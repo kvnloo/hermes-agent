@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 
+import { createVoiceFloor, VOICE_FLOOR_CALIBRATION_MS, VOICE_TRIGGER_CEILING, voiceThreshold } from '@/lib/voice-vad'
+
 type BrowserAudioContext = typeof AudioContext
 
 export interface MicRecorderOptions {
   onLevel?: (level: number) => void
   onError?: (error: Error) => void
   onSilence?: () => void
+  signal?: AbortSignal
   silenceLevel?: number
   silenceMs?: number
   idleSilenceMs?: number
@@ -28,7 +31,7 @@ export interface MicRecorderErrorCopy {
 }
 
 interface MicRecorderHandle {
-  start: (options?: MicRecorderOptions) => Promise<void>
+  start: (options?: MicRecorderOptions) => Promise<boolean>
   stop: () => Promise<MicRecording | null>
   cancel: () => void
 }
@@ -77,8 +80,11 @@ export function useMicRecorder(copy: MicRecorderErrorCopy): {
   const silenceTriggeredRef = useRef(false)
   const silenceStartedAtRef = useRef<number | null>(null)
   const stopResolverRef = useRef<((recording: MicRecording | null) => void) | null>(null)
+  const startIdRef = useRef(0)
 
   const cleanup = () => {
+    startIdRef.current += 1
+
     if (animationRef.current) {
       window.cancelAnimationFrame(animationRef.current)
       animationRef.current = null
@@ -111,6 +117,8 @@ export function useMicRecorder(copy: MicRecorderErrorCopy): {
 
       analyser.fftSize = 256
       const data = new Uint8Array(analyser.fftSize)
+      const floor = createVoiceFloor()
+      let calibrationPeak = 0
 
       source.connect(analyser)
       audioContextRef.current = audioContext
@@ -132,9 +140,29 @@ export function useMicRecorder(copy: MicRecorderErrorCopy): {
         setLevel(normalized)
         options.onLevel?.(normalized)
 
-        const speechThreshold = options.silenceLevel ?? 0
+        const minimumSpeechThreshold = options.silenceLevel ?? 0
+
+        const calibrating = minimumSpeechThreshold > 0 && now - startedAtRef.current < VOICE_FLOOR_CALIBRATION_MS
+
+        if (calibrating) {
+          floor.add(normalized)
+          calibrationPeak = Math.max(calibrationPeak, normalized)
+        }
+
+        const speechThreshold = calibrating
+          ? Number.POSITIVE_INFINITY
+          : voiceThreshold(floor.value(), minimumSpeechThreshold, VOICE_TRIGGER_CEILING)
+
         const silenceMs = options.silenceMs ?? 0
         const idleSilenceMs = options.idleSilenceMs ?? 0
+
+        if (!calibrating && !heardSpeechRef.current && calibrationPeak >= speechThreshold) {
+          heardSpeechRef.current = true
+        }
+
+        if (!heardSpeechRef.current && !calibrating && normalized < speechThreshold) {
+          floor.add(normalized)
+        }
 
         if (speechThreshold > 0 && options.onSilence && !silenceTriggeredRef.current) {
           if (normalized >= speechThreshold) {
@@ -167,15 +195,21 @@ export function useMicRecorder(copy: MicRecorderErrorCopy): {
   }
 
   const start: MicRecorderHandle['start'] = async (options = {}) => {
-    if (recorderRef.current) {
-      return
+    if (recorderRef.current || options.signal?.aborted) {
+      return false
     }
+
+    const startId = ++startIdRef.current
 
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
       throw new Error(copy.microphoneUnsupported)
     }
 
     const permitted = await window.hermesDesktop?.requestMicrophoneAccess?.()
+
+    if (options.signal?.aborted || startId !== startIdRef.current) {
+      return false
+    }
 
     if (permitted === false) {
       throw new Error(copy.microphoneAccessDenied)
@@ -189,6 +223,12 @@ export function useMicRecorder(copy: MicRecorderErrorCopy): {
       })
     } catch (error) {
       throw micError(error, copy)
+    }
+
+    if (options.signal?.aborted || startId !== startIdRef.current) {
+      stream.getTracks().forEach(track => track.stop())
+
+      return false
     }
 
     const mimeType =
@@ -256,6 +296,8 @@ export function useMicRecorder(copy: MicRecorderErrorCopy): {
     recorder.start()
     setRecording(true)
     startMeter(stream, options)
+
+    return true
   }
 
   const stop: MicRecorderHandle['stop'] = () =>

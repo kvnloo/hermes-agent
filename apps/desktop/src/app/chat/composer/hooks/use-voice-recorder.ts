@@ -85,7 +85,12 @@ export function useVoiceRecorder({
     }
 
     try {
-      await handle.start({ onError: error => notifyError(error, voiceCopy.recordingFailed) })
+      const started = await handle.start({ onError: error => notifyError(error, voiceCopy.recordingFailed) })
+
+      if (!started) {
+        return
+      }
+
       startedAtRef.current = Date.now()
       setElapsedSeconds(0)
       setVoiceStatus('recording')

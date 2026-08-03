@@ -2,6 +2,7 @@ import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { BargeMonitorCallbacks } from '@/lib/voice-barge-in'
+import type { SpeechStreamSession } from '@/lib/voice-playback'
 
 import type { MicRecording } from './use-mic-recorder'
 import { useVoiceConversation } from './use-voice-conversation'
@@ -14,23 +15,27 @@ import { useVoiceConversation } from './use-voice-conversation'
 // trigger unreachable).
 
 const monitorCalls: BargeMonitorCallbacks[] = []
-const stopMonitor = vi.fn()
+const monitorStops: Array<ReturnType<typeof vi.fn>> = []
 
 vi.mock('@/lib/voice-barge-in', () => ({
   monitorSpeechDuringPlayback: (callbacks: BargeMonitorCallbacks) => {
-    monitorCalls.push(callbacks)
+    const stop = vi.fn()
 
-    return stopMonitor
+    monitorCalls.push(callbacks)
+    monitorStops.push(stop)
+
+    return stop
   }
 }))
 
 const markVoicePlaybackInterrupted = vi.fn()
+const startSpeechStream = vi.fn<() => Promise<SpeechStreamSession | null>>(async () => null)
 const stopVoicePlayback = vi.fn()
 
 vi.mock('@/lib/voice-playback', () => ({
   markVoicePlaybackInterrupted: () => markVoicePlaybackInterrupted(),
   playSpeechText: vi.fn(async () => true),
-  startSpeechStream: vi.fn(async () => null),
+  startSpeechStream: () => startSpeechStream(),
   stopVoicePlayback: () => stopVoicePlayback()
 }))
 
@@ -41,9 +46,11 @@ vi.mock('@/lib/thinking-sound', () => ({
 
 const micHandle = {
   cancel: vi.fn(),
-  start: vi.fn(async () => undefined),
-  stop: vi.fn<() => Promise<MicRecording | null>>(async () => null)
+  start: vi.fn<(options?: { onSilence?: () => void }) => Promise<void>>(),
+  stop: vi.fn<() => Promise<MicRecording | null>>()
 }
+
+let onMicSilence: () => void = () => undefined
 
 vi.mock('./use-mic-recorder', () => ({
   useMicRecorder: () => ({ handle: micHandle, level: 0, recording: false })
@@ -75,13 +82,26 @@ interface HookProps {
   busy: boolean
 }
 
-function renderConversation(overrides: { onInterrupt?: () => void; transcript?: string } = {}) {
+function renderConversation(
+  overrides: {
+    onInterrupt?: () => void
+    onSubmit?: () => Promise<void>
+    pendingResponse?: () => { id: string; pending: boolean; text: string } | null
+    transcript?: string | Promise<string> | ((index: number) => string | Promise<string>)
+  } = {}
+) {
   const onInterrupt = overrides.onInterrupt ?? vi.fn()
 
   // Mirrors the real app: submitting a turn makes the agent busy.
   const onBusyChange: { current: (busy: boolean) => void } = { current: () => undefined }
 
   const onSubmit = vi.fn(async () => {
+    if (overrides.onSubmit) {
+      await overrides.onSubmit()
+
+      return
+    }
+
     onBusyChange.current(true)
   })
 
@@ -91,9 +111,15 @@ function renderConversation(overrides: { onInterrupt?: () => void; transcript?: 
   // ones are barge captures (the overridable transcript).
   let transcriptions = 0
 
-  const onTranscribeAudio = vi.fn(async () =>
-    transcriptions++ === 0 ? 'kick off the task' : (overrides.transcript ?? 'and another thing')
-  )
+  const onTranscribeAudio = vi.fn(async () => {
+    const index = transcriptions++
+
+    if (typeof overrides.transcript === 'function') {
+      return await overrides.transcript(index)
+    }
+
+    return index === 0 ? 'kick off the task' : await (overrides.transcript ?? 'and another thing')
+  })
 
   const hook = renderHook(
     ({ busy }: HookProps) =>
@@ -105,7 +131,7 @@ function renderConversation(overrides: { onInterrupt?: () => void; transcript?: 
         onStopWord,
         onSubmit,
         onTranscribeAudio,
-        pendingResponse: () => null
+        pendingResponse: overrides.pendingResponse ?? (() => null)
       }),
     { initialProps: { busy: false } }
   )
@@ -137,8 +163,12 @@ async function enterThinking(hook: ReturnType<typeof renderConversation>['hook']
 describe('useVoiceConversation full-duplex barge-in', () => {
   beforeEach(() => {
     monitorCalls.length = 0
+    monitorStops.length = 0
+    onMicSilence = () => undefined
     vi.clearAllMocks()
-    micHandle.start.mockResolvedValue(undefined)
+    micHandle.start.mockImplementation(async options => {
+      onMicSilence = options?.onSilence ?? (() => undefined)
+    })
     micHandle.stop.mockResolvedValue(null)
   })
 
@@ -201,7 +231,17 @@ describe('useVoiceConversation full-duplex barge-in', () => {
   })
 
   it('does not interrupt when speech trips during playback (turn already done)', async () => {
-    const { hook, onInterrupt } = renderConversation()
+    let responseAvailable = false
+
+    const { hook, onInterrupt } = renderConversation({
+      pendingResponse: () => (responseAvailable ? { id: 'reply', pending: false, text: 'Here is the answer.' } : null)
+    })
+
+    startSpeechStream.mockResolvedValueOnce({
+      append: vi.fn(),
+      done: new Promise(() => undefined),
+      finish: vi.fn()
+    })
 
     await act(async () => {
       await hook.result.current.start()
@@ -210,8 +250,8 @@ describe('useVoiceConversation full-duplex barge-in', () => {
     await waitFor(() => expect(monitorCalls.length).toBeGreaterThan(0))
 
     // Turn finished; playback phase.
-    hook.rerender({ busy: false })
-
+    responseAvailable = true
+    await act(async () => hook.rerender({ busy: false }))
     act(() => {
       monitorCalls.at(-1)?.onSpeech()
     })
@@ -262,5 +302,221 @@ describe('useVoiceConversation full-duplex barge-in', () => {
     hook.rerender({ busy: true })
 
     expect(monitorCalls.length).toBe(armed)
+  })
+
+  it('does not submit a transcript that resolves after the voice hook unmounts', async () => {
+    let resolveTranscript: (text: string) => void = () => undefined
+
+    const onSubmit = vi.fn()
+
+    const onTranscribeAudio = vi.fn(
+      () =>
+        new Promise<string>(resolve => {
+          resolveTranscript = resolve
+        })
+    )
+
+    const hook = renderHook(
+      ({ enabled }) =>
+        useVoiceConversation({
+          busy: false,
+          consumePendingResponse: vi.fn(),
+          enabled,
+          onSubmit,
+          onTranscribeAudio,
+          pendingResponse: () => null
+        }),
+      { initialProps: { enabled: true } }
+    )
+
+    await act(async () => {
+      await hook.result.current.start()
+    })
+    await waitFor(() => expect(hook.result.current.status).toBe('listening'))
+
+    micHandle.stop.mockResolvedValueOnce({
+      audio: new Blob(['q'], { type: 'audio/webm' }),
+      durationMs: 900,
+      heardSpeech: true
+    })
+
+    act(() => hook.result.current.stopTurn())
+    await waitFor(() => expect(onTranscribeAudio).toHaveBeenCalledTimes(1))
+
+    hook.unmount()
+
+    await act(async () => resolveTranscript('stale request'))
+
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
+
+  it('does not let a stale turn release a newer turn closing lock', async () => {
+    let resolveFirst!: (transcript: string) => void
+    let resolveSecond!: (transcript: string) => void
+
+    const firstTranscript = new Promise<string>(resolve => {
+      resolveFirst = resolve
+    })
+
+    const secondTranscript = new Promise<string>(resolve => {
+      resolveSecond = resolve
+    })
+
+    const { hook, onTranscribeAudio } = renderConversation({
+      transcript: index => (index === 0 ? firstTranscript : secondTranscript)
+    })
+
+    await act(async () => hook.result.current.start())
+    await waitFor(() => expect(hook.result.current.status).toBe('listening'))
+    micHandle.stop.mockResolvedValueOnce({
+      audio: new Blob(['first'], { type: 'audio/webm' }),
+      durationMs: 900,
+      heardSpeech: true
+    })
+    act(() => hook.result.current.stopTurn())
+    await waitFor(() => expect(onTranscribeAudio).toHaveBeenCalledTimes(1))
+
+    await act(async () => hook.result.current.end())
+    await act(async () => hook.result.current.start())
+    await waitFor(() => expect(hook.result.current.status).toBe('listening'))
+    micHandle.stop.mockResolvedValueOnce({
+      audio: new Blob(['second'], { type: 'audio/webm' }),
+      durationMs: 900,
+      heardSpeech: true
+    })
+    act(() => hook.result.current.stopTurn())
+    await waitFor(() => expect(onTranscribeAudio).toHaveBeenCalledTimes(2))
+    const stopCalls = micHandle.stop.mock.calls.length
+
+    await act(async () => resolveFirst('stale'))
+    act(() => onMicSilence())
+
+    expect(micHandle.stop).toHaveBeenCalledTimes(stopCalls)
+    await act(async () => resolveSecond('active'))
+  })
+
+  it('releases an aborted closing lock when mute starts a fresh turn', async () => {
+    let resolveFirst!: (transcript: string) => void
+
+    const firstTranscript = new Promise<string>(resolve => {
+      resolveFirst = resolve
+    })
+
+    const { hook, onTranscribeAudio } = renderConversation({
+      transcript: index => (index === 0 ? firstTranscript : 'active')
+    })
+
+    await act(async () => hook.result.current.start())
+    await waitFor(() => expect(hook.result.current.status).toBe('listening'))
+    micHandle.stop.mockResolvedValueOnce({
+      audio: new Blob(['first'], { type: 'audio/webm' }),
+      durationMs: 900,
+      heardSpeech: true
+    })
+    act(() => hook.result.current.stopTurn())
+    await waitFor(() => expect(onTranscribeAudio).toHaveBeenCalledTimes(1))
+
+    act(() => hook.result.current.toggleMute())
+    await waitFor(() => expect(hook.result.current.muted).toBe(true))
+    act(() => hook.result.current.toggleMute())
+    await waitFor(() => expect(hook.result.current.status).toBe('listening'))
+
+    micHandle.stop.mockResolvedValueOnce({
+      audio: new Blob(['second'], { type: 'audio/webm' }),
+      durationMs: 900,
+      heardSpeech: true
+    })
+    act(() => onMicSilence())
+
+    await waitFor(() => expect(onTranscribeAudio).toHaveBeenCalledTimes(2))
+    await act(async () => resolveFirst('stale'))
+  })
+
+  it('disposes the barge monitor when muted', async () => {
+    const { hook } = renderConversation()
+
+    await act(async () => hook.result.current.start())
+    await enterThinking(hook)
+    await waitFor(() => expect(monitorCalls.length).toBeGreaterThan(0))
+    const monitor = monitorCalls.at(-1)
+    const stopMonitor = monitorStops.at(-1)
+
+    stopVoicePlayback.mockClear()
+    act(() => hook.result.current.toggleMute())
+
+    expect(stopMonitor).toHaveBeenCalledOnce()
+    act(() => monitor?.onSpeech())
+    expect(stopVoicePlayback).not.toHaveBeenCalled()
+
+    act(() => hook.result.current.toggleMute())
+    expect(monitorCalls).toHaveLength(2)
+  })
+
+  it('resumes normal listening when an old awaiting response is no longer active', async () => {
+    const { hook } = renderConversation({ onSubmit: async () => Promise.reject(new Error('failed')) })
+
+    await act(async () => hook.result.current.start())
+    micHandle.stop.mockResolvedValueOnce({
+      audio: new Blob(['q'], { type: 'audio/webm' }),
+      durationMs: 900,
+      heardSpeech: true
+    })
+    await act(async () => hook.result.current.stopTurn())
+    await waitFor(() => expect(hook.result.current.status).toBe('listening'))
+    const starts = micHandle.start.mock.calls.length
+
+    act(() => hook.result.current.toggleMute())
+    act(() => hook.result.current.toggleMute())
+
+    await waitFor(() => expect(micHandle.start).toHaveBeenCalledTimes(starts + 1))
+    expect(monitorCalls).toHaveLength(0)
+  })
+
+  it('does not submit a captured interruption that resolves after the conversation ends', async () => {
+    let resolveTranscript: (text: string) => void = () => undefined
+
+    const transcript = new Promise<string>(resolve => {
+      resolveTranscript = resolve
+    })
+
+    const { hook, onSubmit, onTranscribeAudio } = renderConversation({ transcript })
+
+    await enterThinking(hook)
+    await waitFor(() => expect(monitorCalls.length).toBeGreaterThan(0))
+
+    const monitor = monitorCalls.at(-1)
+
+    act(() => monitor?.onSpeech())
+    hook.rerender({ busy: false })
+    act(() => monitor?.onUtterance?.(new Blob(['x'], { type: 'audio/webm' })))
+    await waitFor(() => expect(onTranscribeAudio).toHaveBeenCalledTimes(2))
+
+    await act(async () => hook.result.current.end())
+    await act(async () => resolveTranscript('stale interruption'))
+
+    expect(onSubmit).toHaveBeenCalledTimes(1)
+    expect(onSubmit).not.toHaveBeenCalledWith('stale interruption')
+
+    await act(async () => monitor?.onUtterance?.(new Blob(['late'], { type: 'audio/webm' })))
+    expect(onTranscribeAudio).toHaveBeenCalledTimes(2)
+  })
+
+  it('disposes the barge monitor and ignores retained callbacks after unmount', async () => {
+    const { hook, onSubmit, onTranscribeAudio } = renderConversation()
+
+    await enterThinking(hook)
+    await waitFor(() => expect(monitorCalls.length).toBeGreaterThan(0))
+
+    const monitor = monitorCalls.at(-1)
+    const stopMonitor = monitorStops.at(-1)
+
+    hook.unmount()
+
+    expect(stopMonitor).toHaveBeenCalledTimes(1)
+
+    await act(async () => monitor?.onUtterance?.(new Blob(['x'], { type: 'audio/webm' })))
+
+    expect(onTranscribeAudio).toHaveBeenCalledTimes(1)
+    expect(onSubmit).toHaveBeenCalledTimes(1)
   })
 })

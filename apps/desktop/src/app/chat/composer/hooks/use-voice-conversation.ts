@@ -62,9 +62,10 @@ export function useVoiceConversation({
   const { handle, level } = useMicRecorder(voiceCopy)
   const [status, setStatus] = useState<ConversationStatus>('idle')
   const [muted, setMuted] = useState(false)
+  const turnAbortRef = useRef<AbortController | null>(null)
   const turnTimeoutRef = useRef<number | null>(null)
   const pendingStartRef = useRef(false)
-  const turnClosingRef = useRef(false)
+  const turnClosingRef = useRef<AbortController | null>(null)
   const awaitingSpokenResponseRef = useRef(false)
   const responseIdRef = useRef<string | null>(null)
   const spokenSourceLengthRef = useRef(0)
@@ -141,12 +142,19 @@ export function useVoiceConversation({
         return
       }
 
-      turnClosingRef.current = true
+      const turn = turnAbortRef.current
+
+      if (!turn || turn.signal.aborted) {
+        return
+      }
+
+      turnClosingRef.current = turn
       clearTurnTimeout()
       setStatus('transcribing')
 
       try {
         const result = await handle.stop()
+        turn.signal.throwIfAborted()
 
         if (!result || (!result.heardSpeech && !forceTranscribe) || !onTranscribeAudio) {
           if (enabledRef.current && !mutedRef.current && !busyRef.current && statusRef.current !== 'speaking') {
@@ -158,46 +166,46 @@ export function useVoiceConversation({
           return
         }
 
-        try {
-          const transcript = (await onTranscribeAudio(result.audio)).trim()
+        const transcript = (await onTranscribeAudio(result.audio)).trim()
+        turn.signal.throwIfAborted()
 
-          if (!transcript) {
-            if (enabledRef.current) {
-              pendingStartRef.current = true
-            }
-
-            setStatus('idle')
-
-            return
-          }
-
-          // A spoken "stop" (or "never mind", "goodbye", …) ends the
-          // conversation instead of being submitted as a turn. Only whole-
-          // utterance stop commands match, so "stop the container" still goes
-          // through as a real request.
-          if (isVoiceStopCommand(transcript)) {
-            dropSpeechSession()
-            setStatus('idle')
-            onStopWordRef.current?.()
-
-            return
-          }
-
-          awaitingSpokenResponseRef.current = true
-          dropSpeechSession()
-          await onSubmit(transcript)
-          setStatus('thinking')
-        } catch (error) {
-          notifyError(error, voiceCopy.transcriptionFailed)
-
-          if (enabledRef.current && !mutedRef.current && !busyRef.current) {
+        if (!transcript) {
+          if (enabledRef.current) {
             pendingStartRef.current = true
           }
 
           setStatus('idle')
+
+          return
         }
+
+        if (isVoiceStopCommand(transcript)) {
+          dropSpeechSession()
+          setStatus('idle')
+          onStopWordRef.current?.()
+
+          return
+        }
+
+        awaitingSpokenResponseRef.current = true
+        dropSpeechSession()
+        await onSubmit(transcript)
+        turn.signal.throwIfAborted()
+        setStatus('thinking')
+      } catch (error) {
+        if (turn.signal.aborted) {
+          return
+        }
+
+        notifyError(error, voiceCopy.transcriptionFailed)
+
+        if (enabledRef.current && !mutedRef.current && !busyRef.current) {
+          pendingStartRef.current = true
+        }
+
+        setStatus('idle')
       } finally {
-        turnClosingRef.current = false
+        turnClosingRef.current = turnClosingRef.current === turn ? null : turnClosingRef.current
       }
     },
     [handle, onSubmit, onTranscribeAudio, voiceCopy.transcriptionFailed]
@@ -218,9 +226,10 @@ export function useVoiceConversation({
       return
     }
 
-    // Let the wake-word listener fully release the capture device before we
-    // open ours — opening the mic while wake still holds it makes getUserMedia
-    // fail (the "clicked voice but it never starts listening" bug).
+    turnAbortRef.current?.abort()
+    const turn = new AbortController()
+    turnAbortRef.current = turn
+
     try {
       await beforeMicOpenRef.current?.()
     } catch {
@@ -228,13 +237,20 @@ export function useVoiceConversation({
     }
 
     // enabled/muted/busy or an interleaved turn may have changed while we waited.
-    if (!enabledRef.current || mutedRef.current || busyRef.current || statusRef.current !== 'idle') {
+    if (
+      turn.signal.aborted ||
+      !enabledRef.current ||
+      mutedRef.current ||
+      busyRef.current ||
+      statusRef.current !== 'idle'
+    ) {
       return
     }
 
     try {
       // VAD tuning mirrors `tools.voice_mode` defaults so the browser loop matches the CLI.
       await handle.start({
+        signal: turn.signal,
         silenceLevel: 0.075,
         silenceMs: 1_250,
         idleSilenceMs: 12_000,
@@ -245,6 +261,8 @@ export function useVoiceConversation({
         },
         onSilence: () => void handleTurn()
       })
+      turn.signal.throwIfAborted()
+
       setStatus('listening')
       // Clear any prior turn-timeout before arming a fresh one. Each listen
       // cycle reassigns turnTimeoutRef; without clearing first, a stale 60s
@@ -254,6 +272,10 @@ export function useVoiceConversation({
       clearTurnTimeout()
       turnTimeoutRef.current = window.setTimeout(() => void handleTurn(), 60_000)
     } catch (error) {
+      if (turn.signal.aborted) {
+        return
+      }
+
       notifyError(error, voiceCopy.couldNotStartSession)
       pendingStartRef.current = false
       setStatus('idle')
@@ -307,7 +329,15 @@ export function useVoiceConversation({
    */
   const submitCapturedUtterance = useCallback(
     async (audio: Blob | null) => {
+      turnAbortRef.current?.abort()
+      const turn = new AbortController()
+      turnAbortRef.current = turn
+
       const resumeListening = () => {
+        if (turn.signal.aborted) {
+          return
+        }
+
         if (enabledRef.current && !mutedRef.current) {
           pendingStartRef.current = true
         }
@@ -325,6 +355,7 @@ export function useVoiceConversation({
 
       try {
         const transcript = (await onTranscribeAudio(audio)).trim()
+        turn.signal.throwIfAborted()
 
         if (!transcript) {
           resumeListening()
@@ -347,16 +378,24 @@ export function useVoiceConversation({
         // path refuses while `busy`, so wait for the interrupt to settle.
         const deadline = Date.now() + INTERRUPT_SETTLE_TIMEOUT_MS
 
-        while (busyRef.current && Date.now() < deadline) {
+        while (!turn.signal.aborted && busyRef.current && Date.now() < deadline) {
           await new Promise(resolve => window.setTimeout(resolve, 100))
         }
+
+        turn.signal.throwIfAborted()
 
         awaitingSpokenResponseRef.current = true
         dropSpeechSession()
         consumePendingResponse()
         await onSubmit(transcript)
+        turn.signal.throwIfAborted()
+
         setStatus('thinking')
       } catch (error) {
+        if (turn.signal.aborted) {
+          return
+        }
+
         notifyError(error, voiceCopy.transcriptionFailed)
         resumeListening()
       }
@@ -383,26 +422,32 @@ export function useVoiceConversation({
       return
     }
 
-    stopBargeMonitorRef.current = monitorSpeechDuringPlayback({
+    let stopMonitor: (() => void) | null = null
+
+    const whileActive =
+      <Arguments extends unknown[]>(callback: (...args: Arguments) => void) =>
+      (...args: Arguments) =>
+        stopBargeMonitorRef.current === stopMonitor && callback(...args)
+
+    stopMonitor = monitorSpeechDuringPlayback({
       isPlaying: () => $voicePlayback.get().status === 'speaking',
-      onSpeech: () => {
+      onSpeech: whileActive(() => {
         bargeCapturePendingRef.current = true
         bargedRef.current = true
         markVoicePlaybackInterrupted()
         stopVoicePlayback()
 
         if (busyRef.current) {
-          // Mid-generation: stop the in-flight turn so the captured utterance
-          // becomes the next one instead of queueing behind a stale reply.
           void onInterruptRef.current?.()
         }
-      },
-      onUtterance: audio => {
+      }),
+      onUtterance: whileActive(audio => {
         bargeCapturePendingRef.current = false
         stopBargeMonitorRef.current = null
         void submitCapturedUtterance(audio)
-      }
+      })
     })
+    stopBargeMonitorRef.current = stopMonitor
   }, [submitCapturedUtterance])
 
   /** Push any new reply text into the live session; finish when complete. */
@@ -601,10 +646,12 @@ export function useVoiceConversation({
 
   const end = useCallback(async () => {
     pendingStartRef.current = false
+    turnAbortRef.current?.abort()
+    turnAbortRef.current = null
     clearTurnTimeout()
     stopVoicePlayback()
     handle.cancel()
-    turnClosingRef.current = false
+    turnClosingRef.current = null
     awaitingSpokenResponseRef.current = false
     dropSpeechSession()
     consumePendingResponse()
@@ -621,18 +668,28 @@ export function useVoiceConversation({
   const toggleMute = useCallback(() => {
     setMuted(value => {
       const next = !value
+      const responseActive = busyRef.current || statusRef.current === 'speaking' || Boolean(pendingResponse())
 
       if (next) {
+        turnAbortRef.current?.abort()
+        turnAbortRef.current = null
+        turnClosingRef.current = null
+        stopBargeMonitorRef.current?.()
+        stopBargeMonitorRef.current = null
+        bargeCapturePendingRef.current = false
+        bargedRef.current = false
         clearTurnTimeout()
         handle.cancel()
         setStatus('idle')
+      } else if (enabledRef.current && awaitingSpokenResponseRef.current && responseActive) {
+        ensureBargeMonitor()
       } else if (enabledRef.current && !busyRef.current && statusRef.current === 'idle') {
         pendingStartRef.current = true
       }
 
       return next
     })
-  }, [handle])
+  }, [ensureBargeMonitor, handle, pendingResponse])
 
   useEffect(() => {
     if (!enabled) {
@@ -656,6 +713,15 @@ export function useVoiceConversation({
 
     return () => window.removeEventListener('keydown', onKeyDown, { capture: true })
   }, [enabled, stopTurn])
+
+  useEffect(
+    () => () => {
+      turnAbortRef.current?.abort()
+      stopBargeMonitorRef.current?.()
+      stopBargeMonitorRef.current = null
+    },
+    []
+  )
 
   // Ambient "thinking" sound: while the agent works (status 'thinking') no
   // audio flows, which reads as dead air mid-conversation. Calm bubble blips
