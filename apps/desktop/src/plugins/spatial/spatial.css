@@ -1,0 +1,411 @@
+/* Spatial desk — fidelity target: get-spatial.com / App Store stills.
+   Cool paper field, soft multi-stop shadows, large radii, physical piles. */
+
+.spatial-desk {
+  --spatial-canvas: #e6e6e8;
+  --spatial-paper: #f3f3f4;
+  --spatial-card: #ffffff;
+  --spatial-card-raised: #ffffff;
+  --spatial-folder: #f7f7f8;
+  --spatial-text: #1c1c1e;
+  --spatial-muted: #636366;
+  --spatial-dim: #8e8e93;
+  --spatial-hair: rgba(0, 0, 0, 0.08);
+  --spatial-hair-dim: rgba(0, 0, 0, 0.05);
+  --spatial-accent: #0a84ff;
+  --spatial-shadow-rest:
+    0 0.5px 0.5px rgba(0, 0, 0, 0.04),
+    0 4px 10px rgba(0, 0, 0, 0.05),
+    0 14px 28px rgba(0, 0, 0, 0.06);
+  --spatial-shadow-hover:
+    0 1px 1px rgba(0, 0, 0, 0.05),
+    0 10px 20px rgba(0, 0, 0, 0.08),
+    0 28px 48px rgba(0, 0, 0, 0.1);
+  --spatial-shadow-folder:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 8px 18px rgba(0, 0, 0, 0.07);
+  --spatial-radius-card: 20px;
+  --spatial-radius-folder: 22px;
+  --spatial-spring: cubic-bezier(0.34, 1.45, 0.64, 1);
+  --spatial-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  position: relative;
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--spatial-text);
+  background: var(--spatial-canvas);
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'SF Pro Text',
+    'Segoe UI',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.spatial-desk[data-theme='dark'] {
+  --spatial-canvas: #1c1c1e;
+  --spatial-paper: #2c2c2e;
+  --spatial-card: #2c2c2e;
+  --spatial-card-raised: #3a3a3c;
+  --spatial-folder: #2c2c2e;
+  --spatial-text: #f5f5f7;
+  --spatial-muted: #a1a1a6;
+  --spatial-dim: #6c6c70;
+  --spatial-hair: rgba(255, 255, 255, 0.1);
+  --spatial-hair-dim: rgba(255, 255, 255, 0.06);
+  --spatial-shadow-rest:
+    0 1px 1px rgba(0, 0, 0, 0.35),
+    0 8px 18px rgba(0, 0, 0, 0.4),
+    0 22px 40px rgba(0, 0, 0, 0.35);
+  --spatial-shadow-hover:
+    0 2px 4px rgba(0, 0, 0, 0.45),
+    0 16px 32px rgba(0, 0, 0, 0.5),
+    0 36px 64px rgba(0, 0, 0, 0.42);
+  --spatial-shadow-folder: 0 6px 16px rgba(0, 0, 0, 0.45);
+}
+
+.spatial-desk__stage {
+  position: relative;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  background:
+    radial-gradient(120% 90% at 50% 40%, color-mix(in srgb, var(--spatial-paper) 85%, transparent) 0%, transparent 62%),
+    var(--spatial-canvas);
+}
+
+.spatial-desk__stage.is-grabbing {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.spatial-desk__stage.is-grabbing .spatial-card,
+.spatial-desk__stage.is-grabbing .spatial-folder__body {
+  transition: none !important;
+}
+
+.spatial-desk__world {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+/* ── Folder / pile ─────────────────────────────────────────── */
+
+.spatial-folder {
+  position: absolute;
+  transform-origin: 50% 30%;
+  pointer-events: auto;
+}
+
+.spatial-folder__tab {
+  position: absolute;
+  top: -11px;
+  left: 22px;
+  z-index: 4;
+  width: 108px;
+  height: 16px;
+  border-radius: 10px 10px 0 0;
+  box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.25) inset;
+}
+
+.spatial-folder__peek {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border: 1px solid var(--spatial-hair-dim);
+  border-radius: var(--spatial-radius-folder);
+  background: var(--spatial-folder);
+  box-shadow: var(--spatial-shadow-rest);
+  pointer-events: none;
+}
+
+.spatial-folder__body {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 76px;
+  padding: 16px 16px 14px;
+  border: 1px solid var(--spatial-hair);
+  border-radius: var(--spatial-radius-folder);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--spatial-card) 70%, transparent), transparent 40%),
+    var(--spatial-folder);
+  box-shadow: var(--spatial-shadow-folder);
+  backdrop-filter: blur(8px);
+  transition:
+    transform 280ms var(--spatial-spring),
+    box-shadow 280ms var(--spatial-ease);
+}
+
+.spatial-folder__body:hover {
+  box-shadow: var(--spatial-shadow-hover);
+  transform: translateY(-3px);
+}
+
+.spatial-folder__label {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.spatial-folder__label > span:nth-child(2) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spatial-folder__count {
+  flex-shrink: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--spatial-dim);
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.spatial-folder__toggle {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--spatial-hair-dim);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--spatial-card) 80%, transparent);
+  color: var(--spatial-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    transform 220ms var(--spatial-spring),
+    background 160ms var(--spatial-ease),
+    color 160ms var(--spatial-ease);
+}
+
+.spatial-folder__toggle:hover {
+  color: var(--spatial-text);
+  background: var(--spatial-card-raised);
+  transform: scale(1.06);
+}
+
+/* ── Cards ─────────────────────────────────────────────────── */
+
+.spatial-card {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 16px 14px;
+  overflow: hidden;
+  border: 1px solid var(--spatial-hair-dim);
+  border-radius: var(--spatial-radius-card);
+  background: var(--spatial-card);
+  box-shadow: var(--spatial-shadow-rest);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transform-origin: center center;
+  transition:
+    box-shadow 260ms var(--spatial-ease),
+    background 180ms var(--spatial-ease);
+  contain: layout paint;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.spatial-card::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  pointer-events: none;
+  content: '';
+}
+
+.spatial-desk[data-theme='dark'] .spatial-card::after {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.spatial-card:hover,
+.spatial-card:focus-visible {
+  z-index: 30;
+  background: var(--spatial-card-raised);
+  box-shadow: var(--spatial-shadow-hover);
+  outline: none;
+}
+
+.spatial-card.is-selected {
+  z-index: 31;
+  box-shadow:
+    var(--spatial-shadow-hover),
+    0 0 0 1.5px color-mix(in srgb, var(--card-accent, var(--spatial-accent)) 55%, transparent);
+}
+
+.spatial-card--sticky {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--card-accent, #ffd60a) 78%, white);
+  box-shadow:
+    0 1px 1px rgba(0, 0, 0, 0.05),
+    0 8px 18px color-mix(in srgb, var(--card-accent, #ffd60a) 28%, transparent);
+}
+
+.spatial-desk[data-theme='dark'] .spatial-card--sticky {
+  background: color-mix(in srgb, var(--card-accent, #ffd60a) 45%, #2c2c2e);
+}
+
+.spatial-card--sticky::after {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.spatial-card__title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+.spatial-card--sticky .spatial-card__title {
+  color: color-mix(in srgb, var(--spatial-text) 88%, black);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.spatial-card__summary {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--spatial-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.spatial-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: auto;
+}
+
+.spatial-chip {
+  padding: 2px 6px;
+  border: 1px solid var(--spatial-hair-dim);
+  border-radius: 999px;
+  color: var(--spatial-dim);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 8.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: color-mix(in srgb, var(--spatial-paper) 55%, transparent);
+}
+
+/* ── Floating chrome ───────────────────────────────────────── */
+
+.spatial-toolbar {
+  position: absolute;
+  bottom: 22px;
+  left: 50%;
+  z-index: 40;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 7px 8px;
+  border: 1px solid var(--spatial-hair-dim);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--spatial-card) 72%, transparent);
+  box-shadow: var(--spatial-shadow-hover);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  transform: translateX(-50%);
+}
+
+.spatial-toolbar input {
+  width: min(220px, 36vw);
+  padding: 7px 12px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--spatial-paper) 70%, transparent);
+  color: var(--spatial-text);
+  font: inherit;
+  font-size: 12.5px;
+  outline: none;
+  transition: border-color 160ms var(--spatial-ease), background 160ms var(--spatial-ease);
+}
+
+.spatial-toolbar input:focus {
+  border-color: var(--spatial-hair);
+  background: var(--spatial-card);
+}
+
+.spatial-toolbar button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--spatial-muted);
+  cursor: pointer;
+  transition:
+    background 160ms var(--spatial-ease),
+    color 160ms var(--spatial-ease),
+    transform 200ms var(--spatial-spring);
+}
+
+.spatial-toolbar button:hover {
+  background: color-mix(in srgb, var(--spatial-paper) 80%, transparent);
+  color: var(--spatial-text);
+  transform: scale(1.07);
+}
+
+.spatial-toolbar__count {
+  min-width: 3.5rem;
+  padding: 0 8px;
+  color: var(--spatial-dim);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  text-align: center;
+}
+
+.spatial-status {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  z-index: 35;
+  padding: 6px 12px;
+  border: 1px solid var(--spatial-hair-dim);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--spatial-card) 78%, transparent);
+  color: var(--spatial-muted);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  box-shadow: var(--spatial-shadow-rest);
+  backdrop-filter: blur(12px);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spatial-card,
+  .spatial-folder__body,
+  .spatial-folder__toggle,
+  .spatial-toolbar button {
+    transition: none !important;
+  }
+}

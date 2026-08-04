@@ -275,3 +275,8 @@ export { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 /** Plugin-local reactive state (share between a trigger and its panel, poll
  *  loops, cross-component signals) — the same primitive `host.state` uses. */
 export { atom, computed } from 'nanostores'
+/** Motion primitives — same `motion` the app uses for springs/presence.
+ *  Prefer this over hand-rolled rAF or CSS-only when the gesture needs a spring. */
+export { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+/** Headless pan/zoom transform (wheel toward cursor, drag pan). */ 
+export { useZoomPan } from '@/components/ui/use-zoom-pan'
