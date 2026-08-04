@@ -40,7 +40,7 @@ const CSS = [
 '.sp-i.on{z-index:50!important}@keyframes sp-in{from{opacity:.01;transform:translateY(14px) scale(.94) rotate(var(--r,0deg))}to{opacity:1;transform:translateY(0) scale(1) rotate(var(--r,0deg))}}',
 '.sp-p,.sp-c,.sp-n,.sp-x{width:100%;height:100%;border:0;border-radius:20px;text-align:left;cursor:pointer;color:inherit;position:relative;overflow:hidden}',
 '.sp-p,.sp-c{background:linear-gradient(180deg,#fff 0%,#fafafa 70%,#f3f3f5 100%);border:1px solid rgba(0,0,0,.07);box-shadow:var(--sh);padding:0;display:flex;flex-direction:column}.sp-p{box-shadow:var(--sh),0 1px 0 rgba(0,0,0,.04),inset 0 1px 0 rgba(255,255,255,.95),inset 0 -1px 0 rgba(0,0,0,.03);background-image:linear-gradient(180deg,rgba(255,255,255,.92),rgba(250,250,250,.9)),repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.015) 2px,rgba(0,0,0,.015) 3px),repeating-linear-gradient(90deg,transparent,transparent 3px,rgba(0,0,0,.01) 3px,rgba(0,0,0,.01) 4px)}',
-'.sp-p::before,.sp-c::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.78),transparent 32%),radial-gradient(120% 80% at 50% 0%,rgba(255,255,255,.35),transparent 50%);z-index:1}',
+'.sp-p::before,.sp-c::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.82),transparent 34%),radial-gradient(120% 80% at 50% 0%,rgba(255,255,255,.4),transparent 48%),linear-gradient(135deg,rgba(255,255,255,.2),transparent 40%);z-index:1}',
 '.sp[data-t=d] .sp-p::before,.sp[data-t=d] .sp-c::before{background:linear-gradient(180deg,rgba(255,255,255,.06),transparent 30%)}',
 '.sp-i:hover .sp-p,.sp-i:hover .sp-c,.sp-i:hover .sp-n,.sp-i:hover .sp-x{box-shadow:var(--shh)}',
 '.sp-p__h{height:48%;min-height:76px;background:linear-gradient(168deg,color-mix(in srgb,var(--a,#0a84ff) 40%,#fff) 0%,color-mix(in srgb,var(--a,#0a84ff) 14%,#f7f7f9) 38%,#ebebef 100%),repeating-linear-gradient(-11deg,transparent,transparent 7px,rgba(0,0,0,.028) 7px,rgba(0,0,0,.028) 8px),radial-gradient(90% 70% at 18% 0%,rgba(255,255,255,.65),transparent 52%);border-bottom:1px solid var(--line)}',
@@ -174,9 +174,9 @@ async function hermesProjects() {
 
 
 function layoutBands(items) {
-  const projects = items.filter(it => it.k === 'paper').slice(0, 6)
-  const stickies = items.filter(it => it.k === 'sticky').slice(0, 6)
-  const media = items.filter(it => it.k === 'media').slice(0, 5)
+  const projects = items.filter(it => it.k === 'paper').slice(0, 7)
+  const stickies = items.filter(it => it.k === 'sticky').slice(0, 7)
+  const media = items.filter(it => it.k === 'media').slice(0, 6)
   const mid = stickies.slice(0, 7)
 
   const placeBand = (arr, y0, x0, x1) => {
@@ -212,8 +212,8 @@ function layoutBands(items) {
           const a = arr[i], b = arr[j]
           const dx = (b.x + b.w / 2) - (a.x + a.w / 2)
           const dy = (b.y + b.h / 2) - (a.y + a.h / 2)
-          const gapX = (a.w + b.w) * 0.42
-          const gapY = (a.h + b.h) * 0.38
+          const gapX = (a.w + b.w) * 0.46
+          const gapY = (a.h + b.h) * 0.44
           const ox = gapX - Math.abs(dx)
           const oy = gapY - Math.abs(dy)
           if (ox > 0 && oy > 0) {
@@ -237,7 +237,7 @@ function layoutBands(items) {
   placeBand(projects, 48, 30, 1540)
   placeBand(mid, 300, 50, 1520)
   placeBand(media, 560, 40, 1530)
-  return projects.concat(mid, media)
+  return declutterBands(projects, mid, media)
 }
 
 
@@ -249,6 +249,24 @@ function layoutBands(items) {
 
 
 
+
+
+function declutterBands(projects, mid, media) {
+  const pushBelow = (upper, lower, minGap) => {
+    lower.forEach(lo => {
+      upper.forEach(up => {
+        const dx = Math.abs((lo.x + lo.w / 2) - (up.x + up.w / 2))
+        if (dx > (lo.w + up.w) * 0.45) return
+        const upBottom = up.y + up.h
+        const need = upBottom + minGap
+        if (lo.y < need) lo.y = need + hn('dy' + lo.id, 12)
+      })
+    })
+  }
+  pushBelow(projects, mid, 18)
+  pushBelow(mid, media, 16)
+  return projects.concat(mid, media)
+}
 
 function stop(e) { e.stopPropagation() }
 
@@ -355,7 +373,7 @@ function buildHome(hp, companies, pcProjects, issues, prefs) {
     })
   })
   // abstract media tiles pad empty field (reference place-memory)
-  for (let m = 0; m < 5; m++) {
+  for (let m = 0; m < 6; m++) {
     const i = items.length
     const sl0 = sl[i % sl.length] || { x: 900 + m * 40, y: 200 + m * 50 }
     items.push({
