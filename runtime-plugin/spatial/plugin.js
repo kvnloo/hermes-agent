@@ -32,14 +32,14 @@ function togglePin(projectId, path) {
 const CSS = [
 '.sp{--bg:#e9e9eb;--paper:#f2f2f4;--card:#fff;--ink:#1c1c1e;--mut:#6c6c70;--line:rgba(0,0,0,.08);--acc:#0a84ff;--sh:0 .5px .5px rgba(0,0,0,.04),0 2px 6px rgba(0,0,0,.045),0 12px 28px rgba(0,0,0,.08),0 32px 64px rgba(0,0,0,.07);--shh:0 1px 2px rgba(0,0,0,.05),0 14px 32px rgba(0,0,0,.12),0 40px 80px rgba(0,0,0,.14);--spr:cubic-bezier(.34,1.45,.64,1);--ease:cubic-bezier(.22,1,.36,1);position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;color:var(--ink);background:var(--bg);font:12.5px/1.35 ui-sans-serif,system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;min-height:100%;height:100%;width:100%}',
 '.sp[data-t=d]{--bg:#1c1c1e;--paper:#2c2c2e;--card:#2c2c2e;--ink:#f5f5f7;--mut:#a1a1a6;--line:rgba(255,255,255,.1);--sh:0 1px 2px rgba(0,0,0,.4),0 16px 36px rgba(0,0,0,.5);--shh:0 4px 16px rgba(0,0,0,.55),0 28px 64px rgba(0,0,0,.55)}',
-'.sp-st{position:relative;flex:1 1 auto;min-height:0;height:100%;overflow:hidden;cursor:grab;touch-action:none;background:radial-gradient(90% 70% at 50% 42%,color-mix(in srgb,var(--paper) 94%,transparent) 0%,transparent 62%),radial-gradient(40% 34% at 12% 78%,rgba(10,132,255,.035),transparent 55%),radial-gradient(36% 30% at 88% 18%,rgba(191,90,242,.03),transparent 50%),var(--bg)}',
+'.sp-st{position:relative;flex:1 1 auto;min-height:0;height:100%;overflow:hidden;cursor:grab;touch-action:none;background:radial-gradient(85% 65% at 50% 40%,#f3f3f5 0%,transparent 58%),radial-gradient(120% 100% at 50% 100%,rgba(0,0,0,.04),transparent 42%),radial-gradient(40% 34% at 14% 76%,rgba(10,132,255,.04),transparent 55%),radial-gradient(36% 30% at 86% 16%,rgba(191,90,242,.035),transparent 50%),var(--bg)}',
 '.sp-st.p{cursor:grabbing;user-select:none}.sp-st.p .sp-i{transition:none!important;animation:none!important}',
 '.sp-w{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}',
 '.sp-i{position:absolute;transform-origin:center;transform:rotate(var(--r,0deg));animation:sp-in .45s var(--spr) both;animation-fill-mode:both;transition:transform .32s var(--spr),filter .2s var(--ease);contain:layout paint}',
-'.sp-i:hover{z-index:40!important;filter:drop-shadow(0 18px 32px rgba(0,0,0,.16));transform:translateY(-12px) scale(1.04) rotate(var(--r,0deg))!important}',
+'.sp-i:hover{z-index:40!important;filter:drop-shadow(0 22px 40px rgba(0,0,0,.18));transform:translateY(-14px) scale(1.05) rotate(var(--r,0deg))!important}',
 '.sp-i.on{z-index:50!important}@keyframes sp-in{from{opacity:.01;transform:translateY(14px) scale(.94) rotate(var(--r,0deg))}to{opacity:1;transform:translateY(0) scale(1) rotate(var(--r,0deg))}}',
 '.sp-p,.sp-c,.sp-n,.sp-x{width:100%;height:100%;border:0;border-radius:20px;text-align:left;cursor:pointer;color:inherit;position:relative;overflow:hidden}',
-'.sp-p,.sp-c{background:var(--card);border:1px solid var(--line);box-shadow:var(--sh);padding:0;display:flex;flex-direction:column}.sp-p{box-shadow:var(--sh),inset 0 1px 0 rgba(255,255,255,.9),inset 0 0 0 1px rgba(255,255,255,.25)}',
+'.sp-p,.sp-c{background:var(--card);border:1px solid rgba(0,0,0,.06);box-shadow:var(--sh);padding:0;display:flex;flex-direction:column}.sp-p{box-shadow:var(--sh),0 1px 0 rgba(0,0,0,.03),inset 0 1px 0 rgba(255,255,255,.92),inset 0 0 0 1px rgba(255,255,255,.3)}',
 '.sp-p::before,.sp-c::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.78),transparent 32%),radial-gradient(120% 80% at 50% 0%,rgba(255,255,255,.35),transparent 50%);z-index:1}',
 '.sp[data-t=d] .sp-p::before,.sp[data-t=d] .sp-c::before{background:linear-gradient(180deg,rgba(255,255,255,.06),transparent 30%)}',
 '.sp-i:hover .sp-p,.sp-i:hover .sp-c,.sp-i:hover .sp-n,.sp-i:hover .sp-x{box-shadow:var(--shh)}',
@@ -163,28 +163,40 @@ async function hermesProjects() {
 }
 
 
+
 function layoutBands(items) {
   const projects = items.filter(it => it.k === 'paper' && it.meta && it.meta.hermes)
   const stickies = items.filter(it => it.k === 'sticky')
   const media = items.filter(it => it.k === 'media')
   const other = items.filter(it => !projects.includes(it) && !stickies.includes(it) && !media.includes(it))
-  const place = (arr, y0, x0, dx) => {
+  const place = (arr, y0, x0, dx, fan) => {
     arr.forEach((it, i) => {
-      const jx = hn('bx' + it.id, 50) - 25 + (i % 2) * 18
-      const jy = hn('by' + it.id, 40) - 20
+      const jx = hn('bx' + it.id, 64) - 32 + (i % 2) * 28 - (i % 3) * 10
+      const jy = hn('by' + it.id, 72) - 36 + Math.sin(i * 1.7) * fan
       it.x = x0 + i * dx + jx
       it.y = y0 + jy
-      it.r = rot(it.id)
+      it.r = (hn(it.id, 100) - 50) / 8 // stronger freeform tilt
+      it.priority = it.priority || (40 - i)
     })
   }
-  place(projects, 28, 20, 255)
-  place(stickies.slice(0, 8), 248, 48, 210)
-  place(other, 430, 100, 230)
-  place(media, 640, 40, 250)
-  // leftover stickies under media arc lightly
-  place(stickies.slice(8), 620, 900, 200)
-  return projects.concat(stickies, other, media)
+  // strata with intentional slight Y interleave at edges (freeform without losing scan bands)
+  place(projects, 36, 24, 248, 22)
+  place(stickies.slice(0, 7), 236, 56, 198, 28)
+  place(other, 400, 120, 210, 24)
+  place(media, 600, 36, 235, 26)
+  place(stickies.slice(7), 560, 980, 180, 20)
+  // gentle peek-stack: nudge every 3rd card to overlap previous slightly
+  const all = projects.concat(stickies, other, media)
+  all.forEach((it, i) => {
+    if (i % 3 === 2 && i > 0) {
+      it.x = (it.x * 0.7 + all[i - 1].x * 0.3)
+      it.y = (it.y * 0.75 + all[i - 1].y * 0.25) + 12
+      it.priority = (it.priority || 20) + 8
+    }
+  })
+  return all
 }
+
 
 function stop(e) { e.stopPropagation() }
 
