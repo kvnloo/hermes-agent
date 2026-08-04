@@ -81,7 +81,7 @@ function css() {
 }
 
 function usePanZoom() {
-  const [t, setT] = useState({ s: 0.38, x: 8, y: 6 })
+  const [t, setT] = useState({ s: 0.68, x: 20, y: 16 })
   const drag = useRef(null)
   const [pan, setPan] = useState(0)
   const zoomAt = useCallback((f, cx = 0, cy = 0) => {
@@ -110,7 +110,7 @@ function usePanZoom() {
   const end = useCallback(() => { drag.current = null; setPan(0) }, [])
   return {
     pan, s: t.s,
-    reset: () => setT({ s: 0.38, x: 8, y: 6 }),
+    reset: () => setT({ s: 0.68, x: 20, y: 16 }),
     zin: () => zoomAt(1.18), zout: () => zoomAt(1 / 1.18),
     stage: { onWheel, onPointerDown: onDown, onPointerMove: onMove, onPointerUp: end, onPointerCancel: end, onPointerLeave: end },
     world: { transform: 'translate(' + t.x + 'px,' + t.y + 'px) scale(' + t.s + ')' }
@@ -123,42 +123,37 @@ const ST = ['#ffd60a', '#30d158', '#64d2ff', '#ff9f0a', '#bf5af2', '#ff375f']
 const AC = ['#0a84ff', '#30d158', '#bf5af2', '#ff9f0a', '#64d2ff', '#ff375f']
 
 function slots(n) {
-  // Build a large pool then pick n positions interleaved across the field
-  const pool = []
-  const C = [
-    { x: 40, y: 36, c: 4, r: 3, dx: 250, dy: 220 },
-    { x: 700, y: 70, c: 4, r: 3, dx: 260, dy: 230 },
-    { x: 1360, y: 50, c: 4, r: 3, dx: 250, dy: 220 },
-    { x: 160, y: 560, c: 4, r: 3, dx: 250, dy: 210 },
-    { x: 900, y: 580, c: 4, r: 3, dx: 255, dy: 215 },
-    { x: 1500, y: 520, c: 4, r: 3, dx: 245, dy: 210 }
-  ]
-  let i = 0
-  for (const g of C) {
-    for (let r = 0; r < g.r; r++) {
-      for (let c = 0; c < g.c; c++, i++) {
-        pool.push({
-          x: g.x + c * g.dx + hn('x' + i, 60) - 30 + (c % 2) * 32 - (r % 2) * 20,
-          y: g.y + r * g.dy + hn('y' + i, 52) - 26,
-          band: pool.length % 6
-        })
-      }
-    }
-  }
-  // interleave by band so first n span the desk
-  const by = Array.from({ length: 6 }, () => [])
-  pool.forEach((p, idx) => by[idx % 6].push(p))
+  // Positions in world px designed for scale≈0.72 so cards span the visible stage (~1600×900 content).
   const out = []
-  let guard = 0
-  while (out.length < n && guard < 500) {
-    for (let b = 0; b < 6 && out.length < n; b++) {
-      if (by[b].length) out.push(by[b].shift())
-    }
-    guard++
+  const cols = 6
+  const rows = Math.ceil(n / cols) + 1
+  const dx = 250
+  const dy = 195
+  const ox = 30
+  const oy = 24
+  for (let i = 0; i < n; i++) {
+    // space-fill: diagonal-ish freeform, not strict grid
+    const c = i % cols
+    const r = (i / cols) | 0
+    // serpentine + jitter for organic scatter
+    const col = r % 2 === 0 ? c : cols - 1 - c
+    const jx = hn('x' + i, 70) - 35 + (col % 2) * 28 - (r % 2) * 16
+    const jy = hn('y' + i, 56) - 28
+    // pull some items into a second constellation on the right
+    const right = i % 5 === 0 ? 720 : i % 5 === 1 ? 360 : 0
+    out.push({
+      x: ox + col * dx + jx + right * 0.15 + (i % 7 === 3 ? 480 : 0),
+      y: oy + r * dy + jy + (i % 4 === 2 ? 40 : 0)
+    })
   }
-  while (out.length < n) {
-    const k = out.length
-    out.push({ x: 80 + (k % 8) * 240, y: 60 + ((k / 8) | 0) * 220 })
+  // ensure coverage: force last third of items into right half
+  const mid = (n * 2 / 3) | 0
+  for (let i = mid; i < n; i++) {
+    const k = i - mid
+    out[i] = {
+      x: 900 + (k % 4) * 230 + hn('rx' + i, 50) - 25,
+      y: 40 + ((k / 4) | 0) * 200 + hn('ry' + i, 44) - 22
+    }
   }
   return out
 }
@@ -292,7 +287,7 @@ function buildHome(hp, companies, pcProjects, issues, prefs) {
       x: sl0.x, y: sl0.y, r: rot('m' + m), w: 188 + hn('mw'+m, 30), h: 220 + hn('mh'+m, 40), d: 0.4
     })
   }
-  return { w: 2100, h: 1400, items }
+  return { w: 1900, h: 1200, items }
 }
 
 function buildProject(meta, prefs) {
