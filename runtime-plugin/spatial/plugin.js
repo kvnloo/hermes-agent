@@ -81,7 +81,7 @@ function css() {
 }
 
 function usePanZoom() {
-  const [t, setT] = useState({ s: 0.87, x: 12, y: 12 })
+  const [t, setT] = useState({ s: 0.86, x: 10, y: 10 })
   const drag = useRef(null)
   const [pan, setPan] = useState(0)
   const zoomAt = useCallback((f, cx = 0, cy = 0) => {
@@ -110,7 +110,7 @@ function usePanZoom() {
   const end = useCallback(() => { drag.current = null; setPan(0) }, [])
   return {
     pan, s: t.s,
-    reset: () => setT({ s: 0.87, x: 12, y: 12 }),
+    reset: () => setT({ s: 0.86, x: 10, y: 10 }),
     zin: () => zoomAt(1.18), zout: () => zoomAt(1 / 1.18),
     stage: { onWheel, onPointerDown: onDown, onPointerMove: onMove, onPointerUp: end, onPointerCancel: end, onPointerLeave: end },
     world: { transform: 'translate(' + t.x + 'px,' + t.y + 'px) scale(' + t.s + ')' }
@@ -172,6 +172,7 @@ async function hermesProjects() {
 
 
 
+
 function layoutBands(items) {
   const projects = items.filter(it => it.k === 'paper' && it.meta && it.meta.hermes).slice(0, 6)
   const stickies = items.filter(it => it.k === 'sticky').slice(0, 6)
@@ -179,40 +180,67 @@ function layoutBands(items) {
   const other = items.filter(it => it.tag === 'doctrine').slice(0, 1)
   const mid = stickies.concat(other).slice(0, 6)
 
-  // Freeform scatter within band Y — all faces legible (no deep stacks)
   const placeBand = (arr, y0, x0, x1) => {
     const n = arr.length
     if (!n) return
+    // freeform seed positions (organic, not grid)
     arr.forEach((it, i) => {
       const t = n === 1 ? 0.5 : i / (n - 1)
-      // organic: ease spacing + sine drift (pinboard) without burying cards
-      const baseX = x0 + t * (x1 - x0)
-      const jx = hn('fx' + it.id, 54) - 27 + Math.sin(i * 1.7) * 28
-      const jy = hn('fy' + it.id, 40) - 20 + Math.cos(i * 1.3) * 14
+      // non-linear x for pinboard feel
+      const ease = t * t * (3 - 2 * t)
+      const baseX = x0 + ease * (x1 - x0)
+      const jx = hn('fx' + it.id, 70) - 35 + Math.sin(i * 2.1) * 36
+      const jy = hn('fy' + it.id, 55) - 27 + Math.cos(i * 1.6) * 20
       it.x = baseX + jx
       it.y = y0 + jy
-      it.r = (hn(it.id, 85) - 42) / 8
-      it.priority = 32 - i
-      // slight size variance only
+      it.r = (hn(it.id, 110) - 55) / 6 // stronger freeform tilt ~±9deg
+      it.priority = 34 - i
       if (it.k === 'paper') {
-        it.w = 200 + hn(it.id + 'w', 28)
-        it.h = 178 + hn(it.id + 'h', 30)
+        it.w = 198 + hn(it.id + 'w', 34)
+        it.h = 176 + hn(it.id + 'h', 36)
       } else if (it.k === 'media') {
-        it.w = 174 + hn(it.id + 'mw', 30)
-        it.h = 206 + hn(it.id + 'mh', 34)
+        it.w = 170 + hn(it.id + 'mw', 36)
+        it.h = 202 + hn(it.id + 'mh', 40)
       } else {
-        it.w = 152 + hn(it.id + 'sw', 18)
-        it.h = 144 + hn(it.id + 'sh', 16)
+        it.w = 150 + hn(it.id + 'sw', 20)
+        it.h = 142 + hn(it.id + 'sh', 18)
       }
     })
+    // soft separation: keep freeform but ensure faces legible (no deep bury)
+    for (let pass = 0; pass < 4; pass++) {
+      for (let i = 0; i < n; i++) {
+        for (let j = i + 1; j < n; j++) {
+          const a = arr[i], b = arr[j]
+          const dx = (b.x + b.w / 2) - (a.x + a.w / 2)
+          const dy = (b.y + b.h / 2) - (a.y + a.h / 2)
+          const gapX = (a.w + b.w) * 0.42
+          const gapY = (a.h + b.h) * 0.38
+          const ox = gapX - Math.abs(dx)
+          const oy = gapY - Math.abs(dy)
+          if (ox > 0 && oy > 0) {
+            const push = 0.35
+            const sx = (dx === 0 ? 1 : Math.sign(dx)) * ox * push
+            const sy = (dy === 0 ? 1 : Math.sign(dy)) * oy * push * 0.55
+            a.x -= sx / 2
+            b.x += sx / 2
+            a.y -= sy / 2
+            b.y += sy / 2
+            // clamp Y to band corridor so hierarchy strata survive
+            const lo = y0 - 36, hi = y0 + 48
+            a.y = Math.max(lo, Math.min(hi, a.y))
+            b.y = Math.max(lo, Math.min(hi, b.y))
+          }
+        }
+      }
+    }
   }
 
-  // Clear strata gutters (hierarchy) + freeform x (ref win)
-  placeBand(projects, 44, 36, 1520)
-  placeBand(mid, 295, 56, 1500)
-  placeBand(media, 555, 48, 1510)
+  placeBand(projects, 48, 30, 1540)
+  placeBand(mid, 300, 50, 1520)
+  placeBand(media, 560, 40, 1530)
   return projects.concat(mid, media)
 }
+
 
 
 
