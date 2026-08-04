@@ -187,14 +187,16 @@ function layoutBands(items) {
     const per = Math.ceil(n / clusters)
     arr.forEach((it, i) => {
       const c = Math.min(clusters - 1, (i / per) | 0)
-      const li = i - c * per // local index in cluster
-      const cx = x0 + ((c + 0.5) / clusters) * (x1 - x0)
-      const ang = (li - (per - 1) / 2) * 0.55
-      const rad = 38 + hn(it.id, 28)
-      const jx = hn('cx' + it.id, 36) - 18
-      const jy = hn('cy' + it.id, 32) - 16
-      it.x = cx + Math.cos(ang) * rad * 0.35 + li * 52 + jx
-      it.y = y0 + Math.sin(ang) * 18 + jy + (li % 2) * 10
+      const li = i - c * per
+      // cluster anchors at 15% / 50% / 85% of band span
+      const anchors = clusters === 1 ? [0.5] : clusters === 2 ? [0.22, 0.78] : [0.14, 0.5, 0.86]
+      const cx = x0 + anchors[c] * (x1 - x0)
+      const ang = (li - (per - 1) / 2) * 0.7
+      const rad = 70 + hn(it.id, 40)
+      const jx = hn('cx' + it.id, 40) - 20
+      const jy = hn('cy' + it.id, 36) - 18
+      it.x = cx + Math.cos(ang) * rad * 0.9 + li * 38 + jx
+      it.y = y0 + Math.sin(ang) * 22 + jy + (li % 2) * 12
       it.r = (hn(it.id, 100) - 50) / 6.5 + (li - 1) * 1.2
       it.priority = 30 + c * 3 - li
       if (it.k === 'paper') {
