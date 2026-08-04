@@ -32,14 +32,14 @@ function togglePin(projectId, path) {
 const CSS = [
 '.sp{--bg:#e9e9eb;--paper:#f2f2f4;--card:#fff;--ink:#1c1c1e;--mut:#6c6c70;--line:rgba(0,0,0,.08);--acc:#0a84ff;--sh:0 .5px .5px rgba(0,0,0,.04),0 2px 6px rgba(0,0,0,.045),0 12px 28px rgba(0,0,0,.08),0 32px 64px rgba(0,0,0,.07);--shh:0 1px 2px rgba(0,0,0,.05),0 14px 32px rgba(0,0,0,.12),0 40px 80px rgba(0,0,0,.14);--spr:cubic-bezier(.34,1.45,.64,1);--ease:cubic-bezier(.22,1,.36,1);position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;color:var(--ink);background:var(--bg);font:12.5px/1.35 ui-sans-serif,system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;min-height:100%;height:100%;width:100%}',
 '.sp[data-t=d]{--bg:#1c1c1e;--paper:#2c2c2e;--card:#2c2c2e;--ink:#f5f5f7;--mut:#a1a1a6;--line:rgba(255,255,255,.1);--sh:0 1px 2px rgba(0,0,0,.4),0 16px 36px rgba(0,0,0,.5);--shh:0 4px 16px rgba(0,0,0,.55),0 28px 64px rgba(0,0,0,.55)}',
-'.sp-st{position:relative;flex:1 1 auto;min-height:0;height:100%;overflow:hidden;cursor:grab;touch-action:none;background:radial-gradient(85% 65% at 50% 40%,#f3f3f5 0%,transparent 58%),radial-gradient(120% 100% at 50% 100%,rgba(0,0,0,.04),transparent 42%),radial-gradient(40% 34% at 14% 76%,rgba(10,132,255,.04),transparent 55%),radial-gradient(36% 30% at 86% 16%,rgba(191,90,242,.035),transparent 50%),var(--bg)}',
+'.sp-st{position:relative;flex:1 1 auto;min-height:0;height:100%;overflow:hidden;cursor:grab;touch-action:none;background:radial-gradient(80% 60% at 50% 38%,#f5f5f7 0%,transparent 55%),radial-gradient(100% 90% at 50% 100%,rgba(0,0,0,.05),transparent 45%),radial-gradient(38% 32% at 16% 74%,rgba(10,132,255,.045),transparent 55%),radial-gradient(34% 28% at 84% 18%,rgba(191,90,242,.04),transparent 50%),var(--bg)}',
 '.sp-st.p{cursor:grabbing;user-select:none}.sp-st.p .sp-i{transition:none!important;animation:none!important}',
 '.sp-w{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}',
 '.sp-i{position:absolute;transform-origin:center;transform:rotate(var(--r,0deg));animation:sp-in .45s var(--spr) both;animation-fill-mode:both;transition:transform .32s var(--spr),filter .2s var(--ease);contain:layout paint;filter:drop-shadow(0 12px 22px rgba(0,0,0,.11))}',
 '.sp-i:hover{z-index:40!important;filter:drop-shadow(0 22px 40px rgba(0,0,0,.18));transform:translateY(-14px) scale(1.05) rotate(var(--r,0deg))!important}',
 '.sp-i.on{z-index:50!important}@keyframes sp-in{from{opacity:.01;transform:translateY(14px) scale(.94) rotate(var(--r,0deg))}to{opacity:1;transform:translateY(0) scale(1) rotate(var(--r,0deg))}}',
 '.sp-p,.sp-c,.sp-n,.sp-x{width:100%;height:100%;border:0;border-radius:20px;text-align:left;cursor:pointer;color:inherit;position:relative;overflow:hidden}',
-'.sp-p,.sp-c{background:linear-gradient(180deg,#fff 0%,#fafafa 70%,#f3f3f5 100%);border:1px solid rgba(0,0,0,.07);box-shadow:var(--sh);padding:0;display:flex;flex-direction:column}.sp-p{box-shadow:var(--sh),0 1px 0 rgba(0,0,0,.04),inset 0 1px 0 rgba(255,255,255,.95),inset 0 -1px 0 rgba(0,0,0,.03)}',
+'.sp-p,.sp-c{background:linear-gradient(180deg,#fff 0%,#fafafa 70%,#f3f3f5 100%);border:1px solid rgba(0,0,0,.07);box-shadow:var(--sh);padding:0;display:flex;flex-direction:column}.sp-p{box-shadow:var(--sh),0 1px 0 rgba(0,0,0,.04),inset 0 1px 0 rgba(255,255,255,.95),inset 0 -1px 0 rgba(0,0,0,.03);background-image:linear-gradient(180deg,rgba(255,255,255,.92),rgba(250,250,250,.9)),repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.015) 2px,rgba(0,0,0,.015) 3px),repeating-linear-gradient(90deg,transparent,transparent 3px,rgba(0,0,0,.01) 3px,rgba(0,0,0,.01) 4px)}',
 '.sp-p::before,.sp-c::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.78),transparent 32%),radial-gradient(120% 80% at 50% 0%,rgba(255,255,255,.35),transparent 50%);z-index:1}',
 '.sp[data-t=d] .sp-p::before,.sp[data-t=d] .sp-c::before{background:linear-gradient(180deg,rgba(255,255,255,.06),transparent 30%)}',
 '.sp-i:hover .sp-p,.sp-i:hover .sp-c,.sp-i:hover .sp-n,.sp-i:hover .sp-x{box-shadow:var(--shh)}',
@@ -81,7 +81,7 @@ function css() {
 }
 
 function usePanZoom() {
-  const [t, setT] = useState({ s: 0.88, x: 8, y: 6 })
+  const [t, setT] = useState({ s: 0.86, x: 10, y: 10 })
   const drag = useRef(null)
   const [pan, setPan] = useState(0)
   const zoomAt = useCallback((f, cx = 0, cy = 0) => {
@@ -110,7 +110,7 @@ function usePanZoom() {
   const end = useCallback(() => { drag.current = null; setPan(0) }, [])
   return {
     pan, s: t.s,
-    reset: () => setT({ s: 0.88, x: 8, y: 6 }),
+    reset: () => setT({ s: 0.86, x: 10, y: 10 }),
     zin: () => zoomAt(1.18), zout: () => zoomAt(1 / 1.18),
     stage: { onWheel, onPointerDown: onDown, onPointerMove: onMove, onPointerUp: end, onPointerCancel: end, onPointerLeave: end },
     world: { transform: 'translate(' + t.x + 'px,' + t.y + 'px) scale(' + t.s + ')' }
@@ -170,6 +170,7 @@ async function hermesProjects() {
 
 
 
+
 function layoutBands(items) {
   const projects = items.filter(it => it.k === 'paper' && it.meta && it.meta.hermes).slice(0, 6)
   const stickies = items.filter(it => it.k === 'sticky').slice(0, 6)
@@ -177,54 +178,44 @@ function layoutBands(items) {
   const other = items.filter(it => it.tag === 'doctrine').slice(0, 1)
   const mid = stickies.concat(other).slice(0, 6)
 
+  // Pinboard clusters inside a Y-band: organic local piles, global strata preserved
   const placeBand = (arr, y0, x0, x1) => {
     const n = arr.length
     if (!n) return
+    // 2–3 micro-clusters across the band
+    const clusters = n <= 3 ? 1 : n <= 5 ? 2 : 3
+    const per = Math.ceil(n / clusters)
     arr.forEach((it, i) => {
-      const t = n === 1 ? 0.5 : i / (n - 1)
-      // span full width [x0,x1] with freeform jitter — kills right void without 4th float
-      const baseX = x0 + t * (x1 - x0)
-      const jx = hn('bx' + it.id, 50) - 25
-      const jy = hn('by' + it.id, 46) - 23
-      it.x = baseX + jx
-      it.y = y0 + jy
-      it.r = (hn(it.id, 90) - 45) / 7.5 // visible freeform tilt
-      it.priority = 36 - i
+      const c = Math.min(clusters - 1, (i / per) | 0)
+      const li = i - c * per // local index in cluster
+      const cx = x0 + ((c + 0.5) / clusters) * (x1 - x0)
+      const ang = (li - (per - 1) / 2) * 0.55
+      const rad = 38 + hn(it.id, 28)
+      const jx = hn('cx' + it.id, 36) - 18
+      const jy = hn('cy' + it.id, 32) - 16
+      it.x = cx + Math.cos(ang) * rad * 0.35 + li * 52 + jx
+      it.y = y0 + Math.sin(ang) * 18 + jy + (li % 2) * 10
+      it.r = (hn(it.id, 100) - 50) / 6.5 + (li - 1) * 1.2
+      it.priority = 30 + c * 3 - li
       if (it.k === 'paper') {
-        it.w = 198 + hn(it.id + 'w', 36)
-        it.h = 176 + hn(it.id + 'h', 40)
+        it.w = 196 + hn(it.id + 'w', 38)
+        it.h = 174 + hn(it.id + 'h', 42)
       } else if (it.k === 'media') {
-        it.w = 172 + hn(it.id + 'mw', 40)
-        it.h = 206 + hn(it.id + 'mh', 44)
+        it.w = 168 + hn(it.id + 'mw', 42)
+        it.h = 200 + hn(it.id + 'mh', 48)
       } else {
-        it.w = 150 + hn(it.id + 'sw', 22)
-        it.h = 142 + hn(it.id + 'sh', 18)
+        it.w = 148 + hn(it.id + 'sw', 24)
+        it.h = 140 + hn(it.id + 'sh', 20)
       }
     })
-    // one gentle paper peek-stack inside band only (freeform depth, not clutter)
-    if (arr.length >= 3 && arr[0].k === 'paper') {
-      const under = Object.assign({}, arr[1], {
-        id: arr[1].id + '-peek',
-        x: arr[1].x - 14,
-        y: arr[1].y + 18,
-        r: arr[1].r - 2.5,
-        priority: (arr[1].priority || 20) - 6,
-        chips: arr[1].chips,
-      })
-      // don't duplicate — nudge real card instead
-      arr[2].x = arr[1].x + 22
-      arr[2].y = arr[1].y + 16
-      arr[2].r = (arr[2].r || 0) + 3
-      arr[2].priority = (arr[1].priority || 20) + 4
-    }
   }
 
-  // Full-bleed bands across desk (~0..1500 world at scale ~0.9)
-  placeBand(projects, 40, 30, 1480)
-  placeBand(mid, 290, 50, 1460)
-  placeBand(media, 540, 40, 1470)
+  placeBand(projects, 48, 40, 1500)
+  placeBand(mid, 300, 60, 1480)
+  placeBand(media, 560, 50, 1490)
   return projects.concat(mid, media)
 }
+
 
 
 
