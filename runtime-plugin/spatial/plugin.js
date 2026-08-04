@@ -81,7 +81,7 @@ function css() {
 }
 
 function usePanZoom() {
-  const [t, setT] = useState({ s: 0.9, x: 16, y: 14 })
+  const [t, setT] = useState({ s: 0.85, x: 12, y: 10 })
   const drag = useRef(null)
   const [pan, setPan] = useState(0)
   const zoomAt = useCallback((f, cx = 0, cy = 0) => {
@@ -110,7 +110,7 @@ function usePanZoom() {
   const end = useCallback(() => { drag.current = null; setPan(0) }, [])
   return {
     pan, s: t.s,
-    reset: () => setT({ s: 0.9, x: 16, y: 14 }),
+    reset: () => setT({ s: 0.85, x: 12, y: 10 }),
     zin: () => zoomAt(1.18), zout: () => zoomAt(1 / 1.18),
     stage: { onWheel, onPointerDown: onDown, onPointerMove: onMove, onPointerUp: end, onPointerCancel: end, onPointerLeave: end },
     world: { transform: 'translate(' + t.x + 'px,' + t.y + 'px) scale(' + t.s + ')' }
@@ -125,9 +125,9 @@ const AC = ['#0a84ff', '#30d158', '#bf5af2', '#ff9f0a', '#64d2ff', '#ff375f']
 function slots(n) {
   // Stage-pixel-ish coords at scale≈0.92 (sidebar leaves ~1650×1000 stage).
   const out = []
-  const cols = 5
-  const dx = 300
-  const dy = 195
+  const cols = 6
+  const dx = 270
+  const dy = 185
   for (let i = 0; i < n; i++) {
     const col = i % cols
     const row = (i / cols) | 0
