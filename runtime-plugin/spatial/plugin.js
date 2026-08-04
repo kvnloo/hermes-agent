@@ -43,7 +43,7 @@ const CSS = [
 '.sp-p::before,.sp-c::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.78),transparent 32%),radial-gradient(120% 80% at 50% 0%,rgba(255,255,255,.35),transparent 50%);z-index:1}',
 '.sp[data-t=d] .sp-p::before,.sp[data-t=d] .sp-c::before{background:linear-gradient(180deg,rgba(255,255,255,.06),transparent 30%)}',
 '.sp-i:hover .sp-p,.sp-i:hover .sp-c,.sp-i:hover .sp-n,.sp-i:hover .sp-x{box-shadow:var(--shh)}',
-'.sp-p__h{height:44%;min-height:68px;background:linear-gradient(160deg,color-mix(in srgb,var(--a,#0a84ff) 32%,#fff) 0%,color-mix(in srgb,var(--a,#0a84ff) 10%,#f3f3f5) 48%,#eaeaee 100%),repeating-linear-gradient(-14deg,transparent,transparent 9px,rgba(0,0,0,.018) 9px,rgba(0,0,0,.018) 10px);border-bottom:1px solid var(--line)}',
+'.sp-p__h{height:46%;min-height:72px;background:linear-gradient(165deg,color-mix(in srgb,var(--a,#0a84ff) 34%,#fff) 0%,color-mix(in srgb,var(--a,#0a84ff) 12%,#f6f6f8) 42%,#ececf0 100%),repeating-linear-gradient(-12deg,transparent,transparent 8px,rgba(0,0,0,.022) 8px,rgba(0,0,0,.022) 9px),radial-gradient(80% 60% at 20% 0%,rgba(255,255,255,.5),transparent 55%);border-bottom:1px solid var(--line)}',
 '.sp-p__b{position:relative;z-index:2;padding:12px 14px;display:flex;flex-direction:column;gap:6px;flex:1;min-height:0}','.sp-p__rules{display:flex;flex-direction:column;gap:7px;margin-top:4px}','.sp-p__rule{height:5px;border-radius:3px;background:color-mix(in srgb,var(--mut) 16%,transparent)}','.sp-p__rule:nth-child(2){width:92%}','.sp-p__rule:nth-child(3){width:78%}','.sp-p__rule:nth-child(4){width:84%}',
 '.sp-k{font:700 9px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--a,var(--acc))}',
 '.sp-t{font-size:13.5px;font-weight:650;letter-spacing:-.02em;line-height:1.2}',
@@ -81,7 +81,7 @@ function css() {
 }
 
 function usePanZoom() {
-  const [t, setT] = useState({ s: 0.68, x: 2, y: 4 })
+  const [t, setT] = useState({ s: 0.82, x: 12, y: 16 })
   const drag = useRef(null)
   const [pan, setPan] = useState(0)
   const zoomAt = useCallback((f, cx = 0, cy = 0) => {
@@ -110,7 +110,7 @@ function usePanZoom() {
   const end = useCallback(() => { drag.current = null; setPan(0) }, [])
   return {
     pan, s: t.s,
-    reset: () => setT({ s: 0.68, x: 2, y: 4 }),
+    reset: () => setT({ s: 0.82, x: 12, y: 16 }),
     zin: () => zoomAt(1.18), zout: () => zoomAt(1 / 1.18),
     stage: { onWheel, onPointerDown: onDown, onPointerMove: onMove, onPointerUp: end, onPointerCancel: end, onPointerLeave: end },
     world: { transform: 'translate(' + t.x + 'px,' + t.y + 'px) scale(' + t.s + ')' }
@@ -166,50 +166,43 @@ async function hermesProjects() {
 
 
 
+
 function layoutBands(items) {
   const projects = items.filter(it => it.k === 'paper' && it.meta && it.meta.hermes)
   const stickies = items.filter(it => it.k === 'sticky')
   const media = items.filter(it => it.k === 'media')
   const other = items.filter(it => !projects.includes(it) && !stickies.includes(it) && !media.includes(it))
-  const pulse = stickies.slice(0, 7)
-  const place = (arr, y0, x0, dx) => {
+  // single calm mid sticky belt (ops) — no right float constellation
+  const pulse = stickies.slice(0, 8)
+  const placeBand = (arr, y0, x0, dx, yAmp) => {
+    const n = Math.max(arr.length, 1)
     arr.forEach((it, i) => {
-      // freeform within band: jitter + gentle arc, NO cross-band stack
-      const jx = hn('bx' + it.id, 52) - 26 + (i % 2) * 20
-      const jy = hn('by' + it.id, 36) - 18 + Math.sin(i * 1.3) * 16
+      const t = n === 1 ? 0 : i / (n - 1)
+      const jx = hn('bx' + it.id, 44) - 22
+      const jy = hn('by' + it.id, 32) - 16 + Math.sin(t * Math.PI) * yAmp
       it.x = x0 + i * dx + jx
       it.y = y0 + jy
-      it.r = (hn(it.id, 60) - 30) / 11
-      it.priority = (it.priority != null ? it.priority : 28) - i
-      // size breath for freeform desk energy
+      it.r = (hn(it.id, 55) - 27) / 12
+      it.priority = (it.priority != null ? it.priority : 30) - i
       if (it.k === 'paper') {
-        it.w = 186 + hn(it.id + 'w', 34)
-        it.h = 168 + hn(it.id + 'h', 38)
+        it.w = 192 + hn(it.id + 'w', 28)
+        it.h = 172 + hn(it.id + 'h', 32)
+      } else if (it.k === 'media') {
+        it.w = 168 + hn(it.id + 'mw', 32)
+        it.h = 198 + hn(it.id + 'mh', 36)
+      } else if (it.k === 'sticky') {
+        it.w = 148 + hn(it.id + 'sw', 20)
+        it.h = 140 + hn(it.id + 'sh', 18)
       }
     })
   }
-  place(projects, 40, 24, 248)
-  place(pulse.concat(other).slice(0, 8), 255, 48, 198)
-  // media primary strip
-  const medMain = media.slice(0, 4)
-  const medSide = media.slice(4)
-  place(medMain, 620, 40, 250)
-  // right freeform constellation (density without breaking left ops scan)
-  medSide.forEach((it, i) => {
-    it.x = 1750 + hn('sx' + it.id, 100) + (i % 2) * 110
-    it.y = 120 + i * 150 + hn('sy' + it.id, 40)
-    it.r = (hn(it.id, 70) - 35) / 9
-    it.w = 170 + hn(it.id + 'mw', 40)
-    it.h = 200 + hn(it.id + 'mh', 50)
-  })
-  // one soft peek pair on right media only (freeform craft)
-  if (medSide.length >= 2) {
-    medSide[1].x = medSide[0].x + 28
-    medSide[1].y = medSide[0].y + 34
-    medSide[1].priority = (medSide[0].priority || 20) - 2
-  }
-  return projects.concat(pulse, other.slice(0, 2), medMain, medSide)
+  // Full-width 3 bands — freeform *inside* band, gutters *between* bands
+  placeBand(projects, 48, 36, 250, 14)
+  placeBand(pulse.concat(other).slice(0, 8), 270, 56, 195, 18)
+  placeBand(media, 560, 48, 220, 16)
+  return projects.concat(pulse, other.slice(0, 2), media)
 }
+
 
 
 
@@ -320,16 +313,16 @@ function buildHome(hp, companies, pcProjects, issues, prefs) {
     })
   })
   // abstract media tiles pad empty field (reference place-memory)
-  for (let m = 0; m < 7; m++) {
+  for (let m = 0; m < 6; m++) {
     const i = items.length
     const sl0 = sl[i % sl.length] || { x: 900 + m * 40, y: 200 + m * 50 }
     items.push({
-      id: 'med-' + m, k: 'media', t: ['Mood', 'Clip', 'Depth', 'Light', 'Chrome', 'Study', 'Board'][m],
+      id: 'med-' + m, k: 'media', t: ['Mood', 'Clip', 'Depth', 'Light', 'Chrome', 'Study'][m],
       a: AC[m % AC.length], b: AC[(m + 2) % AC.length], pat: PATS[m % PATS.length],
       x: sl0.x, y: sl0.y, r: rot('m' + m), w: 176 + hn('mw'+m, 36), h: 210 + hn('mh'+m, 44), d: 0.4
     })
   }
-  return { w: 2100, h: 1100, items: layoutBands(items) }
+  return { w: 1680, h: 980, items: layoutBands(items) }
 }
 
 function buildProject(meta, prefs) {
