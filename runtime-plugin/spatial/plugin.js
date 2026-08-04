@@ -81,7 +81,7 @@ function css() {
 }
 
 function usePanZoom() {
-  const [t, setT] = useState({ s: 0.7, x: 80, y: 40 })
+  const [t, setT] = useState({ s: 0.58, x: 20, y: 12 })
   const drag = useRef(null)
   const [pan, setPan] = useState(0)
   const zoomAt = useCallback((f, cx = 0, cy = 0) => {
@@ -110,7 +110,7 @@ function usePanZoom() {
   const end = useCallback(() => { drag.current = null; setPan(0) }, [])
   return {
     pan, s: t.s,
-    reset: () => setT({ s: 0.7, x: 80, y: 40 }),
+    reset: () => setT({ s: 0.58, x: 20, y: 12 }),
     zin: () => zoomAt(1.18), zout: () => zoomAt(1 / 1.18),
     stage: { onWheel, onPointerDown: onDown, onPointerMove: onMove, onPointerUp: end, onPointerCancel: end, onPointerLeave: end },
     world: { transform: 'translate(' + t.x + 'px,' + t.y + 'px) scale(' + t.s + ')' }
@@ -124,16 +124,17 @@ const AC = ['#0a84ff', '#30d158', '#bf5af2', '#ff9f0a', '#64d2ff', '#ff375f']
 
 function slots(n) {
   const o = [], C = [
-    { x: 40, y: 40, c: 5, r: 3, dx: 195, dy: 175 },
-    { x: 520, y: 70, c: 4, r: 3, dx: 205, dy: 185 },
-    { x: 180, y: 420, c: 5, r: 2, dx: 200, dy: 170 },
-    { x: 780, y: 380, c: 3, r: 3, dx: 210, dy: 180 }
+    { x: 24, y: 28, c: 5, r: 3, dx: 188, dy: 168 },
+    { x: 480, y: 48, c: 5, r: 3, dx: 198, dy: 176 },
+    { x: 120, y: 400, c: 5, r: 3, dx: 192, dy: 164 },
+    { x: 720, y: 360, c: 4, r: 3, dx: 200, dy: 172 },
+    { x: 980, y: 80, c: 3, r: 4, dx: 190, dy: 160 }
   ]
   let i = 0
   for (const g of C) for (let r = 0; r < g.r; r++) for (let c = 0; c < g.c && i < n; c++, i++) {
-    o.push({ x: g.x + c * g.dx + hn('x' + i, 46) - 23 + (c % 2) * 22 - (r % 2) * 14, y: g.y + r * g.dy + hn('y' + i, 40) - 20 })
+    o.push({ x: g.x + c * g.dx + hn('x' + i, 50) - 25 + (c % 2) * 24 - (r % 2) * 16, y: g.y + r * g.dy + hn('y' + i, 44) - 22 })
   }
-  while (o.length < n) { const k = o.length; o.push({ x: 30 + (k % 6) * 190, y: 30 + ((k / 6) | 0) * 170 }) }
+  while (o.length < n) { const k = o.length; o.push({ x: 20 + (k % 7) * 180, y: 20 + ((k / 7) | 0) * 160 }) }
   return o
 }
 
@@ -253,10 +254,20 @@ function buildHome(hp, companies, pcProjects, issues, prefs) {
     const sl0 = sl[i % sl.length] || { x: 700 + j * 30, y: 700 }
     items.push({
       id: 'fill-' + j, k: 'sticky', t: f.t, s: f.s, tag: 'doctrine', a: f.a,
-      x: sl0.x + 40, y: sl0.y + 30, r: rot('f' + j), w: 160, h: 150, d: 0.35
+      x: sl0.x + 28, y: sl0.y + 18, r: rot('f' + j), w: 156 + hn('fw'+j, 18), h: 146 + hn('fh'+j, 16), d: 0.32
     })
   })
-  return { w: 1600, h: 1100, items }
+  // abstract media tiles pad empty field (reference place-memory)
+  for (let m = 0; m < 5; m++) {
+    const i = items.length
+    const sl0 = sl[i % sl.length] || { x: 900 + m * 40, y: 200 + m * 50 }
+    items.push({
+      id: 'med-' + m, k: 'media', t: ['Mood', 'Clip', 'Depth', 'Light', 'Chrome'][m],
+      a: AC[m % AC.length], b: AC[(m + 2) % AC.length],
+      x: sl0.x, y: sl0.y, r: rot('m' + m), w: 188 + hn('mw'+m, 30), h: 220 + hn('mh'+m, 40), d: 0.4
+    })
+  }
+  return { w: 1700, h: 1150, items }
 }
 
 function buildProject(meta, prefs) {
