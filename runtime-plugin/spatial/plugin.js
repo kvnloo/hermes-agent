@@ -81,7 +81,7 @@ function css() {
 }
 
 function usePanZoom() {
-  const [t, setT] = useState({ s: 0.55, x: 8, y: 8 })
+  const [t, setT] = useState({ s: 0.52, x: 10, y: 12 })
   const drag = useRef(null)
   const [pan, setPan] = useState(0)
   const zoomAt = useCallback((f, cx = 0, cy = 0) => {
@@ -110,7 +110,7 @@ function usePanZoom() {
   const end = useCallback(() => { drag.current = null; setPan(0) }, [])
   return {
     pan, s: t.s,
-    reset: () => setT({ s: 0.55, x: 8, y: 8 }),
+    reset: () => setT({ s: 0.52, x: 10, y: 12 }),
     zin: () => zoomAt(1.18), zout: () => zoomAt(1 / 1.18),
     stage: { onWheel, onPointerDown: onDown, onPointerMove: onMove, onPointerUp: end, onPointerCancel: end, onPointerLeave: end },
     world: { transform: 'translate(' + t.x + 'px,' + t.y + 'px) scale(' + t.s + ')' }
@@ -123,38 +123,18 @@ const ST = ['#ffd60a', '#30d158', '#64d2ff', '#ff9f0a', '#bf5af2', '#ff375f']
 const AC = ['#0a84ff', '#30d158', '#bf5af2', '#ff9f0a', '#64d2ff', '#ff375f']
 
 function slots(n) {
-  // Positions in world px designed for scale≈0.72 so cards span the visible stage (~1600×900 content).
+  // Freeform positions spanning visible stage at scale≈0.55 (sidebar ~240px).
   const out = []
-  const cols = 6
-  const rows = Math.ceil(n / cols) + 1
-  const dx = 250
-  const dy = 195
-  const ox = 30
-  const oy = 24
   for (let i = 0; i < n; i++) {
-    // space-fill: diagonal-ish freeform, not strict grid
-    const c = i % cols
-    const r = (i / cols) | 0
-    // serpentine + jitter for organic scatter
-    const col = r % 2 === 0 ? c : cols - 1 - c
-    const jx = hn('x' + i, 70) - 35 + (col % 2) * 28 - (r % 2) * 16
-    const jy = hn('y' + i, 56) - 28
-    // pull some items into a second constellation on the right
-    const right = i % 5 === 0 ? 720 : i % 5 === 1 ? 360 : 0
+    // 5x4-ish constellation with organic jitter covering full desk
+    const col = i % 5
+    const row = (i / 5) | 0
+    const jx = hn('x' + i, 80) - 40 + (row % 2) * 36
+    const jy = hn('y' + i, 70) - 35 + (col % 2) * 28
     out.push({
-      x: ox + col * dx + jx + (i % 7 === 3 ? 320 : 0),
-      y: oy + r * dy + jy + (i % 4 === 2 ? 40 : 0)
+      x: 40 + col * 320 + jx,
+      y: 30 + row * 210 + jy
     })
-  }
-  // ensure coverage: force last third of items into right half
-  // half the cards land far right (stage is offset ~240px by sidebar; scale~0.62)
-  const half = (n / 2) | 0
-  for (let i = half; i < n; i++) {
-    const k = i - half
-    out[i] = {
-      x: 1180 + (k % 5) * 240 + hn('rx' + i, 60) - 30,
-      y: 36 + ((k / 5) | 0) * 190 + hn('ry' + i, 50) - 25 + (k % 2) * 34
-    }
   }
   return out
 }
@@ -288,7 +268,7 @@ function buildHome(hp, companies, pcProjects, issues, prefs) {
       x: sl0.x, y: sl0.y, r: rot('m' + m), w: 188 + hn('mw'+m, 30), h: 220 + hn('mh'+m, 40), d: 0.4
     })
   }
-  return { w: 2400, h: 1300, items }
+  return { w: 1800, h: 1400, items }
 }
 
 function buildProject(meta, prefs) {
