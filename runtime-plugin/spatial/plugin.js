@@ -43,7 +43,7 @@ const CSS = [
 '.sp-p::before,.sp-c::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.65),transparent 30%);z-index:1}',
 '.sp[data-t=d] .sp-p::before,.sp[data-t=d] .sp-c::before{background:linear-gradient(180deg,rgba(255,255,255,.06),transparent 30%)}',
 '.sp-i:hover .sp-p,.sp-i:hover .sp-c,.sp-i:hover .sp-n,.sp-i:hover .sp-x{box-shadow:var(--shh)}',
-'.sp-p__h{height:38%;min-height:56px;background:linear-gradient(145deg,color-mix(in srgb,var(--a,#0a84ff) 22%,#f6f6f8),#eeeef1);border-bottom:1px solid var(--line)}',
+'.sp-p__h{height:42%;min-height:64px;background:linear-gradient(145deg,color-mix(in srgb,var(--a,#0a84ff) 28%,#fff),color-mix(in srgb,var(--a,#0a84ff) 8%,#ececf0));border-bottom:1px solid var(--line)}',
 '.sp-p__b{position:relative;z-index:2;padding:12px 14px;display:flex;flex-direction:column;gap:6px;flex:1;min-height:0}',
 '.sp-k{font:700 9px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--a,var(--acc))}',
 '.sp-t{font-size:13.5px;font-weight:650;letter-spacing:-.02em;line-height:1.2}',
@@ -81,7 +81,7 @@ function css() {
 }
 
 function usePanZoom() {
-  const [t, setT] = useState({ s: 0.64, x: 28, y: 20 })
+  const [t, setT] = useState({ s: 0.7, x: 80, y: 40 })
   const drag = useRef(null)
   const [pan, setPan] = useState(0)
   const zoomAt = useCallback((f, cx = 0, cy = 0) => {
@@ -110,7 +110,7 @@ function usePanZoom() {
   const end = useCallback(() => { drag.current = null; setPan(0) }, [])
   return {
     pan, s: t.s,
-    reset: () => setT({ s: 0.64, x: 28, y: 20 }),
+    reset: () => setT({ s: 0.7, x: 80, y: 40 }),
     zin: () => zoomAt(1.18), zout: () => zoomAt(1 / 1.18),
     stage: { onWheel, onPointerDown: onDown, onPointerMove: onMove, onPointerUp: end, onPointerCancel: end, onPointerLeave: end },
     world: { transform: 'translate(' + t.x + 'px,' + t.y + 'px) scale(' + t.s + ')' }
