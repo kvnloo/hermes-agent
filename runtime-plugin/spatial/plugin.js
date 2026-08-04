@@ -50,7 +50,7 @@ const CSS = [
 '.sp-s{font-size:11px;color:var(--mut);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}',
 '.sp-m{display:flex;flex-wrap:wrap;gap:4px;margin-top:auto;padding-top:4px}',
 '.sp-ch{padding:2px 7px;border-radius:999px;border:1px solid var(--line);font:500 8px/1.2 ui-monospace,Menlo,monospace;color:var(--mut);text-transform:uppercase;letter-spacing:.03em}',
-'.sp-n{padding:14px;display:flex;flex-direction:column;justify-content:space-between;color:#1c1c1e;background:linear-gradient(155deg,color-mix(in srgb,var(--a,#ffd60a) 94%,#fff),color-mix(in srgb,var(--a,#ffd60a) 72%,#efe6c0));box-shadow:0 1px 1px rgba(0,0,0,.06),0 10px 22px color-mix(in srgb,var(--a,#ffd60a) 32%,transparent),0 24px 48px rgba(0,0,0,.08),inset 0 1px 0 rgba(255,255,255,.55);border-radius:14px;transform:rotate(var(--r,0deg))}',
+'.sp-n{padding:14px;display:flex;flex-direction:column;justify-content:space-between;color:#1c1c1e;background:linear-gradient(155deg,color-mix(in srgb,var(--a,#ffd60a) 94%,#fff),color-mix(in srgb,var(--a,#ffd60a) 72%,#efe6c0));box-shadow:0 1px 1px rgba(0,0,0,.06),0 10px 22px color-mix(in srgb,var(--a,#ffd60a) 32%,transparent),0 24px 48px rgba(0,0,0,.08),inset 0 1px 0 rgba(255,255,255,.55);border-radius:14px}',
 '.sp[data-t=d] .sp-n{color:#f5f5f7;background:color-mix(in srgb,var(--a,#ffd60a) 40%,#2c2c2e)}',
 '.sp-x{background:#0e0e10;box-shadow:var(--sh)}',
 '.sp-x__a{position:absolute;inset:0;background:radial-gradient(90% 80% at 22% 18%,color-mix(in srgb,var(--a,#0a84ff) 75%,transparent),transparent 52%),radial-gradient(80% 70% at 82% 78%,color-mix(in srgb,var(--b,#bf5af2) 55%,transparent),transparent 48%),radial-gradient(circle at 70% 30%,rgba(255,255,255,.12),transparent 28%),linear-gradient(150deg,#1c1c22,#0a0a0c 60%,#121218)}','.sp-x__a[data-pat=grid]{background:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px) 0 0/26px 26px,linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px) 0 0/26px 26px,radial-gradient(60% 50% at 70% 30%,color-mix(in srgb,var(--a) 55%,transparent),transparent 60%),#111114}','.sp-x__a[data-pat=soft]{background:radial-gradient(70% 60% at 40% 40%,color-mix(in srgb,var(--a) 42%,#fff),transparent 60%),linear-gradient(180deg,#f4f4f6,#d8d8de)}','.sp-x__a[data-pat=split]{background:linear-gradient(105deg,color-mix(in srgb,var(--a) 82%,#111) 0 42%,#0e0e12 42% 100%)}',
@@ -81,7 +81,7 @@ function css() {
 }
 
 function usePanZoom() {
-  const [t, setT] = useState({ s: 0.86, x: 8, y: 8 })
+  const [t, setT] = useState({ s: 0.88, x: 10, y: 12 })
   const drag = useRef(null)
   const [pan, setPan] = useState(0)
   const zoomAt = useCallback((f, cx = 0, cy = 0) => {
@@ -110,7 +110,7 @@ function usePanZoom() {
   const end = useCallback(() => { drag.current = null; setPan(0) }, [])
   return {
     pan, s: t.s,
-    reset: () => setT({ s: 0.86, x: 8, y: 8 }),
+    reset: () => setT({ s: 0.88, x: 10, y: 12 }),
     zin: () => zoomAt(1.18), zout: () => zoomAt(1 / 1.18),
     stage: { onWheel, onPointerDown: onDown, onPointerMove: onMove, onPointerUp: end, onPointerCancel: end, onPointerLeave: end },
     world: { transform: 'translate(' + t.x + 'px,' + t.y + 'px) scale(' + t.s + ')' }
@@ -164,38 +164,31 @@ async function hermesProjects() {
 
 
 
+
 function layoutBands(items) {
   const projects = items.filter(it => it.k === 'paper' && it.meta && it.meta.hermes)
   const stickies = items.filter(it => it.k === 'sticky')
   const media = items.filter(it => it.k === 'media')
   const other = items.filter(it => !projects.includes(it) && !stickies.includes(it) && !media.includes(it))
-  const place = (arr, y0, x0, dx, fan) => {
+  // doctrine stickies stay in sticky mid-band only (max 7); rest drop
+  const pulse = stickies.slice(0, 7)
+  const place = (arr, y0, x0, dx, yJ) => {
     arr.forEach((it, i) => {
-      const jx = hn('bx' + it.id, 64) - 32 + (i % 2) * 28 - (i % 3) * 10
-      const jy = hn('by' + it.id, 72) - 36 + Math.sin(i * 1.7) * fan
+      const jx = hn('bx' + it.id, 40) - 20 + (i % 2) * 14
+      const jy = hn('by' + it.id, 28) - 14
       it.x = x0 + i * dx + jx
       it.y = y0 + jy
-      it.r = (hn(it.id, 100) - 50) / 8 // stronger freeform tilt
-      it.priority = it.priority || (40 - i)
+      it.r = (hn(it.id, 50) - 25) / 14 // mild tilt ~±1.8deg
+      it.priority = (it.priority != null ? it.priority : 30) - i
     })
   }
-  // strata with intentional slight Y interleave at edges (freeform without losing scan bands)
-  place(projects, 36, 24, 248, 22)
-  place(stickies.slice(0, 7), 236, 56, 198, 28)
-  place(other, 400, 120, 210, 24)
-  place(media, 600, 36, 235, 26)
-  place(stickies.slice(7), 560, 980, 180, 20)
-  // gentle peek-stack: nudge every 3rd card to overlap previous slightly
-  const all = projects.concat(stickies, other, media)
-  all.forEach((it, i) => {
-    if (i % 3 === 2 && i > 0) {
-      it.x = (it.x * 0.7 + all[i - 1].x * 0.3)
-      it.y = (it.y * 0.75 + all[i - 1].y * 0.25) + 12
-      it.priority = (it.priority || 20) + 8
-    }
-  })
-  return all
+  // three calm strata with breathing room (won hierarchy 8)
+  place(projects, 32, 28, 252, 14)
+  place(pulse.concat(other).slice(0, 8), 250, 60, 200, 14)
+  place(media, 620, 48, 245, 12)
+  return projects.concat(pulse, other.slice(0, 2), media)
 }
+
 
 
 function stop(e) { e.stopPropagation() }
