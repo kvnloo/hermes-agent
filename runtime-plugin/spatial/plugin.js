@@ -81,7 +81,7 @@ function css() {
 }
 
 function usePanZoom() {
-  const [t, setT] = useState({ s: 0.86, x: 10, y: 10 })
+  const [t, setT] = useState({ s: 0.87, x: 12, y: 12 })
   const drag = useRef(null)
   const [pan, setPan] = useState(0)
   const zoomAt = useCallback((f, cx = 0, cy = 0) => {
@@ -110,7 +110,7 @@ function usePanZoom() {
   const end = useCallback(() => { drag.current = null; setPan(0) }, [])
   return {
     pan, s: t.s,
-    reset: () => setT({ s: 0.86, x: 10, y: 10 }),
+    reset: () => setT({ s: 0.87, x: 12, y: 12 }),
     zin: () => zoomAt(1.18), zout: () => zoomAt(1 / 1.18),
     stage: { onWheel, onPointerDown: onDown, onPointerMove: onMove, onPointerUp: end, onPointerCancel: end, onPointerLeave: end },
     world: { transform: 'translate(' + t.x + 'px,' + t.y + 'px) scale(' + t.s + ')' }
@@ -171,6 +171,7 @@ async function hermesProjects() {
 
 
 
+
 function layoutBands(items) {
   const projects = items.filter(it => it.k === 'paper' && it.meta && it.meta.hermes).slice(0, 6)
   const stickies = items.filter(it => it.k === 'sticky').slice(0, 6)
@@ -178,45 +179,41 @@ function layoutBands(items) {
   const other = items.filter(it => it.tag === 'doctrine').slice(0, 1)
   const mid = stickies.concat(other).slice(0, 6)
 
-  // Pinboard clusters inside a Y-band: organic local piles, global strata preserved
+  // Freeform scatter within band Y — all faces legible (no deep stacks)
   const placeBand = (arr, y0, x0, x1) => {
     const n = arr.length
     if (!n) return
-    // 2–3 micro-clusters across the band
-    const clusters = n <= 3 ? 1 : n <= 5 ? 2 : 3
-    const per = Math.ceil(n / clusters)
     arr.forEach((it, i) => {
-      const c = Math.min(clusters - 1, (i / per) | 0)
-      const li = i - c * per
-      // cluster anchors at 15% / 50% / 85% of band span
-      const anchors = clusters === 1 ? [0.5] : clusters === 2 ? [0.22, 0.78] : [0.14, 0.5, 0.86]
-      const cx = x0 + anchors[c] * (x1 - x0)
-      const ang = (li - (per - 1) / 2) * 0.7
-      const rad = 70 + hn(it.id, 40)
-      const jx = hn('cx' + it.id, 40) - 20
-      const jy = hn('cy' + it.id, 36) - 18
-      it.x = cx + Math.cos(ang) * rad * 0.9 + li * 38 + jx
-      it.y = y0 + Math.sin(ang) * 22 + jy + (li % 2) * 12
-      it.r = (hn(it.id, 100) - 50) / 6.5 + (li - 1) * 1.2
-      it.priority = 30 + c * 3 - li
+      const t = n === 1 ? 0.5 : i / (n - 1)
+      // organic: ease spacing + sine drift (pinboard) without burying cards
+      const baseX = x0 + t * (x1 - x0)
+      const jx = hn('fx' + it.id, 54) - 27 + Math.sin(i * 1.7) * 28
+      const jy = hn('fy' + it.id, 40) - 20 + Math.cos(i * 1.3) * 14
+      it.x = baseX + jx
+      it.y = y0 + jy
+      it.r = (hn(it.id, 85) - 42) / 8
+      it.priority = 32 - i
+      // slight size variance only
       if (it.k === 'paper') {
-        it.w = 196 + hn(it.id + 'w', 38)
-        it.h = 174 + hn(it.id + 'h', 42)
+        it.w = 200 + hn(it.id + 'w', 28)
+        it.h = 178 + hn(it.id + 'h', 30)
       } else if (it.k === 'media') {
-        it.w = 168 + hn(it.id + 'mw', 42)
-        it.h = 200 + hn(it.id + 'mh', 48)
+        it.w = 174 + hn(it.id + 'mw', 30)
+        it.h = 206 + hn(it.id + 'mh', 34)
       } else {
-        it.w = 148 + hn(it.id + 'sw', 24)
-        it.h = 140 + hn(it.id + 'sh', 20)
+        it.w = 152 + hn(it.id + 'sw', 18)
+        it.h = 144 + hn(it.id + 'sh', 16)
       }
     })
   }
 
-  placeBand(projects, 48, 40, 1500)
-  placeBand(mid, 300, 60, 1480)
-  placeBand(media, 560, 50, 1490)
+  // Clear strata gutters (hierarchy) + freeform x (ref win)
+  placeBand(projects, 44, 36, 1520)
+  placeBand(mid, 295, 56, 1500)
+  placeBand(media, 555, 48, 1510)
   return projects.concat(mid, media)
 }
+
 
 
 
