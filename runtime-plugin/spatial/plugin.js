@@ -81,7 +81,7 @@ function css() {
 }
 
 function usePanZoom() {
-  const [t, setT] = useState({ s: 0.82, x: 12, y: 16 })
+  const [t, setT] = useState({ s: 0.86, x: 20, y: 20 })
   const drag = useRef(null)
   const [pan, setPan] = useState(0)
   const zoomAt = useCallback((f, cx = 0, cy = 0) => {
@@ -110,7 +110,7 @@ function usePanZoom() {
   const end = useCallback(() => { drag.current = null; setPan(0) }, [])
   return {
     pan, s: t.s,
-    reset: () => setT({ s: 0.82, x: 12, y: 16 }),
+    reset: () => setT({ s: 0.86, x: 20, y: 20 }),
     zin: () => zoomAt(1.18), zout: () => zoomAt(1 / 1.18),
     stage: { onWheel, onPointerDown: onDown, onPointerMove: onMove, onPointerUp: end, onPointerCancel: end, onPointerLeave: end },
     world: { transform: 'translate(' + t.x + 'px,' + t.y + 'px) scale(' + t.s + ')' }
@@ -167,41 +167,41 @@ async function hermesProjects() {
 
 
 
+
 function layoutBands(items) {
-  const projects = items.filter(it => it.k === 'paper' && it.meta && it.meta.hermes)
-  const stickies = items.filter(it => it.k === 'sticky')
-  const media = items.filter(it => it.k === 'media')
-  const other = items.filter(it => !projects.includes(it) && !stickies.includes(it) && !media.includes(it))
-  // single calm mid sticky belt (ops) — no right float constellation
-  const pulse = stickies.slice(0, 8)
-  const placeBand = (arr, y0, x0, dx, yAmp) => {
-    const n = Math.max(arr.length, 1)
+  const projects = items.filter(it => it.k === 'paper' && it.meta && it.meta.hermes).slice(0, 6)
+  const stickies = items.filter(it => it.k === 'sticky').slice(0, 6)
+  const media = items.filter(it => it.k === 'media').slice(0, 5)
+  const other = items.filter(it => it.k === 'sticky' && it.tag === 'doctrine').slice(0, 1)
+  const mid = stickies.concat(other).slice(0, 6)
+  const placeBand = (arr, y0, x0, dx) => {
     arr.forEach((it, i) => {
-      const t = n === 1 ? 0 : i / (n - 1)
-      const jx = hn('bx' + it.id, 44) - 22
-      const jy = hn('by' + it.id, 32) - 16 + Math.sin(t * Math.PI) * yAmp
+      // airy freeform: larger dx gaps, gentle scatter, visible tilt — not denser packing
+      const jx = hn('bx' + it.id, 48) - 24 + (i % 2) * 16
+      const jy = hn('by' + it.id, 40) - 20
       it.x = x0 + i * dx + jx
       it.y = y0 + jy
-      it.r = (hn(it.id, 55) - 27) / 12
-      it.priority = (it.priority != null ? it.priority : 30) - i
+      it.r = (hn(it.id, 70) - 35) / 9 // ~±4deg
+      it.priority = 40 - i
       if (it.k === 'paper') {
-        it.w = 192 + hn(it.id + 'w', 28)
-        it.h = 172 + hn(it.id + 'h', 32)
+        it.w = 200 + hn(it.id + 'w', 24)
+        it.h = 178 + hn(it.id + 'h', 28)
       } else if (it.k === 'media') {
-        it.w = 168 + hn(it.id + 'mw', 32)
-        it.h = 198 + hn(it.id + 'mh', 36)
-      } else if (it.k === 'sticky') {
-        it.w = 148 + hn(it.id + 'sw', 20)
-        it.h = 140 + hn(it.id + 'sh', 18)
+        it.w = 176 + hn(it.id + 'mw', 28)
+        it.h = 208 + hn(it.id + 'mh', 32)
+      } else {
+        it.w = 152 + hn(it.id + 'sw', 16)
+        it.h = 144 + hn(it.id + 'sh', 14)
       }
     })
   }
-  // Full-width 3 bands — freeform *inside* band, gutters *between* bands
-  placeBand(projects, 48, 36, 250, 14)
-  placeBand(pulse.concat(other).slice(0, 8), 270, 56, 195, 18)
-  placeBand(media, 560, 48, 220, 16)
-  return projects.concat(pulse, other.slice(0, 2), media)
+  // calm 3-band with trailing whitespace (critics preferred air over pack)
+  placeBand(projects, 56, 48, 275)
+  placeBand(mid, 290, 72, 230)
+  placeBand(media, 580, 64, 255)
+  return projects.concat(mid, media)
 }
+
 
 
 
@@ -301,8 +301,7 @@ function buildHome(hp, companies, pcProjects, issues, prefs) {
   const fill = [
     { t: 'Kanban = execution', s: 'Spatial = scope + ops pulse', a: '#ffd60a' },
     { t: 'Paperclip owns runs', s: 'Read-only. Deep work in PC UI.', a: '#30d158' },
-    { t: 'Pins stay local', s: 'localStorage only — no second DB.', a: '#64d2ff' },
-    { t: '24/7 command', s: 'Projects + hot issues on one desk.', a: '#ff9f0a' }
+    { t: 'Pins stay local', s: 'localStorage only.', a: '#64d2ff' }
   ]
   fill.forEach((f, j) => {
     const i = items.length + j
@@ -313,7 +312,7 @@ function buildHome(hp, companies, pcProjects, issues, prefs) {
     })
   })
   // abstract media tiles pad empty field (reference place-memory)
-  for (let m = 0; m < 6; m++) {
+  for (let m = 0; m < 5; m++) {
     const i = items.length
     const sl0 = sl[i % sl.length] || { x: 900 + m * 40, y: 200 + m * 50 }
     items.push({
@@ -322,7 +321,7 @@ function buildHome(hp, companies, pcProjects, issues, prefs) {
       x: sl0.x, y: sl0.y, r: rot('m' + m), w: 176 + hn('mw'+m, 36), h: 210 + hn('mh'+m, 44), d: 0.4
     })
   }
-  return { w: 1680, h: 980, items: layoutBands(items) }
+  return { w: 1600, h: 960, items: layoutBands(items) }
 }
 
 function buildProject(meta, prefs) {
