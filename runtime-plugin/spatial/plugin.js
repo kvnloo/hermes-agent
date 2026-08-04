@@ -34,7 +34,7 @@ const CSS = [
 '.sp[data-t=d]{--bg:#1c1c1e;--paper:#2c2c2e;--card:#2c2c2e;--ink:#f5f5f7;--mut:#a1a1a6;--line:rgba(255,255,255,.1);--sh:0 1px 2px rgba(0,0,0,.4),0 16px 36px rgba(0,0,0,.5);--shh:0 4px 16px rgba(0,0,0,.55),0 28px 64px rgba(0,0,0,.55)}',
 '.sp-st{position:relative;flex:1 1 auto;min-height:0;height:100%;overflow:hidden;cursor:grab;touch-action:none;background:radial-gradient(100% 80% at 50% 40%,color-mix(in srgb,var(--paper) 90%,transparent),transparent 65%),var(--bg)}',
 '.sp-st.p{cursor:grabbing;user-select:none}.sp-st.p .sp-i{transition:none!important;animation:none!important}',
-'.sp-w{position:absolute;left:50%;top:48%;transform-origin:0 0;will-change:transform}',
+'.sp-w{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}',
 '.sp-i{position:absolute;transform-origin:center;transform:rotate(var(--r,0deg));animation:sp-in .55s var(--spr) both;transition:transform .32s var(--spr),filter .2s var(--ease);contain:layout paint}',
 '.sp-i:hover{z-index:40!important;filter:drop-shadow(0 18px 32px rgba(0,0,0,.16));transform:translateY(-12px) scale(1.04) rotate(var(--r,0deg))!important}',
 '.sp-i.on{z-index:50!important}@keyframes sp-in{from{opacity:0;transform:translateY(18px) scale(.9) rotate(var(--r,0deg))}to{opacity:1;transform:translateY(0) scale(1) rotate(var(--r,0deg))}}',
@@ -81,7 +81,7 @@ function css() {
 }
 
 function usePanZoom() {
-  const [t, setT] = useState({ s: 0.7, x: 140, y: 260 })
+  const [t, setT] = useState({ s: 0.72, x: 36, y: 28 })
   const drag = useRef(null)
   const [pan, setPan] = useState(0)
   const zoomAt = useCallback((f, cx = 0, cy = 0) => {
@@ -110,10 +110,10 @@ function usePanZoom() {
   const end = useCallback(() => { drag.current = null; setPan(0) }, [])
   return {
     pan, s: t.s,
-    reset: () => setT({ s: 0.7, x: 140, y: 260 }),
+    reset: () => setT({ s: 0.72, x: 36, y: 28 }),
     zin: () => zoomAt(1.18), zout: () => zoomAt(1 / 1.18),
     stage: { onWheel, onPointerDown: onDown, onPointerMove: onMove, onPointerUp: end, onPointerCancel: end, onPointerLeave: end },
-    world: { transform: 'translate(calc(-50% + ' + t.x + 'px), calc(-50% + ' + t.y + 'px)) scale(' + t.s + ')' }
+    world: { transform: 'translate(' + t.x + 'px,' + t.y + 'px) scale(' + t.s + ')' }
   }
 }
 
@@ -124,15 +124,15 @@ const AC = ['#0a84ff', '#30d158', '#bf5af2', '#ff9f0a', '#64d2ff', '#ff375f']
 
 function slots(n) {
   const o = [], C = [
-    { x: 160, y: 140, c: 4, r: 3, dx: 228, dy: 198 },
-    { x: 560, y: 100, c: 4, r: 3, dx: 236, dy: 206 },
-    { x: 220, y: 520, c: 5, r: 2, dx: 220, dy: 188 }
+    { x: 48, y: 56, c: 4, r: 3, dx: 210, dy: 188 },
+    { x: 420, y: 36, c: 4, r: 3, dx: 218, dy: 196 },
+    { x: 80, y: 420, c: 5, r: 3, dx: 200, dy: 178 }
   ]
   let i = 0
   for (const g of C) for (let r = 0; r < g.r; r++) for (let c = 0; c < g.c && i < n; c++, i++) {
-    o.push({ x: g.x + c * g.dx + hn('x' + i, 48) - 24 + (c % 2) * 20, y: g.y + r * g.dy + hn('y' + i, 40) - 20 })
+    o.push({ x: g.x + c * g.dx + hn('x' + i, 42) - 21 + (c % 2) * 18, y: g.y + r * g.dy + hn('y' + i, 36) - 18 })
   }
-  while (o.length < n) { const k = o.length; o.push({ x: 120 + (k % 5) * 220, y: 100 + ((k / 5) | 0) * 190 }) }
+  while (o.length < n) { const k = o.length; o.push({ x: 40 + (k % 5) * 200, y: 40 + ((k / 5) | 0) * 180 }) }
   return o
 }
 
@@ -238,7 +238,22 @@ function buildHome(hp, companies, pcProjects, issues, prefs) {
       meta: { company: co }
     })
   }
-  return { w: 1500, h: 1000, items }
+  // density fillers (doctrine stickies) so field is not sparse
+  const fill = [
+    { t: 'Kanban = execution', s: 'Spatial = scope + ops pulse', a: '#ffd60a' },
+    { t: 'Paperclip owns runs', s: 'Read-only here. Deep work in PC UI.', a: '#30d158' },
+    { t: 'Pins stay local', s: 'localStorage only — no second DB.', a: '#64d2ff' },
+    { t: '24/7 command', s: 'Projects + hot issues on one desk.', a: '#ff9f0a' }
+  ]
+  fill.forEach((f, j) => {
+    const i = items.length + j
+    const sl0 = sl[i % sl.length] || { x: 700 + j * 30, y: 700 }
+    items.push({
+      id: 'fill-' + j, k: 'sticky', t: f.t, s: f.s, tag: 'doctrine', a: f.a,
+      x: sl0.x + 40, y: sl0.y + 30, r: rot('f' + j), w: 160, h: 150, d: 0.35
+    })
+  })
+  return { w: 1600, h: 1100, items }
 }
 
 function buildProject(meta, prefs) {
@@ -355,7 +370,7 @@ function SpatialPage() {
         className: cn('sp-st', zp.pan && 'p'), 'data-testid': 'spatial-stage', ...zp.stage,
         children: _js('div', {
           className: 'sp-w',
-          style: { width: desk.w, height: desk.h, marginLeft: -desk.w / 2, marginTop: -desk.h / 2, ...zp.world },
+          style: { width: desk.w, height: desk.h, ...zp.world },
           children: shown.map(it =>
             _j('div', {
               key: it.id,
