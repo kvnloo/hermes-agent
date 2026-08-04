@@ -40,7 +40,7 @@ const CSS = [
 '.sp-i.on{z-index:50!important}@keyframes sp-in{from{opacity:.01;transform:translateY(14px) scale(.94) rotate(var(--r,0deg))}to{opacity:1;transform:translateY(0) scale(1) rotate(var(--r,0deg))}}',
 '.sp-p,.sp-c,.sp-n,.sp-x{width:100%;height:100%;border:0;border-radius:20px;text-align:left;cursor:pointer;color:inherit;position:relative;overflow:hidden}',
 '.sp-p,.sp-c{background:var(--card);border:1px solid var(--line);box-shadow:var(--sh);padding:0;display:flex;flex-direction:column}.sp-p{box-shadow:var(--sh),inset 0 1px 0 rgba(255,255,255,.9),inset 0 0 0 1px rgba(255,255,255,.25)}',
-'.sp-p::before,.sp-c::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.65),transparent 30%);z-index:1}',
+'.sp-p::before,.sp-c::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.78),transparent 32%),radial-gradient(120% 80% at 50% 0%,rgba(255,255,255,.35),transparent 50%);z-index:1}',
 '.sp[data-t=d] .sp-p::before,.sp[data-t=d] .sp-c::before{background:linear-gradient(180deg,rgba(255,255,255,.06),transparent 30%)}',
 '.sp-i:hover .sp-p,.sp-i:hover .sp-c,.sp-i:hover .sp-n,.sp-i:hover .sp-x{box-shadow:var(--shh)}',
 '.sp-p__h{height:44%;min-height:68px;background:linear-gradient(160deg,color-mix(in srgb,var(--a,#0a84ff) 32%,#fff) 0%,color-mix(in srgb,var(--a,#0a84ff) 10%,#f3f3f5) 48%,#eaeaee 100%),repeating-linear-gradient(-14deg,transparent,transparent 9px,rgba(0,0,0,.018) 9px,rgba(0,0,0,.018) 10px);border-bottom:1px solid var(--line)}',
@@ -81,7 +81,7 @@ function css() {
 }
 
 function usePanZoom() {
-  const [t, setT] = useState({ s: 0.88, x: 4, y: 4 })
+  const [t, setT] = useState({ s: 0.86, x: 8, y: 8 })
   const drag = useRef(null)
   const [pan, setPan] = useState(0)
   const zoomAt = useCallback((f, cx = 0, cy = 0) => {
@@ -110,7 +110,7 @@ function usePanZoom() {
   const end = useCallback(() => { drag.current = null; setPan(0) }, [])
   return {
     pan, s: t.s,
-    reset: () => setT({ s: 0.88, x: 4, y: 4 }),
+    reset: () => setT({ s: 0.86, x: 8, y: 8 }),
     zin: () => zoomAt(1.18), zout: () => zoomAt(1 / 1.18),
     stage: { onWheel, onPointerDown: onDown, onPointerMove: onMove, onPointerUp: end, onPointerCancel: end, onPointerLeave: end },
     world: { transform: 'translate(' + t.x + 'px,' + t.y + 'px) scale(' + t.s + ')' }
@@ -124,20 +124,25 @@ const AC = ['#0a84ff', '#30d158', '#bf5af2', '#ff9f0a', '#64d2ff', '#ff375f']
 const PATS = ['grad', 'grid', 'soft', 'split', 'grad']
 
 function slots(n) {
+  // Banded freeform: readable ops hierarchy with organic jitter (not a dump, not a rigid grid).
+  const bands = [
+    { y: 24, x0: 16, cols: 6, dx: 250, dy: 0, n: 6 },   // projects
+    { y: 230, x0: 40, cols: 5, dx: 220, dy: 0, n: 8 },  // hot stickies
+    { y: 430, x0: 80, cols: 5, dx: 240, dy: 0, n: 6 },  // doctrine / secondary
+    { y: 640, x0: 48, cols: 6, dx: 255, dy: 0, n: 8 }   // media arc
+  ]
   const out = []
-  const cols = 7
-  const dx = 248
-  const dy = 172
-  for (let i = 0; i < n; i++) {
-    const col = i % cols
-    const row = (i / cols) | 0
-    // organic: stagger columns, slight fan
-    const jx = hn('x' + i, 70) - 35 + (row % 2) * 42 - (col % 3) * 8
-    const jy = hn('y' + i, 60) - 30 + (col % 2) * 38
-    out.push({
-      x: 8 + col * dx + jx,
-      y: 8 + row * dy + jy
-    })
+  let i = 0
+  for (const b of bands) {
+    for (let c = 0; c < b.n && i < n; c++, i++) {
+      const jx = hn('x' + i, 56) - 28 + (c % 2) * 22
+      const jy = hn('y' + i, 48) - 24 + (c % 3) * 12
+      out.push({ x: b.x0 + c * b.dx + jx, y: b.y + jy })
+    }
+  }
+  while (out.length < n) {
+    const k = out.length
+    out.push({ x: 40 + (k % 6) * 240, y: 40 + ((k / 6) | 0) * 180 })
   }
   return out
 }
@@ -155,6 +160,30 @@ async function hermesProjects() {
     const p = await host.request('projects.list')
     return (p && p.projects) || []
   } catch { return [] }
+}
+
+
+function layoutBands(items) {
+  const projects = items.filter(it => it.k === 'paper' && it.meta && it.meta.hermes)
+  const stickies = items.filter(it => it.k === 'sticky')
+  const media = items.filter(it => it.k === 'media')
+  const other = items.filter(it => !projects.includes(it) && !stickies.includes(it) && !media.includes(it))
+  const place = (arr, y0, x0, dx) => {
+    arr.forEach((it, i) => {
+      const jx = hn('bx' + it.id, 50) - 25 + (i % 2) * 18
+      const jy = hn('by' + it.id, 40) - 20
+      it.x = x0 + i * dx + jx
+      it.y = y0 + jy
+      it.r = rot(it.id)
+    })
+  }
+  place(projects, 28, 20, 255)
+  place(stickies.slice(0, 8), 248, 48, 210)
+  place(other, 430, 100, 230)
+  place(media, 640, 40, 250)
+  // leftover stickies under media arc lightly
+  place(stickies.slice(8), 620, 900, 200)
+  return projects.concat(stickies, other, media)
 }
 
 function stop(e) { e.stopPropagation() }
@@ -250,14 +279,9 @@ function buildHome(hp, companies, pcProjects, issues, prefs) {
   // density fillers (doctrine stickies) so field is not sparse
   const fill = [
     { t: 'Kanban = execution', s: 'Spatial = scope + ops pulse', a: '#ffd60a' },
-    { t: 'Paperclip owns runs', s: 'Read-only here. Deep work in PC UI.', a: '#30d158' },
+    { t: 'Paperclip owns runs', s: 'Read-only. Deep work in PC UI.', a: '#30d158' },
     { t: 'Pins stay local', s: 'localStorage only — no second DB.', a: '#64d2ff' },
-    { t: '24/7 command', s: 'Projects + hot issues on one desk.', a: '#ff9f0a' },
-    { t: 'Refresh pulse', s: '45s soft poll. No second scheduler.', a: '#bf5af2' },
-    { t: 'Open full board', s: 'P / ↗ jumps to Paperclip UI.', a: '#ff375f' },
-    { t: 'Ship craft', s: 'Study refs. Original Hermes code.', a: '#ff6b6b' },
-    { t: 'Cool paper field', s: '#e8e8ea · multi-stop shadows', a: '#5ac8fa' },
-    { t: 'Peek not chrome', s: 'Desk is place-memory, not chat.', a: '#af52de' }
+    { t: '24/7 command', s: 'Projects + hot issues on one desk.', a: '#ff9f0a' }
   ]
   fill.forEach((f, j) => {
     const i = items.length + j
@@ -268,16 +292,16 @@ function buildHome(hp, companies, pcProjects, issues, prefs) {
     })
   })
   // abstract media tiles pad empty field (reference place-memory)
-  for (let m = 0; m < 8; m++) {
+  for (let m = 0; m < 5; m++) {
     const i = items.length
     const sl0 = sl[i % sl.length] || { x: 900 + m * 40, y: 200 + m * 50 }
     items.push({
-      id: 'med-' + m, k: 'media', t: ['Mood', 'Clip', 'Depth', 'Light', 'Chrome', 'Study', 'Board', 'Ref'][m],
+      id: 'med-' + m, k: 'media', t: ['Mood', 'Clip', 'Depth', 'Light', 'Chrome'][m],
       a: AC[m % AC.length], b: AC[(m + 2) % AC.length], pat: PATS[m % PATS.length],
       x: sl0.x, y: sl0.y, r: rot('m' + m), w: 176 + hn('mw'+m, 36), h: 210 + hn('mh'+m, 44), d: 0.4
     })
   }
-  return { w: 1700, h: 1200, items }
+  return { w: 1750, h: 1100, items: layoutBands(items) }
 }
 
 function buildProject(meta, prefs) {
