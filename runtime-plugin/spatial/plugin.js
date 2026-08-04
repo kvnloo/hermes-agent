@@ -35,11 +35,11 @@ const CSS = [
 '.sp-st{position:relative;flex:1 1 auto;min-height:0;height:100%;overflow:hidden;cursor:grab;touch-action:none;background:radial-gradient(100% 80% at 50% 40%,color-mix(in srgb,var(--paper) 90%,transparent),transparent 65%),var(--bg)}',
 '.sp-st.p{cursor:grabbing;user-select:none}.sp-st.p .sp-i{transition:none!important;animation:none!important}',
 '.sp-w{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}',
-'.sp-i{position:absolute;transform-origin:center;transform:rotate(var(--r,0deg));animation:sp-in .55s var(--spr) both;transition:transform .32s var(--spr),filter .2s var(--ease);contain:layout paint}',
+'.sp-i{position:absolute;transform-origin:center;transform:rotate(var(--r,0deg));animation:sp-in .45s var(--spr) both;animation-fill-mode:both;transition:transform .32s var(--spr),filter .2s var(--ease);contain:layout paint}',
 '.sp-i:hover{z-index:40!important;filter:drop-shadow(0 18px 32px rgba(0,0,0,.16));transform:translateY(-12px) scale(1.04) rotate(var(--r,0deg))!important}',
-'.sp-i.on{z-index:50!important}@keyframes sp-in{from{opacity:0;transform:translateY(18px) scale(.9) rotate(var(--r,0deg))}to{opacity:1;transform:translateY(0) scale(1) rotate(var(--r,0deg))}}',
+'.sp-i.on{z-index:50!important}@keyframes sp-in{from{opacity:.01;transform:translateY(14px) scale(.94) rotate(var(--r,0deg))}to{opacity:1;transform:translateY(0) scale(1) rotate(var(--r,0deg))}}',
 '.sp-p,.sp-c,.sp-n,.sp-x{width:100%;height:100%;border:0;border-radius:20px;text-align:left;cursor:pointer;color:inherit;position:relative;overflow:hidden}',
-'.sp-p,.sp-c{background:var(--card);border:1px solid var(--line);box-shadow:var(--sh);padding:0;display:flex;flex-direction:column}',
+'.sp-p,.sp-c{background:var(--card);border:1px solid var(--line);box-shadow:var(--sh);padding:0;display:flex;flex-direction:column}.sp-p{box-shadow:var(--sh),inset 0 1px 0 rgba(255,255,255,.85)}',
 '.sp-p::before,.sp-c::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.65),transparent 30%);z-index:1}',
 '.sp[data-t=d] .sp-p::before,.sp[data-t=d] .sp-c::before{background:linear-gradient(180deg,rgba(255,255,255,.06),transparent 30%)}',
 '.sp-i:hover .sp-p,.sp-i:hover .sp-c,.sp-i:hover .sp-n,.sp-i:hover .sp-x{box-shadow:var(--shh)}',
@@ -81,7 +81,7 @@ function css() {
 }
 
 function usePanZoom() {
-  const [t, setT] = useState({ s: 0.72, x: 36, y: 28 })
+  const [t, setT] = useState({ s: 0.64, x: 28, y: 20 })
   const drag = useRef(null)
   const [pan, setPan] = useState(0)
   const zoomAt = useCallback((f, cx = 0, cy = 0) => {
@@ -110,7 +110,7 @@ function usePanZoom() {
   const end = useCallback(() => { drag.current = null; setPan(0) }, [])
   return {
     pan, s: t.s,
-    reset: () => setT({ s: 0.72, x: 36, y: 28 }),
+    reset: () => setT({ s: 0.64, x: 28, y: 20 }),
     zin: () => zoomAt(1.18), zout: () => zoomAt(1 / 1.18),
     stage: { onWheel, onPointerDown: onDown, onPointerMove: onMove, onPointerUp: end, onPointerCancel: end, onPointerLeave: end },
     world: { transform: 'translate(' + t.x + 'px,' + t.y + 'px) scale(' + t.s + ')' }
@@ -124,15 +124,16 @@ const AC = ['#0a84ff', '#30d158', '#bf5af2', '#ff9f0a', '#64d2ff', '#ff375f']
 
 function slots(n) {
   const o = [], C = [
-    { x: 48, y: 56, c: 4, r: 3, dx: 210, dy: 188 },
-    { x: 420, y: 36, c: 4, r: 3, dx: 218, dy: 196 },
-    { x: 80, y: 420, c: 5, r: 3, dx: 200, dy: 178 }
+    { x: 40, y: 40, c: 5, r: 3, dx: 195, dy: 175 },
+    { x: 520, y: 70, c: 4, r: 3, dx: 205, dy: 185 },
+    { x: 180, y: 420, c: 5, r: 2, dx: 200, dy: 170 },
+    { x: 780, y: 380, c: 3, r: 3, dx: 210, dy: 180 }
   ]
   let i = 0
   for (const g of C) for (let r = 0; r < g.r; r++) for (let c = 0; c < g.c && i < n; c++, i++) {
-    o.push({ x: g.x + c * g.dx + hn('x' + i, 42) - 21 + (c % 2) * 18, y: g.y + r * g.dy + hn('y' + i, 36) - 18 })
+    o.push({ x: g.x + c * g.dx + hn('x' + i, 46) - 23 + (c % 2) * 22 - (r % 2) * 14, y: g.y + r * g.dy + hn('y' + i, 40) - 20 })
   }
-  while (o.length < n) { const k = o.length; o.push({ x: 40 + (k % 5) * 200, y: 40 + ((k / 5) | 0) * 180 }) }
+  while (o.length < n) { const k = o.length; o.push({ x: 30 + (k % 6) * 190, y: 30 + ((k / 6) | 0) * 170 }) }
   return o
 }
 
@@ -243,7 +244,9 @@ function buildHome(hp, companies, pcProjects, issues, prefs) {
     { t: 'Kanban = execution', s: 'Spatial = scope + ops pulse', a: '#ffd60a' },
     { t: 'Paperclip owns runs', s: 'Read-only here. Deep work in PC UI.', a: '#30d158' },
     { t: 'Pins stay local', s: 'localStorage only — no second DB.', a: '#64d2ff' },
-    { t: '24/7 command', s: 'Projects + hot issues on one desk.', a: '#ff9f0a' }
+    { t: '24/7 command', s: 'Projects + hot issues on one desk.', a: '#ff9f0a' },
+    { t: 'Refresh pulse', s: '45s soft poll. No second scheduler.', a: '#bf5af2' },
+    { t: 'Open full board', s: 'P / ↗ jumps to Paperclip UI.', a: '#ff375f' }
   ]
   fill.forEach((f, j) => {
     const i = items.length + j
