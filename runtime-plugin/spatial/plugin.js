@@ -25,7 +25,7 @@ const ID = 'spatial'
 const CSS = `
 .spatial-desk{--spatial-canvas:#e6e6e8;--spatial-paper:#f0f0f2;--spatial-card:#ffffff;--spatial-card-raised:#ffffff;--spatial-folder:#f5f5f7;--spatial-text:#1c1c1e;--spatial-muted:#636366;--spatial-dim:#8e8e93;--spatial-hair:rgba(0,0,0,.07);--spatial-hair-dim:rgba(0,0,0,.045);--spatial-accent:#0a84ff;--spatial-shadow-rest:0 .5px 1px rgba(0,0,0,.04),0 2px 6px rgba(0,0,0,.04),0 12px 28px rgba(0,0,0,.07),0 28px 56px rgba(0,0,0,.05);--spatial-shadow-hover:0 1px 2px rgba(0,0,0,.05),0 8px 18px rgba(0,0,0,.08),0 24px 48px rgba(0,0,0,.12),0 40px 72px rgba(0,0,0,.08);--spatial-shadow-folder:0 1px 2px rgba(0,0,0,.04),0 10px 24px rgba(0,0,0,.08);--spatial-radius-card:18px;--spatial-radius-folder:20px;--spatial-spring:cubic-bezier(.34,1.45,.64,1);--spatial-ease:cubic-bezier(.22,1,.36,1);position:relative;display:flex;min-height:0;flex:1;flex-direction:column;overflow:hidden;color:var(--spatial-text);background:var(--spatial-canvas);font-family:ui-sans-serif,system-ui,-apple-system,"SF Pro Text","Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
 .spatial-desk[data-theme=dark]{--spatial-canvas:#1c1c1e;--spatial-paper:#2c2c2e;--spatial-card:#2c2c2e;--spatial-card-raised:#3a3a3c;--spatial-folder:#2c2c2e;--spatial-text:#f5f5f7;--spatial-muted:#a1a1a6;--spatial-dim:#6c6c70;--spatial-hair:rgba(255,255,255,.1);--spatial-hair-dim:rgba(255,255,255,.06);--spatial-shadow-rest:0 1px 1px rgba(0,0,0,.35),0 8px 18px rgba(0,0,0,.4),0 22px 40px rgba(0,0,0,.35);--spatial-shadow-hover:0 2px 4px rgba(0,0,0,.45),0 16px 32px rgba(0,0,0,.5),0 36px 64px rgba(0,0,0,.42);--spatial-shadow-folder:0 6px 16px rgba(0,0,0,.45)}
-.spatial-desk__stage{position:relative;min-height:0;flex:1;overflow:auto;cursor:grab;scrollbar-width:none;overscroll-behavior:contain;touch-action:pan-x pan-y;background:
+.spatial-desk__stage{position:relative;min-height:0;flex:1;overflow:auto;padding-bottom:88px;cursor:grab;scrollbar-width:none;overscroll-behavior:contain;touch-action:pan-x pan-y;background:
   radial-gradient(90% 70% at 50% 42%,color-mix(in srgb,var(--spatial-paper) 92%,transparent) 0%,transparent 70%),
   radial-gradient(40% 30% at 18% 80%,rgba(10,132,255,.03),transparent 60%),
   var(--spatial-canvas)}
@@ -56,6 +56,7 @@ const CSS = `
 .spatial-card--sticky::before{background:linear-gradient(180deg,rgba(255,255,255,.35),transparent 40%)}
 .spatial-card__title{position:relative;z-index:1;font-size:14px;font-weight:600;line-height:1.28;letter-spacing:-.022em}
 .spatial-card--sticky .spatial-card__title{font-size:13px;font-weight:650}
+.spatial-card__body{position:relative;z-index:1;display:-webkit-box;overflow:hidden;color:var(--spatial-muted);font-size:11.5px;line-height:1.45;-webkit-box-orient:vertical;-webkit-line-clamp:5;white-space:pre-wrap}
 .spatial-card__summary{position:relative;z-index:1;display:-webkit-box;overflow:hidden;color:var(--spatial-muted);font-size:12px;line-height:1.45;-webkit-box-orient:vertical;-webkit-line-clamp:4}
 .spatial-card__meta{position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:5px;margin-top:auto}
 .spatial-chip{padding:2px 7px;border:1px solid var(--spatial-hair-dim);border-radius:999px;color:var(--spatial-dim);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:8.5px;letter-spacing:.04em;text-transform:uppercase;background:color-mix(in srgb,var(--spatial-paper) 55%,transparent)}
@@ -143,7 +144,7 @@ function layoutDesk(docs, roots) {
   const ranked = docs
     .map(doc => {
       const cls = classifyDoc(doc.rel || doc.name)
-      return { doc, ...cls, title: titleFromPath(doc.name), summary: doc.rel || doc.path }
+      return { doc, ...cls, title: titleFromPath(doc.name), summary: doc.body || doc.rel || doc.path }
     })
     .sort((a, b) => b.priority - a.priority || a.title.localeCompare(b.title))
 
@@ -259,19 +260,32 @@ function cardCount(desk) {
 }
 
 function seedDesk() {
+  const bodies = {
+    'PRD.md': 'Spatial is the project-knowledge desk.\nKanban keeps execution; this surface holds PRD, FRD, roadmap, and decisions.\nRank by priority. Lay out only the most important papers first.',
+    'FRD.md': 'Functional requirements for desk scan, ranking, piles, pan/zoom, and paper open.\nMust load as a Desktop plugin without SyntaxError.',
+    'ROADMAP.md': 'Wave 0 — load + materials.\nWave 1 — curator + freeform memory.\nWave 2 — motion parity with Spatial springs.',
+    'ADR-001-spatial-desk.md': 'Decision: Spatial owns scope docs as collaborative paper.\nNot a tldraw fork. Original Hermes code.',
+    'ADR-002-kanban-split.md': 'Kanban = execution state.\nSpatial = project scope projection.',
+    'interaction.md': 'Spring hover lift, folder fan-out, grab-pan stage, frosted pill chrome.\nStop propagation on cards so pan does not steal clicks.',
+    'materials.md': 'Cool canvas #e6e6e8, radius ~18–20px, multi-stop soft shadows, inset highlight, sticky full-fill.',
+    'timeline.md': 'Milestones track load gate → fidelity slices → blind win vs references.',
+    'AGENTS.md': 'Agents and humans curate the desk together.\nScan active project roots on open.',
+    'README.md': 'Hermes Spatial desk — complementary to Kanban.\nOpen via sidebar or ⌘⌥S.',
+    'misc.md': 'Long-tail notes land collapsed until promoted.'
+  }
   return layoutDesk(
     [
-      { path: 'docs/PRD.md', name: 'PRD.md', rel: 'docs/PRD.md' },
-      { path: 'docs/FRD.md', name: 'FRD.md', rel: 'docs/FRD.md' },
-      { path: 'docs/ROADMAP.md', name: 'ROADMAP.md', rel: 'docs/ROADMAP.md' },
-      { path: 'docs/decisions/ADR-001-spatial-desk.md', name: 'ADR-001-spatial-desk.md', rel: 'docs/decisions/ADR-001-spatial-desk.md' },
-      { path: 'docs/decisions/ADR-002-kanban-split.md', name: 'ADR-002-kanban-split.md', rel: 'docs/decisions/ADR-002-kanban-split.md' },
-      { path: 'docs/specs/interaction.md', name: 'interaction.md', rel: 'docs/specs/interaction.md' },
-      { path: 'docs/specs/materials.md', name: 'materials.md', rel: 'docs/specs/materials.md' },
-      { path: 'docs/timeline.md', name: 'timeline.md', rel: 'docs/timeline.md' },
-      { path: 'AGENTS.md', name: 'AGENTS.md', rel: 'AGENTS.md' },
-      { path: 'README.md', name: 'README.md', rel: 'README.md' },
-      { path: 'docs/notes/misc.md', name: 'misc.md', rel: 'docs/notes/misc.md' }
+      { path: 'docs/PRD.md', name: 'PRD.md', rel: 'docs/PRD.md', body: bodies['PRD.md'] },
+      { path: 'docs/FRD.md', name: 'FRD.md', rel: 'docs/FRD.md', body: bodies['FRD.md'] },
+      { path: 'docs/ROADMAP.md', name: 'ROADMAP.md', rel: 'docs/ROADMAP.md', body: bodies['ROADMAP.md'] },
+      { path: 'docs/decisions/ADR-001-spatial-desk.md', name: 'ADR-001-spatial-desk.md', rel: 'docs/decisions/ADR-001-spatial-desk.md', body: bodies['ADR-001-spatial-desk.md'] },
+      { path: 'docs/decisions/ADR-002-kanban-split.md', name: 'ADR-002-kanban-split.md', rel: 'docs/decisions/ADR-002-kanban-split.md', body: bodies['ADR-002-kanban-split.md'] },
+      { path: 'docs/specs/interaction.md', name: 'interaction.md', rel: 'docs/specs/interaction.md', body: bodies['interaction.md'] },
+      { path: 'docs/specs/materials.md', name: 'materials.md', rel: 'docs/specs/materials.md', body: bodies['materials.md'] },
+      { path: 'docs/timeline.md', name: 'timeline.md', rel: 'docs/timeline.md', body: bodies['timeline.md'] },
+      { path: 'AGENTS.md', name: 'AGENTS.md', rel: 'AGENTS.md', body: bodies['AGENTS.md'] },
+      { path: 'README.md', name: 'README.md', rel: 'README.md', body: bodies['README.md'] },
+      { path: 'docs/notes/misc.md', name: 'misc.md', rel: 'docs/notes/misc.md', body: bodies['misc.md'] }
     ],
     ['(seed)']
   )
@@ -335,6 +349,19 @@ async function listDir(path) {
   }
 }
 
+
+async function readPreview(path) {
+  const b = desktop()
+  if (!b || typeof b.readFileText !== 'function') return ''
+  try {
+    const txt = await b.readFileText(path)
+    if (!txt) return ''
+    return String(txt).split(/\r?\n/).filter(l => l.trim()).slice(0, 5).join('\n').slice(0, 360)
+  } catch {
+    return ''
+  }
+}
+
 async function walkDocs(root, maxDepth, maxFiles) {
   maxDepth = maxDepth == null ? 3 : maxDepth
   maxFiles = maxFiles == null ? 80 : maxFiles
@@ -385,7 +412,17 @@ async function resolveScanRoots(cwd, projectPaths) {
 async function scanProjectDocs(roots) {
   const all = []
   for (const root of roots) all.push(...(await walkDocs(root)))
-  return [...new Map(all.map(d => [d.path, d])).values()]
+  const uniq = [...new Map(all.map(d => [d.path, d])).values()]
+  // Preview bodies for highest-likely papers (cheap, depth-capped)
+  const ranked = uniq
+    .map(d => ({ d, p: classifyDoc(d.rel || d.name).priority }))
+    .sort((a, b) => b.p - a.p)
+    .slice(0, 14)
+  for (const { d } of ranked) {
+    const body = await readPreview(d.path)
+    if (body) d.body = body
+  }
+  return uniq
 }
 
 async function projectPaths() {
@@ -569,7 +606,7 @@ function SpatialDeskPage() {
                       children: [
                         _j('div', { className: 'spatial-card__title', children: card.title }),
                         card.kind !== 'sticky' &&
-                          _j('div', { className: 'spatial-card__summary', children: card.summary }),
+                          _j('div', { className: card.summary && card.summary.includes('\n') ? 'spatial-card__body' : 'spatial-card__summary', children: card.summary }),
                         _js('div', {
                           className: 'spatial-card__meta',
                           children: [

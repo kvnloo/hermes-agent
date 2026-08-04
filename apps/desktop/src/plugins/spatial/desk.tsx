@@ -97,7 +97,11 @@ function PaperCard({
       whileTap={reduceMotion ? undefined : { scale: 0.985 }}
     >
       <div className="spatial-card__title">{card.title}</div>
-      {card.kind !== 'sticky' && <div className="spatial-card__summary">{card.summary}</div>}
+      {card.kind !== 'sticky' && (
+        <div className={card.summary?.includes('\n') ? 'spatial-card__body' : 'spatial-card__summary'}>
+          {card.summary}
+        </div>
+      )}
       <div className="spatial-card__meta">
         <span className="spatial-chip">{card.type}</span>
         <span className="spatial-chip" style={{ color: card.accent, borderColor: `${card.accent}55` }}>
