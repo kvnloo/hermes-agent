@@ -52,7 +52,7 @@ const CSS = [
 '.sp-ch{padding:2px 7px;border-radius:999px;border:1px solid var(--line);font:500 8px/1.2 ui-monospace,Menlo,monospace;color:var(--mut);text-transform:uppercase;letter-spacing:.03em}',
 '.sp-n{padding:14px;display:flex;flex-direction:column;justify-content:space-between;color:#1c1c1e;background:linear-gradient(155deg,color-mix(in srgb,var(--a,#ffd60a) 94%,#fff),color-mix(in srgb,var(--a,#ffd60a) 72%,#efe6c0));box-shadow:0 1px 1px rgba(0,0,0,.06),0 10px 22px color-mix(in srgb,var(--a,#ffd60a) 32%,transparent),0 24px 48px rgba(0,0,0,.08),inset 0 1px 0 rgba(255,255,255,.55);border-radius:14px}',
 '.sp[data-t=d] .sp-n{color:#f5f5f7;background:color-mix(in srgb,var(--a,#ffd60a) 40%,#2c2c2e)}',
-'.sp-x{background:#0e0e10;box-shadow:var(--sh)}',
+'.sp-x{background:#0e0e10;box-shadow:var(--sh),inset 0 0 0 1px rgba(255,255,255,.12);border-radius:20px}',
 '.sp-x__a{position:absolute;inset:0;background:radial-gradient(90% 80% at 22% 18%,color-mix(in srgb,var(--a,#0a84ff) 75%,transparent),transparent 52%),radial-gradient(80% 70% at 82% 78%,color-mix(in srgb,var(--b,#bf5af2) 55%,transparent),transparent 48%),radial-gradient(circle at 70% 30%,rgba(255,255,255,.12),transparent 28%),linear-gradient(150deg,#1c1c22,#0a0a0c 60%,#121218)}','.sp-x__a[data-pat=grid]{background:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px) 0 0/26px 26px,linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px) 0 0/26px 26px,radial-gradient(60% 50% at 70% 30%,color-mix(in srgb,var(--a) 55%,transparent),transparent 60%),#111114}','.sp-x__a[data-pat=soft]{background:radial-gradient(70% 60% at 40% 40%,color-mix(in srgb,var(--a) 42%,#fff),transparent 60%),linear-gradient(180deg,#f4f4f6,#d8d8de)}','.sp-x__a[data-pat=split]{background:linear-gradient(105deg,color-mix(in srgb,var(--a) 82%,#111) 0 42%,#0e0e12 42% 100%)}',
 '.sp-x__c{position:absolute;left:0;right:0;bottom:0;z-index:1;padding:24px 12px 12px;background:linear-gradient(180deg,transparent,rgba(0,0,0,.72));color:#f5f5f7;font-weight:650;font-size:12px}',
 '.sp-tb{position:absolute;bottom:22px;left:50%;z-index:60;transform:translateX(-50%);display:flex;gap:2px;align-items:center;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(18,18,20,.82);color:#f5f5f7;box-shadow:0 12px 40px rgba(0,0,0,.36),inset 0 1px 0 rgba(255,255,255,.1);backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%)}',
@@ -81,7 +81,7 @@ function css() {
 }
 
 function usePanZoom() {
-  const [t, setT] = useState({ s: 0.86, x: 20, y: 20 })
+  const [t, setT] = useState({ s: 0.9, x: 16, y: 8 })
   const drag = useRef(null)
   const [pan, setPan] = useState(0)
   const zoomAt = useCallback((f, cx = 0, cy = 0) => {
@@ -110,7 +110,7 @@ function usePanZoom() {
   const end = useCallback(() => { drag.current = null; setPan(0) }, [])
   return {
     pan, s: t.s,
-    reset: () => setT({ s: 0.86, x: 20, y: 20 }),
+    reset: () => setT({ s: 0.9, x: 16, y: 8 }),
     zin: () => zoomAt(1.18), zout: () => zoomAt(1 / 1.18),
     stage: { onWheel, onPointerDown: onDown, onPointerMove: onMove, onPointerUp: end, onPointerCancel: end, onPointerLeave: end },
     world: { transform: 'translate(' + t.x + 'px,' + t.y + 'px) scale(' + t.s + ')' }
@@ -168,39 +168,42 @@ async function hermesProjects() {
 
 
 
+
 function layoutBands(items) {
   const projects = items.filter(it => it.k === 'paper' && it.meta && it.meta.hermes).slice(0, 6)
   const stickies = items.filter(it => it.k === 'sticky').slice(0, 6)
   const media = items.filter(it => it.k === 'media').slice(0, 5)
-  const other = items.filter(it => it.k === 'sticky' && it.tag === 'doctrine').slice(0, 1)
+  const other = items.filter(it => it.tag === 'doctrine').slice(0, 1)
   const mid = stickies.concat(other).slice(0, 6)
   const placeBand = (arr, y0, x0, dx) => {
     arr.forEach((it, i) => {
-      // airy freeform: larger dx gaps, gentle scatter, visible tilt — not denser packing
-      const jx = hn('bx' + it.id, 48) - 24 + (i % 2) * 16
-      const jy = hn('by' + it.id, 40) - 20
-      it.x = x0 + i * dx + jx
+      const jx = hn('bx' + it.id, 56) - 28 + (i % 2) * 18
+      const jy = hn('by' + it.id, 44) - 22
+      // irregular x: not strict grid — freeform within band
+      const drift = Math.sin(i * 1.1 + hn(it.id, 7)) * 22
+      it.x = x0 + i * dx + jx + drift
       it.y = y0 + jy
-      it.r = (hn(it.id, 70) - 35) / 9 // ~±4deg
+      it.r = (hn(it.id, 80) - 40) / 8 // ~±5deg
       it.priority = 40 - i
       if (it.k === 'paper') {
-        it.w = 200 + hn(it.id + 'w', 24)
-        it.h = 178 + hn(it.id + 'h', 28)
+        it.w = 204 + hn(it.id + 'w', 30)
+        it.h = 182 + hn(it.id + 'h', 34)
       } else if (it.k === 'media') {
-        it.w = 176 + hn(it.id + 'mw', 28)
-        it.h = 208 + hn(it.id + 'mh', 32)
+        it.w = 180 + hn(it.id + 'mw', 34)
+        it.h = 214 + hn(it.id + 'mh', 40)
       } else {
-        it.w = 152 + hn(it.id + 'sw', 16)
-        it.h = 144 + hn(it.id + 'sh', 14)
+        it.w = 156 + hn(it.id + 'sw', 18)
+        it.h = 148 + hn(it.id + 'sh', 16)
       }
     })
   }
-  // calm 3-band with trailing whitespace (critics preferred air over pack)
-  placeBand(projects, 56, 48, 275)
-  placeBand(mid, 290, 72, 230)
-  placeBand(media, 580, 64, 255)
+  // Vertical fill: bands at ~12% / 40% / 68% of ~900 world — air between, less dead floor
+  placeBand(projects, 36, 40, 268)
+  placeBand(mid, 300, 60, 225)
+  placeBand(media, 560, 50, 248)
   return projects.concat(mid, media)
 }
+
 
 
 
@@ -321,7 +324,7 @@ function buildHome(hp, companies, pcProjects, issues, prefs) {
       x: sl0.x, y: sl0.y, r: rot('m' + m), w: 176 + hn('mw'+m, 36), h: 210 + hn('mh'+m, 44), d: 0.4
     })
   }
-  return { w: 1600, h: 960, items: layoutBands(items) }
+  return { w: 1650, h: 900, items: layoutBands(items) }
 }
 
 function buildProject(meta, prefs) {
