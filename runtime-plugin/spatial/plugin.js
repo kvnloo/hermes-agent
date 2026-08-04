@@ -81,7 +81,7 @@ function css() {
 }
 
 function usePanZoom() {
-  const [t, setT] = useState({ s: 0.78, x: 6, y: 8 })
+  const [t, setT] = useState({ s: 0.72, x: 4, y: 6 })
   const drag = useRef(null)
   const [pan, setPan] = useState(0)
   const zoomAt = useCallback((f, cx = 0, cy = 0) => {
@@ -110,7 +110,7 @@ function usePanZoom() {
   const end = useCallback(() => { drag.current = null; setPan(0) }, [])
   return {
     pan, s: t.s,
-    reset: () => setT({ s: 0.78, x: 6, y: 8 }),
+    reset: () => setT({ s: 0.72, x: 4, y: 6 }),
     zin: () => zoomAt(1.18), zout: () => zoomAt(1 / 1.18),
     stage: { onWheel, onPointerDown: onDown, onPointerMove: onMove, onPointerUp: end, onPointerCancel: end, onPointerLeave: end },
     world: { transform: 'translate(' + t.x + 'px,' + t.y + 'px) scale(' + t.s + ')' }
@@ -196,7 +196,7 @@ function layoutBands(items) {
   place(medMain, 620, 40, 250)
   // right freeform constellation (density without breaking left ops scan)
   medSide.forEach((it, i) => {
-    it.x = 1180 + hn('sx' + it.id, 80) + (i % 2) * 90
+    it.x = 1380 + hn('sx' + it.id, 90) + (i % 2) * 100
     it.y = 120 + i * 150 + hn('sy' + it.id, 40)
     it.r = (hn(it.id, 70) - 35) / 9
     it.w = 170 + hn(it.id + 'mw', 40)
