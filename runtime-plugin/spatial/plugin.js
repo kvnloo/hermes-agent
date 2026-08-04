@@ -81,7 +81,7 @@ function css() {
 }
 
 function usePanZoom() {
-  const [t, setT] = useState({ s: 0.52, x: 10, y: 12 })
+  const [t, setT] = useState({ s: 0.48, x: 8, y: 10 })
   const drag = useRef(null)
   const [pan, setPan] = useState(0)
   const zoomAt = useCallback((f, cx = 0, cy = 0) => {
@@ -110,7 +110,7 @@ function usePanZoom() {
   const end = useCallback(() => { drag.current = null; setPan(0) }, [])
   return {
     pan, s: t.s,
-    reset: () => setT({ s: 0.52, x: 10, y: 12 }),
+    reset: () => setT({ s: 0.48, x: 8, y: 10 }),
     zin: () => zoomAt(1.18), zout: () => zoomAt(1 / 1.18),
     stage: { onWheel, onPointerDown: onDown, onPointerMove: onMove, onPointerUp: end, onPointerCancel: end, onPointerLeave: end },
     world: { transform: 'translate(' + t.x + 'px,' + t.y + 'px) scale(' + t.s + ')' }
@@ -123,17 +123,15 @@ const ST = ['#ffd60a', '#30d158', '#64d2ff', '#ff9f0a', '#bf5af2', '#ff375f']
 const AC = ['#0a84ff', '#30d158', '#bf5af2', '#ff9f0a', '#64d2ff', '#ff375f']
 
 function slots(n) {
-  // Freeform positions spanning visible stage at scale≈0.55 (sidebar ~240px).
   const out = []
   for (let i = 0; i < n; i++) {
-    // 5x4-ish constellation with organic jitter covering full desk
-    const col = i % 5
-    const row = (i / 5) | 0
-    const jx = hn('x' + i, 80) - 40 + (row % 2) * 36
-    const jy = hn('y' + i, 70) - 35 + (col % 2) * 28
+    const col = i % 6
+    const row = (i / 6) | 0
+    const jx = hn('x' + i, 72) - 36 + (row % 2) * 40
+    const jy = hn('y' + i, 64) - 32 + (col % 2) * 30
     out.push({
-      x: 40 + col * 320 + jx,
-      y: 30 + row * 210 + jy
+      x: 24 + col * 280 + jx,
+      y: 20 + row * 195 + jy
     })
   }
   return out
@@ -185,7 +183,7 @@ function Card({ it, on }) {
 
 function buildHome(hp, companies, pcProjects, issues, prefs) {
   const items = []
-  const sl = slots(Math.max(hp.length + 8, 16))
+  const sl = slots(Math.max(hp.length + 24, 36))
   const byPath = new Map()
   for (const p of pcProjects || []) {
     const cwd = p.codebase && (p.codebase.effectiveLocalFolder || p.codebase.localFolder)
@@ -277,7 +275,7 @@ function buildProject(meta, prefs) {
     const rank = s => (/in_progress/.test(s) ? 3 : /blocked|in_review/.test(s) ? 2 : /todo|backlog/.test(s) ? 1 : 0)
     return rank(b.status || '') - rank(a.status || '')
   })
-  const sl = slots(Math.max(iss.length + 4, 10))
+  const sl = slots(Math.max(iss.length + 12, 24))
   iss.slice(0, 18).forEach((x, i) => {
     const hot = /in_progress|blocked|in_review/i.test(x.status || '')
     items.push({
