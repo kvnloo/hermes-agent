@@ -35,11 +35,11 @@ const CSS = [
 '.sp-st{position:relative;flex:1 1 auto;min-height:0;height:100%;overflow:hidden;cursor:grab;touch-action:none;background:radial-gradient(85% 65% at 50% 40%,#f3f3f5 0%,transparent 58%),radial-gradient(120% 100% at 50% 100%,rgba(0,0,0,.04),transparent 42%),radial-gradient(40% 34% at 14% 76%,rgba(10,132,255,.04),transparent 55%),radial-gradient(36% 30% at 86% 16%,rgba(191,90,242,.035),transparent 50%),var(--bg)}',
 '.sp-st.p{cursor:grabbing;user-select:none}.sp-st.p .sp-i{transition:none!important;animation:none!important}',
 '.sp-w{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}',
-'.sp-i{position:absolute;transform-origin:center;transform:rotate(var(--r,0deg));animation:sp-in .45s var(--spr) both;animation-fill-mode:both;transition:transform .32s var(--spr),filter .2s var(--ease);contain:layout paint;filter:drop-shadow(0 10px 18px rgba(0,0,0,.08))}',
+'.sp-i{position:absolute;transform-origin:center;transform:rotate(var(--r,0deg));animation:sp-in .45s var(--spr) both;animation-fill-mode:both;transition:transform .32s var(--spr),filter .2s var(--ease);contain:layout paint;filter:drop-shadow(0 12px 22px rgba(0,0,0,.11))}',
 '.sp-i:hover{z-index:40!important;filter:drop-shadow(0 22px 40px rgba(0,0,0,.18));transform:translateY(-14px) scale(1.05) rotate(var(--r,0deg))!important}',
 '.sp-i.on{z-index:50!important}@keyframes sp-in{from{opacity:.01;transform:translateY(14px) scale(.94) rotate(var(--r,0deg))}to{opacity:1;transform:translateY(0) scale(1) rotate(var(--r,0deg))}}',
 '.sp-p,.sp-c,.sp-n,.sp-x{width:100%;height:100%;border:0;border-radius:20px;text-align:left;cursor:pointer;color:inherit;position:relative;overflow:hidden}',
-'.sp-p,.sp-c{background:var(--card);border:1px solid rgba(0,0,0,.06);box-shadow:var(--sh);padding:0;display:flex;flex-direction:column}.sp-p{box-shadow:var(--sh),0 1px 0 rgba(0,0,0,.03),inset 0 1px 0 rgba(255,255,255,.92),inset 0 0 0 1px rgba(255,255,255,.3)}',
+'.sp-p,.sp-c{background:linear-gradient(180deg,#fff 0%,#fafafa 70%,#f3f3f5 100%);border:1px solid rgba(0,0,0,.07);box-shadow:var(--sh);padding:0;display:flex;flex-direction:column}.sp-p{box-shadow:var(--sh),0 1px 0 rgba(0,0,0,.04),inset 0 1px 0 rgba(255,255,255,.95),inset 0 -1px 0 rgba(0,0,0,.03)}',
 '.sp-p::before,.sp-c::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.78),transparent 32%),radial-gradient(120% 80% at 50% 0%,rgba(255,255,255,.35),transparent 50%);z-index:1}',
 '.sp[data-t=d] .sp-p::before,.sp[data-t=d] .sp-c::before{background:linear-gradient(180deg,rgba(255,255,255,.06),transparent 30%)}',
 '.sp-i:hover .sp-p,.sp-i:hover .sp-c,.sp-i:hover .sp-n,.sp-i:hover .sp-x{box-shadow:var(--shh)}',
@@ -50,7 +50,7 @@ const CSS = [
 '.sp-s{font-size:11px;color:var(--mut);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}',
 '.sp-m{display:flex;flex-wrap:wrap;gap:4px;margin-top:auto;padding-top:4px}',
 '.sp-ch{padding:2px 7px;border-radius:999px;border:1px solid var(--line);font:500 8px/1.2 ui-monospace,Menlo,monospace;color:var(--mut);text-transform:uppercase;letter-spacing:.03em}',
-'.sp-n{padding:14px;display:flex;flex-direction:column;justify-content:space-between;color:#1c1c1e;background:linear-gradient(155deg,color-mix(in srgb,var(--a,#ffd60a) 94%,#fff),color-mix(in srgb,var(--a,#ffd60a) 72%,#efe6c0));box-shadow:0 1px 1px rgba(0,0,0,.06),0 10px 22px color-mix(in srgb,var(--a,#ffd60a) 32%,transparent),0 24px 48px rgba(0,0,0,.08),inset 0 1px 0 rgba(255,255,255,.55);border-radius:14px}',
+'.sp-n{padding:14px;display:flex;flex-direction:column;justify-content:space-between;color:#1c1c1e;background:linear-gradient(155deg,color-mix(in srgb,var(--a,#ffd60a) 94%,#fff),color-mix(in srgb,var(--a,#ffd60a) 72%,#efe6c0));box-shadow:0 1px 1px rgba(0,0,0,.07),0 8px 18px color-mix(in srgb,var(--a,#ffd60a) 38%,transparent),0 22px 44px rgba(0,0,0,.1),inset 0 1px 0 rgba(255,255,255,.6);border-radius:13px}',
 '.sp[data-t=d] .sp-n{color:#f5f5f7;background:color-mix(in srgb,var(--a,#ffd60a) 40%,#2c2c2e)}',
 '.sp-x{background:#0e0e10;box-shadow:var(--sh),inset 0 0 0 1px rgba(255,255,255,.12);border-radius:20px}',
 '.sp-x__a{position:absolute;inset:0;background:radial-gradient(90% 80% at 22% 18%,color-mix(in srgb,var(--a,#0a84ff) 75%,transparent),transparent 52%),radial-gradient(80% 70% at 82% 78%,color-mix(in srgb,var(--b,#bf5af2) 55%,transparent),transparent 48%),radial-gradient(circle at 70% 30%,rgba(255,255,255,.12),transparent 28%),linear-gradient(150deg,#1c1c22,#0a0a0c 60%,#121218)}','.sp-x__a[data-pat=grid]{background:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px) 0 0/26px 26px,linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px) 0 0/26px 26px,radial-gradient(60% 50% at 70% 30%,color-mix(in srgb,var(--a) 55%,transparent),transparent 60%),#111114}','.sp-x__a[data-pat=soft]{background:radial-gradient(70% 60% at 40% 40%,color-mix(in srgb,var(--a) 42%,#fff),transparent 60%),linear-gradient(180deg,#f4f4f6,#d8d8de)}','.sp-x__a[data-pat=split]{background:linear-gradient(105deg,color-mix(in srgb,var(--a) 82%,#111) 0 42%,#0e0e12 42% 100%)}',
@@ -81,7 +81,7 @@ function css() {
 }
 
 function usePanZoom() {
-  const [t, setT] = useState({ s: 0.9, x: 16, y: 8 })
+  const [t, setT] = useState({ s: 0.88, x: 8, y: 6 })
   const drag = useRef(null)
   const [pan, setPan] = useState(0)
   const zoomAt = useCallback((f, cx = 0, cy = 0) => {
@@ -110,7 +110,7 @@ function usePanZoom() {
   const end = useCallback(() => { drag.current = null; setPan(0) }, [])
   return {
     pan, s: t.s,
-    reset: () => setT({ s: 0.9, x: 16, y: 8 }),
+    reset: () => setT({ s: 0.88, x: 8, y: 6 }),
     zin: () => zoomAt(1.18), zout: () => zoomAt(1 / 1.18),
     stage: { onWheel, onPointerDown: onDown, onPointerMove: onMove, onPointerUp: end, onPointerCancel: end, onPointerLeave: end },
     world: { transform: 'translate(' + t.x + 'px,' + t.y + 'px) scale(' + t.s + ')' }
@@ -169,40 +169,63 @@ async function hermesProjects() {
 
 
 
+
 function layoutBands(items) {
   const projects = items.filter(it => it.k === 'paper' && it.meta && it.meta.hermes).slice(0, 6)
   const stickies = items.filter(it => it.k === 'sticky').slice(0, 6)
   const media = items.filter(it => it.k === 'media').slice(0, 5)
   const other = items.filter(it => it.tag === 'doctrine').slice(0, 1)
   const mid = stickies.concat(other).slice(0, 6)
-  const placeBand = (arr, y0, x0, dx) => {
+
+  const placeBand = (arr, y0, x0, x1) => {
+    const n = arr.length
+    if (!n) return
     arr.forEach((it, i) => {
-      const jx = hn('bx' + it.id, 56) - 28 + (i % 2) * 18
-      const jy = hn('by' + it.id, 44) - 22
-      // irregular x: not strict grid — freeform within band
-      const drift = Math.sin(i * 1.1 + hn(it.id, 7)) * 22
-      it.x = x0 + i * dx + jx + drift
+      const t = n === 1 ? 0.5 : i / (n - 1)
+      // span full width [x0,x1] with freeform jitter — kills right void without 4th float
+      const baseX = x0 + t * (x1 - x0)
+      const jx = hn('bx' + it.id, 50) - 25
+      const jy = hn('by' + it.id, 46) - 23
+      it.x = baseX + jx
       it.y = y0 + jy
-      it.r = (hn(it.id, 80) - 40) / 8 // ~±5deg
-      it.priority = 40 - i
+      it.r = (hn(it.id, 90) - 45) / 7.5 // visible freeform tilt
+      it.priority = 36 - i
       if (it.k === 'paper') {
-        it.w = 204 + hn(it.id + 'w', 30)
-        it.h = 182 + hn(it.id + 'h', 34)
+        it.w = 198 + hn(it.id + 'w', 36)
+        it.h = 176 + hn(it.id + 'h', 40)
       } else if (it.k === 'media') {
-        it.w = 180 + hn(it.id + 'mw', 34)
-        it.h = 214 + hn(it.id + 'mh', 40)
+        it.w = 172 + hn(it.id + 'mw', 40)
+        it.h = 206 + hn(it.id + 'mh', 44)
       } else {
-        it.w = 156 + hn(it.id + 'sw', 18)
-        it.h = 148 + hn(it.id + 'sh', 16)
+        it.w = 150 + hn(it.id + 'sw', 22)
+        it.h = 142 + hn(it.id + 'sh', 18)
       }
     })
+    // one gentle paper peek-stack inside band only (freeform depth, not clutter)
+    if (arr.length >= 3 && arr[0].k === 'paper') {
+      const under = Object.assign({}, arr[1], {
+        id: arr[1].id + '-peek',
+        x: arr[1].x - 14,
+        y: arr[1].y + 18,
+        r: arr[1].r - 2.5,
+        priority: (arr[1].priority || 20) - 6,
+        chips: arr[1].chips,
+      })
+      // don't duplicate — nudge real card instead
+      arr[2].x = arr[1].x + 22
+      arr[2].y = arr[1].y + 16
+      arr[2].r = (arr[2].r || 0) + 3
+      arr[2].priority = (arr[1].priority || 20) + 4
+    }
   }
-  // Vertical fill: bands at ~12% / 40% / 68% of ~900 world — air between, less dead floor
-  placeBand(projects, 36, 40, 268)
-  placeBand(mid, 300, 60, 225)
-  placeBand(media, 560, 50, 248)
+
+  // Full-bleed bands across desk (~0..1500 world at scale ~0.9)
+  placeBand(projects, 40, 30, 1480)
+  placeBand(mid, 290, 50, 1460)
+  placeBand(media, 540, 40, 1470)
   return projects.concat(mid, media)
 }
+
 
 
 
@@ -324,7 +347,7 @@ function buildHome(hp, companies, pcProjects, issues, prefs) {
       x: sl0.x, y: sl0.y, r: rot('m' + m), w: 176 + hn('mw'+m, 36), h: 210 + hn('mh'+m, 44), d: 0.4
     })
   }
-  return { w: 1650, h: 900, items: layoutBands(items) }
+  return { w: 1600, h: 880, items: layoutBands(items) }
 }
 
 function buildProject(meta, prefs) {
