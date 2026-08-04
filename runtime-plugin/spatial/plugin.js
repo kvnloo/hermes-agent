@@ -43,7 +43,7 @@ const CSS = [
 '.sp-p::before,.sp-c::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.78),transparent 32%),radial-gradient(120% 80% at 50% 0%,rgba(255,255,255,.35),transparent 50%);z-index:1}',
 '.sp[data-t=d] .sp-p::before,.sp[data-t=d] .sp-c::before{background:linear-gradient(180deg,rgba(255,255,255,.06),transparent 30%)}',
 '.sp-i:hover .sp-p,.sp-i:hover .sp-c,.sp-i:hover .sp-n,.sp-i:hover .sp-x{box-shadow:var(--shh)}',
-'.sp-p__h{height:46%;min-height:72px;background:linear-gradient(165deg,color-mix(in srgb,var(--a,#0a84ff) 34%,#fff) 0%,color-mix(in srgb,var(--a,#0a84ff) 12%,#f6f6f8) 42%,#ececf0 100%),repeating-linear-gradient(-12deg,transparent,transparent 8px,rgba(0,0,0,.022) 8px,rgba(0,0,0,.022) 9px),radial-gradient(80% 60% at 20% 0%,rgba(255,255,255,.5),transparent 55%);border-bottom:1px solid var(--line)}',
+'.sp-p__h{height:48%;min-height:76px;background:linear-gradient(168deg,color-mix(in srgb,var(--a,#0a84ff) 40%,#fff) 0%,color-mix(in srgb,var(--a,#0a84ff) 14%,#f7f7f9) 38%,#ebebef 100%),repeating-linear-gradient(-11deg,transparent,transparent 7px,rgba(0,0,0,.028) 7px,rgba(0,0,0,.028) 8px),radial-gradient(90% 70% at 18% 0%,rgba(255,255,255,.65),transparent 52%);border-bottom:1px solid var(--line)}',
 '.sp-p__b{position:relative;z-index:2;padding:12px 14px;display:flex;flex-direction:column;gap:6px;flex:1;min-height:0}','.sp-p__rules{display:flex;flex-direction:column;gap:7px;margin-top:4px}','.sp-p__rule{height:5px;border-radius:3px;background:color-mix(in srgb,var(--mut) 16%,transparent)}','.sp-p__rule:nth-child(2){width:92%}','.sp-p__rule:nth-child(3){width:78%}','.sp-p__rule:nth-child(4){width:84%}',
 '.sp-k{font:700 9px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--a,var(--acc))}',
 '.sp-t{font-size:13.5px;font-weight:650;letter-spacing:-.02em;line-height:1.2}',
@@ -51,9 +51,9 @@ const CSS = [
 '.sp-m{display:flex;flex-wrap:wrap;gap:4px;margin-top:auto;padding-top:4px}',
 '.sp-ch{padding:2px 7px;border-radius:999px;border:1px solid var(--line);font:500 8px/1.2 ui-monospace,Menlo,monospace;color:var(--mut);text-transform:uppercase;letter-spacing:.03em}',
 '.sp-n{padding:14px;display:flex;flex-direction:column;justify-content:space-between;color:#1c1c1e;background:linear-gradient(155deg,color-mix(in srgb,var(--a,#ffd60a) 94%,#fff),color-mix(in srgb,var(--a,#ffd60a) 72%,#efe6c0));box-shadow:0 1px 1px rgba(0,0,0,.07),0 8px 18px color-mix(in srgb,var(--a,#ffd60a) 38%,transparent),0 22px 44px rgba(0,0,0,.1),inset 0 1px 0 rgba(255,255,255,.6);border-radius:13px}',
-'.sp[data-t=d] .sp-n{color:#f5f5f7;background:color-mix(in srgb,var(--a,#ffd60a) 40%,#2c2c2e)}',
+'.sp[data-t=d] .sp-n{color:#f5f5f7;background:color-mix(in srgb,var(--a,#ffd60a) 40%,#2c2c2e)}','.sp-n::after{content:"";position:absolute;top:-3px;right:18px;width:28px;height:10px;border-radius:2px;background:linear-gradient(180deg,rgba(255,255,255,.35),rgba(255,255,255,.12));box-shadow:0 1px 2px rgba(0,0,0,.08);transform:rotate(2deg)}',
 '.sp-x{background:#0e0e10;box-shadow:var(--sh),inset 0 0 0 1px rgba(255,255,255,.12);border-radius:20px}',
-'.sp-x__a{position:absolute;inset:0;background:radial-gradient(90% 80% at 22% 18%,color-mix(in srgb,var(--a,#0a84ff) 75%,transparent),transparent 52%),radial-gradient(80% 70% at 82% 78%,color-mix(in srgb,var(--b,#bf5af2) 55%,transparent),transparent 48%),radial-gradient(circle at 70% 30%,rgba(255,255,255,.12),transparent 28%),linear-gradient(150deg,#1c1c22,#0a0a0c 60%,#121218)}','.sp-x__a[data-pat=grid]{background:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px) 0 0/26px 26px,linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px) 0 0/26px 26px,radial-gradient(60% 50% at 70% 30%,color-mix(in srgb,var(--a) 55%,transparent),transparent 60%),#111114}','.sp-x__a[data-pat=soft]{background:radial-gradient(70% 60% at 40% 40%,color-mix(in srgb,var(--a) 42%,#fff),transparent 60%),linear-gradient(180deg,#f4f4f6,#d8d8de)}','.sp-x__a[data-pat=split]{background:linear-gradient(105deg,color-mix(in srgb,var(--a) 82%,#111) 0 42%,#0e0e12 42% 100%)}',
+'.sp-x__a{position:absolute;inset:0;background:radial-gradient(95% 85% at 20% 15%,color-mix(in srgb,var(--a,#0a84ff) 80%,#fff),transparent 50%),radial-gradient(85% 75% at 85% 80%,color-mix(in srgb,var(--b,#bf5af2) 60%,transparent),transparent 46%),radial-gradient(circle at 72% 28%,rgba(255,255,255,.18),transparent 26%),linear-gradient(155deg,#22222a,#0b0b0e 55%,#14141a);filter:saturate(1.08) contrast(1.05)}','.sp-x__a[data-pat=grid]{background:linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px) 0 0/24px 24px,linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px) 0 0/24px 24px,radial-gradient(65% 55% at 68% 28%,color-mix(in srgb,var(--a) 60%,transparent),transparent 58%),#0f0f14}','.sp-x__a[data-pat=soft]{background:radial-gradient(75% 65% at 42% 38%,color-mix(in srgb,var(--a) 48%,#fff),transparent 58%),linear-gradient(185deg,#f7f7f9,#d2d2d8 80%,#c8c8ce);filter:none}','.sp-x__a[data-pat=split]{background:linear-gradient(108deg,color-mix(in srgb,var(--a) 88%,#0a0a0c) 0 40%,#0c0c10 40% 100%)}','.sp-x__a[data-pat=orb]{background:radial-gradient(circle at 50% 55%,color-mix(in srgb,var(--a) 90%,#fff) 0%,transparent 26%),radial-gradient(circle at 50% 55%,transparent 30%,#0a0a0c 32%),radial-gradient(80% 60% at 20% 20%,color-mix(in srgb,var(--b) 45%,transparent),transparent 50%),#0c0c10}',
 '.sp-x__c{position:absolute;left:0;right:0;bottom:0;z-index:1;padding:24px 12px 12px;background:linear-gradient(180deg,transparent,rgba(0,0,0,.72));color:#f5f5f7;font-weight:650;font-size:12px}',
 '.sp-tb{position:absolute;bottom:22px;left:50%;z-index:60;transform:translateX(-50%);display:flex;gap:2px;align-items:center;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(18,18,20,.82);color:#f5f5f7;box-shadow:0 12px 40px rgba(0,0,0,.36),inset 0 1px 0 rgba(255,255,255,.1);backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%)}',
 '.sp-tb input{width:min(200px,34vw);padding:7px 12px;border:0;border-radius:999px;background:rgba(255,255,255,.1);color:#f5f5f7;font:inherit;font-size:12px;outline:0}',
@@ -121,7 +121,7 @@ const hn = (s, m) => { let h = 0; const t = String(s || ''); for (let i = 0; i <
 const rot = id => (hn(id, 90) - 45) / 9
 const ST = ['#ffd60a', '#30d158', '#64d2ff', '#ff9f0a', '#bf5af2', '#ff375f']
 const AC = ['#0a84ff', '#30d158', '#bf5af2', '#ff9f0a', '#64d2ff', '#ff375f']
-const PATS = ['grad', 'grid', 'soft', 'split', 'grad']
+const PATS = ['grad', 'grid', 'soft', 'split', 'orb', 'grad']
 
 function slots(n) {
   // Banded freeform: readable ops hierarchy with organic jitter (not a dump, not a rigid grid).
@@ -177,7 +177,7 @@ function layoutBands(items) {
   const projects = items.filter(it => it.k === 'paper').slice(0, 6)
   const stickies = items.filter(it => it.k === 'sticky').slice(0, 6)
   const media = items.filter(it => it.k === 'media').slice(0, 5)
-  const mid = stickies.slice(0, 6)
+  const mid = stickies.slice(0, 7)
 
   const placeBand = (arr, y0, x0, x1) => {
     const n = arr.length
