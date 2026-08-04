@@ -81,7 +81,7 @@ function css() {
 }
 
 function usePanZoom() {
-  const [t, setT] = useState({ s: 0.68, x: 20, y: 16 })
+  const [t, setT] = useState({ s: 0.62, x: 12, y: 10 })
   const drag = useRef(null)
   const [pan, setPan] = useState(0)
   const zoomAt = useCallback((f, cx = 0, cy = 0) => {
@@ -110,7 +110,7 @@ function usePanZoom() {
   const end = useCallback(() => { drag.current = null; setPan(0) }, [])
   return {
     pan, s: t.s,
-    reset: () => setT({ s: 0.68, x: 20, y: 16 }),
+    reset: () => setT({ s: 0.62, x: 12, y: 10 }),
     zin: () => zoomAt(1.18), zout: () => zoomAt(1 / 1.18),
     stage: { onWheel, onPointerDown: onDown, onPointerMove: onMove, onPointerUp: end, onPointerCancel: end, onPointerLeave: end },
     world: { transform: 'translate(' + t.x + 'px,' + t.y + 'px) scale(' + t.s + ')' }
@@ -147,12 +147,13 @@ function slots(n) {
     })
   }
   // ensure coverage: force last third of items into right half
-  const mid = (n * 2 / 3) | 0
-  for (let i = mid; i < n; i++) {
-    const k = i - mid
+  // half the cards land in the right 55% of the desk
+  const half = (n / 2) | 0
+  for (let i = half; i < n; i++) {
+    const k = i - half
     out[i] = {
-      x: 900 + (k % 4) * 230 + hn('rx' + i, 50) - 25,
-      y: 40 + ((k / 4) | 0) * 200 + hn('ry' + i, 44) - 22
+      x: 980 + (k % 5) * 210 + hn('rx' + i, 55) - 27,
+      y: 30 + ((k / 5) | 0) * 185 + hn('ry' + i, 48) - 24 + (k % 2) * 30
     }
   }
   return out
