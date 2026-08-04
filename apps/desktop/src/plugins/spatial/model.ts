@@ -140,8 +140,10 @@ function hashRot(id: string): number {
 }
 
 /** Surface budget: only the most important papers start expanded. */
-export const SURFACE_CARD_CAP = 12
-export const SURFACE_STACK_CAP = 3
+export const SURFACE_CARD_CAP = 16
+export const SURFACE_STACK_CAP = 4
+
+const STICKY_PALETTE = ['#ffd60a', '#30d158', '#64d2ff', '#ff9f0a', '#bf5af2', '#ff375f']
 
 export function layoutDesk(docs: FoundDoc[], roots: string[] = []): Desk {
   const ranked = docs
@@ -171,6 +173,18 @@ export function layoutDesk(docs: FoundDoc[], roots: string[] = []): Desk {
     return (STACK_META[a]?.order ?? 9) - (STACK_META[b]?.order ?? 9)
   })
 
+  // Organic cluster anchors — tighter than a linear row so the board reads filled.
+  const anchors = [
+    { x: 90, y: 110 },
+    { x: 520, y: 150 },
+    { x: 960, y: 90 },
+    { x: 280, y: 520 },
+    { x: 760, y: 500 },
+    { x: 1180, y: 420 },
+    { x: 120, y: 880 },
+    { x: 640, y: 860 }
+  ]
+
   let surfaceLeft = SURFACE_CARD_CAP
   const stacks: DeskStack[] = stackNames.slice(0, 8).map((name, si) => {
     const items = byStack.get(name) ?? []
@@ -181,13 +195,17 @@ export function layoutDesk(docs: FoundDoc[], roots: string[] = []): Desk {
     const take = collapse ? Math.min(items.length, 5) : Math.min(items.length, Math.max(3, Math.min(7, surfaceLeft)))
     if (!collapse) surfaceLeft -= take
 
+    const anchor = anchors[si % anchors.length]
+
     const cards: DeskCard[] = items.slice(0, take).map((item, ci) => {
       const id = item.doc.path
       const sticky = item.kind === 'sticky'
-      // Freeform fan: slight column drift + organic offsets (not a rigid grid).
+      // Freeform fan around folder origin — scatter, not rigid 3-col grid.
       const col = ci % 3
       const row = Math.floor(ci / 3)
-      const drift = (ci % 2 === 0 ? -1 : 1) * (6 + (ci % 5) * 2)
+      const driftX = ((ci * 17) % 29) - 14
+      const driftY = ((ci * 13) % 23) - 11
+      const accent = sticky ? STICKY_PALETTE[ci % STICKY_PALETTE.length] : item.accent
       return {
         id,
         title: item.title,
@@ -198,23 +216,23 @@ export function layoutDesk(docs: FoundDoc[], roots: string[] = []): Desk {
         tags: [item.stack.toLowerCase()],
         priority: item.priority,
         sourcePath: item.doc.path,
-        x: sticky ? 36 + (ci % 2) * 138 + drift : col * 248 + drift + row * 12,
-        y: 108 + row * (sticky ? 132 : 172) + (col === 1 ? -14 : col === 2 ? 10 : 0),
+        x: sticky ? 20 + (ci % 3) * 150 + driftX : col * 228 + driftX + row * 16,
+        y: 88 + row * (sticky ? 126 : 160) + (col === 1 ? -20 : col === 2 ? 14 : 0) + driftY,
         rotation: hashRot(id),
-        width: sticky ? 168 : 228,
-        height: sticky ? 118 : 156,
-        accent: item.accent
+        width: sticky ? 158 : 216,
+        height: sticky ? 122 : 164,
+        accent
       }
     })
 
     return {
       id: name.toLowerCase(),
       name,
-      x: 140 + si * 560 + (si % 2) * 30,
-      y: 160 + (si % 3) * 70,
-      rotation: ((si % 5) - 2) * 0.85,
-      width: 272,
-      height: 78,
+      x: anchor.x + (si % 2) * 18,
+      y: anchor.y + ((si * 11) % 24),
+      rotation: ((si % 5) - 2) * 0.9,
+      width: 268,
+      height: 74,
       folderColor: meta.color,
       collapsed: collapse,
       priority: stackPriority,
@@ -223,10 +241,10 @@ export function layoutDesk(docs: FoundDoc[], roots: string[] = []): Desk {
   })
 
   return {
-    width: Math.max(2800, 280 + stacks.length * 600),
-    height: 1800,
+    width: Math.max(2200, 400 + stacks.length * 420),
+    height: Math.max(1400, 900 + Math.ceil(stacks.length / 3) * 280),
     defaultPan: { x: 0, y: 0 },
-    defaultScale: 0.75,
+    defaultScale: 0.82,
     stacks,
     scannedFrom: roots
   }

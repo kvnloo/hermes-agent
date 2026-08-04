@@ -200,15 +200,23 @@ function layoutDesk(docs, roots) {
       }
     })
 
-    // Organic cluster positions — freeform scatter, not rigid grid
-    const clusterX = 80 + si * 480 + (si % 2) * 40 + ((si * 37) % 36)
-    const clusterY = 100 + (si % 3) * 70 + ((si * 19) % 40)
+    const anchors = [
+      { x: 90, y: 110 },
+      { x: 520, y: 150 },
+      { x: 960, y: 90 },
+      { x: 280, y: 520 },
+      { x: 760, y: 500 },
+      { x: 1180, y: 420 },
+      { x: 120, y: 880 },
+      { x: 640, y: 860 }
+    ]
+    const anchor = anchors[si % anchors.length]
 
     return {
       id: name.toLowerCase(),
       name,
-      x: clusterX,
-      y: clusterY,
+      x: anchor.x + (si % 2) * 18,
+      y: anchor.y + ((si * 11) % 24),
       rotation: ((si % 5) - 2) * 0.9,
       width: 268,
       height: 74,
@@ -220,8 +228,8 @@ function layoutDesk(docs, roots) {
   })
 
   return {
-    width: Math.max(3200, 360 + stacks.length * 560),
-    height: 1400,
+    width: Math.max(2200, 400 + stacks.length * 420),
+    height: Math.max(1400, 900 + Math.ceil(stacks.length / 3) * 280),
     stacks,
     scannedFrom: roots || []
   }
