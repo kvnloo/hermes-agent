@@ -35,7 +35,7 @@ const CSS = [
 '.sp-st{position:relative;flex:1 1 auto;min-height:0;height:100%;overflow:hidden;cursor:grab;touch-action:none;background:radial-gradient(85% 65% at 50% 40%,#f3f3f5 0%,transparent 58%),radial-gradient(120% 100% at 50% 100%,rgba(0,0,0,.04),transparent 42%),radial-gradient(40% 34% at 14% 76%,rgba(10,132,255,.04),transparent 55%),radial-gradient(36% 30% at 86% 16%,rgba(191,90,242,.035),transparent 50%),var(--bg)}',
 '.sp-st.p{cursor:grabbing;user-select:none}.sp-st.p .sp-i{transition:none!important;animation:none!important}',
 '.sp-w{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}',
-'.sp-i{position:absolute;transform-origin:center;transform:rotate(var(--r,0deg));animation:sp-in .45s var(--spr) both;animation-fill-mode:both;transition:transform .32s var(--spr),filter .2s var(--ease);contain:layout paint}',
+'.sp-i{position:absolute;transform-origin:center;transform:rotate(var(--r,0deg));animation:sp-in .45s var(--spr) both;animation-fill-mode:both;transition:transform .32s var(--spr),filter .2s var(--ease);contain:layout paint;filter:drop-shadow(0 10px 18px rgba(0,0,0,.08))}',
 '.sp-i:hover{z-index:40!important;filter:drop-shadow(0 22px 40px rgba(0,0,0,.18));transform:translateY(-14px) scale(1.05) rotate(var(--r,0deg))!important}',
 '.sp-i.on{z-index:50!important}@keyframes sp-in{from{opacity:.01;transform:translateY(14px) scale(.94) rotate(var(--r,0deg))}to{opacity:1;transform:translateY(0) scale(1) rotate(var(--r,0deg))}}',
 '.sp-p,.sp-c,.sp-n,.sp-x{width:100%;height:100%;border:0;border-radius:20px;text-align:left;cursor:pointer;color:inherit;position:relative;overflow:hidden}',
@@ -81,7 +81,7 @@ function css() {
 }
 
 function usePanZoom() {
-  const [t, setT] = useState({ s: 0.88, x: 10, y: 12 })
+  const [t, setT] = useState({ s: 0.78, x: 6, y: 8 })
   const drag = useRef(null)
   const [pan, setPan] = useState(0)
   const zoomAt = useCallback((f, cx = 0, cy = 0) => {
@@ -110,7 +110,7 @@ function usePanZoom() {
   const end = useCallback(() => { drag.current = null; setPan(0) }, [])
   return {
     pan, s: t.s,
-    reset: () => setT({ s: 0.88, x: 10, y: 12 }),
+    reset: () => setT({ s: 0.78, x: 6, y: 8 }),
     zin: () => zoomAt(1.18), zout: () => zoomAt(1 / 1.18),
     stage: { onWheel, onPointerDown: onDown, onPointerMove: onMove, onPointerUp: end, onPointerCancel: end, onPointerLeave: end },
     world: { transform: 'translate(' + t.x + 'px,' + t.y + 'px) scale(' + t.s + ')' }
@@ -165,29 +165,52 @@ async function hermesProjects() {
 
 
 
+
 function layoutBands(items) {
   const projects = items.filter(it => it.k === 'paper' && it.meta && it.meta.hermes)
   const stickies = items.filter(it => it.k === 'sticky')
   const media = items.filter(it => it.k === 'media')
   const other = items.filter(it => !projects.includes(it) && !stickies.includes(it) && !media.includes(it))
-  // doctrine stickies stay in sticky mid-band only (max 7); rest drop
   const pulse = stickies.slice(0, 7)
-  const place = (arr, y0, x0, dx, yJ) => {
+  const place = (arr, y0, x0, dx) => {
     arr.forEach((it, i) => {
-      const jx = hn('bx' + it.id, 40) - 20 + (i % 2) * 14
-      const jy = hn('by' + it.id, 28) - 14
+      // freeform within band: jitter + gentle arc, NO cross-band stack
+      const jx = hn('bx' + it.id, 52) - 26 + (i % 2) * 20
+      const jy = hn('by' + it.id, 36) - 18 + Math.sin(i * 1.3) * 16
       it.x = x0 + i * dx + jx
       it.y = y0 + jy
-      it.r = (hn(it.id, 50) - 25) / 14 // mild tilt ~±1.8deg
-      it.priority = (it.priority != null ? it.priority : 30) - i
+      it.r = (hn(it.id, 60) - 30) / 11
+      it.priority = (it.priority != null ? it.priority : 28) - i
+      // size breath for freeform desk energy
+      if (it.k === 'paper') {
+        it.w = 186 + hn(it.id + 'w', 34)
+        it.h = 168 + hn(it.id + 'h', 38)
+      }
     })
   }
-  // three calm strata with breathing room (won hierarchy 8)
-  place(projects, 32, 28, 252, 14)
-  place(pulse.concat(other).slice(0, 8), 250, 60, 200, 14)
-  place(media, 620, 48, 245, 12)
-  return projects.concat(pulse, other.slice(0, 2), media)
+  place(projects, 40, 24, 248)
+  place(pulse.concat(other).slice(0, 8), 255, 48, 198)
+  // media primary strip
+  const medMain = media.slice(0, 4)
+  const medSide = media.slice(4)
+  place(medMain, 620, 40, 250)
+  // right freeform constellation (density without breaking left ops scan)
+  medSide.forEach((it, i) => {
+    it.x = 1180 + hn('sx' + it.id, 80) + (i % 2) * 90
+    it.y = 120 + i * 150 + hn('sy' + it.id, 40)
+    it.r = (hn(it.id, 70) - 35) / 9
+    it.w = 170 + hn(it.id + 'mw', 40)
+    it.h = 200 + hn(it.id + 'mh', 50)
+  })
+  // one soft peek pair on right media only (freeform craft)
+  if (medSide.length >= 2) {
+    medSide[1].x = medSide[0].x + 28
+    medSide[1].y = medSide[0].y + 34
+    medSide[1].priority = (medSide[0].priority || 20) - 2
+  }
+  return projects.concat(pulse, other.slice(0, 2), medMain, medSide)
 }
+
 
 
 
@@ -297,16 +320,16 @@ function buildHome(hp, companies, pcProjects, issues, prefs) {
     })
   })
   // abstract media tiles pad empty field (reference place-memory)
-  for (let m = 0; m < 5; m++) {
+  for (let m = 0; m < 7; m++) {
     const i = items.length
     const sl0 = sl[i % sl.length] || { x: 900 + m * 40, y: 200 + m * 50 }
     items.push({
-      id: 'med-' + m, k: 'media', t: ['Mood', 'Clip', 'Depth', 'Light', 'Chrome'][m],
+      id: 'med-' + m, k: 'media', t: ['Mood', 'Clip', 'Depth', 'Light', 'Chrome', 'Study', 'Board'][m],
       a: AC[m % AC.length], b: AC[(m + 2) % AC.length], pat: PATS[m % PATS.length],
       x: sl0.x, y: sl0.y, r: rot('m' + m), w: 176 + hn('mw'+m, 36), h: 210 + hn('mh'+m, 44), d: 0.4
     })
   }
-  return { w: 1750, h: 1100, items: layoutBands(items) }
+  return { w: 1600, h: 1050, items: layoutBands(items) }
 }
 
 function buildProject(meta, prefs) {
