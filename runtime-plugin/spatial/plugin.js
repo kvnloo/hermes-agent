@@ -81,7 +81,7 @@ function css() {
 }
 
 function usePanZoom() {
-  const [t, setT] = useState({ s: 0.82, x: 6, y: 6 })
+  const [t, setT] = useState({ s: 0.88, x: 4, y: 4 })
   const drag = useRef(null)
   const [pan, setPan] = useState(0)
   const zoomAt = useCallback((f, cx = 0, cy = 0) => {
@@ -110,7 +110,7 @@ function usePanZoom() {
   const end = useCallback(() => { drag.current = null; setPan(0) }, [])
   return {
     pan, s: t.s,
-    reset: () => setT({ s: 0.82, x: 6, y: 6 }),
+    reset: () => setT({ s: 0.88, x: 4, y: 4 }),
     zin: () => zoomAt(1.18), zout: () => zoomAt(1 / 1.18),
     stage: { onWheel, onPointerDown: onDown, onPointerMove: onMove, onPointerUp: end, onPointerCancel: end, onPointerLeave: end },
     world: { transform: 'translate(' + t.x + 'px,' + t.y + 'px) scale(' + t.s + ')' }
@@ -126,8 +126,8 @@ const PATS = ['grad', 'grid', 'soft', 'split', 'grad']
 function slots(n) {
   const out = []
   const cols = 7
-  const dx = 228
-  const dy = 168
+  const dx = 248
+  const dy = 172
   for (let i = 0; i < n; i++) {
     const col = i % cols
     const row = (i / cols) | 0
@@ -217,7 +217,7 @@ function buildHome(hp, companies, pcProjects, issues, prefs) {
         pin.length ? pin.length + ' pin' : null,
         hot[0] ? (hot[0].identifier || hot[0].status) : null
       ].filter(Boolean),
-      x: sl[i].x, y: sl[i].y, r: rot(p.id), w: 188 + hn(p.id, 40), h: 172 + hn(p.id + 'h', 44),
+      x: sl[i].x, y: sl[i].y, r: rot(p.id), w: 178 + hn(p.id, 36), h: 164 + hn(p.id + 'h', 40),
       d: Math.min(i * 0.03, 0.45),
       href: pcP ? PC + '/' : null,
       meta: { hermes: p, pc: pcP, issues: iss, pins: pin }
