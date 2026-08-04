@@ -81,7 +81,7 @@ function css() {
 }
 
 function usePanZoom() {
-  const [t, setT] = useState({ s: 0.62, x: 12, y: 10 })
+  const [t, setT] = useState({ s: 0.55, x: 8, y: 8 })
   const drag = useRef(null)
   const [pan, setPan] = useState(0)
   const zoomAt = useCallback((f, cx = 0, cy = 0) => {
@@ -110,7 +110,7 @@ function usePanZoom() {
   const end = useCallback(() => { drag.current = null; setPan(0) }, [])
   return {
     pan, s: t.s,
-    reset: () => setT({ s: 0.62, x: 12, y: 10 }),
+    reset: () => setT({ s: 0.55, x: 8, y: 8 }),
     zin: () => zoomAt(1.18), zout: () => zoomAt(1 / 1.18),
     stage: { onWheel, onPointerDown: onDown, onPointerMove: onMove, onPointerUp: end, onPointerCancel: end, onPointerLeave: end },
     world: { transform: 'translate(' + t.x + 'px,' + t.y + 'px) scale(' + t.s + ')' }
@@ -142,18 +142,18 @@ function slots(n) {
     // pull some items into a second constellation on the right
     const right = i % 5 === 0 ? 720 : i % 5 === 1 ? 360 : 0
     out.push({
-      x: ox + col * dx + jx + right * 0.15 + (i % 7 === 3 ? 480 : 0),
+      x: ox + col * dx + jx + (i % 7 === 3 ? 320 : 0),
       y: oy + r * dy + jy + (i % 4 === 2 ? 40 : 0)
     })
   }
   // ensure coverage: force last third of items into right half
-  // half the cards land in the right 55% of the desk
+  // half the cards land far right (stage is offset ~240px by sidebar; scale~0.62)
   const half = (n / 2) | 0
   for (let i = half; i < n; i++) {
     const k = i - half
     out[i] = {
-      x: 980 + (k % 5) * 210 + hn('rx' + i, 55) - 27,
-      y: 30 + ((k / 5) | 0) * 185 + hn('ry' + i, 48) - 24 + (k % 2) * 30
+      x: 1180 + (k % 5) * 240 + hn('rx' + i, 60) - 30,
+      y: 36 + ((k / 5) | 0) * 190 + hn('ry' + i, 50) - 25 + (k % 2) * 34
     }
   }
   return out
@@ -288,7 +288,7 @@ function buildHome(hp, companies, pcProjects, issues, prefs) {
       x: sl0.x, y: sl0.y, r: rot('m' + m), w: 188 + hn('mw'+m, 30), h: 220 + hn('mh'+m, 40), d: 0.4
     })
   }
-  return { w: 1900, h: 1200, items }
+  return { w: 2400, h: 1300, items }
 }
 
 function buildProject(meta, prefs) {
