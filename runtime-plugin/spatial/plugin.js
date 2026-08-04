@@ -81,7 +81,7 @@ function css() {
 }
 
 function usePanZoom() {
-  const [t, setT] = useState({ s: 0.48, x: 8, y: 10 })
+  const [t, setT] = useState({ s: 0.9, x: 16, y: 14 })
   const drag = useRef(null)
   const [pan, setPan] = useState(0)
   const zoomAt = useCallback((f, cx = 0, cy = 0) => {
@@ -110,7 +110,7 @@ function usePanZoom() {
   const end = useCallback(() => { drag.current = null; setPan(0) }, [])
   return {
     pan, s: t.s,
-    reset: () => setT({ s: 0.48, x: 8, y: 10 }),
+    reset: () => setT({ s: 0.9, x: 16, y: 14 }),
     zin: () => zoomAt(1.18), zout: () => zoomAt(1 / 1.18),
     stage: { onWheel, onPointerDown: onDown, onPointerMove: onMove, onPointerUp: end, onPointerCancel: end, onPointerLeave: end },
     world: { transform: 'translate(' + t.x + 'px,' + t.y + 'px) scale(' + t.s + ')' }
@@ -123,16 +123,17 @@ const ST = ['#ffd60a', '#30d158', '#64d2ff', '#ff9f0a', '#bf5af2', '#ff375f']
 const AC = ['#0a84ff', '#30d158', '#bf5af2', '#ff9f0a', '#64d2ff', '#ff375f']
 
 function slots(n) {
+  // Stage-pixel-ish coords at scale≈0.92 (sidebar leaves ~1650×1000 stage).
   const out = []
+  const cols = 5
+  const dx = 300
+  const dy = 195
   for (let i = 0; i < n; i++) {
-    const col = i % 6
-    const row = (i / 6) | 0
-    const jx = hn('x' + i, 72) - 36 + (row % 2) * 40
-    const jy = hn('y' + i, 64) - 32 + (col % 2) * 30
-    out.push({
-      x: 24 + col * 280 + jx,
-      y: 20 + row * 195 + jy
-    })
+    const col = i % cols
+    const row = (i / cols) | 0
+    const jx = hn('x' + i, 64) - 32 + (row % 2) * 48
+    const jy = hn('y' + i, 56) - 28 + (col % 2) * 36
+    out.push({ x: 20 + col * dx + jx, y: 16 + row * dy + jy })
   }
   return out
 }
@@ -209,7 +210,7 @@ function buildHome(hp, companies, pcProjects, issues, prefs) {
         pin.length ? pin.length + ' pin' : null,
         hot[0] ? (hot[0].identifier || hot[0].status) : null
       ].filter(Boolean),
-      x: sl[i].x, y: sl[i].y, r: rot(p.id), w: 228 + hn(p.id, 32), h: 210 + hn(p.id + 'h', 40),
+      x: sl[i].x, y: sl[i].y, r: rot(p.id), w: 200 + hn(p.id, 28), h: 180 + hn(p.id + 'h', 32),
       d: Math.min(i * 0.03, 0.45),
       href: pcP ? PC + '/' : null,
       meta: { hermes: p, pc: pcP, issues: iss, pins: pin }
@@ -266,7 +267,7 @@ function buildHome(hp, companies, pcProjects, issues, prefs) {
       x: sl0.x, y: sl0.y, r: rot('m' + m), w: 188 + hn('mw'+m, 30), h: 220 + hn('mh'+m, 40), d: 0.4
     })
   }
-  return { w: 1800, h: 1400, items }
+  return { w: 1700, h: 1200, items }
 }
 
 function buildProject(meta, prefs) {
