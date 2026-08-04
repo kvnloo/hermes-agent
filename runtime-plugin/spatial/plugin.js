@@ -30,7 +30,7 @@ function togglePin(projectId, path) {
 
 
 const CSS = [
-'.sp{--bg:#e8e8ea;--paper:#f2f2f4;--card:#fff;--ink:#1c1c1e;--mut:#6c6c70;--line:rgba(0,0,0,.08);--acc:#0a84ff;--sh:0 .5px .5px rgba(0,0,0,.04),0 2px 6px rgba(0,0,0,.045),0 12px 28px rgba(0,0,0,.08),0 32px 64px rgba(0,0,0,.07);--shh:0 1px 2px rgba(0,0,0,.05),0 14px 32px rgba(0,0,0,.12),0 40px 80px rgba(0,0,0,.14);--spr:cubic-bezier(.34,1.45,.64,1);--ease:cubic-bezier(.22,1,.36,1);position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;color:var(--ink);background:var(--bg);font:12.5px/1.35 ui-sans-serif,system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;min-height:100%;height:100%;width:100%}',
+'.sp{--bg:#e9e9eb;--paper:#f2f2f4;--card:#fff;--ink:#1c1c1e;--mut:#6c6c70;--line:rgba(0,0,0,.08);--acc:#0a84ff;--sh:0 .5px .5px rgba(0,0,0,.04),0 2px 6px rgba(0,0,0,.045),0 12px 28px rgba(0,0,0,.08),0 32px 64px rgba(0,0,0,.07);--shh:0 1px 2px rgba(0,0,0,.05),0 14px 32px rgba(0,0,0,.12),0 40px 80px rgba(0,0,0,.14);--spr:cubic-bezier(.34,1.45,.64,1);--ease:cubic-bezier(.22,1,.36,1);position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;color:var(--ink);background:var(--bg);font:12.5px/1.35 ui-sans-serif,system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;min-height:100%;height:100%;width:100%}',
 '.sp[data-t=d]{--bg:#1c1c1e;--paper:#2c2c2e;--card:#2c2c2e;--ink:#f5f5f7;--mut:#a1a1a6;--line:rgba(255,255,255,.1);--sh:0 1px 2px rgba(0,0,0,.4),0 16px 36px rgba(0,0,0,.5);--shh:0 4px 16px rgba(0,0,0,.55),0 28px 64px rgba(0,0,0,.55)}',
 '.sp-st{position:relative;flex:1 1 auto;min-height:0;height:100%;overflow:hidden;cursor:grab;touch-action:none;background:radial-gradient(90% 70% at 50% 42%,color-mix(in srgb,var(--paper) 94%,transparent) 0%,transparent 62%),radial-gradient(40% 34% at 12% 78%,rgba(10,132,255,.035),transparent 55%),radial-gradient(36% 30% at 88% 18%,rgba(191,90,242,.03),transparent 50%),var(--bg)}',
 '.sp-st.p{cursor:grabbing;user-select:none}.sp-st.p .sp-i{transition:none!important;animation:none!important}',
@@ -81,7 +81,7 @@ function css() {
 }
 
 function usePanZoom() {
-  const [t, setT] = useState({ s: 0.85, x: 12, y: 10 })
+  const [t, setT] = useState({ s: 0.82, x: 6, y: 6 })
   const drag = useRef(null)
   const [pan, setPan] = useState(0)
   const zoomAt = useCallback((f, cx = 0, cy = 0) => {
@@ -110,7 +110,7 @@ function usePanZoom() {
   const end = useCallback(() => { drag.current = null; setPan(0) }, [])
   return {
     pan, s: t.s,
-    reset: () => setT({ s: 0.85, x: 12, y: 10 }),
+    reset: () => setT({ s: 0.82, x: 6, y: 6 }),
     zin: () => zoomAt(1.18), zout: () => zoomAt(1 / 1.18),
     stage: { onWheel, onPointerDown: onDown, onPointerMove: onMove, onPointerUp: end, onPointerCancel: end, onPointerLeave: end },
     world: { transform: 'translate(' + t.x + 'px,' + t.y + 'px) scale(' + t.s + ')' }
@@ -118,23 +118,26 @@ function usePanZoom() {
 }
 
 const hn = (s, m) => { let h = 0; const t = String(s || ''); for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return Math.abs(h) % m }
-const rot = id => (hn(id, 70) - 35) / 12
+const rot = id => (hn(id, 90) - 45) / 9
 const ST = ['#ffd60a', '#30d158', '#64d2ff', '#ff9f0a', '#bf5af2', '#ff375f']
 const AC = ['#0a84ff', '#30d158', '#bf5af2', '#ff9f0a', '#64d2ff', '#ff375f']
 const PATS = ['grad', 'grid', 'soft', 'split', 'grad']
 
 function slots(n) {
-  // Stage-pixel-ish coords at scale≈0.92 (sidebar leaves ~1650×1000 stage).
   const out = []
-  const cols = 6
-  const dx = 255
-  const dy = 175
+  const cols = 7
+  const dx = 228
+  const dy = 168
   for (let i = 0; i < n; i++) {
     const col = i % cols
     const row = (i / cols) | 0
-    const jx = hn('x' + i, 64) - 32 + (row % 2) * 48
-    const jy = hn('y' + i, 56) - 28 + (col % 2) * 36
-    out.push({ x: 20 + col * dx + jx, y: 16 + row * dy + jy })
+    // organic: stagger columns, slight fan
+    const jx = hn('x' + i, 70) - 35 + (row % 2) * 42 - (col % 3) * 8
+    const jy = hn('y' + i, 60) - 30 + (col % 2) * 38
+    out.push({
+      x: 8 + col * dx + jx,
+      y: 8 + row * dy + jy
+    })
   }
   return out
 }
@@ -214,7 +217,7 @@ function buildHome(hp, companies, pcProjects, issues, prefs) {
         pin.length ? pin.length + ' pin' : null,
         hot[0] ? (hot[0].identifier || hot[0].status) : null
       ].filter(Boolean),
-      x: sl[i].x, y: sl[i].y, r: rot(p.id), w: 200 + hn(p.id, 28), h: 180 + hn(p.id + 'h', 32),
+      x: sl[i].x, y: sl[i].y, r: rot(p.id), w: 188 + hn(p.id, 40), h: 172 + hn(p.id + 'h', 44),
       d: Math.min(i * 0.03, 0.45),
       href: pcP ? PC + '/' : null,
       meta: { hermes: p, pc: pcP, issues: iss, pins: pin }
@@ -396,7 +399,7 @@ function SpatialPage() {
             _j('div', {
               key: it.id,
               className: cn('sp-i', sel && sel.id === it.id && 'on'),
-              style: { left: it.x, top: it.y, width: it.w, height: it.h, '--r': it.r + 'deg', animationDelay: (it.d || 0) + 's' },
+              style: { left: it.x, top: it.y, width: it.w, height: it.h, zIndex: 4 + Math.round((it.priority || 20) / 12), '--r': it.r + 'deg', animationDelay: (it.d || 0) + 's' },
               children: _j(Card, { it, on: open })
             })
           )
