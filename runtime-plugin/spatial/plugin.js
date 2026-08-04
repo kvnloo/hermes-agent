@@ -174,11 +174,10 @@ async function hermesProjects() {
 
 
 function layoutBands(items) {
-  const projects = items.filter(it => it.k === 'paper' && it.meta && it.meta.hermes).slice(0, 6)
+  const projects = items.filter(it => it.k === 'paper').slice(0, 6)
   const stickies = items.filter(it => it.k === 'sticky').slice(0, 6)
   const media = items.filter(it => it.k === 'media').slice(0, 5)
-  const other = items.filter(it => it.tag === 'doctrine').slice(0, 1)
-  const mid = stickies.concat(other).slice(0, 6)
+  const mid = stickies.slice(0, 6)
 
   const placeBand = (arr, y0, x0, x1) => {
     const n = arr.length
