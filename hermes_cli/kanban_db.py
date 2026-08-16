@@ -1544,6 +1544,9 @@ CREATE TABLE IF NOT EXISTS kanban_artifact_delivery_attempts (
     source_size   INTEGER NOT NULL,
     delivery_mode TEXT NOT NULL,
     started_at    INTEGER NOT NULL,
+    state         TEXT NOT NULL DEFAULT 'reserved',
+    message_id    TEXT,
+    error         TEXT,
     PRIMARY KEY (task_id, platform, chat_id, thread_id, source_sha256, delivery_mode)
 );
 
@@ -2761,6 +2764,25 @@ def _migrate_add_optional_columns(conn: sqlite3.Connection) -> None:
             _add_column_if_missing(
                 conn, "kanban_notify_subs", "delivery_metadata", "delivery_metadata TEXT"
             )
+
+    attempt_table_exists = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' "
+        "AND name='kanban_artifact_delivery_attempts'"
+    ).fetchone() is not None
+    if attempt_table_exists:
+        attempt_cols = {
+            row["name"]
+            for row in conn.execute("PRAGMA table_info(kanban_artifact_delivery_attempts)")
+        }
+        for name, declaration in (
+            ("state", "state TEXT NOT NULL DEFAULT 'reserved'"),
+            ("message_id", "message_id TEXT"),
+            ("error", "error TEXT"),
+        ):
+            if name not in attempt_cols:
+                _add_column_if_missing(
+                    conn, "kanban_artifact_delivery_attempts", name, declaration
+                )
 
     # One-shot backfill: any task that is 'running' before runs existed
     # had its claim_lock / claim_expires / worker_pid on the task row.
@@ -11456,6 +11478,58 @@ def begin_artifact_delivery_attempt(
              int(source_size), delivery_mode, int(time.time())),
         )
         return cursor.rowcount == 1
+
+
+def release_artifact_delivery_attempt(
+    conn: sqlite3.Connection,
+    *,
+    task_id: str,
+    platform: str,
+    chat_id: str,
+    thread_id: str,
+    source_sha256: str,
+    delivery_mode: str,
+) -> None:
+    """Release a reservation after a definitive transport rejection."""
+    with write_txn(conn):
+        conn.execute(
+            """DELETE FROM kanban_artifact_delivery_attempts
+               WHERE task_id = ? AND platform = ? AND chat_id = ? AND thread_id = ?
+                 AND source_sha256 = ? AND delivery_mode = ? AND state = 'reserved'""",
+            (task_id, platform, chat_id, thread_id, source_sha256, delivery_mode),
+        )
+
+
+def mark_artifact_delivery_ambiguous(
+    conn: sqlite3.Connection,
+    *,
+    task_id: str,
+    platform: str,
+    chat_id: str,
+    thread_id: str,
+    source_sha256: str,
+    delivery_mode: str,
+    message_id: str,
+    error: str,
+) -> None:
+    """Persist a no-retry accepted-send state and expose it on the task."""
+    body = (
+        "Artifact delivery requires reconciliation: the platform accepted the "
+        f"upload (message {message_id}) but its durable receipt was not committed. "
+        "Automatic retry is disabled to avoid a duplicate; chat delivery is not claimed."
+    )
+    with write_txn(conn):
+        changed = conn.execute(
+            """UPDATE kanban_artifact_delivery_attempts
+               SET state = 'accepted_unreceipted', message_id = ?, error = ?
+               WHERE task_id = ? AND platform = ? AND chat_id = ? AND thread_id = ?
+                 AND source_sha256 = ? AND delivery_mode = ?
+                 AND state = 'reserved'""",
+            (message_id, error, task_id, platform, chat_id, thread_id,
+             source_sha256, delivery_mode),
+        ).rowcount
+        if changed:
+            add_comment(conn, task_id, "kanban-notifier", body)
 
 
 def claim_unseen_events_for_sub(

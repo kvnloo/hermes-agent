@@ -1179,33 +1179,79 @@ class GatewayKanbanWatchersMixin:
                     "artifact delivery outcome is uncertain; refusing duplicate upload: "
                     f"{_Path(path).name}"
                 )
-            if mode == "video":
-                result = await adapter.send_video(
+            try:
+                if mode == "video":
+                    result = await adapter.send_video(
                         chat_id=chat_id, video_path=path, metadata=metadata,
                     )
-            elif mode == "photo_preview":
-                result = await adapter.send_image_file(
-                    chat_id=chat_id, image_path=path, metadata=metadata,
-                )
-            else:
-                result = await adapter.send_document(
+                elif mode == "photo_preview":
+                    result = await adapter.send_image_file(
+                        chat_id=chat_id, image_path=path, metadata=metadata,
+                    )
+                else:
+                    result = await adapter.send_document(
                         chat_id=chat_id, file_path=path, metadata=metadata,
                     )
+            except Exception as exc:
+                # An exception can occur after the remote accepted bytes, so it
+                # is not safe to release the reservation and resend blindly.
+                conn = _kb.connect(board=board)
+                try:
+                    _kb.mark_artifact_delivery_ambiguous(
+                        conn, task_id=sub["task_id"], platform=sub["platform"],
+                        chat_id=chat_id, thread_id=sub.get("thread_id") or "",
+                        source_sha256=digest, delivery_mode=mode,
+                        message_id="unknown", error=str(exc),
+                    )
+                finally:
+                    conn.close()
+                raise RuntimeError(
+                    f"artifact transport outcome is uncertain: {exc}"
+                ) from exc
             if getattr(result, "success", True) is False:
+                conn = _kb.connect(board=board)
+                try:
+                    _kb.release_artifact_delivery_attempt(
+                        conn, task_id=sub["task_id"], platform=sub["platform"],
+                        chat_id=chat_id, thread_id=sub.get("thread_id") or "",
+                        source_sha256=digest, delivery_mode=mode,
+                    )
+                finally:
+                    conn.close()
                 raise RuntimeError(
                     f"artifact upload failed: {getattr(result, 'error', None) or _Path(path).name}"
                 )
             message_id = str(getattr(result, "message_id", "") or "")
             if not message_id:
+                conn = _kb.connect(board=board)
+                try:
+                    _kb.mark_artifact_delivery_ambiguous(
+                        conn, task_id=sub["task_id"], platform=sub["platform"],
+                        chat_id=chat_id, thread_id=sub.get("thread_id") or "",
+                        source_sha256=digest, delivery_mode=mode,
+                        message_id="unknown",
+                        error="transport returned success without a message id",
+                    )
+                finally:
+                    conn.close()
                 raise RuntimeError("artifact transport returned no durable message id")
             conn = _kb.connect(board=board)
             try:
-                _kb.record_artifact_delivery_receipt(
-                    conn, task_id=sub["task_id"], event_id=event_id,
-                    platform=sub["platform"], chat_id=chat_id,
-                    thread_id=sub.get("thread_id") or "", source_sha256=digest,
-                    source_size=size, delivery_mode=mode, message_id=message_id,
-                )
+                try:
+                    _kb.record_artifact_delivery_receipt(
+                        conn, task_id=sub["task_id"], event_id=event_id,
+                        platform=sub["platform"], chat_id=chat_id,
+                        thread_id=sub.get("thread_id") or "", source_sha256=digest,
+                        source_size=size, delivery_mode=mode, message_id=message_id,
+                    )
+                except Exception as exc:
+                    _kb.mark_artifact_delivery_ambiguous(
+                        conn, task_id=sub["task_id"], platform=sub["platform"],
+                        chat_id=chat_id, thread_id=sub.get("thread_id") or "",
+                        source_sha256=digest, delivery_mode=mode,
+                        message_id=message_id, error=str(exc),
+                    )
+                    raise
             finally:
                 conn.close()
 

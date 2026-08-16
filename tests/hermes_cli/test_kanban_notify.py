@@ -1031,6 +1031,28 @@ async def test_artifact_transport_failure_creates_no_receipt(kanban_home, tmp_pa
             source_sha256=digest, delivery_mode="document_original",
         ) is None
 
+    # A definitive API rejection releases the reservation. A later tick or
+    # restarted gateway can retry and records exactly one successful upload.
+    adapter.send_document.return_value = SendResult(True, message_id="doc-retry")
+    await runner._deliver_kanban_artifacts(
+        adapter=adapter, chat_id="chat1", metadata={},
+        event_payload={
+            "artifacts": [str(png)],
+            "artifact_manifest": [{"path": str(png), "delivery": "original"}],
+        },
+        task=None, event_id=9,
+        sub={"task_id": tid, "platform": "telegram", "thread_id": ""},
+        board="default",
+    )
+    assert adapter.send_document.await_count == 2
+    with kb.connect() as conn:
+        receipt = kb.get_artifact_delivery_receipt(
+            conn, task_id=tid, platform="telegram", chat_id="chat1", thread_id="",
+            source_sha256=digest, delivery_mode="document_original",
+        )
+    assert receipt is not None
+    assert receipt["message_id"] == "doc-retry"
+
 
 @pytest.mark.asyncio
 async def test_artifact_send_receipt_crash_window_never_reuploads(
@@ -1061,6 +1083,19 @@ async def test_artifact_send_receipt_crash_window_never_reuploads(
             task=None, event_id=10, sub=sub, board="default",
         )
     monkeypatch.setattr(kb, "record_artifact_delivery_receipt", record_receipt)
+
+    with kb.connect() as conn:
+        attempt = conn.execute(
+            "SELECT state, message_id, error FROM kanban_artifact_delivery_attempts "
+            "WHERE task_id = ?", (tid,),
+        ).fetchone()
+        comments = kb.list_comments(conn, tid)
+    assert dict(attempt) == {
+        "state": "accepted_unreceipted", "message_id": "doc-1", "error": "db lost",
+    }
+    assert len(comments) == 1
+    assert "requires reconciliation" in comments[0].body
+    assert "chat delivery is not claimed" in comments[0].body
 
     # A fresh runner models gateway restart. The write-ahead attempt remains,
     # so the ambiguous accepted upload is never automatically repeated.
