@@ -560,8 +560,7 @@ class GatewayKanbanWatchersMixin:
                             if ev.payload and ev.payload.get("reason"):
                                 reason = f": {str(ev.payload['reason'])[:160]}"
                             msg = f"⏸ {board_tag}{tag}Kanban {sub['task_id']} blocked{reason}"
-                            if any(word in reason.lower() for word in ("attachment", "artifact", "evidence", "file")):
-                                msg += "\nEvidence is stored on the task; this blocked notice did not deliver a file."
+                            msg += "\nThis notice did not deliver a file; inspect the task for declared evidence."
                         elif kind == "gave_up":
                             err = ""
                             if ev.payload and ev.payload.get("error"):
@@ -617,8 +616,7 @@ class GatewayKanbanWatchersMixin:
                                 f"🛑 {board_tag}{tag}Kanban {sub['task_id']} routed to TRIAGE"
                                 f" — needs a human decision{rc}{reason}"
                             )
-                            if any(word in reason.lower() for word in ("attachment", "artifact", "evidence", "file")):
-                                msg += "\nEvidence is stored on the task; this triage notice did not deliver a file."
+                            msg += "\nThis notice did not deliver a file; inspect the task for declared evidence."
                         else:
                             # archived / unblocked are claimed by TERMINAL_KINDS
                             # (so the cursor advances past them and they can't
@@ -672,6 +670,21 @@ class GatewayKanbanWatchersMixin:
                             # outcome there, not by skipping the send here.
                             continue
                         try:
+                            # Persist artifact receipts before sending text that
+                            # could imply the deliverable reached chat. Retries
+                            # skip receipted files, so upload failures cannot
+                            # duplicate either the file or the visible notice.
+                            if kind == "completed":
+                                await self._deliver_kanban_artifacts(
+                                    adapter=adapter,
+                                    chat_id=sub["chat_id"],
+                                    metadata=metadata,
+                                    event_payload=getattr(ev, "payload", None),
+                                    task=task,
+                                    event_id=ev.id,
+                                    sub=sub,
+                                    board=board_slug,
+                                )
                             _send_res = await adapter.send(
                                 sub["chat_id"], msg, metadata=metadata,
                             )
@@ -691,38 +704,6 @@ class GatewayKanbanWatchersMixin:
                                 "kanban notifier: delivered %s event for %s to %s/%s on board %s",
                                 kind, sub["task_id"], platform_str, sub["chat_id"], board_slug,
                             )
-                            # After delivering the text notification, surface
-                            # any artifact paths the worker referenced in
-                            # ``kanban_complete(summary=..., artifacts=[...])``
-                            # (or the legacy ``result`` field) as native
-                            # uploads. ``extract_local_files`` finds bare
-                            # absolute paths in the summary;
-                            # ``send_document`` / ``send_image_file`` uploads
-                            # them. Durable content-hash receipts suppress
-                            # duplicate uploads when a retry/restart reclaims
-                            # the completion event.
-                            if kind == "completed":
-                                try:
-                                    await self._deliver_kanban_artifacts(
-                                        adapter=adapter,
-                                        chat_id=sub["chat_id"],
-                                        metadata=metadata,
-                                        event_payload=getattr(ev, "payload", None),
-                                        task=task,
-                                        event_id=ev.id,
-                                        sub=sub,
-                                        board=board_slug,
-                                    )
-                                except Exception as art_exc:
-                                    logger.warning(
-                                        "kanban notifier: artifact delivery for %s failed: %s",
-                                        sub["task_id"], art_exc,
-                                    )
-                                    # The event claim must be rewound by the
-                                    # outer delivery guard. Advancing after a
-                                    # failed upload would let the text imply a
-                                    # deliverable arrived when it did not.
-                                    raise
                             # Reset the failure counter on success.
                             sub_fail_counts.pop(sub_key, None)
                         except Exception as exc:
@@ -1162,8 +1143,11 @@ class GatewayKanbanWatchersMixin:
                 raise RuntimeError(f"invalid artifact size ({size} bytes): {_Path(path).name}")
             with open(path, "rb") as source:
                 digest = hashlib.sha256(source.read()).hexdigest()
-            mode = "document_original" if requested_mode == "original" else (
-                "photo_preview" if ext in _IMAGE_EXTS else "document_original"
+            mode = (
+                "document_original" if requested_mode == "original"
+                else "photo_preview" if ext in _IMAGE_EXTS
+                else "video" if ext in _VIDEO_EXTS
+                else "document_original"
             )
             conn = _kb.connect(board=board)
             try:
@@ -1180,11 +1164,25 @@ class GatewayKanbanWatchersMixin:
                 with open(path, "rb") as source:
                     if source.read(8) != b"\x89PNG\r\n\x1a\n":
                         raise RuntimeError(f"declared PNG has an invalid signature: {_Path(path).name}")
-            if ext in _VIDEO_EXTS and requested_mode != "original":
+            conn = _kb.connect(board=board)
+            try:
+                reserved = _kb.begin_artifact_delivery_attempt(
+                    conn, task_id=sub["task_id"], event_id=event_id,
+                    platform=sub["platform"], chat_id=chat_id,
+                    thread_id=sub.get("thread_id") or "", source_sha256=digest,
+                    source_size=size, delivery_mode=mode,
+                )
+            finally:
+                conn.close()
+            if not reserved:
+                raise RuntimeError(
+                    "artifact delivery outcome is uncertain; refusing duplicate upload: "
+                    f"{_Path(path).name}"
+                )
+            if mode == "video":
                 result = await adapter.send_video(
                         chat_id=chat_id, video_path=path, metadata=metadata,
                     )
-                mode = "video"
             elif mode == "photo_preview":
                 result = await adapter.send_image_file(
                     chat_id=chat_id, image_path=path, metadata=metadata,

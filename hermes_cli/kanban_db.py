@@ -1531,6 +1531,22 @@ CREATE TABLE IF NOT EXISTS kanban_artifact_delivery_receipts (
     PRIMARY KEY (task_id, platform, chat_id, thread_id, source_sha256, delivery_mode)
 );
 
+-- Write-ahead marker for the transport/receipt crash window. Telegram has no
+-- upload idempotency key, so an accepted send with a lost receipt must not be
+-- blindly repeated after restart.
+CREATE TABLE IF NOT EXISTS kanban_artifact_delivery_attempts (
+    task_id       TEXT NOT NULL,
+    event_id      INTEGER NOT NULL,
+    platform      TEXT NOT NULL,
+    chat_id       TEXT NOT NULL,
+    thread_id     TEXT NOT NULL DEFAULT '',
+    source_sha256 TEXT NOT NULL,
+    source_size   INTEGER NOT NULL,
+    delivery_mode TEXT NOT NULL,
+    started_at    INTEGER NOT NULL,
+    PRIMARY KEY (task_id, platform, chat_id, thread_id, source_sha256, delivery_mode)
+);
+
 CREATE INDEX IF NOT EXISTS idx_tasks_assignee_status ON tasks(assignee, status);
 CREATE INDEX IF NOT EXISTS idx_tasks_status          ON tasks(status);
 CREATE INDEX IF NOT EXISTS idx_links_child           ON task_links(child_id);
@@ -1542,6 +1558,7 @@ CREATE INDEX IF NOT EXISTS idx_runs_status           ON task_runs(status);
 CREATE INDEX IF NOT EXISTS idx_attachments_task      ON task_attachments(task_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_notify_task           ON kanban_notify_subs(task_id);
 CREATE INDEX IF NOT EXISTS idx_artifact_receipt_task ON kanban_artifact_delivery_receipts(task_id);
+CREATE INDEX IF NOT EXISTS idx_artifact_attempt_task ON kanban_artifact_delivery_attempts(task_id);
 """
 
 
@@ -11408,6 +11425,37 @@ def record_artifact_delivery_receipt(
             (task_id, int(event_id), platform, chat_id, thread_id, source_sha256,
              int(source_size), delivery_mode, message_id, int(time.time())),
         )
+        conn.execute(
+            """DELETE FROM kanban_artifact_delivery_attempts
+               WHERE task_id = ? AND platform = ? AND chat_id = ? AND thread_id = ?
+                 AND source_sha256 = ? AND delivery_mode = ?""",
+            (task_id, platform, chat_id, thread_id, source_sha256, delivery_mode),
+        )
+
+
+def begin_artifact_delivery_attempt(
+    conn: sqlite3.Connection,
+    *,
+    task_id: str,
+    event_id: int,
+    platform: str,
+    chat_id: str,
+    thread_id: str,
+    source_sha256: str,
+    source_size: int,
+    delivery_mode: str,
+) -> bool:
+    """Reserve one upload; False means a prior send outcome is uncertain."""
+    with write_txn(conn):
+        cursor = conn.execute(
+            """INSERT OR IGNORE INTO kanban_artifact_delivery_attempts
+               (task_id, event_id, platform, chat_id, thread_id, source_sha256,
+                source_size, delivery_mode, started_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (task_id, int(event_id), platform, chat_id, thread_id, source_sha256,
+             int(source_size), delivery_mode, int(time.time())),
+        )
+        return cursor.rowcount == 1
 
 
 def claim_unseen_events_for_sub(

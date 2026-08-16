@@ -1032,6 +1032,70 @@ async def test_artifact_transport_failure_creates_no_receipt(kanban_home, tmp_pa
         ) is None
 
 
+@pytest.mark.asyncio
+async def test_artifact_send_receipt_crash_window_never_reuploads(
+    kanban_home, tmp_path, monkeypatch,
+):
+    """A restart after Telegram accepted bytes fails closed, not duplicate."""
+    from gateway.platforms.base import SendResult
+    from gateway.run import GatewayRunner
+
+    png = tmp_path / "accepted.png"
+    png.write_bytes(b"\x89PNG\r\n\x1a\naccepted")
+    with kb.connect() as conn:
+        tid = kb.create_task(conn, title="crash window", assignee="worker1")
+    adapter = MagicMock()
+    adapter.send_document = AsyncMock(return_value=SendResult(True, message_id="doc-1"))
+    runner = object.__new__(GatewayRunner)
+    payload = {
+        "artifacts": [str(png)],
+        "artifact_manifest": [{"path": str(png), "delivery": "original"}],
+    }
+    sub = {"task_id": tid, "platform": "telegram", "thread_id": ""}
+
+    record_receipt = kb.record_artifact_delivery_receipt
+    monkeypatch.setattr(kb, "record_artifact_delivery_receipt", MagicMock(side_effect=RuntimeError("db lost")))
+    with pytest.raises(RuntimeError, match="db lost"):
+        await runner._deliver_kanban_artifacts(
+            adapter=adapter, chat_id="chat1", metadata={}, event_payload=payload,
+            task=None, event_id=10, sub=sub, board="default",
+        )
+    monkeypatch.setattr(kb, "record_artifact_delivery_receipt", record_receipt)
+
+    # A fresh runner models gateway restart. The write-ahead attempt remains,
+    # so the ambiguous accepted upload is never automatically repeated.
+    restarted = object.__new__(GatewayRunner)
+    with pytest.raises(RuntimeError, match="uncertain; refusing duplicate"):
+        await restarted._deliver_kanban_artifacts(
+            adapter=adapter, chat_id="chat1", metadata={}, event_payload=payload,
+            task=None, event_id=10, sub=sub, board="default",
+        )
+    adapter.send_document.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_automatic_video_receipt_uses_lookup_mode(kanban_home, tmp_path):
+    from gateway.platforms.base import SendResult
+    from gateway.run import GatewayRunner
+
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"harmless-video")
+    with kb.connect() as conn:
+        tid = kb.create_task(conn, title="video", assignee="worker1")
+    adapter = MagicMock()
+    adapter.send_video = AsyncMock(return_value=SendResult(True, message_id="vid-1"))
+    runner = object.__new__(GatewayRunner)
+    payload = {"artifacts": [str(video)]}
+    sub = {"task_id": tid, "platform": "telegram", "thread_id": ""}
+
+    for event_id in (11, 12):
+        await runner._deliver_kanban_artifacts(
+            adapter=adapter, chat_id="chat1", metadata={}, event_payload=payload,
+            task=None, event_id=event_id, sub=sub, board="default",
+        )
+    adapter.send_video.assert_awaited_once()
+
+
 # ---------------------------------------------------------------------------
 # Issue #73030: _inherit_notify_subs (link_tasks / decompose path) must copy
 # EVERY routing column — chat_type, user_id_alt, delivery_mode, and
