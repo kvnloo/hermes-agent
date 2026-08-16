@@ -1514,6 +1514,23 @@ CREATE TABLE IF NOT EXISTS kanban_notify_subs (
     PRIMARY KEY (task_id, platform, chat_id, thread_id)
 );
 
+-- Durable proof that a declared task artifact reached a platform. The
+-- content hash is the idempotency identity, so a gateway restart cannot
+-- upload the same bytes twice merely because its event claim was rewound.
+CREATE TABLE IF NOT EXISTS kanban_artifact_delivery_receipts (
+    task_id       TEXT NOT NULL,
+    event_id      INTEGER NOT NULL,
+    platform      TEXT NOT NULL,
+    chat_id       TEXT NOT NULL,
+    thread_id     TEXT NOT NULL DEFAULT '',
+    source_sha256 TEXT NOT NULL,
+    source_size   INTEGER NOT NULL,
+    delivery_mode TEXT NOT NULL,
+    message_id    TEXT NOT NULL,
+    delivered_at  INTEGER NOT NULL,
+    PRIMARY KEY (task_id, platform, chat_id, thread_id, source_sha256, delivery_mode)
+);
+
 CREATE INDEX IF NOT EXISTS idx_tasks_assignee_status ON tasks(assignee, status);
 CREATE INDEX IF NOT EXISTS idx_tasks_status          ON tasks(status);
 CREATE INDEX IF NOT EXISTS idx_links_child           ON task_links(child_id);
@@ -1524,6 +1541,7 @@ CREATE INDEX IF NOT EXISTS idx_runs_task             ON task_runs(task_id, start
 CREATE INDEX IF NOT EXISTS idx_runs_status           ON task_runs(status);
 CREATE INDEX IF NOT EXISTS idx_attachments_task      ON task_attachments(task_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_notify_task           ON kanban_notify_subs(task_id);
+CREATE INDEX IF NOT EXISTS idx_artifact_receipt_task ON kanban_artifact_delivery_receipts(task_id);
 """
 
 
@@ -5507,6 +5525,9 @@ def complete_task(
                 ]
                 if cleaned_artifacts:
                     completed_payload["artifacts"] = cleaned_artifacts
+            artifact_manifest = metadata.get("artifact_manifest")
+            if isinstance(artifact_manifest, list):
+                completed_payload["artifact_manifest"] = artifact_manifest
         _append_event(
             conn, task_id, "completed",
             completed_payload,
@@ -11339,6 +11360,54 @@ def unseen_events_for_sub(
         ))
         max_id = max(max_id, int(r["id"]))
     return max_id, out
+
+
+def get_artifact_delivery_receipt(
+    conn: sqlite3.Connection,
+    *,
+    task_id: str,
+    platform: str,
+    chat_id: str,
+    thread_id: str,
+    source_sha256: str,
+    delivery_mode: str,
+) -> Optional[dict]:
+    row = conn.execute(
+        """SELECT * FROM kanban_artifact_delivery_receipts
+           WHERE task_id = ? AND platform = ? AND chat_id = ? AND thread_id = ?
+             AND source_sha256 = ? AND delivery_mode = ?""",
+        (task_id, platform, chat_id, thread_id, source_sha256, delivery_mode),
+    ).fetchone()
+    return dict(row) if row else None
+
+
+def record_artifact_delivery_receipt(
+    conn: sqlite3.Connection,
+    *,
+    task_id: str,
+    event_id: int,
+    platform: str,
+    chat_id: str,
+    thread_id: str,
+    source_sha256: str,
+    source_size: int,
+    delivery_mode: str,
+    message_id: str,
+) -> None:
+    """Persist upload proof; conflicting receipts fail closed."""
+    if not message_id:
+        raise ValueError("artifact delivery receipt requires a platform message id")
+    with write_txn(conn):
+        conn.execute(
+            """INSERT INTO kanban_artifact_delivery_receipts
+               (task_id, event_id, platform, chat_id, thread_id, source_sha256,
+                source_size, delivery_mode, message_id, delivered_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT(task_id, platform, chat_id, thread_id, source_sha256, delivery_mode)
+               DO NOTHING""",
+            (task_id, int(event_id), platform, chat_id, thread_id, source_sha256,
+             int(source_size), delivery_mode, message_id, int(time.time())),
+        )
 
 
 def claim_unseen_events_for_sub(

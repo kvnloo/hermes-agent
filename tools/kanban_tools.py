@@ -31,6 +31,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import zipfile
 from typing import Any, Optional
 
 from agent.redact import redact_sensitive_text
@@ -703,9 +704,46 @@ def _handle_complete(args: dict, **kw) -> str:
                 f"artifacts must be a list of file paths, got "
                 f"{type(artifacts).__name__}"
             )
-        artifacts = [
-            str(p).strip() for p in artifacts if str(p).strip()
-        ]
+        artifact_manifest: list[dict] = []
+        normalized_paths: list[str] = []
+        for item in artifacts:
+            if isinstance(item, str):
+                path = item.strip()
+                if path:
+                    normalized_paths.append(path)
+                    artifact_manifest.append({"path": path, "delivery": "auto"})
+                continue
+            if not isinstance(item, dict):
+                return tool_error("each artifact must be a path string or manifest object")
+            path = str(item.get("path") or "").strip()
+            delivery = str(item.get("delivery") or "auto").strip().lower()
+            if not path or delivery not in {"auto", "preview", "original"}:
+                return tool_error(
+                    "artifact manifests require path and delivery=auto|preview|original"
+                )
+            if item.get("private") is True or item.get("privacy_reviewed") is False:
+                return tool_error(
+                    f"refusing undeclared/private artifact delivery: {path}"
+                )
+            normalized_paths.append(path)
+            artifact_manifest.append({"path": path, "delivery": delivery})
+        artifacts = normalized_paths
+        for path in artifacts:
+            if not os.path.isabs(path):
+                return tool_error(f"artifact path must be absolute: {path}")
+            if not os.path.isfile(path):
+                return tool_error(f"artifact is missing or not a regular file: {path}")
+            size = os.path.getsize(path)
+            if size <= 0:
+                return tool_error(f"artifact is empty: {path}")
+            if size > 25 * 1024 * 1024:
+                return tool_error(f"artifact exceeds the 25 MB task-delivery limit: {path}")
+            if path.lower().endswith(".zip") and not zipfile.is_zipfile(path):
+                return tool_error(f"declared ZIP artifact is invalid: {path}")
+            if path.lower().endswith(".png"):
+                with open(path, "rb") as source:
+                    if source.read(8) != b"\x89PNG\r\n\x1a\n":
+                        return tool_error(f"declared PNG artifact is invalid: {path}")
         # Carry the artifact list inside metadata so it rides the
         # existing completed-event payload without a schema change at
         # the DB layer.  The gateway notifier reads payload['artifacts']
@@ -733,6 +771,7 @@ def _handle_complete(args: dict, **kw) -> str:
                 metadata["artifacts"] = merged
             else:
                 metadata["artifacts"] = artifacts
+            metadata["artifact_manifest"] = artifact_manifest
     if not (summary or result):
         return tool_error(
             "provide at least one of: summary (preferred), result"
@@ -1831,7 +1870,24 @@ KANBAN_COMPLETE_SCHEMA = {
             },
             "artifacts": {
                 "type": "array",
-                "items": {"type": "string"},
+                "items": {
+                    "oneOf": [
+                        {"type": "string"},
+                        {
+                            "type": "object",
+                            "properties": {
+                                "path": {"type": "string"},
+                                "delivery": {
+                                    "type": "string",
+                                    "enum": ["auto", "preview", "original"],
+                                },
+                                "privacy_reviewed": {"type": "boolean"},
+                                "private": {"type": "boolean"},
+                            },
+                            "required": ["path", "delivery"],
+                        },
+                    ]
+                },
                 "description": (
                     "Optional list of absolute paths to deliverable "
                     "files you produced during this run — generated "
@@ -1839,9 +1895,12 @@ KANBAN_COMPLETE_SCHEMA = {
                     "Examples: [\"/tmp/q3-revenue.png\", "
                     "\"/tmp/report.pdf\"]. The gateway notifier "
                     "uploads each path as a native attachment to the "
-                    "subscribed chat (images embed inline, everything "
-                    "else uploads as a file) so the deliverable "
-                    "lands with the completion notification. Skip "
+                    "subscribed chat. A string keeps legacy behavior. Use "
+                    "{path, delivery: 'original', privacy_reviewed: true} "
+                    "for byte-exact document delivery; 'preview' sends an "
+                    "image as a compressed photo. Only privacy-reviewed "
+                    "outputs may be declared. The deliverable lands with "
+                    "the completion notification. Skip "
                     "intermediate scratch files and references that "
                     "are not the deliverable. The path must exist "
                     "on disk at completion. Files inside a managed scratch "

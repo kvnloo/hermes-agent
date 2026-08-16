@@ -69,6 +69,27 @@ They coexist: a kanban worker may call `delegate_task` internally during its run
 - **Dispatcher** — a long-lived loop that, every N seconds (default 60): reclaims stale claims, reclaims crashed workers (PID gone but TTL not yet expired), promotes ready tasks, atomically claims, spawns assigned profiles. Runs **inside the gateway** by default (`kanban.dispatch_in_gateway: true`). One dispatcher sweeps all boards per tick; workers are spawned with `HERMES_KANBAN_BOARD` pinned so they can't see other boards. After `kanban.failure_limit` consecutive spawn failures on the same task (default: 2) the dispatcher auto-blocks it with the last error as the reason — prevents thrashing on tasks whose profile doesn't exist, workspace can't mount, etc.
 - **Tenant** — optional string namespace *within* a board. One specialist fleet can serve multiple businesses (`--tenant business-a`) with data isolation by workspace path and memory key prefix. Tenants are a soft filter; boards are the hard isolation boundary.
 
+### Delivering visual artifacts to chat
+
+Workers must declare the actual output file in the top-level `artifacts`
+argument to `kanban_complete`; a comment, attachment number, JSON ballot, or
+path mentioned only in prose is not a visual deliverable. String paths retain
+the legacy automatic behavior. For an original PNG whose bytes must be
+preserved, use an explicit manifest entry:
+
+```json
+{"path":"/absolute/path/master.png","delivery":"original","privacy_reviewed":true}
+```
+
+On Telegram, `original` sends the `.png` itself with `sendDocument` (not a ZIP
+and not `sendPhoto`) so its filename and SHA-256 bytes are preserved. Use
+`delivery: "preview"` only for an intentionally compressed inline photo; a
+preview is separate from the original. Hermes validates declared files and
+records a durable receipt binding the task, source hash, Telegram message id,
+and `document_original` or `photo_preview` mode. Missing, empty, oversized,
+invalid, or private/unreviewed declarations fail closed rather than claiming
+that chat delivery succeeded.
+
 ## Boards (multi-project)
 
 Boards let you separate unrelated streams of work — one per project, repo,

@@ -560,6 +560,8 @@ class GatewayKanbanWatchersMixin:
                             if ev.payload and ev.payload.get("reason"):
                                 reason = f": {str(ev.payload['reason'])[:160]}"
                             msg = f"⏸ {board_tag}{tag}Kanban {sub['task_id']} blocked{reason}"
+                            if any(word in reason.lower() for word in ("attachment", "artifact", "evidence", "file")):
+                                msg += "\nEvidence is stored on the task; this blocked notice did not deliver a file."
                         elif kind == "gave_up":
                             err = ""
                             if ev.payload and ev.payload.get("error"):
@@ -615,6 +617,8 @@ class GatewayKanbanWatchersMixin:
                                 f"🛑 {board_tag}{tag}Kanban {sub['task_id']} routed to TRIAGE"
                                 f" — needs a human decision{rc}{reason}"
                             )
+                            if any(word in reason.lower() for word in ("attachment", "artifact", "evidence", "file")):
+                                msg += "\nEvidence is stored on the task; this triage notice did not deliver a file."
                         else:
                             # archived / unblocked are claimed by TERMINAL_KINDS
                             # (so the cursor advances past them and they can't
@@ -694,8 +698,9 @@ class GatewayKanbanWatchersMixin:
                             # uploads. ``extract_local_files`` finds bare
                             # absolute paths in the summary;
                             # ``send_document`` / ``send_image_file`` uploads
-                            # them. Only fires on the ``completed`` event so
-                            # we never spam attachments on retries.
+                            # them. Durable content-hash receipts suppress
+                            # duplicate uploads when a retry/restart reclaims
+                            # the completion event.
                             if kind == "completed":
                                 try:
                                     await self._deliver_kanban_artifacts(
@@ -704,12 +709,20 @@ class GatewayKanbanWatchersMixin:
                                         metadata=metadata,
                                         event_payload=getattr(ev, "payload", None),
                                         task=task,
+                                        event_id=ev.id,
+                                        sub=sub,
+                                        board=board_slug,
                                     )
                                 except Exception as art_exc:
-                                    logger.debug(
+                                    logger.warning(
                                         "kanban notifier: artifact delivery for %s failed: %s",
                                         sub["task_id"], art_exc,
                                     )
+                                    # The event claim must be rewound by the
+                                    # outer delivery guard. Advancing after a
+                                    # failed upload would let the text imply a
+                                    # deliverable arrived when it did not.
+                                    raise
                             # Reset the failure counter on success.
                             sub_fail_counts.pop(sub_key, None)
                         except Exception as exc:
@@ -1078,6 +1091,9 @@ class GatewayKanbanWatchersMixin:
         metadata: dict,
         event_payload: Optional[dict],
         task,
+        event_id: int,
+        sub: dict,
+        board: Optional[str],
     ) -> None:
         """Upload artifact files referenced by a completed kanban task.
 
@@ -1086,21 +1102,23 @@ class GatewayKanbanWatchersMixin:
         the deliverable as a native upload instead of a path printed in
         chat.
 
-        Sources scanned, in priority order:
-          1. ``event_payload['artifacts']`` (explicit list — preferred)
-          2. ``event_payload['summary']`` (truncated first line)
-          3. ``task.result`` (legacy fallback)
+        Only ``event_payload['artifacts']`` is eligible. Paths in comments,
+        summaries, results, and attachment-number prose are deliberately not
+        delivery authority: they may identify private inputs or evidence that
+        was stored on the board but never reviewed for chat delivery.
 
-        Files are deduplicated, missing files are silently skipped (the
-        path may have been mentioned for reference only), and delivery
-        errors are logged but do not break the notifier loop.
+        Explicit files are validated by the completion boundary; transport failures
+        raise so the notifier rewinds and retries. Successful sends are bound
+        to durable content-hash receipts before the event cursor advances.
         """
+        import hashlib
         from pathlib import Path as _Path
+        from hermes_cli import kanban_db as _kb
 
-        candidates: list[str] = []
+        candidates: list[tuple[str, str]] = []
         seen: set[str] = set()
 
-        def _add(path: str) -> None:
+        def _add(path: str, delivery: str = "auto") -> None:
             if not path:
                 return
             expanded = os.path.expanduser(path)
@@ -1109,75 +1127,89 @@ class GatewayKanbanWatchersMixin:
             if not os.path.isfile(expanded):
                 return
             seen.add(expanded)
-            candidates.append(expanded)
+            candidates.append((expanded, delivery))
 
         # 1. Explicit artifacts list in payload.
         if isinstance(event_payload, dict):
             raw = event_payload.get("artifacts")
+            manifest = event_payload.get("artifact_manifest")
+            manifest_modes = {
+                str(item.get("path")): str(item.get("delivery") or "auto")
+                for item in manifest
+                if isinstance(item, dict) and item.get("path")
+            } if isinstance(manifest, list) else {}
             if isinstance(raw, (list, tuple)):
                 for item in raw:
                     if isinstance(item, str):
-                        _add(item)
-
-            # 2. Paths embedded in the payload summary.
-            summary = event_payload.get("summary")
-            if isinstance(summary, str) and summary:
-                paths, _ = adapter.extract_local_files(summary)
-                for p in paths:
-                    _add(p)
-
-        # 3. Legacy: paths embedded in task.result.
-        if task is not None and getattr(task, "result", None):
-            result_text = str(task.result)
-            paths, _ = adapter.extract_local_files(result_text)
-            for p in paths:
-                _add(p)
+                        _add(item, manifest_modes.get(item, "auto"))
 
         if not candidates:
             return
 
         from gateway.platforms.base import BasePlatformAdapter
-        candidates = BasePlatformAdapter.filter_local_delivery_paths(candidates)
+        safe_paths = set(BasePlatformAdapter.filter_local_delivery_paths([p for p, _ in candidates]))
+        candidates = [(p, mode) for p, mode in candidates if p in safe_paths]
         if not candidates:
             return
 
         _IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
         _VIDEO_EXTS = {".mp4", ".mov", ".avi", ".mkv", ".webm", ".3gp"}
 
-        from urllib.parse import quote as _quote
-
-        # Partition images so they ride a single send_multiple_images call
-        # on platforms that support batch image uploads (Signal/Slack RPCs).
-        image_paths = [p for p in candidates if _Path(p).suffix.lower() in _IMAGE_EXTS]
-        other_paths = [p for p in candidates if _Path(p).suffix.lower() not in _IMAGE_EXTS]
-
-        if image_paths:
-            try:
-                batch = [(f"file://{_quote(p)}", "") for p in image_paths]
-                await adapter.send_multiple_images(
-                    chat_id=chat_id, images=batch, metadata=metadata,
-                )
-            except Exception as exc:
-                logger.warning(
-                    "kanban notifier: image batch upload failed: %s", exc,
-                )
-
-        for path in other_paths:
+        for path, requested_mode in candidates:
             ext = _Path(path).suffix.lower()
+            size = os.path.getsize(path)
+            if size <= 0 or size > _kb.KANBAN_ATTACHMENT_MAX_BYTES:
+                raise RuntimeError(f"invalid artifact size ({size} bytes): {_Path(path).name}")
+            with open(path, "rb") as source:
+                digest = hashlib.sha256(source.read()).hexdigest()
+            mode = "document_original" if requested_mode == "original" else (
+                "photo_preview" if ext in _IMAGE_EXTS else "document_original"
+            )
+            conn = _kb.connect(board=board)
             try:
-                if ext in _VIDEO_EXTS:
-                    await adapter.send_video(
+                receipt = _kb.get_artifact_delivery_receipt(
+                    conn, task_id=sub["task_id"], platform=sub["platform"],
+                    chat_id=chat_id, thread_id=sub.get("thread_id") or "",
+                    source_sha256=digest, delivery_mode=mode,
+                )
+            finally:
+                conn.close()
+            if receipt:
+                continue
+            if ext == ".png":
+                with open(path, "rb") as source:
+                    if source.read(8) != b"\x89PNG\r\n\x1a\n":
+                        raise RuntimeError(f"declared PNG has an invalid signature: {_Path(path).name}")
+            if ext in _VIDEO_EXTS and requested_mode != "original":
+                result = await adapter.send_video(
                         chat_id=chat_id, video_path=path, metadata=metadata,
                     )
-                else:
-                    await adapter.send_document(
+                mode = "video"
+            elif mode == "photo_preview":
+                result = await adapter.send_image_file(
+                    chat_id=chat_id, image_path=path, metadata=metadata,
+                )
+            else:
+                result = await adapter.send_document(
                         chat_id=chat_id, file_path=path, metadata=metadata,
                     )
-            except Exception as exc:
-                logger.warning(
-                    "kanban notifier: artifact upload (%s) failed: %s",
-                    path, exc,
+            if getattr(result, "success", True) is False:
+                raise RuntimeError(
+                    f"artifact upload failed: {getattr(result, 'error', None) or _Path(path).name}"
                 )
+            message_id = str(getattr(result, "message_id", "") or "")
+            if not message_id:
+                raise RuntimeError("artifact transport returned no durable message id")
+            conn = _kb.connect(board=board)
+            try:
+                _kb.record_artifact_delivery_receipt(
+                    conn, task_id=sub["task_id"], event_id=event_id,
+                    platform=sub["platform"], chat_id=chat_id,
+                    thread_id=sub.get("thread_id") or "", source_sha256=digest,
+                    source_size=size, delivery_mode=mode, message_id=message_id,
+                )
+            finally:
+                conn.close()
 
     async def _kanban_dispatcher_watcher(self) -> None:
         """Embedded kanban dispatcher — one tick every `dispatch_interval_seconds`.

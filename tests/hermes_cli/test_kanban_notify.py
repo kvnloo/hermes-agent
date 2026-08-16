@@ -219,7 +219,7 @@ async def test_notifier_notify_plus_wake_sends_and_wakes(kanban_home):
             conn, task_id=active_tid, platform="telegram", chat_id="chat1",
             delivery_mode="notify+wake",
         )
-        kb.block_task(conn, passive_tid, reason="passive block")
+        kb.block_task(conn, passive_tid, reason="passive evidence attachment")
         kb.block_task(conn, active_tid, reason="active block")
     finally:
         conn.close()
@@ -258,7 +258,8 @@ async def test_notifier_notify_plus_wake_sends_and_wakes(kanban_home):
 
     # Both subs still get a passive send (notify AND notify+wake send).
     assert len(sent_msgs) == 2
-    assert any("passive block" in m for m in sent_msgs)
+    assert any("passive evidence attachment" in m for m in sent_msgs)
+    assert any("did not deliver a file" in m for m in sent_msgs)
     assert any("active block" in m for m in sent_msgs)
     # Only the notify+wake sub woke the agent, exactly once.
     wake_mock.assert_awaited_once()
@@ -797,10 +798,8 @@ async def test_gateway_autosubscribe_roundtrips_user_id_alt_for_session_key(
 
 
 @pytest.mark.asyncio
-async def test_notifier_artifact_delivery_skips_missing_files(kanban_home, tmp_path, monkeypatch):
-    """Missing artifact paths are silently skipped — they may have been
-    referenced by name only. The notifier must not crash and must still
-    deliver any artifacts that do exist."""
+async def test_notifier_artifact_delivery_rejects_missing_declared_files(kanban_home, tmp_path, monkeypatch):
+    """An explicit missing artifact fails closed before completion."""
     import hermes_cli.kanban_db as kb
     from gateway.run import GatewayRunner
     from gateway.config import Platform
@@ -823,52 +822,53 @@ async def test_notifier_artifact_delivery_skips_missing_files(kanban_home, tmp_p
     import os
     os.environ["HERMES_KANBAN_TASK"] = tid
     try:
-        kt._handle_complete({
+        result = kt._handle_complete({
             "summary": "one real, one ghost",
             "artifacts": [str(real_pdf), "/tmp/definitely-does-not-exist.pdf"],
         })
     finally:
         os.environ.pop("HERMES_KANBAN_TASK", None)
 
-    runner = object.__new__(GatewayRunner)
-    runner._owns_kanban_dispatcher_lock = lambda: True
-    runner._running = True
-    runner._kanban_sub_fail_counts = {}
-    runner._kanban_dispatcher_lock_handle = object()
+    assert "missing or not a regular file" in result
+    with kb.connect() as conn:
+        task = kb.get_task(conn, tid)
+        assert task is not None and task.status != "done"
 
-    fake_adapter = MagicMock()
-    fake_adapter.name = "telegram"
 
-    documents_uploaded: list = []
+@pytest.mark.parametrize(
+    "case,expected",
+    [
+        ("invalid_zip", "declared ZIP artifact is invalid"),
+        ("oversized", "exceeds the 25 MB"),
+        ("private", "refusing undeclared/private artifact delivery"),
+    ],
+)
+def test_completion_artifact_validation_fails_closed(
+    kanban_home, tmp_path, monkeypatch, case, expected,
+):
+    from tools import kanban_tools as kt
 
-    async def _send(chat_id, msg, metadata=None):
-        runner._running = False
-
-    async def _send_document(chat_id, file_path, metadata=None, **_kw):
-        documents_uploaded.append(file_path)
-
-    fake_adapter.send = AsyncMock(side_effect=_send)
-    fake_adapter.send_document = AsyncMock(side_effect=_send_document)
-    fake_adapter.send_multiple_images = AsyncMock()
-    from gateway.platforms.base import BasePlatformAdapter
-    fake_adapter.extract_local_files = BasePlatformAdapter.extract_local_files
-
-    runner.adapters = {Platform.TELEGRAM: fake_adapter}
-
-    _orig_sleep = asyncio.sleep
-
-    async def _fast_sleep(_):
-        await _orig_sleep(0)
-
-    with patch("gateway.run.asyncio.sleep", side_effect=_fast_sleep):
-        await asyncio.wait_for(
-            runner._kanban_notifier_watcher(interval=1),
-            timeout=10.0,
-        )
-
-    # Only the real file was uploaded.
-    assert len(documents_uploaded) == 1
-    assert "real.pdf" in documents_uploaded[0]
+    with kb.connect() as conn:
+        tid = kb.create_task(conn, title=case, assignee="worker1")
+    path = tmp_path / ("placeholder.zip" if case == "invalid_zip" else "output.bin")
+    if case == "invalid_zip":
+        path.write_bytes(b"not-a-real-archive".ljust(67, b"!"))
+    elif case == "oversized":
+        with path.open("wb") as output:
+            output.truncate(25 * 1024 * 1024 + 1)
+    else:
+        path.write_bytes(b"private source")
+    artifact = (
+        {"path": str(path), "delivery": "original", "private": True}
+        if case == "private"
+        else str(path)
+    )
+    monkeypatch.setenv("HERMES_KANBAN_TASK", tid)
+    result = kt._handle_complete({"summary": "deliver", "artifacts": [artifact]})
+    assert expected in result
+    with kb.connect() as conn:
+        task = kb.get_task(conn, tid)
+        assert task is not None and task.status != "done"
 
 
 # ---------------------------------------------------------------------------
@@ -939,6 +939,97 @@ def test_migration_backfill_runs_only_on_first_add(kanban_home):
             (task_id,),
         ).fetchone()
     assert row["delivery_mode"] == "notify"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "intent,expected_method,receipt_mode",
+    [
+        ("original", "send_document", "document_original"),
+        ("preview", "send_image_file", "photo_preview"),
+    ],
+)
+async def test_png_artifact_intent_and_receipt_are_exact(
+    kanban_home, tmp_path, intent, expected_method, receipt_mode,
+):
+    """Original PNG bytes use document mode; preview uses photo mode."""
+    import hashlib
+    from gateway.config import Platform
+    from gateway.platforms.base import BasePlatformAdapter, SendResult
+    from gateway.run import GatewayRunner
+
+    png = tmp_path / "master.png"
+    png.write_bytes(b"\x89PNG\r\n\x1a\n" + b"exact-master-bytes")
+    digest = hashlib.sha256(png.read_bytes()).hexdigest()
+    with kb.connect() as conn:
+        tid = kb.create_task(conn, title="visual", assignee="worker1")
+
+    adapter = MagicMock()
+    adapter.extract_local_files = BasePlatformAdapter.extract_local_files
+    adapter.send_document = AsyncMock(return_value=SendResult(True, message_id="doc-41"))
+    adapter.send_image_file = AsyncMock(return_value=SendResult(True, message_id="photo-42"))
+    runner = object.__new__(GatewayRunner)
+    payload = {
+        "artifacts": [str(png)],
+        "artifact_manifest": [{"path": str(png), "delivery": intent}],
+    }
+    sub = {"task_id": tid, "platform": Platform.TELEGRAM.value, "thread_id": ""}
+
+    await runner._deliver_kanban_artifacts(
+        adapter=adapter, chat_id="chat1", metadata={}, event_payload=payload,
+        task=None, event_id=7, sub=sub, board="default",
+    )
+    getattr(adapter, expected_method).assert_awaited_once()
+    other = "send_image_file" if expected_method == "send_document" else "send_document"
+    getattr(adapter, other).assert_not_awaited()
+    with kb.connect() as conn:
+        receipt = kb.get_artifact_delivery_receipt(
+            conn, task_id=tid, platform="telegram", chat_id="chat1", thread_id="",
+            source_sha256=digest, delivery_mode=receipt_mode,
+        )
+    assert receipt is not None
+    assert receipt["source_size"] == len(png.read_bytes())
+    assert receipt["message_id"] in {"doc-41", "photo-42"}
+
+    # Gateway restart/reclaim: the durable receipt suppresses a duplicate.
+    await runner._deliver_kanban_artifacts(
+        adapter=adapter, chat_id="chat1", metadata={}, event_payload=payload,
+        task=None, event_id=8, sub=sub, board="default",
+    )
+    getattr(adapter, expected_method).assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_artifact_transport_failure_creates_no_receipt(kanban_home, tmp_path):
+    import hashlib
+    from gateway.platforms.base import BasePlatformAdapter, SendResult
+    from gateway.run import GatewayRunner
+
+    png = tmp_path / "failed.png"
+    png.write_bytes(b"\x89PNG\r\n\x1a\nfailed")
+    digest = hashlib.sha256(png.read_bytes()).hexdigest()
+    with kb.connect() as conn:
+        tid = kb.create_task(conn, title="failed visual", assignee="worker1")
+    adapter = MagicMock()
+    adapter.extract_local_files = BasePlatformAdapter.extract_local_files
+    adapter.send_document = AsyncMock(return_value=SendResult(False, error="telegram down"))
+    runner = object.__new__(GatewayRunner)
+    with pytest.raises(RuntimeError, match="telegram down"):
+        await runner._deliver_kanban_artifacts(
+            adapter=adapter, chat_id="chat1", metadata={},
+            event_payload={
+                "artifacts": [str(png)],
+                "artifact_manifest": [{"path": str(png), "delivery": "original"}],
+            },
+            task=None, event_id=9,
+            sub={"task_id": tid, "platform": "telegram", "thread_id": ""},
+            board="default",
+        )
+    with kb.connect() as conn:
+        assert kb.get_artifact_delivery_receipt(
+            conn, task_id=tid, platform="telegram", chat_id="chat1", thread_id="",
+            source_sha256=digest, delivery_mode="document_original",
+        ) is None
 
 
 # ---------------------------------------------------------------------------
