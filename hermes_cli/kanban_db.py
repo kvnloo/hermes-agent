@@ -8175,8 +8175,14 @@ def _record_dispatch_considerations(
     if not bounded:
         return
     now = int(time.time())
+    # ``last_considered_at`` is also the durable queue-rotation key.  A
+    # seconds-resolution value lets every row considered in adjacent fast
+    # ticks tie, at which point the same stable prefix can monopolize the
+    # bounded sample forever.  Give each row a unique, increasing microsecond
+    # key while retaining an epoch-like timestamp for diagnostics.
+    rotation_base = time.time_ns() // 1_000
     with write_txn(conn):
-        for task_id, reason in bounded:
+        for index, (task_id, reason) in enumerate(bounded):
             row = conn.execute(
                 "SELECT status, created_at, ready_since, dispatch_reason, "
                 "dispatch_sla_alerted_at FROM tasks WHERE id = ? "
@@ -8190,7 +8196,7 @@ def _record_dispatch_considerations(
                 "UPDATE tasks SET ready_since = ?, last_considered_at = ?, "
                 "dispatch_attempt_count = dispatch_attempt_count + 1, dispatch_reason = ? "
                 "WHERE id = ?",
-                (ready_since, now, reason, task_id),
+                (ready_since, rotation_base + index, reason, task_id),
             )
             if row["dispatch_reason"] != reason:
                 _append_event(conn, task_id, "dispatch_health", {"reason": reason})
@@ -8239,7 +8245,8 @@ def _record_capacity_waiters(
     rows = conn.execute(
         "SELECT id FROM tasks WHERE status IN ('ready', 'review') "
         "AND claim_lock IS NULL "
-        "ORDER BY COALESCE(last_considered_at, 0), priority DESC, created_at "
+        "ORDER BY last_considered_at IS NOT NULL, last_considered_at, "
+        "priority DESC, created_at, id "
         "LIMIT ?",
         (DISPATCH_HEALTH_BATCH_LIMIT,),
     ).fetchall()
@@ -10223,7 +10230,8 @@ def _dispatch_once_locked(
     ready_rows = conn.execute(
         "SELECT id, assignee FROM tasks "
         "WHERE status = 'ready' AND claim_lock IS NULL "
-        "ORDER BY priority DESC, created_at ASC"
+        "ORDER BY last_considered_at IS NOT NULL, last_considered_at, "
+        "priority DESC, created_at, id"
     ).fetchall()
     # Review rows are enumerated up front (not after the ready loop) so the
     # budget split below can see whether review work exists at all.
@@ -10232,7 +10240,8 @@ def _dispatch_once_locked(
         review_rows = conn.execute(
             "SELECT id, assignee FROM tasks "
             "WHERE status = 'review' AND claim_lock IS NULL "
-            "ORDER BY priority DESC, created_at ASC"
+            "ORDER BY last_considered_at IS NOT NULL, last_considered_at, "
+            "priority DESC, created_at, id"
         ).fetchall()
     # Review-lane reservation (OOF-30 review finding): the ready loop runs
     # first and used to consume the ENTIRE shared budget, so a sustained
