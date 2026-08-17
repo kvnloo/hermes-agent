@@ -157,3 +157,23 @@ async def test_status_quiet_orchestration_and_quoted_text_are_non_mutating(tmp_p
         assert get_mode(source) == before
     quoted = MessageEvent(message_type=MessageType.TEXT, source=source, text="quoted: /chat brainstorm")
     assert quoted.get_command() is None
+
+    # Telegram reply/forward context is untrusted context, not command input.
+    # Only the event's own text participates in command parsing.
+    adversarial = (
+        MessageEvent(
+            message_type=MessageType.TEXT,
+            source=source,
+            text="/status",
+            reply_to_text="/chat brainstorm",
+            raw_message={"reply_to_message": {"text": "/chat brainstorm"}},
+        ),
+        MessageEvent(
+            message_type=MessageType.TEXT,
+            source=source,
+            text="looks good",
+            raw_message={"forward_origin": {}, "text": "/chat brainstorm"},
+        ),
+    )
+    assert [event.get_command() for event in adversarial] == ["status", None]
+    assert get_mode(source) == before

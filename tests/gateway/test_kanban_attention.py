@@ -251,6 +251,84 @@ async def test_ten_child_completions_send_one_parent_digest_without_network(
     restarted_adapter.send.assert_not_awaited()
 
 
+@pytest.mark.parametrize("exit_mode", ["pm", "copilot"])
+@pytest.mark.asyncio
+async def test_shared_destination_brainstorm_exit_flushes_once(
+    tmp_path, monkeypatch, exit_mode
+):
+    """A later delivery cannot erase an earlier transition in the same tick."""
+    from gateway.config import Platform
+    from gateway.conversation_modes import set_mode
+    from gateway.run import GatewayRunner
+    from gateway.session import SessionSource
+    from hermes_cli import kanban_db as kb
+
+    home = tmp_path / ".hermes"
+    home.mkdir()
+    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    kb.init_db()
+    conn = kb.connect()
+    try:
+        task_ids = [
+            kb.create_task(conn, title=f"shared {index}", assignee="worker")
+            for index in range(2)
+        ]
+        for task_id in task_ids:
+            kb.add_notify_sub(
+                conn, task_id=task_id, platform="telegram", chat_id="captain",
+                notifier_profile="first-mate",
+            )
+            kb._append_event(conn, task_id, kind="completed", payload={"summary": "done"})
+    finally:
+        conn.close()
+
+    destination = SessionSource(
+        platform=Platform.TELEGRAM, chat_id="captain", chat_type="dm",
+        profile="first-mate",
+    )
+    set_mode(destination, "brainstorm")
+    adapter = SimpleNamespace(send=AsyncMock(return_value=None), _active_sessions={})
+    runner = GatewayRunner.__new__(GatewayRunner)
+    runner.adapters = {Platform.TELEGRAM: adapter}
+    runner._profile_adapters = {"first-mate": {Platform.TELEGRAM: adapter}}
+    runner._kanban_sub_fail_counts = {}
+    runner._kanban_notifier_profile = "first-mate"
+    runner._authorization_adapter = lambda platform, profile=None: adapter
+    real_sleep = asyncio.sleep
+
+    async def run_tick():
+        runner._running = True
+
+        async def one_tick(delay):
+            if delay == 5:
+                return
+            runner._running = False
+            await real_sleep(0)
+
+        with patch("gateway.kanban_watchers.asyncio.sleep", side_effect=one_tick), patch(
+            "hermes_cli.config.load_config", return_value=_config(interval_seconds=3600)
+        ):
+            await runner._kanban_notifier_watcher(interval=1)
+
+    await run_tick()
+    adapter.send.assert_not_awaited()
+
+    focuses = task_ids if exit_mode == "copilot" else None
+    set_mode(destination, exit_mode, focus=focuses)
+    destination_key = ("first-mate", "telegram", "captain", "dm", "")
+    runner._kanban_attention_last_digest = {destination_key: 10**30}
+    await run_tick()
+
+    adapter.send.assert_awaited_once()
+    digest = adapter.send.await_args.args[1]
+    assert all(task_id in digest for task_id in task_ids)
+
+    # Both subscription claims advanced atomically; another tick cannot replay.
+    await run_tick()
+    adapter.send.assert_awaited_once()
+
+
 @pytest.mark.asyncio
 async def test_active_conversation_defers_routine_digest_but_not_captain_gate(
     tmp_path, monkeypatch

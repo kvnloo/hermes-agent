@@ -554,7 +554,13 @@ class GatewayKanbanWatchersMixin:
                         )
                         _previous_mode = _effective_modes.get(_dest)
                         _effective_modes[_dest] = _effective_policy.mode
-                        _mode_transitions[_dest] = (
+                        # Several subscriptions may resolve to the exact same
+                        # destination in one tick.  Once any delivery observes
+                        # the brainstorm exit, later deliveries (which now see
+                        # the updated effective mode) must not erase it.
+                        _mode_transitions[_dest] = _mode_transitions.get(
+                            _dest, False
+                        ) or (
                             _previous_mode == "brainstorm"
                             and _effective_policy.mode != "brainstorm"
                         )
