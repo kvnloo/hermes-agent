@@ -2737,6 +2737,14 @@ def _migrate_add_optional_columns(conn: sqlite3.Connection) -> None:
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_tasks_session_id ON tasks(session_id)"
     )
+    migrated_cols = {
+        row["name"] for row in conn.execute("PRAGMA table_info(tasks)")
+    }
+    if {"status", "claim_lock", "last_considered_at"}.issubset(migrated_cols):
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_tasks_dispatch_rotation "
+            "ON tasks(status, claim_lock, last_considered_at)"
+        )
 
     # task_events gained a run_id column; back-fill it as NULL for
     # historical events (they predate runs and can't be attributed).
@@ -8146,6 +8154,7 @@ class DispatchResult:
 
 DEFAULT_CLAIM_SLA_SECONDS = 300
 DISPATCH_HEALTH_BATCH_LIMIT = 128
+SQLITE_MAX_INTEGER = (1 << 63) - 1
 
 
 def _begin_dispatch_wait_episode(
@@ -8174,14 +8183,24 @@ def _record_dispatch_considerations(
     bounded = list(samples)[:DISPATCH_HEALTH_BATCH_LIMIT]
     if not bounded:
         return
-    now = int(time.time())
-    # ``last_considered_at`` is also the durable queue-rotation key.  A
-    # seconds-resolution value lets every row considered in adjacent fast
-    # ticks tie, at which point the same stable prefix can monopolize the
-    # bounded sample forever.  Give each row a unique, increasing microsecond
-    # key while retaining an epoch-like timestamp for diagnostics.
-    rotation_base = time.time_ns() // 1_000
     with write_txn(conn):
+        now = int(time.time())
+        # ``last_considered_at`` is also the durable queue-rotation key. Derive
+        # the next range under the same writer lock as the updates: wall time
+        # alone can move backwards, and a future persisted key must not let a
+        # low-key batch monopolize the bounded prefix after restart.
+        persisted = conn.execute(
+            "SELECT MAX(last_considered_at) AS value FROM tasks "
+            "WHERE status IN ('ready', 'review') AND claim_lock IS NULL"
+        ).fetchone()["value"]
+        wall_candidate = time.time_ns() // 1_000
+        rotation_floor = max(wall_candidate, int(persisted or 0))
+        if rotation_floor > SQLITE_MAX_INTEGER - len(bounded):
+            raise OverflowError(
+                "dispatch rotation key exhausted SQLite INTEGER range; "
+                "repair extreme tasks.last_considered_at values"
+            )
+        rotation_base = rotation_floor + 1
         for index, (task_id, reason) in enumerate(bounded):
             row = conn.execute(
                 "SELECT status, created_at, ready_since, dispatch_reason, "
