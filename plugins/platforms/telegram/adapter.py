@@ -10189,6 +10189,22 @@ class TelegramAdapter(BasePlatformAdapter):
             reply_to_text=reply_to_text,
             auto_skill=topic_skill,
             channel_prompt=_channel_prompt,
+            metadata={
+                # Telegram exposes forwarding as structured provenance on the
+                # current Message.  Do not infer it from rendered text: a
+                # forwarded message/caption can itself begin with a slash and
+                # must remain conversational input, while a user's own `/chat`
+                # reply remains a command even when reply/quote context exists.
+                "gateway_control_text_origin": (
+                    "forwarded_message"
+                    if (
+                        getattr(message, "forward_origin", None) is not None
+                        or getattr(message, "forward_date", None) is not None
+                        or bool(getattr(message, "is_automatic_forward", False))
+                    )
+                    else "current_message"
+                ),
+            },
             timestamp=message.date,
         )
 

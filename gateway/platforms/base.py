@@ -2384,7 +2384,20 @@ class MessageEvent:
     
     def is_command(self) -> bool:
         """Check if this is a command message (e.g., /new, /reset)."""
-        return self.allow_gateway_control and (self.text or "").lstrip().startswith("/")
+        # Adapters that can distinguish current-message text from forwarded or
+        # quoted payloads publish this provenance.  Once present, fail closed:
+        # malformed/unknown values must never turn untrusted payload text into
+        # a gateway control command.  Adapters without this signal retain the
+        # historical behavior.
+        control_origin = self.metadata.get("gateway_control_text_origin")
+        origin_allows_control = (
+            control_origin is None or control_origin == "current_message"
+        )
+        return (
+            self.allow_gateway_control
+            and origin_allows_control
+            and (self.text or "").lstrip().startswith("/")
+        )
     
     def get_command(self) -> Optional[str]:
         """Extract command name if this is a command message."""
