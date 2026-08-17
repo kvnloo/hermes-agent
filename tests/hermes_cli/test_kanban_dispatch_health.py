@@ -251,6 +251,81 @@ def test_critical_memory_guard_records_bounded_fair_health(
         )
 
         kb.dispatch_once(conn)
-        last = kb.get_task(conn, queued[-1])
-        assert last is not None
-        assert last.dispatch_attempt_count == 1
+        assert all(
+            (task := kb.get_task(conn, task_id)) is not None
+            and task.dispatch_attempt_count >= 1
+            for task_id in queued
+        )
+
+
+def test_persistent_poison_prefix_rotates_to_valid_tail_across_restart(
+    tmp_path: Path, monkeypatch
+) -> None:
+    from hermes_cli import profiles
+
+    monkeypatch.setattr(profiles, "profile_exists", lambda name: name == "worker")
+    db_path = tmp_path / "poison-prefix.db"
+    with kb.connect(db_path=db_path) as conn:
+        poison = [
+            kb.create_task(
+                conn, title=f"poison {index}", assignee="missing", priority=100,
+            )
+            for index in range(kb.DISPATCH_HEALTH_BATCH_LIMIT)
+        ]
+        tail = kb.create_task(conn, title="valid tail", assignee="worker")
+        first = kb.dispatch_once(conn, max_spawn=0)
+        assert first.spawned == []
+        tail_before = kb.get_task(conn, tail)
+        assert tail_before is not None
+        assert tail_before.dispatch_attempt_count == 0
+        assert sum(
+            task.dispatch_attempt_count
+            for task_id in poison
+            if (task := kb.get_task(conn, task_id)) is not None
+        ) + tail_before.dispatch_attempt_count == kb.DISPATCH_HEALTH_BATCH_LIMIT
+
+    with kb.connect(db_path=db_path) as reopened:
+        second = kb.dispatch_once(reopened, max_spawn=0)
+        assert second.spawned == []
+        tail_task = kb.get_task(reopened, tail)
+        assert tail_task is not None
+        assert tail_task.dispatch_attempt_count == 1
+        assert tail_task.dispatch_reason == "global_capacity"
+
+
+def test_equal_rotation_keys_use_stable_tie_break_and_do_not_duplicate(
+    tmp_path: Path, all_assignees_spawnable
+) -> None:
+    with kb.connect(db_path=tmp_path / "equal-keys.db") as conn:
+        running = kb.create_task(conn, title="running", assignee="worker")
+        assert kb.claim_task(conn, running)
+        queued = [
+            kb.create_task(conn, title=f"queued {index}", assignee="worker")
+            for index in range(kb.DISPATCH_HEALTH_BATCH_LIMIT + 3)
+        ]
+        conn.execute(
+            "UPDATE tasks SET last_considered_at = 7 WHERE id IN ("
+            + ",".join("?" for _ in queued)
+            + ")",
+            queued,
+        )
+
+        kb.dispatch_once(conn, max_in_progress=1)
+        first_tasks = [kb.get_task(conn, task_id) for task_id in queued]
+        assert all(task is not None for task in first_tasks)
+        first_counts = {
+            task_id: task.dispatch_attempt_count
+            for task_id, task in zip(queued, first_tasks)
+            if task is not None
+        }
+        assert sum(first_counts.values()) == kb.DISPATCH_HEALTH_BATCH_LIMIT
+        kb.dispatch_once(conn, max_in_progress=1)
+        second_tasks = [kb.get_task(conn, task_id) for task_id in queued]
+        assert all(task is not None for task in second_tasks)
+        second_counts = {
+            task_id: task.dispatch_attempt_count
+            for task_id, task in zip(queued, second_tasks)
+            if task is not None
+        }
+        assert all(count >= 1 for count in second_counts.values())
+        assert sum(second_counts.values()) == 2 * kb.DISPATCH_HEALTH_BATCH_LIMIT
