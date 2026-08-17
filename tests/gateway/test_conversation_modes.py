@@ -1,0 +1,99 @@
+import json
+import pytest
+
+from gateway.config import Platform
+from gateway.conversation_modes import (
+    conversation_key,
+    get_mode,
+    receipt,
+    set_focus,
+    set_mode,
+)
+from gateway.platforms.base import MessageEvent, MessageType
+from gateway.session import SessionSource
+from hermes_cli.commands import resolve_command
+
+
+def _source(chat="captain", thread=None, chat_type="dm", profile="first-mate"):
+    return SessionSource(
+        platform=Platform.TELEGRAM,
+        chat_id=chat,
+        thread_id=thread,
+        chat_type=chat_type,
+        profile=profile,
+    )
+
+
+def test_registry_aliases_and_message_parser_are_deterministic():
+    assert resolve_command("PM") and resolve_command("PM").name == "pm"
+    assert resolve_command("manager") and resolve_command("manager").name == "pm"
+    assert resolve_command("BrainStorm") and resolve_command("BrainStorm").name == "brainstorm"
+    assert resolve_command("does-not-exist") is None
+    event = MessageEvent(message_type=MessageType.TEXT, source=_source(), text="  /CoPilot   t_one  ")
+    assert event.get_command() == "copilot"
+    assert event.get_command_args().strip() == "t_one"
+    plain = MessageEvent(message_type=MessageType.TEXT, source=_source(), text="please use /brainstorm")
+    assert plain.get_command() is None
+
+
+def test_state_is_exact_profile_platform_chat_type_chat_and_thread(tmp_path):
+    path = tmp_path / "modes.json"
+    dm = _source()
+    group = _source(chat_type="group")
+    thread = _source(thread="topic")
+    other_profile = _source(profile="default")
+    set_mode(dm, "brainstorm", path=path)
+    assert get_mode(dm, path=path).mode == "brainstorm"
+    for source in (group, thread, other_profile):
+        assert get_mode(source, path=path).mode == "pm"
+        assert conversation_key(source) != conversation_key(dm)
+
+
+def test_restart_persistence_corrupt_fallback_and_safe_default(tmp_path):
+    path = tmp_path / "modes.json"
+    set_mode(_source(), "copilot", focus=["t_one"], path=path)
+    assert get_mode(_source(), path=path).focus == ("t_one",)
+    path.write_text("not-json", encoding="utf-8")
+    assert get_mode(_source(), path=path).mode == "pm"
+    path.write_text(json.dumps({"version": 999, "conversations": {}}), encoding="utf-8")
+    assert get_mode(_source(), path=path).mode == "pm"
+
+
+def test_focus_is_bounded_deduplicated_and_malformed_updates_are_atomic(tmp_path):
+    path = tmp_path / "modes.json"
+    source = _source()
+    set_focus(source, ["a", "a", "b", "c", "d"], path=path)
+    assert get_mode(source, path=path).focus == ("a", "b", "c")
+    with pytest.raises(ValueError):
+        set_mode(source, "freeze", path=path)
+    assert get_mode(source, path=path).mode == "pm"
+    assert "execution remains canonical" in receipt(set_mode(source, "copilot", path=path))
+
+
+@pytest.mark.asyncio
+async def test_commands_only_change_presentation_state(tmp_path, monkeypatch):
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    from gateway.slash_commands import GatewaySlashCommandsMixin
+
+    runner = GatewaySlashCommandsMixin()
+    event = MessageEvent(message_type=MessageType.TEXT, source=_source(), text="/brainstorm")
+    before = vars(event.source).copy()
+    reply = await runner._handle_attention_mode_command(event, "brainstorm")
+    assert reply.startswith("BRAINSTORM")
+    assert vars(event.source) == before
+    assert get_mode(event.source).mode == "brainstorm"
+    # No scheduler/task/agent capability is present on or added by this state seam.
+    state = get_mode(event.source)
+    assert set(vars(state)) == {"mode", "focus"}
+
+
+@pytest.mark.asyncio
+async def test_over_limit_command_has_no_side_effect(tmp_path, monkeypatch):
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    from gateway.slash_commands import GatewaySlashCommandsMixin
+
+    runner = GatewaySlashCommandsMixin()
+    event = MessageEvent(message_type=MessageType.TEXT, source=_source(), text="/copilot a b c d")
+    reply = await runner._handle_attention_mode_command(event, "copilot")
+    assert "nothing changed" in reply
+    assert get_mode(event.source).mode == "pm"

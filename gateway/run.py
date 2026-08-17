@@ -15088,6 +15088,7 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
                 "steer": self._busy_steer_command,
                 "egress": self._busy_egress_command,
                 "goal": self._busy_goal_command,
+                "attention": self._busy_attention_command,
             }.get(handler_key)
             if special is not None:
                 return await special(event, quick_key, source)
@@ -15168,6 +15169,13 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
         # interrupt, no queued text.
         logger.info("Ignoring /start platform ping for active session %s", quick_key)
         return ""
+
+    async def _busy_attention_command(self, event: MessageEvent, quick_key: str, source):
+        from hermes_cli.commands import resolve_command
+
+        definition = resolve_command(event.get_command() or "")
+        command = definition.name if definition is not None else (event.get_command() or "")
+        return await self._handle_attention_mode_command(event, command)
 
     async def _busy_egress_command(self, event: MessageEvent, quick_key: str, source):
         from hermes_cli.proxy_cli import format_status_text
@@ -16227,6 +16235,9 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
 
         if canonical == "whoami":
             return await self._handle_whoami_command(event)
+
+        if canonical in {"mode", "pm", "brainstorm", "copilot", "focus", "unfocus"}:
+            return await self._handle_attention_mode_command(event, canonical)
 
         if canonical == "status":
             return await self._handle_status_command(event)
