@@ -329,3 +329,103 @@ def test_equal_rotation_keys_use_stable_tie_break_and_do_not_duplicate(
         }
         assert all(count >= 1 for count in second_counts.values())
         assert sum(second_counts.values()) == 2 * kb.DISPATCH_HEALTH_BATCH_LIMIT
+
+
+def test_rotation_keys_survive_clock_rollback_future_state_and_restart(
+    tmp_path: Path, all_assignees_spawnable, monkeypatch
+) -> None:
+    db_path = tmp_path / "clock-safe-rotation.db"
+    count = 3 * kb.DISPATCH_HEALTH_BATCH_LIMIT + 1
+    future_key = 9_000_000_000_000_000
+    monkeypatch.setattr(kb.time, "time_ns", lambda: 8_000_000_000_000_000_000)
+
+    with kb.connect(db_path=db_path) as conn:
+        running = kb.create_task(conn, title="running", assignee="worker")
+        assert kb.claim_task(conn, running)
+        queued = [
+            kb.create_task(conn, title=f"queued {index}", assignee="worker")
+            for index in range(count)
+        ]
+        old = int(time.time()) - kb.DEFAULT_CLAIM_SLA_SECONDS - 1
+        review_ids = queued[1::2]
+        conn.execute(
+            "UPDATE tasks SET status = 'review' WHERE id IN ("
+            + ",".join("?" for _ in review_ids)
+            + ")",
+            review_ids,
+        )
+        conn.execute(
+            "UPDATE tasks SET ready_since = ? WHERE id IN ("
+            + ",".join("?" for _ in queued)
+            + ")",
+            [old, *queued],
+        )
+        # A valid but future durable value must dominate the rolled-back clock.
+        conn.execute(
+            "UPDATE tasks SET last_considered_at = ? WHERE id = ?",
+            (future_key, queued[-1]),
+        )
+        first = kb.dispatch_once(conn, max_in_progress=1)
+        assert first.spawned == []
+        assert len(first.claim_sla_breached) == kb.DISPATCH_HEALTH_BATCH_LIMIT
+        first_tasks = [kb.get_task(conn, task_id) for task_id in queued]
+        assert all(task is not None for task in first_tasks)
+        first_keys = [
+            task.last_considered_at for task in first_tasks if task is not None
+        ]
+        written = [key for key in first_keys if key is not None and key != future_key]
+        assert len(written) == kb.DISPATCH_HEALTH_BATCH_LIMIT
+        assert min(written) > future_key
+
+    # Reopen while the clock moves farther backwards. Every one of the 385+
+    # waiters must rotate through within ceil(N / batch) ticks.
+    monkeypatch.setattr(kb.time, "time_ns", lambda: 1_000)
+    with kb.connect(db_path=db_path) as reopened:
+        alerts = 0
+        for _ in range(3):
+            result = kb.dispatch_once(reopened, max_in_progress=1)
+            assert result.spawned == []
+            alerts += len(result.claim_sla_breached)
+        assert alerts == count - kb.DISPATCH_HEALTH_BATCH_LIMIT
+        tasks = [kb.get_task(reopened, task_id) for task_id in queued]
+        assert all(task is not None and task.dispatch_attempt_count >= 1 for task in tasks)
+        keys = [
+            task.last_considered_at
+            for task in tasks
+            if task is not None and task.last_considered_at is not None
+        ]
+        assert len(keys) == len(set(keys))
+        assert min(keys) >= future_key
+        sla_events = [
+            event
+            for task_id in queued
+            for event in kb.list_events(reopened, task_id)
+            if event.kind == "dispatch_claim_sla"
+        ]
+        assert len(sla_events) == count
+
+
+def test_rotation_key_overflow_fails_visibly_without_partial_health_writes(
+    tmp_path: Path, all_assignees_spawnable
+) -> None:
+    with kb.connect(db_path=tmp_path / "rotation-overflow.db") as conn:
+        running = kb.create_task(conn, title="running", assignee="worker")
+        assert kb.claim_task(conn, running)
+        queued = [
+            kb.create_task(conn, title=f"queued {index}", assignee="worker")
+            for index in range(2)
+        ]
+        conn.execute(
+            "UPDATE tasks SET last_considered_at = ? WHERE id = ?",
+            (kb.SQLITE_MAX_INTEGER, queued[0]),
+        )
+
+        try:
+            kb.dispatch_once(conn, max_in_progress=1)
+        except OverflowError as exc:
+            assert "SQLite INTEGER range" in str(exc)
+        else:
+            raise AssertionError("extreme rotation key must fail visibly")
+
+        tasks = [kb.get_task(conn, task_id) for task_id in queued]
+        assert all(task is not None and task.dispatch_attempt_count == 0 for task in tasks)
