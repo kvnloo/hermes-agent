@@ -166,6 +166,8 @@ const $selectedBot = atom('default')
 const $botSessionsWorkspace = atom(null)
 const $botSelectedSessions = atom({})
 const $sessionsGatewayGeneration = atom(0)
+/** Read-only canonical Kanban projection selected from the Bots roster. */
+const $botWorkWorkspace = atom(null)
 
 /** Group-chat rooms: { [group]: { log: [{from:{kind,name},text,at}], watermarks:{[member]:idx}, epoch, running } }.
  *  Log + watermarks persist via plugin storage; epoch/running are runtime-only. */
@@ -3474,6 +3476,7 @@ function BotRow({ bot, onDelete, onEdit, onGroup }) {
             onSelect: () => openBotSessionsWorkspace(bot),
             children: 'Sessions'
           }),
+          jsx(ContextMenuItem, { onSelect: () => $botWorkWorkspace.set(bot.name), children: 'Work' }),
           jsx(ContextMenuItem, { onSelect: () => onEdit(bot), children: 'Edit Profile' }),
           jsx(ContextMenuItem, {
             onSelect: () => onGroup(bot),
@@ -6541,6 +6544,77 @@ function GroupChatWorkspace({ group, members }) {
   })
 }
 
+function WorkStateLabel({ item }) {
+  const stale = item.freshness === 'stale'
+  return jsx('span', {
+    className: cn('rounded-md px-1.5 py-0.5 text-[0.6875rem] font-medium', stale ? 'bg-(--ui-danger-bg) text-(--ui-danger)' : 'bg-(--chrome-action-hover) text-(--ui-text-secondary)'),
+    children: stale ? 'Stale' : item.status || 'Unknown'
+  })
+}
+
+function BotWorkWorkspace({ bot }) {
+  const { data, error, isLoading, refetch } = useQuery({
+    queryKey: [ID, 'work', bot.name],
+    queryFn: () => host.request('profiles.work', { profile: bot.name }),
+    staleTime: 5000,
+    refetchInterval: 15000,
+    retry: false
+  })
+  const work = Array.isArray(data?.work) ? data.work : []
+
+  return jsxs('section', {
+    className: 'flex h-full min-w-0 flex-col',
+    'aria-labelledby': 'bot-work-title',
+    children: [
+      jsxs('header', {
+        className: 'flex min-h-11 items-center gap-2 border-b border-(--ui-stroke-secondary) px-2.5',
+        children: [
+          jsx('button', { type: 'button', className: 'flex size-8 items-center justify-center rounded-md hover:bg-(--chrome-action-hover)', 'aria-label': 'Back to bots', onClick: () => $botWorkWorkspace.set(null), children: jsx(Codicon, { name: 'arrow-left' }) }),
+          jsxs('div', { className: 'min-w-0 flex-1', children: [
+            jsx('h2', { id: 'bot-work-title', className: 'truncate text-sm font-semibold', children: `${displayName(bot, botRosterMeta(bot, $botMeta.get()))} work` }),
+            jsx('p', { className: 'text-[0.6875rem] text-(--ui-text-tertiary)', children: 'Read-only Kanban projection' })
+          ] }),
+          jsx('button', { type: 'button', className: 'flex size-8 items-center justify-center rounded-md hover:bg-(--chrome-action-hover)', 'aria-label': 'Refresh work', onClick: () => void refetch(), children: jsx(Codicon, { name: 'refresh' }) })
+        ]
+      }),
+      isLoading
+        ? jsx('div', { className: 'flex flex-1 items-center justify-center', children: jsx(GlyphSpinner, { spinner: 'breathe' }) })
+        : error
+          ? jsxs('div', { className: 'grid gap-2 p-3 text-xs text-(--ui-text-tertiary)', role: 'status', children: [
+              jsx('p', { children: 'Canonical work is unavailable. No status was inferred.' }),
+              jsx(Button, { variant: 'secondary', size: 'sm', className: 'justify-self-start', onClick: () => void refetch(), children: 'Retry' })
+            ] })
+          : work.length === 0
+            ? jsx(EmptyState, { icon: 'question', title: 'No linked work', description: 'This profile has no explicit Kanban assignment.' })
+            : jsx(ScrollArea, { className: 'min-h-0 flex-1', children: jsx('div', {
+                className: 'grid gap-2 p-2.5',
+                children: work.map(item => jsxs('article', {
+                  className: 'grid min-w-0 gap-2 rounded-lg bg-(--chrome-action-hover) p-3',
+                  children: [
+                    jsxs('div', { className: 'flex min-w-0 items-start justify-between gap-2', children: [
+                      jsxs('div', { className: 'min-w-0', children: [
+                        jsx('h3', { className: 'truncate text-xs font-semibold', children: item.title }),
+                        jsx('p', { className: 'truncate font-mono text-[0.6875rem] text-(--ui-text-quaternary)', children: `${item.board} / ${item.task_id}` })
+                      ] }),
+                      jsx(WorkStateLabel, { item })
+                    ] }),
+                    jsxs('dl', { className: 'grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-[0.6875rem]', children: [
+                      jsx('dt', { className: 'text-(--ui-text-quaternary)', children: 'Freshness' }), jsx('dd', { children: item.heartbeat_age_seconds == null ? 'Unknown' : `${item.heartbeat_age_seconds}s since heartbeat` }),
+                      jsx('dt', { className: 'text-(--ui-text-quaternary)', children: 'Run' }), jsx('dd', { children: item.run_id == null ? 'Unknown' : String(item.run_id) }),
+                      jsx('dt', { className: 'text-(--ui-text-quaternary)', children: 'Model' }), jsx('dd', { className: 'truncate', children: item.model || 'Profile default / unknown' }),
+                      jsx('dt', { className: 'text-(--ui-text-quaternary)', children: 'Branch' }), jsx('dd', { className: 'truncate', children: item.branch || 'Unknown' }),
+                      jsx('dt', { className: 'text-(--ui-text-quaternary)', children: 'Dependencies' }), jsx('dd', { children: `${item.parents.length} parent, ${item.children.length} child` })
+                    ] }),
+                    item.events?.length
+                      ? jsx('ol', { className: 'grid gap-1 border-t border-(--ui-stroke-secondary) pt-2 text-[0.6875rem] text-(--ui-text-tertiary)', 'aria-label': 'Latest canonical events', children: item.events.slice(-3).reverse().map(event => jsx('li', { children: `${event.kind} · ${relativeTime(event.at * 1000)}` }, event.id)) })
+                      : jsx('p', { className: 'text-[0.6875rem] text-(--ui-text-quaternary)', children: 'No canonical events available.' })
+                  ]
+                }, `${item.board}:${item.task_id}`))
+              }) })
+    ]
+  })
+}
+
 function BotsPane() {
   const { data, error, isLoading, refetch } = useRoster()
   const gatewayState = useValue(host.state.gateway)
@@ -6555,6 +6629,7 @@ function BotsPane() {
   const hideBotChats = useValue($hideBotChats)
   const activityToasts = useValue($activityToasts)
   const sessionsWorkspaceName = useValue($botSessionsWorkspace)
+  const workWorkspaceName = useValue($botWorkWorkspace)
   const groupChatName = useValue($groupChatWorkspace)
   const groupNeedsYou = useValue($groupNeedsYou)
 
@@ -6611,6 +6686,11 @@ function BotsPane() {
     ? 'Roster refresh failed — showing the last good list.' + (gatewayUp ? '' : ' Waiting for the gateway to reconnect…')
     : null
   const sessionsWorkspaceBot = roster.find(bot => bot.name === sessionsWorkspaceName)
+  const workWorkspaceBot = roster.find(bot => bot.name === workWorkspaceName && !bot.remoteSource)
+
+  if (workWorkspaceBot) {
+    return jsx(BotWorkWorkspace, { bot: workWorkspaceBot })
+  }
 
   if (sessionsWorkspaceBot) {
     return jsx(ProfileSessionsWorkspace, { bot: sessionsWorkspaceBot })
@@ -6637,6 +6717,13 @@ function BotsPane() {
           jsxs('div', {
             className: 'flex items-center gap-0.5',
             children: [
+              jsx(Tip, { label: `View ${activeProfile} work`, children: jsx('button', {
+                type: 'button',
+                className: 'flex size-6 items-center justify-center rounded-md text-(--ui-text-tertiary) transition-colors hover:bg-(--chrome-action-hover) hover:text-foreground',
+                'aria-label': `View ${activeProfile} work`,
+                onClick: () => $botWorkWorkspace.set(activeProfile),
+                children: jsx(Codicon, { name: 'pulse' })
+              }) }),
               jsx(Tip, {
                 label: activityToasts ? 'Activity toasts on — click to silence' : 'Activity toasts off — click to enable',
                 children: jsx('button', {

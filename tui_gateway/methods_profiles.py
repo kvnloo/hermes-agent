@@ -169,6 +169,78 @@ def _(rid, params: dict) -> dict:
         return _err(rid, 5061, str(e))
 
 
+@method("profiles.work")
+def _(rid, params: dict) -> dict:
+    """Project canonical Kanban work for one profile without mutating it.
+
+    The response deliberately contains only sourced task/run fields.  Missing
+    joins stay missing, and heartbeat freshness never implies that work is
+    active.  Boards are enumerated from Kanban's own registry rather than from
+    renderer-owned configuration.
+    """
+    try:
+        import time as _time
+        from pathlib import Path as _Path
+
+        from hermes_cli import kanban_db as _kb
+
+        profile = str(params.get("profile") or "").strip()
+        if not profile:
+            return _err(rid, 5062, "profile is required")
+
+        now = int(_time.time())
+        rows = []
+        status_rank = {"running": 0, "blocked": 1, "review": 2, "ready": 3, "todo": 4, "done": 5}
+        for board in _kb.list_boards(include_archived=False):
+            slug = str(board.get("slug") or "default")
+            db_path = _Path(str(board.get("db_path") or _kb.kanban_db_path(board=slug)))
+            if not db_path.exists():
+                continue
+            conn = _kb.connect(db_path=db_path)
+            try:
+                tasks = _kb.list_tasks(conn, assignee=profile, include_archived=False)
+                for task in tasks:
+                    run = _kb.get_run(conn, task.current_run_id) if task.current_run_id else None
+                    heartbeat = (run.last_heartbeat_at if run else None) or task.last_heartbeat_at
+                    heartbeat_age = max(0, now - heartbeat) if heartbeat else None
+                    freshness = "unknown" if heartbeat_age is None else ("fresh" if heartbeat_age <= 90 else "stale")
+                    parents = [r[0] for r in conn.execute(
+                        "SELECT parent_id FROM task_links WHERE child_id = ? ORDER BY parent_id", (task.id,)
+                    ).fetchall()]
+                    children = [r[0] for r in conn.execute(
+                        "SELECT child_id FROM task_links WHERE parent_id = ? ORDER BY child_id", (task.id,)
+                    ).fetchall()]
+                    events = _kb.list_events(conn, task.id)[-8:]
+                    rows.append({
+                        "board": slug,
+                        "task_id": task.id,
+                        "title": task.title,
+                        "status": task.status,
+                        "run_id": task.current_run_id,
+                        "run_status": run.status if run else None,
+                        "freshness": freshness,
+                        "heartbeat_age_seconds": heartbeat_age,
+                        "observed_at": now,
+                        "project_id": task.project_id,
+                        "workspace_kind": task.workspace_kind,
+                        "workspace_path": task.workspace_path,
+                        "branch": task.branch_name,
+                        "model": task.model_override,
+                        "provider": task.provider_override,
+                        "block_kind": task.block_kind,
+                        "parents": parents,
+                        "children": children,
+                        "events": [{"id": event.id, "kind": event.kind, "at": event.created_at, "run_id": event.run_id} for event in events],
+                    })
+            finally:
+                conn.close()
+
+        rows.sort(key=lambda row: (status_rank.get(row["status"], 99), -(row["observed_at"] - (row["heartbeat_age_seconds"] or 0)), row["board"], row["task_id"]))
+        return _ok(rid, {"profile": profile, "work": rows[:8], "observed_at": now, "heartbeat_ttl_seconds": 90, "read_only": True})
+    except Exception as e:
+        return _err(rid, 5063, str(e))
+
+
 @method("profiles.create")
 def _(rid, params: dict) -> dict:
     """Create a profile — the ws twin of POST /api/profiles.

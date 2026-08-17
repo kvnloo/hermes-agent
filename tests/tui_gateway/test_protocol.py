@@ -119,6 +119,47 @@ def test_err_envelope(server):
     }
 
 
+def test_profiles_work_projects_sourced_state_and_stale_heartbeat(server, monkeypatch, tmp_path):
+    """Work detail fails closed on stale runtime evidence and only reads Kanban."""
+    from types import SimpleNamespace
+    from hermes_cli import kanban_db as kb
+
+    db_path = tmp_path / "kanban.db"
+    db_path.touch()
+    queries = []
+
+    class Conn:
+        def execute(self, query, params):
+            queries.append((query, params))
+            return SimpleNamespace(fetchall=lambda: [])
+
+        def close(self):
+            pass
+
+    task = SimpleNamespace(
+        id="t_public", title="Grounded work", status="running", current_run_id=7,
+        last_heartbeat_at=100, project_id=None, workspace_kind="worktree",
+        workspace_path=None, branch_name=None, model_override=None,
+        provider_override=None, block_kind=None,
+    )
+    run = SimpleNamespace(status="running", last_heartbeat_at=100)
+    monkeypatch.setattr(kb, "list_boards", lambda **_: [{"slug": "default", "db_path": str(db_path)}])
+    monkeypatch.setattr(kb, "connect", lambda **_: Conn())
+    monkeypatch.setattr(kb, "list_tasks", lambda *_args, **_kwargs: [task])
+    monkeypatch.setattr(kb, "get_run", lambda *_: run)
+    monkeypatch.setattr(kb, "list_events", lambda *_: [])
+    monkeypatch.setattr(time, "time", lambda: 300)
+
+    response = server.handle_request({"id": "work", "method": "profiles.work", "params": {"profile": "worker"}})
+    result = response["result"]
+
+    assert result["read_only"] is True
+    assert result["work"][0]["freshness"] == "stale"
+    assert result["work"][0]["status"] == "running"
+    assert result["work"][0]["model"] is None
+    assert len(queries) == 2
+
+
 @pytest.mark.parametrize("kind", ["legacy", "hard-only", "dynamic-getattr"])
 def test_session_interrupt_uses_explicit_stop_compatibility(server, monkeypatch, kind):
     calls = []
