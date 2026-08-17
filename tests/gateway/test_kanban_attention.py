@@ -18,7 +18,7 @@ def _config(**overrides):
         "enabled": True,
         "mode": "pm",
         "destinations": [
-            {"profile": "first-mate", "platform": "telegram", "chat_id": "captain"}
+            {"profile": "first-mate", "platform": "telegram", "chat_id": "captain", "chat_type": "dm"}
         ],
     }
     policy.update(overrides)
@@ -33,17 +33,20 @@ def test_policy_is_destination_scoped_and_defaults_off():
         load_attention_policy(_config()),
         {**sub, "chat_id": "another-destination"},
     )
+    with pytest.raises(ValueError):
+        load_attention_policy(_config(destinations=[{"profile": "first-mate"}]))
 
 
 def test_policy_can_scope_one_thread_without_affecting_siblings():
     policy = load_attention_policy(_config(destinations=[{
         "profile": "first-mate", "platform": "telegram",
-        "chat_id": "captain", "thread_id": "focus",
+        "chat_id": "captain", "chat_type": "group", "thread_id": "focus",
     }]))
     base = {
         "notifier_profile": "first-mate",
         "platform": "telegram",
         "chat_id": "captain",
+        "chat_type": "group",
     }
     assert applies(policy, {**base, "thread_id": "focus"})
     assert not applies(policy, {**base, "thread_id": "other"})
@@ -65,7 +68,7 @@ def test_modes_and_copilot_focus_are_bounded():
             "enabled": True,
             "mode": "copilot",
             "destinations": {"0": {
-                "profile": "first-mate", "platform": "telegram", "chat_id": "captain"
+                "profile": "first-mate", "platform": "telegram", "chat_id": "captain", "chat_type": "dm"
             }},
             "focus_task_ids": {"0": "a", "1": "b", "2": "c", "3": "d"},
         }}
@@ -179,6 +182,14 @@ async def test_ten_child_completions_send_one_parent_digest_without_network(
     finally:
         conn.close()
 
+    from gateway.session import SessionSource
+    from gateway.conversation_modes import set_mode
+    destination = SessionSource(
+        platform=Platform.TELEGRAM, chat_id="captain", chat_type="dm",
+        profile="first-mate",
+    )
+    set_mode(destination, "brainstorm")
+
     adapter = SimpleNamespace(send=AsyncMock(return_value=None), _active_sessions={})
     runner = GatewayRunner.__new__(GatewayRunner)
     runner._running = True
@@ -196,6 +207,14 @@ async def test_ten_child_completions_send_one_parent_digest_without_network(
         runner._running = False
         await real_sleep(0)
 
+    with patch("gateway.kanban_watchers.asyncio.sleep", side_effect=one_tick), patch(
+        "hermes_cli.config.load_config", return_value=_config(interval_seconds=60)
+    ):
+        await runner._kanban_notifier_watcher(interval=1)
+
+    adapter.send.assert_not_awaited()
+    set_mode(destination, "pm")
+    runner._running = True
     with patch("gateway.kanban_watchers.asyncio.sleep", side_effect=one_tick), patch(
         "hermes_cli.config.load_config", return_value=_config(interval_seconds=60)
     ):

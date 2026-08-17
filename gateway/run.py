@@ -16236,7 +16236,7 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
         if canonical == "whoami":
             return await self._handle_whoami_command(event)
 
-        if canonical in {"mode", "pm", "brainstorm", "copilot", "focus", "unfocus"}:
+        if canonical in {"chat", "orchestration", "focus", "unfocus"}:
             return await self._handle_attention_mode_command(event, canonical)
 
         if canonical == "status":

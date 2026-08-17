@@ -174,14 +174,13 @@ COMMAND_REGISTRY: list[CommandDef] = [
                args_hint="[text | remove N | clear]", busy_policy="dispatch"),
     CommandDef("status", "Show session, model, token, and context info", "Session",
                busy_policy="dispatch"),
-    CommandDef("mode", "Show the conversation attention mode", "Session",
-               gateway_only=True, busy_policy="dispatch", busy_handler="attention"),
-    CommandDef("pm", "Use high-level project-manager delivery", "Session",
-               gateway_only=True, aliases=("manager",), busy_policy="dispatch", busy_handler="attention"),
-    CommandDef("brainstorm", "Use direct-reply-only ideation delivery", "Session",
-               gateway_only=True, busy_policy="dispatch", busy_handler="attention"),
-    CommandDef("copilot", "Use focused collaborative delivery", "Session",
-               gateway_only=True, args_hint="[task-id|product ...]", busy_policy="dispatch", busy_handler="attention"),
+    CommandDef("chat", "Show or set destination attention mode", "Session",
+               gateway_only=True, aliases=("pm", "manager", "brainstorm", "copilot"),
+               args_hint="[pm|brainstorm|copilot] [focus ...]",
+               busy_policy="dispatch", busy_handler="attention"),
+    CommandDef("orchestration", "Show or request system execution policy", "Session",
+               gateway_only=True, args_hint="[focused|frozen|fully-autonomous]",
+               busy_policy="dispatch", busy_handler="attention"),
     CommandDef("unfocus", "Clear the conversation focus set", "Session",
                gateway_only=True, busy_policy="dispatch", busy_handler="attention"),
     CommandDef("egress", "Show Docker egress proxy status", "Session",
@@ -1291,7 +1290,7 @@ _SLACK_PRIORITY_ALIASES = ("btw", "bg")
 _SLACK_VIA_HERMES_ONLY = frozenset({
     "topup", "moa", "debug", "egress", "init", "version", "diff", "update",
     "heartbeat", "refine", "pause", "mode", "pm", "manager", "brainstorm",
-    "copilot", "focus", "unfocus",
+    "copilot", "focus", "unfocus", "chat", "orchestration",
 })
 
 

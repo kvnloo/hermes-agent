@@ -528,13 +528,11 @@ class GatewayKanbanWatchersMixin:
                     _attention_policy = None
 
                 if _attention_policy and _attention_policy.enabled:
-                    _previous_mode = getattr(self, "_kanban_attention_mode", None)
-                    self._kanban_attention_mode = _attention_policy.mode
-                    _mode_transition = bool(
-                        _previous_mode and _previous_mode != _attention_policy.mode
-                    )
+                    _effective_modes = getattr(self, "_kanban_attention_modes", {})
+                    self._kanban_attention_modes = _effective_modes
+                    _mode_transitions: dict[tuple[str, str, str, str, str], bool] = {}
                     _routine_groups: dict[
-                        tuple[str, str, str, str], list[tuple[dict, Any, Any]]
+                        tuple[str, str, str, str, str], list[tuple[dict, Any, Any]]
                     ] = {}
                     _immediate: list[dict] = []
                     for _delivery in deliveries:
@@ -543,11 +541,22 @@ class GatewayKanbanWatchersMixin:
                             _immediate.append(_delivery)
                             continue
                         _effective_policy = _attention_for_destination(_attention_policy, _sub)
+                        _delivery_metadata = _sub.get("delivery_metadata")
+                        _delivery_metadata = (
+                            _delivery_metadata if isinstance(_delivery_metadata, dict) else {}
+                        )
                         _dest = (
                             str(_sub.get("notifier_profile") or ""),
                             str(_sub.get("platform") or "").lower(),
                             str(_sub.get("chat_id") or ""),
+                            str(_sub.get("chat_type") or _delivery_metadata.get("chat_type") or "dm").lower(),
                             str(_sub.get("thread_id") or ""),
+                        )
+                        _previous_mode = _effective_modes.get(_dest)
+                        _effective_modes[_dest] = _effective_policy.mode
+                        _mode_transitions[_dest] = (
+                            _previous_mode == "brainstorm"
+                            and _effective_policy.mode != "brainstorm"
                         )
                         _urgent_events = []
                         _routine_events = []
@@ -602,7 +611,7 @@ class GatewayKanbanWatchersMixin:
                         _due = _now - float(_last_digest.get(_dest, 0.0)) >= _destination_policy.interval_seconds
                         if _destination_policy.mode == "brainstorm":
                             _due = False
-                        elif _mode_transition:
+                        elif _mode_transitions.get(_dest, False):
                             _due = True
                         if not _due or _adapter_busy:
                             for _delivery, _event, _policy in _entries:
