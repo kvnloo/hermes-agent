@@ -27,14 +27,23 @@ def load_attention_policy(config: Any) -> AttentionPolicy:
     destinations = raw.get("destinations") or []
     if isinstance(destinations, dict):
         destinations = [destinations[key] for key in sorted(destinations)]
-    clean = tuple(
-        {
-            k: str(v)
-            for k, v in item.items()
-            if k in {"profile", "platform", "chat_id", "thread_id"}
-        }
-        for item in destinations if isinstance(item, dict)
-    )
+    clean_rows = []
+    required = {"profile", "platform", "chat_id", "chat_type"}
+    allowed = required | {"thread_id"}
+    for item in destinations:
+        if not isinstance(item, dict):
+            raise ValueError("notification destination must be a mapping")
+        if set(item) - allowed or not required.issubset(item):
+            raise ValueError(
+                "notification destination requires exact profile, platform, chat_id, and chat_type"
+            )
+        row = {k: str(v).strip() for k, v in item.items()}
+        if any(not row[k] for k in required) or ("thread_id" in row and not row["thread_id"]):
+            raise ValueError("notification destination identity fields cannot be empty")
+        row["platform"] = row["platform"].lower()
+        row["chat_type"] = row["chat_type"].lower()
+        clean_rows.append(row)
+    clean = tuple(clean_rows)
     mode = str(raw.get("mode", "pm") or "pm").lower()
     if mode not in {"brainstorm", "pm", "copilot"}:
         mode = "pm"
@@ -56,11 +65,14 @@ def load_attention_policy(config: Any) -> AttentionPolicy:
 def applies(policy: AttentionPolicy, sub: dict[str, Any]) -> bool:
     if not policy.enabled:
         return False
+    metadata = sub.get("delivery_metadata")
+    metadata = metadata if isinstance(metadata, dict) else {}
     actual = {
         "profile": str(sub.get("notifier_profile") or ""),
         "platform": str(sub.get("platform") or "").lower(),
         "chat_id": str(sub.get("chat_id") or ""),
         "thread_id": str(sub.get("thread_id") or ""),
+        "chat_type": str(sub.get("chat_type") or metadata.get("chat_type") or "dm").lower(),
     }
     return any(rule and all(actual.get(k) == v for k, v in rule.items()) for rule in policy.destinations)
 

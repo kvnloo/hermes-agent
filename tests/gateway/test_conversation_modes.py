@@ -1,4 +1,7 @@
 import json
+import multiprocessing
+import os
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 import pytest
 
 from gateway.config import Platform
@@ -14,6 +17,18 @@ from gateway.session import SessionSource
 from hermes_cli.commands import resolve_command
 
 
+def _process_set_mode(args):
+    source, path = args
+    set_mode(source, "copilot", focus=[str(source.chat_id)], path=path)
+
+
+def _crash_holding_mode_lock(path):
+    from gateway.conversation_modes import _mutation_lock
+
+    with _mutation_lock(path):
+        os._exit(19)
+
+
 def _source(chat="captain", thread=None, chat_type="dm", profile="first-mate"):
     return SessionSource(
         platform=Platform.TELEGRAM,
@@ -25,9 +40,11 @@ def _source(chat="captain", thread=None, chat_type="dm", profile="first-mate"):
 
 
 def test_registry_aliases_and_message_parser_are_deterministic():
-    assert resolve_command("PM") and resolve_command("PM").name == "pm"
-    assert resolve_command("manager") and resolve_command("manager").name == "pm"
-    assert resolve_command("BrainStorm") and resolve_command("BrainStorm").name == "brainstorm"
+    assert resolve_command("chat") and resolve_command("chat").name == "chat"
+    assert resolve_command("PM") and resolve_command("PM").name == "chat"
+    assert resolve_command("manager") and resolve_command("manager").name == "chat"
+    assert resolve_command("BrainStorm") and resolve_command("BrainStorm").name == "chat"
+    assert resolve_command("orchestration")
     assert resolve_command("does-not-exist") is None
     event = MessageEvent(message_type=MessageType.TEXT, source=_source(), text="  /CoPilot   t_one  ")
     assert event.get_command() == "copilot"
@@ -70,15 +87,40 @@ def test_focus_is_bounded_deduplicated_and_malformed_updates_are_atomic(tmp_path
     assert "execution remains canonical" in receipt(set_mode(source, "copilot", path=path))
 
 
+def test_concurrent_destination_updates_do_not_overwrite(tmp_path):
+    path = tmp_path / "modes.json"
+    sources = [_source(chat=f"chat-{i}", thread=f"topic-{i}") for i in range(24)]
+    with ThreadPoolExecutor(max_workers=12) as pool:
+        list(pool.map(lambda source: set_mode(source, "brainstorm", path=path), sources))
+    assert all(get_mode(source, path=path).mode == "brainstorm" for source in sources)
+
+
+@pytest.mark.linux_only
+def test_multiprocess_updates_and_crashed_holder_release_lock(tmp_path):
+    path = tmp_path / "modes.json"
+    sources = [_source(chat=f"process-{i}", thread=f"topic-{i}") for i in range(8)]
+    ctx = multiprocessing.get_context("fork")
+    with ProcessPoolExecutor(max_workers=4, mp_context=ctx) as pool:
+        list(pool.map(_process_set_mode, [(source, path) for source in sources]))
+    assert all(get_mode(source, path=path).focus == (source.chat_id,) for source in sources)
+
+    crashed = ctx.Process(target=_crash_holding_mode_lock, args=(path,))
+    crashed.start()
+    crashed.join(5)
+    assert crashed.exitcode == 19
+    set_mode(_source(chat="after-crash"), "brainstorm", path=path)
+    assert get_mode(_source(chat="after-crash"), path=path).mode == "brainstorm"
+
+
 @pytest.mark.asyncio
 async def test_commands_only_change_presentation_state(tmp_path, monkeypatch):
     monkeypatch.setenv("HERMES_HOME", str(tmp_path))
     from gateway.slash_commands import GatewaySlashCommandsMixin
 
     runner = GatewaySlashCommandsMixin()
-    event = MessageEvent(message_type=MessageType.TEXT, source=_source(), text="/brainstorm")
+    event = MessageEvent(message_type=MessageType.TEXT, source=_source(), text="/chat brainstorm")
     before = vars(event.source).copy()
-    reply = await runner._handle_attention_mode_command(event, "brainstorm")
+    reply = await runner._handle_attention_mode_command(event, "chat")
     assert reply.startswith("BRAINSTORM")
     assert vars(event.source) == before
     assert get_mode(event.source).mode == "brainstorm"
@@ -93,7 +135,25 @@ async def test_over_limit_command_has_no_side_effect(tmp_path, monkeypatch):
     from gateway.slash_commands import GatewaySlashCommandsMixin
 
     runner = GatewaySlashCommandsMixin()
-    event = MessageEvent(message_type=MessageType.TEXT, source=_source(), text="/copilot a b c d")
-    reply = await runner._handle_attention_mode_command(event, "copilot")
+    event = MessageEvent(message_type=MessageType.TEXT, source=_source(), text="/chat copilot a b c d")
+    reply = await runner._handle_attention_mode_command(event, "chat")
     assert "nothing changed" in reply
     assert get_mode(event.source).mode == "pm"
+
+
+@pytest.mark.asyncio
+async def test_status_quiet_orchestration_and_quoted_text_are_non_mutating(tmp_path, monkeypatch):
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    from gateway.slash_commands import GatewaySlashCommandsMixin
+
+    runner = GatewaySlashCommandsMixin()
+    source = _source()
+    before = get_mode(source)
+    assert resolve_command("status").name == "status"
+    assert resolve_command("quiet") is None
+    for text in ("/orchestration", "/orchestration frozen", "/orchestration fully-autonomous"):
+        event = MessageEvent(message_type=MessageType.TEXT, source=source, text=text)
+        assert await runner._handle_attention_mode_command(event, "orchestration")
+        assert get_mode(source) == before
+    quoted = MessageEvent(message_type=MessageType.TEXT, source=source, text="quoted: /chat brainstorm")
+    assert quoted.get_command() is None

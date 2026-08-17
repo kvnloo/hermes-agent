@@ -5,7 +5,9 @@ not touch agents, tools, tasks, workers, scheduling, or authorization state.
 """
 from __future__ import annotations
 
+import contextlib
 import json
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -13,9 +15,47 @@ from typing import Any
 from hermes_constants import get_hermes_home
 from utils import atomic_json_write
 
+try:
+    import fcntl
+except ImportError:  # pragma: no cover - Windows
+    fcntl = None
+try:
+    import msvcrt
+except ImportError:  # pragma: no cover - POSIX
+    msvcrt = None
+
 _SCHEMA_VERSION = 1
 _MAX_FOCUS = 3
 _VALID_MODES = frozenset({"pm", "brainstorm", "copilot"})
+_process_lock = threading.RLock()
+
+
+@contextlib.contextmanager
+def _mutation_lock(target: Path):
+    """Serialize the complete profile-wide read/modify/write transaction."""
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with _process_lock:
+        handle = open(target.with_name(f".{target.name}.lock"), "a+b")
+        try:
+            if fcntl is not None:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+            elif msvcrt is not None:  # pragma: no cover - Windows
+                handle.seek(0)
+                if handle.read(1) == b"":
+                    handle.write(b"\0")
+                    handle.flush()
+                handle.seek(0)
+                getattr(msvcrt, "locking")(handle.fileno(), getattr(msvcrt, "LK_LOCK"), 1)
+            yield
+        finally:
+            try:
+                if fcntl is not None:
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+                elif msvcrt is not None:  # pragma: no cover - Windows
+                    handle.seek(0)
+                    getattr(msvcrt, "locking")(handle.fileno(), getattr(msvcrt, "LK_UNLCK"), 1)
+            finally:
+                handle.close()
 
 
 @dataclass(frozen=True)
@@ -72,12 +112,13 @@ def set_mode(source: Any, mode: str, *, focus: list[str] | None = None, path: Pa
     if normalized not in _VALID_MODES:
         raise ValueError("unknown conversation mode")
     target = path or _path()
-    data = _load(target)
-    previous = get_mode(source, path=target)
-    chosen = previous.focus if focus is None else tuple(dict.fromkeys(str(v).strip() for v in focus if str(v).strip()))[:_MAX_FOCUS]
-    data["conversations"][conversation_key(source)] = {"mode": normalized, "focus": list(chosen)}
-    target.parent.mkdir(parents=True, exist_ok=True)
-    atomic_json_write(target, data, mode=0o600)
+    with _mutation_lock(target):
+        data = _load(target)
+        row = data["conversations"].get(conversation_key(source), {})
+        previous_focus = row.get("focus", []) if isinstance(row, dict) else []
+        chosen = tuple(str(v) for v in previous_focus[:_MAX_FOCUS] if str(v).strip()) if focus is None else tuple(dict.fromkeys(str(v).strip() for v in focus if str(v).strip()))[:_MAX_FOCUS]
+        data["conversations"][conversation_key(source)] = {"mode": normalized, "focus": list(chosen)}
+        atomic_json_write(target, data, mode=0o600)
     return ConversationMode(normalized, tuple(chosen))
 
 
