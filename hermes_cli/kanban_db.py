@@ -87,7 +87,7 @@ import time
 from contextvars import ContextVar, Token
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable, Mapping, Optional
+from typing import Any, Iterable, Mapping, Optional, Sequence
 
 from hermes_cli.sqlite_util import add_column_if_missing as _add_column_if_missing
 from toolsets import get_toolset_names
@@ -8154,6 +8154,7 @@ class DispatchResult:
 
 DEFAULT_CLAIM_SLA_SECONDS = 300
 DISPATCH_HEALTH_BATCH_LIMIT = 128
+DISPATCH_HEALTH_WAITING_LANES = ("ready", "review")
 SQLITE_MAX_INTEGER = (1 << 63) - 1
 
 
@@ -8256,6 +8257,51 @@ def _record_dispatch_consideration(
         pending.append((task_id, reason))
 
 
+def _select_dispatch_health_candidate_ids(
+    conn: sqlite3.Connection,
+    statuses: Sequence[str],
+) -> list[str]:
+    """Reserve one durable oldest candidate per nonempty lane, then fill globally."""
+    lanes = tuple(dict.fromkeys(statuses))
+    if len(lanes) > DISPATCH_HEALTH_BATCH_LIMIT:
+        raise ValueError("dispatch-health lanes exceed the bounded telemetry budget")
+    lane_order = (
+        "last_considered_at IS NOT NULL, last_considered_at, "
+        "created_at, priority DESC, id"
+    )
+    global_order = (
+        "last_considered_at IS NOT NULL, last_considered_at, "
+        "priority DESC, created_at, id"
+    )
+    selected: list[str] = []
+    for status in lanes:
+        row = conn.execute(
+            f"SELECT id FROM tasks WHERE status = ? AND claim_lock IS NULL "
+            f"ORDER BY {lane_order} LIMIT 1",
+            (status,),
+        ).fetchone()
+        if row is not None:
+            selected.append(row["id"])
+
+    if len(selected) < DISPATCH_HEALTH_BATCH_LIMIT and lanes:
+        placeholders = ",".join("?" for _ in lanes)
+        rows = conn.execute(
+            "SELECT id FROM tasks WHERE status IN (" + placeholders + ") "
+            "AND claim_lock IS NULL "
+            f"ORDER BY {global_order} LIMIT ?",
+            (*lanes, DISPATCH_HEALTH_BATCH_LIMIT + len(selected)),
+        ).fetchall()
+        seen = set(selected)
+        for row in rows:
+            if row["id"] in seen:
+                continue
+            selected.append(row["id"])
+            seen.add(row["id"])
+            if len(selected) == DISPATCH_HEALTH_BATCH_LIMIT:
+                break
+    return selected
+
+
 def _record_capacity_waiters(
     conn: sqlite3.Connection,
     result: DispatchResult,
@@ -8264,18 +8310,12 @@ def _record_capacity_waiters(
     dry_run: bool,
 ) -> None:
     """Persist one fair, bounded sample of tasks deferred before enumeration."""
-    rows = conn.execute(
-        "SELECT id FROM tasks WHERE status IN ('ready', 'review') "
-        "AND claim_lock IS NULL "
-        "ORDER BY last_considered_at IS NOT NULL, last_considered_at, "
-        "priority DESC, created_at, id "
-        "LIMIT ?",
-        (DISPATCH_HEALTH_BATCH_LIMIT,),
-    ).fetchall()
+    statuses = DISPATCH_HEALTH_WAITING_LANES if review_dispatch_enabled() else ("ready",)
+    task_ids = _select_dispatch_health_candidate_ids(conn, statuses)
     _record_dispatch_considerations(
         conn,
         result,
-        [(row["id"], reason) for row in rows],
+        [(task_id, reason) for task_id in task_ids],
         dry_run=dry_run,
     )
 
@@ -10265,25 +10305,18 @@ def _dispatch_once_locked(
             "ORDER BY last_considered_at IS NOT NULL, last_considered_at, "
             "priority DESC, created_at, id"
         ).fetchall()
-    # Select telemetry fairly across both waiting lanes before either
+    # Select telemetry fairly across all enabled waiting lanes before either
     # status-specific spawn loop runs. The loops intentionally stay separate
     # because ready and review claims have different lifecycle semantics, but
     # allowing the ready loop to fill the shared health buffer first hid review
-    # waiters permanently. Durable least-recently-considered rotation reaches
-    # both sides of an asymmetric 129:1 queue within two ticks.
-    health_statuses = ("ready", "review") if review_rows else ("ready",)
-    health_placeholders = ",".join("?" for _ in health_statuses)
-    health_rows = conn.execute(
-        "SELECT id FROM tasks WHERE status IN (" + health_placeholders + ") "
-        "AND claim_lock IS NULL "
-        "ORDER BY last_considered_at IS NOT NULL, last_considered_at, "
-        "priority DESC, created_at, id LIMIT ?",
-        (*health_statuses, DISPATCH_HEALTH_BATCH_LIMIT),
-    ).fetchall()
+    # waiters permanently. One durable oldest reservation per nonempty lane
+    # guarantees progress despite continuous higher-priority arrivals; every
+    # unreserved slot remains available to the global ordering.
+    health_statuses = DISPATCH_HEALTH_WAITING_LANES if review_dispatch_enabled() else ("ready",)
     setattr(
         result,
         "_dispatch_health_candidate_ids",
-        {row["id"] for row in health_rows},
+        set(_select_dispatch_health_candidate_ids(conn, health_statuses)),
     )
     # Review-lane reservation (OOF-30 review finding): the ready loop runs
     # first and used to consume the ENTIRE shared budget, so a sustained

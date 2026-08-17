@@ -447,6 +447,69 @@ def test_mixed_lanes_share_bounded_rotation_fairly(
             )
 
 
+def test_each_nonempty_lane_progresses_under_sustained_priority_arrivals(
+    tmp_path: Path, monkeypatch
+) -> None:
+    from hermes_cli import profiles
+
+    monkeypatch.setattr(profiles, "profile_exists", lambda _name: False)
+    monkeypatch.setattr(kb, "review_dispatch_enabled", lambda: True)
+    for flood_status, tail_status in (("ready", "review"), ("review", "ready")):
+        with kb.connect(db_path=tmp_path / f"sustained-{flood_status}.db") as conn:
+            tail = kb.create_task(conn, title="durable tail", assignee="missing", priority=-1)
+            if tail_status == "review":
+                conn.execute("UPDATE tasks SET status = 'review' WHERE id = ?", (tail,))
+            conn.execute(
+                "UPDATE tasks SET created_at = created_at - 10, ready_since = created_at - 10 "
+                "WHERE id = ?",
+                (tail,),
+            )
+            for tick in range(4):
+                arrivals = [
+                    kb.create_task(
+                        conn, title=f"arrival {tick}-{index}", assignee="missing", priority=100,
+                    )
+                    for index in range(kb.DISPATCH_HEALTH_BATCH_LIMIT)
+                ]
+                if flood_status == "review":
+                    conn.execute(
+                        "UPDATE tasks SET status = 'review' WHERE id IN ("
+                        + ",".join("?" for _ in arrivals) + ")",
+                        arrivals,
+                    )
+                result = kb.dispatch_once(conn, max_spawn=0)
+                assert len(result.claim_sla_breached) <= kb.DISPATCH_HEALTH_BATCH_LIMIT
+
+            persisted = kb.get_task(conn, tail)
+            assert persisted is not None
+            assert persisted.dispatch_attempt_count >= 1
+
+
+def test_lane_reservations_are_extensible_and_reallocate_empty_share(
+    tmp_path: Path
+) -> None:
+    with kb.connect(db_path=tmp_path / "extensible-lanes.db") as conn:
+        ready = [
+            kb.create_task(conn, title=f"ready {index}", assignee="missing")
+            for index in range(kb.DISPATCH_HEALTH_BATCH_LIMIT)
+        ]
+        selected = kb._select_dispatch_health_candidate_ids(
+            conn, ("ready", "review", "scheduled")
+        )
+        assert set(selected) == set(ready)
+
+        review = kb.create_task(conn, title="review", assignee="missing", priority=-1)
+        scheduled = kb.create_task(conn, title="scheduled", assignee="missing", priority=-2)
+        conn.execute("UPDATE tasks SET status = 'review' WHERE id = ?", (review,))
+        conn.execute("UPDATE tasks SET status = 'scheduled' WHERE id = ?", (scheduled,))
+        selected = kb._select_dispatch_health_candidate_ids(
+            conn, ("ready", "review", "scheduled", "review")
+        )
+        assert len(selected) == kb.DISPATCH_HEALTH_BATCH_LIMIT
+        assert review in selected
+        assert scheduled in selected
+
+
 def test_rotation_key_overflow_fails_visibly_without_partial_health_writes(
     tmp_path: Path, all_assignees_spawnable
 ) -> None:
