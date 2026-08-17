@@ -90,3 +90,92 @@ def test_global_capacity_records_every_ready_task_without_claiming(
             assert task.status == "ready"
             assert task.dispatch_reason == "global_capacity"
             assert task.dispatch_attempt_count == 1
+
+
+def test_spawn_failure_starts_a_fresh_claim_sla_episode(
+    tmp_path: Path, monkeypatch
+) -> None:
+    from hermes_cli import profiles
+
+    monkeypatch.setattr(profiles, "profile_exists", lambda _name: True)
+    db_path = tmp_path / "spawn-retry.db"
+    with kb.connect(db_path=db_path) as conn:
+        task_id = kb.create_task(conn, title="retry", assignee="worker")
+        old = int(time.time()) - kb.DEFAULT_CLAIM_SLA_SECONDS - 2
+        conn.execute("UPDATE tasks SET ready_since = ? WHERE id = ?", (old, task_id))
+        first = kb.dispatch_once(conn, spawn_fn=lambda *_args: (_ for _ in ()).throw(RuntimeError("boom")))
+        assert first.claim_sla_breached == []  # claimed before the SLA batch flushed
+        retried = kb.get_task(conn, task_id)
+        assert retried is not None and retried.status == "ready"
+        assert retried.dispatch_attempt_count == 1
+        assert retried.dispatch_sla_alerted_at is None
+        assert retried.ready_since is not None and retried.ready_since > old
+
+        conn.execute("UPDATE tasks SET ready_since = ? WHERE id = ?", (old, task_id))
+        monkeypatch.setattr(profiles, "profile_exists", lambda _name: False)
+        second = kb.dispatch_once(conn, spawn_fn=lambda *_args: 1)
+        assert len(second.claim_sla_breached) == 1
+
+    with kb.connect(db_path=db_path) as reopened:
+        persisted = kb.get_task(reopened, task_id)
+        assert persisted is not None
+        assert persisted.dispatch_reason == "nonspawnable_profile"
+        assert persisted.dispatch_sla_alerted_at is not None
+
+
+def test_review_changes_ready_starts_a_fresh_episode(
+    tmp_path: Path, monkeypatch
+) -> None:
+    from hermes_cli import profiles
+
+    monkeypatch.setattr(profiles, "profile_exists", lambda _name: False)
+    with kb.connect(db_path=tmp_path / "review-episode.db") as conn:
+        task_id = kb.create_task(conn, title="review loop", assignee="implementer")
+        assert kb.request_review(conn, task_id, reviewer="reviewer")
+        old = int(time.time()) - kb.DEFAULT_CLAIM_SLA_SECONDS - 3
+        conn.execute("UPDATE tasks SET ready_since = ? WHERE id = ?", (old, task_id))
+        assert len(kb.dispatch_once(conn).claim_sla_breached) == 1
+
+        claimed = kb.claim_review_task(conn, task_id)
+        assert claimed is not None
+        ok, implementer = kb.request_changes(
+            conn, task_id, reason="repair", expected_run_id=claimed.current_run_id,
+        )
+        assert ok and implementer == "implementer"
+        waiting = kb.get_task(conn, task_id)
+        assert waiting is not None and waiting.status == "ready"
+        assert waiting.dispatch_sla_alerted_at is None
+        assert waiting.dispatch_attempt_count == 0
+
+        conn.execute("UPDATE tasks SET ready_since = ? WHERE id = ?", (old, task_id))
+        assert len(kb.dispatch_once(conn).claim_sla_breached) == 1
+        events = [e for e in kb.list_events(conn, task_id) if e.kind == "dispatch_claim_sla"]
+        assert len(events) == 2
+
+
+def test_zero_capacity_persistence_is_bounded_and_rotates(
+    tmp_path: Path, all_assignees_spawnable
+) -> None:
+    with kb.connect(db_path=tmp_path / "bounded.db") as conn:
+        running = kb.create_task(conn, title="running", assignee="worker")
+        assert kb.claim_task(conn, running)
+        queued = [
+            kb.create_task(conn, title=f"queued {index}", assignee="worker")
+            for index in range(kb.DISPATCH_HEALTH_BATCH_LIMIT + 7)
+        ]
+        first = kb.dispatch_once(conn, max_in_progress=1)
+        assert first.spawned == []
+        first_tasks = [kb.get_task(conn, task_id) for task_id in queued]
+        assert all(task is not None for task in first_tasks)
+        considered_first = [
+            task for task in first_tasks
+            if task is not None and task.dispatch_attempt_count == 1
+        ]
+        assert len(considered_first) == kb.DISPATCH_HEALTH_BATCH_LIMIT
+
+        kb.dispatch_once(conn, max_in_progress=1)
+        second_tasks = [kb.get_task(conn, task_id) for task_id in queued]
+        assert all(
+            task is not None and task.dispatch_attempt_count >= 1
+            for task in second_tasks
+        )

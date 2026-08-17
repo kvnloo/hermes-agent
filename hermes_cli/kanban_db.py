@@ -4598,6 +4598,7 @@ def recompute_ready(
                         "UPDATE tasks SET status = ? WHERE id = ? AND status = 'todo'",
                         (resume_status, task_id),
                     )
+                _begin_dispatch_wait_episode(conn, task_id)
                 _append_event(
                     conn, task_id, "promoted",
                     {"status": resume_status} if resume_status != "ready" else None,
@@ -5068,6 +5069,7 @@ def release_stale_claims(
             )
             if cur.rowcount != 1:
                 continue
+            _begin_dispatch_wait_episode(conn, row["id"], now=now)
             run_id = _end_run(
                 conn, row["id"],
                 outcome="reclaimed", status="reclaimed",
@@ -5160,6 +5162,8 @@ def reclaim_task(
         )
         if cur.rowcount != 1:
             return False
+        if retry_status in ("ready", "review"):
+            _begin_dispatch_wait_episode(conn, task_id)
         run_id = _end_run(
             conn, task_id,
             outcome="reclaimed", status="reclaimed",
@@ -6543,6 +6547,7 @@ def request_review(
                 "task is not in running/ready (or expected_run_id did not "
                 "match the current run)",
             )
+        _begin_dispatch_wait_episode(conn, task_id)
         run_id = _end_run(
             conn,
             task_id,
@@ -6672,6 +6677,8 @@ def request_changes(
         )
         if cur.rowcount != 1:
             return False, "task changed during review handoff"
+        if new_status == "ready":
+            _begin_dispatch_wait_episode(conn, task_id)
         run_id = _end_run(
             conn,
             task_id,
@@ -6754,6 +6761,7 @@ def promote_task(
         )
         if upd.rowcount != 1:
             return False, f"task {task_id} status changed during promotion"
+        _begin_dispatch_wait_episode(conn, task_id)
         _append_event(
             conn,
             task_id,
@@ -6863,6 +6871,8 @@ def unblock_task(conn: sqlite3.Connection, task_id: str) -> bool:
         )
         if cur.rowcount != 1:
             return False
+        if new_status in ("ready", "review"):
+            _begin_dispatch_wait_episode(conn, task_id, now=now)
         _append_event(
             conn, task_id, "unblocked",
             (
@@ -6930,6 +6940,8 @@ def reopen_review_task(conn: sqlite3.Connection, task_id: str) -> bool:
         )
         if cur.rowcount != 1:
             return False
+        if new_status == "ready":
+            _begin_dispatch_wait_episode(conn, task_id, now=now)
         payload: dict[str, Any] = {"status": new_status}
         if implementer:
             payload["implementer"] = implementer
@@ -8005,6 +8017,68 @@ class DispatchResult:
 
 
 DEFAULT_CLAIM_SLA_SECONDS = 300
+DISPATCH_HEALTH_BATCH_LIMIT = 128
+
+
+def _begin_dispatch_wait_episode(
+    conn: sqlite3.Connection, task_id: str, *, now: Optional[int] = None,
+) -> None:
+    """Reset diagnostics atomically when a new ready/review wait begins."""
+    started = int(time.time()) if now is None else int(now)
+    conn.execute(
+        "UPDATE tasks SET ready_since = ?, last_considered_at = NULL, "
+        "dispatch_attempt_count = 0, dispatch_reason = NULL, "
+        "dispatch_sla_alerted_at = NULL WHERE id = ?",
+        (started, task_id),
+    )
+
+
+def _record_dispatch_considerations(
+    conn: sqlite3.Connection,
+    result: DispatchResult,
+    samples: Iterable[tuple[str, str]],
+    *,
+    dry_run: bool,
+) -> None:
+    """Persist a bounded dispatch-health batch in one writer transaction."""
+    if dry_run:
+        return
+    bounded = list(samples)[:DISPATCH_HEALTH_BATCH_LIMIT]
+    if not bounded:
+        return
+    now = int(time.time())
+    with write_txn(conn):
+        for task_id, reason in bounded:
+            row = conn.execute(
+                "SELECT status, created_at, ready_since, dispatch_reason, "
+                "dispatch_sla_alerted_at FROM tasks WHERE id = ? "
+                "AND status IN ('ready', 'review', 'running')",
+                (task_id,),
+            ).fetchone()
+            if row is None:
+                continue
+            ready_since = int(row["ready_since"] or row["created_at"] or now)
+            conn.execute(
+                "UPDATE tasks SET ready_since = ?, last_considered_at = ?, "
+                "dispatch_attempt_count = dispatch_attempt_count + 1, dispatch_reason = ? "
+                "WHERE id = ?",
+                (ready_since, now, reason, task_id),
+            )
+            if row["dispatch_reason"] != reason:
+                _append_event(conn, task_id, "dispatch_health", {"reason": reason})
+            age = max(0, now - ready_since)
+            if (
+                row["status"] in ("ready", "review")
+                and age >= DEFAULT_CLAIM_SLA_SECONDS
+                and row["dispatch_sla_alerted_at"] is None
+            ):
+                conn.execute(
+                    "UPDATE tasks SET dispatch_sla_alerted_at = ? WHERE id = ?",
+                    (now, task_id),
+                )
+                payload = {"reason": reason, "ready_age_seconds": age}
+                _append_event(conn, task_id, "dispatch_claim_sla", payload)
+                result.claim_sla_breached.append((task_id, reason, age))
 
 
 def _record_dispatch_consideration(
@@ -8015,36 +8089,15 @@ def _record_dispatch_consideration(
     *,
     dry_run: bool,
 ) -> None:
-    """Persist one bounded dispatch-health sample for a ready/review task."""
+    """Queue a bounded sample; the dispatch tick flushes once at its end."""
     if dry_run:
         return
-    now = int(time.time())
-    with write_txn(conn):
-        row = conn.execute(
-            "SELECT created_at, ready_since, dispatch_reason, dispatch_sla_alerted_at "
-            "FROM tasks WHERE id = ? AND status IN ('ready', 'review')",
-            (task_id,),
-        ).fetchone()
-        if row is None:
-            return
-        ready_since = int(row["ready_since"] or row["created_at"] or now)
-        conn.execute(
-            "UPDATE tasks SET ready_since = ?, last_considered_at = ?, "
-            "dispatch_attempt_count = dispatch_attempt_count + 1, dispatch_reason = ? "
-            "WHERE id = ?",
-            (ready_since, now, reason, task_id),
-        )
-        if row["dispatch_reason"] != reason:
-            _append_event(conn, task_id, "dispatch_health", {"reason": reason})
-        age = max(0, now - ready_since)
-        if age >= DEFAULT_CLAIM_SLA_SECONDS and row["dispatch_sla_alerted_at"] is None:
-            conn.execute(
-                "UPDATE tasks SET dispatch_sla_alerted_at = ? WHERE id = ?",
-                (now, task_id),
-            )
-            payload = {"reason": reason, "ready_age_seconds": age}
-            _append_event(conn, task_id, "dispatch_claim_sla", payload)
-            result.claim_sla_breached.append((task_id, reason, age))
+    pending = getattr(result, "_dispatch_health_samples", None)
+    if pending is None:
+        pending = []
+        setattr(result, "_dispatch_health_samples", pending)
+    if len(pending) < DISPATCH_HEALTH_BATCH_LIMIT:
+        pending.append((task_id, reason))
 
 
 # Bounded registry of recently-reaped worker child exits, populated by the
@@ -8465,6 +8518,8 @@ def enforce_max_runtime(
                 (retry_status, tid, pid, row["claim_lock"]),
             )
             if cur.rowcount == 1:
+                if retry_status in ("ready", "review"):
+                    _begin_dispatch_wait_episode(conn, tid, now=now)
                 payload = {
                     "pid": pid,
                     "elapsed_seconds": int(elapsed),
@@ -8598,6 +8653,9 @@ def detect_stale_running(
             if cur.rowcount != 1:
                 continue
 
+            if retry_status in ("ready", "review"):
+                _begin_dispatch_wait_episode(conn, tid, now=now)
+
             payload = {
                 "elapsed_seconds": int(elapsed),
                 "last_heartbeat_at": (
@@ -8693,6 +8751,7 @@ def reconcile_orphaned_running(
             )
             if cur.rowcount != 1:
                 continue
+            _begin_dispatch_wait_episode(conn, tid, now=now)
             payload = {
                 "reason": "orphaned_running",
                 "claim_lock": row["claim_lock"],
@@ -8950,6 +9009,8 @@ def detect_crashed_workers(conn: sqlite3.Connection) -> list[str]:
                 (retry_status, row["id"], pid, row["claim_lock"]),
             )
             if cur.rowcount == 1:
+                if retry_status in ("ready", "review"):
+                    _begin_dispatch_wait_episode(conn, row["id"])
                 # Rate-limited requeues are a clean release, not a crash —
                 # record the run outcome as ``rate_limited`` so the board
                 # history doesn't show a phantom crash for a quota wall.
@@ -9257,6 +9318,8 @@ def _record_task_failure(
                     "WHERE id = ? AND status = 'running'",
                     (retry_status, failures, error[:500], task_id),
                 )
+                if retry_status in ("ready", "review"):
+                    _begin_dispatch_wait_episode(conn, task_id)
             else:
                 # Timeout/crash path: caller already restored the source phase.
                 conn.execute(
@@ -9755,6 +9818,21 @@ def _dispatch_once_locked(
             ).fetchone()[0]
         )
 
+    if max_spawn is not None and running_count >= max_spawn:
+        capacity_rows = conn.execute(
+            "SELECT id FROM tasks WHERE status IN ('ready', 'review') "
+            "AND claim_lock IS NULL "
+            "ORDER BY COALESCE(last_considered_at, 0), priority DESC, created_at "
+            "LIMIT ?",
+            (DISPATCH_HEALTH_BATCH_LIMIT,),
+        ).fetchall()
+        _record_dispatch_considerations(
+            conn, result,
+            [(item["id"], "global_capacity") for item in capacity_rows],
+            dry_run=dry_run,
+        )
+        return result
+
     ready_rows = conn.execute(
         "SELECT id, assignee FROM tasks "
         "WHERE status = 'ready' AND claim_lock IS NULL "
@@ -10113,6 +10191,12 @@ def _dispatch_once_locked(
             )
             if auto:
                 result.auto_blocked.append(claimed.id)
+    _record_dispatch_considerations(
+        conn,
+        result,
+        getattr(result, "_dispatch_health_samples", []),
+        dry_run=dry_run,
+    )
     return result
 
 
