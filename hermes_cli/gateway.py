@@ -733,8 +733,15 @@ def find_gateway_pids(
             _append_unique_pid(pids, get_running_pid(), _exclude)
         except Exception:
             pass
-    for pid in _get_service_pids():
-        _append_unique_pid(pids, pid, _exclude)
+    # Service discovery is intentionally global (it is also used by restart
+    # sweeps), so only fold those PIDs into an explicit all-profile query.
+    # The normal profile-scoped path is already covered by its PID file and
+    # the profile-aware process scan below.  Including every service PID here
+    # makes ``hermes -p other gateway status`` attribute the default profile's
+    # service to ``other``.
+    if all_profiles:
+        for pid in _get_service_pids():
+            _append_unique_pid(pids, pid, _exclude)
     try:
         include_restart_managers = not supports_systemd_services()
     except Exception:

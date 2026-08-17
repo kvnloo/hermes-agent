@@ -451,6 +451,21 @@ def test_gateway_install_noninteractive_skips_legacy_unit_prompt(monkeypatch, tm
 
 
 # ---------------------------------------------------------------------------
+# find_gateway_pids
+# ---------------------------------------------------------------------------
+
+
+class TestFindGatewayPids:
+    def test_profile_query_does_not_adopt_another_profiles_service(self, monkeypatch):
+        monkeypatch.setattr("gateway.status.get_running_pid", lambda: None)
+        monkeypatch.setattr(gateway, "_get_service_pids", lambda: {2331124})
+        monkeypatch.setattr(gateway, "_scan_gateway_pids", lambda *args, **kwargs: [])
+
+        assert gateway.find_gateway_pids() == []
+        assert gateway.find_gateway_pids(all_profiles=True) == [2331124]
+
+
+# ---------------------------------------------------------------------------
 # _wait_for_gateway_exit
 # ---------------------------------------------------------------------------
 
