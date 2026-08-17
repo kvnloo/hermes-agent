@@ -8245,6 +8245,9 @@ def _record_dispatch_consideration(
     """Queue a bounded sample; the dispatch tick flushes once at its end."""
     if dry_run:
         return
+    candidates = getattr(result, "_dispatch_health_candidate_ids", None)
+    if candidates is not None and task_id not in candidates:
+        return
     pending = getattr(result, "_dispatch_health_samples", None)
     if pending is None:
         pending = []
@@ -10262,6 +10265,26 @@ def _dispatch_once_locked(
             "ORDER BY last_considered_at IS NOT NULL, last_considered_at, "
             "priority DESC, created_at, id"
         ).fetchall()
+    # Select telemetry fairly across both waiting lanes before either
+    # status-specific spawn loop runs. The loops intentionally stay separate
+    # because ready and review claims have different lifecycle semantics, but
+    # allowing the ready loop to fill the shared health buffer first hid review
+    # waiters permanently. Durable least-recently-considered rotation reaches
+    # both sides of an asymmetric 129:1 queue within two ticks.
+    health_statuses = ("ready", "review") if review_rows else ("ready",)
+    health_placeholders = ",".join("?" for _ in health_statuses)
+    health_rows = conn.execute(
+        "SELECT id FROM tasks WHERE status IN (" + health_placeholders + ") "
+        "AND claim_lock IS NULL "
+        "ORDER BY last_considered_at IS NOT NULL, last_considered_at, "
+        "priority DESC, created_at, id LIMIT ?",
+        (*health_statuses, DISPATCH_HEALTH_BATCH_LIMIT),
+    ).fetchall()
+    setattr(
+        result,
+        "_dispatch_health_candidate_ids",
+        {row["id"] for row in health_rows},
+    )
     # Review-lane reservation (OOF-30 review finding): the ready loop runs
     # first and used to consume the ENTIRE shared budget, so a sustained
     # ready backlog permanently starved autonomous reviews — completed work
