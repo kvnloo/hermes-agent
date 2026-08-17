@@ -19,6 +19,13 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from agent.i18n import t
+from gateway.kanban_attention import (
+    applies as _attention_applies,
+    for_destination as _attention_for_destination,
+    is_urgent as _attention_urgent,
+    load_attention_policy as _load_attention_policy,
+    render_digest as _render_attention_digest,
+)
 
 # Match the logger run.py uses (logging.getLogger(__name__) where __name__ ==
 # "gateway.run") so extracted log records keep their original logger name.
@@ -163,6 +170,42 @@ def _wake_scope_id(adapter: Any, sub: dict) -> Optional[str]:
     return None
 
 
+def _destination_has_active_session(adapter: Any, sub: dict, platform: Any) -> bool:
+    """Return whether this subscription's exact conversation is active."""
+    if adapter is None:
+        return False
+    active = getattr(adapter, "_active_sessions", {})
+    if not active:
+        return False
+    try:
+        from gateway.session import SessionSource, build_session_key
+
+        metadata = sub.get("delivery_metadata")
+        metadata = metadata if isinstance(metadata, dict) else {}
+        source = SessionSource(
+            platform=platform,
+            chat_id=str(sub.get("chat_id") or ""),
+            chat_type=str(sub.get("chat_type") or metadata.get("chat_type") or "group"),
+            thread_id=sub.get("thread_id") or None,
+            user_id=sub.get("user_id"),
+            user_id_alt=sub.get("user_id_alt"),
+            profile=sub.get("notifier_profile") or None,
+            scope_id=_wake_scope_id(adapter, sub),
+        )
+        extra = getattr(getattr(adapter, "config", None), "extra", {}) or {}
+        key = build_session_key(
+            source,
+            group_sessions_per_user=extra.get("group_sessions_per_user", True),
+            thread_sessions_per_user=extra.get("thread_sessions_per_user", False),
+            profile=sub.get("notifier_profile") or None,
+        )
+    except Exception:
+        # If exact identity cannot be reconstructed, retain deterministic
+        # interval coalescing rather than inferring activity adapter-wide.
+        return False
+    return key in active
+
+
 class GatewayKanbanWatchersMixin:
     """Kanban watcher / notifier / dispatcher loops for GatewayRunner."""
 
@@ -217,7 +260,7 @@ class GatewayKanbanWatchersMixin:
         # but is not a block (see kanban_db.request_review); the task is not
         # archived, so the subscription stays alive and later review
         # cycles keep notifying.
-        TERMINAL_KINDS = ("completed", "blocked", "gave_up", "crashed", "timed_out", "status", "archived", "unblocked", "block_loop_detected", "review_requested")
+        TERMINAL_KINDS = ("completed", "blocked", "gave_up", "crashed", "timed_out", "status", "archived", "unblocked", "block_loop_detected", "review_requested", "changes_requested")
         # Subscriptions are removed only when the task reaches the irreversible
         # archived status. ``done`` is reversible in review/controller flows,
         # so removing its subscription would silence a later reopen. We used
@@ -443,6 +486,9 @@ class GatewayKanbanWatchersMixin:
                                     if not events:
                                         continue
                                     task = _kb.get_task(conn, sub["task_id"])
+                                    graph = _kb.task_graph_contexts(conn, [sub["task_id"]]).get(
+                                        sub["task_id"], {"parents": [], "children": []}
+                                    )
                                     logger.debug(
                                         "kanban notifier: claimed %d event(s) for %s on board %s cursor %s→%s",
                                         len(events), sub["task_id"], slug, old_cursor, cursor,
@@ -453,6 +499,7 @@ class GatewayKanbanWatchersMixin:
                                         "cursor": cursor,
                                         "events": events,
                                         "task": task,
+                                        "graph": graph,
                                         "board": slug,
                                     })
                                 except Exception as sub_exc:
@@ -468,6 +515,133 @@ class GatewayKanbanWatchersMixin:
                     return deliveries
 
                 deliveries = await asyncio.to_thread(_collect)
+
+                # Optional destination-scoped attention policy. Routine events
+                # stay in the board ledger and are coalesced per destination;
+                # urgent events continue through the unchanged immediate path.
+                # A deferred digest rewinds the atomic claim, so restart and
+                # replay cannot lose or duplicate already-delivered facts.
+                try:
+                    from hermes_cli.config import load_config as _load_cfg
+                    _attention_policy = _load_attention_policy(_load_cfg())
+                except Exception:
+                    _attention_policy = None
+
+                if _attention_policy and _attention_policy.enabled:
+                    _previous_mode = getattr(self, "_kanban_attention_mode", None)
+                    self._kanban_attention_mode = _attention_policy.mode
+                    _mode_transition = bool(
+                        _previous_mode and _previous_mode != _attention_policy.mode
+                    )
+                    _routine_groups: dict[
+                        tuple[str, str, str, str], list[tuple[dict, Any, Any]]
+                    ] = {}
+                    _immediate: list[dict] = []
+                    for _delivery in deliveries:
+                        _sub = _delivery["sub"]
+                        if not _attention_applies(_attention_policy, _sub):
+                            _immediate.append(_delivery)
+                            continue
+                        _effective_policy = _attention_for_destination(_attention_policy, _sub)
+                        _dest = (
+                            str(_sub.get("notifier_profile") or ""),
+                            str(_sub.get("platform") or "").lower(),
+                            str(_sub.get("chat_id") or ""),
+                            str(_sub.get("thread_id") or ""),
+                        )
+                        _urgent_events = []
+                        _routine_events = []
+                        for _event in _delivery["events"]:
+                            (_urgent_events if _attention_urgent(
+                                _event.kind, _event.payload, _delivery.get("task"),
+                                _effective_policy.mode,
+                            ) else _routine_events).append(_event)
+                        if _urgent_events:
+                            # One subscription cursor is an atomic claim. A
+                            # mixed claim cannot be independently rewound for
+                            # only its routine subset. Keep the whole claim on
+                            # the immediate path; urgency already warrants the
+                            # interruption and no event is lost or replayed.
+                            _immediate.append(dict(_delivery))
+                            continue
+                        for _event in _routine_events:
+                            _parents = (_delivery.get("graph") or {}).get("parents") or []
+                            _family_ids = {_sub["task_id"], *(
+                                str(_parent.get("id") or "") for _parent in _parents
+                            )}
+                            if (
+                                _effective_policy.mode == "copilot"
+                                and not _family_ids.intersection(_effective_policy.focus_task_ids)
+                            ):
+                                await asyncio.to_thread(
+                                    self._kanban_rewind, _delivery["sub"], _delivery["cursor"],
+                                    _delivery.get("old_cursor", 0), _delivery.get("board"),
+                                )
+                                continue
+                            _routine_groups.setdefault(_dest, []).append((_delivery, _event, _effective_policy))
+
+                    _last_digest = getattr(self, "_kanban_attention_last_digest", {})
+                    self._kanban_attention_last_digest = _last_digest
+                    for _dest, _entries in _routine_groups.items():
+                        _sample = _entries[0][0]
+                        _destination_policy = _entries[0][2]
+                        _sub = _sample["sub"]
+                        try:
+                            _plat = _Platform(_dest[1])
+                        except ValueError:
+                            for _delivery, _event, _policy in _entries:
+                                await asyncio.to_thread(self._kanban_advance, _delivery["sub"], _delivery["cursor"], _delivery.get("board"))
+                            continue
+                        _adapter = getattr(self, "_authorization_adapter")(
+                            _plat, _dest[0] or None
+                        )
+                        _adapter_busy = _destination_has_active_session(
+                            _adapter, _sub, _plat
+                        )
+                        _now = time.monotonic()
+                        _due = _now - float(_last_digest.get(_dest, 0.0)) >= _destination_policy.interval_seconds
+                        if _destination_policy.mode == "brainstorm":
+                            _due = False
+                        elif _mode_transition:
+                            _due = True
+                        if not _due or _adapter_busy:
+                            for _delivery, _event, _policy in _entries:
+                                await asyncio.to_thread(
+                                    self._kanban_rewind, _delivery["sub"], _delivery["cursor"],
+                                    _delivery.get("old_cursor", 0), _delivery.get("board"),
+                                )
+                            continue
+                        _digest_items = []
+                        for _delivery, _event, _policy in _entries:
+                            _parents = (_delivery.get("graph") or {}).get("parents") or []
+                            _digest_items.append({
+                                "task_id": _delivery["sub"]["task_id"],
+                                "parent_id": _parents[0]["id"] if _parents else None,
+                                "event_id": _event.id,
+                                "kind": _event.kind,
+                            })
+                        _metadata = dict(_sub.get("delivery_metadata") or {})
+                        if _sub.get("thread_id") and not _metadata.get("thread_id"):
+                            _metadata["thread_id"] = _sub["thread_id"]
+                        try:
+                            if _adapter is None:
+                                raise RuntimeError("destination adapter unavailable")
+                            _result = await _adapter.send(
+                                _sub["chat_id"],
+                                _render_attention_digest(_digest_items, _destination_policy.max_chars),
+                                metadata=_metadata,
+                            )
+                            if getattr(_result, "success", True) is False:
+                                raise RuntimeError(getattr(_result, "error", None) or "send failed")
+                            _last_digest[_dest] = _now
+                        except Exception as _digest_exc:
+                            logger.warning("kanban notifier: digest delivery failed for %s: %s", _dest, _digest_exc)
+                            for _delivery, _event, _policy in _entries:
+                                await asyncio.to_thread(
+                                    self._kanban_rewind, _delivery["sub"], _delivery["cursor"],
+                                    _delivery.get("old_cursor", 0), _delivery.get("board"),
+                                )
+                    deliveries = _immediate
                 for d in deliveries:
                     sub = d["sub"]
                     task = d["task"]
@@ -595,6 +769,14 @@ class GatewayKanbanWatchersMixin:
                             msg = (
                                 f"👀 {board_tag}{tag}Kanban {sub['task_id']} ready for review"
                                 f" — {title}{handoff}"
+                            )
+                        elif kind == "changes_requested":
+                            reason = ""
+                            if ev.payload and ev.payload.get("reason"):
+                                reason = f"\n{str(ev.payload['reason'])[:200]}"
+                            msg = (
+                                f"↩ {board_tag}{tag}Kanban {sub['task_id']} changes requested"
+                                f" — {title}{reason}"
                             )
                         elif kind == "block_loop_detected":
                             # A task re-blocked for the same cause past the
