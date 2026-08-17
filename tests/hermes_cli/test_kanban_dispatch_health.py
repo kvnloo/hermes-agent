@@ -405,6 +405,48 @@ def test_rotation_keys_survive_clock_rollback_future_state_and_restart(
         assert len(sla_events) == count
 
 
+def test_mixed_lanes_share_bounded_rotation_fairly(
+    tmp_path: Path, monkeypatch
+) -> None:
+    from hermes_cli import profiles
+
+    monkeypatch.setattr(profiles, "profile_exists", lambda _name: False)
+    monkeypatch.setattr(kb, "review_dispatch_enabled", lambda: True)
+    for large_status, tail_status in (("ready", "review"), ("review", "ready")):
+        with kb.connect(db_path=tmp_path / f"mixed-{large_status}.db") as conn:
+            large = [
+                kb.create_task(conn, title=f"large {index}", assignee="missing")
+                for index in range(kb.DISPATCH_HEALTH_BATCH_LIMIT + 1)
+            ]
+            tail = kb.create_task(conn, title="other lane tail", assignee="missing")
+            if large_status == "review":
+                conn.execute(
+                    "UPDATE tasks SET status = 'review' WHERE id IN ("
+                    + ",".join("?" for _ in large)
+                    + ")",
+                    large,
+                )
+            if tail_status == "review":
+                conn.execute("UPDATE tasks SET status = 'review' WHERE id = ?", (tail,))
+            old = int(time.time()) - kb.DEFAULT_CLAIM_SLA_SECONDS - 1
+            conn.execute("UPDATE tasks SET ready_since = ?", (old,))
+            conn.commit()
+
+            first = kb.dispatch_once(conn, max_spawn=1)
+            second = kb.dispatch_once(conn, max_spawn=1)
+
+            persisted = kb.get_task(conn, tail)
+            assert persisted is not None
+            assert persisted.dispatch_attempt_count >= 1
+            assert persisted.dispatch_sla_alerted_at is not None
+            assert len(first.claim_sla_breached) == kb.DISPATCH_HEALTH_BATCH_LIMIT
+            assert len(second.claim_sla_breached) == 2
+            assert (
+                len(first.claim_sla_breached) + len(second.claim_sla_breached)
+                == len(large) + 1
+            )
+
+
 def test_rotation_key_overflow_fails_visibly_without_partial_health_writes(
     tmp_path: Path, all_assignees_spawnable
 ) -> None:
