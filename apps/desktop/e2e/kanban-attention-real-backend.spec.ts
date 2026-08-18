@@ -158,14 +158,19 @@ test('actual Electron and isolated backend preserve attention controls and recei
 
     for (const width of WIDTHS) {
       await page.setViewportSize({ width, height: 800 })
-      const snooze = card.getByText('Snooze…')
+      const snooze = card.getByRole('button', { name: '1 hour' })
       await expect(snooze).toBeVisible()
+      await expect(card.getByRole('button', { name: 'Tomorrow at 9 AM local time' })).toBeVisible()
+      await expect(card.getByRole('button', { name: '1 week' })).toBeVisible()
+      await expect(card.getByRole('button', { name: '1 month' })).toBeVisible()
+      const custom = card.getByRole('button', { name: 'Custom+' })
+      await expect(custom).toHaveAttribute('aria-expanded', 'false')
       await snooze.scrollIntoViewIfNeeded()
       await expect.poll(() => snooze.evaluate(element => {
         const rect = element.getBoundingClientRect()
         const center = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)
 
-        return center === element || element.contains(center) || center?.closest('summary') === element
+        return center === element || element.contains(center)
       }), { timeout: 30_000 }).toBe(true)
 
       const geometry = await snooze.evaluate(element => {
@@ -176,7 +181,7 @@ test('actual Electron and isolated backend preserve attention controls and recei
         return {
           height: rect.height,
           noOverflow: document.documentElement.scrollWidth <= window.innerWidth,
-          targetIsSnooze: center === element || element.contains(center) || center?.closest('summary') === element,
+          targetIsSnooze: center === element || element.contains(center),
           target: center ? `${center.tagName}:${center.textContent?.trim().slice(0, 40)}` : null,
           headerIntercepts: Boolean(header && (center === header || header.contains(center))),
         }
@@ -184,15 +189,12 @@ test('actual Electron and isolated backend preserve attention controls and recei
 
       expect(geometry.targetIsSnooze, `elementFromPoint returned ${geometry.target}`).toBe(true)
       expect({ height: geometry.height, noOverflow: geometry.noOverflow, headerIntercepts: geometry.headerIntercepts }).toEqual({ height: 44, noOverflow: true, headerIntercepts: false })
-      await snooze.click()
-      await expect(snooze.locator('..')).toHaveJSProperty('open', true)
-      await snooze.press('Enter')
-      await expect(snooze.locator('..')).toHaveJSProperty('open', false)
-      await snooze.press(' ')
-      await expect(snooze.locator('..')).toHaveJSProperty('open', true)
-      await expect(snooze).toBeFocused()
       await page.screenshot({ path: path.join(evidenceDir, `electron-${width}.png`), fullPage: true })
-      await snooze.press('Enter')
+      await custom.focus()
+      await custom.press('Enter')
+      await expect(custom).toHaveAttribute('aria-expanded', 'true')
+      await card.getByLabel('Custom wake time').press('Escape')
+      await expect(custom).toHaveAttribute('aria-expanded', 'false')
     }
 
     await page.setViewportSize({ width: 390, height: 800 })
@@ -225,9 +227,8 @@ test('actual Electron and isolated backend preserve attention controls and recei
     await expect(page.getByRole('button', { name: 'Settle' })).toHaveCount(3)
     await expect(status).toHaveCount(1)
 
-    await card.getByText('Snooze…').click()
     await card.getByRole('button', { name: '1 hour' }).click()
-    await expect(status).toHaveText('Task snoozed')
+    await expect(status).toContainText('Task snoozed until')
     await expect(status).toHaveCount(1)
     expect(dbState(sandbox, taskIds.snooze).receipt).toEqual({ revision: 1, state: 'snoozed' })
 
