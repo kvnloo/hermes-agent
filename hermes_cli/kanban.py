@@ -600,6 +600,16 @@ def build_parser(parent_subparsers: argparse._SubParsersAction) -> argparse.Argu
     p_complete.add_argument("--metadata", default=None,
                             help='JSON dict of structured facts (e.g. \'{"changed_files": [...], '
                                  '"tests_run": 12}\'). Stored on the closing run.')
+    for flag, kwargs in (
+        ("--review-generation", {"type": int}),
+        ("--review-nonce", {}),
+        ("--implementation-run-id", {"type": int}),
+        ("--source-commit", {}), ("--source-tree", {}),
+        ("--source-manifest-hash", {}), ("--artifact-manifest-hash", {}),
+        ("--reviewer-profile", {}), ("--reviewer-actor", {}),
+        ("--reviewer-principal", {}), ("--reviewer-credential-source", {}),
+    ):
+        p_complete.add_argument(flag, **kwargs)
 
     p_edit = sub.add_parser(
         "edit",
@@ -2298,6 +2308,17 @@ def _cmd_complete(args: argparse.Namespace) -> int:
                 summary=summary,
                 metadata=metadata,
                 expected_run_id=_worker_run_id_for(tid),
+                expected_review_generation=args.review_generation,
+                expected_review_nonce=args.review_nonce,
+                expected_implementation_run_id=args.implementation_run_id,
+                expected_source_commit=args.source_commit,
+                expected_source_tree=args.source_tree,
+                expected_source_hash=args.source_manifest_hash,
+                expected_artifact_hash=args.artifact_manifest_hash,
+                reviewer_profile=args.reviewer_profile,
+                reviewer_actor=args.reviewer_actor,
+                reviewer_principal=args.reviewer_principal,
+                reviewer_credential_source=args.reviewer_credential_source,
             ):
                 failed.append(tid)
                 print(f"cannot complete {tid} (unknown id or terminal state)", file=sys.stderr)
