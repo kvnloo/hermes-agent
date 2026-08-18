@@ -44,3 +44,43 @@
     --kanban-arc-angle: 360deg;
   }
 }
+
+/* Summary-first operator-console geometry. Verbose task prose stays in the
+   drawer; square edges make lane alignment exact instead of SaaS-card soft. */
+.kanban-card,
+.kanban-filter-chip {
+  border-radius: 0;
+}
+
+.kanban-filter-chip {
+  display: inline-flex;
+  min-height: 1.75rem;
+  flex: none;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid var(--ui-stroke-tertiary);
+  padding: 0 0.5rem;
+  color: var(--ui-text-secondary);
+  font-size: 0.625rem;
+}
+
+.kanban-filter-chip:hover,
+.kanban-filter-chip:focus-visible {
+  background: var(--chrome-action-hover);
+  color: var(--ui-text-primary);
+}
+
+@media (max-width: 767px) {
+  .kanban-touch,
+  .kanban-filter-chip,
+  .kanban-drawer-action {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kanban-arc {
+    animation: none;
+  }
+}
