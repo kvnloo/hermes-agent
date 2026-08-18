@@ -85,7 +85,7 @@ try {
     await input.press('Escape')
     if (!(await custom.evaluate(element => document.activeElement === element))) throw new Error(`${width}px Escape did not restore Custom focus`)
     await custom.press('Enter')
-    const cancel = card.getByRole('button', { name: 'Cancel custom snooze' })
+    const cancel = card.getByRole('button', { name: 'Cancel', exact: true })
     await cancel.click()
     if (!(await custom.evaluate(element => document.activeElement === element))) throw new Error(`${width}px Cancel did not restore Custom focus`)
     manifest.responsiveTrace.push({ width, closedGeometry: closed, openGeometry: open, escapeFocusRestored: true, cancelFocusRestored: true })

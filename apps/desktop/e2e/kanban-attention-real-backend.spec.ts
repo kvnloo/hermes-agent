@@ -241,7 +241,7 @@ test('actual Electron and isolated backend preserve attention controls and recei
       await expect(custom).toBeFocused()
       await custom.press('Enter')
       await expect(custom).toHaveAttribute('aria-expanded', 'true')
-      const cancel = card.getByRole('button', { name: 'Cancel custom snooze' })
+      const cancel = card.getByRole('button', { name: 'Cancel', exact: true })
       await cancel.click()
       await expect(custom).toHaveAttribute('aria-expanded', 'false')
       await expect(custom).toBeFocused()
