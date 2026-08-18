@@ -129,6 +129,8 @@
   .hermes-kanban-columns > .hermes-kanban-column--last {
     scroll-snap-align: end;
   }
+  .hermes-kanban-columns--tab-target { scroll-snap-type: none; }
+
   .hermes-kanban-trash { display: none; }
 }
 

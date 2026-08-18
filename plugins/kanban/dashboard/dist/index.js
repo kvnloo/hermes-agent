@@ -2449,9 +2449,10 @@
       const column = el.querySelectorAll(".hermes-kanban-column")[bounded];
       if (!column) return;
       const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      el.classList.add("hermes-kanban-columns--tab-target");
       const left = bounded === props.board.columns.length - 1
-        ? el.scrollWidth - el.clientWidth
-        : column.offsetLeft - el.offsetLeft - 16;
+        ? column.offsetLeft - el.offsetLeft + column.offsetWidth - el.clientWidth + 16
+        : column.offsetLeft - el.offsetLeft;
       el.scrollTo({ left, behavior: reduceMotion ? "auto" : "smooth" });
       setActiveColumn(bounded);
       if (focusTab) {
@@ -2495,6 +2496,14 @@
       function onScroll() {
         const columns = Array.from(el.querySelectorAll(".hermes-kanban-column"));
         if (!columns.length) return;
+        // Chromium's end snap retains the scroller's 60px padding/gap tail.
+        // Once the final lane is wholly visible, keep its tab authoritative.
+        const last = columns[columns.length - 1].getBoundingClientRect();
+        const viewport = el.getBoundingClientRect();
+        if (last.left >= viewport.left - 1 && last.right <= viewport.right + 1) {
+          setActiveColumn(columns.length - 1);
+          return;
+        }
         const target = el.scrollLeft + 16;
         let closest = 0;
         let distance = Infinity;
