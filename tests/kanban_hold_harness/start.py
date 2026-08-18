@@ -17,7 +17,7 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-EXACT_COMMIT = "dc6f0284831c4ef656ececbcc75acdf7c960ff9d"
+EXACT_COMMIT = "12a906568ece4e1fff35d2d6533903cda68a69b0"
 ASSETS = ("plugins/kanban/dashboard/dist/index.js", "plugins/kanban/dashboard/dist/style.css")
 
 
