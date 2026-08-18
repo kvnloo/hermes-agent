@@ -2594,7 +2594,7 @@ def init_db(
     return path
 
 
-_ARTIFACT_REVIEW_GATE_SCHEMA_VERSION = 3
+_ARTIFACT_REVIEW_GATE_SCHEMA_VERSION = 4
 
 
 def _migrate_artifact_review_gate_v2(conn: sqlite3.Connection) -> None:
@@ -2655,6 +2655,15 @@ def _migrate_artifact_review_gate_v2(conn: sqlite3.Connection) -> None:
             "message_id TEXT NOT NULL, source TEXT NOT NULL, issued_at INTEGER NOT NULL, "
             "expires_at INTEGER NOT NULL, approved_at INTEGER NOT NULL, "
             "FOREIGN KEY(authorization_id) REFERENCES captain_approval_authorizations(id))"
+        )
+    if current < 4:
+        conn.execute(
+            "CREATE TABLE captain_approval_requests ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, callback_hash TEXT NOT NULL UNIQUE, "
+            "platform TEXT NOT NULL, chat_id TEXT NOT NULL, message_id TEXT NOT NULL, "
+            "task_id TEXT NOT NULL, source_hash TEXT NOT NULL, artifact_hash TEXT NOT NULL, "
+            "decision_generation INTEGER NOT NULL, expires_at INTEGER NOT NULL, "
+            "consumed_at INTEGER, UNIQUE(platform, chat_id, message_id))"
         )
     conn.execute(
         "INSERT INTO kanban_schema_migrations(name, version, applied_at) VALUES (?, ?, ?) "
@@ -6947,6 +6956,88 @@ class CaptainIdentity:
     operator_user_id: str
     chat_id: str
     source: str
+
+
+def create_captain_approval_request(
+    conn: sqlite3.Connection, *, task_id: str, platform: str, chat_id: str,
+    message_id: str, expires_at: int, now: Optional[int] = None,
+    callback_nonce: Optional[str] = None,
+) -> Optional[str]:
+    """Create the server-side half of an opaque one-shot approval button."""
+    timestamp = int(time.time()) if now is None else int(now)
+    binding = conn.execute(
+        "SELECT generation, source_manifest_hash, artifact_manifest_hash "
+        "FROM task_review_bindings WHERE task_id = ? ORDER BY generation DESC LIMIT 1",
+        (task_id,),
+    ).fetchone()
+    task = conn.execute("SELECT status FROM tasks WHERE id = ?", (task_id,)).fetchone()
+    if (binding is None or task is None or task["status"] != "review"
+            or not all(str(v).strip() for v in (platform, chat_id, message_id))
+            or int(expires_at) <= timestamp):
+        return None
+    nonce = callback_nonce or secrets.token_urlsafe(24)
+    if not nonce or len(nonce) > 48:
+        return None
+    callback_hash = hashlib.sha256(nonce.encode()).hexdigest()
+    try:
+        with write_txn(conn):
+            conn.execute(
+                "INSERT INTO captain_approval_requests(callback_hash, platform, chat_id, "
+                "message_id, task_id, source_hash, artifact_hash, decision_generation, expires_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (callback_hash, platform, chat_id, message_id, task_id,
+                 binding["source_manifest_hash"], binding["artifact_manifest_hash"],
+                 int(binding["generation"]), int(expires_at)),
+            )
+    except sqlite3.IntegrityError:
+        return None
+    return nonce
+
+
+def approve_captain_callback(
+    conn: sqlite3.Connection, *, callback_nonce: str, platform: str,
+    operator_user_id: str, chat_id: str, message_id: str,
+    allowed_user_ids: set[str], allowed_chat_ids: set[str],
+    now: Optional[int] = None,
+) -> bool:
+    """Consume a transport-derived callback; no task or artifact claim is accepted."""
+    timestamp = int(time.time()) if now is None else int(now)
+    callback_hash = hashlib.sha256(str(callback_nonce).encode()).hexdigest()
+    request = conn.execute(
+        "SELECT * FROM captain_approval_requests WHERE callback_hash = ?", (callback_hash,)
+    ).fetchone()
+    if (not allowed_user_ids or not allowed_chat_ids
+            or operator_user_id not in allowed_user_ids or chat_id not in allowed_chat_ids
+            or request is None or request["consumed_at"] is not None
+            or timestamp >= int(request["expires_at"])
+            or (platform, chat_id, message_id) !=
+               (request["platform"], request["chat_id"], request["message_id"])):
+        return False
+    envelope = AuthenticatedCaptainEnvelope(
+        authenticated=True, platform=platform, operator_user_id=operator_user_id,
+        chat_id=chat_id, message_id=message_id, source="telegram-callback",
+        received_at=timestamp,
+    )
+    token = issue_captain_approval_authorization(
+        conn, envelope=envelope,
+        captain=CaptainIdentity(platform, operator_user_id, chat_id, "telegram-callback"),
+        task_id=request["task_id"], source_hash=request["source_hash"],
+        artifact_hash=request["artifact_hash"],
+        decision_generation=int(request["decision_generation"]),
+        expires_at=int(request["expires_at"]),
+    )
+    if token is None:
+        return False
+    with write_txn(conn):
+        consumed = conn.execute(
+            "UPDATE captain_approval_requests SET consumed_at = ? "
+            "WHERE id = ? AND consumed_at IS NULL", (timestamp, int(request["id"])),
+        )
+        if consumed.rowcount != 1:
+            return False
+    return approve_task_by_captain(
+        conn, request["task_id"], authorization_token=token, now=timestamp
+    )
 
 
 def issue_captain_approval_authorization(

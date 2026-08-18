@@ -4,6 +4,7 @@ Mirrors test_telegram_approval_buttons.py for the new ``send_clarify`` and
 ``cl:`` callback dispatch added in feat/clarify-gateway-buttons.
 """
 
+import contextlib
 import os
 import sys
 from pathlib import Path
@@ -144,6 +145,37 @@ class TestTelegramClarifyCallback:
 
     def setup_method(self):
         _clear_clarify_state()
+
+    @pytest.mark.asyncio
+    async def test_captain_callback_uses_verified_update_identity_only(self):
+        adapter = _make_adapter({
+            "captain_allow_from": ["777"],
+            "captain_allow_chats": ["12345"],
+            "captain_board": "test-board",
+        })
+        query = AsyncMock()
+        query.data = "ka:opaque-nonce"
+        query.from_user.id = 777
+        query.message.chat_id = 12345
+        query.message.message_id = 9001
+        query.answer = AsyncMock()
+        query.edit_message_text = AsyncMock()
+        update = MagicMock(callback_query=query)
+        fake_conn = MagicMock()
+
+        with patch(
+            "hermes_cli.kanban_db.connect_closing",
+            return_value=contextlib.nullcontext(fake_conn),
+        ), patch(
+            "hermes_cli.kanban_db.approve_captain_callback", return_value=True,
+        ) as approve:
+            await adapter._handle_callback_query(update, MagicMock())
+
+        approve.assert_called_once_with(
+            fake_conn, callback_nonce="opaque-nonce", platform="telegram",
+            operator_user_id="777", chat_id="12345", message_id="9001",
+            allowed_user_ids={"777"}, allowed_chat_ids={"12345"},
+        )
 
     @pytest.mark.asyncio
     async def test_numeric_choice_resolves_with_choice_text(self):

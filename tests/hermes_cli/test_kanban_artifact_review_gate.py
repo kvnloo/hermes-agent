@@ -241,6 +241,42 @@ def test_captain_missing_expired_wrong_task_and_hash_are_denied(conn, tmp_path):
     assert not kb.approve_task_by_captain(conn, first, authorization_token=wrong_hash, now=401)
 
 
+def test_transport_callback_binds_server_request_and_is_one_shot(conn, tmp_path):
+    task_id, _ = _task(conn, tmp_path)
+    nonce = kb.create_captain_approval_request(
+        conn, task_id=task_id, platform="telegram", chat_id="chat-9",
+        message_id="message-7", expires_at=200, now=100,
+    )
+    assert nonce
+    claims = dict(
+        callback_nonce=nonce, platform="telegram", operator_user_id="captain-7",
+        chat_id="chat-9", message_id="message-7",
+        allowed_user_ids={"captain-7"}, allowed_chat_ids={"chat-9"}, now=101,
+    )
+    assert kb.approve_captain_callback(conn, **claims)
+    assert not kb.approve_captain_callback(conn, **claims)
+    assert conn.execute("SELECT COUNT(*) FROM captain_approval_receipts").fetchone()[0] == 1
+
+
+@pytest.mark.parametrize("field,value", [
+    ("operator_user_id", "attacker"), ("chat_id", "other-chat"),
+    ("message_id", "copied-message"), ("callback_nonce", "copied-nonce"),
+])
+def test_transport_callback_rejects_forged_update_fields(conn, tmp_path, field, value):
+    task_id, _ = _task(conn, tmp_path)
+    nonce = kb.create_captain_approval_request(
+        conn, task_id=task_id, platform="telegram", chat_id="chat-9",
+        message_id="message-7", expires_at=200, now=100,
+    )
+    claims = dict(
+        callback_nonce=nonce, platform="telegram", operator_user_id="captain-7",
+        chat_id="chat-9", message_id="message-7",
+        allowed_user_ids={"captain-7"}, allowed_chat_ids={"chat-9"}, now=101,
+    )
+    claims[field] = value
+    assert not kb.approve_captain_callback(conn, **claims)
+
+
 def _pre_v2_connection(path: Path):
     db = sqlite3.connect(path, isolation_level=None)
     db.row_factory = sqlite3.Row
@@ -264,8 +300,11 @@ def test_pre_v2_migration_success_rollback_restart_and_idempotence(tmp_path):
     db = _pre_v2_connection(path)
     db.execute("CREATE TRIGGER fail_version BEFORE UPDATE ON kanban_schema_migrations "
                "BEGIN SELECT RAISE(ABORT, 'injected migration failure'); END")
-    with pytest.raises(sqlite3.IntegrityError), kb.write_txn(db):
-        kb._migrate_artifact_review_gate_v2(db)
+    db.close()
+    with pytest.raises(sqlite3.IntegrityError):
+        kb.connect(path)
+    db = sqlite3.connect(path, isolation_level=None)
+    db.row_factory = sqlite3.Row
     columns = {row["name"] for row in db.execute("PRAGMA table_info(task_review_bindings)")}
     assert "approval_class" not in columns
     assert db.execute("SELECT name FROM sqlite_master WHERE name='captain_approval_receipts'").fetchone() is None
@@ -273,19 +312,18 @@ def test_pre_v2_migration_success_rollback_restart_and_idempotence(tmp_path):
     db.execute("DROP TRIGGER fail_version")
     db.close()
 
-    retry = sqlite3.connect(path, isolation_level=None)
-    retry.row_factory = sqlite3.Row
-    with kb.write_txn(retry):
-        kb._migrate_artifact_review_gate_v2(retry)
-    with kb.write_txn(retry):
-        kb._migrate_artifact_review_gate_v2(retry)
+    retry = kb.connect(path)
+    retry.close()
+    kb.init_db(path)
+    retry = kb.connect(path)
     assert retry.execute("SELECT version FROM kanban_schema_migrations").fetchone()[0] == kb._ARTIFACT_REVIEW_GATE_SCHEMA_VERSION
     assert retry.execute("SELECT name FROM sqlite_master WHERE name='captain_approval_receipts'").fetchone()
     retry.close()
 
 
-def test_fresh_production_schema_sentinel_and_cross_process_reopen(tmp_path):
-    path = tmp_path / "fresh.db"
+def test_pre_v2_concurrent_first_open_and_production_sentinel(tmp_path):
+    path = tmp_path / "legacy-concurrent.db"
+    _pre_v2_connection(path).close()
     script = (
         "from pathlib import Path; from hermes_cli import kanban_db as k; "
         f"c=k.connect(Path({str(path)!r})); c.close()"
