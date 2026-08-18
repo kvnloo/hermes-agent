@@ -315,6 +315,14 @@ test('actual shell validates exact mobile viewports and all lane input paths', a
     expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(true)
   }
 
+  await setContentViewport(fixture!, 1280)
+  const desktopBytes = await page.screenshot({ fullPage: true })
+  const desktopFilename = 'kanban-desktop-1280-control.png'
+  const desktopPath = testInfo.outputPath(desktopFilename)
+  fs.writeFileSync(desktopPath, desktopBytes)
+  await testInfo.attach(desktopFilename, { path: desktopPath, contentType: 'image/png' })
+  manifest.push({ bytes: desktopBytes.length, filename: desktopFilename, sha256: createHash('sha256').update(desktopBytes).digest('hex'), state: 'desktop-control', viewportWidth: 1280 })
+
   const manifestPath = testInfo.outputPath('kanban-mobile-viewport-manifest.json')
   const boardSource = path.join(REPO_ROOT, 'apps', 'desktop', 'src', 'plugins', 'kanban', 'board.tsx')
   const responsiveSource = path.join(REPO_ROOT, 'apps', 'desktop', 'src', 'plugins', 'kanban', 'responsive.ts')
