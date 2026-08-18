@@ -1,0 +1,18 @@
+{
+  "command": "electron",
+  "args": [
+    "/workspace/zer0/oss/hermes-agent/.worktrees/t_7e38fe5c/apps/desktop",
+    "--disable-gpu",
+    "--no-sandbox",
+    "--ozone-platform=wayland"
+  ],
+  "cwd": "/workspace/zer0/oss/hermes-agent/.worktrees/t_7e38fe5c/apps/desktop",
+  "environment": {
+    "WAYLAND_DISPLAY": "wayland-1",
+    "XDG_RUNTIME_DIR": "/run/user/1000",
+    "HERMES_HOME": "<isolated>/hermes-home",
+    "HERMES_KANBAN_DB": "<isolated>/kanban.db",
+    "HERMES_KANBAN_BOARD": "default",
+    "HERMES_DESKTOP_E2E_HEADLESS": "0"
+  }
+}
