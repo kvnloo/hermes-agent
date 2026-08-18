@@ -336,16 +336,21 @@ export function AttentionControls({ task }: { task: KanbanTask }) {
       if (conflictAttention) {
         setReconciledReceipt(conflictAttention)
       } else {
-        const authoritative = await fetchTask(task.id)
+        try {
+          const authoritative = await fetchTask(task.id)
 
-        setReconciledReceipt(authoritative.task.attention)
-        qc.setQueriesData<KanbanBoard>({ queryKey: ['kanban', 'board'] }, current => current && ({
-          ...current,
-          columns: current.columns.map(column => ({
-            ...column,
-            tasks: column.tasks.map(candidate => candidate.id === task.id ? authoritative.task : candidate)
+          setReconciledReceipt(authoritative.task.attention)
+          qc.setQueriesData<KanbanBoard>({ queryKey: ['kanban', 'board'] }, current => current && ({
+            ...current,
+            columns: current.columns.map(column => ({
+              ...column,
+              tasks: column.tasks.map(candidate => candidate.id === task.id ? authoritative.task : candidate)
+            }))
           }))
-        }))
+        } catch {
+          // Preserve the announced original failure when reconciliation itself
+          // is unavailable; never replace it with a second noisy rejection.
+        }
       }
     },
     onSuccess: (result, variables) => {
