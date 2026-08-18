@@ -117,22 +117,30 @@ def test_compaction_preserves_count_and_hash_evidence(tmp_path):
     assert rollup[0] == 2 and len(rollup[1]) == 64
 
 
-def test_source_collision_is_durable_error_with_occurrence(tmp_path):
+def test_source_collision_preserves_terminal_canonical_with_separate_receipt(tmp_path):
     conn = kb.connect(tmp_path / "board.db")
-    kb.begin_proactive_wake(conn, **_source("collision"))
+    wake_id, _ = kb.begin_proactive_wake(conn, **_source("collision"))
+    kb.finish_proactive_wake(conn, wake_id, kb.DispatchResult())
+    before = tuple(conn.execute(
+        "SELECT outcome,detail,completed_at,payload_hash FROM proactive_wakes WHERE id=?",
+        (wake_id,),
+    ).fetchone())
     with pytest.raises(ValueError, match="payload conflict"):
         kb.begin_proactive_wake(
             conn, **{**_source("collision"), "candidate_action": "different"}
         )
-    wake = conn.execute(
-        "SELECT outcome,completed_at FROM proactive_wakes WHERE source_key='collision'"
-    ).fetchone()
-    assert wake["outcome"] == "error" and wake["completed_at"] is not None
+    after = tuple(conn.execute(
+        "SELECT outcome,detail,completed_at,payload_hash FROM proactive_wakes WHERE id=?",
+        (wake_id,),
+    ).fetchone())
+    assert before == after
     rows = conn.execute(
         "SELECT disposition,payload_hash FROM proactive_wake_occurrences ORDER BY id"
     ).fetchall()
     assert [row["disposition"] for row in rows] == ["inserted", "conflict"]
     assert rows[0]["payload_hash"] != rows[1]["payload_hash"]
+    receipt = conn.execute("SELECT error,occurrence_count FROM proactive_wake_conflicts").fetchone()
+    assert tuple(receipt) == ("source payload conflict", 1)
 
 
 def test_duplicate_has_distinct_occurrence_receipts(tmp_path):
@@ -162,6 +170,7 @@ def test_restart_reconciles_abandoned_open_wake(tmp_path):
     path = tmp_path / "board.db"
     conn = kb.connect(path)
     wake_id, _ = kb.begin_proactive_wake(conn, **_source("abandoned"))
+    conn.execute("UPDATE proactive_wakes SET lease_expires_at=0 WHERE id=?", (wake_id,))
     conn.close()
     kb._INITIALIZED_PATHS.clear()
     reopened = kb.connect(path)
@@ -169,6 +178,95 @@ def test_restart_reconciles_abandoned_open_wake(tmp_path):
         "SELECT outcome,completed_at FROM proactive_wakes WHERE id=?", (wake_id,)
     ).fetchone()
     assert row["outcome"] == "error" and row["completed_at"] is not None
+
+
+def test_fresh_second_process_open_does_not_mutate_live_lease(tmp_path):
+    path = tmp_path / "board.db"
+    conn = kb.connect(path)
+    wake_id, _ = kb.begin_proactive_wake(
+        conn, **_source("live"), owner_instance_id="owner-a", lease_seconds=300,
+    )
+    before = tuple(conn.execute("SELECT * FROM proactive_wakes WHERE id=?", (wake_id,)).fetchone())
+    kb._INITIALIZED_PATHS.clear()
+    other = kb.connect(path)
+    after = tuple(other.execute("SELECT * FROM proactive_wakes WHERE id=?", (wake_id,)).fetchone())
+    assert after == before
+
+
+def test_expired_takeover_once_and_stale_owner_cannot_finish(tmp_path):
+    path = tmp_path / "board.db"
+    conn = kb.connect(path)
+    wake_id, _ = kb.begin_proactive_wake(
+        conn, **_source("expired"), owner_instance_id="stale-owner",
+    )
+    conn.execute("UPDATE proactive_wakes SET lease_expires_at=0 WHERE id=?", (wake_id,))
+    conn.close()
+    kb._INITIALIZED_PATHS.clear()
+    reopened = kb.connect(path)
+    first = tuple(reopened.execute(
+        "SELECT outcome,detail,completed_at,lease_generation FROM proactive_wakes WHERE id=?",
+        (wake_id,),
+    ).fetchone())
+    kb._INITIALIZED_PATHS.clear()
+    again = kb.connect(path)
+    second = tuple(again.execute(
+        "SELECT outcome,detail,completed_at,lease_generation FROM proactive_wakes WHERE id=?",
+        (wake_id,),
+    ).fetchone())
+    assert first == second
+    assert first[0] == "error" and first[3] == 2
+    with pytest.raises(RuntimeError, match="ownership lost"):
+        kb.finish_proactive_wake(
+            again, wake_id, kb.DispatchResult(), lease_generation=1,
+            owner_instance_id="stale-owner",
+        )
+
+
+def test_concurrent_conflicts_are_deterministic_and_canonical_is_immutable(tmp_path):
+    path = tmp_path / "board.db"
+    conn = kb.connect(path)
+    wake_id, _ = kb.begin_proactive_wake(conn, **_source("conflict-race"))
+    kb.finish_proactive_wake(conn, wake_id, kb.DispatchResult())
+    canonical = tuple(conn.execute(
+        "SELECT outcome,detail,completed_at,payload_hash FROM proactive_wakes WHERE id=?",
+        (wake_id,),
+    ).fetchone())
+    barrier = threading.Barrier(4)
+
+    def conflict():
+        local = kb.connect(path)
+        barrier.wait()
+        with pytest.raises(ValueError, match="payload conflict"):
+            kb.begin_proactive_wake(
+                local, **{**_source("conflict-race"), "candidate_action": "other"}
+            )
+        local.close()
+
+    threads = [threading.Thread(target=conflict) for _ in range(4)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert tuple(conn.execute(
+        "SELECT outcome,detail,completed_at,payload_hash FROM proactive_wakes WHERE id=?",
+        (wake_id,),
+    ).fetchone()) == canonical
+    receipt = conn.execute(
+        "SELECT COUNT(*),SUM(occurrence_count) FROM proactive_wake_conflicts WHERE wake_id=?",
+        (wake_id,),
+    ).fetchone()
+    assert tuple(receipt) == (1, 4)
+
+
+def test_terminal_trigger_rejects_direct_canonical_mutation(tmp_path):
+    conn = kb.connect(tmp_path / "board.db")
+    wake_id, _ = kb.begin_proactive_wake(conn, **_source("trigger-guard"))
+    kb.finish_proactive_wake(conn, wake_id, kb.DispatchResult())
+    with pytest.raises(sqlite3.IntegrityError, match="terminal proactive wake is immutable"):
+        conn.execute(
+            "UPDATE proactive_wakes SET outcome='error',detail='overwrite' WHERE id=?",
+            (wake_id,),
+        )
 
 
 def test_cross_task_run_is_rejected(tmp_path):

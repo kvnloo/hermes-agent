@@ -1558,6 +1558,10 @@ CREATE TABLE IF NOT EXISTS proactive_wakes (
     detail             TEXT,
     duplicate_count    INTEGER NOT NULL DEFAULT 0,
     completed_at       INTEGER,
+    owner_instance_id  TEXT NOT NULL DEFAULT '',
+    lease_generation   INTEGER NOT NULL DEFAULT 0,
+    lease_heartbeat_at INTEGER,
+    lease_expires_at   INTEGER,
     CHECK (trigger_type IN ('scheduler','intake','api','test')),
     CHECK (outcome IN ('created','suppressed','deferred','duplicate','policy_denied','capacity','nonspawnable','parent_gated','stale','cooldown_budget','error'))
 );
@@ -1570,6 +1574,16 @@ CREATE TABLE IF NOT EXISTS proactive_wake_occurrences (
     payload_hash   TEXT NOT NULL,
     disposition    TEXT NOT NULL,
     CHECK (disposition IN ('inserted','duplicate','conflict'))
+);
+
+CREATE TABLE IF NOT EXISTS proactive_wake_conflicts (
+    wake_id        INTEGER NOT NULL REFERENCES proactive_wakes(id) ON DELETE RESTRICT,
+    payload_hash   TEXT NOT NULL,
+    first_seen_at  INTEGER NOT NULL,
+    last_seen_at   INTEGER NOT NULL,
+    occurrence_count INTEGER NOT NULL DEFAULT 1,
+    error          TEXT NOT NULL,
+    PRIMARY KEY (wake_id, payload_hash)
 );
 
 CREATE TABLE IF NOT EXISTS proactive_dispatch_attempts (
@@ -2649,6 +2663,14 @@ def _migrate_add_optional_columns(conn: sqlite3.Connection) -> None:
             conn, "proactive_wakes", "duplicate_count",
             "duplicate_count INTEGER NOT NULL DEFAULT 0",
         )
+    for name, declaration in (
+        ("owner_instance_id", "owner_instance_id TEXT NOT NULL DEFAULT ''"),
+        ("lease_generation", "lease_generation INTEGER NOT NULL DEFAULT 0"),
+        ("lease_heartbeat_at", "lease_heartbeat_at INTEGER"),
+        ("lease_expires_at", "lease_expires_at INTEGER"),
+    ):
+        if wake_cols and name not in wake_cols:
+            _add_column_if_missing(conn, "proactive_wakes", name, declaration)
     if wake_cols and "payload_hash" not in wake_cols:
         _add_column_if_missing(
             conn, "proactive_wakes", "payload_hash",
@@ -2674,12 +2696,29 @@ def _migrate_add_optional_columns(conn: sqlite3.Connection) -> None:
                 (digest, row["id"]),
             )
     if wake_cols:
+        now = int(time.time())
         conn.execute(
             "UPDATE proactive_wakes SET outcome='error',"
-            "detail='restart reconciliation: abandoned open wake',completed_at=? "
-            "WHERE outcome='deferred' AND completed_at IS NULL",
-            (int(time.time()),),
+            "detail='restart reconciliation: abandoned open wake',completed_at=?,"
+            "owner_instance_id=?,lease_generation=lease_generation+1,"
+            "lease_heartbeat_at=?,lease_expires_at=? "
+            "WHERE outcome='deferred' AND completed_at IS NULL "
+            "AND (owner_instance_id='' OR lease_expires_at IS NULL OR lease_expires_at<=?)",
+            (now, _PROACTIVE_WAKE_INSTANCE_ID, now, now, now),
         )
+        # Install only after additive/backfill migrations have completed so a
+        # legacy terminal row can receive its first canonical payload hash.
+        conn.execute("""
+            CREATE TRIGGER IF NOT EXISTS proactive_wake_terminal_immutable
+            BEFORE UPDATE OF outcome, detail, completed_at, payload_hash ON proactive_wakes
+            WHEN OLD.completed_at IS NOT NULL AND (
+                NEW.outcome IS NOT OLD.outcome OR NEW.detail IS NOT OLD.detail OR
+                NEW.completed_at IS NOT OLD.completed_at OR NEW.payload_hash IS NOT OLD.payload_hash
+            )
+            BEGIN
+                SELECT RAISE(ABORT, 'terminal proactive wake is immutable');
+            END
+        """)
     cols = {row["name"] for row in conn.execute("PRAGMA table_info(tasks)")}
     if "tenant" not in cols:
         _add_column_if_missing(conn, "tasks", "tenant", "tenant TEXT")
@@ -10177,6 +10216,8 @@ PROACTIVE_WAKE_OUTCOMES = frozenset({
     "capacity", "nonspawnable", "parent_gated", "stale", "cooldown_budget", "error",
 })
 PROACTIVE_TRIGGER_TYPES = frozenset({"scheduler", "intake", "api", "test"})
+PROACTIVE_WAKE_LEASE_SECONDS = 30
+_PROACTIVE_WAKE_INSTANCE_ID = secrets.token_hex(16)
 
 
 def begin_proactive_wake(
@@ -10186,6 +10227,8 @@ def begin_proactive_wake(
     policy_snapshot: Optional[Mapping[str, Any]] = None,
     candidate_action: Optional[str] = None,
     causal_refs: Optional[Sequence[str]] = None,
+    owner_instance_id: Optional[str] = None,
+    lease_seconds: int = PROACTIVE_WAKE_LEASE_SECONDS,
 ) -> tuple[int, bool]:
     """Persist source + occurrence before decisions; reject key collisions."""
     if trigger_type not in PROACTIVE_TRIGGER_TYPES:
@@ -10211,14 +10254,18 @@ def begin_proactive_wake(
     ).encode("utf-8")).hexdigest()
     occurrence_id = secrets.token_hex(16)
     now = int(time.time())
+    owner = owner_instance_id or _PROACTIVE_WAKE_INSTANCE_ID
+    expires = now + max(1, int(lease_seconds))
     with write_txn(conn):
         cur = conn.execute(
             "INSERT OR IGNORE INTO proactive_wakes "
             "(source_key,trigger_id,trigger_type,triggered_at,destination,tenant,"
-            "policy_generation,policy_snapshot,candidate_action,causal_refs,payload_hash) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            "policy_generation,policy_snapshot,candidate_action,causal_refs,payload_hash,"
+            "owner_instance_id,lease_generation,lease_heartbeat_at,lease_expires_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (source_key, trigger_id, trigger_type, now, destination, tenant,
-             policy_generation, snapshot, candidate_action, refs, payload_hash),
+             policy_generation, snapshot, candidate_action, refs, payload_hash,
+             owner, 1, now, expires),
         )
         row = conn.execute(
             "SELECT id,payload_hash FROM proactive_wakes WHERE source_key=?", (source_key,)
@@ -10232,12 +10279,33 @@ def begin_proactive_wake(
         )
         if conflict:
             conn.execute(
-                "UPDATE proactive_wakes SET outcome='error',detail='source payload conflict',completed_at=? WHERE id=?",
-                (now, row["id"]),
+                "INSERT INTO proactive_wake_conflicts "
+                "(wake_id,payload_hash,first_seen_at,last_seen_at,error) VALUES (?,?,?,?,?) "
+                "ON CONFLICT(wake_id,payload_hash) DO UPDATE SET "
+                "last_seen_at=excluded.last_seen_at,occurrence_count=occurrence_count+1",
+                (row["id"], payload_hash, now, now, "source payload conflict"),
             )
     if conflict:
         raise ValueError(f"proactive wake source_key payload conflict: {source_key}")
     return int(row["id"]), bool(cur.rowcount)
+
+
+def heartbeat_proactive_wake(
+    conn: sqlite3.Connection, wake_id: int, lease_generation: int, *,
+    owner_instance_id: Optional[str] = None,
+    lease_seconds: int = PROACTIVE_WAKE_LEASE_SECONDS,
+) -> bool:
+    """Renew an open wake only when the caller still owns its generation."""
+    now = int(time.time())
+    owner = owner_instance_id or _PROACTIVE_WAKE_INSTANCE_ID
+    with write_txn(conn):
+        cur = conn.execute(
+            "UPDATE proactive_wakes SET lease_heartbeat_at=?,lease_expires_at=? "
+            "WHERE id=? AND completed_at IS NULL AND owner_instance_id=? "
+            "AND lease_generation=?",
+            (now, now + max(1, int(lease_seconds)), wake_id, owner, lease_generation),
+        )
+    return cur.rowcount == 1
 
 
 def build_proactive_wake_source(
@@ -10283,12 +10351,35 @@ def _wake_reason_outcome(reason: str) -> str:
 def finish_proactive_wake(
     conn: sqlite3.Connection, wake_id: int, result: DispatchResult, *,
     duplicate: bool = False, error: Optional[str] = None,
+    lease_generation: Optional[int] = None,
+    owner_instance_id: Optional[str] = None,
 ) -> None:
     """Bind source to task/run decisions and persist the closed outcome."""
     now = int(time.time())
     samples = list(getattr(result, "_dispatch_health_samples", ()) or ())
     spawned_ids = {item[0] for item in result.spawned}
+    if duplicate:
+        with write_txn(conn):
+            conn.execute(
+                "UPDATE proactive_wakes SET duplicate_count=duplicate_count+1 WHERE id=?",
+                (wake_id,),
+            )
+        return
+    owner = owner_instance_id or _PROACTIVE_WAKE_INSTANCE_ID
+    if lease_generation is None:
+        owned = conn.execute(
+            "SELECT lease_generation FROM proactive_wakes WHERE id=? AND completed_at IS NULL "
+            "AND owner_instance_id=?", (wake_id, owner),
+        ).fetchone()
+        lease_generation = int(owned[0]) if owned is not None else -1
     with write_txn(conn):
+        owned = conn.execute(
+            "SELECT 1 FROM proactive_wakes WHERE id=? AND completed_at IS NULL "
+            "AND owner_instance_id=? AND lease_generation=?",
+            (wake_id, owner, lease_generation),
+        ).fetchone()
+        if owned is None:
+            raise RuntimeError("proactive wake lease ownership lost")
         for task_id, reason in samples:
             task = conn.execute("SELECT status,current_run_id FROM tasks WHERE id=?", (task_id,)).fetchone()
             if task is None:
@@ -10303,13 +10394,7 @@ def finish_proactive_wake(
                 "(wake_id,task_id,run_id,lane,outcome,reason,created_at) VALUES (?,?,?,?,?,?,?)",
                 (wake_id, task_id, task["current_run_id"], lane, outcome, reason, now),
             )
-        if duplicate:
-            conn.execute(
-                "UPDATE proactive_wakes SET duplicate_count=duplicate_count+1 WHERE id=?",
-                (wake_id,),
-            )
-            return
-        elif error is not None:
+        if error is not None:
             outcome, detail = "error", str(error)[:512]
         elif spawned_ids:
             outcome, detail = "created", f"spawned={len(spawned_ids)}"
@@ -10321,16 +10406,21 @@ def finish_proactive_wake(
             outcome, detail = "stale", "recovery maintenance"
         else:
             outcome, detail = "suppressed", "no eligible task"
-        conn.execute(
-            "UPDATE proactive_wakes SET outcome=?,detail=?,completed_at=? WHERE id=?",
-            (outcome, detail, now, wake_id),
+        cur = conn.execute(
+            "UPDATE proactive_wakes SET outcome=?,detail=?,completed_at=? WHERE id=? "
+            "AND completed_at IS NULL AND owner_instance_id=? AND lease_generation=?",
+            (outcome, detail, now, wake_id, owner, lease_generation),
         )
+        if cur.rowcount != 1:
+            raise RuntimeError("proactive wake lease ownership lost")
 
 
 def record_proactive_decision(
     conn: sqlite3.Connection, wake_id: int, *, outcome: str, reason: str,
     task_id: Optional[str] = None, run_id: Optional[int] = None,
     lane: Optional[str] = None, detail: Optional[str] = None,
+    lease_generation: Optional[int] = None,
+    owner_instance_id: Optional[str] = None,
 ) -> int:
     """Persist an intake/policy decision using the closed reason taxonomy.
 
@@ -10341,7 +10431,14 @@ def record_proactive_decision(
     if outcome not in PROACTIVE_WAKE_OUTCOMES:
         raise ValueError(f"invalid proactive outcome: {outcome}")
     safe_detail = str(detail)[:512] if detail is not None else None
+    owner = owner_instance_id or _PROACTIVE_WAKE_INSTANCE_ID
     with write_txn(conn):
+        if lease_generation is None:
+            row = conn.execute(
+                "SELECT lease_generation FROM proactive_wakes WHERE id=? AND completed_at IS NULL "
+                "AND owner_instance_id=?", (wake_id, owner),
+            ).fetchone()
+            lease_generation = int(row[0]) if row is not None else -1
         if run_id is not None:
             linked = conn.execute(
                 "SELECT task_id FROM task_runs WHERE id=?", (run_id,)
@@ -10356,10 +10453,13 @@ def record_proactive_decision(
             "VALUES (?,?,?,?,?,?,?,?)",
             (wake_id, task_id, run_id, lane, outcome, reason, safe_detail, int(time.time())),
         )
-        conn.execute(
-            "UPDATE proactive_wakes SET outcome=?,detail=?,completed_at=? WHERE id=?",
-            (outcome, safe_detail, int(time.time()), wake_id),
+        updated = conn.execute(
+            "UPDATE proactive_wakes SET outcome=?,detail=?,completed_at=? WHERE id=? "
+            "AND completed_at IS NULL AND owner_instance_id=? AND lease_generation=?",
+            (outcome, safe_detail, int(time.time()), wake_id, owner, lease_generation),
         )
+        if updated.rowcount != 1:
+            raise RuntimeError("proactive wake lease ownership lost")
     if cur.lastrowid is None:
         raise RuntimeError("proactive decision insert returned no identity")
     return int(cur.lastrowid)
@@ -10392,6 +10492,7 @@ def compact_proactive_wakes(conn: sqlite3.Connection, *, before: int, limit: int
             )
         conn.execute(f"DELETE FROM proactive_dispatch_attempts WHERE wake_id IN ({marks})", ids)
         conn.execute(f"DELETE FROM proactive_wake_occurrences WHERE wake_id IN ({marks})", ids)
+        conn.execute(f"DELETE FROM proactive_wake_conflicts WHERE wake_id IN ({marks})", ids)
         conn.execute(f"DELETE FROM proactive_wakes WHERE id IN ({marks})", ids)
     return len(rows)
 
