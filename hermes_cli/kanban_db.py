@@ -1581,6 +1581,7 @@ CREATE INDEX IF NOT EXISTS idx_comments_task         ON task_comments(task_id, c
 CREATE INDEX IF NOT EXISTS idx_events_task           ON task_events(task_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_runs_task             ON task_runs(task_id, started_at);
 CREATE INDEX IF NOT EXISTS idx_runs_status           ON task_runs(status);
+CREATE INDEX IF NOT EXISTS idx_review_binding_task   ON task_review_bindings(task_id, generation);
 CREATE INDEX IF NOT EXISTS idx_attachments_task      ON task_attachments(task_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_notify_task           ON kanban_notify_subs(task_id);
 """
@@ -4880,9 +4881,6 @@ def claim_review_task(
     *,
     ttl_seconds: Optional[int] = None,
     claimer: Optional[str] = None,
-    actor: Optional[str] = None,
-    principal: Optional[str] = None,
-    credential_source: Optional[str] = None,
 ) -> Optional[Task]:
     """Atomically transition ``review -> running``.
 
@@ -4930,9 +4928,6 @@ def claim_review_task(
             _deny_review(conn, task_id, "missing_reviewer_profile", run_id=None)
             return None
         reviewer_profile = _canonical_assignee(review_identity["assignee"])
-        if reviewer_profile == _canonical_assignee(binding["implementation_profile"]):
-            _deny_review(conn, task_id, "self_review", run_id=None)
-            return None
         if binding["review_run_id"] is not None:
             prior_run = conn.execute(
                 "SELECT status FROM task_runs WHERE id = ?",
@@ -5001,9 +4996,11 @@ def claim_review_task(
             ),
         )
         run_id = run_cur.lastrowid
-        reviewer_actor = str(actor or reviewer_profile).strip()
-        reviewer_principal = str(principal or reviewer_profile).strip()
-        reviewer_source = str(credential_source or "dispatcher-profile").strip()
+        # Reviewer identity is a server-side fact of the dispatcher claim.  It
+        # must never be accepted from a request body, CLI flag, or model call.
+        reviewer_actor = reviewer_profile
+        reviewer_principal = f"kanban-run:{int(run_id)}:{reviewer_profile}"
+        reviewer_source = "dispatcher-review-claim"
         bound = conn.execute(
             "UPDATE task_review_bindings SET review_run_id = ?, reviewer_profile = ?, "
             "reviewer_actor = ?, reviewer_principal = ?, reviewer_credential_source = ?, "
@@ -5021,10 +5018,54 @@ def claim_review_task(
         _append_event(
             conn, task_id, "claimed",
             {"lock": lock, "expires": expires, "run_id": run_id,
-             "source_status": "review"},
+             "source_status": "review", "review_generation": binding["generation"],
+             "reviewer_principal": reviewer_principal,
+             "reviewer_credential_source": reviewer_source},
             run_id=run_id,
         )
         return get_task(conn, task_id)
+
+
+def get_review_capability(
+    conn: sqlite3.Connection,
+    task_id: str,
+    *,
+    expected_run_id: int,
+) -> Optional[dict[str, Any]]:
+    """Return the non-secret, one-shot claims bound to this review run.
+
+    Run ownership is the authorization boundary: callers cannot inspect a
+    parked review or another reviewer's generation by task id alone.
+    """
+    row = conn.execute(
+        "SELECT b.*, t.current_run_id, t.status FROM task_review_bindings b "
+        "JOIN tasks t ON t.id = b.task_id "
+        "WHERE b.task_id = ? AND b.review_run_id = ? "
+        "AND b.invalidated_at IS NULL AND b.reviewed_at IS NULL "
+        "ORDER BY b.generation DESC LIMIT 1",
+        (task_id, int(expected_run_id)),
+    ).fetchone()
+    if (
+        row is None
+        or row["status"] != "running"
+        or int(row["current_run_id"] or -1) != int(expected_run_id)
+    ):
+        return None
+    try:
+        source = json.loads(row["source_manifest"])
+    except (json.JSONDecodeError, TypeError):
+        return None
+    if not isinstance(source, dict) or not source.get("commit") or not source.get("tree"):
+        return None
+    return {
+        "review_generation": int(row["generation"]),
+        "review_nonce": row["nonce"],
+        "implementation_run_id": int(row["implementation_run_id"]),
+        "source_commit": source["commit"],
+        "source_tree": source["tree"],
+        "source_manifest_hash": row["source_manifest_hash"],
+        "artifact_manifest_hash": row["artifact_manifest_hash"],
+    }
 
 
 def _retry_status_for_run(
@@ -5568,10 +5609,6 @@ def complete_task(
     expected_source_tree: Optional[str] = None,
     expected_source_hash: Optional[str] = None,
     expected_artifact_hash: Optional[str] = None,
-    reviewer_profile: Optional[str] = None,
-    reviewer_actor: Optional[str] = None,
-    reviewer_principal: Optional[str] = None,
-    reviewer_credential_source: Optional[str] = None,
     fire_lifecycle_hook: bool = True,
 ) -> bool:
     """Transition ``running|ready|blocked|review -> done`` and record ``result``.
@@ -5642,6 +5679,25 @@ def complete_task(
     metadata = _merge_completion_prose_artifacts(
         conn, task_id, metadata, summary=summary, result=result,
     )
+    latest_binding = conn.execute(
+        "SELECT * FROM task_review_bindings WHERE task_id = ? "
+        "ORDER BY generation DESC LIMIT 1", (task_id,),
+    ).fetchone()
+    live_source_hash: Optional[str] = None
+    live_artifact_hash: Optional[str] = None
+    if latest_binding is not None:
+        _, live_source_hash = _review_manifest_hash(_review_source_manifest(conn, task_id))
+        try:
+            bound_artifacts = json.loads(latest_binding["artifact_manifest"])
+        except (json.JSONDecodeError, TypeError):
+            bound_artifacts = []
+        artifact_paths = [
+            item.get("path") for item in bound_artifacts
+            if isinstance(item, dict) and isinstance(item.get("path"), str)
+        ] if isinstance(bound_artifacts, list) else []
+        _, live_artifact_hash = _review_manifest_hash(
+            _review_artifact_manifest({"artifacts": artifact_paths})
+        )
     with write_txn(conn):
         # Parent completion is a hard invariant even for direct human review
         # approval. A parent may have been reopened after this task entered
@@ -5669,10 +5725,10 @@ def complete_task(
         ):
             _deny_review(conn, task_id, "fresh_review_required_after_rework", run_id=current_run_id)
             return False
-        is_independent_review = bool(
-            is_review_approval and latest_binding is not None
-            and latest_binding["approval_class"] == "independent"
-        )
+        # Every review approval is gated, including malformed/legacy rows with
+        # no binding. Absence must deny rather than fall through to ordinary
+        # non-review completion.
+        is_independent_review = bool(is_review_approval)
         if is_independent_review:
             reason: Optional[str] = None
             try:
@@ -5681,6 +5737,8 @@ def complete_task(
                 bound_source = {}
             if latest_binding is None:
                 reason = "missing_review_binding"
+            elif latest_binding["approval_class"] != "independent":
+                reason = "unbound_review_provenance"
             elif prior_status == "review" or current_run_id is None:
                 reason = "review_must_be_claimed_by_distinct_run"
             elif latest_binding["reviewed_at"] is not None:
@@ -5694,8 +5752,6 @@ def complete_task(
                     expected_review_generation, expected_review_nonce,
                     expected_implementation_run_id, expected_source_commit,
                     expected_source_tree, expected_source_hash, expected_artifact_hash,
-                    reviewer_profile, reviewer_actor, reviewer_principal,
-                    reviewer_credential_source,
                 )
                 if any(value is None or (isinstance(value, str) and not value.strip()) for value in mandatory):
                     reason = "missing_exact_review_claims"
@@ -5704,12 +5760,7 @@ def complete_task(
                     "reviewer_credential_source", "claim_generation",
                 )):
                     reason = "missing_persisted_reviewer_identity"
-                elif (_canonical_assignee(str(reviewer_profile)) != latest_binding["reviewer_profile"]
-                      or reviewer_actor != latest_binding["reviewer_actor"]
-                      or reviewer_principal != latest_binding["reviewer_principal"]
-                      or reviewer_credential_source != latest_binding["reviewer_credential_source"]):
-                    reason = "reviewer_identity_mismatch"
-                elif _canonical_assignee(str(reviewer_profile)) == _canonical_assignee(latest_binding["implementation_profile"]):
+                elif _canonical_assignee(str(latest_binding["reviewer_profile"])) == _canonical_assignee(latest_binding["implementation_profile"]):
                     reason = "self_review"
                 elif int(expected_review_generation) != int(latest_binding["generation"]):
                     reason = "review_generation_mismatch"
@@ -6774,6 +6825,86 @@ def block_task(
 
 
 
+def _review_manifest_hash(value: Any) -> tuple[str, str]:
+    encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return encoded, hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def _review_source_manifest(conn: sqlite3.Connection, task_id: str) -> dict[str, Any]:
+    """Snapshot source identity without trusting review-request prose."""
+    row = conn.execute(
+        "SELECT workspace_path, branch_name FROM tasks WHERE id = ?", (task_id,)
+    ).fetchone()
+    workspace = Path(row["workspace_path"]).expanduser() if row and row["workspace_path"] else None
+    manifest: dict[str, Any] = {"workspace": str(workspace) if workspace else None}
+    if not workspace or not workspace.is_dir():
+        manifest["state"] = "no_workspace"
+        return manifest
+    try:
+        def git(*args: str) -> str:
+            return subprocess.run(
+                ["git", "-C", str(workspace), *args], check=True,
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+                timeout=10,
+            ).stdout
+
+        status = git("status", "--porcelain=v2", "--untracked-files=all")
+        diff = git("diff", "--binary", "HEAD")
+        untracked = git("ls-files", "--others", "--exclude-standard").splitlines()
+        untracked_hashes: list[dict[str, Any]] = []
+        for relative in sorted(untracked):
+            candidate = workspace / relative
+            digest = hashlib.sha256()
+            try:
+                with candidate.open("rb") as handle:
+                    for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                        digest.update(chunk)
+                untracked_hashes.append({"path": relative, "sha256": digest.hexdigest()})
+            except OSError:
+                untracked_hashes.append({"path": relative, "missing": True})
+        manifest.update({
+            "commit": git("rev-parse", "HEAD").strip(),
+            "tree": git("rev-parse", "HEAD^{tree}").strip(),
+            "worktree_state_sha256": hashlib.sha256(status.encode("utf-8")).hexdigest(),
+            "tracked_diff_sha256": hashlib.sha256(diff.encode("utf-8")).hexdigest(),
+            "untracked": untracked_hashes,
+        })
+    except (OSError, subprocess.SubprocessError):
+        manifest["state"] = "not_git"
+    return manifest
+
+
+def _review_artifact_manifest(metadata: Optional[dict]) -> list[dict[str, Any]]:
+    """Hash declared artifact bytes; missing files remain explicit evidence."""
+    raw = metadata.get("artifacts", []) if isinstance(metadata, dict) else []
+    if not isinstance(raw, (list, tuple)):
+        raw = []
+    result: list[dict[str, Any]] = []
+    for item in sorted(str(value) for value in raw if isinstance(value, (str, os.PathLike))):
+        path = Path(item).expanduser()
+        entry: dict[str, Any] = {"path": str(path)}
+        try:
+            if path.is_file():
+                digest = hashlib.sha256()
+                with path.open("rb") as handle:
+                    for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                        digest.update(chunk)
+                entry.update({"sha256": digest.hexdigest(), "size": path.stat().st_size})
+            else:
+                entry["missing"] = True
+        except OSError as exc:
+            entry.update({"missing": True, "error": type(exc).__name__})
+        result.append(entry)
+    return result
+
+
+def _deny_review(conn: sqlite3.Connection, task_id: str, reason: str, *, run_id: Optional[int]) -> None:
+    _append_event(
+        conn, task_id, "review_approval_denied",
+        {"reason": reason}, run_id=run_id,
+    )
+
+
 def redact_review_value(value: Any) -> Any:
     """Redact secrets at the domain boundary for durable review handoffs."""
     if isinstance(value, str):
@@ -6825,6 +6956,8 @@ def request_review(
 
     summary = redact_review_value(summary)
     metadata = redact_review_value(metadata)
+    source_manifest, source_hash = _review_manifest_hash(_review_source_manifest(conn, task_id))
+    artifact_manifest, artifact_hash = _review_manifest_hash(_review_artifact_manifest(metadata))
     with write_txn(conn):
         if not _parents_satisfied(conn, task_id):
             return _ret(False, "parent dependencies are not satisfied")
@@ -6849,7 +6982,6 @@ def request_review(
                 "override) instead of clearing the live run's claim",
             )
         implementer = trow["assignee"]
-        reviewer_was_explicit = reviewer is not None
         implementation_run_id = trow["current_run_id"]
         approval_class = "independent"
         try:
@@ -6857,7 +6989,7 @@ def request_review(
         except (json.JSONDecodeError, TypeError):
             source_identity = {}
         if not source_identity.get("commit") or not source_identity.get("tree"):
-            approval_class = "manual_captain"
+            approval_class = "unbound"
         implementation_run = (
             conn.execute(
                 "SELECT profile FROM task_runs WHERE id = ? AND task_id = ?",
@@ -6866,12 +6998,9 @@ def request_review(
             if implementation_run_id is not None else None
         )
         if implementation_run is None or not implementation_run["profile"]:
-            # Compatibility lane for operator-parked/bulk dashboard reviews.
-            # It is deliberately labelled manual and can never produce an
-            # independent artifact approval receipt.
             implementation_run_id = 0
-            implementation_run = {"profile": "captain-manual"}
-            approval_class = "manual_captain"
+            implementation_run = {"profile": str(implementer or "unknown-implementer")}
+            approval_class = "unbound"
         implementation_run_id = int(implementation_run_id)
         implementation_profile = _canonical_assignee(implementation_run["profile"])
         if reviewer is None:
@@ -6912,9 +7041,9 @@ def request_review(
                         "malformed); pass reviewer= explicitly",
                     )
                 reviewer = prior_reviewer
-        if not reviewer_was_explicit and reviewer is None:
-            approval_class = "manual_captain"
-            implementation_profile = "captain-manual"
+        if reviewer is None:
+            reviewer = implementer
+            approval_class = "unbound"
         reviewer = _canonical_assignee(reviewer) if reviewer is not None else None
         assignee_sql = ", assignee = ?" if reviewer is not None else ""
         params: tuple[Any, ...]
@@ -6964,7 +7093,18 @@ def request_review(
                 summary=summary,
                 metadata=metadata,
             )
-        if approval_class == "manual_captain":
+        if run_id is None:
+            # A ready/no-summary operator request remains a valid parked review,
+            # but is explicitly unbound and therefore can never approve through
+            # complete_task. Synthesize provenance so the transition is coherent
+            # and never reaches int(None).
+            run_id = _synthesize_ended_run(
+                conn, task_id, outcome="review_requested",
+                summary="Review requested without implementation provenance.",
+                metadata={"approval_class": "unbound"},
+            )
+            approval_class = "unbound"
+        if implementation_run_id == 0:
             implementation_run_id = int(run_id)
         if run_id != int(implementation_run_id):
             raise RuntimeError("review binding lost implementation run fencing")
@@ -6998,6 +7138,12 @@ def request_review(
                 "summary": event_summary or None,
                 "implementer": implementer,
                 "reviewer": reviewer,
+                "generation": generation,
+                "nonce": nonce,
+                "implementation_run_id": int(implementation_run_id),
+                "implementation_profile": implementation_profile,
+                "source_manifest_hash": source_hash,
+                "artifact_manifest_hash": artifact_hash,
             },
             run_id=run_id,
         )
@@ -7055,6 +7201,16 @@ def request_changes(
         if claimed_payload.get("source_status") != "review":
             return False, "active run was not claimed from review"
 
+        binding = conn.execute(
+            "SELECT id FROM task_review_bindings WHERE task_id = ? "
+            "AND review_run_id = ? AND invalidated_at IS NULL AND reviewed_at IS NULL "
+            "ORDER BY generation DESC LIMIT 1",
+            (task_id, int(current_run_id)),
+        ).fetchone()
+        if binding is None:
+            _deny_review(conn, task_id, "missing_active_review_binding", run_id=int(current_run_id))
+            return False, "no active artifact-bound review generation"
+
         requested_event = conn.execute(
             "SELECT payload FROM task_events "
             "WHERE task_id = ? AND kind = 'review_requested' "
@@ -7109,6 +7265,11 @@ def request_changes(
             outcome="changes_requested",
             status=new_status,
             summary=reason,
+        )
+        conn.execute(
+            "UPDATE task_review_bindings SET invalidated_at = ?, invalidation_reason = ? "
+            "WHERE id = ? AND invalidated_at IS NULL AND reviewed_at IS NULL",
+            (int(time.time()), "changes_requested", int(binding["id"])),
         )
         _append_event(
             conn,
@@ -7364,6 +7525,11 @@ def reopen_review_task(conn: sqlite3.Connection, task_id: str) -> bool:
         )
         if cur.rowcount != 1:
             return False
+        conn.execute(
+            "UPDATE task_review_bindings SET invalidated_at = ?, invalidation_reason = ? "
+            "WHERE task_id = ? AND invalidated_at IS NULL AND reviewed_at IS NULL",
+            (now, "review_reopened", task_id),
+        )
         if new_status == "ready":
             _begin_dispatch_wait_episode(conn, task_id, now=now)
         payload: dict[str, Any] = {"status": new_status}

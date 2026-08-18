@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
-import json
+import inspect
 
 import pytest
 
@@ -41,23 +41,17 @@ def _task(conn, tmp_path: Path, *, reviewer: str = "reviewer"):
 
 
 def _claims(conn, task_id: str) -> dict:
-    row = conn.execute(
-        "SELECT * FROM task_review_bindings WHERE task_id = ? ORDER BY generation DESC",
-        (task_id,),
-    ).fetchone()
-    source = json.loads(row["source_manifest"])
+    run_id = kb.get_task(conn, task_id).current_run_id
+    public = kb.get_review_capability(conn, task_id, expected_run_id=run_id)
+    assert public is not None
     return {
-        "expected_review_generation": row["generation"],
-        "expected_review_nonce": row["nonce"],
-        "expected_implementation_run_id": row["implementation_run_id"],
-        "expected_source_commit": source["commit"],
-        "expected_source_tree": source["tree"],
-        "expected_source_hash": row["source_manifest_hash"],
-        "expected_artifact_hash": row["artifact_manifest_hash"],
-        "reviewer_profile": row["reviewer_profile"],
-        "reviewer_actor": row["reviewer_actor"],
-        "reviewer_principal": row["reviewer_principal"],
-        "reviewer_credential_source": row["reviewer_credential_source"],
+        "expected_review_generation": public["review_generation"],
+        "expected_review_nonce": public["review_nonce"],
+        "expected_implementation_run_id": public["implementation_run_id"],
+        "expected_source_commit": public["source_commit"],
+        "expected_source_tree": public["source_tree"],
+        "expected_source_hash": public["source_manifest_hash"],
+        "expected_artifact_hash": public["artifact_manifest_hash"],
     }
 
 
@@ -76,7 +70,12 @@ def test_valid_independent_exact_binding_approves(conn, tmp_path: Path):
 
 def test_self_review_is_denied_by_persisted_profiles(conn, tmp_path: Path):
     task_id, _ = _task(conn, tmp_path, reviewer="builder")
-    assert kb.claim_review_task(conn, task_id, claimer="forged-reviewer-string") is None
+    review = kb.claim_review_task(conn, task_id, claimer="forged-reviewer-string")
+    assert review is not None
+    assert not kb.complete_task(
+        conn, task_id, expected_run_id=review.current_run_id,
+        **_claims(conn, task_id),
+    )
     event = kb.list_events(conn, task_id)[-1]
     assert event.kind == "review_approval_denied"
     assert event.payload == {"reason": "self_review"}
@@ -123,10 +122,7 @@ def test_changes_invalidate_generation_and_rereview_mints_next(conn, tmp_path: P
 
 def test_missing_and_wrong_nonce_claims_fail_closed(conn, tmp_path: Path):
     task_id, _ = _task(conn, tmp_path)
-    review = kb.claim_review_task(
-        conn, task_id, actor="reviewer", principal="reviewer",
-        credential_source="test-credential",
-    )
+    review = kb.claim_review_task(conn, task_id)
     assert review is not None
     assert not kb.complete_task(conn, task_id, expected_run_id=review.current_run_id)
     assert kb.list_events(conn, task_id)[-1].payload == {
@@ -163,3 +159,18 @@ def test_review_migration_records_explicit_version(conn):
         "SELECT version FROM kanban_schema_migrations WHERE name = 'artifact_review_gate'"
     ).fetchone()
     assert row["version"] == kb._ARTIFACT_REVIEW_GATE_SCHEMA_VERSION
+
+
+def test_reviewer_identity_is_not_caller_supplied():
+    parameters = inspect.signature(kb.claim_review_task).parameters
+    assert not {"actor", "principal", "credential_source"} & set(parameters)
+    completion = inspect.signature(kb.complete_task).parameters
+    assert not {"reviewer_actor", "reviewer_principal", "reviewer_credential_source"} & set(completion)
+
+
+def test_ready_task_without_implementation_run_cannot_request_review(conn, tmp_path: Path):
+    task_id = kb.create_task(conn, title="ready", assignee="builder",
+                             workspace_kind="dir", workspace_path=str(tmp_path))
+    assert kb.request_review(conn, task_id, reviewer="reviewer") is True
+    assert kb.get_task(conn, task_id).status == "review"
+    assert kb.complete_task(conn, task_id) is False

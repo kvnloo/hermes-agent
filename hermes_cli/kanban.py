@@ -606,8 +606,6 @@ def build_parser(parent_subparsers: argparse._SubParsersAction) -> argparse.Argu
         ("--implementation-run-id", {"type": int}),
         ("--source-commit", {}), ("--source-tree", {}),
         ("--source-manifest-hash", {}), ("--artifact-manifest-hash", {}),
-        ("--reviewer-profile", {}), ("--reviewer-actor", {}),
-        ("--reviewer-principal", {}), ("--reviewer-credential-source", {}),
     ):
         p_complete.add_argument(flag, **kwargs)
 
@@ -2289,6 +2287,23 @@ def _cmd_complete(args: argparse.Namespace) -> int:
             # to every terminal handoff so request-review cannot bypass the
             # acceptance contract that protects complete.
             task = kb.get_task(conn, tid)
+            review_claims = (
+                args.review_generation, args.review_nonce,
+                args.implementation_run_id, args.source_commit,
+                args.source_tree, args.source_manifest_hash,
+                args.artifact_manifest_hash,
+            )
+            if task and task.status == "review" and any(
+                value is None or (isinstance(value, str) and not value.strip())
+                for value in review_claims
+            ):
+                print(
+                    f"kanban: review approval of {tid} requires generation, nonce, "
+                    "implementation run, source commit/tree/manifest hash, and artifact hash",
+                    file=sys.stderr,
+                )
+                failed.append(tid)
+                continue
             rejection = _goal_mode_handoff_rejection(
                 task,
                 (summary or args.result or "").strip(),
@@ -2315,10 +2330,6 @@ def _cmd_complete(args: argparse.Namespace) -> int:
                 expected_source_tree=args.source_tree,
                 expected_source_hash=args.source_manifest_hash,
                 expected_artifact_hash=args.artifact_manifest_hash,
-                reviewer_profile=args.reviewer_profile,
-                reviewer_actor=args.reviewer_actor,
-                reviewer_principal=args.reviewer_principal,
-                reviewer_credential_source=args.reviewer_credential_source,
             ):
                 failed.append(tid)
                 print(f"cannot complete {tid} (unknown id or terminal state)", file=sys.stderr)
