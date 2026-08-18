@@ -290,6 +290,8 @@ export function AttentionControls({ task }: { task: KanbanTask }) {
   const [reconciledReceipt, setReconciledReceipt] = useState(task.attention)
   const publishAnnouncement = useContext(AttentionAnnouncementContext)
   const attempt = useRef(0)
+  const pending = useRef(false)
+  const [customOpen, setCustomOpen] = useState(false)
   const receipt = reconciledReceipt ?? task.attention ?? { state: 'active' as const, revision: 0 }
 
   useEffect(() => {
@@ -310,6 +312,7 @@ export function AttentionControls({ task }: { task: KanbanTask }) {
     mutationFn: ({ kind, wakeAt }: { kind: 'settle' | 'snooze' | 'wake'; wakeAt?: number }) =>
       updateAttention(task.id, kind, receipt.revision, wakeAt),
     onError: async (error, variables) => {
+      pending.current = false
       const rawMessage = errText(error)
       const serialized = error instanceof Error ? error.message : String(error)
       const brace = serialized.indexOf('{')
@@ -354,6 +357,7 @@ export function AttentionControls({ task }: { task: KanbanTask }) {
       }
     },
     onSuccess: (result, variables) => {
+      pending.current = false
       host.notify({
         kind: 'success',
         message:
@@ -365,7 +369,11 @@ export function AttentionControls({ task }: { task: KanbanTask }) {
       })
       announce(
         `${task.id}:${variables.kind}:${result.attention.revision}:success`,
-        result.attention.state === 'settled' ? 'Attention settled' : result.attention.state === 'snoozed' ? 'Task snoozed' : 'Task awake'
+        result.attention.state === 'settled'
+          ? 'Attention settled'
+          : result.attention.state === 'snoozed' && variables.wakeAt
+            ? `Task snoozed until ${new Intl.DateTimeFormat(undefined, { dateStyle: 'full', timeStyle: 'short' }).format(new Date(variables.wakeAt * 1000))}`
+            : 'Task awake'
       )
       void qc.invalidateQueries({ queryKey: ['kanban', 'board'] })
       void qc.invalidateQueries({ queryKey: ['kanban', 'task'] })
@@ -375,6 +383,11 @@ export function AttentionControls({ task }: { task: KanbanTask }) {
   const stop = (event: SyntheticEvent) => event.stopPropagation()
 
   const mutate = (variables: { kind: 'settle' | 'snooze' | 'wake'; wakeAt?: number }) => {
+    if (pending.current) {
+      return
+    }
+
+    pending.current = true
     attempt.current += 1
     action.mutate(variables)
   }
@@ -386,6 +399,12 @@ export function AttentionControls({ task }: { task: KanbanTask }) {
     const wake = new Date()
     wake.setDate(wake.getDate() + 1)
     wake.setHours(9, 0, 0, 0)
+    mutate({ kind: 'snooze', wakeAt: Math.floor(wake.getTime() / 1000) })
+  }
+
+  const nextMonth = () => {
+    const wake = new Date()
+    wake.setMonth(wake.getMonth() + 1)
     mutate({ kind: 'snooze', wakeAt: Math.floor(wake.getTime() / 1000) })
   }
 
@@ -416,28 +435,32 @@ export function AttentionControls({ task }: { task: KanbanTask }) {
       >
         Settle
       </button>
-      <details className="basis-full">
-        <summary className="flex min-h-11 cursor-pointer list-none items-center rounded px-2 text-[0.6875rem] text-(--ui-text-secondary) hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2">
-          Snooze…
-        </summary>
-        <div className="mt-1 grid w-full gap-1 rounded-md border border-(--ui-stroke-secondary) bg-(--ui-bg-elevated) p-2 shadow-lg">
-          <button className="min-h-11 rounded px-2 text-left text-xs hover:bg-(--chrome-action-hover)" onClick={() => snooze(3600)} type="button">1 hour</button>
-          <button className="min-h-11 rounded px-2 text-left text-xs hover:bg-(--chrome-action-hover)" onClick={tomorrowMorning} type="button">Tomorrow, 9:00 AM local time</button>
-          <button className="min-h-11 rounded px-2 text-left text-xs hover:bg-(--chrome-action-hover)" onClick={() => snooze(7 * 24 * 3600)} type="button">One week</button>
+      <div aria-label="Snooze presets" className="flex min-w-0 flex-1 flex-wrap items-center gap-1" role="group">
+        <button aria-label="1 hour" className="min-h-11 min-w-11 rounded-none border border-(--ui-stroke-secondary) px-1.5 text-[0.6875rem] hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2 disabled:opacity-50" disabled={action.isPending} onClick={() => snooze(3600)} type="button">1 hr</button>
+        <button aria-label="Tomorrow at 9 AM local time" className="min-h-11 rounded-none border border-(--ui-stroke-secondary) px-1.5 text-[0.6875rem] whitespace-nowrap hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2 disabled:opacity-50" disabled={action.isPending} onClick={tomorrowMorning} type="button">Tmrw 9am</button>
+        <button aria-label="1 week" className="min-h-11 min-w-11 rounded-none border border-(--ui-stroke-secondary) px-1.5 text-[0.6875rem] hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2 disabled:opacity-50" disabled={action.isPending} onClick={() => snooze(7 * 24 * 3600)} type="button">1 wk</button>
+        <button aria-label="1 month" className="min-h-11 min-w-11 rounded-none border border-(--ui-stroke-secondary) px-1.5 text-[0.6875rem] hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2 disabled:opacity-50" disabled={action.isPending} onClick={nextMonth} type="button">1 mo</button>
+        <button aria-expanded={customOpen} className="min-h-11 rounded-none border border-(--ui-stroke-secondary) px-1.5 text-[0.6875rem] hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2 disabled:opacity-50" disabled={action.isPending} onClick={() => setCustomOpen(open => !open)} type="button">Custom{customOpen ? '−' : '+'}</button>
+        {customOpen && <div className="basis-full rounded-none border border-(--ui-stroke-secondary) bg-(--ui-bg-elevated) p-2" onKeyDown={event => {
+          if (event.key === 'Escape') {
+            event.preventDefault()
+            setCustomOpen(false)
+          }
+        }}>
           <label className="grid gap-1 text-[0.6875rem] text-(--ui-text-tertiary)">
             Custom wake time
             <input className="min-h-9 rounded border border-(--ui-stroke-secondary) bg-transparent px-1 text-xs" min={formatLocalDateTime(new Date())} onChange={event => setCustom(event.target.value)} type="datetime-local" value={custom} />
           </label>
           <button
             className="min-h-11 rounded bg-primary px-2 text-xs text-primary-foreground disabled:opacity-50"
-            disabled={!customWake || customWake.getTime() <= Date.now()}
+            disabled={action.isPending || !customWake || customWake.getTime() <= Date.now()}
             onClick={() => customWake && mutate({ kind: 'snooze', wakeAt: Math.floor(customWake.getTime() / 1000) })}
             type="button"
           >
             Snooze until then
           </button>
-        </div>
-      </details>
+        </div>}
+      </div>
     </div>
   )
 }

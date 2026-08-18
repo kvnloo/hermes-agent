@@ -2807,7 +2807,11 @@
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState("");
     const [announcement, setAnnouncement] = useState("");
+    const [customOpen, setCustomOpen] = useState(false);
+    const pendingRef = useRef(false);
     const apply = function (action, wakeAt) {
+      if (pendingRef.current) return Promise.resolve();
+      pendingRef.current = true;
       setBusy(true);
       setError("");
       const body = {
@@ -2823,14 +2827,15 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       }).then(function () {
-        setAnnouncement(action === "settle" ? "Attention settled" : action === "snooze" ? "Task snoozed" : "Task awake");
+        const resolved = wakeAt == null ? "" : new Intl.DateTimeFormat(undefined, { dateStyle: "full", timeStyle: "short" }).format(new Date(wakeAt * 1000));
+        setAnnouncement(action === "settle" ? "Attention settled" : action === "snooze" ? "Task snoozed until " + resolved : "Task awake");
         return props.onRefresh();
       }).catch(function (err) {
         const message = err && err.message ? err.message : String(err);
         setError(message);
         setAnnouncement(message);
       })
-        .finally(function () { setBusy(false); });
+        .finally(function () { pendingRef.current = false; setBusy(false); });
     };
     const stop = function (e) { e.stopPropagation(); };
     const padLocal = function (value) { return String(value).padStart(2, "0"); };
@@ -2857,23 +2862,31 @@
       h("span", { role: "status", "aria-live": "polite", "aria-atomic": "true", className: "sr-only" }, announcement),
       h("button", { type: "button", className: "hermes-kanban-attention-button", disabled: busy,
         onClick: function () { apply("settle"); } }, "Settle"),
-      h("details", null,
-        h("summary", { className: "hermes-kanban-attention-button" }, "Snooze…"),
-        h("div", { className: "hermes-kanban-snooze-menu" },
-          h("button", { type: "button", onClick: function () { apply("snooze", Math.floor(Date.now() / 1000) + 3600); } }, "1 hour"),
+      h("div", { className: "hermes-kanban-snooze-presets", role: "group", "aria-label": "Snooze presets" },
+          h("button", { type: "button", disabled: busy, "aria-label": "1 hour", onClick: function () { apply("snooze", Math.floor(Date.now() / 1000) + 3600); } }, "1 hr"),
           h("button", { type: "button", onClick: function () {
             const wake = new Date();
             wake.setDate(wake.getDate() + 1);
             wake.setHours(9, 0, 0, 0);
             apply("snooze", Math.floor(wake.getTime() / 1000));
-          } }, "Tomorrow, 9:00 AM local time"),
-          h("button", { type: "button", onClick: function () { apply("snooze", Math.floor(Date.now() / 1000) + 604800); } }, "One week"),
+          }, disabled: busy, "aria-label": "Tomorrow at 9 AM local time" }, "Tmrw 9am"),
+          h("button", { type: "button", disabled: busy, "aria-label": "1 week", onClick: function () { apply("snooze", Math.floor(Date.now() / 1000) + 604800); } }, "1 wk"),
+          h("button", { type: "button", disabled: busy, "aria-label": "1 month", onClick: function () {
+            const wake = new Date();
+            wake.setMonth(wake.getMonth() + 1);
+            apply("snooze", Math.floor(wake.getTime() / 1000));
+          } }, "1 mo"),
+          h("button", { type: "button", disabled: busy, "aria-expanded": customOpen,
+            onClick: function () { setCustomOpen(!customOpen); } }, "Custom" + (customOpen ? "−" : "+")),
+          customOpen ? h("div", { className: "hermes-kanban-snooze-custom", onKeyDown: function (event) {
+            if (event.key === "Escape") { event.preventDefault(); setCustomOpen(false); }
+          } },
           h("label", null, "Custom wake time",
             h("input", { type: "datetime-local", value: custom, min: formatLocal(new Date()),
               onChange: function (e) { setCustom(e.target.value); } })),
-          h("button", { type: "button", disabled: !customWake || customWake.getTime() <= Date.now(),
+          h("button", { type: "button", disabled: busy || !customWake || customWake.getTime() <= Date.now(),
             onClick: function () { if (customWake) apply("snooze", Math.floor(customWake.getTime() / 1000)); } }, "Snooze until then"),
-        ),
+          ) : null,
       ),
       error ? h("span", { role: "alert", className: "hermes-kanban-attention-error" }, error) : null,
     );

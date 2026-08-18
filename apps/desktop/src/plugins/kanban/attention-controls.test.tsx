@@ -71,11 +71,9 @@ describe('attention control lifecycle accessibility', () => {
     updateAttentionMock.mockResolvedValueOnce(response('snoozed', 1))
     render(view({ ...baseTask, attention: receipt('active', 0) }))
 
-    const disclosure = screen.getByText('Snooze…')
-    fireEvent.keyDown(disclosure, { key: 'Enter' })
     fireEvent.click(screen.getByRole('button', { name: '1 hour' }))
 
-    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('Task snoozed'))
+    await waitFor(() => expect(screen.getByRole('status').textContent).toContain('Task snoozed until'))
     expect(screen.getAllByRole('status')).toHaveLength(1)
     expect(screen.getByRole('button', { name: '1 hour' }).classList.contains('min-h-11')).toBe(true)
   })
@@ -93,9 +91,8 @@ describe('attention control lifecycle accessibility', () => {
       </QueryClientProvider>
     )
 
-    fireEvent.click(screen.getByText('Snooze…'))
     fireEvent.click(screen.getByRole('button', { name: '1 hour' }))
-    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('Task snoozed'))
+    await waitFor(() => expect(screen.getByRole('status').textContent).toContain('Task snoozed until'))
 
     rendered.rerender(
       <QueryClientProvider client={client}>
@@ -104,7 +101,26 @@ describe('attention control lifecycle accessibility', () => {
     )
 
     expect(screen.getAllByRole('status')).toHaveLength(1)
-    expect(screen.getByRole('status').textContent).toBe('Task snoozed')
+    expect(screen.getByRole('status').textContent).toContain('Task snoozed until')
+  })
+
+  it('shows compact presets, prevents duplicate actions, and closes Custom with Escape', async () => {
+    let resolve!: (value: ReturnType<typeof response>) => void
+    updateAttentionMock.mockReturnValueOnce(new Promise(done => { resolve = done }))
+    render(view({ ...baseTask, attention: receipt('active', 0) }))
+
+    expect(screen.getByRole('group', { name: 'Snooze presets' }).textContent).toBe('1 hrTmrw 9am1 wk1 moCustom+')
+    const hour = screen.getByRole('button', { name: '1 hour' })
+    fireEvent.click(hour)
+    fireEvent.click(hour)
+    await waitFor(() => expect(updateAttentionMock).toHaveBeenCalledTimes(1))
+
+    resolve(response('snoozed', 1))
+    await waitFor(() => expect(screen.getByRole('status').textContent).toContain('Task snoozed until'))
+    fireEvent.click(screen.getByRole('button', { name: 'Custom+' }))
+    const input = screen.getByLabelText('Custom wake time')
+    fireEvent.keyDown(input, { key: 'Escape' })
+    expect(screen.queryByLabelText('Custom wake time')).toBeNull()
   })
 })
 
