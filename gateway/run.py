@@ -16343,6 +16343,12 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
         if canonical == "kanban":
             return await self._handle_kanban_command(event)
 
+        if canonical == "orchestration":
+            # Fail closed until a platform-authenticated capability envelope
+            # (user/chat/message/nonce/scope/policy/expiry/replay) exists.
+            # Local CLI receipts are deliberately not accepted by gateways.
+            return "REFUSED_AUTHORITY: Harness Debug Mode is unavailable on gateway surfaces"
+
         if canonical == "suggestions":
             return await self._handle_suggestions_command(event)
 
