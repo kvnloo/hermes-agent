@@ -22,7 +22,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 HARNESS = Path(__file__).resolve().parent
-EXACT_COMMIT = "27a452edfa475de1b7ec72f09ac481bbb0190164"
+EXACT_COMMIT = "dcb6804e9411c9559e9f53a3958876882ec247da"
 ASSETS = ("plugins/kanban/dashboard/dist/index.js", "plugins/kanban/dashboard/dist/style.css")
 
 
