@@ -419,12 +419,130 @@
   }
 
   function vibrationAllowed() {
-    return typeof navigator !== "undefined" && typeof navigator.vibrate === "function" &&
+    let enabled = true;
+    try { enabled = window.localStorage.getItem("hermes.kanban.haptics") !== "off"; } catch (_storageError) { /* default on */ }
+    return enabled && typeof navigator !== "undefined" && typeof navigator.vibrate === "function" &&
       !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
 
   function vibrate(pattern) {
     if (vibrationAllowed()) navigator.vibrate(pattern);
+  }
+
+  const LANE_SWIPE_SLOP_PX = 12;
+  const LANE_SWIPE_MIN_PX = 24;
+  const LANE_SWIPE_MAX_MS = 450;
+  const LANE_SWIPE_VELOCITY = 0.55;
+  const LANE_SWIPE_DISTANCE_RATIO = 0.28;
+  const LANE_SWIPE_SAMPLE_MS = 100;
+
+  function laneElements(root) {
+    return Array.prototype.slice.call(root.querySelectorAll(":scope > [data-kanban-column]"));
+  }
+
+  function nearestLaneIndex(root, lanes) {
+    const box = root.getBoundingClientRect();
+    const center = box.left + box.width / 2;
+    let best = 0;
+    let distance = Infinity;
+    lanes.forEach(function (lane, index) {
+      const rect = lane.getBoundingClientRect();
+      const next = Math.abs(rect.left + rect.width / 2 - center);
+      if (next < distance) { distance = next; best = index; }
+    });
+    return best;
+  }
+
+  function scrollLaneIntoView(root, lane, instant) {
+    if (!lane) return;
+    const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    lane.scrollIntoView({ behavior: instant || reduced ? "auto" : "smooth", block: "nearest", inline: "center" });
+    root.setAttribute("data-active-lane", lane.getAttribute("data-kanban-column") || "");
+  }
+
+  function attachLaneSwipe(root, onActiveLane) {
+    if (!root) return undefined;
+    let gesture = null;
+    function cancel() {
+      gesture = null;
+      root.removeAttribute("data-lane-swipe");
+      root.style.removeProperty("--lane-drag-x");
+    }
+    function down(e) {
+      const surface = e.target && e.target.closest && e.target.closest("[data-lane-swipe-surface]");
+      const edge = surface && surface.classList.contains("hermes-kanban-lane-edge");
+      if (e.pointerType !== "touch" || !e.isPrimary || gesture || !surface || !root.contains(surface) ||
+          (!edge && e.target !== surface)) return;
+      const now = performance.now();
+      gesture = {
+        pointerId: e.pointerId,
+        startX: e.clientX,
+        startY: e.clientY,
+        startedAt: now,
+        samples: [{ x: e.clientX, at: now }],
+        startLane: nearestLaneIndex(root, laneElements(root)),
+        axis: null,
+      };
+    }
+    function move(e) {
+      if (!gesture || e.pointerId !== gesture.pointerId) return;
+      const dx = e.clientX - gesture.startX;
+      const dy = e.clientY - gesture.startY;
+      if (!gesture.axis && Math.hypot(dx, dy) >= LANE_SWIPE_SLOP_PX) {
+        if (Math.abs(dx) <= Math.abs(dy) * 1.25) { cancel(); return; }
+        gesture.axis = "x";
+        root.setAttribute("data-lane-swipe", "tracking");
+      }
+      if (gesture.axis !== "x") return;
+      e.preventDefault();
+      const now = performance.now();
+      gesture.samples.push({ x: e.clientX, at: now });
+      gesture.samples = gesture.samples.filter(function (sample) { return now - sample.at <= LANE_SWIPE_SAMPLE_MS; });
+      root.style.setProperty("--lane-drag-x", `${dx}px`);
+    }
+    function up(e) {
+      if (!gesture || e.pointerId !== gesture.pointerId) return;
+      const active = gesture;
+      const dx = e.clientX - active.startX;
+      const now = performance.now();
+      const elapsed = now - active.startedAt;
+      const samples = active.samples.concat([{ x: e.clientX, at: now }]);
+      const first = samples[0];
+      const last = samples[samples.length - 1];
+      const velocity = (last.x - first.x) / Math.max(1, last.at - first.at);
+      const lanes = laneElements(root);
+      const current = Math.max(0, Math.min(lanes.length - 1, active.startLane));
+      const rtl = getComputedStyle(root).direction === "rtl";
+      const direction = (dx < 0 ? 1 : -1) * (rtl ? -1 : 1);
+      const width = lanes[current] ? lanes[current].getBoundingClientRect().width : root.clientWidth;
+      const committed = active.axis === "x" && elapsed <= LANE_SWIPE_MAX_MS && Math.abs(dx) >= LANE_SWIPE_MIN_PX &&
+        (Math.abs(dx) >= width * LANE_SWIPE_DISTANCE_RATIO || Math.abs(velocity) >= LANE_SWIPE_VELOCITY);
+      const target = Math.max(0, Math.min(lanes.length - 1, current + (committed ? direction : 0)));
+      cancel();
+      scrollLaneIntoView(root, lanes[committed ? target : current], false);
+      if (committed && target !== current) {
+        const name = lanes[target].getAttribute("data-kanban-column") || "";
+        if (onActiveLane) onActiveLane(name);
+        root.dispatchEvent(new CustomEvent("hermes-kanban:lane-change", { detail: { lane: name }, bubbles: true }));
+        vibrate(8);
+      }
+    }
+    function additional(e) { if (gesture && e.pointerId !== gesture.pointerId) cancel(); }
+    root.addEventListener("pointerdown", down);
+    document.addEventListener("pointerdown", additional, true);
+    document.addEventListener("pointermove", move, { passive: false });
+    document.addEventListener("pointerup", up);
+    document.addEventListener("pointercancel", cancel);
+    document.addEventListener("visibilitychange", cancel);
+    return function () {
+      cancel();
+      root.removeEventListener("pointerdown", down);
+      document.removeEventListener("pointerdown", additional, true);
+      document.removeEventListener("pointermove", move);
+      document.removeEventListener("pointerup", up);
+      document.removeEventListener("pointercancel", cancel);
+      document.removeEventListener("visibilitychange", cancel);
+    };
   }
 
   function attachTouchDrag(el, taskId, callbacks) {
@@ -2568,10 +2686,25 @@
   // -------------------------------------------------------------------------
 
   function BoardColumns(props) {
+    const { t } = useI18n();
     const columnsRef = useRef(null);
     const panRef = useRef({ isPanning: false, startX: 0, scrollLeft: 0 });
     const [isPanning, setIsPanning] = useState(false);
     const [isScrollable, setIsScrollable] = useState(false);
+    const [activeLane, setActiveLane] = useState(props.board.columns[0] ? props.board.columns[0].name : "");
+
+    useEffect(function () {
+      return attachLaneSwipe(columnsRef.current, setActiveLane);
+    }, [props.board.columns.length]);
+
+    const selectLane = useCallback(function (name) {
+      const root = columnsRef.current;
+      if (!root) return;
+      const lane = laneElements(root).find(function (item) { return item.getAttribute("data-kanban-column") === name; });
+      scrollLaneIntoView(root, lane, true);
+      setActiveLane(name);
+      vibrate(8);
+    }, []);
 
     const checkScrollable = useCallback(function () {
       const el = columnsRef.current;
@@ -2664,7 +2797,20 @@
     const handleDragEnd = useCallback(function () {
       if (props.onDragEnd) props.onDragEnd();
     }, [props.onDragEnd]);
-    return h("div", {
+    return h(React.Fragment, null,
+      h("nav", { className: "hermes-kanban-lane-tabs", "aria-label": "Kanban stages" },
+        props.board.columns.map(function (col) {
+          return h("button", {
+            key: col.name,
+            type: "button",
+            className: cn("hermes-kanban-lane-tab", activeLane === col.name ? "hermes-kanban-lane-tab--active" : ""),
+            "aria-current": activeLane === col.name ? "true" : undefined,
+            onClick: function () { selectLane(col.name); },
+          }, getColumnLabel(t, col.name) || col.name,
+            h("span", { className: "hermes-kanban-lane-tab-count" }, col.tasks.length));
+        }),
+      ),
+      h("div", {
       ref: columnsRef,
       className: cn(
         "hermes-kanban-columns",
@@ -2699,7 +2845,7 @@
         selectedIds: props.selectedIds,
         onDelete: props.onDelete,
       }),
-    );
+    ));
   }
 
   function Column(props) {
@@ -2770,6 +2916,10 @@
       onDragLeave: handleDragLeave,
       onDrop: handleDrop,
     },
+      h("div", { className: "hermes-kanban-lane-edge hermes-kanban-lane-edge--start",
+        "data-lane-swipe-surface": "edge", "aria-hidden": "true" }),
+      h("div", { className: "hermes-kanban-lane-edge hermes-kanban-lane-edge--end",
+        "data-lane-swipe-surface": "edge", "aria-hidden": "true" }),
       h("div", { className: "hermes-kanban-column-header",
                  title: colHelp || "" },
         h(Checkbox, {
@@ -2807,7 +2957,7 @@
         },
         onCancel: function () { setShowCreate(false); },
       }) : null,
-      h("div", { className: "hermes-kanban-column-body" },
+      h("div", { className: "hermes-kanban-column-body", "data-lane-swipe-surface": "background" },
         props.column.tasks.length === 0
           ? h("div", { className: "hermes-kanban-empty" }, tx(t, "noTasks", "— no tasks —"))
           : lanes

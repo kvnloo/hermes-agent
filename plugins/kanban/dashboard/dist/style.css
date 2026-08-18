@@ -67,7 +67,12 @@
   gap: 0.75rem;
   align-items: start;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  touch-action: pan-y;
 }
+
+.hermes-kanban-lane-tabs { display: none; }
 
 .hermes-kanban-columns--scrollable {
   cursor: grab;
@@ -79,6 +84,7 @@
 }
 
 .hermes-kanban-column {
+  position: relative;
   flex: 0 0 280px;
   display: flex;
   flex-direction: column;
@@ -89,6 +95,56 @@
   min-height: 200px;
   max-height: calc(100vh - 220px);
   transition: border-color 120ms ease, background-color 120ms ease;
+  scroll-snap-align: center;
+}
+
+.hermes-kanban-lane-edge { display: none; }
+
+@media (max-width: 767px) {
+  .hermes-kanban-lane-tabs {
+    display: flex;
+    gap: 0.25rem;
+    overflow-x: auto;
+    padding: 0 0 0.5rem;
+    scrollbar-width: none;
+  }
+  .hermes-kanban-lane-tab {
+    min-height: 44px;
+    flex: 0 0 auto;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm, 0.25rem);
+    background: var(--color-card);
+    color: var(--color-muted-foreground);
+    padding: 0.35rem 0.55rem;
+    font-size: 0.75rem;
+  }
+  .hermes-kanban-lane-tab--active { border-color: var(--color-ring); color: var(--color-foreground); }
+  .hermes-kanban-lane-tab-count { margin-inline-start: 0.35rem; font-variant-numeric: tabular-nums; }
+  .hermes-kanban-column {
+    flex-basis: min(86vw, 360px);
+    transform: translateX(var(--lane-drag-x, 0));
+    transition: transform 160ms ease, border-color 160ms ease, background-color 160ms ease;
+  }
+  .hermes-kanban-columns[data-lane-swipe="tracking"] { scroll-snap-type: none; }
+  .hermes-kanban-columns[data-lane-swipe="tracking"] .hermes-kanban-column { transition: none; }
+  .hermes-kanban-lane-edge {
+    display: block;
+    position: absolute;
+    z-index: 2;
+    top: 44px;
+    bottom: 0;
+    width: 18px;
+    touch-action: pan-y;
+  }
+  .hermes-kanban-lane-edge--start { inset-inline-start: 0; }
+  .hermes-kanban-lane-edge--end { inset-inline-end: 0; }
+  .hermes-kanban-column-body { touch-action: pan-y; }
+  .hermes-kanban-card, .hermes-kanban-card * { touch-action: pan-y; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hermes-kanban-column { transition: none; }
+  .hermes-kanban-columns { scroll-behavior: auto; }
 }
 
 .hermes-kanban-column--drop {
