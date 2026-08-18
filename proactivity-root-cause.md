@@ -4,7 +4,7 @@ Audit correction: `t_3755aaac` supersedes the causal wording from `t_5a0020a4` w
 
 ## Corrected verdict
 
-The active `NARROWED_LEVEL_0` receipt is a governing constraint and a proven **conditional** suppressor, not a proven historical primary cause of the live Firstmate intake gap.
+The active `NARROWED_LEVEL_0` receipt is a governing constraint and an **observed conditional** suppressor in a small matched replay, not a proven historical primary cause of the live Firstmate intake gap.
 
 A matched six-cell replay used the deployed Hermes agent loop, exact `gpt-5.6-sol` / `openai-codex`, actual chief-of-staff `AGENTS.md`, real Kanban schemas/handler, and an isolated board:
 

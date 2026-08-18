@@ -93,3 +93,34 @@ These are separate changes and must not be bundled:
 ## Final conclusion
 
 The freeze is a governing constraint and a proven conditional suppressor, not a proven historical primary cause. The live proactivity gap is best explained by the absence of a durable proactive wake/replenishment mechanism, with per-turn model/tool selection and task-local stalls as amplifiers. Focused allowlisted policy is compatible with correct informational suppression and actionable creation in the isolated replay, but deploying it requires an explicit Captain receipt; enforcing policy and adding proactivity are separate engineering changes.
+
+---
+
+## Evidence revision 2 — independently auditable repetitions
+
+This section is append-only and supersedes only the original replay's confidence language. Commit `94755b908` and its six raw observations remain preserved in Git history.
+
+The repaired replay ran the actual Hermes CLI/AIAgent intake path with the chief-of-staff `AGENTS.md`, `gpt-5.6-sol` on `openai-codex`, the real `kanban_create` schema/handler, a copied isolated profile configuration, and a dedicated SQLite board. Exact normalized inputs, complete policy treatments, redacted raw session messages/tool calls/results, per-run board snapshots, config/model/toolset/code hashes, and limitations are sealed under `evidence/firstmate-causality/v3/`.
+
+Observed creation rates (three independent turns per cell):
+
+| Treatment | Informational | Actionable |
+|---|---:|---:|
+| no additional policy | 0/3 | 2/3 |
+| `NARROWED_LEVEL_0` presented | 0/3 | 0/3 |
+| focused allowlist presented | 0/3 | 3/3 |
+
+Controls: negative prompt injection under the narrowed treatment created 0/3; actionable no-tool turns created 0/3. The no-policy actionable miss declined because it could not verify an assignee, directly demonstrating per-turn variability.
+
+Observed risk differences for actionable creation were -0.67 (narrowed minus no-policy), +0.33 (focused minus no-policy), and +1.00 (focused minus narrowed). With only three stochastic repetitions per cell and no provider-exposed seed or temperature, these are descriptive sample effects, not population estimates. Confidence in exact effect sizes is low-to-moderate; the evidence supports only conditional behavior under these prompts and tools. It does **not** establish the freeze as the historical primary cause.
+
+The production board changed bytewise during the long replay because unrelated shared-board workers were active. Therefore no false whole-file unchanged claim is made. The isolation sentinel instead searched production read-only for every isolated task ID and unique replay marker and found zero collisions/markers; all five replay cards and their events exist only in the isolated board. No production policy, task, or enforcement state was mutated by the replay.
+
+The causal separation remains:
+
+1. **Historical evidence:** follow-up writes and dispatch continued after narrowing; no session says the receipt globally stopped future intake.
+2. **Governing constraint:** the receipt text denies replenishment/dispatch when presented.
+3. **Enforcement split-brain:** deployed create/promote/claim/spawn does not canonically resolve or enforce it.
+4. **Missing durable proactive wake:** no implemented event/heartbeat guarantees Firstmate portfolio reconciliation after finite task-local loops end; this remains the leading explanation at medium-high confidence, not experimentally isolated proof.
+
+The focused treatment is counterfactual evidence only. It neither activates the recorded governance receipt nor authorizes production work.
