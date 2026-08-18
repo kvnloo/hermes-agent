@@ -1503,6 +1503,39 @@ CREATE TABLE IF NOT EXISTS task_runs (
     error               TEXT
 );
 
+-- Immutable, generation-fenced evidence presented for same-card review.
+CREATE TABLE IF NOT EXISTS task_review_bindings (
+    id                         INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_id                    TEXT NOT NULL,
+    generation                 INTEGER NOT NULL,
+    nonce                      TEXT NOT NULL UNIQUE,
+    implementation_run_id      INTEGER NOT NULL,
+    implementation_profile     TEXT NOT NULL,
+    source_manifest            TEXT NOT NULL,
+    source_manifest_hash       TEXT NOT NULL,
+    artifact_manifest          TEXT NOT NULL,
+    artifact_manifest_hash     TEXT NOT NULL,
+    requested_at               INTEGER NOT NULL,
+    review_run_id              INTEGER,
+    reviewer_profile           TEXT,
+    reviewer_actor             TEXT,
+    reviewer_principal         TEXT,
+    reviewer_credential_source TEXT,
+    claim_generation           INTEGER,
+    approval_class             TEXT NOT NULL DEFAULT 'independent',
+    reviewed_at                INTEGER,
+    invalidated_at             INTEGER,
+    invalidation_reason        TEXT,
+    UNIQUE(task_id, generation),
+    FOREIGN KEY(task_id) REFERENCES tasks(id),
+    FOREIGN KEY(implementation_run_id) REFERENCES task_runs(id),
+    FOREIGN KEY(review_run_id) REFERENCES task_runs(id),
+    CHECK(generation > 0),
+    CHECK(length(nonce) >= 32),
+    CHECK(length(source_manifest_hash) = 64),
+    CHECK(length(artifact_manifest_hash) = 64)
+);
+
 -- Files attached to a task (PDFs, images, source documents). The blob
 -- lives on disk under ``attachments_root(board)/<task_id>/<stored_name>``;
 -- this row carries metadata + the absolute ``stored_path`` so the
@@ -1548,6 +1581,7 @@ CREATE INDEX IF NOT EXISTS idx_comments_task         ON task_comments(task_id, c
 CREATE INDEX IF NOT EXISTS idx_events_task           ON task_events(task_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_runs_task             ON task_runs(task_id, started_at);
 CREATE INDEX IF NOT EXISTS idx_runs_status           ON task_runs(status);
+CREATE INDEX IF NOT EXISTS idx_review_binding_task   ON task_review_bindings(task_id, generation);
 CREATE INDEX IF NOT EXISTS idx_attachments_task      ON task_attachments(task_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_notify_task           ON kanban_notify_subs(task_id);
 """
@@ -2481,7 +2515,13 @@ def connect(
                     # threads from racing through the additive ALTER TABLE pass with
                     # stale PRAGMA snapshots during gateway startup.
                     conn.executescript(SCHEMA_SQL)
+                    # All post-schema upgrades are one explicit transaction.
+                    # SCHEMA_SQL is idempotent bootstrap only; versioned
+                    # migrations must never rely on executescript's implicit
+                    # pre-commit semantics.
                     _migrate_add_optional_columns(conn)
+                    with write_txn(conn):
+                        _migrate_artifact_review_gate_v2(conn)
                     _INITIALIZED_PATHS.add(resolved)
         except Exception:
             conn.close()
@@ -2552,6 +2592,173 @@ def init_db(
     with contextlib.closing(connect(path)):
         pass
     return path
+
+
+_ARTIFACT_REVIEW_GATE_SCHEMA_VERSION = 6
+
+
+def _migrate_artifact_review_gate_v2(conn: sqlite3.Connection) -> None:
+    """Transactionally install/recover the artifact review gate schema.
+
+    The caller holds both the board's cross-process init lock and an explicit
+    write transaction.  The version row is written last, so an exception or
+    process restart rolls the whole migration back and the next open retries.
+    Rollback procedure: restore the pre-upgrade ``kanban.db.corrupt-*`` backup
+    (plus its WAL/SHM sidecars if present), clear the process init cache, and
+    reopen; production boards are never selected implicitly by this function.
+    """
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS kanban_schema_migrations ("
+        "name TEXT PRIMARY KEY, version INTEGER NOT NULL, applied_at INTEGER NOT NULL)"
+    )
+    row = conn.execute(
+        "SELECT version FROM kanban_schema_migrations WHERE name = ?",
+        ("artifact_review_gate",),
+    ).fetchone()
+    current = int(row["version"]) if row else 0
+    if current >= _ARTIFACT_REVIEW_GATE_SCHEMA_VERSION:
+        return
+    cols = {
+        item["name"] for item in conn.execute(
+            "PRAGMA table_info(task_review_bindings)"
+        )
+    }
+    for name, declaration in (
+        ("reviewer_profile", "reviewer_profile TEXT"),
+        ("reviewer_actor", "reviewer_actor TEXT"),
+        ("reviewer_principal", "reviewer_principal TEXT"),
+        ("reviewer_credential_source", "reviewer_credential_source TEXT"),
+        ("claim_generation", "claim_generation INTEGER"),
+        ("approval_class", "approval_class TEXT NOT NULL DEFAULT 'independent'"),
+    ):
+        if name not in cols:
+            conn.execute(f"ALTER TABLE task_review_bindings ADD COLUMN {declaration}")
+    if current < 3:
+        # These records are deliberately separate from reviewer bindings.  A
+        # Captain product decision is not independent-review evidence.
+        conn.execute(
+            "CREATE TABLE captain_approval_authorizations ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, token_hash TEXT NOT NULL UNIQUE, "
+            "platform TEXT NOT NULL, operator_user_id TEXT NOT NULL, "
+            "chat_id TEXT NOT NULL, message_id TEXT NOT NULL, source TEXT NOT NULL, "
+            "task_id TEXT NOT NULL, source_hash TEXT NOT NULL, artifact_hash TEXT NOT NULL, "
+            "decision_generation INTEGER NOT NULL, nonce TEXT NOT NULL, "
+            "operation TEXT NOT NULL, issued_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, "
+            "consumed_at INTEGER, UNIQUE(platform, chat_id, message_id, operation))"
+        )
+        conn.execute(
+            "CREATE TABLE captain_approval_receipts ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, authorization_id INTEGER NOT NULL UNIQUE, "
+            "task_id TEXT NOT NULL, source_hash TEXT NOT NULL, artifact_hash TEXT NOT NULL, "
+            "decision_generation INTEGER NOT NULL, nonce TEXT NOT NULL, operation TEXT NOT NULL, "
+            "platform TEXT NOT NULL, operator_user_id TEXT NOT NULL, chat_id TEXT NOT NULL, "
+            "message_id TEXT NOT NULL, source TEXT NOT NULL, issued_at INTEGER NOT NULL, "
+            "expires_at INTEGER NOT NULL, approved_at INTEGER NOT NULL, "
+            "FOREIGN KEY(authorization_id) REFERENCES captain_approval_authorizations(id))"
+        )
+    if current < 4:
+        conn.execute(
+            "CREATE TABLE captain_approval_requests ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, callback_hash TEXT NOT NULL UNIQUE, "
+            "platform TEXT NOT NULL, chat_id TEXT NOT NULL, message_id TEXT NOT NULL, "
+            "task_id TEXT NOT NULL, source_hash TEXT NOT NULL, artifact_hash TEXT NOT NULL, "
+            "decision_generation INTEGER NOT NULL, expires_at INTEGER NOT NULL, "
+            "consumed_at INTEGER, UNIQUE(platform, chat_id, message_id))"
+        )
+    if current < 5:
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS captain_approval_migration_receipts ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, request_id INTEGER NOT NULL UNIQUE, "
+            "task_id TEXT NOT NULL, decision_generation INTEGER NOT NULL, action TEXT NOT NULL, "
+            "reason TEXT NOT NULL, created_at INTEGER NOT NULL)"
+        )
+        request_cols = {
+            item["name"] for item in conn.execute(
+                "PRAGMA table_info(captain_approval_requests)"
+            )
+        }
+        for name, declaration in (
+            ("state", "state TEXT NOT NULL DEFAULT 'active'"),
+            ("failure_reason", "failure_reason TEXT"),
+            ("cleanup_failed", "cleanup_failed INTEGER NOT NULL DEFAULT 0"),
+            ("updated_at", "updated_at INTEGER"),
+        ):
+            if name not in request_cols:
+                conn.execute(f"ALTER TABLE captain_approval_requests ADD COLUMN {declaration}")
+        # v4 did not constrain generations.  Normalize harmless legacy
+        # duplicates before adding the fence; two distinct live transport
+        # bindings are ambiguous and must stop the migration.
+        duplicate_groups = conn.execute(
+            "SELECT task_id, decision_generation, COUNT(*) AS n FROM captain_approval_requests "
+            "GROUP BY task_id, decision_generation HAVING COUNT(*) > 1"
+        ).fetchall()
+        for group in duplicate_groups:
+            rows = conn.execute(
+                "SELECT * FROM captain_approval_requests WHERE task_id = ? AND decision_generation = ? "
+                "ORDER BY CASE WHEN consumed_at IS NOT NULL THEN 0 ELSE 1 END, "
+                "COALESCE(updated_at, 0) DESC, id DESC",
+                (group["task_id"], group["decision_generation"]),
+            ).fetchall()
+            live = [row for row in rows if row["consumed_at"] is None and row["state"] == "active"]
+            bindings = {(row["platform"], row["chat_id"], row["message_id"]) for row in live}
+            if len(bindings) > 1:
+                raise sqlite3.IntegrityError(
+                    "ambiguous captain approval bindings for "
+                    f"{group['task_id']} generation {group['decision_generation']}"
+                )
+            for row in rows[1:]:
+                conn.execute(
+                    "UPDATE captain_approval_requests SET state = 'revoked', "
+                    "failure_reason = 'migration_v5_duplicate', updated_at = ? WHERE id = ?",
+                    (int(time.time()), row["id"]),
+                )
+                conn.execute(
+                    "INSERT OR IGNORE INTO captain_approval_migration_receipts("
+                    "request_id, task_id, decision_generation, action, reason, created_at) "
+                    "VALUES (?, ?, ?, 'revoked', 'migration_v5_duplicate', ?)",
+                    (row["id"], group["task_id"], group["decision_generation"], int(time.time())),
+                )
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_captain_request_generation "
+            "ON captain_approval_requests(task_id, decision_generation) "
+            "WHERE state IN ('reserved', 'active')"
+        )
+    if current < 6:
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS captain_approval_migration_receipts ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, request_id INTEGER NOT NULL UNIQUE, "
+            "task_id TEXT NOT NULL, decision_generation INTEGER NOT NULL, action TEXT NOT NULL, "
+            "reason TEXT NOT NULL, created_at INTEGER NOT NULL)"
+        )
+        # Early v5 builds created a full index which prevented safe retry rows.
+        conn.execute("DROP INDEX IF EXISTS idx_captain_request_generation")
+        conn.execute(
+            "CREATE UNIQUE INDEX idx_captain_request_generation "
+            "ON captain_approval_requests(task_id, decision_generation) "
+            "WHERE state IN ('reserved', 'active')"
+        )
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS captain_approval_issuance_jobs ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT NOT NULL, "
+            "decision_generation INTEGER NOT NULL, platform TEXT NOT NULL, chat_id TEXT NOT NULL, "
+            "state TEXT NOT NULL DEFAULT 'pending', attempts INTEGER NOT NULL DEFAULT 0, "
+            "next_attempt_at INTEGER NOT NULL, lease_until INTEGER, last_error TEXT, "
+            "request_id INTEGER, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, "
+            "UNIQUE(task_id, decision_generation, platform, chat_id))"
+        )
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS captain_approval_cleanup_jobs ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, request_id INTEGER NOT NULL UNIQUE, "
+            "platform TEXT NOT NULL, chat_id TEXT NOT NULL, message_id TEXT NOT NULL, "
+            "state TEXT NOT NULL DEFAULT 'pending', attempts INTEGER NOT NULL DEFAULT 0, "
+            "next_attempt_at INTEGER NOT NULL, lease_until INTEGER, last_error TEXT, "
+            "created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)"
+        )
+    conn.execute(
+        "INSERT INTO kanban_schema_migrations(name, version, applied_at) VALUES (?, ?, ?) "
+        "ON CONFLICT(name) DO UPDATE SET version=excluded.version, applied_at=excluded.applied_at",
+        ("artifact_review_gate", _ARTIFACT_REVIEW_GATE_SCHEMA_VERSION, int(time.time())),
+    )
 
 
 def _migrate_add_optional_columns(conn: sqlite3.Connection) -> None:
@@ -4828,6 +5035,49 @@ def claim_review_task(
                     },
                 )
             return None
+        binding = conn.execute(
+            "SELECT * FROM task_review_bindings WHERE task_id = ? "
+            "ORDER BY generation DESC LIMIT 1", (task_id,),
+        ).fetchone()
+        review_identity = conn.execute(
+            "SELECT assignee FROM tasks WHERE id = ?", (task_id,)
+        ).fetchone()
+        if binding is None or binding["invalidated_at"] is not None or binding["reviewed_at"] is not None:
+            _deny_review(conn, task_id, "missing_or_inactive_review_binding", run_id=None)
+            return None
+        if not review_identity or not review_identity["assignee"]:
+            _deny_review(conn, task_id, "missing_reviewer_profile", run_id=None)
+            return None
+        reviewer_profile = _canonical_assignee(review_identity["assignee"])
+        if binding["review_run_id"] is not None:
+            prior_run = conn.execute(
+                "SELECT status FROM task_runs WHERE id = ?",
+                (int(binding["review_run_id"]),),
+            ).fetchone()
+            if prior_run is None or prior_run["status"] == "running":
+                return None
+            # A reclaimed/crashed reviewer claim supersedes its capability.
+            # Mint a fresh generation+nonce rather than reusing the old token.
+            conn.execute(
+                "UPDATE task_review_bindings SET invalidated_at = ?, invalidation_reason = ? WHERE id = ?",
+                (now, "review_claim_superseded", int(binding["id"])),
+            )
+            nonce = secrets.token_hex(24)
+            cur_binding = conn.execute(
+                "INSERT INTO task_review_bindings (task_id, generation, nonce, "
+                "implementation_run_id, implementation_profile, source_manifest, "
+                "source_manifest_hash, artifact_manifest, artifact_manifest_hash, "
+                "requested_at, approval_class) "
+                "SELECT task_id, generation + 1, ?, implementation_run_id, "
+                "implementation_profile, source_manifest, source_manifest_hash, "
+                "artifact_manifest, artifact_manifest_hash, ?, approval_class "
+                "FROM task_review_bindings WHERE id = ?",
+                (nonce, now, int(binding["id"])),
+            )
+            binding = conn.execute(
+                "SELECT * FROM task_review_bindings WHERE id = ?",
+                (int(cur_binding.lastrowid),),
+            ).fetchone()
         cur = conn.execute(
             """
             UPDATE tasks
@@ -4867,6 +5117,21 @@ def claim_review_task(
             ),
         )
         run_id = run_cur.lastrowid
+        # Reviewer identity is a server-side fact of the dispatcher claim.  It
+        # must never be accepted from a request body, CLI flag, or model call.
+        reviewer_actor = reviewer_profile
+        reviewer_principal = f"kanban-run:{int(run_id)}:{reviewer_profile}"
+        reviewer_source = "dispatcher-review-claim"
+        bound = conn.execute(
+            "UPDATE task_review_bindings SET review_run_id = ?, reviewer_profile = ?, "
+            "reviewer_actor = ?, reviewer_principal = ?, reviewer_credential_source = ?, "
+            "claim_generation = generation "
+            "WHERE id = ? AND review_run_id IS NULL AND invalidated_at IS NULL",
+            (run_id, reviewer_profile, reviewer_actor, reviewer_principal,
+             reviewer_source, int(binding["id"])),
+        )
+        if bound.rowcount != 1:
+            raise RuntimeError("review binding was concurrently claimed")
         conn.execute(
             "UPDATE tasks SET current_run_id = ? WHERE id = ?",
             (run_id, task_id),
@@ -4874,10 +5139,54 @@ def claim_review_task(
         _append_event(
             conn, task_id, "claimed",
             {"lock": lock, "expires": expires, "run_id": run_id,
-             "source_status": "review"},
+             "source_status": "review", "review_generation": binding["generation"],
+             "reviewer_principal": reviewer_principal,
+             "reviewer_credential_source": reviewer_source},
             run_id=run_id,
         )
         return get_task(conn, task_id)
+
+
+def get_review_capability(
+    conn: sqlite3.Connection,
+    task_id: str,
+    *,
+    expected_run_id: int,
+) -> Optional[dict[str, Any]]:
+    """Return the non-secret, one-shot claims bound to this review run.
+
+    Run ownership is the authorization boundary: callers cannot inspect a
+    parked review or another reviewer's generation by task id alone.
+    """
+    row = conn.execute(
+        "SELECT b.*, t.current_run_id, t.status FROM task_review_bindings b "
+        "JOIN tasks t ON t.id = b.task_id "
+        "WHERE b.task_id = ? AND b.review_run_id = ? "
+        "AND b.invalidated_at IS NULL AND b.reviewed_at IS NULL "
+        "ORDER BY b.generation DESC LIMIT 1",
+        (task_id, int(expected_run_id)),
+    ).fetchone()
+    if (
+        row is None
+        or row["status"] != "running"
+        or int(row["current_run_id"] or -1) != int(expected_run_id)
+    ):
+        return None
+    try:
+        source = json.loads(row["source_manifest"])
+    except (json.JSONDecodeError, TypeError):
+        return None
+    if not isinstance(source, dict) or not source.get("commit") or not source.get("tree"):
+        return None
+    return {
+        "review_generation": int(row["generation"]),
+        "review_nonce": row["nonce"],
+        "implementation_run_id": int(row["implementation_run_id"]),
+        "source_commit": source["commit"],
+        "source_tree": source["tree"],
+        "source_manifest_hash": row["source_manifest_hash"],
+        "artifact_manifest_hash": row["artifact_manifest_hash"],
+    }
 
 
 def _retry_status_for_run(
@@ -5414,6 +5723,13 @@ def complete_task(
     metadata: Optional[dict] = None,
     created_cards: Optional[Iterable[str]] = None,
     expected_run_id: Optional[int] = None,
+    expected_review_generation: Optional[int] = None,
+    expected_review_nonce: Optional[str] = None,
+    expected_implementation_run_id: Optional[int] = None,
+    expected_source_commit: Optional[str] = None,
+    expected_source_tree: Optional[str] = None,
+    expected_source_hash: Optional[str] = None,
+    expected_artifact_hash: Optional[str] = None,
     fire_lifecycle_hook: bool = True,
 ) -> bool:
     """Transition ``running|ready|blocked|review -> done`` and record ``result``.
@@ -5484,6 +5800,25 @@ def complete_task(
     metadata = _merge_completion_prose_artifacts(
         conn, task_id, metadata, summary=summary, result=result,
     )
+    latest_binding = conn.execute(
+        "SELECT * FROM task_review_bindings WHERE task_id = ? "
+        "ORDER BY generation DESC LIMIT 1", (task_id,),
+    ).fetchone()
+    live_source_hash: Optional[str] = None
+    live_artifact_hash: Optional[str] = None
+    if latest_binding is not None:
+        _, live_source_hash = _review_manifest_hash(_review_source_manifest(conn, task_id))
+        try:
+            bound_artifacts = json.loads(latest_binding["artifact_manifest"])
+        except (json.JSONDecodeError, TypeError):
+            bound_artifacts = []
+        artifact_paths = [
+            item.get("path") for item in bound_artifacts
+            if isinstance(item, dict) and isinstance(item.get("path"), str)
+        ] if isinstance(bound_artifacts, list) else []
+        _, live_artifact_hash = _review_manifest_hash(
+            _review_artifact_manifest({"artifacts": artifact_paths})
+        )
     with write_txn(conn):
         # Parent completion is a hard invariant even for direct human review
         # approval. A parent may have been reopened after this task entered
@@ -5495,6 +5830,80 @@ def complete_task(
             (task_id,),
         ).fetchone()
         prior_status = prior["status"] if prior else None
+        current = conn.execute(
+            "SELECT current_run_id FROM tasks WHERE id = ?", (task_id,)
+        ).fetchone()
+        current_run_id = current["current_run_id"] if current else None
+        is_review_approval = prior_status == "review" or (
+            latest_binding is not None and current_run_id is not None
+            and latest_binding["review_run_id"] == current_run_id
+        )
+        if (
+            not is_review_approval
+            and prior_status == "running"
+            and latest_binding is not None
+            and latest_binding["invalidated_at"] is not None
+        ):
+            _deny_review(conn, task_id, "fresh_review_required_after_rework", run_id=current_run_id)
+            return False
+        # Every review approval is gated, including malformed/legacy rows with
+        # no binding. Absence must deny rather than fall through to ordinary
+        # non-review completion.
+        is_independent_review = bool(is_review_approval)
+        if is_independent_review:
+            reason: Optional[str] = None
+            try:
+                bound_source = json.loads(latest_binding["source_manifest"]) if latest_binding else {}
+            except (json.JSONDecodeError, TypeError):
+                bound_source = {}
+            if latest_binding is None:
+                reason = "missing_review_binding"
+            elif latest_binding["approval_class"] != "independent":
+                reason = "unbound_review_provenance"
+            elif prior_status == "review" or current_run_id is None:
+                reason = "review_must_be_claimed_by_distinct_run"
+            elif latest_binding["reviewed_at"] is not None:
+                reason = "review_generation_replayed"
+            elif latest_binding["invalidated_at"] is not None:
+                reason = "review_generation_invalidated"
+            elif int(latest_binding["review_run_id"] or -1) != int(current_run_id):
+                reason = "review_run_mismatch"
+            else:
+                mandatory = (
+                    expected_review_generation, expected_review_nonce,
+                    expected_implementation_run_id, expected_source_commit,
+                    expected_source_tree, expected_source_hash, expected_artifact_hash,
+                )
+                if any(value is None or (isinstance(value, str) and not value.strip()) for value in mandatory):
+                    reason = "missing_exact_review_claims"
+                elif not all(latest_binding[key] for key in (
+                    "reviewer_profile", "reviewer_actor", "reviewer_principal",
+                    "reviewer_credential_source", "claim_generation",
+                )):
+                    reason = "missing_persisted_reviewer_identity"
+                elif _canonical_assignee(str(latest_binding["reviewer_profile"])) == _canonical_assignee(latest_binding["implementation_profile"]):
+                    reason = "self_review"
+                elif int(expected_review_generation) != int(latest_binding["generation"]):
+                    reason = "review_generation_mismatch"
+                elif expected_review_nonce != latest_binding["nonce"]:
+                    reason = "review_nonce_mismatch"
+                elif int(expected_implementation_run_id) != int(latest_binding["implementation_run_id"]):
+                    reason = "implementation_run_mismatch"
+                elif expected_source_commit != bound_source.get("commit"):
+                    reason = "expected_source_commit_mismatch"
+                elif expected_source_tree != bound_source.get("tree"):
+                    reason = "expected_source_tree_mismatch"
+                elif expected_source_hash != latest_binding["source_manifest_hash"]:
+                    reason = "expected_source_hash_mismatch"
+                elif expected_artifact_hash != latest_binding["artifact_manifest_hash"]:
+                    reason = "expected_artifact_hash_mismatch"
+                elif live_source_hash != latest_binding["source_manifest_hash"]:
+                    reason = "stale_source_hash"
+                elif live_artifact_hash != latest_binding["artifact_manifest_hash"]:
+                    reason = "stale_artifact_hash"
+            if reason:
+                _deny_review(conn, task_id, reason, run_id=current_run_id)
+                return False
         if expected_run_id is None:
             cur = conn.execute(
                 """
@@ -5605,6 +6014,15 @@ def complete_task(
             completed_payload,
             run_id=run_id,
         )
+        if is_independent_review and latest_binding is not None:
+            approved = conn.execute(
+                "UPDATE task_review_bindings SET reviewed_at = ? "
+                "WHERE id = ? AND reviewed_at IS NULL AND invalidated_at IS NULL "
+                "AND review_run_id = ?",
+                (now, int(latest_binding["id"]), int(run_id)),
+            )
+            if approved.rowcount != 1:
+                raise RuntimeError("review approval generation lost transaction fence")
     # Prose-scan the summary + result for t_<hex> references that do
     # not resolve. Advisory — does not block the completion. Runs in
     # its own txn so the completion itself is already durable by the
@@ -6528,6 +6946,529 @@ def block_task(
 
 
 
+def _review_manifest_hash(value: Any) -> tuple[str, str]:
+    encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return encoded, hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def _review_source_manifest(conn: sqlite3.Connection, task_id: str) -> dict[str, Any]:
+    """Snapshot source identity without trusting review-request prose."""
+    row = conn.execute(
+        "SELECT workspace_path, branch_name FROM tasks WHERE id = ?", (task_id,)
+    ).fetchone()
+    workspace = Path(row["workspace_path"]).expanduser() if row and row["workspace_path"] else None
+    manifest: dict[str, Any] = {"workspace": str(workspace) if workspace else None}
+    if not workspace or not workspace.is_dir():
+        manifest["state"] = "no_workspace"
+        return manifest
+    try:
+        def git(*args: str) -> str:
+            return subprocess.run(
+                ["git", "-C", str(workspace), *args], check=True,
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+                timeout=10,
+            ).stdout
+
+        status = git("status", "--porcelain=v2", "--untracked-files=all")
+        diff = git("diff", "--binary", "HEAD")
+        untracked = git("ls-files", "--others", "--exclude-standard").splitlines()
+        untracked_hashes: list[dict[str, Any]] = []
+        for relative in sorted(untracked):
+            candidate = workspace / relative
+            digest = hashlib.sha256()
+            try:
+                with candidate.open("rb") as handle:
+                    for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                        digest.update(chunk)
+                untracked_hashes.append({"path": relative, "sha256": digest.hexdigest()})
+            except OSError:
+                untracked_hashes.append({"path": relative, "missing": True})
+        manifest.update({
+            "commit": git("rev-parse", "HEAD").strip(),
+            "tree": git("rev-parse", "HEAD^{tree}").strip(),
+            "worktree_state_sha256": hashlib.sha256(status.encode("utf-8")).hexdigest(),
+            "tracked_diff_sha256": hashlib.sha256(diff.encode("utf-8")).hexdigest(),
+            "untracked": untracked_hashes,
+        })
+    except (OSError, subprocess.SubprocessError):
+        manifest["state"] = "not_git"
+    return manifest
+
+
+def _review_artifact_manifest(metadata: Optional[dict]) -> list[dict[str, Any]]:
+    """Hash declared artifact bytes; missing files remain explicit evidence."""
+    raw = metadata.get("artifacts", []) if isinstance(metadata, dict) else []
+    if not isinstance(raw, (list, tuple)):
+        raw = []
+    result: list[dict[str, Any]] = []
+    for item in sorted(str(value) for value in raw if isinstance(value, (str, os.PathLike))):
+        path = Path(item).expanduser()
+        entry: dict[str, Any] = {"path": str(path)}
+        try:
+            if path.is_file():
+                digest = hashlib.sha256()
+                with path.open("rb") as handle:
+                    for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                        digest.update(chunk)
+                entry.update({"sha256": digest.hexdigest(), "size": path.stat().st_size})
+            else:
+                entry["missing"] = True
+        except OSError as exc:
+            entry.update({"missing": True, "error": type(exc).__name__})
+        result.append(entry)
+    return result
+
+
+def _deny_review(conn: sqlite3.Connection, task_id: str, reason: str, *, run_id: Optional[int]) -> None:
+    _append_event(
+        conn, task_id, "review_approval_denied",
+        {"reason": reason}, run_id=run_id,
+    )
+
+
+@dataclass(frozen=True)
+class AuthenticatedCaptainEnvelope:
+    """Trusted gateway fact, never a dashboard/CLI request-body model."""
+
+    authenticated: bool
+    platform: str
+    operator_user_id: str
+    chat_id: str
+    message_id: str
+    source: str
+    received_at: int
+
+
+@dataclass(frozen=True)
+class CaptainIdentity:
+    platform: str
+    operator_user_id: str
+    chat_id: str
+    source: str
+
+
+def enqueue_captain_approval_issuance(
+    conn: sqlite3.Connection, *, task_id: str, decision_generation: int,
+    platform: str, chat_id: str, now: Optional[int] = None,
+) -> int:
+    """Durably acknowledge a canonical review event before its cursor advances."""
+    timestamp = int(time.time()) if now is None else int(now)
+    with write_txn(conn):
+        conn.execute(
+            "INSERT INTO captain_approval_issuance_jobs("
+            "task_id, decision_generation, platform, chat_id, next_attempt_at, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(task_id, decision_generation, platform, chat_id) "
+            "DO NOTHING",
+            (task_id, int(decision_generation), platform, str(chat_id), timestamp, timestamp, timestamp),
+        )
+        row = conn.execute(
+            "SELECT id FROM captain_approval_issuance_jobs WHERE task_id = ? AND "
+            "decision_generation = ? AND platform = ? AND chat_id = ?",
+            (task_id, int(decision_generation), platform, str(chat_id)),
+        ).fetchone()
+    return int(row["id"])
+
+
+def claim_captain_approval_issuance_jobs(
+    conn: sqlite3.Connection, *, now: Optional[int] = None, lease_seconds: int = 60,
+    limit: int = 20,
+) -> list[dict[str, Any]]:
+    timestamp = int(time.time()) if now is None else int(now)
+    with write_txn(conn):
+        rows = conn.execute(
+            "SELECT * FROM captain_approval_issuance_jobs WHERE state IN ('pending', 'deferred', 'leased') "
+            "AND next_attempt_at <= ? AND (lease_until IS NULL OR lease_until <= ?) "
+            "ORDER BY next_attempt_at, id LIMIT ?", (timestamp, timestamp, int(limit)),
+        ).fetchall()
+        for row in rows:
+            conn.execute(
+                "UPDATE captain_approval_issuance_jobs SET state = 'leased', lease_until = ?, "
+                "attempts = attempts + 1, updated_at = ? WHERE id = ?",
+                (timestamp + int(lease_seconds), timestamp, row["id"]),
+            )
+    return [dict(row) for row in rows]
+
+
+def finish_captain_approval_issuance_job(
+    conn: sqlite3.Connection, *, job_id: int, outcome: str,
+    error: Optional[str] = None, request_id: Optional[int] = None,
+    now: Optional[int] = None,
+) -> bool:
+    timestamp = int(time.time()) if now is None else int(now)
+    row = conn.execute(
+        "SELECT attempts FROM captain_approval_issuance_jobs WHERE id = ? AND state = 'leased'",
+        (int(job_id),),
+    ).fetchone()
+    if row is None:
+        return False
+    if outcome == "active":
+        state, next_at = "active", timestamp
+    elif outcome == "terminal":
+        state, next_at = "terminal", timestamp
+    else:
+        state = "deferred" if outcome == "deferred" else "pending"
+        next_at = timestamp + min(300, 2 ** min(int(row["attempts"]), 8))
+    with write_txn(conn):
+        updated = conn.execute(
+            "UPDATE captain_approval_issuance_jobs SET state = ?, next_attempt_at = ?, "
+            "lease_until = NULL, last_error = ?, request_id = COALESCE(?, request_id), updated_at = ? "
+            "WHERE id = ? AND state = 'leased'",
+            (state, next_at, (error or "")[:240] or None, request_id, timestamp, int(job_id)),
+        )
+    return updated.rowcount == 1
+
+
+def claim_captain_approval_cleanup_jobs(
+    conn: sqlite3.Connection, *, now: Optional[int] = None, lease_seconds: int = 60,
+) -> list[dict[str, Any]]:
+    timestamp = int(time.time()) if now is None else int(now)
+    with write_txn(conn):
+        rows = conn.execute(
+            "SELECT * FROM captain_approval_cleanup_jobs WHERE state IN ('pending', 'leased') "
+            "AND next_attempt_at <= ? AND (lease_until IS NULL OR lease_until <= ?) ORDER BY id LIMIT 20",
+            (timestamp, timestamp),
+        ).fetchall()
+        for row in rows:
+            conn.execute(
+                "UPDATE captain_approval_cleanup_jobs SET state = 'leased', lease_until = ?, "
+                "attempts = attempts + 1, updated_at = ? WHERE id = ?",
+                (timestamp + lease_seconds, timestamp, row["id"]),
+            )
+    return [dict(row) for row in rows]
+
+
+def finish_captain_approval_cleanup_job(
+    conn: sqlite3.Connection, *, job_id: int, success: bool,
+    error: Optional[str] = None, now: Optional[int] = None,
+) -> bool:
+    timestamp = int(time.time()) if now is None else int(now)
+    with write_txn(conn):
+        updated = conn.execute(
+            "UPDATE captain_approval_cleanup_jobs SET state = ?, lease_until = NULL, "
+            "next_attempt_at = ?, last_error = ?, updated_at = ? WHERE id = ? AND state = 'leased'",
+            ("done" if success else "pending", timestamp if success else timestamp + 30,
+             (error or "")[:240] or None, timestamp, int(job_id)),
+        )
+    return updated.rowcount == 1
+
+
+def reserve_captain_approval_request(
+    conn: sqlite3.Connection, *, task_id: str, platform: str, chat_id: str,
+    expires_at: int, now: Optional[int] = None,
+    callback_nonce: Optional[str] = None,
+) -> Optional[str]:
+    """Persist an inert request before any transport button is sent."""
+    timestamp = int(time.time()) if now is None else int(now)
+    binding = conn.execute(
+        "SELECT generation, source_manifest_hash, artifact_manifest_hash "
+        "FROM task_review_bindings WHERE task_id = ? ORDER BY generation DESC LIMIT 1",
+        (task_id,),
+    ).fetchone()
+    task = conn.execute("SELECT status FROM tasks WHERE id = ?", (task_id,)).fetchone()
+    if (binding is None or task is None or task["status"] != "review"
+            or not all(str(v).strip() for v in (platform, chat_id))
+            or int(expires_at) <= timestamp):
+        return None
+    nonce = callback_nonce or secrets.token_urlsafe(24)
+    if not nonce or len(nonce) > 48:
+        return None
+    callback_hash = hashlib.sha256(nonce.encode()).hexdigest()
+    try:
+        with write_txn(conn):
+            existing = conn.execute(
+                "SELECT id, state FROM captain_approval_requests WHERE task_id = ? AND "
+                "decision_generation = ?", (task_id, int(binding["generation"])),
+            ).fetchone()
+            if existing is not None and existing["state"] in ("active", "consumed"):
+                return None
+            if existing is not None:
+                conn.execute(
+                    "UPDATE captain_approval_requests SET callback_hash = ?, platform = ?, chat_id = ?, "
+                    "message_id = ?, source_hash = ?, artifact_hash = ?, expires_at = ?, consumed_at = NULL, "
+                    "state = 'reserved', failure_reason = NULL, cleanup_failed = 0, updated_at = ? WHERE id = ?",
+                    (callback_hash, platform, chat_id, f"reserved:{callback_hash}",
+                     binding["source_manifest_hash"], binding["artifact_manifest_hash"],
+                     int(expires_at), timestamp, existing["id"]),
+                )
+                return nonce
+            conn.execute(
+                "INSERT INTO captain_approval_requests(callback_hash, platform, chat_id, "
+                "message_id, task_id, source_hash, artifact_hash, decision_generation, expires_at, "
+                "state, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'reserved', ?)",
+                (callback_hash, platform, chat_id, f"reserved:{callback_hash}", task_id,
+                 binding["source_manifest_hash"], binding["artifact_manifest_hash"],
+                 int(binding["generation"]), int(expires_at), timestamp),
+            )
+    except sqlite3.IntegrityError:
+        return None
+    return nonce
+
+
+def bind_captain_approval_request(
+    conn: sqlite3.Connection, *, callback_nonce: str, message_id: str,
+    now: Optional[int] = None,
+) -> bool:
+    timestamp = int(time.time()) if now is None else int(now)
+    callback_hash = hashlib.sha256(callback_nonce.encode()).hexdigest()
+    with write_txn(conn):
+        updated = conn.execute(
+            "UPDATE captain_approval_requests SET message_id = ?, state = 'active', updated_at = ? "
+            "WHERE callback_hash = ? AND state = 'reserved' AND expires_at > ?",
+            (str(message_id), timestamp, callback_hash, timestamp),
+        )
+    return updated.rowcount == 1
+
+
+def fail_captain_approval_request(
+    conn: sqlite3.Connection, *, callback_nonce: str, reason: str,
+    cleanup_failed: bool = False, now: Optional[int] = None,
+) -> bool:
+    timestamp = int(time.time()) if now is None else int(now)
+    callback_hash = hashlib.sha256(callback_nonce.encode()).hexdigest()
+    with write_txn(conn):
+        updated = conn.execute(
+            "UPDATE captain_approval_requests SET state = 'failed', failure_reason = ?, "
+            "cleanup_failed = ?, updated_at = ? WHERE callback_hash = ? AND state != 'consumed'",
+            (str(reason)[:240], int(cleanup_failed), timestamp, callback_hash),
+        )
+    return updated.rowcount == 1
+
+
+def expire_captain_approval_requests(conn: sqlite3.Connection, *, now: Optional[int] = None) -> int:
+    timestamp = int(time.time()) if now is None else int(now)
+    with write_txn(conn):
+        expiring = conn.execute(
+            "SELECT id, platform, chat_id, message_id FROM captain_approval_requests "
+            "WHERE state IN ('reserved', 'active') AND expires_at <= ?", (timestamp,),
+        ).fetchall()
+        updated = conn.execute(
+            "UPDATE captain_approval_requests SET state = 'expired', updated_at = ? "
+            "WHERE state IN ('reserved', 'active') AND expires_at <= ?",
+            (timestamp, timestamp),
+        )
+        for row in expiring:
+            if not str(row["message_id"]).startswith("reserved:"):
+                conn.execute(
+                    "INSERT INTO captain_approval_cleanup_jobs("
+                    "request_id, platform, chat_id, message_id, next_attempt_at, created_at, updated_at) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(request_id) DO NOTHING",
+                    (row["id"], row["platform"], row["chat_id"], row["message_id"],
+                     timestamp, timestamp, timestamp),
+                )
+    return updated.rowcount
+
+
+def create_captain_approval_request(
+    conn: sqlite3.Connection, *, task_id: str, platform: str, chat_id: str,
+    message_id: str, expires_at: int, now: Optional[int] = None,
+    callback_nonce: Optional[str] = None,
+) -> Optional[str]:
+    """Compatibility helper that performs the reserve/bind state transition."""
+    nonce = reserve_captain_approval_request(
+        conn, task_id=task_id, platform=platform, chat_id=chat_id,
+        expires_at=expires_at, now=now, callback_nonce=callback_nonce,
+    )
+    if nonce and bind_captain_approval_request(
+        conn, callback_nonce=nonce, message_id=message_id, now=now,
+    ):
+        return nonce
+    return None
+
+
+def approve_captain_callback(
+    conn: sqlite3.Connection, *, callback_nonce: str, platform: str,
+    operator_user_id: str, chat_id: str, message_id: str,
+    allowed_user_ids: set[str], allowed_chat_ids: set[str],
+    now: Optional[int] = None,
+) -> bool:
+    """Consume a transport-derived callback; no task or artifact claim is accepted."""
+    timestamp = int(time.time()) if now is None else int(now)
+    callback_hash = hashlib.sha256(str(callback_nonce).encode()).hexdigest()
+    request = conn.execute(
+        "SELECT * FROM captain_approval_requests WHERE callback_hash = ?", (callback_hash,)
+    ).fetchone()
+    if (not allowed_user_ids or not allowed_chat_ids
+            or operator_user_id not in allowed_user_ids or chat_id not in allowed_chat_ids
+            or request is None or request["state"] != "active"
+            or request["consumed_at"] is not None
+            or timestamp >= int(request["expires_at"])
+            or (platform, chat_id, message_id) !=
+               (request["platform"], request["chat_id"], request["message_id"])):
+        return False
+    envelope = AuthenticatedCaptainEnvelope(
+        authenticated=True, platform=platform, operator_user_id=operator_user_id,
+        chat_id=chat_id, message_id=message_id, source="telegram-callback",
+        received_at=timestamp,
+    )
+    token = issue_captain_approval_authorization(
+        conn, envelope=envelope,
+        captain=CaptainIdentity(platform, operator_user_id, chat_id, "telegram-callback"),
+        task_id=request["task_id"], source_hash=request["source_hash"],
+        artifact_hash=request["artifact_hash"],
+        decision_generation=int(request["decision_generation"]),
+        expires_at=int(request["expires_at"]),
+    )
+    if token is None:
+        return False
+    with write_txn(conn):
+        consumed = conn.execute(
+            "UPDATE captain_approval_requests SET consumed_at = ?, state = 'consumed', updated_at = ? "
+            "WHERE id = ? AND state = 'active' AND consumed_at IS NULL",
+            (timestamp, timestamp, int(request["id"])),
+        )
+        if consumed.rowcount != 1:
+            return False
+    return approve_task_by_captain(
+        conn, request["task_id"], authorization_token=token, now=timestamp
+    )
+
+
+def issue_captain_approval_authorization(
+    conn: sqlite3.Connection,
+    *,
+    envelope: AuthenticatedCaptainEnvelope,
+    captain: CaptainIdentity,
+    task_id: str,
+    source_hash: str,
+    artifact_hash: str,
+    decision_generation: int,
+    expires_at: int,
+    operation: str = "captain_product_approve",
+) -> Optional[str]:
+    """Persist a one-shot authorization from an authenticated gateway event.
+
+    This function belongs at the gateway/dispatcher trust boundary.  The only
+    value later accepted from an approval request is the opaque token.
+    """
+    exact_identity = (
+        envelope.authenticated
+        and envelope.platform == captain.platform
+        and envelope.operator_user_id == captain.operator_user_id
+        and envelope.chat_id == captain.chat_id
+        and envelope.source == captain.source
+    )
+    fields = (task_id, source_hash, artifact_hash, envelope.message_id, operation)
+    if (
+        not exact_identity
+        or any(not str(value).strip() for value in fields)
+        or len(source_hash) != 64
+        or len(artifact_hash) != 64
+        or int(decision_generation) <= 0
+        or int(expires_at) <= int(envelope.received_at)
+        or operation != "captain_product_approve"
+    ):
+        return None
+    token = secrets.token_urlsafe(48)
+    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    nonce = secrets.token_hex(24)
+    try:
+        with write_txn(conn):
+            conn.execute(
+                "INSERT INTO captain_approval_authorizations("
+                "token_hash, platform, operator_user_id, chat_id, message_id, source, "
+                "task_id, source_hash, artifact_hash, decision_generation, nonce, "
+                "operation, issued_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (token_hash, envelope.platform, envelope.operator_user_id,
+                 envelope.chat_id, envelope.message_id, envelope.source, task_id,
+                 source_hash, artifact_hash, int(decision_generation), nonce,
+                 operation, int(envelope.received_at), int(expires_at)),
+            )
+    except sqlite3.IntegrityError:
+        return None
+    return token
+
+
+def approve_task_by_captain(
+    conn: sqlite3.Connection,
+    task_id: str,
+    *,
+    authorization_token: str,
+    now: Optional[int] = None,
+) -> bool:
+    """Consume a trusted authorization and record explicit product approval.
+
+    This is intentionally not ``complete_task`` and never updates a review
+    binding's ``reviewed_at`` field or emits an independent-review receipt.
+    """
+    timestamp = int(time.time()) if now is None else int(now)
+    token_hash = hashlib.sha256(str(authorization_token).encode("utf-8")).hexdigest()
+    with write_txn(conn):
+        auth = conn.execute(
+            "SELECT * FROM captain_approval_authorizations WHERE token_hash = ?",
+            (token_hash,),
+        ).fetchone()
+        task = conn.execute("SELECT status FROM tasks WHERE id = ?", (task_id,)).fetchone()
+        binding = conn.execute(
+            "SELECT generation, source_manifest_hash, artifact_manifest_hash "
+            "FROM task_review_bindings WHERE task_id = ? ORDER BY generation DESC LIMIT 1",
+            (task_id,),
+        ).fetchone()
+        reason = None
+        if auth is None:
+            reason = "missing_captain_authorization"
+        elif auth["consumed_at"] is not None:
+            reason = "captain_authorization_replayed"
+        elif timestamp >= int(auth["expires_at"]):
+            reason = "captain_authorization_expired"
+        elif auth["operation"] != "captain_product_approve":
+            reason = "captain_operation_mismatch"
+        elif auth["task_id"] != task_id:
+            reason = "captain_task_mismatch"
+        elif task is None or task["status"] != "review":
+            reason = "captain_task_not_parked_for_review"
+        elif binding is None:
+            reason = "missing_review_binding"
+        elif int(auth["decision_generation"]) != int(binding["generation"]):
+            reason = "captain_generation_mismatch"
+        elif auth["source_hash"] != binding["source_manifest_hash"]:
+            reason = "captain_source_hash_mismatch"
+        elif auth["artifact_hash"] != binding["artifact_manifest_hash"]:
+            reason = "captain_artifact_hash_mismatch"
+        if reason:
+            _append_event(conn, task_id, "captain_approval_denied", {"reason": reason})
+            return False
+        consumed = conn.execute(
+            "UPDATE captain_approval_authorizations SET consumed_at = ? "
+            "WHERE id = ? AND consumed_at IS NULL AND expires_at > ?",
+            (timestamp, int(auth["id"]), timestamp),
+        )
+        if consumed.rowcount != 1:
+            _append_event(conn, task_id, "captain_approval_denied", {"reason": "captain_authorization_raced"})
+            return False
+        receipt = conn.execute(
+            "INSERT INTO captain_approval_receipts(authorization_id, task_id, source_hash, "
+            "artifact_hash, decision_generation, nonce, operation, platform, operator_user_id, "
+            "chat_id, message_id, source, issued_at, expires_at, approved_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (int(auth["id"]), task_id, auth["source_hash"], auth["artifact_hash"],
+             int(auth["decision_generation"]), auth["nonce"], auth["operation"], auth["platform"],
+             auth["operator_user_id"], auth["chat_id"], auth["message_id"],
+             auth["source"], int(auth["issued_at"]), int(auth["expires_at"]), timestamp),
+        )
+        conn.execute(
+            "UPDATE tasks SET status = 'done', completed_at = ?, current_run_id = NULL, "
+            "claim_lock = NULL, claim_expires = NULL WHERE id = ? AND status = 'review'",
+            (timestamp, task_id),
+        )
+        _append_event(
+            conn, task_id, "captain_product_approved",
+            {"receipt_id": int(receipt.lastrowid), "approval_class": "captain_product",
+             "source_hash": auth["source_hash"], "artifact_hash": auth["artifact_hash"],
+             "decision_generation": int(auth["decision_generation"]),
+             "decision_nonce": auth["nonce"], "expires_at": int(auth["expires_at"]),
+             "operation": auth["operation"], "platform": auth["platform"],
+             "operator_user_id": auth["operator_user_id"], "chat_id": auth["chat_id"],
+             "message_id": auth["message_id"], "source": auth["source"]},
+        )
+    recompute_ready(conn)
+    _clear_failure_counter(conn, task_id)
+    _fire_kanban_lifecycle_hook(
+        "kanban_task_completed", task_id, board=get_current_board(),
+        assignee=None, run_id=None, summary="Captain product approval",
+    )
+    return True
+
+
 def redact_review_value(value: Any) -> Any:
     """Redact secrets at the domain boundary for durable review handoffs."""
     if isinstance(value, str):
@@ -6579,6 +7520,8 @@ def request_review(
 
     summary = redact_review_value(summary)
     metadata = redact_review_value(metadata)
+    source_manifest, source_hash = _review_manifest_hash(_review_source_manifest(conn, task_id))
+    artifact_manifest, artifact_hash = _review_manifest_hash(_review_artifact_manifest(metadata))
     with write_txn(conn):
         if not _parents_satisfied(conn, task_id):
             return _ret(False, "parent dependencies are not satisfied")
@@ -6603,6 +7546,31 @@ def request_review(
                 "override) instead of clearing the live run's claim",
             )
         implementer = trow["assignee"]
+        implementation_run_id = trow["current_run_id"]
+        captain_product_gate = bool(
+            isinstance(metadata, dict)
+            and metadata.get("approval_class") == "captain_product"
+        )
+        approval_class = "captain_product" if captain_product_gate else "independent"
+        try:
+            source_identity = json.loads(source_manifest)
+        except (json.JSONDecodeError, TypeError):
+            source_identity = {}
+        if not source_identity.get("commit") or not source_identity.get("tree"):
+            approval_class = "unbound"
+        implementation_run = (
+            conn.execute(
+                "SELECT profile FROM task_runs WHERE id = ? AND task_id = ?",
+                (int(implementation_run_id), task_id),
+            ).fetchone()
+            if implementation_run_id is not None else None
+        )
+        if implementation_run is None or not implementation_run["profile"]:
+            implementation_run_id = 0
+            implementation_run = {"profile": str(implementer or "unknown-implementer")}
+            approval_class = "unbound"
+        implementation_run_id = int(implementation_run_id)
+        implementation_profile = _canonical_assignee(implementation_run["profile"])
         if reviewer is None:
             changes_run = conn.execute(
                 "SELECT id FROM task_runs "
@@ -6641,6 +7609,9 @@ def request_review(
                         "malformed); pass reviewer= explicitly",
                     )
                 reviewer = prior_reviewer
+        if reviewer is None:
+            reviewer = implementer
+            approval_class = "unbound"
         reviewer = _canonical_assignee(reviewer) if reviewer is not None else None
         assignee_sql = ", assignee = ?" if reviewer is not None else ""
         params: tuple[Any, ...]
@@ -6690,6 +7661,41 @@ def request_review(
                 summary=summary,
                 metadata=metadata,
             )
+        if run_id is None:
+            # A ready/no-summary operator request remains a valid parked review,
+            # but is explicitly unbound and therefore can never approve through
+            # complete_task. Synthesize provenance so the transition is coherent
+            # and never reaches int(None).
+            run_id = _synthesize_ended_run(
+                conn, task_id, outcome="review_requested",
+                summary="Review requested without implementation provenance.",
+                metadata={"approval_class": "unbound"},
+            )
+            approval_class = "unbound"
+        if implementation_run_id == 0:
+            implementation_run_id = int(run_id)
+        if run_id != int(implementation_run_id):
+            raise RuntimeError("review binding lost implementation run fencing")
+        previous = conn.execute(
+            "SELECT COALESCE(MAX(generation), 0) AS generation "
+            "FROM task_review_bindings WHERE task_id = ?",
+            (task_id,),
+        ).fetchone()
+        generation = int(previous["generation"]) + 1
+        nonce = secrets.token_hex(24)
+        conn.execute(
+            """
+            INSERT INTO task_review_bindings (
+                task_id, generation, nonce, implementation_run_id,
+                implementation_profile, source_manifest, source_manifest_hash,
+                artifact_manifest, artifact_manifest_hash, requested_at,
+                approval_class
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (task_id, generation, nonce, int(implementation_run_id),
+             implementation_profile, source_manifest, source_hash,
+             artifact_manifest, artifact_hash, int(time.time()), approval_class),
+        )
         lines = (summary or "").strip().splitlines()
         event_summary = lines[0][:400] if lines else ""
         _append_event(
@@ -6700,9 +7706,25 @@ def request_review(
                 "summary": event_summary or None,
                 "implementer": implementer,
                 "reviewer": reviewer,
+                "generation": generation,
+                "nonce": nonce,
+                "implementation_run_id": int(implementation_run_id),
+                "implementation_profile": implementation_profile,
+                "source_manifest_hash": source_hash,
+                "artifact_manifest_hash": artifact_hash,
             },
             run_id=run_id,
         )
+        if captain_product_gate:
+            _append_event(
+                conn, task_id, "captain_product_review_requested",
+                {
+                    "generation": generation,
+                    "source_manifest_hash": source_hash,
+                    "artifact_manifest_hash": artifact_hash,
+                },
+                run_id=run_id,
+            )
     return _ret(True)
 
 
@@ -6756,6 +7778,16 @@ def request_changes(
             claimed_payload = {}
         if claimed_payload.get("source_status") != "review":
             return False, "active run was not claimed from review"
+
+        binding = conn.execute(
+            "SELECT id FROM task_review_bindings WHERE task_id = ? "
+            "AND review_run_id = ? AND invalidated_at IS NULL AND reviewed_at IS NULL "
+            "ORDER BY generation DESC LIMIT 1",
+            (task_id, int(current_run_id)),
+        ).fetchone()
+        if binding is None:
+            _deny_review(conn, task_id, "missing_active_review_binding", run_id=int(current_run_id))
+            return False, "no active artifact-bound review generation"
 
         requested_event = conn.execute(
             "SELECT payload FROM task_events "
@@ -6811,6 +7843,11 @@ def request_changes(
             outcome="changes_requested",
             status=new_status,
             summary=reason,
+        )
+        conn.execute(
+            "UPDATE task_review_bindings SET invalidated_at = ?, invalidation_reason = ? "
+            "WHERE id = ? AND invalidated_at IS NULL AND reviewed_at IS NULL",
+            (int(time.time()), "changes_requested", int(binding["id"])),
         )
         _append_event(
             conn,
@@ -7066,6 +8103,11 @@ def reopen_review_task(conn: sqlite3.Connection, task_id: str) -> bool:
         )
         if cur.rowcount != 1:
             return False
+        conn.execute(
+            "UPDATE task_review_bindings SET invalidated_at = ?, invalidation_reason = ? "
+            "WHERE task_id = ? AND invalidated_at IS NULL AND reviewed_at IS NULL",
+            (now, "review_reopened", task_id),
+        )
         if new_status == "ready":
             _begin_dispatch_wait_episode(conn, task_id, now=now)
         payload: dict[str, Any] = {"status": new_status}
