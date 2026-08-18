@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 HARNESS = Path(__file__).resolve().parent
 START = HARNESS / "start.py"
 LIVE = HARNESS / "live.json"
+PRODUCT = "e78904f1ffb2af707d896c0de9fcb298c4d747fb"
 
 
 def _port_closed(port: int) -> bool:
@@ -31,7 +32,9 @@ def test_clean_exact_export_starts_twice_without_leaks(tmp_path: Path, attempt: 
     assert completed.returncode == 0, completed.stdout + completed.stderr
     live = json.loads(LIVE.read_text(encoding="utf-8"))
     assert live["home"] == str(home)
-    assert live["commit"]
+    assert live["commit"] == PRODUCT
+    assert live["source_identity"]["product_commit"] == PRODUCT
+    assert live["source_identity"]["assets"] == live["assets"]
     assert _port_closed(live["port"])
     assert not home.exists()
 
@@ -57,3 +60,15 @@ def test_start_failure_preserves_atomic_evidence_and_removes_stale_live(tmp_path
     assert failure["port_checks"]
     assert not failure["port_checks"][0]["connectable"]
     assert set(failure["asset_expectations"])
+
+
+def test_old_product_pin_is_rejected_before_evidence_home_creation(tmp_path: Path) -> None:
+    home = tmp_path / "old-pin"
+    completed = subprocess.run(
+        [sys.executable, str(START), "--home", str(home),
+         "--product-commit", "27a452edfa475de1b7ec72f09ac481bbb0190164"],
+        cwd=ROOT, capture_output=True, text=True, timeout=30,
+    )
+    assert completed.returncode != 0
+    assert PRODUCT in completed.stderr
+    assert not home.exists()

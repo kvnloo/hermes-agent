@@ -22,8 +22,18 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 HARNESS = Path(__file__).resolve().parent
-EXACT_COMMIT = "27a452edfa475de1b7ec72f09ac481bbb0190164"
+EXACT_COMMIT = "e78904f1ffb2af707d896c0de9fcb298c4d747fb"
 ASSETS = ("plugins/kanban/dashboard/dist/index.js", "plugins/kanban/dashboard/dist/style.css")
+EXPECTED_ASSETS = {
+    "plugins/kanban/dashboard/dist/index.js": "e08b3c2730034d754fa7c0eac472921596af0281bcf1949f83e3e10a32d1a43d",
+    "plugins/kanban/dashboard/dist/style.css": "afe45c5cf8e92fbadb0b13f7fc45ba0953ef50e80ffdd29da8ddcd8b2c382cdd",
+}
+SOURCE_IDENTITY = {
+    "product_commit": EXACT_COMMIT,
+    "integration_parent": "dc6d9cf9ca19449e76e8152fad654451fc836948",
+    "approved_base": "dcb6804e9411c9559e9f53a3958876882ec247da",
+    "assets": EXPECTED_ASSETS,
+}
 
 
 class GracefulStop(Exception):
@@ -41,8 +51,12 @@ def atomic_json(path: Path, value: dict[str, Any]) -> None:
     os.replace(temporary, path)
 
 
-def git_blob(commit: str, path: str) -> bytes:
-    return subprocess.check_output(["git", "show", f"{commit}:{path}"], cwd=ROOT)
+def exact_asset(path: str) -> bytes:
+    payload = (ROOT / path).read_bytes()
+    actual = hashlib.sha256(payload).hexdigest()
+    if actual != EXPECTED_ASSETS[path]:
+        raise RuntimeError(f"archived asset does not match {EXACT_COMMIT}: {path} ({actual})")
+    return payload
 
 
 def prepare_source(source: Path) -> None:
@@ -79,7 +93,7 @@ def prepare_source(source: Path) -> None:
     dist = kanban / "dashboard" / "dist"
     dist.mkdir(parents=True)
     for rel in ASSETS:
-        (dist / Path(rel).name).write_bytes(git_blob(EXACT_COMMIT, rel))
+        (dist / Path(rel).name).write_bytes(exact_asset(rel))
 
     # Dashboard discovery intentionally prefers HERMES_HOME plugins. Seed that
     # supported user-plugin surface so bundled assets from the invoking
@@ -92,7 +106,7 @@ def prepare_source(source: Path) -> None:
     user_dist = user_dashboard / "dist"
     user_dist.mkdir()
     for rel in ASSETS:
-        (user_dist / Path(rel).name).write_bytes(git_blob(EXACT_COMMIT, rel))
+        (user_dist / Path(rel).name).write_bytes(exact_asset(rel))
 
 
 def port_state(port: int) -> dict[str, Any]:
@@ -156,9 +170,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--progress-seconds", type=float, default=5.0, help="startup heartbeat cadence")
     parser.add_argument("--exit-after-ready", action="store_true", help="stop immediately after publishing live.json")
     parser.add_argument("--backend-command", help=argparse.SUPPRESS)  # deterministic failure injection for tests
+    parser.add_argument("--product-commit", default=EXACT_COMMIT, help=argparse.SUPPRESS)  # mutation oracle
     args = parser.parse_args(argv)
     if args.readiness_timeout <= 0 or args.progress_seconds <= 0:
         parser.error("timeouts must be positive")
+    if args.product_commit != EXACT_COMMIT:
+        parser.error(f"product commit must be exact pin {EXACT_COMMIT}")
 
     live_path = HARNESS / "live.json"
     live_path.unlink(missing_ok=True)  # a prior run can never masquerade as this run
@@ -192,7 +209,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         prepare_source(source)
-        expected_assets = {rel: hashlib.sha256(git_blob(EXACT_COMMIT, rel)).hexdigest() for rel in ASSETS}
+        expected_assets = dict(EXPECTED_ASSETS)
 
         phase = "runtime-check"
         check = subprocess.run(
@@ -268,6 +285,7 @@ def main(argv: list[str] | None = None) -> int:
             "url": url, "port": port, "pid": proc.pid, "home": str(home), "db": env["HERMES_KANBAN_DB"],
             "stdout": str(stdout_path), "stderr": str(stderr_path), "commit": EXACT_COMMIT,
             "assets": expected_assets, "canonical_sentinel_before": sentinel_before,
+            "source_identity": SOURCE_IDENTITY,
             "start_command": "python tests/kanban_hold_harness/start.py", "readiness_timeout": args.readiness_timeout,
         }
         atomic_json(live_path, metadata)

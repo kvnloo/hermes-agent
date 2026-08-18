@@ -8,6 +8,8 @@ const here = __dirname;
 const live = JSON.parse(fs.readFileSync(path.join(here, 'live.json'), 'utf8'));
 const widths = [320, 360, 390, 430, 1280];
 const results = [];
+assert.equal(live.commit, 'e78904f1ffb2af707d896c0de9fcb298c4d747fb');
+assert.deepEqual(live.source_identity.assets, live.assets);
 
 async function point(page, selector) {
   const box = await page.locator(selector).first().boundingBox();
