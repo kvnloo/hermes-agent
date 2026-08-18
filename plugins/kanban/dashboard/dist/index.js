@@ -476,8 +476,13 @@
           gesture.proxy.classList.add("hermes-kanban-touch-proxy");
           gesture.proxy.setAttribute("aria-hidden", "true");
           document.body.appendChild(gesture.proxy);
-          if (el.setPointerCapture) el.setPointerCapture(e.pointerId);
           setState("armed");
+          // Chromium's CDP pen path can reject capture even while the primary
+          // pointer remains down.  Document-level move/up listeners still own
+          // the gesture, so capture is an enhancement rather than an arm gate.
+          if (el.setPointerCapture) {
+            try { el.setPointerCapture(e.pointerId); } catch (_captureError) { /* continue armed */ }
+          }
           vibrate(18);
           if (cb.onArm) cb.onArm(taskId);
         }, POINTER_HOLD_MS),
