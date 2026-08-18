@@ -2435,10 +2435,41 @@
   // -------------------------------------------------------------------------
 
   function BoardColumns(props) {
+    const { t } = useI18n();
     const columnsRef = useRef(null);
     const panRef = useRef({ isPanning: false, startX: 0, scrollLeft: 0 });
     const [isPanning, setIsPanning] = useState(false);
     const [isScrollable, setIsScrollable] = useState(false);
+    const [activeColumn, setActiveColumn] = useState(0);
+
+    const revealColumn = useCallback(function (index, focusTab) {
+      const el = columnsRef.current;
+      if (!el || !props.board.columns.length) return;
+      const bounded = Math.max(0, Math.min(index, props.board.columns.length - 1));
+      const column = el.querySelectorAll(".hermes-kanban-column")[bounded];
+      if (!column) return;
+      const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const left = bounded === props.board.columns.length - 1
+        ? el.scrollWidth - el.clientWidth
+        : column.offsetLeft - el.offsetLeft - 16;
+      el.scrollTo({ left, behavior: reduceMotion ? "auto" : "smooth" });
+      setActiveColumn(bounded);
+      if (focusTab) {
+        const tab = document.querySelector(`[data-kanban-column-tab="${bounded}"]`);
+        if (tab) tab.focus();
+      }
+    }, [props.board.columns.length]);
+
+    const handleTabKeyDown = useCallback(function (e, index) {
+      let next = index;
+      if (e.key === "ArrowRight") next = Math.min(index + 1, props.board.columns.length - 1);
+      else if (e.key === "ArrowLeft") next = Math.max(index - 1, 0);
+      else if (e.key === "Home") next = 0;
+      else if (e.key === "End") next = props.board.columns.length - 1;
+      else return;
+      e.preventDefault();
+      revealColumn(next, true);
+    }, [props.board.columns.length, revealColumn]);
 
     const checkScrollable = useCallback(function () {
       const el = columnsRef.current;
@@ -2457,6 +2488,25 @@
       window.addEventListener("resize", checkScrollable);
       return function () { window.removeEventListener("resize", checkScrollable); };
     }, [checkScrollable, props.board]);
+
+    useEffect(function () {
+      const el = columnsRef.current;
+      if (!el) return undefined;
+      function onScroll() {
+        const columns = Array.from(el.querySelectorAll(".hermes-kanban-column"));
+        if (!columns.length) return;
+        const target = el.scrollLeft + 16;
+        let closest = 0;
+        let distance = Infinity;
+        columns.forEach(function (column, index) {
+          const nextDistance = Math.abs(column.offsetLeft - el.offsetLeft - target);
+          if (nextDistance < distance) { closest = index; distance = nextDistance; }
+        });
+        setActiveColumn(closest);
+      }
+      el.addEventListener("scroll", onScroll, { passive: true });
+      return function () { el.removeEventListener("scroll", onScroll); };
+    }, [props.board.columns.length]);
 
     const isPanBlockedTarget = useCallback(function (target) {
       if (!target) return true;
@@ -2531,41 +2581,59 @@
     const handleDragEnd = useCallback(function () {
       if (props.onDragEnd) props.onDragEnd();
     }, [props.onDragEnd]);
-    return h("div", {
-      ref: columnsRef,
-      className: cn(
-        "hermes-kanban-columns",
-        isScrollable ? "hermes-kanban-columns--scrollable" : "",
-        isPanning ? "hermes-kanban-columns--panning" : "",
+    return h("div", { className: "hermes-kanban-board-scroll" },
+      h("div", { className: "hermes-kanban-column-tabs", role: "tablist", "aria-label": "Kanban columns" },
+        props.board.columns.map(function (col, index) {
+          return h("button", {
+            key: col.name,
+            type: "button",
+            role: "tab",
+            "aria-selected": activeColumn === index,
+            tabIndex: activeColumn === index ? 0 : -1,
+            "data-kanban-column-tab": String(index),
+            className: cn("hermes-kanban-column-tab", activeColumn === index ? "hermes-kanban-column-tab--active" : ""),
+            onClick: function () { revealColumn(index, false); },
+            onKeyDown: function (e) { handleTabKeyDown(e, index); },
+          }, getColumnLabel(t, col.name));
+        }),
       ),
-      onDragStart: handleDragStart,
-      onDragEnd: handleDragEnd,
-      onMouseDown: handleMouseDown,
-    },
-      props.board.columns.map(function (col) {
-        return h(Column, {
-          key: col.name,
-          column: col,
-          boardMeta: props.boardMeta,
-          laneByProfile: props.laneByProfile,
-          selectedIds: props.selectedIds,
-          failedIds: props.failedIds,
+      h("div", {
+        ref: columnsRef,
+        className: cn(
+          "hermes-kanban-columns",
+          isScrollable ? "hermes-kanban-columns--scrollable" : "",
+          isPanning ? "hermes-kanban-columns--panning" : "",
+        ),
+        onDragStart: handleDragStart,
+        onDragEnd: handleDragEnd,
+        onMouseDown: handleMouseDown,
+      },
+        props.board.columns.map(function (col, index) {
+          return h(Column, {
+            key: col.name,
+            column: col,
+            isLast: index === props.board.columns.length - 1,
+            boardMeta: props.boardMeta,
+            laneByProfile: props.laneByProfile,
+            selectedIds: props.selectedIds,
+            failedIds: props.failedIds,
+            draggingTaskId: props.draggingTaskId,
+            toggleSelected: props.toggleSelected,
+            toggleRange: props.toggleRange,
+            selectAllInColumn: props.selectAllInColumn,
+            onMove: props.onMove,
+            onMoveSelected: props.onMoveSelected,
+            onOpen: props.onOpen,
+            onCreate: props.onCreate,
+            allTasks: props.allTasks,
+          });
+        }),
+        h(TrashDropZone, {
           draggingTaskId: props.draggingTaskId,
-          toggleSelected: props.toggleSelected,
-          toggleRange: props.toggleRange,
-          selectAllInColumn: props.selectAllInColumn,
-          onMove: props.onMove,
-          onMoveSelected: props.onMoveSelected,
-          onOpen: props.onOpen,
-          onCreate: props.onCreate,
-          allTasks: props.allTasks,
-        });
-      }),
-      h(TrashDropZone, {
-        draggingTaskId: props.draggingTaskId,
-        selectedIds: props.selectedIds,
-        onDelete: props.onDelete,
-      }),
+          selectedIds: props.selectedIds,
+          onDelete: props.onDelete,
+        }),
+      ),
     );
   }
 
@@ -2631,6 +2699,7 @@
       "data-kanban-column": props.column.name,
       className: cn(
         "hermes-kanban-column",
+        props.isLast ? "hermes-kanban-column--last" : "",
         dragOver ? "hermes-kanban-column--drop" : "",
       ),
       onDragOver: handleDragOver,
