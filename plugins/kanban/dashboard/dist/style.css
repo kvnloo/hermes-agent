@@ -899,12 +899,51 @@
 
 /* ---- Touch-drag proxy ---------------------------------------------- */
 
+.hermes-kanban-card {
+  touch-action: pan-x pan-y;
+  transition: transform 140ms ease, filter 140ms ease;
+}
+.hermes-kanban-card--pressed :where(.hermes-kanban-card-content) {
+  transform: translateY(1px);
+  box-shadow: 0 0 0 1px var(--color-ring) inset;
+}
+.hermes-kanban-card--armed,
+.hermes-kanban-card--dragging {
+  cursor: grabbing;
+  touch-action: none;
+  transform: translateY(-2px) scale(1.01);
+}
+.hermes-kanban-card--armed :where(.hermes-kanban-card-content),
+.hermes-kanban-card--dragging :where(.hermes-kanban-card-content) {
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--color-ring) 55%, transparent);
+}
+.hermes-kanban-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .hermes-kanban-touch-proxy {
+  position: fixed;
+  z-index: 9999;
   pointer-events: none;
   opacity: 0.85;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
   transform: scale(1.02);
   transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hermes-kanban-card,
+  .hermes-kanban-card :where(.hermes-kanban-card-content) {
+    transition: none !important;
+  }
 }
 
 /* ---- Multi-drag ghost ----------------------------------------------- */
