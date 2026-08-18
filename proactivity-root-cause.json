@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 2,
+  "taskId": "t_3755aaac",
+  "correctsTaskId": "t_5a0020a4",
+  "auditDate": "2026-08-18",
+  "productionMutation": false,
+  "verdict": {
+    "primaryLiveCause": "missing_durable_proactive_wake_or_replenishment_trigger",
+    "primaryLiveCauseConfidence": "medium_high",
+    "freezeRole": "active_governing_constraint_and_proven_conditional_suppressor",
+    "freezeHistoricalCausality": "unproven_low_confidence",
+    "splitBrain": true,
+    "summary": "NARROWED_LEVEL_0 suppresses the matched actionable create only when explicitly presented to Firstmate. Deployment does not automatically present or enforce it, and Firstmate-associated follow-up writes continued after narrowing. The leading live cause is no durable proactive wake/replenishment trigger, amplified by per-turn model/tool choice and downstream stalls."
+  },
+  "confidence": [
+    {"claim":"receipt_is_active_governance","level":"high"},
+    {"claim":"presented_narrowed_receipt_suppresses_matched_actionable_create","level":"high"},
+    {"claim":"deployed_kanban_does_not_enforce_receipt","level":"high"},
+    {"claim":"focused_allowlist_permits_matched_authorized_create","level":"high"},
+    {"claim":"missing_proactive_trigger_is_leading_live_cause","level":"medium_high"},
+    {"claim":"freeze_caused_historical_intake_gap","level":"low_unproven"}
+  ],
+  "matchedReplay": {
+    "artifact": "evidence/firstmate-causality/replay-results.json",
+    "realPath": ["AIAgent", "gpt-5.6-sol/openai-codex", "actual chief-of-staff AGENTS.md", "real kanban_create handler", "isolated SQLite board"],
+    "none": {"informationalCreates":0,"actionableCreates":1},
+    "narrowedPresented": {"informationalCreates":0,"actionableCreates":0},
+    "focusedPresented": {"informationalCreates":0,"actionableCreates":1},
+    "isolatedTaskCount": 2,
+    "claims": 0,
+    "spawns": 0,
+    "limitation": "CLI transport and explicit policy presentation; proves conditional policy effect, not historical Telegram causality."
+  },
+  "historicalEvidence": {
+    "freezeCommit": "334f87052d45809ae580f922a870dfc8e32fcf47",
+    "narrowedAt": "2026-08-16T01:26:27-05:00",
+    "automaticPromptReceiptLoad": false,
+    "postNarrowingComplianceKickReceipts": 29,
+    "firstReceiptUtc": "2026-08-16T06:31:34Z",
+    "lastReceiptUtc": "2026-08-16T20:57:00Z",
+    "explicitGlobalStopReasoningFound": false,
+    "taskLocalComplianceSessions": ["t_0cc2094e", "t_65596f9f"]
+  },
+  "rankedFactors": [
+    {"rank":1,"code":"NO_DURABLE_PROACTIVE_TRIGGER","classification":"missing_capability_or_operational_gap","contribution":"high","confidence":"medium_high"},
+    {"rank":2,"code":"POLICY_PRESENTATION","classification":"conditional_governance_suppressor","contribution":"high_when_presented_unknown_live","confidence":"high_conditional_low_historical"},
+    {"rank":3,"code":"PER_TURN_MODEL_BEHAVIOR","classification":"nondeterministic_intake","contribution":"material","confidence":"medium"},
+    {"rank":4,"code":"ROUTING_TOOL_SPLIT","classification":"execution_surface_amplifier","contribution":"medium","confidence":"high_split_exists"},
+    {"rank":5,"code":"TASK_LOCAL_STALLS","classification":"downstream_throughput","contribution":"high_after_creation_low_for_intake","confidence":"high"}
+  ],
+  "separateDecisions": {
+    "governance": "Captain-authenticated focused replacement receipt for scoped local/reversible work with sensitive/external gates retained.",
+    "enforcement": "After policy replacement, one canonical resolver/gate at create/promote/claim/spawn with durable denial receipts.",
+    "proactivity": "Separate bounded event/heartbeat to wake Firstmate for scoped reconciliation and replenishment."
+  },
+  "doNot": [
+    "do_not_mutate_live_freeze_in_this_correction",
+    "do_not_enforce_stale_narrowed_receipt_before_governance_decision",
+    "do_not_conflate_chat_attention_with_execution",
+    "do_not_treat_dispatcher_ticks_as_firstmate_wakes"
+  ]
+}
