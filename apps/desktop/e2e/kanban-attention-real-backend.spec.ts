@@ -19,7 +19,6 @@ import { expect, test } from './test'
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '..', '..', '..')
 const DESKTOP_ROOT = path.resolve(import.meta.dirname, '..')
-const SOURCE_FIX = 'd57a8374993ece30a0471839b037176392dbd191'
 const WIDTHS = [1220, 320, 360, 390, 430]
 const TASK_TITLE = 'E2E attention receipt sentinel'
 const SETTLE_TITLE = 'E2E settle and wake sentinel'
@@ -125,6 +124,7 @@ test('actual Electron and isolated backend preserve attention controls and recei
   const sandbox = createSandbox('kanban-attention-real')
   const mock = await startMockServer()
   const taskIds = seed(sandbox)
+  const logicalBefore = Object.fromEntries(Object.entries(taskIds).map(([name, id]) => [name, dbState(sandbox, id)]))
   const evidenceDir = testInfo.outputPath('evidence')
   fs.mkdirSync(evidenceDir, { recursive: true })
   writeMockProviderConfig(sandbox.hermesHome, mock.url)
@@ -138,6 +138,11 @@ test('actual Electron and isolated backend preserve attention controls and recei
 
   const launchedAt = Date.now()
   const fixture = await launchDesktop(env)
+  const stdout: Buffer[] = []
+  const stderr: Buffer[] = []
+  fixture.app.process().stdout?.on('data', chunk => stdout.push(Buffer.from(chunk)))
+  fixture.app.process().stderr?.on('data', chunk => stderr.push(Buffer.from(chunk)))
+  let runtimeEvidence: Record<string, unknown> | undefined
 
   try {
     await waitForAppReady({ ...fixture, sandbox, cleanup: async () => undefined })
@@ -246,42 +251,70 @@ test('actual Electron and isolated backend preserve attention controls and recei
     const electronVersion = await fixture.app.evaluate(() => process.versions.electron)
     const backendLog = path.join(sandbox.hermesHome, 'logs', 'desktop.log')
 
-    const manifest = {
-      schema: 1,
-      sourceFix: SOURCE_FIX,
-      sourceFixTree: execFileSync('git', ['show', '-s', '--format=%T', SOURCE_FIX], { cwd: REPO_ROOT, encoding: 'utf8' }).trim(),
-      testedHead: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: REPO_ROOT, encoding: 'utf8' }).trim(),
-      testedSourceTree: execFileSync('git', ['show', '-s', '--format=%T', 'HEAD'], { cwd: REPO_ROOT, encoding: 'utf8' }).trim(),
-      buildStampSha256: hashIfFile(path.join(DESKTOP_ROOT, 'build', 'install-stamp.json')),
-      rendererSha256: sha256(path.join(DESKTOP_ROOT, 'dist', 'index.html')),
-      electronMainSha256: sha256(path.join(DESKTOP_ROOT, 'dist', 'electron-main.mjs')),
+    const logicalAfter = Object.fromEntries(Object.entries(taskIds).map(([name, id]) => [name, dbState(sandbox, id)]))
+    runtimeEvidence = {
+      sourceCommit: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: REPO_ROOT, encoding: 'utf8' }).trim(),
+      sourceTree: execFileSync('git', ['show', '-s', '--format=%T', 'HEAD'], { cwd: REPO_ROOT, encoding: 'utf8' }).trim(),
+      startedAt: new Date(launchedAt).toISOString(),
       electronVersion,
+      electronNodeVersion: await fixture.app.evaluate(() => process.versions.node),
       electronPid,
-      launchedAt,
-      isolatedHermesHome: true,
-      isolatedKanbanDb: true,
-      isolatedKanbanDbSha256: sha256(path.join(sandbox.root, 'kanban.db')),
-      isolatedDbIdentity: { board: 'default', filename: 'kanban.db' },
-      isolatedDbSentinel: [FAILURE_TITLE, SETTLE_TITLE, TASK_TITLE].sort(),
-      taskIds: '<redacted-e2e-tasks>',
-      widths: WIDTHS,
-      finalReceipts: { failure: dbState(sandbox, taskIds.failure).receipt, snooze: snoozeState.receipt, settle: settleState.receipt },
-      attentionEvents: ['snooze:attention_snooze', 'settle:attention_settle', 'settle:attention_wake'],
-      failedActionAttentionEvents: 0,
       backendLogPresent: fs.existsSync(backendLog),
+      logicalBefore,
+      logicalAfter,
+      productionBefore,
       productionSentinelUnchanged: {
         db: productionDbSentinel(productionDb) === productionBefore.dbSentinel,
         config: hashIfFile(productionConfig) === productionBefore.config,
       },
-      screenshots: fs.readdirSync(evidenceDir).sort().map(filename => ({ filename, sha256: sha256(path.join(evidenceDir, filename)) })),
+      interactionVerdict: {
+        widths: WIDTHS,
+        finalReceipts: { failure: logicalAfter.failure.receipt, snooze: snoozeState.receipt, settle: settleState.receipt },
+        failedActionAttentionEvents: logicalAfter.failure.events.filter(event => event.kind.startsWith('attention_')).length,
+        staleFailureAnnouncement: staleMessage,
+      },
     }
 
-    expect(manifest.electronVersion).toBe('40.10.2')
-    expect(manifest.productionSentinelUnchanged).toEqual({ db: true, config: true })
-    fs.writeFileSync(path.join(evidenceDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`)
+    expect(runtimeEvidence.electronVersion).toBe('40.10.2')
+    expect(runtimeEvidence.productionSentinelUnchanged).toEqual({ db: true, config: true })
   } finally {
     await fixture.app.close().catch(() => undefined)
     await mock.close()
+
+    const packet = process.env.KANBAN_ATTENTION_EVIDENCE_PACKET
+    if (packet && runtimeEvidence) {
+      fs.rmSync(packet, { recursive: true, force: true })
+      for (const directory of ['build', 'database', 'logs', 'screenshots']) fs.mkdirSync(path.join(packet, directory), { recursive: true })
+      for (const filename of fs.readdirSync(evidenceDir).filter(name => name.endsWith('.png'))) fs.copyFileSync(path.join(evidenceDir, filename), path.join(packet, 'screenshots', filename))
+      fs.copyFileSync(path.join(DESKTOP_ROOT, 'build', 'install-stamp.json'), path.join(packet, 'build', 'install-stamp.json'))
+      fs.copyFileSync(path.join(DESKTOP_ROOT, 'dist', 'index.html'), path.join(packet, 'build', 'index.html'))
+      fs.copyFileSync(path.join(DESKTOP_ROOT, 'dist', 'electron-main.mjs'), path.join(packet, 'build', 'electron-main.mjs'))
+      const database = path.join(sandbox.root, 'kanban.db')
+      execFileSync('sqlite3', [database, 'PRAGMA wal_checkpoint(TRUNCATE);'])
+      fs.copyFileSync(database, path.join(packet, 'database', 'kanban.db'))
+      fs.writeFileSync(path.join(packet, 'database', 'schema.sql'), execFileSync('sqlite3', [database, '.schema'], { encoding: 'utf8' }))
+      fs.writeFileSync(path.join(packet, 'database', 'logical-before.json'), `${JSON.stringify(runtimeEvidence.logicalBefore, null, 2)}\n`)
+      fs.writeFileSync(path.join(packet, 'database', 'logical-after.json'), `${JSON.stringify(runtimeEvidence.logicalAfter, null, 2)}\n`)
+      const backendLog = path.join(sandbox.hermesHome, 'logs', 'desktop.log')
+      fs.copyFileSync(backendLog, path.join(packet, 'logs', 'backend.log'))
+      fs.writeFileSync(path.join(packet, 'logs', 'electron.stdout.log'), Buffer.concat(stdout))
+      fs.writeFileSync(path.join(packet, 'logs', 'electron.stderr.log'), Buffer.concat(stderr))
+      const endedAt = new Date().toISOString()
+      const processRecord = { pid: runtimeEvidence.electronPid, startedAt: runtimeEvidence.startedAt, endedAt, exitCode: fixture.app.process().exitCode }
+      const launch = { command: 'electron', args: [DESKTOP_ROOT, '--disable-gpu', '--no-sandbox', ...(env.WAYLAND_DISPLAY && !env.DISPLAY ? ['--ozone-platform=wayland'] : []), ...(env.HERMES_DESKTOP_E2E_HEADLESS === '1' ? ['--headless'] : [])], cwd: DESKTOP_ROOT, environment: Object.fromEntries(['DISPLAY', 'WAYLAND_DISPLAY', 'XDG_RUNTIME_DIR', 'HERMES_HOME', 'HERMES_KANBAN_DB', 'HERMES_KANBAN_BOARD', 'HERMES_DESKTOP_E2E_HEADLESS'].filter(key => env[key]).map(key => [key, key === 'HERMES_HOME' || key === 'HERMES_KANBAN_DB' ? `<isolated>/${path.basename(env[key])}` : env[key]])) }
+      fs.writeFileSync(path.join(packet, 'launch.json'), `${JSON.stringify(launch, null, 2)}\n`)
+      fs.writeFileSync(path.join(packet, 'process.json'), `${JSON.stringify(processRecord, null, 2)}\n`)
+      fs.writeFileSync(path.join(packet, 'production-sentinel-before.json'), `${JSON.stringify(runtimeEvidence.productionBefore, null, 2)}\n`)
+      const productionAfter = { dbSentinel: productionDbSentinel(productionDb), config: hashIfFile(productionConfig) }
+      fs.writeFileSync(path.join(packet, 'production-sentinel-after.json'), `${JSON.stringify(productionAfter, null, 2)}\n`)
+      fs.writeFileSync(path.join(packet, 'interaction-trace.json'), `${JSON.stringify(runtimeEvidence.interactionVerdict, null, 2)}\n`)
+      const privacyRows = execFileSync('sqlite3', ['-json', database, 'SELECT title,body,created_by FROM tasks ORDER BY title;'], { encoding: 'utf8' })
+      const privacyAudit = { syntheticOnly: !/(?:@|\/home\/|\/Users\/)/.test(privacyRows), rows: JSON.parse(privacyRows) }
+      const completeRuntime = { ...runtimeEvidence, endedAt, exitCode: fixture.app.process().exitCode, repoRoot: REPO_ROOT, sqliteVersion: execFileSync('sqlite3', ['--version'], { encoding: 'utf8' }).trim(), schemaVersion: Number(execFileSync('sqlite3', [database, 'PRAGMA user_version;'], { encoding: 'utf8' }).trim()), privacyAudit }
+      if (!privacyAudit.syntheticOnly) throw new Error('isolated database privacy audit failed')
+      fs.writeFileSync(path.join(packet, 'runtime.json'), `${JSON.stringify(completeRuntime, null, 2)}\n`)
+      execFileSync(process.execPath, [path.join(DESKTOP_ROOT, 'scripts', 'seal-kanban-attention-evidence.mjs'), packet], { cwd: REPO_ROOT, stdio: 'inherit' })
+    }
 
     if (process.env.KEEP_KANBAN_ATTENTION_E2E !== '1') {sandbox.cleanup()}
   }
