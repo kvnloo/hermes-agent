@@ -1,0 +1,210 @@
+{
+  "schema": 2,
+  "generatedBy": "apps/desktop/scripts/seal-kanban-attention-evidence.mjs",
+  "source": {
+    "commit": "89f23089689fd2dc2eef9a4426da3bc95364216f",
+    "tree": "13435778abdb13d862b863a73653df87eeb76b4a"
+  },
+  "build": {
+    "installStampSha256": "267ad01045cc592d90d63db3f5331c1ac018d57b1b6b59ea7782083b4de3d863",
+    "rendererSha256": "de05cba4df188e3916f7bf38832aa49c4b331b2cadd64b37daadfbd04bc8e703",
+    "electronMainSha256": "d1c562b119e638a6f09253984e0e1708aea0916e311b4ec86da075144d9c0526"
+  },
+  "runtime": {
+    "startedAt": "2026-08-18T19:09:42.774Z",
+    "endedAt": "2026-08-18T19:09:57.962Z",
+    "electronVersion": "40.10.2",
+    "electronNodeVersion": "24.15.0",
+    "harnessNodeVersion": "v26.4.0",
+    "electronPid": 1468090,
+    "exitCode": 0
+  },
+  "database": {
+    "sha256": "21f9fe175f87d0db752d641824837cbfb49c2b6935041e4d84253c36cf3683df",
+    "sqliteVersion": "3.53.4 2026-07-24 19:02:57 bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e0945alt1 (64-bit)",
+    "schemaVersion": 0,
+    "privacyAudit": {
+      "syntheticOnly": true,
+      "rows": [
+        {
+          "title": "E2E attention receipt sentinel",
+          "body": "isolated actual Electron E2E",
+          "created_by": "e2e"
+        },
+        {
+          "title": "E2E settle and wake sentinel",
+          "body": "isolated actual Electron E2E",
+          "created_by": "e2e"
+        },
+        {
+          "title": "E2E stale receipt sentinel",
+          "body": "isolated actual Electron E2E",
+          "created_by": "e2e"
+        }
+      ]
+    }
+  },
+  "productionSentinelUnchanged": {
+    "db": true,
+    "config": true
+  },
+  "interactionVerdict": {
+    "widths": [
+      1220,
+      320,
+      360,
+      390,
+      430
+    ],
+    "finalReceipts": {
+      "failure": {
+        "state": "active",
+        "revision": 2
+      },
+      "snooze": {
+        "state": "snoozed",
+        "revision": 1
+      },
+      "settle": {
+        "state": "active",
+        "revision": 2
+      }
+    },
+    "failedActionAttentionEvents": 0,
+    "staleFailureAnnouncement": "This task changed elsewhere. Your action was not applied."
+  },
+  "screenshots": [
+    {
+      "path": "screenshots/electron-1220.png",
+      "bytes": 73830,
+      "sha256": "88b933324e424484263454cf793c6f3f872e254d9d91f66d87d31bf4fe0f9336"
+    },
+    {
+      "path": "screenshots/electron-320.png",
+      "bytes": 45867,
+      "sha256": "c73fe9fd8b355155a34a2c4c7d4df9eeac3846daa57f868371b046621863db4f"
+    },
+    {
+      "path": "screenshots/electron-360.png",
+      "bytes": 45859,
+      "sha256": "458035ff90309b5fe532b7fa5ced47a6f18eb5503ecad30e3b1290e95d786096"
+    },
+    {
+      "path": "screenshots/electron-390.png",
+      "bytes": 46437,
+      "sha256": "4acf15487c22495bd7115436cb838634a24eff22ee3568b18ffca2402c19c97b"
+    },
+    {
+      "path": "screenshots/electron-430.png",
+      "bytes": 50725,
+      "sha256": "60933cfbf7f9432d589172117236dd1f6eb4566e1faa98ac6ee595a326f6a9bb"
+    }
+  ],
+  "payloads": [
+    {
+      "path": "build/electron-main.mjs",
+      "bytes": 730690,
+      "sha256": "d1c562b119e638a6f09253984e0e1708aea0916e311b4ec86da075144d9c0526"
+    },
+    {
+      "path": "build/index.html",
+      "bytes": 10463,
+      "sha256": "de05cba4df188e3916f7bf38832aa49c4b331b2cadd64b37daadfbd04bc8e703"
+    },
+    {
+      "path": "build/install-stamp.json",
+      "bytes": 190,
+      "sha256": "267ad01045cc592d90d63db3f5331c1ac018d57b1b6b59ea7782083b4de3d863"
+    },
+    {
+      "path": "database/kanban.db",
+      "bytes": 143360,
+      "sha256": "21f9fe175f87d0db752d641824837cbfb49c2b6935041e4d84253c36cf3683df"
+    },
+    {
+      "path": "database/logical-after.json",
+      "bytes": 2732,
+      "sha256": "9bab46f0e4340ba3afc1228b764f60e67f9a659dca895b10a30f3bf295aed082"
+    },
+    {
+      "path": "database/logical-before.json",
+      "bytes": 1693,
+      "sha256": "91b39549f6c96628873e4a21472589eedf3f11e88e514605e5d22a98c3ea4c2a"
+    },
+    {
+      "path": "database/schema.sql",
+      "bytes": 9551,
+      "sha256": "0275fe3979752f6fcb8de50c459c5c42171addda2f2141af1929b58d917b396c"
+    },
+    {
+      "path": "interaction-trace.json",
+      "bytes": 425,
+      "sha256": "690ea5855348764f9e2f11e26399114d6459c044afebc7ef7ec4ab1559f9388b"
+    },
+    {
+      "path": "launch.json",
+      "bytes": 543,
+      "sha256": "54007d17dea572e4ccf5d2aec0fac88c129abcfd34857bfe8ac907a39def07f9"
+    },
+    {
+      "path": "logs/backend.log",
+      "bytes": 920,
+      "sha256": "ddad3c4439a237360a2a582606b07fd545d25a97bc65329f5a9867b9ea6b44e2"
+    },
+    {
+      "path": "logs/electron.stderr.log",
+      "bytes": 1713,
+      "sha256": "fcb15fd04414d1c1bdcb080d84085d4497d86896d5443b043c892b6c5f6f378c"
+    },
+    {
+      "path": "logs/electron.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "process.json",
+      "bytes": 122,
+      "sha256": "def0767c91f891e7e3af3c4f5e754251019ff304ff78f70e7e25e2103e5c486b"
+    },
+    {
+      "path": "production-sentinel-after.json",
+      "bytes": 458,
+      "sha256": "3a5cd5fce4f00a3e19911d630cc2eaaee124359f3b4d5607341fc3839655e441"
+    },
+    {
+      "path": "production-sentinel-before.json",
+      "bytes": 458,
+      "sha256": "3a5cd5fce4f00a3e19911d630cc2eaaee124359f3b4d5607341fc3839655e441"
+    },
+    {
+      "path": "runtime.json",
+      "bytes": 6855,
+      "sha256": "1a3d96728e3b354a13d740e6245ff1f6128647c238611b149a4260a378c58d13"
+    },
+    {
+      "path": "screenshots/electron-1220.png",
+      "bytes": 73830,
+      "sha256": "88b933324e424484263454cf793c6f3f872e254d9d91f66d87d31bf4fe0f9336"
+    },
+    {
+      "path": "screenshots/electron-320.png",
+      "bytes": 45867,
+      "sha256": "c73fe9fd8b355155a34a2c4c7d4df9eeac3846daa57f868371b046621863db4f"
+    },
+    {
+      "path": "screenshots/electron-360.png",
+      "bytes": 45859,
+      "sha256": "458035ff90309b5fe532b7fa5ced47a6f18eb5503ecad30e3b1290e95d786096"
+    },
+    {
+      "path": "screenshots/electron-390.png",
+      "bytes": 46437,
+      "sha256": "4acf15487c22495bd7115436cb838634a24eff22ee3568b18ffca2402c19c97b"
+    },
+    {
+      "path": "screenshots/electron-430.png",
+      "bytes": 50725,
+      "sha256": "60933cfbf7f9432d589172117236dd1f6eb4566e1faa98ac6ee595a326f6a9bb"
+    }
+  ]
+}

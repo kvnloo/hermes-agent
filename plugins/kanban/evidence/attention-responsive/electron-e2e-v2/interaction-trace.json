@@ -1,0 +1,25 @@
+{
+  "widths": [
+    1220,
+    320,
+    360,
+    390,
+    430
+  ],
+  "finalReceipts": {
+    "failure": {
+      "state": "active",
+      "revision": 2
+    },
+    "snooze": {
+      "state": "snoozed",
+      "revision": 1
+    },
+    "settle": {
+      "state": "active",
+      "revision": 2
+    }
+  },
+  "failedActionAttentionEvents": 0,
+  "staleFailureAnnouncement": "This task changed elsewhere. Your action was not applied."
+}
