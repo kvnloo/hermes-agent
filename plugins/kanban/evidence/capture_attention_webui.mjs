@@ -92,8 +92,7 @@ try {
   page.on('request', request => { if (request.method() === 'POST' && request.url().includes(`/tasks/${ids.snooze}/attention`)) attentionPosts += 1 })
   const hour = card.getByRole('button', { name: '1 hour' })
   await Promise.all([hour.click(), hour.click().catch(() => undefined)])
-  await page.waitForFunction(() => [...document.querySelectorAll('[role="status"]')].some(node => node.textContent?.includes('Task snoozed until')))
-  const snoozeReceipt = receipt(ids.snooze)
+  const snoozeReceipt = await waitReceipt(ids.snooze, 'snoozed')
   if (attentionPosts !== 1 || snoozeReceipt?.state !== 'snoozed' || snoozeReceipt?.revision !== 1) throw new Error(`duplicate lock/backend receipt failed: ${JSON.stringify({ attentionPosts, snoozeReceipt })}`)
 
   const settleCard = page.getByText('WebUI settle sentinel').locator('..')
