@@ -464,6 +464,10 @@
         timer: window.setTimeout(function () {
           if (!gesture) return;
           gesture.armed = true;
+          // Only a deliberate hold takes ownership from native HTML DnD.
+          // Changing draggable during pointerdown suppresses Chromium's
+          // compatibility click for an otherwise ordinary touch tap.
+          el.draggable = false;
           gesture.proxy = el.cloneNode(true);
           gesture.proxy.removeAttribute("id");
           gesture.proxy.classList.add("hermes-kanban-touch-proxy");
@@ -475,10 +479,6 @@
           if (cb.onArm) cb.onArm(taskId);
         }, POINTER_HOLD_MS),
       };
-      // A touch/pen sequence is owned by this hold gesture.  Temporarily
-      // disable HTML DnD so it cannot race the pointer proxy; mouse sequences
-      // never enter this path and retain immediate native dragging.
-      el.draggable = false;
       setState("pressed");
     }
 
