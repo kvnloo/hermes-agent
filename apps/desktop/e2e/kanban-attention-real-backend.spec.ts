@@ -156,6 +156,7 @@ test('actual Electron and isolated backend preserve attention controls and recei
     await page.emulateMedia({ reducedMotion: 'reduce' })
     expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(true)
 
+    const responsiveTrace: Array<Record<string, unknown>> = []
     for (const width of WIDTHS) {
       await page.setViewportSize({ width, height: 800 })
       const snooze = card.getByRole('button', { name: '1 hour' })
@@ -211,13 +212,40 @@ test('actual Electron and isolated backend preserve attention controls and recei
       expect(geometry.controls.every(control => control.height >= 44 && control.width >= 44), JSON.stringify(geometry.controls)).toBe(true)
       expect({ presetRows: geometry.presetRows, noOverflow: geometry.noOverflow, headerIntercepts: geometry.headerIntercepts }).toEqual({ presetRows: expect.any(Number), noOverflow: true, headerIntercepts: false })
       expect(geometry.presetRows).toBeLessThanOrEqual(2)
-      await page.screenshot({ path: path.join(evidenceDir, `electron-${width}.png`), fullPage: true })
+      await page.screenshot({ path: path.join(evidenceDir, `electron-${width}-closed.png`), fullPage: true })
       await custom.focus()
       await custom.press('Enter')
       await expect(custom).toHaveAttribute('aria-expanded', 'true')
-      await card.getByLabel('Custom wake time').press('Escape')
+      const input = card.getByLabel('Custom wake time')
+      const openGeometry = await card.evaluate(element => {
+        const controls = [...element.querySelectorAll('button, input')].filter(candidate => {
+          const rect = candidate.getBoundingClientRect()
+          return rect.width > 0 && rect.height > 0
+        }).map(candidate => {
+          const rect = candidate.getBoundingClientRect()
+          return {
+            label: candidate.getAttribute('aria-label') || candidate.textContent?.trim() || candidate.tagName,
+            height: rect.height,
+            width: rect.width,
+            radius: getComputedStyle(candidate).borderRadius,
+            clipped: rect.left < 0 || rect.top < 0 || rect.right > innerWidth || rect.bottom > innerHeight,
+          }
+        })
+        return { controls, noOverflow: document.documentElement.scrollWidth <= innerWidth }
+      })
+      expect(openGeometry.noOverflow).toBe(true)
+      expect(openGeometry.controls.every(control => control.height >= 44 && control.width >= 44 && control.radius === '0px' && !control.clipped), JSON.stringify(openGeometry.controls)).toBe(true)
+      await page.screenshot({ path: path.join(evidenceDir, `electron-${width}-open.png`), fullPage: true })
+      await input.press('Escape')
       await expect(custom).toHaveAttribute('aria-expanded', 'false')
       await expect(custom).toBeFocused()
+      await custom.press('Enter')
+      await expect(custom).toHaveAttribute('aria-expanded', 'true')
+      const cancel = card.getByRole('button', { name: 'Cancel custom snooze' })
+      await cancel.click()
+      await expect(custom).toHaveAttribute('aria-expanded', 'false')
+      await expect(custom).toBeFocused()
+      responsiveTrace.push({ width, closedGeometry: geometry, openGeometry, escapeFocusRestored: true, cancelFocusRestored: true })
     }
 
     await page.setViewportSize({ width: 390, height: 800 })
@@ -294,6 +322,7 @@ test('actual Electron and isolated backend preserve attention controls and recei
       },
       interactionVerdict: {
         widths: WIDTHS,
+        responsiveTrace,
         finalReceipts: { failure: logicalAfter.failure.receipt, snooze: snoozeState.receipt, settle: settleState.receipt },
         failedActionAttentionEvents: logicalAfter.failure.events.filter(event => event.kind.startsWith('attention_')).length,
         staleFailureAnnouncement: staleMessage,

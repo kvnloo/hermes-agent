@@ -53,7 +53,7 @@ async function waitReceipt(id, state) {
 }
 
 const widths = [320, 360, 390, 430, 1220]
-const manifest = { generatedBy: 'actual standalone Hermes dashboard + Playwright system Chromium', sourceCommit: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).trim(), widths, captures: [], interactions: {} }
+const manifest = { generatedBy: 'actual standalone Hermes dashboard + Playwright system Chromium', sourceCommit: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).trim(), widths, captures: [], responsiveTrace: [], interactions: {} }
 let browser
 try {
   await ready()
@@ -78,12 +78,17 @@ try {
     await custom.click()
     const input = card.getByLabel('Custom wake time')
     await input.waitFor()
-    const open = await card.evaluate(element => ({ horizontalOverflow: document.documentElement.scrollWidth > innerWidth, controls: [...element.querySelectorAll('.hermes-kanban-attention button,.hermes-kanban-attention input')].filter(node => { const r=node.getBoundingClientRect(); return r.width > 0 && r.height > 0 }).map(node => { const r=node.getBoundingClientRect(); return { width:r.width,height:r.height,radius:getComputedStyle(node).borderRadius } }) }))
-    if (open.horizontalOverflow || open.controls.some(control => control.width < 44 || control.height < 44 || control.radius !== '0px')) throw new Error(`${width}px open geometry failed: ${JSON.stringify(open)}`)
+    const open = await card.evaluate(element => ({ horizontalOverflow: document.documentElement.scrollWidth > innerWidth, controls: [...element.querySelectorAll('.hermes-kanban-attention button,.hermes-kanban-attention input')].filter(node => { const r=node.getBoundingClientRect(); return r.width > 0 && r.height > 0 }).map(node => { const r=node.getBoundingClientRect(); return { label:node.getAttribute('aria-label') || node.textContent?.trim() || node.tagName,width:r.width,height:r.height,radius:getComputedStyle(node).borderRadius,clipped:r.left < 0 || r.top < 0 || r.right > innerWidth || r.bottom > innerHeight } }) }))
+    if (open.horizontalOverflow || open.controls.some(control => control.width < 44 || control.height < 44 || control.radius !== '0px' || control.clipped)) throw new Error(`${width}px open geometry failed: ${JSON.stringify(open)}`)
     const openFile = path.join(output, `webui-${width}-open.png`)
     await page.screenshot({ path: openFile, fullPage: true })
     await input.press('Escape')
     if (!(await custom.evaluate(element => document.activeElement === element))) throw new Error(`${width}px Escape did not restore Custom focus`)
+    await custom.press('Enter')
+    const cancel = card.getByRole('button', { name: 'Cancel custom snooze' })
+    await cancel.click()
+    if (!(await custom.evaluate(element => document.activeElement === element))) throw new Error(`${width}px Cancel did not restore Custom focus`)
+    manifest.responsiveTrace.push({ width, closedGeometry: closed, openGeometry: open, escapeFocusRestored: true, cancelFocusRestored: true })
     for (const [state, file] of [['closed', closedFile], ['open', openFile]]) { const bytes=readFileSync(file); manifest.captures.push({ width, state, filename:path.basename(file), bytes:bytes.length, sha256:createHash('sha256').update(bytes).digest('hex') }) }
   }
 
@@ -105,7 +110,7 @@ try {
   await page.getByRole('button', { name: 'Wake' }).click()
   const wakeReceipt = await waitReceipt(ids.settle, 'active')
   if (wakeReceipt?.state !== 'active' || wakeReceipt?.revision !== 2) throw new Error(`wake receipt failed: ${JSON.stringify(wakeReceipt)}`)
-  manifest.interactions = { attentionPosts, snoozeReceipt, wakeReceipt, escapeFocusRestored: true, localDatetimeControl: true, staleReconciliationCoveredByElectronReplay: true }
+  manifest.interactions = { attentionPosts, snoozeReceipt, wakeReceipt, escapeFocusRestored: true, cancelFocusRestored: true, localDatetimeControl: true, staleReconciliationCoveredByElectronReplay: true }
 } finally {
   await browser?.close().catch(() => undefined)
   try { process.kill(-server.pid, 'SIGTERM') } catch {}

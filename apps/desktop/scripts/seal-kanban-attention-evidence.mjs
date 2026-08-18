@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { execFileSync } from 'node:child_process'
+import { validateInteractionEvidence } from './kanban-attention-evidence-validation.mjs'
 
 const [packetArg] = process.argv.slice(2)
 if (!packetArg) throw new Error('usage: seal-kanban-attention-evidence.mjs <packet-directory>')
@@ -20,14 +21,16 @@ const walk = dir => fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry =
 const files = walk(packet).filter(file => !excluded.has(rel(file))).sort((a, b) => rel(a).localeCompare(rel(b)))
 const payloads = files.map(file => ({ path: rel(file), bytes: fs.statSync(file).size, sha256: sha256(file) }))
 const byPath = Object.fromEntries(payloads.map(item => [item.path, item]))
-const screenshots = payloads.filter(item => /^screenshots\/electron-(1220|320|360|390|430)\.png$/.test(item.path))
-if (screenshots.length !== 5) throw new Error(`expected five screenshots, found ${screenshots.length}`)
+const screenshots = payloads.filter(item => /^screenshots\/electron-(1220|320|360|390|430)-(closed|open)\.png$/.test(item.path))
+if (screenshots.length !== 10) throw new Error(`expected closed and open screenshots at five widths, found ${screenshots.length}`)
 
 const sourceCommit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: runtime.repoRoot, encoding: 'utf8' }).trim()
 const sourceTree = execFileSync('git', ['show', '-s', '--format=%T', sourceCommit], { cwd: runtime.repoRoot, encoding: 'utf8' }).trim()
 const required = ['build/install-stamp.json', 'build/index.html', 'build/electron-main.mjs', 'database/kanban.db', 'logs/backend.log', 'logs/electron.stdout.log', 'logs/electron.stderr.log', 'interaction-trace.json', 'launch.json', 'process.json', 'production-sentinel-before.json', 'production-sentinel-after.json', 'database/schema.sql', 'database/logical-before.json', 'database/logical-after.json']
 for (const name of required) if (!byPath[name]) throw new Error(`missing required payload: ${name}`)
 if (runtime.sourceCommit !== sourceCommit || runtime.sourceTree !== sourceTree) throw new Error('runtime source identity does not match sealing checkout')
+const interactionTrace = JSON.parse(fs.readFileSync(path.join(packet, 'interaction-trace.json'), 'utf8'))
+validateInteractionEvidence(interactionTrace)
 
 const manifest = {
   schema: 2,
