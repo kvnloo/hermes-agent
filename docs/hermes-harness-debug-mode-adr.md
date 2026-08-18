@@ -68,8 +68,7 @@ Before any sandbox write, the controller seals:
 ```json
 {
   "runId": "hd_<uuid7>",
-  "captainIdentity": "explicit-platform-scoped-id",
-  "commandNonce": "random-256-bit",
+  "receipt": {"surface": "cli-local", "operator": "explicit-local-id", "nonce": "random-256-bit", "signature": "hmac-sha256"},
   "suite": "smoke",
   "seed": 0,
   "codeRevision": "git-sha",
@@ -82,7 +81,7 @@ Before any sandbox write, the controller seals:
 }
 ```
 
-The command parser may lower requested limits but never raise suite ceilings. Model/provider resolution is exact and fail-closed; no fallback substitutes for Sol or Luna.
+The command parser may lower requested limits but never raise suite ceilings. Model/provider resolution is exact and fail-closed; no fallback substitutes for Sol or Luna. Gateway execution is unavailable until a platform-authenticated capability receipt binds exact user/chat/message identity, nonce, scope, policy revision/hash, expiry, and replay consumption. The local CLI accepts only a single-use HMAC receipt for isolated non-destructive smoke mode; there is no caller-controlled identity flag.
 
 ## 4. Isolation transaction
 
@@ -103,7 +102,7 @@ $HERMES_HOME/kanban/debug-runs/<runId>/
   SEALED
 ```
 
-`RUN_MARKER.json` contains schema version, run ID, explicit Captain identity, owner process identity, creation time, TTL, random nonce, and canonical production sentinel hash. The debug board slug is `debug-<runId>` and is never registered as current.
+`RUN_MARKER.json` contains schema version, run ID, the authenticated receipt nonce, owner process identity, creation time, TTL, and canonical production sentinel hash. The debug board slug is `debug-<runId>` and is never registered as current.
 
 Creation is fail-closed and ordered:
 

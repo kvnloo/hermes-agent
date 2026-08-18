@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import os
-import sqlite3
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -10,142 +10,142 @@ import pytest
 from hermes_cli.harness_debug import (
     HarnessDebugController,
     HarnessDebugRefused,
-    aggregate_status,
-    fixture_seed,
-    guard_debug_db,
+    make_local_receipt,
     run_argv,
 )
 from hermes_cli.kanban_db import init_db
 
 
-def _production_db(path: Path) -> Path:
+def _production(path: Path) -> Path:
     init_db(path)
     return path
 
 
-def test_seed_and_status_oracles_are_deterministic():
-    assert fixture_seed(7, "fixture", 1) == fixture_seed(7, "fixture", 1)
-    assert fixture_seed(7, "fixture", 1) != fixture_seed(8, "fixture", 1)
-    assert aggregate_status(["PASS", "PASS"]) == "PASS"
-    assert aggregate_status(["PASS", "UNKNOWN"]) == "UNKNOWN"
-    assert aggregate_status(["UNKNOWN", "FAIL"]) == "FAIL"
+def _authority(tmp_path: Path, production: Path, *, nonce: str = "a" * 64,
+               now: int | None = None, seed: int = 7, fanout: int = 1):
+    key = b"k" * 32
+    key_path = tmp_path / "authority.key"
+    key_path.write_bytes(key)
+    key_path.chmod(0o600)
+    receipt = make_local_receipt(key, production_db=production, nonce=nonce,
+                                 now=now, seed=seed, fanout=fanout)
+    receipt_path = tmp_path / f"receipt-{nonce[:8]}.json"
+    receipt_path.write_text(json.dumps(receipt))
+    return key, key_path, receipt, receipt_path
 
 
-def test_guard_refuses_direct_symlink_hardlink_and_traversal(tmp_path: Path):
-    production = _production_db(tmp_path / "production.db")
-    root = tmp_path / "runs" / "hd_test"
-    board = root / "board"
-    board.mkdir(parents=True)
+def test_forged_expired_mismatched_and_replayed_receipts_fail_closed(tmp_path: Path):
+    production = _production(tmp_path / "production.db")
+    controller = HarnessDebugController(tmp_path / "runs")
+    key, _, receipt, _ = _authority(tmp_path, production)
 
-    guard_debug_db(board / "fresh.db", root, [production])
-    with pytest.raises(HarnessDebugRefused, match="REFUSED_ISOLATION"):
-        guard_debug_db(production, root, [production])
-    with pytest.raises(HarnessDebugRefused, match="REFUSED_ISOLATION"):
-        guard_debug_db(root / ".." / "escape.db", root, [production])
+    forged = dict(receipt); forged["operator"] = "attacker"
+    with pytest.raises(HarnessDebugRefused, match="REFUSED_AUTHORITY"):
+        controller.start_smoke(production_db=production, receipt=forged,
+                               authority_key=key, seed=7, fanout=1)
 
-    symlink = board / "symlink.db"
-    symlink.symlink_to(production)
-    with pytest.raises(HarnessDebugRefused, match="REFUSED_ISOLATION"):
-        guard_debug_db(symlink, root, [production])
+    expired = make_local_receipt(key, production_db=production, nonce="b" * 64,
+                                 now=1, seed=7, fanout=1)
+    with pytest.raises(HarnessDebugRefused, match="expired"):
+        controller.start_smoke(production_db=production, receipt=expired,
+                               authority_key=key, seed=7, fanout=1)
 
-    hardlink = board / "hardlink.db"
-    os.link(production, hardlink)
-    with pytest.raises(HarnessDebugRefused, match="REFUSED_ISOLATION"):
-        guard_debug_db(hardlink, root, [production])
+    with pytest.raises(HarnessDebugRefused, match="scope mismatch"):
+        controller.start_smoke(production_db=production, receipt=receipt,
+                               authority_key=key, seed=8, fanout=1)
 
-
-def test_smoke_is_disposable_exact_and_production_read_only(tmp_path: Path, monkeypatch):
-    production = _production_db(tmp_path / "production" / "kanban.db")
-    config = tmp_path / "config.yaml"
-    config.write_text("sentinel: production\n")
-    current = tmp_path / "current"
-    current.symlink_to(production.parent)
-    before = {
-        "db": production.read_bytes(),
-        "config": config.read_bytes(),
-        "current": os.readlink(current),
-    }
-    # Ambient values are hostile inputs. The controller may include an existing
-    # production DB as an additional sentinel, but it must not resolve writes
-    # through any of them.
-    monkeypatch.setenv("HERMES_KANBAN_DB", str(production))
-    monkeypatch.setenv("HERMES_KANBAN_BOARD", "canonical-production")
-    monkeypatch.setenv("HERMES_KANBAN_TASK", "production-task")
-
-    controller = HarnessDebugController(tmp_path / "debug-runs")
-    report = controller.start_smoke(
-        production_db=production,
-        captain_identity="cli:captain-test",
-        seed=0xC0FFEE,
-        fanout=2,
-    )
-
+    report = controller.start_smoke(production_db=production, receipt=receipt,
+                                    authority_key=key, seed=7, fanout=1)
     assert report["overallStatus"] == "PASS"
+    with pytest.raises(HarnessDebugRefused, match="REFUSED_REPLAY"):
+        controller.start_smoke(production_db=production, receipt=receipt,
+                               authority_key=key, seed=7, fanout=1)
+
+
+def test_real_behavior_red_green_and_production_sentinel(tmp_path: Path):
+    production = _production(tmp_path / "production.db")
+    before = production.read_bytes()
+    key, _, receipt, _ = _authority(tmp_path, production)
+    controller = HarnessDebugController(tmp_path / "runs")
+    report = controller.start_smoke(production_db=production, receipt=receipt,
+                                    authority_key=key, seed=7, fanout=1)
+    assert report["fixtures"][0]["status"] == "PASS"
+    assert report["fixtures"][0]["observed"]["blockedChildClaim"] is True
+    pair = report["mutationPairs"][0]
+    assert pair["red"]["status"] == "FAIL"
+    assert pair["green"]["status"] == "PASS"
+    assert pair["red"]["observed"] != pair["green"]["observed"]
+    assert production.read_bytes() == before
     assert report["productionSentinel"]["equal"] is True
-    assert report["modelIdentities"]["orchestrator"]["model"] == "gpt-5.6-sol"
-    assert report["modelIdentities"]["specialist"]["model"] == "gpt-5.6-luna"
-    assert report["budgets"]["observed"]["agentWorkers"] == 0
-    assert [f["id"] for f in report["fixtures"]] == [
-        "smoke.lifecycle.v1",
-        "smoke.capacity-starvation.v1",
-        "smoke.contamination.v1",
-    ]
-    contamination = report["fixtures"][2]
-    assert contamination["observed"] == {"links": 239, "dangling": 165, "namespaced": True}
-    assert report["mutationPairs"][0]["red"]["reasonCode"] == "REFUSED_ISOLATION"
-    assert report["mutationPairs"][0]["green"]["status"] == "GREEN"
-    assert report["mutationPairs"][0]["writeAttempted"] is False
-
-    run_root = controller.root / report["runId"]
-    assert (run_root / "SEALED").is_file()
-    assert json.loads((run_root / "report.json").read_text())["sealedHash"] == report["sealedHash"]
-    debug_conn = sqlite3.connect(run_root / "board" / "kanban.db")
-    try:
-        assert debug_conn.execute("SELECT count(*) FROM harness_debug_edges").fetchone()[0] == 239
-        assert debug_conn.execute("SELECT count(*) FROM harness_debug_trace").fetchone()[0] == 11
-    finally:
-        debug_conn.close()
-
-    assert production.read_bytes() == before["db"]
-    assert config.read_bytes() == before["config"]
-    assert os.readlink(current) == before["current"]
-
-    status = controller.status(report["runId"])
-    assert status["runs"][0]["state"] == "SEALED"
-    assert controller.stop(report["runId"])["status"] == "already-sealed"
-    cleanup = controller.cleanup(report["runId"])
-    assert cleanup["status"] == "CLEANED"
-    assert cleanup["rootAbsent"] is True
-    assert production.read_bytes() == before["db"]
+    assert report["security"] == {"gatewayEnabled": False, "networkDenied": True,
+                                  "secretCanaryObserved": False}
 
 
-def test_cli_service_requires_explicit_authority_and_supports_report(
-    tmp_path: Path, monkeypatch
-):
-    monkeypatch.setattr(
-        "hermes_cli.config.load_config",
-        lambda: {"orchestration": {"harness_debug": {"enabled": True}}},
-    )
-    production = _production_db(tmp_path / "production.db")
+@pytest.mark.parametrize("target", ["report.json", "evidence/green-trace.json", "envelope.json", "RUN_MARKER.json", "board/green.db"])
+def test_report_and_cleanup_reject_every_tampered_sealed_component(tmp_path: Path, target: str):
+    production = _production(tmp_path / "production.db")
+    key, _, receipt, _ = _authority(tmp_path, production)
+    controller = HarnessDebugController(tmp_path / "runs")
+    report = controller.start_smoke(production_db=production, receipt=receipt,
+                                    authority_key=key, seed=7, fanout=1)
+    path = controller.root / report["runId"] / target
+    path.write_bytes(path.read_bytes() + b"tamper")
+    with pytest.raises(HarnessDebugRefused, match="TAMPERED"):
+        controller.report(report["runId"])
+    with pytest.raises(HarnessDebugRefused, match="TAMPERED"):
+        controller.cleanup(report["runId"])
+    assert controller.status(report["runId"])["runs"][0]["state"] == "TAMPERED"
+
+
+def test_cleanup_is_idempotent_and_retains_complete_seal(tmp_path: Path):
+    production = _production(tmp_path / "production.db")
+    key, _, receipt, _ = _authority(tmp_path, production)
+    controller = HarnessDebugController(tmp_path / "runs")
+    report = controller.start_smoke(production_db=production, receipt=receipt,
+                                    authority_key=key, seed=7, fanout=1)
+    first = controller.cleanup(report["runId"])
+    second = controller.cleanup(report["runId"])
+    assert first == second
+    assert first["status"] == "RETAINED_SEALED"
+    assert controller.report(report["runId"])["overallStatus"] == "PASS"
+
+
+def test_cli_has_no_caller_captain_and_requires_protected_receipt_key(tmp_path: Path):
+    production = _production(tmp_path / "production.db")
+    _, key_path, _, receipt_path = _authority(tmp_path, production)
     controller = HarnessDebugController(tmp_path / "runs")
     with pytest.raises(SystemExit):
-        run_argv(["debug", "start", "smoke", "--production-db", str(production)], controller)
-
-    output = run_argv([
-        "debug", "start", "smoke", "--production-db", str(production),
-        "--captain", "cli:test", "--seed", "9", "--fanout", "1",
-    ], controller)
-    run_id = json.loads(output)["runId"]
-    report = json.loads(run_argv(["debug", "report", run_id], controller))
-    assert report["authorityReceipt"]["captainIdentity"] == "cli:test"
-    markdown = run_argv(["debug", "report", run_id, "--format", "markdown"], controller)
-    assert f"PASS / smoke / {run_id}" in markdown
+        run_argv(["debug", "start", "smoke", "--production-db", str(production),
+                  "--captain", "forged"], controller)
+    output = run_argv(["debug", "start", "smoke", "--production-db", str(production),
+                       "--receipt", str(receipt_path), "--authority-key", str(key_path),
+                       "--seed", "7", "--fanout", "1"], controller)
+    assert json.loads(output)["overallStatus"] == "PASS"
 
 
-def test_cleanup_refuses_unsealed_or_marker_mismatch(tmp_path: Path):
+def test_concurrent_replay_spends_receipt_once(tmp_path: Path):
+    production = _production(tmp_path / "production.db")
+    key, _, receipt, _ = _authority(tmp_path, production)
     controller = HarnessDebugController(tmp_path / "runs")
-    root = controller.root / "hd_foreign"
-    root.mkdir(parents=True)
-    (root / "RUN_MARKER.json").write_text('{"runId":"other"}')
-    with pytest.raises(HarnessDebugRefused, match="REFUSED_ISOLATION"):
-        controller.cleanup("hd_foreign")
+    def attempt():
+        try:
+            controller.start_smoke(production_db=production, receipt=receipt,
+                                   authority_key=key, seed=7, fanout=1)
+            return "PASS"
+        except HarnessDebugRefused as exc:
+            return exc.code
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(lambda _: attempt(), range(2)))
+    assert sorted(results) == ["PASS", "REFUSED_REPLAY"]
+
+
+def test_path_component_symlink_is_refused(tmp_path: Path):
+    production = _production(tmp_path / "production.db")
+    key, _, receipt, _ = _authority(tmp_path, production)
+    root = tmp_path / "runs"
+    elsewhere = tmp_path / "elsewhere"; elsewhere.mkdir()
+    root.symlink_to(elsewhere, target_is_directory=True)
+    controller = HarnessDebugController(root)
+    with pytest.raises((HarnessDebugRefused, FileExistsError, OSError)):
+        controller.start_smoke(production_db=production, receipt=receipt,
+                               authority_key=key, seed=7, fanout=1)

@@ -16344,14 +16344,10 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
             return await self._handle_kanban_command(event)
 
         if canonical == "orchestration":
-            import shlex
-
-            from hermes_cli.harness_debug import HarnessDebugRefused, run_argv
-
-            try:
-                return run_argv(shlex.split(event.get_command_args()))
-            except (HarnessDebugRefused, SystemExit) as exc:
-                return str(exc)
+            # Fail closed until a platform-authenticated capability envelope
+            # (user/chat/message/nonce/scope/policy/expiry/replay) exists.
+            # Local CLI receipts are deliberately not accepted by gateways.
+            return "REFUSED_AUTHORITY: Harness Debug Mode is unavailable on gateway surfaces"
 
         if canonical == "suggestions":
             return await self._handle_suggestions_command(event)
