@@ -1,0 +1,740 @@
+{
+  "generatedBy": "actual standalone Hermes dashboard + Playwright system Chromium; sealed by apps/desktop/scripts/seal-kanban-attention-webui-evidence.mjs",
+  "sourceCommit": "fddff737e7e9314ca0dbcdb30a8a940ebbf4d001",
+  "widths": [
+    320,
+    360,
+    390,
+    430,
+    1220
+  ],
+  "captures": [
+    {
+      "width": 320,
+      "state": "closed",
+      "filename": "webui-320-closed.png",
+      "bytes": 39157,
+      "sha256": "b4b3bed192bcfeb543154f1c8f279f0e0c2dce7f57c36719c253e0e790a5a906"
+    },
+    {
+      "width": 320,
+      "state": "open",
+      "filename": "webui-320-open.png",
+      "bytes": 38917,
+      "sha256": "29d45a35b32f41c7cd7d0e844e0bb65de5aac64c2f2758aba47f856719599dd3"
+    },
+    {
+      "width": 360,
+      "state": "closed",
+      "filename": "webui-360-closed.png",
+      "bytes": 36144,
+      "sha256": "e3c36f5051930d1c2beec17c73d792ef054031c5b8c0c990edc65c4841d69bb0"
+    },
+    {
+      "width": 360,
+      "state": "open",
+      "filename": "webui-360-open.png",
+      "bytes": 32405,
+      "sha256": "51c85694ed5b241c436d5dc104be35219752fb9ccac352ddf3f1fb2835171d17"
+    },
+    {
+      "width": 390,
+      "state": "closed",
+      "filename": "webui-390-closed.png",
+      "bytes": 42650,
+      "sha256": "0b6164703a4cb41085d6dc63b337681bdea760de77edeeeac3cb35cada3ffbcb"
+    },
+    {
+      "width": 390,
+      "state": "open",
+      "filename": "webui-390-open.png",
+      "bytes": 40034,
+      "sha256": "746a002943be5dd6d712c13f1aaed98708cbd02edc40fd15ebd6766f565ae120"
+    },
+    {
+      "width": 430,
+      "state": "closed",
+      "filename": "webui-430-closed.png",
+      "bytes": 43572,
+      "sha256": "c22195cb7ea755cd80adb6375a69266f86637c1ac0bfddc5a2a371912177c7d7"
+    },
+    {
+      "width": 430,
+      "state": "open",
+      "filename": "webui-430-open.png",
+      "bytes": 39051,
+      "sha256": "31b0015f41dbe74940c2c1e94ce764d9c654ff95f938134c6758208c880df688"
+    },
+    {
+      "width": 1220,
+      "state": "closed",
+      "filename": "webui-1220-closed.png",
+      "bytes": 90816,
+      "sha256": "d07983c9f22177603955ea320553db9615310e8bcf112b5386580c886e7e9100"
+    },
+    {
+      "width": 1220,
+      "state": "open",
+      "filename": "webui-1220-open.png",
+      "bytes": 90572,
+      "sha256": "dd9b1f44b6fed51035ca2da4445b2d3e81e8353b8e907ff4d886c4f3dad05e5e"
+    }
+  ],
+  "responsiveTrace": [
+    {
+      "width": 320,
+      "closedGeometry": {
+        "controls": [
+          {
+            "label": "Settle",
+            "width": 44,
+            "height": 44,
+            "radius": "0px"
+          },
+          {
+            "label": "1 hour",
+            "width": 44,
+            "height": 44,
+            "radius": "0px"
+          },
+          {
+            "label": "Tomorrow at 9 AM local time",
+            "width": 66.125,
+            "height": 44,
+            "radius": "0px"
+          },
+          {
+            "label": "1 week",
+            "width": 44,
+            "height": 44,
+            "radius": "0px"
+          },
+          {
+            "label": "1 month",
+            "width": 44,
+            "height": 44,
+            "radius": "0px"
+          },
+          {
+            "label": "Custom+",
+            "width": 58.3125,
+            "height": 44,
+            "radius": "0px"
+          }
+        ],
+        "rows": 2,
+        "horizontalOverflow": false,
+        "clipped": false
+      },
+      "openGeometry": {
+        "horizontalOverflow": false,
+        "controls": [
+          {
+            "label": "Settle",
+            "width": 44,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "1 hour",
+            "width": 44,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "Tomorrow at 9 AM local time",
+            "width": 66.125,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "1 week",
+            "width": 44,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "1 month",
+            "width": 44,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "Custom−",
+            "width": 58.3125,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "INPUT",
+            "width": 177.75,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "Snooze until then",
+            "width": 177.75,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "Cancel",
+            "width": 177.75,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          }
+        ]
+      },
+      "escapeFocusRestored": true,
+      "cancelFocusRestored": true
+    },
+    {
+      "width": 360,
+      "closedGeometry": {
+        "controls": [
+          {
+            "label": "Settle",
+            "width": 44,
+            "height": 44,
+            "radius": "0px"
+          },
+          {
+            "label": "1 hour",
+            "width": 44,
+            "height": 44,
+            "radius": "0px"
+          },
+          {
+            "label": "Tomorrow at 9 AM local time",
+            "width": 66.125,
+            "height": 44,
+            "radius": "0px"
+          },
+          {
+            "label": "1 week",
+            "width": 44,
+            "height": 44,
+            "radius": "0px"
+          },
+          {
+            "label": "1 month",
+            "width": 44,
+            "height": 44,
+            "radius": "0px"
+          },
+          {
+            "label": "Custom+",
+            "width": 58.3125,
+            "height": 44,
+            "radius": "0px"
+          }
+        ],
+        "rows": 2,
+        "horizontalOverflow": false,
+        "clipped": false
+      },
+      "openGeometry": {
+        "horizontalOverflow": false,
+        "controls": [
+          {
+            "label": "Settle",
+            "width": 44,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "1 hour",
+            "width": 44,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "Tomorrow at 9 AM local time",
+            "width": 66.125,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "1 week",
+            "width": 44,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "1 month",
+            "width": 44,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "Custom−",
+            "width": 58.3125,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "INPUT",
+            "width": 177.75,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "Snooze until then",
+            "width": 177.75,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "Cancel",
+            "width": 177.75,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          }
+        ]
+      },
+      "escapeFocusRestored": true,
+      "cancelFocusRestored": true
+    },
+    {
+      "width": 390,
+      "closedGeometry": {
+        "controls": [
+          {
+            "label": "Settle",
+            "width": 44,
+            "height": 44,
+            "radius": "0px"
+          },
+          {
+            "label": "1 hour",
+            "width": 44,
+            "height": 44,
+            "radius": "0px"
+          },
+          {
+            "label": "Tomorrow at 9 AM local time",
+            "width": 66.125,
+            "height": 44,
+            "radius": "0px"
+          },
+          {
+            "label": "1 week",
+            "width": 44,
+            "height": 44,
+            "radius": "0px"
+          },
+          {
+            "label": "1 month",
+            "width": 44,
+            "height": 44,
+            "radius": "0px"
+          },
+          {
+            "label": "Custom+",
+            "width": 58.3125,
+            "height": 44,
+            "radius": "0px"
+          }
+        ],
+        "rows": 2,
+        "horizontalOverflow": false,
+        "clipped": false
+      },
+      "openGeometry": {
+        "horizontalOverflow": false,
+        "controls": [
+          {
+            "label": "Settle",
+            "width": 44,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "1 hour",
+            "width": 44,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "Tomorrow at 9 AM local time",
+            "width": 66.125,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "1 week",
+            "width": 44,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "1 month",
+            "width": 44,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "Custom−",
+            "width": 58.3125,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "INPUT",
+            "width": 177.75,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "Snooze until then",
+            "width": 177.75,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "Cancel",
+            "width": 177.75,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          }
+        ]
+      },
+      "escapeFocusRestored": true,
+      "cancelFocusRestored": true
+    },
+    {
+      "width": 430,
+      "closedGeometry": {
+        "controls": [
+          {
+            "label": "Settle",
+            "width": 44,
+            "height": 44,
+            "radius": "0px"
+          },
+          {
+            "label": "1 hour",
+            "width": 44,
+            "height": 44,
+            "radius": "0px"
+          },
+          {
+            "label": "Tomorrow at 9 AM local time",
+            "width": 66.125,
+            "height": 44,
+            "radius": "0px"
+          },
+          {
+            "label": "1 week",
+            "width": 44,
+            "height": 44,
+            "radius": "0px"
+          },
+          {
+            "label": "1 month",
+            "width": 44,
+            "height": 44,
+            "radius": "0px"
+          },
+          {
+            "label": "Custom+",
+            "width": 58.3125,
+            "height": 44,
+            "radius": "0px"
+          }
+        ],
+        "rows": 2,
+        "horizontalOverflow": false,
+        "clipped": false
+      },
+      "openGeometry": {
+        "horizontalOverflow": false,
+        "controls": [
+          {
+            "label": "Settle",
+            "width": 44,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "1 hour",
+            "width": 44,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "Tomorrow at 9 AM local time",
+            "width": 66.125,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "1 week",
+            "width": 44,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "1 month",
+            "width": 44,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "Custom−",
+            "width": 58.3125,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "INPUT",
+            "width": 177.75,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "Snooze until then",
+            "width": 177.75,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "Cancel",
+            "width": 177.75,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          }
+        ]
+      },
+      "escapeFocusRestored": true,
+      "cancelFocusRestored": true
+    },
+    {
+      "width": 1220,
+      "closedGeometry": {
+        "controls": [
+          {
+            "label": "Settle",
+            "width": 44,
+            "height": 44,
+            "radius": "0px"
+          },
+          {
+            "label": "1 hour",
+            "width": 44,
+            "height": 44,
+            "radius": "0px"
+          },
+          {
+            "label": "Tomorrow at 9 AM local time",
+            "width": 66.125,
+            "height": 44,
+            "radius": "0px"
+          },
+          {
+            "label": "1 week",
+            "width": 44,
+            "height": 44,
+            "radius": "0px"
+          },
+          {
+            "label": "1 month",
+            "width": 44,
+            "height": 44,
+            "radius": "0px"
+          },
+          {
+            "label": "Custom+",
+            "width": 58.3125,
+            "height": 44,
+            "radius": "0px"
+          }
+        ],
+        "rows": 2,
+        "horizontalOverflow": false,
+        "clipped": false
+      },
+      "openGeometry": {
+        "horizontalOverflow": false,
+        "controls": [
+          {
+            "label": "Settle",
+            "width": 44,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "1 hour",
+            "width": 44,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "Tomorrow at 9 AM local time",
+            "width": 66.125,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "1 week",
+            "width": 44,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "1 month",
+            "width": 44,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "Custom−",
+            "width": 58.3125,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "INPUT",
+            "width": 177.75,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "Snooze until then",
+            "width": 177.75,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          },
+          {
+            "label": "Cancel",
+            "width": 177.75,
+            "height": 44,
+            "radius": "0px",
+            "horizontallyClipped": false
+          }
+        ]
+      },
+      "escapeFocusRestored": true,
+      "cancelFocusRestored": true
+    }
+  ],
+  "interactions": {
+    "attentionPosts": 1,
+    "snoozeReceipt": {
+      "state": "snoozed",
+      "revision": 1,
+      "wake_at": 1787084870
+    },
+    "wakeReceipt": {
+      "state": "active",
+      "revision": 2,
+      "wake_at": null
+    },
+    "escapeFocusRestored": true,
+    "cancelFocusRestored": true,
+    "localDatetimeControl": true,
+    "staleReconciliationCoveredByElectronReplay": true
+  },
+  "schema": 2,
+  "payloads": [
+    {
+      "path": "server.log",
+      "bytes": 164,
+      "sha256": "949e8fde0974f8f4500774fee430bbd16413a6bd75391001ff26b00aed5f0793"
+    },
+    {
+      "path": "webui-1220-closed.png",
+      "bytes": 90816,
+      "sha256": "d07983c9f22177603955ea320553db9615310e8bcf112b5386580c886e7e9100"
+    },
+    {
+      "path": "webui-1220-open.png",
+      "bytes": 90572,
+      "sha256": "dd9b1f44b6fed51035ca2da4445b2d3e81e8353b8e907ff4d886c4f3dad05e5e"
+    },
+    {
+      "path": "webui-320-closed.png",
+      "bytes": 39157,
+      "sha256": "b4b3bed192bcfeb543154f1c8f279f0e0c2dce7f57c36719c253e0e790a5a906"
+    },
+    {
+      "path": "webui-320-open.png",
+      "bytes": 38917,
+      "sha256": "29d45a35b32f41c7cd7d0e844e0bb65de5aac64c2f2758aba47f856719599dd3"
+    },
+    {
+      "path": "webui-360-closed.png",
+      "bytes": 36144,
+      "sha256": "e3c36f5051930d1c2beec17c73d792ef054031c5b8c0c990edc65c4841d69bb0"
+    },
+    {
+      "path": "webui-360-open.png",
+      "bytes": 32405,
+      "sha256": "51c85694ed5b241c436d5dc104be35219752fb9ccac352ddf3f1fb2835171d17"
+    },
+    {
+      "path": "webui-390-closed.png",
+      "bytes": 42650,
+      "sha256": "0b6164703a4cb41085d6dc63b337681bdea760de77edeeeac3cb35cada3ffbcb"
+    },
+    {
+      "path": "webui-390-open.png",
+      "bytes": 40034,
+      "sha256": "746a002943be5dd6d712c13f1aaed98708cbd02edc40fd15ebd6766f565ae120"
+    },
+    {
+      "path": "webui-430-closed.png",
+      "bytes": 43572,
+      "sha256": "c22195cb7ea755cd80adb6375a69266f86637c1ac0bfddc5a2a371912177c7d7"
+    },
+    {
+      "path": "webui-430-open.png",
+      "bytes": 39051,
+      "sha256": "31b0015f41dbe74940c2c1e94ce764d9c654ff95f938134c6758208c880df688"
+    }
+  ]
+}
