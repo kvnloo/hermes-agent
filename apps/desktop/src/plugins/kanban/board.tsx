@@ -78,6 +78,7 @@ import {
   fetchBoard,
   fetchBoards,
   fetchProfiles,
+  fetchTask,
   patchTask,
   PROFILES_KEY,
   updateAttention
@@ -265,7 +266,7 @@ export function AttentionAnnouncementBoundary({ children }: { children: ReactNod
     clearTimer.current = window.setTimeout(() => {
       setAnnouncement(current => current?.key === next.key ? null : current)
       clearTimer.current = null
-    }, 8_000)
+    }, 30_000)
   }, [])
 
   useEffect(() => () => {
@@ -286,9 +287,10 @@ export function AttentionControls({ task }: { task: KanbanTask }) {
   const qc = useQueryClient()
   const [custom, setCustom] = useState('')
   const [announcement, setAnnouncement] = useState('')
+  const [reconciledReceipt, setReconciledReceipt] = useState(task.attention)
   const publishAnnouncement = useContext(AttentionAnnouncementContext)
   const attempt = useRef(0)
-  const receipt = task.attention ?? { state: 'active' as const, revision: 0 }
+  const receipt = reconciledReceipt ?? task.attention ?? { state: 'active' as const, revision: 0 }
 
   const announce = (key: string, message: string) => {
     if (publishAnnouncement) {
@@ -301,10 +303,44 @@ export function AttentionControls({ task }: { task: KanbanTask }) {
   const action = useMutation({
     mutationFn: ({ kind, wakeAt }: { kind: 'settle' | 'snooze' | 'wake'; wakeAt?: number }) =>
       updateAttention(task.id, kind, receipt.revision, wakeAt),
-    onError: (error, variables) => {
-      const message = errText(error)
+    onError: async (error, variables) => {
+      const rawMessage = errText(error)
+      const serialized = error instanceof Error ? error.message : String(error)
+      const brace = serialized.indexOf('{')
+      let conflictAttention: KanbanTask['attention']
+
+      if (brace !== -1) {
+        try {
+          conflictAttention = (JSON.parse(serialized.slice(brace)) as { detail?: { attention?: KanbanTask['attention'] } }).detail?.attention
+        } catch {
+          // The generic error formatter below handles non-JSON failures.
+        }
+      }
+
+      const message = rawMessage.includes('stale attention revision')
+        ? 'This task changed elsewhere. Your action was not applied.'
+        : rawMessage
+
       announce(`${task.id}:${variables.kind}:${receipt.revision}:error:${attempt.current}`, message)
       host.notify({ kind: 'error', message })
+
+      // A rejected optimistic action can mean another surface advanced the
+      // receipt. Fetch that exact task and merge only its authoritative row;
+      // invalidation alone can be coalesced while the failed mutation settles.
+      if (conflictAttention) {
+        setReconciledReceipt(conflictAttention)
+      } else {
+        const authoritative = await fetchTask(task.id)
+
+        setReconciledReceipt(authoritative.task.attention)
+        qc.setQueriesData<KanbanBoard>({ queryKey: ['kanban', 'board'] }, current => current && ({
+          ...current,
+          columns: current.columns.map(column => ({
+            ...column,
+            tasks: column.tasks.map(candidate => candidate.id === task.id ? authoritative.task : candidate)
+          }))
+        }))
+      }
     },
     onSuccess: (result, variables) => {
       host.notify({

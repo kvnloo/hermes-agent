@@ -874,7 +874,11 @@ def update_attention(
     except kanban_db.AttentionConflict as exc:
         detail: Any = str(exc)
         if exc.current_revision is not None:
-            detail = {"message": str(exc), "current_revision": exc.current_revision}
+            detail = {
+                "message": str(exc),
+                "current_revision": exc.current_revision,
+                "attention": _attention_projection(conn, task_id),
+            }
         raise HTTPException(status_code=409, detail=detail)
     finally:
         conn.close()

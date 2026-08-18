@@ -76,6 +76,7 @@ finally:
 
 interface DbState {
   events: Array<{ kind: string; payload: string | null }>
+  projected: { revision: number; state: string }
   receipt: { revision: number; state: string } | null
 }
 
@@ -85,20 +86,21 @@ conn = kb.connect()
 try:
     receipt = conn.execute("SELECT state, revision FROM attention_receipts WHERE subject_id=?", (${JSON.stringify(taskId)},)).fetchone()
     events = conn.execute("SELECT kind, payload FROM task_events WHERE task_id=? ORDER BY id", (${JSON.stringify(taskId)},)).fetchall()
-    print(json.dumps({'receipt': dict(receipt) if receipt else None, 'events': [dict(row) for row in events]}))
+    print(json.dumps({'receipt': dict(receipt) if receipt else None, 'projected': kb.project_task_attention(conn, ${JSON.stringify(taskId)}), 'events': [dict(row) for row in events]}))
 finally:
     conn.close()
 `)
 }
 
-function externalSettle(sandbox: Sandbox, taskId: string, revision: number): void {
+function externalAdvance(sandbox: Sandbox, taskId: string, action: 'settle' | 'wake', revision: number): void {
   python<unknown>(sandbox, `
 conn = kb.connect()
 try:
     with kb.write_txn(conn):
         now = int(time.time())
+        state = {'settle': 'settled', 'wake': 'active'}[${JSON.stringify(action)}]
         observed = conn.execute("SELECT COALESCE(MAX(id), 0) FROM task_events WHERE task_id=?", (${JSON.stringify(taskId)},)).fetchone()[0]
-        conn.execute("INSERT INTO attention_receipts (subject_kind,subject_id,state,wake_at,observed_event_id,actor,source,revision,created_at,updated_at) VALUES ('kanban_task',?,'settled',NULL,?,'e2e-racer','e2e',?,?,?)", (${JSON.stringify(taskId)}, observed, ${revision + 1}, now, now))
+        conn.execute("INSERT INTO attention_receipts (subject_kind,subject_id,state,wake_at,observed_event_id,actor,source,revision,created_at,updated_at) VALUES ('kanban_task',?,?,NULL,?,'e2e-racer','e2e',?,?,?) ON CONFLICT(subject_kind,subject_id) DO UPDATE SET state=excluded.state,wake_at=NULL,observed_event_id=excluded.observed_event_id,actor=excluded.actor,source=excluded.source,revision=excluded.revision,updated_at=excluded.updated_at", (${JSON.stringify(taskId)}, state, observed, ${revision + 1}, now, now))
     print(json.dumps(True))
 finally:
     conn.close()
@@ -188,8 +190,34 @@ test('actual Electron and isolated backend preserve attention controls and recei
     }
 
     await page.setViewportSize({ width: 390, height: 800 })
-    externalSettle(sandbox, taskIds.failure, 0)
-    expect(dbState(sandbox, taskIds.failure).receipt).toEqual({ revision: 1, state: 'settled' })
+    const failureCard = page.getByText(FAILURE_TITLE).locator('..')
+    const staleMessage = 'This task changed elsewhere. Your action was not applied.'
+
+    externalAdvance(sandbox, taskIds.failure, 'settle', 0)
+    const externallySettled = dbState(sandbox, taskIds.failure)
+    expect(externallySettled.receipt).toEqual({ revision: 1, state: 'settled' })
+    expect(externallySettled.projected).toMatchObject({ revision: 1, state: 'settled' })
+    expect(externallySettled.events.filter(event => event.kind.startsWith('attention_'))).toHaveLength(0)
+
+    await failureCard.getByRole('button', { name: 'Settle' }).click()
+    await expect(status).toHaveText(staleMessage)
+    expect(dbState(sandbox, taskIds.failure)).toEqual(externallySettled)
+    await expect(page.getByText(FAILURE_TITLE)).toHaveCount(1)
+    const reconciledWake = page.getByRole('button', { name: 'Wake' })
+    await expect(reconciledWake).toHaveCount(1)
+
+    externalAdvance(sandbox, taskIds.failure, 'wake', 1)
+    const externallyAwake = dbState(sandbox, taskIds.failure)
+    expect(externallyAwake.receipt).toEqual({ revision: 2, state: 'active' })
+    expect(externallyAwake.projected).toMatchObject({ revision: 2, state: 'active' })
+    expect(externallyAwake.events.filter(event => event.kind.startsWith('attention_'))).toHaveLength(0)
+
+    await reconciledWake.click()
+    await expect(status).toHaveText(staleMessage)
+    expect(dbState(sandbox, taskIds.failure)).toEqual(externallyAwake)
+    await expect(page.getByText(FAILURE_TITLE)).toHaveCount(1)
+    await expect(page.getByRole('button', { name: 'Settle' })).toHaveCount(3)
+    await expect(status).toHaveCount(1)
 
     await card.getByText('Snooze…').click()
     await card.getByRole('button', { name: '1 hour' }).click()
@@ -233,8 +261,9 @@ test('actual Electron and isolated backend preserve attention controls and recei
       isolatedKanbanDb: true,
       taskIds: '<redacted-e2e-tasks>',
       widths: WIDTHS,
-      finalReceipts: { snooze: snoozeState.receipt, settle: settleState.receipt },
-      attentionEvents: ['attention_snooze', 'attention_settle', 'attention_wake'],
+      finalReceipts: { failure: dbState(sandbox, taskIds.failure).receipt, snooze: snoozeState.receipt, settle: settleState.receipt },
+      attentionEvents: ['snooze:attention_snooze', 'settle:attention_settle', 'settle:attention_wake'],
+      failedActionAttentionEvents: 0,
       backendLogPresent: fs.existsSync(backendLog),
       productionSentinelUnchanged: {
         db: productionDbSentinel(productionDb) === productionBefore.dbSentinel,

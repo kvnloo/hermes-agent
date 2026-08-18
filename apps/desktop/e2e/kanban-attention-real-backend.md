@@ -11,16 +11,13 @@ Replay from the repository root:
 npm ci
 cd apps/desktop
 npm run build
-npx playwright test e2e/kanban-attention-real-backend.spec.ts --reporter=list
+scripts/run-electron-e2e-display.sh npx playwright test e2e/kanban-attention-real-backend.spec.ts --reporter=list
 ```
 
-On a display-less Linux host, run the same Playwright command under a headless
-Wayland compositor (the CI image uses Cage):
-
-```sh
-WLR_BACKENDS=headless WLR_NO_HARDWARE_CURSORS=1 cage -- \
-  npx playwright test e2e/kanban-attention-real-backend.spec.ts --reporter=list
-```
+The wrapper preserves an explicitly configured graphical session, detects a
+live Wayland socket when the environment was scrubbed, and otherwise starts a
+private Xvfb server for headless CI. It fails with a diagnostic instead of
+silently attempting display-less Electron when neither path is available.
 
 Evidence is written below the test's Playwright output directory as lossless
 PNG captures plus `evidence/manifest.json`. The manifest contains hashes,

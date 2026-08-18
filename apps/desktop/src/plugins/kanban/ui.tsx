@@ -62,7 +62,15 @@ export function errText(err: unknown): string {
 
   if (brace !== -1) {
     try {
-      return (JSON.parse(raw.slice(brace)) as { detail?: string }).detail ?? raw
+      const detail = (JSON.parse(raw.slice(brace)) as { detail?: unknown }).detail
+
+      if (typeof detail === 'string') {
+        return detail
+      }
+
+      if (detail && typeof detail === 'object' && 'message' in detail && typeof detail.message === 'string') {
+        return detail.message
+      }
     } catch {
       // Not JSON — fall through to the raw message.
     }
