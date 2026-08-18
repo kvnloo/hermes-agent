@@ -292,6 +292,7 @@ export function AttentionControls({ task }: { task: KanbanTask }) {
   const attempt = useRef(0)
   const pending = useRef(false)
   const [customOpen, setCustomOpen] = useState(false)
+  const customTriggerRef = useRef<HTMLButtonElement>(null)
   const receipt = reconciledReceipt ?? task.attention ?? { state: 'active' as const, revision: 0 }
 
   useEffect(() => {
@@ -413,7 +414,7 @@ export function AttentionControls({ task }: { task: KanbanTask }) {
       <div onClick={stop} onKeyDown={stop}>
         {!publishAnnouncement && <span aria-atomic="true" aria-live="polite" className="sr-only" role="status">{announcement}</span>}
         <button
-          className="min-h-11 rounded px-2 text-[0.6875rem] text-(--ui-text-secondary) hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2"
+          className="min-h-11 rounded-none border border-(--ui-stroke-secondary) px-2 text-[0.6875rem] text-(--ui-text-secondary) hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2"
           disabled={action.isPending}
           onClick={() => mutate({ kind: 'wake' })}
           type="button"
@@ -428,7 +429,7 @@ export function AttentionControls({ task }: { task: KanbanTask }) {
     <div className="flex flex-wrap items-center gap-1 border-t border-(--ui-stroke-tertiary) pt-1.5" onClick={stop} onKeyDown={stop}>
       {!publishAnnouncement && <span aria-atomic="true" aria-live="polite" className="sr-only" role="status">{announcement}</span>}
       <button
-        className="min-h-11 rounded px-2 text-[0.6875rem] text-(--ui-text-secondary) hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2"
+        className="min-h-11 rounded-none border border-(--ui-stroke-secondary) px-2 text-[0.6875rem] text-(--ui-text-secondary) hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2"
         disabled={action.isPending}
         onClick={() => mutate({ kind: 'settle' })}
         type="button"
@@ -440,25 +441,30 @@ export function AttentionControls({ task }: { task: KanbanTask }) {
         <button aria-label="Tomorrow at 9 AM local time" className="min-h-11 rounded-none border border-(--ui-stroke-secondary) px-1.5 text-[0.6875rem] whitespace-nowrap hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2 disabled:opacity-50" disabled={action.isPending} onClick={tomorrowMorning} type="button">Tmrw 9am</button>
         <button aria-label="1 week" className="min-h-11 min-w-11 rounded-none border border-(--ui-stroke-secondary) px-1.5 text-[0.6875rem] hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2 disabled:opacity-50" disabled={action.isPending} onClick={() => snooze(7 * 24 * 3600)} type="button">1 wk</button>
         <button aria-label="1 month" className="min-h-11 min-w-11 rounded-none border border-(--ui-stroke-secondary) px-1.5 text-[0.6875rem] hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2 disabled:opacity-50" disabled={action.isPending} onClick={nextMonth} type="button">1 mo</button>
-        <button aria-expanded={customOpen} className="min-h-11 rounded-none border border-(--ui-stroke-secondary) px-1.5 text-[0.6875rem] hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2 disabled:opacity-50" disabled={action.isPending} onClick={() => setCustomOpen(open => !open)} type="button">Custom{customOpen ? '−' : '+'}</button>
+        <button aria-expanded={customOpen} className="min-h-11 rounded-none border border-(--ui-stroke-secondary) px-1.5 text-[0.6875rem] hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2 disabled:opacity-50" disabled={action.isPending} onClick={() => setCustomOpen(open => !open)} ref={customTriggerRef} type="button">Custom{customOpen ? '−' : '+'}</button>
         {customOpen && <div className="basis-full rounded-none border border-(--ui-stroke-secondary) bg-(--ui-bg-elevated) p-2" onKeyDown={event => {
           if (event.key === 'Escape') {
             event.preventDefault()
             setCustomOpen(false)
+            customTriggerRef.current?.focus()
           }
         }}>
           <label className="grid gap-1 text-[0.6875rem] text-(--ui-text-tertiary)">
             Custom wake time
-            <input className="min-h-9 rounded border border-(--ui-stroke-secondary) bg-transparent px-1 text-xs" min={formatLocalDateTime(new Date())} onChange={event => setCustom(event.target.value)} type="datetime-local" value={custom} />
+            <input className="min-h-11 rounded-none border border-(--ui-stroke-secondary) bg-transparent px-1 text-xs" min={formatLocalDateTime(new Date())} onChange={event => setCustom(event.target.value)} type="datetime-local" value={custom} />
           </label>
           <button
-            className="min-h-11 rounded bg-primary px-2 text-xs text-primary-foreground disabled:opacity-50"
+            className="min-h-11 rounded-none border border-primary bg-primary px-2 text-xs text-primary-foreground disabled:opacity-50"
             disabled={action.isPending || !customWake || customWake.getTime() <= Date.now()}
             onClick={() => customWake && mutate({ kind: 'snooze', wakeAt: Math.floor(customWake.getTime() / 1000) })}
             type="button"
           >
             Snooze until then
           </button>
+          <button className="min-h-11 rounded-none border border-(--ui-stroke-secondary) px-2 text-xs" onClick={() => {
+            setCustomOpen(false)
+            customTriggerRef.current?.focus()
+          }} type="button">Cancel</button>
         </div>}
       </div>
     </div>

@@ -2808,6 +2808,7 @@
     const [error, setError] = useState("");
     const [announcement, setAnnouncement] = useState("");
     const [customOpen, setCustomOpen] = useState(false);
+    const customTriggerRef = useRef(null);
     const pendingRef = useRef(false);
     const apply = function (action, wakeAt) {
       if (pendingRef.current) return Promise.resolve();
@@ -2876,16 +2877,17 @@
             wake.setMonth(wake.getMonth() + 1);
             apply("snooze", Math.floor(wake.getTime() / 1000));
           } }, "1 mo"),
-          h("button", { type: "button", disabled: busy, "aria-expanded": customOpen,
+          h("button", { type: "button", ref: customTriggerRef, disabled: busy, "aria-expanded": customOpen,
             onClick: function () { setCustomOpen(!customOpen); } }, "Custom" + (customOpen ? "−" : "+")),
           customOpen ? h("div", { className: "hermes-kanban-snooze-custom", onKeyDown: function (event) {
-            if (event.key === "Escape") { event.preventDefault(); setCustomOpen(false); }
+            if (event.key === "Escape") { event.preventDefault(); setCustomOpen(false); customTriggerRef.current && customTriggerRef.current.focus(); }
           } },
           h("label", null, "Custom wake time",
             h("input", { type: "datetime-local", value: custom, min: formatLocal(new Date()),
               onChange: function (e) { setCustom(e.target.value); } })),
           h("button", { type: "button", disabled: busy || !customWake || customWake.getTime() <= Date.now(),
             onClick: function () { if (customWake) apply("snooze", Math.floor(customWake.getTime() / 1000)); } }, "Snooze until then"),
+          h("button", { type: "button", onClick: function () { setCustomOpen(false); customTriggerRef.current && customTriggerRef.current.focus(); } }, "Cancel"),
           ) : null,
       ),
       error ? h("span", { role: "alert", className: "hermes-kanban-attention-error" }, error) : null,

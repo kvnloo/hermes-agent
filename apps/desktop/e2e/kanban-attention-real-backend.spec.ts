@@ -173,28 +173,50 @@ test('actual Electron and isolated backend preserve attention controls and recei
         return center === element || element.contains(center)
       }), { timeout: 30_000 }).toBe(true)
 
-      const geometry = await snooze.evaluate(element => {
-        const rect = element.getBoundingClientRect()
+      const geometry = await card.evaluate(element => {
+        const controls = [...element.querySelectorAll('button, input')].filter(candidate => {
+          const rect = candidate.getBoundingClientRect()
+
+          return rect.width > 0 && rect.height > 0
+        }).map(candidate => {
+          const rect = candidate.getBoundingClientRect()
+
+          return { label: candidate.getAttribute('aria-label') || candidate.textContent?.trim() || candidate.tagName, height: rect.height, width: rect.width, radius: getComputedStyle(candidate).borderRadius }
+        })
+        const presetGroup = element.querySelector('[role="group"][aria-label="Snooze presets"]')
+        const presetRows = presetGroup ? new Set([...presetGroup.querySelectorAll(':scope > button')].map(button => Math.round(button.getBoundingClientRect().top))).size : 0
+        const snoozeButton = element.querySelector('[aria-label="1 hour"]')
+
+        if (!snoozeButton) {
+          throw new Error('missing snooze button')
+        }
+
+        const rect = snoozeButton.getBoundingClientRect()
         const center = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)
-        const header = element.closest('article, [draggable="true"]')?.querySelector('header')
+        const header = element.querySelector('header')
 
         return {
-          height: rect.height,
+          controls,
+          presetRows,
           noOverflow: document.documentElement.scrollWidth <= window.innerWidth,
-          targetIsSnooze: center === element || element.contains(center),
+          targetIsSnooze: center === snoozeButton || snoozeButton.contains(center),
           target: center ? `${center.tagName}:${center.textContent?.trim().slice(0, 40)}` : null,
           headerIntercepts: Boolean(header && (center === header || header.contains(center))),
         }
       })
 
       expect(geometry.targetIsSnooze, `elementFromPoint returned ${geometry.target}`).toBe(true)
-      expect({ height: geometry.height, noOverflow: geometry.noOverflow, headerIntercepts: geometry.headerIntercepts }).toEqual({ height: 44, noOverflow: true, headerIntercepts: false })
+      expect(geometry.controls.every(control => control.radius === '0px'), JSON.stringify(geometry.controls)).toBe(true)
+      expect(geometry.controls.every(control => control.height >= 44 && control.width >= 44), JSON.stringify(geometry.controls)).toBe(true)
+      expect({ presetRows: geometry.presetRows, noOverflow: geometry.noOverflow, headerIntercepts: geometry.headerIntercepts }).toEqual({ presetRows: expect.any(Number), noOverflow: true, headerIntercepts: false })
+      expect(geometry.presetRows).toBeLessThanOrEqual(2)
       await page.screenshot({ path: path.join(evidenceDir, `electron-${width}.png`), fullPage: true })
       await custom.focus()
       await custom.press('Enter')
       await expect(custom).toHaveAttribute('aria-expanded', 'true')
       await card.getByLabel('Custom wake time').press('Escape')
       await expect(custom).toHaveAttribute('aria-expanded', 'false')
+      await expect(custom).toBeFocused()
     }
 
     await page.setViewportSize({ width: 390, height: 800 })
