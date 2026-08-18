@@ -1540,6 +1540,50 @@ CREATE TABLE IF NOT EXISTS kanban_notify_subs (
     PRIMARY KEY (task_id, platform, chat_id, thread_id)
 );
 
+-- Durable source-before-decision ledger for proactive dispatcher wakes.
+CREATE TABLE IF NOT EXISTS proactive_wakes (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_key         TEXT NOT NULL UNIQUE,
+    trigger_id         TEXT NOT NULL,
+    trigger_type       TEXT NOT NULL,
+    triggered_at       INTEGER NOT NULL,
+    destination        TEXT,
+    tenant             TEXT,
+    policy_generation  TEXT,
+    policy_snapshot    TEXT NOT NULL DEFAULT '{}',
+    candidate_action   TEXT,
+    causal_refs        TEXT NOT NULL DEFAULT '[]',
+    outcome            TEXT NOT NULL DEFAULT 'deferred',
+    detail             TEXT,
+    duplicate_count    INTEGER NOT NULL DEFAULT 0,
+    completed_at       INTEGER,
+    CHECK (trigger_type IN ('scheduler','intake','api','test')),
+    CHECK (outcome IN ('created','suppressed','deferred','duplicate','policy_denied','capacity','nonspawnable','parent_gated','stale','cooldown_budget','error'))
+);
+
+CREATE TABLE IF NOT EXISTS proactive_dispatch_attempts (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    wake_id     INTEGER NOT NULL REFERENCES proactive_wakes(id) ON DELETE RESTRICT,
+    task_id     TEXT REFERENCES tasks(id) ON DELETE RESTRICT,
+    run_id      INTEGER REFERENCES task_runs(id) ON DELETE RESTRICT,
+    lane        TEXT,
+    outcome     TEXT NOT NULL,
+    reason      TEXT NOT NULL,
+    detail      TEXT,
+    created_at  INTEGER NOT NULL,
+    UNIQUE(wake_id, task_id, lane),
+    CHECK (outcome IN ('created','suppressed','deferred','duplicate','policy_denied','capacity','nonspawnable','parent_gated','stale','cooldown_budget','error'))
+);
+
+CREATE TABLE IF NOT EXISTS proactive_wake_rollups (
+    bucket_day INTEGER NOT NULL,
+    trigger_type TEXT NOT NULL,
+    outcome TEXT NOT NULL,
+    count INTEGER NOT NULL,
+    evidence_hash TEXT NOT NULL,
+    PRIMARY KEY(bucket_day, trigger_type, outcome)
+);
+
 CREATE INDEX IF NOT EXISTS idx_tasks_assignee_status ON tasks(assignee, status);
 CREATE INDEX IF NOT EXISTS idx_tasks_status          ON tasks(status);
 CREATE INDEX IF NOT EXISTS idx_links_child           ON task_links(child_id);
@@ -1550,6 +1594,8 @@ CREATE INDEX IF NOT EXISTS idx_runs_task             ON task_runs(task_id, start
 CREATE INDEX IF NOT EXISTS idx_runs_status           ON task_runs(status);
 CREATE INDEX IF NOT EXISTS idx_attachments_task      ON task_attachments(task_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_notify_task           ON kanban_notify_subs(task_id);
+CREATE INDEX IF NOT EXISTS idx_proactive_wakes_time  ON proactive_wakes(triggered_at);
+CREATE INDEX IF NOT EXISTS idx_proactive_attempt_task ON proactive_dispatch_attempts(task_id, created_at);
 """
 
 
@@ -2559,6 +2605,14 @@ def _migrate_add_optional_columns(conn: sqlite3.Connection) -> None:
 
     Called by ``init_db`` so opening an old DB is always safe.
     """
+    wake_cols = {
+        row["name"] for row in conn.execute("PRAGMA table_info(proactive_wakes)")
+    }
+    if wake_cols and "duplicate_count" not in wake_cols:
+        _add_column_if_missing(
+            conn, "proactive_wakes", "duplicate_count",
+            "duplicate_count INTEGER NOT NULL DEFAULT 0",
+        )
     cols = {row["name"] for row in conn.execute("PRAGMA table_info(tasks)")}
     if "tenant" not in cols:
         _add_column_if_missing(conn, "tasks", "tenant", "tenant TEXT")
@@ -10051,6 +10105,156 @@ def _memory_pressure_level(sample: Optional[Mapping[str, Any]] = None) -> str:
         return "unknown"
 
 
+PROACTIVE_WAKE_OUTCOMES = frozenset({
+    "created", "suppressed", "deferred", "duplicate", "policy_denied",
+    "capacity", "nonspawnable", "parent_gated", "stale", "cooldown_budget", "error",
+})
+PROACTIVE_TRIGGER_TYPES = frozenset({"scheduler", "intake", "api", "test"})
+
+
+def begin_proactive_wake(
+    conn: sqlite3.Connection, *, source_key: str, trigger_id: str,
+    trigger_type: str, destination: Optional[str] = None,
+    tenant: Optional[str] = None, policy_generation: Optional[str] = None,
+    policy_snapshot: Optional[Mapping[str, Any]] = None,
+    candidate_action: Optional[str] = None,
+    causal_refs: Optional[Sequence[str]] = None,
+) -> tuple[int, bool]:
+    """Persist a bounded source before decisions; return ``(id, inserted)``."""
+    if trigger_type not in PROACTIVE_TRIGGER_TYPES:
+        raise ValueError(f"invalid proactive trigger type: {trigger_type}")
+    if not source_key or not trigger_id:
+        raise ValueError("source_key and trigger_id are required")
+    snapshot = json.dumps(dict(policy_snapshot or {}), sort_keys=True, separators=(",", ":"))
+    refs = json.dumps(list(causal_refs or ())[:32], separators=(",", ":"))
+    if len(snapshot) > 4096 or len(refs) > 4096:
+        raise ValueError("proactive wake metadata exceeds 4096 bytes")
+    with write_txn(conn):
+        cur = conn.execute(
+            "INSERT OR IGNORE INTO proactive_wakes "
+            "(source_key,trigger_id,trigger_type,triggered_at,destination,tenant,"
+            "policy_generation,policy_snapshot,candidate_action,causal_refs) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?)",
+            (source_key, trigger_id, trigger_type, int(time.time()), destination, tenant,
+             policy_generation, snapshot, candidate_action, refs),
+        )
+        row = conn.execute("SELECT id FROM proactive_wakes WHERE source_key=?", (source_key,)).fetchone()
+    return int(row["id"]), bool(cur.rowcount)
+
+
+def _wake_reason_outcome(reason: str) -> str:
+    if reason == "claimable": return "created"
+    if "capacity" in reason or "memory_pressure" in reason: return "capacity"
+    if reason in ("unassigned", "nonspawnable_profile"): return "nonspawnable"
+    if reason.startswith("respawn_guard:"): return "cooldown_budget"
+    if "parent" in reason: return "parent_gated"
+    return "deferred"
+
+
+def finish_proactive_wake(
+    conn: sqlite3.Connection, wake_id: int, result: DispatchResult, *,
+    duplicate: bool = False, error: Optional[str] = None,
+) -> None:
+    """Bind source to task/run decisions and persist the closed outcome."""
+    now = int(time.time())
+    samples = list(getattr(result, "_dispatch_health_samples", ()) or ())
+    spawned_ids = {item[0] for item in result.spawned}
+    with write_txn(conn):
+        for task_id, reason in samples:
+            task = conn.execute("SELECT status,current_run_id FROM tasks WHERE id=?", (task_id,)).fetchone()
+            if task is None:
+                continue
+            lane = "review" if task["status"] == "review" else "ready"
+            outcome = "created" if task_id in spawned_ids else _wake_reason_outcome(reason)
+            conn.execute(
+                "INSERT OR IGNORE INTO proactive_dispatch_attempts "
+                "(wake_id,task_id,run_id,lane,outcome,reason,created_at) VALUES (?,?,?,?,?,?,?)",
+                (wake_id, task_id, task["current_run_id"], lane, outcome, reason, now),
+            )
+        if duplicate:
+            conn.execute(
+                "UPDATE proactive_wakes SET duplicate_count=duplicate_count+1 WHERE id=?",
+                (wake_id,),
+            )
+            return
+        elif error is not None:
+            outcome, detail = "error", str(error)[:512]
+        elif spawned_ids:
+            outcome, detail = "created", f"spawned={len(spawned_ids)}"
+        elif samples:
+            outcomes = [_wake_reason_outcome(reason) for _, reason in samples]
+            outcome = "capacity" if "capacity" in outcomes else outcomes[0]
+            detail = f"considered={len(samples)}"
+        elif result.stale or result.reclaimed or result.crashed:
+            outcome, detail = "stale", "recovery maintenance"
+        else:
+            outcome, detail = "suppressed", "no eligible task"
+        conn.execute(
+            "UPDATE proactive_wakes SET outcome=?,detail=?,completed_at=? WHERE id=?",
+            (outcome, detail, now, wake_id),
+        )
+
+
+def record_proactive_decision(
+    conn: sqlite3.Connection, wake_id: int, *, outcome: str, reason: str,
+    task_id: Optional[str] = None, run_id: Optional[int] = None,
+    lane: Optional[str] = None, detail: Optional[str] = None,
+) -> int:
+    """Persist an intake/policy decision using the closed reason taxonomy.
+
+    This is the entrypoint for no-task informational, frozen-policy,
+    parent-gated, and budget decisions that occur before dispatcher queue
+    enumeration. Foreign keys deliberately reject invented task/run links.
+    """
+    if outcome not in PROACTIVE_WAKE_OUTCOMES:
+        raise ValueError(f"invalid proactive outcome: {outcome}")
+    safe_detail = str(detail)[:512] if detail is not None else None
+    with write_txn(conn):
+        cur = conn.execute(
+            "INSERT INTO proactive_dispatch_attempts "
+            "(wake_id,task_id,run_id,lane,outcome,reason,detail,created_at) "
+            "VALUES (?,?,?,?,?,?,?,?)",
+            (wake_id, task_id, run_id, lane, outcome, reason, safe_detail, int(time.time())),
+        )
+        conn.execute(
+            "UPDATE proactive_wakes SET outcome=?,detail=?,completed_at=? WHERE id=?",
+            (outcome, safe_detail, int(time.time()), wake_id),
+        )
+    if cur.lastrowid is None:
+        raise RuntimeError("proactive decision insert returned no identity")
+    return int(cur.lastrowid)
+
+
+def compact_proactive_wakes(conn: sqlite3.Connection, *, before: int, limit: int = 1000) -> int:
+    """Bound raw retention while preserving aggregate/hash evidence."""
+    rows = conn.execute(
+        "SELECT id,trigger_type,outcome,triggered_at,source_key FROM proactive_wakes "
+        "WHERE completed_at IS NOT NULL AND triggered_at<? ORDER BY id LIMIT ?",
+        (int(before), max(1, min(int(limit), 10000))),
+    ).fetchall()
+    if not rows: return 0
+    groups: dict[tuple[int, str, str], list[str]] = {}
+    for row in rows:
+        groups.setdefault((int(row["triggered_at"]) // 86400, row["trigger_type"], row["outcome"]), []).append(row["source_key"])
+    ids = [row["id"] for row in rows]
+    marks = ",".join("?" for _ in ids)
+    with write_txn(conn):
+        for (day, trigger, outcome), keys in groups.items():
+            old = conn.execute(
+                "SELECT count,evidence_hash FROM proactive_wake_rollups WHERE bucket_day=? AND trigger_type=? AND outcome=?",
+                (day, trigger, outcome),
+            ).fetchone()
+            digest = hashlib.sha256(((old["evidence_hash"] if old else "") + "\n" + "\n".join(keys)).encode()).hexdigest()
+            conn.execute(
+                "INSERT INTO proactive_wake_rollups VALUES (?,?,?,?,?) ON CONFLICT(bucket_day,trigger_type,outcome) "
+                "DO UPDATE SET count=excluded.count,evidence_hash=excluded.evidence_hash",
+                (day, trigger, outcome, int(old["count"] if old else 0) + len(keys), digest),
+            )
+        conn.execute(f"DELETE FROM proactive_dispatch_attempts WHERE wake_id IN ({marks})", ids)
+        conn.execute(f"DELETE FROM proactive_wakes WHERE id IN ({marks})", ids)
+    return len(rows)
+
+
 def dispatch_once(
     conn: sqlite3.Connection,
     *,
@@ -10065,6 +10269,7 @@ def dispatch_once(
     default_assignee: Optional[str] = None,
     max_in_progress_per_profile: Optional[int] = None,
     reconcile_orphans: bool = True,
+    wake_source: Optional[Mapping[str, Any]] = None,
 ) -> DispatchResult:
     """Run one dispatcher tick under the board's single-writer lock.
 
@@ -10081,6 +10286,13 @@ def dispatch_once(
     boards tick in parallel. See :func:`_dispatch_tick_lock` for the
     cross-process / cross-platform mechanics.
     """
+    wake_id: Optional[int] = None
+    if wake_source is not None and not dry_run:
+        wake_id, inserted = begin_proactive_wake(conn, **dict(wake_source))
+        if not inserted:
+            result = DispatchResult()
+            finish_proactive_wake(conn, wake_id, result, duplicate=True)
+            return result
     try:
         db_path = kanban_db_path(board=board)
     except Exception:
@@ -10102,6 +10314,8 @@ def dispatch_once(
             reconcile_orphans=reconcile_orphans,
         )
         _fire_dispatch_tick_hook(result, board=board, dry_run=dry_run)
+        if wake_id is not None:
+            finish_proactive_wake(conn, wake_id, result)
         return result
     with _dispatch_tick_lock(db_path) as held:
         if not held:
@@ -10130,6 +10344,8 @@ def dispatch_once(
     # finding / #64231 disposition): a slow subscriber must never extend
     # the lock hold and stall a sibling dispatcher's tick.
     _fire_dispatch_tick_hook(result, board=board, dry_run=dry_run)
+    if wake_id is not None:
+        finish_proactive_wake(conn, wake_id, result)
     return result
 
 
