@@ -368,7 +368,7 @@ def test_reopening_parent_retracts_review_and_blocks_approval(client):
         assert child.status == "review"
         review = kb.claim_review_task(conn, child_id)
         assert review is not None
-        assert kb.complete_task(
+        assert not kb.complete_task(
             conn,
             child_id,
             summary="approved after parent stabilized",
@@ -376,7 +376,7 @@ def test_reopening_parent_retracts_review_and_blocks_approval(client):
         )
         grandchild = kb.get_task(conn, grandchild_id)
         assert grandchild is not None
-        assert grandchild.status == "ready"
+        assert grandchild.status == "todo"
 
 
 def test_reopening_parent_recursively_retracts_done_and_running_descendants(client):
