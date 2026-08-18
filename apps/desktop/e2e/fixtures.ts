@@ -329,6 +329,7 @@ export async function launchDesktop(
       DESKTOP_ROOT, // `electron .` — the `.` is the desktop package dir
       '--disable-gpu',
       '--no-sandbox',
+      ...(env.HERMES_DESKTOP_E2E_HEADLESS === '1' ? ['--headless'] : []),
     ],
     env,
     cwd: DESKTOP_ROOT,
