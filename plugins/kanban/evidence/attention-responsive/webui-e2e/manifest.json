@@ -1,0 +1,99 @@
+{
+  "generatedBy": "actual standalone Hermes dashboard + Playwright system Chromium",
+  "sourceCommit": "bdd19dfea53d215608a1e600d6e547dcc5dbd626",
+  "widths": [
+    320,
+    360,
+    390,
+    430,
+    1220
+  ],
+  "captures": [
+    {
+      "width": 320,
+      "state": "closed",
+      "filename": "webui-320-closed.png",
+      "bytes": 39420,
+      "sha256": "e750c3e987bc3c6580944355e7a368af11ebaeeea18129aa82f98d1a0202f1ea"
+    },
+    {
+      "width": 320,
+      "state": "open",
+      "filename": "webui-320-open.png",
+      "bytes": 39189,
+      "sha256": "00c4a5449e0dd4af958929dad26ee808819134b33f649a639663575baa920de6"
+    },
+    {
+      "width": 360,
+      "state": "closed",
+      "filename": "webui-360-closed.png",
+      "bytes": 41492,
+      "sha256": "4dcea2557df98f013936ef46e6c140a9e98baa911dd1c41c51c24a7ec5f26762"
+    },
+    {
+      "width": 360,
+      "state": "open",
+      "filename": "webui-360-open.png",
+      "bytes": 40486,
+      "sha256": "267e15cab45bb13f557802e1796db4242b999b9be7d059d39b50a3af065d0830"
+    },
+    {
+      "width": 390,
+      "state": "closed",
+      "filename": "webui-390-closed.png",
+      "bytes": 47931,
+      "sha256": "ccbf53bb720c138bf3ca4e2e8527fa036ac1cecc3faef450bb2777f299487b1c"
+    },
+    {
+      "width": 390,
+      "state": "open",
+      "filename": "webui-390-open.png",
+      "bytes": 46717,
+      "sha256": "77f2bf3dd9a2c908282524c00a2f32b5ce25c664c073c56a1fd275505386c752"
+    },
+    {
+      "width": 430,
+      "state": "closed",
+      "filename": "webui-430-closed.png",
+      "bytes": 49397,
+      "sha256": "e4fd2dae24f1908d0dc682b14e90477e337851e0f4ef62b9ece1bda8448ca184"
+    },
+    {
+      "width": 430,
+      "state": "open",
+      "filename": "webui-430-open.png",
+      "bytes": 47467,
+      "sha256": "cf0e3e498a782162f010819117dfb39da3e7b2402971abe85faa7b7e67cc55bd"
+    },
+    {
+      "width": 1220,
+      "state": "closed",
+      "filename": "webui-1220-closed.png",
+      "bytes": 91014,
+      "sha256": "70d0d8b842106f14e9d5b4775b82c66d4f78af4f10909de69aec40bd7265b2e2"
+    },
+    {
+      "width": 1220,
+      "state": "open",
+      "filename": "webui-1220-open.png",
+      "bytes": 90750,
+      "sha256": "dfa7606602db0156735ea47dda90c04fd8817c2f2af8c148eac770cf424d9699"
+    }
+  ],
+  "interactions": {
+    "attentionPosts": 1,
+    "snoozeReceipt": {
+      "state": "snoozed",
+      "revision": 1,
+      "wake_at": 1787083403
+    },
+    "wakeReceipt": {
+      "state": "active",
+      "revision": 2,
+      "wake_at": null
+    },
+    "escapeFocusRestored": true,
+    "localDatetimeControl": true,
+    "staleReconciliationCoveredByElectronReplay": true
+  }
+}
