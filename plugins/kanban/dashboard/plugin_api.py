@@ -838,6 +838,17 @@ class UpdateTaskBody(BaseModel):
     # complete --summary ... --metadata ...``.
     summary: Optional[str] = None
     metadata: Optional[dict] = None
+    review_generation: Optional[int] = None
+    review_nonce: Optional[str] = None
+    implementation_run_id: Optional[int] = None
+    source_commit: Optional[str] = None
+    source_tree: Optional[str] = None
+    source_manifest_hash: Optional[str] = None
+    artifact_manifest_hash: Optional[str] = None
+    reviewer_profile: Optional[str] = None
+    reviewer_actor: Optional[str] = None
+    reviewer_principal: Optional[str] = None
+    reviewer_credential_source: Optional[str] = None
     # Per-task model/provider override (the board's model dropdown).
     # ``model_override=""`` clears both. ``clear_model_override=True`` is
     # the explicit clear signal — needed because Optional[str]=None means
@@ -902,6 +913,17 @@ def update_task(task_id: str, payload: UpdateTaskBody, board: Optional[str] = Qu
                     result=payload.result,
                     summary=payload.summary,
                     metadata=payload.metadata,
+                    expected_review_generation=payload.review_generation,
+                    expected_review_nonce=payload.review_nonce,
+                    expected_implementation_run_id=payload.implementation_run_id,
+                    expected_source_commit=payload.source_commit,
+                    expected_source_tree=payload.source_tree,
+                    expected_source_hash=payload.source_manifest_hash,
+                    expected_artifact_hash=payload.artifact_manifest_hash,
+                    reviewer_profile=payload.reviewer_profile,
+                    reviewer_actor=payload.reviewer_actor,
+                    reviewer_principal=payload.reviewer_principal,
+                    reviewer_credential_source=payload.reviewer_credential_source,
                 )
             elif s == "blocked":
                 ok = kanban_db.block_task(conn, task_id, reason=payload.block_reason)
