@@ -258,6 +258,59 @@ def test_transport_callback_binds_server_request_and_is_one_shot(conn, tmp_path)
     assert conn.execute("SELECT COUNT(*) FROM captain_approval_receipts").fetchone()[0] == 1
 
 
+def test_reserved_request_is_inert_until_bound_and_survives_restart(conn, tmp_path):
+    task_id, _ = _task(conn, tmp_path)
+    nonce = kb.reserve_captain_approval_request(
+        conn, task_id=task_id, platform="telegram", chat_id="chat-9",
+        expires_at=200, now=100,
+    )
+    claims = dict(
+        callback_nonce=nonce, platform="telegram", operator_user_id="captain-7",
+        chat_id="chat-9", message_id="message-7",
+        allowed_user_ids={"captain-7"}, allowed_chat_ids={"chat-9"}, now=101,
+    )
+    assert not kb.approve_captain_callback(conn, **claims)
+    assert kb.bind_captain_approval_request(
+        conn, callback_nonce=nonce, message_id="message-7", now=102,
+    )
+    assert kb.approve_captain_callback(conn, **{**claims, "now": 103})
+
+
+def test_failed_and_expired_requests_never_become_actionable(conn, tmp_path):
+    first, _ = _task(conn, tmp_path / "first")
+    nonce = kb.reserve_captain_approval_request(
+        conn, task_id=first, platform="telegram", chat_id="chat-9",
+        expires_at=200, now=100,
+    )
+    assert kb.fail_captain_approval_request(
+        conn, callback_nonce=nonce, reason="send_failed", now=101,
+    )
+    assert not kb.bind_captain_approval_request(
+        conn, callback_nonce=nonce, message_id="orphan", now=102,
+    )
+    second, _ = _task(conn, tmp_path / "second")
+    stale = kb.reserve_captain_approval_request(
+        conn, task_id=second, platform="telegram", chat_id="chat-9",
+        expires_at=110, now=100,
+    )
+    assert kb.expire_captain_approval_requests(conn, now=110) == 1
+    assert not kb.bind_captain_approval_request(
+        conn, callback_nonce=stale, message_id="late", now=111,
+    )
+
+
+def test_explicit_captain_gate_emits_canonical_event(conn, tmp_path):
+    task_id, _ = _task(conn, tmp_path)
+    with kb.write_txn(conn):
+        conn.execute("UPDATE tasks SET status = 'ready' WHERE id = ?", (task_id,))
+    assert kb.request_review(
+        conn, task_id, summary="product gate",
+        metadata={"approval_class": "captain_product"}, force=True,
+    )
+    events = kb.list_events(conn, task_id)
+    assert [e.kind for e in events].count("captain_product_review_requested") == 1
+
+
 @pytest.mark.parametrize("field,value", [
     ("operator_user_id", "attacker"), ("chat_id", "other-chat"),
     ("message_id", "copied-message"), ("callback_nonce", "copied-nonce"),

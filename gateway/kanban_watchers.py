@@ -11,6 +11,7 @@ behavior-neutral move that lifts ~1,000 LOC out of run.py.
 from __future__ import annotations
 
 import asyncio
+import inspect
 import logging
 import os
 import sqlite3
@@ -217,7 +218,7 @@ class GatewayKanbanWatchersMixin:
         # but is not a block (see kanban_db.request_review); the task is not
         # archived, so the subscription stays alive and later review
         # cycles keep notifying.
-        TERMINAL_KINDS = ("completed", "blocked", "gave_up", "crashed", "timed_out", "status", "archived", "unblocked", "block_loop_detected", "review_requested")
+        TERMINAL_KINDS = ("completed", "blocked", "gave_up", "crashed", "timed_out", "status", "archived", "unblocked", "block_loop_detected", "review_requested", "captain_product_review_requested")
         # Subscriptions are removed only when the task reaches the irreversible
         # archived status. ``done`` is reversible in review/controller flows,
         # so removing its subscription would silence a later reopen. We used
@@ -412,6 +413,9 @@ class GatewayKanbanWatchersMixin:
                                 notifier_profiles=notifier_profiles,
                                 include_unowned=include_unowned,
                             )
+                            # Bound the lifetime of inert reservations and live
+                            # buttons even when no callback ever arrives.
+                            _kb.expire_captain_approval_requests(conn)
                             if not subs:
                                 logger.debug("kanban notifier: board %s has no subscriptions", slug)
                             for sub in subs:
@@ -504,6 +508,22 @@ class GatewayKanbanWatchersMixin:
                             d["cursor"],
                             d.get("old_cursor", 0),
                             board_slug,
+                        )
+                        continue
+                    captain_events = [
+                        ev for ev in d["events"]
+                        if ev.kind == "captain_product_review_requested"
+                    ]
+                    if captain_events:
+                        issue = getattr(adapter, "send_captain_approval_request", None)
+                        if callable(issue):
+                            issuance = issue(task_id=sub["task_id"], chat_id=sub["chat_id"])
+                            if inspect.isawaitable(issuance):
+                                await issuance
+                        # The issuance result is durable in the request table;
+                        # never replay the event and risk a second live button.
+                        await asyncio.to_thread(
+                            self._kanban_advance, sub, d["cursor"], board_slug,
                         )
                         continue
                     title = (task.title if task else sub["task_id"])[:120]

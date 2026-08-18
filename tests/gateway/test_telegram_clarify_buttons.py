@@ -147,6 +147,31 @@ class TestTelegramClarifyCallback:
         _clear_clarify_state()
 
     @pytest.mark.asyncio
+    async def test_captain_reserve_failure_sends_no_button(self):
+        adapter = _make_adapter({"captain_allow_from": ["777"], "captain_allow_chats": ["12345"], "captain_board": "test-board"})
+        with patch("hermes_cli.kanban_db.connect_closing", return_value=contextlib.nullcontext(MagicMock())), patch("hermes_cli.kanban_db.reserve_captain_approval_request", return_value=None):
+            assert not await adapter.send_captain_approval_request(task_id="t_product", chat_id="12345")
+        adapter._bot.send_message.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_captain_send_failure_revokes_reserved_request(self):
+        adapter = _make_adapter({"captain_allow_from": ["777"], "captain_allow_chats": ["12345"], "captain_board": "test-board"})
+        adapter._bot.send_message.side_effect = RuntimeError("offline")
+        with patch("hermes_cli.kanban_db.connect_closing", return_value=contextlib.nullcontext(MagicMock())), patch("hermes_cli.kanban_db.reserve_captain_approval_request", side_effect=lambda *args, **kw: kw["callback_nonce"]), patch("hermes_cli.kanban_db.fail_captain_approval_request") as fail:
+            assert not await adapter.send_captain_approval_request(task_id="t_product", chat_id="12345")
+        assert fail.call_args.kwargs["reason"] == "telegram_send_failed"
+
+    @pytest.mark.asyncio
+    async def test_captain_bind_failure_disables_orphan_button(self):
+        adapter = _make_adapter({"captain_allow_from": ["777"], "captain_allow_chats": ["12345"], "captain_board": "test-board"})
+        adapter._bot.send_message.return_value.message_id = 9001
+        with patch("hermes_cli.kanban_db.connect_closing", return_value=contextlib.nullcontext(MagicMock())), patch("hermes_cli.kanban_db.reserve_captain_approval_request", side_effect=lambda *args, **kw: kw["callback_nonce"]), patch("hermes_cli.kanban_db.bind_captain_approval_request", return_value=False), patch("hermes_cli.kanban_db.fail_captain_approval_request") as fail:
+            assert not await adapter.send_captain_approval_request(task_id="t_product", chat_id="12345")
+        adapter._bot.edit_message_reply_markup.assert_awaited_once()
+        assert fail.call_args.kwargs["reason"] == "binding_failed"
+        assert not fail.call_args.kwargs["cleanup_failed"]
+
+    @pytest.mark.asyncio
     async def test_captain_callback_uses_verified_update_identity_only(self):
         adapter = _make_adapter({
             "captain_allow_from": ["777"],
