@@ -1457,6 +1457,27 @@ class GatewayKanbanWatchersMixin:
                 # re-ran the migration on a second connection, racing
                 # the first. See the matching comment in
                 # `_kanban_notifier_watcher` and issue #21378.
+                policy_snapshot = {
+                    "max_spawn": max_spawn,
+                    "max_in_progress": max_in_progress,
+                    "max_in_progress_per_profile": max_in_progress_per_profile,
+                    "reconcile_orphans": reconcile_orphans,
+                }
+                wake_source = None
+                if bool(kanban_cfg.get("proactive_wake_telemetry", False)):
+                    import hashlib
+                    import json
+                    generation = hashlib.sha256(json.dumps(
+                        policy_snapshot, sort_keys=True, separators=(",", ":"),
+                    ).encode("utf-8")).hexdigest()
+                    wake_source = _kb.build_proactive_wake_source(
+                        conn,
+                        trigger_id=f"gateway-dispatch:{slug}",
+                        trigger_type="scheduler",
+                        destination=slug,
+                        policy_generation=generation,
+                        policy_snapshot=policy_snapshot,
+                    )
                 return _kb.dispatch_once(
                     conn,
                     board=slug,
@@ -1467,19 +1488,7 @@ class GatewayKanbanWatchersMixin:
                     default_assignee=default_assignee,
                     max_in_progress_per_profile=max_in_progress_per_profile,
                     reconcile_orphans=reconcile_orphans,
-                    wake_source={
-                        "source_key": f"scheduler:{slug}:{time.time_ns()}",
-                        "trigger_id": f"gateway-dispatch:{slug}",
-                        "trigger_type": "scheduler",
-                        "destination": slug,
-                        "policy_snapshot": {
-                            "max_spawn": max_spawn,
-                            "max_in_progress": max_in_progress,
-                            "max_in_progress_per_profile": max_in_progress_per_profile,
-                            "reconcile_orphans": reconcile_orphans,
-                        },
-                        "candidate_action": "dispatch_tick",
-                    },
+                    wake_source=wake_source,
                 )
             except sqlite3.DatabaseError as exc:
                 if _is_corrupt_board_db_error(exc):

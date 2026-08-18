@@ -36,6 +36,7 @@ the port.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 import sqlite3
@@ -2287,16 +2288,24 @@ def dispatch(
     board = _resolve_board(board)
     conn = _conn(board=board)
     try:
+        from hermes_cli.config import load_config
+        enabled = bool(((load_config() or {}).get("kanban") or {}).get(
+            "proactive_wake_telemetry", False
+        ))
+        wake_source = None
+        if enabled and not dry_run:
+            policy = {"max_spawn": max_n}
+            generation = hashlib.sha256(json.dumps(
+                policy, sort_keys=True, separators=(",", ":"),
+            ).encode("utf-8")).hexdigest()
+            wake_source = kanban_db.build_proactive_wake_source(
+                conn, trigger_id="dashboard-dispatch", trigger_type="api",
+                destination=board, policy_generation=generation,
+                policy_snapshot=policy,
+            )
         result = kanban_db.dispatch_once(
             conn, dry_run=dry_run, max_spawn=max_n, board=board,
-            wake_source={
-                "source_key": f"api:{board}:{time.time_ns()}",
-                "trigger_id": "dashboard-dispatch",
-                "trigger_type": "api",
-                "destination": board,
-                "policy_snapshot": {"max_spawn": max_n},
-                "candidate_action": "dispatch_tick",
-            },
+            wake_source=wake_source,
         )
         # DispatchResult is a dataclass.
         try:
