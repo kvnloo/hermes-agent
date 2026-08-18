@@ -1,5 +1,5 @@
 {
-  "commit": "e78904f1ffb2",
+  "commit": "e78904f1ffb2af707d896c0de9fcb298c4d747fb",
   "assets": {
     "plugins/kanban/dashboard/dist/index.js": "e08b3c2730034d754fa7c0eac472921596af0281bcf1949f83e3e10a32d1a43d",
     "plugins/kanban/dashboard/dist/style.css": "afe45c5cf8e92fbadb0b13f7fc45ba0953ef50e80ffdd29da8ddcd8b2c382cdd"
