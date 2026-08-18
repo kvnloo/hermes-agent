@@ -542,27 +542,13 @@
       clearGesture("cancelled");
     }
 
-    // Chromium may hand a touch sequence to native scrolling (and emit
-    // pointercancel) as soon as it sees movement.  Suppress native scrolling
-    // only while the movement is still inside the inclusive hold boundary or
-    // after the drag is armed.  Movement beyond 9px is left to scrolling.
+    // Preserve native tap and scrolling before the deliberate hold arms.
+    // Once armed, the drag owns subsequent cancelable movement.
     function holdTouchMove(e) {
       if (!gesture || !e.cancelable || !e.touches || !e.touches.length) return;
-      const touch = e.touches[0];
-      if (gesture.armed || pointerWithinSlop(
-        gesture.startX, gesture.startY, touch.clientX, touch.clientY,
-      )) e.preventDefault();
+      if (gesture.armed) e.preventDefault();
     }
 
-    function holdTouchStart(e) {
-      if (!e.cancelable || isNestedInteractive(e.target, el)) return;
-      // Claim the potential hold before Chromium makes its native-scroll
-      // decision.  The pointer path still cancels strictly above the slop and
-      // no click is suppressed unless the gesture actually arms.
-      e.preventDefault();
-    }
-
-    el.addEventListener("touchstart", holdTouchStart, { passive: false });
     el.addEventListener("pointerdown", onDown);
     el.addEventListener("touchmove", holdTouchMove, { passive: false });
     document.addEventListener("pointerdown", cancelOnAdditionalPointer, true);
@@ -573,7 +559,6 @@
     document.addEventListener("visibilitychange", cancel);
     return function () {
       cancel();
-      el.removeEventListener("touchstart", holdTouchStart);
       el.removeEventListener("pointerdown", onDown);
       el.removeEventListener("touchmove", holdTouchMove);
       document.removeEventListener("pointerdown", cancelOnAdditionalPointer, true);
