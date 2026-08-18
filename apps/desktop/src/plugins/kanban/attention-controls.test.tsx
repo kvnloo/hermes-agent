@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type * as KanbanApi from './api'
 import { updateAttention } from './api'
-import { AttentionControls } from './board'
+import { AttentionAnnouncementBoundary, AttentionControls } from './board'
 import { formatLocalDateTime, parseLocalDateTime } from './datetime-local'
 import type { AttentionReceipt, KanbanTask } from './types'
 
@@ -77,7 +77,34 @@ describe('attention control lifecycle accessibility', () => {
 
     await waitFor(() => expect(screen.getByRole('status').textContent).toBe('Task snoozed'))
     expect(screen.getAllByRole('status')).toHaveLength(1)
-    expect(screen.getByRole('button', { name: '1 hour' }).classList.contains('min-h-8')).toBe(true)
+    expect(screen.getByRole('button', { name: '1 hour' }).classList.contains('min-h-11')).toBe(true)
+  })
+
+  it('keeps a correlated outcome in the page live region when reconciliation removes the card', async () => {
+    updateAttentionMock.mockResolvedValueOnce(response('snoozed', 1))
+
+    const client = new QueryClient({ defaultOptions: { mutations: { retry: false }, queries: { retry: false } } })
+
+    const rendered = render(
+      <QueryClientProvider client={client}>
+        <AttentionAnnouncementBoundary>
+          <AttentionControls task={{ ...baseTask, attention: receipt('active', 0) }} />
+        </AttentionAnnouncementBoundary>
+      </QueryClientProvider>
+    )
+
+    fireEvent.click(screen.getByText('Snooze…'))
+    fireEvent.click(screen.getByRole('button', { name: '1 hour' }))
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('Task snoozed'))
+
+    rendered.rerender(
+      <QueryClientProvider client={client}>
+        <AttentionAnnouncementBoundary>{null}</AttentionAnnouncementBoundary>
+      </QueryClientProvider>
+    )
+
+    expect(screen.getAllByRole('status')).toHaveLength(1)
+    expect(screen.getByRole('status').textContent).toBe('Task snoozed')
   })
 })
 
