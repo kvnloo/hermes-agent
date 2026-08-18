@@ -2510,6 +2510,15 @@ DEFAULT_CONFIG = {
         },
     },
 
+    # Harness Debug Mode is preview-only until independent controller review.
+    # Enabling it exposes only deterministic, local smoke fixtures; model
+    # workers and public networking remain unavailable in Slice 1.
+    "orchestration": {
+        "harness_debug": {
+            "enabled": False,
+        },
+    },
+
     # Logging — controls file logging to ~/.hermes/logs/.
     # agent.log captures INFO+ (all agent activity); errors.log captures WARNING+.
     "logging": {

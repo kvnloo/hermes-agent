@@ -4878,6 +4878,14 @@ def cmd_kanban(args):
     return kanban_command(args)
 
 
+def cmd_orchestration(args):
+    """Governed, isolated orchestration harness checks."""
+    from hermes_cli.harness_debug import run_command
+
+    print(run_command(args))
+    return 0
+
+
 def cmd_project(args):
     """Manage projects (named, multi-folder workspaces)."""
     from hermes_cli.projects_cmd import projects_command
@@ -11769,6 +11777,15 @@ def main():
 
     kanban_parser = _build_kanban_parser(subparsers)
     kanban_parser.set_defaults(func=cmd_kanban)
+
+    # Governed harness debug mode; no ambient board resolution is permitted.
+    from hermes_cli.harness_debug import build_parser as _build_harness_debug_parser
+
+    orchestration_parser = subparsers.add_parser(
+        "orchestration", help="Run isolated orchestration harness checks"
+    )
+    _build_harness_debug_parser(orchestration_parser)
+    orchestration_parser.set_defaults(func=cmd_orchestration)
 
     # =========================================================================
     # project command — named, multi-folder workspaces
