@@ -292,6 +292,12 @@ export function AttentionControls({ task }: { task: KanbanTask }) {
   const attempt = useRef(0)
   const receipt = reconciledReceipt ?? task.attention ?? { state: 'active' as const, revision: 0 }
 
+  useEffect(() => {
+    if ((task.attention?.revision ?? 0) > (reconciledReceipt?.revision ?? 0)) {
+      setReconciledReceipt(task.attention)
+    }
+  }, [reconciledReceipt?.revision, task.attention])
+
   const announce = (key: string, message: string) => {
     if (publishAnnouncement) {
       publishAnnouncement({ key, message })
