@@ -1517,6 +1517,12 @@ CREATE TABLE IF NOT EXISTS task_review_bindings (
     artifact_manifest_hash     TEXT NOT NULL,
     requested_at               INTEGER NOT NULL,
     review_run_id              INTEGER,
+    reviewer_profile           TEXT,
+    reviewer_actor             TEXT,
+    reviewer_principal         TEXT,
+    reviewer_credential_source TEXT,
+    claim_generation           INTEGER,
+    approval_class             TEXT NOT NULL DEFAULT 'independent',
     reviewed_at                INTEGER,
     invalidated_at             INTEGER,
     invalidation_reason        TEXT,
@@ -2509,7 +2515,13 @@ def connect(
                     # threads from racing through the additive ALTER TABLE pass with
                     # stale PRAGMA snapshots during gateway startup.
                     conn.executescript(SCHEMA_SQL)
+                    # All post-schema upgrades are one explicit transaction.
+                    # SCHEMA_SQL is idempotent bootstrap only; versioned
+                    # migrations must never rely on executescript's implicit
+                    # pre-commit semantics.
                     _migrate_add_optional_columns(conn)
+                    with write_txn(conn):
+                        _migrate_artifact_review_gate_v2(conn)
                     _INITIALIZED_PATHS.add(resolved)
         except Exception:
             conn.close()
@@ -2580,6 +2592,52 @@ def init_db(
     with contextlib.closing(connect(path)):
         pass
     return path
+
+
+_ARTIFACT_REVIEW_GATE_SCHEMA_VERSION = 2
+
+
+def _migrate_artifact_review_gate_v2(conn: sqlite3.Connection) -> None:
+    """Transactionally install/recover the artifact review gate v2 schema.
+
+    The caller holds both the board's cross-process init lock and an explicit
+    write transaction.  The version row is written last, so an exception or
+    process restart rolls the whole migration back and the next open retries.
+    Rollback procedure: restore the pre-upgrade ``kanban.db.corrupt-*`` backup
+    (plus its WAL/SHM sidecars if present), clear the process init cache, and
+    reopen; production boards are never selected implicitly by this function.
+    """
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS kanban_schema_migrations ("
+        "name TEXT PRIMARY KEY, version INTEGER NOT NULL, applied_at INTEGER NOT NULL)"
+    )
+    row = conn.execute(
+        "SELECT version FROM kanban_schema_migrations WHERE name = ?",
+        ("artifact_review_gate",),
+    ).fetchone()
+    current = int(row["version"]) if row else 0
+    if current >= _ARTIFACT_REVIEW_GATE_SCHEMA_VERSION:
+        return
+    cols = {
+        item["name"] for item in conn.execute(
+            "PRAGMA table_info(task_review_bindings)"
+        )
+    }
+    for name, declaration in (
+        ("reviewer_profile", "reviewer_profile TEXT"),
+        ("reviewer_actor", "reviewer_actor TEXT"),
+        ("reviewer_principal", "reviewer_principal TEXT"),
+        ("reviewer_credential_source", "reviewer_credential_source TEXT"),
+        ("claim_generation", "claim_generation INTEGER"),
+        ("approval_class", "approval_class TEXT NOT NULL DEFAULT 'independent'"),
+    ):
+        if name not in cols:
+            conn.execute(f"ALTER TABLE task_review_bindings ADD COLUMN {declaration}")
+    conn.execute(
+        "INSERT INTO kanban_schema_migrations(name, version, applied_at) VALUES (?, ?, ?) "
+        "ON CONFLICT(name) DO UPDATE SET version=excluded.version, applied_at=excluded.applied_at",
+        ("artifact_review_gate", _ARTIFACT_REVIEW_GATE_SCHEMA_VERSION, int(time.time())),
+    )
 
 
 def _migrate_add_optional_columns(conn: sqlite3.Connection) -> None:
@@ -4823,6 +4881,9 @@ def claim_review_task(
     *,
     ttl_seconds: Optional[int] = None,
     claimer: Optional[str] = None,
+    actor: Optional[str] = None,
+    principal: Optional[str] = None,
+    credential_source: Optional[str] = None,
 ) -> Optional[Task]:
     """Atomically transition ``review -> running``.
 
@@ -4869,9 +4930,39 @@ def claim_review_task(
         if not review_identity or not review_identity["assignee"]:
             _deny_review(conn, task_id, "missing_reviewer_profile", run_id=None)
             return None
-        if _canonical_assignee(review_identity["assignee"]) == _canonical_assignee(binding["implementation_profile"]):
+        reviewer_profile = _canonical_assignee(review_identity["assignee"])
+        if reviewer_profile == _canonical_assignee(binding["implementation_profile"]):
             _deny_review(conn, task_id, "self_review", run_id=None)
             return None
+        if binding["review_run_id"] is not None:
+            prior_run = conn.execute(
+                "SELECT status FROM task_runs WHERE id = ?",
+                (int(binding["review_run_id"]),),
+            ).fetchone()
+            if prior_run is None or prior_run["status"] == "running":
+                return None
+            # A reclaimed/crashed reviewer claim supersedes its capability.
+            # Mint a fresh generation+nonce rather than reusing the old token.
+            conn.execute(
+                "UPDATE task_review_bindings SET invalidated_at = ?, invalidation_reason = ? WHERE id = ?",
+                (now, "review_claim_superseded", int(binding["id"])),
+            )
+            nonce = secrets.token_hex(24)
+            cur_binding = conn.execute(
+                "INSERT INTO task_review_bindings (task_id, generation, nonce, "
+                "implementation_run_id, implementation_profile, source_manifest, "
+                "source_manifest_hash, artifact_manifest, artifact_manifest_hash, "
+                "requested_at, approval_class) "
+                "SELECT task_id, generation + 1, ?, implementation_run_id, "
+                "implementation_profile, source_manifest, source_manifest_hash, "
+                "artifact_manifest, artifact_manifest_hash, ?, approval_class "
+                "FROM task_review_bindings WHERE id = ?",
+                (nonce, now, int(binding["id"])),
+            )
+            binding = conn.execute(
+                "SELECT * FROM task_review_bindings WHERE id = ?",
+                (int(cur_binding.lastrowid),),
+            ).fetchone()
         cur = conn.execute(
             """
             UPDATE tasks
@@ -4911,10 +5002,16 @@ def claim_review_task(
             ),
         )
         run_id = run_cur.lastrowid
+        reviewer_actor = str(actor or reviewer_profile).strip()
+        reviewer_principal = str(principal or reviewer_profile).strip()
+        reviewer_source = str(credential_source or "dispatcher-profile").strip()
         bound = conn.execute(
-            "UPDATE task_review_bindings SET review_run_id = ? "
+            "UPDATE task_review_bindings SET review_run_id = ?, reviewer_profile = ?, "
+            "reviewer_actor = ?, reviewer_principal = ?, reviewer_credential_source = ?, "
+            "claim_generation = generation "
             "WHERE id = ? AND review_run_id IS NULL AND invalidated_at IS NULL",
-            (run_id, int(binding["id"])),
+            (run_id, reviewer_profile, reviewer_actor, reviewer_principal,
+             reviewer_source, int(binding["id"])),
         )
         if bound.rowcount != 1:
             raise RuntimeError("review binding was concurrently claimed")
@@ -5466,8 +5563,16 @@ def complete_task(
     created_cards: Optional[Iterable[str]] = None,
     expected_run_id: Optional[int] = None,
     expected_review_generation: Optional[int] = None,
+    expected_review_nonce: Optional[str] = None,
+    expected_implementation_run_id: Optional[int] = None,
+    expected_source_commit: Optional[str] = None,
+    expected_source_tree: Optional[str] = None,
     expected_source_hash: Optional[str] = None,
     expected_artifact_hash: Optional[str] = None,
+    reviewer_profile: Optional[str] = None,
+    reviewer_actor: Optional[str] = None,
+    reviewer_principal: Optional[str] = None,
+    reviewer_credential_source: Optional[str] = None,
     fire_lifecycle_hook: bool = True,
 ) -> bool:
     """Transition ``running|ready|blocked|review -> done`` and record ``result``.
@@ -5584,8 +5689,16 @@ def complete_task(
         ):
             _deny_review(conn, task_id, "fresh_review_required_after_rework", run_id=current_run_id)
             return False
-        if is_review_approval:
+        is_independent_review = bool(
+            is_review_approval and latest_binding is not None
+            and latest_binding["approval_class"] == "independent"
+        )
+        if is_independent_review:
             reason: Optional[str] = None
+            try:
+                bound_source = json.loads(latest_binding["source_manifest"]) if latest_binding else {}
+            except (json.JSONDecodeError, TypeError):
+                bound_source = {}
             if latest_binding is None:
                 reason = "missing_review_binding"
             elif prior_status == "review" or current_run_id is None:
@@ -5597,20 +5710,40 @@ def complete_task(
             elif int(latest_binding["review_run_id"] or -1) != int(current_run_id):
                 reason = "review_run_mismatch"
             else:
-                reviewer_run = conn.execute(
-                    "SELECT profile FROM task_runs WHERE id = ? AND task_id = ?",
-                    (int(current_run_id), task_id),
-                ).fetchone()
-                reviewer_profile = reviewer_run["profile"] if reviewer_run else None
-                if not reviewer_profile:
-                    reason = "missing_reviewer_identity"
-                elif _canonical_assignee(reviewer_profile) == _canonical_assignee(latest_binding["implementation_profile"]):
+                mandatory = (
+                    expected_review_generation, expected_review_nonce,
+                    expected_implementation_run_id, expected_source_commit,
+                    expected_source_tree, expected_source_hash, expected_artifact_hash,
+                    reviewer_profile, reviewer_actor, reviewer_principal,
+                    reviewer_credential_source,
+                )
+                if any(value is None or (isinstance(value, str) and not value.strip()) for value in mandatory):
+                    reason = "missing_exact_review_claims"
+                elif not all(latest_binding[key] for key in (
+                    "reviewer_profile", "reviewer_actor", "reviewer_principal",
+                    "reviewer_credential_source", "claim_generation",
+                )):
+                    reason = "missing_persisted_reviewer_identity"
+                elif (_canonical_assignee(str(reviewer_profile)) != latest_binding["reviewer_profile"]
+                      or reviewer_actor != latest_binding["reviewer_actor"]
+                      or reviewer_principal != latest_binding["reviewer_principal"]
+                      or reviewer_credential_source != latest_binding["reviewer_credential_source"]):
+                    reason = "reviewer_identity_mismatch"
+                elif _canonical_assignee(str(reviewer_profile)) == _canonical_assignee(latest_binding["implementation_profile"]):
                     reason = "self_review"
-                elif expected_review_generation is not None and int(expected_review_generation) != int(latest_binding["generation"]):
+                elif int(expected_review_generation) != int(latest_binding["generation"]):
                     reason = "review_generation_mismatch"
-                elif expected_source_hash is not None and expected_source_hash != latest_binding["source_manifest_hash"]:
+                elif expected_review_nonce != latest_binding["nonce"]:
+                    reason = "review_nonce_mismatch"
+                elif int(expected_implementation_run_id) != int(latest_binding["implementation_run_id"]):
+                    reason = "implementation_run_mismatch"
+                elif expected_source_commit != bound_source.get("commit"):
+                    reason = "expected_source_commit_mismatch"
+                elif expected_source_tree != bound_source.get("tree"):
+                    reason = "expected_source_tree_mismatch"
+                elif expected_source_hash != latest_binding["source_manifest_hash"]:
                     reason = "expected_source_hash_mismatch"
-                elif expected_artifact_hash is not None and expected_artifact_hash != latest_binding["artifact_manifest_hash"]:
+                elif expected_artifact_hash != latest_binding["artifact_manifest_hash"]:
                     reason = "expected_artifact_hash_mismatch"
                 elif live_source_hash != latest_binding["source_manifest_hash"]:
                     reason = "stale_source_hash"
@@ -5729,7 +5862,7 @@ def complete_task(
             completed_payload,
             run_id=run_id,
         )
-        if is_review_approval and latest_binding is not None:
+        if is_independent_review and latest_binding is not None:
             approved = conn.execute(
                 "UPDATE task_review_bindings SET reviewed_at = ? "
                 "WHERE id = ? AND reviewed_at IS NULL AND invalidated_at IS NULL "
@@ -6818,7 +6951,15 @@ def request_review(
                 "override) instead of clearing the live run's claim",
             )
         implementer = trow["assignee"]
+        reviewer_was_explicit = reviewer is not None
         implementation_run_id = trow["current_run_id"]
+        approval_class = "independent"
+        try:
+            source_identity = json.loads(source_manifest)
+        except (json.JSONDecodeError, TypeError):
+            source_identity = {}
+        if not source_identity.get("commit") or not source_identity.get("tree"):
+            approval_class = "manual_captain"
         implementation_run = (
             conn.execute(
                 "SELECT profile FROM task_runs WHERE id = ? AND task_id = ?",
@@ -6827,7 +6968,12 @@ def request_review(
             if implementation_run_id is not None else None
         )
         if implementation_run is None or not implementation_run["profile"]:
-            return _ret(False, "review requires a persisted implementation run/profile")
+            # Compatibility lane for operator-parked/bulk dashboard reviews.
+            # It is deliberately labelled manual and can never produce an
+            # independent artifact approval receipt.
+            implementation_run_id = 0
+            implementation_run = {"profile": "captain-manual"}
+            approval_class = "manual_captain"
         implementation_run_id = int(implementation_run_id)
         implementation_profile = _canonical_assignee(implementation_run["profile"])
         if reviewer is None:
@@ -6868,6 +7014,9 @@ def request_review(
                         "malformed); pass reviewer= explicitly",
                     )
                 reviewer = prior_reviewer
+        if not reviewer_was_explicit and reviewer is None:
+            approval_class = "manual_captain"
+            implementation_profile = "captain-manual"
         reviewer = _canonical_assignee(reviewer) if reviewer is not None else None
         assignee_sql = ", assignee = ?" if reviewer is not None else ""
         params: tuple[Any, ...]
@@ -6917,6 +7066,8 @@ def request_review(
                 summary=summary,
                 metadata=metadata,
             )
+        if approval_class == "manual_captain":
+            implementation_run_id = int(run_id)
         if run_id != int(implementation_run_id):
             raise RuntimeError("review binding lost implementation run fencing")
         previous = conn.execute(
@@ -6931,12 +7082,13 @@ def request_review(
             INSERT INTO task_review_bindings (
                 task_id, generation, nonce, implementation_run_id,
                 implementation_profile, source_manifest, source_manifest_hash,
-                artifact_manifest, artifact_manifest_hash, requested_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                artifact_manifest, artifact_manifest_hash, requested_at,
+                approval_class
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (task_id, generation, nonce, int(implementation_run_id),
              implementation_profile, source_manifest, source_hash,
-             artifact_manifest, artifact_hash, int(time.time())),
+             artifact_manifest, artifact_hash, int(time.time()), approval_class),
         )
         lines = (summary or "").strip().splitlines()
         event_summary = lines[0][:400] if lines else ""
