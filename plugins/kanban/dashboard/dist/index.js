@@ -482,6 +482,15 @@
           if (cb.onArm) cb.onArm(taskId);
         }, POINTER_HOLD_MS),
       };
+      // A pen emits mouse-compatible native drag events immediately on a
+      // draggable card, before the hold timer can arm.  Pens do not need the
+      // touch compatibility-click protection, so reserve native DnD at
+      // pointerdown for pen only.  Touch keeps `draggable` untouched until
+      // the deliberate hold above arms.
+      if (e.pointerType === "pen") {
+        el.draggable = false;
+        gesture.nativeDragChanged = true;
+      }
       setState("pressed");
     }
 
