@@ -16343,6 +16343,16 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
         if canonical == "kanban":
             return await self._handle_kanban_command(event)
 
+        if canonical == "orchestration":
+            import shlex
+
+            from hermes_cli.harness_debug import HarnessDebugRefused, run_argv
+
+            try:
+                return run_argv(shlex.split(event.get_command_args()))
+            except (HarnessDebugRefused, SystemExit) as exc:
+                return str(exc)
+
         if canonical == "suggestions":
             return await self._handle_suggestions_command(event)
 

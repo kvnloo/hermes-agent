@@ -10740,6 +10740,19 @@ class HermesCLI(CLIAgentSetupMixin, CLICommandsMixin, CLIBillingMixin):
             self._handle_curator_command(cmd_original)
         elif canonical == "kanban":
             self._handle_kanban_command(cmd_original)
+        elif canonical == "orchestration":
+            import shlex
+
+            from hermes_cli.harness_debug import HarnessDebugRefused, run_argv
+
+            try:
+                self._console_print(
+                    run_argv(shlex.split(cmd_original)[1:]),
+                    highlight=False,
+                    markup=False,
+                )
+            except (HarnessDebugRefused, SystemExit) as exc:
+                self._console_print(str(exc), highlight=False, markup=False)
         elif canonical == "skills":
             with self._busy_command(self._slow_command_status(cmd_original)):
                 self._handle_skills_command(cmd_original)
