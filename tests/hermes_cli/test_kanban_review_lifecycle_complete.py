@@ -12,12 +12,14 @@ These tests cover the two review models that must coexist:
 from __future__ import annotations
 
 import time
+
 from pathlib import Path
 
 import pytest
 
 from hermes_cli import kanban_db as kb
 from hermes_cli import kanban_diagnostics as kd
+
 
 
 @pytest.fixture
