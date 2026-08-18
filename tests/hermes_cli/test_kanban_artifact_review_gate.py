@@ -436,7 +436,8 @@ def test_expiry_enqueues_durable_cleanup_and_callback_is_immediately_invalid(con
 def test_v5_legacy_terminal_duplicates_normalize_on_public_restart(tmp_path):
     path = tmp_path / "legacy-v5.db"
     db = kb.connect(path)
-    db.execute("DROP INDEX idx_captain_request_generation")
+    db.execute("DROP INDEX IF EXISTS idx_captain_request_generation")
+    db.execute("DROP INDEX IF EXISTS idx_captain_request_exact_generation")
     db.execute("UPDATE kanban_schema_migrations SET version = 4 WHERE name = 'artifact_review_gate'")
     values = ("telegram", "chat", "task", "s" * 64, "a" * 64, 1, 200)
     db.execute(
@@ -461,3 +462,69 @@ def test_v5_legacy_terminal_duplicates_normalize_on_public_restart(tmp_path):
     ).fetchone()
     assert tuple(receipt) == ("revoked", "migration_v5_duplicate")
     reopened.close()
+
+
+def test_generation_rollover_revokes_before_cleanup_and_blocks_new_issuance(conn, tmp_path):
+    task_id, _ = _task(conn, tmp_path)
+    old_nonce = kb.create_captain_approval_request(
+        conn, task_id=task_id, platform="telegram", chat_id="chat-9",
+        message_id="old-message", expires_at=1000, now=100,
+    )
+    assert old_nonce is not None
+    review = kb.claim_review_task(conn, task_id)
+    assert review is not None
+    assert kb.request_changes(
+        conn, task_id, reason="new product generation", expected_run_id=review.current_run_id,
+    ) == (True, "builder")
+    implementation = kb.claim_task(conn, task_id)
+    assert implementation is not None
+    assert kb.request_review(
+        conn, task_id, reviewer="reviewer",
+        expected_run_id=implementation.current_run_id,
+    )
+
+    job_id = kb.enqueue_captain_approval_issuance(
+        conn, task_id=task_id, decision_generation=2,
+        platform="telegram", chat_id="chat-9", now=200,
+    )
+    old = conn.execute(
+        "SELECT state FROM captain_approval_requests WHERE task_id = ? AND decision_generation = 1",
+        (task_id,),
+    ).fetchone()
+    assert old["state"] == "superseded"
+    assert not kb.approve_captain_callback(
+        conn, callback_nonce=old_nonce, platform="telegram", operator_user_id="captain-7",
+        chat_id="chat-9", message_id="old-message", allowed_user_ids={"captain-7"},
+        allowed_chat_ids={"chat-9"}, now=201,
+    )
+    assert kb.claim_captain_approval_issuance_jobs(conn, now=201) == []
+    cleanup = kb.claim_captain_approval_cleanup_jobs(conn, now=201)
+    assert len(cleanup) == 1
+    assert kb.finish_captain_approval_cleanup_job(
+        conn, job_id=cleanup[0]["id"], success=True, now=202,
+    )
+    assert [job["id"] for job in kb.claim_captain_approval_issuance_jobs(conn, now=202)] == [job_id]
+
+
+def test_stale_generation_cannot_reserve_or_bind_after_rollover(conn, tmp_path):
+    task_id, _ = _task(conn, tmp_path)
+    nonce = kb.reserve_captain_approval_request(
+        conn, task_id=task_id, platform="telegram", chat_id="chat-9",
+        expires_at=1000, now=100, decision_generation=1,
+    )
+    assert nonce is not None
+    review = kb.claim_review_task(conn, task_id)
+    assert review is not None
+    assert kb.request_changes(conn, task_id, reason="roll", expected_run_id=review.current_run_id)
+    implementation = kb.claim_task(conn, task_id)
+    assert implementation is not None
+    assert kb.request_review(conn, task_id, reviewer="reviewer",
+                             expected_run_id=implementation.current_run_id)
+    assert not kb.bind_captain_approval_request(
+        conn, callback_nonce=nonce, message_id="late", now=200,
+        task_id=task_id, decision_generation=1,
+    )
+    assert kb.reserve_captain_approval_request(
+        conn, task_id=task_id, platform="telegram", chat_id="chat-9",
+        expires_at=1000, now=200, decision_generation=1,
+    ) is None
