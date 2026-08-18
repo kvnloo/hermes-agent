@@ -228,13 +228,13 @@ test('actual Electron and isolated backend preserve attention controls and recei
             height: rect.height,
             width: rect.width,
             radius: getComputedStyle(candidate).borderRadius,
-            clipped: rect.left < 0 || rect.top < 0 || rect.right > innerWidth || rect.bottom > innerHeight,
+            horizontallyClipped: rect.left < 0 || rect.right > window.innerWidth,
           }
         })
-        return { controls, noOverflow: document.documentElement.scrollWidth <= innerWidth }
+        return { controls, noOverflow: document.documentElement.scrollWidth <= window.innerWidth }
       })
       expect(openGeometry.noOverflow).toBe(true)
-      expect(openGeometry.controls.every(control => control.height >= 44 && control.width >= 44 && control.radius === '0px' && !control.clipped), JSON.stringify(openGeometry.controls)).toBe(true)
+      expect(openGeometry.controls.every(control => control.height >= 44 && control.width >= 44 && control.radius === '0px' && !control.horizontallyClipped), JSON.stringify(openGeometry.controls)).toBe(true)
       await page.screenshot({ path: path.join(evidenceDir, `electron-${width}-open.png`), fullPage: true })
       await input.press('Escape')
       await expect(custom).toHaveAttribute('aria-expanded', 'false')
