@@ -24,7 +24,7 @@ ids={name:k.create_task(c,title=title,body='isolated actual WebUI E2E',created_b
 c.close(); print(json.dumps(ids))
 `], { cwd: repo, env, encoding: 'utf8' })
 const ids = JSON.parse(seed.trim())
-const server = spawn(process.env.PYTHON || 'python3', ['-m', 'hermes_cli.main', 'dashboard', '--port', String(port), '--host', '127.0.0.1', '--skip-build', '--no-open', '--isolated'], { cwd: repo, env, stdio: ['ignore', 'pipe', 'pipe'] })
+const server = spawn(process.env.PYTHON || 'python3', ['-m', 'hermes_cli.main', 'dashboard', '--port', String(port), '--host', '127.0.0.1', '--skip-build', '--no-open', '--isolated'], { cwd: repo, detached: true, env, stdio: ['ignore', 'pipe', 'pipe'] })
 let serverLog = ''
 server.stdout.on('data', chunk => { serverLog += chunk })
 server.stderr.on('data', chunk => { serverLog += chunk })
@@ -108,7 +108,9 @@ try {
   manifest.interactions = { attentionPosts, snoozeReceipt, wakeReceipt, escapeFocusRestored: true, localDatetimeControl: true, staleReconciliationCoveredByElectronReplay: true }
 } finally {
   await browser?.close().catch(() => undefined)
-  server.kill('SIGTERM')
+  try { process.kill(-server.pid, 'SIGTERM') } catch {}
+  server.stdout.destroy()
+  server.stderr.destroy()
   writeFileSync(path.join(output, 'server.log'), serverLog)
   writeFileSync(path.join(output, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`)
   rmSync(runtime, { recursive: true, force: true })

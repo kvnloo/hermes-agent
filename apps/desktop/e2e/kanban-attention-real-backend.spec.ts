@@ -174,7 +174,9 @@ test('actual Electron and isolated backend preserve attention controls and recei
       }), { timeout: 30_000 }).toBe(true)
 
       const geometry = await card.evaluate(element => {
-        const controls = [...element.querySelectorAll('button, input')].filter(candidate => {
+        const presetGroup = element.querySelector('[role="group"][aria-label="Snooze presets"]')
+        const attentionRoot = presetGroup?.parentElement
+        const controls = [...(attentionRoot?.querySelectorAll('button, input') ?? [])].filter(candidate => {
           const rect = candidate.getBoundingClientRect()
 
           return rect.width > 0 && rect.height > 0
@@ -183,7 +185,6 @@ test('actual Electron and isolated backend preserve attention controls and recei
 
           return { label: candidate.getAttribute('aria-label') || candidate.textContent?.trim() || candidate.tagName, height: rect.height, width: rect.width, radius: getComputedStyle(candidate).borderRadius }
         })
-        const presetGroup = element.querySelector('[role="group"][aria-label="Snooze presets"]')
         const presetRows = presetGroup ? new Set([...presetGroup.querySelectorAll(':scope > button')].map(button => Math.round(button.getBoundingClientRect().top))).size : 0
         const snoozeButton = element.querySelector('[aria-label="1 hour"]')
 
