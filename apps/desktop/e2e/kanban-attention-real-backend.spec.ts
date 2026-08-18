@@ -163,7 +163,7 @@ test('actual Electron and isolated backend preserve attention controls and recei
       await expect(card.getByRole('button', { name: 'Tomorrow at 9 AM local time' })).toBeVisible()
       await expect(card.getByRole('button', { name: '1 week' })).toBeVisible()
       await expect(card.getByRole('button', { name: '1 month' })).toBeVisible()
-      const custom = card.getByRole('button', { name: 'Custom+' })
+      const custom = card.getByRole('button', { name: /^Custom/ })
       await expect(custom).toHaveAttribute('aria-expanded', 'false')
       await snooze.scrollIntoViewIfNeeded()
       await expect.poll(() => snooze.evaluate(element => {
