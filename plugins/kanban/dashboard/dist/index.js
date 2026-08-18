@@ -552,8 +552,16 @@
       if (gesture.armed) e.preventDefault();
     }
 
+    function holdTouchEnd(e) {
+      if (!e.cancelable) return;
+      if ((gesture && gesture.armed) || el.dataset.suppressCardClick === "true") {
+        e.preventDefault();
+      }
+    }
+
     el.addEventListener("pointerdown", onDown);
     el.addEventListener("touchmove", holdTouchMove, { passive: false });
+    el.addEventListener("touchend", holdTouchEnd, { passive: false });
     document.addEventListener("pointerdown", cancelOnAdditionalPointer, true);
     document.addEventListener("pointermove", move, { passive: false });
     document.addEventListener("pointerup", up, { passive: false });
@@ -564,6 +572,7 @@
       cancel();
       el.removeEventListener("pointerdown", onDown);
       el.removeEventListener("touchmove", holdTouchMove);
+      el.removeEventListener("touchend", holdTouchEnd);
       document.removeEventListener("pointerdown", cancelOnAdditionalPointer, true);
       document.removeEventListener("pointermove", move);
       document.removeEventListener("pointerup", up);
