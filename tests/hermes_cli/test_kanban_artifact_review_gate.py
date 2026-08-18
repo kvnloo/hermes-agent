@@ -3,6 +3,7 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 import inspect
+import sqlite3
 
 import pytest
 
@@ -20,7 +21,7 @@ def conn(tmp_path: Path):
 
 def _task(conn, tmp_path: Path, *, reviewer: str = "reviewer"):
     repo = tmp_path / "repo"
-    repo.mkdir()
+    repo.mkdir(parents=True)
     subprocess.run(["git", "init", "-q", str(repo)], check=True)
     subprocess.run(["git", "-C", str(repo), "config", "user.email", "test@example.invalid"], check=True)
     subprocess.run(["git", "-C", str(repo), "config", "user.name", "Test"], check=True)
@@ -174,3 +175,126 @@ def test_ready_task_without_implementation_run_cannot_request_review(conn, tmp_p
     assert kb.request_review(conn, task_id, reviewer="reviewer") is True
     assert kb.get_task(conn, task_id).status == "review"
     assert kb.complete_task(conn, task_id) is False
+
+
+def _captain_token(conn, task_id: str, *, now: int = 100, **overrides):
+    binding = conn.execute(
+        "SELECT * FROM task_review_bindings WHERE task_id = ? ORDER BY generation DESC",
+        (task_id,),
+    ).fetchone()
+    captain = kb.CaptainIdentity("telegram", "captain-7", "chat-9", "telegram-update")
+    envelope_values = {
+        "authenticated": True, "platform": "telegram", "operator_user_id": "captain-7",
+        "chat_id": "chat-9", "message_id": f"message-{task_id}",
+        "source": "telegram-update", "received_at": now,
+    }
+    envelope_values.update(overrides.pop("envelope", {}))
+    values = {
+        "task_id": task_id, "source_hash": binding["source_manifest_hash"],
+        "artifact_hash": binding["artifact_manifest_hash"],
+        "decision_generation": binding["generation"], "expires_at": now + 60,
+    }
+    values.update(overrides)
+    return kb.issue_captain_approval_authorization(
+        conn, envelope=kb.AuthenticatedCaptainEnvelope(**envelope_values),
+        captain=captain, **values,
+    )
+
+
+def test_captain_product_approval_consumes_authenticated_receipt_once(conn, tmp_path):
+    task_id, _ = _task(conn, tmp_path)
+    token = _captain_token(conn, task_id)
+    assert token
+    assert kb.approve_task_by_captain(conn, task_id, authorization_token=token, now=101)
+    assert not kb.approve_task_by_captain(conn, task_id, authorization_token=token, now=102)
+    receipt = conn.execute("SELECT * FROM captain_approval_receipts").fetchone()
+    assert receipt["task_id"] == task_id
+    assert receipt["operation"] == "captain_product_approve"
+    binding = conn.execute(
+        "SELECT reviewed_at FROM task_review_bindings WHERE task_id = ?", (task_id,)
+    ).fetchone()
+    assert binding["reviewed_at"] is None
+    event = [e for e in kb.list_events(conn, task_id) if e.kind == "captain_product_approved"][-1]
+    assert event.payload["approval_class"] == "captain_product"
+
+
+@pytest.mark.parametrize("envelope", [
+    {"authenticated": False}, {"operator_user_id": "attacker"},
+    {"chat_id": "wrong-chat"}, {"source": "request-body"},
+])
+def test_forged_or_unauthenticated_captain_envelope_is_denied(conn, tmp_path, envelope):
+    task_id, _ = _task(conn, tmp_path)
+    assert _captain_token(conn, task_id, envelope=envelope) is None
+
+
+def test_captain_missing_expired_wrong_task_and_hash_are_denied(conn, tmp_path):
+    first, _ = _task(conn, tmp_path / "one")
+    second, _ = _task(conn, tmp_path / "two")
+    assert not kb.approve_task_by_captain(conn, first, authorization_token="missing", now=101)
+    expired = _captain_token(conn, first, now=200)
+    assert not kb.approve_task_by_captain(conn, first, authorization_token=expired, now=260)
+    wrong_task = _captain_token(conn, first, now=300,
+                                envelope={"message_id": "wrong-task-token"})
+    assert not kb.approve_task_by_captain(conn, second, authorization_token=wrong_task, now=301)
+    wrong_hash = _captain_token(conn, first, now=400, source_hash="0" * 64,
+                                envelope={"message_id": "wrong-hash-token"})
+    assert not kb.approve_task_by_captain(conn, first, authorization_token=wrong_hash, now=401)
+
+
+def _pre_v2_connection(path: Path):
+    db = sqlite3.connect(path, isolation_level=None)
+    db.row_factory = sqlite3.Row
+    db.executescript("""
+        CREATE TABLE task_review_bindings (
+            id INTEGER PRIMARY KEY, task_id TEXT, generation INTEGER, nonce TEXT,
+            implementation_run_id INTEGER, implementation_profile TEXT,
+            source_manifest TEXT, source_manifest_hash TEXT,
+            artifact_manifest TEXT, artifact_manifest_hash TEXT, requested_at INTEGER
+        );
+        CREATE TABLE kanban_schema_migrations (
+            name TEXT PRIMARY KEY, version INTEGER NOT NULL, applied_at INTEGER NOT NULL
+        );
+        INSERT INTO kanban_schema_migrations VALUES ('artifact_review_gate', 1, 1);
+    """)
+    return db
+
+
+def test_pre_v2_migration_success_rollback_restart_and_idempotence(tmp_path):
+    path = tmp_path / "legacy.db"
+    db = _pre_v2_connection(path)
+    db.execute("CREATE TRIGGER fail_version BEFORE UPDATE ON kanban_schema_migrations "
+               "BEGIN SELECT RAISE(ABORT, 'injected migration failure'); END")
+    with pytest.raises(sqlite3.IntegrityError), kb.write_txn(db):
+        kb._migrate_artifact_review_gate_v2(db)
+    columns = {row["name"] for row in db.execute("PRAGMA table_info(task_review_bindings)")}
+    assert "approval_class" not in columns
+    assert db.execute("SELECT name FROM sqlite_master WHERE name='captain_approval_receipts'").fetchone() is None
+    assert db.execute("SELECT version FROM kanban_schema_migrations").fetchone()[0] == 1
+    db.execute("DROP TRIGGER fail_version")
+    db.close()
+
+    retry = sqlite3.connect(path, isolation_level=None)
+    retry.row_factory = sqlite3.Row
+    with kb.write_txn(retry):
+        kb._migrate_artifact_review_gate_v2(retry)
+    with kb.write_txn(retry):
+        kb._migrate_artifact_review_gate_v2(retry)
+    assert retry.execute("SELECT version FROM kanban_schema_migrations").fetchone()[0] == kb._ARTIFACT_REVIEW_GATE_SCHEMA_VERSION
+    assert retry.execute("SELECT name FROM sqlite_master WHERE name='captain_approval_receipts'").fetchone()
+    retry.close()
+
+
+def test_fresh_production_schema_sentinel_and_cross_process_reopen(tmp_path):
+    path = tmp_path / "fresh.db"
+    script = (
+        "from pathlib import Path; from hermes_cli import kanban_db as k; "
+        f"c=k.connect(Path({str(path)!r})); c.close()"
+    )
+    processes = [subprocess.Popen(["python", "-c", script]) for _ in range(2)]
+    assert [process.wait(timeout=30) for process in processes] == [0, 0]
+    db = kb.connect(path)
+    assert db.execute(
+        "SELECT version FROM kanban_schema_migrations WHERE name='artifact_review_gate'"
+    ).fetchone()[0] == kb._ARTIFACT_REVIEW_GATE_SCHEMA_VERSION
+    assert db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+    db.close()
