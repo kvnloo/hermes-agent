@@ -1,0 +1,100 @@
+{
+  "live": {
+    "assets": {
+      "plugins/kanban/dashboard/dist/index.js": "bbf0399a395f444dcbdd4521b5d73d910dcebce770484a8603514d11741be205",
+      "plugins/kanban/dashboard/dist/style.css": "fdaf951dd5b80ccf3657314fab89a3f6a2c89a08dfd1356ad8d41c65416e68bb"
+    },
+    "canonical_sentinel_before": {
+      "path": "/home/kvn/.hermes/kanban/boards/zer0-company/kanban.db",
+      "sha256": "b247788ecf6b7d1fcf3dc1c4df99a20239d6bf68f42de2b9ddff069a150eccaf",
+      "size": 3387392
+    },
+    "commit": "27a452edfa475de1b7ec72f09ac481bbb0190164",
+    "db": "/workspace/zer0/oss/hermes-agent/.worktrees/t_91a83fc4/.tmp-tests/matrix/kanban/boards/hold-drag-review/kanban.db",
+    "home": "/workspace/zer0/oss/hermes-agent/.worktrees/t_91a83fc4/.tmp-tests/matrix",
+    "pid": 1411503,
+    "port": 35843,
+    "readiness_timeout": 60,
+    "start_command": "python tests/kanban_hold_harness/start.py",
+    "stderr": "/workspace/zer0/oss/hermes-agent/.worktrees/t_91a83fc4/.tmp-tests/matrix/dashboard.stderr.log",
+    "stdout": "/workspace/zer0/oss/hermes-agent/.worktrees/t_91a83fc4/.tmp-tests/matrix/dashboard.stdout.log",
+    "url": "http://127.0.0.1:35843/kanban"
+  },
+  "results": [
+    {
+      "width": 320,
+      "dims": {
+        "scrollWidth": 320,
+        "clientWidth": 320,
+        "controls": [
+          73.9375,
+          73.9375,
+          73.9375,
+          73.9375
+        ]
+      },
+      "measured199": 199.09999999776483,
+      "measured200": 200.19999999925494
+    },
+    {
+      "width": 360,
+      "dims": {
+        "scrollWidth": 360,
+        "clientWidth": 360,
+        "controls": [
+          73.9375,
+          73.9375,
+          73.9375,
+          73.9375
+        ]
+      },
+      "measured199": 199.09999999776483,
+      "measured200": 200.19999999925494
+    },
+    {
+      "width": 390,
+      "dims": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "controls": [
+          73.9375,
+          73.9375,
+          73.9375,
+          73.9375
+        ]
+      },
+      "measured199": 199.19999999925494,
+      "measured200": 200.09999999776483
+    },
+    {
+      "width": 430,
+      "dims": {
+        "scrollWidth": 430,
+        "clientWidth": 430,
+        "controls": [
+          73.9375,
+          73.9375,
+          73.9375,
+          73.9375
+        ]
+      },
+      "measured199": 199.30000000074506,
+      "measured200": 200.09999999776483
+    },
+    {
+      "width": 1280,
+      "dims": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "controls": [
+          73.9375,
+          73.9375,
+          73.9375,
+          73.9375
+        ]
+      },
+      "measured199": 199.09999999776483,
+      "measured200": 200.19999999925494
+    }
+  ]
+}

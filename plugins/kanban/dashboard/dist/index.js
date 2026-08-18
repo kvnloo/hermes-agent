@@ -400,67 +400,200 @@
   // standard `drop` event and our `hermes-kanban:drop` event.
   // -------------------------------------------------------------------------
 
-  function attachTouchDrag(el, taskId) {
-    if (!el) return;
-    function onDown(e) {
-      if (e.pointerType !== "touch") return;
-      e.preventDefault();
-      const proxy = el.cloneNode(true);
-      proxy.classList.add("hermes-kanban-touch-proxy");
-      document.body.appendChild(proxy);
-      let lastTarget = null;
+  const POINTER_HOLD_MS = 200;
+  const POINTER_SLOP_PX = 9;
 
-      function move(ev) {
-        proxy.style.left = `${ev.clientX - proxy.offsetWidth / 2}px`;
-        proxy.style.top = `${ev.clientY - 24}px`;
-        proxy.style.display = "none";
-        const under = document.elementFromPoint(ev.clientX, ev.clientY);
-        proxy.style.display = "";
-        const col = under && under.closest && under.closest("[data-kanban-column]");
-        const trash = under && under.closest && under.closest("[data-kanban-trash]");
-        const target = col || trash;
-        if (target !== lastTarget) {
-          if (lastTarget) lastTarget.classList.remove("hermes-kanban-column--drop");
-          if (target) target.classList.add("hermes-kanban-column--drop");
-          lastTarget = target;
-        }
-      }
-      function up() {
-        document.removeEventListener("pointermove", move);
-        document.removeEventListener("pointerup", up);
-        document.removeEventListener("pointercancel", up);
-        if (lastTarget) {
-          lastTarget.classList.remove("hermes-kanban-column--drop");
-          const status = lastTarget.getAttribute("data-kanban-column");
-          const isTrash = lastTarget.hasAttribute("data-kanban-trash");
-          if (isTrash) {
-            lastTarget.dispatchEvent(new CustomEvent("hermes-kanban:delete", {
-              detail: { taskId },
-              bubbles: true,
-            }));
-          } else if (status) {
-            lastTarget.dispatchEvent(new CustomEvent("hermes-kanban:drop", {
-              detail: { taskId, status },
-              bubbles: true,
-            }));
-          }
-        }
-        proxy.remove();
-      }
-      // Kick off proxy at the pointer origin.
-      proxy.style.position = "fixed";
-      proxy.style.pointerEvents = "none";
-      proxy.style.opacity = "0.85";
-      proxy.style.zIndex = "9999";
-      proxy.style.width = `${el.offsetWidth}px`;
-      proxy.style.left = `${e.clientX - el.offsetWidth / 2}px`;
-      proxy.style.top = `${e.clientY - 24}px`;
-      document.addEventListener("pointermove", move);
-      document.addEventListener("pointerup", up);
-      document.addEventListener("pointercancel", up);
+  // Euclidean distance is the gesture oracle.  The boundary is inclusive:
+  // exactly 9px remains eligible and only a value strictly greater than 9px
+  // cancels the hold.  Keep this comparison free of rounding/epsilon fudge;
+  // browser touch coordinates are measured from the pointerdown coordinates.
+  function pointerWithinSlop(startX, startY, clientX, clientY) {
+    return Math.hypot(clientX - startX, clientY - startY) <= POINTER_SLOP_PX;
+  }
+
+  function isNestedInteractive(target, root) {
+    const nested = target && target.closest && target.closest(
+      "a,button,input,select,textarea,label,[role='button'],[data-no-card-drag]",
+    );
+    return !!(nested && nested !== root);
+  }
+
+  function vibrationAllowed() {
+    return typeof navigator !== "undefined" && typeof navigator.vibrate === "function" &&
+      !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }
+
+  function vibrate(pattern) {
+    if (vibrationAllowed()) navigator.vibrate(pattern);
+  }
+
+  function attachTouchDrag(el, taskId, callbacks) {
+    if (!el) return;
+    const cb = callbacks || {};
+    let gesture = null;
+
+    function setState(state) {
+      el.setAttribute("data-gesture-state", state);
+      if (cb.onState) cb.onState(state);
     }
+
+    function clearGesture(finalState) {
+      if (!gesture) return;
+      window.clearTimeout(gesture.timer);
+      const pointerId = gesture.pointerId;
+      const restoreNativeDrag = gesture.restoreNativeDrag;
+      const nativeDragChanged = gesture.nativeDragChanged;
+      gesture = null;
+      if (nativeDragChanged) el.draggable = restoreNativeDrag;
+      if (el.hasPointerCapture && el.hasPointerCapture(pointerId)) el.releasePointerCapture(pointerId);
+      setState(finalState || "cancelled");
+      requestAnimationFrame(function () { if (!gesture) setState("idle"); });
+    }
+
+    function onDown(e) {
+      if ((e.pointerType !== "touch" && e.pointerType !== "pen") ||
+          !e.isPrimary || (e.pointerType === "pen" && e.button !== 0) ||
+          gesture || isNestedInteractive(e.target, el)) return;
+      gesture = {
+        pointerId: e.pointerId,
+        startX: e.clientX,
+        startY: e.clientY,
+        armed: false,
+        proxy: null,
+        lastTarget: null,
+        restoreNativeDrag: el.draggable,
+        nativeDragChanged: false,
+        timer: window.setTimeout(function () {
+          if (!gesture) return;
+          gesture.armed = true;
+          // Only a deliberate hold takes ownership from native HTML DnD.
+          // Changing draggable during pointerdown suppresses Chromium's
+          // compatibility click for an otherwise ordinary touch tap.
+          el.draggable = false;
+          gesture.nativeDragChanged = true;
+          gesture.proxy = el.cloneNode(true);
+          gesture.proxy.removeAttribute("id");
+          gesture.proxy.classList.add("hermes-kanban-touch-proxy");
+          gesture.proxy.setAttribute("aria-hidden", "true");
+          document.body.appendChild(gesture.proxy);
+          setState("armed");
+          // Chromium's CDP pen path can reject capture even while the primary
+          // pointer remains down.  Document-level move/up listeners still own
+          // the gesture, so capture is an enhancement rather than an arm gate.
+          if (el.setPointerCapture) {
+            try { el.setPointerCapture(e.pointerId); } catch (_captureError) { /* continue armed */ }
+          }
+          vibrate(18);
+          if (cb.onArm) cb.onArm(taskId);
+        }, POINTER_HOLD_MS),
+      };
+      // A pen emits mouse-compatible native drag events immediately on a
+      // draggable card, before the hold timer can arm.  Pens do not need the
+      // touch compatibility-click protection, so reserve native DnD at
+      // pointerdown for pen only.  Touch keeps `draggable` untouched until
+      // the deliberate hold above arms.
+      if (e.pointerType === "pen") {
+        el.draggable = false;
+        gesture.nativeDragChanged = true;
+      }
+      setState("pressed");
+    }
+
+    function cancelOnAdditionalPointer(e) {
+      if (gesture && e.pointerId !== gesture.pointerId) cancel();
+    }
+
+    function move(e) {
+      if (!gesture || e.pointerId !== gesture.pointerId) return;
+      if (!gesture.armed) {
+        if (!pointerWithinSlop(gesture.startX, gesture.startY, e.clientX, e.clientY)) {
+          clearGesture("cancelled");
+        }
+        return;
+      }
+      e.preventDefault();
+      setState("dragging");
+      const proxy = gesture.proxy;
+      proxy.style.left = `${e.clientX - proxy.offsetWidth / 2}px`;
+      proxy.style.top = `${e.clientY - 24}px`;
+      proxy.style.display = "none";
+      const under = document.elementFromPoint(e.clientX, e.clientY);
+      proxy.style.display = "";
+      const col = under && under.closest && under.closest("[data-kanban-column]");
+      const trash = under && under.closest && under.closest("[data-kanban-trash]");
+      const target = col || trash;
+      if (target !== gesture.lastTarget) {
+        if (gesture.lastTarget) gesture.lastTarget.classList.remove("hermes-kanban-column--drop");
+        if (target) target.classList.add("hermes-kanban-column--drop");
+        gesture.lastTarget = target;
+      }
+    }
+
+    function up(e) {
+      if (!gesture || e.pointerId !== gesture.pointerId) return;
+      const active = gesture;
+      if (!active.armed) {
+        clearGesture("idle");
+        return;
+      }
+      e.preventDefault();
+      el.dataset.suppressCardClick = "true";
+      window.setTimeout(function () { delete el.dataset.suppressCardClick; }, 350);
+      if (active.lastTarget) {
+        active.lastTarget.classList.remove("hermes-kanban-column--drop");
+        const status = active.lastTarget.getAttribute("data-kanban-column");
+        const isTrash = active.lastTarget.hasAttribute("data-kanban-trash");
+        active.lastTarget.dispatchEvent(new CustomEvent(
+          isTrash ? "hermes-kanban:delete" : "hermes-kanban:drop",
+          { detail: { taskId, status }, bubbles: true },
+        ));
+        vibrate(12);
+        if (cb.onDrop) cb.onDrop(taskId, status || "trash");
+      } else if (cb.onInvalidDrop) cb.onInvalidDrop(taskId);
+      if (active.proxy) active.proxy.remove();
+      clearGesture(active.lastTarget ? "dropped" : "cancelled");
+    }
+
+    function cancel() {
+      if (gesture && gesture.proxy) gesture.proxy.remove();
+      clearGesture("cancelled");
+    }
+
+    // Preserve native tap and scrolling before the deliberate hold arms.
+    // Once armed, the drag owns subsequent cancelable movement.
+    function holdTouchMove(e) {
+      if (!gesture || !e.cancelable || !e.touches || !e.touches.length) return;
+      if (gesture.armed) e.preventDefault();
+    }
+
+    function holdTouchEnd(e) {
+      if (!e.cancelable) return;
+      if ((gesture && gesture.armed) || el.dataset.suppressCardClick === "true") {
+        e.preventDefault();
+      }
+    }
+
     el.addEventListener("pointerdown", onDown);
-    return function () { el.removeEventListener("pointerdown", onDown); };
+    el.addEventListener("touchmove", holdTouchMove, { passive: false });
+    el.addEventListener("touchend", holdTouchEnd, { passive: false });
+    document.addEventListener("pointerdown", cancelOnAdditionalPointer, true);
+    document.addEventListener("pointermove", move, { passive: false });
+    document.addEventListener("pointerup", up, { passive: false });
+    document.addEventListener("pointercancel", cancel);
+    window.addEventListener("scroll", cancel, true);
+    document.addEventListener("visibilitychange", cancel);
+    return function () {
+      cancel();
+      el.removeEventListener("pointerdown", onDown);
+      el.removeEventListener("touchmove", holdTouchMove);
+      el.removeEventListener("touchend", holdTouchEnd);
+      document.removeEventListener("pointerdown", cancelOnAdditionalPointer, true);
+      document.removeEventListener("pointermove", move);
+      document.removeEventListener("pointerup", up);
+      document.removeEventListener("pointercancel", cancel);
+      window.removeEventListener("scroll", cancel, true);
+      document.removeEventListener("visibilitychange", cancel);
+    };
   }
 
   // -------------------------------------------------------------------------
@@ -2743,9 +2876,22 @@
     const { t: i18n } = useI18n();
     const t = props.task;
     const cardRef = useRef(null);
+    const [gestureState, setGestureState] = useState("idle");
+    const [announcement, setAnnouncement] = useState("");
 
     useEffect(function () {
-      return attachTouchDrag(cardRef.current, t.id);
+      return attachTouchDrag(cardRef.current, t.id, {
+        onState: setGestureState,
+        onArm: function () {
+          setAnnouncement(`Grabbed ${t.title || t.id}. Move to a stage and release.`);
+        },
+        onDrop: function (_, status) {
+          setAnnouncement(`Dropped ${t.title || t.id} in ${status}.`);
+        },
+        onInvalidDrop: function () {
+          setAnnouncement(`Move cancelled for ${t.title || t.id}.`);
+        },
+      });
     }, [t.id]);
 
     const handleDragStart = function (e) {
@@ -2763,7 +2909,13 @@
         });
       }
     };
+
     const handleClick = function (e) {
+      if (cardRef.current && cardRef.current.dataset.suppressCardClick === "true") {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
       if (e.shiftKey) {
         e.preventDefault();
         e.stopPropagation();
@@ -2777,6 +2929,7 @@
         return;
       }
       props.onOpen(t.id);
+      vibrate(9);
     };
     const handleKeyDown = function (e) {
       if (e.key === "Enter" || e.key === " ") {
@@ -2801,6 +2954,7 @@
         "hermes-kanban-card",
         props.selected ? "hermes-kanban-card--selected" : "",
         props.failed ? "hermes-kanban-card--failed" : "",
+        gestureState !== "idle" ? `hermes-kanban-card--${gestureState}` : "",
         props.draggingSource ? "hermes-kanban-card--dragging-source" : "",
         stalenessClass(t),
       ),
@@ -2808,10 +2962,16 @@
       tabIndex: 0,
       role: "button",
       "aria-label": `${t.title || "untitled"} — ${t.id} — ${t.status}`,
+      "aria-grabbed": gestureState === "armed" || gestureState === "dragging" ? "true" : "false",
       onDragStart: handleDragStart,
       onClick: handleClick,
       onKeyDown: handleKeyDown,
     },
+      h("span", {
+        className: "hermes-kanban-sr-only",
+        "aria-live": "polite",
+        "aria-atomic": "true",
+      }, announcement),
       h(Card, null,
         h(CardContent, { className: "hermes-kanban-card-content" },
           h("div", { className: "hermes-kanban-card-row" },

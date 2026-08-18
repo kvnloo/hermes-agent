@@ -258,7 +258,6 @@ function Card({
   const k = useKanban()
   const [dragging, setDragging] = useState(false)
   const meta = columnMeta(task.status)
-  const summary = task.latest_summary || task.body
   const fallback = useDefaultAssignee()
   const arc = arcState(task, fallback)
 
@@ -267,7 +266,7 @@ function Card({
       <ContextMenuTrigger asChild>
         <div
           className={cn(
-            'group relative flex cursor-grab flex-col gap-2 rounded-md border border-(--ui-stroke-tertiary) border-l-2 bg-(--ui-bg-elevated) p-2.5',
+            'kanban-card group relative flex cursor-grab flex-col gap-1.5 border border-(--ui-stroke-tertiary) border-l-2 bg-(--ui-bg-elevated) p-2',
             // Hover matches the provider-picker rows: a quiet primary fill;
             // selected = the theme's focus color (same as a focused input).
             'transition-colors hover:bg-primary/[0.06] active:cursor-grabbing',
@@ -298,9 +297,6 @@ function Card({
           <span className="line-clamp-2 text-[0.8125rem] font-medium leading-snug text-foreground">
             {task.title || task.id}
           </span>
-          {summary && (
-            <span className="line-clamp-2 text-[0.6875rem] leading-snug text-(--ui-text-tertiary)">{summary}</span>
-          )}
           <CardFooter arc={arc} task={task} />
         </div>
       </ContextMenuTrigger>
@@ -423,7 +419,7 @@ function Column({
         {...dragHandlers}
         aria-label={k.expand(label)}
         className={cn(
-          'flex h-full w-8 shrink-0 flex-col items-center gap-1.5 rounded-lg p-2 transition-colors hover:bg-(--ui-bg-quinary)',
+          'kanban-touch flex h-full w-8 shrink-0 flex-col items-center gap-1.5 p-2 transition-colors hover:bg-(--ui-bg-quinary)',
           wash
         )}
         onClick={onToggle}
@@ -446,12 +442,12 @@ function Column({
     <div
       {...dragHandlers}
       className={cn(
-        'group/col flex h-full w-[calc(100vw-2rem)] max-w-full shrink-0 snap-start snap-always flex-col rounded-lg p-2 transition-colors md:w-64 md:[scroll-snap-align:none]',
+        'group/col flex h-full w-[calc(100vw-2rem)] max-w-full shrink-0 snap-start snap-always flex-col border-t border-(--ui-stroke-tertiary) p-1.5 transition-colors md:w-64 md:[scroll-snap-align:none]',
         wash
       )}
       style={{ width: laneWidth }}
     >
-      <header className="mb-1.5 flex h-5 items-center gap-1.5 px-1">
+      <header className="sticky top-0 z-[1] mb-1 flex h-7 items-center gap-1.5 bg-(--ui-surface-background) px-1">
         <span className="size-1.5 rounded-full" style={{ backgroundColor: meta.tone }} />
         <Tip label={columnHelp(k, column.name)}>
           <span className="cursor-help text-[0.6875rem] font-medium uppercase tracking-wide text-(--ui-text-tertiary)">
@@ -461,7 +457,7 @@ function Column({
         <span className="text-[0.625rem] tabular-nums text-(--ui-text-quaternary)">{column.tasks.length}</span>
         <button
           aria-label={k.collapse(label)}
-          className="ml-auto grid size-5 place-items-center rounded text-(--ui-text-tertiary) opacity-0 transition-opacity hover:bg-(--chrome-action-hover) hover:text-foreground focus-visible:opacity-100 group-hover/col:opacity-100"
+          className="kanban-touch ml-auto grid size-7 place-items-center text-(--ui-text-tertiary) opacity-0 transition-opacity hover:bg-(--chrome-action-hover) hover:text-foreground focus-visible:opacity-100 group-hover/col:opacity-100"
           onClick={onToggle}
           type="button"
         >
@@ -1341,7 +1337,7 @@ export function KanbanBoardPage() {
       >
         <div className="flex min-w-0 items-center gap-2">
           <h1 className="truncate text-sm font-semibold text-foreground">{k.title}</h1>
-          <span className="shrink-0 rounded-full bg-(--ui-bg-quaternary) px-1.5 py-px text-[0.625rem] tabular-nums text-(--ui-text-tertiary)">
+          <span className="shrink-0 border-l border-(--ui-stroke-secondary) pl-2 font-mono text-[0.625rem] tabular-nums text-(--ui-text-tertiary)">
             {total}
           </span>
         </div>
@@ -1383,6 +1379,26 @@ export function KanbanBoardPage() {
           />
         </div>
       </header>
+
+      {(assignee || tenant || archived) && (
+        <div aria-label={k.filters} className="flex min-h-7 shrink-0 items-center gap-1 overflow-x-auto px-4 pb-1">
+          {assignee && (
+            <button className="kanban-filter-chip" onClick={() => setAssignee('')} type="button">
+              @{assignee} <Codicon name="close" size="0.65rem" />
+            </button>
+          )}
+          {tenant && (
+            <button className="kanban-filter-chip" onClick={() => setTenant('')} type="button">
+              {tenant} <Codicon name="close" size="0.65rem" />
+            </button>
+          )}
+          {archived && (
+            <button className="kanban-filter-chip" onClick={() => setArchived(false)} type="button">
+              {k.showArchived} <Codicon name="close" size="0.65rem" />
+            </button>
+          )}
+        </div>
+      )}
 
       {settingsOpen && <OrchestrationPanel />}
 

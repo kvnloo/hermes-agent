@@ -174,7 +174,7 @@ function MetaRow({ children, label }: { children: ReactNode; label: string }) {
   return (
     <>
       <span className="text-(--ui-text-quaternary)">{label}</span>
-      <span className="min-w-0 truncate text-(--ui-text-secondary)">{children}</span>
+      <span className="min-w-0 break-words text-(--ui-text-secondary)">{children}</span>
     </>
   )
 }
@@ -677,7 +677,7 @@ export function TaskDrawer({
 
   return (
     <div
-      className="absolute inset-y-0 right-0 z-20 flex w-full max-w-full flex-col border-l border-(--ui-stroke-tertiary) bg-(--ui-bg-elevated) duration-150 ease-out motion-reduce:duration-0 motion-reduce:animate-none animate-in fade-in slide-in-from-right-4 md:w-[26rem]"
+      className="kanban-drawer absolute inset-y-0 right-0 z-20 flex w-full max-w-full flex-col border-l border-(--ui-stroke-tertiary) bg-(--ui-bg-elevated) duration-150 ease-out motion-reduce:duration-0 motion-reduce:animate-none animate-in fade-in slide-in-from-right-4 md:w-[26rem]"
       data-kanban-layout={viewport.desktop ? 'desktop' : 'mobile'}
       style={{ width: viewport.drawerWidth }}
     >
@@ -699,7 +699,7 @@ export function TaskDrawer({
                 <DropdownMenuTrigger asChild>
                   <button
                     aria-label={k.taskActions}
-                    className="grid size-6 place-items-center rounded text-(--ui-text-tertiary) transition-colors hover:bg-(--chrome-action-hover) hover:text-foreground"
+                    className="kanban-drawer-action grid size-8 place-items-center text-(--ui-text-tertiary) transition-colors hover:bg-(--chrome-action-hover) hover:text-foreground"
                     type="button"
                   >
                     <Codicon name="ellipsis" size="0.9rem" />
@@ -738,7 +738,7 @@ export function TaskDrawer({
             )}
             <button
               aria-label={k.close}
-              className="grid size-6 place-items-center rounded text-(--ui-text-tertiary) transition-colors hover:bg-(--chrome-action-hover) hover:text-foreground"
+              className="kanban-drawer-action grid size-8 place-items-center text-(--ui-text-tertiary) transition-colors hover:bg-(--chrome-action-hover) hover:text-foreground"
               onClick={onClose}
               type="button"
             >
