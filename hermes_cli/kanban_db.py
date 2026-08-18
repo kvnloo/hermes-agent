@@ -2594,7 +2594,7 @@ def init_db(
     return path
 
 
-_ARTIFACT_REVIEW_GATE_SCHEMA_VERSION = 4
+_ARTIFACT_REVIEW_GATE_SCHEMA_VERSION = 5
 
 
 def _migrate_artifact_review_gate_v2(conn: sqlite3.Connection) -> None:
@@ -2664,6 +2664,24 @@ def _migrate_artifact_review_gate_v2(conn: sqlite3.Connection) -> None:
             "task_id TEXT NOT NULL, source_hash TEXT NOT NULL, artifact_hash TEXT NOT NULL, "
             "decision_generation INTEGER NOT NULL, expires_at INTEGER NOT NULL, "
             "consumed_at INTEGER, UNIQUE(platform, chat_id, message_id))"
+        )
+    if current < 5:
+        request_cols = {
+            item["name"] for item in conn.execute(
+                "PRAGMA table_info(captain_approval_requests)"
+            )
+        }
+        for name, declaration in (
+            ("state", "state TEXT NOT NULL DEFAULT 'active'"),
+            ("failure_reason", "failure_reason TEXT"),
+            ("cleanup_failed", "cleanup_failed INTEGER NOT NULL DEFAULT 0"),
+            ("updated_at", "updated_at INTEGER"),
+        ):
+            if name not in request_cols:
+                conn.execute(f"ALTER TABLE captain_approval_requests ADD COLUMN {declaration}")
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_captain_request_generation "
+            "ON captain_approval_requests(task_id, decision_generation)"
         )
     conn.execute(
         "INSERT INTO kanban_schema_migrations(name, version, applied_at) VALUES (?, ?, ?) "
@@ -6958,12 +6976,12 @@ class CaptainIdentity:
     source: str
 
 
-def create_captain_approval_request(
+def reserve_captain_approval_request(
     conn: sqlite3.Connection, *, task_id: str, platform: str, chat_id: str,
-    message_id: str, expires_at: int, now: Optional[int] = None,
+    expires_at: int, now: Optional[int] = None,
     callback_nonce: Optional[str] = None,
 ) -> Optional[str]:
-    """Create the server-side half of an opaque one-shot approval button."""
+    """Persist an inert request before any transport button is sent."""
     timestamp = int(time.time()) if now is None else int(now)
     binding = conn.execute(
         "SELECT generation, source_manifest_hash, artifact_manifest_hash "
@@ -6972,7 +6990,7 @@ def create_captain_approval_request(
     ).fetchone()
     task = conn.execute("SELECT status FROM tasks WHERE id = ?", (task_id,)).fetchone()
     if (binding is None or task is None or task["status"] != "review"
-            or not all(str(v).strip() for v in (platform, chat_id, message_id))
+            or not all(str(v).strip() for v in (platform, chat_id))
             or int(expires_at) <= timestamp):
         return None
     nonce = callback_nonce or secrets.token_urlsafe(24)
@@ -6983,15 +7001,73 @@ def create_captain_approval_request(
         with write_txn(conn):
             conn.execute(
                 "INSERT INTO captain_approval_requests(callback_hash, platform, chat_id, "
-                "message_id, task_id, source_hash, artifact_hash, decision_generation, expires_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (callback_hash, platform, chat_id, message_id, task_id,
+                "message_id, task_id, source_hash, artifact_hash, decision_generation, expires_at, "
+                "state, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'reserved', ?)",
+                (callback_hash, platform, chat_id, f"reserved:{callback_hash}", task_id,
                  binding["source_manifest_hash"], binding["artifact_manifest_hash"],
-                 int(binding["generation"]), int(expires_at)),
+                 int(binding["generation"]), int(expires_at), timestamp),
             )
     except sqlite3.IntegrityError:
         return None
     return nonce
+
+
+def bind_captain_approval_request(
+    conn: sqlite3.Connection, *, callback_nonce: str, message_id: str,
+    now: Optional[int] = None,
+) -> bool:
+    timestamp = int(time.time()) if now is None else int(now)
+    callback_hash = hashlib.sha256(callback_nonce.encode()).hexdigest()
+    with write_txn(conn):
+        updated = conn.execute(
+            "UPDATE captain_approval_requests SET message_id = ?, state = 'active', updated_at = ? "
+            "WHERE callback_hash = ? AND state = 'reserved' AND expires_at > ?",
+            (str(message_id), timestamp, callback_hash, timestamp),
+        )
+    return updated.rowcount == 1
+
+
+def fail_captain_approval_request(
+    conn: sqlite3.Connection, *, callback_nonce: str, reason: str,
+    cleanup_failed: bool = False, now: Optional[int] = None,
+) -> bool:
+    timestamp = int(time.time()) if now is None else int(now)
+    callback_hash = hashlib.sha256(callback_nonce.encode()).hexdigest()
+    with write_txn(conn):
+        updated = conn.execute(
+            "UPDATE captain_approval_requests SET state = 'failed', failure_reason = ?, "
+            "cleanup_failed = ?, updated_at = ? WHERE callback_hash = ? AND state != 'consumed'",
+            (str(reason)[:240], int(cleanup_failed), timestamp, callback_hash),
+        )
+    return updated.rowcount == 1
+
+
+def expire_captain_approval_requests(conn: sqlite3.Connection, *, now: Optional[int] = None) -> int:
+    timestamp = int(time.time()) if now is None else int(now)
+    with write_txn(conn):
+        updated = conn.execute(
+            "UPDATE captain_approval_requests SET state = 'expired', updated_at = ? "
+            "WHERE state IN ('reserved', 'active') AND expires_at <= ?",
+            (timestamp, timestamp),
+        )
+    return updated.rowcount
+
+
+def create_captain_approval_request(
+    conn: sqlite3.Connection, *, task_id: str, platform: str, chat_id: str,
+    message_id: str, expires_at: int, now: Optional[int] = None,
+    callback_nonce: Optional[str] = None,
+) -> Optional[str]:
+    """Compatibility helper that performs the reserve/bind state transition."""
+    nonce = reserve_captain_approval_request(
+        conn, task_id=task_id, platform=platform, chat_id=chat_id,
+        expires_at=expires_at, now=now, callback_nonce=callback_nonce,
+    )
+    if nonce and bind_captain_approval_request(
+        conn, callback_nonce=nonce, message_id=message_id, now=now,
+    ):
+        return nonce
+    return None
 
 
 def approve_captain_callback(
@@ -7008,7 +7084,8 @@ def approve_captain_callback(
     ).fetchone()
     if (not allowed_user_ids or not allowed_chat_ids
             or operator_user_id not in allowed_user_ids or chat_id not in allowed_chat_ids
-            or request is None or request["consumed_at"] is not None
+            or request is None or request["state"] != "active"
+            or request["consumed_at"] is not None
             or timestamp >= int(request["expires_at"])
             or (platform, chat_id, message_id) !=
                (request["platform"], request["chat_id"], request["message_id"])):
@@ -7030,8 +7107,9 @@ def approve_captain_callback(
         return False
     with write_txn(conn):
         consumed = conn.execute(
-            "UPDATE captain_approval_requests SET consumed_at = ? "
-            "WHERE id = ? AND consumed_at IS NULL", (timestamp, int(request["id"])),
+            "UPDATE captain_approval_requests SET consumed_at = ?, state = 'consumed', updated_at = ? "
+            "WHERE id = ? AND state = 'active' AND consumed_at IS NULL",
+            (timestamp, timestamp, int(request["id"])),
         )
         if consumed.rowcount != 1:
             return False
@@ -7264,7 +7342,11 @@ def request_review(
             )
         implementer = trow["assignee"]
         implementation_run_id = trow["current_run_id"]
-        approval_class = "independent"
+        captain_product_gate = bool(
+            isinstance(metadata, dict)
+            and metadata.get("approval_class") == "captain_product"
+        )
+        approval_class = "captain_product" if captain_product_gate else "independent"
         try:
             source_identity = json.loads(source_manifest)
         except (json.JSONDecodeError, TypeError):
@@ -7428,6 +7510,16 @@ def request_review(
             },
             run_id=run_id,
         )
+        if captain_product_gate:
+            _append_event(
+                conn, task_id, "captain_product_review_requested",
+                {
+                    "generation": generation,
+                    "source_manifest_hash": source_hash,
+                    "artifact_manifest_hash": artifact_hash,
+                },
+                run_id=run_id,
+            )
     return _ret(True)
 
 

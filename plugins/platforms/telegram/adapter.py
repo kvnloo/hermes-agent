@@ -930,20 +930,46 @@ class TelegramAdapter(BasePlatformAdapter):
             return False
         from hermes_cli import kanban_db as kb
         nonce = __import__("secrets").token_urlsafe(24)
+        with kb.connect_closing(board=board) as conn:
+            persisted = kb.reserve_captain_approval_request(
+                conn, task_id=task_id, platform="telegram", chat_id=str(chat_id),
+                expires_at=int(time.time()) + expires_in, callback_nonce=nonce,
+            )
+        if persisted != nonce:
+            return False
         markup = InlineKeyboardMarkup([[InlineKeyboardButton(
             "Approve product", callback_data=f"ka:{nonce}"
         )]])
-        sent = await self._bot.send_message(
-            chat_id=int(chat_id), text=f"Captain approval requested for {task_id}",
-            reply_markup=markup,
-        )
-        with kb.connect_closing(board=board) as conn:
-            persisted = kb.create_captain_approval_request(
-                conn, task_id=task_id, platform="telegram", chat_id=str(chat_id),
-                message_id=str(sent.message_id), expires_at=int(time.time()) + expires_in,
-                callback_nonce=nonce,
+        try:
+            sent = await self._bot.send_message(
+                chat_id=int(chat_id), text=f"Captain approval requested for {task_id}",
+                reply_markup=markup,
             )
-        return persisted == nonce
+        except Exception:
+            with kb.connect_closing(board=board) as conn:
+                kb.fail_captain_approval_request(
+                    conn, callback_nonce=nonce, reason="telegram_send_failed",
+                )
+            return False
+        with kb.connect_closing(board=board) as conn:
+            bound = kb.bind_captain_approval_request(
+                conn, callback_nonce=nonce, message_id=str(sent.message_id),
+            )
+        if bound:
+            return True
+        cleanup_failed = False
+        try:
+            await self._bot.edit_message_reply_markup(
+                chat_id=int(chat_id), message_id=sent.message_id, reply_markup=None,
+            )
+        except Exception:
+            cleanup_failed = True
+        with kb.connect_closing(board=board) as conn:
+            kb.fail_captain_approval_request(
+                conn, callback_nonce=nonce, reason="binding_failed",
+                cleanup_failed=cleanup_failed,
+            )
+        return False
 
     def _mark_connected(self) -> None:
         self._drop_delayed_deliveries = False
