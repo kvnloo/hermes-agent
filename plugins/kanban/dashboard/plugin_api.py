@@ -2289,6 +2289,14 @@ def dispatch(
     try:
         result = kanban_db.dispatch_once(
             conn, dry_run=dry_run, max_spawn=max_n, board=board,
+            wake_source={
+                "source_key": f"api:{board}:{time.time_ns()}",
+                "trigger_id": "dashboard-dispatch",
+                "trigger_type": "api",
+                "destination": board,
+                "policy_snapshot": {"max_spawn": max_n},
+                "candidate_action": "dispatch_tick",
+            },
         )
         # DispatchResult is a dataclass.
         try:

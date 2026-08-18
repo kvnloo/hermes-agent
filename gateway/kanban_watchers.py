@@ -1467,6 +1467,19 @@ class GatewayKanbanWatchersMixin:
                     default_assignee=default_assignee,
                     max_in_progress_per_profile=max_in_progress_per_profile,
                     reconcile_orphans=reconcile_orphans,
+                    wake_source={
+                        "source_key": f"scheduler:{slug}:{time.time_ns()}",
+                        "trigger_id": f"gateway-dispatch:{slug}",
+                        "trigger_type": "scheduler",
+                        "destination": slug,
+                        "policy_snapshot": {
+                            "max_spawn": max_spawn,
+                            "max_in_progress": max_in_progress,
+                            "max_in_progress_per_profile": max_in_progress_per_profile,
+                            "reconcile_orphans": reconcile_orphans,
+                        },
+                        "candidate_action": "dispatch_tick",
+                    },
                 )
             except sqlite3.DatabaseError as exc:
                 if _is_corrupt_board_db_error(exc):
