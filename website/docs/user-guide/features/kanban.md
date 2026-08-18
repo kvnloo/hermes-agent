@@ -1171,8 +1171,11 @@ Source keys are deterministic hashes of stable trigger/destination identity,
 policy generation, candidate action, and causal task references. Every
 invocation also gets a separate occurrence receipt and timestamp. Replaying
 the same key and immutable payload coalesces without dispatching twice; using
-the same key for a different payload is retained as a durable `error` conflict
-and never coalesced. An empty queue is retained as an informational
+the same key for a different payload writes a separate conflict receipt that
+references the canonical wake and never rewrites its terminal decision. Open
+wakes carry an owner/generation lease. A second process leaves a live lease
+untouched; only an expired generation can be reconciled as restart-abandoned,
+and stale owners cannot heartbeat or finish it. An empty queue is retained as an informational
 `suppressed` wake rather than generating a notification.
 
 Outcomes use a closed taxonomy (`created`, `suppressed`, `deferred`,
