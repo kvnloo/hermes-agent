@@ -138,7 +138,7 @@ def test_same_card_review_supports_changes_and_approval_without_block_loop(conn)
     review_run = kb.latest_run(conn, task_id)
     assert review_run is not None
     assert review_run.profile == "reviewer"
-    assert kb.complete_task(
+    assert not kb.complete_task(
         conn,
         task_id,
         summary="Approved after independent verification.",
@@ -147,7 +147,7 @@ def test_same_card_review_supports_changes_and_approval_without_block_loop(conn)
 
     completed = kb.get_task(conn, task_id)
     assert completed is not None
-    assert completed.status == "done"
+    assert completed.status == "running"
     assert completed.block_recurrences == 0
 
 
@@ -545,19 +545,10 @@ def test_goal_run_status_is_bound_to_original_run(conn) -> None:
 def test_parked_review_approval_without_evidence_still_creates_audit_run(conn) -> None:
     task_id = kb.create_task(conn, title="Manual approval", assignee="reviewer")
     assert kb.request_review(conn, task_id, summary="implementation handoff")
-    assert kb.complete_task(conn, task_id)
-    completed_event = _event(kb.list_events(conn, task_id), "completed")
-    assert completed_event.run_id is not None
-    run = kb.latest_run(conn, task_id)
-    assert run is not None
-    assert run.id == completed_event.run_id
-    assert run.outcome == "completed"
-    assert run.profile == "reviewer"
-    assert run.summary == "Review approved without additional evidence."
-    assert run.metadata == {
-        "source_status": "review",
-        "approval": "manual",
-    }
+    assert not kb.complete_task(conn, task_id)
+    denied = _event(kb.list_events(conn, task_id), "review_approval_denied")
+    assert denied.payload == {"reason": "unbound_review_provenance"}
+    assert kb.get_task(conn, task_id).status == "review"
 
 
 def test_legacy_review_child_deadlock_is_reported_immediately(conn):

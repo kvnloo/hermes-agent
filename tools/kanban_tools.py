@@ -771,17 +771,6 @@ def _handle_complete(args: dict, **kw) -> str:
                     result=result, summary=summary, metadata=metadata,
                     created_cards=created_cards,
                     expected_run_id=_worker_run_id(tid),
-                    expected_review_generation=args.get("review_generation"),
-                    expected_review_nonce=args.get("review_nonce"),
-                    expected_implementation_run_id=args.get("implementation_run_id"),
-                    expected_source_commit=args.get("source_commit"),
-                    expected_source_tree=args.get("source_tree"),
-                    expected_source_hash=args.get("source_manifest_hash"),
-                    expected_artifact_hash=args.get("artifact_manifest_hash"),
-                    reviewer_profile=args.get("reviewer_profile"),
-                    reviewer_actor=args.get("reviewer_actor"),
-                    reviewer_principal=args.get("reviewer_principal"),
-                    reviewer_credential_source=args.get("reviewer_credential_source"),
                 )
             except kb.ArtifactPreservationError as artifact_err:
                 return tool_error(
@@ -823,6 +812,53 @@ def _handle_complete(args: dict, **kw) -> str:
     except Exception as e:
         logger.exception("kanban_complete failed")
         return tool_error(f"kanban_complete: {e}")
+
+
+def _handle_review_capability(args: dict, **kw) -> str:
+    tid = _default_task_id(args.get("task_id"))
+    if not tid:
+        return tool_error("task_id is required")
+    run_id = _worker_run_id(tid)
+    if run_id is None:
+        return tool_error("review capability is available only to the claimed review run")
+    kb, conn = _connect(board=args.get("board"))
+    try:
+        capability = kb.get_review_capability(conn, tid, expected_run_id=run_id)
+        if capability is None:
+            return tool_error("no active review capability belongs to this run")
+        return _ok(task_id=tid, **capability)
+    finally:
+        conn.close()
+
+
+def _handle_approve_review(args: dict, **kw) -> str:
+    tid = _default_task_id(args.get("task_id"))
+    if not tid:
+        return tool_error("task_id is required")
+    ownership_err = _enforce_worker_task_ownership(tid)
+    if ownership_err:
+        return ownership_err
+    run_id = _worker_run_id(tid)
+    if run_id is None:
+        return tool_error("review approval is available only to the claimed review run")
+    kb, conn = _connect(board=args.get("board"))
+    try:
+        ok = kb.complete_task(
+            conn, tid, summary=args.get("summary"), metadata=args.get("metadata"),
+            expected_run_id=run_id,
+            expected_review_generation=args["review_generation"],
+            expected_review_nonce=args["review_nonce"],
+            expected_implementation_run_id=args["implementation_run_id"],
+            expected_source_commit=args["source_commit"],
+            expected_source_tree=args["source_tree"],
+            expected_source_hash=args["source_manifest_hash"],
+            expected_artifact_hash=args["artifact_manifest_hash"],
+        )
+        if not ok:
+            return tool_error("review approval denied; claims are missing, stale, or already consumed")
+        return _ok(task_id=tid, run_id=run_id)
+    finally:
+        conn.close()
 
 
 def _handle_block(args: dict, **kw) -> str:
@@ -1861,21 +1897,39 @@ KANBAN_COMPLETE_SCHEMA = {
                     "task in-flight so you can fix the path and retry."
                 ),
             },
-            "review_generation": {"type": "integer", "description": "Exact persisted review generation; mandatory for review approval."},
-            "review_nonce": {"type": "string", "description": "Single-use nonce from the review-request binding."},
-            "implementation_run_id": {"type": "integer", "description": "Exact implementation run bound by the request."},
-            "source_commit": {"type": "string", "description": "Expected bound Git commit."},
-            "source_tree": {"type": "string", "description": "Expected bound Git tree."},
-            "source_manifest_hash": {"type": "string", "description": "Expected SHA-256 source manifest hash."},
-            "artifact_manifest_hash": {"type": "string", "description": "Expected SHA-256 artifact manifest hash."},
-            "reviewer_profile": {"type": "string", "description": "Persisted reviewer profile identity."},
-            "reviewer_actor": {"type": "string", "description": "Persisted reviewer actor identity."},
-            "reviewer_principal": {"type": "string", "description": "Persisted credential principal."},
-            "reviewer_credential_source": {"type": "string", "description": "Persisted credential source."},
             "board": _board_schema_prop(),
         },
         "required": [],
     },
+}
+
+_REVIEW_CLAIM_PROPERTIES = {
+    "review_generation": {"type": "integer"},
+    "review_nonce": {"type": "string", "minLength": 32},
+    "implementation_run_id": {"type": "integer"},
+    "source_commit": {"type": "string", "minLength": 1},
+    "source_tree": {"type": "string", "minLength": 1},
+    "source_manifest_hash": {"type": "string", "minLength": 64, "maxLength": 64},
+    "artifact_manifest_hash": {"type": "string", "minLength": 64, "maxLength": 64},
+}
+_REVIEW_CLAIM_NAMES = list(_REVIEW_CLAIM_PROPERTIES)
+
+KANBAN_REVIEW_CAPABILITY_SCHEMA = {
+    "name": "kanban_review_capability",
+    "description": "Retrieve the exact one-time approval claims bound to your claimed review run.",
+    "parameters": {"type": "object", "properties": {
+        "task_id": {"type": "string", "description": _DESC_TASK_ID_DEFAULT},
+        "board": _board_schema_prop()}, "required": []},
+}
+
+KANBAN_APPROVE_REVIEW_SCHEMA = {
+    "name": "kanban_approve_review",
+    "description": "Approve a claimed review using every exact claim returned by kanban_review_capability.",
+    "parameters": {"type": "object", "properties": {
+        "task_id": {"type": "string", "description": _DESC_TASK_ID_DEFAULT},
+        "summary": {"type": "string"}, "metadata": {"type": "object"},
+        **_REVIEW_CLAIM_PROPERTIES, "board": _board_schema_prop()},
+        "required": _REVIEW_CLAIM_NAMES},
 }
 
 KANBAN_BLOCK_SCHEMA = {
@@ -2398,6 +2452,24 @@ registry.register(
     toolset="kanban",
     schema=KANBAN_COMPLETE_SCHEMA,
     handler=_handle_complete,
+    check_fn=_check_kanban_mode,
+    emoji="✔",
+)
+
+registry.register(
+    name="kanban_review_capability",
+    toolset="kanban",
+    schema=KANBAN_REVIEW_CAPABILITY_SCHEMA,
+    handler=_handle_review_capability,
+    check_fn=_check_kanban_mode,
+    emoji="🔑",
+)
+
+registry.register(
+    name="kanban_approve_review",
+    toolset="kanban",
+    schema=KANBAN_APPROVE_REVIEW_SCHEMA,
+    handler=_handle_approve_review,
     check_fn=_check_kanban_mode,
     emoji="✔",
 )

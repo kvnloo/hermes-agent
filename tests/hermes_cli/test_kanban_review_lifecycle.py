@@ -316,9 +316,9 @@ def test_complete_task_closes_review_to_done(kanban_home: Path) -> None:
         assert kb.get_task(conn, tid).current_run_id is None
 
         ok = kb.complete_task(conn, tid, summary="LGTM — merged", result="approved")
-        assert ok is True
-        assert kb.get_task(conn, tid).status == "done"
-        assert _events(conn, tid, kind="completed")
+        assert ok is False
+        assert kb.get_task(conn, tid).status == "review"
+        assert not _events(conn, tid, kind="completed")
 
 
 # ---------------------------------------------------------------------------
@@ -658,9 +658,9 @@ def test_review_cycle_end_to_end(kanban_home: Path) -> None:
         assert kb.get_task(conn, tid).status == "review"
 
         # Human approves.
-        assert kb.complete_task(conn, tid, summary="approved") is True
+        assert kb.complete_task(conn, tid, summary="approved") is False
         row = _row(conn, tid)
-        assert row["status"] == "done"
+        assert row["status"] == "review"
         assert (row["block_recurrences"] or 0) == 0
         assert _events(conn, tid, kind="block_loop_detected") == []
 
