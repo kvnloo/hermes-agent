@@ -243,6 +243,25 @@ STATUS / SUITE / RUN / SEALED HASH
 
 Every run also records the exact fixture-code hash, config hash, schema version, model/provider strings, seed, and minimal repro. Repro commands create a new sandbox; they never reuse or mutate sealed evidence. Evidence entries include byte size and SHA-256. Reports never assert that a dashboard view is proof.
 
+The slice-1 seal additionally authenticates `manifestHash` with a random
+per-run HMAC-SHA256 key. The key is created mode `0600` below the controller's
+mode `0700` `.manifest-keys/` directory, outside the sealed run root, and is
+retained for exactly as long as the retained evidence. Cleanup currently
+retains both evidence and key; a later deletion policy must delete the run and
+its key in one locked operation. Manifest paths have one relative NFC POSIX
+spelling and are opened by component-wise `openat`/`O_NOFOLLOW` traversal from
+the run-root descriptor. Hashing binds device, inode, size, and mode before and
+after each read; ambiguous case-folded aliases, symlinks, and non-regular files
+are tampering.
+
+Disposable SQLite files are exclusively created with `openat`, `O_EXCL`, and
+`O_NOFOLLOW` beneath the held board-directory descriptor. The controller keeps
+the creation descriptors open and compares the descriptor and directory-entry
+device/inode identity before initialization, after connection, at transaction
+fences, and after the final transaction. Any swap aborts before the next write;
+WAL/SHM files remain inside the same held mode-0700 board directory and are
+included in the sealed inventory when present.
+
 ## 11. UX contract
 
 - `status` is read-only and shows controller state, elapsed/remaining budget, active worker count by exact profile/model, current fixture, redacted board identity, production-sentinel status, and last reason code.

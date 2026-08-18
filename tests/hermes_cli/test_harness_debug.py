@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from concurrent.futures import ThreadPoolExecutor
@@ -13,6 +14,7 @@ from hermes_cli.harness_debug import (
     make_local_receipt,
     run_argv,
 )
+from hermes_cli import harness_debug_secure
 from hermes_cli.kanban_db import init_db
 
 
@@ -149,3 +151,55 @@ def test_path_component_symlink_is_refused(tmp_path: Path):
     with pytest.raises((HarnessDebugRefused, FileExistsError, OSError)):
         controller.start_smoke(production_db=production, receipt=receipt,
                                authority_key=key, seed=7, fanout=1)
+
+
+@pytest.mark.parametrize("forged_path", ["../production.db", "/etc/passwd", "evidence//green-trace.json"])
+def test_resealed_forged_manifest_path_is_tampered_without_external_read(
+    tmp_path: Path, forged_path: str, monkeypatch: pytest.MonkeyPatch
+):
+    production = _production(tmp_path / "production.db")
+    key, _, receipt, _ = _authority(tmp_path, production)
+    controller = HarnessDebugController(tmp_path / "runs")
+    report = controller.start_smoke(production_db=production, receipt=receipt,
+                                    authority_key=key, seed=7, fanout=1)
+    run = controller.root / report["runId"]
+    manifest = json.loads((run / "manifest.json").read_text())
+    manifest["entries"][0]["path"] = forged_path
+    base = {k: manifest[k] for k in ("schemaVersion", "algorithm", "entries")}
+    manifest["manifestHash"] = "sha256:" + hashlib.sha256(
+        json.dumps(base, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode()
+    ).hexdigest()
+    (run / "manifest.json").write_text(json.dumps(manifest))
+    (run / "SEALED").write_text(manifest["manifestHash"] + "\n")
+    external_reads = []
+    original = harness_debug_secure._read_regular_at
+
+    def observed(root_fd, relative):
+        external_reads.append(relative)
+        return original(root_fd, relative)
+    monkeypatch.setattr(harness_debug_secure, "_read_regular_at", observed)
+    with pytest.raises(HarnessDebugRefused, match="TAMPERED"):
+        controller.report(report["runId"])
+    assert forged_path not in external_reads
+
+
+def test_db_swap_before_open_is_refused_without_production_write(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    production = _production(tmp_path / "production.db")
+    before = production.read_bytes()
+    key, _, receipt, _ = _authority(tmp_path, production)
+    controller = HarnessDebugController(tmp_path / "runs")
+    original = harness_debug_secure._behavior_fixture
+    swapped = False
+
+    def swap_then_run(db, seed, mutation=False, identity_check=lambda: None):
+        nonlocal swapped
+        if not swapped:
+            swapped = True
+            db.unlink()
+            os.link(production, db)
+        return original(db, seed, mutation, identity_check)
+    monkeypatch.setattr(harness_debug_secure, "_behavior_fixture", swap_then_run)
+    with pytest.raises(HarnessDebugRefused, match="REFUSED_ISOLATION"):
+        controller.start_smoke(production_db=production, receipt=receipt,
+                               authority_key=key, seed=7, fanout=1)
+    assert production.read_bytes() == before
