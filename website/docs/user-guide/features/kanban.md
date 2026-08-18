@@ -1175,7 +1175,9 @@ the same key for a different payload writes a separate conflict receipt that
 references the canonical wake and never rewrites its terminal decision. Open
 wakes carry an owner/generation lease. A second process leaves a live lease
 untouched; only an expired generation can be reconciled as restart-abandoned,
-and stale owners cannot heartbeat or finish it. An empty queue is retained as an informational
+and stale or expired owners cannot heartbeat, record a decision, or finish it.
+Lease checks use one database-clock value for the complete transaction, including
+the final compare-and-swap. An empty queue is retained as an informational
 `suppressed` wake rather than generating a notification.
 
 Outcomes use a closed taxonomy (`created`, `suppressed`, `deferred`,

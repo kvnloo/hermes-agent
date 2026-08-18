@@ -222,6 +222,140 @@ def test_expired_takeover_once_and_stale_owner_cannot_finish(tmp_path):
         )
 
 
+@pytest.mark.parametrize("offset,accepted", [(0, False), (-1, False), (1, True)])
+@pytest.mark.parametrize("operation", ["heartbeat", "finish", "decision"])
+def test_lease_expiry_is_in_every_owner_cas(tmp_path, monkeypatch, operation, offset, accepted):
+    conn = kb.connect(tmp_path / "board.db")
+    wake_id, _ = kb.begin_proactive_wake(
+        conn, **_source(f"expiry:{operation}:{offset}"), owner_instance_id="owner-a",
+    )
+    authoritative_now = 1_800_000_000
+    conn.execute(
+        "UPDATE proactive_wakes SET lease_expires_at=? WHERE id=?",
+        (authoritative_now + offset, wake_id),
+    )
+    monkeypatch.setattr(kb, "_proactive_wake_now", lambda _conn: authoritative_now)
+    before = tuple(conn.execute("SELECT * FROM proactive_wakes WHERE id=?", (wake_id,)).fetchone())
+    occurrences_before = conn.execute(
+        "SELECT COUNT(*) FROM proactive_wake_occurrences WHERE wake_id=?", (wake_id,)
+    ).fetchone()[0]
+
+    if operation == "heartbeat":
+        result = kb.heartbeat_proactive_wake(
+            conn, wake_id, 1, owner_instance_id="owner-a", lease_seconds=10,
+        )
+        assert result is accepted
+    else:
+        if operation == "finish":
+            call = lambda: kb.finish_proactive_wake(
+                conn, wake_id, kb.DispatchResult(), lease_generation=1,
+                owner_instance_id="owner-a",
+            )
+        else:
+            call = lambda: kb.record_proactive_decision(
+                conn, wake_id, outcome="suppressed", reason="test",
+                lease_generation=1, owner_instance_id="owner-a",
+            )
+        if accepted:
+            call()
+        else:
+            with pytest.raises(RuntimeError, match="ownership lost"):
+                call()
+
+    after = tuple(conn.execute("SELECT * FROM proactive_wakes WHERE id=?", (wake_id,)).fetchone())
+    attempts = conn.execute(
+        "SELECT COUNT(*) FROM proactive_dispatch_attempts WHERE wake_id=?", (wake_id,)
+    ).fetchone()[0]
+    occurrences_after = conn.execute(
+        "SELECT COUNT(*) FROM proactive_wake_occurrences WHERE wake_id=?", (wake_id,)
+    ).fetchone()[0]
+    assert occurrences_after == occurrences_before
+    if accepted:
+        assert after != before
+        assert attempts == (1 if operation == "decision" else 0)
+    else:
+        assert after == before
+        assert attempts == 0
+
+
+def test_lease_clock_is_sampled_once_for_each_transaction(tmp_path, monkeypatch):
+    conn = kb.connect(tmp_path / "board.db")
+    wake_id, _ = kb.begin_proactive_wake(
+        conn, **_source("single-clock"), owner_instance_id="owner-a", lease_seconds=300,
+    )
+    calls = []
+
+    def clock(_conn):
+        calls.append(1)
+        return 1
+
+    monkeypatch.setattr(kb, "_proactive_wake_now", clock)
+    kb.record_proactive_decision(
+        conn, wake_id, outcome="suppressed", reason="test",
+        lease_generation=1, owner_instance_id="owner-a",
+    )
+    assert calls == [1]
+
+
+def test_concurrent_expired_owner_operations_all_fail_closed(tmp_path, monkeypatch):
+    path = tmp_path / "board.db"
+    conn = kb.connect(path)
+    wake_id, _ = kb.begin_proactive_wake(
+        conn, **_source("expired-race"), owner_instance_id="owner-a",
+    )
+    authoritative_now = 1_800_000_000
+    conn.execute(
+        "UPDATE proactive_wakes SET lease_expires_at=? WHERE id=?",
+        (authoritative_now, wake_id),
+    )
+    before = tuple(conn.execute("SELECT * FROM proactive_wakes WHERE id=?", (wake_id,)).fetchone())
+    monkeypatch.setattr(kb, "_proactive_wake_now", lambda _conn: authoritative_now)
+    barrier = threading.Barrier(9)
+    results = []
+
+    def attempt(index):
+        local = kb.connect(path)
+        barrier.wait()
+        try:
+            if index % 3 == 0:
+                accepted = kb.heartbeat_proactive_wake(
+                    local, wake_id, 1, owner_instance_id="owner-a",
+                )
+                results.append(("heartbeat", accepted))
+            elif index % 3 == 1:
+                kb.finish_proactive_wake(
+                    local, wake_id, kb.DispatchResult(), lease_generation=1,
+                    owner_instance_id="owner-a",
+                )
+                results.append(("finish", True))
+            else:
+                kb.record_proactive_decision(
+                    local, wake_id, outcome="suppressed", reason="race",
+                    lease_generation=1, owner_instance_id="owner-a",
+                )
+                results.append(("decision", True))
+        except RuntimeError:
+            results.append(("denied", False))
+        finally:
+            local.close()
+
+    threads = [threading.Thread(target=attempt, args=(index,)) for index in range(9)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert len(results) == 9 and not any(accepted for _, accepted in results)
+    assert tuple(conn.execute(
+        "SELECT * FROM proactive_wakes WHERE id=?", (wake_id,)
+    ).fetchone()) == before
+    assert conn.execute(
+        "SELECT COUNT(*) FROM proactive_dispatch_attempts WHERE wake_id=?", (wake_id,)
+    ).fetchone()[0] == 0
+    assert conn.execute(
+        "SELECT COUNT(*) FROM proactive_wake_occurrences WHERE wake_id=?", (wake_id,)
+    ).fetchone()[0] == 1
+
+
 def test_concurrent_conflicts_are_deterministic_and_canonical_is_immutable(tmp_path):
     path = tmp_path / "board.db"
     conn = kb.connect(path)

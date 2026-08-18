@@ -10220,6 +10220,11 @@ PROACTIVE_WAKE_LEASE_SECONDS = 30
 _PROACTIVE_WAKE_INSTANCE_ID = secrets.token_hex(16)
 
 
+def _proactive_wake_now(conn: sqlite3.Connection) -> int:
+    """Return the database clock used for one wake-lease transaction."""
+    return int(conn.execute("SELECT CAST(strftime('%s', 'now') AS INTEGER)").fetchone()[0])
+
+
 def begin_proactive_wake(
     conn: sqlite3.Connection, *, source_key: str, trigger_id: str,
     trigger_type: str, destination: Optional[str] = None,
@@ -10296,14 +10301,14 @@ def heartbeat_proactive_wake(
     lease_seconds: int = PROACTIVE_WAKE_LEASE_SECONDS,
 ) -> bool:
     """Renew an open wake only when the caller still owns its generation."""
-    now = int(time.time())
     owner = owner_instance_id or _PROACTIVE_WAKE_INSTANCE_ID
     with write_txn(conn):
+        now = _proactive_wake_now(conn)
         cur = conn.execute(
             "UPDATE proactive_wakes SET lease_heartbeat_at=?,lease_expires_at=? "
             "WHERE id=? AND completed_at IS NULL AND owner_instance_id=? "
-            "AND lease_generation=?",
-            (now, now + max(1, int(lease_seconds)), wake_id, owner, lease_generation),
+            "AND lease_generation=? AND lease_expires_at>?",
+            (now, now + max(1, int(lease_seconds)), wake_id, owner, lease_generation, now),
         )
     return cur.rowcount == 1
 
@@ -10355,7 +10360,6 @@ def finish_proactive_wake(
     owner_instance_id: Optional[str] = None,
 ) -> None:
     """Bind source to task/run decisions and persist the closed outcome."""
-    now = int(time.time())
     samples = list(getattr(result, "_dispatch_health_samples", ()) or ())
     spawned_ids = {item[0] for item in result.spawned}
     if duplicate:
@@ -10366,17 +10370,18 @@ def finish_proactive_wake(
             )
         return
     owner = owner_instance_id or _PROACTIVE_WAKE_INSTANCE_ID
-    if lease_generation is None:
-        owned = conn.execute(
-            "SELECT lease_generation FROM proactive_wakes WHERE id=? AND completed_at IS NULL "
-            "AND owner_instance_id=?", (wake_id, owner),
-        ).fetchone()
-        lease_generation = int(owned[0]) if owned is not None else -1
     with write_txn(conn):
+        now = _proactive_wake_now(conn)
+        if lease_generation is None:
+            owned_generation = conn.execute(
+                "SELECT lease_generation FROM proactive_wakes WHERE id=? AND completed_at IS NULL "
+                "AND owner_instance_id=? AND lease_expires_at>?", (wake_id, owner, now),
+            ).fetchone()
+            lease_generation = int(owned_generation[0]) if owned_generation is not None else -1
         owned = conn.execute(
             "SELECT 1 FROM proactive_wakes WHERE id=? AND completed_at IS NULL "
-            "AND owner_instance_id=? AND lease_generation=?",
-            (wake_id, owner, lease_generation),
+            "AND owner_instance_id=? AND lease_generation=? AND lease_expires_at>?",
+            (wake_id, owner, lease_generation, now),
         ).fetchone()
         if owned is None:
             raise RuntimeError("proactive wake lease ownership lost")
@@ -10408,8 +10413,9 @@ def finish_proactive_wake(
             outcome, detail = "suppressed", "no eligible task"
         cur = conn.execute(
             "UPDATE proactive_wakes SET outcome=?,detail=?,completed_at=? WHERE id=? "
-            "AND completed_at IS NULL AND owner_instance_id=? AND lease_generation=?",
-            (outcome, detail, now, wake_id, owner, lease_generation),
+            "AND completed_at IS NULL AND owner_instance_id=? AND lease_generation=? "
+            "AND lease_expires_at>?",
+            (outcome, detail, now, wake_id, owner, lease_generation, now),
         )
         if cur.rowcount != 1:
             raise RuntimeError("proactive wake lease ownership lost")
@@ -10433,10 +10439,11 @@ def record_proactive_decision(
     safe_detail = str(detail)[:512] if detail is not None else None
     owner = owner_instance_id or _PROACTIVE_WAKE_INSTANCE_ID
     with write_txn(conn):
+        now = _proactive_wake_now(conn)
         if lease_generation is None:
             row = conn.execute(
                 "SELECT lease_generation FROM proactive_wakes WHERE id=? AND completed_at IS NULL "
-                "AND owner_instance_id=?", (wake_id, owner),
+                "AND owner_instance_id=? AND lease_expires_at>?", (wake_id, owner, now),
             ).fetchone()
             lease_generation = int(row[0]) if row is not None else -1
         if run_id is not None:
@@ -10451,12 +10458,13 @@ def record_proactive_decision(
             "INSERT INTO proactive_dispatch_attempts "
             "(wake_id,task_id,run_id,lane,outcome,reason,detail,created_at) "
             "VALUES (?,?,?,?,?,?,?,?)",
-            (wake_id, task_id, run_id, lane, outcome, reason, safe_detail, int(time.time())),
+            (wake_id, task_id, run_id, lane, outcome, reason, safe_detail, now),
         )
         updated = conn.execute(
             "UPDATE proactive_wakes SET outcome=?,detail=?,completed_at=? WHERE id=? "
-            "AND completed_at IS NULL AND owner_instance_id=? AND lease_generation=?",
-            (outcome, safe_detail, int(time.time()), wake_id, owner, lease_generation),
+            "AND completed_at IS NULL AND owner_instance_id=? AND lease_generation=? "
+            "AND lease_expires_at>?",
+            (outcome, safe_detail, now, wake_id, owner, lease_generation, now),
         )
         if updated.rowcount != 1:
             raise RuntimeError("proactive wake lease ownership lost")
