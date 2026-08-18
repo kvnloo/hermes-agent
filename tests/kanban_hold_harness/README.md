@@ -1,6 +1,7 @@
 # Hold-to-drag review harness
 
-Private, loopback-only browser harness for exact commit `dc6f0284831c4ef656ececbcc75acdf7c960ff9d`.
+Private, loopback-only browser harness for the exact product commit declared by
+`EXACT_COMMIT` in `start.py`.
 It exports that commit into a disposable directory, seeds a disposable board, dynamically allocates a loopback port, and records a byte sentinel for the canonical board before startup.
 
 ```sh
