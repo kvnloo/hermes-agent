@@ -1553,12 +1553,23 @@ CREATE TABLE IF NOT EXISTS proactive_wakes (
     policy_snapshot    TEXT NOT NULL DEFAULT '{}',
     candidate_action   TEXT,
     causal_refs        TEXT NOT NULL DEFAULT '[]',
+    payload_hash       TEXT NOT NULL DEFAULT '',
     outcome            TEXT NOT NULL DEFAULT 'deferred',
     detail             TEXT,
     duplicate_count    INTEGER NOT NULL DEFAULT 0,
     completed_at       INTEGER,
     CHECK (trigger_type IN ('scheduler','intake','api','test')),
     CHECK (outcome IN ('created','suppressed','deferred','duplicate','policy_denied','capacity','nonspawnable','parent_gated','stale','cooldown_budget','error'))
+);
+
+CREATE TABLE IF NOT EXISTS proactive_wake_occurrences (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    wake_id        INTEGER NOT NULL REFERENCES proactive_wakes(id) ON DELETE RESTRICT,
+    occurrence_id  TEXT NOT NULL UNIQUE,
+    occurred_at    INTEGER NOT NULL,
+    payload_hash   TEXT NOT NULL,
+    disposition    TEXT NOT NULL,
+    CHECK (disposition IN ('inserted','duplicate','conflict'))
 );
 
 CREATE TABLE IF NOT EXISTS proactive_dispatch_attempts (
@@ -1574,6 +1585,30 @@ CREATE TABLE IF NOT EXISTS proactive_dispatch_attempts (
     UNIQUE(wake_id, task_id, lane),
     CHECK (outcome IN ('created','suppressed','deferred','duplicate','policy_denied','capacity','nonspawnable','parent_gated','stale','cooldown_budget','error'))
 );
+
+CREATE TRIGGER IF NOT EXISTS proactive_attempt_run_task_insert
+BEFORE INSERT ON proactive_dispatch_attempts
+WHEN NEW.run_id IS NOT NULL AND (
+    NEW.task_id IS NULL OR NOT EXISTS (
+        SELECT 1 FROM task_runs r
+        WHERE r.id = NEW.run_id AND r.task_id = NEW.task_id
+    )
+)
+BEGIN
+    SELECT RAISE(ABORT, 'proactive run_id must belong to task_id');
+END;
+
+CREATE TRIGGER IF NOT EXISTS proactive_attempt_run_task_update
+BEFORE UPDATE OF task_id, run_id ON proactive_dispatch_attempts
+WHEN NEW.run_id IS NOT NULL AND (
+    NEW.task_id IS NULL OR NOT EXISTS (
+        SELECT 1 FROM task_runs r
+        WHERE r.id = NEW.run_id AND r.task_id = NEW.task_id
+    )
+)
+BEGIN
+    SELECT RAISE(ABORT, 'proactive run_id must belong to task_id');
+END;
 
 CREATE TABLE IF NOT EXISTS proactive_wake_rollups (
     bucket_day INTEGER NOT NULL,
@@ -1595,6 +1630,7 @@ CREATE INDEX IF NOT EXISTS idx_runs_status           ON task_runs(status);
 CREATE INDEX IF NOT EXISTS idx_attachments_task      ON task_attachments(task_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_notify_task           ON kanban_notify_subs(task_id);
 CREATE INDEX IF NOT EXISTS idx_proactive_wakes_time  ON proactive_wakes(triggered_at);
+CREATE INDEX IF NOT EXISTS idx_proactive_occurrence_wake ON proactive_wake_occurrences(wake_id, occurred_at);
 CREATE INDEX IF NOT EXISTS idx_proactive_attempt_task ON proactive_dispatch_attempts(task_id, created_at);
 """
 
@@ -2612,6 +2648,37 @@ def _migrate_add_optional_columns(conn: sqlite3.Connection) -> None:
         _add_column_if_missing(
             conn, "proactive_wakes", "duplicate_count",
             "duplicate_count INTEGER NOT NULL DEFAULT 0",
+        )
+    if wake_cols and "payload_hash" not in wake_cols:
+        _add_column_if_missing(
+            conn, "proactive_wakes", "payload_hash",
+            "payload_hash TEXT NOT NULL DEFAULT ''",
+        )
+        for row in conn.execute(
+            "SELECT id,trigger_id,trigger_type,destination,tenant,policy_generation,"
+            "policy_snapshot,candidate_action,causal_refs FROM proactive_wakes"
+        ):
+            payload = {
+                "trigger_id": row["trigger_id"], "trigger_type": row["trigger_type"],
+                "destination": row["destination"], "tenant": row["tenant"],
+                "policy_generation": row["policy_generation"],
+                "policy_snapshot": json.loads(row["policy_snapshot"] or "{}"),
+                "candidate_action": row["candidate_action"],
+                "causal_refs": sorted(json.loads(row["causal_refs"] or "[]")),
+            }
+            digest = hashlib.sha256(json.dumps(
+                payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+            ).encode("utf-8")).hexdigest()
+            conn.execute(
+                "UPDATE proactive_wakes SET payload_hash=? WHERE id=?",
+                (digest, row["id"]),
+            )
+    if wake_cols:
+        conn.execute(
+            "UPDATE proactive_wakes SET outcome='error',"
+            "detail='restart reconciliation: abandoned open wake',completed_at=? "
+            "WHERE outcome='deferred' AND completed_at IS NULL",
+            (int(time.time()),),
         )
     cols = {row["name"] for row in conn.execute("PRAGMA table_info(tasks)")}
     if "tenant" not in cols:
@@ -10120,30 +10187,92 @@ def begin_proactive_wake(
     candidate_action: Optional[str] = None,
     causal_refs: Optional[Sequence[str]] = None,
 ) -> tuple[int, bool]:
-    """Persist a bounded source before decisions; return ``(id, inserted)``."""
+    """Persist source + occurrence before decisions; reject key collisions."""
     if trigger_type not in PROACTIVE_TRIGGER_TYPES:
         raise ValueError(f"invalid proactive trigger type: {trigger_type}")
     if not source_key or not trigger_id:
         raise ValueError("source_key and trigger_id are required")
     snapshot = json.dumps(dict(policy_snapshot or {}), sort_keys=True, separators=(",", ":"))
-    refs = json.dumps(list(causal_refs or ())[:32], separators=(",", ":"))
+    refs = json.dumps(sorted(str(ref) for ref in (causal_refs or ())[:32]), separators=(",", ":"))
     if len(snapshot) > 4096 or len(refs) > 4096:
         raise ValueError("proactive wake metadata exceeds 4096 bytes")
+    immutable_payload = {
+        "trigger_id": trigger_id,
+        "trigger_type": trigger_type,
+        "destination": destination,
+        "tenant": tenant,
+        "policy_generation": policy_generation,
+        "policy_snapshot": json.loads(snapshot),
+        "candidate_action": candidate_action,
+        "causal_refs": json.loads(refs),
+    }
+    payload_hash = hashlib.sha256(json.dumps(
+        immutable_payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+    ).encode("utf-8")).hexdigest()
+    occurrence_id = secrets.token_hex(16)
+    now = int(time.time())
     with write_txn(conn):
         cur = conn.execute(
             "INSERT OR IGNORE INTO proactive_wakes "
             "(source_key,trigger_id,trigger_type,triggered_at,destination,tenant,"
-            "policy_generation,policy_snapshot,candidate_action,causal_refs) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?)",
-            (source_key, trigger_id, trigger_type, int(time.time()), destination, tenant,
-             policy_generation, snapshot, candidate_action, refs),
+            "policy_generation,policy_snapshot,candidate_action,causal_refs,payload_hash) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            (source_key, trigger_id, trigger_type, now, destination, tenant,
+             policy_generation, snapshot, candidate_action, refs, payload_hash),
         )
-        row = conn.execute("SELECT id FROM proactive_wakes WHERE source_key=?", (source_key,)).fetchone()
+        row = conn.execute(
+            "SELECT id,payload_hash FROM proactive_wakes WHERE source_key=?", (source_key,)
+        ).fetchone()
+        conflict = row["payload_hash"] != payload_hash
+        conn.execute(
+            "INSERT INTO proactive_wake_occurrences "
+            "(wake_id,occurrence_id,occurred_at,payload_hash,disposition) VALUES (?,?,?,?,?)",
+            (row["id"], occurrence_id, now, payload_hash,
+             "conflict" if conflict else ("inserted" if cur.rowcount else "duplicate")),
+        )
+        if conflict:
+            conn.execute(
+                "UPDATE proactive_wakes SET outcome='error',detail='source payload conflict',completed_at=? WHERE id=?",
+                (now, row["id"]),
+            )
+    if conflict:
+        raise ValueError(f"proactive wake source_key payload conflict: {source_key}")
     return int(row["id"]), bool(cur.rowcount)
+
+
+def build_proactive_wake_source(
+    conn: sqlite3.Connection, *, trigger_id: str, trigger_type: str,
+    destination: Optional[str], tenant: Optional[str] = None,
+    policy_generation: Optional[str] = None,
+    policy_snapshot: Optional[Mapping[str, Any]] = None,
+    candidate_action: str = "dispatch_tick",
+) -> dict[str, Any]:
+    """Build a replayable source key from policy and persisted queue state."""
+    causal_refs = [
+        f"task:{row['id']}:{row['status']}:{row['assignee'] or ''}:{row['current_run_id'] or ''}"
+        for row in conn.execute(
+            "SELECT id,status,assignee,current_run_id FROM tasks "
+            "WHERE status IN ('todo','ready','review','running') ORDER BY id"
+        )
+    ]
+    identity = {
+        "trigger_id": trigger_id,
+        "trigger_type": trigger_type,
+        "destination": destination,
+        "tenant": tenant,
+        "policy_generation": policy_generation,
+        "candidate_action": candidate_action,
+        "causal_refs": causal_refs,
+    }
+    source_key = f"{trigger_type}:" + hashlib.sha256(json.dumps(
+        identity, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+    ).encode("utf-8")).hexdigest()
+    return {**identity, "source_key": source_key, "policy_snapshot": dict(policy_snapshot or {})}
 
 
 def _wake_reason_outcome(reason: str) -> str:
     if reason == "claimable": return "created"
+    if reason.startswith("policy_") or reason == "review_disabled": return "policy_denied"
     if "capacity" in reason or "memory_pressure" in reason: return "capacity"
     if reason in ("unassigned", "nonspawnable_profile"): return "nonspawnable"
     if reason.startswith("respawn_guard:"): return "cooldown_budget"
@@ -10164,7 +10293,10 @@ def finish_proactive_wake(
             task = conn.execute("SELECT status,current_run_id FROM tasks WHERE id=?", (task_id,)).fetchone()
             if task is None:
                 continue
-            lane = "review" if task["status"] == "review" else "ready"
+            lanes = getattr(result, "_proactive_candidate_lanes", {})
+            lane = lanes.get(
+                task_id, "review" if task["status"] == "review" else "ready"
+            )
             outcome = "created" if task_id in spawned_ids else _wake_reason_outcome(reason)
             conn.execute(
                 "INSERT OR IGNORE INTO proactive_dispatch_attempts "
@@ -10210,6 +10342,14 @@ def record_proactive_decision(
         raise ValueError(f"invalid proactive outcome: {outcome}")
     safe_detail = str(detail)[:512] if detail is not None else None
     with write_txn(conn):
+        if run_id is not None:
+            linked = conn.execute(
+                "SELECT task_id FROM task_runs WHERE id=?", (run_id,)
+            ).fetchone()
+            if linked is None or task_id is None or linked["task_id"] != task_id:
+                raise sqlite3.IntegrityError(
+                    "proactive run_id must belong to task_id"
+                )
         cur = conn.execute(
             "INSERT INTO proactive_dispatch_attempts "
             "(wake_id,task_id,run_id,lane,outcome,reason,detail,created_at) "
@@ -10251,6 +10391,7 @@ def compact_proactive_wakes(conn: sqlite3.Connection, *, before: int, limit: int
                 (day, trigger, outcome, int(old["count"] if old else 0) + len(keys), digest),
             )
         conn.execute(f"DELETE FROM proactive_dispatch_attempts WHERE wake_id IN ({marks})", ids)
+        conn.execute(f"DELETE FROM proactive_wake_occurrences WHERE wake_id IN ({marks})", ids)
         conn.execute(f"DELETE FROM proactive_wakes WHERE id IN ({marks})", ids)
     return len(rows)
 
@@ -10299,28 +10440,7 @@ def dispatch_once(
         # Path resolution should never fail, but if it somehow does we
         # must not lose the tick — fall through to an unguarded dispatch
         # rather than dropping work.
-        result = _dispatch_once_locked(
-            conn,
-            spawn_fn=spawn_fn,
-            ttl_seconds=ttl_seconds,
-            dry_run=dry_run,
-            max_spawn=max_spawn,
-            max_in_progress=max_in_progress,
-            failure_limit=failure_limit,
-            stale_timeout_seconds=stale_timeout_seconds,
-            board=board,
-            default_assignee=default_assignee,
-            max_in_progress_per_profile=max_in_progress_per_profile,
-            reconcile_orphans=reconcile_orphans,
-        )
-        _fire_dispatch_tick_hook(result, board=board, dry_run=dry_run)
-        if wake_id is not None:
-            finish_proactive_wake(conn, wake_id, result)
-        return result
-    with _dispatch_tick_lock(db_path) as held:
-        if not held:
-            result = DispatchResult(skipped_locked=True)
-        else:
+        try:
             result = _dispatch_once_locked(
                 conn,
                 spawn_fn=spawn_fn,
@@ -10335,10 +10455,42 @@ def dispatch_once(
                 max_in_progress_per_profile=max_in_progress_per_profile,
                 reconcile_orphans=reconcile_orphans,
             )
-            # Still under the dispatch lock: run the periodic PASSIVE WAL
-            # checkpoint (see _maybe_checkpoint_wal; the -wal file size is
-            # bounded by journal_size_limit on the writer's natural reset).
-            _maybe_checkpoint_wal(conn, db_path)
+        except Exception as exc:
+            if wake_id is not None:
+                finish_proactive_wake(
+                    conn, wake_id, DispatchResult(), error=repr(exc)
+                )
+            raise
+        _fire_dispatch_tick_hook(result, board=board, dry_run=dry_run)
+        if wake_id is not None:
+            finish_proactive_wake(conn, wake_id, result)
+        return result
+    try:
+        with _dispatch_tick_lock(db_path) as held:
+            if not held:
+                result = DispatchResult(skipped_locked=True)
+            else:
+                result = _dispatch_once_locked(
+                    conn,
+                    spawn_fn=spawn_fn,
+                    ttl_seconds=ttl_seconds,
+                    dry_run=dry_run,
+                    max_spawn=max_spawn,
+                    max_in_progress=max_in_progress,
+                    failure_limit=failure_limit,
+                    stale_timeout_seconds=stale_timeout_seconds,
+                    board=board,
+                    default_assignee=default_assignee,
+                    max_in_progress_per_profile=max_in_progress_per_profile,
+                    reconcile_orphans=reconcile_orphans,
+                )
+                # Still under the dispatch lock: run the periodic PASSIVE WAL
+                # checkpoint (see _maybe_checkpoint_wal).
+                _maybe_checkpoint_wal(conn, db_path)
+    except Exception as exc:
+        if wake_id is not None:
+            finish_proactive_wake(conn, wake_id, DispatchResult(), error=repr(exc))
+        raise
     # The dispatch lock has been released here. Fire the tick observer
     # strictly OUTSIDE the single-writer critical section (#56066 sweeper
     # finding / #64231 disposition): a slow subscriber must never extend
@@ -10432,6 +10584,18 @@ def _dispatch_once_locked(
         result.rate_limited.extend(_crash_rate_limited)
     result.timed_out = enforce_max_runtime(conn)
     result.promoted = recompute_ready(conn, failure_limit=failure_limit)
+    parent_gated_rows = conn.execute(
+        "SELECT t.id FROM tasks t WHERE t.status='todo' AND EXISTS ("
+        "SELECT 1 FROM task_links l JOIN tasks p ON p.id=l.parent_id "
+        "WHERE l.child_id=t.id AND p.status NOT IN ('done','archived')) ORDER BY t.id"
+    ).fetchall()
+    if parent_gated_rows:
+        setattr(result, "_dispatch_health_samples", [
+            (row["id"], "parent_gated") for row in parent_gated_rows
+        ])
+        setattr(result, "_proactive_candidate_lanes", {
+            row["id"]: "parent_gated" for row in parent_gated_rows
+        })
 
     # Count tasks already running so max_spawn enforces concurrency rather
     # than a per-tick spawn budget. See the docstring above for the full
@@ -10514,6 +10678,7 @@ def _dispatch_once_locked(
     # Review rows are enumerated up front (not after the ready loop) so the
     # budget split below can see whether review work exists at all.
     review_rows = []
+    frozen_review_rows = []
     if review_dispatch_enabled():
         review_rows = conn.execute(
             "SELECT id, assignee FROM tasks "
@@ -10521,6 +10686,20 @@ def _dispatch_once_locked(
             "ORDER BY last_considered_at IS NOT NULL, last_considered_at, "
             "priority DESC, created_at, id"
         ).fetchall()
+    else:
+        frozen_review_rows = conn.execute(
+            "SELECT id FROM tasks WHERE status='review' AND claim_lock IS NULL ORDER BY id"
+        ).fetchall()
+        pending = getattr(result, "_dispatch_health_samples", [])
+        pending.extend((row["id"], "review_disabled") for row in frozen_review_rows)
+        setattr(result, "_dispatch_health_samples", pending)
+    prior_lanes = getattr(result, "_proactive_candidate_lanes", {})
+    setattr(result, "_proactive_candidate_lanes", {
+        **prior_lanes,
+        **{row["id"]: "ready" for row in ready_rows},
+        **{row["id"]: "review" for row in review_rows},
+        **{row["id"]: "review" for row in frozen_review_rows},
+    })
     # Select telemetry fairly across all enabled waiting lanes before either
     # status-specific spawn loop runs. The loops intentionally stay separate
     # because ready and review claims have different lifecycle semantics, but

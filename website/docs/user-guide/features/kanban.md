@@ -1160,11 +1160,20 @@ Kanban is deliberately single-host. `~/.hermes/kanban.db` is a local SQLite file
 
 ## Proactive wake audit trail
 
-Gateway scheduler ticks and authenticated dashboard dispatch nudges write a
-durable wake source before evaluating the queue. The board database links that
-source to each task consideration and, after a claim, its run. Replayed source
-keys coalesce without dispatching twice; an empty queue is retained as an
-informational `suppressed` wake rather than generating a notification.
+This diagnostic is default-off. Set `kanban.proactive_wake_telemetry: true` to
+make gateway scheduler ticks and authenticated dashboard dispatch nudges write
+a durable wake source before evaluating the queue. With the default `false`,
+neither path writes wake rows and dispatch behavior (including `/chat`) is
+unchanged. The board database links an enabled source to each task
+consideration and, after a claim, its run.
+
+Source keys are deterministic hashes of stable trigger/destination identity,
+policy generation, candidate action, and causal task references. Every
+invocation also gets a separate occurrence receipt and timestamp. Replaying
+the same key and immutable payload coalesces without dispatching twice; using
+the same key for a different payload is retained as a durable `error` conflict
+and never coalesced. An empty queue is retained as an informational
+`suppressed` wake rather than generating a notification.
 
 Outcomes use a closed taxonomy (`created`, `suppressed`, `deferred`,
 `duplicate`, `policy_denied`, `capacity`, `nonspawnable`, `parent_gated`,
