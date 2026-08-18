@@ -1,2 +1,2 @@
-→ Skipping web UI build (--skip-build); using dist at /workspace/zer0/oss/hermes-agent/.worktrees/t_7e38fe5c/hermes_cli/web_dist
-HERMES_DASHBOARD_READY port=9679
+→ Skipping web UI build (--skip-build); using dist at /workspace/zer0/oss/hermes-agent/.worktrees/t_0b81f734/hermes_cli/web_dist
+HERMES_DASHBOARD_READY port=9517

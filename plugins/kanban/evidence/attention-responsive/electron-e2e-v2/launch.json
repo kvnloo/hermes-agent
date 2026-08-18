@@ -1,12 +1,12 @@
 {
   "command": "electron",
   "args": [
-    "/workspace/zer0/oss/hermes-agent/.worktrees/t_7e38fe5c/apps/desktop",
+    "/workspace/zer0/oss/hermes-agent/.worktrees/t_0b81f734/apps/desktop",
     "--disable-gpu",
     "--no-sandbox",
     "--ozone-platform=wayland"
   ],
-  "cwd": "/workspace/zer0/oss/hermes-agent/.worktrees/t_7e38fe5c/apps/desktop",
+  "cwd": "/workspace/zer0/oss/hermes-agent/.worktrees/t_0b81f734/apps/desktop",
   "environment": {
     "WAYLAND_DISPLAY": "wayland-1",
     "XDG_RUNTIME_DIR": "/run/user/1000",

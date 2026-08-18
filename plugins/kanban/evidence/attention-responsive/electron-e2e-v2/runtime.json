@@ -1,10 +1,10 @@
 {
-  "sourceCommit": "89f23089689fd2dc2eef9a4426da3bc95364216f",
-  "sourceTree": "13435778abdb13d862b863a73653df87eeb76b4a",
-  "startedAt": "2026-08-18T19:09:42.774Z",
+  "sourceCommit": "fddff737e7e9314ca0dbcdb30a8a940ebbf4d001",
+  "sourceTree": "3c8ae21b062cab1a760ab5cb92f7c67ef521a056",
+  "startedAt": "2026-08-18T19:36:37.158Z",
   "electronVersion": "40.10.2",
   "electronNodeVersion": "24.15.0",
-  "electronPid": 1468090,
+  "electronPid": 1560641,
   "backendLogPresent": true,
   "logicalBefore": {
     "snooze": {
@@ -65,11 +65,11 @@
       "projected": {
         "state": "snoozed",
         "stored_state": "snoozed",
-        "wake_at": 1787083790,
+        "wake_at": 1787085403,
         "revision": 1,
         "observed_event_id": 1,
         "latest_event_id": 1,
-        "updated_at": 1787080190,
+        "updated_at": 1787081803,
         "actor": "human",
         "source": "desktop",
         "reason": "receipt"
@@ -81,7 +81,7 @@
         },
         {
           "kind": "attention_snooze",
-          "payload": "{\"revision\": 1, \"actor\": \"human\", \"source\": \"desktop\", \"wake_at\": 1787083790}"
+          "payload": "{\"revision\": 1, \"actor\": \"human\", \"source\": \"desktop\", \"wake_at\": 1787085403}"
         }
       ]
     },
@@ -97,7 +97,7 @@
         "revision": 2,
         "observed_event_id": 2,
         "latest_event_id": 2,
-        "updated_at": 1787080196,
+        "updated_at": 1787081809,
         "actor": "human",
         "source": "desktop",
         "reason": "receipt"
@@ -129,7 +129,7 @@
         "revision": 2,
         "observed_event_id": 3,
         "latest_event_id": 3,
-        "updated_at": 1787080190,
+        "updated_at": 1787081803,
         "actor": "e2e-racer",
         "source": "e2e",
         "reason": "receipt"
@@ -158,6 +158,598 @@
       390,
       430
     ],
+    "responsiveTrace": [
+      {
+        "width": 1220,
+        "closedGeometry": {
+          "controls": [
+            {
+              "label": "Settle",
+              "height": 44,
+              "width": 47.953125,
+              "radius": "0px"
+            },
+            {
+              "label": "1 hour",
+              "height": 44,
+              "width": 44,
+              "radius": "0px"
+            },
+            {
+              "label": "Tomorrow at 9 AM local time",
+              "height": 44,
+              "width": 69.078125,
+              "radius": "0px"
+            },
+            {
+              "label": "1 week",
+              "height": 44,
+              "width": 44,
+              "radius": "0px"
+            },
+            {
+              "label": "1 month",
+              "height": 44,
+              "width": 44,
+              "radius": "0px"
+            },
+            {
+              "label": "Custom+",
+              "height": 44,
+              "width": 61.359375,
+              "radius": "0px"
+            }
+          ],
+          "presetRows": 2,
+          "noOverflow": true,
+          "targetIsSnooze": true,
+          "target": "BUTTON:1 hr",
+          "headerIntercepts": false
+        },
+        "openGeometry": {
+          "controls": [
+            {
+              "label": "Settle",
+              "height": 44,
+              "width": 47.953125,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "1 hour",
+              "height": 44,
+              "width": 44,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "Tomorrow at 9 AM local time",
+              "height": 44,
+              "width": 69.078125,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "1 week",
+              "height": 44,
+              "width": 44,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "1 month",
+              "height": 44,
+              "width": 44,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "Custom−",
+              "height": 44,
+              "width": 61.359375,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "INPUT",
+              "height": 44,
+              "width": 184,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "Snooze until then",
+              "height": 44,
+              "width": 116.640625,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "Cancel",
+              "height": 44,
+              "width": 57.75,
+              "radius": "0px",
+              "horizontallyClipped": false
+            }
+          ],
+          "noOverflow": true
+        },
+        "escapeFocusRestored": true,
+        "cancelFocusRestored": true
+      },
+      {
+        "width": 320,
+        "closedGeometry": {
+          "controls": [
+            {
+              "label": "Settle",
+              "height": 44,
+              "width": 47.953125,
+              "radius": "0px"
+            },
+            {
+              "label": "1 hour",
+              "height": 44,
+              "width": 44,
+              "radius": "0px"
+            },
+            {
+              "label": "Tomorrow at 9 AM local time",
+              "height": 44,
+              "width": 69.078125,
+              "radius": "0px"
+            },
+            {
+              "label": "1 week",
+              "height": 44,
+              "width": 44,
+              "radius": "0px"
+            },
+            {
+              "label": "1 month",
+              "height": 44,
+              "width": 44,
+              "radius": "0px"
+            },
+            {
+              "label": "Custom+",
+              "height": 44,
+              "width": 61.359375,
+              "radius": "0px"
+            }
+          ],
+          "presetRows": 2,
+          "noOverflow": true,
+          "targetIsSnooze": true,
+          "target": "BUTTON:1 hr",
+          "headerIntercepts": false
+        },
+        "openGeometry": {
+          "controls": [
+            {
+              "label": "Settle",
+              "height": 44,
+              "width": 47.953125,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "1 hour",
+              "height": 44,
+              "width": 44,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "Tomorrow at 9 AM local time",
+              "height": 44,
+              "width": 69.078125,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "1 week",
+              "height": 44,
+              "width": 44,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "1 month",
+              "height": 44,
+              "width": 44,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "Custom−",
+              "height": 44,
+              "width": 61.359375,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "INPUT",
+              "height": 44,
+              "width": 184,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "Snooze until then",
+              "height": 44,
+              "width": 116.640625,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "Cancel",
+              "height": 44,
+              "width": 57.75,
+              "radius": "0px",
+              "horizontallyClipped": false
+            }
+          ],
+          "noOverflow": true
+        },
+        "escapeFocusRestored": true,
+        "cancelFocusRestored": true
+      },
+      {
+        "width": 360,
+        "closedGeometry": {
+          "controls": [
+            {
+              "label": "Settle",
+              "height": 44,
+              "width": 47.953125,
+              "radius": "0px"
+            },
+            {
+              "label": "1 hour",
+              "height": 44,
+              "width": 44,
+              "radius": "0px"
+            },
+            {
+              "label": "Tomorrow at 9 AM local time",
+              "height": 44,
+              "width": 69.078125,
+              "radius": "0px"
+            },
+            {
+              "label": "1 week",
+              "height": 44,
+              "width": 44,
+              "radius": "0px"
+            },
+            {
+              "label": "1 month",
+              "height": 44,
+              "width": 44,
+              "radius": "0px"
+            },
+            {
+              "label": "Custom+",
+              "height": 44,
+              "width": 61.359375,
+              "radius": "0px"
+            }
+          ],
+          "presetRows": 2,
+          "noOverflow": true,
+          "targetIsSnooze": true,
+          "target": "BUTTON:1 hr",
+          "headerIntercepts": false
+        },
+        "openGeometry": {
+          "controls": [
+            {
+              "label": "Settle",
+              "height": 44,
+              "width": 47.953125,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "1 hour",
+              "height": 44,
+              "width": 44,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "Tomorrow at 9 AM local time",
+              "height": 44,
+              "width": 69.078125,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "1 week",
+              "height": 44,
+              "width": 44,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "1 month",
+              "height": 44,
+              "width": 44,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "Custom−",
+              "height": 44,
+              "width": 61.359375,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "INPUT",
+              "height": 44,
+              "width": 215.046875,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "Snooze until then",
+              "height": 44,
+              "width": 116.640625,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "Cancel",
+              "height": 44,
+              "width": 57.75,
+              "radius": "0px",
+              "horizontallyClipped": false
+            }
+          ],
+          "noOverflow": true
+        },
+        "escapeFocusRestored": true,
+        "cancelFocusRestored": true
+      },
+      {
+        "width": 390,
+        "closedGeometry": {
+          "controls": [
+            {
+              "label": "Settle",
+              "height": 44,
+              "width": 47.953125,
+              "radius": "0px"
+            },
+            {
+              "label": "1 hour",
+              "height": 44,
+              "width": 44,
+              "radius": "0px"
+            },
+            {
+              "label": "Tomorrow at 9 AM local time",
+              "height": 44,
+              "width": 69.078125,
+              "radius": "0px"
+            },
+            {
+              "label": "1 week",
+              "height": 44,
+              "width": 44,
+              "radius": "0px"
+            },
+            {
+              "label": "1 month",
+              "height": 44,
+              "width": 44,
+              "radius": "0px"
+            },
+            {
+              "label": "Custom+",
+              "height": 44,
+              "width": 61.359375,
+              "radius": "0px"
+            }
+          ],
+          "presetRows": 2,
+          "noOverflow": true,
+          "targetIsSnooze": true,
+          "target": "BUTTON:1 hr",
+          "headerIntercepts": false
+        },
+        "openGeometry": {
+          "controls": [
+            {
+              "label": "Settle",
+              "height": 44,
+              "width": 47.953125,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "1 hour",
+              "height": 44,
+              "width": 44,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "Tomorrow at 9 AM local time",
+              "height": 44,
+              "width": 69.078125,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "1 week",
+              "height": 44,
+              "width": 44,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "1 month",
+              "height": 44,
+              "width": 44,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "Custom−",
+              "height": 44,
+              "width": 61.359375,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "INPUT",
+              "height": 44,
+              "width": 245.046875,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "Snooze until then",
+              "height": 44,
+              "width": 116.640625,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "Cancel",
+              "height": 44,
+              "width": 57.75,
+              "radius": "0px",
+              "horizontallyClipped": false
+            }
+          ],
+          "noOverflow": true
+        },
+        "escapeFocusRestored": true,
+        "cancelFocusRestored": true
+      },
+      {
+        "width": 430,
+        "closedGeometry": {
+          "controls": [
+            {
+              "label": "Settle",
+              "height": 44,
+              "width": 47.953125,
+              "radius": "0px"
+            },
+            {
+              "label": "1 hour",
+              "height": 44,
+              "width": 44,
+              "radius": "0px"
+            },
+            {
+              "label": "Tomorrow at 9 AM local time",
+              "height": 44,
+              "width": 69.078125,
+              "radius": "0px"
+            },
+            {
+              "label": "1 week",
+              "height": 44,
+              "width": 44,
+              "radius": "0px"
+            },
+            {
+              "label": "1 month",
+              "height": 44,
+              "width": 44,
+              "radius": "0px"
+            },
+            {
+              "label": "Custom+",
+              "height": 44,
+              "width": 61.359375,
+              "radius": "0px"
+            }
+          ],
+          "presetRows": 1,
+          "noOverflow": true,
+          "targetIsSnooze": true,
+          "target": "BUTTON:1 hr",
+          "headerIntercepts": false
+        },
+        "openGeometry": {
+          "controls": [
+            {
+              "label": "Settle",
+              "height": 44,
+              "width": 47.953125,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "1 hour",
+              "height": 44,
+              "width": 44,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "Tomorrow at 9 AM local time",
+              "height": 44,
+              "width": 69.078125,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "1 week",
+              "height": 44,
+              "width": 44,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "1 month",
+              "height": 44,
+              "width": 44,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "Custom−",
+              "height": 44,
+              "width": 61.359375,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "INPUT",
+              "height": 44,
+              "width": 285.046875,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "Snooze until then",
+              "height": 44,
+              "width": 116.640625,
+              "radius": "0px",
+              "horizontallyClipped": false
+            },
+            {
+              "label": "Cancel",
+              "height": 44,
+              "width": 57.75,
+              "radius": "0px",
+              "horizontallyClipped": false
+            }
+          ],
+          "noOverflow": true
+        },
+        "escapeFocusRestored": true,
+        "cancelFocusRestored": true
+      }
+    ],
     "finalReceipts": {
       "failure": {
         "state": "active",
@@ -175,9 +767,9 @@
     "failedActionAttentionEvents": 0,
     "staleFailureAnnouncement": "This task changed elsewhere. Your action was not applied."
   },
-  "endedAt": "2026-08-18T19:09:57.962Z",
+  "endedAt": "2026-08-18T19:36:50.919Z",
   "exitCode": 0,
-  "repoRoot": "/workspace/zer0/oss/hermes-agent/.worktrees/t_7e38fe5c",
+  "repoRoot": "/workspace/zer0/oss/hermes-agent/.worktrees/t_0b81f734",
   "sqliteVersion": "3.53.4 2026-07-24 19:02:57 bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e0945alt1 (64-bit)",
   "schemaVersion": 0,
   "privacyAudit": {

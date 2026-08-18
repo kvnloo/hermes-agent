@@ -7,11 +7,11 @@
     "projected": {
       "state": "snoozed",
       "stored_state": "snoozed",
-      "wake_at": 1787083790,
+      "wake_at": 1787085403,
       "revision": 1,
       "observed_event_id": 1,
       "latest_event_id": 1,
-      "updated_at": 1787080190,
+      "updated_at": 1787081803,
       "actor": "human",
       "source": "desktop",
       "reason": "receipt"
@@ -23,7 +23,7 @@
       },
       {
         "kind": "attention_snooze",
-        "payload": "{\"revision\": 1, \"actor\": \"human\", \"source\": \"desktop\", \"wake_at\": 1787083790}"
+        "payload": "{\"revision\": 1, \"actor\": \"human\", \"source\": \"desktop\", \"wake_at\": 1787085403}"
       }
     ]
   },
@@ -39,7 +39,7 @@
       "revision": 2,
       "observed_event_id": 2,
       "latest_event_id": 2,
-      "updated_at": 1787080196,
+      "updated_at": 1787081809,
       "actor": "human",
       "source": "desktop",
       "reason": "receipt"
@@ -71,7 +71,7 @@
       "revision": 2,
       "observed_event_id": 3,
       "latest_event_id": 3,
-      "updated_at": 1787080190,
+      "updated_at": 1787081803,
       "actor": "e2e-racer",
       "source": "e2e",
       "reason": "receipt"

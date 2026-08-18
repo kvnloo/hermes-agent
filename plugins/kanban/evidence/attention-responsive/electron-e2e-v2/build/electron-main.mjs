@@ -48,9 +48,9 @@ var __toESM = (mod, isNodeMode, target2) => (target2 = mod != null ? __create(__
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// ../../../../node_modules/ms/index.js
+// ../../../../../../../../tmp/hermes-deps/node_modules/ms/index.js
 var require_ms = __commonJS({
-  "../../../../node_modules/ms/index.js"(exports, module) {
+  "../../../../../../../../tmp/hermes-deps/node_modules/ms/index.js"(exports, module) {
     var s = 1e3;
     var m = s * 60;
     var h2 = m * 60;
@@ -164,9 +164,9 @@ var require_ms = __commonJS({
   }
 });
 
-// ../../../../node_modules/debug/src/common.js
+// ../../../../../../../../tmp/hermes-deps/node_modules/debug/src/common.js
 var require_common = __commonJS({
-  "../../../../node_modules/debug/src/common.js"(exports, module) {
+  "../../../../../../../../tmp/hermes-deps/node_modules/debug/src/common.js"(exports, module) {
     function setup(env2) {
       createDebug.debug = createDebug;
       createDebug.default = createDebug;
@@ -341,9 +341,9 @@ var require_common = __commonJS({
   }
 });
 
-// ../../../../node_modules/debug/src/browser.js
+// ../../../../../../../../tmp/hermes-deps/node_modules/debug/src/browser.js
 var require_browser = __commonJS({
-  "../../../../node_modules/debug/src/browser.js"(exports, module) {
+  "../../../../../../../../tmp/hermes-deps/node_modules/debug/src/browser.js"(exports, module) {
     exports.formatArgs = formatArgs;
     exports.save = save;
     exports.load = load;
@@ -511,7 +511,7 @@ var require_browser = __commonJS({
   }
 });
 
-// ../../../../node_modules/supports-color/index.js
+// ../../../../../../../../tmp/hermes-deps/node_modules/supports-color/index.js
 var supports_color_exports = {};
 __export(supports_color_exports, {
   createSupportsColor: () => createSupportsColor,
@@ -645,7 +645,7 @@ function createSupportsColor(stream, options = {}) {
 }
 var env, flagForceColor, supportsColor, supports_color_default;
 var init_supports_color = __esm({
-  "../../../../node_modules/supports-color/index.js"() {
+  "../../../../../../../../tmp/hermes-deps/node_modules/supports-color/index.js"() {
     ({ env } = process2);
     if (hasFlag("no-color") || hasFlag("no-colors") || hasFlag("color=false") || hasFlag("color=never")) {
       flagForceColor = 0;
@@ -660,9 +660,9 @@ var init_supports_color = __esm({
   }
 });
 
-// ../../../../node_modules/debug/src/node.js
+// ../../../../../../../../tmp/hermes-deps/node_modules/debug/src/node.js
 var require_node = __commonJS({
-  "../../../../node_modules/debug/src/node.js"(exports, module) {
+  "../../../../../../../../tmp/hermes-deps/node_modules/debug/src/node.js"(exports, module) {
     var tty2 = __require("tty");
     var util = __require("util");
     exports.init = init;
@@ -834,9 +834,9 @@ var require_node = __commonJS({
   }
 });
 
-// ../../../../node_modules/debug/src/index.js
+// ../../../../../../../../tmp/hermes-deps/node_modules/debug/src/index.js
 var require_src = __commonJS({
-  "../../../../node_modules/debug/src/index.js"(exports, module) {
+  "../../../../../../../../tmp/hermes-deps/node_modules/debug/src/index.js"(exports, module) {
     if (typeof process === "undefined" || process.type === "renderer" || process.browser === true || process.__nwjs) {
       module.exports = require_browser();
     } else {
@@ -845,9 +845,9 @@ var require_src = __commonJS({
   }
 });
 
-// ../../../../node_modules/@kwsites/file-exists/dist/src/index.js
+// ../../../../../../../../tmp/hermes-deps/node_modules/@kwsites/file-exists/dist/src/index.js
 var require_src2 = __commonJS({
-  "../../../../node_modules/@kwsites/file-exists/dist/src/index.js"(exports) {
+  "../../../../../../../../tmp/hermes-deps/node_modules/@kwsites/file-exists/dist/src/index.js"(exports) {
     "use strict";
     var __importDefault = exports && exports.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -889,9 +889,9 @@ var require_src2 = __commonJS({
   }
 });
 
-// ../../../../node_modules/@kwsites/file-exists/dist/index.js
+// ../../../../../../../../tmp/hermes-deps/node_modules/@kwsites/file-exists/dist/index.js
 var require_dist = __commonJS({
-  "../../../../node_modules/@kwsites/file-exists/dist/index.js"(exports) {
+  "../../../../../../../../tmp/hermes-deps/node_modules/@kwsites/file-exists/dist/index.js"(exports) {
     "use strict";
     function __export3(m) {
       for (var p2 in m) if (!exports.hasOwnProperty(p2)) exports[p2] = m[p2];
@@ -901,9 +901,9 @@ var require_dist = __commonJS({
   }
 });
 
-// ../../../../node_modules/@kwsites/promise-deferred/dist/index.js
+// ../../../../../../../../tmp/hermes-deps/node_modules/@kwsites/promise-deferred/dist/index.js
 var require_dist2 = __commonJS({
-  "../../../../node_modules/@kwsites/promise-deferred/dist/index.js"(exports) {
+  "../../../../../../../../tmp/hermes-deps/node_modules/@kwsites/promise-deferred/dist/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.createDeferred = exports.deferred = void 0;
@@ -3866,10 +3866,10 @@ import { execFile } from "node:child_process";
 import fs9 from "node:fs/promises";
 import path9 from "node:path";
 
-// ../../../../node_modules/simple-git/dist/esm/index.js
+// ../../../../../../../../tmp/hermes-deps/node_modules/simple-git/dist/esm/index.js
 var import_file_exists = __toESM(require_dist(), 1);
 
-// ../../../../node_modules/@simple-git/args-pathspec/dist/index.mjs
+// ../../../../../../../../tmp/hermes-deps/node_modules/@simple-git/args-pathspec/dist/index.mjs
 var t = /* @__PURE__ */ new WeakMap();
 function c(...n) {
   const e = new String(n);
@@ -3882,13 +3882,13 @@ function o(n) {
   return t.get(n) ?? [];
 }
 
-// ../../../../node_modules/simple-git/dist/esm/index.js
+// ../../../../../../../../tmp/hermes-deps/node_modules/simple-git/dist/esm/index.js
 var import_debug = __toESM(require_src(), 1);
 import { spawn as spawn2 } from "child_process";
 var import_promise_deferred = __toESM(require_dist2(), 1);
 import { normalize } from "node:path";
 
-// ../../../../node_modules/@simple-git/argv-parser/dist/index.mjs
+// ../../../../../../../../tmp/hermes-deps/node_modules/@simple-git/argv-parser/dist/index.mjs
 function* U(e, t2) {
   const n = t2 === "global";
   for (const o2 of e)
@@ -4352,7 +4352,7 @@ function ne(e, t2) {
   return [...Y(...e).vulnerabilities, ...ee(t2).vulnerabilities];
 }
 
-// ../../../../node_modules/simple-git/dist/esm/index.js
+// ../../../../../../../../tmp/hermes-deps/node_modules/simple-git/dist/esm/index.js
 var import_promise_deferred2 = __toESM(require_dist2(), 1);
 import { EventEmitter } from "node:events";
 var __defProp2 = Object.defineProperty;
