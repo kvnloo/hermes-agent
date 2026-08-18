@@ -1158,6 +1158,22 @@ Every transition appends a row to `task_events`. Each row carries an optional `r
 
 Kanban is deliberately single-host. `~/.hermes/kanban.db` is a local SQLite file and the dispatcher spawns workers on the same machine. Running a shared board across two hosts is not supported — there's no coordination primitive for "worker X on host A, worker Y on host B," and the crash-detection path assumes PIDs are host-local. If you need multi-host, run an independent board per host and use `delegate_task` / a message queue to bridge them.
 
+## Proactive wake audit trail
+
+Gateway scheduler ticks and authenticated dashboard dispatch nudges write a
+durable wake source before evaluating the queue. The board database links that
+source to each task consideration and, after a claim, its run. Replayed source
+keys coalesce without dispatching twice; an empty queue is retained as an
+informational `suppressed` wake rather than generating a notification.
+
+Outcomes use a closed taxonomy (`created`, `suppressed`, `deferred`,
+`duplicate`, `policy_denied`, `capacity`, `nonspawnable`, `parent_gated`,
+`stale`, `cooldown_budget`, and `error`). Diagnostic detail is bounded and
+must not contain prompts, credentials, or full configuration. Old raw wakes
+can be compacted with `compact_proactive_wakes()`; daily counts and chained
+SHA-256 evidence remain. This telemetry is diagnostic only and never changes
+task truth, focused/frozen policy, or notification routing.
+
 ## Design spec
 
 The complete design — architecture, concurrency correctness, comparison with other systems, implementation plan, risks, open questions — lives in `docs/hermes-kanban-v1-spec.pdf`. Read that before filing any behavior-change PR.
