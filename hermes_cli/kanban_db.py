@@ -2594,11 +2594,11 @@ def init_db(
     return path
 
 
-_ARTIFACT_REVIEW_GATE_SCHEMA_VERSION = 2
+_ARTIFACT_REVIEW_GATE_SCHEMA_VERSION = 3
 
 
 def _migrate_artifact_review_gate_v2(conn: sqlite3.Connection) -> None:
-    """Transactionally install/recover the artifact review gate v2 schema.
+    """Transactionally install/recover the artifact review gate schema.
 
     The caller holds both the board's cross-process init lock and an explicit
     write transaction.  The version row is written last, so an exception or
@@ -2633,6 +2633,29 @@ def _migrate_artifact_review_gate_v2(conn: sqlite3.Connection) -> None:
     ):
         if name not in cols:
             conn.execute(f"ALTER TABLE task_review_bindings ADD COLUMN {declaration}")
+    if current < 3:
+        # These records are deliberately separate from reviewer bindings.  A
+        # Captain product decision is not independent-review evidence.
+        conn.execute(
+            "CREATE TABLE captain_approval_authorizations ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, token_hash TEXT NOT NULL UNIQUE, "
+            "platform TEXT NOT NULL, operator_user_id TEXT NOT NULL, "
+            "chat_id TEXT NOT NULL, message_id TEXT NOT NULL, source TEXT NOT NULL, "
+            "task_id TEXT NOT NULL, source_hash TEXT NOT NULL, artifact_hash TEXT NOT NULL, "
+            "decision_generation INTEGER NOT NULL, nonce TEXT NOT NULL, "
+            "operation TEXT NOT NULL, issued_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, "
+            "consumed_at INTEGER, UNIQUE(platform, chat_id, message_id, operation))"
+        )
+        conn.execute(
+            "CREATE TABLE captain_approval_receipts ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, authorization_id INTEGER NOT NULL UNIQUE, "
+            "task_id TEXT NOT NULL, source_hash TEXT NOT NULL, artifact_hash TEXT NOT NULL, "
+            "decision_generation INTEGER NOT NULL, nonce TEXT NOT NULL, operation TEXT NOT NULL, "
+            "platform TEXT NOT NULL, operator_user_id TEXT NOT NULL, chat_id TEXT NOT NULL, "
+            "message_id TEXT NOT NULL, source TEXT NOT NULL, issued_at INTEGER NOT NULL, "
+            "expires_at INTEGER NOT NULL, approved_at INTEGER NOT NULL, "
+            "FOREIGN KEY(authorization_id) REFERENCES captain_approval_authorizations(id))"
+        )
     conn.execute(
         "INSERT INTO kanban_schema_migrations(name, version, applied_at) VALUES (?, ?, ?) "
         "ON CONFLICT(name) DO UPDATE SET version=excluded.version, applied_at=excluded.applied_at",
@@ -6903,6 +6926,173 @@ def _deny_review(conn: sqlite3.Connection, task_id: str, reason: str, *, run_id:
         conn, task_id, "review_approval_denied",
         {"reason": reason}, run_id=run_id,
     )
+
+
+@dataclass(frozen=True)
+class AuthenticatedCaptainEnvelope:
+    """Trusted gateway fact, never a dashboard/CLI request-body model."""
+
+    authenticated: bool
+    platform: str
+    operator_user_id: str
+    chat_id: str
+    message_id: str
+    source: str
+    received_at: int
+
+
+@dataclass(frozen=True)
+class CaptainIdentity:
+    platform: str
+    operator_user_id: str
+    chat_id: str
+    source: str
+
+
+def issue_captain_approval_authorization(
+    conn: sqlite3.Connection,
+    *,
+    envelope: AuthenticatedCaptainEnvelope,
+    captain: CaptainIdentity,
+    task_id: str,
+    source_hash: str,
+    artifact_hash: str,
+    decision_generation: int,
+    expires_at: int,
+    operation: str = "captain_product_approve",
+) -> Optional[str]:
+    """Persist a one-shot authorization from an authenticated gateway event.
+
+    This function belongs at the gateway/dispatcher trust boundary.  The only
+    value later accepted from an approval request is the opaque token.
+    """
+    exact_identity = (
+        envelope.authenticated
+        and envelope.platform == captain.platform
+        and envelope.operator_user_id == captain.operator_user_id
+        and envelope.chat_id == captain.chat_id
+        and envelope.source == captain.source
+    )
+    fields = (task_id, source_hash, artifact_hash, envelope.message_id, operation)
+    if (
+        not exact_identity
+        or any(not str(value).strip() for value in fields)
+        or len(source_hash) != 64
+        or len(artifact_hash) != 64
+        or int(decision_generation) <= 0
+        or int(expires_at) <= int(envelope.received_at)
+        or operation != "captain_product_approve"
+    ):
+        return None
+    token = secrets.token_urlsafe(48)
+    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    nonce = secrets.token_hex(24)
+    try:
+        with write_txn(conn):
+            conn.execute(
+                "INSERT INTO captain_approval_authorizations("
+                "token_hash, platform, operator_user_id, chat_id, message_id, source, "
+                "task_id, source_hash, artifact_hash, decision_generation, nonce, "
+                "operation, issued_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (token_hash, envelope.platform, envelope.operator_user_id,
+                 envelope.chat_id, envelope.message_id, envelope.source, task_id,
+                 source_hash, artifact_hash, int(decision_generation), nonce,
+                 operation, int(envelope.received_at), int(expires_at)),
+            )
+    except sqlite3.IntegrityError:
+        return None
+    return token
+
+
+def approve_task_by_captain(
+    conn: sqlite3.Connection,
+    task_id: str,
+    *,
+    authorization_token: str,
+    now: Optional[int] = None,
+) -> bool:
+    """Consume a trusted authorization and record explicit product approval.
+
+    This is intentionally not ``complete_task`` and never updates a review
+    binding's ``reviewed_at`` field or emits an independent-review receipt.
+    """
+    timestamp = int(time.time()) if now is None else int(now)
+    token_hash = hashlib.sha256(str(authorization_token).encode("utf-8")).hexdigest()
+    with write_txn(conn):
+        auth = conn.execute(
+            "SELECT * FROM captain_approval_authorizations WHERE token_hash = ?",
+            (token_hash,),
+        ).fetchone()
+        task = conn.execute("SELECT status FROM tasks WHERE id = ?", (task_id,)).fetchone()
+        binding = conn.execute(
+            "SELECT generation, source_manifest_hash, artifact_manifest_hash "
+            "FROM task_review_bindings WHERE task_id = ? ORDER BY generation DESC LIMIT 1",
+            (task_id,),
+        ).fetchone()
+        reason = None
+        if auth is None:
+            reason = "missing_captain_authorization"
+        elif auth["consumed_at"] is not None:
+            reason = "captain_authorization_replayed"
+        elif timestamp >= int(auth["expires_at"]):
+            reason = "captain_authorization_expired"
+        elif auth["operation"] != "captain_product_approve":
+            reason = "captain_operation_mismatch"
+        elif auth["task_id"] != task_id:
+            reason = "captain_task_mismatch"
+        elif task is None or task["status"] != "review":
+            reason = "captain_task_not_parked_for_review"
+        elif binding is None:
+            reason = "missing_review_binding"
+        elif int(auth["decision_generation"]) != int(binding["generation"]):
+            reason = "captain_generation_mismatch"
+        elif auth["source_hash"] != binding["source_manifest_hash"]:
+            reason = "captain_source_hash_mismatch"
+        elif auth["artifact_hash"] != binding["artifact_manifest_hash"]:
+            reason = "captain_artifact_hash_mismatch"
+        if reason:
+            _append_event(conn, task_id, "captain_approval_denied", {"reason": reason})
+            return False
+        consumed = conn.execute(
+            "UPDATE captain_approval_authorizations SET consumed_at = ? "
+            "WHERE id = ? AND consumed_at IS NULL AND expires_at > ?",
+            (timestamp, int(auth["id"]), timestamp),
+        )
+        if consumed.rowcount != 1:
+            _append_event(conn, task_id, "captain_approval_denied", {"reason": "captain_authorization_raced"})
+            return False
+        receipt = conn.execute(
+            "INSERT INTO captain_approval_receipts(authorization_id, task_id, source_hash, "
+            "artifact_hash, decision_generation, nonce, operation, platform, operator_user_id, "
+            "chat_id, message_id, source, issued_at, expires_at, approved_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (int(auth["id"]), task_id, auth["source_hash"], auth["artifact_hash"],
+             int(auth["decision_generation"]), auth["nonce"], auth["operation"], auth["platform"],
+             auth["operator_user_id"], auth["chat_id"], auth["message_id"],
+             auth["source"], int(auth["issued_at"]), int(auth["expires_at"]), timestamp),
+        )
+        conn.execute(
+            "UPDATE tasks SET status = 'done', completed_at = ?, current_run_id = NULL, "
+            "claim_lock = NULL, claim_expires = NULL WHERE id = ? AND status = 'review'",
+            (timestamp, task_id),
+        )
+        _append_event(
+            conn, task_id, "captain_product_approved",
+            {"receipt_id": int(receipt.lastrowid), "approval_class": "captain_product",
+             "source_hash": auth["source_hash"], "artifact_hash": auth["artifact_hash"],
+             "decision_generation": int(auth["decision_generation"]),
+             "decision_nonce": auth["nonce"], "expires_at": int(auth["expires_at"]),
+             "operation": auth["operation"], "platform": auth["platform"],
+             "operator_user_id": auth["operator_user_id"], "chat_id": auth["chat_id"],
+             "message_id": auth["message_id"], "source": auth["source"]},
+        )
+    recompute_ready(conn)
+    _clear_failure_counter(conn, task_id)
+    _fire_kanban_lifecycle_hook(
+        "kanban_task_completed", task_id, board=get_current_board(),
+        assignee=None, run_id=None, summary="Captain product approval",
+    )
+    return True
 
 
 def redact_review_value(value: Any) -> Any:
