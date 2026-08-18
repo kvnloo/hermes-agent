@@ -442,8 +442,9 @@
       window.clearTimeout(gesture.timer);
       const pointerId = gesture.pointerId;
       const restoreNativeDrag = gesture.restoreNativeDrag;
+      const nativeDragChanged = gesture.nativeDragChanged;
       gesture = null;
-      el.draggable = restoreNativeDrag;
+      if (nativeDragChanged) el.draggable = restoreNativeDrag;
       if (el.hasPointerCapture && el.hasPointerCapture(pointerId)) el.releasePointerCapture(pointerId);
       setState(finalState || "cancelled");
       requestAnimationFrame(function () { if (!gesture) setState("idle"); });
@@ -461,6 +462,7 @@
         proxy: null,
         lastTarget: null,
         restoreNativeDrag: el.draggable,
+        nativeDragChanged: false,
         timer: window.setTimeout(function () {
           if (!gesture) return;
           gesture.armed = true;
@@ -468,6 +470,7 @@
           // Changing draggable during pointerdown suppresses Chromium's
           // compatibility click for an otherwise ordinary touch tap.
           el.draggable = false;
+          gesture.nativeDragChanged = true;
           gesture.proxy = el.cloneNode(true);
           gesture.proxy.removeAttribute("id");
           gesture.proxy.classList.add("hermes-kanban-touch-proxy");
