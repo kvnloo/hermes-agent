@@ -1105,6 +1105,21 @@ Runs are exposed on the dashboard (Run History section in the drawer, one colour
 
 **Live drawer refresh.** When the dashboard's WebSocket event stream reports new events for the task the user is currently viewing, the drawer reloads itself (via a per-task event counter threaded into its `useEffect` dependency list). Closing and reopening is no longer required to see a run's new row or updated outcome.
 
+### Captain product approval on Telegram
+
+The Telegram adapter has a separate, gateway-internal product-approval button.
+It is disabled unless both `platforms.telegram.extra.captain_allow_from` and
+`platforms.telegram.extra.captain_allow_chats` are non-empty; optionally set
+`platforms.telegram.extra.captain_board` when the gateway is not using the
+current board. The gateway sends the button with
+`send_captain_approval_request()`, then persists the exact Telegram message id,
+task generation, source hash, artifact hash, expiry, and an opaque callback
+nonce. On tap, Telegram supplies the user, chat, and message identity; callback
+data cannot override them. The record is consumed once and produces a durable
+`captain_product_approved` receipt. This is explicit human product approval,
+not independent reviewer evidence, and there is no dashboard or public API
+route for it.
+
 ### Forward compatibility
 
 Two nullable columns on `tasks` are reserved for v2 workflow routing: `workflow_template_id` (which template this task belongs to) and `current_step_key` (which step in that template is active). The v1 kernel ignores them for routing but lets clients write them, so a v2 release can add the routing machinery without another schema migration.
