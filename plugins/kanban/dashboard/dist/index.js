@@ -403,6 +403,14 @@
   const POINTER_HOLD_MS = 200;
   const POINTER_SLOP_PX = 9;
 
+  // Euclidean distance is the gesture oracle.  The boundary is inclusive:
+  // exactly 9px remains eligible and only a value strictly greater than 9px
+  // cancels the hold.  Keep this comparison free of rounding/epsilon fudge;
+  // browser touch coordinates are measured from the pointerdown coordinates.
+  function pointerWithinSlop(startX, startY, clientX, clientY) {
+    return Math.hypot(clientX - startX, clientY - startY) <= POINTER_SLOP_PX;
+  }
+
   function isNestedInteractive(target, root) {
     const nested = target && target.closest && target.closest(
       "a,button,input,select,textarea,label,[role='button'],[data-no-card-drag]",
@@ -433,14 +441,18 @@
       if (!gesture) return;
       window.clearTimeout(gesture.timer);
       const pointerId = gesture.pointerId;
+      const restoreNativeDrag = gesture.restoreNativeDrag;
       gesture = null;
+      el.draggable = restoreNativeDrag;
       if (el.hasPointerCapture && el.hasPointerCapture(pointerId)) el.releasePointerCapture(pointerId);
       setState(finalState || "cancelled");
       requestAnimationFrame(function () { if (!gesture) setState("idle"); });
     }
 
     function onDown(e) {
-      if (!e.isPrimary || e.button !== 0 || gesture || isNestedInteractive(e.target, el)) return;
+      if ((e.pointerType !== "touch" && e.pointerType !== "pen") ||
+          !e.isPrimary || (e.pointerType === "pen" && e.button !== 0) ||
+          gesture || isNestedInteractive(e.target, el)) return;
       gesture = {
         pointerId: e.pointerId,
         startX: e.clientX,
@@ -448,6 +460,7 @@
         armed: false,
         proxy: null,
         lastTarget: null,
+        restoreNativeDrag: el.draggable,
         timer: window.setTimeout(function () {
           if (!gesture) return;
           gesture.armed = true;
@@ -462,6 +475,10 @@
           if (cb.onArm) cb.onArm(taskId);
         }, POINTER_HOLD_MS),
       };
+      // A touch/pen sequence is owned by this hold gesture.  Temporarily
+      // disable HTML DnD so it cannot race the pointer proxy; mouse sequences
+      // never enter this path and retain immediate native dragging.
+      el.draggable = false;
       setState("pressed");
     }
 
@@ -471,9 +488,10 @@
 
     function move(e) {
       if (!gesture || e.pointerId !== gesture.pointerId) return;
-      const distance = Math.hypot(e.clientX - gesture.startX, e.clientY - gesture.startY);
       if (!gesture.armed) {
-        if (distance > POINTER_SLOP_PX) clearGesture("cancelled");
+        if (!pointerWithinSlop(gesture.startX, gesture.startY, e.clientX, e.clientY)) {
+          clearGesture("cancelled");
+        }
         return;
       }
       e.preventDefault();
@@ -524,7 +542,29 @@
       clearGesture("cancelled");
     }
 
+    // Chromium may hand a touch sequence to native scrolling (and emit
+    // pointercancel) as soon as it sees movement.  Suppress native scrolling
+    // only while the movement is still inside the inclusive hold boundary or
+    // after the drag is armed.  Movement beyond 9px is left to scrolling.
+    function holdTouchMove(e) {
+      if (!gesture || !e.cancelable || !e.touches || !e.touches.length) return;
+      const touch = e.touches[0];
+      if (gesture.armed || pointerWithinSlop(
+        gesture.startX, gesture.startY, touch.clientX, touch.clientY,
+      )) e.preventDefault();
+    }
+
+    function holdTouchStart(e) {
+      if (!e.cancelable || isNestedInteractive(e.target, el)) return;
+      // Claim the potential hold before Chromium makes its native-scroll
+      // decision.  The pointer path still cancels strictly above the slop and
+      // no click is suppressed unless the gesture actually arms.
+      e.preventDefault();
+    }
+
+    el.addEventListener("touchstart", holdTouchStart, { passive: false });
     el.addEventListener("pointerdown", onDown);
+    el.addEventListener("touchmove", holdTouchMove, { passive: false });
     document.addEventListener("pointerdown", cancelOnAdditionalPointer, true);
     document.addEventListener("pointermove", move, { passive: false });
     document.addEventListener("pointerup", up, { passive: false });
@@ -533,7 +573,9 @@
     document.addEventListener("visibilitychange", cancel);
     return function () {
       cancel();
+      el.removeEventListener("touchstart", holdTouchStart);
       el.removeEventListener("pointerdown", onDown);
+      el.removeEventListener("touchmove", holdTouchMove);
       document.removeEventListener("pointerdown", cancelOnAdditionalPointer, true);
       document.removeEventListener("pointermove", move);
       document.removeEventListener("pointerup", up);
@@ -2841,6 +2883,22 @@
       });
     }, [t.id]);
 
+    const handleDragStart = function (e) {
+      e.dataTransfer.setData(MIME_TASK, t.id);
+      e.dataTransfer.effectAllowed = "move";
+      const selectedCards = document.querySelectorAll(".hermes-kanban-card--selected");
+      if (selectedCards.length > 1 && props.selected) {
+        const ghost = document.createElement("div");
+        ghost.className = "hermes-kanban-drag-ghost";
+        ghost.textContent = selectedCards.length + " cards";
+        document.body.appendChild(ghost);
+        e.dataTransfer.setDragImage(ghost, 0, 0);
+        requestAnimationFrame(function () {
+          if (ghost.parentNode) document.body.removeChild(ghost);
+        });
+      }
+    };
+
     const handleClick = function (e) {
       if (cardRef.current && cardRef.current.dataset.suppressCardClick === "true") {
         e.preventDefault();
@@ -2889,11 +2947,12 @@
         props.draggingSource ? "hermes-kanban-card--dragging-source" : "",
         stalenessClass(t),
       ),
-      draggable: false,
+      draggable: true,
       tabIndex: 0,
       role: "button",
       "aria-label": `${t.title || "untitled"} — ${t.id} — ${t.status}`,
       "aria-grabbed": gestureState === "armed" || gestureState === "dragging" ? "true" : "false",
+      onDragStart: handleDragStart,
       onClick: handleClick,
       onKeyDown: handleKeyDown,
     },

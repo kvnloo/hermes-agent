@@ -840,7 +840,10 @@
 /* ---- Touch-drag proxy ---------------------------------------------- */
 
 .hermes-kanban-card {
-  touch-action: pan-x pan-y;
+  /* The browser must not steal a potential hold before the strict 9px
+     boundary is evaluated.  Board scrolling remains available from column
+     gutters and headers; card-origin coarse gestures belong to the hold gate. */
+  touch-action: none;
   transition: transform 140ms ease, filter 140ms ease;
 }
 .hermes-kanban-card--pressed :where(.hermes-kanban-card-content) {
