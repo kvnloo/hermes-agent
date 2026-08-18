@@ -419,12 +419,114 @@
   }
 
   function vibrationAllowed() {
-    return typeof navigator !== "undefined" && typeof navigator.vibrate === "function" &&
+    let enabled = true;
+    try { enabled = window.localStorage.getItem("hermes.kanban.haptics") !== "off"; } catch (_storageError) { /* default on */ }
+    return enabled && typeof navigator !== "undefined" && typeof navigator.vibrate === "function" &&
       !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
 
   function vibrate(pattern) {
     if (vibrationAllowed()) navigator.vibrate(pattern);
+  }
+
+  const LANE_SWIPE_SLOP_PX = 10;
+  const LANE_SWIPE_VELOCITY = 0.5;
+  const LANE_SWIPE_DISTANCE_RATIO = 0.25;
+
+  function isLaneSwipeBlockedTarget(target, root) {
+    if (!target || !target.closest) return true;
+    const blocked = target.closest(".hermes-kanban-card,button,input,select,textarea,a,label,[role='button'],[data-no-lane-swipe]");
+    return !!(blocked && blocked !== root);
+  }
+
+  function laneElements(root) {
+    return Array.prototype.slice.call(root.querySelectorAll(":scope > [data-kanban-column]"));
+  }
+
+  function nearestLaneIndex(root, lanes) {
+    const box = root.getBoundingClientRect();
+    const center = box.left + box.width / 2;
+    let best = 0;
+    let distance = Infinity;
+    lanes.forEach(function (lane, index) {
+      const rect = lane.getBoundingClientRect();
+      const next = Math.abs(rect.left + rect.width / 2 - center);
+      if (next < distance) { distance = next; best = index; }
+    });
+    return best;
+  }
+
+  function scrollLaneIntoView(root, lane, instant) {
+    if (!lane) return;
+    const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    lane.scrollIntoView({ behavior: instant || reduced ? "auto" : "smooth", block: "nearest", inline: "center" });
+    root.setAttribute("data-active-lane", lane.getAttribute("data-kanban-column") || "");
+  }
+
+  function attachLaneSwipe(root, onActiveLane) {
+    if (!root) return undefined;
+    let gesture = null;
+    function cancel() { gesture = null; root.removeAttribute("data-lane-swipe"); }
+    function down(e) {
+      if (e.pointerType !== "touch" || !e.isPrimary || gesture || isLaneSwipeBlockedTarget(e.target, root)) return;
+      gesture = {
+        pointerId: e.pointerId,
+        startX: e.clientX,
+        startY: e.clientY,
+        lastX: e.clientX,
+        startedAt: performance.now(),
+        startLane: nearestLaneIndex(root, laneElements(root)),
+        axis: null,
+      };
+    }
+    function move(e) {
+      if (!gesture || e.pointerId !== gesture.pointerId) return;
+      const dx = e.clientX - gesture.startX;
+      const dy = e.clientY - gesture.startY;
+      if (!gesture.axis && Math.hypot(dx, dy) >= LANE_SWIPE_SLOP_PX) {
+        gesture.axis = Math.abs(dx) > Math.abs(dy) * 1.2 ? "x" : "y";
+        if (gesture.axis === "y") { cancel(); return; }
+        root.setAttribute("data-lane-swipe", "tracking");
+      }
+      if (gesture.axis !== "x") return;
+      e.preventDefault();
+      root.scrollLeft -= e.clientX - gesture.lastX;
+      gesture.lastX = e.clientX;
+    }
+    function up(e) {
+      if (!gesture || e.pointerId !== gesture.pointerId) return;
+      const active = gesture;
+      const dx = e.clientX - active.startX;
+      const elapsed = Math.max(1, performance.now() - active.startedAt);
+      const lanes = laneElements(root);
+      const current = Math.max(0, Math.min(lanes.length - 1, active.startLane));
+      const rtl = getComputedStyle(root).direction === "rtl";
+      const direction = (dx < 0 ? 1 : -1) * (rtl ? -1 : 1);
+      const width = lanes[current] ? lanes[current].getBoundingClientRect().width : root.clientWidth;
+      const committed = active.axis === "x" && (Math.abs(dx) >= width * LANE_SWIPE_DISTANCE_RATIO || Math.abs(dx / elapsed) >= LANE_SWIPE_VELOCITY);
+      const target = Math.max(0, Math.min(lanes.length - 1, current + (committed ? direction : 0)));
+      if (committed && target === current) vibrate([8, 24, 8]);
+      else if (committed) vibrate(8);
+      scrollLaneIntoView(root, lanes[target], false);
+      if (onActiveLane && lanes[target]) onActiveLane(lanes[target].getAttribute("data-kanban-column"));
+      cancel();
+    }
+    function additional(e) { if (gesture && e.pointerId !== gesture.pointerId) cancel(); }
+    root.addEventListener("pointerdown", down);
+    document.addEventListener("pointerdown", additional, true);
+    document.addEventListener("pointermove", move, { passive: false });
+    document.addEventListener("pointerup", up);
+    document.addEventListener("pointercancel", cancel);
+    document.addEventListener("visibilitychange", cancel);
+    return function () {
+      cancel();
+      root.removeEventListener("pointerdown", down);
+      document.removeEventListener("pointerdown", additional, true);
+      document.removeEventListener("pointermove", move);
+      document.removeEventListener("pointerup", up);
+      document.removeEventListener("pointercancel", cancel);
+      document.removeEventListener("visibilitychange", cancel);
+    };
   }
 
   function attachTouchDrag(el, taskId, callbacks) {
@@ -549,7 +651,10 @@
         ));
         vibrate(12);
         if (cb.onDrop) cb.onDrop(taskId, status || "trash");
-      } else if (cb.onInvalidDrop) cb.onInvalidDrop(taskId);
+      } else {
+        vibrate([8, 24, 8]);
+        if (cb.onInvalidDrop) cb.onInvalidDrop(taskId);
+      }
       if (active.proxy) active.proxy.remove();
       clearGesture(active.lastTarget ? "dropped" : "cancelled");
     }
@@ -2568,10 +2673,25 @@
   // -------------------------------------------------------------------------
 
   function BoardColumns(props) {
+    const { t } = useI18n();
     const columnsRef = useRef(null);
     const panRef = useRef({ isPanning: false, startX: 0, scrollLeft: 0 });
     const [isPanning, setIsPanning] = useState(false);
     const [isScrollable, setIsScrollable] = useState(false);
+    const [activeLane, setActiveLane] = useState(props.board.columns[0] ? props.board.columns[0].name : "");
+
+    useEffect(function () {
+      return attachLaneSwipe(columnsRef.current, setActiveLane);
+    }, [props.board.columns.length]);
+
+    const selectLane = useCallback(function (name) {
+      const root = columnsRef.current;
+      if (!root) return;
+      const lane = laneElements(root).find(function (item) { return item.getAttribute("data-kanban-column") === name; });
+      scrollLaneIntoView(root, lane, true);
+      setActiveLane(name);
+      vibrate(8);
+    }, []);
 
     const checkScrollable = useCallback(function () {
       const el = columnsRef.current;
@@ -2664,7 +2784,20 @@
     const handleDragEnd = useCallback(function () {
       if (props.onDragEnd) props.onDragEnd();
     }, [props.onDragEnd]);
-    return h("div", {
+    return h(React.Fragment, null,
+      h("nav", { className: "hermes-kanban-lane-tabs", "aria-label": "Kanban stages" },
+        props.board.columns.map(function (col) {
+          return h("button", {
+            key: col.name,
+            type: "button",
+            className: cn("hermes-kanban-lane-tab", activeLane === col.name ? "hermes-kanban-lane-tab--active" : ""),
+            "aria-current": activeLane === col.name ? "true" : undefined,
+            onClick: function () { selectLane(col.name); },
+          }, getColumnLabel(t, col.name) || col.name,
+            h("span", { className: "hermes-kanban-lane-tab-count" }, col.tasks.length));
+        }),
+      ),
+      h("div", {
       ref: columnsRef,
       className: cn(
         "hermes-kanban-columns",
@@ -2699,7 +2832,7 @@
         selectedIds: props.selectedIds,
         onDelete: props.onDelete,
       }),
-    );
+    ));
   }
 
   function Column(props) {
