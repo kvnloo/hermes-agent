@@ -2,7 +2,12 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { useKanbanViewportGeometry } from './responsive'
+import {
+  KANBAN_LANE_GAP,
+  KANBAN_MOBILE_INLINE_INSET,
+  KANBAN_SCROLL_PEEK,
+  useKanbanViewportGeometry
+} from './responsive'
 
 let root: null | Root = null
 let container: HTMLDivElement | null = null
@@ -53,7 +58,7 @@ afterEach(() => {
 })
 
 describe('Kanban responsive geometry', () => {
-  for (const width of [320, 375, 390, 430]) {
+  for (const width of [320, 360, 390, 430]) {
     it(`keeps the toolbar, snapping lanes, and drawer contained at ${width}px`, () => {
       const view = render(width)
       const header = view.querySelector<HTMLElement>('header')!
@@ -67,8 +72,9 @@ describe('Kanban responsive geometry', () => {
       expect(header.querySelector('input')).toBeTruthy()
       expect(strip.style.overflowX).toBe('auto')
       expect(strip.style.scrollSnapType).toBe('x mandatory')
-      expect(lanes.every(lane => lane.style.width === `${width - 32}px`)).toBe(true)
+      expect(lanes.every(lane => lane.style.width === `${width - 36}px`)).toBe(true)
       expect(lanes.every(lane => lane.style.scrollSnapAlign === 'start')).toBe(true)
+      expect(KANBAN_MOBILE_INLINE_INSET + (width - 36) + KANBAN_LANE_GAP).toBe(width - KANBAN_SCROLL_PEEK)
       expect(drawer.style.width).toBe(`${width}px`)
       expect(Number.parseFloat(drawer.style.width)).toBeLessThanOrEqual(width)
     })
