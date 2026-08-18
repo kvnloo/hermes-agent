@@ -1,0 +1,21 @@
+(electron) 'console-message' arguments are deprecated and will be removed. Please use Event<WebContentsConsoleMessageEventParams> object instead.
+Error occurred in handler for 'hermes:api': Error: 409: {"detail":{"message":"stale attention revision","current_revision":1,"attention":{"state":"settled","stored_state":"settled","wake_at":null,"revision":1,"observed_event_id":3,"latest_event_id":3,"updated_at":1787081803,"actor":"e2e-racer","source":"e2e","reason":"receipt"}}}
+    at IncomingMessage.<anonymous> [90m(file:///workspace/zer0/oss/hermes-agent/.worktrees/t_0b81f734/apps/desktop/[39mdist/electron-main.mjs:16938:20[90m)[39m
+[90m    at IncomingMessage.emit (node:events:521:24)[39m
+[90m    at endReadableNT (node:internal/streams/readable:1729:12)[39m
+[90m    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)[39m
+Error occurred in handler for 'hermes:api': Error: 409: {"detail":{"message":"stale attention revision","current_revision":2,"attention":{"state":"active","stored_state":"active","wake_at":null,"revision":2,"observed_event_id":3,"latest_event_id":3,"updated_at":1787081803,"actor":"e2e-racer","source":"e2e","reason":"receipt"}}}
+    at IncomingMessage.<anonymous> [90m(file:///workspace/zer0/oss/hermes-agent/.worktrees/t_0b81f734/apps/desktop/[39mdist/electron-main.mjs:16938:20[90m)[39m
+[90m    at IncomingMessage.emit (node:events:521:24)[39m
+[90m    at endReadableNT (node:internal/streams/readable:1729:12)[39m
+[90m    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)[39m
+Debugger ending on ws://127.0.0.1:19439/ee847874-0b55-4696-b6c5-0d03726a5c40
+For help, see: https://nodejs.org/en/docs/inspector
+Error occurred in handler for 'hermes:api': Error: connect ECONNREFUSED 127.0.0.1:35087
+[90m    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)[39m {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m35087[39m
+}
