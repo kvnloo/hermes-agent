@@ -2594,7 +2594,7 @@ def init_db(
     return path
 
 
-_ARTIFACT_REVIEW_GATE_SCHEMA_VERSION = 5
+_ARTIFACT_REVIEW_GATE_SCHEMA_VERSION = 6
 
 
 def _migrate_artifact_review_gate_v2(conn: sqlite3.Connection) -> None:
@@ -2666,6 +2666,12 @@ def _migrate_artifact_review_gate_v2(conn: sqlite3.Connection) -> None:
             "consumed_at INTEGER, UNIQUE(platform, chat_id, message_id))"
         )
     if current < 5:
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS captain_approval_migration_receipts ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, request_id INTEGER NOT NULL UNIQUE, "
+            "task_id TEXT NOT NULL, decision_generation INTEGER NOT NULL, action TEXT NOT NULL, "
+            "reason TEXT NOT NULL, created_at INTEGER NOT NULL)"
+        )
         request_cols = {
             item["name"] for item in conn.execute(
                 "PRAGMA table_info(captain_approval_requests)"
@@ -2679,9 +2685,74 @@ def _migrate_artifact_review_gate_v2(conn: sqlite3.Connection) -> None:
         ):
             if name not in request_cols:
                 conn.execute(f"ALTER TABLE captain_approval_requests ADD COLUMN {declaration}")
+        # v4 did not constrain generations.  Normalize harmless legacy
+        # duplicates before adding the fence; two distinct live transport
+        # bindings are ambiguous and must stop the migration.
+        duplicate_groups = conn.execute(
+            "SELECT task_id, decision_generation, COUNT(*) AS n FROM captain_approval_requests "
+            "GROUP BY task_id, decision_generation HAVING COUNT(*) > 1"
+        ).fetchall()
+        for group in duplicate_groups:
+            rows = conn.execute(
+                "SELECT * FROM captain_approval_requests WHERE task_id = ? AND decision_generation = ? "
+                "ORDER BY CASE WHEN consumed_at IS NOT NULL THEN 0 ELSE 1 END, "
+                "COALESCE(updated_at, 0) DESC, id DESC",
+                (group["task_id"], group["decision_generation"]),
+            ).fetchall()
+            live = [row for row in rows if row["consumed_at"] is None and row["state"] == "active"]
+            bindings = {(row["platform"], row["chat_id"], row["message_id"]) for row in live}
+            if len(bindings) > 1:
+                raise sqlite3.IntegrityError(
+                    "ambiguous captain approval bindings for "
+                    f"{group['task_id']} generation {group['decision_generation']}"
+                )
+            for row in rows[1:]:
+                conn.execute(
+                    "UPDATE captain_approval_requests SET state = 'revoked', "
+                    "failure_reason = 'migration_v5_duplicate', updated_at = ? WHERE id = ?",
+                    (int(time.time()), row["id"]),
+                )
+                conn.execute(
+                    "INSERT OR IGNORE INTO captain_approval_migration_receipts("
+                    "request_id, task_id, decision_generation, action, reason, created_at) "
+                    "VALUES (?, ?, ?, 'revoked', 'migration_v5_duplicate', ?)",
+                    (row["id"], group["task_id"], group["decision_generation"], int(time.time())),
+                )
         conn.execute(
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_captain_request_generation "
-            "ON captain_approval_requests(task_id, decision_generation)"
+            "ON captain_approval_requests(task_id, decision_generation) "
+            "WHERE state IN ('reserved', 'active')"
+        )
+    if current < 6:
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS captain_approval_migration_receipts ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, request_id INTEGER NOT NULL UNIQUE, "
+            "task_id TEXT NOT NULL, decision_generation INTEGER NOT NULL, action TEXT NOT NULL, "
+            "reason TEXT NOT NULL, created_at INTEGER NOT NULL)"
+        )
+        # Early v5 builds created a full index which prevented safe retry rows.
+        conn.execute("DROP INDEX IF EXISTS idx_captain_request_generation")
+        conn.execute(
+            "CREATE UNIQUE INDEX idx_captain_request_generation "
+            "ON captain_approval_requests(task_id, decision_generation) "
+            "WHERE state IN ('reserved', 'active')"
+        )
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS captain_approval_issuance_jobs ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT NOT NULL, "
+            "decision_generation INTEGER NOT NULL, platform TEXT NOT NULL, chat_id TEXT NOT NULL, "
+            "state TEXT NOT NULL DEFAULT 'pending', attempts INTEGER NOT NULL DEFAULT 0, "
+            "next_attempt_at INTEGER NOT NULL, lease_until INTEGER, last_error TEXT, "
+            "request_id INTEGER, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, "
+            "UNIQUE(task_id, decision_generation, platform, chat_id))"
+        )
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS captain_approval_cleanup_jobs ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, request_id INTEGER NOT NULL UNIQUE, "
+            "platform TEXT NOT NULL, chat_id TEXT NOT NULL, message_id TEXT NOT NULL, "
+            "state TEXT NOT NULL DEFAULT 'pending', attempts INTEGER NOT NULL DEFAULT 0, "
+            "next_attempt_at INTEGER NOT NULL, lease_until INTEGER, last_error TEXT, "
+            "created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)"
         )
     conn.execute(
         "INSERT INTO kanban_schema_migrations(name, version, applied_at) VALUES (?, ?, ?) "
@@ -6976,6 +7047,111 @@ class CaptainIdentity:
     source: str
 
 
+def enqueue_captain_approval_issuance(
+    conn: sqlite3.Connection, *, task_id: str, decision_generation: int,
+    platform: str, chat_id: str, now: Optional[int] = None,
+) -> int:
+    """Durably acknowledge a canonical review event before its cursor advances."""
+    timestamp = int(time.time()) if now is None else int(now)
+    with write_txn(conn):
+        conn.execute(
+            "INSERT INTO captain_approval_issuance_jobs("
+            "task_id, decision_generation, platform, chat_id, next_attempt_at, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(task_id, decision_generation, platform, chat_id) "
+            "DO NOTHING",
+            (task_id, int(decision_generation), platform, str(chat_id), timestamp, timestamp, timestamp),
+        )
+        row = conn.execute(
+            "SELECT id FROM captain_approval_issuance_jobs WHERE task_id = ? AND "
+            "decision_generation = ? AND platform = ? AND chat_id = ?",
+            (task_id, int(decision_generation), platform, str(chat_id)),
+        ).fetchone()
+    return int(row["id"])
+
+
+def claim_captain_approval_issuance_jobs(
+    conn: sqlite3.Connection, *, now: Optional[int] = None, lease_seconds: int = 60,
+    limit: int = 20,
+) -> list[dict[str, Any]]:
+    timestamp = int(time.time()) if now is None else int(now)
+    with write_txn(conn):
+        rows = conn.execute(
+            "SELECT * FROM captain_approval_issuance_jobs WHERE state IN ('pending', 'deferred', 'leased') "
+            "AND next_attempt_at <= ? AND (lease_until IS NULL OR lease_until <= ?) "
+            "ORDER BY next_attempt_at, id LIMIT ?", (timestamp, timestamp, int(limit)),
+        ).fetchall()
+        for row in rows:
+            conn.execute(
+                "UPDATE captain_approval_issuance_jobs SET state = 'leased', lease_until = ?, "
+                "attempts = attempts + 1, updated_at = ? WHERE id = ?",
+                (timestamp + int(lease_seconds), timestamp, row["id"]),
+            )
+    return [dict(row) for row in rows]
+
+
+def finish_captain_approval_issuance_job(
+    conn: sqlite3.Connection, *, job_id: int, outcome: str,
+    error: Optional[str] = None, request_id: Optional[int] = None,
+    now: Optional[int] = None,
+) -> bool:
+    timestamp = int(time.time()) if now is None else int(now)
+    row = conn.execute(
+        "SELECT attempts FROM captain_approval_issuance_jobs WHERE id = ? AND state = 'leased'",
+        (int(job_id),),
+    ).fetchone()
+    if row is None:
+        return False
+    if outcome == "active":
+        state, next_at = "active", timestamp
+    elif outcome == "terminal":
+        state, next_at = "terminal", timestamp
+    else:
+        state = "deferred" if outcome == "deferred" else "pending"
+        next_at = timestamp + min(300, 2 ** min(int(row["attempts"]), 8))
+    with write_txn(conn):
+        updated = conn.execute(
+            "UPDATE captain_approval_issuance_jobs SET state = ?, next_attempt_at = ?, "
+            "lease_until = NULL, last_error = ?, request_id = COALESCE(?, request_id), updated_at = ? "
+            "WHERE id = ? AND state = 'leased'",
+            (state, next_at, (error or "")[:240] or None, request_id, timestamp, int(job_id)),
+        )
+    return updated.rowcount == 1
+
+
+def claim_captain_approval_cleanup_jobs(
+    conn: sqlite3.Connection, *, now: Optional[int] = None, lease_seconds: int = 60,
+) -> list[dict[str, Any]]:
+    timestamp = int(time.time()) if now is None else int(now)
+    with write_txn(conn):
+        rows = conn.execute(
+            "SELECT * FROM captain_approval_cleanup_jobs WHERE state IN ('pending', 'leased') "
+            "AND next_attempt_at <= ? AND (lease_until IS NULL OR lease_until <= ?) ORDER BY id LIMIT 20",
+            (timestamp, timestamp),
+        ).fetchall()
+        for row in rows:
+            conn.execute(
+                "UPDATE captain_approval_cleanup_jobs SET state = 'leased', lease_until = ?, "
+                "attempts = attempts + 1, updated_at = ? WHERE id = ?",
+                (timestamp + lease_seconds, timestamp, row["id"]),
+            )
+    return [dict(row) for row in rows]
+
+
+def finish_captain_approval_cleanup_job(
+    conn: sqlite3.Connection, *, job_id: int, success: bool,
+    error: Optional[str] = None, now: Optional[int] = None,
+) -> bool:
+    timestamp = int(time.time()) if now is None else int(now)
+    with write_txn(conn):
+        updated = conn.execute(
+            "UPDATE captain_approval_cleanup_jobs SET state = ?, lease_until = NULL, "
+            "next_attempt_at = ?, last_error = ?, updated_at = ? WHERE id = ? AND state = 'leased'",
+            ("done" if success else "pending", timestamp if success else timestamp + 30,
+             (error or "")[:240] or None, timestamp, int(job_id)),
+        )
+    return updated.rowcount == 1
+
+
 def reserve_captain_approval_request(
     conn: sqlite3.Connection, *, task_id: str, platform: str, chat_id: str,
     expires_at: int, now: Optional[int] = None,
@@ -6999,6 +7175,22 @@ def reserve_captain_approval_request(
     callback_hash = hashlib.sha256(nonce.encode()).hexdigest()
     try:
         with write_txn(conn):
+            existing = conn.execute(
+                "SELECT id, state FROM captain_approval_requests WHERE task_id = ? AND "
+                "decision_generation = ?", (task_id, int(binding["generation"])),
+            ).fetchone()
+            if existing is not None and existing["state"] in ("active", "consumed"):
+                return None
+            if existing is not None:
+                conn.execute(
+                    "UPDATE captain_approval_requests SET callback_hash = ?, platform = ?, chat_id = ?, "
+                    "message_id = ?, source_hash = ?, artifact_hash = ?, expires_at = ?, consumed_at = NULL, "
+                    "state = 'reserved', failure_reason = NULL, cleanup_failed = 0, updated_at = ? WHERE id = ?",
+                    (callback_hash, platform, chat_id, f"reserved:{callback_hash}",
+                     binding["source_manifest_hash"], binding["artifact_manifest_hash"],
+                     int(expires_at), timestamp, existing["id"]),
+                )
+                return nonce
             conn.execute(
                 "INSERT INTO captain_approval_requests(callback_hash, platform, chat_id, "
                 "message_id, task_id, source_hash, artifact_hash, decision_generation, expires_at, "
@@ -7045,11 +7237,24 @@ def fail_captain_approval_request(
 def expire_captain_approval_requests(conn: sqlite3.Connection, *, now: Optional[int] = None) -> int:
     timestamp = int(time.time()) if now is None else int(now)
     with write_txn(conn):
+        expiring = conn.execute(
+            "SELECT id, platform, chat_id, message_id FROM captain_approval_requests "
+            "WHERE state IN ('reserved', 'active') AND expires_at <= ?", (timestamp,),
+        ).fetchall()
         updated = conn.execute(
             "UPDATE captain_approval_requests SET state = 'expired', updated_at = ? "
             "WHERE state IN ('reserved', 'active') AND expires_at <= ?",
             (timestamp, timestamp),
         )
+        for row in expiring:
+            if not str(row["message_id"]).startswith("reserved:"):
+                conn.execute(
+                    "INSERT INTO captain_approval_cleanup_jobs("
+                    "request_id, platform, chat_id, message_id, next_attempt_at, created_at, updated_at) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(request_id) DO NOTHING",
+                    (row["id"], row["platform"], row["chat_id"], row["message_id"],
+                     timestamp, timestamp, timestamp),
+                )
     return updated.rowcount
 
 

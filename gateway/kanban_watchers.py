@@ -416,6 +416,10 @@ class GatewayKanbanWatchersMixin:
                             # Bound the lifetime of inert reservations and live
                             # buttons even when no callback ever arrives.
                             _kb.expire_captain_approval_requests(conn)
+                            for job in _kb.claim_captain_approval_issuance_jobs(conn):
+                                deliveries.append({"captain_job": job, "board": slug})
+                            for job in _kb.claim_captain_approval_cleanup_jobs(conn):
+                                deliveries.append({"captain_cleanup": job, "board": slug})
                             if not subs:
                                 logger.debug("kanban notifier: board %s has no subscriptions", slug)
                             for sub in subs:
@@ -473,6 +477,50 @@ class GatewayKanbanWatchersMixin:
 
                 deliveries = await asyncio.to_thread(_collect)
                 for d in deliveries:
+                    if "captain_job" in d:
+                        job = d["captain_job"]
+                        try:
+                            plat = _Platform(job["platform"])
+                            adapter = getattr(self, "_authorization_adapter")(plat, None)
+                            issue = getattr(adapter, "send_captain_approval_request", None)
+                            enabled = getattr(adapter, "captain_approval_enabled", None)
+                            if callable(enabled) and not enabled(chat_id=job["chat_id"]):
+                                outcome, error = "deferred", "captain approval surface disabled by configuration"
+                            elif not callable(issue):
+                                outcome, error = "deferred", "captain approval surface disabled"
+                            else:
+                                result = issue(task_id=job["task_id"], chat_id=job["chat_id"])
+                                if inspect.isawaitable(result):
+                                    result = await result
+                                outcome, error = ("active", None) if result else ("pending", "issuance returned false")
+                        except Exception as exc:
+                            outcome, error = "pending", f"{type(exc).__name__}: {exc}"
+                        with _kb.connect_closing(board=d.get("board")) as conn:
+                            _kb.finish_captain_approval_issuance_job(
+                                conn, job_id=job["id"], outcome=outcome, error=error,
+                            )
+                        continue
+                    if "captain_cleanup" in d:
+                        job = d["captain_cleanup"]
+                        success, error = False, None
+                        try:
+                            plat = _Platform(job["platform"])
+                            adapter = getattr(self, "_authorization_adapter")(plat, None)
+                            cleanup = getattr(adapter, "disable_captain_approval_request", None)
+                            if callable(cleanup):
+                                result = cleanup(chat_id=job["chat_id"], message_id=job["message_id"])
+                                if inspect.isawaitable(result):
+                                    result = await result
+                                success = bool(result)
+                            else:
+                                error = "cleanup surface unavailable"
+                        except Exception as exc:
+                            error = f"{type(exc).__name__}: {exc}"
+                        with _kb.connect_closing(board=d.get("board")) as conn:
+                            _kb.finish_captain_approval_cleanup_job(
+                                conn, job_id=job["id"], success=success, error=error,
+                            )
+                        continue
                     sub = d["sub"]
                     task = d["task"]
                     board_slug = d.get("board")
@@ -515,16 +563,14 @@ class GatewayKanbanWatchersMixin:
                         if ev.kind == "captain_product_review_requested"
                     ]
                     if captain_events:
-                        issue = getattr(adapter, "send_captain_approval_request", None)
-                        if callable(issue):
-                            issuance = issue(task_id=sub["task_id"], chat_id=sub["chat_id"])
-                            if inspect.isawaitable(issuance):
-                                await issuance
-                        # The issuance result is durable in the request table;
-                        # never replay the event and risk a second live button.
-                        await asyncio.to_thread(
-                            self._kanban_advance, sub, d["cursor"], board_slug,
-                        )
+                        generation = int(captain_events[-1].payload.get("generation", 0))
+                        with _kb.connect_closing(board=board_slug) as conn:
+                            _kb.enqueue_captain_approval_issuance(
+                                conn, task_id=sub["task_id"], decision_generation=generation,
+                                platform=sub["platform"], chat_id=sub["chat_id"],
+                            )
+                        # Cursor advancement is now backed by the durable job.
+                        await asyncio.to_thread(self._kanban_advance, sub, d["cursor"], board_slug)
                         continue
                     title = (task.title if task else sub["task_id"])[:120]
                     board_tag = f"[{board_slug}] " if board_slug else ""

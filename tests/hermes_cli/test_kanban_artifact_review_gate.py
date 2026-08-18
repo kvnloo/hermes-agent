@@ -389,3 +389,75 @@ def test_pre_v2_concurrent_first_open_and_production_sentinel(tmp_path):
     ).fetchone()[0] == kb._ARTIFACT_REVIEW_GATE_SCHEMA_VERSION
     assert db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
     db.close()
+
+
+def test_issuance_job_retries_after_lease_restart_and_finishes_once(conn, tmp_path):
+    task_id, _ = _task(conn, tmp_path)
+    job_id = kb.enqueue_captain_approval_issuance(
+        conn, task_id=task_id, decision_generation=1,
+        platform="telegram", chat_id="chat-9", now=100,
+    )
+    assert kb.enqueue_captain_approval_issuance(
+        conn, task_id=task_id, decision_generation=1,
+        platform="telegram", chat_id="chat-9", now=101,
+    ) == job_id
+    first = kb.claim_captain_approval_issuance_jobs(conn, now=100, lease_seconds=10)
+    assert [job["id"] for job in first] == [job_id]
+    assert kb.claim_captain_approval_issuance_jobs(conn, now=109) == []
+    restarted = kb.claim_captain_approval_issuance_jobs(conn, now=110)
+    assert [job["id"] for job in restarted] == [job_id]
+    assert kb.finish_captain_approval_issuance_job(
+        conn, job_id=job_id, outcome="active", now=111,
+    )
+    assert kb.claim_captain_approval_issuance_jobs(conn, now=999) == []
+
+
+def test_expiry_enqueues_durable_cleanup_and_callback_is_immediately_invalid(conn, tmp_path):
+    task_id, _ = _task(conn, tmp_path)
+    nonce = kb.create_captain_approval_request(
+        conn, task_id=task_id, platform="telegram", chat_id="chat-9",
+        message_id="77", expires_at=110, now=100,
+    )
+    assert nonce is not None
+    assert kb.expire_captain_approval_requests(conn, now=110) == 1
+    assert not kb.approve_captain_callback(
+        conn, callback_nonce=nonce, platform="telegram", operator_user_id="captain-7",
+        chat_id="chat-9", message_id="77", allowed_user_ids={"captain-7"},
+        allowed_chat_ids={"chat-9"}, now=110,
+    )
+    cleanup = kb.claim_captain_approval_cleanup_jobs(conn, now=110)
+    assert [(job["chat_id"], job["message_id"]) for job in cleanup] == [("chat-9", "77")]
+    assert kb.finish_captain_approval_cleanup_job(
+        conn, job_id=cleanup[0]["id"], success=False, error="telegram down", now=111,
+    )
+    assert kb.claim_captain_approval_cleanup_jobs(conn, now=141)
+
+
+def test_v5_legacy_terminal_duplicates_normalize_on_public_restart(tmp_path):
+    path = tmp_path / "legacy-v5.db"
+    db = kb.connect(path)
+    db.execute("DROP INDEX idx_captain_request_generation")
+    db.execute("UPDATE kanban_schema_migrations SET version = 4 WHERE name = 'artifact_review_gate'")
+    values = ("telegram", "chat", "task", "s" * 64, "a" * 64, 1, 200)
+    db.execute(
+        "INSERT INTO captain_approval_requests(callback_hash, platform, chat_id, message_id, task_id, "
+        "source_hash, artifact_hash, decision_generation, expires_at, consumed_at, state, updated_at) "
+        "VALUES ('one', ?, ?, 'm1', ?, ?, ?, ?, ?, 10, 'consumed', 10)", values,
+    )
+    db.execute(
+        "INSERT INTO captain_approval_requests(callback_hash, platform, chat_id, message_id, task_id, "
+        "source_hash, artifact_hash, decision_generation, expires_at, state, updated_at) "
+        "VALUES ('two', ?, ?, 'm2', ?, ?, ?, ?, ?, 'failed', 9)", values,
+    )
+    db.close()
+    kb.init_db(path)
+    reopened = kb.connect(path)
+    states = [row[0] for row in reopened.execute(
+        "SELECT state FROM captain_approval_requests ORDER BY id"
+    )]
+    assert states == ["consumed", "revoked"]
+    receipt = reopened.execute(
+        "SELECT action, reason FROM captain_approval_migration_receipts"
+    ).fetchone()
+    assert tuple(receipt) == ("revoked", "migration_v5_duplicate")
+    reopened.close()

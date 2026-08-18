@@ -921,6 +921,10 @@ class TelegramAdapter(BasePlatformAdapter):
 
         return _ids("captain_allow_from"), _ids("captain_allow_chats"), extra.get("captain_board")
 
+    def captain_approval_enabled(self, *, chat_id: str) -> bool:
+        users, chats, _board = self._captain_approval_config()
+        return bool(users and str(chat_id) in chats and self._bot)
+
     async def send_captain_approval_request(
         self, *, task_id: str, chat_id: str, expires_in: int = 900,
     ) -> bool:
@@ -931,6 +935,13 @@ class TelegramAdapter(BasePlatformAdapter):
         from hermes_cli import kanban_db as kb
         nonce = __import__("secrets").token_urlsafe(24)
         with kb.connect_closing(board=board) as conn:
+            active = conn.execute(
+                "SELECT 1 FROM captain_approval_requests WHERE task_id = ? AND platform = 'telegram' "
+                "AND chat_id = ? AND state = 'active' ORDER BY decision_generation DESC LIMIT 1",
+                (task_id, str(chat_id)),
+            ).fetchone()
+            if active is not None and active[0] == 1:
+                return True
             persisted = kb.reserve_captain_approval_request(
                 conn, task_id=task_id, platform="telegram", chat_id=str(chat_id),
                 expires_at=int(time.time()) + expires_in, callback_nonce=nonce,
@@ -970,6 +981,15 @@ class TelegramAdapter(BasePlatformAdapter):
                 cleanup_failed=cleanup_failed,
             )
         return False
+
+    async def disable_captain_approval_request(self, *, chat_id: str, message_id: str) -> bool:
+        """Remove an expired approval button; callers durably retry failures."""
+        if not self._bot:
+            return False
+        await self._bot.edit_message_reply_markup(
+            chat_id=int(chat_id), message_id=int(message_id), reply_markup=None,
+        )
+        return True
 
     def _mark_connected(self) -> None:
         self._drop_delayed_deliveries = False
