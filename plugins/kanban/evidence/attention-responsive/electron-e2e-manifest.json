@@ -1,0 +1,80 @@
+{
+  "schema": 1,
+  "sourceFix": "d57a8374993ece30a0471839b037176392dbd191",
+  "sourceFixTree": "bd0d8058ac35b4e82155db05c1a564ce1445cfec",
+  "testedHead": "156c9a4dfc8cb532138c7049df6fa7787e8a8326",
+  "testedSourceTree": "a4b23ec6051c2edac18b61f6c0d78aa0b8e88d7a",
+  "buildStampSha256": "9e6988648e0f82e35b076e02c6239f69bb11716af315d79dbbac1f4f615d7adf",
+  "rendererSha256": "d78229b07c6110fd24539ada884dac0ebbdd069f97a4b8a9eb7a2bbba1e4d6af",
+  "electronMainSha256": "a14a2b8456e285002d45167b8db3082643a358a19bfbe213cdba6a4fcd99affb",
+  "electronVersion": "40.10.2",
+  "electronPid": 1069663,
+  "launchedAt": 1787075148053,
+  "isolatedHermesHome": true,
+  "isolatedKanbanDb": true,
+  "isolatedKanbanDbSha256": "c3c4b12b2870283e44dd1347cd8ec5decb3f477246d365a7e07904fedde6238f",
+  "isolatedDbIdentity": {
+    "board": "default",
+    "filename": "kanban.db"
+  },
+  "isolatedDbSentinel": [
+    "E2E attention receipt sentinel",
+    "E2E settle and wake sentinel",
+    "E2E stale receipt sentinel"
+  ],
+  "taskIds": "<redacted-e2e-tasks>",
+  "widths": [
+    1220,
+    320,
+    360,
+    390,
+    430
+  ],
+  "finalReceipts": {
+    "failure": {
+      "state": "active",
+      "revision": 2
+    },
+    "snooze": {
+      "state": "snoozed",
+      "revision": 1
+    },
+    "settle": {
+      "state": "active",
+      "revision": 2
+    }
+  },
+  "attentionEvents": [
+    "snooze:attention_snooze",
+    "settle:attention_settle",
+    "settle:attention_wake"
+  ],
+  "failedActionAttentionEvents": 0,
+  "backendLogPresent": true,
+  "productionSentinelUnchanged": {
+    "db": true,
+    "config": true
+  },
+  "screenshots": [
+    {
+      "filename": "electron-1220.png",
+      "sha256": "3b2a7bd3a1e5ade432a5457a927f496f67e9ff1879f7d5628a086ae8e3984f50"
+    },
+    {
+      "filename": "electron-320.png",
+      "sha256": "1006e04bea5dea136d77e3c0edf8e4b5fc5fdb5b79898dc62e9a7015d7c44d6d"
+    },
+    {
+      "filename": "electron-360.png",
+      "sha256": "3f5c8b7b2821f154165e3ce16bae849c7dfaa3a9a9aeed144138102b5bb1311f"
+    },
+    {
+      "filename": "electron-390.png",
+      "sha256": "cc17f9c25b8f973cccdc39765343ea5d52debddfc99b18d6dd7775365d140843"
+    },
+    {
+      "filename": "electron-430.png",
+      "sha256": "a6b2a6e23511e3abfb8e938c9cdb13eb2c893ca9015f54c193f602fd980b80c7"
+    }
+  ]
+}
