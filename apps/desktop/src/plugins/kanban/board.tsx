@@ -51,10 +51,13 @@ import {
   useValue
 } from '@hermes/plugin-sdk'
 import {
+  createContext,
   type CSSProperties,
   type DragEvent as ReactDragEvent,
   type ReactNode,
   type SyntheticEvent,
+  useCallback,
+  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -241,21 +244,69 @@ function CardFooter({ arc, task }: { arc: ArcState | null; task: KanbanTask }) {
   )
 }
 
+interface AttentionAnnouncement {
+  key: string
+  message: string
+}
+
+const AttentionAnnouncementContext = createContext<null | ((announcement: AttentionAnnouncement) => void)>(null)
+
+export function AttentionAnnouncementBoundary({ children }: { children: ReactNode }) {
+  const [announcement, setAnnouncement] = useState<null | AttentionAnnouncement>(null)
+  const clearTimer = useRef<null | number>(null)
+
+  const publish = useCallback((next: AttentionAnnouncement) => {
+    setAnnouncement(current => current?.key === next.key ? current : next)
+
+    if (clearTimer.current != null) {
+      window.clearTimeout(clearTimer.current)
+    }
+
+    clearTimer.current = window.setTimeout(() => {
+      setAnnouncement(current => current?.key === next.key ? null : current)
+      clearTimer.current = null
+    }, 8_000)
+  }, [])
+
+  useEffect(() => () => {
+    if (clearTimer.current != null) {
+      window.clearTimeout(clearTimer.current)
+    }
+  }, [])
+
+  return (
+    <AttentionAnnouncementContext.Provider value={publish}>
+      <span aria-atomic="true" aria-live="polite" className="sr-only" role="status">{announcement?.message ?? ''}</span>
+      {children}
+    </AttentionAnnouncementContext.Provider>
+  )
+}
+
 export function AttentionControls({ task }: { task: KanbanTask }) {
   const qc = useQueryClient()
   const [custom, setCustom] = useState('')
   const [announcement, setAnnouncement] = useState('')
+  const publishAnnouncement = useContext(AttentionAnnouncementContext)
+  const attempt = useRef(0)
   const receipt = task.attention ?? { state: 'active' as const, revision: 0 }
+
+  const announce = (key: string, message: string) => {
+    if (publishAnnouncement) {
+      publishAnnouncement({ key, message })
+    } else {
+      setAnnouncement(message)
+    }
+  }
 
   const action = useMutation({
     mutationFn: ({ kind, wakeAt }: { kind: 'settle' | 'snooze' | 'wake'; wakeAt?: number }) =>
       updateAttention(task.id, kind, receipt.revision, wakeAt),
-    onError: error => {
+    onError: (error, variables) => {
       const message = errText(error)
-      setAnnouncement(message)
+      announce(`${task.id}:${variables.kind}:${receipt.revision}:error:${attempt.current}`, message)
       host.notify({ kind: 'error', message })
     },
-    onSuccess: result => {
+    onSuccess: (result, variables) => {
       host.notify({
         kind: 'success',
         message:
@@ -265,31 +316,40 @@ export function AttentionControls({ task }: { task: KanbanTask }) {
               ? 'Snoozed'
               : 'Awake'
       })
-      setAnnouncement(result.attention.state === 'settled' ? 'Attention settled' : result.attention.state === 'snoozed' ? 'Task snoozed' : 'Task awake')
+      announce(
+        `${task.id}:${variables.kind}:${result.attention.revision}:success`,
+        result.attention.state === 'settled' ? 'Attention settled' : result.attention.state === 'snoozed' ? 'Task snoozed' : 'Task awake'
+      )
       void qc.invalidateQueries({ queryKey: ['kanban', 'board'] })
       void qc.invalidateQueries({ queryKey: ['kanban', 'task'] })
     }
   })
 
   const stop = (event: SyntheticEvent) => event.stopPropagation()
-  const snooze = (seconds: number) => action.mutate({ kind: 'snooze', wakeAt: Math.floor(Date.now() / 1000) + seconds })
+
+  const mutate = (variables: { kind: 'settle' | 'snooze' | 'wake'; wakeAt?: number }) => {
+    attempt.current += 1
+    action.mutate(variables)
+  }
+
+  const snooze = (seconds: number) => mutate({ kind: 'snooze', wakeAt: Math.floor(Date.now() / 1000) + seconds })
   const customWake = parseLocalDateTime(custom)
 
   const tomorrowMorning = () => {
     const wake = new Date()
     wake.setDate(wake.getDate() + 1)
     wake.setHours(9, 0, 0, 0)
-    action.mutate({ kind: 'snooze', wakeAt: Math.floor(wake.getTime() / 1000) })
+    mutate({ kind: 'snooze', wakeAt: Math.floor(wake.getTime() / 1000) })
   }
 
   if (receipt.state === 'settled') {
     return (
       <div onClick={stop} onKeyDown={stop}>
-        <span aria-atomic="true" aria-live="polite" className="sr-only" role="status">{announcement}</span>
+        {!publishAnnouncement && <span aria-atomic="true" aria-live="polite" className="sr-only" role="status">{announcement}</span>}
         <button
-          className="min-h-7 rounded px-2 text-[0.6875rem] text-(--ui-text-secondary) hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2"
+          className="min-h-11 rounded px-2 text-[0.6875rem] text-(--ui-text-secondary) hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2"
           disabled={action.isPending}
-          onClick={() => action.mutate({ kind: 'wake' })}
+          onClick={() => mutate({ kind: 'wake' })}
           type="button"
         >
           Wake
@@ -300,31 +360,31 @@ export function AttentionControls({ task }: { task: KanbanTask }) {
 
   return (
     <div className="flex flex-wrap items-center gap-1 border-t border-(--ui-stroke-tertiary) pt-1.5" onClick={stop} onKeyDown={stop}>
-      <span aria-atomic="true" aria-live="polite" className="sr-only" role="status">{announcement}</span>
+      {!publishAnnouncement && <span aria-atomic="true" aria-live="polite" className="sr-only" role="status">{announcement}</span>}
       <button
-        className="min-h-7 rounded px-2 text-[0.6875rem] text-(--ui-text-secondary) hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2"
+        className="min-h-11 rounded px-2 text-[0.6875rem] text-(--ui-text-secondary) hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2"
         disabled={action.isPending}
-        onClick={() => action.mutate({ kind: 'settle' })}
+        onClick={() => mutate({ kind: 'settle' })}
         type="button"
       >
         Settle
       </button>
-      <details className="relative">
-        <summary className="flex min-h-7 cursor-pointer list-none items-center rounded px-2 text-[0.6875rem] text-(--ui-text-secondary) hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2">
+      <details className="basis-full">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center rounded px-2 text-[0.6875rem] text-(--ui-text-secondary) hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2">
           Snooze…
         </summary>
-        <div className="absolute bottom-full left-0 z-20 mb-1 grid min-w-48 gap-1 rounded-md border border-(--ui-stroke-secondary) bg-(--ui-bg-elevated) p-2 shadow-lg">
-          <button className="min-h-8 rounded px-2 text-left text-xs hover:bg-(--chrome-action-hover)" onClick={() => snooze(3600)} type="button">1 hour</button>
-          <button className="min-h-8 rounded px-2 text-left text-xs hover:bg-(--chrome-action-hover)" onClick={tomorrowMorning} type="button">Tomorrow, 9:00 AM local time</button>
-          <button className="min-h-8 rounded px-2 text-left text-xs hover:bg-(--chrome-action-hover)" onClick={() => snooze(7 * 24 * 3600)} type="button">One week</button>
+        <div className="mt-1 grid w-full gap-1 rounded-md border border-(--ui-stroke-secondary) bg-(--ui-bg-elevated) p-2 shadow-lg">
+          <button className="min-h-11 rounded px-2 text-left text-xs hover:bg-(--chrome-action-hover)" onClick={() => snooze(3600)} type="button">1 hour</button>
+          <button className="min-h-11 rounded px-2 text-left text-xs hover:bg-(--chrome-action-hover)" onClick={tomorrowMorning} type="button">Tomorrow, 9:00 AM local time</button>
+          <button className="min-h-11 rounded px-2 text-left text-xs hover:bg-(--chrome-action-hover)" onClick={() => snooze(7 * 24 * 3600)} type="button">One week</button>
           <label className="grid gap-1 text-[0.6875rem] text-(--ui-text-tertiary)">
             Custom wake time
             <input className="min-h-9 rounded border border-(--ui-stroke-secondary) bg-transparent px-1 text-xs" min={formatLocalDateTime(new Date())} onChange={event => setCustom(event.target.value)} type="datetime-local" value={custom} />
           </label>
           <button
-            className="min-h-8 rounded bg-primary px-2 text-xs text-primary-foreground disabled:opacity-50"
+            className="min-h-11 rounded bg-primary px-2 text-xs text-primary-foreground disabled:opacity-50"
             disabled={!customWake || customWake.getTime() <= Date.now()}
-            onClick={() => customWake && action.mutate({ kind: 'snooze', wakeAt: Math.floor(customWake.getTime() / 1000) })}
+            onClick={() => customWake && mutate({ kind: 'snooze', wakeAt: Math.floor(customWake.getTime() / 1000) })}
             type="button"
           >
             Snooze until then
@@ -1497,7 +1557,8 @@ export function KanbanBoardPage() {
   }
 
   return (
-    <div className="relative flex h-full flex-col overflow-hidden bg-(--ui-surface-background)">
+    <AttentionAnnouncementBoundary>
+      <div className="relative flex h-full flex-col overflow-hidden bg-(--ui-surface-background)">
       {/* Page-owned titlebar chrome: exists exactly while this page is mounted. */}
       <Contribute area={TITLEBAR_AREAS.center} id="kanban:board-switcher">
         <BoardSwitcher />
@@ -1618,7 +1679,8 @@ export function KanbanBoardPage() {
       )}
 
       <NewTaskDialog onClose={() => setAddStatus(null)} parents={parentOptions} target={addStatus} />
-      <TaskDrawer columns={columnNames} id={openId} onClose={() => setOpenId(null)} onOpen={setOpenId} />
-    </div>
+        <TaskDrawer columns={columnNames} id={openId} onClose={() => setOpenId(null)} onOpen={setOpenId} />
+      </div>
+    </AttentionAnnouncementBoundary>
   )
 }
