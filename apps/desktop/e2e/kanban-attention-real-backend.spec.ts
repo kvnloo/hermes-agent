@@ -138,10 +138,11 @@ test('actual Electron and isolated backend preserve attention controls and recei
 
   const launchedAt = Date.now()
   const fixture = await launchDesktop(env)
+  const electronProcess = fixture.app.process()
   const stdout: Buffer[] = []
   const stderr: Buffer[] = []
-  fixture.app.process().stdout?.on('data', chunk => stdout.push(Buffer.from(chunk)))
-  fixture.app.process().stderr?.on('data', chunk => stderr.push(Buffer.from(chunk)))
+  electronProcess.stdout?.on('data', chunk => stdout.push(Buffer.from(chunk)))
+  electronProcess.stderr?.on('data', chunk => stderr.push(Buffer.from(chunk)))
   let runtimeEvidence: Record<string, unknown> | undefined
 
   try {
@@ -247,7 +248,7 @@ test('actual Electron and isolated backend preserve attention controls and recei
     expect(snoozeState.events.filter(event => event.kind.startsWith('attention_')).map(event => event.kind)).toEqual(['attention_snooze'])
     expect(settleState.events.filter(event => event.kind.startsWith('attention_')).map(event => event.kind)).toEqual(['attention_settle', 'attention_wake'])
 
-    const electronPid = fixture.app.process().pid
+    const electronPid = electronProcess.pid
     const electronVersion = await fixture.app.evaluate(() => process.versions.electron)
     const backendLog = path.join(sandbox.hermesHome, 'logs', 'desktop.log')
 
@@ -300,7 +301,7 @@ test('actual Electron and isolated backend preserve attention controls and recei
       fs.writeFileSync(path.join(packet, 'logs', 'electron.stdout.log'), Buffer.concat(stdout))
       fs.writeFileSync(path.join(packet, 'logs', 'electron.stderr.log'), Buffer.concat(stderr))
       const endedAt = new Date().toISOString()
-      const processRecord = { pid: runtimeEvidence.electronPid, startedAt: runtimeEvidence.startedAt, endedAt, exitCode: fixture.app.process().exitCode }
+      const processRecord = { pid: runtimeEvidence.electronPid, startedAt: runtimeEvidence.startedAt, endedAt, exitCode: electronProcess.exitCode }
       const launch = { command: 'electron', args: [DESKTOP_ROOT, '--disable-gpu', '--no-sandbox', ...(env.WAYLAND_DISPLAY && !env.DISPLAY ? ['--ozone-platform=wayland'] : []), ...(env.HERMES_DESKTOP_E2E_HEADLESS === '1' ? ['--headless'] : [])], cwd: DESKTOP_ROOT, environment: Object.fromEntries(['DISPLAY', 'WAYLAND_DISPLAY', 'XDG_RUNTIME_DIR', 'HERMES_HOME', 'HERMES_KANBAN_DB', 'HERMES_KANBAN_BOARD', 'HERMES_DESKTOP_E2E_HEADLESS'].filter(key => env[key]).map(key => [key, key === 'HERMES_HOME' || key === 'HERMES_KANBAN_DB' ? `<isolated>/${path.basename(env[key])}` : env[key]])) }
       fs.writeFileSync(path.join(packet, 'launch.json'), `${JSON.stringify(launch, null, 2)}\n`)
       fs.writeFileSync(path.join(packet, 'process.json'), `${JSON.stringify(processRecord, null, 2)}\n`)
@@ -310,7 +311,7 @@ test('actual Electron and isolated backend preserve attention controls and recei
       fs.writeFileSync(path.join(packet, 'interaction-trace.json'), `${JSON.stringify(runtimeEvidence.interactionVerdict, null, 2)}\n`)
       const privacyRows = execFileSync('sqlite3', ['-json', database, 'SELECT title,body,created_by FROM tasks ORDER BY title;'], { encoding: 'utf8' })
       const privacyAudit = { syntheticOnly: !/(?:@|\/home\/|\/Users\/)/.test(privacyRows), rows: JSON.parse(privacyRows) }
-      const completeRuntime = { ...runtimeEvidence, endedAt, exitCode: fixture.app.process().exitCode, repoRoot: REPO_ROOT, sqliteVersion: execFileSync('sqlite3', ['--version'], { encoding: 'utf8' }).trim(), schemaVersion: Number(execFileSync('sqlite3', [database, 'PRAGMA user_version;'], { encoding: 'utf8' }).trim()), privacyAudit }
+      const completeRuntime = { ...runtimeEvidence, endedAt, exitCode: electronProcess.exitCode, repoRoot: REPO_ROOT, sqliteVersion: execFileSync('sqlite3', ['--version'], { encoding: 'utf8' }).trim(), schemaVersion: Number(execFileSync('sqlite3', [database, 'PRAGMA user_version;'], { encoding: 'utf8' }).trim()), privacyAudit }
       if (!privacyAudit.syntheticOnly) throw new Error('isolated database privacy audit failed')
       fs.writeFileSync(path.join(packet, 'runtime.json'), `${JSON.stringify(completeRuntime, null, 2)}\n`)
       execFileSync(process.execPath, [path.join(DESKTOP_ROOT, 'scripts', 'seal-kanban-attention-evidence.mjs'), packet], { cwd: REPO_ROOT, stdio: 'inherit' })
