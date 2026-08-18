@@ -737,6 +737,7 @@ class TelegramAdapter(BasePlatformAdapter):
         # as plain text, which is worse than degraded table/task-list rendering
         # for command snippets and mobile handoffs.
         self._rich_messages_enabled: bool = self._coerce_bool_extra("rich_messages", False)
+
         # Rich draft previews use a separate opt-in. Telegram macOS / Desktop
         # can leave Bot API 10.1 rich draft frames visually overlaid until the
         # chat is redrawn, while final rich messages remain useful.
@@ -907,6 +908,42 @@ class TelegramAdapter(BasePlatformAdapter):
         # API call (e.g. a set_my_commands stall for certain tokens) cannot
         # blow the gateway's connect timeout (#46298).
         self._post_connect_task: Optional[asyncio.Task] = None
+
+    def _captain_approval_config(self) -> tuple[set[str], set[str], Optional[str]]:
+        """Return the explicit Captain allowlist; empty sets disable the surface."""
+        extra = getattr(self.config, "extra", None) or {}
+
+        def _ids(key: str) -> set[str]:
+            value = extra.get(key, [])
+            if isinstance(value, str):
+                value = value.split(",")
+            return {str(item).strip() for item in value if str(item).strip()}
+
+        return _ids("captain_allow_from"), _ids("captain_allow_chats"), extra.get("captain_board")
+
+    async def send_captain_approval_request(
+        self, *, task_id: str, chat_id: str, expires_in: int = 900,
+    ) -> bool:
+        """Send and persist a Telegram-bound product approval request."""
+        users, chats, board = self._captain_approval_config()
+        if not users or chat_id not in chats or not self._bot:
+            return False
+        from hermes_cli import kanban_db as kb
+        nonce = __import__("secrets").token_urlsafe(24)
+        markup = InlineKeyboardMarkup([[InlineKeyboardButton(
+            "Approve product", callback_data=f"ka:{nonce}"
+        )]])
+        sent = await self._bot.send_message(
+            chat_id=int(chat_id), text=f"Captain approval requested for {task_id}",
+            reply_markup=markup,
+        )
+        with kb.connect_closing(board=board) as conn:
+            persisted = kb.create_captain_approval_request(
+                conn, task_id=task_id, platform="telegram", chat_id=str(chat_id),
+                message_id=str(sent.message_id), expires_at=int(time.time()) + expires_in,
+                callback_nonce=nonce,
+            )
+        return persisted == nonce
 
     def _mark_connected(self) -> None:
         self._drop_delayed_deliveries = False
@@ -6702,6 +6739,34 @@ class TelegramAdapter(BasePlatformAdapter):
         query_chat_type = getattr(query_chat, "type", None)
         query_thread_id = getattr(query_message, "message_thread_id", None)
         query_user_name = getattr(query.from_user, "first_name", None)
+
+        # --- Captain product approval (opaque server-side pending request) ---
+        if data.startswith("ka:"):
+            users, chats, board = self._captain_approval_config()
+            caller_id = str(getattr(query.from_user, "id", ""))
+            message_id = str(getattr(query_message, "message_id", ""))
+            chat_id = str(query_chat_id or "")
+            approved = False
+            if users and chats:
+                from hermes_cli import kanban_db as kb
+                with kb.connect_closing(board=board) as conn:
+                    approved = kb.approve_captain_callback(
+                        conn, callback_nonce=data[3:], platform="telegram",
+                        operator_user_id=caller_id, chat_id=chat_id,
+                        message_id=message_id, allowed_user_ids=users,
+                        allowed_chat_ids=chats,
+                    )
+            if approved:
+                await query.answer(text="✅ Product approved")
+                try:
+                    await query.edit_message_text(
+                        text="✅ Product approved by Captain", reply_markup=None
+                    )
+                except Exception:
+                    pass
+            else:
+                await query.answer(text="⛔ Approval rejected or expired")
+            return
 
         # --- Model picker callbacks ---
         if data.startswith(("mp:", "mpg:", "mpv:", "mm:", "mc:", "mb", "mx", "mg:")):
