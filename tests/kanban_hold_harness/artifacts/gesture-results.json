@@ -1,0 +1,97 @@
+{
+  "commit": "e78904f1ffb2",
+  "assets": {
+    "plugins/kanban/dashboard/dist/index.js": "e08b3c2730034d754fa7c0eac472921596af0281bcf1949f83e3e10a32d1a43d",
+    "plugins/kanban/dashboard/dist/style.css": "afe45c5cf8e92fbadb0b13f7fc45ba0953ef50e80ffdd29da8ddcd8b2c382cdd"
+  },
+  "results": [
+    {
+      "width": 320,
+      "css": {
+        "touchAction": "pan-y",
+        "direction": "ltr"
+      },
+      "before": null,
+      "after": "todo",
+      "proof": {
+        "changes": [
+          {
+            "lane": "todo"
+          }
+        ],
+        "vibrations": [
+          8
+        ],
+        "cancels": 2
+      }
+    },
+    {
+      "width": 360,
+      "css": {
+        "touchAction": "pan-y",
+        "direction": "ltr"
+      },
+      "before": null,
+      "after": "todo",
+      "proof": {
+        "changes": [
+          {
+            "lane": "todo"
+          }
+        ],
+        "vibrations": [
+          8
+        ],
+        "cancels": 2
+      }
+    },
+    {
+      "width": 390,
+      "css": {
+        "touchAction": "pan-y",
+        "direction": "ltr"
+      },
+      "before": null,
+      "after": "todo",
+      "proof": {
+        "changes": [
+          {
+            "lane": "todo"
+          }
+        ],
+        "vibrations": [
+          8
+        ],
+        "cancels": 2
+      }
+    },
+    {
+      "width": 430,
+      "css": {
+        "touchAction": "pan-y",
+        "direction": "ltr"
+      },
+      "before": null,
+      "after": "todo",
+      "proof": {
+        "changes": [
+          {
+            "lane": "todo"
+          }
+        ],
+        "vibrations": [
+          8
+        ],
+        "cancels": 2
+      }
+    },
+    {
+      "width": 1280,
+      "css": {
+        "touchAction": "pan-y",
+        "direction": "ltr"
+      },
+      "desktop": true
+    }
+  ]
+}
