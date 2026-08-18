@@ -1,5 +1,6 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
+  "currentRevision": "v3",
   "taskId": "t_3755aaac",
   "correctsTaskId": "t_5a0020a4",
   "auditDate": "2026-08-18",
@@ -12,24 +13,59 @@
     "splitBrain": true,
     "summary": "NARROWED_LEVEL_0 suppresses the matched actionable create only when explicitly presented to Firstmate. Deployment does not automatically present or enforce it, and Firstmate-associated follow-up writes continued after narrowing. The leading live cause is no durable proactive wake/replenishment trigger, amplified by per-turn model/tool choice and downstream stalls."
   },
-  "confidence": [
-    {"claim":"receipt_is_active_governance","level":"high"},
-    {"claim":"presented_narrowed_receipt_suppresses_matched_actionable_create","level":"high"},
-    {"claim":"deployed_kanban_does_not_enforce_receipt","level":"high"},
-    {"claim":"focused_allowlist_permits_matched_authorized_create","level":"low_to_moderate_small_sample"},
-    {"claim":"missing_proactive_trigger_is_leading_live_cause","level":"medium_high"},
-    {"claim":"freeze_caused_historical_intake_gap","level":"low_unproven"}
-  ],
-  "matchedReplay": {
-    "artifact": "evidence/firstmate-causality/replay-results.json",
-    "realPath": ["AIAgent", "gpt-5.6-sol/openai-codex", "actual chief-of-staff AGENTS.md", "real kanban_create handler", "isolated SQLite board"],
-    "none": {"informationalCreates":0,"actionableCreates":1},
-    "narrowedPresented": {"informationalCreates":0,"actionableCreates":0},
-    "focusedPresented": {"informationalCreates":0,"actionableCreates":1},
-    "isolatedTaskCount": 2,
-    "claims": 0,
-    "spawns": 0,
-    "limitation": "CLI transport and explicit policy presentation; records conditional behavior in a small stochastic sample, not historical Telegram causality or a stable effect rate."
+  "confidence": {
+    "artifactAuthenticityAndReproducibility": {
+      "level": "high",
+      "claim": "The sealed 24 raw records, hashes, manifest, and isolated-board outcomes are authentic and independently reproducible from the recorded artifacts."
+    },
+    "conditionalTreatmentEffectMagnitudeAndCausality": {
+      "level": "low_to_moderate",
+      "claim": "The observed treatment differences are conditional descriptive effects; n=3 per cell and unseeded stochastic turns do not support stable population magnitudes."
+    },
+    "historicalPrimaryCause": {
+      "level": "none",
+      "claim": "No confidence is assigned to the freeze as the historical primary cause; that causal claim is not established."
+    },
+    "otherClaims": [
+      {"claim":"receipt_is_active_governance","level":"high"},
+      {"claim":"deployed_kanban_does_not_enforce_receipt","level":"high"},
+      {"claim":"missing_proactive_trigger_is_leading_live_explanation","level":"medium_high_not_experimentally_isolated"}
+    ]
+  },
+  "revisions": {
+    "v3": {
+      "status": "current",
+      "evidenceDate": "2026-08-18",
+      "commit": "342ecac2b",
+      "manifest": {"path":"evidence/firstmate-causality/v3/run-manifest.json","sha256":"170c2a6042787d51c300a58c1059bb64db44a33ea4e30df43d574a24ad99fff0"},
+      "replayRoot": "evidence/firstmate-causality/v3/raw",
+      "treatments": {"path":"evidence/firstmate-causality/v3/treatments.json","sha256":"e7d608b91066eb71a3ba8795a37c8ccb1f4c782e81639bcc71eb957c70bfe14a"},
+      "isolatedBoard": {"path":"evidence/firstmate-causality/v3/isolated-board.db","sha256":"00ae7e4e551794335c350f55f64abc6d4335723f252254613284a04682305989"},
+      "runCount": 24,
+      "isolatedTaskCount": 5,
+      "matrix": {
+        "informational": {"none":"0/3","narrowedPresented":"0/3","focusedAllowlist":"0/3"},
+        "actionable": {"none":"2/3","narrowedPresented":"0/3","focusedAllowlist":"3/3"},
+        "controls": {"negativeInjection":"0/3","noTool":"0/3"}
+      },
+      "claims": 0,
+      "spawns": 0
+    }
+  },
+  "superseded": {
+    "v2": {
+      "status": "superseded",
+      "evidenceDate": "2026-08-18",
+      "commit": "94755b908",
+      "artifact": {"path":"evidence/firstmate-causality/replay-results.json","sha256":"4717778a218801ec87ae69cf33619c1d4988eac57fcdd4955d3416287fc20b21"},
+      "runCount": 6,
+      "isolatedTaskCount": 2,
+      "matrix": {
+        "informational": {"none":"0/1","narrowedPresented":"0/1","focusedAllowlist":"0/1"},
+        "actionable": {"none":"1/1","narrowedPresented":"0/1","focusedAllowlist":"1/1"}
+      },
+      "reason": "Superseded by v3 repeated-cell evidence: 24 runs, five isolated tasks, controls, sealed raw records, and bounded confidence language. Retained for append-only history only."
+    }
   },
   "historicalEvidence": {
     "freezeCommit": "334f87052d45809ae580f922a870dfc8e32fcf47",

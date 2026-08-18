@@ -10,20 +10,22 @@ Production mutation: none. No production policy, board, task, gateway, profile, 
 
 The original claim that the active company freeze was the primary live cause of missing Firstmate replenishment was too strong.
 
-The matched replay establishes a narrower causal fact: **if `NARROWED_LEVEL_0` is explicitly placed in Firstmate's turn context, it suppresses creation of an otherwise actionable task.** The same actionable input creates a real isolated Kanban card with no policy and with a focused Hermes OSS allowlist. The matched informational input creates no card in all three conditions.
+The current v3 repeated replay establishes a narrower conditional observation: **when `NARROWED_LEVEL_0` is explicitly placed in Firstmate's turn context, actionable creation was 0/3**, versus 2/3 with no additional policy and 3/3 with the focused Hermes OSS allowlist. Informational creation was 0/3 in all three conditions. These small stochastic cells do not establish a stable effect magnitude.
 
 That does not establish that the receipt caused the observed production gap. The deployed Firstmate context does not automatically load `COMPANY-CODE-FREEZE.json`; the receipt is not bound to intake or Kanban enforcement. Production history also contradicts a uniform freeze effect: 29 `compliance-kick` intake follow-up receipts were appended after narrowing, from 06:31Z through 20:57Z on August 16, roughly every 30 minutes. Post-freeze Kanban create/claim/spawn activity likewise continued.
 
 Correct confidence:
 
 - High: receipt text is an active governing constraint.
-- High: when explicitly presented, that text suppresses actionable creation in the matched replay.
+- High: the sealed 24-run artifacts, hashes, and recorded isolated-board observations are authentic and reproducible from the evidence pack.
 - High: deployed Kanban create/promote/claim/spawn does not enforce the receipt.
-- High: the focused allowlist permits the matched authorized action while preserving informational suppression.
+- Low-to-moderate: conditional treatment-effect magnitude/causality for narrowed versus focused/no-policy prompts, because each primary cell has only three unseeded stochastic turns.
 - Medium-high: absence of a durable proactive wake/replenishment trigger is the leading explanation for work stopping after task-local loops ended.
-- Low: the receipt itself caused the historical production intake gap. Live causal attribution remains unproven.
+- None assigned: the receipt as the historical primary cause. Historical-primary causal attribution is not established.
 
-## Matched replay
+## Superseded v2 matched replay (history only)
+
+The six-run/1x-cell material below is retained append-only for provenance. It is not current evidence. Machine consumers must resolve `currentRevision` in `proactivity-root-cause.json`, which selects v3 and rejects missing or ambiguous pointers.
 
 The replay used the deployed Hermes `AIAgent`, exact `gpt-5.6-sol` / `openai-codex`, the actual chief-of-staff `AGENTS.md` loaded from `/workspace/zer0/portfolios/chief-of-staff`, the real Kanban tool schemas/handler, a fresh isolated `$HERMES_HOME`, and an isolated SQLite board. The dispatcher was never started, so no replay card could spawn. Only Kanban tools were exposed to prevent the registry CLI from resolving production board paths.
 
@@ -96,9 +98,9 @@ The freeze is a governing constraint and a proven conditional suppressor, not a 
 
 ---
 
-## Evidence revision 2 — independently auditable repetitions
+## Evidence revision v3 — current independently auditable repetitions
 
-This section is append-only and supersedes only the original replay's confidence language. Commit `94755b908` and its six raw observations remain preserved in Git history.
+This section is current. It supersedes the original replay's confidence language and current-data status without deleting it. Commit `94755b908` and its six raw observations remain preserved in Git history and under the machine metadata's `superseded.v2` entry.
 
 The repaired replay ran the actual Hermes CLI/AIAgent intake path with the chief-of-staff `AGENTS.md`, `gpt-5.6-sol` on `openai-codex`, the real `kanban_create` schema/handler, a copied isolated profile configuration, and a dedicated SQLite board. Exact normalized inputs, complete policy treatments, redacted raw session messages/tool calls/results, per-run board snapshots, config/model/toolset/code hashes, and limitations are sealed under `evidence/firstmate-causality/v3/`.
 
