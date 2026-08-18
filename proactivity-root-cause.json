@@ -7,7 +7,7 @@
   "verdict": {
     "primaryLiveCause": "missing_durable_proactive_wake_or_replenishment_trigger",
     "primaryLiveCauseConfidence": "medium_high",
-    "freezeRole": "active_governing_constraint_and_proven_conditional_suppressor",
+    "freezeRole": "active_governing_constraint_and_observed_conditional_suppressor_in_small_replay",
     "freezeHistoricalCausality": "unproven_low_confidence",
     "splitBrain": true,
     "summary": "NARROWED_LEVEL_0 suppresses the matched actionable create only when explicitly presented to Firstmate. Deployment does not automatically present or enforce it, and Firstmate-associated follow-up writes continued after narrowing. The leading live cause is no durable proactive wake/replenishment trigger, amplified by per-turn model/tool choice and downstream stalls."
@@ -16,7 +16,7 @@
     {"claim":"receipt_is_active_governance","level":"high"},
     {"claim":"presented_narrowed_receipt_suppresses_matched_actionable_create","level":"high"},
     {"claim":"deployed_kanban_does_not_enforce_receipt","level":"high"},
-    {"claim":"focused_allowlist_permits_matched_authorized_create","level":"high"},
+    {"claim":"focused_allowlist_permits_matched_authorized_create","level":"low_to_moderate_small_sample"},
     {"claim":"missing_proactive_trigger_is_leading_live_cause","level":"medium_high"},
     {"claim":"freeze_caused_historical_intake_gap","level":"low_unproven"}
   ],
@@ -29,7 +29,7 @@
     "isolatedTaskCount": 2,
     "claims": 0,
     "spawns": 0,
-    "limitation": "CLI transport and explicit policy presentation; proves conditional policy effect, not historical Telegram causality."
+    "limitation": "CLI transport and explicit policy presentation; records conditional behavior in a small stochastic sample, not historical Telegram causality or a stable effect rate."
   },
   "historicalEvidence": {
     "freezeCommit": "334f87052d45809ae580f922a870dfc8e32fcf47",
