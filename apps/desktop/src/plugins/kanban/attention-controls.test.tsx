@@ -121,6 +121,12 @@ describe('attention control lifecycle accessibility', () => {
     const input = screen.getByLabelText('Custom wake time')
     fireEvent.keyDown(input, { key: 'Escape' })
     expect(screen.queryByLabelText('Custom wake time')).toBeNull()
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Custom+' }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Custom+' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByLabelText('Custom wake time')).toBeNull()
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Custom+' }))
   })
 })
 
