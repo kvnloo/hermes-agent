@@ -23,16 +23,24 @@ export function kanbanViewportGeometry(viewportWidth: number): KanbanViewportGeo
   }
 }
 
-export function useKanbanViewportGeometry(): KanbanViewportGeometry {
-  const [geometry, setGeometry] = useState(() => kanbanViewportGeometry(window.innerWidth))
+export function useKanbanViewportGeometry(element: HTMLElement | null = null): KanbanViewportGeometry {
+  const [geometry, setGeometry] = useState(() => kanbanViewportGeometry(element?.clientWidth ?? window.innerWidth))
 
   useEffect(() => {
-    const update = () => setGeometry(kanbanViewportGeometry(window.innerWidth))
+    const update = () => setGeometry(kanbanViewportGeometry(element?.clientWidth ?? window.innerWidth))
 
+    update()
     window.addEventListener('resize', update)
+    const observedElement = element
+    const observer = observedElement && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null
 
-    return () => window.removeEventListener('resize', update)
-  }, [])
+    if (observer && observedElement) {observer.observe(observedElement)}
+
+    return () => {
+      observer?.disconnect()
+      window.removeEventListener('resize', update)
+    }
+  }, [element])
 
   return geometry
 }
