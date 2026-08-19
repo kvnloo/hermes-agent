@@ -339,10 +339,7 @@ export function AttentionControls({
   const receipt = task.attention ?? { state: 'active' as const, revision: 0 }
   const announce = onAnnouncement ?? setLocalAnnouncement
 
-  const closeSnooze = () => {
-    setSnoozeOpen(false)
-    window.requestAnimationFrame(() => snoozeTrigger.current?.focus())
-  }
+  const closeSnooze = () => setSnoozeOpen(false)
 
   type ActionAttempt = { attemptId: string; kind: AttentionActionKind; wakeAt?: number }
   const action = useMutation({
@@ -423,31 +420,33 @@ export function AttentionControls({
       >
         Settle
       </button>
-      <div className="relative">
+      <div>
         <button
           aria-expanded={snoozeOpen}
           aria-haspopup="dialog"
           className="flex min-h-7 cursor-pointer list-none items-center rounded px-2 text-[0.6875rem] text-(--ui-text-secondary) hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2"
           disabled={action.isPending}
-          onClick={() => setSnoozeOpen(open => !open)}
+          onClick={() => setSnoozeOpen(true)}
           ref={snoozeTrigger}
           type="button"
         >
           Snooze…
         </button>
-        {snoozeOpen && (
-          <div
-            aria-label="Snooze task"
-            className="absolute bottom-full left-0 z-20 mb-1 grid min-w-[17rem] gap-2 rounded-md border border-(--ui-stroke-secondary) bg-(--ui-bg-elevated) p-2 shadow-lg"
-            onKeyDown={event => {
-              if (event.key === 'Escape') {
-                event.preventDefault()
-                closeSnooze()
-              }
+        <Dialog onOpenChange={setSnoozeOpen} open={snoozeOpen}>
+          <DialogContent
+            bodyClassName="gap-3 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+            className="inset-x-0 bottom-0 top-auto max-h-[calc(100dvh-env(safe-area-inset-top))] w-full max-w-none translate-x-0 translate-y-0 rounded-b-none rounded-t-xl sm:left-1/2 sm:top-1/2 sm:bottom-auto sm:w-[min(30rem,92vw)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl"
+            onCloseAutoFocus={event => {
+              event.preventDefault()
+              snoozeTrigger.current?.focus()
             }}
-            role="dialog"
+            onInteractOutside={event => event.preventDefault()}
+            showCloseButton={false}
           >
-            <div className="grid grid-cols-5 gap-1">
+            <DialogHeader>
+              <DialogTitle>Snooze task</DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-2 gap-2 min-[390px]:grid-cols-3 sm:grid-cols-5">
               <button className="min-h-11 min-w-11 rounded px-1 text-[0.6875rem] hover:bg-(--chrome-action-hover)" disabled={action.isPending} onClick={() => snooze(3600)} type="button">1 hr</button>
               <button className="min-h-11 min-w-11 rounded px-1 text-[0.6875rem] hover:bg-(--chrome-action-hover)" disabled={action.isPending} onClick={tomorrowMorning} type="button">Tmrw 9am</button>
               <button className="min-h-11 min-w-11 rounded px-1 text-[0.6875rem] hover:bg-(--chrome-action-hover)" disabled={action.isPending} onClick={() => snooze(7 * 24 * 3600)} type="button">1 wk</button>
@@ -456,9 +455,9 @@ export function AttentionControls({
             </div>
             <label className="grid gap-1 text-[0.6875rem] text-(--ui-text-tertiary)">
               Exact local date and time
-              <input className="min-h-11 rounded border border-(--ui-stroke-secondary) bg-transparent px-2 text-xs" id={`snooze-custom-${task.id}`} min={formatLocalDateTime(new Date())} onChange={event => setCustom(event.target.value)} type="datetime-local" value={custom} />
+              <input className="min-h-11 w-full min-w-0 rounded border border-(--ui-stroke-secondary) bg-transparent px-2 text-xs" id={`snooze-custom-${task.id}`} min={formatLocalDateTime(new Date())} onChange={event => setCustom(event.target.value)} type="datetime-local" value={custom} />
             </label>
-            <div className="flex justify-end gap-1">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
               <button className="min-h-11 rounded px-3 text-xs hover:bg-(--chrome-action-hover)" onClick={closeSnooze} type="button">Cancel</button>
               <button
                 className="min-h-11 rounded bg-primary px-3 text-xs text-primary-foreground disabled:opacity-50"
@@ -469,8 +468,8 @@ export function AttentionControls({
                 Snooze
               </button>
             </div>
-          </div>
-        )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )

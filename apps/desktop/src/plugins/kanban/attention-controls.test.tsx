@@ -162,6 +162,33 @@ describe('attention lifecycle controls', () => {
     await waitFor(() => expect(document.activeElement).toBe(trigger))
   })
 
+  it('makes the snooze sheet modal and never activates its underlying card', async () => {
+    updateAttentionMock.mockResolvedValueOnce(response('snoozed', 1))
+
+    function CardHarness() {
+      const [cardActivations, setCardActivations] = useState(0)
+
+      return (
+        <div data-testid="underlying-card" onClick={() => setCardActivations(count => count + 1)}>
+          <output data-testid="card-activations">{cardActivations}</output>
+          <AttentionControls task={{ ...baseTask, attention: receipt('active', 0) }} />
+        </div>
+      )
+    }
+
+    render(<QueryClientProvider client={new QueryClient({ defaultOptions: { mutations: { retry: false }, queries: { retry: false } } })}><CardHarness /></QueryClientProvider>)
+    fireEvent.click(screen.getByRole('button', { name: 'Snooze…' }))
+
+    expect(screen.getByRole('dialog', { name: 'Snooze task' })).toBeTruthy()
+    expect(document.body.style.pointerEvents).toBe('none')
+    expect(screen.getByRole('dialog', { name: 'Snooze task' }).style.pointerEvents).not.toBe('none')
+    expect(screen.getByTestId('card-activations').textContent).toBe('0')
+
+    fireEvent.click(screen.getByRole('button', { name: '1 hr' }))
+    await waitFor(() => expect(updateAttentionMock).toHaveBeenCalledTimes(1))
+    expect(screen.getByTestId('card-activations').textContent).toBe('0')
+  })
+
   it('submits an exact local custom time at the current receipt revision', async () => {
     process.env.TZ = 'America/Chicago'
     updateAttentionMock.mockResolvedValueOnce(response('snoozed', 8))
