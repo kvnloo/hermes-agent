@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type * as KanbanApi from './api'
 import { updateAttention } from './api'
-import { AttentionControls, BoardAnnouncer, useBoardAttentionAnnouncements } from './board'
+import { AttentionControls, BoardAnnouncer, KanbanPageShell, useBoardAttentionAnnouncements, useKanbanPageAnnouncements } from './board'
 import { formatLocalDateTime, parseLocalDateTime } from './datetime-local'
 import type { AttentionReceipt, KanbanTask } from './types'
 
@@ -141,6 +141,61 @@ describe('attention lifecycle controls', () => {
     act(() => nextFrame?.(0))
     expect(screen.getByRole('status').textContent).toBe('Task awake')
     expect(screen.getAllByRole('status')).toHaveLength(1)
+  })
+
+  it('keeps the page-shell host outside a replaced interactive board', () => {
+    const { rerender } = render(
+      <KanbanPageShell>
+        <div data-testid="board-mount">board one</div>
+      </KanbanPageShell>
+    )
+
+    const hostNode = screen.getByRole('status')
+
+    expect(hostNode.closest('[data-kanban-interactive-root]')).toBeNull()
+    rerender(
+      <KanbanPageShell>
+        <div data-testid="board-mount">board two</div>
+      </KanbanPageShell>
+    )
+    expect(screen.getByRole('status')).toBe(hostNode)
+    expect(screen.getByTestId('board-mount').textContent).toBe('board two')
+  })
+
+  it('announces a stale modal action after the interactive board is reconciled away', async () => {
+    updateAttentionMock.mockRejectedValueOnce(new Error('409 stale attention revision'))
+
+    function ReplaceableBoard() {
+      const attention = useKanbanPageAnnouncements()
+      const [visible, setVisible] = useState(true)
+
+      return visible ? (
+        <AttentionControls
+          nextAttemptId={attention.nextAttemptId}
+          onAnnouncement={announcement => {
+            attention.announce(announcement)
+            setVisible(false)
+          }}
+          task={{ ...baseTask, attention: receipt('active', 3) }}
+        />
+      ) : <div data-testid="reconciled-board">Authoritative board</div>
+    }
+
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { mutations: { retry: false }, queries: { retry: false } } })}>
+        <KanbanPageShell><ReplaceableBoard /></KanbanPageShell>
+      </QueryClientProvider>
+    )
+
+    const hostNode = screen.getByRole('status')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Snooze…' }))
+    fireEvent.click(screen.getByRole('button', { name: '1 hr' }))
+
+    await waitFor(() => expect(screen.getByTestId('reconciled-board')).toBeTruthy())
+    expect(screen.getByRole('status')).toBe(hostNode)
+    await waitFor(() => expect(hostNode.textContent).toBe('This task changed elsewhere. Your action was not applied.'))
+    expect(hostNode.closest('[inert], [aria-hidden="true"]')).toBeNull()
   })
 
   it('shows the compact presets and restores trigger focus on Escape and Cancel', async () => {
