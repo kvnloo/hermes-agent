@@ -31,7 +31,7 @@ import {
 } from '@hermes/plugin-sdk'
 
 import { $boardSlug, bindApi, boardKey, fetchBoard } from './api'
-import { KanbanBoardPage } from './board'
+import { KanbanBoardPage, KanbanPageShell } from './board'
 import { KANBAN_LOCALES } from './i18n'
 import { $newTaskLane, useKanban } from './ui'
 
@@ -108,7 +108,7 @@ const plugin: HermesPlugin = {
         id: 'page',
         area: ROUTES_AREA,
         data: { path: '/kanban' } satisfies RouteContribution,
-        render: () => <KanbanBoardPage />
+        render: () => <KanbanPageShell><KanbanBoardPage /></KanbanPageShell>
       },
       {
         id: 'nav',

@@ -51,10 +51,13 @@ import {
   useValue
 } from '@hermes/plugin-sdk'
 import {
+  createContext,
   type CSSProperties,
   type DragEvent as ReactDragEvent,
   type ReactNode,
   type SyntheticEvent,
+  useCallback,
+  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -264,24 +267,24 @@ export function useBoardAttentionAnnouncements() {
   const attempt = useRef(0)
   const focusTarget = useRef<HTMLElement>(null)
 
-  const nextAttemptId: NextAttentionAttemptId = (taskId, kind) => {
+  const nextAttemptId: NextAttentionAttemptId = useCallback((taskId, kind) => {
     attempt.current += 1
 
     return `${taskId}:${kind}:board:${attempt.current}`
-  }
+  }, [])
 
-  const announce = (next: AttentionAnnouncement) => {
+  const announce = useCallback((next: AttentionAnnouncement) => {
     setAnnouncement(current => current?.attemptId === next.attemptId ? current : next)
 
     if (next.stale) {
       window.requestAnimationFrame(() => focusTarget.current?.focus())
     }
-  }
+  }, [])
 
   return { announce, announcement, focusTarget, nextAttemptId }
 }
 
-export function BoardAnnouncer({ announcement }: { announcement: AttentionAnnouncement | null }) {
+export function KanbanAnnouncementHost({ announcement }: { announcement: AttentionAnnouncement | null }) {
   const [message, setMessage] = useState('')
   const displayed = useRef('')
   const lastAttempt = useRef<string | null>(null)
@@ -320,6 +323,33 @@ export function BoardAnnouncer({ announcement }: { announcement: AttentionAnnoun
   }, [announcement])
 
   return <span aria-atomic="true" aria-live="polite" className="sr-only" data-kanban-announcer role="status">{message}</span>
+}
+
+/** @deprecated Use KanbanAnnouncementHost at the page shell boundary. */
+export const BoardAnnouncer = KanbanAnnouncementHost
+
+type BoardAttentionAnnouncements = ReturnType<typeof useBoardAttentionAnnouncements>
+const BoardAttentionContext = createContext<BoardAttentionAnnouncements | null>(null)
+
+export function KanbanPageShell({ children }: { children: ReactNode }) {
+  const attention = useBoardAttentionAnnouncements()
+
+  return (
+    <BoardAttentionContext.Provider value={attention}>
+      <KanbanAnnouncementHost announcement={attention.announcement} />
+      <div className="contents" data-kanban-interactive-root>{children}</div>
+    </BoardAttentionContext.Provider>
+  )
+}
+
+export function useKanbanPageAnnouncements() {
+  const attention = useContext(BoardAttentionContext)
+
+  if (!attention) {
+    throw new Error('KanbanBoardPage must be mounted inside KanbanPageShell')
+  }
+
+  return attention
 }
 
 export function AttentionControls({
@@ -1386,7 +1416,7 @@ export function KanbanBoardPage() {
   const [tenant, setTenant] = useState('')
   const [assignee, setAssignee] = useState('')
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
-  const attentionAnnouncements = useBoardAttentionAnnouncements()
+  const attentionAnnouncements = useKanbanPageAnnouncements()
 
   // One timer at the nearest wake boundary. Server projection remains truth;
   // this only repaints promptly while the app stays open (restart/offline is
@@ -1653,7 +1683,6 @@ export function KanbanBoardPage() {
 
   return (
     <div className="relative flex h-full flex-col overflow-hidden bg-(--ui-surface-background)">
-      <BoardAnnouncer announcement={attentionAnnouncements.announcement} />
       {/* Page-owned titlebar chrome: exists exactly while this page is mounted. */}
       <Contribute area={TITLEBAR_AREAS.center} id="kanban:board-switcher">
         <BoardSwitcher />
