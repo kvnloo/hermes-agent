@@ -1,12 +1,12 @@
 import { host } from '@hermes/plugin-sdk'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { type ReactElement, useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type * as KanbanApi from './api'
 import { updateAttention } from './api'
-import { type AttentionAnnouncement, AttentionControls, BoardAnnouncer } from './board'
+import { AttentionControls, BoardAnnouncer, useBoardAttentionAnnouncements } from './board'
 import { formatLocalDateTime, parseLocalDateTime } from './datetime-local'
 import type { AttentionReceipt, KanbanTask } from './types'
 
@@ -30,6 +30,7 @@ function view(task: KanbanTask): ReactElement {
 
 afterEach(cleanup)
 beforeEach(() => {
+  vi.restoreAllMocks()
   updateAttentionMock.mockReset()
   vi.spyOn(host, 'notify').mockImplementation(() => '')
 })
@@ -50,43 +51,84 @@ describe('attention lifecycle controls', () => {
     expect(screen.getByRole('status').getAttribute('aria-atomic')).toBe('true')
   })
 
-  it('keeps a stale announcement through an authoritative receipt reconciliation', async () => {
-    let reject!: (reason: Error) => void
-    updateAttentionMock.mockImplementationOnce(() => new Promise((_resolve, fail) => { reject = fail }))
+  it.each([
+    ['Settle', 'active', 'settled', 'Attention settled'],
+    ['1 hr', 'active', 'snoozed', 'Task snoozed'],
+    ['Wake', 'settled', 'active', 'Task awake']
+  ] as const)('keeps repeated stale %s attempts distinct across filter reconciliation and permits success afterward', async (actionLabel, initialState, successState, successMessage) => {
+    const attemptIds: string[] = []
+    updateAttentionMock
+      .mockRejectedValueOnce(new Error('409 stale attention revision'))
+      .mockRejectedValueOnce(new Error('409 stale attention revision'))
+      .mockResolvedValueOnce(response(successState, 2))
 
     function ReconciledControl() {
-      const [announcement, setAnnouncement] = useState<AttentionAnnouncement | null>(null)
+      const attention = useBoardAttentionAnnouncements()
       const [visible, setVisible] = useState(true)
 
       return (
         <div>
-          <BoardAnnouncer announcement={announcement} />
-          {visible && (
+          <BoardAnnouncer announcement={attention.announcement} />
+          <header data-testid="board-focus" ref={attention.focusTarget} tabIndex={-1}>Board context</header>
+          {visible ? (
             <AttentionControls
+              nextAttemptId={attention.nextAttemptId}
               onAnnouncement={next => {
-                setAnnouncement(next)
-                setVisible(false)
+                attemptIds.push(next.attemptId)
+                attention.announce(next)
+
+                if (next.stale) {
+                  setVisible(false)
+                }
               }}
-              task={{ ...baseTask, attention: receipt('active', 0) }}
+              task={{ ...baseTask, attention: receipt(initialState, 1) }}
             />
+          ) : (
+            <div>
+              <div data-testid="authoritative-lane">Filtered by authoritative receipt</div>
+              <button onClick={() => setVisible(true)} type="button">Reconcile task</button>
+            </div>
           )}
-          {!visible && <div data-testid="authoritative-settled-lane">Settled elsewhere</div>}
         </div>
       )
     }
 
     render(<QueryClientProvider client={new QueryClient({ defaultOptions: { mutations: { retry: false }, queries: { retry: false } } })}><ReconciledControl /></QueryClientProvider>)
-    fireEvent.click(screen.getByRole('button', { name: 'Settle' }))
-    await waitFor(() => expect(updateAttentionMock).toHaveBeenCalledTimes(1))
-    reject(new Error('409 stale attention revision'))
+    const runAction = () => {
+      if (actionLabel === '1 hr') {
+        fireEvent.click(screen.getByRole('button', { name: 'Snooze…' }))
+      }
 
-    await waitFor(() => expect(screen.getByTestId('authoritative-settled-lane')).toBeTruthy())
-    expect(screen.queryByRole('button', { name: 'Settle' })).toBeNull()
+      fireEvent.click(screen.getByRole('button', { name: actionLabel }))
+    }
+
+    runAction()
+    await waitFor(() => expect(screen.getByTestId('authoritative-lane')).toBeTruthy())
     expect(screen.getAllByRole('status')).toHaveLength(1)
     await waitFor(() => expect(screen.getByRole('status').textContent).toBe('This task changed elsewhere. Your action was not applied.'))
+    expect(document.body.textContent?.split('This task changed elsewhere. Your action was not applied.')).toHaveLength(2)
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByTestId('board-focus')))
+    expect(updateAttentionMock).toHaveBeenCalledTimes(1)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reconcile task' }))
+    runAction()
+    await waitFor(() => expect(screen.getByTestId('authoritative-lane')).toBeTruthy())
+    expect(updateAttentionMock).toHaveBeenCalledTimes(2)
+    expect(new Set(attemptIds.slice(0, 2)).size).toBe(2)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reconcile task' }))
+    runAction()
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe(successMessage))
+    expect(updateAttentionMock).toHaveBeenCalledTimes(3)
   })
 
   it('commits an empty frame for repeated text and ignores duplicate attempt ids', async () => {
+    let nextFrame: FrameRequestCallback | undefined
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation(callback => {
+      nextFrame = callback
+
+      return 42
+    })
     const first = { attemptId: 'attempt-1', message: 'Task awake' }
     const { rerender } = render(<BoardAnnouncer announcement={first} />)
     expect(screen.getByRole('status').textContent).toBe('Task awake')
@@ -95,7 +137,9 @@ describe('attention lifecycle controls', () => {
     expect(screen.getByRole('status').textContent).toBe('Task awake')
 
     rerender(<BoardAnnouncer announcement={{ attemptId: 'attempt-2', message: 'Task awake' }} />)
-    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('Task awake'))
+    expect(screen.getByRole('status').textContent).toBe('')
+    act(() => nextFrame?.(0))
+    expect(screen.getByRole('status').textContent).toBe('Task awake')
     expect(screen.getAllByRole('status')).toHaveLength(1)
   })
 
