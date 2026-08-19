@@ -84,7 +84,7 @@ def test_settle_wake_and_snooze_never_mutate_workflow(client):
     assert client.get(f"/api/plugins/kanban/tasks/{task['id']}").json()["task"]["status"] == "ready"
 
 
-def test_idempotency_and_concurrent_revision_conflicts(client):
+def test_idempotency_and_concurrent_revision_conflicts(client, kanban_home):
     task = create(client)
     first = act(client, task["id"], "settle", "same")
     assert first.status_code == 200
@@ -94,6 +94,19 @@ def test_idempotency_and_concurrent_revision_conflicts(client):
     assert conflict.status_code == 409
     stale = act(client, task["id"], "wake", "other", revision=0)
     assert stale.status_code == 409
+
+    conn = kb.connect()
+    receipt = conn.execute(
+        "SELECT state, revision FROM attention_receipts WHERE subject_id=?",
+        (task["id"],),
+    ).fetchone()
+    events = conn.execute(
+        "SELECT kind FROM task_events WHERE task_id=? AND kind LIKE 'attention_%'",
+        (task["id"],),
+    ).fetchall()
+    conn.close()
+    assert dict(receipt) == {"state": "settled", "revision": 1}
+    assert [row["kind"] for row in events] == ["attention_settle"]
 
 
 def test_independent_connections_serialize_same_revision_race(kanban_home):
