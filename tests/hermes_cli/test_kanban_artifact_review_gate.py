@@ -528,3 +528,45 @@ def test_stale_generation_cannot_reserve_or_bind_after_rollover(conn, tmp_path):
         conn, task_id=task_id, platform="telegram", chat_id="chat-9",
         expires_at=1000, now=200, decision_generation=1,
     ) is None
+
+
+def test_two_phase_staged_message_is_reused_and_denied_until_active(conn, tmp_path):
+    task_id, _ = _task(conn, tmp_path)
+    nonce = kb.reserve_captain_approval_request(
+        conn, task_id=task_id, platform="telegram", chat_id="9",
+        expires_at=1000, now=100, decision_generation=1, callback_nonce="nonce-101",
+    )
+    assert nonce == "nonce-101"
+    assert kb.stage_captain_approval_request(
+        conn, callback_nonce=nonce, message_id="101", now=101,
+        task_id=task_id, decision_generation=1, issuance_generation=1,
+    )
+    assert kb.reserve_captain_approval_request(
+        conn, task_id=task_id, platform="telegram", chat_id="9",
+        expires_at=1000, now=102, decision_generation=1,
+        callback_nonce="replacement-must-not-win",
+    ) == nonce
+    row = conn.execute(
+        "SELECT state, message_id, callback_nonce FROM captain_approval_requests WHERE task_id = ?",
+        (task_id,),
+    ).fetchone()
+    assert tuple(row) == ("staged", "101", nonce)
+    callback = dict(
+        callback_nonce=nonce, platform="telegram", operator_user_id="captain",
+        chat_id="9", message_id="101", allowed_user_ids={"captain"},
+        allowed_chat_ids={"9"},
+    )
+    assert not kb.approve_captain_callback(conn, now=103, **callback)
+    assert kb.mark_captain_approval_activation_attempt(
+        conn, callback_nonce=nonce, message_id="101", now=104,
+    )
+    assert not kb.approve_captain_callback(conn, now=105, **callback)
+    assert kb.mark_captain_approval_activation_attempt(
+        conn, callback_nonce=nonce, message_id="101", now=106,
+    )
+    assert kb.activate_captain_approval_request(
+        conn, callback_nonce=nonce, message_id="101", now=107,
+    )
+    assert conn.execute(
+        "SELECT COUNT(*) FROM captain_approval_requests WHERE state = 'active'"
+    ).fetchone()[0] == 1
