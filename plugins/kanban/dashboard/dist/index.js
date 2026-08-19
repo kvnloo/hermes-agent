@@ -2852,7 +2852,9 @@
     const [snoozeOpen, setSnoozeOpen] = useState(false);
     const snoozeTrigger = useRef(null);
     const snoozePanel = useRef(null);
+    const ghostUntil = useRef(0);
     const closeSnooze = function () {
+      ghostUntil.current = Date.now() + 500;
       setSnoozeOpen(false);
       requestAnimationFrame(function () { if (snoozeTrigger.current) snoozeTrigger.current.focus(); });
     };
@@ -2861,11 +2863,28 @@
       document.dispatchEvent(new CustomEvent("hermes-kanban:cancel-interactions"));
       const bodyOverflow = document.body.style.overflow;
       document.body.style.overflow = "hidden";
+      document.documentElement.classList.add("hermes-kanban-modal-open");
+      const shield = function (e) {
+        const inModal = e.target && e.target.closest && e.target.closest(".hermes-kanban-snooze-modal");
+        if (!inModal) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+        }
+      };
+      ["pointerdown", "pointerup", "click", "wheel", "keydown"].forEach(function (type) {
+        document.addEventListener(type, shield, true);
+      });
       requestAnimationFrame(function () {
         const first = snoozePanel.current && snoozePanel.current.querySelector("button:not(:disabled), input:not(:disabled)");
         if (first) first.focus();
       });
-      return function () { document.body.style.overflow = bodyOverflow; };
+      return function () {
+        document.body.style.overflow = bodyOverflow;
+        document.documentElement.classList.remove("hermes-kanban-modal-open");
+        ["pointerdown", "pointerup", "click", "wheel", "keydown"].forEach(function (type) {
+          document.removeEventListener(type, shield, true);
+        });
+      };
     }, [snoozeOpen]);
     const apply = function (action, wakeAt) {
       setBusy(true);
@@ -2923,9 +2942,15 @@
         onClick: function () { apply("settle"); } }, "Settle"),
       h("div", null,
         h("button", { type: "button", className: "hermes-kanban-attention-button", ref: snoozeTrigger,
-          "aria-haspopup": "dialog", "aria-expanded": snoozeOpen, onClick: function () { setSnoozeOpen(true); } }, "Snooze…"),
-        snoozeOpen ? h("div", { className: "hermes-kanban-snooze-modal", onClick: stop, onPointerDown: stop, onPointerUp: stop },
-        h("div", { className: "hermes-kanban-snooze-backdrop", "aria-hidden": "true" }),
+          "aria-haspopup": "dialog", "aria-expanded": snoozeOpen, onClick: function () {
+            ghostUntil.current = Date.now() + 500;
+            setSnoozeOpen(true);
+          } }, "Snooze…"),
+        snoozeOpen ? h("div", { className: "hermes-kanban-snooze-modal", onClick: function (e) {
+          e.stopPropagation();
+          if (e.target === e.currentTarget && Date.now() >= ghostUntil.current) closeSnooze();
+        }, onPointerDown: stop, onPointerUp: stop },
+        h("div", { className: "hermes-kanban-snooze-backdrop", "aria-hidden": "true", style: { pointerEvents: "none" } }),
         h("div", { className: "hermes-kanban-snooze-menu", role: "dialog", "aria-label": "Snooze task",
           "aria-modal": "true", ref: snoozePanel, onKeyDown: function (e) {
             if (e.key === "Escape") { e.preventDefault(); closeSnooze(); return; }
@@ -2958,11 +2983,7 @@
               id: "snooze-custom-" + task.id,
               onChange: function (e) { setCustom(e.target.value); } })),
           h("div", { className: "hermes-kanban-snooze-actions" },
-            h("button", { type: "button", onTouchStart: function (e) {
-              e.preventDefault(); e.stopPropagation(); closeSnooze();
-            }, onPointerDown: function (e) {
-              e.preventDefault(); e.stopPropagation(); closeSnooze();
-            }, onClick: closeSnooze }, "Cancel"),
+            h("button", { type: "button", onClick: closeSnooze }, "Cancel"),
             h("button", { type: "button", disabled: busy || !customWake || customWake.getTime() <= Date.now(),
               onClick: function () { if (customWake) apply("snooze", Math.floor(customWake.getTime() / 1000)); } }, "Snooze")),
         ),
