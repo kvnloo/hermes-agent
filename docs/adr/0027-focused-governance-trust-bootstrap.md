@@ -7,10 +7,12 @@ production provider intentionally returns no key.
 
 The launcher resolves the authoritative Hermes home before accepting worker,
 CLI, environment, or board input. It inherits a read-only, fully sealed memfd
-(the future systemd `LoadCredential=`/Keel broker handoff) and constructs
-`LauncherPolicyState`. `create_startup_policy_loader()` is the sole production
-factory. It chooses the closed Keel/SecretService provider internally; callers
-cannot pass a path or provider. The private test factory rejects
+(the future systemd `LoadCredential=`/Keel broker handoff). At module startup a
+private closure captures the authoritative home and inherited descriptor once.
+`create_startup_policy_loader()` is a zero-argument production factory. It
+chooses the closed Keel/SecretService provider internally; callers cannot pass
+or construct a home, descriptor, provider, mode, token, or authority object.
+Later environment/CLI mutation is irrelevant. The explicit test factory rejects
 `production=True`.
 
 The authenticated `PolicyBootstrapEnvelope` binds:
@@ -47,11 +49,13 @@ governance hash/version. This bootstrap does not parse or grant authority from
 
 ## Surface proof and inactivity
 
-`FocusedPolicyFixture` is a disposable test-only adapter over the real Kanban
-create, promote, claim and process-spawn callables. It captures one startup
+The disposable test-only surface harness calls the real Kanban `create_task`,
+`promote_task`, and `claim_task` operations against an isolated SQLite board and
+the real `subprocess.Popen` boundary with a sentinel. It captures one startup
 snapshot and applies the identical fail-closed predicate to all four surfaces.
-Tests prove a later reload cannot mutate that startup snapshot and no surface is
-called under the shipped FROZEN/DENY posture.
+Tests record stacks, events, rows, and the sentinel: DENY produces no body, DB,
+or subprocess effects while an explicitly test-only ACTIVE fixture performs
+exactly the four scoped operations. The harness refuses production mode.
 
 The config schema remains `mode: governance_only` and
 `activation_supported: false`. No dispatcher import or live gate, credential,

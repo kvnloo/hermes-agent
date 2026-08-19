@@ -4,7 +4,9 @@ import fcntl
 import hashlib
 import json
 import os
+import subprocess
 import threading
+import traceback
 from pathlib import Path
 
 import pytest
@@ -58,7 +60,7 @@ def _fixture(root: Path) -> tuple[Path, int]:
 
 
 def _loader(home: Path, fd: int) -> policy._StartupPolicyLoader:
-    return policy._create_test_policy_loader(home, fd, {"keel-test": KEY}, production=False, clock=lambda: NOW)
+    return policy.create_test_policy_loader(home, fd, {"keel-test": KEY}, production=False, clock=lambda: NOW)
 
 
 def test_valid_sealed_bootstrap_is_frozen_and_receipt_binding_is_evidence(tmp_path: Path) -> None:
@@ -77,13 +79,13 @@ def test_valid_sealed_bootstrap_is_frozen_and_receipt_binding_is_evidence(tmp_pa
 def test_production_factory_is_closed_and_test_provider_cannot_enter_production(tmp_path: Path) -> None:
     home, fd = _fixture(tmp_path)
     try:
-        production = policy.create_startup_policy_loader(policy.LauncherPolicyState(home, fd))
-        assert production.reload().reason == "envelope_authentication_failed"
+        assert not hasattr(policy, "LauncherPolicyState")
+        with pytest.raises(TypeError):
+            policy.create_startup_policy_loader(home, fd)  # type: ignore[call-arg]
+        with pytest.raises(policy.PolicyLoadError, match="launcher_bootstrap_unavailable"):
+            policy.create_startup_policy_loader()
         with pytest.raises(policy.PolicyLoadError, match="test_provider_forbidden"):
-            policy._create_test_policy_loader(home, fd, {"keel-test": KEY}, production=True, clock=lambda: NOW)
-        forged = policy.LauncherPolicyState(home, fd, object())
-        with pytest.raises(policy.PolicyLoadError, match="untrusted_launcher_state"):
-            policy.create_startup_policy_loader(forged)
+            policy.create_test_policy_loader(home, fd, {"keel-test": KEY}, production=True, clock=lambda: NOW)
     finally:
         os.close(fd)
 
@@ -108,9 +110,9 @@ def test_environment_paths_and_unsealed_or_writable_descriptors_cannot_substitut
 def test_hash_anchor_expiry_and_key_fail_closed(tmp_path: Path) -> None:
     home, fd = _fixture(tmp_path)
     try:
-        bad_key = policy._create_test_policy_loader(home, fd, {}, production=False, clock=lambda: NOW)
+        bad_key = policy.create_test_policy_loader(home, fd, {}, production=False, clock=lambda: NOW)
         assert bad_key.reload().validity == "DENY"
-        expired = policy._create_test_policy_loader(home, fd, {"keel-test": KEY}, production=False, clock=lambda: NOW + 101)
+        expired = policy.create_test_policy_loader(home, fd, {"keel-test": KEY}, production=False, clock=lambda: NOW + 101)
         assert expired.reload().reason == "envelope_outside_validity"
         old = policy.trust_anchor_path(home)
         old.rename(old.with_name("old"))
@@ -201,12 +203,12 @@ def test_disposable_real_surface_fixture_keeps_startup_snapshot_immutable(tmp_pa
     loader = _loader(home, fd)
     startup = loader.reload()
     called: list[str] = []
-    fixture = policy.FocusedPolicyFixture(startup, {
+    fixture = policy.create_test_surface_fixture(startup, {
         "create": lambda: (called.append(create_task.__name__)),
         "promote": lambda: (called.append(promote_task.__name__)),
         "claim": lambda: (called.append(claim_task.__name__)),
         "spawn": lambda: (called.append(subprocess.Popen.__name__)),
-    })
+    }, active=False, production=False)
     os.unlink(policy.trust_anchor_path(home) / policy.MANIFEST_NAME)
     current = loader.reload()
     try:
@@ -218,3 +220,121 @@ def test_disposable_real_surface_fixture_keeps_startup_snapshot_immutable(tmp_pa
         assert called == []
     finally:
         os.close(fd)
+
+
+def test_production_boundary_ignores_late_env_and_object_forgery(tmp_path: Path, monkeypatch) -> None:
+    home, fd = _fixture(tmp_path)
+    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv(policy._STARTUP_FD_ENV, str(fd))
+    monkeypatch.setattr(policy, "_KeelSecretServiceProvider", policy._TestPolicyKeyProvider)
+    try:
+        with pytest.raises(policy.PolicyLoadError, match="launcher_bootstrap_unavailable"):
+            policy.create_startup_policy_loader()
+        assert "LauncherPolicyState" not in policy.__dict__
+        assert "_seal_startup_boundary" not in policy.__dict__
+    finally:
+        os.close(fd)
+
+
+@pytest.mark.parametrize("name", [policy.TRUST_ROOT_NAME, policy.MANIFEST_NAME])
+def test_final_pathname_reopen_rejects_rename_replacement(tmp_path: Path, monkeypatch, name: str) -> None:
+    home, fd = _fixture(tmp_path)
+    anchor = policy.trust_anchor_path(home)
+    real_reopen = policy._reopen_regular
+    swapped = False
+
+    def swap_then_reopen(anchor_fd: int, reopened_name: str, identity, digest: str) -> None:
+        nonlocal swapped
+        if reopened_name == name and not swapped:
+            swapped = True
+            target = anchor / name
+            raw = target.read_bytes()
+            target.rename(anchor / f"{name}.detached")
+            target.write_bytes(raw)
+            os.chmod(target, 0o600)
+        real_reopen(anchor_fd, reopened_name, identity, digest)
+
+    monkeypatch.setattr(policy, "_reopen_regular", swap_then_reopen)
+    try:
+        snapshot = _loader(home, fd).reload()
+    finally:
+        os.close(fd)
+    assert snapshot.validity == "DENY"
+    assert snapshot.reason == f"pathname_replaced_{name}"
+
+
+def test_disposable_gate_executes_real_db_and_popen_surfaces_only_when_active(tmp_path: Path) -> None:
+    from hermes_cli import kanban_db as kb
+
+    db_path = kb.init_db(tmp_path / "kanban.db")
+    conn = kb.connect(db_path)
+    sentinel = tmp_path / "spawned"
+    stacks: list[tuple[str, str]] = []
+    created: list[str] = []
+
+    def record(name: str) -> None:
+        stacks.append((name, "".join(traceback.format_stack())))
+
+    def create() -> str:
+        record("create")
+        task_id = kb.create_task(conn, title="focused", assignee="worker", initial_status="running")
+        created.append(task_id)
+        conn.execute("UPDATE tasks SET status = 'todo' WHERE id = ?", (task_id,))
+        conn.commit()
+        return task_id
+
+    def promote() -> tuple[bool, str | None]:
+        record("promote")
+        return kb.promote_task(conn, created[0], actor="test")
+
+    def claim():
+        record("claim")
+        return kb.claim_task(conn, created[0], claimer="test", ttl_seconds=60)
+
+    def spawn() -> int:
+        record("spawn")
+        proc = subprocess.Popen(
+            ["/bin/sh", "-c", f"printf reached > {sentinel}"],
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+        assert proc.wait(timeout=5) == 0
+        return proc.pid
+
+    surfaces = {"create": create, "promote": promote, "claim": claim, "spawn": spawn}
+    denied = policy.create_test_surface_fixture(
+        policy.PolicySnapshot(1, 0, "DENY", "fixture_deny"),
+        surfaces, active=False, production=False,
+    )
+    for name in surfaces:
+        with pytest.raises(PermissionError, match=f"denied {name}"):
+            denied.invoke(name)
+    assert conn.execute("SELECT COUNT(*) FROM tasks").fetchone()[0] == 0
+    assert not sentinel.exists()
+    assert stacks == []
+
+    active = policy.create_test_surface_fixture(
+        policy.PolicySnapshot(2, 1, "ACTIVE", "test_only_active"),
+        surfaces, active=True, production=False,
+    )
+    task_id = active.invoke("create")
+    assert task_id == created[0]
+    assert active.invoke("promote") == (True, None)
+    claimed = active.invoke("claim")
+    assert claimed is not None and getattr(claimed, "id") == task_id
+    assert isinstance(active.invoke("spawn"), int)
+    assert sentinel.read_text() == "reached"
+    assert [name for name, _ in stacks] == ["create", "promote", "claim", "spawn"]
+    assert all("invoke" in stack for _, stack in stacks)
+    kinds = [row[0] for row in conn.execute(
+        "SELECT kind FROM task_events WHERE task_id = ? ORDER BY id", (task_id,)
+    )]
+    assert kinds == ["created", "promoted_manual", "claimed"]
+    conn.close()
+
+
+def test_test_surface_fixture_refuses_production() -> None:
+    with pytest.raises(policy.PolicyLoadError, match="forbidden_in_production"):
+        policy.create_test_surface_fixture(
+            policy.PolicySnapshot(0, 0, "DENY", "x"), {},
+            active=True, production=True,
+        )
