@@ -936,13 +936,14 @@ class TelegramAdapter(BasePlatformAdapter):
         from hermes_cli import kanban_db as kb
         nonce = __import__("secrets").token_urlsafe(24)
         with kb.connect_closing(board=board) as conn:
-            active = conn.execute(
-                "SELECT 1 FROM captain_approval_requests WHERE task_id = ? AND platform = 'telegram' "
+            request = conn.execute(
+                "SELECT callback_nonce, message_id, state FROM captain_approval_requests "
+                "WHERE task_id = ? AND platform = 'telegram' "
                 "AND chat_id = ? AND decision_generation = ? AND issuance_generation = ? "
-                "AND state = 'active' LIMIT 1",
+                "AND state IN ('reserved', 'staged', 'activating', 'active') LIMIT 1",
                 (task_id, str(chat_id), int(decision_generation), int(issuance_generation)),
             ).fetchone()
-            if active is not None and active[0] == 1:
+            if request is not None and request["state"] == "active":
                 return True
             persisted = kb.reserve_captain_approval_request(
                 conn, task_id=task_id, platform="telegram", chat_id=str(chat_id),
@@ -950,43 +951,46 @@ class TelegramAdapter(BasePlatformAdapter):
                 decision_generation=decision_generation,
                 issuance_generation=issuance_generation,
             )
-        if persisted != nonce:
+        if persisted is None:
             return False
+        nonce = persisted
         markup = InlineKeyboardMarkup([[InlineKeyboardButton(
             "Approve product", callback_data=f"ka:{nonce}"
         )]])
-        try:
-            sent = await self._bot.send_message(
-                chat_id=int(chat_id), text=f"Captain approval requested for {task_id}",
-                reply_markup=markup,
-            )
-        except Exception:
-            with kb.connect_closing(board=board) as conn:
-                kb.fail_captain_approval_request(
-                    conn, callback_nonce=nonce, reason="telegram_send_failed",
+        message_id = (
+            request["message_id"] if request is not None
+            and request["state"] in ("staged", "activating") else None
+        )
+        if message_id is None:
+            try:
+                sent = await self._bot.send_message(
+                    chat_id=int(chat_id), text=f"Captain approval requested for {task_id}",
                 )
-            return False
+                message_id = str(sent.message_id)
+            except Exception:
+                return False
+            with kb.connect_closing(board=board) as conn:
+                if not kb.stage_captain_approval_request(
+                    conn, callback_nonce=nonce, message_id=message_id,
+                    task_id=task_id, decision_generation=decision_generation,
+                    issuance_generation=issuance_generation,
+                ):
+                    return False
         with kb.connect_closing(board=board) as conn:
-            bound = kb.bind_captain_approval_request(
-                conn, callback_nonce=nonce, message_id=str(sent.message_id),
-                task_id=task_id, decision_generation=decision_generation,
-                issuance_generation=issuance_generation,
-            )
-        if bound:
-            return True
-        cleanup_failed = False
+            if not kb.mark_captain_approval_activation_attempt(
+                conn, callback_nonce=nonce, message_id=message_id,
+            ):
+                return False
         try:
             await self._bot.edit_message_reply_markup(
-                chat_id=int(chat_id), message_id=sent.message_id, reply_markup=None,
+                chat_id=int(chat_id), message_id=int(message_id), reply_markup=markup,
             )
         except Exception:
-            cleanup_failed = True
+            return False
         with kb.connect_closing(board=board) as conn:
-            kb.fail_captain_approval_request(
-                conn, callback_nonce=nonce, reason="binding_failed",
-                cleanup_failed=cleanup_failed,
+            return kb.activate_captain_approval_request(
+                conn, callback_nonce=nonce, message_id=message_id,
             )
-        return False
 
     async def disable_captain_approval_request(self, *, chat_id: str, message_id: str) -> bool:
         """Remove an expired approval button; callers durably retry failures."""
