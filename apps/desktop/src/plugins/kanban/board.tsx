@@ -423,29 +423,27 @@ export function AttentionControls({
       >
         Settle
       </button>
-      <div className="relative">
+      <Dialog onOpenChange={open => (open ? setSnoozeOpen(true) : closeSnooze())} open={snoozeOpen}>
         <button
           aria-expanded={snoozeOpen}
           aria-haspopup="dialog"
           className="flex min-h-7 cursor-pointer list-none items-center rounded px-2 text-[0.6875rem] text-(--ui-text-secondary) hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2"
           disabled={action.isPending}
-          onClick={() => setSnoozeOpen(open => !open)}
+          onClick={() => setSnoozeOpen(true)}
           ref={snoozeTrigger}
           type="button"
         >
           Snooze…
         </button>
-        {snoozeOpen && (
-          <div
+        <DialogContent
             aria-label="Snooze task"
-            className="absolute bottom-full left-0 z-20 mb-1 grid min-w-[17rem] gap-2 rounded-md border border-(--ui-stroke-secondary) bg-(--ui-bg-elevated) p-2 shadow-lg"
+            className="grid w-[min(22rem,calc(100vw-2rem))] max-w-none gap-2 p-3"
             onKeyDown={event => {
               if (event.key === 'Escape') {
                 event.preventDefault()
                 closeSnooze()
               }
             }}
-            role="dialog"
           >
             <div className="grid grid-cols-5 gap-1">
               <button className="min-h-11 min-w-11 rounded px-1 text-[0.6875rem] hover:bg-(--chrome-action-hover)" disabled={action.isPending} onClick={() => snooze(3600)} type="button">1 hr</button>
@@ -469,9 +467,8 @@ export function AttentionControls({
                 Snooze
               </button>
             </div>
-          </div>
-        )}
-      </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
