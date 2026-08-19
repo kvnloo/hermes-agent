@@ -539,6 +539,8 @@
     const [lastSelectedId, setLastSelectedId] = useState(null);
     const [failedIds, setFailedIds] = useState(() => new Set());
     const [draggingTaskId, setDraggingTaskId] = useState(null);
+    const [attentionAnnouncement, setAttentionAnnouncement] = useState(null);
+    const boardFocusRef = useRef(null);
     const handleDragStart = useCallback(function (taskId) { setDraggingTaskId(taskId); }, []);
     const handleDragEnd = useCallback(function () { setDraggingTaskId(null); }, []);
     // Per-task event counter incremented whenever the WS stream reports
@@ -1083,7 +1085,9 @@
     const renderMd = !config || config.render_markdown !== false;
 
     return h(ErrorBoundary, null,
-      h("div", { className: "hermes-kanban flex flex-col gap-4" },
+      h("div", { className: "hermes-kanban flex flex-col gap-4", ref: boardFocusRef,
+        tabIndex: -1, "data-kanban-focus-target": true },
+        h(BoardAnnouncer, { announcement: attentionAnnouncement }),
         h(BoardSwitcher, {
           board: board,
           boardList: boardList,
@@ -1152,6 +1156,14 @@
           onDelete: deleteTask,
           onOpen: setSelectedTaskId,
           onCreate: createTask,
+          onAnnouncement: function (next) {
+            setAttentionAnnouncement(function (current) {
+              return current && current.attemptId === next.attemptId ? current : next;
+            });
+            if (next.stale) requestAnimationFrame(function () {
+              if (boardFocusRef.current) boardFocusRef.current.focus();
+            });
+          },
           onRefresh: loadBoard,
           allTasks: boardData.columns.reduce(function (acc, c) { return acc.concat(c.tasks); }, []),
         }),
@@ -2598,6 +2610,7 @@
           onMoveSelected: props.onMoveSelected,
           onOpen: props.onOpen,
           onCreate: props.onCreate,
+          onAnnouncement: props.onAnnouncement,
           onRefresh: props.onRefresh,
           allTasks: props.allTasks,
         });
@@ -2744,6 +2757,7 @@
                       toggleRange: props.toggleRange,
                       onOpen: props.onOpen,
                       boardSlug: props.boardSlug,
+                      onAnnouncement: props.onAnnouncement,
                       onRefresh: props.onRefresh,
                     });
                   }),
@@ -2760,6 +2774,7 @@
                   toggleRange: props.toggleRange,
                   onOpen: props.onOpen,
                   boardSlug: props.boardSlug,
+                  onAnnouncement: props.onAnnouncement,
                   onRefresh: props.onRefresh,
                 });
               }),
@@ -2769,7 +2784,8 @@
             return h(TaskCard, { key: tk.id, task: tk, selected: props.selectedIds.has(tk.id),
               failed: false, draggingTaskId: props.draggingTaskId, draggingSource: false,
               toggleSelected: props.toggleSelected, toggleRange: props.toggleRange,
-              onOpen: props.onOpen, boardSlug: props.boardSlug, onRefresh: props.onRefresh });
+              onOpen: props.onOpen, boardSlug: props.boardSlug,
+              onAnnouncement: props.onAnnouncement, onRefresh: props.onRefresh });
           })) : null,
       ),
     );
@@ -2800,13 +2816,37 @@
     return "";
   }
 
+  function BoardAnnouncer(props) {
+    const [message, setMessage] = useState("");
+    const displayed = useRef("");
+    const attempt = useRef(null);
+    useEffect(function () {
+      const next = props.announcement;
+      if (!next || attempt.current === next.attemptId) return undefined;
+      attempt.current = next.attemptId;
+      if (displayed.current === next.message) {
+        setMessage("");
+        const frame = requestAnimationFrame(function () {
+          displayed.current = next.message;
+          setMessage(next.message);
+        });
+        return function () { cancelAnimationFrame(frame); };
+      }
+      displayed.current = next.message;
+      setMessage(next.message);
+      return undefined;
+    }, [props.announcement]);
+    return h("span", { role: "status", "aria-live": "polite", "aria-atomic": "true",
+      className: "sr-only", "data-kanban-announcer": true }, message);
+  }
+
   function AttentionControls(props) {
     const task = props.task;
     const receipt = task.attention || { state: "active", revision: 0 };
     const [custom, setCustom] = useState("");
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState("");
-    const [announcement, setAnnouncement] = useState("");
+
     const [snoozeOpen, setSnoozeOpen] = useState(false);
     const snoozeTrigger = useRef(null);
     const closeSnooze = function () {
@@ -2823,19 +2863,24 @@
         expected_revision: receipt.revision || 0,
         idempotency_key: Date.now() + "-" + Math.random().toString(36).slice(2),
       };
+      const attemptId = body.idempotency_key;
       if (wakeAt != null) body.wake_at = wakeAt;
       return SDK.fetchJSON(withBoard(`${API}/tasks/${encodeURIComponent(task.id)}/attention`, props.boardSlug), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       }).then(function () {
-        setAnnouncement(action === "settle" ? "Attention settled" : action === "snooze" ? "Task snoozed" : "Task awake");
+        props.onAnnouncement({ attemptId: attemptId,
+          message: action === "settle" ? "Attention settled" : action === "snooze" ? "Task snoozed" : "Task awake" });
         if (action === "snooze") closeSnooze();
         return props.onRefresh();
       }).catch(function (err) {
-        const message = err && err.message ? err.message : String(err);
+        const detail = err && err.message ? err.message : String(err);
+        const stale = /stale|conflict|\b409\b/i.test(detail);
+        const message = stale ? "This task changed elsewhere. Your action was not applied." : detail;
         setError(message);
-        setAnnouncement(message);
+        props.onAnnouncement({ attemptId: attemptId, message: message, stale: stale });
+        return props.onRefresh();
       })
         .finally(function () { setBusy(false); });
     };
@@ -2854,14 +2899,12 @@
     const customWake = parseLocal(custom);
     if (receipt.state === "settled") {
       return h("div", { onClick: stop, onKeyDown: stop },
-        h("span", { role: "status", "aria-live": "polite", "aria-atomic": "true", className: "sr-only" }, announcement),
         h("button", { type: "button", className: "hermes-kanban-attention-button", disabled: busy,
           onClick: function () { apply("wake"); } }, "Wake"),
         error ? h("span", { role: "alert", className: "hermes-kanban-attention-error" }, error) : null,
       );
     }
     return h("div", { className: "hermes-kanban-attention", onClick: stop, onKeyDown: stop },
-      h("span", { role: "status", "aria-live": "polite", "aria-atomic": "true", className: "sr-only" }, announcement),
       h("button", { type: "button", className: "hermes-kanban-attention-button", disabled: busy,
         onClick: function () { apply("settle"); } }, "Settle"),
       h("details", { open: snoozeOpen, onToggle: function (e) { setSnoozeOpen(e.currentTarget.open); },
@@ -3053,7 +3096,8 @@
                         title: t.created_at ? `Created ${t.created_at}` : "" },
               timeAgo ? timeAgo(t.created_at) : ""),
           ),
-          h(AttentionControls, { task: t, boardSlug: props.boardSlug, onRefresh: props.onRefresh }),
+          h(AttentionControls, { task: t, boardSlug: props.boardSlug,
+            onAnnouncement: props.onAnnouncement, onRefresh: props.onRefresh }),
         ),
       ),
     );
