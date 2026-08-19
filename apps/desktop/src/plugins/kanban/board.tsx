@@ -249,6 +249,38 @@ export interface AttentionAnnouncement {
   stale?: boolean
 }
 
+type AttentionActionKind = 'settle' | 'snooze' | 'wake'
+type NextAttentionAttemptId = (taskId: string, kind: AttentionActionKind) => string
+let detachedAttentionAttempt = 0
+
+const nextDetachedAttentionAttemptId: NextAttentionAttemptId = (taskId, kind) => {
+  detachedAttentionAttempt += 1
+
+  return `${taskId}:${kind}:detached:${detachedAttentionAttempt}`
+}
+
+export function useBoardAttentionAnnouncements() {
+  const [announcement, setAnnouncement] = useState<AttentionAnnouncement | null>(null)
+  const attempt = useRef(0)
+  const focusTarget = useRef<HTMLElement>(null)
+
+  const nextAttemptId: NextAttentionAttemptId = (taskId, kind) => {
+    attempt.current += 1
+
+    return `${taskId}:${kind}:board:${attempt.current}`
+  }
+
+  const announce = (next: AttentionAnnouncement) => {
+    setAnnouncement(current => current?.attemptId === next.attemptId ? current : next)
+
+    if (next.stale) {
+      window.requestAnimationFrame(() => focusTarget.current?.focus())
+    }
+  }
+
+  return { announce, announcement, focusTarget, nextAttemptId }
+}
+
 export function BoardAnnouncer({ announcement }: { announcement: AttentionAnnouncement | null }) {
   const [message, setMessage] = useState('')
   const displayed = useRef('')
@@ -291,9 +323,11 @@ export function BoardAnnouncer({ announcement }: { announcement: AttentionAnnoun
 }
 
 export function AttentionControls({
+  nextAttemptId = nextDetachedAttentionAttemptId,
   onAnnouncement,
   task
 }: {
+  nextAttemptId?: NextAttentionAttemptId
   onAnnouncement?: (announcement: AttentionAnnouncement) => void
   task: KanbanTask
 }) {
@@ -303,7 +337,6 @@ export function AttentionControls({
   const [snoozeOpen, setSnoozeOpen] = useState(false)
   const snoozeTrigger = useRef<HTMLButtonElement>(null)
   const receipt = task.attention ?? { state: 'active' as const, revision: 0 }
-  const attempt = useRef(0)
   const announce = onAnnouncement ?? setLocalAnnouncement
 
   const closeSnooze = () => {
@@ -311,7 +344,7 @@ export function AttentionControls({
     window.requestAnimationFrame(() => snoozeTrigger.current?.focus())
   }
 
-  type ActionAttempt = { attemptId: string; kind: 'settle' | 'snooze' | 'wake'; wakeAt?: number }
+  type ActionAttempt = { attemptId: string; kind: AttentionActionKind; wakeAt?: number }
   const action = useMutation({
     mutationFn: ({ kind, wakeAt }: ActionAttempt) => updateAttention(task.id, kind, receipt.revision, wakeAt),
     onError: (error, variables) => {
@@ -345,8 +378,7 @@ export function AttentionControls({
 
   const stop = (event: SyntheticEvent) => event.stopPropagation()
   const run = (kind: ActionAttempt['kind'], wakeAt?: number) => {
-    attempt.current += 1
-    action.mutate({ attemptId: `${task.id}:${kind}:${attempt.current}`, kind, wakeAt })
+    action.mutate({ attemptId: nextAttemptId(task.id, kind), kind, wakeAt })
   }
   const snooze = (seconds: number) => run('snooze', Math.floor(Date.now() / 1000) + seconds)
   const customWake = parseLocalDateTime(custom)
@@ -446,6 +478,7 @@ export function AttentionControls({
 
 function Card({
   columns,
+  nextAttemptId,
   onAnnouncement,
   onDelete,
   onMove,
@@ -455,6 +488,7 @@ function Card({
   task
 }: {
   columns: string[]
+  nextAttemptId: NextAttentionAttemptId
   onAnnouncement: (announcement: AttentionAnnouncement) => void
   onDelete: (id: string) => void
   onMove: (id: string, status: string) => void
@@ -510,7 +544,7 @@ function Card({
             <span className="line-clamp-2 text-[0.6875rem] leading-snug text-(--ui-text-tertiary)">{summary}</span>
           )}
           <CardFooter arc={arc} task={task} />
-          <AttentionControls onAnnouncement={onAnnouncement} task={task} />
+          <AttentionControls nextAttemptId={nextAttemptId} onAnnouncement={onAnnouncement} task={task} />
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>
@@ -548,6 +582,7 @@ function Column({
   column,
   columns,
   laneWidth,
+  nextAttemptId,
   onAdd,
   onAnnouncement,
   onDelete,
@@ -562,6 +597,7 @@ function Column({
   column: { name: string; tasks: KanbanTask[] }
   columns: string[]
   laneWidth: number
+  nextAttemptId: NextAttentionAttemptId
   onAdd: (status: string) => void
   onAnnouncement: (announcement: AttentionAnnouncement) => void
   onDelete: (id: string) => void
@@ -699,6 +735,7 @@ function Column({
                   <Card
                     columns={columns}
                     key={task.id}
+                    nextAttemptId={nextAttemptId}
                     onAnnouncement={onAnnouncement}
                     onDelete={onDelete}
                     onMove={onMove}
@@ -714,6 +751,7 @@ function Column({
               <Card
                 columns={columns}
                 key={task.id}
+                nextAttemptId={nextAttemptId}
                 onAnnouncement={onAnnouncement}
                 onDelete={onDelete}
                 onMove={onMove}
@@ -733,6 +771,7 @@ function Column({
                 <Card
                   columns={columns}
                   key={task.id}
+                  nextAttemptId={nextAttemptId}
                   onAnnouncement={onAnnouncement}
                   onDelete={onDelete}
                   onMove={onMove}
@@ -1350,16 +1389,7 @@ export function KanbanBoardPage() {
   const [tenant, setTenant] = useState('')
   const [assignee, setAssignee] = useState('')
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
-  const [announcement, setAnnouncement] = useState<AttentionAnnouncement | null>(null)
-  const boardHeader = useRef<HTMLElement>(null)
-
-  const announceAttention = (next: AttentionAnnouncement) => {
-    setAnnouncement(current => current?.attemptId === next.attemptId ? current : next)
-
-    if (next.stale) {
-      window.requestAnimationFrame(() => boardHeader.current?.focus())
-    }
-  }
+  const attentionAnnouncements = useBoardAttentionAnnouncements()
 
   // One timer at the nearest wake boundary. Server projection remains truth;
   // this only repaints promptly while the app stays open (restart/offline is
@@ -1626,7 +1656,7 @@ export function KanbanBoardPage() {
 
   return (
     <div className="relative flex h-full flex-col overflow-hidden bg-(--ui-surface-background)">
-      <BoardAnnouncer announcement={announcement} />
+      <BoardAnnouncer announcement={attentionAnnouncements.announcement} />
       {/* Page-owned titlebar chrome: exists exactly while this page is mounted. */}
       <Contribute area={TITLEBAR_AREAS.center} id="kanban:board-switcher">
         <BoardSwitcher />
@@ -1636,7 +1666,7 @@ export function KanbanBoardPage() {
         className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-4 py-2 md:flex md:flex-wrap"
         data-kanban-focus-target
         data-kanban-layout={viewport.desktop ? 'desktop' : 'mobile'}
-        ref={boardHeader}
+        ref={attentionAnnouncements.focusTarget}
         tabIndex={-1}
       >
         <div className="flex min-w-0 items-center gap-2">
@@ -1726,8 +1756,9 @@ export function KanbanBoardPage() {
                 columns={columnNames}
                 key={col.name}
                 laneWidth={viewport.laneWidth}
+                nextAttemptId={attentionAnnouncements.nextAttemptId}
                 onAdd={setAddStatus}
-                onAnnouncement={announceAttention}
+                onAnnouncement={attentionAnnouncements.announce}
                 onDelete={id => deleteMut.mutate(id)}
                 onDropTask={onMove}
                 onMove={onMove}
