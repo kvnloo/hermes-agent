@@ -65,6 +65,7 @@ class FileIdentity:
     size: int
     mtime_ns: int
     ctime_ns: int
+    link_count: int
 
 
 @dataclass(frozen=True)
@@ -128,7 +129,7 @@ def install_anchor(hermes_home: Path) -> Path:
 
 
 def _identity(st: os.stat_result) -> FileIdentity:
-    return FileIdentity(st.st_dev, st.st_ino, st.st_uid, stat.S_IMODE(st.st_mode), st.st_size, st.st_mtime_ns, st.st_ctime_ns)
+    return FileIdentity(st.st_dev, st.st_ino, st.st_uid, stat.S_IMODE(st.st_mode), st.st_size, st.st_mtime_ns, st.st_ctime_ns, st.st_nlink)
 
 
 def _secure_dir(st: os.stat_result) -> bool:
@@ -166,23 +167,44 @@ def _same_open_chain(home: Path, expected: list[FileIdentity]) -> bool:
             os.close(fd)
 
 
-def _reopen_regular(
+def _open_final_pair(
     anchor_fd: int,
-    name: str,
-    expected_identity: FileIdentity,
-    expected_sha256: str,
-) -> None:
-    """Re-resolve and reread a document name immediately before publish."""
-    raw, identity, fd = _read_regular(anchor_fd, name)
+    expected: Mapping[str, tuple[FileIdentity, str]],
+    order: tuple[str, str],
+) -> list[int]:
+    """Open the whole named set before validating any member of the set.
+
+    The returned descriptors are authority-bearing pins and remain owned by the
+    caller until snapshot publication has completed.
+    """
+    opened: dict[str, tuple[bytes, FileIdentity, int]] = {}
     try:
-        if identity != expected_identity:
-            raise PolicyLoadError(f"pathname_replaced_{name}")
-        if hashlib.sha256(raw).hexdigest() != expected_sha256:
-            raise PolicyLoadError(f"pathname_content_changed_{name}")
-        if _identity(os.fstat(fd)) != expected_identity:
-            raise PolicyLoadError(f"pathname_changed_{name}")
-    finally:
-        os.close(fd)
+        for name in order:
+            opened[name] = _read_regular(anchor_fd, name)
+        # Both names are now pinned.  Validate bytes, complete descriptor stats,
+        # and the two current no-follow directory entries as one pair phase.
+        for name in (TRUST_ROOT_NAME, MANIFEST_NAME):
+            raw, identity, fd = opened[name]
+            wanted_identity, wanted_digest = expected[name]
+            if identity != wanted_identity:
+                raise PolicyLoadError(f"pathname_replaced_{name}")
+            if hashlib.sha256(raw).hexdigest() != wanted_digest:
+                raise PolicyLoadError(f"pathname_content_changed_{name}")
+            if _identity(os.fstat(fd)) != wanted_identity:
+                raise PolicyLoadError(f"pathname_changed_{name}")
+        for name in (TRUST_ROOT_NAME, MANIFEST_NAME):
+            entry = os.stat(name, dir_fd=anchor_fd, follow_symlinks=False)
+            if _identity(entry) != expected[name][0]:
+                raise PolicyLoadError(f"directory_entry_changed_{name}")
+        # Revisit both open descriptors after both directory entries were read.
+        for name in (TRUST_ROOT_NAME, MANIFEST_NAME):
+            if _identity(os.fstat(opened[name][2])) != expected[name][0]:
+                raise PolicyLoadError(f"pair_changed_{name}")
+        return [opened[TRUST_ROOT_NAME][2], opened[MANIFEST_NAME][2]]
+    except Exception:
+        for _, _, fd in opened.values():
+            os.close(fd)
+        raise
 
 
 def _read_regular(anchor_fd: int, name: str) -> tuple[bytes, FileIdentity, int]:
@@ -273,7 +295,7 @@ def _receipt_binding(envelope: PolicyBootstrapEnvelope, manifest_sha256: str) ->
     })).hexdigest()
 
 
-def _load_candidate(home: Path, envelope_fd: int, provider: _PolicyKeyProvider, now: int) -> PolicySnapshot:
+def _load_candidate(home: Path, envelope_fd: int, provider: _PolicyKeyProvider, now: int) -> tuple[PolicySnapshot, list[int]]:
     fds: list[int] = []
     document_fds: list[int] = []
     try:
@@ -309,14 +331,21 @@ def _load_candidate(home: Path, envelope_fd: int, provider: _PolicyKeyProvider, 
         # final pathnames from the anchor immediately before publication.
         if _identity(os.fstat(trust_fd)) != trust_identity or _identity(os.fstat(manifest_fd)) != manifest_identity:
             raise PolicyLoadError("document_changed_before_publish")
-        _reopen_regular(
-            fds[-1], TRUST_ROOT_NAME, trust_identity,
-            hashlib.sha256(trust_raw).hexdigest(),
-        )
-        _reopen_regular(fds[-1], MANIFEST_NAME, manifest_identity, manifest_hash)
+        expected = {
+            TRUST_ROOT_NAME: (trust_identity, hashlib.sha256(trust_raw).hexdigest()),
+            MANIFEST_NAME: (manifest_identity, manifest_hash),
+        }
+        # Opposing open orders close both inter-document windows.  The first
+        # pair remains pinned while the second pair and final component checks
+        # run; every descriptor survives until the caller commits the snapshot.
+        document_fds.extend(_open_final_pair(fds[-1], expected, (TRUST_ROOT_NAME, MANIFEST_NAME)))
+        document_fds.extend(_open_final_pair(fds[-1], expected, (MANIFEST_NAME, TRUST_ROOT_NAME)))
         if [_identity(os.fstat(fd)) for fd in fds] != chain or not _same_open_chain(home, chain):
             raise PolicyLoadError("anchor_changed_before_publish")
-        return PolicySnapshot(0, envelope.generation, "FROZEN", "activation_unsupported", anchor.device, anchor.inode, envelope.governance_version, envelope.governance_content_sha256, _receipt_binding(envelope, manifest_hash))
+        snapshot = PolicySnapshot(0, envelope.generation, "FROZEN", "activation_unsupported", anchor.device, anchor.inode, envelope.governance_version, envelope.governance_content_sha256, _receipt_binding(envelope, manifest_hash))
+        pinned = document_fds
+        document_fds = []
+        return snapshot, pinned
     finally:
         for fd in reversed(document_fds):
             os.close(fd)
@@ -344,21 +373,23 @@ class _StartupPolicyLoader:
         with self._lock:
             self._next_generation += 1
             generation = self._next_generation
-        try:
-            candidate = _load_candidate(self._home, self._envelope_fd, self._provider, self._clock())
-        except (OSError, PolicyLoadError, TypeError, ValueError) as exc:
-            reason = exc.args[0] if isinstance(exc, PolicyLoadError) and exc.args else "bootstrap_unavailable"
-            candidate = PolicySnapshot(generation, 0, "DENY", str(reason))
-        else:
-            candidate = replace(candidate, reload_generation=generation)
-        if after_validate:
-            after_validate()
-        with self._lock:
-            if generation < self._published_generation:
-                return self._snapshot
-            self._published_generation = generation
-            self._snapshot = candidate
-            return candidate
+            pinned: list[int] = []
+            try:
+                candidate, pinned = _load_candidate(self._home, self._envelope_fd, self._provider, self._clock())
+            except (OSError, PolicyLoadError, TypeError, ValueError) as exc:
+                reason = exc.args[0] if isinstance(exc, PolicyLoadError) and exc.args else "bootstrap_unavailable"
+                candidate = PolicySnapshot(generation, 0, "DENY", str(reason))
+            else:
+                candidate = replace(candidate, reload_generation=generation)
+            try:
+                if after_validate:
+                    after_validate()
+                self._published_generation = generation
+                self._snapshot = candidate
+                return candidate
+            finally:
+                for fd in reversed(pinned):
+                    os.close(fd)
 
 
 def _seal_startup_boundary() -> Callable[[], _StartupPolicyLoader]:
