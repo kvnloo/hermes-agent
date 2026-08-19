@@ -425,11 +425,12 @@
           lastTarget = target;
         }
       }
-      function up() {
+      function up(ev) {
         document.removeEventListener("pointermove", move);
         document.removeEventListener("pointerup", up);
         document.removeEventListener("pointercancel", up);
-        if (lastTarget) {
+        document.removeEventListener("hermes-kanban:cancel-interactions", up);
+        if (lastTarget && ev && ev.type === "pointerup") {
           lastTarget.classList.remove("hermes-kanban-column--drop");
           const status = lastTarget.getAttribute("data-kanban-column");
           const isTrash = lastTarget.hasAttribute("data-kanban-trash");
@@ -458,6 +459,7 @@
       document.addEventListener("pointermove", move);
       document.addEventListener("pointerup", up);
       document.addEventListener("pointercancel", up);
+      document.addEventListener("hermes-kanban:cancel-interactions", up);
     }
     el.addEventListener("pointerdown", onDown);
     return function () { el.removeEventListener("pointerdown", onDown); };
@@ -2849,10 +2851,22 @@
 
     const [snoozeOpen, setSnoozeOpen] = useState(false);
     const snoozeTrigger = useRef(null);
+    const snoozePanel = useRef(null);
     const closeSnooze = function () {
       setSnoozeOpen(false);
       requestAnimationFrame(function () { if (snoozeTrigger.current) snoozeTrigger.current.focus(); });
     };
+    useEffect(function () {
+      if (!snoozeOpen) return undefined;
+      document.dispatchEvent(new CustomEvent("hermes-kanban:cancel-interactions"));
+      const bodyOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      requestAnimationFrame(function () {
+        const first = snoozePanel.current && snoozePanel.current.querySelector("button:not(:disabled), input:not(:disabled)");
+        if (first) first.focus();
+      });
+      return function () { document.body.style.overflow = bodyOverflow; };
+    }, [snoozeOpen]);
     const apply = function (action, wakeAt) {
       setBusy(true);
       setError("");
@@ -2907,10 +2921,22 @@
     return h("div", { className: "hermes-kanban-attention", onClick: stop, onKeyDown: stop },
       h("button", { type: "button", className: "hermes-kanban-attention-button", disabled: busy,
         onClick: function () { apply("settle"); } }, "Settle"),
-      h("details", { open: snoozeOpen, onToggle: function (e) { setSnoozeOpen(e.currentTarget.open); },
-        onKeyDown: function (e) { if (e.key === "Escape") { e.preventDefault(); closeSnooze(); } } },
-        h("summary", { className: "hermes-kanban-attention-button", ref: snoozeTrigger, "aria-haspopup": "dialog" }, "Snooze…"),
-        h("div", { className: "hermes-kanban-snooze-menu", role: "dialog", "aria-label": "Snooze task" },
+      h("div", null,
+        h("button", { type: "button", className: "hermes-kanban-attention-button", ref: snoozeTrigger,
+          "aria-haspopup": "dialog", "aria-expanded": snoozeOpen, onClick: function () { setSnoozeOpen(true); } }, "Snooze…"),
+        snoozeOpen ? h("div", { className: "hermes-kanban-snooze-modal", onClick: stop, onPointerDown: stop, onPointerUp: stop },
+        h("div", { className: "hermes-kanban-snooze-backdrop", "aria-hidden": "true" }),
+        h("div", { className: "hermes-kanban-snooze-menu", role: "dialog", "aria-label": "Snooze task",
+          "aria-modal": "true", ref: snoozePanel, onKeyDown: function (e) {
+            if (e.key === "Escape") { e.preventDefault(); closeSnooze(); return; }
+            if (e.key !== "Tab") return;
+            const focusable = Array.from(e.currentTarget.querySelectorAll("button:not(:disabled), input:not(:disabled)"));
+            if (!focusable.length) return;
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+            else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+          } },
           h("div", { className: "hermes-kanban-snooze-presets" },
           h("button", { type: "button", disabled: busy, onClick: function () { apply("snooze", Math.floor(Date.now() / 1000) + 3600); } }, "1 hr"),
           h("button", { type: "button", onClick: function () {
@@ -2932,10 +2958,15 @@
               id: "snooze-custom-" + task.id,
               onChange: function (e) { setCustom(e.target.value); } })),
           h("div", { className: "hermes-kanban-snooze-actions" },
-            h("button", { type: "button", onClick: closeSnooze }, "Cancel"),
+            h("button", { type: "button", onTouchStart: function (e) {
+              e.preventDefault(); e.stopPropagation(); closeSnooze();
+            }, onPointerDown: function (e) {
+              e.preventDefault(); e.stopPropagation(); closeSnooze();
+            }, onClick: closeSnooze }, "Cancel"),
             h("button", { type: "button", disabled: busy || !customWake || customWake.getTime() <= Date.now(),
               onClick: function () { if (customWake) apply("snooze", Math.floor(customWake.getTime() / 1000)); } }, "Snooze")),
         ),
+        ) : null,
       ),
       error ? h("span", { role: "alert", className: "hermes-kanban-attention-error" }, error) : null,
     );
@@ -2966,6 +2997,12 @@
       }
     };
     const handleClick = function (e) {
+      // Card activation is a delegated convenience, never the fallback for an
+      // embedded control. This guard is load-bearing on touch browsers where a
+      // compatibility click can arrive after the snooze sheet has mounted.
+      if (e.target && e.target.closest && e.target.closest("button, input, summary, details, [role='dialog']")) {
+        return;
+      }
       if (e.shiftKey) {
         e.preventDefault();
         e.stopPropagation();
