@@ -1,7 +1,7 @@
 import { host } from '@hermes/plugin-sdk'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import type { ReactElement } from 'react'
+import { type ReactElement, useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type * as KanbanApi from './api'
@@ -45,7 +45,41 @@ describe('attention lifecycle controls', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Settle' }))
     expect(updateAttentionMock).toHaveBeenCalledTimes(1)
     reject(new Error('stale attention revision'))
-    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('stale attention revision'))
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('This task changed elsewhere. Your action was not applied.'))
+    expect(screen.getByRole('status').getAttribute('aria-live')).toBe('polite')
+    expect(screen.getByRole('status').getAttribute('aria-atomic')).toBe('true')
+  })
+
+  it('keeps a stale announcement through an authoritative receipt reconciliation', async () => {
+    let reject!: (reason: Error) => void
+    updateAttentionMock.mockImplementationOnce(() => new Promise((_resolve, fail) => { reject = fail }))
+
+    function ReconciledControl() {
+      const [announcement, setAnnouncement] = useState('')
+      const [task, setTask] = useState({ ...baseTask, attention: receipt('active', 0) })
+
+      return (
+        <AttentionControls
+          announcement={announcement}
+          onAnnouncement={message => {
+            setAnnouncement(message)
+
+            if (message.includes('changed elsewhere')) {
+              setTask(current => ({ ...current, attention: receipt('settled', 1) }))
+            }
+          }}
+          task={task}
+        />
+      )
+    }
+
+    render(<QueryClientProvider client={new QueryClient({ defaultOptions: { mutations: { retry: false }, queries: { retry: false } } })}><ReconciledControl /></QueryClientProvider>)
+    fireEvent.click(screen.getByRole('button', { name: 'Settle' }))
+    await waitFor(() => expect(updateAttentionMock).toHaveBeenCalledTimes(1))
+    reject(new Error('409 stale attention revision'))
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Wake' })).toBeTruthy())
+    expect(screen.getByRole('status').textContent).toBe('This task changed elsewhere. Your action was not applied.')
   })
 
   it('shows the compact presets and restores trigger focus on Escape and Cancel', async () => {
