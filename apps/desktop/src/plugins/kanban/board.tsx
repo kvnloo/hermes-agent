@@ -243,22 +243,67 @@ function CardFooter({ arc, task }: { arc: ArcState | null; task: KanbanTask }) {
 
 const STALE_ATTENTION_ANNOUNCEMENT = 'This task changed elsewhere. Your action was not applied.'
 
+export interface AttentionAnnouncement {
+  attemptId: string
+  message: string
+  stale?: boolean
+}
+
+export function BoardAnnouncer({ announcement }: { announcement: AttentionAnnouncement | null }) {
+  const [message, setMessage] = useState('')
+  const displayed = useRef('')
+  const lastAttempt = useRef<string | null>(null)
+  const frame = useRef<number | null>(null)
+
+  // Delivery refs intentionally describe DOM announcement commits, not atoms.
+  // eslint-disable-next-line no-restricted-syntax
+  useEffect(() => {
+    if (!announcement || announcement.attemptId === lastAttempt.current) {
+      return
+    }
+
+    lastAttempt.current = announcement.attemptId
+
+    if (frame.current !== null) {
+      window.cancelAnimationFrame(frame.current)
+    }
+
+    if (displayed.current === announcement.message) {
+      setMessage('')
+      frame.current = window.requestAnimationFrame(() => {
+        displayed.current = announcement.message
+        setMessage(announcement.message)
+        frame.current = null
+      })
+    } else {
+      displayed.current = announcement.message
+      setMessage(announcement.message)
+    }
+
+    return () => {
+      if (frame.current !== null) {
+        window.cancelAnimationFrame(frame.current)
+      }
+    }
+  }, [announcement])
+
+  return <span aria-atomic="true" aria-live="polite" className="sr-only" data-kanban-announcer role="status">{message}</span>
+}
+
 export function AttentionControls({
-  announcement,
   onAnnouncement,
   task
 }: {
-  announcement?: string
-  onAnnouncement?: (message: string) => void
+  onAnnouncement?: (announcement: AttentionAnnouncement) => void
   task: KanbanTask
 }) {
   const qc = useQueryClient()
   const [custom, setCustom] = useState('')
-  const [localAnnouncement, setLocalAnnouncement] = useState('')
+  const [localAnnouncement, setLocalAnnouncement] = useState<AttentionAnnouncement | null>(null)
   const [snoozeOpen, setSnoozeOpen] = useState(false)
   const snoozeTrigger = useRef<HTMLButtonElement>(null)
   const receipt = task.attention ?? { state: 'active' as const, revision: 0 }
-  const liveAnnouncement = announcement ?? localAnnouncement
+  const attempt = useRef(0)
   const announce = onAnnouncement ?? setLocalAnnouncement
 
   const closeSnooze = () => {
@@ -266,23 +311,18 @@ export function AttentionControls({
     window.requestAnimationFrame(() => snoozeTrigger.current?.focus())
   }
 
+  type ActionAttempt = { attemptId: string; kind: 'settle' | 'snooze' | 'wake'; wakeAt?: number }
   const action = useMutation({
-    mutationFn: ({ kind, wakeAt }: { kind: 'settle' | 'snooze' | 'wake'; wakeAt?: number }) => {
-      // Keep the prior live-region message mounted until the next user action.
-      // This clears it at a user-paced boundary instead of racing AT with a timer.
-      announce('')
-
-      return updateAttention(task.id, kind, receipt.revision, wakeAt)
-    },
-    onError: error => {
+    mutationFn: ({ kind, wakeAt }: ActionAttempt) => updateAttention(task.id, kind, receipt.revision, wakeAt),
+    onError: (error, variables) => {
       const detail = errText(error)
       const message = /stale|conflict|\b409\b/i.test(detail) ? STALE_ATTENTION_ANNOUNCEMENT : detail
-      announce(message)
+      announce({ attemptId: variables.attemptId, message, stale: message === STALE_ATTENTION_ANNOUNCEMENT })
       host.notify({ kind: 'error', message })
       void qc.invalidateQueries({ queryKey: ['kanban', 'board'] })
       void qc.invalidateQueries({ queryKey: ['kanban', 'task'] })
     },
-    onSuccess: result => {
+    onSuccess: (result, variables) => {
       host.notify({
         kind: 'success',
         message:
@@ -292,7 +332,7 @@ export function AttentionControls({
               ? 'Snoozed'
               : 'Awake'
       })
-      announce(result.attention.state === 'settled' ? 'Attention settled' : result.attention.state === 'snoozed' ? 'Task snoozed' : 'Task awake')
+      announce({ attemptId: variables.attemptId, message: result.attention.state === 'settled' ? 'Attention settled' : result.attention.state === 'snoozed' ? 'Task snoozed' : 'Task awake' })
 
       if (result.attention.state === 'snoozed') {
         closeSnooze()
@@ -304,30 +344,34 @@ export function AttentionControls({
   })
 
   const stop = (event: SyntheticEvent) => event.stopPropagation()
-  const snooze = (seconds: number) => action.mutate({ kind: 'snooze', wakeAt: Math.floor(Date.now() / 1000) + seconds })
+  const run = (kind: ActionAttempt['kind'], wakeAt?: number) => {
+    attempt.current += 1
+    action.mutate({ attemptId: `${task.id}:${kind}:${attempt.current}`, kind, wakeAt })
+  }
+  const snooze = (seconds: number) => run('snooze', Math.floor(Date.now() / 1000) + seconds)
   const customWake = parseLocalDateTime(custom)
 
   const tomorrowMorning = () => {
     const wake = new Date()
     wake.setDate(wake.getDate() + 1)
     wake.setHours(9, 0, 0, 0)
-    action.mutate({ kind: 'snooze', wakeAt: Math.floor(wake.getTime() / 1000) })
+    run('snooze', Math.floor(wake.getTime() / 1000))
   }
 
   const nextMonth = () => {
     const wake = new Date()
     wake.setMonth(wake.getMonth() + 1)
-    action.mutate({ kind: 'snooze', wakeAt: Math.floor(wake.getTime() / 1000) })
+    run('snooze', Math.floor(wake.getTime() / 1000))
   }
 
   if (receipt.state === 'settled') {
     return (
       <div onClick={stop} onKeyDown={stop}>
-        <span aria-atomic="true" aria-live="polite" className="sr-only" role="status">{liveAnnouncement}</span>
+        {!onAnnouncement && <BoardAnnouncer announcement={localAnnouncement} />}
         <button
           className="min-h-7 rounded px-2 text-[0.6875rem] text-(--ui-text-secondary) hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2"
           disabled={action.isPending}
-          onClick={() => action.mutate({ kind: 'wake' })}
+          onClick={() => run('wake')}
           type="button"
         >
           Wake
@@ -338,11 +382,11 @@ export function AttentionControls({
 
   return (
     <div className="flex flex-wrap items-center gap-1 border-t border-(--ui-stroke-tertiary) pt-1.5" onClick={stop} onKeyDown={stop}>
-      <span aria-atomic="true" aria-live="polite" className="sr-only" role="status">{liveAnnouncement}</span>
+      {!onAnnouncement && <BoardAnnouncer announcement={localAnnouncement} />}
       <button
         className="min-h-7 rounded px-2 text-[0.6875rem] text-(--ui-text-secondary) hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2"
         disabled={action.isPending}
-        onClick={() => action.mutate({ kind: 'settle' })}
+        onClick={() => run('settle')}
         type="button"
       >
         Settle
@@ -387,7 +431,7 @@ export function AttentionControls({
               <button
                 className="min-h-11 rounded bg-primary px-3 text-xs text-primary-foreground disabled:opacity-50"
                 disabled={action.isPending || !customWake || customWake.getTime() <= Date.now()}
-                onClick={() => customWake && action.mutate({ kind: 'snooze', wakeAt: Math.floor(customWake.getTime() / 1000) })}
+                onClick={() => customWake && run('snooze', Math.floor(customWake.getTime() / 1000))}
                 type="button"
               >
                 Snooze
@@ -401,7 +445,6 @@ export function AttentionControls({
 }
 
 function Card({
-  announcement,
   columns,
   onAnnouncement,
   onDelete,
@@ -411,9 +454,8 @@ function Card({
   selected,
   task
 }: {
-  announcement: string
   columns: string[]
-  onAnnouncement: (message: string) => void
+  onAnnouncement: (announcement: AttentionAnnouncement) => void
   onDelete: (id: string) => void
   onMove: (id: string, status: string) => void
   onOpen: (id: string) => void
@@ -468,7 +510,7 @@ function Card({
             <span className="line-clamp-2 text-[0.6875rem] leading-snug text-(--ui-text-tertiary)">{summary}</span>
           )}
           <CardFooter arc={arc} task={task} />
-          <AttentionControls announcement={announcement} onAnnouncement={onAnnouncement} task={task} />
+          <AttentionControls onAnnouncement={onAnnouncement} task={task} />
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>
@@ -507,6 +549,7 @@ function Column({
   columns,
   laneWidth,
   onAdd,
+  onAnnouncement,
   onDelete,
   onDropTask,
   onMove,
@@ -520,6 +563,7 @@ function Column({
   columns: string[]
   laneWidth: number
   onAdd: (status: string) => void
+  onAnnouncement: (announcement: AttentionAnnouncement) => void
   onDelete: (id: string) => void
   onDropTask: (id: string, status: string) => void
   onMove: (id: string, status: string) => void
@@ -530,33 +574,13 @@ function Column({
 }) {
   const k = useKanban()
   const [over, setOver] = useState(false)
-  // Cards move between the active list and settled disclosure after an
-  // authoritative refresh. Keep their live-region text at the stable lane
-  // boundary so that reconciliation cannot remount it back to empty.
-  const [announcements, setAnnouncements] = useState<Record<string, string>>({})
+
   const meta = columnMeta(column.name)
   const label = columnLabel(k, column.name)
   const locked = isLockedTarget(column.name)
   const byProfile = useValue($lanesByProfile)
   const activeTasks = column.tasks.filter(task => (task.attention?.state ?? 'active') === 'active')
 
-  const announce = (taskId: string, message: string) => {
-    setAnnouncements(current => {
-      if (current[taskId] === message) {
-        return current
-      }
-
-      if (!message) {
-        const rest = { ...current }
-
-        delete rest[taskId]
-
-        return rest
-      }
-
-      return { ...current, [taskId]: message }
-    })
-  }
 
   const settledTasks = column.tasks
     .filter(task => task.attention?.state === 'settled')
@@ -673,10 +697,9 @@ function Column({
                 </div>
                 {tasks.map(task => (
                   <Card
-                    announcement={announcements[task.id] ?? ''}
                     columns={columns}
                     key={task.id}
-                    onAnnouncement={message => announce(task.id, message)}
+                    onAnnouncement={onAnnouncement}
                     onDelete={onDelete}
                     onMove={onMove}
                     onOpen={onOpen}
@@ -689,10 +712,9 @@ function Column({
             ))
           : activeTasks.map(task => (
               <Card
-                announcement={announcements[task.id] ?? ''}
                 columns={columns}
                 key={task.id}
-                onAnnouncement={message => announce(task.id, message)}
+                onAnnouncement={onAnnouncement}
                 onDelete={onDelete}
                 onMove={onMove}
                 onOpen={onOpen}
@@ -709,10 +731,9 @@ function Column({
             <div className="grid gap-2 opacity-75">
               {settledTasks.map(task => (
                 <Card
-                  announcement={announcements[task.id] ?? ''}
                   columns={columns}
                   key={task.id}
-                  onAnnouncement={message => announce(task.id, message)}
+                  onAnnouncement={onAnnouncement}
                   onDelete={onDelete}
                   onMove={onMove}
                   onOpen={onOpen}
@@ -1329,6 +1350,16 @@ export function KanbanBoardPage() {
   const [tenant, setTenant] = useState('')
   const [assignee, setAssignee] = useState('')
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
+  const [announcement, setAnnouncement] = useState<AttentionAnnouncement | null>(null)
+  const boardHeader = useRef<HTMLElement>(null)
+
+  const announceAttention = (next: AttentionAnnouncement) => {
+    setAnnouncement(current => current?.attemptId === next.attemptId ? current : next)
+
+    if (next.stale) {
+      window.requestAnimationFrame(() => boardHeader.current?.focus())
+    }
+  }
 
   // One timer at the nearest wake boundary. Server projection remains truth;
   // this only repaints promptly while the app stays open (restart/offline is
@@ -1595,6 +1626,7 @@ export function KanbanBoardPage() {
 
   return (
     <div className="relative flex h-full flex-col overflow-hidden bg-(--ui-surface-background)">
+      <BoardAnnouncer announcement={announcement} />
       {/* Page-owned titlebar chrome: exists exactly while this page is mounted. */}
       <Contribute area={TITLEBAR_AREAS.center} id="kanban:board-switcher">
         <BoardSwitcher />
@@ -1602,7 +1634,10 @@ export function KanbanBoardPage() {
 
       <header
         className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-4 py-2 md:flex md:flex-wrap"
+        data-kanban-focus-target
         data-kanban-layout={viewport.desktop ? 'desktop' : 'mobile'}
+        ref={boardHeader}
+        tabIndex={-1}
       >
         <div className="flex min-w-0 items-center gap-2">
           <h1 className="truncate text-sm font-semibold text-foreground">{k.title}</h1>
@@ -1692,6 +1727,7 @@ export function KanbanBoardPage() {
                 key={col.name}
                 laneWidth={viewport.laneWidth}
                 onAdd={setAddStatus}
+                onAnnouncement={announceAttention}
                 onDelete={id => deleteMut.mutate(id)}
                 onDropTask={onMove}
                 onMove={onMove}

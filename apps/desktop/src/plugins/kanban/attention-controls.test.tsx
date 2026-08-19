@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type * as KanbanApi from './api'
 import { updateAttention } from './api'
-import { AttentionControls } from './board'
+import { type AttentionAnnouncement, AttentionControls, BoardAnnouncer } from './board'
 import { formatLocalDateTime, parseLocalDateTime } from './datetime-local'
 import type { AttentionReceipt, KanbanTask } from './types'
 
@@ -55,21 +55,23 @@ describe('attention lifecycle controls', () => {
     updateAttentionMock.mockImplementationOnce(() => new Promise((_resolve, fail) => { reject = fail }))
 
     function ReconciledControl() {
-      const [announcement, setAnnouncement] = useState('')
-      const [task, setTask] = useState({ ...baseTask, attention: receipt('active', 0) })
+      const [announcement, setAnnouncement] = useState<AttentionAnnouncement | null>(null)
+      const [visible, setVisible] = useState(true)
 
       return (
-        <AttentionControls
-          announcement={announcement}
-          onAnnouncement={message => {
-            setAnnouncement(message)
-
-            if (message.includes('changed elsewhere')) {
-              setTask(current => ({ ...current, attention: receipt('settled', 1) }))
-            }
-          }}
-          task={task}
-        />
+        <div>
+          <BoardAnnouncer announcement={announcement} />
+          {visible && (
+            <AttentionControls
+              onAnnouncement={next => {
+                setAnnouncement(next)
+                setVisible(false)
+              }}
+              task={{ ...baseTask, attention: receipt('active', 0) }}
+            />
+          )}
+          {!visible && <div data-testid="authoritative-settled-lane">Settled elsewhere</div>}
+        </div>
       )
     }
 
@@ -78,8 +80,23 @@ describe('attention lifecycle controls', () => {
     await waitFor(() => expect(updateAttentionMock).toHaveBeenCalledTimes(1))
     reject(new Error('409 stale attention revision'))
 
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Wake' })).toBeTruthy())
-    expect(screen.getByRole('status').textContent).toBe('This task changed elsewhere. Your action was not applied.')
+    await waitFor(() => expect(screen.getByTestId('authoritative-settled-lane')).toBeTruthy())
+    expect(screen.queryByRole('button', { name: 'Settle' })).toBeNull()
+    expect(screen.getAllByRole('status')).toHaveLength(1)
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('This task changed elsewhere. Your action was not applied.'))
+  })
+
+  it('commits an empty frame for repeated text and ignores duplicate attempt ids', async () => {
+    const first = { attemptId: 'attempt-1', message: 'Task awake' }
+    const { rerender } = render(<BoardAnnouncer announcement={first} />)
+    expect(screen.getByRole('status').textContent).toBe('Task awake')
+
+    rerender(<BoardAnnouncer announcement={first} />)
+    expect(screen.getByRole('status').textContent).toBe('Task awake')
+
+    rerender(<BoardAnnouncer announcement={{ attemptId: 'attempt-2', message: 'Task awake' }} />)
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('Task awake'))
+    expect(screen.getAllByRole('status')).toHaveLength(1)
   })
 
   it('shows the compact presets and restores trigger focus on Escape and Cancel', async () => {
