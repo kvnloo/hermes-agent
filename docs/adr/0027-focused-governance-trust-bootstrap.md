@@ -33,9 +33,19 @@ fallback.
 The home and both fixed anchor components are opened descriptor-relatively with
 `O_NOFOLLOW`. Every component must be uid-owned mode 0700. Trust root and
 manifest must be uid-owned regular mode 0600. Device, inode, uid, mode, size,
-mtime and ctime are captured before/after reads. Immediately before publication,
-every still-open descriptor is revalidated and the complete pathname chain is
-reopened and compared, detecting replacement, chmod, ctime and swap races.
+mtime, ctime, and link count are captured before/after reads. Immediately before
+publication, under the same generation/publication lock, both document names are
+opened into a pinned pair before either is accepted. Opposing open-order passes
+reread and hash both documents, compare complete descriptor metadata, compare
+both no-follow directory entries, revisit both descriptors, and recheck every
+anchor component. Final document descriptors remain open through snapshot
+commit, detecting replacement, chmod, ctime, hard-link, and inter-document swaps.
+
+The snapshot's authority is the authenticated envelope, validated content, and
+pinned descriptor set—not mutable pathnames after commit. An OS actor can rename
+a pathname after the final set validation, but that cannot alter the bytes in the
+already committed immutable snapshot; a later reload observes the changed entry
+and denies it. This is not a claim that pathnames remain frozen after commit.
 
 Each reload reserves a strictly increasing local generation before validation.
 Publication is compare-and-swap by that generation. A failure publishes DENY

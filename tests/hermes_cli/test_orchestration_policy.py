@@ -158,7 +158,7 @@ def test_post_read_metadata_revalidation_catches_chmod_ctime_and_size(tmp_path: 
     assert snapshot.reason == "document_changed_before_publish"
 
 
-def test_linearizable_reload_older_success_cannot_overwrite_newer_deny(tmp_path: Path, monkeypatch) -> None:
+def test_reload_validation_and_publication_share_one_generation_lock(tmp_path: Path, monkeypatch) -> None:
     home, fd = _fixture(tmp_path)
     loader = _loader(home, fd)
     original = policy._load_candidate
@@ -181,14 +181,22 @@ def test_linearizable_reload_older_success_cannot_overwrite_newer_deny(tmp_path:
     older = threading.Thread(target=lambda: result.append(loader.reload()))
     older.start()
     assert first_validated.wait(5)
-    newer = loader.reload()
+    newer_result: list[policy.PolicySnapshot] = []
+    newer_thread = threading.Thread(target=lambda: newer_result.append(loader.reload()))
+    newer_thread.start()
+    # The second generation cannot validate while the first generation still
+    # owns its pinned descriptors and publication lock.
+    assert calls == 1
     release_first.set()
     older.join(5)
+    newer_thread.join(5)
+    newer = newer_result[0]
     try:
         assert newer.reload_generation == 2
         assert newer.reason == "newer_failure"
         assert loader.snapshot == newer
-        assert result == [newer]
+        assert result[0].reload_generation == 1
+        assert result[0].validity == "FROZEN"
     finally:
         os.close(fd)
 
@@ -236,31 +244,125 @@ def test_production_boundary_ignores_late_env_and_object_forgery(tmp_path: Path,
         os.close(fd)
 
 
-@pytest.mark.parametrize("name", [policy.TRUST_ROOT_NAME, policy.MANIFEST_NAME])
-def test_final_pathname_reopen_rejects_rename_replacement(tmp_path: Path, monkeypatch, name: str) -> None:
+@pytest.mark.parametrize("name,swap_call", [
+    (policy.TRUST_ROOT_NAME, 4),
+    (policy.MANIFEST_NAME, 6),
+])
+def test_final_pair_rejects_both_inter_document_reopen_races(tmp_path: Path, monkeypatch, name: str, swap_call: int) -> None:
     home, fd = _fixture(tmp_path)
     anchor = policy.trust_anchor_path(home)
-    real_reopen = policy._reopen_regular
+    real_read = policy._read_regular
     swapped = False
+    calls = 0
 
-    def swap_then_reopen(anchor_fd: int, reopened_name: str, identity, digest: str) -> None:
-        nonlocal swapped
-        if reopened_name == name and not swapped:
+    def race_read(anchor_fd: int, reopened_name: str):
+        nonlocal calls, swapped
+        calls += 1
+        if calls == swap_call and not swapped:
             swapped = True
             target = anchor / name
             raw = target.read_bytes()
             target.rename(anchor / f"{name}.detached")
             target.write_bytes(raw)
             os.chmod(target, 0o600)
-        real_reopen(anchor_fd, reopened_name, identity, digest)
+        return real_read(anchor_fd, reopened_name)
 
-    monkeypatch.setattr(policy, "_reopen_regular", swap_then_reopen)
+    monkeypatch.setattr(policy, "_read_regular", race_read)
     try:
         snapshot = _loader(home, fd).reload()
     finally:
         os.close(fd)
     assert snapshot.validity == "DENY"
-    assert snapshot.reason == f"pathname_replaced_{name}"
+    assert name in snapshot.reason
+
+
+def test_repeated_swaps_during_pair_directory_validation_deny(tmp_path: Path, monkeypatch) -> None:
+    home, fd = _fixture(tmp_path)
+    anchor = policy.trust_anchor_path(home)
+    real_stat = policy.os.stat
+    swaps = 0
+
+    def racing_stat(path, *args, **kwargs):
+        nonlocal swaps
+        if kwargs.get("dir_fd") is not None and path in {policy.TRUST_ROOT_NAME, policy.MANIFEST_NAME}:
+            target = anchor / path
+            raw = target.read_bytes()
+            target.rename(anchor / f"swap-{swaps}")
+            target.write_bytes(raw)
+            os.chmod(target, 0o600)
+            swaps += 1
+        return real_stat(path, *args, **kwargs)
+
+    monkeypatch.setattr(policy.os, "stat", racing_stat)
+    try:
+        snapshot = _loader(home, fd).reload()
+    finally:
+        os.close(fd)
+    assert swaps >= 1
+    assert snapshot.validity == "DENY"
+    assert "directory_entry_changed" in snapshot.reason
+
+
+def test_mutation_oracle_removing_final_pair_pass_would_accept_replacement(tmp_path: Path, monkeypatch) -> None:
+    home, fd = _fixture(tmp_path)
+    anchor = policy.trust_anchor_path(home)
+
+    def omitted_pair(anchor_fd, expected, order):
+        # Model the rejected implementation: mutate between documents, then
+        # omit the set-level reopen/stat/hash phase entirely.
+        if order[0] == policy.TRUST_ROOT_NAME:
+            target = anchor / policy.TRUST_ROOT_NAME
+            raw = target.read_bytes()
+            # In-place write changes the already validated descriptor's ctime
+            # without changing the anchor directory identity.
+            target.write_bytes(raw)
+        return []
+
+    monkeypatch.setattr(policy, "_open_final_pair", omitted_pair)
+    try:
+        snapshot = _loader(home, fd).reload()
+    finally:
+        os.close(fd)
+    assert snapshot.validity == "FROZEN"
+
+
+def test_final_descriptors_live_through_commit_and_later_reload_detects_path_change(tmp_path: Path, monkeypatch) -> None:
+    home, fd = _fixture(tmp_path)
+    anchor = policy.trust_anchor_path(home)
+    real_pair = policy._open_final_pair
+    final_fds: list[int] = []
+
+    def recording_pair(*args, **kwargs):
+        opened = real_pair(*args, **kwargs)
+        final_fds.extend(opened)
+        return opened
+
+    def mutate_after_validation() -> None:
+        assert len(final_fds) == 4
+        assert all(os.fstat(open_fd).st_nlink >= 1 for open_fd in final_fds)
+        target = anchor / policy.TRUST_ROOT_NAME
+        raw = target.read_bytes()
+        target.rename(anchor / "post-validation-detached")
+        target.write_bytes(b"x" * len(raw))
+        os.chmod(target, 0o600)
+
+    monkeypatch.setattr(policy, "_open_final_pair", recording_pair)
+    loader = _loader(home, fd)
+    try:
+        committed = loader.reload(after_validate=mutate_after_validation)
+        assert committed.validity == "FROZEN"
+        assert all(_fd_is_closed(open_fd) for open_fd in final_fds)
+        assert loader.reload().validity == "DENY"
+    finally:
+        os.close(fd)
+
+
+def _fd_is_closed(fd: int) -> bool:
+    try:
+        os.fstat(fd)
+    except OSError:
+        return True
+    return False
 
 
 def test_disposable_gate_executes_real_db_and_popen_surfaces_only_when_active(tmp_path: Path) -> None:
