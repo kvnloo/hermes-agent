@@ -29,8 +29,7 @@ _REQUIRED_SEALS = (
     | getattr(fcntl, "F_SEAL_GROW", 0)
     | getattr(fcntl, "F_SEAL_WRITE", 0)
 )
-_PRODUCTION = object()
-_TEST = object()
+_STARTUP_FD_ENV = "HERMES_POLICY_ENVELOPE_FD"
 
 
 class PolicyLoadError(RuntimeError):
@@ -55,15 +54,6 @@ class _TestPolicyKeyProvider:
     def get_key(self, key_id: str) -> bytes | None:
         value = self._keys.get(key_id)
         return bytes(value) if value is not None else None
-
-
-@dataclass(frozen=True)
-class LauncherPolicyState:
-    """Startup-owned values resolved before worker/config input is accepted."""
-
-    hermes_home: Path
-    envelope_fd: int
-    _authority: object = _PRODUCTION
 
 
 @dataclass(frozen=True)
@@ -174,6 +164,25 @@ def _same_open_chain(home: Path, expected: list[FileIdentity]) -> bool:
     finally:
         for fd in reversed(fds):
             os.close(fd)
+
+
+def _reopen_regular(
+    anchor_fd: int,
+    name: str,
+    expected_identity: FileIdentity,
+    expected_sha256: str,
+) -> None:
+    """Re-resolve and reread a document name immediately before publish."""
+    raw, identity, fd = _read_regular(anchor_fd, name)
+    try:
+        if identity != expected_identity:
+            raise PolicyLoadError(f"pathname_replaced_{name}")
+        if hashlib.sha256(raw).hexdigest() != expected_sha256:
+            raise PolicyLoadError(f"pathname_content_changed_{name}")
+        if _identity(os.fstat(fd)) != expected_identity:
+            raise PolicyLoadError(f"pathname_changed_{name}")
+    finally:
+        os.close(fd)
 
 
 def _read_regular(anchor_fd: int, name: str) -> tuple[bytes, FileIdentity, int]:
@@ -296,9 +305,15 @@ def _load_candidate(home: Path, envelope_fd: int, provider: _PolicyKeyProvider, 
             raise PolicyLoadError("manifest_authentication_failed")
         if str(signed.get("governance_content_sha256")) != envelope.governance_content_sha256 or str(signed.get("governance_version")) != envelope.governance_version:
             raise PolicyLoadError("manifest_governance_mismatch")
-        # Revalidate every descriptor and every pathname immediately before publish.
+        # Revalidate every original descriptor, then resolve and reread both
+        # final pathnames from the anchor immediately before publication.
         if _identity(os.fstat(trust_fd)) != trust_identity or _identity(os.fstat(manifest_fd)) != manifest_identity:
             raise PolicyLoadError("document_changed_before_publish")
+        _reopen_regular(
+            fds[-1], TRUST_ROOT_NAME, trust_identity,
+            hashlib.sha256(trust_raw).hexdigest(),
+        )
+        _reopen_regular(fds[-1], MANIFEST_NAME, manifest_identity, manifest_hash)
         if [_identity(os.fstat(fd)) for fd in fds] != chain or not _same_open_chain(home, chain):
             raise PolicyLoadError("anchor_changed_before_publish")
         return PolicySnapshot(0, envelope.generation, "FROZEN", "activation_unsupported", anchor.device, anchor.inode, envelope.governance_version, envelope.governance_content_sha256, _receipt_binding(envelope, manifest_hash))
@@ -346,29 +361,51 @@ class _StartupPolicyLoader:
             return candidate
 
 
-def create_startup_policy_loader(state: LauncherPolicyState) -> _StartupPolicyLoader:
-    """Only production factory: launcher state plus the closed Keel provider."""
-    if type(state) is not LauncherPolicyState or state._authority is not _PRODUCTION:
-        raise PolicyLoadError("untrusted_launcher_state")
-    return _StartupPolicyLoader(state.hermes_home, state.envelope_fd, _KeelSecretServiceProvider())
+def _seal_startup_boundary() -> Callable[[], _StartupPolicyLoader]:
+    """Capture launcher facts once and return a zero-input boundary."""
+    raw_home = os.environ.get("HERMES_HOME")
+    raw_fd = os.environ.get(_STARTUP_FD_ENV)
+    home = Path(raw_home).resolve() if raw_home else None
+    provider = _KeelSecretServiceProvider()
+    try:
+        envelope_fd = int(raw_fd) if raw_fd is not None else -1
+    except ValueError:
+        envelope_fd = -1
+
+    def create() -> _StartupPolicyLoader:
+        if home is None or envelope_fd < 3:
+            raise PolicyLoadError("launcher_bootstrap_unavailable")
+        return _StartupPolicyLoader(home, envelope_fd, provider)
+
+    return create
 
 
-def _create_test_policy_loader(home: Path, envelope_fd: int, keys: Mapping[str, bytes], *, production: bool, clock: Callable[[], int]) -> _StartupPolicyLoader:
+_create_from_sealed_startup = _seal_startup_boundary()
+del _seal_startup_boundary
+
+
+def create_startup_policy_loader() -> _StartupPolicyLoader:
+    """Create from the launcher's immutable startup capture only."""
+    return _create_from_sealed_startup()
+
+
+def create_test_policy_loader(home: Path, envelope_fd: int, keys: Mapping[str, bytes], *, production: bool, clock: Callable[[], int]) -> _StartupPolicyLoader:
     if production:
         raise PolicyLoadError("test_provider_forbidden_in_production")
     return _StartupPolicyLoader(home, envelope_fd, _TestPolicyKeyProvider(keys), clock=clock)
 
 
-class FocusedPolicyFixture:
+class _FocusedPolicyFixture:
     """Disposable adapter over real create/promote/claim/spawn callables.
 
     It captures one startup snapshot.  Production never constructs this fixture;
     it exists to prove all four mutation surfaces use the same immutable decision.
     """
 
-    def __init__(self, snapshot: PolicySnapshot, surfaces: Mapping[str, Callable[[], object]]):
+    def __init__(self, snapshot: PolicySnapshot, surfaces: Mapping[str, Callable[[], object]], *, active: bool):
         self._snapshot = snapshot
         self._surfaces = dict(surfaces)
+        self._active = active
 
     @property
     def startup_snapshot(self) -> PolicySnapshot:
@@ -377,6 +414,19 @@ class FocusedPolicyFixture:
     def invoke(self, surface: str) -> object:
         if surface not in {"create", "promote", "claim", "spawn"}:
             raise ValueError("unknown policy surface")
-        if not self._snapshot.focused or self._snapshot.validity != "ACTIVE":
+        if not self._active:
             raise PermissionError(f"focused policy denied {surface}: {self._snapshot.reason}")
         return self._surfaces[surface]()
+
+
+def create_test_surface_fixture(
+    snapshot: PolicySnapshot,
+    surfaces: Mapping[str, Callable[[], object]],
+    *,
+    active: bool,
+    production: bool,
+) -> _FocusedPolicyFixture:
+    """Build the disposable proof harness; it cannot enter production."""
+    if production:
+        raise PolicyLoadError("test_surface_fixture_forbidden_in_production")
+    return _FocusedPolicyFixture(snapshot, surfaces, active=active)
