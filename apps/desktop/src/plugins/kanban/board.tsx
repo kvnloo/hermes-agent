@@ -241,13 +241,25 @@ function CardFooter({ arc, task }: { arc: ArcState | null; task: KanbanTask }) {
   )
 }
 
-export function AttentionControls({ task }: { task: KanbanTask }) {
+const STALE_ATTENTION_ANNOUNCEMENT = 'This task changed elsewhere. Your action was not applied.'
+
+export function AttentionControls({
+  announcement,
+  onAnnouncement,
+  task
+}: {
+  announcement?: string
+  onAnnouncement?: (message: string) => void
+  task: KanbanTask
+}) {
   const qc = useQueryClient()
   const [custom, setCustom] = useState('')
+  const [localAnnouncement, setLocalAnnouncement] = useState('')
   const [snoozeOpen, setSnoozeOpen] = useState(false)
-  const [announcement, setAnnouncement] = useState('')
   const snoozeTrigger = useRef<HTMLButtonElement>(null)
   const receipt = task.attention ?? { state: 'active' as const, revision: 0 }
+  const liveAnnouncement = announcement ?? localAnnouncement
+  const announce = onAnnouncement ?? setLocalAnnouncement
 
   const closeSnooze = () => {
     setSnoozeOpen(false)
@@ -255,11 +267,17 @@ export function AttentionControls({ task }: { task: KanbanTask }) {
   }
 
   const action = useMutation({
-    mutationFn: ({ kind, wakeAt }: { kind: 'settle' | 'snooze' | 'wake'; wakeAt?: number }) =>
-      updateAttention(task.id, kind, receipt.revision, wakeAt),
+    mutationFn: ({ kind, wakeAt }: { kind: 'settle' | 'snooze' | 'wake'; wakeAt?: number }) => {
+      // Keep the prior live-region message mounted until the next user action.
+      // This clears it at a user-paced boundary instead of racing AT with a timer.
+      announce('')
+
+      return updateAttention(task.id, kind, receipt.revision, wakeAt)
+    },
     onError: error => {
-      const message = errText(error)
-      setAnnouncement(message)
+      const detail = errText(error)
+      const message = /stale|conflict|\b409\b/i.test(detail) ? STALE_ATTENTION_ANNOUNCEMENT : detail
+      announce(message)
       host.notify({ kind: 'error', message })
       void qc.invalidateQueries({ queryKey: ['kanban', 'board'] })
       void qc.invalidateQueries({ queryKey: ['kanban', 'task'] })
@@ -274,7 +292,7 @@ export function AttentionControls({ task }: { task: KanbanTask }) {
               ? 'Snoozed'
               : 'Awake'
       })
-      setAnnouncement(result.attention.state === 'settled' ? 'Attention settled' : result.attention.state === 'snoozed' ? 'Task snoozed' : 'Task awake')
+      announce(result.attention.state === 'settled' ? 'Attention settled' : result.attention.state === 'snoozed' ? 'Task snoozed' : 'Task awake')
 
       if (result.attention.state === 'snoozed') {
         closeSnooze()
@@ -305,7 +323,7 @@ export function AttentionControls({ task }: { task: KanbanTask }) {
   if (receipt.state === 'settled') {
     return (
       <div onClick={stop} onKeyDown={stop}>
-        <span aria-atomic="true" aria-live="polite" className="sr-only" role="status">{announcement}</span>
+        <span aria-atomic="true" aria-live="polite" className="sr-only" role="status">{liveAnnouncement}</span>
         <button
           className="min-h-7 rounded px-2 text-[0.6875rem] text-(--ui-text-secondary) hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2"
           disabled={action.isPending}
@@ -320,7 +338,7 @@ export function AttentionControls({ task }: { task: KanbanTask }) {
 
   return (
     <div className="flex flex-wrap items-center gap-1 border-t border-(--ui-stroke-tertiary) pt-1.5" onClick={stop} onKeyDown={stop}>
-      <span aria-atomic="true" aria-live="polite" className="sr-only" role="status">{announcement}</span>
+      <span aria-atomic="true" aria-live="polite" className="sr-only" role="status">{liveAnnouncement}</span>
       <button
         className="min-h-7 rounded px-2 text-[0.6875rem] text-(--ui-text-secondary) hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2"
         disabled={action.isPending}
@@ -383,7 +401,9 @@ export function AttentionControls({ task }: { task: KanbanTask }) {
 }
 
 function Card({
+  announcement,
   columns,
+  onAnnouncement,
   onDelete,
   onMove,
   onOpen,
@@ -391,7 +411,9 @@ function Card({
   selected,
   task
 }: {
+  announcement: string
   columns: string[]
+  onAnnouncement: (message: string) => void
   onDelete: (id: string) => void
   onMove: (id: string, status: string) => void
   onOpen: (id: string) => void
@@ -446,7 +468,7 @@ function Card({
             <span className="line-clamp-2 text-[0.6875rem] leading-snug text-(--ui-text-tertiary)">{summary}</span>
           )}
           <CardFooter arc={arc} task={task} />
-          <AttentionControls task={task} />
+          <AttentionControls announcement={announcement} onAnnouncement={onAnnouncement} task={task} />
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>
@@ -508,11 +530,33 @@ function Column({
 }) {
   const k = useKanban()
   const [over, setOver] = useState(false)
+  // Cards move between the active list and settled disclosure after an
+  // authoritative refresh. Keep their live-region text at the stable lane
+  // boundary so that reconciliation cannot remount it back to empty.
+  const [announcements, setAnnouncements] = useState<Record<string, string>>({})
   const meta = columnMeta(column.name)
   const label = columnLabel(k, column.name)
   const locked = isLockedTarget(column.name)
   const byProfile = useValue($lanesByProfile)
   const activeTasks = column.tasks.filter(task => (task.attention?.state ?? 'active') === 'active')
+
+  const announce = (taskId: string, message: string) => {
+    setAnnouncements(current => {
+      if (current[taskId] === message) {
+        return current
+      }
+
+      if (!message) {
+        const rest = { ...current }
+
+        delete rest[taskId]
+
+        return rest
+      }
+
+      return { ...current, [taskId]: message }
+    })
+  }
 
   const settledTasks = column.tasks
     .filter(task => task.attention?.state === 'settled')
@@ -629,8 +673,10 @@ function Column({
                 </div>
                 {tasks.map(task => (
                   <Card
+                    announcement={announcements[task.id] ?? ''}
                     columns={columns}
                     key={task.id}
+                    onAnnouncement={message => announce(task.id, message)}
                     onDelete={onDelete}
                     onMove={onMove}
                     onOpen={onOpen}
@@ -643,8 +689,10 @@ function Column({
             ))
           : activeTasks.map(task => (
               <Card
+                announcement={announcements[task.id] ?? ''}
                 columns={columns}
                 key={task.id}
+                onAnnouncement={message => announce(task.id, message)}
                 onDelete={onDelete}
                 onMove={onMove}
                 onOpen={onOpen}
@@ -661,8 +709,10 @@ function Column({
             <div className="grid gap-2 opacity-75">
               {settledTasks.map(task => (
                 <Card
+                  announcement={announcements[task.id] ?? ''}
                   columns={columns}
                   key={task.id}
+                  onAnnouncement={message => announce(task.id, message)}
                   onDelete={onDelete}
                   onMove={onMove}
                   onOpen={onOpen}
