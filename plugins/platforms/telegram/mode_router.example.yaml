@@ -1,0 +1,17 @@
+schema_version: 1
+enabled: false
+captain_user_id: "<existing-captain-telegram-user-id>"
+state_path: "<HERMES_HOME>/gateway/telegram-mode-router.json"
+# No group or topic IDs belong in this candidate. Enrollment writes exact IDs
+# only after Captain-DM nonce approval and Telegram admin/type verification.
+profiles:
+  chiefstaff:
+    persona: First Mate
+    active: true
+  starwars:
+    persona: Second Mate · Temple Guard
+    active: true
+  mbp:
+    persona: mbp
+    active: false
+    blocked_reason: canonical profile and signed Mesh identity/trust proof required
