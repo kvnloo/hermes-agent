@@ -2035,6 +2035,36 @@ class PluginContext:
             )
             return False
 
+    def inject_message_once(
+        self,
+        content: str,
+        *,
+        idempotency_key: str,
+        session_key: str,
+        role: str = "user",
+    ):
+        """Durably accept one gateway turn, without legacy fallback."""
+        from gateway.inbox import InboxReceipt, InjectionOutcome
+
+        if not session_key or not self._gateway_injection_allowed():
+            return InboxReceipt(InjectionOutcome.REJECTED)
+        if not self._manager.has_gateway_message_injector:
+            return InboxReceipt(InjectionOutcome.RETRYABLE_FAILURE)
+        plugin_id = self.manifest.key or self.manifest.name
+        try:
+            result = self._manager.inject_gateway_message(
+                session_key=session_key,
+                content=content,
+                plugin_id=plugin_id,
+                role=role,
+                idempotency_key=idempotency_key,
+                require_once=True,
+            )
+            return result if isinstance(result, InboxReceipt) else InboxReceipt(InjectionOutcome.REJECTED)
+        except Exception:
+            logger.warning("inject_message_once failed: plugin=%s", plugin_id, exc_info=True)
+            return InboxReceipt(InjectionOutcome.RETRYABLE_FAILURE)
+
     def _gateway_injection_allowed(self) -> bool:
         """Return whether this plugin may trigger gateway session turns."""
         try:
@@ -3748,12 +3778,12 @@ class PluginManager:
         if registered is not None and registered[0] is owner:
             self._gateway_message_injector = None
 
-    def inject_gateway_message(self, **kwargs: Any) -> bool:
+    def inject_gateway_message(self, **kwargs: Any) -> Any:
         """Submit a plugin-triggered turn to the live gateway."""
         registered = self._gateway_message_injector
         if registered is None:
             return False
-        return bool(registered[1](**kwargs))
+        return registered[1](**kwargs)
 
     def discover_and_load(self, force: bool = False) -> None:
         """Scan all plugin sources and load each plugin found.
