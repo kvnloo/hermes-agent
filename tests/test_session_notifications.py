@@ -2,6 +2,7 @@ import concurrent.futures
 import hashlib
 import json
 import multiprocessing
+import os
 import random
 import sqlite3
 from pathlib import Path
@@ -59,6 +60,36 @@ def _append(store: SessionNotificationStore, **overrides):
 
 def _process_append(path: str, queue) -> None:
     queue.put(_append(SessionNotificationStore(Path(path), timeout=10)).outcome.value)
+
+
+def _crash_process(path: str, operation: str, failpoint: str, notification_id: str = "") -> None:
+    def crash(name):
+        if name == failpoint:
+            os._exit(86)
+
+    store = SessionNotificationStore(Path(path), clock=lambda: 1000.0, failure_hook=crash)
+    if operation == "migrate":
+        store.migrate_legacy_gateway_notifications()
+    elif operation == "accept":
+        _append(store)
+    elif operation == "ack":
+        store._acknowledge(
+            notification_id, profile_name="default", session_key=SESSION_KEY,
+            generation=7, identity_binding="captain-binding", retention_seconds=0,
+        )
+    elif operation == "compact":
+        store.compact_acknowledged()
+
+
+class _PageLimitedStore(SessionNotificationStore):
+    def __init__(self, db_path: Path, max_pages: int):
+        super().__init__(db_path)
+        self.max_pages = max_pages
+
+    def _connect(self):
+        conn = super()._connect()
+        conn.execute(f"PRAGMA max_page_count={self.max_pages}")
+        return conn
 
 
 def test_atomic_accept_replay_conflict_and_transcript_is_untouched(tmp_path):
@@ -450,6 +481,61 @@ def test_sqlite_full_during_migration_rolls_back_all_evidence(tmp_path, failpoin
     db.close()
 
 
+def test_real_sqlite_page_limit_full_rolls_back_migration_and_retries(tmp_path):
+    db, store = _db(tmp_path)
+    with sqlite3.connect(db.db_path) as conn:
+        conn.executescript("""
+            CREATE TABLE gateway_inbox(inbox_id TEXT PRIMARY KEY,idempotency_key TEXT);
+            CREATE TABLE gateway_turns(turn_id TEXT PRIMARY KEY,inbox_id TEXT,source_id TEXT,
+                session_key TEXT,session_id TEXT,generation INTEGER,created_at REAL);
+        """)
+        for index in range(250):
+            conn.execute("INSERT INTO gateway_inbox VALUES(?,?)", (f"inbox-{index}", f"key-{index}"))
+            conn.execute(
+                "INSERT INTO gateway_turns VALUES(?,?,?,?,?,?,?)",
+                (f"turn-{index}", f"inbox-{index}", "taildrop", SESSION_KEY,
+                 "session-1", 7, 100.0 + index),
+            )
+        conn.commit()
+        page_count = conn.execute("PRAGMA page_count").fetchone()[0]
+        conn.execute(f"PRAGMA max_page_count={page_count}")
+    limited = _PageLimitedStore(db.db_path, page_count)
+    with pytest.raises(sqlite3.OperationalError, match="database or disk is full"):
+        limited.migrate_legacy_gateway_notifications()
+    with sqlite3.connect(db.db_path) as conn:
+        assert conn.execute("SELECT COUNT(*) FROM session_notifications").fetchone()[0] == 0
+        assert conn.execute(
+            "SELECT COUNT(*) FROM session_notification_migration_classifications"
+        ).fetchone()[0] == 0
+        assert conn.execute("SELECT 1 FROM state_meta WHERE key=?", (MIGRATION_MARKER,)).fetchone() is None
+        conn.execute("PRAGMA max_page_count=1073741823")
+    assert store.migrate_legacy_gateway_notifications() == 250
+    db.close()
+
+
+def test_real_sqlite_page_limit_full_accept_has_no_partial_row_and_retries(tmp_path):
+    db, store = _db(tmp_path)
+    with sqlite3.connect(db.db_path) as conn:
+        page_count = conn.execute("PRAGMA page_count").fetchone()[0]
+        conn.execute(f"PRAGMA max_page_count={page_count}")
+    limited = _PageLimitedStore(db.db_path, page_count)
+    accepted = 0
+    for index in range(500):
+        result = _append(limited, idempotency_key=f"real-full-{index}")
+        if result.outcome is NotificationOutcome.RETRYABLE_FAILURE:
+            failed_key = f"real-full-{index}"
+            break
+        assert result.outcome is NotificationOutcome.ACCEPTED
+        accepted += 1
+    else:
+        pytest.fail("SQLite max_page_count did not produce SQLITE_FULL")
+    with sqlite3.connect(db.db_path) as conn:
+        assert conn.execute("SELECT COUNT(*) FROM session_notifications").fetchone()[0] == accepted
+        conn.execute("PRAGMA max_page_count=1073741823")
+    assert _append(store, idempotency_key=failed_key).outcome is NotificationOutcome.ACCEPTED
+    db.close()
+
+
 def test_corrupt_partial_schema_and_busy_migration_fail_closed(tmp_path):
     corrupt = tmp_path / "corrupt.db"
     corrupt.write_bytes(b"not-a-sqlite-database")
@@ -610,4 +696,93 @@ def test_complete_legacy_collision_matrix_reconciles_idempotently(
         assert json.dumps(json.loads(conn.execute(
             "SELECT value FROM state_meta WHERE key=?", (MIGRATION_MARKER,)
         ).fetchone()[0]), sort_keys=True) == sealed
+    db.close()
+
+
+@pytest.mark.parametrize("operation,failpoint,committed", [
+    ("accept", "before_accept_commit", False),
+    ("accept", "after_accept_commit", True),
+    ("ack", "before_ack_commit", False),
+    ("ack", "after_ack_commit", True),
+    ("compact", "before_compaction_commit", False),
+    ("compact", "after_compaction_commit", True),
+])
+def test_real_process_crash_reopen_and_retry_is_atomic(tmp_path, operation, failpoint, committed):
+    db, store = _db(tmp_path)
+    notification_id = ""
+    if operation in {"ack", "compact"}:
+        notification_id = _append(store).notification_id
+    if operation == "compact":
+        store = SessionNotificationStore(db.db_path, clock=lambda: 1000.0)
+        assert store._acknowledge(
+            notification_id, profile_name="default", session_key=SESSION_KEY,
+            generation=7, identity_binding="captain-binding", retention_seconds=0,
+        )
+    process = multiprocessing.get_context("spawn").Process(
+        target=_crash_process,
+        args=(str(db.db_path), operation, failpoint, notification_id),
+    )
+    process.start()
+    process.join(20)
+    assert process.exitcode == 86
+    with sqlite3.connect(db.db_path) as conn:
+        status = conn.execute(
+            "SELECT status FROM session_notifications WHERE notification_id=?", (notification_id,)
+        ).fetchone() if notification_id else None
+        audit_count = conn.execute("SELECT COUNT(*) FROM session_notification_owner_audit").fetchone()[0]
+        receipt_count = conn.execute(
+            "SELECT COUNT(*) FROM session_notification_compaction_receipts"
+        ).fetchone()[0]
+        if operation == "accept":
+            assert conn.execute("SELECT COUNT(*) FROM session_notifications").fetchone()[0] == int(committed)
+        elif operation == "ack":
+            assert status[0] == ("acknowledged" if committed else "pending")
+            assert audit_count == int(committed)
+        else:
+            assert (status is None) is committed
+            assert receipt_count == int(committed)
+    restarted = SessionNotificationStore(db.db_path, clock=lambda: 1000.0)
+    if operation == "accept":
+        assert _append(restarted).outcome is (
+            NotificationOutcome.ALREADY_ACCEPTED if committed else NotificationOutcome.ACCEPTED
+        )
+    elif operation == "ack":
+        assert restarted._acknowledge(
+            notification_id, profile_name="default", session_key=SESSION_KEY,
+            generation=7, identity_binding="captain-binding", retention_seconds=0,
+        ) is (not committed)
+    else:
+        restarted.compact_acknowledged()
+        with sqlite3.connect(db.db_path) as conn:
+            assert conn.execute(
+                "SELECT COUNT(*) FROM session_notifications WHERE notification_id=?", (notification_id,)
+            ).fetchone()[0] == 0
+    db.close()
+
+
+@pytest.mark.parametrize("failpoint,committed", [("before_commit", False), ("after_commit", True)])
+def test_real_process_crash_migration_marker_is_atomic(tmp_path, failpoint, committed):
+    db, _ = _db(tmp_path)
+    with sqlite3.connect(db.db_path) as conn:
+        conn.executescript("""
+            CREATE TABLE gateway_inbox(inbox_id TEXT PRIMARY KEY,idempotency_key TEXT);
+            CREATE TABLE gateway_turns(turn_id TEXT PRIMARY KEY,inbox_id TEXT,source_id TEXT,
+                session_key TEXT,session_id TEXT,generation INTEGER,created_at REAL);
+            INSERT INTO gateway_inbox VALUES('inbox-1','legacy-key');
+            INSERT INTO gateway_turns VALUES('turn-1','inbox-1','taildrop',
+                'agent:main:telegram:dm:42','session-1',7,100);
+        """)
+    process = multiprocessing.get_context("spawn").Process(
+        target=_crash_process, args=(str(db.db_path), "migrate", failpoint),
+    )
+    process.start()
+    process.join(20)
+    assert process.exitcode == 86
+    with sqlite3.connect(db.db_path) as conn:
+        assert (conn.execute("SELECT 1 FROM state_meta WHERE key=?", (MIGRATION_MARKER,)).fetchone()
+                is not None) is committed
+        assert conn.execute(
+            "SELECT COUNT(*) FROM session_notification_migration_classifications"
+        ).fetchone()[0] == int(committed)
+    assert SessionNotificationStore(db.db_path).migrate_legacy_gateway_notifications() == (0 if committed else 1)
     db.close()

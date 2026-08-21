@@ -1,11 +1,12 @@
 import json
 import sqlite3
+from contextlib import ExitStack
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from gateway.config import Platform
+from gateway.config import GatewayConfig, Platform, PlatformConfig
 from gateway.platforms.base import MessageEvent
 from gateway.run import GatewayRunner
 from gateway.session import SessionSource
@@ -27,17 +28,39 @@ def _event(text, **source):
 
 def _runner(db_path, live):
     runner = object.__new__(GatewayRunner)
-    runner.config = SimpleNamespace(platforms={
-        Platform.TELEGRAM: SimpleNamespace(extra={"allow_admin_from": ["42"]})
-    })
+    runner.config = GatewayConfig(platforms={Platform.TELEGRAM: PlatformConfig(
+        enabled=True, token="test-token", extra={"allow_admin_from": ["42"]},
+    )})
+    adapter = MagicMock()
+    adapter.send = AsyncMock(side_effect=AssertionError("out-of-band platform send"))
+    adapter._pending_messages = {}
+    runner.adapters = {Platform.TELEGRAM: adapter}
+    runner.hooks = SimpleNamespace(
+        emit=AsyncMock(), emit_collect=AsyncMock(return_value=[]), loaded_hooks=False,
+    )
+    runner.session_store = MagicMock()
+    runner._voice_mode = {}
+    runner._running_agents_ts = {}
+    runner._session_run_generation = {}
+    runner._pending_approvals = {}
+    runner._session_sources = {}
+    runner._session_db = MagicMock()
     runner._is_user_authorized = lambda source: live["authorized"] and source.user_id == "42"
     runner._session_key_for_source = lambda source: SESSION_KEY if source.chat_id == "42" else f"other:{source.chat_id}"
     runner._peek_session_state = lambda key: SimpleNamespace(
-        persistent=SimpleNamespace(run_generation=live["generation"])
+        persistent=SimpleNamespace(
+            run_generation=live["generation"], update_prompt_pending=False,
+        ),
+        turn=SimpleNamespace(agent=runner._running_agents.get(key), started_ts=0),
     )
     runner._running_agents = {}
     runner._pending_messages = {}
     return runner
+
+
+async def _dispatch(runner, text, **source):
+    """Exercise the production pre-resolution gateway message entrypoint."""
+    return await GatewayRunner._handle_message(runner, _event(text, **source))
 
 
 def _seed(tmp_path, monkeypatch):
@@ -136,4 +159,81 @@ async def test_route_stale_revoked_malformed_and_authorization_read_race_fail_cl
     with patch.object(SessionNotificationStore, "_fetch", revoke_after_read):
         response = await runner._handle_notifications_command(_event(f"/notifications fetch {notification_id}"))
     assert notification_id not in response and _ledger_state(db.db_path) == baseline
+    db.close()
+
+
+@pytest.mark.asyncio
+async def test_production_dispatch_authorized_parses_and_never_falls_through(tmp_path, monkeypatch):
+    db, notification_id = _seed(tmp_path, monkeypatch)
+    runner = _runner(db.db_path, {"authorized": True, "generation": 7})
+    forbidden = MagicMock(side_effect=AssertionError("agent path reached"))
+    runner._handle_message_with_agent = forbidden
+    runner._run_agent = forbidden
+    before_messages = db.get_messages("session-1")
+    prohibited = [
+        "append_message", "append_messages_batch", "update_session_meta",
+        "update_system_prompt", "update_session_model", "update_token_counts",
+        "set_latest_matching_message_display_kind", "set_message_reaction",
+        "set_latest_user_api_content", "delete_session", "delete_sessions", "set_meta",
+    ]
+    with ExitStack() as stack:
+        guards = [stack.enter_context(patch.object(
+            SessionDB, name, side_effect=AssertionError(f"SessionDB.{name} called")
+        )) for name in prohibited]
+        tool_guard = stack.enter_context(patch(
+            "model_tools.handle_function_call", side_effect=AssertionError("tool execution called")
+        ))
+        model_guard = stack.enter_context(patch(
+            "run_agent.AIAgent.run_conversation", side_effect=AssertionError("model loop called")
+        ))
+        listed = await _dispatch(runner, "/notifications list")
+        fetched = json.loads(await _dispatch(runner, f"/notifications fetch {notification_id}"))
+        acked = await _dispatch(runner, f"/notifications ack {notification_id}")
+    for guard in [*guards, tool_guard, model_guard]:
+        guard.assert_not_called()
+    assert notification_id in listed
+    assert fetched["notification_id"] == notification_id
+    assert acked == f"Acknowledged {notification_id}."
+    assert db.get_messages("session-1") == before_messages
+    forbidden.assert_not_called()
+    assert runner._pending_messages == {}
+    assert runner.adapters[Platform.TELEGRAM]._pending_messages == {}
+    runner.adapters[Platform.TELEGRAM].send.assert_not_awaited()
+    db.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("source", [
+    {"user": "99"}, {"chat": "99"}, {"platform": Platform.DISCORD}, {"profile": "other"},
+])
+async def test_production_dispatch_wrong_scope_zero_leak_and_mutation(tmp_path, monkeypatch, source):
+    db, notification_id = _seed(tmp_path, monkeypatch)
+    runner = _runner(db.db_path, {"authorized": True, "generation": 7})
+    before = (_ledger_state(db.db_path), db.get_messages("session-1"))
+    response = await _dispatch(runner, "/notifications list", **source)
+    assert response is None or (notification_id not in response and "taildrop" not in response)
+    assert (_ledger_state(db.db_path), db.get_messages("session-1")) == before
+    assert runner._pending_messages == {}
+    db.close()
+
+
+@pytest.mark.asyncio
+async def test_production_dispatch_stale_revoked_malformed_replay_and_busy(tmp_path, monkeypatch):
+    db, notification_id = _seed(tmp_path, monkeypatch)
+    live = {"authorized": True, "generation": 6}
+    runner = _runner(db.db_path, live)
+    baseline = (_ledger_state(db.db_path), db.get_messages("session-1"))
+    for text in ("/notifications list copied", "/notifications fetch", "/notifications ack",
+                 "/notifications nope", "/notifications list"):
+        response = await _dispatch(runner, text)
+        assert notification_id not in response and "taildrop" not in response
+    live["generation"] = 7
+    live["authorized"] = False
+    assert await _dispatch(runner, "/notifications list") is None
+    live["authorized"] = True
+    runner._running_agents[SESSION_KEY] = MagicMock()
+    busy = await _dispatch(runner, "/notifications list")
+    assert "running" in busy.lower() and notification_id not in busy
+    assert (_ledger_state(db.db_path), db.get_messages("session-1")) == baseline
+    assert runner._pending_messages == {}
     db.close()

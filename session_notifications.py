@@ -372,7 +372,9 @@ class SessionNotificationStore:
                 (key, notification_id, profile, plugin, session["id"], session_key,
                  destination, generation, payload, digest, now, now),
             )
+            self._failpoint("before_accept_commit")
             conn.commit()
+            self._failpoint("after_accept_commit")
             return NotificationReceipt(NotificationOutcome.ACCEPTED, notification_id, digest)
         except sqlite3.OperationalError:
             if conn.in_transaction:
@@ -447,7 +449,9 @@ class SessionNotificationStore:
                 (uuid.uuid4().hex, notification_id, "acknowledge", identity_binding,
                  identity_digest, now),
             )
+            self._failpoint("before_ack_commit")
             conn.commit()
+            self._failpoint("after_ack_commit")
             return True
         finally:
             conn.close()
@@ -475,6 +479,7 @@ class SessionNotificationStore:
                 )
             self._failpoint("before_compaction_commit")
             conn.commit()
+            self._failpoint("after_compaction_commit")
             return receipt, len(rows)
         finally:
             conn.close()
