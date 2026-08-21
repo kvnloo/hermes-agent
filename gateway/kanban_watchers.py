@@ -489,10 +489,7 @@ class GatewayKanbanWatchersMixin:
                             elif not callable(issue):
                                 outcome, error = "deferred", "captain approval surface disabled"
                             else:
-                                result = issue(
-                                    task_id=job["task_id"], chat_id=job["chat_id"],
-                                    decision_generation=int(job["decision_generation"]),
-                                )
+                                result = issue(task_id=job["task_id"], chat_id=job["chat_id"])
                                 if inspect.isawaitable(result):
                                     result = await result
                                 outcome, error = ("active", None) if result else ("pending", "issuance returned false")

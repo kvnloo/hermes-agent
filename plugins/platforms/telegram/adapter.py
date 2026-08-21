@@ -926,8 +926,7 @@ class TelegramAdapter(BasePlatformAdapter):
         return bool(users and str(chat_id) in chats and self._bot)
 
     async def send_captain_approval_request(
-        self, *, task_id: str, chat_id: str, decision_generation: int,
-        issuance_generation: int = 1, expires_in: int = 900,
+        self, *, task_id: str, chat_id: str, expires_in: int = 900,
     ) -> bool:
         """Send and persist a Telegram-bound product approval request."""
         users, chats, board = self._captain_approval_config()
@@ -938,17 +937,14 @@ class TelegramAdapter(BasePlatformAdapter):
         with kb.connect_closing(board=board) as conn:
             active = conn.execute(
                 "SELECT 1 FROM captain_approval_requests WHERE task_id = ? AND platform = 'telegram' "
-                "AND chat_id = ? AND decision_generation = ? AND issuance_generation = ? "
-                "AND state = 'active' LIMIT 1",
-                (task_id, str(chat_id), int(decision_generation), int(issuance_generation)),
+                "AND chat_id = ? AND state = 'active' ORDER BY decision_generation DESC LIMIT 1",
+                (task_id, str(chat_id)),
             ).fetchone()
             if active is not None and active[0] == 1:
                 return True
             persisted = kb.reserve_captain_approval_request(
                 conn, task_id=task_id, platform="telegram", chat_id=str(chat_id),
                 expires_at=int(time.time()) + expires_in, callback_nonce=nonce,
-                decision_generation=decision_generation,
-                issuance_generation=issuance_generation,
             )
         if persisted != nonce:
             return False
@@ -969,8 +965,6 @@ class TelegramAdapter(BasePlatformAdapter):
         with kb.connect_closing(board=board) as conn:
             bound = kb.bind_captain_approval_request(
                 conn, callback_nonce=nonce, message_id=str(sent.message_id),
-                task_id=task_id, decision_generation=decision_generation,
-                issuance_generation=issuance_generation,
             )
         if bound:
             return True
