@@ -16231,6 +16231,9 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
         if canonical == "status":
             return await self._handle_status_command(event)
 
+        if canonical == "notifications":
+            return await self._handle_notifications_command(event)
+
         if canonical == "egress":
             from hermes_cli.proxy_cli import format_status_text
 
@@ -19910,6 +19913,56 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
                 "or to set user_allowed_commands."
             )
         return f"⛔ /{canonical_cmd} is admin-only here. {suffix}"
+
+    async def _handle_notifications_command(self, event: MessageEvent) -> str:
+        """Owner-only notification operations on the authenticated gateway route."""
+        from gateway.notification_owner import GatewayNotificationOwnerService
+        from hermes_constants import get_hermes_home
+
+        source = event.source
+        args = event.get_command_args().strip().split()
+        if len(args) < 2 or args[0] not in {"list", "fetch", "ack"}:
+            return "Usage: /notifications <list|fetch|ack> <plugin> [notification-id]"
+        action, plugin_id = args[:2]
+        if action in {"fetch", "ack"} and len(args) != 3:
+            return f"Usage: /notifications {action} <plugin> <notification-id>"
+
+        def _current_generation(session_key: str) -> int:
+            state = self._peek_session_state(session_key)
+            return int(state.persistent.run_generation) if state is not None else 0
+
+        service = GatewayNotificationOwnerService(
+            db_path=get_hermes_home() / "state.db",
+            gateway_config=self.config,
+            authorize=self._is_user_authorized,
+            session_key_for_source=self._session_key_for_source,
+            current_generation=_current_generation,
+        )
+        if action == "list":
+            rows = service.list_pending(source, plugin_id=plugin_id)
+            if rows is None:
+                return "⛔ Owner notification access denied."
+            if not rows:
+                return "No pending notifications."
+            return "\n".join(
+                f"{row.notification_id} {row.metadata.get('event', 'notification')} "
+                f"gen={row.generation}" for row in rows
+            )
+        notification_id = args[2]
+        if action == "fetch":
+            row = service.fetch(source, notification_id, plugin_id=plugin_id)
+            if row is None:
+                return "Notification not found or access denied."
+            return json.dumps({
+                "notification_id": row.notification_id,
+                "plugin_id": row.plugin_id,
+                "generation": row.generation,
+                "status": row.status,
+                "metadata": row.metadata,
+            }, sort_keys=True, separators=(",", ":"))
+        if service.acknowledge(source, notification_id, plugin_id=plugin_id):
+            return f"Acknowledged {notification_id}."
+        return "Notification not found, stale, already resolved, or access denied."
 
 
 

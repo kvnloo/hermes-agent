@@ -2,17 +2,18 @@ import concurrent.futures
 import multiprocessing
 import sqlite3
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import yaml
+import pytest
 
 from hermes_cli.plugins import PluginContext, PluginManager, PluginManifest
 from hermes_state import SessionDB
-from session_notifications import (
-    GatewayNotificationOwnerBoundary,
-    NotificationOutcome,
-    SessionNotificationStore,
-)
+from gateway.config import Platform
+from gateway.notification_owner import GatewayNotificationOwnerService
+from gateway.session import SessionSource
+from session_notifications import MIGRATION_MARKER, NotificationOutcome, SessionNotificationStore
 
 
 SESSION_KEY = "agent:main:telegram:dm:42"
@@ -115,28 +116,36 @@ def test_owner_scope_generation_ack_and_receipt_backed_retention(tmp_path):
     db, _ = _db(tmp_path)
     store = SessionNotificationStore(db.db_path, clock=lambda: now[0])
     receipt = _append(store)
-    live = {"allowed": True}
-    boundary = GatewayNotificationOwnerBoundary(
-        store, captain_user_id="42", platform="telegram", chat_id="42",
-        profile_name="default", session_key=SESSION_KEY, generation=7,
-        authorization_check=lambda user, platform, chat: live["allowed"] and user == "42",
+    live = {"allowed": True, "generation": 7}
+    config = SimpleNamespace(platforms={
+        Platform.TELEGRAM: SimpleNamespace(extra={"allow_admin_from": ["42"]})
+    })
+    service = GatewayNotificationOwnerService(
+        db_path=db.db_path, gateway_config=config,
+        authorize=lambda source: live["allowed"] and source.user_id == "42",
+        session_key_for_source=lambda source: SESSION_KEY,
+        current_generation=lambda session_key: live["generation"],
     )
-    owner = boundary.issue(user_id="42", platform="telegram", chat_id="42",
-                           profile_name="default", session_key=SESSION_KEY, generation=7)
-    assert owner is not None
-    assert len(boundary.list_pending(owner, plugin_id="taildrop")) == 1
-    assert boundary.fetch(owner, receipt.notification_id, plugin_id="other") is None
+    owner = SessionSource(Platform.TELEGRAM, "42", user_id="42")
+    assert len(service.list_pending(owner, plugin_id="taildrop")) == 1
+    assert service.fetch(owner, receipt.notification_id, plugin_id="other") is None
+    assert service.list_pending(SessionSource(Platform.DISCORD, "42", user_id="42"), plugin_id="taildrop") is None
+    assert service.list_pending(SessionSource(Platform.TELEGRAM, "42", user_id="99"), plugin_id="taildrop") is None
     live["allowed"] = False
-    assert not boundary.acknowledge(owner, receipt.notification_id, plugin_id="taildrop")
+    assert not service.acknowledge(owner, receipt.notification_id, plugin_id="taildrop")
     live["allowed"] = True
-    assert boundary.acknowledge(owner, receipt.notification_id, plugin_id="taildrop", retention_seconds=5)
-    assert boundary.list_pending(owner, plugin_id="taildrop") == []
+    live["generation"] = 6
+    assert not service.acknowledge(owner, receipt.notification_id, plugin_id="taildrop")
+    live["generation"] = 7
+    assert service.acknowledge(owner, receipt.notification_id, plugin_id="taildrop")
+    assert not service.acknowledge(owner, receipt.notification_id, plugin_id="taildrop")
+    assert service.list_pending(owner, plugin_id="taildrop") == []
     assert store.compact_acknowledged()[1] == 0
-    now[0] += 6
-    compaction_receipt, count = store.compact_acknowledged()
-    assert count == 1 and compaction_receipt
     with sqlite3.connect(db.db_path) as conn:
-        assert conn.execute("SELECT row_count FROM session_notification_compaction_receipts WHERE receipt_id=?", (compaction_receipt,)).fetchone()[0] == 1
+        assert conn.execute(
+            "SELECT COUNT(*) FROM session_notification_owner_audit WHERE notification_id=?",
+            (receipt.notification_id,),
+        ).fetchone()[0] == 1
     db.close()
 
 
@@ -206,11 +215,44 @@ def test_legacy_identity_collision_is_preserved_as_conflict(tmp_path):
             "SELECT conflict_class FROM session_notification_migration_conflicts"
         ).fetchone()[0] == "notification_id"
         receipt = conn.execute(
-            "SELECT value FROM state_meta WHERE key='session_notifications_legacy_migrated_v2'"
+            "SELECT value FROM state_meta WHERE key=?", (MIGRATION_MARKER,)
         ).fetchone()[0]
-        assert '"represented_count":1' in receipt and '"version":2' in receipt
+        assert '"source_count":1' in receipt and '"version":3' in receipt
     assert store.migrate_legacy_gateway_notifications() == 0
     db.close()
+
+
+def test_migration_transaction_failpoints_leave_every_source_retryable(tmp_path):
+    failpoints = (
+        "before_notification_insert", "after_notification_insert",
+        "before_classification_insert", "after_classification_insert",
+        "before_marker", "after_marker", "before_commit",
+    )
+    for failpoint in failpoints:
+        case = tmp_path / failpoint
+        case.mkdir()
+        db, _ = _db(case)
+        with sqlite3.connect(db.db_path) as conn:
+            conn.executescript("""
+                CREATE TABLE gateway_inbox(inbox_id TEXT PRIMARY KEY,idempotency_key TEXT);
+                CREATE TABLE gateway_turns(turn_id TEXT PRIMARY KEY,inbox_id TEXT,source_id TEXT,
+                    session_key TEXT,session_id TEXT,generation INTEGER,created_at REAL);
+                INSERT INTO gateway_inbox VALUES('inbox-1','legacy-global-key');
+                INSERT INTO gateway_turns VALUES('turn-1','inbox-1','taildrop',
+                    'agent:main:telegram:dm:42','session-1',7,100.0);
+            """)
+
+        def fail(name, expected=failpoint):
+            if name == expected:
+                raise RuntimeError(expected)
+
+        with pytest.raises(RuntimeError, match=failpoint):
+            SessionNotificationStore(db.db_path, failure_hook=fail).migrate_legacy_gateway_notifications()
+        with sqlite3.connect(db.db_path) as conn:
+            assert conn.execute("SELECT 1 FROM state_meta WHERE key=?", (MIGRATION_MARKER,)).fetchone() is None
+            assert conn.execute("SELECT COUNT(*) FROM session_notification_migration_classifications").fetchone()[0] == 0
+        assert SessionNotificationStore(db.db_path).migrate_legacy_gateway_notifications() == 1
+        db.close()
 
 
 def test_real_plugin_context_boundary_and_compatibility_trap(tmp_path, monkeypatch):
