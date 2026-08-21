@@ -381,33 +381,31 @@ class SessionNotificationStore:
         finally:
             conn.close()
 
-    def _list_pending(self, *, profile_name: str, plugin_id: str,
-                     session_key: str, generation: int,
+    def _list_pending(self, *, profile_name: str, session_key: str, generation: int,
                      limit: int = 100) -> list[SessionNotification]:
         profile = _bounded_text(profile_name, name="profile_name")
-        plugin = _bounded_text(plugin_id, name="plugin_id")
         session_key = _bounded_text(session_key, name="session_key")
         limit = max(1, min(int(limit), 500))
         with self._connect() as conn:
             rows = conn.execute(
-                "SELECT * FROM session_notifications WHERE profile_name=? AND plugin_id=? "
+                "SELECT * FROM session_notifications WHERE profile_name=? "
                 "AND session_key=? AND generation=? AND status='pending' "
                 "ORDER BY created_at,notification_id LIMIT ?",
-                (profile, plugin, session_key, generation, limit),
+                (profile, session_key, generation, limit),
             ).fetchall()
         return [self._record(row) for row in rows]
 
-    def _fetch(self, notification_id: str, *, profile_name: str, plugin_id: str,
+    def _fetch(self, notification_id: str, *, profile_name: str,
               session_key: str, generation: int) -> SessionNotification | None:
         with self._connect() as conn:
             row = conn.execute(
                 "SELECT * FROM session_notifications WHERE notification_id=? AND "
-                "profile_name=? AND plugin_id=? AND session_key=? AND generation=?",
-                (notification_id, profile_name, plugin_id, session_key, generation),
+                "profile_name=? AND session_key=? AND generation=?",
+                (notification_id, profile_name, session_key, generation),
             ).fetchone()
         return self._record(row) if row else None
 
-    def _acknowledge(self, notification_id: str, *, profile_name: str, plugin_id: str,
+    def _acknowledge(self, notification_id: str, *, profile_name: str,
                     session_key: str, generation: int, identity_binding: str,
                     retention_seconds: int = 30 * 86400,
                     still_authorized: Callable[[], bool] | None = None) -> bool:
@@ -419,8 +417,8 @@ class SessionNotificationStore:
             conn.execute("BEGIN IMMEDIATE")
             row = conn.execute(
                 "SELECT * FROM session_notifications WHERE notification_id=? AND "
-                "profile_name=? AND plugin_id=? AND session_key=? AND generation=?",
-                (notification_id, profile_name, plugin_id, session_key, generation),
+                "profile_name=? AND session_key=? AND generation=?",
+                (notification_id, profile_name, session_key, generation),
             ).fetchone()
             if row is None:
                 conn.rollback()
