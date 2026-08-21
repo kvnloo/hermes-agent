@@ -112,15 +112,23 @@ case "$MODE" in
     expect "no chrome-sandbox (namespace)"      relaunch "$(decide --relaunch-target "$UNPACKED/hermes")"
 
     touch "$UNPACKED/chrome-sandbox"
-    expect "sandbox not root/setuid"            manual   "$(decide --relaunch-target "$UNPACKED/hermes")"
-    expect "opt-out: --sandbox-fallback"        relaunch "$(decide --relaunch-target "$UNPACKED/hermes" --sandbox-fallback)"
-    expect "opt-out: --no-sandbox launch arg"   relaunch "$(decide --relaunch-target "$UNPACKED/hermes" -- --no-sandbox)"
-    expect "opt-out: ELECTRON_DISABLE_SANDBOX"  relaunch "$(ELECTRON_DISABLE_SANDBOX=1 decide --relaunch-target "$UNPACKED/hermes")"
+    expect "namespace sandbox removes invalid helper" relaunch "$(HERMES_DESKTOP_USERNS_AVAILABLE=1 decide --relaunch-target "$UNPACKED/hermes")"
+    if [ ! -e "$UNPACKED/chrome-sandbox" ]; then
+      printf 'ok   invalid helper removed for namespace sandbox\n'
+    else
+      printf 'FAIL invalid helper remained after namespace decision\n'; fails=$((fails+1))
+    fi
+
+    touch "$UNPACKED/chrome-sandbox"
+    expect "sandbox not root/setuid, no userns" manual "$(HERMES_DESKTOP_USERNS_AVAILABLE=0 decide --relaunch-target "$UNPACKED/hermes")"
+    expect "opt-out: --sandbox-fallback"        relaunch "$(HERMES_DESKTOP_USERNS_AVAILABLE=0 decide --relaunch-target "$UNPACKED/hermes" --sandbox-fallback)"
+    expect "opt-out: --no-sandbox launch arg"   relaunch "$(HERMES_DESKTOP_USERNS_AVAILABLE=0 decide --relaunch-target "$UNPACKED/hermes" -- --no-sandbox)"
+    expect "opt-out: ELECTRON_DISABLE_SANDBOX"  relaunch "$(HERMES_DESKTOP_USERNS_AVAILABLE=0 ELECTRON_DISABLE_SANDBOX=1 decide --relaunch-target "$UNPACKED/hermes")"
 
     # Result JSON must survive hostile strings (git allows `"` in branch
     # names; messages carry arbitrary text) -- parse it back with python.
     QHOME="$G/qhome"; mkdir -p "$QHOME/hermes-agent"
-    bash "$SCRIPT_DIR/posix.sh" --no-ui --no-marker-cleanup --desktop-pid 0 \
+    bash "$SCRIPT_DIR/posix.sh" --daemonized --no-ui --no-marker-cleanup --desktop-pid 0 \
       --install-root "$QHOME/hermes-agent" --branch 'evil"branch\n$(x)' >/dev/null 2>&1 || true
     if python3 -c "import json,sys; d=json.load(open('$QHOME/.hermes-update-result.json')); sys.exit(0 if d['branch']=='evil\"branch\\\\n\$(x)' and d['ok']==False else 1)"; then
       printf 'ok   result JSON escapes hostile branch/message\n'
