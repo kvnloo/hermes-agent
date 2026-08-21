@@ -17489,11 +17489,14 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
     def _install_plugin_message_injector(self) -> None:
         """Publish this live gateway's plugin message scheduler."""
         from hermes_cli.plugins import get_plugin_manager
+        from gateway.inbox import GatewayInbox
 
+        self._gateway_inbox = GatewayInbox()
         get_plugin_manager().set_gateway_message_injector(
             self,
             self._schedule_plugin_message_injection,
         )
+        self._schedule_gateway_inbox_drain()
 
     def _clear_plugin_message_injector(self) -> None:
         """Remove this runner's scheduler without clobbering a newer owner."""
@@ -17507,8 +17510,46 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
         session_key: str,
         content: str,
         plugin_id: str,
-    ) -> bool:
+        role: str = "user",
+        idempotency_key: str | None = None,
+        require_once: bool = False,
+    ):
         """Schedule a plugin-triggered turn on the live gateway loop."""
+        if require_once:
+            from gateway.inbox import GatewayInbox, InboxReceipt, InjectionOutcome
+
+            if not idempotency_key or role != "user":
+                return InboxReceipt(InjectionOutcome.REJECTED)
+            try:
+                entry = self.session_store.lookup_by_session_key(session_key)
+                if entry is None or entry.origin is None:
+                    return InboxReceipt(InjectionOutcome.REJECTED)
+                source = dataclasses.replace(entry.origin)
+                if not self._is_user_authorized(source, allow_adapter_delegation=False):
+                    return InboxReceipt(InjectionOutcome.REJECTED)
+                inbox = getattr(self, "_gateway_inbox", None)
+                if inbox is None:
+                    inbox = GatewayInbox()
+                    self._gateway_inbox = inbox
+                receipt = inbox.accept(
+                    idempotency_key=idempotency_key, source_id=plugin_id,
+                    session_key=session_key, generation=str(entry.session_id),
+                    role=role, payload=content,
+                )
+                if receipt.outcome is InjectionOutcome.ACCEPTED:
+                    try:
+                        self._schedule_gateway_inbox_drain()
+                    except Exception:
+                        # Acceptance is already committed.  Never report a
+                        # retryable failure that would cause the caller to
+                        # misinterpret the durable boundary; startup drain is
+                        # the recovery path for a failed wake-up.
+                        logger.warning("Gateway inbox wake-up failed", exc_info=True)
+                return receipt
+            except Exception:
+                logger.warning("Durable plugin acceptance failed", exc_info=True)
+                return InboxReceipt(InjectionOutcome.RETRYABLE_FAILURE)
+
         loop = getattr(self, "_gateway_loop", None)
         if not getattr(self, "_running", False) or loop is None or loop.is_closed():
             return False
@@ -17569,12 +17610,52 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
         future.add_done_callback(_log_result)
         return True
 
+    def _schedule_gateway_inbox_drain(self) -> None:
+        loop = getattr(self, "_gateway_loop", None)
+        if loop is None or loop.is_closed():
+            return
+        coro = self._drain_gateway_inbox()
+        try:
+            current = asyncio.get_running_loop()
+        except RuntimeError:
+            current = None
+        future = loop.create_task(coro) if current is loop else safe_schedule_threadsafe(
+            coro, loop, logger=logger, log_message="Gateway inbox drain scheduling failed",
+            log_level=logging.WARNING,
+        )
+        if future is not None:
+            self._background_tasks.add(future)
+            future.add_done_callback(self._background_tasks.discard)
+
+    async def _drain_gateway_inbox(self) -> None:
+        inbox = getattr(self, "_gateway_inbox", None)
+        if inbox is None:
+            return
+        owner = f"{os.getpid()}:{id(self)}"
+        while getattr(self, "_running", False) and not getattr(self, "_draining", False):
+            record = await asyncio.to_thread(inbox.lease_next, owner)
+            if record is None:
+                return
+            turn_id = await asyncio.to_thread(inbox.claim_turn, record.inbox_id, owner)
+            if turn_id is None:
+                continue
+            routed = await self._dispatch_plugin_message_injection(
+                session_key=record.session_key, content=record.payload,
+                plugin_id=record.source_id, inbox_id=record.inbox_id,
+                idempotency_key=record.idempotency_key, turn_id=turn_id,
+            )
+            if routed:
+                await asyncio.to_thread(inbox.finish, record.inbox_id, turn_id, "routed")
+
     async def _dispatch_plugin_message_injection(
         self,
         *,
         session_key: str,
         content: str,
         plugin_id: str,
+        inbox_id: str | None = None,
+        idempotency_key: str | None = None,
+        turn_id: str | None = None,
     ) -> bool:
         """Route a plugin-triggered turn through the session's live adapter."""
         if not getattr(self, "_running", False) or getattr(self, "_draining", False):
@@ -17625,6 +17706,11 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
                 "gateway_session_key": session_key,
                 "gateway_session_id": entry.session_id,
                 "gateway_session_strict": True,
+                **({
+                    "gateway_inbox_id": inbox_id,
+                    "gateway_idempotency_key": idempotency_key,
+                    "gateway_turn_id": turn_id,
+                } if inbox_id is not None else {}),
             },
         )
         await adapter.handle_message(event)

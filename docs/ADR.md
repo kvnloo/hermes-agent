@@ -78,7 +78,21 @@ Consequences:
 
 ## 2026-08-21: Defer durable plugin inject-once until the gateway owns a durable inbox
 
-Status: Proposed; fail closed (no compatibility API is shipped by this change)
+Status: Implemented as a local candidate; independent review required
+
+Implementation status (2026-08-21):
+- `gateway/inbox.py` now owns transactional acceptance, globally unique opaque
+  keys, immutable binding/digest conflict checks, leases, durable turn IDs,
+  bounded receipt-backed compaction, and an additive versioned migration in the
+  canonical profile `state.db`.
+- `GatewayRunner` authorizes and commits before returning `ACCEPTED`, drains on
+  commit/startup, and carries inbox/key/turn identity in `MessageEvent.metadata`.
+  `PluginContext.inject_message_once()` is a thin typed wrapper and never falls
+  back to legacy injection; `inject_message()` remains unchanged.
+- The candidate intentionally claims accepted-once conversation input, not
+  exactly-once model/provider or outbound-platform side effects. Independent
+  crash-boundary and clean-archive review remains required before release or
+  bridge activation.
 
 Context:
 `PluginContext.inject_message()` currently hands a gateway request to a
@@ -118,11 +132,11 @@ Required receiver architecture (one atomic change set):
 1. Add a `gateway_inbox` table to profile-local `state.db` through
    `hermes_state_common.SCHEMA_SQL` and the normal `SessionDB` schema
    reconciliation. Its immutable identity is
-   `(profile_home_digest, plugin_id, session_key, event_generation,
-   idempotency_key)`. Store `payload_digest`, the existing required durable
+   the globally unique `idempotency_key`. Store `profile_home_digest`,
+   `plugin_id`, `session_key`, `event_generation`, `payload_digest`, the durable
    payload, role, `accepted_at`, state, lease owner/expiry, `consumed_at`, and
-   `retain_until`. The primary key is the full identity; a same-key insert with
-   any different scope or payload is a conflict. The profile digest is derived
+   `retain_until`. A same-key insert with any different binding or payload is a
+   conflict. The profile digest is derived
    from the exact resolved Hermes home bytes and is checked against the
    currently opened DB; it is not supplied by the plugin.
 2. In one `BEGIN IMMEDIATE` transaction, validate the destination against the
