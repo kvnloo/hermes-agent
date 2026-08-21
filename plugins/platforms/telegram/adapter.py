@@ -20,6 +20,7 @@ import threading
 import time
 from contextvars import ContextVar
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Set
 
 logger = logging.getLogger(__name__)
@@ -728,6 +729,24 @@ class TelegramAdapter(BasePlatformAdapter):
         super().__init__(config, Platform.TELEGRAM)
         self._app: Optional[Application] = None
         self._bot: Optional[Bot] = None
+        # Company mode routing is an explicit, disabled-by-default operating
+        # layer.  It owns no token and is inert unless a complete config opts
+        # in; malformed/corrupt state fails closed by aborting adapter startup.
+        self._mode_router = None
+        mode_router_config = self.config.extra.get("mode_router", {})
+        if isinstance(mode_router_config, dict) and mode_router_config.get("enabled") is True:
+            from hermes_constants import get_hermes_home
+            from plugins.platforms.telegram.mode_router import TelegramModeRouter
+
+            captain_user_id = str(mode_router_config.get("captain_user_id", "")).strip()
+            state_path = mode_router_config.get("state_path")
+            if state_path:
+                state_path = str(state_path).replace("<HERMES_HOME>", str(get_hermes_home()))
+            else:
+                state_path = str(get_hermes_home() / "gateway" / "telegram-mode-router.json")
+            self._mode_router = TelegramModeRouter(
+                Path(state_path), captain_user_id, enabled=True
+            )
         self._webhook_mode: bool = False
         self._mention_patterns = self._compile_mention_patterns()
         self._reply_to_mode: str = getattr(config, 'reply_to_mode', 'first') or 'first'
@@ -9514,6 +9533,110 @@ class TelegramAdapter(BasePlatformAdapter):
         """
         return getattr(update, "effective_message", None) or getattr(update, "message", None)
 
+    def _apply_mode_router(self, event: MessageEvent) -> bool:
+        """Apply the optional company router, staying byte-for-byte inert when off."""
+        mode_router = getattr(self, "_mode_router", None)
+        if mode_router is None:
+            return True
+        source = event.source
+        decision = mode_router.route(
+            user_id=str(source.user_id or ""),
+            chat_id=str(source.chat_id),
+            thread_id=str(source.thread_id) if source.thread_id is not None else None,
+            message_id=str(source.message_id or ""),
+            text=event.text or "",
+            sender_is_bot=bool(source.is_bot),
+        )
+        if not decision.accepted:
+            # Unknown, untrusted, replayed, bot-authored, and rate-limited input
+            # is intentionally silent.  Do not log IDs or message bodies here.
+            return False
+        source.profile = decision.profile
+        receipt = json.dumps(decision.receipt, sort_keys=True, separators=(",", ":"))
+        route_prompt = (
+            "Telegram single-token route. The response must begin exactly with "
+            f"{decision.visible_attribution}. Local routing receipt: {receipt}. "
+            "The attribution is a persona label from this one bot, not a distinct "
+            "Telegram sender. Non-Captain/persona output cannot authorize actions."
+        )
+        event.channel_prompt = (
+            f"{event.channel_prompt}\n\n{route_prompt}"
+            if event.channel_prompt
+            else route_prompt
+        )
+        return True
+
+    async def _handle_mode_router_control(self, message: Message) -> bool:
+        """Handle owner-only router controls without invoking an agent."""
+        mode_router = getattr(self, "_mode_router", None)
+        text = str(getattr(message, "text", "") or "").strip()
+        if mode_router is None or not text.startswith("/"):
+            return False
+        token, *args = text.split()
+        command = token[1:].split("@", 1)[0].lower()
+        if command not in mode_router.CONTROL_COMMANDS:
+            return False
+        source = self._build_message_event(message, MessageType.COMMAND).source
+        decision = mode_router.route(
+            user_id=str(source.user_id or ""),
+            chat_id=str(source.chat_id),
+            thread_id=str(source.thread_id) if source.thread_id is not None else None,
+            message_id=str(source.message_id or ""),
+            text=text,
+            sender_is_bot=bool(source.is_bot),
+        )
+        if not decision.accepted:
+            return True
+        slot = next(
+            route.key for route in mode_router.slots.values()
+            if route.enabled and route.chat_id == str(source.chat_id)
+            and (route.thread_id or None) == (
+                str(source.thread_id) if source.thread_id else None
+            )
+        )
+        confirmed = bool(args and args[-1].lower() == "confirm")
+        if confirmed:
+            args.pop()
+        try:
+            if command == "status":
+                response = json.dumps(
+                    mode_router.status(str(source.user_id), slot),
+                    sort_keys=True,
+                    indent=2,
+                )
+            elif command == "freeze":
+                receipt = mode_router.freeze(
+                    str(source.user_id), slot, confirmed=confirmed
+                )
+                response = f"Frozen · receipt {receipt}"
+            elif command == "resume":
+                receipt = mode_router.resume(
+                    str(source.user_id), slot, confirmed=confirmed
+                )
+                response = f"Directed · receipt {receipt}"
+            else:
+                if len(args) != 1:
+                    raise ValueError(f"Usage: /{command} <value> [confirm]")
+                key = {
+                    "chat": "chat.type",
+                    "work": "work.mode",
+                    "updates": "updates.mode",
+                    "feed": "feed.mode",
+                    "authority": "authority",
+                    "mute": "updates.mode",
+                }[command]
+                value = args[0].lower()
+                if command == "mute":
+                    value = "silent" if value in {"on", "silent"} else "milestone"
+                receipt = mode_router.set_modes(
+                    str(source.user_id), slot, {key: value}, confirmed=confirmed
+                )
+                response = f"{key}={value} · receipt {receipt}"
+        except ValueError as exc:
+            response = f"Rejected: {exc}"
+        await message.reply_text(response)
+        return True
+
     async def _handle_text_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle incoming text messages.
 
@@ -9542,6 +9665,8 @@ class TelegramAdapter(BasePlatformAdapter):
         await self._ensure_forum_commands(update.message)
 
         event = self._build_message_event(msg, MessageType.TEXT, update_id=update.update_id)
+        if not self._apply_mode_router(event):
+            return
         event.text = self._clean_bot_trigger_text(event.text)
         await self._cache_replied_media(msg, event)
         event = self._apply_telegram_group_observe_attribution(event)
@@ -9561,9 +9686,13 @@ class TelegramAdapter(BasePlatformAdapter):
                 getattr(getattr(msg, "chat", None), "id", None),
             )
             return
+        if await self._handle_mode_router_control(msg):
+            return
         await self._ensure_forum_commands(msg)
 
         event = self._build_message_event(msg, MessageType.COMMAND, update_id=update.update_id)
+        if not self._apply_mode_router(event):
+            return
         event.text = self._clean_bot_trigger_text(event.text)
         await self._cache_replied_media(msg, event)
         event = self._apply_telegram_group_observe_attribution(event)
