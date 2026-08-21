@@ -5936,9 +5936,9 @@ def _cleanup_workspace(conn: sqlite3.Connection, task_id: str) -> None:
 
     Called from :func:`complete_task` after the DB transaction commits.
     Best-effort — any error is swallowed so cleanup never blocks task completion.
-    ``scratch`` workspaces are removed; ``worktree`` workspaces are removed only
-    when provably free of work (clean tree, every commit reachable from a
-    remote-tracking ref); ``dir`` workspaces are intentionally preserved.
+    ``scratch`` workspaces are removed; ``worktree`` and ``dir`` workspaces are
+    intentionally preserved. Worktree removal is an explicit, receipt-backed
+    ``hermes kanban gc --apply`` operation and is never a completion side effect.
     """
     try:
         row = conn.execute(
@@ -5973,11 +5973,7 @@ def _cleanup_workspace(conn: sqlite3.Connection, task_id: str) -> None:
             )
             return
         if kind == "worktree":
-            # Kill the (dead) tmux worker session BEFORE removing the
-            # worktree so a lingering worker never has its cwd deleted out
-            # from under it. Both steps stay best-effort.
             _cleanup_worker_tmux(conn, task_id)
-            _cleanup_worktree_workspace(task_id, path, row["branch_name"])
             _try_cleanup_parent_workspaces(conn, task_id)
             return
         import shutil
@@ -6005,69 +6001,6 @@ def _cleanup_workspace(conn: sqlite3.Connection, task_id: str) -> None:
         # tasks now have all children done — their deferred cleanup can
         # proceed (#33774).
         _try_cleanup_parent_workspaces(conn, task_id)
-    except Exception:
-        pass  # best-effort — never block completion
-
-
-def _cleanup_worktree_workspace(
-    task_id: str, path: str, branch_name: Optional[str] = None
-) -> None:
-    """Remove a finished task's linked git worktree when it holds no work.
-
-    Mirrors the safety judgment of the CLI startup pruner
-    (``cli._prune_stale_worktrees``): removal requires a clean working tree
-    AND every commit reachable from a remote-tracking ref. Any doubt — dirty
-    files, unpushed commits, unresolvable repo, failing git — preserves the
-    worktree. The task's auto-generated ``wt/<task-id>`` branch is deleted
-    with it; custom branches are kept. Best-effort like the scratch path.
-    """
-    try:
-        from cli import _worktree_has_unpushed_commits, _worktree_is_dirty
-    except Exception:
-        return  # CLI safety predicates unavailable — preserve
-    try:
-        wp = Path(path).expanduser()
-        if not wp.is_dir():
-            return
-        common = _git_common_dir(wp)
-        if common is None or common.name != ".git":
-            return  # not a linked worktree of a normal repo — never guess
-        repo_root = common.parent
-        if wp.resolve(strict=False) == repo_root.resolve(strict=False):
-            return  # never remove the main checkout
-        if _worktree_is_dirty(str(wp)) or _worktree_has_unpushed_commits(str(wp)):
-            _log.info(
-                "Preserving worktree for task %s: dirty or unpushed work at %s",
-                task_id, wp,
-            )
-            return
-        # No --force: the dirty/unpushed checks above run before removal, so
-        # git's own dirty guard re-verifies at removal time. If the tree
-        # became dirty between our check and the removal (TOCTOU), removal
-        # fails safe and the worktree is preserved.
-        result = subprocess.run(
-            ["git", "-C", str(repo_root), "worktree", "remove", str(wp)],
-            capture_output=True,
-            text=True, encoding='utf-8', errors='replace',
-            timeout=60,
-            check=False,
-        )
-        if result.returncode != 0:
-            _log.warning(
-                "git worktree remove failed for task %s at %s: %s",
-                task_id, wp, (result.stderr or result.stdout or "").strip(),
-            )
-            return
-        _log.debug("Removed worktree workspace: %s", wp)
-        branch = (branch_name or "").strip() or f"wt/{task_id}"
-        if branch.startswith("wt/"):
-            subprocess.run(
-                ["git", "-C", str(repo_root), "branch", "-D", branch],
-                capture_output=True,
-                text=True, encoding='utf-8', errors='replace',
-                timeout=30,
-                check=False,
-            )
     except Exception:
         pass  # best-effort — never block completion
 
@@ -6108,9 +6041,8 @@ def _try_cleanup_parent_workspaces(conn: sqlite3.Connection, task_id: str) -> No
                 continue  # still has active children
             # All children done — safe to clean up parent workspace
             if row["workspace_kind"] == "worktree":
-                _cleanup_worktree_workspace(
-                    parent_id, row["workspace_path"], row["branch_name"]
-                )
+                # Completion never implicitly removes a worktree. The
+                # operator-facing GC planner re-checks the whole lifecycle.
                 continue
             import shutil
             wp = Path(row["workspace_path"])
@@ -8113,6 +8045,9 @@ class DispatchResult:
     subsequent tick when the assignee has capacity. Separate bucket so
     telemetry / dashboards can show "this profile is busy" vs
     "task is genuinely stuck"."""
+    skipped_worktree_capacity: list[tuple[str, str]] = field(default_factory=list)
+    """Worktree tasks queued because byte/inode preflight failed. Entries are
+    ``(task_id, actionable_reason)``; no claim or checkout is created."""
     crashed: list[str] = field(default_factory=list)
     """Task ids reclaimed because their worker PID disappeared."""
     auto_blocked: list[str] = field(default_factory=list)
@@ -9964,6 +9899,22 @@ def configured_max_in_progress() -> Optional[int]:
     return ival if ival >= 1 else None
 
 
+def configured_worktree_capacity() -> tuple[int, int]:
+    """Return configured byte/inode floors; malformed values fail closed."""
+    try:
+        from hermes_cli.config import load_config_readonly
+        cfg = (load_config_readonly() or {}).get("kanban", {})
+        values = (cfg.get("worktree_min_free_bytes", 0),
+                  cfg.get("worktree_min_free_inodes", 0))
+        parsed = tuple(int(value or 0) for value in values)
+        if any(value < 0 for value in parsed):
+            raise ValueError("negative worktree capacity floor")
+        return parsed  # type: ignore[return-value]
+    except Exception:
+        # A configured-but-unreadable guard must not silently permit growth.
+        return (2**63 - 1, 2**63 - 1)
+
+
 def count_running_tasks(conn: sqlite3.Connection) -> int:
     """Return the number of tasks currently in ``status='running'``.
 
@@ -10290,7 +10241,7 @@ def _dispatch_once_locked(
 
 
     ready_rows = conn.execute(
-        "SELECT id, assignee FROM tasks "
+        "SELECT id, assignee, workspace_kind, workspace_path FROM tasks "
         "WHERE status = 'ready' AND claim_lock IS NULL "
         "ORDER BY last_considered_at IS NOT NULL, last_considered_at, "
         "priority DESC, created_at, id"
@@ -10387,6 +10338,28 @@ def _dispatch_once_locked(
             _record_dispatch_consideration(conn, result, row["id"], "global_capacity", dry_run=dry_run)
             continue
         row_assignee = row["assignee"]
+        if row["workspace_kind"] == "worktree":
+            from hermes_cli.kanban_worktree_gc import capacity_snapshot
+            byte_floor, inode_floor = configured_worktree_capacity()
+            candidate = Path(row["workspace_path"]).expanduser() if row["workspace_path"] else None
+            if candidate is None:
+                board_slug = board if board else get_current_board()
+                default_path = (read_board_metadata(board_slug).get("default_workdir") or "").strip()
+                candidate = Path(default_path).expanduser() if default_path else workspaces_root(board=board)
+            probe = _nearest_existing_path(candidate)
+            try:
+                capacity = capacity_snapshot(probe, min_free_bytes=byte_floor,
+                                             min_free_inodes=inode_floor)
+            except OSError as exc:
+                capacity = None
+                reason = f"capacity probe failed closed at {probe}: {exc}"
+            else:
+                reason = "; ".join(capacity.reasons)
+            if capacity is None or capacity.blocked:
+                result.skipped_worktree_capacity.append((row["id"], reason))
+                _record_dispatch_consideration(conn, result, row["id"],
+                                               f"worktree_capacity:{reason}", dry_run=dry_run)
+                continue
         if not row_assignee:
             # Honour kanban.default_assignee: when the dispatcher hits an
             # unassigned ready task and an operator-configured fallback

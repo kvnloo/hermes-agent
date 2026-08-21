@@ -779,9 +779,50 @@ hermes kanban notify-unsubscribe <id>
 hermes kanban context <id>                             # what a worker sees
 hermes kanban specify [<id> | --all] [--tenant T]      # flesh out a triage-column idea
         [--author NAME] [--json]                       #   into a full spec and promote to todo
-hermes kanban gc [--event-retention-days N]            # workspaces + old events + old logs
-        [--log-retention-days N]
+hermes kanban gc [--worktree-retention-days N] [--json] # plan only; no worktree mutation
+hermes kanban gc --apply --receipt /durable/path/gc.json # explicit reviewed apply
+        [--event-retention-days N] [--log-retention-days N]
 ```
+
+### Worktree lifecycle and retention
+
+Task completion never removes a Git worktree. The lifecycle planner classifies
+each checkout as `active`, `review-held`, `captain-gated`,
+`artifact-extracted`, `completed-retention`, `superseded`, `gc-eligible`, or
+`quarantine`; elapsed time alone can never make one eligible. The default
+`kanban gc` invocation is a non-mutating plan. There is no background deletion.
+
+An explicit apply revalidates task and child state, running task attempts,
+process CWDs and open file descriptors, exact checkout identity, HEAD, and
+`git status --ignored --untracked-files=all`. Dirty, untracked, ignored,
+review-held, child-gated, live, Captain-gated, or attachment-ambiguous
+checkouts are preserved. Before the first mutation, Hermes atomically fsyncs a
+receipt containing per-entry content/type/hash/mode/xattr metadata and global
+refs/reflogs snapshots. If receipt creation fails (including ENOSPC), nothing
+is removed. Apply uses only `git worktree remove` followed by
+`git worktree prune`; branches, refs, and reflogs are retained.
+
+The capacity report records checkout bytes/inodes and top-level consumers per
+task. For the incident that motivated this guard, the bounded cleanup receipt
+proves exactly 5,466,632,789 bytes across four completed worktrees and
+8,286,765,056 workspace bytes reclaimed overall. The historical cleanup did
+not record per-entry manifests for every removed ignored root, so its strict
+preservation classification remains **conditionally accepted with an
+irrecoverable per-entry gap**; the new receipt protocol exists to prevent that
+ambiguity going forward.
+
+Avoid dependency duplication rather than symlinking dependency directories:
+
+- npm/Next/Electron: use the package manager's shared content-addressed cache,
+  install only in tasks that build, and remove generated `.next`, `dist`,
+  Playwright, and Electron outputs independently while the worktree remains.
+- Python: share the wheel/download cache, but keep virtual environments owned
+  by one checkout or use the repository's documented root environment. Never
+  symlink a mutable `venv` or `node_modules` between concurrently running
+  workers.
+- Durable evidence belongs in task attachments. Generated caches are not
+  evidence and require their own reviewed cleanup policy; worktree GC never
+  treats a gitignored directory name as proof that its bytes are disposable.
 
 All commands are also available as a slash command in the interactive CLI and in the messaging gateway (see [`/kanban` slash command](#kanban-slash-command) below).
 
@@ -793,6 +834,9 @@ All commands are also available as a slash command in the interactive CLI and in
 |------------|---------|--------------|
 | `kanban.max_in_progress` | unset (unlimited) | Caps the number of simultaneously running tasks. When the board already has N running, the dispatcher skips spawning more — useful for slow workers (local LLMs, resource-constrained hosts) so they finish what they have before more pile up and time out. Invalid or below-1 values log a warning and behave as unlimited. |
 | `kanban.max_in_progress_per_profile` | unset (unlimited) | Per-profile variant of `max_in_progress` — caps how many tasks any single assignee profile may run concurrently. Useful when one profile is slow or rate-limited but others should keep flowing. Applies alongside the board-wide `max_in_progress`; both must allow a spawn for it to proceed. |
+| `kanban.worktree_min_free_bytes` | `0` (disabled) | Queues new worktree tasks before checkout creation when the target filesystem has fewer free bytes. The dispatch-health reason is actionable and the task remains ready. |
+| `kanban.worktree_min_free_inodes` | `0` (disabled) | Same pre-dispatch guard for free inodes. A failed filesystem probe also fails closed. |
+| `kanban.worktree_retention_days` | `7` | Minimum completed retention used by the explicit GC planner. It never enables background deletion. |
 | `kanban.auto_promote_children` | `true` | After `decompose_triage_task()` produces children with no parent-blocker dependencies, they're automatically promoted to `ready` so the dispatcher can pick them up. Set to `false` to require manual review — children stay in `todo` until you promote them. |
 | `kanban.default_workdir` | unset | Board-level default working directory applied to new tasks when neither `--workspace` nor the task itself overrides it. Per-task `workspace:` still wins. |
 
