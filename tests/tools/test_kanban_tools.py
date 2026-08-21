@@ -40,6 +40,24 @@ def test_kanban_tools_hidden_without_env_var(monkeypatch, tmp_path):
     )
 
 
+def test_profile_kanban_gate_honors_platform_toolsets(monkeypatch, tmp_path):
+    """A messaging orchestrator may enable Kanban for one platform without the
+    legacy top-level ``toolsets`` key. The registry's per-session toolset filter
+    still prevents leakage to platforms that did not select it."""
+    monkeypatch.delenv("HERMES_KANBAN_TASK", raising=False)
+    home = tmp_path / ".hermes"
+    home.mkdir()
+    (home / "config.yaml").write_text(
+        "platform_toolsets:\n  telegram:\n    - kanban\n    - file\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("HERMES_HOME", str(home))
+
+    from tools import kanban_tools as kt
+
+    assert kt._profile_has_kanban_toolset() is True
+
+
 # ---------------------------------------------------------------------------
 # Handler happy paths
 # ---------------------------------------------------------------------------

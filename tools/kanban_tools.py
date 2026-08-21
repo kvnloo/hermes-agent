@@ -57,7 +57,24 @@ def _profile_has_kanban_toolset() -> bool:
         from hermes_cli.config import load_config
         cfg = load_config()
         toolsets = cfg.get("toolsets", [])
-        return "kanban" in toolsets
+        if isinstance(toolsets, str):
+            try:
+                toolsets = json.loads(toolsets)
+            except (TypeError, ValueError):
+                toolsets = []
+        if isinstance(toolsets, (list, tuple, set)) and "kanban" in toolsets:
+            return True
+
+        # Messaging/GUI surfaces are configured per platform. Tool registry
+        # filtering still intersects each session with its own enabled_toolsets,
+        # so recognizing Kanban anywhere in this profile only opens the
+        # availability gate; it does not leak the schema to other platforms.
+        platform_toolsets = cfg.get("platform_toolsets", {})
+        if isinstance(platform_toolsets, dict):
+            for selected in platform_toolsets.values():
+                if isinstance(selected, (list, tuple, set)) and "kanban" in selected:
+                    return True
+        return False
     except Exception:
         return False
 
