@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import sqlite3
 import subprocess
+import sys
 import time
 
 import pytest
@@ -140,15 +141,14 @@ def test_plan_is_dry_run_and_hash_tampering_fails(tmp_path):
     assert wt.exists()
 
 
-def test_normal_clean_fixture_is_non_vacuously_eligible(monkeypatch, tmp_path):
+def test_normal_clean_fixture_is_explicitly_plan_ineligible(tmp_path):
     _repo, wt = make_repo(tmp_path)
     conn = make_db(wt)
-    monkeypatch.setattr(gc, "_processes_using", lambda _path: [])
 
     item = gc.assess_worktree(conn, "t_one", retention_seconds=0)
 
-    assert item.eligible is True, item.blockers
-    assert item.lifecycle == "gc-eligible"
+    assert item.eligible is False
+    assert any("plan-only" in blocker for blocker in item.blockers)
     assert item.head == git(wt, "rev-parse", "HEAD")
 
 
@@ -169,7 +169,7 @@ def test_plan_disables_optional_locks_and_preserves_git_metadata(monkeypatch, tm
 
     plan = gc.build_plan(conn, retention_seconds=0)
 
-    assert plan["worktrees"][0]["eligible"] is True
+    assert plan["worktrees"][0]["eligible"] is False
     assert observed and set(observed) == {"0"}
     assert git_metadata_snapshot(repo) == before
 
@@ -236,6 +236,87 @@ def test_unreadable_or_disappearing_process_state_fails_closed(monkeypatch, tmp_
     item = gc.assess_worktree(conn, "t_one", retention_seconds=0)
     assert not item.eligible
     assert any("live process" in blocker for blocker in item.blockers)
+
+
+def _fake_proc_process(root: Path, pid: int, *, uid: int, gid: int,
+                       cwd: Path, cmdline: bytes = b"sleep\x0010") -> Path:
+    entry = root / str(pid)
+    (entry / "fd").mkdir(parents=True)
+    (entry / "status").write_text(
+        f"Name:\ttest\nUid:\t{uid}\t{uid}\t{uid}\t{uid}\n"
+        f"Gid:\t{gid}\t{gid}\t{gid}\t{gid}\nGroups:\t{gid}\n"
+    )
+    # field 22 (starttime) is index 19 after the comm/state split.
+    (entry / "stat").write_text(f"{pid} (test process) S " + "0 " * 18 + "42 0\n")
+    (entry / "cmdline").write_bytes(cmdline)
+    (entry / "cgroup").write_text("0::/user.slice\n")
+    (entry / "maps").write_text("")
+    (entry / "cwd").symlink_to(cwd, target_is_directory=True)
+    (entry / "root").symlink_to("/", target_is_directory=True)
+    return entry
+
+
+@pytest.mark.linux_only
+def test_real_linux_proc_scanner_detects_same_uid_cwd_and_fd(tmp_path):
+    candidate = tmp_path / "candidate"
+    candidate.mkdir()
+    held = candidate / "held"
+    held.write_text("bytes")
+    proc = subprocess.Popen(
+        [sys.executable, "-c", "import os,time; f=open('held'); time.sleep(30)"],
+        cwd=candidate,
+    )
+    fixture = tmp_path / "proc"
+    fixture.mkdir()
+    (fixture / str(proc.pid)).symlink_to(Path("/proc") / str(proc.pid), target_is_directory=True)
+    try:
+        assert gc._processes_using(candidate, proc_root=fixture) == [proc.pid]
+    finally:
+        proc.terminate()
+        proc.wait(timeout=5)
+
+
+@pytest.mark.linux_only
+def test_actual_linux_proc_scan_never_promotes_clean_fixture(tmp_path):
+    _repo, wt = make_repo(tmp_path)
+    result = gc._processes_using(wt)
+    assert isinstance(result, list)
+    item = gc.assess_worktree(make_db(wt), "t_one", retention_seconds=0)
+    assert item.eligible is False
+    assert any("plan-only on Linux" in blocker for blocker in item.blockers)
+
+
+@pytest.mark.linux_only
+def test_unreadable_same_uid_proc_fixture_fails_closed(tmp_path):
+    candidate = tmp_path / "candidate"
+    candidate.mkdir()
+    proc_root = tmp_path / "proc"
+    proc_root.mkdir()
+    entry = _fake_proc_process(proc_root, 123, uid=os.geteuid(), gid=os.getegid(), cwd=tmp_path)
+    (entry / "maps").chmod(0)
+    try:
+        assert gc._processes_using(candidate, proc_root=proc_root) == [-1]
+    finally:
+        (entry / "maps").chmod(0o600)
+
+
+@pytest.mark.linux_only
+def test_foreign_uid_dac_scope_is_deterministic(tmp_path):
+    candidate = tmp_path / "candidate"
+    candidate.mkdir(mode=0o700)
+    proc_root = tmp_path / "proc"
+    proc_root.mkdir()
+    foreign = os.geteuid() + 10000
+    entry = _fake_proc_process(proc_root, 124, uid=foreign, gid=foreign, cwd=tmp_path)
+    # DAC-denied, ordinary foreign process is safely out of scope even if an
+    # optional descriptor is unreadable.
+    (entry / "maps").chmod(0)
+    try:
+        assert gc._processes_using(candidate, proc_root=proc_root) == []
+        (entry / "cmdline").write_bytes(b"hermes-kanban-service\x00")
+        assert gc._processes_using(candidate, proc_root=proc_root) == [-1]
+    finally:
+        (entry / "maps").chmod(0o600)
 
 
 @pytest.mark.parametrize("failure", ["ENOSPC-pre", "ENOSPC-post", "symlink-substitution", "refs-drift", "concurrent-gc"])

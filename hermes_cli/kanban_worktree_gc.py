@@ -16,6 +16,7 @@ from pathlib import Path
 import shutil
 import sqlite3
 import subprocess
+import sys
 import time
 from typing import Any, Iterable, Optional
 
@@ -113,32 +114,119 @@ def _tree_usage(root: Path) -> tuple[int, int, list[dict[str, Any]]]:
     return total, inodes, top
 
 
-def _processes_using(path: Path) -> list[int]:
-    """Return PIDs whose cwd or open fd resolves inside path; unreadable /proc is ambiguity."""
-    target = path.resolve(strict=False)
+def _proc_identity(entry: Path) -> tuple[int, int, frozenset[int], int, int]:
+    """Read stable process identity: effective uid/gids, starttime and proc inode."""
+    inode = entry.stat().st_ino
+    status = (entry / "status").read_text(errors="strict")
+    values: dict[str, list[int]] = {}
+    for line in status.splitlines():
+        name, sep, raw = line.partition(":")
+        if sep and name in {"Uid", "Gid", "Groups"}:
+            values[name] = [int(part) for part in raw.split()]
+    if len(values.get("Uid", [])) != 4 or len(values.get("Gid", [])) != 4:
+        raise OSError("incomplete proc credentials")
+    stat = (entry / "stat").read_text(errors="strict")
+    close = stat.rfind(")")
+    fields = stat[close + 2:].split() if close >= 0 else []
+    if len(fields) <= 19:
+        raise OSError("incomplete proc stat")
+    groups = frozenset([values["Gid"][1], *values.get("Groups", [])])
+    return values["Uid"][1], values["Gid"][1], groups, int(fields[19]), inode
+
+
+def _dac_can_traverse(path: Path, uid: int, gids: frozenset[int]) -> bool:
+    """Conservatively model ordinary DAC traversal to an owned checkout."""
+    if uid == 0:
+        return True
+    current = path
+    while True:
+        st = current.stat()
+        shift = 6 if st.st_uid == uid else 3 if st.st_gid in gids else 0
+        if not ((st.st_mode >> shift) & 1):
+            return False
+        if current.parent == current:
+            return True
+        current = current.parent
+
+
+def _associated_process(entry: Path) -> bool:
+    """Identify foreign Hermes/Kanban/service processes without trusting names."""
+    data = b""
+    for name in ("cmdline", "cgroup"):
+        try:
+            data += (entry / name).read_bytes().lower()
+        except OSError:
+            # Association is an additional scope signal. Credential/access
+            # rules below remain fail-closed when these optional files hide.
+            pass
+    return any(token in data for token in (b"hermes", b"kanban"))
+
+
+def _inside(candidate: Path, raw: Path) -> bool:
+    try:
+        raw.resolve(strict=True).relative_to(candidate)
+        return True
+    except ValueError:
+        return False
+
+
+def _processes_using(path: Path, *, proc_root: Path = Path("/proc")) -> list[int]:
+    """Return using PIDs, with ``-1`` representing unsafe scan ambiguity.
+
+    Linux threat model: the candidate must be owned by our effective UID. We
+    inspect every same-effective-UID process and every foreign process which is
+    privileged, can traverse the candidate under ordinary DAC, or is explicitly
+    associated with Hermes/Kanban. Unreadable cwd/root/fd/maps for an in-scope
+    process is ambiguous. A foreign process is skipped only when current DAC
+    proves it cannot traverse the candidate and it is not service-associated.
+
+    PID directory inode and /proc stat starttime are checked before and after
+    inspection to reject PID reuse. Linux capabilities, ACLs, namespaces,
+    ptrace policy and already-open descriptors cannot be proven from an
+    unprivileged scan; consequently assessment remains plan-ineligible (see
+    ``assess_worktree``). Non-Linux hosts are likewise plan-only.
+    """
+    if sys.platform != "linux" or not proc_root.is_dir():
+        return [-1]
+    target = path.resolve(strict=True)
+    if target.stat().st_uid != os.geteuid():
+        return [-1]
     hits: set[int] = set()
-    proc = Path("/proc")
-    if not proc.is_dir():
-        return [-1]  # unsupported host: fail closed
-    for entry in proc.iterdir():
+    try:
+        entries = list(proc_root.iterdir())
+    except OSError:
+        return [-1]
+    for entry in entries:
         if not entry.name.isdigit():
             continue
-        links = [entry / "cwd"]
-        fd = entry / "fd"
         try:
-            links.extend(fd.iterdir())
-        except (OSError, PermissionError):
+            before = _proc_identity(entry)
+        except FileNotFoundError:
+            continue
+        except (OSError, ValueError, UnicodeError):
             return [-1]
-        for link in links:
-            try:
-                resolved = link.resolve(strict=True)
-                resolved.relative_to(target)
-            except ValueError:
-                continue
-            except (OSError, PermissionError):
-                return [-1]
+        uid, _gid, groups, _start, _inode = before
+        in_scope = (uid == os.geteuid() or uid == 0 or
+                    _associated_process(entry) or _dac_can_traverse(target, uid, groups))
+        if not in_scope:
+            continue
+        try:
+            links = [entry / "cwd", entry / "root", *(entry / "fd").iterdir()]
+            used = any(_inside(target, link) for link in links)
+            maps = (entry / "maps").read_text(errors="replace")
+            used = used or any(
+                line.rsplit(None, 1)[-1].startswith(str(target) + os.sep)
+                for line in maps.splitlines() if "/" in line
+            )
+            after = _proc_identity(entry)
+        except FileNotFoundError:
+            continue
+        except (OSError, ValueError, UnicodeError):
+            return [-1]
+        if before[3:] != after[3:]:
+            return [-1]
+        if used:
             hits.add(int(entry.name))
-            break
     return sorted(hits)
 
 
@@ -203,6 +291,14 @@ def assess_worktree(conn: sqlite3.Connection, task_id: str, *, retention_seconds
     pids = _processes_using(wp)
     if pids:
         out.blockers.append("live process uses checkout: " + ",".join(map(str, pids[:10])))
+    # Unprivileged /proc inspection cannot exclude privileged/capability/ACL or
+    # namespace access, nor an unreadable process retaining an already-open fd.
+    # Since apply is disabled, report useful process telemetry but never promote
+    # a candidate to deletion eligibility on any platform.
+    out.blockers.append(
+        "safe process exclusion is unavailable; worktree GC is plan-only on "
+        + ("Linux" if sys.platform == "linux" else sys.platform)
+    )
     completed = row["completed_at"]
     if not completed or now - int(completed) < max(0, retention_seconds):
         out.blockers.append("completion retention has not elapsed")
