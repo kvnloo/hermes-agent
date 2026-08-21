@@ -68,10 +68,24 @@ def capacity_snapshot(path: Path, *, min_free_bytes: int, min_free_inodes: int) 
     return CapacitySnapshot(str(path), usage.free, free_inodes, usage.total, total_inodes, bool(reasons), reasons)
 
 
+def _readonly_git_env() -> dict[str, str]:
+    """Return an environment which forbids Git's optional housekeeping writes."""
+    env = os.environ.copy()
+    env["GIT_OPTIONAL_LOCKS"] = "0"
+    return env
+
+
 def _git(path: Path, *args: str, timeout: int = 30) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(["git", "-C", str(path), *args], capture_output=True,
+    # Keep every planning command on this single, explicitly read-only path.
+    # In particular, `git status` otherwise refreshes and may replace the index
+    # even when its reported content is unchanged.
+    command = [
+        "git", "-c", "core.fsmonitor=false", "-c", "maintenance.auto=false",
+        "-c", "gc.auto=0", "-C", str(path), *args,
+    ]
+    return subprocess.run(command, capture_output=True,
                           text=True, encoding="utf-8", errors="replace",
-                          timeout=timeout, check=False)
+                          timeout=timeout, check=False, env=_readonly_git_env())
 
 
 def _tree_usage(root: Path) -> tuple[int, int, list[dict[str, Any]]]:

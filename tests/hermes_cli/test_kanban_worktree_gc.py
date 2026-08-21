@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import argparse
+import hashlib
 import os
 from pathlib import Path
 import sqlite3
@@ -9,6 +11,7 @@ import time
 import pytest
 
 from hermes_cli import kanban_worktree_gc as gc
+from hermes_cli import kanban as kanban_cli
 
 
 def git(path: Path, *args: str) -> str:
@@ -51,6 +54,25 @@ def assessment(tmp_path: Path, **kwargs):
     _repo, wt = make_repo(tmp_path)
     conn = make_db(wt, **kwargs)
     return conn, wt, gc.assess_worktree(conn, "t_one", retention_seconds=0)
+
+
+def file_snapshot(path: Path) -> tuple[int, int, int, int, int, int, str]:
+    st = path.lstat()
+    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    return (st.st_ino, st.st_mode, st.st_size, st.st_mtime_ns,
+            st.st_ctime_ns, st.st_nlink, digest)
+
+
+def git_metadata_snapshot(repo: Path) -> dict[str, tuple[int, int, int, int, int, int, str]]:
+    metadata = repo / ".git"
+    roots = [metadata / "index", metadata / "refs", metadata / "logs", metadata / "worktrees"]
+    paths = []
+    for root in roots:
+        if root.is_file():
+            paths.append(root)
+        elif root.is_dir():
+            paths.extend(path for path in root.rglob("*") if path.is_file())
+    return {str(path.relative_to(metadata)): file_snapshot(path) for path in sorted(paths)}
 
 
 @pytest.mark.parametrize("status", ["triage", "todo", "ready", "running", "blocked", "review"])
@@ -118,6 +140,60 @@ def test_plan_is_dry_run_and_hash_tampering_fails(tmp_path):
     assert wt.exists()
 
 
+def test_normal_clean_fixture_is_non_vacuously_eligible(monkeypatch, tmp_path):
+    _repo, wt = make_repo(tmp_path)
+    conn = make_db(wt)
+    monkeypatch.setattr(gc, "_processes_using", lambda _path: [])
+
+    item = gc.assess_worktree(conn, "t_one", retention_seconds=0)
+
+    assert item.eligible is True, item.blockers
+    assert item.lifecycle == "gc-eligible"
+    assert item.head == git(wt, "rev-parse", "HEAD")
+
+
+def test_plan_disables_optional_locks_and_preserves_git_metadata(monkeypatch, tmp_path):
+    repo, wt = make_repo(tmp_path)
+    conn = make_db(wt)
+    monkeypatch.setattr(gc, "_processes_using", lambda _path: [])
+    original_run = gc.subprocess.run
+    observed = []
+
+    def checked_run(*args, **kwargs):
+        observed.append(kwargs.get("env", {}).get("GIT_OPTIONAL_LOCKS"))
+        return original_run(*args, **kwargs)
+
+    monkeypatch.setattr(gc.subprocess, "run", checked_run)
+    os.utime(wt / "tracked.txt", None)
+    before = git_metadata_snapshot(repo)
+
+    plan = gc.build_plan(conn, retention_seconds=0)
+
+    assert plan["worktrees"][0]["eligible"] is True
+    assert observed and set(observed) == {"0"}
+    assert git_metadata_snapshot(repo) == before
+
+
+def test_disabled_apply_rejects_before_board_or_filesystem_access(monkeypatch, tmp_path):
+    repo, wt = make_repo(tmp_path)
+    os.utime(wt / "tracked.txt", None)
+    before = git_metadata_snapshot(repo)
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(dest="command")
+    kanban_cli.build_parser(subparsers)
+    args = parser.parse_args(["kanban", "gc", "--apply"])
+
+    monkeypatch.setattr(kanban_cli, "_is_delegated_child_cli_mutation",
+                        lambda _args: pytest.fail("delegation inspection attempted"))
+    monkeypatch.setattr(kanban_cli.kb, "init_db", lambda: pytest.fail("DB initialization attempted"))
+    monkeypatch.setattr(kanban_cli.kb, "workspaces_root",
+                        lambda: pytest.fail("scratch discovery attempted"))
+    monkeypatch.setattr(gc, "build_plan", lambda *_a, **_k: pytest.fail("plan attempted"))
+
+    assert kanban_cli.kanban_command(args) == 2
+    assert git_metadata_snapshot(repo) == before
+
+
 def test_apply_refuses_raced_ignored_unique_file_without_mutation(tmp_path):
     conn, wt, item = assessment(tmp_path)
     plan = gc.build_plan(conn, retention_seconds=0)
@@ -153,9 +229,10 @@ def test_detached_unique_head_is_not_eligible(tmp_path):
     assert wt.exists()
 
 
-def test_unreadable_process_state_fails_closed(monkeypatch, tmp_path):
+@pytest.mark.parametrize("ambiguous", [[-1], [-1, 123]])
+def test_unreadable_or_disappearing_process_state_fails_closed(monkeypatch, tmp_path, ambiguous):
     conn, wt, _item = assessment(tmp_path)
-    monkeypatch.setattr(gc, "_processes_using", lambda _path: [-1])
+    monkeypatch.setattr(gc, "_processes_using", lambda _path: ambiguous)
     item = gc.assess_worktree(conn, "t_one", retention_seconds=0)
     assert not item.eligible
     assert any("live process" in blocker for blocker in item.blockers)
