@@ -17728,7 +17728,21 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
                 } if inbox_id is not None else {}),
             },
         )
-        await adapter.handle_message(event)
+        if turn_id is not None:
+            processed = await adapter.handle_durable_turn(event)
+            if not processed:
+                return False
+            inbox = getattr(self, "_gateway_inbox", None)
+            if inbox is None or not await asyncio.to_thread(
+                inbox.finalize_existing_response, turn_id
+            ):
+                logger.warning(
+                    "Durable gateway turn completed without bindable response: turn=%s",
+                    turn_id[:12],
+                )
+                return False
+        else:
+            await adapter.handle_message(event)
         logger.info(
             "Plugin message injection dispatched: plugin=%s session=%s session_id=%s",
             plugin_id,
