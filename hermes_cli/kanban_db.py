@@ -2594,7 +2594,7 @@ def init_db(
     return path
 
 
-_ARTIFACT_REVIEW_GATE_SCHEMA_VERSION = 8
+_ARTIFACT_REVIEW_GATE_SCHEMA_VERSION = 7
 
 
 def _migrate_artifact_review_gate_v2(conn: sqlite3.Connection) -> None:
@@ -2785,28 +2785,6 @@ def _migrate_artifact_review_gate_v2(conn: sqlite3.Connection) -> None:
             "CREATE UNIQUE INDEX idx_captain_request_exact_generation "
             "ON captain_approval_requests(task_id, decision_generation, platform, chat_id, issuance_generation) "
             "WHERE state IN ('reserved', 'active')"
-        )
-    if current < 8:
-        request_cols = {row["name"] for row in conn.execute(
-            "PRAGMA table_info(captain_approval_requests)"
-        )}
-        for name, declaration in (
-            ("callback_nonce", "callback_nonce TEXT"),
-            ("activation_attempted_at", "activation_attempted_at INTEGER"),
-        ):
-            if name not in request_cols:
-                conn.execute(f"ALTER TABLE captain_approval_requests ADD COLUMN {declaration}")
-        conn.execute(
-            "UPDATE captain_approval_requests SET state = 'failed', "
-            "failure_reason = 'migration_v8_unrecoverable_reservation', updated_at = ? "
-            "WHERE state = 'reserved' AND callback_nonce IS NULL",
-            (int(time.time()),),
-        )
-        conn.execute("DROP INDEX IF EXISTS idx_captain_request_exact_generation")
-        conn.execute(
-            "CREATE UNIQUE INDEX idx_captain_request_exact_generation "
-            "ON captain_approval_requests(task_id, decision_generation, platform, chat_id, issuance_generation) "
-            "WHERE state IN ('reserved', 'staged', 'activating', 'active')"
         )
     conn.execute(
         "INSERT INTO kanban_schema_migrations(name, version, applied_at) VALUES (?, ?, ?) "
@@ -7116,8 +7094,7 @@ def enqueue_captain_approval_issuance(
             raise ValueError("captain issuance generation is not current")
         stale = conn.execute(
             "SELECT * FROM captain_approval_requests WHERE task_id = ? AND platform = ? "
-            "AND chat_id = ? AND decision_generation != ? "
-            "AND state IN ('reserved', 'staged', 'activating', 'active')",
+            "AND chat_id = ? AND decision_generation != ? AND state IN ('reserved', 'active')",
             (task_id, platform, str(chat_id), int(decision_generation)),
         ).fetchall()
         for request in stale:
@@ -7126,7 +7103,7 @@ def enqueue_captain_approval_issuance(
                 "failure_reason = 'generation_rollover', updated_at = ? WHERE id = ?",
                 (timestamp, request["id"]),
             )
-            if request["state"] in ("staged", "activating", "active"):
+            if request["state"] == "active":
                 conn.execute(
                     "INSERT INTO captain_approval_cleanup_jobs("
                     "request_id, platform, chat_id, message_id, next_attempt_at, created_at, updated_at, "
@@ -7265,40 +7242,37 @@ def reserve_captain_approval_request(
     try:
         with write_txn(conn):
             existing = conn.execute(
-                "SELECT id, state, callback_nonce FROM captain_approval_requests WHERE task_id = ? AND "
+                "SELECT id, state FROM captain_approval_requests WHERE task_id = ? AND "
                 "decision_generation = ? AND platform = ? AND chat_id = ? AND issuance_generation = ?",
                 (task_id, int(binding["generation"]), platform, str(chat_id), int(issuance_generation)),
             ).fetchone()
-            if existing is not None and existing["state"] in ("staged", "activating", "active"):
-                return existing["callback_nonce"]
-            if existing is not None and existing["state"] == "consumed":
+            if existing is not None and existing["state"] in ("active", "consumed"):
                 return None
             if existing is not None:
                 conn.execute(
                     "UPDATE captain_approval_requests SET callback_hash = ?, platform = ?, chat_id = ?, "
                     "message_id = ?, source_hash = ?, artifact_hash = ?, expires_at = ?, consumed_at = NULL, "
-                    "state = 'reserved', callback_nonce = ?, activation_attempted_at = NULL, "
-                    "failure_reason = NULL, cleanup_failed = 0, updated_at = ? WHERE id = ?",
+                    "state = 'reserved', failure_reason = NULL, cleanup_failed = 0, updated_at = ? WHERE id = ?",
                     (callback_hash, platform, chat_id, f"reserved:{callback_hash}",
                      binding["source_manifest_hash"], binding["artifact_manifest_hash"],
-                     int(expires_at), nonce, timestamp, existing["id"]),
+                     int(expires_at), timestamp, existing["id"]),
                 )
                 return nonce
             conn.execute(
                 "INSERT INTO captain_approval_requests(callback_hash, platform, chat_id, "
                 "message_id, task_id, source_hash, artifact_hash, decision_generation, expires_at, "
-                "state, updated_at, issuance_generation, callback_nonce) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'reserved', ?, ?, ?)",
+                "state, updated_at, issuance_generation) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'reserved', ?, ?)",
                 (callback_hash, platform, chat_id, f"reserved:{callback_hash}", task_id,
                  binding["source_manifest_hash"], binding["artifact_manifest_hash"],
-                 int(binding["generation"]), int(expires_at), timestamp, int(issuance_generation), nonce),
+                 int(binding["generation"]), int(expires_at), timestamp, int(issuance_generation)),
             )
     except sqlite3.IntegrityError:
         return None
     return nonce
 
 
-def stage_captain_approval_request(
+def bind_captain_approval_request(
     conn: sqlite3.Connection, *, callback_nonce: str, message_id: str,
     now: Optional[int] = None, task_id: Optional[str] = None,
     decision_generation: Optional[int] = None, issuance_generation: Optional[int] = None,
@@ -7322,59 +7296,11 @@ def stage_captain_approval_request(
                     and int(request["issuance_generation"]) != int(issuance_generation))):
             return False
         updated = conn.execute(
-            "UPDATE captain_approval_requests SET message_id = ?, state = 'staged', updated_at = ? "
+            "UPDATE captain_approval_requests SET message_id = ?, state = 'active', updated_at = ? "
             "WHERE callback_hash = ? AND state = 'reserved' AND expires_at > ?",
             (str(message_id), timestamp, callback_hash, timestamp),
         )
     return updated.rowcount == 1
-
-
-def mark_captain_approval_activation_attempt(
-    conn: sqlite3.Connection, *, callback_nonce: str, message_id: str,
-    now: Optional[int] = None,
-) -> bool:
-    timestamp = int(time.time()) if now is None else int(now)
-    callback_hash = hashlib.sha256(callback_nonce.encode()).hexdigest()
-    with write_txn(conn):
-        updated = conn.execute(
-            "UPDATE captain_approval_requests SET state = 'activating', activation_attempted_at = ?, "
-            "updated_at = ? WHERE callback_hash = ? AND message_id = ? "
-            "AND state IN ('staged', 'activating') AND expires_at > ?",
-            (timestamp, timestamp, callback_hash, str(message_id), timestamp),
-        )
-    return updated.rowcount == 1
-
-
-def activate_captain_approval_request(
-    conn: sqlite3.Connection, *, callback_nonce: str, message_id: str,
-    now: Optional[int] = None,
-) -> bool:
-    timestamp = int(time.time()) if now is None else int(now)
-    callback_hash = hashlib.sha256(callback_nonce.encode()).hexdigest()
-    with write_txn(conn):
-        updated = conn.execute(
-            "UPDATE captain_approval_requests SET state = 'active', updated_at = ? "
-            "WHERE callback_hash = ? AND message_id = ? AND state = 'activating' AND expires_at > ?",
-            (timestamp, callback_hash, str(message_id), timestamp),
-        )
-    return updated.rowcount == 1
-
-
-def bind_captain_approval_request(
-    conn: sqlite3.Connection, *, callback_nonce: str, message_id: str,
-    now: Optional[int] = None, task_id: Optional[str] = None,
-    decision_generation: Optional[int] = None, issuance_generation: Optional[int] = None,
-) -> bool:
-    """Compatibility helper for callers that already own an inert message."""
-    return (stage_captain_approval_request(
-        conn, callback_nonce=callback_nonce, message_id=message_id, now=now,
-        task_id=task_id, decision_generation=decision_generation,
-        issuance_generation=issuance_generation,
-    ) and mark_captain_approval_activation_attempt(
-        conn, callback_nonce=callback_nonce, message_id=message_id, now=now,
-    ) and activate_captain_approval_request(
-        conn, callback_nonce=callback_nonce, message_id=message_id, now=now,
-    ))
 
 
 def fail_captain_approval_request(
@@ -7397,11 +7323,11 @@ def expire_captain_approval_requests(conn: sqlite3.Connection, *, now: Optional[
     with write_txn(conn):
         expiring = conn.execute(
             "SELECT id, platform, chat_id, message_id FROM captain_approval_requests "
-            "WHERE state IN ('reserved', 'staged', 'activating', 'active') AND expires_at <= ?", (timestamp,),
+            "WHERE state IN ('reserved', 'active') AND expires_at <= ?", (timestamp,),
         ).fetchall()
         updated = conn.execute(
             "UPDATE captain_approval_requests SET state = 'expired', updated_at = ? "
-            "WHERE state IN ('reserved', 'staged', 'activating', 'active') AND expires_at <= ?",
+            "WHERE state IN ('reserved', 'active') AND expires_at <= ?",
             (timestamp, timestamp),
         )
         for row in expiring:
