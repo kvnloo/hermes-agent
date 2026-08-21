@@ -8109,6 +8109,37 @@ def _desktop_linux_sandbox_helper_is_regular_file(packaged_executable: Path) -> 
     return stat.S_ISREG(sandbox_lstat.st_mode)
 
 
+def _desktop_linux_userns_available() -> bool:
+    """Prove that Electron can use Chromium's unprivileged namespace sandbox."""
+    if sys.platform != "linux" or (hasattr(os, "geteuid") and os.geteuid() == 0):
+        return False
+
+    override = os.environ.get("HERMES_DESKTOP_USERNS_AVAILABLE", "").strip().lower()
+    if override in {"1", "true"}:
+        return True
+    if override in {"0", "false"}:
+        return False
+
+    try:
+        clone_toggle = Path("/proc/sys/kernel/unprivileged_userns_clone")
+        if clone_toggle.exists() and clone_toggle.read_text(encoding="utf-8").strip() != "1":
+            return False
+        apparmor_toggle = Path("/proc/sys/kernel/apparmor_restrict_unprivileged_userns")
+        if apparmor_toggle.exists() and apparmor_toggle.read_text(encoding="utf-8").strip() == "1":
+            return False
+    except OSError:
+        return False
+
+    unshare = shutil.which("unshare")
+    if not unshare:
+        return False
+    return subprocess.run(
+        [unshare, "--user", "--map-root-user", "true"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    ).returncode == 0
+
 
 def _desktop_linux_sandbox_fixup(packaged_executable: Path) -> bool:
     """Configure Electron's Linux SUID sandbox helper when required."""
@@ -8117,6 +8148,8 @@ def _desktop_linux_sandbox_fixup(packaged_executable: Path) -> bool:
 
     sandbox = packaged_executable.parent / "chrome-sandbox"
     if not sandbox.exists():
+        if _desktop_linux_userns_available():
+            return True
         print(f"✗ Hermes Desktop is missing Electron's Linux sandbox helper: {sandbox}")
         return False
 
@@ -8134,6 +8167,19 @@ def _desktop_linux_sandbox_fixup(packaged_executable: Path) -> bool:
 
     if sandbox_lstat.st_uid == 0 and stat.S_IMODE(sandbox_lstat.st_mode) == 0o4755:
         return True
+
+    # electron-builder recreates the helper as user-owned 0755 after every
+    # source update. Chromium aborts when that unusable SUID helper is present,
+    # even on hosts where its secure namespace sandbox works. Remove only the
+    # verified regular file beside the packaged executable, then let Electron
+    # select the namespace sandbox. Hosts without proven userns support retain
+    # the helper and follow the narrow sudo/fallback path below.
+    if _desktop_linux_userns_available():
+        try:
+            sandbox.unlink()
+            return not sandbox.exists()
+        except OSError:
+            pass
 
     sudo = shutil.which("sudo")
     if not sudo:

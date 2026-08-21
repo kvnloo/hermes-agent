@@ -306,6 +306,29 @@ stop_ui() { # error/manual outcomes keep the window up briefly so a watching
 #     despite a failed preflight.
 # Outcomes mirror decideRelaunchOutcome: relaunch | skew | manual.
 GATE="" GATE_MSG=""
+linux_userns_available() {
+  # Tests can pin the capability without depending on the host kernel.
+  case "${HERMES_DESKTOP_USERNS_AVAILABLE:-}" in
+    1|true|TRUE|True) return 0 ;;
+    0|false|FALSE|False) return 1 ;;
+  esac
+
+  # Chromium's namespace sandbox requires unprivileged user namespaces and is
+  # blocked by Ubuntu/AppArmor's extra restriction even when the kernel toggle
+  # itself is enabled.  Prove the real operation instead of inferring from one
+  # sysctl alone.
+  if [ -r /proc/sys/kernel/unprivileged_userns_clone ] &&
+     [ "$(cat /proc/sys/kernel/unprivileged_userns_clone 2>/dev/null)" != "1" ]; then
+    return 1
+  fi
+  if [ -r /proc/sys/kernel/apparmor_restrict_unprivileged_userns ] &&
+     [ "$(cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns 2>/dev/null)" = "1" ]; then
+    return 1
+  fi
+  command -v unshare >/dev/null 2>&1 || return 1
+  unshare --user --map-root-user true >/dev/null 2>&1
+}
+
 linux_gate() {
   local unpacked="$INSTALL_ROOT/apps/desktop/release/linux-unpacked" sb arg
   case "$RELAUNCH_TARGET" in
@@ -316,6 +339,19 @@ linux_gate() {
   sb="$unpacked/chrome-sandbox"
   if [ ! -e "$sb" ]; then GATE=relaunch; return; fi
   if [ -u "$sb" ] && [ "$(stat -c %u "$sb" 2>/dev/null)" = "0" ]; then GATE=relaunch; return; fi
+
+  # electron-builder recreates chrome-sandbox as user-owned 0755 on every
+  # source update.  On hosts where the namespace sandbox is demonstrably
+  # available, leaving that unusable SUID helper in place makes Chromium abort
+  # before it can select the secure namespace path.  Remove only a regular file
+  # inside the already-anchored unpacked package; absence is the supported
+  # namespace-sandbox package shape.
+  if [ -f "$sb" ] && [ ! -L "$sb" ] && linux_userns_available; then
+    if rm -f -- "$sb" && [ ! -e "$sb" ]; then
+      GATE=relaunch
+      return
+    fi
+  fi
 
   case "${ELECTRON_DISABLE_SANDBOX:-}" in 1|true|TRUE|True) GATE=relaunch; return ;; esac
   [ "$SANDBOX_FALLBACK" -eq 1 ] && { GATE=relaunch; return; }

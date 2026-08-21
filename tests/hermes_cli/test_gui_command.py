@@ -13,6 +13,31 @@ import pytest
 from hermes_cli import main as cli_main
 
 
+@pytest.mark.skipif(sys.platform != "linux", reason="Linux sandbox policy")
+def test_linux_sandbox_fixup_uses_namespace_sandbox_for_invalid_helper(tmp_path):
+    executable = tmp_path / "Hermes"
+    executable.write_text("", encoding="utf-8")
+    sandbox = tmp_path / "chrome-sandbox"
+    sandbox.write_text("helper", encoding="utf-8")
+    sandbox.chmod(0o755)
+
+    with patch("hermes_cli.main._desktop_linux_userns_available", return_value=True), \
+         patch("hermes_cli.main.subprocess.run") as run:
+        assert cli_main._desktop_linux_sandbox_fixup(executable) is True
+
+    assert not sandbox.exists()
+    run.assert_not_called()
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="Linux sandbox policy")
+def test_linux_sandbox_fixup_accepts_missing_helper_when_userns_works(tmp_path):
+    executable = tmp_path / "Hermes"
+    executable.write_text("", encoding="utf-8")
+
+    with patch("hermes_cli.main._desktop_linux_userns_available", return_value=True):
+        assert cli_main._desktop_linux_sandbox_fixup(executable) is True
+
+
 @pytest.fixture(autouse=True)
 def _isolate_xdg_data_home(tmp_path, monkeypatch):
     """Keep desktop-entry writes out of the developer's real home directory.
