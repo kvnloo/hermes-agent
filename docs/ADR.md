@@ -25,6 +25,16 @@ are copied only as quarantined metadata; transcript content is never deleted.
 A future user-driven prompt snapshot requires a separate review. No automatic
 acknowledgment, delivery worker, or processing queue is authorized here.
 
+Boundary proof drives synthetic Telegram `MessageEvent` values through
+`GatewayRunner._handle_message`, before command resolution, slash access, and
+busy-session policy. It guards the model loop, tool dispatcher, platform send,
+pending queues, and all SessionDB message/metadata mutation surfaces while
+asserting byte- and row-identical transcripts. Storage adversity uses SQLite's
+real `max_page_count` limit, and crash adversity uses spawned processes that
+terminate with `os._exit` immediately before or after migration, acceptance,
+acknowledgment, and compaction commits; the parent reopens and retries the same
+database to prove rollback-or-complete semantics.
+
 ## 2026-07-13: Scope plugin manager state by Hermes home/profile (keyed cache)
 
 Status: Accepted
