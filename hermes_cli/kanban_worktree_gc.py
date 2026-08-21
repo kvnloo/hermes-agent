@@ -134,6 +134,17 @@ def _proc_identity(entry: Path) -> tuple[int, int, frozenset[int], int, int]:
     return values["Uid"][1], values["Gid"][1], groups, int(fields[19]), inode
 
 
+@dataclass
+class ProcessScan:
+    pids: list[int] = field(default_factory=list)
+    ambiguities: list[str] = field(default_factory=list)
+
+
+def _proc_link_snapshot(link: Path) -> tuple[int, str]:
+    """Capture both link identity and target without following the target."""
+    return link.lstat().st_ino, os.readlink(link)
+
+
 def _dac_can_traverse(path: Path, uid: int, gids: frozenset[int]) -> bool:
     """Conservatively model ordinary DAC traversal to an owned checkout."""
     if uid == 0:
@@ -155,6 +166,8 @@ def _associated_process(entry: Path) -> bool:
     for name in ("cmdline", "cgroup"):
         try:
             data += (entry / name).read_bytes().lower()
+        except (FileNotFoundError, ProcessLookupError):
+            raise
         except OSError:
             # Association is an additional scope signal. Credential/access
             # rules below remain fail-closed when these optional files hide.
@@ -170,8 +183,8 @@ def _inside(candidate: Path, raw: Path) -> bool:
         return False
 
 
-def _processes_using(path: Path, *, proc_root: Path = Path("/proc")) -> list[int]:
-    """Return using PIDs, with ``-1`` representing unsafe scan ambiguity.
+def _processes_using(path: Path, *, proc_root: Path = Path("/proc")) -> ProcessScan:
+    """Return using PIDs and explicit, deterministic scan ambiguities.
 
     Linux threat model: the candidate must be owned by our effective UID. We
     inspect every same-effective-UID process and every foreign process which is
@@ -187,31 +200,68 @@ def _processes_using(path: Path, *, proc_root: Path = Path("/proc")) -> list[int
     ``assess_worktree``). Non-Linux hosts are likewise plan-only.
     """
     if sys.platform != "linux" or not proc_root.is_dir():
-        return [-1]
+        return ProcessScan(ambiguities=["proc-root-unavailable"])
     target = path.resolve(strict=True)
     if target.stat().st_uid != os.geteuid():
-        return [-1]
+        return ProcessScan(ambiguities=["candidate-owner-mismatch"])
     hits: set[int] = set()
+    ambiguities: set[str] = set()
     try:
         entries = list(proc_root.iterdir())
     except OSError:
-        return [-1]
+        return ProcessScan(ambiguities=["proc-root-enumeration-failed"])
     for entry in entries:
         if not entry.name.isdigit():
             continue
+        pid = int(entry.name)
+        try:
+            # Absence before this first inode capture means the listed PID was
+            # never admitted to this scan generation and is safe to omit.
+            initial_inode = entry.stat().st_ino
+        except (FileNotFoundError, ProcessLookupError):
+            continue
+        except OSError:
+            ambiguities.add(f"pid:{pid}:initial-identity-unreadable")
+            continue
         try:
             before = _proc_identity(entry)
-        except FileNotFoundError:
+        except (FileNotFoundError, ProcessLookupError):
+            ambiguities.add(f"pid:{pid}:identity-disappeared")
             continue
         except (OSError, ValueError, UnicodeError):
-            return [-1]
+            ambiguities.add(f"pid:{pid}:identity-unreadable")
+            continue
+        if before[4] != initial_inode:
+            ambiguities.add(f"pid:{pid}:proc-inode-changed")
+            continue
         uid, _gid, groups, _start, _inode = before
-        in_scope = (uid == os.geteuid() or uid == 0 or
-                    _associated_process(entry) or _dac_can_traverse(target, uid, groups))
+        try:
+            in_scope = (uid == os.geteuid() or uid == 0 or
+                        _associated_process(entry) or _dac_can_traverse(target, uid, groups))
+        except (FileNotFoundError, ProcessLookupError):
+            ambiguities.add(f"pid:{pid}:process-state-disappeared")
+            continue
+        except OSError:
+            ambiguities.add(f"pid:{pid}:process-state-unreadable")
+            continue
         if not in_scope:
+            try:
+                excluded_after = _proc_identity(entry)
+            except (FileNotFoundError, ProcessLookupError):
+                ambiguities.add(f"pid:{pid}:identity-disappeared")
+                continue
+            except (OSError, ValueError, UnicodeError):
+                ambiguities.add(f"pid:{pid}:identity-unreadable")
+                continue
+            if before[3:] != excluded_after[3:]:
+                reason = "starttime-changed" if before[3] != excluded_after[3] else "proc-inode-changed"
+                ambiguities.add(f"pid:{pid}:{reason}")
             continue
         try:
-            links = [entry / "cwd", entry / "root", *(entry / "fd").iterdir()]
+            fd_dir = entry / "fd"
+            fd_entries = sorted(fd_dir.iterdir(), key=lambda item: item.name)
+            links = [entry / "cwd", entry / "root", *fd_entries]
+            snapshots = {link: _proc_link_snapshot(link) for link in links}
             used = any(_inside(target, link) for link in links)
             maps = (entry / "maps").read_text(errors="replace")
             used = used or any(
@@ -219,15 +269,30 @@ def _processes_using(path: Path, *, proc_root: Path = Path("/proc")) -> list[int
                 for line in maps.splitlines() if "/" in line
             )
             after = _proc_identity(entry)
-        except FileNotFoundError:
+            after_fd_entries = sorted(fd_dir.iterdir(), key=lambda item: item.name)
+            if [item.name for item in fd_entries] != [item.name for item in after_fd_entries]:
+                ambiguities.add(f"pid:{pid}:fd-set-changed")
+                continue
+            after_snapshots = {link: _proc_link_snapshot(link) for link in links}
+        except (FileNotFoundError, ProcessLookupError):
+            ambiguities.add(f"pid:{pid}:process-state-disappeared")
             continue
         except (OSError, ValueError, UnicodeError):
-            return [-1]
+            ambiguities.add(f"pid:{pid}:process-state-unreadable")
+            continue
         if before[3:] != after[3:]:
-            return [-1]
+            reason = "starttime-changed" if before[3] != after[3] else "proc-inode-changed"
+            ambiguities.add(f"pid:{pid}:{reason}")
+            continue
+        changed_links = [link for link in links if snapshots[link] != after_snapshots[link]]
+        if changed_links:
+            label = changed_links[0].name
+            kind = "fd-link-changed" if changed_links[0].parent == fd_dir else f"{label}-link-changed"
+            ambiguities.add(f"pid:{pid}:{kind}")
+            continue
         if used:
-            hits.add(int(entry.name))
-    return sorted(hits)
+            hits.add(pid)
+    return ProcessScan(pids=sorted(hits), ambiguities=sorted(ambiguities))
 
 
 def _artifact_count(conn: sqlite3.Connection, task_id: str) -> int:
@@ -288,9 +353,11 @@ def assess_worktree(conn: sqlite3.Connection, task_id: str, *, retention_seconds
         out.blockers.append("nonterminal child depends on task")
     if conn.execute("SELECT 1 FROM task_runs WHERE task_id=? AND status='running' LIMIT 1", (task_id,)).fetchone():
         out.blockers.append("task has a running worker")
-    pids = _processes_using(wp)
-    if pids:
-        out.blockers.append("live process uses checkout: " + ",".join(map(str, pids[:10])))
+    process_scan = _processes_using(wp)
+    if process_scan.pids:
+        out.blockers.append("live process uses checkout: " + ",".join(map(str, process_scan.pids[:10])))
+    if process_scan.ambiguities:
+        out.blockers.append("process scan ambiguous: " + ",".join(process_scan.ambiguities[:10]))
     # Unprivileged /proc inspection cannot exclude privileged/capability/ACL or
     # namespace access, nor an unreadable process retaining an already-open fd.
     # Since apply is disabled, report useful process telemetry but never promote

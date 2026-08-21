@@ -155,7 +155,7 @@ def test_normal_clean_fixture_is_explicitly_plan_ineligible(tmp_path):
 def test_plan_disables_optional_locks_and_preserves_git_metadata(monkeypatch, tmp_path):
     repo, wt = make_repo(tmp_path)
     conn = make_db(wt)
-    monkeypatch.setattr(gc, "_processes_using", lambda _path: [])
+    monkeypatch.setattr(gc, "_processes_using", lambda _path: gc.ProcessScan())
     original_run = gc.subprocess.run
     observed = []
 
@@ -229,13 +229,15 @@ def test_detached_unique_head_is_not_eligible(tmp_path):
     assert wt.exists()
 
 
-@pytest.mark.parametrize("ambiguous", [[-1], [-1, 123]])
-def test_unreadable_or_disappearing_process_state_fails_closed(monkeypatch, tmp_path, ambiguous):
+@pytest.mark.parametrize("ambiguities", [["pid:12:identity-disappeared"],
+                                         ["pid:12:fd-set-changed", "pid:13:starttime-changed"]])
+def test_unreadable_or_disappearing_process_state_fails_closed(monkeypatch, tmp_path, ambiguities):
     conn, wt, _item = assessment(tmp_path)
-    monkeypatch.setattr(gc, "_processes_using", lambda _path: ambiguous)
+    monkeypatch.setattr(gc, "_processes_using", lambda _path: gc.ProcessScan(ambiguities=ambiguities))
     item = gc.assess_worktree(conn, "t_one", retention_seconds=0)
     assert not item.eligible
-    assert any("live process" in blocker for blocker in item.blockers)
+    assert any("process scan ambiguous" in blocker for blocker in item.blockers)
+    assert not any("-1" in blocker for blocker in item.blockers)
 
 
 def _fake_proc_process(root: Path, pid: int, *, uid: int, gid: int,
@@ -263,14 +265,18 @@ def test_real_linux_proc_scanner_detects_same_uid_cwd_and_fd(tmp_path):
     held = candidate / "held"
     held.write_text("bytes")
     proc = subprocess.Popen(
-        [sys.executable, "-c", "import os,time; f=open('held'); time.sleep(30)"],
+        [sys.executable, "-c", "import time; f=open('held'); print('ready', flush=True); time.sleep(30)"],
         cwd=candidate,
+        stdout=subprocess.PIPE,
+        text=True,
     )
+    assert proc.stdout is not None
+    assert proc.stdout.readline().strip() == "ready"
     fixture = tmp_path / "proc"
     fixture.mkdir()
     (fixture / str(proc.pid)).symlink_to(Path("/proc") / str(proc.pid), target_is_directory=True)
     try:
-        assert gc._processes_using(candidate, proc_root=fixture) == [proc.pid]
+        assert gc._processes_using(candidate, proc_root=fixture) == gc.ProcessScan(pids=[proc.pid])
     finally:
         proc.terminate()
         proc.wait(timeout=5)
@@ -280,7 +286,9 @@ def test_real_linux_proc_scanner_detects_same_uid_cwd_and_fd(tmp_path):
 def test_actual_linux_proc_scan_never_promotes_clean_fixture(tmp_path):
     _repo, wt = make_repo(tmp_path)
     result = gc._processes_using(wt)
-    assert isinstance(result, list)
+    assert isinstance(result, gc.ProcessScan)
+    assert all(pid >= 0 for pid in result.pids)
+    assert all(reason.startswith("pid:") for reason in result.ambiguities)
     item = gc.assess_worktree(make_db(wt), "t_one", retention_seconds=0)
     assert item.eligible is False
     assert any("plan-only on Linux" in blocker for blocker in item.blockers)
@@ -295,7 +303,9 @@ def test_unreadable_same_uid_proc_fixture_fails_closed(tmp_path):
     entry = _fake_proc_process(proc_root, 123, uid=os.geteuid(), gid=os.getegid(), cwd=tmp_path)
     (entry / "maps").chmod(0)
     try:
-        assert gc._processes_using(candidate, proc_root=proc_root) == [-1]
+        result = gc._processes_using(candidate, proc_root=proc_root)
+        assert result.pids == []
+        assert result.ambiguities == ["pid:123:process-state-unreadable"]
     finally:
         (entry / "maps").chmod(0o600)
 
@@ -312,11 +322,114 @@ def test_foreign_uid_dac_scope_is_deterministic(tmp_path):
     # optional descriptor is unreadable.
     (entry / "maps").chmod(0)
     try:
-        assert gc._processes_using(candidate, proc_root=proc_root) == []
+        assert gc._processes_using(candidate, proc_root=proc_root) == gc.ProcessScan()
         (entry / "cmdline").write_bytes(b"hermes-kanban-service\x00")
-        assert gc._processes_using(candidate, proc_root=proc_root) == [-1]
+        result = gc._processes_using(candidate, proc_root=proc_root)
+        assert result.ambiguities == ["pid:124:process-state-unreadable"]
     finally:
         (entry / "maps").chmod(0o600)
+
+
+def _race_fixture(tmp_path: Path) -> tuple[Path, Path, Path]:
+    candidate = tmp_path / "candidate"
+    candidate.mkdir()
+    held = candidate / "held"
+    held.write_text("held")
+    proc_root = tmp_path / "proc"
+    proc_root.mkdir()
+    entry = _fake_proc_process(proc_root, 321, uid=os.geteuid(), gid=os.getegid(), cwd=candidate)
+    (entry / "fd" / "7").symlink_to(held)
+    return candidate, proc_root, entry
+
+
+def _mutate_on_second_identity(monkeypatch, mutation):
+    original = gc._proc_identity
+    calls = 0
+
+    def raced(entry):
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            mutation(entry)
+        return original(entry)
+
+    monkeypatch.setattr(gc, "_proc_identity", raced)
+
+
+@pytest.mark.linux_only
+def test_pid_absent_before_initial_identity_is_not_enumerated(tmp_path):
+    candidate = tmp_path / "candidate"
+    candidate.mkdir()
+    proc_root = tmp_path / "proc"
+    proc_root.mkdir()
+    (proc_root / "320").symlink_to(tmp_path / "already-exited", target_is_directory=True)
+    assert gc._processes_using(candidate, proc_root=proc_root) == gc.ProcessScan()
+
+
+@pytest.mark.linux_only
+def test_starttime_mutation_is_explicitly_ambiguous(monkeypatch, tmp_path):
+    candidate, proc_root, entry = _race_fixture(tmp_path)
+
+    def mutate(_entry):
+        text = (entry / "stat").read_text()
+        (entry / "stat").write_text(text.replace("42 0\n", "43 0\n"))
+
+    _mutate_on_second_identity(monkeypatch, mutate)
+    assert gc._processes_using(candidate, proc_root=proc_root) == gc.ProcessScan(
+        ambiguities=["pid:321:starttime-changed"])
+
+
+@pytest.mark.linux_only
+def test_proc_inode_replacement_is_explicitly_ambiguous(monkeypatch, tmp_path):
+    candidate, proc_root, entry = _race_fixture(tmp_path)
+
+    def mutate(_entry):
+        entry.rename(proc_root / "old")
+        replacement = _fake_proc_process(proc_root, 321, uid=os.geteuid(), gid=os.getegid(), cwd=candidate)
+        (replacement / "fd" / "7").symlink_to(candidate / "held")
+
+    _mutate_on_second_identity(monkeypatch, mutate)
+    assert gc._processes_using(candidate, proc_root=proc_root) == gc.ProcessScan(
+        ambiguities=["pid:321:proc-inode-changed"])
+
+
+@pytest.mark.linux_only
+def test_enumerated_fd_deletion_is_explicitly_ambiguous(monkeypatch, tmp_path):
+    candidate, proc_root, entry = _race_fixture(tmp_path)
+    _mutate_on_second_identity(monkeypatch, lambda _entry: (entry / "fd" / "7").unlink())
+    assert gc._processes_using(candidate, proc_root=proc_root) == gc.ProcessScan(
+        ambiguities=["pid:321:fd-set-changed"])
+
+
+@pytest.mark.linux_only
+def test_fd_target_replacement_is_explicitly_ambiguous(monkeypatch, tmp_path):
+    candidate, proc_root, entry = _race_fixture(tmp_path)
+
+    def mutate(_entry):
+        link = entry / "fd" / "7"
+        link.unlink()
+        link.symlink_to(tmp_path)
+
+    _mutate_on_second_identity(monkeypatch, mutate)
+    assert gc._processes_using(candidate, proc_root=proc_root) == gc.ProcessScan(
+        ambiguities=["pid:321:fd-link-changed"])
+
+
+@pytest.mark.linux_only
+@pytest.mark.parametrize("name", ["cwd", "root"])
+def test_cwd_or_root_disappearance_is_explicitly_ambiguous(monkeypatch, tmp_path, name):
+    candidate, proc_root, entry = _race_fixture(tmp_path)
+    _mutate_on_second_identity(monkeypatch, lambda _entry: (entry / name).unlink())
+    assert gc._processes_using(candidate, proc_root=proc_root) == gc.ProcessScan(
+        ambiguities=["pid:321:process-state-disappeared"])
+
+
+@pytest.mark.linux_only
+def test_process_exit_after_initial_identity_is_explicitly_ambiguous(monkeypatch, tmp_path):
+    candidate, proc_root, entry = _race_fixture(tmp_path)
+    _mutate_on_second_identity(monkeypatch, lambda _entry: __import__("shutil").rmtree(entry))
+    assert gc._processes_using(candidate, proc_root=proc_root) == gc.ProcessScan(
+        ambiguities=["pid:321:process-state-disappeared"])
 
 
 @pytest.mark.parametrize("failure", ["ENOSPC-pre", "ENOSPC-post", "symlink-substitution", "refs-drift", "concurrent-gc"])
