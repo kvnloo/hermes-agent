@@ -182,6 +182,9 @@ class SessionSource:
     # None => the gateway's active/default profile. Drives both session-key
     # namespacing and the per-turn config/credential scope.
     profile: Optional[str] = None
+    # Stable trusted sub-conversation namespace. Unlike thread_id this never
+    # affects response delivery; it only partitions model history.
+    conversation_scope: Optional[str] = None
     # Transport-local fail-closed signal for an explicit profile route whose
     # target is not served. Excluded from repr/equality and wire serialization.
     profile_route_rejected: bool = field(default=False, repr=False, compare=False)
@@ -279,6 +282,8 @@ class SessionSource:
             d["message_id"] = self.message_id
         if self.profile:
             d["profile"] = self.profile
+        if self.conversation_scope:
+            d["conversation_scope"] = self.conversation_scope
         if self.auto_thread_created:
             d["auto_thread_created"] = True
         if self.auto_thread_initial_name:
@@ -306,6 +311,7 @@ class SessionSource:
             parent_chat_id=data.get("parent_chat_id"),
             message_id=data.get("message_id"),
             profile=data.get("profile"),
+            conversation_scope=data.get("conversation_scope"),
             auto_thread_created=bool(data.get("auto_thread_created", False)),
             auto_thread_initial_name=data.get("auto_thread_initial_name"),
             prospective_thread_id=data.get("prospective_thread_id"),
@@ -1127,6 +1133,10 @@ def build_session_key(
     """
     ns = _session_key_namespace(profile)
     platform = source.platform.value
+    def finish(parts: list[str]) -> str:
+        if source.conversation_scope:
+            parts.extend(("scope", source.conversation_scope))
+        return ":".join(str(part) for part in parts)
     slack_scope_id = (
         str(source.scope_id)
         if source.platform == Platform.SLACK and source.scope_id
@@ -1144,7 +1154,7 @@ def build_session_key(
             dm_parts.append(dm_chat_id)
             if source.thread_id:
                 dm_parts.append(source.thread_id)
-            return ":".join(str(part) for part in dm_parts)
+            return finish(dm_parts)
         # No chat_id — fall back to the sender's own identifier before the
         # bare per-platform sink.  Without this, every DM from every user that
         # arrives without a chat_id (non-standard adapters / synthetic sources)
@@ -1161,10 +1171,10 @@ def build_session_key(
             dm_parts.append(str(dm_participant_id))
             if source.thread_id:
                 dm_parts.append(source.thread_id)
-            return ":".join(str(part) for part in dm_parts)
+            return finish(dm_parts)
         if source.thread_id:
             dm_parts.append(source.thread_id)
-        return ":".join(str(part) for part in dm_parts)
+        return finish(dm_parts)
 
     participant_id = source.user_id_alt or source.user_id
     if participant_id and source.platform == Platform.WHATSAPP:
@@ -1208,7 +1218,7 @@ def build_session_key(
     if isolate_user and participant_id:
         key_parts.append(str(participant_id))
 
-    return ":".join(str(part) for part in key_parts)
+    return finish(key_parts)
 
 
 class _SessionFlight:
