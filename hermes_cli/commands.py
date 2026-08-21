@@ -223,6 +223,9 @@ COMMAND_REGISTRY: list[CommandDef] = [
                args_hint="[text | remove N | clear]", busy_policy="dispatch"),
     CommandDef("status", "Show session, model, token, and context info", "Session",
                busy_policy="dispatch"),
+    CommandDef("notifications", "Manage pending durable notifications", "Session",
+               args_hint="<list|fetch|ack> <plugin> [notification-id]",
+               gateway_only=True, busy_policy="reject"),
     CommandDef("egress", "Show Docker egress proxy status", "Session",
                args_hint="[status]", subcommands=("status",),
                busy_policy="dispatch", busy_handler="egress",
@@ -1368,7 +1371,10 @@ _SLACK_PRIORITY_ALIASES = ("btw", "bg")
 #     (session export is an interactive surface; platform is a rare
 #     informational lookup) — without this entry /save tips the registry
 #     past the 50-cap and silently clamps /platform, breaking parity.
-_SLACK_VIA_HERMES_ONLY = frozenset({"topup", "moa", "debug", "egress", "init", "version", "diff", "update", "heartbeat", "refine", "review", "pause", "whoami", "platform"})
+#   - notifications: owner-scoped inbox maintenance; reached via
+#     /hermes notifications on Slack. Added at the 50-cap so the new command
+#     does not silently clamp /insights from the native command set.
+_SLACK_VIA_HERMES_ONLY = frozenset({"topup", "moa", "debug", "egress", "init", "version", "diff", "update", "heartbeat", "refine", "review", "pause", "whoami", "platform", "notifications"})
 
 
 def _sanitize_slack_name(raw: str) -> str:

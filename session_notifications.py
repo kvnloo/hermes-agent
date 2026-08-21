@@ -20,7 +20,8 @@ from typing import Any, Callable, Mapping
 MAX_TEXT_BYTES = 256
 MAX_METADATA_BYTES = 2048
 MAX_ACK_RETENTION_SECONDS = 90 * 86400
-MIGRATION_MARKER = "session_notifications_legacy_migrated_v2"
+MIGRATION_VERSION = 3
+MIGRATION_MARKER = "session_notifications_legacy_migrated_v3"
 _ALLOWED_METADATA = {
     "event": str,
     "sender": str,
@@ -65,78 +66,6 @@ class SessionNotification:
     retain_until: float | None
 
 
-@dataclass(frozen=True)
-class OwnerNotificationContext:
-    """Opaque capability minted only by an authenticated gateway boundary."""
-
-    platform: str
-    user_id: str
-    chat_id: str
-    profile_name: str
-    session_key: str
-    generation: int
-    _issuer: object
-
-
-class GatewayNotificationOwnerBoundary:
-    """Owner read/ack facade which revalidates live gateway auth on every call."""
-
-    def __init__(self, store: "SessionNotificationStore", *, captain_user_id: str,
-                 platform: str, chat_id: str, profile_name: str, session_key: str,
-                 generation: int, authorization_check: Callable[[str, str, str], bool]):
-        self._store = store
-        self._captain = _bounded_text(captain_user_id, name="captain_user_id")
-        self._binding = (platform, chat_id, profile_name, session_key, generation)
-        self._authorization_check = authorization_check
-        self._issuer = object()
-
-    def issue(self, *, user_id: str, platform: str, chat_id: str,
-              profile_name: str, session_key: str, generation: int) -> OwnerNotificationContext | None:
-        supplied = (platform, chat_id, profile_name, session_key, generation)
-        if user_id != self._captain or supplied != self._binding:
-            return None
-        if not self._authorization_check(user_id, platform, chat_id):
-            return None
-        return OwnerNotificationContext(platform, user_id, chat_id, profile_name,
-                                        session_key, generation, self._issuer)
-
-    def _validate(self, context: OwnerNotificationContext) -> bool:
-        return (
-            type(context) is OwnerNotificationContext
-            and context._issuer is self._issuer
-            and context.user_id == self._captain
-            and (context.platform, context.chat_id, context.profile_name,
-                 context.session_key, context.generation) == self._binding
-            and self._authorization_check(context.user_id, context.platform, context.chat_id)
-        )
-
-    def list_pending(self, context: OwnerNotificationContext, *, plugin_id: str,
-                     limit: int = 100) -> list[SessionNotification]:
-        if not self._validate(context):
-            return []
-        return self._store._list_pending(profile_name=context.profile_name, plugin_id=plugin_id,
-                                         session_key=context.session_key, limit=limit)
-
-    def fetch(self, context: OwnerNotificationContext, notification_id: str,
-              *, plugin_id: str) -> SessionNotification | None:
-        if not self._validate(context):
-            return None
-        return self._store._fetch(notification_id, profile_name=context.profile_name,
-                                  plugin_id=plugin_id, session_key=context.session_key)
-
-    def acknowledge(self, context: OwnerNotificationContext, notification_id: str,
-                    *, plugin_id: str, retention_seconds: int = 30 * 86400) -> bool:
-        if not self._validate(context):
-            return False
-        binding = json.dumps({"platform": context.platform, "user_id": context.user_id,
-                              "chat_id": context.chat_id, "generation": context.generation},
-                             sort_keys=True, separators=(",", ":"))
-        return self._store._acknowledge(
-            notification_id, profile_name=context.profile_name, plugin_id=plugin_id,
-            session_key=context.session_key, generation=context.generation,
-            identity_binding=binding, retention_seconds=retention_seconds,
-        )
-
 
 def _bounded_text(value: Any, *, name: str, allow_empty: bool = False) -> str:
     if not isinstance(value, str) or (not allow_empty and not value):
@@ -178,10 +107,16 @@ def canonicalize_metadata(metadata: Mapping[str, Any], generation: int) -> tuple
 class SessionNotificationStore:
     """Atomic notification ledger backed by the canonical state database."""
 
-    def __init__(self, db_path: Path, *, clock=time.time, timeout: float = 5.0):
+    def __init__(self, db_path: Path, *, clock=time.time, timeout: float = 5.0,
+                 failure_hook: Callable[[str], None] | None = None):
         self.db_path = Path(db_path)
         self.clock = clock
         self.timeout = timeout
+        self._failure_hook = failure_hook
+
+    def _failpoint(self, name: str) -> None:
+        if self._failure_hook is not None:
+            self._failure_hook(name)
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path, timeout=self.timeout)
@@ -199,13 +134,9 @@ class SessionNotificationStore:
         conn = self._connect()
         try:
             conn.execute("BEGIN IMMEDIATE")
-            if conn.execute("SELECT 1 FROM state_meta WHERE key=?", (MIGRATION_MARKER,)).fetchone():
-                conn.rollback()
-                return 0
             tables = {row[0] for row in conn.execute(
                 "SELECT name FROM sqlite_master WHERE type='table'"
             )}
-            represented = 0
             rows = []
             if {"gateway_turns", "gateway_inbox"} <= tables:
                 rows = conn.execute(
@@ -214,77 +145,147 @@ class SessionNotificationStore:
                     "FROM gateway_turns t JOIN gateway_inbox i ON i.inbox_id=t.inbox_id "
                     "ORDER BY t.turn_id,t.inbox_id"
                 ).fetchall()
-                for row in rows:
-                    metadata_json, digest = canonicalize_metadata(
-                        {"event": "legacy_gateway_notification", "generation": max(0, int(row["generation"])),
-                         "status_label": "ambiguous_quarantined"},
-                        max(0, int(row["generation"])),
-                    )
-                    key = "legacy:" + hashlib.sha256(
-                        str(row["idempotency_key"]).encode("utf-8")
+
+            source_digests: list[str] = []
+            classes: list[tuple[str, str, str, str | None, str | None]] = []
+            for row in rows:
+                generation = max(0, int(row["generation"]))
+                metadata_json, metadata_digest = canonicalize_metadata(
+                    {"event": "legacy_gateway_notification", "generation": generation,
+                     "status_label": "ambiguous_quarantined"}, generation,
+                )
+                source_identity = hashlib.sha256(json.dumps(
+                    ["gateway_turns", str(row["turn_id"]), str(row["inbox_id"])],
+                    separators=(",", ":"), ensure_ascii=False,
+                ).encode()).hexdigest()
+                source_envelope = {
+                    "source_table": "gateway_turns", "source_row_identity": source_identity,
+                    "turn_id": str(row["turn_id"]), "inbox_id": str(row["inbox_id"]),
+                    "legacy_idempotency_key": str(row["idempotency_key"]),
+                    "notification_id": str(row["turn_id"]), "profile_name": "legacy-unknown",
+                    "plugin_id": str(row["source_id"]), "session_id": str(row["session_id"]),
+                    "session_key": str(row["session_key"]), "destination": str(row["session_key"]),
+                    "generation": generation, "created_at": float(row["created_at"]),
+                    "metadata_digest": metadata_digest,
+                }
+                source_digest = hashlib.sha256(json.dumps(
+                    source_envelope, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+                ).encode()).hexdigest()
+                source_digests.append(source_digest)
+                prior = conn.execute(
+                    "SELECT classification,source_digest,target_id,conflict_id FROM "
+                    "session_notification_migration_classifications WHERE migration_version=? AND "
+                    "source_table='gateway_turns' AND source_row_identity=?",
+                    (MIGRATION_VERSION, source_identity),
+                ).fetchone()
+                if prior is not None:
+                    if prior["source_digest"] != source_digest:
+                        raise sqlite3.IntegrityError("legacy source digest changed")
+                    if prior["classification"] in {"inserted", "represented_existing"}:
+                        target = conn.execute(
+                            "SELECT 1 FROM session_notifications WHERE notification_id=?",
+                            (prior["target_id"],),
+                        ).fetchone()
+                        if target is None:
+                            raise sqlite3.IntegrityError("classified notification is missing")
+                    elif conn.execute(
+                        "SELECT 1 FROM session_notification_migration_conflicts WHERE "
+                        "source_table='gateway_turns' AND source_identity=?", (source_identity,),
+                    ).fetchone() is None:
+                        raise sqlite3.IntegrityError("classified migration conflict is missing")
+                    classes.append((source_identity, prior["classification"], source_digest,
+                                    prior["target_id"], prior["conflict_id"]))
+                    continue
+                key = "legacy:" + hashlib.sha256(
+                    str(row["idempotency_key"]).encode("utf-8")
+                ).hexdigest()
+                expected = (key, str(row["turn_id"]), "legacy-unknown", str(row["source_id"]),
+                            str(row["session_id"]), str(row["session_key"]),
+                            str(row["session_key"]), generation, metadata_digest)
+                collisions = conn.execute(
+                    "SELECT * FROM session_notifications WHERE idempotency_key=? OR "
+                    "notification_id=? OR (profile_name=? AND plugin_id=? AND session_id=? AND "
+                    "session_key=? AND destination=? AND generation=?) OR metadata_digest=?",
+                    (key, str(row["turn_id"]), *expected[2:8], metadata_digest),
+                ).fetchall()
+                exact = next((candidate for candidate in collisions if tuple(candidate[name] for name in (
+                    "idempotency_key", "notification_id", "profile_name", "plugin_id", "session_id",
+                    "session_key", "destination", "generation", "metadata_digest")) == expected), None)
+                target_id: str | None = None
+                conflict_id: str | None = None
+                if exact is not None:
+                    classification = "represented_existing"
+                    target_id = str(exact["notification_id"])
+                elif collisions:
+                    classification = "migration_conflict"
+                    collision_kinds: list[str] = []
+                    for candidate in collisions:
+                        if candidate["idempotency_key"] == key: collision_kinds.append("key")
+                        if candidate["notification_id"] == str(row["turn_id"]): collision_kinds.append("notification_id")
+                        if tuple(candidate[name] for name in ("profile_name", "plugin_id", "session_id", "session_key", "destination", "generation")) == expected[2:8]: collision_kinds.append("binding")
+                        if candidate["metadata_digest"] == metadata_digest: collision_kinds.append("digest")
+                    conflict_class = "+".join(sorted(set(collision_kinds)))
+                    conflict_id = hashlib.sha256(
+                        f"{MIGRATION_VERSION}:gateway_turns:{source_identity}:{conflict_class}".encode()
                     ).hexdigest()
-                    identity = hashlib.sha256(json.dumps(
-                        [str(row["turn_id"]), str(row["inbox_id"])],
-                        separators=(",", ":"),
-                    ).encode()).hexdigest()
-                    by_key = conn.execute(
-                        "SELECT * FROM session_notifications WHERE idempotency_key=?", (key,)
-                    ).fetchone()
-                    by_id = conn.execute(
-                        "SELECT * FROM session_notifications WHERE notification_id=?",
-                        (str(row["turn_id"]),),
-                    ).fetchone()
-                    existing = by_key or by_id
-                    expected = (key, str(row["turn_id"]), "legacy-unknown", str(row["source_id"]),
-                                str(row["session_id"]), str(row["session_key"]),
-                                str(row["session_key"]), max(0, int(row["generation"])), digest)
-                    if existing is not None:
-                        actual = tuple(existing[name] for name in (
-                            "idempotency_key", "notification_id", "profile_name", "plugin_id",
-                            "session_id", "session_key", "destination", "generation", "metadata_digest",
-                        ))
-                        if actual != expected:
-                            conflict_class = "key_and_id" if by_key and by_id else (
-                                "idempotency_key" if by_key else "notification_id"
-                            )
-                            now = self.clock()
-                            prior = conn.execute(
-                                "SELECT metadata_digest,conflict_class FROM "
-                                "session_notification_migration_conflicts WHERE "
-                                "source_table='gateway_turns' AND source_identity=?", (identity,)
-                            ).fetchone()
-                            if prior is not None and tuple(prior) != (digest, conflict_class):
-                                raise sqlite3.IntegrityError("legacy conflict receipt changed")
-                            if prior is None:
-                                conn.execute(
-                                    "INSERT INTO session_notification_migration_conflicts "
-                                    "(source_table,source_identity,metadata_digest,conflict_class,"
-                                    "first_seen_at,last_seen_at) VALUES('gateway_turns',?,?,?,?,?)",
-                                    (identity, digest, conflict_class, now, now),
-                                )
-                    else:
-                        conn.execute(
-                            "INSERT INTO session_notifications "
-                            "(idempotency_key,notification_id,profile_name,plugin_id,session_id,"
-                            "session_key,destination,generation,metadata_json,metadata_digest,status,"
-                            "created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,'quarantined',?,?)",
-                            (key, str(row["turn_id"]), "legacy-unknown", str(row["source_id"]),
-                             str(row["session_id"]), str(row["session_key"]), str(row["session_key"]),
-                             max(0, int(row["generation"])), metadata_json, digest,
-                             float(row["created_at"]), self.clock()),
-                        )
-                    represented += 1
-            if represented != len(rows):
+                    self._failpoint("before_conflict_insert")
+                    conn.execute(
+                        "INSERT INTO session_notification_migration_conflicts "
+                        "(source_table,source_identity,metadata_digest,conflict_class,first_seen_at,last_seen_at) "
+                        "VALUES('gateway_turns',?,?,?,?,?) ON CONFLICT(source_table,source_identity) "
+                        "DO UPDATE SET last_seen_at=excluded.last_seen_at",
+                        (source_identity, source_digest, conflict_class, self.clock(), self.clock()),
+                    )
+                    self._failpoint("after_conflict_insert")
+                else:
+                    classification = "inserted"
+                    target_id = str(row["turn_id"])
+                    self._failpoint("before_notification_insert")
+                    conn.execute(
+                        "INSERT INTO session_notifications "
+                        "(idempotency_key,notification_id,profile_name,plugin_id,session_id,session_key,"
+                        "destination,generation,metadata_json,metadata_digest,status,created_at,updated_at) "
+                        "VALUES(?,?,?,?,?,?,?,?,?,?,'quarantined',?,?)",
+                        (*expected[:8], metadata_json, metadata_digest, float(row["created_at"]), self.clock()),
+                    )
+                    self._failpoint("after_notification_insert")
+
+                receipt = (classification, source_digest, target_id, conflict_id)
+                self._failpoint("before_classification_insert")
+                conn.execute(
+                    "INSERT INTO session_notification_migration_classifications VALUES(?,?,?,?,?,?,?,?)",
+                    (MIGRATION_VERSION, "gateway_turns", source_identity, source_digest,
+                     classification, target_id, conflict_id, self.clock()),
+                )
+                self._failpoint("after_classification_insert")
+                classes.append((source_identity, classification, source_digest, target_id, conflict_id))
+
+            class_counts = {name: sum(1 for item in classes if item[1] == name) for name in
+                            ("inserted", "represented_existing", "migration_conflict")}
+            if sum(class_counts.values()) != len(rows):
                 raise sqlite3.IntegrityError("legacy notification migration count mismatch")
-            receipt = json.dumps({
-                "version": 2, "source_count": len(rows), "represented_count": represented,
-                "source_digest": hashlib.sha256("\n".join(
-                    f'{row["turn_id"]}:{row["inbox_id"]}' for row in rows
-                ).encode()).hexdigest(),
-            }, sort_keys=True, separators=(",", ":"))
+            class_digest = hashlib.sha256("\n".join(
+                json.dumps(item, separators=(",", ":")) for item in sorted(classes)
+            ).encode()).hexdigest()
+            source_aggregate = hashlib.sha256("\n".join(sorted(source_digests)).encode()).hexdigest()
+            receipt_obj = {"version": MIGRATION_VERSION, "source_count": len(rows),
+                           **{f"{key}_count": value for key, value in class_counts.items()},
+                           "classification_aggregate_digest": class_digest,
+                           "source_aggregate_digest": source_aggregate}
+            receipt = json.dumps(receipt_obj, sort_keys=True, separators=(",", ":"))
+            marker = conn.execute("SELECT value FROM state_meta WHERE key=?", (MIGRATION_MARKER,)).fetchone()
+            if marker is not None:
+                if marker[0] != receipt:
+                    raise sqlite3.IntegrityError("legacy migration marker changed")
+                conn.rollback()
+                return 0
+            self._failpoint("before_marker")
             conn.execute("INSERT INTO state_meta(key,value) VALUES(?,?)", (MIGRATION_MARKER, receipt))
+            self._failpoint("after_marker")
+            self._failpoint("before_commit")
             conn.commit()
-            return represented
+            self._failpoint("after_commit")
+            return len(rows)
         except BaseException:
             if conn.in_transaction:
                 conn.rollback()
@@ -413,7 +414,9 @@ class SessionNotificationStore:
                 return False
             if row["status"] == "acknowledged":
                 conn.rollback()
-                return row["acknowledged_by"] == identity_digest
+                # Owner actions are single-use.  A copied/replayed command or
+                # callback never receives a second successful resolution.
+                return False
             if row["status"] != "pending":
                 conn.rollback()
                 return False
@@ -445,15 +448,18 @@ class SessionNotificationStore:
                 "SELECT notification_id FROM session_notifications WHERE status='acknowledged' "
                 "AND retain_until IS NOT NULL AND retain_until<=? LIMIT ?", (now, max(1, min(limit, 5000)))
             ).fetchall()
+            self._failpoint("before_compaction_receipt")
             conn.execute(
                 "INSERT INTO session_notification_compaction_receipts(receipt_id,created_at,row_count) "
                 "VALUES(?,?,?)", (receipt, now, len(rows)),
             )
+            self._failpoint("after_compaction_receipt")
             if rows:
                 conn.executemany(
                     "DELETE FROM session_notifications WHERE notification_id=? AND status='acknowledged'",
                     [(row[0],) for row in rows],
                 )
+            self._failpoint("before_compaction_commit")
             conn.commit()
             return receipt, len(rows)
         finally:
