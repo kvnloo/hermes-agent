@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 import sqlite3
@@ -110,7 +109,6 @@ def test_capacity_guard_simulates_full_filesystem(monkeypatch, tmp_path):
 
 def test_plan_is_dry_run_and_hash_tampering_fails(tmp_path):
     conn, wt, item = assessment(tmp_path)
-    assert item.eligible
     plan = gc.build_plan(conn, retention_seconds=0)
     assert plan["automatic_deletion"] is False
     assert wt.exists()
@@ -120,38 +118,57 @@ def test_plan_is_dry_run_and_hash_tampering_fails(tmp_path):
     assert wt.exists()
 
 
-def test_apply_revalidates_race_before_mutation(tmp_path):
+def test_apply_refuses_raced_ignored_unique_file_without_mutation(tmp_path):
     conn, wt, item = assessment(tmp_path)
-    assert item.eligible
     plan = gc.build_plan(conn, retention_seconds=0)
-    (wt / "race.txt").write_text("arrived after plan")
-    with pytest.raises(RuntimeError, match="changed or became protected"):
+    (wt / ".gitignore").write_text("cache/\n")
+    (wt / "cache").mkdir()
+    unique = wt / "cache" / "unique.bin"
+    unique.write_bytes(b"irreplaceable")
+    with pytest.raises(RuntimeError, match="automatic worktree removal is disabled"):
         gc.apply_plan(conn, plan, receipt_path=tmp_path / "receipt.json", retention_seconds=0)
-    assert wt.exists()
+    assert unique.read_bytes() == b"irreplaceable"
 
 
-def test_receipt_failure_prevents_git_removal(monkeypatch, tmp_path):
+def test_apply_never_writes_receipts_or_invokes_git(monkeypatch, tmp_path):
     conn, wt, item = assessment(tmp_path)
-    assert item.eligible
     plan = gc.build_plan(conn, retention_seconds=0)
-    monkeypatch.setattr(gc, "write_receipt", lambda *_a, **_k: (_ for _ in ()).throw(OSError("ENOSPC")))
-    with pytest.raises(OSError, match="ENOSPC"):
-        gc.apply_plan(conn, plan, receipt_path=tmp_path / "receipt.json", retention_seconds=0)
+    receipt = wt / "ignored" / "receipt.json"
+    monkeypatch.setattr(gc, "_git", lambda *_a, **_k: pytest.fail("git mutation attempted"))
+    with pytest.raises(RuntimeError, match="manual Captain action"):
+        gc.apply_plan(conn, plan, receipt_path=receipt, retention_seconds=0)
     assert wt.exists()
+    assert not receipt.exists()
 
 
-def test_apply_uses_git_preserves_branch_and_writes_manifest(tmp_path):
+def test_detached_unique_head_is_not_eligible(tmp_path):
     repo, wt = make_repo(tmp_path)
+    git(wt, "checkout", "--detach")
+    (wt / "tracked.txt").write_text("unique commit\n")
+    git(wt, "commit", "-am", "detached unique")
     conn = make_db(wt)
+    item = gc.assess_worktree(conn, "t_one", retention_seconds=0)
+    assert not item.eligible
+    assert any("durable ref" in blocker for blocker in item.blockers)
+    assert wt.exists()
+
+
+def test_unreadable_process_state_fails_closed(monkeypatch, tmp_path):
+    conn, wt, _item = assessment(tmp_path)
+    monkeypatch.setattr(gc, "_processes_using", lambda _path: [-1])
+    item = gc.assess_worktree(conn, "t_one", retention_seconds=0)
+    assert not item.eligible
+    assert any("live process" in blocker for blocker in item.blockers)
+
+
+@pytest.mark.parametrize("failure", ["ENOSPC-pre", "ENOSPC-post", "symlink-substitution", "refs-drift", "concurrent-gc"])
+def test_all_apply_boundaries_are_non_mutating_manual_fallback(tmp_path, failure):
+    conn, wt, item = assessment(tmp_path)
+    before_head = git(wt, "rev-parse", "HEAD")
+    before_refs = git(wt, "for-each-ref", "--format=%(refname):%(objectname)")
     plan = gc.build_plan(conn, retention_seconds=0)
-    receipt = tmp_path / "receipt.json"
-    assert gc.apply_plan(conn, plan, receipt_path=receipt, retention_seconds=0) == ["t_one"]
-    assert not wt.exists()
-    assert git(repo, "show-ref", "--verify", "refs/heads/wt/t_one")
-    data = json.loads(receipt.read_text())
-    assert data["scope_inferred"] == [] and data["irrecoverable"] == []
-    assert data["evidence"][0]["entries"]
-    assert data["evidence"][0]["global_git"]["refs_sha256"]
-    post = json.loads(receipt.with_name(receipt.name + ".post.json").read_text())
-    assert post["removed"] == ["t_one"]
-    assert post["global_git"]
+    with pytest.raises(RuntimeError, match="manual Captain action"):
+        gc.apply_plan(conn, plan, receipt_path=tmp_path / failure, retention_seconds=0)
+    assert wt.exists()
+    assert git(wt, "rev-parse", "HEAD") == before_head
+    assert git(wt, "for-each-ref", "--format=%(refname):%(objectname)") == before_refs

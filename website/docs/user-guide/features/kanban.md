@@ -780,8 +780,6 @@ hermes kanban context <id>                             # what a worker sees
 hermes kanban specify [<id> | --all] [--tenant T]      # flesh out a triage-column idea
         [--author NAME] [--json]                       #   into a full spec and promote to todo
 hermes kanban gc [--worktree-retention-days N] [--json] # plan only; no worktree mutation
-hermes kanban gc --apply --receipt /durable/path/gc.json # explicit reviewed apply
-        [--event-retention-days N] [--log-retention-days N]
 ```
 
 ### Worktree lifecycle and retention
@@ -792,15 +790,15 @@ each checkout as `active`, `review-held`, `captain-gated`,
 `quarantine`; elapsed time alone can never make one eligible. The default
 `kanban gc` invocation is a non-mutating plan. There is no background deletion.
 
-An explicit apply revalidates task and child state, running task attempts,
-process CWDs and open file descriptors, exact checkout identity, HEAD, and
-`git status --ignored --untracked-files=all`. Dirty, untracked, ignored,
+The planner checks task and child state, running task attempts, process CWDs
+and open file descriptors, exact checkout identity, durable HEAD reachability,
+and `git status --ignored --untracked-files=all`. Dirty, untracked, ignored,
 review-held, child-gated, live, Captain-gated, or attachment-ambiguous
-checkouts are preserved. Before the first mutation, Hermes atomically fsyncs a
-receipt containing per-entry content/type/hash/mode/xattr metadata and global
-refs/reflogs snapshots. If receipt creation fails (including ENOSPC), nothing
-is removed. Apply uses only `git worktree remove` followed by
-`git worktree prune`; branches, refs, and reflogs are retained.
+checkouts are preserved. Automatic apply is disabled: no portable protocol can
+prevent a concurrent writer from creating unique bytes in the final interval
+before Git recursively removes a checkout. Removal therefore requires manual
+Captain action after reviewing the plan; `kanban gc --apply` fails without
+mutating worktrees, scratch roots, events, logs, refs, or reflogs.
 
 The capacity report records checkout bytes/inodes and top-level consumers per
 task. For the incident that motivated this guard, the bounded cleanup receipt

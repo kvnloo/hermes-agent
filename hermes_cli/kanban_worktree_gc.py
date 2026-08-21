@@ -1,8 +1,10 @@
 """Fail-closed lifecycle planning for Kanban git worktrees.
 
-This module deliberately does not run in the background.  ``apply_plan`` is an
-operator-invoked transaction which accepts only a freshly generated plan and
-uses git's worktree porcelain; ambiguity always preserves the checkout.
+This module deliberately does not run in the background.  Worktree removal is
+plan-only: a portable validation-to-removal transaction cannot prevent a
+concurrent writer from adding unique bytes immediately before Git recursively
+removes the checkout.  ``apply_plan`` therefore always fails closed and leaves
+manual removal to the Captain.
 """
 from __future__ import annotations
 
@@ -13,9 +15,7 @@ import os
 from pathlib import Path
 import shutil
 import sqlite3
-import stat
 import subprocess
-import tempfile
 import time
 from typing import Any, Iterable, Optional
 
@@ -114,13 +114,15 @@ def _processes_using(path: Path) -> list[int]:
         try:
             links.extend(fd.iterdir())
         except (OSError, PermissionError):
-            pass
+            return [-1]
         for link in links:
             try:
                 resolved = link.resolve(strict=True)
                 resolved.relative_to(target)
-            except (OSError, ValueError, PermissionError):
+            except ValueError:
                 continue
+            except (OSError, PermissionError):
+                return [-1]
             hits.add(int(entry.name))
             break
     return sorted(hits)
@@ -164,6 +166,12 @@ def assess_worktree(conn: sqlite3.Connection, task_id: str, *, retention_seconds
         out.blockers.append("cannot resolve HEAD and branch")
     else:
         out.head, out.branch = head.stdout.strip(), branch.stdout.strip() or None
+        durable = _git(
+            wp, "for-each-ref", "--contains", out.head,
+            "--format=%(refname)", "refs/heads", "refs/tags", "refs/remotes",
+        )
+        if durable.returncode or not durable.stdout.strip():
+            out.blockers.append("HEAD is not reachable from an allowed durable ref")
     status = _git(wp, "status", "--porcelain=v1", "--untracked-files=all", "--ignored=matching")
     if status.returncode or status.stdout:
         out.blockers.append("checkout has modified, untracked, or ignored entries")
@@ -225,68 +233,9 @@ def build_plan(conn: sqlite3.Connection, *, retention_seconds: int = 604800,
     return payload
 
 
-def write_receipt(path: Path, payload: dict[str, Any]) -> None:
-    """Atomically persist and fsync a receipt before any mutation."""
-    path = path.expanduser().resolve(strict=False)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            json.dump(payload, handle, indent=2, sort_keys=True)
-            handle.write("\n")
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(tmp, path)
-        dirfd = os.open(path.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
-        try:
-            os.fsync(dirfd)
-        finally:
-            os.close(dirfd)
-    except Exception:
-        try:
-            os.unlink(tmp)
-        except OSError:
-            pass
-        raise
-
-
-def _content_manifest(root: Path) -> list[dict[str, Any]]:
-    """Hash every entry before removal, including mode, type and xattr names."""
-    entries: list[dict[str, Any]] = []
-    for path in sorted(root.rglob("*"), key=lambda p: os.fsencode(str(p.relative_to(root)))):
-        info = path.lstat()
-        kind = "symlink" if stat.S_ISLNK(info.st_mode) else "dir" if stat.S_ISDIR(info.st_mode) else "file"
-        item: dict[str, Any] = {"path": path.relative_to(root).as_posix(), "type": kind,
-                                "mode": stat.S_IMODE(info.st_mode), "size": info.st_size}
-        try:
-            item["xattrs"] = sorted(os.listxattr(path, follow_symlinks=False))
-        except OSError as exc:
-            item["xattrs_error"] = type(exc).__name__
-        if kind == "file":
-            digest = hashlib.sha256()
-            with path.open("rb") as handle:
-                for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                    digest.update(chunk)
-            item["sha256"] = digest.hexdigest()
-        elif kind == "symlink":
-            item["target"] = os.readlink(path)
-        entries.append(item)
-    return entries
-
-
-def _refs_snapshot(repo_root: Path) -> dict[str, Any]:
-    refs = _git(repo_root, "for-each-ref", "--format=%(refname)%00%(objectname)")
-    reflogs = _git(repo_root, "reflog", "show", "--all", "--format=%gD%x00%H")
-    if refs.returncode or reflogs.returncode:
-        raise RuntimeError("cannot snapshot global refs and reflogs")
-    return {"refs": refs.stdout.splitlines(), "reflogs": reflogs.stdout.splitlines(),
-            "refs_sha256": hashlib.sha256(refs.stdout.encode()).hexdigest(),
-            "reflogs_sha256": hashlib.sha256(reflogs.stdout.encode()).hexdigest()}
-
-
 def apply_plan(conn: sqlite3.Connection, plan: dict[str, Any], *, receipt_path: Path,
                retention_seconds: int = 604800) -> list[str]:
-    """Apply a plan after revalidation. Branches/refs/reflogs are never deleted."""
+    """Reject automatic removal because portable race-free deletion is impossible."""
     if plan.get("mode") != "plan-only" or plan.get("automatic_deletion") is not False:
         raise ValueError("refusing malformed or deletion-enabled plan")
     expected = dict(plan)
@@ -294,57 +243,7 @@ def apply_plan(conn: sqlite3.Connection, plan: dict[str, Any], *, receipt_path: 
     actual_hash = hashlib.sha256(json.dumps(expected, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     if not supplied_hash or supplied_hash != actual_hash:
         raise ValueError("plan hash mismatch")
-    selected = [w for w in plan.get("worktrees", []) if w.get("eligible")]
-    fresh = {w.task_id: w for w in (assess_worktree(conn, item["task_id"], retention_seconds=retention_seconds) for item in selected)}
-    for item in selected:
-        current = fresh[item["task_id"]]
-        if not current.eligible or current.head != item.get("head") or current.path != item.get("path"):
-            raise RuntimeError(f"worktree changed or became protected: {item['task_id']}")
-    evidence: list[dict[str, Any]] = []
-    for item in selected:
-        wp = Path(item["path"])
-        common_result = _git(wp, "rev-parse", "--git-common-dir")
-        if common_result.returncode:
-            raise RuntimeError(f"cannot resolve common dir: {item['task_id']}")
-        common = Path(common_result.stdout.strip())
-        if not common.is_absolute():
-            common = (wp / common).resolve()
-        evidence.append({"task_id": item["task_id"], "entries": _content_manifest(wp),
-                         "global_git": _refs_snapshot(common.parent)})
-    receipt = {"schema": 1, "operation": "kanban-worktree-gc", "plan": plan,
-               "pre_mutation": [asdict(fresh[item["task_id"]]) for item in selected],
-               "evidence": evidence,
-               "proven": ["per-entry content/type/hash/mode/xattr manifest captured",
-                           "global refs and reflogs snapshot captured",
-                           "receipt fsynced before mutation"],
-               "scope_inferred": [], "irrecoverable": []}
-    write_receipt(receipt_path, receipt)
-    removed: list[str] = []
-    for item in selected:
-        wp = Path(item["path"])
-        repo = _git(wp, "rev-parse", "--git-common-dir")
-        if repo.returncode:
-            raise RuntimeError(f"cannot resolve common dir: {item['task_id']}")
-        common = Path(repo.stdout.strip())
-        if not common.is_absolute():
-            common = (wp / common).resolve()
-        root = common.parent
-        result = _git(root, "worktree", "remove", str(wp), timeout=60)
-        if result.returncode:
-            raise RuntimeError(f"git worktree remove failed for {item['task_id']}: {result.stderr.strip()}")
-        removed.append(item["task_id"])
-    # Prunes only stale administrative records; never branches/refs/reflogs.
-    roots = {Path(item["path"]).parent.parent for item in selected}
-    for root in roots:
-        _git(root, "worktree", "prune")
-    # The pre-mutation receipt is immutable. A sibling post receipt proves the
-    # operation did not rewrite refs/reflogs; failure is surfaced rather than
-    # silently claiming complete evidence.
-    post = {"schema": 1, "operation": "kanban-worktree-gc-post",
-            "pre_receipt": str(receipt_path), "removed": removed,
-            "global_git": {str(root): _refs_snapshot(root) for root in roots},
-            "proven": ["post-removal refs and reflogs captured"],
-            "scope_inferred": [], "irrecoverable": []}
-    post_path = receipt_path.with_name(receipt_path.name + ".post.json")
-    write_receipt(post_path, post)
-    return removed
+    raise RuntimeError(
+        "automatic worktree removal is disabled: concurrent unique-byte preservation "
+        "cannot be proven portably; manual Captain action is required"
+    )
