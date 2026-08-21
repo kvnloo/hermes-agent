@@ -988,8 +988,15 @@ def build_parser(parent_subparsers: argparse._SubParsersAction) -> argparse.Argu
 
     # --- gc ---
     p_gc = sub.add_parser(
-        "gc", help="Garbage-collect archived-task workspaces, old events, and old logs",
+        "gc", help="Plan worktree retention GC (dry-run unless --apply), plus old metadata",
     )
+    p_gc.add_argument("--apply", action="store_true",
+                      help="Apply eligible worktree removals after fresh revalidation")
+    p_gc.add_argument("--receipt", type=Path,
+                      help="Required with --apply: durable pre-mutation receipt path")
+    p_gc.add_argument("--worktree-retention-days", type=int, default=7,
+                      help="Minimum completed retention before eligibility (default: 7)")
+    p_gc.add_argument("--json", action="store_true", help="Emit the complete GC plan as JSON")
     p_gc.add_argument("--event-retention-days", type=int, default=30,
                       help="Delete task_events older than N days for terminal tasks (default: 30)")
     p_gc.add_argument("--log-retention-days", type=int, default=30,
@@ -3210,8 +3217,8 @@ def _cmd_decompose(args: argparse.Namespace) -> int:
 
 
 def _cmd_gc(args: argparse.Namespace) -> int:
-    """Remove scratch workspaces of archived tasks, prune old events, and
-    delete old worker logs."""
+    """Plan worktree GC by default; mutation requires --apply + receipt."""
+    from hermes_cli import kanban_worktree_gc as worktree_gc
     import shutil
     scratch_root = kb.workspaces_root()
     removed_ws = 0
@@ -3232,21 +3239,51 @@ def _cmd_gc(args: argparse.Namespace) -> int:
         except ValueError:
             # Safety: never delete outside the scratch root.
             continue
-        if path.exists() and path.is_dir():
+        if args.apply and path.exists() and path.is_dir():
             shutil.rmtree(path, ignore_errors=True)
             removed_ws += 1
 
+    retention_seconds = max(0, args.worktree_retention_days) * 24 * 3600
+    with kb.connect_closing() as conn:
+        plan = worktree_gc.build_plan(conn, retention_seconds=retention_seconds)
+        removed_worktrees: list[str] = []
+        if args.apply:
+            if not args.receipt:
+                print("kanban gc: --apply requires --receipt PATH", file=sys.stderr)
+                return 2
+            removed_worktrees = worktree_gc.apply_plan(
+                conn, plan, receipt_path=args.receipt,
+                retention_seconds=retention_seconds,
+            )
+
+    # Event/log/scratch metadata cleanup retains its existing behavior, but
+    # worktree deletion is always separately planned and receipt-backed.
     event_days = getattr(args, "event_retention_days", 30)
     log_days = getattr(args, "log_retention_days", 30)
-    with kb.connect_closing() as conn:
-        removed_events = kb.gc_events(
-            conn, older_than_seconds=event_days * 24 * 3600,
+    removed_events = 0
+    removed_logs = 0
+    if args.apply:
+        with kb.connect_closing() as conn:
+            removed_events = kb.gc_events(
+                conn, older_than_seconds=event_days * 24 * 3600,
+            )
+        removed_logs = kb.gc_worker_logs(
+            older_than_seconds=log_days * 24 * 3600,
         )
-    removed_logs = kb.gc_worker_logs(
-        older_than_seconds=log_days * 24 * 3600,
-    )
-    print(f"GC complete: {removed_ws} workspace(s), "
-          f"{removed_events} event row(s), {removed_logs} log file(s) removed")
+    if args.json:
+        print(json.dumps({"plan": plan, "removed_worktrees": removed_worktrees,
+                          "removed_scratch": removed_ws,
+                          "removed_events": removed_events,
+                          "removed_logs": removed_logs}, indent=2))
+    else:
+        eligible = sum(1 for item in plan["worktrees"] if item["eligible"])
+        verb = "applied" if args.apply else "dry-run"
+        print(f"GC {verb}: {eligible} worktree(s) eligible, "
+              f"{len(removed_worktrees)} applied; {removed_ws} archived scratch "
+              f"workspace(s), {removed_events} event row(s), "
+              f"{removed_logs} log file(s) removed")
+        if not args.apply:
+            print("No worktrees removed. Re-run with --apply --receipt PATH after review.")
     return 0
 
 

@@ -2415,6 +2415,14 @@ DEFAULT_CONFIG = {
         # otherwise saturate one profile's local model / API quota /
         # browser pool while leaving other profiles idle.
         "max_in_progress_per_profile": None,
+        # Worktree creation guard. Zero keeps each threshold disabled for
+        # backward compatibility. Configure both on build-heavy fleets; a
+        # ready worktree task remains queued when either floor is crossed.
+        "worktree_min_free_bytes": 0,
+        "worktree_min_free_inodes": 0,
+        # Worktrees are never removed automatically. This value is only the
+        # minimum age gate used by the explicit `kanban gc` planner.
+        "worktree_retention_days": 7,
         # When true, the kanban dispatcher auto-runs the decomposer on
         # tasks that land in Triage (every dispatcher tick). When false,
         # decomposition is manual via `hermes kanban decompose <id>` or
