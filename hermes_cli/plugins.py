@@ -2122,49 +2122,6 @@ class PluginContext:
         )
         return NotificationReceipt(NotificationOutcome.REJECTED)
 
-    def list_pending_notifications(self, *, session_key: str, limit: int = 100):
-        """List this plugin's pending notifications for one exact session."""
-        if not self._session_notifications_allowed():
-            return []
-        return self._session_notification_store().list_pending(
-            profile_name=self.profile_name,
-            plugin_id=self.plugin_id,
-            session_key=session_key,
-            limit=limit,
-        )
-
-    def get_notification(self, notification_id: str, *, session_key: str):
-        """Fetch one notification owned by this plugin and exact session."""
-        if not self._session_notifications_allowed():
-            return None
-        return self._session_notification_store().fetch(
-            notification_id,
-            profile_name=self.profile_name,
-            plugin_id=self.plugin_id,
-            session_key=session_key,
-        )
-
-    def acknowledge_notification(
-        self,
-        notification_id: str,
-        *,
-        session_key: str,
-        generation: int,
-        actor: str,
-        retention_seconds: int = 30 * 86400,
-    ) -> bool:
-        """Explicitly acknowledge an owned notification; never called automatically."""
-        if not self._session_notifications_allowed():
-            return False
-        return self._session_notification_store().acknowledge(
-            notification_id,
-            profile_name=self.profile_name,
-            plugin_id=self.plugin_id,
-            session_key=session_key,
-            generation=generation,
-            actor=actor,
-            retention_seconds=retention_seconds,
-        )
 
     # -- CLI command registration --------------------------------------------
 
