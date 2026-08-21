@@ -19921,11 +19921,13 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
 
         source = event.source
         args = event.get_command_args().strip().split()
-        if len(args) < 2 or args[0] not in {"list", "fetch", "ack"}:
-            return "Usage: /notifications <list|fetch|ack> <plugin> [notification-id]"
-        action, plugin_id = args[:2]
-        if action in {"fetch", "ack"} and len(args) != 3:
-            return f"Usage: /notifications {action} <plugin> <notification-id>"
+        if not args or args[0] not in {"list", "fetch", "ack"}:
+            return "Usage: /notifications <list|fetch|ack> [notification-id]"
+        action = args[0]
+        if (action == "list" and len(args) != 1) or (action in {"fetch", "ack"} and len(args) != 2):
+            return f"Usage: /notifications {action}" + (
+                "" if action == "list" else " <notification-id>"
+            )
 
         def _current_generation(session_key: str) -> int:
             state = self._peek_session_state(session_key)
@@ -19939,7 +19941,7 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
             current_generation=_current_generation,
         )
         if action == "list":
-            rows = service.list_pending(source, plugin_id=plugin_id)
+            rows = service.list_pending(source)
             if rows is None:
                 return "⛔ Owner notification access denied."
             if not rows:
@@ -19948,9 +19950,9 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
                 f"{row.notification_id} {row.metadata.get('event', 'notification')} "
                 f"gen={row.generation}" for row in rows
             )
-        notification_id = args[2]
+        notification_id = args[1]
         if action == "fetch":
-            row = service.fetch(source, notification_id, plugin_id=plugin_id)
+            row = service.fetch(source, notification_id)
             if row is None:
                 return "Notification not found or access denied."
             return json.dumps({
@@ -19960,7 +19962,7 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
                 "status": row.status,
                 "metadata": row.metadata,
             }, sort_keys=True, separators=(",", ":"))
-        if service.acknowledge(source, notification_id, plugin_id=plugin_id):
+        if service.acknowledge(source, notification_id):
             return f"Acknowledged {notification_id}."
         return "Notification not found, stale, already resolved, or access denied."
 

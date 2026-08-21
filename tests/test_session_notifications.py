@@ -1,5 +1,6 @@
 import concurrent.futures
 import hashlib
+import json
 import multiprocessing
 import random
 import sqlite3
@@ -15,7 +16,9 @@ from hermes_state import SessionDB
 from gateway.config import Platform
 from gateway.notification_owner import GatewayNotificationOwnerService
 from gateway.session import SessionSource
-from session_notifications import MIGRATION_MARKER, NotificationOutcome, SessionNotificationStore
+from session_notifications import (
+    MIGRATION_MARKER, NotificationOutcome, SessionNotificationStore, canonicalize_metadata,
+)
 
 
 SESSION_KEY = "agent:main:telegram:dm:42"
@@ -129,21 +132,20 @@ def test_owner_scope_generation_ack_and_receipt_backed_retention(tmp_path):
         current_generation=lambda session_key: live["generation"],
     )
     owner = SessionSource(Platform.TELEGRAM, "42", user_id="42")
-    assert len(service.list_pending(owner, plugin_id="taildrop")) == 1
-    assert service.fetch(owner, receipt.notification_id, plugin_id="other") is None
-    assert service.list_pending(SessionSource(Platform.DISCORD, "42", user_id="42"), plugin_id="taildrop") is None
-    assert service.list_pending(SessionSource(Platform.TELEGRAM, "42", user_id="99"), plugin_id="taildrop") is None
+    assert len(service.list_pending(owner)) == 1
+    assert service.list_pending(SessionSource(Platform.DISCORD, "42", user_id="42")) is None
+    assert service.list_pending(SessionSource(Platform.TELEGRAM, "42", user_id="99")) is None
     live["allowed"] = False
-    assert not service.acknowledge(owner, receipt.notification_id, plugin_id="taildrop")
+    assert not service.acknowledge(owner, receipt.notification_id)
     live["allowed"] = True
     live["generation"] = 6
-    assert service.list_pending(owner, plugin_id="taildrop") == []
-    assert service.fetch(owner, receipt.notification_id, plugin_id="taildrop") is None
-    assert not service.acknowledge(owner, receipt.notification_id, plugin_id="taildrop")
+    assert service.list_pending(owner) == []
+    assert service.fetch(owner, receipt.notification_id) is None
+    assert not service.acknowledge(owner, receipt.notification_id)
     live["generation"] = 7
-    assert service.acknowledge(owner, receipt.notification_id, plugin_id="taildrop")
-    assert not service.acknowledge(owner, receipt.notification_id, plugin_id="taildrop")
-    assert service.list_pending(owner, plugin_id="taildrop") == []
+    assert service.acknowledge(owner, receipt.notification_id)
+    assert not service.acknowledge(owner, receipt.notification_id)
+    assert service.list_pending(owner) == []
     assert store.compact_acknowledged()[1] == 0
     with sqlite3.connect(db.db_path) as conn:
         assert conn.execute(
@@ -165,7 +167,7 @@ def test_sqlite_busy_is_retryable_and_restart_persists(tmp_path):
     restarted = SessionNotificationStore(db.db_path)
     assert _append(restarted).outcome is NotificationOutcome.ALREADY_ACCEPTED
     assert restarted._fetch(
-        accepted.notification_id, profile_name="default", plugin_id="taildrop",
+        accepted.notification_id, profile_name="default",
         session_key=SESSION_KEY, generation=7,
     )
     db.close()
@@ -368,4 +370,203 @@ def test_real_plugin_context_boundary_and_compatibility_trap(tmp_path, monkeypat
          patch.object(ctx, "_session_notification_store", return_value=SessionNotificationStore(db.db_path)):
         assert not hasattr(ctx, "list_pending_notifications")
     assert [(m["id"], m["role"]) for m in db.get_messages("session-1")] == [(m["id"], m["role"]) for m in before]
+    db.close()
+
+
+@pytest.mark.parametrize("failpoint", [
+    "before_notification_insert", "before_classification_insert",
+    "before_conflict_insert", "before_marker",
+])
+def test_sqlite_full_during_migration_rolls_back_all_evidence(tmp_path, failpoint):
+    db, _ = _db(tmp_path)
+    with sqlite3.connect(db.db_path) as conn:
+        conn.executescript("""
+            CREATE TABLE gateway_inbox(inbox_id TEXT PRIMARY KEY,idempotency_key TEXT);
+            CREATE TABLE gateway_turns(turn_id TEXT PRIMARY KEY,inbox_id TEXT,source_id TEXT,
+                session_key TEXT,session_id TEXT,generation INTEGER,created_at REAL);
+            INSERT INTO gateway_inbox VALUES('inbox-1','legacy-key');
+            INSERT INTO gateway_turns VALUES('turn-1','inbox-1','taildrop',
+                'agent:main:telegram:dm:42','session-1',7,100);
+        """)
+        if failpoint == "before_conflict_insert":
+            conn.execute(
+                "INSERT INTO session_notifications VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                ("other", "turn-1", "default", "other", "session-1", SESSION_KEY,
+                 "other", 7, '{"event":"x"}', "digest", "quarantined", 1, 1,
+                 None, None, None),
+            )
+
+    def full(name):
+        if name == failpoint:
+            raise sqlite3.OperationalError("database or disk is full")
+
+    with pytest.raises(sqlite3.OperationalError, match="disk is full"):
+        SessionNotificationStore(db.db_path, failure_hook=full).migrate_legacy_gateway_notifications()
+    with sqlite3.connect(db.db_path) as conn:
+        assert conn.execute("SELECT 1 FROM state_meta WHERE key=?", (MIGRATION_MARKER,)).fetchone() is None
+        assert conn.execute("SELECT COUNT(*) FROM session_notification_migration_classifications").fetchone()[0] == 0
+        assert conn.execute("SELECT COUNT(*) FROM session_notification_migration_conflicts").fetchone()[0] == 0
+    db.close()
+
+
+def test_corrupt_partial_schema_and_busy_migration_fail_closed(tmp_path):
+    corrupt = tmp_path / "corrupt.db"
+    corrupt.write_bytes(b"not-a-sqlite-database")
+    with pytest.raises(sqlite3.DatabaseError):
+        SessionNotificationStore(corrupt).migrate_legacy_gateway_notifications()
+
+    case = tmp_path / "partial"
+    case.mkdir()
+    db, store = _db(case)
+    with sqlite3.connect(db.db_path) as conn:
+        conn.execute("CREATE TABLE gateway_inbox(inbox_id TEXT PRIMARY KEY)")
+    assert store.migrate_legacy_gateway_notifications() == 0
+    lock = sqlite3.connect(db.db_path)
+    lock.execute("BEGIN IMMEDIATE")
+    with pytest.raises(sqlite3.OperationalError, match="locked"):
+        SessionNotificationStore(db.db_path, timeout=0.01).migrate_legacy_gateway_notifications()
+    lock.rollback()
+    lock.close()
+    db.close()
+
+
+def _ledger_state_for_compaction(path):
+    with sqlite3.connect(path) as conn:
+        return (
+            conn.execute("SELECT notification_id,status FROM session_notifications ORDER BY notification_id").fetchall(),
+            conn.execute("SELECT receipt_id,row_count FROM session_notification_compaction_receipts").fetchall(),
+            conn.execute("SELECT notification_id,action FROM session_notification_owner_audit").fetchall(),
+        )
+
+
+@pytest.mark.parametrize("failpoint", [
+    "before_compaction_receipt", "after_compaction_receipt", "before_compaction_commit",
+])
+def test_compaction_full_rolls_back_receipt_and_preserves_all_rows(tmp_path, failpoint):
+    db, _ = _db(tmp_path)
+    store = SessionNotificationStore(db.db_path, clock=lambda: 1000.0)
+    first = _append(store)
+    _append(store, idempotency_key=KEY + "-pending")
+    assert store._acknowledge(
+        first.notification_id, profile_name="default", session_key=SESSION_KEY,
+        generation=7, identity_binding="captain-binding", retention_seconds=0,
+    )
+    before = _ledger_state_for_compaction(db.db_path)
+
+    def full(name):
+        if name == failpoint:
+            raise sqlite3.OperationalError("database or disk is full")
+
+    with pytest.raises(sqlite3.OperationalError, match="disk is full"):
+        SessionNotificationStore(db.db_path, clock=lambda: 1000.0, failure_hook=full).compact_acknowledged()
+    assert _ledger_state_for_compaction(db.db_path) == before
+    db.close()
+
+
+def test_crash_after_commit_preserves_complete_marker_and_rerun_reconciles(tmp_path):
+    db, _ = _db(tmp_path)
+    with sqlite3.connect(db.db_path) as conn:
+        conn.executescript("""
+            CREATE TABLE gateway_inbox(inbox_id TEXT PRIMARY KEY,idempotency_key TEXT);
+            CREATE TABLE gateway_turns(turn_id TEXT PRIMARY KEY,inbox_id TEXT,source_id TEXT,
+                session_key TEXT,session_id TEXT,generation INTEGER,created_at REAL);
+            INSERT INTO gateway_inbox VALUES('inbox-1','legacy-key');
+            INSERT INTO gateway_turns VALUES('turn-1','inbox-1','taildrop',
+                'agent:main:telegram:dm:42','session-1',7,100);
+        """)
+
+    def crash(name):
+        if name == "after_commit":
+            raise RuntimeError("simulated process death")
+
+    with pytest.raises(RuntimeError, match="process death"):
+        SessionNotificationStore(db.db_path, failure_hook=crash).migrate_legacy_gateway_notifications()
+    with sqlite3.connect(db.db_path) as conn:
+        marker = json.loads(conn.execute("SELECT value FROM state_meta WHERE key=?", (MIGRATION_MARKER,)).fetchone()[0])
+        assert marker["source_count"] == 1 and marker["inserted_count"] == 1
+        assert conn.execute("SELECT COUNT(*) FROM session_notifications").fetchone()[0] == 1
+    assert SessionNotificationStore(db.db_path).migrate_legacy_gateway_notifications() == 0
+    db.close()
+
+
+@pytest.mark.parametrize("case,expected_class,conflict_class", [
+    ("key_only", "migration_conflict", "key"),
+    ("id_only", "migration_conflict", "notification_id"),
+    ("simultaneous", "migration_conflict", "key+notification_id"),
+    ("exact", "represented_existing", None),
+    ("binding", "migration_conflict", "key+notification_id"),
+    ("digest", "migration_conflict", "key+notification_id"),
+    ("binding_and_digest", "migration_conflict", "key+notification_id"),
+])
+def test_complete_legacy_collision_matrix_reconciles_idempotently(
+    tmp_path, case, expected_class, conflict_class,
+):
+    db, store = _db(tmp_path)
+    legacy_key = "legacy-global-key"
+    key = "legacy:" + hashlib.sha256(legacy_key.encode()).hexdigest()
+    metadata_json, digest = canonicalize_metadata({
+        "event": "legacy_gateway_notification", "generation": 7,
+        "status_label": "ambiguous_quarantined",
+    }, 7)
+    expected = dict(
+        idempotency_key=key, notification_id="turn-1", profile_name="legacy-unknown",
+        plugin_id="taildrop", session_id="session-1", session_key=SESSION_KEY,
+        destination=SESSION_KEY, generation=7, metadata_json=metadata_json,
+        metadata_digest=digest,
+    )
+    with sqlite3.connect(db.db_path) as conn:
+        conn.executescript("""
+            CREATE TABLE gateway_inbox(inbox_id TEXT PRIMARY KEY,idempotency_key TEXT);
+            CREATE TABLE gateway_turns(turn_id TEXT PRIMARY KEY,inbox_id TEXT,source_id TEXT,
+                session_key TEXT,session_id TEXT,generation INTEGER,created_at REAL);
+        """)
+        conn.execute("INSERT INTO gateway_inbox VALUES('inbox-1',?)", (legacy_key,))
+        conn.execute("INSERT INTO gateway_turns VALUES('turn-1','inbox-1','taildrop',?,?,7,100)",
+                     (SESSION_KEY, "session-1"))
+
+        rows = []
+        if case == "simultaneous":
+            rows = [
+                {**expected, "notification_id": "other-id"},
+                {**expected, "idempotency_key": "other-key"},
+            ]
+        else:
+            row = dict(expected)
+            if case == "key_only": row["notification_id"] = "other-id"
+            if case == "id_only": row["idempotency_key"] = "other-key"
+            if case in {"binding", "binding_and_digest"}: row["destination"] = "other"
+            if case in {"digest", "binding_and_digest"}: row["metadata_digest"] = "different"
+            rows = [row]
+        for row in rows:
+            conn.execute(
+                "INSERT INTO session_notifications VALUES(?,?,?,?,?,?,?,?,?,?,?,100,100,NULL,NULL,NULL)",
+                (row["idempotency_key"], row["notification_id"], row["profile_name"],
+                 row["plugin_id"], row["session_id"], row["session_key"], row["destination"],
+                 row["generation"], row["metadata_json"], row["metadata_digest"], "quarantined"),
+            )
+
+    assert store.migrate_legacy_gateway_notifications() == 1
+    with sqlite3.connect(db.db_path) as conn:
+        classification = conn.execute(
+            "SELECT classification FROM session_notification_migration_classifications "
+            "WHERE migration_version=4"
+        ).fetchone()[0]
+        assert classification == expected_class
+        if conflict_class:
+            assert conn.execute(
+                "SELECT conflict_class FROM session_notification_migration_conflicts"
+            ).fetchone()[0] == conflict_class
+        marker = json.loads(conn.execute(
+            "SELECT value FROM state_meta WHERE key=?", (MIGRATION_MARKER,)
+        ).fetchone()[0])
+        assert marker[expected_class + "_count"] == 1
+        assert sum(marker[name + "_count"] for name in (
+            "inserted", "represented_existing", "migration_conflict"
+        )) == marker["source_count"] == 1
+        sealed = json.dumps(marker, sort_keys=True)
+    assert store.migrate_legacy_gateway_notifications() == 0
+    with sqlite3.connect(db.db_path) as conn:
+        assert json.dumps(json.loads(conn.execute(
+            "SELECT value FROM state_meta WHERE key=?", (MIGRATION_MARKER,)
+        ).fetchone()[0]), sort_keys=True) == sealed
     db.close()
