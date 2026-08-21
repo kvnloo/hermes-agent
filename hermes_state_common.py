@@ -413,6 +413,19 @@ CREATE TABLE IF NOT EXISTS session_notification_migration_conflicts (
     PRIMARY KEY (source_table, source_identity)
 );
 
+CREATE TABLE IF NOT EXISTS session_notification_migration_classifications (
+    migration_version INTEGER NOT NULL,
+    source_table TEXT NOT NULL,
+    source_row_identity TEXT NOT NULL,
+    source_digest TEXT NOT NULL,
+    classification TEXT NOT NULL CHECK(classification IN
+        ('inserted','represented_existing','migration_conflict')),
+    target_id TEXT,
+    conflict_id TEXT,
+    classified_at REAL NOT NULL,
+    PRIMARY KEY (migration_version, source_table, source_row_identity)
+);
+
 CREATE TABLE IF NOT EXISTS session_notification_owner_audit (
     audit_id TEXT PRIMARY KEY,
     notification_id TEXT NOT NULL,
