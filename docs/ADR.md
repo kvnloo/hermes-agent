@@ -1,5 +1,30 @@
 # Architecture Decision Records
 
+## 2026-08-21: Durable session notifications are not messages
+
+Status: Accepted
+
+Plugin-originated notification metadata lives in the versioned
+`session_notifications` table in the canonical profile `state.db`. A
+notification is not a `user`, `assistant`, or `system` message. Acceptance must
+never append to `messages`, schedule a gateway turn, call a model, tool,
+adapter, platform sender, or alter prompt assembly. This replaces rejected
+candidate `c0baef9e7b44969df52b9c5036c472fe6f8f54be` while preserving lineage.
+
+`PluginContext.append_notification_once` performs one globally keyed atomic
+insert/lookup. Exact binding/digest replay returns `ALREADY_ACCEPTED`; mismatch
+returns `CONFLICT`. Reads require exact profile/plugin/session ownership. Only
+an explicit user/Captain action may acknowledge with exact generation and actor
+identity. Pending rows never compact; acknowledged rows use bounded,
+receipt-backed retention.
+
+Metadata is allowlisted to `event`, `sender`, `device`, `sha256`, `bytes`,
+`generation`, and `status_label`. Content, commands, paths, secrets, tokens,
+and unknown fields are rejected. Legacy candidate rows remain as evidence and
+are copied only as quarantined metadata; transcript content is never deleted.
+A future user-driven prompt snapshot requires a separate review. No automatic
+acknowledgment, delivery worker, or processing queue is authorized here.
+
 ## 2026-07-13: Scope plugin manager state by Hermes home/profile (keyed cache)
 
 Status: Accepted

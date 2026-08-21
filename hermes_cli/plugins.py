@@ -2055,6 +2055,117 @@ class PluginContext:
             is True
         )
 
+    # -- durable session notifications --------------------------------------
+
+    def _session_notifications_allowed(self) -> bool:
+        """Fail-closed capability check for the metadata-only notification API."""
+        try:
+            cfg = load_config_readonly() or {}
+        except Exception:
+            return False
+        return (
+            cfg_get(
+                cfg,
+                "plugins",
+                "entries",
+                self.plugin_id,
+                "allow_session_notifications",
+                default=False,
+            )
+            is True
+        )
+
+    def _session_notification_store(self):
+        # Opening SessionDB first applies the canonical schema migration. The
+        # ledger then uses its own short BEGIN IMMEDIATE transactions and never
+        # calls any SessionDB transcript method.
+        from hermes_state import SessionDB
+        from session_notifications import SessionNotificationStore
+
+        db = SessionDB()
+        path = db.db_path
+        db.close()
+        store = SessionNotificationStore(path)
+        store.migrate_legacy_gateway_notifications()
+        return store
+
+    def append_notification_once(
+        self,
+        *,
+        idempotency_key: str,
+        session_key: str,
+        destination: str,
+        generation: int,
+        metadata: Mapping[str, Any],
+    ):
+        """Atomically store one non-conversational notification metadata row."""
+        from session_notifications import NotificationOutcome, NotificationReceipt
+
+        if not self._session_notifications_allowed():
+            return NotificationReceipt(NotificationOutcome.REJECTED)
+        return self._session_notification_store().append_once(
+            idempotency_key=idempotency_key,
+            profile_name=self.profile_name,
+            plugin_id=self.plugin_id,
+            session_key=session_key,
+            destination=destination,
+            generation=generation,
+            metadata=metadata,
+        )
+
+    def inject_message_once(self, *args, **kwargs):
+        """Rejected compatibility trap: notifications are not messages."""
+        from session_notifications import NotificationOutcome, NotificationReceipt
+
+        logger.warning(
+            "inject_message_once is unsupported; use append_notification_once"
+        )
+        return NotificationReceipt(NotificationOutcome.REJECTED)
+
+    def list_pending_notifications(self, *, session_key: str, limit: int = 100):
+        """List this plugin's pending notifications for one exact session."""
+        if not self._session_notifications_allowed():
+            return []
+        return self._session_notification_store().list_pending(
+            profile_name=self.profile_name,
+            plugin_id=self.plugin_id,
+            session_key=session_key,
+            limit=limit,
+        )
+
+    def get_notification(self, notification_id: str, *, session_key: str):
+        """Fetch one notification owned by this plugin and exact session."""
+        if not self._session_notifications_allowed():
+            return None
+        return self._session_notification_store().fetch(
+            notification_id,
+            profile_name=self.profile_name,
+            plugin_id=self.plugin_id,
+            session_key=session_key,
+        )
+
+    def acknowledge_notification(
+        self,
+        notification_id: str,
+        *,
+        session_key: str,
+        generation: int,
+        actor: str,
+        retention_seconds: int = 30 * 86400,
+    ) -> bool:
+        """Explicitly acknowledge an owned notification; never called automatically."""
+        if not self._session_notifications_allowed():
+            return False
+        return self._session_notification_store().acknowledge(
+            notification_id,
+            profile_name=self.profile_name,
+            plugin_id=self.plugin_id,
+            session_key=session_key,
+            generation=generation,
+            actor=actor,
+            retention_seconds=retention_seconds,
+        )
+
     # -- CLI command registration --------------------------------------------
 
     @_serialized_replacement

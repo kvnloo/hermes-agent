@@ -9,6 +9,23 @@ description: "Extend Hermes with custom tools, hooks, and integrations via the p
 
 Hermes has a plugin system for adding custom tools, hooks, and integrations without modifying core code.
 
+## Durable session notifications
+
+Trusted local plugins can capability-detect
+`PluginContext.append_notification_once` and store bounded notification
+metadata without starting an agent turn. Enable it per plugin with
+`plugins.entries.<plugin-id>.allow_session_notifications: true` in
+`config.yaml`. Taildrop integrations must use this API only and must not fall
+back to `inject_message`; `inject_message_once` always rejects.
+
+Pass an opaque globally unique key, existing session key, exact destination,
+non-negative generation, and allowlisted metadata (`event`, `sender`, `device`,
+lowercase `sha256`, `bytes`, `generation`, `status_label`). Owned records are
+available through `list_pending_notifications` and `get_notification`.
+`acknowledge_notification` requires the exact generation and explicit
+user/Captain actor identity. These APIs never write chat messages, send a
+platform message, or expose notifications to the model.
+
 If you want to create a custom tool for yourself, your team, or one project,
 this is usually the right path. The developer guide's
 [Adding Tools](/developer-guide/adding-tools) page is for built-in Hermes
