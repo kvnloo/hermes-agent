@@ -22,7 +22,14 @@ Telegram supports `createForumTopic`, but this candidate intentionally contains 
 
 ## Controls and safety
 
-Owner-only controls are `/status`, `/chat`, `/work`, `/updates`, `/feed`, `/authority`, `/freeze`, `/resume`, and `/mute`. Group/topic mutations require confirmation. Unknown chats/topics are silent. `frozen` lowers authority to `observe`; it is reversible and is not Keel activation. `autonomous` fails closed while the governance receipt is `RECORDED_NOT_ACTIVE`. Critical incident delivery may bypass a cadence preference, never the authority ceiling.
+Owner-only controls are `/status`, `/chat`, `/work`, `/updates`, `/feed`, `/authority`, `/freeze`, `/resume`, and `/mute`. `/chat` selects an isolated conversation context: `brainstorm`, `portfolio`, `copilot`, or `council`. Changing `/chat` does not change execution authority, work mode, update cadence, or feed behavior. Each mode receives a stable session namespace inside the same physical Telegram chat, so brainstorming and portfolio history cannot contaminate each other. Group/topic mutations require confirmation. Unknown chats/topics are silent. `frozen` lowers authority to `observe`; it is reversible and is not Keel activation. `autonomous` fails closed while the governance receipt is `RECORDED_NOT_ACTIVE`. Critical incident delivery may bypass a cadence preference, never the authority ceiling.
+
+Mode contracts:
+
+- `brainstorm`: exploratory conversation; no unsolicited updates or work creation.
+- `portfolio`: priorities, owners, evidence, blockers, and decisions; worker noise suppressed.
+- `copilot`: interactive execution; direct tools first, Kanban only for durable delegation.
+- `council`: bounded independent perspectives plus synthesis; advisory, not execution authority.
 
 Visible output uses one bot and attribution like `[First Mate · chiefstaff]`. Local receipts carry only profile, lane, request ID, and verified-node marker. Audit records exclude message bodies, token values, raw nonces, chat titles, and private paths.
 
