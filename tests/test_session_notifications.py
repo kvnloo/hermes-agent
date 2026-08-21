@@ -279,6 +279,47 @@ def test_v4_preserves_v3_receipt_and_repairs_false_conflict(tmp_path):
     db.close()
 
 
+@pytest.mark.parametrize("conflict_class", ["key", "ambiguous_source"])
+def test_v4_preserves_v3_true_and_ambiguous_conflict_evidence(tmp_path, conflict_class):
+    db, store = _db(tmp_path)
+    source_identity = hashlib.sha256(
+        b'["gateway_turns","turn-1","inbox-1"]'
+    ).hexdigest()
+    with sqlite3.connect(db.db_path) as conn:
+        conn.executescript("""
+            CREATE TABLE gateway_inbox(inbox_id TEXT PRIMARY KEY,idempotency_key TEXT);
+            CREATE TABLE gateway_turns(turn_id TEXT PRIMARY KEY,inbox_id TEXT,source_id TEXT,
+                session_key TEXT,session_id TEXT,generation INTEGER,created_at REAL);
+            INSERT INTO gateway_inbox VALUES('inbox-1','key-1');
+            INSERT INTO gateway_turns VALUES('turn-1','inbox-1','taildrop',
+                'agent:main:telegram:dm:42','session-1',7,100);
+            INSERT INTO state_meta VALUES(
+                'session_notifications_legacy_migrated_v3','sealed-v3-receipt');
+        """)
+        conn.execute(
+            "INSERT INTO session_notification_migration_classifications VALUES"
+            "(3,'gateway_turns',?,'old-source-digest','migration_conflict',NULL,'old-conflict',100)",
+            (source_identity,),
+        )
+        conn.execute(
+            "INSERT INTO session_notification_migration_conflicts VALUES"
+            "('gateway_turns',?,'old-source-digest',?,100,100)",
+            (source_identity, conflict_class),
+        )
+    assert store.migrate_legacy_gateway_notifications() == 1
+    assert store.migrate_legacy_gateway_notifications() == 0
+    with sqlite3.connect(db.db_path) as conn:
+        assert conn.execute(
+            "SELECT conflict_class FROM session_notification_migration_conflicts "
+            "WHERE source_identity=?", (source_identity,),
+        ).fetchone()[0] == conflict_class
+        assert conn.execute(
+            "SELECT COUNT(*) FROM session_notification_migration_classifications "
+            "WHERE migration_version=3 AND source_row_identity=?", (source_identity,),
+        ).fetchone()[0] == 1
+    db.close()
+
+
 def test_legacy_identity_collision_is_preserved_as_conflict(tmp_path):
     db, store = _db(tmp_path)
     with sqlite3.connect(db.db_path) as conn:
