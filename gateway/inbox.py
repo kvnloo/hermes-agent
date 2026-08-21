@@ -349,6 +349,31 @@ class GatewayInbox:
             return existing["id"] if existing and existing["content"]==content else None
         finally: conn.close()
 
+    def finalize_existing_response(self, turn_id: str) -> Optional[int]:
+        """Bind the response persisted by the real gateway agent pipeline."""
+        conn=self._connect(); now=self.clock()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            turn=conn.execute("SELECT * FROM gateway_turns WHERE turn_id=?",(turn_id,)).fetchone()
+            if turn is None or not turn["user_message_id"]: conn.rollback(); return None
+            if turn["response_message_id"]: conn.rollback(); return turn["response_message_id"]
+            response=conn.execute("""SELECT id FROM messages WHERE session_id=? AND role='assistant'
+                AND id>? AND active=1 ORDER BY id LIMIT 1""",(turn["session_id"],turn["user_message_id"])).fetchone()
+            if response is None: conn.rollback(); return None
+            cur=conn.execute("UPDATE messages SET gateway_turn_id=?,gateway_turn_kind='response' WHERE id=? AND gateway_turn_id IS NULL",
+                (turn_id,response["id"]))
+            if cur.rowcount != 1: conn.rollback(); return None
+            conn.execute("UPDATE gateway_turns SET state='completed',response_message_id=?,outcome='completed',lease_owner=NULL,lease_expires=NULL,updated_at=? WHERE turn_id=?",
+                (response["id"],now,turn_id))
+            conn.execute("UPDATE gateway_inbox SET state='terminal',terminal_at=?,outcome='completed' WHERE inbox_id=?",
+                (now,turn["inbox_id"]))
+            conn.commit(); return response["id"]
+        except sqlite3.IntegrityError:
+            if conn.in_transaction: conn.rollback()
+            existing=conn.execute("SELECT id FROM messages WHERE gateway_turn_id=? AND gateway_turn_kind='response'",(turn_id,)).fetchone()
+            return existing["id"] if existing else None
+        finally: conn.close()
+
     def finish(self, inbox_id: str, turn_id: str, outcome: str) -> bool:
         """Compatibility: only terminalize after a durable response exists."""
         conn=self._connect()
