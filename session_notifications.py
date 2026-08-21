@@ -20,8 +20,8 @@ from typing import Any, Callable, Mapping
 MAX_TEXT_BYTES = 256
 MAX_METADATA_BYTES = 2048
 MAX_ACK_RETENTION_SECONDS = 90 * 86400
-MIGRATION_VERSION = 3
-MIGRATION_MARKER = "session_notifications_legacy_migrated_v3"
+MIGRATION_VERSION = 4
+MIGRATION_MARKER = "session_notifications_legacy_migrated_v4"
 _ALLOWED_METADATA = {
     "event": str,
     "sender": str,
@@ -202,11 +202,13 @@ class SessionNotificationStore:
                 expected = (key, str(row["turn_id"]), "legacy-unknown", str(row["source_id"]),
                             str(row["session_id"]), str(row["session_key"]),
                             str(row["session_key"]), generation, metadata_digest)
+                # Only the schema's two globally unique identities can collide.
+                # Binding and metadata values are deliberately non-unique: a
+                # session may legitimately receive many identical notifications.
                 collisions = conn.execute(
                     "SELECT * FROM session_notifications WHERE idempotency_key=? OR "
-                    "notification_id=? OR (profile_name=? AND plugin_id=? AND session_id=? AND "
-                    "session_key=? AND destination=? AND generation=?) OR metadata_digest=?",
-                    (key, str(row["turn_id"]), *expected[2:8], metadata_digest),
+                    "notification_id=?",
+                    (key, str(row["turn_id"])),
                 ).fetchall()
                 exact = next((candidate for candidate in collisions if tuple(candidate[name] for name in (
                     "idempotency_key", "notification_id", "profile_name", "plugin_id", "session_id",
@@ -222,8 +224,6 @@ class SessionNotificationStore:
                     for candidate in collisions:
                         if candidate["idempotency_key"] == key: collision_kinds.append("key")
                         if candidate["notification_id"] == str(row["turn_id"]): collision_kinds.append("notification_id")
-                        if tuple(candidate[name] for name in ("profile_name", "plugin_id", "session_id", "session_key", "destination", "generation")) == expected[2:8]: collision_kinds.append("binding")
-                        if candidate["metadata_digest"] == metadata_digest: collision_kinds.append("digest")
                     conflict_class = "+".join(sorted(set(collision_kinds)))
                     conflict_id = hashlib.sha256(
                         f"{MIGRATION_VERSION}:gateway_turns:{source_identity}:{conflict_class}".encode()
@@ -249,6 +249,16 @@ class SessionNotificationStore:
                         (*expected[:8], metadata_json, metadata_digest, float(row["created_at"]), self.clock()),
                     )
                     self._failpoint("after_notification_insert")
+
+                    # A committed v3 receipt is immutable evidence.  Its false
+                    # binding/digest conflict row, however, is not a v4 conflict
+                    # and must not remain the current conflict projection.
+                    conn.execute(
+                        "DELETE FROM session_notification_migration_conflicts WHERE "
+                        "source_table='gateway_turns' AND source_identity=? AND "
+                        "conflict_class IN ('binding','digest','binding+digest')",
+                        (source_identity,),
+                    )
 
                 receipt = (classification, source_digest, target_id, conflict_id)
                 self._failpoint("before_classification_insert")
@@ -372,7 +382,8 @@ class SessionNotificationStore:
             conn.close()
 
     def _list_pending(self, *, profile_name: str, plugin_id: str,
-                     session_key: str, limit: int = 100) -> list[SessionNotification]:
+                     session_key: str, generation: int,
+                     limit: int = 100) -> list[SessionNotification]:
         profile = _bounded_text(profile_name, name="profile_name")
         plugin = _bounded_text(plugin_id, name="plugin_id")
         session_key = _bounded_text(session_key, name="session_key")
@@ -380,24 +391,26 @@ class SessionNotificationStore:
         with self._connect() as conn:
             rows = conn.execute(
                 "SELECT * FROM session_notifications WHERE profile_name=? AND plugin_id=? "
-                "AND session_key=? AND status='pending' ORDER BY created_at,notification_id LIMIT ?",
-                (profile, plugin, session_key, limit),
+                "AND session_key=? AND generation=? AND status='pending' "
+                "ORDER BY created_at,notification_id LIMIT ?",
+                (profile, plugin, session_key, generation, limit),
             ).fetchall()
         return [self._record(row) for row in rows]
 
     def _fetch(self, notification_id: str, *, profile_name: str, plugin_id: str,
-              session_key: str) -> SessionNotification | None:
+              session_key: str, generation: int) -> SessionNotification | None:
         with self._connect() as conn:
             row = conn.execute(
                 "SELECT * FROM session_notifications WHERE notification_id=? AND "
-                "profile_name=? AND plugin_id=? AND session_key=?",
-                (notification_id, profile_name, plugin_id, session_key),
+                "profile_name=? AND plugin_id=? AND session_key=? AND generation=?",
+                (notification_id, profile_name, plugin_id, session_key, generation),
             ).fetchone()
         return self._record(row) if row else None
 
     def _acknowledge(self, notification_id: str, *, profile_name: str, plugin_id: str,
                     session_key: str, generation: int, identity_binding: str,
-                    retention_seconds: int = 30 * 86400) -> bool:
+                    retention_seconds: int = 30 * 86400,
+                    still_authorized: Callable[[], bool] | None = None) -> bool:
         identity_binding = _bounded_text(identity_binding, name="identity_binding")
         identity_digest = hashlib.sha256(identity_binding.encode()).hexdigest()
         retention = max(0, min(int(retention_seconds), MAX_ACK_RETENTION_SECONDS))
@@ -418,6 +431,9 @@ class SessionNotificationStore:
                 # callback never receives a second successful resolution.
                 return False
             if row["status"] != "pending":
+                conn.rollback()
+                return False
+            if still_authorized is not None and not still_authorized():
                 conn.rollback()
                 return False
             now = self.clock()

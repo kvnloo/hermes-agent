@@ -82,23 +82,34 @@ class GatewayNotificationOwnerService:
         principal = self._principal(source)
         if principal is None:
             return None
-        return SessionNotificationStore(self._db_path)._list_pending(
+        rows = SessionNotificationStore(self._db_path)._list_pending(
             profile_name=principal.profile_name,
             plugin_id=plugin_id,
             session_key=principal.session_key,
+            generation=principal.generation,
             limit=limit,
         )
+        if self._principal(source) != principal:
+            return None
+        return rows
 
     def fetch(self, source: SessionSource, notification_id: str, *, plugin_id: str) -> SessionNotification | None:
         principal = self._principal(source)
         if principal is None:
             return None
-        return SessionNotificationStore(self._db_path)._fetch(
+        row = SessionNotificationStore(self._db_path)._fetch(
             notification_id,
             profile_name=principal.profile_name,
             plugin_id=plugin_id,
             session_key=principal.session_key,
+            generation=principal.generation,
         )
+        # Authorization and generation are live capabilities, not a snapshot.
+        # Recheck after the ledger read before releasing private metadata.
+        current = self._principal(source)
+        if current != principal:
+            return None
+        return row
 
     def acknowledge(self, source: SessionSource, notification_id: str, *, plugin_id: str) -> bool:
         principal = self._principal(source)
@@ -111,4 +122,5 @@ class GatewayNotificationOwnerService:
             session_key=principal.session_key,
             generation=principal.generation,
             identity_binding=principal.audit_binding(),
+            still_authorized=lambda: self._principal(source) == principal,
         )

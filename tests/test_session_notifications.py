@@ -1,5 +1,7 @@
 import concurrent.futures
+import hashlib
 import multiprocessing
+import random
 import sqlite3
 from pathlib import Path
 from types import SimpleNamespace
@@ -135,6 +137,8 @@ def test_owner_scope_generation_ack_and_receipt_backed_retention(tmp_path):
     assert not service.acknowledge(owner, receipt.notification_id, plugin_id="taildrop")
     live["allowed"] = True
     live["generation"] = 6
+    assert service.list_pending(owner, plugin_id="taildrop") == []
+    assert service.fetch(owner, receipt.notification_id, plugin_id="taildrop") is None
     assert not service.acknowledge(owner, receipt.notification_id, plugin_id="taildrop")
     live["generation"] = 7
     assert service.acknowledge(owner, receipt.notification_id, plugin_id="taildrop")
@@ -160,7 +164,10 @@ def test_sqlite_busy_is_retryable_and_restart_persists(tmp_path):
     accepted = _append(store)
     restarted = SessionNotificationStore(db.db_path)
     assert _append(restarted).outcome is NotificationOutcome.ALREADY_ACCEPTED
-    assert restarted._fetch(accepted.notification_id, profile_name="default", plugin_id="taildrop", session_key=SESSION_KEY)
+    assert restarted._fetch(
+        accepted.notification_id, profile_name="default", plugin_id="taildrop",
+        session_key=SESSION_KEY, generation=7,
+    )
     db.close()
 
 
@@ -194,6 +201,82 @@ def test_ambiguous_legacy_rows_quarantine_without_touching_transcript(tmp_path):
     db.close()
 
 
+@pytest.mark.parametrize("row_count", [2, 10, 100])
+@pytest.mark.parametrize("vary_source", [False, True])
+def test_shared_binding_and_metadata_are_not_migration_collisions(
+    tmp_path, row_count, vary_source,
+):
+    db, store = _db(tmp_path)
+    order = list(range(row_count))
+    random.Random(row_count * 17 + int(vary_source)).shuffle(order)
+    with sqlite3.connect(db.db_path) as conn:
+        conn.executescript("""
+            CREATE TABLE gateway_inbox(inbox_id TEXT PRIMARY KEY,idempotency_key TEXT);
+            CREATE TABLE gateway_turns(turn_id TEXT PRIMARY KEY,inbox_id TEXT,source_id TEXT,
+                session_key TEXT,session_id TEXT,generation INTEGER,created_at REAL);
+        """)
+        for value in order:
+            conn.execute("INSERT INTO gateway_inbox VALUES(?,?)", (f"inbox-{value}", f"key-{value}"))
+            conn.execute(
+                "INSERT INTO gateway_turns VALUES(?,?,?,?,?,?,?)",
+                (f"turn-{value}", f"inbox-{value}",
+                 f"taildrop-{value}" if vary_source else "taildrop",
+                 SESSION_KEY, "session-1", 7, 100.0),
+            )
+    assert store.migrate_legacy_gateway_notifications() == row_count
+    with sqlite3.connect(db.db_path) as conn:
+        assert conn.execute("SELECT COUNT(*) FROM session_notifications").fetchone()[0] == row_count
+        assert conn.execute(
+            "SELECT COUNT(*) FROM session_notification_migration_classifications "
+            "WHERE migration_version=4 AND classification='inserted'"
+        ).fetchone()[0] == row_count
+        assert conn.execute("SELECT COUNT(*) FROM session_notification_migration_conflicts").fetchone()[0] == 0
+    db.close()
+
+
+def test_v4_preserves_v3_receipt_and_repairs_false_conflict(tmp_path):
+    db, store = _db(tmp_path)
+    source_identity = hashlib.sha256(
+        b'["gateway_turns","turn-2","inbox-2"]'
+    ).hexdigest()
+    with sqlite3.connect(db.db_path) as conn:
+        conn.executescript("""
+            CREATE TABLE gateway_inbox(inbox_id TEXT PRIMARY KEY,idempotency_key TEXT);
+            CREATE TABLE gateway_turns(turn_id TEXT PRIMARY KEY,inbox_id TEXT,source_id TEXT,
+                session_key TEXT,session_id TEXT,generation INTEGER,created_at REAL);
+            INSERT INTO gateway_inbox VALUES('inbox-1','key-1');
+            INSERT INTO gateway_inbox VALUES('inbox-2','key-2');
+            INSERT INTO gateway_turns VALUES('turn-1','inbox-1','taildrop',
+                'agent:main:telegram:dm:42','session-1',7,100.0);
+            INSERT INTO gateway_turns VALUES('turn-2','inbox-2','taildrop',
+                'agent:main:telegram:dm:42','session-1',7,100.0);
+            INSERT INTO state_meta VALUES(
+                'session_notifications_legacy_migrated_v3','sealed-v3-receipt');
+        """)
+        conn.execute(
+            "INSERT INTO session_notification_migration_classifications VALUES"
+            "(3,'gateway_turns',?,'old-source-digest','migration_conflict',NULL,'old-conflict',100)",
+            (source_identity,),
+        )
+        conn.execute(
+            "INSERT INTO session_notification_migration_conflicts VALUES"
+            "('gateway_turns',?,'old-source-digest','binding+digest',100,100)",
+            (source_identity,),
+        )
+    assert store.migrate_legacy_gateway_notifications() == 2
+    with sqlite3.connect(db.db_path) as conn:
+        assert conn.execute(
+            "SELECT value FROM state_meta WHERE key='session_notifications_legacy_migrated_v3'"
+        ).fetchone()[0] == "sealed-v3-receipt"
+        assert conn.execute("SELECT COUNT(*) FROM session_notifications").fetchone()[0] == 2
+        assert conn.execute(
+            "SELECT COUNT(*) FROM session_notification_migration_classifications "
+            "WHERE migration_version=3"
+        ).fetchone()[0] == 1
+        assert conn.execute("SELECT COUNT(*) FROM session_notification_migration_conflicts").fetchone()[0] == 0
+    db.close()
+
+
 def test_legacy_identity_collision_is_preserved_as_conflict(tmp_path):
     db, store = _db(tmp_path)
     with sqlite3.connect(db.db_path) as conn:
@@ -217,7 +300,7 @@ def test_legacy_identity_collision_is_preserved_as_conflict(tmp_path):
         receipt = conn.execute(
             "SELECT value FROM state_meta WHERE key=?", (MIGRATION_MARKER,)
         ).fetchone()[0]
-        assert '"source_count":1' in receipt and '"version":3' in receipt
+        assert '"source_count":1' in receipt and '"version":4' in receipt
     assert store.migrate_legacy_gateway_notifications() == 0
     db.close()
 
