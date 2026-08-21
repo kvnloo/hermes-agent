@@ -17636,16 +17636,31 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
             record = await asyncio.to_thread(inbox.lease_next, owner)
             if record is None:
                 return
-            turn_id = await asyncio.to_thread(inbox.claim_turn, record.inbox_id, owner)
+            turn_id = await asyncio.to_thread(inbox.commit_turn, record, owner)
             if turn_id is None:
                 continue
+            durable_turn = await asyncio.to_thread(
+                inbox.lease_turn, owner, turn_id=turn_id
+            )
+            if durable_turn is None:
+                return
+            user_message_id = await asyncio.to_thread(
+                inbox.commit_user, durable_turn, owner
+            )
+            if user_message_id is None:
+                # The turn remains reclaimable or has been quarantined.  Never
+                # fall back to process-local adapter ownership.
+                continue
             routed = await self._dispatch_plugin_message_injection(
-                session_key=record.session_key, content=record.payload,
-                plugin_id=record.source_id, inbox_id=record.inbox_id,
+                session_key=durable_turn.session_key, content=durable_turn.payload,
+                plugin_id=durable_turn.source_id, inbox_id=durable_turn.inbox_id,
                 idempotency_key=record.idempotency_key, turn_id=turn_id,
             )
-            if routed:
-                await asyncio.to_thread(inbox.finish, record.inbox_id, turn_id, "routed")
+            if not routed:
+                logger.warning(
+                    "Durable gateway turn remains queued after adapter refusal: turn=%s",
+                    turn_id[:12],
+                )
 
     async def _dispatch_plugin_message_injection(
         self,

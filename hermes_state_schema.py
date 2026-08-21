@@ -791,6 +791,15 @@ class SessionSchemaMixin:
         # column gets created here.
         self._reconcile_columns(cursor)
 
+        # Durable gateway-turn identity indexes reference columns added by the
+        # reconciler on legacy databases, so they must be created afterward.
+        cursor.executescript("""
+            CREATE UNIQUE INDEX IF NOT EXISTS messages_gateway_turn_user
+                ON messages(gateway_turn_id) WHERE gateway_turn_kind = 'user';
+            CREATE UNIQUE INDEX IF NOT EXISTS messages_gateway_turn_response
+                ON messages(gateway_turn_id) WHERE gateway_turn_kind = 'response';
+        """)
+
         # Rebuild gateway_routing if it still carries the pre-scope PRIMARY
         # KEY (session_key alone). ADD COLUMN cannot fix a PK, so this is
         # the one table-shape repair reconciliation can't express.
