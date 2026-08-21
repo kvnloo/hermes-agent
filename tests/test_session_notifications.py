@@ -1,4 +1,5 @@
 import concurrent.futures
+import multiprocessing
 import sqlite3
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -8,6 +9,7 @@ import yaml
 from hermes_cli.plugins import PluginContext, PluginManager, PluginManifest
 from hermes_state import SessionDB
 from session_notifications import (
+    GatewayNotificationOwnerBoundary,
     NotificationOutcome,
     SessionNotificationStore,
 )
@@ -49,6 +51,10 @@ def _append(store: SessionNotificationStore, **overrides):
     return store.append_once(**params)
 
 
+def _process_append(path: str, queue) -> None:
+    queue.put(_append(SessionNotificationStore(Path(path), timeout=10)).outcome.value)
+
+
 def test_atomic_accept_replay_conflict_and_transcript_is_untouched(tmp_path):
     db, store = _db(tmp_path)
     db.append_message("session-1", "user", "ordinary in-flight user row")
@@ -78,6 +84,23 @@ def test_concurrent_accept_has_one_winner(tmp_path):
     db.close()
 
 
+def test_multiprocess_accept_has_one_winner(tmp_path):
+    db, store = _db(tmp_path)
+    context = multiprocessing.get_context("spawn")
+    queue = context.Queue()
+    processes = [context.Process(target=_process_append, args=(str(store.db_path), queue))
+                 for _ in range(8)]
+    for process in processes:
+        process.start()
+    results = [queue.get(timeout=20) for _ in processes]
+    for process in processes:
+        process.join(20)
+        assert process.exitcode == 0
+    assert results.count(NotificationOutcome.ACCEPTED.value) == 1
+    assert results.count(NotificationOutcome.ALREADY_ACCEPTED.value) == 7
+    db.close()
+
+
 def test_metadata_is_allowlisted_and_content_paths_commands_secrets_are_rejected(tmp_path):
     db, store = _db(tmp_path)
     for field in ("content", "path", "command", "secret", "token", "unknown"):
@@ -92,11 +115,22 @@ def test_owner_scope_generation_ack_and_receipt_backed_retention(tmp_path):
     db, _ = _db(tmp_path)
     store = SessionNotificationStore(db.db_path, clock=lambda: now[0])
     receipt = _append(store)
-    assert len(store.list_pending(profile_name="default", plugin_id="taildrop", session_key=SESSION_KEY)) == 1
-    assert store.fetch(receipt.notification_id, profile_name="default", plugin_id="other", session_key=SESSION_KEY) is None
-    assert not store.acknowledge(receipt.notification_id, profile_name="default", plugin_id="taildrop", session_key=SESSION_KEY, generation=8, actor="captain")
-    assert store.acknowledge(receipt.notification_id, profile_name="default", plugin_id="taildrop", session_key=SESSION_KEY, generation=7, actor="captain", retention_seconds=5)
-    assert store.list_pending(profile_name="default", plugin_id="taildrop", session_key=SESSION_KEY) == []
+    live = {"allowed": True}
+    boundary = GatewayNotificationOwnerBoundary(
+        store, captain_user_id="42", platform="telegram", chat_id="42",
+        profile_name="default", session_key=SESSION_KEY, generation=7,
+        authorization_check=lambda user, platform, chat: live["allowed"] and user == "42",
+    )
+    owner = boundary.issue(user_id="42", platform="telegram", chat_id="42",
+                           profile_name="default", session_key=SESSION_KEY, generation=7)
+    assert owner is not None
+    assert len(boundary.list_pending(owner, plugin_id="taildrop")) == 1
+    assert boundary.fetch(owner, receipt.notification_id, plugin_id="other") is None
+    live["allowed"] = False
+    assert not boundary.acknowledge(owner, receipt.notification_id, plugin_id="taildrop")
+    live["allowed"] = True
+    assert boundary.acknowledge(owner, receipt.notification_id, plugin_id="taildrop", retention_seconds=5)
+    assert boundary.list_pending(owner, plugin_id="taildrop") == []
     assert store.compact_acknowledged()[1] == 0
     now[0] += 6
     compaction_receipt, count = store.compact_acknowledged()
@@ -117,7 +151,7 @@ def test_sqlite_busy_is_retryable_and_restart_persists(tmp_path):
     accepted = _append(store)
     restarted = SessionNotificationStore(db.db_path)
     assert _append(restarted).outcome is NotificationOutcome.ALREADY_ACCEPTED
-    assert restarted.fetch(accepted.notification_id, profile_name="default", plugin_id="taildrop", session_key=SESSION_KEY)
+    assert restarted._fetch(accepted.notification_id, profile_name="default", plugin_id="taildrop", session_key=SESSION_KEY)
     db.close()
 
 
@@ -151,6 +185,34 @@ def test_ambiguous_legacy_rows_quarantine_without_touching_transcript(tmp_path):
     db.close()
 
 
+def test_legacy_identity_collision_is_preserved_as_conflict(tmp_path):
+    db, store = _db(tmp_path)
+    with sqlite3.connect(db.db_path) as conn:
+        conn.executescript("""
+            CREATE TABLE gateway_inbox(inbox_id TEXT PRIMARY KEY,idempotency_key TEXT);
+            CREATE TABLE gateway_turns(turn_id TEXT PRIMARY KEY,inbox_id TEXT,source_id TEXT,
+                session_key TEXT,session_id TEXT,generation INTEGER,created_at REAL);
+            INSERT INTO gateway_inbox VALUES('inbox-1','legacy-global-key');
+            INSERT INTO gateway_turns VALUES('turn-1','inbox-1','taildrop',
+                'agent:main:telegram:dm:42','session-1',7,100.0);
+            INSERT INTO session_notifications VALUES(
+                'other-key','turn-1','default','other','session-1',
+                'agent:main:telegram:dm:42','other',7,'{"event":"x"}','digest',
+                'quarantined',1,1,NULL,NULL,NULL);
+        """)
+    assert store.migrate_legacy_gateway_notifications() == 1
+    with sqlite3.connect(db.db_path) as conn:
+        assert conn.execute(
+            "SELECT conflict_class FROM session_notification_migration_conflicts"
+        ).fetchone()[0] == "notification_id"
+        receipt = conn.execute(
+            "SELECT value FROM state_meta WHERE key='session_notifications_legacy_migrated_v2'"
+        ).fetchone()[0]
+        assert '"represented_count":1' in receipt and '"version":2' in receipt
+    assert store.migrate_legacy_gateway_notifications() == 0
+    db.close()
+
+
 def test_real_plugin_context_boundary_and_compatibility_trap(tmp_path, monkeypatch):
     home = tmp_path / "home"
     home.mkdir()
@@ -179,6 +241,6 @@ def test_real_plugin_context_boundary_and_compatibility_trap(tmp_path, monkeypat
     assert ctx.inject_message_once().outcome is NotificationOutcome.REJECTED
     with patch.object(ctx, "_session_notifications_allowed", return_value=True), \
          patch.object(ctx, "_session_notification_store", return_value=SessionNotificationStore(db.db_path)):
-        assert len(ctx.list_pending_notifications(session_key=SESSION_KEY)) == 1
+        assert not hasattr(ctx, "list_pending_notifications")
     assert [(m["id"], m["role"]) for m in db.get_messages("session-1")] == [(m["id"], m["role"]) for m in before]
     db.close()

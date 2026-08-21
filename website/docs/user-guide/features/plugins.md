@@ -20,11 +20,13 @@ back to `inject_message`; `inject_message_once` always rejects.
 
 Pass an opaque globally unique key, existing session key, exact destination,
 non-negative generation, and allowlisted metadata (`event`, `sender`, `device`,
-lowercase `sha256`, `bytes`, `generation`, `status_label`). Owned records are
-available through `list_pending_notifications` and `get_notification`.
-`acknowledge_notification` requires the exact generation and explicit
-user/Captain actor identity. These APIs never write chat messages, send a
-platform message, or expose notifications to the model.
+lowercase `sha256`, `bytes`, `generation`, `status_label`). Plugins have write
+access only: `PluginContext` does not expose notification list, fetch, or
+acknowledgement methods. Owner reads and acknowledgements require an opaque
+gateway-issued context bound to the configured Captain user, platform, chat,
+profile, session, and generation; live gateway authorization is rechecked for
+every operation. These APIs never write chat messages, send a platform message,
+or expose notifications to the model.
 
 If you want to create a custom tool for yourself, your team, or one project,
 this is usually the right path. The developer guide's

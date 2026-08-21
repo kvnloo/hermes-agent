@@ -403,6 +403,25 @@ CREATE TABLE IF NOT EXISTS session_notification_compaction_receipts (
     row_count INTEGER NOT NULL CHECK(row_count >= 0)
 );
 
+CREATE TABLE IF NOT EXISTS session_notification_migration_conflicts (
+    source_table TEXT NOT NULL,
+    source_identity TEXT NOT NULL,
+    metadata_digest TEXT NOT NULL,
+    conflict_class TEXT NOT NULL,
+    first_seen_at REAL NOT NULL,
+    last_seen_at REAL NOT NULL,
+    PRIMARY KEY (source_table, source_identity)
+);
+
+CREATE TABLE IF NOT EXISTS session_notification_owner_audit (
+    audit_id TEXT PRIMARY KEY,
+    notification_id TEXT NOT NULL,
+    action TEXT NOT NULL,
+    identity_binding TEXT NOT NULL,
+    identity_digest TEXT NOT NULL,
+    created_at REAL NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS compression_locks (
     session_id TEXT PRIMARY KEY,
     holder TEXT NOT NULL,
