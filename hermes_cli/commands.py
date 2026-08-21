@@ -175,7 +175,7 @@ COMMAND_REGISTRY: list[CommandDef] = [
     CommandDef("status", "Show session, model, token, and context info", "Session",
                busy_policy="dispatch"),
     CommandDef("notifications", "Manage pending durable notifications", "Session",
-               args_hint="<list|fetch|ack> <plugin> [notification-id]",
+               args_hint="<list|fetch|ack> [notification-id]",
                gateway_only=True, busy_policy="reject"),
     CommandDef("egress", "Show Docker egress proxy status", "Session",
                args_hint="[status]", subcommands=("status",),

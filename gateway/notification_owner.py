@@ -78,13 +78,12 @@ class GatewayNotificationOwnerService:
             generation=generation,
         )
 
-    def list_pending(self, source: SessionSource, *, plugin_id: str, limit: int = 100) -> list[SessionNotification] | None:
+    def list_pending(self, source: SessionSource, *, limit: int = 100) -> list[SessionNotification] | None:
         principal = self._principal(source)
         if principal is None:
             return None
         rows = SessionNotificationStore(self._db_path)._list_pending(
             profile_name=principal.profile_name,
-            plugin_id=plugin_id,
             session_key=principal.session_key,
             generation=principal.generation,
             limit=limit,
@@ -93,14 +92,13 @@ class GatewayNotificationOwnerService:
             return None
         return rows
 
-    def fetch(self, source: SessionSource, notification_id: str, *, plugin_id: str) -> SessionNotification | None:
+    def fetch(self, source: SessionSource, notification_id: str) -> SessionNotification | None:
         principal = self._principal(source)
         if principal is None:
             return None
         row = SessionNotificationStore(self._db_path)._fetch(
             notification_id,
             profile_name=principal.profile_name,
-            plugin_id=plugin_id,
             session_key=principal.session_key,
             generation=principal.generation,
         )
@@ -111,14 +109,13 @@ class GatewayNotificationOwnerService:
             return None
         return row
 
-    def acknowledge(self, source: SessionSource, notification_id: str, *, plugin_id: str) -> bool:
+    def acknowledge(self, source: SessionSource, notification_id: str) -> bool:
         principal = self._principal(source)
         if principal is None:
             return False
         return SessionNotificationStore(self._db_path)._acknowledge(
             notification_id,
             profile_name=principal.profile_name,
-            plugin_id=plugin_id,
             session_key=principal.session_key,
             generation=principal.generation,
             identity_binding=principal.audit_binding(),
