@@ -10,6 +10,8 @@ from plugins.platforms.telegram.mode_router import (
     TelegramModeRouter,
     default_slots,
 )
+from gateway.config import Platform
+from gateway.session import SessionSource, build_session_key
 
 
 class Clock:
@@ -39,7 +41,7 @@ def test_schema_defaults_are_disabled_and_use_only_canonical_profiles():
     assert all(not slot.enabled for slot in slots.values())
     assert {slot.profile for slot in slots.values()} <= {None, "chiefstaff", "starwars"}
     assert slots["feeds.youtube_chat"].modes.to_wire() == {
-        "chat.type": "feed", "work.mode": "directed", "updates.mode": "summary", "feed.mode": "summary", "authority": "observe",
+        "chat.type": "feed", "chat.mode": "copilot", "work.mode": "directed", "updates.mode": "summary", "feed.mode": "summary", "authority": "observe",
     }
 
 
@@ -53,6 +55,35 @@ def test_modes_are_orthogonal_validated_and_unknowns_fail_closed(tmp_path):
         value.set_modes("42", "captain_dm", {"feed.mode": "continuous"})
     with pytest.raises(RouterError, match="RECORDED_NOT_ACTIVE"):
         value.set_modes("42", "captain_dm", {"work.mode": "autonomous"})
+
+
+def test_conversation_modes_are_independent_and_get_stable_session_namespaces(tmp_path):
+    value, _ = router(tmp_path)
+    assert value.effective_modes("captain_dm").conversation_mode.value == "copilot"
+
+    value.set_modes("42", "captain_dm", {"chat.mode": "brainstorm"})
+    brainstorm = value.route(
+        user_id="42", chat_id="42", thread_id=None, message_id="brainstorm-1",
+        text="explore an idea",
+    )
+    assert brainstorm.accepted
+    assert brainstorm.session_scope == "chat-brainstorm"
+    assert brainstorm.conversation_mode == "brainstorm"
+    assert value.effective_modes("captain_dm").work_mode.value == "directed"
+
+    source = SessionSource(
+        platform=Platform.TELEGRAM, chat_id="42", chat_type="dm",
+        user_id="42", conversation_scope=brainstorm.session_scope,
+    )
+    assert build_session_key(source) == "agent:main:telegram:dm:42:scope:chat-brainstorm"
+
+    value.set_modes("42", "captain_dm", {"chat.mode": "portfolio"})
+    portfolio = value.route(
+        user_id="42", chat_id="42", thread_id=None, message_id="portfolio-1",
+        text="show priorities",
+    )
+    assert portfolio.session_scope == "chat-portfolio"
+    assert portfolio.session_scope != brainstorm.session_scope
 
 
 def test_override_expires_and_restart_is_safe(tmp_path):

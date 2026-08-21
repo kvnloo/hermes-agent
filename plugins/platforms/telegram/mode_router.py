@@ -35,6 +35,13 @@ class ChatType(str, Enum):
     FEED = "feed"
 
 
+class ConversationMode(str, Enum):
+    BRAINSTORM = "brainstorm"
+    PORTFOLIO = "portfolio"
+    COPILOT = "copilot"
+    COUNCIL = "council"
+
+
 class WorkMode(str, Enum):
     AUTONOMOUS = "autonomous"
     DIRECTED = "directed"
@@ -65,6 +72,7 @@ class Authority(str, Enum):
 @dataclass(frozen=True)
 class Modes:
     chat_type: ChatType = ChatType.OPERATIONS
+    conversation_mode: ConversationMode = ConversationMode.COPILOT
     work_mode: WorkMode = WorkMode.DIRECTED
     updates_mode: UpdatesMode = UpdatesMode.MILESTONE
     feed_mode: FeedMode = FeedMode.OFF
@@ -73,13 +81,14 @@ class Modes:
     @classmethod
     def parse(cls, raw: Mapping[str, Any], base: "Modes | None" = None) -> "Modes":
         base = base or cls()
-        allowed = {"chat.type", "work.mode", "updates.mode", "feed.mode", "authority"}
+        allowed = {"chat.type", "chat.mode", "work.mode", "updates.mode", "feed.mode", "authority"}
         unknown = set(raw) - allowed
         if unknown:
             raise RouterError(f"unknown mode keys: {sorted(unknown)}")
         try:
             modes = cls(
                 chat_type=ChatType(raw.get("chat.type", base.chat_type.value)),
+                conversation_mode=ConversationMode(raw.get("chat.mode", base.conversation_mode.value)),
                 work_mode=WorkMode(raw.get("work.mode", base.work_mode.value)),
                 updates_mode=UpdatesMode(raw.get("updates.mode", base.updates_mode.value)),
                 feed_mode=FeedMode(raw.get("feed.mode", base.feed_mode.value)),
@@ -110,6 +119,7 @@ class Modes:
     def to_wire(self) -> dict[str, str]:
         return {
             "chat.type": self.chat_type.value,
+            "chat.mode": self.conversation_mode.value,
             "work.mode": self.work_mode.value,
             "updates.mode": self.updates_mode.value,
             "feed.mode": self.feed_mode.value,
@@ -154,6 +164,8 @@ class RouteDecision:
     request_id: str | None = None
     visible_attribution: str | None = None
     receipt: dict[str, str] | None = None
+    session_scope: str | None = None
+    conversation_mode: str | None = None
 
 
 def default_slots() -> dict[str, RouteSlot]:
@@ -378,7 +390,14 @@ class TelegramModeRouter:
             return RouteDecision(False, "unknown-or-inactive-persona")
         request_id = hashlib.sha256(key.encode()).hexdigest()[:16]
         persona = "First Mate" if profile == "chiefstaff" else "Second Mate · Temple Guard"
-        return RouteDecision(True, "accepted", profile, slot.lane, request_id, f"[{persona} · {profile}]", {"profile": profile, "lane": slot.lane, "request_id": request_id, "node": "verified-local"})
+        mode = self.effective_modes(slot.key).conversation_mode.value
+        return RouteDecision(
+            True, "accepted", profile, slot.lane, request_id,
+            f"[{persona} · {profile}]",
+            {"profile": profile, "lane": slot.lane, "request_id": request_id, "node": "verified-local"},
+            f"chat-{mode}",
+            mode,
+        )
 
     def _persona_profile(self, text: str, slot: RouteSlot) -> str | None:
         lowered = text.lower()
