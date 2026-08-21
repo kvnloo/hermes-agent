@@ -262,14 +262,15 @@ CREATE TABLE IF NOT EXISTS gateway_inbox (
     role TEXT NOT NULL,
     payload_digest TEXT NOT NULL,
     payload TEXT NOT NULL,
-    state TEXT NOT NULL CHECK(state IN ('pending','leased','turn_owned','consumed','quarantined')),
+    state TEXT NOT NULL CHECK(state IN ('pending','leased','turn_committed','terminal','quarantined')),
     accepted_at REAL NOT NULL,
     retain_until REAL NOT NULL,
     lease_owner TEXT,
     lease_expires REAL,
+    lease_generation INTEGER NOT NULL DEFAULT 0,
     attempts INTEGER NOT NULL DEFAULT 0,
     turn_id TEXT UNIQUE,
-    consumed_at REAL,
+    terminal_at REAL,
     outcome TEXT
 );
 CREATE INDEX IF NOT EXISTS gateway_inbox_drain
@@ -280,6 +281,31 @@ CREATE TABLE IF NOT EXISTS gateway_inbox_compaction_receipts(
     deleted_count INTEGER NOT NULL,
     cutoff REAL NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS gateway_turns (
+    turn_id TEXT PRIMARY KEY,
+    inbox_id TEXT NOT NULL UNIQUE REFERENCES gateway_inbox(inbox_id),
+    profile_digest TEXT NOT NULL,
+    source_id TEXT NOT NULL,
+    session_key TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    generation TEXT NOT NULL,
+    role TEXT NOT NULL CHECK(role = 'user'),
+    payload_digest TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    state TEXT NOT NULL CHECK(state IN ('pending','leased','user_committed','processing','completed','failed','quarantined')),
+    created_at REAL NOT NULL,
+    updated_at REAL NOT NULL,
+    lease_owner TEXT,
+    lease_expires REAL,
+    lease_generation INTEGER NOT NULL DEFAULT 0,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    user_message_id INTEGER,
+    response_message_id INTEGER,
+    outcome TEXT
+);
+CREATE INDEX IF NOT EXISTS gateway_turns_drain
+    ON gateway_turns(state, lease_expires, created_at);
 
 CREATE TABLE IF NOT EXISTS system_prompts (
     hash TEXT PRIMARY KEY,
@@ -368,9 +394,10 @@ CREATE TABLE IF NOT EXISTS messages (
     compacted INTEGER NOT NULL DEFAULT 0,
     api_content TEXT,
     display_kind TEXT,
-    display_metadata TEXT
+    display_metadata TEXT,
+    gateway_turn_id TEXT,
+    gateway_turn_kind TEXT CHECK(gateway_turn_kind IN ('user','response'))
 );
-
 CREATE TABLE IF NOT EXISTS session_model_usage (
     session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
     model TEXT NOT NULL,

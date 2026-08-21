@@ -49,6 +49,22 @@ def test_lease_reclaim_turn_identity_and_retention(tmp_path):
     assert reclaimed and reclaimed.attempts == 2
     turn = store.claim_turn(reclaimed.inbox_id, "worker-b")
     assert turn and store.claim_turn(reclaimed.inbox_id, "worker-b") == turn
+    with sqlite3.connect(tmp_path / "state.db") as conn:
+        conn.execute("""CREATE TABLE sessions(
+            id TEXT PRIMARY KEY, session_key TEXT, message_count INTEGER DEFAULT 0
+        )""")
+        conn.execute("""CREATE TABLE messages(
+            id INTEGER PRIMARY KEY, session_id TEXT, role TEXT, content TEXT,
+            timestamp REAL, gateway_turn_id TEXT, gateway_turn_kind TEXT
+        )""")
+        conn.execute("CREATE UNIQUE INDEX turn_kind ON messages(gateway_turn_id, gateway_turn_kind)")
+        conn.execute("INSERT INTO sessions(id,session_key) VALUES('session-1','telegram:1')")
+    durable = store.lease_turn("worker-b")
+    assert durable and durable.turn_id == turn
+    user_id = store.commit_user(durable, "worker-b")
+    assert user_id and store.commit_user(durable, "worker-b") == user_id
+    response_id = store.complete_response(turn, "done")
+    assert response_id and store.complete_response(turn, "done") == response_id
     assert store.finish(reclaimed.inbox_id, turn, "routed")
     assert store.compact()[1] == 0
     now[0] += 86400
