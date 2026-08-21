@@ -9707,13 +9707,9 @@ class TelegramAdapter(BasePlatformAdapter):
         source.profile = decision.profile
         source.conversation_scope = decision.session_scope
         receipt = json.dumps(decision.receipt, sort_keys=True, separators=(",", ":"))
-        mode_contracts = {
-            "brainstorm": "Explore freely. Do not create or modify work unless the Captain explicitly asks; suppress unsolicited status updates.",
-            "portfolio": "Act as portfolio manager: lead with priorities, owners, evidence, blockers, and the next decision; hide worker-level noise.",
-            "copilot": "Work interactively on the current request. Prefer direct tools for simple actions; use Kanban only for genuinely durable delegated work.",
-            "council": "Provide bounded independent viewpoints and a synthesis. Council output is advisory and cannot authorize execution by itself.",
-        }
-        mode_contract = mode_contracts.get(decision.conversation_mode, mode_contracts["copilot"])
+        from plugins.platforms.telegram.mode_router import conversation_mode_contract
+
+        mode_contract = conversation_mode_contract(decision.conversation_mode)
         route_prompt = (
             "Telegram single-token route. The response must begin exactly with "
             f"{decision.visible_attribution}. Local routing receipt: {receipt}. "

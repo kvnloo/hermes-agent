@@ -42,6 +42,22 @@ class ConversationMode(str, Enum):
     COUNCIL = "council"
 
 
+_CONVERSATION_MODE_CONTRACTS = {
+    "brainstorm": "Explore freely. Do not create or modify work unless the Captain explicitly asks; suppress unsolicited status updates.",
+    "portfolio": "Act as portfolio manager: lead with priorities, owners, evidence, blockers, and the next decision; hide worker-level noise.",
+    "copilot": "Work interactively on the current request. Answer informational questions and perform simple local actions directly. Every actionable request that requires specialist or background work must receive durable Kanban intake before execution; delegate_task is forbidden on Telegram.",
+    "council": "Provide bounded independent viewpoints and a synthesis. Council output is advisory and cannot authorize execution by itself.",
+}
+
+
+def conversation_mode_contract(mode: str | None) -> str:
+    """Return the stable behavioral contract for a Telegram conversation mode."""
+    return _CONVERSATION_MODE_CONTRACTS.get(
+        str(mode or "").strip().lower(),
+        _CONVERSATION_MODE_CONTRACTS["copilot"],
+    )
+
+
 class WorkMode(str, Enum):
     AUTONOMOUS = "autonomous"
     DIRECTED = "directed"

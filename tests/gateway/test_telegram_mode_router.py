@@ -8,6 +8,7 @@ import pytest
 from plugins.platforms.telegram.mode_router import (
     RouterError,
     TelegramModeRouter,
+    conversation_mode_contract,
     default_slots,
 )
 from gateway.config import Platform
@@ -58,6 +59,10 @@ def test_modes_are_orthogonal_validated_and_unknowns_fail_closed(tmp_path):
 
 
 def test_conversation_modes_are_independent_and_get_stable_session_namespaces(tmp_path):
+    contract = conversation_mode_contract("copilot")
+    assert "Kanban intake" in contract
+    assert "delegate_task" in contract
+
     value, _ = router(tmp_path)
     assert value.effective_modes("captain_dm").conversation_mode.value == "copilot"
 
