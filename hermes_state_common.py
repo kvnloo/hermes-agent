@@ -216,7 +216,7 @@ def _sql_session_last_active_by_id(session_id_expr: str) -> str:
     )
 
 
-SCHEMA_VERSION = 25
+SCHEMA_VERSION = 26
 
 
 # FTS storage-layout version, tracked INDEPENDENTLY of SCHEMA_VERSION in the
@@ -249,6 +249,36 @@ _FTS_TRIGGERS = (
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS schema_version (
     version INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS gateway_inbox_schema(version INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS gateway_inbox (
+    idempotency_key TEXT PRIMARY KEY,
+    inbox_id TEXT NOT NULL UNIQUE,
+    profile_digest TEXT NOT NULL,
+    source_id TEXT NOT NULL,
+    session_key TEXT NOT NULL,
+    generation TEXT NOT NULL,
+    role TEXT NOT NULL,
+    payload_digest TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    state TEXT NOT NULL CHECK(state IN ('pending','leased','turn_owned','consumed','quarantined')),
+    accepted_at REAL NOT NULL,
+    retain_until REAL NOT NULL,
+    lease_owner TEXT,
+    lease_expires REAL,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    turn_id TEXT UNIQUE,
+    consumed_at REAL,
+    outcome TEXT
+);
+CREATE INDEX IF NOT EXISTS gateway_inbox_drain
+    ON gateway_inbox(state, lease_expires, accepted_at);
+CREATE TABLE IF NOT EXISTS gateway_inbox_compaction_receipts(
+    receipt_id TEXT PRIMARY KEY,
+    compacted_at REAL NOT NULL,
+    deleted_count INTEGER NOT NULL,
+    cutoff REAL NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS system_prompts (
