@@ -1048,6 +1048,17 @@ def kanban_command(args: argparse.Namespace) -> int:
             )
         return 0
 
+    # This safety gate must precede board resolution, DB initialization, plan
+    # construction, Git inspection, and scratch discovery. Disabled apply is
+    # argument-validation only: it must not touch either repository or board.
+    if action == "gc" and getattr(args, "apply", False):
+        print(
+            "kanban gc: automatic cleanup is disabled; review a plan and require "
+            "manual Captain action",
+            file=sys.stderr,
+        )
+        return 2
+
     # Fast-fail for clearer CLI UX only. The durable trust boundary is lower in
     # hermes_cli.kanban_db, because children can import DB mutators directly.
     if _is_delegated_child_cli_mutation(args):
@@ -3218,6 +3229,13 @@ def _cmd_decompose(args: argparse.Namespace) -> int:
 
 def _cmd_gc(args: argparse.Namespace) -> int:
     """Plan worktree GC; automatic mutation is intentionally disabled."""
+    if args.apply:
+        print(
+            "kanban gc: automatic cleanup is disabled; review a plan and require "
+            "manual Captain action",
+            file=sys.stderr,
+        )
+        return 2
     from hermes_cli import kanban_worktree_gc as worktree_gc
     import shutil
     scratch_root = kb.workspaces_root()
@@ -3230,13 +3248,6 @@ def _cmd_gc(args: argparse.Namespace) -> int:
     with kb.connect_closing() as conn:
         plan = worktree_gc.build_plan(conn, retention_seconds=retention_seconds)
     removed_worktrees: list[str] = []
-    if args.apply:
-        print(
-            "kanban gc: automatic cleanup is disabled; review the plan and require "
-            "manual Captain action",
-            file=sys.stderr,
-        )
-        return 2
 
     for row in rows:
         if row["workspace_kind"] != "scratch":
