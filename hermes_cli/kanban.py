@@ -988,12 +988,12 @@ def build_parser(parent_subparsers: argparse._SubParsersAction) -> argparse.Argu
 
     # --- gc ---
     p_gc = sub.add_parser(
-        "gc", help="Plan worktree retention GC (dry-run unless --apply), plus old metadata",
+        "gc", help="Plan worktree retention GC; automatic apply is disabled",
     )
     p_gc.add_argument("--apply", action="store_true",
-                      help="Apply eligible worktree removals after fresh revalidation")
+                      help="Disabled safety gate; exits without mutation")
     p_gc.add_argument("--receipt", type=Path,
-                      help="Required with --apply: durable pre-mutation receipt path")
+                      help="Reserved for a future provably safe apply protocol")
     p_gc.add_argument("--worktree-retention-days", type=int, default=7,
                       help="Minimum completed retention before eligibility (default: 7)")
     p_gc.add_argument("--json", action="store_true", help="Emit the complete GC plan as JSON")
@@ -3217,7 +3217,7 @@ def _cmd_decompose(args: argparse.Namespace) -> int:
 
 
 def _cmd_gc(args: argparse.Namespace) -> int:
-    """Plan worktree GC by default; mutation requires --apply + receipt."""
+    """Plan worktree GC; automatic mutation is intentionally disabled."""
     from hermes_cli import kanban_worktree_gc as worktree_gc
     import shutil
     scratch_root = kb.workspaces_root()
@@ -3226,6 +3226,18 @@ def _cmd_gc(args: argparse.Namespace) -> int:
         rows = conn.execute(
             "SELECT id, workspace_kind, workspace_path FROM tasks WHERE status = 'archived'"
         ).fetchall()
+    retention_seconds = max(0, args.worktree_retention_days) * 24 * 3600
+    with kb.connect_closing() as conn:
+        plan = worktree_gc.build_plan(conn, retention_seconds=retention_seconds)
+    removed_worktrees: list[str] = []
+    if args.apply:
+        print(
+            "kanban gc: automatic cleanup is disabled; review the plan and require "
+            "manual Captain action",
+            file=sys.stderr,
+        )
+        return 2
+
     for row in rows:
         if row["workspace_kind"] != "scratch":
             continue
@@ -3243,21 +3255,8 @@ def _cmd_gc(args: argparse.Namespace) -> int:
             shutil.rmtree(path, ignore_errors=True)
             removed_ws += 1
 
-    retention_seconds = max(0, args.worktree_retention_days) * 24 * 3600
-    with kb.connect_closing() as conn:
-        plan = worktree_gc.build_plan(conn, retention_seconds=retention_seconds)
-        removed_worktrees: list[str] = []
-        if args.apply:
-            if not args.receipt:
-                print("kanban gc: --apply requires --receipt PATH", file=sys.stderr)
-                return 2
-            removed_worktrees = worktree_gc.apply_plan(
-                conn, plan, receipt_path=args.receipt,
-                retention_seconds=retention_seconds,
-            )
 
-    # Event/log/scratch metadata cleanup retains its existing behavior, but
-    # worktree deletion is always separately planned and receipt-backed.
+    # Apply returned above, so all cleanup classes remain non-mutating.
     event_days = getattr(args, "event_retention_days", 30)
     log_days = getattr(args, "log_retention_days", 30)
     removed_events = 0
@@ -3283,7 +3282,7 @@ def _cmd_gc(args: argparse.Namespace) -> int:
               f"workspace(s), {removed_events} event row(s), "
               f"{removed_logs} log file(s) removed")
         if not args.apply:
-            print("No worktrees removed. Re-run with --apply --receipt PATH after review.")
+            print("No worktrees removed. Removal requires manual Captain action.")
     return 0
 
 
