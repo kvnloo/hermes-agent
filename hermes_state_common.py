@@ -216,7 +216,7 @@ def _sql_session_last_active_by_id(session_id_expr: str) -> str:
     )
 
 
-SCHEMA_VERSION = 25
+SCHEMA_VERSION = 26
 
 
 # FTS storage-layout version, tracked INDEPENDENTLY of SCHEMA_VERSION in the
@@ -376,6 +376,33 @@ CREATE TABLE IF NOT EXISTS gateway_routing (
     PRIMARY KEY (scope, session_key)
 );
 
+-- Dedicated non-conversational notification ledger. Pending rows deliberately
+-- have no retention deadline and no relationship to transcript messages.
+CREATE TABLE IF NOT EXISTS session_notifications (
+    idempotency_key TEXT PRIMARY KEY,
+    notification_id TEXT NOT NULL UNIQUE,
+    profile_name TEXT NOT NULL,
+    plugin_id TEXT NOT NULL,
+    session_id TEXT NOT NULL REFERENCES sessions(id),
+    session_key TEXT NOT NULL,
+    destination TEXT NOT NULL,
+    generation INTEGER NOT NULL CHECK(generation >= 0),
+    metadata_json TEXT NOT NULL,
+    metadata_digest TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('pending','acknowledged','quarantined')),
+    created_at REAL NOT NULL,
+    updated_at REAL NOT NULL,
+    acknowledged_at REAL,
+    acknowledged_by TEXT,
+    retain_until REAL
+);
+
+CREATE TABLE IF NOT EXISTS session_notification_compaction_receipts (
+    receipt_id TEXT PRIMARY KEY,
+    created_at REAL NOT NULL,
+    row_count INTEGER NOT NULL CHECK(row_count >= 0)
+);
+
 CREATE TABLE IF NOT EXISTS compression_locks (
     session_id TEXT PRIMARY KEY,
     holder TEXT NOT NULL,
@@ -423,6 +450,10 @@ CREATE INDEX IF NOT EXISTS idx_session_model_usage_session ON session_model_usag
 CREATE INDEX IF NOT EXISTS idx_session_model_usage_model ON session_model_usage(model);
 CREATE INDEX IF NOT EXISTS idx_async_delegations_delivery
     ON async_delegations(delivery_state, completed_at);
+CREATE INDEX IF NOT EXISTS idx_session_notifications_pending
+    ON session_notifications(profile_name, plugin_id, session_key, status, created_at);
+CREATE INDEX IF NOT EXISTS idx_session_notifications_retention
+    ON session_notifications(status, retain_until);
 """
 
 
