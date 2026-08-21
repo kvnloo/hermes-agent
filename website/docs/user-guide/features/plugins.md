@@ -672,6 +672,20 @@ In gateway mode:
 
 This enables plugins like remote control viewers, messaging bridges, or webhook receivers to feed messages into the conversation from external sources.
 
+For durable notification-only delivery, use
+`ctx.inject_message_once(content, idempotency_key=..., session_key=...)`. It
+returns an `InboxReceipt` with `ACCEPTED`, `ALREADY_ACCEPTED`, `CONFLICT`,
+`RETRYABLE_FAILURE`, or `REJECTED`. The global idempotency key is permanently
+bound to the plugin, session, session generation, role, and exact content
+digest for the retention period.
+
+This required-once API appends one user notification to durable session
+history. It does **not** start a model turn, run tools, send a platform reply,
+or interrupt/queue behind an active session. The notification can inform the
+next Captain/user-driven turn. Passing `process_now=True` is rejected; use the
+separate at-least-once `inject_message()` API only when autonomous processing
+and its external effects are explicitly intended.
+
 Gateway injection can send an agent response to an external messaging platform. It is disabled by default for every plugin. Grant it per plugin in `config.yaml`:
 
 ```yaml

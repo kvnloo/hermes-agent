@@ -5953,28 +5953,6 @@ class BasePlatformAdapter(ABC):
 
         await self._drain_pending_after_session_command(session_key, command_guard)
 
-    async def handle_durable_turn(self, event: MessageEvent) -> bool:
-        """Process a transcript-committed turn without ephemeral queue ownership.
-
-        Unlike :meth:`handle_message`, this API never creates a background task
-        and never writes ``_pending_messages``.  A busy session returns False;
-        the durable gateway-turn lease is then the sole retry owner.
-        """
-        if not self._message_handler:
-            return False
-        session_key = build_session_key(
-            event.source,
-            group_sessions_per_user=self.config.extra.get("group_sessions_per_user", True),
-            thread_sessions_per_user=self.config.extra.get("thread_sessions_per_user", False),
-        )
-        expected = str((event.metadata or {}).get("gateway_session_key") or "").strip()
-        if expected and expected != session_key:
-            return False
-        self._heal_stale_session_lock(session_key)
-        if session_key in self._active_sessions:
-            return False
-        await self._process_message_background(event, session_key)
-        return True
 
     async def handle_message(self, event: MessageEvent) -> None:
         """

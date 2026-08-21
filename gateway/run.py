@@ -17628,6 +17628,7 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
             future.add_done_callback(self._background_tasks.discard)
 
     async def _drain_gateway_inbox(self) -> None:
+        """Append accepted notifications; never enter the agent/platform path."""
         inbox = getattr(self, "_gateway_inbox", None)
         if inbox is None:
             return
@@ -17645,20 +17646,15 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
             if durable_turn is None:
                 return
             user_message_id = await asyncio.to_thread(
-                inbox.commit_user, durable_turn, owner
+                inbox.append_durable_notification, durable_turn, owner
             )
             if user_message_id is None:
                 # The turn remains reclaimable or has been quarantined.  Never
                 # fall back to process-local adapter ownership.
                 continue
-            routed = await self._dispatch_plugin_message_injection(
-                session_key=durable_turn.session_key, content=durable_turn.payload,
-                plugin_id=durable_turn.source_id, inbox_id=durable_turn.inbox_id,
-                idempotency_key=record.idempotency_key, turn_id=turn_id,
-            )
-            if not routed:
+            if not await asyncio.to_thread(inbox.terminalize, turn_id, owner):
                 logger.warning(
-                    "Durable gateway turn remains queued after adapter refusal: turn=%s",
+                    "Durable notification remains reclaimable after append: turn=%s",
                     turn_id[:12],
                 )
 
@@ -17729,20 +17725,10 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
             },
         )
         if turn_id is not None:
-            processed = await adapter.handle_durable_turn(event)
-            if not processed:
-                return False
-            inbox = getattr(self, "_gateway_inbox", None)
-            if inbox is None or not await asyncio.to_thread(
-                inbox.finalize_existing_response, turn_id
-            ):
-                logger.warning(
-                    "Durable gateway turn completed without bindable response: turn=%s",
-                    turn_id[:12],
-                )
-                return False
-        else:
-            await adapter.handle_message(event)
+            # Required-once notifications are appended by the durable drain
+            # and must never be routed into this legacy execution path.
+            return False
+        await adapter.handle_message(event)
         logger.info(
             "Plugin message injection dispatched: plugin=%s session=%s session_id=%s",
             plugin_id,

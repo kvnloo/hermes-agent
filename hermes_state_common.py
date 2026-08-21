@@ -293,7 +293,7 @@ CREATE TABLE IF NOT EXISTS gateway_turns (
     role TEXT NOT NULL CHECK(role = 'user'),
     payload_digest TEXT NOT NULL,
     payload TEXT NOT NULL,
-    state TEXT NOT NULL CHECK(state IN ('pending','leased','user_committed','processing','completed','failed','quarantined')),
+    state TEXT NOT NULL CHECK(state IN ('pending','leased','user_committed','terminal','quarantined')),
     created_at REAL NOT NULL,
     updated_at REAL NOT NULL,
     lease_owner TEXT,
@@ -301,7 +301,6 @@ CREATE TABLE IF NOT EXISTS gateway_turns (
     lease_generation INTEGER NOT NULL DEFAULT 0,
     attempts INTEGER NOT NULL DEFAULT 0,
     user_message_id INTEGER,
-    response_message_id INTEGER,
     outcome TEXT
 );
 CREATE INDEX IF NOT EXISTS gateway_turns_drain
@@ -396,7 +395,8 @@ CREATE TABLE IF NOT EXISTS messages (
     display_kind TEXT,
     display_metadata TEXT,
     gateway_turn_id TEXT,
-    gateway_turn_kind TEXT CHECK(gateway_turn_kind IN ('user','response'))
+    gateway_turn_digest TEXT,
+    gateway_turn_scope TEXT
 );
 CREATE TABLE IF NOT EXISTS session_model_usage (
     session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,

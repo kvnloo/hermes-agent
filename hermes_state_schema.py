@@ -791,13 +791,21 @@ class SessionSchemaMixin:
         # column gets created here.
         self._reconcile_columns(cursor)
 
-        # Durable gateway-turn identity indexes reference columns added by the
-        # reconciler on legacy databases, so they must be created afterward.
+        # Durable notification identity is globally unique. Digest and scope
+        # metadata are immutable binding evidence, never response ownership.
+        message_columns = {
+            row[1] for row in cursor.execute("PRAGMA table_info(messages)").fetchall()
+        }
+        if "gateway_turn_kind" in message_columns:
+            cursor.execute(
+                "UPDATE messages SET gateway_turn_id=NULL "
+                "WHERE gateway_turn_kind='response'"
+            )
         cursor.executescript("""
-            CREATE UNIQUE INDEX IF NOT EXISTS messages_gateway_turn_user
-                ON messages(gateway_turn_id) WHERE gateway_turn_kind = 'user';
-            CREATE UNIQUE INDEX IF NOT EXISTS messages_gateway_turn_response
-                ON messages(gateway_turn_id) WHERE gateway_turn_kind = 'response';
+            DROP INDEX IF EXISTS messages_gateway_turn_user;
+            DROP INDEX IF EXISTS messages_gateway_turn_response;
+            CREATE UNIQUE INDEX IF NOT EXISTS messages_gateway_turn_unique
+                ON messages(gateway_turn_id) WHERE gateway_turn_id IS NOT NULL;
         """)
 
         # Rebuild gateway_routing if it still carries the pre-scope PRIMARY

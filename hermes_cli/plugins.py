@@ -2042,11 +2042,12 @@ class PluginContext:
         idempotency_key: str,
         session_key: str,
         role: str = "user",
+        process_now: bool = False,
     ):
         """Durably accept one gateway turn, without legacy fallback."""
         from gateway.inbox import InboxReceipt, InjectionOutcome
 
-        if not session_key or not self._gateway_injection_allowed():
+        if process_now or not session_key or not self._gateway_injection_allowed():
             return InboxReceipt(InjectionOutcome.REJECTED)
         if not self._manager.has_gateway_message_injector:
             return InboxReceipt(InjectionOutcome.RETRYABLE_FAILURE)

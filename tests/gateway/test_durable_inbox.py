@@ -2,6 +2,7 @@ import concurrent.futures
 import sqlite3
 
 from gateway.inbox import GatewayInbox, InjectionOutcome
+from hermes_state import SessionDB
 
 
 KEY = "opaque-high-entropy-key-00000001"
@@ -55,16 +56,16 @@ def test_lease_reclaim_turn_identity_and_retention(tmp_path):
         )""")
         conn.execute("""CREATE TABLE messages(
             id INTEGER PRIMARY KEY, session_id TEXT, role TEXT, content TEXT,
-            timestamp REAL, gateway_turn_id TEXT, gateway_turn_kind TEXT
+            timestamp REAL, gateway_turn_id TEXT, gateway_turn_digest TEXT,
+            gateway_turn_scope TEXT
         )""")
-        conn.execute("CREATE UNIQUE INDEX turn_kind ON messages(gateway_turn_id, gateway_turn_kind)")
+        conn.execute("CREATE UNIQUE INDEX turn_id ON messages(gateway_turn_id)")
         conn.execute("INSERT INTO sessions(id,session_key) VALUES('session-1','telegram:1')")
     durable = store.lease_turn("worker-b")
     assert durable and durable.turn_id == turn
     user_id = store.commit_user(durable, "worker-b")
     assert user_id and store.commit_user(durable, "worker-b") == user_id
-    response_id = store.complete_response(turn, "done")
-    assert response_id and store.complete_response(turn, "done") == response_id
+    assert store.terminalize(turn, "worker-b")
     assert store.finish(reclaimed.inbox_id, turn, "routed")
     assert store.compact()[1] == 0
     now[0] += 86400
@@ -79,3 +80,41 @@ def test_validation_is_bounded_and_fail_closed(tmp_path):
     assert accept(store, source_id="bad\nsource").outcome is InjectionOutcome.REJECTED
     assert accept(store, role="assistant").outcome is InjectionOutcome.REJECTED
     assert accept(store, payload="x" * 1_048_577).outcome is InjectionOutcome.REJECTED
+
+
+def test_real_sessiondb_append_survives_crash_before_terminal_ack(tmp_path):
+    path = tmp_path / "state.db"
+    db = SessionDB(path)
+    db.create_session("session-1", source="telegram", session_key="telegram:1")
+    db.append_message("session-1", "user", "ordinary")
+    db.append_message("session-1", "assistant", "ordinary response")
+    store = GatewayInbox(path)
+    receipt = accept(store)
+    leased = store.lease_next("worker-a")
+    turn_id = store.commit_turn(leased, "worker-a")
+    turn = store.lease_turn("worker-a", turn_id=turn_id)
+    message_id = store.append_durable_notification(turn, "worker-a")
+    assert message_id
+
+    # Simulate process loss after transcript commit but before terminal ack.
+    with sqlite3.connect(path) as conn:
+        conn.execute("UPDATE gateway_turns SET lease_expires=0 WHERE turn_id=?", (turn_id,))
+    restarted = GatewayInbox(path)
+    reclaimed = restarted.lease_turn("worker-b", turn_id=turn_id)
+    assert reclaimed
+    assert restarted.append_durable_notification(reclaimed, "worker-b") == message_id
+    assert restarted.terminalize(turn_id, "worker-b")
+
+    with sqlite3.connect(path) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT role,content,gateway_turn_digest,gateway_turn_scope FROM messages "
+            "WHERE gateway_turn_id=?", (turn_id,)
+        ).fetchall()
+        assert len(rows) == 1
+        assert rows[0]["role"] == "user"
+        assert rows[0]["content"] == "hello"
+        assert rows[0]["gateway_turn_digest"]
+        assert rows[0]["gateway_turn_scope"].endswith(":plugin:telegram:1:session-1")
+        assert conn.execute("SELECT state FROM gateway_turns WHERE turn_id=?", (turn_id,)).fetchone()[0] == "terminal"
+    db.close()

@@ -19,7 +19,7 @@ from typing import Callable, Optional
 
 from hermes_constants import get_hermes_home
 
-INBOX_SCHEMA_VERSION = 2
+INBOX_SCHEMA_VERSION = 3
 MAX_KEY_BYTES = 256
 MAX_SCOPE_BYTES = 1024
 MAX_PAYLOAD_BYTES = 1_048_576
@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS gateway_turns (
  role TEXT NOT NULL CHECK(role='user'),
  payload_digest TEXT NOT NULL,
  payload TEXT NOT NULL,
- state TEXT NOT NULL CHECK(state IN ('pending','leased','user_committed','processing','completed','failed','quarantined')),
+ state TEXT NOT NULL CHECK(state IN ('pending','leased','user_committed','terminal','quarantined')),
  created_at REAL NOT NULL,
  updated_at REAL NOT NULL,
  lease_owner TEXT,
@@ -113,7 +113,6 @@ CREATE TABLE IF NOT EXISTS gateway_turns (
  lease_generation INTEGER NOT NULL DEFAULT 0,
  attempts INTEGER NOT NULL DEFAULT 0,
  user_message_id INTEGER,
- response_message_id INTEGER,
  outcome TEXT
 );
 CREATE INDEX IF NOT EXISTS gateway_turns_drain ON gateway_turns(state, lease_expires, created_at);
@@ -176,11 +175,48 @@ class GatewayInbox:
                     DROP INDEX IF EXISTS gateway_inbox_drain;
                     CREATE INDEX gateway_inbox_drain ON gateway_inbox(state, lease_expires, accepted_at);
                 """
+            turn = conn.execute(
+                "SELECT sql FROM sqlite_master WHERE type='table' AND name='gateway_turns'"
+            ).fetchone()
+            turn_legacy_sql = ""
+            turn_copy_sql = ""
+            if turn and any(s in (turn[0] or "") for s in ("processing", "completed", "failed")):
+                turn_legacy_sql = "ALTER TABLE gateway_turns RENAME TO gateway_turns_v2;\n"
+                turn_copy_sql = """
+                    INSERT OR IGNORE INTO gateway_turns
+                    (turn_id,inbox_id,profile_digest,source_id,session_key,session_id,generation,role,
+                     payload_digest,payload,state,created_at,updated_at,lease_generation,attempts,user_message_id,outcome)
+                    SELECT turn_id,inbox_id,profile_digest,source_id,session_key,session_id,generation,role,
+                     payload_digest,payload,
+                     CASE WHEN user_message_id IS NOT NULL THEN 'user_committed' ELSE 'pending' END,
+                     created_at,updated_at,lease_generation,attempts,user_message_id,NULL
+                    FROM gateway_turns_v2;
+                    DROP TABLE gateway_turns_v2;
+                    DROP INDEX IF EXISTS gateway_turns_drain;
+                    CREATE INDEX gateway_turns_drain ON gateway_turns(state, lease_expires, created_at);
+                """
+            message_cols = {r[1] for r in conn.execute("PRAGMA table_info(messages)")}
+            message_migration = ""
+            if message_cols:
+                for name in ("gateway_turn_id", "gateway_turn_digest", "gateway_turn_scope"):
+                    if name not in message_cols:
+                        message_migration += f"ALTER TABLE messages ADD COLUMN {name} TEXT;\n"
+                if "gateway_turn_kind" in message_cols:
+                    message_migration += (
+                        "DROP INDEX IF EXISTS messages_gateway_turn_user;\n"
+                        "DROP INDEX IF EXISTS messages_gateway_turn_response;\n"
+                        "UPDATE messages SET gateway_turn_id=NULL WHERE gateway_turn_kind='response';\n"
+                    )
+                message_migration += (
+                    "CREATE UNIQUE INDEX IF NOT EXISTS messages_gateway_turn_unique "
+                    "ON messages(gateway_turn_id) WHERE gateway_turn_id IS NOT NULL;\n"
+                )
             # executescript commits before executing, so BEGIN must be part of
             # the script.  The rebuild, data copy, indexes, and version marker
             # are thereby one rollback-safe migration.
             conn.executescript(
-                "BEGIN IMMEDIATE;\n" + legacy_sql + _SCHEMA + copy_sql
+                "BEGIN IMMEDIATE;\n" + legacy_sql + turn_legacy_sql + _SCHEMA
+                + copy_sql + turn_copy_sql + message_migration
                 + f"UPDATE gateway_inbox_schema SET version={INBOX_SCHEMA_VERSION};\nCOMMIT;"
             )
         except BaseException:
@@ -288,11 +324,11 @@ class GatewayInbox:
             conn.execute("BEGIN IMMEDIATE")
             row=conn.execute("""SELECT * FROM gateway_turns
               WHERE (? IS NULL OR turn_id=?) AND (state IN ('pending','user_committed')
-              OR (state IN ('leased','processing') AND lease_expires<=?))
+              OR (state='leased' AND lease_expires<=?))
               ORDER BY created_at LIMIT 1""",(turn_id,turn_id,now)).fetchone()
             if row is None: conn.rollback(); return None
             gen=row["lease_generation"]+1
-            target="processing" if row["user_message_id"] else "leased"
+            target="leased"
             conn.execute("UPDATE gateway_turns SET state=?,lease_owner=?,lease_expires=?,lease_generation=?,attempts=attempts+1,updated_at=? WHERE turn_id=?",
                 (target,owner,now+lease_seconds,gen,now,row["turn_id"]))
             conn.commit()
@@ -300,8 +336,8 @@ class GatewayInbox:
                 row["payload"],row["payload_digest"],row["attempts"]+1,gen,target)
         finally: conn.close()
 
-    def commit_user(self, turn: GatewayTurn, owner: str) -> Optional[int]:
-        """Persist the canonical user row before adapter/background scheduling."""
+    def append_durable_notification(self, turn: GatewayTurn, owner: str) -> Optional[int]:
+        """Persist exactly one notification row while retaining ownership."""
         conn=self._connect(); now=self.clock()
         try:
             conn.execute("BEGIN IMMEDIATE")
@@ -314,72 +350,56 @@ class GatewayInbox:
             if session is None or session["session_key"] != row["session_key"]:
                 conn.execute("UPDATE gateway_turns SET state='quarantined',outcome='session_binding_mismatch',updated_at=? WHERE turn_id=?",(now,turn.turn_id))
                 conn.commit(); return None
-            cur=conn.execute("""INSERT INTO messages(session_id,role,content,timestamp,gateway_turn_id,gateway_turn_kind)
-                VALUES(?,'user',?,?,?,'user')""",(row["session_id"],row["payload"],now,row["turn_id"]))
+            scope=f"{row['profile_digest']}:{row['source_id']}:{row['session_key']}:{row['generation']}"
+            cur=conn.execute("""INSERT INTO messages
+                (session_id,role,content,timestamp,gateway_turn_id,gateway_turn_digest,gateway_turn_scope)
+                VALUES(?,'user',?,?,?,?,?)""",
+                (row["session_id"],row["payload"],now,row["turn_id"],row["payload_digest"],scope))
             message_id=cur.lastrowid
             conn.execute("UPDATE sessions SET message_count=message_count+1 WHERE id=?",(row["session_id"],))
-            conn.execute("""UPDATE gateway_turns SET state='user_committed',user_message_id=?,lease_owner=NULL,
-                lease_expires=NULL,updated_at=? WHERE turn_id=?""",(message_id,now,row["turn_id"]))
+            conn.execute("""UPDATE gateway_turns SET state='user_committed',user_message_id=?,updated_at=?
+                WHERE turn_id=?""",(message_id,now,row["turn_id"]))
             conn.commit(); return message_id
         except sqlite3.IntegrityError:
             if conn.in_transaction: conn.rollback()
-            row=conn.execute("SELECT id,content FROM messages WHERE gateway_turn_id=? AND gateway_turn_kind='user'",(turn.turn_id,)).fetchone()
-            return row["id"] if row and hashlib.sha256((row["content"] or "").encode()).hexdigest()==turn.payload_digest else None
+            row=conn.execute("SELECT id,gateway_turn_digest FROM messages WHERE gateway_turn_id=?",(turn.turn_id,)).fetchone()
+            return row["id"] if row and row["gateway_turn_digest"]==turn.payload_digest else None
         finally: conn.close()
 
-    def complete_response(self, turn_id: str, content: str, *, outcome: str="completed") -> Optional[int]:
-        """Idempotently bind one final assistant response to a durable turn."""
+    # Compatibility for pre-v3 callers. This never processes a model turn.
+    commit_user = append_durable_notification
+
+    def terminalize(self, turn_id: str, owner: str, *, outcome: str="appended") -> bool:
+        """Acknowledge only after the exact notification row is durable."""
         conn=self._connect(); now=self.clock()
         try:
             conn.execute("BEGIN IMMEDIATE")
             row=conn.execute("SELECT * FROM gateway_turns WHERE turn_id=?",(turn_id,)).fetchone()
-            if row is None or not row["user_message_id"]: conn.rollback(); return None
-            if row["response_message_id"]: conn.rollback(); return row["response_message_id"]
-            cur=conn.execute("""INSERT INTO messages(session_id,role,content,timestamp,gateway_turn_id,gateway_turn_kind)
-                VALUES(?,'assistant',?,?,?,'response')""",(row["session_id"],content,now,turn_id))
-            mid=cur.lastrowid
-            conn.execute("UPDATE sessions SET message_count=message_count+1 WHERE id=?",(row["session_id"],))
-            conn.execute("UPDATE gateway_turns SET state='completed',response_message_id=?,outcome=?,lease_owner=NULL,lease_expires=NULL,updated_at=? WHERE turn_id=?",
-                (mid,outcome[:128],now,turn_id))
-            conn.execute("UPDATE gateway_inbox SET state='terminal',terminal_at=?,outcome=? WHERE inbox_id=?",(now,outcome[:128],row["inbox_id"]))
-            conn.commit(); return mid
-        except sqlite3.IntegrityError:
-            if conn.in_transaction: conn.rollback()
-            existing=conn.execute("SELECT id,content FROM messages WHERE gateway_turn_id=? AND gateway_turn_kind='response'",(turn_id,)).fetchone()
-            return existing["id"] if existing and existing["content"]==content else None
-        finally: conn.close()
-
-    def finalize_existing_response(self, turn_id: str) -> Optional[int]:
-        """Bind the response persisted by the real gateway agent pipeline."""
-        conn=self._connect(); now=self.clock()
-        try:
-            conn.execute("BEGIN IMMEDIATE")
-            turn=conn.execute("SELECT * FROM gateway_turns WHERE turn_id=?",(turn_id,)).fetchone()
-            if turn is None or not turn["user_message_id"]: conn.rollback(); return None
-            if turn["response_message_id"]: conn.rollback(); return turn["response_message_id"]
-            response=conn.execute("""SELECT id FROM messages WHERE session_id=? AND role='assistant'
-                AND id>? AND active=1 ORDER BY id LIMIT 1""",(turn["session_id"],turn["user_message_id"])).fetchone()
-            if response is None: conn.rollback(); return None
-            cur=conn.execute("UPDATE messages SET gateway_turn_id=?,gateway_turn_kind='response' WHERE id=? AND gateway_turn_id IS NULL",
-                (turn_id,response["id"]))
-            if cur.rowcount != 1: conn.rollback(); return None
-            conn.execute("UPDATE gateway_turns SET state='completed',response_message_id=?,outcome='completed',lease_owner=NULL,lease_expires=NULL,updated_at=? WHERE turn_id=?",
-                (response["id"],now,turn_id))
-            conn.execute("UPDATE gateway_inbox SET state='terminal',terminal_at=?,outcome='completed' WHERE inbox_id=?",
-                (now,turn["inbox_id"]))
-            conn.commit(); return response["id"]
-        except sqlite3.IntegrityError:
-            if conn.in_transaction: conn.rollback()
-            existing=conn.execute("SELECT id FROM messages WHERE gateway_turn_id=? AND gateway_turn_kind='response'",(turn_id,)).fetchone()
-            return existing["id"] if existing else None
+            if row is None: conn.rollback(); return False
+            if row["state"] == "terminal": conn.rollback(); return True
+            if not row["user_message_id"] or row["lease_owner"] != owner:
+                conn.rollback(); return False
+            message=conn.execute(
+                "SELECT gateway_turn_digest,gateway_turn_scope FROM messages WHERE id=? AND gateway_turn_id=?",
+                (row["user_message_id"],turn_id),
+            ).fetchone()
+            scope=f"{row['profile_digest']}:{row['source_id']}:{row['session_key']}:{row['generation']}"
+            if message is None or message["gateway_turn_digest"] != row["payload_digest"] or message["gateway_turn_scope"] != scope:
+                conn.execute("UPDATE gateway_turns SET state='quarantined',outcome='transcript_binding_mismatch',updated_at=? WHERE turn_id=?",(now,turn_id))
+                conn.commit(); return False
+            conn.execute("UPDATE gateway_turns SET state='terminal',outcome=?,lease_owner=NULL,lease_expires=NULL,updated_at=? WHERE turn_id=?",
+                (outcome[:128],now,turn_id))
+            conn.execute("UPDATE gateway_inbox SET state='terminal',terminal_at=?,outcome=? WHERE inbox_id=?",
+                (now,outcome[:128],row["inbox_id"]))
+            conn.commit(); return True
         finally: conn.close()
 
     def finish(self, inbox_id: str, turn_id: str, outcome: str) -> bool:
-        """Compatibility: only terminalize after a durable response exists."""
+        """Compatibility query; notification completion has no response."""
         conn=self._connect()
         try:
             row=conn.execute("SELECT state FROM gateway_turns WHERE turn_id=? AND inbox_id=?",(turn_id,inbox_id)).fetchone()
-            return bool(row and row["state"] in ("completed","failed","quarantined"))
+            return bool(row and row["state"] in ("terminal","quarantined"))
         finally: conn.close()
 
     def compact(self, *, limit: int = 500) -> tuple[str, int]:
@@ -388,7 +408,7 @@ class GatewayInbox:
             conn.execute("BEGIN IMMEDIATE")
             rows=conn.execute("SELECT inbox_id FROM gateway_inbox WHERE state='terminal' AND retain_until<=? LIMIT ?",(now,max(1,min(limit,5000)))).fetchall()
             for row in rows:
-                conn.execute("DELETE FROM gateway_turns WHERE inbox_id=? AND state IN ('completed','failed','quarantined')",(row[0],))
+                conn.execute("DELETE FROM gateway_turns WHERE inbox_id=? AND state IN ('terminal','quarantined')",(row[0],))
                 conn.execute("DELETE FROM gateway_inbox WHERE inbox_id=? AND state='terminal'",(row[0],))
             conn.execute("INSERT INTO gateway_inbox_compaction_receipts VALUES(?,?,?,?)",(receipt,now,len(rows),now))
             conn.commit(); return receipt,len(rows)
