@@ -1881,6 +1881,28 @@ class CLICommandsMixin:
         if output:
             print(output)
 
+    def _handle_autoresearch_command(self, cmd: str):
+        """Handle /autoresearch — delegate to the shared autoresearch module.
+
+        The command returns a static instruction string which is printed here.
+        When it enters/resumes the loop, the returned text is also seeded as
+        the next agent prompt so the model picks up the goal as a normal user
+        message (no system-prompt or toolset mutation — cache-safe).
+        """
+        from hermes_cli.autoresearch import run_slash
+
+        rest = cmd.strip()
+        if rest.startswith("/"):
+            rest = rest.lstrip("/")
+        if rest.startswith("autoresearch"):
+            rest = rest[len("autoresearch"):].strip()
+        try:
+            output = run_slash(rest)
+        except Exception as exc:  # pragma: no cover - defensive
+            output = f"(._.) autoresearch error: {exc}"
+        if output:
+            print(output)
+
     def _handle_skills_command(self, cmd: str):
         """Handle /skills slash command — delegates to hermes_cli.skills_hub."""
         from cli import ChatConsole

@@ -10757,7 +10757,7 @@ def _build_provider_choices() -> list[str]:
 # to parse.
 _BUILTIN_SUBCOMMANDS = frozenset(
     {
-        "acp", "approvals", "auth", "backup", "bundles", "checkpoints", "claw", "completion",
+        "acp", "approvals", "auth", "autoresearch", "backup", "bundles", "checkpoints", "claw", "completion",
         "computer-use",
         "config", "console", "cron", "curator", "dashboard", "serve", "debug", "doctor",
         "dump", "egress", "fallback", "gateway", "hooks", "import", "import-agent", "insights",
@@ -11769,6 +11769,16 @@ def main():
 
     kanban_parser = _build_kanban_parser(subparsers)
     kanban_parser.set_defaults(func=cmd_kanban)
+
+    # =========================================================================
+    # autoresearch command — autonomous benchmark-optimization loop (OMP port)
+    # =========================================================================
+    from hermes_cli.autoresearch import build_parser as _build_autoresearch_parser
+
+    autoresearch_parser = _build_autoresearch_parser(subparsers)
+    from hermes_cli.autoresearch import autoresearch_command as _autoresearch_command
+
+    autoresearch_parser.set_defaults(func=_autoresearch_command)
 
     # =========================================================================
     # project command — named, multi-folder workspaces

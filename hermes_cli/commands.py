@@ -295,6 +295,9 @@ COMMAND_REGISTRY: list[CommandDef] = [
                             "notify-list", "notify-unsubscribe", "log", "runs",
                             "heartbeat", "assignees", "context", "specify", "gc"),
                busy_policy="dispatch"),
+    CommandDef("autoresearch", "Autonomous benchmark-optimization loop (enter/resume, off, clear)",
+               "Tools & Skills", args_hint="[goal | off | clear [--keep-tree|--reset-tree] | status | runs]",
+               subcommands=("off", "clear", "status", "runs")),
     CommandDef("reload", "Reload .env variables into the running session", "Tools & Skills",
                cli_only=True),
     CommandDef("reload-mcp", "Reload MCP servers from config", "Tools & Skills",
@@ -1277,7 +1280,11 @@ _SLACK_PRIORITY_ALIASES = ("btw", "bg")
 #     native slash.
 #   - pause: global emergency stop; reached via /hermes pause [off] on
 #     Slack. Added at the 50-cap — a native slot would clamp /platform.
-_SLACK_VIA_HERMES_ONLY = frozenset({"topup", "moa", "debug", "egress", "init", "version", "diff", "update", "heartbeat", "refine", "pause"})
+_SLACK_VIA_HERMES_ONLY = frozenset({"topup", "moa", "debug", "egress", "init", "version", "diff", "update", "heartbeat", "refine", "pause",
+                                     # autoresearch's arrival at the 50-slash cap clamped
+                                     # /platform (it sorts after /autoresearch); routed
+                                     # through /hermes platform on Slack deliberately.
+                                     "platform"})
 
 
 def _sanitize_slack_name(raw: str) -> str:
