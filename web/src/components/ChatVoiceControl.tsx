@@ -1,13 +1,43 @@
-import { Mic, Send, Square, X } from "lucide-react";
+import { Mic, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@nous-research/ui/ui/components/button";
-import { authedFetch } from "@/lib/api";
 
-const MAX_RECORDING_MS = 30_000;
-const MIME_TYPES = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"];
+const RESTART_DELAY_MS = 250;
+const MAX_RESTARTS = 6;
 
-type VoiceState = "idle" | "listening" | "transcribing" | "sent" | "error";
+type VoiceState = "idle" | "listening" | "sent" | "error";
+
+interface SpeechRecognitionResultLike {
+  readonly isFinal: boolean;
+  readonly 0: { readonly transcript: string };
+}
+
+interface SpeechRecognitionEventLike {
+  readonly resultIndex: number;
+  readonly results: ArrayLike<SpeechRecognitionResultLike>;
+}
+
+interface SpeechRecognitionLike {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onend: (() => void) | null;
+  onerror: ((event: { error: string }) => void) | null;
+  start(): void;
+  stop(): void;
+  abort(): void;
+}
+
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
+
+declare global {
+  interface Window {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  }
+}
 
 interface ChatVoiceControlProps {
   connected: boolean;
@@ -15,125 +45,181 @@ interface ChatVoiceControlProps {
   submit: (transcript: string) => void;
 }
 
-function blobDataUrl(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("Could not read the recording"));
-    reader.onload = () => resolve(String(reader.result));
-    reader.readAsDataURL(blob);
-  });
+function recognitionConstructor(): SpeechRecognitionConstructor | undefined {
+  return window.SpeechRecognition ?? window.webkitSpeechRecognition;
 }
 
-export function ChatVoiceControl({ connected, profile, submit }: ChatVoiceControlProps) {
+export function ChatVoiceControl({ connected, submit }: ChatVoiceControlProps) {
   const [state, setState] = useState<VoiceState>("idle");
+  const [finalTranscript, setFinalTranscript] = useState("");
+  const [interimTranscript, setInterimTranscript] = useState("");
   const [error, setError] = useState("");
-  const recorderRef = useRef<MediaRecorder | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const timerRef = useRef<number | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const listeningRef = useRef(false);
+  const fatalRef = useRef(false);
+  const restartCountRef = useRef(0);
+  const restartTimerRef = useRef<number | null>(null);
+  const finalRef = useRef("");
+  const interimRef = useRef("");
 
-  const cleanup = () => {
-    if (timerRef.current !== null) window.clearTimeout(timerRef.current);
-    timerRef.current = null;
-    streamRef.current?.getTracks().forEach((track) => track.stop());
-    streamRef.current = null;
-    recorderRef.current = null;
+  const clearRestart = () => {
+    if (restartTimerRef.current !== null) window.clearTimeout(restartTimerRef.current);
+    restartTimerRef.current = null;
   };
 
-  useEffect(() => () => cleanup(), []);
-
-  const fail = (message: string) => {
-    cleanup();
-    setError(message);
-    setState("error");
+  const updateFinal = (value: string) => {
+    finalRef.current = value;
+    setFinalTranscript(value);
   };
 
-  const transcribe = async (blob: Blob) => {
-    setState("transcribing");
+  const updateInterim = (value: string) => {
+    interimRef.current = value;
+    setInterimTranscript(value);
+  };
+
+  const startRecognition = () => {
+    const Constructor = recognitionConstructor();
+    if (!Constructor) {
+      listeningRef.current = false;
+      setError("Chrome speech recognition is unavailable. Use Gboard below.");
+      setState("error");
+      return;
+    }
+
+    const recognition = new Constructor();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+    recognition.onresult = (event) => {
+      let appendedFinal = "";
+      let nextInterim = "";
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        const result = event.results[index];
+        const text = result?.[0]?.transcript ?? "";
+        if (result?.isFinal) appendedFinal += text;
+        else nextInterim += text;
+      }
+      if (appendedFinal) updateFinal(`${finalRef.current}${appendedFinal}`);
+      updateInterim(nextInterim);
+      setError("");
+    };
+    recognition.onerror = (event) => {
+      const fatal = event.error === "not-allowed" || event.error === "service-not-allowed";
+      if (fatal) {
+        fatalRef.current = true;
+        listeningRef.current = false;
+        setError(event.error === "not-allowed"
+          ? "Microphone permission was denied. Allow mic access in Chrome, then tap again."
+          : "Chrome speech recognition is not allowed on this device.");
+        setState("error");
+      } else {
+        setError(`Speech recognition error: ${event.error}. Retrying…`);
+      }
+    };
+    recognition.onend = () => {
+      if (!listeningRef.current || fatalRef.current) return;
+      if (restartCountRef.current >= MAX_RESTARTS) {
+        listeningRef.current = false;
+        setError("Speech recognition kept stopping. Tap to resume or use Gboard below.");
+        setState("error");
+        return;
+      }
+      const delay = RESTART_DELAY_MS * 2 ** Math.min(restartCountRef.current, 3);
+      restartCountRef.current += 1;
+      restartTimerRef.current = window.setTimeout(startRecognition, delay);
+    };
+    recognitionRef.current = recognition;
     try {
-      const dataUrl = await blobDataUrl(blob);
-      const suffix = profile ? `?profile=${encodeURIComponent(profile)}` : "";
-      const response = await authedFetch(`/api/audio/transcribe${suffix}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ data_url: dataUrl, mime_type: blob.type || "audio/webm" }),
-      });
-      if (!response.ok) throw new Error((await response.text()) || `Transcription failed (${response.status})`);
-      const result = (await response.json()) as { transcript?: string };
-      const transcript = result.transcript?.trim();
-      if (!transcript) throw new Error("No speech detected. Tap Start and try again.");
-      submit(transcript);
-      setState("sent");
-    } catch (cause) {
-      fail(cause instanceof Error ? cause.message : "Voice input failed");
+      recognition.start();
+    } catch {
+      listeningRef.current = false;
+      setError("Could not start Chrome speech recognition. Tap to try again.");
+      setState("error");
     }
   };
 
-  const stop = () => {
-    const recorder = recorderRef.current;
-    if (!recorder || recorder.state === "inactive") return;
-    recorder.stop();
-  };
-
-  const start = async () => {
+  const begin = () => {
+    if (!connected) {
+      setError("Chat is not connected yet.");
+      setState("error");
+      return;
+    }
+    clearRestart();
+    fatalRef.current = false;
+    restartCountRef.current = 0;
+    listeningRef.current = true;
     setError("");
-    if (!connected) return fail("Chat is not connected yet.");
-    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
-      return fail("Microphone recording is unavailable in this browser.");
+    setState("listening");
+    startRecognition();
+  };
+
+  const commit = () => {
+    const transcript = `${finalRef.current} ${interimRef.current}`.replace(/\s+/g, " ").trim();
+    if (!transcript) {
+      setError("No speech heard yet — keep talking, then tap anywhere to send.");
+      return;
     }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true },
-      });
-      const mimeType = MIME_TYPES.find((type) => MediaRecorder.isTypeSupported(type));
-      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-      chunksRef.current = [];
-      streamRef.current = stream;
-      recorderRef.current = recorder;
-      recorder.ondataavailable = (event) => {
-        if (event.data.size) chunksRef.current.push(event.data);
-      };
-      recorder.onerror = () => fail("Microphone recording failed.");
-      recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || mimeType || "audio/webm" });
-        chunksRef.current = [];
-        cleanup();
-        if (blob.size) void transcribe(blob);
-        else fail("The recording was empty.");
-      };
-      recorder.start();
-      setState("listening");
-      timerRef.current = window.setTimeout(stop, MAX_RECORDING_MS);
-    } catch (cause) {
-      const denied = cause instanceof DOMException && ["NotAllowedError", "SecurityError"].includes(cause.name);
-      fail(denied ? "Microphone permission was denied." : "Could not start the microphone.");
-    }
+    listeningRef.current = false;
+    clearRestart();
+    recognitionRef.current?.abort();
+    recognitionRef.current = null;
+    submit(transcript);
+    updateFinal("");
+    updateInterim("");
+    setError("");
+    setState("sent");
   };
 
   const end = () => {
-    const recorder = recorderRef.current;
-    if (recorder && recorder.state !== "inactive") {
-      recorder.ondataavailable = null;
-      recorder.onstop = null;
-      recorder.stop();
-    }
-    cleanup();
-    chunksRef.current = [];
+    listeningRef.current = false;
+    clearRestart();
+    recognitionRef.current?.abort();
+    recognitionRef.current = null;
+    updateFinal("");
+    updateInterim("");
     setError("");
     setState("idle");
   };
 
-  const label = state === "listening" ? "Listening (30s max)" : state === "transcribing" ? "Transcribing…" : state === "sent" ? "Sent — reply appears below" : state === "error" ? error : "Voice input ready";
+  useEffect(() => () => {
+    listeningRef.current = false;
+    clearRestart();
+    recognitionRef.current?.abort();
+  }, []);
+
+  const transcript = `${finalTranscript}${interimTranscript}`.trim();
+  const headline = state === "listening"
+    ? (transcript || "LISTENING…")
+    : state === "sent"
+      ? "SENT"
+      : "TAP TO TALK";
 
   return (
-    <div data-voice-state={state} className="flex min-h-11 shrink-0 items-center gap-2 border border-current/20 bg-black/20 px-2 py-1 text-xs text-white/85" role="status" aria-live="polite">
-      {state === "listening" ? (
-        <Button aria-label="Stop and send voice input" onClick={stop} className="min-h-11 min-w-11 px-3" prefix={<Send className="h-4 w-4" />}>Send</Button>
-      ) : (
-        <Button aria-label="Start voice input" onClick={() => void start()} disabled={state === "transcribing"} className="min-h-11 min-w-11 px-3" prefix={<Mic className="h-4 w-4" />}>Start</Button>
-      )}
-      <span className="min-w-0 flex-1 truncate">{label}</span>
-      <Button ghost aria-label="End voice input" onClick={end} className="min-h-11 min-w-11 px-2" prefix={state === "listening" ? <Square className="h-4 w-4" /> : <X className="h-4 w-4" />}>End</Button>
+    <div className="relative flex min-h-[42dvh] shrink-0 flex-col border border-current/25 bg-black/30 pb-[env(safe-area-inset-bottom)] text-white lg:min-h-44">
+      <button
+        type="button"
+        aria-label="Voice conversation surface"
+        onClick={state === "listening" ? commit : begin}
+        className="flex min-h-[42dvh] w-full touch-manipulation flex-1 flex-col items-center justify-center gap-5 px-5 py-8 text-center active:bg-white/10 lg:min-h-44"
+      >
+        <Mic className={state === "listening" ? "h-12 w-12 animate-pulse text-red-400" : "h-12 w-12"} />
+        <span className="max-h-[45dvh] w-full overflow-y-auto whitespace-pre-wrap break-words text-2xl font-semibold leading-tight sm:text-3xl">
+          {headline}
+        </span>
+        <span className="text-sm tracking-wide text-white/70">
+          {state === "listening" ? "TAP ANYWHERE TO SEND" : "Chrome live speech • Gboard remains below"}
+        </span>
+      </button>
+      {error && <div role="alert" className="px-4 pb-3 text-center text-sm text-red-300">{error}</div>}
+      <Button
+        ghost
+        aria-label="End or cancel voice conversation"
+        onClick={end}
+        className="absolute right-2 top-2 min-h-11 min-w-11 touch-manipulation px-2"
+        prefix={<X className="h-5 w-5" />}
+      >
+        End
+      </Button>
     </div>
   );
 }
