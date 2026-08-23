@@ -32,6 +32,7 @@ import { useSearchParams } from "react-router";
 
 import { ChatSidebar } from "@/components/ChatSidebar";
 import { ChatSessionList } from "@/components/ChatSessionList";
+import { ChatVoiceControl } from "@/components/ChatVoiceControl";
 import { usePageHeader } from "@/contexts/usePageHeader";
 import { useI18n } from "@/i18n";
 import { api } from "@/lib/api";
@@ -470,6 +471,22 @@ export default function ChatPage({ isActive = true }: { isActive?: boolean }) {
     copyResetRef.current = setTimeout(() => setCopyState("idle"), 1500);
     termRef.current?.focus();
   };
+
+  const submitVoiceTranscript = useCallback((transcript: string) => {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      setBanner("Chat disconnected before the voice transcript could be sent.");
+      return;
+    }
+    // Keep Return separate from the text burst. Ink can otherwise classify a
+    // combined mobile/WebSocket frame as a paste and leave it in the composer.
+    ws.send(transcript);
+    window.setTimeout(() => {
+      const active = wsRef.current;
+      if (active && active.readyState === WebSocket.OPEN) active.send("\r");
+    }, 100);
+    termRef.current?.focus();
+  }, []);
 
   useEffect(() => {
     // Don't spawn the chat PTY (and the TUI/agent bootstrap it triggers)
@@ -1564,6 +1581,11 @@ export default function ChatPage({ isActive = true }: { isActive?: boolean }) {
             boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4)",
           }}
         >
+          <ChatVoiceControl
+            connected={ptyState === "open"}
+            profile={scopedProfile}
+            submit={submitVoiceTranscript}
+          />
           <div
             ref={hostRef}
             className="hermes-chat-xterm-host min-h-0 min-w-0 flex-1"
