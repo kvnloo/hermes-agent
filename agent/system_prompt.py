@@ -351,6 +351,12 @@ def build_system_prompt_parts(agent: Any, system_message: Optional[str] = None) 
     _kanban_guidance = getattr(agent, "_kanban_worker_guidance", None)
     if _kanban_guidance:
         tool_guidance.append(_kanban_guidance)
+        # OX1000 C2: optional pre-warmed command-policy block, appended to
+        # the lifecycle guidance. Resolved once at agent init (byte-stable,
+        # config-gated, kanban workers only).
+        _kanban_policy = getattr(agent, "_kanban_command_policy", "")
+        if _kanban_policy:
+            tool_guidance.append(_kanban_policy)
     elif _kanban_guidance is None and "kanban_show" in agent.valid_tool_names:
         # Fallback for code paths that bypass agent_init (rare).
         tool_guidance.append(KANBAN_GUIDANCE)

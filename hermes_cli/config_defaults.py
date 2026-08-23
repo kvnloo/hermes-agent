@@ -2444,6 +2444,12 @@ DEFAULT_CONFIG = {
         # so stale rows don't accumulate and get scanned on every notifier
         # tick forever. Set 0 to disable the sweep.
         "done_sub_retention_days": 30,
+        # OX1000 C2: inject a byte-stable command-policy block (no heredoc/
+        # `python -c` file creation; stop after 4 identical failed commands;
+        # re-read after 2 same-file patch failures; no redundant re-reads)
+        # into dispatched kanban workers' system prompts. Default off —
+        # enable per-board/profile for canary measurement.
+        "worker_command_policy": False,
     },
 
     # execute_code settings — controls the tool used for programmatic tool calls.

@@ -1527,6 +1527,24 @@ def init_agent(
         KANBAN_GUIDANCE if "kanban_show" in agent.valid_tool_names else ""
     )
 
+    # OX1000 C2: optional pre-warmed command-policy block, appended to the
+    # kanban lifecycle guidance. Resolved once here — same cache-safe
+    # contract as _kanban_worker_guidance above (byte-stable for the life
+    # of the session, kanban workers only, config-gated, default off).
+    agent._kanban_command_policy = ""
+    if agent._kanban_worker_guidance:
+        try:
+            from agent.kanban_command_policy import (
+                KANBAN_COMMAND_POLICY,
+                load_worker_command_policy_enabled,
+            )
+
+            if load_worker_command_policy_enabled():
+                agent._kanban_command_policy = "\n" + KANBAN_COMMAND_POLICY
+        except Exception:
+            logger.debug("kanban command-policy gate resolution failed",
+                         exc_info=True)
+
     # Check tool requirements
     if agent.tools and not agent.quiet_mode:
         requirements = _ra().check_toolset_requirements()
