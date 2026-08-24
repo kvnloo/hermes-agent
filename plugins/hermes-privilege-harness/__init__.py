@@ -1,52 +1,46 @@
-"""
-Hermes Privilege Harness — Passive VIP Plugin.
-
-Architecture: Hermes handles approval, we handle execution.
-"""
+"""Hermes Privilege Harness unprivileged requester plugin."""
 
 import logging
+
 from . import guard
 
 logger = logging.getLogger("hermes-vip.plugin")
 
 
 def register(ctx):
-    # pre_tool_call — only intercept vip_sudo for native approval card
     ctx.register_hook("pre_tool_call", _hook)
-
-    # vip_sudo — the ONLY privileged tool
     ctx.register_tool(
-        name="vip_sudo",
+        name="privilege_request",
         toolset="terminal",
         description=(
-            "Execute commands as root via a secure privilege daemon. "
-            "Hermes will prompt for approval before execution."
+            "Request one typed operation from an external privilege broker. "
+            "A separately authenticated operator must approve it."
         ),
         schema={
-            "name": "vip_sudo",
+            "name": "privilege_request",
             "parameters": {
                 "type": "object",
+                "additionalProperties": False,
                 "properties": {
-                    "command": {
-                        "type": "string",
-                        "description": "Shell command to execute as root",
+                    "operation_id": {"type": "string", "description": "Catalog operation identifier"},
+                    "slots": {
+                        "type": "object",
+                        "description": "Typed catalog slot values",
+                        "additionalProperties": {"type": ["string", "integer", "boolean"]},
                     },
-                    "reason": {
-                        "type": "string",
-                        "description": "Why root is needed",
-                    },
+                    "reason": {"type": "string", "description": "Why the operation is needed"},
+                    "profile": {"type": "string", "description": "Hermes profile correlation"},
+                    "session": {"type": "string", "description": "Hermes session correlation"},
                 },
-                "required": ["command"],
+                "required": ["operation_id", "slots", "reason", "profile", "session"],
             },
         },
-        handler=lambda args, **kw: guard.vip_sudo(
-            args.get("command", "") if isinstance(args, dict) else str(args),
-            args.get("reason", "") if isinstance(args, dict) else "",
+        handler=lambda args, **kw: guard.request(
+            args.get("operation_id", ""), args.get("slots", {}), args.get("reason", ""),
+            args.get("profile", ""), args.get("session", ""),
         ),
     )
-
-    guard._register_stamp_cap()
-    logger.info("hermes-privilege-harness plugin ready")
+    logger.info("privilege requester plugin ready")
 
 
 def _hook(tool_name, args, **kwargs):

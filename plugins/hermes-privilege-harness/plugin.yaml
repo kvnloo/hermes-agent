@@ -1,8 +1,8 @@
-name: hermes-vip
-description: "Passive root privilege harness — Hermes handles approval, VIP executes"
-version: 1.0.0
-author: Hermes Community
+name: hermes-privilege-requester
+description: "Requests typed operations from an external broker."
+version: 2.0.0
+author: Corton Kwok and Hermes Community
 license: MIT
-platforms: [macos, linux]
+platforms: [linux]
 hooks:
   - pre_tool_call
