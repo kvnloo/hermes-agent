@@ -1506,8 +1506,9 @@ export function KanbanBoardPage() {
         <div
           aria-label={k.board}
           className={cn(
-            'flex flex-1 snap-x scroll-px-4 gap-2 overflow-x-auto overscroll-x-contain px-4 pt-1 pb-3 md:snap-none',
-            grabbing || cardDragging ? 'cursor-grabbing snap-none' : 'snap-mandatory'
+            'flex flex-1 snap-x scroll-px-4 gap-2 overflow-x-auto overscroll-x-contain px-4 pt-1 pb-3',
+            viewport.desktop || grabbing || cardDragging ? 'snap-none' : 'snap-mandatory',
+            (grabbing || cardDragging) && 'cursor-grabbing'
           )}
           data-kanban-scroller=""
           onMouseDown={onMouseDown}
