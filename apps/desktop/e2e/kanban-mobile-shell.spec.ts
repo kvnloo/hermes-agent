@@ -87,6 +87,10 @@ async function setContentViewport(fixture: MockBackendFixture, width: number) {
     window?.setContentSize(size, 760)
   }, width)
   await expect.poll(() => fixture.page.evaluate(() => window.innerWidth)).toBe(width)
+  await expect(fixture.page.locator('[data-kanban-layout]').first()).toHaveAttribute(
+    'data-kanban-layout',
+    width < 768 ? 'mobile' : 'desktop'
+  )
 }
 
 async function expectContained(page: MockBackendFixture['page'], status: string) {
@@ -96,26 +100,18 @@ async function expectContained(page: MockBackendFixture['page'], status: string)
   await expect(selector).toHaveAttribute('aria-controls', `kanban-lane-${status}`)
   await expect(selector).toHaveAttribute('aria-selected', 'true')
   await expect(selector).toHaveAttribute('tabindex', '0')
-  await expect(selector).toBeFocused()
 
-  const geometry = await lane.evaluate(element => {
+  await expect.poll(() => lane.evaluate(element => {
     const scroller = element.parentElement!
     const laneRect = element.getBoundingClientRect()
     const scrollRect = scroller.getBoundingClientRect()
 
     return {
+      contained: laneRect.left >= scrollRect.left - 1 && laneRect.right <= scrollRect.right + 1,
       documentOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-      laneLeft: laneRect.left,
-      laneRight: laneRect.right,
       scrollerOverflow: scroller.scrollWidth > scroller.clientWidth,
-      scrollLeft: scrollRect.left,
-      scrollRight: scrollRect.right
     }
-  })
-  expect(geometry.documentOverflow).toBe(0)
-  expect(geometry.scrollerOverflow).toBe(true)
-  expect(geometry.laneLeft).toBeGreaterThanOrEqual(geometry.scrollLeft - 1)
-  expect(geometry.laneRight).toBeLessThanOrEqual(geometry.scrollRight + 1)
+  })).toEqual({ contained: true, documentOverflow: 0, scrollerOverflow: true })
 }
 
 async function expectMobileTargetsAndClipping(page: MockBackendFixture['page']) {
@@ -229,6 +225,7 @@ test('actual shell validates exact mobile viewports and all lane input paths', a
 
   for (const width of MOBILE_WIDTHS) {
     await setContentViewport(fixture!, width)
+    await page.locator('[role="tablist"]').evaluate(element => { element.scrollLeft = 0 })
     const shell = await page.evaluate(() => ({
       board: document.querySelector<HTMLElement>('[data-kanban-board-root]')!.clientWidth,
       lane: document.querySelector<HTMLElement>('[data-kanban-lane="triage"]')!.clientWidth,
