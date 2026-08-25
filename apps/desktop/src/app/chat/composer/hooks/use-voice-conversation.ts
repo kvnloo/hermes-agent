@@ -380,6 +380,13 @@ export function useVoiceConversation({
           await new Promise(resolve => window.setTimeout(resolve, 100))
         }
 
+        // The settle wait belongs to the same captured turn as STT. Ending,
+        // muting, unmounting, or starting a newer turn while it waited must
+        // invalidate the capture before it can submit or mutate shared state.
+        if (!mountedRef.current || lifetime !== lifetimeRef.current) {
+          return
+        }
+
         awaitingSpokenResponseRef.current = true
         dropSpeechSession()
         consumePendingResponse()
