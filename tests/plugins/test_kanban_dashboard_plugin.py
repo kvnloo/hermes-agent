@@ -116,6 +116,32 @@ def test_create_task_appears_on_board(client):
     assert "researcher" in data["assignees"]
 
 
+def test_dashboard_round_trips_recursive_issue_scope(client):
+    product = client.post(
+        "/api/plugins/kanban/tasks",
+        json={"title": "Hermes", "kind": "product", "product_id": "product_hermes"},
+    ).json()["task"]
+    feature_response = client.post(
+        "/api/plugins/kanban/tasks",
+        json={
+            "title": "Recursive issues",
+            "kind": "feature",
+            "parent_id": product["id"],
+            "product_id": "product_hermes",
+        },
+    )
+
+    assert feature_response.status_code == 200, feature_response.text
+    feature = feature_response.json()["task"]
+    assert feature["kind"] == "feature"
+    assert feature["parent_id"] == product["id"]
+    assert feature["product_id"] == "product_hermes"
+
+    board = client.get("/api/plugins/kanban/board").json()
+    issues = [task for column in board["columns"] for task in column["tasks"]]
+    assert {issue["kind"] for issue in issues} == {"product", "feature"}
+
+
 def test_patch_board_sets_project_directory(client, tmp_path):
     """Board-level default_workdir must be editable after creation."""
     kb.create_board("late-config")

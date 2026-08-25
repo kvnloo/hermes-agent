@@ -81,6 +81,9 @@ def _task_to_dict(t: kb.Task) -> dict[str, Any]:
         "session_id": t.session_id,
         "workflow_template_id": t.workflow_template_id,
         "current_step_key": t.current_step_key,
+        "kind": t.kind,
+        "parent_id": t.parent_id,
+        "product_id": t.product_id,
     }
 
 
@@ -333,6 +336,12 @@ def build_parser(parent_subparsers: argparse._SubParsersAction) -> argparse.Argu
     p_create.add_argument("--assignee", default=None, help="Profile name to assign")
     p_create.add_argument("--parent", action="append", default=[],
                           help="Parent task id (repeatable)")
+    p_create.add_argument("--kind", choices=sorted(kb.VALID_ISSUE_KINDS), default="task",
+                          help="Semantic issue kind (default: task)")
+    p_create.add_argument("--under", dest="hierarchy_parent_id", default=None,
+                          help="Containment parent issue id (does not gate dispatch)")
+    p_create.add_argument("--product-id", default=None,
+                          help="Structured portable product identity")
     p_create.add_argument("--workspace", default="scratch",
                           help="scratch | worktree | worktree:<path> | dir:<path> "
                                "(default: scratch)")
@@ -1586,6 +1595,9 @@ def _cmd_create(args: argparse.Namespace) -> int:
             goal_mode=bool(getattr(args, "goal_mode", False)),
             goal_max_turns=getattr(args, "goal_max_turns", None),
             initial_status=getattr(args, "initial_status", "running"),
+            kind=getattr(args, "kind", "task"),
+            hierarchy_parent_id=getattr(args, "hierarchy_parent_id", None),
+            product_id=getattr(args, "product_id", None),
         )
         task = kb.get_task(conn, task_id)
     if getattr(args, "json", False):
