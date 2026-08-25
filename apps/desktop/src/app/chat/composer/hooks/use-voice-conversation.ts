@@ -153,7 +153,9 @@ export function useVoiceConversation({
       try {
         const result = await handle.stop()
 
-        if (!mountedRef.current || lifetime !== lifetimeRef.current) {return}
+        if (!mountedRef.current || lifetime !== lifetimeRef.current) {
+          return
+        }
 
         if (!result || (!result.heardSpeech && !forceTranscribe) || !onTranscribeAudio) {
           if (enabledRef.current && !mutedRef.current && !busyRef.current && statusRef.current !== 'speaking') {
@@ -168,7 +170,9 @@ export function useVoiceConversation({
         try {
           const transcript = (await onTranscribeAudio(result.audio)).trim()
 
-          if (!mountedRef.current || lifetime !== lifetimeRef.current) {return}
+          if (!mountedRef.current || lifetime !== lifetimeRef.current) {
+            return
+          }
 
           if (!transcript) {
             if (enabledRef.current) {
@@ -196,7 +200,10 @@ export function useVoiceConversation({
           dropSpeechSession()
           await onSubmit(transcript)
 
-          if (!mountedRef.current || lifetime !== lifetimeRef.current) {return}
+          if (!mountedRef.current || lifetime !== lifetimeRef.current) {
+            return
+          }
+
           setStatus('thinking')
         } catch (error) {
           notifyError(error, voiceCopy.transcriptionFailed)
@@ -241,7 +248,9 @@ export function useVoiceConversation({
       // A pause failure shouldn't block the user's explicit start.
     }
 
-    if (!mountedRef.current || lifetime !== lifetimeRef.current) {return}
+    if (!mountedRef.current || lifetime !== lifetimeRef.current) {
+      return
+    }
 
     // enabled/muted/busy or an interleaved turn may have changed while we waited.
     if (!enabledRef.current || mutedRef.current || busyRef.current || statusRef.current !== 'idle') {
@@ -333,7 +342,9 @@ export function useVoiceConversation({
       const lifetime = lifetimeRef.current
 
       const resumeListening = () => {
-        if (!mountedRef.current || lifetime !== lifetimeRef.current) {return}
+        if (!mountedRef.current || lifetime !== lifetimeRef.current) {
+          return
+        }
 
         if (enabledRef.current && !mutedRef.current) {
           pendingStartRef.current = true
@@ -353,7 +364,9 @@ export function useVoiceConversation({
       try {
         const transcript = (await onTranscribeAudio(audio)).trim()
 
-        if (!mountedRef.current || lifetime !== lifetimeRef.current) {return}
+        if (!mountedRef.current || lifetime !== lifetimeRef.current) {
+          return
+        }
 
         if (!transcript) {
           resumeListening()
@@ -392,7 +405,10 @@ export function useVoiceConversation({
         consumePendingResponse()
         await onSubmit(transcript)
 
-        if (!mountedRef.current || lifetime !== lifetimeRef.current) {return}
+        if (!mountedRef.current || lifetime !== lifetimeRef.current) {
+          return
+        }
+
         setStatus('thinking')
       } catch (error) {
         notifyError(error, voiceCopy.transcriptionFailed)
@@ -425,7 +441,10 @@ export function useVoiceConversation({
     stopBargeMonitorRef.current = monitorSpeechDuringPlayback({
       isPlaying: () => $voicePlayback.get().status === 'speaking',
       onSpeech: () => {
-        if (!mountedRef.current || lifetime !== lifetimeRef.current) {return}
+        if (!mountedRef.current || lifetime !== lifetimeRef.current) {
+          return
+        }
+
         bargeCapturePendingRef.current = true
         bargedRef.current = true
         markVoicePlaybackInterrupted()
@@ -438,7 +457,10 @@ export function useVoiceConversation({
         }
       },
       onUtterance: audio => {
-        if (!mountedRef.current || lifetime !== lifetimeRef.current) {return}
+        if (!mountedRef.current || lifetime !== lifetimeRef.current) {
+          return
+        }
+
         bargeCapturePendingRef.current = false
         stopBargeMonitorRef.current = null
         void submitCapturedUtterance(audio)

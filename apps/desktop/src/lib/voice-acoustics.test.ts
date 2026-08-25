@@ -7,7 +7,9 @@ describe('AdaptiveAcousticThreshold', () => {
     const threshold = new AdaptiveAcousticThreshold()
     const initial = threshold.startThreshold
 
-    for (let index = 0; index < 40; index += 1) {threshold.observeQuiet(0.04)}
+    for (let index = 0; index < 40; index += 1) {
+      threshold.observeQuiet(0.04)
+    }
 
     expect(threshold.noiseFloor).toBeGreaterThan(0.01)
     expect(threshold.startThreshold).toBeGreaterThan(initial)
@@ -19,7 +21,10 @@ describe('AdaptiveAcousticThreshold', () => {
     threshold.observeQuiet(0.8)
     expect(threshold.noiseFloor).toBe(0.01)
 
-    for (let index = 0; index < 200; index += 1) {threshold.observeQuiet(0.07)}
+    for (let index = 0; index < 200; index += 1) {
+      threshold.observeQuiet(0.07)
+    }
+
     expect(threshold.noiseFloor).toBeLessThanOrEqual(0.08)
   })
 })
