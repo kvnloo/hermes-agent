@@ -263,4 +263,40 @@ describe('useVoiceConversation full-duplex barge-in', () => {
 
     expect(monitorCalls.length).toBe(armed)
   })
+
+  it('rejects late STT completion after the conversation ends', async () => {
+    let resolveTranscript!: (value: string) => void
+    const onTranscribeAudio = vi.fn(
+      () =>
+        new Promise<string>(resolve => {
+          resolveTranscript = resolve
+        })
+    )
+    const onSubmit = vi.fn()
+    const hook = renderHook(() =>
+      useVoiceConversation({
+        busy: false,
+        consumePendingResponse: vi.fn(),
+        enabled: true,
+        onSubmit,
+        onTranscribeAudio,
+        pendingResponse: () => null
+      })
+    )
+
+    await act(async () => hook.result.current.start())
+    micHandle.stop.mockResolvedValueOnce({
+      audio: new Blob(['late'], { type: 'audio/webm' }),
+      durationMs: 200,
+      heardSpeech: true
+    })
+    act(() => hook.result.current.stopTurn())
+    await waitFor(() => expect(onTranscribeAudio).toHaveBeenCalledTimes(1))
+
+    await act(async () => hook.result.current.end())
+    await act(async () => resolveTranscript('must not submit'))
+
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(hook.result.current.status).toBe('idle')
+  })
 })
