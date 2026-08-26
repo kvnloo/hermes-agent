@@ -167,3 +167,30 @@ async def test_prepare_route_identity_check_keeps_event_loop_responsive(monkeypa
     assert result == "inspect @AGENTS.md"
     assert seen["event_loop_progressed"] is True
     assert seen["thread"] is not main_thread
+
+
+@pytest.mark.asyncio
+async def test_explicit_save_only_image_skips_native_and_auxiliary_analysis(monkeypatch):
+    runner = _make_runner()
+    source = _source()
+    analyzed = []
+
+    async def fail_if_analyzed(*args, **kwargs):
+        analyzed.append((args, kwargs))
+        return "unexpected"
+
+    monkeypatch.setattr(runner, "_enrich_message_with_vision", fail_if_analyzed)
+    monkeypatch.setattr(runner, "_decide_image_input_mode", lambda **_: "text")
+
+    result = await runner._prepare_inbound_message_text(
+        event=_image_event("Save these only — do not analyze them."),
+        source=source,
+        history=[],
+    )
+
+    assert analyzed == []
+    assert runner._consume_pending_native_image_paths(
+        runner._session_key_for_source(source)
+    ) == []
+    assert result is not None
+    assert "Do not inspect or analyze" in result

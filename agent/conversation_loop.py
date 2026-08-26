@@ -1876,8 +1876,13 @@ def run_conversation(
                 agent.session_id or "-",
             )
 
+        from agent.image_routing import strip_historical_native_images
+
+        request_messages = strip_historical_native_images(
+            messages, current_turn_user_idx=current_turn_user_idx
+        )
         api_messages = []
-        for idx, msg in enumerate(messages):
+        for idx, msg in enumerate(request_messages):
 
             # Structural clone, NOT msg.copy(): every in-place transform
             # below (canonicalize/repair, surrogate + non-ASCII sanitizers,

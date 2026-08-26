@@ -5888,7 +5888,11 @@ class TurnRunner:
             # content list. Consume-and-clear so subsequent turns on the same
             # runner instance don't re-attach stale images.
             _native_imgs = self._runner._consume_pending_native_image_paths(ctx.session_key)
-            if _native_imgs:
+            from agent.image_routing import content_has_native_images
+
+            if _native_imgs and content_has_native_images(ctx.message):
+                _run_message = ctx.message
+            elif _native_imgs:
                 try:
                     from agent.image_routing import build_native_content_parts
                     _parts, _skipped = build_native_content_parts(
@@ -17031,6 +17035,17 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
                     audio_paths.append(path)
                 if mtype.startswith("video/") or (not mtype and event.message_type == MessageType.VIDEO):
                     video_paths.append(path)
+
+            if image_paths:
+                from agent.image_routing import is_explicit_image_save_only_request
+
+                if is_explicit_image_save_only_request(message_text):
+                    message_text = (
+                        "[The attached image files were saved as requested. "
+                        "Do not inspect or analyze their contents.]\n\n"
+                        + message_text
+                    )
+                    image_paths = []
 
             if image_paths:
                 # Decide routing: native (attach pixels) vs text (vision_analyze

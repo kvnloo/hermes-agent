@@ -51,6 +51,73 @@ logger = logging.getLogger(__name__)
 
 _VALID_MODES = frozenset({"auto", "native", "text"})
 
+_SAVE_ONLY_RE = re.compile(
+    r"\b(?:just\s+save|save\s+(?:these|them|this|the\s+images?)\s+only|save[- ]only)\b",
+    re.IGNORECASE,
+)
+_NO_IMAGE_ANALYSIS_RE = re.compile(
+    r"\b(?:do\s+not|don't|dont|no)\s+(?:analy[sz]e|inspect|examine|look\s+at|review)\b",
+    re.IGNORECASE,
+)
+_POSITIVE_IMAGE_ANALYSIS_RE = re.compile(
+    r"\b(?:and|then)\s+(?:also\s+)?(?:analy[sz]e|inspect|examine|review)\b",
+    re.IGNORECASE,
+)
+
+
+def is_explicit_image_save_only_request(content: Any) -> bool:
+    """Return whether the user explicitly forbids inspecting attached images."""
+    if isinstance(content, list):
+        text = "\n".join(
+            str(part.get("text", ""))
+            for part in content
+            if isinstance(part, dict) and part.get("type") in {"text", "input_text"}
+        )
+    elif isinstance(content, str):
+        text = content
+    else:
+        return False
+    if _POSITIVE_IMAGE_ANALYSIS_RE.search(text):
+        return False
+    return bool(_SAVE_ONLY_RE.search(text) or _NO_IMAGE_ANALYSIS_RE.search(text))
+
+
+def content_has_native_images(content: Any) -> bool:
+    """Return True for OpenAI/Responses-style inline image content."""
+    return isinstance(content, list) and any(
+        isinstance(part, dict) and part.get("type") in {"image", "image_url", "input_image"}
+        for part in content
+    )
+
+
+def strip_historical_native_images(
+    messages: List[Dict[str, Any]], *, current_turn_user_idx: int
+) -> List[Dict[str, Any]]:
+    """Build a request copy with pixels retained only on the current user turn."""
+    # Shallow-copy message envelopes only. Deep-copying first would briefly
+    # duplicate the very multi-megabyte payloads this guard is meant to bound;
+    # the normal send path structurally clones each retained message later.
+    outbound = [dict(message) for message in messages]
+    marker = "[Image attachment omitted after its original turn.]"
+    for idx, message in enumerate(outbound):
+        if idx == current_turn_user_idx:
+            continue
+        content = message.get("content") or []
+        if not content_has_native_images(content):
+            continue
+        text_parts = [
+            str(part.get("text", ""))
+            for part in content
+            if isinstance(part, dict)
+            and part.get("type") in {"text", "input_text"}
+            and part.get("text")
+        ]
+        text_parts.append(marker)
+        message["content"] = "\n".join(text_parts)
+        if isinstance(message.get("api_content"), list):
+            message.pop("api_content", None)
+    return outbound
+
 
 # Image extensions used by extract_image_refs(). Kept tight on purpose — we
 # only auto-attach things the model can actually see. Documents/archives are
