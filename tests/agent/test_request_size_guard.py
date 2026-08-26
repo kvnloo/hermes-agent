@@ -1,5 +1,6 @@
 import json
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from types import SimpleNamespace
 
 import pytest
@@ -22,6 +23,11 @@ def _codex_payload(tool_output: str) -> dict:
         ],
         "stream": True,
     }
+
+
+def _saved_path(guarded: dict) -> str:
+    replacement = guarded["input"][2]["output"]
+    return replacement.split("Full output saved to: ", 1)[1].splitlines()[0]
 
 
 def test_codex_preflight_spills_large_tool_output_before_serialization(tmp_path, monkeypatch):
@@ -106,6 +112,42 @@ def test_repeated_preflight_is_idempotent_and_does_not_duplicate_spill_footer(tm
     assert second is first
     assert report.compacted_tool_results == 0
     assert second["input"][2]["output"].count("Full output saved to:") == 1
+
+
+def test_equal_id_equal_length_distinct_spills_keep_earlier_bytes(tmp_path, monkeypatch):
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    first_content = "HEAD\n" + ("A" * 200_000) + "\nTAIL"
+    second_content = "HEAD\n" + ("B" * 200_000) + "\nTAIL"
+
+    first, _ = guard_request_body_size(
+        _codex_payload(first_content), max_body_bytes=50_000, max_inline_tool_chars=10_000
+    )
+    second, _ = guard_request_body_size(
+        _codex_payload(second_content), max_body_bytes=50_000, max_inline_tool_chars=10_000
+    )
+
+    first_path = _saved_path(first)
+    second_path = _saved_path(second)
+    assert first_path != second_path
+    assert open(first_path, encoding="utf-8").read() == first_content
+    assert open(second_path, encoding="utf-8").read() == second_content
+
+
+def test_concurrent_equal_id_equal_length_distinct_spills_never_alias(tmp_path, monkeypatch):
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    contents = [f"HEAD\n{letter * 200_000}\nTAIL" for letter in "ABCDEFGH"]
+
+    def spill(content):
+        guarded, _ = guard_request_body_size(
+            _codex_payload(content), max_body_bytes=50_000, max_inline_tool_chars=10_000
+        )
+        return _saved_path(guarded)
+
+    with ThreadPoolExecutor(max_workers=len(contents)) as pool:
+        paths = list(pool.map(spill, contents))
+
+    assert len(set(paths)) == len(contents)
+    assert [open(path, encoding="utf-8").read() for path in paths] == contents
 
 
 def test_exact_codex_transport_serialization_is_bounded_with_repeated_notifications(tmp_path, monkeypatch):

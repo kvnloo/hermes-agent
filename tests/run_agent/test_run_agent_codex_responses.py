@@ -1,3 +1,4 @@
+import copy
 import sys
 import types
 from types import SimpleNamespace
@@ -1041,6 +1042,136 @@ def test_run_conversation_codex_plain_text(monkeypatch):
     assert result["final_response"] == "OK"
     assert result["messages"][-1]["role"] == "assistant"
     assert result["messages"][-1]["content"] == "OK"
+
+
+@pytest.mark.parametrize("streaming", [False, True])
+def test_run_conversation_guards_physical_transport_without_mutating_history(
+    monkeypatch, tmp_path, streaming
+):
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    agent = _build_agent(monkeypatch)
+    giant = "HEAD\n" + ("transport-secret\n" * 20_000) + "TAIL"
+    history = [
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [{
+                "id": "call_big",
+                "type": "function",
+                "function": {"name": "terminal", "arguments": "{}"},
+            }],
+        },
+        {"role": "tool", "tool_call_id": "call_big", "name": "terminal", "content": giant},
+    ]
+    original_history = copy.deepcopy(history)
+    captured = []
+
+    def physical_call(api_kwargs, **_kwargs):
+        captured.append(api_kwargs)
+        return _codex_message_response("OK")
+
+    if streaming:
+        monkeypatch.setattr(agent, "_has_stream_consumers", lambda: True)
+        monkeypatch.setattr(agent, "_interruptible_streaming_api_call", physical_call)
+    else:
+        setattr(agent, "_disable_streaming", True)
+        monkeypatch.setattr(agent, "_interruptible_api_call", physical_call)
+
+    result = agent.run_conversation("continue", conversation_history=history)
+
+    assert result["completed"] is True
+    assert len(captured) == 1
+    outputs = [
+        item["output"]
+        for item in captured[0]["input"]
+        if item.get("type") == "function_call_output"
+    ]
+    assert len(outputs) == 1
+    assert giant not in outputs
+    assert "HEAD" in outputs[0] and "TAIL" in outputs[0]
+    assert "Full output saved to:" in outputs[0]
+    assert history == original_history
+
+
+def test_run_conversation_rejects_irreducible_body_before_physical_transport(monkeypatch):
+    from agent import request_size_guard
+
+    agent = _build_agent(monkeypatch)
+    setattr(agent, "_disable_streaming", True)
+    physical_calls = []
+    original_guard = request_size_guard.guard_request_body_size
+
+    def low_budget_guard(payload):
+        return original_guard(payload, max_body_bytes=50_000, max_inline_tool_chars=10_000)
+
+    def execution_middleware(request, next_call, **_context):
+        replacement = dict(request)
+        replacement["instructions"] = "irreducible" * 10_000
+        return next_call(replacement)
+
+    monkeypatch.setattr(request_size_guard, "guard_request_body_size", low_budget_guard)
+    monkeypatch.setattr(
+        "hermes_cli.middleware.run_llm_execution_middleware", execution_middleware
+    )
+    monkeypatch.setattr(
+        agent,
+        "_interruptible_api_call",
+        lambda kwargs: physical_calls.append(kwargs),
+    )
+
+    result = agent.run_conversation("continue")
+
+    assert physical_calls == []
+    assert result["completed"] is False
+    assert "request body remains oversized" in result["error"].lower()
+
+
+def test_execution_middleware_retry_dedupes_giant_spill(monkeypatch, tmp_path):
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    agent = _build_agent(monkeypatch)
+    setattr(agent, "_disable_streaming", True)
+    giant = "HEAD\n" + ("retry-content\n" * 20_000) + "TAIL"
+    history = [
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [{
+                "id": "call_retry",
+                "type": "function",
+                "function": {"name": "terminal", "arguments": "{}"},
+            }],
+        },
+        {"role": "tool", "tool_call_id": "call_retry", "name": "terminal", "content": giant},
+    ]
+    original_history = copy.deepcopy(history)
+    physical_payloads = []
+
+    def physical_call(api_kwargs):
+        physical_payloads.append(api_kwargs)
+        return _codex_message_response("OK")
+
+    def retry_once(request, next_call, **_context):
+        next_call(request)
+        return next_call(request)
+
+    monkeypatch.setattr(
+        "hermes_cli.middleware.run_llm_execution_middleware", retry_once
+    )
+    monkeypatch.setattr(agent, "_interruptible_api_call", physical_call)
+
+    result = agent.run_conversation("continue", conversation_history=history)
+
+    assert result["completed"] is True
+    assert len(physical_payloads) == 2
+    spill_paths = {
+        item["output"].split("Full output saved to: ", 1)[1].splitlines()[0]
+        for payload in physical_payloads
+        for item in payload["input"]
+        if item.get("type") == "function_call_output"
+    }
+    assert len(spill_paths) == 1
+    assert len(list((tmp_path / "cache" / "spillover").glob("request_*.txt"))) == 1
+    assert history == original_history
 
 
 def test_codex_preflight_defangs_harmony_tokens_before_and_after_middleware(monkeypatch):

@@ -13,12 +13,16 @@ from dataclasses import dataclass
 import hashlib
 import json
 import logging
+import os
+from pathlib import Path
+import tempfile
 from typing import Any, Iterator
 
 from tools.tool_result_storage import (
     PERSISTED_OUTPUT_TAG,
     _build_persisted_message,
-    _write_to_spillover,
+    _prune_spillover_once,
+    get_spillover_dir,
 )
 
 logger = logging.getLogger(__name__)
@@ -81,14 +85,39 @@ def _head_tail_preview(content: str, max_chars: int) -> str:
 
 
 def _spill_for_request(content: str, tool_use_id: str, max_inline_chars: int) -> str | None:
-    digest = hashlib.sha256(
-        f"request:{tool_use_id}:{len(content)}".encode("utf-8", errors="replace")
-    ).hexdigest()[:20]
-    path = _write_to_spillover(content, f"request_{digest}.txt")
-    if path is None:
+    encoded = content.encode("utf-8", errors="replace")
+    call_digest = hashlib.sha256(tool_use_id.encode("utf-8", errors="replace")).hexdigest()[:12]
+    content_digest = hashlib.sha256(encoded).hexdigest()
+    filename = f"request_{call_digest}_{content_digest}.txt"
+    spill_dir = get_spillover_dir()
+    temporary_path: Path | None = None
+    try:
+        spill_dir.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(
+            mode="wb", prefix=".request_", suffix=".tmp", dir=spill_dir, delete=False
+        ) as temporary:
+            temporary_path = Path(temporary.name)
+            temporary.write(encoded)
+            temporary.flush()
+            os.fsync(temporary.fileno())
+        path = spill_dir / filename
+        # The target becomes visible only after the complete bytes are durable.
+        # Replacing an identical content-addressed target is safe for concurrent
+        # retries; distinct content has a distinct cryptographic identity.
+        os.replace(temporary_path, path)
+        temporary_path = None
+    except OSError as exc:
+        logger.warning("Request spillover write failed for %s: %s", filename, exc)
         return None
+    finally:
+        if temporary_path is not None:
+            try:
+                temporary_path.unlink()
+            except OSError:
+                pass
+    _prune_spillover_once()
     preview = _head_tail_preview(content, max_inline_chars)
-    return _build_persisted_message(preview, True, len(content), path)
+    return _build_persisted_message(preview, True, len(content), str(path))
 
 
 def guard_request_body_size(
