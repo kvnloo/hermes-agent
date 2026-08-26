@@ -6198,10 +6198,15 @@ class SessionDB(SessionSearchMixin, SessionSchemaMixin, SessionPortabilityMixin)
         "input_tokens", "output_tokens", "cache_read_tokens",
         "cache_write_tokens", "reasoning_tokens", "api_call_count",
     )
-    _TOKEN_DELTA_COST_FIELDS = ("estimated_cost_usd", "actual_cost_usd")
+    _TOKEN_DELTA_COST_FIELDS = (
+        "estimated_cost_usd", "actual_cost_usd", "paid_spend_usd",
+    )
     _TOKEN_DELTA_ROUTE_FIELDS = (
         "model", "cost_status", "cost_source", "pricing_version",
-        "billing_provider", "billing_base_url", "billing_mode",
+        "billing_provider", "billing_base_url", "billing_mode", "spend_class",
+        # Event fields are excluded from the route key below and accumulated
+        # as a list, preserving one immutable row while summaries coalesce.
+        "event_timestamp", "event_batch",
     )
 
     def queue_token_counts(self, session_id: str, **kwargs) -> None:
@@ -6213,6 +6218,8 @@ class SessionDB(SessionSearchMixin, SessionSchemaMixin, SessionPortabilityMixin)
         API call.  After close() has stopped the writer, falls back to the
         synchronous path and may raise like :meth:`update_token_counts`.
         """
+        if not kwargs.get("absolute") and "event_timestamp" not in kwargs:
+            kwargs["event_timestamp"] = time.time()
         with self._token_queue_cond:
             thread = self._token_writer_thread
             writer_stopped = self._token_writer_stop and (
@@ -6355,10 +6362,13 @@ class SessionDB(SessionSearchMixin, SessionSchemaMixin, SessionPortabilityMixin)
         """
         groups: List[Tuple[Optional[tuple], str, Dict[str, Any]]] = []
         for session_id, kwargs in batch:
+            kwargs = dict(kwargs)
+            kwargs.setdefault("event_batch", [dict(kwargs)])
             key = None
             if not kwargs.get("absolute"):
                 key = (session_id,) + tuple(
                     kwargs.get(f) for f in self._TOKEN_DELTA_ROUTE_FIELDS
+                    if f not in ("event_timestamp", "event_batch")
                 )
             if groups and key is not None and groups[-1][0] == key:
                 merged = groups[-1][2]
@@ -6370,6 +6380,7 @@ class SessionDB(SessionSearchMixin, SessionSchemaMixin, SessionPortabilityMixin)
                         # None-preserving sum: an all-None run must stay
                         # None so COALESCE keeps the stored value untouched.
                         merged[f] = (merged.get(f) or 0.0) + value
+                merged["event_batch"].extend(kwargs["event_batch"])
             else:
                 groups.append((key, session_id, dict(kwargs)))
         return [(sid, kw) for _, sid, kw in groups]
@@ -6452,6 +6463,10 @@ class SessionDB(SessionSearchMixin, SessionSchemaMixin, SessionPortabilityMixin)
         billing_base_url: Optional[str] = None,
         billing_mode: Optional[str] = None,
         api_call_count: int = 0,
+        spend_class: str = "unknown",
+        paid_spend_usd: Optional[float] = None,
+        event_timestamp: Optional[float] = None,
+        event_batch: Optional[List[Dict[str, Any]]] = None,
         absolute: bool = False,
     ) -> None:
         """Update token counters and backfill model if not already set.
@@ -6600,6 +6615,53 @@ class SessionDB(SessionSearchMixin, SessionSchemaMixin, SessionPortabilityMixin)
                     cost_status=cost_status,
                     cost_source=cost_source,
                     api_call_count=api_call_count,
+                )
+                session_row = conn.execute(
+                    "SELECT source FROM sessions WHERE id = ?", (session_id,)
+                ).fetchone()
+                events = event_batch or [{
+                    "event_timestamp": event_timestamp, "model": model,
+                    "billing_provider": billing_provider,
+                    "billing_base_url": billing_base_url,
+                    "billing_mode": billing_mode, "api_call_count": api_call_count,
+                    "input_tokens": input_tokens, "output_tokens": output_tokens,
+                    "cache_read_tokens": cache_read_tokens,
+                    "cache_write_tokens": cache_write_tokens,
+                    "reasoning_tokens": reasoning_tokens,
+                    "estimated_cost_usd": estimated_cost_usd,
+                    "actual_cost_usd": actual_cost_usd, "cost_status": cost_status,
+                    "cost_source": cost_source, "spend_class": spend_class,
+                    "paid_spend_usd": paid_spend_usd,
+                }]
+                conn.executemany(
+                    """INSERT INTO usage_events (
+                           timestamp, session_id, source, model, billing_provider,
+                           billing_base_url, billing_mode, task, api_call_count,
+                           input_tokens, output_tokens, cache_read_tokens,
+                           cache_write_tokens, reasoning_tokens, estimated_cost_usd,
+                           actual_cost_usd, cost_status, cost_source, spend_class,
+                           paid_spend_usd
+                       ) VALUES (?, ?, ?, ?, ?, ?, ?, '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    [(
+                        event.get("event_timestamp") or time.time(),
+                        session_id,
+                        (session_row["source"] if session_row else None) or "unknown",
+                        event.get("model") or existing_model or "unknown",
+                        event.get("billing_provider") or existing_provider or "",
+                        event.get("billing_base_url") or "",
+                        event.get("billing_mode") or "",
+                        event.get("api_call_count") or 0,
+                        event.get("input_tokens") or 0,
+                        event.get("output_tokens") or 0,
+                        event.get("cache_read_tokens") or 0,
+                        event.get("cache_write_tokens") or 0,
+                        event.get("reasoning_tokens") or 0,
+                        event.get("estimated_cost_usd"),
+                        event.get("actual_cost_usd"), event.get("cost_status"),
+                        event.get("cost_source"),
+                        event.get("spend_class") or "unknown",
+                        event.get("paid_spend_usd"),
+                    ) for event in events],
                 )
         self._execute_write(_do)
 
@@ -6772,6 +6834,26 @@ class SessionDB(SessionSearchMixin, SessionSchemaMixin, SessionPortabilityMixin)
                 cost_source=None,
                 api_call_count=1,
                 task=task,
+            )
+            source_row = conn.execute(
+                "SELECT source FROM sessions WHERE id = ?", (session_id,)
+            ).fetchone()
+            conn.execute(
+                """INSERT INTO usage_events (
+                       timestamp, session_id, source, model, billing_provider,
+                       billing_base_url, task, api_call_count, input_tokens,
+                       output_tokens, cache_read_tokens, cache_write_tokens,
+                       reasoning_tokens, estimated_cost_usd, spend_class
+                   ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, 'unknown')""",
+                (
+                    time.time(), session_id,
+                    (source_row["source"] if source_row else None) or "unknown",
+                    model or "unknown", billing_provider or "",
+                    billing_base_url or "", task,
+                    input_tokens or 0, output_tokens or 0,
+                    cache_read_tokens or 0, cache_write_tokens or 0,
+                    reasoning_tokens or 0, estimated_cost_usd,
+                ),
             )
         self._execute_write(_do)
 

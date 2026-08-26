@@ -3820,6 +3820,9 @@ def run_conversation(
                                 estimated_cost_usd=_cost_delta,
                                 cost_status=cost_result.status,
                                 cost_source=cost_result.source,
+                                spend_class=cost_result.spend_class,
+                                paid_spend_usd=float(cost_result.paid_spend_usd)
+                                if cost_result.paid_spend_usd is not None else None,
                                 billing_provider=agent.provider,
                                 billing_base_url=agent.base_url,
                                 billing_mode="subscription_included"

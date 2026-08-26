@@ -14584,20 +14584,33 @@ def _get_usage_analytics(days: int = 30, profile: Optional[str] = None):
     db = _open_session_db_for_profile(profile, read_only=True)
     try:
         cutoff = time.time() - (days * 86400)
+        # Daily buckets are event-time facts. Never spread cumulative session
+        # rows across dates: pre-ledger history remains explicitly legacy.
         cur = db._conn.execute("""
-            SELECT date(started_at, 'unixepoch') as day,
+            SELECT date(timestamp, 'unixepoch') as day,
                    SUM(input_tokens) as input_tokens,
                    SUM(output_tokens) as output_tokens,
                    SUM(cache_read_tokens) as cache_read_tokens,
                    SUM(reasoning_tokens) as reasoning_tokens,
                    COALESCE(SUM(estimated_cost_usd), 0) as estimated_cost,
                    COALESCE(SUM(actual_cost_usd), 0) as actual_cost,
-                   COUNT(*) as sessions,
+                   COUNT(DISTINCT session_id) as sessions,
                    SUM(COALESCE(api_call_count, 0)) as api_calls
-            FROM sessions WHERE started_at > ?
+            FROM usage_events WHERE timestamp > ?
             GROUP BY day ORDER BY day
         """, (cutoff,))
         daily = [dict(r) for r in cur.fetchall()]
+
+        legacy = db._conn.execute("""
+            SELECT COUNT(*) AS sessions,
+                   COALESCE(SUM(input_tokens), 0) AS input_tokens,
+                   COALESCE(SUM(output_tokens), 0) AS output_tokens
+            FROM sessions s
+            WHERE s.started_at > ?
+              AND NOT EXISTS (
+                  SELECT 1 FROM usage_events e WHERE e.session_id = s.id
+              )
+        """, (cutoff,)).fetchone()
 
         cur2 = db._conn.execute("""
             SELECT model,
@@ -14635,6 +14648,7 @@ def _get_usage_analytics(days: int = 30, profile: Optional[str] = None):
 
         return {
             "daily": daily,
+            "legacy_unknown": dict(legacy),
             "by_model": by_model,
             # Aux-task summary across models (vision, compression, ...). Lets
             # the dashboard answer "what is compression costing me" directly.
