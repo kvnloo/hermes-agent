@@ -167,3 +167,62 @@ async def test_prepare_route_identity_check_keeps_event_loop_responsive(monkeypa
     assert result == "inspect @AGENTS.md"
     assert seen["event_loop_progressed"] is True
     assert seen["thread"] is not main_thread
+
+
+@pytest.mark.asyncio
+async def test_explicit_save_only_image_skips_native_and_auxiliary_analysis(monkeypatch):
+    runner = _make_runner()
+    source = _source()
+    analyzed = []
+
+    async def fail_if_analyzed(*args, **kwargs):
+        analyzed.append((args, kwargs))
+        return "unexpected"
+
+    monkeypatch.setattr(runner, "_enrich_message_with_vision", fail_if_analyzed)
+    monkeypatch.setattr(runner, "_decide_image_input_mode", lambda **_: "text")
+
+    result = await runner._prepare_inbound_message_text(
+        event=_image_event("Save these only — do not analyze them."),
+        source=source,
+        history=[],
+    )
+
+    assert analyzed == []
+    assert runner._consume_pending_native_image_paths(
+        runner._session_key_for_source(source)
+    ) == []
+    assert result is not None
+    assert "Do not inspect or analyze" in result
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "instruction",
+    [
+        "No review needed; analyze the image for defects.",
+        "Don't inspect the metadata; analyze the actual image.",
+        "Save this only for the record, then tell me what is shown here.",
+    ],
+)
+async def test_mixed_image_instructions_still_request_content_analysis(
+    monkeypatch, instruction
+):
+    runner = _make_runner()
+    source = _source()
+    analyzed = []
+
+    async def record_analysis(message, image_paths):
+        analyzed.append((message, image_paths))
+        return "[Image analysis: visible defects]"
+
+    monkeypatch.setattr(runner, "_enrich_message_with_vision", record_analysis)
+    monkeypatch.setattr(runner, "_decide_image_input_mode", lambda **_: "text")
+
+    await runner._prepare_inbound_message_text(
+        event=_image_event(instruction),
+        source=source,
+        history=[],
+    )
+
+    assert analyzed == [(instruction, ["/tmp/cashback.png"])]
