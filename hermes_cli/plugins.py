@@ -2788,6 +2788,54 @@ class PluginContext:
         )
         return handle
 
+    # -- realtime voice provider registration ---------------------------------
+
+    @_serialized_replacement
+    def register_realtime_voice_provider(self, provider) -> Optional[PluginRegistration]:
+        """Register a provider-neutral realtime voice session factory.
+
+        The provider owns audio transport and turn-taking only. Tool execution,
+        approvals, durable history, and memory remain behind the Hermes-owned
+        coordinator and its injected dispatcher.
+        """
+        from agent.realtime_voice import RealtimeVoiceProvider
+        from agent.realtime_voice_registry import (
+            register_provider,
+            restore_registration,
+            snapshot_registration,
+        )
+
+        if not isinstance(provider, RealtimeVoiceProvider):
+            logger.warning(
+                "Plugin '%s' tried to register a realtime voice provider that "
+                "does not inherit from RealtimeVoiceProvider. Ignoring.",
+                self.manifest.name,
+            )
+            return None
+        registry_name = provider.name.strip().lower()
+        scope = self._manager.scope_key
+        previous = snapshot_registration(registry_name, scope=scope)
+        register_provider(provider, scope=scope)
+        registered = snapshot_registration(registry_name, scope=scope)
+        if registered is not provider:
+            return None
+        handle = self._track_replacement(
+            "realtime_voice_provider",
+            registry_name,
+            slot=("realtime_voice_provider", scope, registry_name),
+            current=provider,
+            previous=previous,
+            restore=lambda replacement: restore_registration(
+                registry_name, provider, replacement, scope=scope
+            ),
+        )
+        logger.info(
+            "Plugin '%s' registered realtime voice provider: %s",
+            self.manifest.name,
+            registry_name,
+        )
+        return handle
+
     # -- transcription (STT) provider registration ---------------------------
 
     @_serialized_replacement
