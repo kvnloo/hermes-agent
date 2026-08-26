@@ -51,6 +51,91 @@ logger = logging.getLogger(__name__)
 
 _VALID_MODES = frozenset({"auto", "native", "text"})
 
+_SAVE_OBJECT = (
+    r"(?:them|(?:these|this)(?:\s+(?:images?|photos?|pictures?|screenshots?))?"
+    r"|the\s+(?:attached\s+)?(?:images?|photos?|pictures?|screenshots?))"
+)
+_SAVE_DESTINATION = (
+    r"(?:for\s+(?:the\s+)?record|"
+    r"to\s+(?:the\s+)?[\w -]+\s+(?:drive|folder|archive|storage))"
+)
+_SAVE_CLAUSE = (
+    rf"(?:just\s+)?(?:save|archive|store)\s+{_SAVE_OBJECT}(?:\s+only)?"
+    rf"(?:\s+{_SAVE_DESTINATION})?"
+    r"|just\s+save"
+)
+_NO_ANALYSIS_CLAUSE = (
+    r"(?:do\s+not|don't|dont)\s+"
+    r"(?:analy[sz]e|inspect|examine|review)\s+"
+    r"(?:these|this|them|(?:the\s+)?(?:attached\s+)?(?:images?|photos?|pictures?|screenshots?))"
+)
+_PURE_SAVE_ONLY_RE = re.compile(
+    rf"(?:"
+    rf"(?:{_SAVE_CLAUSE})(?:\s*[,;—-]\s*(?:{_NO_ANALYSIS_CLAUSE}))?"
+    rf"|(?:{_NO_ANALYSIS_CLAUSE})\s*[,;—-]\s*(?:{_SAVE_CLAUSE})"
+    rf")\s*[.!]?",
+    re.IGNORECASE,
+)
+
+
+def is_explicit_image_save_only_request(content: Any) -> bool:
+    """Return True only for a complete, unambiguous save-only command.
+
+    This intentionally recognizes a small whole-turn command grammar rather
+    than inferring intent from words embedded in arbitrary prose. Unknown,
+    mixed, or compound language fails open so current-turn pixels remain
+    available to the model.
+    """
+    if isinstance(content, list):
+        text = "\n".join(
+            str(part.get("text", ""))
+            for part in content
+            if isinstance(part, dict) and part.get("type") in {"text", "input_text"}
+        )
+    elif isinstance(content, str):
+        text = content
+    else:
+        return False
+    normalized = " ".join(text.replace("’", "'").split())
+    return _PURE_SAVE_ONLY_RE.fullmatch(normalized) is not None
+
+
+def content_has_native_images(content: Any) -> bool:
+    """Return True for OpenAI/Responses-style inline image content."""
+    return isinstance(content, list) and any(
+        isinstance(part, dict) and part.get("type") in {"image", "image_url", "input_image"}
+        for part in content
+    )
+
+
+def strip_historical_native_images(
+    messages: List[Dict[str, Any]], *, current_turn_user_idx: int
+) -> List[Dict[str, Any]]:
+    """Build a request copy with pixels retained only on the current user turn."""
+    # Shallow-copy message envelopes only. Deep-copying first would briefly
+    # duplicate the very multi-megabyte payloads this guard is meant to bound;
+    # the normal send path structurally clones each retained message later.
+    outbound = [dict(message) for message in messages]
+    marker = "[Image attachment omitted after its original turn.]"
+    for idx, message in enumerate(outbound):
+        if idx == current_turn_user_idx:
+            continue
+        content = message.get("content") or []
+        if not content_has_native_images(content):
+            continue
+        text_parts = [
+            str(part.get("text", ""))
+            for part in content
+            if isinstance(part, dict)
+            and part.get("type") in {"text", "input_text"}
+            and part.get("text")
+        ]
+        text_parts.append(marker)
+        message["content"] = "\n".join(text_parts)
+        if isinstance(message.get("api_content"), list):
+            message.pop("api_content", None)
+    return outbound
+
 
 # Image extensions used by extract_image_refs(). Kept tight on purpose — we
 # only auto-attach things the model can actually see. Documents/archives are

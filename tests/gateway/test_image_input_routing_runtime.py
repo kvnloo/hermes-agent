@@ -167,3 +167,84 @@ async def test_prepare_route_identity_check_keeps_event_loop_responsive(monkeypa
     assert result == "inspect @AGENTS.md"
     assert seen["event_loop_progressed"] is True
     assert seen["thread"] is not main_thread
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "instruction",
+    [
+        "Save these only — do not analyze them.",
+        "Do not analyze these; just save them.",
+        "Just archive these images to the 4 TB drive.",
+    ],
+)
+async def test_explicit_save_only_image_skips_native_and_auxiliary_analysis(
+    monkeypatch, instruction
+):
+    runner = _make_runner()
+    source = _source()
+    analyzed = []
+
+    async def fail_if_analyzed(*args, **kwargs):
+        analyzed.append((args, kwargs))
+        return "unexpected"
+
+    monkeypatch.setattr(runner, "_enrich_message_with_vision", fail_if_analyzed)
+    monkeypatch.setattr(runner, "_decide_image_input_mode", lambda **_: "text")
+
+    result = await runner._prepare_inbound_message_text(
+        event=_image_event(instruction),
+        source=source,
+        history=[],
+    )
+
+    assert analyzed == []
+    assert runner._consume_pending_native_image_paths(
+        runner._session_key_for_source(source)
+    ) == []
+    assert result is not None
+    assert "Do not inspect or analyze" in result
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "instruction",
+    [
+        "No review needed; analyze the image for defects.",
+        "Don't inspect the metadata; analyze the actual image.",
+        "Save this only for the record, then tell me what is shown here.",
+        "Save this only for the record, then identify the defect in the image.",
+        "Save this only for the record, then classify the image.",
+        "Save this only for the record, then diagnose the problem shown.",
+        "Save this only for the record, then compare the two images.",
+        "Save this only for the record, then explain what happened.",
+        "Save this only for the record, then check the image for damage.",
+        "Save this only for the record, then read the label.",
+        "Save this only for the record, then transcribe the receipt.",
+        "Save this only for the record, then count the visible objects.",
+        "Save this only for the record, then describe the scene.",
+        "Save this only for the record, then show me what is there.",
+        "Save this only for the record, then tell me what the image shows.",
+    ],
+)
+async def test_mixed_image_instructions_still_request_content_analysis(
+    monkeypatch, instruction
+):
+    runner = _make_runner()
+    source = _source()
+    analyzed = []
+
+    async def record_analysis(message, image_paths):
+        analyzed.append((message, image_paths))
+        return "[Image analysis: visible defects]"
+
+    monkeypatch.setattr(runner, "_enrich_message_with_vision", record_analysis)
+    monkeypatch.setattr(runner, "_decide_image_input_mode", lambda **_: "text")
+
+    await runner._prepare_inbound_message_text(
+        event=_image_event(instruction),
+        source=source,
+        history=[],
+    )
+
+    assert analyzed == [(instruction, ["/tmp/cashback.png"])]
