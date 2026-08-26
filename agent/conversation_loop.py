@@ -3181,6 +3181,17 @@ def run_conversation(
                             is_github_responses=agent._is_copilot_url(),
                             sanitize_harmony_tokens=agent._is_codex_backend(),
                         )
+                    # Final provider-neutral byte gate: middleware/hooks and
+                    # provider preflight may have changed the prepared body,
+                    # so run this immediately before selecting the physical
+                    # transport. Oversized tool outputs are request-locally
+                    # replaced by disk-backed head/tail stubs; an irreducible
+                    # body fails before any socket is opened.
+                    from agent.request_size_guard import guard_request_body_size
+
+                    next_api_kwargs, _ = guard_request_body_size(
+                        next_api_kwargs
+                    )
                     if _use_streaming:
                         return agent._interruptible_streaming_api_call(
                             next_api_kwargs, on_first_delta=_stop_spinner
