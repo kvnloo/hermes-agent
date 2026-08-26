@@ -782,6 +782,10 @@ class AIAgent:
         self.session_estimated_cost_usd = 0.0
         self.session_cost_status = "unknown"
         self.session_cost_source = "none"
+        # Incremental cash spend is independent from retail-equivalent cost.
+        # Unknown stays unknown rather than being inferred from catalog rates.
+        self.session_spend_class = "unknown"
+        self.session_paid_spend_usd = 0.0
         
         # Turn counter (added after reset_session_state was first written — #2635)
         self._user_turn_count = 0
