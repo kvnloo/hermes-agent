@@ -194,3 +194,55 @@ async def test_explicit_save_only_image_skips_native_and_auxiliary_analysis(monk
     ) == []
     assert result is not None
     assert "Do not inspect or analyze" in result
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "instruction",
+    [
+        "Save these images to the archive and identify the defect on the drive.",
+        "Save these images to the folder and tell me what is shown on the drive.",
+        "Archive these photos to the folder and analyze the storage.",
+        "Store these screenshots to the evidence and inspect the archive.",
+    ],
+)
+async def test_destination_tail_mixed_requests_keep_image_routing_available(
+    monkeypatch, instruction
+):
+    source = _source()
+
+    text_runner = _make_runner()
+    analyzed = []
+
+    async def analyze(message, image_paths):
+        analyzed.append((message, image_paths))
+        return f"[analyzed]\n\n{message}"
+
+    monkeypatch.setattr(text_runner, "_enrich_message_with_vision", analyze)
+    monkeypatch.setattr(text_runner, "_decide_image_input_mode", lambda **_: "text")
+
+    text_result = await text_runner._prepare_inbound_message_text(
+        event=_image_event(instruction),
+        source=source,
+        history=[],
+    )
+
+    assert analyzed == [(instruction, ["/tmp/cashback.png"])]
+    assert text_result is not None
+    assert text_result.startswith("[analyzed]")
+    assert "Do not inspect or analyze" not in text_result
+
+    native_runner = _make_runner()
+    monkeypatch.setattr(native_runner, "_decide_image_input_mode", lambda **_: "native")
+
+    native_result = await native_runner._prepare_inbound_message_text(
+        event=_image_event(instruction),
+        source=source,
+        history=[],
+    )
+
+    assert native_result is not None
+    assert "Do not inspect or analyze" not in native_result
+    assert native_runner._consume_pending_native_image_paths(
+        native_runner._session_key_for_source(source)
+    ) == ["/tmp/cashback.png"]

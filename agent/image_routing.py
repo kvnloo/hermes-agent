@@ -51,22 +51,30 @@ logger = logging.getLogger(__name__)
 
 _VALID_MODES = frozenset({"auto", "native", "text"})
 
-_SAVE_ONLY_RE = re.compile(
-    r"\b(?:just\s+save|save\s+(?:these|them|this|the\s+images?)\s+only|save[- ]only)\b",
-    re.IGNORECASE,
-)
-_NO_IMAGE_ANALYSIS_RE = re.compile(
-    r"\b(?:do\s+not|don't|dont|no)\s+(?:analy[sz]e|inspect|examine|look\s+at|review)\b",
-    re.IGNORECASE,
-)
-_POSITIVE_IMAGE_ANALYSIS_RE = re.compile(
-    r"\b(?:and|then)\s+(?:also\s+)?(?:analy[sz]e|inspect|examine|review)\b",
+_SAVE_ONLY_TURN_RE = re.compile(
+    r"^\s*(?:please\s+)?(?P<just>just\s+)?"
+    r"(?:save|store|archive)"
+    r"(?:\s+(?P<object>these|those|them|this|(?:the\s+)?"
+    r"(?:images?|photos?|screenshots?|files?)))?"
+    r"(?:\s+(?P<only>only))?"
+    r"(?:\s+(?:to|in)\s+(?:the\s+|my\s+)?"
+    r"(?:archive|folder|drive|storage))?"
+    r"(?:\s*[,;—-]?\s*(?P<negative>"
+    r"(?:do\s+not|don't|dont|no)\s+"
+    r"(?:analy[sz]e|inspect|examine|look\s+at|review)"
+    r"(?:\s+(?:these|those|them|this|(?:the\s+)?(?:images?|photos?|screenshots?|files?)))?"
+    r"))?\s*[.!]?\s*$",
     re.IGNORECASE,
 )
 
 
 def is_explicit_image_save_only_request(content: Any) -> bool:
-    """Return whether the user explicitly forbids inspecting attached images."""
+    """Return True only for an unambiguously complete save-only turn.
+
+    This intentionally recognizes a small grammar rather than inferring intent
+    from keywords.  Any compound, mixed, or unknown wording fails open so an
+    attached image remains available to the model.
+    """
     if isinstance(content, list):
         text = "\n".join(
             str(part.get("text", ""))
@@ -77,9 +85,16 @@ def is_explicit_image_save_only_request(content: Any) -> bool:
         text = content
     else:
         return False
-    if _POSITIVE_IMAGE_ANALYSIS_RE.search(text):
+    match = _SAVE_ONLY_TURN_RE.fullmatch(text)
+    if match is None:
         return False
-    return bool(_SAVE_ONLY_RE.search(text) or _NO_IMAGE_ANALYSIS_RE.search(text))
+    if match.group("object") is None and not (
+        match.group("just") and match.group("negative")
+    ):
+        return False
+    # A bare "save these" can be conversationally ambiguous.  Require an
+    # explicit exclusivity signal; a destination alone is not one.
+    return any(match.group(name) for name in ("just", "only", "negative"))
 
 
 def content_has_native_images(content: Any) -> bool:

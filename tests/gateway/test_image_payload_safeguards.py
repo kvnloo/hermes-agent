@@ -1,3 +1,5 @@
+import pytest
+
 from agent.image_routing import (
     content_has_native_images,
     is_explicit_image_save_only_request,
@@ -10,6 +12,22 @@ def test_explicit_save_only_request_is_detected_without_matching_normal_analysis
     assert is_explicit_image_save_only_request("just save, don't inspect the images")
     assert not is_explicit_image_save_only_request("save these and analyze the screenshots")
     assert not is_explicit_image_save_only_request("what is shown here?")
+
+
+@pytest.mark.parametrize(
+    "instruction",
+    [
+        "Save these images to the archive and identify the defect on the drive.",
+        "Save these images to the folder and tell me what is shown on the drive.",
+        "Archive these photos to the folder and analyze the storage.",
+        "Store these screenshots to the evidence and inspect the archive.",
+        "Save this only for the record, then identify the defect in the image.",
+        "No review needed; analyze the image for defects.",
+        "Don't inspect the metadata; analyze the actual image.",
+    ],
+)
+def test_mixed_or_unknown_save_wording_fails_open(instruction):
+    assert not is_explicit_image_save_only_request(instruction)
 
 
 def test_native_inline_content_is_recognized_for_attachment_deduplication():
