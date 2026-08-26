@@ -3772,6 +3772,9 @@ def run_conversation(
                             pass
                     agent.session_cost_status = cost_result.status
                     agent.session_cost_source = cost_result.source
+                    agent.session_spend_class = cost_result.spend_class
+                    if cost_result.paid_spend_usd is not None:
+                        agent.session_paid_spend_usd += float(cost_result.paid_spend_usd)
 
                     # Persist token counts to session DB for /insights.
                     # Do this for every platform with a session_id so non-CLI

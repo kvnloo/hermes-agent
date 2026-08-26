@@ -59,6 +59,13 @@ def format_cost_label(amount: Decimal) -> str:
     return f"~${amount:.2f}"
 
 CostStatus = Literal["actual", "estimated", "included", "unknown"]
+SpendClass = Literal[
+    "paid_metered",
+    "subscription_included",
+    "credit_included",
+    "free_model",
+    "unknown",
+]
 CostSource = Literal[
     "provider_cost_api",
     "provider_generation_api",
@@ -135,6 +142,8 @@ class CostResult:
     status: CostStatus
     source: CostSource
     label: str
+    spend_class: SpendClass = "unknown"
+    paid_spend_usd: Optional[Decimal] = None
     fetched_at: Optional[datetime] = None
     pricing_version: Optional[str] = None
     notes: tuple[str, ...] = ()
@@ -1044,8 +1053,8 @@ def resolve_billing_route(
             provider_name = inferred_provider
             model = bare_model
 
-    if provider_name == "openai-codex":
-        return BillingRoute(provider="openai-codex", model=model, base_url=base_url or "", billing_mode="subscription_included")
+    if provider_name in {"openai-codex", "xai-oauth"}:
+        return BillingRoute(provider=provider_name, model=model, base_url=base_url or "", billing_mode="subscription_included")
     if provider_name == "openrouter" or base_url_host_matches(base_url or "", "openrouter.ai"):
         return BillingRoute(provider="openrouter", model=model, base_url=base_url or "", billing_mode="official_models_api")
     if provider_name == "nous" or base_url_host_matches(base_url or "", "inference-api.nousresearch.com"):
@@ -1365,6 +1374,7 @@ def estimate_usage_cost(
     provider: Optional[str] = None,
     base_url: Optional[str] = None,
     api_key: Optional[str] = None,
+    paid_balance_evidence: bool = False,
 ) -> CostResult:
     route = resolve_billing_route(model_name, provider=provider, base_url=base_url)
     if route.billing_mode == "subscription_included":
@@ -1373,8 +1383,24 @@ def estimate_usage_cost(
             status="included",
             source="none",
             label="included",
+            spend_class="subscription_included",
+            paid_spend_usd=_ZERO,
             pricing_version="included-route",
             notes=(_INCLUDED_NOTE,),
+        )
+
+    # ``:free`` is an OpenRouter routing contract, not merely a zero-valued
+    # retail price.  It remains free even if the public model catalog is
+    # temporarily unavailable.
+    if route.provider == "openrouter" and route.model.lower().endswith(":free"):
+        return CostResult(
+            amount_usd=_ZERO,
+            status="included",
+            source="none",
+            label="$0.00",
+            spend_class="free_model",
+            paid_spend_usd=_ZERO,
+            notes=("OpenRouter free-model route; no paid balance consumed.",),
         )
 
     entry = get_pricing_entry(model_name, provider=provider, base_url=base_url, api_key=api_key)
@@ -1428,11 +1454,26 @@ def estimate_usage_cost(
     if route.provider == "openrouter":
         notes.append("OpenRouter cost is estimated from the models API until reconciled.")
 
+    if route.provider == "nous":
+        spend_class: SpendClass = "credit_included"
+        paid_spend_usd: Optional[Decimal] = _ZERO
+        notes.append("Nous Portal credits cover this usage; estimate is retail-equivalent only.")
+    elif route.provider == "openrouter":
+        # Public catalog pricing proves a retail rate, not that this request
+        # consumed cash. OpenRouter free credits can cover non-:free models.
+        spend_class = "paid_metered" if paid_balance_evidence else "unknown"
+        paid_spend_usd = amount if paid_balance_evidence else None
+    else:
+        spend_class = "paid_metered"
+        paid_spend_usd = amount
+
     return CostResult(
         amount_usd=amount,
         status=status,
         source=entry.source,
         label=label,
+        spend_class=spend_class,
+        paid_spend_usd=paid_spend_usd,
         fetched_at=entry.fetched_at,
         pricing_version=entry.pricing_version,
         notes=tuple(notes),
