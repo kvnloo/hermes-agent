@@ -210,6 +210,9 @@ def _record_codex_app_server_usage(agent, turn) -> dict[str, Any]:
         agent.session_estimated_cost_usd += float(cost_result.amount_usd)
     agent.session_cost_status = cost_result.status
     agent.session_cost_source = cost_result.source
+    agent.session_spend_class = cost_result.spend_class
+    if cost_result.paid_spend_usd is not None:
+        agent.session_paid_spend_usd += float(cost_result.paid_spend_usd)
 
     if agent._session_db and agent.session_id:
         try:
@@ -247,6 +250,9 @@ def _record_codex_app_server_usage(agent, turn) -> dict[str, Any]:
         if cost_result.amount_usd is not None else None,
         "cost_status": cost_result.status,
         "cost_source": cost_result.source,
+        "spend_class": cost_result.spend_class,
+        "paid_spend_usd": float(cost_result.paid_spend_usd)
+        if cost_result.paid_spend_usd is not None else None,
     }
 
 

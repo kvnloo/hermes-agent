@@ -458,3 +458,62 @@ class TestSubscriptionIncludedNotes:
         assert result.amount_usd == Decimal("0")
         assert len(result.notes) > 0
         assert any("subscription" in note.lower() for note in result.notes)
+
+
+class TestSpendClassification:
+    """Consumption estimates and incremental paid spend are separate axes."""
+
+    def test_codex_and_grok_oauth_are_subscription_included(self):
+        usage = CanonicalUsage(input_tokens=1000, output_tokens=100)
+        for provider in ("openai-codex", "xai-oauth"):
+            result = estimate_usage_cost("gpt-or-grok", usage, provider=provider)
+            assert result.status == "included"
+            assert result.spend_class == "subscription_included"
+            assert result.paid_spend_usd == Decimal("0")
+
+    def test_nous_portal_is_credit_included_not_paid_spend(self, monkeypatch):
+        monkeypatch.setattr(
+            "agent.usage_pricing.fetch_endpoint_model_metadata",
+            lambda *_args, **_kwargs: {
+                "model": {"pricing": {"prompt": "0.000001", "completion": "0.000002"}}
+            },
+        )
+        result = estimate_usage_cost(
+            "model", CanonicalUsage(input_tokens=1000), provider="nous"
+        )
+        assert result.amount_usd == Decimal("0.001000")
+        assert result.spend_class == "credit_included"
+        assert result.paid_spend_usd == Decimal("0")
+
+    def test_openrouter_free_model_is_free(self, monkeypatch):
+        monkeypatch.setattr("agent.usage_pricing.fetch_model_metadata", lambda: {})
+        result = estimate_usage_cost(
+            "vendor/model:free", CanonicalUsage(input_tokens=1000), provider="openrouter"
+        )
+        assert result.spend_class == "free_model"
+        assert result.paid_spend_usd == Decimal("0")
+
+    def test_openrouter_estimate_without_account_evidence_is_unknown(self, monkeypatch):
+        monkeypatch.setattr(
+            "agent.usage_pricing.fetch_model_metadata",
+            lambda: {
+                "vendor/model": {
+                    "pricing": {"prompt": "0.000001", "completion": "0.000002"}
+                }
+            },
+        )
+        result = estimate_usage_cost(
+            "vendor/model", CanonicalUsage(input_tokens=1000), provider="openrouter"
+        )
+        assert result.amount_usd == Decimal("0.001000")
+        assert result.spend_class == "unknown"
+        assert result.paid_spend_usd is None
+
+        proven = estimate_usage_cost(
+            "vendor/model",
+            CanonicalUsage(input_tokens=1000),
+            provider="openrouter",
+            paid_balance_evidence=True,
+        )
+        assert proven.spend_class == "paid_metered"
+        assert proven.paid_spend_usd == proven.amount_usd
