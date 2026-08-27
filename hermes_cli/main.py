@@ -4734,6 +4734,8 @@ def _prompt_provider_choice(choices, *, default=0, title="Select provider:"):
             searchable=True,
             search_on_type=True,
         )
+        if idx == -1:
+            return None
         if idx >= 0:
             print()
             return idx

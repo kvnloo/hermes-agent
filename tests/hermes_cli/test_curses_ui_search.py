@@ -29,6 +29,32 @@ def test_provider_choice_enables_default_type_to_search(monkeypatch):
     assert captured["search_on_type"] is True
 
 
+def test_provider_choice_returns_none_without_numbered_fallback_on_curses_cancel(
+    monkeypatch,
+):
+    from hermes_cli import main as main_mod
+
+    monkeypatch.setattr("hermes_cli.setup._curses_prompt_choice", lambda *args, **kwargs: -1)
+    monkeypatch.setattr(
+        "builtins.input",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("numbered fallback must not prompt after curses cancellation")
+        ),
+    )
+
+    assert main_mod._prompt_provider_choice(["Anthropic", "OpenAI"]) is None
+
+
+def test_provider_choice_uses_numbered_fallback_on_curses_failure(monkeypatch):
+    from hermes_cli import main as main_mod
+
+    def fail_curses(*args, **kwargs):
+        raise RuntimeError("curses unavailable")
+
+    monkeypatch.setattr("hermes_cli.setup._curses_prompt_choice", fail_curses)
+    monkeypatch.setattr("builtins.input", lambda *args, **kwargs: "2")
+
+    assert main_mod._prompt_provider_choice(["Anthropic", "OpenAI"]) == 1
 
 
 def test_reconcile_cursor_moves_to_first_visible_match():
