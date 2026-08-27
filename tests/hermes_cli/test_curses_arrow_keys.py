@@ -154,6 +154,74 @@ def test_enhanced_enter_selects_filtered_model_while_search_is_active(monkeypatc
     assert selected == 1
 
 
+def test_printable_typing_filters_without_opening_search_mode(monkeypatch):
+    """Provider pickers can make type-to-search the default interaction."""
+    fake = ExhaustingStdscr([ord("g"), ord("p"), ord("t"), 13])
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(curses, "wrapper", lambda draw: draw(fake))
+    monkeypatch.setattr(curses, "curs_set", lambda _value: None)
+    monkeypatch.setattr(curses, "has_colors", lambda: False)
+    monkeypatch.setattr("hermes_cli.curses_ui.flush_stdin", lambda: None)
+
+    selected = curses_radiolist(
+        "Pick provider",
+        ["Anthropic", "OpenAI GPT"],
+        searchable=True,
+        search_on_type=True,
+    )
+
+    assert selected == 1
+    rendered = " ".join(str(arg) for write in fake.writes for arg in write)
+    assert "type to search" in rendered
+    assert "/ search" not in rendered
+
+
+def test_space_still_selects_when_type_to_search_query_is_empty(monkeypatch):
+    fake = ExhaustingStdscr([32])
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(curses, "wrapper", lambda draw: draw(fake))
+    monkeypatch.setattr(curses, "curs_set", lambda _value: None)
+    monkeypatch.setattr(curses, "has_colors", lambda: False)
+    monkeypatch.setattr("hermes_cli.curses_ui.flush_stdin", lambda: None)
+
+    assert curses_radiolist(
+        "Pick provider",
+        ["Anthropic", "OpenAI"],
+        selected=1,
+        searchable=True,
+        search_on_type=True,
+    ) == 1
+
+
+@pytest.mark.parametrize(
+    ("keys", "expected"),
+    [
+        # Enter cannot select a stale row while the filter has no matches;
+        # Backspace restores the list and the next query selects OpenAI.
+        ([ord("z"), 13, curses.KEY_BACKSPACE, ord("o"), ord("p"), ord("e"), ord("n"), 13], 1),
+        # Up/down navigation continues to operate on the filtered ordering.
+        ([ord("a"), curses.KEY_DOWN, 13], 1),
+        # A space is a literal query character once filtering is active.
+        ([ord("o"), ord("p"), ord("e"), ord("n"), 32, ord("a"), ord("i"), 13], 1),
+    ],
+)
+def test_type_to_search_edit_navigation_and_cancel_contract(monkeypatch, keys, expected):
+    fake = ExhaustingStdscr(keys)
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(curses, "wrapper", lambda draw: draw(fake))
+    monkeypatch.setattr(curses, "curs_set", lambda _value: None)
+    monkeypatch.setattr(curses, "has_colors", lambda: False)
+    monkeypatch.setattr("hermes_cli.curses_ui.flush_stdin", lambda: None)
+
+    assert curses_radiolist(
+        "Pick provider",
+        ["Anthropic", "Open AI"],
+        cancel_returns=-1,
+        searchable=True,
+        search_on_type=True,
+    ) == expected
+
+
 @pytest.mark.parametrize(
     ("enhanced_keys", "expected_event"),
     [

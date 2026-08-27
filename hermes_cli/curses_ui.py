@@ -649,6 +649,7 @@ def _run_curses_menu(
     cancel_value,
     searchable=False,
     search_labels=None,
+    search_on_type=False,
 ):
     """Shared curses single-/multi-select event loop.
 
@@ -687,6 +688,9 @@ def _run_curses_menu(
             ``search_labels``. Returned values are always ORIGINAL item indices.
         search_labels: per-item text used for filtering (required when
             ``searchable`` is true; length must equal ``item_count``).
+        search_on_type: when true, a printable non-space key starts filtering
+            immediately. Space keeps its menu select/toggle behavior until a
+            query is active.
     """
     navigation_handler = _MENU_NAVIGATION_HANDLER.get()
     navigation_start = (
@@ -837,6 +841,14 @@ def _run_curses_menu(
                         if handled:
                             continue
                         action = _decode_menu_key(stdscr, key)
+                    elif search_on_type and 33 <= key < 127:
+                        search.active = True
+                        search.query += chr(key)
+                        scroll_offset = 0
+                        cursor, cursor_pos = _reconcile_cursor(
+                            _filter_indices(search_labels, search.query), cursor
+                        )
+                        continue
                     elif key == ord("/"):
                         search.active = True
                         continue
@@ -982,6 +994,7 @@ def curses_radiolist(
     description: str | None = None,
     searchable: bool = False,
     search_labels: List[str] | None = None,
+    search_on_type: bool = False,
 ) -> int:
     """Curses single-select radio list. Returns the selected index.
 
@@ -1002,6 +1015,9 @@ def curses_radiolist(
             row position.
         search_labels: Optional haystacks for type-to-filter (length must
             match ``items``). Defaults to the display labels when omitted.
+        search_on_type: Start filtering on the first printable non-space key,
+            without requiring ``/``. Space still selects while the query is
+            empty and inserts a literal space while a query is active.
     """
     if cancel_returns is None:
         cancel_returns = selected
@@ -1032,7 +1048,8 @@ def curses_radiolist(
             if searchable and search is not None and search.active:
                 hint = f"  Search: {search.query}\u258e  BACKSPACE edit  Ctrl+U clear  ESC stop"
             elif searchable:
-                hint = "  \u2191\u2193 navigate  ENTER/SPACE select  / search  ESC cancel"
+                search_hint = "type to search" if search_on_type else "/ search"
+                hint = f"  \u2191\u2193 navigate  ENTER/SPACE select  {search_hint}  ESC cancel"
             else:
                 hint = "  \u2191\u2193 navigate  ENTER/SPACE select  ESC cancel"
             if back_enabled:
@@ -1080,6 +1097,7 @@ def curses_radiolist(
             if searchable and search_labels is not None
             else (plain_labels if searchable else None)
         ),
+        search_on_type=search_on_type,
     )
 
 

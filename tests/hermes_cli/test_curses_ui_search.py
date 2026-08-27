@@ -13,6 +13,22 @@ class _FakeCurses:
     KEY_ENTER = 343
 
 
+def test_provider_choice_enables_default_type_to_search(monkeypatch):
+    from hermes_cli import main as main_mod
+
+    captured = {}
+
+    def fake_prompt(question, choices, default, **kwargs):
+        captured.update(question=question, choices=choices, default=default, **kwargs)
+        return 1
+
+    monkeypatch.setattr("hermes_cli.setup._curses_prompt_choice", fake_prompt)
+
+    assert main_mod._prompt_provider_choice(["Anthropic", "OpenAI"], default=1) == 1
+    assert captured["searchable"] is True
+    assert captured["search_on_type"] is True
+
+
 
 
 def test_reconcile_cursor_moves_to_first_visible_match():
