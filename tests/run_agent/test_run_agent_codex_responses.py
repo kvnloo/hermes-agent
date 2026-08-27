@@ -1093,33 +1093,26 @@ def test_run_conversation_guards_physical_transport_without_mutating_history(
     assert history == original_history
 
 
-def test_run_conversation_rejects_irreducible_body_before_physical_transport(monkeypatch):
-    from agent import request_size_guard
-
+@pytest.mark.parametrize("streaming", [False, True])
+def test_run_conversation_rejects_body_above_production_cap_before_physical_transport(
+    monkeypatch, streaming
+):
     agent = _build_agent(monkeypatch)
-    setattr(agent, "_disable_streaming", True)
     physical_calls = []
-    original_guard = request_size_guard.guard_request_body_size
+    irreducible_user_text = "x" * ((32 * 1024 * 1024) + 1)
 
-    def low_budget_guard(payload):
-        return original_guard(payload, max_body_bytes=50_000, max_inline_tool_chars=10_000)
+    def physical_call(api_kwargs, **_kwargs):
+        physical_calls.append(api_kwargs)
+        return _codex_message_response("transport opened")
 
-    def execution_middleware(request, next_call, **_context):
-        replacement = dict(request)
-        replacement["instructions"] = "irreducible" * 10_000
-        return next_call(replacement)
+    if streaming:
+        monkeypatch.setattr(agent, "_has_stream_consumers", lambda: True)
+        monkeypatch.setattr(agent, "_interruptible_streaming_api_call", physical_call)
+    else:
+        setattr(agent, "_disable_streaming", True)
+        monkeypatch.setattr(agent, "_interruptible_api_call", physical_call)
 
-    monkeypatch.setattr(request_size_guard, "guard_request_body_size", low_budget_guard)
-    monkeypatch.setattr(
-        "hermes_cli.middleware.run_llm_execution_middleware", execution_middleware
-    )
-    monkeypatch.setattr(
-        agent,
-        "_interruptible_api_call",
-        lambda kwargs: physical_calls.append(kwargs),
-    )
-
-    result = agent.run_conversation("continue")
+    result = agent.run_conversation(irreducible_user_text)
 
     assert physical_calls == []
     assert result["completed"] is False
