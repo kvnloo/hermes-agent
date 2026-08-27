@@ -4727,7 +4727,7 @@ def _prompt_provider_choice(choices, *, default=0, title="Select provider:"):
     try:
         from hermes_cli.setup import _curses_prompt_choice
 
-        idx = _curses_prompt_choice(title, choices, default)
+        idx = _curses_prompt_choice(title, choices, default, searchable=True)
         if idx >= 0:
             print()
             return idx

@@ -154,6 +154,42 @@ def test_enhanced_enter_selects_filtered_model_while_search_is_active(monkeypatc
     assert selected == 1
 
 
+@pytest.mark.parametrize("confirm_key", [13, ord(" ")])
+def test_typing_immediately_filters_and_confirms_original_index(monkeypatch, confirm_key):
+    labels = ["alpha", "gpt-fast", "gpt-pro"]
+    fake = ExhaustingStdscr([ord("g"), curses.KEY_DOWN, confirm_key])
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(curses, "wrapper", lambda draw: draw(fake))
+    monkeypatch.setattr(curses, "curs_set", lambda _value: None)
+    monkeypatch.setattr(curses, "has_colors", lambda: False)
+    monkeypatch.setattr("hermes_cli.curses_ui.flush_stdin", lambda: None)
+
+    selected = curses_radiolist(
+        "Pick",
+        labels,
+        searchable=True,
+        search_labels=labels,
+    )
+
+    from hermes_cli.curses_ui import _filter_indices
+
+    assert selected == _filter_indices(labels, "g")[1]
+
+
+def test_escape_cancels_after_typing_immediate_filter(monkeypatch):
+    fake = ExhaustingStdscr([ord("g"), 27, -1])
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(curses, "wrapper", lambda draw: draw(fake))
+    monkeypatch.setattr(curses, "curs_set", lambda _value: None)
+    monkeypatch.setattr(curses, "has_colors", lambda: False)
+    monkeypatch.setattr("hermes_cli.curses_ui.flush_stdin", lambda: None)
+
+    assert curses_radiolist(
+        "Pick", ["alpha", "gpt"], searchable=True,
+        search_labels=["alpha", "gpt"], cancel_returns=-1,
+    ) == -1
+
+
 @pytest.mark.parametrize(
     ("enhanced_keys", "expected_event"),
     [

@@ -38,18 +38,12 @@ def test_scorer_matches_typescript_reference():
 
 
 
-def test_esc_clears_query_and_signals_changed():
-    # Esc during active search clears the filter (restores full list) and
-    # signals `changed` so the driver resets scroll/cursor.
+def test_esc_is_left_to_menu_cancellation():
     search = _SearchState(active=True, query="gpt")
     handled, confirm, changed = _handle_active_search_key(_FakeCurses, 27, search)
-    assert (handled, confirm, changed) == (True, False, True)
-    assert search.active is False
-    assert search.query == ""
-
-    # Esc with no query: still stops search, but nothing changed.
-    search2 = _SearchState(active=True, query="")
-    assert _handle_active_search_key(_FakeCurses, 27, search2) == (True, False, False)
+    assert (handled, confirm, changed) == (False, False, False)
+    assert search.active is True
+    assert search.query == "gpt"
 
 
 

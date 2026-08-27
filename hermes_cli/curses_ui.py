@@ -420,13 +420,9 @@ def _handle_active_search_key(
         return False, False, False
 
     if key == 27:
-        # Esc stops search AND clears the query, restoring the full list (so a
-        # no-match filter can't strand the user on an empty list). Signals
-        # `changed` when there was a query so the driver resets scroll/cursor.
-        had_query = bool(search.query)
-        search.active = False
-        search.query = ""
-        return True, False, had_query
+        # Escape belongs to the surrounding menu so it can preserve the
+        # radiolist's cancellation contract even after filtering has started.
+        return False, False, False
 
     if key in (curses_mod.KEY_BACKSPACE, 127, 8):
         search.query = search.query[:-1]
@@ -436,7 +432,7 @@ def _handle_active_search_key(
         search.query = ""
         return True, False, True
 
-    if key in (curses_mod.KEY_ENTER, 10, 13):
+    if key in (curses_mod.KEY_ENTER, 10, 13, ord(" ")):
         return True, True, False
 
     if 32 <= key < 127:  # printable ASCII; avoids Latin-1 mojibake from 128-255
@@ -683,8 +679,9 @@ def _run_curses_menu(
         fallback() -> value
             Called when curses errors out on a real TTY (curses unavailable).
         cancel_value: returned on non-TTY stdin, ESC/cancel, or KeyboardInterrupt.
-        searchable: when true, ``/`` opens a type-to-filter prompt over
-            ``search_labels``. Returned values are always ORIGINAL item indices.
+        searchable: when true, printable typing immediately filters over
+            ``search_labels`` (``/`` remains a supported explicit shortcut).
+            Returned values are always ORIGINAL item indices.
         search_labels: per-item text used for filtering (required when
             ``searchable`` is true; length must equal ``item_count``).
     """
@@ -802,14 +799,9 @@ def _run_curses_menu(
                     if search.active and key == 27:
                         # Ghostty/Kitty enhanced keys also begin with ESC.
                         # Decode the full sequence before treating a genuine
-                        # Escape as "stop search"; otherwise Enter/Left/Ctrl+C
+                        # Escape as cancel; otherwise Enter/Left/Ctrl+C
                         # lose their tail while the search prompt is active.
                         action = _decode_menu_key(stdscr, key)
-                        if action == NAV_CANCEL:
-                            search.active = False
-                            search.query = ""
-                            scroll_offset = 0
-                            continue
                         if action == NAV_NONE:
                             continue
                     elif search.active:
@@ -839,6 +831,14 @@ def _run_curses_menu(
                         action = _decode_menu_key(stdscr, key)
                     elif key == ord("/"):
                         search.active = True
+                        continue
+                    elif 33 <= key < 127:
+                        # Type-to-search: printable keys start filtering without
+                        # requiring a separate "/" mode. Space is intentionally
+                        # excluded so it keeps its radiolist selection binding.
+                        search.active = True
+                        search.query = chr(key)
+                        scroll_offset = 0
                         continue
                     else:
                         action = _decode_menu_key(stdscr, key)
@@ -997,9 +997,9 @@ def curses_radiolist(
         description: Optional multi-line text shown between the title and
             the item list.  Useful for context that should survive the
             curses screen clear.
-        searchable: When true, ``/`` opens a type-to-filter prompt. The
-            returned value is always the original item index, not a filtered
-            row position.
+        searchable: When true, printable typing immediately filters the list;
+            ``/`` also explicitly opens search. The returned value is always
+            the original item index, not a filtered row position.
         search_labels: Optional haystacks for type-to-filter (length must
             match ``items``). Defaults to the display labels when omitted.
     """
@@ -1030,9 +1030,9 @@ def curses_radiolist(
                 row += 1
 
             if searchable and search is not None and search.active:
-                hint = f"  Search: {search.query}\u258e  BACKSPACE edit  Ctrl+U clear  ESC stop"
+                hint = f"  Search: {search.query}\u258e  BACKSPACE edit  Ctrl+U clear  ESC cancel"
             elif searchable:
-                hint = "  \u2191\u2193 navigate  ENTER/SPACE select  / search  ESC cancel"
+                hint = "  Type to filter  \u2191\u2193 navigate  ENTER/SPACE select  ESC cancel"
             else:
                 hint = "  \u2191\u2193 navigate  ENTER/SPACE select  ESC cancel"
             if back_enabled:
