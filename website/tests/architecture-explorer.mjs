@@ -14,16 +14,24 @@ const base = `http://127.0.0.1:${port}`;
 const route = "/docs/developer-guide/architecture";
 const evidence = process.env.ARCHITECTURE_EVIDENCE_DIR || "/tmp/hermes-architecture-evidence";
 const server = spawn(process.execPath, ["node_modules/@docusaurus/core/bin/docusaurus.mjs", "serve", "--port", String(port), "--host", "127.0.0.1", "--no-open"], { stdio: "pipe" });
+let serverOutput = "";
+let stoppingServer = false;
+server.stdout.on("data", (chunk) => { serverOutput += chunk; });
+server.stderr.on("data", (chunk) => { serverOutput += chunk; });
+const serverExit = new Promise((resolve, reject) => server.once("exit", (code, signal) => {
+  if (stoppingServer) resolve();
+  else reject(new Error(`Docusaurus preview exited before readiness (${code ?? signal})\n${serverOutput}`));
+}));
 
 async function waitForServer() {
-  for (let attempt = 0; attempt < 80; attempt += 1) {
+  for (let attempt = 0; attempt < 480; attempt += 1) {
     try {
       const response = await fetch(base + route);
       if (response.ok) return;
     } catch {}
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await Promise.race([new Promise((resolve) => setTimeout(resolve, 250)), serverExit]);
   }
-  throw new Error("Docusaurus preview did not become ready");
+  throw new Error(`Docusaurus preview did not become ready within 120 seconds\n${serverOutput}`);
 }
 
 try {
@@ -125,5 +133,6 @@ try {
   await browser.close();
   console.log(`Architecture explorer contract passed; evidence: ${evidence}`);
 } finally {
+  stoppingServer = true;
   server.kill("SIGTERM");
 }
