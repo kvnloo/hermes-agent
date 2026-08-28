@@ -459,5 +459,5 @@ If you are hunting for all the places a provider touches, search these symbols:
 ## Related docs
 
 - [Provider Runtime Resolution](./provider-runtime.md)
-- [Architecture](./architecture.md)
+- [Architecture](./architecture)
 - [Contributing](./contributing.md)

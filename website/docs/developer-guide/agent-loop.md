@@ -236,4 +236,4 @@ After each turn:
 - [Prompt Assembly](./prompt-assembly.md)
 - [Context Compression & Prompt Caching](./context-compression-and-caching.md)
 - [Tools Runtime](./tools-runtime.md)
-- [Architecture Overview](./architecture.md)
+- [Architecture Overview](./architecture)

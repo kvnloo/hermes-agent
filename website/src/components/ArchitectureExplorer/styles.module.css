@@ -1,0 +1,148 @@
+.explorer {
+  --architecture-accent: #d4a646;
+  margin: 1.5rem 0 2.5rem;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--ifm-background-surface-color);
+  box-shadow: 0 18px 50px rgb(15 23 42 / 8%);
+}
+
+.instructions {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.8rem;
+}
+
+.canvas {
+  height: 430px;
+  background: radial-gradient(circle at 15% 15%, rgb(212 166 70 / 10%), transparent 28%), var(--ifm-background-color);
+}
+
+.node {
+  width: 250px;
+  min-height: 118px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 1rem;
+  border: 1px solid var(--ifm-color-emphasis-400);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--ifm-background-surface-color) 94%, var(--architecture-accent));
+  box-shadow: 0 8px 22px rgb(15 23 42 / 10%);
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.node:hover,
+.nodeSelected {
+  border-color: var(--architecture-accent);
+  box-shadow: 0 10px 30px rgb(212 166 70 / 18%);
+  transform: translateY(-2px);
+}
+
+.nodeTitle {
+  color: var(--ifm-font-color-base);
+  font-size: 0.9rem;
+  font-weight: 750;
+  letter-spacing: 0.03em;
+}
+
+.nodeSummary {
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.handle {
+  width: 7px;
+  height: 7px;
+  border: 0;
+  background: var(--architecture-accent);
+}
+
+.details {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.7fr) minmax(240px, 1.4fr) minmax(180px, 0.9fr);
+  gap: 1rem 1.5rem;
+  align-items: start;
+  min-height: 190px;
+  padding: 1.35rem 1.5rem;
+  border-top: 1px solid var(--ifm-color-emphasis-200);
+}
+
+.details h3 {
+  grid-column: 1;
+  margin: 0.25rem 0 0;
+}
+
+.details > p,
+.details > ul {
+  grid-column: 2;
+  margin: 0;
+}
+
+.details > ul {
+  padding-left: 1.15rem;
+}
+
+.details nav {
+  grid-column: 3;
+  grid-row: 1 / span 3;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.eyebrow {
+  grid-column: 1;
+  color: var(--architecture-accent);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.reference {
+  display: flex;
+  gap: 0.55rem;
+  align-items: center;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 8px;
+  color: var(--ifm-font-color-base);
+  font-size: 0.78rem;
+  text-decoration: none;
+}
+
+.reference:hover { border-color: var(--architecture-accent); text-decoration: none; }
+.reference span { color: var(--ifm-color-emphasis-600); font-size: 0.65rem; text-transform: uppercase; }
+
+.semanticCopy { margin: 0 1.5rem 1.5rem; font-size: 0.85rem; }
+.semanticCopy > summary { cursor: pointer; font-weight: 650; }
+
+.staticFallback {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 12px;
+}
+
+.fallbackIntro { margin-top: 0; }
+.staticGrid { display: grid; gap: 1rem; padding-left: 1.5rem; }
+.staticGrid > li { padding-left: 0.4rem; }
+.staticGrid p { margin: 0.25rem 0; }
+.staticGrid ul { margin: 0.35rem 0; }
+.staticLinks { display: flex; flex-wrap: wrap; gap: 0.75rem; font-size: 0.8rem; }
+
+@media (max-width: 760px) {
+  .canvas { height: 560px; }
+  .details { grid-template-columns: 1fr; padding: 1rem; }
+  .details > *, .details h3, .details > p, .details > ul, .details nav, .eyebrow { grid-column: 1; grid-row: auto; }
+  .semanticCopy { margin: 0 1rem 1rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .node { transition: none; }
+  .node:hover, .nodeSelected { transform: none; }
+  :global(.react-flow__edge.animated path) { animation: none; }
+}

@@ -4,49 +4,53 @@ title: "Architecture"
 description: "Hermes Agent internals — major subsystems, execution paths, data flow, and where to read next"
 ---
 
+import ArchitectureExplorer from '@site/src/components/ArchitectureExplorer';
+
 # Architecture
 
 This page is the top-level map of Hermes Agent internals. Use it to orient yourself in the codebase, then dive into subsystem-specific docs for implementation details.
 
 ## System Overview
 
-```text
-┌─────────────────────────────────────────────────────────────────────┐
-│                        Entry Points                                  │
-│                                                                      │
-│  CLI (cli.py)    Gateway (gateway/run.py)    ACP (acp_adapter/)     │
-│  Batch Runner    API Server                  Python Library          │
-└──────────┬──────────────┬───────────────────────┬───────────────────┘
-           │              │                       │
-           ▼              ▼                       ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                     AIAgent (run_agent.py)                          │
-│                                                                     │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐               │
-│  │ Prompt       │  │ Provider     │  │ Tool         │               │
-│  │ Builder      │  │ Resolution   │  │ Dispatch     │               │
-│  │ (prompt_     │  │ (runtime_    │  │ (model_      │               │
-│  │  builder.py) │  │  provider.py)│  │  tools.py)   │               │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘               │
-│         │                 │                 │                       │
-│  ┌──────┴───────┐  ┌──────┴───────┐  ┌──────┴───────┐               │
-│  │ Compression  │  │ 3 API Modes  │  │ Tool Registry│               │
-│  │ & Caching    │  │ chat_compl.  │  │ (registry.py)│               │
-│  │              │  │ codex_resp.  │  │ 70+ tools    │               │
-│  │              │  │ anthropic    │  │ 28 toolsets  │               │
-│  └──────────────┘  └──────────────┘  └──────────────┘               │
-└─────────┴─────────────────┴─────────────────┴───────────────────────┘
-           │                                    │
-           ▼                                    ▼
-┌───────────────────┐              ┌──────────────────────┐
-│ Session Storage   │              │ Tool Backends         │
-│ (SQLite + FTS5)   │              │ Terminal (6 backends) │
-│ hermes_state.py   │              │ Browser (5 backends)  │
-│ gateway/session.py│              │ Web (4 backends)      │
-└───────────────────┘              │ MCP (dynamic)         │
-                                   │ File, Vision, etc.    │
-                                   └──────────────────────┘
-```
+The explorer follows one request from a user-facing surface through routing,
+prompt assembly, the agent/provider/tool loop, delivery, and durable state.
+Select a stage for canonical implementation and test links. A complete text
+representation is included below the interactive canvas and in `llms-full.txt`.
+
+<ArchitectureExplorer />
+
+<details>
+<summary>Complete request lifecycle (text)</summary>
+
+1. **Surfaces** — CLI, TUI, Desktop, ACP, batch, API, cron, and messaging
+   accept work. Each surface normalizes user intent before entering the shared
+   agent runtime; surface-specific presentation stays outside the core loop.
+2. **Session / Gateway** — routing, authorization, history, interrupts, and
+   session identity converge. Gateway adapters normalize platform events and
+   resolve a durable session key; direct surfaces restore the same conversation
+   model without gateway routing.
+3. **Prompt Assembly** — stable instructions, project context, skills, memory,
+   and history form the request. Ordered prompt tiers preserve a byte-stable
+   cached prefix, with compression as the controlled context-budget exception.
+4. **Agent Loop** — `AIAgent` coordinates model calls, tool turns, iteration
+   budgets, retries, fallback, interrupts, and completion while preserving
+   strict message-role alternation.
+5. **Provider Runtime** — provider, model, credentials, API mode, and fallback
+   route resolve for the call. Chat Completions, Codex Responses, and Anthropic
+   Messages retain their provider-specific wire behavior.
+6. **Tools / Approvals** — toolsets and availability checks determine the
+   model-visible schema. The registry dispatches handlers while approval gates
+   hold risky terminal actions for an explicit decision.
+7. **Events / Delivery** — streaming deltas, tool progress, final output, and
+   hooks return through surface callbacks. Gateway delivery handles platform
+   limits, edits, media, streaming, and final-message reconciliation.
+8. **Sessions / Memory / Usage / State** — SQLite persists messages, lineage,
+   per-model usage, routing, and searchable state. Memory providers and session
+   search add recall without mutating the stable prompt prefix mid-session.
+9. **Next Turn** — completed output becomes history and queued input re-enters
+   the same lifecycle through session routing and prompt assembly.
+
+</details>
 
 ## Directory Structure
 
