@@ -49,6 +49,7 @@ class SurfaceSessionConfig:
     scopes: frozenset[str] = field(default_factory=frozenset)
 
     MAX_TTL_SECONDS = 300.0
+    ALLOWED_SCOPES = frozenset({"audio.send", "events.receive"})
 
     def validate(self, *, now: float | None = None) -> None:
         current_time = time.time() if now is None else now
@@ -58,9 +59,8 @@ class SurfaceSessionConfig:
             raise ValueError("Surface session config is expired")
         if self.expires_at > current_time + self.MAX_TTL_SECONDS:
             raise ValueError("Surface session config lifetime exceeds the maximum")
-        forbidden = {"approve", "approval", "tools.execute", "provider.secret"}
-        if self.scopes & forbidden:
-            raise ValueError("Surface session config requests a forbidden scope")
+        if self.scopes - self.ALLOWED_SCOPES:
+            raise ValueError("Surface session config requests an unsupported scope")
 
 
 @dataclass(frozen=True)

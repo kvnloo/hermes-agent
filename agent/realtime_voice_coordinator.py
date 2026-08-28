@@ -89,9 +89,12 @@ class RealtimeVoiceCoordinator:
 
     async def cancel_response(self) -> None:
         session = self._require_session()
+        epoch = self._epoch
         boundary, self._heard_boundary = self._heard_boundary, None
         if boundary is not None:
             await session.truncate_response(boundary)
+        if self._session is not session or self._epoch != epoch:
+            return
         await session.cancel_response()
 
     async def events(self) -> AsyncIterator[RealtimeEvent]:
@@ -112,11 +115,11 @@ class RealtimeVoiceCoordinator:
                 if event.call_id in self._dispatched_call_ids:
                     continue
                 self._dispatched_call_ids.add(event.call_id)
-                await self._dispatch(event, session)
+                await self._dispatch(event, session, epoch)
             yield event
 
     async def _dispatch(
-        self, event: RealtimeEvent, session: RealtimeSession
+        self, event: RealtimeEvent, session: RealtimeSession, epoch: int
     ) -> None:
         if not event.call_id or not event.tool_name:
             raise ValueError("Realtime tool_call events require call_id and tool_name")
@@ -127,6 +130,8 @@ class RealtimeVoiceCoordinator:
             output = str(result)
         except Exception as exc:
             output = f"Error: {exc}"
+        if self._session is not session or self._epoch != epoch:
+            return
         await session.submit_tool_result(event.call_id, output)
 
     async def close(self) -> None:

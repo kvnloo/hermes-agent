@@ -90,6 +90,18 @@ class BoundarySession(FakeSession):
         self.cancellation_operations.append("truncate")
 
 
+class GatedTruncationSession(BoundarySession):
+    def __init__(self, events: list[RealtimeEvent]) -> None:
+        super().__init__(events)
+        self.truncation_started = asyncio.Event()
+        self.release_truncation = asyncio.Event()
+
+    async def truncate_response(self, boundary: HeardAudioBoundary) -> None:
+        await super().truncate_response(boundary)
+        self.truncation_started.set()
+        await self.release_truncation.wait()
+
+
 class LegacyCancelSession(FakeSession):
     async def cancel_response(self) -> None:
         self.cancelled = True
@@ -316,7 +328,10 @@ async def test_surface_hosted_topology_returns_only_scoped_expiring_config():
     ("expires_at", "scopes", "message"),
     [
         (0, frozenset({"audio.send"}), "expired"),
-        (time.time() + 60, frozenset({"approval"}), "forbidden scope"),
+        (time.time() + 60, frozenset({"approval"}), "unsupported scope"),
+        (time.time() + 60, frozenset({"approval.once"}), "unsupported scope"),
+        (time.time() + 60, frozenset({"tools.execute.shell"}), "unsupported scope"),
+        (time.time() + 60, frozenset({"unknown"}), "unsupported scope"),
         (float("inf"), frozenset({"audio.send"}), "lifetime exceeds"),
     ],
 )
@@ -376,3 +391,54 @@ async def test_stale_event_iterator_cannot_dispatch_after_reconnect():
     with pytest.raises(StopAsyncIteration):
         await stale_event
     assert dispatched == []
+
+
+@pytest.mark.asyncio
+async def test_inflight_tool_result_is_suppressed_after_reconnect():
+    tool_call = RealtimeEvent.tool_call("old", "terminal", {})
+    old_session = FakeSession([tool_call])
+    provider = FakeProvider("fake", old_session)
+    dispatch_started = asyncio.Event()
+    release_dispatch = asyncio.Event()
+
+    async def dispatch(_name: str, _arguments: dict[str, Any]) -> str:
+        dispatch_started.set()
+        await release_dispatch.wait()
+        return "stale"
+
+    coordinator = RealtimeVoiceCoordinator(provider, dispatch_tool=dispatch)
+    await coordinator.open(instructions="", tools=[])
+    old_event = asyncio.ensure_future(anext(coordinator.events()))
+    await dispatch_started.wait()
+    await coordinator.close()
+    new_session = FakeSession([])
+    provider.session = new_session
+    await coordinator.open(instructions="", tools=[])
+    release_dispatch.set()
+
+    assert await old_event is tool_call
+    assert old_session.tool_results == []
+    assert new_session.tool_results == []
+
+
+@pytest.mark.asyncio
+async def test_inflight_truncation_does_not_cancel_after_reconnect():
+    output = RealtimeEvent.audio(b"old", item_id="old-item")
+    old_session = GatedTruncationSession([output])
+    provider = FakeProvider("fake", old_session)
+    coordinator = RealtimeVoiceCoordinator(provider, dispatch_tool=lambda _n, _a: "ok")
+    await coordinator.open(instructions="", tools=[])
+    [observed] = [event async for event in coordinator.events()]
+    assert coordinator.report_audio_heard(observed, audio_end_ms=10) is True
+    cancellation = asyncio.create_task(coordinator.cancel_response())
+    await old_session.truncation_started.wait()
+    await coordinator.close()
+    new_session = FakeSession([])
+    provider.session = new_session
+    await coordinator.open(instructions="", tools=[])
+    old_session.release_truncation.set()
+    await cancellation
+
+    assert old_session.cancellation_operations == ["truncate"]
+    assert old_session.cancelled is False
+    assert new_session.cancelled is False
