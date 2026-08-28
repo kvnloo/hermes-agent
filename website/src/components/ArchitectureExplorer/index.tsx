@@ -23,10 +23,21 @@ interface StageNodeData extends Record<string, unknown> {
   summary: string;
 }
 
-function StageNode({ data, selected }: NodeProps): React.ReactElement {
+function StageNode({ id, data, selected }: NodeProps): React.ReactElement {
   const stage = data as StageNodeData;
   return (
-    <div className={`${styles.node} ${selected ? styles.nodeSelected : ""}`}>
+    <div
+      className={`${styles.node} ${selected ? styles.nodeSelected : ""}`}
+      role="button"
+      tabIndex={0}
+      aria-label={`${stage.label}. ${stage.summary}`}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          window.dispatchEvent(new CustomEvent("architecture-stage-select", { detail: id }));
+        }
+      }}
+    >
       <Handle type="target" position={Position.Left} className={styles.handle} />
       <span className={styles.nodeTitle}>{stage.label}</span>
       <span className={styles.nodeSummary}>{stage.summary}</span>
@@ -80,14 +91,37 @@ function StaticArchitecture(): React.ReactElement {
 export default function ArchitectureExplorer(): React.ReactElement {
   const [hydrated, setHydrated] = useState(false);
   const [selectedId, setSelectedId] = useState(architectureStages[0].id);
+  const [reducedMotion, setReducedMotion] = useState(false);
   const selectedStage = architectureStages.find((stage) => stage.id === selectedId) ?? architectureStages[0];
   const nodeTypes = useMemo(() => ({ architectureStage: StageNode }), []);
   const edges = useMemo(() => architectureEdges.map((edge) => ({
     ...edge,
+    animated: !reducedMotion,
     markerEnd: { type: MarkerType.ArrowClosed },
-  })), []);
+  })), [reducedMotion]);
 
-  useEffect(() => setHydrated(true), []);
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("architecture");
+    if (architectureStages.some((stage) => stage.id === requested)) setSelectedId(requested!);
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updateMotion = () => setReducedMotion(media.matches);
+    updateMotion();
+    media.addEventListener("change", updateMotion);
+    const selectFromKeyboard = (event: Event) => selectStage((event as CustomEvent<string>).detail);
+    window.addEventListener("architecture-stage-select", selectFromKeyboard);
+    setHydrated(true);
+    return () => {
+      media.removeEventListener("change", updateMotion);
+      window.removeEventListener("architecture-stage-select", selectFromKeyboard);
+    };
+  }, []);
+
+  const selectStage = (id: string) => {
+    setSelectedId(id);
+    const url = new URL(window.location.href);
+    url.searchParams.set("architecture", id);
+    window.history.replaceState({}, "", url);
+  };
 
   if (!hydrated) return <StaticArchitecture />;
 
@@ -96,7 +130,7 @@ export default function ArchitectureExplorer(): React.ReactElement {
       <div className={styles.instructions} id="architecture-explorer-instructions">
         Select a stage to inspect it. Use Tab to focus a node, Enter to select it, and the controls to zoom or fit the lifecycle.
       </div>
-      <div className={styles.canvas} aria-describedby="architecture-explorer-instructions">
+      <div className={styles.canvas} aria-describedby="architecture-explorer-instructions" data-testid="architecture-canvas">
         <ReactFlow
           nodes={architectureNodes}
           edges={edges}
@@ -111,15 +145,34 @@ export default function ArchitectureExplorer(): React.ReactElement {
           maxZoom={1.5}
           fitView
           fitViewOptions={{ padding: 0.12 }}
-          onNodeClick={(_, node) => setSelectedId(node.id)}
+          onNodeClick={(_, node) => selectStage(node.id)}
+          onSelectionChange={({ nodes }) => {
+            if (nodes[0]) selectStage(nodes[0].id);
+          }}
 
           proOptions={{ hideAttribution: false }}
-          aria-label="Hermes request lifecycle. Nine connected stages from surfaces through durable state and the next turn."
+          aria-label="Hermes request lifecycle. Eight connected stages from surfaces through durable state."
         >
           <Background gap={24} size={1} />
           <Controls showInteractive={false} />
         </ReactFlow>
       </div>
+      <ol className={styles.mobileStages} aria-label="Hermes request lifecycle stages">
+        {architectureStages.map((stage) => (
+          <li key={stage.id}>
+            <button
+              type="button"
+              className={stage.id === selectedId ? styles.mobileStageSelected : undefined}
+              aria-pressed={stage.id === selectedId}
+              onClick={() => selectStage(stage.id)}
+            >
+              <span>{stage.order}</span>
+              <strong>{stage.title}</strong>
+              <small>{stage.summary}</small>
+            </button>
+          </li>
+        ))}
+      </ol>
       <StageDetails stage={selectedStage} />
       <details className={styles.semanticCopy}>
         <summary>Read the complete architecture as text</summary>

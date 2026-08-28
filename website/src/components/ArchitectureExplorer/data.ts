@@ -121,19 +121,6 @@ export const architectureStages: ArchitectureStage[] = [
     ],
     position: { x: 300, y: 250 },
   },
-  {
-    id: "next-turn",
-    order: "09",
-    title: "Next Turn",
-    summary: "Persisted history and queued input re-enter the same request lifecycle.",
-    details: ["A completed turn becomes history for the next request without rebuilding prior context.", "Queued messages, cron triggers, and follow-ups begin another pass through the same architecture."],
-    references: [
-      { label: "Context and caching", href: "/developer-guide/context-compression-and-caching", kind: "Guide" },
-      { label: "Conversation loop", href: "https://github.com/NousResearch/hermes-agent/blob/main/run_agent.py", kind: "Source" },
-      { label: "Conversation tests", href: "https://github.com/NousResearch/hermes-agent/tree/main/tests", kind: "Tests" },
-    ],
-    position: { x: 0, y: 250 },
-  },
 ];
 
 export const architectureNodes: Node[] = architectureStages.map((stage) => ({
@@ -144,7 +131,7 @@ export const architectureNodes: Node[] = architectureStages.map((stage) => ({
   ariaLabel: `${stage.order}, ${stage.title}. ${stage.summary}`,
 }));
 
-const lifecycle = ["surfaces", "session-gateway", "prompt-assembly", "agent-loop", "provider-runtime", "tools-approvals", "events-delivery", "state", "next-turn"];
+const lifecycle = ["surfaces", "session-gateway", "prompt-assembly", "agent-loop", "provider-runtime", "tools-approvals", "events-delivery", "state"];
 
 export const architectureEdges: Edge[] = lifecycle.slice(0, -1).map((source, index) => ({
   id: `${source}-${lifecycle[index + 1]}`,
@@ -154,4 +141,4 @@ export const architectureEdges: Edge[] = lifecycle.slice(0, -1).map((source, ind
   animated: true,
 }));
 
-architectureEdges.push({ id: "next-turn-session", source: "next-turn", target: "session-gateway", type: "smoothstep", animated: true });
+architectureEdges.push({ id: "state-session", source: "state", target: "session-gateway", type: "smoothstep", animated: true });

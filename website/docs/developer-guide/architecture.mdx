@@ -47,8 +47,8 @@ representation is included below the interactive canvas and in `llms-full.txt`.
 8. **Sessions / Memory / Usage / State** — SQLite persists messages, lineage,
    per-model usage, routing, and searchable state. Memory providers and session
    search add recall without mutating the stable prompt prefix mid-session.
-9. **Next Turn** — completed output becomes history and queued input re-enters
-   the same lifecycle through session routing and prompt assembly.
+The durable state from stage 8 feeds subsequent turns back through session
+routing and prompt assembly, completing the lifecycle.
 
 </details>
 
