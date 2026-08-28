@@ -143,7 +143,31 @@ def test_breadcrumbs_fail_closed_for_corrupt_orphan_and_cycle_rows(board):
         kb.issue_breadcrumbs(board, child)
 
 
-def test_product_scope_ids_deliberately_allow_colon(board):
-    product_id = "company:zer0:product:hermes-agent"
+@pytest.mark.parametrize(
+    "product_id",
+    [
+        "productHermes1",
+        "product.hermes",
+        "product_hermes",
+        "product-hermes",
+        "A.b_c-9",
+    ],
+)
+def test_product_scope_ids_accept_alphanumeric_dot_underscore_hyphen(board, product_id):
     task_id = kb.create_task(board, title="portable", product_id=product_id)
     assert kb.get_task(board, task_id).product_id == product_id
+
+
+@pytest.mark.parametrize(
+    "product_id",
+    [
+        "company:zer0",
+        "product:hermes-agent",
+        "a:b",
+        ":leading",
+        "trailing:",
+    ],
+)
+def test_product_scope_ids_reject_colon(board, product_id):
+    with pytest.raises(ValueError, match="product_id must be a structured identifier"):
+        kb.create_task(board, title="portable", product_id=product_id)

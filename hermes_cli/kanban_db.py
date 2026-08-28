@@ -141,7 +141,7 @@ VALID_ISSUE_KINDS = {
 # intentionally generous for organizational/project decomposition while
 # bounding corrupt or adversarial chains across every hierarchy surface.
 MAX_CONTAINMENT_DEPTH = 32
-_SCOPE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
+_SCOPE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 
 
 def normalize_reasoning_effort(effort: Optional[str]) -> Optional[str]:

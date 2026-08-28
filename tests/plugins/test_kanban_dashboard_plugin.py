@@ -142,6 +142,44 @@ def test_dashboard_filters_and_reparents_recursive_issues(client):
     assert moved.json()["task"]["parent_id"] == other["id"]
 
 
+@pytest.mark.parametrize(
+    "product_id",
+    [
+        "productHermes1",
+        "product.hermes",
+        "product_hermes",
+        "product-hermes",
+        "A.b_c-9",
+    ],
+)
+def test_dashboard_create_accepts_structured_product_ids(client, product_id):
+    response = client.post(
+        "/api/plugins/kanban/tasks",
+        json={"title": "portable", "product_id": product_id},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["task"]["product_id"] == product_id
+
+
+@pytest.mark.parametrize(
+    "product_id",
+    [
+        "company:zer0",
+        "product:hermes-agent",
+        "a:b",
+        ":leading",
+        "trailing:",
+    ],
+)
+def test_dashboard_create_rejects_colon_product_ids(client, product_id):
+    response = client.post(
+        "/api/plugins/kanban/tasks",
+        json={"title": "portable", "product_id": product_id},
+    )
+    assert response.status_code == 400
+    assert "product_id must be a structured identifier" in response.json()["detail"]
+
+
 def test_dashboard_rejects_ambiguous_parent_clear_payload(client):
     parent = client.post("/api/plugins/kanban/tasks", json={"title": "parent"}).json()["task"]
     child = client.post("/api/plugins/kanban/tasks", json={"title": "child"}).json()["task"]
