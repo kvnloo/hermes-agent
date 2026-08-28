@@ -182,3 +182,34 @@ class TestModelSetSkewGuard:
         body = _rt_models.ModelAssignment(scope="main", provider="nous", model="some-model")
         result = asyncio.run(_rt_models.set_model_assignment(body))
         assert result["ok"] is True
+class TestTreeFingerprint:
+    """Skew is about CONTENT: identical trees under different commits are not skew."""
+
+    def _git(self, repo, *args):
+        import subprocess
+        return subprocess.run(["git", "-C", str(repo), *args], capture_output=True, text=True, check=True).stdout.strip()
+
+    def test_identical_tree_across_commits_is_not_skew(self, tmp_path, monkeypatch):
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        self._git(repo, "init", "-q", "-b", "main")
+        self._git(repo, "config", "user.email", "t@example.invalid")
+        self._git(repo, "config", "user.name", "t")
+        (repo / "a.py").write_text("x = 1\n")
+        self._git(repo, "add", "a.py")
+        self._git(repo, "commit", "-q", "-m", "one")
+        monkeypatch.setattr(code_skew, "_PROJECT_ROOT", repo)
+        code_skew.record_boot_fingerprint()
+        assert code_skew._boot_fingerprint.startswith("tree:")
+        # A second commit with the SAME tree (branch flip / empty commit).
+        self._git(repo, "commit", "-q", "--allow-empty", "-m", "two")
+        assert code_skew.detect_code_skew() is None
+        # A real content change IS skew.
+        (repo / "a.py").write_text("x = 2\n")
+        self._git(repo, "commit", "-q", "-am", "three")
+        skew = code_skew.detect_code_skew()
+        assert skew is not None and skew[0] != skew[1]
+
+    def test_tree_fingerprint_none_outside_git(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(code_skew, "_PROJECT_ROOT", tmp_path)
+        assert code_skew._tree_fingerprint() is None
