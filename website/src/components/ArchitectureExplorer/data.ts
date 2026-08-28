@@ -134,11 +134,11 @@ export const architectureNodes: Node[] = architectureStages.map((stage) => ({
 const lifecycle = ["surfaces", "session-gateway", "prompt-assembly", "agent-loop", "provider-runtime", "tools-approvals", "events-delivery", "state"];
 
 export const architectureEdges: Edge[] = lifecycle.slice(0, -1).map((source, index) => ({
-  id: `${source}-${lifecycle[index + 1]}`,
+  id: `edge:${source}->${lifecycle[index + 1]}`,
   source,
   target: lifecycle[index + 1],
   type: "smoothstep",
   animated: true,
 }));
 
-architectureEdges.push({ id: "state-session", source: "state", target: "session-gateway", type: "smoothstep", animated: true });
+architectureEdges.push({ id: "edge:state->session-gateway", source: "state", target: "session-gateway", type: "smoothstep", animated: true });

@@ -1,9 +1,15 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdir } from "node:fs/promises";
+import { access, mkdir } from "node:fs/promises";
+import { createServer } from "node:net";
+import path from "node:path";
 import { chromium } from "playwright";
 
-const port = 4300 + (process.pid % 1000);
+const probe = createServer();
+await new Promise((resolve, reject) => probe.listen(0, "127.0.0.1", resolve).once("error", reject));
+const address = probe.address();
+const port = typeof address === "object" && address ? address.port : 4317;
+await new Promise((resolve) => probe.close(resolve));
 const base = `http://127.0.0.1:${port}`;
 const route = "/docs/developer-guide/architecture";
 const evidence = process.env.ARCHITECTURE_EVIDENCE_DIR || "/tmp/hermes-architecture-evidence";
@@ -23,11 +29,20 @@ async function waitForServer() {
 try {
   await mkdir(evidence, { recursive: true });
   await waitForServer();
-  const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROMIUM_PATH || "/usr/bin/chromium" });
+  let browser;
+  try {
+    browser = await chromium.launch({ headless: true, executablePath: process.env.CHROMIUM_PATH });
+  } catch (error) {
+    const systemChromium = "/usr/bin/chromium";
+    await access(systemChromium).catch(() => { throw error; });
+    browser = await chromium.launch({ headless: true, executablePath: systemChromium });
+  }
 
   for (const scheme of ["light", "dark"]) {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, colorScheme: scheme });
+    await page.addInitScript((theme) => localStorage.setItem("theme", theme), scheme);
     await page.goto(`${base}${route}?architecture=tools-approvals`, { waitUntil: "networkidle" });
+    assert.equal(await page.locator("html").getAttribute("data-theme"), scheme, `${scheme} theme is effective`);
     await page.locator("[data-testid=architecture-canvas] .react-flow__node").first().waitFor();
     assert.equal(await page.locator(".react-flow__node").count(), 8, "desktop graph has exactly eight stages");
     assert.match(await page.locator("aside[aria-live=polite] h3").textContent(), /Tools \/ Approvals/);
@@ -46,13 +61,15 @@ try {
       const edgeNode = [];
       for (const path of document.querySelectorAll(".react-flow__edge-path")) {
         const edge = path.closest(".react-flow__edge");
-        const id = edge?.getAttribute("data-testid")?.replace("rf__edge-", "") || "edge";
+        const id = edge?.getAttribute("data-testid")?.replace("rf__edge-", "") || "edge:unknown->unknown";
+        const [source, target] = id.replace("edge:", "").split("->");
         const length = path.getTotalLength();
-        for (let step = 1; step < 20; step += 1) {
-          const point = path.getPointAtLength(length * step / 20);
+        const steps = Math.ceil(length);
+        for (let step = 1; step < steps; step += 1) {
+          const point = path.getPointAtLength(step);
           const screen = new DOMPoint(point.x, point.y).matrixTransform(path.getScreenCTM());
           for (const node of nodes) {
-            if (id.startsWith(`${node.id}-`) || id.endsWith(`-${node.id}`)) continue;
+            if (node.id === source || node.id === target) continue;
             const r = node.rect; const margin = 4;
             if (screen.x > r.left - margin && screen.x < r.right + margin && screen.y > r.top - margin && screen.y < r.bottom + margin) edgeNode.push(`${id}/${node.id}`);
           }
@@ -63,6 +80,20 @@ try {
     assert.deepEqual(geometry.collisions, [], "nodes preserve a 12px safe margin");
     assert.deepEqual(geometry.edgeNode, [], "edges preserve a 4px safe margin from nodes between endpoints");
     assert.ok(geometry.overflow <= 1, `page has no horizontal overflow (${geometry.overflow}px)`);
+    const references = await page.locator("section[aria-label='Hermes request lifecycle'] a").evaluateAll((links) => [...new Set(links.map((link) => link.href))]);
+    assert.ok(references.length >= 20, "all stages expose canonical references");
+    for (const href of references) {
+      const url = new URL(href);
+      if (url.origin === base) {
+        const response = await fetch(href);
+        assert.ok(response.ok, `internal reference resolves: ${href}`);
+      } else {
+        assert.equal(url.hostname, "github.com", `external reference is canonical GitHub: ${href}`);
+        assert.match(url.pathname, /^\/NousResearch\/hermes-agent\/(blob|tree)\/main\//);
+        const relative = url.pathname.replace(/^\/NousResearch\/hermes-agent\/(?:blob|tree)\/main\//, "");
+        await access(path.resolve("..", relative));
+      }
+    }
     await page.screenshot({ path: `${evidence}/desktop-${scheme}.png`, fullPage: true });
     await page.close();
   }
