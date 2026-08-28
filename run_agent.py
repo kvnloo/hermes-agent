@@ -8595,6 +8595,7 @@ class AIAgent:
         persist_user_display_kind: Optional[str] = None,
         persist_user_display_metadata: Optional[Dict[str, Any]] = None,
         moa_config: Optional[dict[str, Any]] = None,
+        conversation_session: Optional[Any] = None,
     ) -> Dict[str, Any]:
         """Forwarder — see ``agent.conversation_loop.run_conversation``."""
         # A review deliberately shares this agent's session_id for prompt-cache
@@ -8957,19 +8958,51 @@ class AIAgent:
                         with durable_turn_lease_activity_lock:
                             durable_turn_lease_turn_active = True
                         durable_turn_lease_thread.start()
-                    result = run_conversation(
-                        self,
-                        user_message,
-                        system_message,
-                        conversation_history,
-                        effective_task_id,
-                        stream_callback,
-                        persist_user_message,
-                        persist_user_timestamp=persist_user_timestamp,
-                        persist_user_display_kind=persist_user_display_kind,
-                        persist_user_display_metadata=persist_user_display_metadata,
-                        moa_config=moa_config,
-                    )
+                    def _run_turn(active_stream_callback):
+                        return run_conversation(
+                            self,
+                            user_message,
+                            system_message,
+                            conversation_history,
+                            effective_task_id,
+                            active_stream_callback,
+                            persist_user_message,
+                            persist_user_timestamp=persist_user_timestamp,
+                            persist_user_display_kind=persist_user_display_kind,
+                            persist_user_display_metadata=persist_user_display_metadata,
+                            moa_config=moa_config,
+                        )
+
+                    if conversation_session is None:
+                        result = _run_turn(stream_callback)
+                    else:
+                        from agent.realtime_voice_coordinator import (
+                            ConversationSession,
+                            run_authoritative_turn,
+                        )
+
+                        if not isinstance(conversation_session, ConversationSession):
+                            raise TypeError(
+                                "conversation_session must be a ConversationSession"
+                            )
+                        if conversation_session.session_id != session_id:
+                            raise PermissionError(
+                                "conversation_session does not own this agent session"
+                            )
+                        if (
+                            conversation_session.profile_key
+                            != relay_runtime.current_profile_key()
+                        ):
+                            raise PermissionError(
+                                "conversation_session does not own this agent profile"
+                            )
+                        result = run_authoritative_turn(
+                            conversation_session,
+                            turn_id=relay_turn_id,
+                            task_id=effective_task_id,
+                            run_turn=_run_turn,
+                            stream_callback=stream_callback,
+                        )
                 finally:
                     # The lease remains held through relay/task finalization, but
                     # those post-loop steps must not receive a late refresh

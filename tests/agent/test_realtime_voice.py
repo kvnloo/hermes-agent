@@ -140,6 +140,27 @@ async def test_coordinator_keeps_tool_dispatch_in_hermes(provider_name: str):
 
 
 @pytest.mark.asyncio
+async def test_coordinator_suppresses_duplicate_provider_tool_effects() -> None:
+    duplicate = RealtimeEvent.tool_call("call-1", "terminal", {"command": "pwd"})
+    provider_session = FakeSession([duplicate, duplicate])
+    effects: list[str] = []
+
+    async def dispatch(_name: str, _arguments: dict[str, Any]) -> str:
+        effects.append("ran")
+        return "ok"
+
+    coordinator = RealtimeVoiceCoordinator(
+        FakeProvider("fake", provider_session), dispatch_tool=dispatch
+    )
+    await coordinator.open(instructions="", tools=[])
+    observed = [event async for event in coordinator.events()]
+
+    assert observed == [duplicate, duplicate]
+    assert effects == ["ran"]
+    assert provider_session.tool_results == [("call-1", "ok"), ("call-1", "ok")]
+
+
+@pytest.mark.asyncio
 async def test_coordinator_cancels_at_the_latest_heard_output_boundary_once():
     session = BoundarySession([RealtimeEvent.audio(b"reply-pcm", item_id="item-1")])
     coordinator = RealtimeVoiceCoordinator(
