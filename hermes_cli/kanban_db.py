@@ -10714,6 +10714,32 @@ class WorkerPreflightError(RuntimeError):
     """A deterministic worker route failure that should block immediately."""
 
 
+def _is_deterministic_worker_auth_error(exc: Exception) -> bool:
+    """Return whether auth state requires operator action rather than a retry."""
+    from hermes_cli.auth import AuthError
+
+    if not isinstance(exc, AuthError):
+        return False
+    if getattr(exc, "relogin_required", False):
+        return True
+    code = (getattr(exc, "code", None) or "").lower()
+    return code in {"invalid_provider", "no_provider_configured", "missing"} or any(
+        marker in code
+        for marker in (
+            "auth_missing",
+            "auth_invalid_shape",
+            "missing_access_token",
+            "missing_refresh_token",
+            "refresh_token_missing",
+            "access_token_missing",
+            "not_logged_in",
+            "no_access_token",
+            "no_refresh_token",
+            "invalid_token",
+        )
+    )
+
+
 def _preflight_worker_route(task: Task, profile_home: Path) -> None:
     """Validate a pinned worker provider with the runtime auth resolver."""
     provider = (task.provider_override or "").strip()
@@ -10730,6 +10756,8 @@ def _preflight_worker_route(task: Task, profile_home: Path) -> None:
             target_model=task.model_override,
         )
     except Exception as exc:
+        if not _is_deterministic_worker_auth_error(exc):
+            raise
         profile = task.assignee or "<profile>"
         model = task.model_override or "<profile default>"
         raise WorkerPreflightError(
