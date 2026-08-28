@@ -173,6 +173,11 @@ function makeFullscreenableWindow() {
     fullscreen = on
     listeners.get(on ? 'enter-full-screen' : 'leave-full-screen')?.()
   }
+  const origClose = win.close.bind(win)
+  ext.close = () => {
+    origClose()
+    listeners.get('closed')?.()
+  }
 
   return ext
 }
@@ -248,4 +253,28 @@ test('leaving fullscreen while a turn is still in flight keeps both windows live
 
   throttle.update(false)
   assert.equal(timers.pendingCount, 1, 'normal trailing re-throttle resumes')
+})
+
+test('closing a fullscreen window without leave-full-screen re-throttles remaining idle windows', () => {
+  const timers = makeTimers()
+  const throttle = createStreamThrottle(timers)
+  const fsWin = makeFullscreenableWindow()
+  const remaining = makeWindow()
+
+  throttle.register(fsWin)
+  throttle.register(remaining)
+
+  fsWin.goFullscreen(true)
+  assert.equal(throttle.isUnthrottled(), true)
+  assert.deepEqual(remaining.calls.slice(-1), [false])
+  assert.equal(timers.pendingCount, 0)
+
+  // Close while still fullscreen: Electron does not emit leave-full-screen.
+  fsWin.close()
+  assert.equal(fsWin.isDestroyed(), true)
+
+  assert.equal(timers.pendingCount, 1, 'closed handler arms trailing settle when no busy/fullscreen window remains')
+  timers.fire()
+  assert.deepEqual(remaining.calls, [true, false, true])
+  assert.equal(throttle.isUnthrottled(), false)
 })

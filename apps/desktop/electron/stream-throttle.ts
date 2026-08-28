@@ -123,7 +123,23 @@ export function createStreamThrottle(
 
     register(win) {
       windows.add(win)
-      win.on?.('closed', () => windows.delete(win))
+      win.on?.('closed', () => {
+        windows.delete(win)
+        // Closing a fullscreen window does not emit leave-full-screen.
+        // Re-evaluate so remaining idle windows can settle instead of
+        // staying pinned unthrottled forever.
+        if (lastBusy || anyFullscreen()) {
+          return
+        }
+        if (!unthrottled || trailing !== null) {
+          return
+        }
+        trailing = timers.setTimeout(() => {
+          trailing = null
+          unthrottled = false
+          applyAll()
+        }, delayMs)
+      })
       // Follow the compositor: entering fullscreen must lift throttling even
       // when no turn is in flight, leaving it may restore throttling once the
       // stream settles. Both events re-evaluate every window because the
