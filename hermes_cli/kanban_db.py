@@ -10291,7 +10291,9 @@ def _dispatch_once_locked(
         except Exception as exc:
             auto = _record_spawn_failure(
                 conn, claimed.id, str(exc),
-                failure_limit=failure_limit,
+                failure_limit=(
+                    1 if isinstance(exc, WorkerPreflightError) else failure_limit
+                ),
             )
             if auto:
                 result.auto_blocked.append(claimed.id)
@@ -10411,7 +10413,9 @@ def _dispatch_once_locked(
         except Exception as exc:
             auto = _record_spawn_failure(
                 conn, claimed.id, str(exc),
-                failure_limit=failure_limit,
+                failure_limit=(
+                    1 if isinstance(exc, WorkerPreflightError) else failure_limit
+                ),
             )
             if auto:
                 result.auto_blocked.append(claimed.id)
@@ -10706,6 +10710,37 @@ def _retag_legacy_worker_sessions(workspaces_root_path: str) -> None:
         _log.debug("kanban worker: legacy session retag skipped (%s)", exc)
 
 
+class WorkerPreflightError(RuntimeError):
+    """A deterministic worker route failure that should block immediately."""
+
+
+def _preflight_worker_route(task: Task, profile_home: Path) -> None:
+    """Validate a pinned worker provider with the runtime auth resolver."""
+    provider = (task.provider_override or "").strip()
+    if not provider:
+        return
+
+    from hermes_constants import reset_hermes_home_override, set_hermes_home_override
+    from hermes_cli.runtime_provider import resolve_runtime_provider
+
+    token = set_hermes_home_override(profile_home)
+    try:
+        resolve_runtime_provider(
+            requested=provider,
+            target_model=task.model_override,
+        )
+    except Exception as exc:
+        profile = task.assignee or "<profile>"
+        model = task.model_override or "<profile default>"
+        raise WorkerPreflightError(
+            f"Kanban worker preflight failed for profile {profile!r}, provider "
+            f"{provider!r}, model {model!r}: {exc}. Authenticate that profile with "
+            f"`hermes -p {profile} auth login {provider}`."
+        ) from exc
+    finally:
+        reset_hermes_home_override(token)
+
+
 def _default_spawn(
     task: Task,
     workspace: str,
@@ -10759,6 +10794,8 @@ def _default_spawn(
         # This only happens in test fixtures where the isolated
         # HERMES_HOME never had profiles created.
         pass
+    if task.provider_override and env.get("HERMES_HOME"):
+        _preflight_worker_route(task, Path(env["HERMES_HOME"]))
     if task.tenant:
         env["HERMES_TENANT"] = task.tenant
     env["HERMES_KANBAN_TASK"] = task.id

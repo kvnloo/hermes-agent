@@ -10322,6 +10322,7 @@ def cmd_profile(args):
         remove_wrapper_script,
         _is_wrapper_dir_in_path,
         _get_wrapper_dir,
+        profile_clone_credential_notice,
     )
     from hermes_constants import display_hermes_home
 
@@ -10454,6 +10455,7 @@ def cmd_profile(args):
                     print(
                         f"Cloned config, .env, SOUL.md, and skills from {source_label}."
                     )
+                print(profile_clone_credential_notice(clone_all=clone_all))
 
             # Auto-clone Honcho config for the new profile (only with clone operations)
             if clone_config or clone_all:

@@ -136,6 +136,29 @@ def test_provider_auth_state_returns_none_when_neither_has_it(profile_env):
     assert get_provider_auth_state("nous") is None
 
 
+def test_provider_state_falls_back_when_local_oauth_state_is_unusable(profile_env):
+    """An empty local OAuth shell must not shadow a usable global grant."""
+    from hermes_cli.auth import _load_auth_store, _load_provider_state_with_source
+
+    _write(profile_env["global"] / "auth.json", _make_auth_store(providers={
+        "xai-oauth": {
+            "tokens": {"access_token": "global-access", "refresh_token": "global-refresh"},
+        },
+    }))
+    _write(profile_env["profile"] / "auth.json", _make_auth_store(providers={
+        "xai-oauth": {
+            "auth_mode": "oauth_device_code",
+            "tokens": {"access_token": "", "refresh_token": ""},
+        },
+    }))
+
+    state, source = _load_provider_state_with_source(_load_auth_store(), "xai-oauth")
+
+    assert state is not None
+    assert state["tokens"]["access_token"] == "global-access"
+    assert source == profile_env["global"] / "auth.json"
+
+
 # ---------------------------------------------------------------------------
 # _load_provider_state — internal global fallback (issue #18594 follow-up)
 #

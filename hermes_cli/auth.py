@@ -1410,6 +1410,26 @@ def _save_auth_store(auth_store: Dict[str, Any], target_path: Optional[Path] = N
     return auth_file
 
 
+def provider_state_has_usable_credential(state: Any) -> bool:
+    """Return whether persisted provider state contains credential material.
+
+    Provider state also carries metadata such as auth mode and refresh times;
+    those keys must not make an empty login shell shadow a usable global grant.
+    Refresh tokens count because provider-specific resolvers can exchange them.
+    """
+    if not isinstance(state, dict):
+        return False
+    credential_keys = {
+        "access_token", "refresh_token", "api_key", "token", "id_token",
+    }
+    for key, value in state.items():
+        if key in credential_keys and has_usable_secret(value, min_length=1):
+            return True
+        if key in {"tokens", "credentials"} and provider_state_has_usable_credential(value):
+            return True
+    return False
+
+
 def _load_provider_state_with_source(
     auth_store: Dict[str, Any],
     provider_id: str,
@@ -1426,7 +1446,7 @@ def _load_provider_state_with_source(
     providers = auth_store.get("providers")
     if isinstance(providers, dict):
         state = providers.get(provider_id)
-        if isinstance(state, dict):
+        if isinstance(state, dict) and provider_state_has_usable_credential(state):
             return dict(state), _auth_file_path()
 
     global_path = _global_auth_file_path()
@@ -1435,8 +1455,12 @@ def _load_provider_state_with_source(
         global_providers = global_store.get("providers")
         if isinstance(global_providers, dict):
             global_state = global_providers.get(provider_id)
-            if isinstance(global_state, dict):
+            if isinstance(global_state, dict) and provider_state_has_usable_credential(global_state):
                 return dict(global_state), global_path
+    if isinstance(providers, dict):
+        state = providers.get(provider_id)
+        if isinstance(state, dict):
+            return dict(state), _auth_file_path()
     return None, None
 
 

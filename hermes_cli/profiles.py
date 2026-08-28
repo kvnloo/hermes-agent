@@ -255,6 +255,19 @@ _RESERVED_NAMES = frozenset({
     "hermes", "default", "test", "tmp", "root", "sudo",
 })
 
+
+def profile_clone_credential_notice(*, clone_all: bool) -> str:
+    """Describe credential semantics for a completed profile clone."""
+    if clone_all:
+        return (
+            "Copied a point-in-time OAuth snapshot from auth.json; credentials "
+            "are not shared and may diverge or expire independently."
+        )
+    return (
+        "OAuth credentials were not copied (API keys in .env were copied). "
+        "Authenticate separately with `hermes -p <profile> auth login <provider>`."
+    )
+
 # Hermes subcommands that cannot be used as profile names/aliases
 _HERMES_SUBCOMMANDS = frozenset({
     "chat", "model", "gateway", "setup", "whatsapp", "login", "logout",
