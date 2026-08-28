@@ -309,7 +309,7 @@ export function ModelCatalogMenu({
   // Keep the selected row in view while arrowing through the scrollable list.
   const listRef = useRef<HTMLDivElement>(null)
   const pointerSamples = useRef<Array<{ at: number; x: number; y: number }>>([])
-  const pointerIntentActive = useRef(false)
+  const deferringSiblingHover = useRef(false)
 
   useEffect(() => {
     listRef.current?.querySelector('[data-kb-active]')?.scrollIntoView({ block: 'nearest' })
@@ -426,9 +426,9 @@ export function ModelCatalogMenu({
               { at: event.timeStamp, x: event.clientX, y: event.clientY }
             ]
 
-            pointerIntentActive.current = deferSiblingHover(event)
+            deferringSiblingHover.current = deferSiblingHover(event)
 
-            if (pointerIntentActive.current) {
+            if (deferringSiblingHover.current) {
               event.preventDefault()
             }
           }}
@@ -512,7 +512,7 @@ export function ModelCatalogMenu({
                       <DropdownMenuSub
                         key={subKey}
                         onOpenChange={open => {
-                          if (pointerIntentActive.current && (!open || openSubKey !== subKey)) {
+                          if (deferringSiblingHover.current && (!open || openSubKey !== subKey)) {
                             return
                           }
 
@@ -525,8 +525,6 @@ export function ModelCatalogMenu({
                           hideChevron
                           onClick={activate}
                           onKeyDown={event => {
-                            pointerIntentActive.current = false
-
                             if (event.key === 'Enter' || event.key === ' ') {
                               activate()
                             }
@@ -553,6 +551,9 @@ export function ModelCatalogMenu({
                           fastControl={fastControl}
                           isActive={isCurrent}
                           model={family.id}
+                          onPointerEnter={() => {
+                            deferringSiblingHover.current = false
+                          }}
                           onSelectModel={nextModel => controller.select(nextModel, group.provider.slug)}
                           onSetOptions={patch =>
                             controller.setOptions(patch, {
