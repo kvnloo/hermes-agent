@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
-import { act } from "react";
+import { act, useRef, useState, type MutableRefObject } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ChatVoiceControl } from "./ChatVoiceControl";
+import { ChatVoiceControl, type ChatVoiceControlActions } from "./ChatVoiceControl";
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -150,6 +150,34 @@ describe("ChatVoiceControl browser speech input", () => {
     await act(async () => surface.click());
     expect(FakeRecognition.instances).toHaveLength(0);
     expect(host.textContent).toContain("not connected");
+  });
+
+  it("keeps startRecognition/begin/commit identities stable across a parent rerender with unchanged submit/onBargeIn", async () => {
+    const submit = vi.fn();
+    const onBargeIn = vi.fn();
+    const actionsRef: MutableRefObject<ChatVoiceControlActions | null> = { current: null };
+
+    function Parent() {
+      const [, setTick] = useState(0);
+      const tickRef = useRef(setTick);
+      tickRef.current = setTick;
+      (globalThis as typeof globalThis & { __voiceParentRerender?: () => void }).__voiceParentRerender = () => {
+        tickRef.current((value) => value + 1);
+      };
+      return <ChatVoiceControl connected submit={submit} onBargeIn={onBargeIn} actionsRef={actionsRef} />;
+    }
+
+    await act(async () => root.render(<Parent />));
+    const first = actionsRef.current;
+    expect(first).not.toBeNull();
+    await act(async () => {
+      (globalThis as typeof globalThis & { __voiceParentRerender: () => void }).__voiceParentRerender();
+    });
+    const second = actionsRef.current;
+    expect(second).not.toBeNull();
+    expect(second?.startRecognition).toBe(first?.startRecognition);
+    expect(second?.begin).toBe(first?.begin);
+    expect(second?.commit).toBe(first?.commit);
   });
 
 });

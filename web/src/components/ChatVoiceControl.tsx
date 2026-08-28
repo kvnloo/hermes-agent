@@ -1,5 +1,5 @@
 import { Mic, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type MutableRefObject, useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@nous-research/ui/ui/components/button";
 
@@ -38,17 +38,24 @@ declare global {
   }
 }
 
+export type ChatVoiceControlActions = {
+  startRecognition: (generation: number) => void;
+  begin: () => void;
+  commit: () => void;
+};
+
 interface ChatVoiceControlProps {
   connected: boolean;
   submit: (transcript: string) => void;
   onBargeIn?: () => void;
+  actionsRef?: MutableRefObject<ChatVoiceControlActions | null>;
 }
 
 function recognitionConstructor(): SpeechRecognitionConstructor | undefined {
   return window.SpeechRecognition ?? window.webkitSpeechRecognition;
 }
 
-export function ChatVoiceControl({ connected, submit, onBargeIn }: ChatVoiceControlProps) {
+export function ChatVoiceControl({ connected, submit, onBargeIn, actionsRef }: ChatVoiceControlProps) {
   const [state, setState] = useState<VoiceState>("idle");
   const [finalTranscript, setFinalTranscript] = useState("");
   const [interimTranscript, setInterimTranscript] = useState("");
@@ -61,23 +68,29 @@ export function ChatVoiceControl({ connected, submit, onBargeIn }: ChatVoiceCont
   const generationRef = useRef(0);
   const finalRef = useRef("");
   const interimRef = useRef("");
+  const submitRef = useRef(submit);
+  const onBargeInRef = useRef(onBargeIn);
+  const connectedRef = useRef(connected);
+  submitRef.current = submit;
+  onBargeInRef.current = onBargeIn;
+  connectedRef.current = connected;
 
   const clearRestart = useCallback(() => {
     if (restartTimerRef.current !== null) window.clearTimeout(restartTimerRef.current);
     restartTimerRef.current = null;
   }, []);
 
-  const updateFinal = (value: string) => {
+  const updateFinal = useCallback((value: string) => {
     finalRef.current = value;
     setFinalTranscript(value);
-  };
+  }, []);
 
-  const updateInterim = (value: string) => {
+  const updateInterim = useCallback((value: string) => {
     interimRef.current = value;
     setInterimTranscript(value);
-  };
+  }, []);
 
-  function startRecognition(generation: number) {
+  const startRecognition = useCallback((generation: number) => {
     if (!listeningRef.current || generation !== generationRef.current) return;
     const Constructor = recognitionConstructor();
     if (!Constructor) {
@@ -140,15 +153,15 @@ export function ChatVoiceControl({ connected, submit, onBargeIn }: ChatVoiceCont
       setError("Could not start Chrome speech recognition. Tap to try again.");
       setState("error");
     }
-  }
+  }, [updateFinal, updateInterim]);
 
-  const begin = () => {
-    if (!connected) {
+  const begin = useCallback(() => {
+    if (!connectedRef.current) {
       setError("Chat is not connected yet.");
       setState("error");
       return;
     }
-    onBargeIn?.();
+    onBargeInRef.current?.();
     clearRestart();
     fatalRef.current = false;
     restartCountRef.current = 0;
@@ -158,9 +171,9 @@ export function ChatVoiceControl({ connected, submit, onBargeIn }: ChatVoiceCont
     setError("");
     setState("listening");
     startRecognition(generation);
-  };
+  }, [clearRestart, startRecognition]);
 
-  const commit = () => {
+  const commit = useCallback(() => {
     const transcript = `${finalRef.current} ${interimRef.current}`.replace(/\s+/g, " ").trim();
     if (!transcript) {
       setError("No speech heard yet — keep talking, then tap anywhere to send.");
@@ -171,12 +184,16 @@ export function ChatVoiceControl({ connected, submit, onBargeIn }: ChatVoiceCont
     clearRestart();
     recognitionRef.current?.abort();
     recognitionRef.current = null;
-    submit(transcript);
+    submitRef.current(transcript);
     updateFinal("");
     updateInterim("");
     setError("");
     setState("sent");
-  };
+  }, [clearRestart, updateFinal, updateInterim]);
+
+  if (actionsRef) {
+    actionsRef.current = { startRecognition, begin, commit };
+  }
 
   const cancel = useCallback(() => {
     listeningRef.current = false;
@@ -188,7 +205,7 @@ export function ChatVoiceControl({ connected, submit, onBargeIn }: ChatVoiceCont
     updateInterim("");
     setError("");
     setState("idle");
-  }, [clearRestart]);
+  }, [clearRestart, updateFinal, updateInterim]);
 
   useEffect(() => cancel, [cancel]);
 
