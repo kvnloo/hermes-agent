@@ -17,7 +17,11 @@ class FakeSurfaceTransport:
 
 
 def test_surface_transport_roundtrip_and_projection_only_reconnect() -> None:
-    core = ConversationSession(session_id="session-1", profile_key="profile-a")
+    owner_token = object()
+    core = ConversationSession(
+        session_id="session-1", profile_key="profile-a",
+        authenticate_attachment=lambda token: token is owner_token,
+    )
     surface = FakeSurfaceTransport()
     projected = core.emit(
         "assistant.text.delta",
@@ -39,14 +43,25 @@ def test_surface_transport_roundtrip_and_projection_only_reconnect() -> None:
     assert decoded.sequence == projected.sequence
     assert decoded.epoch == projected.epoch
     assert core.reattach(
-        profile_key="profile-a", generation=1, last_ack_sequence=0
+        profile_key="profile-a", owner_token=owner_token,
+        generation=1, last_ack_sequence=0,
     ) == [projected]
 
 
 def test_surface_transport_cannot_reattach_across_profile_or_stale_generation() -> None:
-    core = ConversationSession(session_id="session-1", profile_key="profile-a")
-    core.reattach(profile_key="profile-a", generation=2, last_ack_sequence=0)
+    owner_token = object()
+    core = ConversationSession(
+        session_id="session-1", profile_key="profile-a",
+        authenticate_attachment=lambda token: token is owner_token,
+    )
+    core.reattach(
+        profile_key="profile-a", owner_token=owner_token,
+        generation=2, last_ack_sequence=0,
+    )
 
     with pytest.raises(PermissionError):
-        core.reattach(profile_key="profile-b", generation=3, last_ack_sequence=0)
+        core.reattach(
+            profile_key="profile-b", owner_token=owner_token,
+            generation=3, last_ack_sequence=0,
+        )
     assert core.accept_adapter_event(profile_key="profile-a", generation=1) is False

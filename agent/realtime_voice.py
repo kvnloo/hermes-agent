@@ -17,7 +17,11 @@ from types import MappingProxyType
 from typing import Any
 
 _SENSITIVE_EVENT_KEYS = frozenset(
-    {"audio_bytes", "raw_audio", "provider_secret", "secret", "token", "password", "reasoning"}
+    {
+        "audio_bytes", "raw_audio", "provider_secret", "secret", "token",
+        "password", "reasoning", "authorization", "api_key", "access_token",
+        "refresh_token", "credential",
+    }
 )
 
 
@@ -81,7 +85,15 @@ class ConversationEvent:
     replayable: bool = True
 
     def __post_init__(self) -> None:
-        if not self.session_id or not self.turn_id or self.sequence < 1 or self.epoch < 0:
+        if (
+            not self.session_id
+            or not self.turn_id
+            or not self.event_type
+            or self.sequence < 1
+            or self.epoch < 0
+            or self.monotonic_ns < 0
+            or self.event_id != f"{self.session_id}:{self.sequence}"
+        ):
             raise ValueError("ConversationEvent identity is malformed")
         _reject_sensitive_payload(self.payload)
         object.__setattr__(self, "payload", _immutable_copy(self.payload))

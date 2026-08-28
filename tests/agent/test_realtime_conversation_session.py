@@ -9,6 +9,8 @@ from agent.realtime_voice import ConversationEvent
 from agent.realtime_voice_coordinator import (
     AttachmentSaturated,
     ConversationSession,
+    EffectAlreadyStarted,
+    InMemoryEffectLedger,
     run_authoritative_turn,
 )
 from run_agent import AIAgent
@@ -67,7 +69,11 @@ def test_interruption_accepts_heard_boundary_once_and_rejects_stale_epoch() -> N
 
 
 def test_tool_effect_group_dispatches_exactly_once_across_retries() -> None:
-    session = ConversationSession(session_id="session-1", profile_key="profile-a")
+    ledger = InMemoryEffectLedger()
+    session = ConversationSession(
+        session_id="session-1", profile_key="profile-a", effect_ledger=ledger,
+        authorize_tool=lambda _group, _call: True,
+    )
     epoch = session.begin_response("turn-1")
     effects: list[str] = []
 
@@ -89,6 +95,47 @@ def test_tool_effect_group_dispatches_exactly_once_across_retries() -> None:
         )
 
 
+def test_started_tool_effect_is_not_repeated_after_session_crash() -> None:
+    ledger = InMemoryEffectLedger()
+    crashed = ConversationSession(
+        session_id="session-1", profile_key="profile-a", effect_ledger=ledger,
+        authorize_tool=lambda _group, _call: True,
+    )
+    epoch = crashed.begin_response("turn-1")
+
+    with pytest.raises(RuntimeError, match="crash after effect"):
+        crashed.dispatch_tool_once(
+            turn_id="turn-1", epoch=epoch, group_id="group-1",
+            tool_call_id="call-1", approved=True,
+            effect=lambda: (_ for _ in ()).throw(RuntimeError("crash after effect")),
+        )
+
+    resumed = ConversationSession(
+        session_id="session-1", profile_key="profile-a", effect_ledger=ledger,
+        authorize_tool=lambda _group, _call: True,
+    )
+    resumed_epoch = resumed.begin_response("turn-1")
+    with pytest.raises(EffectAlreadyStarted):
+        resumed.dispatch_tool_once(
+            turn_id="turn-1", epoch=resumed_epoch, group_id="group-1",
+            tool_call_id="call-1", approved=True, effect=lambda: "repeated",
+        )
+
+
+def test_tool_effect_cannot_bypass_host_approval_with_caller_claim() -> None:
+    session = ConversationSession(
+        session_id="session-1", profile_key="profile-a",
+        authorize_tool=lambda _group, _call: False,
+    )
+    epoch = session.begin_response("turn-1")
+
+    with pytest.raises(PermissionError, match="approval"):
+        session.dispatch_tool_once(
+            turn_id="turn-1", epoch=epoch, group_id="group-1",
+            tool_call_id="call-1", approved=True, effect=lambda: "bypassed",
+        )
+
+
 def test_projection_queue_is_bounded_nonblocking_and_never_silently_drops_authority() -> None:
     session = ConversationSession(
         session_id="session-1", profile_key="profile-a", projection_capacity=2
@@ -105,24 +152,67 @@ def test_projection_queue_is_bounded_nonblocking_and_never_silently_drops_author
 
     with pytest.raises(AttachmentSaturated):
         session.emit("approval.requested", turn_id="turn-1")
+    assert session.metrics()["authoritative_saturation_count"] == 1
+    assert session.metrics()["attachment_degraded"] == 1
     assert [event.sequence for event in session.drain_projection()] == [1, 2]
+    recovered = session.emit("persistence.terminal", turn_id="turn-1")
+    assert recovered is not None
+    assert recovered.sequence == 3
 
 
 def test_reattach_replays_projection_only_and_suppresses_stale_generation() -> None:
-    session = ConversationSession(session_id="session-1", profile_key="profile-a")
+    owner_token = object()
+    session = ConversationSession(
+        session_id="session-1", profile_key="profile-a",
+        authenticate_attachment=lambda token: token is owner_token,
+    )
     first = session.emit("assistant.text.delta", turn_id="turn-1", presentation=True)
     session.emit("tool.started", turn_id="turn-1", replayable=False)
     third = session.emit("assistant.text.final", turn_id="turn-1", presentation=True)
 
-    replay = session.reattach(profile_key="profile-a", generation=2, last_ack_sequence=1)
+    replay = session.reattach(
+        profile_key="profile-a", owner_token=owner_token,
+        generation=2, last_ack_sequence=1,
+    )
     assert replay == [third]
     assert first is not None and third is not None
     assert session.accept_adapter_event(profile_key="profile-a", generation=1) is False
     assert session.accept_adapter_event(profile_key="profile-a", generation=2) is True
     with pytest.raises(PermissionError, match="profile"):
-        session.reattach(profile_key="profile-b", generation=3, last_ack_sequence=0)
+        session.reattach(
+            profile_key="profile-b", owner_token=owner_token,
+            generation=3, last_ack_sequence=0,
+        )
+    with pytest.raises(PermissionError, match="authenticate"):
+        session.reattach(
+            profile_key="profile-a", owner_token=object(),
+            generation=3, last_ack_sequence=0,
+        )
     with pytest.raises(ValueError, match="future acknowledgement"):
-        session.reattach(profile_key="profile-a", generation=3, last_ack_sequence=99)
+        session.reattach(
+            profile_key="profile-a", owner_token=owner_token,
+            generation=3, last_ack_sequence=99,
+        )
+
+
+def test_reattach_rejects_ack_before_bounded_replay_window() -> None:
+    owner_token = object()
+    session = ConversationSession(
+        session_id="session-1", profile_key="profile-a", projection_capacity=2,
+        authenticate_attachment=lambda token: token is owner_token,
+    )
+    for index in range(3):
+        session.emit(
+            "assistant.text.delta", turn_id="turn-1",
+            payload={"text": str(index)}, presentation=True,
+        )
+        session.drain_projection()
+
+    with pytest.raises(ValueError, match="replay gap"):
+        session.reattach(
+            profile_key="profile-a", owner_token=owner_token,
+            generation=1, last_ack_sequence=0,
+        )
 
 
 def test_run_conversation_exposes_an_opt_in_conversation_session_facade() -> None:
@@ -195,6 +285,22 @@ def test_surface_wire_roundtrip_retains_identity_and_rejects_sensitive_payloads(
             session.emit(
                 "diagnostic.adapter", turn_id="turn-1", payload={forbidden: "nope"}
             )
+    with pytest.raises(ValueError, match="sensitive"):
+        session.emit(
+            "diagnostic.adapter", turn_id="turn-1",
+            payload={"nested": {"authorization": "Bearer raw-secret"}},
+        )
+
+
+def test_surface_wire_rejects_forged_event_identity() -> None:
+    session = ConversationSession(session_id="session-1", profile_key="profile-a")
+    event = session.emit("assistant.text.final", turn_id="turn-1")
+    assert event is not None
+    frame = event.to_wire()
+    frame["event_id"] = "foreign:999"
+
+    with pytest.raises(ValueError, match="identity"):
+        ConversationEvent.from_wire(frame)
 
 
 def test_session_scope_is_bounded_to_five_minutes_and_close_is_idempotent() -> None:

@@ -8,7 +8,7 @@ import threading
 import time
 from collections import deque
 from collections.abc import AsyncIterator, Awaitable, Callable
-from typing import Any
+from typing import Any, Protocol
 
 from agent.realtime_voice import (
     ConversationEvent,
@@ -27,6 +27,42 @@ class AttachmentSaturated(RuntimeError):
     """An authoritative event could not enter the bounded projection lane."""
 
 
+class EffectAlreadyStarted(RuntimeError):
+    """A durable tool effect claim exists without a replayable result."""
+
+
+class EffectLedger(Protocol):
+    """Atomic host-owned storage for tool effect transitions."""
+
+    def claim(self, key: tuple[str, str, str, str]) -> tuple[bool, Any]: ...
+
+    def finish(self, key: tuple[str, str, str, str], result: Any) -> None: ...
+
+
+class InMemoryEffectLedger:
+    """Deterministic fake ledger; production hosts inject durable storage."""
+
+    def __init__(self) -> None:
+        self._states: dict[tuple[str, str, str, str], tuple[str, Any]] = {}
+        self._lock = threading.Lock()
+
+    def claim(self, key: tuple[str, str, str, str]) -> tuple[bool, Any]:
+        with self._lock:
+            state = self._states.get(key)
+            if state is None:
+                self._states[key] = ("started", None)
+                return True, None
+            if state[0] == "finished":
+                return False, state[1]
+            raise EffectAlreadyStarted("tool effect was already claimed")
+
+    def finish(self, key: tuple[str, str, str, str], result: Any) -> None:
+        with self._lock:
+            if self._states.get(key, (None,))[0] != "started":
+                raise RuntimeError("tool effect must be claimed before it is finished")
+            self._states[key] = ("finished", result)
+
+
 class ConversationSession:
     """Hermes-owned canonical identity and event sequencing facade."""
 
@@ -37,6 +73,9 @@ class ConversationSession:
         profile_key: str,
         projection_capacity: int = 256,
         max_duration_seconds: float = 300.0,
+        effect_ledger: EffectLedger | None = None,
+        authenticate_attachment: Callable[[object], bool] | None = None,
+        authorize_tool: Callable[[str, str], bool] | None = None,
     ) -> None:
         if not session_id or not profile_key:
             raise ValueError("ConversationSession requires session and profile identity")
@@ -52,13 +91,17 @@ class ConversationSession:
         self._audio_events: dict[str, ConversationEvent] = {}
         self._heard_audio: dict[str, int] = {}
         self._interruptions: dict[int, ConversationEvent] = {}
-        self._tool_results: dict[tuple[str, str], Any] = {}
-        self._tool_lock = threading.Lock()
+        self._effect_ledger = effect_ledger or InMemoryEffectLedger()
+        self._authenticate_attachment = authenticate_attachment or (lambda _token: False)
+        self._authorize_tool = authorize_tool or (lambda _group, _call: False)
         self._projection_capacity = projection_capacity
         self._projection: deque[ConversationEvent] = deque()
         self._event_log: deque[ConversationEvent] = deque(maxlen=projection_capacity)
+        self._replay_floor = 0
         self._presentation_events_dropped = 0
         self._queue_high_water = 0
+        self._authoritative_saturation_count = 0
+        self._attachment_degraded = False
         self._attachment_generation = 0
         self._deadline = time.monotonic() + max_duration_seconds
         self._closed = False
@@ -108,6 +151,15 @@ class ConversationSession:
         event_epoch = self._epoch if epoch is None else epoch
         if event_epoch != self._epoch:
             raise ValueError("stale epoch")
+        if len(self._projection) >= self._projection_capacity:
+            if presentation:
+                self._presentation_events_dropped += 1
+                return None
+            self._authoritative_saturation_count += 1
+            self._attachment_degraded = True
+            raise AttachmentSaturated(
+                f"authoritative projection lane is full at {self._projection_capacity} events"
+            )
         self._sequence += 1
         projection_replayable = replayable and presentation
         event = ConversationEvent(
@@ -129,14 +181,9 @@ class ConversationSession:
         if projection_replayable:
             # This log is projection-only. Its bounded eviction can never discard
             # an approval, tool effect, history mutation, or persistence action.
+            if len(self._event_log) == self._projection_capacity:
+                self._replay_floor = self._event_log[0].sequence
             self._event_log.append(event)
-        if len(self._projection) >= self._projection_capacity:
-            if presentation:
-                self._presentation_events_dropped += 1
-                return None
-            raise AttachmentSaturated(
-                f"authoritative projection lane is full at {self._projection_capacity} events"
-            )
         self._projection.append(event)
         self._queue_high_water = max(self._queue_high_water, len(self._projection))
         return event
@@ -150,6 +197,8 @@ class ConversationSession:
         return {
             "presentation_events_dropped": self._presentation_events_dropped,
             "queue_high_water": self._queue_high_water,
+            "authoritative_saturation_count": self._authoritative_saturation_count,
+            "attachment_degraded": int(self._attachment_degraded),
         }
 
     def record_latency(
@@ -177,14 +226,23 @@ class ConversationSession:
         return report
 
     def reattach(
-        self, *, profile_key: str, generation: int, last_ack_sequence: int
+        self,
+        *,
+        profile_key: str,
+        owner_token: object,
+        generation: int,
+        last_ack_sequence: int,
     ) -> list[ConversationEvent]:
         if profile_key != self.profile_key:
             raise PermissionError("profile does not own this conversation session")
+        if not self._authenticate_attachment(owner_token):
+            raise PermissionError("attachment ownership could not authenticate")
         if generation <= self._attachment_generation:
             raise ValueError("attachment generation must increase")
         if last_ack_sequence < 0 or last_ack_sequence > self._sequence:
             raise ValueError("future acknowledgement is invalid")
+        if last_ack_sequence < self._replay_floor:
+            raise ValueError("replay gap predates the retained projection window")
         self._attachment_generation = generation
         return [
             event
@@ -246,15 +304,15 @@ class ConversationSession:
             raise ValueError("stale epoch")
         if not group_id or not tool_call_id:
             raise ValueError("Tool effects require group and call identity")
-        key = (group_id, tool_call_id)
-        with self._tool_lock:
-            if key in self._tool_results:
-                return self._tool_results[key]
-            if not approved:
-                raise PermissionError("Hermes approval is required before dispatch")
-            result = effect()
-            self._tool_results[key] = result
-            return result
+        if not approved or not self._authorize_tool(group_id, tool_call_id):
+            raise PermissionError("Hermes approval is required before dispatch")
+        key = (self.profile_key, self.session_id, group_id, tool_call_id)
+        claimed, prior_result = self._effect_ledger.claim(key)
+        if not claimed:
+            return prior_result
+        result = effect()
+        self._effect_ledger.finish(key, result)
+        return result
 
 
 def run_authoritative_turn(
