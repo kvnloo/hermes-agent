@@ -54,3 +54,11 @@ jobs:
         # Same pattern Docusaurus uses internally (build:fast --locale en).
         run: npm run build:fast
         working-directory: website
+
+      - name: Install architecture explorer browser
+        run: npx playwright install --with-deps chromium
+        working-directory: website
+
+      - name: Test architecture explorer contracts
+        run: npm run test:architecture:browser
+        working-directory: website
