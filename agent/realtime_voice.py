@@ -8,6 +8,7 @@ calls are events that a host-side coordinator dispatches through Hermes.
 from __future__ import annotations
 
 import abc
+import time
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from enum import Enum
@@ -29,6 +30,37 @@ class HeardAudioBoundary:
 
     item_id: str
     audio_end_ms: int
+
+
+@dataclass(frozen=True)
+class SurfaceSessionConfig:
+    """Short-lived, least-privilege config for a surface-hosted transport.
+
+    ``session_token`` is a minted session credential, never a provider API key.
+    The closed shape prevents plugins from passing arbitrary provider config or
+    approval authority into a surface.
+    """
+
+    provider: str
+    session_id: str
+    endpoint: str
+    session_token: str
+    expires_at: float
+    scopes: frozenset[str] = field(default_factory=frozenset)
+
+    MAX_TTL_SECONDS = 300.0
+
+    def validate(self, *, now: float | None = None) -> None:
+        current_time = time.time() if now is None else now
+        if not all((self.provider, self.session_id, self.endpoint, self.session_token)):
+            raise ValueError("Surface session config fields must be non-empty")
+        if self.expires_at <= current_time:
+            raise ValueError("Surface session config is expired")
+        if self.expires_at > current_time + self.MAX_TTL_SECONDS:
+            raise ValueError("Surface session config lifetime exceeds the maximum")
+        forbidden = {"approve", "approval", "tools.execute", "provider.secret"}
+        if self.scopes & forbidden:
+            raise ValueError("Surface session config requests a forbidden scope")
 
 
 @dataclass(frozen=True)
@@ -118,3 +150,13 @@ class RealtimeVoiceProvider(abc.ABC):
         voice: str | None = None,
     ) -> RealtimeSession:
         """Open a session using Hermes-supplied instructions and tool schemas."""
+
+    async def mint_surface_session(
+        self,
+        *,
+        instructions: str,
+        tools: list[dict[str, Any]],
+        voice: str | None = None,
+    ) -> SurfaceSessionConfig:
+        """Mint scoped config for an optional surface-hosted transport."""
+        raise NotImplementedError("Provider does not support surface-hosted sessions")

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import time
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -13,6 +15,7 @@ from agent.realtime_voice import (
     RealtimeEventType,
     RealtimeSession,
     RealtimeVoiceProvider,
+    SurfaceSessionConfig,
 )
 from agent.realtime_voice_coordinator import RealtimeVoiceCoordinator
 
@@ -45,6 +48,17 @@ class FakeSession(RealtimeSession):
         self.closed = True
 
 
+class GatedSession(FakeSession):
+    def __init__(self, events: list[RealtimeEvent]) -> None:
+        super().__init__(events)
+        self.release = asyncio.Event()
+
+    async def events(self) -> AsyncIterator[RealtimeEvent]:
+        await self.release.wait()
+        for event in self._events:
+            yield event
+
+
 class FakeProvider(RealtimeVoiceProvider):
     def __init__(self, name: str, session: FakeSession) -> None:
         self._name = name
@@ -58,6 +72,16 @@ class FakeProvider(RealtimeVoiceProvider):
     async def open_session(self, *, instructions, tools, voice=None):
         self.opened_with = {"instructions": instructions, "tools": tools, "voice": voice}
         return self.session
+
+
+class SurfaceFakeProvider(FakeProvider):
+    def __init__(self, name: str, session: FakeSession, config: SurfaceSessionConfig) -> None:
+        super().__init__(name, session)
+        self.config = config
+
+    async def mint_surface_session(self, *, instructions, tools, voice=None):
+        self.opened_with = {"instructions": instructions, "tools": tools, "voice": voice}
+        return self.config
 
 
 class BoundarySession(FakeSession):
@@ -261,3 +285,94 @@ async def test_coordinator_requires_open_session_and_closes_idempotently():
     await coordinator.close()
     await coordinator.close()
     assert session.closed is True
+
+
+@pytest.mark.asyncio
+async def test_surface_hosted_topology_returns_only_scoped_expiring_config():
+    config = SurfaceSessionConfig(
+        provider="surface-fake",
+        session_id="session-1",
+        endpoint="wss://voice.invalid/session",
+        session_token="minted-short-lived-token",
+        expires_at=time.time() + 60,
+        scopes=frozenset({"audio.send", "events.receive"}),
+    )
+    provider = SurfaceFakeProvider("surface-fake", FakeSession([]), config)
+    coordinator = RealtimeVoiceCoordinator(provider, dispatch_tool=lambda _n, _a: "ok")
+
+    minted = await coordinator.mint_surface_session(
+        instructions="Hermes owns approvals", tools=[{"name": "terminal"}]
+    )
+
+    assert minted is config
+    assert set(vars(minted)) == {
+        "provider", "session_id", "endpoint", "session_token", "expires_at", "scopes"
+    }
+    assert not ({"approve", "approval", "tools.execute", "provider.secret"} & minted.scopes)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("expires_at", "scopes", "message"),
+    [
+        (0, frozenset({"audio.send"}), "expired"),
+        (time.time() + 60, frozenset({"approval"}), "forbidden scope"),
+        (float("inf"), frozenset({"audio.send"}), "lifetime exceeds"),
+    ],
+)
+async def test_surface_hosted_topology_rejects_expired_or_authoritative_config(
+    expires_at: float, scopes: frozenset[str], message: str
+):
+    config = SurfaceSessionConfig(
+        provider="fake",
+        session_id="s",
+        endpoint="wss://voice.invalid",
+        session_token="ephemeral",
+        expires_at=expires_at,
+        scopes=scopes,
+    )
+    coordinator = RealtimeVoiceCoordinator(
+        SurfaceFakeProvider("fake", FakeSession([]), config),
+        dispatch_tool=lambda _n, _a: "ok",
+    )
+    with pytest.raises(ValueError, match=message):
+        await coordinator.mint_surface_session(instructions="", tools=[])
+
+
+@pytest.mark.asyncio
+async def test_duplicate_tool_call_group_dispatches_exactly_once_per_connection():
+    duplicate = RealtimeEvent.tool_call("group-1", "terminal", {"command": "pwd"})
+    session = FakeSession([duplicate, duplicate])
+    dispatched: list[str] = []
+    coordinator = RealtimeVoiceCoordinator(
+        FakeProvider("fake", session),
+        dispatch_tool=lambda name, _args: dispatched.append(name) or "ok",
+    )
+    await coordinator.open(instructions="", tools=[])
+
+    observed = [event async for event in coordinator.events()]
+
+    assert observed == [duplicate]
+    assert dispatched == ["terminal"]
+    assert session.tool_results == [("group-1", "ok")]
+
+
+@pytest.mark.asyncio
+async def test_stale_event_iterator_cannot_dispatch_after_reconnect():
+    stale_session = GatedSession([RealtimeEvent.tool_call("old", "terminal", {})])
+    provider = FakeProvider("fake", stale_session)
+    dispatched: list[str] = []
+    coordinator = RealtimeVoiceCoordinator(
+        provider, dispatch_tool=lambda name, _args: dispatched.append(name) or "ok"
+    )
+    await coordinator.open(instructions="", tools=[])
+    stale_event = asyncio.ensure_future(anext(coordinator.events()))
+    await asyncio.sleep(0)
+    await coordinator.close()
+    provider.session = FakeSession([])
+    await coordinator.open(instructions="", tools=[])
+    stale_session.release.set()
+
+    with pytest.raises(StopAsyncIteration):
+        await stale_event
+    assert dispatched == []

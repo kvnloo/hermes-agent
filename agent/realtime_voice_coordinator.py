@@ -12,6 +12,7 @@ from agent.realtime_voice import (
     RealtimeEventType,
     RealtimeSession,
     RealtimeVoiceProvider,
+    SurfaceSessionConfig,
 )
 
 ToolDispatcher = Callable[[str, dict[str, Any]], str | Awaitable[str]]
@@ -29,6 +30,8 @@ class RealtimeVoiceCoordinator:
         self._current_item_id: str | None = None
         self._current_audio_events: dict[int, RealtimeEvent] = {}
         self._heard_boundary: HeardAudioBoundary | None = None
+        self._epoch = 0
+        self._dispatched_call_ids: set[str] = set()
 
     async def open(
         self,
@@ -43,6 +46,21 @@ class RealtimeVoiceCoordinator:
             instructions=instructions, tools=tools, voice=voice
         )
         self._reset_output_state()
+        self._epoch += 1
+
+    async def mint_surface_session(
+        self,
+        *,
+        instructions: str,
+        tools: list[dict[str, Any]],
+        voice: str | None = None,
+    ) -> SurfaceSessionConfig:
+        """Mint and validate config without transferring Hermes authority."""
+        config = await self._provider.mint_surface_session(
+            instructions=instructions, tools=tools, voice=voice
+        )
+        config.validate()
+        return config
 
     def _require_session(self) -> RealtimeSession:
         if self._session is None:
@@ -78,7 +96,10 @@ class RealtimeVoiceCoordinator:
 
     async def events(self) -> AsyncIterator[RealtimeEvent]:
         session = self._require_session()
+        epoch = self._epoch
         async for event in session.events():
+            if self._session is not session or self._epoch != epoch:
+                break
             if event.type is RealtimeEventType.AUDIO and event.item_id:
                 if event.item_id != self._current_item_id:
                     self._current_item_id = event.item_id
@@ -86,6 +107,11 @@ class RealtimeVoiceCoordinator:
                     self._heard_boundary = None
                 self._current_audio_events[id(event)] = event
             if event.type is RealtimeEventType.TOOL_CALL:
+                if not event.call_id:
+                    raise ValueError("Realtime tool_call events require call_id and tool_name")
+                if event.call_id in self._dispatched_call_ids:
+                    continue
+                self._dispatched_call_ids.add(event.call_id)
                 await self._dispatch(event, session)
             yield event
 
@@ -105,6 +131,7 @@ class RealtimeVoiceCoordinator:
 
     async def close(self) -> None:
         session, self._session = self._session, None
+        self._epoch += 1
         self._reset_output_state()
         if session is not None:
             await session.close()
@@ -113,3 +140,4 @@ class RealtimeVoiceCoordinator:
         self._current_item_id = None
         self._current_audio_events.clear()
         self._heard_boundary = None
+        self._dispatched_call_ids.clear()
