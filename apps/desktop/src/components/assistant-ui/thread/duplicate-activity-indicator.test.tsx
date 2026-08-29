@@ -8,8 +8,10 @@ import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { __resetElapsedTimerRegistryForTests } from '@/components/chat/activity-timer'
+import { createClientSessionState } from '@/lib/chat-runtime'
 import { setSessionCompacting } from '@/store/compaction'
 import { $activeSessionId, $turnStartedAt } from '@/store/session'
+import { $sessionStates } from '@/store/session-states'
 
 import { stubThreadEnvironment, stubThreadViewportSize, userMessage } from '../test-utils'
 
@@ -91,8 +93,42 @@ describe('TurnActivityIndicator tail gating (#68634)', () => {
     setSessionCompacting(sessionId, false)
     $activeSessionId.set(null)
     $turnStartedAt.set(null)
+    $sessionStates.set({})
     __resetElapsedTimerRegistryForTests()
     vi.useRealTimers()
+  })
+
+  it('renders the live MoA row only in the tail assistant message', () => {
+    $sessionStates.set({
+      [sessionId]: {
+        ...createClientSessionState(),
+        moa: {
+          phase: 'fanout',
+          refsDone: 0,
+          refsTotal: 2,
+          slots: [
+            { id: 1, status: 'running' },
+            { id: 2, status: 'running' }
+          ]
+        }
+      }
+    })
+
+    const { container } = render(
+      <Harness
+        messages={[
+          userMessage('user-1', 'first'),
+          runningAssistantMessage('assistant-1', 'historical'),
+          userMessage('user-2', 'second'),
+          runningAssistantMessage('assistant-2', 'current')
+        ]}
+      />
+    )
+
+    const roots = container.querySelectorAll('[data-slot="aui_assistant-message-root"]')
+    expect(container.querySelectorAll('[data-testid="moa-thinking-orbs"]')).toHaveLength(1)
+    expect(roots[0]?.querySelector('[data-testid="moa-thinking-orbs"]')).toBeNull()
+    expect(roots[1]?.querySelector('[data-testid="moa-thinking-orbs"]')).not.toBeNull()
   })
 
   it('renders exactly one indicator, on the later bubble, when two assistant bubbles are running with content', () => {
