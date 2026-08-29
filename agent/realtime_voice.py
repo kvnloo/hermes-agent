@@ -19,6 +19,7 @@ class RealtimeEventType(str, Enum):
     AUDIO = "audio"
     TRANSCRIPT = "transcript"
     TOOL_CALL = "tool_call"
+    TOOL_CALL_CANCELLED = "tool_call_cancelled"
     TURN_STARTED = "turn_started"
     TURN_ENDED = "turn_ended"
     ERROR = "error"
@@ -64,6 +65,10 @@ class RealtimeEvent:
             tool_name=name,
             arguments=dict(arguments),
         )
+
+    @classmethod
+    def tool_call_cancelled(cls, call_id: str) -> "RealtimeEvent":
+        return cls(type=RealtimeEventType.TOOL_CALL_CANCELLED, call_id=call_id)
 
 
 class RealtimeSession(abc.ABC):
