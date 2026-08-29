@@ -26,9 +26,11 @@ import { useMessageReactions, useTapbackDoubleClick } from '@/components/assista
 import { AGENT_MESSAGE_RE } from '@/components/assistant-ui/thread/user-message'
 import { TooltipIconButton } from '@/components/assistant-ui/tooltip-icon-button'
 import { formatElapsed } from '@/components/chat/activity-timer'
+import { MoaThinkingOrbs } from '@/components/chat/moa-thinking-orbs'
 import { PreviewAttachment } from '@/components/chat/preview-attachment'
 import { Codicon } from '@/components/ui/codicon'
 import { CopyButton } from '@/components/ui/copy-button'
+import { prefersReducedMotion } from '@/hooks/use-media-query'
 import { useI18n } from '@/i18n'
 import { type ErrorSurface, formatErrorDiagnostics } from '@/lib/error-surface'
 import { triggerHaptic } from '@/lib/haptics'
@@ -49,7 +51,8 @@ import { cn } from '@/lib/utils'
 import { playSpeechText, stopVoicePlayback } from '@/lib/voice-playback'
 import { notifyError } from '@/store/notifications'
 import { requestSendDiagnostics } from '@/store/send-diagnostics'
-import { $connection, $currentModel } from '@/store/session'
+import { $activeSessionId, $connection, $currentModel } from '@/store/session'
+import { $sessionStates } from '@/store/session-states'
 import { $voicePlayback } from '@/store/voice-playback'
 
 // Stable empty identity for the settled-parts selector — a fresh [] per render
@@ -324,7 +327,21 @@ const AssistantStatusSlot: FC = () => {
     return null
   }
 
-  return slot === 'placeholder' ? <ResponseLoadingIndicator /> : <TurnActivityIndicator />
+  return (
+    <>
+      <TailMoaStatus />
+      {slot === 'placeholder' ? <ResponseLoadingIndicator /> : <TurnActivityIndicator />}
+    </>
+  )
+}
+
+/** Current-turn state is session-scoped, so it may only mount in the tail slot. */
+const TailMoaStatus: FC = () => {
+  const sessionId = useStore($activeSessionId)
+  const states = useStore($sessionStates)
+  const moa = sessionId ? states[sessionId]?.moa : undefined
+
+  return moa && moa.phase !== 'idle' ? <MoaThinkingOrbs reducedMotion={prefersReducedMotion()} state={moa} /> : null
 }
 
 /**

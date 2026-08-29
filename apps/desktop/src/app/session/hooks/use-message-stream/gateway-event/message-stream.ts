@@ -6,6 +6,7 @@ import { coerceGatewayText, coerceThinkingText } from '@/lib/chat-runtime'
 import { playCompletionSound } from '@/lib/completion-sound'
 import { parseErrorSurface } from '@/lib/error-surface'
 import { triggerHaptic } from '@/lib/haptics'
+import { applyMoaEvent, emptyMoaState } from '@/lib/moa-orchestration'
 import { billingCtaLabel, clearBillingBlock, runBillingRecovery, setBillingBlock } from '@/store/billing-block'
 import { clearClarifyRequest } from '@/store/clarify'
 import { setSessionCompacting } from '@/store/compaction'
@@ -79,6 +80,15 @@ export function handleMessageStreamEvent(ctx: GatewayEventContext): boolean {
     sessionStateByRuntimeIdRef,
     updateSessionState
   } = deps
+
+  const updateMoa = () => {
+    if (sessionId) {
+      updateSessionState(sessionId, state => ({
+        ...state,
+        moa: applyMoaEvent(state.moa ?? emptyMoaState(), { payload, type: event.type })
+      }))
+    }
+  }
 
   if (event.type === 'message.start') {
     if (!sessionId) {
@@ -222,6 +232,8 @@ export function handleMessageStreamEvent(ctx: GatewayEventContext): boolean {
   }
 
   if (event.type === 'moa.reference') {
+    updateMoa()
+
     // MoA reference-model output — surface as a labelled thinking chunk
     // (tagged with the source model) before the aggregator's response, so
     // the mixture-of-agents process is visible. Reuses the reasoning
@@ -262,6 +274,8 @@ export function handleMessageStreamEvent(ctx: GatewayEventContext): boolean {
   }
 
   if (event.type === 'moa.aggregating') {
+    updateMoa()
+
     // Status transition only; the aggregator's reply arrives via the normal
     // message stream. No reasoning/transcript mutation here.
     if (isActiveEvent) {
@@ -272,6 +286,8 @@ export function handleMessageStreamEvent(ctx: GatewayEventContext): boolean {
   }
 
   if (event.type === 'moa.progress') {
+    updateMoa()
+
     // Live reference fan-out progress ("refs k/n") — surfaced in the same
     // reasoning disclosure the references land in. These lines arrive
     // BEFORE any moa.reference event (references are only emitted once the
@@ -296,6 +312,8 @@ export function handleMessageStreamEvent(ctx: GatewayEventContext): boolean {
   }
 
   if (event.type === 'moa.phase') {
+    updateMoa()
+
     // Phase transition — currently only phase="aggregator" (fan-out done,
     // aggregator acting). Append a one-line marker; the first
     // moa.reference that follows replaces the whole block.
@@ -349,6 +367,10 @@ export function handleMessageStreamEvent(ctx: GatewayEventContext): boolean {
         : undefined
 
     completeAssistantMessage(sessionId, finalText, payload?.response_previewed, failure, occurredAt)
+
+    updateSessionState(sessionId, state =>
+      state.moa ? { ...state, moa: applyMoaEvent(state.moa, { payload, type: event.type }) } : state
+    )
 
     // Structured billing wall forwarded by the gateway (out of credits /
     // payment required) — cache it + raise a billing-specific toast.

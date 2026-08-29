@@ -163,6 +163,8 @@ export type GatewayEventPayload = {
   refs_done?: number
   refs_total?: number
   phase?: string
+  state?: string
+  elapsed_seconds?: number
   // message.complete — signals the final text was already previewed via
   // interim_assistant_callback, so the UI can settle instead of duplicating.
   response_previewed?: boolean
