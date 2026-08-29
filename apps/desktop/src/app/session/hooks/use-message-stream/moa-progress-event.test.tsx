@@ -22,45 +22,47 @@ afterEach(() => {
 })
 
 describe('useMessageStream moa.progress / moa.phase surfacing', () => {
-  it('shows refs k/n lines in the reasoning block as references complete', () => {
+  it('records refs k/n in orchestration state as references complete, not in Thinking', () => {
     mountStream()
 
     emit('message.start')
     emit('moa.progress', { label: 'model-a', refs_done: 1, refs_total: 3 })
     emit('moa.progress', { label: 'model-b', refs_done: 2, refs_total: 3 })
 
-    const text = stream.reasoningText()
-    expect(text).toContain('MoA refs 1/3 — model-a')
-    expect(text).toContain('MoA refs 2/3 — model-b')
+    expect(stream.reasoningText()).not.toContain('MoA refs')
+    expect(stream.state().moa?.refsDone).toBe(2)
+    expect(stream.state().moa?.refsTotal).toBe(3)
+    expect(stream.state().moa?.unattributedCompletions).toBe(2)
   })
 
-  it('restarts the progress block on the first ref of a new fan-out', () => {
+  it('restarts orchestration on the first ref of a new fan-out', () => {
     mountStream()
 
     emit('message.start')
     emit('moa.progress', { label: 'stale', refs_done: 1, refs_total: 2 })
     emit('moa.progress', { label: 'stale-2', refs_done: 2, refs_total: 2 })
-    // A later turn's fan-out starts over at 1/N — old lines must not linger.
     emit('moa.progress', { label: 'fresh', refs_done: 1, refs_total: 2 })
 
-    const text = stream.reasoningText()
-    expect(text).toContain('MoA refs 1/2 — fresh')
-    expect(text).not.toContain('stale')
+    expect(stream.reasoningText()).not.toContain('stale')
+    expect(stream.state().moa?.refsDone).toBe(1)
+    expect(stream.state().moa?.refsTotal).toBe(2)
   })
 
-  it('appends the aggregating marker on moa.phase and ignores unknown phases', () => {
+  it('ignores unknown phases and waits to act until fan-out settles', () => {
     mountStream()
 
     emit('message.start')
     emit('moa.progress', { label: 'model-a', refs_done: 1, refs_total: 1 })
     emit('moa.phase', { phase: 'reference', refs_done: 1, refs_total: 1 })
-    expect(stream.reasoningText()).not.toContain('aggregating')
+    expect(stream.state().moa?.phase).not.toBe('aggregating')
 
     emit('moa.phase', { aggregator: 'agg-model', phase: 'aggregator', refs_done: 1, refs_total: 1 })
-    expect(stream.reasoningText()).toContain('MoA aggregating…')
+    expect(stream.reasoningText()).not.toContain('aggregating')
+    expect(stream.state().moa?.phase).toBe('aggregating')
+    expect(stream.state().moa?.aggregatorLabel).toBe('agg-model')
   })
 
-  it('a following moa.reference replaces the progress trail (self-cleaning)', () => {
+  it('a following moa.reference fills a labelled slot without Thinking prose', () => {
     mountStream()
 
     emit('message.start')
@@ -68,9 +70,9 @@ describe('useMessageStream moa.progress / moa.phase surfacing', () => {
     emit('moa.phase', { phase: 'aggregator', refs_done: 1, refs_total: 1 })
     emit('moa.reference', { count: 1, index: 1, label: 'model-a', text: 'advice-a' })
 
-    const text = stream.reasoningText()
-    expect(text).toContain('Reference 1/1 — model-a')
-    expect(text).not.toContain('MoA refs')
-    expect(text).not.toContain('aggregating')
+    expect(stream.reasoningText()).not.toContain('Reference 1/1')
+    expect(stream.reasoningText()).not.toContain('MoA refs')
+    expect(stream.state().moa?.slots[0]?.label).toBe('model-a')
+    expect(stream.state().moa?.slots[0]?.output).toBe('advice-a')
   })
 })

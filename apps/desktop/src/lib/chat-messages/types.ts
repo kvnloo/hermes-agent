@@ -163,6 +163,14 @@ export type GatewayEventPayload = {
   refs_done?: number
   refs_total?: number
   phase?: string
+  /** Optional #71796 waiting heartbeat. Ignored by older backends. */
+  state?: string
+  elapsed_seconds?: number
+  advisors?: string[]
+  fanout?: string
+  cached?: boolean
+  concurrency?: number
+  output_progress?: number
   // message.complete — signals the final text was already previewed via
   // interim_assistant_callback, so the UI can settle instead of duplicating.
   response_previewed?: boolean

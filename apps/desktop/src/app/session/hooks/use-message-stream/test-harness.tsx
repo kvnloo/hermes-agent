@@ -30,7 +30,7 @@ export interface MessageStreamHarness {
    *  tail is not text. What streamed deltas accumulate into. */
   text: (sessionId?: string) => string
   /** Text of the reasoning part on the newest message, '' when there is none.
-   *  MoA events land there, so the moa specs read the stream through it. */
+   *  Ordinary reasoning still lands there; MoA orchestration does not. */
   reasoningText: () => string
 }
 

@@ -2509,6 +2509,19 @@ export const ar = defineLocale({
       thought: 'فكّر',
       thoughtBriefly: 'فكّر قليلاً',
       thoughtFor: duration => `فكّر لمدة ${duration}`,
+      moa: {
+        label: 'MoA',
+        parallel: 'متوازٍ',
+        advisors: (done, total) => `${done}/${total}`,
+        waiting: 'المجمّع ينتظر',
+        aggregating: 'يجري التجميع',
+        reused: 'إرشاد معاد استخدامه',
+        settled: (count, aggregator, duration) =>
+          duration ? `${count} مستشارين → ${aggregator} · ${duration}` : `${count} مستشارين → ${aggregator}`,
+        expand: 'إظهار تفاصيل MoA',
+        collapse: 'إخفاء تفاصيل MoA',
+        outputProgress: percent => `تقدم الإخراج ${percent}%`
+      },
       turnDuration: duration => `استغرقت هذه الجولة ${duration}`,
       today: time => `اليوم ${time}`,
       yesterday: time => `أمس ${time}`,

@@ -2715,6 +2715,19 @@ export const zhHant = defineLocale({
       thought: '已思考',
       thoughtBriefly: '思考了片刻',
       thoughtFor: duration => `思考了 ${duration}`,
+      moa: {
+        label: 'MoA',
+        parallel: '並行',
+        advisors: (done, total) => `${done}/${total}`,
+        waiting: '聚合器等待中',
+        aggregating: '正在聚合',
+        reused: '重用參考',
+        settled: (count, aggregator, duration) =>
+          duration ? `${count} 個顧問 → ${aggregator} · ${duration}` : `${count} 個顧問 → ${aggregator}`,
+        expand: '顯示 MoA 詳情',
+        collapse: '隱藏 MoA 詳情',
+        outputProgress: percent => `輸出進度 ${percent}%`
+      },
       turnDuration: duration => `本輪耗時 ${duration}`,
       today: time => `今天，${time}`,
       yesterday: time => `昨天，${time}`,

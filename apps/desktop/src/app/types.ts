@@ -1,6 +1,7 @@
 import type * as React from 'react'
 
 import type { ChatMessage } from '@/lib/chat-messages'
+import type { MoaOrchestrationState } from '@/lib/moa-orchestration'
 import type { SessionMessage, UsageStats } from '@/types/hermes'
 
 export interface ContextSuggestion {
@@ -227,4 +228,7 @@ export interface ClientSessionState {
    *  the primary-only $currentUsage — the statusbar reads it for a focused
    *  tile's context count. Null until the first turn reports. */
   usage: null | UsageStats
+  /** Desktop-only Mixture of Agents orchestration for the live turn. Absent
+   *  on ordinary (non-MoA) sessions so the Thinking disclosure stays unchanged. */
+  moa?: MoaOrchestrationState
 }

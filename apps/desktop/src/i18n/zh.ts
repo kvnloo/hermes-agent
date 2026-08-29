@@ -3343,6 +3343,19 @@ export const zh: Translations = {
       thought: '已思考',
       thoughtBriefly: '思考了片刻',
       thoughtFor: duration => `思考了 ${duration}`,
+      moa: {
+        label: 'MoA',
+        parallel: '并行',
+        advisors: (done, total) => `${done}/${total}`,
+        waiting: '聚合器等待中',
+        aggregating: '正在聚合',
+        reused: '复用参考',
+        settled: (count, aggregator, duration) =>
+          duration ? `${count} 个顾问 → ${aggregator} · ${duration}` : `${count} 个顾问 → ${aggregator}`,
+        expand: '显示 MoA 详情',
+        collapse: '隐藏 MoA 详情',
+        outputProgress: percent => `输出进度 ${percent}%`
+      },
       turnDuration: duration => `本轮耗时 ${duration}`,
       today: time => `今天，${time}`,
       yesterday: time => `昨天，${time}`,

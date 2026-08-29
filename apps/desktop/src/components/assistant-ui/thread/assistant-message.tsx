@@ -26,9 +26,11 @@ import { useMessageReactions, useTapbackDoubleClick } from '@/components/assista
 import { AGENT_MESSAGE_RE } from '@/components/assistant-ui/thread/user-message'
 import { TooltipIconButton } from '@/components/assistant-ui/tooltip-icon-button'
 import { formatElapsed } from '@/components/chat/activity-timer'
+import { MoaThinkingOrbs } from '@/components/chat/moa-thinking-orbs'
 import { PreviewAttachment } from '@/components/chat/preview-attachment'
 import { Codicon } from '@/components/ui/codicon'
 import { CopyButton } from '@/components/ui/copy-button'
+import { prefersReducedMotion } from '@/hooks/use-media-query'
 import { useI18n } from '@/i18n'
 import { type ErrorSurface, formatErrorDiagnostics } from '@/lib/error-surface'
 import { triggerHaptic } from '@/lib/haptics'
@@ -45,11 +47,13 @@ import {
 import { extractPreviewTargets } from '@/lib/preview-targets'
 import { markAssistantIdSpoken } from '@/lib/spoken-reply'
 import { useEnterAnimation } from '@/lib/use-enter-animation'
+import { useStoreSelector } from '@/lib/use-session-slice'
 import { cn } from '@/lib/utils'
 import { playSpeechText, stopVoicePlayback } from '@/lib/voice-playback'
 import { notifyError } from '@/store/notifications'
 import { requestSendDiagnostics } from '@/store/send-diagnostics'
-import { $connection, $currentModel } from '@/store/session'
+import { $activeSessionId, $connection, $currentModel } from '@/store/session'
+import { $sessionStates } from '@/store/session-states'
 import { $voicePlayback } from '@/store/voice-playback'
 
 // Stable empty identity for the settled-parts selector — a fresh [] per render
@@ -321,10 +325,26 @@ const AssistantStatusSlot: FC = () => {
   })
 
   if (slot === 'none') {
+    return <MoaOrchestrationLeaf />
+  }
+
+  return (
+    <>
+      <MoaOrchestrationLeaf />
+      {slot === 'placeholder' ? <ResponseLoadingIndicator /> : <TurnActivityIndicator />}
+    </>
+  )
+}
+
+const MoaOrchestrationLeaf: FC = () => {
+  const runtimeId = useStore($activeSessionId)
+  const moa = useStoreSelector($sessionStates, states => (runtimeId ? states[runtimeId]?.moa : undefined))
+
+  if (!moa || moa.phase === 'idle') {
     return null
   }
 
-  return slot === 'placeholder' ? <ResponseLoadingIndicator /> : <TurnActivityIndicator />
+  return <MoaThinkingOrbs reducedMotion={prefersReducedMotion()} state={moa} />
 }
 
 /**

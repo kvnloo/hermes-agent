@@ -3185,6 +3185,19 @@ export const en: Translations = {
       thought: 'Thought',
       thoughtBriefly: 'Thought briefly',
       thoughtFor: duration => `Thought for ${duration}`,
+      moa: {
+        label: 'MoA',
+        parallel: 'parallel',
+        advisors: (done, total) => `${done}/${total}`,
+        waiting: 'aggregator waiting',
+        aggregating: 'aggregating',
+        reused: 'reused guidance',
+        settled: (count, aggregator, duration) =>
+          duration ? `${count} advisors → ${aggregator} · ${duration}` : `${count} advisors → ${aggregator}`,
+        expand: 'Show MoA details',
+        collapse: 'Hide MoA details',
+        outputProgress: percent => `output progress ${percent}%`
+      },
       turnDuration: duration => `This turn took ${duration}`,
       today: time => `Today, ${time}`,
       yesterday: time => `Yesterday, ${time}`,

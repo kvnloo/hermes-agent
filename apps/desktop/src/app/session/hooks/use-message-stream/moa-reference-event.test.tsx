@@ -22,18 +22,17 @@ describe('useMessageStream moa.reference accumulation (#64658)', () => {
     vi.restoreAllMocks()
   })
 
-  it('keeps every reference model labelled block instead of only the latest one', () => {
+  it('keeps every reference model labelled slot instead of only the latest one', () => {
     mountStream()
 
     emit('moa.reference', { count: 2, index: 1, label: 'model-a', text: 'advice-a' })
     emit('moa.reference', { count: 2, index: 2, label: 'model-b', text: 'advice-b' })
 
-    const text = stream.reasoningText()
-
-    expect(text).toContain('model-a')
-    expect(text).toContain('advice-a')
-    expect(text).toContain('model-b')
-    expect(text).toContain('advice-b')
+    expect(stream.reasoningText()).not.toContain('advice-a')
+    expect(stream.state().moa?.slots[0]?.label).toBe('model-a')
+    expect(stream.state().moa?.slots[0]?.output).toBe('advice-a')
+    expect(stream.state().moa?.slots[1]?.label).toBe('model-b')
+    expect(stream.state().moa?.slots[1]?.output).toBe('advice-b')
   })
 
   it('handles a single-reference MoA turn (count=1) without regression', () => {
@@ -41,27 +40,17 @@ describe('useMessageStream moa.reference accumulation (#64658)', () => {
 
     emit('moa.reference', { count: 1, index: 1, label: 'model-a', text: 'only-advice' })
 
-    const text = stream.reasoningText()
-
-    expect(text).toContain('model-a')
-    expect(text).toContain('only-advice')
+    expect(stream.state().moa?.slots[0]?.label).toBe('model-a')
+    expect(stream.state().moa?.slots[0]?.output).toBe('only-advice')
   })
 
-  it('accumulates three or more references in order', () => {
+  it('accumulates three or more references in stable slot order', () => {
     mountStream()
 
     emit('moa.reference', { count: 3, index: 1, label: 'model-a', text: 'advice-a' })
     emit('moa.reference', { count: 3, index: 2, label: 'model-b', text: 'advice-b' })
     emit('moa.reference', { count: 3, index: 3, label: 'model-c', text: 'advice-c' })
 
-    const text = stream.reasoningText()
-
-    const orderOk =
-      text.indexOf('advice-a') < text.indexOf('advice-b') && text.indexOf('advice-b') < text.indexOf('advice-c')
-
-    expect(text).toContain('advice-a')
-    expect(text).toContain('advice-b')
-    expect(text).toContain('advice-c')
-    expect(orderOk).toBe(true)
+    expect(stream.state().moa?.slots.map(slot => slot.output)).toEqual(['advice-a', 'advice-b', 'advice-c'])
   })
 })

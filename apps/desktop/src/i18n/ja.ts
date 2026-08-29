@@ -2811,6 +2811,19 @@ export const ja = defineLocale({
       thought: '思考済み',
       thoughtBriefly: '少し思考',
       thoughtFor: duration => `${duration} 思考`,
+      moa: {
+        label: 'MoA',
+        parallel: '並列',
+        advisors: (done, total) => `${done}/${total}`,
+        waiting: '集約待ち',
+        aggregating: '集約中',
+        reused: '案内を再利用',
+        settled: (count, aggregator, duration) =>
+          duration ? `${count} 件の助言 → ${aggregator} · ${duration}` : `${count} 件の助言 → ${aggregator}`,
+        expand: 'MoA の詳細を表示',
+        collapse: 'MoA の詳細を隠す',
+        outputProgress: percent => `出力進捗 ${percent}%`
+      },
       turnDuration: duration => `このターンの所要時間: ${duration}`,
       today: time => `今日 ${time}`,
       yesterday: time => `昨日 ${time}`,

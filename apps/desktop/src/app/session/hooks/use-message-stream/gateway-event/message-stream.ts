@@ -6,6 +6,7 @@ import { coerceGatewayText, coerceThinkingText } from '@/lib/chat-runtime'
 import { playCompletionSound } from '@/lib/completion-sound'
 import { parseErrorSurface } from '@/lib/error-surface'
 import { triggerHaptic } from '@/lib/haptics'
+import { applyMoaEvent, emptyMoaState } from '@/lib/moa-orchestration'
 import { billingCtaLabel, clearBillingBlock, runBillingRecovery, setBillingBlock } from '@/store/billing-block'
 import { clearClarifyRequest } from '@/store/clarify'
 import { setSessionCompacting } from '@/store/compaction'
@@ -127,6 +128,7 @@ export function handleMessageStreamEvent(ctx: GatewayEventContext): boolean {
         sawAssistantPayload: false,
         interrupted: false,
         interimBoundaryPending: false,
+        moa: undefined,
         // Backend accepted the turn — the no-payload settle gate below may
         // now treat a running=false heartbeat as a real turn end.
         turnLive: true,
@@ -221,87 +223,22 @@ export function handleMessageStreamEvent(ctx: GatewayEventContext): boolean {
     return true
   }
 
-  if (event.type === 'moa.reference') {
-    // MoA reference-model output — surface as a labelled thinking chunk
-    // (tagged with the source model) before the aggregator's response, so
-    // the mixture-of-agents process is visible. Reuses the reasoning
-    // disclosure rather than introducing a parallel surface.
+  if (
+    event.type === 'moa.reference' ||
+    event.type === 'moa.progress' ||
+    event.type === 'moa.phase' ||
+    event.type === 'moa.aggregating'
+  ) {
+    // Desktop MoA orchestration (#97674) is a dedicated one-line stage.
+    // Do not flatten these events into the generic Thinking disclosure.
     if (sessionId) {
-      const label = coerceGatewayText(payload?.label) || 'reference'
-      const idx = typeof payload?.index === 'number' ? payload.index : undefined
-      const cnt = typeof payload?.count === 'number' ? payload.count : undefined
-      const header = idx && cnt ? `◇ Reference ${idx}/${cnt} — ${label}` : `◇ Reference — ${label}`
-      const body = coerceThinkingText(payload?.text)
-      const text = `${header}\n${body}\n\n`
-
-      if (idx === undefined || idx <= 1) {
-        // First reference: clear any stale reasoning left over from
-        // before this turn's references start, same as before.
-        appendReasoningDelta(sessionId, text, true, occurredAt)
-      } else {
-        // Later references must accumulate, not replace — otherwise
-        // each new reference wipes out the ones already shown (#64658).
-        // Queue-then-flush (rather than the streamed/batched queue path)
-        // applies it immediately, since each reference arrives as one
-        // complete block rather than incremental tokens. reasoning.delta
-        // cannot be mid-flight here: MoAChatCompletions.reference_callback
-        // (agent/moa_loop.py) fires "moa.reference" once per reference's
-        // already-complete text, with no concurrent token stream for the
-        // reference-gathering phase, so there is no in-flight delta to
-        // collide with in the shared queue bucket.
-        appendReasoningDelta(sessionId, text, false, occurredAt)
-        flushQueuedDeltas(sessionId)
-      }
-    }
-
-    if (isActiveEvent) {
-      setPetActivity({ reasoning: true })
-    }
-
-    return true
-  }
-
-  if (event.type === 'moa.aggregating') {
-    // Status transition only; the aggregator's reply arrives via the normal
-    // message stream. No reasoning/transcript mutation here.
-    if (isActiveEvent) {
-      setPetActivity({ reasoning: true })
-    }
-
-    return true
-  }
-
-  if (event.type === 'moa.progress') {
-    // Live reference fan-out progress ("refs k/n") — surfaced in the same
-    // reasoning disclosure the references land in. These lines arrive
-    // BEFORE any moa.reference event (references are only emitted once the
-    // whole fan-out completes), and the first moa.reference replaces the
-    // block, so the progress trail is self-cleaning.
-    if (sessionId && typeof payload?.refs_done === 'number' && typeof payload?.refs_total === 'number') {
-      const label = coerceGatewayText(payload?.label)
-
-      const line = label
-        ? `◇ MoA refs ${payload.refs_done}/${payload.refs_total} — ${label}\n`
-        : `◇ MoA refs ${payload.refs_done}/${payload.refs_total}\n`
-
-      appendReasoningDelta(sessionId, line, payload.refs_done <= 1, occurredAt)
-      flushQueuedDeltas(sessionId)
-    }
-
-    if (isActiveEvent) {
-      setPetActivity({ reasoning: true })
-    }
-
-    return true
-  }
-
-  if (event.type === 'moa.phase') {
-    // Phase transition — currently only phase="aggregator" (fan-out done,
-    // aggregator acting). Append a one-line marker; the first
-    // moa.reference that follows replaces the whole block.
-    if (sessionId && payload?.phase === 'aggregator') {
-      appendReasoningDelta(sessionId, '◇ MoA aggregating…\n', false, occurredAt)
-      flushQueuedDeltas(sessionId)
+      updateSessionState(sessionId, state => ({
+        ...state,
+        moa: applyMoaEvent(state.moa ?? emptyMoaState(), {
+          payload: payload as Record<string, unknown> | undefined,
+          type: event.type
+        })
+      }))
     }
 
     if (isActiveEvent) {
@@ -349,6 +286,18 @@ export function handleMessageStreamEvent(ctx: GatewayEventContext): boolean {
         : undefined
 
     completeAssistantMessage(sessionId, finalText, payload?.response_previewed, failure, occurredAt)
+
+    updateSessionState(sessionId, state =>
+      state.moa
+        ? {
+            ...state,
+            moa: applyMoaEvent(state.moa, {
+              payload: payload as Record<string, unknown> | undefined,
+              type: 'message.complete'
+            })
+          }
+        : state
+    )
 
     // Structured billing wall forwarded by the gateway (out of credits /
     // payment required) — cache it + raise a billing-specific toast.

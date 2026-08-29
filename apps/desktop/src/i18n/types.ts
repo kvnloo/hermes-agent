@@ -2744,6 +2744,18 @@ export interface Translations {
       thought: string
       thoughtBriefly: string
       thoughtFor: (duration: string) => string
+      moa: {
+        label: string
+        parallel: string
+        advisors: (done: number, total: number) => string
+        waiting: string
+        aggregating: string
+        reused: string
+        settled: (count: number, aggregator: string, duration?: string) => string
+        expand: string
+        collapse: string
+        outputProgress: (percent: number) => string
+      }
       turnDuration: (duration: string) => string
       today: (time: string) => string
       yesterday: (time: string) => string
