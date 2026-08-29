@@ -73,4 +73,17 @@ describe('useMessageStream moa.progress / moa.phase surfacing', () => {
     expect(text).not.toContain('MoA refs')
     expect(text).not.toContain('aggregating')
   })
+
+  it('clears settled MoA state when a following plain turn starts', () => {
+    mountStream()
+
+    emit('message.start')
+    emit('moa.progress', { label: 'model-a', refs_done: 1, refs_total: 1 })
+    emit('message.complete', { text: 'MoA answer' })
+    expect(stream.state().moa?.phase).toBe('settled')
+
+    emit('message.start')
+
+    expect(stream.state().moa).toBeUndefined()
+  })
 })

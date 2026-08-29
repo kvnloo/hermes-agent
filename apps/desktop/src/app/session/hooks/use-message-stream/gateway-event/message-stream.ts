@@ -132,6 +132,7 @@ export function handleMessageStreamEvent(ctx: GatewayEventContext): boolean {
 
       return {
         ...state,
+        moa: undefined,
         busy: true,
         awaitingResponse: true,
         sawAssistantPayload: false,
