@@ -1376,6 +1376,22 @@ def build_turn_context(
     except Exception as exc:
         logger.warning("pre_llm_call hook failed: %s", exc)
 
+    # Chiefstaff Research KB retrieval rides the user-message sidecar, never
+    # the system prompt, so the cached prefix stays byte-stable.
+    try:
+        from agent.research_kb_retrieval import retrieve_for_turn as _rk_retrieve
+
+        _rk_query = original_user_message if isinstance(original_user_message, str) else ""
+        _rk_block = _rk_retrieve(_rk_query)
+        if _rk_block:
+            plugin_user_context = (
+                f"{plugin_user_context}\n\n{_rk_block}"
+                if plugin_user_context
+                else _rk_block
+            )
+    except Exception:
+        logger.debug("research KB retrieval skipped", exc_info=True)
+
     # Gateway must-deliver notes (auto-reset note, first-contact intro,
     # voice-channel change) ride the same user-message injection channel as
     # plugin context so the ephemeral system prompt can stay byte-stable.
