@@ -38,6 +38,10 @@ from agent.conversation_compression import (
     conversation_history_after_compression,
 )
 from agent.context_engine import automatic_compaction_status_message
+from agent.context_budget import (
+    retained_tool_result_chars,
+    telegram_history_exceeds_attention_budget,
+)
 from agent.display import KawaiiSpinner
 from agent.error_classifier import FailoverReason, classify_api_error
 from agent.message_metadata import append_message
@@ -109,6 +113,43 @@ from tools.skill_provenance import set_current_write_origin
 from utils import base_url_host_matches, env_var_enabled
 
 logger = logging.getLogger(__name__)
+
+
+def telegram_attention_guard_result(
+    agent: Any,
+    messages: List[Dict[str, Any]],
+    conversation_history: List[Dict[str, Any]],
+    *,
+    api_calls: int,
+) -> Optional[Dict[str, Any]]:
+    """Persist and interrupt an over-budget Telegram request, else return None."""
+    platform_name = str(getattr(agent, "platform", "") or "").lower()
+    if not platform_name.endswith("telegram"):
+        return None
+    tool_budget = int(
+        getattr(agent, "telegram_tool_result_budget_chars", 400_000) or 400_000
+    )
+    if not telegram_history_exceeds_attention_budget(
+        messages, budget_chars=tool_budget
+    ):
+        return None
+    retained_chars = retained_tool_result_chars(messages)
+    guard_error = (
+        "Telegram retained-tool attention budget exceeded "
+        f"({retained_chars:,} > {tool_budget:,} characters); the next provider "
+        "request was not sent. The complete transcript remains saved; run "
+        "/compress to retry or /reset to start a clean session."
+    )
+    logger.error(guard_error)
+    agent._persist_session(messages, conversation_history)
+    return {
+        "final_response": f"⚠️ {guard_error}",
+        "messages": messages,
+        "api_calls": api_calls,
+        "completed": False,
+        "failed": True,
+        "error": guard_error,
+    }
 
 
 # Scaffold marker used by _apply_active_turn_redirect and the ghost-row filter
@@ -2966,6 +3007,18 @@ def run_conversation(
                 )
                 if callable(_warn_fn):
                     _warn_fn(request_pressure_tokens, _ctx_len)
+
+        # Tool results can cross the budget mid-turn, after gateway hygiene.
+        # The normal compressor above gets first chance; this final pre-request
+        # fence makes timeout/cooldown/no-progress outcomes fail closed.
+        _telegram_guard = telegram_attention_guard_result(
+            agent,
+            messages,
+            conversation_history,
+            api_calls=api_call_count,
+        )
+        if _telegram_guard is not None:
+            return _telegram_guard
 
         # Thinking spinner for quiet mode (animated during API call)
         thinking_spinner = None

@@ -905,6 +905,7 @@ DEFAULT_CONFIG = {
                                       # re-summarizes the summary itself instead of
                                       # letting it grow without bound.
         "hygiene_hard_message_limit": 5000,  # gateway session-hygiene force-compress threshold by message count
+        "telegram_tool_result_budget_chars": 400000,  # deterministic retained tool-result cap for Telegram provider replay; over-budget turns must compact or interrupt before the next request
         "hygiene_timeout_seconds": 30,  # max seconds gateway waits for pre-agent hygiene compression
                                       # WITHOUT forward progress. The summary call streams, so
                                       # this is an inactivity budget: a slow model still

@@ -493,12 +493,12 @@ async def test_session_hygiene_preserves_transcript_when_in_place_configured_but
 
 
 @pytest.mark.asyncio
-async def test_session_hygiene_timeout_continues_to_agent_and_sets_cooldown(monkeypatch, tmp_path):
-    """A timed-out SessionDB-bound worker cannot compact after the live turn starts.
+async def test_session_hygiene_timeout_blocks_oversized_telegram_provider_request(monkeypatch, tmp_path):
+    """A timed-out compressor must not replay oversized tool results to Telegram.
 
     The worker remains alive long enough to cross the old race window. The
-    timeout must fence its eventual commit, continue to the live agent, and
-    clean up the temporary agent only after the worker actually returns.
+    timeout must fence its eventual commit, durably retain the latest human
+    intent, and interrupt before the live provider call.
     """
     fake_dotenv = types.ModuleType("dotenv")
     fake_dotenv.load_dotenv = lambda *args, **kwargs: None
@@ -559,6 +559,7 @@ async def test_session_hygiene_timeout_continues_to_agent_and_sets_cooldown(monk
         "  enabled: true\n"
         "  hygiene_timeout_seconds: 0.01\n"
         "  hygiene_failure_cooldown_seconds: 120\n"
+        "  telegram_tool_result_budget_chars: 1000\n"
     )
 
     gateway_run = importlib.import_module("gateway.run")
@@ -581,10 +582,15 @@ async def test_session_hygiene_timeout_continues_to_agent_and_sets_cooldown(monk
         platform=Platform.TELEGRAM,
         chat_type="dm",
     )
-    runner.session_store.load_transcript.return_value = _make_history(6, content_size=400)
+    _oversized_tool_history = [
+        {"role": "tool", "tool_call_id": f"call-{i}", "content": "x" * 400}
+        for i in range(6)
+    ]
+    runner.session_store.load_transcript.return_value = _oversized_tool_history
     runner.session_store.has_any_sessions.return_value = True
     runner.session_store.rewrite_transcript = MagicMock()
     runner.session_store.append_to_transcript = MagicMock()
+    runner.session_store.has_platform_message_id.return_value = False
     runner._running_agents = {}
     runner._pending_messages = {}
     runner._pending_approvals = {}
@@ -621,9 +627,15 @@ async def test_session_hygiene_timeout_continues_to_agent_and_sets_cooldown(monk
 
     result = await runner._handle_message(event)
 
-    assert result == "ok"
+    assert "provider request was not sent" in result
     assert worker_started.is_set()
-    assert runner._run_agent.await_count == 1
+    runner._run_agent.assert_not_awaited()
+    persisted_user_rows = [
+        call.args[1]
+        for call in runner.session_store.append_to_transcript.call_args_list
+        if call.args[1].get("role") == "user"
+    ]
+    assert [row["content"] for row in persisted_user_rows] == ["hello"]
     # Cooldown must be persisted to the state DB (survives restart, #74136),
     # not stashed in an in-memory dict.
     assert fake_db.record_compression_failure_cooldown.called

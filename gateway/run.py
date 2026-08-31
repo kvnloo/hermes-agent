@@ -2887,6 +2887,11 @@ from gateway.config import (
     _getenv,
     load_gateway_config,
 )
+from gateway.context_budget import (
+    DEFAULT_TELEGRAM_TOOL_RESULT_BUDGET_CHARS,
+    retained_tool_result_chars,
+    telegram_history_exceeds_attention_budget,
+)
 from gateway.session import (
     AsyncSessionStore,
     SessionEntry,
@@ -20486,6 +20491,9 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
             _hyg_threshold_pct = 0.85
             _hyg_compression_enabled = True
             _hyg_hard_msg_limit = 5000
+            _telegram_tool_result_budget_chars = (
+                DEFAULT_TELEGRAM_TOOL_RESULT_BUDGET_CHARS
+            )
             _hyg_timeout_seconds = 30.0
             _hyg_total_ceiling_seconds = 600.0
             # Max wall-clock the user's TURN is held waiting on hygiene
@@ -20540,6 +20548,16 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
                                 _parsed = int(_raw_hard_limit)
                                 if _parsed > 0:
                                     _hyg_hard_msg_limit = _parsed
+                            except (TypeError, ValueError):
+                                pass
+                        _raw_tool_budget = _comp_cfg.get(
+                            "telegram_tool_result_budget_chars"
+                        )
+                        if _raw_tool_budget is not None:
+                            try:
+                                _parsed = int(_raw_tool_budget)
+                                if _parsed > 0:
+                                    _telegram_tool_result_budget_chars = _parsed
                             except (TypeError, ValueError):
                                 pass
                         _raw_timeout = _comp_cfg.get("hygiene_timeout_seconds")
@@ -20684,9 +20702,17 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
                 # compression.hygiene_hard_message_limit.
                 # (#2153)
                 _HARD_MSG_LIMIT = _hyg_hard_msg_limit
+                _tool_budget_exceeded = (
+                    source.platform == Platform.TELEGRAM
+                    and telegram_history_exceeds_attention_budget(
+                        history,
+                        budget_chars=_telegram_tool_result_budget_chars,
+                    )
+                )
                 _needs_compress = (
                     _approx_tokens >= _compress_token_threshold
                     or _msg_count >= _HARD_MSG_LIMIT
+                    or _tool_budget_exceeded
                 )
 
                 if _needs_compress:
@@ -21496,6 +21522,65 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
                         logger.warning(
                             "Session hygiene auto-compress failed: %s", e
                         )
+
+            # Telegram's persisted transcript is an audit log, not an unlimited
+            # provider-input buffer. Compression may time out, abort, be on
+            # cooldown, or complete without enough shrinkage; none of those
+            # outcomes may replay a poison-sized tool tail into the next model
+            # request. Keep the old session immutable, durably anchor the latest
+            # human intent, and stop explicitly before _run_agent. A later
+            # successful /compress can recover without hidden message loss.
+            if (
+                source.platform == Platform.TELEGRAM
+                and telegram_history_exceeds_attention_budget(
+                    history,
+                    budget_chars=_telegram_tool_result_budget_chars,
+                )
+            ):
+                _retained_tool_chars = retained_tool_result_chars(history)
+                _guard_message = (
+                    "⚠️ This Telegram session still contains "
+                    f"{_retained_tool_chars:,} retained tool-result characters, "
+                    "above the configured "
+                    f"{_telegram_tool_result_budget_chars:,}-character attention "
+                    "budget. Your latest message was saved, but the provider "
+                    "request was not sent because bounded compression did not "
+                    "succeed. Run /compress to retry or /reset to start a clean "
+                    "session; existing history remains readable."
+                )
+                _already_saved = bool(
+                    event.message_id
+                    and await self.async_session_store.has_platform_message_id(
+                        session_entry.session_id, str(event.message_id)
+                    )
+                )
+                if not _already_saved:
+                    _guarded_user_entry = {
+                        "role": "user",
+                        "content": (
+                            persist_user_message
+                            if persist_user_message is not None
+                            else event.text
+                        ),
+                        "timestamp": (
+                            persist_user_timestamp
+                            if persist_user_timestamp is not None
+                            else datetime.now().isoformat()
+                        ),
+                    }
+                    if event.message_id:
+                        _guarded_user_entry["message_id"] = str(event.message_id)
+                    await self.async_session_store.append_to_transcript(
+                        session_entry.session_id, _guarded_user_entry
+                    )
+                logger.error(
+                    "Telegram attention guard interrupted session %s before "
+                    "provider call (%s > %s retained tool-result chars)",
+                    session_entry.session_id,
+                    _retained_tool_chars,
+                    _telegram_tool_result_budget_chars,
+                )
+                return _guard_message
 
         # First-message onboarding -- only on the very first interaction ever.
         # Delivered on the current user message (sidecar), NOT the ephemeral

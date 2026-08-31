@@ -2104,6 +2104,17 @@ def init_agent(
     _compression_cfg = _agent_cfg.get("compression", {})
     if not isinstance(_compression_cfg, dict):
         _compression_cfg = {}
+    try:
+        agent.telegram_tool_result_budget_chars = max(
+            1,
+            int(
+                _compression_cfg.get(
+                    "telegram_tool_result_budget_chars", 400_000
+                )
+            ),
+        )
+    except (TypeError, ValueError):
+        agent.telegram_tool_result_budget_chars = 400_000
     compression_threshold = float(_compression_cfg.get("threshold", 0.50))
     # Per-model/route compaction-threshold override. Codex gpt-5.4 / gpt-5.5
     # raise to 85% (the Codex backend caps both families at 272K, so the
