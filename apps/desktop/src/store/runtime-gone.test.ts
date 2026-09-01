@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { refreshBackgroundProcesses, resetBackgroundPollingGuard } from './composer-status'
 import { $gateway } from './gateway'
 import { markRuntimeGone, noteRuntimeAlive, resetRuntimeGoneHealing } from './runtime-gone'
+import { resetScopedRpcResume } from './scoped-rpc-resume'
 import { $activeSessionId, $sessionResumeRequest } from './session'
 import { $sessionStates, $sessionTiles } from './session-states'
 
@@ -16,6 +17,7 @@ const tile = (storedSessionId: string, runtimeId?: string) => ({ runtimeId, stor
 
 beforeEach(() => {
   resetRuntimeGoneHealing()
+  resetScopedRpcResume()
   $sessionStates.set({})
   $sessionTiles.set([])
   $activeSessionId.set(null)
@@ -26,6 +28,7 @@ afterEach(() => {
   $gateway.set(null as never)
   resetBackgroundPollingGuard()
   resetRuntimeGoneHealing()
+  resetScopedRpcResume()
   $sessionStates.set({})
   $sessionTiles.set([])
   $activeSessionId.set(null)
@@ -136,7 +139,11 @@ describe('refreshBackgroundProcesses recovery', () => {
   it('leaves a transient failure alone — the binding may still be alive', async () => {
     $sessionTiles.set([tile(STORED, RUNTIME)])
     $gateway.set({
-      request: vi.fn(async () => {
+      request: vi.fn(async (method: string) => {
+        if (method === 'session.resume') {
+          return { session_id: RUNTIME }
+        }
+
         throw new Error('request timed out after 30s: process.list')
       })
     } as never)

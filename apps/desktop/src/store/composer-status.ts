@@ -9,6 +9,7 @@ import { $goalsBySession, type GoalStatus } from './goals'
 import { dispatchNativeNotification } from './native-notifications'
 import { notifyError } from './notifications'
 import { isSessionGone, isSessionGoneForBackgroundPolling, markSessionGone, noteRuntimeAlive } from './runtime-gone'
+import { canAttemptScopedRpc, ensureLiveSessionIdForScopedRpc, noteUnresumableScopedSession } from './scoped-rpc-resume'
 import { $sessions, lineageAliases } from './session'
 import { $sessionStates } from './session-states'
 import { $subagentsBySession, type SubagentProgress } from './subagents'
@@ -396,22 +397,37 @@ export function reconcileBackgroundProcesses(sid: string, procs: GatewayProcessE
 export async function refreshBackgroundProcesses(sid: string): Promise<void> {
   const gateway = $gateway.get()
 
-  if (!sid || !gateway || isSessionGone(sid)) {
+  if (!sid || !gateway || !canAttemptScopedRpc(sid)) {
     return
   }
 
-  try {
-    const result = await gateway.request<{ processes?: GatewayProcessEntry[] }>('process.list', { session_id: sid })
+  let liveId: string | undefined
 
-    reconcileBackgroundProcesses(sid, result?.processes ?? [])
+  try {
+    liveId = await ensureLiveSessionIdForScopedRpc(gateway, sid)
+
+    if (!liveId) {
+      noteUnresumableScopedSession(sid)
+
+      return
+    }
+
+    if (isSessionGone(liveId)) {
+      return
+    }
+
+    const result = await gateway.request<{ processes?: GatewayProcessEntry[] }>('process.list', { session_id: liveId })
+
+    reconcileBackgroundProcesses(liveId, result?.processes ?? [])
     // The binding answered, so it is healthy: refund the stored session's
     // recovery budget (a heal that stuck must not count against the next one).
-    noteRuntimeAlive(sid)
+    noteRuntimeAlive(liveId)
   } catch (error) {
     // A gone session never comes back under this runtime id: stop polling it,
     // or the 5s timer hammers the gateway with 4001s for the window's lifetime.
     if (isSessionGoneForBackgroundPolling(error)) {
       markSessionGone(sid)
+      if (liveId) markSessionGone(liveId)
 
       return
     }
