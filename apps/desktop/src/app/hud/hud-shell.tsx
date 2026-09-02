@@ -15,6 +15,7 @@ import { useHudGlass } from './glass'
 import { useHudGoto, useReportHudSession } from './handoff'
 import { hudResizeDirections, useHudResizeHandle } from './resize-handle'
 import { useHudThreadFocus } from './thread-focus'
+import { HudAgentStrip } from './hud-agent-strip'
 import { useHudTranscriptBand } from './transcript-band'
 
 /** How long the transcript lingers at its glanceable opacity — after a turn
@@ -340,6 +341,8 @@ export function HudShell() {
       <div aria-hidden data-hud-glass />
 
       <WiredPane part="chatRoutes" />
+
+      <HudAgentStrip />
 
       {/* CanvasTTY-style resize frame. Windows/macOS/X11 get every edge and
           corner; native Wayland gets the right/bottom handles it can honour
