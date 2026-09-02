@@ -137,7 +137,9 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
       ipcRenderer.on('hermes:hud:game-overlay', listener)
 
       return () => ipcRenderer.removeListener('hermes:hud:game-overlay', listener)
-    }
+    },
+    listHyprlandWindows: () => ipcRenderer.invoke('hermes:hud:hyprland-windows'),
+    pinOverlay: () => ipcRenderer.invoke('hermes:hud:pin')
   },
   // Quick Entry: the global-hotkey mini composer window. Main owns the OS
   // shortcut + the persisted preference; the quick window only captures text
