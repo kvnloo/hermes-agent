@@ -420,6 +420,36 @@ async def test_tool_dispatch_does_not_block_later_realtime_events():
 
 
 @pytest.mark.asyncio
+async def test_cancelled_epoch_does_not_submit_late_tool_result():
+    release = asyncio.Event()
+    session = FakeSession(
+        [RealtimeEvent.tool_call("cancelled-call", "terminal", {"command": "pwd"})]
+    )
+
+    async def dispatch(_name: str, _arguments: dict[str, Any]) -> str:
+        await release.wait()
+        return "completed external effect"
+
+    coordinator = RealtimeVoiceCoordinator(
+        FakeProvider("fake", session), dispatch_tool=dispatch
+    )
+    await coordinator.open(instructions="", tools=[])
+    events = coordinator.events()
+
+    tool_call = await anext(events)
+    tasks = tuple(coordinator._tool_tasks.values())
+    assert tool_call.epoch == 0
+
+    await coordinator.cancel_response()
+    release.set()
+    await asyncio.gather(*tasks)
+
+    assert session.tool_results == []
+    assert "cancelled-call" in coordinator._completed_tool_calls
+    await events.aclose()
+
+
+@pytest.mark.asyncio
 async def test_duplicate_tool_call_is_dispatched_exactly_once():
     duplicate = RealtimeEvent.tool_call("call-1", "terminal", {"command": "pwd"})
     session = FakeSession([duplicate, duplicate])
