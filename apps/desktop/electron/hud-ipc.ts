@@ -7,6 +7,8 @@ import { type BrowserWindow, ipcMain, screen } from 'electron'
 import { createHudDragSession } from './hud-drag'
 import { normalizeHudResizeBounds } from './hud-geometry'
 import { hudWindowingView, resolveHudWindowing } from './hud-windowing'
+import { promoteHudOverlay } from './hud-overlay'
+import { readHyprlandWindows } from './hyprland'
 import { hudFrostFor, type TranslucencyState } from './translucency'
 
 function hudWindowing() {
@@ -289,6 +291,20 @@ export function registerHudIpc({
     if (hudWindow && !hudWindow.isDestroyed() && event.sender === hudWindow.webContents) {
       setHudSessionId(typeof sessionId === 'string' && sessionId ? sessionId : null)
     }
+  })
+
+  ipcMain.handle('hermes:hud:hyprland-windows', async () => {
+    const listed = await readHyprlandWindows(process.pid)
+
+    return (listed ?? []).map(window => ({ app: window.app, id: window.id, title: window.title }))
+  })
+
+  ipcMain.handle('hermes:hud:pin', async () => {
+    const hudWindow = getHudWindow()
+    const title = hudWindow && !hudWindow.isDestroyed() ? hudWindow.getTitle() : 'Hermes'
+    const ok = await promoteHudOverlay({ title })
+
+    return { ok }
   })
 
   ipcMain.handle('hermes:hud:close', async () => {
