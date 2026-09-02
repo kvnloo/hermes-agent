@@ -48,6 +48,10 @@ class RealtimeEvent:
     role: str | None = None
     arguments: dict[str, Any] = field(default_factory=dict)
     session_id: str | None = None
+    provider_session_id: str | None = None
+    turn_id: str | None = None
+    epoch: int | None = None
+    sequence: int | None = None
 
     @classmethod
     def audio(cls, pcm: bytes, *, item_id: str | None = None) -> "RealtimeEvent":
