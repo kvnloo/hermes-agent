@@ -296,6 +296,9 @@ class RealtimeVoiceCoordinator:
         if not self._is_current_session(session, generation):
             return
         call = (event.tool_name, dict(event.arguments))
+        if event.epoch != self._epoch:
+            self._complete_call(event.call_id, call)
+            return
         await self._submit_result(event.call_id, output, session, generation)
         if self._is_current_session(session, generation):
             self._complete_call(event.call_id, call)
