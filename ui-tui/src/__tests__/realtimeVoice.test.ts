@@ -8,6 +8,7 @@ import {
   encodeRealtimeVoiceDelegationResult,
   MAX_REALTIME_VOICE_FRAME_CHARS,
   MAX_REALTIME_VOICE_TEXT_CHARS,
+  RealtimeVoiceOrderGuard,
   parseRealtimeVoiceEvent,
   parseRealtimeVoicePhase,
   registerRealtimeVoiceProcess,
@@ -23,6 +24,13 @@ const envelope = {
   protocol_version: 1 as const,
   sequence: 1,
   surface_session_id: 'surface-1'
+}
+
+const canonicalIdentity = {
+  realtime_session_id: 'realtime-1',
+  realtime_turn_id: 'realtime-1:1',
+  realtime_epoch: 0,
+  realtime_sequence: 7
 }
 
 const framed = (payload: Record<string, unknown>): string =>
@@ -75,6 +83,62 @@ describe('realtime voice lifecycle', () => {
       name: 'endpoint_to_first_audio_ms',
       value_ms: 234.5
     })
+  })
+
+  it('parses canonical identity atomically', () => {
+    expect(
+      parseRealtimeVoiceEvent(
+        framed({
+          type: 'metric',
+          name: 'endpoint_to_first_audio_ms',
+          value_ms: 234.5,
+          ...canonicalIdentity
+        })
+      )
+    ).toEqual({
+      ...envelope,
+      ...canonicalIdentity,
+      type: 'metric',
+      name: 'endpoint_to_first_audio_ms',
+      value_ms: 234.5
+    })
+    expect(
+      parseRealtimeVoiceEvent(
+        framed({
+          type: 'warning',
+          message: 'partial identity',
+          realtime_session_id: 'realtime-1'
+        })
+      )
+    ).toBeNull()
+  })
+
+  it('rejects regressing surface and canonical event order', () => {
+    const guard = new RealtimeVoiceOrderGuard()
+    const first = parseRealtimeVoiceEvent(framed({ type: 'warning', message: 'first', ...canonicalIdentity }))
+    const next = parseRealtimeVoiceEvent(
+      framed({
+        type: 'warning',
+        message: 'next',
+        ...canonicalIdentity,
+        sequence: 2,
+        realtime_epoch: 1,
+        realtime_sequence: 9
+      })
+    )
+    const stale = parseRealtimeVoiceEvent(
+      framed({
+        type: 'warning',
+        message: 'stale',
+        ...canonicalIdentity,
+        sequence: 3,
+        realtime_sequence: 8
+      })
+    )
+
+    expect(first && guard.accept(first)).toBe(true)
+    expect(next && guard.accept(next)).toBe(true)
+    expect(stale && guard.accept(stale)).toBe(false)
   })
 
   it('round-trips a delegated text-agent result over child stdin', () => {

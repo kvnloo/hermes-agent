@@ -24,6 +24,7 @@ import {
   encodeRealtimeVoiceDelegationProgress,
   encodeRealtimeVoiceDelegationResult,
   MAX_REALTIME_VOICE_FRAME_CHARS,
+  RealtimeVoiceOrderGuard,
   parseRealtimeVoiceEvent,
   parseRealtimeVoicePhase,
   registerRealtimeVoiceProcess,
@@ -565,8 +566,7 @@ export function useMainApp(gw: GatewayClient) {
       let readyText = ''
       let stdoutBuffer = ''
       let ready = false
-      let protocolSessionId: string | null = null
-      let lastProtocolSequence = 0
+      const eventOrder = new RealtimeVoiceOrderGuard()
       child.stdout?.setEncoding('utf8')
       const rejectOversizedFrame = () => {
         errorText = 'Realtime voice child emitted an oversized protocol frame.'
@@ -610,15 +610,10 @@ export function useMainApp(gw: GatewayClient) {
           if (!event || realtimeVoiceRef.current !== child) {
             continue
           }
-          if (
-            (protocolSessionId !== null && event.surface_session_id !== protocolSessionId) ||
-            event.sequence <= lastProtocolSequence
-          ) {
-            rejectProtocolFrame('Realtime voice child emitted an out-of-order protocol frame.')
+          if (!eventOrder.accept(event)) {
+            rejectProtocolFrame('Realtime voice child emitted stale or out-of-order event identity.')
             return
           }
-          protocolSessionId = event.surface_session_id
-          lastProtocolSequence = event.sequence
 
           if (event.type === 'metric') {
             continue
