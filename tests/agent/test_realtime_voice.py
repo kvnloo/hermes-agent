@@ -154,6 +154,83 @@ async def test_coordinator_keeps_tool_dispatch_in_hermes(provider_name: str):
 
 
 @pytest.mark.asyncio
+async def test_coordinator_stamps_one_canonical_ordered_session_envelope():
+    session = FakeSession(
+        [
+            RealtimeEvent(
+                type=RealtimeEventType.SESSION_READY,
+                provider_session_id="provider-1",
+            ),
+            RealtimeEvent(type=RealtimeEventType.TURN_STARTED, role="user"),
+            RealtimeEvent.transcript("hello", final=True, role="user"),
+            RealtimeEvent(type=RealtimeEventType.TURN_ENDED, role="user"),
+            RealtimeEvent(type=RealtimeEventType.TURN_STARTED, role="assistant"),
+            RealtimeEvent.audio(b"reply", item_id="item-1"),
+        ]
+    )
+    coordinator = RealtimeVoiceCoordinator(
+        FakeProvider("fake", session), dispatch_tool=async_dispatch("ok")
+    )
+    await coordinator.open(instructions="", tools=[])
+
+    observed = [event async for event in coordinator.events()]
+
+    assert len({event.session_id for event in observed}) == 1
+    assert observed[0].session_id
+    assert observed[0].provider_session_id == "provider-1"
+    assert observed[0].turn_id is None
+    assert observed[1].turn_id
+    assert {event.turn_id for event in observed[1:]} == {observed[1].turn_id}
+    assert [event.epoch for event in observed] == [0] * len(observed)
+    assert [event.sequence for event in observed] == list(
+        range(1, len(observed) + 1)
+    )
+
+
+@pytest.mark.asyncio
+async def test_coordinator_drops_old_epoch_events_without_sequence_gaps():
+    session = FakeSession(
+        [
+            RealtimeEvent(
+                type=RealtimeEventType.AUDIO,
+                audio_bytes=b"current",
+                item_id="item-1",
+                epoch=0,
+            ),
+            RealtimeEvent(
+                type=RealtimeEventType.AUDIO,
+                audio_bytes=b"late",
+                item_id="item-old",
+                epoch=0,
+            ),
+            RealtimeEvent(
+                type=RealtimeEventType.AUDIO,
+                audio_bytes=b"next",
+                item_id="item-2",
+                epoch=1,
+            ),
+        ]
+    )
+    coordinator = RealtimeVoiceCoordinator(
+        FakeProvider("fake", session), dispatch_tool=async_dispatch("ok")
+    )
+    await coordinator.open(instructions="", tools=[])
+    events = coordinator.events()
+
+    first = await anext(events)
+    await coordinator.cancel_response()
+    second = await anext(events)
+
+    assert first.audio_bytes == b"current"
+    assert first.epoch == 0
+    assert second.audio_bytes == b"next"
+    assert second.epoch == 1
+    assert (first.sequence, second.sequence) == (1, 2)
+    assert first.session_id == second.session_id
+    assert coordinator.report_audio_heard(first, audio_end_ms=10) is False
+
+
+@pytest.mark.asyncio
 async def test_coordinator_cancels_at_the_latest_heard_output_boundary_once():
     session = BoundarySession([RealtimeEvent.audio(b"reply-pcm", item_id="item-1")])
     coordinator = RealtimeVoiceCoordinator(

@@ -4,6 +4,8 @@ from __future__ import annotations
 import asyncio
 import inspect
 import logging
+import uuid
+from dataclasses import replace
 from collections import OrderedDict
 from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any
@@ -49,6 +51,12 @@ class RealtimeVoiceCoordinator:
         self._max_in_flight_tool_calls = max_in_flight_tool_calls
         self._max_completed_tool_calls = max_completed_tool_calls
         self._generation = 0
+        self._session_id: str | None = None
+        self._event_sequence = 0
+        self._epoch = 0
+        self._turn_counter = 0
+        self._turn_id: str | None = None
+        self._user_speaking = False
         self._tool_calls: dict[str, tuple[str, dict[str, Any]]] = {}
         self._completed_tool_calls: OrderedDict[
             str, tuple[str, dict[str, Any]]
@@ -70,6 +78,12 @@ class RealtimeVoiceCoordinator:
         )
         self._generation += 1
         self._session = session
+        self._session_id = uuid.uuid4().hex
+        self._event_sequence = 0
+        self._epoch = 0
+        self._turn_counter = 0
+        self._turn_id = None
+        self._user_speaking = False
         self._tool_calls.clear()
         self._completed_tool_calls.clear()
         self._errors = asyncio.Queue(maxsize=1)
@@ -98,6 +112,9 @@ class RealtimeVoiceCoordinator:
             or not event.item_id
             or event.item_id != self._current_item_id
             or self._current_audio_event is not event
+            or event.session_id != self._session_id
+            or event.turn_id != self._turn_id
+            or event.epoch != self._epoch
             or audio_end_ms < 0
         ):
             return False
@@ -110,6 +127,8 @@ class RealtimeVoiceCoordinator:
     async def cancel_response(self) -> None:
         session = self._require_session()
         boundary, self._heard_boundary = self._heard_boundary, None
+        self._epoch += 1
+        self._reset_output_state()
         await session.cancel_response()
         if boundary is not None:
             await session.truncate_response(boundary)
@@ -129,7 +148,7 @@ class RealtimeVoiceCoordinator:
                 if error_next in done:
                     provider_next.cancel()
                     await asyncio.gather(provider_next, return_exceptions=True)
-                    yield error_next.result()
+                    yield self._stamp_event(error_next.result())
                     return
                 try:
                     event = provider_next.result()
@@ -137,6 +156,10 @@ class RealtimeVoiceCoordinator:
                     return
                 if not self._is_current_session(session, generation):
                     return
+                if event.epoch is not None and event.epoch != self._epoch:
+                    provider_next = asyncio.create_task(anext(provider_events))
+                    continue
+                event = self._stamp_event(event)
                 if event.type is RealtimeEventType.AUDIO and event.item_id:
                     if event.item_id != self._current_item_id:
                         self._current_item_id = event.item_id
@@ -152,6 +175,38 @@ class RealtimeVoiceCoordinator:
             provider_next.cancel()
             error_next.cancel()
             await asyncio.gather(provider_next, error_next, return_exceptions=True)
+
+    def _stamp_event(self, event: RealtimeEvent) -> RealtimeEvent:
+        if self._session_id is None:
+            raise RuntimeError("Realtime voice session is not open")
+        if event.type is RealtimeEventType.TURN_STARTED and event.role == "user":
+            if not self._user_speaking:
+                self._turn_counter += 1
+                self._turn_id = f"{self._session_id}:{self._turn_counter}"
+            self._user_speaking = True
+        elif event.type is RealtimeEventType.TURN_ENDED and event.role == "user":
+            self._user_speaking = False
+        elif (
+            self._turn_id is None
+            and event.type
+            in {
+                RealtimeEventType.AUDIO,
+                RealtimeEventType.TRANSCRIPT,
+                RealtimeEventType.TOOL_CALL,
+                RealtimeEventType.TURN_STARTED,
+                RealtimeEventType.TURN_ENDED,
+            }
+        ):
+            self._turn_counter += 1
+            self._turn_id = f"{self._session_id}:{self._turn_counter}"
+        self._event_sequence += 1
+        return replace(
+            event,
+            session_id=self._session_id,
+            turn_id=self._turn_id,
+            epoch=self._epoch,
+            sequence=self._event_sequence,
+        )
 
     def _start_tool_dispatch(
         self, event: RealtimeEvent, session: RealtimeSession, generation: int
@@ -289,6 +344,12 @@ class RealtimeVoiceCoordinator:
         self._tool_calls.clear()
         self._completed_tool_calls.clear()
         self._reset_output_state()
+        self._session_id = None
+        self._event_sequence = 0
+        self._epoch = 0
+        self._turn_counter = 0
+        self._turn_id = None
+        self._user_speaking = False
         if session is not None:
             await session.close()
 
