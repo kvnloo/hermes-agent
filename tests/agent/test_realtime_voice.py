@@ -163,7 +163,11 @@ async def test_coordinator_stamps_one_canonical_ordered_session_envelope():
             ),
             RealtimeEvent(type=RealtimeEventType.TURN_STARTED, role="user"),
             RealtimeEvent.transcript("hello", final=True, role="user"),
-            RealtimeEvent(type=RealtimeEventType.TURN_ENDED, role="user"),
+            RealtimeEvent(
+                type=RealtimeEventType.TURN_ENDED,
+                role="user",
+                offset_ms=1_234,
+            ),
             RealtimeEvent(type=RealtimeEventType.TURN_STARTED, role="assistant"),
             RealtimeEvent.audio(b"reply", item_id="item-1"),
         ]
@@ -181,6 +185,7 @@ async def test_coordinator_stamps_one_canonical_ordered_session_envelope():
     assert observed[0].turn_id is None
     assert observed[1].turn_id
     assert {event.turn_id for event in observed[1:]} == {observed[1].turn_id}
+    assert observed[3].offset_ms == 1_234
     assert [event.epoch for event in observed] == [0] * len(observed)
     assert [event.sequence for event in observed] == list(
         range(1, len(observed) + 1)
