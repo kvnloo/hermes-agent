@@ -46,6 +46,7 @@ class RealtimeEvent:
     tool_name: str | None = None
     item_id: str | None = None
     role: str | None = None
+    offset_ms: int | None = None
     arguments: dict[str, Any] = field(default_factory=dict)
     session_id: str | None = None
     provider_session_id: str | None = None
