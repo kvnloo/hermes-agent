@@ -4,6 +4,7 @@ import { keyedTimeouts } from '@/lib/keyed-timeouts'
 
 import { $gateway } from './gateway'
 import { isSessionGone, isSessionGoneForBackgroundPolling, markSessionGone } from './runtime-gone'
+import { canAttemptScopedRpc, ensureLiveSessionIdForScopedRpc, noteUnresumableScopedSession } from './scoped-rpc-resume'
 
 export type GoalStatus = 'active' | 'done' | 'paused' | 'waiting'
 
@@ -164,17 +165,35 @@ export function applyGoalStatusText(sid: string, text: string, opts?: { hydrate?
 export async function refreshSessionGoal(sid: string): Promise<void> {
   const gateway = $gateway.get()
 
-  if (!sid || !gateway || isSessionGone(sid)) {
+  if (!sid || !gateway || !canAttemptScopedRpc(sid)) {
     return
   }
 
-  try {
-    const result = await gateway.request<{ output?: string }>('slash.exec', { command: 'goal status', session_id: sid })
+  let liveId: string | undefined
 
-    applyGoalStatusText(sid, result?.output ?? '', { hydrate: true })
+  try {
+    liveId = await ensureLiveSessionIdForScopedRpc(gateway, sid)
+
+    if (!liveId) {
+      noteUnresumableScopedSession(sid)
+
+      return
+    }
+
+    if (isSessionGone(liveId)) {
+      return
+    }
+
+    const result = await gateway.request<{ output?: string }>('slash.exec', {
+      command: 'goal status',
+      session_id: liveId
+    })
+
+    applyGoalStatusText(liveId, result?.output ?? '', { hydrate: true })
   } catch (error) {
     if (isSessionGoneForBackgroundPolling(error)) {
       markSessionGone(sid)
+      if (liveId) markSessionGone(liveId)
 
       return
     }

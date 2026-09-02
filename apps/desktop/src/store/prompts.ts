@@ -2,6 +2,7 @@ import { atom, computed, type ReadableAtom } from 'nanostores'
 
 import { $clarifyRequest, $clarifyRequests } from './clarify'
 import { isSessionGone, isSessionGoneForBackgroundPolling, markSessionGone } from './runtime-gone'
+import { canAttemptScopedRpc, ensureLiveSessionIdForScopedRpc, noteUnresumableScopedSession } from './scoped-rpc-resume'
 import { $activeSessionId } from './session'
 
 // Blocking interactive prompts the gateway raises mid-turn. Each maps to a
@@ -128,19 +129,34 @@ export async function receiveApprovalRequest(gateway: ApprovalGateway | null, re
 }
 
 export async function replayPendingApproval(gateway: ApprovalGateway | null, sessionId: string | null): Promise<void> {
-  if (!gateway || !sessionId || isSessionGone(sessionId)) {
+  if (!gateway || !canAttemptScopedRpc(sessionId)) {
     return
   }
 
+  let liveId: string | undefined
   let rawResult: unknown
 
   try {
+    const resumed = await ensureLiveSessionIdForScopedRpc(gateway, sessionId)
+
+    if (!resumed) {
+      noteUnresumableScopedSession(sessionId)
+
+      return
+    }
+
+    if (isSessionGone(resumed)) {
+      return
+    }
+
+    liveId = resumed
     rawResult = await gateway.request('approval.pending', {
-      session_id: sessionId
+      session_id: liveId
     })
   } catch (error) {
     if (isSessionGoneForBackgroundPolling(error)) {
       markSessionGone(sessionId)
+      if (liveId) markSessionGone(liveId)
 
       return
     }
