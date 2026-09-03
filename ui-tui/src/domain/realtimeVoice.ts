@@ -1,6 +1,113 @@
-import type { ChildProcess } from 'node:child_process'
+import { type ChildProcess, execFileSync } from 'node:child_process'
+import { accessSync, constants } from 'node:fs'
+import { delimiter, join, resolve, win32 } from 'node:path'
+
+export type RealtimeVoiceLane = 'codex' | 'default'
+
+export interface RealtimeVoiceLaunch {
+  command: string
+  args: string[]
+  killTree?: boolean
+}
+
+export interface RealtimeVoiceLaunchEnvironment {
+  ComSpec?: string
+  HERMES_PYTHON?: string
+  HERMES_PYTHON_SRC_ROOT?: string
+  PATH?: string
+  Path?: string
+  PATHEXT?: string
+}
+
+export const executableOnPath = (
+  name: string,
+  pathValue: string | undefined,
+  platform: NodeJS.Platform = process.platform,
+  pathExtValue = process.env.PATHEXT
+): string | null => {
+  const pathDelimiter = platform === 'win32' ? win32.delimiter : delimiter
+
+  const extensions =
+    platform === 'win32'
+      ? (pathExtValue || '.COM;.EXE;.BAT;.CMD')
+          .split(';')
+          .filter(Boolean)
+          .map(extension => (extension.startsWith('.') ? extension : `.${extension}`))
+      : ['']
+
+  const accessMode = platform === 'win32' ? constants.F_OK : constants.X_OK
+
+  for (const directory of (pathValue ?? '').split(pathDelimiter)) {
+    if (!directory) {
+      continue
+    }
+
+    for (const extension of extensions) {
+      const candidate = join(directory, `${name}${extension}`)
+
+      try {
+        accessSync(candidate, accessMode)
+
+        return candidate
+      } catch {
+        // Continue searching PATH and, on Windows, PATHEXT.
+      }
+    }
+  }
+
+  return null
+}
+
+const CMD_SHIM_PATTERN = /\.(?:bat|cmd)$/i
+const CMD_META_PATTERN = /([()%!^"`<>&|;, *?])/g
+
+const escapeCmdToken = (value: string): string => value.replace(CMD_META_PATTERN, '^$1')
+
+export const buildCmdShimCommandLine = (executable: string, args: readonly string[] = []): string => {
+  const escapedArgs = args.map(argument => {
+    const quoted = argument.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\*)$/, '$1$1')
+
+    return `"${escapeCmdToken(quoted)}"`
+  })
+
+  return `"${[escapeCmdToken(executable), ...escapedArgs].join(' ')}"`
+}
+
+export const resolveRealtimeVoiceLaunch = (
+  lane: RealtimeVoiceLane,
+  environment: RealtimeVoiceLaunchEnvironment = process.env,
+  findExecutable: (name: string, pathValue: string | undefined) => string | null = (name, pathValue) =>
+    executableOnPath(name, pathValue, process.platform, environment.PATHEXT)
+): RealtimeVoiceLaunch | null => {
+  if (lane === 'codex') {
+    const installed = findExecutable('hermes-codex-live', environment.PATH ?? environment.Path)
+
+    if (!installed) {
+      return null
+    }
+
+    return CMD_SHIM_PATTERN.test(installed)
+      ? {
+          command: environment.ComSpec?.trim() || 'cmd.exe',
+          args: ['/d', '/s', '/c', buildCmdShimCommandLine(installed)],
+          killTree: true
+        }
+      : { command: installed, args: [] }
+  }
+
+  const python = environment.HERMES_PYTHON?.trim()
+  const sourceRoot = environment.HERMES_PYTHON_SRC_ROOT?.trim()
+
+  return python && sourceRoot ? { command: python, args: ['-u', resolve(sourceRoot, 'hermes'), 'talk'] } : null
+}
+
+export interface RealtimeVoiceStopDependencies {
+  killProcessTree?: (pid: number, force: boolean) => void
+  platform?: NodeJS.Platform
+}
 
 let activeProcess: ChildProcess | null = null
+let activeProcessNeedsTreeKill = false
 let stopPromise: Promise<void> | null = null
 const backpressuredInputs = new WeakSet<NonNullable<ChildProcess['stdin']>>()
 
@@ -10,27 +117,33 @@ export function writeRealtimeVoiceControl(child: ChildProcess, payload: string, 
   if (!input?.writable || (!required && backpressuredInputs.has(input))) {
     return
   }
+
   if (!input.write(payload)) {
     backpressuredInputs.add(input)
     input.once('drain', () => backpressuredInputs.delete(input))
   }
 }
 
-export const registerRealtimeVoiceProcess = (child: ChildProcess): void => {
+export const registerRealtimeVoiceProcess = (child: ChildProcess, launch?: RealtimeVoiceLaunch): void => {
   if (activeProcess && activeProcess !== child) {
     throw new Error('A native realtime voice process is already registered.')
   }
 
   activeProcess = child
+  activeProcessNeedsTreeKill = launch?.killTree === true
 }
 
 export const unregisterRealtimeVoiceProcess = (child: ChildProcess): void => {
   if (activeProcess === child) {
     activeProcess = null
+    activeProcessNeedsTreeKill = false
   }
 }
 
-export const stopRegisteredRealtimeVoiceProcess = (graceMs = 1_500): Promise<void> => {
+export const stopRegisteredRealtimeVoiceProcess = (
+  graceMs = 1_500,
+  dependencies: RealtimeVoiceStopDependencies = {}
+): Promise<void> => {
   if (stopPromise) {
     return stopPromise
   }
@@ -39,13 +152,38 @@ export const stopRegisteredRealtimeVoiceProcess = (graceMs = 1_500): Promise<voi
 
   if (!child || child.exitCode !== null || child.signalCode !== null) {
     activeProcess = null
+    activeProcessNeedsTreeKill = false
+
     return Promise.resolve()
   }
+
+  const treeKill =
+    activeProcessNeedsTreeKill && (dependencies.platform ?? process.platform) === 'win32' && Number.isInteger(child.pid)
+
+  const killProcessTree =
+    dependencies.killProcessTree ??
+    ((pid: number, force: boolean) => {
+      execFileSync('taskkill', ['/pid', String(pid), '/T', ...(force ? ['/F'] : [])], { stdio: 'ignore' })
+    })
+
+  const stopChild = (force: boolean): boolean => {
+    if (treeKill) {
+      killProcessTree(child.pid!, force)
+
+      return true
+    }
+
+    return child.kill(force ? 'SIGKILL' : 'SIGINT')
+  }
+
   let resolveStop: () => void = () => {}
+
   const promise = new Promise<void>(resolve => {
     resolveStop = resolve
   })
+
   let settled = false
+
   const finish = () => {
     if (settled) {
       return
@@ -56,9 +194,10 @@ export const stopRegisteredRealtimeVoiceProcess = (graceMs = 1_500): Promise<voi
     child.off('exit', finish)
     resolveStop()
   }
+
   const timer = setTimeout(() => {
     try {
-      child.kill('SIGKILL')
+      stopChild(true)
     } finally {
       finish()
     }
@@ -67,19 +206,32 @@ export const stopRegisteredRealtimeVoiceProcess = (graceMs = 1_500): Promise<voi
   child.once('exit', finish)
 
   try {
-    if (!child.kill('SIGINT')) {
+    if (!stopChild(false)) {
       finish()
     }
   } catch {
-    finish()
+    if (!treeKill) {
+      finish()
+    } else {
+      try {
+        stopChild(true)
+      } catch {
+        // The process tree may already be gone.
+      } finally {
+        finish()
+      }
+    }
   }
 
   const stopping = promise.finally(() => {
     if (activeProcess === child) {
       activeProcess = null
+      activeProcessNeedsTreeKill = false
     }
+
     stopPromise = null
   })
+
   stopPromise = stopping
 
   return stopping
@@ -131,6 +283,7 @@ export class RealtimeVoiceOrderGuard {
     ) {
       return false
     }
+
     if (
       event.realtime_session_id !== undefined &&
       ((this.realtimeSessionId !== null && event.realtime_session_id !== this.realtimeSessionId) ||
@@ -141,13 +294,16 @@ export class RealtimeVoiceOrderGuard {
     ) {
       return false
     }
+
     this.surfaceSessionId = event.surface_session_id
     this.surfaceSequence = event.sequence
+
     if (event.realtime_session_id !== undefined) {
       this.realtimeSessionId = event.realtime_session_id
       this.realtimeSequence = event.realtime_sequence!
       this.realtimeEpoch = event.realtime_epoch!
     }
+
     return true
   }
 }
@@ -165,8 +321,11 @@ export const parseRealtimeVoicePhase = (line: string): RealtimeVoicePhase | null
   }
 
   const phase = line.slice(STATE_PREFIX.length).trim()
+
   return phase === 'listening' || phase === 'solving' || phase === 'composing' ? phase : null
 }
+
+export const isRealtimeVoiceReadyPhase = (phase: RealtimeVoicePhase | null): boolean => phase === 'listening'
 
 export const parseRealtimeVoiceEvent = (line: string): RealtimeVoiceEvent | null => {
   if (line.length > MAX_REALTIME_VOICE_FRAME_CHARS) {
@@ -185,6 +344,7 @@ export const parseRealtimeVoiceEvent = (line: string): RealtimeVoiceEvent | null
     }
 
     const event = value as Record<string, unknown>
+
     if (
       event.protocol_version !== 1 ||
       typeof event.surface_session_id !== 'string' ||
@@ -194,18 +354,22 @@ export const parseRealtimeVoiceEvent = (line: string): RealtimeVoiceEvent | null
     ) {
       return null
     }
+
     const envelope: RealtimeVoiceEnvelope = {
       protocol_version: 1,
       surface_session_id: event.surface_session_id,
       sequence: Number(event.sequence)
     }
+
     const hasCanonicalIdentity = [
       event.realtime_session_id,
       event.realtime_turn_id,
       event.realtime_epoch,
       event.realtime_sequence
     ].some(item => item !== undefined)
+
     let canonicalIdentity: Partial<RealtimeVoiceCanonicalIdentity> = {}
+
     if (hasCanonicalIdentity) {
       if (
         typeof event.realtime_session_id !== 'string' ||
@@ -221,6 +385,7 @@ export const parseRealtimeVoiceEvent = (line: string): RealtimeVoiceEvent | null
       ) {
         return null
       }
+
       canonicalIdentity = {
         realtime_session_id: event.realtime_session_id,
         realtime_turn_id: event.realtime_turn_id,
@@ -228,6 +393,7 @@ export const parseRealtimeVoiceEvent = (line: string): RealtimeVoiceEvent | null
         realtime_sequence: Number(event.realtime_sequence)
       }
     }
+
     const eventEnvelope = { ...envelope, ...canonicalIdentity }
 
     if (

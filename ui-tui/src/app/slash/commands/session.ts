@@ -312,7 +312,7 @@ export const sessionCommands: SlashCommand[] = [
   },
 
   {
-    help: 'native realtime duplex voice: [orb|waveform|stop|status]',
+    help: 'native realtime duplex voice: [codex|orb|waveform|stop|status]',
     name: 'talk',
     run: (arg, ctx) => {
       const normalized = (arg ?? '').trim().toLowerCase()
@@ -322,7 +322,8 @@ export const sessionCommands: SlashCommand[] = [
         return
       }
 
-      const visualizer = normalized === 'waveform' || normalized === 'orb' ? normalized : undefined
+      const visualizer =
+        normalized === 'waveform' || normalized === 'orb' || normalized === 'codex' ? normalized : undefined
 
       ctx.voice.controlRealtimeVoice('start', visualizer)
     }
