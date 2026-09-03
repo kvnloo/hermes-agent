@@ -1,5 +1,4 @@
-import { spawn, type ChildProcess } from 'node:child_process'
-import { resolve } from 'node:path'
+import { type ChildProcess, spawn } from 'node:child_process'
 
 import {
   forceRedraw,
@@ -23,16 +22,18 @@ import { composeTabTitle, fmtProjectCwdBranch, shortCwd } from '../domain/paths.
 import {
   encodeRealtimeVoiceDelegationProgress,
   encodeRealtimeVoiceDelegationResult,
+  isRealtimeVoiceReadyPhase,
   MAX_REALTIME_VOICE_FRAME_CHARS,
-  RealtimeVoiceOrderGuard,
   parseRealtimeVoiceEvent,
   parseRealtimeVoicePhase,
-  registerRealtimeVoiceProcess,
-  stopRegisteredRealtimeVoiceProcess,
-  writeRealtimeVoiceControl,
-  unregisterRealtimeVoiceProcess,
+  RealtimeVoiceOrderGuard,
   type RealtimeVoicePhase,
-  type RealtimeVoiceTranscript
+  type RealtimeVoiceTranscript,
+  registerRealtimeVoiceProcess,
+  resolveRealtimeVoiceLaunch,
+  stopRegisteredRealtimeVoiceProcess,
+  unregisterRealtimeVoiceProcess,
+  writeRealtimeVoiceControl
 } from '../domain/realtimeVoice.js'
 import { sessionScopedModelArg } from '../domain/slash.js'
 import { type GatewayClient } from '../gatewayClient.js'
@@ -224,11 +225,13 @@ export function useMainApp(gw: GatewayClient) {
   const [realtimeVoiceActive, setRealtimeVoiceActive] = useState(false)
   const [voiceRecordKey, setVoiceRecordKey] = useState<ParsedVoiceRecordKey>(DEFAULT_VOICE_RECORD_KEY)
   const realtimeVoiceRef = useRef<ChildProcess | null>(null)
+
   const realtimeVoiceDelegationRef = useRef<null | {
     child: ChildProcess
     id: string
     sessionId: string
   }>(null)
+
   const [sessionStartedAt, setSessionStartedAt] = useState(() => Date.now())
   const [dashboardFreshSessionId, setDashboardFreshSessionId] = useState<null | string>(null)
   const [turnStartedAt, setTurnStartedAt] = useState<null | number>(null)
@@ -496,58 +499,70 @@ export function useMainApp(gw: GatewayClient) {
   }, [])
 
   const controlRealtimeVoice = useCallback(
-    (action: 'start' | 'status' | 'stop', visualizer?: 'orb' | 'waveform') => {
+    (action: 'start' | 'status' | 'stop', visualizer?: 'orb' | 'waveform' | 'codex') => {
       const active = realtimeVoiceRef.current
 
       if (action === 'status') {
         sys(`Native realtime voice: ${active ? 'ON' : 'OFF'}`)
+
         return
       }
 
       if (action === 'stop') {
         if (!active) {
           sys('Native realtime voice is not running.')
+
           return
         }
 
         sys('Stopping native realtime voice…')
         void stopRegisteredRealtimeVoiceProcess()
+
         return
       }
 
       if (active) {
         sys('Native realtime voice is already running. Use /talk stop to end it.')
+
         return
       }
 
       if (voiceRecording) {
         sys('Stop the current voice recording before starting native realtime voice.')
+
         return
       }
 
       if (!getUiState().sid) {
         sys('Native realtime voice requires an active Hermes session.')
+
         return
       }
 
-      const python = process.env.HERMES_PYTHON?.trim()
-      const sourceRoot = process.env.HERMES_PYTHON_SRC_ROOT?.trim()
+      const lane = visualizer === 'codex' ? 'codex' : 'default'
+      const launch = resolveRealtimeVoiceLaunch(lane)
 
-      if (!python || !sourceRoot) {
-        sys('Native realtime voice requires a source-aware Hermes launch. Restart with hermes --tui --dev.')
+      if (!launch) {
+        sys(
+          lane === 'codex'
+            ? 'Native realtime voice requires hermes-codex-live on PATH.'
+            : 'Native realtime voice requires a source-aware Hermes launch. Restart with hermes --tui --dev.'
+        )
+
         return
       }
 
-      if (visualizer) {
+      if (visualizer && visualizer !== 'codex') {
         setRealtimeVoiceVisualizer(visualizer)
       }
 
-      const child = spawn(python, ['-u', resolve(sourceRoot, 'hermes'), 'talk'], {
+      const child = spawn(launch.command, launch.args, {
         cwd: process.cwd(),
         env: { ...process.env, HERMES_TALK_EVENT_STREAM: 'jsonl' },
         stdio: ['pipe', 'pipe', 'pipe']
       })
-      registerRealtimeVoiceProcess(child)
+
+      registerRealtimeVoiceProcess(child, launch)
       realtimeVoiceRef.current = child
       setRealtimeVoiceActive(true)
       setRealtimeVoiceConnecting(true)
@@ -568,18 +583,33 @@ export function useMainApp(gw: GatewayClient) {
       let ready = false
       const eventOrder = new RealtimeVoiceOrderGuard()
       child.stdout?.setEncoding('utf8')
+
       const rejectOversizedFrame = () => {
         errorText = 'Realtime voice child emitted an oversized protocol frame.'
         stdoutBuffer = ''
         sys(`Native realtime voice error: ${errorText}`)
         child.kill('SIGINT')
       }
+
       const rejectProtocolFrame = (message: string) => {
         errorText = message
         stdoutBuffer = ''
         sys(`Native realtime voice error: ${errorText}`)
         child.kill('SIGINT')
       }
+
+      const markReady = () => {
+        if (ready || realtimeVoiceRef.current !== child) {
+          return
+        }
+
+        ready = true
+        setRealtimeVoiceConnecting(false)
+        setRealtimeVoicePhase('listening')
+        setVoiceRecording(true)
+        sys(`Native realtime voice ready · listening · ${formatVoiceRecordKey(voiceRecordKey)} to end`)
+      }
+
       const onStdout = (chunk: string) => {
         readyText = `${readyText}${chunk}`.slice(-2048)
         stdoutBuffer += chunk
@@ -588,20 +618,28 @@ export function useMainApp(gw: GatewayClient) {
 
         if (stdoutBuffer.length > MAX_REALTIME_VOICE_FRAME_CHARS) {
           rejectOversizedFrame()
+
           return
         }
 
         for (const line of lines) {
           if (line.length > MAX_REALTIME_VOICE_FRAME_CHARS) {
             rejectOversizedFrame()
+
             return
           }
+
           const phase = parseRealtimeVoicePhase(line)
 
           if (phase && realtimeVoiceRef.current === child) {
             setRealtimeVoicePhase(phase)
             setVoiceRecording(phase === 'listening')
             setVoiceProcessing(phase !== 'listening')
+
+            if (isRealtimeVoiceReadyPhase(phase)) {
+              markReady()
+            }
+
             continue
           }
 
@@ -610,8 +648,10 @@ export function useMainApp(gw: GatewayClient) {
           if (!event || realtimeVoiceRef.current !== child) {
             continue
           }
+
           if (!eventOrder.accept(event)) {
             rejectProtocolFrame('Realtime voice child emitted stale or out-of-order event identity.')
+
             return
           }
 
@@ -628,16 +668,20 @@ export function useMainApp(gw: GatewayClient) {
 
             continue
           }
+
           if (event.type === 'warning') {
             sys(`Native realtime voice warning: ${event.message}`)
+
             continue
           }
 
           if (event.type === 'error') {
             errorText = `${errorText}\n${event.message}`.slice(-4000)
             sys(`Native realtime voice error: ${event.message}`)
+
             continue
           }
+
           const pending = realtimeVoiceDelegationRef.current
 
           if (pending) {
@@ -645,6 +689,7 @@ export function useMainApp(gw: GatewayClient) {
               child,
               encodeRealtimeVoiceDelegationResult(event.id, 'A Hermes text-agent request is already running.')
             )
+
             continue
           }
 
@@ -655,6 +700,7 @@ export function useMainApp(gw: GatewayClient) {
               child,
               encodeRealtimeVoiceDelegationResult(event.id, 'Hermes has no active text-agent session.')
             )
+
             continue
           }
 
@@ -683,16 +729,11 @@ export function useMainApp(gw: GatewayClient) {
           })
         }
 
-        if (ready || !readyText.includes('talk: connected (') || realtimeVoiceRef.current !== child) {
-          return
+        if (!ready && readyText.includes('talk: connected (')) {
+          markReady()
         }
-
-        ready = true
-        setRealtimeVoiceConnecting(false)
-        setRealtimeVoicePhase('listening')
-        setVoiceRecording(true)
-        sys(`Native realtime voice ready · listening · ${formatVoiceRecordKey(voiceRecordKey)} to end`)
       }
+
       child.stdout?.on('data', onStdout)
       child.stderr?.setEncoding('utf8')
       child.stderr?.on('data', chunk => {
@@ -702,6 +743,7 @@ export function useMainApp(gw: GatewayClient) {
         if (realtimeVoiceRef.current !== child) {
           return
         }
+
         unregisterRealtimeVoiceProcess(child)
 
         realtimeVoiceRef.current = null
@@ -1189,6 +1231,7 @@ export function useMainApp(gw: GatewayClient) {
         )
       )
       realtimeVoiceDelegationRef.current = null
+
       return
     }
 
@@ -1202,6 +1245,7 @@ export function useMainApp(gw: GatewayClient) {
       if (progress) {
         writeRealtimeVoiceControl(pending.child, encodeRealtimeVoiceDelegationProgress(pending.id, progress), false)
       }
+
       return
     }
 
@@ -1214,6 +1258,7 @@ export function useMainApp(gw: GatewayClient) {
         )
       )
       realtimeVoiceDelegationRef.current = null
+
       return
     }
 
@@ -1252,6 +1297,7 @@ export function useMainApp(gw: GatewayClient) {
         )
         realtimeVoiceDelegationRef.current = null
       }
+
       turnController.reset()
 
       // A still-owned child dying while the TUI is alive is an *unexpected*

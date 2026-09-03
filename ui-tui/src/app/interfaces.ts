@@ -558,7 +558,7 @@ export interface SlashHandlerContext {
     trimLastExchange: (items: Msg[]) => Msg[]
   }
   voice: {
-    controlRealtimeVoice: (action: 'start' | 'status' | 'stop', visualizer?: 'orb' | 'waveform') => void
+    controlRealtimeVoice: (action: 'start' | 'status' | 'stop', visualizer?: 'codex' | 'orb' | 'waveform') => void
     setVoiceEnabled: StateSetter<boolean>
     setVoiceRecordKey: (v: ParsedVoiceRecordKey) => void
     setVoiceTts: StateSetter<boolean>

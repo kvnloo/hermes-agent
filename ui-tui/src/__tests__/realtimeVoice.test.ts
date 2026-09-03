@@ -1,23 +1,31 @@
 import type { ChildProcess } from 'node:child_process'
 import { EventEmitter } from 'node:events'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  buildCmdShimCommandLine,
   encodeRealtimeVoiceDelegationProgress,
   encodeRealtimeVoiceDelegationResult,
+  executableOnPath,
+  isRealtimeVoiceReadyPhase,
   MAX_REALTIME_VOICE_FRAME_CHARS,
   MAX_REALTIME_VOICE_TEXT_CHARS,
-  RealtimeVoiceOrderGuard,
   parseRealtimeVoiceEvent,
   parseRealtimeVoicePhase,
+  RealtimeVoiceOrderGuard,
   registerRealtimeVoiceProcess,
+  resolveRealtimeVoiceLaunch,
   stopRegisteredRealtimeVoiceProcess,
   writeRealtimeVoiceControl
 } from '../domain/realtimeVoice.js'
 
 afterEach(() => {
   vi.useRealTimers()
+  vi.restoreAllMocks()
 })
 
 const envelope = {
@@ -39,6 +47,11 @@ const framed = (payload: Record<string, unknown>): string =>
 describe('realtime voice lifecycle', () => {
   it.each(['listening', 'solving', 'composing'] as const)('parses the %s phase', phase => {
     expect(parseRealtimeVoicePhase(`talk: state ${phase}`)).toBe(phase)
+  })
+
+  it('treats the first listening state as child readiness', () => {
+    expect(isRealtimeVoiceReadyPhase(parseRealtimeVoicePhase('talk: state listening'))).toBe(true)
+    expect(isRealtimeVoiceReadyPhase(parseRealtimeVoicePhase('talk: state solving'))).toBe(false)
   })
 
   it('ignores transcripts and unknown states', () => {
@@ -116,6 +129,7 @@ describe('realtime voice lifecycle', () => {
   it('rejects regressing surface and canonical event order', () => {
     const guard = new RealtimeVoiceOrderGuard()
     const first = parseRealtimeVoiceEvent(framed({ type: 'warning', message: 'first', ...canonicalIdentity }))
+
     const next = parseRealtimeVoiceEvent(
       framed({
         type: 'warning',
@@ -126,6 +140,7 @@ describe('realtime voice lifecycle', () => {
         realtime_sequence: 9
       })
     )
+
     const stale = parseRealtimeVoiceEvent(
       framed({
         type: 'warning',
@@ -141,12 +156,12 @@ describe('realtime voice lifecycle', () => {
     expect(stale && guard.accept(stale)).toBe(false)
   })
 
-  it('round-trips a delegated text-agent result over child stdin', () => {
-    expect(parseRealtimeVoiceEvent(framed({ type: 'delegate', id: 'call-1', request: 'inspect the bug' }))).toEqual({
+  it('routes delegated requests literally over the shared JSONL bridge', () => {
+    expect(parseRealtimeVoiceEvent(framed({ type: 'delegate', id: 'call-1', request: '/talk stop exactly' }))).toEqual({
       ...envelope,
       type: 'delegate',
       id: 'call-1',
-      request: 'inspect the bug'
+      request: '/talk stop exactly'
     })
     expect(JSON.parse(encodeRealtimeVoiceDelegationResult('call-1', 'fixed'))).toEqual({
       type: 'delegate.result',
@@ -176,21 +191,82 @@ describe('realtime voice lifecycle', () => {
   })
 })
 
+describe('realtime voice command selection', () => {
+  it('preserves the Hermes talk command for the default lane', () => {
+    expect(
+      resolveRealtimeVoiceLaunch('default', {
+        HERMES_PYTHON: '/opt/hermes/python',
+        HERMES_PYTHON_SRC_ROOT: '/opt/hermes/src'
+      })
+    ).toEqual({
+      command: '/opt/hermes/python',
+      args: ['-u', '/opt/hermes/src/hermes', 'talk']
+    })
+  })
+
+  it('selects only the installed Codex live binary for the codex lane', () => {
+    const findExecutable = vi.fn().mockReturnValue('/usr/local/bin/hermes-codex-live')
+
+    expect(resolveRealtimeVoiceLaunch('codex', { PATH: '/usr/local/bin:/usr/bin' }, findExecutable)).toEqual({
+      command: '/usr/local/bin/hermes-codex-live',
+      args: []
+    })
+    expect(findExecutable).toHaveBeenCalledWith('hermes-codex-live', '/usr/local/bin:/usr/bin')
+  })
+
+  it.each(['.cmd', '.BAT'])('launches Windows %s shims through ComSpec with injection-safe quoting', extension => {
+    const shim = `C:\\Program Files\\Hermes & Tools\\hermes-codex-live${extension}`
+
+    expect(
+      resolveRealtimeVoiceLaunch('codex', { ComSpec: 'C:\\Windows\\System32\\cmd.exe', PATH: 'unused' }, () => shim)
+    ).toEqual({
+      command: 'C:\\Windows\\System32\\cmd.exe',
+      args: ['/d', '/s', '/c', `"C:\\Program^ Files\\Hermes^ ^&^ Tools\\hermes-codex-live${extension}"`],
+      killTree: true
+    })
+  })
+
+  it('quotes every cmd shim argument without exposing command metacharacters', () => {
+    expect(buildCmdShimCommandLine('C:\\tools\\voice.cmd', ['hello & whoami', '100% ready'])).toBe(
+      '"C:\\tools\\voice.cmd "hello^ ^&^ whoami" "100^%^ ready""'
+    )
+  })
+
+  it.each(['.CMD', '.EXE'])('resolves Windows package-bin shims using PATHEXT (%s)', extension => {
+    const directory = mkdtempSync(join(tmpdir(), 'hermes-codex-path-'))
+    const executable = join(directory, `hermes-codex-live${extension}`)
+    writeFileSync(executable, '')
+
+    try {
+      expect(executableOnPath('hermes-codex-live', `${directory};C:\\Windows`, 'win32', '.CMD;.EXE')).toBe(executable)
+    } finally {
+      rmSync(directory, { recursive: true, force: true })
+    }
+  })
+
+  it('refuses the codex lane when its binary is unavailable', () => {
+    expect(resolveRealtimeVoiceLaunch('codex', { PATH: '/usr/bin' }, () => null)).toBeNull()
+  })
+})
+
 describe('realtime voice child supervision', () => {
   const childProcess = (exitOnInterrupt: boolean) => {
     const child = new EventEmitter() as EventEmitter & {
       exitCode: null | number
       kill: ReturnType<typeof vi.fn>
+      pid: number
       signalCode: NodeJS.Signals | null
     }
 
     child.exitCode = null
+    child.pid = 4242
     child.signalCode = null
     child.kill = vi.fn((signal: NodeJS.Signals) => {
       if (signal === 'SIGINT' && exitOnInterrupt) {
         child.signalCode = signal
         child.emit('exit', null, signal)
       }
+
       return true
     })
 
@@ -202,6 +278,7 @@ describe('realtime voice child supervision', () => {
       writable: boolean
       write: ReturnType<typeof vi.fn>
     }
+
     input.writable = true
     input.write = vi.fn().mockReturnValueOnce(false).mockReturnValue(true)
     const child = { stdin: input } as unknown as ChildProcess
@@ -226,6 +303,59 @@ describe('realtime voice child supervision', () => {
     await first
     expect(child.kill).toHaveBeenCalledTimes(1)
     expect(child.kill).toHaveBeenCalledWith('SIGINT')
+  })
+
+  it('tree-kills a Windows cmd wrapper PID once without signaling only the direct child', async () => {
+    const child = childProcess(false)
+    const killProcessTree = vi.fn(() => {
+      child.emit('exit', 0, null)
+    })
+    registerRealtimeVoiceProcess(child, { command: 'cmd.exe', args: [], killTree: true })
+
+    await stopRegisteredRealtimeVoiceProcess(25, { killProcessTree, platform: 'win32' })
+
+    expect(killProcessTree).toHaveBeenCalledOnce()
+    expect(killProcessTree).toHaveBeenCalledWith(4242, false)
+    expect(child.kill).not.toHaveBeenCalled()
+  })
+
+  it('forces the Windows wrapper tree when graceful taskkill fails', async () => {
+    const child = childProcess(false)
+    const killProcessTree = vi.fn((_pid: number, force: boolean) => {
+      if (!force) {
+        throw new Error('graceful taskkill failed')
+      }
+    })
+    registerRealtimeVoiceProcess(child, { command: 'cmd.exe', args: [], killTree: true })
+
+    await stopRegisteredRealtimeVoiceProcess(25, { killProcessTree, platform: 'win32' })
+
+    expect(killProcessTree.mock.calls).toEqual([
+      [4242, false],
+      [4242, true]
+    ])
+    expect(child.kill).not.toHaveBeenCalled()
+  })
+
+  it('escalates an unresponsive Windows cmd wrapper tree without direct-child kill', async () => {
+    vi.useFakeTimers()
+    const child = childProcess(false)
+    const killProcessTree = vi.fn((_pid: number, force: boolean) => {
+      if (force) {
+        child.emit('exit', 0, null)
+      }
+    })
+    registerRealtimeVoiceProcess(child, { command: 'cmd.exe', args: [], killTree: true })
+
+    const stopped = stopRegisteredRealtimeVoiceProcess(25, { killProcessTree, platform: 'win32' })
+    await vi.advanceTimersByTimeAsync(25)
+    await stopped
+
+    expect(killProcessTree.mock.calls).toEqual([
+      [4242, false],
+      [4242, true]
+    ])
+    expect(child.kill).not.toHaveBeenCalled()
   })
 
   it('escalates an unresponsive child to SIGKILL after the grace period', async () => {

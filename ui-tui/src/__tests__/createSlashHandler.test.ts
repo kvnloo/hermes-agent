@@ -583,12 +583,14 @@ describe('createSlashHandler', () => {
     expect(slash('/talk')).toBe(true)
     expect(slash('/talk orb')).toBe(true)
     expect(slash('/talk waveform')).toBe(true)
+    expect(slash('/talk codex')).toBe(true)
     expect(slash('/talk stop')).toBe(true)
     expect(slash('/talk status')).toBe(true)
     expect(ctx.voice.controlRealtimeVoice.mock.calls).toEqual([
       ['start', undefined],
       ['start', 'orb'],
       ['start', 'waveform'],
+      ['start', 'codex'],
       ['stop'],
       ['status']
     ])
