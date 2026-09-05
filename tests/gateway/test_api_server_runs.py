@@ -129,6 +129,39 @@ def auth_adapter():
 
 class TestStartRun:
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("explicit", [False, True])
+    async def test_session_id_restores_persisted_history(self, adapter, explicit):
+        db = await adapter._ensure_session_db_async()
+        db.create_session("mesh-recall", source="api_server")
+        db.append_message("mesh-recall", "user", "PC0 is the GPU worker.")
+        db.append_message("mesh-recall", "assistant", "Understood.")
+        stored = db.get_messages_as_conversation("mesh-recall")
+        supplied = [{"role": "user", "content": "Explicit history wins."}]
+        body = {"input": "What is PC0 for?", "session_id": "mesh-recall"}
+        if explicit:
+            body["conversation_history"] = supplied
+        agent = MagicMock()
+        agent.run_conversation.return_value = {"final_response": "done"}
+        agent.session_prompt_tokens = agent.session_completion_tokens = agent.session_total_tokens = 0
+        try:
+            async with TestClient(TestServer(_create_runs_app(adapter))) as cli:
+                with patch.object(adapter, "_create_agent", return_value=agent):
+                    response = await cli.post("/v1/runs", json=body)
+                    assert response.status == 202
+                    run_id = (await response.json())["run_id"]
+                    for _ in range(100):
+                        status = await cli.get(f"/v1/runs/{run_id}")
+                        if (await status.json())["status"] == "completed":
+                            break
+                        await asyncio.sleep(0.05)
+                    agent.run_conversation.assert_called_once()
+                    assert agent.run_conversation.call_args.kwargs["conversation_history"] == (
+                        supplied if explicit else stored
+                    )
+        finally:
+            adapter._close_cached_session_dbs()
+
+    @pytest.mark.asyncio
     async def test_start_returns_202(self, adapter):
         app = _create_runs_app(adapter)
         async with TestClient(TestServer(app)) as cli:

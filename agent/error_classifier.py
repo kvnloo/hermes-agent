@@ -1376,7 +1376,19 @@ def _classify_by_status(
         # wraps upstream errors with the outer message "Provider returned
         # error" — the user's key is healthy, so marking it exhausted / rotating
         # is wrong and burns the key for ~24min. Fall back to a different model.
-        if _is_openrouter_upstream_error(body, provider):
+        if _is_openrouter_upstream_error(body, provider) or (
+            # OpenAI SDK often leaves .body empty and only puts the OpenRouter
+            # wrapper in str(error): "Error code: 429 - {'error': {'message':
+            # 'Provider returned error', ...}}". Without this, MoA treats a
+            # single upstream free-model 429 as an account-level exhaust and
+            # skips every other OpenRouter reference on the same key.
+            "provider returned error" in error_msg
+            and (
+                (provider or "").strip().lower() == "openrouter"
+                or "rate-limited upstream" in error_msg
+                or "upstream_provider_shared_pool" in error_msg
+            )
+        ):
             upstream_provider = _extract_upstream_provider_name(body)
             ctx = {"upstream_provider": upstream_provider} if upstream_provider else {}
             return result_fn(
@@ -2084,13 +2096,61 @@ def _extract_status_code(error: Exception) -> Optional[int]:
     return None
 
 
+def _parse_embedded_error_payload(text: str) -> dict:
+    """Parse a dict out of an OpenAI-SDK / OpenRouter error string.
+
+    Typical shape: ``Error code: 429 - {'error': {'message': 'Provider returned error', ...}}``.
+    JSON is tried first; Python-literal dicts (single quotes) fall back to
+    ``ast.literal_eval``. Returns ``{}`` when nothing structured is present.
+    """
+    if not isinstance(text, str) or not text.strip():
+        return {}
+
+    def _coerce_mapping(candidate: str) -> dict:
+        import ast
+        import json
+
+        candidate = candidate.strip()
+        if not candidate or candidate[0] not in "{[":
+            return {}
+        try:
+            obj = json.loads(candidate)
+            return obj if isinstance(obj, dict) else {}
+        except (json.JSONDecodeError, TypeError, ValueError):
+            pass
+        try:
+            obj = ast.literal_eval(candidate)
+            return obj if isinstance(obj, dict) else {}
+        except (SyntaxError, ValueError):
+            return {}
+
+    parsed = _coerce_mapping(text)
+    if parsed:
+        return parsed
+    if "Error code:" in text and " - " in text:
+        tail = text.split(" - ", 1)[1]
+        parsed = _coerce_mapping(tail)
+        if parsed:
+            return parsed
+    brace = text.find("{")
+    if brace >= 0:
+        parsed = _coerce_mapping(text[brace:])
+        if parsed:
+            return parsed
+    return {}
+
+
 def _extract_error_body(error: Exception) -> dict:
     """Extract the structured error body from an SDK exception or its cause chain."""
     current = error
     for _ in range(5):  # Match _extract_status_code() traversal depth.
         body = getattr(current, "body", None)
-        if isinstance(body, dict):
+        if isinstance(body, dict) and body:
             return body
+        if isinstance(body, str):
+            parsed = _parse_embedded_error_payload(body)
+            if parsed:
+                return parsed
         # Some errors have .response.json()
         response = getattr(current, "response", None)
         if response is not None:
@@ -2104,6 +2164,9 @@ def _extract_error_body(error: Exception) -> dict:
         if cause is None or cause is current:
             break
         current = cause
+    parsed = _parse_embedded_error_payload(str(error))
+    if parsed:
+        return parsed
     return {}
 
 

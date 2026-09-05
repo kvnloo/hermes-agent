@@ -7677,6 +7677,11 @@ class APIServerAdapter(BasePlatformAdapter):
         if selection_error:
             return web.json_response(_openai_error(selection_error), status=400)
 
+        if not conversation_history and session_id and not previous_response_id:
+            conversation_history = await self._conversation_history_for_session(
+                str(session_id)
+            )
+
         run_id = f"run_{uuid.uuid4().hex}"
         session_id = session_id or run_id
         # Approval queues gate host-side tool execution and must be isolated

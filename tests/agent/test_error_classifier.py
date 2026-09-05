@@ -1222,6 +1222,35 @@ class TestOpenRouterUpstreamRateLimit:
         assert result.should_fallback is True
         assert result.error_context.get("upstream_provider") == "DeepSeek"
 
+    def test_openrouter_upstream_429_from_openai_sdk_string_does_not_exhaust_key(self):
+        """OpenAI SDK often stores the OpenRouter wrapper only in str(error).
+
+        That used to classify as account-level rate_limit, which latched the
+        whole OpenRouter credential exhausted and skipped every other MoA
+        OpenRouter reference on the same key.
+        """
+
+        class SdkStringError(Exception):
+            def __init__(self):
+                super().__init__(
+                    "Error code: 429 - {'error': {'message': 'Provider returned error', "
+                    "'code': 429, 'metadata': {'raw': 'google/gemma-4-31b-it:free is "
+                    "temporarily rate-limited upstream. Please retry shortly', "
+                    "'provider_name': 'Google AI Studio', "
+                    "'limit_source': 'upstream_provider_shared_pool'}}}"
+                )
+                self.status_code = 429
+
+        result = classify_api_error(
+            SdkStringError(),
+            provider="openrouter",
+            model="google/gemma-4-31b-it:free",
+        )
+        assert result.reason == FailoverReason.upstream_rate_limit
+        assert result.should_rotate_credential is False
+        assert result.should_fallback is True
+        assert result.error_context.get("upstream_provider") == "Google AI Studio"
+
 
     def test_account_level_429_still_rotates_credential(self):
         """A real account-level 429 (no upstream wrapper) → rate_limit, rotates."""

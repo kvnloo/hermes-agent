@@ -8943,6 +8943,123 @@ def _contains_profile_reasoning_fields(value: Any) -> bool:
     return False
 
 
+# Groq on_demand TPM is also a per-request prompt ceiling. A 20k-token MoA
+# payload against gpt-oss-120b is refused with HTTP 413 even on a full
+# bucket — waiting cannot help. Compound models publish 70k TPM.
+_GROQ_COMPOUND_PROMPT_CEILING = 65000
+_GROQ_DEFAULT_ON_DEMAND_PROMPT_CEILING = 7500
+
+
+def _sanitize_chat_completion_messages(messages: list, model: Optional[str] = None) -> list:
+    """Strip Hermes persistence fields before OpenAI-compat wires.
+
+    The main agent loop is cleaned by ChatCompletionsTransport.convert_messages.
+    Auxiliary/MoA call_llm used to skip that transport, so Groq/Cerebras/Mistral
+    400'd on ``timestamp`` and ``_db_persisted``.
+    """
+    if not messages:
+        return messages
+    try:
+        from agent.transports import get_transport
+
+        transport = get_transport("chat_completions")
+    except Exception:
+        return messages
+    if transport is None:
+        return messages
+    try:
+        return transport.convert_messages(messages, model=model)
+    except Exception:
+        logger.warning(
+            "chat-completions wire sanitizer failed; sending unsanitized messages",
+            exc_info=True,
+        )
+        return messages
+
+
+def _approx_prompt_tokens(messages: list, tools: Optional[list] = None) -> int:
+    size = 0
+    for msg in messages or []:
+        if not isinstance(msg, dict):
+            continue
+        content = msg.get("content")
+        if isinstance(content, str):
+            size += len(content)
+        elif content is not None:
+            size += len(str(content))
+        tool_calls = msg.get("tool_calls")
+        if tool_calls:
+            size += len(str(tool_calls))
+    if tools:
+        try:
+            size += len(json.dumps(tools, default=str))
+        except Exception:
+            size += len(str(tools))
+    return max(1, size // 4)
+
+
+def _groq_prompt_token_ceiling(
+    provider: str, model: str, base_url: Optional[str] = None
+) -> Optional[int]:
+    provider_norm = str(provider or "").strip().lower()
+    host = ""
+    try:
+        from urllib.parse import urlparse
+
+        host = (urlparse(str(base_url or "").strip()).hostname or "").lower()
+    except Exception:
+        host = ""
+    if provider_norm != "groq" and "groq.com" not in host:
+        return None
+    model_id = str(model or "").strip().lower()
+    if model_id.startswith("groq/compound"):
+        return _GROQ_COMPOUND_PROMPT_CEILING
+    return _GROQ_DEFAULT_ON_DEMAND_PROMPT_CEILING
+
+
+def _trim_messages_to_token_ceiling(
+    messages: list,
+    ceiling: int,
+    tools: Optional[list] = None,
+) -> list:
+    """Drop oldest non-system turns until the prompt fits ``ceiling`` tokens.
+
+    Does not drop tools. If tools alone exceed the ceiling, history trimming
+    cannot recover and the original messages are returned for a loud provider
+    error.
+    """
+    if not messages or ceiling <= 0:
+        return messages
+    tools_tokens = _approx_prompt_tokens([], tools)
+    if tools_tokens >= ceiling:
+        return messages
+    if _approx_prompt_tokens(messages, tools) <= ceiling:
+        return messages
+    systems = [
+        dict(msg) if isinstance(msg, dict) else msg
+        for msg in messages
+        if isinstance(msg, dict) and msg.get("role") == "system"
+    ]
+    body = [
+        dict(msg) if isinstance(msg, dict) else msg
+        for msg in messages
+        if not (isinstance(msg, dict) and msg.get("role") == "system")
+    ]
+    while body and _approx_prompt_tokens(systems + body, tools) > ceiling:
+        if len(body) <= 1:
+            last = body[-1]
+            if isinstance(last, dict) and isinstance(last.get("content"), str):
+                remain = max(200, (ceiling - tools_tokens) * 4)
+                last = dict(last)
+                last["content"] = last["content"][-remain:]
+                body[-1] = last
+            break
+        body.pop(0)
+        while body and isinstance(body[0], dict) and body[0].get("role") == "assistant":
+            body.pop(0)
+    return systems + body
+
+
 def _build_call_kwargs(
     provider: str,
     model: str,
@@ -9168,6 +9285,53 @@ def _build_call_kwargs(
             or _is_anthropic_compat_endpoint(provider_norm, effective_base)
         ):
             kwargs["_reasoning_config"] = dict(reasoning_config)
+
+    kwargs["messages"] = _sanitize_chat_completion_messages(
+        kwargs.get("messages") or [], model=model
+    )
+    provider_norm = str(provider or "").strip().lower()
+    host = ""
+    try:
+        from urllib.parse import urlparse
+
+        host = (urlparse(str(base_url or "").strip()).hostname or "").lower()
+    except Exception:
+        host = ""
+    # Groq/Cerebras OpenAI-compat schemas reject extra_body.reasoning
+    # (HTTP 400 "property 'reasoning' is unsupported"). Strip it here so
+    # MoA aggregator streams do not 400 before any retry path can run.
+    if (
+        provider_norm in {"groq", "cerebras"}
+        or "groq.com" in host
+        or "cerebras.ai" in host
+    ):
+        extra = kwargs.get("extra_body")
+        if isinstance(extra, dict) and "reasoning" in extra:
+            extra = dict(extra)
+            extra.pop("reasoning", None)
+            if extra:
+                kwargs["extra_body"] = extra
+            else:
+                kwargs.pop("extra_body", None)
+        kwargs.pop("reasoning", None)
+    groq_ceiling = _groq_prompt_token_ceiling(provider, model, base_url)
+    if groq_ceiling is not None:
+        before = kwargs["messages"]
+        after = _trim_messages_to_token_ceiling(
+            before, groq_ceiling, tools=kwargs.get("tools")
+        )
+        if after is not before:
+            logger.warning(
+                "Groq on_demand prompt ceiling %s tokens; trimmed MoA/aux history "
+                "from ~%s to ~%s tokens (provider=%s model=%s). No cross-provider "
+                "fallback.",
+                groq_ceiling,
+                _approx_prompt_tokens(before, kwargs.get("tools")),
+                _approx_prompt_tokens(after, kwargs.get("tools")),
+                provider,
+                model,
+            )
+            kwargs["messages"] = after
 
     return kwargs
 

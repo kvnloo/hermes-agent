@@ -66,6 +66,16 @@ def resolve_exec_command() -> str:
     """
     from hermes_cli.relaunch import resolve_hermes_bin
 
+    try:
+        from hermes_cli.profiles import get_active_profile_name  # pyright: ignore[reportMissingImports]
+
+        active_profile = get_active_profile_name()
+    except Exception:
+        active_profile = "default"
+    profile_args = (
+        [] if active_profile in ("default", "custom") else ["-p", active_profile]
+    )
+
     bin_path = resolve_hermes_bin()
     if bin_path:
         resolved = Path(bin_path).resolve()
@@ -78,11 +88,24 @@ def resolve_exec_command() -> str:
             # third-party import (#90292) — silently, since Terminal=false.
             # sys.executable is the interpreter actually running Hermes (the
             # venv one), so prefix it explicitly.
-            argv = [str(Path(sys.executable).resolve()), str(resolved), "desktop"]
+            argv = [
+                str(Path(sys.executable).resolve()),
+                str(resolved),
+                *profile_args,
+                "desktop",
+                "--skip-build",
+            ]
         else:
-            argv = [str(resolved), "desktop"]
+            argv = [str(resolved), *profile_args, "desktop", "--skip-build"]
     else:
-        argv = [str(Path(sys.executable).resolve()), "-m", "hermes_cli.main", "desktop"]
+        argv = [
+            str(Path(sys.executable).resolve()),
+            "-m",
+            "hermes_cli.main",
+            *profile_args,
+            "desktop",
+            "--skip-build",
+        ]
     return " ".join(_quote_exec_arg(a) for a in argv)
 
 
@@ -106,8 +129,13 @@ def _needs_interpreter(bin_path: Path) -> bool:
     # A python shebang pointing INSIDE the running interpreter's environment
     # already resolves correctly; anything else (``/usr/bin/env python3``,
     # a system path) would escape the venv when spawned by the DE.
-    exe_dir = str(Path(sys.executable).resolve().parent)
-    return exe_dir not in shebang
+    # Do not resolve the venv interpreter symlink here. A typical venv's
+    # ``bin/python`` resolves to ``/usr/bin/python3``, which made
+    # ``#!/usr/bin/env python3`` look as though it referenced the active venv
+    # merely because both strings contained ``/usr/bin``. The desktop launcher
+    # then escaped the profile venv and failed silently under Terminal=false.
+    active_interpreter = str(Path(sys.executable).absolute()).lower()
+    return active_interpreter not in shebang
 
 
 def _quote_exec_arg(arg: str) -> str:

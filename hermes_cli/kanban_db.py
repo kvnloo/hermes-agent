@@ -1141,6 +1141,13 @@ class Task:
     # Unblock-loop counter. See the column comment in SCHEMA_SQL and
     # ``BLOCK_RECURRENCE_LIMIT``. Reset only on successful completion.
     block_recurrences: int = 0
+    # ASG metadata (shadow-first). privacy_class is public-oss /
+    # company-private / secrets. capacity_pools is a list of named leases.
+    # moa_preset names a MoA config preset; when set without model_override
+    # create_task also pins model_override=preset provider_override=moa.
+    privacy_class: Optional[str] = None
+    capacity_pools: Optional[list] = None
+    moa_preset: Optional[str] = None
 
     @classmethod
     def from_row(cls, row: sqlite3.Row) -> "Task":
@@ -1235,7 +1242,35 @@ class Task:
                 if "block_recurrences" in keys and row["block_recurrences"] is not None
                 else 0
             ),
+            privacy_class=(
+                row["privacy_class"]
+                if "privacy_class" in keys and row["privacy_class"]
+                else None
+            ),
+            capacity_pools=_parse_capacity_pools_column(
+                row["capacity_pools"] if "capacity_pools" in keys else None
+            ),
+            moa_preset=(
+                row["moa_preset"]
+                if "moa_preset" in keys and row["moa_preset"]
+                else None
+            ),
         )
+
+
+def _parse_capacity_pools_column(raw: Any) -> Optional[list]:
+    if raw is None or raw == "":
+        return None
+    if isinstance(raw, list):
+        return [str(p) for p in raw if p]
+    if isinstance(raw, str):
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            return [p.strip() for p in raw.split(",") if p.strip()] or None
+        if isinstance(parsed, list):
+            return [str(p) for p in parsed if p]
+    return None
 
 
 @dataclass
@@ -1422,7 +1457,11 @@ CREATE TABLE IF NOT EXISTS tasks (
     -- ``blocked`` so a cron can't spin it forever. Reset to 0 only on a
     -- successful completion — NOT on unblock (resetting on unblock is exactly
     -- the amnesia that let the loop run unbounded).
-    block_recurrences    INTEGER NOT NULL DEFAULT 0
+    block_recurrences    INTEGER NOT NULL DEFAULT 0,
+    -- ASG metadata. NULL on legacy rows. See hermes_cli.capacity_pools.
+    privacy_class        TEXT,
+    capacity_pools       TEXT,
+    moa_preset           TEXT
 );
 
 CREATE TABLE IF NOT EXISTS task_links (
@@ -2690,6 +2729,13 @@ def _migrate_add_optional_columns(conn: sqlite3.Connection) -> None:
             "block_recurrences INTEGER NOT NULL DEFAULT 0",
         )
 
+    if "privacy_class" not in cols:
+        _add_column_if_missing(conn, "tasks", "privacy_class", "privacy_class TEXT")
+    if "capacity_pools" not in cols:
+        _add_column_if_missing(conn, "tasks", "capacity_pools", "capacity_pools TEXT")
+    if "moa_preset" not in cols:
+        _add_column_if_missing(conn, "tasks", "moa_preset", "moa_preset TEXT")
+
     # Indexes over additive ``tasks`` columns must be created after the
     # columns exist. Keeping them in SCHEMA_SQL breaks legacy boards: SQLite
     # parses each statement in ``executescript`` against the live schema, so a
@@ -3194,6 +3240,9 @@ def create_task(
     board: Optional[str] = None,
     project_id: Optional[str] = None,
     project_source_task_id: Optional[str] = None,
+    privacy_class: Optional[str] = None,
+    capacity_pools: Optional[Iterable[str]] = None,
+    moa_preset: Optional[str] = None,
 ) -> str:
     """Create a new task and optionally link it under parent tasks.
 
@@ -3239,6 +3288,20 @@ def create_task(
     reasoning_effort = normalize_reasoning_effort(reasoning_effort)
     if provider_override and not model_override:
         raise ValueError("provider_override requires a model_override")
+    from hermes_cli.capacity_pools import normalize_task_capacity
+    _cap = normalize_task_capacity(
+        privacy_class=privacy_class,
+        capacity_pools=capacity_pools,
+        moa_preset=moa_preset,
+    )
+    privacy_class = _cap["privacy_class"]
+    moa_preset = _cap["moa_preset"]
+    capacity_pools_json = (
+        json.dumps(_cap["capacity_pools"]) if _cap["capacity_pools"] else None
+    )
+    if moa_preset and not model_override:
+        model_override = moa_preset
+        provider_override = provider_override or "moa"
     assignee = _canonical_assignee(assignee)
     if not title or not title.strip():
         raise ValueError("title is required")
@@ -3508,8 +3571,9 @@ def create_task(
                         max_runtime_seconds,
                         skills, max_retries, model_override, provider_override,
                         reasoning_effort,
-                        goal_mode, goal_max_turns, session_id
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        goal_mode, goal_max_turns, session_id,
+                        privacy_class, capacity_pools, moa_preset
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         task_id,
@@ -3535,6 +3599,9 @@ def create_task(
                         1 if goal_mode else 0,
                         int(goal_max_turns) if goal_max_turns is not None else None,
                         session_id,
+                        privacy_class,
+                        capacity_pools_json,
+                        moa_preset,
                     ),
                 )
                 for pid in parents:
@@ -8086,6 +8153,8 @@ class DispatchResult:
     DB writes this tick — the lock holder is making progress on the same
     board. This is the steady-state signal that a single-writer guard is
     actively preventing two dispatchers from racing on ``kanban.db``."""
+    capacity_receipts: list[dict] = field(default_factory=list)
+    """Secret-free ASG shadow receipts for this tick (pools, load, remaining%)."""
     memory_pressure: Optional[str] = None
     """System memory pressure observed at spawn time when the memory guard
     restricted this tick (OOF-30/OOF-77): ``"critical"`` — no new workers
@@ -8093,6 +8162,17 @@ class DispatchResult:
     spawned. ``None`` when memory was fine/unknown and the guard imposed
     no restriction. Reclaim/promotion bookkeeping still ran either way;
     deferred tasks stay queued for the next tick."""
+    compute_pressure: Optional[str] = None
+    """Host CPU/load pressure observed at spawn time: ``"critical"`` — no
+    new workers this tick; ``"elevated"`` — at most one new worker.
+    ``None`` when load was fine/unknown. Independent of memory pressure:
+    a box with free RAM but loadavg above nproc must not keep admitting
+    Kanban workers. Reclaim/promotion still run; deferred tasks wait."""
+    storage_pressure: Optional[str] = None
+    """Storage reserve observed at spawn time when the storage guard stopped
+    new workers: ``"critical"`` when either free bytes or free inodes on the
+    workspace filesystem are below the durable reserve. Existing workers and
+    reclaim/promotion bookkeeping are untouched; queued tasks are deferred."""
 
 
 # Bounded registry of recently-reaped worker child exits, populated by the
@@ -9794,6 +9874,55 @@ def count_running_tasks_other_boards(board: Optional[str] = None) -> int:
     return total
 
 
+def _system_compute_sample() -> dict:
+    """Best-effort CPU/load snapshot. ``{}`` when unknown (non-Linux / error).
+
+    Load is the right admission signal for local agent fleets: a 20-core
+    box at load 22 is already queued even if ``cpu_busy`` looks modest in
+    a short /proc/stat sample. Never raises.
+    """
+    try:
+        nproc = os.cpu_count() or 0
+        with open("/proc/loadavg", encoding="utf-8") as handle:
+            parts = handle.read().split()
+        return {
+            "nproc": int(nproc),
+            "load1": float(parts[0]),
+            "load5": float(parts[1]),
+            "load15": float(parts[2]),
+        }
+    except Exception:
+        return {}
+
+
+# load1/nproc: 1.0 means every core has a full run queue. Elevated starts
+# before hard saturation so interactive Hermes turns keep a core; critical
+# is sustained overload where extra Kanban workers only make it worse.
+COMPUTE_ELEVATED_LOAD_PER_CPU = 0.85
+COMPUTE_CRITICAL_LOAD_PER_CPU = 1.25
+
+
+def _compute_pressure_level(sample: Optional[Mapping[str, Any]] = None) -> str:
+    """Classify current CPU/load pressure: ok/elevated/critical/unknown."""
+    if sample is None:
+        sample = _system_compute_sample()
+    if not sample:
+        return "unknown"
+    try:
+        nproc = int(sample["nproc"])
+        load1 = float(sample["load1"])
+    except (KeyError, TypeError, ValueError):
+        return "unknown"
+    if nproc < 1 or load1 < 0:
+        return "unknown"
+    ratio = load1 / nproc
+    if ratio >= COMPUTE_CRITICAL_LOAD_PER_CPU:
+        return "critical"
+    if ratio >= COMPUTE_ELEVATED_LOAD_PER_CPU:
+        return "elevated"
+    return "ok"
+
+
 def _memory_pressure_level(sample: Optional[Mapping[str, Any]] = None) -> str:
     """Classify current system memory pressure: ok/elevated/critical/unknown.
 
@@ -9814,6 +9943,113 @@ def _memory_pressure_level(sample: Optional[Mapping[str, Any]] = None) -> str:
         )
     except Exception:
         return "unknown"
+
+
+_DISPATCH_MIN_FREE_BYTES = 30 * 1024**3
+_DISPATCH_MIN_FREE_INODE_RATIO = 0.05
+
+
+def _storage_pressure_level(
+    path: str = "/workspace",
+    sample: Optional[Mapping[str, Any]] = None,
+) -> str:
+    """Classify dispatch storage pressure from both byte and inode reserves.
+
+    ``critical`` is fail-closed for a valid sample: breaching either reserve
+    prevents worktree materialization and other write-heavy worker startup.
+    Unsupported hosts or stat failures return ``unknown`` so Hermes remains
+    portable rather than being bricked by a Linux-specific mount assumption.
+    """
+    if sample is None:
+        try:
+            stat = os.statvfs(path)
+            sample = {
+                "free_bytes": stat.f_bavail * stat.f_frsize,
+                "free_inodes": stat.f_favail,
+                "total_inodes": stat.f_files,
+            }
+        except (OSError, ValueError):
+            return "unknown"
+    try:
+        free_bytes = int(sample["free_bytes"])
+        free_inodes = int(sample["free_inodes"])
+        total_inodes = int(sample["total_inodes"])
+    except (KeyError, TypeError, ValueError):
+        return "unknown"
+    if min(free_bytes, free_inodes, total_inodes) < 0 or total_inodes == 0:
+        return "unknown"
+    if (
+        free_bytes < _DISPATCH_MIN_FREE_BYTES
+        or free_inodes / total_inodes < _DISPATCH_MIN_FREE_INODE_RATIO
+    ):
+        return "critical"
+    return "ok"
+
+
+def _task_storage_probe_path(task: Task, *, board: Optional[str] = None) -> Path:
+    """Return the existing filesystem anchor that will hold ``task`` writes.
+
+    Probe the task's destination mount rather than a global ``/workspace``.
+    Symlink resolution is intentional: a repo exposed under ``/workspace`` may
+    actually live on a healthy capacity drive. This helper never materializes
+    a scratch directory or worktree.
+    """
+    kind = task.workspace_kind or "scratch"
+    raw_path = (task.workspace_path or "").strip()
+    if raw_path:
+        candidate = Path(raw_path).expanduser()
+    elif kind == "scratch":
+        candidate = workspaces_root(board=board)
+    elif kind == "worktree":
+        board_slug = board if board else get_current_board()
+        default_workdir = (
+            read_board_metadata(board_slug).get("default_workdir") or ""
+        ).strip()
+        candidate = (
+            Path(default_workdir).expanduser()
+            if default_workdir
+            else Path("/workspace")
+        )
+    else:
+        candidate = Path("/workspace")
+    return _nearest_existing_path(candidate).resolve(strict=False)
+
+
+def _emit_capacity_receipt(result: DispatchResult, task: Task, board: Optional[str] = None) -> dict:
+    """Shadow ASG receipt. Never refuses spawn unless enforce env is set."""
+    from hermes_cli import capacity_pools as pools
+    from hermes_cli.capacity_broker import recommend_for_task
+    sample = _system_compute_sample()
+    remaining = pools.provider_remaining()
+    apply = pools.env_flag("HERMES_KANBAN_BROKER_APPLY")
+    decision = recommend_for_task(
+        task,
+        load1=sample.get("load1"),
+        nproc=sample.get("nproc"),
+        remaining=remaining,
+        apply=apply,
+    )
+    if decision.applied and not decision.pinned and not decision.defer:
+        if decision.model:
+            task.model_override = decision.model
+        if decision.provider:
+            task.provider_override = decision.provider
+        if decision.moa_preset:
+            task.moa_preset = decision.moa_preset
+    receipt = pools.shadow_admit(
+        task,
+        load1=sample.get("load1"),
+        nproc=sample.get("nproc"),
+    )
+    receipt["board"] = board
+    receipt["broker"] = decision.as_dict()
+    receipt["provider_remaining"] = remaining
+    try:
+        pools.persist_receipt(receipt)
+    except Exception:
+        pass
+    result.capacity_receipts.append(receipt)
+    return receipt
 
 
 def dispatch_once(
@@ -10044,6 +10280,26 @@ def _dispatch_once_locked(
             )
             spawn_budget = 1
 
+    # Compute-pressure guard: RAM-only admission misses a loaded run queue.
+    # Same shape as memory — critical freezes new spawns, elevated admits at
+    # most one, unknown is a no-op. Interactive Hermes turns keep a core.
+    compute = _compute_pressure_level()
+    if compute == "critical":
+        result.compute_pressure = compute
+        _log.warning(
+            "kanban dispatch: host CPU/load pressure is critical; "
+            "spawning no new workers this tick (deferred, not dropped)"
+        )
+        return result
+    if compute == "elevated":
+        result.compute_pressure = compute
+        if spawn_budget is None or spawn_budget > 1:
+            _log.warning(
+                "kanban dispatch: host CPU/load pressure is elevated; "
+                "limiting to at most 1 new worker this tick"
+            )
+            spawn_budget = 1
+
     ready_rows = conn.execute(
         "SELECT id, assignee FROM tasks "
         "WHERE status = 'ready' AND claim_lock IS NULL "
@@ -10226,7 +10482,22 @@ def _dispatch_once_locked(
                         {"reason": guard_reason},
                     )
             continue
+        task_for_storage = get_task(conn, row["id"])
+        if task_for_storage is not None:
+            storage_path = _task_storage_probe_path(task_for_storage, board=board)
+            storage_pressure = _storage_pressure_level(str(storage_path))
+            if storage_pressure == "critical":
+                result.storage_pressure = storage_pressure
+                _log.warning(
+                    "kanban dispatch: task %s destination %s has critical "
+                    "byte/inode reserve; deferring this task (not dropped)",
+                    row["id"], storage_path,
+                )
+                continue
         if dry_run:
+            peek = get_task(conn, row["id"])
+            if peek is not None:
+                _emit_capacity_receipt(result, peek, board=board)
             result.spawned.append((row["id"], row_assignee, ""))
             spawned += 1
             # Increment per-profile counter even in dry_run so the cap
@@ -10260,6 +10531,7 @@ def _dispatch_once_locked(
         if claimed.workspace_kind == "worktree":
             set_branch_name(conn, claimed.id, resolved_branch_name or (claimed.branch_name or "").strip() or f"wt/{claimed.id}")
         _maybe_emit_scratch_tip(conn, claimed.id, claimed.workspace_kind)
+        _emit_capacity_receipt(result, claimed, board=board)
         _spawn = spawn_fn if spawn_fn is not None else _default_spawn
         try:
             # Back-compat: older spawn_fn signatures accept only
@@ -10357,6 +10629,18 @@ def _dispatch_once_locked(
                         {"reason": guard_reason},
                     )
             continue
+        task_for_storage = get_task(conn, row["id"])
+        if task_for_storage is not None:
+            storage_path = _task_storage_probe_path(task_for_storage, board=board)
+            storage_pressure = _storage_pressure_level(str(storage_path))
+            if storage_pressure == "critical":
+                result.storage_pressure = storage_pressure
+                _log.warning(
+                    "kanban dispatch: review task %s destination %s has critical "
+                    "byte/inode reserve; deferring this task (not dropped)",
+                    row["id"], storage_path,
+                )
+                continue
         if dry_run:
             result.spawned.append((row["id"], row["assignee"], ""))
             spawned += 1
@@ -10395,6 +10679,7 @@ def _dispatch_once_locked(
         claimed.skills = list(
             dict.fromkeys([*(claimed.skills or []), "sdlc-review"])
         )
+        _emit_capacity_receipt(result, claimed, board=board)
         _spawn = spawn_fn if spawn_fn is not None else _default_spawn
         try:
             import inspect
@@ -10881,6 +11166,10 @@ def _default_spawn(
     # branch, not a nested one.
     if task.reasoning_effort:
         cmd.extend(["--reasoning", task.reasoning_effort])
+    from hermes_cli.capacity_pools import pools_for_task, systemd_slice_enforce, wrap_spawn_command
+    cmd = wrap_spawn_command(
+        cmd, pools_for_task(task), enforce=systemd_slice_enforce(),
+    )
     worker_toolsets = _resolve_worker_cli_toolsets(env.get("HERMES_HOME"))
     if worker_toolsets:
         cmd.extend(["--toolsets", ",".join(worker_toolsets)])

@@ -78,6 +78,9 @@ def _task_to_dict(t: kb.Task) -> dict[str, Any]:
         "max_retries": t.max_retries,
         "model_override": t.model_override,
         "provider_override": t.provider_override,
+        "privacy_class": t.privacy_class,
+        "capacity_pools": list(t.capacity_pools) if t.capacity_pools else [],
+        "moa_preset": t.moa_preset,
         "session_id": t.session_id,
         "workflow_template_id": t.workflow_template_id,
         "current_step_key": t.current_step_key,
@@ -418,6 +421,18 @@ def build_parser(parent_subparsers: argparse._SubParsersAction) -> argparse.Argu
                           help="Provider the --model belongs to (passed as "
                                "--provider <name> to the worker). Requires "
                                "--model.")
+    p_create.add_argument("--privacy-class", default=None,
+                          choices=["public-oss", "company-private", "secrets"],
+                          help="ASG privacy class. public-oss may use OpenCode/"
+                               ":free; company-private and secrets must not.")
+    p_create.add_argument("--capacity-pool", action="append", default=None,
+                          dest="capacity_pools",
+                          help="Named capacity pool to lease (repeatable). "
+                               "Example: --capacity-pool cpu-batch "
+                               "--capacity-pool provider-groq")
+    p_create.add_argument("--moa-preset", default=None,
+                          help="MoA preset name. Also pins --model/--provider "
+                               "moa when --model is omitted.")
     p_create.add_argument("--goal", action="store_true", dest="goal_mode",
                           help="Run the worker in a goal loop: after each "
                                "turn a judge checks the response against the "
@@ -1683,6 +1698,9 @@ def _cmd_create(args: argparse.Namespace) -> int:
             max_retries=max_retries,
             model_override=getattr(args, "model_override", None),
             provider_override=getattr(args, "provider_override", None),
+            privacy_class=getattr(args, "privacy_class", None),
+            capacity_pools=getattr(args, "capacity_pools", None),
+            moa_preset=getattr(args, "moa_preset", None),
             goal_mode=bool(getattr(args, "goal_mode", False)),
             goal_max_turns=getattr(args, "goal_max_turns", None),
             initial_status=getattr(args, "initial_status", "running"),
