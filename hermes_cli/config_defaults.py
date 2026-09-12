@@ -1129,6 +1129,18 @@ DEFAULT_CONFIG = {
             "instructions": "",
             # optional "api_key" / "base_url" keys override the OpenAI audio credentials for this mode only
         },
+        # Discord VC PCM duplex (opt-in). Default remains half-duplex STT→Hermes→TTS.
+        # Do not fold this into voice.voice_chat_mode (that key is Desktop-only: chained|gpt-live).
+        "discord_duplex": {
+            "enabled": False,
+            "provider": "openai",
+            "model": "gpt-realtime-2.1",
+            "vad": "server_vad",  # server_vad | semantic_vad | manual
+            "max_ingress_seconds": 2.0,
+            "max_playback_seconds": 1.0,
+            "max_pending_tools": 8,
+            "reconnect_deadline_seconds": 5.0,
+        },
         "record_key": "ctrl+b",
         "submit_mode": "direct",  # TUI: direct submits immediately; draft = editable transcript
         "max_recording_seconds": 120,

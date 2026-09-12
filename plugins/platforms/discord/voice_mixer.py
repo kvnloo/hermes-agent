@@ -93,6 +93,7 @@ class VoiceMixer(discord.AudioSource):
         self._duck_release_frames = max(1, duck_release_ms // FRAME_LENGTH_MS)
         self._duck_release_left = 0
         self._closed = self._speech_active = False
+        self._played_speech_ms = 0
 
     def set_ambient(self, pcm: Optional[bytes], *, gain: Optional[float] = None) -> None:
         """Install (or clear, with ``pcm=None``) the looping ambient bed."""
@@ -123,6 +124,24 @@ class VoiceMixer(discord.AudioSource):
         with self._lock:
             return self._speech_active
 
+    @property
+    def played_through_ms(self) -> int:
+        """Mixer consumption timestamp for the current speech item (heard ≈ played)."""
+        with self._lock:
+            return self._played_speech_ms
+
+    def reset_playback_cursor(self) -> None:
+        with self._lock:
+            self._played_speech_ms = 0
+
+    def queued_speech_ms(self) -> int:
+        """Unplayed speech remaining, including in-flight children."""
+        with self._lock:
+            remaining = 0
+            for child in self._speech:
+                remaining += max(0, (len(child._pcm) - child._pos) * 1000 // BYTES_PER_MS)
+            return remaining
+
     def stop_speech(self) -> None:
         """Drop any in-flight speech immediately and release the duck."""
         with self._lock:
@@ -144,13 +163,17 @@ class VoiceMixer(discord.AudioSource):
             # Speech children (drop exhausted ones; release duck when last ends)
             if self._speech:
                 still_live: List[MixerChild] = []
+                speech_frame = False
                 for child in self._speech:
                     frame = child.read_frame()
                     if frame is None:
                         continue
+                    speech_frame = True
                     acc = frame if acc is None else acc + frame
                     still_live.append(child)
                 self._speech = still_live
+                if speech_frame:
+                    self._played_speech_ms += FRAME_LENGTH_MS
                 if not self._speech and self._speech_active:
                     self._begin_duck_release_locked()
             # Ambient bed — ramp gain back up during duck-release.

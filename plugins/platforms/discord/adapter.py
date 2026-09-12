@@ -703,6 +703,24 @@ class VoiceReceiver:
     def resume(self):
         self._paused = False
 
+    def take_live_pcm(self, max_bytes: int = 192000) -> list:
+        """Return (user_id, pcm) without waiting for silence — duplex capture stays live."""
+        completed = []
+        with self._lock:
+            ssrc_user_map = dict(self._ssrc_to_user)
+            for ssrc, buf in list(self._buffers.items()):
+                if not buf:
+                    continue
+                user_id = ssrc_user_map.get(ssrc, 0)
+                if not user_id:
+                    user_id = self._infer_user_for_ssrc(ssrc)
+                if not user_id:
+                    continue
+                chunk = bytes(buf[:max_bytes])
+                del buf[:len(chunk)]
+                completed.append((user_id, chunk))
+        return completed
+
     # --- SSRC -> user_id mapping via SPEAKING opcode hook ---
 
     def map_ssrc(self, ssrc: int, user_id: int):
@@ -1050,6 +1068,7 @@ class DiscordAdapter(DiscordMediaMixin, BasePlatformAdapter):
         self._voice_mode_getter: Optional[Callable] = None  # set by run.py
         # Continuous voice mixer per guild (ambient bed + ducked speech) so acks/TTS/thinking overlap.
         self._voice_mixers: Dict[int, Any] = {}  # guild_id -> VoiceMixer
+        self._duplex_consumers: Dict[int, Any] = {}  # guild_id -> DiscordDuplexConsumer
         self._ambient_pcm_cache: Optional[bytes] = None  # decoded ambient bed
         self._voice_fx_cfg: Dict[str, Any] = self._load_voice_fx_config()
         # Threads the bot participated in (no @mention needed there); persisted across restarts.
@@ -3421,6 +3440,13 @@ class DiscordAdapter(DiscordMediaMixin, BasePlatformAdapter):
             # Tear down the mixer (stops the continuous outgoing stream).
             if getattr(self, "_voice_mixers", None) is not None:
                 self._voice_mixers.pop(guild_id, None)
+            if getattr(self, "_duplex_consumers", None) is not None:
+                consumer = self._duplex_consumers.pop(guild_id, None)
+                if consumer is not None:
+                    try:
+                        await consumer.coordinator.close()
+                    except Exception:
+                        pass
             vc = self._voice_clients.pop(guild_id, None)
             if vc and vc.is_connected():
                 try:
@@ -3464,8 +3490,9 @@ class DiscordAdapter(DiscordMediaMixin, BasePlatformAdapter):
                     return True
                 logger.warning("Mixer decode failed for %s; falling back to legacy playback", audio_path)
             # Legacy one-shot path: pause receiver while playing (echo prevention).
+            # Duplex opt-in keeps capture live; pause only when degraded or flag off.
             receiver = self._voice_receivers.get(guild_id)
-            if receiver:
+            if receiver and self._should_pause_voice_receiver(guild_id):
                 receiver.pause()
             try:
                 wait_start = time.monotonic()
@@ -3622,6 +3649,96 @@ class DiscordAdapter(DiscordMediaMixin, BasePlatformAdapter):
     # UDP keepalive interval; Discord drops the UDP route after ~60s of silence.
     _KEEPALIVE_INTERVAL = 15
 
+    def _should_pause_voice_receiver(self, guild_id: int) -> bool:
+        """Half-duplex pauses capture during TTS. Duplex never pauses unless degraded."""
+        consumer = getattr(self, "_duplex_consumers", {}).get(guild_id)
+        if consumer is not None:
+            return bool(consumer.should_pause_receiver())
+        try:
+            from plugins.platforms.discord.realtime_consumer import is_discord_duplex_enabled
+            return not is_discord_duplex_enabled()
+        except Exception:
+            return True
+
+    async def _maybe_start_duplex(self, guild_id: int):
+        """Opt-in OpenAI Realtime consumer; missing key/adapter → DEGRADED_LEGACY."""
+        consumers = getattr(self, "_duplex_consumers", None)
+        if consumers is None:
+            self._duplex_consumers = {}
+            consumers = self._duplex_consumers
+        if guild_id in consumers:
+            return consumers[guild_id]
+        try:
+            from plugins.platforms.discord.realtime_consumer import (
+                DiscordDuplexConsumer,
+                is_discord_duplex_enabled,
+                load_discord_duplex_config,
+                openai_api_key_from_config,
+            )
+        except Exception:
+            return None
+        if not is_discord_duplex_enabled():
+            return None
+        cfg = load_discord_duplex_config()
+        key = openai_api_key_from_config(cfg)
+        if not key:
+            logger.warning("%s discord duplex missing OpenAI API key", "DEGRADED_LEGACY")
+            return None
+        try:
+            from agent.realtime_voice_coordinator import RealtimeVoiceCoordinator
+            from plugins.platforms.discord.realtime_openai import OpenAIRealtimeProvider
+
+            async def _ws_factory(url: str, headers: dict):
+                import websockets
+                connect = getattr(websockets, "connect")
+                try:
+                    return await connect(url, additional_headers=headers)
+                except TypeError:
+                    return await connect(url, extra_headers=headers)
+
+            def _dispatch(name: str, arguments: dict) -> str:
+                from model_tools import handle_function_call
+                return handle_function_call(name, arguments)
+
+            provider = OpenAIRealtimeProvider(
+                api_key=key, model=str(cfg.get("model") or "gpt-realtime-2.1"),
+                vad=str(cfg.get("vad") or "server_vad"), websocket_factory=_ws_factory,
+            )
+            coordinator = RealtimeVoiceCoordinator(
+                provider, dispatch_tool=_dispatch,
+                max_pending_tools=int(cfg.get("max_pending_tools") or 8),
+                surface="discord_vc", model=str(cfg.get("model") or ""),
+            )
+            await coordinator.open(instructions="Hermes owns tools, approvals, and history.", tools=[])
+            mixer = getattr(self, "_voice_mixers", {}).get(guild_id)
+
+            async def _fallback(**kwargs):
+                pcm = kwargs.get("pcm_data") or b""
+                await self._process_voice_input(guild_id, kwargs.get("user_id") or 0, pcm)
+
+            consumer = DiscordDuplexConsumer(
+                coordinator=coordinator, mixer=mixer, fallback=_fallback,
+                max_ingress_seconds=float(cfg.get("max_ingress_seconds") or 2.0),
+                max_playback_seconds=float(cfg.get("max_playback_seconds") or 1.0),
+                metrics=coordinator.metrics,
+            )
+            consumers[guild_id] = consumer
+            asyncio.ensure_future(self._duplex_event_loop(guild_id, consumer))
+            return consumer
+        except Exception as exc:
+            logger.warning("%s discord duplex failed to start: %s", "DEGRADED_LEGACY", exc)
+            return None
+
+    async def _duplex_event_loop(self, guild_id: int, consumer) -> None:
+        try:
+            async for event in consumer.coordinator.events():
+                await consumer.handle_provider_event(event)
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.warning("%s discord duplex event loop: %s", "DEGRADED_LEGACY", exc)
+            consumer.mark_degraded(type(exc).__name__)
+
     async def _voice_listen_loop(self, guild_id: int):
         """Periodically check for completed utterances and process them."""
         receiver = self._voice_receivers.get(guild_id)
@@ -3629,6 +3746,7 @@ class DiscordAdapter(DiscordMediaMixin, BasePlatformAdapter):
             return
         last_keepalive = time.monotonic()
         try:
+            await self._maybe_start_duplex(guild_id)
             while receiver._running:
                 await asyncio.sleep(0.2)
                 now = time.monotonic()
@@ -3640,13 +3758,27 @@ class DiscordAdapter(DiscordMediaMixin, BasePlatformAdapter):
                             vc._connection.send_packet(b'\xf8\xff\xfe')
                     except Exception:
                         pass
-                completed = receiver.check_silence()
-                # Pass guild so role checks stay guild-scoped.
+                consumer = getattr(self, "_duplex_consumers", {}).get(guild_id)
                 _vc_guild = self._client.get_guild(guild_id) if self._client is not None else None
+                if consumer is not None and not consumer.degraded:
+                    live = receiver.take_live_pcm()
+                    mixer = getattr(self, "_voice_mixers", {}).get(guild_id)
+                    playing = bool(mixer is not None and getattr(mixer, "speech_active", False))
+                    for user_id, pcm_data in live:
+                        if not self._is_allowed_user(str(user_id), guild=_vc_guild, is_dm=False):
+                            continue
+                        self._reset_voice_timeout(guild_id)
+                        duration_ms = (len(pcm_data) * 1000) // 192
+                        await consumer.ingest_capture(
+                            pcm_data, playing=playing, echo_window=playing,
+                            duration_ms=duration_ms, user_id=user_id, guild_id=guild_id,
+                            authorized=True,
+                        )
+                    continue
+                completed = receiver.check_silence()
                 for user_id, pcm_data in completed:
                     if not self._is_allowed_user(str(user_id), guild=_vc_guild, is_dm=False):
                         continue
-                    # User speech is activity too; keeps active listeners connected.
                     self._reset_voice_timeout(guild_id)
                     await self._process_voice_input(guild_id, user_id, pcm_data)
         except asyncio.CancelledError:

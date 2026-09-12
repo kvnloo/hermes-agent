@@ -62,6 +62,18 @@ class TestVoiceMixerCore:
         assert any(p > 0 for p in peaks[10:])
         assert max(peaks) < int(32767 * 0.5)
 
+    def test_played_through_ms_advances_on_speech_frames_and_stop_keeps_receipt(self):
+        mx = vm.VoiceMixer()
+        speech = b"\x00\x10" * (vm.FRAME_SIZE // 2) * 5
+        mx.play_speech(speech)
+        mx.read()
+        mx.read()
+        assert mx.played_through_ms == 40
+        mx.stop_speech()
+        assert mx.played_through_ms == 40
+        mx.reset_playback_cursor()
+        assert mx.played_through_ms == 0
+
 
 # =====================================================================
 # Adapter integration

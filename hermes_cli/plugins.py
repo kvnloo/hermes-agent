@@ -1055,6 +1055,12 @@ _SCOPED_PROVIDER_REGISTRARS: Tuple[Tuple[str, str, str, str, str, str, Dict[str,
      "Register an :class:`agent.transcription_provider.TranscriptionProvider`; ``provider.name`` is "
      "matched by ``stt.provider`` unless it is a built-in name (rejected) or a ``stt.providers.<name>: "
      "type: command`` entry shares it (command-providers win).", {"normalize": "lower"}),
+    ("register_realtime_voice_provider", "realtime_voice_provider", "agent.realtime_voice_registry",
+     "agent.realtime_voice:RealtimeVoiceProvider", "realtime voice provider",
+     "Register an :class:`agent.realtime_voice.RealtimeVoiceProvider`; transports audio and proposes "
+     "calls only. Hermes remains responsible for tool dispatch, approvals, conversation history, and "
+     "memory. ``provider.name`` is matched by ``voice.discord_duplex.provider``.",
+     {"normalize": "lower"}),
 )
 
 _NAME_NORMALIZERS: Dict[Optional[str], Optional[Callable[[str], str]]] = {
