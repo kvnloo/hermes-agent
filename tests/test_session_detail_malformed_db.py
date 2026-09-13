@@ -161,3 +161,170 @@ async def test_non_corruption_database_error_is_not_swallowed(monkeypatch):
     )
     with pytest.raises(sqlite3.DatabaseError):
         await sessions_router.get_session_detail("20260830_180820_744f05")
+
+
+# ── Post-resolve corruption in get_session_messages (ba7743b scope gap) ────
+#
+# _resolve_session_id only classifies a corrupt *sessions* index. get_messages
+# reads the *messages* b-tree afterwards, and a partial corruption (sessions PK
+# intact, messages b-tree damaged - the 2026-08-31 incident shape) sails past
+# the resolve step and used to raise an unhandled sqlite3.DatabaseError out of
+# asyncio.to_thread, rendering as a bare 500 with no repair path instead of the
+# 503 "run `hermes doctor`" diagnostic the resolve step already emits.
+
+
+class _MessagesOnlyMalformedDB:
+    """Sessions PK intact, messages b-tree damaged.
+
+    resolve_session_id succeeds (PK lookup), resolve_resume_session_id
+    swallows the corruption and falls back to the id, and get_messages is the
+    first uncaught raise - exactly the chain a real zeroed messages rootpage
+    produces.
+    """
+
+    def __init__(self):
+        self.closed = False
+
+    def resolve_session_id(self, session_id):
+        return session_id  # PK index intact -> resolve SUCCEEDS
+
+    def resolve_resume_session_id(self, session_id):
+        return session_id  # swallows corruption -> falls back unchanged
+
+    def get_messages(self, session_id, **kwargs):
+        raise sqlite3.DatabaseError("database disk image is malformed")
+
+    def close(self):
+        self.closed = True
+
+
+@pytest.fixture
+def messages_malformed_db(monkeypatch):
+    db = _MessagesOnlyMalformedDB()
+    monkeypatch.setattr(
+        web_server, "_open_session_db_for_profile", lambda profile, *, read_only: db
+    )
+    return db
+
+
+@pytest.mark.asyncio
+async def test_messages_endpoint_reports_post_resolve_corruption(messages_malformed_db):
+    with pytest.raises(HTTPException) as excinfo:
+        await sessions_router.get_session_messages(
+            "20260830_180820_744f05", None, None, 0, None, False
+        )
+    assert excinfo.value.status_code != 500, (
+        "post-resolve corruption returned a bare 500 - this is the bug"
+    )
+    assert excinfo.value.status_code != 404
+    assert excinfo.value.status_code == 503
+    detail = str(excinfo.value.detail).lower()
+    assert "corrupt" in detail or "malformed" in detail
+    assert "hermes doctor" in detail
+
+
+class _MessagesOtherErrorDB(_MessagesOnlyMalformedDB):
+    def get_messages(self, session_id, **kwargs):
+        raise sqlite3.DatabaseError("some unrelated messages read failure")
+
+
+@pytest.mark.asyncio
+async def test_post_resolve_non_corruption_database_error_not_swallowed(monkeypatch):
+    monkeypatch.setattr(
+        web_server,
+        "_open_session_db_for_profile",
+        lambda profile, *, read_only: _MessagesOtherErrorDB(),
+    )
+    with pytest.raises(sqlite3.DatabaseError):
+        await sessions_router.get_session_messages(
+            "20260830_180820_744f05", None, None, 0, None, False
+        )
+
+
+@pytest.mark.asyncio
+async def test_absent_session_messages_still_404(monkeypatch):
+    monkeypatch.setattr(
+        web_server,
+        "_open_session_db_for_profile",
+        lambda profile, *, read_only: _EmptyDB(),
+    )
+    with pytest.raises(HTTPException) as excinfo:
+        await sessions_router.get_session_messages(
+            "does_not_exist", None, None, 0, None, False
+        )
+    assert excinfo.value.status_code == 404
+
+
+# ── End-to-end through the real mounted router + a real corrupt SQLite file ─
+#
+# The mock tests above pin the classification branch; this pair reproduces the
+# reported HTTP transition (500 -> 503) with a real state.db whose messages
+# b-tree root page is zeroed while the sessions primary-key index stays intact
+# - the partial-corruption shape from the 2026-08-31 incident.
+
+
+def _build_healthy_store_with_messages() -> str:
+    import uuid
+
+    from hermes_state import SessionDB
+
+    db = SessionDB()
+    sid = db.create_session(session_id=str(uuid.uuid4()), source="test")
+    for i in range(3):
+        db.append_message(sid, role="user", content=f"hello world {i}")
+    db.close()
+    return sid
+
+
+def _zero_messages_rootpage(db_path) -> None:
+    conn = sqlite3.connect(str(db_path))
+    try:
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        page_size = conn.execute("PRAGMA page_size").fetchone()[0]
+        rootpage = conn.execute(
+            "SELECT rootpage FROM sqlite_master WHERE type='table' AND name='messages'"
+        ).fetchone()[0]
+    finally:
+        conn.close()
+    with open(db_path, "r+b") as f:
+        f.seek((rootpage - 1) * page_size)
+        f.write(b"\x00" * page_size)
+
+
+def test_messages_endpoint_real_corrupt_messages_btree_returns_503():
+    from starlette.testclient import TestClient
+
+    from hermes_cli.web_server import _SESSION_HEADER_NAME, _SESSION_TOKEN, app
+    from hermes_state import _default_db_path
+
+    sid = _build_healthy_store_with_messages()
+    _zero_messages_rootpage(_default_db_path())
+
+    client = TestClient(app, raise_server_exceptions=False)
+    client.headers[_SESSION_HEADER_NAME] = _SESSION_TOKEN
+    resp = client.get(f"/api/sessions/{sid}/messages")
+
+    assert resp.status_code != 500, (
+        "real post-resolve corruption returned a bare 500 - this is the bug"
+    )
+    assert resp.status_code == 503, resp.text
+    detail = str(resp.json().get("detail", "")).lower()
+    assert "corrupt" in detail or "malformed" in detail
+    assert "hermes doctor" in detail
+
+
+def test_messages_endpoint_real_healthy_store_still_returns_200():
+    from starlette.testclient import TestClient
+
+    from hermes_cli.web_server import _SESSION_HEADER_NAME, _SESSION_TOKEN, app
+
+    sid = _build_healthy_store_with_messages()
+
+    client = TestClient(app, raise_server_exceptions=False)
+    client.headers[_SESSION_HEADER_NAME] = _SESSION_TOKEN
+    resp = client.get(f"/api/sessions/{sid}/messages")
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["session_id"] == sid
+    assert len(body["messages"]) == 3
