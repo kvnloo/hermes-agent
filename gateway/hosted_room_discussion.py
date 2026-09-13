@@ -1164,6 +1164,19 @@ def plan_next_task(
             for event in member_messages
         )
         if not spoke:
+            deferred_pending = any(
+                event.kind == "turn.deferred"
+                for (r_idx, _member_id), event in terminals.items()
+                if r_idx == round_index
+            )
+            if deferred_pending:
+                return DiscussionDecision(
+                    status="idle",
+                    reason="awaiting_retry",
+                    discussion_event_id=discussion.event_id,
+                    source_event_seq=discussion.seq,
+                    thread_id=thread_id,
+                )
             return DiscussionDecision(
                 status="settled",
                 reason="silent_round",

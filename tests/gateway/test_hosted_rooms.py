@@ -967,7 +967,7 @@ def test_tombstone_pruning_owns_only_room_log_driver_and_policy_tables(tmp_path)
         )
         conn.execute(
             """INSERT INTO hosted_room_policy_threads
-               VALUES ('room-1', 'thread-1', 'user-1', 1, 0)"""
+               VALUES ('room-1', 'thread-1', 'user-1', 1, 0, 0)"""
         )
         conn.execute(
             """INSERT INTO hosted_room_policy_events
