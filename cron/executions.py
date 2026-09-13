@@ -127,6 +127,24 @@ def _process_start_time(pid: int) -> Optional[int]:
 
 
 def _owner_is_live(pid: int, started_at: Optional[int]) -> bool:
+    """Return True unless the owner process is *proved* gone.
+
+    A ``claimed``/``running`` row may be fenced to the terminal ``unknown``
+    state only after its exact owner process is proved gone (see the module
+    docstring); ``unknown`` is immutable, so the burden of proof is on the
+    fencing action. Once ``_pid_exists(pid)`` confirms a process occupies the
+    pid, the start-time fingerprint is the only identifier that can prove
+    that process is *not* the owner:
+
+    - a matching fingerprint proves it IS the owner        -> alive (do not fence)
+    - a mismatching fingerprint proves the pid was recycled -> proved gone (fence)
+    - a missing or unreadable fingerprint proves nothing   -> not proved gone
+
+    The last case must NOT fence: an unavailable fingerprint is an instrument
+    failure, not proof of owner death. Fencing it would irreversibly discard
+    the owner's real outcome for a process that may still be running. Fail
+    open (treat as alive), mirroring the import-error branch below.
+    """
     try:
         from gateway.status import _pid_exists
         if not _pid_exists(pid):
@@ -134,9 +152,11 @@ def _owner_is_live(pid: int, started_at: Optional[int]) -> bool:
     except Exception:
         return True  # fail safe: inability to prove death must not rewrite state
     if started_at is None:
-        return pid == os.getpid()
+        return True  # alive; no fingerprint to disprove identity -> do not rewrite state
     current = _process_start_time(pid)
-    return current is not None and current == started_at
+    if current is None:
+        return True  # alive; start time unreadable -> do not rewrite state
+    return current == started_at
 
 
 def _prune_unlocked(conn: sqlite3.Connection) -> None:
