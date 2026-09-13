@@ -731,6 +731,11 @@ export function useMessageStream({
         // the just-cancelled full text, so we settle and bail instead — only
         // extending the bubble to the partial the agent persisted (#121594).
         if (state.interrupted) {
+          // The turn ended (here via the late complete of a cancelled turn).
+          // Reset every per-turn flag the normal branch resets so a stale
+          // adoptedRunningTurn can't leak a hydrate onto the NEXT turn this
+          // window streams itself — the settle clears the turn's identity,
+          // not just the fields the late-complete path happened to need.
           return {
             ...state,
             messages:
@@ -741,7 +746,9 @@ export function useMessageStream({
             pendingBranchGroup: null,
             streamId: null,
             turnStartedAt: null,
-            turnLive: false
+            turnLive: false,
+            adoptedRunningTurn: false,
+            interimBoundaryPending: false
           }
         }
 
@@ -1165,7 +1172,8 @@ export function useMessageStream({
           needsInput: false,
           interimBoundaryPending: false,
           turnStartedAt: null,
-          turnLive: false
+          turnLive: false,
+          adoptedRunningTurn: false
         }
       })
     },
