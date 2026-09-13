@@ -85,7 +85,10 @@ export function stripGeneratedImageEchoes(text: string, sources: readonly string
   let next = text.replace(/!\[[^\]\n]*\]\([^)\n]*\)/g, '').replace(/\[[^\]\n]*\]\(\s*#media:[^)\n]*\)/g, '')
 
   for (const source of unique([...sources])) {
-    next = next.replace(new RegExp(String.raw`(^|[\s([{])<?${regexEscape(source)}>?(?=$|[\s)\]},.!?])`, 'g'), '$1')
+    next = next.replace(
+      new RegExp(String.raw`(?<![\p{L}\p{N}_/~%-])<?${regexEscape(source)}>?(?![\p{L}\p{N}_/~%-])`, 'gu'),
+      ''
+    )
   }
 
   return next

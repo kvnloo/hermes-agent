@@ -38,6 +38,33 @@ describe('stripGeneratedImageEchoes', () => {
       'Saved image:'
     )
   })
+
+  it('strips bare echoes bounded by quotes, colons, or string edges', () => {
+    expect(stripGeneratedImageEchoes('Saved to "/tmp/cat.png" just now.', ['/tmp/cat.png'])).toBe(
+      'Saved to "" just now.'
+    )
+    expect(stripGeneratedImageEchoes('Generated /tmp/cat.png: done', ['/tmp/cat.png'])).toBe('Generated : done')
+    expect(stripGeneratedImageEchoes('/tmp/cat.png is ready', ['/tmp/cat.png'])).toBe('is ready')
+    expect(stripGeneratedImageEchoes('Saved to /tmp/cat.png.', ['/tmp/cat.png'])).toBe('Saved to .')
+  })
+
+  it('strips a quoted sandbox (agent-visible) path so the container path never leaks', () => {
+    expect(
+      stripGeneratedImageEchoes('Restated as "/root/.hermes/cache/images/cat.png" — see above.', [
+        '/root/.hermes/cache/images/cat.png'
+      ])
+    ).toBe('Restated as "" — see above.')
+  })
+
+  it('does not strip a path that is a substring of a longer path', () => {
+    expect(stripGeneratedImageEchoes('see /tmp/cat.png/foo here', ['/tmp/cat.png'])).toBe('see /tmp/cat.png/foo here')
+  })
+
+  it('does not strip a path glued to a path-continuation character', () => {
+    expect(stripGeneratedImageEchoes('see x/tmp/cat.png', ['/tmp/cat.png'])).toBe('see x/tmp/cat.png')
+    expect(stripGeneratedImageEchoes('see /tmp/cat.png_bar', ['/tmp/cat.png'])).toBe('see /tmp/cat.png_bar')
+    expect(stripGeneratedImageEchoes('see /tmp/cat.png-baz', ['/tmp/cat.png'])).toBe('see /tmp/cat.png-baz')
+  })
 })
 
 describe('generatedImageEchoSources', () => {
@@ -116,5 +143,25 @@ describe('dedupeGeneratedImageEchoesInParts', () => {
     ]
 
     expect(dedupeGeneratedImageEchoesInParts(parts)).toEqual(parts)
+  })
+
+  it('strips a bare quoted path out of prose next to a successful image call, keeping the tool result', () => {
+    expect(
+      dedupeGeneratedImageEchoesInParts([
+        { text: 'Saved to "/tmp/cat.png" — enjoy!', type: 'text' },
+        {
+          result: { host_image: '/tmp/cat.png', image: '/tmp/cat.png', success: true },
+          toolName: 'image_generate',
+          type: 'tool-call'
+        }
+      ])
+    ).toEqual([
+      { text: 'Saved to "" — enjoy!', type: 'text' },
+      {
+        result: { host_image: '/tmp/cat.png', image: '/tmp/cat.png', success: true },
+        toolName: 'image_generate',
+        type: 'tool-call'
+      }
+    ])
   })
 })
