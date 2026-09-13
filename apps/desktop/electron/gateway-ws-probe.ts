@@ -120,6 +120,17 @@ function probeGatewayWebSocket<T>(
       }
 
       opened = true
+
+      // The socket is open — the connect deadline no longer applies. Clear the
+      // connect timer so it can't fire during the grace window and falsely
+      // report "waiting for the WebSocket to open" for a socket that already
+      // opened (a real race when the upgrade lands in the last readyGraceMs of
+      // the connect budget).
+      if (connectTimer !== null) {
+        clearTimeout(connectTimer)
+        connectTimer = null
+      }
+
       // Upgrade accepted. Give the server a brief window to reject the
       // credential post-handshake (early close) before declaring success.
       graceTimer = setTimeout(() => {
