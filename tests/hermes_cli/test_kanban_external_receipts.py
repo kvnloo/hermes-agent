@@ -5,13 +5,14 @@ import hashlib
 import pytest
 
 from hermes_cli import kanban_db as kb
+from hermes_cli import kanban_db_connect as kbc
 
 
 @pytest.fixture
 def running_execution(tmp_path):
     db_path = tmp_path / "kanban.db"
     kb.init_db(db_path)
-    conn = kb.connect(db_path)
+    conn = kbc.connect(db_path)
     now = 1_700_000_000
     conn.execute(
         "INSERT INTO tasks (id, title, status, created_at, started_at, workspace_kind) "
