@@ -116,6 +116,27 @@ test('probe times out when the socket never opens', async () => {
   assert.match(result.reason, /Timed out/)
 })
 
+test('probe resolves ok when the socket opens late and stays open through the grace window', async () => {
+  // Regression: when the upgrade opens inside the last readyGraceMs of the
+  // connect budget, the connect timer is still armed and would fire during the
+  // grace window, falsely reporting a connect timeout. The fix clears the
+  // connect timer on open. Here readyGraceMs > connectTimeoutMs forces the
+  // grace deadline to land after the connect deadline, exposing the race.
+  const { FakeWs, instances } = makeFakeWs()
+
+  const promise = probeGatewayWebSocket('ws://host/api/ws?token=t', {
+    WebSocketImpl: FakeWs,
+    connectTimeoutMs: 50,
+    readyGraceMs: 200
+  })
+
+  instances[0].emit('open') // upgrade accepted; connect timer must be cleared here
+  const result = await promise
+
+  assert.deepEqual(result, { ok: true })
+  assert.equal(instances[0].closed, true)
+})
+
 test('probe fails gracefully when the constructor throws', async () => {
   class ThrowingWs {
     constructor() {
