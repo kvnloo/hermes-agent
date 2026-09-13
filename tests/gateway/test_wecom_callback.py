@@ -7,7 +7,7 @@ import pytest
 
 from gateway.config import PlatformConfig
 from plugins.platforms.wecom.callback_adapter import WecomCallbackAdapter
-from plugins.platforms.wecom.wecom_crypto import WXBizMsgCrypt
+from plugins.platforms.wecom.wecom_crypto import SignatureError, WXBizMsgCrypt
 
 
 def _app(name="test-app", corp_id="ww1234567890", agent_id="1000002"):
@@ -43,6 +43,53 @@ class TestWecomCrypto:
             root.findtext("Encrypt", default=""),
         )
         assert b"<Content>hello</Content>" in decrypted
+
+
+class TestWecomSignatureVerification:
+    """Signature verification uses ``hmac.compare_digest`` (constant-time).
+
+    The inbound ``msg_signature`` is an attacker-controlled query parameter on
+    a public, unauthenticated endpoint, so it must be compared with
+    ``hmac.compare_digest`` rather than plain ``!=`` — the repo-wide convention
+    for request-path signature verifiers.
+    """
+
+    @staticmethod
+    def _encrypt_and_parse(crypt, plaintext="<xml><Content>hello</Content></xml>"):
+        encrypted_xml = crypt.encrypt(plaintext, nonce="nonce123", timestamp="123456")
+        root = ET.fromstring(encrypted_xml)
+        return {
+            "msg_signature": root.findtext("MsgSignature", default=""),
+            "timestamp": root.findtext("TimeStamp", default=""),
+            "nonce": root.findtext("Nonce", default=""),
+            "encrypt": root.findtext("Encrypt", default=""),
+        }
+
+    def _crypt(self):
+        app = _app()
+        return WXBizMsgCrypt(app["token"], app["encoding_aes_key"], app["corp_id"])
+
+    def test_tampered_signature_raises_signature_error(self):
+        """A single-byte change to msg_signature must raise SignatureError."""
+        crypt = self._crypt()
+        parts = self._encrypt_and_parse(crypt)
+        valid = parts["msg_signature"]
+        tampered = valid[:-1] + ("0" if valid[-1] != "0" else "1")
+        with pytest.raises(SignatureError):
+            crypt.decrypt(tampered, parts["timestamp"], parts["nonce"], parts["encrypt"])
+
+    def test_non_ascii_signature_raises_signature_error_not_type_error(self):
+        """A non-ASCII msg_signature must raise SignatureError (bytes-compare fail-closed).
+
+        ``hmac.compare_digest`` raises ``TypeError`` on a non-ASCII ``str``; the
+        implementation compares ``.encode()``d bytes so a hostile query value
+        fails closed with a clean ``SignatureError`` rather than propagating a
+        ``TypeError`` (which would surface as a logged 500).
+        """
+        crypt = self._crypt()
+        parts = self._encrypt_and_parse(crypt)
+        with pytest.raises(SignatureError):
+            crypt.decrypt("\u00e9" * 40, parts["timestamp"], parts["nonce"], parts["encrypt"])
 
 
 class TestWecomCallbackEventConstruction:
