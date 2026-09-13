@@ -22,6 +22,9 @@ from tools.checkpoint_manager import (
     _ref_name,
     _project_meta_path,
     _touch_project,
+    _dir_size_bytes,
+    _repair_bare_repo_dirs,
+    _GIT_TIMEOUT,
     prune_checkpoints,
     maybe_auto_prune_checkpoints,
     store_status,
@@ -268,6 +271,282 @@ class TestRealPruning:
         names = set(files.splitlines())
         assert "small.py" in names
         assert "weights.bin" not in names  # filtered by size cap
+
+
+# =========================================================================
+# Global size cap — must drop the *minimal* number of commits (regression)
+# =========================================================================
+
+class TestSizeCapOverPrune:
+    """The global size-cap drop loop must stop as soon as the cap is met.
+
+    Background: ``_enforce_size_cap`` rewrites per-project refs to drop the
+    oldest commit round-robin and re-measures the store with
+    ``_dir_size_bytes`` to decide when to stop. ``git update-ref`` only makes
+    commits *unreachable* — physical object files stay on disk until
+    ``git gc --prune=now`` runs. ``_dir_size_bytes`` counts every physical
+    file, including unreachable objects, so re-measuring immediately after an
+    ``update-ref`` cannot observe the reclamation.
+
+    The bug: the size-cap loop originally ran ``git gc --prune=now`` only
+    *after* the entire drop loop, so the in-loop ``size <= cap_bytes`` stop
+    condition could never fire from reclamation. The measured size in fact
+    *grew* (each ``commit-tree`` rewrite adds new objects), so the loop kept
+    dropping until ``range(20)`` was exhausted — stripping every ref to a
+    single commit even when a single drop would have satisfied the cap.
+
+    Fix: run ``git gc --prune=now`` *inside* the loop after each drop round so
+    the next measurement reflects the reclamation, and reset the per-iteration
+    drop flag so the loop can terminate once nothing is droppable. Same for
+    the size-cap pass in ``prune_checkpoints``.
+    """
+
+    def _build_store_with_unique_blobs(
+        self, work_dir, checkpoint_base, monkeypatch, n=8, blob_mb=5,
+    ):
+        """Build a store with ``n`` checkpoints, each overwriting one file
+        with fresh random content, so every commit owns a unique large blob
+        that no other commit references. Dropping the oldest commit then
+        frees exactly one blob (~``blob_mb`` MB) once ``gc`` runs — independent
+        of blob size, the over-prune mechanism reproduces for any blob size
+        (the loop's measurement never decreases mid-loop when ``gc`` is
+        deferred). The default 5 MB keeps the per-doc gap wide enough to be
+        robust against git pack/commit overhead.
+        """
+        monkeypatch.setattr(
+            "tools.checkpoint_manager.CHECKPOINT_BASE", checkpoint_base
+        )
+        # max_snapshots high so _prune never trims; cap disabled during the
+        # build so _enforce_size_cap (called at the end of every _take) is
+        # a no-op while we are constructing the history.
+        m = CheckpointManager(enabled=True, max_snapshots=50, max_total_size_mb=0)
+        blob_path = work_dir / "blob.bin"
+        for i in range(n):
+            blob_path.write_bytes(os.urandom(blob_mb * 1024 * 1024))
+            m.new_turn()
+            assert m.ensure_checkpoint(str(work_dir), f"unique-blob-{i}") is True
+        return m
+
+    @staticmethod
+    def _ref_commit_count(store, ref):
+        ok, out, _ = _run_git(
+            ["rev-list", "--count", ref], store, str(store.parent),
+            allowed_returncodes={128},
+        )
+        try:
+            return int(out) if ok else 0
+        except ValueError:
+            return 0
+
+    @staticmethod
+    def _gc(store):
+        _run_git(
+            ["reflog", "expire", "--expire=now", "--all"], store, str(store.parent),
+        )
+        _run_git(
+            ["gc", "--prune=now", "--quiet"], store, str(store.parent),
+            timeout=_GIT_TIMEOUT * 3,
+        )
+        _repair_bare_repo_dirs(store)
+
+    def test_enforce_size_cap_stops_after_minimal_drop(
+        self, work_dir, checkpoint_base, monkeypatch,
+    ):
+        """A store barely over the cap should lose ONE checkpoint, not seven.
+
+        8 checkpoints each carry a unique ~5 MB blob. The cap is set halfway
+        between ``size8`` (the 8-commit store) and ``size8 - one_blob`` — i.e.
+        a single drop frees enough to cross it, two drops are not needed.
+        Before the fix, ``_enforce_size_cap`` stripped the ref to 1 commit
+        (``assert 1 == 7`` failed).
+        """
+        n = 8
+        blob_mb = 5
+        blob_bytes = blob_mb * 1024 * 1024
+        m = self._build_store_with_unique_blobs(
+            work_dir, checkpoint_base, monkeypatch, n=n, blob_mb=blob_mb,
+        )
+
+        store = _store_path(checkpoint_base)
+        ref = _ref_name(_project_hash(str(work_dir)))
+
+        # Make the 8-commit store reflect its true steady-state size on disk.
+        self._gc(store)
+        size8 = _dir_size_bytes(store)
+        assert size8 > 0, "store produced no measurable objects"
+        assert self._ref_commit_count(store, ref) == n
+
+        # Cap halfway to "one blob below size8": one drop (which frees ~one
+        # unique 5 MB blob) crosses it with room to spare; two drops are not
+        # required. Use integer MB; floor stays strictly below size8.
+        target_cap_bytes = size8 - blob_bytes // 2
+        max_total_size_mb = max(1, target_cap_bytes // (1024 * 1024))
+        cap_bytes = max_total_size_mb * 1024 * 1024
+        # Sanity: the store is over the cap so the loop actually engages.
+        assert size8 > cap_bytes, (
+            f"test setup broken: size8={size8} not over cap={cap_bytes}"
+        )
+
+        m.max_total_size_mb = max_total_size_mb
+        m._enforce_size_cap(store)
+
+        remaining = self._ref_commit_count(store, ref)
+        assert remaining == n - 1, (
+            f"Over-prune: expected {n - 1} commits (1 drop suffices for cap "
+            f"{max_total_size_mb} MB on a {size8} bytes store), but got "
+            f"{remaining}"
+        )
+        # The store must actually be under the cap after the minimal drop.
+        size_after = _dir_size_bytes(store)
+        assert size_after <= cap_bytes, (
+            f"after the drop the store is still over cap: "
+            f"{size_after} > {cap_bytes}"
+        )
+
+    def test_enforce_size_cap_noop_when_under_cap(
+        self, work_dir, checkpoint_base, monkeypatch,
+    ):
+        """Stores already under the cap early-return, dropping nothing."""
+        m = self._build_store_with_unique_blobs(
+            work_dir, checkpoint_base, monkeypatch, n=4, blob_mb=1,
+        )
+        store = _store_path(checkpoint_base)
+        ref = _ref_name(_project_hash(str(work_dir)))
+        before = self._ref_commit_count(store, ref)
+        size_before = _dir_size_bytes(store)
+        # Cap well above the store.
+        m.max_total_size_mb = max(1, (size_before * 2) // (1024 * 1024) + 1)
+        m._enforce_size_cap(store)
+        assert self._ref_commit_count(store, ref) == before
+        assert _dir_size_bytes(store) >= size_before  # nothing dropped/reclaimed
+
+    def test_enforce_size_cap_keeps_at_least_one_per_project(
+        self, work_dir, checkpoint_base, monkeypatch,
+    ):
+        """Even when the cap is 0, every project keeps its newest snapshot.
+
+        A cap of 1 MB with three 5 MB-blob checkpoints cannot be satisfied by
+        any number of drops short of emptying the ref, but the
+        ``count <= 1: continue`` guard keeps one commit per project and the
+        loop terminates via ``not any_dropped`` rather than running forever.
+        """
+        m = self._build_store_with_unique_blobs(
+            work_dir, checkpoint_base, monkeypatch, n=3, blob_mb=5,
+        )
+        store = _store_path(checkpoint_base)
+        ref = _ref_name(_project_hash(str(work_dir)))
+        self._gc(store)
+        m.max_total_size_mb = 1
+        m._enforce_size_cap(store)
+        # At least one snapshot retained per project.
+        assert self._ref_commit_count(store, ref) == 1
+        # ...and the loop terminated (count dropped to 1, not below it).
+        size_after = _dir_size_bytes(store)
+        # The single retained commit still holds one unique blob, so the
+        # store stays over the 1 MB cap — the guard correctly stops at 1.
+        assert size_after > 1 * 1024 * 1024
+
+    def test_enforce_size_cap_drops_minimal_across_two_projects(
+        self, tmp_path, checkpoint_base, monkeypatch,
+    ):
+        """Round-robin across projects: each project loses at most one commit
+        when one round of drops satisfies the cap. Before the fix, both
+        projects were stripped to a single commit each."""
+        monkeypatch.setattr(
+            "tools.checkpoint_manager.CHECKPOINT_BASE", checkpoint_base
+        )
+        m = CheckpointManager(enabled=True, max_snapshots=50, max_total_size_mb=0)
+        proj_a = tmp_path / "proj-a"
+        proj_a.mkdir()
+        (proj_a / "f.py").write_text("a\n")
+        proj_b = tmp_path / "proj-b"
+        proj_b.mkdir()
+        (proj_b / "g.py").write_text("b\n")
+
+        per_proj = 6
+        blob_mb = 5
+        for i in range(per_proj):
+            (proj_a / "blob.bin").write_bytes(os.urandom(blob_mb * 1024 * 1024))
+            m.new_turn()
+            assert m.ensure_checkpoint(str(proj_a), f"a-{i}") is True
+            (proj_b / "blob.bin").write_bytes(os.urandom(blob_mb * 1024 * 1024))
+            m.new_turn()
+            assert m.ensure_checkpoint(str(proj_b), f"b-{i}") is True
+
+        store = _store_path(checkpoint_base)
+        ref_a = _ref_name(_project_hash(str(proj_a)))
+        ref_b = _ref_name(_project_hash(str(proj_b)))
+        self._gc(store)
+        size_before = _dir_size_bytes(store)
+        assert self._ref_commit_count(store, ref_a) == per_proj
+        assert self._ref_commit_count(store, ref_b) == per_proj
+
+        blob_bytes = blob_mb * 1024 * 1024
+        # One round of drops (one per project = 2 blobs freed) crosses this cap;
+        # no project should be stripped to a single commit.
+        # Two-blob margin between the two rounds; keep the cap comfortably
+        # above "after one round" so the loop stops after round 1.
+        after_one_round = size_before - 2 * blob_bytes  # one blob freed per ref
+        target = after_one_round + (size_before - after_one_round) // 2
+        max_total_size_mb = max(1, target // (1024 * 1024))
+        cap_bytes = max_total_size_mb * 1024 * 1024
+        assert size_before > cap_bytes, "cap should start over budget"
+        assert after_one_round < cap_bytes, (
+            f"one round of drops should satisfy the cap: "
+            f"{after_one_round} >= {cap_bytes}"
+        )
+
+        m.max_total_size_mb = max_total_size_mb
+        m._enforce_size_cap(store)
+
+        a_after = self._ref_commit_count(store, ref_a)
+        b_after = self._ref_commit_count(store, ref_b)
+        # Exactly one drop per project — round 1 — then the cap is met.
+        assert a_after == per_proj - 1, (
+            f"project a over-pruned: expected {per_proj - 1}, got {a_after}"
+        )
+        assert b_after == per_proj - 1, (
+            f"project b over-pruned: expected {per_proj - 1}, got {b_after}"
+        )
+        assert _dir_size_bytes(store) <= cap_bytes
+
+    def test_prune_checkpoints_size_cap_stops_after_minimal_drop(
+        self, work_dir, checkpoint_base, monkeypatch,
+    ):
+        """The size-cap pass inside ``prune_checkpoints`` also has the same
+        deferred-gc defect and the same fix must apply there too. Build a
+        6-commit-overwriting store, then call ``prune_checkpoints`` with a
+        cap one drop can satisfy; assert only one commit was dropped."""
+        n = 6
+        blob_mb = 5
+        blob_bytes = blob_mb * 1024 * 1024
+        m = self._build_store_with_unique_blobs(
+            work_dir, checkpoint_base, monkeypatch, n=n, blob_mb=blob_mb,
+        )
+        store = _store_path(checkpoint_base)
+        ref = _ref_name(_project_hash(str(work_dir)))
+        self._gc(store)
+        size_n = _dir_size_bytes(store)
+        assert self._ref_commit_count(store, ref) == n
+
+        target_cap_bytes = size_n - blob_bytes // 2
+        max_total_size_mb = max(1, target_cap_bytes // (1024 * 1024))
+        cap_bytes = max_total_size_mb * 1024 * 1024
+        assert size_n > cap_bytes, "store should be over cap"
+
+        # prune_checkpoints disables orphan/stale pruning so the size cap is
+        # the only thing that runs.
+        prune_checkpoints(
+            retention_days=0, delete_orphans=False,
+            checkpoint_base=checkpoint_base,
+            max_total_size_mb=max_total_size_mb,
+        )
+
+        remaining = self._ref_commit_count(store, ref)
+        assert remaining == n - 1, (
+            f"prune_checkpoints over-pruned: expected {n - 1}, got {remaining}"
+        )
+        assert _dir_size_bytes(store) <= cap_bytes
 
 
 # =========================================================================

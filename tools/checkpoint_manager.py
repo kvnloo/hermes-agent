@@ -1548,12 +1548,12 @@ class CheckpointManager:
             return
         refs = [r for r in stdout.splitlines() if r.strip()]
 
-        any_dropped = False
         # Round-robin-drop oldest commit per ref until under cap.
         for _ in range(20):  # hard upper bound to avoid pathological loops
             size = _dir_size_bytes(store)
             if size <= cap_bytes:
                 break
+            any_dropped = False
             for ref in refs:
                 ok_count, count_out, _ = _run_git(
                     ["rev-list", "--count", ref], store, str(store.parent),
@@ -1600,16 +1600,21 @@ class CheckpointManager:
                 any_dropped = True
             if not any_dropped:
                 break
-
-        _run_git(
-            ["reflog", "expire", "--expire=now", "--all"],
-            store, str(store.parent),
-        )
-        _run_git(
-            ["gc", "--prune=now", "--quiet"],
-            store, str(store.parent), timeout=_GIT_TIMEOUT * 3,
-        )
-        _repair_bare_repo_dirs(store)
+            # Reclaim objects made unreachable this round BEFORE re-measuring:
+            # ``_dir_size_bytes`` counts physical files, including unreachable
+            # git objects still on disk, so without a ``gc`` between rounds the
+            # ``size <= cap_bytes`` stop condition could never fire from
+            # reclamation and the loop would over-prune far past the minimal
+            # drop count. (Regression: TestSizeCapOverPrune.)
+            _run_git(
+                ["reflog", "expire", "--expire=now", "--all"],
+                store, str(store.parent),
+            )
+            _run_git(
+                ["gc", "--prune=now", "--quiet"],
+                store, str(store.parent), timeout=_GIT_TIMEOUT * 3,
+            )
+            _repair_bare_repo_dirs(store)
 
 
 def format_checkpoint_list(checkpoints: List[Dict], directory: str) -> str:
@@ -2030,15 +2035,17 @@ def prune_checkpoints(
                     any_drop = True
                 if not any_drop:
                     break
-            _run_git(
-                ["reflog", "expire", "--expire=now", "--all"],
-                store, str(base),
-            )
-            _run_git(
-                ["gc", "--prune=now", "--quiet"],
-                store, str(base), timeout=_GIT_TIMEOUT * 3,
-            )
-            _repair_bare_repo_dirs(store)
+                # Reclaim before re-measuring so the size-cap stop condition
+                # can observe the freed bytes — same fix as _enforce_size_cap.
+                _run_git(
+                    ["reflog", "expire", "--expire=now", "--all"],
+                    store, str(base),
+                )
+                _run_git(
+                    ["gc", "--prune=now", "--quiet"],
+                    store, str(base), timeout=_GIT_TIMEOUT * 3,
+                )
+                _repair_bare_repo_dirs(store)
 
     size_after = _dir_size_bytes(base)
     delta = size_before - size_after
