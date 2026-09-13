@@ -330,13 +330,13 @@ def subscription_manage_url(
     if parts.scheme not in ("http", "https") or not parts.netloc:
         return None
 
-    from urllib.parse import parse_qsl
-
-    # Preserve unrelated portal query params; org_id / plan are contract-owned
-    # (org_id before plan — insertion order is the emitted query order).
-    params = dict(parse_qsl(parts.query, keep_blank_values=True))
-    params.pop("org_id", None)
-    params.pop("plan", None)
+    # Only org_id / plan are contract-owned on /manage-subscription. The TUI and
+    # desktop builders strip portal_url to its origin (new URL(portal_url).origin)
+    # before re-attaching /manage-subscription, so the query never carries over —
+    # mirror that here: never let stray portal params (topup=open, utm_*, ref, …)
+    # leak onto the manage page. org_id precedes plan — insertion order is the
+    # emitted query order.
+    params: dict[str, str] = {}
     if state.org_id:
         params["org_id"] = state.org_id
     if tier_id:
