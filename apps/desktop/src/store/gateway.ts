@@ -1212,10 +1212,21 @@ export async function retainGatewayForSessionTurn(
   profile: string,
   sessionId: string
 ): Promise<() => void> {
-  // Primary events do not flow through a Secondary's terminal-event listener.
-  // Registering a no-op lease here would leave a phantom key that can suppress
-  // the real hold if this route is later re-homed as a secondary.
+  // Primary events do not flow through a Secondary's terminal-event listener
+  // (the primary's onEvent in use-gateway-boot calls recordSessionEventScope +
+  // handleGatewayEvent only — never releaseTerminalTurnLease). Registering a
+  // no-op lease here would leave a phantom key that no terminal event ever
+  // releases and that can suppress the real hold if this route is later
+  // re-homed as a secondary. Gate on "the route resolves to the primary
+  // gateway", covering BOTH primary shapes: the registry-named route AND the
+  // bare-profile ambient primary (null/empty connectionId whose profile IS the
+  // window primary — gatewayForProfile returns { release: noRelease } for
+  // g.primaryProfile, so the stored releaser is a no-op too).
   if (isPrimaryRegistryRoute(connectionId, normKey(profile))) {
+    return () => undefined
+  }
+
+  if (!String(connectionId ?? '').trim() && normKey(profile) === g.primaryProfile) {
     return () => undefined
   }
 
@@ -1292,6 +1303,16 @@ function releaseTerminalTurnLease(scope: string, event: GatewayEvent): void {
       }, TURN_LEASE_SETTLE_DELAY_MS)
     )
   }
+}
+
+/**
+ * Test-only: snapshot of the live routed-turn lease keys. Lets retainers
+ * assert the leak invariant (no entry is registered for a route that
+ * resolves to the primary socket, whose events have no releaseTerminalTurnLease
+ * path). closeSecondaryGateways clears it between tests.
+ */
+export function _turnLeaseKeysForTests(): string[] {
+  return [...g.turnLeases.keys()]
 }
 
 // Open `profile`'s socket WITHOUT making it active — the hover-intent pre-warm
