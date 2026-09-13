@@ -266,16 +266,39 @@ export function useComposerVoice({
 
   useEffect(() => resumeWakeIfPaused, [resumeWakeIfPaused])
 
+  // The conversation lease is a single per-renderer signal shared by every
+  // mounted composer — the main chat bar and each session tile. Only the
+  // composer whose `voiceConversationActive` flipped to true may release it:
+  // a tile that mounts or unmounts while another composer's conversation is
+  // active never acquired the lease and must not tear down the engine that
+  // other composer is still speaking through. Mirrors the ownership-token
+  // pattern used for `ownsWakeIndicatorRef`/`wakePausedRef` above.
+  const ownsConversationLeaseRef = useRef(false)
+
   // Speech-output toggles are TTS warm-up / release signals. Entering a voice
   // conversation acquires this window's lease (pre-loads the engine so the
   // first spoken reply doesn't start with dead air); ending it releases the
   // lease, and the backend unloads resident local models once no surface holds
   // one. Fire-and-forget — the toggle never waits on or fails from this.
+  // eslint-disable-next-line no-restricted-syntax -- ownership token guards the shared lease from a non-owning composer release
   useEffect(() => {
-    void syncTtsLease(CONVERSATION_LEASE, voiceConversationActive)
+    if (voiceConversationActive) {
+      ownsConversationLeaseRef.current = true
+      void syncTtsLease(CONVERSATION_LEASE, true)
+    } else if (ownsConversationLeaseRef.current) {
+      ownsConversationLeaseRef.current = false
+      void syncTtsLease(CONVERSATION_LEASE, false)
+    }
   }, [voiceConversationActive])
 
-  useEffect(() => () => void syncTtsLease(CONVERSATION_LEASE, false), [])
+  useEffect(
+    () => () => {
+      if (ownsConversationLeaseRef.current) {
+        void syncTtsLease(CONVERSATION_LEASE, false)
+      }
+    },
+    []
+  )
 
   // "Read replies aloud" is the same signal, held for as long as the toggle is
   // on (it mirrors voice.auto_tts, so this also warms at startup when the
