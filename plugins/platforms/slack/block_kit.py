@@ -76,7 +76,17 @@ def _indent_level(spaces: str) -> int:
 _INLINE_CODE_RE = re.compile(r"`([^`]+)`")
 _LINK_RE = re.compile(r"(?<!!)\[([^\]]+)\]\(([^()\s]+(?:\([^()]*\)[^()\s]*)*)\)")
 _BOLD_RE = re.compile(r"(?:\*\*|__)(.+?)(?:\*\*|__)")
-_ITALIC_RE = re.compile(r"(?<![\*_])(?:\*|_)(?![\*_\s])(.+?)(?<![\*_\s])(?:\*|_)(?![\*_])")
+# Italic is split into same-delimiter-only variants so ``*`` and ``_`` can no
+# longer open/close each other, and the ``_`` variant enforces CommonMark
+# left-/right-flanking: ``_`` only opens when not preceded by an alphanumeric
+# and only closes when not followed by one.  A single regex that allowed
+# ``*``/``_`` to pair across each other previously matched any intra-word
+# ``_..._`` span (e.g. the middle of ``build_status_report``), which deleted
+# the underscores from the rendered text instead of emitting them verbatim.
+# The star variant stays mid-word-permissive (CommonMark lets ``*`` open
+# emphasis anywhere it is left-flanking); only ``_`` is word-boundary-gated.
+_ITALIC_STAR_RE = re.compile(r"(?<!\*)\*(?!\s|\*)(.+?)(?<!\s|\*)\*(?!\*)")
+_ITALIC_UND_RE = re.compile(r"(?<![A-Za-z0-9])_(?![\s_])(.+?)(?<![\s_])_(?![A-Za-z0-9])")
 _STRIKE_RE = re.compile(r"~~(.+?)~~")
 
 
@@ -125,8 +135,15 @@ def _inline_elements(text: str) -> List[Dict[str, Any]]:
     def _walk_emphasis(s: str, style: Dict[str, bool]) -> None:
         if not s:
             return
-        # Try bold, then strike, then italic, recursing into the inner span.
-        for rx, key in ((_BOLD_RE, "bold"), (_STRIKE_RE, "strike"), (_ITALIC_RE, "italic")):
+        # Try bold, then strike, then italic (split into ``*...*`` and the
+        # word-boundary-gated ``_..._`` variants so snake_case identifiers
+        # don't lose their underscores), recursing into the inner span.
+        for rx, key in (
+            (_BOLD_RE, "bold"),
+            (_STRIKE_RE, "strike"),
+            (_ITALIC_STAR_RE, "italic"),
+            (_ITALIC_UND_RE, "italic"),
+        ):
             m = rx.search(s)
             if m:
                 _walk_emphasis(s[:m.start()], style)

@@ -13,6 +13,34 @@ def _types(blocks):
     return [b["type"] for b in blocks]
 
 
+def _iter_text_elements(blocks):
+    """Yield every ``text`` element dict in document order."""
+    def _walk(node):
+        if isinstance(node, dict):
+            if node.get("type") == "text":
+                yield node
+            for v in node.values():
+                yield from _walk(v)
+        elif isinstance(node, list):
+            for v in node:
+                yield from _walk(v)
+    yield from _walk(blocks)
+
+
+def _all_text(blocks) -> str:
+    """Concatenate every ``text`` element's text (no separators)."""
+    return "".join(el.get("text", "") for el in _iter_text_elements(blocks))
+
+
+def _italic_texts(blocks) -> list:
+    """Text strings of every ``text`` element carrying ``style.italic == True``."""
+    return [
+        el["text"]
+        for el in _iter_text_elements(blocks)
+        if isinstance(el.get("style"), dict) and el["style"].get("italic")
+    ]
+
+
 class TestRenderBlocksBasics:
     def test_empty_returns_none(self):
         assert render_blocks("") is None
@@ -62,6 +90,86 @@ class TestInlineFormatting:
         assert len(lists) == 1
         items = lists[0]["elements"]
         assert len(items) == 3
+
+
+class TestEmphasis:
+    """Inline emphasis parsing inside ``rich_text`` blocks.
+
+    Regression coverage for the italic snake_case over-match: the single
+    ``_ITALIC_RE`` treated any pair of ``_`` (or a ``*``/``_`` cross-pair) as
+    emphasis and *deleted* the delimiters from the rendered text, so an
+    un-backticked snake_case identifier inside a list / quote / table cell was
+    mangled (``build_status_report`` -> ``buildstatusreport`` with ``status``
+    italicised).  The fix splits italic into same-delimiter ``*...*`` and
+    word-boundary-gated ``_..._`` variants (CommonMark left/right flanking),
+    so intra-word underscores fall through to the verbatim fallback and are
+    preserved.
+    """
+
+    def test_multiple_snake_case_identifiers_in_bullets_preserve_underscores(self):
+        md = (
+            "- Set MY_API_KEY in the config\n"
+            "- Call fetch_user_data() helper\n"
+            "- Inspect build_status_report logs"
+        )
+        blocks = render_blocks(md)
+        text = _all_text(blocks)
+        assert "MY_API_KEY" in text
+        assert "fetch_user_data()" in text
+        assert "build_status_report" in text
+        assert _italic_texts(blocks) == []
+
+    def test_snake_case_in_blockquote_preserves_underscores(self):
+        blocks = render_blocks("> see foo_bar_baz here")
+        assert "foo_bar_baz" in _all_text(blocks)
+        assert _italic_texts(blocks) == []
+
+    def test_snake_case_in_table_cell_preserves_underscores(self):
+        md = (
+            "| Field | Value |\n"
+            "|-------|-------|\n"
+            "| key | MY_API_KEY |"
+        )
+        blocks = render_blocks(md)
+        assert blocks[0]["type"] == "table"
+        assert "MY_API_KEY" in _all_text(blocks)
+        assert _italic_texts(blocks) == []
+
+    def test_star_emphasis_in_bullet_italicizes(self):
+        blocks = render_blocks("- a *real* bug")
+        assert _italic_texts(blocks) == ["real"]
+        assert _all_text(blocks) == "a real bug"
+
+    def test_underscore_emphasis_at_word_boundary_italicizes(self):
+        blocks = render_blocks("- a _real_ word")
+        assert _italic_texts(blocks) == ["real"]
+        assert _all_text(blocks) == "a real word"
+
+    def test_underscore_emphasis_multiword_phrase_italicizes(self):
+        blocks = render_blocks("- the _quick brown fox_ jumps")
+        assert _italic_texts(blocks) == ["quick brown fox"]
+        assert _all_text(blocks) == "the quick brown fox jumps"
+
+    def test_backticked_snake_case_preserved_as_code(self):
+        # Inline code is opaque to emphasis: identifiers wrapped in backticks
+        # are unaffected by the bug, and must stay unaffected by the fix.
+        blocks = render_blocks("- Call `fetch_user_data()` helper")
+        # find the code-styled text element
+        code = [
+            el["text"]
+            for el in _iter_text_elements(blocks)
+            if isinstance(el.get("style"), dict) and el["style"].get("code")
+        ]
+        assert code == ["fetch_user_data()"]
+        assert _italic_texts(blocks) == []
+
+    def test_cross_pair_star_underscore_is_not_emphasis(self):
+        # Previously ``*`` and ``_`` could open/close each other, so the
+        # single ``*`` mated with an intra-word ``_`` and deleted both
+        # delimiters. With the split regexes neither italic matches.
+        blocks = render_blocks("- 2*3=6 and my_var_b")
+        assert "2*3=6 and my_var_b" in _all_text(blocks)
+        assert _italic_texts(blocks) == []
 
 
 class TestTables:
