@@ -177,18 +177,18 @@ export function useSubmission(opts: UseSubmissionOptions) {
   )
 
   const sendQueued = useCallback(
-    (text: string) => {
-      if (text.startsWith('!')) {
-        return shellExec(text.slice(1).trim())
+    (item: QueueItem) => {
+      if (item.display.startsWith('!')) {
+        return shellExec(item.text.slice(1).trim())
       }
 
-      if (hasInterpolation(text)) {
+      if (hasInterpolation(item.display)) {
         patchUiState({ busy: true })
 
-        return interpolate(text, send)
+        return interpolate(item.text, text => send(text, true, item.display, value => value))
       }
 
-      send(text)
+      send(item.text, true, item.display, value => value)
     },
     [interpolate, send, shellExec]
   )
@@ -244,7 +244,7 @@ export function useSubmission(opts: UseSubmissionOptions) {
       // the agent is in model generation, tool execution, or an older runtime.
       // Reuse the normal submit pipeline so the correction gets its user bubble
       // and file-drop interpolation exactly once.
-      send(item.text)
+      send(item.text, true, item.display, value => value)
     },
     [composerActions, gw, send, sys]
   )
@@ -297,7 +297,7 @@ export function useSubmission(opts: UseSubmissionOptions) {
 
       if (!live.sid) {
         composerActions.pushHistory(toHistory)
-        composerActions.enqueue(full)
+        composerActions.enqueue(submission.text, full)
         composerActions.clearIn()
 
         return
@@ -325,13 +325,13 @@ export function useSubmission(opts: UseSubmissionOptions) {
           return handleBusyInput(picked, { fallbackToFront: true })
         }
 
-        return sendQueued(picked.text)
+        return sendQueued(picked)
       }
 
       composerActions.pushHistory(toHistory)
 
       if (getUiState().busy) {
-        return handleBusyInput(queueItem(full))
+        return handleBusyInput(queueItem(submission.text, full))
       }
 
       if (shouldInterpolateSubmission(full)) {
@@ -388,7 +388,7 @@ export function useSubmission(opts: UseSubmissionOptions) {
 
           if (next) {
             composerActions.setQueueEdit(null)
-            dispatchSubmission(next)
+            sendQueued(next)
           }
         }
 
@@ -405,7 +405,7 @@ export function useSubmission(opts: UseSubmissionOptions) {
 
       dispatchSubmission([...composerState.inputBuf, value].join('\n'))
     },
-    [appendMessage, composerActions, composerRefs, composerState, dispatchSubmission, gw, sys]
+    [appendMessage, composerActions, composerRefs, composerState, dispatchSubmission, gw, sendQueued, sys]
   )
 
   submitRef.current = submit
