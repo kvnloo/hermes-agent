@@ -23,6 +23,12 @@ const MAX_ID_CODE_POINTS = 256
 const MAX_NAME_CODE_POINTS = 120
 const ALLOWED_AXES = new Set<CronModelDriftAxis>(['provider', 'model'])
 
+// Tracks the active selection-guard confirm toast so the scope-invalidation
+// listener can dismiss it alongside the impact warning. A confirm that
+// outlives its assignment (second assignment bumped the generation, or the
+// profile/connection moved while it lingered) must never be left clickable.
+let activeConfirmToastId: string | null = null
+
 function profileIdentity(): string {
   return getApiRequestProfile()?.trim() || 'default'
 }
@@ -174,6 +180,16 @@ export async function setMainModelAssignment(
 
     const accepted = await confirmModelWarning(result.confirm_message?.trim() ?? '')
 
+    // The confirm toast can outlive the assignment it was raised for — a
+    // second assignment bumped the generation, or the scope-invalidation
+    // listener dismissed it after a profile/backend switch. A stale confirm
+    // must never persist an older selection over newer intent: drop the
+    // retry and return the un-acked result. This mirrors the isStale guard
+    // surfaceModelSwitchConfirm enforces before requestConfirmed().
+    if (!currentResponseScope(profile, connection, generation)) {
+      return result
+    }
+
     if (!accepted) {
       throw new Error(translateNow('cron.modelImpact.declined'))
     }
@@ -222,8 +238,18 @@ export function invalidateCronModelImpactScope(options: { clearNotification?: bo
 }
 
 // Scope changes originating outside this module (profile/backend switches)
-// clear any warning that belongs to the old runtime.
-onCronModelImpactScopeInvalidated(() => dismissNotification(CRON_MODEL_IMPACT_NOTIFICATION_ID))
+// clear any warning that belongs to the old runtime. The selection-guard
+// confirm toast carries a disjoint id, so dismiss it here too — otherwise a
+// stale Confirm button lingers, wired to the no-op guard above.
+onCronModelImpactScopeInvalidated(() => {
+  dismissNotification(CRON_MODEL_IMPACT_NOTIFICATION_ID)
+
+  const confirmId = activeConfirmToastId
+
+  if (confirmId) {
+    dismissNotification(confirmId)
+  }
+})
 
 /**
  * Selection-guard warning as a confirm toast. Resolves true on Confirm, false
@@ -232,6 +258,8 @@ onCronModelImpactScopeInvalidated(() => dismissNotification(CRON_MODEL_IMPACT_NO
  */
 function confirmModelWarning(message: string): Promise<boolean> {
   const id = `model-warning-confirm-${Date.now()}`
+
+  activeConfirmToastId = id
 
   return new Promise(resolve => {
     let settled = false
@@ -243,6 +271,11 @@ function confirmModelWarning(message: string): Promise<boolean> {
 
       settled = true
       dismissNotification(id)
+
+      if (activeConfirmToastId === id) {
+        activeConfirmToastId = null
+      }
+
       resolve(value)
     }
 

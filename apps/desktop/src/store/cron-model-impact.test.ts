@@ -17,6 +17,7 @@ import {
   invalidateCronModelImpactScope,
   setMainModelAssignment
 } from '@/store/cron-model-impact'
+import { invalidateCronModelImpactScopeState } from '@/store/cron-model-impact-scope'
 
 import { deferred } from '../test/deferred'
 
@@ -286,5 +287,118 @@ describe('setMainModelAssignment', () => {
 
     expect($notifications.get()).toEqual([])
     expect(setModelAssignment).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('setMainModelAssignment stale confirm', () => {
+  function confirmResponse(provider = 'openrouter', model = 'openai/gpt-5.5-pro'): ModelAssignmentResponse {
+    return {
+      ok: false,
+      scope: 'main',
+      provider,
+      model,
+      confirm_required: true,
+      confirm_message: 'Confirm this expensive model.'
+    }
+  }
+
+  it('drops the retry when a second assignment bumps the generation under a pending confirm', async () => {
+    setModelAssignment.mockResolvedValueOnce(confirmResponse())
+    setModelAssignment.mockResolvedValueOnce(response(positive()))
+    const reviewCount = $cronReviewRequest.get()
+
+    const pending = setMainModelAssignment({ provider: 'openrouter', model: 'openai/gpt-5.5-pro' })
+    const confirm = await waitForConfirmToast()
+
+    // A second assignment bumped the generation under the pending confirm
+    // (beginCronModelImpactAssignment does not fire the invalidation
+    // listeners, so the toast is still on screen and clickable here).
+    invalidateCronModelImpactScope({ clearNotification: false })
+
+    confirm.action?.onClick()
+    await pending
+
+    expect(setModelAssignment).toHaveBeenCalledTimes(1)
+    expect(setModelAssignment).not.toHaveBeenCalledWith(
+      expect.objectContaining({ confirm_expensive_model: true })
+    )
+    expect($notifications.get()).toEqual([])
+    expect($cronReviewRequest.get()).toBe(reviewCount)
+  })
+
+  it('does not persist after a declined stale confirm', async () => {
+    setModelAssignment.mockResolvedValueOnce(confirmResponse())
+
+    const pending = setMainModelAssignment({ provider: 'openrouter', model: 'openai/gpt-5.5-pro' })
+    const confirm = await waitForConfirmToast()
+
+    invalidateCronModelImpactScope({ clearNotification: false })
+
+    // Dismissing the stale confirm is a no-op: the scope already moved, so
+    // it does not surface a "declined" error and never fires the retry.
+    dismissNotification(confirm.id)
+    await pending
+
+    expect(setModelAssignment).toHaveBeenCalledTimes(1)
+    expect(setModelAssignment).not.toHaveBeenCalledWith(
+      expect.objectContaining({ confirm_expensive_model: true })
+    )
+    expect($notifications.get()).toEqual([])
+  })
+
+  it('dismisses the confirm toast and never retargets after a profile-switch invalidation', async () => {
+    // Profile A is active when the assignment starts.
+    getApiRequestProfile.mockReturnValue('profile-a')
+    setModelAssignment.mockResolvedValueOnce(confirmResponse())
+    setModelAssignment.mockResolvedValueOnce(response(positive()))
+    const reviewCount = $cronReviewRequest.get()
+
+    const pending = setMainModelAssignment({ provider: 'openrouter', model: 'openai/gpt-5.5-pro' })
+    const confirm = await waitForConfirmToast()
+
+    // Mirror the production profile switch path: the active profile
+    // subscribe calls invalidateCronModelImpactScopeState() (which fires
+    // the listeners / dismisses the toasts) and the active profile flips.
+    invalidateCronModelImpactScopeState()
+    getApiRequestProfile.mockReturnValue('profile-b')
+
+    // The confirm toast id is disjoint from CRON_MODEL_IMPACT_NOTIFICATION_ID;
+    // the invalidation listener must dismiss it so no stale Confirm lingers.
+    expect($notifications.get().find(item => item.id === confirm.id)).toBeUndefined()
+
+    // A late click on the now-dismissed toast is a no-op.
+    confirm.action?.onClick()
+    await pending
+
+    // No retry at all, so the legacy "no profile key" shape can never be
+    // produced to route the persist to the now-active profile B.
+    expect(setModelAssignment).toHaveBeenCalledTimes(1)
+    expect(setModelAssignment).not.toHaveBeenCalledWith(
+      expect.objectContaining({ confirm_expensive_model: true })
+    )
+    expect($notifications.get()).toEqual([])
+    expect($cronReviewRequest.get()).toBe(reviewCount)
+  })
+
+  it('still retries when the user confirms a non-stale guard prompt', async () => {
+    setModelAssignment.mockResolvedValueOnce(confirmResponse())
+    setModelAssignment.mockResolvedValueOnce(response(positive('Confirmed job')))
+
+    const pending = setMainModelAssignment({ provider: 'openrouter', model: 'openai/gpt-5.5-pro' })
+    const confirm = await waitForConfirmToast()
+
+    confirm.action?.onClick()
+    await pending
+
+    expect(setModelAssignment).toHaveBeenCalledTimes(2)
+    expect(setModelAssignment).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        scope: 'main',
+        confirm_expensive_model: true,
+        provider: 'openrouter',
+        model: 'openai/gpt-5.5-pro'
+      })
+    )
+    expect($notifications.get().some(item => item.detail?.includes('Confirmed job'))).toBe(true)
   })
 })
