@@ -51,6 +51,16 @@ logger = logging.getLogger("run_agent")
 # Deduped: the gateway builds a fresh AIAgent per message, so it would warn every turn.
 _warned_unavailable_providers: set[tuple[str, str]] = set()
 
+# Whether we've already warned that the built-in memory store (MEMORY.md /
+# USER.md via tools.memory_tool) is unavailable. Deduped because the gateway
+# builds a fresh AIAgent per message, so an un-deduped warning would fire on
+# every turn. The built-in store's try block is a silent no-op on failure; a
+# tools.memory_tool import failure (the same failure that left mem_config
+# unbound for the provider block below) would otherwise be completely
+# undiagnosable, since the external provider activates from raw config and
+# emits only an INFO log.
+_warned_builtin_memory_unavailable: set[str] = set()
+
 
 def _unavailable_warning_key(name: str) -> tuple[str, str]:
     """Once per profile home and provider: one multiplexed gateway/Desktop backend serves several
@@ -1339,9 +1349,25 @@ def _init_memory(agent, _agent_cfg, skip_memory, platform, memory_manager=None):
         "memory" in (agent.enabled_toolsets or [])
         and "memory" not in (agent.disabled_toolsets or [])
     )
+    # Default mem_config from raw config *before* the built-in store's try,
+    # which overwrites it with the normalized value on success. The external
+    # memory-provider block below is a distinct subsystem (plugins.memory /
+    # agent.memory_manager) that reads mem_config across its own separate try
+    # boundary; without this default, a tools.memory_tool import failure in
+    # the prior try leaves mem_config unbound and the provider block raises a
+    # swallowed UnboundLocalError that silently disables the external
+    # provider a user explicitly configured. get_builtin_memory_config is an
+    # identity transform for a dict memory section, so this matches the
+    # happy-path value exactly.
+    mem_config = _agent_cfg.get("memory", {}) if isinstance(_agent_cfg, dict) else {}
     if not skip_memory or _memory_toolset_requested:
-        # Memory is optional — don't break agent init
-        with suppress(Exception):
+        # Memory is optional — don't break agent init. But surface the
+        # failure once per process: the built-in store's except used to be
+        # fully silent, so a tools.memory_tool import failure (which also
+        # drops the external provider when mem_config is unbound) left no
+        # diagnostic at all. The gateway builds a fresh AIAgent per
+        # message, so this is deduped to avoid a warning on every turn.
+        try:
             from tools.memory_tool import (
                 MemoryStore, get_builtin_memory_config, get_builtin_memory_store_flags,
             )
@@ -1358,6 +1384,10 @@ def _init_memory(agent, _agent_cfg, skip_memory, platform, memory_manager=None):
                     user_profile_enabled=agent._user_profile_enabled,
                 )
                 agent._memory_store.load_from_disk()
+        except Exception as _e:
+            if not _warned_builtin_memory_unavailable:
+                _warned_builtin_memory_unavailable.add("builtin")
+                _ra().logger.warning("Built-in memory store unavailable: %s", _e)
 
     # External memory provider plugin (one at a time, alongside built-in): memory.provider.
     agent._memory_manager = None
