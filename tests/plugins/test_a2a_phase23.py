@@ -648,6 +648,78 @@ class TestA2AOrchestrate:
 
 
 # ═════════════════════════════════════════════════════════════════════════════
+# _call_peer_sync tenant contract (regression: orchestrate path dropped tenant)
+# ═════════════════════════════════════════════════════════════════════════════
+
+
+_PEER_WITH_TENANT = {
+    "url": "http://peer.example",
+    "auth": {},
+    "timeout": 5,
+    "capabilities": ["research"],
+    "tenant": "dev-team",
+}
+
+
+def _capture_post_factory(captured):
+    def fake_post(url, body, headers, timeout):
+        captured.update(body.get("params", {}))
+        captured["method"] = body.get("method")
+        return {"jsonrpc": "2.0", "id": body.get("id", "r1"), "result": protocol.build_task(
+            "task-1", "c1", protocol.STATE_COMPLETED, "ok")}
+    return fake_post
+
+
+class TestCallPeerSyncTenant:
+    """Regression coverage for the orchestrate path's `peer`-dict construction.
+
+    `_call_peer_sync` builds its own `peer` dict (parallel to `_resolve_peer`);
+    it must carry the configured `tenant` so `_send_task` -> `_interface_tenant`
+    emits `params.tenant` on the wire. The rest of `TestA2AOrchestrate` stubs
+    `_call_peer_sync`, so this class calls the real helper and mocks its
+    transport-level callees instead.
+    """
+
+    def test_call_peer_sync_includes_tenant_in_rpc_body(self, monkeypatch):
+        """The configured `tenant` reaches `params.tenant` on the orchestrate path.
+
+        Before the fix `_call_peer_sync` omitted `tenant` from the `peer` dict,
+        so `_interface_tenant` fell back to `peer.get("tenant")` -> `""` and
+        `params.tenant` was never sent (mirroring `_resolve_peer`).
+        """
+        # No-tenant card -> `_interface_tenant` must fall back to peer.get("tenant").
+        monkeypatch.setattr(tools, "_fetch_card", lambda url, headers, timeout: None)
+        captured = {}
+        monkeypatch.setattr(tools, "_http_post_json", _capture_post_factory(captured))
+
+        tools._call_peer_sync("dev", dict(_PEER_WITH_TENANT), "hello", "ctx-1")
+
+        assert captured.get("tenant") == "dev-team", (
+            f"orchestrate path dropped params.tenant; got keys={list(captured)}"
+        )
+        assert captured["method"] == "SendMessage"
+
+    def test_a2a_orchestrate_sends_tenant_end_to_end(self, monkeypatch):
+        """End-to-end: `a2a_orchestrate` (real `_call_peer_sync`, not stubbed)
+        must emit `params.tenant` for a tenant-tagged peer matched by
+        capability. Before the fix the wire body carried no `params.tenant`."""
+        monkeypatch.setattr(tools, "_load_config", lambda: {
+            "a2a_agents": {"dev": dict(_PEER_WITH_TENANT)},
+        })
+        monkeypatch.setattr(tools, "_fetch_card", lambda url, headers, timeout: None)
+        captured = {}
+        monkeypatch.setattr(tools, "_http_post_json", _capture_post_factory(captured))
+
+        out = tools.a2a_orchestrate(
+            {"capability": "research", "message": "go", "mode": "all"})
+
+        assert captured.get("tenant") == "dev-team", (
+            f"orchestrate fan-out dropped params.tenant; got keys={list(captured)}"
+        )
+        assert "ok" in out  # the stubbed reply reached the orchestrator
+
+
+# ═════════════════════════════════════════════════════════════════════════════
 # SSRF protection for push callbacks
 # ═════════════════════════════════════════════════════════════════════════════
 
