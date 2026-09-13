@@ -122,5 +122,46 @@ def test_cleanup_terminal_temp_cache(tmp_path, monkeypatch):
     assert not (root / "hermes_bg_dead1.log").exists()
 
 
+def test_cleanup_terminal_temp_cache_worker_pid_grouped(tmp_path, monkeypatch):
+    """``.worker_pid`` (sandbox-backed background jobs) is part of the same
+    artifact group as ``.log/.pid/.exit``: a fresh ``.log`` must protect a
+    stale ``.worker_pid`` so a long-running session's kill path can still read
+    the worker PID, and a fully-stale group including ``.worker_pid`` is pruned
+    as a unit."""
+    import time
+
+    from tools.environments import local as local_mod
+
+    root = tmp_path / "cache" / "terminal"
+    root.mkdir(parents=True)
+    monkeypatch.setattr(local_mod, "_default_terminal_temp_dir", lambda: root)
+
+    old = time.time() - 100 * 3600
+    fresh = time.time()
+
+    # Live group: stale .pid + stale .worker_pid, fresh .log -> whole group kept.
+    live_pid = root / "hermes_bg_live2.pid"
+    live_pid.write_text("123")
+    os.utime(live_pid, (old, old))
+    live_wpid = root / "hermes_bg_live2.worker_pid"
+    live_wpid.write_text("456")
+    os.utime(live_wpid, (old, old))
+    live_log = root / "hermes_bg_live2.log"
+    live_log.write_text("running")
+    os.utime(live_log, (fresh, fresh))
+
+    # Dead group: all four artifacts stale -> pruned together (4 files).
+    for suffix in ("log", "pid", "worker_pid", "exit"):
+        f = root / f"hermes_bg_dead2.{suffix}"
+        f.write_text("x")
+        os.utime(f, (old, old))
+
+    removed = local_mod.cleanup_terminal_temp_cache(max_age_hours=72)
+    assert removed == 4  # the 4 dead-group files, none of the live group
+    assert live_pid.exists() and live_log.exists() and live_wpid.exists()
+    assert not (root / "hermes_bg_dead2.log").exists()
+    assert not (root / "hermes_bg_dead2.worker_pid").exists()
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-q"]))
