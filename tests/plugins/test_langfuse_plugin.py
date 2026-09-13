@@ -433,6 +433,174 @@ class TestTurnTraceIsolation:
         assert len(exited) == 1
         assert exited[0] == (None, None, None)
 
+    def test_eviction_does_not_drop_actively_executing_turn(self, monkeypatch):
+        """A turn mid-tool-dispatch must not be evicted by _evict_stale_locked.
+
+        Regression: ``_evict_stale_locked`` evicts oldest-first by
+        ``last_updated_at``, but the tool/subagent hooks never bumped that
+        field. During a turn's tool-dispatch interval (between the
+        ``on_pre_llm_request`` that produced a tool call and the next
+        ``on_pre_llm_request`` that consumes its result), a live turn's
+        clock froze at its last LLM request, making it the stalest entry.
+        Once the cap filled with dead (non-finalizing) turns, the live turn
+        was evicted first — its root span was ended, its in-flight tool
+        observation was orphaned, and the next ``on_pre_llm_request``
+        re-opened a SECOND root trace for the same real turn.
+        """
+        mod = self._fresh_plugin()
+        started: list = []
+        monkeypatch.setattr(mod, "_get_langfuse", lambda: self._fake_client(started))
+        monkeypatch.setattr(mod, "_MAX_TRACE_STATE", 8)
+        mod._TRACE_STATE.clear()
+
+        # Deterministic monotonic clock so a turn's last_updated_at equals
+        # its hook-call order.  Microsecond wall-clock resolution yields the
+        # same ordering in production; this just pins it exactly so the test
+        # never flakes on clock granularity.
+        ticks = iter(range(1, 100_000))
+        monkeypatch.setattr(mod.time, "time", lambda: next(ticks))
+
+        # The active turn — opened via on_pre_llm_request (clock = 1).
+        active_turn = "turn-active"
+        active_task = "active-task"
+        active_sess = "active-sess"
+        mod.on_pre_llm_request(
+            task_id=active_task, session_id=active_sess,
+            model="m", provider="p", api_mode="chat", api_call_count=1,
+            request_messages=[{"role": "user", "content": "run a tool"}],
+            turn_id=active_turn, api_request_id=f"{active_turn}:api:1",
+        )
+        active_key = mod._trace_key(active_task, active_sess, turn_id=active_turn)
+        assert len(mod._TRACE_STATE) == 1
+
+        # Fill to the cap (8) with non-finalizing dead turns.  Each
+        # on_pre_llm_request bumps its own clock to a strictly newer value
+        # than the active turn's, so the active turn is the stalest entry
+        # before its tool loop dispatches.
+        for n in range(7):
+            self._run_turn(mod, session=f"dead-{n}", turn_n=n, finalize=False)
+        assert len(mod._TRACE_STATE) == 8
+
+        # The active turn's tool loop dispatches its next tool.  This is the
+        # forward-progress hook that (post-fix) refreshes its eviction clock
+        # past every dead turn's.
+        tool_call_id = "tc-active-1"
+        mod.on_pre_tool_call(
+            tool_name="read_file", args={"path": "/x"},
+            task_id=active_task, session_id=active_sess,
+            tool_call_id=tool_call_id, turn_id=active_turn,
+            api_request_id=f"{active_turn}:api:2",
+        )
+
+        # One more dead turn forces _evict_stale_locked to drop one entry
+        # oldest-first to make room.
+        self._run_turn(mod, session="dead-trigger", turn_n=0, finalize=False)
+        assert len(mod._TRACE_STATE) == 8  # still capped
+
+        # (1) The actively-executing turn survived — it was NOT selected as
+        # the stalest victim.  On the unpatched code its frozen clock (1)
+        # was the oldest and it was evicted here.
+        assert active_key in mod._TRACE_STATE, (
+            "eviction dropped the actively-executing turn (mid-tool-loop); a "
+            "live turn was selected as the stalest entry because "
+            "on_pre_tool_call never bumped last_updated_at"
+        )
+
+        # (2) The in-flight tool observation is still tracked and ends cleanly
+        # when on_post_tool_call fires — the tool result is not silently
+        # dropped from the trace.
+        ended: list = []
+        monkeypatch.setattr(mod, "_end_observation", lambda obs, **k: ended.append(obs))
+        mod.on_post_tool_call(
+            tool_name="read_file", args={"path": "/x"}, result="ok",
+            task_id=active_task, session_id=active_sess,
+            tool_call_id=tool_call_id, turn_id=active_turn,
+            api_request_id=f"{active_turn}:api:2",
+        )
+        assert ended, (
+            "the in-flight tool observation was never ended because the "
+            "active turn had been evicted before on_post_tool_call fired"
+        )
+
+        # (3) The next on_pre_llm_request for the same turn reuses its
+        # existing root trace instead of opening a SECOND root — no split
+        # trace, no orphaned second root on the Langfuse backend.
+        started_before = len(started)
+        mod.on_pre_llm_request(
+            task_id=active_task, session_id=active_sess,
+            model="m", provider="p", api_mode="chat", api_call_count=2,
+            request_messages=[{"role": "user", "content": "tool result"}],
+            turn_id=active_turn, api_request_id=f"{active_turn}:api:2",
+        )
+        assert len(started) == started_before, (
+            "the actively-executing turn was evicted mid-tool-loop, so its "
+            "next on_pre_llm_request re-opened a second root trace for the "
+            "same turn"
+        )
+
+    def test_eviction_does_not_drop_subagent_dispatching_turn(self, monkeypatch):
+        """A turn dispatching a subagent mid-flight must also survive eviction.
+
+        Same bug class as the tool case: ``on_subagent_start`` /
+        ``on_subagent_stop`` were added (commit e665300d6b) WITHOUT a
+        ``last_updated_at`` bump while ``on_api_request_error`` — added in
+        the same commit — GOT one.  So a subagent-dispatching turn's clock
+        froze and it could be evicted as the stalest entry.
+        """
+        mod = self._fresh_plugin()
+        started: list = []
+        monkeypatch.setattr(mod, "_get_langfuse", lambda: self._fake_client(started))
+        monkeypatch.setattr(mod, "_MAX_TRACE_STATE", 8)
+        mod._TRACE_STATE.clear()
+
+        ticks = iter(range(1, 100_000))
+        monkeypatch.setattr(mod.time, "time", lambda: next(ticks))
+
+        active_turn = "turn-active"
+        active_task = "active-task"
+        active_sess = "active-sess"
+        mod.on_pre_llm_request(
+            task_id=active_task, session_id=active_sess,
+            model="m", provider="p", api_mode="chat", api_call_count=1,
+            request_messages=[{"role": "user", "content": "delegate"}],
+            turn_id=active_turn, api_request_id=f"{active_turn}:api:1",
+        )
+        active_key = mod._trace_key(active_task, active_sess, turn_id=active_turn)
+        assert len(mod._TRACE_STATE) == 1
+
+        for n in range(7):
+            self._run_turn(mod, session=f"dead-{n}", turn_n=n, finalize=False)
+        assert len(mod._TRACE_STATE) == 8
+
+        child_session = "child-sess-active"
+        mod.on_subagent_start(
+            parent_session_id=active_sess, parent_turn_id=active_turn,
+            child_session_id=child_session, child_subagent_id="sub-1",
+            child_role="researcher", child_goal="find the thing",
+        )
+
+        self._run_turn(mod, session="dead-trigger", turn_n=0, finalize=False)
+        assert len(mod._TRACE_STATE) == 8  # still capped
+
+        assert active_key in mod._TRACE_STATE, (
+            "eviction dropped the subagent-dispatching turn mid-flight; "
+            "on_subagent_start never bumped last_updated_at"
+        )
+
+        # The in-flight subagent observation is still tracked and ends
+        # cleanly when on_subagent_stop fires.
+        ended: list = []
+        monkeypatch.setattr(mod, "_end_observation", lambda obs, **k: ended.append(obs))
+        mod.on_subagent_stop(
+            parent_session_id=active_sess, parent_turn_id=active_turn,
+            child_session_id=child_session, child_role="researcher",
+            child_summary="found it", child_status="ok",
+        )
+        assert ended, (
+            "the in-flight subagent observation was never ended because the "
+            "active turn had been evicted before on_subagent_stop fired"
+        )
+
 
 # ---------------------------------------------------------------------------
 # Placeholder-credential guard (#23823).
@@ -1740,6 +1908,7 @@ class TestAtexitFinalization(TestTurnTraceIsolation):
 
         assert mod._get_langfuse() is not None
         assert mod._finalize_all_traces in registered
+
 
 class TestSystemPromptInGenerationInput:
     """The generation input must carry the system prompt even for providers
