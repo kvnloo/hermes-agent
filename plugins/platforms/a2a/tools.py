@@ -386,6 +386,7 @@ def _call_peer_sync(agent_name: str, peer_entry: dict, message: str, context_id:
             "url": peer_entry.get("url", ""),
             "auth": peer_entry.get("auth", {}) or {},
             "timeout": int(peer_entry.get("timeout", _DEFAULT_TIMEOUT)),
+            "tenant": peer_entry.get("tenant", ""),
         }
         reply, _ctx, _state = _send_task(agent_name, peer, message, context_id)
         return (agent_name, reply or "(no reply)")
