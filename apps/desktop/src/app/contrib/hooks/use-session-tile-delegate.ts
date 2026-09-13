@@ -77,6 +77,18 @@ export function useSessionTileDelegate({
   updateSessionState
 }: SessionTileDelegateParams): void {
   useEffect(() => {
+    // #94724 stale-recovery race: overlapping resumeTile calls for the same
+    // stored id can interleave (a reconnect-invalidated binding re-fires a
+    // resume while an earlier no-owner resume is still awaiting a slow
+    // cross-backend stored read). The main-pane resume guards this with
+    // isCurrentResume(); the tile path had no analog, so a stale read-only
+    // outcome could repaint a live tile read-only AND repoint the
+    // stored→runtime binding onto a synthetic read-only id — and the warm
+    // path then kept it stuck until an external invalidation. Bump a
+    // per-stored-id epoch on every resumeTile entry and discard an outcome
+    // whose epoch is no longer current, so the fresher call owns the paint.
+    const resumeTileEpochByStoredSessionId = new Map<string, number>()
+
     // A tile's runtime binding can die the same way the foreground's does
     // (sleep/wake, backend restart). The cache maps stored -> runtime, so walk
     // it backwards to find the durable id this runtime belongs to.
@@ -203,6 +215,9 @@ export function useSessionTileDelegate({
         )
       },
       resumeTile: async (storedSessionId, options) => {
+        const epoch = (resumeTileEpochByStoredSessionId.get(storedSessionId) ?? 0) + 1
+        resumeTileEpochByStoredSessionId.set(storedSessionId, epoch)
+
         const existing = runtimeIdByStoredSessionIdRef.current.get(storedSessionId)
         const cached = existing ? sessionStateByRuntimeIdRef.current.get(existing) : undefined
         const refreshTranscript = options?.refreshTranscript === true
@@ -285,6 +300,30 @@ export function useSessionTileDelegate({
             return stored
           }
         )
+
+        // A fresher resumeTile for this stored id superseded this call (e.g. a
+        // reconnect + owner-backfill made the owner resolvable again, and the
+        // fresher call's live resume already rebound the binding and repainted
+        // the tile live). Discard this stale outcome so it can neither repaint
+        // the tile read-only nor repoint the stored→runtime binding over the
+        // live one — the fresher call owns the paint (#94724 stale-recovery
+        // race). Skipping the read-only updateSessionState is what keeps the
+        // warm path from pinning a stale read-only id onto a live session.
+        if (resumeTileEpochByStoredSessionId.get(storedSessionId) !== epoch) {
+          const currentBinding = runtimeIdByStoredSessionIdRef.current.get(storedSessionId)
+
+          if (currentBinding) {
+            return currentBinding
+          }
+
+          // The fresher resume is still in flight (no binding yet). Return the
+          // id this outcome would have bound WITHOUT repointing — no
+          // updateSessionState runs, so the cache map is never repointed and
+          // the warm path cannot pin a stale read-only id.
+          return outcome.mode === 'read-only'
+            ? readOnlyRuntimeIdFor(storedSessionId)
+            : (outcome.resumed?.session_id ?? readOnlyRuntimeIdFor(storedSessionId))
+        }
 
         const prefetch = await prefetchPromise
 

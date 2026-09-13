@@ -2,15 +2,24 @@ import { renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type * as HermesModule from '@/hermes'
+import { $connectionsRegistry } from '@/store/connections'
+import { $profiles } from '@/store/profile'
+import { isStoredTranscriptReadOnly, resetLiveResumeGenerations } from '@/store/read-only-transcript'
 import { setSessionOwnerHint, setSessions } from '@/store/session'
 import { sessionTileDelegate } from '@/store/session-states'
 import type { SessionInfo } from '@/types/hermes'
+
+import { clearSingleFlightSessionResumeState } from '../../session/hooks/use-prompt-actions/single-flight-resume'
 
 import { useSessionTileDelegate } from './use-session-tile-delegate'
 
 vi.mock('@/hermes', async importActual => ({
   ...(await importActual<typeof HermesModule>()),
-  getLatestSessionMessages: vi.fn(async () => ({ messages: [], session_id: '' }))
+  fetchStoredTranscriptAcrossBackends: vi.fn(async () => ({ messages: [], session_id: '' })),
+  getLatestSessionMessages: vi.fn(async () => ({ messages: [], session_id: '' })),
+  getSession: vi.fn(async () => {
+    throw new Error('not found')
+  })
 }))
 vi.mock('@/store/gateway', async importActual => ({
   ...(await importActual<Record<string, unknown>>()),
@@ -18,7 +27,7 @@ vi.mock('@/store/gateway', async importActual => ({
   requestGatewayForProfile: vi.fn()
 }))
 
-const { getLatestSessionMessages } = await import('@/hermes')
+const { fetchStoredTranscriptAcrossBackends, getLatestSessionMessages, getSession } = await import('@/hermes')
 const { requestGatewayForAgent, requestGatewayForProfile } = await import('@/store/gateway')
 
 const row = (over: Partial<SessionInfo>): SessionInfo =>
@@ -374,5 +383,184 @@ describe('useSessionTileDelegate interruptSession', () => {
     // Same 3s cooldown the primary chat's Stop sets: busy reads false while the
     // gateway winds down, so the rewind path must still interrupt-first.
     expect(isSessionRecentlyInterrupted('runtime-tile-1')).toBe(true)
+  })
+})
+
+const tileRegistry = (...ids: string[]) =>
+  ({
+    connections: ids.map(id => ({ id })),
+    lastUsed: ids[0] ?? null,
+    launchMode: 'primary',
+    primary: ids[0] ?? null
+  }) as never
+
+type TileStoredTranscript = { messages: unknown[]; session_id: string }
+
+describe('useSessionTileDelegate resumeTile stale-recovery race (#94724)', () => {
+  beforeEach(() => {
+    setSessions([])
+    clearSingleFlightSessionResumeState()
+    resetLiveResumeGenerations()
+    vi.mocked(getLatestSessionMessages).mockClear()
+    vi.mocked(fetchStoredTranscriptAcrossBackends).mockClear()
+    vi.mocked(requestGatewayForAgent).mockClear()
+    vi.mocked(requestGatewayForProfile).mockClear()
+  })
+
+  afterEach(() => {
+    $connectionsRegistry.set(null)
+    $profiles.set([])
+    setSessions([])
+    clearSingleFlightSessionResumeState()
+    resetLiveResumeGenerations()
+    // Restore the default hermes mock implementations the other suites rely on
+    // (mockReset clears impl + once-queues, then re-arm the file-level defaults).
+    vi.mocked(getLatestSessionMessages).mockReset()
+    vi.mocked(getLatestSessionMessages).mockImplementation(async () => ({ messages: [], session_id: '' }))
+    vi.mocked(fetchStoredTranscriptAcrossBackends).mockReset()
+    vi.mocked(fetchStoredTranscriptAcrossBackends).mockImplementation(async () => ({ messages: [], session_id: '' }))
+    vi.mocked(requestGatewayForAgent).mockReset()
+    vi.mocked(requestGatewayForProfile).mockReset()
+  })
+
+  it('does NOT repoint the binding onto a stale read-only id after a later live resumeTile (#94724)', async () => {
+    // Registry topology + 2 profiles: assertSessionOwnerResolved throws for an
+    // unknown owner (the ambient gateway does not own every session).
+    $connectionsRegistry.set(tileRegistry('gw-a', 'gw-b'))
+    $profiles.set([{ name: 'default' }, { name: 'researcher' }] as never)
+
+    // Call A opens before the owner backfill stamps the row: the row exists but
+    // carries no owning profile, so assertSessionOwnerResolved throws under
+    // registry topology (the real fail-closed gate, same as read-only-transcript
+    // tests). The ambient prefetch misses (rejects -> null) so the helper's
+    // stored read falls through to fetchStoredTranscriptAcrossBackends, which
+    // is deferred so Call B can interleave.
+    setSessions([row({ id: 'stored-race', profile: undefined })])
+    vi.mocked(getLatestSessionMessages).mockRejectedValue(new Error('404'))
+    let resolveStored!: (value: TileStoredTranscript) => void
+
+    const storedRead = new Promise<TileStoredTranscript>(resolve => {
+      resolveStored = resolve
+    })
+
+    vi.mocked(fetchStoredTranscriptAcrossBackends).mockImplementation(() => storedRead as never)
+
+    // Call B's later live resume returns a real runtime id through the profile
+    // router (the row's owner is resolvable once the backfill stamps it).
+    vi.mocked(requestGatewayForProfile).mockResolvedValueOnce({ session_id: 'runtime-live' } as never)
+
+    const requestGateway = vi.fn(async () => ({}) as never)
+
+    const runtimeIdByStoredSessionIdRef = { current: new Map<string, string>() }
+    const sessionStateByRuntimeIdRef = { current: new Map<string, unknown>() }
+
+    // Mirror the real ensureSessionState: side-effect the stored->runtime
+    // binding so Call A's stale call-site guard can observe Call B's binding.
+    const updateSessionState = vi.fn(
+      (id: string, updater: (state: { messages: unknown[] }) => { messages: unknown[] }, stored?: string) => {
+        const prev = (sessionStateByRuntimeIdRef.current.get(id) ?? { messages: [] }) as { messages: unknown[] }
+        const next = updater(prev)
+        sessionStateByRuntimeIdRef.current.set(id, next)
+
+        if (stored) {
+          runtimeIdByStoredSessionIdRef.current.set(stored, id)
+        }
+
+        return next
+      }
+    ) as never
+
+    renderTile(requestGateway, { runtimeIdByStoredSessionIdRef, sessionStateByRuntimeIdRef, updateSessionState })
+
+    const delegate = sessionTileDelegate()!
+
+    // Call A: owner unresolvable -> SessionOwnerResolutionError -> catch ->
+    // awaits the deferred cross-backend stored read.
+    const callA = delegate.resumeTile('stored-race')
+
+    // Let Call A reach the catch and start awaiting the deferred stored read
+    // (drain the owner-resolution microtask chain).
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    // The owner backfill stamps the row; Call B now resolves a routable owner.
+    setSessions([row({ id: 'stored-race', profile: 'default' })])
+
+    // Call B: live resume succeeds, clears the latch (no-op), and binds the
+    // stored->runtime mapping to the live runtime id.
+    const callB = delegate.resumeTile('stored-race')
+    const runtimeIdB = await callB
+    expect(runtimeIdB).toBe('runtime-live')
+    expect(runtimeIdByStoredSessionIdRef.current.get('stored-race')).toBe('runtime-live')
+
+    // Call A's stale stored read resolves last. The helper skips the latch
+    // (generation moved), and the call-site staleness guard discards the stale
+    // read-only outcome WITHOUT repointing the binding onto read-only:stored-race.
+    resolveStored!({ messages: [{ content: 'stale history', role: 'user' }], session_id: 'stored-race' })
+    const runtimeIdA = await callA
+
+    // The stale call returns the live binding (not a synthetic read-only id),
+    // and the stored->runtime binding still points at the live runtime.
+    expect(runtimeIdA).toBe('runtime-live')
+    expect(runtimeIdByStoredSessionIdRef.current.get('stored-race')).toBe('runtime-live')
+
+    // No read-only tile state was painted for the stale outcome:
+    // updateSessionState was never called with a read-only:* id.
+    const readOnlyPaints = (updateSessionState as ReturnType<typeof vi.fn>).mock.calls.filter(
+      ([id]: unknown[]) => typeof id === 'string' && id.startsWith('read-only:')
+    )
+
+    expect(readOnlyPaints).toHaveLength(0)
+
+    // The latch is NOT set: the helper skipped the mark because a live resume
+    // bumped the generation during Call A's stored read.
+    expect(isStoredTranscriptReadOnly('stored-race')).toBe(false)
+  })
+
+  it('still paints read-only for a LEGITIMATE no-owner tile recovery when no live resume interleaves', async () => {
+    $connectionsRegistry.set(tileRegistry('gw-a', 'gw-b'))
+    $profiles.set([{ name: 'default' }, { name: 'researcher' }] as never)
+
+    setSessions([row({ id: 'stored-lone', profile: undefined })])
+
+    // Prefetch misses -> the cross-backend stored read carries the transcript.
+    vi.mocked(getLatestSessionMessages).mockRejectedValue(new Error('404'))
+    vi.mocked(fetchStoredTranscriptAcrossBackends).mockResolvedValueOnce({
+      messages: [{ content: 'intact history', role: 'user' }],
+      session_id: 'stored-lone'
+    } as never)
+
+    const runtimeIdByStoredSessionIdRef = { current: new Map<string, string>() }
+    const sessionStateByRuntimeIdRef = { current: new Map<string, unknown>() }
+
+    const updateSessionState = vi.fn(
+      (id: string, updater: (state: { messages: unknown[] }) => { messages: unknown[] }, stored?: string) => {
+        const prev = (sessionStateByRuntimeIdRef.current.get(id) ?? { messages: [] }) as { messages: unknown[] }
+        const next = updater(prev)
+        sessionStateByRuntimeIdRef.current.set(id, next)
+
+        if (stored) {
+          runtimeIdByStoredSessionIdRef.current.set(stored, id)
+        }
+
+        return next
+      }
+    ) as never
+
+    renderTile(
+      vi.fn(async () => ({}) as never),
+      {
+        runtimeIdByStoredSessionIdRef,
+        sessionStateByRuntimeIdRef,
+        updateSessionState
+      }
+    )
+
+    const runtimeId = await sessionTileDelegate()!.resumeTile('stored-lone')
+
+    // The synthetic read-only id is returned and bound, and the latch is set:
+    // no live resume proved this session routable, so read-only is correct.
+    expect(runtimeId).toBe('read-only:stored-lone')
+    expect(runtimeIdByStoredSessionIdRef.current.get('stored-lone')).toBe('read-only:stored-lone')
+    expect(isStoredTranscriptReadOnly('stored-lone')).toBe(true)
   })
 })
