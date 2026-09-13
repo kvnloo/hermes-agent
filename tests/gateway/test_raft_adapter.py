@@ -23,10 +23,12 @@ from plugins.platforms.raft.adapter import (
     _RAFT_CONTEXT_LOCK,
     _RAFT_PROMPT_TURN_IDS,
     _RAFT_SESSION_IDS,
+    _RAFT_SESSION_TURNS,
     _RAFT_TURN_IDS,
     _has_content_field,
     _env_enablement,
     _is_connected,
+    _is_raft_context,
     _on_session_start,
     _on_pre_llm_call,
     _on_pre_tool_call,
@@ -320,3 +322,152 @@ class TestMultiplexProfileScope:
             assert "--profile default-profile-slug" in ctx.platform_kwargs["platform_hint"]
         finally:
             set_multiplex_active(False)
+
+
+# ---------------------------------------------------------------------------
+# Raft context turn-id tracking (per-session drain on teardown)
+# ---------------------------------------------------------------------------
+#
+# The adapter records every raft turn in module-global _RAFT_TURN_IDS /
+# _RAFT_PROMPT_TURN_IDS for activity attribution and per-turn
+# UserPromptSubmit de-dup. Cleanup relied on the on_session_end hook
+# carrying a turn_id, but the gateway's _finalize_session teardown fires
+# on_session_end / on_session_finalize WITHOUT a turn_id (a force-reaped
+# in-flight turn never ran its own per-turn finalize_turn hook), so any
+# turn id whose per-turn finalizer never ran leaked into the two sets
+# for the lifetime of the gateway process. The fix tracks turn ids per
+# session (_RAFT_SESSION_TURNS) and drains them on the session-finalize
+# path, restoring the invariant that "session end" releases every turn id
+# the session registered — even with no turn_id available.
+
+
+class TestRaftContextTracking:
+    """Per-session turn-id tracking so the gateway teardown path releases
+    every turn id the session registered instead of leaking it into the
+    module-global turn-id sets."""
+
+    @pytest.fixture(autouse=True)
+    def _reset_raft_context(self):
+        with _RAFT_CONTEXT_LOCK:
+            _RAFT_SESSION_IDS.clear()
+            _RAFT_TURN_IDS.clear()
+            _RAFT_PROMPT_TURN_IDS.clear()
+            _RAFT_SESSION_TURNS.clear()
+        yield
+        with _RAFT_CONTEXT_LOCK:
+            _RAFT_SESSION_IDS.clear()
+            _RAFT_TURN_IDS.clear()
+            _RAFT_PROMPT_TURN_IDS.clear()
+            _RAFT_SESSION_TURNS.clear()
+
+    @staticmethod
+    def _drive_session_turn(session_id, turn_id):
+        _on_session_start(platform="raft", session_id=session_id)
+        _on_pre_llm_call(platform="raft", session_id=session_id, turn_id=turn_id)
+
+    def test_gateway_teardown_without_turn_id_releases_all_turn_ids(self):
+        """The reported bug: gateway _finalize_session fires on_session_end
+        and on_session_finalize WITHOUT a turn_id (force-reaped in-flight
+        turn). The session-registered turn id must not leak."""
+        self._drive_session_turn("gw-7", "gw-7:task-1:deadbeef")
+
+        # Sanity: turn id registered across all three sets before teardown.
+        assert _RAFT_TURN_IDS == {"gw-7:task-1:deadbeef"}
+        assert _RAFT_PROMPT_TURN_IDS == {"gw-7:task-1:deadbeef"}
+        assert _RAFT_SESSION_IDS == {"gw-7"}
+        assert _RAFT_SESSION_TURNS == {"gw-7": {"gw-7:task-1:deadbeef"}}
+
+        # Gateway teardown sequence: both hooks fire without a turn_id.
+        _on_session_end(
+            platform="raft", session_id="gw-7", completed=False, interrupted=True
+        )
+        _on_session_finalize(platform="raft", session_id="gw-7")
+
+        assert _RAFT_TURN_IDS == set()
+        assert _RAFT_PROMPT_TURN_IDS == set()
+        assert _RAFT_SESSION_IDS == set()
+        assert _RAFT_SESSION_TURNS == {}
+
+    def test_repeated_sessions_do_not_accumulate_orphaned_turn_ids(self):
+        """Several sessions ending via the no-turn_id teardown path must not
+        leave any turn id behind — the leak-rate defect the fix targets."""
+        for s in range(4):
+            sid = f"gw-{s}"
+            self._drive_session_turn(sid, f"{sid}:task:deadbeef")
+            _on_session_end(platform="raft", session_id=sid, completed=False, interrupted=True)
+            _on_session_finalize(platform="raft", session_id=sid)
+
+        assert _RAFT_TURN_IDS == set()
+        assert _RAFT_PROMPT_TURN_IDS == set()
+        assert _RAFT_SESSION_IDS == set()
+        assert _RAFT_SESSION_TURNS == {}
+
+    def test_concurrent_sessions_finalize_independently(self):
+        """Draining one session must not touch another session's turn ids."""
+        self._drive_session_turn("gw-7", "turn-a")
+        self._drive_session_turn("gw-9", "turn-b")
+
+        # Finalize only gw-7 via the no-turn_id teardown path.
+        _on_session_end(platform="raft", session_id="gw-7", completed=False, interrupted=True)
+        _on_session_finalize(platform="raft", session_id="gw-7")
+
+        assert _RAFT_TURN_IDS == {"turn-b"}
+        assert _RAFT_PROMPT_TURN_IDS == {"turn-b"}
+        assert _RAFT_SESSION_IDS == {"gw-9"}
+        assert _RAFT_SESSION_TURNS == {"gw-9": {"turn-b"}}
+
+    def test_normal_per_turn_finalize_then_session_finalize_clears_all(self):
+        """No regression: the normal path (per-turn on_session_end WITH a
+        turn_id then on_session_finalize without) still cleans everything."""
+        self._drive_session_turn("gw-7", "turn-1")
+
+        _on_session_end(platform="raft", session_id="gw-7", turn_id="turn-1", completed=True)
+        # After per-turn end: turn id gone from the two turn-id sets, session
+        # still tracked until the explicit finalize.
+        assert _RAFT_TURN_IDS == set()
+        assert _RAFT_PROMPT_TURN_IDS == set()
+        assert _RAFT_SESSION_IDS == {"gw-7"}
+
+        _on_session_finalize(platform="raft", session_id="gw-7")
+        assert _RAFT_SESSION_IDS == set()
+        assert _RAFT_SESSION_TURNS == {}
+
+    def test_pre_llm_call_dedup_unchanged_within_a_turn(self):
+        """Regression guard: the per-turn UserPromptSubmit de-dup (short-circuit
+        on a turn id already in _RAFT_PROMPT_TURN_IDS) still suppresses repeated
+        activity for the same turn_id, and still emits for a new turn_id. The
+        per-session tracking must not be drained mid-turn."""
+        import plugins.platforms.raft.adapter as raft_mod
+
+        reported = []
+        orig = raft_mod._report_activity
+
+        def _capture(event):
+            reported.append(event["hookEventName"])
+
+        raft_mod._report_activity = _capture
+        try:
+            _on_pre_llm_call(platform="raft", session_id="gw-7", turn_id="turn-1")
+            _on_pre_llm_call(platform="raft", session_id="gw-7", turn_id="turn-1")
+            _on_pre_llm_call(platform="raft", session_id="gw-7", turn_id="turn-2")
+        finally:
+            raft_mod._report_activity = orig
+
+        # Only the first call per turn_id emits a UserPromptSubmit activity.
+        assert reported == ["UserPromptSubmit", "UserPromptSubmit"]
+        assert _RAFT_PROMPT_TURN_IDS == {"turn-1", "turn-2"}
+
+    def test_non_raft_session_hooks_do_not_mutate_raft_tracking_state(self):
+        """A non-raft platform (not previously registered as raft) must not
+        mutate the raft context tracking sets through any lifecycle hook."""
+        assert _is_raft_context(platform="tui", session_id="tui-1") is False
+
+        _on_session_start(platform="tui", session_id="tui-1")
+        _on_pre_llm_call(platform="tui", session_id="tui-1", turn_id="tui-turn-1")
+        _on_session_end(platform="tui", session_id="tui-1")
+        _on_session_finalize(platform="tui", session_id="tui-1")
+
+        assert _RAFT_SESSION_IDS == set()
+        assert _RAFT_TURN_IDS == set()
+        assert _RAFT_PROMPT_TURN_IDS == set()
+        assert _RAFT_SESSION_TURNS == {}
