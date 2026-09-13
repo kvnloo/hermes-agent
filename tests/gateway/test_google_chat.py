@@ -1276,6 +1276,160 @@ class TestPerUserAttachmentRouting:
 
 
 # ===========================================================================
+# /setup-files dispatch → setup → send identity-key agreement
+# ===========================================================================
+
+
+class TestSetupFilesIdentityRouting:
+    """Regression for the per-user identity-key mismatch: the
+    ``/setup-files <code>`` dispatch path must key the per-user OAuth
+    token (and the in-memory client cache) by the sender's EMAIL — the
+    SAME identity ``_send_file`` later looks up via
+    ``_last_sender_by_chat``. Before the fix, ``_dispatch_message`` read
+    ``event.source.user_id_alt`` (the ``users/{id}`` Chat resource name)
+    and labelled it "the sender's email", so the token was written to
+    ``google_chat_user_tokens/users_<id>.json`` but read back from
+    ``<email>.json`` — a guaranteed miss that broke per-user attachment
+    routing for every ``/setup-files``-bootstrapped user. These tests
+    drive the real ``_dispatch_message → _build_message_event →
+    _handle_setup_files_command`` handoff (which the pre-existing
+    ``/setup-files`` tests bypass by calling
+    ``_handle_setup_files_command`` directly)."""
+
+    @staticmethod
+    def _envelope(text, sender_email="alice@example.com"):
+        env = _make_chat_envelope(text=text, sender_email=sender_email)
+        msg = env["chat"]["messagePayload"]["message"]
+        space = env["chat"]["messagePayload"]["space"]
+        msg_with_space = dict(msg)
+        msg_with_space["space"] = space
+        return msg_with_space, {"space": space}
+
+    @pytest.mark.asyncio
+    async def test_dispatch_threads_sender_email_into_oauth_key_not_resource_name(
+        self, adapter, tmp_path, monkeypatch
+    ):
+        """``/setup-files <code>`` keys exchange + reload by the email
+        (``event.source.user_id``), not the resource name
+        (``user_id_alt`` == ``users/12345``). The key threaded into the
+        OAuth helpers must equal the runtime send-time key."""
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        adapter._create_message = AsyncMock(
+            return_value=type("R", (), {"success": True, "message_id": "m",
+                                        "error": None})()
+        )
+        from plugins.platforms.google_chat import oauth as helper
+
+        with patch.object(helper, "exchange_auth_code") as exc, \
+                patch.object(
+                    helper, "load_user_credentials",
+                    return_value=MagicMock(valid=True)) as load, \
+                patch.object(helper, "build_user_chat_service"):
+            msg, env = self._envelope("/setup-files 4/0A QUESTCODE")
+            await adapter._dispatch_message(msg, env)
+
+        # BOTH OAuth helpers received the sender's email as the per-user
+        # key — NOT "users/12345" (the value of sender.name /
+        # user_id_alt). With the bug, these would be "users/12345".
+        assert exc.call_args.args == ("4/0A QUESTCODE", "alice@example.com")
+        assert load.call_args.args == ("alice@example.com",)
+
+        # The runtime send path keys by the same email via
+        # _last_sender_by_chat; store and lookup MUST agree or the token
+        # written at setup is unreachable from _send_file.
+        runtime_key = adapter._last_sender_by_chat["spaces/S"]
+        assert runtime_key == "alice@example.com"
+        assert exc.call_args.args[1] == runtime_key
+        assert load.call_args.args[0] == runtime_key
+
+        # The post-exchange in-memory client cache is keyed by the email
+        # too, so the next attachment send in this chat hits it without
+        # a gateway restart.
+        assert "alice@example.com" in adapter._user_chat_api_by_email
+        assert "users/12345" not in adapter._user_chat_api_by_email
+
+        # Concretely: the token path written at setup and the path read
+        # at send time resolve to the SAME file. Before the fix the
+        # resource-name key sanitized to "users_12345.json" while the
+        # email key sanitized to "alice@example.com.json" — two
+        # different files that never collides for a real user.
+        assert helper._token_path("alice@example.com").name == \
+            "alice@example.com.json"
+        assert helper._token_path("users/12345").name == "users_12345.json"
+        assert helper._token_path(exc.call_args.args[1]) == \
+            helper._token_path(runtime_key)
+
+        # The setup short-circuit must consume the message (the agent
+        # never sees the auth code).
+        adapter.handle_message.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_setup_files_dispatch_then_send_file_uses_per_user_token(
+        self, adapter, tmp_path, monkeypatch
+    ):
+        """End-to-end: after ``/setup-files <code>`` cached Alice's
+        per-user Chat client under her email (via the dispatch path), a
+        subsequent ``_send_file`` in that chat must upload through
+        Alice's client — NOT the legacy single-user fallback. Before
+        the fix the dispatch cached under "users/12345" while _send_file
+        looked up "alice@example.com", so the per-user slot always
+        missed and (with a legacy token present) every user's upload
+        was silently mis-attributed to the shared legacy identity."""
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+
+        per_user_api = MagicMock()
+        per_user_api.media.return_value.upload.return_value.execute \
+            .return_value = {"attachmentDataRef": {"resourceName": "ref-alice"}}
+        per_user_api.spaces.return_value.messages.return_value \
+            .create.return_value.execute.return_value = {
+                "name": "spaces/S/messages/MID",
+                "thread": {"name": "spaces/S/threads/T"},
+            }
+        legacy_api = MagicMock()
+        adapter._user_chat_api = legacy_api
+        adapter._user_credentials = MagicMock(valid=True)
+        adapter._consume_typing_card_with_text = AsyncMock(return_value=None)
+        adapter._create_message = AsyncMock(
+            return_value=type("R", (), {"success": True, "message_id": "m",
+                                        "error": None})()
+        )
+        creds = MagicMock(valid=True)
+
+        from plugins.platforms.google_chat import oauth as helper
+        with patch.object(helper, "exchange_auth_code"), \
+                patch.object(
+                    helper, "load_user_credentials", return_value=creds), \
+                patch.object(
+                    helper, "build_user_chat_service",
+                    return_value=per_user_api), \
+                patch.object(helper, "refresh_or_none", return_value=creds):
+            # 1. Alice runs /setup-files <code> in her DM.
+            msg, env = self._envelope("/setup-files 4/0A QUESTCODE")
+            await adapter._dispatch_message(msg, env)
+
+            # Dispatch cached Alice's client under her EMAIL — the same
+            # key _send_file will look up via _last_sender_by_chat.
+            assert adapter._last_sender_by_chat["spaces/S"] == \
+                "alice@example.com"
+            assert adapter._user_chat_api_by_email.get("alice@example.com") \
+                is per_user_api
+
+            # 2. The agent later sends Alice a PDF in the same chat.
+            f = tmp_path / "doc.pdf"
+            f.write_bytes(b"%PDF")
+            result = await adapter._send_file(
+                "spaces/S", str(f), caption=None,
+                mime_hint="application/pdf",
+            )
+
+        # Uploaded through Alice's per-user client; the legacy fallback
+        # was never touched — the multi-user routing guarantee holds.
+        assert result.success is True
+        per_user_api.media.return_value.upload.assert_called_once()
+        legacy_api.media.assert_not_called()
+
+
+# ===========================================================================
 # Persistent thread-count store (restart-safe side-thread heuristic)
 # ===========================================================================
 
