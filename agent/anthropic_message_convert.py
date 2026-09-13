@@ -351,25 +351,6 @@ def _content_parts_to_anthropic_blocks(parts: Any) -> List[Dict[str, Any]]:
 _EMPTY_TEXT_PLACEHOLDER = "(empty)"
 
 
-def _safe_text(text: Any) -> str:
-    """Return ``text`` if it's non-whitespace, else a non-whitespace placeholder.
-
-    The Anthropic Messages API rejects requests where a text content block is
-    empty or whitespace-only (HTTP 400 "text content blocks must contain
-    non-whitespace text"). When such a block gets stored in session history —
-    e.g. produced by context compression — it is replayed verbatim on every
-    subsequent turn, permanently wedging the session. Coercing to a
-    non-whitespace placeholder is self-healing: the next API call recovers.
-
-    Mirrors ``bedrock_adapter._safe_text`` (#9486); ref #69512.
-    """
-    if text is None:
-        return _EMPTY_TEXT_PLACEHOLDER
-    if not isinstance(text, str):
-        text = str(text)
-    return text if text.strip() else _EMPTY_TEXT_PLACEHOLDER
-
-
 def _sanitize_replay_block(b: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Strip output-only fields from a stored Anthropic content block so it is
     valid as REQUEST input on replay.
