@@ -700,7 +700,9 @@ def get_subprocess_home(env: dict[str, str] | None = None) -> str | None:
     """
     env = env or {}
     profile_home = _profile_home_path(env)
-    mode = _env_get(env, "TERMINAL_HOME_MODE", "auto").lower() or "auto"
+    from tools.terminal_scope import terminal_env
+
+    mode = str(terminal_env("TERMINAL_HOME_MODE", "auto")).strip().lower() or "auto"
     mode = _HOME_MODE_ALIASES.get(mode, mode)
 
     if mode == "profile":
