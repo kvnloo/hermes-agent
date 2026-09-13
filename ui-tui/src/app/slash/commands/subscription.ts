@@ -109,11 +109,14 @@ const buildSubscriptionCtx = (
       .rpc<BillingMutationResponse>('billing.step_up', { session_id: ctx.sid ?? undefined })
       // Carry the typed denial (session_revoked / remote_spending_revoked /
       // rate_limited / …) so the stepup screen shows the right recovery.
-      .then(r => ({ error: r?.error, granted: !!(r && r.ok && r.granted), message: r?.message }))
-      .catch(() => ({
-        granted: false,
-        message: 'Could not reach the billing service — check your connection, then retry.'
-      })),
+      // rpc never rejects — it resolves to null on any transport failure (WS
+      // drop, gateway restart, child exit, "not connected"), so the null case
+      // must be handled here, not in a .catch (which would be dead code).
+      .then(r =>
+        r
+          ? { error: r.error, granted: !!(r.ok && r.granted), message: r.message }
+          : { granted: false, message: 'Could not reach the billing service — check your connection, then retry.' }
+      ),
   resume: () =>
     ctx.gateway
       .rpc<BillingMutationResponse>('subscription.resume', {})

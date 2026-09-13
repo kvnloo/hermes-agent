@@ -402,6 +402,99 @@ describe('SubscriptionOverlay — step-up', () => {
     expect(out).toContain('Allow Remote Spending')
     expect(out).not.toContain('billing:manage')
   })
+
+  // Drive the step-up screen's "Allow Remote Spending" flow: simulate Enter on
+  // the first row (enable → ctx.requestRemoteSpending().then(...)), await the
+  // onPatch that moves to the result screen, and return the patched state so
+  // each denial case can assert its recovery copy.
+  const runStepUp = async (response: unknown) => {
+    const onPatch = vi.fn()
+    const requestRemoteSpending = vi.fn(() => Promise.resolve(response))
+
+    const mounted = mount(
+      at('stepup', subscriber(), {
+        ctx: { ...ctx, requestRemoteSpending } as SubscriptionOverlayState['ctx'],
+        stepUpRetry: { kind: 'preview', tierId: 'ultra' }
+      }),
+      onPatch
+    )
+
+    inputHarness.handler?.('', { return: true }) // first row = Allow Remote Spending
+    await vi.waitFor(() => expect(onPatch).toHaveBeenCalled())
+    mounted.cleanup()
+
+    return onPatch.mock.calls.at(-1)?.[0] as Partial<SubscriptionOverlayState>
+  }
+
+  it('transport failure → "Could not reach the billing service" (not the admin-approval default)', async () => {
+    // requestRemoteSpending resolves to the transport-failure shape the fixed
+    // ctx function produces when rpc → null (granted:false + the retry message).
+    const patch = await runStepUp({
+      granted: false,
+      message: 'Could not reach the billing service — check your connection, then retry.'
+    })
+
+    expect(patch.screen).toBe('result')
+    expect(patch.result?.ok).toBe(false)
+    expect(patch.result?.message).toContain('Could not reach the billing service')
+    expect(patch.result?.message).toContain('check your connection')
+    // The whole point: MUST NOT fall through to the misleading admin copy.
+    expect(patch.result?.message).not.toContain('must approve it')
+    expect(patch.result?.message).not.toContain('finance admin')
+    expect(patch.result?.message).not.toContain('make this change on the portal')
+  })
+
+  it('granted → routes to the granted phase (no result-screen denial)', async () => {
+    const onPatch = vi.fn()
+    const requestRemoteSpending = vi.fn(() => Promise.resolve({ granted: true }))
+
+    const mounted = mount(
+      at('stepup', subscriber(), {
+        ctx: { ...ctx, requestRemoteSpending } as SubscriptionOverlayState['ctx'],
+        stepUpRetry: { kind: 'preview', tierId: 'ultra' }
+      }),
+      onPatch
+    )
+
+    inputHarness.handler?.('', { return: true }) // Allow Remote Spending
+    await vi.waitFor(() => expect(requestRemoteSpending).toHaveBeenCalled())
+    // A grant sets the 'granted' phase (Continue prompt) without patching to a
+    // result screen — the overlay holds for an explicit Continue.
+    await Promise.resolve()
+    await Promise.resolve()
+    mounted.rerender()
+
+    expect(mounted.output()).toContain('Remote Spending allowed')
+    expect(mounted.output()).toContain('Continue')
+    // No denial result was patched while waiting for the explicit Continue.
+    expect(onPatch).not.toHaveBeenCalled()
+    mounted.cleanup()
+  })
+
+  it('session_revoked denial → "Your session expired" recovery', async () => {
+    const patch = await runStepUp({ granted: false, error: 'session_revoked' })
+
+    expect(patch.screen).toBe('result')
+    expect(patch.result?.ok).toBe(false)
+    expect(patch.result?.message).toContain('Your session expired')
+    expect(patch.result?.message).toContain('/portal')
+  })
+
+  it('rate_limited denial → "Too many attempts" recovery', async () => {
+    const patch = await runStepUp({ granted: false, error: 'rate_limited' })
+
+    expect(patch.screen).toBe('result')
+    expect(patch.result?.ok).toBe(false)
+    expect(patch.result?.message).toContain('Too many attempts')
+  })
+
+  it('remote_spending_revoked denial → "reconnect from the portal" recovery', async () => {
+    const patch = await runStepUp({ granted: false, error: 'remote_spending_revoked' })
+
+    expect(patch.screen).toBe('result')
+    expect(patch.result?.ok).toBe(false)
+    expect(patch.result?.message).toContain('reconnect from the portal')
+  })
 })
 
 describe('SubscriptionOverlay — picker', () => {

@@ -100,3 +100,53 @@ describe('/subscription slash command', () => {
     expect(findSlashCommand('subscription')).toBe(subscriptionCommand)
   })
 })
+
+// requestRemoteSpending ctx: the step-up screen's "Allow Remote Spending" path
+// (`subscriptionOverlay.tsx` → `StepUpScreen.enable()`). `ctx.gateway.rpc` never
+// rejects — it catches every transport error and resolves to null (see
+// useMainApp.ts). The ctx function must map that null to the transport-failure
+// retry message instead of letting it fall through to a misleading
+// "someone with billing permissions must approve it" default.
+describe('/subscription requestRemoteSpending ctx', () => {
+  beforeEach(() => {
+    resetOverlayState()
+  })
+
+  /** Open the overlay, then return the overlay ctx + rpc mock for direct calls. */
+  const openAndGrab = async (stepUpResult: unknown) => {
+    const { rpc, run } = buildCtx({
+      'subscription.state': loggedInState(),
+      'billing.step_up': stepUpResult
+    })
+
+    // `run` awaits the subscription.state resolution + the guarded .then; after
+    // it the overlay (with its ctx) is mounted in the store. The overlay ctx
+    // captures this same rpc mock, so a later requestRemoteSpending() call
+    // resolves to the billing.step_up entry above.
+    await run('')
+
+    const overlayCtx = getOverlayState().subscription?.ctx
+
+    return { overlayCtx, rpc }
+  }
+
+  it('null (transport failure) → transport-failure retry message, granted:false', async () => {
+    const { overlayCtx } = await openAndGrab(null)
+
+    const res = await overlayCtx!.requestRemoteSpending()
+
+    expect(res.granted).toBe(false)
+    expect(res.message).toBe('Could not reach the billing service — check your connection, then retry.')
+    expect(res.error).toBeUndefined()
+  })
+
+  it('granted response → granted:true, no transport-fallback message', async () => {
+    const { overlayCtx } = await openAndGrab({ ok: true, granted: true })
+
+    const res = await overlayCtx!.requestRemoteSpending()
+
+    expect(res.granted).toBe(true)
+    expect(res.message).toBeUndefined()
+    expect(res.error).toBeUndefined()
+  })
+})
