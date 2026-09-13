@@ -237,6 +237,39 @@ class TestIsGenuineNousRateLimit:
             headers=None, last_known_state=last_state
         ) is False
 
+    def test_partial_headers_do_not_trip_breaker(self):
+        # A 200 response carrying only x-ratelimit-limit-* (no matching
+        # x-ratelimit-remaining-*) must parse to a "no data" bucket, so it
+        # cannot be mistaken for an exhausted bucket by the cross-session
+        # breaker.  Before the fix, the limit+reset variant (no remaining)
+        # parsed to limit=800, remaining=0, reset=3100 — which WOULD have
+        # falsely tripped the breaker via last_known_state.  After the fix
+        # the bucket is "no data" (limit=0) so the breaker stays open.
+        from agent.nous_rate_guard import (
+            is_genuine_nous_rate_limit,
+            _has_exhausted_bucket_in_object,
+        )
+        from agent.rate_limit_tracker import parse_rate_limit_headers
+
+        for partial_headers in (
+            {"x-ratelimit-limit-requests-1h": "800"},
+            {
+                "x-ratelimit-limit-requests-1h": "800",
+                "x-ratelimit-reset-requests-1h": "3100",
+            },
+        ):
+            last_state = parse_rate_limit_headers(partial_headers, provider="nous")
+            assert last_state is not None
+            assert last_state.requests_hour.limit == 0
+            assert _has_exhausted_bucket_in_object(last_state) is False
+            assert (
+                is_genuine_nous_rate_limit(
+                    headers=partial_headers,
+                    last_known_state=last_state,
+                )
+                is False
+            )
+
 
 
 class TestRateGuardStateEncoding:
