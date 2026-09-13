@@ -256,6 +256,86 @@ class TestProfileBootstrap:
 
 
 # ---------------------------------------------------------------------------
-# Python process HOME unchanged
+# Scope-bound TERMINAL_HOME_MODE (profile multiplexing — #101242)
 # ---------------------------------------------------------------------------
 
+class TestGetSubprocessHomeScopeMode:
+    """get_subprocess_home must read TERMINAL_HOME_MODE from the bound
+    terminal scope under profile multiplexing, not the launch process's
+    ambient os.environ value (#101242, commit 1cd736f)."""
+
+    def _host(self, monkeypatch):
+        monkeypatch.setattr(hermes_constants, "is_container", lambda: False)
+
+    def _make_profile(self, tmp_path, monkeypatch):
+        profile_dir = tmp_path / ".hermes" / "profiles" / "coder"
+        profile_home = profile_dir / "home"
+        profile_home.mkdir(parents=True)
+        monkeypatch.setenv("HERMES_HOME", str(profile_dir))
+        real_home = tmp_path / "real-home"
+        real_home.mkdir()
+        monkeypatch.setenv("HOME", str(real_home))
+        return profile_dir, profile_home, real_home
+
+    def test_scope_bound_profile_overrides_ambient_auto(self, tmp_path, monkeypatch):
+        """A routed profile's ``home_mode=profile`` (scope-bound) wins over the
+        launch process's ambient ``TERMINAL_HOME_MODE=auto``; subprocess HOME
+        resolves to ``{HERMES_HOME}/home`` instead of the real account HOME."""
+        self._host(monkeypatch)
+        monkeypatch.setenv("TERMINAL_HOME_MODE", "auto")
+        profile_dir, profile_home, real_home = self._make_profile(tmp_path, monkeypatch)
+
+        from tools.terminal_scope import terminal_scope
+        from hermes_constants import get_subprocess_home
+
+        with terminal_scope({"TERMINAL_HOME_MODE": "profile"}):
+            assert get_subprocess_home() == str(profile_home)
+        assert get_subprocess_home() is None
+
+    def test_scope_bound_auto_overrides_ambient_profile(self, tmp_path, monkeypatch):
+        """The inverse: a routed profile at ``home_mode=auto`` must NOT inherit
+        the launch process's ambient ``profile`` mode via os.environ."""
+        self._host(monkeypatch)
+        monkeypatch.setenv("TERMINAL_HOME_MODE", "profile")
+        profile_dir, profile_home, real_home = self._make_profile(tmp_path, monkeypatch)
+
+        from tools.terminal_scope import terminal_scope
+        from hermes_constants import get_subprocess_home
+
+        with terminal_scope({"TERMINAL_HOME_MODE": "auto"}):
+            assert get_subprocess_home() is None
+        assert get_subprocess_home() == str(profile_home)
+
+    def test_omitted_home_mode_in_scope_resolves_to_auto_not_ambient(self, tmp_path, monkeypatch):
+        """The scope's completeness contract: an omitted key under a scope
+        resolves to the default (``auto``), never ambient ``os.environ``. A
+        scope lacking ``TERMINAL_HOME_MODE`` must NOT inherit the launch
+        process's ambient ``profile`` value."""
+        self._host(monkeypatch)
+        monkeypatch.setenv("TERMINAL_HOME_MODE", "profile")
+        profile_dir, profile_home, real_home = self._make_profile(tmp_path, monkeypatch)
+
+        from tools.terminal_scope import terminal_scope
+        from hermes_constants import get_subprocess_home
+
+        with terminal_scope({}):
+            assert get_subprocess_home() is None
+        assert get_subprocess_home() == str(profile_home)
+
+    def test_no_scope_keeps_process_env_behavior(self, tmp_path, monkeypatch):
+        """Single-process CLI/TUI (no scope bound) is unchanged: ``get_subprocess_home``
+        reads ``TERMINAL_HOME_MODE`` from the process env exactly as before."""
+        self._host(monkeypatch)
+        profile_dir, profile_home, real_home = self._make_profile(tmp_path, monkeypatch)
+
+        from hermes_constants import get_subprocess_home
+
+        monkeypatch.setenv("TERMINAL_HOME_MODE", "profile")
+        assert get_subprocess_home() == str(profile_home)
+        monkeypatch.setenv("TERMINAL_HOME_MODE", "auto")
+        assert get_subprocess_home() is None
+
+
+# ---------------------------------------------------------------------------
+# Python process HOME unchanged
+# ---------------------------------------------------------------------------
