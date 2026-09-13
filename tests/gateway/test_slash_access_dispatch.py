@@ -156,6 +156,83 @@ async def test_non_admin_with_empty_user_commands_gets_floor_only():
 
 
 # ---------------------------------------------------------------------------
+# /status floor — regression for the asymmetry where /status was denied to
+# non-admins on the cold dispatch path (no agent running) while the
+# running-agent fast-path pre-gate kept it reachable. ``status`` must be in
+# ``_ALWAYS_ALLOWED_FOR_USERS`` so the cold-path gate lets non-admins
+# through, matching the busy path and the module's documented intent.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_status_non_admin_cold_path_is_reachable():
+    """Cold path (no agent running): a non-admin with empty
+    ``user_allowed_commands`` running /status must reach the status
+    handler — not be denied by the floor-gated cold-path access check."""
+    runner = _make_runner(
+        platform_extra={
+            "allow_admin_from": ["111"],
+            "user_allowed_commands": [],
+        }
+    )
+    runner._handle_status_command = AsyncMock(return_value="status-handled")
+
+    result = await runner._handle_message(
+        _make_event("/status", _make_source(user_id="999"))
+    )
+
+    assert result == "status-handled"
+    assert "⛔" not in (result or "")
+    assert runner._handle_status_command.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_non_admin_still_denied_for_non_floor_command_when_status_allowed():
+    """The floor expansion to /status must NOT open other commands. A
+    non-admin with empty ``user_allowed_commands`` is still denied /stop
+    — guard that the floor stays minimal and only read-only state
+    commands were added. Also asserts /stop's handler never ran."""
+    runner = _make_runner(
+        platform_extra={
+            "allow_admin_from": ["111"],
+            "user_allowed_commands": [],
+        }
+    )
+    runner._handle_stop_command = AsyncMock(return_value="stop-handled")
+
+    result = await runner._handle_message(
+        _make_event("/stop", _make_source(user_id="999"))
+    )
+
+    assert result is not None
+    assert "⛔" in result
+    assert "/stop is admin-only here" in result
+    assert runner._handle_stop_command.await_count == 0
+
+
+@pytest.mark.asyncio
+async def test_whoami_non_admin_with_empty_commands_advertises_status():
+    """The /whoami handler mirrors ``_ALWAYS_ALLOWED_FOR_USERS``. With
+    "status" in the floor, a non-admin with no ``user_allowed_commands``
+    must be advertised /status (alongside /help and /whoami) as a
+    runnable command — otherwise the floor and the /whoami mirror
+    disagree about what the user can do."""
+    runner = _make_runner(
+        platform_extra={
+            "allow_admin_from": ["111"],
+            "user_allowed_commands": [],
+        }
+    )
+    result = await runner._handle_message(
+        _make_event("/whoami", _make_source(user_id="999"))
+    )
+    assert "Tier: user" in result
+    assert "/help" in result      # always-allowed floor
+    assert "/whoami" in result    # always-allowed floor
+    assert "/status" in result    # always-allowed floor (the fix)
+
+
+# ---------------------------------------------------------------------------
 # Gate ALLOW — admin and listed user
 # ---------------------------------------------------------------------------
 
