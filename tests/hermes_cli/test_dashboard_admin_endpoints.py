@@ -799,6 +799,85 @@ class TestSkillsHubScanEndpoint:
         assert body["findings"][0]["file"] == "SKILL.md"
 
 
+class TestSkillsHubSearchEndpoint:
+    """``GET /api/skills/hub/search`` merges sources in parallel and must
+    return the top-`limit` results by TRUST RANK, mirroring
+    ``tools.skills_hub.unified_search``. The web router used to slice by
+    source-completion order (``as_completed``), truncating built-in / trusted
+    entries behind a flood of fast community mirrors — see
+    ``test_unified_search_trust_rank_survives_limit_cut`` for the model-layer
+    guard this endpoint must also honor.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _setup(self, _isolate_hermes_home):
+        self.client, _ = _client()
+
+    # Reuse the module-level _FakeMeta shape, but the search path reads
+    # .trust_level / .identifier and passes objects through
+    # _skill_meta_to_payload, so a faithful SkillMeta (with every payload
+    # field) is what the real parallel_search_sources returns.
+    @staticmethod
+    def _meta(name, identifier, trust_level, source="skills.sh"):
+        from tools.skills_hub import SkillMeta
+
+        return SkillMeta(
+            name=name,
+            description=name,
+            source=source,
+            identifier=identifier,
+            trust_level=trust_level,
+            repo="owner/repo",
+            tags=["a"],
+        )
+
+    def _patch_search(self, monkeypatch, results, source_counts=None, timed_out=None):
+        """Patch the producer seam the endpoint reads at call time, matching
+        how test_unified_search_trust_rank_survives_limit_cut patches
+        ``tools.skills_hub.parallel_search_sources``. ``create_source_router``
+        is stubbed to [] (unused once parallel_search_sources is patched)."""
+        monkeypatch.setattr(
+            "tools.skills_hub.create_source_router", lambda: []
+        )
+        monkeypatch.setattr(
+            "tools.skills_hub.parallel_search_sources",
+            lambda *a, **k: (list(results), dict(source_counts or {}), list(timed_out or [])),
+        )
+        # Keep the installed-provenance map out of the filesystem so the
+        # endpoint's installed-marker pass is deterministic and hermetic.
+        monkeypatch.setattr(
+            "hermes_cli.web_server._installed_hub_identifiers",
+            lambda profile=None: {},
+        )
+
+    def test_builtin_survives_community_flood_at_limit(self, monkeypatch):
+        # Regression guard for the trust-rank sort before the limit cut,
+        # mirroring test_unified_search_trust_rank_survives_limit_cut for the
+        # web endpoint. 20 community results flood the head of the merged
+        # list (skills.sh completing first via as_completed); 1 builtin lands
+        # at the tail. limit=10 would cut the builtin in completion order —
+        # the trust-rank sort must hoist it to position 0.
+        community = [
+            self._meta(f"s{i}", f"skills-sh/x/s{i}", "community")
+            for i in range(20)
+        ]
+        official = [self._meta("s-official", "official/cat/s-official", "builtin", "official")]
+        self._patch_search(
+            monkeypatch, community + official, source_counts={"skills-sh": 20, "official": 1}
+        )
+
+        r = self.client.get("/api/skills/hub/search?q=s&limit=10")
+        assert r.status_code == 200
+        body = r.json()
+        results = body["results"]
+        assert len(results) == 10
+        assert results[0]["identifier"] == "official/cat/s-official"
+        assert results[0]["trust_level"] == "builtin"
+        # Stable sort preserves community insertion order within the tier.
+        assert results[1]["identifier"] == "skills-sh/x/s0"
+        assert results[1]["trust_level"] == "community"
+
+
 class TestWebhookToggleEndpoint:
     @pytest.fixture(autouse=True)
     def _setup(self, _isolate_hermes_home):

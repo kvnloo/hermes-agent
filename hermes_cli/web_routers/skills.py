@@ -252,7 +252,14 @@ async def search_skills_hub(
                 seen[r.identifier] = r
             elif _rank.get(r.trust_level, 0) > _rank.get(seen[r.identifier].trust_level, 0):
                 seen[r.identifier] = r
-        deduped = list(seen.values())[:capped]
+        deduped = list(seen.values())
+        # Stable-sort by trust rank before the limit cut, matching unified_search
+        # (see test_unified_search_trust_rank_survives_limit_cut): a high-volume
+        # community source that completes first (parallel_search_sources appends
+        # in as_completed order) must not crowd out a builtin/official catalog
+        # entry that finished later. Insertion order is preserved within a rank.
+        deduped.sort(key=lambda r: -_rank.get(r.trust_level, 0))
+        deduped = deduped[:capped]
 
         return {
             "results": [_skill_meta_to_payload(m) for m in deduped],
