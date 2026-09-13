@@ -79,7 +79,13 @@ def _doctor_runtime(plugin_path: Path):
         stack.close()
         raise
 
-    from hermes_cli.plugins import PluginManager
+    from hermes_cli.plugins import (
+        _BARE_MODULE_SCOPE,
+        _MODULE_NAMESPACE_LOCK,
+        _NS_PARENT,
+        PluginManager,
+        _clear_plugin_submodules,
+    )
     from tools.registry import registry
 
     entries_before = {entry.name: entry for entry in registry._snapshot_entries()}
@@ -90,6 +96,8 @@ def _doctor_runtime(plugin_path: Path):
         if name == "hermes_plugins" or name.startswith("hermes_plugins.")
     }
     manager = PluginManager()
+    temp_scope = manager.scope_key
+    manifest = None
     try:
         manifests = manager._scan_directory(plugins_root, source="user")
         if not manifests:
@@ -125,14 +133,30 @@ def _doctor_runtime(plugin_path: Path):
         with registry._lock:
             for name in changed_names:
                 previous = entries_before.get(name)
-                if previous is None:
-                    registry._tools.pop(name, None)
-                else:
-                    registry._tools[name] = previous
+                current = entries_after.get(name)
+                if current is None:
+                    continue
+                registry.restore_registration(
+                    name, current, previous, scope=temp_scope
+                )
             registry._plugin_override_policy.clear()
             registry._plugin_override_policy.update(policy_before)
+            for module_namespace, scopes in list(
+                registry._plugin_module_scopes.items()
+            ):
+                scopes.discard(temp_scope)
+                if not scopes:
+                    registry._plugin_module_scopes.pop(module_namespace, None)
             if changed_names:
                 registry._generation += 1
+        _clear_plugin_submodules(manager)
+        if manifest is not None:
+            plugin_key = manifest.key or manifest.name
+            slug = plugin_key.replace("/", "__").replace("-", "_")
+            bare_name = f"{_NS_PARENT}.{slug}"
+            with _MODULE_NAMESPACE_LOCK:
+                if _BARE_MODULE_SCOPE.get(bare_name) == temp_scope:
+                    _BARE_MODULE_SCOPE.pop(bare_name, None)
         for name in list(sys.modules):
             if (
                 name not in modules_before
