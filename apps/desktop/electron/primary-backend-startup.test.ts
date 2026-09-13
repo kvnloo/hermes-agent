@@ -48,6 +48,58 @@ test('primary remote descriptor preserves a resolved registry connection id', ()
   assert.equal(connection.isFullscreen, false)
 })
 
+test('primary remote descriptor forwards custom gateway headers for a profile or registry primary', () => {
+  // Per-profile override and v2 registry primaries resolved through
+  // resolveDesktopRemoteRoute carry `headers` (e.g. CF-Access-Client-Id /
+  // CF-Access-Client-Secret for a Cloudflare-Access-protected gateway). REST
+  // (requestJsonForProfile) and the OAuth WS-ticket mint read
+  // connection.headers, so the descriptor must not drop them. Unlike the
+  // global-remote path, these routes are NOT covered by the
+  // headersForRemoteRequest fallback that re-reads config.remote.headers.
+  const headers = { 'CF-Access-Client-Id': 'cid', 'CF-Access-Client-Secret': 'csecret' }
+
+  const connection = createPrimaryRemoteConnection(
+    {
+      authMode: 'oauth',
+      baseUrl: 'https://gateway.example.com',
+      connectionId: 'skateway',
+      headers,
+      remoteKind: 'cloud',
+      source: 'registry',
+      token: null,
+      wsUrl: 'wss://gateway.example.com/api/ws'
+    },
+    ['ready'],
+    { isFullscreen: false }
+  )
+
+  assert.equal('headers' in connection, true)
+  assert.deepEqual(connection.headers, headers)
+  // The connectionId and headers conditional spreads compose for registry
+  // primaries, which carry both at once.
+  assert.equal(connection.connectionId, 'skateway')
+})
+
+test('primary remote descriptor keeps SSH routes free of a headers key', () => {
+  // The registry-primary SSH route and the settings SSH route never carry
+  // gateway HTTP headers (they tunnel through SSH), so the descriptor must
+  // omit `headers` entirely rather than emit `headers: undefined` — mirroring
+  // the legacy-unregistered handling for `connectionId`.
+  const connection = createPrimaryRemoteConnection(
+    {
+      baseUrl: 'http://127.0.0.1:49152',
+      remoteKind: 'ssh',
+      ssh: { host: 'build-host', user: 'alice' },
+      token: 'secret',
+      wsUrl: 'ws://127.0.0.1:49152/api/ws'
+    },
+    [],
+    {}
+  )
+
+  assert.equal('headers' in connection, false)
+})
+
 test('primary remote descriptor preserves the effective SSH dialing identity', () => {
   const ssh = {
     effectiveConfigFingerprint: 'effective-config',
