@@ -89,3 +89,93 @@ describe('weather reference app (async contract)', () => {
     expect(weatherApp.reduce(state, key({ return: true }))).toBeNull()
   })
 })
+
+describe('weather reference app (relaunch race)', () => {
+  const reply = (area: string, country: string, code: string) => ({
+    current_condition: [
+      {
+        FeelsLikeC: '20',
+        humidity: '40',
+        temp_C: '22',
+        weatherCode: code,
+        weatherDesc: [{ value: 'Sunny' }],
+        windspeedKmph: '7'
+      }
+    ],
+    nearest_area: [{ areaName: [{ value: area }], country: [{ value: country }] }]
+  })
+
+  it('a stale resolution must not clobber the newer launch', async () => {
+    let resolveParis!: (v: unknown) => void
+    let resolveRome!: (v: unknown) => void
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        if (url.includes('Paris')) {
+          return new Promise(r => (resolveParis = r))
+        }
+
+        if (url.includes('Rome')) {
+          return new Promise(r => (resolveRome = r))
+        }
+
+        throw new Error('unexpected url ' + url)
+      })
+    )
+
+    expect(launchWidget('weather', 'Paris')).toBeNull()
+    expect(launchWidget('weather', 'Rome')).toBeNull()
+    expect(activeState()?.location).toBe('Rome')
+    expect(activeState()?.phase.kind).toBe('loading')
+
+    // Rome resolves first — the user sees correct Rome conditions.
+    resolveRome({ json: async () => reply('Rome', 'Italy', '113'), ok: true })
+    await vi.waitFor(() => expect(activeState()?.phase.kind).toBe('ready'))
+    expect((activeState()!.phase as { kind: 'ready'; report: { area: string } }).report.area).toBe('Rome, Italy')
+
+    // Paris, launched first but slower, resolves LAST. Expected: discarded.
+    resolveParis({ json: async () => reply('Paris', 'France', '200'), ok: true })
+    await new Promise(r => setTimeout(r, 0))
+
+    const phase = activeState()!.phase as { kind: 'ready'; report: { area: string } }
+
+    expect(phase.report.area).toBe('Rome, Italy')
+    expect(activeState()?.location).toBe('Rome')
+  })
+
+  it('a stale rejection must not flip a ready slot to error', async () => {
+    let rejectParis!: (e: unknown) => void
+    let resolveRome!: (v: unknown) => void
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        if (url.includes('Paris')) {
+          return new Promise((_, rej) => (rejectParis = rej))
+        }
+
+        if (url.includes('Rome')) {
+          return new Promise(r => (resolveRome = r))
+        }
+
+        throw new Error('unexpected url ' + url)
+      })
+    )
+
+    expect(launchWidget('weather', 'Paris')).toBeNull()
+    expect(launchWidget('weather', 'Rome')).toBeNull()
+    expect(activeState()?.location).toBe('Rome')
+
+    // Rome resolves successfully — the user sees correct Rome conditions.
+    resolveRome({ json: async () => reply('Rome', 'Italy', '113'), ok: true })
+    await vi.waitFor(() => expect(activeState()?.phase.kind).toBe('ready'))
+
+    // Paris, launched first but slower, REJECTS. Expected: discarded — Rome stays ready.
+    rejectParis(new DOMException('The operation was aborted due to timeout', 'TimeoutError'))
+    await new Promise(r => setTimeout(r, 0))
+
+    expect(activeState()?.phase.kind).toBe('ready')
+    expect(activeState()?.location).toBe('Rome')
+  })
+})
