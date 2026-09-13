@@ -70,13 +70,16 @@ vi.mock('@/store/notify-baseline', () => ({ markNativeNotifyBaseline: vi.fn() })
 
 const {
   $activeGatewayRoute,
+  _turnLeaseKeysForTests,
   activeGatewayProfileKey,
   closeSecondaryGateways,
   configureGatewayRegistry,
   ensureGatewayForProfile,
   pruneSecondaryGateways,
+  retainGatewayForSessionTurn,
   retireLocalProfileGateways,
-  setPrimaryGateway
+  setPrimaryGateway,
+  setPrimaryGatewayConnectionId
 } = await import('./gateway')
 
 const { requestForSessionProfile, sessionRpcNeedsProfileRoute } = await import('./session-request-router')
@@ -582,5 +585,95 @@ describe('requestForSessionProfile', () => {
     expect(ambient.mock.calls.map(args => args.length)).toEqual([2, 3, 4])
     expect(ambient).toHaveBeenNthCalledWith(2, 'session.usage', params, 1_800_000)
     expect(ambient).toHaveBeenNthCalledWith(3, 'session.usage', params, undefined, controller.signal)
+  })
+})
+
+// The primary gateway's onEvent (use-gateway-boot) never calls
+// releaseTerminalTurnLease — only a Secondary's onEvent does. A turn lease keyed
+// on a route that resolves to the primary socket therefore has no event-driven
+// releaser and would leak one entry per distinct sessionId for the window
+// lifetime. retainGatewayForSessionTurn must early-return for BOTH primary
+// shapes: the registry-named route AND the bare-profile ambient primary
+// (null/empty connectionId whose profile IS g.primaryProfile).
+describe('retainGatewayForSessionTurn primary-route guard', () => {
+  it('registers no lease for a bare-profile ambient primary (legacy topology)', async () => {
+    const primary = makePrimary()
+    setPrimaryGateway(primary as never, 'default')
+    installDesktop()
+
+    const release = await retainGatewayForSessionTurn(null, 'default', 'sess-primary')
+
+    expect(_turnLeaseKeysForTests()).toEqual([])
+    expect(release).toBeTypeOf('function')
+    // The returned releaser is a no-op: calling it must not throw and must not
+    // mutate any state (there is no lease to clear).
+    expect(() => release()).not.toThrow()
+    expect(_turnLeaseKeysForTests()).toEqual([])
+  })
+
+  it('registers no lease for a bare-profile primary in registry topology (primaryConnectionId set)', async () => {
+    // isPrimaryRegistryRoute(null, 'default') short-circuits on Boolean(id) and
+    // misses this shape even when g.primaryConnectionId === 'local'; the bare
+    // primary still resolves to the primary socket and must not leak.
+    const primary = makePrimary()
+    setPrimaryGateway(primary as never, 'default')
+    setPrimaryGatewayConnectionId('local')
+    installDesktop()
+
+    await retainGatewayForSessionTurn(null, 'default', 'sess-primary-registry')
+
+    expect(_turnLeaseKeysForTests()).toEqual([])
+  })
+
+  it('registers a lease for a bare-profile NON-primary owner (no over-blocking)', async () => {
+    const primary = makePrimary()
+    setPrimaryGateway(primary as never, 'default')
+    installDesktop()
+
+    const release = await retainGatewayForSessionTurn(null, 'loki', 'sess-loki')
+
+    expect(_turnLeaseKeysForTests()).toEqual(['loki\u0000sess-loki'])
+    expect(secondaryGateways).toHaveLength(1)
+
+    // Releasing via the returned handle removes the lease.
+    release()
+    expect(_turnLeaseKeysForTests()).toEqual([])
+  })
+
+  it('registers a lease for an explicit local connectionId named "default" when the primary has no connectionId', async () => {
+    // primaryConnectionId is null, so `local` is NOT the registry-named primary;
+    // it dials its own conn:local::default secondary. The bare-profile guard
+    // must not fire for an explicit, non-empty connectionId.
+    const primary = makePrimary()
+    setPrimaryGateway(primary as never, 'default')
+    installDesktop()
+
+    const release = await retainGatewayForSessionTurn('local', 'default', 'sess-local-default')
+
+    expect(_turnLeaseKeysForTests()).toEqual(['conn:local::default\u0000sess-local-default'])
+    expect(secondaryGateways).toHaveLength(1)
+
+    release()
+    expect(_turnLeaseKeysForTests()).toEqual([])
+  })
+
+  it('does not leak a turn lease for a prompt.submit dispatched on the bare primary profile', async () => {
+    const primary = makePrimary()
+    setPrimaryGateway(primary as never, 'default')
+    installDesktop()
+    const ambient = vi.fn(async () => ({ ambient: true }))
+
+    // promptAckStatus defaults to null → the mock ACK has no `status`, so
+    // turnKeepsRunning is true and the ACK path does NOT release. Before the
+    // fix this registered and retained a phantom lease; after the fix no lease
+    // is ever registered.
+    await requestForSessionProfile('default', ambient as never, 'prompt.submit', {
+      session_id: 'rt-primary-leak',
+      text: 'hello'
+    })
+
+    expect(_turnLeaseKeysForTests()).toEqual([])
+    expect(secondaryGateways).toHaveLength(0)
+    expect(primary.request).toHaveBeenCalledWith('prompt.submit', { session_id: 'rt-primary-leak', text: 'hello' })
   })
 })
