@@ -10,22 +10,13 @@ Auth supports:
   - Claude Code credentials (~/.claude.json or ~/.claude/.credentials.json) → Bearer auth
 """
 
-import copy
-import json
 import logging
-import os
-import platform
 import re
-import secrets
-import stat
 import subprocess
 from pathlib import Path
-from urllib.parse import urlparse
 
-from hermes_constants import get_hermes_home
-from typing import Any, Dict, List, Optional, Tuple
-from utils import base_url_host_matches, base_url_hostname, normalize_proxy_env_vars
-from agent.secret_scope import get_secret as _get_secret
+from typing import Any, Dict, List, Optional
+from utils import normalize_proxy_env_vars
 
 # This module keeps client construction and the Messages API call itself.  The
 # three surfaces it used to inline now live next to it:
