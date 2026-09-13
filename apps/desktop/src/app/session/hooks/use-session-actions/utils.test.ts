@@ -723,6 +723,188 @@ describe('reconcileResumeMessages', () => {
     expect(reconciled[1]).toMatchObject({ id: 'assistant-stream-live', pending: false })
     expect(chatMessageText(reconciled[1])).toBe('streamed body')
   })
+
+  // #67603 class: the gateway persists model-switch / personality notices as
+  // role='user' rows whose text starts with `[System:` (tui_gateway/server.py).
+  // The renderer never inserts such a marker into its live cache; it only
+  // arrives via the RESUME fetch. So the FIRST reconcile after a switch is
+  // asymmetric: the marker is in `next` but not in `previous`. Counting the
+  // marker toward the `user` ordinal on the `next` side consumed the slot the
+  // real user turn needed, so the real user row paired against nothing in the
+  // cache and the optimistic `attachmentRefs` carry-over was skipped — the
+  // attachment indicator vanished permanently on backends that never persisted
+  // `@image:` refs. `preserveLocalPendingTurnMessages` already filters these
+  // markers from its ordinal pairing; `reconcileResumeMessages` must too.
+  it('carries attachmentRefs past an asymmetric [System: marker in next that is absent from previous', () => {
+    const next = [
+      msg('s1-user', 'user', 'first'),
+      msg('s2-assistant', 'assistant', 'first answer'),
+      msg('s3-marker', 'user', '[System: The active model for this chat has changed to k2.]'),
+      msg('s4-user', 'user', 'second question'),
+      msg('s5-assistant', 'assistant', 'second answer')
+    ]
+
+    const previous = [
+      msg('1-user', 'user', 'first'),
+      msg('2-assistant', 'assistant', 'first answer'),
+      msg('user-2000-abcdef', 'user', 'second question', { attachmentRefs: ['@image:/tmp/photo.png'] })
+    ]
+
+    const reconciled = reconcileResumeMessages(next, previous)
+
+    const userRow = reconciled.find(m => m.role === 'user' && chatMessageText(m).trim() === 'second question')
+    expect(userRow?.id).toBe('s4-user')
+    expect(userRow?.attachmentRefs).toEqual(['@image:/tmp/photo.png'])
+  })
+
+  // The marker row itself must pass through unchanged — it is never paired
+  // against the cached transcript, so it cannot pick up foreign attachmentRefs
+  // or other cached metadata by ordinal collision.
+  it('passes a [System: marker through unchanged without pairing it against the cache', () => {
+    const next = [
+      msg('s1-user', 'user', 'first'),
+      msg('s2-assistant', 'assistant', 'first answer'),
+      msg('s3-marker', 'user', '[System: The active model for this chat has changed to k2.]'),
+      msg('s4-assistant', 'assistant', 'second answer')
+    ]
+
+    const previous = [
+      msg('1-user', 'user', 'first', { attachmentRefs: ['@image:/tmp/should-not-leak.png'] }),
+      msg('2-assistant', 'assistant', 'first answer')
+    ]
+
+    const reconciled = reconcileResumeMessages(next, previous)
+
+    const markerRow = reconciled.find(m => m.id === 's3-marker')
+    expect(markerRow?.attachmentRefs).toBeUndefined()
+    expect(markerRow).toBe(next[2])
+  })
+
+  // Defensive symmetry: a second reconcile (or a backend that had already
+  // flushed the marker through the renderer cache) carries the marker in BOTH
+  // sides. Filtering it on the `previous` loop too keeps the ordinal pairing
+  // aligned, so the real user turn still finds its cached twin.
+  it('carries attachmentRefs when the [System: marker is present in both next and previous', () => {
+    const next = [
+      msg('s1-user', 'user', 'first'),
+      msg('s2-assistant', 'assistant', 'first answer'),
+      msg('s3-marker', 'user', '[System: The active model for this chat has changed to k2.]'),
+      msg('s4-user', 'user', 'second question'),
+      msg('s5-assistant', 'assistant', 'second answer')
+    ]
+
+    const previous = [
+      msg('1-user', 'user', 'first'),
+      msg('2-assistant', 'assistant', 'first answer'),
+      msg('3-marker', 'user', '[System: The active model for this chat has changed to k2.]'),
+      msg('user-2000-abcdef', 'user', 'second question', { attachmentRefs: ['@image:/tmp/photo.png'] })
+    ]
+
+    const reconciled = reconcileResumeMessages(next, previous)
+
+    const userRow = reconciled.find(m => m.role === 'user' && chatMessageText(m).trim() === 'second question')
+    expect(userRow?.attachmentRefs).toEqual(['@image:/tmp/photo.png'])
+  })
+
+  // Two switches around one turn put a marker BEFORE the committed prompt and
+  // another AFTER it, so neither ordinal can drift the real user row out of
+  // its slot. The carry-over must still fire for the bracketed prompt.
+  it('carries attachmentRefs when two [System: markers bracket the user turn', () => {
+    const next = [
+      msg('s1-user', 'user', 'first'),
+      msg('s2-assistant', 'assistant', 'first answer'),
+      msg('s3-marker-k2', 'user', '[System: The active model for this chat has changed to k2.]'),
+      msg('s4-user', 'user', 'second question'),
+      msg('s5-assistant', 'assistant', 'second answer'),
+      msg('s6-marker-k3', 'user', '[System: The active model for this chat has changed to k3.]')
+    ]
+
+    const previous = [
+      msg('1-user', 'user', 'first'),
+      msg('2-assistant', 'assistant', 'first answer'),
+      msg('user-2000-abcdef', 'user', 'second question', { attachmentRefs: ['@image:/tmp/photo.png'] })
+    ]
+
+    const reconciled = reconcileResumeMessages(next, previous)
+
+    const userRow = reconciled.find(m => m.role === 'user' && chatMessageText(m).trim() === 'second question')
+    expect(userRow?.attachmentRefs).toEqual(['@image:/tmp/photo.png'])
+  })
+
+  // The carry-over only fires on the text-match path (sameText), so a marker
+  // shifting ordinals must not pair a real user row against a DIFFERENT cached
+  // user row's attachmentRefs.
+  it('does not carry attachmentRefs from a mis-paired user row when texts differ', () => {
+    const next = [
+      msg('s1-marker', 'user', '[System: The active model for this chat has changed to k2.]'),
+      msg('s2-user', 'user', 'second question')
+    ]
+
+    const previous = [
+      msg('1-user-cached', 'user', 'a different prompt', { attachmentRefs: ['@image:/tmp/other.png'] })
+    ]
+
+    const reconciled = reconcileResumeMessages(next, previous)
+
+    const userRow = reconciled.find(m => m.id === 's2-user')
+    expect(userRow?.attachmentRefs).toBeUndefined()
+  })
+
+  // rowId and reactions come from the authoritative row itself (stamped by
+  // toChatMessages from row_id / display_metadata), so they are present
+  // regardless of pairing. The marker fix must not disturb them.
+  it('does not disturb rowId or reactions already stamped on the authoritative user row', () => {
+    const reactions = [{ emoji: '👍', author: 'user' as const, at: 1000 }]
+
+    const next = [
+      msg('s1-user', 'user', 'first'),
+      msg('s2-assistant', 'assistant', 'first answer'),
+      msg('s3-marker', 'user', '[System: The active model for this chat has changed to k2.]'),
+      msg('s4-user', 'user', 'second question', { rowId: 102, reactions })
+    ]
+
+    const previous = [
+      msg('1-user', 'user', 'first'),
+      msg('2-assistant', 'assistant', 'first answer'),
+      msg('user-2000-abcdef', 'user', 'second question', { attachmentRefs: ['@image:/tmp/photo.png'] })
+    ]
+
+    const reconciled = reconcileResumeMessages(next, previous)
+
+    const userRow = reconciled.find(m => m.role === 'user' && chatMessageText(m).trim() === 'second question')
+    expect(userRow?.rowId).toBe(102)
+    expect(userRow?.reactions).toBe(reactions)
+    expect(userRow?.attachmentRefs).toEqual(['@image:/tmp/photo.png'])
+  })
+
+  // Full pipeline confirmation. `preserveLocalPendingTurnMessages` runs
+  // immediately after reconcileResumeMessages on the same data; it drops the
+  // optimistic `user-*` row by text-matching it against the latest
+  // authoritative user. Nothing downstream reattaches attachmentRefs, so the
+  // reconcile carry-over is the only source — the bug made the loss permanent.
+  it('survives the full reconcile → preserve pipeline with attachmentRefs intact', () => {
+    const next = [
+      msg('s1-user', 'user', 'first'),
+      msg('s2-assistant', 'assistant', 'first answer'),
+      msg('s3-marker', 'user', '[System: The active model for this chat has changed to k2.]'),
+      msg('s4-user', 'user', 'second question'),
+      msg('s5-assistant', 'assistant', 'second answer')
+    ]
+
+    const previous = [
+      msg('1-user', 'user', 'first'),
+      msg('2-assistant', 'assistant', 'first answer'),
+      msg('user-2000-abcdef', 'user', 'second question', { attachmentRefs: ['@image:/tmp/photo.png'] })
+    ]
+
+    const reconciled = reconcileResumeMessages(next, previous)
+    const throughPipeline = preserveLocalPendingTurnMessages(reconciled, previous)
+
+    const userRow = throughPipeline.find(m => m.role === 'user' && chatMessageText(m).trim() === 'second question')
+    expect(userRow?.attachmentRefs).toEqual(['@image:/tmp/photo.png'])
+    // The optimistic row is dropped (not re-appended) — no duplication.
+    expect(throughPipeline.some(m => m.id === 'user-2000-abcdef')).toBe(false)
+  })
 })
 
 describe('preserveLocalPendingTurnMessages', () => {
