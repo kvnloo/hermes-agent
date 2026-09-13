@@ -413,6 +413,10 @@ export function reconcileResumeMessages(nextMessages: ChatMessage[], previousMes
   const previousRoleCounts = new Map<string, number>()
 
   for (const message of previousMessages) {
+    if (isGatewaySystemMarker(message)) {
+      continue
+    }
+
     const ordinal = previousRoleCounts.get(message.role) ?? 0
     previousRoleCounts.set(message.role, ordinal + 1)
     previousByRoleOrdinal.set(`${message.role}:${ordinal}`, message)
@@ -421,6 +425,10 @@ export function reconcileResumeMessages(nextMessages: ChatMessage[], previousMes
   const nextRoleCounts = new Map<string, number>()
 
   return nextMessages.map(message => {
+    if (isGatewaySystemMarker(message)) {
+      return message
+    }
+
     const ordinal = nextRoleCounts.get(message.role) ?? 0
     nextRoleCounts.set(message.role, ordinal + 1)
 
