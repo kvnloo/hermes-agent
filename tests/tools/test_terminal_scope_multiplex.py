@@ -182,3 +182,113 @@ def test_tui_and_cron_boundaries_bind_and_reset(tmp_path):
     with install_and_reset_profile_terminal_scope(home):  # cron fire helper
         assert terminal_env("TERMINAL_ENV") == "local"
     assert get_terminal_scope() is None
+
+
+def test_scope_projects_home_mode_into_policy(tmp_path):
+    """The canonical TERMINAL_CONFIG_ENV_MAP must include ``home_mode`` so that
+    ``build_profile_terminal_scope`` projects the profile's ``home_mode`` into
+    the scope. Without the mapping ``TERMINAL_HOME_MODE`` is silently dropped
+    while peer keys (backend/ssh_host) project, violating the scope's
+    "total policy" contract (#101242).
+    """
+    from tools.terminal_scope import (
+        build_profile_terminal_scope,
+        terminal_scope,
+    )
+
+    home = _profile(
+        tmp_path,
+        "hmode",
+        "terminal:\n  backend: docker\n  home_mode: profile\n"
+        "  ssh_host: example.com\n  ssh_port: 2222\n",
+    )
+    scope = build_profile_terminal_scope(home)
+    assert "TERMINAL_HOME_MODE" in scope, (
+        "home_mode was dropped from the per-profile scope — "
+        "TERMINAL_CONFIG_ENV_MAP is missing the home_mode mapping"
+    )
+    with terminal_scope(scope):
+        assert terminal_env("TERMINAL_HOME_MODE", "auto") == "profile"
+        assert terminal_env("TERMINAL_ENV") == "docker"
+        assert terminal_env("TERMINAL_SSH_HOST") == "example.com"
+        assert terminal_env("TERMINAL_SSH_PORT", "22") == "2222"
+
+
+def test_scope_defaults_home_mode_to_auto_when_profile_omits_it(tmp_path):
+    """A profile that omits ``home_mode`` gets the defined default ``auto`` via
+    the scope, not the launch process's ambient value."""
+    from tools.terminal_scope import (
+        build_profile_terminal_scope,
+        terminal_scope,
+    )
+
+    home = _profile(tmp_path, "automode", "terminal:\n  backend: local\n")
+    scope = build_profile_terminal_scope(home)
+    assert scope.get("TERMINAL_HOME_MODE") == "auto"
+    with terminal_scope(scope):
+        assert terminal_env("TERMINAL_HOME_MODE", "profile") == "auto"
+
+
+def test_routed_profile_home_mode_profile_drives_subprocess_home(tmp_path, monkeypatch):
+    """End-to-end through the gateway boundary.
+
+    A routed profile configured with ``home_mode: profile``, served from a
+    launch process whose ambient ``TERMINAL_HOME_MODE=auto``, must resolve
+    subprocess ``HOME`` to ``{HERMES_HOME}/home`` via ``get_subprocess_home`` —
+    honoring the routed profile's policy, not the launch process's ambient
+    value. Both defects (scope projection + consumer scope-read) are required
+    for this to pass (#101242).
+    """
+    import gateway.run as gw
+    import hermes_constants
+
+    monkeypatch.setenv("TERMINAL_HOME_MODE", "auto")
+    monkeypatch.setattr(hermes_constants, "is_container", lambda: False)
+
+    home = _profile(
+        tmp_path, "coder", "terminal:\n  backend: local\n  home_mode: profile\n"
+    )
+    (home / "home").mkdir()
+    real_home = tmp_path / "real-home"
+    real_home.mkdir()
+    monkeypatch.setenv("HOME", str(real_home))
+    monkeypatch.setenv("HERMES_HOME", str(home))
+
+    with gw._profile_runtime_scope(home):
+        from hermes_constants import get_subprocess_home
+
+        assert terminal_env("TERMINAL_HOME_MODE", "auto") == "profile"
+        assert get_subprocess_home() == str(home / "home")
+    from hermes_constants import get_subprocess_home
+
+    assert get_subprocess_home() is None
+
+
+def test_routed_profile_home_mode_auto_does_not_inherit_launch_profile(tmp_path, monkeypatch):
+    """The inverse leak: a routed profile with ``home_mode: auto`` must NOT
+    inherit the launch process's ambient ``profile`` mode through the stale
+    ``os.environ`` read path. Subprocess ``HOME`` stays the real account HOME.
+    """
+    import gateway.run as gw
+    import hermes_constants
+
+    monkeypatch.setenv("TERMINAL_HOME_MODE", "profile")
+    monkeypatch.setattr(hermes_constants, "is_container", lambda: False)
+
+    home = _profile(
+        tmp_path, "autohost", "terminal:\n  backend: local\n  home_mode: auto\n"
+    )
+    (home / "home").mkdir()
+    real_home = tmp_path / "real-home"
+    real_home.mkdir()
+    monkeypatch.setenv("HOME", str(real_home))
+    monkeypatch.setenv("HERMES_HOME", str(home))
+
+    with gw._profile_runtime_scope(home):
+        from hermes_constants import get_subprocess_home
+
+        assert terminal_env("TERMINAL_HOME_MODE", "profile") == "auto"
+        assert get_subprocess_home() is None
+    from hermes_constants import get_subprocess_home
+
+    assert get_subprocess_home() == str(home / "home")

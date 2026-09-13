@@ -1308,7 +1308,9 @@ def get_subprocess_home(env: dict[str, str] | None = None) -> str | None:
     """
     env = env or {}
     profile_home = _profile_home_path(env)
-    mode = str(env.get("TERMINAL_HOME_MODE") or os.getenv("TERMINAL_HOME_MODE", "auto")).strip().lower() or "auto"
+    from tools.terminal_scope import terminal_env
+
+    mode = str(terminal_env("TERMINAL_HOME_MODE", "auto")).strip().lower() or "auto"
     if mode in {"isolated", "profile_home", "profile-home"}:
         mode = "profile"
     if mode in {"host", "user", "real_home", "real-home"}:
