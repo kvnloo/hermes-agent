@@ -41,7 +41,12 @@ vi.mock(import('@/store/profile'), async importOriginal => {
   }
 })
 
+vi.mock(import('@/store/suggestion-providers/skill'), () => ({
+  invalidateSkillSuggestionIndex: vi.fn()
+}))
+
 const { invalidateProfileListFetches } = await import('@/store/profile')
+const { invalidateSkillSuggestionIndex } = await import('@/store/suggestion-providers/skill')
 
 describe('wipeSessionListsForGatewaySwitch', () => {
   beforeEach(() => {
@@ -86,6 +91,21 @@ describe('wipeSessionListsForGatewaySwitch', () => {
     wipeSessionListsForGatewaySwitch()
 
     expect(invalidateProfileListFetches).toHaveBeenCalled()
+  })
+
+  it('drops the skill-match suggestion index so the new backend skills load', () => {
+    // The skill-match index is a module-level cache (NOT a Query), so
+    // invalidateProfileScopedQueries() cannot reach it — without an explicit
+    // call here it would serve the previous backend's skills for the full TTL.
+    // The wipe runs unconditionally on every connection switch, which is the
+    // only path that covers a switch where the profile key is unchanged (two
+    // gateways both exposing "default") — the profile-key subscription in
+    // skill.ts cannot detect that case on its own.
+    vi.mocked(invalidateSkillSuggestionIndex).mockClear()
+
+    wipeSessionListsForGatewaySwitch()
+
+    expect(invalidateSkillSuggestionIndex).toHaveBeenCalledTimes(1)
   })
 })
 

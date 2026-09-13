@@ -3,6 +3,7 @@ import { getSkills } from '@/hermes'
 import { translateNow } from '@/i18n'
 import type { ChatMessage } from '@/lib/chat-messages'
 import { type ComposerSuggestion, registerDraftProvider } from '@/store/composer-suggestions'
+import { $activeGatewayProfile, normalizeProfileKey } from '@/store/profile'
 import { $activeSessionId, $currentCwd, $messages } from '@/store/session'
 import { $sessionStates } from '@/store/session-states'
 
@@ -91,6 +92,28 @@ async function loadIndex(): Promise<SkillIndexEntry[]> {
 
   return index
 }
+
+// Each profile has its own skills directory, so a cached index is only valid
+// for the profile that produced it. A live profile swap (selectProfile) does
+// NOT reload the renderer, so this module cache would otherwise serve the
+// PREVIOUS profile's skills for the full TTL. Mirror the sibling cache
+// (slash-completion-cache.ts) and drop the index on a normalized-key change.
+//
+// A profile-only subscription is NOT sufficient: two connections can share a
+// profile name (both expose "default"), so a connection switch with an
+// unchanged profile key skips this path. wipeSessionListsForGatewaySwitch()
+// covers that shape — it runs unconditionally on every beginGatewaySwitch.
+let cachedProfile: null | string = null
+
+$activeGatewayProfile.subscribe(value => {
+  const key = normalizeProfileKey(value)
+
+  if (cachedProfile !== null && cachedProfile !== key) {
+    invalidateSkillSuggestionIndex()
+  }
+
+  cachedProfile = key
+})
 
 // ---------------------------------------------------------------------------
 // Already-in-context guard: a skill the session has engaged with must not be
