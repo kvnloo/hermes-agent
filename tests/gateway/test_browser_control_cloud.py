@@ -1,4 +1,5 @@
 import threading
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -13,6 +14,15 @@ from hermes_cli.dashboard_auth.ws_tickets import _reset_for_tests, mint_ticket
 from tui_gateway import server
 from tui_gateway.ws import WSTransport
 from tui_gateway.methods_browser_control import _broker_event_writer, _principal_digest
+
+# Modeled on the production live-session shape: session.create / _init_session /
+# _deferred_session_record stamp ``profile_home`` (a filesystem path) and never
+# a bare ``profile`` name, so every cloud fixture must carry ``profile_home``.
+# The register handler derives the cloud ``profile_id`` from
+# ``Path(profile_home).name``, so this resolves to the NAME "default" — parity
+# with the local-API adapter's ``profile_id=profile`` (a name, not a path).
+_DEFAULT_PROFILE_HOME = "/hermes/profiles/default"
+assert Path(_DEFAULT_PROFILE_HOME).name == "default"
 
 
 def _fake_ticket_ws(ticket):
@@ -95,7 +105,7 @@ def test_cloud_agent_context_binds_registration_principal_and_transport_family()
     server._sessions["context-session-fixture"] = {
         "transport": transport,
         "session_key": "stored-context-session",
-        "profile": "default",
+        "profile_home": _DEFAULT_PROFILE_HOME,
         "agent": SimpleNamespace(session_id="context-session-fixture"),
     }
     tokens = []
@@ -154,7 +164,7 @@ def test_cloud_controller_registration_rejects_missing_or_internal_identity(monk
     server._sessions["session-fixture"] = {
         "transport": transport,
         "session_key": "stored-session-fixture",
-        "profile": "default",
+        "profile_home": _DEFAULT_PROFILE_HOME,
     }
     try:
         response = server.dispatch(
@@ -208,7 +218,7 @@ def test_cloud_registration_rejects_unsupported_protocol_or_empty_capabilities(
     server._sessions["registration-session-fixture"] = {
         "transport": transport,
         "session_key": "stored-registration-session",
-        "profile": "default",
+        "profile_home": _DEFAULT_PROFILE_HOME,
     }
     try:
         response = server.dispatch(
@@ -255,7 +265,7 @@ def test_cloud_gateway_real_action_round_trip_is_bound_to_identity_and_transport
     server._sessions["session-fixture"] = {
         "transport": transport,
         "session_key": "stored-session-fixture",
-        "profile": "default",
+        "profile_home": _DEFAULT_PROFILE_HOME,
     }
     try:
         registration = server.dispatch(
@@ -278,6 +288,10 @@ def test_cloud_gateway_real_action_round_trip_is_bound_to_identity_and_transport
         assert scope_payload["principal_id"] != "spoofed-client-principal"
         assert scope_payload["transport_family"] == "cloud-ticket-ws"
         assert scope_payload["capabilities"] == ["browser_navigate"]
+        # profile_id is the profile NAME (Path(profile_home).name == "default"),
+        # not the filesystem path nor the empty string, matching the local-API
+        # adapter's name-keyed artifact-store slots.
+        assert scope_payload["profile_id"] == "default"
         assert "browser_cdp" not in BROWSER_CONTROL_CAPABILITIES
 
         missing_identity = server.dispatch(
@@ -432,7 +446,7 @@ def test_cloud_same_identity_reconnect_refreshes_transport_and_completes_pending
     session = {
         "transport": first,
         "session_key": "stored-reconnect-session",
-        "profile": "default",
+        "profile_home": _DEFAULT_PROFILE_HOME,
     }
     server._sessions["reconnect-session"] = session
     try:
@@ -537,7 +551,7 @@ def test_cloud_explicit_detach_requires_current_authenticated_owner(monkeypatch)
     server._sessions["detach-session"] = {
         "transport": owner,
         "session_key": "stored-detach-session",
-        "profile": "default",
+        "profile_home": _DEFAULT_PROFILE_HOME,
     }
     try:
         registration = server.dispatch(
