@@ -6,7 +6,15 @@ import path from 'node:path'
 
 import { afterEach, test } from 'vitest'
 
-import { gitFor, repoStatus, resolveRenamePath, REVIEW_FILE_CAP, reviewList } from './git-review-ops'
+import {
+  fileDiffVsHead,
+  gitFor,
+  repoStatus,
+  resolveRenamePath,
+  REVIEW_FILE_CAP,
+  reviewDiff,
+  reviewList
+} from './git-review-ops'
 
 const tempDirs: string[] = []
 
@@ -116,4 +124,37 @@ test('reviewList caps the file payload returned to the renderer', async () => {
   const result = await reviewList(dir, 'uncommitted', null, 'git')
 
   assert.equal(result.files.length, REVIEW_FILE_CAP)
+})
+
+test('reviewDiff returns empty for a pristine tracked file (staged=false) instead of synthesizing an all-add', async () => {
+  const dir = makeRepo()
+
+  // No working-tree changes — before the fix this synthesized a full-file
+  // all-add diff for the tracked file.
+  const diff = await reviewDiff(dir, 'tracked.txt', 'uncommitted', null, false, 'git')
+
+  assert.equal(diff, '', 'pristine tracked file has no unstaged diff')
+})
+
+test('reviewDiff synthesizes an all-add diff for a genuinely untracked file (staged=false)', async () => {
+  const dir = makeRepo()
+
+  fs.writeFileSync(path.join(dir, 'new.txt'), 'fresh content\nline two\n')
+
+  const diff = await reviewDiff(dir, 'new.txt', 'uncommitted', null, false, 'git')
+
+  assert.ok(diff.length > 0, 'untracked file gets a synthesized all-add diff')
+  assert.ok(diff.includes('new file mode'), 'all-add diff marks it as a new file')
+  assert.ok(diff.includes('+++ b/new.txt'), 'all-add diff has the add side')
+})
+
+test('reviewDiff and fileDiffVsHead agree for a pristine tracked file (the asymmetric bug no longer holds)', async () => {
+  const dir = makeRepo()
+
+  const review = await reviewDiff(dir, 'tracked.txt', 'uncommitted', null, false, 'git')
+  const head = await fileDiffVsHead(dir, 'tracked.txt', 'git')
+
+  assert.equal(review, '', 'reviewDiff returns empty for a pristine tracked file')
+  assert.equal(head, '', 'fileDiffVsHead returns empty for a pristine tracked file')
+  assert.equal(review, head, 'both functions agree on a pristine tracked file')
 })
