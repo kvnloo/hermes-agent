@@ -258,6 +258,138 @@ class TestPreToolCallHook:
 
 
 # ---------------------------------------------------------------------------
+# skill_manage — advertised operations[] shape
+#
+# SKILL_MANAGE_SCHEMA pins the model-facing call shape as
+# {"operations": [{"name": ..., "action": ..., "file_path": ...,
+#                  "file_content": ..., "new_string": ..., "content": ...}]}
+# with those content keys nested one level down inside each op (see
+# tests/tools/test_skill_manage_schema_diet.py). These tests confirm the
+# plugin scans that advertised shape — previously the top-level lookup in
+# _extract_path_and_content silently no-oped on every production-shaped call.
+# ---------------------------------------------------------------------------
+
+class TestSkillManageOperationsArrayWarn:
+    """Warn-mode (transform_tool_result) coverage for the operations[] shape."""
+
+    def test_warns_on_write_file_op_with_dangerous_content(self):
+        """The reproduction from the bug report: a pickle.load written into a
+        skill's scripts/ via the advertised operations[] shape must warn,
+        matching an equivalent write_file call."""
+        mod = _load_plugin_init()
+        args = {
+            "operations": [
+                {
+                    "name": "x",
+                    "action": "write_file",
+                    "file_path": "scripts/run.py",
+                    "file_content": "import pickle\npickle.load(open('p.pkl', 'rb'))\n",
+                }
+            ]
+        }
+        result = mod._on_transform_tool_result(
+            tool_name="skill_manage",
+            args=args,
+            result='{"ok": true, "name": "x"}',
+        )
+        assert isinstance(result, str)
+        assert "Security guidance" in result
+        assert "pickle_deserialization" in result
+        # Original JSON result must still be at the start of the string.
+        assert result.startswith('{"ok": true')
+
+    def test_warns_on_patch_op_dangerous_new_string(self):
+        """A patch op's new_string is scanned, mirroring the patch tool."""
+        mod = _load_plugin_init()
+        args = {
+            "operations": [
+                {
+                    "name": "x",
+                    "action": "patch",
+                    "file_path": "scripts/run.py",
+                    "old_string": "x = 1",
+                    "new_string": "x = eval(user_input)",
+                }
+            ]
+        }
+        result = mod._on_transform_tool_result(
+            tool_name="skill_manage",
+            args=args,
+            result='{"ok": true, "name": "x"}',
+        )
+        assert isinstance(result, str)
+        assert "eval_injection" in result
+
+    def test_old_string_removal_text_not_scanned(self):
+        """old_string is the text being removed by a patch op — scanning it
+        would warn about content being deleted. It must be excluded. A patch
+        op with a dangerous old_string but clean new_string must NOT warn."""
+        mod = _load_plugin_init()
+        args = {
+            "operations": [
+                {
+                    "name": "x",
+                    "action": "patch",
+                    "file_path": "scripts/run.py",
+                    "old_string": "pickle.load(f)\n",
+                    "new_string": "import json\njson.load(f)\n",
+                }
+            ]
+        }
+        assert (
+            mod._on_transform_tool_result(
+                tool_name="skill_manage",
+                args=args,
+                result='{"ok": true, "name": "x"}',
+            )
+            is None
+        )
+
+
+class TestSkillManageOperationsArrayBlock:
+    """Block-mode (pre_tool_call, SECURITY_GUIDANCE_BLOCK=1) coverage for the
+    operations[] shape — the strict-opt-in policy the bug silently bypassed."""
+
+    def test_blocks_write_file_op_in_block_mode(self, monkeypatch):
+        mod = _load_plugin_init()
+        monkeypatch.setenv("SECURITY_GUIDANCE_BLOCK", "1")
+        args = {
+            "operations": [
+                {"name": "x", "action": "write_file", "file_path": "scripts/run.py",
+                 "file_content": "import pickle\npickle.load(open('p.pkl', 'rb'))\n"}
+            ]
+        }
+        out = mod._on_pre_tool_call(tool_name="skill_manage", args=args)
+        assert isinstance(out, dict)
+        assert out["action"] == "block"
+        assert "pickle_deserialization" in out["message"]
+        assert "SECURITY_GUIDANCE_BLOCK" in out["message"]
+
+
+class TestSkillManageLegacyFlatShape:
+    """Regression guard: the handler still accepts the unadvertised legacy
+    flat single-op shape (top-level action/name/file_path/file_content/
+    new_string) for old transcripts and staged-write replay. The plugin must
+    keep scanning that shape too — the operations[] fix must not regress it."""
+
+    def test_legacy_flat_write_file_warns(self):
+        mod = _load_plugin_init()
+        args = {
+            "name": "x",
+            "action": "write_file",
+            "file_path": "scripts/run.py",
+            "file_content": "import pickle\npickle.load(open('p.pkl', 'rb'))\n",
+        }
+        result = mod._on_transform_tool_result(
+            tool_name="skill_manage",
+            args=args,
+            result='{"ok": true, "name": "x"}',
+        )
+        assert isinstance(result, str)
+        assert "pickle_deserialization" in result
+
+
+# ---------------------------------------------------------------------------
 # Bundled-plugin discovery
 # ---------------------------------------------------------------------------
 
