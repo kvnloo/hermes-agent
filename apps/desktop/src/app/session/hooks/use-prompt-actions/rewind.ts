@@ -515,6 +515,9 @@ export function applyReloadOptimistic(state: ClientSessionState, plan: ReloadPla
     awaitingResponse: true,
     busy: true,
     interrupted: false,
+    // A regenerated turn starts here, not via adoption — scrub a stale flag so
+    // it can't force a hydrate at this turn's settle.
+    adoptedRunningTurn: false,
     messages: [
       ...state.messages.slice(0, plan.userIndex + 1),
       ...state.messages
@@ -653,6 +656,9 @@ export function applyRewindOptimistic(
     awaitingResponse: true,
     busy: true,
     interrupted: false,
+    // The restore/edit turn starts here, not via adoption — scrub a stale flag
+    // so it can't force a hydrate at this turn's settle.
+    adoptedRunningTurn: false,
     messages: editedMessage
       ? [...state.messages.slice(0, sourceIndex), editedMessage]
       : state.messages.slice(0, sourceIndex + 1),

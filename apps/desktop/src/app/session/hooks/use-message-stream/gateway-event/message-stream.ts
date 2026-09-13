@@ -130,6 +130,14 @@ export function handleMessageStreamEvent(ctx: GatewayEventContext): boolean {
         // Backend accepted the turn — the no-payload settle gate below may
         // now treat a running=false heartbeat as a real turn end.
         turnLive: true,
+        // This turn started backend-side on the transport we own, so this
+        // window receives its prompt row — it is NOT a resumed/adopted turn.
+        // A real adoption (session.activate/resume with running=true) sets
+        // turnLive directly and never replays a message.start, so clearing
+        // here can't drop a legitimate flag — it only scrubs a stale one
+        // leaked from a prior adopt→cancel so it can't force a hydrate onto
+        // a turn this window streamed itself.
+        adoptedRunningTurn: false,
         // Keep the submit-time seed (submit.ts seedOptimistic) — resetting
         // here would hide the submit→accept round trip from the timer.
         // Backend-originated turns (queue drain elsewhere, goal follow-up)

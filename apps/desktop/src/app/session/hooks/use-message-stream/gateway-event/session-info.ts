@@ -373,7 +373,11 @@ export function handleSessionInfoEvent(ctx: GatewayEventContext): boolean {
             pendingBranchGroup: null,
             streamId: null,
             turnStartedAt: null,
-            turnLive: false
+            turnLive: false,
+            // The turn ended without message.complete — clear the adoption
+            // flag so it can't leak into the next turn's settle, matching the
+            // normal completeAssistantMessage branch.
+            adoptedRunningTurn: false
           }
         },
         payload?.stored_session_id || undefined

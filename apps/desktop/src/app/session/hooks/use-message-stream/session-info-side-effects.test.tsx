@@ -355,6 +355,40 @@ describe('empty message.complete after streamed text (#95514)', () => {
     expect(hydrateFromStoredSession).not.toHaveBeenCalled()
   })
 
+  it('does NOT hydrate a locally-streamed turn when a stale adoptedRunningTurn leaks from a prior cancelled turn', () => {
+    // Discriminates the bug from the empty-complete case above: non-empty streamed
+    // finalText makes the `!(localVisibleText && !finalText)` guard pass, so the
+    // `(state.adoptedRunningTurn || …)` clause becomes the deciding factor. A stale
+    // true would force a hydrate over a transcript this window streamed itself.
+    mountStream()
+    act(() => {
+      const current = stream.states.get(ACTIVE_SID) ?? createClientSessionState()
+      stream.states.set(ACTIVE_SID, { ...current, adoptedRunningTurn: true })
+    })
+
+    act(() => stream.handleEvent({ payload: {}, session_id: ACTIVE_SID, type: 'message.start' }))
+    act(() =>
+      stream.handleEvent({
+        payload: { text: 'Locally streamed reply.' },
+        session_id: ACTIVE_SID,
+        type: 'message.delta'
+      })
+    )
+    act(() =>
+      stream.handleEvent({
+        payload: { text: 'Locally streamed reply.' },
+        session_id: ACTIVE_SID,
+        type: 'message.complete'
+      })
+    )
+
+    const assistant = stream.state(ACTIVE_SID).messages.find(message => message.role === 'assistant')
+    expect(assistant?.parts.filter(part => part.type === 'text').map(part => part.text)).toEqual([
+      'Locally streamed reply.'
+    ])
+    expect(hydrateFromStoredSession).not.toHaveBeenCalled()
+  })
+
   it('still hydrates an empty complete when this turn streamed no text', () => {
     mountStream()
 
