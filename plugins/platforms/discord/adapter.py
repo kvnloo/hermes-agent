@@ -3851,9 +3851,18 @@ class DiscordAdapter(BasePlatformAdapter):
             # streaming edits truncate a one-message preview in place.
             if len(formatted) > self.MAX_MESSAGE_LENGTH:
                 if finalize:
-                    return await self._edit_overflow_split(
+                    overflow_result = await self._edit_overflow_split(
                         channel, msg, message_id, content,
                     )
+                    if overflow_result.success:
+                        await asyncio.to_thread(
+                            self._record_discord_response,
+                            reply_to=(metadata or {}).get("reply_to_message_id"),
+                            result=overflow_result,
+                            content=content,
+                            final=True,
+                        )
+                    return overflow_result
                 formatted = self.truncate_message(
                     formatted, self.MAX_MESSAGE_LENGTH,
                 )[0]
@@ -3882,9 +3891,18 @@ class DiscordAdapter(BasePlatformAdapter):
                 # as "error code: 50035 ... Must be 2000 or fewer in length".
                 if self._is_length_overflow_error(edit_err):
                     if finalize:
-                        return await self._edit_overflow_split(
+                        overflow_result = await self._edit_overflow_split(
                             channel, msg, message_id, content,
                         )
+                        if overflow_result.success:
+                            await asyncio.to_thread(
+                                self._record_discord_response,
+                                reply_to=(metadata or {}).get("reply_to_message_id"),
+                                result=overflow_result,
+                                content=content,
+                                final=True,
+                            )
+                        return overflow_result
                     # Mid-stream: truncate and retry in place (no split).
                     truncated = self.truncate_message(
                         formatted, self.MAX_MESSAGE_LENGTH,
