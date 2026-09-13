@@ -743,6 +743,36 @@ describe('buildManageSubscriptionUrl', () => {
       'https://portal.nousresearch.com/manage-subscription?org_id=org_z&plan=tier_q'
     )
   })
+
+  it('strips stray portal_url query params (parity with the TUI/Python manage-URL builders)', () => {
+    // The builder derives the origin via `new URL(portal_url).origin`, which drops
+    // path AND query — so unrelated params the server may attach to portal_url
+    // (topup=open, utm_source, ref, …) must never reach /manage-subscription.
+    expect(
+      buildManageSubscriptionUrl(
+        { org_id: 'org_123', portal_url: 'https://portal.nousresearch.com/billing?topup=open' },
+        null
+      )
+    ).toBe('https://portal.nousresearch.com/manage-subscription?org_id=org_123')
+
+    expect(
+      buildManageSubscriptionUrl(
+        { org_id: 'org_123', portal_url: 'https://portal.nousresearch.com/billing?utm_source=email&ref=x' },
+        null,
+        'tier_abc'
+      )
+    ).toBe('https://portal.nousresearch.com/manage-subscription?org_id=org_123&plan=tier_abc')
+
+    // A portal_url carrying spoofed org_id/plan must also be stripped — only the
+    // builder-supplied org_id/plan reach the URL (org_id before plan).
+    expect(
+      buildManageSubscriptionUrl(
+        { org_id: 'org_123', portal_url: 'https://portal.nousresearch.com/billing?org_id=evil&plan=evil' },
+        null,
+        'tier_abc'
+      )
+    ).toBe('https://portal.nousresearch.com/manage-subscription?org_id=org_123&plan=tier_abc')
+  })
 })
 
 describe('formatMonthlyCreditsDelta', () => {
