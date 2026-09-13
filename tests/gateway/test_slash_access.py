@@ -32,6 +32,41 @@ class TestPolicyFromExtra:
         assert p.is_admin("anyone") is True
         assert p.can_run("anyone", "stop") is True
 
+    def test_always_allowed_floor_keeps_status_reachable_for_non_admin(self):
+        # /status MUST stay reachable for non-admins even when
+        # ``user_allowed_commands`` is empty: it is the read-only
+        # session-state view the always-allowed floor exists to guarantee,
+        # and the running-agent fast-path already pre-gates it. Without
+        # "status" in ``_ALWAYS_ALLOWED_FOR_USERS`` the cold dispatch path
+        # (no agent running) denies /status to non-admins while the busy
+        # path allows it — this test pins the floor so the two paths agree.
+        p = policy_from_extra(
+            {"allow_admin_from": ["111"], "user_allowed_commands": []},
+            "dm",
+        )
+        assert p.enabled is True
+        assert p.is_admin("111") is True
+        assert p.is_admin("999") is False
+        # Floor commands reachable for a non-admin with no user_allowed_commands.
+        assert p.can_run("999", "help") is True
+        assert p.can_run("999", "whoami") is True
+        assert p.can_run("999", "status") is True
+        # Non-floor commands still denied under an enabled gate.
+        assert p.can_run("999", "stop") is False
+        assert p.can_run("999", "restart") is False
+        assert p.can_run("999", "model") is False
+        # An admin still runs everything.
+        assert p.can_run("111", "stop") is True
+        assert p.can_run("111", "status") is True
+        # user_allowed_commands is additive on top of the floor, never
+        # replacing it — a granted command works AND floor stays reachable.
+        p2 = policy_from_extra(
+            {"allow_admin_from": ["111"], "user_allowed_commands": ["model"]},
+            "dm",
+        )
+        assert p2.can_run("999", "model") is True
+        assert p2.can_run("999", "status") is True  # floor unaffected
+
 
     def test_id_coercion_ints_become_strings(self):
         # YAML often loads numeric IDs as ints; we stringify on ingest.

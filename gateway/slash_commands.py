@@ -445,7 +445,7 @@ class GatewaySlashCommandsMixin:
             )
 
         # Non-admin user. Show what's actually reachable.
-        floor = ["help", "whoami"]  # mirrors slash_access._ALWAYS_ALLOWED_FOR_USERS
+        floor = ["help", "whoami", "status"]  # mirrors slash_access._ALWAYS_ALLOWED_FOR_USERS
         configured = sorted(policy.user_allowed_commands)
         # Combine + dedupe, preserve order: floor first, then operator additions.
         seen: set[str] = set()

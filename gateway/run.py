@@ -19433,8 +19433,9 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
             # Mirrors the cold-path gate further below so non-admin users
             # can't bypass gating just because an agent happens to be busy.
             # /status above is intentionally pre-gate so users always see
-            # session state. /help and /whoami fall under the always-allowed
-            # floor inside _check_slash_access.
+            # session state. /status, /help, and /whoami also sit in the
+            # always-allowed floor inside _check_slash_access, so the cold
+            # path keeps them reachable too.
             if _evt_cmd and _cmd_def_inner is not None:
                 _denied = self._check_slash_access(source, _cmd_def_inner.name)
                 if _denied is not None:
@@ -19659,7 +19660,8 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
         # vs group). When unset → backward-compat: every allowed user can
         # run every command. When set → non-admins can run only commands in
         # ``user_allowed_commands`` (plus the always-allowed floor: /help,
-        # /whoami). Plain chat is unaffected — only slash commands gate.
+        # /whoami, /status). Plain chat is unaffected — only slash commands
+        # gate.
         if command and canonical and is_gateway_known_command(canonical):
             _denied = self._check_slash_access(source, canonical)
             if _denied is not None:
