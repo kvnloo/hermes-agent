@@ -801,6 +801,218 @@ def test_service_publishes_deferred_turn_continues_and_retries_new_generation(
     assert retried.execution_generation == old_attempt.execution_generation + 1
 
 
+def test_single_mention_defer_does_not_close_discussion(tmp_path: Path):
+    now = [100.0]
+
+    def clock():
+        return now[0]
+
+    db = tmp_path / "state.db"
+    service = HostedRoomService(_server(), db_path=db)
+    service.rpc = _FakeRPC()
+    service.runtime.rpc = service.rpc
+    service.runtime.clock = clock
+    service.runtime.lease_ttl_seconds = 30
+    service.runtime.indeterminate_defer_seconds = 5
+    service.local_profiles = lambda: ("default", "ops")
+    service.create_room(
+        room_id="room-1",
+        name="Resilient room",
+        members=[
+            {"member_id": "default", "profile": "default", "handle": "default"},
+            {"member_id": "ops", "profile": "ops", "handle": "ops"},
+        ],
+    )
+    binding = service.bindings()[0]
+    service.send(
+        room_id="room-1",
+        event_id="user-1",
+        payload={"text": "@ops please build", "thread_id": "thread-1"},
+    )
+    first = driver.list_tasks(db, room_id="room-1", status="queued")[0]
+    old_lease = driver.acquire_lease(
+        db,
+        room_id="room-1",
+        gateway_id=binding.gateway_id,
+        authority_epoch=1,
+        process_generation="offline-member",
+        ttl_seconds=1,
+        clock=clock,
+    )
+    driver.start_task(
+        db,
+        first["identity"],
+        old_lease,
+        expected_cancel_generation=0,
+        clock=clock,
+    )
+
+    now[0] = 102.0
+    service.runtime._process_room(binding)
+    now[0] = 108.0
+    service.runtime._process_room(binding)
+
+    events = service._events("room-1")
+    kinds = [event["kind"] for event in events]
+    assert "turn.deferred" in kinds
+    assert "room.activity" not in kinds
+    deferred = next(event for event in events if event["kind"] == "turn.deferred")
+    assert deferred["payload"]["task_id"] == first["identity"].task_id
+
+
+def test_retry_after_defer_publishes_reply_without_reconstruction_error(
+    tmp_path: Path,
+):
+    now = [100.0]
+
+    def clock():
+        return now[0]
+
+    db = tmp_path / "state.db"
+    service = HostedRoomService(_server(), db_path=db)
+    service.rpc = _FakeRPC()
+    service.runtime.rpc = service.rpc
+    service.runtime.clock = clock
+    service.runtime.lease_ttl_seconds = 30
+    service.runtime.indeterminate_defer_seconds = 5
+    service.local_profiles = lambda: ("default", "ops")
+    service.create_room(
+        room_id="room-1",
+        name="Resilient room",
+        members=[
+            {"member_id": "default", "profile": "default", "handle": "default"},
+            {"member_id": "ops", "profile": "ops", "handle": "ops"},
+        ],
+    )
+    binding = service.bindings()[0]
+    service.send(
+        room_id="room-1",
+        event_id="user-1",
+        payload={"text": "@ops please build", "thread_id": "thread-1"},
+    )
+    first = driver.list_tasks(db, room_id="room-1", status="queued")[0]
+    old_lease = driver.acquire_lease(
+        db,
+        room_id="room-1",
+        gateway_id=binding.gateway_id,
+        authority_epoch=1,
+        process_generation="offline-member",
+        ttl_seconds=1,
+        clock=clock,
+    )
+    driver.start_task(
+        db,
+        first["identity"],
+        old_lease,
+        expected_cancel_generation=0,
+        clock=clock,
+    )
+
+    now[0] = 102.0
+    service.runtime._process_room(binding)
+    now[0] = 108.0
+    service.runtime._process_room(binding)
+
+    service.retry_room_task("room-1", task_id=first["identity"].task_id)
+    lease = service.runtime._leases["room-1"]
+    retried = driver.start_task(
+        db,
+        first["identity"],
+        lease,
+        expected_cancel_generation=0,
+        clock=clock,
+    )
+    driver.settle_task(
+        db,
+        retried,
+        settlement_id="retry-reply-1",
+        status="settled",
+        result={"text": "Recovered on explicit retry."},
+        clock=clock,
+    )
+
+    for _ in range(3):
+        service.prepare_room(binding)
+
+    events = service._events("room-1")
+    kinds = [event["kind"] for event in events]
+    assert "message.member" in kinds
+    assert "turn.settled" in kinds
+    assert "room.activity" in kinds
+    assert (
+        kinds.index("message.member")
+        < kinds.index("turn.settled")
+        < kinds.index("room.activity")
+    )
+
+
+def test_second_thread_planned_while_first_thread_deferred(tmp_path: Path):
+    now = [100.0]
+
+    def clock():
+        return now[0]
+
+    db = tmp_path / "state.db"
+    service = HostedRoomService(_server(), db_path=db)
+    service.rpc = _FakeRPC()
+    service.runtime.rpc = service.rpc
+    service.runtime.clock = clock
+    service.runtime.lease_ttl_seconds = 30
+    service.runtime.indeterminate_defer_seconds = 5
+    service.local_profiles = lambda: ("default", "ops")
+    service.create_room(
+        room_id="room-1",
+        name="FIFO room",
+        members=[
+            {"member_id": "default", "profile": "default", "handle": "default"},
+            {"member_id": "ops", "profile": "ops", "handle": "ops"},
+        ],
+    )
+    binding = service.bindings()[0]
+    service.send(
+        room_id="room-1",
+        event_id="user-1",
+        payload={"text": "@ops please build", "thread_id": "thread-1"},
+    )
+    first = driver.list_tasks(db, room_id="room-1", status="queued")[0]
+    old_lease = driver.acquire_lease(
+        db,
+        room_id="room-1",
+        gateway_id=binding.gateway_id,
+        authority_epoch=1,
+        process_generation="offline-member",
+        ttl_seconds=1,
+        clock=clock,
+    )
+    driver.start_task(
+        db,
+        first["identity"],
+        old_lease,
+        expected_cancel_generation=0,
+        clock=clock,
+    )
+
+    now[0] = 102.0
+    service.runtime._process_room(binding)
+    now[0] = 108.0
+    service.runtime._process_room(binding)
+
+    events = service._events("room-1")
+    assert any(event["kind"] == "turn.deferred" for event in events)
+    assert not any(event["kind"] == "room.activity" for event in events)
+
+    service.send(
+        room_id="room-1",
+        event_id="user-2",
+        payload={"text": "@default please review", "thread_id": "thread-2"},
+    )
+    service.prepare_room(binding)
+
+    tasks = driver.list_tasks(db, room_id="room-1", status="queued")
+    assert len(tasks) == 1
+    assert tasks[0]["identity"].thread_id == "thread-2"
+
+
 def test_stop_fence_prevents_the_next_room_member_from_starting(
     tmp_path: Path, monkeypatch
 ):

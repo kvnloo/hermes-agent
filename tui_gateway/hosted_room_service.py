@@ -656,6 +656,15 @@ class HostedRoomService:
                     )
             elif decision.status in {"settled", "bounded"}:
                 self._append_room_status(room, decision)
+            elif (
+                decision.status == "idle"
+                and decision.reason == "awaiting_retry"
+                and decision.thread_id is not None
+            ):
+                self.policy_checkpoint.park_thread(
+                    room_id=binding.room_id,
+                    thread_id=decision.thread_id,
+                )
 
     def publish_terminal(
         self,

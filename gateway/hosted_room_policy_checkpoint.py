@@ -70,13 +70,21 @@ class HostedRoomPolicyCheckpoint:
                     discussion_event_id TEXT NOT NULL,
                     latest_user_seq INTEGER NOT NULL,
                     completed INTEGER NOT NULL DEFAULT 0,
+                    parked INTEGER NOT NULL DEFAULT 0,
                     PRIMARY KEY(room_id, thread_id)
                 )"""
             )
+            columns = conn.execute("PRAGMA table_info(hosted_room_policy_threads)").fetchall()
+            if not any(row["name"] == "parked" for row in columns):
+                conn.execute(
+                    "ALTER TABLE hosted_room_policy_threads "
+                    "ADD COLUMN parked INTEGER NOT NULL DEFAULT 0"
+                )
+            conn.execute("DROP INDEX IF EXISTS idx_hosted_room_policy_pending")
             conn.execute(
                 """CREATE INDEX IF NOT EXISTS idx_hosted_room_policy_pending
                    ON hosted_room_policy_threads(
-                       room_id, completed, latest_user_seq, thread_id
+                       room_id, completed, parked, latest_user_seq, thread_id
                    )"""
             )
             conn.execute(
@@ -311,12 +319,13 @@ class HostedRoomPolicyCheckpoint:
             conn.execute(
                 """INSERT INTO hosted_room_policy_threads(
                        room_id, thread_id, discussion_event_id,
-                       latest_user_seq, completed
-                   ) VALUES (?, ?, ?, ?, 0)
+                       latest_user_seq, completed, parked
+                   ) VALUES (?, ?, ?, ?, 0, 0)
                    ON CONFLICT(room_id, thread_id) DO UPDATE SET
                        discussion_event_id=excluded.discussion_event_id,
                        latest_user_seq=excluded.latest_user_seq,
-                       completed=0""",
+                       completed=0,
+                       parked=0""",
                 (room_id, thread_id, event_id, seq),
             )
             self._store_active_event(
@@ -411,6 +420,12 @@ class HostedRoomPolicyCheckpoint:
                                    excluded.seen_through_seq
                                )""",
                         (room_id, thread_id, member_id, seen_through_seq),
+                    )
+                if kind in {"turn.settled", "turn.failed", "turn.cancelled"}:
+                    conn.execute(
+                        """UPDATE hosted_room_policy_threads SET parked=0
+                           WHERE room_id=? AND thread_id=?""",
+                        (room_id, thread_id),
                     )
             return
 
@@ -534,7 +549,8 @@ class HostedRoomPolicyCheckpoint:
             thread = conn.execute(
                 """SELECT thread_id, discussion_event_id
                    FROM hosted_room_policy_threads
-                   WHERE room_id=? AND completed=0 AND latest_user_seq>?
+                   WHERE room_id=? AND completed=0 AND parked=0
+                     AND latest_user_seq>?
                    ORDER BY latest_user_seq, thread_id LIMIT 1""",
                 (room_id, stopped_through_seq),
             ).fetchone()
@@ -679,4 +695,23 @@ class HostedRoomPolicyCheckpoint:
                 """DELETE FROM hosted_room_policy_threads
                    WHERE room_id=? AND completed=1""",
                 (room_id,),
+            )
+
+    def park_thread(self, *, room_id: str, thread_id: str) -> None:
+        """Mark one thread as parked so snapshot skips it until a superseding
+        terminal event or a fresh user message unparks it.
+
+        Called by :meth:`HostedRoomService.prepare_room` only when
+        ``plan_next_task`` returns ``idle``/``awaiting_retry``, i.e. a
+        deferred-only round is pending explicit retry.  Parking preserves
+        FIFO for concurrent threads in the same room without deleting the
+        deferred discussion's active projection; the recovered reply is
+        published later once ``groups.retry`` settles the task.
+        """
+
+        with self._connect() as conn:
+            conn.execute(
+                """UPDATE hosted_room_policy_threads SET parked=1
+                   WHERE room_id=? AND thread_id=?""",
+                (room_id, thread_id),
             )

@@ -176,6 +176,80 @@ def test_deferred_member_allows_next_mentioned_member_and_later_terminal_result(
     assert decision.task.member.member_id == second.member.member_id
 
 
+def test_single_mention_deferred_round_awaits_retry_instead_of_closing(
+    room_db,
+):
+    db, room = room_db
+    _append_user(db, event_id="user-1", text="@build inspect the release")
+    task = _next_task(room, db)
+    assert task.member.profile == "build"
+
+    deferred = discussion.plan_publication(
+        room,
+        _events(db),
+        task,
+        status="deferred",
+        result={"reason": "member_unavailable"},
+        execution_generation=1,
+        local_profiles=LOCAL_PROFILES,
+    )
+    _append_publication(db, deferred)
+
+    decision = discussion.plan_next_task(
+        room,
+        _events(db),
+        local_profiles=LOCAL_PROFILES,
+    )
+    assert decision.status == "idle"
+    assert decision.reason == "awaiting_retry"
+    assert decision.discussion_event_id == "user-1"
+    assert decision.thread_id == "thread-1"
+
+
+def test_single_mention_deferred_then_retry_settles_and_closes(room_db):
+    db, room = room_db
+    _append_user(db, event_id="user-1", text="@build inspect the release")
+    task = _next_task(room, db)
+
+    deferred = discussion.plan_publication(
+        room,
+        _events(db),
+        task,
+        status="deferred",
+        result={"reason": "member_unavailable"},
+        execution_generation=1,
+        local_profiles=LOCAL_PROFILES,
+    )
+    _append_publication(db, deferred)
+
+    decision = discussion.plan_next_task(
+        room,
+        _events(db),
+        local_profiles=LOCAL_PROFILES,
+    )
+    assert decision.status == "idle"
+    assert decision.reason == "awaiting_retry"
+
+    settled = discussion.plan_publication(
+        room,
+        _events(db),
+        task,
+        status="settled",
+        result={"text": "Recovered on explicit retry."},
+        local_profiles=LOCAL_PROFILES,
+    )
+    _append_publication(db, settled)
+
+    decision = discussion.plan_next_task(
+        room,
+        _events(db),
+        local_profiles=LOCAL_PROFILES,
+    )
+    assert decision.status == "settled"
+    assert decision.reason == "silent_round"
+    assert decision.discussion_event_id == "user-1"
+
+
 def test_distinct_threads_are_planned_fifo_without_skipping(room_db):
     db, room = room_db
     _append_user(db, event_id="user-1", text="First", thread_id="thread-1")
