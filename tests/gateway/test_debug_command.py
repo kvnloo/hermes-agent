@@ -45,3 +45,41 @@ class TestHandleDebugCommand:
         mock_sweep.assert_called_once()
         assert "https://paste.rs/report" in result
 
+    @pytest.mark.asyncio
+    async def test_debug_reply_includes_6h_line_for_paste_rs(self):
+        runner = _make_runner()
+        event = _make_event()
+
+        with patch("hermes_cli.debug._sweep_expired_pastes", return_value=(0, 0)), \
+             patch("hermes_cli.debug._capture_dump", return_value="dump"), \
+             patch("hermes_cli.debug.collect_debug_report", return_value="report"), \
+             patch("hermes_cli.debug.upload_to_pastebin", return_value="https://paste.rs/report"), \
+             patch("hermes_cli.debug._schedule_auto_delete"):
+            result = await runner._handle_debug_command(event)
+
+        assert "https://paste.rs/report" in result
+        # The paste.rs-only "auto-delete in 6 hours" line is shown on the happy path.
+        assert "auto-delete in 6 hours" in result
+
+    @pytest.mark.asyncio
+    async def test_debug_reply_omits_6h_line_for_dpaste_fallback(self):
+        """When /debug fell back to dpaste.com the paste.rs-only 6-hour line is
+        omitted (it's false for dpaste); the privacy notice already discloses
+        the dpaste.com fallback retention instead."""
+        runner = _make_runner()
+        event = _make_event()
+
+        with patch("hermes_cli.debug._sweep_expired_pastes", return_value=(0, 0)), \
+             patch("hermes_cli.debug._capture_dump", return_value="dump"), \
+             patch("hermes_cli.debug.collect_debug_report", return_value="report"), \
+             patch("hermes_cli.debug.upload_to_pastebin", return_value="https://dpaste.com/report"), \
+             patch("hermes_cli.debug._schedule_auto_delete"):
+            result = await runner._handle_debug_command(event)
+
+        assert "https://dpaste.com/report" in result
+        # The paste.rs-only line must NOT appear for a dpaste paste.
+        assert "auto-delete in 6 hours" not in result
+        # The privacy notice discloses the fallback retention (1 day) instead.
+        assert "dpaste.com" in result
+        assert "1 day" in result
+

@@ -4581,7 +4581,13 @@ async def run_debug_share_endpoint(body: DebugShareRequest | None = None):
     URLs it produces, so we run the upload in a worker thread and return the
     structured ``{urls, failures, redacted, ...}`` payload directly. The
     dashboard renders those as real, copyable links instead of scraping a log
-    tail. Pastes auto-delete after 6 hours (handled inside the share core).
+    tail.
+
+    Retention is service-aware: paste.rs pastes are swept after 6 hours, but
+    if paste.rs is unreachable the upload falls back to dpaste.com, which keeps
+    pastes for the requested ``expiry`` days (default 1) and cannot delete them
+    via API. ``auto_delete_seconds`` reflects the actual worst-case retention
+    and ``dpaste_fallback`` flags the fallback so the UI can say so.
     """
     from hermes_cli.debug import build_debug_share
 
@@ -4590,6 +4596,7 @@ async def run_debug_share_endpoint(body: DebugShareRequest | None = None):
         result = await asyncio.to_thread(
             build_debug_share,
             log_lines=max(1, min(int(req.lines), 5000)),
+            expiry=max(1, min(int(req.expiry), 365)),
             redact=bool(req.redact),
         )
     except RuntimeError as exc:
@@ -4605,6 +4612,7 @@ async def run_debug_share_endpoint(body: DebugShareRequest | None = None):
         "failures": result.failures,
         "redacted": result.redacted,
         "auto_delete_seconds": result.auto_delete_seconds,
+        "dpaste_fallback": bool(result.dpaste_fallback),
     }
 
 

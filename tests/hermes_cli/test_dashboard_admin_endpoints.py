@@ -949,6 +949,92 @@ class TestDebugShareEndpoint:
         r = self.client.post("/api/ops/debug-share", json={"redact": True})
         assert r.status_code == 502
 
+    def test_dpaste_fallback_reports_true_retention_and_flag(self, monkeypatch):
+        """When paste.rs is down the endpoint must surface the real dpaste
+        retention (1 day) and a dpaste_fallback flag — not the old hardcoded
+        6h value the UI rendered as "auto-deletes in 6h"."""
+        import urllib.error
+        import hermes_cli.debug as dbg
+
+        monkeypatch.setattr(
+            dbg, "_upload_paste_rs",
+            lambda content: (_ for _ in ()).throw(
+                urllib.error.URLError("paste.rs down")))
+        monkeypatch.setattr(
+            dbg, "_upload_dpaste_com",
+            lambda content, expiry_days=1: "https://dpaste.com/ABC123")
+        monkeypatch.setattr(dbg, "_schedule_auto_delete", lambda *a, **k: None)
+        monkeypatch.setattr(dbg, "_best_effort_sweep_expired_pastes", lambda: None)
+        monkeypatch.setattr("hermes_cli.dump.run_dump", lambda a: None)
+
+        r = self.client.post("/api/ops/debug-share", json={"redact": True})
+        assert r.status_code == 200
+        body = r.json()
+        assert all(v.startswith("https://dpaste.com/") for v in body["urls"].values())
+        assert body["dpaste_fallback"] is True
+        # 1-day dpaste retention, not 21600.
+        assert body["auto_delete_seconds"] == 86400
+        assert body["auto_delete_seconds"] != 21600
+
+    def test_paste_rs_reports_6h_and_no_fallback(self, monkeypatch):
+        """Happy path (paste.rs serves the upload) keeps the 6h sweep value
+        and dpaste_fallback=False — no regression."""
+        import hermes_cli.debug as dbg
+
+        monkeypatch.setattr(
+            dbg, "upload_to_pastebin",
+            lambda c, expiry_days=1: "https://paste.rs/abc")
+        monkeypatch.setattr(dbg, "_schedule_auto_delete", lambda *a, **k: None)
+        monkeypatch.setattr(dbg, "_best_effort_sweep_expired_pastes", lambda: None)
+        monkeypatch.setattr("hermes_cli.dump.run_dump", lambda a: None)
+
+        r = self.client.post("/api/ops/debug-share")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["dpaste_fallback"] is False
+        assert body["auto_delete_seconds"] == 21600
+
+    def test_expiry_body_is_honored_and_clamped(self, monkeypatch):
+        """The new `expiry` field drives dpaste retention and is clamped to
+        dpaste.com's server-enforced [1, 365] range."""
+        import urllib.error
+        import hermes_cli.debug as dbg
+
+        captured = {}
+
+        def fake_dpaste(content, expiry_days=1):
+            captured["expiry_days"] = expiry_days
+            return "https://dpaste.com/ABC"
+
+        monkeypatch.setattr(
+            dbg, "_upload_paste_rs",
+            lambda content: (_ for _ in ()).throw(
+                urllib.error.URLError("paste.rs down")))
+        monkeypatch.setattr(dbg, "_upload_dpaste_com", fake_dpaste)
+        monkeypatch.setattr(dbg, "_schedule_auto_delete", lambda *a, **k: None)
+        monkeypatch.setattr(dbg, "_best_effort_sweep_expired_pastes", lambda: None)
+        monkeypatch.setattr("hermes_cli.dump.run_dump", lambda a: None)
+
+        # Honored: expiry=3 → 3-day retention.
+        r = self.client.post("/api/ops/debug-share", json={"redact": True, "expiry": 3})
+        assert r.status_code == 200
+        assert captured["expiry_days"] == 3
+        assert r.json()["auto_delete_seconds"] == 3 * 86400
+
+        # Below the minimum → clamped up to 1.
+        captured.clear()
+        r = self.client.post("/api/ops/debug-share", json={"redact": True, "expiry": 0})
+        assert r.status_code == 200
+        assert captured["expiry_days"] == 1
+        assert r.json()["auto_delete_seconds"] == 86400
+
+        # Above the maximum → clamped down to 365.
+        captured.clear()
+        r = self.client.post("/api/ops/debug-share", json={"redact": True, "expiry": 99999})
+        assert r.status_code == 200
+        assert captured["expiry_days"] == 365
+        assert r.json()["auto_delete_seconds"] == 365 * 86400
+
 
 
 class TestToolsConfigEndpoints:

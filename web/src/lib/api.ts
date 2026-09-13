@@ -1281,13 +1281,14 @@ export const api = {
   runDump: () => fetchJSON<ActionResponse>("/api/ops/dump", { method: "POST" }),
   runConfigMigrate: () =>
     fetchJSON<ActionResponse>("/api/ops/config-migrate", { method: "POST" }),
-  runDebugShare: (opts?: { redact?: boolean; lines?: number }) =>
+  runDebugShare: (opts?: { redact?: boolean; lines?: number; expiry?: number }) =>
     fetchJSON<DebugShareResponse>("/api/ops/debug-share", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         redact: opts?.redact ?? true,
         lines: opts?.lines ?? 200,
+        expiry: opts?.expiry ?? 1,
       }),
     }),
 
@@ -1370,7 +1371,13 @@ export interface DebugShareResponse {
   // "label: error" strings for optional full-log uploads that failed.
   failures: string[];
   redacted: boolean;
+  // Time until ALL pastes are gone (seconds). paste.rs is swept at 6h; a
+  // dpaste.com fallback paste lives `expiry` days server-side. Render this
+  // honestly rather than a hardcoded 6h.
   auto_delete_seconds: number;
+  // True if any upload fell back to dpaste.com (those pastes cannot be
+  // deleted via API and live for the `expiry` window).
+  dpaste_fallback: boolean;
 }
 
 export interface SessionStoreStats {
