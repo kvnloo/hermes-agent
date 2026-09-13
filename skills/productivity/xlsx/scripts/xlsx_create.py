@@ -62,6 +62,7 @@ Prints a JSON summary to stdout; exits non-zero on failure.
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import sys
 from datetime import date, datetime
@@ -70,7 +71,7 @@ from openpyxl import Workbook
 from openpyxl.chart import BarChart, LineChart, PieChart, Reference
 from openpyxl.comments import Comment
 from openpyxl.formatting.rule import CellIsRule, ColorScaleRule
-from openpyxl.styles import (Alignment, Border, Font, PatternFill,
+from openpyxl.styles import (Alignment, Border, PatternFill,
                              Protection, Side)
 from openpyxl.utils import column_index_from_string, range_boundaries
 from openpyxl.workbook.defined_name import DefinedName
@@ -118,7 +119,10 @@ def apply_cell(ws, coord, spec):
         if "font_color" in spec:
             font_kw["color"] = spec["font_color"]
         if font_kw:
-            cell.font = Font(**font_kw)
+            base = copy.copy(cell.font)
+            for k, v in font_kw.items():
+                setattr(base, k, v)
+            cell.font = base
         if "fill" in spec:
             cell.fill = PatternFill("solid", fgColor=spec["fill"])
         if "border" in spec:
