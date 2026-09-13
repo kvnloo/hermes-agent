@@ -694,7 +694,10 @@ export function usePromptActions({
         needsInput: false,
         interrupted: true,
         turnStartedAt: null,
-        turnLive: false
+        turnLive: false,
+        // Stop ends the turn — clear the adoption flag so it can't leak a
+        // hydrate onto the next turn this window streams itself.
+        adoptedRunningTurn: false
       }
     })
 

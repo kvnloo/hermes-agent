@@ -425,6 +425,11 @@ export function useSubmitPrompt(deps: SubmitPromptDeps) {
             // mutateStream/completeAssistantMessage drop every delta of this turn
             // (what made drained-after-interrupt sends go silent).
             interrupted: false,
+            // A user-initiated turn is not adopted — clear a stale flag leaked
+            // from a prior adopt→cancel so it can't force a hydrate onto this
+            // turn's settle. (message.start clears it too, but the submit arm
+            // may land first when the backend's accept lags.)
+            adoptedRunningTurn: false,
             // Arm the turn clock at send, not at the backend's message.start —
             // the round trip (submit RPC → gateway accept → WS event) can take
             // seconds under load, and the honest latency clock starts when the
