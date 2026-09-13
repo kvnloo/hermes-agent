@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterator, Optional
 
 from agent.redact import redact_sensitive_text
-from cron.executions import _owner_is_live, _process_start_time
+from cron.executions import _process_start_time
 from hermes_cli.sqlite_util import add_column_if_missing
 from hermes_constants import get_hermes_home
 from hermes_time import now as _hermes_now
@@ -35,6 +35,31 @@ _ACTIVE_DELIVERIES: set[str] = set()
 _TERMINAL = ("delivered", "failed", "unknown")
 MAX_TERMINAL_DELIVERIES = 1000
 DEFAULT_DELIVERY_WAIT_TIMEOUT_SECONDS = 300.0
+
+
+def _owner_is_live(pid: int, started_at: Optional[int]) -> bool:
+    """Owner liveness for the delivery ledger, with at-most-once fencing.
+
+    This ledger's contract (see the module docstring) is at-most-once: losing
+    a delivery is safer than duplicating a possibly-completed send. Unlike
+    ``cron.executions._owner_is_live`` -- which fences only when the owner is
+    *proved* gone and otherwise leaves the row untouched -- an unconfirmable
+    owner identity (the recorded fingerprint is missing, or the live re-read
+    is unreadable, while some process occupies the pid) is treated as "not
+    live" here so the row is fenced to ``unknown`` and never retried.
+    """
+    try:
+        from gateway.status import _pid_exists
+        if not _pid_exists(pid):
+            return False
+    except Exception:
+        return True  # probe itself failed -> do not rewrite state
+    if started_at is None:
+        return False  # at-most-once: unconfirmable identity -> fence
+    current = _process_start_time(pid)
+    if current is None:
+        return False  # at-most-once: unreadable fingerprint -> fence
+    return current == started_at
 
 
 def _prune_terminal_unlocked(conn: sqlite3.Connection) -> None:
