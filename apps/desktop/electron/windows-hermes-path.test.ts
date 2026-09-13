@@ -6,8 +6,11 @@
 //      empty extension, or an extensionless Git-Bash `hermes` shim shadows
 //      the real hermes.cmd/hermes.exe.
 //   2. chooseUpdaterArgs() — must distinguish a runnable updater from stale
-//      install provenance. The bootstrap marker can outlive the venv, and a
-//      partial venv cannot run the updater; those states require --repair.
+//      install provenance AND from file existence. The bootstrap marker can
+//      outlive the venv, a partial venv cannot run the updater, and a
+//      broken-but-present venv has both files on disk yet cannot import
+//      hermes_cli (e.g. dotenv/PyYAML wiped); all three states require
+//      --repair, and only a proven-runnable venv gets --update.
 //   3. resolveVenvHermesCommand() — must probe the venv python via
 //      canImportHermesCli() before trusting it, or a broken venv gets
 //      re-selected forever instead of falling through to bootstrap.
@@ -45,41 +48,99 @@ test('buildPathExtCandidates: non-Windows only tries the bare name', () => {
   assert.deepEqual(buildPathExtCandidates(undefined, false), [''])
 })
 
-test('chooseUpdaterArgs: gentle --update when both updater runtime files exist', () => {
-  assert.deepEqual(chooseUpdaterArgs({ hasBootstrapMarker: true, hasVenvHermes: true, hasVenvPython: true }, 'main'), [
-    '--update',
-    '--branch',
-    'main'
-  ])
+test('chooseUpdaterArgs: gentle --update when both updater runtime files exist and the venv is runnable', () => {
+  assert.deepEqual(
+    chooseUpdaterArgs(
+      { hasBootstrapMarker: true, hasVenvHermes: true, hasVenvPython: true, isVenvUsable: true },
+      'main'
+    ),
+    ['--update', '--branch', 'main']
+  )
 })
 
 test('chooseUpdaterArgs: marker-only install uses --repair when the venv is gone', () => {
   assert.deepEqual(
-    chooseUpdaterArgs({ hasBootstrapMarker: true, hasVenvHermes: false, hasVenvPython: false }, 'main'),
+    chooseUpdaterArgs(
+      { hasBootstrapMarker: true, hasVenvHermes: false, hasVenvPython: false, isVenvUsable: false },
+      'main'
+    ),
     ['--repair', '--branch', 'main']
   )
 })
 
 test('chooseUpdaterArgs: partial updater runtimes use --repair', () => {
-  assert.deepEqual(chooseUpdaterArgs({ hasBootstrapMarker: true, hasVenvHermes: false, hasVenvPython: true }, 'main'), [
-    '--repair',
-    '--branch',
-    'main'
-  ])
-  assert.deepEqual(chooseUpdaterArgs({ hasBootstrapMarker: true, hasVenvHermes: true, hasVenvPython: false }, 'main'), [
-    '--repair',
-    '--branch',
-    'main'
-  ])
+  assert.deepEqual(
+    chooseUpdaterArgs(
+      { hasBootstrapMarker: true, hasVenvHermes: false, hasVenvPython: true, isVenvUsable: false },
+      'main'
+    ),
+    ['--repair', '--branch', 'main']
+  )
+  assert.deepEqual(
+    chooseUpdaterArgs(
+      { hasBootstrapMarker: true, hasVenvHermes: true, hasVenvPython: false, isVenvUsable: false },
+      'main'
+    ),
+    ['--repair', '--branch', 'main']
+  )
+})
+
+test('chooseUpdaterArgs: broken-but-present venv (files exist, not runnable) uses --repair (regression for lazy-refresh wipe)', () => {
+  // The reported bug: python-dotenv / PyYAML wiped in a failed lazy backend
+  // refresh leaves both python.exe and hermes.exe on disk, but the venv
+  // cannot import hermes_cli. Gating on file existence alone routed this to
+  // --update, where the shim crashes at module import and the installer's
+  // update-failure screen offers no --repair escalation. Runnability must
+  // drive the choice so the venv is rebuilt via --repair instead.
+  assert.deepEqual(
+    chooseUpdaterArgs(
+      { hasBootstrapMarker: true, hasVenvHermes: true, hasVenvPython: true, isVenvUsable: false },
+      'main'
+    ),
+    ['--repair', '--branch', 'main']
+  )
+
+  assert.deepEqual(
+    chooseUpdaterArgs(
+      { hasBootstrapMarker: false, hasVenvHermes: true, hasVenvPython: true, isVenvUsable: false },
+      'main'
+    ),
+    ['--repair', '--branch', 'main']
+  )
+})
+
+test('chooseUpdaterArgs: a runnable usable flag is required for --update even when both files exist', () => {
+  // isVenvUsable is the deciding signal once both files exist; absence of
+  // runnability must NOT silently fall through to the gentle path.
+  assert.deepEqual(
+    chooseUpdaterArgs(
+      { hasBootstrapMarker: true, hasVenvHermes: true, hasVenvPython: true, isVenvUsable: true },
+      'main'
+    ),
+    ['--update', '--branch', 'main']
+  )
+  assert.deepEqual(
+    chooseUpdaterArgs(
+      { hasBootstrapMarker: true, hasVenvHermes: true, hasVenvPython: true, isVenvUsable: false },
+      'main'
+    ),
+    ['--repair', '--branch', 'main']
+  )
 })
 
 test('chooseUpdaterArgs: passes the branch through unchanged in both modes', () => {
   assert.deepEqual(
-    chooseUpdaterArgs({ hasBootstrapMarker: false, hasVenvHermes: true, hasVenvPython: true }, 'release/1.2'),
+    chooseUpdaterArgs(
+      { hasBootstrapMarker: false, hasVenvHermes: true, hasVenvPython: true, isVenvUsable: true },
+      'release/1.2'
+    ),
     ['--update', '--branch', 'release/1.2']
   )
   assert.deepEqual(
-    chooseUpdaterArgs({ hasBootstrapMarker: false, hasVenvHermes: false, hasVenvPython: false }, 'release/1.2'),
+    chooseUpdaterArgs(
+      { hasBootstrapMarker: false, hasVenvHermes: false, hasVenvPython: false, isVenvUsable: false },
+      'release/1.2'
+    ),
     ['--repair', '--branch', 'release/1.2']
   )
 })

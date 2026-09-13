@@ -12,10 +12,17 @@
  *      the desktop fell through to a spurious bootstrap/repair. The fix:
  *      PATHEXT extensions first, empty extension LAST.
  *   2. chooseUpdaterArgs() — handOffWindowsBootstrapRecovery() must separate
- *      install provenance from updater viability. A bootstrap-complete marker
- *      can outlive a deleted venv, while the updater needs BOTH the venv Python
- *      and Hermes launcher. Marker-only or partial runtimes must use --repair;
- *      only a runnable pair can use --update.
+ *      install provenance and file existence from updater viability. A
+ *      bootstrap-complete marker can outlive a deleted venv, and a
+ *      broken-but-present venv has BOTH the venv Python and Hermes launcher on
+ *      disk yet still crashes the `hermes` shim at module import (e.g.
+ *      `python-dotenv`/`PyYAML` wiped during a failed lazy refresh). The
+ *      installer's `--update` flow invokes that shim, whose `_early_recovery`
+ *      is a no-op for the lazy-marker / no-marker broken states, so it dies
+ *      before any repair logic runs and the failure UI offers no `--repair`
+ *      escalation. Marker-only, partial, OR not-runnable venvs must use
+ *      --repair; only a venv the desktop has already proven runnable (via
+ *      canImportHermesCli) can use --update.
  *   3. resolveVenvHermesCommand() — unwrapWindowsVenvHermesCommand() returned
  *      the venv python with NO runtime probe (bypassing the caller's
  *      --version check too), so a venv broken mid-update (e.g. missing
@@ -61,10 +68,21 @@ export function buildPathExtCandidates(pathext: string | undefined, isWindows: b
 
 /**
  * Choose the Windows bootstrap-recovery invocation. The gentle in-place
- * updater can only start when both pieces of its runtime contract exist: the
- * venv Python interpreter and the Hermes launcher that drives `hermes update`.
- * A bootstrap-complete marker proves install provenance, not current runtime
- * usability, and may remain after the venv is removed or quarantined.
+ * updater (`--update`) drives the venv's own `hermes` shim, which can only
+ * succeed when the venv is actually runnable: both files of its runtime
+ * contract (the venv Python interpreter and the Hermes launcher that drives
+ * `hermes update`) exist AND the desktop's runnability probe
+ * (`canImportHermesCli`, threaded in from `isActiveRuntimeUsable()`) could
+ * import `hermes_cli`. A bootstrap-complete marker proves install
+ * provenance, not current runtime usability, and may remain after the venv
+ * is removed or quarantined — and file existence alone is NOT proof either:
+ * a broken-but-present venv (e.g. `python-dotenv`/`PyYAML` wiped during a
+ * failed lazy backend refresh) has both files on disk yet crashes the
+ * `hermes` shim at module import, before the installer's update flow can
+ * self-heal, leaving the user on a dead-end "Retry update" screen with no
+ * `--repair` escalation. Not-runnable, marker-only, or partial venvs all go
+ * through full `--repair`; only a proven-runnable pair gets the gentle
+ * update path.
  *
  * @param {BootstrapRecoverySignals} signals
  * @param {string} branch
@@ -74,10 +92,15 @@ export interface BootstrapRecoverySignals {
   hasBootstrapMarker: boolean
   hasVenvHermes: boolean
   hasVenvPython: boolean
+  // The venv's runnability, as the desktop already computed it via
+  // isActiveRuntimeUsable() (canImportHermesCli against the venv python).
+  // File existence does NOT imply this — a broken-but-present venv has both
+  // python.exe and hermes.exe on disk but cannot import hermes_cli.
+  isVenvUsable: boolean
 }
 
 export function chooseUpdaterArgs(signals: BootstrapRecoverySignals, branch: string): string[] {
-  const canRunUpdater = signals.hasVenvHermes && signals.hasVenvPython
+  const canRunUpdater = signals.hasVenvHermes && signals.hasVenvPython && signals.isVenvUsable
 
   return canRunUpdater ? ['--update', '--branch', branch] : ['--repair', '--branch', branch]
 }

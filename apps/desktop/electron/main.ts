@@ -4213,7 +4213,7 @@ async function applyUpdates(opts: { stopSafeBlockers?: boolean } = {}) {
   }
 }
 
-async function handOffWindowsBootstrapRecovery(reason) {
+async function handOffWindowsBootstrapRecovery(reason, hints: { activeVenvUsable?: boolean } = {}) {
   if (!IS_WINDOWS || !IS_PACKAGED) {
     return false
   }
@@ -4257,13 +4257,22 @@ async function handOffWindowsBootstrapRecovery(reason) {
   // venv interpreter. A bootstrap-complete marker proves only that setup once
   // finished; it can outlive a manually removed or quarantined venv. Sending a
   // marker-only install through --update dead-ends at "Could not find the hermes
-  // CLI" instead of rebuilding the runtime, so only a runnable pair gets the
-  // gentle update path. Partial or missing runtimes go through full repair.
+  // CLI" instead of rebuilding the runtime. File existence is not enough either:
+  // a broken-but-present venv (e.g. python-dotenv/PyYAML wiped during a failed
+  // lazy backend refresh) has both python.exe and hermes.exe on disk but cannot
+  // import hermes_cli, so the shim crashes at module import before the
+  // installer's update flow can self-heal — landing the user on a dead-end
+  // "Retry update" screen with no --repair escalation. So only a venv the
+  // desktop has ALREADY proven runnable (activeVenvUsable, threaded in from
+  // isActiveRuntimeUsable() — the same probe that decided this hand-off was
+  // needed) gets the gentle update path. Partial, missing, OR not-runnable
+  // venvs go through full repair.
   const updaterArgs = chooseUpdaterArgs(
     {
       hasBootstrapMarker: fileExists(path.join(updateRoot, '.hermes-bootstrap-complete')),
       hasVenvHermes: fileExists(venvHermes),
-      hasVenvPython: fileExists(venvPython)
+      hasVenvPython: fileExists(venvPython),
+      isVenvUsable: hints.activeVenvUsable ?? false
     },
     branch
   )
@@ -5060,7 +5069,14 @@ function resolveHermesBackend(backendArgs) {
     activeRoot: ACTIVE_HERMES_ROOT,
     installStamp: INSTALL_STAMP, // may be null in dev
     isPackaged: IS_PACKAGED,
-    platform: process.platform
+    platform: process.platform,
+    // The active venv's runnability, as isActiveRuntimeUsable() already
+    // computed at step 3 to decide whether to use the active runtime. Thread
+    // it through to handOffWindowsBootstrapRecovery so the Windows hand-off
+    // gates --update vs --repair on runnability (not re-derivable from
+    // fileExists); matches the "don't re-derive an import-probe answer we
+    // already have" guidance for resolveHermesBackend's sibling paths.
+    activeVenvUsable: activeRuntime.usabilityReason === 'usable'
   }
 }
 
@@ -5083,7 +5099,7 @@ async function ensureRuntime(backend) {
   if (backend.kind === 'bootstrap-needed') {
     rememberLog('[bootstrap] no Hermes install found; starting first-launch bootstrap')
 
-    if (await handOffWindowsBootstrapRecovery('bootstrap-needed')) {
+    if (await handOffWindowsBootstrapRecovery('bootstrap-needed', { activeVenvUsable: backend.activeVenvUsable })) {
       const handoffError: Error & { isBootstrapFailure?: boolean; bootstrapHandedOff?: boolean } = new Error(
         'Hermes recovery was handed off to Hermes Setup. The desktop will restart when recovery completes.'
       )
