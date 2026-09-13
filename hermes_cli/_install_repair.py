@@ -162,6 +162,40 @@ def _normalize_windows_path(value) -> str:
     return str(value).replace("/", "\\").rstrip("\\").lower()
 
 
+def _cmd_delegator_body(source: Path, *, default_root: Path | None) -> tuple[str, str]:
+    """Compose a ``<name>.cmd`` delegator body invoking the in-venv exe *source*.
+
+    Returns ``(body, encoding)``. When *source* sits under the default
+    Windows InstallDir (``%LOCALAPPDATA%\\hermes\\hermes-agent``), the body
+    references the exe through ``%LOCALAPPDATA%`` so its literal bytes stay
+    pure ASCII even when the Windows username carries non-ASCII characters
+    (``cmd.exe`` expands the env var at run time); without that rewrite,
+    ``write_text(..., encoding="ascii")`` raised ``UnicodeEncodeError`` --
+    a ``ValueError``, not an ``OSError`` -- escaping ``ensure_windows_bin_launchers``'s
+    ``except OSError`` guard, leaking a zero-byte ``.heal.<pid>`` staging file
+    and never staging the launcher for international users. Other layouts
+    embed the literal path and the writer falls back to UTF-8 so a non-ASCII
+    ``HERMES_HOME`` override still round-trips on a UTF-8 active code page
+    (65001, the Windows 11 default for many locales); the widened per-file
+    guard catches any surrogate UTF-8 itself cannot encode.
+    """
+    if default_root is not None:
+        try:
+            rel = Path(source).relative_to(default_root)
+        except ValueError:
+            rel = None
+        if rel is not None:
+            # cmd.exe takes backslashes; str(rel) carries forward slashes on a
+            # POSIX test runner exercising the Windows branch.
+            rel_str = str(rel).replace("/", "\\")
+            return (
+                "@echo off\r\n"
+                f'"%LOCALAPPDATA%\\hermes\\hermes-agent\\{rel_str}" %*\r\n',
+                "ascii",
+            )
+    return "@echo off\r\n" f'"{source}" %*\r\n', "utf-8"
+
+
 def _windows_user_path_entries() -> list[str]:
     """User PATH entries from the registry — the value install.ps1 writes.
 
@@ -293,6 +327,19 @@ def ensure_windows_bin_launchers(
         return []
     relocatable = _venv_is_relocatable(venv_dir)
 
+    # Default Windows InstallDir. When the in-venv exe sits under this layout
+    # the .cmd delegator body inlines a ``%LOCALAPPDATA%`` reference (cmd.exe
+    # expands it at run time) so the body stays ASCII-pure even when the
+    # Windows username carries non-ASCII characters. Without that rewrite,
+    # ``write_text(..., encoding="ascii")`` raised ``UnicodeEncodeError`` (a
+    # ``ValueError``, not an ``OSError``), bypassing the per-file guard,
+    # leaking a zero-byte ``.heal.<pid>`` staging file and never staging the
+    # launcher for international users with a relocatable venv.
+    local_appdata = os.environ.get("LOCALAPPDATA", "").strip()
+    default_root: Path | None = (
+        Path(local_appdata) / "hermes" / "hermes-agent" if local_appdata else None
+    )
+
     restored: list[str] = []
     for target in targets:
         try:
@@ -306,14 +353,24 @@ def ensure_windows_bin_launchers(
             staging = target / f"{final.name}.heal.{os.getpid()}"
             try:
                 if relocatable:
-                    staging.write_text(
-                        "@echo off\r\n" f'"{source}" %*\r\n', encoding="ascii"
+                    body, encoding = _cmd_delegator_body(
+                        source, default_root=default_root
                     )
+                    try:
+                        staging.write_text(body, encoding=encoding)
+                    except UnicodeEncodeError:
+                        # Non-ASCII HERMES_HOME override whose %LOCALAPPDATA%
+                        # form did not collapse -- fall back to UTF-8 so a
+                        # launcher still stages. Round-trips on a UTF-8 active
+                        # code page (65001, the Windows 11 default for many
+                        # locales); the widened per-file guard below catches
+                        # any surrogate UTF-8 itself cannot encode.
+                        staging.write_text(body, encoding="utf-8")
                 else:
                     shutil.copy2(source, staging)
                 os.replace(staging, final)
                 restored.append(str(final))
-            except OSError:
+            except (OSError, UnicodeEncodeError):
                 with contextlib.suppress(OSError):
                     staging.unlink()
     if restored:
