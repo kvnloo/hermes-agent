@@ -52,21 +52,6 @@ def source_logger_for_export(name: Any) -> Optional[str]:
     return value if len(value) <= 128 and _SOURCE_LOGGER_RE.fullmatch(value) else None
 
 
-def redact_gateway_message(message: Any) -> str:
-    """Redact gateway diagnostic free text for operator-owned export.
-
-    Single scrub path: everything goes through
-    ``agent.monitoring.redaction.redact_for_export`` (unconditional
-    secrets + PII), then is length-bounded.
-    """
-    try:
-        from agent.monitoring.redaction import redact_for_export
-        redacted = redact_for_export(str(message or "")) or ""
-    except Exception:
-        redacted = "[redaction-unavailable]"
-    return redacted[:500]
-
-
 def classify_gateway_error(raw: Any) -> str:
     s = str(raw or "").lower()
     if any(k in s for k in ("auth", "token", "unauthorized", "forbidden", "401", "403")):
@@ -465,5 +450,4 @@ __all__ = [
     "build_gateway_health_snapshot",
     "classify_gateway_error",
     "source_logger_for_export",
-    "redact_gateway_message",
 ]
