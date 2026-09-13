@@ -426,6 +426,10 @@ def cmd_sessions(args, sessions_parser=None):
                 return
             # Unlike prune/archive, export includes archived sessions.
             filters["archived"] = None
+            # Export is a read-only superset (matches export_all / --session-id);
+            # don't inherit the destructive pinned-exclusion default from
+            # _prune_filter_where.
+            filters["include_pinned"] = True
 
         def _redact(data):
             if not args.redact or data is None:
