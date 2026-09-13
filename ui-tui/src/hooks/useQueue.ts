@@ -136,8 +136,8 @@ export function useQueue() {
     [queueRef, syncQueue]
   )
 
-  const dequeue = useCallback(() => {
-    const head = queueRef.current.shift()?.text
+  const dequeue = useCallback((): QueueItem | undefined => {
+    const head = queueRef.current.shift()
     syncQueue()
 
     return head
