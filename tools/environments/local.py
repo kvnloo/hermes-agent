@@ -32,17 +32,18 @@ logger = logging.getLogger(__name__)
 # cleanup_*_cache helpers), and a once-per-process best-effort sweep covers
 # CLI-only installs that never run the gateway.
 #
-# Background-process artifacts come in triplets (hermes_bg_<id>.log/.pid/
-# .exit). A long-running server's .pid file never changes mtime while its
-# .log keeps updating — so age is judged per GROUP (newest mtime among files
-# sharing a stem) to avoid yanking the pid/exit files out from under a
-# still-live background session.
+# Background-process artifacts come in groups (hermes_bg_<id>.log/.pid/.exit,
+# plus a .worker_pid for sandbox-backed sessions). A long-running server's
+# .pid/.worker_pid files never change mtime while its .log keeps updating —
+# so age is judged per GROUP (newest mtime among files sharing a stem) to
+# avoid yanking the pid/exit/worker_pid files out from under a still-live
+# background session.
 TERMINAL_TEMP_MAX_AGE_HOURS = 72
 
 _terminal_temp_prune_lock = threading.Lock()
 _terminal_temp_pruned_once = False
 
-_BG_GROUP_RE = re.compile(r"^(hermes_bg_[A-Za-z0-9_-]+)\.(log|pid|exit)$")
+_BG_GROUP_RE = re.compile(r"^(hermes_bg_[A-Za-z0-9_-]+)\.(log|pid|exit|worker_pid)$")
 
 
 def _default_terminal_temp_dir() -> "Path | None":
