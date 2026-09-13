@@ -256,6 +256,7 @@ class AggregateMetrics:
     trajectories_compressed: int = 0
     trajectories_skipped_under_target: int = 0
     trajectories_still_over_limit: int = 0
+    trajectories_dropped_over_limit: int = 0
     trajectories_failed: int = 0
     
     total_tokens_before: int = 0
@@ -322,6 +323,7 @@ class AggregateMetrics:
                 "trajectories_compressed": self.trajectories_compressed,
                 "trajectories_skipped_under_target": self.trajectories_skipped_under_target,
                 "trajectories_still_over_limit": self.trajectories_still_over_limit,
+                "trajectories_dropped_over_limit": self.trajectories_dropped_over_limit,
                 "trajectories_failed": self.trajectories_failed,
                 "compression_rate": round(self.trajectories_compressed / max(self.total_trajectories, 1), 4),
             },
@@ -1284,14 +1286,21 @@ Write only the summary, starting with "[CONTEXT SUMMARY]:" prefix."""
         for file_path in jsonl_files:
             output_path = output_dir / file_path.name
             file_results = results[file_path]
-            
-            # Sort by original entry index to preserve order, skip None (timed out) entries
-            sorted_entries = [
-                file_results[idx][0] 
-                for idx in sorted(file_results.keys()) 
-                if file_results[idx] is not None
-            ]
-            
+
+            # Sort by original entry index to preserve order; skip None
+            # (timed out) entries and, when save_over_limit is false, drop
+            # trajectories that still exceed the token target after compression.
+            sorted_entries = []
+            for idx in sorted(file_results.keys()):
+                entry_and_metrics = file_results[idx]
+                if entry_and_metrics is None:
+                    continue
+                processed_entry, metrics = entry_and_metrics
+                if not self.config.save_over_limit and metrics.still_over_limit:
+                    self.aggregate_metrics.trajectories_dropped_over_limit += 1
+                    continue
+                sorted_entries.append(processed_entry)
+
             with open(output_path, 'w', encoding='utf-8') as f:
                 for entry in sorted_entries:
                     f.write(json.dumps(entry, ensure_ascii=False) + '\n')
@@ -1319,6 +1328,7 @@ Write only the summary, starting with "[CONTEXT SUMMARY]:" prefix."""
         compressed = m['summary']['trajectories_compressed']
         skipped = m['summary']['trajectories_skipped_under_target']
         over_limit = m['summary']['trajectories_still_over_limit']
+        dropped = m['summary']['trajectories_dropped_over_limit']
         failed = m['summary']['trajectories_failed']
         
         # Token stats
@@ -1343,6 +1353,7 @@ Write only the summary, starting with "[CONTEXT SUMMARY]:" prefix."""
         print(f"║{'':4}├─ Compressed:          {compressed:>10,}  ({compressed_pct:>5.1f}%){' '*18}║")
         print(f"║{'':4}├─ Skipped (under limit):{skipped:>9,}  ({skipped_pct:>5.1f}%){' '*18}║")
         print(f"║{'':4}├─ Still over limit:    {over_limit:>10,}  ({over_limit_pct:>5.1f}%){' '*18}║")
+        print(f"║{'':4}├─ Dropped (over limit): {dropped:>9,}{' '*32}║")
         print(f"║{'':4}└─ Failed:              {failed:>10,}{' '*32}║")
         
         print(f"╠{'═'*70}╣")

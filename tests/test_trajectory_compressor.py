@@ -1,6 +1,8 @@
 """Tests for trajectory_compressor.py — config, metrics, and compression logic."""
 
+import asyncio
 import importlib
+import json
 import os
 import sys
 from types import SimpleNamespace
@@ -178,6 +180,12 @@ class TestAggregateMetrics:
         assert agg.trajectories_compressed == 1
         assert agg.total_tokens_saved == 10000
         assert len(agg.compression_ratios) == 1
+
+    def test_to_dict_includes_dropped_over_limit(self):
+        agg = AggregateMetrics()
+        agg.trajectories_dropped_over_limit = 7
+        d = agg.to_dict()
+        assert d["summary"]["trajectories_dropped_over_limit"] == 7
 
 
 
@@ -494,3 +502,180 @@ class TestCompressionNetSavingsGuard:
         assert sum(tc.count_turn_tokens(compressed)) == before
         tc._generate_summary.assert_not_called()
 
+
+# ---------------------------------------------------------------------------
+# TrajectoryCompressor.process_directory — save_over_limit write filtering
+# ---------------------------------------------------------------------------
+
+
+def _write_jsonl(path, entries):
+    with open(path, "w", encoding="utf-8") as f:
+        for entry in entries:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+
+def _read_jsonl(path):
+    return [
+        json.loads(line)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+
+def _metrics(**kwargs):
+    m = TrajectoryMetrics()
+    for key, value in kwargs.items():
+        setattr(m, key, value)
+    return m
+
+
+_OVER_COMPRESSED = dict(
+    was_compressed=True, still_over_limit=True,
+    original_tokens=5000, compressed_tokens=4500, tokens_saved=500,
+    compression_ratio=0.9, original_turns=10, compressed_turns=9, turns_removed=1,
+)
+_OVER_ABORTED = dict(
+    was_compressed=False, still_over_limit=True,
+    original_tokens=4000, compressed_tokens=4000,
+    original_turns=8, compressed_turns=8,
+)
+_IN_BUDGET = dict(
+    was_compressed=False, still_over_limit=False, skipped_under_target=True,
+    original_tokens=10, compressed_tokens=10,
+    original_turns=2, compressed_turns=2,
+)
+_METRICS_BY_TAG = {
+    "over_compressed": _OVER_COMPRESSED,
+    "over_aborted": _OVER_ABORTED,
+    "in_budget": _IN_BUDGET,
+}
+
+
+def _entry(tag):
+    return {"tag": tag, "conversations": [
+        {"from": "system", "value": "s"}, {"from": "human", "value": "h"},
+    ]}
+
+
+def _patch_process_entry_async(monkeypatch, extra=None):
+    by_tag = dict(_METRICS_BY_TAG)
+    if extra:
+        by_tag.update(extra)
+
+    async def fake(self, entry):
+        tag = entry["tag"]
+        if tag == "timeout":
+            await asyncio.sleep(10)
+        return entry, _metrics(**by_tag[tag])
+
+    monkeypatch.setattr(TrajectoryCompressor, "process_entry_async", fake)
+    return fake
+
+
+def _over_limit_abort_entry():
+    big = "w " * 400
+    small = "ok " * 2
+    return {"id": "over", "conversations": [
+        {"from": "system", "value": big},
+        {"from": "human", "value": big},
+        {"from": "gpt", "value": small},
+        {"from": "tool", "value": small},
+        {"from": "gpt", "value": small},
+        {"from": "tool", "value": small},
+        {"from": "gpt", "value": small},
+        {"from": "human", "value": small},
+    ]}
+
+
+def _under_target_entry():
+    return {"id": "under", "conversations": [
+        {"from": "system", "value": "you are an agent"},
+        {"from": "human", "value": "hi"},
+    ]}
+
+
+class TestSaveOverLimit:
+    def _setup_files(self, tmp_path, tags):
+        in_dir = tmp_path / "in"
+        out_dir = tmp_path / "out"
+        in_dir.mkdir()
+        _write_jsonl(in_dir / "t.jsonl", [_entry(t) for t in tags])
+        return in_dir, out_dir
+
+    def test_save_over_limit_false_drops_over_limit_entries(self, tmp_path, monkeypatch):
+        config = CompressionConfig()
+        config.save_over_limit = False
+        config.metrics_per_trajectory = True
+        tc = _make_compressor(config)
+        _patch_process_entry_async(monkeypatch)
+        in_dir, out_dir = self._setup_files(
+            tmp_path, ["over_compressed", "over_aborted", "in_budget"])
+
+        tc.process_directory(in_dir, out_dir)
+
+        written = _read_jsonl(out_dir / "t.jsonl")
+        assert [e["tag"] for e in written] == ["in_budget"]
+        assert tc.aggregate_metrics.trajectories_dropped_over_limit == 2
+        assert tc.aggregate_metrics.trajectories_still_over_limit == 2
+        assert tc.aggregate_metrics.trajectories_failed == 0
+        assert tc.aggregate_metrics.total_trajectories == 3
+
+    def test_save_over_limit_true_keeps_over_limit_entries(self, tmp_path, monkeypatch):
+        config = CompressionConfig()
+        config.metrics_per_trajectory = True
+        tc = _make_compressor(config)
+        _patch_process_entry_async(monkeypatch)
+        in_dir, out_dir = self._setup_files(
+            tmp_path, ["over_compressed", "over_aborted", "in_budget"])
+
+        tc.process_directory(in_dir, out_dir)
+
+        written = _read_jsonl(out_dir / "t.jsonl")
+        assert [e["tag"] for e in written] == [
+            "over_compressed", "over_aborted", "in_budget"]
+        assert tc.aggregate_metrics.trajectories_dropped_over_limit == 0
+        assert tc.aggregate_metrics.trajectories_still_over_limit == 2
+        assert tc.aggregate_metrics.total_trajectories == 3
+
+    def test_timeout_entries_excluded_and_not_counted_as_dropped(self, tmp_path, monkeypatch):
+        config = CompressionConfig()
+        config.save_over_limit = False
+        config.per_trajectory_timeout = 0.05
+        tc = _make_compressor(config)
+        _patch_process_entry_async(monkeypatch)
+        in_dir, out_dir = self._setup_files(
+            tmp_path, ["over_compressed", "timeout", "in_budget"])
+
+        tc.process_directory(in_dir, out_dir)
+
+        written = _read_jsonl(out_dir / "t.jsonl")
+        assert [e["tag"] for e in written] == ["in_budget"]
+        assert tc.aggregate_metrics.trajectories_dropped_over_limit == 1
+        assert tc.aggregate_metrics.trajectories_still_over_limit == 1
+        assert tc.aggregate_metrics.trajectories_failed == 1
+        assert tc.aggregate_metrics.total_trajectories == 2
+
+    def test_end_to_end_real_compress_drops_over_limit(self, tmp_path, monkeypatch):
+        config = CompressionConfig()
+        config.target_max_tokens = 100
+        config.summary_target_tokens = 20
+        config.protect_last_n_turns = 2
+        config.save_over_limit = False
+        config.metrics_per_trajectory = True
+        tc = _make_compressor(config)
+        tc.client = MagicMock()
+        tc.async_client = MagicMock()
+        in_dir = tmp_path / "in"
+        out_dir = tmp_path / "out"
+        in_dir.mkdir()
+        _write_jsonl(in_dir / "t.jsonl", [_over_limit_abort_entry(), _under_target_entry()])
+
+        tc.process_directory(in_dir, out_dir)
+
+        written = _read_jsonl(out_dir / "t.jsonl")
+        assert [e["id"] for e in written] == ["under"]
+        assert tc.aggregate_metrics.trajectories_dropped_over_limit == 1
+        assert tc.aggregate_metrics.trajectories_still_over_limit == 1
+        assert tc.aggregate_metrics.trajectories_skipped_under_target == 1
+        assert tc.aggregate_metrics.total_trajectories == 2
+        assert tc.aggregate_metrics.total_summarization_calls == 0
