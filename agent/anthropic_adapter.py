@@ -71,7 +71,6 @@ from agent.anthropic_message_convert import (  # noqa: F401
     _manage_thinking_signatures,
     _merge_consecutive_roles,
     _normalize_tool_input_schema,
-    _safe_text,
     _sanitize_replay_block,
     _sanitize_tool_id,
     _scrub_blank_text_blocks,

@@ -14,7 +14,6 @@ in ``_convert_assistant_message`` (main path). Ref #69512.
 import pytest
 from agent.anthropic_adapter import (
     _EMPTY_TEXT_PLACEHOLDER,
-    _safe_text,
     _sanitize_replay_block,
     _convert_assistant_message,
 )
@@ -29,18 +28,6 @@ def _assert_no_blank_text(msg):
     assert isinstance(msg["content"], list)
     for b in _text_blocks(msg):
         assert b["text"].strip(), f"blank text block survived: {b!r}"
-
-
-class TestSafeText:
-    def test_none_becomes_placeholder(self):
-        assert _safe_text(None) == _EMPTY_TEXT_PLACEHOLDER
-
-
-    @pytest.mark.parametrize("blank", ["   ", "\n", "\t", " \n\t "])
-    def test_whitespace_only_becomes_placeholder(self, blank):
-        assert _safe_text(blank) == _EMPTY_TEXT_PLACEHOLDER
-
-
 
 
 class TestSanitizeReplayBlockWhitespace:
