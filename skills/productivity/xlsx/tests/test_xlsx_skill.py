@@ -476,6 +476,73 @@ def test_names_hyperlinks_notes(tmp_path):
     assert names["defined_names"] == {"Extra": "'D'!$C$1"}
 
 
+def test_hyperlink_keeps_theme_color_with_font_styles(tmp_path):
+    """A hyperlink combined with bold/italic/font_size must keep the
+    Hyperlink named style's blue theme color; only an explicit font_color
+    should override it. Previously the font key built a minimal Font that
+    discarded the theme color (regression from fad88cf130)."""
+    spec = {
+        "sheets": [{"name": "L", "cells": {
+            "A1": {"value": "plain", "hyperlink": "https://example.com/a"},
+            "A2": {"value": "bold link", "hyperlink": "https://example.com/b",
+                   "bold": True},
+            "A3": {"value": "italic link", "hyperlink": "https://example.com/c",
+                   "italic": True},
+            "A4": {"value": "sized link", "hyperlink": "https://example.com/d",
+                   "font_size": 14},
+            "A5": {"value": "combo link", "hyperlink": "https://example.com/e",
+                   "bold": True, "italic": True, "font_size": 16},
+            "A6": {"value": "explicit color",
+                   "hyperlink": "https://example.com/f",
+                   "bold": True, "font_color": "0563C1"},
+        }}],
+    }
+    spec_path = tmp_path / "lspec.json"
+    spec_path.write_text(json.dumps(spec), encoding="utf-8")
+    book = tmp_path / "links.xlsx"
+    run("xlsx_create.py", spec_path, book)
+
+    wb = load_workbook(book)
+    ws = wb["L"]
+    # baseline plain hyperlink carries theme=10 (standard hyperlink blue) and
+    # is NOT boldened by the bold override applied to A2 below (the fix copies
+    # the resolved font rather than mutating the shared named-style font)
+    assert ws["A1"].font.color is not None
+    assert ws["A1"].font.color.theme == 10
+    assert not ws["A1"].font.bold
+    # bold/italic/font_size must not drop the hyperlink theme color, and the
+    # requested style must still be applied
+    assert ws["A2"].font.bold is True
+    assert ws["A2"].font.color is not None
+    assert ws["A2"].font.color.theme == 10
+    assert ws["A3"].font.italic is True
+    assert ws["A3"].font.color is not None
+    assert ws["A3"].font.color.theme == 10
+    assert ws["A4"].font.size == 14
+    assert ws["A4"].font.color is not None
+    assert ws["A4"].font.color.theme == 10
+    # combining all three font keys still preserves the link color
+    assert ws["A5"].font.bold is True and ws["A5"].font.italic is True
+    assert ws["A5"].font.size == 16
+    assert ws["A5"].font.color is not None
+    assert ws["A5"].font.color.theme == 10
+    # an explicit font_color still wins over the theme color (the color is
+    # an explicit RGB, not the theme-10 hyperlink blue)
+    assert ws["A6"].font.bold is True
+    assert ws["A6"].font.color is not None
+    assert ws["A6"].font.color.type == "rgb"
+    assert ws["A6"].font.color.rgb.endswith("0563C1")
+    # every link remains clickable with the right target
+    targets = {
+        "A1": "https://example.com/a", "A2": "https://example.com/b",
+        "A3": "https://example.com/c", "A4": "https://example.com/d",
+        "A5": "https://example.com/e", "A6": "https://example.com/f",
+    }
+    for coord, url in targets.items():
+        assert ws[coord].hyperlink is not None
+        assert ws[coord].hyperlink.target == url
+
+
 def test_sheet_protection(tmp_path):
     spec = {"sheets": [{"name": "P", "rows": [["locked", "open"]],
                         "protection": {"password": "your-password",
