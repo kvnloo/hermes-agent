@@ -23,7 +23,6 @@ from OpenAI's ``hatch-pet`` skill (openai/skills, Apache-2.0).
 
 from __future__ import annotations
 
-import io
 import logging
 import math
 from pathlib import Path
@@ -56,8 +55,6 @@ ROWS = len(ROW_SPECS)
 COLUMNS = max(count for _, _, count in ROW_SPECS)
 ATLAS_WIDTH = COLUMNS * CELL_WIDTH
 ATLAS_HEIGHT = ROWS * CELL_HEIGHT
-
-FRAME_COUNTS: dict[str, int] = {state: count for state, _, count in ROW_SPECS}
 
 # Alpha at/below which a pixel is "background" for component detection.
 _ALPHA_FLOOR = 16
@@ -1066,13 +1063,6 @@ def compose_atlas(frames_by_state: dict[str, list]):
                 cell = _fit_to_cell(cell)
             atlas.alpha_composite(cell, (col * CELL_WIDTH, row * CELL_HEIGHT))
     return _clear_transparent_rgb(atlas)
-
-
-def atlas_to_webp_bytes(atlas) -> bytes:
-    """Encode an atlas image to lossless WebP bytes (the on-disk pet format)."""
-    buf = io.BytesIO()
-    atlas.save(buf, format="WEBP", lossless=True, quality=100, method=6, exact=True)
-    return buf.getvalue()
 
 
 def validate_atlas(atlas) -> dict:
