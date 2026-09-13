@@ -208,6 +208,10 @@ upload, but the following personal data is NOT redacted and will be public:
 The resulting URL is public to anyone who has the link. Pastes auto-delete
 after 6 hours, but may be archived by third parties in the meantime.
 
+If paste.rs is unreachable, uploads fall back to dpaste.com: those pastes
+stay public for the --expire window (default: 1 day) and CANNOT be deleted
+with `hermes debug delete`.
+
 Use --local to view the report without uploading.
 """
 
@@ -216,7 +220,8 @@ _GATEWAY_PRIVACY_NOTICE = (
     "(may contain conversation fragments) to a public paste service. "
     "Full logs are NOT included from the gateway — use `hermes debug share` "
     "from the CLI for full log uploads.\n"
-    "Pastes auto-delete after 6 hours."
+    "Pastes auto-delete after 6 hours (dpaste.com fallback pastes are kept "
+    "for 1 day and cannot be deleted)."
 )
 
 
@@ -232,6 +237,16 @@ def _extract_paste_id(url: str) -> Optional[str]:
     return None
 
 
+def _is_dpaste_url(url: str) -> bool:
+    """Whether *url* is a dpaste.com paste.
+
+    dpaste.com pastes expire automatically on a server-side schedule but cannot
+    be deleted via API (anonymous uploads have no owner token), so callers must
+    not advertise the ``hermes debug delete`` path for them.
+    """
+    return url.strip().startswith(("https://dpaste.com/", "http://dpaste.com/"))
+
+
 def delete_paste(url: str) -> bool:
     """Delete a paste from paste.rs.  Returns True on success.
 
@@ -240,6 +255,12 @@ def delete_paste(url: str) -> bool:
     """
     paste_id = _extract_paste_id(url)
     if not paste_id:
+        if _is_dpaste_url(url):
+            raise ValueError(
+                "Cannot delete: dpaste.com pastes cannot be deleted (anonymous "
+                "uploads have no owner token); they expire on their own.  "
+                f"Got: {url}"
+            )
         raise ValueError(
             f"Cannot delete: only paste.rs URLs are supported.  Got: {url}"
         )
@@ -290,10 +311,12 @@ def _upload_paste_rs(content: str) -> str:
     return url
 
 
-def _upload_dpaste_com(content: str, expiry_days: int = 7) -> str:
+def _upload_dpaste_com(content: str, expiry_days: int = 1) -> str:
     """Upload to dpaste.com.  Returns the paste URL.
 
-    dpaste.com uses multipart form data.
+    dpaste.com uses multipart form data.  The server enforces
+    ``expiry_days`` in [1, 365] (7 was the historical default; 1 day is the
+    minimum and bounds worst-case retention when this fallback fires).
     """
     boundary = "----HermesDebugBoundary9f3c"
 
@@ -326,10 +349,15 @@ def _upload_dpaste_com(content: str, expiry_days: int = 7) -> str:
     return url
 
 
-def upload_to_pastebin(content: str, expiry_days: int = 7) -> str:
+def upload_to_pastebin(content: str, expiry_days: int = 1) -> str:
     """Upload *content* to a paste service, trying paste.rs then dpaste.com.
 
     Returns the paste URL on success, raises on total failure.
+
+    ``expiry_days`` applies only to the dpaste.com fallback (paste.rs pastes are
+    swept after 6 hours via the pending-deletion scheduler).  dpaste.com's
+    minimum is 1 day and anonymous pastes cannot be deleted afterwards, so
+    callers must not promise a shorter retention to the user.
     """
     errors: list[str] = []
 
@@ -767,14 +795,19 @@ class DebugShareResult:
     urls: dict  # label -> paste URL (e.g. {"Report": "...", "agent.log": "..."})
     failures: list  # human-readable "label: error" strings for optional uploads
     redacted: bool  # whether force-mode redaction was applied before upload
-    auto_delete_seconds: int  # how long until the pastes auto-delete
+    auto_delete_seconds: int  # time until ALL pastes are gone — paste.rs is
+    # swept at 6 hours; a dpaste.com fallback paste lives `expiry` days
+    # server-side. This is the longest-lived paste's retention so callers
+    # never understate the worst-case exposure.
+    dpaste_fallback: bool = False  # True if any upload fell back to dpaste.com
+    # (those pastes cannot be deleted via API)
     report: str = ""  # the summary report text (kept for local fallback)
 
 
 def build_debug_share(
     *,
     log_lines: int = 200,
-    expiry: int = 7,
+    expiry: int = 1,
     redact: bool = True,
 ) -> DebugShareResult:
     """Collect the debug report + full logs, upload each, return the URLs.
@@ -787,8 +820,18 @@ def build_debug_share(
     The summary report upload is required: on failure this raises
     ``RuntimeError``. Full-log uploads are best-effort; their errors are
     collected into ``failures`` rather than raised.
+
+    ``expiry`` (days) applies only to the dpaste.com fallback; paste.rs pastes
+    are always swept after 6 hours. It is clamped to [1, 365] (dpaste.com's
+    server-enforced range) so the dashboard's retention knob can't 400 the
+    upload.
     """
     _best_effort_sweep_expired_pastes()
+
+    # Clamp to dpaste.com's server-enforced [1, 365] range so the new dashboard
+    # `expiry` knob never 400s the upload (and a CLI `--expire 0` degrades to
+    # the minimum rather than raising).
+    expiry = max(1, min(int(expiry), 365))
 
     # Collect the report + full logs (force-redacted when redact=True) via the
     # shared collector so the paste.rs and Nous-S3 paths build identical,
@@ -819,14 +862,28 @@ def build_debug_share(
         except Exception as exc:
             failures.append(f"{label}: {exc}")
 
-    # Schedule auto-deletion after 6 hours.
+    # Schedule auto-deletion after 6 hours.  _record_pending filters to
+    # paste.rs-only URLs (dpaste.com auto-expires), so this only schedules a
+    # sweep when paste.rs served the upload.
     _schedule_auto_delete(list(urls.values()))
+
+    # Effective retention: paste.rs pastes are swept at _AUTO_DELETE_SECONDS;
+    # dpaste.com fallback pastes live `expiry` days server-side. Report the
+    # longest-lived paste's retention so callers render "auto-deletes in Xh"
+    # honestly and never understate the worst-case exposure.
+    any_paste_rs = any(_extract_paste_id(u) for u in urls.values())
+    any_dpaste = any(_is_dpaste_url(u) for u in urls.values())
+    auto_delete_seconds = max(
+        _AUTO_DELETE_SECONDS if any_paste_rs else 0,
+        (expiry * 86400) if any_dpaste else 0,
+    )
 
     return DebugShareResult(
         urls=urls,
         failures=failures,
         redacted=redact,
-        auto_delete_seconds=_AUTO_DELETE_SECONDS,
+        auto_delete_seconds=auto_delete_seconds,
+        dpaste_fallback=any_dpaste,
         report=report,
     )
 
@@ -866,7 +923,7 @@ def _confirm_upload(args) -> bool:
 def run_debug_share(args):
     """Collect debug report + full logs, upload each, print URLs."""
     log_lines = getattr(args, "lines", 200)
-    expiry = getattr(args, "expire", 7)
+    expiry = getattr(args, "expire", 1)
     local_only = getattr(args, "local", False)
     nous = getattr(args, "nous", False)
     redact = not getattr(args, "no_redact", False)
@@ -923,11 +980,32 @@ def run_debug_share(args):
     if result.failures:
         print(f"\n  (failed to upload: {', '.join(result.failures)})")
 
-    hours = result.auto_delete_seconds // 3600
-    print(f"\n⏱  Pastes will auto-delete in {hours} hours.")
+    dpaste_urls = [u for u in result.urls.values() if _is_dpaste_url(u)]
+    if dpaste_urls:
+        # dpaste.com fallback fired: those pastes stay public for the (clamped)
+        # expiry window and cannot be deleted via API (anonymous posts have no
+        # owner token). Be honest — do not promise the 6-hour sweep or the
+        # `hermes debug delete` hint for these. Derive the displayed retention
+        # from result.auto_delete_seconds (the clamped, authoritative value), not
+        # the raw --expire arg, so a sub-minimum like --expire 0 reports the
+        # effective 1-day floor rather than the impossible "0 day(s)".
+        effective_days = result.auto_delete_seconds // 86400 or 1
+        print(
+            f"\n⚠️  {len(dpaste_urls)} of {len(result.urls)} upload(s) fell back "
+            f"to dpaste.com: those pastes stay public for {effective_days} day(s) "
+            "and cannot be deleted with `hermes debug delete`."
+        )
+        if any(_extract_paste_id(u) for u in result.urls.values()):
+            print(
+                f"⏱  paste.rs pastes will auto-delete in "
+                f"{_AUTO_DELETE_SECONDS // 3600} hours."
+            )
+    else:
+        hours = result.auto_delete_seconds // 3600
+        print(f"\n⏱  Pastes will auto-delete in {hours} hours.")
 
-    # Manual delete fallback
-    print("To delete now:  hermes debug delete <url>")
+        # Manual delete fallback
+        print("To delete now:  hermes debug delete <url>")
 
     print("\nShare these links with the Hermes team for support.")
 
@@ -1062,7 +1140,7 @@ def run_debug(args):
         print()
         print("Options (share):")
         print("  --lines N    Number of log lines to include (default: 200)")
-        print("  --expire N   Paste expiry in days (default: 7)")
+        print("  --expire N   dpaste.com fallback retention in days (default: 1)")
         print("  --local      Print report locally instead of uploading")
         print("  --nous       Upload to Nous-internal storage (private, staff-only,")
         print("               auto-deletes in 14 days) instead of a public paste")

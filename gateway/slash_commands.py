@@ -6383,6 +6383,7 @@ class GatewaySlashCommandsMixin:
             _capture_dump, collect_debug_report,
             upload_to_pastebin, _schedule_auto_delete,
             _GATEWAY_PRIVACY_NOTICE, _best_effort_sweep_expired_pastes,
+            _is_dpaste_url,
         )
 
         # Run blocking I/O (dump capture, log reads, uploads) in a thread.
@@ -6397,7 +6398,9 @@ class GatewaySlashCommandsMixin:
             except Exception as exc:
                 return t("gateway.debug.upload_failed", error=exc)
 
-            # Schedule auto-deletion after 6 hours
+            # Schedule auto-deletion after 6 hours. _record_pending filters to
+            # paste.rs-only URLs (dpaste.com auto-expires), so this only
+            # schedules a sweep when paste.rs served the upload.
             _schedule_auto_delete(list(urls.values()))
 
             lines = [_GATEWAY_PRIVACY_NOTICE, "", t("gateway.debug.header"), ""]
@@ -6405,8 +6408,13 @@ class GatewaySlashCommandsMixin:
             for label, url in urls.items():
                 lines.append(f"`{label:<{label_width}}`  {url}")
 
-            lines.append("")
-            lines.append(t("gateway.debug.auto_delete"))
+            # The 6-hour auto-delete line is only true for paste.rs pastes.
+            # When the upload fell back to dpaste.com the privacy notice above
+            # already states the longer retention, so omit the line rather
+            # than contradict it.
+            if not any(_is_dpaste_url(u) for u in urls.values()):
+                lines.append("")
+                lines.append(t("gateway.debug.auto_delete"))
             lines.append(t("gateway.debug.full_logs_hint"))
             lines.append(t("gateway.debug.share_hint"))
             return "\n".join(lines)

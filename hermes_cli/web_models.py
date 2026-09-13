@@ -298,6 +298,10 @@ class DebugShareRequest(BaseModel):
     redact: bool = True
     # Recent log lines included in the summary tail (full logs are separate).
     lines: int = 200
+    # dpaste.com fallback retention in days (only applies when paste.rs is
+    # unreachable; paste.rs pastes are always swept after 6 hours). Clamped to
+    # [1, 365] by the share core (dpaste.com's server-enforced range).
+    expiry: int = 1
 
 
 # --- from web_server.py (originally lines 4492-4493) ---

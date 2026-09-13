@@ -200,3 +200,52 @@ describe("api OAuth helpers", () => {
     ]);
   });
 });
+
+describe("api.runDebugShare", () => {
+  it("sends the default 1-day dpaste fallback retention when no expiry is given", async () => {
+    vi.stubGlobal("window", {});
+    const fetchMock = jsonFetchMock({
+      ok: true,
+      urls: {},
+      failures: [],
+      redacted: true,
+      auto_delete_seconds: 86400,
+      dpaste_fallback: true,
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await api.runDebugShare({ redact: true });
+
+    const init = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(JSON.parse(init.body as string)).toEqual({
+      redact: true,
+      lines: 200,
+      expiry: 1,
+    });
+  });
+
+  it("forwards an explicit expiry to the endpoint", async () => {
+    vi.stubGlobal("window", {});
+    const fetchMock = jsonFetchMock({
+      ok: true,
+      urls: { Report: "https://dpaste.com/x" },
+      failures: [],
+      redacted: true,
+      auto_delete_seconds: 3 * 86400,
+      dpaste_fallback: true,
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await api.runDebugShare({ redact: false, expiry: 3 });
+
+    const init = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(JSON.parse(init.body as string)).toEqual({
+      redact: false,
+      lines: 200,
+      expiry: 3,
+    });
+    // The typed response surfaces the dpaste fallback flag + real retention.
+    expect(res.dpaste_fallback).toBe(true);
+    expect(res.auto_delete_seconds).toBe(3 * 86400);
+  });
+});

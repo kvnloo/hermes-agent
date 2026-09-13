@@ -1355,7 +1355,9 @@ export default function SystemPage() {
                   <span className="text-xs text-muted-foreground max-w-prose">
                     Uploads system info + logs to a public paste service and
                     returns links to send the Hermes team. Pastes auto-delete
-                    after 6 hours.
+                    after 6 hours (paste.rs) — if the upload falls back to
+                    dpaste.com, pastes are kept for up to 1 day and cannot be
+                    deleted early.
                   </span>
                 </div>
               </div>
@@ -1406,6 +1408,9 @@ export default function SystemPage() {
                       auto-deletes in{" "}
                       {Math.round(shareResult.auto_delete_seconds / 3600)}h
                     </span>
+                    {shareResult.dpaste_fallback && (
+                      <Badge tone="warning">dpaste.com fallback</Badge>
+                    )}
                   </div>
                   {Object.keys(shareResult.urls).length > 1 && (
                     <Button
