@@ -33,6 +33,7 @@ import {
 import { clearAllSessionControl } from '@/store/session-control'
 import { resetSessionPinMirror } from '@/store/session-pin-sync'
 import { clearAllSessionStates } from '@/store/session-states'
+import { invalidateSkillSuggestionIndex } from '@/store/suggestion-providers/skill'
 import { clearAllSessionTodos } from '@/store/todos'
 import { clearTranscriptTailPaging } from '@/store/transcript-tail'
 import { clearTranscriptTails } from '@/store/transcript-tail-cache'
@@ -273,6 +274,15 @@ export function wipeSessionListsForGatewaySwitch(): void {
   // fail the unique-match lookup that shows "Show earlier".
   clearTranscriptTails()
   clearTranscriptTailPaging()
+
+  // The skill-match suggestion index is a module-level cache (not a Query), so
+  // invalidateProfileScopedQueries() below cannot evict it. It carries the
+  // PREVIOUS backend's skills for up to the TTL — drop it here so the new
+  // backend's skills load on the next sample. The wipe runs unconditionally on
+  // every connection switch, covering the shared-profile-key case (two
+  // connections both expose "default") that the profile-key subscription in
+  // skill.ts cannot detect on its own.
+  invalidateSkillSuggestionIndex()
 
   // Narrowed: account/marketplace/onboarding caches are global, not gateway-
   // scoped, so a mode swap must not refetch them.
