@@ -31,11 +31,16 @@ from typing import Any
 from gateway.hosted_rooms import (
     MAX_ACTOR_ID_CHARS,
     MAX_EVENT_JSON_BYTES,
+    MAX_GATEWAY_EVENT_BYTES,
+    MAX_ROOM_EVENT_BYTES,
     MAX_ROOM_ID_CHARS,
     HostedRoomError,
     RoomConflictError,
+    _assert_event_capacity,
     _canonical_json,
     _connect,
+    _event_storage_bytes,
+    _prune_disbanded_rooms_locked,
     _transaction,
     _validate_identifier,
     _validate_members,
@@ -405,6 +410,41 @@ def promote_replica(
             + len(claim_payload_json.encode("utf-8"))
         )
 
+        projected_room_bytes = int(replica["event_bytes"]) + claim_bytes
+        if projected_room_bytes > MAX_ROOM_EVENT_BYTES:
+            raise HostedRoomError(
+                "This Group Chat reached its storage limit. "
+                "Start a new Group Chat to continue."
+            )
+        # The new hosted room does not exist in ``hosted_rooms`` yet, so the
+        # gateway-total ``SUM(event_bytes)`` read here excludes it. Account for
+        # the projected insertion explicitly, mirroring _assert_event_capacity's
+        # prune-then-check so takeover cannot push the gateway past its budget
+        # and permanently block every later write (including disband_room).
+        current_gateway_bytes = int(
+            conn.execute(
+                "SELECT COALESCE(SUM(event_bytes), 0) FROM hosted_rooms"
+            ).fetchone()[0]
+        )
+        if current_gateway_bytes + projected_room_bytes > MAX_GATEWAY_EVENT_BYTES:
+            _prune_disbanded_rooms_locked(
+                conn,
+                now=None,
+                max_gateway_event_bytes=max(
+                    0, MAX_GATEWAY_EVENT_BYTES - projected_room_bytes
+                ),
+            )
+            current_gateway_bytes = int(
+                conn.execute(
+                    "SELECT COALESCE(SUM(event_bytes), 0) FROM hosted_rooms"
+                ).fetchone()[0]
+            )
+        if current_gateway_bytes + projected_room_bytes > MAX_GATEWAY_EVENT_BYTES:
+            raise HostedRoomError(
+                "Group Chat storage is full on this host. "
+                "Delete an old Group Chat and try again."
+            )
+
         conn.execute(
             """INSERT INTO hosted_rooms
                (room_id, name, members_json, authority_gateway_id,
@@ -499,7 +539,8 @@ def demote_room(
 
     with _replica_transaction(db_path) as conn:
         row = conn.execute(
-            """SELECT authority_gateway_id, authority_epoch, next_seq
+            """SELECT authority_gateway_id, authority_epoch, next_seq,
+                      event_bytes
                  FROM hosted_rooms WHERE room_id=? AND disbanded_at IS NULL""",
             (room_id,),
         ).fetchone()
@@ -540,6 +581,22 @@ def demote_room(
             label="payload",
             max_bytes=MAX_EVENT_JSON_BYTES,
         )
+        lost_event_id = f"system:authority-lost:{observed_epoch}"
+        lost_bytes = _event_storage_bytes(
+            event_id=lost_event_id,
+            kind="authority.lost",
+            actor_json=lost_actor_json,
+            payload_json=lost_payload_json,
+        )
+        # ``authority.lost`` is a control event, so it earns the control-event
+        # reserve that every other control emitter in hosted_rooms.py relies on.
+        # The gate also keeps the room's event_bytes in sync with the new event.
+        _assert_event_capacity(
+            conn,
+            room=row,
+            additional_bytes=lost_bytes,
+            allow_control=True,
+        )
         conn.execute(
             """INSERT INTO hosted_room_events
                (room_id, seq, event_id, kind, actor_json, authority_epoch,
@@ -548,7 +605,7 @@ def demote_room(
             (
                 room_id,
                 seq,
-                f"system:authority-lost:{observed_epoch}",
+                lost_event_id,
                 lost_actor_json,
                 observed_epoch,
                 lost_payload_json,
@@ -558,9 +615,10 @@ def demote_room(
         conn.execute(
             """UPDATE hosted_rooms
                   SET authority_gateway_id=?, authority_epoch=?,
-                      next_seq=next_seq+1, revision=revision+1, updated_at=?
+                      next_seq=next_seq+1, event_bytes=event_bytes+?,
+                      revision=revision+1, updated_at=?
                 WHERE room_id=?""",
-            (observed_gateway_id, observed_epoch, now, room_id),
+            (observed_gateway_id, observed_epoch, lost_bytes, now, room_id),
         )
     return {
         "room_id": room_id,

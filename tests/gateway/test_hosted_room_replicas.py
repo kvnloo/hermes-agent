@@ -2,6 +2,7 @@
 stale-authority demotion for hosted Group Chat rooms."""
 
 import json
+import sqlite3
 
 import pytest
 
@@ -21,6 +22,24 @@ def _authority_db(tmp_path, name="authority.db"):
 
 def _replica_db(tmp_path, name="replica.db"):
     return tmp_path / name
+
+
+def _gateway_event_bytes(db) -> int:
+    with sqlite3.connect(db) as conn:
+        return int(
+            conn.execute(
+                "SELECT COALESCE(SUM(event_bytes), 0) FROM hosted_rooms"
+            ).fetchone()[0]
+        )
+
+
+def _room_event_bytes(db, room_id) -> int:
+    with sqlite3.connect(db) as conn:
+        return int(
+            conn.execute(
+                "SELECT event_bytes FROM hosted_rooms WHERE room_id=?", (room_id,)
+            ).fetchone()[0]
+        )
 
 
 def _seed_room(db, *, gateway_id=AUTH_A, n_events=3, room_id="room-1"):
@@ -294,3 +313,245 @@ def test_full_failover_round_trip(tmp_path, monkeypatch):
     kinds = [e["kind"] for e in replay["events"]]
     assert kinds == ["message.user"] * 4 + ["authority.claimed", "message.user"]
     assert replay["authority"]["gateway_id"] == AUTH_B
+
+
+def test_promote_refuses_when_gateway_event_budget_exceeded(tmp_path, monkeypatch):
+    """Takeover must not push the gateway-total event_bytes budget over the
+    limit and permanently block every later write (including disband_room)."""
+    adb = _authority_db(tmp_path)
+    page = _seed_room(adb, n_events=4)
+    rdb = _replica_db(tmp_path)
+    replicas.ingest_page(
+        rdb, room_id="room-1", room_name="Field Room", members=MEMBERS, page=page
+    )
+    # The survivor gateway already hosts a near-budget room of its own, the
+    # normal state of a long-running gateway that is the designated survivor.
+    rooms.create_room(
+        rdb,
+        room_id="filler",
+        name="Filler",
+        members=MEMBERS,
+        authority_gateway_id=AUTH_B,
+        now=20,
+    )
+    for index in range(4):
+        rooms.append_event(
+            rdb,
+            room_id="filler",
+            event_id=f"filler-{index}",
+            kind="message.user",
+            actor=USER,
+            payload={"text": f"filler message {index}"},
+            authority_gateway_id=AUTH_B,
+            authority_epoch=1,
+        )
+    monkeypatch.setattr(replicas, "local_authority_gateway_id", lambda: AUTH_B)
+
+    gateway_total = _gateway_event_bytes(rdb)
+    replica_bytes = replicas.replica_state(rdb, room_id="room-1")["event_bytes"]
+    # A budget that fits the filler OR the replica, but not both: the promote's
+    # projected room bytes (replica log + authority.claimed) push the gateway
+    # total over by the claim-event cost, so promote must fail closed.
+    monkeypatch.setattr(
+        replicas, "MAX_GATEWAY_EVENT_BYTES", gateway_total + replica_bytes
+    )
+
+    with pytest.raises(rooms.HostedRoomError, match="storage is full"):
+        replicas.promote_replica(rdb, room_id="room-1")
+
+    # The failed promote left the gateway store and the replica untouched.
+    assert _gateway_event_bytes(rdb) == gateway_total
+    with sqlite3.connect(rdb) as conn:
+        assert (
+            conn.execute(
+                "SELECT 1 FROM hosted_rooms WHERE room_id='room-1'"
+            ).fetchone()
+            is None
+        )
+        assert (
+            conn.execute(
+                "SELECT 1 FROM hosted_room_events WHERE room_id='room-1'"
+            ).fetchone()
+            is None
+        )
+    assert (
+        replicas.replica_state(rdb, room_id="room-1")["event_bytes"] == replica_bytes
+    )
+
+    # Raising the budget so both fit lets the same promote succeed, proving
+    # the refusal was capacity-driven rather than a structural conflict.
+    monkeypatch.setattr(
+        replicas, "MAX_GATEWAY_EVENT_BYTES", gateway_total + replica_bytes + 4096
+    )
+    promoted = replicas.promote_replica(rdb, room_id="room-1")
+    assert promoted["authority_epoch"] == 2
+    promoted_bytes = _room_event_bytes(rdb, "room-1")
+    # The authority.claimed claim event is charged to the promoted room.
+    assert promoted_bytes > replica_bytes
+    assert _gateway_event_bytes(rdb) == _room_event_bytes(rdb, "filler") + promoted_bytes
+    replay = rooms.read_events(rdb, room_id="room-1", since_seq=0, limit=100)
+    assert replay["events"][-1]["kind"] == "authority.claimed"
+
+
+def test_promote_refuses_when_replica_exceeds_room_event_budget(
+    tmp_path, monkeypatch
+):
+    """The per-room event_bytes ceiling applies to the projected promoted room."""
+    adb = _authority_db(tmp_path)
+    page = _seed_room(adb, n_events=4)
+    rdb = _replica_db(tmp_path)
+    replicas.ingest_page(
+        rdb, room_id="room-1", room_name="Field Room", members=MEMBERS, page=page
+    )
+    monkeypatch.setattr(replicas, "local_authority_gateway_id", lambda: AUTH_B)
+
+    replica_bytes = replicas.replica_state(rdb, room_id="room-1")["event_bytes"]
+    # Per-room ceiling just below the projected room bytes (replica + claim),
+    # but with a generous gateway total so only the per-room gate fires.
+    monkeypatch.setattr(replicas, "MAX_ROOM_EVENT_BYTES", replica_bytes)
+    monkeypatch.setattr(replicas, "MAX_GATEWAY_EVENT_BYTES", 256 * 1024 * 1024)
+
+    with pytest.raises(rooms.HostedRoomError, match="storage limit"):
+        replicas.promote_replica(rdb, room_id="room-1")
+
+    assert _gateway_event_bytes(rdb) == 0
+    with sqlite3.connect(rdb) as conn:
+        assert (
+            conn.execute(
+                "SELECT 1 FROM hosted_rooms WHERE room_id='room-1'"
+            ).fetchone()
+            is None
+        )
+    assert (
+        replicas.replica_state(rdb, room_id="room-1")["event_bytes"] == replica_bytes
+    )
+
+
+def test_promote_reclaims_disbanded_room_budget_then_succeeds(
+    tmp_path, monkeypatch
+):
+    """A promote over budget prunes disbanded rooms first, mirroring
+    _assert_event_capacity, and succeeds once reclaim frees enough space."""
+    adb = _authority_db(tmp_path)
+    page = _seed_room(adb, n_events=4)
+    rdb = _replica_db(tmp_path)
+    replicas.ingest_page(
+        rdb, room_id="room-1", room_name="Field Room", members=MEMBERS, page=page
+    )
+    # A leftover disbanded room still counts against the gateway total until
+    # pruned; the promote's prune-then-check must reclaim it.
+    rooms.create_room(
+        rdb,
+        room_id="filler",
+        name="Filler",
+        members=MEMBERS,
+        authority_gateway_id=AUTH_B,
+        now=20,
+    )
+    for index in range(4):
+        rooms.append_event(
+            rdb,
+            room_id="filler",
+            event_id=f"filler-{index}",
+            kind="message.user",
+            actor=USER,
+            payload={"text": f"filler message {index}"},
+            authority_gateway_id=AUTH_B,
+            authority_epoch=1,
+        )
+    rooms.disband_room(
+        rdb, room_id="filler", expected_gateway_id=AUTH_B, expected_epoch=1, now=30
+    )
+    monkeypatch.setattr(replicas, "local_authority_gateway_id", lambda: AUTH_B)
+
+    gateway_total = _gateway_event_bytes(rdb)
+    replica_bytes = replicas.replica_state(rdb, room_id="room-1")["event_bytes"]
+    # Same budget that fails for an *active* filler now succeeds because the
+    # disbanded filler is pruned to make room for the replica.
+    monkeypatch.setattr(
+        replicas, "MAX_GATEWAY_EVENT_BYTES", gateway_total + replica_bytes
+    )
+
+    promoted = replicas.promote_replica(rdb, room_id="room-1")
+    assert promoted["authority_epoch"] == 2
+    assert promoted["authority_gateway_id"] == AUTH_B
+
+    # The disbanded filler was reclaimed; the promoted room took its place.
+    with sqlite3.connect(rdb) as conn:
+        assert (
+            conn.execute(
+                "SELECT 1 FROM hosted_rooms WHERE room_id='room-1'"
+            ).fetchone()
+            is not None
+        )
+        assert (
+            conn.execute(
+                "SELECT 1 FROM hosted_rooms WHERE room_id='filler'"
+            ).fetchone()
+            is None
+        )
+        assert (
+            conn.execute(
+                "SELECT 1 FROM hosted_room_retired_ids WHERE room_id='filler'"
+            ).fetchone()
+            is not None
+        )
+
+
+def test_demote_records_authority_lost_event_bytes(tmp_path, monkeypatch):
+    """demote_room must charge the authority.lost control event to the room's
+    event_bytes so the gateway-total accounting stays accurate."""
+    adb = _authority_db(tmp_path)
+    _seed_room(adb, n_events=3)
+    monkeypatch.setattr(replicas, "local_authority_gateway_id", lambda: AUTH_A)
+
+    before = _room_event_bytes(adb, "room-1")
+    replicas.demote_room(
+        adb, room_id="room-1", observed_gateway_id=AUTH_B, observed_epoch=2
+    )
+    after = _room_event_bytes(adb, "room-1")
+
+    with sqlite3.connect(adb) as conn:
+        row = conn.execute(
+            "SELECT event_id, kind, actor_json, payload_json "
+            "FROM hosted_room_events "
+            "WHERE room_id='room-1' AND kind='authority.lost'"
+        ).fetchone()
+    assert row is not None
+    lost_bytes = sum(len(col.encode("utf-8")) for col in row)
+    assert after == before + lost_bytes
+    assert _gateway_event_bytes(adb) == after
+
+
+def test_demote_refuses_when_gateway_event_budget_exceeded(
+    tmp_path, monkeypatch
+):
+    """demote_room gates its authority.lost control event through the same
+    _assert_event_capacity gate every other control emitter uses."""
+    adb = _authority_db(tmp_path)
+    _seed_room(adb, n_events=3)
+    monkeypatch.setattr(replicas, "local_authority_gateway_id", lambda: AUTH_A)
+    # Zero gateway budget and no control-event reserve: even the small
+    # authority.lost control event must be rejected at the gate.
+    monkeypatch.setattr(rooms, "MAX_GATEWAY_EVENT_BYTES", 0)
+    monkeypatch.setattr(rooms, "CONTROL_EVENT_BYTE_RESERVE", 0)
+
+    with pytest.raises(rooms.HostedRoomError, match="storage is full"):
+        replicas.demote_room(
+            adb, room_id="room-1", observed_gateway_id=AUTH_B, observed_epoch=2
+        )
+
+    # Nothing was appended and authority is unchanged.
+    with sqlite3.connect(adb) as conn:
+        lost = conn.execute(
+            "SELECT COUNT(*) FROM hosted_room_events "
+            "WHERE room_id='room-1' AND kind='authority.lost'"
+        ).fetchone()[0]
+        row = conn.execute(
+            "SELECT authority_gateway_id, authority_epoch, event_bytes "
+            "FROM hosted_rooms WHERE room_id='room-1'"
+        ).fetchone()
+    assert lost == 0
+    assert row[0] == AUTH_A
+    assert row[1] == 1
+

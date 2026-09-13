@@ -846,7 +846,7 @@ def _(rid, params: dict) -> dict:
 def _(rid, params: dict) -> dict:
     """Fence this gateway's stale room authority against a proven newer epoch."""
     from gateway.hosted_room_replicas import ReplicaError, demote_room
-    from gateway.hosted_rooms import default_db_path
+    from gateway.hosted_rooms import HostedRoomError, default_db_path
 
     try:
         result = demote_room(
@@ -856,7 +856,7 @@ def _(rid, params: dict) -> dict:
             observed_epoch=params.get("observed_epoch"),
         )
         return _ok(rid, result)
-    except ReplicaError as exc:
+    except (ReplicaError, HostedRoomError) as exc:
         return _err(rid, 4119, str(exc))
     except Exception as exc:
         return _err(rid, 5119, str(exc))
