@@ -117,14 +117,25 @@ async function fetchReport(location: string): Promise<Report> {
   }
 }
 
+let loadEpoch = 0
+
 function load(location: string): void {
+  const mine = ++loadEpoch
+
   fetchReport(location).then(
-    report => updateWidget(weatherApp, state => ({ ...state, phase: { kind: 'ready', report } as Phase })),
-    (error: unknown) =>
-      updateWidget(weatherApp, state => ({
-        ...state,
-        phase: { kind: 'error', message: error instanceof Error ? error.message : String(error) } as Phase
-      }))
+    report => {
+      if (mine === loadEpoch) {
+        updateWidget(weatherApp, state => ({ ...state, phase: { kind: 'ready', report } as Phase }))
+      }
+    },
+    (error: unknown) => {
+      if (mine === loadEpoch) {
+        updateWidget(weatherApp, state => ({
+          ...state,
+          phase: { kind: 'error', message: error instanceof Error ? error.message : String(error) } as Phase
+        }))
+      }
+    }
   )
 }
 
