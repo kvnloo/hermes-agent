@@ -42,10 +42,11 @@ logger = logging.getLogger(__name__)
 TERMINAL_TEMP_MAX_IDLE_HOURS = 24
 _terminal_temp_prune_lock = threading.Lock()
 _terminal_temp_pruned_once = False
-# Background artifacts come in triplets (hermes_bg_<id>.log/.pid/.exit). A live
-# server's .pid never changes mtime while its .log does, so age is judged per
-# GROUP (newest mtime sharing a stem) to keep pid/exit files of live sessions.
-_BG_GROUP_RE = re.compile(r"^(hermes_bg_[A-Za-z0-9_-]+)\.(log|pid|exit)$")
+# Background artifacts come in groups (hermes_bg_<id>.log/.pid/.exit, plus a
+# .worker_pid for sandbox-backed sessions). A live server's .pid/.worker_pid
+# never changes mtime while its .log does, so age is judged per GROUP (newest
+# mtime sharing a stem) to keep pid/exit/worker_pid files of live sessions.
+_BG_GROUP_RE = re.compile(r"^(hermes_bg_[A-Za-z0-9_-]+)\.(log|pid|exit|worker_pid)$")
 
 
 def _default_terminal_temp_dir() -> "Path | None":

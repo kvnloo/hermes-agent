@@ -547,9 +547,8 @@ class ProcessSession:
     handoff_note: str = ""                      # why a subagent handed this process to its parent (rides the notice)
     persist_on_release: bool = False           # opt out of agent-lifecycle cleanup (release()/turn-abandon kill
                                                 # sweeps), per terminal(background=true, persist_on_release=true) (#41225)
+    worker_pid_path: str = ""                   # sandbox-only: file holding the nohup'd worker PID (spawn_via_env)
     # Watcher/notification routing (persisted for crash recovery)
-    # systemd_unit: str = ""                      # transient scope unit name when spawned under systemd-run
-    # (#70716)
     watcher_platform: str = ""
     watcher_chat_id: str = ""
     watcher_user_id: str = ""
@@ -1229,6 +1228,56 @@ class ProcessRegistry(ProcessCheckpointMixin):
             # issued before this check, covers the cgroup case).
         return [pid for pid in survivors if pid]
 
+    def _terminate_env_worker(self, env: Any, session: ProcessSession) -> None:
+        """Best-effort tree-kill of the nohup'd worker a sandbox-backed session spawned.
+
+        ``spawn_via_env`` backgrounds a wrapper subshell and stores that
+        subshell's PID as ``session.pid``, while the real worker (the
+        ``nohup bash -lc CMD`` process and its descendants) is recorded
+        separately in ``session.worker_pid_path``. Signaling only
+        ``session.pid`` SIGTERMs the wrapper: it dies and the worker is
+        reparented to PID 1 inside the sandbox and keeps running. To
+        actually stop the user's command we read the worker PID from its
+        file and terminate the worker (and its direct children) directly —
+        mirroring the descendant-reaping the host path does in
+        ``_terminate_host_pid`` — with a SIGTERM-then-SIGKILL escalation so
+        a worker that traps or ignores SIGTERM cannot leak indefinitely.
+
+        All failures are swallowed: a missing/unreadable worker PID file
+        (legacy session, dead sandbox, race with cleanup) simply leaves the
+        caller's subsequent ``kill {session.pid}`` to clean up the wrapper,
+        which is the historical best-effort behavior — no regression.
+        """
+        worker_pid_path = getattr(session, "worker_pid_path", "") or ""
+        if not worker_pid_path:
+            return
+        try:
+            res = env.execute(
+                f"cat {shlex.quote(worker_pid_path)} 2>/dev/null", timeout=5
+            )
+        except Exception:
+            return
+        worker_pid = (res.get("output", "") or "").strip()
+        # The PID came from a file we wrote and is interpolated into a kill
+        # command, so validate it is purely numeric first — a corrupted file
+        # can never inject shell syntax into the command below.
+        if not worker_pid.isdigit():
+            return
+        try:
+            env.execute(
+                # SIGTERM the worker and its direct children first; a brief
+                # in-sandbox grace lets a well-behaved worker exit on SIGTERM
+                # before we escalate. Then SIGKILL any survivor so a worker
+                # that traps/ignores SIGTERM cannot keep running. The kill
+                # commands are individually best-effort (``2>/dev/null``).
+                f"pkill -P {worker_pid} 2>/dev/null; kill {worker_pid} 2>/dev/null; "
+                f"sleep 0.5; "
+                f"pkill -9 -P {worker_pid} 2>/dev/null; kill -9 {worker_pid} 2>/dev/null",
+                timeout=6,
+            )
+        except Exception:
+            pass
+
     # ----- Spawn -----
 
     @staticmethod
@@ -1434,11 +1483,25 @@ class ProcessRegistry(ProcessCheckpointMixin):
                                     persist_on_release=persist_on_release)
         temp_dir = self._env_temp_dir(env)
         log_path, pid_path, exit_path = (f"{temp_dir}/hermes_bg_{session.id}.{ext}" for ext in ("log", "pid", "exit"))
+        worker_pid_path = f"{temp_dir}/hermes_bg_{session.id}.worker_pid"
+        session.worker_pid_path = worker_pid_path
         q = shlex.quote
+        # The wrapper subshell (``( ... ) &``) is what we store as session.pid
+        # via ``echo $!``. Inside it the real worker is backgrounded with
+        # ``nohup ... &`` so its PID can be captured separately into
+        # ``worker_pid_path`` (``WPID=$!``); the subshell then ``wait``s on
+        # the worker so it stays alive — and ``kill -0 $session.pid`` keeps
+        # reflecting worker liveness — until the worker exits, at which
+        # point ``rc=$?`` is written to the exit file as before. Capturing
+        # the worker PID separately is what lets kill_process tree-kill the
+        # real worker instead of only SIGTERMing this wrapper subshell
+        # (which would die and leave the nohup'd worker reparented to PID 1
+        # inside the sandbox, still running).
         bg_command = (
             f"mkdir -p {q(temp_dir)} && "
-            f"( nohup bash -lc {q(command)} > {q(log_path)} 2>&1; "
-            f"rc=$?; printf '%s\\n' \"$rc\" > {q(exit_path)} ) & "
+            f"( nohup bash -lc {q(command)} > {q(log_path)} 2>&1 & "
+            f"WPID=$!; echo \"$WPID\" > {q(worker_pid_path)}; "
+            f"wait \"$WPID\"; rc=$?; printf '%s\\n' \"$rc\" > {q(exit_path)} ) & "
             f"echo $! > {q(pid_path)} && cat {q(pid_path)}")
         try:
             result = env.execute(bg_command, timeout=timeout, rewrite_compound_background=False)
@@ -2356,6 +2419,13 @@ class ProcessRegistry(ProcessCheckpointMixin):
             # leaves Git Bash descendants behind.
             self._terminate_host_pid(session.process.pid, session.host_start_time)
         elif session.env_ref and session.pid:
+            # spawn_via_env stores the wrapper subshell PID as session.pid and
+            # records the nohup'd worker PID in session.worker_pid_path. Tree-kill
+            # the worker (and its children) first, then SIGTERM the wrapper
+            # subshell: signaling only the wrapper would SIGTERM it while it was
+            # ``wait``ing on the worker, killing the wrapper but leaving the
+            # worker reparented to PID 1 inside the sandbox and still running.
+            self._terminate_env_worker(session.env_ref, session)
             session.env_ref.execute(f"kill {session.pid} 2>/dev/null", timeout=5)
         elif session.detached and session.pid_scope == "host" and session.pid:
             # Same fate as poll/list: a gone or reused PID means our process is
