@@ -3175,11 +3175,46 @@ function Install-HermesCommandLaunchers {
     foreach ($launcher in @("hermes", "hermes-acp")) {
         $src = Join-Path $scriptsDir "$launcher.exe"
         if (-not (Test-Path -LiteralPath $src -PathType Leaf)) { continue }
+        $cmdPath = Join-Path $Destination "$launcher.cmd"
         if ($venvRelocatable) {
             Remove-Item (Join-Path $Destination "$launcher.exe") -Force -ErrorAction SilentlyContinue
-            Set-Content -Path (Join-Path $Destination "$launcher.cmd") -Value "@echo off`r`n`"$src`" %*" -Encoding Ascii
+            # When the install sits under the default %LOCALAPPDATA%\hermes\
+            # hermes-agent layout, reference the in-venv exe through
+            # %LOCALAPPDATA% so the .cmd body stays pure ASCII even when the
+            # Windows username carries non-ASCII characters (cmd.exe expands
+            # %LOCALAPPDATA% at run time). Set-Content -Encoding Ascii cannot
+            # encode a non-ASCII literal $src, so do NOT embed $src on this
+            # branch. Keep in lockstep with
+            # hermes_cli/_install_repair.py::ensure_windows_bin_launchers.
+            # Normalize separators before comparing so a $Root handed in with
+            # forward slashes (or a $env:LOCALAPPDATA that differs only in case
+            # / trailing separator) still matches the default layout.
+            $defaultInstallDir = "$env:LOCALAPPDATA\hermes\hermes-agent"
+            $normRoot = $Root -replace '/', '\'
+            $normDefault = $defaultInstallDir -replace '/', '\'
+            $isDefault = $normRoot.TrimEnd('\').Equals(
+                $normDefault.TrimEnd('\'),
+                [System.StringComparison]::OrdinalIgnoreCase)
+            if ($isDefault) {
+                $relSrc = $src.Substring($Root.Length)  # \venv\Scripts\<name>.exe
+                # cmd.exe takes backslashes; normalize in case $Root carried
+                # forward slashes or differs in separator from $src.
+                $relSrc = $relSrc -replace '/', '\'
+                $body = "@echo off`r`n`"%LOCALAPPDATA%\hermes\hermes-agent$relSrc`" %*"
+                Set-Content -Path $cmdPath -Value $body -Encoding Ascii
+            } else {
+                # HERMES_HOME overridden or custom InstallDir: embed the
+                # literal path. Set-Content -Encoding Ascii would fail on a
+                # non-ASCII path; write UTF-8 without BOM so cmd.exe can
+                # still parse the body on a UTF-8 active code page (65001,
+                # the Windows 11 default for many locales). [System.IO.File]
+                # avoids the BOM Set-Content -Encoding UTF8 prepends, which
+                # would desync cmd.exe's tokenizer on the first line.
+                $body = "@echo off`r`n`"$src`" %*"
+                [System.IO.File]::WriteAllText($cmdPath, $body, (New-Object System.Text.UTF8Encoding $false))
+            }
         } else {
-            Remove-Item (Join-Path $Destination "$launcher.cmd") -Force -ErrorAction SilentlyContinue
+            Remove-Item $cmdPath -Force -ErrorAction SilentlyContinue
             Copy-Item -Force -LiteralPath $src -Destination (Join-Path $Destination "$launcher.exe")
         }
     }

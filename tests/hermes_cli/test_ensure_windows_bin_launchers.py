@@ -18,6 +18,14 @@ existing install's PATH to the canonical layout from the ``hermes update``
 tail. Platform verdict, PATH values, and registry I/O are injected
 parameters (same pattern as ``hermes_constants.venv_bin_dir``), so these
 tests are host-independent input→output checks, not host fakes.
+
+The ``.cmd`` delegator body must stay ASCII-pure for the default
+``%LOCALAPPDATA%\\hermes\\hermes-agent`` layout even when the Windows
+username carries non-ASCII characters (cmd.exe expands ``%LOCALAPPDATA%``
+at run time); embedding the literal absolute path under
+``write_text(..., encoding="ascii")`` raised ``UnicodeEncodeError`` (a
+``ValueError``, not an ``OSError``) and escaped the per-file guard, so
+no launcher was staged and a zero-byte ``.heal.<pid>`` file leaked.
 """
 
 from pathlib import Path
@@ -26,6 +34,7 @@ import pytest
 
 from hermes_cli._install_repair import (
     _WINDOWS_BIN_LAUNCHERS,
+    _cmd_delegator_body,
     _normalize_windows_path,
     ensure_windows_bin_launchers,
     migrate_windows_bin_path,
@@ -53,6 +62,27 @@ def managed_install(tmp_path, monkeypatch):
     return _make_managed(tmp_path, monkeypatch)
 
 
+def _make_relocatable_managed_under(home: Path, monkeypatch) -> tuple[Path, Path]:
+    """Create a relocatable-venv managed install rooted at *home*.
+
+    The venv, the managed clone, and the venv's console scripts are all
+    materialized under *home*; HERMES_HOME is pointed at *home*. Used to
+    reach the ``.cmd`` delegator writer from a layout whose path carries
+    non-ASCII characters (international Windows usernames).
+    """
+    root = home / "hermes-agent"
+    scripts = root / "venv" / "Scripts"
+    scripts.mkdir(parents=True)
+    for name in _WINDOWS_BIN_LAUNCHERS:
+        (scripts / f"{name}.exe").write_bytes(b"MZ console script: " + name.encode())
+    (root / "venv" / "pyvenv.cfg").write_text(
+        "home = X\nversion_info = 3.11.15\nrelocatable = true\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("HERMES_HOME", str(home))
+    return home, root
+
+
 def test_managed_clone_heals_canonical_home_bin(managed_install):
     home, root = managed_install
 
@@ -74,11 +104,212 @@ def test_relocatable_venv_gets_cmd_delegators_not_exe_copies(tmp_path, monkeypat
 
     assert {Path(p).suffix for p in restored} == {".cmd"}
     for name in _WINDOWS_BIN_LAUNCHERS:
-        body = (home / "bin" / f"{name}.cmd").read_text(encoding="ascii")
+        # Read with UTF-8, not ASCII, so this test is not locked into the
+        # ASCII-only body assumption — a non-ASCII username on a non-default
+        # layout embeds the literal path and is written as UTF-8.
+        body = (home / "bin" / f"{name}.cmd").read_text(encoding="utf-8")
         # Delegates to the in-venv exe by absolute path, forwarding args.
         assert str(root / "venv" / "Scripts" / f"{name}.exe") in body
         assert "%*" in body
         assert not (home / "bin" / f"{name}.exe").exists()
+
+
+def test_cmd_delegator_body_uses_localappdata_expansion_for_default_layout():
+    """Default %LOCALAPPDATA%\hermes\hermes-agent layout collapses to a pure
+    ASCII body referencing %LOCALAPPDATA% (cmd.exe expands it at run time),
+    even when the Source path itself carries non-ASCII."""
+    default_root = Path("C:/Users/M\u00fcller/AppData/Local/hermes/hermes-agent")
+    source = default_root / "venv" / "Scripts" / "hermes.exe"
+
+    body, encoding = _cmd_delegator_body(source, default_root=default_root)
+
+    assert encoding == "ascii"
+    assert body.isascii()
+    assert "%*" in body
+    assert "@echo off\r\n" in body
+    assert (
+        '"%LOCALAPPDATA%\\hermes\\hermes-agent\\venv\\Scripts\\hermes.exe" %*'
+        in body
+    )
+    # The literal non-ASCII username must NOT be embedded.
+    assert "M\u00fcller" not in body
+
+
+def test_cmd_delegator_body_supports_dotvenv_layout():
+    """The default anchor delegates the relative tail, so a ``.venv`` layout
+    also collapses to the %LOCALAPPDATA% form."""
+    default_root = Path("C:/Users/M\u00fcller/AppData/Local/hermes/hermes-agent")
+    source = default_root / ".venv" / "Scripts" / "hermes-acp.exe"
+
+    body, encoding = _cmd_delegator_body(source, default_root=default_root)
+
+    assert encoding == "ascii"
+    assert body.isascii()
+    assert (
+        '"%LOCALAPPDATA%\\hermes\\hermes-agent\\.venv\\Scripts\\hermes-acp.exe" %*'
+        in body
+    )
+
+
+def test_cmd_delegator_body_falls_back_to_literal_for_non_default_layout():
+    """A HERMES_HOME override (or custom InstallDir) outside the default
+    %LOCALAPPDATA% layout keeps the literal source path and writes UTF-8."""
+    source = Path("/opt/hermes/hermes-agent/venv/Scripts/hermes.exe")
+
+    body, encoding = _cmd_delegator_body(source, default_root=None)
+
+    assert encoding == "utf-8"
+    assert str(source) in body
+    assert "%LOCALAPPDATA%" not in body
+    assert "%*" in body
+
+
+def test_cmd_delegator_body_falls_back_to_literal_when_source_outside_default_root():
+    """default_root set but source not under it: literal path, UTF-8."""
+    default_root = Path("/default/hermes/hermes-agent")
+    source = Path("/opt/custom/hermes-agent/venv/Scripts/hermes.exe")
+
+    body, encoding = _cmd_delegator_body(source, default_root=default_root)
+
+    assert encoding == "utf-8"
+    assert str(source) in body
+    assert "%LOCALAPPDATA%" not in body
+
+
+def test_relocatable_venv_cmd_delegator_for_non_ascii_default_layout_uses_localappdata(
+    tmp_path, monkeypatch
+):
+    """Regression: an international Windows username (non-ASCII %LOCALAPPDATA%)
+    plus a relocatable venv used to raise UnicodeEncodeError out of
+    ensure_windows_bin_launchers, never staging the launcher and leaking a
+    .heal.<pid> file. Post-fix the body inlines %LOCALAPPDATA% (ASCII-pure),
+    the launcher stages, and the never-raise contract holds."""
+    local_appdata = tmp_path / "M\u00fcller" / "AppData" / "Local"
+    home = local_appdata / "hermes"
+    home, root = _make_relocatable_managed_under(home, monkeypatch)
+    monkeypatch.setenv("LOCALAPPDATA", str(local_appdata))
+
+    restored = ensure_windows_bin_launchers(root, windows=True, user_path_entries=[])
+
+    assert len(restored) == len(_WINDOWS_BIN_LAUNCHERS)
+    assert {Path(p).suffix for p in restored} == {".cmd"}
+    for name in _WINDOWS_BIN_LAUNCHERS:
+        cmd = home / "bin" / f"{name}.cmd"
+        assert cmd.is_file()
+        body = cmd.read_text(encoding="utf-8")
+        # The literal non-ASCII username must NOT appear in the file body;
+        # the file references the exe via %LOCALAPPDATA% instead.
+        assert "M\u00fcller" not in body
+        assert body.isascii()
+        assert (
+            '"%LOCALAPPDATA%\\hermes\\hermes-agent\\venv\\Scripts\\'
+            f"{name}.exe\" %*"
+        ) in body
+        assert not (home / "bin" / f"{name}.exe").exists()
+    # Staging never leaked a .heal.<pid> file.
+    assert [
+        p.name for p in (home / "bin").iterdir() if ".heal." in p.name
+    ] == []
+
+
+def test_relocatable_venv_cmd_delegator_for_non_ascii_overridden_home_uses_utf8_fallback(
+    tmp_path, monkeypatch
+):
+    """HERMES_HOME overridden to a non-ASCII path OUTSIDE the default
+    %LOCALAPPDATA% layout does not collapse to the %LOCALAPPDATA% form, so
+    the body embeds the literal path; writing as UTF-8 (not ASCII) keeps the
+    never-raise contract and stages a launcher that round-trips on a UTF-8
+    active code page (65001)."""
+    monkeypatch.delenv("LOCALAPPDATA", raising=False)
+    home = tmp_path / "M\u00fcller" / "hermes"
+    home, root = _make_relocatable_managed_under(home, monkeypatch)
+
+    restored = ensure_windows_bin_launchers(root, windows=True, user_path_entries=[])
+
+    assert len(restored) == len(_WINDOWS_BIN_LAUNCHERS)
+    assert {Path(p).suffix for p in restored} == {".cmd"}
+    for name in _WINDOWS_BIN_LAUNCHERS:
+        cmd = home / "bin" / f"{name}.cmd"
+        assert cmd.is_file()
+        body = cmd.read_text(encoding="utf-8")
+        # The literal non-ASCII path is embedded (no %LOCALAPPDATA% form),
+        # and the file's bytes decode as UTF-8.
+        assert str(root / "venv" / "Scripts" / f"{name}.exe") in body
+        assert "M\u00fcller" in body
+        assert "%LOCALAPPDATA%" not in body
+        assert "%*" in body
+        assert not (home / "bin" / f"{name}.exe").exists()
+    assert [
+        p.name for p in (home / "bin").iterdir() if ".heal." in p.name
+    ] == []
+
+
+def test_never_raises_and_cleans_staging_when_body_unencodable(tmp_path, monkeypatch):
+    """Defense for the widened per-file guard: if the body somehow stays
+    unencodable even under the UTF-8 fallback (e.g. a surrogate that UTF-8
+    itself cannot encode), the function STILL never raises (its documented
+    contract), does not stage, and leaves no .heal.<pid> file behind. This
+    is the regression that the original `except OSError` guard missed —
+    UnicodeEncodeError is a ValueError, not an OSError."""
+    home = tmp_path / "hermes"
+    home, root = _make_relocatable_managed_under(home, monkeypatch)
+    from hermes_cli import _install_repair
+
+    def _force_unencodable(source, *, default_root):
+        # A lone surrogate encodes as neither ASCII nor UTF-8.
+        return ('@echo off\r\n"\ud800" %*\r\n', "ascii")
+
+    monkeypatch.setattr(_install_repair, "_cmd_delegator_body", _force_unencodable)
+
+    restored = ensure_windows_bin_launchers(root, windows=True, user_path_entries=[])
+
+    assert restored == []
+    for name in _WINDOWS_BIN_LAUNCHERS:
+        assert not (home / "bin" / f"{name}.cmd").exists()
+        assert not (home / "bin" / f"{name}.exe").exists()
+    assert [
+        p.name for p in (home / "bin").iterdir() if ".heal." in p.name
+    ] == []
+
+
+def test_no_staging_litter_for_non_ascii_default_layout(tmp_path, monkeypatch):
+    """The staging cleanup path also runs cleanly when the body stays
+    ASCII-pure on the non-ASCII default layout path."""
+    local_appdata = tmp_path / "M\u00fcller" / "AppData" / "Local"
+    home = local_appdata / "hermes"
+    home, root = _make_relocatable_managed_under(home, monkeypatch)
+    monkeypatch.setenv("LOCALAPPDATA", str(local_appdata))
+
+    ensure_windows_bin_launchers(root, windows=True, user_path_entries=[])
+
+    leftovers = [p.name for p in (home / "bin").iterdir() if ".heal." in p.name]
+    assert leftovers == []
+
+
+def test_migrate_windows_bin_path_for_non_ascii_default_layout(tmp_path, monkeypatch):
+    """End-to-end: hermes update's PATH migration also completes on the
+    non-ASCII default layout (migrate_windows_bin_path calls
+    ensure_windows_bin_launchers with no local try/except, relying on the
+    never-raise contract)."""
+    local_appdata = tmp_path / "M\u00fcller" / "AppData" / "Local"
+    home = local_appdata / "hermes"
+    home, root = _make_relocatable_managed_under(home, monkeypatch)
+    monkeypatch.setenv("LOCALAPPDATA", str(local_appdata))
+
+    state, read, write = _fake_registry([str(root / "bin")])
+
+    ok = migrate_windows_bin_path(
+        root, windows=True, read_user_path=read, write_user_path=write
+    )
+
+    assert ok
+    for name in _WINDOWS_BIN_LAUNCHERS:
+        cmd = home / "bin" / f"{name}.cmd"
+        assert cmd.is_file()
+        assert cmd.read_text(encoding="utf-8").isascii()
+    keys = [_normalize_windows_path(e) for e in state["entries"]]
+    assert _normalize_windows_path(home / "bin") in keys
+    assert _normalize_windows_path(root / "bin") not in keys
 
 
 def test_existing_exe_counts_as_present_for_relocatable_venv(tmp_path, monkeypatch):
