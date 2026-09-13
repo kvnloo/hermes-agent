@@ -342,6 +342,10 @@ async def download_transcript_text(
         )
         text = destination.read_text(encoding=encoding).strip()
     except MicrosoftGraphAPIError as exc:
+        if exc.status_code == 404:
+            raise TeamsMeetingArtifactNotFoundError(
+                f"Transcript {transcript.artifact_id} not found for meeting {meeting_ref.meeting_id}"
+            ) from exc
         raise _wrap_graph_error(
             exc,
             missing_message=(

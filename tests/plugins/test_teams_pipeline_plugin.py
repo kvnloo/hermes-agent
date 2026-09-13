@@ -347,6 +347,110 @@ class TestTeamsMeetingPipeline:
         assert teams_record is not None
         assert teams_record["message_id"] == "msg-1"
 
+    async def test_transcript_content_404_drives_real_fallback_through_pipeline(self, tmp_path, monkeypatch):
+        """A real 404 from the transcript content endpoint must not hard-fail the job.
+
+        Drives the real ``fetch_preferred_transcript_text`` -> ``download_transcript_text``
+        path (no monkeypatch on ``fetch_preferred_transcript_text``), so a transcript
+        listing that succeeds but whose ``/content`` download 404s is caught and the
+        pipeline falls back to recording + STT exactly as it does for an empty-body
+        transcript.
+        """
+        from plugins.teams_pipeline import pipeline as pipeline_module
+        from tools.microsoft_graph_client import MicrosoftGraphAPIError
+
+        monkeypatch.setattr(pipeline_module, "resolve_meeting_reference", _transcript_meeting_resolver)
+
+        transcript_payload = {
+            "id": "tx-404",
+            "displayName": "meeting.vtt",
+            "status": "running",  # listed, but content not yet materialized
+            "lastModifiedDateTime": "2026-05-01T00:00:00Z",
+        }
+        recording_payload = {
+            "id": "rec-1",
+            "displayName": "recording.mp4",
+            "downloadUrl": "https://files.example/recording.mp4",
+        }
+
+        transcript_content_calls: list[str] = []
+        recording_content_calls: list[str] = []
+
+        class _Transcript404RecordingOkClient:
+            async def collect_paginated(self, path, *, params=None, headers=None):
+                if path.endswith("/transcripts"):
+                    return [transcript_payload]
+                if path.endswith("/recordings"):
+                    return [recording_payload]
+                return []
+
+            async def download_to_file(self, path, destination, *, headers=None):
+                if "/transcripts/" in path:
+                    transcript_content_calls.append(path)
+                    raise MicrosoftGraphAPIError(404, "GET", path, "Not found")
+                recording_content_calls.append(path)
+                Path(destination).write_bytes(b"video-bytes")
+                return {"content_type": "video/mp4", "size_bytes": 11}
+
+        async def _prepare_audio(self, recording_path):
+            audio_path = recording_path.with_suffix(".wav")
+            audio_path.write_bytes(b"audio-bytes")
+            return audio_path
+
+        def _transcribe(file_path, model):
+            return {
+                "success": True,
+                "transcript": "Action: Send the spec to Legal.\nDecision: Use the recording fallback.",
+                "provider": "local",
+            }
+
+        async def _summarize(**kwargs):
+            return pipeline_module.TeamsMeetingSummaryPayload(
+                meeting_ref=kwargs["resolved_meeting"],
+                title="Weekly Sync",
+                transcript_text=kwargs["transcript_text"],
+                summary="Fallback summary after transcript 404",
+                key_decisions=["Use the recording fallback."],
+                action_items=["Send the spec to Legal."],
+                risks=[],
+                confidence="medium",
+                confidence_notes="Generated from STT fallback.",
+                source_artifacts=kwargs["artifacts"],
+            )
+
+        monkeypatch.setattr(pipeline_module.TeamsMeetingPipeline, "_prepare_audio_path", _prepare_audio)
+        monkeypatch.setattr(pipeline_module, "enrich_meeting_with_call_record", _no_call_record)
+
+        store = TeamsPipelineStore(tmp_path / "teams-store.json")
+        pipeline = TeamsMeetingPipeline(
+            graph_client=_Transcript404RecordingOkClient(),
+            store=store,
+            config={"transcript_min_chars": 20},
+            transcribe_fn=_transcribe,
+            summarize_fn=_summarize,
+        )
+
+        job = await pipeline.run_notification(
+            {
+                "id": "notif-404",
+                "changeType": "updated",
+                "resource": "communications/onlineMeetings/meeting-404",
+                "resourceData": {"id": "meeting-404"},
+            }
+        )
+
+        # The recording/STT fallback succeeded — not a hard failure.
+        assert job.status == "completed"
+        assert job.selected_artifact_strategy == "recording_stt_fallback"
+        assert job.summary_payload is not None
+        assert job.summary_payload.summary == "Fallback summary after transcript 404"
+        assert job.error_info == {}
+        # The real transcript content endpoint was hit and 404'd (the selected
+        # transcript's /content download, not just the listing).
+        assert len(transcript_content_calls) == 1
+        assert transcript_content_calls[0].endswith("/transcripts/tx-404/content")
+        # The recording content endpoint (a distinct Graph resource) was also hit.
+        assert recording_content_calls == ["https://files.example/recording.mp4"]
 
     async def test_missing_transcript_and_recording_schedules_retry(self, tmp_path, monkeypatch):
         from plugins.teams_pipeline import pipeline as pipeline_module
