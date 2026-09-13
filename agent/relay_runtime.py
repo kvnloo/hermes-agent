@@ -1825,29 +1825,6 @@ def resolve_execution_context(
     return runtime, session, None if session is None else session.handle
 
 
-def emit_mark(
-    name: str,
-    *,
-    session_id: str,
-    data: Any = None,
-    metadata: Any = None,
-) -> bool:
-    """Emit a fail-open Relay mark under a Hermes session."""
-    runtime = get_runtime(create=False)
-    if runtime is None:
-        return False
-    try:
-        return runtime.emit_mark(
-            name,
-            {"session_id": session_id},
-            data=data,
-            metadata=metadata,
-        )
-    except Exception:
-        logger.warning("Hermes Relay mark failed: %s", name, exc_info=True)
-        return False
-
-
 def apply_tool_request_intercepts(
     *,
     session_id: str,
@@ -1865,54 +1842,6 @@ def apply_tool_request_intercepts(
         tool_name=tool_name,
         args=args,
     )
-
-
-def ensure_session(*, session_id: str, **context: Any) -> RelaySession | None:
-    """Create or return the shared Relay session used by Hermes core."""
-    runtime = get_runtime()
-    if runtime is None:
-        return None
-    try:
-        return runtime.ensure_session({"session_id": session_id, **context})
-    except Exception:
-        logger.warning("Hermes Relay session initialization failed", exc_info=True)
-        return None
-
-
-def run_in_session(
-    session_id: str,
-    callback: Callable[..., Any],
-    *args: Any,
-    **kwargs: Any,
-) -> Any:
-    """Run a scope, LLM, or tool API against a shared Hermes session."""
-    runtime = get_runtime()
-    if runtime is None:
-        raise RuntimeError("Hermes Relay runtime is unavailable")
-    session = runtime.get_session(session_id)
-    if session is None:
-        session = runtime.ensure_session({"session_id": session_id})
-    if session is None:
-        raise RuntimeError("Hermes Relay session is unavailable")
-    return runtime.run_in_session(session, callback, *args, **kwargs)
-
-
-async def run_in_session_async(
-    session_id: str,
-    callback: Callable[..., Any],
-    *args: Any,
-    **kwargs: Any,
-) -> Any:
-    """Await a Relay operation inside a shared Hermes session context."""
-    runtime = get_runtime()
-    if runtime is None:
-        raise RuntimeError("Hermes Relay runtime is unavailable")
-    session = runtime.get_session(session_id)
-    if session is None:
-        session = runtime.ensure_session({"session_id": session_id})
-    if session is None:
-        raise RuntimeError("Hermes Relay session is unavailable")
-    return await runtime.run_in_session_async(session, callback, *args, **kwargs)
 
 
 def get_session_handle(session_id: str) -> Any:
