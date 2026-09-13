@@ -53,37 +53,33 @@ describe("resume hydration gate over the real sanitizer", () => {
 });
 
 describe("shouldShowResumeLoadingOverlay", () => {
-  it("shows while a resume target is connecting or open and still hydrating", () => {
+  // The overlay keys on `hydrating` alone (not the URL `?resume=` param):
+  // `resumeHydrating` is set both for explicit `?resume=` chats (at the top
+  // of the connect effect) and for an implicit server-announced resume
+  // (`beginResumeReplay` after the active-session control frame arrives,
+  // with no `?resume=` on the URL — see `pty_ws` in web_server.py, #93518).
+  // Both paths spawn a fresh `--resume` PTY with the same blank boot window,
+  // so both must show the overlay for `hydrating && (connecting|open)`.
+  // Regression: the old helper took `hasResumeTarget: Boolean(resumeParam)`,
+  // which suppressed the overlay on the implicit path.
+  it("shows while connecting or open and still hydrating (explicit or implicit resume)", () => {
     expect(
       shouldShowResumeLoadingOverlay({
-        hasResumeTarget: true,
         ptyState: "connecting",
         hydrating: true,
       }),
     ).toBe(true);
     expect(
       shouldShowResumeLoadingOverlay({
-        hasResumeTarget: true,
         ptyState: "open",
         hydrating: true,
       }),
     ).toBe(true);
   });
 
-  it("hides when there is no resume target", () => {
-    expect(
-      shouldShowResumeLoadingOverlay({
-        hasResumeTarget: false,
-        ptyState: "connecting",
-        hydrating: true,
-      }),
-    ).toBe(false);
-  });
-
   it("hides once hydration finishes", () => {
     expect(
       shouldShowResumeLoadingOverlay({
-        hasResumeTarget: true,
         ptyState: "open",
         hydrating: false,
       }),
@@ -94,7 +90,6 @@ describe("shouldShowResumeLoadingOverlay", () => {
     for (const ptyState of ["reconnecting", "closed", "ended"] as const) {
       expect(
         shouldShowResumeLoadingOverlay({
-          hasResumeTarget: true,
           ptyState,
           hydrating: true,
         }),
