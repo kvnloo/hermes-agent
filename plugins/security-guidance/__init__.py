@@ -24,6 +24,12 @@ logger = logging.getLogger(__name__)
 _TARGET_TOOLS: Dict[str, Tuple[str, Tuple[str, ...]]] = {
     "write_file": ("path", ("content",)),
     "patch": ("path", ("new_string", "patch")),
+    # skill_manage legacy flat single-op shape: the handler still accepts
+    # top-level file_path/file_content/new_string for old transcripts and
+    # staged-write replay (no longer advertised). The advertised operations[]
+    # shape — where those keys live one level down inside each op — is handled
+    # in _extract_path_and_content, since it doesn't fit the flat (path_key,
+    # content_keys) tuple shape above.
     "skill_manage": ("file_path", ("file_content", "new_string")),
 }
 
@@ -82,9 +88,39 @@ def _scan_args(tool_name: str, args: Any) -> List[Tuple[str, str]]:
     spec = _TARGET_TOOLS.get(tool_name)
     if _env_flag("SECURITY_GUIDANCE_DISABLE") or spec is None or not isinstance(args, dict):
         return []
+    out: List[Tuple[str, str]] = []
+    # skill_manage's advertised (schema-pinned) call shape is an operations[]
+    # array: each op nests its own file_path / file_content / new_string /
+    # content one level down. Scan every op against its own path so warn/block
+    # behavior matches an equivalent write_file / patch call. The legacy flat
+    # single-op shape (top-level file_path/file_content/new_string) is still
+    # accepted by the handler for old transcripts / staged-write replay — it
+    # falls through to the generic path-key lookup below.
+    if tool_name == "skill_manage" and isinstance(args.get("operations"), list):
+        for op in args["operations"]:
+            if not isinstance(op, dict):
+                continue
+            path = op.get("file_path") or ""
+            if not isinstance(path, str):
+                path = ""
+            # content is the create / full-rewrite body and can also carry
+            # code (e.g. a patch of scripts/run.py); scan it too. old_string is
+            # the text being removed — scanning it would warn about content
+            # being deleted, so it is intentionally excluded.
+            for ck in ("file_content", "new_string", "content"):
+                val = op.get(ck)
+                if isinstance(val, str) and val:
+                    out.append((path, val))
+        return out
     path_key, content_keys = spec
-    path = raw_path if isinstance(raw_path := args.get(path_key), str) else ""
-    return [finding for val in (args.get(ck) for ck in content_keys) if isinstance(val, str) and val for finding in _scan_content(path, val)]
+    path = args.get(path_key) or ""
+    if not isinstance(path, str):
+        path = ""
+    for ck in content_keys:
+        val = args.get(ck)
+        if isinstance(val, str) and val:
+            out.append((path, val))
+    return out
 
 
 def _format_warning_block(findings: List[Tuple[str, str]]) -> str:
