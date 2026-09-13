@@ -322,6 +322,55 @@ test('addWorktree: base origin/main does not set up upstream tracking', async ()
   }
 })
 
+test('addWorktree: base upstream/main (non-origin remote) does not set up upstream tracking', async () => {
+  // Same shape as the origin/main control above, but with the remote renamed to
+  // `upstream`. The `--no-track` guard must apply to any remote-tracking base,
+  // not only the literal `origin/` prefix.
+  const remoteDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hermes-remote-'))
+  const cloneDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hermes-clone-'))
+
+  try {
+    execFileSync('git', ['init', '-b', 'main', remoteDir])
+    execFileSync('git', [
+      '-C',
+      remoteDir,
+      '-c',
+      'user.email=hermes@localhost',
+      '-c',
+      'user.name=Hermes',
+      'commit',
+      '--allow-empty',
+      '-m',
+      'root'
+    ])
+
+    execFileSync('git', ['clone', remoteDir, cloneDir])
+    // Fork layout: the only remote is NOT named `origin`.
+    execFileSync('git', ['-C', cloneDir, 'remote', 'rename', 'origin', 'upstream'])
+
+    const result = await addWorktree(
+      cloneDir,
+      { base: 'upstream/main', branch: 'feature-branch', name: 'feature-branch' },
+      'git'
+    )
+
+    assert.equal(result.branch, 'feature-branch')
+
+    let hasUpstream = true
+
+    try {
+      execFileSync('git', ['-C', result.path, 'rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'])
+    } catch {
+      hasUpstream = false
+    }
+
+    assert.equal(hasUpstream, false)
+  } finally {
+    fs.rmSync(remoteDir, { recursive: true, force: true })
+    fs.rmSync(cloneDir, { recursive: true, force: true })
+  }
+})
+
 // A pair of repos: a bare "remote" with `main` and the extra branches in
 // `branches`, plus a clone of it. Returns both paths. The caller must remove
 // them.
