@@ -1,5 +1,6 @@
 import { usageBarsText } from '../../../components/overlayPrimitives.js'
 import { introMsg, toTranscriptMessages } from '../../../domain/messages.js'
+import { modelHopOverlay } from '../../../domain/modelHop.js'
 import { sessionScopedModelArg, TUI_SESSION_MODEL_FLAG } from '../../../domain/slash.js'
 import type {
   BackgroundStartResponse,
@@ -128,12 +129,10 @@ export const sessionCommands: SlashCommand[] = [
       // gateway QUEUES it and applies it at the next turn start (returning
       // deferred:true) instead of rejecting. Either way the pick sticks without
       // interrupting the stream or waiting on the swap.
-      if (!arg.trim()) {
-        return patchOverlayState({ modelPicker: true })
-      }
+      const hop = modelHopOverlay(arg)
 
-      if (arg.trim() === '--refresh') {
-        return patchOverlayState({ modelPicker: { refresh: true } })
+      if (hop) {
+        return patchOverlayState({ modelPicker: hop === true ? true : hop })
       }
 
       const switchModel = (confirmExpensiveModel = false) =>

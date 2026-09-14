@@ -3967,6 +3967,7 @@ class GatewayRunner(
         base_url: Optional[str]
         api_key: Optional[str]
         data: Any
+        protect_first_n: int = 3
 
     @dataclasses.dataclass
     class _HygieneAttempt:

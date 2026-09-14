@@ -1,6 +1,7 @@
 import { Box, Text, useInput, useStdout } from '@hermes/ink'
 import { useEffect, useMemo, useState } from 'react'
 
+import { flattenHopModels, hopSelectValue, type HopModel } from '../domain/modelHop.js'
 import { providerDisplayNames } from '../domain/providers.js'
 import { TUI_SESSION_MODEL_FLAG } from '../domain/slash.js'
 import type { GatewayClient } from '../gatewayClient.js'
@@ -35,6 +36,7 @@ export function providerIndexAfterClearingFilter(
 export function ModelPicker({
   allowPersistGlobal = true,
   gw,
+  hopMode = false,
   initialRefresh = false,
   maxWidth,
   onCancel,
@@ -49,7 +51,7 @@ export function ModelPicker({
   const [persistGlobal, setPersistGlobal] = useState(false)
   const [providerIdx, setProviderIdx] = useState(0)
   const [modelIdx, setModelIdx] = useState(0)
-  const [stage, setStage] = useState<Stage>('provider')
+  const [stage, setStage] = useState<Stage>(hopMode ? 'model' : 'provider')
   const [keyInput, setKeyInput] = useState('')
   const [keySaving, setKeySaving] = useState(false)
   const [keyError, setKeyError] = useState('')
@@ -95,7 +97,7 @@ export function ModelPicker({
           )
         )
         setModelIdx(0)
-        setStage('provider')
+        setStage(hopMode ? 'model' : 'provider')
         setErr('')
         setLoading(false)
       })
@@ -103,7 +105,7 @@ export function ModelPicker({
         setErr(rpcErrorMessage(e))
         setLoading(false)
       })
-  }, [gw, initialRefresh, sessionId])
+  }, [gw, hopMode, initialRefresh, sessionId])
 
   const names = useMemo(() => providerDisplayNames(providers), [providers])
 
@@ -129,11 +131,31 @@ export function ModelPicker({
     ).map(r => r.item)
   }, [providerRows, filter, stage])
 
+  const hopRows = useMemo(
+    () => (hopMode ? flattenHopModels(providers, currentModel) : []),
+    [currentModel, hopMode, providers]
+  )
+
+  const filteredHopRows = useMemo(() => {
+    if (!hopMode) {
+      return [] as HopModel[]
+    }
+
+    if (!filter.trim()) {
+      return hopRows
+    }
+
+    return fuzzyRank(hopRows, filter, row => `${row.label} ${row.id} ${row.provider}`).map(r => r.item)
+  }, [filter, hopMode, hopRows])
+
   const provider = filteredProviderRows[providerIdx]?.provider
-  const allModels = useMemo(() => provider?.models ?? [], [provider])
+  const allModels = useMemo(
+    () => (hopMode ? filteredHopRows.map(r => r.label) : provider?.models ?? []),
+    [filteredHopRows, hopMode, provider]
+  )
 
   const filteredModels = useMemo(() => {
-    if (stage !== 'model' || !filter.trim()) {
+    if (stage !== 'model' || hopMode || !filter.trim()) {
       return allModels
     }
 
@@ -158,6 +180,18 @@ export function ModelPicker({
   }, [models.length, modelIdx])
 
   const back = () => {
+    if (hopMode) {
+      if (filter.trim()) {
+        setFilter('')
+        setModelIdx(0)
+
+        return
+      }
+
+      onCancel()
+
+      return
+    }
     // Esc first clears an active filter on the list stages, before navigating.
     if ((stage === 'provider' || stage === 'model') && filter.trim()) {
       // Preserve the selected provider across filter clear (same fix as
@@ -344,6 +378,16 @@ export function ModelPicker({
     }
 
     if (key.return) {
+      if (hopMode) {
+        const row = filteredHopRows[modelIdx]
+
+        if (row) {
+          onSelect(hopSelectValue(row))
+        }
+
+        return
+      }
+
       if (stage === 'provider') {
         if (!provider) {
           return
@@ -636,11 +680,11 @@ export function ModelPicker({
   return (
     <Box flexDirection="column" width={width}>
       <Text bold color={t.color.accent} wrap="truncate-end">
-        Select model (step 2/2)
+        Select model{hopMode ? ' (this session)' : ' (step 2/2)'}
       </Text>
 
       <Text color={t.color.muted} wrap="truncate-end">
-        {filteredProviderRows[providerIdx]?.name || '(unknown provider)'} · Esc back
+        {hopMode ? 'type to filter · Enter switches this session' : `${filteredProviderRows[providerIdx]?.name || '(unknown provider)'} · Esc back`}
       </Text>
       <Text color={filter ? t.color.accent : t.color.muted} wrap="truncate-end">
         {filter ? `filter: ${filter}▎` : 'type to filter · ↑/↓ select'}
@@ -701,6 +745,7 @@ export function ModelPicker({
 interface ModelPickerProps {
   allowPersistGlobal?: boolean
   gw: GatewayClient
+  hopMode?: boolean
   initialRefresh?: boolean
   maxWidth?: number
   onCancel: () => void

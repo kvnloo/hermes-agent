@@ -635,6 +635,10 @@ export function useInputHandlers(ctx: InputHandlerContext): InputHandlerResult {
       return patchOverlayState({ modelPicker: true })
     }
 
+    if (key.meta && ch.toLowerCase() === 'p') {
+      return patchOverlayState({ modelPicker: { sessionOnly: true } })
+    }
+
     if (key.ctrl && ch.toLowerCase() === 'c') {
       const ctrlC = resolveCtrlCComposerAction({
         busy: live.busy,

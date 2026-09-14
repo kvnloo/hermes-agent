@@ -240,13 +240,16 @@ export function FloatingOverlays({
 
   if (overlay.modelPicker) {
     const initialRefresh = typeof overlay.modelPicker === 'object' && overlay.modelPicker.refresh === true
+    const sessionOnly = typeof overlay.modelPicker === 'object' && overlay.modelPicker.sessionOnly === true
 
     widgets.push({
       id: 'model-picker',
       render: width => (
         <FloatBox color={theme.color.border}>
           <ModelPicker
+            allowPersistGlobal={!sessionOnly}
             gw={gw}
+            hopMode={sessionOnly}
             initialRefresh={initialRefresh}
             maxWidth={width}
             onCancel={() => patchOverlayState({ modelPicker: false })}

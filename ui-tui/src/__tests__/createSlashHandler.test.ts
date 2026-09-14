@@ -213,6 +213,24 @@ describe('createSlashHandler', () => {
     expect(ctx.gateway.rpc).not.toHaveBeenCalled()
   })
 
+  it('opens a session-only hop picker for /model --session', () => {
+    patchUiState({ sid: 'sid-abc' })
+    const ctx = buildCtx()
+
+    expect(createSlashHandler(ctx)('/model --session')).toBe(true)
+    expect(getOverlayState().modelPicker).toEqual({ sessionOnly: true })
+    expect(ctx.gateway.rpc).not.toHaveBeenCalled()
+  })
+
+  it('keeps /switch on the live session switcher', () => {
+    patchUiState({ sid: 'sid-abc' })
+    const ctx = buildCtx()
+
+    expect(createSlashHandler(ctx)('/switch')).toBe(true)
+    expect(getOverlayState().sessions).toBe(true)
+    expect(getOverlayState().modelPicker).toBe(false)
+  })
+
   it('honors TUI picker session scope without adding --global', async () => {
     patchUiState({ sid: 'sid-abc' })
 

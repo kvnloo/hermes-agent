@@ -515,6 +515,7 @@ class GatewayTurnMixin:
             return parsed if (parsed >= 0 if allow_zero else parsed > 0) else current
 
         hs.hard_msg_limit = _knob("hygiene_hard_message_limit", hs.hard_msg_limit, int)
+        hs.protect_first_n = _knob("protect_first_n", getattr(hs, "protect_first_n", 3), int)
         hs.timeout_seconds = _knob("hygiene_timeout_seconds", hs.timeout_seconds, float)
         hs.total_ceiling_seconds = _knob("hygiene_total_ceiling_seconds", hs.total_ceiling_seconds, float)
         # The ceiling can never be tighter than one idle window, or the extension loop would be dead code.
@@ -1195,16 +1196,26 @@ class GatewayTurnMixin:
         """Auto-compress pathologically large transcripts before the agent starts so oversized
         histories don't cause repeated truncation/context failures. Token source: the API's
         prompt_tokens from the last turn, else a char/4 estimate."""
+        from gateway.history_bound import bound_history_to_hard_limit
         from gateway.run import HygieneTurnHoldExceeded
-        if not history or len(history) < 4:
-            return history
 
         hs = await self._hmwa_hygiene_settings(source, session_key)
+
+        def _bound(h):
+            return bound_history_to_hard_limit(
+                h, hs.hard_msg_limit, protect_first_n=getattr(hs, "protect_first_n", 3),
+            )
+
+        # Always cap the in-context window, including compression-disabled / cooldown
+        # / turn-hold-abandon paths. LLM hygiene remains best-effort; the bound is
+        # what stops Telegram from proceeding on a 20k-message transcript.
+        if not history or len(history) < 4:
+            return _bound(history)
         if not hs.compression_enabled:
-            return history
+            return _bound(history)
         plan = await self._hmwa_hygiene_plan(hs, history, session_entry, session_key)
         if not plan.needs_compress:
-            return history
+            return _bound(history)
 
         attempt = self._HygieneAttempt(agent=None, meta=self._event_thread_metadata(event, source), history=history)
         try:
@@ -1230,7 +1241,7 @@ class GatewayTurnMixin:
             pass
         except Exception as e:
             logger.warning("Session hygiene auto-compress failed: %s", e)
-        return attempt.history
+        return _bound(attempt.history)
 
     async def _hmwa_first_contact_notes(self, source, history, turn_sidecar_notes):
         """First-ever-message onboarding note + one-time 'no home channel' prompt (both only when
