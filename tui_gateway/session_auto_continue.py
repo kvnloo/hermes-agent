@@ -262,6 +262,24 @@ def _handle_busy_submit(rid, sid: str, session: dict, text: Any, transport: Any,
         if (method and supported[mode]
                 and (resp := _ac_try_correction(rid, session, agent, method, plain_text, status)) is not None):
             return resp
+    # If a queued prompt already exists and the new text differs from it, upgrade the queued
+    # message to a steer instead of merging into the same slot — matching omp's behavior where
+    # pressing Enter again while busy steers the pending message into the live turn.
+    existing_queued = session.get("queued_prompt")
+    if existing_queued and plain_text and agent is not None and hasattr(agent, "steer"):
+        existing_text = str(existing_queued.get("text") or "").strip()
+        if existing_text and existing_text != plain_text:
+            try:
+                steer_accepted = agent.steer(plain_text)
+            except Exception:
+                steer_accepted = False
+            if steer_accepted:
+                with session["history_lock"]:
+                    if session.get("running"):
+                        _record_inflight_correction(session, plain_text)
+                        _enqueue_prompt(session, text, transport, image_paths=image_paths, turn_author=turn_author)
+                        session["last_active"] = time.time()
+                        return _ok(rid, {"status": "steered"})
     # Queue before asking the live turn to stop. Never call a provider/compute-host method under history_lock: an
     # interrupt can wait behind the op it cancels.
     with session["history_lock"]:
