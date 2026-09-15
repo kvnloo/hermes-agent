@@ -1210,15 +1210,6 @@ class TestCodexValidateResponse:
         assert transport.validate_response(r) is False
 
 
-class TestCodexMapFinishReason:
-
-    def test_completed(self, transport):
-        assert transport.map_finish_reason("completed") == "stop"
-
-
-
-
-
 class TestCodexNormalizeResponse:
 
     def test_text_response(self, transport):

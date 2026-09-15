@@ -1052,22 +1052,6 @@ class ResponsesApiTransport(ProviderTransport):
                 extra_body.pop("prompt_cache_key", None)
         return normalized
 
-    def map_finish_reason(self, raw_reason: str) -> str:
-        """Map Codex response.status to OpenAI finish_reason.
-
-        Codex uses response.status ('completed', 'incomplete') +
-        response.incomplete_details.reason for granular mapping.
-        This method handles the simple status string; the caller
-        should check incomplete_details separately for 'max_output_tokens'.
-        """
-        _MAP = {
-            "completed": "stop",
-            "incomplete": "length",
-            "failed": "stop",
-            "cancelled": "stop",
-        }
-        return _MAP.get(raw_reason, "stop")
-
 
 # Auto-register on import
 from agent.transports import register_transport  # noqa: E402
