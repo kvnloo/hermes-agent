@@ -655,6 +655,13 @@ strings to prove the plugin rejects them, so it asks for confirmation and
 `--force` overrides it instead of blocking the install outright. The same
 finding in any other file (`setup.sh`, `src/spec/…`) is still **dangerous**.
 
+Defensive documentation gets the same cap: a whole-line code comment or a
+`CHANGELOG.md` entry that merely *describes* the threat a defense rejects
+(prose about the defense, not the attack) is also capped at **caution**, so
+authoring hardening notes can't make a plugin un-installable. Runtime code
+(including trailing comments on an executable line) and agent-facing docs
+like `after-install.md` keep full severity.
+
 Scanning is on by default; disable it in `config.yaml`:
 
 ```yaml
