@@ -487,6 +487,7 @@ from hermes_cli.subcommands.webhook import build_webhook_parser
 from hermes_cli.subcommands.hooks import build_hooks_parser
 from hermes_cli.subcommands.doctor import build_doctor_parser
 from hermes_cli.subcommands.verify import build_verify_parser
+from hermes_cli.subcommands.cleanse import build_cleanse_parser
 from hermes_cli.subcommands.security import build_security_parser
 from hermes_cli.subcommands.approvals import build_approvals_parser
 from hermes_cli.subcommands.dump import build_dump_parser
@@ -5924,6 +5925,13 @@ def cmd_verify(args):
     from hermes_cli.verify_cmd import run_verify_command
 
     sys.exit(run_verify_command(args))
+
+
+def cmd_cleanse(args):
+    """Run project-checker repair loop."""
+    from hermes_cli.cleanse_cmd import run_cleanse_command
+
+    sys.exit(run_cleanse_command(args))
 
 
 def cmd_security(args):
@@ -13773,6 +13781,11 @@ def main():
     # verify command  (parser built in hermes_cli/subcommands/verify.py)
     # =========================================================================
     build_verify_parser(subparsers, cmd_verify=cmd_verify)
+
+    # =========================================================================
+    # cleanse command  (parser built in hermes_cli/subcommands/cleanse.py)
+    # =========================================================================
+    build_cleanse_parser(subparsers, cmd_cleanse=cmd_cleanse)
 
     # =========================================================================
     # security command — on-demand supply-chain audit
