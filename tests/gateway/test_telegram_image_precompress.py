@@ -1,7 +1,7 @@
 """Tests for Telegram large-image pre-compression (salvage of PR #74893).
 
 Behind slow HTTP proxies, raw PNGs > 1-2MB exceed PTB's media_write_timeout.
-``_compress_image_to_jpeg`` converts large raster images to progressive JPEG
+``_compress_image_to_jpeg`` converts large raster images to baseline JPEG
 (resizing above 1600px) before upload. These tests exercise the real Pillow
 path with real file I/O — no mocks on the compression itself.
 """
@@ -75,6 +75,7 @@ class TestCompressImageToJpeg:
             assert os.path.getsize(out) < os.path.getsize(src)
             with Image.open(out) as jpg:
                 assert jpg.format == "JPEG"
+                assert jpg.info.get("progressive", 0) in (0, False)
                 assert max(jpg.size) <= adapter._IMG_MAX_DIMENSION
         finally:
             os.remove(out)

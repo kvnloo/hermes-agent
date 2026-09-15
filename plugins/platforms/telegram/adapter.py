@@ -381,7 +381,8 @@ class TelegramAdapter(BasePlatformAdapter):
 
     # Large-image compression for Telegram photo sends. Behind an HTTP proxy the PTB
     # media_write_timeout is easily exceeded by raw PNGs > 1-2MB; pre-compressing to
-    # progressive JPEG keeps the upload well under the timeout and reduces bandwidth.
+    # baseline JPEG keeps the upload under the timeout. Progressive JPEG is avoided:
+    # Telegram's photo processor has returned image_process_failed on this gateway.
     _IMG_JPEG_QUALITY = 85
     _IMG_MAX_DIMENSION = 1600  # above this, resize before JPEG
     _IMG_COMPRESS_THRESHOLD_BYTES = 1_048_576  # 1MB
@@ -4587,12 +4588,13 @@ class TelegramAdapter(BasePlatformAdapter):
         return None
 
     def _compress_image_to_jpeg(self, image_path: str) -> Optional[str]:
-        """Pre-compress a large image to progressive JPEG before upload.
+        """Pre-compress a large image to baseline JPEG before upload.
 
         Behind an HTTP proxy (e.g. tgapi.indevs.in) the PTB
         media_write_timeout (~20s) is easily exceeded by raw PNGs > 1-2MB.
-        A progressive JPEG at ~85% quality keeps the upload well under the
-        timeout while remaining visually equivalent for photos / info-graphics.
+        A baseline JPEG at ~85% quality keeps the upload well under the
+        timeout. Progressive JPEGs are not used: Telegram has rejected them
+        with ``image_process_failed`` on this gateway.
 
         Returns the path to a temporary JPEG, or None when the original can be
         used as-is (already small / already JPEG / Pillow not available). The
@@ -4661,7 +4663,7 @@ class TelegramAdapter(BasePlatformAdapter):
                 tmp,
                 "JPEG",
                 quality=self._IMG_JPEG_QUALITY,
-                progressive=True,
+                progressive=False,
                 optimize=True,
             )
             logger.info(
@@ -4810,6 +4812,8 @@ class TelegramAdapter(BasePlatformAdapter):
         self, chat_id: str, images: List[tuple], metadata: Optional[Dict[str, Any]] = None, human_delay: float = 0.0) -> SendResult:
         """Send images as Telegram albums (``send_media_group``, 10 per chunk). Animated GIFs can't join a
         media group (need ``send_animation``) so they go via the base per-image path, as does a failed chunk."""
+        if getattr(self, "_send_path_degraded", False):
+            return SendResult(success=False, error="send_path_degraded", retryable=True)
         if not self._bot:
             return SendResult(success=False, error="Not connected")
         if not images:
@@ -4864,9 +4868,11 @@ class TelegramAdapter(BasePlatformAdapter):
                         with contextlib.suppress(Exception):
                             fh.seek(0)
 
-                await self._send_with_dm_topic_reply_anchor_retry(
+                sent = await self._send_with_dm_topic_reply_anchor_retry(
                     self._bot.send_media_group, {**send_kwargs, "media": media}, metadata, reply_to_id,
                     "media group", reset_media=_reset_opened_files)
+                n_sent = len(sent) if isinstance(sent, list) else 1
+                logger.info("[%s] Media group delivered (%d photo(s), chunk %d/%d)", self.name, n_sent, chunk_idx + 1, len(chunks))
                 delivered = True
             except Exception as e:
                 logger.warning(
@@ -4887,7 +4893,9 @@ class TelegramAdapter(BasePlatformAdapter):
         self, chat_id: str, image_path: str, caption: Optional[str] = None, reply_to: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None, **kwargs) -> SendResult:
         """Send a local image file natively as a Telegram photo."""
-        # Pre-compress large raster images to progressive JPEG once; the photo send and the document
+        if getattr(self, "_send_path_degraded", False):
+            return SendResult(success=False, error="send_path_degraded", retryable=True)
+        # Pre-compress large raster images to baseline JPEG once; the photo send and the document
         # fallback both reuse the compressed file so either upload stays under media_write_timeout.
         compressed = self._compress_image_to_jpeg(image_path)
         actual_path = compressed or image_path
@@ -4895,9 +4903,8 @@ class TelegramAdapter(BasePlatformAdapter):
 
         async def _photo_failed(e: Exception) -> SendResult:
             error_str = str(e)
-            # Dimension errors are expected for valid images Telegram refuses as photos → INFO.
-            if "Photo_invalid_dimensions" in error_str or "PHOTO_INVALID_DIMENSIONS" in error_str:
-                logger.info("[%s] Image dimensions exceed Telegram photo limits, sending as document: %s", self.name, image_path)
+            if "Photo_invalid_dimensions" in error_str or "PHOTO_INVALID_DIMENSIONS" in error_str or "image_process_failed" in error_str.lower():
+                logger.info("[%s] Telegram refused photo (%s), sending as document: %s", self.name, error_str.split(":")[0][:80], image_path)
             else:
                 logger.warning(
                     "[%s] Failed to send Telegram local image as photo, trying document fallback: %s", self.name,

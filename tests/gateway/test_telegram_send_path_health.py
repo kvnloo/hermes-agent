@@ -183,3 +183,37 @@ def test_record_polling_progress_does_not_flip_when_not_running_or_fatal(running
 
     write_status.assert_not_called()
     assert adapter._send_path_degraded is False
+
+
+
+@pytest.mark.asyncio
+async def test_send_multiple_images_short_circuits_when_path_degraded():
+    """Albums must honor the same degraded-path gate as send(); otherwise a
+    wedged PTB client can ACK send_media_group while nothing reaches the user."""
+    adapter = _make_adapter()
+    adapter._send_path_degraded = True
+    adapter._bot.send_media_group = AsyncMock()
+
+    result = await adapter.send_multiple_images(
+        "123", [("file:///tmp/a.png", "a"), ("file:///tmp/b.png", "b")])
+
+    assert result.success is False
+    assert result.error == "send_path_degraded"
+    assert result.retryable is True
+    adapter._bot.send_media_group.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_send_image_file_short_circuits_when_path_degraded():
+    adapter = _make_adapter()
+    adapter._send_path_degraded = True
+    adapter._bot.send_photo = AsyncMock()
+    adapter._bot.send_document = AsyncMock()
+
+    result = await adapter.send_image_file("123", "/tmp/missing.png")
+
+    assert result.success is False
+    assert result.error == "send_path_degraded"
+    assert result.retryable is True
+    adapter._bot.send_photo.assert_not_awaited()
+    adapter._bot.send_document.assert_not_awaited()
