@@ -481,12 +481,7 @@ def test_external_secret_values_are_isolated_between_homes(tmp_path, monkeypatch
                 )
             ],
             provenance={
-                "SHARED_API_KEY": AppliedVar(
-                    name="SHARED_API_KEY",
-                    source="test-source",
-                    shape="mapped",
-                    overrode_env=True,
-                )
+                "SHARED_API_KEY": AppliedVar(source="test-source"),
             }
         )
 
