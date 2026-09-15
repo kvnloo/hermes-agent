@@ -62,10 +62,7 @@ _REGISTRY_LOCK = threading.RLock()
 class AppliedVar:
     """Provenance record for one env var the orchestrator set."""
 
-    name: str
     source: str          # SecretSource.name
-    shape: str           # "mapped" | "bulk"
-    overrode_env: bool   # replaced a pre-existing .env/shell value
 
 
 @dataclass
@@ -77,9 +74,6 @@ class SourceReport:
     result: FetchResult
     applied: List[str] = field(default_factory=list)
     skipped_existing: List[str] = field(default_factory=list)   # .env/shell won
-    skipped_claimed: List[str] = field(default_factory=list)    # earlier source won
-    skipped_protected: List[str] = field(default_factory=list)  # bootstrap-auth guard
-    skipped_invalid: List[str] = field(default_factory=list)    # bad env-var name
 
 
 @dataclass
@@ -439,8 +433,8 @@ def apply_all(secrets_cfg: dict, home_path: Path,
     4. Bulk sources, in configured order.
 
     First claim wins.  A later source that also carries the var gets a
-    ``skipped_claimed`` entry and a conflict warning — never a silent
-    clobber, and ``override_existing`` never applies across sources.
+    conflict warning — never a silent clobber, and ``override_existing``
+    never applies across sources.
 
     Profile aliasing (#51447): when running under a named profile, an applied
     var ``FOO_<PROFILE>`` (credential-shaped suffixes only) also hydrates the
@@ -515,13 +509,10 @@ def apply_all(secrets_cfg: dict, home_path: Path,
         def _try_apply(var: str, value: str, *, is_alias: bool = False) -> bool:
             """Apply one var through the shared guard chain. True = applied."""
             if not is_valid_env_name(var):
-                sr.skipped_invalid.append(var)
                 return False
             if var in protected:
-                sr.skipped_protected.append(var)
                 return False
             if var in claimed:
-                sr.skipped_claimed.append(var)
                 report.conflicts.append(
                     f"{var}: kept value from {claimed[var]}; "
                     f"{source.name} also supplies it (first source wins — "
@@ -538,12 +529,7 @@ def apply_all(secrets_cfg: dict, home_path: Path,
             env[var] = value
             claimed[var] = source.name
             sr.applied.append(var)
-            report.provenance[var] = AppliedVar(
-                name=var,
-                source=source.name,
-                shape=source.shape,
-                overrode_env=existed,
-            )
+            report.provenance[var] = AppliedVar(source=source.name)
             return True
 
         for var, value in result.secrets.items():

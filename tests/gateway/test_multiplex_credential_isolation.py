@@ -186,12 +186,7 @@ def test_cold_profile_hydrates_external_source_without_global_env(
                 )
             ],
             provenance={
-                "TEST_PROVIDER_API_KEY": AppliedVar(
-                    name="TEST_PROVIDER_API_KEY",
-                    source="fake-source",
-                    shape="mapped",
-                    overrode_env=False,
-                )
+                "TEST_PROVIDER_API_KEY": AppliedVar(source="fake-source"),
             },
         )
 
