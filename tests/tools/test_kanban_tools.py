@@ -63,10 +63,14 @@ def worker_env(monkeypatch, tmp_path):
     conn = kbc.connect()
     try:
         tid = kb.create_task(conn, title="worker-test", assignee="test-worker")
-        kb.claim_task(conn, tid)
+        claimed = kb.claim_task(conn, tid)
+        assert claimed is not None
     finally:
         conn.close()
     monkeypatch.setenv("HERMES_KANBAN_TASK", tid)
+    # A dispatcher-spawned worker always carries its run id
+    # (kanban_db_dispatch injects HERMES_KANBAN_RUN_ID at spawn).
+    monkeypatch.setenv("HERMES_KANBAN_RUN_ID", str(claimed.current_run_id))
     return tid
 
 

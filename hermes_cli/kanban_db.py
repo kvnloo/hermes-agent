@@ -2626,29 +2626,40 @@ class ArtifactPreservationError(RuntimeError):
 class LiveClaimError(ValueError):
     """``complete_task`` refused: the task is ``running`` under a live claim and
     the caller neither owns its run (``expected_run_id``) nor passed ``force``.
-    Completing anyway would close the worker's run row underneath a process
-    that is still executing. A ``ValueError`` so tool error handlers treat it
-    as recoverable."""
+    Completing anyway would close the claimant's run row from underneath it and
+    misattribute the run's summary. A ``ValueError`` so tool error handlers
+    treat it as recoverable."""
 
     def __init__(self, task_id: str):
         super().__init__(
-            f"{task_id} is running under a live worker claim; pass expected_run_id "
-            "(worker ownership) or force=True (explicit operator override) instead "
+            f"{task_id} is running under a live claim; pass expected_run_id "
+            "(run ownership) or force=True (explicit operator override) instead "
             "of closing the live run"
         )
 
 
-def _claim_is_live(trow) -> bool:
-    """True when a ``running`` task's claim still protects a run: the worker process
-    it spawned exists (PID + start-time fingerprint). A claim whose worker is gone,
-    or a library/CLI claim that never spawned one, has no run to protect. TTL expiry
-    is deliberately not consulted: ``reclaim_stale_tasks`` extends, not reclaims, the
-    claim of a live worker, so the process is the liveness authority here too."""
-    return bool(
-        trow["status"] == "running"
-        and trow["claim_lock"] is not None
-        and trow["worker_pid"]
-        and _worker_alive(trow["worker_pid"], trow["worker_started_at"])
+def _claim_is_live(conn: sqlite3.Connection, trow) -> bool:
+    """True when a ``running`` task's claim still protects an open run: the
+    recorded worker is alive (PID + start-time fingerprint), or the claim's run
+    row is still open. Pid-less claims (control-plane/CLI/library lanes via
+    ``claim_task``) open a run row without ever recording a ``worker_pid``, so a
+    missing or dead pid must not unprotect it. TTL expiry is deliberately not
+    consulted: ``reclaim_stale_tasks`` extends a live worker's claim and ends a
+    dead one's run, so an open run row means the claim is still the claimant's.
+    """
+    if trow["status"] != "running" or trow["claim_lock"] is None:
+        return False
+    # A recorded worker's process is the liveness authority for its own claim.
+    if trow["worker_pid"] and _worker_alive(trow["worker_pid"], trow["worker_started_at"]):
+        return True
+    # No live worker: the claim is live while its run row is still open.
+    run_id = trow["current_run_id"]
+    return (
+        run_id is not None
+        and conn.execute(
+            "SELECT 1 FROM task_runs WHERE id = ? AND ended_at IS NULL", (run_id,)
+        ).fetchone()
+        is not None
     )
 
 
@@ -2692,14 +2703,15 @@ def complete_task(
         if acceptance is not None and not record_acceptance(conn, task_id, acceptance):
             return False
         trow = conn.execute(
-            "SELECT status, claim_lock, worker_pid, worker_started_at FROM tasks WHERE id = ?",
+            "SELECT status, claim_lock, current_run_id, worker_pid, worker_started_at "
+            "FROM tasks WHERE id = ?",
             (task_id,),
         ).fetchone()
         prior_status = trow["status"] if trow else None
-        # Refuse to close a LIVE worker's run without proof of ownership
+        # Refuse to close a live run without proof of ownership
         # (expected_run_id) or an explicit human override (force=True); see
         # _claim_is_live for what "live" means.
-        if expected_run_id is None and not force and trow and _claim_is_live(trow):
+        if expected_run_id is None and not force and trow and _claim_is_live(conn, trow):
             raise LiveClaimError(task_id)
         sql = """
                 UPDATE tasks
@@ -3198,10 +3210,10 @@ def request_review(
             ).fetchone()
             if trow is None:
                 return _ret(False, "task not found")
-            # Refuse to clear a live worker's claim without proof of ownership
+            # Refuse to clear a live claim without proof of ownership
             # (expected_run_id) or an explicit human override (force=True);
             # the same fence as complete_task (_claim_is_live).
-            if expected_run_id is None and not force and _claim_is_live(trow):
+            if expected_run_id is None and not force and _claim_is_live(conn, trow):
                 return _ret(
                     False, "task is running under a live claim; pass expected_run_id "
                     "(worker ownership) or force=True (explicit operator "
