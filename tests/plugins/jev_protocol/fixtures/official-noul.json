@@ -1,0 +1,33 @@
+{
+  "provenance": {
+    "source": "https://docs.typesafe.ai/api.md",
+    "section": "Noul answer Example response",
+    "snapshot": "vendor-docs/api.md",
+    "retrieved": "2026-09-16T19:19:58Z",
+    "note": "Copied from published docs. Not a live API capture. No TypeSafe key used."
+  },
+  "request": {
+    "state": "Help! My payouts have been failing for 3 days.",
+    "model": "jev-latest",
+    "questions": {
+      "is_urgent": {
+        "type": "noul",
+        "instructions": "Does this convey urgency?",
+        "criteria": {
+          "true": "Explicitly time-sensitive",
+          "false": "No urgency expressed"
+        }
+      }
+    }
+  },
+  "response": {
+    "model": "jev-latest",
+    "answers": {
+      "is_urgent": {
+        "type": "noul",
+        "noul": 0.92
+      }
+    },
+    "usage": { "input_tokens": 312, "output_tokens": 48 }
+  }
+}

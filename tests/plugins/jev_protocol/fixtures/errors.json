@@ -1,0 +1,15 @@
+{
+  "provenance": {
+    "source": "https://docs.typesafe.ai/api.md",
+    "section": "Errors table",
+    "snapshot": "vendor-docs/api.md",
+    "retrieved": "2026-09-16T19:19:58Z",
+    "note": "Status meanings from docs only. Bodies are synthetic illustrations, not live TypeSafe errors."
+  },
+  "cases": [
+    {"status": 401, "kind": "unauthorized", "body": {"error": "missing or invalid API key"}},
+    {"status": 422, "kind": "unprocessable_entity", "body": {"error": "malformed question"}},
+    {"status": 429, "kind": "rate_limited", "body": {"error": "rate limit"}},
+    {"status": 529, "kind": "overloaded", "body": {"error": "overloaded"}}
+  ]
+}
