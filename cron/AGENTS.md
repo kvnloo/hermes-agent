@@ -77,9 +77,9 @@ cannot see other boards; **tenant** is a soft namespace within a board (workspac
 isolation, one fleet serving several businesses). After `kanban.failure_limit` consecutive
 non-success attempts on a task (default 2) the dispatcher auto-blocks it to stop spin loops.
 Process-identity note: `kanban --preserve-cache` contains "serve" — never classify processes by argv
-substring (root). Worker liveness is `(worker_pid, worker_started_at)` — the start-time fingerprint
-(`gateway.status.get_process_start_time`) recorded at claim time — never bare PID existence, or a
-recycled PID gets killed on reclaim.
+substring (root). Worker liveness is `(worker_pid, worker_started_at)` — the restart-stable fingerprint
+`"<instantiation epoch>|<start time>"` (`kanban_db_dispatch._process_fingerprint`) recorded at claim
+time — never bare PID existence, or a recycled PID gets killed on reclaim.
 
 - **Notifications leave through the task's owning profile.** `hermes_cli/kanban_db_notify.py`
   subscriptions carry the profile; `gateway/kanban_watchers_notifier.py` delivers via THAT
