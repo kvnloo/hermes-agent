@@ -183,6 +183,7 @@ def _start_desktop_cron_ticker(stop_event: threading.Event, interval: int = 60) 
 _DESKTOP_MCP_DISCOVERY_DELAY_S = 1.0
 
 
+# app_lifespan owns prewarm_picker_cache_async for standalone backends only.
 from hermes_cli.web_server_app import app_lifespan
 
 
