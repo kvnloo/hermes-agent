@@ -376,3 +376,68 @@ def test_load_hermes_env_bom_only_env_is_noop(tmp_path, monkeypatch):
 
     added = {k: v for k, v in os.environ.items() if k not in before}
     assert "\ufeff" not in "".join(added)
+
+
+def _worker_and_intake_homes(tmp_path):
+    profiles = tmp_path / "profiles"
+    chief = profiles / "chiefstaff"
+    intake = profiles / "intake"
+    chief.mkdir(parents=True)
+    intake.mkdir(parents=True)
+    (chief / "config.yaml").write_text("{}\n")
+    (intake / "config.yaml").write_text("{}\n")
+    (chief / "channel_directory.json").write_text(
+        json.dumps({"platforms": {"discord": [{"id": "1", "name": "general"}]}})
+    )
+    (intake / "channel_directory.json").write_text(
+        json.dumps({"platforms": {"telegram": [{"id": "1083429746", "name": "kevin"}]}})
+    )
+    (intake / ".env").write_text("TELEGRAM_BOT_TOKEN=intake-token\n")
+    return chief, intake
+
+
+def test_merge_intake_telegram_targets_fills_missing(monkeypatch):
+    monkeypatch.setattr(
+        send_cmd, "_intake_telegram_channels",
+        lambda: [{"id": "1083429746", "name": "kevin"}],
+    )
+    filled = send_cmd._merge_intake_telegram_targets({"discord": [{"id": "1"}]})
+    assert filled["telegram"][0]["id"] == "1083429746"
+    kept = send_cmd._merge_intake_telegram_targets({"telegram": [{"id": "own"}]})
+    assert kept["telegram"][0]["id"] == "own"
+
+
+def test_sibling_intake_home_from_worker_profile(tmp_path, monkeypatch):
+    from hermes_constants import set_hermes_home_override
+
+    chief, intake = _worker_and_intake_homes(tmp_path)
+    monkeypatch.setenv("HERMES_HOME", str(chief))
+    set_hermes_home_override(None)
+    assert send_cmd._sibling_intake_home() == intake
+    set_hermes_home_override(None)
+
+
+def test_send_telegram_routes_through_intake_home(tmp_path, monkeypatch, fake_tool):
+    """hermes send --to telegram from chiefstaff must load intake's bot token."""
+    import os
+    from importlib import reload
+    from pathlib import Path
+
+    chief, intake = _worker_and_intake_homes(tmp_path)
+    monkeypatch.setenv("HERMES_HOME", str(chief))
+    monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
+
+    import hermes_cli.config as _hc_config
+    reload(_hc_config)
+
+    args = _parse(["--to", "telegram", "hello from worker"])
+    with pytest.raises(SystemExit) as exc:
+        send_cmd.cmd_send(args)
+    assert exc.value.code == 0
+    assert Path(os.environ["HERMES_HOME"]) == intake
+    assert os.environ.get("TELEGRAM_BOT_TOKEN") == "intake-token"
+    assert fake_tool.calls[0]["target"] == "telegram"
+    assert fake_tool.calls[0]["message"] == "hello from worker"
+
+    from hermes_constants import set_hermes_home_override
+    set_hermes_home_override(None)

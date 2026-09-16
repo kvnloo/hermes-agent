@@ -97,6 +97,7 @@ def _list_targets(platform_filter: Optional[str], *, json_mode: bool) -> int:
                 platforms.setdefault(plat_name, [])
     except Exception:
         pass  # directory contents alone are still useful; don't fail --list on a config problem
+    platforms = _merge_intake_telegram_targets(platforms)
     if platform_filter:
         key = platform_filter.strip().lower()
         filtered = {k: v for k, v in platforms.items() if k.lower() == key}
@@ -163,6 +164,72 @@ def _load_hermes_env() -> None:
             os.environ[key] = str(val)
 
 
+def _sibling_intake_home() -> Optional[Path]:
+    """Intake profile next to this one. Telegram receive/send lives there.
+
+    Worker profiles keep TELEGRAM_BOT_TOKEN off their ``.env`` so they cannot
+    poll ``getUpdates``. Outbound ``hermes send --to telegram`` still has to
+    work, so we borrow intake's home when this profile has no telegram target.
+    """
+    try:
+        from hermes_cli.config import get_hermes_home
+        home = get_hermes_home()
+    except Exception:
+        return None
+    if home.name == "intake":
+        return None
+    if home.parent.name == "profiles":
+        candidate = home.parent / "intake"
+    else:
+        candidate = home / "profiles" / "intake"
+    if (candidate / "config.yaml").is_file() or (candidate / "channel_directory.json").is_file():
+        return candidate
+    return None
+
+
+def _intake_telegram_channels() -> list:
+    intake = _sibling_intake_home()
+    if intake is None:
+        return []
+    path = intake / "channel_directory.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, TypeError):
+        return []
+    channels = (data.get("platforms") or {}).get("telegram") or []
+    return channels if isinstance(channels, list) else []
+
+
+def _merge_intake_telegram_targets(platforms: dict) -> dict:
+    """Expose intake's telegram DM on worker profiles that only have Discord/etc."""
+    if platforms.get("telegram"):
+        return platforms
+    extra = _intake_telegram_channels()
+    if extra:
+        platforms["telegram"] = extra
+    return platforms
+
+
+def _route_telegram_send_through_intake(target: str) -> None:
+    """If this profile cannot send Telegram, use intake's token and home channel."""
+    import os
+    platform = (target or "").split(":", 1)[0].strip().lower()
+    if platform != "telegram":
+        return
+    if os.environ.get("TELEGRAM_BOT_TOKEN"):
+        return
+    intake = _sibling_intake_home()
+    if intake is None:
+        return
+    os.environ["HERMES_HOME"] = str(intake)
+    try:
+        from hermes_constants import set_hermes_home_override
+        set_hermes_home_override(intake)
+    except Exception:
+        pass
+    _load_hermes_env()
+
+
 def cmd_send(args: argparse.Namespace) -> None:
     """Entry point wired into the top-level argparse dispatcher."""
     _load_hermes_env()  # the downstream gateway config loader reads credentials from os.environ
@@ -179,6 +246,7 @@ def cmd_send(args: argparse.Namespace) -> None:
             "  hermes send --to discord:#ops --file report.md\n"
             "  hermes send --list      # list available targets",
             _USAGE_EXIT)
+    _route_telegram_send_through_intake(target)
     message = _read_message_body(getattr(args, "message", None), getattr(args, "file", None))
     if message is None or not message.strip():
         _fail(
