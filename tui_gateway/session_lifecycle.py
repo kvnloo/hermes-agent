@@ -71,9 +71,19 @@ def _claim_active_session_slot(
 ) -> tuple[Any, str | None]:
     try:
         from hermes_cli.active_sessions import try_acquire_active_session
+        metadata = _lease_metadata(live_session_id)
+        # A stdio TUI has no bound HTTP origin. Discovery failures must not
+        # block the exclusive lease that prevents a double-writer.
+        try:
+            from hermes_cli.session_attach_runtime import advertised_shared_runtime_origin
+            origin = advertised_shared_runtime_origin()
+        except (ImportError, SystemExit):
+            origin = None
+        if origin:
+            metadata["shared_runtime_url"] = origin
         return try_acquire_active_session(
             session_id=session_key, surface=surface, config=_load_cfg(), registry_home=profile_home,
-            metadata=_lease_metadata(live_session_id),
+            metadata=metadata,
             track_liveness=str(surface or "").strip().lower() == "desktop")
     except Exception as exc:
         logger.warning("Failed to claim active session slot: %s", exc)
