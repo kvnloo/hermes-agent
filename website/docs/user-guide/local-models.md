@@ -118,7 +118,7 @@ local_runtime:
   enabled: false     # true = start the managed server with Hermes.
                      # The desktop "Use" button sets this automatically.
   backend: auto      # auto | cuda | metal | vulkan | hip | cpu
-  tag: b10362        # pinned llama.cpp release; Hermes updates it with
+  tag: b10964        # pinned llama.cpp release; Hermes updates it with
                      # each release after re-validation
 ```
 
