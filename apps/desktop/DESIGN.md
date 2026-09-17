@@ -112,7 +112,6 @@ or write scroll offsets to pin the decision. Preview this order with delayed
 start and completion events, not pre-created tool rows. Final approval removal
 retires both the painted card and its measured layout footprint; restoring tool
 rows must not insert their full height before the outgoing stack can settle.
-No completion callback may clear the measurement of a newly arrived card.
 Reduced motion settles immediately without retaining empty clearance.
 
 ## Window glass
