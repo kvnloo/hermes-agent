@@ -132,7 +132,7 @@ Each platform adapter receives messages, routes them through a per-chat session 
 
 ## Intentional Silence Tokens
 
-For group chats, hooks, and automation flows, Hermes supports explicit silence tokens. If the agent's final response is exactly one supported token, the gateway suppresses outbound delivery and sends nothing to the chat.
+For hooks and automation flows, Hermes supports explicit silence tokens. If the agent's final response is exactly one supported token, the gateway suppresses outbound delivery and sends nothing to the chat. On a direct user turn, a bare silence marker is replaced with a visible fallback reply instead of being suppressed.
 
 Supported tokens:
 
@@ -147,9 +147,9 @@ Whitespace and case are normalized, but the whole final response must be the tok
 Silence is a delivery decision only. Hermes keeps the assistant silence turn in the session transcript, so the conversation still alternates normally:
 
 ```text
-user: side-channel chatter
+automation: scheduled run, nothing to report
 assistant: [SILENT]   # stored, not delivered
-user: next message
+automation: next scheduled run
 ```
 
 Failed turns still surface as errors; Hermes does not hide failures just because the text resembles a silence token.
