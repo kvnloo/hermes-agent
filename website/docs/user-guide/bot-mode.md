@@ -313,7 +313,7 @@ revoke room authority. If you cannot establish the fence, do not promote.
    old authoritative store into a synchronized replica.
 
 Promoting while the old gateway remains writable allows both independent
-`state.db` stores to accept messages and develop divergent histories. A higher
+`shared-state.db` stores to accept messages and develop divergent histories. A higher
 epoch on the replacement does not remotely disable the old writer; equal epochs
 are not required for split-brain. If histories have already diverged, fence
 writers and preserve both histories for recovery rather than assuming that
