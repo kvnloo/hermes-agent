@@ -152,7 +152,7 @@ fails, a restart fails, or a requested service cannot be verified active. The up
 exits nonzero and reports the affected services; recover them with the printed
 commands and retry `hermes update`.
 
-A failed historical receipt does not by itself prove that gateways are still stale. Startup and gateway-status warnings, as well as update catch-up, check the live fleet before acting on receipt-only restart obligations. Every recorded gateway profile must have a live successor on the current checkout; an unrelated current gateway cannot stand in for a missing, down, unknown-version, or non-gateway runtime. A manual gateway restart can therefore settle the warning without rewriting a failed update as successful. A separate pending marker remains authoritative because it can belong to a newer interrupted update whose inventory never reached the receipt.
+A failed historical receipt does not by itself prove that gateways are still stale. Startup and gateway-status warnings, as well as update catch-up, check the live fleet before acting on receipt-only restart obligations. Every recorded gateway profile must have a live successor on the code it owes — the current checkout for update catch-up, or the code a completed-restart receipt actually pulled for the startup warning (even if a later `git pull` has since moved the checkout past it); an unrelated current gateway cannot stand in for a missing, down, unknown-version, or non-gateway runtime. A manual gateway restart onto the owed code can therefore settle the warning without rewriting a failed update as successful. A separate pending marker remains authoritative because it can belong to a newer interrupted update whose inventory never reached the receipt.
 
 ### Full pre-update backup: `--backup`
 
