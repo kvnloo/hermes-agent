@@ -76,6 +76,27 @@ async def test_command_is_truncated_to_the_platform_budget():
     assert prompt.command == "x" * 100  # the raw command stays available for embeds/cards
 
 
+@pytest.mark.asyncio
+async def test_escaped_preview_stays_within_the_message_cap():
+    """A command of '&' chars fits the raw 3800 budget, but HTML-escaping expands it past the
+    4096 cap; the card send then fails and the runner falls back to the /approve text prompt
+    (issue #114036). Truncation must budget the escaped form."""
+    import html
+
+    class _Html(_Buttons):
+        _EA_CMD_BUDGET = 3800
+        MAX_MESSAGE_LENGTH = 4096
+
+        def _ea_escape(self, text):
+            return html.escape(text)
+
+    adapter = _Html()
+    await adapter.send_exec_approval("chat", "&" * 3800, "sess", description="flagged pattern")
+    (prompt,) = adapter.prompts
+    assert len(prompt.text) <= 4096
+    assert "..." in prompt.text  # the preview was clamped to fit
+
+
 def test_runner_only_offers_buttons_to_adapters_that_render_them():
     """Plain adapters get the text ``/approve`` prompt; the base send_exec_approval must not make
     the runner believe every adapter has buttons (its default reports failure and the runner would

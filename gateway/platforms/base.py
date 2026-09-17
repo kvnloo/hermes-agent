@@ -2580,6 +2580,19 @@ class BasePlatformAdapter(ABC):
         text = str(text or "")
         return text[:budget] + suffix if len(text) > budget else text
 
+    # A cut that lands inside an HTML entity would emit a broken "&am" fragment; back up to
+    # the entity start so the truncated preview stays parseable.
+    _PARTIAL_ENTITY_RE = re.compile(r"&[a-zA-Z0-9#]*$")
+
+    def _truncate_escaped_preview(self, text: str, budget: int, suffix: str = "...") -> str:
+        """Like ``_truncate_preview`` but budgets the ESCAPED form, never splitting an entity."""
+        text = str(text or "")
+        escaped = self._ea_escape(text)
+        if len(escaped) <= budget:
+            return escaped
+        cut = self._PARTIAL_ENTITY_RE.sub("", escaped[:budget])
+        return cut + suffix
+
     def _ea_escape(self, text: str) -> str:
         """Escape hook for command preview/reason; HTML-mode platforms (Telegram) override."""
         return text
@@ -2596,16 +2609,23 @@ class BasePlatformAdapter(ABC):
         self, command: str, description: str = "dangerous command", smart_denied: bool = False) -> str:
         """Shared exec-approval prompt text: header + fenced (truncated) command + why it was
         flagged + the deadline line, plus the smart-deny line. Buttons/trailing instructions stay
-        platform-local."""
+        platform-local. The command preview is budgeted against its ESCAPED length: HTML-mode
+        platforms expand characters on escape (& -> &amp;), so budgeting the raw text can still
+        blow past the message cap and send the card into the /approve text fallback."""
         if self._EA_REASON_BUDGET:
             description = self._truncate_preview(str(description or ""), self._EA_REASON_BUDGET)
-        cmd_preview = self._truncate_preview(
-            str(command or ""), self._exec_approval_cmd_budget(description, smart_denied))
-        text = (f"{self._EA_HEADER}"
-                f"{self._EA_CODE_OPEN}{self._ea_escape(cmd_preview)}{self._EA_CODE_CLOSE}"
-                f"{self._EA_REASON_LABEL}{self._ea_escape(description)}"
-                f"{self._ea_deadline_line()}")
-        return text + self._EA_SMART_DENY_LINE if smart_denied else text
+        desc_escaped = self._ea_escape(str(description or ""))
+        smart_line = self._EA_SMART_DENY_LINE if smart_denied else ""
+        chrome = (self._EA_HEADER + self._EA_CODE_OPEN + self._EA_CODE_CLOSE
+                  + self._EA_REASON_LABEL + desc_escaped + self._ea_deadline_line() + smart_line)
+        # Reserve the truncation suffix so the assembled card always fits the platform cap.
+        cmd_budget = max(0, min(self._exec_approval_cmd_budget(description, smart_denied),
+                                self.max_message_length_for_chat(None) - len(chrome) - 3))
+        cmd_preview = self._truncate_escaped_preview(str(command or ""), cmd_budget)
+        return (f"{self._EA_HEADER}"
+                f"{self._EA_CODE_OPEN}{cmd_preview}{self._EA_CODE_CLOSE}"
+                f"{self._EA_REASON_LABEL}{desc_escaped}"
+                f"{self._ea_deadline_line()}{smart_line}")
 
     # ── Exec-approval prompt (template method). The choice set is one rule for every button
     # surface — three separate "same fix × N adapters" commits motivated lifting it here.
