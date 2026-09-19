@@ -417,6 +417,9 @@ _TOOL_RESULT_MEDIA_PROVIDERS = frozenset({
     "openrouter", "nous", "vertex", "bedrock", "anthropic-vertex", "google-vertex",
     "anthropic", "claude", "anthropic-direct",
     "openai", "openai-chat", "openai-codex", "azure-openai",
+    # Vendor API accepts images inside tool-result messages (#115248). Attest
+    # transport positively — do NOT infer it from catalog supports_vision.
+    "deepseek",
 })
 _GEMINI_PROVIDERS = frozenset({"google", "gemini", "google-gemini", "google-vertex-gemini"})
 
@@ -456,27 +459,137 @@ def _supports_media_in_tool_results(provider: str, model: str) -> bool:
         return False
 
 
+class NativeToolResultPixelsDecision(NamedTuple):
+    """Two-axis decision for putting image bytes inside a tool-result message.
+
+    Axes are independent: catalog ``supports_vision`` is NOT transport acceptance.
+    ``native`` is True only when both axes are positively known True, with no veto
+    and no explicit auxiliary.vision override. Unknown fails closed.
+    """
+    native: bool
+    model_can_understand_images: Optional[bool]
+    transport_accepts_images_in_tool_results: Optional[bool]
+    explicit_veto: bool
+    explicit_aux_override: bool
+    reason: str
+
+
+def resolve_native_tool_result_pixels(
+    provider: str,
+    model: str,
+    cfg: Optional[Dict[str, Any]] = None,
+) -> NativeToolResultPixelsDecision:
+    """Shared resolver for ``vision_analyze`` and ``computer_use`` capture.
+
+    native_pixels =
+        model_can_understand_images
+        AND tool_result_transport_accepts_images
+        AND NOT explicit_veto
+        AND NOT explicit_aux_override
+
+    An explicit config ``supports_vision: true`` is operator attestation that
+    native tool-result pixels are allowed for this route (escape hatch for
+    custom/local VLMs). Catalog vision alone never implies transport support.
+    """
+    from agent.image_routing import (
+        _coerce_mode,
+        _dict_or_empty,
+        _explicit_aux_vision_override,
+        _lookup_supports_vision,
+        _supports_vision_override,
+    )
+
+    # Explicit agent.image_input_mode=text wins over supports_vision attestation.
+    mode_cfg = _coerce_mode(_dict_or_empty(_dict_or_empty(cfg).get("agent")).get("image_input_mode"))
+    if mode_cfg == "text":
+        return NativeToolResultPixelsDecision(
+            native=False,
+            model_can_understand_images=None,
+            transport_accepts_images_in_tool_results=None,
+            explicit_veto=False,
+            explicit_aux_override=False,
+            reason="explicit_image_input_mode_text",
+        )
+
+    if _explicit_aux_vision_override(cfg):
+        return NativeToolResultPixelsDecision(
+            native=False,
+            model_can_understand_images=None,
+            transport_accepts_images_in_tool_results=None,
+            explicit_veto=False,
+            explicit_aux_override=True,
+            reason="explicit_aux_vision_override",
+        )
+
+    veto = _profile_rejects_tool_media(provider, model)
+    user_declared = _supports_vision_override(cfg, provider, model)
+    if veto:
+        model_can = True if user_declared is True else _lookup_supports_vision(provider, model, cfg)
+        return NativeToolResultPixelsDecision(
+            native=False,
+            model_can_understand_images=model_can,
+            transport_accepts_images_in_tool_results=False,
+            explicit_veto=True,
+            explicit_aux_override=False,
+            reason="profile_rejects_tool_media",
+        )
+
+    # Operator escape hatch: config supports_vision=true attests the full native
+    # tool-result path for this route. Distinct from catalog vision.
+    if user_declared is True:
+        return NativeToolResultPixelsDecision(
+            native=True,
+            model_can_understand_images=True,
+            transport_accepts_images_in_tool_results=True,
+            explicit_veto=False,
+            explicit_aux_override=False,
+            reason="config_supports_vision_attestation",
+        )
+    if user_declared is False:
+        return NativeToolResultPixelsDecision(
+            native=False,
+            model_can_understand_images=False,
+            transport_accepts_images_in_tool_results=_supports_media_in_tool_results(provider, model) or None,
+            explicit_veto=False,
+            explicit_aux_override=False,
+            reason="config_supports_vision_false",
+        )
+
+    model_can = _lookup_supports_vision(provider, model, cfg)
+    transport = True if _supports_media_in_tool_results(provider, model) else False
+    # Whitelist miss / no profile → transport False (not positively known). Fail closed.
+    native = model_can is True and transport is True
+    if model_can is None:
+        reason = "unknown_model_vision"
+    elif model_can is False:
+        reason = "model_lacks_vision"
+    elif not transport:
+        reason = "transport_not_attested"
+    else:
+        reason = "both_axes_positive"
+    return NativeToolResultPixelsDecision(
+        native=native,
+        model_can_understand_images=model_can,
+        transport_accepts_images_in_tool_results=transport if transport else False,
+        explicit_veto=False,
+        explicit_aux_override=False,
+        reason=reason,
+    )
+
+
 def _should_use_native_vision_fast_path() -> bool:
-    """True when image routing resolves to ``native`` AND the provider accepts images in tool
-    results, or the user set the ``model.supports_vision`` override (escape hatch for
-    custom/local providers). Any failure → False."""
+    """True when the shared two-axis resolver admits native tool-result pixels.
+
+    Same resolver as ``computer_use`` capture — do not maintain a second gate.
+    Any failure → False.
+    """
     try:
         from agent.auxiliary_client import _read_main_provider, _read_main_model
-        from agent.image_routing import decide_image_input_mode, _lookup_supports_vision
         from hermes_cli.config import load_config
         provider = _read_main_provider()
         model = _read_main_model()
         cfg = load_config()
-        if decide_image_input_mode(provider, model, cfg) != "native":
-            return False
-        # The profile veto applies ahead of the capability lookup too: a
-        # model marked vision-capable by models.dev / custom_providers must
-        # not re-open the multimodal-envelope route the profile rejects.
-        if _profile_rejects_tool_media(provider, model):
-            return False
-        return (
-            _supports_media_in_tool_results(provider, model)
-            or _lookup_supports_vision(provider, model, cfg) is True)
+        return resolve_native_tool_result_pixels(provider, model, cfg).native
     except Exception as exc:
         logger.debug("Native vision fast-path check failed: %s", exc)
         return False
