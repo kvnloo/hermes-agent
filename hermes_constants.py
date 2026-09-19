@@ -98,13 +98,45 @@ def _warn_profile_fallback_once() -> None:
             sys.stderr.flush()
 
 
+def _sticky_named_profile_home() -> Path | None:
+    """Return ``~/.hermes/profiles/<name>`` when sticky ``active_profile`` names a real dir."""
+    try:
+        root = _get_platform_default_hermes_home()
+        active_path = root / "active_profile"
+        active = active_path.read_text(encoding="utf-8").strip() if active_path.exists() else ""
+    except (UnicodeDecodeError, OSError):
+        return None
+    if not active or active == "default":
+        return None
+    candidate = root / "profiles" / active
+    return candidate if candidate.is_dir() else None
+
+
+def _is_supervised_hermes_child() -> bool:
+    """Supervised slots have a fixed identity and must not follow sticky ``active_profile``."""
+    if os.environ.get("HERMES_SUPERVISED_CHILD") or os.environ.get("HERMES_S6_SUPERVISED_CHILD"):
+        return True
+    return os.environ.get("HERMES_GATEWAY_EXTERNAL_SUPERVISOR", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def get_hermes_home() -> Path:
-    """Hermes home: context-local override → ``HERMES_HOME`` env var → platform default."""
+    """Hermes home: override → ``HERMES_HOME`` → sticky named profile → platform default."""
     override = get_hermes_home_override()
     if override:
         return Path(override)
-    if not os.environ.get("HERMES_HOME", "").strip():
-        _warn_profile_fallback_once()
+    env = os.environ.get("HERMES_HOME", "").strip()
+    if env:
+        return Path(env)
+    sticky = _sticky_named_profile_home()
+    if sticky is not None and not _is_supervised_hermes_child():
+        os.environ["HERMES_HOME"] = str(sticky)
+        return sticky
+    _warn_profile_fallback_once()
     return get_process_hermes_home()
 
 

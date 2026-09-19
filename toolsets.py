@@ -24,6 +24,7 @@ _HERMES_CORE_TOOLS = [
     "todo_list", "memory",
     "session_search",
     "clarify",
+    "recovery_advise",
     "execute_code", "delegate_task",
     "cronjob_manage",
     "ha_list_entities", "ha_get_state", "ha_list_services", "ha_call_service",
@@ -142,6 +143,11 @@ TOOLSETS = {
          "gui_tour", "show_tip"],
     ),
     "clarify": _ts("Ask the user clarifying questions (multiple-choice or open-ended)", ["clarify"]),
+    "recovery": _ts(
+        "FlyForge recovery controller — typed operational events to bounded actions "
+        "(retry, restart_sandbox, escalate, noop, page_human) via evolution-lab",
+        ["recovery_advise"],
+    ),
     "code_execution": _ts("Run Python scripts that call tools programmatically (reduces LLM round trips)", ["execute_code"]),
     "delegation": _ts("Spawn subagents with isolated context for complex subtasks", ["delegate_task"]),
     "homeassistant": _ts("Home Assistant smart home control and monitoring", _HA_TOOLS),
