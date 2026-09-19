@@ -289,31 +289,58 @@ def handle_computer_use(args: Dict[str, Any], **kwargs) -> Any:
     """Main entry point (tools.registry): a JSON string (text-only) or a dict marked `_multimodal`. Order: hard
     blocks (_reject_unsafe) -> approval scopes (destructive action, then 'bring_to_front' — persistent focus is a
     separate visible side effect with its own scope) -> backend -> dispatch under the session call lock."""
+    from tools.computer_use import cu_trace
+
     action = (args.get("action") or "").strip().lower()
     if not action:
         return json.dumps({"error": "missing `action`"})
     session_id = str(kwargs.get("session_id") or "")  # approval-state / daemon-mode isolation key
-    if (err := _reject_unsafe(action, args)) is not None:
-        return err
-    scopes = ([action] if action in _ACTIONS and _ACTIONS[action].destructive else []) + (
-        ["bring_to_front"] if args.get("bring_to_front") or (action == "focus_app" and args.get("raise_window")) else [])
-    for scope in scopes:
-        if (err := _request_approval(scope, args)) is not None:
-            return err
-    try:
-        backend = _get_backend(session_id=session_id)
-    except Exception as e:
-        return json.dumps({"error": f"computer_use backend unavailable: {e}",
-                           "hint": "If the cua-driver binary is missing, run `hermes computer-use install`. "
-                                   "If a Python dependency is missing, the error above shows the exact install command."})
-    try:
-        with _backend_lock:
-            call_lock = _backend_call_locks.setdefault(session_id, threading.RLock())
-        with call_lock:
-            return _dispatch(backend, action, args, session_id=session_id or None)
-    except Exception as e:
-        logger.exception("computer_use %s failed", action)
-        return json.dumps({"error": f"{action} failed: {e}"})
+    warm = bool(kwargs.get("cu_warm", False))
+    own_turn = cu_trace.current() is None
+    turn_cm = (
+        cu_trace.cu_turn(turn_id=kwargs.get("cu_turn_id") or "", warm=warm, action=action)
+        if own_turn else contextlib.nullcontext(cu_trace.current())
+    )
+    with turn_cm as trace:
+        with cu_trace.span("admission.unsafe_check", action=action):
+            if (err := _reject_unsafe(action, args)) is not None:
+                if own_turn and trace is not None:
+                    trace.close(success=False, error="unsafe")
+                return err
+        scopes = ([action] if action in _ACTIONS and _ACTIONS[action].destructive else []) + (
+            ["bring_to_front"] if args.get("bring_to_front") or (action == "focus_app" and args.get("raise_window")) else [])
+        for scope in scopes:
+            with cu_trace.span("admission.approval", scope=scope):
+                if (err := _request_approval(scope, args)) is not None:
+                    if own_turn and trace is not None:
+                        trace.close(success=False, error="approval_denied")
+                    return err
+        try:
+            with cu_trace.span("admission.backend_resolve"):
+                backend = _get_backend(session_id=session_id)
+        except Exception as e:
+            if own_turn and trace is not None:
+                trace.close(success=False, error="backend_unavailable")
+            return json.dumps({"error": f"computer_use backend unavailable: {e}",
+                               "hint": "If the cua-driver binary is missing, run `hermes computer-use install`. "
+                                       "If a Python dependency is missing, the error above shows the exact install command."})
+        try:
+            with _backend_lock:
+                call_lock = _backend_call_locks.setdefault(session_id, threading.RLock())
+            with call_lock:
+                with cu_trace.span("execution.dispatch", action=action):
+                    result = _dispatch(backend, action, args, session_id=session_id or None)
+            if own_turn and trace is not None:
+                # Stash for callers/benchmarks that want the last turn without ContextVar.
+                handle_computer_use.last_trace = trace.to_dict()  # type: ignore[attr-defined]
+                trace.close(success=True, action=action)
+            return result
+        except Exception as e:
+            logger.exception("computer_use %s failed", action)
+            if own_turn and trace is not None:
+                handle_computer_use.last_trace = trace.to_dict()  # type: ignore[attr-defined]
+                trace.close(success=False, error=str(e))
+            return json.dumps({"error": f"{action} failed: {e}"})
 
 def _request_approval(action: str, args: Dict[str, Any]) -> Optional[str]:
     """None if approved, else a JSON error string. The decision (yolo bypass, session/permanent grants, CLI prompt,
@@ -376,9 +403,12 @@ def _do_capture(backend, action, args, session_id=None, **_):
     if (mode := str(args.get("mode", "som"))) not in {"som", "vision", "ax"}:
         return json.dumps({"error": f"bad mode {mode!r}; use som|vision|ax"})
     # pid/window_id forwarded only when given so older backends keep their defaults.
-    return _capture_response(backend.capture(mode=mode, app=args.get("app"),
-                                             **{k: args[k] for k in ("pid", "window_id") if args.get(k) is not None}),
-                             session_id=session_id)
+    from tools.computer_use import cu_trace
+    with cu_trace.span("perception.capture", mode=mode) as bag:
+        cap = backend.capture(mode=mode, app=args.get("app"),
+                              **{k: args[k] for k in ("pid", "window_id") if args.get(k) is not None})
+        bag["png_bytes"] = getattr(cap, "png_bytes_len", None) or (len(cap.png_b64) if getattr(cap, "png_b64", None) else 0)
+    return _capture_response(cap, session_id=session_id)
 
 def _do_listing(backend, action, args, key, **_):
     return json.dumps({key: (items := getattr(backend, action)()), "count": len(items)})
@@ -595,7 +625,11 @@ def _capture_digest(cap: CaptureResult) -> str:
 
 def _capture_response(cap: CaptureResult, max_elements: int = _DEFAULT_MAX_ELEMENTS,
                       session_id: Optional[str] = None) -> Any:
-    v = _capture_view(cap, max_elements)
+    from tools.computer_use import cu_trace
+    with cu_trace.span("perception.accessibility_projection") as bag:
+        v = _capture_view(cap, max_elements)
+        bag["elements"] = v.total
+        bag["has_image"] = bool(v.has_image)
     lines = _capture_summary_lines(v)
     summary, extra = "\n".join(lines), None  # multimodal/aux paths use this; text paths append notes and rebuild
     if v.has_image and session_id and _screenshot_dedup_check(
@@ -606,10 +640,17 @@ def _capture_response(cap: CaptureResult, max_elements: int = _DEFAULT_MAX_ELEME
                      "capture's screenshot/analysis still shows the current state. Element indices below are fresh "
                      "and remain the preferred way to act.)")
         extra = {"screen_unchanged": True}
+        if (tr := cu_trace.current()) is not None:
+            tr.attrs["capture_changed"] = False
     elif v.has_image:
+        if (tr := cu_trace.current()) is not None:
+            tr.attrs["capture_changed"] = True
         # Hand the screenshot to auxiliary.vision (text-only result) when the main model may not consume images
         # natively; returning the multimodal envelope unconditionally tripped HTTP 404/400 at the provider.
         if not _should_route_through_aux_vision():  # envelope carrying the screenshot (not the elements array, so no truncation note)
+            if (tr := cu_trace.current()) is not None:
+                tr.attrs.setdefault("native_pixels", True)
+                tr.attrs.setdefault("route", "native_pixels")
             return {
                 "_multimodal": True,
                 "content": [{"type": "text", "text": summary},
@@ -646,8 +687,11 @@ def _maybe_follow_capture(backend: ComputerUseBackend, res: ActionResult, do_cap
         # Recapture the exact window when known: on Linux several unrelated windows may share an app name, so
         # app-only recapture can switch targets.
         exact = {k: (getattr(backend, "_last_target", None) or {}).get(k) for k in ("pid", "window_id")}
-        cap = backend.capture(mode=_capture_after_mode(), **(exact if None not in exact.values()
-                                                            else {"app": getattr(backend, "_last_app", None)}))
+        from tools.computer_use import cu_trace
+        with cu_trace.span("perception.capture", follow_up=True) as bag:
+            cap = backend.capture(mode=_capture_after_mode(), **(exact if None not in exact.values()
+                                                                else {"app": getattr(backend, "_last_app", None)}))
+            bag["png_bytes"] = getattr(cap, "png_bytes_len", None) or (len(cap.png_b64) if getattr(cap, "png_b64", None) else 0)
     except Exception as e:
         logger.warning("follow-up capture failed: %s", e)
         return _text_response(res)
@@ -733,17 +777,31 @@ def _should_route_through_aux_vision() -> bool:
         from agent.auxiliary_client import _read_main_model, _read_main_provider
         from hermes_cli.config import load_config
         from hermes_constants import hermes_home_key
+        from tools.computer_use import cu_trace
         from tools.computer_use.vision_routing import should_route_capture_to_aux_vision
         stage = "config read"
         provider, model = _read_main_provider() or "", _read_main_model() or ""
         if (cached := _AUX_VISION_ROUTE_CACHE.get(key := (hermes_home_key(), str(provider), str(model)))) is not None:
+            with cu_trace.span("perception.media_route_resolve", provider=provider, model=model, cached=True) as bag:
+                bag["route"] = "aux_vision" if cached else "native_pixels"
             return cached
         stage = "decision"
-        _AUX_VISION_ROUTE_CACHE[key] = decision = bool(should_route_capture_to_aux_vision(provider, model, load_config()))
-        return decision
+        cfg = load_config()
+        with cu_trace.span("perception.media_route_resolve", provider=provider, model=model) as bag:
+            route_aux = bool(should_route_capture_to_aux_vision(provider, model, cfg))
+            bag["route"] = "aux_vision" if route_aux else "native_pixels"
+            # Provenance for Phase 9 — best-effort; never change the routing decision.
+            try:
+                from tools.vision_tools import resolve_native_tool_result_pixels
+                bag.update(cu_trace.bind_media_route(resolve_native_tool_result_pixels(provider, model, cfg)))
+            except Exception:
+                pass
+        _AUX_VISION_ROUTE_CACHE[key] = route_aux
+        return route_aux
     except Exception as exc:  # pragma: no cover - defensive
         logger.debug("computer_use: aux-vision routing %s failed: %s", stage, exc)
         return False
+
 
 def _capture_after_mode() -> str:
     """Mode for ``capture_after`` follow-ups. Default ``som`` (screenshot)."""
@@ -777,7 +835,16 @@ def _route_capture_through_aux_vision(cap: CaptureResult, summary: str, *, visib
         raw, scale_note = _shrink_capture_for_vision(raw, ext)
         temp_image_path.write_bytes(raw)
         prompt = _VISION_PROMPT + summary + (f"\n\nNote: {scale_note}" if scale_note else "")
-        result_json = _run_async(vision_analyze_tool(str(temp_image_path), prompt))
+        from tools.computer_use import cu_trace
+        with cu_trace.span("perception.aux_vision", provider="auxiliary", model="vision_analyze") as bag:
+            result_json = _run_async(vision_analyze_tool(str(temp_image_path), prompt))
+            cu_trace.record_model_call(
+                "auxiliary_vision",
+                provider="auxiliary",
+                model="vision_analyze",
+                model_call_reason="capture_routed_to_aux_vision",
+            )
+            bag["model_call"] = "auxiliary_vision"
     except Exception as exc:
         if problem:
             logger.debug("computer_use: %s: %s", problem, exc)

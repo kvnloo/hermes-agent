@@ -110,7 +110,20 @@ def _smart_approve(command: str, description: str) -> str:
             task="approval", temperature=0, max_tokens=16, timeout=smart_timeout,
             messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
         )
-        logger.debug("Smart approvals: LLM call completed in %.1fs", time.monotonic() - _smart_t0)
+        _smart_dur = (time.monotonic() - _smart_t0) * 1000.0
+        logger.debug("Smart approvals: LLM call completed in %.1fs", _smart_dur / 1000.0)
+        try:
+            from tools.computer_use import cu_trace
+            if cu_trace.current() is not None:
+                with cu_trace.span("admission.smart_approval"):
+                    pass
+                cu_trace.record_model_call(
+                    "smart_approval",
+                    duration_ms=_smart_dur,
+                    model_call_reason="guardian_llm_verdict",
+                )
+        except Exception:
+            pass
         answer = (response.choices[0].message.content or "").strip().upper()
         return _VERDICTS.get(answer, "escalate")
     except Exception as e:

@@ -1,0 +1,57 @@
+{
+  "phase": 9,
+  "rows": 14,
+  "ok": 14,
+  "model_call_totals": {
+    "auxiliary_vision": 2,
+    "local_jev": 8,
+    "recovery": 2
+  },
+  "ranked_spans": [
+    {
+      "span": "execution.dispatch",
+      "total_ms": 39.057
+    },
+    {
+      "span": "perception.accessibility_projection",
+      "total_ms": 7.404
+    },
+    {
+      "span": "decision.local_jev",
+      "total_ms": 4.105
+    },
+    {
+      "span": "transport.reconnect",
+      "total_ms": 4.023
+    },
+    {
+      "span": "recovery.reconnect",
+      "total_ms": 2.03
+    },
+    {
+      "span": "transport.mcp_wait",
+      "total_ms": 2.016
+    },
+    {
+      "span": "admission.unsafe_check",
+      "total_ms": 0.364
+    },
+    {
+      "span": "admission.backend_resolve",
+      "total_ms": 0.194
+    },
+    {
+      "span": "admission.approval",
+      "total_ms": 0.133
+    },
+    {
+      "span": "perception.capture",
+      "total_ms": 0.118
+    },
+    {
+      "span": "perception.aux_vision",
+      "total_ms": 0.11
+    }
+  ],
+  "attribution_note": "Fake-backend matrix attributes CU tool spans. Live browser/MCP/run_goal need CU_PERF_LIVE + hypr isolation / botscreen merge."
+}

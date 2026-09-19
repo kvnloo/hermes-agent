@@ -714,7 +714,34 @@ def _dispatch_nonstreaming_api_request(agent, api_kwargs: dict, *, make_client):
     kind=...)`` builds the per-request client (``"openai"`` / ``"anthropic_messages"``)
     so callers can register it with their abort/close machinery; bedrock / MoA
     manage their own clients. Interrupt/abort/close semantics stay in callers.
+
+    When a Phase-9 ``cu_trace`` turn is active, records one ``primary_agent`` model call
+    (no-op otherwise — tracer must stay cheap when unbound).
     """
+    import time as _time
+    _t0 = _time.monotonic()
+    try:
+        return _dispatch_nonstreaming_api_request_impl(agent, api_kwargs, make_client=make_client)
+    finally:
+        try:
+            from tools.computer_use import cu_trace
+            if cu_trace.current() is not None:
+                with cu_trace.span("decision.frontier_model",
+                                   provider=str(getattr(agent, "provider", "") or ""),
+                                   model=str(api_kwargs.get("model") or getattr(agent, "model", "") or "")):
+                    pass
+                cu_trace.record_model_call(
+                    "primary_agent",
+                    provider=str(getattr(agent, "provider", "") or ""),
+                    model=str(api_kwargs.get("model") or getattr(agent, "model", "") or ""),
+                    duration_ms=(_time.monotonic() - _t0) * 1000.0,
+                    model_call_reason="frontier_model_roundtrip",
+                )
+        except Exception:
+            pass
+
+
+def _dispatch_nonstreaming_api_request_impl(agent, api_kwargs: dict, *, make_client):
     if agent.api_mode == "codex_responses":
         return agent._run_codex_stream(api_kwargs, client=make_client("codex_stream_request"),
             on_first_delta=getattr(agent, "_codex_on_first_delta", None))
