@@ -161,6 +161,7 @@ def _cleanup_inactive_browser_sessions():
 
     for task_id in sessions_to_cleanup:
         with _session_owner_scope(task_id):
+            observed_epoch = _shared_browser_lease_epoch(task_id)
             if _human_holds_shared_browser(task_id):
                 # A human took the bot's screen (login, 2FA) — the agent is idle BECAUSE they are working.
                 _update_session_activity(task_id)
@@ -169,6 +170,12 @@ def _cleanup_inactive_browser_sessions():
         _bt.logger.info("Cleaning up inactive session for task: %s (inactive for %ss)", task_id, elapsed)
         try:
             with _session_owner_scope(task_id):
+                # Effect-boundary revalidation (#110064 check-to-effect race): a human may
+                # take the lease after the negative check above and before destruction.
+                if _human_holds_shared_browser(task_id) or _shared_browser_lease_changed(
+                        task_id, observed_epoch):
+                    _update_session_activity(task_id)
+                    continue
                 cleanup_browser(task_id)
             _forget_session_tracking(task_id)
         except Exception as e:
@@ -196,6 +203,24 @@ def _human_holds_shared_browser(task_id: str) -> bool:
     if not session_info:
         return False
     return _session.human_holds_shared_browser(session_info)
+
+
+def _shared_browser_lease_epoch(task_id: str) -> int | None:
+    """Current Bot Desktop lease epoch for a shared headed browser, else None."""
+    with _bt._cleanup_lock:
+        session_info = _bt._active_sessions.get(task_id)
+    if not session_info or not _session._shares_bot_desktop_browser(session_info):
+        return None
+    from tools.bot_desktop import lease as _bd_lease
+    return int(_bd_lease.get().epoch)
+
+
+def _shared_browser_lease_changed(task_id: str, observed_epoch: int | None) -> bool:
+    """True when a shared-browser lease epoch moved since the janitor's observation."""
+    if observed_epoch is None:
+        return False
+    current = _shared_browser_lease_epoch(task_id)
+    return current is None or current != observed_epoch
 
 
 def _write_owner_pid(socket_dir: str, session_name: str) -> None:
@@ -699,6 +724,13 @@ def _cleanup_single_browser_session(task_id: str) -> None:
             _bt.logger.debug("agent-browser close command completed for task %s", task_id)
         except Exception as e:
             _bt.logger.warning("agent-browser close failed for task %s: %s", task_id, e)
+
+    # Last-chance lease fence at the destruction boundary: a human may have taken
+    # the Bot Desktop lease after the caller authorized cleanup (#110064 race).
+    if _session.human_holds_shared_browser(session_info):
+        _bt.logger.info(
+            "Aborting browser cleanup for %s: human holds the Bot Desktop lease", task_id)
+        return
 
     _release_session_resources(task_id, session_info)
     _bt.logger.debug("Removed task %s from active sessions", task_id)

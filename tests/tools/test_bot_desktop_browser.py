@@ -315,3 +315,54 @@ def test_daemon_idle_timer_defers_to_the_janitor_only_for_the_shared_headed_brow
     monkeypatch.setattr(session._cloud, "_is_headed_mode", lambda: True)
     monkeypatch.setattr(runtime, "published_env", lambda: {})
     assert session._daemon_idle_timeout_seconds() == 120
+
+
+
+def test_janitor_aborts_cleanup_when_human_takes_lease_between_check_and_effect(monkeypatch):
+    """Check-to-effect race (#110064 follow-on): janitor sees no human lease, human takes
+    over before destruction, Chromium must survive."""
+    from tools import browser_tool_lifecycle as lifecycle
+
+    monkeypatch.setattr(runtime, "published_env", lambda: {"DISPLAY": ":37"})
+    holds_calls = {"n": 0}
+
+    def racing_holds(task_id):
+        holds_calls["n"] += 1
+        # First observation: no human. Immediately before effect: human owns lease.
+        return holds_calls["n"] >= 2
+
+    monkeypatch.setattr(lifecycle, "_human_holds_shared_browser", racing_holds)
+    reaped: list = []
+    monkeypatch.setattr(lifecycle, "cleanup_browser", lambda task_id: reaped.append(task_id))
+    monkeypatch.setattr(lifecycle._bt, "BROWSER_SESSION_INACTIVITY_TIMEOUT", 1)
+    monkeypatch.setattr(lifecycle._bt, "_active_sessions", {
+        "bot": {"session_name": "h_bot", "features": {"local": True}},
+    })
+    monkeypatch.setattr(lifecycle._bt, "_session_last_activity", {"bot": 0.0})
+    monkeypatch.setattr(lifecycle._bt, "_session_owner_homes", {})
+
+    lifecycle._cleanup_inactive_browser_sessions()
+
+    assert reaped == [], "shared Chromium must survive a mid-janitor human takeover"
+    assert holds_calls["n"] >= 2, "authority must be revalidated at the effect boundary"
+    assert lifecycle._bt._session_last_activity["bot"] > 0
+
+
+def test_janitor_still_cleans_orphaned_shared_browser_without_human_lease(monkeypatch):
+    """Control: no human lease → stale/orphaned shared browser still cleans up."""
+    from tools import browser_tool_lifecycle as lifecycle
+
+    monkeypatch.setattr(runtime, "published_env", lambda: {"DISPLAY": ":37"})
+    monkeypatch.setattr(lifecycle, "_human_holds_shared_browser", lambda task_id: False)
+    reaped: list = []
+    monkeypatch.setattr(lifecycle, "cleanup_browser", lambda task_id: reaped.append(task_id))
+    monkeypatch.setattr(lifecycle._bt, "BROWSER_SESSION_INACTIVITY_TIMEOUT", 1)
+    monkeypatch.setattr(lifecycle._bt, "_active_sessions", {
+        "bot": {"session_name": "h_bot", "features": {"local": True}},
+    })
+    monkeypatch.setattr(lifecycle._bt, "_session_last_activity", {"bot": 0.0})
+    monkeypatch.setattr(lifecycle._bt, "_session_owner_homes", {})
+
+    lifecycle._cleanup_inactive_browser_sessions()
+
+    assert reaped == ["bot"]
