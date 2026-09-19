@@ -692,6 +692,21 @@ def release_orphaned_leases(live_lease_ids: set[str]) -> int:
     return dropped
 
 
+
+def _lease_prune_fingerprint(entry: dict[str, Any]) -> tuple[Any, ...]:
+    """Identity used to validate a stale dead-lease prune against a newer registry.
+
+    A concurrent renew of the same ``lease_id`` changes pid / start time /
+    ``updated_at``; matching only on lease id would delete that renewal.
+    """
+    return (
+        str(entry.get("lease_id") or ""),
+        entry.get("pid"),
+        entry.get("process_start_time"),
+        entry.get("updated_at"),
+    )
+
+
 def active_session_registry_snapshot(
     registry_home: str | Path | None = None, *, strict: bool = False,
 ) -> list[dict[str, Any]]:
@@ -700,9 +715,10 @@ def active_session_registry_snapshot(
     The per-entry liveness probes in ``_prune_dead`` run AFTER the file lock
     is released: holding an exclusive, unfair lock across process-introspection
     syscalls starves concurrent pollers once a handful of leases exist
-    (#115578). The prune write-back re-locks and drops only the lease ids
-    already proven dead, so a lease created between the snapshot and the
-    write-back is never lost.
+    (#115578). The prune write-back re-locks and drops only entries that still
+    match the stale dead identity from the snapshot (lease_id + pid +
+    process_start_time + updated_at), so a lease created OR renewed between
+    the snapshot and the write-back is never lost.
     """
     state_path, lock_path = _lease_paths(registry_home=registry_home)
     with _FileLock(lock_path):
@@ -710,8 +726,8 @@ def active_session_registry_snapshot(
     entries = _prune_dead(raw_entries, strict=strict)
     if entries != raw_entries:
         live_lease_ids = {str(entry.get("lease_id") or "") for entry in entries}
-        dead_lease_ids = {
-            str(entry.get("lease_id") or "")
+        dead_fingerprints = {
+            _lease_prune_fingerprint(entry)
             for entry in raw_entries
             if str(entry.get("lease_id") or "") not in live_lease_ids
         }
@@ -719,7 +735,7 @@ def active_session_registry_snapshot(
             current_entries = _read_entries(state_path, strict=True)
             kept_entries = [
                 entry for entry in current_entries
-                if str(entry.get("lease_id") or "") not in dead_lease_ids
+                if _lease_prune_fingerprint(entry) not in dead_fingerprints
             ]
             if len(kept_entries) != len(current_entries):
                 _write_entries(state_path, kept_entries)

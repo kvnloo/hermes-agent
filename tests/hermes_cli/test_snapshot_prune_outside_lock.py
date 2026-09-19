@@ -96,3 +96,90 @@ def test_concurrent_lease_survives_prune_writeback(tmp_path, monkeypatch):
 
     assert [e["lease_id"] for e in live] == ["live-1"]
     assert sorted(e["lease_id"] for e in _read_all(state_path)) == ["live-1", "new-1"]
+
+
+
+def test_concurrent_same_lease_update_survives_stale_prune_writeback(tmp_path, monkeypatch):
+    """Critical race (#115578 adversarial): A snapshots lease X as dead; B renews
+    the SAME lease_id with a live pid; A's stale write-back must not delete B."""
+    home = tmp_path / "home"
+    state_path = _seed(home, [
+        _entry("live-1", "s-live", os.getpid()),
+        _entry("x-1", "s-x", DEAD_PID),
+    ])
+    renewed = {
+        "lease_id": "x-1",
+        "session_id": "s-x",
+        "pid": os.getpid(),
+        "updated_at": 9_999_999.0,
+        "process_start_time": 1.0,
+    }
+
+    real_prune = active_sessions._prune_dead
+
+    def spy_prune(entries, **kwargs):
+        current = active_sessions._read_entries(state_path, strict=True)
+        rewritten = []
+        for entry in current:
+            if str(entry.get("lease_id") or "") == "x-1":
+                rewritten.append(dict(renewed))
+            else:
+                rewritten.append(entry)
+        active_sessions._write_entries(state_path, rewritten)
+        return real_prune(entries, **kwargs)
+
+    monkeypatch.setattr(active_sessions, "_prune_dead", spy_prune)
+
+    live = active_sessions.active_session_registry_snapshot(registry_home=home)
+
+    # Returned snapshot is A's view (x-1 looked dead); persisted registry must
+    # keep B's renewal.
+    assert [e["lease_id"] for e in live] == ["live-1"]
+    persisted = {e["lease_id"]: e for e in _read_all(state_path)}
+    assert set(persisted) == {"live-1", "x-1"}
+    assert persisted["x-1"]["pid"] == os.getpid()
+    assert persisted["x-1"]["updated_at"] == 9_999_999.0
+
+
+def test_snapshot_lock_metrics_stay_bounded_with_many_leases(tmp_path, monkeypatch):
+    """~12 leases: expensive prune work outside lock; no multi-second lock hold."""
+    import time as time_mod
+
+    home = tmp_path / "home"
+    entries = [_entry(f"live-{i}", f"s-{i}", os.getpid()) for i in range(10)]
+    entries.append(_entry("dead-a", "s-dead-a", DEAD_PID))
+    entries.append(_entry("dead-b", "s-dead-b", DEAD_PID))
+    _seed(home, entries)
+
+    hold_samples = []
+    wait_samples = []
+
+    class _TimedLock(active_sessions._FileLock):
+        def __enter__(self):
+            wait_t0 = time_mod.monotonic()
+            result = super().__enter__()
+            wait_samples.append(time_mod.monotonic() - wait_t0)
+            self._hold_t0 = time_mod.monotonic()
+            return result
+
+        def __exit__(self, *exc):
+            hold_samples.append(time_mod.monotonic() - self._hold_t0)
+            return super().__exit__(*exc)
+
+    monkeypatch.setattr(active_sessions, "_FileLock", _TimedLock)
+
+    # Inject artificial expensive work into prune to prove it is outside lock.
+    real_prune = active_sessions._prune_dead
+
+    def slow_prune(entries, **kwargs):
+        time_mod.sleep(0.05)
+        return real_prune(entries, **kwargs)
+
+    monkeypatch.setattr(active_sessions, "_prune_dead", slow_prune)
+
+    live = active_sessions.active_session_registry_snapshot(registry_home=home)
+
+    assert len(live) == 10
+    assert hold_samples, hold_samples
+    assert max(hold_samples) < 0.05, hold_samples  # prune sleep must not be in hold
+    assert max(wait_samples) < 1.0, wait_samples
