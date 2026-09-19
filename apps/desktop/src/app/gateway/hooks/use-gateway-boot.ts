@@ -19,6 +19,11 @@ import {
   LIVENESS_PROBE_TIMEOUT_MS,
   LIVENESS_REPROBE_DELAY_MS
 } from '@/lib/gateway-liveness-policy'
+import {
+  decideTrailingWakeForcedReconnect,
+  decideWakeForcedReconnect,
+  WAKE_RECONNECT_HOLDOFF_MS
+} from '@/lib/gateway-wake-reconnect-holdoff'
 import { BACKEND_BOOT_WAIT_TIMEOUT_MS, RECONNECT_ATTEMPT_TIMEOUT_MS, withTimeout } from '@/lib/with-timeout'
 import {
   $desktopBoot,
@@ -123,11 +128,6 @@ const RECONNECT_ESCALATE_AFTER_MS = 300_000
 // TIMEOUT alone no longer tears the socket down mid-turn (#95327): while a
 // turn is in flight the first timeout defers behind one bounded re-probe, so
 // only a STREAK of unanswered pings rebuilds the transport.
-
-// Renderer twin of the main process's POWER_RESUME_REVALIDATION_HOLDOFF_MS:
-// forced wake reconnects (online / power resume) are coalesced into one per
-// window instead of tearing down every secondary socket on each signal (#94769).
-const WAKE_RECONNECT_HOLDOFF_MS = 15_000
 
 // Bounded self-heal for a failed REMOTE boot (#82679): main classifies every
 // fault it can see (via getBootProgress().retryable); the renderer adds the one
@@ -1017,11 +1017,51 @@ export function useGatewayBoot({
     // handler reaped healthy sockets in bursts and the UI remounted on every
     // redial: the #94769 flicker loop. Coalesce forced wakes like the main
     // process already does for power-resume revalidation
-    // (POWER_RESUME_REVALIDATION_HOLDOFF_MS): one forced reconnect per
-    // holdoff window; a socket dropped in between is still picked up by the
-    // ordinary close/reconnect backoff and by the non-forced focus/visibility
-    // nudges below.
-    let lastForcedWakeReconnectAt = 0
+    // (POWER_RESUME_REVALIDATION_HOLDOFF_MS): leading-edge force + exactly one
+    // coalesced trailing force when additional wakes arrive inside the holdoff.
+    // Dropping mid-holdoff evidence without a trailing edge strands a transport
+    // that went half-open after the leading recovery (#115701 wake-holdoff).
+    let lastForcedWakeReconnectAt: number | null = null
+    let trailingWakeForcedPending = false
+    let trailingWakeForcedTimer: ReturnType<typeof setTimeout> | null = null
+
+    const clearTrailingWakeForcedTimer = () => {
+      if (trailingWakeForcedTimer !== null) {
+        clearTimeout(trailingWakeForcedTimer)
+        trailingWakeForcedTimer = null
+      }
+
+      trailingWakeForcedPending = false
+    }
+
+    const dispatchForcedWake = (forceOpenSocket: boolean, stampAt: number) => {
+      if (forceOpenSocket) {
+        lastForcedWakeReconnectAt = stampAt
+        clearTrailingWakeForcedTimer()
+      }
+
+      void reconnectNow({ forceOpenSocket })
+    }
+
+    const armTrailingWakeForced = (dueAt: number) => {
+      if (trailingWakeForcedPending) {
+        return
+      }
+
+      trailingWakeForcedPending = true
+      const delay = Math.max(0, dueAt - Date.now())
+      trailingWakeForcedTimer = setTimeout(() => {
+        trailingWakeForcedTimer = null
+        trailingWakeForcedPending = false
+
+        if (cancelled || !bootCompleted || $gatewaySwitching.get()) {
+          return
+        }
+
+        const decision = decideTrailingWakeForcedReconnect(Date.now())
+        dispatchForcedWake(true, decision.nextLastForcedAt)
+      }, delay)
+    }
 
     const forceReconnectNow = () => {
       // reconnectNow no-ops while boot is incomplete or a gateway switch is in
@@ -1032,18 +1072,25 @@ export function useGatewayBoot({
         return
       }
 
-      // Only the destructive half is coalesced: a second wake inside the
-      // holdoff (macOS fires resume then 'online' seconds apart) still runs
-      // the cheap, idempotent nudge — primary ping probe, redial of already
-      // closed secondaries — without touching open sockets.
       const now = Date.now()
-      const forced = now - lastForcedWakeReconnectAt >= WAKE_RECONNECT_HOLDOFF_MS
+      const decision = decideWakeForcedReconnect({
+        now,
+        lastForcedAt: lastForcedWakeReconnectAt,
+        trailingPending: trailingWakeForcedPending,
+        holdoffMs: WAKE_RECONNECT_HOLDOFF_MS
+      })
 
-      if (forced) {
-        lastForcedWakeReconnectAt = now
+      if (decision.kind === 'force-now') {
+        dispatchForcedWake(true, decision.nextLastForcedAt)
+        return
       }
 
-      void reconnectNow({ forceOpenSocket: forced })
+      // Cheap nudge only; arm one trailing forced recovery if needed.
+      if (decision.scheduleTrailing) {
+        armTrailingWakeForced(decision.trailingDueAt)
+      }
+
+      void reconnectNow({ forceOpenSocket: false })
     }
 
     const offPowerResume = desktop.onPowerResume?.(() => void forceReconnectNow())
@@ -1448,6 +1495,7 @@ export function useGatewayBoot({
       offTiles()
       offSelectedSession()
       offSessionOwnerHolds()
+      clearTrailingWakeForcedTimer()
       window.removeEventListener('online', onOnline)
       document.removeEventListener('visibilitychange', onVisible)
       window.removeEventListener('focus', onFocus)
