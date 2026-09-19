@@ -37,6 +37,8 @@ class TestTwoAxisResolver:
         assert d.transport_accepts_images_in_tool_results is True
         assert d.explicit_veto is False
         assert d.native is True
+        assert d.model_vision_source == "catalog"
+        assert d.transport_source == "provider_whitelist"
 
     def test_vision_capable_model_plus_rejecting_transport_fails_closed(self):
         """Counterexample: vision-capable model + provider rejecting image tool content."""
@@ -95,7 +97,7 @@ class TestTwoAxisResolver:
         assert d.native is False
 
     def test_deepseek_flash_native_via_positive_transport_not_catalog_conflation(self):
-        """#115248: deepseek transport is positively attested; both axes True → native."""
+        """#115248: deepseek-flash transport is model-attested; both axes True → native."""
         from tools.vision_tools import resolve_native_tool_result_pixels
 
         with patch(
@@ -107,6 +109,31 @@ class TestTwoAxisResolver:
         assert d.transport_accepts_images_in_tool_results is True
         assert d.model_can_understand_images is True
         assert d.native is True
+        assert d.model_vision_source == "catalog"
+        assert d.transport_source == "explicit_attestation:deepseek-flash"
+        assert d.reason == "both_axes_positive"
+
+    def test_deepseek_non_flash_does_not_inherit_provider_wide_transport(self):
+        """Falsification: provider-wide deepseek whitelist must NOT exist."""
+        from tools.vision_tools import (
+            _TOOL_RESULT_MEDIA_PROVIDERS,
+            resolve_native_tool_result_pixels,
+        )
+
+        assert "deepseek" not in _TOOL_RESULT_MEDIA_PROVIDERS
+        with patch(
+            "agent.models_dev.get_model_capabilities", return_value=_caps(True)
+        ), patch(
+            "agent.image_routing._lookup_supports_vision", return_value=True
+        ), patch(
+            "providers.get_provider_profile", return_value=None
+        ):
+            d = resolve_native_tool_result_pixels("deepseek", "deepseek-chat", {})
+        assert d.model_can_understand_images is True
+        assert d.transport_accepts_images_in_tool_results is not True
+        assert d.transport_source == "unknown"
+        assert d.native is False
+        assert d.reason == "transport_not_attested"
 
     def test_explicit_aux_override_blocks_native(self):
         from tools.vision_tools import resolve_native_tool_result_pixels

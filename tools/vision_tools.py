@@ -417,11 +417,16 @@ _TOOL_RESULT_MEDIA_PROVIDERS = frozenset({
     "openrouter", "nous", "vertex", "bedrock", "anthropic-vertex", "google-vertex",
     "anthropic", "claude", "anthropic-direct",
     "openai", "openai-chat", "openai-codex", "azure-openai",
-    # Vendor API accepts images inside tool-result messages (#115248). Attest
-    # transport positively — do NOT infer it from catalog supports_vision.
-    "deepseek",
 })
 _GEMINI_PROVIDERS = frozenset({"google", "gemini", "google-gemini", "google-vertex-gemini"})
+
+# Model-scoped positive transport attestations. Provider-wide whitelist only after
+# multiple models of a vendor prove the same tool-result media contract. Keys are
+# (provider, model_needle) where model_needle is matched as a substring of the
+# lowercased model id (#115248 evidence: deepseek-flash only).
+_TOOL_RESULT_MEDIA_MODEL_ATTESTATIONS: frozenset[tuple[str, str]] = frozenset({
+    ("deepseek", "deepseek-flash"),
+})
 
 
 def _profile_rejects_tool_media(provider: str, model: str = "") -> bool:
@@ -439,24 +444,49 @@ def _profile_rejects_tool_media(provider: str, model: str = "") -> bool:
         return False
 
 
-def _supports_media_in_tool_results(provider: str, model: str) -> bool:
-    """Whether provider+model accepts image content inside a tool-result message. Unknown
-    providers are False (caller falls back to aux-LLM text) unless their ``ProviderProfile``
-    declares ``supports_vision``; ``supports_vision_tool_messages=False`` is a hard veto."""
+class ToolResultMediaDecision(NamedTuple):
+    """Transport-axis result with provenance. ``accepted`` is True only when positively attested."""
+    accepted: bool
+    source: str  # provider_whitelist | model_attestation:<id> | gemini_model_gate | profile.supports_vision | veto | unknown
+
+
+def _tool_result_media_decision(provider: str, model: str) -> ToolResultMediaDecision:
+    """Whether provider+model accepts image content inside a tool-result message.
+
+    Catalog ``supports_vision`` is NOT consulted here — that is the model axis.
+    Provider-wide whitelist is reserved for vendors with multi-model proof;
+    otherwise require an explicit (provider, model) attestation.
+    """
     p = provider.strip().lower() if isinstance(provider, str) else ""
-    if not p or _profile_rejects_tool_media(p, model):
-        return False
+    m = model.strip().lower() if isinstance(model, str) else ""
+    if not p:
+        return ToolResultMediaDecision(False, "unknown")
+    if _profile_rejects_tool_media(p, model):
+        return ToolResultMediaDecision(False, "veto")
     if p in _TOOL_RESULT_MEDIA_PROVIDERS:
-        return True
+        return ToolResultMediaDecision(True, "provider_whitelist")
+    for attested_provider, needle in _TOOL_RESULT_MEDIA_MODEL_ATTESTATIONS:
+        if p == attested_provider and needle in m:
+            return ToolResultMediaDecision(True, f"explicit_attestation:{needle}")
     if p in _GEMINI_PROVIDERS:
-        m = model.strip().lower() if isinstance(model, str) else ""
-        return any(tag in m for tag in ("gemini-3", "gemini-pro-3", "gemini-flash-3"))
+        if any(tag in m for tag in ("gemini-3", "gemini-pro-3", "gemini-flash-3")):
+            return ToolResultMediaDecision(True, "gemini_model_gate")
+        return ToolResultMediaDecision(False, "unknown")
     try:
         from providers import get_provider_profile
         profile = get_provider_profile(p)
-        return profile is not None and bool(profile.supports_vision)
+        if profile is not None and bool(profile.supports_vision):
+            # Profile flag is operator/provider attestation of tool-result media,
+            # not catalog model vision. Keep source distinct for Phase 9 traces.
+            return ToolResultMediaDecision(True, "profile.supports_vision")
     except Exception:
-        return False
+        pass
+    return ToolResultMediaDecision(False, "unknown")
+
+
+def _supports_media_in_tool_results(provider: str, model: str) -> bool:
+    """Compat wrapper: True only when transport is positively attested."""
+    return _tool_result_media_decision(provider, model).accepted
 
 
 class NativeToolResultPixelsDecision(NamedTuple):
@@ -465,6 +495,9 @@ class NativeToolResultPixelsDecision(NamedTuple):
     Axes are independent: catalog ``supports_vision`` is NOT transport acceptance.
     ``native`` is True only when both axes are positively known True, with no veto
     and no explicit auxiliary.vision override. Unknown fails closed.
+
+    Provenance fields (``model_vision_source``, ``transport_source``) record *why*
+    each axis resolved — required for Phase 9 route comparisons.
     """
     native: bool
     model_can_understand_images: Optional[bool]
@@ -472,6 +505,8 @@ class NativeToolResultPixelsDecision(NamedTuple):
     explicit_veto: bool
     explicit_aux_override: bool
     reason: str
+    model_vision_source: str = "unset"  # catalog | config | unknown | n/a | ...
+    transport_source: str = "unset"  # provider_whitelist | explicit_attestation:... | veto | unknown | ...
 
 
 def resolve_native_tool_result_pixels(
@@ -499,65 +534,79 @@ def resolve_native_tool_result_pixels(
         _supports_vision_override,
     )
 
+    def _pack(
+        *,
+        native: bool,
+        model_can: Optional[bool],
+        transport: Optional[bool],
+        veto: bool = False,
+        aux: bool = False,
+        reason: str,
+        model_src: str,
+        transport_src: str,
+    ) -> NativeToolResultPixelsDecision:
+        return NativeToolResultPixelsDecision(
+            native=native,
+            model_can_understand_images=model_can,
+            transport_accepts_images_in_tool_results=transport,
+            explicit_veto=veto,
+            explicit_aux_override=aux,
+            reason=reason,
+            model_vision_source=model_src,
+            transport_source=transport_src,
+        )
+
     # Explicit agent.image_input_mode=text wins over supports_vision attestation.
     mode_cfg = _coerce_mode(_dict_or_empty(_dict_or_empty(cfg).get("agent")).get("image_input_mode"))
     if mode_cfg == "text":
-        return NativeToolResultPixelsDecision(
-            native=False,
-            model_can_understand_images=None,
-            transport_accepts_images_in_tool_results=None,
-            explicit_veto=False,
-            explicit_aux_override=False,
+        return _pack(
+            native=False, model_can=None, transport=None,
             reason="explicit_image_input_mode_text",
+            model_src="n/a", transport_src="n/a",
         )
 
     if _explicit_aux_vision_override(cfg):
-        return NativeToolResultPixelsDecision(
-            native=False,
-            model_can_understand_images=None,
-            transport_accepts_images_in_tool_results=None,
-            explicit_veto=False,
-            explicit_aux_override=True,
+        return _pack(
+            native=False, model_can=None, transport=None, aux=True,
             reason="explicit_aux_vision_override",
+            model_src="n/a", transport_src="n/a",
         )
 
     veto = _profile_rejects_tool_media(provider, model)
     user_declared = _supports_vision_override(cfg, provider, model)
     if veto:
-        model_can = True if user_declared is True else _lookup_supports_vision(provider, model, cfg)
-        return NativeToolResultPixelsDecision(
-            native=False,
-            model_can_understand_images=model_can,
-            transport_accepts_images_in_tool_results=False,
-            explicit_veto=True,
-            explicit_aux_override=False,
+        if user_declared is True:
+            model_can, model_src = True, "config"
+        else:
+            model_can = _lookup_supports_vision(provider, model, cfg)
+            model_src = "catalog" if model_can is not None else "unknown"
+        return _pack(
+            native=False, model_can=model_can, transport=False, veto=True,
             reason="profile_rejects_tool_media",
+            model_src=model_src, transport_src="veto",
         )
 
     # Operator escape hatch: config supports_vision=true attests the full native
     # tool-result path for this route. Distinct from catalog vision.
     if user_declared is True:
-        return NativeToolResultPixelsDecision(
-            native=True,
-            model_can_understand_images=True,
-            transport_accepts_images_in_tool_results=True,
-            explicit_veto=False,
-            explicit_aux_override=False,
+        return _pack(
+            native=True, model_can=True, transport=True,
             reason="config_supports_vision_attestation",
+            model_src="config", transport_src="config_attestation",
         )
     if user_declared is False:
-        return NativeToolResultPixelsDecision(
-            native=False,
-            model_can_understand_images=False,
-            transport_accepts_images_in_tool_results=_supports_media_in_tool_results(provider, model) or None,
-            explicit_veto=False,
-            explicit_aux_override=False,
+        media = _tool_result_media_decision(provider, model)
+        return _pack(
+            native=False, model_can=False,
+            transport=True if media.accepted else None,
             reason="config_supports_vision_false",
+            model_src="config", transport_src=media.source,
         )
 
     model_can = _lookup_supports_vision(provider, model, cfg)
-    transport = True if _supports_media_in_tool_results(provider, model) else False
-    # Whitelist miss / no profile → transport False (not positively known). Fail closed.
+    model_src = "catalog" if model_can is not None else "unknown"
+    media = _tool_result_media_decision(provider, model)
+    transport = True if media.accepted else False
     native = model_can is True and transport is True
     if model_can is None:
         reason = "unknown_model_vision"
@@ -567,14 +616,11 @@ def resolve_native_tool_result_pixels(
         reason = "transport_not_attested"
     else:
         reason = "both_axes_positive"
-    return NativeToolResultPixelsDecision(
-        native=native,
-        model_can_understand_images=model_can,
-        transport_accepts_images_in_tool_results=transport if transport else False,
-        explicit_veto=False,
-        explicit_aux_override=False,
-        reason=reason,
+    return _pack(
+        native=native, model_can=model_can, transport=transport,
+        reason=reason, model_src=model_src, transport_src=media.source,
     )
+
 
 
 def _should_use_native_vision_fast_path() -> bool:
