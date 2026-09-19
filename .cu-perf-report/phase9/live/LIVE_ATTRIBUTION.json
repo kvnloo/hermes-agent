@@ -1,0 +1,158 @@
+{
+  "phase": "9-live",
+  "gui_headed_status": "BLOCKED",
+  "gui_block_reason": "hypr-headless fixture map focuses HERMES_UI_TEST / steals active workspace; windowrule field noinitialfocus rejected as invalid on Hyprland 0.56.2; hypr-agent-input plugin not installed (only hyprglass). Two attempted maps restored immediately; product_correct N/A, desktop_isolation_correct=false for those attempts.",
+  "hypr_agent_input_present": false,
+  "runtime_route": {
+    "provider": "xai-oauth",
+    "model": "grok-4.6",
+    "native": false,
+    "reason": "transport_not_attested",
+    "model_vision_source": "catalog",
+    "transport_source": "unknown",
+    "span_ms": 266.015
+  },
+  "route_comparisons": [
+    {
+      "provider": "xai-oauth",
+      "model": "grok-4.6",
+      "native": false,
+      "reason": "transport_not_attested",
+      "model_vision_source": "catalog",
+      "transport_source": "unknown",
+      "span_ms": 266.015
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "native": true,
+      "reason": "both_axes_positive",
+      "model_vision_source": "catalog",
+      "transport_source": "explicit_attestation:deepseek-flash",
+      "span_ms": 0.458
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-chat",
+      "native": false,
+      "reason": "unknown_model_vision",
+      "model_vision_source": "unknown",
+      "transport_source": "unknown",
+      "span_ms": 1.258
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-sonnet-4",
+      "native": false,
+      "reason": "unknown_model_vision",
+      "model_vision_source": "unknown",
+      "transport_source": "provider_whitelist",
+      "span_ms": 0.313
+    }
+  ],
+  "media_route_cold_warm": [
+    {
+      "turn_id": "media_route-cold",
+      "warm": false,
+      "total_ms": 178.895,
+      "span_totals_ms": {
+        "perception.media_route_resolve": 178.864
+      },
+      "route_attrs": {
+        "provider": "xai-oauth",
+        "model": "grok-4.6",
+        "native_pixels": false,
+        "native_pixels_reason": "transport_not_attested",
+        "model_vision": true,
+        "model_vision_source": "catalog",
+        "tool_result_media": false,
+        "transport_source": "unknown",
+        "route": "aux_vision"
+      }
+    },
+    {
+      "turn_id": "media_route-warm",
+      "warm": true,
+      "total_ms": 0.202,
+      "span_totals_ms": {
+        "perception.media_route_resolve": 0.185
+      },
+      "route_attrs": {
+        "provider": "xai-oauth",
+        "model": "grok-4.6",
+        "native_pixels": false,
+        "native_pixels_reason": "transport_not_attested",
+        "model_vision": true,
+        "model_vision_source": "catalog",
+        "tool_result_media": false,
+        "transport_source": "unknown",
+        "route": "aux_vision"
+      }
+    }
+  ],
+  "mcp_child_recovery_live": [
+    {
+      "turn_id": "mcp_child_recovery-cold",
+      "warm": false,
+      "wall_ms": 294.286,
+      "ok": false,
+      "model_call_counts": {
+        "recovery": 1
+      },
+      "span_totals_ms": {
+        "transport.mcp_wait": 200.83,
+        "transport.reconnect_setup": 42.302,
+        "recovery.reconnect": 50.868
+      },
+      "wait_stats": {
+        "n": 2,
+        "zero": 0,
+        "timeouts": [
+          0.04990945300232852,
+          0.049887785004102625
+        ]
+      },
+      "failed": [
+        "reconnect"
+      ]
+    },
+    {
+      "turn_id": "mcp_child_recovery-warm",
+      "warm": true,
+      "wall_ms": 203.957,
+      "ok": false,
+      "model_call_counts": {
+        "recovery": 1
+      },
+      "span_totals_ms": {
+        "transport.mcp_wait": 150.14,
+        "transport.reconnect_setup": 3.172,
+        "recovery.reconnect": 50.41
+      },
+      "wait_stats": {
+        "n": 2,
+        "zero": 0,
+        "timeouts": [
+          0.04994748200260801,
+          0.049927801002922934
+        ]
+      },
+      "failed": [
+        "reconnect"
+      ]
+    }
+  ],
+  "isolation_nongui": {
+    "hermes_output_absent": true,
+    "agent_did_not_create_headless": true,
+    "pre_focused_monitor": "DP-2",
+    "post_focused_monitor": "DP-2",
+    "no_test_clients": true,
+    "test_clients": [],
+    "desktop_isolation_correct": true
+  },
+  "focus_steal_evidence_files": [
+    "post_map.json",
+    "post_map2.json"
+  ]
+}

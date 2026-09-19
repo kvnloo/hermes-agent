@@ -1,0 +1,74 @@
+[
+  {
+    "turn_id": "media_route-cold",
+    "warm": false,
+    "provider": "xai-oauth",
+    "model": "grok-4.6",
+    "attrs": {
+      "success": true,
+      "total_ms": 178.895
+    },
+    "spans": [
+      {
+        "name": "perception.media_route_resolve",
+        "start_ms": 0.014,
+        "end_ms": 178.878,
+        "duration_ms": 178.864,
+        "success": true,
+        "attrs": {
+          "provider": "xai-oauth",
+          "model": "grok-4.6",
+          "native_pixels": false,
+          "native_pixels_reason": "transport_not_attested",
+          "model_vision": true,
+          "model_vision_source": "catalog",
+          "tool_result_media": false,
+          "transport_source": "unknown",
+          "route": "aux_vision"
+        }
+      }
+    ],
+    "model_calls": [],
+    "model_call_counts": {},
+    "span_totals_ms": {
+      "perception.media_route_resolve": 178.864
+    },
+    "wall_ms": 178.858
+  },
+  {
+    "turn_id": "media_route-warm",
+    "warm": true,
+    "provider": "xai-oauth",
+    "model": "grok-4.6",
+    "attrs": {
+      "success": true,
+      "total_ms": 0.202
+    },
+    "spans": [
+      {
+        "name": "perception.media_route_resolve",
+        "start_ms": 0.009,
+        "end_ms": 0.194,
+        "duration_ms": 0.185,
+        "success": true,
+        "attrs": {
+          "provider": "xai-oauth",
+          "model": "grok-4.6",
+          "native_pixels": false,
+          "native_pixels_reason": "transport_not_attested",
+          "model_vision": true,
+          "model_vision_source": "catalog",
+          "tool_result_media": false,
+          "transport_source": "unknown",
+          "route": "aux_vision"
+        }
+      }
+    ],
+    "model_calls": [],
+    "model_call_counts": {},
+    "span_totals_ms": {
+      "perception.media_route_resolve": 0.185
+    },
+    "wall_ms": 0.182
+  }
+]

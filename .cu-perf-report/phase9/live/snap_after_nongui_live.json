@@ -1,0 +1,15 @@
+{
+  "label": "after_nongui_live",
+  "ts": 1789802768.8386657,
+  "cursorpos": "2875, 1104",
+  "ws": 2,
+  "monitor": "DP-2",
+  "focus": "0x558af1966870",
+  "class": "zen",
+  "title": "Set up MBP worker \u2014 Zen Browser",
+  "focused_monitor": "DP-2",
+  "monitors": [
+    "DP-1",
+    "DP-2"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "ts": 1789802625.5898643,
+  "cursorpos": "5808, 156",
+  "ws": 3,
+  "monitor": "HERMES_UI_TEST",
+  "focus": null,
+  "class": null,
+  "title": null,
+  "focused_monitor": "HERMES_UI_TEST",
+  "fixtures": [
+    {
+      "class": "HermesE2E-cu93600082",
+      "title": "HERMES_CU_PHASE9",
+      "workspace": {
+        "id": 99,
+        "name": "99"
+      },
+      "monitor": 2,
+      "address": "0x558af1b4a0e0"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "ts": 1789802636.417358,
+  "cursorpos": "3960, 960",
+  "ws": 1,
+  "monitor": "DP-1",
+  "focus": "0x558af1966870",
+  "class": "zen",
+  "title": "Set up MBP worker \u2014 Zen Browser",
+  "monitors": [
+    "DP-1",
+    "DP-2"
+  ],
+  "focused_monitor": "DP-1",
+  "fixtures_remaining": [],
+  "hermes_output_gone": true
+}

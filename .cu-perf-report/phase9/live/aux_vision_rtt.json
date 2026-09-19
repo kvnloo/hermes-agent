@@ -1,0 +1,30 @@
+[
+  {
+    "turn_id": "aux_vision_rtt-cold",
+    "warm": false,
+    "wall_ms": 2116.631,
+    "model_call_counts": {
+      "auxiliary_vision": 1
+    },
+    "span_totals_ms": {
+      "perception.aux_vision": 2116.567
+    },
+    "success": true,
+    "preview": "{\n  \"success\": false,\n  \"error\": \"Error analyzing image: Error code: 401 - {'error': {'message': 'Missing Authentication header', 'code': 401}}\",\n  \"analysis\": \"There was a problem with the request an",
+    "error": null
+  },
+  {
+    "turn_id": "aux_vision_rtt-warm",
+    "warm": true,
+    "wall_ms": 36.391,
+    "model_call_counts": {
+      "auxiliary_vision": 1
+    },
+    "span_totals_ms": {
+      "perception.aux_vision": 36.32
+    },
+    "success": true,
+    "preview": "{\n  \"success\": false,\n  \"error\": \"Error analyzing image: No LLM provider configured for task=vision provider=auto. Run: hermes setup\",\n  \"analysis\": \"There was a problem with the request and the image",
+    "error": null
+  }
+]

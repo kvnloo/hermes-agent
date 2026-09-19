@@ -1,0 +1,16 @@
+{
+  "lease_id": "cu-phase9-3600082",
+  "pid": 3933516,
+  "tier": "hypr-headless",
+  "width": 1280,
+  "height": 720,
+  "refresh": 60,
+  "scale": 1,
+  "workspace": 99,
+  "window_class": "HermesE2E-cu93600082",
+  "output": "HERMES_UI_TEST",
+  "display": ":1",
+  "xvfb_pid": "",
+  "xvfb_bin": "",
+  "created_unix": 1789802571.848271
+}

@@ -1,0 +1,29 @@
+{
+  "tier": "hypr-headless",
+  "window_class": "HermesE2E-cu93600082",
+  "requested_workspace": 99,
+  "headless_output": "HERMES_UI_TEST",
+  "focused_monitor": "DP-2",
+  "physical_monitor_workspaces": {
+    "DP-1": 1,
+    "DP-2": 2
+  },
+  "all_monitors": [
+    {
+      "name": "DP-1",
+      "focused": false,
+      "id": 1
+    },
+    {
+      "name": "DP-2",
+      "focused": true,
+      "id": 2
+    },
+    {
+      "name": "HERMES_UI_TEST",
+      "focused": false,
+      "id": 3
+    }
+  ],
+  "protected_untouched": true
+}

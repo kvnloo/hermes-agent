@@ -78,14 +78,14 @@ Notes:
 ## Benchmark / wall-clock trace
 
 - Phase9 tracer landed: `tools/computer_use/cu_trace.py` (monotonic, in-memory, contextvar)
-- Wired into `handle_computer_use`, capture/aux-vision, media_route_resolve, primary_agent dispatch, smart_approval
-- Fake-backend matrix: `scripts/cu_phase9_matrix.py` → `.cu-perf-report/phase9/`
-- Live browser/MCP/run_goal headed rows still deferred (hypr-agent-input absent / botscreen branch)
+- Fake-backend matrix: `.cu-perf-report/phase9/`
+- Live Hyprland headed trajectories **BLOCKED**: fixture map steals focus (`noinitialfocus` invalid; no `hypr-agent-input`)
+- Live non-GUI attribution: `.cu-perf-report/phase9/live/` — MCP reconnect OK (no busy spin); active main `xai-oauth`/`grok-4.6` → aux_vision (transport_not_attested)
 
 ## Remaining known confounders
 
 - Two branches need upstream PR strategy (main-line vs #108914-based)
-- Full CUA live smoke with real cua-driver MCP child not run (deterministic smoke covers busy-spin)
+- Live cua-driver MCP child kill/reconnect exercised (no busy-spin); headed CUA smoke still blocked by focus-on-map
 - Windows native wake qualification not run on this Linux host
 - hypr-agent-input absent → headed GUI TDD blocked until plugin/skill path available
 
@@ -101,8 +101,8 @@ Measured ordering still favors control-plane until Phase9 trace exists. Next ver
 
 ## Single smallest next vertical slice
 
-**Phase 9 live attribution:** run the six trajectories under hypr isolation (or botscreen for run_goal),
-rank spans by wall-clock contribution, then choose Phase 10 from evidence. Do not optimize yet.
+**Phase 10:** controlled tool-result media transport probe for live main `xai-oauth`/`grok-4.6`.
+Model-scoped attestation only if positively accepted; else keep fail-closed and measure successful aux-vision RTT under a credentialed profile. No click/readiness/browser patches yet.
 
 ## Phase 6 complete
 - Commit `fix/cu-run-goal-on-108914`: applied #105566 — no bounds_scale inference
@@ -119,10 +119,8 @@ rank spans by wall-clock contribution, then choose Phase 10 from evidence. Do no
 - Did NOT land #115276 catalog-as-transport conflation
 - Tests: vision-related suites green (49+)
 
-## Phase 9 in progress / scaffolding green
-- `cu_trace` unit + wiring tests green
-- Matrix (fake backend) cold+warm for: warm_click_type, changed_visual_{native,aux},
-  run_goal_3step stub, approval_type, mcp_child_recovery stub; warm_browser skipped (needs live)
-- Model-call accounting works: aux path records `auxiliary_vision`; run_goal stub records `local_jev`
-- **No further perf patches until live attribution ≥~90% wall time**
-- Next: live/hypr matrix where possible; rank real spans; pick Phase 10 from evidence
+## Phase 9 live attribution attempted
+- See `.cu-perf-report/phase9/live/SUMMARY.md` + `LIVE_ATTRIBUTION.json`
+- Headed GUI: blocked (focus steal on map) — restored immediately; seat0 product paths not exercised
+- Non-GUI live: MCP `cua-driver mcp` kill → reconnect, 0 busy-spin; route provenance for active main
+- Phase 10 chosen from evidence: grok-4.6 transport probe (model-scoped, fail-closed)
