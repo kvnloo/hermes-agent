@@ -158,6 +158,9 @@ API hooks describe provider attempts inside the agent loop:
 `api_request_error` includes the same identity/runtime fields plus:
 
 - `api_duration`, `started_at`, `ended_at`
+- successful streamed requests may also include `first_chunk_at` (first stream event),
+  `first_reasoning_at` (first non-empty reasoning delta), and `first_text_at`
+  (first non-whitespace assistant text that survives Hermes' visibility scrubbers)
 - `status_code`, `retry_count`, `max_retries`, `retryable`, `reason`
 - structured `error = {"type": ..., "message": ...}`
 - sanitized failed request payload: `request`
