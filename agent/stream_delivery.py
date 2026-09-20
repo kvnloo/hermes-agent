@@ -6,6 +6,7 @@ Extracted from ``run_agent.py``; every method resolves through ``AIAgent``'s MRO
 import logging
 import re
 import threading
+import time
 from typing import Any, Dict, List
 
 from agent.memory_manager import sanitize_context
@@ -310,6 +311,10 @@ class StreamDeliveryMixin:
                 text = text.lstrip("\n")
         if not text:
             return
+        # "First chunk" is transport activity, not user-visible commitment. Stamp
+        # the first non-empty text that survives Hermes' think/context scrubbers.
+        if getattr(self, "_last_api_first_text_at", None) is None:
+            self._last_api_first_text_at = time.time()
         delivered = self._deliver_to_stream_callbacks(text)
         self._enqueue_stream_hook("on_stream_delta", delta=text, kind="text")
         if delivered:
@@ -322,6 +327,10 @@ class StreamDeliveryMixin:
             # content deltas.
             self._note_dropped_stream_writer("_fire_reasoning_delta")
             return
+        if isinstance(text, str) and text.strip() and getattr(
+            self, "_last_api_first_reasoning_at", None
+        ) is None:
+            self._last_api_first_reasoning_at = time.time()
         self._call_quietly(self.reasoning_callback, text)
         try:
             from agent.plugin_stream_hooks import stream_reasoning_deltas_enabled
