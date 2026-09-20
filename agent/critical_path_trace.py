@@ -29,7 +29,8 @@ _ACTIVE_SPAN_ID: contextvars.ContextVar[str | None] = contextvars.ContextVar(
 )
 
 
-def _label(value: str, field: str) -> str:
+def _strict_label(value: str, field: str) -> str:
+    """Validate host-owned identity that must already satisfy the contract."""
     text = str(value or "").strip()
     if not text:
         raise ValueError(f"{field} must be non-empty")
@@ -38,6 +39,18 @@ def _label(value: str, field: str) -> str:
     if len(text) > _MAX_LABEL_CHARS:
         raise ValueError(f"{field} must be <= {_MAX_LABEL_CHARS} characters")
     return text
+
+
+def _runtime_label(value: object, fallback: str) -> str:
+    """Bound extension-owned labels without letting telemetry change behavior."""
+    try:
+        text = str(value or "")
+    except Exception:
+        text = ""
+    text = " ".join(text.replace("\r", " ").replace("\n", " ").split())
+    if not text:
+        text = fallback
+    return text[:_MAX_LABEL_CHARS]
 
 
 @dataclass(frozen=True)
@@ -72,7 +85,7 @@ class TurnLatencyTrace:
     """Bounded, thread-safe completed-span buffer for one turn."""
 
     def __init__(self, turn_id: str, *, max_spans: int = DEFAULT_MAX_SPANS_PER_TURN):
-        self.turn_id = _label(turn_id, "turn_id")
+        self.turn_id = _strict_label(turn_id, "turn_id")
         if isinstance(max_spans, bool) or not isinstance(max_spans, int) or max_spans <= 0:
             raise ValueError("max_spans must be a positive integer")
         self.max_spans = max_spans
@@ -156,23 +169,25 @@ def bind_turn_trace(
 
 @contextlib.contextmanager
 def trace_span(
-    owner_kind: str,
-    owner_id: str,
-    operation: str,
+    owner_kind: object,
+    owner_id: object,
+    operation: object,
     *,
     blocking: bool = True,
 ) -> Iterator[Optional[str]]:
-    """Record a nested span when a turn trace is active; otherwise be a no-op."""
+    """Record a nested span when a turn trace is active; otherwise be a no-op.
+
+    Extension-provided labels are sanitized and bounded rather than rejected:
+    observability must never prevent the wrapped runtime operation from running.
+    """
     trace = _ACTIVE_TRACE.get()
     if trace is None:
         yield None
         return
 
-    # Validate metadata before entering the wrapped operation so trace bookkeeping
-    # can never replace an exception raised by the operation itself.
-    normalized_owner_kind = _label(owner_kind, "owner_kind")
-    normalized_owner_id = _label(owner_id, "owner_id")
-    normalized_operation = _label(operation, "operation")
+    normalized_owner_kind = _runtime_label(owner_kind, "unknown")
+    normalized_owner_id = _runtime_label(owner_id, "unknown")
+    normalized_operation = _runtime_label(operation, "unknown")
 
     span_id = trace.next_span_id()
     parent_span_id = _ACTIVE_SPAN_ID.get()
