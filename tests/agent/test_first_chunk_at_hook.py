@@ -33,12 +33,14 @@ from tests.agent.test_run_agent import (
 # ── Helpers ──────────────────────────────────────────────────────────────
 
 
-def _make_stream_chunk(content=None, finish_reason=None, model=None, usage=None):
+def _make_stream_chunk(
+    content=None, finish_reason=None, model=None, usage=None, reasoning_content=None
+):
     """Mock streaming chunk matching OpenAI's ChatCompletionChunk shape."""
     delta = SimpleNamespace(
         content=content,
         tool_calls=None,
-        reasoning_content=None,
+        reasoning_content=reasoning_content,
         reasoning=None,
     )
     choice = SimpleNamespace(index=0, delta=delta, finish_reason=finish_reason)
@@ -272,3 +274,84 @@ class TestPostApiRequestFirstChunkAtPayload:
         assert len(post) == 1
         assert post[0]["first_chunk_at"] is None
         assert agent._last_api_first_chunk_at is None
+
+
+
+# ── Reasoning vs visible-text timing semantics ────────────────────────────
+
+
+class TestFirstReasoningAndVisibleTextTiming:
+    @patch("run_agent.AIAgent._create_request_openai_client")
+    @patch("run_agent.AIAgent._close_request_openai_client")
+    def test_reasoning_and_text_are_distinct_from_first_chunk(
+        self, _mock_close, mock_create, agent
+    ):
+        chunks = [
+            _make_stream_chunk(reasoning_content="thinking"),
+            _make_stream_chunk(content="Visible"),
+            _make_stream_chunk(content=" answer", finish_reason="stop", model="test-model"),
+        ]
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = iter(chunks)
+        mock_create.return_value = mock_client
+        agent.stream_delta_callback = lambda _text: None
+
+        result, post = _run_with_hooks(agent)
+
+        assert result["final_response"] == "Visible answer"
+        assert len(post) == 1
+        timing = post[0]
+        assert isinstance(timing["first_chunk_at"], float)
+        assert isinstance(timing["first_reasoning_at"], float)
+        assert isinstance(timing["first_text_at"], float)
+        assert timing["started_at"] <= timing["first_chunk_at"]
+        assert timing["first_chunk_at"] <= timing["first_reasoning_at"]
+        assert timing["first_reasoning_at"] <= timing["first_text_at"]
+        assert timing["first_text_at"] <= timing["ended_at"]
+
+    @patch("run_agent.AIAgent._create_request_openai_client")
+    @patch("run_agent.AIAgent._close_request_openai_client")
+    def test_text_only_stream_has_visible_text_but_no_reasoning_timestamp(
+        self, _mock_close, mock_create, agent
+    ):
+        chunks = [
+            _make_stream_chunk(content="Hello"),
+            _make_stream_chunk(content="!", finish_reason="stop", model="test-model"),
+        ]
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = iter(chunks)
+        mock_create.return_value = mock_client
+        agent.stream_delta_callback = lambda _text: None
+
+        _, post = _run_with_hooks(agent)
+
+        assert len(post) == 1
+        assert isinstance(post[0]["first_text_at"], float)
+        assert post[0]["first_reasoning_at"] is None
+
+    def test_non_streamed_response_has_no_reasoning_or_visible_delta_timestamp(self, agent):
+        agent.client.chat.completions.create.return_value = _mock_response(
+            content="Done", finish_reason="stop"
+        )
+
+        _, post = _run_with_hooks(agent)
+
+        assert len(post) == 1
+        assert post[0]["first_chunk_at"] is None
+        assert post[0]["first_reasoning_at"] is None
+        assert post[0]["first_text_at"] is None
+
+    def test_per_attempt_reset_clears_all_stream_timestamps(self, agent):
+        agent._last_api_first_chunk_at = 1.0
+        agent._last_api_first_reasoning_at = 2.0
+        agent._last_api_first_text_at = 3.0
+        agent.client.chat.completions.create.return_value = _mock_response(
+            content="Fresh", finish_reason="stop"
+        )
+
+        _, post = _run_with_hooks(agent)
+
+        assert len(post) == 1
+        assert post[0]["first_chunk_at"] is None
+        assert post[0]["first_reasoning_at"] is None
+        assert post[0]["first_text_at"] is None

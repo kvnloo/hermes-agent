@@ -80,9 +80,11 @@ def _fire_post_api_request_hook(
                 api_duration=api_duration,
                 started_at=api_start_time,
                 ended_at=api_start_time + api_duration,
-                # First stream chunk time (epoch s); None if not streamed / no chunk.
-                # TTFB = first_chunk_at - started_at.
+                # Stream timing is intentionally split: first_chunk_at is
+                # transport/event TTFB, reasoning may begin before any visible text.
                 first_chunk_at=getattr(agent, "_last_api_first_chunk_at", None),
+                first_reasoning_at=getattr(agent, "_last_api_first_reasoning_at", None),
+                first_text_at=getattr(agent, "_last_api_first_text_at", None),
                 finish_reason=finish_reason,
                 message_count=len(api_messages),
                 response_model=getattr(response, "model", None),
