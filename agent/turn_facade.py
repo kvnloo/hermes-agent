@@ -50,6 +50,7 @@ class TurnFacadeMixin:
         from agent.review_idle_queue import QUEUE as _review_queue
         from agent.subagent_lifecycle import bind_subagent_parent
         from agent.interrupt_scope import track_in_interrupt_scope
+        from agent.critical_path_trace import bind_turn_trace
         from agent.turn_facade_lease import admit_durable_turn_lease, carry_unadmitted_user_message
         from hermes_cli.observability.relay_shared_metrics import finish_task_run, start_task_run
 
@@ -62,6 +63,9 @@ class TurnFacadeMixin:
         }
         relay_turn_id = f"{session_id or 'session'}:{effective_task_id}:{uuid.uuid4().hex[:8]}"
         self._relay_pending_turn_id = relay_turn_id
+        # Never let a rejected/failed admission leave a previous turn's timing
+        # receipt looking current.
+        self._last_turn_latency_receipt = None
         relay_parent_session_id = (
             str(getattr(self, "_parent_session_id", None) or "")
             if task_context["platform"] == "subagent"
@@ -130,7 +134,12 @@ class TurnFacadeMixin:
 
             # Keep the ContextVar scope local (agent tokens may be observed from another thread).
             # A host that owns this thread (Hermes Console) may cancel the turn cross-thread.
-            with bind_subagent_parent(self), scoped_runtime_main({}), track_in_interrupt_scope(self):
+            with (
+                bind_subagent_parent(self),
+                scoped_runtime_main({}),
+                track_in_interrupt_scope(self),
+                bind_turn_trace(relay_turn_id) as latency_trace,
+            ):
                 try:
                     if lease is not None:
                         lease.start()
@@ -148,6 +157,9 @@ class TurnFacadeMixin:
                     # the interrupt clear itself waits for the thread join in the outer finally.
                     if lease is not None:
                         lease.stop_refresher()
+                    # Internal/debug surface only for now. Consumers can read the
+                    # content-free receipt without changing the turn result schema.
+                    self._last_turn_latency_receipt = latency_trace.receipt()
             terminal = result if isinstance(result, dict) else {}
             relay_outcome = (
                 "cancelled" if terminal.get("interrupted") is True
