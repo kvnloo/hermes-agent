@@ -103,9 +103,9 @@ class TurnLatencyTrace:
             span_id=span_id,
             parent_span_id=parent_span_id,
             turn_id=self.turn_id,
-            owner_kind=_label(owner_kind, "owner_kind"),
-            owner_id=_label(owner_id, "owner_id"),
-            operation=_label(operation, "operation"),
+            owner_kind=owner_kind,
+            owner_id=owner_id,
+            operation=operation,
             blocking=bool(blocking),
             start_offset_ms=max(0.0, (started_ns - self._started_ns) / 1_000_000.0),
             duration_ms=max(0.0, (ended_ns - started_ns) / 1_000_000.0),
@@ -168,6 +168,12 @@ def trace_span(
         yield None
         return
 
+    # Validate metadata before entering the wrapped operation so trace bookkeeping
+    # can never replace an exception raised by the operation itself.
+    normalized_owner_kind = _label(owner_kind, "owner_kind")
+    normalized_owner_id = _label(owner_id, "owner_id")
+    normalized_operation = _label(operation, "operation")
+
     span_id = trace.next_span_id()
     parent_span_id = _ACTIVE_SPAN_ID.get()
     started_ns = time.monotonic_ns()
@@ -180,9 +186,9 @@ def trace_span(
         trace.finish_span(
             span_id=span_id,
             parent_span_id=parent_span_id,
-            owner_kind=owner_kind,
-            owner_id=owner_id,
-            operation=operation,
+            owner_kind=normalized_owner_kind,
+            owner_id=normalized_owner_id,
+            operation=normalized_operation,
             blocking=blocking,
             started_ns=started_ns,
             ended_ns=ended_ns,
