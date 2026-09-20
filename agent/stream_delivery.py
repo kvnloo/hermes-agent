@@ -313,7 +313,11 @@ class StreamDeliveryMixin:
             return
         # "First chunk" is transport activity, not user-visible commitment. Stamp
         # the first non-empty text that survives Hermes' think/context scrubbers.
-        if getattr(self, "_last_api_first_text_at", None) is None:
+        if (
+            isinstance(text, str)
+            and text.strip()
+            and getattr(self, "_last_api_first_text_at", None) is None
+        ):
             self._last_api_first_text_at = time.time()
         delivered = self._deliver_to_stream_callbacks(text)
         self._enqueue_stream_hook("on_stream_delta", delta=text, kind="text")
