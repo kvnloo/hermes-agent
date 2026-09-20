@@ -101,3 +101,28 @@ def test_span_is_recorded_when_wrapped_work_raises():
 def test_turn_id_rejects_empty_or_multiline_labels(field, value):
     with pytest.raises(ValueError, match=field):
         TurnLatencyTrace(value)
+
+
+def test_extension_owned_labels_are_sanitized_not_rejected():
+    owner = "third-party\ncontext-engine"
+    with bind_turn_trace("turn-6") as trace:
+        with trace_span("context", owner, "select_context"):
+            pass
+
+    [span] = trace.snapshot()
+    assert span.owner_id == "third-party context-engine"
+
+
+def test_bad_runtime_label_cannot_prevent_wrapped_work():
+    class _BadLabel:
+        def __str__(self):
+            raise RuntimeError("label rendering failed")
+
+    ran = False
+    with bind_turn_trace("turn-7") as trace:
+        with trace_span("plugin", _BadLabel(), "pre_llm_call"):
+            ran = True
+
+    assert ran is True
+    [span] = trace.snapshot()
+    assert span.owner_id == "unknown"
