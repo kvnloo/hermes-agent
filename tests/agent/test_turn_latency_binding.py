@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from tests.agent.test_run_agent import _make_tool_defs, _mock_response
 
 
@@ -60,11 +62,30 @@ def test_new_turn_clears_stale_receipt_before_admission():
     from types import SimpleNamespace
 
     early = {"final_response": "", "failed": True}
-    with patch(
-        "agent.turn_facade_lease.admit_durable_turn_lease",
-        return_value=SimpleNamespace(early_result=early, lease=None, conversation_history=[]),
-    ), patch("agent.turn_facade_lease.carry_unadmitted_user_message"):
+    with (
+        patch(
+            "agent.turn_facade_lease.admit_durable_turn_lease",
+            return_value=SimpleNamespace(
+                early_result=early, lease=None, conversation_history=[]
+            ),
+        ),
+        patch("agent.turn_facade_lease.carry_unadmitted_user_message"),
+    ):
         result = agent.run_conversation("blocked")
 
     assert result is early
     assert agent._last_turn_latency_receipt is None
+
+
+def test_failed_agent_loop_still_leaves_latency_receipt():
+    agent = _agent()
+
+    with patch(
+        "agent.conversation_loop.run_conversation",
+        side_effect=RuntimeError("provider exploded"),
+    ), pytest.raises(RuntimeError, match="provider exploded"):
+        agent.run_conversation("do not copy this into timing")
+
+    receipt = agent._last_turn_latency_receipt
+    assert receipt["turn_id"] == agent._current_turn_id
+    assert "do not copy this" not in repr(receipt)
