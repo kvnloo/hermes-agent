@@ -357,7 +357,12 @@ export function upsertToolPart(
 
   if (index === -1) {
     next.push(base)
-  } else if (phase === 'running' && prev?.type === 'tool-call' && prev.completedAt !== undefined && prev.result === undefined) {
+  } else if (
+    phase === 'running' &&
+    prev?.type === 'tool-call' &&
+    prev.completedAt !== undefined &&
+    prev.result === undefined
+  ) {
     // A settle-time seal (interim boundary, mid-turn user message, lost
     // completion) closed this call without a result. A running event for the
     // same id says the tool is still executing, so the row goes live again
@@ -398,13 +403,30 @@ export interface SettledClarifyProjection {
  * from an earlier turn, not the owner of the new one. Routing to it would
  * draw the new call over the old row and leave the live turn empty.
  *
+ * The `phase` splits the sealed-without-result case (a part `sealOpenToolParts`
+ * closed with `completedAt` but no `result` because the `tool.complete` was
+ * lost to a degraded websocket):
+ *
+ * • a `complete`-phase event is the call's own result arriving after settle
+ *   (#113035), so a sealed-no-result part is always its reconciled owner no
+ *   matter whether the owning turn has settled;
+ * • a `running`-phase event on a sealed-no-result part is a NEW call reusing
+ *   the id. Only re-arm it when the owner is still in flight (the owning
+ *   message is `pending`/`interim`, or the session has an
+ *   `interimBoundaryPending` boundary open) — i.e. the interim-boundary /
+ *   mid-turn-user-message re-attach the unseal branch exists for. A
+ *   sealed-no-result part on a settled prior turn is history, so the new
+ *   call seeds its own bubble instead of clobbering the prior turn's row.
+ *
  * Newest-first among unresolved parts: interim boundaries append bubbles, so
  * the owner of an in-flight call is the most recent message that carries the
  * id without a result.
  */
 export function toolCallOwnerMessageId(
   messages: ChatMessage[],
-  payload: GatewayEventPayload | undefined
+  payload: GatewayEventPayload | undefined,
+  phase: 'running' | 'complete',
+  session?: { interimBoundaryPending?: boolean }
 ): string | null {
   const stableId = toolId(payload)
 
@@ -416,9 +438,25 @@ export function toolCallOwnerMessageId(
     const message = messages[messageIndex]
 
     for (const part of message.parts) {
-      if (part.type === 'tool-call' && part.toolCallId === stableId && !Object.hasOwn(part, 'result')) {
-        return message.id
+      if (part.type !== 'tool-call' || part.toolCallId !== stableId || Object.hasOwn(part, 'result')) {
+        continue
       }
+
+      // A sealed-without-result part is a reconciled owner for a late
+      // COMPLETION (#113035: the call's own result arriving after settle) no
+      // matter whether the turn has settled. A RUNNING event on a sealed
+      // part is a NEW call reusing the id; only re-arm it when the owner is
+      // still in flight (interim boundary, mid-turn user message) — a sealed
+      // part on a settled prior turn is history, not the new call's owner.
+      if (
+        phase === 'running' &&
+        part.completedAt !== undefined &&
+        !(message.pending || message.interim || session?.interimBoundaryPending)
+      ) {
+        continue
+      }
+
+      return message.id
     }
   }
 
