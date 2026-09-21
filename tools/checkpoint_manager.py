@@ -309,10 +309,13 @@ def _commit_tree_args(tree_sha: str, message: str, parent: Optional[str]) -> Lis
     return ["commit-tree", tree_sha, *(["-p", parent] if parent is not None else []), "-m", message, "--no-gpg-sign"]
 
 
-def _rebuild_linear_chain(store: Path, working_dir: str, shas: List[str]) -> Optional[str]:
+def _rebuild_linear_chain(store: Path, working_dir: str, shas: List[str],
+                          parent: Optional[str] = None) -> Optional[str]:
     """Re-commit each sha's tree (same message) as a fresh linear chain; new tip, or None on
-    any failure (caller leaves the ref untouched)."""
-    new_parent: Optional[str] = None
+    any failure (caller leaves the ref untouched). ``parent`` roots the rebuilt chain at a given
+    commit (the default is a parentless root), used by profile-rename rekey retry to re-parent a
+    post-rename checkpoint chain onto the surviving old tip."""
+    new_parent: Optional[str] = parent
     for sha in shas:
         tree_sha = _git_out(["rev-parse", f"{sha}^{{tree}}"], store, working_dir)
         if not tree_sha:
