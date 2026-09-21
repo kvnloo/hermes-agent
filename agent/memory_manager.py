@@ -16,6 +16,13 @@ from concurrent.futures import Future, ThreadPoolExecutor, wait
 from functools import partial
 from typing import Any, Callable, Dict, List, Optional
 
+from agent.memory_packet_cache import (
+    FRESH,
+    STALE,
+    MemoryPacketCache,
+    cache_key,
+    make_scope,
+)
 from agent.memory_provider import MemoryProvider, PRE_COMPRESS_CHECKPOINT_API_VERSION, ctx_bound, spawn_context_thread
 from agent.skill_commands import extract_user_instruction_from_skill_message
 from tools.hook_output_spill import get_spill_config, spill_if_oversized
@@ -299,6 +306,10 @@ class MemoryManager:
         self._external_prefetch_timeout = timeout
         self._external_prefetch_threads: Dict[str, threading.Thread] = {}
         self._external_prefetch_lock = threading.Lock()
+        # Recall answers outlive the turn that fetched them. Without this, every
+        # non-trivial turn paid a full remote lookup even when the same scope had
+        # answered moments earlier. See agent/memory_packet_cache.py.
+        self.memory_packet_cache = MemoryPacketCache()
         # Single-worker background executor for end-of-turn sync/prefetch, created lazily so
         # the builtin-only path spawns no threads; one worker serializes a provider's writes.
         self._sync_executor: Optional[ThreadPoolExecutor] = None
@@ -401,12 +412,75 @@ class MemoryManager:
         )
         return "\n\n".join(p for p in parts if p and p.strip())
 
-    def _prefetch_provider(self, provider: MemoryProvider, query: str, *, session_id: str = "") -> str:
-        """Run one provider's prefetch; external providers are bounded by a timeout. A stuck external
-        call keeps running on its daemon thread and the provider is skipped on later turns until it returns."""
-        if provider.name == "builtin":
-            return provider.prefetch(query, session_id=session_id)
+    def _packet_scope(self, provider: MemoryProvider, session_id: str) -> str:
+        """The scope a packet may be reused within.
 
+        Conservative by default: provider + session. A provider that knows its own
+        tenancy may widen this by exposing ``cache_scope()`` — the only way a packet
+        is allowed to cross a session boundary, because a session id is not a
+        tenancy boundary for every backend.
+        """
+        tenant: Optional[str] = None
+        getter = getattr(provider, "cache_scope", None)
+        if callable(getter):
+            try:
+                declared = getter()
+            except Exception as exc:  # pragma: no cover - a provider bug must not break recall
+                logger.debug("Memory provider '%s' cache_scope() failed: %s", provider.name, exc)
+                declared = None
+            if isinstance(declared, str) and declared:
+                tenant = declared
+        return make_scope(
+            provider=provider.name,
+            tenant=tenant,
+            # An explicitly declared tenant scope is reusable across sessions; an
+            # inferred one is not, so the session stays in the key.
+            session_id=None if tenant is not None else session_id,
+        )
+
+    def invalidate_memory_packets(self, session_id: str, *, reason: str = "write") -> int:
+        """Mark cached recall for a scope superseded, keeping it as last-known-good.
+
+        Deleting instead would make the next turn synchronous again, which is the
+        latency this cache exists to remove; the entry is replaced only by a
+        validated fetch.
+        """
+        marked = 0
+        for provider in list(self._providers):
+            if provider.name == "builtin":
+                continue
+            marked += self.memory_packet_cache.invalidate(self._packet_scope(provider, session_id))
+        if marked:
+            logger.debug("Invalidated %d memory packet(s) for %s (%s)", marked, session_id, reason)
+        return marked
+
+    def _spill_packet(self, text: str, provider: MemoryProvider, session_id: str) -> str:
+        """Apply the oversized-prefetch spill to text about to be injected."""
+        if text and text.strip():
+            return spill_if_oversized(
+                text, session_id=session_id, source=f"{provider.name} memory prefetch",
+                config=self._external_prefetch_spill_config,
+            )
+        return text
+
+    def _refresh_packet(self, provider: MemoryProvider, key: str, scope: str, query: str,
+                        session_id: str) -> None:
+        """Background replacement for a stale packet. Never raises into the caller."""
+        try:
+            result = self._fetch_provider_bounded(provider, query, session_id=session_id)
+        except Exception as exc:
+            logger.debug("Memory provider '%s' packet refresh failed: %s", provider.name, exc)
+            return
+        if result and result.strip():
+            self.memory_packet_cache.put(key, scope=scope, provider=provider.name, text=result)
+
+    def _fetch_provider_bounded(self, provider: MemoryProvider, query: str, *, session_id: str = "") -> str:
+        """One bounded, coalesced external prefetch, returning unspilled text.
+
+        ``""`` means nothing usable reached us, which includes a timeout and a
+        concurrent prefetch still in flight — the two are deliberately not
+        distinguished here because neither is evidence about memory content.
+        """
         result_box: Dict[str, Any] = {}
 
         def _run() -> None:
@@ -437,15 +511,39 @@ class MemoryManager:
                 self._external_prefetch_threads.pop(provider.name, None)
         if "error" in result_box:
             raise result_box["error"]
-        result = result_box.get("value", "")
-        if result and result.strip():
-            # Prefetch is stamped into the user turn's api_content and replayed every later turn;
-            # spill oversized results like plugin hook output so one provider can't inflate the prefix.
-            result = spill_if_oversized(
-                result, session_id=session_id, source=f"{provider.name} memory prefetch",
-                config=self._external_prefetch_spill_config,
+        return result_box.get("value", "") or ""
+
+    def _prefetch_provider(self, provider: MemoryProvider, query: str, *, session_id: str = "") -> str:
+        """Run one provider's prefetch, serving a known-good packet when one is trustworthy.
+
+        External providers keep their existing blocking bound and in-flight guard.
+        What is added is memory of previous answers: a fresh packet returns without
+        touching the network, and a stale packet answers this turn while its
+        replacement is fetched behind it.
+        """
+        if provider.name == "builtin":
+            return provider.prefetch(query, session_id=session_id)
+
+        scope = self._packet_scope(provider, session_id)
+        key = cache_key(scope, query)
+
+        hit = self.memory_packet_cache.lookup(key)
+        if hit.state == FRESH:
+            return self._spill_packet(hit.text, provider, session_id)
+        if hit.state == STALE:
+            # Answer now from the last known good packet and replace it out of
+            # band. start_refresh coalesces, so concurrent callers issue one fetch.
+            self.memory_packet_cache.start_refresh(
+                key, partial(self._refresh_packet, provider, key, scope, query, session_id)
             )
-        return result
+            return self._spill_packet(hit.text, provider, session_id)
+
+        result = self._fetch_provider_bounded(provider, query, session_id=session_id)
+        if result and result.strip():
+            # Store the CANONICAL (unspilled) text: spill is a per-session size
+            # concern, while the packet belongs to the scope.
+            self.memory_packet_cache.put(key, scope=scope, provider=provider.name, text=result)
+        return self._spill_packet(result, provider, session_id)
 
     def describe_recall(self) -> str:
         """Deterministic recall indicator line (e.g. ``"🧠 Provider — recalled 3 memories"``); ``""`` if none.
@@ -498,6 +596,12 @@ class MemoryManager:
                 if value is not None and self._provider_sync_accepts(provider, keyword):
                     kwargs[keyword] = value
             provider.sync_turn(clean_user_content, assistant_content, **kwargs)
+
+        # The backend's answer for this scope may now differ. Mark it stale rather
+        # than deleting it, so the next turn still gets an immediate last-known-good
+        # answer while the replacement is fetched behind it. Done here, not on the
+        # worker, so the very next turn cannot race the invalidation.
+        self.invalidate_memory_packets(session_id, reason="sync_turn")
 
         self._submit_background(
             lambda: self._each_provider("sync_turn failed", _sync, level=logging.WARNING, providers=providers)
