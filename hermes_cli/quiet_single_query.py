@@ -20,11 +20,17 @@ from typing import Any, Callable, MutableMapping
 # Nested A→B→C is one extra turn; this caps a runaway message_agent chain.
 _MAX_QUIET_NOTIFY_ROUNDS = 8
 
-# Last line a Kanban worker leaves in its own log: ``[kanban-worker-exit] rc=<code>``. A per-tick
-# ``hermes kanban dispatch`` process never reaped the worker, so ``os.waitpid`` cannot tell it how
-# the worker exited; the trailer is the process-independent witness the dead-worker sweep reads
-# instead, so a clean exit without a terminal board call is booked as the same protocol violation
-# (and a 75 as the same rate-limit requeue) whichever process notices the death.
+# Last line a Kanban worker leaves in its own log: ``[kanban-worker-exit] rc=<code>`` (optionally
+# followed by `` run=<run_id>``). A per-tick ``hermes kanban dispatch`` process never reaped the
+# worker, so ``os.waitpid`` cannot tell it how the worker exited; the trailer is the
+# process-independent witness the dead-worker sweep reads instead, so a clean exit without a
+# terminal board call is booked as the same protocol violation (and a 75 as the same rate-limit
+# requeue) whichever process notices the death. The ``run=<run_id>`` stamp scopes a trailer to the
+# run that wrote it: the worker log is append-mode across re-runs and never truncated below the
+# 2 MiB rotation cap, so an unstamped prior-run trailer would otherwise leak into the last 4000
+# bytes the sweep scans and be misbooked against the current run (a worker killed before its
+# epilogue leaves no fresh trailer and must stay a plain crash). The stamp is optional so a
+# mixed-version fleet keeps working during a rolling upgrade.
 KANBAN_WORKER_EXIT_TRAILER = "[kanban-worker-exit] rc="
 
 
@@ -33,8 +39,13 @@ def exit_single_query(code: int) -> None:
     if os.environ.get("HERMES_KANBAN_TASK"):
         with contextlib.suppress(Exception):
             # stderr: stdout may be the ``--stream-json`` record stream, and the worker log
-            # captures both streams.
-            print(f"\n{KANBAN_WORKER_EXIT_TRAILER}{int(code)}", file=sys.stderr, flush=True)
+            # captures both streams. Stamp the trailer with ``HERMES_KANBAN_RUN_ID`` (already in
+            # the worker env from ``_default_spawn``) so a reclaim by a different process can tell
+            # this run's trailer apart from an earlier run's that still survives in the
+            # append-mode log's last 4000 bytes.
+            run_id = os.environ.get("HERMES_KANBAN_RUN_ID")
+            suffix = f" run={run_id}" if run_id else ""
+            print(f"\n{KANBAN_WORKER_EXIT_TRAILER}{int(code)}{suffix}", file=sys.stderr, flush=True)
     sys.exit(code)
 
 
