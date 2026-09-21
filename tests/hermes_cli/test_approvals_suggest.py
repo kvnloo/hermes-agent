@@ -251,6 +251,56 @@ class TestProposalRedaction:
         approval_module.load_permanent(set(approval_module.load_permanent_allowlist()))
         assert not _command_matches_permanent_allowlist("GITHUB_TOKEN=x sudo git push --force origin main")
 
+    def test_render_masks_non_prefix_userinfo_url(self, db_path, isolated_allowlist, capsys):
+        """Non-prefix-matched ``user:pass@`` URL userinfo (HTTP Basic Auth, bespoke
+        bearer) is masked at the text display boundary. The existing ``ghp_…`` test
+        passes through the redactor's prefix pass and never exercises the userinfo
+        shape; this pins the shape the fix targets.
+
+        Regression for the approvals-suggest URL userinfo leak: ``build_proposals``
+        must opt into ``redact_url_credentials=True`` so non-prefix-matched
+        ``user:pass@`` secrets do not survive into the printed ``e.g.`` examples.
+        """
+        pwd = "p4ssw0rdLeak"  # no recognized provider prefix; survives _PREFIX_RE
+        path, con = db_path
+        cmd = f"git push --force https://user:{pwd}@git.internal.example.com/org/repo.git"
+        for _ in range(3):
+            _add_terminal_call(con, cmd)
+        assert suggest_command(_args(path)) == 0
+        out = capsys.readouterr().out
+        assert "git push *" in out  # sanity: a proposal was actually rendered
+        assert "e.g." in out
+        assert pwd not in out          # the credential must not reach stdout
+        assert "user:***@" in out      # userinfo masked; command shape survives
+
+    def test_truncation_does_not_rescue_non_prefix_userinfo_url(
+        self, db_path, isolated_allowlist, capsys
+    ):
+        """``add_example`` truncates examples over 100 chars to ``command[:97] + "..."``.
+        URL userinfo sits immediately after the scheme (char offset ~25 in a
+        ``git push --force https://...`` URL), well inside the first 97 chars, so
+        truncation neither rescues a leaked credential nor eats the mask. Pins the
+        truncation cut point so a future change to ``add_example`` cannot silently
+        re-introduce the leak, and covers the ``--json`` ``examples`` surface.
+        """
+        pwd = "p4ssw0rdLeak"
+        path, con = db_path
+        cmd = (
+            f"git push --force https://user:{pwd}@internal-git.corp.example.com/"
+            "very-long-org-name/very-long-repo-name-with-deep/path/to/repo.git"
+        )
+        assert len(cmd) > 100  # exercises the truncation branch in add_example
+        for _ in range(3):
+            _add_terminal_call(con, cmd)
+        assert suggest_command(_args(path, json=True)) == 0
+        payload = json.loads(capsys.readouterr().out)
+        examples = [ex for p in payload["proposals"] for ex in p["examples"]]
+        assert examples, "a proposal with examples was rendered"
+        # Truncation shape: every stored example is exactly the cut form.
+        assert all(len(ex) == 100 and ex.endswith("...") for ex in examples)
+        assert pwd not in "".join(examples)            # credential did not survive truncation
+        assert all("user:***@" in ex for ex in examples)  # mask sits within [:97]
+
 
 # ---------------------------------------------------------------------------
 # --apply / dry-run
