@@ -1200,18 +1200,26 @@ def _apply_context_engine_selection(
     # Structural clones: the engine must not be able to write through nested
     # containers into persisted history; only the request list is acted on (#80498).
     try:
-        selected = engine.select_context(
-            api_messages,
-            conversation_messages=(
-                [_clone_message_for_send(m) for m in conversation_messages]
-                if conversation_messages is not None else None
-            ),
-            incoming_message=(
-                _clone_message_for_send(incoming_message)
-                if isinstance(incoming_message, dict) else incoming_message
-            ),
-            budget_tokens=getattr(engine, "context_length", 0) or 0,
-        )
+        from agent.critical_path_trace import trace_span
+
+        try:
+            _context_engine_owner = getattr(engine, "name", None) or type(engine).__name__
+        except Exception:
+            _context_engine_owner = type(engine).__name__
+
+        with trace_span("context", _context_engine_owner, "select_context", blocking=True):
+            selected = engine.select_context(
+                api_messages,
+                conversation_messages=(
+                    [_clone_message_for_send(m) for m in conversation_messages]
+                    if conversation_messages is not None else None
+                ),
+                incoming_message=(
+                    _clone_message_for_send(incoming_message)
+                    if isinstance(incoming_message, dict) else incoming_message
+                ),
+                budget_tokens=getattr(engine, "context_length", 0) or 0,
+            )
     except Exception:
         logger.warning(
             "Context engine select_context hook failed; using unmodified request messages (session=%s)",

@@ -19,6 +19,7 @@ from typing import Any, Dict, List
 from unittest.mock import MagicMock
 
 from agent.context_engine import ContextEngine
+from agent.critical_path_trace import bind_turn_trace
 from agent.conversation_loop import (
     _apply_context_engine_selection,
     _notify_context_engine_turn_complete,
@@ -251,3 +252,64 @@ def test_on_turn_complete_called_with_snapshot_and_meta():
 
 
 
+
+
+
+# -- critical-path attribution ---------------------------------------------
+
+
+def test_select_context_records_owner_attributed_blocking_span():
+    class _Engine(_MinimalEngine):
+        @property
+        def name(self) -> str:
+            return "retriever"
+
+        def select_context(self, request_messages, **kwargs):
+            return list(request_messages)
+
+    agent = _agent_with(_Engine())
+    with bind_turn_trace("turn-context") as trace:
+        out = _apply_context_engine_selection(
+            agent, REQUEST, HISTORY, HISTORY[-1], logger=MagicMock()
+        )
+
+    assert out == REQUEST
+    [span] = trace.snapshot()
+    assert span.owner_kind == "context"
+    assert span.owner_id == "retriever"
+    assert span.operation == "select_context"
+    assert span.blocking is True
+
+
+def test_base_noop_context_engine_emits_no_span():
+    agent = _agent_with(_MinimalEngine())
+    with bind_turn_trace("turn-noop") as trace:
+        out = _apply_context_engine_selection(
+            agent, REQUEST, HISTORY, HISTORY[-1], logger=MagicMock()
+        )
+
+    assert out is REQUEST
+    assert trace.snapshot() == ()
+
+
+def test_failing_context_engine_is_attributed_and_still_fails_open():
+    class _Engine(_MinimalEngine):
+        @property
+        def name(self) -> str:
+            return "broken-engine"
+
+        def select_context(self, request_messages, **kwargs):
+            raise RuntimeError("boom")
+
+    logger = MagicMock()
+    agent = _agent_with(_Engine())
+    with bind_turn_trace("turn-failure") as trace:
+        out = _apply_context_engine_selection(
+            agent, REQUEST, HISTORY, HISTORY[-1], logger=logger
+        )
+
+    assert out is REQUEST
+    assert logger.warning.called
+    [span] = trace.snapshot()
+    assert span.owner_id == "broken-engine"
+    assert span.operation == "select_context"
