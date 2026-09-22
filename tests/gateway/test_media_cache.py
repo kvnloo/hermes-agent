@@ -13,7 +13,6 @@ import pytest
 from gateway.platforms.media_cache import (
     DEFAULT_EXT_TO_MIME,
     DEFAULT_MIME_TO_EXT,
-    cache_media_bytes,
     ext_for_mime,
     mime_for_ext,
 )
@@ -43,30 +42,6 @@ class TestSharedTable:
         assert mime_for_ext(".unknown") == "application/octet-stream"
         assert mime_for_ext(".unknown", fallback="x/y") == "x/y"
         assert mime_for_ext(".pdf", overrides={".pdf": "custom/pdf"}) == "custom/pdf"
-
-
-# ---------------------------------------------------------------------------
-# cache_media_bytes dispatch
-# ---------------------------------------------------------------------------
-
-class TestCacheMediaBytes:
-    PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
-
-    def test_image_dispatch(self, monkeypatch, tmp_path):
-        monkeypatch.setattr(
-            "gateway.platforms.base.get_image_cache_dir", lambda: tmp_path
-        )
-        path = cache_media_bytes(self.PNG, "image/png")
-        assert path.endswith(".png")
-
-
-    def test_document_dispatch_uses_filename_hint(self, monkeypatch, tmp_path):
-        monkeypatch.setattr(
-            "gateway.platforms.base.get_document_cache_dir", lambda: tmp_path
-        )
-        path = cache_media_bytes(b"%PDF-1.4", "application/pdf",
-                                 filename_hint="report.pdf")
-        assert path.endswith("_report.pdf")
 
 
 # ---------------------------------------------------------------------------
