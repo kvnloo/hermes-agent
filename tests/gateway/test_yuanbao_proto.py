@@ -28,12 +28,10 @@ from gateway.platforms.yuanbao_proto import (
     _fields_to_dict,
     _encode_msg_body_element,
     _decode_msg_body_element,
-    encode_conn_msg,
     decode_conn_msg,
     encode_conn_msg_full,
     # biz 层
     encode_biz_msg,
-    decode_biz_msg,
     # 入站/出站
     decode_inbound_push,
     encode_send_c2c_message,
@@ -43,8 +41,6 @@ from gateway.platforms.yuanbao_proto import (
     encode_ping,
     encode_push_ack,
     # 常量
-    PB_MSG_TYPES,
-    BIZ_SERVICES,
     CMD_TYPE,
     next_seq_no,
 )
@@ -85,7 +81,7 @@ class TestVarint:
 class TestConnCodec:
     def test_basic_round_trip(self):
         payload = b"hello world"
-        encoded = encode_conn_msg(msg_type=0, seq_no=42, data=payload)
+        encoded = encode_conn_msg_full(cmd_type=0, cmd="", seq_no=42, msg_id="", module="", data=payload)
         decoded = decode_conn_msg(encoded)
         assert decoded["msg_type"] == 0
         assert decoded["seq_no"] == 42
@@ -94,16 +90,15 @@ class TestConnCodec:
 
 
 
-
     # 固定 bytes 常量测试——防协议悄悄改动
     def test_fixed_bytes_simple(self):
         """
-        encode_conn_msg(msg_type=0, seq_no=1, data=b"") 的固定编码。
+        encode_conn_msg_full(cmd_type=0, cmd="", seq_no=1, msg_id="", module="", data=b"") 的固定编码。
         ConnMsg { head { seq_no=1 } }
         head bytes: field3 varint(1) = 0x18 0x01
         head field: field1 len(2) 0x18 0x01 = 0x0a 0x02 0x18 0x01
         """
-        enc = encode_conn_msg(msg_type=0, seq_no=1, data=b"")
+        enc = encode_conn_msg_full(cmd_type=0, cmd="", seq_no=1, msg_id="", module="", data=b"")
         # head: field 3 (seq_no=1) => tag=0x18, value=0x01
         head_content = bytes([0x18, 0x01])
         # outer field 1 (head message)
@@ -124,12 +119,12 @@ class TestBizCodec:
             req_id="req-001",
             body=body,
         )
-        dec = decode_biz_msg(enc)
-        assert dec["service"] == "trpc.yuanbao.example"
-        assert dec["method"] == "/im/send_c2c_msg"
-        assert dec["req_id"] == "req-001"
-        assert dec["body"] == body
-        assert dec["is_response"] is False
+        dec = decode_conn_msg(enc)
+        assert dec["head"]["module"] == "trpc.yuanbao.example"
+        assert dec["head"]["cmd"] == "/im/send_c2c_msg"
+        assert dec["head"]["msg_id"] == "req-001"
+        assert dec["data"] == body
+        assert dec["head"]["cmd_type"] == CMD_TYPE["Request"]
 
     def test_is_response_flag(self):
         # Response cmd_type = 1
@@ -141,8 +136,8 @@ class TestBizCodec:
             module="svc",
             data=b"\x01",
         )
-        dec = decode_biz_msg(enc)
-        assert dec["is_response"] is True
+        dec = decode_conn_msg(enc)
+        assert dec["head"]["cmd_type"] == CMD_TYPE["Response"]
 
 
 
@@ -380,14 +375,6 @@ class TestAuthAndPing:
 # ===========================================================
 
 class TestConstants:
-    def test_pb_msg_types_keys(self):
-        assert "ConnMsg" in PB_MSG_TYPES
-        assert "AuthBindReq" in PB_MSG_TYPES
-        assert "PingReq" in PB_MSG_TYPES
-        assert "KickoutMsg" in PB_MSG_TYPES
-        assert "PushMsg" in PB_MSG_TYPES
-
-
     def test_cmd_type_values(self):
         assert CMD_TYPE["Request"] == 0
         assert CMD_TYPE["Response"] == 1

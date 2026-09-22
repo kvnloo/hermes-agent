@@ -154,8 +154,8 @@ class TestProtoRoundTrip:
     """验证 proto 编解码基本功能"""
 
     def test_conn_msg_roundtrip(self):
-        from gateway.platforms.yuanbao_proto import encode_conn_msg, decode_conn_msg
-        encoded = encode_conn_msg(msg_type=1, seq_no=42, data=b"hello")
+        from gateway.platforms.yuanbao_proto import encode_conn_msg_full, decode_conn_msg
+        encoded = encode_conn_msg_full(cmd_type=1, cmd="", seq_no=42, msg_id="", module="", data=b"hello")
         decoded = decode_conn_msg(encoded)
         assert decoded["seq_no"] == 42
         assert decoded["data"] == b"hello"

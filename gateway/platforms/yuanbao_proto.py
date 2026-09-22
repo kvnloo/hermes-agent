@@ -11,11 +11,6 @@ import threading
 import time
 from typing import Optional
 
-# conn 层消息类型（ConnMsg.Head.cmd_type）
-PB_MSG_TYPES = {
-    n: f"trpc.yuanbao.conn_common.{n}"
-    for n in ("ConnMsg", "AuthBindReq", "AuthBindRsp", "PingReq", "PingRsp", "KickoutMsg", "DirectedPush", "PushMsg")
-}
 # cmd_type: 上行请求 / 请求回包 / 下行推送 / 推送 ACK
 CMD_TYPE = {"Request": 0, "Response": 1, "Push": 2, "PushAck": 3}
 CMD = {"AuthBind": "auth-bind", "Ping": "ping", "Kickout": "kickout", "UpdateMeta": "update-meta"}
@@ -23,13 +18,6 @@ MODULE = {"ConnAccess": "conn_access"}
 
 # biz 层服务/方法映射。TS client 使用短名 'yuanbao_openclaw_proxy'（非完整包路径）。
 _BIZ_PKG = "yuanbao_openclaw_proxy"
-BIZ_SERVICES = {
-    n: f"{_BIZ_PKG}.{n}"
-    for n in ("InboundMessagePush",) + tuple(
-        f"{m}{k}" for m in ("SendC2CMessage", "SendGroupMessage", "QueryGroupInfo", "GetGroupMemberList",
-                            "SendPrivateHeartbeat", "SendGroupHeartbeat") for k in ("Req", "Rsp")
-    )
-}
 
 HERMES_INSTANCE_ID = 17  # openclaw instance_id（固定值）
 WS_HEARTBEAT_RUNNING = 1
@@ -250,11 +238,6 @@ def encode_conn_msg_full(
     return buf + _m(2, data) if data else buf
 
 
-def encode_conn_msg(msg_type: int, seq_no: int, data: bytes) -> bytes:
-    """编码 ConnMsg（简化接口：仅 cmd_type + seq_no + payload）"""
-    return encode_conn_msg_full(msg_type, "", seq_no, "", "", data)
-
-
 def decode_conn_msg(data: bytes) -> dict:
     """解码 ConnMsg → {msg_type, seq_no, data, head}（head 为完整 Head dict）"""
     fdict = _parse_dict(data)
@@ -273,16 +256,6 @@ def _conn_request(cmd_type: int, cmd: str, msg_id: str, module: str, data: bytes
 def encode_biz_msg(service: str, method: str, req_id: str, body: bytes) -> bytes:
     """将已编码的业务 protobuf 包装为可直接发送的 ConnMsg bytes"""
     return _conn_request(CMD_TYPE["Request"], method, req_id, service, body)
-
-
-def decode_biz_msg(data: bytes) -> dict:
-    """解码 ConnMsg → {service, method, req_id, body, is_response, head}"""
-    result = decode_conn_msg(data)
-    head = result["head"]
-    return {
-        "service": head["module"], "method": head["cmd"], "req_id": head["msg_id"], "body": result["data"],
-        "is_response": head["cmd_type"] == CMD_TYPE["Response"], "head": head,
-    }
 
 
 def _biz_request(method: str, prefix: str, body: bytes, msg_id: str = "") -> bytes:
