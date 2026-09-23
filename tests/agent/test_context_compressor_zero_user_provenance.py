@@ -237,6 +237,32 @@ def test_real_task_wins_over_trailing_max_iterations_nudge(compressor):
     assert messages[idx]["content"] == human["content"]
 
 
+def test_kanban_wake_notifications_do_not_become_compaction_anchors(compressor):
+    """Kanban graph-continuation wakes are not operator-authored turns."""
+    from agent.i18n import t
+
+    wake_turn = {
+        "role": "user",
+        "content": t(
+            "gateway.kanban.wake.message",
+            task_id="k7",
+            status="completed",
+            title="Ship release notes",
+            assignee="worker1",
+            board="main",
+        ),
+    }
+    human = {"role": "user", "content": "Refactor the auth module and add tests."}
+    messages = [human, {"role": "assistant", "content": "Working on it."}, wake_turn]
+
+    assert ContextCompressor._is_synthetic_compression_user_turn(wake_turn) is True
+    assert ContextCompressor._transcript_has_real_user_turn([wake_turn]) is False
+    assert compressor._derive_auto_focus_topic(messages) == (
+        "Recent user focus:\n- Refactor the auth module and add tests."
+    )
+    assert compressor._find_last_user_message_idx(messages, head_end=0) == 0
+
+
 @pytest.mark.parametrize(
     "content",
     [

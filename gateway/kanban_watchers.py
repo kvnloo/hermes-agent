@@ -163,6 +163,22 @@ def _wake_scope_id(adapter: Any, sub: dict) -> Optional[str]:
     return None
 
 
+def _coalesce_terminal_events(events: list[Any]) -> list[Any]:
+    """Suppress stale retry-state alerts superseded by batch completion."""
+    completed_positions = [
+        index for index, event in enumerate(events) if event.kind == "completed"
+    ]
+    if not completed_positions:
+        return events
+    last_completed = completed_positions[-1]
+    superseded = {"gave_up", "crashed", "timed_out", "blocked"}
+    return [
+        event
+        for index, event in enumerate(events)
+        if not (index < last_completed and event.kind in superseded)
+    ]
+
+
 class GatewayKanbanWatchersMixin:
     """Kanban watcher / notifier / dispatcher loops for GatewayRunner."""
 
@@ -524,7 +540,11 @@ class GatewayKanbanWatchersMixin:
                     # "Task X completed" and re-decomposes work that already
                     # exists on the board.
                     wake_handoff = ""
-                    for ev in d["events"]:
+                    # A task can fail, recover, and complete while the notifier
+                    # is offline. Advance over every durable event, but do not
+                    # send a superseded failure beside its later success.
+                    delivery_events = _coalesce_terminal_events(d["events"])
+                    for ev in delivery_events:
                         kind = ev.kind
                         # Identity prefix: attribute terminal pings to the
                         # worker that did the work. Makes fleets (where one
@@ -761,7 +781,7 @@ class GatewayKanbanWatchersMixin:
                         task_terminal = task and task.status == "archived"
                         _WAKE_KINDS = ("completed", "gave_up", "crashed", "timed_out", "blocked")
                         _wake_kinds = (
-                            {ev.kind for ev in d["events"] if ev.kind in _WAKE_KINDS}
+                            {ev.kind for ev in delivery_events if ev.kind in _WAKE_KINDS}
                             if wake_agent
                             else set()
                         )

@@ -25,6 +25,18 @@ def _m():
     return main
 
 
+def _is_hermes_managed_service(service_name: str | None) -> bool:
+    """Whether a systemd unit explicitly claims Hermes process ownership.
+
+    A process's cgroup is a containment boundary, not necessarily its service
+    owner. Desktop backends launched from a UWSM session inherit the compositor
+    unit (for example ``wayland-wm@hyprland.desktop.service``); restarting that
+    unit logs the user out and still does not relaunch Desktop. Only units whose
+    names explicitly identify Hermes are safe for this updater to manage.
+    """
+    return bool(service_name and "hermes" in service_name.lower())
+
+
 def _scan_dashboard_processes(
     *,
     exclude_pids: set[int] | None = None,
@@ -214,10 +226,14 @@ def _kill_stale_dashboard_processes(
         for pid in pids:
             cg_path = _m()._get_pid_cgroup_path(pid)
             pid_cgroup[pid] = cg_path
-            pid_service[pid] = _m()._get_systemd_service_for_pid(pid)
+            detected_service = _m()._get_systemd_service_for_pid(pid)
+            pid_service[pid] = (
+                detected_service if _is_hermes_managed_service(detected_service) else None
+            )
             if not pid_service[pid]:
-                # Manually-started process: preserve its exact argv so we
-                # can respawn it after the update (#40449, #68934).
+                # Manually-started process, or a Desktop child merely contained
+                # by a session/compositor cgroup: preserve its exact argv so we
+                # can respawn it without restarting unrelated host services.
                 cmdline = _m()._dashboard_cmdline_for_pid(pid)
                 if cmdline:
                     pid_cmdline[pid] = cmdline

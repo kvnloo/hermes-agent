@@ -23,6 +23,17 @@ from pathlib import Path
 WT = str(Path(__file__).resolve().parents[2])
 
 
+def configure_benchmark_home(home):
+    """Pin every benchmark DB access to its disposable sandbox."""
+    home = Path(home)
+    for name in tuple(os.environ):
+        if name.startswith("HERMES_KANBAN_"):
+            os.environ.pop(name, None)
+    os.environ["HERMES_HOME"] = str(home)
+    os.environ["HOME"] = str(home)
+    os.environ["HERMES_KANBAN_DB"] = str(home / "kanban.db")
+
+
 def bench(label, fn, iterations=5):
     """Time fn over `iterations` runs, return (min, median, max) in ms."""
     times = []
@@ -55,8 +66,7 @@ def seed_tasks(conn, kb, n, assignee="bench-worker", with_parents=False):
 
 def main():
     home = tempfile.mkdtemp(prefix="hermes_bench_")
-    os.environ["HERMES_HOME"] = home
-    os.environ["HOME"] = home
+    configure_benchmark_home(home)
     sys.path.insert(0, WT)
     from hermes_cli import kanban_db as kb
 
