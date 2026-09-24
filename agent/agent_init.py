@@ -1264,6 +1264,15 @@ def _init_memory(agent, _agent_cfg, skip_memory, platform):
         "memory" in (agent.enabled_toolsets or [])
         and "memory" not in (agent.disabled_toolsets or [])
     )
+    # PER-1606: bind mem_config UNCONDITIONALLY before the suppressed import block.
+    # Previously `mem_config` was assigned inside `with suppress(Exception)`, so a
+    # failure importing tools.memory_tool left the name unbound. The later guard
+    # `mem_config.get("provider", "") if mem_config else ""` cannot protect against
+    # that: evaluating the name itself raises UnboundLocalError, which the outer
+    # except swallowed -- silently disabling the configured external memory
+    # provider. Binding it first makes the provider selection independent of
+    # whether the built-in memory module imports.
+    mem_config = _agent_cfg.get("memory", {}) or {}
     if not skip_memory or _memory_toolset_requested:
         # Memory is optional — don't break agent init
         with suppress(Exception):
