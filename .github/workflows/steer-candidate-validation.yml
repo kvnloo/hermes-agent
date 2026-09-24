@@ -1,0 +1,79 @@
+name: Fork-only steer candidate verification
+
+on:
+  push:
+    branches: [validate/hermes-internship-20260923]
+    paths:
+      - .github/workflows/steer-candidate-validation.yml
+      - .validation/steer/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: steer-candidate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    if: github.repository == 'kvnloo/hermes-agent'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      HERMES_TEST_WORKERS: '2'
+      HERMES_DISABLE_LAZY_INSTALLS: '1'
+      OPENAI_API_KEY: ''
+      OPENROUTER_API_KEY: ''
+      NOUS_API_KEY: ''
+    steps:
+      - name: Checkout only this validation harness
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          path: harness
+          persist-credentials: false
+      - name: Checkout the pinned integration base
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          repository: kvnloo/hermes-agent
+          ref: a25cf4d77d46733767b91d5a410e701f4596541e
+          path: subject
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39
+        with:
+          version: '0.12.13'
+          enable-cache: false
+      - name: Install locked test dependencies
+        working-directory: subject
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv python install 3.11
+          uv sync --locked --python 3.11 --extra all --extra dev --extra anthropic --extra mistral --extra fal --extra modal --extra daytona --extra parallel-web --extra bedrock
+          printf 'HERMES_HOME=%s/steer-candidate-profile\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - name: Verify main failure, candidate success, and removed-wiring failure
+        id: verify
+        working-directory: subject
+        shell: bash
+        run: |
+          set -euo pipefail
+          source .venv/bin/activate
+          python ../harness/.validation/steer/validate_candidate.py ../harness/.validation/steer
+      - name: Publish only the tested candidate to a new fork branch
+        working-directory: subject
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE: ${{ steps.verify.outputs.candidate }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = 'kvnloo/hermes-agent'
+          test "${#CANDIDATE}" = 40
+          git cat-file -e "$CANDIDATE^{commit}"
+          target="refs/heads/candidate/steer-112428-$GITHUB_RUN_ID"
+          # Credentials exist only for this push, never in the checked-out test tree.
+          header="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $header" push https://github.com/kvnloo/hermes-agent.git "$CANDIDATE:$target"
+          printf '\nVerified candidate: `%s`\nFork branch: `%s`\nExisting upstream PR was not modified.\n' "$CANDIDATE" "$target" >> "$GITHUB_STEP_SUMMARY"
