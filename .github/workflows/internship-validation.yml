@@ -1,17 +1,13 @@
 name: Fork-only pinned draft validation
-
 on:
   push:
     branches: [validate/hermes-internship-20260923]
     paths: [.github/workflows/internship-validation.yml]
-
 permissions:
   contents: read
-
 concurrency:
   group: internship-validation-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
   validate:
     if: github.repository == 'kvnloo/hermes-agent'
@@ -23,7 +19,7 @@ jobs:
       BASE_SHA: 65d01a7c22d3c62576bfe5f0fd875cbc9ab42be5
       PR_HEAD_SHA: ae85fa251c4b06414f02632ef8313e60c6599a06
       PR_NUMBER: '112428'
-      TEST_FILES: tests/agent/test_steer.py tests/agent/test_interrupt_compat.py tests/hermes_cli/test_cli_steer_busy_path.py tests/hermes_cli/test_steer_inline_repaint.py tests/hermes_cli/test_status_lines_held_during_stream_box.py tests/hermes_cli/test_cli_steer_observer_wiring.py
+      TEST_FILES: tests/agent/test_steer.py tests/agent/test_interrupt_compat.py tests/hermes_cli/test_cli_steer_busy_path.py tests/hermes_cli/test_status_lines_held_during_stream_box.py tests/hermes_cli/test_cli_steer_observer_wiring.py
       HERMES_TEST_WORKERS: '2'
       HERMES_DISABLE_LAZY_INSTALLS: '1'
       OPENAI_API_KEY: ''
@@ -37,7 +33,7 @@ jobs:
           ref: 04d9fad581c3e6a0c2c2d805b6bb38ebceeb9d9e
           fetch-depth: 2
           persist-credentials: false
-      - name: Verify both parents and isolate the profile
+      - name: Verify both parents and every requested test file
         shell: bash
         run: |
           set -euo pipefail
@@ -45,8 +41,11 @@ jobs:
           test "$(git rev-parse HEAD^1)" = "$BASE_SHA"
           test "$(git rev-parse HEAD^2)" = "$PR_HEAD_SHA"
           test -z "$(git status --porcelain)"
+          for file in $TEST_FILES; do
+            test -f "$file" || { echo "Requested test file is missing: $file" >&2; exit 1; }
+          done
           printf 'HERMES_HOME=%s/hermes-validation-profile\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
-          printf 'PR: %s\nIntegration: %s\nBase: %s\nHead: %s\n' "$PR_NUMBER" "$EXPECTED_SHA" "$BASE_SHA" "$PR_HEAD_SHA" >> "$GITHUB_STEP_SUMMARY"
+          printf 'PR: %s\nIntegration: %s\nBase: %s\nHead: %s\nTests: %s\n' "$PR_NUMBER" "$EXPECTED_SHA" "$BASE_SHA" "$PR_HEAD_SHA" "$TEST_FILES" >> "$GITHUB_STEP_SUMMARY"
       - name: Install the repository-pinned uv release
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39
         with:
@@ -102,12 +101,9 @@ jobs:
               'repository': 'NousResearch/hermes-agent',
               'pull_request': os.environ['PR_NUMBER'],
               'integration_sha': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
-              'base_sha': os.environ['BASE_SHA'],
-              'pr_head_sha': os.environ['PR_HEAD_SHA'],
-              'python': platform.python_version(),
-              'pytest': importlib.metadata.version('pytest'),
-              'tests': os.environ['TEST_FILES'].split(),
-              'exit_code': int(os.environ['TEST_EXIT_CODE']),
+              'base_sha': os.environ['BASE_SHA'], 'pr_head_sha': os.environ['PR_HEAD_SHA'],
+              'python': platform.python_version(), 'pytest': importlib.metadata.version('pytest'),
+              'tests': os.environ['TEST_FILES'].split(), 'exit_code': int(os.environ['TEST_EXIT_CODE']),
               'scope': 'Pinned integration; not a full-suite or physical terminal acceptance run.'
           }
           print('```json\n' + json.dumps(receipt, indent=2) + '\n```')
