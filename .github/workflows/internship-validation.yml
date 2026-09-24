@@ -24,11 +24,8 @@ jobs:
       matrix:
         include:
           - pr: '112428'
-            sha: eb442593b66a255f7f7789d4bf2e862d861cec61
-            tests: tests/agent/test_steer.py tests/agent/test_interrupt_compat.py tests/hermes_cli/test_cli_steer_busy_path.py tests/hermes_cli/test_steer_inline_repaint.py
-          - pr: '120677'
-            sha: 793da6cc3b69d0fab547a9fd351c761fc75cd104
-            tests: tests/agent/test_tool_call_guardrail_runtime.py tests/agent/test_relay_tools.py tests/agent/test_relay_nested_execution.py
+            sha: ae85fa251c4b06414f02632ef8313e60c6599a06
+            tests: tests/agent/test_steer.py tests/agent/test_interrupt_compat.py tests/hermes_cli/test_cli_steer_busy_path.py tests/hermes_cli/test_steer_inline_repaint.py tests/hermes_cli/test_status_lines_held_during_stream_box.py tests/hermes_cli/test_cli_steer_observer_wiring.py
     env:
       EXPECTED_SHA: ${{ matrix.sha }}
       PR_NUMBER: ${{ matrix.pr }}
@@ -65,11 +62,6 @@ jobs:
           uv python install 3.11
           uv sync --locked --python 3.11 --extra all --extra dev --extra anthropic --extra mistral --extra fal --extra modal --extra daytona --extra parallel-web --extra bedrock
           mkdir -p "$HERMES_HOME"
-      - name: Require the real Relay dependency
-        if: matrix.pr == '120677'
-        shell: bash
-        run: |
-          .venv/bin/python -c 'import importlib.metadata, nemo_relay; print("nemo-relay", importlib.metadata.version("nemo-relay")); print(nemo_relay.__file__)'
       - name: Execute targeted suites and record the actual exit code
         shell: bash
         run: |
@@ -97,11 +89,43 @@ jobs:
               'tests': os.environ['TEST_FILES'].split(),
               'exit_code': int(os.environ['TEST_EXIT_CODE']),
               'evidence_kind': 'executed_targeted_suites',
-              'scope': 'Exact historical PR head; not current-main integration or live acceptance.'
+              'scope': 'Exact PR head; not current-main integration or a physical terminal acceptance run.'
           }
           print('```json\n' + json.dumps(receipt, indent=2) + '\n```')
           PY
           exit "$rc"
+      - name: Prove the wiring test detects a disconnected observer
+        shell: bash
+        run: |
+          set -euo pipefail
+          file=hermes_cli/cli_agent_setup_mixin.py
+          trap 'git checkout -- "$file"' EXIT
+          .venv/bin/python - <<'PY'
+          from pathlib import Path
+          path = Path('hermes_cli/cli_agent_setup_mixin.py')
+          text = path.read_text()
+          wire = '            self.agent._steer_accepted_callback = self._on_steer_accepted\n'
+          assert text.count(wire) == 1, 'Expected exactly one production wiring edge'
+          path.write_text(text.replace(wire, '            # Mutation control: observer deliberately disconnected.\n'))
+          PY
+          set +e
+          .venv/bin/python -m pytest tests/hermes_cli/test_cli_steer_observer_wiring.py::test_external_steer_uses_initialized_cli_observer -q --junitxml="$RUNNER_TEMP/steer-disconnected.xml" 2>&1 | tee "$RUNNER_TEMP/steer-disconnected.log"
+          rc=${PIPESTATUS[0]}
+          set -e
+          test "$rc" = 1
+          .venv/bin/python - <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
+          import os
+          import xml.etree.ElementTree as ET
+          root = ET.parse(os.path.join(os.environ['RUNNER_TEMP'], 'steer-disconnected.xml')).getroot()
+          cases = list(root.iter('testcase'))
+          assert len(cases) == 1
+          assert not list(root.iter('error')), 'Setup/import errors are not a detection witness'
+          assert not list(root.iter('skipped')), 'Skipped controls do not prove detection'
+          failures = list(root.iter('failure'))
+          assert len(failures) == 1
+          assert 'assert 0 == 1' in (failures[0].text or ''), 'Must fail because the notice is missing'
+          print('Disconnected-observer control: expected missing-notice assertion detected; no setup error or skip.')
+          PY
       - name: Preserve the failure or success summary
         if: always()
         shell: bash
