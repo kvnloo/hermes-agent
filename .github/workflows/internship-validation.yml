@@ -15,41 +15,38 @@ concurrency:
 jobs:
   validate:
     if: github.repository == 'kvnloo/hermes-agent'
-    name: PR ${{ matrix.pr }} at ${{ matrix.sha }}
+    name: PR 112428 pinned current-main integration
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      max-parallel: 2
-      matrix:
-        include:
-          - pr: '112428'
-            sha: ae85fa251c4b06414f02632ef8313e60c6599a06
-            tests: tests/agent/test_steer.py tests/agent/test_interrupt_compat.py tests/hermes_cli/test_cli_steer_busy_path.py tests/hermes_cli/test_steer_inline_repaint.py tests/hermes_cli/test_status_lines_held_during_stream_box.py tests/hermes_cli/test_cli_steer_observer_wiring.py
     env:
-      EXPECTED_SHA: ${{ matrix.sha }}
-      PR_NUMBER: ${{ matrix.pr }}
-      TEST_FILES: ${{ matrix.tests }}
+      EXPECTED_SHA: 04d9fad581c3e6a0c2c2d805b6bb38ebceeb9d9e
+      BASE_SHA: 65d01a7c22d3c62576bfe5f0fd875cbc9ab42be5
+      PR_HEAD_SHA: ae85fa251c4b06414f02632ef8313e60c6599a06
+      PR_NUMBER: '112428'
+      TEST_FILES: tests/agent/test_steer.py tests/agent/test_interrupt_compat.py tests/hermes_cli/test_cli_steer_busy_path.py tests/hermes_cli/test_steer_inline_repaint.py tests/hermes_cli/test_status_lines_held_during_stream_box.py tests/hermes_cli/test_cli_steer_observer_wiring.py
       HERMES_TEST_WORKERS: '2'
       HERMES_DISABLE_LAZY_INSTALLS: '1'
       OPENAI_API_KEY: ''
       OPENROUTER_API_KEY: ''
       NOUS_API_KEY: ''
     steps:
-      - name: Checkout the exact subject revision
+      - name: Checkout the exact integration revision
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
-          repository: kvnloo/hermes-agent
-          ref: ${{ matrix.sha }}
+          repository: NousResearch/hermes-agent
+          ref: 04d9fad581c3e6a0c2c2d805b6bb38ebceeb9d9e
+          fetch-depth: 2
           persist-credentials: false
-      - name: Verify source identity and isolate the profile
+      - name: Verify both parents and isolate the profile
         shell: bash
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test "$(git rev-parse HEAD^1)" = "$BASE_SHA"
+          test "$(git rev-parse HEAD^2)" = "$PR_HEAD_SHA"
           test -z "$(git status --porcelain)"
           printf 'HERMES_HOME=%s/hermes-validation-profile\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
-          printf 'Subject: %s\nRevision: %s\n' "$PR_NUMBER" "$EXPECTED_SHA" >> "$GITHUB_STEP_SUMMARY"
+          printf 'PR: %s\nIntegration: %s\nBase: %s\nHead: %s\n' "$PR_NUMBER" "$EXPECTED_SHA" "$BASE_SHA" "$PR_HEAD_SHA" >> "$GITHUB_STEP_SUMMARY"
       - name: Install the repository-pinned uv release
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39
         with:
@@ -62,6 +59,34 @@ jobs:
           uv python install 3.11
           uv sync --locked --python 3.11 --extra all --extra dev --extra anthropic --extra mistral --extra fal --extra modal --extra daytona --extra parallel-web --extra bedrock
           mkdir -p "$HERMES_HOME"
+      - name: Check preservation of current-main interrupt semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+          .venv/bin/python - <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
+          import ast, os, subprocess, threading
+          from pathlib import Path
+          path = 'agent/interrupt_control.py'
+          old = subprocess.check_output(['git', 'show', os.environ['BASE_SHA'] + ':' + path], text=True)
+          new = Path(path).read_text()
+          def clear(tree):
+              return ast.dump(next(n for n in ast.walk(ast.parse(tree)) if isinstance(n, ast.FunctionDef) and n.name == 'clear_interrupt'), include_attributes=False)
+          assert clear(old) == clear(new), 'Integration changed current-main clear_interrupt'
+          from agent.interrupt_control import InterruptControlMixin
+          agent = InterruptControlMixin()
+          agent._pending_steer = None
+          agent._pending_steer_lock = threading.Lock()
+          agent._pending_redirect = None
+          agent._pending_redirect_lock = threading.Lock()
+          agent._execution_thread_id = None
+          assert agent.steer('accepted before soft clear') is True
+          assert agent.clear_interrupt() is True
+          assert agent._drain_pending_steer() == 'accepted before soft clear'
+          assert agent.steer('cancelled explicitly') is True
+          assert agent.clear_interrupt(hard_cancel=True) is True
+          assert agent._drain_pending_steer() is None
+          print('Current-main interrupt control retained: soft clear preserves accepted guidance; explicit hard cancel removes it.')
+          PY
       - name: Execute targeted suites and record the actual exit code
         shell: bash
         run: |
@@ -73,23 +98,17 @@ jobs:
           export TEST_EXIT_CODE="$rc"
           python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
           import importlib.metadata, json, os, platform, subprocess
-          versions = {}
-          for name in ('pytest', 'nemo-relay'):
-              try:
-                  versions[name] = importlib.metadata.version(name)
-              except importlib.metadata.PackageNotFoundError:
-                  versions[name] = None
           receipt = {
-              'repository': 'kvnloo/hermes-agent',
+              'repository': 'NousResearch/hermes-agent',
               'pull_request': os.environ['PR_NUMBER'],
-              'head_sha': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
-              'expected_sha': os.environ['EXPECTED_SHA'],
+              'integration_sha': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
+              'base_sha': os.environ['BASE_SHA'],
+              'pr_head_sha': os.environ['PR_HEAD_SHA'],
               'python': platform.python_version(),
-              'dependencies': versions,
+              'pytest': importlib.metadata.version('pytest'),
               'tests': os.environ['TEST_FILES'].split(),
               'exit_code': int(os.environ['TEST_EXIT_CODE']),
-              'evidence_kind': 'executed_targeted_suites',
-              'scope': 'Exact PR head; not current-main integration or a physical terminal acceptance run.'
+              'scope': 'Pinned integration; not a full-suite or physical terminal acceptance run.'
           }
           print('```json\n' + json.dumps(receipt, indent=2) + '\n```')
           PY
@@ -117,8 +136,7 @@ jobs:
           import os
           import xml.etree.ElementTree as ET
           root = ET.parse(os.path.join(os.environ['RUNNER_TEMP'], 'steer-disconnected.xml')).getroot()
-          cases = list(root.iter('testcase'))
-          assert len(cases) == 1
+          assert len(list(root.iter('testcase'))) == 1
           assert not list(root.iter('error')), 'Setup/import errors are not a detection witness'
           assert not list(root.iter('skipped')), 'Skipped controls do not prove detection'
           failures = list(root.iter('failure'))
@@ -135,5 +153,5 @@ jobs:
             tail -100 "$RUNNER_TEMP/hermes-validation.log" >> "$GITHUB_STEP_SUMMARY"
             printf '\n```\n' >> "$GITHUB_STEP_SUMMARY"
           else
-            printf '\nNo test receipt: checkout or environment setup did not complete.\n' >> "$GITHUB_STEP_SUMMARY"
+            printf '\nNo suite receipt: checkout, environment, or interrupt preservation check did not complete.\n' >> "$GITHUB_STEP_SUMMARY"
           fi
