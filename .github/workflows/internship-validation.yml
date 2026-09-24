@@ -1,0 +1,115 @@
+name: Fork-only pinned draft validation
+
+on:
+  push:
+    branches: [validate/hermes-internship-20260923]
+    paths: [.github/workflows/internship-validation.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: internship-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: github.repository == 'kvnloo/hermes-agent'
+    name: PR ${{ matrix.pr }} at ${{ matrix.sha }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - pr: '112428'
+            sha: eb442593b66a255f7f7789d4bf2e862d861cec61
+            tests: tests/agent/test_steer.py tests/agent/test_interrupt_compat.py tests/hermes_cli/test_cli_steer_busy_path.py tests/hermes_cli/test_steer_inline_repaint.py
+          - pr: '120677'
+            sha: 793da6cc3b69d0fab547a9fd351c761fc75cd104
+            tests: tests/agent/test_tool_call_guardrail_runtime.py tests/agent/test_relay_tools.py tests/agent/test_relay_nested_execution.py
+    env:
+      EXPECTED_SHA: ${{ matrix.sha }}
+      PR_NUMBER: ${{ matrix.pr }}
+      TEST_FILES: ${{ matrix.tests }}
+      HERMES_HOME: ${{ runner.temp }}/hermes-validation-profile
+      HERMES_TEST_WORKERS: '2'
+      HERMES_DISABLE_LAZY_INSTALLS: '1'
+      OPENAI_API_KEY: ''
+      OPENROUTER_API_KEY: ''
+      NOUS_API_KEY: ''
+    steps:
+      - name: Checkout the exact subject revision
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          repository: kvnloo/hermes-agent
+          ref: ${{ matrix.sha }}
+          persist-credentials: false
+      - name: Verify source identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test -z "$(git status --porcelain)"
+          printf 'Subject: %s\nRevision: %s\n' "$PR_NUMBER" "$EXPECTED_SHA" >> "$GITHUB_STEP_SUMMARY"
+      - name: Install the repository-pinned uv release
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39
+        with:
+          version: '0.12.13'
+          enable-cache: false
+      - name: Install the locked test environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv python install 3.11
+          uv sync --locked --python 3.11 --extra all --extra dev --extra anthropic --extra mistral --extra fal --extra modal --extra daytona --extra parallel-web --extra bedrock
+          mkdir -p "$HERMES_HOME"
+      - name: Require the real Relay dependency
+        if: matrix.pr == '120677'
+        shell: bash
+        run: |
+          .venv/bin/python -c 'import importlib.metadata, nemo_relay; print("nemo-relay", importlib.metadata.version("nemo-relay")); print(nemo_relay.__file__)'
+      - name: Execute targeted suites and record the actual exit code
+        shell: bash
+        run: |
+          set -uo pipefail
+          source .venv/bin/activate
+          set +e
+          scripts/run_tests.sh $TEST_FILES 2>&1 | tee "$RUNNER_TEMP/hermes-validation.log"
+          rc=${PIPESTATUS[0]}
+          export TEST_EXIT_CODE="$rc"
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import importlib.metadata, json, os, platform, subprocess
+          versions = {}
+          for name in ('pytest', 'nemo-relay'):
+              try:
+                  versions[name] = importlib.metadata.version(name)
+              except importlib.metadata.PackageNotFoundError:
+                  versions[name] = None
+          receipt = {
+              'repository': 'kvnloo/hermes-agent',
+              'pull_request': os.environ['PR_NUMBER'],
+              'head_sha': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
+              'expected_sha': os.environ['EXPECTED_SHA'],
+              'python': platform.python_version(),
+              'dependencies': versions,
+              'tests': os.environ['TEST_FILES'].split(),
+              'exit_code': int(os.environ['TEST_EXIT_CODE']),
+              'evidence_kind': 'executed_targeted_suites',
+              'scope': 'Exact historical PR head; not current-main integration or live acceptance.'
+          }
+          print('```json\n' + json.dumps(receipt, indent=2) + '\n```')
+          PY
+          exit "$rc"
+      - name: Preserve the failure or success summary
+        if: always()
+        shell: bash
+        run: |
+          if test -f "$RUNNER_TEMP/hermes-validation.log"; then
+            printf '\n### Test output (last 100 lines)\n```text\n' >> "$GITHUB_STEP_SUMMARY"
+            tail -100 "$RUNNER_TEMP/hermes-validation.log" >> "$GITHUB_STEP_SUMMARY"
+            printf '\n```\n' >> "$GITHUB_STEP_SUMMARY"
+          else
+            printf '\nNo test receipt: checkout or environment setup did not complete.\n' >> "$GITHUB_STEP_SUMMARY"
+          fi
