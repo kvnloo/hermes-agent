@@ -1602,19 +1602,41 @@ def probe_profile_catalog(normalized: str, profile, api_key: Optional[str], base
     return merge_profile_catalog(normalized, profile, live)
 
 
+def _live_catalog_is_authoritative(normalized: str) -> bool:
+    """Whether ``normalized``'s profile treats a successful live listing as its full catalog
+    (see ``ProviderProfile.live_catalog_mode``). A provider with no profile keeps union behavior."""
+    from providers import get_provider_profile
+
+    profile = get_provider_profile(normalized)
+    return bool(profile) and getattr(profile, "live_catalog_mode", "union") == "authoritative"
+
+
 def merge_profile_catalog(normalized: str, profile, live: Optional[list[str]]) -> Optional[list[str]]:
     """Combine a profile's live catalog with its curated list the way the ``/model`` picker does, so
     first-time setup (``model_setup_flows._api_key_provider_model_list``) offers the same rows the
-    picker will later show. Empty live → ``fallback_models`` (None when the profile has none)."""
-    if not live:
+    picker will later show. A failed/absent live fetch (``None``) falls back to ``fallback_models``
+    (None when the profile has none); a profile with ``live_catalog_mode="authoritative"`` replaces
+    its curated floor on a successful listing instead of resurrecting retired ids."""
+    if live is None:
         rows = CuratedFallbackModels(profile.fallback_models) if profile.fallback_models else None
     else:
-        curated = list(static_catalog(normalized)) or list(profile.fallback_models or ())
-        if not curated:
+        markers = getattr(profile, "live_excluded_markers", None) or ()
+        if live and markers:
+            live = [
+                m for m in live
+                if not any(marker in str(m).lower().rsplit("/", 1)[-1] for marker in markers)
+            ]
+        if getattr(profile, "live_catalog_mode", "union") == "authoritative":
             rows = live
+        elif not live:
+            rows = CuratedFallbackModels(profile.fallback_models) if profile.fallback_models else None
         else:
-            primary, secondary = (live, curated) if normalized in _LIVE_FIRST_PICKER_PROVIDERS else (curated, live)
-            rows = _merge_unique(primary, secondary, key=_model_dedup_key)
+            curated = list(static_catalog(normalized)) or list(profile.fallback_models or ())
+            if not curated:
+                rows = live
+            else:
+                primary, secondary = (live, curated) if normalized in _LIVE_FIRST_PICKER_PROVIDERS else (curated, live)
+                rows = _merge_unique(primary, secondary, key=_model_dedup_key)
     return _drop_delisted_opencode_models(normalized, rows)
 
 
@@ -2006,6 +2028,10 @@ def cached_provider_model_ids(
     if not normalized:
         return []
     is_ollama = normalized == "ollama"
+    # A provider whose live listing IS its catalog (``live_catalog_mode="authoritative"``) may
+    # serve a cached empty row; everyone else keeps the "empty is a miss" rule. The ollama TTL
+    # clamp lives in ``_disk_serve_tier``.
+    accepts_empty_cache = is_ollama or _live_catalog_is_authoritative(normalized)
 
     cache = _load_provider_models_cache()
     fp = _credential_fingerprint(normalized)
@@ -2013,7 +2039,8 @@ def cached_provider_model_ids(
     now = time.time()
 
     if not force_refresh:
-        tier = _disk_serve_tier(entry, fp, now, is_ollama=is_ollama, ttl_seconds=ttl_seconds)
+        tier = _disk_serve_tier(entry, fp, now, is_ollama=is_ollama, ttl_seconds=ttl_seconds,
+                                allow_empty=accepts_empty_cache)
         if tier is not None:
             if tier == "stale":
                 _spawn_swr_refresh(normalized)
@@ -2024,7 +2051,7 @@ def cached_provider_model_ids(
         # SWR window is still served (hour-old catalog beats an empty picker) while a daemon thread
         # warms the next open; a cold row returns [] and the caller falls back to its curated list.
         _spawn_swr_refresh(normalized)
-        if _cache_entry_valid(entry, fp, allow_empty=is_ollama):
+        if _cache_entry_valid(entry, fp, allow_empty=accepts_empty_cache):
             return _chat_catalog_rows([
                 model for model in entry["models"]
                 if not _model_requires_account_discovery(normalized, model)])
@@ -2039,6 +2066,11 @@ def cached_provider_model_ids(
         _store_cache_entry(normalized, fresh)
         return _chat_catalog_rows(list(live))
 
+    if _live_catalog_is_authoritative(normalized):
+        # An authoritative catalog's successful empty listing replaces stale rows;
+        # fetch failures degrade to their non-empty offline floor before reaching here.
+        _store_cache_entry(normalized, _cache_entry(fp, [], now))
+        return []
     if is_ollama:
         if _ollama_native_probe_reachable():
             # A reachable empty native catalog is authoritative; do not resurrect a stale disk catalog.
@@ -2558,17 +2590,19 @@ def _cache_entry_valid(
 
 
 def _disk_serve_tier(entry: Any, fp: str, now: float, *, is_ollama: bool,
-                     ttl_seconds: int = _PROVIDER_MODELS_CACHE_TTL) -> Optional[str]:
+                     ttl_seconds: int = _PROVIDER_MODELS_CACHE_TTL,
+                     allow_empty: bool = False) -> Optional[str]:
     """How :func:`cached_provider_model_ids` serves *entry* without the network.
 
     ``"fresh"`` inside the row's TTL (a curated fallback row only for
     ``_PROVIDER_MODELS_FALLBACK_TTL``), ``"stale"`` for a non-empty, non-fallback row inside
     ``_PROVIDER_MODELS_STALE_SERVE_MAX`` (served while an SWR thread revalidates), else ``None``:
     the call would block on a live fetch. Empty native catalogs are authoritative only inside the
-    short native TTL, never through the stale window."""
+    short native TTL, never through the stale window; ``allow_empty`` extends that same authority
+    to a provider whose live listing IS its catalog (``live_catalog_mode="authoritative"``)."""
     if is_ollama:
         ttl_seconds = min(ttl_seconds, _OLLAMA_LOCAL_MODELS_CACHE_TTL)
-    if not _cache_entry_valid(entry, fp, allow_empty=is_ollama):
+    if not _cache_entry_valid(entry, fp, allow_empty=is_ollama or allow_empty):
         return None
     age = now - entry["at"]
     if age < (_PROVIDER_MODELS_FALLBACK_TTL if entry.get("fallback") else ttl_seconds):
