@@ -1,0 +1,116 @@
+name: Fork-only reconciled steer verification
+
+on:
+  push:
+    branches: [validate/hermes-internship-20260923]
+    paths: [.github/workflows/steer-reconciliation-check.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: steer-reconciliation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    if: github.repository == 'kvnloo/hermes-agent'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUBJECT_SHA: 98ca5561beafe226b3f8dc7c923ca10cd481f7d7
+      HERMES_TEST_WORKERS: '2'
+      HERMES_DISABLE_LAZY_INSTALLS: '1'
+      OPENAI_API_KEY: ''
+      OPENROUTER_API_KEY: ''
+      NOUS_API_KEY: ''
+    steps:
+      - name: Checkout the reconciled revision only
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          repository: kvnloo/hermes-agent
+          ref: 98ca5561beafe226b3f8dc7c923ca10cd481f7d7
+          persist-credentials: false
+      - name: Verify revision and isolate profile
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
+          test -z "$(git status --porcelain)"
+          printf 'HERMES_HOME=%s/steer-reconciliation-profile\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - name: Install repository-pinned uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39
+        with:
+          version: '0.12.13'
+          enable-cache: false
+      - name: Install locked test environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv python install 3.11
+          uv sync --locked --python 3.11 --extra all --extra dev --extra anthropic --extra mistral --extra fal --extra modal --extra daytona --extra parallel-web --extra bedrock
+          mkdir -p "$HERMES_HOME"
+      - name: Require every requested file, then execute both workers' coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          source .venv/bin/activate
+          tests=(
+            tests/agent/test_steer.py
+            tests/agent/test_interrupt_compat.py
+            tests/hermes_cli/test_cli_steer_busy_path.py
+            tests/hermes_cli/test_status_lines_held_during_stream_box.py
+            tests/hermes_cli/test_steer_observer_wiring.py
+            tests/hermes_cli/test_cli_steer_observer_wiring.py
+          )
+          for file in "${tests[@]}"; do test -f "$file"; done
+          scripts/run_tests.sh "${tests[@]}" 2>&1 | tee "$RUNNER_TEMP/reconciled-tests.log"
+          python -m ruff check tests/hermes_cli/test_steer_observer_wiring.py tests/hermes_cli/test_cli_steer_observer_wiring.py
+          printf 'Revision: `%s`\nExecuted test files:\n' "$SUBJECT_SHA" >> "$GITHUB_STEP_SUMMARY"
+          printf -- '- `%s`\n' "${tests[@]}" >> "$GITHUB_STEP_SUMMARY"
+      - name: Both wiring witnesses must reject a disconnected observer
+        shell: bash
+        run: |
+          set -euo pipefail
+          file=hermes_cli/cli_agent_setup_mixin.py
+          trap 'git checkout -- "$file"' EXIT
+          .venv/bin/python - <<'PY'
+          from pathlib import Path
+          path = Path('hermes_cli/cli_agent_setup_mixin.py')
+          text = path.read_text()
+          wire = '            self.agent._steer_accepted_callback = self._on_steer_accepted\n'
+          assert text.count(wire) == 1
+          path.write_text(text.replace(wire, ''))
+          PY
+          set +e
+          .venv/bin/python -m pytest tests/hermes_cli/test_steer_observer_wiring.py::test_external_acceptance_is_rendered_by_cli_setup tests/hermes_cli/test_cli_steer_observer_wiring.py::test_external_steer_uses_initialized_cli_observer -q --junitxml="$RUNNER_TEMP/disconnected-both.xml" 2>&1 | tee "$RUNNER_TEMP/disconnected-both.log"
+          rc=${PIPESTATUS[0]}
+          set -e
+          test "$rc" = 1
+          .venv/bin/python - <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
+          import os
+          import xml.etree.ElementTree as ET
+          root = ET.parse(os.path.join(os.environ['RUNNER_TEMP'], 'disconnected-both.xml')).getroot()
+          assert len(list(root.iter('testcase'))) == 2
+          assert not list(root.iter('error'))
+          assert not list(root.iter('skipped'))
+          failures = list(root.iter('failure'))
+          assert len(failures) == 2
+          assert all('assert 0 == 1' in (failure.text or '') for failure in failures)
+          print('Both disconnected-observer controls failed specifically on missing-notice assertions, with no setup errors or skips.')
+          PY
+      - name: Confirm production bytes restored
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code -- hermes_cli/cli_agent_setup_mixin.py
+          printf '\nNo upstream PR or branch was changed by this workflow. No live terminal or model call was tested.\n' >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve executed results
+        if: always()
+        shell: bash
+        run: |
+          if test -f "$RUNNER_TEMP/reconciled-tests.log"; then
+            printf '\n```text\n' >> "$GITHUB_STEP_SUMMARY"
+            tail -70 "$RUNNER_TEMP/reconciled-tests.log" >> "$GITHUB_STEP_SUMMARY"
+            printf '\n```\n' >> "$GITHUB_STEP_SUMMARY"
+          fi
