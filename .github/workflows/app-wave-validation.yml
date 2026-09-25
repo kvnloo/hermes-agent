@@ -1,0 +1,79 @@
+name: App wave validation
+
+on:
+  push:
+    branches:
+      - validation/app-wave-20260925-1514
+
+permissions:
+  contents: read
+
+jobs:
+  memory-systemexit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: a272f82c639a2737ae129b16c61543870d3c8315
+          fetch-depth: 2
+      - uses: ./.github/actions/setup-pm
+        with:
+          extras: '["all", "anthropic", "bedrock", "mistral", "fal", "modal", "daytona", "parallel-web"]'
+          test-environment: 'true'
+          prune-python-cache: true
+      - name: Candidate
+        run: scripts/run_tests.sh tests/agent/test_memory_provider_unavailable_warning.py
+      - name: Ruff
+        run: |
+          "$HERMES_PYTHON" -m ruff check agent/agent_init.py tests/agent/test_memory_provider_unavailable_warning.py
+      - name: Behavioral control
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout HEAD^ -- agent/agent_init.py
+          set +e
+          scripts/run_tests.sh tests/agent/test_memory_provider_unavailable_warning.py > /tmp/control.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/control.log
+          if [ "$status" -eq 0 ]; then
+            echo "::error::control unexpectedly passed"
+            exit 1
+          fi
+          grep -Eq "test_memory_provider_systemexit_is_contained|test_unavailable_reason_systemexit_does_not_abort_init" /tmp/control.log
+
+  desktop-lucide:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: 46380cf710adfb30ab3e793bb11bcafffe1fcb87
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26.5.1'
+          cache: npm
+      - run: npm install --global npm@11.17.0
+      - name: Candidate scoped install
+        run: npm install --workspace apps/desktop --no-audit --no-fund
+      - name: Candidate build
+        run: npm run build --workspace apps/desktop
+      - name: Behavioral control
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout HEAD^ -- apps/desktop/package.json package-lock.json
+          rm -rf node_modules apps/desktop/node_modules
+          npm install --workspace apps/desktop --no-audit --no-fund
+          set +e
+          npm run build --workspace apps/desktop > /tmp/control.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/control.log
+          if [ "$status" -eq 0 ]; then
+            echo "::error::control unexpectedly passed"
+            exit 1
+          fi
+          grep -E "lucide-react|assert-root-install" /tmp/control.log
