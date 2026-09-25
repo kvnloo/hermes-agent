@@ -1,0 +1,47 @@
+name: Model picker first-click validation
+
+on:
+  push:
+    branches:
+      - validation/model-picker-first-click-123040
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: a9cc8201e1f6dab5801fd85c013cae06ed374e4d
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26.5.1'
+          cache: npm
+      - run: npm install --global npm@11.17.0
+      - name: Root install
+        run: npm ci --no-audit --no-fund
+      - name: Focused picker tests
+        working-directory: apps/desktop
+        run: ../../node_modules/.bin/vitest run --project ui src/app/shell/model-menu-panel.test.tsx src/components/ui/dropdown-menu.test.tsx
+      - name: Desktop typecheck
+        run: npm run typecheck --workspace apps/desktop
+      - name: Behavioral control
+        shell: bash
+        working-directory: apps/desktop
+        run: |
+          set -euo pipefail
+          git checkout HEAD^ -- src/app/shell/model-catalog-menu.tsx
+          set +e
+          ../../node_modules/.bin/vitest run --project ui src/app/shell/model-menu-panel.test.tsx > /tmp/control.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/control.log
+          if [ "$status" -eq 0 ]; then
+            echo "::error::control unexpectedly passed"
+            exit 1
+          fi
+          grep -q "keeps model rows hit-testable before any pointer movement" /tmp/control.log
