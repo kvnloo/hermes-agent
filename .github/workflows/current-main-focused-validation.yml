@@ -1,0 +1,83 @@
+name: Current-main focused validation
+
+on:
+  push:
+    branches:
+      - validation/current-main-wave-20260925-1333
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - lane: acp-malformed-visible
+            sha: 217066b05d6c3196f3de24d29763a1a6390e0404
+            test_file: tests/agent/test_acp_openai_bridge.py
+            prod_file: agent/acp_openai_bridge.py
+            lint_files: "agent/acp_openai_bridge.py tests/agent/test_acp_openai_bridge.py"
+            witnesses: "test_malformed_tool_call_block_is_never_silently_swallowed|test_malformed_and_empty_input_never_raises"
+          - lane: doctor-nontty-progress
+            sha: 17d00497eaaaa05b89f25498531dbb634a1cd53c
+            test_file: tests/hermes_cli/test_doctor_connectivity_output.py
+            prod_file: hermes_cli/doctor.py
+            lint_files: "hermes_cli/doctor.py tests/hermes_cli/test_doctor_connectivity_output.py"
+            witnesses: "test_redirected_connectivity_output_has_no_carriage_returns"
+          - lane: hybrid-recurrent-spill
+            sha: 2c5d6f373b26724facdeabf71d621a03d78b6b2e
+            test_file: tests/hermes_cli/test_context_policy.py
+            prod_file: hermes_cli/local_runtime/context_policy.py
+            lint_files: "hermes_cli/local_runtime/context_policy.py tests/hermes_cli/test_context_policy.py"
+            witnesses: "test_hybrid_spill_override_matches_only_recurrent_layer_indices|test_hybrid_spill_override_handles_interleaved_layer_kinds"
+
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: ${{ matrix.sha }}
+          fetch-depth: 2
+
+      - name: Set up locked Python and test dependencies
+        uses: ./.github/actions/setup-pm
+        with:
+          extras: '["all", "anthropic", "bedrock", "mistral", "fal", "modal", "daytona", "parallel-web"]'
+          test-environment: 'true'
+          prune-python-cache: true
+
+      - name: Candidate tests
+        run: scripts/run_tests.sh "${{ matrix.test_file }}"
+        env:
+          OPENROUTER_API_KEY: ""
+          OPENAI_API_KEY: ""
+          NOUS_API_KEY: ""
+
+      - name: Ruff touched files
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$HERMES_PYTHON" -m ruff check ${{ matrix.lint_files }}
+
+      - name: Sabotage production fix only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout HEAD^ -- "${{ matrix.prod_file }}"
+          set +e
+          scripts/run_tests.sh "${{ matrix.test_file }}" > /tmp/control.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/control.log
+          if [ "$status" -eq 0 ]; then
+            echo "::error::control unexpectedly passed"
+            exit 1
+          fi
+          if ! grep -Eq "${{ matrix.witnesses }}" /tmp/control.log; then
+            echo "::error::control failed, but not on the intended witness"
+            exit 1
+          fi
+          git checkout -- "${{ matrix.prod_file }}"
