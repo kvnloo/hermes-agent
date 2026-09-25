@@ -1,0 +1,147 @@
+name: Fork-only app CPU evidence
+
+on:
+  push:
+    branches: [validate/app-cpu-evidence-20260925]
+    paths: [.github/workflows/app-cpu-evidence.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-cpu-evidence-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.repository == 'kvnloo/hermes-agent'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - pr: '120778'
+            head: d4cfe847a98a7b2d736b83eb71625b4d90643659
+            base: 4441dd34a52a4a00f7634207ed5c8dbcb398a53b
+            source: hermes_cli/local_runtime/context_policy.py
+            tests: tests/hermes_cli/test_context_policy.py
+            witnesses: test_hybrid_spill_override_matches_only_recurrent_layer_indices test_hybrid_spill_override_handles_interleaved_layer_kinds
+          - pr: '120747'
+            head: 84486318b1b5a55d23bbcecd44b7d047c288e5e2
+            base: 21999f0bb36097f0b9ba90f5ff94789e7a5a0f49
+            source: agent/acp_openai_bridge.py
+            tests: tests/agent/test_acp_openai_bridge.py
+            witnesses: test_malformed_and_empty_input_never_raises test_malformed_tool_call_block_is_never_silently_swallowed
+          - pr: '120755'
+            head: 9589ca060e1ef87f9507c080e6b90bc165e98ceb
+            base: 58694737e214c17bcce9cd638bd52f0912f35264
+            source: hermes_cli/doctor.py
+            tests: tests/hermes_cli/test_doctor_connectivity_output.py
+            witnesses: test_redirected_connectivity_output_has_no_carriage_returns
+    name: 'PR #${{ matrix.pr }} exact-head and base control'
+    env:
+      SUBJECT_SHA: ${{ matrix.head }}
+      BASE_SHA: ${{ matrix.base }}
+      SOURCE_FILE: ${{ matrix.source }}
+      TEST_FILE: ${{ matrix.tests }}
+      WITNESS_NAMES: ${{ matrix.witnesses }}
+      HERMES_TEST_WORKERS: '2'
+      HERMES_DISABLE_LAZY_INSTALLS: '1'
+      OPENAI_API_KEY: ''
+      OPENROUTER_API_KEY: ''
+      NOUS_API_KEY: ''
+    steps:
+      - name: Checkout immutable PR head
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          repository: kvnloo/hermes-agent
+          ref: ${{ matrix.head }}
+          persist-credentials: false
+      - name: Verify head, source and test inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
+          test -z "$(git status --porcelain)"
+          test -f "$SOURCE_FILE"
+          test -f "$TEST_FILE"
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git cat-file -e "$BASE_SHA:$SOURCE_FILE"
+          printf 'HERMES_HOME=%s/app-evidence-profile\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'Subject: `%s`\nBase-source control: `%s`\nTest file: `%s`\n' "$SUBJECT_SHA" "$BASE_SHA" "$TEST_FILE" >> "$GITHUB_STEP_SUMMARY"
+      - name: Install the previously verified uv pin
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39
+        with:
+          version: '0.12.13'
+          enable-cache: false
+      - name: Install each head's locked test environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv python install 3.11
+          uv sync --locked --python 3.11 --extra all --extra dev --extra anthropic --extra mistral --extra fal --extra modal --extra daytona --extra parallel-web --extra bedrock
+          mkdir -p "$HERMES_HOME"
+          .venv/bin/python --version
+          uv --version
+          git diff --exit-code -- pyproject.toml uv.lock
+      - name: Run complete selected file through canonical runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          source .venv/bin/activate
+          scripts/run_tests.sh "$TEST_FILE" 2>&1 | tee "$RUNNER_TEMP/canonical-tests.log"
+          python -m ruff check "$SOURCE_FILE" "$TEST_FILE" 2>&1 | tee "$RUNNER_TEMP/ruff.log"
+      - name: Require passing witnesses and real failures with base source
+        shell: bash
+        run: |
+          set -euo pipefail
+          trap 'git restore --source="$SUBJECT_SHA" -- "$SOURCE_FILE"' EXIT
+          ids=()
+          for witness in $WITNESS_NAMES; do ids+=("$TEST_FILE::$witness"); done
+          test "${#ids[@]}" -gt 0
+          .venv/bin/python -m pytest "${ids[@]}" -q --junitxml="$RUNNER_TEMP/head-witnesses.xml" 2>&1 | tee "$RUNNER_TEMP/head-witnesses.log"
+          git show "$BASE_SHA:$SOURCE_FILE" > "$SOURCE_FILE"
+          git diff --exit-code -- "$TEST_FILE" pyproject.toml uv.lock
+          set +e
+          .venv/bin/python -m pytest "${ids[@]}" -q --junitxml="$RUNNER_TEMP/base-witnesses.xml" 2>&1 | tee "$RUNNER_TEMP/base-witnesses.log"
+          rc=${PIPESTATUS[0]}
+          set -e
+          test "$rc" = 1
+          .venv/bin/python - <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
+          import os
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          names = set(os.environ['WITNESS_NAMES'].split())
+          for arm, expected_failure in [('head', False), ('base', True)]:
+              root = ET.parse(Path(os.environ['RUNNER_TEMP']) / f'{arm}-witnesses.xml').getroot()
+              cases = list(root.iter('testcase'))
+              assert len(cases) == len(names), (arm, len(cases), names)
+              assert {case.attrib['name'] for case in cases} == names
+              assert not list(root.iter('error')), f'{arm}: setup/import error'
+              assert not list(root.iter('skipped')), f'{arm}: skipped witness'
+              failures = list(root.iter('failure'))
+              assert len(failures) == (len(names) if expected_failure else 0)
+              if expected_failure:
+                  assert all('assert ' in (failure.text or '') for failure in failures)
+              print(f'{arm}: {len(cases)} witnesses; {len(failures)} assertion failures; no errors/skips.')
+          PY
+      - name: Confirm source restored
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code -- "$SOURCE_FILE" "$TEST_FILE" pyproject.toml uv.lock
+      - name: Preserve evidence in job summary
+        if: always()
+        shell: bash
+        run: |
+          printf '\nTargeted CPU evidence only: not full-suite, current-main integration, GPU throughput, live ACP editor or physical terminal validation. No model API calls are requested; no upstream PR or branch is modified.\n' >> "$GITHUB_STEP_SUMMARY"
+          for log in canonical-tests ruff head-witnesses base-witnesses; do
+            if test -f "$RUNNER_TEMP/$log.log"; then
+              printf '\n### %s\n```text\n' "$log" >> "$GITHUB_STEP_SUMMARY"
+              tail -60 "$RUNNER_TEMP/$log.log" >> "$GITHUB_STEP_SUMMARY"
+              printf '\n```\n' >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
