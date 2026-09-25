@@ -176,45 +176,46 @@ If maintainers choose an existing request-metadata contract with a different fie
 
 ---
 
-## E3 — Pending intent: one place for “what will happen next?”
+## E3 — Pane intent: fail fast when no visible owner exists
 
 **Upstream seams**
 
-- NousResearch/hermes-agent#68083 — TUI steer + queue pending area
-- existing Desktop approval/clarify card stack and session attention state
+- NousResearch/hermes-agent#119333 — pane request stalls when no window hosts the asking session
+- NousResearch/hermes-agent#121476 — read the preview zone the user is looking at
+- NousResearch/hermes-agent#121473 — refuse unfocused typing / abort leftover keystrokes
 
 **User friction**
 
-Pending steer, queued prompts, approvals, and clarifications can be represented in different places even though the user's core question is the same: **what happens next, and can I change it?**
+An agent can wait ~45 seconds for a pane request that no visible window is able to answer, then receive an error indistinguishable from “the pane is closed.”
 
 **Invariant**
 
-Each pending action has one durable visible representation, exact identity, ordering, and cancel/edit path appropriate to that action.
-
-Do **not** force unlike action types into one universal widget.
+Pane actions target the proven visible/focused owner. If no owner exists, fail quickly and explain the recovery action; never guess, steal focus, or wait out an ambiguous bridge deadline.
 
 **First proof**
 
-Start narrowly with the TUI steer/queue case already requested upstream:
+Reproduce #119333 with the asking session absent from every hosted window, then prove:
 
-- pending steer is visible beside queued work;
-- steer sorts first because it fires first;
-- it can be edited/cancelled before injection;
-- successful submission does not leave only a transient transcript/sys-line acknowledgement.
+- the request fails quickly with a distinct no-host error;
+- a genuinely closed pane remains distinguishable;
+- bringing the session on screen restores the ordinary read path;
+- another foreground chat is never activated or replaced automatically.
 
 **Falsifying control**
 
-A UI-only row that edits local text but leaves the backend pending steer unchanged must fail.
+A timeout reduction that returns the same ambiguous “no pane or timed out” error must fail. So must any fix that makes the request succeed by silently switching the user’s foreground session.
 
 **Measures**
 
-- wrong item edited/cancelled = 0;
-- pending UI/backend disagreement = 0;
-- orphan acknowledgement-only states = 0.
+- wrong-target actions = 0;
+- foreground focus steals = 0;
+- no-host failure latency is bounded and materially below the current bridge timeout;
+- error identifies the missing UI owner;
+- normal hosted-pane behavior remains unchanged.
 
 **Stop / split**
 
-Do not generalize into a universal pending-action framework unless two independently shipped surfaces demonstrate the same missing semantic owner.
+Keep this at the existing pane-bridge ownership boundary. Do not build a general attention/router framework unless another concrete surface demonstrates the same missing owner.
 
 ---
 
@@ -222,21 +223,24 @@ Do not generalize into a universal pending-action framework unless two independe
 
 Keep these parked until a Wave 1 slot closes.
 
-## C1 — Pane intent and visible-object ownership
+## C1 — Pending intent collaboration, not a competing implementation
 
 References:
 
-- #121476 — read the preview zone the user is looking at
-- #121473 — refuse unfocused typing / abort leftover keystrokes
-- #119333 — pane request when no window hosts the asking session
+- #68083 — pending steers belong in the TUI queue strip
+- #78047 — full editable/tagged pending-steer implementation
+- #75359 — smaller visibility implementation
 
-Direction:
+Both implementation directions are already owned upstream. Treat this as a verification/collaboration lane.
 
-- read the visible/focused object;
-- act only on the proven owner;
-- fast-fail when no UI owner exists instead of burning a long ambiguous timeout.
+Useful work:
 
-This is a strong reusable pattern for any future agent-controlled pane.
+- reproduce the post-drain acknowledgement ordering;
+- prove UI/backend pending-steer identity cannot diverge during edit/cancel;
+- test reconnect after a steer was consumed;
+- preserve one backend owner rather than mirroring private pending state in the UI.
+
+Do not open a third implementation PR.
 
 ## C2 — Activity that does not disappear while being read
 
