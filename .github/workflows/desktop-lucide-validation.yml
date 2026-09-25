@@ -1,0 +1,53 @@
+name: Desktop scoped-install validation
+
+on:
+  push:
+    branches:
+      - validation/desktop-lucide-123032
+
+permissions:
+  contents: read
+
+jobs:
+  scoped-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: 46380cf710adfb30ab3e793bb11bcafffe1fcb87
+          fetch-depth: 2
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '26.5.1'
+          cache: npm
+
+      - name: Use repository-supported npm
+        run: npm install --global npm@11.17.0
+
+      - name: Candidate workspace-scoped install
+        run: npm install --workspace apps/desktop --no-audit --no-fund
+
+      - name: Candidate Desktop build
+        run: npm run build --workspace apps/desktop
+
+      - name: Sabotage dependency declaration only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout HEAD^ -- apps/desktop/package.json package-lock.json
+          rm -rf node_modules apps/desktop/node_modules
+          npm install --workspace apps/desktop --no-audit --no-fund
+          set +e
+          npm run build --workspace apps/desktop > /tmp/control.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/control.log
+          if [ "$status" -eq 0 ]; then
+            echo "::error::control unexpectedly passed"
+            exit 1
+          fi
+          grep -E 'lucide-react|assert-root-install' /tmp/control.log
