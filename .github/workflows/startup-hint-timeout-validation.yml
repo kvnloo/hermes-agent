@@ -16,7 +16,7 @@ jobs:
       - name: Checkout exact candidate
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
-          ref: 012c033d2481473ab7039ef4eadc1cb22735c138
+          ref: 9db06efa6d74d7c80e1a290359767f6d331f7fdd
           fetch-depth: 2
 
       - name: Set up locked Python and test dependencies
