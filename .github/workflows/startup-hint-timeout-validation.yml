@@ -16,7 +16,7 @@ jobs:
       - name: Checkout exact candidate
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
-          ref: fa9ee87cbcbda8c548ab42c8c12bf2326fa5480e
+          ref: 012c033d2481473ab7039ef4eadc1cb22735c138
           fetch-depth: 2
 
       - name: Set up locked Python and test dependencies
@@ -51,4 +51,4 @@ jobs:
             echo "::error::control unexpectedly passed"
             exit 1
           fi
-          grep -q "test_first_hint_file_times_out_on_slow_resolved_read" /tmp/control.log
+          grep -q "test_tracker_init_bounds_slow_root_hint_read" /tmp/control.log
