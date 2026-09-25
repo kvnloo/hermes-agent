@@ -1296,8 +1296,10 @@ target and renamed into place, so an interrupted copy (a transient file lock, a
 crash mid-copy) never leaves a half-written folder behind; a leftover
 `desktop-plugins/<id>/` that has no marker and no `plugin.js` is treated as
 such damage and replaced on the next **Rescan**, while a marker-less folder
-that *does* hold a `plugin.js` is a standalone plugin you installed by hand and
-is never overwritten.
+that *does* hold a `plugin.js` is never overwritten — a standalone plugin you
+installed by hand, or a pre-marker copy the app itself left behind, which a
+later **Rescan** adopts in place (marker stamped, nothing else written) when it
+matches that package's own half byte for byte.
 
 Two enable switches still apply, on purpose, and both default to **off**: the
 desktop half ships opt-in — it inventories in **Capabilities → Plugins** but stays
