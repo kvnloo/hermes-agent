@@ -34,7 +34,8 @@ jobs:
           NOUS_API_KEY: ""
 
       - name: Ruff touched files
-        run: "$HERMES_PYTHON" -m ruff check agent/subdirectory_hints.py tests/agent/test_subdirectory_hints_startup_timeout.py
+        run: |
+          "$HERMES_PYTHON" -m ruff check agent/subdirectory_hints.py tests/agent/test_subdirectory_hints_startup_timeout.py
 
       - name: Sabotage production fix only
         shell: bash
