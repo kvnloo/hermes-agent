@@ -1,0 +1,53 @@
+name: Startup hint timeout validation
+
+on:
+  push:
+    branches:
+      - validation/startup-hint-wave-20260925-1345
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: fa9ee87cbcbda8c548ab42c8c12bf2326fa5480e
+          fetch-depth: 2
+
+      - name: Set up locked Python and test dependencies
+        uses: ./.github/actions/setup-pm
+        with:
+          extras: '["all", "anthropic", "bedrock", "mistral", "fal", "modal", "daytona", "parallel-web"]'
+          test-environment: 'true'
+          prune-python-cache: true
+
+      - name: Candidate tests
+        run: scripts/run_tests.sh tests/agent/test_subdirectory_hints_startup_timeout.py tests/agent/test_subdirectory_hints.py
+        env:
+          OPENROUTER_API_KEY: ""
+          OPENAI_API_KEY: ""
+          NOUS_API_KEY: ""
+
+      - name: Ruff touched files
+        run: "$HERMES_PYTHON" -m ruff check agent/subdirectory_hints.py tests/agent/test_subdirectory_hints_startup_timeout.py
+
+      - name: Sabotage production fix only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout HEAD^ -- agent/subdirectory_hints.py
+          set +e
+          scripts/run_tests.sh tests/agent/test_subdirectory_hints_startup_timeout.py > /tmp/control.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/control.log
+          if [ "$status" -eq 0 ]; then
+            echo "::error::control unexpectedly passed"
+            exit 1
+          fi
+          grep -q "test_first_hint_file_times_out_on_slow_resolved_read" /tmp/control.log
