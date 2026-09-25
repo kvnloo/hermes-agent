@@ -56,6 +56,9 @@ MAX_OUTPUT_CHARS = 200_000      # rolling output buffer
 COMPLETION_OUTPUT_CHARS = 2000
 FINISHED_TTL_SECONDS = 1800     # keep finished processes 30 minutes
 MAX_PROCESSES = 64              # max tracked processes (LRU pruning)
+# Output-preview width for retained-receipt listings. load_completed_results
+# hydrates only this tail (tail_chars=) because the listing renders nothing else.
+_RETAINED_OUTPUT_PREVIEW_CHARS = 200
 
 # Watch-pattern rate limiting, PER SESSION: one watch-match notification per
 # WATCH_MIN_INTERVAL_SECONDS; a match inside the cooldown is dropped and counts as one
@@ -2338,7 +2341,10 @@ class ProcessRegistry(ProcessCheckpointMixin):
         """
         # Only an explicit tool query reads historical receipts. Status bars and
         # gateway liveness scans call this frequently and need the live registry.
-        sessions = load_completed_results() if include_retained else {}
+        # Retained receipts load tail-only: the listing renders just a 200-char
+        # output preview, so hydrating up to 200KB of output per receipt is pure
+        # waste (~11.7ms/MB). Full hydration stays on the get()/read_log() path.
+        sessions = load_completed_results(tail_chars=_RETAINED_OUTPUT_PREVIEW_CHARS) if include_retained else {}
         with self._lock:
             sessions.update(self._finished)
             sessions.update(self._running)
@@ -2363,7 +2369,7 @@ class ProcessRegistry(ProcessCheckpointMixin):
                 "started_at": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(s.started_at)),
                 "uptime_seconds": int(time.time() - s.started_at),
                 "status": "exited" if s.exited else "running",
-                "output_preview": s.output_buffer[-200:] if s.output_buffer else "",
+                "output_preview": s.output_buffer[-_RETAINED_OUTPUT_PREVIEW_CHARS:] if s.output_buffer else "",
             }
             # Flag processes surfaced only because they share the gateway session (not the current task) —
             # these are the long-lived background processes a user may have forgotten about (#29177).

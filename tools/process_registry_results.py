@@ -83,8 +83,123 @@ def _owns_result(owner: str, parent: str | None) -> bool:
         db.close()
 
 
-def load_completed_results(prefix: str = "") -> dict:
-    """Restore read-only snapshots; no process handles, watchers, or queue events."""
+def _introduces_escape(raw: str, i: int) -> bool:
+    """Whether the backslash at ``raw[i]`` starts an escape (even run before it)."""
+    run = 0
+    j = i - 1
+    while j >= 0 and raw[j] == "\\":
+        run += 1
+        j -= 1
+    return run % 2 == 0
+
+
+def _prev_token_start(raw: str, p: int) -> int:
+    """Start index of the JSON string token ending at boundary ``p``.
+
+    Tokens are one plain char, a 2-char ``\\X`` escape, or a 6-char
+    ``\\uXXXX`` escape. A backslash at ``p - 1`` always closes a ``\\\\``
+    pair here: at a true boundary its run is even (an odd run would leave one
+    backslash starting an escape past ``p`` — impossible).
+    """
+    if raw[p - 1] == "\\":
+        return p - 2  # trailing \\ pair is one token
+    if p >= 2 and raw[p - 2] == "\\" and _introduces_escape(raw, p - 2):
+        return p - 2  # \X escape
+    if (
+        p >= 6
+        and raw[p - 6] == "\\"
+        and raw[p - 5] == "u"
+        and all(c in "0123456789abcdefABCDEF" for c in raw[p - 4:p])
+        and _introduces_escape(raw, p - 6)
+    ):
+        return p - 6  # \uXXXX escape
+    return p - 1  # plain char
+
+
+def _tail_cut(raw: str, tail_chars: int) -> int:
+    """Index into ``raw`` where a ``tail_chars`` decoded-char suffix starts.
+
+    Walks token boundaries backward from the string end — a cut is exact only
+    at a boundary, never inside an escape. Returns the largest boundary with at
+    least ``tail_chars * 6`` raw chars after it; a decoded char takes at most
+    6 raw chars (``\\uXXXX``), so the suffix always covers the tail.
+    """
+    want = len(raw) - tail_chars * 6
+    p = len(raw)  # raw ends at the closing quote: a boundary
+    while p > want:
+        p = _prev_token_start(raw, p)
+    return p
+
+
+def _load_receipt_tail(path, tail_chars: int) -> dict:
+    """Read a receipt's small fields plus only the tail of its ``output`` value.
+
+    The listing path renders just ``output[-tail_chars:]``, but a plain
+    ``json.loads`` walks every byte of the (up to 200KB) output string —
+    ~5ms/MB, paid on every retained listing. Receipts are flat dicts written
+    by :func:`save_completed_result` with ``"output"`` last, so parse the head
+    (everything before it) normally and decode only a tail window of the raw
+    output, cut at a token boundary (never inside a ``\\X`` / ``\\uXXXX``
+    escape). A decoded char takes at most 6 raw chars, so a ``6 * tail_chars``
+    window always covers the tail. Anything unfamiliar — reordered fields,
+    non-string output — leaves stray quotes in the slice, the tail decode
+    raises, and the caller falls back to a full parse: never a garbled tail.
+    """
+    text = path.read_text(encoding="utf-8-sig")
+    # A raw `"output"` (quotes included) cannot occur inside a JSON string
+    # value, so the last occurrence is the key — which our writer emits last.
+    key_idx = text.rfind('"output"')
+    if key_idx <= 0:
+        raise ValueError("output key not found")
+    value_open = text.index('"', text.index(":", key_idx + 8) + 1)
+    # The last quote closes the output value when our writer's layout holds
+    # ("output" last). Anything else (hand-written, reordered) leaves stray
+    # quotes in the slice below, so the tail decode raises and the caller
+    # falls back to a full parse — never a garbled tail.
+    value_close = text.rindex('"')
+    if value_close <= value_open:
+        raise ValueError("bad output value bounds")
+    if text[value_close + 1:].strip() != "}":
+        raise ValueError("output is not the last field")
+    head_src = text[:key_idx].rstrip()
+    if head_src.endswith(","):
+        head_src = head_src[:-1]
+    record = json.loads(head_src + "}")
+    raw = text[value_open + 1:value_close]
+    # Cut the tail at a token boundary so the suffix decodes to a true suffix
+    # of the whole value (never split a \\X / \\uXXXX escape).
+    if tail_chars and len(raw) > tail_chars * 6 + 64:
+        raw = raw[_tail_cut(raw, tail_chars):]
+    tail = json.loads('"' + raw + '"')
+    record["output"] = tail[-tail_chars:] if tail_chars else ""
+    return record
+
+
+def _load_tail_or_full(path, tail_chars: int | None) -> dict:
+    """Read one receipt: tail-only fast path, with a full-parse fallback.
+
+    The fast path assumes the writer's layout (flat dict, ``"output"`` last);
+    anything unfamiliar falls back to a full parse plus truncation, so a
+    hand-written or future-format receipt still loads correctly.
+    """
+    if tail_chars is None:
+        return json.loads(path.read_text(encoding="utf-8-sig"))
+    try:
+        return _load_receipt_tail(path, tail_chars)
+    except (ValueError, IndexError):
+        record = json.loads(path.read_text(encoding="utf-8-sig"))
+        record["output"] = record["output"][-tail_chars:] if tail_chars else ""
+        return record
+
+
+def load_completed_results(prefix: str = "", *, tail_chars: int | None = None) -> dict:
+    """Restore read-only snapshots; no process handles, watchers, or queue events.
+
+    ``tail_chars`` truncates each receipt's ``output`` to its last N chars at
+    read time, for consumers that only render a preview (``list_sessions``
+    shows ``output_buffer[-200:]``). ``None`` (default) keeps full hydration
+    for ``get``/``read_log``.
+    """
     from tools.process_registry import ProcessSession
 
     from gateway.session_context import get_session_env
@@ -102,7 +217,7 @@ def load_completed_results(prefix: str = "") -> dict:
         if not path.stem.startswith(prefix):
             continue
         try:
-            record = json.loads(path.read_text(encoding="utf-8-sig"))
+            record = _load_tail_or_full(path, tail_chars)
             if record["id"] != path.stem or not re.fullmatch(r"proc_[\w]+", record["id"]):
                 continue
             if not _owns_result(owner, record.get("parent_session_id")):
