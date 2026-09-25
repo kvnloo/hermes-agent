@@ -77,3 +77,41 @@ jobs:
             exit 1
           fi
           grep -E "lucide-react|assert-root-install" /tmp/control.log
+
+
+  desktop-streamed-reply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: 2060d083a210ab3af918dce7cb2c6ed27b359895
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26.5.1'
+          cache: npm
+      - run: npm install --global npm@11.17.0
+      - name: Install Desktop workspace
+        run: npm install --workspace apps/desktop --no-audit --no-fund
+      - name: Focused transcript tests
+        working-directory: apps/desktop
+        run: ../../node_modules/.bin/vitest run --project ui src/app/session/hooks/use-session-actions/streamed-reply-survives-sync.test.ts src/app/session/hooks/use-session-actions/utils.test.ts
+      - name: Desktop typecheck
+        run: npm run typecheck --workspace apps/desktop
+      - name: Behavioral control
+        shell: bash
+        working-directory: apps/desktop
+        run: |
+          set -euo pipefail
+          git checkout HEAD^ -- src/app/session/hooks/use-session-actions/utils.ts
+          set +e
+          ../../node_modules/.bin/vitest run --project ui src/app/session/hooks/use-session-actions/streamed-reply-survives-sync.test.ts > /tmp/control.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/control.log
+          if [ "$status" -eq 0 ]; then
+            echo "::error::control unexpectedly passed"
+            exit 1
+          fi
+          grep -q "keeps a settled streamed final reply" /tmp/control.log
