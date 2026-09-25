@@ -678,6 +678,24 @@ class TestListSessions:
         assert [r["session_id"] for r in result][:1] == ["proc_live"]
         assert [r["session_id"] for r in result][1:] == [f"proc_done{idx}" for idx in range(6)]  # stable
 
+    def test_running_processes_listed_before_retained_receipts(self, registry):
+        """The motivating case for the sort: ``include_retained=True`` loads up to 64
+        on-disk receipts BEFORE the live registry, so without the sort a still-running
+        shell is buried at the very end of the model-visible list."""
+        retained = {
+            f"proc_retained{idx}": _make_session(
+                sid=f"proc_retained{idx}", task_id="t1", exited=True, exit_code=0
+            )
+            for idx in range(10)
+        }
+        live = _make_session(sid="proc_live", task_id="t1")
+        registry._running[live.id] = live
+        with patch("tools.process_registry.load_completed_results", return_value=retained):
+            result = registry.list_sessions(task_id="t1", include_retained=True)
+        ids = [r["session_id"] for r in result]
+        assert ids[0] == "proc_live"
+        assert ids[1:] == [f"proc_retained{idx}" for idx in range(10)]  # stable
+
     def test_filter_by_task_id(self, registry):
         s1 = _make_session(sid="proc_1", task_id="t1")
         s2 = _make_session(sid="proc_2", task_id="t2")
