@@ -226,6 +226,14 @@ def classify_tool_failure(tool_name: str, result: str | None) -> tuple[bool, str
     if is_guardrail_refusal(result):
         return False, ""
 
+    # A denied/timed-out approval carries one human sentence, not an ``"error"`` key;
+    # display tags it a failure via ``user_summary``, so the guardrail must count it too
+    # or it disagrees with the CLI's ``[error]`` tag (denials would clear failure streaks
+    # as if the call had succeeded).
+    data = safe_json_loads(result)
+    if isinstance(data, dict) and data.get("user_summary"):
+        return True, " [denied]"
+
     if tool_name == "terminal":
         data = safe_json_loads(result)
         exit_code = data.get("exit_code") if isinstance(data, dict) else None
@@ -320,9 +328,10 @@ class ToolCallGuardrailController:
         # result resets it, so re-reads after edits and varied polling are never flagged.
         # Identical-call loop-breaker state (agent.stall_guards): tracks the CONSECUTIVE streak of identical
         # (tool, canonical args) calls whose results were also identical. Per-turn, like everything else
-        # here. NOTE: open PR #85352 (patrykkopycinski) tracks no-progress loops ACROSS turns via a
-        # detection window — a different mechanism from this per-turn consecutive streak. Coordinate future
-        # work there.
+        # here. NOTE: PR #85352 (patrykkopycinski) tracked no-progress loops ACROSS turns via a
+        # detection window, but it closed unmerged; the cross-turn gap is now reported in #71566
+        # (failure counters reset each turn) and #111635 (per-session TTL plugin). Coordinate
+        # future cross-turn work there, not on this per-turn streak.
         self._identical_streak_sig: ToolCallSignature | None = None
         self._identical_streak_result_hash: str = ""
         self._identical_streak_count: int = 0

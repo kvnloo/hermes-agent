@@ -400,3 +400,38 @@ def test_a_real_tool_error_is_still_a_failure():
     assert _detect_tool_failure("read_file", real)[0] is True
     # The marker is only honoured as the literal boolean, never as truthy prose.
     assert classify_tool_failure("read_file", '{"error": "x", "guardrail_refusal": "yes"}')[0] is True
+
+
+def test_approval_denials_are_failures_on_both_classifiers():
+    """An approval denial carries ``user_summary``, not an ``"error"`` key; the display
+    classifier tags it a failure via ``user_summary``. ``classify_tool_failure`` must
+    agree, or a denial looks like a success to the fallback path and clears the failure
+    streaks the guardrail keeps. Built with the real ``_denied`` builder so the shape
+    under test is the one production emits."""
+    from agent.display import _detect_tool_failure
+    from tools.approval import _denied
+
+    for outcome in ("denied", "timeout", "blocked", "cancelled", "notify_failed"):
+        result = json.dumps(
+            _denied("Do NOT retry.", pattern_key="k", description="d", outcome=outcome)
+        )
+        assert _detect_tool_failure("terminal", result)[0] is True, outcome
+        assert classify_tool_failure("terminal", result)[0] is True, outcome
+
+
+def test_denial_does_not_clear_the_exact_failure_streak():
+    """Two identical denied calls must reach ``repeated_exact_failure_warning``; on the
+    old classifier each denial read as a success and popped the streak, so the warning
+    never fired on a denied loop."""
+    from tools.approval import _denied
+
+    controller = ToolCallGuardrailController()
+    args = {"command": "rm -rf /tmp/x"}
+    denied = json.dumps(
+        _denied("Do NOT retry.", pattern_key="k", description="d", outcome="denied")
+    )
+    first = controller.after_call("terminal", args, denied)
+    assert first.action != "warn"
+    second = controller.after_call("terminal", args, denied)
+    assert second.action == "warn"
+    assert second.code == "repeated_exact_failure_warning"
