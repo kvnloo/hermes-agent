@@ -850,14 +850,22 @@ def do_check(name: Optional[str] = None, console: Optional[Console] = None) -> N
 
 
 def _has_local_edits(installed: dict) -> bool:
-    """True when the on-disk content no longer matches the install-time hash."""
+    """True when the on-disk content no longer matches the install-time hash.
+
+    A lock entry with no recorded hash predates content-hash tracking: there is
+    no baseline to compare against, so the skill is unprovable as unmodified
+    and fails closed as edited — ``do_update`` skips it unless ``--force``.
+    """
     from tools.skills_hub import SKILLS_DIR
     from tools.skills_guard import content_hash
     recorded_hash = installed.get("content_hash", "")
     skill_path = SKILLS_DIR / installed.get("install_path", "")
     try:
-        return (bool(recorded_hash) and skill_path.is_dir()
-                and content_hash(skill_path) != recorded_hash)
+        if not skill_path.is_dir():
+            return False
+        if not recorded_hash:
+            return True
+        return content_hash(skill_path) != recorded_hash
     except OSError:
         return False
 
@@ -892,8 +900,13 @@ def do_update(name: Optional[str] = None, console: Optional[Console] = None,
             category = "" if parent == "." else parent
             if not force and _has_local_edits(installed):
                 skipped_local.append(entry["name"])
-                c.print(f"[yellow]Skipping:[/] {entry['name']} — you have local edits "
-                        "(update would overwrite them).")
+                if installed.get("content_hash"):
+                    c.print(f"[yellow]Skipping:[/] {entry['name']} — you have local edits "
+                            "(update would overwrite them).")
+                else:
+                    c.print(f"[yellow]Skipping:[/] {entry['name']} — no recorded install hash "
+                            "(pre-hash-era install); cannot verify you have no local edits "
+                            "(update would overwrite them).")
                 continue
         c.print(f"[bold]Updating:[/] {entry['name']}")
         # Pin to the lockfile's source registry: a bare identifier such as "reddit" would
@@ -905,7 +918,7 @@ def do_update(name: Optional[str] = None, console: Optional[Console] = None,
     if len(updates) > len(skipped_local):
         c.print(f"[bold green]Updated {len(updates) - len(skipped_local)} skill(s).[/]\n")
     if skipped_local:
-        c.print(f"[dim]{len(skipped_local)} skill(s) kept your local edits: "
+        c.print(f"[dim]{len(skipped_local)} skill(s) skipped to protect your work: "
                 f"{', '.join(sorted(skipped_local))}.[/]")
         c.print("[dim]Overwrite with: hermes skills update <name> --force[/]\n")
 

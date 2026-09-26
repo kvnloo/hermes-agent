@@ -490,8 +490,11 @@ def test_do_search_json_flag_emits_full_identifiers(capsys):
 # ---------------------------------------------------------------------------
 
 
-def _update_env(monkeypatch, tmp_path, *, edit_after_install: bool):
+def _update_env(monkeypatch, tmp_path, *, edit_after_install: bool, hashless: bool = False):
     """Install a fake hub skill on disk, optionally edit it, and wire mocks.
+
+    ``hashless`` simulates a pre-content-hash-era lock entry (no ``content_hash``
+    recorded), where the local-edits guard has no install-time baseline.
 
     Returns (console_sink, installs_list).
     """
@@ -516,11 +519,11 @@ def _update_env(monkeypatch, tmp_path, *, edit_after_install: bool):
         "source": "github",
         "status": "update_available",
     }])
+    lock_entry = {"install_path": "category/hub-skill"}
+    if not hashless:
+        lock_entry["content_hash"] = recorded
     monkeypatch.setattr(hub, "HubLockFile", lambda: type("L", (), {
-        "get_installed": lambda self, name: {
-            "install_path": "category/hub-skill",
-            "content_hash": recorded,
-        }
+        "get_installed": lambda self, name: dict(lock_entry)
     })())
 
     installs = []
@@ -562,6 +565,30 @@ def test_do_update_unmodified_skill_updates_normally(monkeypatch, tmp_path):
     console, sink, installs = _update_env(monkeypatch, tmp_path, edit_after_install=False)
 
     do_update(console=console)
+
+    assert installs == ["someone/hub-skill"]
+    assert "Updated 1 skill(s)" in sink.getvalue()
+
+
+def test_do_update_skips_hashless_lock_entry(monkeypatch, tmp_path):
+    """A lock entry with no recorded content_hash predates hash tracking, so the
+    local-edits guard cannot prove the skill unmodified: the update must skip
+    (fail closed) rather than silently rmtree-replace unknown user state."""
+    console, sink, installs = _update_env(monkeypatch, tmp_path, edit_after_install=False, hashless=True)
+
+    do_update(console=console)
+
+    assert installs == []
+    out = sink.getvalue()
+    assert "no recorded install hash" in out
+    assert "--force" in out
+
+
+def test_do_update_force_updates_hashless_lock_entry(monkeypatch, tmp_path):
+    """--force restores the destructive replace for hashless lock entries."""
+    console, sink, installs = _update_env(monkeypatch, tmp_path, edit_after_install=False, hashless=True)
+
+    do_update(console=console, force=True)
 
     assert installs == ["someone/hub-skill"]
     assert "Updated 1 skill(s)" in sink.getvalue()
