@@ -935,11 +935,23 @@ def _port_listening(host: str, port: int) -> bool:
         return False
 
 
+# Window kept in sync with the slice in the pre-seek implementation: only the
+# last _TAIL_LOG_WINDOW bytes are ever consumed, via splitlines()[-lines:].
+_TAIL_LOG_WINDOW = 8192
+
+
 def _tail_log(path: Path, *, lines: int = 20) -> str:
     if not path.exists():
         return "(no log file)"
     try:
-        return "\n".join(path.read_bytes()[-8192:].decode("utf-8", errors="replace").splitlines()[-lines:])
+        with open(path, "rb") as fh:
+            # iron-proxy.log is append-only and never rotated, so it accumulates
+            # across gateway restarts; seek from the end instead of reading it whole.
+            fh.seek(0, 2)
+            size = fh.tell()
+            fh.seek(max(size - _TAIL_LOG_WINDOW, 0))
+            data = fh.read()
+        return "\n".join(data.decode("utf-8", errors="replace").splitlines()[-lines:])
     except OSError as exc:
         return f"(could not read log: {exc})"
 
