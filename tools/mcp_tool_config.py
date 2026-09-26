@@ -351,11 +351,23 @@ def _warn_hidden_whitespace(server_name: str, config: dict) -> List[str]:
 
 
 def _filter_suspicious_mcp_servers(servers: Dict[str, dict]) -> Dict[str, dict]:
-    """Drop exfiltration-shaped MCP configs before any stdio spawn path."""
+    """Drop exfiltration-shaped MCP configs before any stdio spawn path.
+
+    Fail-closed: if the validator cannot be imported (broken install), NOTHING
+    spawns. The guard's whole promise is that hand-edited or pre-planted
+    config.yaml entries are caught before execution — returning the servers
+    unfiltered on an import failure would silently invert that promise into
+    "spawn everything unvalidated".
+    """
     try:
         from hermes_cli.mcp_security import validate_mcp_server_entry
-    except Exception:
-        return servers
+    except Exception as exc:
+        logger.error(
+            "MCP security validator failed to import (%s); refusing to spawn any "
+            "configured MCP servers unvalidated",
+            exc,
+        )
+        return {}
     safe_servers = {}
     for name, cfg in servers.items():
         issues = validate_mcp_server_entry(name, cfg) if isinstance(cfg, dict) else None
