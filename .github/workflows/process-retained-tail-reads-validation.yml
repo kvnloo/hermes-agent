@@ -1,0 +1,45 @@
+name: Retained receipt tail-read validation
+
+on:
+  push:
+    branches:
+      - validation/process-retained-tail-reads-muse
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: 72d8263c416f4f0afadb99dc5d19f7086f55406b
+          fetch-depth: 2
+      - uses: ./.github/actions/setup-pm
+        with:
+          extras: '["all", "anthropic", "bedrock", "mistral", "fal", "modal", "daytona", "parallel-web"]'
+          test-environment: 'true'
+          prune-python-cache: true
+      - name: Candidate focused suites
+        run: scripts/run_tests.sh tests/tools/test_tail_receipt_reads.py tests/tools/test_process_registry.py tests/tools/test_completed_process_results.py
+      - name: Ruff
+        run: |
+          "$HERMES_PYTHON" -m ruff check tools/process_registry.py tools/process_registry_results.py tests/tools/test_tail_receipt_reads.py
+      - name: Behavioral no-full-read control
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout HEAD^ -- tools/process_registry.py tools/process_registry_results.py
+          set +e
+          scripts/run_tests.sh tests/tools/test_tail_receipt_reads.py -k test_large_retained_listing_does_not_full_read_receipt > /tmp/control.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/control.log
+          if [ "$status" -eq 0 ]; then
+            echo "::error::control unexpectedly passed"
+            exit 1
+          fi
+          grep -q "test_large_retained_listing_does_not_full_read_receipt" /tmp/control.log
+          grep -q "full receipt read" /tmp/control.log
