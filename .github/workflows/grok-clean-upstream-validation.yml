@@ -1,0 +1,78 @@
+name: Grok CLEAN upstream validation
+
+on:
+  push:
+    branches:
+      - validation/grok-clean-batch-20260925
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - lane: honcho-refresh
+            pr: 120787
+            test_cmd: "tests/honcho_plugin"
+            prod_files: "plugins/memory/honcho/oauth.py"
+            witness: "test_non_rotating_refresh_keeps_stored_refresh_token"
+          - lane: env-byte-roundtrip
+            pr: 120812
+            test_cmd: "tests/hermes_cli/test_config.py tests/hermes_cli/test_env_loader.py"
+            prod_files: "hermes_cli/config.py hermes_cli/env_loader.py hermes_cli/profile_channels.py plugins/memory/mem0/_setup.py"
+            witness: "test_save_env_value_keeps_non_utf8_bytes_of_other_lines|test_cp1252_env_bytes_survive_a_normalizing_sanitize"
+
+    steps:
+      - name: Checkout upstream merge ref
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          repository: NousResearch/hermes-agent
+          ref: refs/pull/${{ matrix.pr }}/merge
+          fetch-depth: 2
+
+      - name: Set up locked Python and test dependencies
+        uses: ./.github/actions/setup-pm
+        with:
+          extras: '["all", "anthropic", "bedrock", "mistral", "fal", "modal", "daytona", "parallel-web"]'
+          test-environment: 'true'
+          prune-python-cache: true
+
+      - name: Candidate tests
+        run: scripts/run_tests.sh ${{ matrix.test_cmd }}
+
+      - name: Ruff changed production and focused tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${{ matrix.lane }}" in
+            honcho-refresh)
+              "$HERMES_PYTHON" -m ruff check plugins/memory/honcho/oauth.py tests/honcho_plugin/test_oauth.py
+              ;;
+            env-byte-roundtrip)
+              "$HERMES_PYTHON" -m ruff check hermes_cli/config.py hermes_cli/env_loader.py hermes_cli/profile_channels.py plugins/memory/mem0/_setup.py tests/hermes_cli/test_config.py tests/hermes_cli/test_env_loader.py
+              ;;
+          esac
+
+      - name: Restore current-main production only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout HEAD^1 -- ${{ matrix.prod_files }}
+          set +e
+          scripts/run_tests.sh ${{ matrix.test_cmd }} > /tmp/control.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/control.log
+          if [ "$status" -eq 0 ]; then
+            echo "::error::control unexpectedly passed"
+            exit 1
+          fi
+          if ! grep -Eq "${{ matrix.witness }}" /tmp/control.log; then
+            echo "::error::control failed, but not on the intended witness"
+            exit 1
+          fi
