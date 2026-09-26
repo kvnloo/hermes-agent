@@ -598,14 +598,26 @@ class GatewayNotificationsMixin:
 
     @staticmethod
     def _read_update_output_since(path: Path, offset: int) -> tuple[str, int]:
-        """Read update output defensively; logs may contain invalid UTF-8."""
+        """Read only the bytes appended since ``offset``; logs may contain invalid UTF-8.
+
+        The update watcher polls this every 2s for up to 30 minutes, so a full
+        ``read_bytes()`` per poll re-reads the whole build log quadratically. The
+        caller already tracks ``offset`` as bytes consumed; seek there instead.
+        """
         try:
-            data = path.read_bytes()
+            size = path.stat().st_size
         except OSError:
             return "", offset
-        if len(data) <= offset:
-            return "", len(data)
-        return data[offset:].decode("utf-8", errors="replace"), len(data)
+        if size <= offset:
+            # Unchanged, or the file shrank (update relaunched): resync the offset.
+            return "", size
+        try:
+            with open(path, "rb") as fh:
+                fh.seek(offset)
+                data = fh.read()
+        except OSError:
+            return "", offset
+        return data.decode("utf-8", errors="replace"), offset + len(data)
 
     async def _send_update_output(self, target: "_UpdateTarget", text: str) -> None:
         """Send buffered update output as fenced chunks that fit message limits (Telegram: 4096)."""

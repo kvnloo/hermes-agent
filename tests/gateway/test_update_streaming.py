@@ -379,3 +379,90 @@ class TestCmdUpdateGatewayMode:
         assert "Restore" in gateway_prompt.call_args.args[0]
         assert (root / "notes.txt").read_text(encoding="utf-8") == "committed\n"
         assert git("stash", "show", "-p").endswith("+user edit")
+
+
+# ---------------------------------------------------------------------------
+# _read_update_output_since (incremental poll reads, not quadratic re-reads)
+# ---------------------------------------------------------------------------
+
+class TestReadUpdateOutputSince:
+    """The update watcher polls every 2s; each poll must read only new bytes."""
+
+    @staticmethod
+    def _read(path, offset):
+        from gateway.run_notifications import GatewayNotificationsMixin
+        return GatewayNotificationsMixin._read_update_output_since(path, offset)
+
+    def test_incremental_polls_return_only_new_bytes(self, tmp_path):
+        p = tmp_path / "update_output.txt"
+        p.write_bytes(b"line one\n")
+        chunk, off = self._read(p, 0)
+        assert (chunk, off) == ("line one\n", 9)
+        assert self._read(p, off) == ("", 9)
+        with open(p, "ab") as fh:
+            fh.write("line two \u2713\n".encode("utf-8"))
+        chunk, off2 = self._read(p, off)
+        assert chunk == "line two \u2713\n"
+        assert off2 == off + len("line two \u2713\n".encode("utf-8"))
+
+    def test_offset_splitting_multibyte_char_decodes_defensively(self, tmp_path):
+        p = tmp_path / "update_output.txt"
+        raw = "h\u00e9llo\n".encode("utf-8")  # \u00e9 is 2 bytes; offset 1 splits it
+        p.write_bytes(raw)
+        chunk, _ = self._read(p, 1)
+        assert chunk == raw[1:].decode("utf-8", errors="replace")
+
+    def test_shrunk_file_resyncs_offset(self, tmp_path):
+        p = tmp_path / "update_output.txt"
+        p.write_bytes(b"x" * 100)
+        assert self._read(p, 100) == ("", 100)
+        p.write_bytes(b"new\n")  # relaunched update truncated the file
+        # Contract preserved from the full-read version: resync past the shrink.
+        assert self._read(p, 100) == ("", 4)
+
+    def test_missing_file_keeps_offset(self, tmp_path):
+        assert self._read(tmp_path / "nope.txt", 7) == ("", 7)
+
+    def test_poll_read_is_bounded(self, tmp_path, monkeypatch):
+        """Red on base: a 2MB log with a small append must not cost a 2MB read."""
+        import io as _io
+
+        p = tmp_path / "update_output.txt"
+        p.write_bytes(b"z" * (2 * 1024 * 1024))
+        _, off = self._read(p, 0)
+        with open(p, "ab") as fh:
+            fh.write(b"tail\n")
+
+        real_open = open
+        total = 0
+
+        class _Spy:
+            def __init__(self, fh):
+                self._fh = fh
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return self._fh.__exit__(*exc)
+
+            def seek(self, *args):
+                return self._fh.seek(*args)
+
+            def read(self, *args):
+                data = self._fh.read(*args)
+                nonlocal total
+                total += len(data)
+                return data
+
+        def _spy_open(*args, **kwargs):
+            return _Spy(real_open(*args, **kwargs))
+
+        # builtins.open covers the new seek-based read; io.open covers
+        # Path.read_bytes() on base.
+        monkeypatch.setattr("builtins.open", _spy_open)
+        monkeypatch.setattr(_io, "open", _spy_open)
+
+        chunk, _ = self._read(p, off)
+        assert chunk == "tail\n"
+        assert total <= 65536
