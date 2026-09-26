@@ -455,7 +455,9 @@ def test_repair_outcome_is_recorded_while_cross_process_lock_is_held(
         )
         probe.start()
         try:
-            observed.append(result.get(timeout=5))
+            # Spawn-context startup (fresh interpreter import) can exceed a few
+            # seconds on a loaded runner; the probe itself is fast once alive.
+            observed.append(result.get(timeout=30))
         finally:
             probe.join(5)
             if probe.is_alive():
