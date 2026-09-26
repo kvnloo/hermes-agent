@@ -1,0 +1,44 @@
+name: Process list running-first validation
+
+on:
+  push:
+    branches:
+      - validation/process-list-running-first-muse
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: 9c31f76ad7c346f8cc8e03cf949a4f9a45c312e2
+          fetch-depth: 2
+      - uses: ./.github/actions/setup-pm
+        with:
+          extras: '["all", "anthropic", "bedrock", "mistral", "fal", "modal", "daytona", "parallel-web"]'
+          test-environment: 'true'
+          prune-python-cache: true
+      - name: Candidate process-registry suite
+        run: scripts/run_tests.sh tests/tools/test_process_registry.py
+      - name: Ruff
+        run: |
+          "$HERMES_PYTHON" -m ruff check tools/process_registry.py tests/tools/test_process_registry.py
+      - name: Behavioral control
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout HEAD^ -- tools/process_registry.py
+          set +e
+          scripts/run_tests.sh tests/tools/test_process_registry.py > /tmp/control.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/control.log
+          if [ "$status" -eq 0 ]; then
+            echo "::error::control unexpectedly passed"
+            exit 1
+          fi
+          grep -q "test_running_processes_listed_before_retained_receipts" /tmp/control.log
