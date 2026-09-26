@@ -1,6 +1,6 @@
 """Security checks for user-configured MCP server entries.
 
-Blocks three narrow shapes (see ``validate_mcp_server_entry``), including a hardcoded IOC blocklist
+Blocks four narrow shapes (see ``validate_mcp_server_entry``), including a hardcoded IOC blocklist
 for the June 2026 hermes-0day campaign. Runs BOTH at save time (``_save_mcp_server`` — dashboard API +
 CLI) and at spawn time (``tools.mcp_tool._filter_suspicious_mcp_servers``), so a hand-edited or
 pre-planted ``config.yaml`` entry is caught before it can execute.
@@ -41,6 +41,20 @@ _PERSISTENCE_PATTERN = re.compile(
     r"|/etc/cron|crontab\b"          # cron persistence
     r"|/etc/rc\.local|/etc/systemd"  # init / unit persistence
     r"|\.bashrc\b|\.bash_profile\b|\.profile\b|\.zshrc\b",  # shell rc backdoor
+    re.IGNORECASE,
+)
+
+# Env keys that execute attacker code at process start no matter what the command is:
+# native library preload (any value = code exec) and shell init files sourced by
+# non-interactive shells. NODE_OPTIONS only when it carries a code-loading flag —
+# --max-old-space-size and friends stay legal.
+_CODE_PRELOAD_ENV_KEYS = frozenset({
+    "ld_preload", "ld_audit", "dyld_insert_libraries",
+    "bash_env", "env", "zdotdir", "perl5opt", "rubyopt",
+})
+
+_NODE_OPTIONS_CODELOAD_PATTERN = re.compile(
+    r"(?<![\w.-])--(?:require|import|loader|experimental-loader|inspect(?:-brk)?)(?:[=\s]|$)",
     re.IGNORECASE,
 )
 
@@ -89,9 +103,11 @@ def _entry_text(entry: dict[str, Any]) -> str:
 def validate_mcp_server_entry(name: str, entry: dict[str, Any]) -> list[str]:
     """Return security warnings for an MCP server entry (empty = not suspicious).
 
-    Intentionally not a whitelist — custom commands, Python scripts, npx, uvx stay legal. Only three
-    narrow shapes are blocked: (1) a known IOC anywhere in command/args/env, (2) a shell interpreter
-    with network egress in its inline script, (3) a shell interpreter writing an OS persistence surface.
+    Intentionally not a whitelist — custom commands, Python scripts, npx, uvx stay legal. Only four
+    narrow shapes are blocked: (1) a known IOC anywhere in command/args/env, (2) an env key that
+    preloads/executes code at process start (LD_PRELOAD, BASH_ENV, NODE_OPTIONS --require, …),
+    (3) a shell interpreter with network egress in its inline script, (4) a shell interpreter
+    writing an OS persistence surface.
 
     * a shell interpreter whose inline script writes to an OS persistence surface (June 2026 hermes-0day
     SSH/PAM/sudoers/cron shape). See #45620.
@@ -108,6 +124,24 @@ def validate_mcp_server_entry(name: str, entry: dict[str, Any]) -> list[str]:
                 f"MCP server '{name}' contains a known hermes-0day "
                 f"indicator-of-compromise ('{ioc}')"
             )
+            return issues
+
+    # The shell-interpreter rules below key off the command, so an env-only payload (e.g. a plain
+    # `node` entry with NODE_OPTIONS=--require /tmp/evil.js) sailed through. Env keys that
+    # unconditionally preload code execute at spawn regardless of the command — block them here so
+    # the save-time and spawn-time gates both catch them.
+    env = entry.get("env")
+    if isinstance(env, dict):
+        for key, value in env.items():
+            norm = str(key).strip().lower()
+            if norm in _CODE_PRELOAD_ENV_KEYS:
+                issues.append(
+                    f"MCP server '{name}' sets env {str(key).strip()!r}: executes code at "
+                    f"process start (LD_PRELOAD / shell-init shape)")
+            elif norm == "node_options" and _NODE_OPTIONS_CODELOAD_PATTERN.search(str(value or "")):
+                issues.append(
+                    f"MCP server '{name}' sets NODE_OPTIONS with a code-loading flag")
+        if issues:
             return issues
 
     command = entry.get("command")
