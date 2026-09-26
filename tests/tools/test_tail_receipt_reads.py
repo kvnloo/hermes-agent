@@ -45,6 +45,16 @@ def _tail_fixture_paths(home_dir, owner):
         home_dir, "proc_tailasciiesc", "é→✓" * 8_000, owner, ensure_ascii=True)
     paths["all_escape_fallback"] = _write_receipt(
         home_dir, "proc_tailallesc", "é" * 20_000, owner, ensure_ascii=True)
+    # Non-BMP via ensure_ascii=True: surrogate pairs (12 raw chars per char).
+    # The tail cut must never land between a high and low surrogate.
+    paths["nonbmp_escapes"] = _write_receipt(
+        home_dir, "proc_tailnonbmp", "🎉" * 300 + "A" * 11, owner, ensure_ascii=True)
+    paths["nonbmp_mixed"] = _write_receipt(
+        home_dir, "proc_tailnonbmp2", "🎉" * 199 + "A" * 11, owner, ensure_ascii=True)
+    # Lone surrogate (from surrogate-escaped argv/paths): not a pair, just a
+    # 6-char token; must round-trip, not crash or pair up.
+    paths["lone_surrogate"] = _write_receipt(
+        home_dir, "proc_taillone", "A\ud83cB" * 5_000, owner, ensure_ascii=True)
     # Hand-written receipt: output not last, odd key order — exercises the
     # full-parse fallback (fast path must refuse, tail must stay correct).
     odd_path = home_dir / "logs" / "process-results" / "proc_tailoddorder.json"
