@@ -12263,7 +12263,9 @@ const backendShutdown = createBackendShutdownCoordinator(async (): Promise<void>
   const ownedChildren = IS_WINDOWS ? collectOwnedBackendChildren() : []
   const localShutdown = localBackendLifecycle.shutdown()
   const primary = backendConnectionState.getProcess()
-  const primaryStop = teardownPrimaryBackendAndWait()
+  // A quit is not a re-home: don't rewrite the boot progress to
+  // "Restarting desktop connection" on the way out.
+  const primaryStop = teardownPrimaryBackendAndWait({ soft: true })
   const pooledStops = stopAllPoolBackends()
 
   if (poolIdleReaper) {
