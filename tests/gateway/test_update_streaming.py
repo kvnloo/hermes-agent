@@ -369,6 +369,12 @@ class TestCmdUpdateGatewayMode:
         monkeypatch.setattr("hermes_cli.update_inventory.collect_runtime_inventory", lambda: None)
         monkeypatch.setattr(update_cmd, "_prepare_git_command", lambda: (False, ["git"], False))
         monkeypatch.setattr(update_cmd, "run_completion", lambda request: {"exit_code": 0, "receipt": None})
+        # The tmp checkout is not the venv's owning install; without this the
+        # owning-install redirect re-runs pytest's argv in a child and exits 2.
+        monkeypatch.setattr(
+            "hermes_cli.update_owning_install.retarget_to_owning_install",
+            lambda project_root: None,
+        )
         gateway_prompt = MagicMock(return_value="n")
         monkeypatch.setattr(update_cmd, "_gateway_prompt", gateway_prompt)
         monkeypatch.setattr("builtins.input", lambda *a: pytest.fail("gateway update read terminal input"))
