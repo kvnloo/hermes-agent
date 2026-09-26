@@ -7,7 +7,7 @@ import { prepareSubmission } from '../app/useSubmission.js'
 import { expandTokens } from '../domain/attachments.js'
 import type { GatewayClient } from '../gatewayClient.js'
 import { queueItem } from '../hooks/useQueue.js'
-import { hasInterpolation } from '../protocol/interpolation.js'
+import { hasInterpolation, INTERPOLATION_RE } from '../protocol/interpolation.js'
 
 describe('busy/no-session queue stores the expanded paste, not the collapsed label', () => {
   const label = '[[ log [2 lines] ]]'
@@ -74,6 +74,67 @@ describe('sendQueued gates shell/interpolation on the display, not the expanded 
     expect(hasInterpolation(item.display)).toBe(true)
     expect(item.display).toBe(full)
     expect(item.text).toBe(`show {!date} for ${pastePayload}`)
+  })
+
+  // The combined collapsed-paste + visible-interpolation security hole:
+  // once a visible `{!...}` opens the interpolation gate, the expanded paste
+  // must not be able to smuggle in its own `{!...}` for execution. `sendQueued`
+  // resolves interpolation on the display (the visible surface, where the
+  // paste is still behind its `[[ … ]]` label) and re-expands the paste
+  // afterwards, so a `{!...}` carried only in the pasted bytes never reaches
+  // `interpolate` — it ships to the model as literal payload text.
+  it('a visible {!...} does not authorize interpolation syntax smuggled in by the expanded paste', () => {
+    const pasteLabel = '[[ log [1 line] ]]'
+    const pastePayload = 'untrusted {!touch /tmp/pwned}'
+    const tokens: ComposerToken[] = [{ kind: 'paste', label: pasteLabel, text: pastePayload }]
+    const full = `show {!date} for ${pasteLabel}`
+    const submission = prepareSubmission(full, tokens)
+    const item = queueItem(submission.text, full, expandTokens(tokens))
+
+    // The gate opens on the display's visible interpolation...
+    expect(hasInterpolation(item.display)).toBe(true)
+    // ...while the paste smuggles interpolation syntax into the expanded text.
+    expect(hasInterpolation(item.text)).toBe(true)
+
+    const executedCommands: string[] = []
+
+    // Mirror `useSubmission.sendQueued`'s interpolation branch — `interpolate`
+    // runs `shell.exec` for each `{!...}` match in the text it is given, then
+    // splices the results back. Record which commands ran to pin the boundary.
+    const interpolate = (text: string, then: (resolved: string) => void) => {
+      const matches = [...text.matchAll(new RegExp(INTERPOLATION_RE.source, 'g'))]
+
+      for (const m of matches) {
+        executedCommands.push(m[1]!)
+      }
+
+      const resolved = matches.reduceRight(
+        (acc, m) => acc.slice(0, m.index!) + 'Fri' + acc.slice(m.index! + m[0].length),
+        text
+      )
+
+      then(resolved)
+    }
+
+    let submittedText = ''
+    let transcriptDisplay = ''
+
+    // sendQueued drains by interpolating the DISPLAY, then sending the
+    // expanded resolved display with the resolved display as the transcript.
+    interpolate(item.display, resolvedDisplay => {
+      transcriptDisplay = resolvedDisplay
+      submittedText = (item.expand ?? (value => value))(resolvedDisplay)
+    })
+
+    // Only the user-authored command executed; the pasted command did NOT.
+    expect(executedCommands).toEqual(['date'])
+    expect(executedCommands).not.toContain('touch /tmp/pwned')
+
+    // Transcript keeps the resolved visible interpolation + the compact label.
+    expect(transcriptDisplay).toBe(`show Fri for ${pasteLabel}`)
+    // Model payload expands the paste; the smuggled {!...} ships as text.
+    expect(submittedText).toBe(`show Fri for ${pastePayload}`)
+    expect(submittedText).toContain('{!touch /tmp/pwned}')
   })
 })
 

@@ -26,14 +26,18 @@ export const expandPasteTokens = (tokens: ComposerToken[]) =>
 
 const slashArgument = (command: string) => /^\/\S+\s+([\s\S]+)$/.exec(command)?.[1] ?? ''
 
-export const queueItemFromSlash = (displayCommand: string, expandedCommand: string): QueueItem | undefined => {
+export const queueItemFromSlash = (
+  displayCommand: string,
+  expandedCommand: string,
+  expand?: (value: string) => string
+): QueueItem | undefined => {
   const display = slashArgument(displayCommand)
 
   if (!display.trim()) {
     return undefined
   }
 
-  return queueItem(slashArgument(expandedCommand), display)
+  return queueItem(slashArgument(expandedCommand), display, expand)
 }
 
 export const prepareSubmission = (display: string, tokens: ComposerToken[]) => ({
@@ -183,10 +187,22 @@ export function useSubmission(opts: UseSubmissionOptions) {
         return shellExec(item.text.slice(1).trim())
       }
 
+      // Resolve interpolation on the DISPLAY — the user-authored visible
+      // surface — so only a `{!...}` the user actually typed can ever run.
+      // The expanded paste sits behind the `[[ … ]]` label, which is not an
+      // interpolation expression, so a `{!...}` smuggled in via pasted bytes
+      // never reaches `interpolate`. After resolving the visible expressions,
+      // re-expand the paste into the resolved display (via the expand closure
+      // captured at enqueue): the model gets resolved visible interpolation +
+      // the expanded paste, with the paste's own `{!...}` as literal payload
+      // text; the transcript shows the resolved interpolation + the label.
       if (hasInterpolation(item.display)) {
         patchUiState({ busy: true })
+        const expand = item.expand ?? (value => value)
 
-        return interpolate(item.text, text => send(text, true, item.display, value => value))
+        return interpolate(item.display, resolvedDisplay =>
+          send(expand(resolvedDisplay), true, resolvedDisplay, value => value)
+        )
       }
 
       send(item.text, true, item.display, value => value)
@@ -214,7 +230,7 @@ export function useSubmission(opts: UseSubmissionOptions) {
         if (opts.fallbackToFront) {
           composerActions.prependQueue(item)
         } else {
-          composerActions.enqueue(item.text, item.display)
+          composerActions.enqueue(item.text, item.display, item.expand)
         }
       }
 
@@ -274,10 +290,12 @@ export function useSubmission(opts: UseSubmissionOptions) {
         const parsed = parseSlashCommand(full)
 
         const queued =
-          parsed.name === 'queue' || parsed.name === 'q' ? queueItemFromSlash(slash.display, slash.command) : undefined
+          parsed.name === 'queue' || parsed.name === 'q'
+            ? queueItemFromSlash(slash.display, slash.command, expandPasteTokens(submissionTokens))
+            : undefined
 
         if (queued) {
-          composerActions.enqueue(queued.text, queued.display)
+          composerActions.enqueue(queued.text, queued.display, queued.expand)
           sys(`queued: "${queued.display.slice(0, 50)}${queued.display.length > 50 ? '…' : ''}"`)
         } else {
           slashRef.current(slash.command)
@@ -298,7 +316,7 @@ export function useSubmission(opts: UseSubmissionOptions) {
 
       if (!live.sid) {
         composerActions.pushHistory(toHistory)
-        composerActions.enqueue(submission.text, full)
+        composerActions.enqueue(submission.text, full, expandTokens(submissionTokens))
         composerActions.clearIn()
 
         return
@@ -332,7 +350,7 @@ export function useSubmission(opts: UseSubmissionOptions) {
       composerActions.pushHistory(toHistory)
 
       if (getUiState().busy) {
-        return handleBusyInput(queueItem(submission.text, full))
+        return handleBusyInput(queueItem(submission.text, full, expandTokens(submissionTokens)))
       }
 
       if (shouldInterpolateSubmission(full)) {
