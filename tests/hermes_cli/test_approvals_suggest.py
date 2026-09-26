@@ -230,6 +230,45 @@ class TestProposalRedaction:
             assert pat not in p["pattern"]
             assert all(pat not in ex for ex in p["examples"])
 
+    def test_render_masks_non_prefix_userinfo_url(self, db_path, isolated_allowlist, capsys):
+        """Arbitrary HTTP Basic-style userinfo must not reach rendered examples."""
+        pwd = "p4ssw0rdLeak"
+        path, con = db_path
+        cmd = f"git push --force https://user:{pwd}@git.internal.example.com/org/repo.git"
+        for _ in range(3):
+            _add_terminal_call(con, cmd)
+
+        assert suggest_command(_args(path)) == 0
+
+        out = capsys.readouterr().out
+        assert "git push *" in out
+        assert "e.g." in out
+        assert pwd not in out
+        assert "user:***@" in out
+
+    def test_json_truncation_does_not_rescue_non_prefix_userinfo_url(
+        self, db_path, isolated_allowlist, capsys
+    ):
+        """The JSON example truncation boundary must still contain a mask, never the secret."""
+        pwd = "p4ssw0rdLeak"
+        path, con = db_path
+        cmd = (
+            f"git push --force https://user:{pwd}@internal-git.corp.example.com/"
+            "very-long-org-name/very-long-repo-name-with-deep/path/to/repo.git"
+        )
+        assert len(cmd) > 100
+        for _ in range(3):
+            _add_terminal_call(con, cmd)
+
+        assert suggest_command(_args(path, json=True)) == 0
+
+        payload = json.loads(capsys.readouterr().out)
+        examples = [ex for proposal in payload["proposals"] for ex in proposal["examples"]]
+        assert examples
+        assert pwd not in "".join(examples)
+        assert all("user:***@" in ex for ex in examples)
+
+
     def test_credential_in_glob_tokens_falls_back_to_class_key(self, isolated_allowlist):
         """Redaction must never reach a persisted glob: `KEY=*** git *` would be three
         fnmatch wildcards pre-approving any `KEY=… git …` command."""
