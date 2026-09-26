@@ -21,6 +21,8 @@ import hermes_yaml as yaml
 
 from utils import atomic_write_text, atomic_yaml_write
 
+from hermes_cli.mcp_security import validate_mcp_server_entry
+
 logger = logging.getLogger(__name__)
 
 # Entry delimiter of the Hermes memory store (memories/MEMORY.md) and the openclaw script.
@@ -479,6 +481,13 @@ class AgentImporter:
             self.stripped_secrets.extend(stripped)
             if not hermes_srv:
                 self.record(kind, name, None, "skipped", "Server has neither a command nor a url")
+                continue
+            issues = validate_mcp_server_entry(name, hermes_srv)
+            if issues:
+                # Imported bundles are the likeliest vector for planted MCP entries;
+                # hold them to the same save-time bar as `hermes mcp add`.
+                self.record(kind, name, None, "skipped",
+                            "Suspicious MCP server configuration rejected: " + "; ".join(issues))
                 continue
             existing[name] = hermes_srv
             added += 1
