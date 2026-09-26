@@ -1298,12 +1298,20 @@ class SessionSessionsMixin:
             # rows; MAX over the chain gives effective_last_active in SQL. Do NOT
             # require child.started_at >= parent.ended_at: races insert the
             # continuation before ended_at is written.
+            #
+            # The seed filter lives in its own CTE so its params bind once; the
+            # outer query reuses the admitted set by id instead of evaluating
+            # the filter text twice.
             outer_where, id_params = self._chain_search_where(
-                where_sql, (id_query or "").strip().lower(), (search_query or "").strip().lower(),
+                "WHERE s.id IN (SELECT id FROM seed)",
+                (id_query or "").strip().lower(), (search_query or "").strip().lower(),
             )
             query = f"""
-                WITH RECURSIVE chain(root_id, cur_id) AS (
-                    SELECT s.id, s.id FROM sessions s {where_sql}
+                WITH RECURSIVE seed AS (
+                    SELECT s.id FROM sessions s {where_sql}
+                ),
+                chain(root_id, cur_id) AS (
+                    SELECT id, id FROM seed
                     UNION ALL
                     SELECT c.root_id, child.id
                     FROM chain c
@@ -1331,7 +1339,7 @@ class SessionSessionsMixin:
                 ORDER BY _effective_last_active DESC, s.started_at DESC, s.id DESC
                 LIMIT ? OFFSET ?
             """
-            params = params + params + id_params + [limit, offset]  # WHERE binds twice (seed + outer)
+            params = params + id_params + [limit, offset]
         else:
             query = f"""
                 {select_head}{_sql_session_last_active("s")} AS last_active
