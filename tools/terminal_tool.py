@@ -1435,6 +1435,34 @@ TERMINAL_SCHEMA = {
 }
 
 
+# Bool-ish tokens accepted for ``notify`` after provider/schema round-trips
+# (anyOf boolean|array often arrives as the strings "true"/"false"). Unrecognized
+# tokens stay fail-closed via the same error as a non-bool/non-list value.
+_NOTIFY_TRUTHY_TOKENS = frozenset({"1", "true", "yes", "on"})
+_NOTIFY_FALSY_TOKENS = frozenset({"0", "false", "no", "off"})
+
+
+def _coerce_notify_arg(notify):
+    """Map advertised ``notify`` onto ``(notify_on_complete, watch_patterns)``.
+
+    Returns ``(True/False, None)`` for bool / recognized bool-ish strings,
+    ``(False, list)`` for pattern lists, or ``None`` when the value is invalid
+    (caller emits the standard tool_error).
+    """
+    if isinstance(notify, bool):
+        return notify, None
+    if isinstance(notify, str):
+        token = notify.strip().lower()
+        if token in _NOTIFY_TRUTHY_TOKENS:
+            return True, None
+        if token in _NOTIFY_FALSY_TOKENS:
+            return False, None
+        return None
+    if isinstance(notify, list):
+        return False, notify
+    return None
+
+
 def _handle_terminal(args, **kw):
     from agent.terminal_approval_batch import validate_prepared_terminal
     validate_prepared_terminal(args)
@@ -1457,8 +1485,19 @@ def _handle_terminal(args, **kw):
     persist_on_release = bool(args.get("persist_on_release", False))
     if not isinstance(heartbeat, int) or isinstance(heartbeat, bool) or heartbeat < 0:
         return tool_error("heartbeat must be a whole number of seconds (min 60).")
+    # Coerce before the foreground gate so string "true"/"false" do not trip
+    # the truthiness check (non-empty strings) or the strict isinstance(bool)
+    # branch — #123345.
+    if notify is not None:
+        coerced = _coerce_notify_arg(notify)
+        if coerced is None:
+            return tool_error(
+                "notify must be true/false (notify on exit) or a list of "
+                "strings (notify on output pattern match)."
+            )
+        notify_on_complete, watch_patterns = coerced
     if not args.get("background", False):
-        if notify or watch_patterns or notify_on_complete or heartbeat:
+        if watch_patterns or notify_on_complete or heartbeat:
             return tool_error(
                 "notify/heartbeat only apply to background commands (foreground "
                 "results return directly). Either drop them, or run as "
@@ -1476,18 +1515,6 @@ def _handle_terminal(args, **kw):
                 "persist_on_release only applies to background commands (a foreground "
                 "process is awaited inline and has nothing to persist). Retry as "
                 "terminal(command=..., background=true, persist_on_release=true)."
-            )
-    if notify is not None:
-        if isinstance(notify, bool):
-            notify_on_complete = notify
-            watch_patterns = None
-        elif isinstance(notify, list):
-            watch_patterns = notify
-            notify_on_complete = False
-        else:
-            return tool_error(
-                "notify must be true/false (notify on exit) or a list of "
-                "strings (notify on output pattern match)."
             )
     if heartbeat:
         notify_on_complete = True  # the heartbeat rides the completion delivery path
