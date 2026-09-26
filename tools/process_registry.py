@@ -2383,6 +2383,10 @@ class ProcessRegistry(ProcessCheckpointMixin):
             if s.detached:
                 entry["detached"] = True
             result.append(entry)
+        # Running first: retained receipts are loaded before the live registry,
+        # so without an explicit stable sort a live shell can sit below dozens
+        # of completed receipts in the model-visible list.
+        result.sort(key=lambda entry: entry["status"] != "running")
         return result
 
     # ----- Session/Task Queries (for gateway integration) -----

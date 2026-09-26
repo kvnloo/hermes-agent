@@ -675,6 +675,25 @@ class TestListSessions:
         assert len(result) == 1
         assert result[0]["session_id"] == "proc_1"
 
+    def test_running_processes_listed_before_retained_receipts(self, registry):
+        """Retained history must not bury the live process at the bottom of the list."""
+        retained = {
+            f"proc_retained{idx}": _make_session(
+                sid=f"proc_retained{idx}", task_id="t1", exited=True, exit_code=0
+            )
+            for idx in range(10)
+        }
+        live = _make_session(sid="proc_live", task_id="t1")
+        registry._running[live.id] = live
+
+        with patch("tools.process_registry.load_completed_results", return_value=retained):
+            result = registry.list_sessions(task_id="t1", include_retained=True)
+
+        ids = [row["session_id"] for row in result]
+        assert ids[0] == "proc_live"
+        assert ids[1:] == [f"proc_retained{idx}" for idx in range(10)]
+
+
     def test_session_key_surfaces_cross_task_processes(self, registry):
         """A bg process under the same gateway session but a DIFFERENT task is
         surfaced when session_key is passed, and flagged session_scoped (#29177).
