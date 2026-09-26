@@ -1,0 +1,49 @@
+name: Approvals userinfo validation
+
+on:
+  push:
+    branches:
+      - validation/approvals-userinfo-20260925
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: d850479c91feabaad37ebd2aba790c51b52174f9
+          fetch-depth: 2
+
+      - uses: ./.github/actions/setup-pm
+        with:
+          extras: '["all", "anthropic", "bedrock", "mistral", "fal", "modal", "daytona", "parallel-web"]'
+          test-environment: 'true'
+          prune-python-cache: true
+
+      - name: Candidate tests
+        run: scripts/run_tests.sh tests/hermes_cli/test_approvals_suggest.py
+
+      - name: Ruff and diff
+        run: |
+          "$HERMES_PYTHON" -m ruff check hermes_cli/approvals_suggest.py tests/hermes_cli/test_approvals_suggest.py
+          git diff --check HEAD^
+
+      - name: Behavioral control
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout HEAD^ -- hermes_cli/approvals_suggest.py
+          set +e
+          scripts/run_tests.sh tests/hermes_cli/test_approvals_suggest.py > /tmp/control.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/control.log
+          if [ "$status" -eq 0 ]; then
+            echo "::error::control unexpectedly passed"
+            exit 1
+          fi
+          grep -Eq "test_render_masks_non_prefix_userinfo_url|test_json_examples_mask_non_prefix_userinfo_before_truncation" /tmp/control.log
