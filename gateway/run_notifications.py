@@ -81,6 +81,25 @@ def _update_output_tail(output: str, limit: int) -> str:
     return output if len(output) <= limit else "…" + output[-limit:]
 
 
+def _read_text_tail_chars(path: Path, max_chars: int) -> str:
+    """Last ``max_chars`` chars of a text file, read bounded from the end.
+
+    Update logs are unbounded (``hermes update`` redirects its whole output
+    there) but the notification only ever keeps the last ``max_chars`` chars,
+    so read at most ``max_chars * 4 + 4096`` bytes: 4 bytes/char worst-case
+    UTF-8 plus slack so a split multi-byte char or ANSI escape at the window
+    edge cannot shift the tail.
+    """
+    try:
+        size = path.stat().st_size
+        with open(path, "rb") as fh:
+            fh.seek(max(0, size - (max_chars * 4 + 4096)))
+            raw = fh.read()
+    except OSError:
+        return ""
+    return raw.decode("utf-8", errors="replace")
+
+
 _VIDEO_EXTS = {'.mp4', '.mov', '.avi', '.mkv', '.webm', '.3gp'}
 # Routing fields copied verbatim from a process watcher onto its synthetic completion event.
 _WATCHER_ROUTE_FIELDS = ("session_key", "platform", "chat_type", "chat_id", "thread_id", "user_id", "user_name")
@@ -752,7 +771,9 @@ class GatewayNotificationsMixin:
             if not paths.exit_code.exists():
                 return _defer("Update notification deferred: update still running")
             exit_code = self._update_exit_code(paths)
-            output = paths.output.read_bytes().decode("utf-8", errors="replace") if paths.output.exists() else ""
+            # Bounded tail read: the update log is unbounded but the notification
+            # only ever keeps the last 3500 chars (see _read_text_tail_chars).
+            output = _read_text_tail_chars(paths.output, 3500) if paths.output.exists() else ""
             platform = Platform(platform_str)
             adapter = self._authorization_adapter(platform, self._marker_profile(pending))
             if chat_id and not adapter:
