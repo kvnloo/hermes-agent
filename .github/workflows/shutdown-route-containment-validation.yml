@@ -1,0 +1,49 @@
+name: Shutdown route containment validation
+
+on:
+  push:
+    branches:
+      - validation/shutdown-profile-route-20260925
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: 3c80d412097a5a8575d5ee837a590ed2beef75fc
+          fetch-depth: 2
+
+      - uses: ./.github/actions/setup-pm
+        with:
+          extras: '["all", "anthropic", "bedrock", "mistral", "fal", "modal", "daytona", "parallel-web"]'
+          test-environment: 'true'
+          prune-python-cache: true
+
+      - name: Candidate tests
+        run: |
+          scripts/run_tests.sh tests/gateway/test_shutdown_profile_route_rejection.py             tests/gateway/test_cron_interrupt_notification.py             tests/gateway/test_shutdown_teardown_profile_scope.py
+
+      - name: Ruff
+        run: |
+          "$HERMES_PYTHON" -m ruff check gateway/run_shutdown.py tests/gateway/test_shutdown_profile_route_rejection.py
+
+      - name: Behavioral control
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout HEAD^ -- gateway/run_shutdown.py
+          set +e
+          scripts/run_tests.sh tests/gateway/test_shutdown_profile_route_rejection.py > /tmp/control.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/control.log
+          if [ "$status" -eq 0 ]; then
+            echo "::error::control unexpectedly passed"
+            exit 1
+          fi
+          grep -Eq "test_profile_route_rejection_for_one_session_does_not_block_shutdown|test_profile_scope_entry_failure_for_one_session_does_not_block_shutdown" /tmp/control.log
