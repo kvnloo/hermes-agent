@@ -372,11 +372,21 @@ def _portable_mcp_servers(safe_servers: Dict[str, dict]) -> None:
         from hermes_cli.plugins import discover_plugins, get_plugin_manager
         discover_plugins()
         portable = get_plugin_manager().get_portable_mcp_servers()
-        for name, cfg in _filter_suspicious_mcp_servers(portable).items():
+        # Interpolate BEFORE the suspicious-server filter: the filter must see the actual
+        # command/args the child will receive, not the ${VAR} placeholders a .env-only
+        # value leaves behind (same filter-after-resolution ordering as _load_mcp_config).
+        resolved: Dict[str, dict] = {}
+        if isinstance(portable, dict):
+            for name, cfg in portable.items():
+                if isinstance(cfg, dict):
+                    interpolated = _interpolate_env_vars(cfg)
+                    if isinstance(interpolated, dict):
+                        resolved[name] = interpolated
+        for name, cfg in _filter_suspicious_mcp_servers(resolved).items():
             if name in safe_servers:
                 logger.warning("Portable MCP server '%s' conflicts with native config; skipping", name)
             else:
-                safe_servers[name] = dict(cfg)
+                safe_servers[name] = cfg
     except Exception:
         logger.debug("Failed to load portable MCP servers", exc_info=True)
 
