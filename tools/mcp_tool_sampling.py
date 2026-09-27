@@ -78,11 +78,18 @@ def _parse_tool_call_arguments(server_name: str, args) -> dict:
     """LLM tool_calls arguments -> dict; malformed JSON / non-dicts become ``{"_raw": ...}``, not dropped."""
     if isinstance(args, str):
         try:
-            return json.loads(args)
+            parsed = json.loads(args)
         except (json.JSONDecodeError, ValueError):
             logger.warning("MCP server '%s': malformed tool_calls arguments from LLM (wrapping as raw): %.100s",
                            server_name, args)
             return {"_raw": args}
+        # A JSON scalar/array is valid JSON but not an object: wrap it the same
+        # way so the caller (ToolUseContent ``input``) always gets a dict.
+        if not isinstance(parsed, dict):
+            logger.warning("MCP server '%s': tool_calls arguments from LLM are not an object (wrapping as raw): %.100s",
+                           server_name, args)
+            return {"_raw": args}
+        return parsed
     return args if isinstance(args, dict) else {"_raw": str(args)}
 
 
