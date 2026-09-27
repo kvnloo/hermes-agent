@@ -84,7 +84,14 @@ _SETTINGS = [
      lambda m: _discord(m, "_get_discord_command_sync_policy")),
     ("plugins.platforms.discord.adapter", "DISCORD_ALLOW_MENTION_EVERYONE", "true", "false",
      lambda m: m._env_bool("DISCORD_ALLOW_MENTION_EVERYONE", False)),
+    ("plugins.platforms.simplex.adapter", "HERMES_SIMPLEX_TEXT_BATCH_DELAY", "0.8", "1.6",
+     lambda m: _simplex_resolve(m, "_resolve_text_batch_delay")),
 ]
+
+
+def _simplex_resolve(mod, method):
+    adapter = object.__new__(mod.SimplexAdapter)
+    return getattr(adapter, method)()
 
 
 def _slack(mod, method):

@@ -117,6 +117,11 @@ class SimplexAdapter(BasePlatformAdapter):
 
     MAX_MESSAGE_LENGTH = MAX_MESSAGE_LENGTH
 
+    def _resolve_text_batch_delay(self) -> float:
+        # Ingress batching is per-profile: a served secondary reads its own tuning,
+        # never the launch profile's bridged os.environ value.
+        return float(_get_scoped_secret("HERMES_SIMPLEX_TEXT_BATCH_DELAY", "0.8"))
+
     def __init__(self, config: PlatformConfig, **kwargs):
         super().__init__(config=config, platform=Platform("simplex"))
         extra = getattr(config, "extra", {}) or {}
@@ -144,7 +149,7 @@ class SimplexAdapter(BasePlatformAdapter):
         self._pending_responses: Dict[str, asyncio.Future] = {}  # awaited command replies
         self._corr_counter = 0
         # SimpleX has no client-side split, so the split delay equals the plain one.
-        self._text_batch_delay_seconds = float(os.getenv("HERMES_SIMPLEX_TEXT_BATCH_DELAY", "0.8"))
+        self._text_batch_delay_seconds = self._resolve_text_batch_delay()
         self._text_batch_split_delay_seconds = self._text_batch_delay_seconds
         logger.info(
             "SimpleX adapter initialized: url=%s auto_accept=%s groups=%s",
