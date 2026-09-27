@@ -419,16 +419,19 @@ def _probe_single_server(
     Returns ``(tool_name, description)`` tuples; raises on connection failure. ``details`` is an
     out-param filled with ``schema_chars``/``prompts``/``resources`` so the return shape stays stable.
     """
-    issues = validate_mcp_server_entry(name, config)
-    if issues:
-        raise ValueError("; ".join(issues))
-
+    # Validate AFTER dotenv/interpolation resolution: the validator must see the real
+    # command/args the child receives, not the inert ${VAR} placeholders (a .env-only
+    # SHELL_BIN=bash in "command": "${SHELL_BIN}" is not a shell interpreter name until resolved).
     from tools.mcp_tool_loop import _ensure_mcp_loop, _run_on_mcp_loop
     from tools.mcp_tool_discovery import _connect_server
     from tools.mcp_tool_lifecycle import _stop_mcp_loop_if_idle
     from tools.mcp_tool_common import _parse_boolish
 
     config = _resolve_mcp_server_config(config)
+    issues = validate_mcp_server_entry(name, config)
+    if issues:
+        raise ValueError("; ".join(issues))
+
     if connect_timeout is None:
         try:
             connect_timeout = max(1.0, float(config.get("connect_timeout", 30)))
