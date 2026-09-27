@@ -286,6 +286,27 @@ def _ref_name(dir_hash: str) -> str:
     return f"{_REFS_PREFIX}/{dir_hash}"
 
 
+def _checkpoint_owned_by_project(store: Path, abs_dir: str, commit_hash: str) -> bool:
+    """True when ``commit_hash`` is this directory's own checkpoint.
+
+    The v2 store is shared across projects, so mere object existence
+    (``git cat-file -t``) says nothing about ownership.  A hash counts as
+    this directory's checkpoint only when it is reachable from the
+    project's own ``refs/hermes/<hash16>`` tip — checkpoints commit
+    linearly on top of the ref, and pruning intentionally orphans
+    discarded snapshots by rewriting the ref.  A foreign project's hash
+    must be rejected: restoring or diffing against it would corrupt this
+    project's tree with another project's files.
+    """
+    dir_hash = _project_hash(abs_dir)
+    ok, _, _ = _run_git(
+        ["merge-base", "--is-ancestor", commit_hash, _ref_name(dir_hash)],
+        store,
+        abs_dir,
+    )
+    return ok
+
+
 def _project_meta_path(store: Path, dir_hash: str) -> Path:
     return store / _PROJECTS_DIRNAME / f"{dir_hash}.json"
 
@@ -849,6 +870,10 @@ class CheckpointManager:
         if not (store / "HEAD").exists():
             return {"success": False, "error": "No checkpoints exist for this directory"}
 
+        if not _checkpoint_owned_by_project(store, abs_dir, commit_hash):
+            return {"success": False,
+                    "error": f"Checkpoint '{commit_hash[:8]}' is not a checkpoint of this directory"}
+
         dir_hash = _project_hash(abs_dir)
         index_file = _index_path(store, dir_hash)
 
@@ -910,6 +935,16 @@ class CheckpointManager:
         # Skip root, home, and other overly broad directories
         if abs_dir in {"/", str(Path.home())}:
             logger.debug("Checkpoint skipped: directory too broad (%s)", abs_dir)
+            return False
+
+        # Never snapshot the checkpoint infrastructure itself. A working dir
+        # that is or contains the shared store would stage store/objects/...
+        # into its own snapshots — recursive bloat the pruner then fights.
+        store_path = _store_path().resolve()
+        abs_path = Path(abs_dir)
+        if (abs_path == store_path or store_path.is_relative_to(abs_path)
+                or abs_path.is_relative_to(store_path)):
+            logger.debug("Checkpoint skipped: directory overlaps the checkpoint store (%s)", abs_dir)
             return False
 
         if abs_dir in self._checkpointed_dirs:
@@ -1030,6 +1065,10 @@ class CheckpointManager:
         if not ok:
             return {"success": False, "error": f"Checkpoint '{commit_hash}' not found"}
 
+        if not _checkpoint_owned_by_project(store, abs_dir, commit_hash):
+            return {"success": False,
+                    "error": f"Checkpoint '{commit_hash[:8]}' is not a checkpoint of this directory"}
+
         dir_hash = _project_hash(abs_dir)
         index_file = _index_path(store, dir_hash)
 
@@ -1142,6 +1181,10 @@ class CheckpointManager:
         if not ok:
             return {"success": False, "error": f"Checkpoint '{commit_hash}' not found",
                     "debug": err or None}
+
+        if not _checkpoint_owned_by_project(store, abs_dir, commit_hash):
+            return {"success": False,
+                    "error": f"Checkpoint '{commit_hash[:8]}' is not a checkpoint of this directory"}
 
         skipped_user_edits: List[str] = []
         kept_oversize: List[str] = []
