@@ -187,6 +187,26 @@ class TestSyncFallbacks:
         assert res["success"] is True
         m_run.assert_called_once()   # ran inline on this thread
 
+    def test_pool_at_capacity_fires_claimed_snapshot(self):
+        """The pool-full inline fallback must fire the CLAIMED snapshot, not the stale
+        pre-claim one. Without the fresh fire_claim, _run_with_fire_claim_heartbeat sees
+        owner='' and skips the heartbeat entirely — a run outliving the 300s claim TTL
+        then lets the durable claim expire, and a second replica sharing the store
+        reclaims and double-fires the job."""
+        with _bound_session_key():
+            with patch("tools.cronjob_tools.claim_job_for_fire", side_effect=lambda jid, **kw: {**_job(jid), "fire_claim": {"by": "bg-owner"}}), \
+                 patch("tools.async_delegation.dispatch_async_delegation",
+                       return_value={"status": "rejected", "error": "capacity"}), \
+                 patch("cron.scheduler.run_one_job", return_value=True) as m_run, \
+                 patch("tools.cronjob_tools.get_job",
+                       return_value={"last_status": "ok", "last_error": None}):
+                res = _try_dispatch_background_run(_job('job-bg-11'))
+        assert res["dispatched"] is False
+        assert res["success"] is True
+        m_run.assert_called_once()
+        fired = m_run.call_args[0][0]
+        assert fired.get("fire_claim") == {"by": "bg-owner"}   # heartbeat stays armed
+
 class TestInFlightDedupe:
     """Manual runs must not double-fire a job that is already mid-run
     (salvaged from #53395 by @izumi0uu): the fire claim's 300s TTL is
