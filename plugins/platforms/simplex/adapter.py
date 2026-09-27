@@ -143,8 +143,10 @@ class SimplexAdapter(BasePlatformAdapter):
         self._pending_file_transfers: Dict[int, dict] = {}  # awaiting rcvFileComplete, by fileId
         self._pending_responses: Dict[str, asyncio.Future] = {}  # awaited command replies
         self._corr_counter = 0
-        # SimpleX has no client-side split, so the split delay equals the plain one.
-        self._text_batch_delay_seconds = float(os.getenv("HERMES_SIMPLEX_TEXT_BATCH_DELAY", "0.8"))
+        # SimpleX has no client-side split, so the split delay equals the plain one; the
+        # profile-scoped reader (not bare os.getenv) so a served secondary honors its own
+        # .env instead of borrowing the launch profile's delay.
+        self._text_batch_delay_seconds = _env_float("HERMES_SIMPLEX_TEXT_BATCH_DELAY", 0.8)
         self._text_batch_split_delay_seconds = self._text_batch_delay_seconds
         logger.info(
             "SimpleX adapter initialized: url=%s auto_accept=%s groups=%s",
@@ -623,6 +625,14 @@ def validate_config(config) -> bool:
 def is_connected(config) -> bool:
     """Configured (env or config.yaml) ⇒ shown as connected in status."""
     return validate_config(config)
+
+
+def _env_float(name: str, default: float) -> float:
+    """Parse a float env var through the profile-scoped reader; garbage -> *default*."""
+    try:
+        return float(_get_scoped_secret(name, str(default)))
+    except (TypeError, ValueError):
+        return default
 
 
 def _env_enablement() -> Optional[dict]:

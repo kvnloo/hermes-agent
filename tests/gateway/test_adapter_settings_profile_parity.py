@@ -84,6 +84,10 @@ _SETTINGS = [
      lambda m: _discord(m, "_get_discord_command_sync_policy")),
     ("plugins.platforms.discord.adapter", "DISCORD_ALLOW_MENTION_EVERYONE", "true", "false",
      lambda m: m._env_bool("DISCORD_ALLOW_MENTION_EVERYONE", False)),
+    ("plugins.platforms.matrix.adapter", "HERMES_MATRIX_TEXT_BATCH_DELAY_SECONDS", "0.6", "2.5",
+     lambda m: m.MatrixAdapter(PlatformConfig(enabled=True))._text_batch_delay_seconds),
+    ("plugins.platforms.simplex.adapter", "HERMES_SIMPLEX_TEXT_BATCH_DELAY", "0.8", "2.5",
+     lambda m: m.SimplexAdapter(PlatformConfig(enabled=True))._text_batch_delay_seconds),
 ]
 
 

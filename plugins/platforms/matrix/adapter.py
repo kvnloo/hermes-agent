@@ -902,9 +902,11 @@ class MatrixAdapter(BasePlatformAdapter):
         if self._proxy_url:
             logger.info("Matrix: proxy configured — %s", self._proxy_url)
         self._max_media_bytes = _env_number("MATRIX_MAX_MEDIA_BYTES", 100 * 1024 * 1024, int)
-        # Text batching merges client-side splits (~4000 chars) of one long message.
-        self._text_batch_delay_seconds = float(os.getenv("HERMES_MATRIX_TEXT_BATCH_DELAY_SECONDS", "0.6"))
-        self._text_batch_split_delay_seconds = float(os.getenv("HERMES_MATRIX_TEXT_BATCH_SPLIT_DELAY_SECONDS", "2.0"))
+        # Text batching merges client-side splits (~4000 chars) of one long message; the
+        # profile-scoped reader (not bare os.getenv) so a served secondary honors its own
+        # .env instead of borrowing the launch profile's delay.
+        self._text_batch_delay_seconds = _env_number("HERMES_MATRIX_TEXT_BATCH_DELAY_SECONDS", 0.6, float)
+        self._text_batch_split_delay_seconds = _env_number("HERMES_MATRIX_TEXT_BATCH_SPLIT_DELAY_SECONDS", 2.0, float)
         self._approval_reaction_map = {
             "✅": "once", "🌀": "session", "♾️": "always", "♾": "always", "\u267e\ufe0f": "always",
             "\u267e": "always", "❌": "deny", "❎": "deny"}
