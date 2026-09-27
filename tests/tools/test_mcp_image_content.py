@@ -119,3 +119,26 @@ class TestCacheMcpImageBlock:
         tag = _cache_mcp_image_block(block)
         assert tag.startswith("MEDIA:")
         assert tag.endswith(".jpg"), f"expected .jpg extension, got {tag!r}"
+
+    def test_oversized_image_block_rejected_before_decode(self, tmp_path, monkeypatch):
+        """An image block over the resource cap must be rejected on b64 length
+        BEFORE decoding — like the audio path — not decoded into memory and
+        silently dropped."""
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        from tools.mcp_tool_content import _MCP_RESOURCE_MAX_B64_CHARS, _cache_mcp_image_block
+
+        real_b64decode = base64.b64decode
+        decode_calls = []
+
+        def spy_b64decode(data, *args, **kwargs):
+            decode_calls.append(len(data))
+            return real_b64decode(data, *args, **kwargs)
+
+        monkeypatch.setattr(base64, "b64decode", spy_b64decode)
+        block = SimpleNamespace(
+            data="A" * (_MCP_RESOURCE_MAX_B64_CHARS + 100),
+            mimeType="image/png",
+        )
+        tag = _cache_mcp_image_block(block)
+        assert "too large to cache" in tag, f"expected size marker, got {tag!r}"
+        assert decode_calls == [], f"payload was decoded before rejection: {decode_calls}"
