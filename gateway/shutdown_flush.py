@@ -181,6 +181,53 @@ def drain_transcript_spool(session_id: str, replay, *, db_known_failing: bool = 
     return replayed, remaining
 
 
+def rekey_transcript_spool(old_session_id: str, new_session_id: str) -> int:
+    """Repoint cap-dropped transcript spool payloads from one session id to another.
+
+    Used when a compression reroute moves a session parent->child: payloads keyed by the
+    parent would otherwise never drain (the live path drains by the child id) and boot
+    recovery would replay them into the compression-ended parent, where the append raises
+    and the file is kept forever. Rewrites are atomic (temp file + os.replace). Returns
+    the number of files rewritten.
+    """
+    if not old_session_id or old_session_id == new_session_id:
+        return 0
+    rewritten = 0
+    try:
+        candidates = list(_get_flush_dir().glob("pending-*.json"))
+    except Exception as exc:
+        logger.debug("Cannot scan transcript spool for rekey: %s", exc)
+        return 0
+    for path in candidates:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8-sig"))
+        except Exception:
+            continue
+        if (not isinstance(payload, dict)
+                or payload.get("reason") != TRANSCRIPT_CAP_DROP_REASON):
+            continue
+        data = payload.get("data")
+        if not isinstance(data, dict):
+            continue
+        touched = False
+        if payload.get("session_key") == old_session_id:
+            payload["session_key"] = new_session_id
+            touched = True
+        if data.get("session_id") == old_session_id:
+            data["session_id"] = new_session_id
+            touched = True
+        if not touched:
+            continue
+        try:
+            tmp = path.with_name(path.name + ".tmp")
+            tmp.write_text(json.dumps(payload), encoding="utf-8")
+            os.replace(tmp, path)
+            rewritten += 1
+        except Exception as exc:
+            logger.warning("Failed to rekey transcript spool file %s: %s", path, exc)
+    return rewritten
+
+
 def _json_safe(value: Any) -> bool:
     try:
         json.dumps(value)

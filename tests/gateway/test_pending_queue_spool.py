@@ -225,3 +225,68 @@ class TestSpoolPrimitives:
         assert remaining == 0
         assert seen == ["c0", "c1", "c2"]
         assert _spool_files(spool_home) == []
+
+
+class TestSpoolSurvivesCompressionReroute:
+    """A compression reroute parent->child must not orphan the on-disk transcript
+    spool: _migrate_transcript_queue_to_child moves the queue and failure counters
+    but used to leave the spool keyed by the parent, so the spooled messages never
+    drained into the live child and boot recovery replayed them into the
+    compression-ended parent (append raises, file kept forever: permanent loss)."""
+
+    def _spool_under(self, store, session_id, message):
+        from gateway.session_transcript import _spool_dropped
+
+        assert _spool_dropped(session_id, message) is not None
+        store._lazy("_spooled_drop_sessions", set).add(session_id)
+
+    def test_reroute_rekeys_spool_and_drains_into_child(self, spool_home, monkeypatch):
+        db = BrokenThenHealedDb()
+        db.broken = False
+        store = _make_store(db)
+        store._db_for_session_id = lambda sid: db
+
+        parent, child = "sess-parent", "sess-child"
+        self._spool_under(store, parent, {"role": "user", "content": "spooled hello"})
+        assert _spool_files(spool_home)
+
+        # Compression reroutes parent -> child (retry lock held, as the caller does).
+        with store._transcript_retry_lock:
+            store._migrate_transcript_queue_to_child(parent, parent, child, [], None)
+
+        assert store._spooled_drop_sessions == {child}
+        for path in _spool_files(spool_home):
+            payload = json.loads(path.read_text(encoding="utf-8-sig"))
+            assert payload["session_key"] == child
+            assert payload["data"]["session_id"] == child
+
+        # The next live write drains the spool into the child, not the parent.
+        store._drain_spooled_drops(child)
+        assert len(db.rows) == 1
+        assert db.rows[0]["session_id"] == child
+        assert db.rows[0]["content"] == "spooled hello"
+        assert _spool_files(spool_home) == []
+        assert store._spooled_drop_sessions == set()
+
+    def test_boot_recovery_replays_rekeyed_spool_into_live_child(self, spool_home):
+        """After a reroute + restart, recover_pending_to_db must replay the spooled
+        message into the live child (not the compression-ended parent)."""
+        from gateway import shutdown_flush
+        from gateway.session_transcript import _spool_dropped
+
+        parent, child = "sess-parent", "sess-child"
+        assert _spool_dropped(parent, {"role": "user", "content": "boot hello"}) is not None
+        assert shutdown_flush.rekey_transcript_spool(parent, child) == 1
+
+        class FakeSessionDb:
+            def __init__(self):
+                self.rows = []
+
+            def append_message(self, **kwargs):
+                self.rows.append(kwargs)
+
+        db = FakeSessionDb()
+        assert shutdown_flush.recover_pending_to_db(session_db=db) == 1
+        assert db.rows[0]["session_id"] == child
+        assert db.rows[0]["content"] == "boot hello"
+        assert _spool_files(spool_home) == []

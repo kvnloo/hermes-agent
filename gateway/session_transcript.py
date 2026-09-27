@@ -208,7 +208,24 @@ class SessionTranscriptMixin:
         if previous_failures:
             self._transcript_append_failures[child_id] = max(
                 previous_failures, self._transcript_append_failures.get(child_id, 0))
-        self._transcript_reroutes[session_id] = child_id
+        # A compression reroute must not orphan the on-disk transcript spool: move the spool
+        # tracking to the child and rekey the spooled payloads, so the next live write drains
+        # them into the child and a boot replay lands on the live session instead of the
+        # compression-ended parent (where the append raises and the file is kept forever).
+        spooled_sessions = self._lazy("_spooled_drop_sessions", set)
+        if session_id in spooled_sessions or queue_session_id in spooled_sessions:
+            spooled_sessions.discard(session_id)
+            spooled_sessions.discard(queue_session_id)
+            spooled_sessions.add(child_id)
+            try:
+                from gateway.shutdown_flush import rekey_transcript_spool
+                rekey_transcript_spool(session_id, child_id)
+                if queue_session_id != session_id:
+                    rekey_transcript_spool(queue_session_id, child_id)
+            except Exception:
+                logger.warning("Failed to rekey transcript spool %s -> %s",
+                               session_id, child_id, exc_info=True)
+        self._lazy("_transcript_reroutes", dict)[session_id] = child_id
         return pending
 
     def _publish_transcript_reroute(self, session_id: str, child_id: str) -> None:
