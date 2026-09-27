@@ -597,7 +597,11 @@ def failed_delegations_for_session(
     for delegation_id, state, dispatched_at, completed_at, task_json, result_json in rows:
         task, result = _json_object(task_json), _json_object(result_json)
         goals = task.get("goals") if isinstance(task.get("goals"), list) and task["goals"] else [task.get("goal") or ""]
-        goal_for = dict(zip(task.get("task_indexes") or range(len(goals)), goals))
+        # task_indexes names this unit's slice of the CALL-wide goals list; index into it
+        # directly (never zip positionally — a unit running goals 1..2 of a 3-goal call
+        # must not read goals[0]).
+        indexes = task.get("task_indexes") or range(len(goals))
+        goal_for = {i: goals[i] for i in indexes if isinstance(i, int) and 0 <= i < len(goals)}
         tasks = result["results"] if isinstance(result.get("results"), list) else [] if task.get("is_batch") else [result]
         if not tasks and str(state).lower() in _FAILED_TASK_STATES:
             tasks = [{"task_index": 0, "error": result.get("error")}]

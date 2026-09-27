@@ -41,12 +41,27 @@ def test_a_failed_single_delegation_is_listed_for_its_session():
 
 
 def test_a_batch_that_completed_still_surfaces_its_failed_task():
-    _delegation("d-batch", status="completed", is_batch=True, goals=["scan api", "scan web"], task_indexes=[3, 4],
+    # Production shape: goals is the whole call's list; task_indexes is this unit's slice of it.
+    _delegation("d-batch", status="completed", is_batch=True,
+                goals=["audit api", "audit web", "audit auth", "audit billing", "audit cache"],
+                task_indexes=[3, 4],
                 result={"results": [{"task_index": 3, "status": "completed", "summary": "ok"},
                                     {"task_index": 4, "status": "timeout", "error": "no progress"}]})
 
     [row] = ad.failed_delegations_for_session("ui-1")
-    assert (row["task_index"], row["goal"], row["status"], row["error"]) == (4, "scan web", "timeout", "no progress")
+    assert (row["task_index"], row["goal"], row["status"], row["error"]) == (4, "audit cache", "timeout", "no progress")
+
+
+def test_a_later_unit_indexes_into_call_wide_goals_not_positionally():
+    # A unit running tasks 1..2 of a 3-goal call: positional zip would pair
+    # index 2 with goals[1]; the correct goal is goals[2].
+    _delegation("d-batch-2", status="completed", is_batch=True,
+                goals=["goal-zero", "goal-one", "goal-two"], task_indexes=[1, 2],
+                result={"results": [{"task_index": 1, "status": "completed", "summary": "ok"},
+                                    {"task_index": 2, "status": "failed", "error": "boom"}]})
+
+    [row] = ad.failed_delegations_for_session("ui-1")
+    assert (row["task_index"], row["goal"], row["status"]) == (2, "goal-two", "failed")
 
 
 def test_the_durable_parent_id_claims_rows_after_a_reload_remints_the_ui_session():
