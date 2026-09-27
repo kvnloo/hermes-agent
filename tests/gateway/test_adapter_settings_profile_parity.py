@@ -84,7 +84,15 @@ _SETTINGS = [
      lambda m: _discord(m, "_get_discord_command_sync_policy")),
     ("plugins.platforms.discord.adapter", "DISCORD_ALLOW_MENTION_EVERYONE", "true", "false",
      lambda m: m._env_bool("DISCORD_ALLOW_MENTION_EVERYONE", False)),
+    ("plugins.platforms.telegram.adapter", "TELEGRAM_WEBHOOK_HOST", "default-host", "secondary-host",
+     lambda m: _telegram_webhook_host(m)),
 ]
+
+
+def _telegram_webhook_host(mod):
+    adapter = object.__new__(mod.TelegramAdapter)
+    adapter.config = PlatformConfig(enabled=True)
+    return adapter._resolve_webhook_host()
 
 
 def _slack(mod, method):

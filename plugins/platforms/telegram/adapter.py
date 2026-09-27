@@ -3143,13 +3143,18 @@ class TelegramAdapter(BasePlatformAdapter):
                 "true" if self._drop_pending_on_cold_boot else "false")
         return drop_pending
 
+    def _resolve_webhook_host(self) -> str:
+        # The bind interface is per-profile like TELEGRAM_WEBHOOK_URL: a served secondary reads its
+        # own value, never the launch profile's.
+        return str(_extra_or_secret(self.config.extra, "webhook_host", "TELEGRAM_WEBHOOK_HOST", "") or "").strip()
+
     async def _start_webhook_mode(self, webhook_url: str, *, is_reconnect: bool) -> None:
         """Start PTB's webhook server (Telegram pushes updates; lets cloud platforms auto-wake suspended
         machines). SECURITY: TELEGRAM_WEBHOOK_SECRET is REQUIRED — without it the endpoint accepts forged
         updates (GHSA-3vpc-7q5r-276h); refuse to start rather than run fail-open."""
         webhook_port = env_int("TELEGRAM_WEBHOOK_PORT", 8443)
         # Default "" → tornado listens on IPv4 + IPv6; "0.0.0.0" is unreachable on IPv6-only networks.
-        webhook_host = (os.getenv("TELEGRAM_WEBHOOK_HOST", "").strip() or str((self.config.extra or {}).get("webhook_host") or "").strip())
+        webhook_host = self._resolve_webhook_host()
         webhook_secret = (_get_scoped_secret("TELEGRAM_WEBHOOK_SECRET") or "").strip()
         if not webhook_secret:
             raise RuntimeError(
