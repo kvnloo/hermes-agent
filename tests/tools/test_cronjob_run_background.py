@@ -285,3 +285,25 @@ class TestCronjobRunToolIntegration:
         assert out["job"]["executed"] is True
         assert out["job"]["execution_mode"] == "background"
         assert out["job"]["delegation_id"]
+
+
+class TestPoolFallbackClaimFencing:
+    def test_pool_full_inline_failure_fences_write_by_fire_claim_owner(self):
+        """A failed inline fallback run must fence its mark_job_run failure write by the
+        fire-claim owner, exactly like the sync run path does: the claim's 300s TTL is
+        routinely outlived by real jobs, so an unfenced stale write from an expired
+        claim can clobber the terminal state of whoever reclaimed the fire."""
+        with _bound_session_key():
+            with patch("tools.cronjob_tools.claim_job_for_fire",
+                       side_effect=lambda jid, **kw: {**_job(jid), "fire_claim": {"at": "t", "by": "bg-owner"}}), \
+                 patch("tools.async_delegation.dispatch_async_delegation",
+                       return_value={"status": "rejected", "error": "capacity"}), \
+                 patch("cron.scheduler.run_one_job", side_effect=RuntimeError("boom")), \
+                 patch("tools.cronjob_tools.get_job", return_value={}), \
+                 patch("tools.cronjob_tools.mark_job_run", return_value=True) as m_mark:
+                res = _try_dispatch_background_run(_job("job-bg-fence"))
+        assert res["dispatched"] is False
+        assert res["claimed"] is True
+        assert res["success"] is False
+        m_mark.assert_called_once()
+        assert m_mark.call_args.kwargs["expected_fire_owner"] == "bg-owner"
