@@ -106,6 +106,13 @@ class TestParseSchedule:
         assert result["kind"] == "interval"
         assert result["minutes"] == 120
 
+    @pytest.mark.parametrize("schedule", ["every 0m", "0m", "every 0h", "0d"])
+    def test_zero_interval_rejected(self, schedule):
+        """A 0-minute interval would anchor next_run_at at the last run and fire
+        continuously: reject it loudly instead of creating a runaway job."""
+        with pytest.raises(ValueError, match="at least 1 minute"):
+            parse_schedule(schedule)
+
 
     # ---- Natural-language weekday/daily phrases → cron (issue: documented
     # "every monday 9am" format was rejected because the "every" branch only

@@ -766,6 +766,10 @@ def _cron_schedule(
 
 
 def _interval_schedule(minutes: int) -> Dict[str, Any]:
+    if minutes < 1:
+        raise ValueError(
+            f"Invalid interval '{minutes}m': recurring intervals must be at least 1 minute "
+            "('every 0m' would re-anchor next_run_at at the last run and fire continuously).")
     return {"kind": "interval", "minutes": minutes, "display": f"every {minutes}m"}
 
 
@@ -832,8 +836,15 @@ def parse_schedule(schedule: str) -> Dict[str, Any]:
         # Durations measure elapsed time, not wall-clock hours across a DST transition.
         run_at = (now.astimezone(timezone.utc) + timedelta(minutes=minutes)).astimezone(now.tzinfo)
         return {"kind": "once", "run_at": run_at.isoformat(), "display": f"once in {duration_str}"}
-    with contextlib.suppress(ValueError):
-        return _interval_schedule(parse_duration(schedule))
+    try:
+        minutes = parse_duration(schedule)
+    except ValueError:
+        pass
+    else:
+        # A syntactically valid duration that is not a valid interval (e.g. "0m")
+        # must fail loudly with the interval error, not fall through to the generic
+        # "Invalid schedule" dump.
+        return _interval_schedule(minutes)
 
     raise ValueError(
         f"Invalid schedule '{original}'. Use:\n"
