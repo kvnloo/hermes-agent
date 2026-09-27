@@ -173,6 +173,9 @@ def _stage_session_file_attachment(
         except (ValueError, _binascii.Error) as exc:
             raise ValueError("invalid data_url payload") from exc
         filename = _sanitize_attachment_name(name or Path(str(raw_path or "")).name)
+    if len(payload) > _ATTACH_BYTES_MAX_BYTES:
+        mb = _ATTACH_BYTES_MAX_BYTES // (1024 * 1024)
+        raise ValueError(f"attachment too large ({len(payload)} bytes; cap is {mb} MB)")
     root = _session_home_dir(session, "attachments")
     root.mkdir(parents=True, exist_ok=True)
     filename = _sanitize_attachment_name(filename)
