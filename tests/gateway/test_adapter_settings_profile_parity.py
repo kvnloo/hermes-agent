@@ -84,7 +84,16 @@ _SETTINGS = [
      lambda m: _discord(m, "_get_discord_command_sync_policy")),
     ("plugins.platforms.discord.adapter", "DISCORD_ALLOW_MENTION_EVERYONE", "true", "false",
      lambda m: m._env_bool("DISCORD_ALLOW_MENTION_EVERYONE", False)),
+    ("plugins.platforms.matrix.adapter", "HERMES_MATRIX_TEXT_BATCH_DELAY_SECONDS", "0.6", "1.2",
+     lambda m: _matrix_resolve(m, "_resolve_text_batch_delay")),
+    ("plugins.platforms.matrix.adapter", "HERMES_MATRIX_TEXT_BATCH_SPLIT_DELAY_SECONDS", "2.0", "3.5",
+     lambda m: _matrix_resolve(m, "_resolve_text_batch_split_delay")),
 ]
+
+
+def _matrix_resolve(mod, method):
+    adapter = object.__new__(mod.MatrixAdapter)
+    return getattr(adapter, method)()
 
 
 def _slack(mod, method):

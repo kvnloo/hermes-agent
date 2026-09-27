@@ -840,6 +840,14 @@ class MatrixAdapter(BasePlatformAdapter):
     def _crypto_db_path(self) -> Path:
         return (self._store_dir or _get_hermes_dir("platforms/matrix/store", "matrix/store")) / "crypto.db"
 
+    def _resolve_text_batch_delay(self) -> float:
+        # Ingress batching is per-profile: a served secondary reads its own tuning,
+        # never the launch profile's bridged os.environ value.
+        return float(_get_scoped_secret("HERMES_MATRIX_TEXT_BATCH_DELAY_SECONDS", "0.6"))
+
+    def _resolve_text_batch_split_delay(self) -> float:
+        return float(_get_scoped_secret("HERMES_MATRIX_TEXT_BATCH_SPLIT_DELAY_SECONDS", "2.0"))
+
     def __init__(self, config: PlatformConfig):
         super().__init__(config, Platform.MATRIX)
         self.max_message_length = _resolve_max_message_length(config)
@@ -903,8 +911,8 @@ class MatrixAdapter(BasePlatformAdapter):
             logger.info("Matrix: proxy configured — %s", self._proxy_url)
         self._max_media_bytes = _env_number("MATRIX_MAX_MEDIA_BYTES", 100 * 1024 * 1024, int)
         # Text batching merges client-side splits (~4000 chars) of one long message.
-        self._text_batch_delay_seconds = float(os.getenv("HERMES_MATRIX_TEXT_BATCH_DELAY_SECONDS", "0.6"))
-        self._text_batch_split_delay_seconds = float(os.getenv("HERMES_MATRIX_TEXT_BATCH_SPLIT_DELAY_SECONDS", "2.0"))
+        self._text_batch_delay_seconds = self._resolve_text_batch_delay()
+        self._text_batch_split_delay_seconds = self._resolve_text_batch_split_delay()
         self._approval_reaction_map = {
             "✅": "once", "🌀": "session", "♾️": "always", "♾": "always", "\u267e\ufe0f": "always",
             "\u267e": "always", "❌": "deny", "❎": "deny"}
