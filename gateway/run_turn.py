@@ -3789,12 +3789,25 @@ class GatewayTurnMixin:
                 if inspect.isawaitable(_bg_result):
                     await _bg_result
 
+    def _park_capped_followup(self, adapter: Any, session_key: str, pending_event: Any) -> None:
+        """Park a depth-capped follow-up back into the pending slot without losing FIFO order.
+
+        _run_agent_drain_pending already staged the next overflow head into the slot via
+        _promote_queued_event; a blind merge_pending_message_event would replace (and lose)
+        that staged message on text-on-text. Unstage it to the overflow front first, then park.
+        """
+        staged = adapter._pending_messages.pop(session_key, None)
+        if staged is not None and staged is not pending_event:
+            overflow = self._overflow_queue(session_key)
+            if overflow is not None:
+                overflow.insert(0, staged)
+        adapter._pending_messages[session_key] = pending_event
+
     async def _run_agent_queued_followup(
         self, turn_ctx: TurnContext, adapter: Any, pending: Optional[str], pending_event: Any,
         response: Any, result: Any, stream_task: Any,
     ) -> Any:
         """Run the queued / interrupting follow-up as the next turn (recursive ``_run_agent``)."""
-        from gateway.platforms.base import merge_pending_message_event
         from gateway.run import _preserve_queued_followup_history_offset
         source, session_id, session_key, run_generation = (
             turn_ctx.source, turn_ctx.session_id, turn_ctx.session_key, turn_ctx.run_generation,
@@ -3818,7 +3831,7 @@ class GatewayTurnMixin:
             )
             adapter = self._delivery_adapter_for(source)
             if adapter and pending_event:
-                merge_pending_message_event(adapter._pending_messages, session_key, pending_event)
+                self._park_capped_followup(adapter, session_key, pending_event)
             elif adapter and hasattr(adapter, 'queue_message'):
                 adapter.queue_message(session_key, pending)
             return turn_ctx.result_holder[0] or {"final_response": response, "messages": history}
