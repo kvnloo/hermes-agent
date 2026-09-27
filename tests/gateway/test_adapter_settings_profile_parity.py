@@ -84,6 +84,8 @@ _SETTINGS = [
      lambda m: _discord(m, "_get_discord_command_sync_policy")),
     ("plugins.platforms.discord.adapter", "DISCORD_ALLOW_MENTION_EVERYONE", "true", "false",
      lambda m: m._env_bool("DISCORD_ALLOW_MENTION_EVERYONE", False)),
+    ("plugins.platforms.a2a.adapter", "A2A_REPLY_TIMEOUT", "300", "60",
+     lambda m: m._reply_timeout()),
 ]
 
 

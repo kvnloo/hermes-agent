@@ -541,6 +541,33 @@ def _bare_adapter():
     return A2AAdapter(PlatformConfig(enabled=True))
 
 
+class TestReplyTimeoutCapture:
+    """A2A_REPLY_TIMEOUT is captured at construction (request/watchdog threads are
+    scope-less), so a served secondary keeps its own window."""
+
+    def test_captures_configured_timeout(self, monkeypatch):
+        monkeypatch.setenv("A2A_REPLY_TIMEOUT", "60")
+        adapter = _bare_adapter()
+        assert adapter._reply_timeout_seconds == 60.0
+        assert adapter._orphan_timeout_seconds == 300.0  # floored at _MIN_ORPHAN_TIMEOUT
+
+    def test_default_when_unset(self, monkeypatch):
+        monkeypatch.delenv("A2A_REPLY_TIMEOUT", raising=False)
+        adapter = _bare_adapter()
+        assert adapter._reply_timeout_seconds == 300.0
+
+    def test_garbage_falls_back_to_default(self, monkeypatch):
+        monkeypatch.setenv("A2A_REPLY_TIMEOUT", "not-a-number")
+        adapter = _bare_adapter()
+        assert adapter._reply_timeout_seconds == 300.0
+
+    def test_orphan_window_capped(self, monkeypatch):
+        monkeypatch.setenv("A2A_REPLY_TIMEOUT", "90000")
+        adapter = _bare_adapter()
+        assert adapter._reply_timeout_seconds == 90000.0
+        assert adapter._orphan_timeout_seconds == 86400.0  # capped at _MAX_ORPHAN_TIMEOUT
+
+
 class TestReplyCapture:
     def test_send_waits_for_notify_marked_final_reply(self):
         """Interim/editable sends must not satisfy the blocked A2A RPC future."""
