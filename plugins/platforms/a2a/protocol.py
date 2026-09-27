@@ -58,16 +58,29 @@ def now_iso() -> str:
 
 def build_agent_card(*, name: str, url: str, description: str, skills: Optional[list[dict]] = None,
                      streaming: bool = False, push_notifications: bool = False, auth_required: bool = False,
-                     tenant: str = "") -> dict:
+                     tenant: str = "", provider_org: Optional[str] = None,
+                     provider_url: Optional[str] = None) -> dict:
     """A2A v1.0 Agent Card. ``tenant`` is the optional multi-tenancy routing key on
-    AgentInterface; when present, clients MUST echo it in request params."""
+    AgentInterface; when present, clients MUST echo it in request params.
+
+    ``provider_org``/``provider_url`` are the profile-scoped values captured at adapter
+    construction; when ``None`` (direct protocol callers) the legacy process-env read
+    applies. ``_build_card`` must pass the captured values: it runs on
+    ThreadingHTTPServer's per-connection OS threads, which never inherit the profile
+    scope contextvar, so a bare os.getenv there would read the default profile's
+    branding into a secondary's card.
+    """
+    if provider_org is None:
+        provider_org = os.getenv("A2A_PROVIDER_ORG", "Hermes Agent")
+    if provider_url is None:
+        provider_url = os.getenv("A2A_PROVIDER_URL", "")
     iface: dict[str, Any] = {"url": url, "protocolBinding": "JSONRPC", "protocolVersion": PROTOCOL_VERSION, **({"tenant": tenant} if tenant else {})}
     card: dict[str, Any] = {
         "name": name,
         "description": description,
         "url": url,  # convenience for pre-1.0 clients; canonical is supportedInterfaces
         "version": "1.0.0",
-        "provider": {"organization": os.getenv("A2A_PROVIDER_ORG", "Hermes Agent"), "url": os.getenv("A2A_PROVIDER_URL", "") or url},
+        "provider": {"organization": provider_org, "url": provider_url or url},
         "supportedInterfaces": [iface],
         "capabilities": {"streaming": streaming, "pushNotifications": push_notifications,
                          "stateTransitionHistory": False, "extendedAgentCard": False},

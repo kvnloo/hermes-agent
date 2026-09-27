@@ -1618,6 +1618,8 @@ def default_profile_env(monkeypatch):
     monkeypatch.setenv("A2A_ADVERTISED_TOOLSETS", "default-only-toolset")
     monkeypatch.setenv("A2A_AGENT_DESCRIPTION", "Default profile's own agent.")
     monkeypatch.setenv("A2A_PUBLIC_URL", "https://default-profile.example.com/")
+    monkeypatch.setenv("A2A_PROVIDER_ORG", "Default Org")
+    monkeypatch.setenv("A2A_PROVIDER_URL", "https://default-org.example/")
 
 
 class TestMultiplexConstructionScope:
@@ -1642,6 +1644,13 @@ class TestMultiplexConstructionScope:
         # scoped retrofit the sibling fields above already got.
         assert adapter._public_url != "https://default-profile.example.com/"
         assert adapter._public_url == ""
+        # A2A_PROVIDER_ORG/URL missed the same retrofit: the per-request _build_card runs
+        # on scope-less HTTP threads, so a bare os.getenv there serves the default
+        # profile's branding in the secondary's card. A scoped miss falls to the module
+        # defaults, never to the launch profile's bridged values.
+        card = adapter._build_card()
+        assert card["provider"]["organization"] == "Hermes Agent"
+        assert card["provider"]["url"] != "https://default-org.example/"
 
     def test_default_profile_unscoped_keeps_env_precedence(
         self, monkeypatch, default_profile_env
@@ -1661,6 +1670,9 @@ class TestMultiplexConstructionScope:
         assert adapter.agent_name == "default-profile-agent"
         assert adapter._agents[""]["description"] == "Default profile's own agent."
         assert adapter._public_url == "https://default-profile.example.com/"
+        card = adapter._build_card()
+        assert card["provider"]["organization"] == "Default Org"
+        assert card["provider"]["url"] == "https://default-org.example/"
 
 
 def test_load_conversation_skips_non_dict_lines(monkeypatch, tmp_path):
