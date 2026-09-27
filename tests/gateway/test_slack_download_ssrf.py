@@ -67,6 +67,9 @@ class _RecordingClient:
     async def get(self, *args, **kwargs):
         raise _NetworkTouched("network access attempted")
 
+    def stream(self, *args, **kwargs):
+        raise _NetworkTouched("network access attempted")
+
 
 @pytest.mark.parametrize(
     "method_name",
@@ -115,7 +118,7 @@ def test_redirect_guard_is_wired(monkeypatch, method_name):
         if method_name == "_download_slack_file" \
         else ("https://files.slack.com/x.jpg",)
 
-    # The fake client raises when .get() is called; we only care that the
+    # The fake client raises when .get()/.stream() is called; we only care that the
     # client was constructed with the redirect guard hook.
     with pytest.raises(_NetworkTouched):
         asyncio.run(method(*args))
