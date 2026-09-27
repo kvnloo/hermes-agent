@@ -808,3 +808,85 @@ class TestOwnerAlivePidProbe:
 
         monkeypatch.setattr(status, "_pid_exists", boom)
         assert dl._owner_alive(12345, 999) is False
+
+
+class TestSendFinalLedgeredMarkerRelease:
+    """send_final_ledgered must not leave the durable turn marker set past a
+    completed send: a marker surviving a delivered reply makes the next boot's
+    crash-left sweep redeliver it (duplicate reply)."""
+
+    class _StubAdapter:
+        name = "stub"
+
+        def __init__(self, result):
+            self._result = result
+
+        async def _send_with_retry(self, **kwargs):
+            return self._result
+
+    class _StubPlatform:
+        def __init__(self, adapter, obligation_id=None):
+            self._adapter = adapter
+            self._obligation_id = obligation_id
+            self.releases = 0
+            self.finalized = 0
+
+        def _final_delivery_adapter(self, source):
+            return self._adapter
+
+        async def _record_delivery_obligation(self, *args):
+            return self._obligation_id
+
+        async def _release_turn_marker(self, event):
+            self.releases += 1
+
+        async def _finalize_delivery_obligation(self, *args):
+            self.finalized += 1
+
+    @staticmethod
+    def _event():
+        from gateway.config import Platform
+        from gateway.platforms.event import MessageEvent
+        from gateway.session import SessionSource
+
+        return MessageEvent(
+            text="the final answer",
+            source=SessionSource(platform=Platform.TELEGRAM, chat_id="chat"),
+            internal=True,
+            metadata={},
+        )
+
+    async def _send(self, success, obligation_id=None, ephemeral=True):
+        from gateway.platforms.base import BasePlatformAdapter, SendResult
+
+        stub = self._StubPlatform(
+            self._StubAdapter(SendResult(success=success)),
+            obligation_id=obligation_id,
+        )
+        result, _adapter = await BasePlatformAdapter.send_final_ledgered(
+            stub, self._event(), "session-key", "the final answer", {},
+            reply_to=None, is_ephemeral_response=ephemeral)
+        assert result.success is success
+        return stub
+
+    @pytest.mark.asyncio
+    async def test_marker_released_after_delivered_unledgered_send(self):
+        """An ephemeral/ledger-skipped final that WAS delivered must release the
+        marker: holding it past the send redelivers the reply on next boot."""
+        stub = await self._send(success=True, obligation_id=None, ephemeral=True)
+        assert stub.releases == 1
+
+    @pytest.mark.asyncio
+    async def test_marker_held_after_refused_unledgered_send(self):
+        """A refused send keeps the marker: the boot sweep stays the recovery
+        path for unledgered refused finals."""
+        stub = await self._send(success=False, obligation_id=None, ephemeral=True)
+        assert stub.releases == 0
+
+    @pytest.mark.asyncio
+    async def test_marker_released_presend_when_ledgered(self):
+        """Unchanged existing behavior: a ledgered final releases the marker
+        before the send and finalizes the obligation after."""
+        stub = await self._send(success=True, obligation_id="ob-1", ephemeral=False)
+        assert stub.releases == 1
+        assert stub.finalized == 1

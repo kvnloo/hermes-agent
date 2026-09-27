@@ -4299,6 +4299,13 @@ class BasePlatformAdapter(ABC):
             chat_id=event.source.chat_id, content=text_content, reply_to=reply_to, metadata=metadata)
         if obligation_id is not None:
             await self._finalize_delivery_obligation(obligation_id, result, event, delivery_adapter)
+        elif result.success:
+            # Delivered but nothing was ledgered (ephemeral, command echo, ledger
+            # off, or a record failure): the durable turn marker must not outlive
+            # the send, or a crash before the end-of-processing release makes the
+            # next boot redeliver an already-delivered reply. A refused send keeps
+            # the marker — the boot sweep stays its recovery path.
+            await self._release_turn_marker(event)
         return result, delivery_adapter
 
     async def _release_turn_marker(self, event: MessageEvent) -> None:
