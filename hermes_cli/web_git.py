@@ -69,6 +69,37 @@ def _git_ok(cwd: str, args: list[str]) -> None:
         raise RuntimeError(err.strip() or f"git {' '.join(args)} failed")
 
 
+_REV_SHA_RE = re.compile(r"^[0-9a-fA-F]{4,64}$")
+
+
+def _validate_base_sha(base: str | None) -> str | None:
+    """Validate the review routes' client-supplied ``base``.
+
+    It lands in git's revision slot *before* any ``--`` fence, so a
+    leading-dash value is flag injection: ``--output=<path>`` turns a
+    read-only ``git diff`` into an arbitrary file write on the gateway
+    host. The desktop client always sends a commit SHA here; anything
+    else fails closed (the route wrapper maps ``RuntimeError`` to
+    HTTP 400).
+    """
+    if not base:
+        return None
+    if not _REV_SHA_RE.match(base):
+        raise RuntimeError(f"invalid base revision: {base!r}")
+    return base
+
+
+def _validate_ref(ref: str | None) -> str | None:
+    """Validate ``review_rev_parse``'s client-supplied ``ref``.
+
+    Refs may legitimately be branch names, so only the flag-injection
+    shape is rejected: no real revision starts with ``-``.
+    """
+    if ref is not None and ref.startswith("-"):
+        raise RuntimeError(f"invalid ref: {ref!r}")
+    return ref
+
+
 def _is_dir(cwd: str) -> bool:
     try:
         return Path(cwd).is_dir()
@@ -252,7 +283,7 @@ def review_list(cwd: str, scope: str, base_ref: str | None) -> dict:
     if not _is_dir(cwd):
         return {"files": [], "base": None}
     if scope in ("branch", "lastTurn"):
-        base = _branch_base(cwd) if scope == "branch" else base_ref
+        base = _branch_base(cwd) if scope == "branch" else _validate_base_sha(base_ref)
         if not base:
             return {"files": [], "base": None}
         rng = f"{base}...HEAD" if scope == "branch" else base
@@ -295,7 +326,8 @@ def review_diff(cwd: str, file_path: str, scope: str, base_ref: str | None, stag
         base = _branch_base(cwd)
         return _git_out(cwd, ["diff", f"{base}...HEAD", "--", file_path]) if base else ""
     if scope == "lastTurn":
-        return _git_out(cwd, ["diff", base_ref, "--", file_path]) if base_ref else ""
+        base = _validate_base_sha(base_ref)
+        return _git_out(cwd, ["diff", base, "--", file_path]) if base else ""
     if staged:
         return _git_out(cwd, ["diff", "--cached", "--", file_path])
     worktree = _git_out(cwd, ["diff", "--", file_path])
@@ -333,7 +365,8 @@ def review_revert(cwd: str, file_path: str | None) -> dict:
 
 
 def review_rev_parse(cwd: str, ref: str | None) -> str | None:
-    return _git_line(cwd, ["rev-parse", ref or "HEAD"]) or None
+    validated = _validate_ref(ref)
+    return _git_line(cwd, ["rev-parse", validated or "HEAD"]) or None
 
 
 def _has_staged(raw: str) -> bool:
