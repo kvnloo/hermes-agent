@@ -368,7 +368,9 @@ def _build_children(
     live_deleg_id: Optional[str], live_writers: list, task_images: Optional[List[Optional[List[str]]]] = None,
 ) -> tuple[List[tuple], Optional[str]]:
     """Build every child on the main thread (construction is not thread-safe);
-    ``(children, None)`` or ``([], error)`` on an explicit-pin preflight failure."""
+    ``(children, None)`` or ``([], error)`` on an explicit-pin preflight failure.
+    Children built before a failure are closed: an abandoned child keeps its
+    dedicated session_db handle (released only by ``close()``) until process exit."""
     from tools.delegation_live_log import wrap_progress_callback
     from tools.delegation_output_schema import append_output_contract
     overrides = {
@@ -380,41 +382,49 @@ def _build_children(
         "routing_cfg": routing_cfg,
     }
     children = []
-    for i, t in enumerate(task_list):
-        _task_schema = task_schemas[i] if i < len(task_schemas) else None
-        _child_context = t.get("context")
-        if _task_schema is not None:
-            _child_context = append_output_contract(_child_context, _task_schema)
-        try:
-            child = _build_child_preserving_parent_tools(
-                task_index=i, goal=t["goal"], context=_child_context,
-                toolsets=None,  # always inherit the parent's toolsets
-                model=creds["model"], max_iterations=max_iterations, task_count=len(task_list),
-                parent_agent=parent_agent, role=_normalize_role(t.get("role") or top_role), **overrides,
-            )
-        except ValueError as exc:
-            return [], str(exc)
-        if _task_schema is not None:
-            with _quiet("Could not attach output schema to child %d", i):
-                child._delegate_output_schema = _task_schema
-        # Validated per-task images; absent on image-less tasks, which keep the text-only goal turn.
-        _t_images = task_images[i] if task_images and i < len(task_images) else None
-        if _t_images:
-            with _quiet("Could not attach images to child %d", i):
-                child._delegate_images = _t_images
-        # Tee progress events into the live transcript (wrapper keeps the
-        # _flush contract and swallows writer failures).
-        _writer = live_writers[i] if i < len(live_writers) else None
-        if _writer is not None:
-            child.tool_progress_callback = wrap_progress_callback(getattr(child, "tool_progress_callback", None), _writer)
-            child._live_transcript_path = str(_writer.path)
-        if live_deleg_id:
-            setattr(child, "_delegation_id", live_deleg_id)
-            _ident_ref = getattr(child, "_progress_identity_ref", None)
-            if isinstance(_ident_ref, dict):
-                _ident_ref["delegation_id"] = live_deleg_id
-        children.append((i, t, child))
-    return children, None
+    completed = False
+    try:
+        for i, t in enumerate(task_list):
+            _task_schema = task_schemas[i] if i < len(task_schemas) else None
+            _child_context = t.get("context")
+            if _task_schema is not None:
+                _child_context = append_output_contract(_child_context, _task_schema)
+            try:
+                child = _build_child_preserving_parent_tools(
+                    task_index=i, goal=t["goal"], context=_child_context,
+                    toolsets=None,  # always inherit the parent's toolsets
+                    model=creds["model"], max_iterations=max_iterations, task_count=len(task_list),
+                    parent_agent=parent_agent, role=_normalize_role(t.get("role") or top_role), **overrides,
+                )
+            except ValueError as exc:
+                return [], str(exc)
+            if _task_schema is not None:
+                with _quiet("Could not attach output schema to child %d", i):
+                    child._delegate_output_schema = _task_schema
+            # Validated per-task images; absent on image-less tasks, which keep the text-only goal turn.
+            _t_images = task_images[i] if task_images and i < len(task_images) else None
+            if _t_images:
+                with _quiet("Could not attach images to child %d", i):
+                    child._delegate_images = _t_images
+            # Tee progress events into the live transcript (wrapper keeps the
+            # _flush contract and swallows writer failures).
+            _writer = live_writers[i] if i < len(live_writers) else None
+            if _writer is not None:
+                child.tool_progress_callback = wrap_progress_callback(getattr(child, "tool_progress_callback", None), _writer)
+                child._live_transcript_path = str(_writer.path)
+            if live_deleg_id:
+                setattr(child, "_delegation_id", live_deleg_id)
+                _ident_ref = getattr(child, "_progress_identity_ref", None)
+                if isinstance(_ident_ref, dict):
+                    _ident_ref["delegation_id"] = live_deleg_id
+            children.append((i, t, child))
+        completed = True
+        return children, None
+    finally:
+        if not completed:
+            for _, _, built in children:
+                with _quiet("Could not close abandoned delegate child"):
+                    built.close()
 
 
 def _oneshot_spawn_budget(parent_agent: Any, requested: int) -> Optional[str]:
