@@ -84,6 +84,10 @@ _SETTINGS = [
      lambda m: _discord(m, "_get_discord_command_sync_policy")),
     ("plugins.platforms.discord.adapter", "DISCORD_ALLOW_MENTION_EVERYONE", "true", "false",
      lambda m: m._env_bool("DISCORD_ALLOW_MENTION_EVERYONE", False)),
+    ("plugins.platforms.teams.summary_writer", "TEAMS_INCOMING_WEBHOOK_URL",
+     "https://default.example/hook", "https://secondary.example/hook",
+     lambda m: m.TeamsSummaryWriter(
+         platform_config=PlatformConfig(enabled=True))._resolve_delivery_config(None)["incoming_webhook_url"]),
 ]
 
 

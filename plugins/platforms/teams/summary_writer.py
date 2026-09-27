@@ -6,7 +6,6 @@ Lives inside the Teams platform plugin so the meeting pipeline reuses one Teams
 from __future__ import annotations
 
 import html
-import os
 from typing import Any, Optional
 from urllib.parse import quote
 
@@ -29,7 +28,10 @@ def _parse_bool(value: Any, *, default: bool = False) -> bool:
 
 
 _LIST_SECTIONS = (("Key decisions", "key_decisions"), ("Action items", "action_items"), ("Risks", "risks"))
-# Env fallbacks for delivery config keys, applied only where nothing else set the key (access_token is a scoped secret).
+# Env fallbacks for delivery config keys, applied only where nothing else set the key; every
+# key reads through the profile-scoped reader so a served secondary resolves its own .env
+# instead of borrowing the launch profile's os.environ (same class as the telegram
+# webhook host/port and a2a reply-timeout fixes).
 _ENV_KEYS = {"delivery_mode": "TEAMS_DELIVERY_MODE", "incoming_webhook_url": "TEAMS_INCOMING_WEBHOOK_URL",
              "access_token": "TEAMS_GRAPH_ACCESS_TOKEN", "team_id": "TEAMS_TEAM_ID", "channel_id": "TEAMS_CHANNEL_ID", "chat_id": "TEAMS_CHAT_ID"}
 
@@ -84,7 +86,7 @@ class TeamsSummaryWriter:
                 merged.setdefault("channel_id", platform_cfg.home_channel.chat_id)
         merged.update(dict(config or {}))
         for key, env in _ENV_KEYS.items():
-            value = _get_scoped_secret(env, "") if key == "access_token" else os.getenv(env, "")
+            value = _get_scoped_secret(env, "")
             if value and not merged.get(key):
                 merged[key] = value
         return merged
