@@ -394,6 +394,30 @@ class TestSaveAndLoadRoundtrip:
         assert config_path.read_text(encoding="utf-8") == original
         assert list((tmp_path / "backups" / "config").glob("config.yaml.corrupt.*"))
 
+    def test_atomic_config_write_secures_file_to_0600_on_create(self, tmp_path):
+        """THE config.yaml writer must leave the file 0600 even when it did not exist:
+        credential-shaped values (model.api_key, ...) land here in plaintext."""
+        if os.name == "nt":
+            pytest.skip("POSIX file modes only")
+        from hermes_cli.config import atomic_config_write
+
+        config_path = tmp_path / "config.yaml"
+        atomic_config_write(config_path, {"model": {"api_key": "sk-test-secret"}})
+        mode = config_path.stat().st_mode & 0o777
+        assert mode == 0o600, f"expected 0o600, got {oct(mode)}"
+
+    def test_config_set_credential_key_creates_0600_config(self, tmp_path):
+        """`hermes config set model.api_key` must not create a group/world-readable
+        config.yaml holding the secret in plaintext."""
+        if os.name == "nt":
+            pytest.skip("POSIX file modes only")
+        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+            set_config_value("model.api_key", "sk-test-secret-12345")
+        config_path = tmp_path / "config.yaml"
+        mode = config_path.stat().st_mode & 0o777
+        assert mode == 0o600, f"expected 0o600, got {oct(mode)}"
+        assert "sk-test-secret-12345" in config_path.read_text(encoding="utf-8")
+
 class TestLoadEnvInlineComments:
     def test_unquoted_hash_is_a_comment_quoted_hash_is_data(self, tmp_path):
         """load_env is the one dotenv reader (agent.secret_scope.load_env_file): an unquoted ` #...` tail

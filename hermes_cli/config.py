@@ -2056,6 +2056,9 @@ def atomic_config_write(config_path: Path, data: Dict[str, Any], *, extra_conten
 
     _refuse_failed_read(config_path, data)
     atomic_roundtrip_yaml_save(config_path, data, extra_content_on_create=extra_content_on_create)
+    # config.yaml is secret-capable (credential mirrors land here in plaintext): every write
+    # through this chokepoint leaves it 0600 (no-op when managed or in a container).
+    _secure_file(config_path)
 
 
 def load_config() -> Dict[str, Any]:
