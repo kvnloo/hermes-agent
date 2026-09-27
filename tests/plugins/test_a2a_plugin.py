@@ -1618,6 +1618,7 @@ def default_profile_env(monkeypatch):
     monkeypatch.setenv("A2A_ADVERTISED_TOOLSETS", "default-only-toolset")
     monkeypatch.setenv("A2A_AGENT_DESCRIPTION", "Default profile's own agent.")
     monkeypatch.setenv("A2A_PUBLIC_URL", "https://default-profile.example.com/")
+    monkeypatch.setenv("A2A_REPLY_TIMEOUT", "60")
 
 
 class TestMultiplexConstructionScope:
@@ -1642,6 +1643,9 @@ class TestMultiplexConstructionScope:
         # scoped retrofit the sibling fields above already got.
         assert adapter._public_url != "https://default-profile.example.com/"
         assert adapter._public_url == ""
+        # A2A_REPLY_TIMEOUT missed the same retrofit: a scoped miss falls to
+        # the 300s default, never to the launch profile's bridged value.
+        assert adapter._reply_timeout == 300.0
 
     def test_default_profile_unscoped_keeps_env_precedence(
         self, monkeypatch, default_profile_env
@@ -1661,6 +1665,7 @@ class TestMultiplexConstructionScope:
         assert adapter.agent_name == "default-profile-agent"
         assert adapter._agents[""]["description"] == "Default profile's own agent."
         assert adapter._public_url == "https://default-profile.example.com/"
+        assert adapter._reply_timeout == 60.0
 
 
 def test_load_conversation_skips_non_dict_lines(monkeypatch, tmp_path):

@@ -63,17 +63,23 @@ _METHODS: dict[str, tuple[str, bool]] = {
 }
 
 
-def _reply_timeout() -> float:
-    """Seconds to wait for the agent to answer an inbound task."""
+def _coerce_reply_timeout(raw) -> float:
+    """A2A_REPLY_TIMEOUT -> seconds; unset/garbage -> 300.0, floored at 1.0."""
     try:
-        return max(1.0, float(os.getenv("A2A_REPLY_TIMEOUT", "300")))
+        return max(1.0, float(raw))
     except (ValueError, TypeError):
         return 300.0
 
 
-def _orphan_timeout() -> float:
+def _reply_timeout() -> float:
+    """Seconds to wait for the agent to answer an inbound task (process-env fallback)."""
+    return _coerce_reply_timeout(os.getenv("A2A_REPLY_TIMEOUT", "300"))
+
+
+def _orphan_timeout(reply_timeout: float | None = None) -> float:
     """Orphan grace must never expire before a configured reply window, but stays bounded."""
-    return min(float(_MAX_ORPHAN_TIMEOUT), max(float(_MIN_ORPHAN_TIMEOUT), _reply_timeout()))
+    window = _reply_timeout() if reply_timeout is None else reply_timeout
+    return min(float(_MAX_ORPHAN_TIMEOUT), max(float(_MIN_ORPHAN_TIMEOUT), window))
 
 
 def _default_agent_name() -> str:
@@ -280,6 +286,9 @@ class A2AAdapter(BasePlatformAdapter):
         # do_GET/do_POST run on ThreadingHTTPServer's per-connection OS threads, which never inherit
         # the profile scope contextvar (same class as A2A_PORT above).
         self._public_url = _get_scoped_secret("A2A_PUBLIC_URL", "").strip()
+        # Same class again: a secondary multiplex profile's own A2A_REPLY_TIMEOUT wins; a scoped
+        # miss falls to the 300s default, never to the launch profile's bridged env value.
+        self._reply_timeout = _coerce_reply_timeout(_get_scoped_secret("A2A_REPLY_TIMEOUT", "300"))
         self._agents = self._load_served_agents(extra)
         self._httpd: Optional[ThreadingHTTPServer] = None
         self._server_thread = self._watchdog_thread = None  # type: Optional[threading.Thread]
@@ -361,7 +370,7 @@ class A2AAdapter(BasePlatformAdapter):
         """Fail stale tasks that no request still owns."""
         with self._pending_lock:
             active_tasks = set(self._active_tasks)
-        timeout = _orphan_timeout()
+        timeout = _orphan_timeout(self._reply_timeout)
         failed = self.tasks.fail_orphans(timeout, exclude=active_tasks)
         for tid in failed:
             logger.warning("A2A: orphaned task %s marked failed (timeout %gs)", tid, timeout)
@@ -416,7 +425,7 @@ class A2AAdapter(BasePlatformAdapter):
                 "name": str(val.get("name") or f"Hermes {slug}"),
                 "description": str(val.get("description") or f"Hermes profile '{profile or slug}' exposed over A2A."),
                 "advertised_toolsets": list(toolsets or []),
-                "timeout": int(val.get("timeout") or _reply_timeout()),
+                "timeout": int(val.get("timeout") or self._reply_timeout),
             }
         return agents
 
@@ -579,7 +588,7 @@ class A2AAdapter(BasePlatformAdapter):
         safe_ctx = _safe_context_slug(context_id)
         session_title = f"a2a-{slug}-{safe_ctx}"
         key = (profile or "default", slug, safe_ctx)
-        timeout = int(agent.get("timeout") or _reply_timeout())
+        timeout = int(agent.get("timeout") or self._reply_timeout)
         with self._forward_lock(key):
             session_id = self._profile_sessions.get(key) or _state_db(
                 profile, "SELECT id FROM sessions WHERE title = ? ORDER BY started_at DESC LIMIT 1",
@@ -657,7 +666,7 @@ class A2AAdapter(BasePlatformAdapter):
                 return on_timeout
 
     def _await_reply(self, pending: dict, keepalive=None) -> tuple[str, str]:
-        return self._await_future(pending["future"], pending["started"] + _reply_timeout(), keepalive,
+        return self._await_future(pending["future"], pending["started"] + self._reply_timeout, keepalive,
                                   (protocol.STATE_FAILED, "[agent did not reply in time]"))
 
     def _rpc_message_send(self, req_id: Any, params: dict, peer: str, agent: Optional[dict] = None, v1_response: bool = False) -> dict:
@@ -725,7 +734,7 @@ class A2AAdapter(BasePlatformAdapter):
         try:
             if (fut := self.tasks.watch(task_id, *self._scope_for_agent(agent))) is None:
                 return self._sse_write(handler, protocol.sse_done())
-            state, reply = self._await_future(fut, time.time() + _reply_timeout(), self._keepalive(handler),
+            state, reply = self._await_future(fut, time.time() + self._reply_timeout, self._keepalive(handler),
                                               (rec["state"], rec.get("reply", "")))
             self._emit_terminal(handler, task_id, rec["context_id"], state, reply, req_id=req_id)
         except (BrokenPipeError, ConnectionResetError):
