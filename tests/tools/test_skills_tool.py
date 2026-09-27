@@ -383,6 +383,39 @@ class TestSkillView:
             session_id="session-view",
         )
 
+    def test_background_review_view_is_telemetry_silent(self, tmp_path):
+        """Curator/background-review reads must not refresh the staleness clock.
+
+        The curator's deterministic pass consumes last_used_at as its staleness
+        ground truth; if its own inspection views bumped the telemetry, every
+        reviewed skill would look freshly used and could never go stale.
+        """
+        from tools.skill_provenance import (
+            BACKGROUND_REVIEW,
+            reset_current_write_origin,
+            set_current_write_origin,
+        )
+        from tools.skills_tool import _skill_view_with_bump
+
+        with (
+            patch("tools.skills_tool.SKILLS_DIR", tmp_path),
+            patch("tools.skill_usage.bump_view") as bump_view,
+            patch("tools.skill_usage.bump_use") as bump_use,
+        ):
+            _make_skill(tmp_path, "my-skill")
+            token = set_current_write_origin(BACKGROUND_REVIEW)
+            try:
+                raw = _skill_view_with_bump(
+                    {"name": "my-skill"},
+                    task_id="task-review",
+                    session_id="session-review",
+                )
+            finally:
+                reset_current_write_origin(token)
+
+        assert json.loads(raw)["success"] is True
+        bump_view.assert_not_called()
+        bump_use.assert_not_called()
 
     def test_view_reference_files(self, tmp_path):
         with patch("tools.skills_tool.SKILLS_DIR", tmp_path):
