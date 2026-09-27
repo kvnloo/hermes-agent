@@ -385,8 +385,18 @@ def migrate_profile_identity_verb(runner):
     Runs on the control-socket executor thread; ``rekey_profile_routing`` takes the store lock."""
 
     def _handler(params: dict) -> dict:
-        old, new = str(params.get("old") or "").strip(), str(params.get("new") or "").strip()
-        if not old or not new or old == new:
+        old_raw, new_raw = str(params.get("old") or "").strip(), str(params.get("new") or "").strip()
+        if not old_raw or not new_raw:
+            return {"ok": False, "error": "old/new required and must differ"}
+        # Names arrive over the control socket from any same-user process: apply the
+        # CLI's canonical rule before any path is built or store touched — a raw
+        # ``../../`` name would otherwise escape ``profiles/`` at the path build below.
+        try:
+            from hermes_cli.profiles import _canon_valid
+            old, new = _canon_valid(old_raw), _canon_valid(new_raw)
+        except ValueError as exc:
+            return {"ok": False, "error": f"invalid profile name: {exc}"}
+        if old == new:
             return {"ok": False, "error": "old/new required and must differ"}
         store = getattr(runner, "session_store", None)
         if store is None:
@@ -432,9 +442,15 @@ def purge_profile_identity_verb(runner):
     executor thread; ``purge_profile_routing`` takes the store lock."""
 
     def _handler(params: dict) -> dict:
-        name = str(params.get("name") or "").strip()
-        if not name:
+        name_raw = str(params.get("name") or "").strip()
+        if not name_raw:
             return {"ok": False, "error": "name required"}
+        # Same canonical rule as the migrate verb: socket clients are untrusted.
+        try:
+            from hermes_cli.profiles import _canon_valid
+            name = _canon_valid(name_raw)
+        except ValueError as exc:
+            return {"ok": False, "error": f"invalid profile name: {exc}"}
         store = getattr(runner, "session_store", None)
         if store is None:
             return {"ok": False, "error": "live gateway has no session store"}
