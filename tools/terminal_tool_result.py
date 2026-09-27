@@ -76,6 +76,13 @@ _EXIT_CODE_SEMANTICS: dict[str, dict[int, str]] = {
     "git": {1: "Non-zero exit (often normal — e.g. 'git diff' returns 1 when files differ)"},
 }
 
+# Privilege/env relays that forward to the real command: `sudo grep ...`
+# Privilege/env relays that forward to the real command: `sudo grep ...`
+# still carries grep's exit-code semantics, so the base-command extraction
+# skips them (but not their flags — `sudo -u root grep` keeps the old None).
+_COMMAND_WRAPPER_PREFIXES = frozenset({"sudo", "doas", "env", "command"})
+
+
 # Model-facing warning attached when the backend replaced its container/sandbox
 # mid-command (out-of-band removal, terminal sandbox state). Persistent-filesystem
 # state was restored, but background processes and anything outside the synced
@@ -108,8 +115,11 @@ def _interpret_exit_code(command: str, exit_code: int) -> str | None:
     # command = its first word that isn't a VAR=val assignment, basename'd.
     segments = re.split(r'\s*(?:\|\||&&|[|;])\s*', command)
     last_segment = (segments[-1] if segments else command).strip()
-    base_cmd = next((w.split("/")[-1] for w in last_segment.split()
-                     if "=" not in w or w.startswith("-")), "")
+    words = [w for w in last_segment.split() if "=" not in w or w.startswith("-")]
+    # Skip privilege/env relays so `sudo grep ...` keeps grep's semantics.
+    while len(words) > 1 and words[0] in _COMMAND_WRAPPER_PREFIXES and not words[1].startswith("-"):
+        words.pop(0)
+    base_cmd = words[0].split("/")[-1] if words else ""
     return _EXIT_CODE_SEMANTICS.get(base_cmd, {}).get(exit_code)
 
 
