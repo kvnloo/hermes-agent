@@ -289,6 +289,20 @@ def _resolve_git_url(identifier: str) -> tuple[str, Optional[str]]:
             parts = path.split("/")
             if len(parts) >= 3 and all(parts[:2]) and parts[2] in _GITHUB_BROWSER_SEGMENTS:
                 repo = parts[1].removesuffix(".git")
+                # A browser URL can name a revision (tree/<rev>, blob/<rev>, commit/<sha>,
+                # releases/tag/<tag>). Installing it must not silently fall back to the
+                # default branch — refuse loudly and point at --ref with an exact SHA,
+                # the pinning rule the rest of the installer enforces.
+                revision = None
+                if parts[2] in ("tree", "blob", "commit", "commits") and len(parts) >= 4:
+                    revision = parts[3] or None
+                elif parts[2] == "releases" and len(parts) >= 5 and parts[3] == "tag":
+                    revision = parts[4] or None
+                if revision:
+                    raise ValueError(
+                        f"GitHub URL names revision '{revision}': resolve it to a "
+                        "40-character commit SHA and install with --ref <sha>."
+                    )
                 subdir = None
                 if parts[2] == "tree" and len(parts) >= 5:
                     subdir = "/".join(p for p in parts[4:] if p).strip("/") or None

@@ -119,6 +119,37 @@ class TestResolveGitUrl:
         assert url == identifier
         assert subdir is None
 
+    @pytest.mark.parametrize(
+        "identifier,revision",
+        [
+            ("https://github.com/owner/repo/tree/v1.2.3/plugins/foo", "v1.2.3"),
+            ("https://github.com/owner/repo/tree/main", "main"),
+            ("https://github.com/owner/repo/blob/v1.2.3/plugins/foo/manifest.json", "v1.2.3"),
+            ("https://github.com/owner/repo/commit/0123456789abcdef0123456789abcdef01234567",
+             "0123456789abcdef0123456789abcdef01234567"),
+            ("https://github.com/owner/repo/releases/tag/v1.0.0", "v1.0.0"),
+        ],
+    )
+    def test_browser_url_with_revision_is_refused_loudly(self, identifier, revision):
+        """A browser URL naming a revision must never silently install the default
+        branch: the resolver refuses and points at --ref with an exact SHA."""
+        with pytest.raises(ValueError, match="--ref"):
+            _resolve_git_url(identifier)
+
+    @pytest.mark.parametrize(
+        "identifier",
+        [
+            "https://github.com/owner/repo/pull/123",
+            "https://github.com/owner/repo/issues/456",
+            "https://github.com/owner/repo/wiki",
+            "https://github.com/owner/repo/actions",
+        ],
+    )
+    def test_browser_url_without_revision_segment_still_resolves(self, identifier):
+        url, subdir = _resolve_git_url(identifier)
+        assert url == "https://github.com/owner/repo.git"
+        assert subdir is None
+
 
 # ── _resolve_subdir_within ──────────────────────────────────────────────────
 
