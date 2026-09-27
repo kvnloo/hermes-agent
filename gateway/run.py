@@ -3647,6 +3647,9 @@ class GatewayRunner(
         # Value: (AIAgent, config_signature); LRU cap in _enforce_agent_cache_cap, TTL in expiry watcher.
         self._agent_cache: "OrderedDict[str, tuple]" = OrderedDict()
         self._agent_cache_lock = threading.Lock()
+        # Agents evicted mid-turn whose soft release waits for the worker's turn finalizer
+        # (see _drain_deferred_agent_release); one bounded slot per session.
+        self._deferred_agent_releases: "Dict[str, tuple]" = {}
         # Launch-time identity of the profile that owns ``self.adapters``; ``_authorization_adapter``
         # compares against this rather than the per-turn ``_active_profile_name()``. A multiplex
         # host's primary map is always the default profile, even when a named profile launched

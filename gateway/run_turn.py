@@ -3982,6 +3982,8 @@ class GatewayTurnMixin:
             # Release the slot only if this run's generation still owns it (/stop or /new may have
             # installed its own state).
             self._release_running_agent_state(session_key, run_generation=turn_ctx.run_generation)
+            # A mid-turn eviction's deferred soft release fires only once this worker is done.
+            self._drain_deferred_agent_release(session_key, turn_ctx.run_generation)
         if self._draining:
             self._update_runtime_status("draining")
 

@@ -1386,6 +1386,8 @@ class GatewayInboundMixin:
             # sentinel/agent and lease. Reset/stop release their stale slot before installing a
             # successor, preserving reset-zombie cleanup without granting gen-N successor authority.
             self._release_running_agent_state(_quick_key, run_generation=_run_generation)
+            # A mid-turn eviction's deferred soft release fires only once this worker is done.
+            self._drain_deferred_agent_release(_quick_key, _run_generation)
             # Turn lease is keyed by (routing key, run generation) so this unwind can only free
             # the lease its own turn acquired, never a newer turn's.
             self._release_turn_lease(_quick_key, _run_generation)

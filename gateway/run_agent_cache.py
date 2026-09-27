@@ -292,9 +292,26 @@ class GatewayAgentCacheMixin:
         not have its sentinel/lease wiped by the displaced path's tail. Then sweep lease tokens
         from generations OLDER than the current one: a hung evicted turn's finalizer may never run,
         and each such generation would otherwise pin its token (and its ``_SessionLease``) forever.
-        Identity-checked + idempotent, so a live successor's token is never affected."""
+        Identity-checked + idempotent, so a live successor's token is never affected.
+
+        The evicted agent's soft release is deferred when it is the just-cleared running
+        agent: its worker may still be unwinding, and release_clients()/transcript wipe
+        against a live worker is use-after-release. The turn finalizer drains the deferred
+        entry (see _drain_deferred_agent_release)."""
+        state = self._peek_session_state(session_key)
+        turn = state.turn if state is not None else None
+        running_agent = turn.agent if turn is not None else None
+        worker_generation = getattr(getattr(turn, "ctx", None), "run_generation", None)
+        if worker_generation is None and run_generation:
+            # Bumps are exactly +1 and never reset; callers pass the post-bump value,
+            # so the displaced worker ran one generation earlier.
+            worker_generation = run_generation - 1
         self._release_running_agent_state(session_key, run_generation=run_generation)
-        self._evict_cached_agent(session_key)
+        self._evict_cached_agent(
+            session_key,
+            defer_release_agent=running_agent,
+            defer_release_generation=worker_generation,
+        )
         state = self._peek_session_state(session_key)
         registry = getattr(self, "_turn_leases", None)
         if state is None or registry is None:
@@ -714,7 +731,13 @@ class GatewayAgentCacheMixin:
         )
         return hashlib.sha256(repr(key_tuple).encode("utf-8")).hexdigest()
 
-    def _evict_cached_agent(self, session_key: str) -> None:
+    def _evict_cached_agent(
+        self,
+        session_key: str,
+        *,
+        defer_release_agent: Any = None,
+        defer_release_generation: Any = None,
+    ) -> None:
         """Remove a cached agent (/new, /model, ...) and soft-release its LLM client pool (AIAgent
         holds reference cycles; without it RSS grows across /new). Soft = frees clients and child
         subagents but PRESERVES terminal sandbox / browser / bg processes since the session may
@@ -746,12 +769,64 @@ class GatewayAgentCacheMixin:
             if _cache is not None:
                 evicted = _cache.pop(session_key, None)
         agent = _first_agent(evicted)
+        if (
+            defer_release_agent is not None
+            and defer_release_agent is not _AGENT_PENDING_SENTINEL
+            and agent is defer_release_agent
+        ):
+            # The just-cleared running agent: its worker may still be unwinding, so the
+            # soft release waits for the turn finalizer (_drain_deferred_agent_release).
+            # The pop stands — the next message still rebuilds fresh (#44212).
+            self._stash_deferred_agent_release(session_key, defer_release_generation, agent)
+            return
         # Never tear down an agent that's mid-turn — its client, sandbox and child subagents are in use.
         if agent is None or agent is _AGENT_PENDING_SENTINEL or id(agent) in self._running_agent_ids():
             return
         self._spawn_release_thread(
             self._release_evicted_agent_soft, (agent,), f"agent-evict-{str(session_key)[:24]}", inline_fallback=True,
             session_key=session_key,
+        )
+
+    def _deferred_release_map(self) -> Dict[str, tuple]:
+        """session_key -> (worker_generation, agent) whose soft release is deferred."""
+        deferred = self.__dict__.get("_deferred_agent_releases")
+        if deferred is None:
+            deferred = self._deferred_agent_releases = {}
+        return deferred
+
+    def _stash_deferred_agent_release(
+        self, session_key: str, worker_generation: Any, agent: Any
+    ) -> None:
+        """Defer an evicted mid-turn agent's soft release until its worker finishes.
+
+        One slot per session: a newer stash drops the older one WITHOUT releasing it
+        (its worker may still be hung — releasing would be the use-after-release this
+        avoids). Bounded by construction; the turn finalizer drains the live entry.
+        """
+        if not session_key or agent is None:
+            return
+        self._deferred_release_map()[session_key] = (worker_generation, agent)
+
+    def _drain_deferred_agent_release(self, session_key: str, run_generation: Any) -> None:
+        """Soft-release the deferred agent for a finished turn; turn finalizers call this.
+
+        Generation-checked: only the finishing turn's own entry is released, so a stale
+        worker's unwind can never tear down a successor's deferred agent. A hung worker
+        never drains — its entry stays pinned (bounded: one per session).
+        """
+        if not session_key:
+            return
+        deferred = self.__dict__.get("_deferred_agent_releases")
+        if not deferred or session_key not in deferred:
+            return
+        worker_generation, agent = deferred[session_key]
+        if worker_generation != run_generation:
+            return
+        del deferred[session_key]
+        self._spawn_release_thread(
+            self._release_evicted_agent_soft, (agent,),
+            f"agent-evict-deferred-{str(session_key)[:24]}",
+            inline_fallback=True, session_key=session_key,
         )
 
     def _spawn_release_thread(self, target, args: tuple, name: str, *, inline_fallback: bool,
