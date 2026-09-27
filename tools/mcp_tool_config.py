@@ -388,12 +388,13 @@ def _load_mcp_config() -> Dict[str, dict]:
         from utils import env_var_enabled as _env_enabled
         if _env_enabled("HERMES_SAFE_MODE"):
             return {}
-        servers = load_config().get("mcp_servers")
-        try:  # ensure .env vars are available for interpolation
+        try:  # .env first: load_config() expands ${VAR} refs, and the suspicious-server
+            # filter must see those values — not the inert placeholders they leave behind.
             from hermes_cli.env_loader import load_hermes_dotenv
             load_hermes_dotenv()
         except Exception:
             pass
+        servers = load_config().get("mcp_servers")
         safe_servers: Dict[str, dict] = {}
         for name, cfg in _filter_suspicious_mcp_servers(servers if isinstance(servers, dict) else {}).items():
             interpolated = _interpolate_env_vars(cfg)
