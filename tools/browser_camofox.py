@@ -29,6 +29,11 @@ from hermes_constants import get_hermes_home_override, hermes_home_key
 from tools.browser_camofox_state import get_camofox_identity
 from tools.registry import tool_error
 
+try:
+    from tools.url_safety import is_always_blocked_url as _is_always_blocked_url
+except Exception:
+    _is_always_blocked_url = lambda url: True  # noqa: E731 — fail-closed on the floor too
+
 logger = logging.getLogger(__name__)
 
 # ---- Configuration ----
@@ -395,12 +400,38 @@ def _navigate_tab(task_id: Optional[str], browser_url: str) -> tuple[Dict[str, A
     return _ensure_tab(task_id, browser_url), {"ok": True, "url": browser_url}
 
 
+def _camofox_post_redirect_block(task_id: Optional[str], navigated_url: str,
+                                final_url: str) -> Optional[str]:
+    """Post-redirect SSRF check for camofox_navigate; blocked JSON payload or None.
+
+    Mirrors ``_post_redirect_block`` in browser_tool.py: the always-blocked
+    cloud-metadata floor fires on the redirect landing for every backend (a local
+    Chromium on a cloud VM still reaches the host IMDS — #16234). The private-address
+    arm is skipped here exactly as the main path skips it for local backends, and
+    camofox is a local browser. The tab is reset to about:blank first so later
+    snapshots can't read the blocked page.
+    """
+    if not final_url or final_url == navigated_url:
+        return None
+    if not _is_always_blocked_url(final_url):
+        return None
+    try:
+        _navigate_tab(task_id, "about:blank")
+    except Exception:
+        logger.debug("camofox: tab reset after blocked redirect failed", exc_info=True)
+    return json.dumps({"success": False, "error": "Blocked: redirect landed on a cloud metadata endpoint"})
+
+
 def camofox_navigate(url: str, task_id: Optional[str] = None) -> str:
     """Navigate to a URL via Camofox."""
     try:
         browser_url, rewrite_info = _rewrite_loopback_url_for_camofox(url)
         session, data = _navigate_tab(task_id, browser_url)
-        result = {"success": True, "url": data.get("url", browser_url), "title": data.get("title", "")}
+        final_url = data.get("url", browser_url)
+        blocked = _camofox_post_redirect_block(task_id, browser_url, final_url)
+        if blocked is not None:
+            return blocked
+        result = {"success": True, "url": final_url, "title": data.get("title", "")}
         if rewrite_info:
             result["requested_url"], result["url_rewrite"] = url, rewrite_info
             result["warning"] = ("Rewrote loopback URL for Docker-hosted Camofox: "
