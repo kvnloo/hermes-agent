@@ -147,7 +147,8 @@ def _start_desktop_cron_ticker(stop_event: "threading.Event", interval: int = 60
             start_kwargs["profile_homes"] = lambda: [(own_name, own_home)]
             start_kwargs["profile_gate"] = profile_gate
     else:
-        # External providers take no per-tick gate: defer their start until the gateway is gone.
+        # Defer external startup until the gateway is gone; compatible providers also
+        # receive the live gate for any fallback ticker they start later.
         def _owned() -> bool:
             try:
                 return _gateway_owns_cron(own_name, own_home)
@@ -155,6 +156,13 @@ def _start_desktop_cron_ticker(stop_event: "threading.Event", interval: int = 60
                 # Start the ticker rather than silently stand down.
                 _log.warning("Desktop cron: gateway-ownership probe failed; starting the ticker", exc_info=True)
                 return False
+
+        from cron.scheduler_provider import provider_supports_ownership_gate
+
+        if provider_supports_ownership_gate(provider):
+            # A provider may start a built-in fallback later; keep that ticker behind
+            # the same live ownership predicate used for deferred startup.
+            start_kwargs["can_dispatch"] = lambda: not _owned()
 
         if _owned():
             _log.info(
