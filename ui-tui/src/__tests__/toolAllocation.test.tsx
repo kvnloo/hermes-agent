@@ -137,4 +137,45 @@ describe('MessageLine settled-tool integration', () => {
     instance.unmount()
     instance.cleanup()
   })
+
+
+  it('honors a two-row viewport budget without leaving the settled renderer', () => {
+    const stdout = new PassThrough()
+    const stdin = new PassThrough()
+    const stderr = new PassThrough()
+    let output = ''
+
+    Object.assign(stdout, { columns: 80, isTTY: false, rows: 20 })
+    Object.assign(stdin, { isTTY: false })
+    Object.assign(stderr, { isTTY: false })
+    stdout.on('data', chunk => {
+      output += chunk.toString()
+    })
+
+    const instance = renderSync(
+      <MessageLine
+        cols={80}
+        msg={{ kind: 'trail', role: 'system', text: '', tools: [settledRead] }}
+        t={DEFAULT_THEME}
+        toolRowBudget={2}
+      />,
+      {
+        patchConsole: false,
+        stderr: stderr as NodeJS.WriteStream,
+        stdin: stdin as NodeJS.ReadStream,
+        stdout: stdout as NodeJS.WriteStream
+      }
+    )
+
+    const printable = stripAnsi(output).replace(/\r/g, '')
+    const visibleLines = printable.split('\n').filter(Boolean)
+
+    expect(visibleLines).toHaveLength(2)
+    expect(visibleLines[0]).toMatch(/^╭─ ✓ read_file/)
+    expect(visibleLines[1]).toMatch(/^╰─ /)
+    expect(printable).not.toContain('Tool calls')
+
+    instance.unmount()
+    instance.cleanup()
+  })
 })

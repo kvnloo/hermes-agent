@@ -13,7 +13,8 @@ import { $uiState } from '../app/uiStore.js'
 import { usePet } from '../app/usePet.js'
 import { INLINE_MODE, NATIVE_MODE, SHOW_FPS, TERMUX_TUI_MODE } from '../config/env.js'
 import { PLACEHOLDER } from '../content/placeholders.js'
-import { prevRenderedMsg } from '../domain/blockLayout.js'
+import { hasLeadGap, prevRenderedMsg } from '../domain/blockLayout.js'
+import { sectionMode } from '../domain/details.js'
 import {
   COMPOSER_PROMPT_GAP_WIDTH,
   composerPromptWidth,
@@ -22,6 +23,8 @@ import {
 } from '../lib/inputMetrics.js'
 import { PerfPane } from '../lib/perfPane.js'
 import { composerPromptText } from '../lib/prompt.js'
+import { allocateToolRowBudgets, visibleRowSpan } from '../lib/toolRowBudget.js'
+import { getViewportSnapshot, useViewportSnapshot } from '../lib/viewportStore.js'
 import { ActiveWidgetSlot, AmbientDock, AmbientRail, useAmbientRailWidth } from '../sdk/host.js'
 
 import { AgentsOverlay } from './agentsOverlay.js'
@@ -34,6 +37,7 @@ import { GoalBar } from './goalBar.js'
 import { HelpHint } from './helpHint.js'
 import { Journey } from './journey.js'
 import { MessageLine } from './messageLine.js'
+import { isSettledToolAllocationCandidate } from './toolAllocation.js'
 import { PetKitty, PetSprite } from './petSprite.js'
 import { QueuedMessages } from './queuedMessages.js'
 import { LiveTodoPanel, StreamingAssistant } from './streamingAssistant.js'
@@ -156,6 +160,67 @@ const TranscriptPane = memo(function TranscriptPane({
   const useGutter = !nativeMode && !!petBox && composer.cols - railCols - petBox.width >= MIN_GUTTER_BODY_COLS
   const bodyCols = Math.max(28, (useGutter && petBox ? composer.cols - petBox.width : composer.cols) - railCols)
   const petBandRows = petBox && !useGutter ? petBox.height : 0
+  const viewportTick = useViewportSnapshot(transcript.scrollRef)
+  const viewport = transcript.scrollRef.current ? getViewportSnapshot(transcript.scrollRef.current) : viewportTick
+  const toolsMode = sectionMode('tools', ui.detailsMode, ui.sections, ui.detailsModeCommandOverride)
+
+  // Spend transcript rows by semantic importance instead of event volume.
+  // Native mode deliberately has no app-owned viewport, so settled tools keep
+  // the one-row fallback there. In ScrollBox mode we can use measured history
+  // offsets + the real viewport to upgrade only visible settled tool blocks.
+  const toolRowBudgets = (() => {
+    if (nativeMode || viewport.viewportHeight <= 0 || toolsMode !== 'collapsed') {
+      return new Map<string, number>()
+    }
+
+    const offsets = transcript.virtualHistory.offsets
+    const candidates: { fixedRows: number; index: number; key: string }[] = []
+    let occupiedRows = 0
+
+    for (let i = transcript.virtualHistory.start; i < transcript.virtualHistory.end; i++) {
+      const row = transcript.virtualRows[i]
+
+      if (!row) {
+        continue
+      }
+
+      const rowTop = Number(offsets[i] ?? 0)
+      const rowBottom = Number(offsets[i + 1] ?? rowTop)
+      const visibleRows = visibleRowSpan(rowTop, rowBottom, viewport.top, viewport.bottom)
+
+      if (visibleRows <= 0) {
+        continue
+      }
+
+      if (isSettledToolAllocationCandidate(row.msg, toolsMode)) {
+        const prev = prevRenderedMsg(index => transcript.virtualRows[index]?.msg, row.index, {
+          commandOverride: ui.detailsModeCommandOverride,
+          detailsMode: ui.detailsMode,
+          sections: ui.sections
+        })
+
+        candidates.push({
+          fixedRows: hasLeadGap(prev, row.msg) ? 1 : 0,
+          index: row.index,
+          key: row.key
+        })
+      } else {
+        occupiedRows += visibleRows
+      }
+    }
+
+    const historyRows = Number(offsets[transcript.virtualRows.length] ?? 0)
+    const petReserve = viewport.atBottom ? Math.min(petBandRows, viewport.viewportHeight) : 0
+    const liveTailRows = viewport.atBottom
+      ? Math.max(0, viewport.scrollHeight - historyRows - petReserve)
+      : 0
+
+    return allocateToolRowBudgets({
+      candidates,
+      occupiedRows: occupiedRows + Math.min(liveTailRows, viewport.viewportHeight),
+      viewportHeight: Math.max(0, viewport.viewportHeight - petReserve)
+    })
+  })()
 
   // LiveTodoPanel rides as a child of the latest user-message row so it
   // visually belongs to the prompt and follows it during scroll. -1 when
@@ -231,6 +296,7 @@ const TranscriptPane = memo(function TranscriptPane({
               sections={ui.sections}
               t={ui.theme}
               timestamps={ui.timestamps}
+              toolRowBudget={toolRowBudgets.get(row.key)}
             />
           )}
 
