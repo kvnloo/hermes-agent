@@ -177,6 +177,7 @@ export function AllocatedToolTrail({
   t: Theme
 }) {
   const readGroup = allocateSettledReadGroup(lines, rowsPerTool)
+
   const blocks = readGroup
     ? readGroup.rows.length > 0
       ? [readGroup]

@@ -177,7 +177,6 @@ describe('MessageLine settled-tool integration', () => {
     instance.cleanup()
   })
 
-
   it('renders a completed read run as one compact group', () => {
     const stdout = new PassThrough()
     const stdin = new PassThrough()
@@ -194,6 +193,7 @@ describe('MessageLine settled-tool integration', () => {
     const instance = renderSync(
       <MessageLine
         cols={80}
+        detailsModeCommandOverride={true}
         msg={{ kind: 'trail', role: 'system', text: '', tools: groupedReads }}
         t={DEFAULT_THEME}
       />,
