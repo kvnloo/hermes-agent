@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react'
 import { resolveDetailsMode, resolveSections } from '../domain/details.js'
 import type { GatewayClient } from '../gatewayClient.js'
 import type { ConfigFullResponse, ConfigMtimeResponse, ReloadMcpResponse } from '../gatewayTypes.js'
+import { normalizeGlyphPreset, setActiveGlyphPreset } from '../lib/glyphPreset.js'
 import { DEFAULT_VOICE_RECORD_KEY, type ParsedVoiceRecordKey, parseVoiceRecordKey } from '../lib/platform.js'
 import { asRpcResult } from '../lib/rpc.js'
 
@@ -17,6 +18,8 @@ import {
 } from './interfaces.js'
 import { turnController } from './turnController.js'
 import { patchUiState } from './uiStore.js'
+
+export { normalizeGlyphPreset } from '../lib/glyphPreset.js'
 
 const STATUSBAR_ALIAS: Record<string, StatusBarMode> = {
   bottom: 'bottom',
@@ -299,6 +302,7 @@ export const applyDisplay = (
     detailsMode: resolveDetailsMode(d),
     detailsModeCommandOverride: false,
     focusView: !!d.focus_view,
+    glyphPreset: normalizeGlyphPreset(d.tui_glyph_preset),
     indicatorStyle: normalizeIndicatorStyle(d.tui_status_indicator),
     inlineDiffs: d.inline_diffs !== false,
     mouseTracking: normalizeMouseTracking(d),
@@ -313,6 +317,7 @@ export const applyDisplay = (
     // no separate TUI knob.
     timestamps: d.timestamps === true
   })
+  setActiveGlyphPreset(normalizeGlyphPreset(d.tui_glyph_preset))
 }
 
 export function useConfigSync({

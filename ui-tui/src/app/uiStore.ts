@@ -5,7 +5,7 @@ import { ZERO } from '../domain/usage.js'
 import { bootTheme } from '../lib/themeBoot.js'
 import { DEFAULT_THEME } from '../theme.js'
 
-import { DEFAULT_INDICATOR_STYLE, type UiState } from './interfaces.js'
+import { DEFAULT_GLYPH_PRESET, DEFAULT_INDICATOR_STYLE, type UiState } from './interfaces.js'
 
 const buildUiState = (): UiState => ({
   battery: false,
@@ -19,6 +19,7 @@ const buildUiState = (): UiState => ({
   detailsMode: 'collapsed',
   detailsModeCommandOverride: false,
   focusView: false,
+  glyphPreset: DEFAULT_GLYPH_PRESET,
   indicatorStyle: DEFAULT_INDICATOR_STYLE,
   info: null,
   liveSessionCount: 0,

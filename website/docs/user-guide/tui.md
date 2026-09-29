@@ -184,9 +184,12 @@ The status-bar busy indicator is pluggable — the default rotates Hermes' kawai
 ```yaml
 display:
   tui_status_indicator: kaomoji   # kaomoji | emoji | unicode | ascii
+  tui_glyph_preset: unicode       # nerd | unicode | ascii — chrome symbols (status/disclosure/rails)
 ```
 
 Or in-session: `/indicator emoji` (etc.). Styles ship with matched glyph widths so the rest of the status bar doesn't jitter on rotation.
+
+`tui_glyph_preset` is the terminal-compatibility layer for chrome (disclosure arrows, status marks, tree rails, tool-card marks). It is independent of the busy-indicator animation style. The `ascii` preset emits only printable ASCII chrome so tofu never appears at individual call sites.
 
 ## Auto-resume
 

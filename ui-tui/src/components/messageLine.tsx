@@ -9,6 +9,7 @@ import { splitComposerHighlights } from '../domain/composerHighlights.js'
 import { sectionMode } from '../domain/details.js'
 import { userDisplay } from '../domain/messages.js'
 import { ROLE } from '../domain/roles.js'
+import { disclosureGlyph } from '../lib/disclosureGlyph.js'
 import { transcriptBodyWidth, transcriptGutterWidth } from '../lib/inputMetrics.js'
 import { boundedLiveRenderText, compactPreview, isPasteBackedText } from '../lib/text.js'
 import type { Theme } from '../theme.js'
@@ -181,7 +182,7 @@ export const MessageLine = memo(function MessageLine({
       return (
         <Box flexDirection="column">
           <Box onClick={() => setSystemOpen(v => !v)}>
-            <Text color={t.color.accent}>{systemOpen ? '▾ ' : '▸ '}</Text>
+            <Text color={t.color.accent}>{disclosureGlyph(systemOpen)}</Text>
             <Text color={t.color.muted}>{firstLine}</Text>
             <Text color={t.color.muted} dimColor>
               {' — '}
