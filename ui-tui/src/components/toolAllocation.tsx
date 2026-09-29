@@ -83,13 +83,89 @@ export const allocateSettledToolTrailLine = (line: string, requestedRows: number
 export const isSettledToolTrailCandidate = (lines: readonly string[]): boolean =>
   lines.length > 0 && lines.every(line => parseToolTrailResultLine(line) !== null)
 
-export const isSettledToolAllocationCandidate = (msg: Msg, toolsMode: DetailsMode): boolean =>
-  msg.kind === 'trail' &&
-  !msg.isMoaReference &&
-  !(msg.thinking?.trim()) &&
-  toolsMode === 'collapsed' &&
-  msg.tools?.length === 1 &&
-  isSettledToolTrailCandidate(msg.tools)
+const READ_FILE_PREFIX = 'Read File("'
+
+const settledReadPath = (line: string): string | null => {
+  const parsed = parseToolTrailResultLine(line)
+
+  if (!parsed || parsed.mark !== '✓') {
+    return null
+  }
+
+  const { label } = splitToolDuration(flattenToolHeader(parsed.call))
+
+  if (!label.startsWith(READ_FILE_PREFIX) || !label.endsWith('")')) {
+    return null
+  }
+
+  return label.slice(READ_FILE_PREFIX.length, -2)
+}
+
+export const isSettledReadGroupCandidate = (lines: readonly string[]): boolean =>
+  lines.length >= 2 && lines.every(line => settledReadPath(line) !== null)
+
+export const allocateSettledReadGroup = (
+  lines: readonly string[],
+  requestedRows: number
+): AllocatedToolBlock | null => {
+  if (!isSettledReadGroupCandidate(lines)) {
+    return null
+  }
+
+  const paths = lines.map(line => settledReadPath(line)!)
+  const budget = Math.max(0, Math.trunc(requestedRows))
+  const header = `✓ Read ${paths.length} files`
+
+  if (budget === 0) {
+    return { rows: [], tone: 'success' }
+  }
+
+  if (budget === 1) {
+    const shown = paths.slice(0, 2)
+    const omitted = paths.length - shown.length
+    const suffix = omitted > 0 ? ` · +${omitted} more` : ''
+
+    return { rows: [`${header} · ${shown.join(' · ')}${suffix}`], tone: 'success' }
+  }
+
+  if (budget === 2) {
+    const omitted = paths.length - 1
+    const suffix = omitted > 0 ? ` · +${omitted} file${omitted === 1 ? '' : 's'}` : ''
+
+    return { rows: [`╭─ ${header}`, `╰─ ${paths[0]}${suffix}`], tone: 'success' }
+  }
+
+  const detailBudget = budget - 1
+  let visible: string[]
+
+  if (paths.length > detailBudget) {
+    const shown = paths.slice(0, Math.max(0, detailBudget - 1))
+    const omitted = paths.length - shown.length
+    visible = [...shown, `… +${omitted} file${omitted === 1 ? '' : 's'}`]
+  } else {
+    visible = [...paths]
+  }
+
+  return {
+    rows: [
+      `╭─ ${header}`,
+      ...visible.map((path, index) => (index === visible.length - 1 ? `╰─ ${path}` : `│  ${path}`))
+    ],
+    tone: 'success'
+  }
+}
+
+export const isSettledToolAllocationCandidate = (msg: Msg, toolsMode: DetailsMode): boolean => {
+  const lines = msg.tools ?? []
+
+  return (
+    msg.kind === 'trail' &&
+    !msg.isMoaReference &&
+    !(msg.thinking?.trim()) &&
+    toolsMode === 'collapsed' &&
+    ((lines.length === 1 && isSettledToolTrailCandidate(lines)) || isSettledReadGroupCandidate(lines))
+  )
+}
 
 export function AllocatedToolTrail({
   lines,
@@ -100,9 +176,15 @@ export function AllocatedToolTrail({
   rowsPerTool: number
   t: Theme
 }) {
-  const blocks = lines
-    .map(line => allocateSettledToolTrailLine(line, rowsPerTool))
-    .filter((block): block is AllocatedToolBlock => block !== null && block.rows.length > 0)
+  const readGroup = allocateSettledReadGroup(lines, rowsPerTool)
+
+  const blocks = readGroup
+    ? readGroup.rows.length > 0
+      ? [readGroup]
+      : []
+    : lines
+        .map(line => allocateSettledToolTrailLine(line, rowsPerTool))
+        .filter((block): block is AllocatedToolBlock => block !== null && block.rows.length > 0)
 
   if (!blocks.length) {
     return null
