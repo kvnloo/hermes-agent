@@ -2,6 +2,7 @@ import { Box, Text } from '@hermes/ink'
 
 import { parseToolTrailResultLine, splitToolDuration } from '../lib/text.js'
 import type { Theme } from '../theme.js'
+import type { DetailsMode, Msg } from '../types.js'
 
 export type ToolAllocationTone = 'error' | 'success'
 
@@ -44,6 +45,7 @@ export const allocateSettledToolTrailLine = (line: string, requestedRows: number
 
   if (budget === 2) {
     const preview = details[0] ?? '(no output)'
+
     const suffix =
       details.length > 1
         ? ` · +${details.length - 1} line${details.length === 2 ? '' : 's'}`
@@ -80,6 +82,14 @@ export const allocateSettledToolTrailLine = (line: string, requestedRows: number
 
 export const isSettledToolTrailCandidate = (lines: readonly string[]): boolean =>
   lines.length > 0 && lines.every(line => parseToolTrailResultLine(line) !== null)
+
+export const isSettledToolAllocationCandidate = (msg: Msg, toolsMode: DetailsMode): boolean =>
+  msg.kind === 'trail' &&
+  !msg.isMoaReference &&
+  !(msg.thinking?.trim()) &&
+  toolsMode === 'collapsed' &&
+  msg.tools?.length === 1 &&
+  isSettledToolTrailCandidate(msg.tools)
 
 export function AllocatedToolTrail({
   lines,

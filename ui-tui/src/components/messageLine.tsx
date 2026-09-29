@@ -17,8 +17,8 @@ import type { ActiveTool, DetailsMode, Msg, SectionVisibility } from '../types.j
 import { Md } from './markdown.js'
 import { StreamingMd } from './streamingMarkdown.js'
 import { ToolTrail } from './thinking.js'
-import { AllocatedToolTrail, isSettledToolTrailCandidate } from './toolAllocation.js'
 import { TodoPanel } from './todoPanel.js'
+import { AllocatedToolTrail, isSettledToolAllocationCandidate } from './toolAllocation.js'
 
 // Collapse threshold for long system messages (system prompt etc.)
 const SYSTEM_COLLAPSE_CHARS = 400
@@ -56,6 +56,7 @@ export const MessageLine = memo(function MessageLine({
   sections,
   t,
   timestamps = false,
+  toolRowBudget,
   tools = []
 }: MessageLineProps) {
   // Per-section overrides win over the global mode, so resolve each section
@@ -98,20 +99,12 @@ export const MessageLine = memo(function MessageLine({
   // mode. Live tools, multi-tool groups, thinking-bearing trails, and explicit
   // expanded detail stay on ToolTrail until viewport allocation is wired.
   const settledToolLines =
-    msg.kind === 'trail' &&
-    !msg.isMoaReference &&
-    !thinking &&
-    tools.length === 0 &&
-    toolsMode === 'collapsed' &&
-    msg.tools?.length === 1 &&
-    isSettledToolTrailCandidate(msg.tools)
-      ? msg.tools
-      : null
+    tools.length === 0 && isSettledToolAllocationCandidate(msg, toolsMode) ? msg.tools! : null
 
   if (settledToolLines) {
     return (
       <Box flexDirection="column" marginTop={leadGap ? 1 : 0}>
-        <AllocatedToolTrail lines={settledToolLines} rowsPerTool={1} t={t} />
+        <AllocatedToolTrail lines={settledToolLines} rowsPerTool={toolRowBudget ?? 1} t={t} />
       </Box>
     )
   }
@@ -373,5 +366,7 @@ interface MessageLineProps {
   t: Theme
   /** `display.timestamps` — dim [HH:MM] label on user/assistant rows. */
   timestamps?: boolean
+  /** Viewport allocator budget for a settled compact tool block. */
+  toolRowBudget?: number
   tools?: ActiveTool[]
 }
