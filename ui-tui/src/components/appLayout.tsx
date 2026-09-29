@@ -1,7 +1,7 @@
 // Importing the apps barrel registers the reference widget apps at startup.
 import '../sdk/apps/index.js'
 
-import { AlternateScreen, Box, NoSelect, ScrollBox, Text } from '@hermes/ink'
+import { AlternateScreen, Box, NoSelect, ScrollBox, Text, useStdout } from '@hermes/ink'
 import { useStore } from '@nanostores/react'
 import { Fragment, memo, type MutableRefObject, useEffect, useMemo, useRef } from 'react'
 
@@ -20,6 +20,7 @@ import {
   inputVisualHeight,
   stableComposerColumns
 } from '../lib/inputMetrics.js'
+import { agentsOverlayHeight, overlayLayoutDecision } from '../lib/overlayLayoutDecision.js'
 import { PerfPane } from '../lib/perfPane.js'
 import { composerPromptText } from '../lib/prompt.js'
 import { ActiveWidgetSlot, AmbientDock, AmbientRail, useAmbientRailWidth } from '../sdk/host.js'
@@ -34,6 +35,7 @@ import { GoalBar } from './goalBar.js'
 import { HelpHint } from './helpHint.js'
 import { Journey } from './journey.js'
 import { MessageLine } from './messageLine.js'
+import { Overlay } from './overlay.js'
 import { PetKitty, PetSprite } from './petSprite.js'
 import { QueuedMessages } from './queuedMessages.js'
 import { LiveTodoPanel, StreamingAssistant } from './streamingAssistant.js'
@@ -492,7 +494,13 @@ const ComposerPane = memo(function ComposerPane({
   )
 })
 
-const AgentsOverlayPane = memo(function AgentsOverlayPane() {
+const AgentsOverlayPane = memo(function AgentsOverlayPane({
+  layoutMode = 'full',
+  maxRows
+}: {
+  layoutMode?: 'full' | 'overlay'
+  maxRows?: number
+}) {
   const { gw } = useGateway()
   const ui = useStore($uiState)
   const overlay = useStore($overlayState)
@@ -501,7 +509,14 @@ const AgentsOverlayPane = memo(function AgentsOverlayPane() {
     <AgentsOverlay
       gw={gw}
       initialHistoryIndex={overlay.agentsInitialHistoryIndex}
-      onClose={() => patchOverlayState({ agents: false, agentsInitialHistoryIndex: 0 })}
+      layoutMode={layoutMode}
+      maxRows={maxRows}
+      onClose={() =>
+        patchOverlayState({ agents: false, agentsExpanded: false, agentsInitialHistoryIndex: 0 })
+      }
+      onExpand={
+        layoutMode === 'overlay' ? () => patchOverlayState({ agentsExpanded: true }) : undefined
+      }
       t={ui.theme}
     />
   )
@@ -569,6 +584,7 @@ export const AppLayout = memo(function AppLayout({
 }: AppLayoutProps) {
   const overlay = useStore($overlayState)
   const ui = useStore($uiState)
+  const { stdout } = useStdout()
 
   const cursorSnapshotRef = useRef<InputCursorSnapshot | null>(null)
   useEffect(() => {
@@ -581,14 +597,27 @@ export const AppLayout = memo(function AppLayout({
   const Shell = INLINE_MODE ? Fragment : AlternateScreen
   const shellProps = INLINE_MODE ? {} : { mouseTracking }
 
+  // #113241 — context-preserving agents overlay by default. Small terminals
+  // and explicit expand still use the legacy full-height swap.
+  const termRows = stdout?.rows ?? 24
+  const termCols = stdout?.columns ?? composer.cols
+
+  const agentsMode = overlay.agents
+    ? overlayLayoutDecision(termRows, termCols, overlay.agentsExpanded)
+    : null
+
+  const agentsFull = agentsMode === 'full'
+  const agentsContext = agentsMode === 'overlay'
+  const agentsCardRows = agentsOverlayHeight(termRows)
+
   return (
     <Shell {...shellProps}>
       <Box flexDirection="column" flexGrow={1} position={NATIVE_MODE ? undefined : 'relative'}>
         <Box flexDirection="row" flexGrow={1}>
-          {!overlay.agents && !overlay.journey && <AmbientRail side="left" />}
-          {overlay.agents ? (
+          {!agentsFull && !overlay.journey && <AmbientRail side="left" />}
+          {agentsFull ? (
             <PerfPane id="agents">
-              <AgentsOverlayPane />
+              <AgentsOverlayPane layoutMode="full" />
             </PerfPane>
           ) : overlay.journey ? (
             <PerfPane id="journey">
@@ -605,10 +634,10 @@ export const AppLayout = memo(function AppLayout({
               />
             </PerfPane>
           )}
-          {!overlay.agents && !overlay.journey && <AmbientRail side="right" />}
+          {!agentsFull && !overlay.journey && <AmbientRail side="right" />}
         </Box>
 
-        {!overlay.agents && !overlay.journey && (
+        {!agentsFull && !overlay.journey && (
           <>
             <PerfPane id="prompt">
               <PromptZone
@@ -640,13 +669,30 @@ export const AppLayout = memo(function AppLayout({
           </>
         )}
 
-        {!overlay.agents && !NATIVE_MODE && <PetPane />}
+        {!agentsFull && !NATIVE_MODE && <PetPane />}
+
+        {agentsContext && (
+          <Overlay zone="bottom">
+            <Box
+              borderColor={ui.theme.color.primary}
+              borderStyle="round"
+              flexDirection="column"
+              height={agentsCardRows}
+              opaque
+              width={Math.max(AGENTS_OVERLAY_MIN_WIDTH, Math.min(termCols, termCols - (termCols >= 42 ? 2 : 0)))}
+            >
+              <AgentsOverlayPane layoutMode="overlay" maxRows={agentsCardRows} />
+            </Box>
+          </Overlay>
+        )}
       </Box>
 
       <ActiveWidgetSlot />
     </Shell>
   )
 })
+
+const AGENTS_OVERLAY_MIN_WIDTH = 40
 
 type GutterMouseEvent = {
   button: number

@@ -5,6 +5,7 @@ import { $uiState } from './uiStore.js'
 
 const buildOverlayState = (): OverlayState => ({
   agents: false,
+  agentsExpanded: false,
   agentsInitialHistoryIndex: 0,
   approval: null,
   billing: null,
@@ -100,9 +101,12 @@ export const $isBlocked = computed(
  *   render in NORMAL FLOW above ComposerPane (`appLayout.tsx:553-568`): they
  *   push content down, they do not cover it.  The rule stays on screen and
  *   its clock must keep running.
- * - `agents` and `journey`.  They unmount the entire ComposerPane subtree
- *   (`appLayout.tsx:553`), so `StatusRule` unmounts with it and React's own
- *   effect cleanup clears the intervals.  Gating on them would be dead code.
+ * - `agents` (full-height fallback / explicit expand) and `journey`.  The
+ *   full-height agents path and journey unmount the ComposerPane subtree, so
+ *   `StatusRule` unmounts with it and React's own effect cleanup clears the
+ *   intervals.  Gating on them would be dead code.  Context-preserving agents
+ *   overlay mode (#113241) keeps the composer mounted and relies on
+ *   `$isBlocked` instead.
  * - `ambient` — a glanceable in-flow dock that reserves its own rows.
  * - Composer completions.  They share the FloatingOverlays grid and do
  *   occlude, but they are a render prop rather than store state and they
@@ -160,6 +164,7 @@ export const resetFlowOverlays = () =>
   $overlayState.set({
     ...buildOverlayState(),
     agents: $overlayState.get().agents,
+    agentsExpanded: $overlayState.get().agentsExpanded,
     agentsInitialHistoryIndex: $overlayState.get().agentsInitialHistoryIndex,
     ambient: $overlayState.get().ambient,
     connection: $overlayState.get().connection,

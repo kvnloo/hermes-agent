@@ -312,7 +312,7 @@ export function useInputHandlers(ctx: InputHandlerContext): InputHandlerResult {
     }
 
     if (overlay.agents) {
-      return patchOverlayState({ agents: false })
+      return patchOverlayState({ agents: false, agentsExpanded: false })
     }
 
     if (overlay.journey) {
@@ -734,7 +734,7 @@ export function useInputHandlers(ctx: InputHandlerContext): InputHandlerResult {
     // session model (config.set), which the next turn reads while the in-flight
     // turn keeps streaming.
     if (isCtrl(key, ch, 't')) {
-      return patchOverlayState({ agents: true, agentsInitialHistoryIndex: 0 })
+      return patchOverlayState({ agents: true, agentsExpanded: false, agentsInitialHistoryIndex: 0 })
     }
 
     if (isCtrl(key, ch, 'o')) {

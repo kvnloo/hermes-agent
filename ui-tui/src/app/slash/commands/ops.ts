@@ -322,7 +322,7 @@ export const opsCommands: SlashCommand[] = [
         return
       }
 
-      patchOverlayState({ agents: true, agentsInitialHistoryIndex: 0 })
+      patchOverlayState({ agents: true, agentsExpanded: false, agentsInitialHistoryIndex: 0 })
     }
   },
 
@@ -393,7 +393,7 @@ export const opsCommands: SlashCommand[] = [
               // Push onto the in-memory history so the overlay picks it up
               // by index 1 just like any other snapshot.
               pushDiskSnapshot(r, path)
-              patchOverlayState({ agents: true, agentsInitialHistoryIndex: 1 })
+              patchOverlayState({ agents: true, agentsExpanded: false, agentsInitialHistoryIndex: 1 })
             })
           )
           .catch(ctx.guardedErr)
@@ -418,7 +418,7 @@ export const opsCommands: SlashCommand[] = [
         index = parsed
       }
 
-      patchOverlayState({ agents: true, agentsInitialHistoryIndex: index })
+      patchOverlayState({ agents: true, agentsExpanded: false, agentsInitialHistoryIndex: index })
     }
   },
 
@@ -453,7 +453,7 @@ export const opsCommands: SlashCommand[] = [
       }
 
       setDiffPair({ baseline, candidate })
-      patchOverlayState({ agents: true, agentsInitialHistoryIndex: 0 })
+      patchOverlayState({ agents: true, agentsExpanded: false, agentsInitialHistoryIndex: 0 })
     }
   },
 

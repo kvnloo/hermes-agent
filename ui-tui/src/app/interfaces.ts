@@ -287,6 +287,8 @@ export interface ConnectionOverlayState {
 
 export interface OverlayState {
   agents: boolean
+  /** Explicit full-height expand of the agents roster (#113241). */
+  agentsExpanded: boolean
   agentsInitialHistoryIndex: number
   approval: ApprovalReq | null
   billing: BillingOverlayState | null
