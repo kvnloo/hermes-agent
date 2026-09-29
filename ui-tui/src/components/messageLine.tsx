@@ -17,8 +17,8 @@ import type { ActiveTool, DetailsMode, Msg, SectionVisibility } from '../types.j
 import { Md } from './markdown.js'
 import { StreamingMd } from './streamingMarkdown.js'
 import { ToolTrail } from './thinking.js'
-import { AllocatedToolTrail, isSettledToolAllocationCandidate } from './toolAllocation.js'
 import { TodoPanel } from './todoPanel.js'
+import { AllocatedToolTrail, isSettledToolAllocationCandidate } from './toolAllocation.js'
 
 // Collapse threshold for long system messages (system prompt etc.)
 const SYSTEM_COLLAPSE_CHARS = 400

@@ -45,6 +45,7 @@ export const allocateSettledToolTrailLine = (line: string, requestedRows: number
 
   if (budget === 2) {
     const preview = details[0] ?? '(no output)'
+
     const suffix =
       details.length > 1
         ? ` · +${details.length - 1} line${details.length === 2 ? '' : 's'}`

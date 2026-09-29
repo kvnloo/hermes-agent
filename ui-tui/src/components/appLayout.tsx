@@ -37,11 +37,11 @@ import { GoalBar } from './goalBar.js'
 import { HelpHint } from './helpHint.js'
 import { Journey } from './journey.js'
 import { MessageLine } from './messageLine.js'
-import { isSettledToolAllocationCandidate } from './toolAllocation.js'
 import { PetKitty, PetSprite } from './petSprite.js'
 import { QueuedMessages } from './queuedMessages.js'
 import { LiveTodoPanel, StreamingAssistant } from './streamingAssistant.js'
 import { type InputCursorSnapshot, TextInput, type TextInputMouseApi } from './textInput.js'
+import { isSettledToolAllocationCandidate } from './toolAllocation.js'
 
 // Box geometry, kept here so the transcript's reservation math matches the
 // rendered overlay exactly.
@@ -211,6 +211,7 @@ const TranscriptPane = memo(function TranscriptPane({
 
     const historyRows = Number(offsets[transcript.virtualRows.length] ?? 0)
     const petReserve = viewport.atBottom ? Math.min(petBandRows, viewport.viewportHeight) : 0
+
     const liveTailRows = viewport.atBottom
       ? Math.max(0, viewport.scrollHeight - historyRows - petReserve)
       : 0
