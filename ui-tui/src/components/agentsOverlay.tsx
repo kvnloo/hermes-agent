@@ -605,7 +605,15 @@ function DiffView({
 
 // ── Main overlay ─────────────────────────────────────────────────────
 
-export function AgentsOverlay({ gw, initialHistoryIndex = 0, onClose, t }: AgentsOverlayProps) {
+export function AgentsOverlay({
+  gw,
+  initialHistoryIndex = 0,
+  layoutMode = 'full',
+  maxRows,
+  onClose,
+  onExpand,
+  t
+}: AgentsOverlayProps) {
   const liveSubagents = useAgentRoster()
   const delegation = useStore($delegationState)
   const history = useStore($spawnHistory)
@@ -657,7 +665,7 @@ export function AgentsOverlay({ gw, initialHistoryIndex = 0, onClose, t }: Agent
     rows: rowsH,
     start: listWindowStart,
     timelineRows
-  } = rosterViewport((stdout?.rows ?? 24) - (flash ? 1 : 0), rows.length, cursor)
+  } = rosterViewport((maxRows ?? stdout?.rows ?? 24) - (flash ? 1 : 0), rows.length, cursor)
 
   // ── Effects ────────────────────────────────────────────────────────
 
@@ -790,6 +798,11 @@ export function AgentsOverlay({ gw, initialHistoryIndex = 0, onClose, t }: Agent
 
     if (key.ctrl && ch === 't') {
       return closeWithCleanup()
+    }
+
+    // Explicit full-height expand from the context overlay (#113241).
+    if (layoutMode === 'overlay' && onExpand && ch === 'F' && !key.ctrl && !key.meta) {
+      return onExpand()
     }
 
     if (ch === 'e' && selected && sid && !replayMode) {
@@ -933,7 +946,9 @@ export function AgentsOverlay({ gw, initialHistoryIndex = 0, onClose, t }: Agent
 
   const controlsHint = replayMode
     ? ' · controls locked'
-    : ` · e steer · t tail · x stop · X subtree · p ${delegation.paused ? 'resume' : 'pause'}`
+    : ` · e steer · t tail · x stop · X subtree · p ${delegation.paused ? 'resume' : 'pause'}${
+        layoutMode === 'overlay' && onExpand ? ' · F full' : ''
+      }`
 
   // ── Rendering ──────────────────────────────────────────────────────
 
@@ -1040,9 +1055,17 @@ export function AgentsOverlay({ gw, initialHistoryIndex = 0, onClose, t }: Agent
 interface AgentsOverlayProps {
   gw: GatewayClient
   initialHistoryIndex?: number
+  /** Context overlay vs legacy full-height swap (#113241). */
+  layoutMode?: 'full' | 'overlay'
+  /** Row budget for the context-overlay card; defaults to full terminal. */
+  maxRows?: number
   onClose: () => void
+  /** Promote context overlay to full-height tree. */
+  onExpand?: () => void
   t: Theme
 }
 
-export const closeAgentsOverlay = () => patchOverlayState({ agents: false })
-export const openAgentsOverlay = () => patchOverlayState({ agents: true })
+export const closeAgentsOverlay = () =>
+  patchOverlayState({ agents: false, agentsExpanded: false, agentsInitialHistoryIndex: 0 })
+export const openAgentsOverlay = () =>
+  patchOverlayState({ agents: true, agentsExpanded: false, agentsInitialHistoryIndex: 0 })
