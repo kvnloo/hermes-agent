@@ -18,6 +18,7 @@ import type { ParsedVoiceRecordKey } from '../lib/platform.js'
 import type { RpcResult } from '../lib/rpc.js'
 import type { ActiveWidget } from '../sdk/types.js'
 import type { Theme } from '../theme.js'
+import type { GlyphPreset } from '../lib/glyphPreset.js'
 import type {
   ApprovalReq,
   ClarifyReq,
@@ -75,6 +76,14 @@ export interface Notice {
 export const INDICATOR_STYLES = ['ascii', 'emoji', 'kaomoji', 'unicode'] as const
 export type IndicatorStyle = (typeof INDICATOR_STYLES)[number]
 export const DEFAULT_INDICATOR_STYLE: IndicatorStyle = 'kaomoji'
+
+// Re-export chrome glyph preset so UI state + config share one enum with
+// `lib/glyphPreset.ts` (source of the shared chrome table).
+export {
+  DEFAULT_GLYPH_PRESET,
+  GLYPH_PRESETS,
+  type GlyphPreset
+} from '../lib/glyphPreset.js'
 
 export interface SelectionApi {
   captureScrolledRows: (firstRow: number, lastRow: number, side: 'above' | 'below') => void
@@ -349,6 +358,7 @@ export interface UiState {
   sections: SectionVisibility
   sessionTitle: string
   showReasoning: boolean
+  glyphPreset: GlyphPreset
   indicatorStyle: IndicatorStyle
   sid: null | string
   status: string

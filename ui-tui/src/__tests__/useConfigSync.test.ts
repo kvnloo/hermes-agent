@@ -7,6 +7,7 @@ import {
   type McpRevState,
   normalizeBusyInputMode,
   normalizeIndicatorStyle,
+  normalizeGlyphPreset,
   normalizeMouseTracking,
   normalizeStatusBar,
   syncMcpReload
@@ -295,6 +296,36 @@ describe('applyDisplay → tui_status_indicator', () => {
 // Regressions from Copilot review on #19835: the config-hydration path
 // for voice.record_key was untested, so a future regression in the
 // hydration or mtime-reapply wiring would slip past the suite.
+
+describe('normalizeGlyphPreset', () => {
+  it('passes through the canonical enum', () => {
+    expect(normalizeGlyphPreset('nerd')).toBe('nerd')
+    expect(normalizeGlyphPreset('unicode')).toBe('unicode')
+    expect(normalizeGlyphPreset('ascii')).toBe('ascii')
+  })
+
+  it('defaults to unicode for missing/unknown values', () => {
+    expect(normalizeGlyphPreset(undefined)).toBe('unicode')
+    expect(normalizeGlyphPreset('kaomoji')).toBe('unicode')
+  })
+})
+
+describe('applyDisplay → tui_glyph_preset', () => {
+  beforeEach(() => {
+    resetUiState()
+  })
+
+  it('threads display.tui_glyph_preset into $uiState', () => {
+    const setBell = vi.fn()
+
+    applyDisplay({ config: { display: { tui_glyph_preset: 'ascii' } } }, setBell)
+    expect($uiState.get().glyphPreset).toBe('ascii')
+
+    applyDisplay({ config: { display: { tui_glyph_preset: 'nerd' } } }, setBell)
+    expect($uiState.get().glyphPreset).toBe('nerd')
+  })
+})
+
 describe('applyDisplay → voice.record_key (#18994)', () => {
   beforeEach(() => {
     resetUiState()

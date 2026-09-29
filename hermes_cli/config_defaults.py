@@ -901,6 +901,9 @@ DEFAULT_CONFIG = {
         "language": "en",
         # TUI busy indicator: kaomoji | emoji | unicode (braille) | ascii. `/indicator <style>`.
         "tui_status_indicator": "kaomoji",
+        # Global chrome glyph preset (status/disclosure/rail/tool-card): nerd | unicode | ascii.
+        # Independent of tui_status_indicator (animation style). ascii emits zero non-ASCII chrome.
+        "tui_glyph_preset": "unicode",
         # Seconds between idle prompt_toolkit redraws in the classic CLI; keeps wall-clock
         # status-bar read-outs ticking and the bottom chrome from going stale. 0 disables it if it
         # fights terminal auto-scroll in non-fullscreen mode.

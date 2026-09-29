@@ -109,6 +109,10 @@ export interface ConfigDisplayConfig {
   // wire type is documented as `string` so consumers don't get a false
   // narrowing-and-autocomplete contract on a value that requires runtime
   // validation anyway.
+  /** Global chrome glyph preset: nerd | unicode | ascii. Terminal-compat
+   *  layer for status/disclosure/rail/tool-card marks. Independent of
+   *  `tui_status_indicator` (busy animation style). */
+  tui_glyph_preset?: string
   tui_status_indicator?: string
   tui_statusbar?: 'bottom' | 'off' | 'on' | 'top' | boolean
   /** Theme mode pin: 'light' / 'dark' beat background auto-detection; 'auto'

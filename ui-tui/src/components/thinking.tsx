@@ -5,6 +5,7 @@ import spinners, { type BrailleSpinnerName } from 'unicode-animations'
 
 import { THINKING_COT_MAX } from '../config/limits.js'
 import { sectionMode } from '../domain/details.js'
+import { disclosureGlyph } from '../lib/disclosureGlyph.js'
 import {
   buildSubagentTree,
   fmtTokens,
@@ -251,7 +252,7 @@ function Chevron({
   return (
     <Box onClick={(e: any) => onClick(!!e?.shiftKey || !!e?.ctrlKey)}>
       <Text color={color} dim={tone === 'dim'}>
-        <Text color={t.color.accent}>{open ? '▾ ' : '▸ '}</Text>
+        <Text color={t.color.accent}>{disclosureGlyph(open)}</Text>
         {title}
         {typeof count === 'number' ? ` (${count})` : ''}
         {suffix ? (
@@ -1056,7 +1057,7 @@ export const ToolTrail = memo(function ToolTrail({
           }}
         >
           <Text color={t.color.muted} dim={!thinkingLive}>
-            <Text color={t.color.accent}>{openThinking ? '▾ ' : '▸ '}</Text>
+            <Text color={t.color.accent}>{disclosureGlyph(openThinking)}</Text>
             {thinkingLive ? (
               <Text bold color={t.color.text}>
                 Thinking
