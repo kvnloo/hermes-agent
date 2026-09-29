@@ -15,11 +15,11 @@ import {
 import { DEFAULT_THEME } from '../theme.js'
 
 const settledRead =
-  'read_file(src/components/example.ts) (0.2s) :: lines 1-120\\nsecond detail that should fold ✓'
+  'read_file(src/components/example.ts) (0.2s) :: lines 1-120\nsecond detail that should fold ✓'
 
 describe('settled tool row allocation', () => {
   it('flattens embedded newlines in tool headers', () => {
-    expect(flattenToolHeader('read_file(foo)\\nbar')).toBe('read_file(foo) bar')
+    expect(flattenToolHeader('read_file(foo)\nbar')).toBe('read_file(foo) bar')
   })
 
   it('recognizes only finalized result lines', () => {
@@ -43,7 +43,7 @@ describe('settled tool row allocation', () => {
 
     expect(block?.rows).toHaveLength(1)
     expect(block?.rows[0]).toContain('✓ read_file(src/components/example.ts)')
-    expect(block?.rows[0]).not.toContain('\\n')
+    expect(block?.rows[0]).not.toContain('\n')
   })
 
   it('renders the two-row folded-card shape', () => {
@@ -56,7 +56,7 @@ describe('settled tool row allocation', () => {
   })
 
   it('bounds 3+ rows and reports omitted detail exactly', () => {
-    const line = 'terminal(test) :: one\\ntwo\\nthree\\nfour ✓'
+    const line = 'terminal(test) :: one\ntwo\nthree\nfour ✓'
     const block = allocateSettledToolTrailLine(line, 3)
 
     expect(block?.rows).toHaveLength(3)
@@ -116,6 +116,7 @@ describe('MessageLine settled-tool integration', () => {
     const instance = renderSync(
       <MessageLine
         cols={80}
+        detailsModeCommandOverride={true}
         msg={{ kind: 'trail', role: 'system', text: '', tools: [settledRead] }}
         t={DEFAULT_THEME}
       />,
@@ -155,6 +156,7 @@ describe('MessageLine settled-tool integration', () => {
     const instance = renderSync(
       <MessageLine
         cols={80}
+        detailsModeCommandOverride={true}
         msg={{ kind: 'trail', role: 'system', text: '', tools: [settledRead] }}
         t={DEFAULT_THEME}
         toolRowBudget={2}
