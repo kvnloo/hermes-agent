@@ -17,7 +17,7 @@ permissions:
 jobs:
   live-bend-matrix:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
@@ -66,6 +66,13 @@ jobs:
           export PATH="$HOME/.elan/bin:$PATH"
           python3 evals/bend_adapter_wave2.py --repeats 20 --attacks 25 --output /tmp/bend-hermes-wave2.json
 
+      - name: Run kernel provenance experiments
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.elan/bin:$PATH"
+          python3 evals/bend_adapter_provenance.py --attacks 25 --cold-runs 5 --output /tmp/bend-hermes-provenance.json
+
       - name: Upload experiment receipts
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -74,5 +81,6 @@ jobs:
           path: |
             /tmp/bend-hermes-matrix.json
             /tmp/bend-hermes-wave2.json
+            /tmp/bend-hermes-provenance.json
           if-no-files-found: warn
           retention-days: 14
