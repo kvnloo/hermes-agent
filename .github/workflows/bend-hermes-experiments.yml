@@ -112,11 +112,6 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          repository: kvnloo/bend
-          ref: exp/hermes-verdict-semantic-attestation-1212
-          path: patched-bend
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: "3.13"
@@ -149,20 +144,6 @@ jobs:
           install_bend 2.0.32 5c365ddb12954d0933cef751802e0f7d9875f842edcb80f9661f89cd1a9ff7b6
           install_bend 2.0.33 a6c13c421543701a7f33e594a9c077c74361cdabd87c0052fc487a0deab8bc30
           install_bend 2.0.34 78106a97af242429dcc057258eb8d10f69cddebcd5e263022185a52d003e09bf
-
-          BUN_URL=https://github.com/oven-sh/bun/releases/download/bun-v1.3.14/bun-linux-x64.zip
-          BUN_SHA=951ee2aee855f08595aeec6225226a298d3fea83a3dcd6465c09cbccdf7e848f
-          curl -sSfL --retry 3 --retry-delay 2 "$BUN_URL" -o /tmp/bun.zip
-          echo "$BUN_SHA  /tmp/bun.zip" | sha256sum -c -
-          unzip -q /tmp/bun.zip -d /tmp/bun-release
-          BUN_BIN=$(find /tmp/bun-release -type f -name bun -perm -u+x | head -n 1)
-          printf '%s\n' \
-            '#!/bin/sh' \
-            "exec \"$BUN_BIN\" \"$GITHUB_WORKSPACE/patched-bend/bend2/main.ts\" \"\$@\"" \
-            > /tmp/bend-patched
-          chmod +x /tmp/bend-patched
-          echo "patched-main=/tmp/bend-patched" >> /tmp/bend-versions.txt
-          /tmp/bend-patched version
           cat /tmp/bend-versions.txt
       - name: Run cross-version semantic oracle
         shell: bash
