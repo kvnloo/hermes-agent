@@ -49,33 +49,8 @@ def root_rec(d: Nat, +x: U32) -> U32:
     case 0n: x
     case 1n+p: sq(root_rec(p, x))
 
-law slide:
-  for d: Nat
-  for +x: U32
-  {root_loop(d, sq(x)) == sq(root_loop(d, x)) : U32}
-
-def slide(d, x):
-  match d:
-    case 0n:
-      {==}
-    case 1n+p:
-      slide(p, sq(x))
-
-law agree:
-  for +d: Nat
-  for +x: U32
-  {root_loop(d, x) == root_rec(d, x) : U32}
-
-def agree(d, x):
-  match d:
-    case 0n:
-      {==}
-    case 1n+p:
-      %agree(p, x) : {root_loop(p, mix(x, x)) == sq(_) : U32}
-      slide(p, x)
-
 def agree_32(+x: U32) -> {root_loop(32n, x) == root_rec(32n, x) : U32}:
-  agree(32n, x)
+  {==}
 """
 
 VALID_PROOF = """import Base
@@ -133,6 +108,10 @@ def main() -> int:
         if warm["verdict"] != "pass":
             raise RuntimeError(f"kernel warmup failed: {warm}")
         baseline = core.verify(str(gap), source_env=shared_env)
+        if baseline["verdict"] != "fail":
+            raise RuntimeError(
+                f"kernel-gap discriminator no longer fails closed on this Bend build: {baseline}"
+            )
         bins = kernel_bins(shared_home)
         if len(bins) != 1:
             raise RuntimeError(
@@ -191,6 +170,7 @@ def main() -> int:
     summary = {
         "experiment_count": 2 + len(poisoned_records) + len(cold_records),
         "baseline": {
+            "expected": "fail",
             "verdict": baseline["verdict"],
             "duration_ms": baseline["duration_ms"],
         },
