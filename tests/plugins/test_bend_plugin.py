@@ -300,6 +300,50 @@ def test_warm_kernel_keeps_proof_timeout(tmp_path):
     assert seen["timeout"] == core._TIMEOUT_SECONDS
 
 
+def test_pinned_kernel_is_injected_only_after_hash_check(tmp_path):
+    _proof(tmp_path)
+    kernel = tmp_path / "bendtt"
+    kernel.write_text("# pinned kernel\n")
+    expected = core.sha256_file(kernel)
+    seen = {}
+
+    def runner(command, **kwargs):
+        if command[-1] == "version":
+            return SimpleNamespace(returncode=0, stdout="bend 2.0.34\n", stderr="")
+        seen["bendtt"] = kwargs["env"].get("BENDTT")
+        return SimpleNamespace(returncode=0, stdout="ALL PROOFS CHECK\n", stderr="")
+
+    result = core.verify(
+        str(tmp_path),
+        which=lambda _: "/bin/bend",
+        runner=runner,
+        kernel_override=str(kernel),
+        kernel_expected_sha256=expected,
+    )
+    assert result["success"] is True
+    assert result["kernel_cache_state"] == "pinned"
+    assert result["kernel_sha256_before"] == expected
+    assert seen["bendtt"] == str(kernel.resolve())
+
+
+def test_pinned_kernel_hash_mismatch_fails_before_verdict(tmp_path):
+    _proof(tmp_path)
+    kernel = tmp_path / "bendtt"
+    kernel.write_text("# mutated kernel\n")
+
+    with pytest.raises(core.BendVerifyError) as caught:
+        core.verify(
+            str(tmp_path),
+            which=lambda _: "/bin/bend",
+            runner=lambda *args, **kwargs: SimpleNamespace(
+                returncode=0, stdout="bend 2.0.34\n", stderr=""
+            ),
+            kernel_override=str(kernel),
+            kernel_expected_sha256="0" * 64,
+        )
+    assert caught.value.code == "kernel_integrity"
+
+
 @pytest.mark.skipif(os.name != "posix", reason="process groups are POSIX-specific")
 def test_run_process_timeout_reaps_process_group(monkeypatch):
     events = []
