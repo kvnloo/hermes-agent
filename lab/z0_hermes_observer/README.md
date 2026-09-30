@@ -16,7 +16,7 @@ not persisted by default.
 `Z0INT_HERMES_CAPTURE_SANITIZED_CONTENT=1` opts into Hermes' sanitized
 `request` / `response` API envelopes. These can still contain user text.
 
-For tests or one-off experiments, set `Z0INT_HERMES_EVENT_PATH=/tmp/events.jsonl`.
+For tests or one-off experiments, set `Z0INT_HERMES_EVENT_PATH=$TMPDIR/z0-hermes-events.jsonl`.
 
 ## First experiment
 
