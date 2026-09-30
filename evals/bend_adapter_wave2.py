@@ -1,8 +1,8 @@
-"""Wave 2 live experiments for the downstream Bend/Hermes adapter.
+"""Wave 2/3 live experiments for the downstream Bend/Hermes adapter.
 
-Measures verifier concurrency and attempts a real Bend TOCTOU attack by swapping
-LAWS.bend after the adapter has begun verification but before Bend reads it.
-No model calls.
+Measures verifier concurrency and repeatedly attempts a real Bend TOCTOU attack
+by swapping LAWS.bend after verification begins. With snapshot verification,
+the attack must never forge a pass.
 
 Usage:
   python evals/bend_adapter_wave2.py --repeats 20 --attacks 25 --output result.json
@@ -69,10 +69,7 @@ def concurrency_sweep(valid: Path, invalid: Path, repeats: int) -> dict:
         started = time.monotonic()
         durations = []
         with ThreadPoolExecutor(max_workers=workers) as pool:
-            futures = {
-                pool.submit(core.verify, str(project)): expected
-                for project, expected in jobs
-            }
+            futures = {pool.submit(core.verify, str(project)): expected for project, expected in jobs}
             for future in as_completed(futures):
                 expected = futures[future]
                 result = future.result()
@@ -122,6 +119,7 @@ def toctou_attack(root: Path, attacks: int) -> dict:
     wrapper = make_wrapper(root, real_bend, marker)
 
     forged_passes = 0
+    source_change_detections = 0
     records = []
     for iteration in range(attacks):
         laws.write_text(INVALID_LAWS, encoding="utf-8")
@@ -142,13 +140,16 @@ def toctou_attack(root: Path, attacks: int) -> dict:
         thread.join(timeout=5)
         if result["verdict"] == "pass":
             forged_passes += 1
+        if result.get("source_changed_during_verify"):
+            source_change_detections += 1
         records.append(
             {
                 "iteration": iteration,
                 "swapped": mutation["swapped"],
                 "verdict": result["verdict"],
+                "execution_verdict": result.get("execution_verdict"),
                 "success": result["success"],
-                "proof_changed_during_verify": result["proof_changed_during_verify"],
+                "source_changed_during_verify": result.get("source_changed_during_verify"),
                 "duration_ms": result["duration_ms"],
             }
         )
@@ -157,6 +158,7 @@ def toctou_attack(root: Path, attacks: int) -> dict:
     return {
         "experiment_count": attacks,
         "forged_passes": forged_passes,
+        "source_change_detections": source_change_detections,
         "attack_success_rate": forged_passes / attacks,
         "records": records,
     }
@@ -173,8 +175,6 @@ def main() -> int:
         root = Path(raw)
         valid = write_project(root / "valid", VALID_LAWS)
         invalid = write_project(root / "invalid", INVALID_LAWS)
-
-        # Warm BendTT before measuring concurrency.
         warm = core.verify(str(valid))
         if warm["verdict"] != "pass":
             raise RuntimeError(f"warmup failed: {warm}")
@@ -188,6 +188,7 @@ def main() -> int:
         "toctou": {
             "experiment_count": toctou["experiment_count"],
             "forged_passes": toctou["forged_passes"],
+            "source_change_detections": toctou["source_change_detections"],
             "attack_success_rate": toctou["attack_success_rate"],
         },
     }
@@ -198,10 +199,8 @@ def main() -> int:
         args.output.write_text(rendered + "\n", encoding="utf-8")
     print(json.dumps(summary, indent=2))
 
-    # Concurrency semantics must stay correct. The TOCTOU experiment is
-    # observational in this red phase: a forged pass is the signal we expect
-    # to drive the next implementation.
-    return 1 if concurrency["mismatches"] else 0
+    bad = bool(concurrency["mismatches"]) or toctou["forged_passes"] != 0
+    return 1 if bad else 0
 
 
 if __name__ == "__main__":
