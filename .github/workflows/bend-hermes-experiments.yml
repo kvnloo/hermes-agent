@@ -73,6 +73,13 @@ jobs:
           export PATH="$HOME/.elan/bin:$PATH"
           python3 evals/bend_adapter_provenance.py --attacks 25 --cold-runs 5 --output /tmp/bend-hermes-provenance.json
 
+      - name: Compare shared and session-pinned kernel strategies
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.elan/bin:$PATH"
+          python3 evals/bend_adapter_kernel_strategies.py \
+            --repeats 20 --attacks 10 --output /tmp/bend-hermes-kernel-strategies.json
       - name: Install comparison Bend releases
         shell: bash
         run: |
@@ -118,6 +125,7 @@ jobs:
             /tmp/bend-hermes-matrix.json
             /tmp/bend-hermes-wave2.json
             /tmp/bend-hermes-provenance.json
+            /tmp/bend-hermes-kernel-strategies.json
             /tmp/bend-hermes-upstream-regressions.json
           if-no-files-found: warn
           retention-days: 14
