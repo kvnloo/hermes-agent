@@ -7,6 +7,7 @@ on:
     paths:
       - "evals/bend_adapter_upstream_regressions.py"
       - "evals/bend_patched_wrapper.sh"
+      - "evals/bend_patched_corpus.py"
       - ".github/workflows/bend-patched-qualification.yml"
   workflow_dispatch:
 
@@ -25,6 +26,12 @@ jobs:
           repository: kvnloo/bend
           ref: 17db447a8b8c17b51517de42b35d3216e563f40f
           path: patched-bend
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: bendlang/bend
+          ref: 018751270e800bc222a93dad7f257083ee53a5f7
+          path: base-bend
 
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
@@ -75,11 +82,25 @@ jobs:
             --repeats 25 \
             --output /tmp/bend-patched-qualification.json
 
+      - name: Differential proof corpus against unpatched base
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.elan/bin:$PATH"
+          python3 evals/bend_patched_corpus.py \
+            --bun "$BUN_BIN" \
+            --base-root "$GITHUB_WORKSPACE/base-bend" \
+            --patched-root "$GITHUB_WORKSPACE/patched-bend" \
+            --repeats 2 \
+            --output /tmp/bend-patched-corpus.json
+
       - name: Upload patched qualification receipt
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: bend-patched-qualification
-          path: /tmp/bend-patched-qualification.json
+          path: |
+            /tmp/bend-patched-qualification.json
+            /tmp/bend-patched-corpus.json
           if-no-files-found: warn
           retention-days: 14
