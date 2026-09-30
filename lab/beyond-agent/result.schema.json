@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "hermes.beyond_agent.canary_result.v0",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema", "issue", "parent_rfc", "hypothesis", "baseline",
+    "candidate", "exact_revisions", "verdict", "novelty_survives"
+  ],
+  "properties": {
+    "schema": {"const": "hermes.beyond_agent.canary_result.v0"},
+    "issue": {"type": "integer", "minimum": 342},
+    "parent_rfc": {"type": "integer", "minimum": 330, "maximum": 340},
+    "hypothesis": {"type": "string", "minLength": 1},
+    "baseline": {"type": "string", "minLength": 1},
+    "candidate": {"type": "string", "minLength": 1},
+    "fixture_or_trace_ids": {"type": "array", "items": {"type": "string"}},
+    "exact_revisions": {"type": "object", "additionalProperties": {"type": "string"}},
+    "procedure": {"type": "array", "items": {"type": "string"}},
+    "raw_measurements": {"type": "object", "additionalProperties": true},
+    "counterexamples": {"type": "array", "items": {"type": "string"}},
+    "verdict": {"enum": ["supports", "falsifies", "ambiguous"]},
+    "nearest_old_world_mechanism": {"type": ["string", "null"]},
+    "novelty_survives": {"enum": [true, false, "unknown"]},
+    "kill_criterion_triggered": {"type": "boolean"},
+    "next_discriminating_question": {"type": ["string", "null"]}
+  }
+}
