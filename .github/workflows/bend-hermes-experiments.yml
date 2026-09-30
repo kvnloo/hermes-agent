@@ -1,0 +1,69 @@
+name: Bend Hermes experiments
+
+on:
+  push:
+    branches:
+      - exp/bend-hermes-verify
+    paths:
+      - "plugins/bend/**"
+      - "tests/plugins/test_bend_plugin*.py"
+      - "evals/bend_adapter_matrix.py"
+      - ".github/workflows/bend-hermes-experiments.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-bend-matrix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.13"
+
+      - name: Install Lean 4.34.0 for BendTT
+        shell: bash
+        run: |
+          set -euo pipefail
+          ELAN_COMMIT=0e36a07b9bbcc5381fa6250df109f9a4f94d7bac
+          curl -sSfL --retry 3             "https://raw.githubusercontent.com/leanprover/elan/${ELAN_COMMIT}/elan-init.sh"             -o /tmp/elan-init.sh
+          sh /tmp/elan-init.sh -y --default-toolchain leanprover/lean4:v4.34.0
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          "$HOME/.elan/bin/lean" --version
+
+      - name: Install pinned Bend 2.0.34
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL=https://github.com/bendlang/bend/releases/download/v2.0.34/bend-2.0.34-linux-x64.tar.gz
+          SHA=78106a97af242429dcc057258eb8d10f69cddebcd5e263022185a52d003e09bf
+          curl -sSfL --retry 3 --retry-delay 2 "$URL" -o /tmp/bend.tar.gz
+          echo "$SHA  /tmp/bend.tar.gz" | sha256sum -c -
+          mkdir -p /tmp/bend-release
+          tar -xzf /tmp/bend.tar.gz -C /tmp/bend-release
+          BEND_BIN=$(find /tmp/bend-release -type f -name bend -perm -u+x | head -n 1)
+          test -n "$BEND_BIN"
+          BEND_BIN_DIR=$(dirname "$BEND_BIN")
+          test -d "$BEND_BIN_DIR/../bend2"
+          echo "$BEND_BIN_DIR" >> "$GITHUB_PATH"
+          "$BEND_BIN" version
+
+      - name: Run 225 live verification experiments
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.elan/bin:$PATH"
+          python3 evals/bend_adapter_matrix.py --iterations 25 --output /tmp/bend-hermes-matrix.json
+
+      - name: Upload experiment receipt
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: bend-hermes-matrix
+          path: /tmp/bend-hermes-matrix.json
+          if-no-files-found: warn
+          retention-days: 14
