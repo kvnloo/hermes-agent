@@ -73,6 +73,42 @@ jobs:
           export PATH="$HOME/.elan/bin:$PATH"
           python3 evals/bend_adapter_provenance.py --attacks 25 --cold-runs 5 --output /tmp/bend-hermes-provenance.json
 
+      - name: Install comparison Bend releases
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > /tmp/bend-versions.txt
+          install_bend() {
+            version="$1"
+            sha="$2"
+            root="/tmp/bend-version-$version"
+            archive="/tmp/bend-$version.tar.gz"
+            curl -sSfL --retry 3 --retry-delay 2 \
+              "https://github.com/bendlang/bend/releases/download/v${version}/bend-${version}-linux-x64.tar.gz" \
+              -o "$archive"
+            echo "$sha  $archive" | sha256sum -c -
+            mkdir -p "$root"
+            tar -xzf "$archive" -C "$root"
+            bin=$(find "$root" -type f -name bend -perm -u+x | head -n 1)
+            test -n "$bin"
+            echo "$version=$bin" >> /tmp/bend-versions.txt
+          }
+          install_bend 2.0.32 5c365ddb12954d0933cef751802e0f7d9875f842edcb80f9661f89cd1a9ff7b6
+          install_bend 2.0.33 a6c13c421543701a7f33e594a9c077c74361cdabd87c0052fc487a0deab8bc30
+          echo "2.0.34=$(command -v bend)" >> /tmp/bend-versions.txt
+          cat /tmp/bend-versions.txt
+
+      - name: Qualify 2.0.32-2.0.34 against upstream semantic regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.elan/bin:$PATH"
+          args=()
+          while IFS= read -r spec; do
+            args+=(--bend "$spec")
+          done < /tmp/bend-versions.txt
+          python3 evals/bend_adapter_upstream_regressions.py \
+            "${args[@]}" --repeats 25 --output /tmp/bend-hermes-upstream-regressions.json
       - name: Upload experiment receipts
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -82,5 +118,6 @@ jobs:
             /tmp/bend-hermes-matrix.json
             /tmp/bend-hermes-wave2.json
             /tmp/bend-hermes-provenance.json
+            /tmp/bend-hermes-upstream-regressions.json
           if-no-files-found: warn
           retention-days: 14
