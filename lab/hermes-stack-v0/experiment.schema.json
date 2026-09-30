@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "z0eval.hermes_stack_experiment.v0",
+  "title": "Hermes downstream integration experiment receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "experiment_id", "arm", "task_family", "revisions", "identity", "measurements", "outcome"],
+  "properties": {
+    "schema": {"const": "z0eval.hermes_stack_experiment.v0"},
+    "experiment_id": {"type": "string", "minLength": 1},
+    "arm": {"enum": ["H0", "Z", "R", "S", "ZR", "ZS", "RS", "ZRS"]},
+    "task_family": {"type": "string", "minLength": 1},
+    "fixture_id": {"type": ["string", "null"]},
+    "revisions": {
+      "type": "object",
+      "additionalProperties": {"type": "string"},
+      "required": ["hermes"]
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["harness_id", "trace_id"],
+      "properties": {
+        "harness_id": {"const": "hermes"},
+        "session_id": {"type": ["string", "null"]},
+        "trace_id": {"type": "string", "minLength": 1},
+        "turn_id": {"type": ["string", "null"]},
+        "process_id": {"type": ["integer", "null"]},
+        "bridge_generation": {"type": ["integer", "null"]},
+        "build_id": {"type": ["string", "null"]}
+      }
+    },
+    "component_receipts": {
+      "type": "object",
+      "additionalProperties": {"type": ["string", "null"]},
+      "description": "Pointers/ids for existing Hermes, z0int, RLM/State Packet, SoL-Pi and verifier receipts. This envelope does not duplicate their payloads."
+    },
+    "measurements": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "wall_ms": {"type": ["number", "null"], "minimum": 0},
+        "ttft_ms": {"type": ["number", "null"], "minimum": 0},
+        "frontier_input_tokens": {"type": ["integer", "null"], "minimum": 0},
+        "frontier_output_tokens": {"type": ["integer", "null"], "minimum": 0},
+        "total_model_tokens": {"type": ["integer", "null"], "minimum": 0},
+        "context_bytes": {"type": ["integer", "null"], "minimum": 0},
+        "raw_source_reads": {"type": ["integer", "null"], "minimum": 0},
+        "tool_calls": {"type": ["integer", "null"], "minimum": 0},
+        "retries": {"type": ["integer", "null"], "minimum": 0},
+        "decision_ms": {"type": ["number", "null"], "minimum": 0},
+        "state_packet_ms": {"type": ["number", "null"], "minimum": 0},
+        "observation_pack_ms": {"type": ["number", "null"], "minimum": 0},
+        "vram_peak_mb": {"type": ["number", "null"], "minimum": 0}
+      }
+    },
+    "outcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["execution_completed", "verified_success"],
+      "properties": {
+        "execution_completed": {"type": "boolean"},
+        "verified_success": {"type": ["boolean", "null"]},
+        "verifier_id": {"type": ["string", "null"]},
+        "abstained": {"type": "boolean", "default": false},
+        "escalated": {"type": "boolean", "default": false},
+        "duplicate_side_effect": {"type": "boolean", "default": false},
+        "stale_answer": {"type": "boolean", "default": false},
+        "invariant_violations": {"type": "array", "items": {"type": "string"}}
+      }
+    }
+  }
+}
