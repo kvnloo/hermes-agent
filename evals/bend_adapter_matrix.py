@@ -133,7 +133,7 @@ def main() -> int:
             ("unicode-space-path", str(unicode_project), "PROOF.bend", None, "pass", None),
             ("poisoned-env-invalid", str(invalid), "PROOF.bend", poisoned_env, "fail", None),
             ("custom-basename", str(custom), "proof.bend", None, None, "invalid_input"),
-            ("symlink-escape", str(symlink_project), "PROOF.bend", None, None, "invalid_input"),
+            ("symlink-escape", str(symlink_project), "PROOF.bend", None, None, "unsupported_input"),
         ]
 
         for iteration in range(args.iterations):
