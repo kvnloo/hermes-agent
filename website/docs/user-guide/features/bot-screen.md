@@ -374,8 +374,9 @@ Xauthority, launcher log, per-profile xfconf).
   to viewers (`-SendCutText=0`), so watchers do not receive what the person in
   control copies; pasting into the screen still works.
 - **Display binding.** The launcher publishes `DISPLAY`, `XAUTHORITY` and the
-  D-Bus address; every cua-driver and headed-browser spawn for that profile
-  inherits them, so the bot never acts on a display a human is sitting at.
+  D-Bus address; every spawn that acts on this profile's screen — cua-driver,
+  headed-browser, and a terminal command that opens a GUI while the desktop is
+  up — inherits them, so the bot never acts on a display a human is sitting at.
 
 ## Troubleshooting
 
