@@ -26,6 +26,8 @@ if SPEC is None or SPEC.loader is None:
 core = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(core)
 
+_HOST_ELAN_HOME = os.environ.get("ELAN_HOME") or str(Path.home() / ".elan")
+
 # Bend 2.0.34's TypeScript checker accepts this shared graph, while its
 # proven kernel currently exhausts fuel. That makes it a clean discriminator:
 # a real kernel fails; a fake "always pass" cached kernel can forge success.
@@ -96,6 +98,9 @@ def project(root: Path, name: str, proof: str) -> Path:
 def env_with_home(home: Path) -> dict[str, str]:
     env = dict(os.environ)
     env["HOME"] = str(home)
+    # Keep the already-installed Lean toolchain available while isolating
+    # Bend's ~/.bend/bendtt cache under this experiment HOME.
+    env["ELAN_HOME"] = _HOST_ELAN_HOME
     return env
 
 
