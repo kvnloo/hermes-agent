@@ -236,6 +236,69 @@ def test_rejects_absolute_local_import_for_snapshot_integrity(tmp_path):
     assert caught.value.code == "unsupported_import"
 
 
+def test_cold_kernel_uses_bootstrap_timeout(tmp_path):
+    _proof(tmp_path)
+    fake_root = tmp_path / "bend-dist"
+    fake_bin = fake_root / "bin" / "bend"
+    fake_src = fake_root / "bend2" / "bendtt.lean"
+    fake_bin.parent.mkdir(parents=True)
+    fake_src.parent.mkdir(parents=True)
+    fake_bin.write_text("# fake bend\n")
+    fake_src.write_text("-- fake kernel source\n")
+    seen = {}
+
+    def runner(command, **kwargs):
+        if command[-1] == "version":
+            return SimpleNamespace(returncode=0, stdout="bend 2.0.34\n", stderr="")
+        seen["timeout"] = kwargs["timeout"]
+        return SimpleNamespace(returncode=0, stdout="ALL PROOFS CHECK\n", stderr="")
+
+    result = core.verify(
+        str(tmp_path),
+        which=lambda _: str(fake_bin),
+        runner=runner,
+        source_env={"HOME": str(tmp_path / "home")},
+    )
+    assert result["kernel_cache_state"] == "cold"
+    assert result["verdict_timeout_seconds"] == core._KERNEL_BOOTSTRAP_TIMEOUT_SECONDS
+    assert seen["timeout"] == core._KERNEL_BOOTSTRAP_TIMEOUT_SECONDS
+
+
+def test_warm_kernel_keeps_proof_timeout(tmp_path):
+    _proof(tmp_path)
+    fake_root = tmp_path / "bend-dist"
+    fake_bin = fake_root / "bin" / "bend"
+    fake_src = fake_root / "bend2" / "bendtt.lean"
+    fake_bin.parent.mkdir(parents=True)
+    fake_src.parent.mkdir(parents=True)
+    fake_bin.write_text("# fake bend\n")
+    fake_src.write_text("-- fake kernel source\n")
+
+    home = tmp_path / "home"
+    key = core.sha256_bytes(fake_src.read_bytes())[:16]
+    kernel = home / ".bend" / "bendtt" / key / "bendtt"
+    kernel.parent.mkdir(parents=True)
+    kernel.write_text("# cached kernel\n")
+    seen = {}
+
+    def runner(command, **kwargs):
+        if command[-1] == "version":
+            return SimpleNamespace(returncode=0, stdout="bend 2.0.34\n", stderr="")
+        seen["timeout"] = kwargs["timeout"]
+        return SimpleNamespace(returncode=0, stdout="ALL PROOFS CHECK\n", stderr="")
+
+    result = core.verify(
+        str(tmp_path),
+        which=lambda _: str(fake_bin),
+        runner=runner,
+        source_env={"HOME": str(home)},
+    )
+    assert result["kernel_cache_state"] == "warm"
+    assert result["kernel_sha256_before"] == core.sha256_file(kernel)
+    assert result["verdict_timeout_seconds"] == core._TIMEOUT_SECONDS
+    assert seen["timeout"] == core._TIMEOUT_SECONDS
+
+
 def test_handler_returns_stable_error_code(monkeypatch):
     def fail(**kwargs):
         raise core.BendVerifyError("unsupported_bend", "old Bend")
