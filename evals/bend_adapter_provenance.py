@@ -124,6 +124,9 @@ def main() -> int:
         shared_home.mkdir()
         shared_env = env_with_home(shared_home)
 
+        warm = core.verify(str(valid), source_env=shared_env)
+        if warm["verdict"] != "pass":
+            raise RuntimeError(f"kernel warmup failed: {warm}")
         baseline = core.verify(str(gap), source_env=shared_env)
         bins = kernel_bins(shared_home)
         if len(bins) != 1:
@@ -181,7 +184,7 @@ def main() -> int:
     cold_durations = [record["duration_ms"] for record in cold_records]
 
     summary = {
-        "experiment_count": 1 + len(poisoned_records) + len(cold_records),
+        "experiment_count": 2 + len(poisoned_records) + len(cold_records),
         "baseline": {
             "verdict": baseline["verdict"],
             "duration_ms": baseline["duration_ms"],
