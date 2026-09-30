@@ -9,6 +9,7 @@ from types import SimpleNamespace
 import pytest
 
 from plugins.bend import register
+from plugins.bend import session_kernel as session
 from plugins.bend import tools
 from plugins.bend import verify_core as core
 
@@ -383,10 +384,162 @@ def test_run_process_timeout_reaps_process_group(monkeypatch):
     assert caught.value.stderr == "partial-err"
 
 
+def test_detects_bend_binary_mutation_during_verdict(tmp_path):
+    _proof(tmp_path)
+    fake_root = tmp_path / "bend-dist"
+    fake_bin = fake_root / "bin" / "bend"
+    fake_src = fake_root / "bend2" / "bendtt.lean"
+    fake_bin.parent.mkdir(parents=True)
+    fake_src.parent.mkdir(parents=True)
+    fake_bin.write_text("# bend before\n")
+    fake_src.write_text("-- fake kernel source\n")
+
+    def runner(command, **kwargs):
+        if command[-1] == "version":
+            return SimpleNamespace(returncode=0, stdout="bend 2.0.34\n", stderr="")
+        fake_bin.write_text("# bend after\n")
+        return SimpleNamespace(returncode=0, stdout="ALL PROOFS CHECK\n", stderr="")
+
+    result = core.verify(
+        str(tmp_path),
+        which=lambda _: str(fake_bin),
+        runner=runner,
+        source_env={"HOME": str(tmp_path / "home")},
+    )
+    assert result["execution_verdict"] == "pass"
+    assert result["verdict"] == "unstable"
+    assert result["success"] is False
+    assert result["bend_changed_during_verify"] is True
+    assert result["bend_sha256_after"] != result["bend_sha256"]
+
+
+def test_session_kernel_bootstraps_once_then_pins(monkeypatch):
+    session._reset_session_kernel_for_tests()
+    calls = []
+
+    monkeypatch.setattr(session, "_current_bend", lambda: ("/opt/bend/bin/bend", "bend-sha"))
+    monkeypatch.setattr(
+        session,
+        "kernel_cache_identity",
+        lambda bend, env: {
+            "state": "warm",
+            "path": "/private/session/bendtt",
+            "source_sha256": "source-sha",
+            "sha256": "kernel-sha",
+        },
+    )
+    monkeypatch.setattr(
+        session,
+        "file_identity_sha256",
+        lambda path: "kernel-sha" if path == "/private/session/bendtt" else "bend-sha",
+    )
+
+    def fake_verify(project_dir, proof_file="PROOF.bend", **kwargs):
+        calls.append(kwargs)
+        return {
+            "success": True,
+            "verdict": "pass",
+            "execution_verdict": "pass",
+        }
+
+    monkeypatch.setattr(session, "verify", fake_verify)
+    first = session.verify_with_session_kernel("/project")
+    second = session.verify_with_session_kernel("/project")
+
+    assert first["kernel_strategy"] == "session-bootstrap"
+    assert second["kernel_strategy"] == "session-pinned"
+    assert "kernel_override" not in calls[0]
+    assert calls[1]["kernel_override"] == "/private/session/bendtt"
+    assert calls[1]["kernel_expected_sha256"] == "kernel-sha"
+    session._reset_session_kernel_for_tests()
+
+
+def test_session_kernel_tamper_fails_closed(monkeypatch):
+    session._reset_session_kernel_for_tests()
+    current_kernel_sha = {"value": "kernel-sha"}
+
+    monkeypatch.setattr(session, "_current_bend", lambda: ("/opt/bend/bin/bend", "bend-sha"))
+    monkeypatch.setattr(
+        session,
+        "kernel_cache_identity",
+        lambda bend, env: {
+            "state": "warm",
+            "path": "/private/session/bendtt",
+            "source_sha256": "source-sha",
+            "sha256": "kernel-sha",
+        },
+    )
+    monkeypatch.setattr(
+        session,
+        "file_identity_sha256",
+        lambda path: current_kernel_sha["value"]
+        if path == "/private/session/bendtt"
+        else "bend-sha",
+    )
+    monkeypatch.setattr(
+        session,
+        "verify",
+        lambda *args, **kwargs: {
+            "success": True,
+            "verdict": "pass",
+            "execution_verdict": "pass",
+        },
+    )
+
+    session.verify_with_session_kernel("/project")
+    current_kernel_sha["value"] = "mutated"
+    with pytest.raises(core.BendVerifyError) as caught:
+        session.verify_with_session_kernel("/project")
+    assert caught.value.code == "kernel_integrity"
+    session._reset_session_kernel_for_tests()
+
+
+def test_session_refuses_bend_binary_swap_after_bootstrap(monkeypatch):
+    session._reset_session_kernel_for_tests()
+    bend_sha = {"value": "bend-sha"}
+
+    monkeypatch.setattr(
+        session,
+        "_current_bend",
+        lambda: ("/opt/bend/bin/bend", bend_sha["value"]),
+    )
+    monkeypatch.setattr(
+        session,
+        "kernel_cache_identity",
+        lambda bend, env: {
+            "state": "warm",
+            "path": "/private/session/bendtt",
+            "source_sha256": "source-sha",
+            "sha256": "kernel-sha",
+        },
+    )
+    monkeypatch.setattr(
+        session,
+        "file_identity_sha256",
+        lambda path: "kernel-sha" if path == "/private/session/bendtt" else bend_sha["value"],
+    )
+    monkeypatch.setattr(
+        session,
+        "verify",
+        lambda *args, **kwargs: {
+            "success": True,
+            "verdict": "pass",
+            "execution_verdict": "pass",
+        },
+    )
+
+    session.verify_with_session_kernel("/project")
+    bend_sha["value"] = "replacement-sha"
+    with pytest.raises(core.BendVerifyError) as caught:
+        session.verify_with_session_kernel("/project")
+    assert caught.value.code == "bend_integrity"
+    session._reset_session_kernel_for_tests()
+
+
 def test_handler_returns_stable_error_code(monkeypatch):
     def fail(**kwargs):
         raise core.BendVerifyError("unsupported_bend", "old Bend")
 
-    monkeypatch.setattr(tools, "verify", fail)
+    monkeypatch.setattr(tools, "verify_with_session_kernel", fail)
     result = json.loads(tools.handle_bend_verify({"project_dir": "/tmp/example"}))
     assert result == {"error": "old Bend", "code": "unsupported_bend"}
