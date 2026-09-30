@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -297,6 +298,45 @@ def test_warm_kernel_keeps_proof_timeout(tmp_path):
     assert result["kernel_sha256_before"] == core.sha256_file(kernel)
     assert result["verdict_timeout_seconds"] == core._TIMEOUT_SECONDS
     assert seen["timeout"] == core._TIMEOUT_SECONDS
+
+
+@pytest.mark.skipif(os.name != "posix", reason="process groups are POSIX-specific")
+def test_run_process_timeout_reaps_process_group(monkeypatch):
+    events = []
+
+    class FakeProcess:
+        pid = 4242
+        returncode = -15
+
+        def __init__(self):
+            self.calls = 0
+
+        def communicate(self, timeout=None):
+            self.calls += 1
+            if self.calls == 1:
+                raise core.subprocess.TimeoutExpired(["bend"], timeout)
+            return ("partial-out", "partial-err")
+
+    fake = FakeProcess()
+
+    def fake_popen(*args, **kwargs):
+        events.append(("popen", kwargs.get("start_new_session")))
+        return fake
+
+    monkeypatch.setattr(core.subprocess, "Popen", fake_popen)
+    monkeypatch.setattr(
+        core.os,
+        "killpg",
+        lambda pid, sig: events.append(("killpg", pid, sig)),
+    )
+
+    with pytest.raises(core.subprocess.TimeoutExpired) as caught:
+        core.run_process(["bend", "PROOF.bend", "--verdict"], timeout=0.01)
+
+    assert ("popen", True) in events
+    assert ("killpg", 4242, core.signal.SIGTERM) in events
+    assert caught.value.output == "partial-out"
+    assert caught.value.stderr == "partial-err"
 
 
 def test_handler_returns_stable_error_code(monkeypatch):
