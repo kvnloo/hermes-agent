@@ -7,7 +7,7 @@ on:
     paths:
       - "plugins/bend/**"
       - "tests/plugins/test_bend_plugin*.py"
-      - "evals/bend_adapter_matrix.py"
+      - "evals/bend_adapter_*.py"
       - ".github/workflows/bend-hermes-experiments.yml"
   workflow_dispatch:
 
@@ -17,7 +17,7 @@ permissions:
 jobs:
   live-bend-matrix:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
@@ -59,11 +59,20 @@ jobs:
           export PATH="$HOME/.elan/bin:$PATH"
           python3 evals/bend_adapter_matrix.py --iterations 25 --output /tmp/bend-hermes-matrix.json
 
-      - name: Upload experiment receipt
+      - name: Run 225 concurrency and TOCTOU experiments
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.elan/bin:$PATH"
+          python3 evals/bend_adapter_wave2.py --repeats 20 --attacks 25 --output /tmp/bend-hermes-wave2.json
+
+      - name: Upload experiment receipts
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: bend-hermes-matrix
-          path: /tmp/bend-hermes-matrix.json
+          name: bend-hermes-experiments
+          path: |
+            /tmp/bend-hermes-matrix.json
+            /tmp/bend-hermes-wave2.json
           if-no-files-found: warn
           retention-days: 14
