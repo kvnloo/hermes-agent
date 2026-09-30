@@ -156,10 +156,10 @@ jobs:
           echo "$BUN_SHA  /tmp/bun.zip" | sha256sum -c -
           unzip -q /tmp/bun.zip -d /tmp/bun-release
           BUN_BIN=$(find /tmp/bun-release -type f -name bun -perm -u+x | head -n 1)
-          cat > /tmp/bend-patched <<EOF
-#!/bin/sh
-exec "$BUN_BIN" "$GITHUB_WORKSPACE/patched-bend/bend2/main.ts" "\$@"
-EOF
+          printf '%s\n' \
+            '#!/bin/sh' \
+            "exec \"$BUN_BIN\" \"$GITHUB_WORKSPACE/patched-bend/bend2/main.ts\" \"\$@\"" \
+            > /tmp/bend-patched
           chmod +x /tmp/bend-patched
           echo "patched-main=/tmp/bend-patched" >> /tmp/bend-versions.txt
           /tmp/bend-patched version
