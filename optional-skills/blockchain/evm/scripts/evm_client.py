@@ -1006,16 +1006,18 @@ def cmd_compare(_args: argparse.Namespace) -> None:
     for t in threads:
         t.join(timeout=30)
 
+    # A failed gas fetch is None (sorted last, never a headline); 0.0 is a real, cheapest price.
     sorted_by_gas = sorted(
         results.values(),
-        key=lambda x: x.get("gas_price_gwei") or float("inf"),
+        key=lambda x: float("inf") if x.get("gas_price_gwei") is None else x["gas_price_gwei"],
     )
+    priced = [r for r in sorted_by_gas if r.get("gas_price_gwei") is not None]
 
     print_json({
         "comparison":       sorted_by_gas,
         "errors":           errors,
-        "cheapest_gas":     sorted_by_gas[0]["chain"] if sorted_by_gas else None,
-        "most_expensive_gas": sorted_by_gas[-1]["chain"] if sorted_by_gas else None,
+        "cheapest_gas":     priced[0]["chain"] if priced else None,
+        "most_expensive_gas": priced[-1]["chain"] if priced else None,
     })
 
 
