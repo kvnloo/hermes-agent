@@ -146,6 +146,11 @@ export function useSessionTileDelegate({
   updateSessionState
 }: SessionTileDelegateParams): void {
   useEffect(() => {
+    // Per stored id, bumped on every resumeTile entry: lets an overlapping
+    // stale call tell that a fresher one now owns the tile (the main pane's
+    // isCurrentResume() analog).
+    const resumeTileEpochByStoredSessionId = new Map<string, number>()
+
     // A tile's runtime binding can die the same way the foreground's does
     // (sleep/wake, backend restart). The cache maps stored -> runtime, so walk
     // it backwards to find the durable id this runtime belongs to.
@@ -292,6 +297,10 @@ export function useSessionTileDelegate({
         )
       },
       resumeTile: async (storedSessionId, options) => {
+        const epoch = (resumeTileEpochByStoredSessionId.get(storedSessionId) ?? 0) + 1
+
+        resumeTileEpochByStoredSessionId.set(storedSessionId, epoch)
+
         // A retained tile can still own its runtime after the primary view drops
         // its reverse lookup. Reconnect invalidates both bindings.
         const existing =
@@ -396,6 +405,15 @@ export function useSessionTileDelegate({
             return stored
           }
         )
+
+        // A fresher resumeTile started while this no-owner recovery awaited its
+        // stored read (e.g. the owner became resolvable and its live resume
+        // rebound the tile). This stale read-only outcome must neither repaint
+        // the tile nor repoint the stored -> runtime binding onto the synthetic
+        // read-only id, or the warm path keeps the tile read-only for good.
+        if (outcome.mode === 'read-only' && resumeTileEpochByStoredSessionId.get(storedSessionId) !== epoch) {
+          return runtimeIdByStoredSessionIdRef.current.get(storedSessionId) ?? readOnlyRuntimeIdFor(storedSessionId)
+        }
 
         const prefetch = await prefetchPromise
 

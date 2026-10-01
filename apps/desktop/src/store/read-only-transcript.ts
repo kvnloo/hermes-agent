@@ -25,6 +25,14 @@ import { isSessionOwnerResolutionError } from './session-owner-resolution'
  *  that has no routable live runtime. */
 export const $readOnlyStoredTranscripts = atom<ReadonlySet<string>>(new Set())
 
+/** Bumped per stored id by every successful live resume (see
+ *  `clearStoredTranscriptReadOnly`), so an in-flight recovery can tell that the
+ *  session was proven routable while its stored read was still pending. */
+const liveResumeGenerationByStoredSessionId = new Map<string, number>()
+
+const liveResumeGeneration = (storedSessionId: string): number =>
+  liveResumeGenerationByStoredSessionId.get(storedSessionId.trim()) ?? 0
+
 export function markStoredTranscriptReadOnly(storedSessionId: string): void {
   const id = storedSessionId.trim()
 
@@ -38,7 +46,15 @@ export function markStoredTranscriptReadOnly(storedSessionId: string): void {
 export function clearStoredTranscriptReadOnly(storedSessionId: string): void {
   const id = storedSessionId.trim()
 
-  if (!id || !$readOnlyStoredTranscripts.get().has(id)) {
+  if (!id) {
+    return
+  }
+
+  // A live success counts even when the latch is not set yet: a recovery
+  // still awaiting its stored read must not latch over it.
+  liveResumeGenerationByStoredSessionId.set(id, liveResumeGeneration(id) + 1)
+
+  if (!$readOnlyStoredTranscripts.get().has(id)) {
     return
   }
 
@@ -99,6 +115,7 @@ export async function resumeWithStoredTranscriptFallback<TResumed, TTranscript>(
       throw error
     }
 
+    const generation = liveResumeGeneration(storedSessionId)
     let transcript: TTranscript
 
     try {
@@ -107,7 +124,11 @@ export async function resumeWithStoredTranscriptFallback<TResumed, TTranscript>(
       throw error
     }
 
-    markStoredTranscriptReadOnly(storedSessionId)
+    // A live resume for this id succeeded while the stored read was in flight:
+    // the session is routable, so this stale recovery must not latch it.
+    if (liveResumeGeneration(storedSessionId) === generation) {
+      markStoredTranscriptReadOnly(storedSessionId)
+    }
 
     return { error, mode: 'read-only', transcript }
   }
