@@ -1,73 +1,56 @@
 ## What does this PR do?
 
-Docs-only. Each statement below is wrong on current `main`; every correction cites the source that contradicts it. No behaviour changes.
+Docs-only. Seven statements in the Desktop docs no longer match the code on `main`. Each item below gives the old text, the source that contradicts it, and what the new text says. No behaviour changes. File:line references are to f848940560 and still match current `main`.
 
-### docs(desktop): cover marker-less copies of a package's own desktop half
+#### Desktop plugin SDK: adoption of marker-less copies
 
-- **Was:** website/docs/developer-guide/desktop-plugin-sdk.md:1383-1385 — "while a marker-less folder that *does* hold a `plugin.js` is a standalone plugin you installed by hand and is never overwritten."
-- **Source on main:** apps/desktop/electron/desktop-plugins-root.ts:208-229 materializeDesktopHalf(): a marker-less target with plugin.js is compared via sameFile() (:222); equal bytes -> writeDesktopHalfMarker() in place and return target (adoption, #112450); different -> left untouched.
-- **Check:** Doc says such folders are always the user's; source adopts byte-identical pre-marker copies.
-- **Now:** Corrected clause keeps 'never overwritten' and adds the in-place adoption case. vitest electron/desktop-plugins-root.test.ts 'adopts an unmarked copy of its own half that a pre-marker install left behind' passes on main.
-- **Mirrors:** No zh-Hans copy of desktop-plugin-sdk.md.
-- Drift introduced by 4dc7a23690 (#121714).
+- Old: `website/docs/developer-guide/desktop-plugin-sdk.md:1383-1385` says a marker-less `desktop-plugins/<id>/` folder that holds a `plugin.js` "is a standalone plugin you installed by hand and is never overwritten."
+- Source: `materializeDesktopHalf()` in `apps/desktop/electron/desktop-plugins-root.ts:221-228` compares such a folder's `plugin.js` with `sameFile()`; if the bytes match it calls `writeDesktopHalfMarker()` in place and adopts the folder (#112450), otherwise it leaves the folder untouched.
+- New: keeps "never overwritten" and adds the case of a pre-marker copy of the package's own half, which the next **Rescan** adopts in place. Pinned by `desktop-plugins-root.test.ts` ('adopts an unmarked copy of its own half that a pre-marker install left behind'). Behaviour changed in #121714 (4dc7a23690); docs were not updated.
 
-### docs(desktop): drop stale "off shows answers only" claim for Reasoning Blocks
+#### Reasoning Blocks
 
-- **Was:** website/docs/user-guide/desktop.md:251 — "shows or hides the model's thinking in the transcript (off shows answers only)."
-- **Source on main:** apps/desktop/src/components/assistant-ui/thread/message-parts.tsx:154-158 'The tool feed ... follows display.tool_progress, never show_reasoning'; use-hermes-config.test.ts:70 'mirrors display.tool_progress independently of show_reasoning'.
-- **Check:** Parenthetical promises an answers-only transcript; tool feed remains.
-- **Now:** Parenthetical removed. vitest use-hermes-config.test.ts passes on main.
-- **Mirrors:** No zh-Hans desktop.md.
-- Drift introduced by 8f21606116 (#126479).
+- Old: `website/docs/user-guide/desktop.md:251` says Reasoning Blocks off "shows answers only".
+- Source: `apps/desktop/src/components/assistant-ui/thread/message-parts.tsx:155-158`: the tool feed follows `display.tool_progress`, never `show_reasoning`.
+- New: the parenthetical is removed. Pinned by `use-hermes-config.test.ts:70` ('mirrors display.tool_progress independently of show_reasoning'). Behaviour changed in #126479 (8f21606116); docs were not updated.
 
-### docs(desktop): correct markdown line-break behavior to match soft-breaks plugin
+#### Markdown line breaks
 
-- **Was:** website/docs/user-guide/desktop.md:46 — "**Markdown line breaks** follow Markdown semantics: two trailing spaces create a hard line break; an ordinary newline stays a soft break."
-- **Source on main:** apps/desktop/src/lib/remark-soft-breaks.ts:7-35 (text nodes split on newlines into break nodes; code/inline code/math untouched); applied in markdown-text.tsx:104 REMARK_PLUGINS. Commit 9b17e80970 postdates the doc line (blame 55ad5afa12, an ancestor).
-- **Check:** Doc describes behaviour the renderer overrides.
-- **Now:** Bullet rewritten to the soft-breaks behaviour. vitest src/lib/remark-soft-breaks.test.ts passes on main.
-- **Mirrors:** No zh-Hans desktop.md.
-- Drift introduced by 9b17e80970 (#124345).
+- Old: `website/docs/user-guide/desktop.md:46` says two trailing spaces make a hard line break and an ordinary newline stays a soft break.
+- Source: `remarkSoftBreaks()` in `apps/desktop/src/lib/remark-soft-breaks.ts:7-35` splits prose text nodes on newlines into `break` nodes and leaves code, inline code and math alone. It is registered in `REMARK_PLUGINS` (`apps/desktop/src/components/assistant-ui/markdown-text.tsx:104`).
+- New: a single newline in prose renders as a line break; code, inline code and math keep their own whitespace. Pinned by `remark-soft-breaks.test.ts` ('turns single newlines in prose into line breaks', 'leaves code and math nodes untouched'). Behaviour changed in #124345 (9b17e80970); docs were not updated.
 
-### docs: cover NVIDIA proprietary driver defaulting to XWayland on Linux
+#### Linux/Wayland: NVIDIA proprietary driver
 
-- **Was:** website/docs/user-guide/desktop.md:199 — "On a local Wayland session ... Hermes launches with `--ozone-platform=wayland` so Electron does not fall back to XWayland."
-- **Source on main:** apps/desktop/electron/entry.ts:37 nvidiaProprietaryDriver = linux && existsSync('/proc/driver/nvidia/version'); wslg-launch.ts:43-53 defaultBackend(): explicit x11/wayland hint wins, else nvidiaProprietaryDriver ? 'x11' : 'wayland' (#126013). desktop.ozone_platform_hint reaches it as ELECTRON_OZONE_PLATFORM_HINT (hermes_cli/main_desktop.py:1651-1652).
-- **Check:** Doc states wayland unconditionally.
-- **Now:** NVIDIA exception added; override sentence now lists a hint of x11 or wayland. vitest wslg-launch.test.ts 'defaults the NVIDIA proprietary driver to x11 unless the user chose wayland' passes on main.
-- **Mirrors:** No zh-Hans desktop.md; the WSLg paragraph is unaffected (no /proc/driver/nvidia under WSL dxg).
-- Drift introduced by e050902e7c (#127048).
+- Old: `website/docs/user-guide/desktop.md:199` says a local Wayland session always launches with `--ozone-platform=wayland`, and the override sentence names only `desktop.ozone_platform_hint: x11`.
+- Source: `apps/desktop/electron/entry.ts:37` sets `nvidiaProprietaryDriver` when `/proc/driver/nvidia/version` exists. `defaultBackend()` in `apps/desktop/electron/wslg-launch.ts:47-53` lets an explicit `x11`/`wayland` hint win and otherwise picks `x11` for that driver, `wayland` for everyone else (#126013). The config hint reaches it as `ELECTRON_OZONE_PLATFORM_HINT` (`hermes_cli/main_desktop.py:1651-1652`).
+- New: adds the NVIDIA exception (XWayland by default), and the override sentence now names a hint of `x11` or `wayland`. Pinned by `wslg-launch.test.ts:91` ('defaults the NVIDIA proprietary driver to x11 unless the user chose wayland'). The WSLg paragraph is unaffected: `/proc/driver/nvidia` is absent under WSL. Behaviour changed in #127048 (e050902e7c); docs were not updated.
 
-### docs: correct Update all instances dispatch order to remote-then-local
+#### Update all instances order
 
-- **Was:** website/docs/user-guide/multi-connection-desktop.md:293-295 — "dispatches `hermes update` to every eligible connection in parallel:"
-- **Source on main:** apps/desktop/electron/update-order.ts:7-22 updateConnectionsBeforeLocal(): Promise.all(non-local) then Promise.all(local); used by the connections:update-all handler, main.ts:16776-16779.
-- **Check:** Doc says fully parallel.
-- **Now:** Doc states remote/SSH first (parallel), then local, with the reason. vitest electron/update-order.test.ts passes on main.
-- **Mirrors:** No zh-Hans multi-connection-desktop.md.
-- Drift introduced by f429fef30c (#105129).
+- Old: `website/docs/user-guide/multi-connection-desktop.md:293-295` says **Update all instances** dispatches `hermes update` to every eligible connection in parallel.
+- Source: `updateConnectionsBeforeLocal()` in `apps/desktop/electron/update-order.ts:7-22` runs the non-local connections with `Promise.all`, then the local one. It is used by the `hermes:connections:update-all` IPC handler in `apps/desktop/electron/main.ts`.
+- New: remote and SSH connections update first, in parallel, then local once they have settled, with the reason (the local update hands off to an updater that waits for the app to exit). Pinned by `update-order.test.ts` ('a local handoff waits for remote updates that outlive its exit deadline'). Behaviour changed in #105129 (f429fef30c); docs were not updated.
 
-### docs(bot-screen): include terminal GUI launches in display-binding consumers
+#### Bot Screen display binding
 
-- **Was:** website/docs/user-guide/features/bot-screen.md:376-378 — "every cua-driver and headed-browser spawn for that profile inherits them"
-- **Source on main:** tools/environments/local.py:725-740 _make_run_env(): merges tools.bot_desktop.runtime.published_env() while the desktop runs (#125830) and drops WAYLAND_DISPLAY.
-- **Check:** Consumer list omits terminal GUI launches.
-- **Now:** Bullet adds GUI apps launched from a local terminal command.
-- **Mirrors:** No zh-Hans bot-screen.md.
-- Drift introduced by 89dd61a281 (#128246).
+- Old: `website/docs/user-guide/features/bot-screen.md:376-378` names only cua-driver and headed-browser spawns as inheriting the published `DISPLAY`/`XAUTHORITY`/D-Bus env.
+- Source: `_make_run_env()` in `tools/environments/local.py:726-740` merges `tools.bot_desktop.runtime.published_env()` while the Bot Desktop runs (#125830) and drops `WAYLAND_DISPLAY`.
+- New: also names GUI apps the agent launches from a local `terminal` command while the screen is up. Pinned by `tests/tools/test_local_env_bot_desktop.py` (`test_running_bot_desktop_display_rides_along`); not run here, verified by reading `tools/environments/local.py`. Behaviour changed in #128246 (89dd61a281); docs were not updated.
 
-### docs: correct NVIDIA SwiftShader fallback to behavioral probe, not 580.x series
+#### HERMES_DESKTOP_NVIDIA_SWIFTSHADER
 
-- **Was:** website/docs/reference/environment-variables.md:588 — "routes rendering through SwiftShader on driver series with a broken EGL probe (`580.x`, #40077): `1` forces the fallback on — the recovery hatch if a future series reintroduces the crash but is not yet in the closed list"
-- **Source on main:** apps/desktop/electron/linux-nvidia-egl-fallback.ts:10-24 ('The gate used to be a driver-major set ... So the gate is now behavioral (#124255)'), decideNvidiaEglFallback() :183-260 (override, sticky fallback marker per app+driver version, booting-marker engage).
-- **Check:** Doc describes the removed driver-major list.
-- **Now:** Entry describes the behavioural probe. vitest linux-nvidia-egl-fallback.test.ts ('the 580 series is probed, not assumed broken', 'a driver update re-probes hardware GL once') passes on main.
-- **Mirrors:** No zh-Hans copy of this variable.
-- Drift introduced by d9f0a399a0 (#128337).
+- Old: `website/docs/reference/environment-variables.md:588` describes the SwiftShader fallback as applying to driver series with a broken EGL probe (`580.x`), with `1` as the hatch for a future series "not yet in the closed list".
+- Source: `apps/desktop/electron/linux-nvidia-egl-fallback.ts:10-24` explains that the driver-major gate was replaced by a behavioural one (#124255). `decideNvidiaEglFallback()` (`:183`) boots with hardware GL and engages the fallback only after a witnessed GPU-process death; the result is sticky per app version and full driver version.
+- New: the entry describes the behavioural probe, says it is re-probed after an app or driver update, and makes `1` the hatch for a broken host the probe has not caught. Pinned by `linux-nvidia-egl-fallback.test.ts:61` ('boots with hardware GL on a first launch (no marker): the 580 series is probed, not assumed broken') and `:92` ('a driver update re-probes hardware GL once'). Behaviour changed in #128337 (d9f0a399a0); docs were not updated.
+
+None of the edited passages has a zh-Hans translation (the zh-Hans `environment-variables.md` has no `HERMES_DESKTOP_NVIDIA_SWIFTSHADER` row).
 
 ## Related Issue
 
-Supersedes our own parked docs PRs #127359, #127360 (closed to keep the review queue short); no open issue tracks these drifts.
+No open issue tracks these. Supersedes my earlier docs PRs #127359 (Reasoning Blocks) and #127360 (Markdown line breaks), both closed. The behaviour changes these docs now describe came from #121714, #126479, #124345, #127048, #105129, #128246 and #128337.
+
+Related: #128505 adds a 580-series section that still describes the removed driver-major gate; the env-var row here follows the behavioural probe from #128337.
 
 ## Type of Change
 
@@ -81,18 +64,19 @@ Supersedes our own parked docs PRs #127359, #127360 (closed to keep the review q
 
 ## Changes Made
 
-- `website/docs/developer-guide/desktop-plugin-sdk.md`
-- `website/docs/reference/environment-variables.md`
-- `website/docs/user-guide/desktop.md`
-- `website/docs/user-guide/features/bot-screen.md`
-- `website/docs/user-guide/multi-connection-desktop.md`
+- `website/docs/developer-guide/desktop-plugin-sdk.md`: marker-less folder adoption.
+- `website/docs/reference/environment-variables.md`: `HERMES_DESKTOP_NVIDIA_SWIFTSHADER` row.
+- `website/docs/user-guide/desktop.md`: Markdown line breaks, Linux/Wayland NVIDIA default, Reasoning Blocks.
+- `website/docs/user-guide/features/bot-screen.md`: display-binding consumers.
+- `website/docs/user-guide/multi-connection-desktop.md`: Update all instances order.
 
 ## How to Test
 
-1. For each item above, read the cited source lines on `main`; the old text contradicts them, the new text matches.
-2. Behaviour the docs describe, run on this branch: apps/desktop vitest: electron/update-order.test.ts electron/wslg-launch.test.ts electron/linux-nvidia-egl-fallback.test.ts electron/desktop-plugins-root.test.ts src/lib/remark-soft-breaks.test.ts src/app/session/hooks/use-hermes-config.test.ts -> 6 files, 57 passed.
-3. Docs CI equivalent: `python3 website/scripts/extract-skills.py && python3 website/scripts/generate-skill-docs.py && git diff --exit-code -- website/docs website/sidebars.ts website/i18n` (clean) and `python3 website/scripts/check_doc_links.py` (OK).
-4. Not run here: the Docusaurus build (`npm run build:fast`); added lines contain no MDX-sensitive `{}`/raw tags outside code.
+1. For each item above, read the cited source on `main`. The old text contradicts it; the new text matches.
+2. apps/desktop vitest, run on f848940560 (sources identical on this branch, which is docs-only): `electron/update-order.test.ts electron/wslg-launch.test.ts electron/linux-nvidia-egl-fallback.test.ts electron/desktop-plugins-root.test.ts src/lib/remark-soft-breaks.test.ts src/app/session/hooks/use-hermes-config.test.ts` -> 6 files, 57 passed.
+3. Ran the docs-site-checks generator/diff step (`python3 website/scripts/extract-skills.py && python3 website/scripts/generate-skill-docs.py`, then `git diff --exit-code -- website/docs website/sidebars.ts website/i18n`: clean) and `python3 website/scripts/check_doc_links.py` (OK).
+4. Not run: `npm run lint:diagrams` (no diagrams touched) and `npm run build:fast`. The added lines contain no MDX-sensitive `{}` or raw tags outside code.
+5. Python tests were not run; the bot-screen item was checked against source only.
 
 ## Checklist
 
@@ -102,8 +86,8 @@ Supersedes our own parked docs PRs #127359, #127360 (closed to keep the review q
 - [x] My commit messages follow [Conventional Commits](https://www.conventionalcommits.org/) (`fix(scope):`, `feat(scope):`, etc.)
 - [x] I searched for [existing PRs](https://github.com/NousResearch/hermes-agent/pulls) to make sure this isn't a duplicate
 - [x] My PR contains **only** changes related to this fix/feature (no unrelated commits)
-- [ ] I've run `pytest tests/ -q` and all tests pass — targeted files only (listed above); docs-only change
-- [ ] I've added tests for my changes — N/A, documentation only
+- [ ] I've run `pytest tests/ -q` and all tests pass (not run; docs-only change, targeted vitest files listed above)
+- [ ] I've added tests for my changes (N/A, documentation only)
 - [x] I've tested on my platform: Linux (CachyOS)
 
 ### Documentation & Housekeeping
@@ -116,4 +100,4 @@ Supersedes our own parked docs PRs #127359, #127360 (closed to keep the review q
 
 ## Screenshots / Logs
 
-Verified on `main` f848940560; merges cleanly onto eb8d21f482. Branch `ready/docs2-desktop` @ 58f1374abe9b, 5 files changed, 15 insertions(+), 8 deletions(-).
+Based on f848940560; merges cleanly onto main at aeff051a18 (5 files, +15/-8).

@@ -2,14 +2,14 @@
 
 `parse_rate_limit_headers()` defaults an absent `x-ratelimit-remaining-<tag>` header to `0`. Zero is also the genuine "exhausted" signal, so a response that carries `x-ratelimit-limit-<tag>` without the matching `remaining` header is recorded as 100% used:
 
-- `/usage` renders a fabricated `100.0%  800/800 used (0 left …)` bar plus a `⚠ requests/min at 100%` warning, telling the user they are rate-limited when the provider said no such thing.
+- The CLI `/usage` shows a fabricated `100.0%  800/800 used  (0 left, …)` bar and a `⚠ requests/min at 100%` warning. The gateway `/usage` shows `RPM: 0/800`. Both tell the user they are rate-limited when the provider never said so.
 - The same `RateLimitState` is the `last_known_state` that `is_genuine_nous_rate_limit()` consults on a later 429. If the prior response sent `limit` + `reset` (≥ 60 s) but no `remaining`, a bare upstream-capacity 429 is classified as a genuine account limit and trips the cross-session Nous breaker.
 
-The 429-header path in `nous_rate_guard._parse_buckets_from_headers()` already parses `remaining` with a `None` default. This PR makes the tracker do the same: an absent or unparseable `remaining` gives a "no data" bucket (`limit=0`), which is how a missing `limit` is already shown. `RateLimitState.has_data` now also requires at least one usable window, so a state built only from partial headers reports "No rate limit data" rather than an empty `⏱️ Rate Limits:` line in the gateway `/usage`. A `remaining` of `0` that is actually present still reports exhaustion.
+The 429-header path in `nous_rate_guard._parse_buckets_from_headers()` already parses `remaining` with a `None` default. This PR makes the tracker do the same: an absent or unparseable `remaining` gives a "no data" bucket (`limit=0`), which is how a missing `limit` is already shown. `RateLimitState.has_data` now also requires at least one window with a limit. A state with no complete window therefore counts as no data: the gateway `/usage` leaves out the Rate Limits line instead of printing it empty, and the CLI `/usage` leaves out the rate-limit block. A `remaining` of `0` that is actually present still reports exhaustion.
 
 ## Related Issue
 
-No existing issue. Searched open/closed PRs and issues for `x-ratelimit-remaining`, `rate_limit_tracker` and `parse_rate_limit_headers`. Open PRs that touch `agent/rate_limit_tracker.py` (#40460 `_fmt_count` negative guard, #128670 Anthropic unified headers, #78167 proactive throttle) do not change how a missing `remaining` is handled. #78167's proactive throttle would act on these false-exhausted buckets too, so this fix also makes that PR safer.
+No upstream issue. Found by Detail and first fixed in the fork as kvnloo/hermes-agent#47 (detail-app[bot]). This is a rebuild of that fix on current main, where bucket construction has moved to a `_BUCKET_TAGS` comprehension. It keeps the same approach: a missing `remaining` gives a no-data bucket, and `has_data` requires a usable window. Searched open/closed PRs and issues for `x-ratelimit-remaining`, `rate_limit_tracker` and `parse_rate_limit_headers`. Open PRs that touch `agent/rate_limit_tracker.py` (#40460 `_fmt_count` negative guard, #128670 Anthropic unified headers, #78167 proactive throttle) do not change how a missing `remaining` is handled. #78167 adds a proactive throttle on exhausted buckets. With the current `0` default, that throttle would also fire on these limit-only buckets.
 
 ## Type of Change
 
@@ -28,6 +28,8 @@ No existing issue. Searched open/closed PRs and issues for `x-ratelimit-remainin
 3. Reverting only the `None` default for `remaining` brings back both failures. Reverting only the `has_data` change fails the tracker test on `assert not state.has_data`.
 
 Adjacent suites pass with the change: `tests/gateway/test_usage_command.py`, `tests/hermes_cli/test_cli_status_bar.py`, `tests/agent/test_credits_cold_start.py`, `tests/agent/test_nous_welcome_client_contract.py`, `tests/agent/test_welcome_error_identity.py`, `tests/agent/test_welcome_tier_recovery.py` (139 tests in total across the 8 files). `ruff check` is clean on the touched files.
+
+Runs were on main f848940. Main has since moved ahead with no changes to the touched files, and the branch merges cleanly. Not tested: the full `pytest tests/` suite, and a live provider response with partial headers. The behaviour is covered only by the two unit tests above.
 
 ## Checklist
 

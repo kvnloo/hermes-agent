@@ -1,10 +1,14 @@
 ## What does this PR do?
 
-The `/subscription` step-up screen ("Allow Remote Spending") shows the wrong message when the gateway is unreachable.
+The `/subscription` Remote Spending step-up (the "Allow Remote Spending" action) shows the wrong message when the gateway is unreachable.
 
-`requestRemoteSpending` in `ui-tui/src/app/slash/commands/subscription.ts` relied on a `.catch()` to show `slashCmd.subscription.billingUnreachable` ("Could not reach the billing service — check your connection, then retry."). But `ctx.gateway.rpc` (`ui-tui/src/app/useMainApp.ts`) never rejects. It catches every transport error (dropped socket, gateway restart, dead child, "gateway not connected") and resolves `null`; `GatewayRpc` is typed `Promise<null | T>`. The `.then()` therefore ran with `r === null` and returned `{ granted: false, message: undefined }`. `stepUpDenialResult` has no case for that, so the user saw the default admin-approval copy ("Remote Spending was not allowed — someone with billing permissions (owner, admin, or finance admin) must approve it…") when a retry would have worked.
+`requestRemoteSpending` in `ui-tui/src/app/slash/commands/subscription.ts` relied on a `.catch()` to show `slashCmd.subscription.billingUnreachable` ("Could not reach the billing service — check your connection, then retry."). But `ctx.gateway.rpc` (`ui-tui/src/app/useMainApp.ts`) never rejects. It catches every failed request (dropped socket, gateway restart, dead child, "gateway not connected", the request timeout, 120 s by default) and resolves `null`. It also resolves `null` for a malformed response. `GatewayRpc` is typed `Promise<null | T>`. The `.then()` therefore ran with `r === null` and returned `{ granted: false, message: undefined }`. `stepUpDenialResult` has no case for that, so the user saw the default admin-approval copy ("Remote Spending was not allowed — someone with billing permissions (owner, admin, or finance admin) must approve it…") when a retry would have worked.
 
 `requestRemoteSpending` now maps a `null` response to the retry message inside `.then()` and drops the `.catch()`, which could not run. Typed denials (`session_revoked` / `remote_spending_revoked` / `rate_limited`) and the granted path are unchanged.
+
+A step-up whose browser approval outlives the RPC timeout also resolves `null` and now gets the retry message. Retry is correct there too, because the grant persists gateway-side (see the comment on `requestRemoteSpending` in `topup.ts`).
+
+Sibling: `topup.ts` has its own `requestRemoteSpending` with the same unreachable `.catch(() => false)`. There, `null` and a reject both map to `false` (documented as "not yet granted"), so the dead catch changes nothing. A dropped gateway during `/topup` still ends in the billing overlay's admin-approval line, though. Giving it a distinct message needs a reason in the `Promise<boolean>` contract of `BillingOverlayCtx.requestRemoteSpending`, so it is left for a follow-up to keep this diff small.
 
 ## Related Issue
 
@@ -17,16 +21,16 @@ No upstream issue or PR found. Searched PRs and issues for `requestRemoteSpendin
 ## Changes Made
 
 - `ui-tui/src/app/slash/commands/subscription.ts`: `requestRemoteSpending` maps `null` to `{ granted: false, message: t('slashCmd.subscription.billingUnreachable') }` and keeps the typed-denial mapping for non-null responses. The dead `.catch()` is removed.
-- `ui-tui/src/__tests__/subscriptionCommand.test.ts`: two tests that drive the real overlay ctx built by `/subscription`. (1) `billing.step_up` → `null` gives the retry message. (2) A typed `rate_limited` denial is still carried through.
+- `ui-tui/src/__tests__/subscriptionCommand.test.ts`: two tests that drive the real overlay ctx built by `/subscription`. (1) `billing.step_up` → `null` gives the retry message. (2) A typed `rate_limited` denial is still carried through. This one passes on `main` too; it guards the rewritten non-null branch.
 
 ## How to Test
 
 1. `cd ui-tui && npx vitest run src/__tests__/subscriptionCommand.test.ts`
-2. On unpatched `main` the null test fails: `expected { error: undefined, granted: false, message: undefined } to deeply equal { granted: false, message: 'Could not reach the billing service — check your connection, then retry.' }`.
+2. On unpatched `main` with only the new tests, the null test fails: `expected { error: undefined, granted: false, message: undefined } to deeply equal { granted: false, message: 'Could not reach the billing service — check your connection, then retry.' }` (1 failed, 4 passed).
 3. With the patch, 5/5 pass. With only the null branch's message replaced by `undefined`, the test fails again.
 4. Adjacent: `subscriptionCommand.test.ts`, `subscriptionOverlay.test.tsx`, `billingStepUp.test.tsx` and `topupCommand.test.ts` give 53 passed. `npm run typecheck`, `eslint` and `prettier --check` are clean.
 
-Not tested: the live flow against an authenticated Nous account with a real gateway drop.
+Not tested: the live flow against an authenticated Nous account with a real gateway drop or a real RPC timeout.
 
 ## Checklist
 

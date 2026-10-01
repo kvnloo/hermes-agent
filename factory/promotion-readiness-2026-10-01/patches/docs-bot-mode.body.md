@@ -1,22 +1,34 @@
 ## What does this PR do?
 
-Corrects three Bot Mode / Bot Chat statements that no longer match the code on `main` (tested at `f848940560`).
+Corrects three Bot Mode / Bot Chat statements that no longer match the code on `main` (verified against `aeff051a18`; none of the cited files changed since the branch base `f848940560`).
 
 | # | Doc on main | What it says | What the code does |
 |---|---|---|---|
-| 1 | `website/docs/developer-guide/cron-internals.md:366` | "Without a mailbox owner it retains `hermes [-p <profile>] chat --in ~ -c "Bot Chat" --create-if-missing -Q --query-file <tmp>`" | `_deliver_to_bot_chat` (`cron/scheduler_delivery.py:772-950`) never passes the target profile with `-p`. It builds the child env with `served_profile_child_env(..., target_home=home)`, which sets `HERMES_HOME` to the resolved target (`tools/environments/local.py:409-411`), and appends `-p default` only when the target is the root home (`if home.parent.name != "profiles": argv += ["-p", "default"]`), then `chat --in ~ -c "Bot Chat" --create-if-missing -Q --query-file <tmp>`. |
+| 1 | `website/docs/developer-guide/cron-internals.md:366` | "Without a mailbox owner it retains `hermes [-p <profile>] chat --in ~ -c "Bot Chat" --create-if-missing -Q --query-file <tmp>`" | `_deliver_to_bot_chat` (`cron/scheduler_delivery.py:772-996`) never passes the target profile with `-p`. It builds the child env with `served_profile_child_env(..., target_home=home)` (`:906-907`), which sets `HERMES_HOME` to the resolved target (`tools/environments/local.py:409-411`), and appends `-p default` only when the target is the root home (`:911-912`, `if home.parent.name != "profiles": argv += ["-p", "default"]`), then `chat --in ~ -c "Bot Chat" --create-if-missing -Q --query-file <tmp>` (`:929-931`). |
 | 2 | `website/i18n/zh-Hans/.../user-guide/bot-mode.md:125` | `Message from 🤖 <sender> (@<sender>):` | `tools/bot_mode_dm.py:243` stamps `f"Message from 🤖 {_display_name(...)} (@{_handle(me)}): "`, a display name plus a handle, which the English page already shows as `Message from 🤖 <friendly name> (@<handle>):` (`website/docs/user-guide/bot-mode.md:186`). |
-| 3 | `website/docs/user-guide/bot-mode.md:356-357` and `website/i18n/zh-Hans/.../user-guide/bot-mode.md:213` | promoting while the old gateway is writable lets "both independent `state.db` stores" accept messages | Hosted-room state lives in the root `shared-state.db`, not the master `state.db` (`gateway/hosted_rooms.py:398-413` `default_db_path`; the docstring explains it is deliberately separate). `groups.promote` / `groups.demote` (`tui_gateway/methods_groups.py:506-519`) act on that store. |
+| 3 | `website/docs/user-guide/bot-mode.md:356-357` and `website/i18n/zh-Hans/.../user-guide/bot-mode.md:213` | promoting while the old gateway is writable lets "both independent `state.db` stores" accept messages | Hosted-room state lives in the root `shared-state.db`, not the master `state.db` (`gateway/hosted_rooms.py:398-413` `default_db_path`; the docstring explains it is deliberately separate). `groups.promote` / `groups.demote` (`tui_gateway/methods_groups.py:506-522`) act on that store. |
 
 Docs only; no behaviour change.
 
 ## Related Issue
 
-No upstream issue. Searched open PRs/issues for `bot-chat`, `shared-state.db`, `Message from 🤖`: no overlap. (Our separate local-delivery-launcher correction for `bot-mode.md` is a different paragraph.)
+No upstream issue. Searched open PRs/issues for `bot-chat`, `shared-state.db`, `Message from 🤖`: no overlap.
+
+Docs follow-up to:
+
+- 0e422e0ece: hosted-room state moved from `state.db` to `shared-state.db`.
+- 002ee41cfc (related #104055, #104066): the unowned Bot Chat CLI lane stopped passing `-p <profile>` and pins `HERMES_HOME` to the resolved target home. That commit updated `user-guide/features/cron.md` but not `developer-guide/cron-internals.md`.
+- 786c0e3f9d (#117220): that child env is now built with `served_profile_child_env` for the destination profile.
 
 ## Type of Change
 
+- [ ] 🐛 Bug fix (non-breaking change that fixes an issue)
+- [ ] ✨ New feature (non-breaking change that adds functionality)
+- [ ] 🔒 Security fix
 - [x] 📝 Documentation update
+- [ ] ✅ Tests (adding or improving test coverage)
+- [ ] ♻️ Refactor (no behavior change)
+- [ ] 🎯 New skill (bundled or hub)
 
 ## Changes Made
 
@@ -30,6 +42,7 @@ The zh-Hans `cron-internals.md` has no Bot Chat paragraph, so it needs no change
 
 1. Compare each quote with `main` and read the cited source.
 2. `python3 website/scripts/check_doc_links.py` → `OK: no route-style links in hand-authored docs.`
+3. Not run: Docusaurus build. Every `<...>` placeholder in the changed lines sits inside an inline code span, and the added prose contains no `<` or `{`, so MDX parsing should be unaffected.
 
 ## Checklist
 
@@ -41,7 +54,7 @@ The zh-Hans `cron-internals.md` has no Bot Chat paragraph, so it needs no change
 - [x] My PR contains **only** changes related to this fix/feature (no unrelated commits)
 - [ ] I've run `pytest tests/ -q` and all tests pass. Docs only; not run.
 - [ ] I've added tests for my changes. N/A, docs only.
-- [x] I've tested on my platform: Linux (CachyOS)
+- [x] I've tested on my platform: Linux (CachyOS): ran `python3 website/scripts/check_doc_links.py` only; did not build the Docusaurus site.
 
 ### Documentation & Housekeeping
 

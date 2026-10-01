@@ -2,13 +2,13 @@
 
 `GET /api/sessions/{id}/messages` returns a bare `500 Internal Server Error` when `state.db` is corrupt in the `messages` b-tree but the `sessions` primary key is intact.
 
-`_resolve_session_id` already turns a malformed store into the 503 "run `hermes doctor`" response, but only for the resolve step (ba7743b / #99529). With this partial-corruption shape, resolve succeeds and `db.get_messages(...)` is the first read to hit the damage. Its `sqlite3.DatabaseError` leaves `get_session_messages` unclassified, so FastAPI's default 500 replaces the repair guidance. Meanwhile `/api/sessions` for the same store already answers with the corrupt-store 503 (#120274, #121428).
+`_resolve_session_id` already turns a malformed store into the 503 "run `hermes doctor`" response, but only for the resolve step (ba7743b / #99529). With this partial-corruption shape, resolve succeeds and `db.get_messages(...)` is the first read to hit the damage. Its `sqlite3.DatabaseError` leaves `get_session_messages` unclassified, so FastAPI's default 500 replaces the repair guidance. `GET /api/sessions` already maps a malformed store to the `state_db_corrupt` 503 (#120274), and `corrupt_store_as_status` produces the same payload plus the store `path` (current shape from #121428).
 
-The fix sends a `sqlite3.DatabaseError` from the transcript read through the existing `corrupt_store_as_status` helper, using the same `with corrupt_store_as_status(...): raise` pattern this router already uses for `StateDbReplacedError`. Malformed-image errors become the shared 503 corrupt-store payload. Every other database error is re-raised unchanged. The helper is only called on the exception path, so the happy path does no extra work.
+The fix sends a `sqlite3.DatabaseError` from the transcript read through the existing `corrupt_store_as_status` helper, using the same `with corrupt_store_as_status(...): raise` pattern this router already uses for `StateDbReplacedError`. Malformed-image errors become the shared 503 corrupt-store payload. Every other database error is re-raised unchanged. The helper and the profile path lookup only run on the exception path, so the happy path does no extra work.
 
 ## Related Issue
 
-No upstream issue. Found by Detail (bug report PER-1604) and carried downstream as kvnloo/hermes-agent#28. This is a narrow current-main rebuild of that report.
+No upstream issue. Adapted from detail-app[bot]'s fix in kvnloo/hermes-agent#28. Rebuilt on current main to reuse `corrupt_store_as_status` instead of a second hand-written 503. Tests cut to the two contract tests and moved to `tests/hermes_cli/`.
 
 ## Type of Change
 
@@ -30,7 +30,9 @@ No upstream issue. Found by Detail (bug report PER-1604) and carried downstream 
 2. Adjacent: `scripts/run_tests.sh tests/hermes_cli/test_session_detail_malformed_db.py tests/hermes_cli/test_session_message_page_owner.py tests/hermes_cli/test_session_messages_inline_images.py tests/hermes_cli/test_history_commentary_display.py tests/hermes_cli/test_session_timeline.py tests/hermes_cli/test_web_analytics_corrupt_store.py tests/hermes_cli/test_web_server.py tests/e2e/core/dashboard/test_dashboard_sessions.py -q` → **8 files, 242 passed, 0 failed**.
 3. `ruff check` on both touched files passes.
 
-Not covered here: `/messages/around` and the streaming `/export` read the messages table in the same unguarded way. They are left out to keep this to one claim. `/export` starts streaming before the read, so it cannot change its status code anyway.
+Not tested: the full suite, and how the Desktop transcript view renders the dict-shaped `detail`. The resolve-step 503 on this endpoint still returns `_resolve_session_id`'s string detail, so clients see a string or a dict depending on which b-tree is damaged.
+
+Not covered here: `/timeline` and `/messages/around` read the `messages` table the same way and still return 500 on this store. They resolve the id through `_timeline_session_id` (an exact-id `_read_one`), not `_resolve_session_id`, so they also lack the resolve-step 503. Wrapping them would change how they report a damaged `sessions` index as well, which needs its own tests, so I left them for a follow-up. `/export` sends its first chunk before reading messages, so its status code cannot change.
 
 ## Checklist
 
@@ -50,5 +52,6 @@ Not covered here: `/messages/around` and the streaming `/export` read the messag
 - [x] I've updated `cli-config.yaml.example` if I added/changed config keys — or N/A
 - [x] I've updated `CONTRIBUTING.md` or `AGENTS.md` if I changed architecture or workflows — or N/A
 - [x] I've considered cross-platform impact (Windows, macOS) per the [compatibility guide](https://github.com/NousResearch/hermes-agent/blob/main/CONTRIBUTING.md#cross-platform-compatibility) — or N/A. This is pure-Python exception routing with no OS calls.
+- [x] I've updated tool descriptions/schemas if I changed tool behavior — or N/A
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)

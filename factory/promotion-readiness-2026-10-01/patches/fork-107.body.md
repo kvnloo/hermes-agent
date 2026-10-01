@@ -1,6 +1,6 @@
 ## What does this PR do?
 
-Tool call ids are not unique across turns: llama.cpp emits one constant id, and Hermes' own deterministic ids repeat. When a turn's `tool.complete` is lost (degraded websocket, reconnect), settle seals that tool part with `completedAt` and no `result`. `toolCallOwnerMessageId` treats any part without a `result` as the owner. So when a later turn sends `tool.start` with the same id, the event is routed back onto the old sealed row. `upsertToolPart`'s unseal branch then writes the new call's command over the old turn's row, and the live turn shows no tool row at all. A reload repairs it from the store, so the corruption is only local, but until then the transcript is wrong.
+Tool call ids are not unique across turns: llama.cpp emits one constant id, and Hermes' own deterministic ids repeat. When a turn's `tool.complete` is lost (degraded websocket, reconnect), settle seals that tool part with `completedAt` and no `result`. `toolCallOwnerMessageId` treats any part without a `result` as the owner. So when a later turn sends `tool.start` with the same id, the event is routed back onto the old sealed row. `upsertToolPart`'s unseal branch then writes the new call's command over the old turn's row, and the live turn shows no tool row at all.
 
 The fix makes the owner lookup depend on the event phase:
 
@@ -9,9 +9,13 @@ The fix makes the owner lookup depend on the event phase:
 
 The `interim` flag alone is not enough evidence. A bubble sealed by interim commentary keeps `interim: true` after its turn settles into a later bubble. The session-wide `interimBoundaryPending` flag is also not used, because a later turn can set it.
 
+Trade-off: an id alone cannot tell a reused id from a late running event for the old call. Once the old turn has settled, a running event with that id (for example a replayed `tool.start`) now opens its own row instead of re-arming the sealed one. The completion lookup is unchanged.
+
 ## Related Issue
 
 Refs #113035. Follows #113123, which excluded parts that already have a `result`, and #128009, which handles a reused id within the same message. This PR covers the case those leave open: a part sealed without a result, from an earlier turn.
+
+Builds on kvnloo/hermes-agent#107 by detail-app[bot], which found this case and proposed the phase-aware lookup and the plain-settle guard test. Its per-row `pending || interim` gate leaves the interim-sealed shape (b) open, so this version adds the settled-reply boundary.
 
 ## Type of Change
 
@@ -29,7 +33,7 @@ Refs #113035. Follows #113123, which excluded parts that already have a `result`
 ## How to Test
 
 1. `cd apps/desktop && npx vitest run --project ui src/app/session/hooks/use-message-stream/late-tool-events.test.tsx` gives 7/7 passing.
-2. On `main` without the fix, all three reuse shapes fail with `expected [ { messageIndex: +0, …(1) } ] to have a length of 2 but got 1`. The old row is overwritten and the new turn has no row. The plain-settle late-completion test passes on `main`; it guards the phase split.
+2. On the base commit (f8489405) without the fix, all three reuse shapes fail with `expected [ { messageIndex: +0, …(1) } ] to have a length of 2 but got 1`. The old row is overwritten and the new turn has no row. The plain-settle late-completion test passes on the base; it guards the phase split.
 3. Negative controls, each applied to the fix on its own:
    - Dropping the settled-reply check (so `pending || interim` alone counts as in flight): shape (b) fails.
    - Removing the running-phase check entirely: all three shapes fail.
@@ -58,4 +62,6 @@ Refs #113035. Follows #113123, which excluded parts that already have a `result`
 
 ## Screenshots / Logs
 
-Not tested: an Electron run against a live gateway with a dropped websocket. The tests drive the real `useMessageStream` event handler through the shared test harness.
+All runs above were on base f8489405. The branch merges cleanly onto current main but was not re-run there.
+
+Not tested: the electron typecheck projects (no electron files changed), and an Electron run against a live gateway with a dropped websocket. The tests drive the real `useMessageStream` event handler through the shared test harness.

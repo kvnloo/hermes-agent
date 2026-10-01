@@ -2,13 +2,15 @@
 
 Makes the dashboard chat show its "Please wait while the conversation loads…" notice when the server resumes a session without a `?resume=` param in the URL.
 
-When a `/chat` socket connects without `?resume=`, `pty_ws` can fall back to the channel's active-session file and send a `{"type":"resume","id":…}` control frame before the replay starts (#93518). `ChatPage` handles that frame with `beginResumeReplay()`, which sets `resumeHydrating` for the fresh `--resume` PTY. That PTY boots just as blank as an explicit resume. The render gate still passed `hasResumeTarget: Boolean(resumeParam)`, though, so on this path the notice never appeared. One way to hit it is reconnecting after the keep-alive PTY was reaped. The user just saw an empty terminal with a blinking cursor until the first PTY byte arrived.
+When a `/chat` socket connects without `?resume=`, `pty_ws` can fall back to the channel's active-session file and send a `{"type":"resume","id":…}` control frame before the replay starts (added in #93659 for #93518). `ChatPage` handles that frame with `beginResumeReplay()`, which sets `resumeHydrating`. When no keep-alive PTY is left to reattach, the server spawns a fresh `--resume` PTY that boots just as blank as an explicit resume. The render gate still passed `hasResumeTarget: Boolean(resumeParam)`, though, so on this path the notice never appeared. One way to hit it is reconnecting after the keep-alive PTY was reaped. The user just saw an empty terminal with a blinking cursor until the first PTY byte arrived.
 
-`resumeHydrating` is only set when a resume target exists, either from the URL param or from the control frame. The extra URL-param check therefore protected nothing; all it did was hide the notice on the implicit path. This PR removes `hasResumeTarget` and gates the notice on `hydrating` alone. The reconnect, closed and ended overlays still take precedence.
+`resumeHydrating` is only set when a resume target exists, either from the URL param or from the control frame. The extra URL-param check therefore protected nothing; all it did was hide the notice on the implicit path. This PR removes `hasResumeTarget` and gates the notice on `hydrating` alone. The reconnect, closed and ended overlays still take precedence. `pty_ws` sends the frame before it decides whether to reattach or spawn. So on an implicit reattach to a keep-alive PTY that is still running, the notice now also shows briefly until the buffered replay or forced redraw arrives. An explicit `?resume=` reattach already behaves this way, and the 30 s `PTY_RESUME_LOADING_MAX_MS` cap still applies.
+
+The gate change was first proposed by detail-app[bot] in kvnloo/hermes-agent#46. This version is rebuilt on main without that branch's unrelated kanban files and replaces its helper-only test with a `ChatPage` integration test.
 
 ## Related Issue
 
-Refs #93518 (that change added the implicit-resume control frame and set `resumeHydrating` from it, but left the render gate on the URL param)
+Refs #93518. Follow-up to #93659, which added the implicit-resume control frame and started `resumeHydrating` from it, but left the render gate on the URL param.
 
 ## Type of Change
 
@@ -24,9 +26,10 @@ Refs #93518 (that change added the implicit-resume control frame and set `resume
 ## How to Test
 
 1. `cd web && npx vitest run src/pages/ChatPage.test.tsx src/lib/pty-resume-loading.test.ts src/lib/pty-scroll.test.ts src/lib/pty-resume-sanitizer.test.ts src/lib/pty-reconnect.test.ts`: 5 files, 73 tests pass.
-2. On current `main` without the fix, the new ChatPage test fails right after the control frame: `AssertionError: expected null not to be null` (the notice is missing). The fresh-chat precondition passes.
+2. On `main` at f848940560 (the branch base; the touched files are unchanged on main since) without the fix, the new ChatPage test fails right after the control frame: `AssertionError: expected null not to be null` (the notice is missing). The fresh-chat precondition passes.
 3. Negative control: with the fix applied, changing the call site to `hydrating: resumeHydrating && Boolean(resumeParam)` makes the new test fail again with the same assertion.
 4. `npx tsc -p tsconfig.app.json --noEmit` is clean. `npx eslint` on the changed files reports 0 errors; the 3 warnings are on untouched lines and also appear on `main`.
+5. Not tested: a live browser session (jsdom only) and the full web vitest suite. No Python files changed, so pytest was not run.
 
 ## Checklist
 
@@ -50,4 +53,4 @@ Refs #93518 (that change added the implicit-resume control frame and set `resume
 
 ## Screenshots / Logs
 
-N/A. Covered by the jsdom ChatPage test; I did not check it in a live browser.
+N/A

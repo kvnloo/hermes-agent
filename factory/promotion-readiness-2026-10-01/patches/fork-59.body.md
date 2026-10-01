@@ -7,9 +7,13 @@
 
 The sort now uses an explicit `is None` check, so `0.0` stays a real minimum. The headlines come only from chains that reported a price, and both are `null` when none did. Failed chains stay in `comparison` with their null price, and `errors` and `_fetch_chain_stats` are unchanged.
 
+Left unchanged: `_fetch_chain_stats` still maps a response with no `result` to 0.0 gwei (`gas_hex or "0x0"`). `rpc_call` already raises on an RPC `error`, so this only affects malformed responses.
+
+The bug and this fix were first found by the Detail automated bug finder; this PR keeps its fix and trims the tests to two behaviour tests.
+
 ## Related Issue
 
-No upstream issue. A search of upstream PRs and issues (`evm_client.py`, `most_expensive_gas`, `cheapest_gas`, `gas_price_gwei`, `evm compare`) found no existing fix. Open #29194 (Injective chain) and #18508 touch `evm_client.py` but not `cmd_compare`. #29194 also adds a `tests/skills/test_evm_skill.py`, so whichever lands second will need a trivial rebase.
+No upstream issue. A search of upstream PRs and issues (`evm_client.py`, `most_expensive_gas`, `cheapest_gas`, `gas_price_gwei`, `evm compare`) found no existing fix. Open #29194 (Injective EVM support) and #18508 (read-only EVM JSON-RPC additions) also modify `evm_client.py`, but not `cmd_compare`. Both also add `tests/skills/test_evm_skill.py`, so whichever of these PRs lands later will need a trivial rebase of that new file.
 
 ## Type of Change
 
@@ -17,7 +21,7 @@ No upstream issue. A search of upstream PRs and issues (`evm_client.py`, `most_e
 
 ## Changes Made
 
-- `optional-skills/blockchain/evm/scripts/evm_client.py` (`cmd_compare`): sort with `float("inf") if gas is None else gas`. `cheapest_gas` and `most_expensive_gas` now come from the priced subset.
+- `optional-skills/blockchain/evm/scripts/evm_client.py` (`cmd_compare`): sort key maps only `None` (not `0.0`) to `+inf`: `float("inf") if x.get("gas_price_gwei") is None else x["gas_price_gwei"]`. `cheapest_gas` and `most_expensive_gas` now come from the priced subset.
 - `tests/skills/test_evm_skill.py` (new, 2 invariant tests, stdlib + pytest + `unittest.mock`, no network, per `skills/AGENTS.md`). One test checks that a chain whose gas fetch failed is never a headline and stays visible with `null` gas. The other checks that a `0x0` chain is `cheapest_gas`, not `most_expensive_gas`.
 
 ## How to Test
@@ -30,9 +34,9 @@ No upstream issue. A search of upstream PRs and issues (`evm_client.py`, `most_e
    - Taking the headlines from the unfiltered list makes only the failed-fetch test fail.
 
    So each test pins one half of the fix.
-3. Adjacent: `tests/skills/test_optional_skill_scripts.py`, `test_optional_skill_self_paths.py` and `test_authoring_standards.py` pass with the change (1479 passed across the 4 files). `ruff check`, `check-windows-footguns.py` and `git diff --check` are clean.
+3. Adjacent: `tests/skills/test_optional_skill_scripts.py`, `test_optional_skill_self_paths.py` and `test_authoring_standards.py` pass with the change (1479 passed across those three files plus the new `test_evm_skill.py`). `ruff check`, `check-windows-footguns.py` and `git diff --check` are clean.
 
-Not tested: a live run against public RPCs.
+Not tested: a live run against public RPCs. The all-chains-failed case (both headlines `null`) follows from the `if priced else None` branch but is not pinned by a test.
 
 ## Checklist
 

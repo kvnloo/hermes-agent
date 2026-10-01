@@ -5,9 +5,11 @@
 - a **connect timer** (`connectTimeoutMs`, 10 s by default) that fails the probe if the socket never opens;
 - a **grace timer** (`readyGraceMs`, 750 ms by default), armed in `onOpen`, that catches a post-handshake credential rejection (open, then immediate close).
 
-`onOpen` arms the grace timer but leaves the connect timer running. If the upgrade lands in the last `readyGraceMs` of the connect budget (9.25–10 s with the defaults), the connect timer fires first. The probe then resolves `{ ok: false, reason: "Timed out after 10000ms waiting for the WebSocket to open." }` for a socket that opened and stayed open. The renderer's real dial (`apps/shared/src/json-rpc-gateway.ts`) already clears its connect timer on open, so the probe and the real connection can disagree.
+`onOpen` arms the grace timer but leaves the connect timer running. If the upgrade lands in the last `readyGraceMs` of the connect budget (9.25–10 s with the defaults), the connect timer fires first. The probe then resolves `{ ok: false }` with a "Timed out after ...ms waiting for the WebSocket to open" reason, for a socket that opened and stayed open. The renderer's real dial (`apps/shared/src/json-rpc-gateway.ts`) already clears its connect timer on open, so the probe and the real connection can disagree.
 
 The fix calls the existing `clearTimers()` in `onOpen`, before the grace timer is armed. After a successful upgrade, only the grace window, a frame, an error or a close can settle the probe.
+
+Credit: the bug and the original fix were found by Detail's automated bug finder (detail-app[bot]). This PR rebuilds that fix on current `main` with the existing `clearTimers()` helper and keeps its regression test.
 
 ## Related Issue
 

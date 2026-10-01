@@ -1,19 +1,14 @@
 ## What does this PR do?
 
-Docs-only. Each statement below is wrong on current `main`; every correction cites the source that contradicts it. No behaviour changes.
+`contributors/README.md` says both GitHub noreply forms auto-resolve with no mapping file. The Contributor Attribution Check only skips the id+login form: `.github/workflows/contributor-check.yml:51-52` matches `\+.*@users\.noreply\.github\.com`, then requires `contributors/emails/<email>` or a legacy `AUTHOR_MAP` entry. `scripts/audit_pr_attribution.py` does the same (`ID_NOREPLY_RE` at line 44, `is_mapped()` at lines 64-77). A contributor who commits with the bare `<login>@users.noreply.github.com` form and follows the README skips the file and fails the check.
 
-### docs: correct bare noreply email auto-resolve claim in contributors README
+Release-note attribution (`scripts/releases/authors.py:63-66`, in `resolve_author()`) does guess `@<login>` from a bare local part, so the old line holds there, but not for the Contributor Attribution Check or `audit_pr_attribution.py`. The audit script's docstring (lines 19-22) gives the reason that guess needs checking: the local part is usually the GitHub login but is user-controlled.
 
-- **Was:** contributors/README.md:35-36 — "GitHub noreply emails (`<id>+<login>@users.noreply.github.com` and `<login>@users.noreply.github.com`) auto-resolve — no file needed."
-- **Source on main:** .github/workflows/contributor-check.yml:51-52 skips only emails matching '\+.*@users\.noreply\.github\.com' ('GitHub id+login noreply emails auto-resolve'), then requires contributors/emails/<email> or a legacy AUTHOR_MAP entry; scripts/audit_pr_attribution.py:44 ID_NOREPLY_RE, :64-77 is_mapped() short-circuits only on ID_NOREPLY_RE; --fix (resolve_login + add_contributor.py) maps a bare noreply by WRITING a file.
-- **Check:** Probe on main: is_mapped('123456+b2probe@users.noreply.github.com') -> True; is_mapped('b2probe-nonexistent@users.noreply.github.com') -> False; CI shell rule replayed: id+login -> skipped, bare -> MISSING. 225 bare-noreply files already exist under contributors/emails/.
-- **Now:** README narrows auto-resolve to the id+login form and says the bare form needs a file (audit --fix creates it).
-- **Mirrors:** Only copy (git grep 'auto-resolve' / '<login>@users.noreply' across *.md).
-- Drift introduced by 8bbedc345f (#126344).
+This narrows the auto-resolve rule to the id+login form and says the bare form needs a file, which `audit_pr_attribution.py --fix` creates. Over 200 bare-noreply mapping files already exist under `contributors/emails/`, which is the path the gate requires. Docs-only; no other doc repeats the claim (`git grep` over `*.md`/`*.mdx`). The line has been inaccurate since `contributors/README.md` was added in 597615ade4 (#66373); the CI gate already skipped only the id+login form at that point.
 
 ## Related Issue
 
-Supersedes our own parked docs PRs #127376 (closed to keep the review queue short); no open issue tracks these drifts.
+No issue. Replaces my earlier #127376 (closed, same change). Related: #9718 and #27789 propose making the CI gate accept bare noreply emails instead. This PR documents current behaviour; if either of those lands, this change should be dropped.
 
 ## Type of Change
 
@@ -27,14 +22,21 @@ Supersedes our own parked docs PRs #127376 (closed to keep the review queue shor
 
 ## Changes Made
 
-- `contributors/README.md`
+- `contributors/README.md`: limit the "auto-resolve, no file needed" rule to `<id>+<login>@users.noreply.github.com`; say the bare `<login>@users.noreply.github.com` form needs a mapping file and that `scripts/audit_pr_attribution.py --fix` creates it.
 
 ## How to Test
 
-1. For each item above, read the cited source lines on `main`; the old text contradicts them, the new text matches.
-2. Behaviour the docs describe, run on this branch: is_mapped() probe + CI shell-rule replay (see red); no pytest target exists for contributors/README.md.
-3. Docs CI equivalent: `python3 website/scripts/extract-skills.py && python3 website/scripts/generate-skill-docs.py && git diff --exit-code -- website/docs website/sidebars.ts website/i18n` (clean) and `python3 website/scripts/check_doc_links.py` (OK).
-4. Not run here: the Docusaurus build (`npm run build:fast`); added lines contain no MDX-sensitive `{}`/raw tags outside code.
+1. Read the cited lines on `main` (`.github/workflows/contributor-check.yml:51-52`, `scripts/audit_pr_attribution.py:44,64-77`); the old README text contradicts them, the new text matches.
+2. On `main`, check how the audit script and the CI rule treat each form:
+   ```
+   cd scripts && python3 -c "from audit_pr_attribution import is_mapped; print(is_mapped('123456+probe@users.noreply.github.com'), is_mapped('probe-nonexistent@users.noreply.github.com'))"
+   ```
+   prints `True False`. CI rule:
+   ```
+   echo probe@users.noreply.github.com | grep -qP '\+.*@users\.noreply\.github\.com' || echo not-skipped
+   ```
+   prints `not-skipped`.
+3. No test, docs build or link checker covers `contributors/README.md` (it is not part of the Docusaurus site), so verification is steps 1-2.
 
 ## Checklist
 
@@ -44,7 +46,7 @@ Supersedes our own parked docs PRs #127376 (closed to keep the review queue shor
 - [x] My commit messages follow [Conventional Commits](https://www.conventionalcommits.org/) (`fix(scope):`, `feat(scope):`, etc.)
 - [x] I searched for [existing PRs](https://github.com/NousResearch/hermes-agent/pulls) to make sure this isn't a duplicate
 - [x] My PR contains **only** changes related to this fix/feature (no unrelated commits)
-- [ ] I've run `pytest tests/ -q` and all tests pass — targeted files only (listed above); docs-only change
+- [ ] I've run `pytest tests/ -q` and all tests pass — not run; docs-only change, no tests cover contributors/README.md
 - [ ] I've added tests for my changes — N/A, documentation only
 - [x] I've tested on my platform: Linux (CachyOS)
 
@@ -58,4 +60,4 @@ Supersedes our own parked docs PRs #127376 (closed to keep the review queue shor
 
 ## Screenshots / Logs
 
-Verified on `main` f848940560; merges cleanly onto eb8d21f482. Branch `ready/docs2-contributors` @ 29319c49cd4f, 1 file changed, 5 insertions(+), 2 deletions(-).
+Merges cleanly onto `main` da1a583417.

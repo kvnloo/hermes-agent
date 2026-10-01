@@ -1,19 +1,18 @@
 ## What does this PR do?
 
-Docs-only. Each statement below is wrong on current `main`; every correction cites the source that contradicts it. No behaviour changes.
+`memory-providers.md` says Hindsight's local embedded mode installs `hindsight-all` on first use through Hermes' lazy-install path. That stopped being true when #128442 moved the catalog pin to vectorize-io/hindsight eb021da3: the plugin no longer calls `tools.lazy_deps` (a stub on main that raises) or depends on `hindsight-all`. At that SHA, `pyproject.toml` declares `hindsight-client>=0.10.1,<1` and `hindsight-embed>=0.10.1,<1`, `embedded.py:_check_local_runtime()` imports only those two, and the server runs as a separate process that `hindsight-embed` starts from an installed `hindsight-api` binary or else via `uvx hindsight-api`, which downloads the server on its first start (`setup.py`). The zh-Hans page still described the bundled-era wizard (`hindsight-all`, auto-upgrading `hindsight-client >= 0.4.22`) and now matches the English page. Docs only.
 
-### docs(memory): drop stale hindsight-all lazy-install claim
+The open pin bump #129093 (v1.2.1, d56c4ac) declares the same dependencies and starts the server the same way, so this text holds after it lands.
 
-- **Was:** website/docs/user-guide/features/memory-providers.md:468 — "In local embedded mode the plugin installs `hindsight-all` on first use through Hermes' lazy-install path, which honours `security.allow_lazy_installs`."; zh-Hans memory-providers.md:350 — "本地用 `hindsight-all` ... 需要 `hindsight-client >= 0.4.22`（会话启动时若版本过旧则自动升级）"
-- **Source on main:** plugin-catalog/hindsight.yaml:3 sha eb021da3 (bumped by 5e4857bf2e: 'drops the retired tools.lazy_deps call and the hindsight-all dependency ... local_embedded runs on PM-managed Hermes', known_issues removed). Plugin at that SHA (read-only gh api): pyproject dependencies hindsight-client>=0.10.1,<1 and hindsight-embed>=0.10.1,<1; embedded.py _check_local_runtime() imports only hindsight_client + hindsight_embed.daemon_embed_manager and documents that the server runs out of process. tools/lazy_deps.py on main is an old-updater stub.
-- **Check:** Doc names a dependency and install path the pinned plugin no longer has.
-- **Now:** Sentence replaced with the pinned plugin's behaviour; zh-Hans install text brought in line. The released v1.2.1 pin proposed upstream (#129093, d56c4ac) declares the same two dependencies in pyproject, so the text survives that bump.
-- **Mirrors:** zh-Hans memory-providers.md fixed in the same commit (its whole Hindsight install paragraph was bundled-era).
-- Drift introduced by 5e4857bf2e (#128442).
+Sources at eb021da3 (`hindsight-integrations/hermes`):
+
+- `pyproject.toml`: `dependencies` lists only those two packages.
+- `embedded.py`: the `_check_local_runtime()` docstring says the server runs as a separate process that `hindsight_embed` starts "from an installed `hindsight-api` binary, else a `uvx hindsight-api` fallback"; the comment on `_DAEMON_START_TIMEOUT = 900` says the first start on a machine with no `hindsight-api` binary downloads the server through uvx.
+- `setup.py:105`: the setup wizard prints "The Hindsight server runs as a separate process; first use downloads it if needed."
 
 ## Related Issue
 
-Supersedes our own parked docs PRs #127354 (closed to keep the review queue short); no open issue tracks these drifts.
+No issue tracks this. Replaces #127354 (closed), which edited the same sentence to call embedded mode unsupported under PM; #128442 removed the catalog `known_issues` entry that wording relied on.
 
 ## Type of Change
 
@@ -27,15 +26,15 @@ Supersedes our own parked docs PRs #127354 (closed to keep the review queue shor
 
 ## Changes Made
 
-- `website/docs/user-guide/features/memory-providers.md`
-- `website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/features/memory-providers.md`
+- `website/docs/user-guide/features/memory-providers.md`: replace the `hindsight-all` lazy-install sentence with the pinned plugin's dependencies (`hindsight-client`, `hindsight-embed`) and how the server starts (an installed `hindsight-api` binary, else `uvx hindsight-api`, which downloads it on first start).
+- `website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/features/memory-providers.md`: add `hermes plugins install hindsight` to the 依赖 row and the install block, and replace the bundled-era wizard paragraph with a translation of the English paragraph.
 
 ## How to Test
 
-1. For each item above, read the cited source lines on `main`; the old text contradicts them, the new text matches.
-2. Behaviour the docs describe, run on this branch: external plugin read at the pinned SHA (gh api, read-only); no in-repo test covers the third-party plugin's install path.
-3. Docs CI equivalent: `python3 website/scripts/extract-skills.py && python3 website/scripts/generate-skill-docs.py && git diff --exit-code -- website/docs website/sidebars.ts website/i18n` (clean) and `python3 website/scripts/check_doc_links.py` (OK).
-4. Not run here: the Docusaurus build (`npm run build:fast`); added lines contain no MDX-sensitive `{}`/raw tags outside code.
+1. On `main`, read `plugin-catalog/hindsight.yaml` (pin `eb021da3b2501911e4b57c82b3de1123572a200e`, set by #128442) and `tools/lazy_deps.py` (`install_specs` raises `ImportError`). The old sentence names an install path the pinned plugin no longer uses.
+2. Read the plugin at the pinned SHA eb021da3 (`hindsight-integrations/hermes`): `pyproject.toml` dependencies, `embedded.py` `_check_local_runtime()` and `_DAEMON_START_TIMEOUT`, `setup.py` `_check_mode_dependencies()`. Not tested: actually starting local embedded mode.
+3. Python steps of `docs-site-checks.yml`: `python3 website/scripts/extract-skills.py && python3 website/scripts/generate-skill-docs.py && git diff --exit-code -- website/docs website/sidebars.ts website/i18n` (clean) and `python3 website/scripts/check_doc_links.py` (OK).
+4. Not run: `npm run lint:diagrams`, `npm run build:fast`. The changed lines contain no `{}` or raw tags outside code spans.
 
 ## Checklist
 
@@ -45,9 +44,9 @@ Supersedes our own parked docs PRs #127354 (closed to keep the review queue shor
 - [x] My commit messages follow [Conventional Commits](https://www.conventionalcommits.org/) (`fix(scope):`, `feat(scope):`, etc.)
 - [x] I searched for [existing PRs](https://github.com/NousResearch/hermes-agent/pulls) to make sure this isn't a duplicate
 - [x] My PR contains **only** changes related to this fix/feature (no unrelated commits)
-- [ ] I've run `pytest tests/ -q` and all tests pass — targeted files only (listed above); docs-only change
+- [ ] I've run `pytest tests/ -q` — not run; docs-only change, no Python touched
 - [ ] I've added tests for my changes — N/A, documentation only
-- [x] I've tested on my platform: Linux (CachyOS)
+- [x] I've tested on my platform: Linux (CachyOS) — docs scripts only (see How to Test)
 
 ### Documentation & Housekeeping
 
@@ -56,7 +55,3 @@ Supersedes our own parked docs PRs #127354 (closed to keep the review queue shor
 - [x] I've updated `CONTRIBUTING.md` or `AGENTS.md` if I changed architecture or workflows — or N/A
 - [x] I've considered cross-platform impact (Windows, macOS) per the [compatibility guide](https://github.com/NousResearch/hermes-agent/blob/main/CONTRIBUTING.md#cross-platform-compatibility) — or N/A
 - [x] I've updated tool descriptions/schemas if I changed tool behavior — or N/A
-
-## Screenshots / Logs
-
-Verified on `main` f848940560; merges cleanly onto eb8d21f482. Branch `ready/docs2-memory` @ c9010e911f6f, 2 files changed, 5 insertions(+), 4 deletions(-).

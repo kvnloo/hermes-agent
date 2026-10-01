@@ -2,11 +2,11 @@
 
 Removes `_safe_text` from `agent/anthropic_message_convert.py`. Nothing on current `main` calls it.
 
-The Anthropic request path no longer coerces blank text blocks in place. `_replay_text` / `_is_blank_text_block` drop them, and `_EMPTY_TEXT_PLACEHOLDER` is appended only when nothing survives. That left the old coerce-in-place helper with no callers. Its only references were its own unit tests (`TestSafeText`), and `agent.anthropic_adapter` no longer re-exports it. `bedrock_adapter._safe_text` is a separate helper that is still used, and this PR leaves it alone.
+For message content, the Anthropic request path no longer coerces blank text blocks in place. `_replay_text` and `_split_blank_text_blocks` (both via `_is_blank_text_block`) drop them, and a placeholder (`_EMPTY_TEXT_PLACEHOLDER` for assistant turns) is added only when nothing survives. The one remaining substitution that keeps a blank block in position is in `_convert_system_content`: when the system content carries cache markers, blank system text blocks are replaced with `_EMPTY_TEXT_PLACEHOLDER` by an inline expression that does not call `_safe_text`. That left the old coerce-in-place helper with no callers. Its only references were its own unit tests (`TestSafeText`), and `agent.anthropic_adapter` no longer re-exports it. `bedrock_adapter._safe_text` is a separate helper that is still used, and this PR leaves it alone.
 
 ## Related Issue
 
-No upstream issue. This is a dead-code cleanup, originally proposed downstream in kvnloo/hermes-agent#15 and rebuilt here on current `main`.
+No upstream issue. Dead-code cleanup originally proposed by detail-app[bot] in kvnloo/hermes-agent#15 (credited as co-author on the commit), rebuilt here on `main`.
 
 ## Type of Change
 
@@ -29,11 +29,11 @@ No upstream issue. This is a dead-code cleanup, originally proposed downstream i
 
 - [x] I've read the [Contributing Guide](https://github.com/NousResearch/hermes-agent/blob/main/CONTRIBUTING.md)
 - [x] My commit messages follow [Conventional Commits](https://www.conventionalcommits.org/) (`fix(scope):`, `feat(scope):`, etc.)
-- [x] I searched for [existing PRs](https://github.com/NousResearch/hermes-agent/pulls) to make sure this isn't a duplicate. No open PR uses `anthropic_message_convert._safe_text`. #71935 only has the old import as an unchanged context line, and the other `_safe_text` PRs touch bedrock's copy.
+- [x] I searched for [existing PRs](https://github.com/NousResearch/hermes-agent/pulls) to make sure this isn't a duplicate. No open PR uses `anthropic_message_convert._safe_text`. #71935 has the old import only as an unchanged context line; #55135, #63983 and #64858 touch `bedrock_adapter._safe_text`; #93963 defines an unrelated helper of the same name.
 - [x] My PR contains **only** changes related to this fix/feature (no unrelated commits)
 - [ ] I've run `pytest tests/ -q` and all tests pass. Not done: I ran only the targeted files listed above via `scripts/run_tests.sh`.
 - [ ] I've added tests for my changes. N/A: pure deletion, and the remaining behaviour tests cover the live path.
-- [x] I've tested on my platform: Linux (CachyOS, Python 3.11)
+- [x] I've tested on my platform: Linux (CachyOS)
 
 ### Documentation & Housekeeping
 
@@ -45,7 +45,7 @@ No upstream issue. This is a dead-code cleanup, originally proposed downstream i
 
 ## Screenshots / Logs
 
-Tested on `main` @ `f8489405600c9a7d9d2f307dace086f18d7173ba`.
+Ran on this branch (based on `main` @ `f8489405600c`). None of the touched or tested files have changed on `main` since (checked against `main` @ `bfe1357ea50b`), and the branch merges cleanly onto current `main`.
 
 ```
 === Summary: 7 files, 684 tests passed, 0 failed (100% complete) in 44.0s (20 workers) ===

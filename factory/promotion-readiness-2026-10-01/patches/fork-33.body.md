@@ -4,13 +4,17 @@ The bundled `security-guidance` plugin scans `write_file` / `patch` / `skill_man
 
 `skill_manage` advertises one call shape (`SKILL_MANAGE_SCHEMA`, `"required": ["operations"]`): an `operations[]` array where each op carries its own `file_path` / `file_content` / `new_string`. The flat top-level fields are only accepted for old transcripts and staged-write replay. `skill_manage()` routes to `_skill_manage_batch` and ignores them whenever `operations` is present. So every schema-shaped `skill_manage` write reached the plugin's hooks with nothing to scan. Warn mode added no warning, and block mode let through a skill write that the equivalent `write_file`/`patch` call would refuse.
 
-This PR changes `_scan_args` for `skill_manage`. When the args carry an `operations` list, each op is scanned with the same `(file_path, file_content/new_string)` spec, against the op's own `file_path`, so per-rule path filters such as the `.py` gate still apply. Without `operations`, the existing top-level scan runs unchanged for the flat shape. A non-list `operations` is rejected by the batch handler before any write, so it needs no scan.
+This PR changes `_scan_args` for `skill_manage`. When the args carry an `operations` list, each op is scanned with the same `(file_path, file_content/new_string)` spec, against the op's own `file_path`, so per-rule path filters such as the `.py` gate still apply. Otherwise (no `operations`, or a non-list value) the existing top-level scan runs; that code path is unchanged.
+
+Known limitation: block mode runs in the agent loop on the raw model args, before `coerce_tool_args`. A JSON-encoded-string `operations` is still not scanned there (nor a bare op object, or a list of JSON-string ops), although dispatch later coerces it into a valid op list and the write goes through. Warn mode sees the coerced args and is covered.
 
 Scope note: the set of scanned keys is unchanged. `content` (create / full SKILL.md rewrite) was not scanned in the flat shape before and is not scanned per-op now. Whether SKILL.md bodies should be scanned is a separate false-positive policy question.
 
 ## Related Issue
 
-No upstream issue. Searched open/closed PRs and issues for security-guidance + `skill_manage`/`operations`. Open security-guidance PRs (#126746 V4A patch paths, #116113 bounded windows, #124576 JS filters, #64235 block-by-default, #33186 severity tiers) don't touch the `skill_manage` `operations[]` shape.
+No upstream issue. Searched open/closed PRs and issues for security-guidance + `skill_manage`/`operations`. Open security-guidance PRs (#126746 V4A patch paths, #116113 bounded windows, #124576 JS filters, #64235 block-by-default, #33186 severity tiers) don't touch the `skill_manage` `operations[]` shape. #126746 and #116113 edit the same `_scan_args` lines; expect a small rebase whichever lands second.
+
+The bug was first flagged by the Detail automated scanner on my fork. This is a narrower rebuild of that fix on current main (per-op `content` scanning left out, see Scope note).
 
 ## Type of Change
 
@@ -19,7 +23,7 @@ No upstream issue. Searched open/closed PRs and issues for security-guidance + `
 ## Changes Made
 
 - `plugins/security-guidance/__init__.py`: `_scan_args` iterates `operations[]` for `skill_manage` (each op scanned like the flat shape against its own `file_path`). Otherwise it falls back to the top-level args.
-- `tests/plugins/test_security_guidance_plugin.py`: two behaviour tests, using the same benign marker strings the existing flat-shape tests use:
+- `tests/plugins/test_security_guidance_plugin.py`: two behaviour tests, using the same benign marker strings as the existing `write_file` / `patch` tests (`pickle.loads(b)`, `eval(user_input)`):
   - warn mode: an `operations[]` `write_file` op to `scripts/load.py` containing `pickle.loads` gets the `pickle_deserialization` warning;
   - block mode: an `operations[]` `patch` op on `scripts/run.py` whose `new_string` contains `eval(` is refused with `eval_injection`.
 
@@ -28,7 +32,8 @@ No upstream issue. Searched open/closed PRs and issues for security-guidance + `
 1. `scripts/run_tests.sh tests/plugins/test_security_guidance_plugin.py -q`
 2. On `main` without the fix, both new tests fail. The hooks return `None` (`assert isinstance(None, str)` / `assert isinstance(None, dict)`): 19 passed, 2 failed.
 3. With the fix: 21 passed. Adjacent: `tests/plugins/test_security_guidance_plugin.py tests/plugins/test_transform_tool_result_hook.py tests/tools/test_skill_manager_tool.py` give 97 passed.
-4. Negative control: forcing `targets = [args]` (top-level only) makes both new tests fail again.
+
+Not tested: hooks were called directly. No run through the agent-loop dispatch (`agent/tool_executor` -> `model_tools.handle_function_call`). The legacy flat `skill_manage` shape has no test on main or here; its fallback is unchanged code.
 
 ## Checklist
 
@@ -48,5 +53,6 @@ No upstream issue. Searched open/closed PRs and issues for security-guidance + `
 - [x] I've updated `cli-config.yaml.example` if I added/changed config keys — or N/A
 - [x] I've updated `CONTRIBUTING.md` or `AGENTS.md` if I changed architecture or workflows — or N/A
 - [x] I've considered cross-platform impact (Windows, macOS) per the [compatibility guide](https://github.com/NousResearch/hermes-agent/blob/main/CONTRIBUTING.md#cross-platform-compatibility) — or N/A
+- [x] I've updated tool descriptions/schemas if I changed tool behavior — or N/A
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)

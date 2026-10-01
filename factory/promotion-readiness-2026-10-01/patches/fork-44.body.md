@@ -5,13 +5,17 @@ The Raft adapter (`plugins/platforms/raft/adapter.py`) keeps module-global sets 
 - `_RAFT_TURN_IDS`, for attributing hook payloads to Raft;
 - `_RAFT_PROMPT_TURN_IDS`, for emitting one `UserPromptSubmit` per turn.
 
-Only `_forget_raft_context(session_id, turn_id)` removes them, and it only gets a `turn_id` from the per-turn `on_session_end` that `agent/turn_finalizer.finalize_turn` fires. Some turns never reach `finalize_turn`. `agent/conversation_loop.py::_close_durable_failed_turn` lists the cases: the terminal-failure paths "(content-policy refusal, `_Trunc.end_turn`, retry exhaustion, interrupt before any assistant text) ... return without reaching `finalize_turn`". A turn that is force-reaped while stuck never gets there either. Those turn ids stay in both sets for the life of the gateway process. The session's own finalize (`gateway/run_shutdown.py::_finalize_session_off_loop` → `on_session_finalize`) carries no `turn_id`, so it removes only the session id.
+Only `_forget_raft_context(session_id, turn_id)` removes them, and it only gets a `turn_id` from the per-turn `on_session_end` that `agent/turn_finalizer.finalize_turn` fires. Some turns never reach `finalize_turn`. `agent/conversation_loop.py::_close_durable_failed_turn` lists the cases: the terminal-failure paths "(content-policy refusal, `_Trunc.end_turn`, retry exhaustion, interrupt before any assistant text) ... return without reaching `finalize_turn`". Those turn ids stay in both sets for the life of the gateway process. The session's own finalize (`gateway/run_shutdown.py::_finalize_session_off_loop` → `on_session_finalize`) carries no `turn_id`, so it removes only the session id.
 
 This PR records which session registered each live turn (`_RAFT_TURN_SESSIONS`, turn id → session id). When a session is forgotten, every turn it still owns is released. The per-turn release also drops the mapping, so a normal turn leaves nothing behind, as before.
 
+Behaviour change: after a session is finalized, a late per-turn hook for one of its turns counts as Raft only if the payload has `platform="raft"`. Before, the leftover turn id still matched.
+
 ## Related Issue
 
-No upstream issue or PR found. Searched PRs and issues for `_RAFT_TURN_IDS`, "raft turn ids", "raft adapter leak" and "raft session_finalize".
+No upstream issue or PR found. Searched PRs and issues for `_RAFT_TURN_IDS`, "raft turn ids", "raft adapter leak" and "raft session_finalize". The turn-id sets and the turn_id-only release were introduced with the Raft plugin in #48210.
+
+First flagged by an automated Detail scan on my fork (kvnloo/hermes-agent#44). This is a rework against current `main` with different bookkeeping and a single test.
 
 ## Type of Change
 
@@ -28,11 +32,11 @@ No upstream issue or PR found. Searched PRs and issues for `_RAFT_TURN_IDS`, "ra
 ## How to Test
 
 1. `scripts/run_tests.sh tests/gateway/test_raft_adapter.py -q`
-2. On unpatched `main` the new test fails with `AssertionError: assert 't1' not in ({'t1', 't2'} | {'t1', 't2'})`.
+2. On `main` at f848940560 (the touched files are unchanged on current `main`), the new test fails with `AssertionError: assert 't1' not in ({'t1', 't2'} | {'t1', 't2'})`.
 3. With the patch, 8/8 pass. With only the `released.update(...)` line removed, the test fails again with the same assertion.
-4. Adjacent: `test_raft_adapter.py`, `test_kanban_wake_acceptance.py`, `tests/plugins/platforms/test_interactive_setup_reconfigure_gate.py` and `tests/tools/test_spawn_site_child_env.py` give 34 passed. `ruff check` is clean.
+4. Other suites that exercise the Raft plugin (`tests/gateway/test_kanban_wake_acceptance.py`, `tests/plugins/platforms/test_interactive_setup_reconfigure_gate.py`, `tests/tools/test_spawn_site_child_env.py`) plus `test_raft_adapter.py`: 34 passed. `ruff check` clean.
 
-Not tested: a live Raft bridge (it needs the `raft` CLI). After a session is finalized, a late per-turn hook for one of its turns is attributed to Raft only if the payload says `platform="raft"`. Before this change, the leftover turn id would still have matched.
+Not tested: a live Raft bridge (needs the `raft` CLI).
 
 ## Checklist
 
