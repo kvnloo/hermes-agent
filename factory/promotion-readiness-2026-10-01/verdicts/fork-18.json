@@ -1,0 +1,31 @@
+{
+  "fork_pr": 18,
+  "title": "chore: remove unused Codex fetch wrapper and char-estimator helpers",
+  "claim": "model_metadata._fetch_codex_oauth_context_lengths (thin wrapper) and _estimate_message_chars are unused.",
+  "verdict": "SUPERSEDED-ON-MAIN",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "source": "Every targeted name is absent on main f848940560: `git grep -n -w` across the whole tree (code, tests, plugins/, optional-skills/, website/, scripts/, tests/compat) finds 0 hits for _fetch_codex_oauth_context_lengths, _estimate_message_chars. A first-parent bisect of agent/model_metadata.py from fork base 63279301bc puts the removal in d3630f8532 (#102117 'whole-codebase simplification', 2026-09-04).",
+    "references_before": "0 (already gone on main)",
+    "references_after": "n/a",
+    "red": "n/a (pure deletion; nothing left to delete)",
+    "green": "n/a",
+    "negative_control": "n/a",
+    "adjacent": "n/a (no change built)"
+  },
+  "upstream_overlap": [
+    "removed upstream by d3630f8532 (#102117 'whole-codebase simplification', 2026-09-04)"
+  ],
+  "branch": null,
+  "bundle": null,
+  "files": [],
+  "size": "+0/-0",
+  "depends_on": null,
+  "fork_head": "detail/dead-code/chore-remove-unused-codex-fetch-wrapper-and-char-e-f9f3cc",
+  "fork_head_oid": "9b13421bd2a2d2b2126fbfe0867d29c89f7cfa94",
+  "wave": "W5-bot-chore",
+  "batch": "C",
+  "patch": null,
+  "body": null,
+  "notes": "The fork diff also carries unrelated Kanban baggage (hermes_cli/kanban_db.py, tests/hermes_cli/test_kanban_external_receipts.py) from merge commits; the intended tip commit was read in isolation. Retire the fork PR."
+}

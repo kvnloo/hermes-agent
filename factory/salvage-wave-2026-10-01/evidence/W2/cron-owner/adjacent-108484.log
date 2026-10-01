@@ -1,0 +1,74 @@
+label=adjacent-108484 main=298a01c79b38018e029e50f77efe67c4a4fdbd40
+CHECKOUT refs/w2/cron-owner/108484-merged (a2d19879871b): pre-resolved merge
+▶ not activated — using HERMES_PYTHON: /workspace/hermes-home/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 12 test files (~61 tests) under ['tests/cron/test_cron_owner_null_fingerprint.py', 'tests/cron/test_owner_start_time_drift.py', 'tests/cron/test_execution_ledger.py', 'tests/cron/test_delivery_queue.py', 'tests/cron/test_delivery_queue_retention_race.py', 'tests/cron/test_dead_owner_claim_reclaim.py', 'tests/cron/test_cron_run_stale_claim_reap.py', 'tests/cron/test_stale_running_recovery.py', 'tests/cron/test_restart_safe_worker_death_evidence.py', 'tests/cron/test_scheduled_occurrence.py', 'tests/gateway/test_owner_liveness_drift.py', 'tests/cron/test_owner_uncertainty.py']; running with -j 2
+[  1.6% |     1/~61 | ✓1 | ✗0] ✓ tests/cron/test_cron_run_stale_claim_reap.py (1✓, 1.7s)
+[ 16.4% |    10/~61 | ✓10 | ✗ 0] ✓ tests/cron/test_dead_owner_claim_reclaim.py (9✓, 2.1s)
+[ 21.3% |    13/~61 | ✓14 | ✗ 0] ✓ tests/cron/test_cron_owner_null_fingerprint.py (4✓, 4.2s)
+[ 23.0% |    14/~61 | ✓15 | ✗ 0] ✓ tests/cron/test_delivery_queue_retention_race.py (1✓, 1.2s)
+[ 39.3% |    24/~61 | ✓25 | ✗ 0] ✓ tests/cron/test_delivery_queue.py (10✓, 2.9s)
+[ 42.6% |    26/~61 | ✓28 | ✗ 0] ✓ tests/cron/test_owner_start_time_drift.py (3✓, 1.8s)
+[ 82.0% |    50/~61 | ✓52 | ✗ 0] ✓ tests/cron/test_execution_ledger.py (24✓, 7.1s)
+[ 83.6% |    51/~61 | ✓53 | ✗ 1] ✗ tests/cron/test_owner_uncertainty.py (1✓ 1✗, 6.4s)
+
+  ╔╍ Failed: tests/cron/test_owner_uncertainty.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ .F                                                                       [100%]
+  ║ =================================== FAILURES ===================================
+  ║ _ test_live_owner_can_finish_both_ledgers_when_fingerprint_is_unavailable[current] _
+  ║ 
+  ║ tmp_path = PosixPath('/var/tmp/hermes-pytest-1000/r-hwpcb260/pytest-of-kvn/pytest-0/test_live_owner_can_finish_bot1')
+  ║ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fc1bd115150>
+  ║ missing = 'current'
+  ║ 
+  ║ >   ???
+  ║ E   AssertionError: assert not True
+  ║ E    +  where True = <function _owner_is_live at 0x7fc1bc5d1ee0>(3508430, (13452497 + 1))
+  ║ E    +    where <function _owner_is_live at 0x7fc1bc5d1ee0> = <module 'cron.executions' from '/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/cron/cron/executions.py'>._owner_is_live
+  ║ E    +    and   3508430 = <Popen: returncode: None args: ['/workspace/hermes-home/hermes-agent/venv/bi...>.pid
+  ║ 
+  ║ tests/cron/test_owner_uncertainty.py:52: AssertionError
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/cron/test_owner_uncertainty.py::test_live_owner_can_finish_both_ledgers_when_fingerprint_is_unavailable[current]
+  ║ 1 failed, 1 passed in 2.34s
+  ║
+  ║  Repro: python -m pytest tests/cron/test_owner_uncertainty.py -q -rf -p no:randomly
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+[ 90.2% |    55/~61 | ✓59 | ✗ 1] ✓ tests/cron/test_scheduled_occurrence.py (6✓, 16.2s)
+[ 93.4% |    57/~61 | ✓64 | ✗ 1] ✓ tests/cron/test_stale_running_recovery.py (5✓, 2.0s)
+[ 96.7% |    59/~61 | ✓68 | ✗ 1] ✓ tests/gateway/test_owner_liveness_drift.py (4✓, 2.7s)
+[100.0% |    61/~61 | ✓79 | ✗ 1] ✓ tests/cron/test_restart_safe_worker_death_evidence.py (11✓, 40.0s)
+
+=== Summary: 12 files, 79 tests passed, 1 failed (100% complete) in 52.6s (2 workers) ===
+  Durations cached to test_durations.json (11 files)
+
+=== Per-file subprocess time distribution ===
+
+=== Failure output ===
+
+--- tests/cron/test_owner_uncertainty.py ---
+.F                                                                       [100%]
+=================================== FAILURES ===================================
+_ test_live_owner_can_finish_both_ledgers_when_fingerprint_is_unavailable[current] _
+
+tmp_path = PosixPath('/var/tmp/hermes-pytest-1000/r-hwpcb260/pytest-of-kvn/pytest-0/test_live_owner_can_finish_bot1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fc1bd115150>
+missing = 'current'
+
+>   ???
+E   AssertionError: assert not True
+E    +  where True = <function _owner_is_live at 0x7fc1bc5d1ee0>(3508430, (13452497 + 1))
+E    +    where <function _owner_is_live at 0x7fc1bc5d1ee0> = <module 'cron.executions' from '/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/cron/cron/executions.py'>._owner_is_live
+E    +    and   3508430 = <Popen: returncode: None args: ['/workspace/hermes-home/hermes-agent/venv/bi...>.pid
+
+tests/cron/test_owner_uncertainty.py:52: AssertionError
+=========================== short test summary info ============================
+FAILED tests/cron/test_owner_uncertainty.py::test_live_owner_can_finish_both_ledgers_when_fingerprint_is_unavailable[current]
+1 failed, 1 passed in 2.34s
+
+=== 1 file with test failures (1 test failed) ===
+  tests/cron/test_owner_uncertainty.py  (1 test failed)

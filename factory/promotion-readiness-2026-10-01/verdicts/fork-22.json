@@ -1,0 +1,29 @@
+{
+ "fork_pr": 22,
+ "title": "fix(langfuse): bump last_updated_at in tool/subagent hooks to stop evicting live turns",
+ "claim": "Langfuse _TRACE_STATE eviction is least-recently-updated, but tool/subagent hooks never refresh last_updated_at, so a live turn mid tool/subagent dispatch can be evicted ahead of idle turns (root ended, in-flight observation dropped, second root trace opened for the same turn).",
+ "verdict": "READY",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "tests only on MAIN: `scripts/run_tests.sh tests/plugins/test_langfuse_plugin.py -q -k refreshes_eviction_clock` -> 4 failed (tool/subagent x TestTurnTraceIsolation/TestAtexitFinalization): `assert live_key in mod._TRACE_STATE` -> AssertionError: assert 'task:live:turn:live-turn' in {...} (live turn evicted)",
+  "green": "with fix: same -k selection 4 passed; full tests/plugins/test_langfuse_plugin.py 85 passed",
+  "negative_control": "removed on_pre_tool_call bump -> 2 failed ([tool] x2), 2 passed; removed on_subagent_start bump -> 2 failed ([subagent] x2), 2 passed; restored. on_post_tool_call/on_subagent_stop bumps are not directly asserted.",
+  "adjacent": "tests/plugins/test_langfuse_plugin.py + test_langfuse_max_depth.py + test_scoped_secret_readers_fail_closed.py: 105 passed, 0 failed (with fix). ruff check clean.",
+  "source": "MAIN plugins/observability/langfuse/__init__.py: _get_or_start_state_locked L719-732 evicts sorted by last_updated_at; bumps only at L731 (LLM path) and L964 (retryable api error); on_pre_tool_call L878, on_post_tool_call L896, on_subagent_start L994, on_subagent_stop L1012 have no bump."
+ },
+ "upstream_overlap": [
+  "#45326 OPEN rdguidry 'reap stale per-turn trace state' (TTL reaper; different change, does not bump tool/subagent hooks)",
+  "#48292 MERGED (introduced per-turn keys + cap)",
+  "no PR/issue found for the tool/subagent eviction-clock defect (GraphQL search: last_updated_at, langfuse evict/eviction, _MAX_TRACE_STATE, langfuse subagent evict; title scan of 42.9k cached upstream PRs for 'langfuse')"
+ ],
+ "branch": "ready/fork-22-langfuse-tool-subagent-eviction-clock",
+ "commit": "17368915ebfbe458327c8e399372141355b9de65",
+ "files": [
+  "plugins/observability/langfuse/__init__.py",
+  "tests/plugins/test_langfuse_plugin.py"
+ ],
+ "size": "+40/-0",
+ "depends_on": null,
+ "notes": "Rebuilt on MAIN after heavy langfuse refactor drift (fork targeted pre-refactor line numbers). Fork's two ~170-line tests replaced by one 36-line parametrized contract test that pins clocks directly instead of monkeypatching the global time.time. Kanban baggage dropped. Limitation stated in body: bumps fire at dispatch start/end; a single very long tool call still freezes the clock between those events. Value is real but narrow (needs cap=256 pressure). NOT_TESTED: live Langfuse backend, full suite.",
+ "lead_review": "Lead independent spot-check on MAIN f8489405600c: RED reproduced (4 failures: the new parametrized test also runs under TestAtexitFinalization, which subclasses TestTurnTraceIsolation \u2014 pre-existing inheritance convention, so the test executes twice; nit, not blocking). GREEN 85/85 in test_langfuse_plugin.py. Diff reviewed: 4 x last_updated_at refresh inside existing _STATE_LOCK blocks, consistent with LLM-path hooks."
+}

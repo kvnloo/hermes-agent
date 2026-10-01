@@ -1,0 +1,325 @@
+[
+ {
+  "fork_pr": 34,
+  "title": "fix(desktop): clear connect timer on WebSocket open in gateway probe",
+  "wave": "W3-narrow-correctness",
+  "head": "detail/bug-fix/fix-desktop-clear-connect-timer-on-websocket-open-d650b5",
+  "head_oid": "f797ae90d1f70bab800e6e29af78e9dac0849cec",
+  "head_present": true,
+  "files": [
+   "apps/desktop/electron/gateway-ws-probe.test.ts",
+   "apps/desktop/electron/gateway-ws-probe.ts",
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "kanban_baggage": [
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "changed_files": 4,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Comparison includes unrelated Kanban external-receipt files; never promote this full diff.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 35,
+  "title": "fix(windows): repair hermes launchers for non-ASCII user profiles with relocatable venvs",
+  "wave": "W3-narrow-correctness",
+  "head": "detail/bug-fix/fix-windows-repair-hermes-launchers-for-non-ascii-1e189d",
+  "head_oid": "9731233980b90e0e22d9334820998609cfe7e46b",
+  "head_present": true,
+  "files": [
+   "hermes_cli/_install_repair.py",
+   "hermes_cli/kanban_db.py",
+   "scripts/install.ps1",
+   "tests/hermes_cli/test_ensure_windows_bin_launchers.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "kanban_baggage": [
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "changed_files": 5,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Comparison includes unrelated Kanban external-receipt files; never promote this full diff.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 36,
+  "title": "fix(gateway): keep /status reachable for non-admins on the cold slash-gate path",
+  "wave": "W3-narrow-correctness",
+  "head": "detail/bug-fix/fix-gateway-keep-status-reachable-for-non-admins-o-e5584c",
+  "head_oid": "ee8f95d20c09ad6c44fd78ff2e2715546b4c21ef",
+  "head_present": true,
+  "files": [
+   "gateway/run.py",
+   "gateway/slash_access.py",
+   "gateway/slash_commands.py",
+   "hermes_cli/kanban_db.py",
+   "tests/gateway/test_slash_access.py",
+   "tests/gateway/test_slash_access_dispatch.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "kanban_baggage": [
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "changed_files": 7,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Comparison includes unrelated Kanban external-receipt files; never promote this full diff.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 37,
+  "title": "fix(tui): show billing service retry message on subscription step-up transport failures",
+  "wave": "W3-narrow-correctness",
+  "head": "detail/bug-fix/fix-tui-show-billing-service-retry-message-on-subs-50c472",
+  "head_oid": "e8065cacbfb02ea7207109276951191499de46b4",
+  "head_present": true,
+  "files": [
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py",
+   "ui-tui/src/__tests__/subscriptionCommand.test.ts",
+   "ui-tui/src/__tests__/subscriptionOverlay.test.tsx",
+   "ui-tui/src/app/slash/commands/subscription.ts"
+  ],
+  "kanban_baggage": [
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "changed_files": 5,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Comparison includes unrelated Kanban external-receipt files; never promote this full diff.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 38,
+  "title": "fix(desktop): invalidate skill-suggestion cache on soft re-home",
+  "wave": "W3-narrow-correctness",
+  "head": "detail/bug-fix/fix-desktop-invalidate-skill-suggestion-cache-on-s-05c6b1",
+  "head_oid": "44708b835e4ce2c66c8b9602f7c8f7125aff1f6d",
+  "head_present": true,
+  "files": [
+   "apps/desktop/src/store/gateway-switch.test.ts",
+   "apps/desktop/src/store/gateway-switch.ts",
+   "apps/desktop/src/store/suggestion-providers/skill-cache.test.ts",
+   "apps/desktop/src/store/suggestion-providers/skill.ts",
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "kanban_baggage": [
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "changed_files": 6,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Comparison includes unrelated Kanban external-receipt files; never promote this full diff.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 39,
+  "title": "fix(desktop): worktree from non-origin remote no longer sets upstream tracking",
+  "wave": "W3-narrow-correctness",
+  "head": "detail/bug-fix/fix-desktop-worktree-from-non-origin-remote-no-lon-8b3b11",
+  "head_oid": "0ec9d70cbda906480b562a4aefbfde2b19a9a8e3",
+  "head_present": true,
+  "files": [
+   "apps/desktop/electron/git-worktree-ops.test.ts",
+   "apps/desktop/electron/git-worktree-ops.ts",
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "kanban_baggage": [
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "changed_files": 4,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Comparison includes unrelated Kanban external-receipt files; never promote this full diff.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 40,
+  "title": "fix(tools): honor terminal.home_mode from the routed profile's scope",
+  "wave": "W3-narrow-correctness",
+  "head": "detail/bug-fix/fix-tools-honor-terminal-home-mode-from-the-routed-1c9768",
+  "head_oid": "b617cb90c6ca0df9d3cc559b1001d3ca7420f120",
+  "head_present": true,
+  "files": [
+   "hermes_cli/config.py",
+   "hermes_cli/kanban_db.py",
+   "hermes_constants.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py",
+   "tests/test_subprocess_home_isolation.py",
+   "tests/tools/test_terminal_scope_multiplex.py"
+  ],
+  "kanban_baggage": [
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "changed_files": 6,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Comparison includes unrelated Kanban external-receipt files; never promote this full diff.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 41,
+  "title": "fix(process): tree-kill the nohup'd worker in sandbox background kills",
+  "wave": "W3-narrow-correctness",
+  "head": "detail/bug-fix/fix-process-tree-kill-the-nohup-d-worker-in-sandbo-ce4515",
+  "head_oid": "123b6d00ecfc2fbd66a93f6768551c7466bb601c",
+  "head_present": true,
+  "files": [
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py",
+   "tests/tools/test_local_temp_dir.py",
+   "tests/tools/test_process_registry.py",
+   "tools/environments/local.py",
+   "tools/process_registry.py"
+  ],
+  "kanban_baggage": [
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "changed_files": 6,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Comparison includes unrelated Kanban external-receipt files; never promote this full diff.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 42,
+  "title": "fix(desktop): skip turn lease for bare-profile primary routes",
+  "wave": "W3-narrow-correctness",
+  "head": "detail/bug-fix/fix-desktop-skip-turn-lease-for-bare-profile-prima-ba2434",
+  "head_oid": "5c2d956f2f7cfb973686a58531f64dc078a5498e",
+  "head_present": true,
+  "files": [
+   "apps/desktop/src/store/gateway.ts",
+   "apps/desktop/src/store/session-request-router.test.ts",
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "kanban_baggage": [
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "changed_files": 4,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Comparison includes unrelated Kanban external-receipt files; never promote this full diff.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 43,
+  "title": "fix(security): use constant-time compare for WeCom callback signature",
+  "wave": "W3-narrow-correctness",
+  "head": "detail/bug-fix/fix-security-use-constant-time-compare-for-wecom-c-b383c8",
+  "head_oid": "884117c5c81d9fb959d82708df86436c834b7d33",
+  "head_present": true,
+  "files": [
+   "hermes_cli/kanban_db.py",
+   "plugins/platforms/wecom/wecom_crypto.py",
+   "tests/gateway/test_wecom_callback.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "kanban_baggage": [
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "changed_files": 4,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Comparison includes unrelated Kanban external-receipt files; never promote this full diff.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 44,
+  "title": "fix(gateway): drain raft per-session turn IDs on teardown without turn_id",
+  "wave": "W3-narrow-correctness",
+  "head": "detail/bug-fix/fix-gateway-drain-raft-per-session-turn-ids-on-tea-db4b90",
+  "head_oid": "f9c5aec2c94d56b903374a627383f274606131bb",
+  "head_present": true,
+  "files": [
+   "hermes_cli/kanban_db.py",
+   "plugins/platforms/raft/adapter.py",
+   "tests/gateway/test_raft_adapter.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "kanban_baggage": [
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "changed_files": 4,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Comparison includes unrelated Kanban external-receipt files; never promote this full diff.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 45,
+  "title": "fix(discord): record recovery ledger on oversized streamed final replies",
+  "wave": "W3-narrow-correctness",
+  "head": "detail/bug-fix/fix-discord-record-recovery-ledger-on-oversized-st-fff52e",
+  "head_oid": "65e3efe1ea2a3da5832d12eeef2b3743c8411e29",
+  "head_present": true,
+  "files": [
+   "hermes_cli/kanban_db.py",
+   "plugins/platforms/discord/adapter.py",
+   "tests/gateway/test_discord_edit_message_overflow_ledger.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "kanban_baggage": [
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "changed_files": 4,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Comparison includes unrelated Kanban external-receipt files; never promote this full diff.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ }
+]

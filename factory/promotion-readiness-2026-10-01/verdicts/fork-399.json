@@ -1,0 +1,34 @@
+{
+  "fork_pr": 399,
+  "title": "docs: cover gpt-6 Sol/Luna & gpt-6.1 Sol in Codex autoraise scope",
+  "claim": "Codex OAuth's 272K cap / 85% autoraise covers gpt-6 Sol/Luna and gpt-6.1 Sol as well as Astra; there is no GPT-6 Terra tier.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "doc_text_on_main": "website/docs/developer-guide/context-compression-and-caching.md:273 and :354 — \"gpt-5.4/5.5/5.6 and gpt-6 Astra\"; agent/auxiliary_client.py:606 docstring — \"gpt-6 Sol/Terra/Luna\"",
+    "source": "agent/auxiliary_client.py:605-623 _is_codex_gpt54_or_gpt55(): families gpt-5.4, gpt-5.5, gpt-5.6, gpt-6-sol, gpt-6.1-sol, gpt-6-luna + any 'astra' (no terra); agent/reasoning_effort.py:39 GPT6_TIER_PREFIXES = ('gpt-6-sol', 'gpt-6-luna').",
+    "red": "Probe on main: _is_codex_gpt54_or_gpt55(m, 'openai-codex') True for gpt-6-sol / gpt-6-luna / gpt-6.1-sol / gpt-6-astra, False for gpt-6-terra; docs name Astra only.",
+    "green": "Row and section enumerate gpt-6 Sol/Luna/Astra and gpt-6.1 Sol; docstring drops Terra. tests/agent/test_codex_gpt55_autoraise_notice.py passes on main.",
+    "negative_control": "N/A — docs/docstring only.",
+    "adjacent": "tests/hermes_cli/test_gpt6_tiers_registration.py tests/agent/test_auxiliary_reasoning_catalog_floor.py tests/agent/test_auxiliary_reasoning_floor.py tests/agent/test_codex_gpt55_autoraise_notice.py -> 12 passed. docs-site-checks equivalent on the bundle branch: website/scripts/extract-skills.py + generate-skill-docs.py leave website/docs, website/sidebars.ts and website/i18n unchanged (clean); website/scripts/check_doc_links.py OK. added lines scanned for MDX hazards ({ } or raw <tag> outside inline code / fences): none. NOT_TESTED: Docusaurus build (website/node_modules not installed in this environment).",
+    "mirrors": "No zh-Hans copy of these lines.",
+    "rebase": "verified on main f848940560; bundle merges cleanly onto refreshed main eb8d21f482 (git merge-tree); merges cleanly with every B1 ready/docs-* branch that touches the same files"
+  },
+  "upstream_overlap": [
+    "fork #121 / NousResearch/hermes-agent#127381 CLOSED: Terra-inclusive version — superseded, do not revive. Its separate providers.md residual ('`max` is a gpt-5.6-only level') was re-proved on main and is carried here without Terra",
+    "NousResearch/hermes-agent#129364 OPEN (thanosapollo, native compaction for gpt-6.1-sol) and #129056 OPEN (kshitijk4poor, gpt-6.1-sol-900k; also removes main's stale `gpt-6-terra-900k` mention) edit nearby lines of the same doc, not these lines; left alone"
+  ],
+  "branch": "ready/docs2-models",
+  "bundle_commit": "69a146992b3fcc4fdf0b89bc9226e752bbdde9b7",
+  "patch": "patches/docs2-models.patch",
+  "pr_body": "patches/docs2-models.body.md",
+  "files": [
+    "agent/auxiliary_client.py",
+    "website/docs/developer-guide/context-compression-and-caching.md",
+    "website/docs/integrations/providers.md",
+    "website/docs/user-guide/configuration.md"
+  ],
+  "size": "fork leaf +3/-3; bundle docs2-models +5/-5 (4 files changed, 5 insertions(+), 5 deletions(-))",
+  "depends_on": null,
+  "notes": "Model-taxonomy lane: #399 is the newer correction; #121's Terra wording is not resurrected. Explicit tier list instead of the fork leaf's 'Astra/Sol/Luna/…'. Drift introduced by 8ad4dc8d67 (#128248). Bundled with: #396. Packaging: one commit per area bundle (batch B2 lane W4-docs); publish one bundle at a time per kvnloo/hermes-agent#313."
+}

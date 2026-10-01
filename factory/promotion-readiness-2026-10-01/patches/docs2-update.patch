@@ -1,0 +1,86 @@
+From ec60a9f5a730991f1432979bb63ff7cf4caa985f Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:39:00 -0500
+Subject: [PATCH] docs(update): sync fleet-restart scope, marker settlement,
+ macOS swap and cron status docs
+
+Four update/fleet statements no longer match main:
+
+- hermes_cli/AGENTS.md, Restart-per-kind: the fleet pass restarts
+  hermes-serve* and hermes-dashboard* units as well as hermes-gateway*
+  (_is_hermes_gateway_unit, #125297), and the SIGUSR1 drain is gateway-only
+  (_service_unit_supports_graceful_sigusr1_restart); serve/dashboard units
+  get a plain restart.
+- updating.md: "Legacy markers without an inventory ... cannot be
+  automatically cleared" contradicts both the page's own earlier paragraph
+  and _marker_only_restart_obsolete(), which discharges an inventory-less
+  marker once every live gateway runs the current checkout (#115638,
+  #125952). What stays fail-closed is a malformed/unsupported inventory, or
+  an inventory recorded without its target SHA.
+- updating.md, Desktop rebuild: _install_rebuilt_macos_bundles() refuses to
+  replace a publisher-signed (Team ID) app with a locally signed rebuild, or
+  one with a different Team ID / bundle identifier, and reports it
+  (_macos_signing_downgrade_error, #123748).
+- multi-profile-gateways.md: with no host gateway, cron_status() first names
+  a fresh in-process hermes serve / Desktop backend ticker before telling
+  the user to start the host gateway.
+---
+ hermes_cli/AGENTS.md                              | 5 +++--
+ website/docs/getting-started/updating.md          | 4 ++--
+ website/docs/user-guide/multi-profile-gateways.md | 2 +-
+ 3 files changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/hermes_cli/AGENTS.md b/hermes_cli/AGENTS.md
+index fe0e56582c..c4e48ba000 100644
+--- a/hermes_cli/AGENTS.md
++++ b/hermes_cli/AGENTS.md
+@@ -154,8 +154,9 @@ it guards. `plan → snapshot → apply → restart-per-kind → verify → repo
+   rebuild decision also trusts the build stamp under HERMES_HOME, so an install that already lost
+   its artifacts in an earlier update is rebuilt instead of "forgotten" (#90495).
+ - **Restart-per-kind**: systemd and launchd restarts are FLEET-WIDE within the updating install (every
+-  `hermes-gateway*` unit / `ai.hermes.gateway*` LaunchAgent whose home is the updating root or one of its
+-  `profiles/<name>`), drain-first (SIGUSR1), with per-unit/per-label failure isolation. Restarting only the
++  `hermes-gateway*` / `hermes-serve*` / `hermes-dashboard*` unit and `ai.hermes.gateway*` LaunchAgent whose
++  home is the updating root or one of its `profiles/<name>`), drain-first (SIGUSR1, gateway units only —
++  serve/dashboard units have no handler and get a plain restart), with per-unit/per-label failure isolation. Restarting only the
+   invoking profile's service leaves siblings on stale `sys.modules` until they crash — the largest dupe-PR
+   cluster in the repo's history came from that bug. The fleet is bounded by HOME, not by namespace:
+   `hermes_cli/update_fleet_scope.py` judges every unit/label/process by the home it actually runs on
+diff --git a/website/docs/getting-started/updating.md b/website/docs/getting-started/updating.md
+index cbd089c531..6155855e86 100644
+--- a/website/docs/getting-started/updating.md
++++ b/website/docs/getting-started/updating.md
+@@ -138,7 +138,7 @@ For an admitted source checkout, `hermes update` runs these phases:
+ 3. **Post-pull syntax validation + auto-rollback** — after the pull, Hermes compiles the nine critical files every `hermes` invocation imports at startup. If any fails to parse (e.g. an orphan merge-conflict marker, an accidentally truncated file), Hermes rolls the install back so your shell stays bootable: it resets the checkout to the commit it ran before the pull (`git reset --hard <pre-pull-sha>`), or, when the update switched away from a detached checkout or a parked feature branch, returns there with `git checkout --detach <sha>` / `git checkout <branch>` (a branch it cannot check out again is restored detached at the same commit). Re-run `hermes update` once the upstream fix lands.
+ 4. **Dependency preparation** — PM provisions required tools and prepares a complete Python environment from the new lock, existing extras, and enabled plugin requirements. It validates that environment before publishing its selection. A plugin never fails the update. A plugin that no longer fits the new core is added to `plugins.disabled` in every profile that enables it (a memory provider has `memory.provider` cleared). That covers a `requires-python` that excludes Hermes's Python, a `manifest_version` newer than this Hermes supports, and dependencies that the resolver proves can't resolve alongside core and earlier plugins in config order, or that fail their own build. A download or network failure gets one retry and is disabled if it fails again. The update prints `⚠ Disabled plugin '<name>' in <home>: <reason>`, records it in the receipt's warnings, and continues. Re-enable it with `hermes plugins enable <name>` once the plugin ships a compatible release, or once the network is back. A `requires_hermes` range the running version misses never disables a plugin, because a source checkout without release tags can read as an older release. That plugin sits out instead (`⚠ Left plugin '<name>' … out of this update`), stays enabled, and rejoins once Hermes reports a version it accepts. A secondary profile whose config cannot be read sits out the same way until the config is fixed. Only a core that cannot build on its own fails this step.
+ 5. **Config migration** — detects new config options added since your version and prompts you to set them
+-6. **Desktop rebuild (stage-and-swap)** — if the Hermes Desktop app was built from this checkout, it is rebuilt so the GUI matches the new code. The rebuild packs into a temporary staging directory next to `apps/desktop/release/`, verifies the staged app, and only then renames it over the previous build (on Windows a real-time scanner briefly holding `release/win-unpacked` is ridden out with a few short retries). A rebuild that fails at any point — corrupt Electron download, missing dependency, disk full — leaves the previous app untouched and launchable; the update fails at that step, and `hermes desktop --build-only --force-build` or the next `hermes update` retries the rebuild. On macOS the rebuilt bundle is then copied (with `ditto`, signature intact) over a stale `/Applications/Hermes.app` or `~/Applications/Hermes.app`, so the copy Finder and the Dock launch matches the backend; an installed copy that is currently running is left alone and the update tells you to quit it and run `hermes update` again. If a copy an earlier update installed has since been removed (including dragged to the Trash), the update rebuilds it if needed, puts it back and says so, so Finder, the Dock and Spotlight find Hermes again; `hermes uninstall` removes the app for good. On Windows, when the update finishes from inside the Desktop app it would rebuild (the app completing an interrupted update at launch), the rebuild is skipped with a notice instead: Windows locks a running app's files, and stopping the app would end the update with it. The rest of the update completes; quit Hermes Desktop and run `hermes desktop` from a terminal, or use **Update now** in **Settings → About**, to rebuild and reopen it.
++6. **Desktop rebuild (stage-and-swap)** — if the Hermes Desktop app was built from this checkout, it is rebuilt so the GUI matches the new code. The rebuild packs into a temporary staging directory next to `apps/desktop/release/`, verifies the staged app, and only then renames it over the previous build (on Windows a real-time scanner briefly holding `release/win-unpacked` is ridden out with a few short retries). A rebuild that fails at any point — corrupt Electron download, missing dependency, disk full — leaves the previous app untouched and launchable; the update fails at that step, and `hermes desktop --build-only --force-build` or the next `hermes update` retries the rebuild. On macOS the rebuilt bundle is then copied (with `ditto`, signature intact) over a stale `/Applications/Hermes.app` or `~/Applications/Hermes.app`, so the copy Finder and the Dock launch matches the backend; an installed copy that is currently running is left alone and the update tells you to quit it and run `hermes update` again. A publisher-signed install (Developer ID / Team ID) is never replaced by a locally signed rebuild, or by one with a different Team ID or bundle identifier: the update keeps the installed app and reports why instead of downgrading its signature. If a copy an earlier update installed has since been removed (including dragged to the Trash), the update rebuilds it if needed, puts it back and says so, so Finder, the Dock and Spotlight find Hermes again; `hermes uninstall` removes the app for good. On Windows, when the update finishes from inside the Desktop app it would rebuild (the app completing an interrupted update at launch), the rebuild is skipped with a notice instead: Windows locks a running app's files, and stopping the app would end the update with it. The rest of the update completes; quit Hermes Desktop and run `hermes desktop` from a terminal, or use **Update now** in **Settings → About**, to rebuild and reopen it.
+ 7. **Gateway auto-restart**: running gateways are refreshed after the update completes. Service-managed gateways (systemd on Linux, launchd on macOS) restart through the service manager. Manual gateways are relaunched when Hermes can map their PID to a profile. Manually launched `hermes serve` / `hermes dashboard` backends are different: the updater leaves them running and asks their owner to restart them. See [Manual backend restart reminders](#manual-backend-restart-reminders). Backends owned by a running Desktop app remain the app's responsibility.
+ 8. **Multiplex migration (multi-profile installs)** — once the fleet is verified on the new code, an install with two or more profiles that still run **one gateway per profile** is folded into a single multiplexed default gateway when nothing blocks it (same as `hermes gateway migrate --multiplex --yes`); if a blocker exists (a bot token shared by two profiles, a secondary profile binding a port with no `/p/<profile>/` ingress) the update prints the blockers with their fixes and changes nothing. Single-profile installs are never touched. See [Migrating from per-profile gateways](../user-guide/multi-profile-gateways.md#migrating-from-per-profile-gateways).
+ 
+@@ -311,7 +311,7 @@ A failed historical receipt alone does not prove that gateways are still stale.
+ 
+ A pending restart marker records its own pre-update runtime inventory and target commit. Recovery checks that inventory, never an older receipt's inventory. Settlement requires a nonempty verified current fleet, a successor at the target commit for every recorded gateway profile, and successful handling of any identified manual backend obligations. A manual backend that is still alive or whose liveness is unknown needs a saved reminder; a confirmed exited process needs no reminder. Missing gateways, unsupported runtimes, or failed reminder writes keep the marker pending.
+ 
+-Legacy markers without an inventory, and malformed or unsupported inventories, cannot be automatically cleared by startup or catch-up reconciliation. Restarting all visible gateways is not enough to establish what that update owed. The warning remains until a later update completes with a new marker containing its own inventory and settles successfully.
++Malformed or unsupported inventories, and an inventory recorded without its target commit, cannot be automatically cleared by startup or catch-up reconciliation. Restarting all visible gateways is not enough to establish what that update owed. The warning remains until a later update completes with a new marker containing its own inventory and settles successfully.
+ 
+ ### Full pre-update backup: `--backup`
+ 
+diff --git a/website/docs/user-guide/multi-profile-gateways.md b/website/docs/user-guide/multi-profile-gateways.md
+index 96e1b7a7ca..88ac77a92e 100644
+--- a/website/docs/user-guide/multi-profile-gateways.md
++++ b/website/docs/user-guide/multi-profile-gateways.md
+@@ -573,7 +573,7 @@ There is a single process-level PID and lock (the multiplexer, under the default
+ 
+ `hermes -p coder cron status` names the single host gateway and the profiles it serves — `Scheduler host: the host gateway (PID 4211) serving profiles default, coder` — then checks coder's own ticker heartbeat and last successful tick. A missing or stale heartbeat produces a warning rather than an unconditional running verdict. `cron list` and `cron create` also warn when a served profile has no fresh heartbeat. `cron status` adds tick-failure details that those lightweight checks do not read.
+ 
+-When no gateway owns the host role, `cron status` tells you to start the **one** host gateway (`hermes --profile default gateway install` / `gateway run`) and to make sure it serves this profile. Installing a per-profile service is shown only under `LEGACY (pre-multiplex topology, not recommended)`: it would start a second gateway process on the host. `hermes doctor` follows the same rule — under s6 it reports `Host gateway: the host gateway (PID 4211) serving profiles default, coder` instead of a per-profile slot count, flags any still-supervised per-profile slot as LEGACY, and checks the host systemd unit's linger even when you run doctor from a served profile. The `state.db` holder lines name the shared host process too, so "3 process(es) holding the DB open" says which gateway and which profiles stopping it would affect.
++When no gateway owns the host role, `cron status` names an in-process `hermes serve` / Desktop backend ticker if one is freshly ticking this profile (`Scheduler host: an in-process ticker (hermes serve / Desktop backend) ticking profile '<name>'`); otherwise it tells you to start the **one** host gateway (`hermes --profile default gateway install` / `gateway run`) and to make sure it serves this profile. Installing a per-profile service is shown only under `LEGACY (pre-multiplex topology, not recommended)`: it would start a second gateway process on the host. `hermes doctor` follows the same rule — under s6 it reports `Host gateway: the host gateway (PID 4211) serving profiles default, coder` instead of a per-profile slot count, flags any still-supervised per-profile slot as LEGACY, and checks the host systemd unit's linger even when you run doctor from a served profile. The `state.db` holder lines name the shared host process too, so "3 process(es) holding the DB open" says which gateway and which profiles stopping it would affect.
+ 
+ #### What does **not** change
+ 
+-- 
+2.55.0
+

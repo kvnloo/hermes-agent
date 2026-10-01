@@ -1,0 +1,21 @@
+label=adjacent-fork25 main=298a01c79b38018e029e50f77efe67c4a4fdbd40
+APPLY /mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/export-pinned/fork25-rebuilt-onto-main.diff: ok
+▶ not activated — using HERMES_PYTHON: /workspace/hermes-home/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 8 test files (~266 tests) under ['tests/hermes_cli/test_sessions_export_filtered_pinned.py', 'tests/hermes_cli/test_sessions_export_md_cli.py', 'tests/hermes_cli/test_session_export.py', 'tests/hermes_cli/test_session_filters.py', 'tests/hermes_cli/test_sessions_pin.py', 'tests/hermes_cli/test_sessions_export_output_dir.py', 'tests/hermes_cli/test_sessions_delete.py', 'tests/hermes_state/test_hermes_state.py']; running with -j 2
+[  1.5% |     4/~266 | ✓11 | ✗ 0] ✓ tests/hermes_cli/test_session_filters.py (11✓, 1.8s)
+[  2.6% |     7/~266 | ✓14 | ✗ 0] ✓ tests/hermes_cli/test_session_export.py (3✓, 2.9s)
+[  3.4% |     9/~266 | ✓16 | ✗ 0] ✓ tests/hermes_cli/test_sessions_delete.py (2✓, 3.2s)
+[  4.5% |    12/~266 | ✓21 | ✗ 0] ✓ tests/hermes_cli/test_sessions_export_filtered_pinned.py (5✓, 7.0s)
+[  5.3% |    14/~266 | ✓23 | ✗ 0] ✓ tests/hermes_cli/test_sessions_export_output_dir.py (2✓, 1.5s)
+[  6.8% |    18/~266 | ✓28 | ✗ 0] ✓ tests/hermes_cli/test_sessions_export_md_cli.py (5✓, 6.5s)
+[  8.6% |    23/~266 | ✓33 | ✗ 0] ✓ tests/hermes_cli/test_sessions_pin.py (5✓, 2.0s)
+[100.0% |   266/~266 | ✓324 | ✗  0] ✓ tests/hermes_state/test_hermes_state.py (291✓, 208.4s)
+
+=== Summary: 8 files, 324 tests passed, 0 failed (100% complete) in 219.9s (2 workers) ===
+  Durations cached to test_durations.json (8 files)
+
+=== Per-file subprocess time distribution ===

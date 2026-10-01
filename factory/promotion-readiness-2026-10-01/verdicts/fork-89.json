@@ -1,0 +1,33 @@
+{
+  "fork_pr": 89,
+  "title": "docs(profile): add migrate-identity to profile-commands summary table",
+  "claim": "The `hermes profile` subcommand table omits migrate-identity (and purge-identity), both registered and documented below on the same page.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "red": "Parser vs table on main: `re.findall` of profile_subparsers.add_parser names in hermes_cli/subcommands/profile.py minus table rows in profile-commands.md:17-31 = ['purge-identity', 'migrate-identity'].",
+    "green": "Same script on the bundle: missing [] and extra [].",
+    "negative_control": "N/A for docs (no executable behaviour). Equivalent check: the stale phrase is present on main and absent on the bundle (grep given in red/green).",
+    "adjacent": "python3 website/scripts/check_doc_links.py on the bundle tree: OK (no route-style links). All 7 B1 bundles cherry-pick together onto main cleanly, and each pairs cleanly with B2's current docs2-update/docs2-desktop/docs2-gateway/docs2-memory bundles.",
+    "source": "hermes_cli/subcommands/profile.py:93-114 registers purge-identity and migrate-identity (help strings reused as row text); sections at profile-commands.md:259 and :288."
+  },
+  "upstream_overlap": [
+    "No open external PR/issue for this claim (gh search prs/issues; open docs PRs touching the same files edit other sections)"
+  ],
+  "branch": "ready/docs-cli",
+  "bundle": {
+    "branch": "ready/docs-cli",
+    "commit": "3d969343fa",
+    "subject": "docs(cli): list profile identity commands; scope the receipt successor check",
+    "bundle_size": "+3/-1",
+    "patch": "patches/docs-cli.patch",
+    "body": "patches/docs-cli.body.md"
+  },
+  "files": [
+    "website/docs/reference/profile-commands.md"
+  ],
+  "size": "+2/-0",
+  "depends_on": null,
+  "fork_head": "bf12e3d1011f88ad0e8a59d0a4824a38d862b220",
+  "notes": "Added purge-identity too (same table, same gap); the fork only added migrate-identity. zh-Hans profile-commands.md is an older translation without either identity section (or the describe row), so rows were not added there; left to a zh-Hans refresh."
+}

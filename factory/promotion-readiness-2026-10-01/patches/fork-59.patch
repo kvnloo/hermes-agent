@@ -1,0 +1,137 @@
+From 57de52cf7b7e4cd426866a71599a7d30ce02d43c Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:16:55 -0500
+Subject: [PATCH] fix(skills): evm compare no longer names a failed or zero-gas
+ chain most expensive
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+`evm_client.py compare` sorted chains with `x.get("gas_price_gwei") or
+float("inf")` and took the headlines from the ends of that list. The
+truthiness test folds two different values into +inf:
+
+- `None` — `_fetch_chain_stats` swallows an `eth_gasPrice` failure into
+  `gas_price_gwei=None`, so a chain whose RPC failed was reported as
+  `most_expensive_gas` (with `errors` still `{}`);
+- `0.0` — an RPC returning `0x0` is genuinely the cheapest chain, but it
+  sorted last and was also reported as `most_expensive_gas`.
+
+Sort with an explicit `is None` check so `0.0` stays a real minimum, and
+derive `cheapest_gas` / `most_expensive_gas` only from chains that
+reported a price (both `null` when none did). Failed chains stay in
+`comparison` with their null price.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../blockchain/evm/scripts/evm_client.py      |  8 ++-
+ tests/skills/test_evm_skill.py                | 71 +++++++++++++++++++
+ 2 files changed, 76 insertions(+), 3 deletions(-)
+ create mode 100644 tests/skills/test_evm_skill.py
+
+diff --git a/optional-skills/blockchain/evm/scripts/evm_client.py b/optional-skills/blockchain/evm/scripts/evm_client.py
+index e7fe963fd9..f87d1c84e5 100644
+--- a/optional-skills/blockchain/evm/scripts/evm_client.py
++++ b/optional-skills/blockchain/evm/scripts/evm_client.py
+@@ -1006,16 +1006,18 @@ def cmd_compare(_args: argparse.Namespace) -> None:
+     for t in threads:
+         t.join(timeout=30)
+ 
++    # A failed gas fetch is None (sorted last, never a headline); 0.0 is a real, cheapest price.
+     sorted_by_gas = sorted(
+         results.values(),
+-        key=lambda x: x.get("gas_price_gwei") or float("inf"),
++        key=lambda x: float("inf") if x.get("gas_price_gwei") is None else x["gas_price_gwei"],
+     )
++    priced = [r for r in sorted_by_gas if r.get("gas_price_gwei") is not None]
+ 
+     print_json({
+         "comparison":       sorted_by_gas,
+         "errors":           errors,
+-        "cheapest_gas":     sorted_by_gas[0]["chain"] if sorted_by_gas else None,
+-        "most_expensive_gas": sorted_by_gas[-1]["chain"] if sorted_by_gas else None,
++        "cheapest_gas":     priced[0]["chain"] if priced else None,
++        "most_expensive_gas": priced[-1]["chain"] if priced else None,
+     })
+ 
+ 
+diff --git a/tests/skills/test_evm_skill.py b/tests/skills/test_evm_skill.py
+new file mode 100644
+index 0000000000..03d2832e9c
+--- /dev/null
++++ b/tests/skills/test_evm_skill.py
+@@ -0,0 +1,71 @@
++from __future__ import annotations
++
++import argparse
++import importlib.util
++import json
++import sys
++from pathlib import Path
++from unittest.mock import patch
++
++
++SCRIPT_PATH = (
++    Path(__file__).resolve().parents[2]
++    / "optional-skills"
++    / "blockchain"
++    / "evm"
++    / "scripts"
++    / "evm_client.py"
++)
++
++_FAIL = object()  # eth_gasPrice raises -> _fetch_chain_stats records gas_price_gwei=None
++
++
++def load_module():
++    spec = importlib.util.spec_from_file_location("evm_skill", SCRIPT_PATH)
++    module = importlib.util.module_from_spec(spec)
++    assert spec.loader is not None
++    sys.modules[spec.name] = module
++    spec.loader.exec_module(module)
++    return module
++
++
++def _compare(mod, capsys, gas_gwei_by_chain):
++    """Run ``cmd_compare`` against mocked RPC/price calls and return its JSON output."""
++
++    def rpc_call(chain, method, params, req_id=1):
++        value = gas_gwei_by_chain[chain]
++        if value is _FAIL:
++            raise RuntimeError("eth_gasPrice failed after retries")
++        return hex(int(value * 1e9))
++
++    with patch.object(mod, "rpc_call", side_effect=rpc_call), \
++         patch.object(mod, "cg_price_by_id", return_value=10.0):
++        mod.cmd_compare(argparse.Namespace())
++    return json.loads(capsys.readouterr().out)
++
++
++def _prices(mod, **overrides):
++    prices = {chain: 1.0 + i for i, chain in enumerate(mod.CHAINS)}
++    prices.update(overrides)
++    return prices
++
++
++def test_compare_headlines_ignore_chains_whose_gas_fetch_failed(capsys):
++    mod = load_module()
++    failed, priciest = list(mod.CHAINS)[:2]
++    out = _compare(mod, capsys, _prices(mod, **{failed: _FAIL, priciest: 999.0}))
++
++    assert out["most_expensive_gas"] == priciest
++    assert out["cheapest_gas"] not in (None, failed)
++    # The failed chain stays visible (null gas) instead of being dropped.
++    assert next(e for e in out["comparison"] if e["chain"] == failed)["gas_price_gwei"] is None
++
++
++def test_compare_zero_gas_chain_is_cheapest_not_most_expensive(capsys):
++    mod = load_module()
++    free = list(mod.CHAINS)[0]
++    out = _compare(mod, capsys, _prices(mod, **{free: 0.0}))
++
++    assert out["cheapest_gas"] == free
++    assert out["most_expensive_gas"] != free
++    assert out["comparison"][0]["chain"] == free
+-- 
+2.55.0
+

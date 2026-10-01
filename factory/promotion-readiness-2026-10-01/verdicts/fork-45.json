@@ -1,0 +1,28 @@
+{
+ "fork_pr": 45,
+ "title": "fix(discord): record recovery ledger on oversized streamed final replies",
+ "claim": "A finalized streamed Discord reply that exceeds 2,000 chars (pre-flight or reactive-50035 overflow split) must record the recovery ledger exactly like the in-place finalize branch; today both overflow returns skip it, leaving the source message incomplete for backfill.",
+ "verdict": "READY",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "On main with only the new test: test_oversized_final_edit_records_recovery_completion[preflight] and [reactive_50035] both fail, AssertionError: assert False is True where False = _discord_message_is_persistently_complete('93') (edit_message returned success=True).",
+  "green": "With both overflow returns wrapped in _record_response_async: test_discord_missed_message_backfill.py + test_discord_edit_message_overflow.py = 30 passed.",
+  "negative_control": "Per branch: reverting only the pre-flight wrap fails only [preflight]; reverting only the reactive wrap fails only [reactive_50035] (1 passed, 1 failed each).",
+  "adjacent": "All 48 tests/gateway/test_discord*.py files: 317 passed, 0 failed. ruff clean.",
+  "source": "main plugins/platforms/discord/adapter.py edit_message: `if finalize: return await self._edit_overflow_split(...)` at the pre-flight (L3255) and reactive 50035 (L3274) branches, while the in-place path does `await self._record_response_async((metadata or {}).get('reply_to_message_id'), result, content, True)`. send() records success and failure via _record_response_async."
+ },
+ "upstream_overlap": [
+  "None for this gap: gh search _edit_overflow_split, _record_discord_response, 'oversized final reply ledger', 'discord overflow backfill'.",
+  "#120094 (OPEN, liuhao1024) changes partial-continuation failures to success=False. Different claim; compatible (a partial split then records not-completed, and the consumer's tail send() records completion).",
+  "#114815 (MERGED) made backfill rely on the ledger completion gate, which raises the cost of this gap under reply_to_mode: off.",
+  "#123947 (OPEN, jonpol01) touches send() split resume, not edit_message overflow."
+ ],
+ "branch": "ready/fork-45-discord-overflow-ledger",
+ "files": [
+  "plugins/platforms/discord/adapter.py",
+  "tests/gateway/test_discord_missed_message_backfill.py"
+ ],
+ "size": "+41/-2",
+ "depends_on": null,
+ "notes": "Rebuilt on main using the existing _record_response_async helper (already off-loop via asyncio.to_thread), so no new code paths. The fork hand-rolled asyncio.to_thread(self._record_discord_response, ...) behind an `if success` guard. Dropped the fork's 396-line new test file for one parametrized behaviour test in the existing backfill suite. Kanban baggage dropped. NOT_TESTED: live Discord bot. Commit 4c18ef1b3c."
+}

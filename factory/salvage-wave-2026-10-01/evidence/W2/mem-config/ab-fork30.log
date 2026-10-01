@@ -1,0 +1,11 @@
+main=298a01c79b38018e029e50f77efe67c4a4fdbd40
+MERGE refs/w2/fork/30 (5b136fe5ac): clean
+  ║ 1 failed, 9 passed in 2.16s
+1 failed, 9 passed in 2.16s
+=== 1 file with test failures (1 test failed) ===
+E   assert not True
+FAILED tests/agent/test_memory_bootstrap_independence.py::test_builtin_failure_does_not_invent_provider_or_plugin_error[malformed]
+=== Summary: 1 files, 9 tests passed, 1 failed (100% complete) in 6.6s (2 workers) ===
+  tests/agent/test_memory_bootstrap_independence.py  (1 test failed)
+  ║ WARNING  run_agent:agent_init.py:1391 Memory provider plugin init failed: 'str' object has no attribute 'get'
+WARNING  run_agent:agent_init.py:1391 Memory provider plugin init failed: 'str' object has no attribute 'get'

@@ -1,0 +1,115 @@
+From 24f01553d8556559696d4b63dcc2a9401bced80b Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:43:44 -0500
+Subject: [PATCH] fix(raft): release a session's turn ids when it is finalized
+ without a turn_id
+
+The Raft adapter keeps module-global sets of turn ids (_RAFT_TURN_IDS
+for attribution, _RAFT_PROMPT_TURN_IDS for the one-UserPromptSubmit-per-
+turn de-dup). Only the per-turn on_session_end that finalize_turn fires
+with a turn_id removes them. Turns that end on a terminal-failure path
+(content-policy refusal, truncation end, retry exhaustion, interrupt
+before any assistant text) return without reaching finalize_turn. A
+force-reaped turn never gets there either. Their ids stay in both sets
+for the life of the gateway process. The session's own finalize carries
+no turn_id, so it releases nothing but the session id.
+
+Record which session registered each live turn (_RAFT_TURN_SESSIONS).
+When a session is forgotten, release every turn it still owns. The
+per-turn release also drops the mapping, so normal turns leave nothing
+behind, as before.
+---
+ plugins/platforms/raft/adapter.py  | 16 +++++++++++++---
+ tests/gateway/test_raft_adapter.py | 29 +++++++++++++++++++++++++++++
+ 2 files changed, 42 insertions(+), 3 deletions(-)
+
+diff --git a/plugins/platforms/raft/adapter.py b/plugins/platforms/raft/adapter.py
+index 941ef6375c..6022250b4b 100644
+--- a/plugins/platforms/raft/adapter.py
++++ b/plugins/platforms/raft/adapter.py
+@@ -71,6 +71,9 @@ _RAFT_CONTEXT_LOCK = threading.Lock()
+ _RAFT_SESSION_IDS: set[str] = set()
+ _RAFT_TURN_IDS: set[str] = set()
+ _RAFT_PROMPT_TURN_IDS: set[str] = set()
++# Live turn id -> the session that registered it, so a session finalize that carries no turn_id
++# can still release turns whose per-turn on_session_end never fired (early-returned or reaped).
++_RAFT_TURN_SESSIONS: dict[str, str] = {}
+ 
+ 
+ def _resolve_raft_profile() -> str:
+@@ -206,11 +209,14 @@ class ActivityQueue:
+ def _forget_raft_context(session_id: Any, turn_id: Any = None, *, forget_session: bool = False) -> None:
+     safe_session_id, safe_turn_id = _safe_scalar(session_id), _safe_scalar(turn_id)
+     with _RAFT_CONTEXT_LOCK:
+-        if safe_turn_id:
+-            _RAFT_TURN_IDS.discard(safe_turn_id)
+-            _RAFT_PROMPT_TURN_IDS.discard(safe_turn_id)
++        released = {safe_turn_id} if safe_turn_id else set()
+         if forget_session and safe_session_id:
+             _RAFT_SESSION_IDS.discard(safe_session_id)
++            released.update(t for t, s in _RAFT_TURN_SESSIONS.items() if s == safe_session_id)
++        for released_turn_id in released:
++            _RAFT_TURN_IDS.discard(released_turn_id)
++            _RAFT_PROMPT_TURN_IDS.discard(released_turn_id)
++            _RAFT_TURN_SESSIONS.pop(released_turn_id, None)
+ 
+ 
+ def _is_raft_context(**kwargs: Any) -> bool:
+@@ -223,6 +229,8 @@ def _is_raft_context(**kwargs: Any) -> bool:
+                 _RAFT_SESSION_IDS.add(safe_session_id)
+             if safe_turn_id:
+                 _RAFT_TURN_IDS.add(safe_turn_id)
++                if safe_session_id:
++                    _RAFT_TURN_SESSIONS.setdefault(safe_turn_id, safe_session_id)
+             return True
+         return bool((safe_turn_id and safe_turn_id in _RAFT_TURN_IDS)
+                     or (safe_session_id and safe_session_id in _RAFT_SESSION_IDS))
+@@ -263,6 +271,8 @@ def _on_pre_llm_call(**kwargs: Any) -> None:
+             if safe_turn_id in _RAFT_PROMPT_TURN_IDS:
+                 return
+             _RAFT_PROMPT_TURN_IDS.add(safe_turn_id)
++            if safe_session_id := _safe_scalar(kwargs.get("session_id")):
++                _RAFT_TURN_SESSIONS.setdefault(safe_turn_id, safe_session_id)
+     _emit("UserPromptSubmit", kwargs)
+ 
+ 
+diff --git a/tests/gateway/test_raft_adapter.py b/tests/gateway/test_raft_adapter.py
+index 64cd9e1b71..1224bf6c57 100644
+--- a/tests/gateway/test_raft_adapter.py
++++ b/tests/gateway/test_raft_adapter.py
+@@ -288,3 +288,32 @@ class TestMultiplexProfileScope:
+             assert "--profile default-profile-slug" in ctx.platform_kwargs["platform_hint"]
+         finally:
+             set_multiplex_active(False)
++
++
++@pytest.fixture
++def raft_context():
++    import plugins.platforms.raft.adapter as raft
++
++    tracked = (raft._RAFT_SESSION_IDS, raft._RAFT_TURN_IDS, raft._RAFT_PROMPT_TURN_IDS)
++    for ids in tracked:
++        ids.clear()
++    yield raft
++    for ids in tracked:
++        ids.clear()
++
++
++class TestRaftTurnTracking:
++    def test_session_finalize_without_turn_id_releases_the_sessions_turn_ids(self, raft_context):
++        raft = raft_context
++        raft._on_pre_llm_call(platform="raft", session_id="s1", turn_id="t1")
++        raft._on_pre_llm_call(platform="raft", session_id="s2", turn_id="t2")
++
++        # t1 never reached the per-turn on_session_end (an early-returned or force-reaped
++        # turn); the gateway's session finalize carries no turn_id.
++        raft._on_session_finalize(session_id="s1", platform="gateway", reason="shutdown")
++
++        assert "t1" not in raft._RAFT_TURN_IDS | raft._RAFT_PROMPT_TURN_IDS
++        # Another live session keeps its turn.
++        assert "t2" in raft._RAFT_TURN_IDS & raft._RAFT_PROMPT_TURN_IDS
++        raft._on_session_finalize(session_id="s2", platform="gateway", reason="shutdown")
++        assert not raft._RAFT_TURN_IDS | raft._RAFT_PROMPT_TURN_IDS
+-- 
+2.55.0
+

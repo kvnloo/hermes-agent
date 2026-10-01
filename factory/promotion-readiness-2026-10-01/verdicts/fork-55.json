@@ -1,0 +1,50 @@
+{
+ "fork_pr": 55,
+ "title": "fix(desktop): strip quoted/colon-delimited generated-image echoes",
+ "claim": "stripGeneratedImageEchoes' bare-path pass only matches a known generated-image path bounded by whitespace/brackets/sentence punctuation, so a path the model restates inside quotes, backticks or before a colon survives in the prose despite the doc comment saying bare occurrences are removed.",
+ "verdict": "NEEDS-REWORK",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "source": "main apps/desktop/src/lib/generated-images.ts:88: `(^|[\\s([{])<?src>?(?=$|[\\s)\\]},.!?])` - quotes, backticks, colon, semicolon are not boundaries. Doc comment (:96-101) says bare occurrences are removed.",
+  "red": "Probe on main: expect(strip('Saved to \"/tmp/cat.png\" just now.')).not.toContain('/tmp/cat.png') -> AssertionError: expected 'Saved to \"/tmp/cat.png\" just now.' not to contain '/tmp/cat.png'. Gap is real.",
+  "green": "Fork regex applied to main: fork's own claims pass (probe + existing generated-images.test.ts, 11/11).",
+  "negative_control": "Not run on a rebuilt fix (not rebuilt); RED on main == fork line reverted.",
+  "adjacent": "apps/desktop/src/lib/generated-images.test.ts 9/9 pass with the fork regex.",
+  "probe_main": [
+   "\"Saved to \\\"/tmp/cat.png\\\" just now.\" => \"Saved to \\\"/tmp/cat.png\\\" just now.\"",
+   "\"Generated /tmp/cat.png: done\" => \"Generated /tmp/cat.png: done\"",
+   "\"Saved to `/tmp/cat.png`.\" => \"Saved to `/tmp/cat.png`.\"",
+   "\"Saved to '/tmp/cat.png'.\" => \"Saved to '/tmp/cat.png'.\"",
+   "\"See [the file](/tmp/cat.png).\" => \"See [the file]().\"",
+   "\"Saved to (/tmp/cat.png).\" => \"Saved to ().\"",
+   "\"Saved to /tmp/cat.png.\" => \"Saved to .\"",
+   "\"see /tmp/cat.png/foo and /tmp/cat.png.bak\" => \"see /tmp/cat.png/foo and .bak\""
+  ],
+  "probe_fork": [
+   "\"Saved to \\\"/tmp/cat.png\\\" just now.\" => \"Saved to \\\"\\\" just now.\"",
+   "\"Generated /tmp/cat.png: done\" => \"Generated : done\"",
+   "\"Saved to `/tmp/cat.png`.\" => \"Saved to ``.\"",
+   "\"Saved to '/tmp/cat.png'.\" => \"Saved to ''.\"",
+   "\"See [the file](/tmp/cat.png).\" => \"See [the file]().\"",
+   "\"Saved to (/tmp/cat.png).\" => \"Saved to ().\"",
+   "\"Saved to /tmp/cat.png.\" => \"Saved to .\"",
+   "\"see /tmp/cat.png/foo and /tmp/cat.png.bak\" => \"see /tmp/cat.png/foo and .bak\""
+  ],
+  "why_rework": "Fork output leaves empty-delimiter debris: 'Saved to `/tmp/cat.png`.' -> 'Saved to ``.' (stray literal backticks replacing a readable code-span path - the most common model phrasing), '\"\"', \"''\", 'Generated : done'. Its symmetric boundary also keeps '(' / ')' as boundaries, so '[the file](/tmp/cat.png)' -> '[the file]()' persists - exactly what open #81462 removes."
+ },
+ "upstream_overlap": [
+  "#81462 OPEN (DavidMetcalfe, external, head 6d82e4a50a, updated 2026-09-30; refs #80621): rewrites stripGeneratedImageEchoes including this exact bare-path regex, deliberately dropping '(' / ')' from the boundary classes to stop markdown link destinations being corrupted. It does NOT add quotes/colon (claim not fixed there), but any change to this line must be built on/after it. A symmetric-boundary PR now would collide with and partly undo #81462.",
+  "#105069 OPEN (nftpoetrist) touches stream-completion trimming after echo extraction (use-message-stream), not this regex.",
+  "#70891 OPEN touches message-parts.tsx, not this file."
+ ],
+ "branch": null,
+ "files": [
+  "apps/desktop/src/lib/generated-images.ts",
+  "apps/desktop/src/lib/generated-images.test.ts"
+ ],
+ "size": "+51/-1 (clean fork diff)",
+ "depends_on": [
+  "NousResearch/hermes-agent#81462"
+ ],
+ "notes": "Fork test hunks no longer apply to main (test file trimmed by 81235c9add). Rework direction: strip a matching wrapper pair (quotes/backticks) together with the path, keep parens out of the boundary set per #81462, and rebuild only after #81462 lands - or offer the quote/backtick/colon cases to #81462 as review input. Low user impact (cosmetic: path text stays in prose; image still renders in the tool slot). NOT_TESTED: desktop typecheck/lint, rendered markdown in the app."
+}

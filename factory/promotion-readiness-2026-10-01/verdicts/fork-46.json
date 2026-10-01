@@ -1,0 +1,29 @@
+{
+ "fork_pr": 46,
+ "title": "fix(dashboard): show resume-loading overlay for implicit reconnect resume",
+ "claim": "On a /chat connect without ?resume=, the server's implicit active-session {type:'resume'} control frame sets resumeHydrating, but the render gate also requires Boolean(resumeParam), so the resume wait notice never shows during that blank --resume boot.",
+ "verdict": "READY",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "source": "main web/src/pages/ChatPage.tsx:1828-1832 passes hasResumeTarget: Boolean(resumeParam); beginResumeReplay (ChatPage.tsx:1373-1387) calls setResumeHydrating(true) when the control frame arrives (ChatPage.tsx:1402-1406); server sends the frame in hermes_cli/web_routers/chat_ws.py:483. 9c013eaaf8 (#93518) explicitly moved 'hydration logic' onto effectiveResume but left the render gate on the URL param (overlay feature bb189bf6fe predates it).",
+  "red": "New ChatPage.test.tsx case on main: fresh-chat precondition passes, then after onmessage({type:'resume',id:'sess-1'}) -> AssertionError: expected null not to be null (ChatPage.test.tsx:530, notice absent).",
+  "green": "With fix: ChatPage.test.tsx + pty-resume-loading/pty-scroll/pty-resume-sanitizer/pty-reconnect tests -> 5 files, 73 passed.",
+  "negative_control": "Call site changed to hydrating: resumeHydrating && Boolean(resumeParam) -> new test fails again with 'expected null not to be null'.",
+  "adjacent": "web/src/lib/pty-resume-loading.test.ts, pty-scroll.test.ts, pty-resume-sanitizer.test.ts, pty-reconnect.test.ts and the full ChatPage.test.tsx (16 tests) pass; tsc -p tsconfig.app.json --noEmit clean (includes tests); eslint 0 errors (3 pre-existing warnings on untouched lines). Prettier reports the same files unformatted on main too (web is not prettier-enforced)."
+ },
+ "upstream_overlap": [
+  "No open upstream PR touches the overlay gate: gh search (shouldShowResumeLoadingOverlay, hasResumeTarget, pty-resume-loading, 'resume loading overlay') and a file scan of 1000 open comp/dashboard PRs found only #112087 (iPhone one-finger pan, touches pty-scroll.ts, unrelated).",
+  "#75433 MERGED (original resume loading notice), #93659 MERGED (implicit resume follow-scroll, #93518) - neither fixes the gate."
+ ],
+ "branch": "ready/fork-46-dashboard-implicit-resume-notice",
+ "commit": "ae4f4631ea2a176acd58598f428df24772cf3cab",
+ "files": [
+  "web/src/lib/pty-resume-loading.ts",
+  "web/src/lib/pty-resume-loading.test.ts",
+  "web/src/pages/ChatPage.tsx",
+  "web/src/pages/ChatPage.test.tsx"
+ ],
+ "size": "+37/-19",
+ "depends_on": [],
+ "notes": "Rebuilt on pinned main; dropped kanban baggage and the fork's long explanatory comments. Replaced the fork's helper-only witness (which on main 'fails' merely because the param is missing) with a real ChatPage integration test through FakeWebSocket that exercises the actual call site. Overlay also briefly shows on implicit reattach to a live keep-alive PTY until the forced redraw lands - same as the explicit ?resume= path today; 30s cap unchanged. NOT_TESTED: live browser, full web suite."
+}

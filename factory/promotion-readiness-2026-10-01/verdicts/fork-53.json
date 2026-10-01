@@ -1,0 +1,28 @@
+{
+ "fork_pr": 53,
+ "title": "fix(gateway): enforce Group Chat storage budget on replica takeover and demotion",
+ "claim": "promote_replica copies a replica log into hosted_rooms without the gateway-total (MAX_GATEWAY_EVENT_BYTES) prune-then-check every other event writer uses, so a takeover can push the host over budget and write-lock every room (incl. disband); demote_room's authority.lost event is also never charged to event_bytes.",
+ "verdict": "EXTERNAL-OWNED",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "Need confirmed on main with a scratch test (not committed): survivor gateway with a filler room + ingested replica, rooms.MAX_GATEWAY_EVENT_BYTES set to filler+replica bytes, CONTROL_EVENT_BYTE_RESERVE=0; promote_replica succeeds and leaves SUM(event_bytes)=779 > budget 480 (AssertionError: gateway total 779 > budget 480 after promote). demote_room on main still inserts authority.lost via _append_control_event and its UPDATE never adds event_bytes (source read).",
+  "green": "NOT_TESTED (not rebuilt: external owner)",
+  "negative_control": "NOT_TESTED (not rebuilt)",
+  "adjacent": "NOT_TESTED (not rebuilt)",
+  "source": "main gateway/hosted_room_replicas.py promote_replica L198-244 inserts hosted_rooms row with event_bytes=replica+claim and bulk-copies events with no _prepare_event/_prune_disbanded_rooms_locked/MAX_GATEWAY_EVENT_BYTES check; hosted_rooms.py _prepare_event L536-554 is the gate all other writers (append/rename/claim/disband) use. demote_room L247-286 ungated + uncharged. groups.promote/groups.demote RPCs (tui_gateway/methods_groups.py L507-522) are live callers. Note fork's methods_groups.py hunk is moot on main: _room_method now maps errors centrally; demote is replica_only so a new HostedRoomError would surface as 5119."
+ },
+ "upstream_overlap": [
+  "#99107 OPEN, non-draft, dokterdok (external), updated 2026-10-01: 'fix(groups): keep copied Group Chats passive and protect their history' - deletes promote_replica and demote_room, turns groups.promote/groups.demote into 'authority_takeover_disabled' errors, and owns replica/authority storage-budget accounting (replica_budget = MAX_GATEWAY_EVENT_BYTES - hosted_bytes; P2 mixed storage budgets). Same surface and same defect class; our fix would compete with/be deleted by it.",
+  "#104601 OPEN draft (dokterdok) and #98307 OPEN draft (dokterdok) touch hosted_room_replicas.py as part of the same Group Chat layer stack",
+  "#99047 MERGED (teknium1) introduced the replicated log + fenced takeover"
+ ],
+ "branch": null,
+ "files": [
+  "gateway/hosted_room_replicas.py",
+  "tests/gateway/test_hosted_room_replicas.py",
+  "tui_gateway/methods_groups.py"
+ ],
+ "size": "+325/-6 (clean fork diff, not rebuilt)",
+ "depends_on": [],
+ "notes": "Do not promote. Possible review support for #99107 only: main's promote_replica bypasses the 16 MiB gateway event budget (scratch RED above: 779 > 480), which is independent evidence for their decision to disable caller-only takeover; if takeover is ever re-enabled, the promoted room must go through the same prune-then-check gate, and demote's authority.lost bytes must be charged to event_bytes. Fork diff also used names (_assert_event_capacity, _event_storage_bytes) that no longer exist on main (now _prepare_event/_insert_event/utf8_len), and its per-room MAX_ROOM_EVENT_BYTES check is unreachable on main (256 MiB room cap > 16 MiB gateway cap). Sibling gap noticed: promote_replica also skips create_room's MAX_ACTIVE_ROOMS check. Kanban baggage excluded."
+}

@@ -1,0 +1,25 @@
+{
+ "fork_pr": 34,
+ "title": "fix(desktop): clear connect timer on WebSocket open in gateway probe",
+ "claim": "Once the probe socket opens, the connect timer must no longer be able to settle the probe; today a socket that opens in the last readyGraceMs of the connect budget is reported as a connect timeout.",
+ "verdict": "READY",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "On main with only the new test: 'probe resolves ok when the socket opens late in the connect budget and stays open' fails, Expected {ok:true} Received {ok:false, reason:'Timed out after 50ms waiting for the WebSocket to open.'} (1 failed | 18 passed).",
+  "green": "With onOpen calling clearTimers(): electron/gateway-ws-probe.test.ts 19/19 pass.",
+  "negative_control": "Commenting out only the new clearTimers() line in onOpen makes the new test fail again with the same 'Timed out after 50ms' reason.",
+  "adjacent": "vitest --project electron: gateway-ws-probe, connection-config, connection-config-apply, backend-probes, backend-probes-runtime, backend-connection-state = 6 files, 169 passed. tsc -p tsconfig.electron.json --noEmit clean; eslint and prettier --check clean on both files.",
+  "source": "main apps/desktop/electron/gateway-ws-probe.ts onOpen sets opened=true and arms graceTimer without touching connectTimer; check() never consults `opened`. apps/shared/src/json-rpc-gateway.ts cleanup() clears its timer on open (renderer already correct)."
+ },
+ "upstream_overlap": [
+  "None found: gh search prs/issues for gateway-ws-probe, probeGatewayWebSocket, connectTimer, 'probe grace window'. #41570 (closed) only lengthened the grace window. #120750/#96346 reworked the keepWaitingWhile path but not onOpen."
+ ],
+ "branch": "ready/fork-34-ws-probe-connect-timer",
+ "files": [
+  "apps/desktop/electron/gateway-ws-probe.ts",
+  "apps/desktop/electron/gateway-ws-probe.test.ts"
+ ],
+ "size": "+22/-0",
+ "depends_on": null,
+ "notes": "Rebuilt on current main using the existing clearTimers() helper instead of the fork's hand-rolled clear (same effect, smaller). Kanban baggage dropped. NOT_TESTED: the keepWaitingWhile hard-cap variant of the same race (covered by the same line, no test); live Test remote against a real gateway. Commit 006ec6d82a."
+}

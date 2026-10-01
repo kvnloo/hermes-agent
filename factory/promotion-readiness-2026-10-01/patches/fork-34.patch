@@ -1,0 +1,71 @@
+From 006ec6d82a6f5d43e13db6c5d03b36f2ac0dfed3 Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:28:23 -0500
+Subject: [PATCH] fix(desktop): clear the connect timer once the gateway probe
+ socket opens
+
+probeGatewayWebSocket arms a connect timer (connectTimeoutMs, 10s by
+default) and, when the socket opens, a grace timer (readyGraceMs, 750ms)
+that catches a post-handshake credential rejection. onOpen armed the
+grace timer but left the connect timer running. When the upgrade lands
+in the last readyGraceMs of the connect budget, the connect timer fires
+first and the probe resolves "Timed out ... waiting for the WebSocket to
+open" for a socket that opened and stayed open. The same applies to the
+keepWaitingWhile checkpoints used for a spawned backend: they keep
+rescheduling after open and can hit the hard cap mid-grace.
+
+onOpen now calls the existing clearTimers() before it arms the grace
+timer, so after a successful upgrade only the grace window, a frame, an
+error or a close can settle the probe.
+---
+ apps/desktop/electron/gateway-ws-probe.test.ts | 18 ++++++++++++++++++
+ apps/desktop/electron/gateway-ws-probe.ts      |  4 ++++
+ 2 files changed, 22 insertions(+)
+
+diff --git a/apps/desktop/electron/gateway-ws-probe.test.ts b/apps/desktop/electron/gateway-ws-probe.test.ts
+index a92444d2a5..e41d4b3ce3 100644
+--- a/apps/desktop/electron/gateway-ws-probe.test.ts
++++ b/apps/desktop/electron/gateway-ws-probe.test.ts
+@@ -122,6 +122,24 @@ test('probe times out when the socket never opens', async () => {
+   assert.match(result.reason, /Timed out/)
+ })
+ 
++test('probe resolves ok when the socket opens late in the connect budget and stays open', async () => {
++  // The upgrade lands inside the last readyGraceMs of the connect budget, so the
++  // grace deadline falls after the connect deadline. Opening must disarm the
++  // connect timer; otherwise it fires mid-grace and reports a connect timeout
++  // for a socket that opened and stayed open.
++  const { FakeWs, instances } = makeFakeWs()
++
++  const promise = probeGatewayWebSocket('ws://host/api/ws?token=t', {
++    WebSocketImpl: FakeWs,
++    connectTimeoutMs: 50,
++    readyGraceMs: 200
++  })
++
++  instances[0].emit('open')
++
++  assert.deepEqual(await promise, { ok: true })
++})
++
+ // --- waiting on a spawned backend (#96177) ----------------------------------
+ // A Windows cold start can stall the backend's event loop for 12-28s after
+ // HTTP is up, leaving the upgrade unanswered past the fixed budget. Fake timers
+diff --git a/apps/desktop/electron/gateway-ws-probe.ts b/apps/desktop/electron/gateway-ws-probe.ts
+index 143fed15a7..0db6980dbc 100644
+--- a/apps/desktop/electron/gateway-ws-probe.ts
++++ b/apps/desktop/electron/gateway-ws-probe.ts
+@@ -142,6 +142,10 @@ function probeGatewayWebSocket<T>(
+       }
+ 
+       opened = true
++      // The connect deadline no longer applies once the upgrade is accepted. A
++      // still-armed connect timer would fire inside the grace window below and
++      // report a connect timeout for a socket that opened.
++      clearTimers()
+       // Upgrade accepted. Give the server a brief window to reject the
+       // credential post-handshake (early close) before declaring success.
+       graceTimer = setTimeout(() => {
+-- 
+2.55.0
+

@@ -1,0 +1,32 @@
+{
+  "fork_pr": 306,
+  "title": "docs(cli): correct fallback_providers redaction scope in dump config overrides",
+  "claim": "hermes dump masks every secret-named field of a fallback_providers entry, not only api_key.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "doc_text_on_main": "website/docs/reference/cli-commands.md:1017 — \"Credentials in them are redacted: a `fallback_providers` entry's `api_key`, and credentials in its `base_url` ...\"; zh cli-commands.md:522 same.",
+    "source": "hermes_cli/dump.py:181-188 + :191-200 _mask_fallback_keys(): masks any key where agent.redact.is_secret_field_name(k) ('api_key', 'token', 'password', ...).",
+    "red": "Probe on main: _config_overrides({'fallback_providers':[{api_key, token, password}]}) -> all three '***'.",
+    "green": "Row (en + zh) says every secret-named field is redacted.",
+    "negative_control": "N/A — docs-only.",
+    "adjacent": "tests/hermes_cli/test_logs.py tests/hermes_cli/test_anon_surfaces.py -> 22 passed. docs-site-checks equivalent on the bundle branch: website/scripts/extract-skills.py + generate-skill-docs.py leave website/docs, website/sidebars.ts and website/i18n unchanged (clean); website/scripts/check_doc_links.py OK. added lines scanned for MDX hazards ({ } or raw <tag> outside inline code / fences): none. NOT_TESTED: Docusaurus build (website/node_modules not installed in this environment).",
+    "mirrors": "zh-Hans cli-commands.md:522 fixed in the same commit.",
+    "rebase": "verified on main f848940560; bundle merges cleanly onto refreshed main eb8d21f482 (git merge-tree); merges cleanly with every B1 ready/docs-* branch that touches the same files"
+  },
+  "upstream_overlap": [
+    "NousResearch/hermes-agent#67969 OPEN (Solitud1nem, 'mask inline fallback provider keys in hermes dump') — older code PR; main already masks by field; no doc change"
+  ],
+  "branch": "ready/docs2-cli",
+  "bundle_commit": "b68897f77bc513e3614adb12522f3a0612952f7a",
+  "patch": "patches/docs2-cli.patch",
+  "pr_body": "patches/docs2-cli.body.md",
+  "files": [
+    "website/docs/reference/cli-commands.md",
+    "website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/reference/cli-commands.md",
+    "website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/configuration.md"
+  ],
+  "size": "fork leaf +2/-2; bundle docs2-cli +7/-9 (3 files changed, 7 insertions(+), 9 deletions(-))",
+  "depends_on": null,
+  "notes": "Drift introduced by 536802c00e (#127207). Bundled with: #127, #295. Packaging: one commit per area bundle (batch B2 lane W4-docs); publish one bundle at a time per kvnloo/hermes-agent#313."
+}

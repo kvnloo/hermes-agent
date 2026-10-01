@@ -1,0 +1,31 @@
+{
+  "fork_pr": 71,
+  "title": "chore(secrets): remove dead apply_bitwarden_secrets function",
+  "claim": "agent.secret_sources.bitwarden.apply_bitwarden_secrets is dead (registry path replaced it).",
+  "verdict": "SUPERSEDED-ON-MAIN",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "source": "Every targeted name is absent on main f848940560: `git grep -n -w` across the whole tree (code, tests, plugins/, optional-skills/, website/, scripts/, tests/compat) finds 0 hits for apply_bitwarden_secrets (only residue: a stale comment at tests/agent/test_bitwarden_secrets.py:101 and a `guarded_only` entry in tests/compat/old_updater_surface.json). A first-parent bisect of agent/secret_sources/bitwarden.py from fork base 63279301bc puts the removal in a5bd246865 (#126164 'plugin compat layer removed on schedule', 2026-09-28).",
+    "references_before": "0 (already gone on main)",
+    "references_after": "n/a",
+    "red": "n/a (pure deletion; nothing left to delete)",
+    "green": "n/a",
+    "negative_control": "n/a",
+    "adjacent": "n/a (no change built)"
+  },
+  "upstream_overlap": [
+    "removed upstream by a5bd246865 (#126164 'plugin compat layer removed on schedule', 2026-09-28)"
+  ],
+  "branch": null,
+  "bundle": null,
+  "files": [],
+  "size": "+0/-0",
+  "depends_on": null,
+  "fork_head": "detail/dead-code/chore-secrets-remove-dead-apply-bitwarden-secrets-a882d0",
+  "fork_head_oid": "cc34b76d80f01d44d73c536b05baa434ab8320f6",
+  "wave": "W5-bot-chore",
+  "batch": "C",
+  "patch": null,
+  "body": null,
+  "notes": "The fork diff also carries unrelated Kanban baggage (hermes_cli/kanban_db.py, tests/hermes_cli/test_kanban_external_receipts.py) from merge commits; the intended tip commit was read in isolation. Retire the fork PR. Old updaters import this name only inside a guard (old_updater_surface.json `guarded_only`), so removing it did not brick updates. The stale comment in test_bitwarden_secrets.py:101 is cosmetic and was left alone."
+}

@@ -1,0 +1,34 @@
+{
+  "fork_pr": 395,
+  "title": "docs(bot-screen): include terminal GUI launches in display-binding consumers",
+  "claim": "While Bot Desktop is up, GUI apps launched from the local terminal backend inherit its DISPLAY/XAUTHORITY/D-Bus env too.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "doc_text_on_main": "website/docs/user-guide/features/bot-screen.md:376-378 — \"every cua-driver and headed-browser spawn for that profile inherits them\"",
+    "source": "tools/environments/local.py:725-740 _make_run_env(): merges tools.bot_desktop.runtime.published_env() while the desktop runs (#125830) and drops WAYLAND_DISPLAY.",
+    "red": "Consumer list omits terminal GUI launches.",
+    "green": "Bullet adds GUI apps launched from a local terminal command.",
+    "negative_control": "N/A — docs-only.",
+    "adjacent": "apps/desktop vitest: electron/update-order.test.ts electron/wslg-launch.test.ts electron/linux-nvidia-egl-fallback.test.ts electron/desktop-plugins-root.test.ts src/lib/remark-soft-breaks.test.ts src/app/session/hooks/use-hermes-config.test.ts -> 6 files, 57 passed. docs-site-checks equivalent on the bundle branch: website/scripts/extract-skills.py + generate-skill-docs.py leave website/docs, website/sidebars.ts and website/i18n unchanged (clean); website/scripts/check_doc_links.py OK. added lines scanned for MDX hazards ({ } or raw <tag> outside inline code / fences): none. NOT_TESTED: Docusaurus build (website/node_modules not installed in this environment).",
+    "mirrors": "No zh-Hans bot-screen.md.",
+    "rebase": "verified on main f848940560; bundle merges cleanly onto refreshed main eb8d21f482 (git merge-tree); merges cleanly with every B1 ready/docs-* branch that touches the same files"
+  },
+  "upstream_overlap": [
+    "NousResearch/hermes-agent#125835 OPEN (liuhao1024, 'route GUI launches to the running Bot Desktop screen') — code-only; behaviour already on main via 89dd61a281 (#128246)"
+  ],
+  "branch": "ready/docs2-desktop",
+  "bundle_commit": "58f1374abe9b808711ba307c5b02d79a698398ba",
+  "patch": "patches/docs2-desktop.patch",
+  "pr_body": "patches/docs2-desktop.body.md",
+  "files": [
+    "website/docs/developer-guide/desktop-plugin-sdk.md",
+    "website/docs/reference/environment-variables.md",
+    "website/docs/user-guide/desktop.md",
+    "website/docs/user-guide/features/bot-screen.md",
+    "website/docs/user-guide/multi-connection-desktop.md"
+  ],
+  "size": "fork leaf +3/-2; bundle docs2-desktop +15/-8 (5 files changed, 15 insertions(+), 8 deletions(-))",
+  "depends_on": null,
+  "notes": "Scoped to the local backend (the env merge lives in tools/environments/local.py). Drift introduced by 89dd61a281 (#128246). Bundled with: #124, #291, #292, #305, #392, #398. Packaging: one commit per area bundle (batch B2 lane W4-docs); publish one bundle at a time per kvnloo/hermes-agent#313."
+}

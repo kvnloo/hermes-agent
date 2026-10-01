@@ -1,0 +1,28 @@
+{
+ "fork_pr": 111,
+ "title": "fix(checkpoints): retry of migrate-identity re-parents a parentless post-rename checkpoint chain",
+ "claim": "After a profile rename leaves the old checkpoint ref behind, `hermes profile migrate-identity` must converge even when the new ref does not descend from the old tip; today it fails closed forever and the old history is eventually pruned as an orphan.",
+ "verdict": "NEEDS-REWORK",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "Need confirmed on f8489405 with probe $D/verdicts/fork-111.probe_test.py (not committed). (A) rename_profile raises at step 4 (remove_wrapper_script OSError), so step 6 never runs; a checkpoint under the new name gives a parentless root; migrate_profile_identity('oldname','newname') returns False with 'target identity already exists: refs/hermes/<new> does not descend from refs/hermes/<old>'. (B) Upstream's own partial-rekey scenario (from test_retry_after_partial_rekey_keeps_checkpoints_taken_under_new_name: _delete_ref fails, new_ref=old_tip) plus a take-path count trim (max_snapshots=2) before the retry: Pruner.trim rewrites new_ref as a fresh root chain, and the retry also returns False with 'does not descend from'. Both stay stuck forever.",
+  "green": "Prototype of the fork's re-parent approach rebuilt on main (inline Pruner-based chain rebuild, since _rebuild_linear_chain/_ref_commits_oldest_first no longer exist): scenario A passes ([new0, old1, old0]). Scenario B returns True but the history becomes [new0, old1, old1, old0]: a duplicate old1 snapshot plus a resurrection of old0, which the count trim had dropped.",
+  "negative_control": "NOT_TESTED (no READY rebuild)",
+  "adjacent": "tests/hermes_cli/test_profile_rename_checkpoints.py on main: 2/2 pass (baseline)",
+  "source": "tools/checkpoint_manager_profile_rename.py::_rekey_project on main still raises OSError('target identity already exists: ... does not descend from ...'). The check is deliberate: teknium1 added it in b1b0cb230b (2026-09-16) on the premise that a non-descending new ref is 'a different project's history'. The fork's premise that this branch is reachable ONLY from a parentless post-rename root is false: take-path Pruner.trim and Pruner.drop_one_round also rewrite new_ref into a non-descending chain (scenario B)."
+ },
+ "upstream_overlap": [
+  "No open upstream PR/issue found for this retry deadlock (gh search: 'migrate-identity', '\"does not descend from\"', '_rekey_project')",
+  "#113076 (teknium1, CLOSED; its content is on main) introduced rekey for #112973 (CLOSED)",
+  "b1b0cb230b (teknium1) added the fail-closed branch"
+ ],
+ "branch": null,
+ "files": [
+  "tools/checkpoint_manager_profile_rename.py",
+  "tools/checkpoint_manager.py",
+  "tests/hermes_cli/test_profile_rename_checkpoints.py"
+ ],
+ "size": "fork leaf +269/-9; no rebuild",
+ "depends_on": null,
+ "notes": "Real bug, wrong fix. (1) The fork's hunks cannot apply: _rebuild_linear_chain and _ref_commits_oldest_first were removed by the 6716b72ef2 refactor, and chain rewrites now live in tools/checkpoint_pruning.Pruner._rewrite. (2) Blind re-parenting duplicates or resurrects snapshots after a trim or size round (scenario B). (3) It reverses a maintainer's deliberate fail-closed choice made two weeks ago. (4) The meta/ledger rollback hunk is not needed for convergence: the ledger merge is idempotent, and a stray new meta is skipped by migrate_profile_checkpoint_projects. Suggested rework, which needs a maintainer design call: when new_tip does not descend from old_tip, first check whether old_tip's (tree, author date, committer date, subject) identity appears in the new chain. Pruner._rewrite preserves all four, so a match means the history was already folded and only the old identity should be dropped. Otherwise re-parent through a Pruner._rewrite root parameter. Test both A and B. Maybe raise as an issue first, citing scenario B, which breaks upstream's own retry test shape."
+}

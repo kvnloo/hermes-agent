@@ -1,0 +1,190 @@
+From 0081fb5e75cf160dc258eacb53400ddb0fe5e551 Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:36:07 -0500
+Subject: [PATCH] docs(mcp): correct catalog and plugin MCP install docs
+
+Four MCP install/connect descriptions no longer match the code on main:
+
+- tool-search.md said manage_connections is present whether or not you
+  are signed in because it also installs catalog MCP servers. The tool is
+  registered with check_fn=connectors_available (tools/connectors/tool.py),
+  which needs tools.connectors.enabled plus a free-tier identity or a
+  Portal token carrying the managed_tools claim; everyone else never sees
+  it.
+- mcp.md said non-secret catalog values go to ~/.hermes/.env, and the
+  Asana example showed both OAuth credentials as ${VAR} refs. install_entry
+  (hermes_cli/mcp_catalog.py) saves only secrets to .env and inlines every
+  secret: false value into the mcp_servers block (_inline_non_secret_value);
+  the Asana manifest declares ASANA_CLIENT_ID secret: false.
+- plugins_activation/plugins_loader docstrings, plugins/AGENTS.md and the
+  plugin developer guide said a mid-run plugin's MCP servers wait for
+  "mcp.reload" (no such RPC; the RPC is reload.mcp, the command
+  /reload-mcp). Install surfaces run load_and_go_live, which connects them
+  in place and reports them as live_now.mcp_servers; only a process that
+  did not run it (the messaging gateway) still waits for /reload-mcp.
+  gateway-internals.md carried the same stale name.
+
+Docs and docstrings only; no behaviour change.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ hermes_cli/plugins_activation.py                 |  4 +++-
+ hermes_cli/plugins_loader.py                     |  3 ++-
+ plugins/AGENTS.md                                |  3 ++-
+ .../docs/developer-guide/gateway-internals.md    |  3 ++-
+ website/docs/developer-guide/plugins/index.md    | 16 ++++++++++++----
+ website/docs/user-guide/features/mcp.md          | 14 +++++++++-----
+ website/docs/user-guide/features/tool-search.md  |  9 ++++++---
+ 7 files changed, 36 insertions(+), 16 deletions(-)
+
+diff --git a/hermes_cli/plugins_activation.py b/hermes_cli/plugins_activation.py
+index 7939d70a62..7d8653cfbe 100644
+--- a/hermes_cli/plugins_activation.py
++++ b/hermes_cli/plugins_activation.py
+@@ -37,7 +37,9 @@ def plugin_activation_summary(manager: Any, plugin_key: str) -> Dict[str, Any]:
+     ``callbacks`` (platforms with a ``register_platform_handler`` factory / Slack action ids), ``locales``
+     (``<lang>.<surface>`` language-pack layers).
+     ``deferred``: ``tools`` (tool names; next session), ``prompt`` (section ids; next session),
+-    ``mcp_servers`` (the plugin's mcp.json server names exactly as registered; until ``mcp.reload``)."""
++    ``mcp_servers`` (the plugin's mcp.json server names exactly as registered; :func:`load_and_go_live`
++    connects them in place and moves them to ``live_now``, else they wait for ``/reload-mcp`` or the
++    next session)."""
+     loaded = manager._plugins.get(plugin_key)
+     manifest = getattr(loaded, "manifest", None)
+     name = getattr(manifest, "name", None) or plugin_key
+diff --git a/hermes_cli/plugins_loader.py b/hermes_cli/plugins_loader.py
+index 4d3dd6378a..31a985fc89 100644
+--- a/hermes_cli/plugins_loader.py
++++ b/hermes_cli/plugins_loader.py
+@@ -193,7 +193,8 @@ class PluginLoaderMixin:
+         short-circuits on ``_discovered`` and never fires). See
+         :func:`hermes_cli.plugins_activation.plugin_activation_summary` for the payload: ``activated_now``
+         (gateway commands/transforms/hooks/callbacks, live at once) vs ``deferred`` (``tools``/``prompt``
+-        until the next session, ``mcp_servers`` — the plugin's mcp.json server names — until ``mcp.reload``).
++        until the next session, ``mcp_servers`` — the plugin's mcp.json server names — until
++        ``plugins_activation.load_and_go_live`` connects them in place, else ``/reload-mcp``).
+         Listeners belong to the process (gateway runner, TUI server), not to a plugin, so ``unload()``
+         never clears them. Returns an unsubscribe callable. Fires on the discovering thread with the
+         discovery lock released; marshal onto your own loop."""
+diff --git a/plugins/AGENTS.md b/plugins/AGENTS.md
+index f2ead5a219..bf145f2c8e 100644
+--- a/plugins/AGENTS.md
++++ b/plugins/AGENTS.md
+@@ -67,7 +67,8 @@ tool) and `run_agent.py` (lifecycle). A non-forced `discover_plugins()` short-ci
+ mid-run load path (install/enable/update on any surface, `reload-plugins` verb) runs
+ `discover_plugins(force=True)`, and `PluginManager.on_plugin_loaded` fires from inside that sweep for the
+ newly loaded plugins with an activation summary (`hermes_cli/plugins_activation.py`: handlers live now;
+-tools/prompt next session; `deferred.mcp_servers` until `mcp.reload`). Never emit that event from an RPC. Auxiliary LLM calls (titling, compression, MoA, vision, ...)
++tools/prompt next session; `deferred.mcp_servers` until `load_and_go_live` connects them in place and
++reports them as `live_now.mcp_servers`, else `/reload-mcp`). Never emit that event from an RPC. Auxiliary LLM calls (titling, compression, MoA, vision, ...)
+ fire `pre_auxiliary_call`/`post_auxiliary_call` from `agent/auxiliary_hooks.py` (payload = the
+ `*_api_request` shape + `aux_task`); they never fire the turn-scoped `pre/post_api_request` (#79733). When a plugin changes a default, add a migration guard keyed
+ on an "existing config" signal (`_explicitly_configured`) so existing users keep the old default.
+diff --git a/website/docs/developer-guide/gateway-internals.md b/website/docs/developer-guide/gateway-internals.md
+index 5333ba3576..19e7b4e936 100644
+--- a/website/docs/developer-guide/gateway-internals.md
++++ b/website/docs/developer-guide/gateway-internals.md
+@@ -307,7 +307,8 @@ Plugins that load after the adapters connected (install/enable from the CLI, Des
+   running gateway to force-rescan the requested (served) home; the answer carries `plugins`, per-plugin
+   `activations` and `adapters_rewired`, so the caller can say "active now" truthfully.
+ - **Scope limit** — handlers only. Tools and system-prompt sections of a late plugin wait for the next
+-  session (prompt-cache invariant); portable MCP servers wait for `mcp.reload`. Nothing un-wires on disable.
++  session (prompt-cache invariant); portable MCP servers wait for `/reload-mcp` or the next session
++  (only the chat host's `load_and_go_live` connects them in place). Nothing un-wires on disable.
+ 
+ ## Related Docs
+ 
+diff --git a/website/docs/developer-guide/plugins/index.md b/website/docs/developer-guide/plugins/index.md
+index 950969c624..9b15cdb836 100644
+--- a/website/docs/developer-guide/plugins/index.md
++++ b/website/docs/developer-guide/plugins/index.md
+@@ -1582,15 +1582,23 @@ re-discovery. Every one of those paths runs a **real forced rescan** (`discover_
+   by a late plugin is wired without a restart. Re-wiring is deduped per native client by `(plugin, factory
+   qualname)`; on Telegram the late handlers are hoisted ahead of core's catch-all `filters.COMMAND` /
+   `CallbackQueryHandler` (PTB dispatches the first match per group), exactly as they would sit at connect.
++- **Live in open chats now** — after an install/enable/update, `activate_plugin_now` runs
++  `load_and_go_live` (`hermes_cli/plugins_activation.py`) in the process that hosts the profile's chats
++  (`hermes plugins install` asks the running dashboard/Desktop backend to do it). It connects the summary's
++  `mcp_servers` (the plugin's `mcp.json` servers, by their mcp.json names) and lists the plugin's skills,
++  reports both as `live_now`, and hands them to every open chat of that profile on its next turn. MCP tools
++  stay deferred behind `tool_search`/`tool_call`, so the cached prompt prefix is unchanged.
+ - **Deferred** — `tools` and `prompt` sections apply from the **next session** (the running session's
+-  prompt/tool schema is cache-stable, same rule as `/skills install`); `mcp_servers` (the plugin's
+-  `mcp.json` servers, by their mcp.json names) connect on `mcp.reload` or the next session.
++  prompt/tool schema is cache-stable, same rule as `/skills install`). A process that did not run
++  `load_and_go_live` (such as the messaging gateway answering `reload-plugins`) still lists `mcp_servers`
++  under `deferred`; there they connect on `/reload-mcp` or the next session.
+ - There is no un-wire: disabling a plugin mid-run keeps its already-wired handlers until the gateway
+   restarts, and the surfaces say so.
+ 
+ Install surfaces report exactly this split: `hermes plugins install/enable` prints it after nudging the running
+-gateway (`reload-plugins` control-socket verb), `plugins.manage install/toggle/update` returns `activation` +
+-`gateway_reloaded` (`restart_required` is true only when no gateway answered).
++gateway (`reload-plugins` control-socket verb), `plugins.manage install/toggle/update` returns `activation`
++(`live_now` MCP servers and skills, `deferred` tools and prompt sections) + `gateway_reloaded`
++(`restart_required` is true only when no gateway answered).
+ 
+ :::tip
+ This guide covers **general plugins** (tools, hooks, slash commands, CLI commands). The sections below sketch the authoring pattern for each specialized plugin type; each links to its full guide for field reference and examples.
+diff --git a/website/docs/user-guide/features/mcp.md b/website/docs/user-guide/features/mcp.md
+index 61d76c1c02..f32668850a 100644
+--- a/website/docs/user-guide/features/mcp.md
++++ b/website/docs/user-guide/features/mcp.md
+@@ -120,7 +120,9 @@ available. This change does not migrate existing connections to
+ Catalog entries can require:
+ 
+ - **API key** — Hermes prompts at install time and writes the value to
+-  `~/.hermes/.env`. Non-secret values (base URLs) go to the same file.
++  `~/.hermes/.env`. Non-secret values (server URLs, OAuth client IDs) are
++  not written to `.env`: Hermes inlines them into the server's
++  `mcp_servers` block in `config.yaml`.
+ - **OAuth** (remote MCP) — written as `auth: oauth` in your config; the MCP
+   client opens a browser on first connection.
+ - **OAuth** (third-party provider like Google/GitHub) — Hermes points you at
+@@ -245,8 +247,10 @@ the vendor's developer console. Asana's V2 server
+ 
+ Such a manifest declares the credentials under `auth.env` and pins the
+ client under `auth.oauth`, so installing it (CLI picker, web dashboard or
+-Desktop) prompts for the Client ID / Client secret, stores them in the
+-profile's `.env`, and writes only `${VAR}` references to `config.yaml`:
++Desktop) prompts for the Client ID / Client secret. The secret is stored in
++the profile's `.env` and `config.yaml` keeps only its `${VAR}` reference; the
++Client ID is declared `secret: false`, so its value is inlined into
++`config.yaml`:
+ 
+ ```yaml
+ mcp_servers:
+@@ -254,8 +258,8 @@ mcp_servers:
+     url: https://mcp.asana.com/v2/mcp
+     auth: oauth
+     oauth:
+-      client_id: "${ASANA_CLIENT_ID}"
+-      client_secret: "${ASANA_CLIENT_SECRET}"
++      client_id: "<your Asana MCP app Client ID>"   # inlined (non-secret)
++      client_secret: "${ASANA_CLIENT_SECRET}"       # resolved from .env
+       redirect_host: localhost      # the vendor matches the redirect URL exactly
+       redirect_port: 27890          # register http://localhost:27890/callback on the app
+ ```
+diff --git a/website/docs/user-guide/features/tool-search.md b/website/docs/user-guide/features/tool-search.md
+index 9bec47d298..f9aff5ef92 100644
+--- a/website/docs/user-guide/features/tool-search.md
++++ b/website/docs/user-guide/features/tool-search.md
+@@ -188,9 +188,12 @@ their connection state and starts an authorization: in the desktop app the call
+ shows a card, blocks until each app is connected or skipped, and reports the
+ outcomes; elsewhere it returns a connect link per app for the user to open.
+ Disconnecting an account is done by the user in the Portal. The same tool also installs, enables and authorizes
+-local MCP servers from the catalog (targets with `mcp: true`), so it is
+-present whether or not you are signed in; only the managed-connector actions
+-need the sign-in.
++local MCP servers from the catalog (targets with `mcp: true`), but it sits
++behind the same gate as connectors: the tool is in the schema only when
++`tools.connectors.enabled` is on and you are on the Nous free tier or signed
++in to a Portal account that has connectors enabled (the `managed_tools` claim
++on its token). Signed-out sessions and accounts without that claim never see
++it.
+ 
+ The desktop backend's account-list and disconnect APIs use the Portal's
+ account-management service, including its organization membership checks and
+-- 
+2.55.0
+

@@ -1,0 +1,20 @@
+main = 298a01c79b38018e029e50f77efe67c4a4fdbd40 (refs/w2/main)
+cmd: export-pinned_ab.sh <label> [ref|patch] [extra files]  ->  PATH=<tripwire>:/usr/bin:/bin HOME=$S/testhome-W2-export-pinned HERMES_HOME=$HOME/.hermes setsid -w bash scripts/run_tests.sh tests/hermes_cli/test_sessions_export_filtered_pinned.py -q -j 2 -rf -p no:randomly
+test file: test_sessions_export_filtered_pinned.py (real on-disk SessionDB through `hermes sessions export` via hermes_cli.main.main(); idea from kvnloo fork #25)
+  W = test_filtered_export_writes_ended_pinned_and_pinned_archived_sessions[jsonl|md]   (exported ids == plain + pinned + pinned&archived)
+  D = test_filtered_export_dry_run_counts_pinned_sessions[jsonl|trace]                  ("Would export 3 session(s)")
+  P = test_prune_and_archive_still_spare_pinned_sessions                                 (destructive selector keeps the pin guard)
+
+main:                          W 0/2, D 0/2, P 1/1  -> 4 failed / 1 passed. "filtered jsonl export dropped pinned sessions: {'..plain1'} == {plain1, pinned, pinarc}"; "Would export 1 session(s) (source 'cli')"
+#99487 (e6ec55bbf9) merge:     CONFLICT in hermes_cli/session_filters.py, hermes_cli/sessions_cmd.py (one block, HEAD 320-926 vs PR), hermes_state.py (one block; main is 1685 lines after the SessionDB mixin split). See merge-99487.txt.
+#99487 hand-ported:            W 2/2, D 2/2, P 1/1 -> 5/5 PASS (99487-port-onto-main.diff: list_export_candidates/_split_ended_guard moved into hermes_state_maintenance.py over _prune_where, 3 export call sites in _cmd_export/_export_trace/_export_markdown, include_pinned=True; prod +33/-8 over 2 files, plus its tests/docs which apply cleanly)
+  its own CLI test on main:    FAILS (SystemExit 1: "<lambda>() got an unexpected keyword argument 'read_only'"); passes after the 1-token drift fix lambda *a, **k (99487-own-tests-after-testfix.log: 7 passed)
+  negative control:            port minus the single `filters["include_pinned"] = True` line -> 4 failed / 1 passed, identical to main (negctl-99487-port.log). The list_export_candidates half (open sessions, #89223) does not touch the pinned contract.
+#89226 (1cc2350b63) ported:    production port of include_open=True (89226-port-onto-main.production.diff) -> 4 failed / 1 passed, identical to main (fixes open sessions only, never sets include_pinned)
+kvnloo fork #25 rebuilt:       1-line include_pinned=True in _cmd_export (fork25-rebuilt-onto-main.diff) -> 5/5 PASS
+
+adjacent (7 files + regression; adjacent-files.txt):
+  main:            320 passed, 4 failed (the 4 regression cases only)
+  fork #25:        324 passed, 0 failed
+  #99487 port:     325 passed, 1 failed (its own CLI test, lambda drift above)
+tripwire: no hit from this cluster's runs (one hits.log line at 04:34:34 is test_close_stdin_allows_eof_* = another fork's process-registry run).

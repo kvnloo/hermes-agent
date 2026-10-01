@@ -1,0 +1,74 @@
+diff --git i/apps/desktop/electron/git-review-ops.test.ts w/apps/desktop/electron/git-review-ops.test.ts
+index aafeee3d34..1f3a3ae79d 100644
+--- i/apps/desktop/electron/git-review-ops.test.ts
++++ w/apps/desktop/electron/git-review-ops.test.ts
+@@ -158,6 +158,8 @@ test('reviewCreatePr falls back to the generic message when gh reports no stderr
+   failGh('')
+ 
+   await assert.rejects(reviewCreatePr(dir, 'git', 'gh'), /is gh installed and authenticated\?/)
++})
++
+ // ── reviewDiff: the click → bottom-panel payload ─────────────────────────────
+ // `reviewList` collapses an untracked directory into one `dir/` row (asserted
+ // above). Clicking that row used to hand `dir/` to `git diff --no-index --
+diff --git i/apps/desktop/electron/git-review-ops.ts w/apps/desktop/electron/git-review-ops.ts
+index f031acd95e..3c9e320ddd 100644
+--- i/apps/desktop/electron/git-review-ops.ts
++++ w/apps/desktop/electron/git-review-ops.ts
+@@ -364,14 +364,13 @@ async function reviewList(repoPath, scope, baseRef, gitBin) {
+ // when the two sides differ, so go around simple-git's reject-on-nonzero with a
+ // raw execFile and read stdout.
+ function synthesizeAddDiff(cwd, gitBin, filePath): Promise<string> {
+-  return new Promise(resolve => {
+-    execFile(
+-      gitBin || 'git',
+-      ['diff', '--no-index', '--', '/dev/null', filePath],
+-      { cwd, windowsHide: true, timeout: 30_000, maxBuffer: 32 * 1024 * 1024 },
+-      (_err, stdout) => resolve(String(stdout || ''))
+-    )
+-  })
++  return execGit(gitBin || 'git', ['diff', '--no-index', '--', '/dev/null', filePath], {
++    cwd,
++    timeoutMs: 30_000
++  }).then(
++    result => result.stdout,
++    () => ''
++  )
+ }
+ 
+ // The untracked paths git reports under `pathspec`. Resolved through git rather
+@@ -386,22 +385,20 @@ function synthesizeAddDiff(cwd, gitBin, filePath): Promise<string> {
+ // re-introduce that cost. On overflow node kills git and hands back truncated
+ // stdout, which still fills the capped preview.
+ function untrackedPathsUnder(cwd, gitBin, pathspec): Promise<string[]> {
+-  return new Promise(resolve => {
+-    execFile(
+-      gitBin || 'git',
+-      [LITERAL_PATHSPECS, 'ls-files', '--others', '--exclude-standard', '-z', '--', pathspec],
+-      { cwd, windowsHide: true, timeout: 30_000, maxBuffer: UNTRACKED_LIST_MAX_BYTES },
+-      (_err, stdout) => {
+-        const parts = String(stdout || '').split('\0')
++  return execGit(
++    gitBin || 'git',
++    [LITERAL_PATHSPECS, 'ls-files', '--others', '--exclude-standard', '-z', '--', pathspec],
++    { cwd, timeoutMs: 30_000 }
++  ).then(
++    result => {
++      const parts = result.stdout.split('\0')
+ 
+-        // Entries are NUL-TERMINATED, so the tail is either '' (complete run)
+-        // or a half-written path (truncated run). Neither is a usable entry.
+-        parts.pop()
++      parts.pop()
+ 
+-        resolve(parts.filter(Boolean))
+-      }
+-    )
+-  })
++      return parts.filter(Boolean)
++    },
++    () => []
++  )
+ }
+ 
+ // All-add diff for an untracked row, which may be a file OR a directory.

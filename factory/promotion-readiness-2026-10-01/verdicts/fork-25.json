@@ -1,0 +1,27 @@
+{
+ "fork_pr": 25,
+ "title": "fix(sessions): filtered export includes ended pinned sessions",
+ "claim": "`hermes sessions export <out> --<filter>` reuses list_prune_candidates, whose _prune_filter_where defaults include_pinned=False, so filtered (read-only) exports silently drop ended pinned sessions that bare export and --session-id include.",
+ "verdict": "EXTERNAL-OWNED",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "Defect confirmed on MAIN by direct probe: real SessionDB with 3 ended source=cli sessions (pinned, unpinned, pinned+archived); hermes_cli.sessions_cmd._cmd_export(db, args --source cli --format jsonl) -> 'Exported 1 sessions'; exported ids = [unpinned only]; PINNED in: False, ARCHIVED_PINNED in: False.",
+  "green": "NOT_TESTED (not rebuilt: external owner).",
+  "negative_control": "NOT_TESTED",
+  "adjacent": "NOT_TESTED",
+  "source": "MAIN hermes_cli/sessions_cmd.py _cmd_export L322-332 sets filters['archived']=None but never include_pinned; L356 (jsonl/html/only), L444 (_export_trace) and _export_markdown all call db.list_prune_candidates(**filters); hermes_state_maintenance.py L199/L226-227 `if not include_pinned: clauses.append('COALESCE(s.pinned, 0) = 0')`.",
+  "fork_tests_on_main": "Fork's committed test file run test-only on MAIN fails for the WRONG reasons: dispatch test captures {} (stub no longer intercepted), e2e test FileNotFoundError on backup.jsonl because monkeypatching hermes_state.SessionDB no longer reaches cmd_sessions. Fork tests are stale and would need rework (call _cmd_export(db, args) directly)."
+ },
+ "upstream_overlap": [
+  "#99487 OPEN alissonrgalindo 'fix(sessions): include open and pinned sessions in filtered exports' (created 2026-08-31, labels type/bug P2 area/sessions): sets filters['include_pinned']=True for exports plus a new list_export_candidates that also includes open sessions; has CLI test asserting include_pinned is True. Currently CONFLICTS with MAIN in session_filters.py, sessions_cmd.py, hermes_state.py (hermes_state decomposition drift).",
+  "#89226 OPEN liuhao1024 'include open sessions in bulk exports' / issue #89223 OPEN (open-session half only, not pinned)."
+ ],
+ "branch": null,
+ "files": [
+  "hermes_cli/sessions_cmd.py",
+  "tests/hermes_cli/test_export_filters_include_pinned.py"
+ ],
+ "size": "fork: +129/-0 (excl. kanban baggage); not rebuilt",
+ "depends_on": null,
+ "notes": "Support opportunity: #99487 has only a filters-dict assertion; fork #25's idea of a real-SessionDB end-to-end check (pinned + pinned-archived rows actually land in the JSONL) is the missing behavioral test, and the 1-line include_pinned override is a minimal fallback if #99487's broader open-session change stalls. Offer as review support to #99487, not a competing PR. Fork test needs rework before reuse (see evidence)."
+}

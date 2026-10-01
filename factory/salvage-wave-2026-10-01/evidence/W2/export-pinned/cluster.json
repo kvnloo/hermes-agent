@@ -1,0 +1,117 @@
+{
+ "issue": "none (filtered `hermes sessions export` drops ended pinned sessions; kvnloo fork #25)",
+ "slug": "export-pinned",
+ "seed": "fork #25 (kvnloo/hermes-agent)",
+ "title": "Filtered `hermes sessions export` silently drops ended pinned sessions (inherits prune's include_pinned=False)",
+ "main_sha": "298a01c79b38018e029e50f77efe67c4a4fdbd40",
+ "candidates": [
+  {
+   "pr": 99487,
+   "author": "alissonrgalindo",
+   "created": "2026-08-31T15:25:06Z",
+   "last_activity": "2026-09-01T16:11:25Z (Enough1122 AI review comment; no maintainer activity)",
+   "mergeable_github": "UNKNOWN (GitHub has not computed it; locally CONFLICTING)",
+   "merges_clean_on_pinned_main": "false: conflicts in hermes_cli/session_filters.py (docstring), hermes_cli/sessions_cmd.py (one block: main split the cmd_sessions monolith into _cmd_export/_export_trace/_export_markdown) and hermes_state.py (one block: main is 1685 lines after the SessionDB mixin split; prune selectors now live in hermes_state_maintenance.py and _apply_prune_age_filter is gone). Not context drift: a hand port is needed (99487-port-onto-main.diff, production +33/-8 over 2 files); tests and docs then apply cleanly",
+   "diff_size": "+102/-17, 7 files (2 docs)",
+   "has_tests": "yes: tests/hermes_cli/test_sessions_export_md_cli.py (FakeDB filters-dict assertion include_pinned is True), tests/test_hermes_state.py (list_export_candidates includes open sessions). The CLI test fails on main for a test-side reason (lambda: FakeDB() rejects main's SessionDB(read_only=...)); passes after a 1-token fix",
+   "approach": "Two contracts in one PR. (1) Pinned: `filters[\"include_pinned\"] = True` in the export branch. (2) Open sessions (#89223): new SessionDB.list_export_candidates that strips the mandatory ended_at guard via a fail-loud _split_ended_guard helper (also reused by count_open_prune_matches); the 4 export call sites switch to it; prune/archive keep list_prune_candidates. Docs updated (en + zh-Hans). Labels type/bug, comp/cli, P2, sweeper:risk-session-state, area/sessions. No closing issue."
+  }
+ ],
+ "candidates_checked_not_same_defect": [
+  {
+   "pr": 89226,
+   "author": "liuhao1024",
+   "why": "Open (created 2026-08-18, Closes #89223, +114/-4). Adds list_prune_candidates(include_open=True) for the 4 export call sites: the open-session half only, never sets include_pinned. Production port onto main fails the pinned test exactly like main (4/5). alt-glitch closed #89856 (RelaxJonh) as 'Duplicate of #89226', so #89226 is the triage-canonical PR for #89223 and competes with #99487's list_export_candidates half."
+  },
+  {
+   "pr": 89856,
+   "author": "RelaxJonh",
+   "why": "CLOSED 2026-08-28 as duplicate of #89226 (open-session half, #89223)."
+  },
+  {
+   "pr": 126434,
+   "author": "jonpol01",
+   "why": "Open: a pin covers compression continuations published after it. Prune/pin semantics, does not touch the export filter path."
+  },
+  {
+   "pr": 126645,
+   "author": "JoaoMarcos44",
+   "why": "Open: protect pinned compression continuations in prune. Same as above, export untouched."
+  },
+  {
+   "pr": 123323,
+   "author": "jonpol01",
+   "why": "Open: export/repair/optimize exit non-zero on failure. Exit codes only, no selector change."
+  },
+  {
+   "pr": 85171,
+   "author": "ranxi2001",
+   "why": "Open: archive filtered unended sessions (list_archive_candidates). Archive path, not export."
+  }
+ ],
+ "regression_test": {
+  "source": "new; the real-SessionDB end-to-end idea from kvnloo fork #25 tests/hermes_cli/test_export_filters_include_pinned.py (whose committed tests are stale on main: they patch hermes_state.SessionDB with a zero-arg lambda and call the old cmd_sessions shape)",
+  "path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/export-pinned/test_sessions_export_filtered_pinned.py (placed at tests/hermes_cli/test_sessions_export_filtered_pinned.py)",
+  "tests": [
+   "test_filtered_export_writes_ended_pinned_and_pinned_archived_sessions[jsonl|md]",
+   "test_filtered_export_dry_run_counts_pinned_sessions[jsonl|trace]",
+   "test_prune_and_archive_still_spare_pinned_sessions"
+  ],
+  "contract": "Through the real `hermes sessions export --source cli` CLI against a real on-disk SessionDB, a filtered (read-only) export selects ended pinned and pinned+archived sessions in the jsonl, md and trace paths, as bare export and --session-id already do; the destructive prune/archive selector still excludes pinned rows.",
+  "evidence_path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/export-pinned/"
+ },
+ "ab_results": {
+  "main": {
+   "result": "fail",
+   "detail": "4 failed / 1 passed. jsonl and md exports write only the unpinned session (`assert {'20260101_000001_plain1'} == {plain1, pinned, pinarc}`); jsonl and trace --dry-run print 'Would export 1 session(s) (source 'cli')'. The prune anchor passes."
+  },
+  "99487": {
+   "result": "pass (after a hand port; does not merge)",
+   "detail": "git merge conflicts in 3 files (merge-99487.txt). Hand-ported onto main (99487-port-onto-main.diff): 5/5. Its own CLI test fails on main (SystemExit 1, `<lambda>() got an unexpected keyword argument 'read_only'`) and passes after `lambda *a, **k: FakeDB()` (7 own tests pass). Negative control: the port minus its single `filters[\"include_pinned\"] = True` line fails 4/5 exactly like main, so the pinned contract rides on that one line and the list_export_candidates half is the separate #89223 contract."
+  },
+  "89226": {
+   "result": "fail",
+   "detail": "Production hunks ported onto main (89226-port-onto-main.production.diff; it also conflicts on merge): 4 failed / 1 passed, identical to main. Open-session fix only."
+  },
+  "fork#25 rebuilt (reference, not an upstream candidate)": {
+   "result": "pass",
+   "detail": "The fork's 1-line `filters[\"include_pinned\"] = True` in _cmd_export (fork25-rebuilt-onto-main.diff): 5/5."
+  }
+ },
+ "adjacent_tests": {
+  "files": [
+   "tests/hermes_cli/test_sessions_export_md_cli.py",
+   "tests/hermes_cli/test_session_export.py",
+   "tests/hermes_cli/test_session_filters.py",
+   "tests/hermes_cli/test_sessions_pin.py",
+   "tests/hermes_cli/test_sessions_export_output_dir.py",
+   "tests/hermes_cli/test_sessions_delete.py",
+   "tests/hermes_state/test_hermes_state.py"
+  ],
+  "result": "Main plus the regression test: 320 passed, 4 failed (the 4 regression cases). Fork #25 one-liner: 324 passed, 0 failed. #99487 hand port (with its own tests): 325 passed, 1 failed (its CLI test's lambda drift; passes with the 1-token fix)."
+ },
+ "carrier": null,
+ "fold_ins": [],
+ "close_after_merge": [],
+ "exclude_reason": "Carrier not executable as a wave row yet. #99487 (alissonrgalindo) is the only open PR that fixes the pinned contract, and hand-ported onto 298a01c7 it passes 5/5, but it does not merge: all three production files conflict because main split hermes_state.py into mixins (prune selectors now in hermes_state_maintenance.py, _apply_prune_age_filter replaced by _prune_where) and split cmd_sessions into _cmd_export/_export_trace/_export_markdown. Its list_export_candidates must be re-implemented in another file (production +33/-8), and its own CLI test needs a drift fix. It also bundles the open-session contract of #89223, where #89226 (liuhao1024, 2026-08-18, triage-canonical per alt-glitch's duplicate close of #89856) is the earlier claimant. The pinned fix itself is one line (negative control). Becomes a row once #99487 is rebased, ideally with the pinned line split from the #89223 half (see row_when_rebased).",
+ "excluded_summary": "kvnloo fork #25 vs #99487 (filtered sessions export drops ended pinned sessions): #99487 is the only PR that fixes it (hand-ported onto main it passes the real-SessionDB test 5/5, and its single `include_pinned=True` line carries the fix), but it conflicts in all three production files after main's SessionDB mixin split and cmd_sessions decomposition, so merging needs a port of list_export_candidates into hermes_state_maintenance.py (+33/-8). It also bundles the open-session half of #89223, where #89226 (liuhao1024, earlier, triage-canonical) competes. Becomes a row once #99487 is rebased (`row_when_rebased` in the JSON). Until then, offer the real-SessionDB test and the 1-token lambda fix for its CLI test as review support on #99487.",
+ "row": null,
+ "carrier_when_rebased": {
+  "pr": 99487,
+  "author": "alissonrgalindo",
+  "why": "Only open PR that fixes the pinned contract; correct (5/5 ported, negative control isolates its include_pinned line), has tests, keeps prune/archive on the guarded selector."
+ },
+ "fold_ins_when_rebased": [
+  {
+   "from": "fork #25 (kvnloo/hermes-agent)",
+   "author": "kvnloo",
+   "co_authored_by": "Kevin Rajan <7121943+kvnloo@users.noreply.github.com>",
+   "hunk_scope": "New file tests/hermes_cli/test_sessions_export_filtered_pinned.py (the regression test above: real SessionDB, jsonl/md/trace paths, prune anchor). Optionally the 1-token `lambda *a, **k: FakeDB()` fix in #99487's own CLI test.",
+   "why": "#99487's CLI test only asserts the filters dict handed to a FakeDB; nothing checks that pinned and pinned+archived rows actually land in the export files or that the destructive selector keeps the pin guard.",
+   "test": "Fails 4/5 on main 298a01c7; passes 5/5 on main plus the #99487 port."
+  }
+ ],
+ "row_when_rebased": "| none (filtered export drops ended pinned sessions; kvnloo fork #25) | #99487 (alissonrgalindo), once rebased | main: FAIL, 4 of 5 (jsonl/md/trace filtered exports skip the pinned and pinned+archived rows); #99487 hand-ported: PASS 5/5 (negative control: dropping its `include_pinned=True` line re-fails 4 of 5); #89226 ported: FAIL, 4 of 5 (open-session fix only); kvnloo fork #25 rebuilt: PASS 5/5 | kvnloo (fork #25): real-SessionDB regression test `tests/hermes_cli/test_sessions_export_filtered_pinned.py` (jsonl, md and trace paths; prune still spares pins); `Co-authored-by: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>` | none (#89226 stays open for the #89223 open-session decision) | On main `_cmd_export` overrides `archived` but not `include_pinned`, so `_prune_filter_where` appends `COALESCE(s.pinned, 0) = 0` and every filtered export drops pinned sessions that bare export and --session-id include. #99487's one `include_pinned=True` line fixes it, and adjacent session files go from 320 passed / 4 failed to 325 passed / 1 failed (its own CLI test's `lambda: FakeDB()` drift). |",
+ "notes": "(1) Need confirmed on main 298a01c7: `_cmd_export` (hermes_cli/sessions_cmd.py:322-332) sets filters['archived']=None but never include_pinned; all three export selectors (_collect_sessions L356, _export_trace L444, _export_markdown L513) call list_prune_candidates, and hermes_state_maintenance.py:224-225 appends `COALESCE(s.pinned, 0) = 0` unless include_pinned. No upstream issue exists for the pinned half. (2) Two contracts, two lanes: pinned (only #99487 fixes it) and open sessions (#89223: #89226 is earlier and triage-canonical; #99487's list_export_candidates competes). The test seeds only ended sessions so it never mixes them. A maintainer choosing between #89226's include_open flag and #99487's list_export_candidates is a design call outside this wave. (3) Suggested review note on #99487: rebase onto the mixin split, consider splitting the one-line pinned fix (which nobody contests) from the #89223 half, fix the CLI test's zero-arg SessionDB lambda, and add the real-SessionDB test. (4) Fork-side: kvnloo fork #25's own tests are stale on main (verdict notes); the regression test here replaces them. Close kvnloo/hermes-agent#25 after #99487 (or any pinned fix) merges. (5) Hygiene: `git apply -3` of #89226's tests recorded two preimage-only rerere entries in the shared rr-cache (no postimage was ever recorded, so nothing can be replayed); every merge in this cluster ran with rerere.enabled=false. The worktree was removed. Refs: refs/w2/pr/99487 e6ec55bbf9, refs/w2/pr/89226 1cc2350b63, fork commit bf7b7909c9.",
+ "evidence_dir": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/export-pinned/"
+}

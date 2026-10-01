@@ -1,0 +1,33 @@
+{
+  "fork_pr": 95,
+  "title": "docs(computer-use): align zh-Hans screenshot eviction with provider-limit behavior",
+  "claim": "zh-Hans computer-use page says the Anthropic adapter keeps only the last 3 screenshots; eviction is provider-independent and limit-triggered.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "red": "website/i18n/zh-Hans/.../user-guide/features/computer-use.md:102 on main: \"截图淘汰 — Anthropic 适配器在上下文中仅保留最近 3 张截图\".",
+    "green": "zh-Hans bullet now translates EN computer-use.md:397-403 (20 image blocks or 24 MB, oldest batch retired, prompt-cache prefix preserved, user images never removed).",
+    "negative_control": "N/A for docs (no executable behaviour). Equivalent check: the stale phrase is present on main and absent on the bundle (grep given in red/green).",
+    "adjacent": "python3 website/scripts/check_doc_links.py on the bundle tree: OK (no route-style links). All 7 B1 bundles cherry-pick together onto main cleanly, and each pairs cleanly with B2's current docs2-update/docs2-desktop/docs2-gateway/docs2-memory bundles.",
+    "source": "agent/image_eviction_policy.py:26-28 OUTBOUND_IMAGE_LIMIT=20, OUTBOUND_IMAGE_BUDGET_BYTES=24_000_000, IMAGE_EVICTION_BATCH=8; agent/anthropic_message_convert.py:603-635 _evict_old_screenshots uses outbound_image_retire_count."
+  },
+  "upstream_overlap": [
+    "No open external PR/issue for this claim (gh search prs/issues; open docs PRs touching the same files edit other sections)"
+  ],
+  "branch": "ready/docs-computer-use",
+  "bundle": {
+    "branch": "ready/docs-computer-use",
+    "commit": "e6ed1c863d",
+    "subject": "docs(computer-use): cua-driver links its skill pack into Hermes; sync zh-Hans eviction",
+    "bundle_size": "+8/-14",
+    "patch": "patches/docs-computer-use.patch",
+    "body": "patches/docs-computer-use.body.md"
+  },
+  "files": [
+    "website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/features/computer-use.md"
+  ],
+  "size": "+1/-1",
+  "depends_on": null,
+  "fork_head": "63e859c70b24755e2c0883b9a1f25524e9eb8f0e",
+  "notes": "Translation taken from the fork, minus one redundant clause."
+}

@@ -1,0 +1,198 @@
+label=99487-port main=298a01c79b38018e029e50f77efe67c4a4fdbd40
+APPLY /mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/export-pinned/99487-port-onto-main.diff: ok
+▶ not activated — using HERMES_PYTHON: /workspace/hermes-home/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 2 test files (~8 tests) under ['tests/hermes_cli/test_sessions_export_filtered_pinned.py', 'tests/hermes_cli/test_sessions_export_md_cli.py']; running with -j 2
+[ 37.5% |     3/~8 | ✓5 | ✗0] ✓ tests/hermes_cli/test_sessions_export_filtered_pinned.py (5✓, 10.0s)
+[100.0% |     8/~8 | ✓10 | ✗ 1] ✗ tests/hermes_cli/test_sessions_export_md_cli.py (5✓ 1✗, 19.3s)
+
+  ╔╍ Failed: tests/hermes_cli/test_sessions_export_md_cli.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║         # (hooks list, cron list, gateway status, ...) pay no discovery cost and
+  ║         # trigger no consent prompts for hooks the user is still inspecting.
+  ║         _prepare_agent_startup(args)
+  ║     
+  ║         if getattr(args, "oneshot", None):
+  ║             _run_oneshot_from_args(args)
+  ║     
+  ║         from hermes_cli.observability.shared_metrics_disabled import set_process_surface
+  ║         set_process_surface(args.command)
+  ║         # No subcommand (optionally with top-level --resume / --continue) → chat.
+  ║         if args.command is None:
+  ║             _default_to_chat(args)
+  ║             return
+  ║     
+  ║         # A handler's int return code becomes the exit code (None = success).
+  ║         if hasattr(args, "func"):
+  ║             rc = args.func(args)
+  ║             if isinstance(rc, int) and rc != 0:
+  ║ >               sys.exit(rc)
+  ║ E               SystemExit: 1
+  ║ 
+  ║ hermes_cli/main.py:3713: SystemExit
+  ║ ----------------------------- Captured stdout call -----------------------------
+  ║ Could not open your session history database. Run: hermes sessions repair to fix it (a backup is made first).
+  ║ Details: test_sessions_export_filtered_includes_pinned_and_archived.<locals>.<lambda>() got an unexpected keyword argument 'read_only'
+  ║ ------------------------------ Captured log call -------------------------------
+  ║ INFO     hermes_cli.boot_bootstrap:boot_bootstrap.py:233 home maintenance: code changed to 298a01c79b38, running steps
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/hermes_cli/test_sessions_export_md_cli.py::test_sessions_export_filtered_includes_pinned_and_archived
+  ║ 1 failed, 5 passed in 7.70s
+  ║
+  ║  Repro: python -m pytest tests/hermes_cli/test_sessions_export_md_cli.py -q -rf -p no:randomly
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 2 files, 10 tests passed, 1 failed (100% complete) in 19.4s (2 workers) ===
+  Durations cached to test_durations.json (1 files)
+
+=== Per-file subprocess time distribution ===
+
+=== Failure output ===
+
+--- tests/hermes_cli/test_sessions_export_md_cli.py ---
+.F....                                                                   [100%]
+=================================== FAILURES ===================================
+__________ test_sessions_export_filtered_includes_pinned_and_archived __________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f510f58bb10>
+tmp_path = PosixPath('/var/tmp/hermes-pytest-1000/r-wxty65a2/pytest-of-kvn/pytest-0/test_sessions_export_filtered_0')
+capsys = <_pytest.capture.CaptureFixture object at 0x7f510cce8c90>
+
+>   ???
+
+tests/hermes_cli/test_sessions_export_md_cli.py:99: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def main():
+        """Main entry point for hermes CLI."""
+        _set_process_title()
+        _warn_if_unsupervised_pid1()
+        _advertise_agent_env()
+    
+        # Force UTF-8 stdio on Windows before anything prints.  No-op elsewhere.
+        try:
+            from hermes_cli.stdio import configure_windows_stdio
+            configure_windows_stdio()
+        except Exception:
+            pass
+        # A non-UTF-8 locale that the package import had to repair would crash Python children the
+        # same way. Only on that host, so a healthy UTF-8 locale keeps its children untouched.
+        from hermes_cli import _stdio_repaired
+        if _stdio_repaired:
+            os.environ.setdefault("PYTHONUTF8", "1")
+            os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+    
+        # One TLS authority: trust the OS store before any outbound call resolves a
+        # CA bundle (agent/ssl_verify.py). Never raises; False just means OpenSSL's paths.
+        from agent.ssl_verify import install_truststore
+    
+        install_truststore()
+    
+        # Sweep stale ``hermes.exe.old.*`` quarantine files from previous Windows
+        # updates. No-op elsewhere.
+        try:
+            _cleanup_quarantined_exes()
+        except Exception:
+            pass
+    
+        # Checkout changed since last launch → sweep stale __pycache__ once so no
+        # process resolves fresh source against old bytecode. Never raises.
+        _sweep_stale_bytecode_if_checkout_changed()
+    
+        # Dependency recovery already ran before imports. Report any fleet restart
+        # still owed by a previous update without restarting services here.
+        if "update" not in sys.argv[1:]:
+            try:
+                from hermes_cli.update_cmd_fleet import _warn_pending_fleet_restart_on_startup
+    
+                _warn_pending_fleet_restart_on_startup()
+            except Exception:
+                pass
+    
+        if _first_positional_argv() != "update":
+            from hermes_cli.boot_bootstrap import maybe_run_boot_bootstrap
+            from pm.paths import install_root
+            maybe_run_boot_bootstrap(install_root())
+    
+        # Every dispatch, including fast chat/serve, gets one passive PM verdict.
+        try:
+            from hermes_cli.venv_sync import check_runtime
+            from pm.paths import install_root
+    
+            problem = check_runtime(install_root())
+            if problem:
+                print(f"⚠ {problem}", file=sys.stderr)
+        except Exception:
+            import logging
+    
+            logging.getLogger(__name__).debug("pm startup check failed", exc_info=True)
+    
+        if _try_termux_fast_tui_launch():
+            return
+        if _try_termux_fast_cli_launch():
+            return
+        if _try_fast_serve_launch():
+            return
+        if _try_fast_chat_launch():
+            return
+    
+        parser, subparsers = _build_cli_parser()
+    
+        # NixOS container mode routes ALL invocations into the managed container.
+        # MUST run before parse_args() so --help, unrecognised flags and every
+        # subcommand are forwarded instead of intercepted by argparse on the host.
+        from hermes_cli.config import get_container_exec_info
+    
+        container_info = get_container_exec_info()
+        if container_info:
+            _exec_in_container(container_info, sys.argv[1:])
+            sys.exit(1)  # unreachable: execvp replaces the process or raises
+    
+        args = _parse_cli_args(parser, subparsers, sys.argv[1:])
+    
+        if args.version:
+            cmd_version(args)
+            return
+    
+        # --yolo must be set *before* plugin discovery: tools.approval freezes
+        # _YOLO_MODE_FROZEN at import; set later (inside cmd_chat) it does nothing.
+        if getattr(args, "yolo", False):
+            os.environ["HERMES_YOLO_MODE"] = "1"
+    
+        # Plugin discovery + shell hooks once, gated so introspection commands
+        # (hooks list, cron list, gateway status, ...) pay no discovery cost and
+        # trigger no consent prompts for hooks the user is still inspecting.
+        _prepare_agent_startup(args)
+    
+        if getattr(args, "oneshot", None):
+            _run_oneshot_from_args(args)
+    
+        from hermes_cli.observability.shared_metrics_disabled import set_process_surface
+        set_process_surface(args.command)
+        # No subcommand (optionally with top-level --resume / --continue) → chat.
+        if args.command is None:
+            _default_to_chat(args)
+            return
+    
+        # A handler's int return code becomes the exit code (None = success).
+        if hasattr(args, "func"):
+            rc = args.func(args)
+            if isinstance(rc, int) and rc != 0:
+>               sys.exit(rc)
+E               SystemExit: 1
+
+hermes_cli/main.py:3713: SystemExit
+----------------------------- Captured stdout call -----------------------------
+Could not open your session history database. Run: hermes sessions repair to fix it (a backup is made first).
+Details: test_sessions_export_filtered_includes_pinned_and_archived.<locals>.<lambda>() got an unexpected keyword argument 'read_only'
+------------------------------ Captured log call -------------------------------
+INFO     hermes_cli.boot_bootstrap:boot_bootstrap.py:233 home maintenance: code changed to 298a01c79b38, running steps
+=========================== short test summary info ============================
+FAILED tests/hermes_cli/test_sessions_export_md_cli.py::test_sessions_export_filtered_includes_pinned_and_archived
+1 failed, 5 passed in 7.70s
+
+=== 1 file with test failures (1 test failed) ===
+  tests/hermes_cli/test_sessions_export_md_cli.py  (1 test failed)

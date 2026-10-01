@@ -1,0 +1,10 @@
+# Does bash honour 'set -m' with no tty (non-interactive, stdin /dev/null, own session)? bash 5.3.15(1)-release
+wrapper pid=3625428
+    PID    PGID     SID CMD
+3625428 3625428 3625426 bash -c ( set -m; ( trap : TERM; sleep 9 ) > /dev/null 2>&1 & echo $! )
+3625428 3625428 bash -c ( set -m; ( trap : TERM; sleep 9 ) > /dev/null 2>&1 & echo $! )
+3625431 3625428 sleep 9
+after kill -TERM -- -3625428:
+(empty = group gone)
+
+# shells used by backend execute(): base.py/ssh.py/singularity.py 'bash -c', modal.py exec('bash','-c'), vercel_sandbox.py run_command('bash',['-c'|'-lc'])

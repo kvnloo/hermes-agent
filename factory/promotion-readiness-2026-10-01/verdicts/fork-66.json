@@ -1,0 +1,27 @@
+{
+ "fork_pr": 66,
+ "title": "fix(tui): discard stale weather fetches on relaunch with a per-launch epoch",
+ "claim": "Only the latest weather load (relaunch or r refresh) may settle the ambient weather widget; an older fetch settling later must not overwrite it with a stale report or a stale error.",
+ "verdict": "READY",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "Two new Open-Meteo relaunch-race tests on unpatched main both FAIL: (1) toMatchObject diff '- \"area\": \"Rome, Italy\" / + \"area\": \"Paris, France\"' under location 'Rome' (stale success clobbers). (2) '- \"kind\": \"ready\" ... / + \"kind\": \"error\"' (stale rejection flips the ready card).",
+  "green": "With fix: weatherApp.test.ts 7/7 pass.",
+  "negative_control": "Guard 'if (epoch === loadEpoch)' -> 'if (true)': both new tests fail again; restored -> green.",
+  "adjacent": "vitest userWidgets/weatherApp/widgetGridComponent/widgetSdk: 4 files / 23 tests pass. npm run typecheck clean; eslint + prettier clean.",
+  "source": "main ui-tui/src/sdk/apps/weather.tsx:229-238 load() fires fetchReport() fire-and-forget; host.tsx:84-102 updateWidget matches by appId only, so it cannot tell launches apart."
+ },
+ "upstream_overlap": [
+  "No PR/issue for this race (gh search 'weather widget stale', 'weather relaunch', 'weather.tsx'; cached title scan).",
+  "#112193 MERGED (moved widget to Open-Meteo, salvage of #111818) - different claim; fork test was rewritten for its two-step geocode+forecast flow.",
+  "#111818 OPEN (TheAngryPit, original Open-Meteo move, already salvaged by #112193) - no epoch/stale handling in its diff."
+ ],
+ "branch": "ready/fork-66-weather-relaunch-epoch",
+ "files": [
+  "ui-tui/src/sdk/apps/weather.tsx",
+  "ui-tui/src/__tests__/weatherApp.test.ts"
+ ],
+ "size": "+76/-6",
+ "depends_on": null,
+ "notes": "Commit 5aad8cc6af. Rebuilt: fork's tests targeted the old wttr.in reply shape (current main uses Open-Meteo geocode+forecast), so they were rewritten. The prod fix was tidied into one settle() helper. Kanban baggage dropped. Low-stakes demo/reference widget, but it is the SDK's async-contract reference app, so correct stale handling there is worth having. Low priority for a review slot. NOT_TESTED: manual TTY smoke against live Open-Meteo."
+}

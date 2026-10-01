@@ -1,0 +1,134 @@
+From 83190e3859755602629b06017891152788e3d728 Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:24:48 -0500
+Subject: [PATCH] fix(process): a kill the reader observes mid-signal keeps its
+ kill attribution
+
+kill_process can block in the SIGKILL grace window while the reader thread
+observes the SIGTERMed exit and finalises the session first. The reader's
+_move_to_finished then snapshots completion_reason="exited" with no
+termination_source into the completion_queue notification. #112156 re-saves
+the durable receipt afterwards, but the queued notification stays stale, so
+a bulk kill (kill_all / CLI /stop, consume_output=False) reaches the CLI/TUI
+drain as "exited (exit code -15, SIGTERM)" instead of "terminated by
+kill_all". A real Popen + reader + kill_all run on main got the stale label
+in 9 of 10 trials.
+
+kill_process now records its source on the session (_kill_source) before
+it signals and clears it when the call returns. mark_exited treats an exit
+observed while that marker is set as the kill (-15, "killed", source), the
+same values kill_process stamps afterwards. The reader's receipt and its
+queued notification therefore carry the kill attribution from the first
+write, with no queue rewrite and no new lock nesting.
+
+The existing reader-wins receipt test now also requires the reader's first
+save to record the kill. A new test drains the notification and checks it
+reads killed/kill_all/-15 and "terminated by kill_all".
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tests/tools/test_process_registry.py | 37 +++++++++++++++++++++++++---
+ tools/process_registry.py            | 12 ++++++++-
+ 2 files changed, 45 insertions(+), 4 deletions(-)
+
+diff --git a/tests/tools/test_process_registry.py b/tests/tools/test_process_registry.py
+index 8faa5cf9a3..9522a6d972 100644
+--- a/tests/tools/test_process_registry.py
++++ b/tests/tools/test_process_registry.py
+@@ -1432,14 +1432,45 @@ class TestKillProcess:
+             assert result["status"] == "killed"
+             assert result["completion_reason"] == "killed"
+             assert result["termination_source"] == "process.kill"
+-            # First save: the reader won the race and persisted a plain exit.
+-            assert saved[0] == ("exited", "", 0)
+-            # Second save: the receipt rewritten with the kill outcome.
++            # The exit the reader observed mid-signal is the kill: no save, not even
++            # the reader's first one, records it as a plain exit.
++            assert saved[0] == ("killed", "process.kill", -15)
+             assert saved[-1] == ("killed", "process.kill", -15)
+         finally:
+             registry._running.pop(s.id, None)
+             registry._finished.pop(s.id, None)
+ 
++    def test_kill_notification_keeps_kill_attribution_when_reader_finalises_first(self, registry):
++        """The reader's completion notification is the one the CLI/TUI drain delivers
++        when a bulk kill (``consume_output=False``) races it, so it must say who
++        killed the process rather than report a plain exit."""
++        s = _make_session(sid="proc_kill_race_live", command="sleep 999")
++        s.pid = 424244
++        s.detached = True
++        s.notify_on_complete = True
++        s.session_key = "t1"
++        registry._running[s.id] = s
++
++        def reader_wins_during_signal(pid, start=None):
++            registry._finish_exited(s, -15)
++
++        try:
++            with patch.object(ProcessRegistry, "_host_pid_is_ours", return_value=True), \
++                 patch.object(ProcessRegistry, "_terminate_host_pid",
++                              side_effect=reader_wins_during_signal), \
++                 patch("tools.process_registry.save_completed_result"):
++                registry.kill_process(s.id, source="kill_all", consume_output=False)
++
++            drained = registry.drain_notifications(session_key="t1")
++            assert len(drained) == 1
++            evt, text = drained[0]
++            assert (evt["completion_reason"], evt["termination_source"], evt["exit_code"]) == \
++                ("killed", "kill_all", -15)
++            assert "terminated by kill_all" in text
++        finally:
++            registry._running.pop(s.id, None)
++            registry._finished.pop(s.id, None)
++
+ 
+ # =========================================================================
+ # Tool handler
+diff --git a/tools/process_registry.py b/tools/process_registry.py
+index 6c7377a6ee..1294eaf3fe 100644
+--- a/tools/process_registry.py
++++ b/tools/process_registry.py
+@@ -578,6 +578,7 @@ class ProcessSession:
+     _reader_thread: Optional[threading.Thread] = field(default=None, repr=False)
+     _reader_finish_requested: threading.Event = field(default_factory=threading.Event, repr=False)
+     _reader_selectable: bool = field(default=False, repr=False)
++    _kill_source: str = field(default="", repr=False)  # set while kill_process is signalling
+     _pty: Any = field(default=None, repr=False)  # ptyprocess handle (use_pty=True)
+ 
+     def __post_init__(self):
+@@ -596,8 +597,12 @@ class ProcessSession:
+ 
+     def mark_exited(self, exit_code, reason: str = "exited", source: str = "") -> None:
+         """Record an exit. A kill that raced the observer already recorded its own
+-        exit_code/reason; never overwrite it."""
++        exit_code/reason; never overwrite it. An exit observed while the kill is still
++        signalling (``_kill_source``) is that kill, so the observer's receipt and
++        completion notification carry the kill's attribution, not a plain exit."""
+         self.exited = True
++        if self._kill_source:
++            exit_code, reason, source = -15, "killed", self._kill_source
+         if self.completion_reason != "killed":
+             self.exit_code = exit_code
+             self.completion_reason = reason
+@@ -2251,6 +2256,9 @@ class ProcessRegistry(ProcessCheckpointMixin):
+                 self._completion_consumed.add(session_id)
+             return result
+         try:
++            # The signal path can block for the SIGKILL grace window; an exit the reader
++            # observes meanwhile is this kill (see ``mark_exited``).
++            session._kill_source = source
+             early = self._signal_kill(session, session_id, consume_output)
+             if early is not None:
+                 return early
+@@ -2302,6 +2310,8 @@ class ProcessRegistry(ProcessCheckpointMixin):
+                 "termination_source": session.termination_source, **output}
+         except Exception as e:
+             return {"status": "error", "error": str(e)}
++        finally:
++            session._kill_source = ""
+ 
+     def _signal_kill(self, session: ProcessSession, session_id: str, consume_output: bool) -> Optional[dict]:
+         """Deliver the kill via PTY, local Popen tree, sandbox exec or recovered host
+-- 
+2.55.0
+

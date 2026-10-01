@@ -1,0 +1,19 @@
+LABEL interaction-129674-then-125004  main=298a01c79b38018e029e50f77efe67c4a4fdbd40
+MERGE refs/w2/pr/129674 (84ae319978): clean
+MERGE refs/w2/pr/125004 (2692841849): clean
+▶ not activated — using HERMES_PYTHON: /workspace/hermes-home/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 2 test files (~120 tests) under ['tests/tools/test_sandbox_background_kill_tree.py', 'tests/tools/test_process_registry.py']; running with -j 2
+[  1.7% |     2/~120 | ✓4 | ✗0] ✓ tests/tools/test_sandbox_background_kill_tree.py (4✓, 4.1s)
+[100.0% |   120/~120 | ✓119 | ✗  0] ✓ tests/tools/test_process_registry.py (115✓ 4s, 20.6s)
+
+=== Summary: 2 files, 119 tests passed, 0 failed, 4 skipped (100% complete) in 20.8s (2 workers) ===
+
+  note: platforms('windows') tests (in 1 file) were SKIPPED on this host (linux); they run on the Windows Python-tests lane.
+  Durations cached to test_durations.json (2 files)
+
+=== Per-file subprocess time distribution ===
+TRIPWIRE hits during run: 0

@@ -1,0 +1,33 @@
+{
+  "fork_pr": 297,
+  "title": "chore(gateway): remove unused cache_media_bytes from media_cache",
+  "claim": "gateway.platforms.media_cache.cache_media_bytes has no production callers and can be removed with its tests (rebuild of fork #114).",
+  "verdict": "EXTERNAL-OWNED",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "source": "Zero callers is TRUE on main: production imports only ext_for_mime/mime_for_ext from media_cache (bluebubbles, qqbot/adapter, signal, whatsapp_cloud). Do not confuse it with the unrelated, live gateway.platforms.base.cache_media_bytes(data, *, filename, mime_type) at base.py:1529. But open external PRs are actively building on this exact helper: #125651 edits its image branch, and #117403 adds a new caller. It was introduced by teknium1's #74210 ('shared media-cache mime dispatch for adapter downloads') as the shared dispatch adapters are meant to adopt.",
+    "references_before": "gateway/platforms/media_cache.py:69 (def; uuid import used only here), tests/gateway/test_media_cache.py:12, :38-58",
+    "references_after": "not built",
+    "red": "n/a",
+    "green": "n/a",
+    "negative_control": "n/a",
+    "adjacent": "not run (no change built)"
+  },
+  "upstream_overlap": [
+    "#125651 dasgltd OPEN 2026-09-29 'keep the inbound filename on cached images': modifies media_cache.cache_media_bytes (filename=filename_hint passthrough)",
+    "#117403 ArthurDentsTowel OPEN 2026-09-21 SMS inbound MMS: `from gateway.platforms.media_cache import cache_media_bytes` + asyncio.to_thread(cache_media_bytes, data, mime)",
+    "#74210 teknium1 MERGED: introduced the helper"
+  ],
+  "branch": null,
+  "bundle": null,
+  "files": [],
+  "size": "+0/-0",
+  "depends_on": null,
+  "fork_head": "salvage/remove-unused-media-cache-helper-20260929",
+  "fork_head_oid": "af6ee61e86aa116e098bf05ac438b0cba43bba46",
+  "wave": "W4-dead-code-rebuild",
+  "batch": "C",
+  "patch": null,
+  "body": null,
+  "notes": "Do not rebuild or promote. Deleting it would break two open external contributions. Also retire the older fork leaf #114. The fork's 915-file comparison was never used."
+}

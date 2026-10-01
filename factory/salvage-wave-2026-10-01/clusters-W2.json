@@ -1,0 +1,969 @@
+{
+ "wave": "salvage-ready cluster wave, half W2",
+ "prepared_for": "kvnloo (research + local testing only; nothing published)",
+ "date": "2026-09-30",
+ "main_sha": "298a01c79b38018e029e50f77efe67c4a4fdbd40",
+ "method": "Each candidate PR merged (git merge --no-ff, rerere disabled) onto pinned upstream main (refs/w2/main), then one behaviour-contract regression test dropped in and run with isolated HOME/HERMES_HOME under setsid, with a PATH tripwire (hermes/systemctl/launchctl stubs) and a pytest plugin that blocks os.exec* and signals to the runner's own process group. Conflicts resolved only for mechanical context drift (documented per candidate). Evidence logs and test files under evidence/W2/<slug>/.",
+ "coordinator_reverification": {
+  "note": "After the per-cluster runs, the coordinator re-ran each key A/B in a separate fresh worktree (wt/W2/verify) on refs/w2/main with the same isolation; all matched the per-cluster logs.",
+  "browser-4403": "main 3 failed (4403); main + #119346 3/3; fixture-masking fold-in on main 12 passed / 3 failed, on main + #119346 16/16.",
+  "mem-config": "main 7 failed / 3 passed; main + #126106 10/10.",
+  "memmon-heartbeat": "main 3 of 5 failed; #54014 port 5/5; conflict-only #54014 4 of 5 failed (NameError _load_gateway_runtime_config); #49782 port 3 of 5 failed; #49789 port 5/5. The #54014 port differs from the PR's own changed lines only by that one token, one context-drift comment line and two blank lines. start_gateway() on main was read for re-exec/service/kill paths: get_running_pid is stubbed (replace/kill branch unreachable), restart flags are False, and the planned-stop marker resolves under the tmp HERMES_HOME.",
+  "cron-owner": "main 1 of 4 failed (assert (1, 1) == (0, 0)); refs/w2/cron-owner/108484-merged (parents 298a01c79b + 9e29936e8e, net 1-line production diff) 4/4.",
+  "sandbox-kill": "main 4 of 4 failed; main + #125004 4/4 (clean merge); TERM-ignoring probe on #125004 2 of 2 failed, with the fold-in 2/2 and regression 4/4; no leftover sleep processes; no tripwire hits.",
+  "export-pinned": "#99487 conflicts on main in hermes_cli/session_filters.py, hermes_cli/sessions_cmd.py, hermes_state.py; regression main 4 of 5 failed; fork #25 one line 5/5; #99487 hand port 5/5.",
+  "queued-paste": "vitest regression on main 6 of 6 failed (incl. shell-exec of a !-prefixed /queue paste on drain); main + #99042 (pinned refs/w2/queued-paste/m99042, parents 298a01c79b + a549960398) 6 of 6 failed; main + fork-56 (refs/w2/queued-paste/mfork56, parents 298a01c79b + e8d70c6409) 6/6.",
+  "tripwire": "hits.log recorded only ptyprocess child execs of /usr/bin/bash -lic from tests/tools/test_process_registry.py::TestStdinHelpers::test_close_stdin_allows_eof_driven_process_to_finish (a local PTY child, identical on every state; deselected in the sandbox-kill adjacent runs). No re-exec of a test process, no hermes/systemctl/launchctl invocation, no own-group signal."
+ },
+ "included": [
+  "memmon-heartbeat",
+  "browser-4403",
+  "mem-config",
+  "sandbox-kill",
+  "cron-owner"
+ ],
+ "excluded": {
+  "queued-paste": "No upstream PR fixes the defect, and the composition is not a fold-in. #99042 (the only upstream PR, Closes #99032) checks for orphaned labels at dispatch time, while the tokens still exist, so it fails all 6 regression cases on 298a01c7. It is also red at its own head: PASTE_SNIPPET_RE is a global regex and looksLikeOrphanedPasteToken calls .test() on it, so lastIndex carries over and every second consecutive orphan is missed (3 of its 22 tests fail), and the new `unresolved` key breaks main's useSubmission.test.ts. With the regex fixed, its block refuses every queue-edit resubmit of a collapsed paste, including the /queue-item edit main delivers today. On its own drain path it dequeues a busy queue-mode paste and refuses it while telling the user 'nothing is lost'. The whole fix is kvnloo's unpublished branch ready/fork-56-queued-paste-payload (6/6, clean merge, 239/239 adjacent, negative controls fire), which would be the entire production change (+53/-31, 5 files), not a fold-in onto #99042. Becomes a row once fork-56 is opened upstream as the carrier (see row_when_opened), after kvnloo coordinates on #99032 with kokhlo, who claimed the issue on 2026-08-31.",
+  "export-pinned": "Carrier not executable as a wave row yet. #99487 (alissonrgalindo) is the only open PR that fixes the pinned contract, and hand-ported onto 298a01c7 it passes 5/5, but it does not merge: all three production files conflict because main split hermes_state.py into mixins (prune selectors now in hermes_state_maintenance.py, _apply_prune_age_filter replaced by _prune_where) and split cmd_sessions into _cmd_export/_export_trace/_export_markdown. Its list_export_candidates must be re-implemented in another file (production +33/-8), and its own CLI test needs a drift fix. It also bundles the open-session contract of #89223, where #89226 (liuhao1024, 2026-08-18, triage-canonical per alt-glitch's duplicate close of #89856) is the earlier claimant. The pinned fix itself is one line (negative control). Becomes a row once #99487 is rebased, ideally with the pinned line split from the #89223 half (see row_when_rebased)."
+ },
+ "clusters": [
+  {
+   "issue": "#99032",
+   "slug": "queued-paste",
+   "seed": "kvnloo READY local branch ready/fork-56-queued-paste-payload (fork #56, verdict READY on f848940560)",
+   "title": "TUI: a collapsed paste submitted while busy (interrupt/steer/queue) or before the first session reaches the model as its [[ … ]] label, and a queued paste whose bytes start with ! is shell-executed when the queue drains",
+   "main_sha": "298a01c79b38018e029e50f77efe67c4a4fdbd40",
+   "candidates": [
+    {
+     "pr": 99042,
+     "author": "kokhlo (commit author Konstantin Khlopkov <konstantin.khlopkov93@gmail.com>)",
+     "created": "2026-08-31T03:05:29Z",
+     "last_activity": "2026-08-31T12:48:42Z (one automated review comment by Enough1122; no maintainer review; head a549960398 unchanged since)",
+     "mergeable_github": "CONFLICTING (DIRTY); labels type/bug, comp/tui, P2; Closes #99032",
+     "merges_clean_on_pinned_main": "false: one conflict in ui-tui/src/app/useSubmission.ts (main removed the `queuePayload` line the PR edits, via 00b2e03c80/queueItemFromSlash). Resolved mechanically by keeping the PR's unresolved check and dropping `queuePayload` (pr99042-merge-resolution.cc.diff). Its package-lock.json -27 (`\"peer\": true` removals) is already on main and merges as a no-op.",
+     "diff_size": "+139/-56, 5 files (production +69/-13 in useSubmission.ts, attachments.ts, useComposerState.ts; package-lock.json -27; attachments.test.ts +70/-16)",
+     "has_tests": "yes: ui-tui/src/__tests__/attachments.test.ts (orphan detection unit tests). 3 of its 22 tests fail at its own head, and it breaks main's existing useSubmission.test.ts prepareSubmission toEqual (4 failed / 23 passed at head).",
+     "approach": "expandTokens returns {expanded, unresolved}; dispatchSubmission (and the interpolation callback) refuse to submit when a generated-looking [[ … [N lines] … ]] label has no token, with a sys error; paste.collapse failures become a sys warning. Does not change the busy, steer, queue or no-session paths."
+    },
+    {
+     "pr": "fork #56: local branch ready/fork-56-queued-paste-payload (e8d70c6409), not opened upstream",
+     "author": "kvnloo (Kevin Rajan <7121943+kvnloo@users.noreply.github.com>)",
+     "created": "2026-09-30T20:32:07-05:00 (rebuilt commit; fork PR kvnloo/hermes-agent#56 earlier)",
+     "last_activity": "2026-09-30 (promotion-readiness verdict READY)",
+     "mergeable_github": "n/a (no upstream PR)",
+     "merges_clean_on_pinned_main": true,
+     "diff_size": "+248/-33, 7 files (production +53/-31 in useSubmission.ts +32/-18, useQueue.ts +15/-9, interfaces.ts +4/-3, useInputHandlers.ts +1/-1, useMainApp.ts +1/-0; new test queuedPasteSubmission.test.tsx 193 lines; queueScopeRenderer.test.tsx +2/-2)",
+     "has_tests": "yes: queuedPasteSubmission.test.tsx, mounted real useSubmission + useQueue (6 cases)",
+     "approach": "Busy and no-session submits queue the expanded text with the label as display and a paste expander captured at enqueue; sendQueued takes the QueueItem and gates ! and {!...} on display, interpolates the display, then expands; dequeue returns the QueueItem so double-Enter and Ctrl+K drain through sendQueued; interrupt passes display to send."
+    }
+   ],
+   "candidates_checked_not_same_defect": [
+    {
+     "pr": 129581,
+     "author": "Wenfengcheng",
+     "why": "OPEN, MERGEABLE, 2026-09-30, Part of #32997: keeps collapsed text-draft tokens across automatic reconnect (resumeById). Different path (session recovery); it does not touch the busy/no-session submit or the queue drain. Related to Khwan888's first-session race (resetSession clears tokens), which neither candidate covers."
+    },
+    {
+     "pr": 123756,
+     "author": "jonpol01",
+     "why": "OPEN: Ctrl+K kill-to-end no longer also sends the next queued message. Adjacent line in useInputHandlers.ts; trivial rebase against fork-56 (its test may need to expect sendQueued)."
+    },
+    {
+     "pr": 129525,
+     "author": "kvnloo",
+     "why": "OPEN, MERGEABLE: perf(tui) queue wake-ups. Textual overlap in useQueue.ts and queueScopeRenderer.test.tsx only."
+    },
+    {
+     "pr": 74689,
+     "author": "briandevans",
+     "why": "OPEN: scopes the prompt queue to its origin session. Touches useQueue/useSubmission; different defect."
+    },
+    {
+     "pr": 129971,
+     "author": "dskwe",
+     "why": "OPEN, 2026-10-01: classic CLI (cli.py) paste expansion in slash commands. Not the Ink TUI."
+    },
+    {
+     "pr": 44034,
+     "author": "0xAdamFortuna",
+     "why": "OPEN: recursive CLI paste references. Not the Ink TUI."
+    },
+    {
+     "pr": 74797,
+     "author": "eloklam",
+     "why": "MERGED 2026-07-31: preserve collapsed /queue paste payloads (queueItemFromSlash). Prior partial fix; the busy and no-session paths remained."
+    },
+    {
+     "pr": 75565,
+     "author": "austinpickett",
+     "why": "MERGED 2026-07-31: expand collapsed paste tokens before idle submission. Prior partial fix."
+    },
+    {
+     "pr": 100837,
+     "author": "OutThisLife",
+     "why": "MERGED 2026-09-02: a collapsed paste resolves before a slash command runs. Prior partial fix."
+    }
+   ],
+   "regression_test": {
+    "source": "kvnloo fork #56 (ready/fork-56-queued-paste-payload e8d70c6409), used unchanged",
+    "path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/queued-paste/queuedPasteSubmission.test.tsx (placed at ui-tui/src/__tests__/queuedPasteSubmission.test.tsx)",
+    "tests": [
+     "reaches the model expanded (busy, interrupt mode)",
+     "reaches the model expanded (busy, steer mode)",
+     "reaches the model expanded (busy, queue mode)",
+     "reaches the model expanded (no session yet)",
+     "draining a queued collapsed paste: runs only the visible {!...}, not one carried by the paste",
+     "draining a queued collapsed paste: does not shell-execute a /queue paste whose content starts with !"
+    ],
+    "contract": "Driving the real useSubmission and useQueue hooks with a fake gateway: a collapsed paste submitted while busy (interrupt, steer, queue) or before a session exists reaches prompt.submit/session.steer expanded while the transcript keeps the label, and when a queued item drains, ! and {!...} are taken only from what the user typed, never from the pasted bytes (shell.exec is recorded, never executed).",
+    "evidence_path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/queued-paste/"
+   },
+   "ab_results": {
+    "main": {
+     "result": "fail",
+     "detail": "6 of 6 fail. R1-R4: prompt is 'review this: [[ line one line two line three line four line five [5 lines] ]]' (label sent, payload lost). R5: 'show Fri for [[ first line of th.. [21 lines] .. y y y y y y y y y y y y end ]]'. R6: shell.exec('echo pwned\\nz\\nz\\nz\\nz\\nz\\nend') from a `/queue <paste>` on double-Enter drain; probe P2 shows the useMainApp auto-drain path (dequeue then sendQueued) shell-executes the same pasted bytes. tsc clean."
+    },
+    "99042": {
+     "result": "fail",
+     "detail": "6 of 6 fail after a one-conflict mechanical merge. Interrupt and steer still send the label: the tokens still exist when dispatchSubmission runs its orphan check, and send() later expands against the cleared tokensRef. Queue and no-session drains re-enter dispatchSubmission with the bare label and are either refused or sent as the label depending on regex state (lastIndex bug). R6 still shell-executes the pasted bytes. Probe P4: a busy queue-mode paste drained by double-Enter is dequeued (queue 1 -> 0) and refused with 'cannot submit: 1 collapsed paste token missing ... The composer still has what you typed, so nothing is lost.' while the composer is empty. Own tests: 3 of 22 fail at its head and on main (unresolved [] for '[[ lost.. [5k lines] .. data ]]'; second orphan missed; fmtK label not recognized), plus main's useSubmission.test.ts toEqual fails on the new `unresolved` key. tsc clean."
+    },
+    "fork#56 ready branch (reference, not an upstream PR)": {
+     "result": "pass",
+     "detail": "6/6, clean merge, tsc clean. Probes P2-P6 pass (auto-drain, double-Enter and queue-edit paths). P1 fails: no orphaned-placeholder guard. #99042's attachments.test.ts on fork-56 alone: 15 of 22 fail (expandTokens returns a string, looksLikeOrphanedPasteToken absent), so fork-56 does not cover #99042's contract."
+    },
+    "99042+fork#56 (textual merge only)": {
+     "result": "fail",
+     "detail": "Same single textual conflict, but TypeScript reports 2 x TS2345 ('(value: string) => ExpandResult' is not assignable to 'QueueExpand', useSubmission.ts:331 and :365) and R5 sends an ExpandResult object {expanded, unresolved} as the prompt text: 5/6."
+    },
+    "99042+fork#56 (adapted, +2/-2)": {
+     "result": "pass",
+     "detail": "Wrapping fork-56's two expanders as `(value: string) => expandTokens(submissionTokens)(value).expanded` gives 6/6 and clean tsc. P6 fails: a busy queue-mode item loaded by cycleQueue and resubmitted is refused by #99042's check and stays queued."
+    },
+    "99042+fork#56+non-global regex": {
+     "result": "pass (regression) / regression on queue-edit",
+     "detail": "With #99042's detector using `new RegExp(PASTE_SNIPPET_RE.source)`, its attachments tests pass 22/22 and the consecutive-call probe is stable, regression 6/6, but both queue-edit probes (P5 /queue item, P6 busy item) are refused: cycleQueue loads only the display, so every edited-and-resubmitted collapsed paste trips the orphan check."
+    },
+    "99042+non-global regex (no fork-56)": {
+     "result": "fail",
+     "detail": "Regression 0/6. Probe P5: #99042 alone refuses the `/queue` item edit that main delivers today (main resolves it through takeQueueItem's display->text replace)."
+    }
+   },
+   "adjacent_tests": {
+    "files": [
+     "ui-tui/src/__tests__/attachments.test.ts",
+     "ui-tui/src/__tests__/gatewayClientKillLatch.test.ts",
+     "ui-tui/src/__tests__/inputSelectionClipboard.test.ts",
+     "ui-tui/src/__tests__/libTextI18n.test.ts",
+     "ui-tui/src/__tests__/orchestratorPromptSession.test.ts",
+     "ui-tui/src/__tests__/platform.test.ts",
+     "ui-tui/src/__tests__/queueScopeRenderer.test.tsx",
+     "ui-tui/src/__tests__/queueSubmission.test.ts",
+     "ui-tui/src/__tests__/submissionCore.test.ts",
+     "ui-tui/src/__tests__/useComposerState.test.ts",
+     "ui-tui/src/__tests__/useInputHandlers.test.ts",
+     "ui-tui/src/__tests__/useQueue.test.ts",
+     "ui-tui/src/__tests__/useSubmission.test.ts",
+     "ui-tui/src/__tests__/createGatewayEventHandler.test.ts",
+     "ui-tui/src/__tests__/voiceSubmitModeRenderer.test.tsx",
+     "ui-tui/src/__tests__/startupLatency.test.ts",
+     "ui-tui/src/__tests__/startupLatencyDashboard.test.ts",
+     "ui-tui/src/__tests__/moaProgressActivity.test.ts",
+     "ui-tui/src/__tests__/composerHighlights.test.ts",
+     "npm run typecheck (tsc --noEmit)"
+    ],
+    "result": "main 239/239; fork-56 239/239 (plus the 6 regression cases); #99042 242/246 (its 3 own attachments tests + useSubmission.test.ts 'keeps the collapsed paste for display and expands the model payload'); 99042+fork-56 adapted 242/246 (same 4). tsc clean on main, #99042, fork-56 and the adapted composition. Negative controls on fork-56 (negative-control-fork56.log): busy path reverted to handleBusyInput(queueItem(full)) fails R1/R2/R3/R5; no-session reverted to enqueue(full) fails R4; sendQueued gating ! on item.text fails R6. Tripwire log empty for every run."
+   },
+   "carrier": null,
+   "fold_ins": [],
+   "close_after_merge": [],
+   "exclude_reason": "No upstream PR fixes the defect, and the composition is not a fold-in. #99042 (the only upstream PR, Closes #99032) checks for orphaned labels at dispatch time, while the tokens still exist, so it fails all 6 regression cases on 298a01c7. It is also red at its own head: PASTE_SNIPPET_RE is a global regex and looksLikeOrphanedPasteToken calls .test() on it, so lastIndex carries over and every second consecutive orphan is missed (3 of its 22 tests fail), and the new `unresolved` key breaks main's useSubmission.test.ts. With the regex fixed, its block refuses every queue-edit resubmit of a collapsed paste, including the /queue-item edit main delivers today. On its own drain path it dequeues a busy queue-mode paste and refuses it while telling the user 'nothing is lost'. The whole fix is kvnloo's unpublished branch ready/fork-56-queued-paste-payload (6/6, clean merge, 239/239 adjacent, negative controls fire), which would be the entire production change (+53/-31, 5 files), not a fold-in onto #99042. Becomes a row once fork-56 is opened upstream as the carrier (see row_when_opened), after kvnloo coordinates on #99032 with kokhlo, who claimed the issue on 2026-08-31.",
+   "excluded_summary": "Issue #99032 (collapsed paste lost when busy or before a session): kokhlo's #99042, the only upstream PR, fails all 6 regression cases on 298a01c7. It checks for orphaned labels at dispatch, while the tokens still exist. It is also red at its own head: a stateful `PASTE_SNIPPET_RE.test()` (global regex, lastIndex) misses every second orphan, so 3 of its 22 tests fail, and its new `unresolved` key breaks main's useSubmission.test.ts. With that fixed, its block refuses queue-edit resubmits that main delivers. The fix that passes is kvnloo's unpublished `ready/fork-56-queued-paste-payload` (6/6, clean merge, 239/239 adjacent), which is the whole change, not a fold-in. Becomes a row once kvnloo coordinates with kokhlo on #99032 and opens it upstream (`row_when_opened` in the JSON). It also stops a queued paste starting with `!` from being shell-executed on drain, which main does on both drain paths.",
+   "row": null,
+   "carrier_when_opened": {
+    "pr": null,
+    "branch": "ready/fork-56-queued-paste-payload (e8d70c6409, $S/h.git); patch /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/patches/fork-56.patch, body fork-56.body.md",
+    "author": "kvnloo (Kevin Rajan <7121943+kvnloo@users.noreply.github.com>)",
+    "why": "Only change that satisfies the contract on 298a01c7 (6/6), merges clean, typechecks, keeps 239/239 adjacent tests, and its three key lines are each pinned by a negative control. It also closes the drain-time shell-exec of pasted bytes on both drain paths (double-Enter/Ctrl+K and the useMainApp auto-drain)."
+   },
+   "fold_ins_when_opened": [
+    {
+     "from": "#99042",
+     "author": "kokhlo",
+     "co_authored_by": "Konstantin Khlopkov <konstantin.khlopkov93@gmail.com>",
+     "hunk_scope": "ui-tui/src/app/useComposerState.ts only: paste.collapse `.catch(() => {})` -> `.catch(err => sys(`warning: paste.collapse failed ...`))` (+3/-1). Optional.",
+     "why": "Independent and sound: it surfaces the paste.collapse registration failure the issue reporter called out (plan item 2), and does not depend on the orphan guard.",
+     "test": "NOT_TESTED behaviourally (#99042 has no test for it); tsc clean in the adapted composition."
+    }
+   ],
+   "row_when_opened": "| #99032 | kvnloo branch `ready/fork-56-queued-paste-payload` (kvnloo; not yet opened upstream, coordinate on #99032 first) | main: FAIL, 6 of 6 (busy interrupt/steer/queue and no-session send the `[[ … [5 lines] ]]` label; a drained `/queue` paste starting with `!` is shell-executed); fork-56: PASS 6/6, clean merge; #99042: FAIL 6/6 (CONFLICTING, one mechanical conflict; 3 of its own 22 tests fail at its own head) | kokhlo (#99042): optional `ui-tui/src/app/useComposerState.ts` hunk that reports a failed `paste.collapse` as a sys warning instead of `.catch(() => {})` (+3/-1); `Co-authored-by: Konstantin Khlopkov <konstantin.khlopkov93@gmail.com>` | none (#99042 stays open for its orphaned-placeholder guard, which needs a non-global regex, a queue-edit exemption and a rebase) | Through the real useSubmission and useQueue hooks, main stores the display string after `clearIn()` has dropped the paste tokens, so every busy mode and the pre-session queue send the label, and the queue drain judges `!` on the expanded paste. fork-56 passes 6/6, typechecks, keeps 239/239 adjacent ui-tui tests, and each of three one-line reverts re-fails its cases. #99042 checks for orphans at dispatch, when the tokens still exist, so it misses all six cases; with it, a busy queue-mode paste drained by double-Enter is dequeued and refused with \"nothing is lost\" while the composer is empty. |",
+   "close_after_merge_when_opened": [],
+   "notes": "(1) Coordination: kokhlo claimed #99032 on 2026-08-31 and #99042 has had no activity since. The fork-56 verdict ruled it not EXTERNAL-OWNED because no open PR fixes this root cause. Before opening, kvnloo should post on #99032 with the A/B above, offer fork-56 as a complementary PR that `Refs #99042` (busy/no-session/drain paths), and leave the orphan-guard lane to kokhlo. Alternatively kokhlo can adopt fork-56's hunks into #99042 with `Co-authored-by: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>`. (2) Review notes for #99042: use a non-global regex in looksLikeOrphanedPasteToken (or drop the redundant PASTE_SNIPPET_RE.test, since `match` already is a snippet match); update useSubmission.test.ts for the `unresolved` key; exempt queue-edit resubmits (cycleQueue loads only the display; takeQueueItem resolves the payload); do not claim 'nothing is lost' on a drained item; rebase over main's queueItemFromSlash. (3) Merge interaction if both land: fork-56's two `expandTokens(submissionTokens)` expanders must become `(value: string) => expandTokens(submissionTokens)(value).expanded` (+2/-2). TypeScript flags it (TS2345); without it the `{!...}` drain sends an object as the prompt. (4) Security-relevant sub-finding, mocked only: on main, `/queue <collapsed paste>` whose pasted text begins with `!` is shell-executed via shell.exec when it drains, on both the double-Enter/Ctrl+K path (dispatchSubmission re-parses the expanded text) and the useMainApp auto-drain (sendQueued checks item.text). The direct submit path is safe because it checks the display (label). Observed call: shell.exec({command: 'echo pwned\\nz\\nz\\nz\\nz\\nz\\nend'}). fork-56 fixes both paths; #99042 fixes neither. (5) Pre-existing, not fixed by either candidate: pasteTokenLabel's edge preview (first 16 / last 28 chars) can carry `{!...}` into the visible label, which then interpolates on both direct and queued paths and orphans the paste (fork-56 verdict probe). Candidate sibling fix: neutralize `{!` in edgePreview as it already neutralizes `]]`. (6) Not covered by either candidate, NOT_TESTED: Khwan888's first-session race (paste before session.create returns, Enter after: resetSession clears the tokens while the label stays in the composer) and queue-edit token restoration when the edit changes the label itself. #129581 covers only the reconnect variant. (7) Behaviour change in fork-56: manual drains (double-Enter, Ctrl+K) now go through sendQueued, so a queued '/cmd' text is sent as a prompt rather than re-run as a slash command. (8) Order-dependence: because of the lastIndex bug, #99042 states give different probe outcomes depending on test order (e.g. the busy queue-mode drain was refused in one run and sent as the label in another). The regression test fails 6/6 on #99042 in every order. (9) Housekeeping: merge states pinned at refs/w2/queued-paste/{m99042,mfork56,mcompose-textual,mcompose,mcompose-lastidx,m99042-lastidx} in $S/h.git; rerere off for every merge; worktree removed. NOT_TESTED: live TUI against a real gateway; @hermes/ink and @hermes/shared resolve through the borrowed /workspace/hermes-home/hermes-agent node_modules.",
+   "evidence_dir": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/queued-paste/"
+  },
+  {
+   "issue": "#49773",
+   "slug": "memmon-heartbeat",
+   "seed": "fork #296 (kvnloo/hermes-agent; verdict EXTERNAL-OWNED: help the #49773 cluster converge on one carrier)",
+   "title": "memory_monitor heartbeat never starts: start_memory_monitoring() not called from the gateway runtime (wiring dropped by accident)",
+   "main_sha": "298a01c79b38018e029e50f77efe67c4a4fdbd40",
+   "candidates": [
+    {
+     "pr": 49782,
+     "author": "liuhao1024",
+     "created": "2026-06-20T20:10:45Z",
+     "last_activity": "2026-07-14T22:11Z teknium1 sweeper review (keep_open, salvageability=medium: restore logging.memory_monitor settings, test the lifecycle); no push since 2026-06-20",
+     "mergeable_github": "CONFLICTING/DIRTY",
+     "merges_clean_on_pinned_main": "false: gateway/run.py (main refactored start_gateway() on 2026-09-02) and tests/gateway/test_memory_monitor.py (main compacted it). Ported by re-anchoring its two verbatim hunks: start after _start_gateway_start_cron_and_housekeeping(), stop after the housekeeping drain in _start_gateway_shutdown_tail (port-49782.diff)",
+     "diff_size": "+35/-1, 2 files",
+     "has_tests": "yes, source-text only: test_start_gateway_calls_start_memory_monitoring (inspect.getsource); passes on the port",
+     "approach": "Unconditional start_memory_monitoring() (module default 300 s) after the housekeeping thread starts in start_gateway(); stop_memory_monitoring() after the cron/housekeeping joins. No config handling, no DEFAULT_CONFIG block. Fixes #49773; triage-named canonical by alt-glitch's duplicate comments."
+    },
+    {
+     "pr": 49789,
+     "author": "Tranquil-Flow",
+     "created": "2026-06-20T20:24:26Z",
+     "last_activity": "2026-07-14T22:11Z teknium1 sweeper review (keep_open: stub lacks runner._running; malformed interval disables monitoring instead of falling back to 300); no push since 2026-06-20",
+     "mergeable_github": "CONFLICTING/DIRTY",
+     "merges_clean_on_pinned_main": "false: gateway/run.py and hermes_cli/config.py (DEFAULT_CONFIG moved to hermes_cli/config_defaults.py). Ported mechanically: helpers verbatim after _start_cron_ticker, start before _start_gateway_start_cron_and_housekeeping(), stop after the planned-stop watcher join in _start_gateway_shutdown_tail, defaults block in config_defaults.py (port-49789.diff)",
+     "diff_size": "+277/-1, 3 files",
+     "has_tests": "yes: tests/gateway/test_memory_monitor_runtime.py (7 tests); on the port 3/7 pass: 3 read mm._interval_seconds (removed by main's 2026-09-02 memory_monitor compaction) and the lifecycle test patches tools.mcp_tool.discover_mcp_tools (moved)",
+     "approach": "_start_runtime_memory_monitoring()/_stop_runtime_memory_monitoring() helpers reading logging.memory_monitor via _load_gateway_config(); start after the aborted-startup guard, stop in teardown; adds the DEFAULT_CONFIG block. float(interval) sits under the outer except, so 'abc' silently disables monitoring and 0/-5 are passed through."
+    },
+    {
+     "pr": 50472,
+     "author": "chiefmojo",
+     "created": "2026-06-21T23:54:04Z",
+     "last_activity": "2026-07-16 push (finally-based teardown, defaults, early-exit test) answering teknium1's 2026-07-14 sweeper review; labelled duplicate by alt-glitch",
+     "mergeable_github": "CONFLICTING/DIRTY",
+     "merges_clean_on_pinned_main": "false: gateway/run.py, hermes_cli/config.py, tests/gateway/test_runner_startup_failures.py. Its +166/-135 run.py hunk re-indents a start_gateway() tail that no longer exists in that shape on main; ported by applying the same design to main's body (start block before runner.start(), try/finally around the rest, +105/-37 run.py), which is a re-implementation rather than a context fix (port-50472.diff)",
+     "diff_size": "+236/-135, 4 files",
+     "has_tests": "yes: DEFAULT_CONFIG test + parametrized start_gateway() early-exit test (clean/failed/disabled); 4/4 pass on the port",
+     "approach": "Restores the original #27102 block verbatim (load_config(), enabled default True, float(interval) with TypeError/ValueError -> 300) before runner.start(), and stops in a finally covering every exit. 0/-5 are passed through."
+    },
+    {
+     "pr": 54014,
+     "author": "itsflownium",
+     "created": "2026-06-28T06:03:12Z",
+     "last_activity": "2026-07-15T12:01Z force-push answering teknium1's 2026-07-15 sweeper review (no sync cron join, start after the aborted-startup guard, aborted-startup test); labelled duplicate by alt-glitch",
+     "mergeable_github": "CONFLICTING/DIRTY",
+     "merges_clean_on_pinned_main": "false: gateway/run.py (call site only), hermes_cli/config.py, tests/gateway/test_memory_monitor.py, tests/gateway/test_startup_restart_race.py. The helper block auto-merges but calls _load_gateway_runtime_config(), which main folded into _load_gateway_config() (that loader now does the ${VAR} expansion). Port = re-anchored hunks + that one-token rename (port-54014.diff; port-54014-literal.diff without it)",
+     "diff_size": "+203/-2, 4 files (port: +201/-1)",
+     "has_tests": "yes: 8 tests in tests/gateway/test_memory_monitor.py (defaults, resolver, disable, bad-interval fallback, start/stop ordering, stop when the wait raises) + aborted-startup guard in tests/gateway/test_startup_restart_race.py; all pass on the port",
+     "approach": "_resolve_gateway_memory_monitor_config() with coercion (string/scalar enabled, interval < 1 s or malformed -> 300), _start/_stop_gateway_memory_monitor(), and _wait_with_gateway_memory_monitor() wrapping the running-path wait_for_shutdown() in try/finally; adds the DEFAULT_CONFIG block. Refs #53995."
+    }
+   ],
+   "candidates_checked_not_same_defect": [
+    {
+     "pr": 49837,
+     "author": "koshaji",
+     "why": "Same defect but CLOSED: its author closed it on 2026-09-24T19:54Z together with three other PRs within 2 s (no comment), after two rebases and bumps with no maintainer response. Not a rejection. It wired start/stop into GatewayRunner.start()/stop(); the regression test stubs GatewayRunner, so that placement would escape it (no open candidate uses it)."
+    },
+    {
+     "pr": 98313,
+     "author": "liuhao1024",
+     "why": "'re-arm active heartbeat watches on startup': process-watch heartbeats, not the [MEMORY] monitor"
+    },
+    {
+     "pr": 116204,
+     "author": "Domarchi",
+     "why": "delegation roster sharing; matched 'heartbeat' only"
+    },
+    {
+     "pr": 63878,
+     "author": "ofir5300",
+     "why": "Telegram compact topic titles; search hit on text, does not touch memory_monitor"
+    }
+   ],
+   "regression_test": {
+    "source": "new; re-derived from the interrupted W2 run's draft (which drove start_gateway() with the tests/gateway/test_startup_restart_race.py stubs), extended with host-attach/claim, control-socket, MCP-discovery, keepalive and pending-flush stubs, a failure-exit case, an unconfigured-default case and an aborted-startup guard; modelled on #49789's lifecycle test and #50472's early-exit test",
+    "path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/memmon-heartbeat/test_memory_monitor_gateway_wiring.py (placed at tests/gateway/test_memory_monitor_gateway_wiring.py)",
+    "tests": [
+     "test_serving_gateway_runs_memory_heartbeat_until_shutdown[enabled]",
+     "test_serving_gateway_runs_memory_heartbeat_until_shutdown[enabled-failure-exit]",
+     "test_serving_gateway_runs_memory_heartbeat_until_shutdown[disabled]",
+     "test_serving_gateway_runs_memory_heartbeat_until_shutdown[unconfigured-default]",
+     "test_aborted_startup_leaves_no_heartbeat_running"
+    ],
+    "contract": "A gateway that reaches serving (start_gateway() past runner.start(), cron and housekeeping started) runs the real [MEMORY] monitor thread at logging.memory_monitor.interval_seconds (default 300), does not start it when enabled: false, and has stopped it by the time start_gateway() returns, whether the exit is clean, a failure verdict or an aborted startup.",
+    "evidence_path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/memmon-heartbeat/"
+   },
+   "ab_results": {
+    "main": {
+     "result": "fail",
+     "detail": "3 failed / 2 passed. enabled, enabled-failure-exit and unconfigured-default: 'heartbeat state while serving: False is True' (start_memory_monitoring() has no caller anywhere on main). disabled and the aborted-startup guard pass trivially."
+    },
+    "49782": {
+     "result": "fail",
+     "detail": "3 failed / 2 passed on the port. enabled and enabled-failure-exit: start called with [300.0], expected [42.0]; disabled: heartbeat running while serving (True is False). It never reads logging.memory_monitor."
+    },
+    "49789": {
+     "result": "pass",
+     "detail": "5/5 on the mechanical port. Probe: interval 'abc' silently disables monitoring, 0 and -5 are passed to start_memory_monitoring (busy loop), enabled: 'false' and memory_monitor: false still start. 4 of its own 7 tests fail on main (stale module/MCP attributes)."
+    },
+    "50472": {
+     "result": "pass",
+     "detail": "5/5 on the port (its try/finally re-applied over main's refactored start_gateway() body). Own tests 4/4. Probe: 'abc' -> 300, but 0 and -5 are passed through (busy loop); string/scalar false still start."
+    },
+    "54014": {
+     "result": "pass",
+     "detail": "5/5 on the port (re-anchored hunks + _load_gateway_runtime_config -> _load_gateway_config). Own tests pass (21/21 with the regression file). Probe: 'abc', 0, -5 -> 300; enabled: 'false' and memory_monitor: false do not start."
+    },
+    "54014-conflict-only-merge": {
+     "result": "fail",
+     "detail": "4 failed / 1 passed: NameError: name '_load_gateway_runtime_config' is not defined, raised out of start_gateway() before wait_for_shutdown(), so the gateway would not start at all. The helper block merges cleanly; only the call site conflicts."
+    },
+    "49837": {
+     "result": "not tested",
+     "detail": "closed by its author 2026-09-24"
+    }
+   },
+   "adjacent_tests": {
+    "files": [
+     "tests/gateway/test_memory_monitor.py",
+     "tests/gateway/test_startup_restart_race.py",
+     "tests/gateway/test_runner_startup_failures.py",
+     "tests/test_hermes_logging.py",
+     "tests/hermes_cli/test_config.py",
+     "tests/gateway/test_memory_monitor_gateway_wiring.py (regression)"
+    ],
+    "result": "main: 235 passed, 3 failed (the 3 regression cases), 8 skipped. Carrier #54014 port + regression test: 246 passed, 0 failed, 8 skipped (+8 carrier tests, +3 regression cases). Negative controls on the carrier: (A) call site reverted to runner.wait_for_shutdown() -> 3 fail ('heartbeat state while serving'); (B) finally stop removed -> 3 fail ('heartbeat must stop when the gateway shuts down'); (C) resolver ignores logging.memory_monitor -> 3 fail (interval 300 != 42, disabled still running). Safety grep: the restart hits in test_startup_restart_race.py are request_restart(detached=False) flag/verdict tests (the detached launcher is gated on _restart_detached); no file exercises update, re-exec, systemctl/launchctl or fleet code. W2 tripwire: 0 hits from this cluster."
+   },
+   "carrier": {
+    "pr": 54014,
+    "author": "itsflownium <157689911+itsflownium@users.noreply.github.com> (commit author 'Flownium')",
+    "why": "Correct on the whole contract, and the only config-aware candidate whose config handling is sound: a malformed, zero or negative interval falls back to 300 (the fallback teknium1's sweeper review asked #49789 for), and string or scalar 'false' disables. It starts only after the aborted-startup guard and stops in a finally around wait_for_shutdown(). Its 2026-07-15 force-push answers teknium1's sweeper review, and its own tests pass on main after the rebase. It is not the earliest: #49782 fails the config contract, which teknium1's sweeper review asked it to restore. #49789 (the earliest config-aware PR) silently disables monitoring on a malformed interval, passes 0/negative through (verified about 100k [MEMORY] lines/s), and 4 of its 7 tests fail on main. #50472's run.py change re-indents a tail that main has since refactored, so porting it means re-implementing it, and it also passes 0/negative through. The rebase is mechanical except for one token, _load_gateway_runtime_config() -> _load_gateway_config(). Without it, start_gateway() raises NameError."
+   },
+   "fold_ins": [
+    {
+     "from": "W2 salvage wave on kvnloo's behalf (new test; seed fork #296 proposed deleting gateway/memory_monitor.py and is withdrawn)",
+     "author": "kvnloo",
+     "co_authored_by": "Kevin Rajan <7121943+kvnloo@users.noreply.github.com>",
+     "hunk_scope": "New file tests/gateway/test_memory_monitor_gateway_wiring.py (2 functions, 5 cases: enabled interval 42, failure exit still stops, enabled: false, unconfigured default 300, aborted startup leaves no thread). No production change.",
+     "why": "#54014's tests call its helpers and the wait wrapper directly; the only start_gateway() test it touches is the aborted-startup guard. teknium1's sweeper review asked for a start_gateway() lifecycle test covering start, final stop and disabled config, and this test drives the real start_gateway() and the real monitor thread.",
+     "test": "Fails 3/5 on main 298a01c7, passes 5/5 on main + #54014 (port). Each of 3 negative controls re-fails 3 cases."
+    }
+   ],
+   "close_after_merge": [
+    {
+     "pr": 49782,
+     "reason": "Duplicate 'Fixes #49773'. Unconditional start, no logging.memory_monitor handling; fails 3/5 (interval and enabled: false ignored)."
+    },
+    {
+     "pr": 49789,
+     "reason": "Duplicate 'Fixes #49773'. Superseded: same wiring and defaults block. Its malformed-interval handling disables monitoring and passes 0/negative through, and its tests are stale on main."
+    },
+    {
+     "pr": 50472,
+     "reason": "Duplicate (alt-glitch 2026-06-21). Same wiring via a start_gateway() tail re-indent that no longer matches main; passes 0/negative intervals through."
+    }
+   ],
+   "exclude_reason": null,
+   "row": "| #49773 | #54014 (itsflownium) | main: FAIL, 3 of 5 cases fail (the heartbeat never runs while the gateway serves); #54014: PASS 5/5 after a rebase (4 conflict files: the call site moves into main's refactored `start_gateway()`, the defaults block into `hermes_cli/config_defaults.py`) plus a one-token drift fix (`_load_gateway_runtime_config()` to `_load_gateway_config()`); #49789: PASS 5/5 (ported, CONFLICTING); #50472: PASS 5/5 (ported by re-indenting main's `start_gateway()` tail into its try/finally, CONFLICTING); #49782: FAIL, 3 of 5 fail (ignores `logging.memory_monitor`: interval 42 runs at 300, `enabled: false` still starts) | kvnloo (written for this wave; fork #296 itself proposed deleting the module and is withdrawn): lifecycle regression test `tests/gateway/test_memory_monitor_gateway_wiring.py` (real `start_gateway()` and real monitor thread: interval 42, failure exit still stops, `enabled: false`, unconfigured default 300, aborted startup leaves no thread); `Co-authored-by: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>` | #49782, #49789, #50472 | On main `start_memory_monitoring()` has no caller: dc3d0fe148 (#27102) added the start/stop wiring and the `logging.memory_monitor` defaults, and 51c68d4ab (#20059, desktop app import) dropped both. Ported #54014 passes 5/5 with its own tests, and the adjacent files go from 235 passed/3 failed to 246/0. Reverting its call site, dropping its finally stop, or ignoring config each re-fails 3 cases. A conflict-only merge keeps the auto-merged `_load_gateway_runtime_config()` call, which main removed, so `start_gateway()` raises NameError (4 of 5 fail). #54014 is the only config-aware candidate that maps a malformed, 0 or negative `interval_seconds` to 300; #49789 and #50472 pass 0 through, which spins the monitor at about 100k `[MEMORY]` lines/s. |",
+   "row_fork_draft": "| #49773 | #54014 (itsflownium) | main 298a01c7 FAIL 3/5; #54014 PASS 5/5 (rebase: 4 conflict files + `_load_gateway_runtime_config`->`_load_gateway_config`); #49789 PASS 5/5 (ported); #50472 PASS 5/5 (ported, tail re-indent); #49782 FAIL 3/5 (no config) | kvnloo (Co-authored-by Kevin Rajan): start_gateway() lifecycle regression test tests/gateway/test_memory_monitor_gateway_wiring.py | #49782, #49789, #50472 | Wiring + defaults from dc3d0fe148 (#27102) dropped by 51c68d4ab (#20059). Carrier 5/5, adjacent 235/3 -> 246/0, 3 negative controls re-fail. Conflict-only merge raises NameError at startup. Only config-aware PR that clamps 0/negative intervals (others spin ~100k [MEMORY] lines/s). |",
+   "notes": "(1) Origin, verified in the repo: dc3d0fe148 (#27102, teknium1, 2026-05-16) added the start_gateway() start/stop wiring and the logging.memory_monitor DEFAULT_CONFIG block, and 51c68d4ab ('Add Hermes desktop app (#20059)', 2026-05-31, 442 files) removed both. teknium1's sweeper review on #49837 cites 476d8d9cc, which is not in the repo; the sweeper review on #49782 names 51c68d4ab. Main has no logging.memory_monitor key in hermes_cli/config_defaults.py, cli-config.yaml.example or the docs, so the carrier restores an undocumented key, as #27102 did. (2) All four open PRs are CONFLICTING/DIRTY on GitHub (re-queried 2026-09-30) and none merges locally, because main refactored start_gateway() into helpers on 2026-09-02 (aed6720dab) and moved DEFAULT_CONFIG into hermes_cli/config_defaults.py. The carrier's rebase resolution is port-54014.diff. The non-textual drift is the rename, and port-54014-literal.diff shows what happens without it. (3) Test safety: start_gateway() on main was read end to end. The test uses the stubs from tests/gateway/test_startup_restart_race.py plus _host_attach_or_none, _claim_host_gateway_role, the control socket, the host-record refresh, MCP discovery, the Nous auth keepalive, pending-flush recovery, cron/housekeeping and MCP shutdown. Restart flags stay False, so the exit verdict returns without SystemExit. Signal handlers attach to the test loop only. The conftest live-system guard and the per-process HERMES_GATEWAY_LOCK_DIR are active. The W2 tripwire (os.exec*, own-group kill, PATH stubs) recorded 0 hits from this cluster; the shared hits.log has entries from another cluster's test_close_stdin_allows_eof. (4) Probe matrix (probe-matrix.log, fake start): 'abc' gives 300/none/300/300 for #49782/#49789/#50472/#54014; 0 gives 300/0/0/300; -5 gives 300/-5/-5/300; enabled 'false' gives 300/300/300/none; scalar false gives 300/300/300/none. probe-zero-interval-busy-loop.log: the real monitor emits about 25,000 [MEMORY] records in 0.25 s at interval 0 or -5. #27102's original block had the same 0/negative hazard. (5) If a maintainer prefers the earliest config-aware author (#49789), it needs the rebase, a 300 fallback for malformed and non-positive intervals (what #54014's _coerce_gateway_memory_monitor_interval does), and rewritten tests. That is more change than rebasing #54014, and it would still need this regression test. (6) Optional for the maintainer: #54014's defaults block has no inline comment, while config_defaults.py comments its neighbouring keys. #50472's comment text could be reused, but that is cosmetic and not worth a fold-in. (7) Fork side: kvnloo fork #296 (and the older leaf #113) proposes deleting gateway/memory_monitor.py as dead code, the opposite of the carrier. Close both regardless; they must not be promoted. (8) The interrupted run's draft test was re-derived rather than reused. Its shape is kept, and it gains extra host-isolation stubs, the failure-exit and default cases and the aborted-startup guard. Every A/B result here was re-run on 298a01c7. (9) The PR heads used are pinned at refs/w2/pr/<N> in $S/h.git. The worktree was removed after the run.",
+   "evidence_dir": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/memmon-heartbeat/"
+  },
+  {
+   "issue": "none (cloud browser.controller.register 4403; kvnloo fork #51)",
+   "slug": "browser-4403",
+   "seed": "fork #51 (kvnloo/hermes-agent)",
+   "title": "Cloud browser.controller.register rejects every production session with 4403 because it reads a session 'profile' key that no session builder stamps",
+   "main_sha": "298a01c79b38018e029e50f77efe67c4a4fdbd40",
+   "candidates": [
+    {
+     "pr": 119346,
+     "author": "musabatas",
+     "created": "2026-09-22T17:30:05Z",
+     "last_activity": "2026-09-22T17:33:43Z (no comments or reviews)",
+     "mergeable_github": "UNKNOWN/UNKNOWN (GitHub has not computed it; re-queried 2026-10-01)",
+     "merges_clean_on_pinned_main": true,
+     "diff_size": "+69/-1, 2 files (tui_gateway/methods_browser_control.py +1/-1, tests/gateway/test_browser_control_cloud.py +68/-0)",
+     "has_tests": "yes: test_cloud_controller_registration_uses_created_session_profile (session.create default -> ops -> default, then register; launch profile patched to 'default'). It fails on main (4403) and passes with the fix.",
+     "approach": "One line: profile_id = profile_name_for_home(session.get('profile_home')) or _current_profile_name(), using the module globals server.py already binds. Labels type/bug, comp/tui, tool/browser, P2, sweeper:risk-session-state, area/profiles. No linked issue."
+    }
+   ],
+   "candidates_checked_not_same_defect": [
+    {
+     "pr": 111800,
+     "author": "kshitijk4poor",
+     "why": "Open +55955/-35491 Pydantic wire refactor (2026-09-15). It rewrites the same register handler (+49/-42 in methods_browser_control.py) but keeps profile_id = str(session.get('profile') or '').strip() as context, so it does not fix the defect and will need a one-line rebase after #119346."
+    },
+    {
+     "pr": 86784,
+     "author": "ryantuc",
+     "why": "Closed; resume-client attach in tui_gateway, mentions browser.controller.register only in passing."
+    },
+    {
+     "pr": 88203,
+     "author": "abundantbeing",
+     "why": "Open loopback extension pairing feature; does not touch methods_browser_control.py."
+    }
+   ],
+   "regression_test": {
+    "source": "new; built from #119346's session.create round-trip test plus kvnloo fork #51's artifact-store slot test (test_browser_control_profile_repro_real.py::test_cloud_profile_id_hits_local_api_artifact_store_slot)",
+    "path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/browser-4403/test_browser_controller_session_profile.py (placed at tests/gateway/test_browser_controller_session_profile.py)",
+    "tests": [
+     "test_created_session_registers_with_its_canonical_profile[launch-default] (default -> ops -> default)",
+     "test_created_session_registers_with_its_canonical_profile[launch-named] (launch 'work': none -> work, default (home = Hermes root) -> default, ops -> ops)",
+     "test_cloud_scope_selects_the_local_api_artifact_store_slot"
+    ],
+    "contract": "A session made by session.create registers a cloud browser controller without 4403, and the scope's profile_id is the session's canonical profile name: the launch profile's name when profile_home is None, 'default' when the home is the Hermes root, '<name>' for <root>/profiles/<name>. The attached scope selects the local-API artifact-store slot keyed by that name.",
+    "evidence_path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/browser-4403/"
+   },
+   "ab_results": {
+    "main": {
+     "result": "fail",
+     "detail": "3 failed / 0 passed. Every create -> register returns {'error': {'code': 4403, 'message': 'controller_id, browser_profile_id, and server session profile are required'}}."
+    },
+    "119346": {
+     "result": "pass",
+     "detail": "3/3, merges clean (head d6c5a4a67e). Probe matrix: all 5 launch/request cases give the canonical name."
+    },
+    "fork#51 (kvnloo, reference, not an upstream PR)": {
+     "result": "fail",
+     "detail": "2 failed / 1 passed (commit a2b896ff5c cherry-picks clean). Path(profile_home).name or literal 'default': a gateway launched under 'work' registers launch-profile sessions as 'default' (assert 'default' == 'work'), and a session whose profile_home is the Hermes root (a 'default' request on a named-launch gateway, per server._profile_home) registers as the root's basename ('hermes_test' in the sandbox, '.hermes' on a real install), so the artifact-store slot lookup misses."
+    },
+    "negative_control": {
+     "result": "fail (as intended)",
+     "detail": "On main + #119346: reverting its line to session.get('profile') re-fails 3/3 (4403); keeping profile_name_for_home but dropping the _current_profile_name() fallback also re-fails 3/3 (launch-profile sessions have profile_home None)."
+    }
+   },
+   "adjacent_tests": {
+    "files": [
+     "tests/gateway/test_browser_control_api.py",
+     "tests/gateway/test_browser_control_artifacts.py",
+     "tests/gateway/test_browser_control_broker.py",
+     "tests/gateway/test_browser_control_broker_hardening.py",
+     "tests/gateway/test_browser_control_cloud.py"
+    ],
+    "result": "Main: 84 passed, 0 failed. #119346 + fold-ins (fixture correction + regression test): 88 passed, 0 failed (84 + #119346's test + 3 regression cases). Fixture masking: with the six cloud fixtures' 'profile': 'default' key dropped, main fails 3 (test_cloud_gateway_real_action_round_trip_is_bound_to_identity_and_transport, test_cloud_same_identity_reconnect_refreshes_transport_and_completes_pending, test_cloud_explicit_detach_requires_current_authenticated_owner) and #119346 passes 16/16. kvnloo fork #51's 4 repro tests also pass on #119346."
+   },
+   "carrier": {
+    "pr": 119346,
+    "author": "musabatas <musabatas@gmail.com>",
+    "why": "The only upstream PR for the defect. It is correct on every launch/request shape probed, uses the canonical helper pair that session rows already use for profile_name (methods_session.py:296, :2241; session_workdir.py:452), is a one-line production change with a round-trip test that fails on main, and merges clean. kvnloo fork #51 is not upstream and is wrong for named-launch gateways and root-homed sessions."
+   },
+   "fold_ins": [
+    {
+     "from": "fork #51 (kvnloo/hermes-agent)",
+     "author": "kvnloo",
+     "co_authored_by": "Kevin Rajan <7121943+kvnloo@users.noreply.github.com>",
+     "hunk_scope": "(1) tests/gateway/test_browser_control_cloud.py: drop the line '\"profile\": \"default\",' from the six hand-rolled server._sessions fixtures (foldin-fixture-drop-dead-profile-key.diff, -6). Adapted from the fork's fixture migration: the fork replaced the key with a synthetic profile_home '/hermes/profiles/default', but a launch-profile session carries no profile_home, which is the shape kept here. (2) New tests/gateway/test_browser_controller_session_profile.py (3 cases above): adds the named-launch and Hermes-root cases and the fork's artifact-store slot invariant, none of which #119346's own test covers (it pins the launch profile to 'default').",
+     "why": "With #119346 alone, the six fixtures still pass through a dead 'profile' key that would hide a regression back to session['profile']. #119346's own test cannot distinguish its canonical lookup from a basename shortcut (fork #51's approach passes it).",
+     "test": "Regression file: FAIL 3/3 on main 298a01c7, PASS 3/3 on main + #119346. Fixture correction: 3 failures on main, 16/16 on main + #119346."
+    }
+   ],
+   "close_after_merge": [],
+   "exclude_reason": null,
+   "row": "| none (cloud `browser.controller.register` refuses every created session with 4403; kvnloo fork #51) | #119346 (musabatas) | main: FAIL 3/3 (4403 on every `session.create` then `browser.controller.register`); #119346: merges clean, PASS 3/3; kvnloo fork #51 (reference, not upstream): FAIL 2/3 (a gateway launched under profile `work` registers its sessions as `default`, and a session homed at the Hermes root registers as the root's basename) | kvnloo (fork #51): fixture correction in `tests/gateway/test_browser_control_cloud.py` (drop the `\"profile\": \"default\"` key that no production builder stamps from the six hand-rolled cloud fixtures) plus `tests/gateway/test_browser_controller_session_profile.py` (named-launch cases and the artifact-store slot invariant); `Co-authored-by: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>` | none (#119346 is the only same-defect PR; fork-side, close kvnloo/hermes-agent#51) | On main the register handler reads `session[\"profile\"]`, which no production session builder stamps, so every real cloud registration is refused with 4403. Main's cloud tests pass only because six hand-rolled fixtures carry that key: with it dropped, 3 of them fail on main and all pass with #119346. #119346 uses `profile_name_for_home(profile_home) or _current_profile_name()`, the same expression session rows already use for `profile_name`. Reverting that line re-fails 3/3, and so does dropping its launch-profile fallback. The 5 browser-control test files go from 84/84 to 88/88. |",
+   "row_fork_draft": "| none (cloud browser.controller.register 4403; fork #51) | #119346 (musabatas) | main 298a01c7 FAIL 3/3 (4403); #119346 PASS 3/3, merges clean; fork #51 FAIL 2/3 (named launch -> 'default'; root home -> basename) | kvnloo (fork #51, Co-authored-by Kevin Rajan): drop dead 'profile' key from six cloud fixtures + tests/gateway/test_browser_controller_session_profile.py | none (close kvnloo/hermes-agent#51) | Main reads session['profile'], which no builder stamps; fixtures mask it (3 fail on main without the key). #119346's canonical lookup passes all cases; reverting it re-fails 3/3; browser-control files 84/84 -> 88/88. |",
+   "notes": "(1) GitHub reports mergeable UNKNOWN for #119346 (never computed; no maintainer activity since 2026-09-22); it merges clean on 298a01c7 with no conflict. (2) #111800 (Pydantic wire refactor) rewrites the same handler and keeps the buggy line as context; whichever lands second needs a one-line rebase. (3) The only runtime observables are the 4403 refusal and artifact-store slot selection; scope_for_session dispatch matching ignores profile_id. (4) Not used from fork #51: its 244-line test_browser_control_profile_repro_real.py and its Path(profile_home).name production change (wrong for named-launch gateways and root-homed sessions, see probe-matrix.log). (5) Hermes' ledger had no record of #119346 (fork-51 verdict). (6) Fork-side: close kvnloo/hermes-agent#51 after the carrier merges. (7) PR heads pinned at refs/w2/pr/119346 and refs/w2/fork/51 (fork commit cherry-picked onto refs/w2/main) in $S/h.git. No tripwire hits.",
+   "evidence_dir": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/browser-4403/"
+  },
+  {
+   "issue": "#125919",
+   "slug": "mem-config",
+   "seed": "fork #30 (kvnloo/hermes-agent)",
+   "title": "A failing `from tools.memory_tool import ...` in agent_init._init_memory leaves mem_config unbound and silently drops the configured external memory provider",
+   "main_sha": "298a01c79b38018e029e50f77efe67c4a4fdbd40",
+   "candidates": [
+    {
+     "pr": 126106,
+     "author": "Wenfengcheng",
+     "created": "2026-09-28T07:18:51Z",
+     "last_activity": "2026-09-28T07:36:56Z (no comments or reviews)",
+     "mergeable_github": "MERGEABLE/BLOCKED",
+     "merges_clean_on_pinned_main": true,
+     "diff_size": "+162/-1, 2 files (agent/agent_init.py +3/-1, tests/agent/test_memory_bootstrap_independence.py +159)",
+     "has_tests": "yes: 3 test functions / 10 cases (public AIAgent ctor, core/absent/malformed provider boundaries, disk-installed MemoryProvider through real config.yaml)",
+     "approach": "Provider selection reads _cfg_dict(_agent_cfg, 'memory').get('provider', '') instead of the built-in block's local mem_config. Same normalization as get_builtin_memory_config on the success path; the built-in store stays optional and silent. 'Part of #125919' (config-load diagnostics left to #125960). Labels type/bug, comp/agent, comp/plugins, tool/memory, P3, area/memory."
+    },
+    {
+     "pr": 87028,
+     "author": "richardclawbot",
+     "created": "2026-08-15T13:53:59Z",
+     "last_activity": "2026-09-06T04:08:38Z",
+     "mergeable_github": "UNKNOWN/UNKNOWN",
+     "merges_clean_on_pinned_main": "false: conflicts in agent/agent_init.py and agent/memory_manager.py (written against the pre-_init_memory init_agent layout)",
+     "diff_size": "+150/-10, 4 files",
+     "has_tests": "yes, for its own feature (tests/agent/test_agent_init_memory_prefetch_timeout.py)",
+     "approach": "Feature: honor memory.external_prefetch_timeout. Hoists mem_config = _agent_cfg.get('memory', {}) above the built-in try as a side effect, which would also bind it on import failure (raw section, so a malformed section has the same 'str'.get problem as fork #30). Does not reference #125919. Not A/B'd (conflicting, different defect)."
+    },
+    {
+     "pr": 18565,
+     "author": "natehale",
+     "created": "2026-05-01T22:10:11Z",
+     "last_activity": "2026-09-23T10:31:38Z",
+     "mergeable_github": "UNKNOWN/UNKNOWN",
+     "merges_clean_on_pinned_main": "false: conflicts in 11 files",
+     "diff_size": "+1068/-25, 18 files",
+     "has_tests": "yes, for its own feature",
+     "approach": "Feature: per-job cron external memory provider modes (needs-decision). Initializes mem_config = {} before the built-in block as a side effect. Not A/B'd (conflicting, design-gated feature)."
+    }
+   ],
+   "candidates_checked_not_same_defect": [
+    {
+     "pr": 125960,
+     "author": "YS-OH-CORE",
+     "why": "Open, MERGEABLE (2026-09-28). The other half of #125919: warns when load_config_readonly() fails at init_agent. It does not touch _init_memory or mem_config; #126106's body defers diagnostics to it. Complementary, stays open."
+    },
+    {
+     "pr": 43313,
+     "author": "bionicbutterfly13",
+     "why": "Open (2026-06-10). Raises the 'provider not found or not available' DEBUG line to a warning; it does not bind mem_config, so the import-failure path still raises UnboundLocalError."
+    },
+    {
+     "pr": 123055,
+     "author": "Synxneuos",
+     "why": "Open (2026-09-25). SystemExit containment in provider availability probes (#123042), a different trigger."
+    },
+    {
+     "pr": 123057,
+     "author": "kvnloo",
+     "why": "Open (2026-09-25), kvnloo's own. SystemExit containment for memory providers, a different trigger."
+    }
+   ],
+   "regression_test": {
+    "source": "#126106's tests/agent/test_memory_bootstrap_independence.py, unchanged (byte-identical to the previous run's leftover copy)",
+    "path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/mem-config/test_memory_bootstrap_independence.py (placed at tests/agent/test_memory_bootstrap_independence.py)",
+    "tests": [
+     "test_public_agent_preserves_provider_selection[skip_memory x fail_builtin_import] (4)",
+     "test_builtin_failure_does_not_invent_provider_or_plugin_error[None|{}|'malformed'|{'provider': ''}|{'provider': 'builtin'}] (5)",
+     "test_disk_provider_discovery_survives_builtin_import_failure (1)"
+    ],
+    "contract": "When `from tools.memory_tool import ...` fails inside _init_memory, a configured external provider is still loaded, initialized with the session id and its tools injected (public AIAgent ctor and a disk-installed provider via config.yaml), while skip_memory still loads nothing. Absent, blank, core or malformed provider settings load no provider and log no 'Memory provider plugin init failed'.",
+    "evidence_path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/mem-config/"
+   },
+   "ab_results": {
+    "main": {
+     "result": "fail",
+     "detail": "7 failed / 3 passed. Public ctor with skip_memory=False plus import failure: 'built-in import disabled the external provider' (_memory_manager is None). Disk provider: manager None. All 5 core/absent/malformed cases log \"Memory provider plugin init failed: cannot access local variable 'mem_config' where it is not associated with a value\"."
+    },
+    "126106": {
+     "result": "pass",
+     "detail": "10/10, merges clean (head 1d5d0a2562)."
+    },
+    "fork#30 (kvnloo, reference, not an upstream PR)": {
+     "result": "fail",
+     "detail": "1 failed / 9 passed. 381e59256b conflicts on main (init_agent was split into _init_memory with suppress()), so its production hunk was hand-ported (fork30-ported-onto-main.diff, +7/-1: raw default mem_config = _agent_cfg.get('memory', {}) before the block, plus the once-per-process 'Built-in memory store unavailable' warning). [malformed] fails: the raw default is the string 'malformed', so the import-failure path logs \"Memory provider plugin init failed: 'str' object has no attribute 'get'\"."
+    },
+    "87028": {
+     "result": "not run",
+     "detail": "CONFLICTING on main (agent/agent_init.py, agent/memory_manager.py). Same raw-section hoist as fork #30, as a side effect of a prefetch-timeout feature."
+    },
+    "18565": {
+     "result": "not run",
+     "detail": "CONFLICTING on main (11 files). Needs-decision cron feature; mem_config = {} default is a side effect."
+    },
+    "negative_control": {
+     "result": "fail (as intended)",
+     "detail": "On main + #126106 with its line reverted to mem_config.get('provider', '') if mem_config else '': 7 failed / 3 passed, identical to main."
+    }
+   },
+   "adjacent_tests": {
+    "files": [
+     "tests/agent/test_memory_provider_init.py",
+     "tests/agent/test_memory_provider.py",
+     "tests/agent/test_memory_provider_unavailable_warning.py",
+     "tests/agent/test_skip_memory_store.py",
+     "tests/agent/test_builtin_memory_disabled_surface.py",
+     "tests/gateway/test_api_server_memory_sessions.py"
+    ],
+    "result": "Main: 86 passed, 0 failed. Main + #126106: 96 passed, 0 failed (86 + its 10). kvnloo fork #30's own tests/run_agent/test_mem_config_unbound_init.py is stale (patches run_agent.get_tool_definitions, which no longer exists): 0/3 on main and on #126106."
+   },
+   "carrier": {
+    "pr": 126106,
+    "author": "Wenfengcheng <30426178+Wenfengcheng@users.noreply.github.com>",
+    "why": "The only upstream PR aimed at this defect. It is a 3-line production change that reuses the existing _cfg_dict normalization, so it is correct on malformed sections where the raw-section hoist (fork #30, #87028) is not. Its test drives the public AIAgent constructor and a real disk-installed provider, it merges clean and GitHub reports MERGEABLE. #87028 and #18565 fix it only as a side effect of conflicting feature PRs."
+   },
+   "fold_ins": [],
+   "close_after_merge": [],
+   "exclude_reason": null,
+   "row": "| #125919 (part: unbound `mem_config` drops the configured external memory provider) | #126106 (Wenfengcheng) | main: FAIL 7/10 on #126106's `tests/agent/test_memory_bootstrap_independence.py`; #126106: merges clean, PASS 10/10; kvnloo fork #30 (reference; conflicts, production hunk hand-ported): FAIL 1/10 (`memory: \"malformed\"` plus an import failure logs \"'str' object has no attribute 'get'\"); #87028, #18565: CONFLICTING, side effect of other features, not run | none (kvnloo fork #30's once-per-process \"Built-in memory store unavailable\" WARNING is a separate diagnostic contract next to #125960; offer it as a review note, not a fold-in) | none (#125960 is the config-load diagnostic half of #125919 and stays open; #87028 and #18565 carry other features; fork-side, close kvnloo/hermes-agent#30) | On main, `_init_memory` binds `mem_config` only inside the `suppress(Exception)` block whose first statement imports `tools.memory_tool`. When that import fails (the issue's missing-`ruamel.yaml` cron env), provider selection raises UnboundLocalError, which is logged as \"Memory provider plugin init failed\", and the configured provider never loads. #126106 reads the provider name from `_cfg_dict(_agent_cfg, \"memory\")` (+3/-1). Its test drives the public `AIAgent` constructor and a disk-installed provider, and reverting the line re-fails the same 7 cases. 6 adjacent memory-init files go from 86/86 to 96/96. |",
+   "row_fork_draft": "| #125919 (part: unbound mem_config) | #126106 (Wenfengcheng) | main 298a01c7 FAIL 7/10; #126106 PASS 10/10, merges clean; fork #30 (hand-ported) FAIL 1/10 (malformed section); #87028, #18565 CONFLICTING, not run | none (fork #30's built-in-unavailable WARNING = review note only) | none (#125960 stays open for diagnostics; close kvnloo/hermes-agent#30) | Import failure leaves mem_config unbound, so provider selection raises UnboundLocalError ('Memory provider plugin init failed') and the configured provider never loads. #126106 reads the provider from _cfg_dict(_agent_cfg, 'memory'); reverting re-fails 7/10; adjacent 86/86 -> 96/96. |",
+   "notes": "(1) Partial fix by design: #126106 is 'Part of #125919'. The config-load warning half is #125960 (YS-OH-CORE, MERGEABLE), which touches a different hunk (init_agent's load_config_readonly fallback) and composes with #126106 without a textual conflict (not merged together here). After both, the remaining silent case in #125919 is the built-in store itself: with tools.memory_tool unimportable, agent._memory_store stays None with no log at any level. (2) kvnloo fork #30's only distinct content is a once-per-process WARNING 'Built-in memory store unavailable: %s' replacing that silent suppress(). It is a separate diagnostic contract, adjacent to #125960 (which deliberately omits exception text because config errors can carry secrets) and #43313. Offer it as a review suggestion on #126106 or #125960, not as a fold-in. (3) Fork #30's raw-section default (and #87028's identical hoist) mishandles memory: <non-dict> on the import-failure path; #126106 does not. (4) Fork-side: close kvnloo/hermes-agent#30 after the carrier merges. (5) The previous run's leftover memcfg diff was #126106 merged as-is; everything was re-run here on 298a01c7. Refs pinned: refs/w2/pr/{126106,87028,18565}, refs/w2/fork/30 (hand-port, reference only). No tripwire hits.",
+   "evidence_dir": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/mem-config/"
+  },
+  {
+   "issue": "none (filtered `hermes sessions export` drops ended pinned sessions; kvnloo fork #25)",
+   "slug": "export-pinned",
+   "seed": "fork #25 (kvnloo/hermes-agent)",
+   "title": "Filtered `hermes sessions export` silently drops ended pinned sessions (inherits prune's include_pinned=False)",
+   "main_sha": "298a01c79b38018e029e50f77efe67c4a4fdbd40",
+   "candidates": [
+    {
+     "pr": 99487,
+     "author": "alissonrgalindo",
+     "created": "2026-08-31T15:25:06Z",
+     "last_activity": "2026-09-01T16:11:25Z (Enough1122 AI review comment; no maintainer activity)",
+     "mergeable_github": "UNKNOWN (GitHub has not computed it; locally CONFLICTING)",
+     "merges_clean_on_pinned_main": "false: conflicts in hermes_cli/session_filters.py (docstring), hermes_cli/sessions_cmd.py (one block: main split the cmd_sessions monolith into _cmd_export/_export_trace/_export_markdown) and hermes_state.py (one block: main is 1685 lines after the SessionDB mixin split; prune selectors now live in hermes_state_maintenance.py and _apply_prune_age_filter is gone). Not context drift: a hand port is needed (99487-port-onto-main.diff, production +33/-8 over 2 files); tests and docs then apply cleanly",
+     "diff_size": "+102/-17, 7 files (2 docs)",
+     "has_tests": "yes: tests/hermes_cli/test_sessions_export_md_cli.py (FakeDB filters-dict assertion include_pinned is True), tests/test_hermes_state.py (list_export_candidates includes open sessions). The CLI test fails on main for a test-side reason (lambda: FakeDB() rejects main's SessionDB(read_only=...)); passes after a 1-token fix",
+     "approach": "Two contracts in one PR. (1) Pinned: `filters[\"include_pinned\"] = True` in the export branch. (2) Open sessions (#89223): new SessionDB.list_export_candidates that strips the mandatory ended_at guard via a fail-loud _split_ended_guard helper (also reused by count_open_prune_matches); the 4 export call sites switch to it; prune/archive keep list_prune_candidates. Docs updated (en + zh-Hans). Labels type/bug, comp/cli, P2, sweeper:risk-session-state, area/sessions. No closing issue."
+    }
+   ],
+   "candidates_checked_not_same_defect": [
+    {
+     "pr": 89226,
+     "author": "liuhao1024",
+     "why": "Open (created 2026-08-18, Closes #89223, +114/-4). Adds list_prune_candidates(include_open=True) for the 4 export call sites: the open-session half only, never sets include_pinned. Production port onto main fails the pinned test exactly like main (4/5). alt-glitch closed #89856 (RelaxJonh) as 'Duplicate of #89226', so #89226 is the triage-canonical PR for #89223 and competes with #99487's list_export_candidates half."
+    },
+    {
+     "pr": 89856,
+     "author": "RelaxJonh",
+     "why": "CLOSED 2026-08-28 as duplicate of #89226 (open-session half, #89223)."
+    },
+    {
+     "pr": 126434,
+     "author": "jonpol01",
+     "why": "Open: a pin covers compression continuations published after it. Prune/pin semantics, does not touch the export filter path."
+    },
+    {
+     "pr": 126645,
+     "author": "JoaoMarcos44",
+     "why": "Open: protect pinned compression continuations in prune. Same as above, export untouched."
+    },
+    {
+     "pr": 123323,
+     "author": "jonpol01",
+     "why": "Open: export/repair/optimize exit non-zero on failure. Exit codes only, no selector change."
+    },
+    {
+     "pr": 85171,
+     "author": "ranxi2001",
+     "why": "Open: archive filtered unended sessions (list_archive_candidates). Archive path, not export."
+    }
+   ],
+   "regression_test": {
+    "source": "new; the real-SessionDB end-to-end idea from kvnloo fork #25 tests/hermes_cli/test_export_filters_include_pinned.py (whose committed tests are stale on main: they patch hermes_state.SessionDB with a zero-arg lambda and call the old cmd_sessions shape)",
+    "path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/export-pinned/test_sessions_export_filtered_pinned.py (placed at tests/hermes_cli/test_sessions_export_filtered_pinned.py)",
+    "tests": [
+     "test_filtered_export_writes_ended_pinned_and_pinned_archived_sessions[jsonl|md]",
+     "test_filtered_export_dry_run_counts_pinned_sessions[jsonl|trace]",
+     "test_prune_and_archive_still_spare_pinned_sessions"
+    ],
+    "contract": "Through the real `hermes sessions export --source cli` CLI against a real on-disk SessionDB, a filtered (read-only) export selects ended pinned and pinned+archived sessions in the jsonl, md and trace paths, as bare export and --session-id already do; the destructive prune/archive selector still excludes pinned rows.",
+    "evidence_path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/export-pinned/"
+   },
+   "ab_results": {
+    "main": {
+     "result": "fail",
+     "detail": "4 failed / 1 passed. jsonl and md exports write only the unpinned session (`assert {'20260101_000001_plain1'} == {plain1, pinned, pinarc}`); jsonl and trace --dry-run print 'Would export 1 session(s) (source 'cli')'. The prune anchor passes."
+    },
+    "99487": {
+     "result": "pass (after a hand port; does not merge)",
+     "detail": "git merge conflicts in 3 files (merge-99487.txt). Hand-ported onto main (99487-port-onto-main.diff): 5/5. Its own CLI test fails on main (SystemExit 1, `<lambda>() got an unexpected keyword argument 'read_only'`) and passes after `lambda *a, **k: FakeDB()` (7 own tests pass). Negative control: the port minus its single `filters[\"include_pinned\"] = True` line fails 4/5 exactly like main, so the pinned contract rides on that one line and the list_export_candidates half is the separate #89223 contract."
+    },
+    "89226": {
+     "result": "fail",
+     "detail": "Production hunks ported onto main (89226-port-onto-main.production.diff; it also conflicts on merge): 4 failed / 1 passed, identical to main. Open-session fix only."
+    },
+    "fork#25 rebuilt (reference, not an upstream candidate)": {
+     "result": "pass",
+     "detail": "The fork's 1-line `filters[\"include_pinned\"] = True` in _cmd_export (fork25-rebuilt-onto-main.diff): 5/5."
+    }
+   },
+   "adjacent_tests": {
+    "files": [
+     "tests/hermes_cli/test_sessions_export_md_cli.py",
+     "tests/hermes_cli/test_session_export.py",
+     "tests/hermes_cli/test_session_filters.py",
+     "tests/hermes_cli/test_sessions_pin.py",
+     "tests/hermes_cli/test_sessions_export_output_dir.py",
+     "tests/hermes_cli/test_sessions_delete.py",
+     "tests/hermes_state/test_hermes_state.py"
+    ],
+    "result": "Main plus the regression test: 320 passed, 4 failed (the 4 regression cases). Fork #25 one-liner: 324 passed, 0 failed. #99487 hand port (with its own tests): 325 passed, 1 failed (its CLI test's lambda drift; passes with the 1-token fix)."
+   },
+   "carrier": null,
+   "fold_ins": [],
+   "close_after_merge": [],
+   "exclude_reason": "Carrier not executable as a wave row yet. #99487 (alissonrgalindo) is the only open PR that fixes the pinned contract, and hand-ported onto 298a01c7 it passes 5/5, but it does not merge: all three production files conflict because main split hermes_state.py into mixins (prune selectors now in hermes_state_maintenance.py, _apply_prune_age_filter replaced by _prune_where) and split cmd_sessions into _cmd_export/_export_trace/_export_markdown. Its list_export_candidates must be re-implemented in another file (production +33/-8), and its own CLI test needs a drift fix. It also bundles the open-session contract of #89223, where #89226 (liuhao1024, 2026-08-18, triage-canonical per alt-glitch's duplicate close of #89856) is the earlier claimant. The pinned fix itself is one line (negative control). Becomes a row once #99487 is rebased, ideally with the pinned line split from the #89223 half (see row_when_rebased).",
+   "excluded_summary": "kvnloo fork #25 vs #99487 (filtered sessions export drops ended pinned sessions): #99487 is the only PR that fixes it (hand-ported onto main it passes the real-SessionDB test 5/5, and its single `include_pinned=True` line carries the fix), but it conflicts in all three production files after main's SessionDB mixin split and cmd_sessions decomposition, so merging needs a port of list_export_candidates into hermes_state_maintenance.py (+33/-8). It also bundles the open-session half of #89223, where #89226 (liuhao1024, earlier, triage-canonical) competes. Becomes a row once #99487 is rebased (`row_when_rebased` in the JSON). Until then, offer the real-SessionDB test and the 1-token lambda fix for its CLI test as review support on #99487.",
+   "row": null,
+   "carrier_when_rebased": {
+    "pr": 99487,
+    "author": "alissonrgalindo",
+    "why": "Only open PR that fixes the pinned contract; correct (5/5 ported, negative control isolates its include_pinned line), has tests, keeps prune/archive on the guarded selector."
+   },
+   "fold_ins_when_rebased": [
+    {
+     "from": "fork #25 (kvnloo/hermes-agent)",
+     "author": "kvnloo",
+     "co_authored_by": "Kevin Rajan <7121943+kvnloo@users.noreply.github.com>",
+     "hunk_scope": "New file tests/hermes_cli/test_sessions_export_filtered_pinned.py (the regression test above: real SessionDB, jsonl/md/trace paths, prune anchor). Optionally the 1-token `lambda *a, **k: FakeDB()` fix in #99487's own CLI test.",
+     "why": "#99487's CLI test only asserts the filters dict handed to a FakeDB; nothing checks that pinned and pinned+archived rows actually land in the export files or that the destructive selector keeps the pin guard.",
+     "test": "Fails 4/5 on main 298a01c7; passes 5/5 on main plus the #99487 port."
+    }
+   ],
+   "row_when_rebased": "| none (filtered export drops ended pinned sessions; kvnloo fork #25) | #99487 (alissonrgalindo), once rebased | main: FAIL, 4 of 5 (jsonl/md/trace filtered exports skip the pinned and pinned+archived rows); #99487 hand-ported: PASS 5/5 (negative control: dropping its `include_pinned=True` line re-fails 4 of 5); #89226 ported: FAIL, 4 of 5 (open-session fix only); kvnloo fork #25 rebuilt: PASS 5/5 | kvnloo (fork #25): real-SessionDB regression test `tests/hermes_cli/test_sessions_export_filtered_pinned.py` (jsonl, md and trace paths; prune still spares pins); `Co-authored-by: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>` | none (#89226 stays open for the #89223 open-session decision) | On main `_cmd_export` overrides `archived` but not `include_pinned`, so `_prune_filter_where` appends `COALESCE(s.pinned, 0) = 0` and every filtered export drops pinned sessions that bare export and --session-id include. #99487's one `include_pinned=True` line fixes it, and adjacent session files go from 320 passed / 4 failed to 325 passed / 1 failed (its own CLI test's `lambda: FakeDB()` drift). |",
+   "notes": "(1) Need confirmed on main 298a01c7: `_cmd_export` (hermes_cli/sessions_cmd.py:322-332) sets filters['archived']=None but never include_pinned; all three export selectors (_collect_sessions L356, _export_trace L444, _export_markdown L513) call list_prune_candidates, and hermes_state_maintenance.py:224-225 appends `COALESCE(s.pinned, 0) = 0` unless include_pinned. No upstream issue exists for the pinned half. (2) Two contracts, two lanes: pinned (only #99487 fixes it) and open sessions (#89223: #89226 is earlier and triage-canonical; #99487's list_export_candidates competes). The test seeds only ended sessions so it never mixes them. A maintainer choosing between #89226's include_open flag and #99487's list_export_candidates is a design call outside this wave. (3) Suggested review note on #99487: rebase onto the mixin split, consider splitting the one-line pinned fix (which nobody contests) from the #89223 half, fix the CLI test's zero-arg SessionDB lambda, and add the real-SessionDB test. (4) Fork-side: kvnloo fork #25's own tests are stale on main (verdict notes); the regression test here replaces them. Close kvnloo/hermes-agent#25 after #99487 (or any pinned fix) merges. (5) Hygiene: `git apply -3` of #89226's tests recorded two preimage-only rerere entries in the shared rr-cache (no postimage was ever recorded, so nothing can be replayed); every merge in this cluster ran with rerere.enabled=false. The worktree was removed. Refs: refs/w2/pr/99487 e6ec55bbf9, refs/w2/pr/89226 1cc2350b63, fork commit bf7b7909c9.",
+   "evidence_dir": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/export-pinned/"
+  },
+  {
+   "issue": "#125003",
+   "slug": "sandbox-kill",
+   "seed": "fork #41 (kvnloo/hermes-agent)",
+   "title": "Killing a sandbox-backed background process (docker/ssh/modal/daytona/vercel/singularity) leaves the command running",
+   "main_sha": "298a01c79b38018e029e50f77efe67c4a4fdbd40",
+   "candidates": [
+    {
+     "pr": 125004,
+     "author": "Adolanium",
+     "created": "2026-09-27T09:03:45Z",
+     "last_activity": "2026-09-27T09:27:00Z (no comments or reviews)",
+     "mergeable_github": "UNKNOWN/UNKNOWN (not yet computed by GitHub)",
+     "merges_clean_on_pinned_main": true,
+     "diff_size": "+67/-4, 2 files (tools/process_registry.py +10/-4, tests/tools/test_process_registry.py +57)",
+     "has_tests": "yes: TestSandboxKillTree in tests/tools/test_process_registry.py (real bash via a fake env; child gone, exit file 143)",
+     "approach": "spawn_via_env starts the wrapper under `set -m`, so the wrapper is its own process-group leader (PGID == recorded PID). The wrapper traps TERM (`trap : TERM`) so it outlives its child and still writes the exit code, and its own stdio goes to /dev/null. The _signal_kill sandbox branch sends `kill -TERM -- -<pid>` to the whole group. No pkill/setsid needed in the image. Fixes #125003 (same author)."
+    }
+   ],
+   "candidates_checked_not_same_defect": [
+    {
+     "pr": 129674,
+     "author": "Froraut",
+     "why": "Open 2026-09-30, replaces closed #128735/#128033/#128102. Sandbox background cwd, exit-file completion and final log read. Does not touch the kill path; fails the regression test 4/4 alone. Merges clean together with #125004 (either order tested: #129674 then #125004) and the combination passes the regression test 4/4 and test_process_registry.py 115/115. Its exit-file poller is compatible with #125004's trapped wrapper writing 143."
+    },
+    {
+     "pr": 127778,
+     "author": "Froraut",
+     "why": "Reaps failed background launches; no kill-path change."
+    },
+    {
+     "pr": 8075,
+     "author": "tomqiaozc",
+     "why": "env_ref weakref so environments can be GC'd (#8041); touches kill_process only to handle a dead weakref."
+    },
+    {
+     "pr": 121822,
+     "author": "Finn763",
+     "why": "Unbuffered sandbox-bg python and poll output recency; no kill-path change."
+    },
+    {
+     "pr": 123304,
+     "author": "jonpol01",
+     "why": "Sandbox heartbeats carry polled output; no kill-path change."
+    },
+    {
+     "pr": 124896,
+     "author": "liuhao1024",
+     "why": "Windows PTY host-tree kill (_signal_kill PTY branch), not the sandbox branch."
+    },
+    {
+     "pr": 108992,
+     "author": "fangliquanflq",
+     "why": "Windows PTY descendants surviving kill; host PTY branch only."
+    },
+    {
+     "pr": "75753, 78199, 100036, 122170, 122329, 82013, 109846",
+     "author": "trippyogi, itskaism, fangliquanflq, beardthelion, salch-cred, fangliquanflq, Sahilvishnaliya",
+     "why": "Mention spawn_via_env (failed-spawn reporting, workdir, env temp dirs, offline backends, persist_on_release); none changes the wrapper kill or _signal_kill (diff grep for kill/set -m/killpg/pkill/worker_pid: 0 lines)."
+    }
+   ],
+   "regression_test": {
+    "source": "new, adapted from #125004's TestSandboxKillTree (Adolanium): adds the real LocalEnvironment as a second sandbox stand-in, the command's own shell and a grandchild in the asserted tree, and identity-checked kill(1) cleanup (the conftest live-system guard refuses os.kill on reparented survivors)",
+    "path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/sandbox-kill/test_sandbox_background_kill_tree.py (placed at tests/tools/test_sandbox_background_kill_tree.py)",
+    "tests": [
+     "test_kill_stops_the_command_and_everything_it_started[local_env|plain_bash]",
+     "test_kill_records_the_termination_in_the_exit_file[local_env|plain_bash]"
+    ],
+    "contract": "Through the real spawn_via_env and kill_process against real bash, killing a sandbox background session stops the command's shell and everything it started (direct child and grandchild gone within 5 s), kill_process reports 'killed', and the wrapper records the termination (143) in hermes_bg_<id>.exit.",
+    "evidence_path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/sandbox-kill/"
+   },
+   "ab_results": {
+    "main": {
+     "result": "fail",
+     "detail": "4 failed. A: 'processes outlived the kill: shell, child, grandchild' in both envs (kill <wrapper pid> orphans nohup bash -lc and its tree). B: 'exit file was never written' in both envs. kill_process still returns status 'killed'."
+    },
+    "125004": {
+     "result": "pass",
+     "detail": "4/4, merges clean. Negative controls: reverting _signal_kill to `kill <pid>` gives 4 failed (the trapped wrapper keeps waiting, nothing dies); dropping `set -m` gives 4 failed (group kill hits ESRCH)."
+    },
+    "fork#41 rebuilt (reference, not a candidate)": {
+     "result": "fail (partial)",
+     "detail": "Hand port onto main (cherry-pick conflicts in process_registry.py and local.py). B 2/2, A 0/2: 'processes outlived the kill: grandchild', because `pkill -P <worker>` reaches only the worker's direct children. It also depends on pkill, which minimal images lack."
+    },
+    "129674 (adjacent, not same defect)": {
+     "result": "fail",
+     "detail": "4 failed, same as main. #129674 then #125004: both merge clean, 4/4."
+    },
+    "125004 + escalation fold-in": {
+     "result": "pass",
+     "detail": "Regression 4/4 and TERM-ignoring probe 2/2 (carrier alone: probe 0/2, 'survived: shell, child')."
+    }
+   },
+   "adjacent_tests": {
+    "files": [
+     "tests/tools/test_process_registry.py",
+     "tests/tools/test_local_temp_dir.py",
+     "tests/tools/test_process_registry_list_exit.py",
+     "tests/tools/test_terminal_compound_background.py",
+     "tests/tools/test_terminal_task_cwd.py",
+     "tests/tools/test_kill_verify_tree_death.py",
+     "tests/tools/test_process_checkpoint_readopt.py",
+     "tests/tools/test_process_wait_clarity.py",
+     "tests/tools/test_notify_on_complete.py",
+     "tests/gateway/test_abandoned_turn_process_cleanup.py"
+    ],
+    "result": "Main: 205 passed, 4 skipped, 0 failed. #125004: 210 passed (205 + its TestSandboxKillTree + 4 regression cases). #125004 + escalation fold-in: 212 passed (adds the 2 probe cases). All runs deselect tests/tools/test_process_registry.py::TestStdinHelpers::test_close_stdin_allows_eof_driven_process_to_finish: its ptyprocess child calls os.execvpe('/usr/bin/bash', ...), which the W2 tripwire blocks, so the file hangs to the 300 s per-file cap identically on main and every candidate (seen in an earlier run). That is a tripwire-blocked local PTY spawn, not a re-exec of the install. No other tripwire hits."
+   },
+   "carrier": {
+    "pr": 125004,
+    "author": "Adolanium <94890352+Adolanium@users.noreply.github.com>",
+    "why": "The only open PR for #125003 (same author as the issue). It passes the full contract in both sandbox stand-ins, merges clean on 298a01c7, is the smallest footprint (+10/-4 production), needs no pkill/setsid in the image, keeps exit-code capture, and has a real-bash test. kvnloo fork #41 (earlier, 2026-09-13, fork-only) misses grandchildren and depends on pkill."
+   },
+   "fold_ins": [
+    {
+     "from": "fork #41 (kvnloo/hermes-agent)",
+     "author": "kvnloo",
+     "co_authored_by": "Kevin Rajan <7121943+kvnloo@users.noreply.github.com>",
+     "hunk_scope": "OPTIONAL, separable. tools/process_registry.py _signal_kill sandbox branch, +10/-1 on top of #125004 (foldin-sandbox-kill-escalation.diff): after `kill -TERM -- -<pid>`, poll `kill -0 -- -<pid>` every 0.1 s and send `kill -KILL -- -<pid>` if the group outlives terminal.daemon_term_grace_seconds (default 2.0; 0 disables), with the execute timeout raised by the grace. Plus one test: a command that ignores SIGTERM (`trap '' TERM; sleep 300 & ...; wait`) is gone after the kill (probe_sandbox_kill_term_ignored.py, or as a second test in #125004's TestSandboxKillTree). This re-expresses fork #41's TERM-then-KILL escalation for the carrier's process-group shape; fork #41's own pkill -P code does not carry over.",
+     "why": "Host-path parity (tools/AGENTS.md: the host teardown 'SIGKILLs whatever ignored both'). Without it a TERM-ignoring sandbox command keeps running while kill_process returns 'killed', because sandbox sessions skip the #115490 survivor check by design. Separable: the carrier alone satisfies the #125003 contract.",
+     "test": "Probe fails 2/2 on main and on #125004 ('survived: shell, child'), passes 2/2 with the fold-in; regression 4/4; adjacent 212/212.",
+     "optional": true
+    }
+   ],
+   "close_after_merge": [],
+   "exclude_reason": null,
+   "row": "| #125003 | #125004 (Adolanium) | main: FAIL, 4 of 4 (the command's shell, child and grandchild outlive the kill; no exit file); #125004: PASS 4/4, merges clean; kvnloo fork #41 rebuilt (reference): FAIL, 2 of 4 (grandchild survives `pkill -P`); #129674 (adjacent): FAIL 4/4, composes clean with #125004 | kvnloo (fork #41's TERM-then-KILL idea, re-expressed for the group shape; optional and separable, the carrier alone closes #125003): SIGKILL escalation for the sandbox process group after `terminal.daemon_term_grace_seconds` (`tools/process_registry.py` +10/-1, host-path parity) + a TERM-ignoring-command test; `Co-authored-by: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>` | none (no other open PR for #125003) | On main, `_signal_kill` sends `kill <wrapper pid>`, so the `nohup bash -lc` command and its tree keep running in the sandbox, no exit file is written, and `kill_process` still says \"killed\". #125004 puts the wrapper in its own group with `set -m`, traps TERM in it and signals the group: 4/4 in the real LocalEnvironment and a plain `bash -c` env; reverting either the group kill or `set -m` re-fails 4/4. Adjacent 10 files go from 205 to 210 passing. A command that ignores SIGTERM still survives #125004 with a \"killed\" receipt; the fold-in closes that (probe 0/2 to 2/2, adjacent 212/212). |",
+   "row_fork_draft": "| #125003 | #125004 (Adolanium) | main 298a01c7 FAIL 4/4; #125004 PASS 4/4 (clean merge); fork #41 rebuilt FAIL 2/4 (grandchild survives pkill -P); #129674 FAIL 4/4 (adjacent; composes clean) | kvnloo (fork #41 idea, Co-authored-by Kevin Rajan; optional, separable): group SIGKILL after terminal.daemon_term_grace_seconds (+10/-1) + TERM-ignoring test | none | main's kill <wrapper pid> orphans the command tree and writes no exit file while reporting killed; #125004's set -m group + trapped wrapper fixes both (NC: revert group kill or set -m re-fails 4/4); adjacent 205->210; fold-in closes the TERM-ignoring false receipt (probe 0/2 -> 2/2, adjacent 212). |",
+   "notes": "(1) Maintainer review point, not a test failure: tools/AGENTS.md documents a host teardown invariant, 'Background-process teardown signals the parent first ... Never SIGTERM descendants before the parent' (Chromium zygotes reaped mid-shutdown turn exit 0 into a SIGTRAP core dump). #125004 sends one SIGTERM to the whole sandbox group, so the command and its descendants are signalled together. Main's sandbox branch never followed the host ordering (it only signals the wrapper, which is not the command), and the invariant is written against _terminate_host_pid, but a reviewer may ask whether it should extend to sandboxes. Making it parent-first needs the command's PID (the wrapper would have to background it and forward TERM), which is a redesign of #125004, not a fold-in; neither the regression test nor the probe can observe the difference without a zygote-style program. (2) Job control: every backend's execute() runs `bash -c`/`bash -lc` (base.py, ssh.py, singularity.py, modal.py, vercel_sandbox.py), and bash 5.3 honours `set -m` with no tty (jobcontrol-probe.log: wrapper PGID == PID; the group kill empties it). Simulated missing job control (NC-B, `set -m` removed): the group kill hits ESRCH and the command, its tree and the wrapper all keep running with a 'killed' receipt; main also leaves the command running (it kills only the wrapper), so this is not worse for the user command. Residual: a bash built without job control. Real docker/ssh/modal backends NOT_TESTED (no sandbox available); LocalEnvironment uses the same spawn-per-call bash -c model. (3) Fold-in cost: on a container whose PID 1 does not reap (docker_snap_compat without --init) the exited wrapper stays a zombie, `kill -0 -- -<pgid>` keeps succeeding, and the kill waits the full grace (2 s) before a no-op SIGKILL. Not tested. (4) Side effect of #125004 worth knowing: main's wrapper keeps the exec stdout pipe open, so a LocalEnvironment launch of a long command waits on the orphaned-pipe guard (about 0.46 s measured) and a pipe-capturing env without that guard (subprocess.run(capture_output=True)) hangs until its 10 s timeout and records failed_start; #125004's `> /dev/null 2>&1` on the wrapper removes that (0.02 s). (5) #129674 (Froraut) is adjacent and composes cleanly; its exit-file poller reads #125004's 143. (6) kvnloo fork #41 is not competitive: its rebuild misses grandchildren, needs pkill, kills children before the worker (opposite of the AGENTS.md order) and adds a .worker_pid artifact plus a local.py cleanup regex. Fork-side: close kvnloo/hermes-agent#41 after the carrier merges. (7) Housekeeping: PR heads pinned at refs/w2/pr/125004 (2692841849) and refs/w2/pr/129674 (84ae319978). All test runs used setsid -w, isolated HOME/HERMES_HOME and the W2 tripwire; no `sleep 300` survivors were left after any run (checked by ps after each). A `systemd-run` stub was added to the shared tripwire bin (blocking direction only). The worktree was removed.",
+   "evidence_dir": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/sandbox-kill/"
+  },
+  {
+   "issue": "#108480",
+   "slug": "cron-owner",
+   "seed": "fork #60 (kvnloo/hermes-agent)",
+   "title": "cron recovery terminalizes a live owner when its start-time fingerprint was never recorded (started_at NULL)",
+   "main_sha": "298a01c79b38018e029e50f77efe67c4a4fdbd40",
+   "candidates": [
+    {
+     "pr": 108484,
+     "author": "Liuzikaii",
+     "created": "2026-09-11T18:24:20Z",
+     "last_activity": "2026-09-11T18:30:25Z (no comments or reviews; issue #108480 has a supporting analysis by Enough1122 on 2026-09-27)",
+     "mergeable_github": "UNKNOWN (GitHub has not computed it; locally CONFLICTING, one hunk)",
+     "merges_clean_on_pinned_main": "false: one conflict hunk in cron/executions.py. Its second hunk (unreadable current fingerprint -> live) is already on main via #117584 with drift tolerance. Resolved mechanically by keeping main's side; the started_at hunk auto-merges, so the net production change is one line (108484-merged-on-main.resolved.diff)",
+     "diff_size": "+73/-2, 2 files (net on main after rebase: +1/-1 production, +69 test)",
+     "has_tests": "yes: tests/cron/test_owner_uncertainty.py (real subprocess owner, temp-profile SQLite, both ledgers, parametrized recorded/current). Its [current] case fails on main for a test-side reason: the `started_at + 1` mismatch sentinel is inside main's 200-tick drift tolerance; passes with the sentinel moved past it",
+     "approach": "Shared cron.executions._owner_is_live: a live PID with no recorded fingerprint returns True (not proved abandoned), and an unreadable current fingerprint returns True. Covers execution and delivery recovery together because delivery_queue imports the shared helper. Fixes #108480."
+    },
+    {
+     "pr": 83939,
+     "author": "Leon-Geldmann",
+     "created": "2026-08-11T14:17:42Z",
+     "last_activity": "2026-08-16T17:03:14Z",
+     "mergeable_github": "UNKNOWN (locally CONFLICTING)",
+     "merges_clean_on_pinned_main": "false: conflicts in 32 files (merge-83939.txt)",
+     "diff_size": "+6392/-646, 36 files",
+     "has_tests": "yes (scheduler handoff suites); not run, does not merge",
+     "approach": "'fence cross-process scheduler handoff': a redesign that adds a stable_started_at fingerprint and, as one hunk among many, makes `started_at is None` return True. Labels sweeper:risk-session-state, sweeper:risk-message-delivery, sweeper:risk-compatibility. Does not reference #108480."
+    }
+   ],
+   "candidates_checked_not_same_defect": [
+    {
+     "pr": 117584,
+     "author": "teknium1",
+     "why": "MERGED 2026-09-20 (salvage of #117514, liuhao1024): unreadable current fingerprint -> live, plus the drift-tolerant comparator. Fixed the other half of #108480; the NULL-recorded branch is untouched."
+    },
+    {
+     "pr": 111454,
+     "author": "Monti76",
+     "why": "Open: drift tolerance (500) + current-None -> live in _owner_is_live. Leaves `started_at is None: return pid == os.getpid()`; its drift half is superseded on main by #117584."
+    },
+    {
+     "pr": 117091,
+     "author": "emirsaffar-collab",
+     "why": "Open: ±2 s drift tolerance for gateway/status liveness fingerprints (scoped locks, pid_is_hermes). Does not touch cron._owner_is_live."
+    },
+    {
+     "pr": 106627,
+     "author": "chelsealong",
+     "why": "Open (Closes #106607): protect a live restart-safe worker from stale-owner recovery. Stale-claim bound, not the NULL fingerprint branch."
+    },
+    {
+     "pr": 121052,
+     "author": "djmango",
+     "why": "Open: late imports survive in-place upgrade; released claim records outcome first. No change to the owner predicate."
+    },
+    {
+     "pr": 104185,
+     "author": "fangliquanflq",
+     "why": "Open: keep scheduled jobs running across daemon upgrades. No change to the owner predicate."
+    },
+    {
+     "pr": 90293,
+     "author": "andrexibiza",
+     "why": "Open: atomic fallback routing, preserve unknown outcomes (#90089). No change to the owner predicate."
+    }
+   ],
+   "regression_test": {
+    "source": "adapted from #108484 tests/cron/test_owner_uncertainty.py (real child interpreter, both ledgers) plus kvnloo fork #60's dead-PID and recycled-PID anchors (mocked in the fork, real-subprocess here)",
+    "path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/cron-owner/test_cron_owner_null_fingerprint.py (placed at tests/cron/test_cron_owner_null_fingerprint.py)",
+    "tests": [
+     "test_live_owner_without_fingerprint_finishes_both_ledgers[recorded|current]",
+     "test_dead_owner_without_recorded_fingerprint_is_still_fenced",
+     "test_recycled_pid_with_known_mismatch_is_still_fenced"
+    ],
+    "contract": "Recovery run from another process does not fence a live owner whose start-time fingerprint was never recorded (or is unreadable now): recover_interrupted_executions() and recover_abandoned() return (0, 0) and the owner then completes its execution and delivery rows. A dead owner without a recorded fingerprint, and a live PID whose recorded fingerprint mismatches beyond the drift tolerance, are still fenced to unknown in both ledgers.",
+    "evidence_path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/cron-owner/"
+   },
+   "ab_results": {
+    "main": {
+     "result": "fail",
+     "detail": "1 failed / 3 passed. [recorded]: recovery returns (1, 1) and the owner's finish writes nothing: \"live owner fenced: {'execution': None, 'delivered': False}\", `assert (1, 1) == (0, 0)` (cron/executions.py:136-137 `return pid == os.getpid()`). [current], dead and recycled anchors pass (the current half was fixed by #117584)."
+    },
+    "108484": {
+     "result": "pass",
+     "detail": "4/4 after a one-hunk mechanical rebase (keep main's #117584 tail). Negative control: reverting its one line re-fails [recorded] (1 failed / 3 passed). Its own test fails [current] on main because `started_at + 1` is now within the 200-tick drift tolerance; 2/2 with the sentinel moved past it (108484-own-test-rebase-fix.diff)."
+    },
+    "83939": {
+     "result": "not run",
+     "detail": "Conflicts in 32 files on main (+6392/-646 scheduler-handoff bundle); its NULL-fingerprint hunk matches #108484's but cannot be A/B'd without porting the bundle."
+    },
+    "fork#60 rebuilt (reference, not an upstream candidate)": {
+     "result": "fail",
+     "detail": "2 failed / 2 passed. The executions hunk matches #108484, but its delivery-local at-most-once _owner_is_live fences the live owner's delivery in both [recorded] and [current] (`assert (0, 1) == (0, 0)`), which also regresses the unreadable-current case that main already preserves since #117584."
+    }
+   },
+   "adjacent_tests": {
+    "files": [
+     "tests/cron/test_owner_start_time_drift.py",
+     "tests/cron/test_execution_ledger.py",
+     "tests/cron/test_delivery_queue.py",
+     "tests/cron/test_delivery_queue_retention_race.py",
+     "tests/cron/test_dead_owner_claim_reclaim.py",
+     "tests/cron/test_cron_run_stale_claim_reap.py",
+     "tests/cron/test_stale_running_recovery.py",
+     "tests/cron/test_restart_safe_worker_death_evidence.py",
+     "tests/cron/test_scheduled_occurrence.py",
+     "tests/gateway/test_owner_liveness_drift.py"
+    ],
+    "result": "Main plus the regression test: 77 passed, 1 failed (the [recorded] case). #108484 merged plus its own test: 79 passed, 1 failed (its [current] sentinel drift). #108484 plus the sentinel fix plus the regression test: 80 passed, 0 failed. Fork #60 rebuilt: 76 passed, 2 failed. tests/cron/test_restart_safe_worker.py was excluded because it exercises systemd-run scope paths."
+   },
+   "carrier": {
+    "pr": 108484,
+    "author": "liuzikaii <2319582736@qq.com>",
+    "why": "The only upstream PR that targets #108480 (Fixes #108480) and the smallest sound footprint: one production line after a mechanical one-hunk rebase, with a real-subprocess test of both ledgers. It passes the contract, and reverting its line re-fails it. #83939 carries the same one-line change inside a 36-file scheduler redesign that conflicts in 32 files, and kvnloo fork #60 splits delivery onto an at-most-once policy that contradicts #117584 and fails the contract."
+   },
+   "fold_ins": [
+    {
+     "from": "fork #60 (kvnloo/hermes-agent)",
+     "author": "kvnloo",
+     "co_authored_by": "Kevin Rajan <7121943+kvnloo@users.noreply.github.com>",
+     "hunk_scope": "New file tests/cron/test_cron_owner_null_fingerprint.py (the regression test above). Its live-owner case overlaps #108484's own test, so a maintainer may keep only the two anchors (dead owner without a recorded fingerprint, and recycled PID beyond START_TIME_DRIFT_TOLERANCE, each fenced in both ledgers). No production code from fork #60.",
+     "why": "#108484's test proves the live owner survives but never checks that the NULL branch stays gated on PID existence or that a known mismatch still fences after the rebase onto main's drift-tolerant comparator; its own mismatch sentinel (`+ 1`) is now inside that tolerance.",
+     "test": "Fails 1/4 on main 298a01c7 ([recorded]); passes 4/4 on main plus #108484."
+    }
+   ],
+   "close_after_merge": [],
+   "exclude_reason": null,
+   "row": "| #108480 | #108484 (Liuzikaii) | main: FAIL, 1 of 4 (a live owner with no recorded start time is fenced in both ledgers: recovery returns (1, 1) and the owner's finish writes nothing); #108484: PASS 4/4 after a one-hunk mechanical rebase (keep main's #117584 drift-tolerant tail in `_owner_is_live`); kvnloo fork #60 rebuilt: FAIL, 2 of 4 (its delivery-local at-most-once helper fences the live owner's delivery, also in the unreadable-current case main already handles); #83939: CONFLICTING in 32 files, not run | kvnloo (fork #60): real-subprocess anchors in `tests/cron/test_cron_owner_null_fingerprint.py` (dead owner without a recorded fingerprint and recycled PID beyond drift tolerance are still fenced in both ledgers); `Co-authored-by: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>` | none (#83939 is a 36-file scheduler-handoff bundle; its NULL-fingerprint hunk becomes a no-op on rebase and it stays open) | On main `_owner_is_live` returns `pid == os.getpid()` when no start time was recorded at claim, so recovery in another process rewrites a live owner's execution and delivery rows to immutable `unknown`. #108484 makes that branch `return True`, matching the unreadable-current branch #117584 fixed. Reverting it re-fails the case. The 10 adjacent cron/gateway files go from 77 passed / 1 failed to 80 passed / 0 failed once #108484's own `+ 1` mismatch sentinel is moved past main's 200-tick drift tolerance. |",
+   "row_fork_draft": "| #108480 | #108484 (Liuzikaii) | main 298a01c7 FAIL 1/4 (NULL recorded fingerprint: live owner fenced in both ledgers); #108484 PASS 4/4 (one-hunk rebase onto #117584 tail); fork #60 FAIL 2/4 (delivery fenced); #83939 CONFLICTING (32 files) | kvnloo (fork #60, Co-authored-by Kevin Rajan): dead-owner and recycled-PID anchors in tests/cron/test_cron_owner_null_fingerprint.py | none | On main `_owner_is_live` returns `pid == os.getpid()` for a NULL recorded start time, so another process's recovery fences a live owner to immutable `unknown`. #108484's one line fixes it; reverting re-fails; adjacent 77/1 -> 80/0 with its `+ 1` sentinel moved past the 200-tick drift tolerance. |",
+   "notes": "(1) Need confirmed on main 298a01c7: cron/executions.py:136-137 still `if started_at is None: return pid == os.getpid()` (unchanged since abc22cdf1a); #117584 fixed only the unreadable-current branch. cron/delivery_queue.py:24 imports the shared helper, so one line covers both ledgers, as #108484 states. (2) When is started_at NULL in production? create_execution, adopt_claimed_execution and delivery claim_next record `get_process_start_time(os.getpid())`, which returns None only when /proc/<pid>/stat is unreadable AND psutil fails (procfs absent or restricted in a sandbox/container; psutil itself reads /proc on Linux). Both columns exist in CREATE TABLE since they were introduced (abc22cdf1a, 3373e97693), so migrated legacy rows are not a source. The trigger is narrow, but the result is terminal (unknown is immutable), and the reporter reproduced it on native Windows with fault injection. (3) Residual risk the maintainer should know: with the fix, a NULL-fingerprint execution whose PID is later recycled is still bounded by the stale-claim sweep (_live_owner_stale_after_seconds), but delivery_queue.recover_abandoned has no wedge bound, so such a delivery stays 'delivering' while the recycled PID lives. That is the same trade-off main already accepted for the unreadable-current branch in #117584; kvnloo fork #60's at-most-once delivery split addresses it but contradicts #117584 and fails the contract, so it is not folded. (4) Rebase notes for #108484: drop its second hunk (on main already) and move its test sentinel past START_TIME_DRIFT_TOLERANCE (108484-own-test-rebase-fix.diff). (5) Fork-side: close kvnloo/hermes-agent#60 after #108484 merges. (6) Refs pinned: refs/w2/pr/108484 9e29936e8e, refs/w2/pr/83939 2c90864a50, refs/w2/cron-owner/{108484-merged a2d1987987, 108484-carrier 8d2d60aa4c, 108484-negctl}; fork commit 0a152e48b2. All merges ran with rerere.enabled=false. The worktree was removed.",
+   "evidence_dir": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/cron-owner/"
+  }
+ ]
+}

@@ -1,0 +1,144 @@
+######## 54617
+merge CONFLICT: plugins/platforms/wecom/wecom_crypto.py tests/gateway/test_wecom_callback.py 
+UU plugins/platforms/wecom/wecom_crypto.py
+UU tests/gateway/test_wecom_callback.py
+ported 54617
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+  ║ E   AssertionError: assert not True
+  ║ /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:58: AssertionError: assert not True
+  ║ E   AssertionError: the secret was not compared with hmac.compare_digest
+  ║ /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:103: AssertionError: the secret was not compared with hmac.compare_digest
+  ║ E   AssertionError: the secret was not compared with hmac.compare_digest
+  ║ /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:103: AssertionError: the secret was not compared with hmac.compare_digest
+  ║ E   TypeError: comparing strings with non-ASCII characters is not supported
+  ║ /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:100: TypeError: comparing strings with non-ASCII characters is not supported
+  ║ E   TypeError: comparing strings with non-ASCII characters is not supported
+  ║ /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:100: TypeError: comparing strings with non-ASCII characters is not supported
+  ║ FAILED tests/gateway/test_inbound_auth_hardening.py::test_validly_signed_request_outside_replay_window_is_refused[wecom]
+  ║ FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[bluebubbles]
+  ║ FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[google_meet]
+  ║ FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[wecom]
+  ║ FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[a2a]
+=== Summary: 1 files, 0 tests passed, 5 failed, 1 skipped (100% complete) in 6.7s (20 workers) ===
+E   AssertionError: assert not True
+/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:58: AssertionError: assert not True
+E   AssertionError: the secret was not compared with hmac.compare_digest
+/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:103: AssertionError: the secret was not compared with hmac.compare_digest
+E   AssertionError: the secret was not compared with hmac.compare_digest
+/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:103: AssertionError: the secret was not compared with hmac.compare_digest
+E   TypeError: comparing strings with non-ASCII characters is not supported
+/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:100: TypeError: comparing strings with non-ASCII characters is not supported
+E   TypeError: comparing strings with non-ASCII characters is not supported
+/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:100: TypeError: comparing strings with non-ASCII characters is not supported
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_validly_signed_request_outside_replay_window_is_refused[wecom]
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[bluebubbles]
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[google_meet]
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[wecom]
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[a2a]
+######## 43937
+merge CONFLICT: plugins/platforms/wecom/wecom_crypto.py tests/gateway/test_wecom_callback.py 
+UU plugins/platforms/wecom/wecom_crypto.py
+UU tests/gateway/test_wecom_callback.py
+ported 43937
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+  ║ E   AssertionError: assert not True
+  ║ /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:58: AssertionError: assert not True
+  ║ E   AssertionError: the secret was not compared with hmac.compare_digest
+  ║ /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:103: AssertionError: the secret was not compared with hmac.compare_digest
+  ║ E   AssertionError: the secret was not compared with hmac.compare_digest
+  ║ /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:103: AssertionError: the secret was not compared with hmac.compare_digest
+  ║ E   TypeError: comparing strings with non-ASCII characters is not supported
+  ║ /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:100: TypeError: comparing strings with non-ASCII characters is not supported
+  ║ E   TypeError: comparing strings with non-ASCII characters is not supported
+  ║ /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:100: TypeError: comparing strings with non-ASCII characters is not supported
+  ║ FAILED tests/gateway/test_inbound_auth_hardening.py::test_validly_signed_request_outside_replay_window_is_refused[wecom]
+  ║ FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[bluebubbles]
+  ║ FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[google_meet]
+  ║ FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[wecom]
+  ║ FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[a2a]
+=== Summary: 1 files, 0 tests passed, 5 failed, 1 skipped (100% complete) in 5.4s (20 workers) ===
+E   AssertionError: assert not True
+/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:58: AssertionError: assert not True
+E   AssertionError: the secret was not compared with hmac.compare_digest
+/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:103: AssertionError: the secret was not compared with hmac.compare_digest
+E   AssertionError: the secret was not compared with hmac.compare_digest
+/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:103: AssertionError: the secret was not compared with hmac.compare_digest
+E   TypeError: comparing strings with non-ASCII characters is not supported
+/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:100: TypeError: comparing strings with non-ASCII characters is not supported
+E   TypeError: comparing strings with non-ASCII characters is not supported
+/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:100: TypeError: comparing strings with non-ASCII characters is not supported
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_validly_signed_request_outside_replay_window_is_refused[wecom]
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[bluebubbles]
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[google_meet]
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[wecom]
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[a2a]
+######## 39049
+merge CONFLICT: plugins/platforms/wecom/wecom_crypto.py 
+UU plugins/platforms/wecom/wecom_crypto.py
+ported 39049
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+  ║ E   AssertionError: assert not True
+  ║ /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:58: AssertionError: assert not True
+  ║ E   AssertionError: the secret was not compared with hmac.compare_digest
+  ║ /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:103: AssertionError: the secret was not compared with hmac.compare_digest
+  ║ E   AssertionError: the secret was not compared with hmac.compare_digest
+  ║ /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:103: AssertionError: the secret was not compared with hmac.compare_digest
+  ║ E   TypeError: comparing strings with non-ASCII characters is not supported
+  ║ /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:100: TypeError: comparing strings with non-ASCII characters is not supported
+  ║ E   TypeError: comparing strings with non-ASCII characters is not supported
+  ║ /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:100: TypeError: comparing strings with non-ASCII characters is not supported
+  ║ FAILED tests/gateway/test_inbound_auth_hardening.py::test_validly_signed_request_outside_replay_window_is_refused[wecom]
+  ║ FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[bluebubbles]
+  ║ FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[google_meet]
+  ║ FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[wecom]
+  ║ FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[a2a]
+=== Summary: 1 files, 0 tests passed, 5 failed, 1 skipped (100% complete) in 2.3s (20 workers) ===
+E   AssertionError: assert not True
+/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:58: AssertionError: assert not True
+E   AssertionError: the secret was not compared with hmac.compare_digest
+/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:103: AssertionError: the secret was not compared with hmac.compare_digest
+E   AssertionError: the secret was not compared with hmac.compare_digest
+/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:103: AssertionError: the secret was not compared with hmac.compare_digest
+E   TypeError: comparing strings with non-ASCII characters is not supported
+/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:100: TypeError: comparing strings with non-ASCII characters is not supported
+E   TypeError: comparing strings with non-ASCII characters is not supported
+/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:100: TypeError: comparing strings with non-ASCII characters is not supported
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_validly_signed_request_outside_replay_window_is_refused[wecom]
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[bluebubbles]
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[google_meet]
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[wecom]
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[a2a]
+######## fork43
+ported fork43
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+  ║ E   AssertionError: assert not True
+  ║ /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:58: AssertionError: assert not True
+  ║ E   AssertionError: the secret was not compared with hmac.compare_digest
+  ║ /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:103: AssertionError: the secret was not compared with hmac.compare_digest
+  ║ E   AssertionError: the secret was not compared with hmac.compare_digest
+  ║ /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:103: AssertionError: the secret was not compared with hmac.compare_digest
+  ║ E   UnicodeEncodeError: 'utf-8' codec can't encode character '\udcff' in position 3: surrogates not allowed
+  ║ /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/plugins/platforms/wecom/wecom_crypto.py:78: UnicodeEncodeError: 'utf-8' codec can't encode character '\udcff' in position 3: surrogates not allowed
+  ║ E   TypeError: comparing strings with non-ASCII characters is not supported
+  ║ /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:100: TypeError: comparing strings with non-ASCII characters is not supported
+  ║ FAILED tests/gateway/test_inbound_auth_hardening.py::test_validly_signed_request_outside_replay_window_is_refused[wecom]
+  ║ FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[bluebubbles]
+  ║ FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[google_meet]
+  ║ FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[wecom]
+  ║ FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[a2a]
+=== Summary: 1 files, 0 tests passed, 5 failed, 1 skipped (100% complete) in 2.1s (20 workers) ===
+E   AssertionError: assert not True
+/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:58: AssertionError: assert not True
+E   AssertionError: the secret was not compared with hmac.compare_digest
+/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:103: AssertionError: the secret was not compared with hmac.compare_digest
+E   AssertionError: the secret was not compared with hmac.compare_digest
+/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:103: AssertionError: the secret was not compared with hmac.compare_digest
+E   UnicodeEncodeError: 'utf-8' codec can't encode character '\udcff' in position 3: surrogates not allowed
+/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/plugins/platforms/wecom/wecom_crypto.py:78: UnicodeEncodeError: 'utf-8' codec can't encode character '\udcff' in position 3: surrogates not allowed
+E   TypeError: comparing strings with non-ASCII characters is not supported
+/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:100: TypeError: comparing strings with non-ASCII characters is not supported
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_validly_signed_request_outside_replay_window_is_refused[wecom]
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[bluebubbles]
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[google_meet]
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[wecom]
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[a2a]

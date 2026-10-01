@@ -1,0 +1,27 @@
+{
+ "fork_pr": 43,
+ "title": "fix(security): use constant-time compare for WeCom callback signature",
+ "claim": "WXBizMsgCrypt.decrypt must compare the callback msg_signature in constant time (hmac.compare_digest), failing closed with SignatureError, including on non-ASCII input.",
+ "verdict": "EXTERNAL-OWNED",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "NOT_TESTED (owned upstream). Need confirmed by source: main plugins/platforms/wecom/wecom_crypto.py:76 `if _sha1_signature(self.token, timestamp, nonce, encrypt) != msg_signature:`.",
+  "green": "NOT_TESTED",
+  "negative_control": "NOT_TESTED",
+  "adjacent": "NOT_TESTED",
+  "source": "see red"
+ },
+ "upstream_overlap": [
+  "#54617 (OPEN, Alix-007, 2026-06-29) current plugin path + tests: hmac.compare_digest(expected, msg_signature) on str.",
+  "#43937 (OPEN, zapabob) and #39049 (OPEN, zashraf1337) same fix on the old gateway/platforms path.",
+  "#127901 (OPEN issue, jonpol01) umbrella: non-constant-time compares (WeCom, BlueBubbles, google_meet), no replay window, and '500s on hostile bytes'."
+ ],
+ "branch": null,
+ "files": [
+  "plugins/platforms/wecom/wecom_crypto.py",
+  "tests/gateway/test_wecom_callback.py"
+ ],
+ "size": "fork leaf +54/-2; no rebuild",
+ "depends_on": null,
+ "notes": "Review-support value: #54617 compares str with compare_digest, which raises TypeError on a non-ASCII msg_signature. That surfaces as a 500 (the hostile-bytes case in #127901 item 3) instead of SignatureError. The fork compares encoded bytes and has test_non_ascii_signature_raises_signature_error_not_type_error. Worth offering on #54617 / #127901 as a suggested hardening plus test, not a competing PR. Kanban baggage ignored."
+}

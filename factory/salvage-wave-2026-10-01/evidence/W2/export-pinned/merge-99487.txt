@@ -1,0 +1,6 @@
+git merge --no-ff refs/w2/pr/99487 (head e6ec55bbf9de) onto refs/w2/main 298a01c79b (rerere off):
+merge-base 26f178e5fa (2026-08-31)
+CONFLICT (content): hermes_cli/session_filters.py (docstring; main shortened it to one line)
+CONFLICT (content): hermes_cli/sessions_cmd.py: one conflict block spanning HEAD lines 320-926 vs PR 926-1532 (main split the cmd_sessions monolith into _cmd_export/_export_trace/_export_markdown)
+CONFLICT (content): hermes_state.py: one block HEAD 1617-3532 vs PR 3532-5475 (main is 1685 lines after the SessionDB mixin decomposition; list_prune_candidates/_prune_filter_where/count_open_prune_matches now live in hermes_state_maintenance.py, and _apply_prune_age_filter no longer exists: replaced by _prune_where(..., whole_lineages))
+auto-merged: tests/hermes_cli/test_sessions_export_md_cli.py, tests/hermes_state/test_hermes_state.py (renamed from tests/test_hermes_state.py), website docs x2

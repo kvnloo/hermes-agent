@@ -1,0 +1,34 @@
+{
+ "fork_pr": 302,
+ "title": "feat(tui): halt live-agents dock clock while collapsed",
+ "claim": "While the live-agents dock is collapsed, its 1 s clock must not re-render the dock for agent elapsed the collapsed line never shows, but process rows (whose 'exit N · Ns ago' text and PROCESS_RETAIN_SECONDS expiry are clock-driven and visible collapsed) must keep it, and expanding must paint the live elapsed.",
+ "verdict": "READY",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "source": "main ui-tui/src/components/agentsPanel.tsx:155-165 `ticking = live || processRows.length > 0` ignores $agentDockCollapsed; AgentsPanelView collapsed branch renders only `▸ counts · firstDetail · hints` (agent row detail = notes/outputTail/tools, not time-based; lib/agentRows.ts:121), but firstDetail falls back to processes.rows[0].detail = processVerdict 'exit N · Ns ago' and buildProcessRows drops exits after PROCESS_RETAIN_SECONDS using nowMs (app/processRoster.ts:70-100). Unchanged since fork merge-base 39faafb616.",
+  "measured": "Real LiveAgentsPanel under vi fake timers, 1 running subagent, 10 s window, React Profiler commits / Ink onFrame frames: main collapsed 10/10, rebuild collapsed 0/0; expanded 10/10 both (clock kept).",
+  "red": "agentDockCollapsedClock.test.tsx on main: test 1 'AssertionError: expected [ 10, 10 ] to deeply equal [ +0, +0 ]'; test 2 (process ageing) passes on main.",
+  "fork_head_reproof": "Exact fork-head agentsPanel.tsx (9433e49f81 == closed upstream #127466 head) on main: test 2 FAILS 'expected \\'[top]\\n▸ 1 done · exit 0 · 5s ago · C…\\' to contain \\'exit 0 · 8s ago\\'' -> fork halts the clock for process rows too, so a collapsed dock freezes the exited-process verdict and never ages it out (visible regression). Fork's PR-body premise 'collapsed chrome shows counts + first activity only (no per-row elapsed)' is false for process verdicts.",
+  "green": "Rebuild (ticking = processRows.length > 0 || (live && !collapsed); re-seed now on (re)arm): 2/2 pass; 5x repeat + shuffle green.",
+  "negative_control": "NC1 drop `&& !collapsed` -> test 1 fails [10,10]; NC2 fork rule `!collapsed && (live || processRows.length > 0)` -> test 2 fails (frozen '5s ago'); NC3 drop re-seed -> test 1 fails ('probe auth 12s' after expand).",
+  "adjacent": "agentsDock, agentsCompact, processDock, agentsHydration, agentRoster, agentControls, subagentTree, appChromeBlockedTimers + new file: 9 files / 76 tests pass. npm run typecheck clean; eslint + prettier clean on touched files. Combined tree (rebuild + #129526 head + #129556 head + fork-303 rebuild): new tests, uiThemeSubscription, sidBusySubscriptionNarrow, processDock, agentsDock 6 files/13 tests pass, typecheck clean. NOT_TESTED: full-app frame rate/CPU in a real terminal (numbers are isolated-dock), manual Ctrl+R in live TUI."
+ },
+ "upstream_overlap": [
+  "#129526 OPEN kvnloo (theme-only leaf subscriptions) touches the same component (agentsPanel.tsx:8 import, :148 theme line); different hunk, git merge-tree clean, combined tests pass - no code dependency",
+  "#129556 OPEN kvnloo (sid/busy subscriptions) changes useProcessRows/useAgentRoster sid subscription; no shared lines; merge clean, combined tests pass",
+  "#129524 OPEN kvnloo (static agents replay clock, agentsOverlay.tsx) - distinct timer/file; merge clean",
+  "#129525 OPEN kvnloo (queue scope) - unrelated; merge clean",
+  "#127466 CLOSED unmerged kvnloo (parked by author 2026-09-29, no reviewer feedback) = fork head; this rebuild supersedes it and fixes its process-row regression",
+  "#127142 OPEN EdderTalmor changes only i18n hint strings (hubs.ts) - no overlap with this change or its tests",
+  "#70899 OPEN JoaoMarcos44 (Jul, stale) async-delegation feature that created its own agentsPanel.tsx - different feature/era, not an owner of this defect",
+  "Origin issues #111986/#99773 are kvnloo's own; no external owner. Cached title scan (42,912 PRs) + GitHub search 'LiveAgentsPanel', 'agentDockCollapsed', 'dock clock collapsed' found no other carrier"
+ ],
+ "branch": "ready/fork-302-dock-collapsed-clock",
+ "files": [
+  "ui-tui/src/components/agentsPanel.tsx",
+  "ui-tui/src/__tests__/agentDockCollapsedClock.test.tsx"
+ ],
+ "size": "+132/-2 (production +5/-2)",
+ "depends_on": null,
+ "notes": "Commit 1f94c329f2 (author Kevin Rajan noreply), parent = pinned main. REWORK, not a port: dropped the fork's exported shouldArmAgentDockClock helper + pure-table tests and setInterval-spy tests; kept its re-seed; changed the rule so process rows keep the clock while collapsed. Sequencing (capacity, not code): the lane already has 4 open kvnloo perf carriers; Hermes' plan opens this after #129524/#129526 settle - the branch already applies on current main and merge-tests clean against both. Upstream precedent for the pattern: appChrome FaceTicker/SessionDuration/IdleSince halt 1 s clocks while occluded and re-seed on reveal. Worktree contamination incident: fork-302 worktree briefly received batch A3 #49 desktop files via shared refs/stash; discarded after verifying identical copies in A3's worktree; committed branch contains only the two ui-tui files."
+}

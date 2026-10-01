@@ -1,0 +1,148 @@
+From c497e7abe5c386250e4ecba2e634c085b6828726 Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:35:15 -0500
+Subject: [PATCH] docs(gateway): sync run-status, session-stream,
+ session-store, multiplex and bot-delivery docs
+
+Six gateway-facing docs statements no longer match main:
+
+- programmatic-integration.md: the "Provider/agent failure" row listed only
+  `completed: false`, `error`. The retry-exhausted and non-retryable paths in
+  agent/turn_recovery.py set `partial` when reply text was already delivered
+  (#119001), and terminal_run_status() carries it on `run.failed`.
+- api-server.md: the /api/sessions/{id}/chat/stream row omitted
+  `approval.request`. _register_session_stream_approval() enqueues it, keyed
+  by the run id, and parks the run in `waiting_for_approval` until
+  POST /v1/runs/{run_id}/approval resolves it.
+- gateway-session-lifecycle.md: switch_session() gained
+  `preserve_prompt_pin=True`; /resume (slash_commands_session.py) and the CLI
+  handoff (run_startup.py) pass False.
+- multiplexing-gateway.md, control plane: profiles.describe / configure and
+  create's seeding bind the full runtime scope via _hermes_home_scope()
+  (home + secrets + terminal), not only a HERMES_HOME override.
+- multiplexing-gateway.md, secret scope: build_profile_secret_scope() now
+  overlays the administrator-managed .env last with override, so a
+  secondary does not resolve "from its own files only".
+- bot-mode.md (+ zh-Hans): tools/bot_relay._hermes_cli() tries the
+  install's published launcher (.hermes/bin/hermes) before the interpreter
+  sibling and PATH.
+---
+ .../developer-guide/gateway-session-lifecycle.md    |  2 +-
+ .../docs/developer-guide/multiplexing-gateway.md    | 13 +++++++++----
+ .../developer-guide/programmatic-integration.md     |  2 +-
+ website/docs/user-guide/bot-mode.md                 |  7 ++++---
+ website/docs/user-guide/features/api-server.md      |  2 +-
+ .../current/user-guide/bot-mode.md                  |  2 +-
+ 6 files changed, 17 insertions(+), 11 deletions(-)
+
+diff --git a/website/docs/developer-guide/gateway-session-lifecycle.md b/website/docs/developer-guide/gateway-session-lifecycle.md
+index ccbec078e8..ee1ad7ec28 100644
+--- a/website/docs/developer-guide/gateway-session-lifecycle.md
++++ b/website/docs/developer-guide/gateway-session-lifecycle.md
+@@ -170,7 +170,7 @@ SessionStore(sessions_dir: Path, config: GatewayConfig, has_active_processes_fn=
+ | `get_or_create_session(source, force_new=False)` | Core entry point. Returns existing or creates new `SessionEntry`. Evaluates explicit suspension and restart recovery state. Creates/ends SQLite records. |
+ | `update_session(session_key, last_prompt_tokens=None)` | Lightweight metadata update after an interaction. Bumps `updated_at`, optionally records `last_prompt_tokens`. |
+ | `reset_session(session_key, display_name=None)` | Explicit reset (from `/new` or `/reset`). Creates new `session_id`, sets `is_fresh_reset=True`. Ends old SQLite session, creates new one. |
+-| `switch_session(session_key, target_session_id, *, expected_session_id=None)` | Switch to a different existing session ID (from `/resume`). Ends current SQLite session, reopens target. With `expected_session_id=` the repoint is a compare-and-swap: returns `None` without switching when the key no longer points at that session, so a caller that resolved against a snapshot across an `await` (async-delegation re-pin, Telegram topic-binding heal) cannot overwrite a concurrent `/new` or `/resume`. |
++| `switch_session(session_key, target_session_id, *, expected_session_id=None, preserve_prompt_pin=True)` | Switch to a different existing session ID (from `/resume`). Ends current SQLite session, reopens target. With `expected_session_id=` the repoint is a compare-and-swap: returns `None` without switching when the key no longer points at that session, so a caller that resolved against a snapshot across an `await` (async-delegation re-pin, Telegram topic-binding heal) cannot overwrite a concurrent `/new` or `/resume`. `preserve_prompt_pin` carries the entry's prompt pin onto the new session id (the default for non-boundary repoints); `/resume` and the CLI handoff pass `False` because they start a different conversation on the same routing key. |
+ | `suspend_session(session_key)` | Mark session as `suspended=True` (from `/stop`). Forces auto-reset on next access. |
+ | `mark_resume_pending(session_key, reason)` | Mark session as `resume_pending=True` (from drain timeout). Preserves session_id on next access. Will NOT override `suspended=True`. |
+ | `clear_resume_pending(session_key)` | Clear `resume_pending` after a successful resumed turn. Called from gateway after `run_conversation()` returns. |
+diff --git a/website/docs/developer-guide/multiplexing-gateway.md b/website/docs/developer-guide/multiplexing-gateway.md
+index efea24c3a5..33c59d3a18 100644
+--- a/website/docs/developer-guide/multiplexing-gateway.md
++++ b/website/docs/developer-guide/multiplexing-gateway.md
+@@ -125,7 +125,8 @@ profile `.env` files into `os.environ` — leaks profile A's keys into profile
+ B's turns and into every subprocess spawned with `env=dict(os.environ)`.
+ 
+ - `build_profile_secret_scope(home)` merges the profile's `.env` with its
+-  configured secret sources, skipping globals.
++  configured secret sources, skipping globals, then overlays the
++  administrator-managed `.env` last, with override.
+ - `set_secret_scope(mapping)` installs it for the current task.
+ - `get_secret(name)` resolves: global allowlist → active scope → fallback.
+   The fallback is the load-bearing part:
+@@ -279,8 +280,11 @@ Desktop plugins reach the gateway only through the ws JSON-RPC door, so
+ profile enumeration and configuration live in
+ `tui_gateway/methods_profiles.py`: `profiles.list`, `profiles.create`,
+ `profiles.describe`, `profiles.configure`, `profiles.set_asset`,
+-`profiles.get_asset`. Reads and writes run under the target profile's
+-HERMES_HOME override. Asset writes are atomic, type- and size-capped.
++`profiles.get_asset`. Bodies that read or write a profile's config or
++credentials (`profiles.describe`, `profiles.configure`, and `profiles.create`'s
++seeding) run under the target profile's full runtime scope — home, secret
++scope and terminal scope, the same composition `@_profile_scoped` binds — not
++just its HERMES_HOME override. Asset writes are atomic, type- and size-capped.
+ 
+ ## Failure modes
+ 
+@@ -300,7 +304,8 @@ HERMES_HOME override. Asset writes are atomic, type- and size-capped.
+   owner's fresh scope at every connect and reconnect, so it heals once that
+   profile's `.env` or secret source supplies the value. The launch profile's
+   mapping still includes its frozen launch env (systemd `Environment=` /
+-  `op run` credentials resolve); a secondary resolves from its own files only.
++  `op run` credentials resolve); a secondary never inherits that frozen env
++  and resolves from its own files plus the administrator-managed `.env`.
+ - Scoped platform gates: A2A (`A2A_PORT`) and Buzz enablement are read through
+   the profile's own scope / `platforms.<name>` section, so a launch-profile
+   env var no longer enables an inbound listener in every secondary.
+diff --git a/website/docs/developer-guide/programmatic-integration.md b/website/docs/developer-guide/programmatic-integration.md
+index 828b315102..1622e6b594 100644
+--- a/website/docs/developer-guide/programmatic-integration.md
++++ b/website/docs/developer-guide/programmatic-integration.md
+@@ -191,7 +191,7 @@ The terminal status of a run is derived from how the agent's turn actually ended
+ |---|---|---|---|
+ | Final answer produced | `completed` | `run.completed` | `completed: true` |
+ | Interrupted (`/stop`, or an interrupt inside the agent) | `cancelled` | `run.cancelled` | `completed: false`, `interrupted: true`, `turn_exit_reason` naming the issuer — `interrupted_by_user` for a human stop, `interrupted_by_system(<issuer>)` / `interrupted_during_api_call(<issuer>)` when a watchdog (e.g. `cron_inactivity_watchdog`, `turn_liveness_watchdog`, `gateway_inactivity_watchdog`, `session_turn_lease_lost`) ended the turn |
+-| Provider/agent failure | `failed` | `run.failed` | `completed: false`, `error` |
++| Provider/agent failure | `failed` | `run.failed` | `completed: false`, `error`, `partial` when applicable (e.g. reply text was already streamed before a retry-exhausted or non-retryable provider error) |
+ | Gateway shut down while the run was active (`/v1/runs` only) | `interrupted` | `run.interrupted` | `error: "Gateway shutdown interrupted the run."` — recorded before the agent is interrupted and never overwritten by the turn's late result; a client `/stop` still settles as `cancelled` |
+ | Ended without finishing (iteration budget, truncated or partial reply) | `failed` | `run.failed` | `completed: false`, `partial` when applicable, `turn_exit_reason` (e.g. `max_iterations_reached(60/60)`), `output` with any fallback text |
+ 
+diff --git a/website/docs/user-guide/bot-mode.md b/website/docs/user-guide/bot-mode.md
+index 4e9f9b6012..19281181b6 100644
+--- a/website/docs/user-guide/bot-mode.md
++++ b/website/docs/user-guide/bot-mode.md
+@@ -233,9 +233,10 @@ A failed delivery turn is retried at most once, and only when a retry can actual
+ 
+ When a target has no live Desktop or TUI owner, local delivery opens that
+ profile's canonical Bot Chat through a quiet CLI turn. The transport prefers
+-the Hermes entrypoint beside the sending runtime's Python interpreter, so an
+-unrelated or older `hermes` on a service's `PATH` cannot take precedence when
+-that sibling entrypoint exists. `--in ~` selects the working directory; the
++this install's published launcher (`.hermes/bin/hermes` in the install root),
++then the Hermes entrypoint beside the sending runtime's Python interpreter, so
++an unrelated or older `hermes` on a service's `PATH` cannot take precedence
++when either launch point exists. `--in ~` selects the working directory; the
+ explicit Bot Chat title is resolved in the target profile's session database.
+ 
+ ### When a delivery fails: typed reasons
+diff --git a/website/docs/user-guide/features/api-server.md b/website/docs/user-guide/features/api-server.md
+index 82bd01f044..605ece503c 100644
+--- a/website/docs/user-guide/features/api-server.md
++++ b/website/docs/user-guide/features/api-server.md
+@@ -614,7 +614,7 @@ External UIs can manage Hermes sessions over REST without standing up the dashbo
+ | `GET` | `/api/sessions/{id}/messages` | Message history for a session. `include_compacted=true` also returns the turns a context compaction archived (default: live transcript only). `inline_images=false` renders image attachments as `[image]` placeholders instead of inline data URIs — the transcript travels in kilobytes, for clients reading over a network |
+ | `POST` | `/api/sessions/{id}/fork` | Branch the session via `SessionDB` lineage (matches CLI `/branch` semantics) |
+ | `POST` | `/api/sessions/{id}/chat` | Run one synchronous agent turn |
+-| `POST` | `/api/sessions/{id}/chat/stream` | SSE wrapper over a single turn — emits `assistant.delta`, `assistant.commentary` (mid-turn commentary: `message_id`, `text`, `already_streamed`; never folded into `assistant.completed`), `tool.started`, `tool.completed`, `tool.failed` (a tool that finished with an error), then a terminal `run.completed` / `run.failed` / `run.cancelled` event that matches how the turn ended (see [Terminal run status](../../developer-guide/programmatic-integration.md#terminal-run-status)) |
++| `POST` | `/api/sessions/{id}/chat/stream` | SSE wrapper over a single turn — emits `assistant.delta`, `assistant.commentary` (mid-turn commentary: `message_id`, `text`, `already_streamed`; never folded into `assistant.completed`), `tool.started`, `tool.completed`, `tool.failed` (a tool that finished with an error), `approval.request` when a guarded tool needs consent (keyed by the run id; the run waits in `waiting_for_approval` until `POST /v1/runs/{run_id}/approval` resolves it), then a terminal `run.completed` / `run.failed` / `run.cancelled` event that matches how the turn ended (see [Terminal run status](../../developer-guide/programmatic-integration.md#terminal-run-status)) |
+ 
+ `/v1/capabilities` advertises the full surface via `session_*` feature flags and `endpoints.session_*` entries so external UIs can detect support and fall back safely. Inline images are supported in `chat` and `chat/stream` payloads (multimodal-aware path).
+ 
+diff --git a/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/bot-mode.md b/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/bot-mode.md
+index e53cb8af6b..72b7fc790c 100644
+--- a/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/bot-mode.md
++++ b/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/bot-mode.md
+@@ -145,7 +145,7 @@ Bot 间投递是按次调用的：接收方 Bot 会在它下一次运行时取
+ 
+ 一次失败的投递轮次最多重试一次，并且只在重试确实可能有帮助时才会重试。瞬时性失败（目标运行时离线、投递超时、provider 限流或服务端错误）会不加改动地重新运行同一个 Bot Chat 会话。上下文溢出失败同样会重新运行同一个会话——重试的这一轮会先通过标准的上下文压缩流程压缩超出阈值的记录，再调用模型，这样重试就能装进原本装不下的空间。认证、配额和配置类的失败永远不会自动重试：第二次尝试无法解决这些问题，只会白白消耗配额，因此这类失败会被立即上报。一次重试永远不会开启新会话——你的 Bot Chat 历史和上下文会保持完整。
+ 
+-当目标没有活跃的 Desktop 或 TUI 所有者时，本地投递会通过一次安静的 CLI 轮次打开该 profile 的规范 Bot Chat。这条传输路径优先使用与发送方运行时的 Python 解释器并列的 Hermes 入口，因此只要这个同级入口存在，某个服务 `PATH` 上不相关或较旧的 `hermes` 就不会抢先。`--in ~` 选择工作目录；显式的 Bot Chat 标题会在目标 profile 的会话数据库中解析。
++当目标没有活跃的 Desktop 或 TUI 所有者时，本地投递会通过一次安静的 CLI 轮次打开该 profile 的规范 Bot Chat。这条传输路径优先使用本安装已发布的启动器（安装根目录下的 `.hermes/bin/hermes`），其次是与发送方运行时的 Python 解释器并列的 Hermes 入口，因此只要任一启动入口存在，某个服务 `PATH` 上不相关或较旧的 `hermes` 就不会抢先。`--in ~` 选择工作目录；显式的 Bot Chat 标题会在目标 profile 的会话数据库中解析。
+ 
+ ### 投递失败时：带类型的原因码
+ 
+-- 
+2.55.0
+

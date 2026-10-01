@@ -1,0 +1,22 @@
+diff --git i/ui-tui/src/app/useSubmission.ts w/ui-tui/src/app/useSubmission.ts
+index 9b3c5e1e21..d03246d6a9 100644
+--- i/ui-tui/src/app/useSubmission.ts
++++ w/ui-tui/src/app/useSubmission.ts
+@@ -328,7 +328,7 @@ export function useSubmission(opts: UseSubmissionOptions) {
+ 
+       if (!live.sid) {
+         composerActions.pushHistory(toHistory)
+-        composerActions.enqueue(submission.text, full, expandTokens(submissionTokens))
++        composerActions.enqueue(submission.text, full, (value: string) => expandTokens(submissionTokens)(value).expanded)
+         composerActions.clearIn()
+ 
+         return
+@@ -362,7 +362,7 @@ export function useSubmission(opts: UseSubmissionOptions) {
+       composerActions.pushHistory(toHistory)
+ 
+       if (getUiState().busy) {
+-        return handleBusyInput(queueItem(submission.text, full, expandTokens(submissionTokens)))
++        return handleBusyInput(queueItem(submission.text, full, (value: string) => expandTokens(submissionTokens)(value).expanded))
+       }
+ 
+       if (shouldInterpolateSubmission(full)) {

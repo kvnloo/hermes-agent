@@ -1,0 +1,5 @@
+=== Summary: 3 files, 74 tests passed, 4 failed (100% complete) in 4.7s (20 workers) ===
+FAILED tests/gateway/test_msgraph_webhook.py::TestMSGraphValidationHandshake::test_connect_allows_loopback_without_source_allowlist[trio]
+FAILED tests/gateway/test_msgraph_webhook.py::TestMSGraphNotifications::test_valid_notification_accepted_and_scheduled[trio]
+FAILED tests/gateway/test_msgraph_webhook.py::TestMSGraphNotifications::test_resource_patterns_accept_leading_slash[trio]
+FAILED tests/gateway/test_msgraph_webhook.py::TestMSGraphSourceIPAllowlist::test_loopback_bind_without_allowlist_still_accepts_local_requests[trio]

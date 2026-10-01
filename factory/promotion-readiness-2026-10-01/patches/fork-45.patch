@@ -1,0 +1,99 @@
+From 4c18ef1b3c65d267263ec7ebc821fb6475f55ef8 Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:47:54 -0500
+Subject: [PATCH] fix(discord): record the recovery ledger when a final edit is
+ split
+
+A streamed final reply is finished with edit_message(finalize=True). The
+in-place branch records the delivery in the missed-message recovery
+ledger (_record_response_async: source message -> responded, channel
+cursor advanced). A reply over Discord's 2,000-char cap takes one of two
+early returns through _edit_overflow_split: the pre-flight length check,
+or a reactive 50035 length rejection. Both return before the ledger
+write. With DISCORD_MISSED_MESSAGE_BACKFILL on, the source message of
+every oversized reply stays incomplete. Each reconnect re-evaluates it,
+and backfill can dispatch it again.
+
+Both overflow returns now pass the split result through
+_record_response_async, the same call the in-place branch makes. A
+failed split is recorded as not completed, so it stays retryable.
+---
+ plugins/platforms/discord/adapter.py          | 11 +++++--
+ .../test_discord_missed_message_backfill.py   | 32 +++++++++++++++++++
+ 2 files changed, 41 insertions(+), 2 deletions(-)
+
+diff --git a/plugins/platforms/discord/adapter.py b/plugins/platforms/discord/adapter.py
+index f77f812d09..1f5d90e084 100644
+--- a/plugins/platforms/discord/adapter.py
++++ b/plugins/platforms/discord/adapter.py
+@@ -3252,7 +3252,11 @@ class DiscordAdapter(DiscordMediaMixin, BasePlatformAdapter):
+             # Pre-flight oversize: final edits split-and-deliver; streaming edits truncate in place.
+             if len(formatted) > self.MAX_MESSAGE_LENGTH:
+                 if finalize:
+-                    return await self._edit_overflow_split(channel, msg, message_id, content)
++                    # A split final delivery owes the recovery ledger the same record as an in-place one.
++                    return await self._record_response_async(
++                        (metadata or {}).get("reply_to_message_id"),
++                        await self._edit_overflow_split(channel, msg, message_id, content), content, True,
++                    )
+                 formatted = self.truncate_message(formatted, self.MAX_MESSAGE_LENGTH)[0]
+                 _saturated_preview = True
+                 # Saturated-preview dedup: past the cap every edit is the same text; skip until finalize.
+@@ -3271,7 +3275,10 @@ class DiscordAdapter(DiscordMediaMixin, BasePlatformAdapter):
+                 # Reactive split: format_message inflation can exceed 2,000 (50035) even after pre-flight.
+                 if self._is_length_overflow_error(edit_err):
+                     if finalize:
+-                        return await self._edit_overflow_split(channel, msg, message_id, content)
++                        return await self._record_response_async(
++                            (metadata or {}).get("reply_to_message_id"),
++                            await self._edit_overflow_split(channel, msg, message_id, content), content, True,
++                        )
+                     truncated = self.truncate_message(formatted, self.MAX_MESSAGE_LENGTH)[0]
+                     if self._last_overflow_preview.get(_preview_key) == truncated:
+                         # Saturated-preview dedup (see pre-flight path above).
+diff --git a/tests/gateway/test_discord_missed_message_backfill.py b/tests/gateway/test_discord_missed_message_backfill.py
+index 9a75a468d2..8cf16dc30e 100644
+--- a/tests/gateway/test_discord_missed_message_backfill.py
++++ b/tests/gateway/test_discord_missed_message_backfill.py
+@@ -436,6 +436,38 @@ async def test_unthreaded_final_reply_records_recovery_completion(adapter):
+     assert adapter._discord_message_is_persistently_complete("92") is True
+ 
+ 
++@pytest.mark.asyncio
++@pytest.mark.parametrize("reactive", [False, True], ids=["preflight", "reactive_50035"])
++async def test_oversized_final_edit_records_recovery_completion(adapter, reactive):
++    """A streamed final reply over 2,000 chars is delivered by the overflow split; it must still
++    mark the source message responded, or backfill re-scans it on every reconnect."""
++    channel = FakeChannel(channel_id=123)
++    adapter._record_discord_message_seen(make_message(message_id=93, channel=channel), status="processing")
++    edits = []
++
++    def edit(*, content):
++        edits.append(content)
++        if reactive and len(edits) == 1:
++            # Pre-flight passed but Discord still rejected the length.
++            raise RuntimeError(
++                "400 Bad Request (error code: 50035): Invalid Form Body\n"
++                "In content: Must be 2000 or fewer in length."
++            )
++
++    original = SimpleNamespace(id=42, edit=AsyncMock(side_effect=edit), to_reference=MagicMock(return_value=None))
++    channel.get_partial_message = MagicMock(return_value=original)
++    channel.send = AsyncMock(return_value=SimpleNamespace(id=9006))
++    adapter._client.get_channel = lambda _channel_id: channel
++
++    result = await adapter.edit_message(
++        "123", "42", "u" * (1500 if reactive else 5000), finalize=True,
++        metadata={"reply_to_message_id": "93"},
++    )
++
++    assert result.success is True
++    assert adapter._discord_message_is_persistently_complete("93") is True
++
++
+ @pytest.mark.asyncio
+ async def test_iter_candidates_keeps_latest_messages_when_window_exceeds_limit(adapter, monkeypatch):
+     class RealisticChannel(FakeChannel):
+-- 
+2.55.0
+

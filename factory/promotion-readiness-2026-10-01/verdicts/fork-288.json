@@ -1,0 +1,35 @@
+{
+  "fork_pr": 288,
+  "title": "docs: correct profiles RPC scope binding description in multiplexing-gateway",
+  "claim": "profiles.* bodies that read/write config or credentials bind the target profile's full runtime scope (home + secrets + terminal), not only a HERMES_HOME override.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "doc_text_on_main": "website/docs/developer-guide/multiplexing-gateway.md:282-283 — \"Reads and writes run under the target profile's HERMES_HOME override.\"",
+    "source": "tui_gateway/methods_profiles.py:60-68 _hermes_home_scope(): 'Bind path's full runtime scope (home + secrets + terminal) ... Home alone is half-bound ... UnscopedSecretError' -> _session_profile_runtime_scope(...); used by profiles.describe (:352), configure (_configure_cfg_sections :712) and create's seeding (:497, :516, :531).",
+    "red": "Doc describes the pre-#126160 half-bound behaviour.",
+    "green": "Paragraph now names describe/configure/create seeding and the full runtime scope. tests/tui_gateway/test_profiles_describe_secret_scope.py passes on main.",
+    "negative_control": "N/A — docs-only.",
+    "adjacent": "tests/gateway/test_session_chat_approval.py tests/gateway/test_resume_command.py tests/gateway/test_handoff_secondary_profile_adapter.py tests/tui_gateway/test_profiles_describe_secret_scope.py tests/hermes_cli/test_managed_scope_env.py tests/gateway/test_sse_agent_cancel.py -> 46 passed. docs-site-checks equivalent on the bundle branch: website/scripts/extract-skills.py + generate-skill-docs.py leave website/docs, website/sidebars.ts and website/i18n unchanged (clean); website/scripts/check_doc_links.py OK. added lines scanned for MDX hazards ({ } or raw <tag> outside inline code / fences): none. NOT_TESTED: Docusaurus build (website/node_modules not installed in this environment).",
+    "mirrors": "No zh-Hans multiplexing-gateway.md.",
+    "rebase": "verified on main f848940560; bundle merges cleanly onto refreshed main eb8d21f482 (git merge-tree); merges cleanly with every B1 ready/docs-* branch that touches the same files"
+  },
+  "upstream_overlap": [
+    "NousResearch/hermes-agent#127356 CLOSED (kvnloo, own parked carrier)"
+  ],
+  "branch": "ready/docs2-gateway",
+  "bundle_commit": "c497e7abe5c386250e4ecba2e634c085b6828726",
+  "patch": "patches/docs2-gateway.patch",
+  "pr_body": "patches/docs2-gateway.body.md",
+  "files": [
+    "website/docs/developer-guide/gateway-session-lifecycle.md",
+    "website/docs/developer-guide/multiplexing-gateway.md",
+    "website/docs/developer-guide/programmatic-integration.md",
+    "website/docs/user-guide/bot-mode.md",
+    "website/docs/user-guide/features/api-server.md",
+    "website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/bot-mode.md"
+  ],
+  "size": "fork leaf +1/-0; bundle docs2-gateway +17/-11 (6 files changed, 17 insertions(+), 11 deletions(-))",
+  "depends_on": "kvnloo/hermes-agent#313 review-slot policy (publication capacity only)",
+  "notes": "More precise than the fork leaf: profiles.list / set_asset / get_asset take explicit paths and bind no scope, so the sentence is scoped to the bodies that actually bind one. Drift introduced by 49064ce4dd (#126160). Bundled with: #123, #126, #287, #394, #294. Packaging: one commit per area bundle (batch B2 lane W4-docs); publish one bundle at a time per kvnloo/hermes-agent#313."
+}

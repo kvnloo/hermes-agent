@@ -1,0 +1,30 @@
+{
+ "fork_pr": 28,
+ "title": "fix(state-db): classify post-resolve messages-btree corruption as 503",
+ "claim": "GET /api/sessions/{id}/messages must answer a malformed messages b-tree (sessions PK intact, so _resolve_session_id succeeds) with the corrupt-store 503 + `hermes doctor` guidance, not FastAPI's bare 500.",
+ "verdict": "READY",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "tests only on f848940: scripts/run_tests.sh tests/hermes_cli/test_session_detail_malformed_db.py -q -> 1 failed, 10 passed; test_messages_endpoint_reports_corrupt_messages_btree_as_503: `AssertionError: Internal Server Error / assert 500 == 503` (hermes_state_health latch logged structural corruption, endpoint still 500)",
+  "green": "with fix: 11 passed",
+  "negative_control": "replaced `with corrupt_store_as_status(...): raise` with bare `raise` -> same test fails `assert 500 == 503` (10 passed, 1 failed); restored -> 11 passed",
+  "adjacent": "tests/hermes_cli/{test_session_detail_malformed_db,test_session_message_page_owner,test_session_messages_inline_images,test_history_commentary_display,test_session_timeline,test_web_analytics_corrupt_store,test_web_server}.py + tests/e2e/core/dashboard/test_dashboard_sessions.py -> 8 files, 242 passed, 0 failed. (A first draft that evaluated _session_db_path_for_profile eagerly broke test_history_commentary_display::test_rest_pages_bind_the_history_owner_for_messages_and_around with 404 Profile 'visible' does not exist; final version only computes the path on the exception path, matching the router's existing `with corrupt_store_as_status(...): raise` idiom.) ruff check clean.",
+  "source": "main hermes_cli/web_routers/sessions.py:669 `result = await asyncio.to_thread(_with_db, profile, _read, read_only=True)` has no classifier; _resolve_session_id (l.153) only guards resolve; get_sessions (l.257-268) already maps malformed -> 503 CORRUPT_STORE_DETAIL (#120274/#121428)."
+ },
+ "upstream_overlap": [
+  "#99529 MERGED (teknium1) resolve-step 503 = ba7743b, the scope this extends",
+  "#121428 MERGED (kshitijk4poor) corrupt_store_as_status helper reused here",
+  "#120274 MERGED (austinpickett) list endpoints 503 state_db_corrupt",
+  "no OPEN upstream PR/issue for post-resolve /messages corruption found (GraphQL search: get_session_messages, corrupt_store_as_status, messages malformed 503, messages b-tree, post-resolve corruption, transcript 500 state.db corrupt)"
+ ],
+ "branch": "ready/fork-28-messages-btree-corrupt-503",
+ "commit": "12ab1efd35ae2c3adf76400df32f38b2e4f87a04",
+ "files": [
+  "hermes_cli/web_routers/sessions.py",
+  "tests/hermes_cli/test_session_detail_malformed_db.py"
+ ],
+ "size": "+77/-1",
+ "depends_on": null,
+ "notes": "Rebuilt on current main: fork's hand-rolled 503 string + _log.error duplicated _resolve_session_id; replaced with the existing corrupt_store_as_status helper (shared dict payload with `hermes doctor` guidance, rate-limited warning). Fork test file moved upstream to tests/hermes_cli/ and monkeypatch target is now hermes_cli.web_server_sessions; trimmed fork's 5 tests to 2 contract tests (real zeroed-rootpage e2e + non-corruption passthrough). Kanban baggage dropped. Sibling gap (not included): /messages/around has the same unguarded read; /export streams so cannot change status. NOT_TESTED: Desktop rendering of the dict-shaped 503 detail on the transcript view; full suite.",
+ "lead_review": "Lead spot-check: RED reproduced (assert 500 == 503 on real zeroed messages root page), GREEN 11/11 in test_session_detail_malformed_db.py. Diff reviewed: reuses corrupt_store_as_status; path lookup only on error path. Sibling /messages/around gap intentionally out of scope."
+}

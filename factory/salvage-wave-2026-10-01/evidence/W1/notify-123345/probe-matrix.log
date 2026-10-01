@@ -1,0 +1,100 @@
+=== main
+bg notify='true'       -> ERR notify must be true/false (n
+bg notify='false'      -> ERR notify must be true/false (n
+bg notify='yes'        -> ERR notify must be true/false (n
+bg notify='1'          -> ERR notify must be true/false (n
+bg notify='on'         -> ERR notify must be true/false (n
+bg notify='maybe'      -> ERR notify must be true/false (n
+bg notify='["ready"]'  -> ERR notify must be true/false (n
+bg notify='ready'      -> ERR notify must be true/false (n
+bg notify=2            -> ERR notify must be true/false (n
+bg notify=1.5          -> ERR notify must be true/false (n
+bg notify=True         -> noc=True wp=None
+bg notify=['ready']    -> noc=False wp=['ready']
+fg notify='false'      -> ERR notify/heartbeat only apply 
+fg notify='true'       -> ERR notify/heartbeat only apply 
+=== 123356
+coerce_tool_args: failed to parse string as JSON for expected type list: Expecting value: line 1 column 1 (char 0)
+coerce_tool_args: JSON-parsed value is int, expected list — skipping coercion
+coerce_tool_args: failed to parse string as JSON for expected type list: Expecting value: line 1 column 1 (char 0)
+coerce_tool_args: failed to parse string as JSON for expected type list: Expecting value: line 1 column 1 (char 0)
+coerce_tool_args: failed to parse string as JSON for expected type list: Expecting value: line 1 column 1 (char 0)
+bg notify='true'       -> noc=True wp=None
+bg notify='false'      -> noc=False wp=None
+bg notify='yes'        -> noc=True wp=None
+bg notify='1'          -> noc=True wp=None
+bg notify='on'         -> noc=True wp=None
+bg notify='maybe'      -> ERR notify must be true/false (n
+bg notify='["ready"]'  -> noc=False wp=['ready']
+bg notify='ready'      -> ERR notify must be true/false (n
+bg notify=2            -> ERR notify must be true/false (n
+bg notify=1.5          -> ERR notify must be true/false (n
+bg notify=True         -> noc=True wp=None
+bg notify=['ready']    -> noc=False wp=['ready']
+fg notify='false'      -> noc=False wp=None
+fg notify='true'       -> ERR notify/heartbeat only apply 
+=== 123448
+bg notify='true'       -> noc=True wp=None
+bg notify='false'      -> noc=False wp=None
+bg notify='yes'        -> noc=True wp=None
+bg notify='1'          -> noc=True wp=None
+bg notify='on'         -> noc=True wp=None
+bg notify='maybe'      -> ERR notify must be true/false (n
+bg notify='["ready"]'  -> ERR notify must be true/false (n
+bg notify='ready'      -> ERR notify must be true/false (n
+bg notify=2            -> noc=True wp=None
+bg notify=1.5          -> noc=True wp=None
+bg notify=True         -> noc=True wp=None
+bg notify=['ready']    -> noc=False wp=['ready']
+fg notify='false'      -> ERR notify/heartbeat only apply 
+fg notify='true'       -> ERR notify/heartbeat only apply 
+=== 123389
+bg notify='true'       -> noc=True wp=None
+bg notify='false'      -> noc=False wp=None
+bg notify='yes'        -> ERR notify must be true/false (n
+bg notify='1'          -> ERR notify must be true/false (n
+bg notify='on'         -> ERR notify must be true/false (n
+bg notify='maybe'      -> ERR notify must be true/false (n
+bg notify='["ready"]'  -> ERR notify must be true/false (n
+bg notify='ready'      -> ERR notify must be true/false (n
+bg notify=2            -> ERR notify must be true/false (n
+bg notify=1.5          -> ERR notify must be true/false (n
+bg notify=True         -> noc=True wp=None
+bg notify=['ready']    -> noc=False wp=['ready']
+fg notify='false'      -> noc=False wp=None
+fg notify='true'       -> ERR notify/heartbeat only apply 
+=== 23213
+coerce_tool_args: failed to parse string as JSON for expected type list: Expecting value: line 1 column 1 (char 0)
+coerce_tool_args: JSON-parsed value is int, expected list — skipping coercion
+coerce_tool_args: failed to parse string as JSON for expected type list: Expecting value: line 1 column 1 (char 0)
+coerce_tool_args: failed to parse string as JSON for expected type list: Expecting value: line 1 column 1 (char 0)
+coerce_tool_args: failed to parse string as JSON for expected type list: Expecting value: line 1 column 1 (char 0)
+bg notify='true'       -> noc=True wp=None
+bg notify='false'      -> noc=False wp=None
+bg notify='yes'        -> noc=False wp=['yes']
+bg notify='1'          -> noc=False wp=['1']
+bg notify='on'         -> noc=False wp=['on']
+bg notify='maybe'      -> noc=False wp=['maybe']
+bg notify='["ready"]'  -> noc=False wp=['ready']
+bg notify='ready'      -> noc=False wp=['ready']
+bg notify=2            -> ERR notify must be true/false (n
+bg notify=1.5          -> ERR notify must be true/false (n
+bg notify=True         -> noc=True wp=None
+bg notify=['ready']    -> noc=False wp=['ready']
+fg notify='false'      -> noc=False wp=None
+fg notify='true'       -> ERR notify/heartbeat only apply 
+=== 127557
+bg notify='true'       -> noc=True wp=None
+bg notify='false'      -> noc=False wp=None
+bg notify='yes'        -> ERR notify must be true/false (n
+bg notify='1'          -> ERR notify must be true/false (n
+bg notify='on'         -> ERR notify must be true/false (n
+bg notify='maybe'      -> ERR notify must be true/false (n
+bg notify='["ready"]'  -> ERR notify must be true/false (n
+bg notify='ready'      -> ERR notify must be true/false (n
+bg notify=2            -> ERR notify must be true/false (n
+bg notify=1.5          -> ERR notify must be true/false (n
+bg notify=True         -> noc=True wp=None
+bg notify=['ready']    -> noc=False wp=['ready']
+fg notify='false'      -> noc=False wp=None
+fg notify='true'       -> ERR notify/heartbeat only apply 

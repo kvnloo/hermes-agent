@@ -1,0 +1,13 @@
+diff --git i/ui-tui/src/domain/attachments.ts w/ui-tui/src/domain/attachments.ts
+index 37d14d0e3e..9c3cdcc8fa 100644
+--- i/ui-tui/src/domain/attachments.ts
++++ w/ui-tui/src/domain/attachments.ts
+@@ -36,7 +36,7 @@ export const droppedTokens = (tokens: ComposerToken[], value: string) => {
+  * user-typed string that happens to be bracketed.
+  */
+ export const looksLikeOrphanedPasteToken = (label: string): boolean =>
+-  PASTE_SNIPPET_RE.test(label) && /\[[\d.]+[kmgt]?\s+lines\]/i.test(label)
++  new RegExp(PASTE_SNIPPET_RE.source).test(label) && /\[[\d.]+[kmgt]?\s+lines\]/i.test(label)
+ 
+ export interface ExpandResult {
+   expanded: string

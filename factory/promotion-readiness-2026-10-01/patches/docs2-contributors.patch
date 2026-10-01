@@ -1,0 +1,43 @@
+From 29319c49cd4f5e69e3c2c2df38e35a1b2818f351 Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:29:41 -0500
+Subject: [PATCH] docs(contributors): bare noreply emails still need a mapping
+ file
+
+contributors/README.md said both GitHub noreply forms auto-resolve with
+"no file needed". Only the id+login form does: the Contributor Attribution
+Check (.github/workflows/contributor-check.yml) skips emails matching
+`\+.*@users\.noreply\.github\.com`, and scripts/audit_pr_attribution.py's
+is_mapped() short-circuits only on ID_NOREPLY_RE. A bare
+`<login>@users.noreply.github.com` falls through to the
+contributors/emails/ file check and fails the job when no file exists.
+`audit_pr_attribution.py --fix` can derive the login from the bare local
+part, but it does so by writing a mapping file, so "no file needed" is
+still wrong for that form.
+
+Narrow the auto-resolve rule to the id+login form and say how the bare
+form gets its file.
+---
+ contributors/README.md | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/contributors/README.md b/contributors/README.md
+index fcf44a6a17..584aa1b4ec 100644
+--- a/contributors/README.md
++++ b/contributors/README.md
+@@ -32,7 +32,10 @@ janedoe
+ - Do NOT add new entries to `AUTHOR_MAP` in `scripts/releases/authors_legacy.py`. That dict
+   is frozen legacy data; the release tooling merges it with this directory
+   (directory entries win on duplicates).
+-- GitHub noreply emails (`<id>+<login>@users.noreply.github.com` and
+-  `<login>@users.noreply.github.com`) auto-resolve — no file needed.
++- GitHub id+login noreply emails (`<id>+<login>@users.noreply.github.com`)
++  auto-resolve — no file needed. The bare `<login>@users.noreply.github.com`
++  form does **not**: it needs a mapping file like any other email
++  (`python3 scripts/audit_pr_attribution.py --fix` creates one from the local
++  part once it confirms that GitHub user exists).
+ - The `Contributor Attribution Check` CI job fails a PR whose commits carry
+   an unmapped email; the failure message prints the exact command to run.
+-- 
+2.55.0
+

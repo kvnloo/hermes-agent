@@ -1,0 +1,34 @@
+{
+  "fork_pr": 392,
+  "title": "docs: correct Update all instances dispatch order to remote-then-local",
+  "claim": "Update all instances settles remote/SSH updates first (in parallel), then runs the local update.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "doc_text_on_main": "website/docs/user-guide/multi-connection-desktop.md:293-295 — \"dispatches `hermes update` to every eligible connection in parallel:\"",
+    "source": "apps/desktop/electron/update-order.ts:7-22 updateConnectionsBeforeLocal(): Promise.all(non-local) then Promise.all(local); used by the connections:update-all handler, main.ts:16776-16779.",
+    "red": "Doc says fully parallel.",
+    "green": "Doc states remote/SSH first (parallel), then local, with the reason. vitest electron/update-order.test.ts passes on main.",
+    "negative_control": "N/A — docs-only.",
+    "adjacent": "apps/desktop vitest: electron/update-order.test.ts electron/wslg-launch.test.ts electron/linux-nvidia-egl-fallback.test.ts electron/desktop-plugins-root.test.ts src/lib/remark-soft-breaks.test.ts src/app/session/hooks/use-hermes-config.test.ts -> 6 files, 57 passed. docs-site-checks equivalent on the bundle branch: website/scripts/extract-skills.py + generate-skill-docs.py leave website/docs, website/sidebars.ts and website/i18n unchanged (clean); website/scripts/check_doc_links.py OK. added lines scanned for MDX hazards ({ } or raw <tag> outside inline code / fences): none. NOT_TESTED: Docusaurus build (website/node_modules not installed in this environment).",
+    "mirrors": "No zh-Hans multi-connection-desktop.md.",
+    "rebase": "verified on main f848940560; bundle merges cleanly onto refreshed main eb8d21f482 (git merge-tree); merges cleanly with every B1 ready/docs-* branch that touches the same files"
+  },
+  "upstream_overlap": [
+    "NousResearch/hermes-agent#118135 OPEN (sealca, 'hermes desktop --update-all') inserts a new section just above this paragraph; textual merge expected clean, not the same claim"
+  ],
+  "branch": "ready/docs2-desktop",
+  "bundle_commit": "58f1374abe9b808711ba307c5b02d79a698398ba",
+  "patch": "patches/docs2-desktop.patch",
+  "pr_body": "patches/docs2-desktop.body.md",
+  "files": [
+    "website/docs/developer-guide/desktop-plugin-sdk.md",
+    "website/docs/reference/environment-variables.md",
+    "website/docs/user-guide/desktop.md",
+    "website/docs/user-guide/features/bot-screen.md",
+    "website/docs/user-guide/multi-connection-desktop.md"
+  ],
+  "size": "fork leaf +1/-1; bundle docs2-desktop +15/-8 (5 files changed, 15 insertions(+), 8 deletions(-))",
+  "depends_on": null,
+  "notes": "Drift introduced by f429fef30c (#105129). Bundled with: #124, #291, #292, #305, #395, #398. Packaging: one commit per area bundle (batch B2 lane W4-docs); publish one bundle at a time per kvnloo/hermes-agent#313."
+}

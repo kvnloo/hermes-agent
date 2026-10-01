@@ -1,0 +1,34 @@
+{
+  "fork_pr": 307,
+  "title": "docs(skills): correct clarify call shape and multi-select claims",
+  "claim": "clarify takes questions=[{question, choices?, multi_select?}] and the CLI supports several questions and multi-select; pixel-art's old call shape and openclaw-migration's single-choice limits are wrong.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "doc_text_on_main": "optional-skills/creative/pixel-art/SKILL.md:50 and :70 — \"clarify(\\n    question=..., choices=[...])\" (mirrored at website creative-pixel-art.md:65, :85); optional-skills/migration/openclaw-migration/SKILL.md:88-93 — \"- one choice at a time\" / \"It does **not** support true multi-select checkboxes in a single prompt.\" (mirrored in website and zh-Hans migration-openclaw-migration.md)",
+    "source": "tools/clarify_tool.py:16 _SHAPE, :50-55 _normalize_questions() rejects anything but a non-empty questions list; schema property multi_select (:175); CLI renders multi_select checkboxes (hermes_cli/cli_modal_mixin.py:929-930, cli_tui_mixin.py:474-506).",
+    "red": "Probe on main: clarify_tool(question=..., choices=...) -> TypeError unexpected keyword 'question'; questions missing -> 'questions must be a non-empty array. Pass questions=[{question, choices?, multi_select?}] ...'.",
+    "green": "New shape validates: _normalize_questions([{question, choices}]) ok; two questions with multi_select -> ok. tests/tools/test_clarify_tool.py, skills docs contract/page tests, website generator test: 44 passed.",
+    "negative_control": "Old documented shape still errors (probe above), new shape accepted.",
+    "adjacent": "tests/tools/test_clarify_tool.py tests/skills/test_skill_docs_contract.py tests/skills/test_skill_pages_match_shipped_skills.py tests/website/test_generate_skill_docs.py -> 44 passed. docs-site-checks equivalent on the bundle branch: website/scripts/extract-skills.py + generate-skill-docs.py leave website/docs, website/sidebars.ts and website/i18n unchanged (clean); website/scripts/check_doc_links.py OK. added lines scanned for MDX hazards ({ } or raw <tag> outside inline code / fences): none. NOT_TESTED: Docusaurus build (website/node_modules not installed in this environment).",
+    "mirrors": "English per-skill pages regenerated with website/scripts/generate-skill-docs.py (exactly the two pages changed; generator re-run is clean). zh-Hans openclaw page is a hand translation the generator does not rewrite: the same two lines removed by hand and its retry hint now names the `questions` array like the English source.",
+    "rebase": "verified on main f848940560; bundle merges cleanly onto refreshed main eb8d21f482 (git merge-tree); merges cleanly with every B1 ready/docs-* branch that touches the same files"
+  },
+  "upstream_overlap": [
+    "fork #391 duplicates the pixel-art half: retire it; this bundle is the single source-doc owner and regenerates mirrors"
+  ],
+  "branch": "ready/docs2-skills",
+  "bundle_commit": "104ffb37573209746ce7058d901686cfa944d016",
+  "patch": "patches/docs2-skills.patch",
+  "pr_body": "patches/docs2-skills.body.md",
+  "files": [
+    "optional-skills/creative/pixel-art/SKILL.md",
+    "optional-skills/migration/openclaw-migration/SKILL.md",
+    "website/docs/user-guide/skills/optional/creative/creative-pixel-art.md",
+    "website/docs/user-guide/skills/optional/migration/migration-openclaw-migration.md",
+    "website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/skills/optional/migration/migration-openclaw-migration.md"
+  ],
+  "size": "fork leaf +16/-22; bundle docs2-skills +17/-26 (5 files changed, 17 insertions(+), 26 deletions(-))",
+  "depends_on": null,
+  "notes": "Fork leaf missed the zh-Hans openclaw mirror; added. Drift introduced by 5eea87882a (#127760). Packaging: one commit per area bundle (batch B2 lane W4-docs); publish one bundle at a time per kvnloo/hermes-agent#313."
+}

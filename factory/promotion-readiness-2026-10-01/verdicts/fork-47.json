@@ -1,0 +1,31 @@
+{
+ "fork_pr": 47,
+ "title": "fix(agent): treat missing x-ratelimit-remaining-* as unknown, not 100% exhausted",
+ "claim": "A response carrying x-ratelimit-limit-<tag> without x-ratelimit-remaining-<tag> must parse as 'no data', not remaining=0 (100% exhausted), so /usage does not show false exhaustion and the Nous cross-session breaker cannot trip off a partial last-known state.",
+ "verdict": "READY",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "source": "On main agent/rate_limit_tracker.py:96-104 builds every bucket with remaining=_safe_int(lowered.get('x-ratelimit-remaining-<tag>')) (default 0); nous_rate_guard._has_exhausted_bucket_in_object treats limit>0 & remaining<=0 & reset>=60 as exhausted; turn_recovery.py:1738 passes agent._rate_limit_state as last_known_state. nous_rate_guard._parse_buckets_from_headers already uses _safe_int(..., None) for the 429-header path (precedent). has_data consumers: gateway/slash_commands_status.py:206, hermes_cli/cli_info_mixin.py:724.",
+  "red": "On main with only the new tests: test_rate_limit_tracker::test_missing_remaining_is_unknown_not_exhausted -> 'AssertionError: assert 100.0 == 0.0' (RateLimitBucket(limit=800, remaining=0, reset_seconds=30.0).usage_pct); test_nous_rate_guard::test_last_known_state_missing_remaining_stays_upstream -> 'AssertionError: assert True is False' (is_genuine_nous_rate_limit trips on limit+reset-only last-known state).",
+  "green": "With fix: tests/agent/test_rate_limit_tracker.py + tests/agent/test_nous_rate_guard.py + tests/gateway/test_usage_command.py + tests/hermes_cli/test_cli_status_bar.py -> 59 passed, 0 failed.",
+  "negative_control": "Reverting the None default for remaining (key line) -> both new tests fail again with the RED assertions. Reverting only the has_data change -> tracker test fails 'assert not True' (has_data). Both restored afterwards.",
+  "adjacent": "tests/gateway/test_usage_command.py, tests/hermes_cli/test_cli_status_bar.py (59 incl. target files) and tests/agent/test_credits_cold_start.py, test_nous_welcome_client_contract.py, test_welcome_error_identity.py, test_welcome_tier_recovery.py (80) all pass; ruff clean."
+ },
+ "upstream_overlap": [
+  "#40460 OPEN (HeLLGURD) touches rate_limit_tracker.py: _fmt_count negative guard only - different defect",
+  "#128670 OPEN (jjunghwa0928) Anthropic unified headers in rate_limit_tracker.py - feature, does not change missing-remaining handling of x-ratelimit-*",
+  "#78167 OPEN (aroncomcap) proactive throttle on is_exhausted buckets - would amplify this bug (false-exhausted buckets throttle/record breaker); our fix makes it safer",
+  "#54507 CLOSED (briandevans) limit>0 in header-path exhausted check - related guard family, closed",
+  "No issue/PR owns missing-remaining->0; no origin_refs"
+ ],
+ "branch": "ready/fork-47-ratelimit-missing-remaining",
+ "commit": "bde30632804cd83a548290fb9e39ee891c9d4834",
+ "files": [
+  "agent/rate_limit_tracker.py",
+  "tests/agent/test_rate_limit_tracker.py",
+  "tests/agent/test_nous_rate_guard.py"
+ ],
+ "size": "+54/-10",
+ "depends_on": [],
+ "notes": "Rebuilt on current main (main refactored bucket construction into a _BUCKET_TAGS comprehension; fork diff did not apply verbatim). Kept the has_data tightening because without it the fixed limit-only case renders an empty gateway 'Rate Limits:' line; it is covered by the tracker test (negative control proves it). Dropped fork's 9 tests (TestPartialHeaders/TestHasData, several change-detector-ish) to 2 behaviour-contract tests. Kanban baggage excluded. Unparseable remaining is now also 'no data' (previously 0 = exhausted). NOT_TESTED: full suite; live provider responses."
+}

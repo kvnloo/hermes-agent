@@ -1,0 +1,44 @@
+main = 298a01c79b38018e029e50f77efe67c4a4fdbd40 (refs/w2/main)
+cmd: queued-paste_ab.sh <label> <state-ref>  (vitest in ui-tui with PATH=$S/w2-tripwire/bin:/usr/bin:/bin HOME=$S/testhome-W2-queued-paste; node_modules symlinked; then `npm run typecheck`)
+regression test: queuedPasteSubmission.test.tsx (kvnloo's, from ready/fork-56-queued-paste-payload e8d70c6409; mounted real useSubmission + useQueue, fake gateway, shell.exec only recorded)
+  R1-R4 = paste submitted busy (interrupt / steer / queue) or before a session exists reaches prompt.submit/session.steer expanded, transcript keeps the label
+  R5    = draining a queued paste runs only the typed {!date}, not a {!...} carried inside the paste
+  R6    = a `/queue <paste>` whose pasted bytes start with `!` is not shell-executed when it drains
+probe file: queuedPasteProbe.test.tsx (evidence only)
+  P1 = idle submit of an orphaned label (no token) is refused with a warning (#99042's contract)
+  P2 = auto-drain path (useMainApp effect: dequeue() then sendQueued) does not shell-execute a `!`-prefixed /queue paste
+  P3 = auto-drain delivers a busy queue-mode paste expanded
+  P4 = double-Enter drain delivers a busy queue-mode paste expanded (diff shows queue length + sys lines)
+  P5/P6 = queue-edit resubmit (cycleQueue loads display, Enter) delivers a /queue item / busy queue-mode item expanded
+
+state refs (pinned in $S/h.git):
+  m99042            0eb74c88eb  main + #99042 a549960398; one conflict in useSubmission.ts (main dropped `queuePayload`; kept the PR's unresolved check) -> pr99042-merge-resolution.cc.diff
+  mfork56           564ba9e2f5  main + ready/fork-56-queued-paste-payload e8d70c6409; clean merge
+  mcompose-textual  1a78ef3125  mfork56 + #99042; same single textual conflict -> compose-textual-merge-resolution.cc.diff
+  mcompose          c0a18b7d4f  mcompose-textual + 2-line semantic adaptation (fork-56's expanders wrapped as `v => expandTokens(t)(v).expanded`) -> compose-semantic-adaptation.diff
+  mcompose-lastidx  b4404e6294  mcompose + non-global regex in #99042's looksLikeOrphanedPasteToken -> compose-plus-lastIndex-fix.diff
+  m99042-lastidx    ffc9568e72  m99042 + the same regex fix
+
+results (regression R1-R6 | probes | typecheck):
+  main:               R 0/6 (R1-R4 send '[[ line one ... [5 lines] ]]'; R5 sends 'show Fri for [[ first line of th.. [21 lines] .. ]]'; R6 shell.exec('echo pwned\nz\nz\nz\nz\nz\nend')) | P2 FAIL (auto-drain also shell-executes the pasted bytes), P3/P4 FAIL (label sent), P5 PASS (main's /queue edit resolves via takeQueueItem), P6 FAIL, P1 FAIL | tsc clean
+  #99042:             R 0/6 (interrupt/steer send the label: tokens still exist at dispatch, so its check passes and the later send expands against the cleared ref; queue/no-session drains are refused or sent as the label depending on regex state; R6 still shell-executes) | P1 PASS, P2-P4 FAIL, P4 shows the item dequeued (queuedAfter 0) and refused with 'cannot submit ... The composer still has what you typed, so nothing is lost.' while the composer is empty | tsc clean
+  fork-56:            R 6/6 | P1 FAIL (no orphan guard), P2-P6 PASS | tsc clean
+  compose (textual):  R 5/6 (R5 sends an ExpandResult object {expanded, unresolved} as the prompt) | tsc FAIL x2 TS2345 '(value: string) => ExpandResult' not assignable to 'QueueExpand' (useSubmission.ts:331, :365)
+  compose (adapted):  R 6/6 | P1-P5 PASS, P6 FAIL (busy queue-mode item edit refused, stays queued) | tsc clean
+  compose + regex fix: R 6/6 | P5 AND P6 FAIL (every queue-edit resubmit of a collapsed paste refused) | #99042 attachments 22/22 | tsc clean
+  #99042 + regex fix: R 0/6 | P5 FAIL: #99042 by itself now refuses the /queue-item edit that main delivers | tsc clean
+
+#99042 own tests (attachments.test.ts from the PR):
+  at PR head a549960398: 3 of 22 FAIL ('reports an unmatched paste token ... as unresolved', 'reports multiple orphaned paste tokens', 'recognizes ... [N.Nk lines]'); plus main's existing useSubmission.test.ts 'keeps the collapsed paste for display...' FAILS (prepareSubmission gains `unresolved`, breaks toEqual) -> 4 failed / 23 passed
+  on main+#99042: same 3 FAIL (19 pass) -> pr99042-own-test-on-99042.log
+  on main+fork-56: 15 of 22 FAIL (expandTokens returns a string; looksLikeOrphanedPasteToken absent) -> fork-56 does not cover the orphan warning
+  root cause: PASTE_SNIPPET_RE is /\[\[[^\n]*?\]\]/g (protocol/paste.ts:1); looksLikeOrphanedPasteToken calls PASTE_SNIPPET_RE.test(label), so lastIndex carries between calls. probe orphanDetector.probe.test.ts: four consecutive expandTokens([])('submit: <label>') -> unresolved [label], [], [label], [] (probe-99042-orphan-detector-lastIndex.log)
+
+negative controls on fork-56 (negative-control-fork56.log):
+  A busy path back to handleBusyInput(queueItem(full)) -> R1, R2, R3, R5 FAIL
+  B no-session back to enqueue(full)                  -> R4 FAIL
+  C sendQueued gates `!` on item.text                 -> R6 FAIL
+
+adjacent (19 ui-tui files: every test importing useSubmission/useQueue/useInputHandlers/attachments/useComposerState/useMainApp/submissionCore + the fork-56 verdict set), adjacent.sh:
+  main 239/239; fork-56 239/239; #99042 242/246 (its 3 own attachments tests + useSubmission.test.ts toEqual); compose 242/246 (same 4)
+tripwire hits.log: empty for every run

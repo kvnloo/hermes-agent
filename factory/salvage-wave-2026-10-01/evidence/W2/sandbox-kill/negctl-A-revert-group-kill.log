@@ -1,0 +1,123 @@
+LABEL negctl-A-revert-group-kill  main=298a01c79b38018e029e50f77efe67c4a4fdbd40
+APPLY /mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/sandbox-kill/negctl-A-revert-group-kill.diff: ok
+▶ not activated — using HERMES_PYTHON: /workspace/hermes-home/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~2 tests) under ['tests/tools/test_sandbox_background_kill_tree.py']; running with -j 2
+[100.0% |     2/~2 | ✓0 | ✗4] ✗ tests/tools/test_sandbox_background_kill_tree.py (4✗, 48.3s)
+
+  ╔╍ Failed: tests/tools/test_sandbox_background_kill_tree.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║         assert result["status"] == "killed"
+  ║ >       assert _wait_for(exit_file.exists), "exit file was never written"
+  ║ E       AssertionError: exit file was never written
+  ║ E       assert False
+  ║ E        +  where False = _wait_for(exists)
+  ║ E        +    where exists = PosixPath('/var/tmp/hermes-pytest-1000/r-r1a8jmyb/pytest-of-kvn/pytest-0/test_kill_records_the_terminat0/sandbox_tmp/hermes_bg_proc_3e11c91e0a96.exit').exists
+  ║ 
+  ║ tests/tools/test_sandbox_background_kill_tree.py:143: AssertionError
+  ║ ________ test_kill_records_the_termination_in_the_exit_file[plain_bash] ________
+  ║ 
+  ║ spawn_and_kill = <function spawn_and_kill.<locals>._run at 0x7efcf27dbf60>
+  ║ 
+  ║     def test_kill_records_the_termination_in_the_exit_file(spawn_and_kill):
+  ║         _session, _pids, result, exit_file = spawn_and_kill(
+  ║             "sleep 300 & echo $! > {0}; wait", ["child.pid"])
+  ║     
+  ║         assert result["status"] == "killed"
+  ║ >       assert _wait_for(exit_file.exists), "exit file was never written"
+  ║ E       AssertionError: exit file was never written
+  ║ E       assert False
+  ║ E        +  where False = _wait_for(exists)
+  ║ E        +    where exists = PosixPath('/var/tmp/hermes-pytest-1000/r-r1a8jmyb/pytest-of-kvn/pytest-0/test_kill_records_the_terminat1/sandbox_tmp/hermes_bg_proc_638845792645.exit').exists
+  ║ 
+  ║ tests/tools/test_sandbox_background_kill_tree.py:143: AssertionError
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/tools/test_sandbox_background_kill_tree.py::test_kill_stops_the_command_and_everything_it_started[local_env]
+  ║ FAILED tests/tools/test_sandbox_background_kill_tree.py::test_kill_stops_the_command_and_everything_it_started[plain_bash]
+  ║ FAILED tests/tools/test_sandbox_background_kill_tree.py::test_kill_records_the_termination_in_the_exit_file[local_env]
+  ║ FAILED tests/tools/test_sandbox_background_kill_tree.py::test_kill_records_the_termination_in_the_exit_file[plain_bash]
+  ║ 4 failed in 22.79s
+  ║
+  ║  Repro: python -m pytest tests/tools/test_sandbox_background_kill_tree.py -q -rf -p no:randomly
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 1 files, 0 tests passed, 4 failed (100% complete) in 48.3s (2 workers) ===
+
+=== Per-file subprocess time distribution ===
+
+=== Failure output ===
+
+--- tests/tools/test_sandbox_background_kill_tree.py ---
+FFFF                                                                     [100%]
+=================================== FAILURES ===================================
+_______ test_kill_stops_the_command_and_everything_it_started[local_env] _______
+
+spawn_and_kill = <function spawn_and_kill.<locals>._run at 0x7efcf35ff420>
+
+>   ???
+E   AssertionError: processes outlived the kill: shell, child, grandchild
+E   assert False
+E    +  where False = _wait_for(<function test_kill_stops_the_command_and_everything_it_started.<locals>.<lambda> at 0x7efcf3333740>)
+
+tests/tools/test_sandbox_background_kill_tree.py:133: AssertionError
+______ test_kill_stops_the_command_and_everything_it_started[plain_bash] _______
+
+spawn_and_kill = <function spawn_and_kill.<locals>._run at 0x7efcf27ba160>
+
+    def test_kill_stops_the_command_and_everything_it_started(spawn_and_kill):
+        _session, pids, result, _exit = spawn_and_kill(_TREE, ["shell.pid", "child.pid", "grandchild.pid"])
+    
+        assert result["status"] == "killed"
+>       assert _wait_for(lambda: not any(_alive(p) for p in pids)), (
+            "processes outlived the kill: "
+            + ", ".join(name for name, pid in zip(("shell", "child", "grandchild"), pids) if _alive(pid)))
+E       AssertionError: processes outlived the kill: shell, child, grandchild
+E       assert False
+E        +  where False = _wait_for(<function test_kill_stops_the_command_and_everything_it_started.<locals>.<lambda> at 0x7efcf275f9c0>)
+
+tests/tools/test_sandbox_background_kill_tree.py:133: AssertionError
+________ test_kill_records_the_termination_in_the_exit_file[local_env] _________
+
+spawn_and_kill = <function spawn_and_kill.<locals>._run at 0x7efcf27bc540>
+
+    def test_kill_records_the_termination_in_the_exit_file(spawn_and_kill):
+        _session, _pids, result, exit_file = spawn_and_kill(
+            "sleep 300 & echo $! > {0}; wait", ["child.pid"])
+    
+        assert result["status"] == "killed"
+>       assert _wait_for(exit_file.exists), "exit file was never written"
+E       AssertionError: exit file was never written
+E       assert False
+E        +  where False = _wait_for(exists)
+E        +    where exists = PosixPath('/var/tmp/hermes-pytest-1000/r-r1a8jmyb/pytest-of-kvn/pytest-0/test_kill_records_the_terminat0/sandbox_tmp/hermes_bg_proc_3e11c91e0a96.exit').exists
+
+tests/tools/test_sandbox_background_kill_tree.py:143: AssertionError
+________ test_kill_records_the_termination_in_the_exit_file[plain_bash] ________
+
+spawn_and_kill = <function spawn_and_kill.<locals>._run at 0x7efcf27dbf60>
+
+    def test_kill_records_the_termination_in_the_exit_file(spawn_and_kill):
+        _session, _pids, result, exit_file = spawn_and_kill(
+            "sleep 300 & echo $! > {0}; wait", ["child.pid"])
+    
+        assert result["status"] == "killed"
+>       assert _wait_for(exit_file.exists), "exit file was never written"
+E       AssertionError: exit file was never written
+E       assert False
+E        +  where False = _wait_for(exists)
+E        +    where exists = PosixPath('/var/tmp/hermes-pytest-1000/r-r1a8jmyb/pytest-of-kvn/pytest-0/test_kill_records_the_terminat1/sandbox_tmp/hermes_bg_proc_638845792645.exit').exists
+
+tests/tools/test_sandbox_background_kill_tree.py:143: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tools/test_sandbox_background_kill_tree.py::test_kill_stops_the_command_and_everything_it_started[local_env]
+FAILED tests/tools/test_sandbox_background_kill_tree.py::test_kill_stops_the_command_and_everything_it_started[plain_bash]
+FAILED tests/tools/test_sandbox_background_kill_tree.py::test_kill_records_the_termination_in_the_exit_file[local_env]
+FAILED tests/tools/test_sandbox_background_kill_tree.py::test_kill_records_the_termination_in_the_exit_file[plain_bash]
+4 failed in 22.79s
+
+=== 1 file with test failures (4 tests failed) ===
+  tests/tools/test_sandbox_background_kill_tree.py  (4 tests failed)
+TRIPWIRE hits during run: 0

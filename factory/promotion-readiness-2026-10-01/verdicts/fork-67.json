@@ -1,0 +1,27 @@
+{
+ "fork_pr": 67,
+ "title": "fix(checkpoints): stop size-cap over-pruning by gcing between drop rounds",
+ "claim": "The size-cap drop loop re-measured the store without gc between rounds, so unreachable objects never left the measurement and one over-cap event flattened every project to a single snapshot.",
+ "verdict": "SUPERSEDED-ON-MAIN",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "NOT_APPLICABLE: the fork's code targets CheckpointManager._enforce_size_cap and the prune_checkpoints size-cap loop, and neither exists on main. 6716b72ef2 split them into tools/checkpoint_pruning.py (Pruner) and tools/checkpoint_maintenance.py.",
+  "green": "Main's own regression file tests/tools/test_checkpoint_size_cap.py passes on f8489405 (run_tests.sh: 12 passed, 0 failed). It pins the fork's invariant: test_maintenance_size_cap_retains_every_snapshot_after_the_only_large_one (minimal drop), test_reclaim_stops_before_touching_another_projects_history (no cross-project over-drop) and test_snapshot_over_cap_drops_one_round_and_leaves_the_gc_to_the_prune.",
+  "negative_control": "NOT_TESTED (superseded; no fork hunk to break)",
+  "adjacent": "tests/tools/test_checkpoint_size_cap.py 12/12 on main",
+  "source": "tools/checkpoint_pruning.py on main: Pruner.drop_one_round docstring says 'the full loop measured against an unchanging pack once flattened every project to a single snapshot'. The take path now drops one round and defers gc. Pruner.enforce_size (periodic prune) gcs per rewrite (_rewrite(gc=True)) and re-measures after each rewrite. Fixed upstream by 804707bea6 / PR #112063 (teknium1, merged 2026-09-15: 'That loop also re-measured a pack size that cannot move without a gc, so a single over-cap checkpoint dropped 20 rounds of history and flattened every project to one snapshot') and ported onto the Pruner by 8ec89a5088 / PR #102765."
+ },
+ "upstream_overlap": [
+  "NousResearch/hermes-agent#112063 (MERGED, teknium1) fixed the defect",
+  "NousResearch/hermes-agent#102765 (merged, ethernet8023) ported it onto Pruner",
+  "open #109074 (AceJY) / #65354 / #61227 touch checkpoint gc but are not this claim"
+ ],
+ "branch": null,
+ "files": [
+  "tools/checkpoint_manager.py",
+  "tests/tools/test_checkpoint_manager.py"
+ ],
+ "size": "+0/-0 (fork leaf without kanban: tools +27/-20, tests +279)",
+ "depends_on": null,
+ "notes": "Kanban baggage (hermes_cli/kanban_db.py, tests/hermes_cli/test_kanban_external_receipts.py) dropped. The fork test class TestSizeCapOverPrune calls _enforce_size_cap, which no longer exists, so nothing is worth offering. The fork leaf can be retired as superseded by #112063."
+}

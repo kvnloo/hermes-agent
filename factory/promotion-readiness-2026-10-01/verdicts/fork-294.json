@@ -1,0 +1,36 @@
+{
+  "fork_pr": 294,
+  "title": "docs(bot-mode): correct local-delivery launcher resolution order",
+  "claim": "Local Bot Chat delivery resolves the install's published launcher first, then the interpreter-sibling entrypoint, then PATH.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "doc_text_on_main": "website/docs/user-guide/bot-mode.md:235-238 — \"The transport prefers the Hermes entrypoint beside the sending runtime's Python interpreter ...\"; zh-Hans bot-mode.md:148 same.",
+    "source": "tools/bot_relay.py:502-517 _hermes_cli(): published = <install>/.hermes/bin/hermes(.exe) (:513) if it exists, else the sibling of sys.executable, else shutil.which('hermes'); local_delivery_command() uses it (:520-522).",
+    "red": "Doc omits the first rung of the ladder.",
+    "green": "en + zh-Hans now list published launcher -> interpreter sibling -> PATH.",
+    "negative_control": "N/A — docs-only.",
+    "adjacent": "tests/gateway/test_session_chat_approval.py tests/gateway/test_resume_command.py tests/gateway/test_handoff_secondary_profile_adapter.py tests/tui_gateway/test_profiles_describe_secret_scope.py tests/hermes_cli/test_managed_scope_env.py tests/gateway/test_sse_agent_cancel.py -> 46 passed. docs-site-checks equivalent on the bundle branch: website/scripts/extract-skills.py + generate-skill-docs.py leave website/docs, website/sidebars.ts and website/i18n unchanged (clean); website/scripts/check_doc_links.py OK. added lines scanned for MDX hazards ({ } or raw <tag> outside inline code / fences): none. NOT_TESTED: Docusaurus build (website/node_modules not installed in this environment).",
+    "mirrors": "zh-Hans bot-mode.md:148 fixed in the same commit.",
+    "rebase": "verified on main f848940560; bundle merges cleanly onto refreshed main eb8d21f482 (git merge-tree); merges cleanly with every B1 ready/docs-* branch that touches the same files"
+  },
+  "upstream_overlap": [
+    "NousResearch/hermes-agent#127362 CLOSED (kvnloo, own parked carrier)",
+    "NousResearch/hermes-agent#125926 OPEN (SmelterLabs) — DM runner launcher, code-only, no doc files"
+  ],
+  "branch": "ready/docs2-gateway",
+  "bundle_commit": "c497e7abe5c386250e4ecba2e634c085b6828726",
+  "patch": "patches/docs2-gateway.patch",
+  "pr_body": "patches/docs2-gateway.body.md",
+  "files": [
+    "website/docs/developer-guide/gateway-session-lifecycle.md",
+    "website/docs/developer-guide/multiplexing-gateway.md",
+    "website/docs/developer-guide/programmatic-integration.md",
+    "website/docs/user-guide/bot-mode.md",
+    "website/docs/user-guide/features/api-server.md",
+    "website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/bot-mode.md"
+  ],
+  "size": "fork leaf +6/-5; bundle docs2-gateway +17/-11 (6 files changed, 17 insertions(+), 11 deletions(-))",
+  "depends_on": "kvnloo/hermes-agent#313 review-slot policy (publication capacity only)",
+  "notes": "B1's ready/docs-bot-mode edits other paragraphs of the same two files; merge-tree clean. Drift introduced by 5ce2c7d5aa (#125559). Bundled with: #123, #126, #287, #288, #394. Packaging: one commit per area bundle (batch B2 lane W4-docs); publish one bundle at a time per kvnloo/hermes-agent#313."
+}

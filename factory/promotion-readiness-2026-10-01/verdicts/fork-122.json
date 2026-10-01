@@ -1,0 +1,38 @@
+{
+  "fork_pr": 122,
+  "title": "docs: installed plugin MCP servers connect in place, not at mcp.reload",
+  "claim": "Docstrings, plugins/AGENTS.md and the plugin developer guide say a mid-run plugin's MCP servers wait for 'mcp.reload'; install surfaces connect them in place via load_and_go_live and report live_now.mcp_servers.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "red": "'until ``mcp.reload``' at hermes_cli/plugins_activation.py:40 and hermes_cli/plugins_loader.py:196; plugins/AGENTS.md:70 '`deferred.mcp_servers` until `mcp.reload`'; website/docs/developer-guide/plugins/index.md:1585-1587 'connect on `mcp.reload` or the next session'; also gateway-internals.md:310 'wait for `mcp.reload`'.",
+    "green": "All five places describe load_and_go_live connecting in place (live_now), with /reload-mcp or next session only where it did not run (messaging gateway); `git grep mcp.reload` in those files returns nothing.",
+    "negative_control": "N/A for docs (no executable behaviour). Equivalent check: the stale phrase is present on main and absent on the bundle (grep given in red/green).",
+    "adjacent": "python3 website/scripts/check_doc_links.py on the bundle tree: OK (no route-style links). All 7 B1 bundles cherry-pick together onto main cleanly, and each pairs cleanly with B2's current docs2-update/docs2-desktop/docs2-gateway/docs2-memory bundles. py_compile of both docstring files OK; scripts/run_tests.sh tests/gateway/test_late_plugin_rewire.py tests/tui_gateway/test_plugins_manage_late_activation.py -q -> 6 passed.",
+    "source": "hermes_cli/plugins_activation.py:96-128 activate_plugin_now -> load_and_go_live (:130-173) sets activation['live_now'] = {'mcp_servers', 'skills'} and drops mcp_servers from deferred (:161-163); gateway/run_plugin_rewire.py:81-118 reload-plugins verb only rediscovers and rewires; tools/mcp_tool_config.py:431 discovery (hence /reload-mcp) includes portable plugin servers; no 'mcp.reload' RPC exists (tui_gateway/contracts/tools_mcp_plugins.py:137 is 'reload.mcp')."
+  },
+  "upstream_overlap": [
+    "#127382 (our own, CLOSED/parked; superseded by this bundle)",
+    "No open external PR/issue for this claim (gh search prs/issues; open docs PRs touching the same files edit other sections)"
+  ],
+  "branch": "ready/docs-mcp",
+  "bundle": {
+    "branch": "ready/docs-mcp",
+    "commit": "0081fb5e75",
+    "subject": "docs(mcp): correct catalog and plugin MCP install docs",
+    "bundle_size": "+36/-16",
+    "patch": "patches/docs-mcp.patch",
+    "body": "patches/docs-mcp.body.md"
+  },
+  "files": [
+    "hermes_cli/plugins_activation.py",
+    "hermes_cli/plugins_loader.py",
+    "plugins/AGENTS.md",
+    "website/docs/developer-guide/plugins/index.md",
+    "website/docs/developer-guide/gateway-internals.md"
+  ],
+  "size": "+21/-8",
+  "depends_on": null,
+  "fork_head": "fe7e32af3dff0dfd1465eb4b65074a4fa0d975eb",
+  "notes": "Fork said deferred.mcp_servers move to live_now unconditionally; rebuilt keeps the gateway-process exception (activations from reload-plugins still list them as deferred). Added gateway-internals.md, which carried the same stale name. Supersedes our parked upstream #127382."
+}

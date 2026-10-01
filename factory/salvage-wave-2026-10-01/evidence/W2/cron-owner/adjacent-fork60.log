@@ -1,0 +1,118 @@
+label=adjacent-fork60 main=298a01c79b38018e029e50f77efe67c4a4fdbd40
+APPLY /mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/cron-owner/fork60-rebuilt-onto-main.diff: ok
+▶ not activated — using HERMES_PYTHON: /workspace/hermes-home/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 11 test files (~60 tests) under ['tests/cron/test_cron_owner_null_fingerprint.py', 'tests/cron/test_owner_start_time_drift.py', 'tests/cron/test_execution_ledger.py', 'tests/cron/test_delivery_queue.py', 'tests/cron/test_delivery_queue_retention_race.py', 'tests/cron/test_dead_owner_claim_reclaim.py', 'tests/cron/test_cron_run_stale_claim_reap.py', 'tests/cron/test_stale_running_recovery.py', 'tests/cron/test_restart_safe_worker_death_evidence.py', 'tests/cron/test_scheduled_occurrence.py', 'tests/gateway/test_owner_liveness_drift.py']; running with -j 2
+[  1.7% |     1/~60 | ✓1 | ✗0] ✓ tests/cron/test_cron_run_stale_claim_reap.py (1✓, 1.5s)
+[ 16.7% |    10/~60 | ✓10 | ✗ 0] ✓ tests/cron/test_dead_owner_claim_reclaim.py (9✓, 2.0s)
+[ 33.3% |    20/~60 | ✓20 | ✗ 0] ✓ tests/cron/test_delivery_queue.py (10✓, 3.2s)
+[ 35.0% |    21/~60 | ✓21 | ✗ 0] ✓ tests/cron/test_delivery_queue_retention_race.py (1✓, 1.6s)
+[ 40.0% |    24/~60 | ✓23 | ✗ 2] ✗ tests/cron/test_cron_owner_null_fingerprint.py (2✓ 2✗, 9.2s)
+
+  ╔╍ Failed: tests/cron/test_cron_owner_null_fingerprint.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ 
+  ║     @pytest.mark.parametrize("missing", ["recorded", "current"])
+  ║     def test_live_owner_without_fingerprint_finishes_both_ledgers(ledgers, monkeypatch, missing):
+  ║         from cron import delivery_queue
+  ║         import gateway.status
+  ║     
+  ║         owner, row = _spawn_owner(ledgers, missing)
+  ║         try:
+  ║             assert owner.poll() is None and gateway.status._pid_exists(owner.pid)
+  ║             if missing == "recorded":
+  ║                 assert row["process_started_at"] is None
+  ║             else:
+  ║                 assert row["process_started_at"] is not None
+  ║                 monkeypatch.setattr(gateway.status, "get_process_start_time", lambda pid: None)
+  ║             recovered = _recover()
+  ║             output, error = owner.communicate("x", timeout=30)
+  ║             assert owner.returncode == 0, error
+  ║             outcome = json.loads(output)
+  ║ >           assert recovered == (0, 0), f"live owner fenced: {outcome}"
+  ║ E           AssertionError: live owner fenced: {'execution': {'id': 'fd565a4da33b4069b0bf56b648a57695', 'job_id': 'live-job', 'source': 'builtin', 'process_id': '45554f65b82d4f98bdfac45c0cc732e8', 'pid': 3514845, 'process_started_at': 13459252, 'status': 'completed', 'handoff_pending': 0, 'handoff_started_at': None, 'claimed_at': '2026-10-01T04:50:08.802655+00:00', 'started_at': '2026-10-01T04:50:08.890990+00:00', 'finished_at': '2026-10-01T04:50:09.047618+00:00', 'error': None, 'delivery_outcome': None, 'scheduled_instant': None}, 'delivered': False}
+  ║ E           assert (0, 1) == (0, 0)
+  ║ E             
+  ║ E             At index 1 diff: 1 != 0
+  ║ E             Use -v to get more diff
+  ║ 
+  ║ tests/cron/test_cron_owner_null_fingerprint.py:84: AssertionError
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/cron/test_cron_owner_null_fingerprint.py::test_live_owner_without_fingerprint_finishes_both_ledgers[recorded]
+  ║ FAILED tests/cron/test_cron_owner_null_fingerprint.py::test_live_owner_without_fingerprint_finishes_both_ledgers[current]
+  ║ 2 failed, 2 passed in 3.48s
+  ║
+  ║  Repro: python -m pytest tests/cron/test_cron_owner_null_fingerprint.py -q -rf -p no:randomly
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+[ 43.3% |    26/~60 | ✓26 | ✗ 2] ✓ tests/cron/test_owner_start_time_drift.py (3✓, 2.0s)
+[ 83.3% |    50/~60 | ✓50 | ✗ 2] ✓ tests/cron/test_execution_ledger.py (24✓, 6.1s)
+[ 90.0% |    54/~60 | ✓56 | ✗ 2] ✓ tests/cron/test_scheduled_occurrence.py (6✓, 17.6s)
+[ 93.3% |    56/~60 | ✓61 | ✗ 2] ✓ tests/cron/test_stale_running_recovery.py (5✓, 1.8s)
+[ 96.7% |    58/~60 | ✓65 | ✗ 2] ✓ tests/gateway/test_owner_liveness_drift.py (4✓, 2.9s)
+[100.0% |    60/~60 | ✓76 | ✗ 2] ✓ tests/cron/test_restart_safe_worker_death_evidence.py (11✓, 39.5s)
+
+=== Summary: 11 files, 76 tests passed, 2 failed (100% complete) in 50.7s (2 workers) ===
+  Durations cached to test_durations.json (10 files)
+
+=== Per-file subprocess time distribution ===
+
+=== Failure output ===
+
+--- tests/cron/test_cron_owner_null_fingerprint.py ---
+FF..                                                                     [100%]
+=================================== FAILURES ===================================
+_____ test_live_owner_without_fingerprint_finishes_both_ledgers[recorded] ______
+
+ledgers = {'PATH': '/tmp/claude-1000/-home-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad/w2-tripwire/bin:/usr/bin:/bi...-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad/testhome-W2-cron-owner', 'TZ': 'UTC', 'LANG': 'C.UTF-8', ...}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fc39db16310>
+missing = 'recorded'
+
+>   ???
+E   AssertionError: live owner fenced: {'execution': {'id': '15f376f2871f425fbe22cdaf898681d1', 'job_id': 'live-job', 'source': 'builtin', 'process_id': '2a93352ee34c48e59c54c78e0db21224', 'pid': 3514777, 'process_started_at': None, 'status': 'completed', 'handoff_pending': 0, 'handoff_started_at': None, 'claimed_at': '2026-10-01T04:50:08.131688+00:00', 'started_at': '2026-10-01T04:50:08.237063+00:00', 'finished_at': '2026-10-01T04:50:08.381793+00:00', 'error': None, 'delivery_outcome': None, 'scheduled_instant': None}, 'delivered': False}
+E   assert (0, 1) == (0, 0)
+E     
+E     At index 1 diff: 1 != 0
+E     Use -v to get more diff
+
+tests/cron/test_cron_owner_null_fingerprint.py:84: AssertionError
+______ test_live_owner_without_fingerprint_finishes_both_ledgers[current] ______
+
+ledgers = {'PATH': '/tmp/claude-1000/-home-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad/w2-tripwire/bin:/usr/bin:/bi...-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad/testhome-W2-cron-owner', 'TZ': 'UTC', 'LANG': 'C.UTF-8', ...}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fc39db6dfd0>
+missing = 'current'
+
+    @pytest.mark.parametrize("missing", ["recorded", "current"])
+    def test_live_owner_without_fingerprint_finishes_both_ledgers(ledgers, monkeypatch, missing):
+        from cron import delivery_queue
+        import gateway.status
+    
+        owner, row = _spawn_owner(ledgers, missing)
+        try:
+            assert owner.poll() is None and gateway.status._pid_exists(owner.pid)
+            if missing == "recorded":
+                assert row["process_started_at"] is None
+            else:
+                assert row["process_started_at"] is not None
+                monkeypatch.setattr(gateway.status, "get_process_start_time", lambda pid: None)
+            recovered = _recover()
+            output, error = owner.communicate("x", timeout=30)
+            assert owner.returncode == 0, error
+            outcome = json.loads(output)
+>           assert recovered == (0, 0), f"live owner fenced: {outcome}"
+E           AssertionError: live owner fenced: {'execution': {'id': 'fd565a4da33b4069b0bf56b648a57695', 'job_id': 'live-job', 'source': 'builtin', 'process_id': '45554f65b82d4f98bdfac45c0cc732e8', 'pid': 3514845, 'process_started_at': 13459252, 'status': 'completed', 'handoff_pending': 0, 'handoff_started_at': None, 'claimed_at': '2026-10-01T04:50:08.802655+00:00', 'started_at': '2026-10-01T04:50:08.890990+00:00', 'finished_at': '2026-10-01T04:50:09.047618+00:00', 'error': None, 'delivery_outcome': None, 'scheduled_instant': None}, 'delivered': False}
+E           assert (0, 1) == (0, 0)
+E             
+E             At index 1 diff: 1 != 0
+E             Use -v to get more diff
+
+tests/cron/test_cron_owner_null_fingerprint.py:84: AssertionError
+=========================== short test summary info ============================
+FAILED tests/cron/test_cron_owner_null_fingerprint.py::test_live_owner_without_fingerprint_finishes_both_ledgers[recorded]
+FAILED tests/cron/test_cron_owner_null_fingerprint.py::test_live_owner_without_fingerprint_finishes_both_ledgers[current]
+2 failed, 2 passed in 3.48s
+
+=== 1 file with test failures (2 tests failed) ===
+  tests/cron/test_cron_owner_null_fingerprint.py  (2 tests failed)

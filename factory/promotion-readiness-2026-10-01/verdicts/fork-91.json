@@ -1,0 +1,33 @@
+{
+  "fork_pr": 91,
+  "title": "docs(desktop): remove stale timeline rail popover and turn-threshold claims",
+  "claim": "desktop.md says hovering the timeline rail pops open a prompt list and the rail appears only after a handful of turns; markers have per-marker tooltips and the rail renders with any prompt.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "red": "website/docs/user-guide/desktop.md:57 on main: \"long chats get a slim rail ... Hover it to pop open the list of prompts ... (It appears once the chat has a handful of turns.)\"",
+    "green": "'a slim rail of markers ... Hover a marker to see its prompt in a tooltip, and click one to jump ...' (keeps main's Show earlier sentence); grep 'handful of turns|pop open the list' returns nothing.",
+    "negative_control": "N/A for docs (no executable behaviour). Equivalent check: the stale phrase is present on main and absent on the bundle (grep given in red/green).",
+    "adjacent": "python3 website/scripts/check_doc_links.py on the bundle tree: OK (no route-style links). All 7 B1 bundles cherry-pick together onto main cleanly, and each pairs cleanly with B2's current docs2-update/docs2-desktop/docs2-gateway/docs2-memory bundles.",
+    "source": "apps/desktop/src/components/assistant-ui/thread/timeline-rail.tsx:165-189 each marker wrapped in <Tip label={entry.preview}>; timeline.tsx:311-313 returns null only when !railEntries.length; timeline-data.ts:46-69 deriveTimelineEntries has no minimum."
+  },
+  "upstream_overlap": [
+    "No open external PR/issue for this claim (gh search prs/issues; open docs PRs touching the same files edit other sections)"
+  ],
+  "branch": "ready/docs-desktop",
+  "bundle": {
+    "branch": "ready/docs-desktop",
+    "commit": "2ee1217746",
+    "subject": "docs(desktop): sync timeline rail, Simple-mode rail, square menu and launch precedence",
+    "bundle_size": "+13/-9",
+    "patch": "patches/docs-desktop.patch",
+    "body": "patches/docs-desktop.body.md"
+  },
+  "files": [
+    "website/docs/user-guide/desktop.md"
+  ],
+  "size": "+1/-1",
+  "depends_on": null,
+  "fork_head": "03ba8a834746dc05ba83ac3b88f4575b6dba8789",
+  "notes": "Rebuilt on main's newer line (which added the Show earlier sentence after the fork's base)."
+}

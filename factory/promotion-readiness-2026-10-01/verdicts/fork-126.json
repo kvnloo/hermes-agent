@@ -1,0 +1,33 @@
+{
+  "fork_pr": 126,
+  "title": "docs: add approval.request to /api/sessions/{id}/chat/stream event list",
+  "claim": "The session chat stream emits approval.request (run-id keyed, resolved via POST /v1/runs/{run_id}/approval); its documented event list must include it.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "doc_text_on_main": "website/docs/user-guide/features/api-server.md:617 — chat/stream row lists assistant.delta, assistant.commentary, tool.started, tool.completed, tool.failed, then terminal run.* (no approval.request).",
+    "source": "gateway/platforms/api_server.py:3673 wires approval_notify = self._register_session_stream_approval(run_id, ...); :3751-3761 builds the approval.request event, sets status waiting_for_approval and events.enqueue(\"approval.request\", event) (:3760); route POST /v1/runs/{run_id}/approval (api_server_runs.py:238).",
+    "red": "Event list on main omits an event the handler enqueues.",
+    "green": "Row now lists approval.request (run-id keyed, parks in waiting_for_approval until POST /v1/runs/{run_id}/approval). tests/gateway/test_session_chat_approval.py passes on main.",
+    "negative_control": "N/A — docs-only.",
+    "adjacent": "tests/gateway/test_session_chat_approval.py tests/gateway/test_resume_command.py tests/gateway/test_handoff_secondary_profile_adapter.py tests/tui_gateway/test_profiles_describe_secret_scope.py tests/hermes_cli/test_managed_scope_env.py tests/gateway/test_sse_agent_cancel.py -> 46 passed. docs-site-checks equivalent on the bundle branch: website/scripts/extract-skills.py + generate-skill-docs.py leave website/docs, website/sidebars.ts and website/i18n unchanged (clean); website/scripts/check_doc_links.py OK. added lines scanned for MDX hazards ({ } or raw <tag> outside inline code / fences): none. NOT_TESTED: Docusaurus build (website/node_modules not installed in this environment).",
+    "mirrors": "website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/features/api-server.md has no /api/sessions chat/stream row — nothing to mirror.",
+    "rebase": "verified on main f848940560; bundle merges cleanly onto refreshed main eb8d21f482 (git merge-tree); merges cleanly with every B1 ready/docs-* branch that touches the same files"
+  },
+  "upstream_overlap": [],
+  "branch": "ready/docs2-gateway",
+  "bundle_commit": "c497e7abe5c386250e4ecba2e634c085b6828726",
+  "patch": "patches/docs2-gateway.patch",
+  "pr_body": "patches/docs2-gateway.body.md",
+  "files": [
+    "website/docs/developer-guide/gateway-session-lifecycle.md",
+    "website/docs/developer-guide/multiplexing-gateway.md",
+    "website/docs/developer-guide/programmatic-integration.md",
+    "website/docs/user-guide/bot-mode.md",
+    "website/docs/user-guide/features/api-server.md",
+    "website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/bot-mode.md"
+  ],
+  "size": "fork leaf +1/-1; bundle docs2-gateway +17/-11 (6 files changed, 17 insertions(+), 11 deletions(-))",
+  "depends_on": null,
+  "notes": "Rebuilt by hand: main's row gained `tool.failed` after the fork leaf was cut. Drift introduced by 583d5b407b (#121769). Bundled with: #123, #287, #288, #394, #294. Packaging: one commit per area bundle (batch B2 lane W4-docs); publish one bundle at a time per kvnloo/hermes-agent#313."
+}

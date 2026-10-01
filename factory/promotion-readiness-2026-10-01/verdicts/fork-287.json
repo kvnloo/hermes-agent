@@ -1,0 +1,35 @@
+{
+  "fork_pr": 287,
+  "title": "docs: document preserve_prompt_pin on SessionStore.switch_session",
+  "claim": "SessionStore.switch_session takes preserve_prompt_pin=True; /resume and CLI handoff pass False. The lifecycle reference signature must include it.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "doc_text_on_main": "website/docs/developer-guide/gateway-session-lifecycle.md:173 — \"`switch_session(session_key, target_session_id, *, expected_session_id=None)`\"",
+    "source": "gateway/session.py:1235-1238 signature with preserve_prompt_pin: bool = True (docstring: pins follow non-boundary repoints by default); callers passing False: gateway/slash_commands_session.py:902 (/resume), gateway/run_startup.py:1794 (CLI handoff).",
+    "red": "inspect.signature(SessionStore.switch_session) on main includes preserve_prompt_pin: bool = True; doc signature does not.",
+    "green": "Signature + one sentence added. tests/gateway/test_resume_command.py and test_handoff_secondary_profile_adapter.py pass on main.",
+    "negative_control": "N/A — docs-only.",
+    "adjacent": "tests/gateway/test_session_chat_approval.py tests/gateway/test_resume_command.py tests/gateway/test_handoff_secondary_profile_adapter.py tests/tui_gateway/test_profiles_describe_secret_scope.py tests/hermes_cli/test_managed_scope_env.py tests/gateway/test_sse_agent_cancel.py -> 46 passed. docs-site-checks equivalent on the bundle branch: website/scripts/extract-skills.py + generate-skill-docs.py leave website/docs, website/sidebars.ts and website/i18n unchanged (clean); website/scripts/check_doc_links.py OK. added lines scanned for MDX hazards ({ } or raw <tag> outside inline code / fences): none. NOT_TESTED: Docusaurus build (website/node_modules not installed in this environment).",
+    "mirrors": "No zh-Hans gateway-session-lifecycle.md.",
+    "rebase": "verified on main f848940560; bundle merges cleanly onto refreshed main eb8d21f482 (git merge-tree); merges cleanly with every B1 ready/docs-* branch that touches the same files"
+  },
+  "upstream_overlap": [
+    "NousResearch/hermes-agent#127355 CLOSED (kvnloo, our own parked carrier of this exact leaf)"
+  ],
+  "branch": "ready/docs2-gateway",
+  "bundle_commit": "c497e7abe5c386250e4ecba2e634c085b6828726",
+  "patch": "patches/docs2-gateway.patch",
+  "pr_body": "patches/docs2-gateway.body.md",
+  "files": [
+    "website/docs/developer-guide/gateway-session-lifecycle.md",
+    "website/docs/developer-guide/multiplexing-gateway.md",
+    "website/docs/developer-guide/programmatic-integration.md",
+    "website/docs/user-guide/bot-mode.md",
+    "website/docs/user-guide/features/api-server.md",
+    "website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/bot-mode.md"
+  ],
+  "size": "fork leaf +1/-1; bundle docs2-gateway +17/-11 (6 files changed, 17 insertions(+), 11 deletions(-))",
+  "depends_on": "kvnloo/hermes-agent#313 policy: publish only when a maintainer review slot exists (publication capacity, not a correctness gate)",
+  "notes": "Drift introduced by 72a2271d0e (#126137). Bundled with: #123, #126, #288, #394, #294. Packaging: one commit per area bundle (batch B2 lane W4-docs); publish one bundle at a time per kvnloo/hermes-agent#313."
+}

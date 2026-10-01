@@ -1,0 +1,84 @@
+diff --git c/tools/terminal_tool.py w/tools/terminal_tool.py
+index 474b64e892..f6becc6ae8 100644
+--- c/tools/terminal_tool.py
++++ w/tools/terminal_tool.py
+@@ -1557,6 +1557,20 @@ TERMINAL_SCHEMA = {
+ }
+ 
+ 
++def _coerce_terminal_bool(val: Any, default: bool = False) -> bool:
++    if val is None:
++        return default
++    if isinstance(val, bool):
++        return val
++    if isinstance(val, str):
++        low = val.strip().lower()
++        if low in ("false", "0", "no", "off"):
++            return False
++        if low in ("true", "1", "yes", "on"):
++            return True
++    return bool(val)
++
++
+ def _handle_terminal(args, **kw):
+     from agent.terminal_approval_batch import validate_prepared_terminal
+     validate_prepared_terminal(args)
+@@ -1576,17 +1590,19 @@ def _handle_terminal(args, **kw):
+     notify_on_complete = args.get("notify_on_complete", False)
+     watch_patterns = args.get("watch_patterns")
+     heartbeat = args.get("heartbeat") or 0
+-    persist_on_release = bool(args.get("persist_on_release", False))
++    persist_on_release = _coerce_terminal_bool(args.get("persist_on_release", False))
+     if not isinstance(heartbeat, int) or isinstance(heartbeat, bool) or heartbeat < 0:
+         return tool_error("heartbeat must be a whole number of seconds (0 disables; positive values are clamped to min 60).")
+-    if not args.get("background", False):
++    background = _coerce_terminal_bool(args.get("background", False))
++    pty = _coerce_terminal_bool(args.get("pty", False))
++    if not background:
+         if notify or watch_patterns or notify_on_complete or heartbeat:
+             return tool_error(
+                 "notify/heartbeat only apply to background commands (foreground "
+                 "results return directly). Either drop them, or run as "
+                 "terminal(command=..., background=true, notify=...)."
+             )
+-        if args.get("pty", False):
++        if pty:
+             return tool_error(
+                 "pty requires background=true (a PTY session is interacted "
+                 "with via process(action='write'/'submit'), which needs a "
+@@ -1600,6 +1616,20 @@ def _handle_terminal(args, **kw):
+                 "terminal(command=..., background=true, persist_on_release=true)."
+             )
+     if notify is not None:
++        if isinstance(notify, str):
++            val = notify.strip()
++            low = val.lower()
++            if low in ("false", "0", "no", "off"):
++                notify = False
++            elif low in ("true", "1", "yes", "on"):
++                notify = True
++            elif val.startswith("[") and val.endswith("]"):
++                try:
++                    parsed = json.loads(val)
++                    if isinstance(parsed, list):
++                        notify = parsed
++                except Exception:
++                    pass
+         if isinstance(notify, bool):
+             notify_on_complete = notify
+             watch_patterns = None
+@@ -1615,12 +1645,12 @@ def _handle_terminal(args, **kw):
+         notify_on_complete = True  # the heartbeat rides the completion delivery path
+     return terminal_tool(
+         command=args.get("command"),
+-        background=args.get("background", False),
++        background=background,
+         timeout=args.get("timeout"),
+         task_id=kw.get("task_id"),
+         session_id=kw.get("session_id"),
+         workdir=args.get("workdir"),
+-        pty=args.get("pty", False),
++        pty=pty,
+         notify_on_complete=notify_on_complete,
+         watch_patterns=watch_patterns,
+         heartbeat=heartbeat,

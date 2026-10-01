@@ -1,0 +1,33 @@
+{
+  "fork_pr": 97,
+  "title": "docs: clarify startup warning checks the receipt's pulled code, not current checkout",
+  "claim": "updating.md says startup warnings and update catch-up both require successors on the current checkout; the startup warning also accepts successors at the completed restart's pulled SHA.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "red": "website/docs/getting-started/updating.md:310 on main: \"Startup and gateway-status warnings, as well as update catch-up, check for a live successor on the current checkout for every gateway profile recorded in that receipt.\"",
+    "green": "'Update catch-up checks for a live successor on the current checkout ... Startup and gateway-status warnings also accept successors on the code the receipt's completed restart phase pulled, even if a later `git pull` has since moved the checkout past it.'",
+    "negative_control": "N/A for docs (no executable behaviour). Equivalent check: the stale phrase is present on main and absent on the bundle (grep given in red/green).",
+    "adjacent": "python3 website/scripts/check_doc_links.py on the bundle tree: OK (no route-style links). All 7 B1 bundles cherry-pick together onto main cleanly, and each pairs cleanly with B2's current docs2-update/docs2-desktop/docs2-gateway/docs2-memory bundles.",
+    "source": "hermes_cli/update_cmd_fleet.py:475-491 _pending_fleet_restart_needed (catch-up, update_completion.py:219) checks _current_checkout_sha only; :494-515 _update_owes_fleet_restart ('Hold a completed restart to the code it pulled, not a later checkout HEAD') first accepts restarted_to with accept_states=('current','stale'); used by _warn_pending_fleet_restart_on_startup (:527-540) from main.py:3636-3640, which also runs for `hermes gateway status`."
+  },
+  "upstream_overlap": [
+    "No open external PR/issue for this claim (gh search prs/issues; open docs PRs touching the same files edit other sections)"
+  ],
+  "branch": "ready/docs-cli",
+  "bundle": {
+    "branch": "ready/docs-cli",
+    "commit": "3d969343fa",
+    "subject": "docs(cli): list profile identity commands; scope the receipt successor check",
+    "bundle_size": "+3/-1",
+    "patch": "patches/docs-cli.patch",
+    "body": "patches/docs-cli.body.md"
+  },
+  "files": [
+    "website/docs/getting-started/updating.md"
+  ],
+  "size": "+1/-1",
+  "depends_on": null,
+  "fork_head": "ece10894d409555104bfe3cd49f0e7547f006ae8",
+  "notes": "Main reworded this paragraph after the fork's base; rebuilt against main's text. B2's docs2-update (#290/#397) edits neighbouring paragraphs; no textual conflict."
+}

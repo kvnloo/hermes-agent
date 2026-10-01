@@ -1,0 +1,77 @@
+From 4e848040659262b804e9443dcc6cb41189e75e0b Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:22:28 -0500
+Subject: [PATCH] fix(skills): trust-sort dashboard hub search before the limit
+ cut
+
+GET /api/skills/hub/search merges every source through
+parallel_search_sources, which appends results in as_completed order, then
+dedupes by identifier and slices [:limit]. Unlike unified_search (which
+stable-sorts by trust before truncating, guarded by
+test_unified_search_trust_rank_survives_limit_cut), the dashboard endpoint
+cut in completion order. A fast, high-volume community source therefore
+filled the page, and builtin/trusted hits that arrived later were dropped
+from the Browse-hub results.
+
+Stable-sort the deduped results by the existing trust rank before the cut.
+Order within a rank is unchanged.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ hermes_cli/web_routers/skills.py              |  4 +++-
+ .../test_dashboard_admin_endpoints.py         | 24 +++++++++++++++++++
+ 2 files changed, 27 insertions(+), 1 deletion(-)
+
+diff --git a/hermes_cli/web_routers/skills.py b/hermes_cli/web_routers/skills.py
+index 9fc1f6dc36..9b171d9286 100644
+--- a/hermes_cli/web_routers/skills.py
++++ b/hermes_cli/web_routers/skills.py
+@@ -205,7 +205,9 @@ async def search_skills_hub(
+             prev = seen.get(r.identifier)
+             if prev is None or _rank.get(r.trust_level, 0) > _rank.get(prev.trust_level, 0):
+                 seen[r.identifier] = r
+-        deduped = list(seen.values())[:capped]
++        # Trust-sort before the limit cut (as unified_search does) so a community source that
++        # finished first cannot push builtin/trusted hits out; order is kept within a rank.
++        deduped = sorted(seen.values(), key=lambda r: -_rank.get(r.trust_level, 0))[:capped]
+ 
+         return {
+             "results": [_skill_meta_to_payload(m) for m in deduped], "source_counts": source_counts,
+diff --git a/tests/hermes_cli/test_dashboard_admin_endpoints.py b/tests/hermes_cli/test_dashboard_admin_endpoints.py
+index 6fb5801821..2971b83e55 100644
+--- a/tests/hermes_cli/test_dashboard_admin_endpoints.py
++++ b/tests/hermes_cli/test_dashboard_admin_endpoints.py
+@@ -644,6 +644,30 @@ class TestSkillsHubSourcesEndpoint:
+         assert isinstance(body["installed"], dict)
+ 
+ 
++class TestSkillsHubSearchEndpoint:
++    @pytest.fixture(autouse=True)
++    def _setup(self, _isolate_hermes_home):
++        self.client, _ = _client()
++
++    def test_trust_rank_survives_limit_cut(self, monkeypatch):
++        # Same contract as unified_search: a community source that finished first
++        # must not push a builtin entry past the limit cut (order kept within a rank).
++        community = [_FakeMeta(f"skills-sh/x/s{i}", "community", "skills.sh") for i in range(20)]
++        official = _FakeMeta("official/cat/s-official", "builtin", "official")
++        monkeypatch.setattr("tools.skills_hub_search.create_source_router", lambda: [])
++        monkeypatch.setattr(
++            "tools.skills_hub_search.parallel_search_sources",
++            lambda *a, **k: (community + [official], {}, []),
++        )
++        monkeypatch.setattr(
++            "hermes_cli.web_routers.skills._installed_hub_identifiers", lambda profile=None: {}
++        )
++        r = self.client.get("/api/skills/hub/search?q=s&limit=10")
++        assert r.status_code == 200
++        ids = [m["identifier"] for m in r.json()["results"]]
++        assert ids == ["official/cat/s-official"] + [f"skills-sh/x/s{i}" for i in range(9)]
++
++
+ class TestOfficialSkillsCatalogEndpoint:
+     @pytest.fixture(autouse=True)
+     def _setup(self, _isolate_hermes_home):
+-- 
+2.55.0
+

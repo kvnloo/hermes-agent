@@ -1,0 +1,285 @@
+npm notice run hermes-agent@1.0.0 npx
+npm notice run 'vitest' run src/__tests__/attachments.test.ts
+
+ RUN  v4.1.10 /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/paste/ui-tui
+
+ ❯ src/__tests__/attachments.test.ts (22 tests | 15 failed) 13ms
+     × replaces a collapsed paste label with its full content 5ms
+     × is a no-op for already-expanded / token-free text (recall round-trip) 0ms
+     × expands repeated identical labels in submission order 0ms
+     × leaves an unmatched label intact when it does not look like a paste token 0ms
+     × reports an unmatched paste token with [N lines] signature as unresolved 1ms
+     × reports multiple orphaned paste tokens 0ms
+     × drops an image token from the text — the gateway already holds the file 1ms
+     × leaves no double space where an image token sat mid-sentence 0ms
+     × resolves an image-only message to empty text 0ms
+     × resolves pastes and images in one pass 1ms
+     × recognizes a paste token with [N lines] signature 0ms
+     × recognizes a paste token with [N.Nk lines] suffix (fmtK output) 0ms
+     × recognizes lowercase k/m/g suffix from fmtK 0ms
+     × rejects user-typed [[ ... ]] without a [N lines] signature 0ms
+     × rejects [[ some text ]] that lacks the line-count marker 0ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 15 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/__tests__/attachments.test.ts > expandTokens (what the agent actually receives) > replaces a collapsed paste label with its full content
+AssertionError: expected undefined to be 'here: hello\nfoo\nworld done' // Object.is equality
+
+- Expected:
+"here: hello
+foo
+world done"
+
++ Received:
+undefined
+
+ ❯ src/__tests__/attachments.test.ts:20:29
+     18|     const result = expandTokens([paste(label, 'hello\nfoo\nworld')])(`…
+     19|
+     20|     expect(result.expanded).toBe('here: hello\nfoo\nworld done')
+       |                             ^
+     21|     expect(result.unresolved).toEqual([])
+     22|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/15]⎯
+
+ FAIL  src/__tests__/attachments.test.ts > expandTokens (what the agent actually receives) > is a no-op for already-expanded / token-free text (recall round-trip)
+AssertionError: expected undefined to be 'hello\nfoo\nworld' // Object.is equality
+
+- Expected:
+"hello
+foo
+world"
+
++ Received:
+undefined
+
+ ❯ src/__tests__/attachments.test.ts:28:29
+     26|     const result = expandTokens([])(expanded)
+     27|
+     28|     expect(result.expanded).toBe(expanded)
+       |                             ^
+     29|     expect(result.unresolved).toEqual([])
+     30|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/15]⎯
+
+ FAIL  src/__tests__/attachments.test.ts > expandTokens (what the agent actually receives) > expands repeated identical labels in submission order
+AssertionError: expected undefined to be 'first then second' // Object.is equality
+
+- Expected:
+"first then second"
+
++ Received:
+undefined
+
+ ❯ src/__tests__/attachments.test.ts:36:29
+     34|     const result = expandTokens([paste(label, 'first'), paste(label, '…
+     35|
+     36|     expect(result.expanded).toBe('first then second')
+       |                             ^
+     37|     expect(result.unresolved).toEqual([])
+     38|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/15]⎯
+
+ FAIL  src/__tests__/attachments.test.ts > expandTokens (what the agent actually receives) > leaves an unmatched label intact when it does not look like a paste token
+AssertionError: expected undefined to be '[[ orphan ]]' // Object.is equality
+
+- Expected:
+"[[ orphan ]]"
+
++ Received:
+undefined
+
+ ❯ src/__tests__/attachments.test.ts:44:29
+     42|     const result = expandTokens([])(label)
+     43|
+     44|     expect(result.expanded).toBe(label)
+       |                             ^
+     45|     expect(result.unresolved).toEqual([])
+     46|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/15]⎯
+
+ FAIL  src/__tests__/attachments.test.ts > expandTokens (what the agent actually receives) > reports an unmatched paste token with [N lines] signature as unresolved
+AssertionError: expected undefined to be 'submit: [[ lost.. [5k lines] .. data …' // Object.is equality
+
+- Expected:
+"submit: [[ lost.. [5k lines] .. data ]] now"
+
++ Received:
+undefined
+
+ ❯ src/__tests__/attachments.test.ts:52:29
+     50|     const result = expandTokens([])(`submit: ${label} now`)
+     51|
+     52|     expect(result.expanded).toBe(`submit: ${label} now`)
+       |                             ^
+     53|     expect(result.unresolved).toEqual([label])
+     54|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/15]⎯
+
+ FAIL  src/__tests__/attachments.test.ts > expandTokens (what the agent actually receives) > reports multiple orphaned paste tokens
+AssertionError: expected undefined to be '[[ chunk1 [135 lines] ]] and [[ chunk…' // Object.is equality
+
+- Expected:
+"[[ chunk1 [135 lines] ]] and [[ chunk2.. [9.2k lines] .. tail ]]"
+
++ Received:
+undefined
+
+ ❯ src/__tests__/attachments.test.ts:61:29
+     59|     const result = expandTokens([])(`${a} and ${b}`)
+     60|
+     61|     expect(result.expanded).toBe(`${a} and ${b}`)
+       |                             ^
+     62|     expect(result.unresolved).toEqual([a, b])
+     63|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/15]⎯
+
+ FAIL  src/__tests__/attachments.test.ts > expandTokens (what the agent actually receives) > drops an image token from the text — the gateway already holds the file
+AssertionError: expected undefined to be 'what is in' // Object.is equality
+
+- Expected:
+"what is in"
+
++ Received:
+undefined
+
+ ❯ src/__tests__/attachments.test.ts:68:29
+     66|     const result = expandTokens([image(1)])(`what is in ${imageToken(1…
+     67|
+     68|     expect(result.expanded).toBe('what is in')
+       |                             ^
+     69|     expect(result.unresolved).toEqual([])
+     70|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/15]⎯
+
+ FAIL  src/__tests__/attachments.test.ts > expandTokens (what the agent actually receives) > leaves no double space where an image token sat mid-sentence
+AssertionError: expected undefined to be 'before after' // Object.is equality
+
+- Expected:
+"before after"
+
++ Received:
+undefined
+
+ ❯ src/__tests__/attachments.test.ts:75:29
+     73|     const result = expandTokens([image(1)])(`before ${imageToken(1)} a…
+     74|
+     75|     expect(result.expanded).toBe('before after')
+       |                             ^
+     76|     expect(result.unresolved).toEqual([])
+     77|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/15]⎯
+
+ FAIL  src/__tests__/attachments.test.ts > expandTokens (what the agent actually receives) > resolves an image-only message to empty text
+AssertionError: expected undefined to be '' // Object.is equality
+
+- Expected:
+""
+
++ Received:
+undefined
+
+ ❯ src/__tests__/attachments.test.ts:82:29
+     80|     const result = expandTokens([image(1)])(imageToken(1))
+     81|
+     82|     expect(result.expanded).toBe('')
+       |                             ^
+     83|     expect(result.unresolved).toEqual([])
+     84|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/15]⎯
+
+ FAIL  src/__tests__/attachments.test.ts > expandTokens (what the agent actually receives) > resolves pastes and images in one pass
+AssertionError: expected undefined to be 'stack\ntrace and' // Object.is equality
+
+- Expected:
+"stack
+trace and"
+
++ Received:
+undefined
+
+ ❯ src/__tests__/attachments.test.ts:90:29
+     88|     const result = expandTokens([paste(label, 'stack\ntrace'), image(2…
+     89|
+     90|     expect(result.expanded).toBe('stack\ntrace and')
+       |                             ^
+     91|     expect(result.unresolved).toEqual([])
+     92|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/15]⎯
+
+ FAIL  src/__tests__/attachments.test.ts > looksLikeOrphanedPasteToken (detection of real paste tokens) > recognizes a paste token with [N lines] signature
+TypeError: looksLikeOrphanedPasteToken is not a function
+ ❯ src/__tests__/attachments.test.ts:97:12
+     95| describe('looksLikeOrphanedPasteToken (detection of real paste tokens)…
+     96|   it('recognizes a paste token with [N lines] signature', () => {
+     97|     expect(looksLikeOrphanedPasteToken('[[ spec text [135 lines] ]]'))…
+       |            ^
+     98|   })
+     99|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/15]⎯
+
+ FAIL  src/__tests__/attachments.test.ts > looksLikeOrphanedPasteToken (detection of real paste tokens) > recognizes a paste token with [N.Nk lines] suffix (fmtK output)
+TypeError: looksLikeOrphanedPasteToken is not a function
+ ❯ src/__tests__/attachments.test.ts:101:12
+     99|
+    100|   it('recognizes a paste token with [N.Nk lines] suffix (fmtK output)'…
+    101|     expect(looksLikeOrphanedPasteToken('[[ heading.. [5.3k lines] .. t…
+       |            ^
+    102|   })
+    103|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/15]⎯
+
+ FAIL  src/__tests__/attachments.test.ts > looksLikeOrphanedPasteToken (detection of real paste tokens) > recognizes lowercase k/m/g suffix from fmtK
+TypeError: looksLikeOrphanedPasteToken is not a function
+ ❯ src/__tests__/attachments.test.ts:105:12
+    103|
+    104|   it('recognizes lowercase k/m/g suffix from fmtK', () => {
+    105|     expect(looksLikeOrphanedPasteToken('[[ [9.9m lines] ]]')).toBe(tru…
+       |            ^
+    106|   })
+    107|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/15]⎯
+
+ FAIL  src/__tests__/attachments.test.ts > looksLikeOrphanedPasteToken (detection of real paste tokens) > rejects user-typed [[ ... ]] without a [N lines] signature
+TypeError: looksLikeOrphanedPasteToken is not a function
+ ❯ src/__tests__/attachments.test.ts:109:12
+    107|
+    108|   it('rejects user-typed [[ ... ]] without a [N lines] signature', () …
+    109|     expect(looksLikeOrphanedPasteToken('[[ orphan ]]')).toBe(false)
+       |            ^
+    110|   })
+    111|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/15]⎯
+
+ FAIL  src/__tests__/attachments.test.ts > looksLikeOrphanedPasteToken (detection of real paste tokens) > rejects [[ some text ]] that lacks the line-count marker
+TypeError: looksLikeOrphanedPasteToken is not a function
+ ❯ src/__tests__/attachments.test.ts:113:12
+    111|
+    112|   it('rejects [[ some text ]] that lacks the line-count marker', () =>…
+    113|     expect(looksLikeOrphanedPasteToken('[[ I typed this ]]')).toBe(fal…
+       |            ^
+    114|   })
+    115| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/15]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  15 failed | 7 passed (22)
+   Start at  23:21:44
+   Duration  600ms (transform 368ms, setup 0ms, import 446ms, tests 13ms, environment 0ms)
+

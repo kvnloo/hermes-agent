@@ -1,0 +1,189 @@
+npm notice run hermes-agent@1.0.0 npx
+npm notice run 'vitest' run electron/git-review-ops.test.ts
+
+ RUN  v4.1.10 /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/reviewdiff-tracked/apps/desktop
+
+ ❯ |electron| electron/git-review-ops.test.ts (29 tests | 8 failed) 1480ms
+   × reviewDiff synthesizes an all-add diff for an untracked file 66ms
+   × reviewDiff expands an untracked directory into its files 63ms
+   × reviewDiff expands an untracked directory whose path contains spaces 63ms
+   × reviewDiff skips gitignored files when expanding an untracked directory 62ms
+   × reviewDiff caps a huge untracked directory and says what it dropped 63ms
+   × fileDiffVsHead expands an untracked directory too 65ms
+   × reviewDiff does not pull in neighbours of a file whose name looks like a glob 67ms
+   × fileDiffVsHead does not pull in glob neighbours either 70ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |electron| electron/git-review-ops.test.ts > reviewDiff synthesizes an all-add diff for an untracked file
+AssertionError: The input did not match the regular expression /\+alpha/. Input:
+
+''
+
+
+- Expected:
+/\+alpha/
+
++ Received:
+""
+
+ ❯ electron/git-review-ops.test.ts:180:10
+    178|   const diff = await uncommittedDiff(dir, 'fresh.txt')
+    179|
+    180|   assert.match(diff, /\+alpha/)
+       |          ^
+    181|   assert.match(diff, /\+beta/)
+    182| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  |electron| electron/git-review-ops.test.ts > reviewDiff expands an untracked directory into its files
+AssertionError: Expected "actual" to be strictly unequal to: ''
+ ❯ electron/git-review-ops.test.ts:193:10
+    191|   const diff = await uncommittedDiff(dir, 'newdir/')
+    192|
+    193|   assert.notEqual(diff.trim(), '')
+       |          ^
+    194|   assert.match(diff, /\+first/)
+    195|   assert.match(diff, /\+second/)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  |electron| electron/git-review-ops.test.ts > reviewDiff expands an untracked directory whose path contains spaces
+AssertionError: The input did not match the regular expression /\+vault note/. Input:
+
+''
+
+
+- Expected:
+/\+vault note/
+
++ Received:
+""
+
+ ❯ electron/git-review-ops.test.ts:209:10
+    207|   const diff = await uncommittedDiff(dir, 'Fallout Vault/')
+    208|
+    209|   assert.match(diff, /\+vault note/)
+       |          ^
+    210| })
+    211|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  |electron| electron/git-review-ops.test.ts > reviewDiff skips gitignored files when expanding an untracked directory
+AssertionError: The input did not match the regular expression /\+kept/. Input:
+
+''
+
+
+- Expected:
+/\+kept/
+
++ Received:
+""
+
+ ❯ electron/git-review-ops.test.ts:222:10
+    220|   const diff = await uncommittedDiff(dir, 'logs/')
+    221|
+    222|   assert.match(diff, /\+kept/)
+       |          ^
+    223|   assert.doesNotMatch(diff, /\+ignored/)
+    224| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  |electron| electron/git-review-ops.test.ts > reviewDiff caps a huge untracked directory and says what it dropped
+AssertionError: The input did not match the regular expression /\+line 0/. Input:
+
+''
+
+
+- Expected:
+/\+line 0/
+
++ Received:
+""
+
+ ❯ electron/git-review-ops.test.ts:237:10
+    235|   const diff = await uncommittedDiff(dir, 'generated/')
+    236|
+    237|   assert.match(diff, /\+line 0/)
+       |          ^
+    238|   // Truncation is never silent.
+    239|   assert.match(diff, /10 more file\(s\) omitted/)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  |electron| electron/git-review-ops.test.ts > fileDiffVsHead expands an untracked directory too
+AssertionError: The input did not match the regular expression /\+preview line/. Input:
+
+''
+
+
+- Expected:
+/\+preview line/
+
++ Received:
+""
+
+ ❯ electron/git-review-ops.test.ts:291:10
+    289|   fs.writeFileSync(path.join(dir, 'preview-dir', 'a.txt'), 'preview li…
+    290|
+    291|   assert.match(await fileDiffVsHead(dir, 'preview-dir/', 'git'), /\+pr…
+       |          ^
+    292| })
+    293|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+ FAIL  |electron| electron/git-review-ops.test.ts > reviewDiff does not pull in neighbours of a file whose name looks like a glob
+AssertionError: The input did not match the regular expression /\+clicked file/. Input:
+
+''
+
+
+- Expected:
+/\+clicked file/
+
++ Received:
+""
+
+ ❯ electron/git-review-ops.test.ts:352:10
+    350|   const diff = await uncommittedDiff(dir, 'weird[1].txt')
+    351|
+    352|   assert.match(diff, /\+clicked file/)
+       |          ^
+    353|   assert.doesNotMatch(diff, /neighbour MODIFIED/)
+    354|   assert.doesNotMatch(diff, /weird1\.txt/)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯
+
+ FAIL  |electron| electron/git-review-ops.test.ts > fileDiffVsHead does not pull in glob neighbours either
+AssertionError: The input did not match the regular expression /\+clicked file/. Input:
+
+''
+
+
+- Expected:
+/\+clicked file/
+
++ Received:
+""
+
+ ❯ electron/git-review-ops.test.ts:361:10
+    359|   const diff = await fileDiffVsHead(dir, 'weird[1].txt', 'git')
+    360|
+    361|   assert.match(diff, /\+clicked file/)
+       |          ^
+    362|   assert.doesNotMatch(diff, /neighbour MODIFIED/)
+    363| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/8]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  8 failed | 21 passed (29)
+   Start at  22:53:23
+   Duration  1.69s (transform 70ms, setup 0ms, import 100ms, tests 1.48s, environment 0ms)
+

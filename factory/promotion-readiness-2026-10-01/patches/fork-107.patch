@@ -1,0 +1,186 @@
+From bffc644b1b299a09d21a4fa781930933c51c553d Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:28:48 -0500
+Subject: [PATCH] fix(desktop): a reused tool call id no longer re-arms a
+ sealed row from a settled turn
+
+Tool call ids repeat across turns (llama.cpp emits one constant id, Hermes'
+deterministic ids repeat). When a turn's tool.complete is lost, settle seals
+its part with completedAt and no result. toolCallOwnerMessageId matched any
+part without a result, so a later turn's tool.start for the same id was
+routed onto that sealed row: upsertToolPart's unseal branch overwrote the
+prior turn's command with the new one and the live turn drew no tool row.
+
+toolCallOwnerMessageId now takes the event phase. A completion still
+reconciles with a sealed-no-result part wherever it is (#113035). A running
+event re-arms one only while its turn is in flight: the bubble is pending or
+interim and no settled reply has landed after it. interim alone is not
+enough, because it stays set on a bubble sealed by interim commentary after
+the turn settles into a later bubble; the session-wide interim boundary bit
+is not consulted because a later turn can raise it.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../use-message-stream/gateway-event/tools.ts |  4 +-
+ .../session/hooks/use-message-stream/index.ts |  5 +-
+ .../late-tool-events.test.tsx                 | 53 +++++++++++++++++++
+ .../src/lib/chat-messages/tool-parts.ts       | 29 ++++++++--
+ 4 files changed, 85 insertions(+), 6 deletions(-)
+
+diff --git a/apps/desktop/src/app/session/hooks/use-message-stream/gateway-event/tools.ts b/apps/desktop/src/app/session/hooks/use-message-stream/gateway-event/tools.ts
+index b96f83e091..ff91303550 100644
+--- a/apps/desktop/src/app/session/hooks/use-message-stream/gateway-event/tools.ts
++++ b/apps/desktop/src/app/session/hooks/use-message-stream/gateway-event/tools.ts
+@@ -73,10 +73,12 @@ export function handleToolEvent(ctx: GatewayEventContext): boolean {
+       flushQueuedDeltas(sessionId)
+ 
+       const state = $sessionStates.get()[sessionId]
++
+       // Read before the upsert seals the part: only a completion that resolves
+       // a still-pending call is a fresh production; a duplicate or replayed
+       // completion may never re-offer a dismissed target.
+-      const pendingProduction = !event.replayed && Boolean(toolCallOwnerMessageId(state?.messages ?? [], payload))
++      const pendingProduction =
++        !event.replayed && Boolean(toolCallOwnerMessageId(state?.messages ?? [], payload, 'complete'))
+ 
+       upsertToolCall(sessionId, toTodoPayload(payload) ?? payload, 'complete', event.type, occurredAt)
+ 
+diff --git a/apps/desktop/src/app/session/hooks/use-message-stream/index.ts b/apps/desktop/src/app/session/hooks/use-message-stream/index.ts
+index 6ebd95d6f6..b9f4bf2031 100644
+--- a/apps/desktop/src/app/session/hooks/use-message-stream/index.ts
++++ b/apps/desktop/src/app/session/hooks/use-message-stream/index.ts
+@@ -589,8 +589,9 @@ export function useMessageStream({
+           // lookup a completion seeds a new bubble with a duplicate row while
+           // the sealed one keeps reading "Result unavailable", and a running
+           // event for the same id seeds a second live row with its own timer
+-          // under the user's message (#113035). Both phases route by id.
+-          eventTarget: state => toolCallOwnerMessageId(state.messages, payload)
++          // under the user's message (#113035). Both phases route by id; a
++          // running event never re-arms a sealed row from a settled turn.
++          eventTarget: state => toolCallOwnerMessageId(state.messages, payload, phase)
+         },
+         occurredAt
+       )
+diff --git a/apps/desktop/src/app/session/hooks/use-message-stream/late-tool-events.test.tsx b/apps/desktop/src/app/session/hooks/use-message-stream/late-tool-events.test.tsx
+index 74daeb17c9..1cb49ac319 100644
+--- a/apps/desktop/src/app/session/hooks/use-message-stream/late-tool-events.test.tsx
++++ b/apps/desktop/src/app/session/hooks/use-message-stream/late-tool-events.test.tsx
+@@ -116,4 +116,57 @@ describe('tool events for a part that already exists on a sealed message', () =>
+     expect(rows[1].part).toMatchObject({ args: { command: 'echo step2' }, result: 'step 2 output' })
+     expect(rows[1].messageIndex).toBeGreaterThan(rows[0].messageIndex)
+   })
++
++  it.each([
++    { interimInA: false, interimInB: false, shape: 'settled on the bubble that owns the call' },
++    { interimInA: true, interimInB: false, shape: 'sealed the call behind interim commentary, then settled' },
++    { interimInA: false, interimInB: true, shape: 'settled, and the later turn opens with interim commentary' }
++  ])(
++    'draws a reused id as its own row when the prior turn lost the completion and $shape',
++    ({ interimInA, interimInB }) => {
++      // Turn A never receives tool.complete; settle seals its part without a result.
++      event('message.start', 600)
++
++      if (interimInA) {
++        event('message.delta', 601, { text: 'Running step A.' })
++      }
++
++      event('tool.start', 602, { args: { command: 'echo stepA' }, name: 'terminal', tool_id: 'call_lost' })
++
++      if (interimInA) {
++        event('message.interim', 603, { text: 'Running step A.' })
++      }
++
++      event('message.complete', 604, { text: 'first turn done' })
++
++      event('message.start', 700)
++
++      if (interimInB) {
++        event('message.interim', 701, { already_streamed: true, text: 'Thinking about step B.' })
++      }
++
++      event('tool.start', 702, { args: { command: 'echo stepB' }, name: 'terminal', tool_id: 'call_lost' })
++      event('tool.complete', 703, { name: 'terminal', result: 'step B output', tool_id: 'call_lost' })
++      event('message.complete', 704, { text: 'second turn done' })
++
++      const rows = toolRows('call_lost')
++      expect(rows).toHaveLength(2)
++      expect(rows[0].part).toMatchObject({ args: { command: 'echo stepA' } })
++      expect((rows[0].part as { result?: unknown }).result).toBeUndefined()
++      expect(rows[1].part).toMatchObject({ args: { command: 'echo stepB' }, result: 'step B output' })
++      expect(rows[1].messageIndex).toBeGreaterThan(rows[0].messageIndex)
++    }
++  )
++
++  it('attaches a late completion to a part sealed by a plain turn settle', () => {
++    event('message.start', 800)
++    event('tool.start', 801, { args: { command: 'echo step1' }, name: 'terminal', tool_id: 'call_settle' })
++    event('message.complete', 802, { text: 'first turn done' })
++    event('tool.complete', 803, { name: 'terminal', result: 'ok', tool_id: 'call_settle' })
++
++    const rows = toolRows('call_settle')
++    expect(rows).toHaveLength(1)
++    expect(rows[0].part).toMatchObject({ args: { command: 'echo step1' }, result: 'ok' })
++    expect(stream.state(SID).streamId).toBeNull()
++  })
+ })
+diff --git a/apps/desktop/src/lib/chat-messages/tool-parts.ts b/apps/desktop/src/lib/chat-messages/tool-parts.ts
+index 9a1e89357c..30229a9b3f 100644
+--- a/apps/desktop/src/lib/chat-messages/tool-parts.ts
++++ b/apps/desktop/src/lib/chat-messages/tool-parts.ts
+@@ -425,13 +425,23 @@ export interface SettledClarifyProjection {
+  * from an earlier turn, not the owner of the new one. Routing to it would
+  * draw the new call over the old row and leave the live turn empty.
+  *
++ * A part sealed WITHOUT a result (`sealOpenToolParts` after a lost
++ * `tool.complete`) is split by phase. A `complete` event is that call's own
++ * late result, so the sealed part always owns it (#113035). A `running` event
++ * re-arms it only while its turn is still in flight: the bubble is `pending`
++ * or `interim` and no settled reply has landed after it. `interim` alone is
++ * not enough — it stays set on a bubble sealed by interim commentary after its
++ * turn settles into a later bubble — so a reused id in a later turn would
++ * otherwise overwrite that turn's row and leave the live turn without one.
++ *
+  * Newest-first among unresolved parts: interim boundaries append bubbles, so
+  * the owner of an in-flight call is the most recent message that carries the
+  * id without a result.
+  */
+ export function toolCallOwnerMessageId(
+   messages: ChatMessage[],
+-  payload: GatewayEventPayload | undefined
++  payload: GatewayEventPayload | undefined,
++  phase: 'running' | 'complete'
+ ): string | null {
+   const stableId = toolId(payload)
+ 
+@@ -439,13 +449,26 @@ export function toolCallOwnerMessageId(
+     return null
+   }
+ 
++  let settledReplyAfter = false
++
+   for (let messageIndex = messages.length - 1; messageIndex >= 0; messageIndex -= 1) {
+     const message = messages[messageIndex]
++    const inFlight = (message.pending || message.interim) && !settledReplyAfter
+ 
+     for (const part of message.parts) {
+-      if (part.type === 'tool-call' && part.toolCallId === stableId && !Object.hasOwn(part, 'result')) {
+-        return message.id
++      if (part.type !== 'tool-call' || part.toolCallId !== stableId || Object.hasOwn(part, 'result')) {
++        continue
+       }
++
++      if (phase === 'running' && part.completedAt !== undefined && !inFlight) {
++        continue
++      }
++
++      return message.id
++    }
++
++    if (message.role === 'assistant' && !message.pending && !message.interim && message.completedAt !== undefined) {
++      settledReplyAfter = true
+     }
+   }
+ 
+-- 
+2.55.0
+

@@ -1,0 +1,179 @@
+From ae4f4631ea2a176acd58598f428df24772cf3cab Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:18:14 -0500
+Subject: [PATCH] fix(dashboard): show resume wait notice for implicit
+ active-session resume
+
+When a /chat socket connects with no ?resume= param, pty_ws can fall back
+to the channel's active-session file and announce that replay with a
+{"type":"resume"} control frame (#93518). ChatPage then sets
+resumeHydrating for the fresh --resume PTY, which boots just as blank as
+an explicit resume. The render gate still required Boolean(resumeParam),
+so on this path (for example reconnecting after the keep-alive PTY was
+reaped) the "Please wait while the conversation loads..." notice stayed
+hidden and the user saw an empty terminal with a blinking cursor.
+
+resumeHydrating is only set when a resume target exists (URL param or
+control frame), so the extra URL-param guard added nothing except
+excluding the implicit path. Drop hasResumeTarget from
+shouldShowResumeLoadingOverlay and gate on hydrating alone.
+
+Add a ChatPage test: a fresh chat shows no notice, the control frame
+shows it, and the first PTY output hides it.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ web/src/lib/pty-resume-loading.test.ts | 16 +------------
+ web/src/lib/pty-resume-loading.ts      |  8 ++++---
+ web/src/pages/ChatPage.test.tsx        | 31 ++++++++++++++++++++++++++
+ web/src/pages/ChatPage.tsx             |  1 -
+ 4 files changed, 37 insertions(+), 19 deletions(-)
+
+diff --git a/web/src/lib/pty-resume-loading.test.ts b/web/src/lib/pty-resume-loading.test.ts
+index 01a5ae9db9..5403130912 100644
+--- a/web/src/lib/pty-resume-loading.test.ts
++++ b/web/src/lib/pty-resume-loading.test.ts
+@@ -41,37 +41,24 @@ describe("resume hydration gate over the real sanitizer", () => {
+ });
+ 
+ describe("shouldShowResumeLoadingOverlay", () => {
+-  it("shows while a resume target is connecting or open and still hydrating", () => {
++  it("shows while connecting or open and still hydrating", () => {
+     expect(
+       shouldShowResumeLoadingOverlay({
+-        hasResumeTarget: true,
+         ptyState: "connecting",
+         hydrating: true,
+       }),
+     ).toBe(true);
+     expect(
+       shouldShowResumeLoadingOverlay({
+-        hasResumeTarget: true,
+         ptyState: "open",
+         hydrating: true,
+       }),
+     ).toBe(true);
+   });
+ 
+-  it("hides when there is no resume target", () => {
+-    expect(
+-      shouldShowResumeLoadingOverlay({
+-        hasResumeTarget: false,
+-        ptyState: "connecting",
+-        hydrating: true,
+-      }),
+-    ).toBe(false);
+-  });
+-
+   it("hides once hydration finishes", () => {
+     expect(
+       shouldShowResumeLoadingOverlay({
+-        hasResumeTarget: true,
+         ptyState: "open",
+         hydrating: false,
+       }),
+@@ -82,7 +69,6 @@ describe("shouldShowResumeLoadingOverlay", () => {
+     for (const ptyState of ["reconnecting", "closed", "ended"] as const) {
+       expect(
+         shouldShowResumeLoadingOverlay({
+-          hasResumeTarget: true,
+           ptyState,
+           hydrating: true,
+         }),
+diff --git a/web/src/lib/pty-resume-loading.ts b/web/src/lib/pty-resume-loading.ts
+index 9a150664d5..7bd29f1213 100644
+--- a/web/src/lib/pty-resume-loading.ts
++++ b/web/src/lib/pty-resume-loading.ts
+@@ -10,7 +10,6 @@ export const PTY_RESUME_LOADING_MESSAGE =
+   "Please wait while the conversation loads…";
+ 
+ export interface ResumeLoadingOverlayInput {
+-  hasResumeTarget: boolean;
+   ptyState: PtyConnectionState;
+   hydrating: boolean;
+ }
+@@ -20,15 +19,18 @@ export interface ResumeLoadingOverlayInput {
+  * first real PTY payload arrives the terminal has something to show, so
+  * the notice hides and history can stream in underneath.
+  *
++ * `hydrating` alone marks a resume replay: ChatPage sets it for an explicit
++ * `?resume=` and for the server's implicit active-session control frame
++ * (#93518), which has no URL param but the same blank `--resume` boot.
++ *
+  * Reconnect / ended / closed states keep their own overlays and must not
+  * stack this one on top.
+  */
+ export function shouldShowResumeLoadingOverlay({
+-  hasResumeTarget,
+   ptyState,
+   hydrating,
+ }: ResumeLoadingOverlayInput): boolean {
+-  if (!hasResumeTarget || !hydrating) {
++  if (!hydrating) {
+     return false;
+   }
+   if (
+diff --git a/web/src/pages/ChatPage.test.tsx b/web/src/pages/ChatPage.test.tsx
+index 7429b87dce..66833f8b0d 100644
+--- a/web/src/pages/ChatPage.test.tsx
++++ b/web/src/pages/ChatPage.test.tsx
+@@ -9,6 +9,7 @@ import {
+   PTY_RECONNECT_MAX_MS,
+   PTY_TICKET_TIMEOUT_MS,
+ } from "@/lib/pty-reconnect";
++import { PTY_RESUME_LOADING_MESSAGE } from "@/lib/pty-resume-loading";
+ 
+ class FakeFitAddon {
+   fit() {}
+@@ -505,6 +506,36 @@ describe("ChatPage", () => {
+     });
+   });
+ 
++  it("shows the resume wait notice for a server-announced resume with no ?resume= param", async () => {
++    const { default: ChatPage } = await import("./ChatPage");
++    await render(
++      <MemoryRouter initialEntries={["/chat"]}>
++        <ChatPage isActive />
++      </MemoryRouter>,
++    );
++    await vi.waitFor(() => expect(FakeWebSocket.instances).toHaveLength(1));
++    const socket = FakeWebSocket.instances[0];
++    await act(async () => socket.onopen?.());
++    const notice = () =>
++      container.querySelector(`[aria-label="${PTY_RESUME_LOADING_MESSAGE}"]`);
++
++    // A fresh chat with nothing to replay never shows the notice.
++    expect(notice()).toBeNull();
++
++    // The active-session fallback announces its replay with a control frame
++    // (#93518); the fresh --resume PTY is as blank as an explicit resume.
++    await act(async () =>
++      socket.onmessage?.({ data: JSON.stringify({ type: "resume", id: "sess-1" }) }),
++    );
++    expect(notice()).not.toBeNull();
++
++    // First real PTY output ends the blank window.
++    await act(async () =>
++      socket.onmessage?.({ data: new TextEncoder().encode("history\r\n").buffer }),
++    );
++    expect(notice()).toBeNull();
++  });
++
+   it("attaches visualViewport keyboard-inset listeners only while the chat tab is active", async () => {
+     // NS-434 follow-up: ChatPage stays mounted (hidden) on every dashboard
+     // route. The keyboard-inset/scroll-pin listeners must only be live while
+diff --git a/web/src/pages/ChatPage.tsx b/web/src/pages/ChatPage.tsx
+index 27ec31b15f..1f64c6ea45 100644
+--- a/web/src/pages/ChatPage.tsx
++++ b/web/src/pages/ChatPage.tsx
+@@ -1826,7 +1826,6 @@ export default function ChatPage({ isActive = true }: { isActive?: boolean }) {
+   const showReconnectOverlay =
+     ptyState === "reconnecting" || (ptyState === "closed" && !banner);
+   const showResumeLoadingOverlay = shouldShowResumeLoadingOverlay({
+-    hasResumeTarget: Boolean(resumeParam),
+     ptyState,
+     hydrating: resumeHydrating,
+   });
+-- 
+2.55.0
+

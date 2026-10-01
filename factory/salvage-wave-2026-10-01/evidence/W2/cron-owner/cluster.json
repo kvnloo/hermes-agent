@@ -1,0 +1,133 @@
+{
+ "issue": "#108480",
+ "slug": "cron-owner",
+ "seed": "fork #60 (kvnloo/hermes-agent)",
+ "title": "cron recovery terminalizes a live owner when its start-time fingerprint was never recorded (started_at NULL)",
+ "main_sha": "298a01c79b38018e029e50f77efe67c4a4fdbd40",
+ "candidates": [
+  {
+   "pr": 108484,
+   "author": "Liuzikaii",
+   "created": "2026-09-11T18:24:20Z",
+   "last_activity": "2026-09-11T18:30:25Z (no comments or reviews; issue #108480 has a supporting analysis by Enough1122 on 2026-09-27)",
+   "mergeable_github": "UNKNOWN (GitHub has not computed it; locally CONFLICTING, one hunk)",
+   "merges_clean_on_pinned_main": "false: one conflict hunk in cron/executions.py. Its second hunk (unreadable current fingerprint -> live) is already on main via #117584 with drift tolerance. Resolved mechanically by keeping main's side; the started_at hunk auto-merges, so the net production change is one line (108484-merged-on-main.resolved.diff)",
+   "diff_size": "+73/-2, 2 files (net on main after rebase: +1/-1 production, +69 test)",
+   "has_tests": "yes: tests/cron/test_owner_uncertainty.py (real subprocess owner, temp-profile SQLite, both ledgers, parametrized recorded/current). Its [current] case fails on main for a test-side reason: the `started_at + 1` mismatch sentinel is inside main's 200-tick drift tolerance; passes with the sentinel moved past it",
+   "approach": "Shared cron.executions._owner_is_live: a live PID with no recorded fingerprint returns True (not proved abandoned), and an unreadable current fingerprint returns True. Covers execution and delivery recovery together because delivery_queue imports the shared helper. Fixes #108480."
+  },
+  {
+   "pr": 83939,
+   "author": "Leon-Geldmann",
+   "created": "2026-08-11T14:17:42Z",
+   "last_activity": "2026-08-16T17:03:14Z",
+   "mergeable_github": "UNKNOWN (locally CONFLICTING)",
+   "merges_clean_on_pinned_main": "false: conflicts in 32 files (merge-83939.txt)",
+   "diff_size": "+6392/-646, 36 files",
+   "has_tests": "yes (scheduler handoff suites); not run, does not merge",
+   "approach": "'fence cross-process scheduler handoff': a redesign that adds a stable_started_at fingerprint and, as one hunk among many, makes `started_at is None` return True. Labels sweeper:risk-session-state, sweeper:risk-message-delivery, sweeper:risk-compatibility. Does not reference #108480."
+  }
+ ],
+ "candidates_checked_not_same_defect": [
+  {
+   "pr": 117584,
+   "author": "teknium1",
+   "why": "MERGED 2026-09-20 (salvage of #117514, liuhao1024): unreadable current fingerprint -> live, plus the drift-tolerant comparator. Fixed the other half of #108480; the NULL-recorded branch is untouched."
+  },
+  {
+   "pr": 111454,
+   "author": "Monti76",
+   "why": "Open: drift tolerance (500) + current-None -> live in _owner_is_live. Leaves `started_at is None: return pid == os.getpid()`; its drift half is superseded on main by #117584."
+  },
+  {
+   "pr": 117091,
+   "author": "emirsaffar-collab",
+   "why": "Open: ±2 s drift tolerance for gateway/status liveness fingerprints (scoped locks, pid_is_hermes). Does not touch cron._owner_is_live."
+  },
+  {
+   "pr": 106627,
+   "author": "chelsealong",
+   "why": "Open (Closes #106607): protect a live restart-safe worker from stale-owner recovery. Stale-claim bound, not the NULL fingerprint branch."
+  },
+  {
+   "pr": 121052,
+   "author": "djmango",
+   "why": "Open: late imports survive in-place upgrade; released claim records outcome first. No change to the owner predicate."
+  },
+  {
+   "pr": 104185,
+   "author": "fangliquanflq",
+   "why": "Open: keep scheduled jobs running across daemon upgrades. No change to the owner predicate."
+  },
+  {
+   "pr": 90293,
+   "author": "andrexibiza",
+   "why": "Open: atomic fallback routing, preserve unknown outcomes (#90089). No change to the owner predicate."
+  }
+ ],
+ "regression_test": {
+  "source": "adapted from #108484 tests/cron/test_owner_uncertainty.py (real child interpreter, both ledgers) plus kvnloo fork #60's dead-PID and recycled-PID anchors (mocked in the fork, real-subprocess here)",
+  "path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/cron-owner/test_cron_owner_null_fingerprint.py (placed at tests/cron/test_cron_owner_null_fingerprint.py)",
+  "tests": [
+   "test_live_owner_without_fingerprint_finishes_both_ledgers[recorded|current]",
+   "test_dead_owner_without_recorded_fingerprint_is_still_fenced",
+   "test_recycled_pid_with_known_mismatch_is_still_fenced"
+  ],
+  "contract": "Recovery run from another process does not fence a live owner whose start-time fingerprint was never recorded (or is unreadable now): recover_interrupted_executions() and recover_abandoned() return (0, 0) and the owner then completes its execution and delivery rows. A dead owner without a recorded fingerprint, and a live PID whose recorded fingerprint mismatches beyond the drift tolerance, are still fenced to unknown in both ledgers.",
+  "evidence_path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/cron-owner/"
+ },
+ "ab_results": {
+  "main": {
+   "result": "fail",
+   "detail": "1 failed / 3 passed. [recorded]: recovery returns (1, 1) and the owner's finish writes nothing: \"live owner fenced: {'execution': None, 'delivered': False}\", `assert (1, 1) == (0, 0)` (cron/executions.py:136-137 `return pid == os.getpid()`). [current], dead and recycled anchors pass (the current half was fixed by #117584)."
+  },
+  "108484": {
+   "result": "pass",
+   "detail": "4/4 after a one-hunk mechanical rebase (keep main's #117584 tail). Negative control: reverting its one line re-fails [recorded] (1 failed / 3 passed). Its own test fails [current] on main because `started_at + 1` is now within the 200-tick drift tolerance; 2/2 with the sentinel moved past it (108484-own-test-rebase-fix.diff)."
+  },
+  "83939": {
+   "result": "not run",
+   "detail": "Conflicts in 32 files on main (+6392/-646 scheduler-handoff bundle); its NULL-fingerprint hunk matches #108484's but cannot be A/B'd without porting the bundle."
+  },
+  "fork#60 rebuilt (reference, not an upstream candidate)": {
+   "result": "fail",
+   "detail": "2 failed / 2 passed. The executions hunk matches #108484, but its delivery-local at-most-once _owner_is_live fences the live owner's delivery in both [recorded] and [current] (`assert (0, 1) == (0, 0)`), which also regresses the unreadable-current case that main already preserves since #117584."
+  }
+ },
+ "adjacent_tests": {
+  "files": [
+   "tests/cron/test_owner_start_time_drift.py",
+   "tests/cron/test_execution_ledger.py",
+   "tests/cron/test_delivery_queue.py",
+   "tests/cron/test_delivery_queue_retention_race.py",
+   "tests/cron/test_dead_owner_claim_reclaim.py",
+   "tests/cron/test_cron_run_stale_claim_reap.py",
+   "tests/cron/test_stale_running_recovery.py",
+   "tests/cron/test_restart_safe_worker_death_evidence.py",
+   "tests/cron/test_scheduled_occurrence.py",
+   "tests/gateway/test_owner_liveness_drift.py"
+  ],
+  "result": "Main plus the regression test: 77 passed, 1 failed (the [recorded] case). #108484 merged plus its own test: 79 passed, 1 failed (its [current] sentinel drift). #108484 plus the sentinel fix plus the regression test: 80 passed, 0 failed. Fork #60 rebuilt: 76 passed, 2 failed. tests/cron/test_restart_safe_worker.py was excluded because it exercises systemd-run scope paths."
+ },
+ "carrier": {
+  "pr": 108484,
+  "author": "liuzikaii <2319582736@qq.com>",
+  "why": "The only upstream PR that targets #108480 (Fixes #108480) and the smallest sound footprint: one production line after a mechanical one-hunk rebase, with a real-subprocess test of both ledgers. It passes the contract, and reverting its line re-fails it. #83939 carries the same one-line change inside a 36-file scheduler redesign that conflicts in 32 files, and kvnloo fork #60 splits delivery onto an at-most-once policy that contradicts #117584 and fails the contract."
+ },
+ "fold_ins": [
+  {
+   "from": "fork #60 (kvnloo/hermes-agent)",
+   "author": "kvnloo",
+   "co_authored_by": "Kevin Rajan <7121943+kvnloo@users.noreply.github.com>",
+   "hunk_scope": "New file tests/cron/test_cron_owner_null_fingerprint.py (the regression test above). Its live-owner case overlaps #108484's own test, so a maintainer may keep only the two anchors (dead owner without a recorded fingerprint, and recycled PID beyond START_TIME_DRIFT_TOLERANCE, each fenced in both ledgers). No production code from fork #60.",
+   "why": "#108484's test proves the live owner survives but never checks that the NULL branch stays gated on PID existence or that a known mismatch still fences after the rebase onto main's drift-tolerant comparator; its own mismatch sentinel (`+ 1`) is now inside that tolerance.",
+   "test": "Fails 1/4 on main 298a01c7 ([recorded]); passes 4/4 on main plus #108484."
+  }
+ ],
+ "close_after_merge": [],
+ "exclude_reason": null,
+ "row": "| #108480 | #108484 (Liuzikaii) | main: FAIL, 1 of 4 (a live owner with no recorded start time is fenced in both ledgers: recovery returns (1, 1) and the owner's finish writes nothing); #108484: PASS 4/4 after a one-hunk mechanical rebase (keep main's #117584 drift-tolerant tail in `_owner_is_live`); kvnloo fork #60 rebuilt: FAIL, 2 of 4 (its delivery-local at-most-once helper fences the live owner's delivery, also in the unreadable-current case main already handles); #83939: CONFLICTING in 32 files, not run | kvnloo (fork #60): real-subprocess anchors in `tests/cron/test_cron_owner_null_fingerprint.py` (dead owner without a recorded fingerprint and recycled PID beyond drift tolerance are still fenced in both ledgers); `Co-authored-by: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>` | none (#83939 is a 36-file scheduler-handoff bundle; its NULL-fingerprint hunk becomes a no-op on rebase and it stays open) | On main `_owner_is_live` returns `pid == os.getpid()` when no start time was recorded at claim, so recovery in another process rewrites a live owner's execution and delivery rows to immutable `unknown`. #108484 makes that branch `return True`, matching the unreadable-current branch #117584 fixed. Reverting it re-fails the case. The 10 adjacent cron/gateway files go from 77 passed / 1 failed to 80 passed / 0 failed once #108484's own `+ 1` mismatch sentinel is moved past main's 200-tick drift tolerance. |",
+ "row_fork_draft": "| #108480 | #108484 (Liuzikaii) | main 298a01c7 FAIL 1/4 (NULL recorded fingerprint: live owner fenced in both ledgers); #108484 PASS 4/4 (one-hunk rebase onto #117584 tail); fork #60 FAIL 2/4 (delivery fenced); #83939 CONFLICTING (32 files) | kvnloo (fork #60, Co-authored-by Kevin Rajan): dead-owner and recycled-PID anchors in tests/cron/test_cron_owner_null_fingerprint.py | none | On main `_owner_is_live` returns `pid == os.getpid()` for a NULL recorded start time, so another process's recovery fences a live owner to immutable `unknown`. #108484's one line fixes it; reverting re-fails; adjacent 77/1 -> 80/0 with its `+ 1` sentinel moved past the 200-tick drift tolerance. |",
+ "notes": "(1) Need confirmed on main 298a01c7: cron/executions.py:136-137 still `if started_at is None: return pid == os.getpid()` (unchanged since abc22cdf1a); #117584 fixed only the unreadable-current branch. cron/delivery_queue.py:24 imports the shared helper, so one line covers both ledgers, as #108484 states. (2) When is started_at NULL in production? create_execution, adopt_claimed_execution and delivery claim_next record `get_process_start_time(os.getpid())`, which returns None only when /proc/<pid>/stat is unreadable AND psutil fails (procfs absent or restricted in a sandbox/container; psutil itself reads /proc on Linux). Both columns exist in CREATE TABLE since they were introduced (abc22cdf1a, 3373e97693), so migrated legacy rows are not a source. The trigger is narrow, but the result is terminal (unknown is immutable), and the reporter reproduced it on native Windows with fault injection. (3) Residual risk the maintainer should know: with the fix, a NULL-fingerprint execution whose PID is later recycled is still bounded by the stale-claim sweep (_live_owner_stale_after_seconds), but delivery_queue.recover_abandoned has no wedge bound, so such a delivery stays 'delivering' while the recycled PID lives. That is the same trade-off main already accepted for the unreadable-current branch in #117584; kvnloo fork #60's at-most-once delivery split addresses it but contradicts #117584 and fails the contract, so it is not folded. (4) Rebase notes for #108484: drop its second hunk (on main already) and move its test sentinel past START_TIME_DRIFT_TOLERANCE (108484-own-test-rebase-fix.diff). (5) Fork-side: close kvnloo/hermes-agent#60 after #108484 merges. (6) Refs pinned: refs/w2/pr/108484 9e29936e8e, refs/w2/pr/83939 2c90864a50, refs/w2/cron-owner/{108484-merged a2d1987987, 108484-carrier 8d2d60aa4c, 108484-negctl}; fork commit 0a152e48b2. All merges ran with rerere.enabled=false. The worktree was removed.",
+ "evidence_dir": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/cron-owner/"
+}

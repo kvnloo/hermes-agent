@@ -1,0 +1,126 @@
+diff --git a/hermes_cli/plugin_dev.py b/hermes_cli/plugin_dev.py
+index 456c87c46e..1a04bd7adf 100644
+--- a/hermes_cli/plugin_dev.py
++++ b/hermes_cli/plugin_dev.py
+@@ -61,9 +61,23 @@ def _doctor_runtime(plugin_path: Path):
+ 
+     from hermes_cli.plugins import PluginManager
+     from tools.registry import registry
+-    entries_before = {entry.name: entry for entry in registry._snapshot_entries()}
+-    policy_before = dict(registry._plugin_override_policy)
+-    modules_before = {name for name in sys.modules if _is_plugin_module(name)}
++
++    with registry._lock:
++        tools_before = dict(registry._tools)
++        scoped_tools_before = {
++            scope: dict(entries)
++            for scope, entries in registry._scoped_tools.items()
++        }
++        policy_before = dict(registry._plugin_override_policy)
++        module_scopes_before = {
++            module: set(scopes)
++            for module, scopes in registry._plugin_module_scopes.items()
++        }
++    modules_before = {
++        name
++        for name in sys.modules
++        if name == "hermes_plugins" or name.startswith("hermes_plugins.")
++    }
+     manager = PluginManager()
+     try:
+         manifests = manager._scan_directory(plugins_root, source="user")
+@@ -102,23 +116,30 @@ def _doctor_runtime(plugin_path: Path):
+             manager.unload()
+         except Exception:
+             pass
+-        entries_after = {entry.name: entry for entry in registry._snapshot_entries()}
+-        changed_names = {
+-            name
+-            for name in set(entries_before) | set(entries_after)
+-            if entries_after.get(name) is not entries_before.get(name)
+-        }
+         with registry._lock:
+-            for name in changed_names:
+-                previous = entries_before.get(name)
+-                if previous is None:
+-                    registry._tools.pop(name, None)
+-                else:
+-                    registry._tools[name] = previous
++            registry._tools.clear()
++            registry._tools.update(tools_before)
++
++            registry._scoped_tools.clear()
++            registry._scoped_tools.update(
++                {
++                    scope: dict(entries)
++                    for scope, entries in scoped_tools_before.items()
++                }
++            )
++
+             registry._plugin_override_policy.clear()
+             registry._plugin_override_policy.update(policy_before)
+-            if changed_names:
+-                registry._generation += 1
++
++            registry._plugin_module_scopes.clear()
++            registry._plugin_module_scopes.update(
++                {
++                    module: set(scopes)
++                    for module, scopes in module_scopes_before.items()
++                }
++            )
++
++            registry._generation += 1
+         for name in list(sys.modules):
+             if name not in modules_before and _is_plugin_module(name):
+                 sys.modules.pop(name, None)
+diff --git a/tests/hermes_cli/test_plugin_dev.py b/tests/hermes_cli/test_plugin_dev.py
+index 472e0aaa64..cf32c26097 100644
+--- a/tests/hermes_cli/test_plugin_dev.py
++++ b/tests/hermes_cli/test_plugin_dev.py
+@@ -251,3 +251,45 @@ def test_doctor_loads_model_provider_plugins_through_provider_discovery(tmp_path
+     report = doctor_plugin(plugin)
+     assert not report.ok
+     assert any("registered no ProviderProfile" in f.message for f in report.findings)
++def test_doctor_restores_scoped_registry_state(tmp_path: Path) -> None:
++    from hermes_cli.plugin_dev import doctor_plugin
++    from tools.registry import registry
++
++    target = tmp_path / "scoped-cleanup-plugin"
++    target.mkdir()
++    (target / "plugin.yaml").write_text(
++        "name: scoped-cleanup-plugin\nprovides_tools: [scoped_cleanup_ping]\n",
++        encoding="utf-8",
++    )
++    (target / "__init__.py").write_text(
++        "import json\n\n"
++        "def ping(args, **kwargs):\n"
++        "    return json.dumps({'ok': True})\n\n"
++        "def register(ctx):\n"
++        "    ctx.register_tool("
++        "name='scoped_cleanup_ping', "
++        "toolset='cleanup', "
++        "schema={'name': 'scoped_cleanup_ping', "
++        "'description': 'test', "
++        "'parameters': {'type': 'object'}}, "
++        "handler=ping)\n",
++        encoding="utf-8",
++    )
++
++    with registry._lock:
++        scoped_before = {
++            scope: dict(entries)
++            for scope, entries in registry._scoped_tools.items()
++        }
++        module_scopes_before = {
++            module: set(scopes)
++            for module, scopes in registry._plugin_module_scopes.items()
++        }
++
++    report = doctor_plugin(target)
++
++    assert report.ok, report.format_text()
++
++    with registry._lock:
++        assert registry._scoped_tools == scoped_before
++        assert registry._plugin_module_scopes == module_scopes_before

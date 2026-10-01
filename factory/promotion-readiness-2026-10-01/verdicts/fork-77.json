@@ -1,0 +1,31 @@
+{
+  "fork_pr": 77,
+  "title": "chore(cron): remove dead provider_supports_fire_cancel predicate",
+  "claim": "cron.scheduler_provider.provider_supports_fire_cancel is an unused predicate.",
+  "verdict": "SUPERSEDED-ON-MAIN",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "source": "Every targeted name is absent on main f848940560: `git grep -n -w` across the whole tree (code, tests, plugins/, optional-skills/, website/, scripts/, tests/compat) finds 0 hits for provider_supports_fire_cancel. A first-parent bisect of cron/scheduler_provider.py from fork base 63279301bc puts the removal in a5bd246865 (#126164 'plugin compat layer removed on schedule', 2026-09-28).",
+    "references_before": "0 (already gone on main)",
+    "references_after": "n/a",
+    "red": "n/a (pure deletion; nothing left to delete)",
+    "green": "n/a",
+    "negative_control": "n/a",
+    "adjacent": "n/a (no change built)"
+  },
+  "upstream_overlap": [
+    "removed upstream by a5bd246865 (#126164 'plugin compat layer removed on schedule', 2026-09-28)"
+  ],
+  "branch": null,
+  "bundle": null,
+  "files": [],
+  "size": "+0/-0",
+  "depends_on": null,
+  "fork_head": "detail/dead-code/chore-cron-remove-dead-provider-supports-fire-canc-a7688a",
+  "fork_head_oid": "78eaef283ea65aea0649a95fe032d4fc2a67e7fb",
+  "wave": "W5-bot-chore",
+  "batch": "C",
+  "patch": null,
+  "body": null,
+  "notes": "The fork diff also carries unrelated Kanban baggage (hermes_cli/kanban_db.py, tests/hermes_cli/test_kanban_external_receipts.py) from merge commits; the intended tip commit was read in isolation. Retire the fork PR."
+}

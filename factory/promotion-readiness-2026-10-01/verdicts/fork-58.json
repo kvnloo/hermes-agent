@@ -1,0 +1,28 @@
+{
+ "fork_pr": 58,
+ "title": "fix(desktop): keep the conversation TTS lease held across session-tile mount/unmount",
+ "claim": "A composer that never acquired the shared per-renderer CONVERSATION_LEASE (e.g. a session tile mounting/unmounting) must not release it while another composer's voice conversation holds it.",
+ "verdict": "READY",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "New test mounting two real useComposerVoice instances (real tts-lease, setTtsLease stubbed) on unpatched main: 'keeps the main conversation lease held while a session tile mounts and unmounts' FAILS: expected [[desktop:conversation:*,true],[desktop:conversation:*,false]] to deeply equal [[desktop:conversation:*,true]] (tile sent a stray release). Owner-unmount guard test passes on main (non-regression guard).",
+  "green": "With fix: 2/2 pass.",
+  "negative_control": "(1) else-if (ownsConversationLeaseRef.current) -> else: test 1 fails with the stray [lease,false]. (2) unmount cleanup guard -> if (true): test 1 fails. Restored -> green.",
+  "adjacent": "npx vitest run src/app/chat/composer/hooks src/lib/tts-lease.test.ts: 33 files / 207 tests pass. npm run typecheck clean; eslint + prettier clean on both files.",
+  "source": "main use-composer-voice.ts:404-408 unconditional syncTtsLease(CONVERSATION_LEASE, voiceConversationActive && !liveEngineActive) and unmount syncTtsLease(...,false); voiceConversationActive is per-hook useState while tts-lease.ts dedupes on one module-level sent map per lease key."
+ },
+ "upstream_overlap": [
+  "No PR/issue for this defect: gh search (CONVERSATION_LEASE, syncTtsLease, 'tts lease tile', 'conversation lease') and cached 42,912-title scan found none.",
+  "#118037 CLOSED (wake-only conversation release right after warm-up; backend hysteresis) - related, distinct trigger.",
+  "#101296 OPEN (profile-scoping of backend TTS lease) - distinct.",
+  "#121235 MERGED (TTS lease follow-ups) - main still carries the unconditional effects, so not fixed by it."
+ ],
+ "branch": "ready/fork-58-tts-lease-tile-ownership",
+ "files": [
+  "apps/desktop/src/app/chat/composer/hooks/use-composer-voice.ts",
+  "apps/desktop/src/app/chat/composer/hooks/use-composer-voice-lease.test.tsx"
+ ],
+ "size": "+195/-2",
+ "depends_on": null,
+ "notes": "Rebuilt, not cherry-picked: main drifted (liveEngineActive conjunction added), fix adapted to keep live-engine conversations lease-free. Dropped kanban baggage. Replaced the fork's 250-line test, which tested a hand-copied replica harness (passes regardless of production code - would not go RED on main), with 2 behaviour tests driving the real hook. Commit cbb6d74ecf; prod hunk +22/-2, test +173 (mostly the existing voice-hook mock harness). NOT_TESTED: live Electron/local-TTS run on the rebuild. Residual out of scope: two simultaneously-active composer conversations still share one key (would need refcount)."
+}

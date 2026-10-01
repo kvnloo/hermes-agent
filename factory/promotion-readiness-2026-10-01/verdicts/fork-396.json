@@ -1,0 +1,31 @@
+{
+  "fork_pr": 396,
+  "title": "docs: cover gpt-6.1-sol omit-disable recovery in reasoning-mandatory note",
+  "claim": "A thinking-off auxiliary call is lifted to low only when the catalog marks the model mandatory or a prior 400 was seen; on OpenRouter an openai/ model whose built-in ladder lacks none (gpt-6.1-sol) has the field omitted instead.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "doc_text_on_main": "website/docs/user-guide/configuration.md:1492 — \"a thinking-off auxiliary call ... goes out at the lowest effort (`low`) instead of the disable. Hermes knows ahead of time when the route's model catalog marks the model mandatory ... or when the route already answered an earlier disable that way\"",
+    "source": "agent/auxiliary_reasoning_floor.py:109-125 known_reasoning_floor() lifts to low only for floored routes / catalog-mandatory; plugins/model-providers/openrouter/__init__.py:93-95 returns None (omit) when openai/ and 'none' not in codex_supported_efforts(model); agent/reasoning_effort.py:42 NO_DISABLE_TIER_PREFIXES = ('gpt-6.1-sol',).",
+    "red": "Doc describes only the lift-to-low recovery.",
+    "green": "Paragraph distinguishes the two recoveries. tests/hermes_cli/test_gpt6_tiers_registration.py::test_openrouter_omits_disable_the_openai_ladder_rejects and the aux floor tests pass on main.",
+    "negative_control": "N/A — docs-only.",
+    "adjacent": "tests/hermes_cli/test_gpt6_tiers_registration.py tests/agent/test_auxiliary_reasoning_catalog_floor.py tests/agent/test_auxiliary_reasoning_floor.py tests/agent/test_codex_gpt55_autoraise_notice.py -> 12 passed. docs-site-checks equivalent on the bundle branch: website/scripts/extract-skills.py + generate-skill-docs.py leave website/docs, website/sidebars.ts and website/i18n unchanged (clean); website/scripts/check_doc_links.py OK. added lines scanned for MDX hazards ({ } or raw <tag> outside inline code / fences): none. NOT_TESTED: Docusaurus build (website/node_modules not installed in this environment).",
+    "mirrors": "No zh-Hans copy of this paragraph.",
+    "rebase": "verified on main f848940560; bundle merges cleanly onto refreshed main eb8d21f482 (git merge-tree); merges cleanly with every B1 ready/docs-* branch that touches the same files"
+  },
+  "upstream_overlap": [],
+  "branch": "ready/docs2-models",
+  "bundle_commit": "69a146992b3fcc4fdf0b89bc9226e752bbdde9b7",
+  "patch": "patches/docs2-models.patch",
+  "pr_body": "patches/docs2-models.body.md",
+  "files": [
+    "agent/auxiliary_client.py",
+    "website/docs/developer-guide/context-compression-and-caching.md",
+    "website/docs/integrations/providers.md",
+    "website/docs/user-guide/configuration.md"
+  ],
+  "size": "fork leaf +1/-1; bundle docs2-models +5/-5 (4 files changed, 5 insertions(+), 5 deletions(-))",
+  "depends_on": null,
+  "notes": "Reworded vs the fork leaf, which blurred which anticipation source leads to which recovery. Drift introduced by bf87ae620e (#128248). Bundled with: #399. Packaging: one commit per area bundle (batch B2 lane W4-docs); publish one bundle at a time per kvnloo/hermes-agent#313."
+}

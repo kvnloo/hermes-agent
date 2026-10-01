@@ -1,0 +1,29 @@
+{
+ "fork_pr": 49,
+ "title": "fix(desktop): guard read-only transcript recovery from stale no-owner race",
+ "claim": "A stale no-owner tile recovery (#94724) whose stored read resolves after a later live resumeTile for the same stored id must neither latch the session read-only nor repaint/rebind the tile onto read-only:<id>.",
+ "verdict": "READY",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "Tests only on main (production files at main): use-session-tile-delegate.test.ts race test FAILS: AssertionError: expected 'read-only:stored-race' to be 'runtime-live' (1 failed | 19 passed). The lone-recovery regression guard passes on main as intended.",
+  "green": "With fix: use-session-tile-delegate.test.ts + read-only-transcript.test.ts 25/25 passed (re-run after prettier and after the stash incident, with prod diff verified byte-identical).",
+  "negative_control": "(1) Tile epoch guard disabled only (if (false && ...)): race test fails 'expected read-only:stored-race to be runtime-live'. (2) Helper generation guard disabled only (if (true || ...)): race test fails on latch assertion 'expected true to be false'. Both guards independently necessary.",
+  "adjacent": "vitest --project ui src/app/contrib/hooks/ src/app/contrib/session-rpc-dispatcher.test.ts src/app/chat/session-tile* src/store/read-only-transcript.test.ts src/store/session-owner-resolution.test.ts: 20 files / 220 tests passed. eslint + prettier --check clean on 3 changed files. tsc -p . --noEmit: only error is a sparse-checkout artifact (tests/fixtures/session-resume-active-turn.json outside cone), unrelated. NOT_TESTED: full npm run typecheck (electron/e2e projects; untouched), full ui/electron suites, real Electron app.",
+  "source": "main read-only-transcript.ts L84-113 unconditionally markStoredTranscriptReadOnly after the stored read; clearStoredTranscriptReadOnly (L38-49) early-returns when latch unset so a concurrent live success leaves no trace. use-session-tile-delegate.ts resumeTile (L294-458) paints updateSessionState(readOnlyId, ..., storedSessionId), which use-session-state-cache.ts L219-233 turns into runtimeIdByStoredSessionIdRef.set(stored, read-only:<id>); warm path L315-324 then reuses it; session-tile.tsx L522 patches the returned id into the tile. Main-pane path (use-session-actions/index.ts ~L2370) has isCurrentResume(); tile path has none. read-only-transcript.ts unchanged between fork base 63279301bc and main."
+ },
+ "upstream_overlap": [
+  "#96110 MERGED (teknium1) introduced the no-owner read-only recovery (#94724) - origin of the race, not a fix",
+  "#102690 OPEN (Sahilvishnaliya) adds recovery on session-rpc-dispatcher path; different defect, does not touch the race; our helper-level generation guard would also protect its new caller",
+  "No open/closed upstream PR or issue found for the stale-recovery race (gh search resumeWithStoredTranscriptFallback / markStoredTranscriptReadOnly; local title cache)"
+ ],
+ "branch": "ready/fork-49-tile-stale-readonly-recovery",
+ "commit": "5e1c2076120609cd2b113223e2cc6a8fdf039224",
+ "files": [
+  "apps/desktop/src/store/read-only-transcript.ts",
+  "apps/desktop/src/app/contrib/hooks/use-session-tile-delegate.ts",
+  "apps/desktop/src/app/contrib/hooks/use-session-tile-delegate.test.ts"
+ ],
+ "size": "+150/-4",
+ "depends_on": [],
+ "notes": "Rebuilt minimal from the fork's +484/-4 clean diff: dropped the separate 203-line race test file (5 tests), the resetLiveResumeGenerations test export, and long comments; kept both guards (proven independently necessary) but narrowed the tile guard to read-only outcomes only (fork also discarded stale LIVE outcomes, which is not needed for the claim and could leave a tile on an id with no painted state). Kanban baggage excluded. Out of scope sibling: main-pane recovery (use-session-actions index.ts ~L2385) still calls markStoredTranscriptReadOnly directly, so a tile live resume interleaving a main-pane no-owner recovery for the same id is not covered. Stash incident: a shared refs/stash swap moved this item's production diff into D/fork-302 for a few minutes; RED/first GREEN were taken before the swap (state verified via git status), the one run taken during the swap was discarded, and NC1/NC2/adjacent/final GREEN+RED were re-run after restoring a byte-identical prod diff. No recorded result is affected."
+}

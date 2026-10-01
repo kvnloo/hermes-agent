@@ -1,0 +1,85 @@
+From 9a8daaa95f54bcf5b67a639e2fb16955c5c092b5 Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:39:39 -0500
+Subject: [PATCH] docs(agents): fix stale kanban and toolset pointers in area
+ AGENTS.md files
+
+- cron/AGENTS.md pointed at `kanban_db.connect`. The kanban connection
+  helper is hermes_cli/kanban_db_connect.py:connect; kanban_db does not
+  re-export it (hasattr(hermes_cli.kanban_db, "connect") is False).
+- cron/AGENTS.md said worker liveness uses the start-time fingerprint from
+  gateway.status.get_process_start_time recorded at claim time.
+  worker_started_at is kanban_db_dispatch._process_fingerprint, the
+  restart-stable "<instantiation epoch>|<start time>" value, written at
+  spawn by _set_worker_pid.
+- tools/AGENTS.md listed TOOLSETS keys that no longer exist (messaging,
+  moa, rl) and missed current ones (coding, setup, computer_use,
+  connections, project, video_gen, x_search, the hermes-<platform>
+  bundles, ...). Describe the families instead of copying the key list,
+  and point per-platform selection at platform_toolsets.<platform>, the
+  key hermes_cli/tools_config.py reads and writes (there is no
+  tools.<platform>.enabled/disabled).
+
+Docs only; no behaviour change.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ cron/AGENTS.md  | 10 +++++-----
+ tools/AGENTS.md | 13 +++++++------
+ 2 files changed, 12 insertions(+), 11 deletions(-)
+
+diff --git a/cron/AGENTS.md b/cron/AGENTS.md
+index 522e712141..e7eb5dc411 100644
+--- a/cron/AGENTS.md
++++ b/cron/AGENTS.md
+@@ -111,8 +111,8 @@ zero outside a kanban task (footprint ladder rung 3).
+ - **Dispatcher:** long-lived loop (default 60s) that reclaims stale claims, promotes ready tasks,
+   atomically claims, and spawns assigned profiles. Runs **inside the gateway** by default
+   (`kanban.dispatch_in_gateway: true`). Standalone: `plugins/kanban/systemd/hermes-kanban-dispatcher.service`.
+-- **Plugin assets:** `plugins/kanban/dashboard/` (web UI) + systemd unit. `kanban_db.connect` is its
+-  own connection helper — do not alias it to `projects_db.connect` (a path-proximity generator did).
++- **Plugin assets:** `plugins/kanban/dashboard/` (web UI) + systemd unit. `kanban_db_connect.connect` is
++  its own connection helper — do not alias it to `projects_db.connect` (a path-proximity generator did).
+ 
+ Isolation: **board** is the hard boundary — workers get `HERMES_KANBAN_BOARD` pinned in their env and
+ cannot see other boards; **tenant** is a soft namespace within a board (workspace-path + memory-key
+@@ -122,9 +122,9 @@ worker exit of `KANBAN_TERMINAL_PROVIDER_EXIT_CODE` (78 — credential revoked,
+ worker's own `failure_reason` classification via `cli._TERMINAL_PROVIDER_REASONS`) trips it on
+ the first attempt, sticky, because no retry can heal it (#114587).
+ Process-identity note: `kanban --preserve-cache` contains "serve" — never classify processes by argv
+-substring (root). Worker liveness is `(worker_pid, worker_started_at)` — the start-time fingerprint
+-(`gateway.status.get_process_start_time`) recorded at claim time — never bare PID existence, or a
+-recycled PID gets killed on reclaim.
++substring (root). Worker liveness is `(worker_pid, worker_started_at)` — the restart-stable fingerprint
++`"<instantiation epoch>|<start time>"` (`kanban_db_dispatch._process_fingerprint`) recorded at spawn
++by `_set_worker_pid` — never bare PID existence, or a recycled PID gets killed on reclaim.
+ 
+ - **Notifications leave through the task's owning profile.** `hermes_cli/kanban_db_notify.py`
+   subscriptions carry the profile; `gateway/kanban_watchers_notifier.py` delivers via THAT
+diff --git a/tools/AGENTS.md b/tools/AGENTS.md
+index 922bb26685..65960f88dd 100644
+--- a/tools/AGENTS.md
++++ b/tools/AGENTS.md
+@@ -66,12 +66,13 @@ Rules for tool code:
+ 
+ ## Toolsets (`toolsets.py`)
+ 
+-Single `TOOLSETS` dict. Keys today: `browser, clarify, code_execution, cronjob, debugging,
+-delegation, discord, discord_admin, feishu_doc, feishu_drive, file, homeassistant, image_gen,
+-kanban, memory, messaging, moa, rl, safe, search, session_search, skills, spotify, terminal, todo,
+-tts, video, vision, web, yuanbao` (don't assert the list in tests). Per-platform enable/disable via
+-`hermes tools` (curses) or `tools.<platform>.enabled/disabled` in config.yaml. `browser_exec`
+-replaces the other browser tools when `browser.backend` is `browser-use`.
++Single `TOOLSETS` dict: per-capability sets (`browser`, `file`, `terminal`, `web`, ...), composites
++built with `includes` (`debugging`, `safe`), the `coding` posture, one `hermes-<platform>` bundle per
++surface, and role-reserved sets such as `setup` (only a profile whose `profile.yaml` carries
++`role: setup` gets it). Read `toolsets.TOOLSETS` rather than keeping a key list here, and don't
++assert the list in tests. Per-platform enable/disable via `hermes tools` (curses) or
++`platform_toolsets.<platform>` in config.yaml. `browser_exec` replaces the other browser tools when
++`browser.backend` is `browser-use`.
+ 
+ ## Backends and providers inside tools/
+ 
+-- 
+2.55.0
+

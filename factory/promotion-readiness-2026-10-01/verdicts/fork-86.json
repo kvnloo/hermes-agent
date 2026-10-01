@@ -1,0 +1,33 @@
+{
+  "fork_pr": 86,
+  "title": "docs: correct computer-use docs that still said Hermes autodetection was planned",
+  "claim": "computer-use.md says Hermes autodetection in cua-driver is planned and users must point at or symlink ~/.cua-driver/skills/cua-driver; cua-driver now detects Hermes and links into ~/.hermes/skills/cua-driver.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "red": "website/docs/user-guide/features/computer-use.md:92-95, :296-302, :697-700 on main all say 'Hermes autodetection is a planned ... follow-up' / point Hermes at ~/.cua-driver/skills/cua-driver or symlink it, while :274-275 of the same page says the command links the pack into ~/.hermes/skills/cua-driver.",
+    "green": "All three passages now say `cua-driver skills install` links the pack into ~/.hermes/skills/cua-driver; `git grep -i 'autodetection is\\|planned follow-up\\|.cua-driver/skills' website/ skills/` returns nothing on the bundle.",
+    "negative_control": "N/A for docs (no executable behaviour). Equivalent check: the stale phrase is present on main and absent on the bundle (grep given in red/green).",
+    "adjacent": "python3 website/scripts/check_doc_links.py on the bundle tree: OK (no route-style links). All 7 B1 bundles cherry-pick together onto main cleanly, and each pairs cleanly with B2's current docs2-update/docs2-desktop/docs2-gateway/docs2-memory bundles.",
+    "source": "Main's own website/docs/reference/cli-commands.md:1711-1712 ('detects Hermes and links Cua's skill pack into the Hermes skills directory automatically') and skills/autonomous-ai-agents/computer-use/SKILL.md:336-340. External: trycua/cua libs/cua-driver/rust/CHANGELOG.md 'skills: autodetect Hermes (NousResearch/hermes-agent) at ~/.hermes/skills (#1963)' and 'honor HERMES_HOME for skill links (#3291)' (gh search code, read-only)."
+  },
+  "upstream_overlap": [
+    "No open external PR/issue for this claim (gh search prs/issues; open docs PRs touching the same files edit other sections)"
+  ],
+  "branch": "ready/docs-computer-use",
+  "bundle": {
+    "branch": "ready/docs-computer-use",
+    "commit": "e6ed1c863d",
+    "subject": "docs(computer-use): cua-driver links its skill pack into Hermes; sync zh-Hans eviction",
+    "bundle_size": "+8/-14",
+    "patch": "patches/docs-computer-use.patch",
+    "body": "patches/docs-computer-use.body.md"
+  },
+  "files": [
+    "website/docs/user-guide/features/computer-use.md"
+  ],
+  "size": "+7/-13",
+  "depends_on": null,
+  "fork_head": "9ddf890e7c04a650eae842d62418c083ebbf60ea",
+  "notes": "Partially superseded: the fork's second file (generated skill page) already matches on main, so it was dropped. zh-Hans computer-use.md has no skill-pack passage."
+}

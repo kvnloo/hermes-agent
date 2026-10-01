@@ -1,0 +1,80 @@
+diff --git i/tools/environments/local.py w/tools/environments/local.py
+index 792a8358b9..3b592162aa 100644
+--- i/tools/environments/local.py
++++ w/tools/environments/local.py
+@@ -45,7 +45,7 @@ _terminal_temp_pruned_once = False
+ # Background artifacts come in triplets (hermes_bg_<id>.log/.pid/.exit). A live
+ # server's .pid never changes mtime while its .log does, so age is judged per
+ # GROUP (newest mtime sharing a stem) to keep pid/exit files of live sessions.
+-_BG_GROUP_RE = re.compile(r"^(hermes_bg_[A-Za-z0-9_-]+)\.(log|pid|exit)$")
++_BG_GROUP_RE = re.compile(r"^(hermes_bg_[A-Za-z0-9_-]+)\.(log|pid|exit|worker_pid)$")
+ 
+ 
+ def _default_terminal_temp_dir() -> "Path | None":
+diff --git i/tools/process_registry.py w/tools/process_registry.py
+index 6c7377a6ee..fff32ddeeb 100644
+--- i/tools/process_registry.py
++++ w/tools/process_registry.py
+@@ -542,6 +542,7 @@ class ProcessSession:
+     detached: bool = False                      # Recovered from checkpoint (no pipe)
+     pid_scope: str = "host"                     # "host" for local/PTY PIDs, "sandbox" for env-local PIDs
+     systemd_unit: str = ""                      # transient scope unit name when spawned under systemd-run
++    worker_pid_path: str = ""                   # sandbox-only: file holding the nohup'd worker PID (spawn_via_env)
+     handoff_note: str = ""                      # why a subagent handed this process to its parent (rides the notice)
+     persist_on_release: bool = False           # opt out of agent-lifecycle cleanup (release()/turn-abandon kill
+                                                 # sweeps), per terminal(background=true, persist_on_release=true) (#41225)
+@@ -1192,6 +1193,29 @@ class ProcessRegistry(ProcessCheckpointMixin):
+             # issued before this check, covers the cgroup case).
+         return [pid for pid in survivors if pid]
+ 
++    def _terminate_env_worker(self, env: Any, session: ProcessSession) -> None:
++        """Best-effort tree-kill of the nohup'd worker a sandbox-backed session spawned
++        (kvnloo fork #41, rebuilt as reference)."""
++        worker_pid_path = getattr(session, "worker_pid_path", "") or ""
++        if not worker_pid_path:
++            return
++        try:
++            res = env.execute(f"cat {shlex.quote(worker_pid_path)} 2>/dev/null", timeout=5)
++        except Exception:
++            return
++        worker_pid = (res.get("output", "") or "").strip()
++        if not worker_pid.isdigit():
++            return
++        try:
++            env.execute(
++                f"pkill -P {worker_pid} 2>/dev/null; kill {worker_pid} 2>/dev/null; "
++                f"sleep 0.5; "
++                f"pkill -9 -P {worker_pid} 2>/dev/null; kill -9 {worker_pid} 2>/dev/null",
++                timeout=6,
++            )
++        except Exception:
++            pass
++
+     # ----- Spawn -----
+ 
+     @staticmethod
+@@ -1396,11 +1420,14 @@ class ProcessRegistry(ProcessCheckpointMixin):
+                                     persist_on_release=persist_on_release)
+         temp_dir = self._env_temp_dir(env)
+         log_path, pid_path, exit_path = (f"{temp_dir}/hermes_bg_{session.id}.{ext}" for ext in ("log", "pid", "exit"))
++        worker_pid_path = f"{temp_dir}/hermes_bg_{session.id}.worker_pid"
++        session.worker_pid_path = worker_pid_path
+         q = shlex.quote
+         bg_command = (
+             f"mkdir -p {q(temp_dir)} && "
+-            f"( nohup bash -lc {q(command)} > {q(log_path)} 2>&1; "
+-            f"rc=$?; printf '%s\\n' \"$rc\" > {q(exit_path)} ) & "
++            f"( nohup bash -lc {q(command)} > {q(log_path)} 2>&1 & "
++            f"WPID=$!; echo \"$WPID\" > {q(worker_pid_path)}; "
++            f"wait \"$WPID\"; rc=$?; printf '%s\\n' \"$rc\" > {q(exit_path)} ) & "
+             f"echo $! > {q(pid_path)} && cat {q(pid_path)}")
+         try:
+             result = env.execute(bg_command, timeout=timeout, rewrite_compound_background=False)
+@@ -2318,6 +2345,7 @@ class ProcessRegistry(ProcessCheckpointMixin):
+             # leaves Git Bash descendants behind.
+             self._terminate_host_pid(session.process.pid, session.host_start_time)
+         elif session.env_ref and session.pid:
++            self._terminate_env_worker(session.env_ref, session)
+             session.env_ref.execute(f"kill {session.pid} 2>/dev/null", timeout=5)
+         elif session.detached and session.pid_scope == "host" and session.pid:
+             # Same fate as poll/list: a gone or reused PID means our process is

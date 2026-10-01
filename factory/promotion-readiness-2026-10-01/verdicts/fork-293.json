@@ -1,0 +1,33 @@
+{
+  "fork_pr": 293,
+  "title": "docs: cover serve-ticker branch in cron status guidance",
+  "claim": "With no host gateway, `cron status` names a fresh in-process hermes serve / Desktop ticker before telling the user to start the host gateway.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "doc_text_on_main": "website/docs/user-guide/multi-profile-gateways.md:576 — \"When no gateway owns the host role, `cron status` tells you to start the **one** host gateway ...\"",
+    "source": "hermes_cli/cron.py:507-531 cron_status(): when neither the lock nor the multiplexer serves the profile, in_process_ticker = fresh heartbeat + live writer; prints 'Scheduler host: an in-process ticker (hermes serve / Desktop backend) ticking profile ...' (:530) instead of the start-gateway advice.",
+    "red": "Doc describes only the start-gateway branch.",
+    "green": "Sentence covers the in-process ticker branch. tests/hermes_cli/test_cron_satellite_diagnostics.py passes on main.",
+    "negative_control": "N/A — docs-only.",
+    "adjacent": "tests/hermes_cli/test_update_stale_dashboard.py tests/hermes_cli/test_desktop_install_after_update.py tests/hermes_cli/test_cron_satellite_diagnostics.py tests/tui_gateway/test_bot_mode_silence_delivery.py pass; tests/hermes_cli/test_update_fleet_restart_pending.py has 7 environment failures identical on main (the shared venv belongs to /workspace/hermes-home/hermes-agent, so cmd_update's retarget_to_owning_install() re-execs there and argparse exits 2) — the bundle changes no Python. Overall 105 passed / 7 failed (pre-existing, env) / 4 skipped. docs-site-checks equivalent on the bundle branch: website/scripts/extract-skills.py + generate-skill-docs.py leave website/docs, website/sidebars.ts and website/i18n unchanged (clean); website/scripts/check_doc_links.py OK. added lines scanned for MDX hazards ({ } or raw <tag> outside inline code / fences): none. NOT_TESTED: Docusaurus build (website/node_modules not installed in this environment).",
+    "mirrors": "No zh-Hans multi-profile-gateways.md.",
+    "rebase": "verified on main f848940560; bundle merges cleanly onto refreshed main eb8d21f482 (git merge-tree); merges cleanly with every B1 ready/docs-* branch that touches the same files"
+  },
+  "upstream_overlap": [
+    "NousResearch/hermes-agent#127361 CLOSED (kvnloo, own parked carrier)",
+    "NousResearch/hermes-agent#121921 OPEN (Bartok9, 'treat a fresh serve ticker as scheduler-alive') — code-only, no doc files; main already has the branch"
+  ],
+  "branch": "ready/docs2-update",
+  "bundle_commit": "ec60a9f5a730991f1432979bb63ff7cf4caa985f",
+  "patch": "patches/docs2-update.patch",
+  "pr_body": "patches/docs2-update.body.md",
+  "files": [
+    "hermes_cli/AGENTS.md",
+    "website/docs/getting-started/updating.md",
+    "website/docs/user-guide/multi-profile-gateways.md"
+  ],
+  "size": "fork leaf +1/-1; bundle docs2-update +6/-5 (3 files changed, 6 insertions(+), 5 deletions(-))",
+  "depends_on": "kvnloo/hermes-agent#313 review-slot policy (publication capacity only)",
+  "notes": "Drift introduced by fc15ec8fe3 (#126156). Bundled with: #289, #290, #397. Packaging: one commit per area bundle (batch B2 lane W4-docs); publish one bundle at a time per kvnloo/hermes-agent#313."
+}

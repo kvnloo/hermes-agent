@@ -1,0 +1,528 @@
+npm notice run hermes-agent@1.0.0 npx
+npm notice run 'vitest' run src/app/chat/close-tab.test.ts src/app/chat/composer/hooks/use-composer-submit.restore-scoping.test.tsx src/app/chat/resume-exhausted-overlay.test.tsx src/app/chat/session-drag.test.ts src/app/chat/session-tile.test.ts src/app/chat/sidebar/chat-sidebar.integration.test.tsx src/app/chat/sidebar/gateway-groups-drag.test.tsx src/app/chat/sidebar/gateway-groups.test.tsx src/app/chat/sidebar/profile-dropdown-switcher.test.tsx src/app/chat/sidebar/profile-rail-connect.test.tsx src/app/chat/sidebar/profile-rail-fleet.test.tsx src/app/chat/sidebar/profile-rail-status.test.tsx src/app/chat/sidebar/profile-scope.test.ts src/app/chat/sidebar/use-profile-prewarm.test.ts src/app/chat/sidebar/use-profile-rail-refresh-on-active.test.ts src/app/contrib/session-rpc-dispatcher.test.ts src/app/contrib/surfaces.app-routes.test.tsx src/app/contrib/surfaces.late-routes.test.tsx src/app/contrib/surfaces.test.tsx src/app/gateway/hooks/use-gateway-boot.test.tsx src/app/gateway/hooks/use-gateway-request.test.ts src/app/hooks/use-keybinds-tab-slot.test.ts src/app/hooks/use-on-profile-switch.test.tsx src/app/messaging/index.test.tsx src/app/profiles/index.test.tsx src/app/session/hooks/default-new-session.test.tsx src/app/session/hooks/profile-rail-fresh-chat-owner.test.tsx src/app/session/hooks/resume-occurrences.test.tsx src/app/session/hooks/use-message-stream/approval-mode-event.test.tsx src/app/session/hooks/use-model-controls.test.tsx src/app/session/hooks/use-session-actions/remove-archived-session.test.tsx src/app/session/hooks/use-session-actions/resolve-stored-session.test.ts src/app/session/hooks/use-session-actions.test.tsx src/app/session/hooks/use-session-actions/unarchive-session.test.tsx src/app/session/hooks/use-session-actions/utils.test.ts src/app/session/hooks/use-session-state-cache.test.tsx src/app/session/hooks/warm-resume-replay-barrier.test.tsx src/app/session/workspace-session-target.test.ts src/app/settings/custom-endpoints-settings.test.tsx src/app/settings/local-models-settings.test.tsx src/app/settings/memory/provider-config-modal.test.tsx src/app/settings/memory/provider-config-panel.test.tsx src/app/settings/plugin-install-modal.test.tsx src/app/settings/profile-scope.test.tsx src/app/settings/providers-settings.test.tsx src/app/settings/vault-settings.owner.test.tsx src/app/shell/model-catalog-menu.test.tsx src/components/assistant-ui/catalog-install-tool.test.tsx src/components/assistant-ui/clarify/clarify-tool.test.tsx src/components/assistant-ui/thread/assistant-message.test.tsx src/components/assistant-ui/thread/list-restore-composer-resize.test.tsx src/components/assistant-ui/thread/list-session-scroll.test.tsx src/components/assistant-ui/thread/use-timeline-history.test.tsx src/components/prompt-overlays.vault-code.test.tsx src/components/prompt-overlays.vault-save-login.test.tsx src/components/prompt-overlays.vault-unlock.test.tsx src/i18n/profile-locale.test.tsx src/plugin-socket-scope.test.ts src/sdk/host-state.test.ts src/sdk/open-session-refresh-in-place.test.ts src/sdk/profile-routing.test.ts src/store/connections.test.ts src/store/default-profile-startup.test.ts src/store/gateway-profile-only-owner.integration.test.ts src/store/gateway-switch.test.ts src/store/hub-actions.blocked.test.ts src/store/hub-actions.test.ts src/store/hud.test.ts src/store/kanban-connection-scope.test.ts src/store/layout-sidebar-view.test.ts src/store/local-models-surfaces.test.tsx src/store/local-runtime-jobs.test.ts src/store/mcp-health.test.ts src/store/preview-tabs-scope.test.ts src/store/profile-agent-activation.test.ts src/store/profile-cache.test.ts src/store/profile-dot-state.test.ts src/store/profile-select-source.test.ts src/store/profile-share.test.ts src/store/profile-switch-failure.test.ts src/store/profile.test.ts src/store/projects.test.ts src/store/read-only-transcript.test.ts src/store/session-owner-resolution.test.ts src/store/session-pin-sync.test.ts src/store/session-states-runtime-map.test.ts src/store/session-states.test.ts src/store/session-tiles-connection-scope.test.ts src/store/session-unread.test.ts src/store/settings-scope.test.ts src/store/windows.test.ts
+
+ RUN  v4.1.10 /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/suggest-cache/apps/desktop
+
+(node:3148487) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3148508) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3148415) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3148407) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3148444) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3148466) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3148408) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3148450) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3148480) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3148502) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3148438) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3148409) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3148459) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3148427) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3148426) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3148523) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3148516) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3148494) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3148473) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ |ui| src/app/session/hooks/use-session-actions.test.tsx (0 test)
+(node:3148657) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ |ui| src/app/messaging/index.test.tsx (0 test)
+ ❯ |ui| src/components/assistant-ui/thread/list-session-scroll.test.tsx (0 test)
+ ❯ |ui| src/app/session/hooks/use-model-controls.test.tsx (0 test)
+ ❯ |ui| src/app/session/hooks/use-session-state-cache.test.tsx (0 test)
+ ❯ |ui| src/app/gateway/hooks/use-gateway-request.test.ts (0 test)
+ ❯ |ui| src/app/session/hooks/use-session-actions/resolve-stored-session.test.ts (0 test)
+ ❯ |ui| src/store/session-states.test.ts (0 test)
+(node:3149154) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ |ui| src/app/session/hooks/profile-rail-fresh-chat-owner.test.tsx (0 test)
+ ❯ |ui| src/app/chat/composer/hooks/use-composer-submit.restore-scoping.test.tsx (0 test)
+ ❯ |ui| src/components/assistant-ui/thread/assistant-message.test.tsx (0 test)
+(node:3149233) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3149252) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3149266) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3149244) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ |ui| src/components/assistant-ui/clarify/clarify-tool.test.tsx (0 test)
+(node:3149259) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3149292) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ |ui| src/app/gateway/hooks/use-gateway-boot.test.tsx (0 test)
+ ❯ |ui| src/app/session/hooks/resume-occurrences.test.tsx (0 test)
+ ❯ |ui| src/app/chat/sidebar/chat-sidebar.integration.test.tsx (0 test)
+(node:3149387) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3149404) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ |ui| src/app/session/hooks/use-session-actions/utils.test.ts (0 test)
+(node:3149423) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3149464) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3149472) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3149479) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3149485) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3149494) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3149508) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3149541) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3149672) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3149691) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ |ui| src/store/profile-agent-activation.test.ts (0 test)
+ ❯ |ui| src/store/gateway-switch.test.ts (0 test)
+ ❯ |ui| src/store/session-states-runtime-map.test.ts (0 test)
+ ❯ |ui| src/store/session-pin-sync.test.ts (0 test)
+(node:3149774) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ |ui| src/app/contrib/session-rpc-dispatcher.test.ts (0 test)
+ ❯ |ui| src/store/projects.test.ts (0 test)
+(node:3149811) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ |ui| src/app/session/hooks/warm-resume-replay-barrier.test.tsx (0 test)
+ ❯ |ui| src/app/session/hooks/default-new-session.test.tsx (0 test)
+ ❯ |ui| src/app/settings/plugin-install-modal.test.tsx (0 test)
+(node:3149819) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ |ui| src/app/chat/session-tile.test.ts (0 test)
+(node:3149826) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3149833) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3149854) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3149847) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3149862) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3149898) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3149906) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3149925) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3149939) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3149932) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3149951) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3149963) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3149995) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ |ui| src/components/assistant-ui/catalog-install-tool.test.tsx (0 test)
+(node:3150266) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ |ui| src/store/session-unread.test.ts (0 test)
+(node:3150342) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ |ui| src/store/profile-select-source.test.ts (0 test)
+ ❯ |ui| src/sdk/host-state.test.ts (0 test)
+(node:3150522) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3150545) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ |ui| src/app/settings/profile-scope.test.tsx (0 test)
+(node:3150594) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ |ui| src/components/assistant-ui/thread/list-restore-composer-resize.test.tsx (0 test)
+ ❯ |ui| src/app/chat/sidebar/gateway-groups.test.tsx (0 test)
+(node:3150601) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3150610) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ |ui| src/store/gateway-profile-only-owner.integration.test.ts (0 test)
+ ❯ |ui| src/app/settings/vault-settings.owner.test.tsx (0 test)
+ ❯ |ui| src/app/chat/sidebar/gateway-groups-drag.test.tsx (0 test)
+(node:3150647) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3150689) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3150663) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ |ui| src/store/kanban-connection-scope.test.ts (0 test)
+ ❯ |ui| src/store/windows.test.ts (0 test)
+ ❯ |ui| src/store/profile-dot-state.test.ts (0 test)
+(node:3150715) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3150716) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3150727) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ |ui| src/store/settings-scope.test.ts (0 test)
+(node:3150755) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3150773) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3150781) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3150802) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3150877) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ |ui| src/store/default-profile-startup.test.ts (0 test)
+(node:3150979) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3150986) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3151064) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3151075) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ |ui| src/app/session/hooks/use-session-actions/unarchive-session.test.tsx (0 test)
+ ❯ |ui| src/i18n/profile-locale.test.tsx (0 test)
+ ❯ |ui| src/store/session-tiles-connection-scope.test.ts (0 test)
+ ❯ |ui| src/store/profile-cache.test.ts (0 test)
+ ❯ |ui| src/store/profile-share.test.ts (0 test)
+ ❯ |ui| src/app/session/hooks/use-session-actions/remove-archived-session.test.tsx (0 test)
+ ❯ |ui| src/app/session/workspace-session-target.test.ts (0 test)
+ ❯ |ui| src/plugin-socket-scope.test.ts (0 test)
+ ❯ |ui| src/store/read-only-transcript.test.ts (0 test)
+(node:3151179) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3151188) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3151194) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3151202) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3151223) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3151237) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ |ui| src/components/prompt-overlays.vault-save-login.test.tsx (0 test)
+(node:3151273) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3151286) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3151279) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3151299) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3151385) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ |ui| src/components/prompt-overlays.vault-code.test.tsx (0 test)
+ ❯ |ui| src/store/profile-switch-failure.test.ts (0 test)
+(node:3151393) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3151404) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ |ui| src/app/hooks/use-keybinds-tab-slot.test.ts (0 test)
+(node:3151673) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ |ui| src/store/layout-sidebar-view.test.ts (0 test)
+ ❯ |ui| src/store/session-owner-resolution.test.ts (0 test)
+ ❯ |ui| src/store/preview-tabs-scope.test.ts (0 test)
+ ❯ |ui| src/store/hud.test.ts (0 test)
+ ❯ |ui| src/app/chat/resume-exhausted-overlay.test.tsx (0 test)
+ ❯ |ui| src/components/prompt-overlays.vault-unlock.test.tsx (0 test)
+ ❯ |ui| src/app/chat/sidebar/profile-scope.test.ts (0 test)
+ ❯ |ui| src/app/session/hooks/use-message-stream/approval-mode-event.test.tsx (0 test)
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 62 ⎯⎯⎯⎯⎯⎯
+
+ FAIL  |ui| src/plugin-socket-scope.test.ts [ src/plugin-socket-scope.test.ts ]
+ FAIL  |ui| src/components/prompt-overlays.vault-code.test.tsx [ src/components/prompt-overlays.vault-code.test.tsx ]
+ FAIL  |ui| src/components/prompt-overlays.vault-save-login.test.tsx [ src/components/prompt-overlays.vault-save-login.test.tsx ]
+ FAIL  |ui| src/components/prompt-overlays.vault-unlock.test.tsx [ src/components/prompt-overlays.vault-unlock.test.tsx ]
+ FAIL  |ui| src/i18n/profile-locale.test.tsx [ src/i18n/profile-locale.test.tsx ]
+ FAIL  |ui| src/sdk/host-state.test.ts [ src/sdk/host-state.test.ts ]
+ FAIL  |ui| src/store/default-profile-startup.test.ts [ src/store/default-profile-startup.test.ts ]
+ FAIL  |ui| src/store/gateway-profile-only-owner.integration.test.ts [ src/store/gateway-profile-only-owner.integration.test.ts ]
+ FAIL  |ui| src/store/hud.test.ts [ src/store/hud.test.ts ]
+ FAIL  |ui| src/store/kanban-connection-scope.test.ts [ src/store/kanban-connection-scope.test.ts ]
+ FAIL  |ui| src/store/layout-sidebar-view.test.ts [ src/store/layout-sidebar-view.test.ts ]
+ FAIL  |ui| src/store/preview-tabs-scope.test.ts [ src/store/preview-tabs-scope.test.ts ]
+ FAIL  |ui| src/store/profile-agent-activation.test.ts [ src/store/profile-agent-activation.test.ts ]
+ FAIL  |ui| src/store/profile-cache.test.ts [ src/store/profile-cache.test.ts ]
+ FAIL  |ui| src/store/profile-dot-state.test.ts [ src/store/profile-dot-state.test.ts ]
+ FAIL  |ui| src/store/profile-select-source.test.ts [ src/store/profile-select-source.test.ts ]
+ FAIL  |ui| src/store/profile-share.test.ts [ src/store/profile-share.test.ts ]
+ FAIL  |ui| src/store/projects.test.ts [ src/store/projects.test.ts ]
+ FAIL  |ui| src/store/read-only-transcript.test.ts [ src/store/read-only-transcript.test.ts ]
+ FAIL  |ui| src/store/session-owner-resolution.test.ts [ src/store/session-owner-resolution.test.ts ]
+ FAIL  |ui| src/store/session-pin-sync.test.ts [ src/store/session-pin-sync.test.ts ]
+ FAIL  |ui| src/store/session-states-runtime-map.test.ts [ src/store/session-states-runtime-map.test.ts ]
+ FAIL  |ui| src/store/session-states.test.ts [ src/store/session-states.test.ts ]
+ FAIL  |ui| src/store/session-tiles-connection-scope.test.ts [ src/store/session-tiles-connection-scope.test.ts ]
+ FAIL  |ui| src/store/session-unread.test.ts [ src/store/session-unread.test.ts ]
+ FAIL  |ui| src/store/settings-scope.test.ts [ src/store/settings-scope.test.ts ]
+ FAIL  |ui| src/store/windows.test.ts [ src/store/windows.test.ts ]
+ FAIL  |ui| src/app/chat/session-tile.test.ts [ src/app/chat/session-tile.test.ts ]
+ FAIL  |ui| src/app/session/workspace-session-target.test.ts [ src/app/session/workspace-session-target.test.ts ]
+ FAIL  |ui| src/app/settings/plugin-install-modal.test.tsx [ src/app/settings/plugin-install-modal.test.tsx ]
+ FAIL  |ui| src/app/settings/profile-scope.test.tsx [ src/app/settings/profile-scope.test.tsx ]
+ FAIL  |ui| src/app/settings/vault-settings.owner.test.tsx [ src/app/settings/vault-settings.owner.test.tsx ]
+ FAIL  |ui| src/components/assistant-ui/catalog-install-tool.test.tsx [ src/components/assistant-ui/catalog-install-tool.test.tsx ]
+ FAIL  |ui| src/app/chat/sidebar/chat-sidebar.integration.test.tsx [ src/app/chat/sidebar/chat-sidebar.integration.test.tsx ]
+ FAIL  |ui| src/app/chat/sidebar/gateway-groups-drag.test.tsx [ src/app/chat/sidebar/gateway-groups-drag.test.tsx ]
+ FAIL  |ui| src/app/chat/sidebar/gateway-groups.test.tsx [ src/app/chat/sidebar/gateway-groups.test.tsx ]
+ FAIL  |ui| src/app/chat/sidebar/profile-scope.test.ts [ src/app/chat/sidebar/profile-scope.test.ts ]
+ FAIL  |ui| src/app/gateway/hooks/use-gateway-boot.test.tsx [ src/app/gateway/hooks/use-gateway-boot.test.tsx ]
+ FAIL  |ui| src/app/gateway/hooks/use-gateway-request.test.ts [ src/app/gateway/hooks/use-gateway-request.test.ts ]
+ FAIL  |ui| src/app/session/hooks/profile-rail-fresh-chat-owner.test.tsx [ src/app/session/hooks/profile-rail-fresh-chat-owner.test.tsx ]
+ FAIL  |ui| src/app/session/hooks/use-model-controls.test.tsx [ src/app/session/hooks/use-model-controls.test.tsx ]
+ FAIL  |ui| src/app/session/hooks/use-session-state-cache.test.tsx [ src/app/session/hooks/use-session-state-cache.test.tsx ]
+ FAIL  |ui| src/components/assistant-ui/clarify/clarify-tool.test.tsx [ src/components/assistant-ui/clarify/clarify-tool.test.tsx ]
+ FAIL  |ui| src/components/assistant-ui/thread/list-restore-composer-resize.test.tsx [ src/components/assistant-ui/thread/list-restore-composer-resize.test.tsx ]
+ FAIL  |ui| src/components/assistant-ui/thread/list-session-scroll.test.tsx [ src/components/assistant-ui/thread/list-session-scroll.test.tsx ]
+ FAIL  |ui| src/app/session/hooks/use-message-stream/approval-mode-event.test.tsx [ src/app/session/hooks/use-message-stream/approval-mode-event.test.tsx ]
+ FAIL  |ui| src/app/session/hooks/use-session-actions/resolve-stored-session.test.ts [ src/app/session/hooks/use-session-actions/resolve-stored-session.test.ts ]
+ FAIL  |ui| src/app/session/hooks/use-session-actions/utils.test.ts [ src/app/session/hooks/use-session-actions/utils.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'subscribe')
+ ❯ src/lib/slash-completion-cache.ts:99:23
+     97| let cachedProfile: null | string = null
+     98|
+     99| $activeGatewayProfile.subscribe(value => {
+       |                       ^
+    100|   const key = normalizeProfileKey(value)
+    101|
+ ❯ src/lib/desktop-slash-commands.ts:2:1
+ ❯ src/app/chat/composer/slash-refs.ts:13:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/62]⎯
+
+ FAIL  |ui| src/store/gateway-switch.test.ts [ src/store/gateway-switch.test.ts ]
+ FAIL  |ui| src/app/hooks/use-keybinds-tab-slot.test.ts [ src/app/hooks/use-keybinds-tab-slot.test.ts ]
+Error: [vitest] There was an error when mocking a module. If you are using "vi.mock" factory, make sure there are no top level variables inside, since this call is hoisted to top of the file. Read more: https://vitest.dev/api/vi.html#vi-mock
+ ❯ src/store/layout.ts:28:1
+     26| import { trackArea } from './desktop-metrics'
+     27| import { $paneStates, ensurePaneRegistered, setPaneOpen, setPaneWidthO…
+     28| import { $showAllProfiles, setShowAllProfiles } from './profile'
+       | ^
+     29| import type { PullRequestBucket } from './pull-requests'
+     30| import type { SessionStatusBucket } from './session-dot-state'
+
+Caused by: TypeError: Cannot read properties of undefined (reading 'subscribe')
+ ❯ src/lib/slash-completion-cache.ts:99:23
+ ❯ src/lib/desktop-slash-commands.ts:2:1
+ ❯ src/app/chat/composer/slash-refs.ts:13:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/62]⎯
+
+ FAIL  |ui| src/store/profile-switch-failure.test.ts [ src/store/profile-switch-failure.test.ts ]
+Error: [vitest] No "$activeSessionId" export is defined on the "@/store/session" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+vi.mock(import("@/store/session"), async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    // your mocked methods
+  }
+})
+
+ ❯ src/store/transcript-lightbox.ts:25:1
+     23| // media path can legitimately appear in two sessions, and a lightbox …
+     24| // with no gesture there would be the bug again, inverted.
+     25| $activeSessionId.subscribe(() => resetTranscriptLightbox())
+       | ^
+     26|
+     27| export function openTranscriptLightbox(src: string): void {
+ ❯ src/components/chat/zoomable-image.tsx:11:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/62]⎯
+
+ FAIL  |ui| src/app/chat/resume-exhausted-overlay.test.tsx [ src/app/chat/resume-exhausted-overlay.test.tsx ]
+Error: [vitest] There was an error when mocking a module. If you are using "vi.mock" factory, make sure there are no top level variables inside, since this call is hoisted to top of the file. Read more: https://vitest.dev/api/vi.html#vi-mock
+ ❯ src/app/chat/resume-exhausted-overlay.tsx:11:1
+      9| import { ErrorState } from '@/components/ui/error-state'
+     10| import { useI18n } from '@/i18n'
+     11| import { requestFreshSession } from '@/store/profile'
+       | ^
+     12|
+     13| export function ResumeExhaustedOverlay({
+
+Caused by: TypeError: Cannot read properties of undefined (reading 'subscribe')
+ ❯ src/lib/slash-completion-cache.ts:99:23
+ ❯ src/lib/desktop-slash-commands.ts:2:1
+ ❯ src/app/chat/composer/slash-refs.ts:13:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/62]⎯
+
+ FAIL  |ui| src/app/contrib/session-rpc-dispatcher.test.ts [ src/app/contrib/session-rpc-dispatcher.test.ts ]
+Error: [vitest] There was an error when mocking a module. If you are using "vi.mock" factory, make sure there are no top level variables inside, since this call is hoisted to top of the file. Read more: https://vitest.dev/api/vi.html#vi-mock
+ ❯ src/app/contrib/session-rpc-dispatcher.ts:36:1
+     34| import type { MutableRefObject } from 'react'
+     35|
+     36| import { resolveSessionOwner } from '@/app/session/hooks/use-session-a…
+       | ^
+     37| import type { ClientSessionState } from '@/app/types'
+     38| import { isSessionGoneForBackgroundPolling } from '@/store/runtime-gon…
+
+Caused by: TypeError: Cannot read properties of undefined (reading 'subscribe')
+ ❯ src/lib/slash-completion-cache.ts:99:23
+ ❯ src/lib/desktop-slash-commands.ts:2:1
+ ❯ src/app/chat/composer/slash-refs.ts:13:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/62]⎯
+
+ FAIL  |ui| src/app/messaging/index.test.tsx [ src/app/messaging/index.test.tsx ]
+Error: [vitest] No "openLink" export is defined on the "@/lib/external-link" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+vi.mock(import("@/lib/external-link"), async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    // your mocked methods
+  }
+})
+
+ ❯ src/components/assistant-ui/directive-text.tsx:529:10
+    527|     icon: 'link-external',
+    528|     label: t => t.composer.openDirective,
+    529|     run: openLink
+       |          ^
+    530|   }
+    531| }
+ ❯ src/app/chat/composer/rich-editor.ts:9:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/62]⎯
+
+ FAIL  |ui| src/app/session/hooks/default-new-session.test.tsx [ src/app/session/hooks/default-new-session.test.tsx ]
+Error: [vitest] There was an error when mocking a module. If you are using "vi.mock" factory, make sure there are no top level variables inside, since this call is hoisted to top of the file. Read more: https://vitest.dev/api/vi.html#vi-mock
+ ❯ src/app/session/hooks/default-new-session.test.tsx:8:1
+      6| import { $defaultProfileRoute, setDefaultProfile } from '@/store/defau…
+      7| import { requestGatewayForAgent } from '@/store/gateway'
+      8| import {
+       | ^
+      9|   $activeGatewayProfile,
+     10|   $newChatConnectionId,
+
+Caused by: TypeError: Cannot read properties of undefined (reading 'subscribe')
+ ❯ src/lib/slash-completion-cache.ts:99:23
+ ❯ src/lib/desktop-slash-commands.ts:2:1
+ ❯ src/app/chat/composer/slash-refs.ts:13:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/62]⎯
+
+ FAIL  |ui| src/app/session/hooks/resume-occurrences.test.tsx [ src/app/session/hooks/resume-occurrences.test.tsx ]
+Error: [vitest] There was an error when mocking a module. If you are using "vi.mock" factory, make sure there are no top level variables inside, since this call is hoisted to top of the file. Read more: https://vitest.dev/api/vi.html#vi-mock
+ ❯ src/app/session/hooks/resume-occurrences.test.tsx:10:1
+      8| import { chatMessageText, toChatMessages } from '@/lib/chat-messages'
+      9| import { resetInFlightTurnJournalStateForTests } from '@/lib/inflight-…
+     10| import { $activeGatewayProfile } from '@/store/profile'
+       | ^
+     11| import {
+     12|   _resetSessionOwnerHintsForTests,
+
+Caused by: TypeError: Cannot read properties of undefined (reading 'subscribe')
+ ❯ src/lib/slash-completion-cache.ts:99:23
+ ❯ src/lib/desktop-slash-commands.ts:2:1
+ ❯ src/app/chat/composer/slash-refs.ts:13:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/62]⎯
+
+ FAIL  |ui| src/app/session/hooks/use-session-actions.test.tsx [ src/app/session/hooks/use-session-actions.test.tsx ]
+Error: Failed to resolve import "../../../../../../tests/fixtures/session-resume-active-turn.json" from "src/app/session/hooks/use-session-actions.test.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/suggest-cache/apps/desktop/src/app/session/hooks/use-session-actions.test.tsx:106:0
+  58 |  const __vi_import_26__ = await import("@/store/todos");
+  59 |  const __vi_import_27__ = await import("@/store/transcript-tail-cache");
+  60 |  const __vi_import_28__ = await import("../../../../../../tests/fixtures/session-resume-active-turn.json");
+     |                                        ^
+  61 |  const __vi_import_29__ = await import("../../../test/deferred");
+  62 |  const __vi_import_30__ = await import("../../routes");
+ ❯ TransformPluginContext._formatLog ../../../../../../../../../../workspace/hermes-home/hermes-agent/node_modules/vite/dist/node/chunks/node.js:31011:39
+ ❯ TransformPluginContext.error ../../../../../../../../../../workspace/hermes-home/hermes-agent/node_modules/vite/dist/node/chunks/node.js:31008:14
+ ❯ normalizeUrl ../../../../../../../../../../workspace/hermes-home/hermes-agent/node_modules/vite/dist/node/chunks/node.js:27957:18
+ ❯ ../../../../../../../../../../workspace/hermes-home/hermes-agent/node_modules/vite/dist/node/chunks/node.js:28025:30
+ ❯ TransformPluginContext.transform ../../../../../../../../../../workspace/hermes-home/hermes-agent/node_modules/vite/dist/node/chunks/node.js:27993:4
+ ❯ EnvironmentPluginContainer.transform ../../../../../../../../../../workspace/hermes-home/hermes-agent/node_modules/vite/dist/node/chunks/node.js:30796:14
+ ❯ loadAndTransform ../../../../../../../../../../workspace/hermes-home/hermes-agent/node_modules/vite/dist/node/chunks/node.js:20594:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/62]⎯
+
+ FAIL  |ui| src/app/session/hooks/warm-resume-replay-barrier.test.tsx [ src/app/session/hooks/warm-resume-replay-barrier.test.tsx ]
+ FAIL  |ui| src/app/chat/composer/hooks/use-composer-submit.restore-scoping.test.tsx [ src/app/chat/composer/hooks/use-composer-submit.restore-scoping.test.tsx ]
+Error: [vitest] There was an error when mocking a module. If you are using "vi.mock" factory, make sure there are no top level variables inside, since this call is hoisted to top of the file. Read more: https://vitest.dev/api/vi.html#vi-mock
+ ❯ src/app/session/hooks/use-session-actions/utils.ts:20:1
+     18| import { reconcileApprovalModeForProfile } from '@/store/approval-mode'
+     19| import { requestDesktopOnboardingForCredentialWarning } from '@/store/…
+     20| import { $activeGatewayProfile, $profiles, normalizeProfileKey } from …
+       | ^
+     21| import { $projectTree } from '@/store/projects'
+     22| import {
+
+Caused by: TypeError: Cannot read properties of undefined (reading 'subscribe')
+ ❯ src/lib/slash-completion-cache.ts:99:23
+ ❯ src/lib/desktop-slash-commands.ts:2:1
+ ❯ src/app/chat/composer/slash-refs.ts:13:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/62]⎯
+
+ FAIL  |ui| src/components/assistant-ui/thread/assistant-message.test.tsx [ src/components/assistant-ui/thread/assistant-message.test.tsx ]
+Error: [vitest] There was an error when mocking a module. If you are using "vi.mock" factory, make sure there are no top level variables inside, since this call is hoisted to top of the file. Read more: https://vitest.dev/api/vi.html#vi-mock
+ ❯ src/components/assistant-ui/thread/assistant-message.tsx:15:1
+     13| import { useInRouterContext, useNavigate } from 'react-router'
+     14|
+     15| import { requestModelMenuToggle } from '@/app/chat/composer/focus'
+       | ^
+     16| import { useComposerScope } from '@/app/chat/composer/scope'
+     17| import { useSessionView } from '@/app/chat/session-view'
+
+Caused by: Error: [vitest] There was an error when mocking a module. If you are using "vi.mock" factory, make sure there are no top level variables inside, since this call is hoisted to top of the file. Read more: https://vitest.dev/api/vi.html#vi-mock
+ ❯ src/lib/slash-completion-cache.ts:4:1
+
+Caused by: TypeError: Cannot read properties of undefined (reading 'get')
+ ❯ profileKey src/store/session-states.ts:1446:68
+ ❯ tileScopeKey src/store/session-states.ts:1461:62
+ ❯ src/store/session-states.ts:1462:24
+ ❯ src/store/suggestion-providers/skill.ts:7:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/62]⎯
+
+ FAIL  |ui| src/app/session/hooks/use-session-actions/remove-archived-session.test.tsx [ src/app/session/hooks/use-session-actions/remove-archived-session.test.tsx ]
+ FAIL  |ui| src/app/session/hooks/use-session-actions/unarchive-session.test.tsx [ src/app/session/hooks/use-session-actions/unarchive-session.test.tsx ]
+Error: [vitest] There was an error when mocking a module. If you are using "vi.mock" factory, make sure there are no top level variables inside, since this call is hoisted to top of the file. Read more: https://vitest.dev/api/vi.html#vi-mock
+ ❯ src/app/session/new-session-route.ts:4:1
+      2| import { $defaultProfileRoute } from '@/store/default-profile'
+      3| import { notifyError } from '@/store/notifications'
+      4| import {
+       | ^
+      5|   $newChatProfile,
+      6|   $newChatRoute,
+
+Caused by: TypeError: Cannot read properties of undefined (reading 'subscribe')
+ ❯ src/lib/slash-completion-cache.ts:99:23
+ ❯ src/lib/desktop-slash-commands.ts:2:1
+ ❯ src/app/chat/composer/slash-refs.ts:13:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/62]⎯
+
+
+ Test Files  62 failed | 29 passed (91)
+      Tests  286 passed (286)
+   Start at  22:40:56
+   Duration  43.50s (transform 157.42s, setup 28.39s, import 156.27s, tests 31.83s, environment 110.81s)
+

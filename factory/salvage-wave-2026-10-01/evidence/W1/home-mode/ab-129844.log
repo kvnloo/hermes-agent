@@ -1,0 +1,131 @@
+▶ not activated — using HERMES_PYTHON: /workspace/hermes-home/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 3 test files (~15 tests) under ['tests/tools/test_terminal_scope_home_mode.py', 'tests/tools/test_terminal_config_env_sync.py', 'tests/tools/test_terminal_scope_multiplex.py']; running with -j 20
+[ 13.3% |     2/~15 | ✓2 | ✗0] ✓ tests/tools/test_terminal_config_env_sync.py (2✓, 2.9s)
+[ 86.7% |    13/~15 | ✓14 | ✗ 0] ✓ tests/tools/test_terminal_scope_multiplex.py (12✓, 3.8s)
+[100.0% |    15/~15 | ✓16 | ✗ 2] ✗ tests/tools/test_terminal_scope_home_mode.py (2✓ 2✗, 5.1s)
+
+  ╔╍ Failed: tests/tools/test_terminal_scope_home_mode.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ routed_mode = 'auto', ambient_mode = 'profile', expect_profile_home = False
+  ║ 
+  ║     @pytest.mark.parametrize("routed_mode, ambient_mode, expect_profile_home", [
+  ║         ("profile", "auto", True),   # routed profile asks for its own HOME
+  ║         ("auto", "profile", False),  # routed profile must not inherit the launch profile's mode
+  ║     ])
+  ║     def test_routed_profile_home_mode_drives_subprocess_home(
+  ║             tmp_path, monkeypatch, routed_mode, ambient_mode, expect_profile_home):
+  ║         """Defect B: under a multiplexed gateway turn, get_subprocess_home honours
+  ║         the routed profile's home_mode, not the launch process's TERMINAL_HOME_MODE."""
+  ║         import gateway.run as gw
+  ║         from hermes_constants import get_subprocess_home
+  ║     
+  ║         monkeypatch.setenv("TERMINAL_HOME_MODE", ambient_mode)
+  ║         home = _profile(tmp_path, "routed", f"terminal:\n  backend: local\n  home_mode: {routed_mode}\n")
+  ║         (home / "home").mkdir()
+  ║         real_home = tmp_path / "real-home"
+  ║         real_home.mkdir()
+  ║         monkeypatch.setenv("HOME", str(real_home))
+  ║     
+  ║         with gw._profile_runtime_scope(home):
+  ║             got = get_subprocess_home()
+  ║ >       assert got == (str(home / "home") if expect_profile_home else None)
+  ║ E       AssertionError: assert '/var/tmp/hermes-pytest-1000/r-vz0mo_ma/pytest-of-kvn/pytest-0/test_routed_profile_home_mode_1/profiles/routed/home' == None
+  ║ 
+  ║ tests/tools/test_terminal_scope_home_mode.py:61: AssertionError
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/tools/test_terminal_scope_home_mode.py::test_routed_profile_home_mode_drives_subprocess_home[profile-auto-True]
+  ║ FAILED tests/tools/test_terminal_scope_home_mode.py::test_routed_profile_home_mode_drives_subprocess_home[auto-profile-False]
+  ║ 2 failed, 2 passed in 1.49s
+  ║
+  ║  Repro: python -m pytest tests/tools/test_terminal_scope_home_mode.py -q
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 3 files, 16 tests passed, 2 failed (100% complete) in 5.2s (20 workers) ===
+  Durations cached to test_durations.json (2 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   3
+  Total subprocess CPU-wall: 11.8s  (runner wall: 5.2s, parallelism: 20x)
+  P50: 3.83s  P90: 5.14s  P95: 5.14s  P99: 5.14s  Max: 5.14s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+      5.14s  tests/tools/test_terminal_scope_home_mode.py
+      3.83s  tests/tools/test_terminal_scope_multiplex.py
+      2.87s  tests/tools/test_terminal_config_env_sync.py
+
+=== Failure output ===
+
+--- tests/tools/test_terminal_scope_home_mode.py ---
+..FF                                                                     [100%]
+=================================== FAILURES ===================================
+___ test_routed_profile_home_mode_drives_subprocess_home[profile-auto-True] ____
+
+tmp_path = PosixPath('/var/tmp/hermes-pytest-1000/r-vz0mo_ma/pytest-of-kvn/pytest-0/test_routed_profile_home_mode_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f861247c650>
+routed_mode = 'profile', ambient_mode = 'auto', expect_profile_home = True
+
+    @pytest.mark.parametrize("routed_mode, ambient_mode, expect_profile_home", [
+        ("profile", "auto", True),   # routed profile asks for its own HOME
+        ("auto", "profile", False),  # routed profile must not inherit the launch profile's mode
+    ])
+    def test_routed_profile_home_mode_drives_subprocess_home(
+            tmp_path, monkeypatch, routed_mode, ambient_mode, expect_profile_home):
+        """Defect B: under a multiplexed gateway turn, get_subprocess_home honours
+        the routed profile's home_mode, not the launch process's TERMINAL_HOME_MODE."""
+        import gateway.run as gw
+        from hermes_constants import get_subprocess_home
+    
+        monkeypatch.setenv("TERMINAL_HOME_MODE", ambient_mode)
+        home = _profile(tmp_path, "routed", f"terminal:\n  backend: local\n  home_mode: {routed_mode}\n")
+        (home / "home").mkdir()
+        real_home = tmp_path / "real-home"
+        real_home.mkdir()
+        monkeypatch.setenv("HOME", str(real_home))
+    
+        with gw._profile_runtime_scope(home):
+            got = get_subprocess_home()
+>       assert got == (str(home / "home") if expect_profile_home else None)
+E       AssertionError: assert None == '/var/tmp/hermes-pytest-1000/r-vz0mo_ma/pytest-of-kvn/pytest-0/test_routed_profile_home_mode_0/profiles/routed/home'
+
+tests/tools/test_terminal_scope_home_mode.py:61: AssertionError
+___ test_routed_profile_home_mode_drives_subprocess_home[auto-profile-False] ___
+
+tmp_path = PosixPath('/var/tmp/hermes-pytest-1000/r-vz0mo_ma/pytest-of-kvn/pytest-0/test_routed_profile_home_mode_1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f860f4d49d0>
+routed_mode = 'auto', ambient_mode = 'profile', expect_profile_home = False
+
+    @pytest.mark.parametrize("routed_mode, ambient_mode, expect_profile_home", [
+        ("profile", "auto", True),   # routed profile asks for its own HOME
+        ("auto", "profile", False),  # routed profile must not inherit the launch profile's mode
+    ])
+    def test_routed_profile_home_mode_drives_subprocess_home(
+            tmp_path, monkeypatch, routed_mode, ambient_mode, expect_profile_home):
+        """Defect B: under a multiplexed gateway turn, get_subprocess_home honours
+        the routed profile's home_mode, not the launch process's TERMINAL_HOME_MODE."""
+        import gateway.run as gw
+        from hermes_constants import get_subprocess_home
+    
+        monkeypatch.setenv("TERMINAL_HOME_MODE", ambient_mode)
+        home = _profile(tmp_path, "routed", f"terminal:\n  backend: local\n  home_mode: {routed_mode}\n")
+        (home / "home").mkdir()
+        real_home = tmp_path / "real-home"
+        real_home.mkdir()
+        monkeypatch.setenv("HOME", str(real_home))
+    
+        with gw._profile_runtime_scope(home):
+            got = get_subprocess_home()
+>       assert got == (str(home / "home") if expect_profile_home else None)
+E       AssertionError: assert '/var/tmp/hermes-pytest-1000/r-vz0mo_ma/pytest-of-kvn/pytest-0/test_routed_profile_home_mode_1/profiles/routed/home' == None
+
+tests/tools/test_terminal_scope_home_mode.py:61: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tools/test_terminal_scope_home_mode.py::test_routed_profile_home_mode_drives_subprocess_home[profile-auto-True]
+FAILED tests/tools/test_terminal_scope_home_mode.py::test_routed_profile_home_mode_drives_subprocess_home[auto-profile-False]
+2 failed, 2 passed in 1.49s
+
+=== 1 file with test failures (2 tests failed) ===
+  tests/tools/test_terminal_scope_home_mode.py  (2 tests failed)

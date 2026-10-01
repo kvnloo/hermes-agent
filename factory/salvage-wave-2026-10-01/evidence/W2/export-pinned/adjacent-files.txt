@@ -1,0 +1,7 @@
+tests/hermes_cli/test_sessions_export_md_cli.py
+tests/hermes_cli/test_session_export.py
+tests/hermes_cli/test_session_filters.py
+tests/hermes_cli/test_sessions_pin.py
+tests/hermes_cli/test_sessions_export_output_dir.py
+tests/hermes_cli/test_sessions_delete.py
+tests/hermes_state/test_hermes_state.py

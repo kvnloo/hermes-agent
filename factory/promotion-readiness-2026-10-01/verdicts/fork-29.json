@@ -1,0 +1,31 @@
+{
+ "fork_pr": 29,
+ "title": "fix(desktop): clear adoptedRunningTurn at every turn boundary",
+ "claim": "A stale adoptedRunningTurn=true (left when an adopted turn ends by Stop/error/heartbeat instead of a normal message.complete) must not force hydrateFromStoredSession over the next turn this window originates itself; genuinely adopted turns (incl. subagent watch windows that receive a mirrored message.start) must still hydrate.",
+ "verdict": "READY",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "Tests only on MAIN: `npx vitest run src/app/session/hooks/use-prompt-actions/index.test.tsx src/app/session/hooks/use-prompt-actions/rewind.test.ts src/app/session/hooks/use-message-stream/session-info-side-effects.test.tsx` -> 2 failed | 194 passed: index.test.tsx:2163 'clears a leaked adoptedRunningTurn on a fresh submit' AssertionError: expected false to be true (seeds.every(s => s.adoptedRunningTurn === false)); rewind.test.ts:691 'restore/edit/regenerate arms clear a leaked adoptedRunningTurn' AssertionError: expected true to be false. Child-mirror guard passes on MAIN.",
+  "green": "With fix: same 3 files 196/196 passed.",
+  "negative_control": "(a) Each new line changed to `adoptedRunningTurn: state.adoptedRunningTurn` in submit.ts + rewind.ts -> both new tests fail again (2 failed | 176 passed); restored. (b) Rejected v1 variant (clear at message.start, no local-origin clears) -> child-mirror guard fails: session-info-side-effects.test.tsx:401 AssertionError: expected \"vi.fn()\" to be called with arguments: [ 3, null, 'session-active' ].",
+  "adjacent": "`npx vitest run src/app/session/hooks/use-message-stream/ src/app/session/hooks/use-session-actions.test.tsx src/app/session/hooks/use-prompt-actions/ src/app/chat/` -> 228 files passed (1872 tests across 227 files + use-session-actions 128/128, run after adding tests/fixtures to the then-sparse checkout). Typecheck: renderer `tsc -p .` 0 errors; tsconfig.e2e clean; electron-builder.config.cjs check clean; tsconfig.electron has 1 error `electron/channel-build-version.test.ts(321,22) TS2307 ... bundle-smoke-metadata.mjs` that is identical on plain MAIN in the same worktree (untouched file, electron/ excludes src) -> pre-existing/env. eslint 0 errors (1 pre-existing react-hooks/exhaustive-deps warning in the test Harness useEffect, also on MAIN); prettier clean.",
+  "source": "MAIN use-message-stream/index.ts:1032 shouldHydrate = ... && (state.adoptedRunningTurn || !state.sawAssistantPayload); flag consumed only at index.ts:1037 (normal complete); not reset by cancelRun (use-prompt-actions/index.ts:704-718), interrupted early return (index.ts:727-739), failAssistantMessage, session-info running=false settle, nor submit.ts seedOptimistic (~443-490) / rewind.ts applyReloadOptimistic/applyRewindOptimistic. Child mirror: tui_gateway/methods_session.py lazy watch resume returns running=_child_run_active(...); tui_gateway/agent_callbacks.py:59-62 _mirror_subagent_to_child emits message.start into the watch window on first relayed event."
+ },
+ "upstream_overlap": [
+  "#127939 OPEN dskwe 'avoid rehydrating streamed interrupted turns' (Fixes #127911) - adjacent shouldHydrate area but different trigger (hydrate of the interrupted turn itself); its head 8392f21d04 reverts its own change, net diff 0 files. Not an owner of this defect.",
+  "#118758 CLOSED KoNit-K reasoning-only stream (#118755) - different defect (empty finalText), already handled on main by #95514 guard.",
+  "No kvnloo upstream PR for this."
+ ],
+ "branch": "ready/fork-29-desktop-adopted-turn-stale-flag",
+ "files": [
+  "apps/desktop/src/app/session/hooks/use-prompt-actions/submit.ts",
+  "apps/desktop/src/app/session/hooks/use-prompt-actions/rewind.ts",
+  "apps/desktop/src/app/session/hooks/use-prompt-actions/index.test.tsx",
+  "apps/desktop/src/app/session/hooks/use-prompt-actions/rewind.test.ts",
+  "apps/desktop/src/app/session/hooks/use-message-stream/session-info-side-effects.test.tsx"
+ ],
+ "size": "+77/-1",
+ "depends_on": null,
+ "notes": "REWORKED after lead review. v1 (commit 0a78b08d7a) cleared the flag at message.start on the premise 'an adopted turn never replays message.start' - FALSE on MAIN for subagent watch windows: lazy watch resume returns running=true (use-session-actions/index.ts:2264 sets adoptedRunningTurn) and tui_gateway agent_callbacks.py:59-62 _mirror_subagent_to_child emits a synthetic message.start on the first relayed event, so v1 would have suppressed the child-transcript hydrate (regression; now pinned by the child-mirror guard test, which fails on v1). v2 (commit 6125946f9c, branch force-updated, parent = MAIN) clears only at local-origin points: submit.ts seedOptimistic and rewind.ts applyReloadOptimistic/applyRewindOptimistic (watch windows have no composer). Accepted remainder: backend-originated next turns (queue drain elsewhere, goal follow-up) can still inherit a leaked flag and merely hydrate a turn whose prompt this window did not author. Dropped from fork: session-info running=false reset (regression risk vs #119569 reordered complete), cancelRun/interrupted/fail resets, message.start reset, 2 new test files, Playwright e2e spec, kanban baggage. NOT_TESTED: live Electron adopt->Stop->next-submit run; a queue-drain seed racing a heartbeat-settled adopted turn's late complete is a pre-existing race not addressed here. Worktree: /mnt/.../wt/A1/fork-29 (sparse then full). No git stash used.",
+ "lead_review": "Lead review rejected v1 (commit 0a78b08d7a, message.start reset): reachable regression for subagent watch windows \u2014 methods_session.py:893 lazy resume reports running=true, use-session-actions:2264 sets adoptedRunningTurn, agent_callbacks.py:59-62 child mirror emits a synthetic message.start mid-run, so v1 cleared the flag and skipped the persisted child-transcript hydrate. v2 (6125946f9c) clears only at local-origin sites (submit seed, reload/rewind optimistic arms; watch windows have no composer) and adds a guard test that fails on v1. Residual edge acknowledged in body: queue-drain submit racing an adopted turn's late reordered message.complete (#119569)."
+}

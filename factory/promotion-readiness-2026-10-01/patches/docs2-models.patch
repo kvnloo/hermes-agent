@@ -1,0 +1,97 @@
+From 69a146992b3fcc4fdf0b89bc9226e752bbdde9b7 Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:33:58 -0500
+Subject: [PATCH] docs(models): match GPT-6 effort, autoraise and no-disable
+ docs to the code
+
+Three docs lag the GPT-6 / GPT-6.1 model handling on main:
+
+- context-compression-and-caching.md (codex_gpt55_autoraise row and the
+  "Codex gpt-5.x / Astra threshold autoraise" section) named only gpt-6
+  Astra. _is_codex_gpt54_or_gpt55() also prefix-matches gpt-6-sol,
+  gpt-6-luna and gpt-6.1-sol on openai-codex, so those get the 272K cap and
+  the 85% autoraise too. Its docstring listed a "Terra" GPT-6 tier the
+  predicate does not match (GPT6_TIER_PREFIXES is sol/luna only); drop it and
+  name gpt-6.1 Sol.
+- configuration.md reasoning-mandatory note said a thinking-off auxiliary
+  call is always lifted to `low`. That holds when the catalog marks the
+  model mandatory or the route already refused a disable
+  (agent/auxiliary_reasoning_floor.py). On OpenRouter, an openai/ model whose
+  built-in ladder lacks `none` (gpt-6.1-sol, whose catalog wrongly lists
+  `none`) instead has the reasoning field omitted
+  (openrouter _clamp_reasoning_to_catalog -> None), so it runs at its own
+  default effort.
+- providers.md said `max` is "gpt-5.6-only" on an api.openai.com custom
+  entry. codex_supported_efforts() also offers `max` for gpt-6 Sol/Luna
+  (CODEX_GPT56_EFFORTS) and Astra / gpt-6.1 Sol (CODEX_ASTRA_EFFORTS).
+---
+ agent/auxiliary_client.py                                     | 2 +-
+ .../docs/developer-guide/context-compression-and-caching.md   | 4 ++--
+ website/docs/integrations/providers.md                        | 2 +-
+ website/docs/user-guide/configuration.md                      | 2 +-
+ 4 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/agent/auxiliary_client.py b/agent/auxiliary_client.py
+index df4bd83e3a..c4f1a71098 100644
+--- a/agent/auxiliary_client.py
++++ b/agent/auxiliary_client.py
+@@ -603,7 +603,7 @@ _CODEX_SPARK_COMPACTION_THRESHOLD = 0.70
+ 
+ 
+ def _is_codex_gpt54_or_gpt55(model: Optional[str], provider: Optional[str] = None) -> bool:
+-    """True for gpt-5.4/5.5/5.6, gpt-6 Sol/Terra/Luna, gpt-6 Astra (and the Daybreak Sol alias) on the Codex OAuth route only.
++    """True for gpt-5.4/5.5/5.6, gpt-6 Sol/Luna, gpt-6.1 Sol, gpt-6 Astra (and the Daybreak Sol alias) on the Codex OAuth route only.
+ 
+     Other routes expose a larger window for the same slug and keep the user's threshold.
+     Prefix-matched so ``-pro`` and dated snapshots track every 272K-capped family; ``-900k``
+diff --git a/website/docs/developer-guide/context-compression-and-caching.md b/website/docs/developer-guide/context-compression-and-caching.md
+index b7e84c076e..a9f6a3a00c 100644
+--- a/website/docs/developer-guide/context-compression-and-caching.md
++++ b/website/docs/developer-guide/context-compression-and-caching.md
+@@ -270,7 +270,7 @@ auxiliary:
+ | `min_tail_user_messages` | `1` | ≥1 | Minimum number of REAL (actionable) user messages guaranteed to survive in the uncompressed tail. `1` = the existing single last-user anchor (behavior-preserving default). Raise to e.g. `3` to keep the last 3 real user turns verbatim even when bulky tool outputs fill the tail token budget. Blank platform echoes, compaction handoffs, and synthetic continuation rows never count toward N. The guarantee wins over the tail token budget — the tail may exceed the budget when the anchor pulls the cut back |
+ | `protect_first_n` | `3` | (hardcoded) | System prompt + first exchange always preserved |
+ | `idle_compact_after_seconds` | `0` | ≥0 seconds | Opt-in: compact up front when a session resumes after this many seconds idle (0 = disabled). Skips when context ≤ threshold × target_ratio; honors cooldown/anti-thrash/lock guards |
+-| `codex_gpt55_autoraise` | `true` | bool | Raise the trigger to 85% for gpt-5.4/5.5/5.6 and gpt-6 Astra on the ChatGPT Codex OAuth route (see below). Set `false` to keep the global `threshold` |
++| `codex_gpt55_autoraise` | `true` | bool | Raise the trigger to 85% for gpt-5.4/5.5/5.6, gpt-6 Sol/Luna/Astra and gpt-6.1 Sol on the ChatGPT Codex OAuth route (see below). Set `false` to keep the global `threshold` |
+ | `codex_gpt55_autoraise_notice` | `true` | bool | Show the one-time Codex gpt-5.5 autoraise notice. Set `false` to keep the 85% autoraise but suppress the banner |
+ | `codex_app_server_auto` | `native` | `native`, `hermes`, `off` | Thread-compaction mode for Codex app-server sessions (see below) |
+ | `codex_responses_native` | `false` | bool | Opt in to OpenAI's server-side compaction on the Responses API. Engages for gpt-5.6-family models on the direct OpenAI API or a ChatGPT Codex subscription, and `gpt-6-astra` (including its `-900k` picker alias) on official Codex OAuth (see below) |
+@@ -351,7 +351,7 @@ map.
+ 
+ ### Codex gpt-5.x / Astra threshold autoraise
+ 
+-The ChatGPT Codex OAuth backend hard-caps gpt-5.4/5.5/5.6 and gpt-6 Astra at a **272K** context window
++The ChatGPT Codex OAuth backend hard-caps gpt-5.4/5.5/5.6, gpt-6 Sol/Luna/Astra and gpt-6.1 Sol at a **272K** context window
+ (the same slug exposes 1.05M on OpenAI's direct API and OpenRouter, and 400K on
+ GitHub Copilot). At the default 50% trigger, compaction would fire at ~136K —
+ half the window the model can actually use. When the active route is Codex
+diff --git a/website/docs/integrations/providers.md b/website/docs/integrations/providers.md
+index 63664d476c..7bdc823891 100644
+--- a/website/docs/integrations/providers.md
++++ b/website/docs/integrations/providers.md
+@@ -1393,7 +1393,7 @@ Older configs used a top-level `custom_providers:` list instead. It still works
+ 
+ **Context window on `codex_responses` proxies.** A custom entry with `transport: codex_responses` (a local Codex proxy, for example) resolves the context window of Codex OAuth models (`gpt-6-astra`, `gpt-5.6-sol`/`-terra`/`-luna`, `gpt-5.5`, …) from the Codex OAuth table — 272K for most slugs — not from the 1.05M direct-API catalog, so compression fires before the Codex backend's limit and its 272K billing tier. The decision follows the transport, not the hostname; the same holds for `openai-codex` behind `HERMES_CODEX_BASE_URL` or `model.base_url`. A per-model `models.<id>.context_length`, an entry-level `context_length`, or `model.context_length` still wins; the opt-in `-900k` picker variants keep their verified 900K.
+ 
+-**Reasoning effort on custom endpoints.** The configured `reasoning_effort` (`/reasoning max`, `agent.reasoning_effort`) reaches a custom endpoint unchanged on both the `chat_completions` and the `codex_responses` transport — up to `max`; only the Hermes-internal `ultra` is clamped to `max`. Two exceptions follow the host rather than the entry: a custom entry pointed at `api.openai.com` keeps OpenAI's per-model ladder (`max` is a gpt-5.6-only level there), and an entry pointed at a provider whose profile publishes a per-model vocabulary (Ramp Router) is clamped to that catalog. An endpoint that rejects the level answers with an HTTP 400 instead of Hermes silently downgrading it. When no effort is configured at all, `chat_completions` requests carry `reasoning_effort: medium` — the same default the Nous Portal and OpenRouter routes apply — rather than leaving the endpoint's own default in charge (kimi-k3's is `max`, about 3x the reasoning tokens of `medium`); models marked `supports_reasoning: false` in the catalog or `model_overrides`, and Ollama models without the `thinking` capability, keep the field off.
++**Reasoning effort on custom endpoints.** The configured `reasoning_effort` (`/reasoning max`, `agent.reasoning_effort`) reaches a custom endpoint unchanged on both the `chat_completions` and the `codex_responses` transport — up to `max`; only the Hermes-internal `ultra` is clamped to `max`. Two exceptions follow the host rather than the entry: a custom entry pointed at `api.openai.com` keeps OpenAI's per-model ladder (`max` exists there only for gpt-5.6, gpt-6 Sol/Luna/Astra and gpt-6.1 Sol), and an entry pointed at a provider whose profile publishes a per-model vocabulary (Ramp Router) is clamped to that catalog. An endpoint that rejects the level answers with an HTTP 400 instead of Hermes silently downgrading it. When no effort is configured at all, `chat_completions` requests carry `reasoning_effort: medium` — the same default the Nous Portal and OpenRouter routes apply — rather than leaving the endpoint's own default in charge (kimi-k3's is `max`, about 3x the reasoning tokens of `medium`); models marked `supports_reasoning: false` in the catalog or `model_overrides`, and Ollama models without the `thinking` capability, keep the field off.
+ 
+ Some OpenAI-compatible endpoints need provider-specific request body fields. Add an `extra_body` map to the matching custom provider and Hermes will merge it into each chat-completions request for that endpoint:
+ 
+diff --git a/website/docs/user-guide/configuration.md b/website/docs/user-guide/configuration.md
+index 16eec2d448..8d9d73010c 100644
+--- a/website/docs/user-guide/configuration.md
++++ b/website/docs/user-guide/configuration.md
+@@ -1489,7 +1489,7 @@ This is the per-task counterpart of the global `agent.reasoning_effort`: run com
+ 
+ If the endpoint rejects the reasoning field outright (a chat-only model behind an OpenAI-compatible relay answering `400 Unrecognized request argument supplied: reasoning_effort`, or the reversed wording `400 reasoning_effort 'none' unsupported; use minimal|low|medium|high|xhigh`), the auxiliary call is retried once with every reasoning field omitted, so the task (for example the session title) still completes with the endpoint's default behaviour. The main conversation applies the same recovery: when a route rejects the reasoning-off request Hermes sends for a thinking-only truncated continuation, the disable is dropped for the rest of the session and the request is retried with the route's default.
+ 
+-Some models cannot turn thinking off at all (`400 Reasoning is mandatory for this endpoint and cannot be disabled`). For those, a thinking-off auxiliary call (title generation, or any task set to `reasoning_effort: none`) goes out at the lowest effort (`low`) instead of the disable. Hermes knows ahead of time when the route's model catalog marks the model mandatory (OpenRouter and Nous Portal `/v1/models`, cached in `cache/reasoning_caps.json`), or when the route already answered an earlier disable that way in the same process. So the rejected request is not sent. A fresh install with no cached catalog can still see that 400 once: the lookup fetches the catalog in the background and later calls use it.
++Some models cannot turn thinking off at all (`400 Reasoning is mandatory for this endpoint and cannot be disabled`). For those, a thinking-off auxiliary call (title generation, or any task set to `reasoning_effort: none`) goes out at the lowest effort (`low`) instead of the disable when Hermes knows ahead of time that the disable will be refused: the route's model catalog marks the model mandatory (OpenRouter and Nous Portal `/v1/models`, cached in `cache/reasoning_caps.json`), or the route already answered an earlier disable that way in the same process. On OpenRouter, an `openai/` model whose built-in OpenAI effort ladder has no `none` level (`gpt-6.1-sol`, whose catalog entry wrongly lists `none`) is sent with the reasoning field omitted instead, so it runs at the model's own default effort. Either way the rejected request is not sent. A fresh install with no cached catalog can still see that 400 once: the lookup fetches the catalog in the background and later calls use it.
+ 
+ **Background review is different:** a same-model review fork always inherits the parent's reasoning effort. `auxiliary.background_review.reasoning_effort` is ignored on that path, including when the parent provider/model is explicitly selected. This preserves byte-identical reasoning settings, system prompt, full conversation snapshot, and tool definitions for prompt-cache parity; there is no independent-effort switch for same-model reviews. See [background review reasoning](./features/memory.md#same-model-review-reasoning). When the review is routed to a different provider/model, `reasoning_effort` applies to that routed fork (unset = the routed provider's default). Hermes prints a one-time warning when the key is set but the review runs on the main model.
+ 
+-- 
+2.55.0
+

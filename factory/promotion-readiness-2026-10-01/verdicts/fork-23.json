@@ -1,0 +1,27 @@
+{
+ "fork_pr": 23,
+ "title": "fix(slack): preserve snake_case underscores in rich_text blocks",
+ "claim": "With slack rich_blocks enabled, _ITALIC_RE in plugins/platforms/slack/block_kit.py matches intra-word _..._ spans, so snake_case identifiers in rich_text lists/quotes/table cells lose their underscores (build_status_report -> 'build' + italic 'status' + 'report').",
+ "verdict": "EXTERNAL-OWNED",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "Defect confirmed on MAIN (direct render_blocks probe, not a committed test): '- Inspect build_status_report logs' -> [('Inspect build',None),('status',{'italic':True}),('report logs',None)]; MY_API_KEY -> 'MY'+italic 'API'+'KEY'; quote fetch_user_data() and table cell a_b_c likewise lose underscores.",
+  "green": "NOT_TESTED as our own branch (not rebuilt: external owner). Upstream #96941 head 189e4e93 block_kit.py loaded in isolation renders the same input with underscores intact and keeps *real*/_real_/_quick brown fox_ italic.",
+  "negative_control": "NOT_TESTED (no rebuild)",
+  "adjacent": "NOT_TESTED (no rebuild)",
+  "source": "MAIN block_kit.py L84 _ITALIC_RE = (?<![\\*_])(?:\\*|_)(?![\\*_\\s])(.+?)(?<![\\*_\\s])(?:\\*|_)(?![\\*_]) used by _walk_emphasis L141 (no word-boundary gate for '_')."
+ },
+ "upstream_overlap": [
+  "#96941 OPEN NaMinhyeok 'fix: preserve literal underscores in Slack rich headers' (created 2026-08-28, labels type/bug P3 platform/slack): splits _ITALIC_RE into _ITALIC_STAR_RE/_ITALIC_UNDERSCORE_RE with (?<![\\w_])/(?![\\w_]) gating - same production fix as fork #23 - plus __bold__ word-boundary + header path. Currently CONFLICTS with MAIN in block_kit.py (main added _SLACK_LINK_RE walker via #114810).",
+  "#56482 CLOSED (2026-07-15) briandevans 'fix(slack): don't italicize intra-word underscores in Block Kit rendering' - same fix, closed unmerged.",
+  "#105534 OPEN SharadKumar / #114607 OPEN Roblmvp restructure emphasis walking but keep _ITALIC_RE (would conflict with any regex split)."
+ ],
+ "branch": null,
+ "files": [
+  "plugins/platforms/slack/block_kit.py",
+  "tests/gateway/test_slack_block_kit.py"
+ ],
+ "size": "fork: +128/-3 (excl. kanban baggage); not rebuilt",
+ "depends_on": null,
+ "notes": "Support opportunity: #96941's tests cover only the header path; fork #23 adds rich_text BODY-path regressions (list/blockquote/table snake_case, *-vs-_ cross-pair no longer matching, legit emphasis kept). Offer those as review support / a rebase-onto-main note to NaMinhyeok rather than a competing PR. Kanban baggage dropped from consideration."
+}

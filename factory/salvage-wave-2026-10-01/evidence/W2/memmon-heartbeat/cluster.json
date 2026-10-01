@@ -1,0 +1,163 @@
+{
+ "issue": "#49773",
+ "slug": "memmon-heartbeat",
+ "seed": "fork #296 (kvnloo/hermes-agent; verdict EXTERNAL-OWNED: help the #49773 cluster converge on one carrier)",
+ "title": "memory_monitor heartbeat never starts: start_memory_monitoring() not called from the gateway runtime (wiring dropped by accident)",
+ "main_sha": "298a01c79b38018e029e50f77efe67c4a4fdbd40",
+ "candidates": [
+  {
+   "pr": 49782,
+   "author": "liuhao1024",
+   "created": "2026-06-20T20:10:45Z",
+   "last_activity": "2026-07-14T22:11Z teknium1 sweeper review (keep_open, salvageability=medium: restore logging.memory_monitor settings, test the lifecycle); no push since 2026-06-20",
+   "mergeable_github": "CONFLICTING/DIRTY",
+   "merges_clean_on_pinned_main": "false: gateway/run.py (main refactored start_gateway() on 2026-09-02) and tests/gateway/test_memory_monitor.py (main compacted it). Ported by re-anchoring its two verbatim hunks: start after _start_gateway_start_cron_and_housekeeping(), stop after the housekeeping drain in _start_gateway_shutdown_tail (port-49782.diff)",
+   "diff_size": "+35/-1, 2 files",
+   "has_tests": "yes, source-text only: test_start_gateway_calls_start_memory_monitoring (inspect.getsource); passes on the port",
+   "approach": "Unconditional start_memory_monitoring() (module default 300 s) after the housekeeping thread starts in start_gateway(); stop_memory_monitoring() after the cron/housekeeping joins. No config handling, no DEFAULT_CONFIG block. Fixes #49773; triage-named canonical by alt-glitch's duplicate comments."
+  },
+  {
+   "pr": 49789,
+   "author": "Tranquil-Flow",
+   "created": "2026-06-20T20:24:26Z",
+   "last_activity": "2026-07-14T22:11Z teknium1 sweeper review (keep_open: stub lacks runner._running; malformed interval disables monitoring instead of falling back to 300); no push since 2026-06-20",
+   "mergeable_github": "CONFLICTING/DIRTY",
+   "merges_clean_on_pinned_main": "false: gateway/run.py and hermes_cli/config.py (DEFAULT_CONFIG moved to hermes_cli/config_defaults.py). Ported mechanically: helpers verbatim after _start_cron_ticker, start before _start_gateway_start_cron_and_housekeeping(), stop after the planned-stop watcher join in _start_gateway_shutdown_tail, defaults block in config_defaults.py (port-49789.diff)",
+   "diff_size": "+277/-1, 3 files",
+   "has_tests": "yes: tests/gateway/test_memory_monitor_runtime.py (7 tests); on the port 3/7 pass: 3 read mm._interval_seconds (removed by main's 2026-09-02 memory_monitor compaction) and the lifecycle test patches tools.mcp_tool.discover_mcp_tools (moved)",
+   "approach": "_start_runtime_memory_monitoring()/_stop_runtime_memory_monitoring() helpers reading logging.memory_monitor via _load_gateway_config(); start after the aborted-startup guard, stop in teardown; adds the DEFAULT_CONFIG block. float(interval) sits under the outer except, so 'abc' silently disables monitoring and 0/-5 are passed through."
+  },
+  {
+   "pr": 50472,
+   "author": "chiefmojo",
+   "created": "2026-06-21T23:54:04Z",
+   "last_activity": "2026-07-16 push (finally-based teardown, defaults, early-exit test) answering teknium1's 2026-07-14 sweeper review; labelled duplicate by alt-glitch",
+   "mergeable_github": "CONFLICTING/DIRTY",
+   "merges_clean_on_pinned_main": "false: gateway/run.py, hermes_cli/config.py, tests/gateway/test_runner_startup_failures.py. Its +166/-135 run.py hunk re-indents a start_gateway() tail that no longer exists in that shape on main; ported by applying the same design to main's body (start block before runner.start(), try/finally around the rest, +105/-37 run.py), which is a re-implementation rather than a context fix (port-50472.diff)",
+   "diff_size": "+236/-135, 4 files",
+   "has_tests": "yes: DEFAULT_CONFIG test + parametrized start_gateway() early-exit test (clean/failed/disabled); 4/4 pass on the port",
+   "approach": "Restores the original #27102 block verbatim (load_config(), enabled default True, float(interval) with TypeError/ValueError -> 300) before runner.start(), and stops in a finally covering every exit. 0/-5 are passed through."
+  },
+  {
+   "pr": 54014,
+   "author": "itsflownium",
+   "created": "2026-06-28T06:03:12Z",
+   "last_activity": "2026-07-15T12:01Z force-push answering teknium1's 2026-07-15 sweeper review (no sync cron join, start after the aborted-startup guard, aborted-startup test); labelled duplicate by alt-glitch",
+   "mergeable_github": "CONFLICTING/DIRTY",
+   "merges_clean_on_pinned_main": "false: gateway/run.py (call site only), hermes_cli/config.py, tests/gateway/test_memory_monitor.py, tests/gateway/test_startup_restart_race.py. The helper block auto-merges but calls _load_gateway_runtime_config(), which main folded into _load_gateway_config() (that loader now does the ${VAR} expansion). Port = re-anchored hunks + that one-token rename (port-54014.diff; port-54014-literal.diff without it)",
+   "diff_size": "+203/-2, 4 files (port: +201/-1)",
+   "has_tests": "yes: 8 tests in tests/gateway/test_memory_monitor.py (defaults, resolver, disable, bad-interval fallback, start/stop ordering, stop when the wait raises) + aborted-startup guard in tests/gateway/test_startup_restart_race.py; all pass on the port",
+   "approach": "_resolve_gateway_memory_monitor_config() with coercion (string/scalar enabled, interval < 1 s or malformed -> 300), _start/_stop_gateway_memory_monitor(), and _wait_with_gateway_memory_monitor() wrapping the running-path wait_for_shutdown() in try/finally; adds the DEFAULT_CONFIG block. Refs #53995."
+  }
+ ],
+ "candidates_checked_not_same_defect": [
+  {
+   "pr": 49837,
+   "author": "koshaji",
+   "why": "Same defect but CLOSED: its author closed it on 2026-09-24T19:54Z together with three other PRs within 2 s (no comment), after two rebases and bumps with no maintainer response. Not a rejection. It wired start/stop into GatewayRunner.start()/stop(); the regression test stubs GatewayRunner, so that placement would escape it (no open candidate uses it)."
+  },
+  {
+   "pr": 98313,
+   "author": "liuhao1024",
+   "why": "'re-arm active heartbeat watches on startup': process-watch heartbeats, not the [MEMORY] monitor"
+  },
+  {
+   "pr": 116204,
+   "author": "Domarchi",
+   "why": "delegation roster sharing; matched 'heartbeat' only"
+  },
+  {
+   "pr": 63878,
+   "author": "ofir5300",
+   "why": "Telegram compact topic titles; search hit on text, does not touch memory_monitor"
+  }
+ ],
+ "regression_test": {
+  "source": "new; re-derived from the interrupted W2 run's draft (which drove start_gateway() with the tests/gateway/test_startup_restart_race.py stubs), extended with host-attach/claim, control-socket, MCP-discovery, keepalive and pending-flush stubs, a failure-exit case, an unconfigured-default case and an aborted-startup guard; modelled on #49789's lifecycle test and #50472's early-exit test",
+  "path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/memmon-heartbeat/test_memory_monitor_gateway_wiring.py (placed at tests/gateway/test_memory_monitor_gateway_wiring.py)",
+  "tests": [
+   "test_serving_gateway_runs_memory_heartbeat_until_shutdown[enabled]",
+   "test_serving_gateway_runs_memory_heartbeat_until_shutdown[enabled-failure-exit]",
+   "test_serving_gateway_runs_memory_heartbeat_until_shutdown[disabled]",
+   "test_serving_gateway_runs_memory_heartbeat_until_shutdown[unconfigured-default]",
+   "test_aborted_startup_leaves_no_heartbeat_running"
+  ],
+  "contract": "A gateway that reaches serving (start_gateway() past runner.start(), cron and housekeeping started) runs the real [MEMORY] monitor thread at logging.memory_monitor.interval_seconds (default 300), does not start it when enabled: false, and has stopped it by the time start_gateway() returns, whether the exit is clean, a failure verdict or an aborted startup.",
+  "evidence_path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/memmon-heartbeat/"
+ },
+ "ab_results": {
+  "main": {
+   "result": "fail",
+   "detail": "3 failed / 2 passed. enabled, enabled-failure-exit and unconfigured-default: 'heartbeat state while serving: False is True' (start_memory_monitoring() has no caller anywhere on main). disabled and the aborted-startup guard pass trivially."
+  },
+  "49782": {
+   "result": "fail",
+   "detail": "3 failed / 2 passed on the port. enabled and enabled-failure-exit: start called with [300.0], expected [42.0]; disabled: heartbeat running while serving (True is False). It never reads logging.memory_monitor."
+  },
+  "49789": {
+   "result": "pass",
+   "detail": "5/5 on the mechanical port. Probe: interval 'abc' silently disables monitoring, 0 and -5 are passed to start_memory_monitoring (busy loop), enabled: 'false' and memory_monitor: false still start. 4 of its own 7 tests fail on main (stale module/MCP attributes)."
+  },
+  "50472": {
+   "result": "pass",
+   "detail": "5/5 on the port (its try/finally re-applied over main's refactored start_gateway() body). Own tests 4/4. Probe: 'abc' -> 300, but 0 and -5 are passed through (busy loop); string/scalar false still start."
+  },
+  "54014": {
+   "result": "pass",
+   "detail": "5/5 on the port (re-anchored hunks + _load_gateway_runtime_config -> _load_gateway_config). Own tests pass (21/21 with the regression file). Probe: 'abc', 0, -5 -> 300; enabled: 'false' and memory_monitor: false do not start."
+  },
+  "54014-conflict-only-merge": {
+   "result": "fail",
+   "detail": "4 failed / 1 passed: NameError: name '_load_gateway_runtime_config' is not defined, raised out of start_gateway() before wait_for_shutdown(), so the gateway would not start at all. The helper block merges cleanly; only the call site conflicts."
+  },
+  "49837": {
+   "result": "not tested",
+   "detail": "closed by its author 2026-09-24"
+  }
+ },
+ "adjacent_tests": {
+  "files": [
+   "tests/gateway/test_memory_monitor.py",
+   "tests/gateway/test_startup_restart_race.py",
+   "tests/gateway/test_runner_startup_failures.py",
+   "tests/test_hermes_logging.py",
+   "tests/hermes_cli/test_config.py",
+   "tests/gateway/test_memory_monitor_gateway_wiring.py (regression)"
+  ],
+  "result": "main: 235 passed, 3 failed (the 3 regression cases), 8 skipped. Carrier #54014 port + regression test: 246 passed, 0 failed, 8 skipped (+8 carrier tests, +3 regression cases). Negative controls on the carrier: (A) call site reverted to runner.wait_for_shutdown() -> 3 fail ('heartbeat state while serving'); (B) finally stop removed -> 3 fail ('heartbeat must stop when the gateway shuts down'); (C) resolver ignores logging.memory_monitor -> 3 fail (interval 300 != 42, disabled still running). Safety grep: the restart hits in test_startup_restart_race.py are request_restart(detached=False) flag/verdict tests (the detached launcher is gated on _restart_detached); no file exercises update, re-exec, systemctl/launchctl or fleet code. W2 tripwire: 0 hits from this cluster."
+ },
+ "carrier": {
+  "pr": 54014,
+  "author": "itsflownium <157689911+itsflownium@users.noreply.github.com> (commit author 'Flownium')",
+  "why": "Correct on the whole contract, and the only config-aware candidate whose config handling is sound: a malformed, zero or negative interval falls back to 300 (the fallback teknium1's sweeper review asked #49789 for), and string or scalar 'false' disables. It starts only after the aborted-startup guard and stops in a finally around wait_for_shutdown(). Its 2026-07-15 force-push answers teknium1's sweeper review, and its own tests pass on main after the rebase. It is not the earliest: #49782 fails the config contract, which teknium1's sweeper review asked it to restore. #49789 (the earliest config-aware PR) silently disables monitoring on a malformed interval, passes 0/negative through (verified about 100k [MEMORY] lines/s), and 4 of its 7 tests fail on main. #50472's run.py change re-indents a tail that main has since refactored, so porting it means re-implementing it, and it also passes 0/negative through. The rebase is mechanical except for one token, _load_gateway_runtime_config() -> _load_gateway_config(). Without it, start_gateway() raises NameError."
+ },
+ "fold_ins": [
+  {
+   "from": "W2 salvage wave on kvnloo's behalf (new test; seed fork #296 proposed deleting gateway/memory_monitor.py and is withdrawn)",
+   "author": "kvnloo",
+   "co_authored_by": "Kevin Rajan <7121943+kvnloo@users.noreply.github.com>",
+   "hunk_scope": "New file tests/gateway/test_memory_monitor_gateway_wiring.py (2 functions, 5 cases: enabled interval 42, failure exit still stops, enabled: false, unconfigured default 300, aborted startup leaves no thread). No production change.",
+   "why": "#54014's tests call its helpers and the wait wrapper directly; the only start_gateway() test it touches is the aborted-startup guard. teknium1's sweeper review asked for a start_gateway() lifecycle test covering start, final stop and disabled config, and this test drives the real start_gateway() and the real monitor thread.",
+   "test": "Fails 3/5 on main 298a01c7, passes 5/5 on main + #54014 (port). Each of 3 negative controls re-fails 3 cases."
+  }
+ ],
+ "close_after_merge": [
+  {
+   "pr": 49782,
+   "reason": "Duplicate 'Fixes #49773'. Unconditional start, no logging.memory_monitor handling; fails 3/5 (interval and enabled: false ignored)."
+  },
+  {
+   "pr": 49789,
+   "reason": "Duplicate 'Fixes #49773'. Superseded: same wiring and defaults block. Its malformed-interval handling disables monitoring and passes 0/negative through, and its tests are stale on main."
+  },
+  {
+   "pr": 50472,
+   "reason": "Duplicate (alt-glitch 2026-06-21). Same wiring via a start_gateway() tail re-indent that no longer matches main; passes 0/negative intervals through."
+  }
+ ],
+ "exclude_reason": null,
+ "row": "| #49773 | #54014 (itsflownium) | main: FAIL, 3 of 5 cases fail (the heartbeat never runs while the gateway serves); #54014: PASS 5/5 after a rebase (4 conflict files: the call site moves into main's refactored `start_gateway()`, the defaults block into `hermes_cli/config_defaults.py`) plus a one-token drift fix (`_load_gateway_runtime_config()` to `_load_gateway_config()`); #49789: PASS 5/5 (ported, CONFLICTING); #50472: PASS 5/5 (ported by re-indenting main's `start_gateway()` tail into its try/finally, CONFLICTING); #49782: FAIL, 3 of 5 fail (ignores `logging.memory_monitor`: interval 42 runs at 300, `enabled: false` still starts) | kvnloo (written for this wave; fork #296 itself proposed deleting the module and is withdrawn): lifecycle regression test `tests/gateway/test_memory_monitor_gateway_wiring.py` (real `start_gateway()` and real monitor thread: interval 42, failure exit still stops, `enabled: false`, unconfigured default 300, aborted startup leaves no thread); `Co-authored-by: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>` | #49782, #49789, #50472 | On main `start_memory_monitoring()` has no caller: dc3d0fe148 (#27102) added the start/stop wiring and the `logging.memory_monitor` defaults, and 51c68d4ab (#20059, desktop app import) dropped both. Ported #54014 passes 5/5 with its own tests, and the adjacent files go from 235 passed/3 failed to 246/0. Reverting its call site, dropping its finally stop, or ignoring config each re-fails 3 cases. A conflict-only merge keeps the auto-merged `_load_gateway_runtime_config()` call, which main removed, so `start_gateway()` raises NameError (4 of 5 fail). #54014 is the only config-aware candidate that maps a malformed, 0 or negative `interval_seconds` to 300; #49789 and #50472 pass 0 through, which spins the monitor at about 100k `[MEMORY]` lines/s. |",
+ "row_fork_draft": "| #49773 | #54014 (itsflownium) | main 298a01c7 FAIL 3/5; #54014 PASS 5/5 (rebase: 4 conflict files + `_load_gateway_runtime_config`->`_load_gateway_config`); #49789 PASS 5/5 (ported); #50472 PASS 5/5 (ported, tail re-indent); #49782 FAIL 3/5 (no config) | kvnloo (Co-authored-by Kevin Rajan): start_gateway() lifecycle regression test tests/gateway/test_memory_monitor_gateway_wiring.py | #49782, #49789, #50472 | Wiring + defaults from dc3d0fe148 (#27102) dropped by 51c68d4ab (#20059). Carrier 5/5, adjacent 235/3 -> 246/0, 3 negative controls re-fail. Conflict-only merge raises NameError at startup. Only config-aware PR that clamps 0/negative intervals (others spin ~100k [MEMORY] lines/s). |",
+ "notes": "(1) Origin, verified in the repo: dc3d0fe148 (#27102, teknium1, 2026-05-16) added the start_gateway() start/stop wiring and the logging.memory_monitor DEFAULT_CONFIG block, and 51c68d4ab ('Add Hermes desktop app (#20059)', 2026-05-31, 442 files) removed both. teknium1's sweeper review on #49837 cites 476d8d9cc, which is not in the repo; the sweeper review on #49782 names 51c68d4ab. Main has no logging.memory_monitor key in hermes_cli/config_defaults.py, cli-config.yaml.example or the docs, so the carrier restores an undocumented key, as #27102 did. (2) All four open PRs are CONFLICTING/DIRTY on GitHub (re-queried 2026-09-30) and none merges locally, because main refactored start_gateway() into helpers on 2026-09-02 (aed6720dab) and moved DEFAULT_CONFIG into hermes_cli/config_defaults.py. The carrier's rebase resolution is port-54014.diff. The non-textual drift is the rename, and port-54014-literal.diff shows what happens without it. (3) Test safety: start_gateway() on main was read end to end. The test uses the stubs from tests/gateway/test_startup_restart_race.py plus _host_attach_or_none, _claim_host_gateway_role, the control socket, the host-record refresh, MCP discovery, the Nous auth keepalive, pending-flush recovery, cron/housekeeping and MCP shutdown. Restart flags stay False, so the exit verdict returns without SystemExit. Signal handlers attach to the test loop only. The conftest live-system guard and the per-process HERMES_GATEWAY_LOCK_DIR are active. The W2 tripwire (os.exec*, own-group kill, PATH stubs) recorded 0 hits from this cluster; the shared hits.log has entries from another cluster's test_close_stdin_allows_eof. (4) Probe matrix (probe-matrix.log, fake start): 'abc' gives 300/none/300/300 for #49782/#49789/#50472/#54014; 0 gives 300/0/0/300; -5 gives 300/-5/-5/300; enabled 'false' gives 300/300/300/none; scalar false gives 300/300/300/none. probe-zero-interval-busy-loop.log: the real monitor emits about 25,000 [MEMORY] records in 0.25 s at interval 0 or -5. #27102's original block had the same 0/negative hazard. (5) If a maintainer prefers the earliest config-aware author (#49789), it needs the rebase, a 300 fallback for malformed and non-positive intervals (what #54014's _coerce_gateway_memory_monitor_interval does), and rewritten tests. That is more change than rebasing #54014, and it would still need this regression test. (6) Optional for the maintainer: #54014's defaults block has no inline comment, while config_defaults.py comments its neighbouring keys. #50472's comment text could be reused, but that is cosmetic and not worth a fold-in. (7) Fork side: kvnloo fork #296 (and the older leaf #113) proposes deleting gateway/memory_monitor.py as dead code, the opposite of the carrier. Close both regardless; they must not be promoted. (8) The interrupted run's draft test was re-derived rather than reused. Its shape is kept, and it gains extra host-isolation stubs, the failure-exit and default cases and the aborted-startup guard. Every A/B result here was re-run on 298a01c7. (9) The PR heads used are pinned at refs/w2/pr/<N> in $S/h.git. The worktree was removed after the run.",
+ "evidence_dir": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/memmon-heartbeat/"
+}

@@ -1,0 +1,75 @@
+commit 0eb74c88eb88e56f091f7864fd43dca3f9329638
+Merge: 298a01c79b a549960398
+Author: w2 <w2@local>
+Date:   Wed Sep 30 23:14:23 2026 -0500
+
+    Merge commit 'refs/w2/pr/99042' into HEAD
+    
+    # Conflicts:
+    #       ui-tui/src/app/useSubmission.ts
+
+diff --cc ui-tui/src/app/useSubmission.ts
+index 76fe467e4a,039b117a8e..6e19bba61d
+--- a/ui-tui/src/app/useSubmission.ts
++++ b/ui-tui/src/app/useSubmission.ts
+@@@ -37,29 -35,16 +37,34 @@@ export const queueItemFromSlash = (disp
+    return queueItem(slashArgument(expandedCommand), display)
+  }
+  
+- export const prepareSubmission = (display: string, tokens: ComposerToken[]) => ({
+-   display,
+-   text: expandTokens(tokens)(display)
+- })
++ export const prepareSubmission = (display: string, tokens: ComposerToken[]) => {
++   const result = expandTokens(tokens)(display)
++ 
++   return {
++     display,
++     text: result.expanded,
++     unresolved: result.unresolved
++   }
++ }
+  
+ +/**
+ + * Split a slash submission into the two things it has to be at once.
+ + *
+ + * A slash command's argument is ordinary user text, so a collapsed paste in it
+ + * must resolve BEFORE the command runs — otherwise `/pr-triage [[ … [412 lines]
+ + * … ]]` hands the skill the label and the agent faithfully reports that the
+ + * paste is truncated. The transcript still shows the compact form, because a
+ + * 412-line paste inlined into the scrollback is exactly what collapsing it was
+ + * for.
+ + *
+ + * Image tokens stay as labels: the gateway already holds those files in
+ + * `attached_images` and splices them in at submit.
+ + */
+ +export const prepareSlashSubmission = (display: string, tokens: ComposerToken[]) => ({
+ +  command: expandPasteTokens(tokens)(display),
+ +  display
+ +})
+ +
+  export const shouldInterpolateSubmission = (display: string) => hasInterpolation(display)
+  
+  export function useSubmission(opts: UseSubmissionOptions) {
+@@@ -266,10 -251,18 +271,18 @@@
+        const submission = prepareSubmission(full, submissionTokens)
+        const toHistory = submission.text
+  
++       if (submission.unresolved.length > 0) {
++         sys(
++           `cannot submit: ${submission.unresolved.length} collapsed paste token${submission.unresolved.length > 1 ? 's' : ''} missing — their text was lost before submission (${submission.unresolved.map(s => s.slice(0, 60)).join(', ')}). The composer still has what you typed, so nothing is lost.`
++         )
++ 
++         return
++       }
++ 
+ -      const queuePayload = expandPasteTokens(submissionTokens)(full)
+ -
+        if (looksLikeSlashCommand(full)) {
+ -        appendMessage({ kind: 'slash', role: 'system', text: full })
+ +        const slash = prepareSlashSubmission(full, submissionTokens)
+ +
+ +        appendMessage({ kind: 'slash', role: 'system', text: slash.display })
+          composerActions.pushHistory(toHistory)
+  
+          const parsed = parseSlashCommand(full)

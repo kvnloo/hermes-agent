@@ -1,0 +1,99 @@
+From 25baa72adec4ddc294c4f7cd6d11054dbc803897 Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:37:40 -0500
+Subject: [PATCH] docs(memory): drop stale Supermemory session ingest and gui
+ platform value
+
+- The provider comparison table (EN and zh-Hans) still credited
+  Supermemory with "session graph ingest", and the SUPERMEMORY_API_KEY row
+  (EN and zh-Hans) with "session ingest". The plugin
+  (plugins/memory/supermemory/__init__.py) writes each completed turn in
+  sync_turn and only retries failed writes at on_session_end; the
+  session-end /v4/conversations ingest is gone and the provider section
+  above already says "per-turn conversation capture" (bc1d4776db purged
+  the other references but missed these rows).
+- memory-provider-plugin.md listed `gui` as an example `platform` value.
+  No session reports `gui`: the TUI gateway resolves `desktop` (Desktop
+  chat panel) or `tui` (tui_gateway/server.py _resolve_session_platform),
+  ACP passes `acp`, and _memory_provider_init_kwargs forwards that value
+  unchanged.
+
+Docs only; no behaviour change.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ website/docs/developer-guide/memory-provider-plugin.md          | 2 +-
+ website/docs/reference/environment-variables.md                 | 2 +-
+ website/docs/user-guide/features/memory-providers.md            | 2 +-
+ .../current/reference/environment-variables.md                  | 2 +-
+ .../current/user-guide/features/memory-providers.md             | 2 +-
+ 5 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/website/docs/developer-guide/memory-provider-plugin.md b/website/docs/developer-guide/memory-provider-plugin.md
+index e88a61074c..3fd76055dd 100644
+--- a/website/docs/developer-guide/memory-provider-plugin.md
++++ b/website/docs/developer-guide/memory-provider-plugin.md
+@@ -121,7 +121,7 @@ fields; callers may initialize a provider without an agent or a session database
+ | Keyword | Meaning |
+ |---|---|
+ | `hermes_home` | Active profile's storage directory. |
+-| `platform` | Session surface, such as `cli`, `gui`, `acp`, or `telegram`. |
++| `platform` | Session surface, such as `cli`, `tui`, `desktop`, `acp`, or `telegram`. |
+ | `session_title` | Stored session title, when available. A display label is not necessarily a user-selected identity. |
+ | `session_title_source` | Stored title provenance, when available: `derived`, `llm`, or `user`. Automatic sources must not be mistaken for explicit identity overrides; missing provenance retains a provider's legacy behavior. Shared constants live in `hermes_state_common.py`. |
+ | `cwd` | Non-empty logical workspace supplied as `AIAgent(cwd=...)`, available before provider initialization. Omitted for `None` or an empty string. |
+diff --git a/website/docs/reference/environment-variables.md b/website/docs/reference/environment-variables.md
+index 103d06b300..e9e79ed627 100644
+--- a/website/docs/reference/environment-variables.md
++++ b/website/docs/reference/environment-variables.md
+@@ -198,7 +198,7 @@ For native Anthropic auth, Hermes prefers Claude Code's own credential files whe
+ | `OPENVIKING_API_KEY` | OpenViking API key (leave blank for local dev mode) |
+ | `OPENVIKING_ENDPOINT` | OpenViking server URL (default: `http://127.0.0.1:1933`) |
+ | `BRV_API_KEY` | ByteRover API key (optional, for cloud sync — local-first by default) ([app.byterover.dev](https://app.byterover.dev)) |
+-| `SUPERMEMORY_API_KEY` | Semantic long-term memory with profile recall and session ingest ([supermemory.ai](https://supermemory.ai)) |
++| `SUPERMEMORY_API_KEY` | Semantic long-term memory with profile recall and per-turn conversation capture ([supermemory.ai](https://supermemory.ai)) |
+ | `DAYTONA_API_KEY` | Daytona cloud sandboxes ([daytona.io](https://daytona.io/)) |
+ | `VERCEL_TOKEN` | Vercel Sandbox access token ([vercel.com](https://vercel.com/)) |
+ | `VERCEL_PROJECT_ID` | Vercel project ID (required with `VERCEL_TOKEN`) |
+diff --git a/website/docs/user-guide/features/memory-providers.md b/website/docs/user-guide/features/memory-providers.md
+index beae77ee8a..e299d1a6d2 100644
+--- a/website/docs/user-guide/features/memory-providers.md
++++ b/website/docs/user-guide/features/memory-providers.md
+@@ -721,7 +721,7 @@ package command. Restart Hermes after successful dependency preparation.
+ | **Holographic** | Local | Free | 2 | None | HRR algebra + trust scoring |
+ | **RetainDB** | Cloud | $20/mo | 10 | `requests` | Delta compression |
+ | **ByteRover** | Local/Cloud | Free/Paid | 3 | `brv` CLI | Pre-compression extraction |
+-| **Supermemory** | Cloud/Self-hosted | Free/Paid | 4 | `supermemory` | Context fencing + session graph ingest + multi-container |
++| **Supermemory** | Cloud/Self-hosted | Free/Paid | 4 | `supermemory` | Context fencing + multi-container |
+ | **Memori** | Cloud | Free/Paid | 5 | `hermes-memori` | Tool-aware memory + structured recall |
+ 
+ ## Profile Isolation
+diff --git a/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/reference/environment-variables.md b/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/reference/environment-variables.md
+index 810202f363..2eaeb8ce5b 100644
+--- a/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/reference/environment-variables.md
++++ b/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/reference/environment-variables.md
+@@ -150,7 +150,7 @@ description: "Hermes Agent 使用的所有环境变量完整参考"
+ | `HONCHO_API_KEY` | 跨会话用户建模（[honcho.dev](https://honcho.dev/)） |
+ | `HONCHO_BASE_URL` | 自托管 Honcho 实例的 base URL（默认：Honcho 云）。本地实例无需 API 密钥 |
+ | `HINDSIGHT_TIMEOUT` | Hindsight 内存提供商 API 调用超时（秒，默认：`60`）。如果 Hindsight 实例在 `/sync` 或 `on_session_switch` 期间响应缓慢并出现超时，请增大此值，并检查 `errors.log`。 |
+-| `SUPERMEMORY_API_KEY` | 支持 profile 召回和会话摄取的语义长期记忆（[supermemory.ai](https://supermemory.ai)） |
++| `SUPERMEMORY_API_KEY` | 支持 profile 召回和逐轮对话捕获的语义长期记忆（[supermemory.ai](https://supermemory.ai)） |
+ | `DAYTONA_API_KEY` | Daytona 云沙箱（[daytona.io](https://daytona.io/)） |
+ | `VERCEL_TOKEN` | Vercel Sandbox 访问 token（[vercel.com](https://vercel.com/)） |
+ | `VERCEL_PROJECT_ID` | Vercel 项目 ID（与 `VERCEL_TOKEN` 配合使用） |
+diff --git a/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/features/memory-providers.md b/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/features/memory-providers.md
+index c5b9240036..55e888b239 100644
+--- a/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/features/memory-providers.md
++++ b/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/features/memory-providers.md
+@@ -557,7 +557,7 @@ Base URL 优先级为 `supermemory.json` → `SUPERMEMORY_BASE_URL` → `https:/
+ | **Holographic** | 本地 | 免费 | 2 | 无 | HRR 代数 + 信任评分 |
+ | **RetainDB** | 云端 | $20/月 | 5 | `requests` | 增量压缩 |
+ | **ByteRover** | 本地/云端 | 免费/付费 | 3 | `brv` CLI | 预压缩提取 |
+-| **Supermemory** | 云端/自托管 | 免费/付费 | 4 | `supermemory` | 上下文隔离 + 会话图谱导入 + 多容器 |
++| **Supermemory** | 云端/自托管 | 免费/付费 | 4 | `supermemory` | 上下文隔离 + 多容器 |
+ 
+ ## Profile 隔离
+ 
+-- 
+2.55.0
+

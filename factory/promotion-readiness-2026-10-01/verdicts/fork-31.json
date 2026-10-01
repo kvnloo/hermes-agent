@@ -1,0 +1,28 @@
+{
+ "fork_pr": 31,
+ "title": "fix(skills): rank hub search results by trust before the limit cut",
+ "claim": "GET /api/skills/hub/search must trust-sort merged results before the [:limit] cut (like unified_search), so builtin/trusted hits are not truncated behind a faster community source; on main it cuts in as_completed order.",
+ "verdict": "READY",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "tests only on main: tests/hermes_cli/test_dashboard_admin_endpoints.py -> 42 passed, 1 failed; TestSkillsHubSearchEndpoint::test_trust_rank_survives_limit_cut: AssertionError 'At index 0 diff: 'skills-sh/x/s0' != 'official/cat/s-official''",
+  "green": "with fix: tests/hermes_cli/test_dashboard_admin_endpoints.py -> 43 passed, 0 failed",
+  "negative_control": "inverted sort key (ascending trust) -> TestSkillsHubSearchEndpoint 0 passed, 1 failed with the same index-0 diff; restored",
+  "adjacent": "tests/hermes_cli/test_web_server_skills_profiles.py tests/hermes_cli/test_web_server_skill_editor.py tests/tools/test_skill_bundle_provenance.py tests/tools/test_skills_hub_browse_sh.py -> 4 files, 38 passed, 0 failed; ruff clean",
+  "source": "main hermes_cli/web_routers/skills.py:201-208 dedupes then `list(seen.values())[:capped]` with no sort; tools/skills_hub_search.py:261-270 unified_search sorts by -TRUST_RANK before [:limit]; hermes_cli/skills_hub.py _rank_and_page also sorts. Dashboard endpoint is the lone outlier."
+ },
+ "upstream_overlap": [
+  "None owning this defect. #116108 OPEN (nikkoxgonzales) adds opt-in relevance rerank to unified_search only (files: tools/skills_hub_search.py, tools/skills_hub_rerank.py, config) \u2014 does not touch web_routers/skills.py.",
+  "#113118 MERGED (index-miss fallback) touched hub search but not ordering."
+ ],
+ "branch": "ready/fork-31-hub-search-trust-sort",
+ "commit": "4e848040659262b804e9443dcc6cb41189e75e0b",
+ "files": [
+  "hermes_cli/web_routers/skills.py",
+  "tests/hermes_cli/test_dashboard_admin_endpoints.py"
+ ],
+ "size": "+27/-1",
+ "depends_on": null,
+ "notes": "Rebuilt on current main (router now imports parallel_search_sources from tools.skills_hub_search and uses _hub_sources(profile); fork's patch targeted the old tools.skills_hub seam and its test patched hermes_cli.web_server._installed_hub_identifiers, which is no longer the lookup site). Test trimmed to one contract test reusing the module's _FakeMeta. Kanban baggage dropped. NOT_TESTED: live dashboard against real hub sources.",
+ "lead_review": "Lead spot-check: RED reproduced (builtin entry cut by completion-order slice), GREEN 43/43 in test_dashboard_admin_endpoints.py. Stable sort by existing _rank before [:capped]."
+}

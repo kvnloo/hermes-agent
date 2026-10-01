@@ -1,0 +1,17 @@
+NEG-CONTROL A: carrier #123356 with tools/arg_coercion.py reverted to main (handler-only)
+  ║ 1 failed, 9 passed in 1.42s
+=== Summary: 1 files, 9 tests passed, 1 failed (100% complete) in 4.0s (20 workers) ===
+FAILED tests/tools/test_terminal_notify_string_bool.py::test_foreground_string_notify_false_is_a_no_op_like_native_false
+1 failed, 9 passed in 1.42s
+NEG-CONTROL B: carrier with handler notify str-branch disabled (arg_coercion only)
+1
+=== Summary: 1 files, 10 tests passed, 0 failed (100% complete) in 2.3s (20 workers) ===
+NEG-CONTROL C: both reverted
+  ║ 5 failed, 5 passed in 1.50s
+=== Summary: 1 files, 5 tests passed, 5 failed (100% complete) in 4.0s (20 workers) ===
+FAILED tests/tools/test_terminal_notify_string_bool.py::test_background_bool_or_bool_string_notify_maps_to_notify_on_complete[true-True]
+FAILED tests/tools/test_terminal_notify_string_bool.py::test_background_bool_or_bool_string_notify_maps_to_notify_on_complete[True-True0]
+FAILED tests/tools/test_terminal_notify_string_bool.py::test_background_bool_or_bool_string_notify_maps_to_notify_on_complete[false-False]
+FAILED tests/tools/test_terminal_notify_string_bool.py::test_background_bool_or_bool_string_notify_maps_to_notify_on_complete[FALSE-False]
+FAILED tests/tools/test_terminal_notify_string_bool.py::test_foreground_string_notify_false_is_a_no_op_like_native_false
+5 failed, 5 passed in 1.50s

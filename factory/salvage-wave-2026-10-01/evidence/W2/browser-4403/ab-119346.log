@@ -1,0 +1,13 @@
+main=298a01c79b38018e029e50f77efe67c4a4fdbd40
+MERGE refs/w2/pr/119346 (d6c5a4a67e): clean
+▶ not activated — using HERMES_PYTHON: /workspace/hermes-home/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~2 tests) under ['tests/gateway/test_browser_controller_session_profile.py']; running with -j 2
+[100.0% |     2/~2 | ✓3 | ✗0] ✓ tests/gateway/test_browser_controller_session_profile.py (3✓, 3.1s)
+
+=== Summary: 1 files, 3 tests passed, 0 failed (100% complete) in 3.2s (2 workers) ===
+  Durations cached to test_durations.json (1 files)
+

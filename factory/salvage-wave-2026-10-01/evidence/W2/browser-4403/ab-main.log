@@ -1,0 +1,31 @@
+main=298a01c79b38018e029e50f77efe67c4a4fdbd40
+__________ test_cloud_scope_selects_the_local_api_artifact_store_slot __________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f52d691e110>
+tmp_path = PosixPath('/var/tmp/hermes-pytest-1000/r-mpqtzcno/pytest-of-kvn/pytest-0/test_cloud_scope_selects_the_l0')
+
+    def test_cloud_scope_selects_the_local_api_artifact_store_slot(monkeypatch, tmp_path):
+        """The local-API adapter attaches artifact stores keyed by profile NAME; a cloud
+        scope for the same profile must resolve that slot, not miss it."""
+        _serve_launch_profile(monkeypatch, tmp_path, "work")
+        broker = get_browser_control_broker()
+        stores = {name: object() for name in ("default", "work", "ops")}
+        transport = _Transport()
+        for requested_profile, expected in ((None, "work"), ("default", "default"), ("ops", "ops")):
+            for name, store in stores.items():
+                broker.attach_artifact_store(store, profile_id=name)
+            session_id, registration = _create_and_register(transport, requested_profile)
+            try:
+>               assert "error" not in registration, (requested_profile, registration)
+E               AssertionError: (None, {'jsonrpc': '2.0', 'id': 2, 'error': {'code': 4403, 'message': 'controller_id, browser_profile_id, and server session profile are required'}})
+E               assert 'error' not in {'jsonrpc': '2.0', 'id': 2, 'error': {'code': 4403, 'message': 'controller_id, browser_profile_id, and server session profile are required'}}
+
+tests/gateway/test_browser_controller_session_profile.py:114: AssertionError
+=========================== short test summary info ============================
+FAILED tests/gateway/test_browser_controller_session_profile.py::test_created_session_registers_with_its_canonical_profile[launch-default]
+FAILED tests/gateway/test_browser_controller_session_profile.py::test_created_session_registers_with_its_canonical_profile[launch-named]
+FAILED tests/gateway/test_browser_controller_session_profile.py::test_cloud_scope_selects_the_local_api_artifact_store_slot
+3 failed in 2.88s
+
+=== 1 file with test failures (3 tests failed) ===
+  tests/gateway/test_browser_controller_session_profile.py  (3 tests failed)

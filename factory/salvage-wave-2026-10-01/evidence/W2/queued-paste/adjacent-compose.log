@@ -1,0 +1,106 @@
+state=compose ref=refs/w2/queued-paste/mcompose head=c0a18b7d4f715e87855a2c8e0c1d0ec31d9876da
+npm notice run hermes-agent@1.0.0 npx
+npm notice run 'vitest' run src/__tests__/attachments.test.ts src/__tests__/gatewayClientKillLatch.test.ts src/__tests__/inputSelectionClipboard.test.ts src/__tests__/libTextI18n.test.ts src/__tests__/orchestratorPromptSession.test.ts src/__tests__/platform.test.ts src/__tests__/queueScopeRenderer.test.tsx src/__tests__/queueSubmission.test.ts src/__tests__/submissionCore.test.ts src/__tests__/useComposerState.test.ts src/__tests__/useInputHandlers.test.ts src/__tests__/useQueue.test.ts src/__tests__/useSubmission.test.ts src/__tests__/createGatewayEventHandler.test.ts src/__tests__/voiceSubmitModeRenderer.test.tsx src/__tests__/startupLatency.test.ts src/__tests__/startupLatencyDashboard.test.ts src/__tests__/moaProgressActivity.test.ts src/__tests__/composerHighlights.test.ts
+
+ RUN  v4.1.10 /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/paste/ui-tui
+
+ ❯ src/__tests__/attachments.test.ts (22 tests | 3 failed) 16ms
+     × reports an unmatched paste token with [N lines] signature as unresolved 6ms
+     × reports multiple orphaned paste tokens 1ms
+     × recognizes a paste token with [N.Nk lines] suffix (fmtK output) 1ms
+ ❯ src/__tests__/useSubmission.test.ts (4 tests | 1 failed) 13ms
+     × keeps the collapsed paste for display and expands the model payload 10ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/__tests__/attachments.test.ts > expandTokens (what the agent actually receives) > reports an unmatched paste token with [N lines] signature as unresolved
+AssertionError: expected [] to deeply equal [ '[[ lost.. [5k lines] .. data ]]' ]
+
+- Expected
++ Received
+
+- [
+-   "[[ lost.. [5k lines] .. data ]]",
+- ]
++ []
+
+ ❯ src/__tests__/attachments.test.ts:53:31
+     51|
+     52|     expect(result.expanded).toBe(`submit: ${label} now`)
+     53|     expect(result.unresolved).toEqual([label])
+       |                               ^
+     54|   })
+     55|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  src/__tests__/attachments.test.ts > expandTokens (what the agent actually receives) > reports multiple orphaned paste tokens
+AssertionError: expected [ '[[ chunk1 [135 lines] ]]' ] to deeply equal [ '[[ chunk1 [135 lines] ]]', …(1) ]
+
+- Expected
++ Received
+
+  [
+    "[[ chunk1 [135 lines] ]]",
+-   "[[ chunk2.. [9.2k lines] .. tail ]]",
+  ]
+
+ ❯ src/__tests__/attachments.test.ts:62:31
+     60|
+     61|     expect(result.expanded).toBe(`${a} and ${b}`)
+     62|     expect(result.unresolved).toEqual([a, b])
+       |                               ^
+     63|   })
+     64|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  src/__tests__/attachments.test.ts > looksLikeOrphanedPasteToken (detection of real paste tokens) > recognizes a paste token with [N.Nk lines] suffix (fmtK output)
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/__tests__/attachments.test.ts:101:81
+     99|
+    100|   it('recognizes a paste token with [N.Nk lines] suffix (fmtK output)'…
+    101|     expect(looksLikeOrphanedPasteToken('[[ heading.. [5.3k lines] .. t…
+       |                                                                                 ^
+    102|   })
+    103|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  src/__tests__/useSubmission.test.ts > prepareSubmission > keeps the collapsed paste for display and expands the model payload
+AssertionError: expected { …(3) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+  {
+    "display": "review this: [[ first.. [3 lines] .. last ]]",
+    "text": "review this: first
+  middle
+  last",
++   "unresolved": [],
+  }
+
+ ❯ src/__tests__/useSubmission.test.ts:11:64
+      9|     const tokens: ComposerToken[] = [{ kind: 'paste', label, text: 'fi…
+     10|
+     11|     expect(prepareSubmission(`review this: ${label}`, tokens)).toEqual…
+       |                                                                ^
+     12|       display: `review this: ${label}`,
+     13|       text: 'review this: first\nmiddle\nlast'
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  2 failed | 17 passed (19)
+      Tests  4 failed | 242 passed (246)
+   Start at  23:24:28
+   Duration  1.98s (transform 11.69s, setup 0ms, import 18.38s, tests 976ms, environment 2ms)
+

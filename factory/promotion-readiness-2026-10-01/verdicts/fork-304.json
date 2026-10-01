@@ -1,0 +1,31 @@
+{
+  "fork_pr": 304,
+  "title": "docs: correct bare noreply email auto-resolve claim in contributors README",
+  "claim": "Only <id>+<login>@users.noreply.github.com auto-resolves in the attribution gate; a bare <login>@users.noreply.github.com needs a mapping file (audit --fix creates one).",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "doc_text_on_main": "contributors/README.md:35-36 — \"GitHub noreply emails (`<id>+<login>@users.noreply.github.com` and `<login>@users.noreply.github.com`) auto-resolve — no file needed.\"",
+    "source": ".github/workflows/contributor-check.yml:51-52 skips only emails matching '\\+.*@users\\.noreply\\.github\\.com' ('GitHub id+login noreply emails auto-resolve'), then requires contributors/emails/<email> or a legacy AUTHOR_MAP entry; scripts/audit_pr_attribution.py:44 ID_NOREPLY_RE, :64-77 is_mapped() short-circuits only on ID_NOREPLY_RE; --fix (resolve_login + add_contributor.py) maps a bare noreply by WRITING a file.",
+    "red": "Probe on main: is_mapped('123456+b2probe@users.noreply.github.com') -> True; is_mapped('b2probe-nonexistent@users.noreply.github.com') -> False; CI shell rule replayed: id+login -> skipped, bare -> MISSING. 225 bare-noreply files already exist under contributors/emails/.",
+    "green": "README narrows auto-resolve to the id+login form and says the bare form needs a file (audit --fix creates it).",
+    "negative_control": "Same probe distinguishes the two forms; reverting the README restores a claim the probe falsifies.",
+    "adjacent": "is_mapped() probe + CI shell-rule replay (see red); no pytest target exists for contributors/README.md. docs-site-checks equivalent on the bundle branch: website/scripts/extract-skills.py + generate-skill-docs.py leave website/docs, website/sidebars.ts and website/i18n unchanged (clean); website/scripts/check_doc_links.py OK. added lines scanned for MDX hazards ({ } or raw <tag> outside inline code / fences): none. NOT_TESTED: Docusaurus build (website/node_modules not installed in this environment).",
+    "mirrors": "Only copy (git grep 'auto-resolve' / '<login>@users.noreply' across *.md).",
+    "rebase": "verified on main f848940560; bundle merges cleanly onto refreshed main eb8d21f482 (git merge-tree); merges cleanly with every B1 ready/docs-* branch that touches the same files"
+  },
+  "upstream_overlap": [
+    "NousResearch/hermes-agent#127376 CLOSED (kvnloo, own parked carrier)",
+    "fork #80 / #116 / #125 change the same README claim: retire as duplicates of this lane (#116's explicit 'bare form does NOT auto-resolve' sentence is incorporated)"
+  ],
+  "branch": "ready/docs2-contributors",
+  "bundle_commit": "29319c49cd4f5e69e3c2c2df38e35a1b2818f351",
+  "patch": "patches/docs2-contributors.patch",
+  "pr_body": "patches/docs2-contributors.body.md",
+  "files": [
+    "contributors/README.md"
+  ],
+  "size": "fork leaf +2/-2; bundle docs2-contributors +5/-2 (1 file changed, 5 insertions(+), 2 deletions(-))",
+  "depends_on": "kvnloo/hermes-agent#313 review-slot policy; the audit names this the first docs promotion",
+  "notes": "Canonical noreply lane (#80/#116/#125/#304). Drift introduced by 8bbedc345f (#126344). Packaging: one commit per area bundle (batch B2 lane W4-docs); publish one bundle at a time per kvnloo/hermes-agent#313."
+}

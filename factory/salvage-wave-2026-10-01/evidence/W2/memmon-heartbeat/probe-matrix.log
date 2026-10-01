@@ -1,0 +1,30 @@
+== main
+{"case": "interval-abc", "start_calls": [], "ok": true, "error": null}
+{"case": "interval-0", "start_calls": [], "ok": true, "error": null}
+{"case": "interval-neg5", "start_calls": [], "ok": true, "error": null}
+{"case": "enabled-string-false", "start_calls": [], "ok": true, "error": null}
+{"case": "scalar-false", "start_calls": [], "ok": true, "error": null}
+== 49782
+{"case": "interval-abc", "start_calls": [300.0], "ok": true, "error": null}
+{"case": "interval-0", "start_calls": [300.0], "ok": true, "error": null}
+{"case": "interval-neg5", "start_calls": [300.0], "ok": true, "error": null}
+{"case": "enabled-string-false", "start_calls": [300.0], "ok": true, "error": null}
+{"case": "scalar-false", "start_calls": [300.0], "ok": true, "error": null}
+== 49789
+{"case": "interval-abc", "start_calls": [], "ok": true, "error": null}
+{"case": "interval-0", "start_calls": [0.0], "ok": true, "error": null}
+{"case": "interval-neg5", "start_calls": [-5.0], "ok": true, "error": null}
+{"case": "enabled-string-false", "start_calls": [300.0], "ok": true, "error": null}
+{"case": "scalar-false", "start_calls": [300.0], "ok": true, "error": null}
+== 50472
+{"case": "interval-abc", "start_calls": [300.0], "ok": true, "error": null}
+{"case": "interval-0", "start_calls": [0.0], "ok": true, "error": null}
+{"case": "interval-neg5", "start_calls": [-5.0], "ok": true, "error": null}
+{"case": "enabled-string-false", "start_calls": [300.0], "ok": true, "error": null}
+{"case": "scalar-false", "start_calls": [300.0], "ok": true, "error": null}
+== 54014
+{"case": "interval-abc", "start_calls": [300.0], "ok": true, "error": null}
+{"case": "interval-0", "start_calls": [300.0], "ok": true, "error": null}
+{"case": "interval-neg5", "start_calls": [300.0], "ok": true, "error": null}
+{"case": "enabled-string-false", "start_calls": [], "ok": true, "error": null}
+{"case": "scalar-false", "start_calls": [], "ok": true, "error": null}

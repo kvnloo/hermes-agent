@@ -1,0 +1,13 @@
+main = 298a01c79b38018e029e50f77efe67c4a4fdbd40 (refs/w2/main)
+cmd: mem-config_ab.sh <label> [ref]  ->  PATH=<tripwire>:/usr/bin:/bin HOME=$S/testhome-W2-mem-config HERMES_HOME=$HOME/.hermes HERMES_PYTHON=$PY setsid -w bash scripts/run_tests.sh tests/agent/test_memory_bootstrap_independence.py -q -j 2 -rf -p no:randomly
+test file: #126106's tests/agent/test_memory_bootstrap_independence.py, unchanged (10 cases)
+  public AIAgent ctor x {skip_memory, fail_builtin_import} (4); built-in import failure with memory None/{}/'malformed'/{'provider': ''}/{'provider': 'builtin'} invents no provider and no plugin error (5); disk-installed provider discovered through real config.yaml survives the import failure (1)
+
+main:                          FAIL 7/10. 'built-in import disabled the external provider' (public ctor, skip_memory=False + import failure); disk provider manager is None; every core/absent/malformed case logs 'Memory provider plugin init failed: cannot access local variable 'mem_config' where it is not associated with a value'
+#126106 (1d5d0a2562) merged:   merges clean, PASS 10/10
+kvnloo fork #30 (381e59256b; CONFLICTS on main, production hunk hand-ported: fork30-ported-onto-main.diff, reference): FAIL 1/10. [malformed]: with memory: 'malformed' the hoisted raw default is a str, so a built-in import failure logs 'Memory provider plugin init failed: 'str' object has no attribute 'get''
+#87028 (richardclawbot) and #18565 (natehale): CONFLICTING on main (agent/agent_init.py + agent/memory_manager.py; #18565 in 11 files); both hoist mem_config out of the built-in block as a side effect of other features. Not A/B'd.
+negative control (#126106 line reverted to mem_config.get(...)): FAIL 7/10, identical to main
+adjacent (6 files: test_memory_provider_init, test_memory_provider, test_memory_provider_unavailable_warning, test_skip_memory_store, test_builtin_memory_disabled_surface, gateway/test_api_server_memory_sessions): main 86 passed / 0 failed; #126106 96 passed / 0 failed (86 + its 10)
+fork #30's own tests (tests/run_agent/test_mem_config_unbound_init.py): stale on main and on #126106 (patch run_agent.get_tool_definitions, which no longer exists): 0/3 both
+tripwire hits: none

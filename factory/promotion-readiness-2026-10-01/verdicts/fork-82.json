@@ -1,0 +1,23 @@
+{
+  "fork_pr": 82,
+  "title": "docs(plugins): cover hardening-comment severity cap in install scan",
+  "claim": "plugins.md install-scan section should say whole-line comments / CHANGELOG entries describing a defense are capped below dangerous.",
+  "verdict": "SUPERSEDED-ON-MAIN",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "red": "N/A",
+    "green": "N/A",
+    "negative_control": "N/A",
+    "adjacent": "N/A",
+    "source": "Main's plugins.md:793-794 already says '**Whole-line comments and `CHANGELOG.md`** describe a defense; they score as prose does', and prose 'can never on its own produce dangerous' (:775-776). Added by 5a0c2fb89e 'fix(plugins): install scanner scores inert context as context'. Matches tools/plugin_guard.py:200-205 _comment_severity and :244-259 _is_defensive_documentation."
+  },
+  "upstream_overlap": [],
+  "branch": null,
+  "files": [
+    "website/docs/user-guide/features/plugins.md"
+  ],
+  "size": null,
+  "depends_on": null,
+  "fork_head": "4b3c65b1a8dea978640c6fdf0fd8a20e082d3af8",
+  "notes": "Fork paragraph would duplicate main's bullet."
+}

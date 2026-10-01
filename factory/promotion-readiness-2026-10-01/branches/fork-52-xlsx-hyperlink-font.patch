@@ -1,0 +1,96 @@
+From 98aa594b04955aec0212460e1dcf157a2043e535 Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:24:29 -0500
+Subject: [PATCH] fix(skills): keep the hyperlink color when xlsx_create
+ applies font overrides
+
+apply_cell() gives a hyperlink cell the built-in "Hyperlink" named style
+(theme color 10, the standard link blue), then, if the spec also sets bold,
+italic or font_size, assigns cell.font = Font(**font_kw). That replaces the
+style's font with a bare one that has no color, name or scheme, so a spec like
+{"value": "Report", "hyperlink": "https://...", "bold": true} produces a
+clickable link rendered in black.
+
+Copy the cell's resolved font and set only the requested attributes on it, so
+the Hyperlink style (or any default font) keeps its color and face while
+bold/italic/size still apply and an explicit font_color still wins. The now
+unused Font import is dropped.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../productivity/xlsx/scripts/xlsx_create.py  |  9 +++++--
+ .../xlsx/tests/test_xlsx_skill.py             | 24 +++++++++++++++++++
+ 2 files changed, 31 insertions(+), 2 deletions(-)
+
+diff --git a/skills/productivity/xlsx/scripts/xlsx_create.py b/skills/productivity/xlsx/scripts/xlsx_create.py
+index 14b351cfd9..d300eb901f 100644
+--- a/skills/productivity/xlsx/scripts/xlsx_create.py
++++ b/skills/productivity/xlsx/scripts/xlsx_create.py
+@@ -62,6 +62,7 @@ Prints a JSON summary to stdout; exits non-zero on failure.
+ from __future__ import annotations
+ 
+ import argparse
++import copy
+ import json
+ import sys
+ from datetime import date, datetime
+@@ -70,7 +71,7 @@ from openpyxl import Workbook
+ from openpyxl.chart import BarChart, LineChart, PieChart, Reference
+ from openpyxl.comments import Comment
+ from openpyxl.formatting.rule import CellIsRule, ColorScaleRule
+-from openpyxl.styles import (Alignment, Border, Font, PatternFill,
++from openpyxl.styles import (Alignment, Border, PatternFill,
+                              Protection, Side)
+ from openpyxl.utils import column_index_from_string, range_boundaries
+ from openpyxl.workbook.defined_name import DefinedName
+@@ -118,7 +119,11 @@ def apply_cell(ws, coord, spec):
+         if "font_color" in spec:
+             font_kw["color"] = spec["font_color"]
+         if font_kw:
+-            cell.font = Font(**font_kw)
++            # Restyle the resolved font (e.g. the Hyperlink style's blue) instead of replacing it.
++            font = copy.copy(cell.font)
++            for key, value in font_kw.items():
++                setattr(font, key, value)
++            cell.font = font
+         if "fill" in spec:
+             cell.fill = PatternFill("solid", fgColor=spec["fill"])
+         if "border" in spec:
+diff --git a/skills/productivity/xlsx/tests/test_xlsx_skill.py b/skills/productivity/xlsx/tests/test_xlsx_skill.py
+index dd56f2fa17..a6a03ff0c7 100644
+--- a/skills/productivity/xlsx/tests/test_xlsx_skill.py
++++ b/skills/productivity/xlsx/tests/test_xlsx_skill.py
+@@ -476,6 +476,30 @@ def test_names_hyperlinks_notes(tmp_path):
+     assert names["defined_names"] == {"Extra": "'D'!$C$1"}
+ 
+ 
++def test_hyperlink_font_overrides_keep_link_color(tmp_path):
++    # bold/italic/font_size on a hyperlink must restyle the Hyperlink font,
++    # not replace it with a colorless one; only font_color changes the color.
++    spec = {"sheets": [{"name": "L", "cells": {
++        "A1": {"value": "plain", "hyperlink": "https://example.com/a"},
++        "A2": {"value": "styled", "hyperlink": "https://example.com/b",
++               "bold": True, "italic": True, "font_size": 14},
++        "A3": {"value": "colored", "hyperlink": "https://example.com/c",
++               "bold": True, "font_color": "FF0000"},
++    }}]}
++    spec_path = tmp_path / "lspec.json"
++    spec_path.write_text(json.dumps(spec), encoding="utf-8")
++    book = tmp_path / "links.xlsx"
++    run("xlsx_create.py", spec_path, book)
++
++    ws = load_workbook(book)["L"]
++    a1, a2, a3 = ws["A1"].font, ws["A2"].font, ws["A3"].font
++    assert a1.color.theme == 10 and not a1.bold
++    assert (a2.bold, a2.italic, a2.size) == (True, True, 14)
++    assert a2.color is not None and a2.color.theme == 10
++    assert a3.bold and a3.color.rgb.endswith("FF0000")
++    assert ws["A2"].hyperlink.target == "https://example.com/b"
++
++
+ def test_sheet_protection(tmp_path):
+     spec = {"sheets": [{"name": "P", "rows": [["locked", "open"]],
+                         "protection": {"password": "your-password",
+-- 
+2.55.0
+

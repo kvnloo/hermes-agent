@@ -1,0 +1,12 @@
+state=fork56 ref=refs/w2/queued-paste/mfork56 head=564ba9e2f5a54a24a56225ed9417a874208418c6
+npm notice run hermes-agent@1.0.0 npx
+npm notice run 'vitest' run src/__tests__/attachments.test.ts src/__tests__/gatewayClientKillLatch.test.ts src/__tests__/inputSelectionClipboard.test.ts src/__tests__/libTextI18n.test.ts src/__tests__/orchestratorPromptSession.test.ts src/__tests__/platform.test.ts src/__tests__/queueScopeRenderer.test.tsx src/__tests__/queueSubmission.test.ts src/__tests__/submissionCore.test.ts src/__tests__/useComposerState.test.ts src/__tests__/useInputHandlers.test.ts src/__tests__/useQueue.test.ts src/__tests__/useSubmission.test.ts src/__tests__/createGatewayEventHandler.test.ts src/__tests__/voiceSubmitModeRenderer.test.tsx src/__tests__/startupLatency.test.ts src/__tests__/startupLatencyDashboard.test.ts src/__tests__/moaProgressActivity.test.ts src/__tests__/composerHighlights.test.ts
+
+ RUN  v4.1.10 /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/paste/ui-tui
+
+
+ Test Files  19 passed (19)
+      Tests  239 passed (239)
+   Start at  23:24:26
+   Duration  2.03s (transform 12.92s, setup 0ms, import 19.18s, tests 956ms, environment 3ms)
+

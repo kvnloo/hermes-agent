@@ -1,0 +1,28 @@
+{
+ "fork_pr": 40,
+ "title": "fix(tools): honor terminal.home_mode from the routed profile's scope",
+ "claim": "Under profile multiplexing, a routed profile's terminal.home_mode must drive its subprocess HOME. Today (A) build_profile_terminal_scope drops home_mode because TERMINAL_CONFIG_ENV_MAP lacks it, and (B) get_subprocess_home reads TERMINAL_HOME_MODE from the env dict / os.environ instead of the bound terminal scope.",
+ "verdict": "EXTERNAL-OWNED",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "Probe on main (not committed): routed profile config.yaml terminal.home_mode: profile, ambient TERMINAL_HOME_MODE=auto. (A) build_profile_terminal_scope(...).get('TERMINAL_HOME_MODE') -> None. (B) With a scope that already carries TERMINAL_HOME_MODE='profile' (i.e. after A is fixed), terminal_env() -> 'profile' but get_subprocess_home() -> None (expected <profile>/home). Both defects reproduce.",
+  "green": "NOT_TESTED (no rebuild: owned)",
+  "negative_control": "NOT_TESTED",
+  "adjacent": "NOT_TESTED",
+  "source": "main hermes_cli/config.py TERMINAL_CONFIG_ENV_MAP (L2159) omits home_mode, though tools/terminal_scope.py _TOOL_LEVEL_DEFAULTS includes 'home_mode': 'auto' (silently dropped by _apply). hermes_constants.py get_subprocess_home L703: mode = _env_get(env, 'TERMINAL_HOME_MODE', 'auto') -> env dict or os.getenv, never terminal_env(). tests/tools/test_terminal_config_env_sync.py:143 exempts home_mode as 'CLI-only' for config-set sync; adding it to the canonical map also changes `hermes config set terminal.home_mode` (.env sync), so that exemption needs updating."
+ },
+ "upstream_overlap": [
+  "#73117 (OPEN, Lapot300, updated 2026-09-27) adds 'home_mode' to TERMINAL_CONFIG_ENV_MAP (defect A) for routed kanban workers.",
+  "#128032 (OPEN, Froraut) strips launch-profile TERMINAL_* from routed child envs; related scope but does not touch get_subprocess_home."
+ ],
+ "branch": null,
+ "files": [
+  "hermes_cli/config.py",
+  "hermes_constants.py",
+  "tests/test_subprocess_home_isolation.py",
+  "tests/tools/test_terminal_scope_multiplex.py"
+ ],
+ "size": "fork leaf +195/-2; no rebuild",
+ "depends_on": "#73117 for defect A",
+ "notes": "Defect A is owned by #73117. Defect B (consumer) is NOT covered by #73117 or #128032. Without it, in-process routed turns (gateway multiplex) still use the launch profile's home mode even after A lands. Worth offering on #73117 as a review note with the probe above, or as a small follow-up after #73117 merges: get_subprocess_home reads terminal_env('TERMINAL_HOME_MODE') when a scope is bound, lazy import to keep hermes_constants dependency-free. The fork's test file tests/test_subprocess_home_isolation.py has moved to tests/tools/ on main. Kanban baggage ignored."
+}

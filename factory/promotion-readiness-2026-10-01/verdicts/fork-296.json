@@ -1,0 +1,36 @@
+{
+  "fork_pr": 296,
+  "title": "chore: remove dead memory_monitor logging module",
+  "claim": "gateway/memory_monitor.py has no production callers and can be deleted with its tests (rebuild of fork #113).",
+  "verdict": "EXTERNAL-OWNED",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "source": "Zero callers is TRUE on main: git grep finds only gateway/memory_monitor.py and tests/gateway/test_memory_monitor.py. The PREMISE is false, though. The salvage body says 'startup/shutdown wiring and config were removed earlier', but the wiring was accidentally dropped (per #50472: #20059 desktop-app rewrite of gateway/run.py silently lost the #27102 blocks). Upstream issue #49773 'memory_monitor heartbeat never starts' is OPEN and reports external log-freshness watchdogs depending on the [MEMORY] heartbeat. Several external contributors have OPEN PRs restoring the wiring. Deleting the module would destroy the feature they are fixing (AGENTS.md: 'fixes that destroy the feature', 'verify the premise').",
+    "references_before": "gateway/memory_monitor.py (module), tests/gateway/test_memory_monitor.py",
+    "references_after": "not built",
+    "red": "n/a",
+    "green": "n/a",
+    "negative_control": "n/a",
+    "adjacent": "not run (no change built)"
+  },
+  "upstream_overlap": [
+    "#49773 issue OPEN (bug: heartbeat never starts)",
+    "#49782 liuhao1024 OPEN (triage-named canonical: call start_memory_monitoring() from start_gateway())",
+    "#49789 Tranquil-Flow OPEN",
+    "#50472 chiefmojo OPEN (restore startup/shutdown wiring)",
+    "#54014 itsflownium OPEN (wire memory monitor + config)",
+    "#49837 koshaji CLOSED 2026-09-24"
+  ],
+  "branch": null,
+  "bundle": null,
+  "files": [],
+  "size": "+0/-0",
+  "depends_on": null,
+  "fork_head": "salvage/remove-dead-memory-monitor-20260929",
+  "fork_head_oid": "f13d7929939269a7d9cf8abfdd9110295ed24d69",
+  "wave": "W4-dead-code-rebuild",
+  "batch": "C",
+  "patch": null,
+  "body": null,
+  "notes": "Do not rebuild or promote. Support rather than compete: if anything, help the #49773 cluster converge on one carrier. Also retire the older fork leaf #113 for the same reason. The fork's 915-file comparison was never used."
+}

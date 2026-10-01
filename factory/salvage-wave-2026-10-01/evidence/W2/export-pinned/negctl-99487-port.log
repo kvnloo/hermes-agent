@@ -1,0 +1,152 @@
+label=negctl-99487 main=298a01c79b38018e029e50f77efe67c4a4fdbd40
+APPLY /mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/export-pinned/negctl-99487-port-without-include_pinned.diff: ok
+▶ not activated — using HERMES_PYTHON: /workspace/hermes-home/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~3 tests) under ['tests/hermes_cli/test_sessions_export_filtered_pinned.py']; running with -j 2
+[100.0% |     3/~3 | ✓1 | ✗4] ✗ tests/hermes_cli/test_sessions_export_filtered_pinned.py (1✓ 4✗, 21.8s)
+
+  ╔╍ Failed: tests/hermes_cli/test_sessions_export_filtered_pinned.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ E           20260101_000001_plain1  cli
+  ║ E         
+  ║ E       assert 'Would export 3 session(s)' in "Would export 1 session(s) (source 'cli').\n  20260101_000001_plain1  cli\n"
+  ║ 
+  ║ tests/hermes_cli/test_sessions_export_filtered_pinned.py:75: AssertionError
+  ║ __________ test_filtered_export_dry_run_counts_pinned_sessions[trace] __________
+  ║ 
+  ║ seeded_db = <hermes_state.SessionDB object at 0x7f99932562d0>
+  ║ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f9993354d90>
+  ║ tmp_path = PosixPath('/var/tmp/hermes-pytest-1000/r-aacjs9wy/pytest-of-kvn/pytest-0/test_filtered_export_dry_run_c1')
+  ║ capsys = <_pytest.capture.CaptureFixture object at 0x7f99904be410>
+  ║ fmt = 'trace'
+  ║ 
+  ║     @pytest.mark.parametrize("fmt", ["jsonl", "trace"])
+  ║     def test_filtered_export_dry_run_counts_pinned_sessions(seeded_db, monkeypatch, tmp_path, capsys, fmt):
+  ║         _run_cli(monkeypatch, "export", "--source", "cli", "--format", fmt, "--dry-run", str(tmp_path / "x"))
+  ║         out = capsys.readouterr().out
+  ║ >       assert "Would export 3 session(s)" in out, out
+  ║ E       AssertionError: Would export 1 session(s) (source 'cli').
+  ║ E           20260101_000001_plain1  cli
+  ║ E         
+  ║ E       assert 'Would export 3 session(s)' in "Would export 1 session(s) (source 'cli').\n  20260101_000001_plain1  cli\n"
+  ║ 
+  ║ tests/hermes_cli/test_sessions_export_filtered_pinned.py:75: AssertionError
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/hermes_cli/test_sessions_export_filtered_pinned.py::test_filtered_export_writes_ended_pinned_and_pinned_archived_sessions[jsonl]
+  ║ FAILED tests/hermes_cli/test_sessions_export_filtered_pinned.py::test_filtered_export_writes_ended_pinned_and_pinned_archived_sessions[md]
+  ║ FAILED tests/hermes_cli/test_sessions_export_filtered_pinned.py::test_filtered_export_dry_run_counts_pinned_sessions[jsonl]
+  ║ FAILED tests/hermes_cli/test_sessions_export_filtered_pinned.py::test_filtered_export_dry_run_counts_pinned_sessions[trace]
+  ║ 4 failed, 1 passed in 8.96s
+  ║
+  ║  Repro: python -m pytest tests/hermes_cli/test_sessions_export_filtered_pinned.py -q -rf -p no:randomly
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 1 files, 1 tests passed, 4 failed (100% complete) in 21.9s (2 workers) ===
+
+=== Per-file subprocess time distribution ===
+
+=== Failure output ===
+
+--- tests/hermes_cli/test_sessions_export_filtered_pinned.py ---
+FFFF.                                                                    [100%]
+=================================== FAILURES ===================================
+_ test_filtered_export_writes_ended_pinned_and_pinned_archived_sessions[jsonl] _
+
+seeded_db = <hermes_state.SessionDB object at 0x7f9991feb1d0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f9993256ad0>
+tmp_path = PosixPath('/var/tmp/hermes-pytest-1000/r-aacjs9wy/pytest-of-kvn/pytest-0/test_filtered_export_writes_en0')
+fmt = 'jsonl'
+
+>   ???
+E   AssertionError: filtered jsonl export dropped pinned sessions
+E   assert {'20260101_000001_plain1'} == {'20260101_00...00003_pinarc'}
+E     
+E     Extra items in the right set:
+E     '20260101_000003_pinarc'
+E     '20260101_000002_pinned'
+E     Use -v to get more diff
+
+tests/hermes_cli/test_sessions_export_filtered_pinned.py:68: AssertionError
+----------------------------- Captured stdout call -----------------------------
+Exported 1 sessions to /var/tmp/hermes-pytest-1000/r-aacjs9wy/pytest-of-kvn/pytest-0/test_filtered_export_writes_en0/backup.jsonl
+__ test_filtered_export_writes_ended_pinned_and_pinned_archived_sessions[md] ___
+
+seeded_db = <hermes_state.SessionDB object at 0x7f99906c4ed0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f9990683bd0>
+tmp_path = PosixPath('/var/tmp/hermes-pytest-1000/r-aacjs9wy/pytest-of-kvn/pytest-0/test_filtered_export_writes_en1')
+fmt = 'md'
+
+    @pytest.mark.parametrize("fmt", ["jsonl", "md"])
+    def test_filtered_export_writes_ended_pinned_and_pinned_archived_sessions(seeded_db, monkeypatch, tmp_path, fmt):
+        if fmt == "jsonl":
+            out = tmp_path / "backup.jsonl"
+            _run_cli(monkeypatch, "export", "--source", "cli", "--format", "jsonl", str(out))
+            exported = _jsonl_ids(out)
+        else:
+            out = tmp_path / "md-out"
+            _run_cli(monkeypatch, "export", "--source", "cli", "--format", "md", str(out))
+            manifest = out / "manifest.jsonl"
+            exported = {json.loads(l)["session_id"] for l in manifest.read_text(encoding="utf-8").splitlines() if l.strip()}
+    
+>       assert exported == {PLAIN, PINNED, PINNED_ARCHIVED}, f"filtered {fmt} export dropped pinned sessions"
+E       AssertionError: filtered md export dropped pinned sessions
+E       assert {'20260101_000001_plain1'} == {'20260101_00...00003_pinarc'}
+E         
+E         Extra items in the right set:
+E         '20260101_000003_pinarc'
+E         '20260101_000002_pinned'
+E         Use -v to get more diff
+
+tests/hermes_cli/test_sessions_export_filtered_pinned.py:68: AssertionError
+----------------------------- Captured stdout call -----------------------------
+Exported 1 session(s) to /var/tmp/hermes-pytest-1000/r-aacjs9wy/pytest-of-kvn/pytest-0/test_filtered_export_writes_en1/md-out
+__________ test_filtered_export_dry_run_counts_pinned_sessions[jsonl] __________
+
+seeded_db = <hermes_state.SessionDB object at 0x7f99906dd450>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f9992c51f90>
+tmp_path = PosixPath('/var/tmp/hermes-pytest-1000/r-aacjs9wy/pytest-of-kvn/pytest-0/test_filtered_export_dry_run_c0')
+capsys = <_pytest.capture.CaptureFixture object at 0x7f9990718910>
+fmt = 'jsonl'
+
+    @pytest.mark.parametrize("fmt", ["jsonl", "trace"])
+    def test_filtered_export_dry_run_counts_pinned_sessions(seeded_db, monkeypatch, tmp_path, capsys, fmt):
+        _run_cli(monkeypatch, "export", "--source", "cli", "--format", fmt, "--dry-run", str(tmp_path / "x"))
+        out = capsys.readouterr().out
+>       assert "Would export 3 session(s)" in out, out
+E       AssertionError: Would export 1 session(s) (source 'cli').
+E           20260101_000001_plain1  cli
+E         
+E       assert 'Would export 3 session(s)' in "Would export 1 session(s) (source 'cli').\n  20260101_000001_plain1  cli\n"
+
+tests/hermes_cli/test_sessions_export_filtered_pinned.py:75: AssertionError
+__________ test_filtered_export_dry_run_counts_pinned_sessions[trace] __________
+
+seeded_db = <hermes_state.SessionDB object at 0x7f99932562d0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f9993354d90>
+tmp_path = PosixPath('/var/tmp/hermes-pytest-1000/r-aacjs9wy/pytest-of-kvn/pytest-0/test_filtered_export_dry_run_c1')
+capsys = <_pytest.capture.CaptureFixture object at 0x7f99904be410>
+fmt = 'trace'
+
+    @pytest.mark.parametrize("fmt", ["jsonl", "trace"])
+    def test_filtered_export_dry_run_counts_pinned_sessions(seeded_db, monkeypatch, tmp_path, capsys, fmt):
+        _run_cli(monkeypatch, "export", "--source", "cli", "--format", fmt, "--dry-run", str(tmp_path / "x"))
+        out = capsys.readouterr().out
+>       assert "Would export 3 session(s)" in out, out
+E       AssertionError: Would export 1 session(s) (source 'cli').
+E           20260101_000001_plain1  cli
+E         
+E       assert 'Would export 3 session(s)' in "Would export 1 session(s) (source 'cli').\n  20260101_000001_plain1  cli\n"
+
+tests/hermes_cli/test_sessions_export_filtered_pinned.py:75: AssertionError
+=========================== short test summary info ============================
+FAILED tests/hermes_cli/test_sessions_export_filtered_pinned.py::test_filtered_export_writes_ended_pinned_and_pinned_archived_sessions[jsonl]
+FAILED tests/hermes_cli/test_sessions_export_filtered_pinned.py::test_filtered_export_writes_ended_pinned_and_pinned_archived_sessions[md]
+FAILED tests/hermes_cli/test_sessions_export_filtered_pinned.py::test_filtered_export_dry_run_counts_pinned_sessions[jsonl]
+FAILED tests/hermes_cli/test_sessions_export_filtered_pinned.py::test_filtered_export_dry_run_counts_pinned_sessions[trace]
+4 failed, 1 passed in 8.96s
+
+=== 1 file with test failures (4 tests failed) ===
+  tests/hermes_cli/test_sessions_export_filtered_pinned.py  (4 tests failed)

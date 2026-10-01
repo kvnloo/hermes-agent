@@ -1,0 +1,32 @@
+{
+  "fork_pr": 295,
+  "title": "docs: correct stale hermes logs filter & timezone notes (en + zh-Hans)",
+  "claim": "Unstamped log lines take the verdict of the stamped record above them under --since/--level; the old always-included paragraph (en + zh) and the zh timezone/log claim are stale.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "doc_text_on_main": "website/docs/reference/cli-commands.md:1282 — \"Lines without a parseable timestamp are included when `--since` is active ... Lines without a detectable level are included when `--level` is active.\" (contradicts :1246 of the same page); zh cli-commands.md:753 same; zh configuration.md:1576 — \"影响日志中的时间戳、cron 调度和系统提示词时间注入。\"",
+    "source": "hermes_cli/logs.py:124-138 _LineFilter: an unstamped line returns the carried verdict of the record above; before the first stamp it is dropped when --since/--level is active. hermes_logging.py has no timezone converter (log stamps are machine-local; English configuration.md:2789 already says so).",
+    "red": "Probe on main: _LineFilter(min_level='WARNING') over [INFO record, traceback lines, WARNING record, continuation] keeps only the WARNING record and its continuation — traceback under the INFO record is dropped, contrary to the stale paragraph.",
+    "green": "Stale paragraph removed (en + zh), current note translated into zh-Hans, zh timezone intro aligned with English. tests/hermes_cli/test_logs.py passes on main.",
+    "negative_control": "N/A — docs-only.",
+    "adjacent": "tests/hermes_cli/test_logs.py tests/hermes_cli/test_anon_surfaces.py -> 22 passed. docs-site-checks equivalent on the bundle branch: website/scripts/extract-skills.py + generate-skill-docs.py leave website/docs, website/sidebars.ts and website/i18n unchanged (clean); website/scripts/check_doc_links.py OK. added lines scanned for MDX hazards ({ } or raw <tag> outside inline code / fences): none. NOT_TESTED: Docusaurus build (website/node_modules not installed in this environment).",
+    "mirrors": "zh-Hans cli-commands.md and configuration.md fixed in the same commit.",
+    "rebase": "verified on main f848940560; bundle merges cleanly onto refreshed main eb8d21f482 (git merge-tree); merges cleanly with every B1 ready/docs-* branch that touches the same files"
+  },
+  "upstream_overlap": [
+    "NousResearch/hermes-agent#127363 CLOSED (kvnloo, own parked carrier)"
+  ],
+  "branch": "ready/docs2-cli",
+  "bundle_commit": "b68897f77bc513e3614adb12522f3a0612952f7a",
+  "patch": "patches/docs2-cli.patch",
+  "pr_body": "patches/docs2-cli.body.md",
+  "files": [
+    "website/docs/reference/cli-commands.md",
+    "website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/reference/cli-commands.md",
+    "website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/configuration.md"
+  ],
+  "size": "fork leaf +3/-5; bundle docs2-cli +7/-9 (3 files changed, 7 insertions(+), 9 deletions(-))",
+  "depends_on": "kvnloo/hermes-agent#313 review-slot policy (publication capacity only)",
+  "notes": "Drift introduced by fc4dbe32df (#126176). Bundled with: #127, #306. Packaging: one commit per area bundle (batch B2 lane W4-docs); publish one bundle at a time per kvnloo/hermes-agent#313."
+}

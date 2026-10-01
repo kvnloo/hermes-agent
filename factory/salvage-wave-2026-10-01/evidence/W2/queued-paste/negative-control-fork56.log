@@ -1,0 +1,27 @@
+### mutation A: busy path back to handleBusyInput(queueItem(full))
+ ui-tui/src/app/useSubmission.ts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+-        return handleBusyInput(queueItem(submission.text, full, expandTokens(submissionTokens)))
++        return handleBusyInput(queueItem(full))
+     × reaches the model expanded ('busy, interrupt mode') 41ms
+     × reaches the model expanded ('busy, steer mode') 8ms
+     × reaches the model expanded ('busy, queue mode') 8ms
+     × 'runs only the visible {!...}, not one…' 8ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  4 failed | 2 passed (6)
+### mutation B: no-session path back to enqueue(full)
+ ui-tui/src/app/useSubmission.ts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+-        composerActions.enqueue(submission.text, full, expandTokens(submissionTokens))
++        composerActions.enqueue(full)
+     × reaches the model expanded ('no session yet') 12ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  1 failed | 5 passed (6)
+### mutation C: sendQueued gates ! on item.text instead of item.display
+ ui-tui/src/app/useSubmission.ts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+-      if (item.display.startsWith('!')) {
++      if (item.text.startsWith('!')) {
+     × 'does not shell-execute a /queue paste…' 15ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  1 failed | 5 passed (6)

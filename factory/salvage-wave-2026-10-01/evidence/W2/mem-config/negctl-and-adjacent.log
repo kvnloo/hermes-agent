@@ -1,0 +1,34 @@
+## negative control: #126106 merged, its line reverted to mem_config.get(...)
+Auto-merging agent/agent_init.py
+ agent/agent_init.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[100.0% |     3/~3 | ✓ 3 | ✗ 7] ✗ tests/agent/test_memory_bootstrap_independence.py (3✓ 7✗, 6.2s)
+E   AssertionError: assert None is not None
+E   AssertionError: built-in import disabled the external provider
+E   assert not True
+FAILED tests/agent/test_memory_bootstrap_independence.py::test_builtin_failure_does_not_invent_provider_or_plugin_error[malformed]
+FAILED tests/agent/test_memory_bootstrap_independence.py::test_builtin_failure_does_not_invent_provider_or_plugin_error[memory1]
+FAILED tests/agent/test_memory_bootstrap_independence.py::test_builtin_failure_does_not_invent_provider_or_plugin_error[memory3]
+FAILED tests/agent/test_memory_bootstrap_independence.py::test_builtin_failure_does_not_invent_provider_or_plugin_error[memory4]
+FAILED tests/agent/test_memory_bootstrap_independence.py::test_builtin_failure_does_not_invent_provider_or_plugin_error[None]
+FAILED tests/agent/test_memory_bootstrap_independence.py::test_disk_provider_discovery_survives_builtin_import_failure
+FAILED tests/agent/test_memory_bootstrap_independence.py::test_public_agent_preserves_provider_selection[False-True]
+=== Summary: 1 files, 3 tests passed, 7 failed (100% complete) in 6.3s (2 workers) ===
+## adjacent on main (tests/agent/test_memory_provider_init.py tests/agent/test_memory_provider.py tests/agent/test_memory_provider_unavailable_warning.py tests/agent/test_skip_memory_store.py tests/agent/test_builtin_memory_disabled_surface.py tests/gateway/test_api_server_memory_sessions.py)
+[100.0% |    81/~81 | ✓86 | ✗ 0] ✓ tests/agent/test_skip_memory_store.py (2✓, 19.1s)
+[ 23.5% |    19/~81 | ✓19 | ✗ 0] ✓ tests/agent/test_builtin_memory_disabled_surface.py (19✓, 4.0s)
+[ 85.2% |    69/~81 | ✓74 | ✗ 0] ✓ tests/agent/test_memory_provider.py (55✓, 5.6s)
+[ 88.9% |    72/~81 | ✓77 | ✗ 0] ✓ tests/agent/test_memory_provider_unavailable_warning.py (3✓, 1.2s)
+[ 96.3% |    78/~81 | ✓83 | ✗ 0] ✓ tests/agent/test_memory_provider_init.py (6✓, 3.5s)
+[ 97.5% |    79/~81 | ✓84 | ✗ 0] ✓ tests/gateway/test_api_server_memory_sessions.py (1✓, 1.4s)
+=== Summary: 6 files, 86 tests passed, 0 failed (100% complete) in 26.0s (2 workers) ===
+## adjacent on main + #126106 (incl. its test file)
+Auto-merging agent/agent_init.py
+[100.0% |    84/~84 | ✓96 | ✗ 0] ✓ tests/agent/test_skip_memory_store.py (2✓, 18.1s)
+[ 22.6% |    19/~84 | ✓19 | ✗ 0] ✓ tests/agent/test_builtin_memory_disabled_surface.py (19✓, 2.4s)
+[ 26.2% |    22/~84 | ✓29 | ✗ 0] ✓ tests/agent/test_memory_bootstrap_independence.py (10✓, 2.9s)
+[ 33.3% |    28/~84 | ✓35 | ✗ 0] ✓ tests/agent/test_memory_provider_init.py (6✓, 3.4s)
+[ 92.9% |    78/~84 | ✓90 | ✗ 0] ✓ tests/agent/test_memory_provider.py (55✓, 4.4s)
+[ 96.4% |    81/~84 | ✓93 | ✗ 0] ✓ tests/agent/test_memory_provider_unavailable_warning.py (3✓, 1.0s)
+[ 97.6% |    82/~84 | ✓94 | ✗ 0] ✓ tests/gateway/test_api_server_memory_sessions.py (1✓, 0.8s)
+=== Summary: 7 files, 96 tests passed, 0 failed (100% complete) in 24.9s (2 workers) ===

@@ -1,0 +1,19 @@
+MERGE 127557: clean
+▶ not activated — using HERMES_PYTHON: /workspace/hermes-home/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~5 tests) under ['tests/tools/test_terminal_notify_string_bool.py']; running with -j 20
+[100.0% |     5/~5 | ✓10 | ✗ 0] ✓ tests/tools/test_terminal_notify_string_bool.py (10✓, 4.5s)
+
+=== Summary: 1 files, 10 tests passed, 0 failed (100% complete) in 4.6s (20 workers) ===
+  Durations cached to test_durations.json (1 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 4.5s  (runner wall: 4.6s, parallelism: 20x)
+  P50: 4.54s  P90: 4.54s  P95: 4.54s  P99: 4.54s  Max: 4.54s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+      4.54s  tests/tools/test_terminal_notify_string_bool.py

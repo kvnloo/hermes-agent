@@ -1,0 +1,189 @@
+######## negctl A-callsite-reverted
+label=negctl-A-callsite-reverted main=298a01c79b38018e029e50f77efe67c4a4fdbd40 port=/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/memmon-heartbeat/negctl-A-callsite-reverted.diff
+            pytest.param("    enabled: true\n    interval_seconds: 42\n", True, True, 42.0, id="enabled-failure-exit"),
+            pytest.param("    enabled: false\n    interval_seconds: 42\n", False, False, None, id="disabled"),
+            pytest.param(None, False, True, 300.0, id="unconfigured-default"),
+        ],
+    )
+    async def test_serving_gateway_runs_memory_heartbeat_until_shutdown(
+        tmp_path, monkeypatch, monitor_cfg, exit_with_failure, expect_running, expect_interval
+    ):
+        seen: dict = {}
+        runner_cls = _make_runner_cls(seen, running=True, exit_with_failure=exit_with_failure)
+        intervals = _boot(monkeypatch, tmp_path, monitor_cfg, runner_cls)
+    
+        ok = await gateway_run.start_gateway(config=GatewayConfig(), replace=False, verbosity=None)
+    
+        assert ok is (not exit_with_failure)
+>       assert seen["running_while_serving"] is expect_running, "[MEMORY] heartbeat state while serving"
+E       AssertionError: [MEMORY] heartbeat state while serving
+E       assert False is True
+
+tests/gateway/test_memory_monitor_gateway_wiring.py:138: AssertionError
+_ test_serving_gateway_runs_memory_heartbeat_until_shutdown[unconfigured-default] _
+
+tmp_path = PosixPath('/var/tmp/hermes-pytest-1000/r-9lmapof5/pytest-of-kvn/pytest-0/test_serving_gateway_runs_memo3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f399f4c8150>
+monitor_cfg = None, exit_with_failure = False, expect_running = True
+expect_interval = 300.0
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("monitor_cfg", "exit_with_failure", "expect_running", "expect_interval"),
+        [
+            pytest.param("    enabled: true\n    interval_seconds: 42\n", False, True, 42.0, id="enabled"),
+            pytest.param("    enabled: true\n    interval_seconds: 42\n", True, True, 42.0, id="enabled-failure-exit"),
+            pytest.param("    enabled: false\n    interval_seconds: 42\n", False, False, None, id="disabled"),
+            pytest.param(None, False, True, 300.0, id="unconfigured-default"),
+        ],
+    )
+    async def test_serving_gateway_runs_memory_heartbeat_until_shutdown(
+        tmp_path, monkeypatch, monitor_cfg, exit_with_failure, expect_running, expect_interval
+    ):
+        seen: dict = {}
+        runner_cls = _make_runner_cls(seen, running=True, exit_with_failure=exit_with_failure)
+        intervals = _boot(monkeypatch, tmp_path, monitor_cfg, runner_cls)
+    
+        ok = await gateway_run.start_gateway(config=GatewayConfig(), replace=False, verbosity=None)
+    
+        assert ok is (not exit_with_failure)
+>       assert seen["running_while_serving"] is expect_running, "[MEMORY] heartbeat state while serving"
+E       AssertionError: [MEMORY] heartbeat state while serving
+E       assert False is True
+
+tests/gateway/test_memory_monitor_gateway_wiring.py:138: AssertionError
+=========================== short test summary info ============================
+FAILED tests/gateway/test_memory_monitor_gateway_wiring.py::test_serving_gateway_runs_memory_heartbeat_until_shutdown[enabled]
+FAILED tests/gateway/test_memory_monitor_gateway_wiring.py::test_serving_gateway_runs_memory_heartbeat_until_shutdown[enabled-failure-exit]
+FAILED tests/gateway/test_memory_monitor_gateway_wiring.py::test_serving_gateway_runs_memory_heartbeat_until_shutdown[unconfigured-default]
+3 failed, 2 passed in 1.69s
+
+=== 1 file with test failures (3 tests failed) ===
+  tests/gateway/test_memory_monitor_gateway_wiring.py  (3 tests failed)
+tripwire hits during run: 1
+######## negctl B-no-stop
+label=negctl-B-no-stop main=298a01c79b38018e029e50f77efe67c4a4fdbd40 port=/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/memmon-heartbeat/negctl-B-no-stop.diff
+        assert ok is (not exit_with_failure)
+        assert seen["running_while_serving"] is expect_running, "[MEMORY] heartbeat state while serving"
+        if expect_interval is not None:
+            assert intervals == [expect_interval], "heartbeat must use logging.memory_monitor.interval_seconds"
+        else:
+            assert intervals == [], "enabled: false must not start the heartbeat"
+>       assert mm.is_running() is False, "heartbeat must stop when the gateway shuts down"
+E       AssertionError: heartbeat must stop when the gateway shuts down
+E       assert True is False
+E        +  where True = <function is_running at 0x7efce73404a0>()
+E        +    where <function is_running at 0x7efce73404a0> = mm.is_running
+
+tests/gateway/test_memory_monitor_gateway_wiring.py:143: AssertionError
+_ test_serving_gateway_runs_memory_heartbeat_until_shutdown[unconfigured-default] _
+
+tmp_path = PosixPath('/var/tmp/hermes-pytest-1000/r-9dttgv1c/pytest-of-kvn/pytest-0/test_serving_gateway_runs_memo3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7efce72090d0>
+monitor_cfg = None, exit_with_failure = False, expect_running = True
+expect_interval = 300.0
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("monitor_cfg", "exit_with_failure", "expect_running", "expect_interval"),
+        [
+            pytest.param("    enabled: true\n    interval_seconds: 42\n", False, True, 42.0, id="enabled"),
+            pytest.param("    enabled: true\n    interval_seconds: 42\n", True, True, 42.0, id="enabled-failure-exit"),
+            pytest.param("    enabled: false\n    interval_seconds: 42\n", False, False, None, id="disabled"),
+            pytest.param(None, False, True, 300.0, id="unconfigured-default"),
+        ],
+    )
+    async def test_serving_gateway_runs_memory_heartbeat_until_shutdown(
+        tmp_path, monkeypatch, monitor_cfg, exit_with_failure, expect_running, expect_interval
+    ):
+        seen: dict = {}
+        runner_cls = _make_runner_cls(seen, running=True, exit_with_failure=exit_with_failure)
+        intervals = _boot(monkeypatch, tmp_path, monitor_cfg, runner_cls)
+    
+        ok = await gateway_run.start_gateway(config=GatewayConfig(), replace=False, verbosity=None)
+    
+        assert ok is (not exit_with_failure)
+        assert seen["running_while_serving"] is expect_running, "[MEMORY] heartbeat state while serving"
+        if expect_interval is not None:
+            assert intervals == [expect_interval], "heartbeat must use logging.memory_monitor.interval_seconds"
+        else:
+            assert intervals == [], "enabled: false must not start the heartbeat"
+>       assert mm.is_running() is False, "heartbeat must stop when the gateway shuts down"
+E       AssertionError: heartbeat must stop when the gateway shuts down
+E       assert True is False
+E        +  where True = <function is_running at 0x7efce73404a0>()
+E        +    where <function is_running at 0x7efce73404a0> = mm.is_running
+
+tests/gateway/test_memory_monitor_gateway_wiring.py:143: AssertionError
+=========================== short test summary info ============================
+FAILED tests/gateway/test_memory_monitor_gateway_wiring.py::test_serving_gateway_runs_memory_heartbeat_until_shutdown[enabled]
+FAILED tests/gateway/test_memory_monitor_gateway_wiring.py::test_serving_gateway_runs_memory_heartbeat_until_shutdown[enabled-failure-exit]
+FAILED tests/gateway/test_memory_monitor_gateway_wiring.py::test_serving_gateway_runs_memory_heartbeat_until_shutdown[unconfigured-default]
+3 failed, 2 passed in 1.39s
+
+=== 1 file with test failures (3 tests failed) ===
+  tests/gateway/test_memory_monitor_gateway_wiring.py  (3 tests failed)
+tripwire hits during run: 0
+######## negctl C-config-ignored
+label=negctl-C-config-ignored main=298a01c79b38018e029e50f77efe67c4a4fdbd40 port=/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/memmon-heartbeat/negctl-C-config-ignored.diff
+    async def test_serving_gateway_runs_memory_heartbeat_until_shutdown(
+        tmp_path, monkeypatch, monitor_cfg, exit_with_failure, expect_running, expect_interval
+    ):
+        seen: dict = {}
+        runner_cls = _make_runner_cls(seen, running=True, exit_with_failure=exit_with_failure)
+        intervals = _boot(monkeypatch, tmp_path, monitor_cfg, runner_cls)
+    
+        ok = await gateway_run.start_gateway(config=GatewayConfig(), replace=False, verbosity=None)
+    
+        assert ok is (not exit_with_failure)
+        assert seen["running_while_serving"] is expect_running, "[MEMORY] heartbeat state while serving"
+        if expect_interval is not None:
+>           assert intervals == [expect_interval], "heartbeat must use logging.memory_monitor.interval_seconds"
+E           AssertionError: heartbeat must use logging.memory_monitor.interval_seconds
+E           assert [300.0] == [42.0]
+E             
+E             At index 0 diff: 300.0 != 42.0
+E             Use -v to get more diff
+
+tests/gateway/test_memory_monitor_gateway_wiring.py:140: AssertionError
+_____ test_serving_gateway_runs_memory_heartbeat_until_shutdown[disabled] ______
+
+tmp_path = PosixPath('/var/tmp/hermes-pytest-1000/r-lggk_rs5/pytest-of-kvn/pytest-0/test_serving_gateway_runs_memo2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fbf33262dd0>
+monitor_cfg = '    enabled: false\n    interval_seconds: 42\n'
+exit_with_failure = False, expect_running = False, expect_interval = None
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("monitor_cfg", "exit_with_failure", "expect_running", "expect_interval"),
+        [
+            pytest.param("    enabled: true\n    interval_seconds: 42\n", False, True, 42.0, id="enabled"),
+            pytest.param("    enabled: true\n    interval_seconds: 42\n", True, True, 42.0, id="enabled-failure-exit"),
+            pytest.param("    enabled: false\n    interval_seconds: 42\n", False, False, None, id="disabled"),
+            pytest.param(None, False, True, 300.0, id="unconfigured-default"),
+        ],
+    )
+    async def test_serving_gateway_runs_memory_heartbeat_until_shutdown(
+        tmp_path, monkeypatch, monitor_cfg, exit_with_failure, expect_running, expect_interval
+    ):
+        seen: dict = {}
+        runner_cls = _make_runner_cls(seen, running=True, exit_with_failure=exit_with_failure)
+        intervals = _boot(monkeypatch, tmp_path, monitor_cfg, runner_cls)
+    
+        ok = await gateway_run.start_gateway(config=GatewayConfig(), replace=False, verbosity=None)
+    
+        assert ok is (not exit_with_failure)
+>       assert seen["running_while_serving"] is expect_running, "[MEMORY] heartbeat state while serving"
+E       AssertionError: [MEMORY] heartbeat state while serving
+E       assert True is False
+
+tests/gateway/test_memory_monitor_gateway_wiring.py:138: AssertionError
+=========================== short test summary info ============================
+FAILED tests/gateway/test_memory_monitor_gateway_wiring.py::test_serving_gateway_runs_memory_heartbeat_until_shutdown[enabled]
+FAILED tests/gateway/test_memory_monitor_gateway_wiring.py::test_serving_gateway_runs_memory_heartbeat_until_shutdown[enabled-failure-exit]
+FAILED tests/gateway/test_memory_monitor_gateway_wiring.py::test_serving_gateway_runs_memory_heartbeat_until_shutdown[disabled]
+3 failed, 2 passed in 1.76s
+
+=== 1 file with test failures (3 tests failed) ===
+  tests/gateway/test_memory_monitor_gateway_wiring.py  (3 tests failed)
+tripwire hits during run: 0

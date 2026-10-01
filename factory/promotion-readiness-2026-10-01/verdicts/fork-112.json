@@ -1,0 +1,27 @@
+{
+ "fork_pr": 112,
+ "title": "fix(tools): re-stamp live completion_queue payload when reader wins kill race",
+ "claim": "When kill_process races the reader thread (the reader finalises during the SIGKILL grace window), the completion notification queued for the CLI/TUI drain must carry the kill attribution (killed/<source>/-15), not a plain 'exited'.",
+ "verdict": "READY",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "New/updated tests applied to main f8489405 production: test_kill_receipt_rewritten_when_reader_finalises_first -> AssertionError: assert ('exited', '', 0) == ('killed', 'process.kill', -15); test_kill_notification_keeps_kill_attribution_when_reader_finalises_first -> AssertionError: assert ('exited', '', -15) == ('killed', 'kill_all', -15). Uncommitted real-Popen probe (sh -c 'sleep 30' + real _reader_loop thread + kill_all(consume_output=False), 10 trials): main stale=9/10 ('exited','').",
+  "green": "With the fix, both tests pass and the real-Popen probe is 10/10 ('killed','kill_all').",
+  "negative_control": "Removing only `session._kill_source = source` from kill_process: both tests fail with the same assertions, and the real-Popen probe is 10/10 stale.",
+  "adjacent": "run_tests.sh over 14 files (tests/tools/test_process_registry.py, test_notify_on_complete.py, test_kill_verify_tree_death.py, test_persist_on_release.py, test_process_checkpoint_readopt.py, test_process_registry_list_exit.py, test_process_registry_lazy_restore.py, test_completed_process_results.py, test_zombie_process_cleanup.py, test_process_heartbeat.py, test_process_wait_clarity.py, tests/gateway/test_abandoned_turn_process_cleanup.py, tests/gateway/test_completion_delivery.py, tests/hermes_cli/test_process_notification_display.py): 235 passed, 4 skipped, 0 failed. ruff clean.",
+  "source": "main tools/process_registry.py: the reader's _move_to_finished builds the notification from _exit_fields(session) outside self._lock. kill_process stamps killed only after _signal_kill returns, and when the reader won it only re-saves the durable receipt (#112156). The queued dict stays 'exited', and format_process_notification reads only the queued dict."
+ },
+ "upstream_overlap": [
+  "#112156 (teknium1 salvage of #111615 by kokhlo, for #111598) fixed only the durable receipt, not the queue; this is the follow-up",
+  "No open upstream PR on the live-queue attribution (gh search 'completion_queue stale killed', 'kill_all exited completion_reason', '\"terminated by kill_all\"' -> only merged #46659)",
+  "Open #123901 / #108334 move save_completed_result out of self._lock in _move_to_finished. This rework adds no lock nesting, so no conflict in design, but expect a textual neighbour"
+ ],
+ "branch": "ready/fork-112-kill-race-notify-attribution",
+ "files": [
+  "tools/process_registry.py",
+  "tests/tools/test_process_registry.py"
+ ],
+ "size": "+45/-4",
+ "depends_on": null,
+ "notes": "REWORKED and not a port of the fork diff. Rebuilt on current main, the fork's design (move the completion enqueue under self._lock, then drain/re-put the queue from kill_process) deadlocks the global registry. _redact_process_result now calls process_registry.get() (152bef7531, after the fork's base), get() takes the non-reentrant threading.Lock, and so any notify_on_complete session with an empty task_id hangs the reader with the registry lock held. Verified with $D/verdicts/fork-112.deadlock_probe.py: plain main finished=True; the fork design finished=False with lock held=True. The fork design also ran transform_terminal_output plugin hooks under the registry lock, and re-enqueued unconditionally, which duplicates the notification if a concurrent drain already took the stale one. The replacement fixes the race at its source: a private _kill_source marker is set before signalling and cleared in finally, and mark_exited treats an exit observed meanwhile as the kill. Trade-off for review: an existing upstream assertion that pinned the reader's stale first save ('exited','',0) is changed to expect the kill. Commit 83190e3859 by Kevin Rajan (noreply)."
+}

@@ -1,0 +1,41 @@
+ready/chore-agent	71a0085e4e	f848940560	chore(anthropic): remove unused _safe_text helper
+ready/chore-gateway	3d721162fc	f848940560	chore(gateway): remove dead helpers with no production callers
+ready/docs-agents	9a8daaa95f	f848940560	docs(agents): fix stale kanban and toolset pointers in area AGENTS.md files
+ready/docs-bot-mode	36cf0f54d6	f848940560	docs(bot-mode): correct Bot Chat delivery argv, DM stamp and room store name
+ready/docs-cli	3d969343fa	f848940560	docs(cli): list profile identity commands; scope the receipt successor check
+ready/docs-computer-use	e6ed1c863d	f848940560	docs(computer-use): cua-driver links its skill pack into Hermes; sync zh-Hans eviction
+ready/docs-desktop	2ee1217746	f848940560	docs(desktop): sync timeline rail, Simple-mode rail, square menu and launch precedence
+ready/docs-mcp	0081fb5e75	f848940560	docs(mcp): correct catalog and plugin MCP install docs
+ready/docs-memory	25baa72ade	f848940560	docs(memory): drop stale Supermemory session ingest and gui platform value
+ready/docs2-cli	b68897f77b	f848940560	docs(cli): fix stale portal tools, hermes logs and hermes dump reference text
+ready/docs2-contributors	29319c49cd	f848940560	docs(contributors): bare noreply emails still need a mapping file
+ready/docs2-desktop	58f1374abe	f848940560	docs(desktop): sync desktop docs with plugin adoption, transcript, Wayland, update and GPU behaviour
+ready/docs2-gateway	c497e7abe5	f848940560	docs(gateway): sync run-status, session-stream, session-store, multiplex and bot-delivery docs
+ready/docs2-memory	c9010e911f	f848940560	docs(memory): Hindsight local embedded mode no longer lazy-installs hindsight-all
+ready/docs2-models	69a146992b	f848940560	docs(models): match GPT-6 effort, autoraise and no-disable docs to the code
+ready/docs2-skills	104ffb3757	f848940560	docs(skills): use the questions=[...] clarify shape; drop single-choice limits
+ready/docs2-update	ec60a9f5a7	f848940560	docs(update): sync fleet-restart scope, marker settlement, macOS swap and cron status docs
+ready/fork-107-reused-tool-id-settled-turn	bffc644b1b	f848940560	fix(desktop): a reused tool call id no longer re-arms a sealed row from a settled turn
+ready/fork-112-kill-race-notify-attribution	83190e3859	f848940560	fix(process): a kill the reader observes mid-signal keeps its kill attribution
+ready/fork-22-langfuse-tool-subagent-eviction-clock	17368915eb	f848940560	fix(langfuse): count tool and subagent hooks as turn activity for eviction
+ready/fork-27-subscription-manage-url-query	5b0e3b0fad	f848940560	fix(agent): drop portal query params from the subscription manage URL
+ready/fork-28-messages-btree-corrupt-503	12ab1efd35	f848940560	fix(sessions): report a corrupt messages b-tree on /messages as 503, not 500
+ready/fork-29-desktop-adopted-turn-stale-flag	6125946f9c	f848940560	fix(desktop): clear a stale adoptedRunningTurn when this window starts a turn
+ready/fork-302-dock-collapsed-clock	1f94c329f2	f848940560	perf(tui): halt the live-agents dock clock while collapsed
+ready/fork-303-charm-clock-defer	35681443b4	f848940560	perf(tui): sleep the long-run charm clock until a tool can charm
+ready/fork-31-hub-search-trust-sort	4e84804065	f848940560	fix(skills): trust-sort dashboard hub search before the limit cut
+ready/fork-33-security-guidance-skill-ops	b4548bd647	f848940560	fix(plugins): security-guidance scans skill_manage operations[] writes
+ready/fork-34-ws-probe-connect-timer	006ec6d82a	f848940560	fix(desktop): clear the connect timer once the gateway probe socket opens
+ready/fork-37-tui-step-up-unreachable	dceade1de1	f848940560	fix(tui): show the retry message when the step-up cannot reach the gateway
+ready/fork-39-worktree-non-origin-no-track	f31e218b00	f848940560	fix(worktree): don't track the base when it is on a remote not named origin
+ready/fork-44-raft-turn-id-drain	24f01553d8	f848940560	fix(raft): release a session's turn ids when it is finalized without a turn_id
+ready/fork-45-discord-overflow-ledger	4c18ef1b3c	f848940560	fix(discord): record the recovery ledger when a final edit is split
+ready/fork-46-dashboard-implicit-resume-notice	ae4f4631ea	f848940560	fix(dashboard): show resume wait notice for implicit active-session resume
+ready/fork-47-ratelimit-missing-remaining	bde3063280	f848940560	fix(agent): read a missing x-ratelimit-remaining-* as no data, not exhausted
+ready/fork-49-tile-stale-readonly-recovery	5e1c207612	f848940560	fix(desktop): keep a stale no-owner tile recovery from latching a live session read-only
+ready/fork-50-honor-save-over-limit	4d0e03c8a1	f848940560	fix(trajectory-compressor): honor save_over_limit when writing output
+ready/fork-52-xlsx-hyperlink-font	98aa594b04	f848940560	fix(skills): keep the hyperlink color when xlsx_create applies font overrides
+ready/fork-56-queued-paste-payload	e8d70c6409	f848940560	fix(tui): keep a collapsed paste's payload when a submit is queued or busy
+ready/fork-58-tts-lease-tile-ownership	cbb6d74ecf	f848940560	fix(desktop): keep the conversation TTS lease held across tile mount/unmount
+ready/fork-59-evm-compare-gas-headlines	57de52cf7b	f848940560	fix(skills): evm compare no longer names a failed or zero-gas chain most expensive
+ready/fork-66-weather-relaunch-epoch	5aad8cc6af	f848940560	fix(tui): drop stale weather fetches when /weather is relaunched

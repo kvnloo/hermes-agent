@@ -1,0 +1,273 @@
+diff --git c/gateway/run.py w/gateway/run.py
+index 620fe26bfe..9a674e9e72 100644
+--- c/gateway/run.py
++++ w/gateway/run.py
+@@ -69,6 +69,9 @@ _USER_BOUNDARY_END_REASONS = ("session_reset", "user_exit", "session_switch", "n
+ # Bounds one stall-notify send so a wedged transport can't block the watcher; on timeout the next tick retries.
+ _STALL_NOTIFY_SEND_TIMEOUT_SECONDS = 15.0
+ _GATEWAY_PROXY_SSE_BUFFER_MAX_CHARS = 16 * 1024 * 1024
++_GATEWAY_MEMORY_MONITOR_DEFAULT_ENABLED = True
++_GATEWAY_MEMORY_MONITOR_DEFAULT_INTERVAL_SECONDS = 300.0
++_GATEWAY_MEMORY_MONITOR_MIN_INTERVAL_SECONDS = 1.0
+ _TELEGRAM_COMMAND_MENTION_RE = re.compile(r"(?<![\w:/])/([A-Za-z0-9][A-Za-z0-9_-]*)")
+ _GATEWAY_HYGIENE_PLATFORM = "gateway_hygiene"
+ 
+@@ -361,6 +364,84 @@ def _gateway_compression_progress_notices_enabled() -> bool:
+ _GATEWAY_RAW_TEXT_PLATFORMS = frozenset({"local", "api_server", "webhook", "msgraph_webhook"})
+ 
+ 
++def _coerce_gateway_memory_monitor_enabled(value: Any, default: bool) -> bool:
++    if isinstance(value, str):
++        normalized = value.strip().lower()
++        if normalized in {"0", "false", "no", "off", "disabled"}:
++            return False
++        if normalized in {"1", "true", "yes", "on", "enabled"}:
++            return True
++        return default
++    if value is None:
++        return default
++    return bool(value)
++
++
++def _coerce_gateway_memory_monitor_interval(value: Any) -> float:
++    try:
++        interval = float(value)
++    except (TypeError, ValueError):
++        return _GATEWAY_MEMORY_MONITOR_DEFAULT_INTERVAL_SECONDS
++    if interval < _GATEWAY_MEMORY_MONITOR_MIN_INTERVAL_SECONDS:
++        return _GATEWAY_MEMORY_MONITOR_DEFAULT_INTERVAL_SECONDS
++    return interval
++
++
++def _resolve_gateway_memory_monitor_config(
++    config: Optional[dict] = None,
++) -> tuple[bool, float]:
++    cfg = config if isinstance(config, dict) else _load_gateway_config()
++    monitor_cfg = cfg_get(cfg, "logging", "memory_monitor", default=None)
++
++    enabled = _GATEWAY_MEMORY_MONITOR_DEFAULT_ENABLED
++    interval_seconds = _GATEWAY_MEMORY_MONITOR_DEFAULT_INTERVAL_SECONDS
++
++    if isinstance(monitor_cfg, dict):
++        enabled = _coerce_gateway_memory_monitor_enabled(
++            monitor_cfg.get("enabled"),
++            enabled,
++        )
++        interval_seconds = _coerce_gateway_memory_monitor_interval(
++            monitor_cfg.get("interval_seconds", interval_seconds),
++        )
++    elif monitor_cfg is not None:
++        enabled = _coerce_gateway_memory_monitor_enabled(monitor_cfg, enabled)
++
++    return enabled, interval_seconds
++
++
++def _start_gateway_memory_monitor(config: Optional[dict] = None) -> bool:
++    enabled, interval_seconds = _resolve_gateway_memory_monitor_config(config)
++    if not enabled:
++        logger.debug("Gateway memory monitoring disabled by config")
++        return False
++    try:
++        from gateway.memory_monitor import start_memory_monitoring
++
++        return start_memory_monitoring(interval_seconds=interval_seconds)
++    except Exception as exc:
++        logger.warning("[MEMORY] Periodic memory monitoring failed to start: %s", exc)
++        return False
++
++
++def _stop_gateway_memory_monitor() -> None:
++    try:
++        from gateway.memory_monitor import stop_memory_monitoring
++
++        stop_memory_monitoring()
++    except Exception as exc:
++        logger.debug("Gateway memory monitoring stop failed: %s", exc)
++
++
++async def _wait_with_gateway_memory_monitor(runner: Any) -> None:
++    memory_monitor_started = _start_gateway_memory_monitor()
++    try:
++        await runner.wait_for_shutdown()
++    finally:
++        if memory_monitor_started:
++            pass
++
++
+ def _gateway_surface_passes_raw_text(platform: Any) -> bool:
+     """True only for programmatic/local surfaces that must keep raw text."""
+     return _gateway_platform_value(platform) in _GATEWAY_RAW_TEXT_PLATFORMS
+@@ -5997,7 +6078,9 @@ async def start_gateway(config: Optional[GatewayConfig] = None, replace: bool =
+     # READY only once adapters, cron and housekeeping run; missing systemd state just disables watchdog.
+     runner._start_systemd_watchdog()
+ 
+-    await runner.wait_for_shutdown()
++    # Monitor only a fully running gateway, and always stop the monitor when
++    # the runner leaves its active lifetime.
++    await _wait_with_gateway_memory_monitor(runner)
+ 
+     return await _start_gateway_shutdown_tail(
+         runner, _control_server, cron_stop, cron_provider, cron_thread, housekeeping_thread,
+diff --git c/hermes_cli/config_defaults.py w/hermes_cli/config_defaults.py
+index 1196da7252..656ea63623 100644
+--- c/hermes_cli/config_defaults.py
++++ w/hermes_cli/config_defaults.py
+@@ -2029,6 +2029,10 @@ DEFAULT_CONFIG = {
+         "level": "INFO",       # minimum level for agent.log: DEBUG, INFO, WARNING
+         "max_size_mb": 5,      # max size per log file before rotation
+         "backup_count": 3,     # rotated backups to keep
++        "memory_monitor": {
++            "enabled": True,
++            "interval_seconds": 300,
++        },
+     },
+     # Remote model-catalog manifest: curated OpenRouter / Nous Portal model lists fetched from this
+     # URL (falls back to the in-repo snapshot on network failure), so picker lists update without a
+diff --git c/tests/gateway/test_memory_monitor.py w/tests/gateway/test_memory_monitor.py
+index 179f76b8d4..13d3e3f119 100644
+--- c/tests/gateway/test_memory_monitor.py
++++ w/tests/gateway/test_memory_monitor.py
+@@ -37,3 +37,106 @@ def test_stop_ends_monitoring():
+     assert mm.is_running() is False
+ 
+ 
++def test_default_config_enables_gateway_memory_monitor():
++    from hermes_cli.config import DEFAULT_CONFIG
++
++    monitor_cfg = DEFAULT_CONFIG["logging"]["memory_monitor"]
++    assert monitor_cfg["enabled"] is True
++    assert monitor_cfg["interval_seconds"] == 300
++
++
++def test_gateway_memory_monitor_config_defaults_enabled():
++    from gateway.run import _resolve_gateway_memory_monitor_config
++
++    assert _resolve_gateway_memory_monitor_config({}) == (True, 300.0)
++
++
++def test_gateway_memory_monitor_config_can_disable():
++    from gateway.run import _resolve_gateway_memory_monitor_config
++
++    cfg = {"logging": {"memory_monitor": {"enabled": False, "interval_seconds": 30}}}
++    assert _resolve_gateway_memory_monitor_config(cfg) == (False, 30.0)
++
++
++def test_gateway_memory_monitor_config_falls_back_for_bad_interval():
++    from gateway.run import _resolve_gateway_memory_monitor_config
++
++    cfg = {"logging": {"memory_monitor": {"enabled": True, "interval_seconds": 0}}}
++    assert _resolve_gateway_memory_monitor_config(cfg) == (True, 300.0)
++
++
++def test_start_gateway_memory_monitor_passes_config_interval(monkeypatch):
++    from gateway.run import _start_gateway_memory_monitor
++
++    calls = []
++    monkeypatch.setattr(
++        mm,
++        "start_memory_monitoring",
++        lambda interval_seconds: calls.append(interval_seconds) or True,
++    )
++
++    cfg = {"logging": {"memory_monitor": {"enabled": True, "interval_seconds": 42}}}
++    assert _start_gateway_memory_monitor(cfg) is True
++    assert calls == [42.0]
++
++
++def test_start_gateway_memory_monitor_skips_disabled_config(monkeypatch):
++    from gateway.run import _start_gateway_memory_monitor
++
++    calls = []
++    monkeypatch.setattr(
++        mm,
++        "start_memory_monitoring",
++        lambda interval_seconds: calls.append(interval_seconds) or True,
++    )
++
++    cfg = {"logging": {"memory_monitor": {"enabled": False, "interval_seconds": 42}}}
++    assert _start_gateway_memory_monitor(cfg) is False
++    assert calls == []
++
++
++@pytest.mark.asyncio
++async def test_gateway_memory_monitor_tracks_running_lifetime(monkeypatch):
++    from gateway.run import _wait_with_gateway_memory_monitor
++
++    events = []
++
++    class Runner:
++        async def wait_for_shutdown(self):
++            events.append("wait")
++
++    monkeypatch.setattr(
++        "gateway.run._start_gateway_memory_monitor",
++        lambda: events.append("start") or True,
++    )
++    monkeypatch.setattr(
++        "gateway.run._stop_gateway_memory_monitor",
++        lambda: events.append("stop"),
++    )
++
++    await _wait_with_gateway_memory_monitor(Runner())
++
++    assert events == ["start", "wait", "stop"]
++
++
++@pytest.mark.asyncio
++async def test_gateway_memory_monitor_stops_when_shutdown_wait_fails(monkeypatch):
++    from gateway.run import _wait_with_gateway_memory_monitor
++
++    stopped = False
++
++    class Runner:
++        async def wait_for_shutdown(self):
++            raise RuntimeError("shutdown wait failed")
++
++    def stop_monitor():
++        nonlocal stopped
++        stopped = True
++
++    monkeypatch.setattr("gateway.run._start_gateway_memory_monitor", lambda: True)
++    monkeypatch.setattr("gateway.run._stop_gateway_memory_monitor", stop_monitor)
++
++    with pytest.raises(RuntimeError, match="shutdown wait failed"):
++        await _wait_with_gateway_memory_monitor(Runner())
++
++    assert stopped is True
+diff --git c/tests/gateway/test_startup_restart_race.py w/tests/gateway/test_startup_restart_race.py
+index 233cc8a322..08d169eeb3 100644
+--- c/tests/gateway/test_startup_restart_race.py
++++ w/tests/gateway/test_startup_restart_race.py
+@@ -182,6 +182,7 @@ def _patch_aborted_startup(monkeypatch, runner_cls):
+ async def test_start_gateway_does_not_start_cron_after_aborted_startup(tmp_path, monkeypatch):
+     monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+     cron_started = False
++    memory_monitor_started = False
+     export_shutdown_calls = 0
+ 
+     class ExportRuntime:
+@@ -210,8 +211,16 @@ async def test_start_gateway_does_not_start_cron_after_aborted_startup(tmp_path,
+         nonlocal cron_started
+         cron_started = True
+ 
++    def fail_if_memory_monitor_starts(*args, **kwargs):
++        nonlocal memory_monitor_started
++        memory_monitor_started = True
++
+     _patch_aborted_startup(monkeypatch, AbortedStartupRunner)
+     monkeypatch.setattr("gateway.run._start_cron_ticker", fail_if_cron_starts)
++    monkeypatch.setattr(
++        "gateway.run._start_gateway_memory_monitor",
++        fail_if_memory_monitor_starts,
++    )
+     monkeypatch.setattr("tools.mcp_tool_lifecycle.shutdown_mcp_servers", lambda: None)
+ 
+     with pytest.raises(SystemExit) as exc:
+@@ -219,6 +228,7 @@ async def test_start_gateway_does_not_start_cron_after_aborted_startup(tmp_path,
+ 
+     assert exc.value.code == GATEWAY_SERVICE_RESTART_EXIT_CODE
+     assert cron_started is False
++    assert memory_monitor_started is False
+     assert export_shutdown_calls == 1
+ 
+ 

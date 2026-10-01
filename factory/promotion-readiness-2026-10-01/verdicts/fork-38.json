@@ -1,0 +1,27 @@
+{
+ "fork_pr": 38,
+ "title": "fix(desktop): invalidate skill-suggestion cache on soft re-home",
+ "claim": "The skill-suggestion index (5-min module cache) must be dropped when the desktop re-homes to another profile or connection, so a stale 'Use skill' pill cannot insert a /skill the new backend lacks.",
+ "verdict": "EXTERNAL-OWNED",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "NOT_TESTED (owned upstream). Need confirmed by source: main apps/desktop/src/store/suggestion-providers/skill.ts invalidateSkillSuggestionIndex() is only called from gateway-event/tools.ts (skill_manage); store/profile.ts profile-change block (L456-468) and gateway-switch.ts wipeSessionListsForGatewaySwitch() call neither it nor the MCP equivalent.",
+  "green": "NOT_TESTED",
+  "negative_control": "NOT_TESTED",
+  "adjacent": "NOT_TESTED",
+  "source": "see red"
+ },
+ "upstream_overlap": [
+  "#85253 (OPEN, pierrenode, 2026-08-13) 'fix(desktop): invalidate composer suggestion-provider caches on profile switch' calls invalidateSkillSuggestionIndex() and invalidateMcpSuggestionIndex() from the existing $activeGatewayProfile chokepoint in store/profile.ts, with a mutation-verified test. It owns the profile-swap half and is the better placement than the fork's separate subscription in skill.ts."
+ ],
+ "branch": null,
+ "files": [
+  "apps/desktop/src/store/suggestion-providers/skill.ts",
+  "apps/desktop/src/store/gateway-switch.ts",
+  "apps/desktop/src/store/gateway-switch.test.ts",
+  "apps/desktop/src/store/suggestion-providers/skill-cache.test.ts"
+ ],
+ "size": "fork leaf +226/-0; no rebuild",
+ "depends_on": null,
+ "notes": "Review-support value: the fork's second hook, invalidateSkillSuggestionIndex() inside gateway-switch.ts wipeSessionListsForGatewaySwitch(), covers the connection/mode switch where both connections expose the same profile key (e.g. 'default'). #85253's profile-key gate does not fire in that case. Worth offering on #85253 as a suggested sibling (MCP cache too), not as a competing PR. Kanban baggage ignored."
+}

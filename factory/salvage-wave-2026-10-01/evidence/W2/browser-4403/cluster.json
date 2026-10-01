@@ -1,0 +1,97 @@
+{
+ "issue": "none (cloud browser.controller.register 4403; kvnloo fork #51)",
+ "slug": "browser-4403",
+ "seed": "fork #51 (kvnloo/hermes-agent)",
+ "title": "Cloud browser.controller.register rejects every production session with 4403 because it reads a session 'profile' key that no session builder stamps",
+ "main_sha": "298a01c79b38018e029e50f77efe67c4a4fdbd40",
+ "candidates": [
+  {
+   "pr": 119346,
+   "author": "musabatas",
+   "created": "2026-09-22T17:30:05Z",
+   "last_activity": "2026-09-22T17:33:43Z (no comments or reviews)",
+   "mergeable_github": "UNKNOWN/UNKNOWN (GitHub has not computed it; re-queried 2026-10-01)",
+   "merges_clean_on_pinned_main": true,
+   "diff_size": "+69/-1, 2 files (tui_gateway/methods_browser_control.py +1/-1, tests/gateway/test_browser_control_cloud.py +68/-0)",
+   "has_tests": "yes: test_cloud_controller_registration_uses_created_session_profile (session.create default -> ops -> default, then register; launch profile patched to 'default'). It fails on main (4403) and passes with the fix.",
+   "approach": "One line: profile_id = profile_name_for_home(session.get('profile_home')) or _current_profile_name(), using the module globals server.py already binds. Labels type/bug, comp/tui, tool/browser, P2, sweeper:risk-session-state, area/profiles. No linked issue."
+  }
+ ],
+ "candidates_checked_not_same_defect": [
+  {
+   "pr": 111800,
+   "author": "kshitijk4poor",
+   "why": "Open +55955/-35491 Pydantic wire refactor (2026-09-15). It rewrites the same register handler (+49/-42 in methods_browser_control.py) but keeps profile_id = str(session.get('profile') or '').strip() as context, so it does not fix the defect and will need a one-line rebase after #119346."
+  },
+  {
+   "pr": 86784,
+   "author": "ryantuc",
+   "why": "Closed; resume-client attach in tui_gateway, mentions browser.controller.register only in passing."
+  },
+  {
+   "pr": 88203,
+   "author": "abundantbeing",
+   "why": "Open loopback extension pairing feature; does not touch methods_browser_control.py."
+  }
+ ],
+ "regression_test": {
+  "source": "new; built from #119346's session.create round-trip test plus kvnloo fork #51's artifact-store slot test (test_browser_control_profile_repro_real.py::test_cloud_profile_id_hits_local_api_artifact_store_slot)",
+  "path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/browser-4403/test_browser_controller_session_profile.py (placed at tests/gateway/test_browser_controller_session_profile.py)",
+  "tests": [
+   "test_created_session_registers_with_its_canonical_profile[launch-default] (default -> ops -> default)",
+   "test_created_session_registers_with_its_canonical_profile[launch-named] (launch 'work': none -> work, default (home = Hermes root) -> default, ops -> ops)",
+   "test_cloud_scope_selects_the_local_api_artifact_store_slot"
+  ],
+  "contract": "A session made by session.create registers a cloud browser controller without 4403, and the scope's profile_id is the session's canonical profile name: the launch profile's name when profile_home is None, 'default' when the home is the Hermes root, '<name>' for <root>/profiles/<name>. The attached scope selects the local-API artifact-store slot keyed by that name.",
+  "evidence_path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/browser-4403/"
+ },
+ "ab_results": {
+  "main": {
+   "result": "fail",
+   "detail": "3 failed / 0 passed. Every create -> register returns {'error': {'code': 4403, 'message': 'controller_id, browser_profile_id, and server session profile are required'}}."
+  },
+  "119346": {
+   "result": "pass",
+   "detail": "3/3, merges clean (head d6c5a4a67e). Probe matrix: all 5 launch/request cases give the canonical name."
+  },
+  "fork#51 (kvnloo, reference, not an upstream PR)": {
+   "result": "fail",
+   "detail": "2 failed / 1 passed (commit a2b896ff5c cherry-picks clean). Path(profile_home).name or literal 'default': a gateway launched under 'work' registers launch-profile sessions as 'default' (assert 'default' == 'work'), and a session whose profile_home is the Hermes root (a 'default' request on a named-launch gateway, per server._profile_home) registers as the root's basename ('hermes_test' in the sandbox, '.hermes' on a real install), so the artifact-store slot lookup misses."
+  },
+  "negative_control": {
+   "result": "fail (as intended)",
+   "detail": "On main + #119346: reverting its line to session.get('profile') re-fails 3/3 (4403); keeping profile_name_for_home but dropping the _current_profile_name() fallback also re-fails 3/3 (launch-profile sessions have profile_home None)."
+  }
+ },
+ "adjacent_tests": {
+  "files": [
+   "tests/gateway/test_browser_control_api.py",
+   "tests/gateway/test_browser_control_artifacts.py",
+   "tests/gateway/test_browser_control_broker.py",
+   "tests/gateway/test_browser_control_broker_hardening.py",
+   "tests/gateway/test_browser_control_cloud.py"
+  ],
+  "result": "Main: 84 passed, 0 failed. #119346 + fold-ins (fixture correction + regression test): 88 passed, 0 failed (84 + #119346's test + 3 regression cases). Fixture masking: with the six cloud fixtures' 'profile': 'default' key dropped, main fails 3 (test_cloud_gateway_real_action_round_trip_is_bound_to_identity_and_transport, test_cloud_same_identity_reconnect_refreshes_transport_and_completes_pending, test_cloud_explicit_detach_requires_current_authenticated_owner) and #119346 passes 16/16. kvnloo fork #51's 4 repro tests also pass on #119346."
+ },
+ "carrier": {
+  "pr": 119346,
+  "author": "musabatas <musabatas@gmail.com>",
+  "why": "The only upstream PR for the defect. It is correct on every launch/request shape probed, uses the canonical helper pair that session rows already use for profile_name (methods_session.py:296, :2241; session_workdir.py:452), is a one-line production change with a round-trip test that fails on main, and merges clean. kvnloo fork #51 is not upstream and is wrong for named-launch gateways and root-homed sessions."
+ },
+ "fold_ins": [
+  {
+   "from": "fork #51 (kvnloo/hermes-agent)",
+   "author": "kvnloo",
+   "co_authored_by": "Kevin Rajan <7121943+kvnloo@users.noreply.github.com>",
+   "hunk_scope": "(1) tests/gateway/test_browser_control_cloud.py: drop the line '\"profile\": \"default\",' from the six hand-rolled server._sessions fixtures (foldin-fixture-drop-dead-profile-key.diff, -6). Adapted from the fork's fixture migration: the fork replaced the key with a synthetic profile_home '/hermes/profiles/default', but a launch-profile session carries no profile_home, which is the shape kept here. (2) New tests/gateway/test_browser_controller_session_profile.py (3 cases above): adds the named-launch and Hermes-root cases and the fork's artifact-store slot invariant, none of which #119346's own test covers (it pins the launch profile to 'default').",
+   "why": "With #119346 alone, the six fixtures still pass through a dead 'profile' key that would hide a regression back to session['profile']. #119346's own test cannot distinguish its canonical lookup from a basename shortcut (fork #51's approach passes it).",
+   "test": "Regression file: FAIL 3/3 on main 298a01c7, PASS 3/3 on main + #119346. Fixture correction: 3 failures on main, 16/16 on main + #119346."
+  }
+ ],
+ "close_after_merge": [],
+ "exclude_reason": null,
+ "row": "| none (cloud `browser.controller.register` refuses every created session with 4403; kvnloo fork #51) | #119346 (musabatas) | main: FAIL 3/3 (4403 on every `session.create` then `browser.controller.register`); #119346: merges clean, PASS 3/3; kvnloo fork #51 (reference, not upstream): FAIL 2/3 (a gateway launched under profile `work` registers its sessions as `default`, and a session homed at the Hermes root registers as the root's basename) | kvnloo (fork #51): fixture correction in `tests/gateway/test_browser_control_cloud.py` (drop the `\"profile\": \"default\"` key that no production builder stamps from the six hand-rolled cloud fixtures) plus `tests/gateway/test_browser_controller_session_profile.py` (named-launch cases and the artifact-store slot invariant); `Co-authored-by: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>` | none (#119346 is the only same-defect PR; fork-side, close kvnloo/hermes-agent#51) | On main the register handler reads `session[\"profile\"]`, which no production session builder stamps, so every real cloud registration is refused with 4403. Main's cloud tests pass only because six hand-rolled fixtures carry that key: with it dropped, 3 of them fail on main and all pass with #119346. #119346 uses `profile_name_for_home(profile_home) or _current_profile_name()`, the same expression session rows already use for `profile_name`. Reverting that line re-fails 3/3, and so does dropping its launch-profile fallback. The 5 browser-control test files go from 84/84 to 88/88. |",
+ "row_fork_draft": "| none (cloud browser.controller.register 4403; fork #51) | #119346 (musabatas) | main 298a01c7 FAIL 3/3 (4403); #119346 PASS 3/3, merges clean; fork #51 FAIL 2/3 (named launch -> 'default'; root home -> basename) | kvnloo (fork #51, Co-authored-by Kevin Rajan): drop dead 'profile' key from six cloud fixtures + tests/gateway/test_browser_controller_session_profile.py | none (close kvnloo/hermes-agent#51) | Main reads session['profile'], which no builder stamps; fixtures mask it (3 fail on main without the key). #119346's canonical lookup passes all cases; reverting it re-fails 3/3; browser-control files 84/84 -> 88/88. |",
+ "notes": "(1) GitHub reports mergeable UNKNOWN for #119346 (never computed; no maintainer activity since 2026-09-22); it merges clean on 298a01c7 with no conflict. (2) #111800 (Pydantic wire refactor) rewrites the same handler and keeps the buggy line as context; whichever lands second needs a one-line rebase. (3) The only runtime observables are the 4403 refusal and artifact-store slot selection; scope_for_session dispatch matching ignores profile_id. (4) Not used from fork #51: its 244-line test_browser_control_profile_repro_real.py and its Path(profile_home).name production change (wrong for named-launch gateways and root-homed sessions, see probe-matrix.log). (5) Hermes' ledger had no record of #119346 (fork-51 verdict). (6) Fork-side: close kvnloo/hermes-agent#51 after the carrier merges. (7) PR heads pinned at refs/w2/pr/119346 and refs/w2/fork/51 (fork commit cherry-picked onto refs/w2/main) in $S/h.git. No tripwire hits.",
+ "evidence_dir": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/browser-4403/"
+}

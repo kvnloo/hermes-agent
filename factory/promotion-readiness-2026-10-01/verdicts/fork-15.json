@@ -1,0 +1,34 @@
+{
+  "fork_pr": 15,
+  "title": "chore(anthropic): remove unused _safe_text helper",
+  "claim": "agent/anthropic_message_convert._safe_text has no callers on main; the request path drops blank text blocks and only falls back to _EMPTY_TEXT_PLACEHOLDER, so the coerce-in-place helper and its unit tests can be deleted.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "source": "main anthropic_message_convert.py:279 defines _safe_text; there are no call sites in the module (`_replay_text` drops blanks at :287-293, placeholder only at :368/:425/:650/:704). The fork diff's anthropic_adapter re-export hunk no longer applies: main's adapter does not re-export it. The premise is verified as intentional design: the drop-not-coerce comment at :288-290 documents why coercion was abandoned.",
+    "references_before": "main: def at agent/anthropic_message_convert.py:279 plus its docstring, and tests/agent/test_anthropic_whitespace_text_blocks.py:15 (import), :31 and :36 (TestSafeText). Other hits are bedrock_adapter's separate live _safe_text.",
+    "references_after": "0 references to anthropic_message_convert._safe_text. Remaining hits are bedrock_adapter.py, test_bedrock_empty_text_blocks.py, and a docstring in the whitespace test naming bedrock_adapter._safe_text. Not in tests/compat/old_updater_surface.json.",
+    "red": "n/a (pure deletion)",
+    "green": "n/a (pure deletion)",
+    "negative_control": "n/a (pure deletion)",
+    "adjacent": "scripts/run_tests.sh on 7 files (test_anthropic_whitespace_text_blocks, _request_blank_block_guard, _anthropic_adapter, _bedrock_empty_text_blocks, _anthropic_thinking_block_order, _anthropic_output_field_leak, tests/test_old_updater_compat_surface.py): 684 passed, 0 failed. main baseline for the overlapping 5 files: all pass; the whitespace file went from 10 to 5 tests (TestSafeText = 1 + 4 parametrized). Import smoke OK; ruff and windows-footguns clean."
+  },
+  "upstream_overlap": [
+    "No open PR uses anthropic_message_convert._safe_text. #71935 (acke, OPEN, stale) has the old import only as an unchanged context line in the test file. #55135/#63983/#64858 touch bedrock_adapter._safe_text only. #69517 (merged) introduced the helper; the later drop-not-coerce design superseded it."
+  ],
+  "branch": "ready/chore-agent",
+  "bundle": "chore-agent",
+  "files": [
+    "agent/anthropic_message_convert.py",
+    "tests/agent/test_anthropic_whitespace_text_blocks.py"
+  ],
+  "size": "+1/-22",
+  "depends_on": null,
+  "fork_head": "detail/dead-code/chore-anthropic-remove-unused-safe-text-helper-ee3bb6",
+  "fork_head_oid": "593fa385645ded60444e0c17239037905a52238b",
+  "wave": "W5-bot-chore",
+  "batch": "C",
+  "patch": "/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/patches/fork-15.patch (identical to bundle-chore-agent.patch)",
+  "body": "/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/patches/bundle-chore-agent.body.md",
+  "notes": "Bundle commit 71a0085e4e (author Kevin Rajan noreply, Co-authored-by detail-app[bot]), parent = pinned main. Also removed the `import pytest` the deleted tests left unused. Left the test-module docstring alone: it names bedrock's still-live helper."
+}

@@ -1,0 +1,31 @@
+{
+  "fork_pr": 76,
+  "title": "chore(cli): remove dead HERMES_AGENT_LOGO/HERMES_CADUCEUS duplicates",
+  "claim": "cli.py HERMES_AGENT_LOGO / HERMES_CADUCEUS duplicate the hermes_cli/banner.py constants and are unused.",
+  "verdict": "SUPERSEDED-ON-MAIN",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "source": "Every targeted name is absent on main f848940560: `git grep -n -w` across the whole tree (code, tests, plugins/, optional-skills/, website/, scripts/, tests/compat) finds 0 hits for HERMES_AGENT_LOGO / HERMES_CADUCEUS in cli.py (the canonical copies in hermes_cli/banner.py are live and must stay). A first-parent bisect of cli.py from fork base 63279301bc puts the removal in d3630f8532 (#102117 'whole-codebase simplification', 2026-09-04).",
+    "references_before": "0 (already gone on main)",
+    "references_after": "n/a",
+    "red": "n/a (pure deletion; nothing left to delete)",
+    "green": "n/a",
+    "negative_control": "n/a",
+    "adjacent": "n/a (no change built)"
+  },
+  "upstream_overlap": [
+    "removed upstream by d3630f8532 (#102117 'whole-codebase simplification', 2026-09-04)"
+  ],
+  "branch": null,
+  "bundle": null,
+  "files": [],
+  "size": "+0/-0",
+  "depends_on": null,
+  "fork_head": "detail/dead-code/chore-cli-remove-dead-hermes-agent-logo-hermes-cad-d0dd5e",
+  "fork_head_oid": "3e44244a46c407b168aa3c30e67610d2d92f295e",
+  "wave": "W5-bot-chore",
+  "batch": "C",
+  "patch": null,
+  "body": null,
+  "notes": "The fork diff also carries unrelated Kanban baggage (hermes_cli/kanban_db.py, tests/hermes_cli/test_kanban_external_receipts.py) from merge commits; the intended tip commit was read in isolation. Retire the fork PR."
+}

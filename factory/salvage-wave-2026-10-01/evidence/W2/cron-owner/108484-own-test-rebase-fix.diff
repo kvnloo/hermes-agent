@@ -1,0 +1,14 @@
+diff --git a/tests/cron/test_owner_uncertainty.py b/tests/cron/test_owner_uncertainty.py
+index bfbdfe8243..420a39255f 100644
+--- a/tests/cron/test_owner_uncertainty.py
++++ b/tests/cron/test_owner_uncertainty.py
+@@ -49,7 +49,8 @@ def test_live_owner_can_finish_both_ledgers_when_fingerprint_is_unavailable(tmp_
+         assert gateway.status._pid_exists(owner.pid)
+         if missing == "current":
+             assert row["process_started_at"] is not None
+-            assert not executions._owner_is_live(owner.pid, row["process_started_at"] + 1)
++            stale = row["process_started_at"] + gateway.status.START_TIME_DRIFT_TOLERANCE + 1
++            assert not executions._owner_is_live(owner.pid, stale)
+             assert executions.recover_interrupted_executions() == 0
+             assert delivery_queue.recover_abandoned() == 0
+             # Fault at the OS metadata boundary; real PID probing, processes and SQLite remain active.

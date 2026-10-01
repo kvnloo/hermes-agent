@@ -1,0 +1,33 @@
+{
+  "fork_pr": 81,
+  "title": "docs: drop stale -p <profile> flag from cron Bot Chat delivery lane",
+  "claim": "cron-internals.md shows the unowned Bot Chat CLI lane as `hermes [-p <profile>] chat ...`; the code never passes the target profile with -p.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "red": "website/docs/developer-guide/cron-internals.md:366 on main: \"Without a mailbox owner it retains `hermes [-p <profile>] chat --in ~ -c \\\"Bot Chat\\\" --create-if-missing -Q --query-file <tmp>` and normal ownership fencing.\"",
+    "green": "Bundle: `hermes chat --in ~ -c \"Bot Chat\" --create-if-missing -Q --query-file <tmp>`, launched with HERMES_HOME pinned to the resolved target home (plus `-p default` when that is the root home).",
+    "negative_control": "N/A for docs (no executable behaviour). Equivalent check: the stale phrase is present on main and absent on the bundle (grep given in red/green).",
+    "adjacent": "python3 website/scripts/check_doc_links.py on the bundle tree: OK (no route-style links). All 7 B1 bundles cherry-pick together onto main cleanly, and each pairs cleanly with B2's current docs2-update/docs2-desktop/docs2-gateway/docs2-memory bundles.",
+    "source": "cron/scheduler_delivery.py _deliver_to_bot_chat (:772-950): env = served_profile_child_env(..., target_home=home, inherit_credentials=True) (sets env['HERMES_HOME']=target, tools/environments/local.py:409-411); `if home.parent.name != \"profiles\": argv += [\"-p\", \"default\"]`; then argv += ['chat','--in','~','-c','Bot Chat','--create-if-missing','-Q','--query-file', query_file] (:929-932)."
+  },
+  "upstream_overlap": [
+    "No open external PR/issue for this claim (gh search prs/issues; open docs PRs touching the same files edit other sections)"
+  ],
+  "branch": "ready/docs-bot-mode",
+  "bundle": {
+    "branch": "ready/docs-bot-mode",
+    "commit": "36cf0f54d6",
+    "subject": "docs(bot-mode): correct Bot Chat delivery argv, DM stamp and room store name",
+    "bundle_size": "+4/-4",
+    "patch": "patches/docs-bot-mode.patch",
+    "body": "patches/docs-bot-mode.body.md"
+  },
+  "files": [
+    "website/docs/developer-guide/cron-internals.md"
+  ],
+  "size": "+1/-1",
+  "depends_on": null,
+  "fork_head": "129a673b49d0447c74294dbc21489a1cb2605c6c",
+  "notes": "Fork text dropped the `-p default` root-home detail; rebuilt text keeps it. zh-Hans cron-internals.md has no Bot Chat paragraph. evals/botmode-dm-matrix/README.md quotes a historical message_agent launcher line; left as a record."
+}

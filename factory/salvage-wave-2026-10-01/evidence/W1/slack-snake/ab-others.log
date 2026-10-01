@@ -1,0 +1,41 @@
+######## fork23
+Applied patch to 'plugins/platforms/slack/block_kit.py' cleanly.
+M  plugins/platforms/slack/block_kit.py
+=== Summary: 1 files, 9 tests passed, 5 failed (100% complete) in 2.9s (20 workers) ===
+E   AssertionError: assert 'SERVICE__US__EAST' in 'region SERVICEUSEAST is up'
+E   AssertionError: assert 'SERVICEUS SA...urrent status' == 'SERVICE_US S...urrent status'
+E   AssertionError: assert 'SERVICEUSEAST' == 'SERVICE_US_EAST'
+E   AssertionError: assert 'SERVICEUSEAST' == 'SERVICE__US__EAST'
+E   AssertionError: assert 'SERVICEUS' == '**SERVICE_US__'
+FAILED tests/gateway/test_slack_block_kit_underscores.py::TestBodyDoubleUnderscore::test_double_underscore_identifier_in_bullet_preserved
+FAILED tests/gateway/test_slack_block_kit_underscores.py::TestHeader::test_header_preserves_literal_markup_characters
+FAILED tests/gateway/test_slack_block_kit_underscores.py::TestHeader::test_header_does_not_treat_identifier_underscores_as_emphasis
+FAILED tests/gateway/test_slack_block_kit_underscores.py::TestHeader::test_header_does_not_treat_double_identifier_underscores_as_strong
+FAILED tests/gateway/test_slack_block_kit_underscores.py::TestHeader::test_header_requires_matching_strong_delimiters
+######## 105534
+merge CONFLICT: plugins/platforms/slack/block_kit.py tests/gateway/test_slack_block_kit.py 
+######## 114607
+merge CONFLICT: plugins/platforms/slack/block_kit.py 
+######## 56482
+merge clean
+=== Summary: 1 files, 9 tests passed, 5 failed (100% complete) in 2.9s (20 workers) ===
+E   AssertionError: assert 'SERVICE__US__EAST' in 'region SERVICEUSEAST is up'
+E   AssertionError: assert 'SERVICEUS SA...urrent status' == 'SERVICE_US S...urrent status'
+E   AssertionError: assert 'SERVICEUSEAST' == 'SERVICE_US_EAST'
+E   AssertionError: assert 'SERVICEUSEAST' == 'SERVICE__US__EAST'
+E   AssertionError: assert 'SERVICEUS' == '**SERVICE_US__'
+FAILED tests/gateway/test_slack_block_kit_underscores.py::TestBodyDoubleUnderscore::test_double_underscore_identifier_in_bullet_preserved
+FAILED tests/gateway/test_slack_block_kit_underscores.py::TestHeader::test_header_preserves_literal_markup_characters
+FAILED tests/gateway/test_slack_block_kit_underscores.py::TestHeader::test_header_does_not_treat_identifier_underscores_as_emphasis
+FAILED tests/gateway/test_slack_block_kit_underscores.py::TestHeader::test_header_does_not_treat_double_identifier_underscores_as_strong
+FAILED tests/gateway/test_slack_block_kit_underscores.py::TestHeader::test_header_requires_matching_strong_delimiters
+######## 105534 (PR-head block_kit.py swapped onto main; conflicts on merge)
+78:_BOLD_RE = re.compile(r"(?:\*\*|__)(.+?)(?:\*\*|__)")
+79:_ITALIC_RE = re.compile(r"(?<![\*_])(?:\*|_)(?![\*_\s])(.+?)(?<![\*_\s])(?:\*|_)(?![\*_])")
+170:    clean = re.sub(r"[*_~`]", "", text).strip()
+=== Summary: 1 files, 5 tests passed, 9 failed (100% complete) in 2.9s (20 workers) ===
+######## 114607 (PR-head block_kit.py swapped onto main; conflicts on merge)
+78:_BOLD_RE = re.compile(r"(?:\*\*|__)(.+?)(?:\*\*|__)")
+79:_ITALIC_RE = re.compile(r"(?<![\*_])(?:\*|_)(?![\*_\s])(.+?)(?<![\*_\s])(?:\*|_)(?![\*_])")
+175:    clean = re.sub(r"[*_~`]", "", text).strip()
+=== Summary: 1 files, 5 tests passed, 9 failed (100% complete) in 2.7s (20 workers) ===

@@ -1,0 +1,36 @@
+cluster: issue #123345 (terminal notify string coercion)
+pinned main: af92ea8e5b852518c523c3e8b2cbd95f0f3d79dc (refs/w1/main)
+PR heads pinned at refs/w1notify/pr/<N> in $S/h.git
+regression test: tests/tools/test_terminal_notify_string_bool.py (this dir), 5 functions / 10 cases,
+  dispatch path = coerce_tool_args("terminal", args) -> _handle_terminal(args), terminal_tool stubbed
+runner: HOME=$S/testhome-W1-notify HERMES_HOME=$S/testhome-W1-notify/.hermes HERMES_PYTHON=$PY bash scripts/run_tests.sh <file> -q
+merge: git merge --no-edit --no-ff refs/w1notify/pr/<N> onto a fresh pinned-main worktree (script: $S/w1notify_ab.sh)
+
+main                 FAIL 5 failed / 5 passed  (ab-main.log)
+  bg notify='true'/'True'/'false'/'FALSE' -> {'error': 'notify must be true/false (notify on exit) or a list of strings ...'}
+  fg notify='false' -> {'error': 'notify/heartbeat only apply to background commands ...'}
+#123356 webtecnica   PASS 10/10 (ab-123356.log). Merge: CONFLICT in tools/terminal_tool.py, one hunk:
+  main changed the heartbeat error text; resolved keeping main's text + PR's background/pty lines
+  (pr123356-resolved-terminal_tool.diff). GitHub: CONFLICTING/DIRTY.
+#123448 WYSTAF       FAIL 1 failed / 9 passed (ab-123448.log). Merge clean. GitHub MERGEABLE/BLOCKED.
+  test_foreground_string_notify_false_is_a_no_op_like_native_false:
+  {'error': 'notify/heartbeat only apply to background commands ...'} (coercion runs after the truthiness gate)
+#123389 salch-cred   PASS 10/10 (ab-123389.log). Merge clean. 4-fix bundle; only the tools/arg_coercion.py hunk is #123345.
+#23213  liuhao1024   PASS 10/10 (ab-23213.log). Merge clean locally (rename detection: tests/run_agent -> tests/agent);
+  GitHub CONFLICTING/DIRTY.
+#127557 Finn763      PASS 10/10 (ab-127557.log), side effect of the #109115 schema split (notify becomes type: boolean).
+related, not fixing: #122059 FAIL 5/10, #123024 FAIL 5/10, #128728 FAIL 5/10 (merge clean each);
+  #109145 does not merge (conflicts in tools/terminal_tool.py + 2 test files).
+
+probe matrix (probe-matrix.log), dispatch path, notable differences:
+  #123356: yes/1/on -> True; maybe/ready/2/1.5 -> error; '["ready"]' -> watch_patterns; fg 'false' ok
+  #123448: yes/1/on/2/1.5 -> True; '["ready"]' -> error; fg 'false' -> refused
+  #123389, #127557: only true/false coerced, everything else -> error; fg 'false' ok
+  #23213: yes/1/on/maybe/ready -> watch_patterns=[that string] (completion notify silently dropped); fg 'false' ok
+
+carrier #123356 negative controls (negative-control-123356.log):
+  A arg_coercion.py reverted to main (handler-only)      -> 1 failed (fg notify='false')
+  B handler notify str-branch disabled (arg_coercion only) -> 10 passed (handler branch redundant on this path)
+  C both reverted                                          -> 5 failed (same as main)
+adjacent (adjacent-files.txt): main 205 passed / 0 failed; carrier + regression test 219 passed / 0 failed
+fork #155 handler tests (fork155_test_terminal_notify_coerce.py) on carrier: 21 passed / 0 failed

@@ -1,0 +1,129 @@
+From 5aad8cc6af1824903d44ae2e5e8643eef54b7ad9 Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:35:48 -0500
+Subject: [PATCH] fix(tui): drop stale weather fetches when /weather is
+ relaunched
+
+The weather widget's load() fires fetchReport() fire-and-forget, and
+updateWidget() is scoped to the app id, so it cannot tell one launch
+from the next. Relaunching `/weather Rome` while `/weather Paris` is
+still in flight let the older request land last: a late success
+painted the Paris report under the Rome location, and a late failure
+flipped Rome's ready card to an error.
+
+Stamp each load with a module-level epoch and let only the latest
+load settle the widget. Both call sites (init and the `r` refresh) go
+through load(), so both are covered.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ ui-tui/src/__tests__/weatherApp.test.ts | 61 +++++++++++++++++++++++++
+ ui-tui/src/sdk/apps/weather.tsx         | 21 ++++++---
+ 2 files changed, 76 insertions(+), 6 deletions(-)
+
+diff --git a/ui-tui/src/__tests__/weatherApp.test.ts b/ui-tui/src/__tests__/weatherApp.test.ts
+index 46cb2ee875..3266188261 100644
+--- a/ui-tui/src/__tests__/weatherApp.test.ts
++++ b/ui-tui/src/__tests__/weatherApp.test.ts
+@@ -156,3 +156,64 @@ describe('weather reference app (async contract)', () => {
+     expect(weatherApp.reduce(state, key({ return: true }))).toBeNull()
+   })
+ })
++
++describe('weather reference app (relaunch race)', () => {
++  const LATITUDE: Record<string, number> = { Paris: 48.85, Rome: 41.9 }
++
++  // Geocoding answers at once; each launch's forecast is held (keyed by
++  // latitude) until the test settles it, so an older launch can land last.
++  const holdForecasts = () => {
++    const held = new Map<string, { reject: (error: unknown) => void; resolve: (value: unknown) => void }>()
++
++    vi.stubGlobal(
++      'fetch',
++      vi.fn((input: string | URL | Request) => {
++        const url = new URL(String(input))
++
++        if (url.hostname === 'geocoding-api.open-meteo.com') {
++          const name = url.searchParams.get('name') ?? ''
++          const country = name === 'Paris' ? 'France' : 'Italy'
++          const place = { country, latitude: LATITUDE[name], longitude: 10, name, timezone: 'Europe/Rome' }
++
++          return Promise.resolve({ json: async () => ({ results: [place] }), ok: true })
++        }
++
++        return new Promise((resolve, reject) => held.set(url.searchParams.get('latitude') ?? '', { reject, resolve }))
++      })
++    )
++
++    return (name: string) => held.get(String(LATITUDE[name]))!
++  }
++
++  const relaunchParisThenRome = async (forecast: (name: string) => unknown) => {
++    expect(launchWidget('weather', 'Paris')).toBeNull()
++    expect(launchWidget('weather', 'Rome')).toBeNull()
++    await vi.waitFor(() => expect(forecast('Paris') && forecast('Rome')).toBeTruthy())
++  }
++
++  it('a stale forecast resolving last does not replace the newer launch', async () => {
++    const forecast = holdForecasts()
++
++    await relaunchParisThenRome(forecast)
++    forecast('Rome').resolve({ json: async () => openMeteoForecast, ok: true })
++    await vi.waitFor(() => expect(activeState()?.phase.kind).toBe('ready'))
++
++    forecast('Paris').resolve({ json: async () => openMeteoForecast, ok: true })
++    await new Promise(resolve => setTimeout(resolve, 0))
++
++    expect(activeState()).toMatchObject({ location: 'Rome', phase: { kind: 'ready', report: { area: 'Rome, Italy' } } })
++  })
++
++  it('a stale forecast failure does not flip the newer launch to error', async () => {
++    const forecast = holdForecasts()
++
++    await relaunchParisThenRome(forecast)
++    forecast('Rome').resolve({ json: async () => openMeteoForecast, ok: true })
++    await vi.waitFor(() => expect(activeState()?.phase.kind).toBe('ready'))
++
++    forecast('Paris').reject(new Error('The operation was aborted due to timeout'))
++    await new Promise(resolve => setTimeout(resolve, 0))
++
++    expect(activeState()).toMatchObject({ location: 'Rome', phase: { kind: 'ready', report: { area: 'Rome, Italy' } } })
++  })
++})
+diff --git a/ui-tui/src/sdk/apps/weather.tsx b/ui-tui/src/sdk/apps/weather.tsx
+index a8850e683c..0c50f13200 100644
+--- a/ui-tui/src/sdk/apps/weather.tsx
++++ b/ui-tui/src/sdk/apps/weather.tsx
+@@ -226,14 +226,23 @@ async function fetchReport(location: string): Promise<Report> {
+   }
+ }
+ 
++// updateWidget is app-scoped, so it cannot tell launches apart: only the
++// latest load (relaunch or `r` refresh) may land, never an older one that
++// settles after it.
++let loadEpoch = 0
++
+ function load(location: string): void {
++  const epoch = ++loadEpoch
++
++  const settle = (phase: Phase) => {
++    if (epoch === loadEpoch) {
++      updateWidget(weatherApp, state => ({ ...state, phase }))
++    }
++  }
++
+   fetchReport(location).then(
+-    report => updateWidget(weatherApp, state => ({ ...state, phase: { kind: 'ready', report } as Phase })),
+-    (error: unknown) =>
+-      updateWidget(weatherApp, state => ({
+-        ...state,
+-        phase: { kind: 'error', message: error instanceof Error ? error.message : String(error) } as Phase
+-      }))
++    report => settle({ kind: 'ready', report }),
++    (error: unknown) => settle({ kind: 'error', message: error instanceof Error ? error.message : String(error) })
+   )
+ }
+ 
+-- 
+2.55.0
+

@@ -1,0 +1,63 @@
+label=main main=298a01c79b38018e029e50f77efe67c4a4fdbd40
+▶ not activated — using HERMES_PYTHON: /workspace/hermes-home/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~3 tests) under ['tests/cron/test_cron_owner_null_fingerprint.py']; running with -j 2
+[100.0% |     3/~3 | ✓3 | ✗1] ✗ tests/cron/test_cron_owner_null_fingerprint.py (3✓ 1✗, 12.9s)
+
+  ╔╍ Failed: tests/cron/test_cron_owner_null_fingerprint.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ F...                                                                     [100%]
+  ║ =================================== FAILURES ===================================
+  ║ _____ test_live_owner_without_fingerprint_finishes_both_ledgers[recorded] ______
+  ║ 
+  ║ ledgers = {'PATH': '/tmp/claude-1000/-home-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad/w2-tripwire/bin:/usr/bin:/bi...-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad/testhome-W2-cron-owner', 'TZ': 'UTC', 'LANG': 'C.UTF-8', ...}
+  ║ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f64ff2f6310>
+  ║ missing = 'recorded'
+  ║ 
+  ║ >   ???
+  ║ E   AssertionError: live owner fenced: {'execution': None, 'delivered': False}
+  ║ E   assert (1, 1) == (0, 0)
+  ║ E     
+  ║ E     At index 0 diff: 1 != 0
+  ║ E     Use -v to get more diff
+  ║ 
+  ║ tests/cron/test_cron_owner_null_fingerprint.py:84: AssertionError
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/cron/test_cron_owner_null_fingerprint.py::test_live_owner_without_fingerprint_finishes_both_ledgers[recorded]
+  ║ 1 failed, 3 passed in 5.39s
+  ║
+  ║  Repro: python -m pytest tests/cron/test_cron_owner_null_fingerprint.py -q -rf -p no:randomly
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 1 files, 3 tests passed, 1 failed (100% complete) in 12.9s (2 workers) ===
+
+=== Per-file subprocess time distribution ===
+
+=== Failure output ===
+
+--- tests/cron/test_cron_owner_null_fingerprint.py ---
+F...                                                                     [100%]
+=================================== FAILURES ===================================
+_____ test_live_owner_without_fingerprint_finishes_both_ledgers[recorded] ______
+
+ledgers = {'PATH': '/tmp/claude-1000/-home-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad/w2-tripwire/bin:/usr/bin:/bi...-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad/testhome-W2-cron-owner', 'TZ': 'UTC', 'LANG': 'C.UTF-8', ...}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f64ff2f6310>
+missing = 'recorded'
+
+>   ???
+E   AssertionError: live owner fenced: {'execution': None, 'delivered': False}
+E   assert (1, 1) == (0, 0)
+E     
+E     At index 0 diff: 1 != 0
+E     Use -v to get more diff
+
+tests/cron/test_cron_owner_null_fingerprint.py:84: AssertionError
+=========================== short test summary info ============================
+FAILED tests/cron/test_cron_owner_null_fingerprint.py::test_live_owner_without_fingerprint_finishes_both_ledgers[recorded]
+1 failed, 3 passed in 5.39s
+
+=== 1 file with test failures (1 test failed) ===
+  tests/cron/test_cron_owner_null_fingerprint.py  (1 test failed)

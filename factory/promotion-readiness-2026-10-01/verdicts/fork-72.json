@@ -1,0 +1,31 @@
+{
+  "fork_pr": 72,
+  "title": "chore: remove dead per-key command secret helpers",
+  "claim": "command secret source get_command_secret / list_command_secrets / parse_secret_output are dead per-key helpers.",
+  "verdict": "SUPERSEDED-ON-MAIN",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "source": "Every targeted name is absent on main f848940560: `git grep -n -w` across the whole tree (code, tests, plugins/, optional-skills/, website/, scripts/, tests/compat) finds 0 hits for get_command_secret, list_command_secrets, parse_secret_output. A first-parent bisect of agent/secret_sources/command.py from fork base 63279301bc puts the removal in a5bd246865 (#126164 'plugin compat layer removed on schedule', 2026-09-28).",
+    "references_before": "0 (already gone on main)",
+    "references_after": "n/a",
+    "red": "n/a (pure deletion; nothing left to delete)",
+    "green": "n/a",
+    "negative_control": "n/a",
+    "adjacent": "n/a (no change built)"
+  },
+  "upstream_overlap": [
+    "removed upstream by a5bd246865 (#126164 'plugin compat layer removed on schedule', 2026-09-28)"
+  ],
+  "branch": null,
+  "bundle": null,
+  "files": [],
+  "size": "+0/-0",
+  "depends_on": null,
+  "fork_head": "detail/dead-code/chore-remove-dead-per-key-command-secret-helpers-bfd04a",
+  "fork_head_oid": "0898aaae7a48ac3688ff4f9826e177c5c0cdfe5b",
+  "wave": "W5-bot-chore",
+  "batch": "C",
+  "patch": null,
+  "body": null,
+  "notes": "The fork diff also carries unrelated Kanban baggage (hermes_cli/kanban_db.py, tests/hermes_cli/test_kanban_external_receipts.py) from merge commits; the intended tip commit was read in isolation. Retire the fork PR. The `__all__` entries and docstring mentions are gone too."
+}

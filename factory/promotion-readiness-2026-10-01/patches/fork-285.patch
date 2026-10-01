@@ -1,0 +1,80 @@
+# fork-285 slice of bundle commit 3d721162fc9aa7a610aa193f6bd556e9a75ffb83 (ready/chore-gateway) on main f8489405600c9a7d9d2f307dace086f18d7173ba
+# Apply the whole bundle with patches/bundle-chore-gateway.patch; this slice is for per-item review.
+diff --git a/gateway/shutdown_forensics.py b/gateway/shutdown_forensics.py
+index 2812c30340..2592860adb 100644
+--- a/gateway/shutdown_forensics.py
++++ b/gateway/shutdown_forensics.py
+@@ -8,7 +8,6 @@ subprocess. Anything that waits belongs in the async helper, never in the probe.
+ 
+ from __future__ import annotations
+ 
+-import json
+ import os
+ import shutil
+ import signal
+@@ -189,14 +188,6 @@ def format_context_for_log(ctx: Dict[str, Any]) -> str:
+     )
+ 
+ 
+-def context_as_json(ctx: Dict[str, Any]) -> str:
+-    """JSON-serialise a context dict for structured ingestion.  Never raises."""
+-    try:
+-        return json.dumps(ctx, default=str, sort_keys=True)
+-    except (TypeError, ValueError):
+-        return "{}"
+-
+-
+ def check_systemd_timing_alignment(
+     drain_timeout: float, cron_drain_timeout: float = DEFAULT_GATEWAY_CRON_DRAIN_TIMEOUT
+ ) -> Optional[Dict[str, Any]]:
+diff --git a/tests/gateway/test_shutdown_forensics.py b/tests/gateway/test_shutdown_forensics.py
+index a51cbefe5b..3fe6730179 100644
+--- a/tests/gateway/test_shutdown_forensics.py
++++ b/tests/gateway/test_shutdown_forensics.py
+@@ -2,7 +2,6 @@
+ 
+ from __future__ import annotations
+ 
+-import json
+ import os
+ import signal
+ import subprocess
+@@ -34,20 +33,6 @@ class TestSnapshotShutdownContext:
+         assert "takeover_marker" in ctx
+         assert ctx["takeover_marker_for_self"] is True
+ 
+-# ---------------------------------------------------------------------------
+-# format_context_for_log / context_as_json
+-# ---------------------------------------------------------------------------
+-
+-class TestFormatters:
+-
+-    def test_context_as_json_handles_unserialisable_values(self):
+-        ctx = {"signal": "SIGTERM", "weird": object()}
+-        payload = sf.context_as_json(ctx)
+-        # default=str means objects get repr'd, JSON stays valid
+-        decoded = json.loads(payload)
+-        assert decoded["signal"] == "SIGTERM"
+-        assert "weird" in decoded
+-
+ # ---------------------------------------------------------------------------
+ # persisted snapshots must never include process argv (#112459)
+ # ---------------------------------------------------------------------------
+@@ -71,7 +56,7 @@ class TestArgvFreePersistence:
+     @pytest.mark.platforms("linux")
+     def test_snapshot_and_log_line_identify_process_without_argv(self, child_with_secret_argv):
+         """/proc-backed summaries keep pid/name/ppid/state but never the command line, so neither
+-        the JSON snapshot nor the warning line can carry a credential from a parent's argv."""
++        the snapshot dict nor the warning line can carry a credential from a parent's argv."""
+         summary = sf._proc_summary(child_with_secret_argv.pid)
+         assert summary["pid"] == child_with_secret_argv.pid
+         assert summary["name"]  # identity survives
+@@ -80,7 +65,7 @@ class TestArgvFreePersistence:
+         ctx = sf.snapshot_shutdown_context(signal.SIGTERM)
+         ctx["parent"] = summary
+         line = sf.format_context_for_log(ctx)
+-        assert _ARGV_CANARY not in line and _ARGV_CANARY not in sf.context_as_json(ctx)
++        assert _ARGV_CANARY not in line and _ARGV_CANARY not in repr(ctx)
+         assert f"parent_pid={child_with_secret_argv.pid}" in line
+ 
+ # ---------------------------------------------------------------------------

@@ -1,0 +1,28 @@
+{
+ "fork_pr": 41,
+ "title": "fix(process): tree-kill the nohup'd worker in sandbox background kills",
+ "claim": "Killing a sandbox-backed (docker/ssh/modal/...) background process must terminate the nohup'd user command, not only the wrapper subshell whose PID is recorded.",
+ "verdict": "EXTERNAL-OWNED",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "NOT_TESTED (owned upstream). Need confirmed by source: main tools/process_registry.py spawn_via_env L1400-1404 `( nohup bash -lc CMD > log 2>&1; rc=$?; ... ) & echo $! > pid` records the wrapper PID, and _signal_kill sandbox branch runs `kill {session.pid}` only.",
+  "green": "NOT_TESTED",
+  "negative_control": "NOT_TESTED",
+  "adjacent": "NOT_TESTED",
+  "source": "see red"
+ },
+ "upstream_overlap": [
+  "#125004 (OPEN, MERGEABLE, Adolanium, 2026-09-27) 'fix(process): kill the whole sandbox background tree, not just the wrapper', Fixes #125003 (OPEN). Uses `set -m` + `kill -TERM -- -<pgid>` + `trap : TERM` so the exit file still records 143, with a real-bash TestSandboxKillTree.",
+  "#129674 / #128735 (OPEN, Froraut) sandbox background jobs cwd/exit/log, adjacent."
+ ],
+ "branch": null,
+ "files": [
+  "tools/process_registry.py",
+  "tools/environments/local.py",
+  "tests/tools/test_process_registry.py",
+  "tests/tools/test_local_temp_dir.py"
+ ],
+ "size": "fork leaf +441/-9; no rebuild",
+ "depends_on": null,
+ "notes": "#125004 is smaller (+10/-4 prod) and keeps exit-code capture; ours adds a .worker_pid artifact plus a local.py cleanup regex change. Not worth competing. Possible review support on #125004: verify group kill when the sandbox shell lacks job control, and SIGKILL escalation parity with the host path (ours had TERM->KILL escalation). Kanban baggage ignored."
+}

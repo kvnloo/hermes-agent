@@ -1,0 +1,31 @@
+{
+  "fork_pr": 155,
+  "title": "fix(terminal): coerce string notify true/false (#123345)",
+  "claim": "terminal(background=true, notify=<bool-ish string>) must map recognized true/false tokens onto notify_on_complete instead of failing with 'notify must be true/false', while unrecognized values stay fail-closed.",
+  "verdict": "EXTERNAL-OWNED",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "source": "Need is real on main: tools/terminal_tool.py:_handle_terminal (L1602-1613) only accepts isinstance(notify,bool)/list; tools/arg_coercion.coerce_tool_args skips props without a top-level 'type' (notify is anyOf boolean|array), so a string 'true' reaches the handler. Probe through real coerce_tool_args+_handle_terminal on main: {'background':'true','notify':'true'} -> background coerced to True, notify stays 'true' -> error 'notify must be true/false ...'; foreground {'notify':'false'} -> wrongly refused with 'notify/heartbeat only apply to background commands'.",
+    "red": "fork test tests/tools/test_terminal_notify_coerce.py on main: 12 failed / 9 passed, e.g. AssertionError: {'error': 'notify must be true/false (notify on exit) or a list of strings (notify on output pattern match).'} for notify='true'/'false'/'1'/'yes'/'on'/' True '.",
+    "green": "fork fix rebuilt on main (one trivial conflict: heartbeat error text drift) -> 21/21 fork tests + 2 dispatch-path probes pass (23 passed).",
+    "negative_control": "disabling the str branch of _coerce_notify_arg -> 15 failed (13 fork tests + 2 probes).",
+    "adjacent": "with fork fix: test_terminal_notify_coerce, test_process_heartbeat, test_watch_patterns, test_notify_on_complete, test_terminal_tool, tests/agent/test_tool_arg_coercion -> 90 passed, 0 failed.",
+    "external_cross_check": "Fork tests run against external fixes applied to main: #123448 (WYSTAF) -> 20 passed / 3 failed: dispatch probe 'foreground notify=\"false\" is a no-op' still refused (it coerces AFTER the foreground truthiness gate, and arg_coercion still skips notify), plus numeric 2 / 1.5 accepted (deliberate design choice in #123448, not a defect). #123356 (webtecnica, needs a one-line rebase for heartbeat message drift) -> 23/23 pass because its arg_coercion union fix coerces before the handler."
+  },
+  "upstream_overlap": [
+    "NousResearch/hermes-agent#123345 OPEN issue (Ethan-Vex), labels type/bug P2 tool/terminal, no assignee",
+    "#123356 OPEN webtecnica 2026-09-26T02:30Z 'Closes #123345' (arg_coercion anyOf union + terminal bool coercion) - earliest implementation, predates fork #155 (03:53Z)",
+    "#123448 OPEN WYSTAF 2026-09-26 'Closes #123345', MERGEABLE, terminal_tool-only _coerce_notify",
+    "#123389 OPEN salch-cred bundled p2 PR incl. arg_coercion anyOf boolean coercion for #123345",
+    "#127557 OPEN Finn763 (Closes #109115) splits notify into boolean notify + watch_patterns; would also make arg_coercion coerce 'true'/'false' as a side effect",
+    "#23213 OPEN liuhao1024 2026-05-10 'fix(mcp): resolve anyOf/oneOf union types in coerce_tool_args' - older generic arg_coercion union fix that would also cover notify"
+  ],
+  "branch": null,
+  "files": [
+    "tools/terminal_tool.py",
+    "tests/tools/test_terminal_notify_coerce.py"
+  ],
+  "size": "+117/-13 (fork diff, not packaged)",
+  "depends_on": "NousResearch/hermes-agent#123345 (owned by external PRs)",
+  "notes": "Hermes audit said #123345 is 'an OPEN issue, not a verified live implementation owner' - wrong: three external OPEN implementation PRs target it (two with Closes #123345) and all predate or are near-simultaneous with fork #155. Do not promote. Review-support worth offering: on #123448, the residual that a foreground call with notify='false' (string) is still refused by the truthiness gate because coercion runs after it (coerce-before-gate as in fork #155 fixes it), and our fail-closed / foreground-refusal tests. Root cause of a native JSON bool becoming a string is not proven by anyone (reporter claims a JSON boolean was sent); NOT_TESTED: provider-side round-trip. Fork commit author email kevin@loo.ai is unmapped (check-attribution failed on the fork PR)."
+}

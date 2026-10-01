@@ -1,0 +1,28 @@
+{
+ "fork_pr": 32,
+ "title": "fix(desktop): prevent stale model-confirm toast from persisting a switch",
+ "claim": "Clicking a selection-guard 'Confirm' toast that has gone stale (newer assignment, or profile/backend switched while it lingered) must not resend the assignment with confirm_expensive_model:true and persist the old model over newer intent / onto the wrong profile.",
+ "verdict": "NEEDS-REWORK",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "NOT RUN - fork's target file apps/desktop/src/store/cron-model-impact.ts (and its test, plus store/cron-model-impact-scope.ts providing beginCronModelImpactAssignment/getCronModelImpactScope/onCronModelImpactScopeInvalidated) was DELETED on main by 0469740ab3 'feat(cron): jobs follow the main agent model at fire time' (teknium1, merged via #113679). The fork's guard `currentResponseScope(profile, connection, generation)` has no equivalent on MAIN; the patch cannot be applied or ported line-for-line.",
+  "green": "n/a",
+  "negative_control": "n/a",
+  "adjacent": "n/a",
+  "source": "Successor MAIN apps/desktop/src/store/model-assignment.ts:42-83 keeps the confirm flow with NO staleness guard: `const accepted = await confirmModelWarning(...)` -> `result = await assign({ ...request, confirm_expensive_model: true })`. Residual variant still reachable by reading: (1) warning toasts never auto-dismiss (store/notifications.ts:60-64 defaultDuration('warning') = 0) and nothing dismisses `model-warning-confirm-*` on profile/connection switch (the cron scope listener was removed); (2) unscoped retry resolves profile/connection at CLICK time (api/models.ts:123 setModelAssignment -> api/client.ts:219-235 capabilityScoped(undefined) -> profileScoped()/connectionScoped() read $apiRequestScope.get()); (3) Settings caller (app/settings/model-settings.tsx:741-760) only checks profileEpoch AFTER setMainModelAssignment resolves, i.e. after the retry already persisted. So Apply on profile A -> switch to B while the toast lingers -> Confirm persists the guarded model on B. The fork's 'generation bump' variant is largely unreachable on MAIN in Settings: Apply is disabled while `applying` (model-settings.tsx:1005)."
+ },
+ "upstream_overlap": [
+  "0469740ab3 / #113679 MERGED teknium1 - deleted the code the fork patches and moved setMainModelAssignment to store/model-assignment.ts without the scope/generation machinery.",
+  "#103517 OPEN 686f6c61 'confirm guarded auxiliary model assignments' (last update 2026-09-05) - touches the now-deleted cron-model-impact.ts for aux assignments; different claim, itself stale.",
+  "#118894 OPEN issue adamking77 - Settings model applies land in the backend launch home; sibling profile-routing hazard, not the same defect.",
+  "No kvnloo upstream PR."
+ ],
+ "branch": null,
+ "files": [
+  "apps/desktop/src/store/cron-model-impact.ts",
+  "apps/desktop/src/store/cron-model-impact.test.ts"
+ ],
+ "size": "+0/-0 (fork leaf +149/-2 excl. kanban)",
+ "depends_on": null,
+ "notes": "Rework plan if promoted later (low priority, narrow race): in store/model-assignment.ts setMainModelAssignment, when scopeProfile == null snapshot the request scope (getApiRequestProfile() + getApiRequestConnection()) before the first assign; after confirmModelWarning resolves, if the snapshot no longer matches, skip the confirm_expensive_model resend, notify translateNow('desktop.modelSwitchStaleNotice') (same contract as lib/guarded-model-switch.ts surfaceModelSwitchConfirm isStale), and throw/return not-applied; optionally dismiss the active confirm toast on profile switch. New behaviour-contract test file store/model-assignment.test.ts (mock @/hermes setModelAssignment + notifications): stale scope -> no second call; same scope -> resend with confirm_expensive_model:true. Needs maintainer-acceptable choice of throw vs return for onboarding callers. Kanban baggage ignored."
+}

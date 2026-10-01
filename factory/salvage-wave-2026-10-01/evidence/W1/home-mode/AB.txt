@@ -1,0 +1,13 @@
+main = af92ea8e5b852518c523c3e8b2cbd95f0f3d79dc (refs/w1/main)
+cmd: HOME=$S/testhome-W1-home-mode HERMES_HOME=$S/testhome-W1-home-mode/.hermes HERMES_PYTHON=$PY bash scripts/run_tests.sh tests/tools/test_terminal_scope_home_mode.py [-q + adjacent]
+test file: test_terminal_scope_home_mode.py (adapted from kvnloo fork #40)
+  A = test_profile_terminal_scope_projects_home_mode[profile|auto]  (build_profile_terminal_scope carries TERMINAL_HOME_MODE)
+  B = test_routed_profile_home_mode_drives_subprocess_home[profile-auto|auto-profile] (gateway _profile_runtime_scope -> get_subprocess_home)
+
+main:            A 0/2, B 0/2  (scope.get('TERMINAL_HOME_MODE') is None; get_subprocess_home follows ambient os.environ)
+#73117 merged (clean):   A 2/2, B 0/2 ; own kanban tests + test_terminal_config_env_sync + test_terminal_scope_multiplex pass (19 passed / 2 failed = the 2 B cases)
+#129844 merged (clean):  A 2/2, B 0/2 ; its rewritten test_terminal_config_env_sync + multiplex pass (16 passed / 2 failed = the 2 B cases)
+#128032:  CONFLICT on main (tools/environments/local.py); run at PR head: A 0/2, B 0/2 (does not touch TERMINAL_CONFIG_ENV_MAP / terminal_scope / get_subprocess_home)
+#73117 + B fold-in (foldin-get_subprocess_home-scope.diff): A 2/2, B 2/2; adjacent 11 files (kanban_worker_terminal_profile_env, terminal_config_env_sync, terminal_scope_multiplex, copilot_acp_client, file_safety_write_credentials, skill_utils, file_tools_tilde_profile, spawn_site_child_env, ssh_remote_cwd, subprocess_home_isolation + regression): 99 passed / 0 failed
+negative control for fold-in = #73117 alone (B 0/2).
+#73117 then #129844: one-line textual conflict in TERMINAL_CONFIG_ENV_MAP (both add "home_mode" at different tuple positions).

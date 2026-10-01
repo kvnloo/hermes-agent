@@ -1,0 +1,33 @@
+{
+  "fork_pr": 96,
+  "title": "docs: add Open in new window / Set as default to at-rest square menu list",
+  "claim": "The at-rest square context menu list omits Open in new window and Set as default.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "red": "website/docs/user-guide/multi-connection-desktop.md:231-233 on main: \"Right-click on an at-rest square offers **Switch to**, **Color**, **Rename**, **Edit SOUL.md** and **Delete**\".",
+    "green": "Adds **Open in new window** (when the app can open one) and **Set as default** before Switch to.",
+    "negative_control": "N/A for docs (no executable behaviour). Equivalent check: the stale phrase is present on main and absent on the bundle (grep given in red/green).",
+    "adjacent": "python3 website/scripts/check_doc_links.py on the bundle tree: OK (no route-style links). All 7 B1 bundles cherry-pick together onto main cleanly, and each pairs cleanly with B2's current docs2-update/docs2-desktop/docs2-gateway/docs2-memory bundles.",
+    "source": "apps/desktop/src/app/chat/sidebar/profile-switcher.tsx:1319-1350 RestSquare menu begins with <ProfileLaunchMenuSection>; profile-launch-menu.tsx:22-55 renders Open in new window when canOpenNewWindow() and Set as default."
+  },
+  "upstream_overlap": [
+    "No open external PR/issue for this claim (gh search prs/issues; open docs PRs touching the same files edit other sections)"
+  ],
+  "branch": "ready/docs-desktop",
+  "bundle": {
+    "branch": "ready/docs-desktop",
+    "commit": "2ee1217746",
+    "subject": "docs(desktop): sync timeline rail, Simple-mode rail, square menu and launch precedence",
+    "bundle_size": "+13/-9",
+    "patch": "patches/docs-desktop.patch",
+    "body": "patches/docs-desktop.body.md"
+  },
+  "files": [
+    "website/docs/user-guide/multi-connection-desktop.md"
+  ],
+  "size": "+4/-3",
+  "depends_on": null,
+  "fork_head": "d93e6fc8daadc4845b40d099567cbaa407ddbf83",
+  "notes": ""
+}

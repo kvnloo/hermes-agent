@@ -1,0 +1,51 @@
+state=compose ref=refs/w2/queued-paste/mcompose head=c0a18b7d4f715e87855a2c8e0c1d0ec31d9876da
+npm notice run hermes-agent@1.0.0 npx
+npm notice run 'vitest' run src/__tests__/queuedPasteSubmission.test.tsx src/__tests__/queuedPasteProbe.test.tsx
+
+ RUN  v4.1.10 /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/paste/ui-tui
+
+ ❯ src/__tests__/queuedPasteProbe.test.tsx (6 tests | 1 failed) 74ms
+     × an edited-and-resubmitted queued collapsed paste is delivered expanded ('busy queue-mode item') 14ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/__tests__/queuedPasteProbe.test.tsx > probe: queue-edit submit (cycleQueue then Enter) > an edited-and-resubmitted queued collapsed paste is delivered expanded ('busy queue-mode item')
+AssertionError: expected { prompts: [], queuedAfter: 1, …(1) } to deeply equal { …(3) }
+
+- Expected
++ Received
+
+  {
+-   "prompts": [
+-     "review this: line one
+- line two
+- line three
+- line four
+- line five",
++   "prompts": [],
++   "queuedAfter": 1,
++   "sys": [
++     "cannot submit: 1 collapsed paste token missing — their text was lost before submission ([[ line one line two line three line four line five [5 lines). The composer still has what you typed, so nothing is lost.",
+    ],
+-   "queuedAfter": 0,
+-   "sys": [],
+  }
+
+ ❯ src/__tests__/queuedPasteProbe.test.tsx:226:126
+    224|       ui.editAndSubmitQueued(0)
+    225|       await settle()
+    226|       expect({ prompts: ui.prompts, queuedAfter: ui.queueLength(), sys…
+       |                                                                                                                              ^
+    227|         prompts: [`review this: ${log.text}`],
+    228|         queuedAfter: 0,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 11 passed (12)
+   Start at  23:22:24
+   Duration  1.53s (transform 2.17s, setup 0ms, import 2.64s, tests 147ms, environment 0ms)
+
+=== typecheck
+typecheck rc=0

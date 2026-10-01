@@ -1,0 +1,119 @@
+▶ not activated — using HERMES_PYTHON: /workspace/hermes-home/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~2 tests) under ['tests/hermes_cli/test_plugin_doctor_scope_release.py']; running with -j 20
+[100.0% |     2/~2 | ✓0 | ✗2] ✗ tests/hermes_cli/test_plugin_doctor_scope_release.py (2✗, 1.9s)
+
+  ╔╍ Failed: tests/hermes_cli/test_plugin_doctor_scope_release.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ 
+  ║     def test_repeated_doctor_runs_keep_bare_namespace(tmp_path: Path) -> None:
+  ║         """Two doctor runs of a same-named plugin in one process must both import
+  ║         under the bare ``hermes_plugins.<slug>`` namespace (run 1 must not keep its
+  ║         _BARE_MODULE_SCOPE claim and force run 2 into ``__home_<digest>``)."""
+  ║         from hermes_cli.plugin_dev import _doctor_runtime
+  ║     
+  ║         _write_tool_plugin(tmp_path / "a" / "barepro", "barepro", "barepro_a")
+  ║         _write_tool_plugin(tmp_path / "b" / "barepro", "barepro", "barepro_b")
+  ║     
+  ║         names = []
+  ║         for root in ("a", "b"):
+  ║             with _doctor_runtime(tmp_path / root / "barepro") as host:
+  ║                 loaded = host.manager._plugins.get(host.manifest.key or host.manifest.name)
+  ║                 names.append(loaded.module.__name__)
+  ║     
+  ║ >       assert names == ["hermes_plugins.barepro", "hermes_plugins.barepro"]
+  ║ E       AssertionError: assert ['hermes_plug...18cc76ce5412'] == ['hermes_plug...gins.barepro']
+  ║ E         
+  ║ E         At index 1 diff: 'hermes_plugins.barepro__home_18cc76ce5412' != 'hermes_plugins.barepro'
+  ║ E         Use -v to get more diff
+  ║ 
+  ║ tests/hermes_cli/test_plugin_doctor_scope_release.py:53: AssertionError
+  ║ ------------------------------ Captured log call -------------------------------
+  ║ INFO     hermes_cli.plugin_capabilities:plugin_capabilities.py:144 capability_check plugin=barepro capability=tools.override decision=deny checked_by=plugin_capability_granted evidence=not granted
+  ║ INFO     hermes_cli.plugin_capabilities:plugin_capabilities.py:144 capability_check plugin=barepro capability=tools.override decision=deny checked_by=plugin_capability_granted evidence=not granted
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/hermes_cli/test_plugin_doctor_scope_release.py::test_doctor_releases_module_scope_attribution
+  ║ FAILED tests/hermes_cli/test_plugin_doctor_scope_release.py::test_repeated_doctor_runs_keep_bare_namespace
+  ║ 2 failed in 0.57s
+  ║
+  ║  Repro: python -m pytest tests/hermes_cli/test_plugin_doctor_scope_release.py -q
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 2.0s (20 workers) ===
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 1.9s  (runner wall: 2.0s, parallelism: 20x)
+  P50: 1.93s  P90: 1.93s  P95: 1.93s  P99: 1.93s  Max: 1.93s
+  <1s: 0 files (0%)  <2s: 1 files (100%)
+  Top 10 slowest:
+      1.93s  tests/hermes_cli/test_plugin_doctor_scope_release.py
+
+=== Failure output ===
+
+--- tests/hermes_cli/test_plugin_doctor_scope_release.py ---
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+________________ test_doctor_releases_module_scope_attribution _________________
+
+tmp_path = PosixPath('/var/tmp/hermes-pytest-1000/r-fx0eeqa8/pytest-of-kvn/pytest-0/test_doctor_releases_module_sc0')
+
+    def test_doctor_releases_module_scope_attribution(tmp_path: Path) -> None:
+        """After doctor returns, no module namespace may still map to its (deleted)
+        temp HERMES_HOME scope."""
+        from hermes_cli.plugin_dev import doctor_plugin
+        from tools.registry import registry
+    
+        _write_tool_plugin(tmp_path / "scopeprobe", "scopeprobe", "scopeprobe_ping")
+        before = {ns: set(s) for ns, s in registry._plugin_module_scopes.items()}
+    
+        report = doctor_plugin(tmp_path / "scopeprobe")
+    
+        assert report.ok, report.format_text()
+>       assert registry.plugin_scope_for_module("hermes_plugins.scopeprobe") is None
+E       AssertionError: assert '/var/tmp/hermes-pytest-1000/r-fx0eeqa8/hermes-plugin-doctor-pyz5coy6' is None
+E        +  where '/var/tmp/hermes-pytest-1000/r-fx0eeqa8/hermes-plugin-doctor-pyz5coy6' = plugin_scope_for_module('hermes_plugins.scopeprobe')
+E        +    where plugin_scope_for_module = <tools.registry.ToolRegistry object at 0x7f76cfb7be50>.plugin_scope_for_module
+
+tests/hermes_cli/test_plugin_doctor_scope_release.py:34: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     hermes_cli.plugin_capabilities:plugin_capabilities.py:144 capability_check plugin=scopeprobe capability=tools.override decision=deny checked_by=plugin_capability_granted evidence=not granted
+________________ test_repeated_doctor_runs_keep_bare_namespace _________________
+
+tmp_path = PosixPath('/var/tmp/hermes-pytest-1000/r-fx0eeqa8/pytest-of-kvn/pytest-0/test_repeated_doctor_runs_keep0')
+
+    def test_repeated_doctor_runs_keep_bare_namespace(tmp_path: Path) -> None:
+        """Two doctor runs of a same-named plugin in one process must both import
+        under the bare ``hermes_plugins.<slug>`` namespace (run 1 must not keep its
+        _BARE_MODULE_SCOPE claim and force run 2 into ``__home_<digest>``)."""
+        from hermes_cli.plugin_dev import _doctor_runtime
+    
+        _write_tool_plugin(tmp_path / "a" / "barepro", "barepro", "barepro_a")
+        _write_tool_plugin(tmp_path / "b" / "barepro", "barepro", "barepro_b")
+    
+        names = []
+        for root in ("a", "b"):
+            with _doctor_runtime(tmp_path / root / "barepro") as host:
+                loaded = host.manager._plugins.get(host.manifest.key or host.manifest.name)
+                names.append(loaded.module.__name__)
+    
+>       assert names == ["hermes_plugins.barepro", "hermes_plugins.barepro"]
+E       AssertionError: assert ['hermes_plug...18cc76ce5412'] == ['hermes_plug...gins.barepro']
+E         
+E         At index 1 diff: 'hermes_plugins.barepro__home_18cc76ce5412' != 'hermes_plugins.barepro'
+E         Use -v to get more diff
+
+tests/hermes_cli/test_plugin_doctor_scope_release.py:53: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     hermes_cli.plugin_capabilities:plugin_capabilities.py:144 capability_check plugin=barepro capability=tools.override decision=deny checked_by=plugin_capability_granted evidence=not granted
+INFO     hermes_cli.plugin_capabilities:plugin_capabilities.py:144 capability_check plugin=barepro capability=tools.override decision=deny checked_by=plugin_capability_granted evidence=not granted
+=========================== short test summary info ============================
+FAILED tests/hermes_cli/test_plugin_doctor_scope_release.py::test_doctor_releases_module_scope_attribution
+FAILED tests/hermes_cli/test_plugin_doctor_scope_release.py::test_repeated_doctor_runs_keep_bare_namespace
+2 failed in 0.57s
+
+=== 1 file with test failures (2 tests failed) ===
+  tests/hermes_cli/test_plugin_doctor_scope_release.py  (2 tests failed)

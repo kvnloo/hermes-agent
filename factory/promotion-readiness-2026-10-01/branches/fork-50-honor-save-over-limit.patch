@@ -1,0 +1,87 @@
+From 4d0e03c8a152e5122d158446e1f564b0ec9b6abd Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:19:37 -0500
+Subject: [PATCH] fix(trajectory-compressor): honor save_over_limit when
+ writing output
+
+CompressionConfig.save_over_limit (processing.save_over_limit in the YAML
+config) is meant to keep trajectories that are still over the token target
+after compression out of the output when set to false, but the output write
+loop in _process_directory_async never read it. Every trajectory with a result was
+written, so setting save_over_limit: false still leaked over-budget samples
+into the compressed dataset, while the report counted them as
+"Still over limit".
+
+The write loop now skips outcomes whose metrics.still_over_limit is true when
+save_over_limit is false. Timed-out entries are still dropped as before, and
+error-path entries (original kept, empty metrics) are unaffected. All entry
+points (file, sampled file, directory, scripts/sample_and_compress.py) go
+through process_directory, so this is the single write site.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tests/test_trajectory_compressor.py | 23 +++++++++++++++++++++++
+ trajectory_compressor.py            |  5 +++--
+ 2 files changed, 26 insertions(+), 2 deletions(-)
+
+diff --git a/tests/test_trajectory_compressor.py b/tests/test_trajectory_compressor.py
+index af8ec8353a..b24d12f515 100644
+--- a/tests/test_trajectory_compressor.py
++++ b/tests/test_trajectory_compressor.py
+@@ -1,6 +1,7 @@
+ """Tests for trajectory_compressor.py — config, metrics, and compression logic."""
+ 
+ import importlib
++import json
+ import os
+ import sys
+ from types import SimpleNamespace
+@@ -462,3 +463,25 @@ class TestCompressionNetSavingsGuard:
+         assert sum(tc.count_turn_tokens(compressed)) == before
+         tc._generate_summary.assert_not_called()
+ 
++
++@pytest.mark.parametrize("save_over_limit, written", [(True, ["over", "under"]), (False, ["under"])])
++def test_save_over_limit_controls_writing_still_over_limit_trajectories(tmp_path, save_over_limit, written):
++    guard = TestCompressionNetSavingsGuard()
++    config = guard._config()
++    config.save_over_limit = save_over_limit
++    tc = _make_compressor(config)
++    tc._generate_summary_async = AsyncMock()
++    entries = [
++        {"id": "over", "conversations": guard._tiny_middle_trajectory()},  # cannot shrink: still over limit
++        {"id": "under", "conversations": [{"from": "system", "value": "sys"}, {"from": "human", "value": "hi"}]},
++    ]
++    in_dir, out_dir = tmp_path / "in", tmp_path / "out"
++    in_dir.mkdir()
++    (in_dir / "t.jsonl").write_text("".join(json.dumps(e) + "\n" for e in entries), encoding="utf-8")
++
++    tc.process_directory(in_dir, out_dir)
++
++    lines = (out_dir / "t.jsonl").read_text(encoding="utf-8").splitlines()
++    assert [json.loads(line)["id"] for line in lines] == written
++    assert tc.aggregate_metrics.trajectories_still_over_limit == 1
++    tc._generate_summary_async.assert_not_called()
+diff --git a/trajectory_compressor.py b/trajectory_compressor.py
+index 9e76ec23da..f8893d34e7 100644
+--- a/trajectory_compressor.py
++++ b/trajectory_compressor.py
+@@ -654,12 +654,13 @@ Write only the summary, starting with "[CONTEXT SUMMARY]:" prefix."""
+             outcomes = await asyncio.gather(*(self._process_one(run, *item) for item in all_entries))
+             progress.remove_task(run.status_task)
+ 
+-        # Write results preserving original order; timed-out entries are dropped.
++        # Write results preserving original order; timed-out entries are dropped, and so are
++        # trajectories still over the token target when save_over_limit is off.
+         console.print("\n[dim]Writing output files...[/dim]")
+         output_dir.mkdir(parents=True, exist_ok=True)
+         results = {f: [] for f in jsonl_files}
+         for (file_path, _, _), outcome in zip(all_entries, outcomes):
+-            if outcome is not None:
++            if outcome is not None and (self.config.save_over_limit or not outcome[1].still_over_limit):
+                 results[file_path].append(outcome[0])
+         for file_path in jsonl_files:
+             _write_jsonl(output_dir / file_path.name, results[file_path])
+-- 
+2.55.0
+

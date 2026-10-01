@@ -1,0 +1,147 @@
+npm notice run hermes-agent@1.0.0 npx
+npm notice run 'vitest' run electron/git-review-ops.test.ts electron/no-console-git.test.ts electron/git-binary-candidates.test.ts electron/git-repo-scan.test.ts electron/git-root.test.ts electron/git-worktree-ops.test.ts src/components/chat/diff-lines.test.ts electron/review-diff-tracked.test.ts
+
+ RUN  v4.1.10 /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/reviewdiff-tracked/apps/desktop
+
+ ❯ |electron| electron/git-review-ops.test.ts (0 test)
+Preparing worktree (new branch 'wt')
+Switched to a new branch 'rawr'
+Switched to a new branch 'rawr'
+Cloning into '/tmp/vitest-lcdGpH/hermes-clone-57CUgg'...
+done.
+fatal: no upstream configured for branch 'feature-branch'
+Note: switching to 'f608460d0451a63fe5188f57b7d3d0650640e5c4'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+Note: switching to 'f608460d0451a63fe5188f57b7d3d0650640e5c4'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+Note: switching to '0202ea0aaf1efe80ec7de6b34c29c864a008d65e'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+Cloning into '/tmp/vitest-lcdGpH/hermes-normal-typo-clone-XTbWpt'...
+done.
+(node:3216255) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3216249) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Cloning into '/tmp/vitest-lcdGpH/hermes-normal-convert-config-clone-Jyrmiw'...
+done.
+Note: switching to '0202ea0aaf1efe80ec7de6b34c29c864a008d65e'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+Cloning into '/tmp/vitest-lcdGpH/hermes-plus-base-clone-HwI18e'...
+done.
+Note: switching to '0202ea0aaf1efe80ec7de6b34c29c864a008d65e'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+Cloning into '/tmp/vitest-lcdGpH/hermes-branches-remote-clone-b7bRdI'...
+done.
+Cloning into '/tmp/vitest-lcdGpH/hermes-convert-remote-clone-VvMWVM'...
+done.
+Cloning into '/tmp/vitest-lcdGpH/hermes-convert-remote-default-clone-ZShYxq'...
+done.
+Switched to a new branch 'rawr'
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |electron| electron/git-review-ops.test.ts [ electron/git-review-ops.test.ts ]
+Error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected `}` but found `EOF`
+     [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m electron/git-review-ops.test.ts:435:4 [38;5;246m][0m
+     [38;5;246m│[0m
+ [38;5;246m155 │[0m [38;5;249mt[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249m([0m[38;5;249m'[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mv[0m[38;5;249mi[0m[38;5;249me[0m[38;5;249mw[0m[38;5;249mC[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249ma[0m[38;5;249mt[0m[38;5;249me[0m[38;5;249mP[0m[38;5;249mr[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249ml[0m[38;5;249ms[0m[38;5;249m [0m[38;5;249mb[0m[38;5;249ma[0m[38;5;249mc[0m[38;5;249mk[0m[38;5;249m [0m[38;5;249mt[0m[38;5;249mo[0m[38;5;249m [0m[38;5;249mt[0m[38;5;249mh[0m[38;5;249me[0m[38;5;249m [0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249mi[0m[38;5;249mc[0m[38;5;249m [0m[38;5;249mm[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249ms[0m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249m [0m[38;5;249mw[0m[38;5;249mh[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249mg[0m[38;5;249mh[0m[38;5;249m [0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mp[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249ms[0m[38;5;249m [0m[38;5;249mn[0m[38;5;249mo[0m[38;5;249m [0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249md[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249mr[0m[38;5;249m'[0m[38;5;249m,[0m[38;5;249m [0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249my[0m[38;5;249mn[0m[38;5;249mc[0m[38;5;249m [0m[38;5;249m([0m[38;5;249m)[0m[38;5;249m [0m[38;5;249m=[0m[38;5;249m>[0m[38;5;249m [0m{
+ [38;5;240m    │[0m                                                                                                ┬  
+ [38;5;240m    │[0m                                                                                                ╰── Opened here
+ [38;5;240m    │[0m 
+ [38;5;246m435 │[0m [38;5;249m}[0m[38;5;249m)[0m
+ [38;5;240m    │[0m    │ 
+ [38;5;240m    │[0m    ╰─ `}` expected
+[38;5;246m─────╯[0m
+
+  Plugin: vite:oxc
+  File: /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/reviewdiff-tracked/apps/desktop/electron/git-review-ops.test.ts
+ ❯ transformWithOxc ../../../../../../../../../../workspace/hermes-home/hermes-agent/node_modules/vite/dist/node/chunks/node.js:4090:19
+ ❯ TransformPluginContext.transform ../../../../../../../../../../workspace/hermes-home/hermes-agent/node_modules/vite/dist/node/chunks/node.js:4161:26
+ ❯ EnvironmentPluginContainer.transform ../../../../../../../../../../workspace/hermes-home/hermes-agent/node_modules/vite/dist/node/chunks/node.js:30796:51
+ ❯ loadAndTransform ../../../../../../../../../../workspace/hermes-home/hermes-agent/node_modules/vite/dist/node/chunks/node.js:20594:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 8 passed (9)
+      Tests  65 passed (65)
+   Start at  22:52:43
+   Duration  5.69s (transform 5.22s, setup 554ms, import 8.86s, tests 6.90s, environment 1.34s)
+

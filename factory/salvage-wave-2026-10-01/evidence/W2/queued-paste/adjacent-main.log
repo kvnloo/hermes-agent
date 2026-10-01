@@ -1,0 +1,12 @@
+state=main ref=refs/w2/main head=298a01c79b38018e029e50f77efe67c4a4fdbd40
+npm notice run hermes-agent@1.0.0 npx
+npm notice run 'vitest' run src/__tests__/attachments.test.ts src/__tests__/gatewayClientKillLatch.test.ts src/__tests__/inputSelectionClipboard.test.ts src/__tests__/libTextI18n.test.ts src/__tests__/orchestratorPromptSession.test.ts src/__tests__/platform.test.ts src/__tests__/queueScopeRenderer.test.tsx src/__tests__/queueSubmission.test.ts src/__tests__/submissionCore.test.ts src/__tests__/useComposerState.test.ts src/__tests__/useInputHandlers.test.ts src/__tests__/useQueue.test.ts src/__tests__/useSubmission.test.ts src/__tests__/createGatewayEventHandler.test.ts src/__tests__/voiceSubmitModeRenderer.test.tsx src/__tests__/startupLatency.test.ts src/__tests__/startupLatencyDashboard.test.ts src/__tests__/moaProgressActivity.test.ts src/__tests__/composerHighlights.test.ts
+
+ RUN  v4.1.10 /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/paste/ui-tui
+
+
+ Test Files  19 passed (19)
+      Tests  239 passed (239)
+   Start at  23:24:21
+   Duration  2.05s (transform 14.04s, setup 0ms, import 20.81s, tests 908ms, environment 3ms)
+

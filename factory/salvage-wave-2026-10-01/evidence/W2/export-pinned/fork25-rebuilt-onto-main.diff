@@ -1,0 +1,15 @@
+diff --git a/hermes_cli/sessions_cmd.py b/hermes_cli/sessions_cmd.py
+index f275bc33b0..3f05ff0a62 100644
+--- a/hermes_cli/sessions_cmd.py
++++ b/hermes_cli/sessions_cmd.py
+@@ -330,6 +330,10 @@ def _cmd_export(db, args):
+             return
+         # Unlike prune/archive, export includes archived sessions.
+         filters["archived"] = None
++        # Export is a read-only superset (matches export_all / --session-id);
++        # don't inherit the destructive pinned-exclusion default from
++        # _prune_filter_where.
++        filters["include_pinned"] = True
+ 
+     def _redact(data):
+         if not args.redact or data is None:

@@ -1,0 +1,25 @@
+{
+ "fork_pr": 44,
+ "title": "fix(gateway): drain raft per-session turn IDs on teardown without turn_id",
+ "claim": "Finalizing a Raft session must release every turn id that session registered, even when the finalize carries no turn_id; today turns that never reached finalize_turn's per-turn on_session_end leak into _RAFT_TURN_IDS/_RAFT_PROMPT_TURN_IDS for the process lifetime.",
+ "verdict": "READY",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "On main with only the new test: TestRaftTurnTracking::test_session_finalize_without_turn_id_releases_the_sessions_turn_ids fails, AssertionError: assert 't1' not in ({'t1', 't2'} | {'t1', 't2'}).",
+  "green": "With _RAFT_TURN_SESSIONS + session drain: tests/gateway/test_raft_adapter.py 8/8 pass.",
+  "negative_control": "Replacing only the `released.update(...)` line in _forget_raft_context with `pass`: the new test fails again with the same assertion (7 passed, 1 failed).",
+  "adjacent": "test_raft_adapter, test_kanban_wake_acceptance, plugins/platforms/test_interactive_setup_reconfigure_gate, tools/test_spawn_site_child_env = 34 passed. ruff clean.",
+  "source": "main adapter.py _forget_raft_context discards turn ids only `if safe_turn_id`; _on_session_finalize passes kwargs.get('turn_id') which the gateway never supplies (gateway/run_shutdown.py _finalize_session_off_loop -> finalize_session(session_id, platform, reason)). agent/turn_finalizer.py is the only on_session_end(turn_id=...) site, and agent/conversation_loop.py _close_durable_failed_turn docstring states terminal-failure paths return without reaching finalize_turn."
+ },
+ "upstream_overlap": [
+  "None found: gh search prs/issues for _RAFT_TURN_IDS, 'raft turn ids leak', 'raft adapter leak', 'raft session_finalize'. Title-cache grep for raft shows only unrelated raft PRs (#59185 bridge exit, #72633 identity, #50369 proxy env)."
+ ],
+ "branch": "ready/fork-44-raft-turn-id-drain",
+ "files": [
+  "plugins/platforms/raft/adapter.py",
+  "tests/gateway/test_raft_adapter.py"
+ ],
+ "size": "+42/-3",
+ "depends_on": null,
+ "notes": "Rebuilt on main; the fork targeted _remember_raft_context, which no longer exists (registration now lives in _is_raft_context). Design differs from the fork. A turn->session map, released on both per-turn and session forget, keeps normal-turn memory identical to main. The fork's session->set map grew with every turn of a long session until finalize, and it missed turn ids added only by _on_pre_llm_call. The fork's real-world trigger (WS-orphan reaper) is weaker than the one found here: early-returned terminal-failure turns, documented in conversation_loop. Low-impact leak (small strings), but real and unbounded. Trimmed the fork's 151-line test to one behaviour test. Kanban baggage dropped. NOT_TESTED: live raft bridge. Commit 24f01553d8."
+}

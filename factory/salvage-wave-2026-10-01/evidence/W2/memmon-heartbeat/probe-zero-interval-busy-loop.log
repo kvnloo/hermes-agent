@@ -1,0 +1,3 @@
+interval_seconds=0.0: 24884 [MEMORY] records in 0.25 s (incl. baseline/started/shutdown/stopped)
+interval_seconds=-5.0: 25170 [MEMORY] records in 0.25 s (incl. baseline/started/shutdown/stopped)
+interval_seconds=300.0: 4 [MEMORY] records in 0.25 s (incl. baseline/started/shutdown/stopped)

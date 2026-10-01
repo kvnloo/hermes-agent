@@ -1,0 +1,165 @@
+[
+  {
+    "slug": "suggest-cache",
+    "issue": "fork #38 vs #85253 (no upstream issue)",
+    "title": "Desktop composer skill/MCP suggestion caches survive a profile or connection switch",
+    "main_sha": "af92ea8e5b852518c523c3e8b2cbd95f0f3d79dc",
+    "candidates": [
+      {
+        "pr": 85253,
+        "author": "pierrenode",
+        "created": "2026-08-13T11:26:22Z",
+        "last_activity": "2026-08-16T12:35:48Z (bot review comment; no maintainer activity)",
+        "mergeable_github": "UNKNOWN",
+        "merges_clean_on_pinned_main": "false: textual conflict in profile.ts $activeGatewayProfile.subscribe block (main added invalidateProfileListFetches()); resolved mechanically by keeping both. Semantic problem after merge: new import edge profile.ts -> suggestion-providers/{skill,mcp}.ts closes an import cycle back into profile.ts via app/chat/composer -> slash-refs.ts -> lib/desktop-slash-commands.ts -> lib/slash-completion-cache.ts",
+        "diff_size": "+37/-0, 2 files",
+        "has_tests": "yes: 2 tests in apps/desktop/src/store/profile.test.ts, both mock the suggestion-provider modules (which hides the cycle)",
+        "approach": "call invalidateMcpSuggestionIndex() + invalidateSkillSuggestionIndex() inside the profile.ts $activeGatewayProfile real-change block"
+      }
+    ],
+    "regression_test": {
+      "source": "new (behavioural; skill half adapted from fork #38 skill-cache.test.ts, MCP half new)",
+      "path": "apps/desktop/src/store/suggestion-providers/switch-cache.test.ts",
+      "tests": [
+        "suggestion caches on profile switch > does not offer the previous profile skill or MCP pills after switching profiles",
+        "suggestion caches on profile switch > keeps the caches when the profile is re-set to the same key",
+        "suggestion caches on connection switch with an unchanged profile key > does not offer the previous connection skill or MCP pills"
+      ],
+      "contract": "After a switch to another backend (profile switch, or a connection switch that keeps the same profile key), the skill and MCP draft providers answer from the new backend, not from their 5-minute module caches; a same-key re-set keeps the cache.",
+      "evidence_path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W1/suggest-cache/"
+    },
+    "ab_results": {
+      "main": {
+        "result": "fail",
+        "detail": "2 failed | 1 passed: profile switch still offers ['pr-ready'] and ['linear'] (expected []), connection switch same; same-key test passes."
+      },
+      "85253": {
+        "result": "fail (partial)",
+        "detail": "Profile-switch contract passes (skill + MCP) and same-key passes; same-profile-key connection switch still fails (out of its scope). Merged onto af92ea8e it introduces an import cycle: 62 of 91 desktop test files that import store/profile fail to load vs 1 on main (61 new; TypeError: Cannot read properties of undefined (reading 'subscribe') at lib/slash-completion-cache.ts:99, plus mock-chain errors). With the regression test importing store/profile before the providers, the test file itself fails to load the same way. Static ESM order check from src/main.tsx shows profile.ts is entered first, so the renderer would likely hit the same TDZ at boot (Electron boot NOT_TESTED). tsc -p . clean."
+      },
+      "fork#38 rebuilt (reference, not a candidate)": {
+        "result": "fail (partial)",
+        "detail": "skill.ts subscription + gateway-switch wipe call: skill assertions pass for profile and connection switch; MCP assertions fail (fork does not touch mcp.ts)."
+      },
+      "provider-subscription design (reference, not a candidate)": {
+        "result": "pass",
+        "detail": "fork #38 hunks + MCP twin (mcp.ts $activeGatewayProfile subscription + invalidateMcpSuggestionIndex() in wipeSessionListsForGatewaySwitch), +51/-0, 3 files: 3/3; 91 profile importers + suggestion-providers + gateway-switch.test.ts 96/97 files, 1251 tests (same single sparse-checkout fixture failure as main); no back-edge into profile.ts."
+      }
+    },
+    "adjacent_tests": {
+      "files": ["91 apps/desktop test files importing store/profile", "src/store/suggestion-providers/*", "src/store/gateway-switch.test.ts", "src/store/profile.test.ts", "tsc -p ."],
+      "result": "main 90/91 (use-session-actions.test.tsx fails on a ../tests/fixtures import missing from the sparse worktree, pre-existing artifact); #85253 merged 29/91 (61 new load failures); provider-subscription design 96/97 (same artifact only). profile.test.ts with #85253: 27/27."
+    },
+    "carrier": null,
+    "fold_ins": [],
+    "close_after_merge": [],
+    "exclude_reason": "No correct candidate. The only open PR, #85253, fixes the profile-switch half but, merged onto af92ea8e, its profile.ts -> suggestion-providers import closes a cycle back into profile.ts (via lib/slash-completion-cache.ts), which makes 61 additional desktop test files fail to load (62/91 vs 1/91 on main), and it does not cover a connection switch that keeps the same profile key. Making it sound means moving its only production hunk into provider-module subscriptions, which is a redesign of the PR, not a fold-in.",
+    "row": null,
+    "notes": "Support rather than compete: a review note on #85253 should report the cycle (61 test-file load failures on current main; its own tests mock the providers and hide it) and suggest the verified shape: subscribe to $activeGatewayProfile inside skill.ts and mcp.ts (the existing slash-completion-cache.ts pattern, as in fork #38) and call both invalidators in wipeSessionListsForGatewaySwitch() (fork #38 hunk, extended to MCP) for same-profile-key connection switches. Design diff and test saved in the evidence dir (provider-subscription-design.diff, switch-cache.test.ts). This contradicts the fork-38 verdict note that #85253's profile.ts placement is the better one: that was true at its Aug-13 base, not on current main. No other open PR invalidates these caches (searched invalidateSkillSuggestionIndex, invalidateMcpSuggestionIndex, suggestion-providers, wipeSessionListsForGatewaySwitch; #82823/#89915/#104680/#106041 touch neighbouring files but not these caches). Co-authored-by if the design is later carried: pierrenode <298902573+pierrenode@users.noreply.github.com>, Kevin Rajan <7121943+kvnloo@users.noreply.github.com>."
+  },
+  {
+    "slug": "reviewdiff-tracked",
+    "issue": "#81160 / #81161 (carrier's issues); the defect itself has no issue: reviewDiff/review_diff (unstaged) renders a clean or stale-staged tracked file as a new-file all-add",
+    "title": "Review pane unstaged diff synthesizes a 'new file mode' all-add for tracked files with an empty unstaged diff (Electron + Python twin)",
+    "main_sha": "af92ea8e5b852518c523c3e8b2cbd95f0f3d79dc",
+    "candidates": [
+      {
+        "pr": 81164,
+        "author": "thelonewander3r (commit author Eman <eman1369a@gmail.com>)",
+        "created": "2026-08-07T15:46:47Z",
+        "last_activity": "2026-09-09T14:42:21Z (CI retrigger commit; no review)",
+        "mergeable_github": "CONFLICTING (DIRTY); labels type/bug, P2, comp/desktop, comp/cli, sweeper:risk-compatibility",
+        "merges_clean_on_pinned_main": "false: git-review-ops.ts x2 (main replaced the raw execFile --no-index call with execGit from no-console-git; PR replaced it with untrackedDiff) and git-review-ops.test.ts x2 (main's reviewCreatePr import + file-wide execFile mock vs PR's appended tests). Mechanical resolution builds and passes the regression test, but the PR's new helpers still spawn git with raw execFile, so 8 of its own tests fail under main's execFile mock until ported to execGit (+21/-22).",
+        "diff_size": "+908/-46, 15 files",
+        "has_tests": "yes: +288 in git-review-ops.test.ts, diff-lines.test.ts, tests/hermes_cli/test_web_git_review_pathspecs.py (none for the tracked-file case)",
+        "approach": "resolve untracked rows through `git ls-files --others --exclude-standard` in both reviewDiff (Electron) and review_diff (Python); a tracked file resolves to nothing, so ''. Also literalizes all pathspecs, expands untracked directories, and changes staged rows to diff HEAD..worktree."
+      },
+      {
+        "pr": 95554,
+        "author": "sprmn24",
+        "created": "2026-08-26T13:10:26Z",
+        "last_activity": "2026-08-28T11:26:36Z",
+        "mergeable_github": "UNKNOWN",
+        "merges_clean_on_pinned_main": "prod merges clean; test import-line conflict (mechanical)",
+        "diff_size": "+32/-1, 2 files",
+        "has_tests": "yes (outside-repo path test)",
+        "approach": "different defect: reject renderer-supplied paths outside the repo before the --no-index fallback (Electron only)"
+      }
+    ],
+    "regression_test": {
+      "source": "fork #48 (kvnloo) support-diff Electron tests, as a standalone file; Python twin new",
+      "path": "apps/desktop/electron/review-diff-tracked.test.ts + tests/hermes_cli/test_web_git_review_diff_tracked.py",
+      "tests": [
+        "reviewDiff (unstaged) never renders a tracked file as a new-file all-add",
+        "reviewDiff (unstaged) still synthesizes an all-add for an untracked file",
+        "test_unstaged_review_diff_of_tracked_file_is_never_an_all_add",
+        "test_unstaged_review_diff_still_all_adds_an_untracked_file"
+      ],
+      "contract": "With staged=false, a pristine or fully staged tracked file yields '' (never a 'new file mode' all-add) in both backends, while an untracked file still gets the synthesized all-add.",
+      "evidence_path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W1/reviewdiff-tracked/"
+    },
+    "ab_results": {
+      "main": {
+        "result": "fail",
+        "detail": "Electron 1 failed/1 passed: actual 'diff --git a/tracked.txt b/tracked.txt\\nnew file mode 100644 ... +tracked', expected ''. Python 1 failed/1 passed: assert 'diff --git a...@\\n+tracked\\n' == ''."
+      },
+      "81164": {
+        "result": "pass",
+        "detail": "Electron 2/2, Python 2/2 when merged onto af92ea8e (conflicts resolved, PR side for the fallback). Needs rebase: as merged, 8 of its own git-review-ops tests fail (21/29) because its helpers use raw execFile under main's execFile mock; with the helpers ported to execGit: 29/29, and 30/30 with the fork #48 tracked-file test appended in that file."
+      },
+      "95554": {
+        "result": "fail",
+        "detail": "Electron still returns the 'new file mode' all-add for tracked.txt; Python backend untouched (fails). Its own outside-repo test passes. Not a fix for this defect."
+      },
+      "fork#48 guard (reference, not a candidate)": {
+        "result": "fail (partial)",
+        "detail": "7-line `git status --porcelain` '??' guard: Electron 2/2 pass, Python 1 failed (fork does not touch hermes_cli/web_git.py)."
+      }
+    },
+    "adjacent_tests": {
+      "files": [
+        "apps/desktop/electron/git-review-ops.test.ts",
+        "apps/desktop/electron/no-console-git.test.ts",
+        "apps/desktop/electron/git-binary-candidates.test.ts",
+        "apps/desktop/electron/git-repo-scan.test.ts",
+        "apps/desktop/electron/git-root.test.ts",
+        "apps/desktop/electron/git-worktree-ops.test.ts",
+        "apps/desktop/src/components/chat/diff-lines.test.ts",
+        "apps/desktop/src/app/right-sidebar/review/*",
+        "tests/hermes_cli/test_web_git_review_pathspecs.py",
+        "tests/hermes_cli/test_web_server_git.py",
+        "tests/hermes_cli/test_web_git_gh_stderr.py",
+        "tsc -p tsconfig.electron.json",
+        "tsc -p ."
+      ],
+      "result": "#81164 merged: all electron siblings pass except git-review-ops.test.ts (21/29 as merged, 29/29 after execGit port); review UI + diff-lines 4 files/18 tests pass; Python 4 files/42 tests pass; both tsc runs clean (as merged and ported)."
+    },
+    "carrier": {
+      "pr": 81164,
+      "author": "thelonewander3r",
+      "why": "Only open PR that fixes the defect, in both backends (verified A/B); it already carries Fixes #81160/#81161 and has tests. Requires a rebase that ports synthesizeAddDiff()/untrackedPathsUnder() from raw execFile to main's execGit (verified diff +21/-22; drops the PR's ls-files maxBuffer bound, which execGit lacks)."
+    },
+    "fold_ins": [
+      {
+        "from": "fork #48",
+        "author": "kvnloo",
+        "co_authored_by": "Kevin Rajan <7121943+kvnloo@users.noreply.github.com>",
+        "hunk_scope": "apps/desktop/electron/git-review-ops.test.ts: add test 'reviewDiff (unstaged) never renders a tracked file as a new-file all-add' (pristine + stale-staged -> '') and 'reviewDiff (unstaged) still synthesizes an all-add for an untracked file' (import reviewDiff)",
+        "why": "#81164 fixes the tracked-file case only incidentally and has no reviewDiff tracked-file test; these pin it.",
+        "test": "fails on main (new file mode for tracked.txt), passes on rebased #81164 (30/30 in that file)"
+      },
+      {
+        "from": "new (W1, on behalf of kvnloo)",
+        "author": "kvnloo",
+        "co_authored_by": "Kevin Rajan <7121943+kvnloo@users.noreply.github.com>",
+        "hunk_scope": "tests/hermes_cli/test_web_git_review_diff_tracked.py (new, 2 tests on hermes_cli.web_git.review_diff)",
+        "why": "Python twin of the same contract; neither #81164 nor fork #48 tests review_diff for tracked files.",
+        "test": "fails on main, passes on #81164"
+      }
+    ],
+    "close_after_merge": [],
+    "exclude_reason": null,
+    "row": "| #81160, #81161 (+ unfiled: unstaged reviewDiff/review_diff all-adds a clean or stale-staged tracked file) | #81164 (thelonewander3r); rebase needed: port synthesizeAddDiff/untrackedPathsUnder from raw execFile to execGit | main: FAIL (Electron and Python return a 'new file mode' all-add for a pristine tracked.txt); #81164: PASS (Electron 2/2, Python 2/2); #95554: FAIL; fork #48 guard: Electron PASS, Python FAIL | kvnloo: reviewDiff tracked-file regression tests in git-review-ops.test.ts + Python twin tests/hermes_cli/test_web_git_review_diff_tracked.py | none (no competing upstream PR; #95554 is a separate outside-repo defect, keep open) | #81164's `ls-files --others` resolution returns '' for tracked files in both backends, fixing a bug it does not claim and has no test for. Merged onto af92ea8e it conflicts with main's move to execGit: as merged, 8 of its own git-review-ops tests fail under main's file-wide execFile mock, and porting its two helpers to execGit (+21/-22) gives 30/30 there, Python 42/42 and clean tsc. |",
+    "notes": "No competing upstream PR for this defect (searched reviewDiff, review_diff, _all_add_diff, literal-pathspecs; #58726 Adolanium's is_file guard still all-adds tracked files by code reading; #63063, #58036, #65555, #110525 do not change this fallback). #81164 also changes staged-row semantics (staged rows now diff HEAD..worktree), which this test does not cover; alt-glitch labelled it sweeper:risk-compatibility on 2026-08-07, so a maintainer should look at that change before merging. Probe: #95554's outside-repo case leaks '+HERMES_OUTSIDE_REPO_SECRET' on main, while #81164 (as merged and ported) returns '' because ls-files rejects outside paths. After the carrier lands, #95554 is defence in depth and needs a rebase on the same lines. Close kvnloo fork #48 (fork side) after the carrier merges. Issues #81160/#81161 auto-close via Fixes."
+  }
+]

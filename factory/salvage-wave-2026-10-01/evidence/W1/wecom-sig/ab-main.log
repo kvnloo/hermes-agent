@@ -1,0 +1,40 @@
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 2.6s  (runner wall: 2.6s, parallelism: 20x)
+  P50: 2.58s  P90: 2.58s  P95: 2.58s  P99: 2.58s  Max: 2.58s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+      2.58s  tests/gateway/test_inbound_auth_hardening.py
+
+=== Failure output ===
+
+--- tests/gateway/test_inbound_auth_hardening.py ---
+FsFFFF                                                                   [100%]
+=================================== FAILURES ===================================
+E   AssertionError: assert not True
+     +  where True = <function _wecom_accepts at 0x7f88caebcf40>('1790825439')
+     +    where '1790825439' = str((1790826039 - 600))
+/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:58: AssertionError: assert not True
+E   AssertionError: the secret was not compared with hmac.compare_digest
+    assert []
+/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:103: AssertionError: the secret was not compared with hmac.compare_digest
+E   AssertionError: the secret was not compared with hmac.compare_digest
+    assert []
+/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:103: AssertionError: the secret was not compared with hmac.compare_digest
+E   AssertionError: the secret was not compared with hmac.compare_digest
+    assert []
+/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:103: AssertionError: the secret was not compared with hmac.compare_digest
+E   TypeError: comparing strings with non-ASCII characters is not supported
+/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/wecom-sig/tests/gateway/test_inbound_auth_hardening.py:100: TypeError: comparing strings with non-ASCII characters is not supported
+=========================== short test summary info ============================
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_validly_signed_request_outside_replay_window_is_refused[wecom]
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[bluebubbles]
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[google_meet]
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[wecom]
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[a2a]
+SKIPPED [1] tests/gateway/test_inbound_auth_hardening.py:42: could not import 'lark_oapi': No module named 'lark_oapi'
+5 failed, 1 skipped in 0.59s
+
+=== 1 file with test failures (5 tests failed) ===
+  tests/gateway/test_inbound_auth_hardening.py  (5 tests failed)

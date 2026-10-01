@@ -1,0 +1,917 @@
+{
+ "wave": "salvage-ready cluster wave, half W1",
+ "prepared_for": "kvnloo (research + local testing only; nothing published)",
+ "date": "2026-09-30",
+ "main_sha": "af92ea8e5b852518c523c3e8b2cbd95f0f3d79dc",
+ "method": "Each candidate PR merged (git merge --no-ff) onto pinned upstream main, then one behaviour-contract regression test dropped in and run with isolated HOME/HERMES_HOME. Conflicts resolved only for mechanical context drift (documented per candidate). Evidence logs and test files under evidence/W1/<slug>/.",
+ "included": [
+  "notify-123345",
+  "wecom-sig",
+  "home-mode",
+  "slack-snake"
+ ],
+ "excluded": {
+  "doctor-scope": "#99721 is CONFLICTING on GitHub and does not merge on af92ea8e: its finally-block rewrite collides with 024f1b07bd's manager.unload(), which already restores _scoped_tools, so half of its wholesale restore is redundant and needs an author rebase. Hand-merged it fixes the claimed _plugin_module_scopes leak but fails the bare-namespace contract (repeated doctor runs import as hermes_plugins.<slug>__home_<digest>), and the only in-repo caller is the one-shot `hermes plugins doctor` CLI, so there is no production observable to justify a maintainer-side salvage.",
+  "suggest-cache": "No correct candidate. The only open PR, #85253, fixes the profile-switch half but, merged onto af92ea8e, its profile.ts -> suggestion-providers import closes a cycle back into profile.ts (via lib/slash-completion-cache.ts), which makes 61 additional desktop test files fail to load (62/91 vs 1/91 on main), and it does not cover a connection switch that keeps the same profile key. Making it sound means moving its only production hunk into provider-module subscriptions, which is a redesign of the PR, not a fold-in.",
+  "reviewdiff-tracked": "Carrier not executable as a wave row yet. #81164 is the only PR that fixes the defect (Electron and Python both pass the regression test), but it is CONFLICTING on main, and merging it takes a code port beyond context drift: its synthesizeAddDiff/untrackedPathsUnder helpers must move from raw execFile to main's execGit (+21/-22, verified locally), and as merged 8 of its own git-review-ops tests fail. It is also a +908/-46, 15-file multi-behaviour PR labelled sweeper:risk-compatibility (staged-row change not covered by this test), and it fixes the tracked-file case only as a side effect. Becomes a row once #81164 is rebased (see row_when_rebased). Until then, offer the two regression tests and the execGit port diff as review support on #81164."
+ },
+ "clusters": [
+  {
+   "issue": "#123345",
+   "slug": "notify-123345",
+   "seed": "fork #155 (kvnloo/hermes-agent)",
+   "title": "terminal tool: notify=true rejected by validator ('notify must be true/false') when it arrives as a string",
+   "main_sha": "af92ea8e5b852518c523c3e8b2cbd95f0f3d79dc",
+   "candidates": [
+    {
+     "pr": 123356,
+     "author": "webtecnica",
+     "created": "2026-09-26T02:30:23Z",
+     "last_activity": "2026-09-29T01:54:53Z",
+     "mergeable_github": "CONFLICTING/DIRTY",
+     "merges_clean_on_pinned_main": "false: one conflict hunk in tools/terminal_tool.py. Main changed the heartbeat error text. Resolved mechanically by keeping main's text plus the PR's background/pty lines (evidence pr123356-resolved-terminal_tool.diff)",
+     "diff_size": "+143/-6, 4 files",
+     "has_tests": "yes: tests/agent/test_tool_arg_coercion.py (+3), tests/tools/test_terminal_tool.py (+1)",
+     "approach": "Two layers. (1) arg_coercion resolves anyOf/oneOf branch types when there is no top-level type and no string branch, so 'true'/'false' become bools before the handler runs. (2) The handler adds _coerce_terminal_bool for background/pty/persist_on_release and a notify string branch (true/1/yes/on, false/0/no/off, JSON-array string). Closes #123345."
+    },
+    {
+     "pr": 123448,
+     "author": "WYSTAF",
+     "created": "2026-09-26T04:08:47Z",
+     "last_activity": "2026-09-29T07:03:52Z",
+     "mergeable_github": "MERGEABLE/BLOCKED",
+     "merges_clean_on_pinned_main": true,
+     "diff_size": "+102/-8, 2 files",
+     "has_tests": "yes: TestNotifyCoercion in tests/tools/test_watch_patterns.py (handler-level)",
+     "approach": "Handler-only _coerce_notify, applied AFTER the foreground truthiness gate. arg_coercion is unchanged. It also accepts enabled/disabled and numeric 2/1.5 as True, filters non-string list members, and refuses JSON-array strings. Closes #123345."
+    },
+    {
+     "pr": 123389,
+     "author": "salch-cred",
+     "created": "2026-09-26T03:20:29Z",
+     "last_activity": "2026-09-27T16:24:50Z",
+     "mergeable_github": "MERGEABLE/BLOCKED",
+     "merges_clean_on_pinned_main": true,
+     "diff_size": "+208/-5, 8 files (#123345 part: tools/arg_coercion.py +8, tests/tools/test_arg_coercion.py +39)",
+     "has_tests": "yes: tests/tools/test_arg_coercion.py (3 tests)",
+     "approach": "Bundle of four unrelated P2 fixes (#123354 file-sync atomic apply, #123345, #123325 hub verify-before-delete, #123333 Windows npm PATH). The #123345 hunk is 8 lines: if a type-less union accepts boolean, apply _coerce_boolean (true/false only)."
+    },
+    {
+     "pr": 23213,
+     "author": "liuhao1024",
+     "created": "2026-05-10T13:46:10Z",
+     "last_activity": "2026-09-09T06:00:26Z",
+     "mergeable_github": "CONFLICTING/DIRTY",
+     "merges_clean_on_pinned_main": "true locally (ort rename detection maps tests/run_agent to tests/agent); GitHub reports DIRTY",
+     "diff_size": "+276/-6, 2 files",
+     "has_tests": "yes: 204 lines in tests/run_agent/test_tool_arg_coercion.py (lands in tests/agent/)",
+     "approach": "Generic anyOf/oneOf union resolution in arg_coercion for the MCP string|array double-encoding defect. It covers terminal notify only as a side effect. Bare strings go into the list wrap for unions without a string branch. teknium1 sweeper review 2026-07-13: keep_open, salvageability=medium. Labels sweeper:blast-broad and sweeper:risk-compatibility. Does not reference #123345."
+    },
+    {
+     "pr": 127557,
+     "author": "Finn763",
+     "created": "2026-09-29T06:57:20Z",
+     "last_activity": "2026-09-29T08:03:36Z",
+     "mergeable_github": "MERGEABLE/BLOCKED",
+     "merges_clean_on_pinned_main": true,
+     "diff_size": "+76/-27, 4 files",
+     "has_tests": "yes: tests/agent/test_gemini_schema.py and others",
+     "approach": "Closes #109115 (Vertex rejects the anyOf schema). Splits the schema into boolean notify plus array watch_patterns. Because notify then has a top-level type: boolean, arg_coercion coerces 'true'/'false' as a side effect. This is a design and schema change for a different issue. Competes with #109145 (fangliquan, 2026-09-12), which does not merge on pinned main."
+    }
+   ],
+   "regression_test": {
+    "source": "new; derived from kvnloo fork #155 tests/tools/test_terminal_notify_coerce.py plus the fork-155 verdict's dispatch probes",
+    "path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W1/notify-123345/test_terminal_notify_string_bool.py (placed at tests/tools/test_terminal_notify_string_bool.py)",
+    "tests": [
+     "test_background_bool_or_bool_string_notify_maps_to_notify_on_complete[true/True/false/FALSE/native True/native False]",
+     "test_foreground_string_notify_false_is_a_no_op_like_native_false",
+     "test_foreground_string_notify_true_is_still_refused",
+     "test_pattern_list_still_maps_to_watch_patterns",
+     "test_unrecognized_string_never_enables_completion_notify"
+    ],
+    "contract": "Through the production dispatch order (coerce_tool_args('terminal') then _handle_terminal), a stringified boolean notify behaves exactly like the boolean it spells: background 'true'/'false' maps to notify_on_complete True/False, and foreground 'false' is a no-op like native False. Native bools, pattern lists and the foreground 'true' refusal are unchanged.",
+    "evidence_path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W1/notify-123345/"
+   },
+   "ab_results": {
+    "main": {
+     "result": "fail",
+     "detail": "5 failed / 5 passed. Background notify='true'/'True'/'false'/'FALSE' gives {'error': 'notify must be true/false (notify on exit) or a list of strings ...'}. Foreground notify='false' gives {'error': 'notify/heartbeat only apply to background commands ...'}."
+    },
+    "123356": {
+     "result": "pass",
+     "detail": "10/10 after a one-hunk mechanical rebase (heartbeat error text drift in tools/terminal_tool.py)."
+    },
+    "123448": {
+     "result": "fail",
+     "detail": "1 failed / 9 passed. Foreground notify='false' is still refused with 'notify/heartbeat only apply to background commands' because _coerce_notify runs after the truthiness gate and arg_coercion still skips notify."
+    },
+    "123389": {
+     "result": "pass",
+     "detail": "10/10, merges clean. Passes only through its 8-line arg_coercion hunk; the PR is a 4-fix bundle."
+    },
+    "23213": {
+     "result": "pass",
+     "detail": "10/10, merges clean locally. Probe: notify='yes'/'1'/'on'/'maybe'/'ready' become watch_patterns=[that string], so the exit notification is silently dropped instead of the value being refused."
+    },
+    "127557": {
+     "result": "pass",
+     "detail": "10/10, merges clean. Side effect of the #109115 schema split; only 'true'/'false' are coerced and everything else is refused."
+    },
+    "related_not_fixing": {
+     "result": "fail",
+     "detail": "#122059 (teknium1), #123024 and #128728 each merge clean and still fail 5/10, the same failures as main. #109145 conflicts in tools/terminal_tool.py and 2 test files."
+    }
+   },
+   "adjacent_tests": {
+    "files": [
+     "tests/agent/test_tool_arg_coercion.py",
+     "tests/tools/test_terminal_tool.py",
+     "tests/tools/test_watch_patterns.py",
+     "tests/tools/test_notify_on_complete.py",
+     "tests/tools/test_process_heartbeat.py",
+     "tests/tools/test_tool_search.py",
+     "tests/tools/test_schema_sanitizer.py",
+     "tests/agent/test_gemini_schema.py",
+     "tests/tools/test_terminal_none_command_guard.py",
+     "tests/tools/test_terminal_foreground_timeout_cap.py",
+     "tests/tools/test_terminal_compound_background.py"
+    ],
+    "result": "Main: 205 passed, 0 failed. Carrier #123356 plus the regression test: 219 passed, 0 failed (includes the 4 new #123356 tests and the 10 regression cases). kvnloo fork #155's 21 handler-level tests also pass on the carrier. Negative controls: reverting #123356's arg_coercion hunk gives 1 failure (foreground 'false'); disabling the handler notify string branch still passes 10/10 (that branch is redundant on the dispatch path); reverting both gives 5 failures."
+   },
+   "carrier": {
+    "pr": 123356,
+    "author": "webtecnica <webtecnica@gmail.com>",
+    "why": "Earliest PR for this issue (02:30Z, Closes #123345). It is correct on the full contract including foreground notify='false', fails closed on unrecognized notify values, has tests in both layers, and needs only a one-hunk mechanical rebase. #123448 fails the contract, #123389 is an unrelated 4-fix bundle, #23213 targets a broader MCP union defect and silently reinterprets bool-ish strings as watch patterns, and #127557 is a schema redesign for a different issue (#109115)."
+   },
+   "fold_ins": [
+    {
+     "from": "fork #155 (kvnloo/hermes-agent)",
+     "author": "kvnloo",
+     "co_authored_by": "Kevin Rajan <7121943+kvnloo@users.noreply.github.com>",
+     "hunk_scope": "New file tests/tools/test_terminal_notify_string_bool.py (the regression test above, 5 functions). Optionally tighten the last guard to assert the 'notify must be true/false' error, which the carrier satisfies: fork #155's test_notify_unrecognized_fails_closed passes 5/5 on the carrier.",
+     "why": "#123356's own tests call the handler and arg_coercion separately. They never exercise the dispatch order, foreground notify='false' (the case that only the arg_coercion hunk fixes, per negative control A), or the fail-closed path for unrecognized values.",
+     "test": "Fails 5/10 on main af92ea8e and passes 10/10 on main plus #123356."
+    }
+   ],
+   "close_after_merge": [
+    {
+     "pr": 123448,
+     "reason": "Duplicate 'Closes #123345', handler-only. Superseded by #123356 and fails the foreground notify='false' case because coercion runs after the truthiness gate."
+    }
+   ],
+   "exclude_reason": null,
+   "row": "| #123345 | #123356 (webtecnica) | main: FAIL, 5 of 10 cases fail; #123356: PASS 10/10 after a one-hunk mechanical rebase (heartbeat error text in `tools/terminal_tool.py`); #123389: PASS 10/10 (via its 8-line `tools/arg_coercion.py` hunk); #23213: PASS 10/10; #127557: PASS 10/10 (side effect of its #109115 schema split); #123448: FAIL, 1 of 10 fails (foreground `notify=\"false\"` still refused) | kvnloo (fork #155): dispatch-path regression test `tests/tools/test_terminal_notify_string_bool.py` (background \"true\"/\"false\", foreground \"false\" is a no-op, foreground \"true\" still refused, pattern list unchanged, unrecognized value still refused); `Co-authored-by: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>` | #123448; #123389 drops only its `tools/arg_coercion.py` hunk (the other three fixes in that bundle stay open) | Through `coerce_tool_args` then `_handle_terminal`, main rejects background `notify=\"true\"`/`\"false\"` with \"notify must be true/false\" and refuses foreground `notify=\"false\"`. With #123356 all 10 cases pass and the adjacent terminal/arg-coercion files go from 205/205 to 219/219. Reverting #123356's arg_coercion union hunk re-breaks foreground `notify=\"false\"`, which is the case #123448 misses because it coerces after the foreground truthiness gate. |",
+   "notes": "(1) Do not close #23213: it carries the separate MCP string|array union defect (teknium1 sweeper keep_open, salvageability=medium), which #123356 deliberately skips for unions with a string branch. It will need a rebase over the carrier's arg_coercion hunk, and a reviewer should ask that bool-ish strings for notify not be wrapped into watch patterns (probe: 'yes'/'1'/'maybe' become watch_patterns). (2) #127557 and #109145 belong to #109115 (Vertex schema) and stay out of this wave. If #127557 lands, notify loses its union and the carrier's union branch becomes general hardening only. (3) Optional trim for the maintainer: #123356's handler-side _coerce_terminal_bool for background/pty/persist_on_release is redundant on the model dispatch path, because arg_coercion already coerces typed booleans. Its bool(val) fallback keeps unrecognized strings truthy, as main does. It is still useful for callers that skip coerce_tool_args (hermes_cli/plugins.py:714 registry.dispatch). Earlier review findings on #123356 (Deeptanshuu: string-union corruption; Enough1122: on/persist_on_release flips) are addressed in its current head 1d536106ec. (4) Deeptanshuu reports production impact: jobs relaunched without notify went unreported for about 3.5 h. (5) The root cause of a native JSON bool arriving as a string is unproven (the reporter says a JSON boolean was sent); not tested. (6) Fork-side: close kvnloo/hermes-agent#155 after the carrier merges. (7) Housekeeping: refs/pr/128728 and refs/pr/109145 vanished from the shared repo mid-run, so all PR heads used are pinned at refs/w1notify/pr/<N> in $S/h.git. git rerere recorded the #123356 terminal_tool.py resolution in the shared rr-cache. The worktree was removed. Evidence, including AB-SUMMARY.log, probe-matrix.log, negative-control-123356.log and the reusable A/B script w1notify_ab.sh, is in /mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W1/notify-123345/.",
+   "row_fork_draft": "| #123345 | #123356 (webtecnica) | main af92ea8e FAIL 5/10; #123356 PASS 10/10 (one-hunk rebase: heartbeat error text); #123389 PASS 10/10; #23213 PASS 10/10; #127557 PASS 10/10; #123448 FAIL 1/10 (foreground notify=\"false\" refused) | kvnloo (fork #155, Co-authored-by Kevin Rajan): dispatch-path regression test tests/tools/test_terminal_notify_string_bool.py (foreground notify=\"false\" no-op, unrecognized value stays refused) | #123448; #123389 drops only its tools/arg_coercion.py hunk (4-fix bundle stays open) | Through coerce_tool_args then _handle_terminal, main rejects background notify=\"true\"/\"false\" with \"notify must be true/false\" and refuses foreground notify=\"false\". With #123356 all 10 cases pass and the adjacent terminal/arg-coercion files go from 205/205 to 219/219. Reverting #123356's arg_coercion union hunk re-breaks foreground notify=\"false\", which is the case #123448 misses because it coerces after the foreground truthiness gate. |",
+   "evidence_dir": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W1/notify-123345/"
+  },
+  {
+   "issue": "#127901",
+   "slug": "wecom-sig",
+   "seed": "fork #43 (kvnloo/hermes-agent)",
+   "title": "Inbound webhook auth: non-constant-time secret compares (WeCom/BlueBubbles/Google Meet), no replay window on WeCom/Feishu, 500s on hostile bytes",
+   "main_sha": "af92ea8e5b852518c523c3e8b2cbd95f0f3d79dc",
+   "candidates": [
+    {
+     "pr": 127902,
+     "author": "jonpol01 (John Paul Soliva)",
+     "created": "2026-09-29T14:02:27Z",
+     "last_activity": "2026-09-30T20:51:54Z (AI review comment, Enough1122)",
+     "mergeable_github": "MERGEABLE (mergeStateStatus BLOCKED)",
+     "merges_clean_on_pinned_main": true,
+     "diff_size": "+186/-64, 20 files",
+     "has_tests": true,
+     "approach": "Moves webhook.py's private compare/window into gateway/platforms/_shared.py as secrets_match (hmac.compare_digest on UTF-8 bytes with surrogatepass, False for non-str/unset) and timestamp_fresh (300 s); used by WeCom, BlueBubbles, Feishu, A2A, LINE, Raft, SMS, WhatsApp Cloud, MS Graph, API server; Meet node gets an inline stdlib compare; WeCom/Feishu refuse signed timestamps outside 300 s. Fixes #127901; commit already carries Co-authored-by for Bartok9, Adolanium, zapabob, memosr, zashraf1337."
+    },
+    {
+     "pr": 54617,
+     "author": "Alix-007",
+     "created": "2026-06-29T04:20:58Z",
+     "last_activity": "2026-07-15T09:24:33Z",
+     "mergeable_github": "CONFLICTING",
+     "merges_clean_on_pinned_main": "false: wecom_crypto.py decrypt() and test_wecom_callback.py drift (ce08af6139 compaction); ported the one-line change by hand",
+     "diff_size": "+32/-1, 2 files",
+     "has_tests": true,
+     "approach": "hmac.compare_digest(expected, msg_signature) on str (plugin path)."
+    },
+    {
+     "pr": 43937,
+     "author": "zapabob",
+     "created": "2026-06-11T02:54:48Z",
+     "last_activity": "2026-08-11T11:15:33Z (egilewski: suggesting changes, non-ASCII TypeError)",
+     "mergeable_github": "CONFLICTING",
+     "merges_clean_on_pinned_main": "false: targets pre-relocation gateway/platforms/wecom_crypto.py (absent on main); ported by hand to plugins/platforms/wecom/wecom_crypto.py",
+     "diff_size": "+44/-1, 2 files",
+     "has_tests": true,
+     "approach": "hmac.compare_digest(expected, msg_signature or \"\") on str; spy + None tests."
+    },
+    {
+     "pr": 39049,
+     "author": "zashraf1337",
+     "created": "2026-06-04T13:02:32Z",
+     "last_activity": "2026-07-14T01:55:27Z",
+     "mergeable_github": "CONFLICTING",
+     "merges_clean_on_pinned_main": "false: old gateway/platforms path; ported by hand",
+     "diff_size": "+7/-1, 1 file",
+     "has_tests": false,
+     "approach": "isinstance(str) guard + hmac.compare_digest on str."
+    },
+    {
+     "pr": 9219,
+     "author": "memosr",
+     "created": "2026-04-13T20:46:32Z",
+     "last_activity": "2026-08-13T22:33:36Z",
+     "mergeable_github": "not re-queried (UNKNOWN on first read)",
+     "merges_clean_on_pinned_main": "false: gateway/platforms/bluebubbles.py conflict",
+     "diff_size": "+91/-2, 2 files",
+     "has_tests": true,
+     "approach": "BlueBubbles only: compare_digest on .encode('utf-8') bytes (related item 1, issue #108388)."
+    },
+    {
+     "pr": 44025,
+     "author": "zapabob",
+     "created": "2026-06-11T05:40:45Z",
+     "last_activity": "2026-09-13T04:59:49Z",
+     "mergeable_github": "not re-queried",
+     "merges_clean_on_pinned_main": "false: bluebubbles.py + test_bluebubbles.py conflict",
+     "diff_size": "+60/-1, 2 files",
+     "has_tests": true,
+     "approach": "BlueBubbles only: compare_digest on .encode() bytes."
+    },
+    {
+     "pr": 51328,
+     "author": "Bartok9",
+     "created": "2026-06-23T11:19:31Z",
+     "last_activity": "2026-08-10T13:07:27Z",
+     "mergeable_github": "not re-queried",
+     "merges_clean_on_pinned_main": "false: bluebubbles.py conflict",
+     "diff_size": "+109/-1, 2 files",
+     "has_tests": true,
+     "approach": "BlueBubbles only: compare_digest on bytes + 401 when password unset (main already returns 401 for unset password with no token; probe)."
+    },
+    {
+     "pr": 108390,
+     "author": "Adolanium",
+     "created": "2026-09-11T16:12:44Z",
+     "last_activity": "2026-09-11T16:23:38Z",
+     "mergeable_github": "not re-queried",
+     "merges_clean_on_pinned_main": true,
+     "diff_size": "+19/-9, 4 files",
+     "has_tests": true,
+     "approach": "BlueBubbles compare on .encode() bytes + generic webhook bad-signature 401->404 (extra scope, issue #108388)."
+    },
+    {
+     "pr": 44027,
+     "author": "zapabob",
+     "created": "2026-06-11T05:42:13Z",
+     "last_activity": "2026-07-14T12:12:45Z",
+     "mergeable_github": "not re-queried",
+     "merges_clean_on_pinned_main": "false: plugins/google_meet/node/protocol.py + test conflict",
+     "diff_size": "+23/-1, 2 files",
+     "has_tests": true,
+     "approach": "Google Meet node only: compare_digest on .encode() bytes (issue #108353)."
+    },
+    {
+     "pr": 108354,
+     "author": "Adolanium",
+     "created": "2026-09-11T15:44:18Z",
+     "last_activity": "2026-09-14T21:07:56Z",
+     "mergeable_github": "not re-queried",
+     "merges_clean_on_pinned_main": true,
+     "diff_size": "+45/-4, 3 files",
+     "has_tests": true,
+     "approach": "Google Meet: compare_digest with surrogatepass + owner-only nodes.json (extra scope, issue #108353)."
+    }
+   ],
+   "regression_test": {
+    "source": "PR #127902",
+    "path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W1/wecom-sig/test_inbound_auth_hardening.py (dropped in as tests/gateway/test_inbound_auth_hardening.py)",
+    "tests": [
+     "test_presented_secret_is_compared_timing_safe_and_fails_closed[wecom|bluebubbles|google_meet|a2a]",
+     "test_validly_signed_request_outside_replay_window_is_refused[wecom|feishu]"
+    ],
+    "contract": "Every remote-supplied secret/signature (WeCom msg_signature included) goes through hmac.compare_digest, accepts the right value, and fails closed (SignatureError/401/False, never TypeError/UnicodeEncodeError) on a wrong or hostile non-ASCII/surrogate value; a validly signed WeCom/Feishu timestamp more than 300 s off is refused.",
+    "evidence_path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W1/wecom-sig/"
+   },
+   "ab_results": {
+    "main": {
+     "result": "fail",
+     "detail": "5 failed, 1 skipped (feishu: lark_oapi not installed). [wecom] compare: 'the secret was not compared with hmac.compare_digest'; [wecom] replay: validly signed ts now-600 accepted; bluebubbles/google_meet same spy failure; a2a TypeError on non-ASCII."
+    },
+    "127902": {
+     "result": "pass",
+     "detail": "Merges clean; 5 passed, 1 skipped (feishu NOT_TESTED locally: lark_oapi absent). Probe: non-ASCII and lone-surrogate msg_signature -> SignatureError."
+    },
+    "54617": {
+     "result": "fail",
+     "detail": "[wecom] compare fails at `assert not accepts(_HOSTILE)`: TypeError: comparing strings with non-ASCII characters is not supported. Probe: main raises SignatureError for the same input, so the PR turns a clean rejection into a TypeError (logger.exception + break in _handle_callback). Also no replay window."
+    },
+    "43937": {
+     "result": "fail",
+     "detail": "Same TypeError on non-ASCII msg_signature (egilewski raised this on the PR 2026-08-11); targets the deleted gateway/platforms path."
+    },
+    "39049": {
+     "result": "fail",
+     "detail": "Same TypeError on non-ASCII msg_signature; targets the deleted gateway/platforms path; no tests."
+    },
+    "fork#43 (kvnloo, not upstream)": {
+     "result": "fail",
+     "detail": "Bytes compare via .encode() passes plain non-ASCII but raises UnicodeEncodeError on a lone surrogate (wecom_crypto.py .encode())."
+    },
+    "108390": {
+     "result": "fail",
+     "detail": "[bluebubbles] UnicodeEncodeError on surrogate input (plain .encode()); WeCom untouched."
+    },
+    "108354": {
+     "result": "pass (google_meet param only)",
+     "detail": "[google_meet] passes; WeCom untouched (other params fail as on main)."
+    },
+    "9219/44025/51328/44027": {
+     "result": "not run",
+     "detail": "Merge conflicts on pinned main; they touch only BlueBubbles/Meet, which the carrier's [bluebubbles]/[google_meet] params cover."
+    }
+   },
+   "adjacent_tests": {
+    "files": [
+     "tests/gateway/relay/test_relay_sheds_crypto.py",
+     "tests/gateway/test_api_server_multiplex_secret_scope.py",
+     "tests/gateway/test_api_server.py",
+     "tests/gateway/test_bluebubbles.py",
+     "tests/gateway/test_feishu_bot_auth_bypass.py",
+     "tests/gateway/test_feishu.py",
+     "tests/gateway/test_line_plugin.py",
+     "tests/gateway/test_msgraph_webhook.py",
+     "tests/gateway/test_raft_adapter.py",
+     "tests/gateway/test_sms.py",
+     "tests/gateway/test_webhook_adapter.py",
+     "tests/gateway/test_webhook_deliver_only.py",
+     "tests/gateway/test_webhook_integration.py",
+     "tests/gateway/test_webhook_signature_rate_limit.py",
+     "tests/gateway/test_wecom_callback.py",
+     "tests/gateway/test_wecom.py",
+     "tests/gateway/test_whatsapp_cloud.py",
+     "tests/plugins/test_a2a_phase23.py",
+     "tests/plugins/test_a2a_plugin.py",
+     "tests/plugins/test_google_meet_node.py",
+     "tests/gateway/test_inbound_auth_hardening.py"
+    ],
+    "result": "With #127902 merged: 581 passed, 4 failed, 8 skipped. The 4 failures (test_msgraph_webhook.py [trio] variants: test_connect_allows_loopback_without_source_allowlist, test_valid_notification_accepted_and_scheduled, test_resource_patterns_accept_leading_slash, test_loopback_bind_without_allowlist_still_accepts_local_requests) fail identically on plain main (pre-existing)."
+   },
+   "carrier": {
+    "pr": 127902,
+    "author": "jonpol01",
+    "why": "Only candidate that passes the WeCom compare contract (hostile non-ASCII/surrogate -> SignatureError) and the only one that fixes all of #127901 (compare sites, replay window, hostile bytes); merges clean, has invariant tests, already credits the earlier per-adapter authors. Every smaller WeCom candidate fails the contract and conflicts with main."
+   },
+   "fold_ins": [],
+   "close_after_merge": [
+    {
+     "pr": 54617,
+     "reason": "WeCom compare duplicate; CONFLICTING; str compare_digest raises TypeError on non-ASCII msg_signature (fails regression test)."
+    },
+    {
+     "pr": 43937,
+     "reason": "WeCom compare duplicate on the deleted gateway/platforms path; CONFLICTING; same TypeError (outstanding change request from egilewski); credited in carrier (zapabob)."
+    },
+    {
+     "pr": 39049,
+     "reason": "WeCom compare duplicate on the deleted gateway/platforms path; CONFLICTING; same TypeError; no tests; credited in carrier (zashraf1337)."
+    }
+   ],
+   "exclude_reason": null,
+   "row": "| #127901 | #127902 (jonpol01) | main: FAIL, 5 fail + 1 skip on #127902's `tests/gateway/test_inbound_auth_hardening.py`; #127902: PASS, merges clean, 5 pass + 1 skip (Feishu param needs `lark_oapi`, not installed); #54617, #43937, #39049 (all CONFLICTING, ported by hand): FAIL on [wecom], TypeError on a non-ASCII `msg_signature` | none (the carrier commit already credits zapabob, zashraf1337, memosr, Bartok9, Adolanium; kvnloo fork #43 adds nothing it lacks) | #54617, #43937, #39049 (secondary, under #108388/#108353, own tests not yet re-run on the carrier: #9219, #44025, #51328, #44027) | On main the WeCom signature is compared with `!=` (the `hmac.compare_digest` spy fails) and a validly signed timestamp 600 s old is accepted. The three WeCom-only PRs use str `hmac.compare_digest`, which raises TypeError on a non-ASCII `msg_signature` that main rejects cleanly with SignatureError (kvnloo fork #43's bytes form still raises UnicodeEncodeError on a lone surrogate). #127902 compares UTF-8 bytes with surrogatepass and merges clean; 21 adjacent gateway/plugin test files pass except 4 `test_msgraph_webhook.py` [trio] cases that fail the same way on main. |",
+   "notes": "Parent's candidate list missed #127902: the issue author (jonpol01) opened it 1 minute after #127901 and it is the only PR with 'Fixes #127901'. No maintainer design objection on the issue or PR; alt-glitch on #54617 only asked maintainers to pick the architecturally current path. Behaviour change to flag: WeCom/Feishu now refuse signed callbacks with >300 s clock skew (docs updated in the PR). NOT_TESTED: feishu replay param (lark_oapi missing from the venv). Residual not covered by any open PR: Enough1122's review on #127902 found two remaining bare .encode('utf-8') compares (plugins/dashboard_auth/basic/__init__.py:143, plugins/dashboard_auth/drain/__init__.py:92) that raise on surrogate input; good follow-up, not a reason to hold the carrier. Keep open: #108390 (generic webhook 401->404 route-enumeration change) and #108354 (owner-only nodes.json); both need a rebase that drops their compare hunks once #127902 lands. #54617's author (Alix-007 <li.long15@xydigit.com>) is not credited in #127902; no hunk from it is needed, so no trailer is required. kvnloo fork #43 adds nothing the carrier lacks, so no fold-in.",
+   "close_after_merge_secondary": {
+    "note": "Compare-only PRs under related issues #108388 (BlueBubbles) and #108353 (Google Meet). The carrier covers their claim (its [bluebubbles]/[google_meet] params pass) and credits their authors, but their own tests were not re-run on the carrier. Confirm those before closing them.",
+    "prs": [
+     {
+      "pr": 9219,
+      "scope": "secondary (issue #108388)",
+      "reason": "BlueBubbles compare-only; conflicts with main; carrier's [bluebubbles] param covers the claim; credited in carrier (memosr). Own tests not re-run against the carrier."
+     },
+     {
+      "pr": 44025,
+      "scope": "secondary (issue #108388)",
+      "reason": "BlueBubbles compare-only; conflicts with main; covered by carrier [bluebubbles]; credited (zapabob). Own tests not re-run."
+     },
+     {
+      "pr": 51328,
+      "scope": "secondary (issue #108388)",
+      "reason": "BlueBubbles compare + unset-password 401; conflicts with main; carrier [bluebubbles] passes and unset password returns 401 at carrier (and already on main, probe); credited (Bartok9). Own tests not re-run."
+     },
+     {
+      "pr": 44027,
+      "scope": "secondary (issue #108353)",
+      "reason": "Google Meet compare-only; conflicts with main; covered by carrier [google_meet]; credited (zapabob). Own tests not re-run."
+     }
+    ]
+   },
+   "row_fork_draft": "| #127901 | #127902 (jonpol01) | main af92ea8e: #127902's test_inbound_auth_hardening.py 5 fail, 1 skip; #127902 merged: 5 pass, 1 skip (feishu needs lark_oapi); #54617, #43937, #39049 (all CONFLICTING, ported by hand): [wecom] fails with TypeError on a non-ASCII msg_signature | none | #54617, #43937, #39049 (also compare-only #9219, #44025, #51328, #44027 under #108388/#108353) | On main the WeCom signature is compared with != (the compare_digest spy fails) and a validly signed timestamp 600 s old is accepted. The three WeCom-only PRs switch to str hmac.compare_digest, which raises TypeError on a non-ASCII msg_signature that main rejects cleanly with SignatureError; kvnloo's fork #43 bytes form still raises UnicodeEncodeError on a lone surrogate. #127902 merges clean, compares UTF-8 bytes with surrogatepass, and 21 adjacent gateway/plugin test files pass apart from 4 test_msgraph_webhook [trio] failures that fail identically on main. |",
+   "evidence_dir": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W1/wecom-sig/"
+  },
+  {
+   "issue": "none (fork #54 vs #99721; plugin doctor process-global scope cleanup)",
+   "slug": "doctor-scope",
+   "seed": "fork #54 (kvnloo/hermes-agent)",
+   "title": "Plugin Doctor leaves process-global plugin attribution (_plugin_module_scopes, _BARE_MODULE_SCOPE) pinned to its deleted temp HERMES_HOME",
+   "main_sha": "af92ea8e5b852518c523c3e8b2cbd95f0f3d79dc",
+   "candidates": [
+    {
+     "pr": 99721,
+     "author": "Fachri-analys (Muhamad Fachri Funandar)",
+     "created": "2026-08-31",
+     "last_activity": "2026-09-01 (AI review comment by Enough1122; no maintainer activity)",
+     "mergeable_github": "CONFLICTING (mergeable_state dirty)",
+     "merges_clean_on_pinned_main": false,
+     "merge_note": "conflicts in hermes_cli/plugin_dev.py _doctor_runtime finally block (main 024f1b07bd added manager.unload() + reformatting) and the tail of tests/hermes_cli/test_plugin_dev.py; resolved by hand keeping main's unload() block and the PR's snapshot/restore (evidence 99721-merged-on-main.resolved.diff). Overlap is partly semantic: manager.unload() already restores _scoped_tools, so the PR's wholesale _tools/_scoped_tools clear+update is now redundant.",
+     "diff_size": "+76/-16, 2 files",
+     "has_tests": true,
+     "approach": "snapshot _tools/_scoped_tools/_plugin_override_policy/_plugin_module_scopes under registry._lock and restore them wholesale in finally; does not touch hermes_cli.plugins _BARE_MODULE_SCOPE"
+    }
+   ],
+   "regression_test": {
+    "source": "new, adapted from kvnloo fork #54 tests (repeated-runs test) and #99721's module-scope assertion",
+    "path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W1/doctor-scope/test_plugin_doctor_scope_release.py (dropped in as tests/hermes_cli/)",
+    "tests": [
+     "test_doctor_releases_module_scope_attribution",
+     "test_repeated_doctor_runs_keep_bare_namespace"
+    ],
+    "contract": "After doctor_plugin returns, no module namespace maps to the doctor's temp HERMES_HOME scope, and a second doctor run of a same-named plugin in the same process still imports as the bare hermes_plugins.<slug>.",
+    "evidence_path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W1/doctor-scope/AB.txt"
+   },
+   "ab_results": {
+    "main": {
+     "result": "fail",
+     "detail": "0/2: plugin_scope_for_module('hermes_plugins.scopeprobe') returns the deleted '/var/tmp/.../hermes-plugin-doctor-pyz5coy6'; second run imports as 'hermes_plugins.barepro__home_18cc76ce5412'"
+    },
+    "99721": {
+     "result": "fail",
+     "detail": "does not merge (CONFLICTING); after hand resolution 1/2: module-scope test passes, bare-namespace test fails ('hermes_plugins.barepro__home_80bf9219adba' != 'hermes_plugins.barepro') because _BARE_MODULE_SCOPE is never released"
+    },
+    "99721+bare-sweep fold-in": {
+     "result": "pass",
+     "detail": "2/2; negative control (sweep del -> pass) fails the bare-namespace test again"
+    }
+   },
+   "adjacent_tests": {
+    "files": [
+     "tests/hermes_cli/test_plugin_dev.py",
+     "tests/hermes_cli/test_plugin_cli_registration.py",
+     "tests/hermes_cli/test_plugin_ownership_ledger.py",
+     "tests/hermes_cli/test_plugins.py",
+     "tests/hermes_cli/test_plugins_cmd.py",
+     "tests/tools/test_registry.py"
+    ],
+    "result": "#99721 (hand-merged): 206 passed / 0 failed; #99721 + fold-in + regression: 208 passed / 0 failed"
+   },
+   "carrier": null,
+   "fold_ins": [
+    {
+     "from": "fork #54",
+     "author": "kvnloo",
+     "co_authored_by": "Kevin Rajan <7121943+kvnloo@users.noreply.github.com>",
+     "hunk_scope": "hermes_cli/plugin_dev.py _doctor_runtime finally block: after the registry restore, under _MODULE_NAMESPACE_LOCK delete every _BARE_MODULE_SCOPE entry whose owner == manager.scope_key (7 lines, evidence foldin-bare-sweep.diff)",
+     "why": "releases the bare-namespace claim on success and import-failure paths without recomputing the manifest slug",
+     "test": "test_repeated_doctor_runs_keep_bare_namespace",
+     "status": "offer as review support on #99721, not part of a wave row"
+    }
+   ],
+   "close_after_merge": [],
+   "exclude_reason": "#99721 is CONFLICTING on GitHub and does not merge on af92ea8e: its finally-block rewrite collides with 024f1b07bd's manager.unload(), which already restores _scoped_tools, so half of its wholesale restore is redundant and needs an author rebase. Hand-merged it fixes the claimed _plugin_module_scopes leak but fails the bare-namespace contract (repeated doctor runs import as hermes_plugins.<slug>__home_<digest>), and the only in-repo caller is the one-shot `hermes plugins doctor` CLI, so there is no production observable to justify a maintainer-side salvage.",
+   "row": null,
+   "candidates_checked_not_same_defect": [
+    {
+     "pr": 112365,
+     "author": "clawpotato1-svg",
+     "note": "backup/plugin staging SIGTERM cleanup; touches plugin_dev.py but not registry/module-scope restore"
+    },
+    {
+     "pr": 119429,
+     "author": "KineticGamesStudio",
+     "note": "doctor reporting for model-provider import errors; different defect"
+    }
+   ],
+   "notes": "Recommended action instead of a row: review-support comment on #99721 asking for a rebase over 024f1b07bd (drop the now-redundant _tools/_scoped_tools wholesale restore, keep the _plugin_module_scopes snapshot/restore) plus the 7-line scope-keyed _BARE_MODULE_SCOPE sweep and the 2-test regression file; with those it passes 2/2 and 208 adjacent tests. Revisit as a wave row only if #99721 is rebased. kvnloo fork #54 stays EXTERNAL-OWNED. Worktree removed; local-only refs left in $S/h.git: refs/w1/merge/99721 (hand-resolved merge commit 0af848e690).",
+   "evidence_dir": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W1/doctor-scope/"
+  },
+  {
+   "issue": "none (fork #40 vs #73117; routed-profile terminal.home_mode, follow-up to merged #101242)",
+   "slug": "home-mode",
+   "seed": "fork #40 (kvnloo/hermes-agent)",
+   "title": "A routed profile's terminal.home_mode is dropped from its terminal scope (TERMINAL_CONFIG_ENV_MAP lacks home_mode) and get_subprocess_home ignores the bound scope",
+   "main_sha": "af92ea8e5b852518c523c3e8b2cbd95f0f3d79dc",
+   "candidates": [
+    {
+     "pr": 73117,
+     "author": "Lapot300 (Artur Lapot)",
+     "created": "2026-07-28",
+     "last_activity": "2026-09-27 (author refresh merge); teknium1 hermes-sweeper review 2026-07-30: keep_open, salvageability=high",
+     "mergeable_github": "MERGEABLE (state blocked = awaiting review)",
+     "merges_clean_on_pinned_main": true,
+     "diff_size": "+118/-1, 3 files (production +10/-1)",
+     "has_tests": true,
+     "approach": "adds 'home_mode' to TERMINAL_CONFIG_ENV_MAP (defect A) and strips canonical TERMINAL_* names from deferred-resolution Kanban worker envs; tests drive _default_spawn and a child-side get_subprocess_home probe"
+    },
+    {
+     "pr": 129844,
+     "author": "ericcurtin (Eric Curtin)",
+     "created": "2026-10-01",
+     "last_activity": "2026-10-01",
+     "mergeable_github": "MERGEABLE (state blocked)",
+     "merges_clean_on_pinned_main": true,
+     "diff_size": "+64/-204, 5 files",
+     "has_tests": true,
+     "approach": "Fixes FR #28892: adds 'home_mode' to TERMINAL_CONFIG_ENV_MAP and makes the CLI and gateway bridges reuse that map (drops duplicate maps), rewrites test_terminal_config_env_sync.py"
+    },
+    {
+     "pr": 128032,
+     "author": "Froraut",
+     "created": "2026-09-29",
+     "last_activity": "2026-09-29",
+     "mergeable_github": "CONFLICTING",
+     "merges_clean_on_pinned_main": false,
+     "merge_note": "conflict in tools/environments/local.py; tested at PR head instead",
+     "diff_size": "+262/-38, 13 files",
+     "has_tests": true,
+     "approach": "strips every launch TERMINAL_* and bridged config from routed-profile child envs; does not touch TERMINAL_CONFIG_ENV_MAP, tools/terminal_scope.py or get_subprocess_home (related, different defect)"
+    }
+   ],
+   "regression_test": {
+    "source": "adapted from kvnloo fork #40 (tests/tools/test_terminal_scope_multiplex.py + tests/test_subprocess_home_isolation.py)",
+    "path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W1/home-mode/test_terminal_scope_home_mode.py (dropped in as tests/tools/)",
+    "tests": [
+     "test_profile_terminal_scope_projects_home_mode[profile|auto] (defect A)",
+     "test_routed_profile_home_mode_drives_subprocess_home[profile-auto|auto-profile] (defect B)"
+    ],
+    "contract": "build_profile_terminal_scope carries the routed profile's TERMINAL_HOME_MODE (else the 'auto' default, never ambient), and under a gateway _profile_runtime_scope get_subprocess_home follows that value in both directions instead of the launch process's TERMINAL_HOME_MODE.",
+    "evidence_path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W1/home-mode/AB.txt"
+   },
+   "ab_results": {
+    "main": {
+     "result": "fail",
+     "detail": "A 0/2 (scope.get('TERMINAL_HOME_MODE') is None), B 0/2 (get_subprocess_home follows ambient os.environ in both directions)"
+    },
+    "73117": {
+     "result": "pass (defect A) / fail (defect B)",
+     "detail": "merges clean; A 2/2, B 0/2; its own kanban tests + test_terminal_config_env_sync + test_terminal_scope_multiplex pass. B is the separate consumer gap (in-process routed turns)"
+    },
+    "129844": {
+     "result": "pass (defect A) / fail (defect B)",
+     "detail": "merges clean; A 2/2, B 0/2; same one-token map fix as #73117"
+    },
+    "128032": {
+     "result": "fail",
+     "detail": "conflicts on main; at PR head A 0/2, B 0/2 (does not address the map or the scope read)"
+    },
+    "73117+fold-in": {
+     "result": "pass",
+     "detail": "A 2/2, B 2/2; #73117 alone is the negative control for the fold-in"
+    }
+   },
+   "adjacent_tests": {
+    "files": [
+     "tests/hermes_cli/test_kanban_worker_terminal_profile_env.py",
+     "tests/tools/test_terminal_config_env_sync.py",
+     "tests/tools/test_terminal_scope_multiplex.py",
+     "tests/agent/test_copilot_acp_client.py",
+     "tests/agent/test_file_safety_write_credentials.py",
+     "tests/agent/test_skill_utils.py",
+     "tests/tools/test_file_tools_tilde_profile.py",
+     "tests/tools/test_spawn_site_child_env.py",
+     "tests/tools/test_ssh_remote_cwd.py",
+     "tests/tools/test_subprocess_home_isolation.py"
+    ],
+    "result": "#73117 + fold-in + regression file: 11 files, 99 passed / 0 failed"
+   },
+   "carrier": {
+    "pr": 73117,
+    "author": "Lapot300",
+    "why": "earliest correct candidate for defect A (2026-07-28 vs #129844 2026-10-01), merges clean, smallest production footprint (+10/-1 vs #129844's bridge refactor), has subprocess-level tests, sweeper-reviewed keep_open/salvageability=high"
+   },
+   "fold_ins": [
+    {
+     "from": "fork #40",
+     "author": "kvnloo",
+     "co_authored_by": "Kevin Rajan <7121943+kvnloo@users.noreply.github.com>",
+     "hunk_scope": "hermes_constants.py get_subprocess_home: when tools.terminal_scope.get_terminal_scope() is bound, read TERMINAL_HOME_MODE from the scope (refusal scope -> 'auto'); unscoped path unchanged (+8/-1, lazy import; evidence foldin-get_subprocess_home-scope.diff). Reworked from the fork, which read terminal_env unconditionally, dropped env-dict precedence and would raise under a refusal scope.",
+     "why": "defect B: without it a multiplexed gateway turn still uses the launch profile's home mode even after #73117 projects home_mode into the scope",
+     "test": "test_routed_profile_home_mode_drives_subprocess_home[profile-auto|auto-profile] (fails on #73117 alone, passes with fold-in)"
+    }
+   ],
+   "close_after_merge": [],
+   "exclude_reason": null,
+   "row": "| none (routed-profile `terminal.home_mode`, follow-up to merged #101242) | #73117 (Lapot300) | main: FAIL 0/4; #73117: merges clean, scope projection 2/2 PASS, routed `get_subprocess_home` 0/2; #129844: 2/2, 0/2; #128032: CONFLICTING, 0/4 at its head; #73117 + fold-in: PASS 4/4 | kvnloo (fork #40): `get_subprocess_home` reads `TERMINAL_HOME_MODE` from the bound terminal scope (`hermes_constants.py` +8/-1, unscoped path unchanged) + 2 routed-turn tests; `Co-authored-by: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>` | none (#129844 stays open for #28892 and drops its duplicate `home_mode` map token on rebase; #128032 is a different defect) | On main, `build_profile_terminal_scope` drops `terminal.home_mode`, and a gateway `_profile_runtime_scope` turn takes subprocess HOME from the launch process's `TERMINAL_HOME_MODE` in both directions. #73117's one-token `TERMINAL_CONFIG_ENV_MAP` fix restores the scope projection and its Kanban child tests pass, but in-process routed turns stay wrong until `get_subprocess_home` reads the scope. Carrier plus fold-in passes 4/4 and 99 adjacent tests across 11 files. |",
+   "candidates_checked_not_same_defect": [
+    {
+     "pr": 91778,
+     "author": "tuwsm",
+     "note": "CLI bridge exports hardcoded terminal defaults over inherited env (mentions TERMINAL_HOME_MODE); different mechanism"
+    },
+    {
+     "pr": 71838,
+     "author": "fangliquanflq",
+     "note": "TUI slash worker HOME after session HERMES_HOME override; different code path"
+    }
+   ],
+   "notes": "#73117 and #129844 add the same 'home_mode' token at different tuple positions, so whichever lands second has a one-line textual conflict (verified). #129844 is not a duplicate (bridge dedupe for FR #28892) and should stay open. #73117's stale 'home_mode is CLI-only' exemption in tests/tools/test_terminal_config_env_sync.py still passes but is obsolete once home_mode is in the map (#129844 rewrites that test anyway). #128032's Kanban/child-env strip overlaps #73117's deferred-resolution hunk conceptually (different branch of _default_spawn); not tested beyond this contract. kvnloo fork #40 can be closed on the fork once the fold-in lands. Worktree removed; local-only refs left in $S/h.git: refs/w1/merge/73117, refs/w1/merge/129844 (clean merge commits on refs/w1/main).",
+   "row_fork_draft": "| none (routed-profile terminal.home_mode; follow-up to merged #101242) | #73117 (Lapot300) | main: 0/4 fail; #73117 merged clean: scope-projection 2/2 pass, routed get_subprocess_home 0/2; #129844: 2/2, 0/2; #128032: conflicts, 0/4 at head; #73117 + fold-in: 4/4 | kvnloo (fork #40): get_subprocess_home reads TERMINAL_HOME_MODE from the bound terminal scope (hermes_constants.py +8/-1) + 2 routed-turn tests; Co-authored-by: Kevin Rajan <7121943+kvnloo@users.noreply.github.com> | none (#129844 stays open for #28892 and drops its duplicate `home_mode` map token on rebase; #128032 is a different defect) | On af92ea8e, build_profile_terminal_scope drops terminal.home_mode and a gateway _profile_runtime_scope turn resolves subprocess HOME from the launch process's TERMINAL_HOME_MODE in both directions. #73117's one-token map fix restores the scope projection and its Kanban child tests pass, but in-process routed turns stay wrong until get_subprocess_home reads the scope; carrier plus fold-in passes 4/4 and 99 adjacent tests across 11 files, with the unscoped path unchanged. |",
+   "evidence_dir": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W1/home-mode/"
+  },
+  {
+   "issue": "fork #38 vs #85253 (no upstream issue)",
+   "slug": "suggest-cache",
+   "seed": "fork #38 (kvnloo/hermes-agent)",
+   "title": "Desktop composer skill/MCP suggestion caches survive a profile or connection switch",
+   "main_sha": "af92ea8e5b852518c523c3e8b2cbd95f0f3d79dc",
+   "candidates": [
+    {
+     "pr": 85253,
+     "author": "pierrenode",
+     "created": "2026-08-13T11:26:22Z",
+     "last_activity": "2026-08-16T12:35:48Z (bot review comment; no maintainer activity)",
+     "mergeable_github": "UNKNOWN",
+     "merges_clean_on_pinned_main": "false: textual conflict in profile.ts $activeGatewayProfile.subscribe block (main added invalidateProfileListFetches()); resolved mechanically by keeping both. Semantic problem after merge: new import edge profile.ts -> suggestion-providers/{skill,mcp}.ts closes an import cycle back into profile.ts via app/chat/composer -> slash-refs.ts -> lib/desktop-slash-commands.ts -> lib/slash-completion-cache.ts",
+     "diff_size": "+37/-0, 2 files",
+     "has_tests": "yes: 2 tests in apps/desktop/src/store/profile.test.ts, both mock the suggestion-provider modules (which hides the cycle)",
+     "approach": "call invalidateMcpSuggestionIndex() + invalidateSkillSuggestionIndex() inside the profile.ts $activeGatewayProfile real-change block"
+    }
+   ],
+   "regression_test": {
+    "source": "new (behavioural; skill half adapted from fork #38 skill-cache.test.ts, MCP half new)",
+    "path": "apps/desktop/src/store/suggestion-providers/switch-cache.test.ts",
+    "tests": [
+     "suggestion caches on profile switch > does not offer the previous profile skill or MCP pills after switching profiles",
+     "suggestion caches on profile switch > keeps the caches when the profile is re-set to the same key",
+     "suggestion caches on connection switch with an unchanged profile key > does not offer the previous connection skill or MCP pills"
+    ],
+    "contract": "After a switch to another backend (profile switch, or a connection switch that keeps the same profile key), the skill and MCP draft providers answer from the new backend, not from their 5-minute module caches; a same-key re-set keeps the cache.",
+    "evidence_path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W1/suggest-cache/"
+   },
+   "ab_results": {
+    "main": {
+     "result": "fail",
+     "detail": "2 failed | 1 passed: profile switch still offers ['pr-ready'] and ['linear'] (expected []), connection switch same; same-key test passes."
+    },
+    "85253": {
+     "result": "fail (partial)",
+     "detail": "Profile-switch contract passes (skill + MCP) and same-key passes; same-profile-key connection switch still fails (out of its scope). Merged onto af92ea8e it introduces an import cycle: 62 of 91 desktop test files that import store/profile fail to load vs 1 on main (61 new; TypeError: Cannot read properties of undefined (reading 'subscribe') at lib/slash-completion-cache.ts:99, plus mock-chain errors). With the regression test importing store/profile before the providers, the test file itself fails to load the same way. Static ESM order check from src/main.tsx shows profile.ts is entered first, so the renderer would likely hit the same TDZ at boot (Electron boot NOT_TESTED). tsc -p . clean."
+    },
+    "fork#38 rebuilt (reference, not a candidate)": {
+     "result": "fail (partial)",
+     "detail": "skill.ts subscription + gateway-switch wipe call: skill assertions pass for profile and connection switch; MCP assertions fail (fork does not touch mcp.ts)."
+    },
+    "provider-subscription design (reference, not a candidate)": {
+     "result": "pass",
+     "detail": "fork #38 hunks + MCP twin (mcp.ts $activeGatewayProfile subscription + invalidateMcpSuggestionIndex() in wipeSessionListsForGatewaySwitch), +51/-0, 3 files: 3/3; 91 profile importers + suggestion-providers + gateway-switch.test.ts 96/97 files, 1251 tests (same single sparse-checkout fixture failure as main); no back-edge into profile.ts."
+    }
+   },
+   "adjacent_tests": {
+    "files": [
+     "91 apps/desktop test files importing store/profile",
+     "src/store/suggestion-providers/*",
+     "src/store/gateway-switch.test.ts",
+     "src/store/profile.test.ts",
+     "tsc -p ."
+    ],
+    "result": "main 90/91 (use-session-actions.test.tsx fails on a ../tests/fixtures import missing from the sparse worktree, pre-existing artifact); #85253 merged 29/91 (61 new load failures); provider-subscription design 96/97 (same artifact only). profile.test.ts with #85253: 27/27."
+   },
+   "carrier": null,
+   "fold_ins": [],
+   "close_after_merge": [],
+   "exclude_reason": "No correct candidate. The only open PR, #85253, fixes the profile-switch half but, merged onto af92ea8e, its profile.ts -> suggestion-providers import closes a cycle back into profile.ts (via lib/slash-completion-cache.ts), which makes 61 additional desktop test files fail to load (62/91 vs 1/91 on main), and it does not cover a connection switch that keeps the same profile key. Making it sound means moving its only production hunk into provider-module subscriptions, which is a redesign of the PR, not a fold-in.",
+   "row": null,
+   "notes": "Support rather than compete: a review note on #85253 should report the cycle (61 test-file load failures on current main; its own tests mock the providers and hide it) and suggest the verified shape: subscribe to $activeGatewayProfile inside skill.ts and mcp.ts (the existing slash-completion-cache.ts pattern, as in fork #38) and call both invalidators in wipeSessionListsForGatewaySwitch() (fork #38 hunk, extended to MCP) for same-profile-key connection switches. Design diff and test saved in the evidence dir (provider-subscription-design.diff, switch-cache.test.ts). This contradicts the fork-38 verdict note that #85253's profile.ts placement is the better one: that was true at its Aug-13 base, not on current main. No other open PR invalidates these caches (searched invalidateSkillSuggestionIndex, invalidateMcpSuggestionIndex, suggestion-providers, wipeSessionListsForGatewaySwitch; #82823/#89915/#104680/#106041 touch neighbouring files but not these caches). Co-authored-by if the design is later carried: pierrenode <298902573+pierrenode@users.noreply.github.com>, Kevin Rajan <7121943+kvnloo@users.noreply.github.com>.",
+   "evidence_dir": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W1/suggest-cache/"
+  },
+  {
+   "issue": "#81160 / #81161 (carrier's issues); the defect itself has no issue: reviewDiff/review_diff (unstaged) renders a clean or stale-staged tracked file as a new-file all-add",
+   "slug": "reviewdiff-tracked",
+   "seed": "fork #48 (kvnloo/hermes-agent)",
+   "title": "Review pane unstaged diff synthesizes a 'new file mode' all-add for tracked files with an empty unstaged diff (Electron + Python twin)",
+   "main_sha": "af92ea8e5b852518c523c3e8b2cbd95f0f3d79dc",
+   "candidates": [
+    {
+     "pr": 81164,
+     "author": "thelonewander3r (commit author Eman <eman1369a@gmail.com>)",
+     "created": "2026-08-07T15:46:47Z",
+     "last_activity": "2026-09-09T14:42:21Z (CI retrigger commit; no review)",
+     "mergeable_github": "CONFLICTING (DIRTY); labels type/bug, P2, comp/desktop, comp/cli, sweeper:risk-compatibility",
+     "merges_clean_on_pinned_main": "false: git-review-ops.ts x2 (main replaced the raw execFile --no-index call with execGit from no-console-git; PR replaced it with untrackedDiff) and git-review-ops.test.ts x2 (main's reviewCreatePr import + file-wide execFile mock vs PR's appended tests). Mechanical resolution builds and passes the regression test, but the PR's new helpers still spawn git with raw execFile, so 8 of its own tests fail under main's execFile mock until ported to execGit (+21/-22).",
+     "diff_size": "+908/-46, 15 files",
+     "has_tests": "yes: +288 in git-review-ops.test.ts, diff-lines.test.ts, tests/hermes_cli/test_web_git_review_pathspecs.py (none for the tracked-file case)",
+     "approach": "resolve untracked rows through `git ls-files --others --exclude-standard` in both reviewDiff (Electron) and review_diff (Python); a tracked file resolves to nothing, so ''. Also literalizes all pathspecs, expands untracked directories, and changes staged rows to diff HEAD..worktree."
+    },
+    {
+     "pr": 95554,
+     "author": "sprmn24",
+     "created": "2026-08-26T13:10:26Z",
+     "last_activity": "2026-08-28T11:26:36Z",
+     "mergeable_github": "UNKNOWN",
+     "merges_clean_on_pinned_main": "prod merges clean; test import-line conflict (mechanical)",
+     "diff_size": "+32/-1, 2 files",
+     "has_tests": "yes (outside-repo path test)",
+     "approach": "different defect: reject renderer-supplied paths outside the repo before the --no-index fallback (Electron only)"
+    }
+   ],
+   "regression_test": {
+    "source": "fork #48 (kvnloo) support-diff Electron tests, as a standalone file; Python twin new",
+    "path": "apps/desktop/electron/review-diff-tracked.test.ts + tests/hermes_cli/test_web_git_review_diff_tracked.py",
+    "tests": [
+     "reviewDiff (unstaged) never renders a tracked file as a new-file all-add",
+     "reviewDiff (unstaged) still synthesizes an all-add for an untracked file",
+     "test_unstaged_review_diff_of_tracked_file_is_never_an_all_add",
+     "test_unstaged_review_diff_still_all_adds_an_untracked_file"
+    ],
+    "contract": "With staged=false, a pristine or fully staged tracked file yields '' (never a 'new file mode' all-add) in both backends, while an untracked file still gets the synthesized all-add.",
+    "evidence_path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W1/reviewdiff-tracked/"
+   },
+   "ab_results": {
+    "main": {
+     "result": "fail",
+     "detail": "Electron 1 failed/1 passed: actual 'diff --git a/tracked.txt b/tracked.txt\\nnew file mode 100644 ... +tracked', expected ''. Python 1 failed/1 passed: assert 'diff --git a...@\\n+tracked\\n' == ''."
+    },
+    "81164": {
+     "result": "pass",
+     "detail": "Electron 2/2, Python 2/2 when merged onto af92ea8e (conflicts resolved, PR side for the fallback). Needs rebase: as merged, 8 of its own git-review-ops tests fail (21/29) because its helpers use raw execFile under main's execFile mock; with the helpers ported to execGit: 29/29, and 30/30 with the fork #48 tracked-file test appended in that file."
+    },
+    "95554": {
+     "result": "fail",
+     "detail": "Electron still returns the 'new file mode' all-add for tracked.txt; Python backend untouched (fails). Its own outside-repo test passes. Not a fix for this defect."
+    },
+    "fork#48 guard (reference, not a candidate)": {
+     "result": "fail (partial)",
+     "detail": "7-line `git status --porcelain` '??' guard: Electron 2/2 pass, Python 1 failed (fork does not touch hermes_cli/web_git.py)."
+    }
+   },
+   "adjacent_tests": {
+    "files": [
+     "apps/desktop/electron/git-review-ops.test.ts",
+     "apps/desktop/electron/no-console-git.test.ts",
+     "apps/desktop/electron/git-binary-candidates.test.ts",
+     "apps/desktop/electron/git-repo-scan.test.ts",
+     "apps/desktop/electron/git-root.test.ts",
+     "apps/desktop/electron/git-worktree-ops.test.ts",
+     "apps/desktop/src/components/chat/diff-lines.test.ts",
+     "apps/desktop/src/app/right-sidebar/review/*",
+     "tests/hermes_cli/test_web_git_review_pathspecs.py",
+     "tests/hermes_cli/test_web_server_git.py",
+     "tests/hermes_cli/test_web_git_gh_stderr.py",
+     "tsc -p tsconfig.electron.json",
+     "tsc -p ."
+    ],
+    "result": "#81164 merged: all electron siblings pass except git-review-ops.test.ts (21/29 as merged, 29/29 after execGit port); review UI + diff-lines 4 files/18 tests pass; Python 4 files/42 tests pass; both tsc runs clean (as merged and ported)."
+   },
+   "carrier": null,
+   "fold_ins": [],
+   "close_after_merge": [],
+   "exclude_reason": "Carrier not executable as a wave row yet. #81164 is the only PR that fixes the defect (Electron and Python both pass the regression test), but it is CONFLICTING on main, and merging it takes a code port beyond context drift: its synthesizeAddDiff/untrackedPathsUnder helpers must move from raw execFile to main's execGit (+21/-22, verified locally), and as merged 8 of its own git-review-ops tests fail. It is also a +908/-46, 15-file multi-behaviour PR labelled sweeper:risk-compatibility (staged-row change not covered by this test), and it fixes the tracked-file case only as a side effect. Becomes a row once #81164 is rebased (see row_when_rebased). Until then, offer the two regression tests and the execGit port diff as review support on #81164.",
+   "row": null,
+   "notes": "No competing upstream PR for this defect (searched reviewDiff, review_diff, _all_add_diff, literal-pathspecs; #58726 Adolanium's is_file guard still all-adds tracked files by code reading; #63063, #58036, #65555, #110525 do not change this fallback). #81164 also changes staged-row semantics (staged rows now diff HEAD..worktree), which this test does not cover; alt-glitch labelled it sweeper:risk-compatibility on 2026-08-07, so a maintainer should look at that change before merging. Probe: #95554's outside-repo case leaks '+HERMES_OUTSIDE_REPO_SECRET' on main, while #81164 (as merged and ported) returns '' because ls-files rejects outside paths. After the carrier lands, #95554 is defence in depth and needs a rebase on the same lines. Close kvnloo fork #48 (fork side) after the carrier merges. Issues #81160/#81161 auto-close via Fixes.",
+   "carrier_when_rebased": {
+    "pr": 81164,
+    "author": "thelonewander3r",
+    "why": "Only open PR that fixes the defect, in both backends (verified A/B); it already carries Fixes #81160/#81161 and has tests. Requires a rebase that ports synthesizeAddDiff()/untrackedPathsUnder() from raw execFile to main's execGit (verified diff +21/-22; drops the PR's ls-files maxBuffer bound, which execGit lacks)."
+   },
+   "row_when_rebased": "| #81160, #81161 (+ unfiled: unstaged reviewDiff/review_diff all-adds a clean or stale-staged tracked file) | #81164 (thelonewander3r); rebase needed: port synthesizeAddDiff/untrackedPathsUnder from raw execFile to execGit | main: FAIL (Electron and Python return a 'new file mode' all-add for a pristine tracked.txt); #81164: PASS (Electron 2/2, Python 2/2); #95554: FAIL; fork #48 guard: Electron PASS, Python FAIL | kvnloo: reviewDiff tracked-file regression tests in git-review-ops.test.ts + Python twin tests/hermes_cli/test_web_git_review_diff_tracked.py | none (no competing upstream PR; #95554 is a separate outside-repo defect, keep open) | #81164's `ls-files --others` resolution returns '' for tracked files in both backends, fixing a bug it does not claim and has no test for. Merged onto af92ea8e it conflicts with main's move to execGit: as merged, 8 of its own git-review-ops tests fail under main's file-wide execFile mock, and porting its two helpers to execGit (+21/-22) gives 30/30 there, Python 42/42 and clean tsc. |",
+   "fold_ins_when_rebased": [
+    {
+     "from": "fork #48",
+     "author": "kvnloo",
+     "co_authored_by": "Kevin Rajan <7121943+kvnloo@users.noreply.github.com>",
+     "hunk_scope": "apps/desktop/electron/git-review-ops.test.ts: add test 'reviewDiff (unstaged) never renders a tracked file as a new-file all-add' (pristine + stale-staged -> '') and 'reviewDiff (unstaged) still synthesizes an all-add for an untracked file' (import reviewDiff)",
+     "why": "#81164 fixes the tracked-file case only incidentally and has no reviewDiff tracked-file test; these pin it.",
+     "test": "fails on main (new file mode for tracked.txt), passes on rebased #81164 (30/30 in that file)"
+    },
+    {
+     "from": "new (W1, on behalf of kvnloo)",
+     "author": "kvnloo",
+     "co_authored_by": "Kevin Rajan <7121943+kvnloo@users.noreply.github.com>",
+     "hunk_scope": "tests/hermes_cli/test_web_git_review_diff_tracked.py (new, 2 tests on hermes_cli.web_git.review_diff)",
+     "why": "Python twin of the same contract; neither #81164 nor fork #48 tests review_diff for tracked files.",
+     "test": "fails on main, passes on #81164"
+    }
+   ],
+   "parent_override": "Parent reclassified this cluster from row to EXCLUDE for consistency with doctor-scope: a carrier that needs a non-mechanical rebase is not a concrete disposition.",
+   "evidence_dir": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W1/reviewdiff-tracked/"
+  },
+  {
+   "issue": "no upstream issue (kvnloo fork #23 vs #96941)",
+   "slug": "slack-snake",
+   "seed": "fork #23 (kvnloo/hermes-agent)",
+   "title": "Slack rich_blocks: intra-word underscores (snake_case, SERVICE_US_EAST, A__B__C) are eaten as emphasis delimiters in rich_text bodies and stripped from headers",
+   "main_sha": "af92ea8e5b852518c523c3e8b2cbd95f0f3d79dc",
+   "candidates": [
+    {
+     "pr": 96941,
+     "author": "NaMinhyeok (Na Minhyeok)",
+     "created": "2026-08-28T06:50:19Z",
+     "last_activity": "2026-08-28T06:54:16Z",
+     "mergeable_github": "UNKNOWN (not computed; conflicts locally)",
+     "merges_clean_on_pinned_main": "false: one conflict hunk in block_kit.py regex block, main added _SLACK_LINK_RE next to it (da25b16662); resolved mechanically by keeping main's _SLACK_LINK_RE and taking the PR's regex split, no other edits. Resolved diff saved as 96941-merged-onto-af92ea8e.diff",
+     "diff_size": "+50/-6, 2 files",
+     "has_tests": true,
+     "approach": "Splits _BOLD_RE/_ITALIC_RE into star/underscore variants; the underscore ones are gated with (?<![\\w_]) / (?![\\w_]); header path goes through _inline_elements instead of re.sub('[*_~`]','') so literal identifier characters survive; 5 header tests."
+    },
+    {
+     "pr": 56482,
+     "author": "briandevans",
+     "created": "2026-07-01T15:34:07Z",
+     "last_activity": "2026-07-15T03:32:21Z (closed unmerged by author, stale)",
+     "mergeable_github": "CONFLICTING (closed)",
+     "merges_clean_on_pinned_main": true,
+     "diff_size": "+70/-3, 2 files",
+     "has_tests": true,
+     "approach": "Splits italic into */_ variants with an underscore word-boundary gate (body only); no header or __ fix."
+    },
+    {
+     "pr": 105534,
+     "author": "SharadKumar",
+     "created": "2026-09-08T03:47:22Z",
+     "last_activity": "2026-09-08T09:01:51Z",
+     "mergeable_github": "UNKNOWN",
+     "merges_clean_on_pinned_main": "false: block_kit.py + test conflict",
+     "diff_size": "+64/-32, 2 files",
+     "has_tests": true,
+     "approach": "Different defect: emphasis across inline code/links (sentinel protection); keeps _ITALIC_RE/_BOLD_RE and header re.sub."
+    },
+    {
+     "pr": 114607,
+     "author": "Roblmvp",
+     "created": "2026-09-18T03:12:54Z",
+     "last_activity": "2026-09-18T03:17:50Z",
+     "mergeable_github": "UNKNOWN",
+     "merges_clean_on_pinned_main": "false: block_kit.py conflict",
+     "diff_size": "+107/-19, 2 files",
+     "has_tests": true,
+     "approach": "Different defect: resolve outer emphasis before code/links; keeps _ITALIC_RE; labeled needs-decision (alt-glitch asked #105534/#114607 to consolidate)."
+    }
+   ],
+   "regression_test": {
+    "source": "new composite: kvnloo fork #23 TestEmphasis (8 body-path tests) + #96941 header tests (5) + 1 body double-underscore case",
+    "path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W1/slack-snake/test_slack_block_kit_underscores.py (dropped in as tests/gateway/test_slack_block_kit_underscores.py)",
+    "tests": [
+     "TestBodyEmphasis::* (8)",
+     "TestBodyDoubleUnderscore::test_double_underscore_identifier_in_bullet_preserved",
+     "TestHeader::* (5)"
+    ],
+    "contract": "An intra-word _ or __ in Slack rich_text bodies (lists, quotes, table cells) and headers stays literal text, while word-boundary *x*, _x_ and __x__ emphasis still renders.",
+    "evidence_path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W1/slack-snake/"
+   },
+   "ab_results": {
+    "main": {
+     "result": "fail",
+     "detail": "9 of 14 fail: body snake_case list/quote/table and */_ cross-pair (underscores deleted, 'status' italic), body SERVICE__US__EAST -> SERVICEUSEAST, header 'SERVICEUSEAST' == 'SERVICE_US_EAST' and 3 more header cases."
+    },
+    "96941": {
+     "result": "pass",
+     "detail": "14/14 after the mechanical conflict resolution. Negative control: dropping \\w from _ITALIC_UNDERSCORE_RE lookarounds -> 5 fail (4 body snake_case + header SERVICE_US_EAST)."
+    },
+    "fork#23 (kvnloo, not upstream)": {
+     "result": "fail",
+     "detail": "Body hunk applies cleanly; 9 pass, 5 fail: the 4 header tests (header still strips [*_~`]) and body SERVICE__US__EAST (_BOLD_RE unchanged)."
+    },
+    "56482": {
+     "result": "fail",
+     "detail": "Closed. Merges clean; same 5 failures as fork #23 (body-only fix)."
+    },
+    "105534": {
+     "result": "fail",
+     "detail": "Different defect. PR-head block_kit.py on main: 5 pass, 9 fail, identical to main."
+    },
+    "114607": {
+     "result": "fail",
+     "detail": "Different defect. PR-head block_kit.py on main: 5 pass, 9 fail, identical to main."
+    }
+   },
+   "adjacent_tests": {
+    "files": [
+     "tests/gateway/test_slack.py",
+     "tests/gateway/test_slack_approval_buttons.py",
+     "tests/gateway/test_slack_block_kit.py (with #96941's header tests)",
+     "tests/gateway/test_slack_block_kit_underscores.py"
+    ],
+    "result": "With #96941 merged: 267 passed, 0 failed."
+   },
+   "carrier": {
+    "pr": 96941,
+    "author": "NaMinhyeok",
+    "why": "The only open candidate that passes both the body and header contract (14/14). Small (+50/-6), has tests, one mechanical conflict. No other open PR targets the defect; #56482 (closed) and kvnloo fork #23 fix the body path only."
+   },
+   "fold_ins": [
+    {
+     "from": "fork #23",
+     "author": "kvnloo",
+     "co_authored_by": "Kevin Rajan <7121943+kvnloo@users.noreply.github.com>",
+     "hunk_scope": "tests/gateway/test_slack_block_kit.py: the _iter_text_elements/_all_text/_italic_texts helpers plus the TestEmphasis body-path tests (snake_case preserved in bullet list, blockquote and table cell; legit *real*/_real_/_quick brown fox_ still italic; backticked snake_case stays code; 2*3=6 and my_var_b cross-pair not emphasis). Can be trimmed to the list/quote/table + cross-pair + legit-emphasis cases. Test-only, no production hunk.",
+     "why": "#96941's own tests cover only the header path. Its regex split also fixes the rich_text body path, but nothing asserts that, and the body path is where agents' snake_case identifiers appear most.",
+     "test": "8 tests pass on #96941 merged onto af92ea8e and 4 fail on main (snake_case list/quote/table + cross-pair)."
+    }
+   ],
+   "close_after_merge": [],
+   "exclude_reason": null,
+   "row": "| none (Slack rich_text/header intra-word underscores; kvnloo fork #23) | #96941 (NaMinhyeok) | main: FAIL, 9 of 14; #96941: PASS 14/14 after one mechanical conflict next to main's `_SLACK_LINK_RE`; closed #56482 and kvnloo fork #23: FAIL, 5 of 14 (header path, body `SERVICE__US__EAST`); #105534, #114607: FAIL, 9 of 14 (different defect) | kvnloo (fork #23): rich_text body-path tests in `tests/gateway/test_slack_block_kit.py` (snake_case in list, quote and table cell; real `_x_`/`*x*` still italic; `*`/`_` cross-pair not emphasis); `Co-authored-by: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>` | none (the only same-defect PR, #56482, is already closed unmerged) | On main the combined `_ITALIC_RE` pairs intra-word underscores and the header path strips every emphasis character, so `build_status_report` and `SERVICE_US_EAST` lose their underscores. #96941 splits the emphasis regexes with word-boundary gates and routes headers through the inline parser; breaking its underscore gate re-fails 5 tests, and the Slack test files pass (267). Its own tests cover only headers, so kvnloo's body-path tests are folded in. |",
+   "notes": "Merge-order: #105534 and #114607 restructure the same _walk_emphasis region and keep the old _BOLD_RE/_ITALIC_RE. alt-glitch asked them to consolidate and #114607 is labeled needs-decision. That gates their parser approach, not #96941's regex/header fix; whichever lands second needs a rebase. #126045 (CJK emphasis padding) and #76025 touch adapter.py's mrkdwn path, not block_kit.py, and are unrelated. No upstream issue exists for this defect. kvnloo fork #23 can be closed downstream once #96941 plus the fold-in lands. briandevans (#56482, closed) had the same body fix earlier, but no hunk from it is needed. The bare repo has rerere enabled, so a resolution for #96941's block_kit.py conflict is now recorded in the shared rr-cache (it matches the mechanical resolution above).",
+   "row_fork_draft": "| fork #23 / #96941 (no upstream issue) | #96941 (NaMinhyeok) | main af92ea8e: 9 of 14 fail; #96941 merged (one mechanical conflict next to main's _SLACK_LINK_RE): 14/14 pass; closed #56482 and kvnloo fork #23: 5 fail (header path, body SERVICE__US__EAST); #105534, #114607: 9 fail (different defect) | kvnloo (fork #23): rich_text body-path tests in tests/gateway/test_slack_block_kit.py (snake_case in list/quote/table cell, legit _x_/*x* still italic, */_ cross-pair) | none open (#56482 already closed unmerged) | On main the combined _ITALIC_RE pairs any intra-word _..._ and the header strips every [*_~`], so build_status_report and SERVICE_US_EAST lose their underscores. #96941 splits the emphasis regexes with \\w word-boundary gates and sends headers through the inline parser; breaking its underscore gate re-fails 5 tests, and the Slack test files pass (267). Its own tests cover only headers, which is why kvnloo's body-path tests are folded in. |",
+   "evidence_dir": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W1/slack-snake/"
+  }
+ ]
+}

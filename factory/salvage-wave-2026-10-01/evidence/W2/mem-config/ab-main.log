@@ -1,0 +1,18 @@
+main=298a01c79b38018e029e50f77efe67c4a4fdbd40
+=== 1 file with test failures (7 tests failed) ===
+  ║ 7 failed, 3 passed in 2.76s
+7 failed, 3 passed in 2.76s
+E   AssertionError: assert None is not None
+E   AssertionError: built-in import disabled the external provider
+E   assert not True
+FAILED tests/agent/test_memory_bootstrap_independence.py::test_builtin_failure_does_not_invent_provider_or_plugin_error[malformed]
+FAILED tests/agent/test_memory_bootstrap_independence.py::test_builtin_failure_does_not_invent_provider_or_plugin_error[memory1]
+FAILED tests/agent/test_memory_bootstrap_independence.py::test_builtin_failure_does_not_invent_provider_or_plugin_error[memory3]
+FAILED tests/agent/test_memory_bootstrap_independence.py::test_builtin_failure_does_not_invent_provider_or_plugin_error[memory4]
+FAILED tests/agent/test_memory_bootstrap_independence.py::test_builtin_failure_does_not_invent_provider_or_plugin_error[None]
+FAILED tests/agent/test_memory_bootstrap_independence.py::test_disk_provider_discovery_survives_builtin_import_failure
+FAILED tests/agent/test_memory_bootstrap_independence.py::test_public_agent_preserves_provider_selection[False-True]
+=== Summary: 1 files, 3 tests passed, 7 failed (100% complete) in 7.4s (2 workers) ===
+  tests/agent/test_memory_bootstrap_independence.py  (7 tests failed)
+  ║ WARNING  run_agent:agent_init.py:1385 Memory provider plugin init failed: cannot access local variable 'mem_config' where it is not associated with a value
+WARNING  run_agent:agent_init.py:1385 Memory provider plugin init failed: cannot access local variable 'mem_config' where it is not associated with a value

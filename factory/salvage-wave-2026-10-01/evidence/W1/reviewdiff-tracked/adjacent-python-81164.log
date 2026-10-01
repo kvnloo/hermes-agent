@@ -1,0 +1,24 @@
+▶ not activated — using HERMES_PYTHON: /workspace/hermes-home/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 4 test files (~40 tests) under ['tests/hermes_cli/test_web_git_review_diff_tracked.py', 'tests/hermes_cli/test_web_git_review_pathspecs.py', 'tests/hermes_cli/test_web_server_git.py', 'tests/hermes_cli/test_web_git_gh_stderr.py']; running with -j 20
+[  5.0% |     2/~40 | ✓2 | ✗0] ✓ tests/hermes_cli/test_web_git_review_diff_tracked.py (2✓, 1.0s)
+[ 22.5% |     9/~40 | ✓9 | ✗0] ✓ tests/hermes_cli/test_web_git_gh_stderr.py (7✓, 1.1s)
+[ 62.5% |    25/~40 | ✓25 | ✗ 0] ✓ tests/hermes_cli/test_web_git_review_pathspecs.py (16✓, 1.7s)
+[100.0% |    40/~40 | ✓42 | ✗ 0] ✓ tests/hermes_cli/test_web_server_git.py (17✓, 3.4s)
+
+=== Summary: 4 files, 42 tests passed, 0 failed (100% complete) in 3.5s (20 workers) ===
+  Durations cached to test_durations.json (4 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   4
+  Total subprocess CPU-wall: 7.3s  (runner wall: 3.5s, parallelism: 20x)
+  P50: 1.74s  P90: 3.41s  P95: 3.41s  P99: 3.41s  Max: 3.41s
+  <1s: 0 files (0%)  <2s: 3 files (75%)
+  Top 10 slowest:
+      3.41s  tests/hermes_cli/test_web_server_git.py
+      1.74s  tests/hermes_cli/test_web_git_review_pathspecs.py
+      1.14s  tests/hermes_cli/test_web_git_gh_stderr.py
+      1.03s  tests/hermes_cli/test_web_git_review_diff_tracked.py

@@ -1,0 +1,24 @@
+{
+  "fork_pr": 60,
+  "title": "fix(cron): do not fence running executions when owner fingerprint is unavailable",
+  "claim": "cron.executions._owner_is_live must not report a live pid as 'proved gone' (fencing the execution row to immutable `unknown`) when the start-time fingerprint is missing at claim (started_at None) or unreadable at recovery (current None).",
+  "verdict": "EXTERNAL-OWNED",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "red": "Fork test file run on main: test_live_external_owner_with_null_start_time_is_not_recovered FAILS (`AssertionError: expected 0 recoveries, got 1; owner is alive`) -> the started_at-None branch (`return pid == os.getpid()`, main cron/executions.py:136-137) still fences a live external owner. test_live_external_owner_with_unreadable_start_time_at_recovery PASSES on main (half already fixed). test_delivery_queue_still_fences_uncertain_identity_owner fails on main (`assert 0 == 1`) - that test encodes the fork's proposed delivery at-most-once policy split, not a main defect claim.",
+    "green": "NOT_TESTED (not rebuilt: owned upstream).",
+    "negative_control": "NOT_TESTED (not rebuilt: owned upstream).",
+    "adjacent": "NOT_TESTED (not rebuilt: owned upstream).",
+    "source": "main cron/executions.py:130-145: unreadable current start time now returns True (landed by 52abb64c8f / #117584 salvage of liuhao1024 #117514, merged 2026-09-20, plus drift tolerance via start_time_fingerprints_match in 36ede56a66); `if started_at is None: return pid == os.getpid()` is unchanged since abc22cdf1a. cron/delivery_queue.py:24 still imports the shared _owner_is_live."
+  },
+  "upstream_overlap": [
+    "#108484 OPEN Liuzikaii (external), created 2026-09-11 (before fork #60 on 2026-09-13): fix(cron): preserve live owners when process identity is unavailable - changes BOTH None branches of the shared _owner_is_live (execution + delivery together) with a real-subprocess test tests/cron/test_owner_uncertainty.py. Head 9e29936e8ea3; its `current is not None and current == started_at` context line no longer exists on main -> needs rebase.",
+    "#108480 OPEN issue (Liuzikaii, P2, comp/cron, unassigned): cron recovery terminalizes live owners when a process fingerprint is unavailable. Comment 2026-09-27 by Enough1122 confirms the remaining unsafe branch is the NULL recorded fingerprint.",
+    "#117584 MERGED teknium1 (salvage #117514 liuhao1024): fixed the unreadable-current-start-time half + drift tolerance."
+  ],
+  "branch": null,
+  "files": ["cron/executions.py", "cron/delivery_queue.py", "tests/cron/test_bug_repro_owner_live_none.py"],
+  "size": "+51/-3 production (fork, excl. kanban baggage); not rebuilt",
+  "depends_on": null,
+  "notes": "Kanban baggage present on fork and excluded. Our version's distinct content is a delivery_queue-local _owner_is_live that keeps at-most-once fencing on unconfirmable identity; that contradicts both #108484's stated intent (shared helper covers delivery) and main's direction since #117584 (delivery already treats unreadable current fingerprint as live). Not worth offering as competing code. Possible review support for #108484 only: a delta receipt that the null-recorded branch still reproduces on main f8489405600c (RED above) and that #108484 needs a rebase onto the drift-tolerant comparator; the 'pid-recycled still fences' / 'dead pid still fences' anchors are likely already covered by tests/cron/test_owner_start_time_drift.py (not verified)."
+}

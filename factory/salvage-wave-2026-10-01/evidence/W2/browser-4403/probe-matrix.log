@@ -1,0 +1,18 @@
+=== main
+PROBE launch=default request=None profile_home=None root_basename=hermes_test -> profile_id='ERROR 4403'
+PROBE launch=default request=ops profile_home=<root>/profiles/ops root_basename=hermes_test -> profile_id='ERROR 4403'
+PROBE launch=work request=None profile_home=None root_basename=hermes_test -> profile_id='ERROR 4403'
+PROBE launch=work request=default profile_home=<root> root_basename=hermes_test -> profile_id='ERROR 4403'
+PROBE launch=work request=ops profile_home=<root>/profiles/ops root_basename=hermes_test -> profile_id='ERROR 4403'
+=== refs/w2/pr/119346
+PROBE launch=default request=None profile_home=None root_basename=hermes_test -> profile_id='default'
+PROBE launch=default request=ops profile_home=<root>/profiles/ops root_basename=hermes_test -> profile_id='ops'
+PROBE launch=work request=None profile_home=None root_basename=hermes_test -> profile_id='work'
+PROBE launch=work request=default profile_home=<root> root_basename=hermes_test -> profile_id='default'
+PROBE launch=work request=ops profile_home=<root>/profiles/ops root_basename=hermes_test -> profile_id='ops'
+=== refs/w2/fork/51
+PROBE launch=default request=None profile_home=None root_basename=hermes_test -> profile_id='default'
+PROBE launch=default request=ops profile_home=<root>/profiles/ops root_basename=hermes_test -> profile_id='ops'
+PROBE launch=work request=None profile_home=None root_basename=hermes_test -> profile_id='default'
+PROBE launch=work request=default profile_home=<root> root_basename=hermes_test -> profile_id='hermes_test'
+PROBE launch=work request=ops profile_home=<root>/profiles/ops root_basename=hermes_test -> profile_id='ops'

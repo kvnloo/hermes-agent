@@ -1,0 +1,159 @@
+From f31e218b00cde57ae4dcc0c740b297b2bd612f5f Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:37:29 -0500
+Subject: [PATCH] fix(worktree): don't track the base when it is on a remote
+ not named origin
+
+"New worktree from base" passes --no-track so a branch made from a
+remote-tracking ref is standalone, not wired to that ref as its
+upstream. The flag was only added when the base started with "origin/".
+The base picker also lists refs from other remotes. In a fork layout
+(origin = your fork, upstream = the project), branching from
+upstream/main made the new branch track upstream/main. Review push then
+calls a bare git push, which push.default=simple rejects because the
+branch name doesn't match its upstream.
+
+Pass --no-track for every base, in both twins (Electron
+git-worktree-ops.ts and the hermes_cli/web_git.py mirror). git only
+auto-tracks remote-tracking bases, so the flag changes nothing for a
+local base. The origin-only best-effort fetch is unchanged.
+---
+ .../desktop/electron/git-worktree-ops.test.ts | 47 +++++++++++++++++++
+ apps/desktop/electron/git-worktree-ops.ts     | 15 +++---
+ hermes_cli/web_git.py                         |  8 ++--
+ tests/hermes_cli/test_web_server_git.py       |  9 ++--
+ 4 files changed, 64 insertions(+), 15 deletions(-)
+
+diff --git a/apps/desktop/electron/git-worktree-ops.test.ts b/apps/desktop/electron/git-worktree-ops.test.ts
+index fb9e653629..a1848d4898 100644
+--- a/apps/desktop/electron/git-worktree-ops.test.ts
++++ b/apps/desktop/electron/git-worktree-ops.test.ts
+@@ -322,6 +322,53 @@ test('addWorktree: base origin/main does not set up upstream tracking', async ()
+   }
+ })
+ 
++test('addWorktree: base on a remote not named origin does not set up upstream tracking', async () => {
++  // Fork layout: the remote is `upstream`, so the base is upstream/main. git
++  // auto-tracks any remote-tracking base, whatever the remote is called.
++  const remoteDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hermes-remote-'))
++  const cloneDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hermes-clone-'))
++
++  try {
++    execFileSync('git', ['init', '-b', 'main', remoteDir])
++    execFileSync('git', [
++      '-C',
++      remoteDir,
++      '-c',
++      'user.email=hermes@localhost',
++      '-c',
++      'user.name=Hermes',
++      'commit',
++      '--allow-empty',
++      '-m',
++      'root'
++    ])
++    execFileSync('git', ['clone', '--origin', 'upstream', remoteDir, cloneDir])
++
++    const result = await addWorktree(
++      cloneDir,
++      { base: 'upstream/main', branch: 'feature-branch', name: 'feature-branch' },
++      'git'
++    )
++
++    let upstream = ''
++
++    try {
++      upstream = execFileSync('git', ['-C', result.path, 'rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'], {
++        stdio: ['ignore', 'pipe', 'ignore']
++      })
++        .toString()
++        .trim()
++    } catch {
++      // No upstream configured: the expected outcome.
++    }
++
++    assert.equal(upstream, '')
++  } finally {
++    fs.rmSync(remoteDir, { recursive: true, force: true })
++    fs.rmSync(cloneDir, { recursive: true, force: true })
++  }
++})
++
+ // A tag-pinned narrow clone (`--single-branch --branch v0`), the shape older
+ // installers made: remote.origin.fetch maps only the tag, so no branch has a
+ // tracking ref. The remote has `main` and `feature` one commit past the tag.
+diff --git a/apps/desktop/electron/git-worktree-ops.ts b/apps/desktop/electron/git-worktree-ops.ts
+index 8d206e2f4e..97c0597119 100644
+--- a/apps/desktop/electron/git-worktree-ops.ts
++++ b/apps/desktop/electron/git-worktree-ops.ts
+@@ -350,16 +350,15 @@ async function addWorktree(repoPath, options, gitBin) {
+       if (await gitOk(gitBin, ['check-ref-format', '--branch', remoteBranch], root)) {
+         await fetchTrackingRef(gitBin, root, 'origin', remoteBranch)
+       }
+-
+-      // When branching off a remote-tracking ref, git auto-sets up tracking
+-      // (e.g. `new-branch` → tracks `origin/main`). The user almost certainly
+-      // wants a standalone local branch — like `git checkout origin/main &&
+-      // git checkout -b new-branch` — not a branch silently wired to the
+-      // remote's upstream. `--no-track` prevents that.
+-      args.push('--no-track')
+     }
+ 
+-    args.push(base)
++    // When branching off a remote-tracking ref, git auto-sets up tracking
++    // (e.g. `new-branch` → tracks `origin/main`, or `upstream/main` in a fork
++    // layout). The user almost certainly wants a standalone local branch — like
++    // `git checkout origin/main && git checkout -b new-branch` — not a branch
++    // silently wired to the remote's upstream. `--no-track` prevents that for
++    // any remote name, and a local base never sets up tracking anyway.
++    args.push('--no-track', base)
+   }
+ 
+   try {
+diff --git a/hermes_cli/web_git.py b/hermes_cli/web_git.py
+index bec611c756..47ac9d4f20 100644
+--- a/hermes_cli/web_git.py
++++ b/hermes_cli/web_git.py
+@@ -670,10 +670,10 @@ def worktree_add(cwd: str, options: dict) -> dict:
+             # "origin/*" would fetch every branch: only fetch valid branch names.
+             if _git(root, ["check-ref-format", "--branch", remote_branch])[0] == 0:
+                 _fetch_tracking_ref(root, "origin", remote_branch)
+-            # Branching off a remote-tracking ref auto-wires upstream tracking; the user wants
+-            # a standalone local branch (Electron-op parity).
+-            args.append("--no-track")
+-        args.append(base)
++        # Branching off a remote-tracking ref auto-wires upstream tracking for any remote name
++        # (origin, upstream, ...); the user wants a standalone local branch (Electron-op parity).
++        # A local base never sets up tracking, so --no-track is safe for every base.
++        args += ["--no-track", base]
+     code, _, err = _git(root, args)
+     if code != 0:
+         if "already exists" not in (err or "").lower():
+diff --git a/tests/hermes_cli/test_web_server_git.py b/tests/hermes_cli/test_web_server_git.py
+index c67c0e9718..f7f5263f17 100644
+--- a/tests/hermes_cli/test_web_server_git.py
++++ b/tests/hermes_cli/test_web_server_git.py
+@@ -253,14 +253,17 @@ def test_worktree_add_existing_remote_branch_tracks_not_detaches(client, repo_wi
+     assert upstream == "origin/feature"
+ 
+ 
+-def test_worktree_add_from_origin_base_does_not_track(client, repo_with_remote):
++@pytest.mark.parametrize("remote", ["origin", "upstream"])
++def test_worktree_add_from_remote_base_does_not_track(client, repo_with_remote, remote):
++    if remote != "origin":
++        _git(repo_with_remote, "remote", "rename", "origin", remote)
+     added = client.post(
+         "/api/git/worktree/add",
+-        json={"path": str(repo_with_remote), "branch": "fresh", "base": "origin/main"},
++        json={"path": str(repo_with_remote), "branch": "fresh", "base": f"{remote}/main"},
+     ).json()
+     assert added["branch"] == "fresh"
+ 
+-    # Branching off origin/main must yield a standalone local branch, not one
++    # Branching off <remote>/main must yield a standalone local branch, not one
+     # silently wired to the remote's upstream (parity with the Electron op).
+     probe = subprocess.run(
+         ["git", "rev-parse", "--abbrev-ref", "fresh@{upstream}"],
+-- 
+2.55.0
+

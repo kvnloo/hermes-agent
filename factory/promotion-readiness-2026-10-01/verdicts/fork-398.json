@@ -1,0 +1,32 @@
+{
+  "fork_pr": 398,
+  "title": "docs: correct NVIDIA SwiftShader fallback to behavioral probe, not 580.x series",
+  "claim": "The NVIDIA SwiftShader fallback is a behavioural probe (witnessed GPU-process death), not a 580.x driver-series list.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "doc_text_on_main": "website/docs/reference/environment-variables.md:588 — \"routes rendering through SwiftShader on driver series with a broken EGL probe (`580.x`, #40077): `1` forces the fallback on — the recovery hatch if a future series reintroduces the crash but is not yet in the closed list\"",
+    "source": "apps/desktop/electron/linux-nvidia-egl-fallback.ts:10-24 ('The gate used to be a driver-major set ... So the gate is now behavioral (#124255)'), decideNvidiaEglFallback() :183-260 (override, sticky fallback marker per app+driver version, booting-marker engage).",
+    "red": "Doc describes the removed driver-major list.",
+    "green": "Entry describes the behavioural probe. vitest linux-nvidia-egl-fallback.test.ts ('the 580 series is probed, not assumed broken', 'a driver update re-probes hardware GL once') passes on main.",
+    "negative_control": "N/A — docs-only.",
+    "adjacent": "apps/desktop vitest: electron/update-order.test.ts electron/wslg-launch.test.ts electron/linux-nvidia-egl-fallback.test.ts electron/desktop-plugins-root.test.ts src/lib/remark-soft-breaks.test.ts src/app/session/hooks/use-hermes-config.test.ts -> 6 files, 57 passed. docs-site-checks equivalent on the bundle branch: website/scripts/extract-skills.py + generate-skill-docs.py leave website/docs, website/sidebars.ts and website/i18n unchanged (clean); website/scripts/check_doc_links.py OK. added lines scanned for MDX hazards ({ } or raw <tag> outside inline code / fences): none. NOT_TESTED: Docusaurus build (website/node_modules not installed in this environment).",
+    "mirrors": "No zh-Hans copy of this variable.",
+    "rebase": "verified on main f848940560; bundle merges cleanly onto refreshed main eb8d21f482 (git merge-tree); merges cleanly with every B1 ready/docs-* branch that touches the same files"
+  },
+  "upstream_overlap": [],
+  "branch": "ready/docs2-desktop",
+  "bundle_commit": "58f1374abe9b808711ba307c5b02d79a698398ba",
+  "patch": "patches/docs2-desktop.patch",
+  "pr_body": "patches/docs2-desktop.body.md",
+  "files": [
+    "website/docs/developer-guide/desktop-plugin-sdk.md",
+    "website/docs/reference/environment-variables.md",
+    "website/docs/user-guide/desktop.md",
+    "website/docs/user-guide/features/bot-screen.md",
+    "website/docs/user-guide/multi-connection-desktop.md"
+  ],
+  "size": "fork leaf +1/-1; bundle docs2-desktop +15/-8 (5 files changed, 15 insertions(+), 8 deletions(-))",
+  "depends_on": null,
+  "notes": "B1's ready/docs-memory touches other rows of environment-variables.md; merge-tree clean. Drift introduced by d9f0a399a0 (#128337). Bundled with: #124, #291, #292, #305, #392, #395. Packaging: one commit per area bundle (batch B2 lane W4-docs); publish one bundle at a time per kvnloo/hermes-agent#313."
+}

@@ -1,0 +1,85 @@
+From 71a0085e4e2eea201ea4b668cdc0fc6ce0b4409e Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:30:31 -0500
+Subject: [PATCH] chore(anthropic): remove unused _safe_text helper
+
+`agent/anthropic_message_convert._safe_text` has no callers on current
+main. The Anthropic request path now drops blank text blocks
+(`_replay_text` / `_is_blank_text_block`) and appends
+`_EMPTY_TEXT_PLACEHOLDER` only when nothing survives, so the
+coerce-in-place helper was left unused when that design replaced it.
+Its only references were its own unit tests, and `agent.anthropic_adapter`
+no longer re-exports it.
+
+Remove the helper, its `TestSafeText` cases and the now-unused `pytest`
+import. The blank-block behaviour tests for `_sanitize_replay_block` and
+`_convert_assistant_message` stay. `bedrock_adapter._safe_text` is a
+separate, still-used helper and is untouched.
+
+No behaviour change. The name is not in
+tests/compat/old_updater_surface.json.
+
+Salvaged from kvnloo/hermes-agent#15 and rebuilt on current main.
+
+Co-authored-by: detail-app[bot] <180357370+detail-app[bot]@users.noreply.github.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ agent/anthropic_message_convert.py                |  8 --------
+ .../test_anthropic_whitespace_text_blocks.py      | 15 +--------------
+ 2 files changed, 1 insertion(+), 22 deletions(-)
+
+diff --git a/agent/anthropic_message_convert.py b/agent/anthropic_message_convert.py
+index 60e400b1b5..6cbc826562 100644
+--- a/agent/anthropic_message_convert.py
++++ b/agent/anthropic_message_convert.py
+@@ -276,14 +276,6 @@ def _content_parts_to_anthropic_blocks(parts: Any) -> List[Dict[str, Any]]:
+     return out
+ 
+ 
+-def _safe_text(text: Any) -> str:
+-    """``text`` if non-whitespace, else the placeholder. A blank text block stored in history (e.g.
+-    by compression) is replayed on every turn and wedges the session with HTTP 400; the placeholder
+-    is self-healing. Mirrors ``bedrock_adapter._safe_text`` (kept separate on purpose)."""
+-    text = "" if text is None else str(text)
+-    return text if text.strip() else _EMPTY_TEXT_PLACEHOLDER
+-
+-
+ def _replay_text(b: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+     # Drop blank blocks rather than coerce in place: the caller relocates any cache_control and
+     # falls back to a placeholder only when nothing survives, so "(empty)" never sits as
+diff --git a/tests/agent/test_anthropic_whitespace_text_blocks.py b/tests/agent/test_anthropic_whitespace_text_blocks.py
+index 9aac5aa111..03d98a8c4c 100644
+--- a/tests/agent/test_anthropic_whitespace_text_blocks.py
++++ b/tests/agent/test_anthropic_whitespace_text_blocks.py
+@@ -11,8 +11,7 @@ text to a non-whitespace placeholder at two points on the Anthropic request path
+ — ``_sanitize_replay_block`` (ordered-blocks replay) and the final content walk
+ in ``_convert_assistant_message`` (main path). Ref #69512.
+ """
+-import pytest
+-from agent.anthropic_message_convert import _EMPTY_TEXT_PLACEHOLDER, _safe_text, _sanitize_replay_block, _convert_assistant_message
++from agent.anthropic_message_convert import _EMPTY_TEXT_PLACEHOLDER, _sanitize_replay_block, _convert_assistant_message
+ 
+ 
+ def _text_blocks(msg):
+@@ -26,18 +25,6 @@ def _assert_no_blank_text(msg):
+         assert b["text"].strip(), f"blank text block survived: {b!r}"
+ 
+ 
+-class TestSafeText:
+-    def test_none_becomes_placeholder(self):
+-        assert _safe_text(None) == _EMPTY_TEXT_PLACEHOLDER
+-
+-
+-    @pytest.mark.parametrize("blank", ["   ", "\n", "\t", " \n\t "])
+-    def test_whitespace_only_becomes_placeholder(self, blank):
+-        assert _safe_text(blank) == _EMPTY_TEXT_PLACEHOLDER
+-
+-
+-
+-
+ class TestSanitizeReplayBlockWhitespace:
+     def test_whitespace_text_block_dropped(self):
+         # Blank text blocks are DROPPED at the block level (not coerced in
+-- 
+2.55.0
+

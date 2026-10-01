@@ -1,0 +1,33 @@
+{
+  "fork_pr": 98,
+  "title": "docs(bot-mode): align zh-Hans DM signature placeholder with friendly-name form",
+  "claim": "zh-Hans bot-mode shows the DM stamp as `<sender> (@<sender>)`; the code stamps display name plus handle.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "red": "website/i18n/zh-Hans/.../user-guide/bot-mode.md:125 on main: \"`Message from 🤖 <sender> (@<sender>):`\".",
+    "green": "'`Message from 🤖 <friendly name> (@<handle>):`', matching EN bot-mode.md:186.",
+    "negative_control": "N/A for docs (no executable behaviour). Equivalent check: the stale phrase is present on main and absent on the bundle (grep given in red/green).",
+    "adjacent": "python3 website/scripts/check_doc_links.py on the bundle tree: OK (no route-style links). All 7 B1 bundles cherry-pick together onto main cleanly, and each pairs cleanly with B2's current docs2-update/docs2-desktop/docs2-gateway/docs2-memory bundles.",
+    "source": "tools/bot_mode_dm.py:243 content = f\"Message from 🤖 {_display_name(me, ...)} (@{_handle(me)}): \" + body."
+  },
+  "upstream_overlap": [
+    "No open external PR/issue for this claim (gh search prs/issues; open docs PRs touching the same files edit other sections)"
+  ],
+  "branch": "ready/docs-bot-mode",
+  "bundle": {
+    "branch": "ready/docs-bot-mode",
+    "commit": "36cf0f54d6",
+    "subject": "docs(bot-mode): correct Bot Chat delivery argv, DM stamp and room store name",
+    "bundle_size": "+4/-4",
+    "patch": "patches/docs-bot-mode.patch",
+    "body": "patches/docs-bot-mode.body.md"
+  },
+  "files": [
+    "website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/bot-mode.md"
+  ],
+  "size": "+1/-1",
+  "depends_on": null,
+  "fork_head": "47b0e7d43b701149fc1f19f1eec2a9155aa752ae",
+  "notes": "The rest of the zh-Hans DM bullet is an older, shorter translation; only the placeholder was corrected. B2's docs2-gateway (#294) edits other lines of the same file; no textual conflict."
+}

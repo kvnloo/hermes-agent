@@ -1,0 +1,29 @@
+## negative control: #119346 merged, its line reverted to session.get('profile')
+Auto-merging tui_gateway/methods_browser_control.py
+ tui_gateway/methods_browser_control.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[100.0% |     2/~2 | ✓0 | ✗3] ✗ tests/gateway/test_browser_controller_session_profile.py (3✗, 5.9s)
+=== Summary: 1 files, 0 tests passed, 3 failed (100% complete) in 6.0s (2 workers) ===
+E   AssertionError: (None, {'jsonrpc': '2.0', 'id': 2, 'error': {'code': 4403, 'message': 'controller_id, browser_profile_id, and server session profile are required'}})
+E   assert 'error' not in {'jsonrpc': '2.0', 'id': 2, 'error': {'code': 4403, 'message': 'controller_id, browser_profile_id, and server session profile are required'}}
+E               AssertionError: (None, {'jsonrpc': '2.0', 'id': 2, 'error': {'code': 4403, 'message': 'controller_id, browser_profile_id, and server session profile are required'}})
+E               assert 'error' not in {'jsonrpc': '2.0', 'id': 2, 'error': {'code': 4403, 'message': 'controller_id, browser_profile_id, and server session profile are required'}}
+E               AssertionError: (None, {'jsonrpc': '2.0', 'id': 2, 'error': {'code': 4403, 'message': 'controller_id, browser_profile_id, and server session profile are required'}})
+E               assert 'error' not in {'jsonrpc': '2.0', 'id': 2, 'error': {'code': 4403, 'message': 'controller_id, browser_profile_id, and server session profile are required'}}
+FAILED tests/gateway/test_browser_controller_session_profile.py::test_created_session_registers_with_its_canonical_profile[launch-default]
+FAILED tests/gateway/test_browser_controller_session_profile.py::test_created_session_registers_with_its_canonical_profile[launch-named]
+FAILED tests/gateway/test_browser_controller_session_profile.py::test_cloud_scope_selects_the_local_api_artifact_store_slot
+## negative control B: #119346 merged, fallback dropped (profile_name_for_home only)
+ tui_gateway/methods_browser_control.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[100.0% |     2/~2 | ✓0 | ✗3] ✗ tests/gateway/test_browser_controller_session_profile.py (3✗, 6.9s)
+=== Summary: 1 files, 0 tests passed, 3 failed (100% complete) in 6.9s (2 workers) ===
+E   AssertionError: (None, {'jsonrpc': '2.0', 'id': 2, 'error': {'code': 4403, 'message': 'controller_id, browser_profile_id, and server session profile are required'}})
+E   assert 'error' not in {'jsonrpc': '2.0', 'id': 2, 'error': {'code': 4403, 'message': 'controller_id, browser_profile_id, and server session profile are required'}}
+E               AssertionError: (None, {'jsonrpc': '2.0', 'id': 2, 'error': {'code': 4403, 'message': 'controller_id, browser_profile_id, and server session profile are required'}})
+E               assert 'error' not in {'jsonrpc': '2.0', 'id': 2, 'error': {'code': 4403, 'message': 'controller_id, browser_profile_id, and server session profile are required'}}
+E               AssertionError: (None, {'jsonrpc': '2.0', 'id': 2, 'error': {'code': 4403, 'message': 'controller_id, browser_profile_id, and server session profile are required'}})
+E               assert 'error' not in {'jsonrpc': '2.0', 'id': 2, 'error': {'code': 4403, 'message': 'controller_id, browser_profile_id, and server session profile are required'}}
+FAILED tests/gateway/test_browser_controller_session_profile.py::test_created_session_registers_with_its_canonical_profile[launch-default]
+FAILED tests/gateway/test_browser_controller_session_profile.py::test_created_session_registers_with_its_canonical_profile[launch-named]
+FAILED tests/gateway/test_browser_controller_session_profile.py::test_cloud_scope_selects_the_local_api_artifact_store_slot

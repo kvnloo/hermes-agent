@@ -1,0 +1,28 @@
+{
+ "fork_pr": 35,
+ "title": "fix(windows): repair hermes launchers for non-ASCII user profiles with relocatable venvs",
+ "claim": "ensure_windows_bin_launchers / install.ps1 must not crash (UnicodeEncodeError escaping `except OSError`, leaked .heal.<pid>) when writing the relocatable-venv .cmd delegator under a non-ASCII %LOCALAPPDATA%.",
+ "verdict": "SUPERSEDED-ON-MAIN",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "NOT_TESTED: the code the fork patches no longer exists on main, so there is nothing to make RED.",
+  "green": "NOT_TESTED (no rebuild)",
+  "negative_control": "NOT_TESTED (no rebuild)",
+  "adjacent": "NOT_TESTED (no rebuild)",
+  "source": "main hermes_cli/_install_repair.py::ensure_windows_bin_launchers no longer writes any .cmd body: it delegates to hermes_cli/_launchers.py (ensure_install_launchers / stage_launcher). The venv-delegator `write_text(..., encoding=\"ascii\")` is gone (git log -S'encoding=\"ascii\"': removed by 3d12e86ef1 'feat(pm): unified package manager \u2014 pm store foundation'). _launchers.py now writes .cmd bodies with encoding=\"utf-8\" (L274, L318), so the UnicodeEncodeError crash path no longer exists. install.ps1 no longer writes launcher bodies: it publishes them through `hermes_cli/_launchers.py $binDir` (install.ps1 L995)."
+ },
+ "upstream_overlap": [
+  "#122594 (OPEN, liopcc, 2026-09-25) 'fix(windows): keep .cmd launchers and the bootstrap working with non-ASCII user names' owns the remaining defect class on current main: a UTF-8 .cmd body parsed by cmd.exe under the OEM code page, fixed with a %~dp0-relative body, plus the install.ps1 decode fix.",
+  "#113919 (MERGED) desktop non-ASCII profile install fix.",
+  "#98906 (OPEN, kokhlo) wscript launchers as UTF-16."
+ ],
+ "branch": null,
+ "files": [
+  "hermes_cli/_install_repair.py",
+  "scripts/install.ps1",
+  "tests/hermes_cli/test_ensure_windows_bin_launchers.py"
+ ],
+ "size": "fork leaf +329/-6; no rebuild",
+ "depends_on": null,
+ "notes": "The fork's claim (ASCII write raising UnicodeEncodeError) cannot occur on main. The adjacent residual (UTF-8 bytes vs OEM code page in cmd.exe) is real but owned by #122594. The fork's %LOCALAPPDATA%-expansion idea is a different approach from #122594's %~dp0; at most offer it as a review comment on #122594, not a competing PR. Kanban baggage ignored."
+}

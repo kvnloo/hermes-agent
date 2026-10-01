@@ -1,0 +1,23 @@
+{
+  "fork_pr": 99,
+  "title": "docs(desktop): drop stale completion-callback rule from card-stack design",
+  "claim": "apps/desktop/DESIGN.md 'No completion callback may clear the measurement of a newly arrived card.' is stale because onExitComplete was removed.",
+  "verdict": "NOT-REPRODUCIBLE",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "red": "N/A",
+    "green": "N/A",
+    "negative_control": "N/A",
+    "adjacent": "N/A",
+    "source": "The sentence is a prohibition, not a description, and main satisfies it: CardStack (apps/desktop/src/components/ui/card-stack.tsx:58-105) uses <AnimatePresence initial={false}> with no completion callback and retires the footprint by a min-height transition. The rule and the callback removal were committed together by the same author (140d12545a adds the DESIGN.md sentence; 4bcde77e53 removes onExitComplete's setHeight(0); same author, same timestamp), so the sentence records why the callback was removed. Deleting it would drop a live design constraint."
+  },
+  "upstream_overlap": [],
+  "branch": null,
+  "files": [
+    "apps/desktop/DESIGN.md"
+  ],
+  "size": null,
+  "depends_on": null,
+  "fork_head": "0027dab2798eabb91a16efc45ca45b092291e25a",
+  "notes": "Recommend retiring the fork PR."
+}

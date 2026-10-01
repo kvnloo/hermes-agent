@@ -1,0 +1,27 @@
+{
+ "fork_pr": 30,
+ "title": "fix(agent): keep external memory provider when built-in memory import fails",
+ "claim": "A failing `from tools.memory_tool import ...` in _init_memory must not leave mem_config unbound and thereby drop the configured external memory provider (UnboundLocalError swallowed as 'Memory provider plugin init failed').",
+ "verdict": "EXTERNAL-OWNED",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "Defect still present on f848940 (agent/agent_init.py:1336 binds mem_config only inside `with suppress(Exception)`; l.1359 reads it in the provider block). Ran upstream #126106's tests/agent/test_memory_bootstrap_independence.py (head 1d5d0a25) against f848940: 7 failed, 3 passed, e.g. `AssertionError: built-in import disabled the external provider / assert None is not None (_memory_manager)`. Fork's own test (tests/run_agent/test_mem_config_unbound_init.py) is stale on main: 3 errors `run_agent has no attribute get_tool_definitions` (fixture drift), not a valid RED.",
+  "green": "Applied #126106's one-line fix (`_cfg_dict(_agent_cfg, \"memory\").get(\"provider\", \"\")`) on f848940: test_memory_bootstrap_independence + test_memory_provider_init + test_memory_provider_unavailable_warning -> 3 files, 19 passed, 0 failed (local only, discarded).",
+  "negative_control": "n/a (not rebuilt: externally owned); main itself is the negative control above",
+  "adjacent": "tests/agent/test_memory_provider_init.py, tests/agent/test_memory_provider_unavailable_warning.py pass with #126106's fix (included in the 19)",
+  "source": "Real trigger is narrow: get_builtin_memory_config never raises, so only an ImportError of tools.memory_tool (broken install) reaches the unbound path."
+ },
+ "upstream_overlap": [
+  "#126106 OPEN Wenfengcheng 'fix(memory): decouple external provider selection from built-in import' (MERGEABLE, head 1d5d0a2562d5) - same root cause, same fix shape via existing _cfg_dict, stronger test (public AIAgent ctor, disk-installed provider fixture)",
+  "#125919 OPEN issue (yuichro) - parent issue; #126106 is 'Part of'",
+  "#125960 owns config-load diagnostics per #126106 body"
+ ],
+ "branch": null,
+ "files": [
+  "agent/agent_init.py",
+  "tests/run_agent/test_mem_config_unbound_init.py"
+ ],
+ "size": "fork +241/-4 (excl. kanban); not rebuilt",
+ "depends_on": null,
+ "notes": "Support, don't compete. Our version adds only one thing #126106 lacks: a once-per-process WARNING ('Built-in memory store unavailable: %s') replacing the silent suppress(Exception) around the built-in store. That is a separate diagnostic contract, arguably scope creep for #126106 and adjacent to #125960's diagnostics lane; at most offer it as a review suggestion. Our test adds nothing beyond #126106's (and is stale on main). Possible review receipt: #126106's fix + tests are GREEN on current main f848940 (19 passed) and its tests are RED on main without the fix."
+}

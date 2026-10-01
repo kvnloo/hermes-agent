@@ -1,0 +1,115 @@
+From b68897f77bc513e3614adb12522f3a0612952f7a Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:39:56 -0500
+Subject: [PATCH] docs(cli): fix stale portal tools, hermes logs and hermes
+ dump reference text
+
+- `hermes portal tools` row named "Firecrawl" as the web partner; the
+  static catalog in hermes_cli/portal_cli.py now prints "Nous-managed".
+  Drop the partner enumeration rather than track the next vendor rename
+  (en + zh-Hans).
+- `hermes logs`: a leftover paragraph said unstamped / level-less lines are
+  always included under --since / --level, contradicting the note above the
+  options table. hermes_cli/logs._LineFilter gives an unstamped line the
+  verdict of the stamped record above it. Remove the stale paragraph
+  (en + zh-Hans) and add the missing zh-Hans translation of the current
+  note.
+- `hermes dump` "Config overrides": only a fallback entry's `api_key` was
+  documented as redacted; _mask_fallback_keys() masks every secret-named
+  field (agent.redact.is_secret_field_name) (en + zh-Hans).
+- zh-Hans configuration.md still said `timezone` changes log timestamps;
+  the English page and hermes_logging (no timezone converter) say log lines
+  stay in machine-local time.
+---
+ website/docs/reference/cli-commands.md                    | 6 ++----
+ .../current/reference/cli-commands.md                     | 8 ++++----
+ .../current/user-guide/configuration.md                   | 2 +-
+ 3 files changed, 7 insertions(+), 9 deletions(-)
+
+diff --git a/website/docs/reference/cli-commands.md b/website/docs/reference/cli-commands.md
+index e59b7e73c3..6a452f1316 100644
+--- a/website/docs/reference/cli-commands.md
++++ b/website/docs/reference/cli-commands.md
+@@ -434,7 +434,7 @@ Inspect Nous Portal auth, Tool Gateway routing, and reach the subscription page.
+ |------------|-------------|
+ | `status` (default) | Portal auth state + per-tool Tool Gateway routing summary. Also shown when no subcommand is given. |
+ | `open` | Open `portal.nousresearch.com/manage-subscription` in your default browser. |
+-| `tools` | List every Tool Gateway partner (Firecrawl, FAL, OpenAI TTS, Browser Use, Modal) and which are routed via Nous. |
++| `tools` | List every Tool Gateway partner and which are routed via Nous. |
+ 
+ For configuration of the gateway itself, see [Tool Gateway](../user-guide/features/tool-gateway.md). For the one-shot setup path, see `hermes setup --portal` above.
+ 
+@@ -1014,7 +1014,7 @@ Outputs a compact, plain-text summary of your entire Hermes setup. Designed to b
+ | **Features** | Enabled toolsets, MCP server count, memory provider |
+ | **Services** | Gateway status, configured messaging platforms |
+ | **Workload** | Cron job counts, installed skill count |
+-| **Config overrides** | Any config values that differ from defaults. Credentials in them are redacted: a `fallback_providers` entry's `api_key`, and credentials in its `base_url` (userinfo, `key`/token query parameters, signed-URL signatures). |
++| **Config overrides** | Any config values that differ from defaults. Credentials in them are redacted: every secret-named field of a `fallback_providers` entry (`api_key`, `token`, `password`, …), and credentials in its `base_url` (userinfo, `key`/token query parameters, signed-URL signatures). |
+ 
+ ### Example output
+ 
+@@ -1279,8 +1279,6 @@ Filters can be combined. When multiple filters are active, a log line must pass
+ hermes logs --level WARNING --since 2h --session tg-12345
+ ```
+ 
+-Lines without a parseable timestamp are included when `--since` is active (they may be continuation lines from a multi-line log entry). Lines without a detectable level are included when `--level` is active.
+-
+ ### Log rotation
+ 
+ Hermes uses Python's `RotatingFileHandler`. Old logs are rotated automatically — look for `agent.log.1`, `agent.log.2`, etc. The `hermes logs list` subcommand shows all log files including rotated ones.
+diff --git a/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/reference/cli-commands.md b/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/reference/cli-commands.md
+index 0d72fefe45..46ceee715b 100644
+--- a/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/reference/cli-commands.md
++++ b/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/reference/cli-commands.md
+@@ -296,7 +296,7 @@ hermes portal [status|open|tools]
+ |------------|-------------|
+ | `status`（默认） | Portal 认证状态 + 每个工具的 Tool Gateway 路由摘要。不带子命令时也会显示。 |
+ | `open` | 在默认浏览器中打开 `portal.nousresearch.com/manage-subscription`。 |
+-| `tools` | 列出每个 Tool Gateway 合作伙伴（Firecrawl、FAL、OpenAI TTS、Browser Use、Modal）及哪些通过 Nous 路由。 |
++| `tools` | 列出每个 Tool Gateway 合作伙伴及哪些通过 Nous 路由。 |
+ 
+ 关于 gateway 本身的配置，请参阅 [Tool Gateway](../user-guide/features/tool-gateway.md)。关于一键设置路径，请参阅上方的 `hermes setup --portal`。
+ 
+@@ -519,7 +519,7 @@ hermes dump [--show-keys]
+ | **Features** | 已启用的 toolset、MCP 服务器数量、memory provider |
+ | **Services** | Gateway 状态、已配置的消息平台 |
+ | **Workload** | Cron 任务数量、已安装 skill 数量 |
+-| **Config overrides** | 与默认值不同的所有 config 值。其中的凭据会被脱敏：`fallback_providers` 条目的 `api_key`，以及其 `base_url` 中的凭据（userinfo、`key`/token 查询参数、签名 URL 的签名）。 |
++| **Config overrides** | 与默认值不同的所有 config 值。其中的凭据会被脱敏：`fallback_providers` 条目中所有以秘密命名的字段（`api_key`、`token`、`password` 等），以及其 `base_url` 中的凭据（userinfo、`key`/token 查询参数、签名 URL 的签名）。 |
+ 
+ ### 示例输出
+ 
+@@ -716,6 +716,8 @@ hermes logs [log_name] [options]
+ | `--since <TIME>` | 显示相对时间之前的行：`30m`、`1h`、`2d` 等。支持 `s`（秒）、`m`（分钟）、`h`（小时）、`d`（天）。 |
+ | `--component <NAME>` | 按组件过滤：`gateway`、`agent`、`tools`、`cli`、`cron`。 |
+ 
++没有自己时间戳的行（例如 traceback 帧或多行消息的其余部分）会与它上方带时间戳的行一同显示或隐藏。
++
+ ### 示例
+ 
+ ```bash
+@@ -750,8 +752,6 @@ hermes logs list
+ hermes logs --level WARNING --since 2h --session tg-12345
+ ```
+ 
+-当 `--since` 激活时，没有可解析时间戳的行会被包含（它们可能是多行日志条目的续行）。当 `--level` 激活时，没有可检测级别的行会被包含。
+-
+ ### 日志轮转
+ 
+ Hermes 使用 Python 的 `RotatingFileHandler`。旧日志会自动轮转——查找 `agent.log.1`、`agent.log.2` 等。`hermes logs list` 子命令显示所有日志文件，包括已轮转的。
+diff --git a/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/configuration.md b/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/configuration.md
+index c6cea794b6..8f5a958d72 100644
+--- a/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/configuration.md
++++ b/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/configuration.md
+@@ -1573,7 +1573,7 @@ browser:
+ 
+ ## 时区
+ 
+-使用 IANA 时区字符串覆盖服务器本地时区。影响日志中的时间戳、cron 调度和系统提示词时间注入。
++使用 IANA 时区字符串覆盖服务器本地时区。影响 cron 调度和注入系统提示词的时间。它不改变日志文件：`~/.hermes/logs/` 中的每一行都按机器本地时间打时间戳，`hermes logs --since` 比较的也是这个时间。
+ 
+ ```yaml
+ timezone: "America/New_York"   # IANA 时区（默认："" = 服务器本地时间）
+-- 
+2.55.0
+

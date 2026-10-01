@@ -1,0 +1,34 @@
+{
+  "fork_pr": 124,
+  "title": "docs(desktop): cover marker-less copies of a package's own desktop half",
+  "claim": "A marker-less desktop-plugins/<id>/ folder with plugin.js is not always a hand-installed plugin: when it byte-matches the package's own half, Rescan adopts it in place.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "doc_text_on_main": "website/docs/developer-guide/desktop-plugin-sdk.md:1383-1385 — \"while a marker-less folder that *does* hold a `plugin.js` is a standalone plugin you installed by hand and is never overwritten.\"",
+    "source": "apps/desktop/electron/desktop-plugins-root.ts:208-229 materializeDesktopHalf(): a marker-less target with plugin.js is compared via sameFile() (:222); equal bytes -> writeDesktopHalfMarker() in place and return target (adoption, #112450); different -> left untouched.",
+    "red": "Doc says such folders are always the user's; source adopts byte-identical pre-marker copies.",
+    "green": "Corrected clause keeps 'never overwritten' and adds the in-place adoption case. vitest electron/desktop-plugins-root.test.ts 'adopts an unmarked copy of its own half that a pre-marker install left behind' passes on main.",
+    "negative_control": "N/A — docs-only; the pinned vitest case is the executable statement of the behaviour.",
+    "adjacent": "apps/desktop vitest: electron/update-order.test.ts electron/wslg-launch.test.ts electron/linux-nvidia-egl-fallback.test.ts electron/desktop-plugins-root.test.ts src/lib/remark-soft-breaks.test.ts src/app/session/hooks/use-hermes-config.test.ts -> 6 files, 57 passed. docs-site-checks equivalent on the bundle branch: website/scripts/extract-skills.py + generate-skill-docs.py leave website/docs, website/sidebars.ts and website/i18n unchanged (clean); website/scripts/check_doc_links.py OK. added lines scanned for MDX hazards ({ } or raw <tag> outside inline code / fences): none. NOT_TESTED: Docusaurus build (website/node_modules not installed in this environment).",
+    "mirrors": "No zh-Hans copy of desktop-plugin-sdk.md.",
+    "rebase": "verified on main f848940560; bundle merges cleanly onto refreshed main eb8d21f482 (git merge-tree); merges cleanly with every B1 ready/docs-* branch that touches the same files"
+  },
+  "upstream_overlap": [
+    "NousResearch/hermes-agent#125219 OPEN (Goitonthefloor, 'turn on a desktop half when the user installs it') — code-only, does not touch this doc"
+  ],
+  "branch": "ready/docs2-desktop",
+  "bundle_commit": "58f1374abe9b808711ba307c5b02d79a698398ba",
+  "patch": "patches/docs2-desktop.patch",
+  "pr_body": "patches/docs2-desktop.body.md",
+  "files": [
+    "website/docs/developer-guide/desktop-plugin-sdk.md",
+    "website/docs/reference/environment-variables.md",
+    "website/docs/user-guide/desktop.md",
+    "website/docs/user-guide/features/bot-screen.md",
+    "website/docs/user-guide/multi-connection-desktop.md"
+  ],
+  "size": "fork leaf +4/-2; bundle docs2-desktop +15/-8 (5 files changed, 15 insertions(+), 8 deletions(-))",
+  "depends_on": null,
+  "notes": "Drift introduced by 4dc7a23690 (#121714). Bundled with: #291, #292, #305, #392, #395, #398. Packaging: one commit per area bundle (batch B2 lane W4-docs); publish one bundle at a time per kvnloo/hermes-agent#313."
+}

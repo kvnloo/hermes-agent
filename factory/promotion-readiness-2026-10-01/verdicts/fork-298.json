@@ -1,0 +1,35 @@
+{
+  "fork_pr": 298,
+  "title": "chore: remove dead yuanbao_proto helpers and constants",
+  "claim": "yuanbao_proto PB_MSG_TYPES, BIZ_SERVICES, encode_conn_msg and decode_biz_msg have no production references; tests can use encode_conn_msg_full/decode_conn_msg directly.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "source": "main gateway/platforms/yuanbao_proto.py:15 (PB_MSG_TYPES), :26 (BIZ_SERVICES), :253 (encode_conn_msg), :278 (decode_biz_msg). gateway/platforms/yuanbao.py:59 imports none of them. _BIZ_PKG stays used by _biz_request. The salvage tip diff (c56a08c7b2 + e42fb71455) applied cleanly to pinned main; the 915-file comparison was ignored.",
+    "references_before": "main: the 4 definitions, plus tests/gateway/test_yuanbao_proto.py:31, :36, :84, :97, :102, :123, :140. test_yuanbao_integration.py has NO proto references on main.",
+    "references_after": "0 for all four names (git grep -n -w). Not in old_updater_surface.json.",
+    "red": "n/a (pure deletion)",
+    "green": "n/a (pure deletion)",
+    "negative_control": "n/a (pure deletion; the fixed-bytes protocol assertions are kept byte-for-byte through encode_conn_msg_full)",
+    "adjacent": "test_yuanbao_proto 20/20 (same count as main), test_yuanbao_integration 3, _pipeline 52, _forwarded_heartbeat 2, _shutdown 2, all passing in the 715/0/1 gateway bundle run. Import of gateway.platforms.yuanbao OK."
+  },
+  "upstream_overlap": [
+    "No open upstream PR references the four names: checked diffs of #29077 (adds proto functions), #58798 (tests/test_yuanbao_proto.py at a different path) and #115424 (heartbeat shard); 0 hits.",
+    "Older fork leaf #115 is the same claim. Do not promote both: retire #115 after this lands."
+  ],
+  "branch": "ready/chore-gateway",
+  "bundle": "chore-gateway",
+  "files": [
+    "gateway/platforms/yuanbao_proto.py",
+    "tests/gateway/test_yuanbao_proto.py"
+  ],
+  "size": "+11/-41",
+  "depends_on": null,
+  "fork_head": "salvage/remove-dead-yuanbao-proto-20260929",
+  "fork_head_oid": "e42fb714558d11f2509473d98184d8d0fd0dd930",
+  "wave": "W4-dead-code-rebuild",
+  "batch": "C",
+  "patch": "/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/patches/fork-298.patch (slice of bundle-chore-gateway.patch)",
+  "body": "/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/patches/bundle-chore-gateway.body.md",
+  "notes": "This rebuild keeps #298's distinction from #115: it does NOT carry #115's tests/gateway/test_yuanbao_integration.py rewrite. On main that file no longer references any yuanbao_proto helper, so the old hunk would not even apply. The salvage body said 'moved to encode_conn_msg_full'; more precisely, the proto round-trip class is gone from the integration test. Small judgment risk: PB_MSG_TYPES/BIZ_SERVICES double as an in-code protocol reference table for the TS client, and a yuanbao maintainer could prefer keeping them. Bundle commit 3d721162fc; original authored by kvnloo (salvage) from detail-app[bot] #115."
+}

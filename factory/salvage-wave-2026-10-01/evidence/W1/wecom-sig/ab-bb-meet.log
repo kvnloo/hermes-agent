@@ -1,0 +1,32 @@
+######## 9219
+merge CONFLICT: gateway/platforms/bluebubbles.py 
+######## 44025
+merge CONFLICT: gateway/platforms/bluebubbles.py tests/gateway/test_bluebubbles.py 
+######## 51328
+merge CONFLICT: gateway/platforms/bluebubbles.py 
+######## 108390
+merge clean
+=== Summary: 1 files, 0 tests passed, 5 failed, 1 skipped (100% complete) in 2.5s (20 workers) ===
+E   AssertionError: assert not True
+E   UnicodeEncodeError: 'utf-8' codec can't encode character '\udcff' in position 3: surrogates not allowed
+E   AssertionError: the secret was not compared with hmac.compare_digest
+E   AssertionError: the secret was not compared with hmac.compare_digest
+E   TypeError: comparing strings with non-ASCII characters is not supported
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_validly_signed_request_outside_replay_window_is_refused[wecom]
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[bluebubbles]
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[google_meet]
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[wecom]
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[a2a]
+######## 44027
+merge CONFLICT: plugins/google_meet/node/protocol.py tests/plugins/test_google_meet_node.py 
+######## 108354
+merge clean
+=== Summary: 1 files, 1 tests passed, 4 failed, 1 skipped (100% complete) in 2.7s (20 workers) ===
+E   AssertionError: assert not True
+E   AssertionError: the secret was not compared with hmac.compare_digest
+E   AssertionError: the secret was not compared with hmac.compare_digest
+E   TypeError: comparing strings with non-ASCII characters is not supported
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_validly_signed_request_outside_replay_window_is_refused[wecom]
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[bluebubbles]
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[wecom]
+FAILED tests/gateway/test_inbound_auth_hardening.py::test_presented_secret_is_compared_timing_safe_and_fails_closed[a2a]

@@ -1,0 +1,25 @@
+{
+ "fork_pr": 42,
+ "title": "fix(desktop): skip turn lease for bare-profile primary routes",
+ "claim": "retainGatewayForSessionTurn must not register a turn lease for a bare-profile route (connectionId null, profile == primary) that rides the primary socket, because nothing ever releases it.",
+ "verdict": "SUPERSEDED-ON-MAIN",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "NOT RED on main. A probe (fork's own tests plus a temporary _turnLeaseKeysForTests helper, not committed) in apps/desktop/src/store/session-request-router.test.ts passes 3/3: bare-profile primary (legacy) registers no lease; bare-profile primary with primaryConnectionId='local' registers no lease; bare non-primary 'loki' still registers ['loki\\u0000sess-loki'].",
+  "green": "n/a",
+  "negative_control": "Removing main's `if (!g.secondaries.has(scope)) { releaseRoute(); return () => undefined }` guard (from e1374093aa) makes both bare-primary probe tests fail, so the probe is sensitive and main's guard is what fixes it.",
+  "adjacent": "Main already has gateway-connection-lifecycle.test.ts 'lets the next turn take a real hold after a turn that rode the primary socket'.",
+  "source": "main apps/desktop/src/store/gateway.ts retainGatewayForSessionTurn (L1689+) returns a no-op and stores no key when g.secondaries lacks the scope, which covers every primary-socket route, including the bare-profile primary."
+ },
+ "upstream_overlap": [
+  "Fixed by e1374093aa (John Paul Soliva / jonpol01) 'fix(desktop): never register a turn lease that nothing can release', landed via #114986 (MERGED, teknium1 salvage of #113798) for issue #113795 (CLOSED)."
+ ],
+ "branch": null,
+ "files": [
+  "apps/desktop/src/store/gateway.ts",
+  "apps/desktop/src/store/session-request-router.test.ts"
+ ],
+ "size": "fork leaf +118/-4; no rebuild",
+ "depends_on": null,
+ "notes": "Retire the fork leaf. Main's outcome-based guard is more general than the fork's shape-based guard. Kanban baggage ignored."
+}

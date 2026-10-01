@@ -1,0 +1,28 @@
+{
+ "fork_pr": 52,
+ "title": "fix(skills): preserve hyperlink theme color when bold/italic/font_size is set",
+ "claim": "In xlsx_create.apply_cell, a hyperlink cell that also sets bold/italic/font_size must keep the Hyperlink named style's theme-10 link color; only font_color may change it.",
+ "verdict": "READY",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "source": "On main skills/productivity/xlsx/scripts/xlsx_create.py:97-101 sets cell.style='Hyperlink', then :120-121 'if font_kw: cell.font = Font(**font_kw)' replaces the style font with a colorless bare Font. No upstream commit touched skills/productivity/xlsx since the fork base.",
+  "red": "On main with only the new test (uv ephemeral env, openpyxl 3.1.5): test_hyperlink_font_overrides_keep_link_color -> 'assert (None is not None)' where the A2 font is 'name=None, ..., b=True, i=True, ..., color=None, ..., sz=14.0'.",
+  "green": "With fix: skills/productivity/xlsx/tests/test_xlsx_skill.py 13 passed.",
+  "negative_control": "Replacing copy.copy(cell.font) with a fresh Font() -> new test fails with the same assertion (1 failed, 12 passed); restored.",
+  "adjacent": "Full xlsx skill suite (13, covers xlsx_create/xlsx_edit/xlsx_read/etc.) passes; tests/skills/test_skill_document_contracts.py 29 passed/1 skipped; ruff clean. Former CI gate tests/skills/test_office_document_skills.py no longer exists on main (removed in 524c38a98a)."
+ },
+ "upstream_overlap": [
+  "No PR/issue on xlsx hyperlink font color (gh search 'xlsx_create hyperlink', 'xlsx hyperlink font', issues 'xlsx hyperlink'; local title cache)",
+  "#89986 OPEN (teddiesloco), #89927 OPEN (adnankassem) touch xlsx_create.py - different defects, no font handling",
+  "#106090 OPEN (Yasin-Usman) moves openpyxl imports in xlsx_create.py - textual conflict on the import line only"
+ ],
+ "branch": "ready/fork-52-xlsx-hyperlink-font",
+ "commit": "98aa594b04955aec0212460e1dcf157a2043e535",
+ "files": [
+  "skills/productivity/xlsx/scripts/xlsx_create.py",
+  "skills/productivity/xlsx/tests/test_xlsx_skill.py"
+ ],
+ "size": "+31/-2",
+ "depends_on": [],
+ "notes": "Production change identical in substance to the fork (copy.copy + setattr); test trimmed from 6 links/~30 asserts to 3 links. Behaviour side effect (intended): non-hyperlink cells with bold/italic/size now keep the default font name/size/scheme instead of a nameless Font. Fork body says openpyxl Font 'has no .copy()' - imprecise (StyleProxy.copy exists but is deprecated); immaterial. The skill tests are outside pyproject testpaths and need openpyxl, which the Hermes venv lacks: ran via 'uv run --no-project --with openpyxl==3.1.5 --with pytest'. Kanban baggage excluded. NOT_TESTED: rendering in Excel/LibreOffice (asserted via openpyxl reload only)."
+}

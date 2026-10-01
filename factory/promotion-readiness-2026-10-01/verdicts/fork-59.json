@@ -1,0 +1,24 @@
+{
+  "fork_pr": 59,
+  "title": "fix(skills): correct EVM compare gas headlines for null/zero chains",
+  "claim": "evm_client.py `compare` must never name a chain whose eth_gasPrice fetch failed (gas_price_gwei=None) or a 0x0 (0.0 gwei) chain as most_expensive_gas; 0.0 is the real minimum and headlines come only from priced chains.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "red": "On main, new tests/skills/test_evm_skill.py: 2 failed. test_compare_headlines_ignore_chains_whose_gas_fetch_failed -> `AssertionError: assert 'ethereum' == 'bsc'` (failed-fetch chain named most_expensive_gas); test_compare_zero_gas_chain_is_cheapest_not_most_expensive -> `AssertionError: assert 'bsc' == 'ethereum'` (0.0-gwei chain not cheapest).",
+    "green": "With fix: tests/skills/test_evm_skill.py 2 passed.",
+    "negative_control": "(1) restore `key=lambda x: x.get('gas_price_gwei') or float('inf')` -> zero-gas test fails (`'bsc' == 'ethereum'`), failed-fetch test passes; (2) restore headlines from unfiltered list (`priced = sorted_by_gas`) -> failed-fetch test fails (`'ethereum' == 'bsc'`). Each test pins one half of the fix.",
+    "adjacent": "tests/skills/test_optional_skill_scripts.py (5), test_optional_skill_self_paths.py (1), test_authoring_standards.py (1471) + new file: 1479 passed, 0 failed. ruff check, check-windows-footguns.py, git diff --check clean.",
+    "source": "main optional-skills/blockchain/evm/scripts/evm_client.py:1009-1019 still uses `x.get(\"gas_price_gwei\") or float(\"inf\")` and sorted_by_gas[0]/[-1] headlines; _fetch_chain_stats:960-965 maps eth_gasPrice exceptions to gas_price_gwei=None. No change to this function since the fork merge-base (git log empty). SKILL.md:130 'Shows cheapest/most expensive chain'."
+  },
+  "upstream_overlap": [
+    "None owning the defect: GraphQL search (evm_client.py / evm compare / most_expensive_gas / cheapest_gas / gas_price_gwei) + cached-title grep found no PR/issue on cmd_compare headlines.",
+    "#29194 OPEN arcayne feat(evm-skill): add Injective EVM support - touches evm_client.py (not cmd_compare) and ALSO creates tests/skills/test_evm_skill.py -> trivial add/add conflict for whichever lands second.",
+    "#18508 OPEN xyiy001 bundled Web3 EVM skill - does not touch cmd_compare."
+  ],
+  "branch": "ready/fork-59-evm-compare-gas-headlines",
+  "files": ["optional-skills/blockchain/evm/scripts/evm_client.py", "tests/skills/test_evm_skill.py"],
+  "size": "+76/-3",
+  "depends_on": null,
+  "notes": "Commit 57de52cf7b7e. Kanban baggage dropped. Fork's 4 tests trimmed to 2 invariant tests (AGENTS.md <=2); happy-path/all-fail cases dropped (all-fail null headline is the `if priced else None` branch, not separately pinned). Optional-skills policy: in-repo official optional skill bug fix is in scope (CONTRIBUTING 'optional-skills/' ships with repo; tests at tests/skills/test_<skill>_skill.py per skills/AGENTS.md #7); not a new skill / third-party plugin. Pre-existing oddity left out of scope: `gas_hex or \"0x0\"` turns a None RPC result into 0.0 gwei. NOT_TESTED: live public-RPC run. Low-value niche leaf; promote only when review capacity allows."
+}

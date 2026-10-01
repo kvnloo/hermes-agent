@@ -1,0 +1,109 @@
+From 2ee12177465b278f1ce540ae634e101163f4cb56 Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:41:28 -0500
+Subject: [PATCH] docs(desktop): sync timeline rail, Simple-mode rail, square
+ menu and launch precedence
+
+- desktop.md said hovering the timeline rail pops open the list of
+  prompts and that the rail appears once a chat has a handful of turns.
+  TimelineRail (apps/desktop/src/components/assistant-ui/thread/
+  timeline-rail.tsx) wraps each marker in its own tooltip, and
+  ActiveThreadTimeline renders whenever there is at least one prompt.
+- desktop.md said Simple mode keeps the profile rail with more than one
+  profile. SIMPLE policy in apps/desktop/src/store/interface-mode.ts keeps
+  it when profileCount > 1 || connectionCount > 1.
+- multi-connection-desktop.md listed the at-rest square menu without
+  Open in new window / Set as default. RestSquare prepends
+  ProfileLaunchMenuSection (profile-launch-menu.tsx), which shows
+  Open in new window when the shell supports it and Set as default.
+- desktop.md described an "Open on launch" control with Primary gateway /
+  Last used options; the only control is the "At startup, return to
+  Sessions on the last-used gateway" toggle (connections-registry.tsx).
+  Neither page said that a default profile wins: the startup selection in
+  apps/desktop/src/store/connections.ts follows $defaultProfileRoute before
+  looking at launchMode, and electron/main.ts connects that route at
+  startup.
+
+Docs only; no behaviour change.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ website/docs/user-guide/desktop.md               |  6 +++---
+ .../docs/user-guide/multi-connection-desktop.md  | 16 ++++++++++------
+ 2 files changed, 13 insertions(+), 9 deletions(-)
+
+diff --git a/website/docs/user-guide/desktop.md b/website/docs/user-guide/desktop.md
+index 2ed42b2bf9..f5f856c657 100644
+--- a/website/docs/user-guide/desktop.md
++++ b/website/docs/user-guide/desktop.md
+@@ -54,7 +54,7 @@ The center of the app. You get:
+ - **Comment mode in the in-app browser** — click **Annotate** in the preview browser bar, then click any element (or drag a box) on the live page and type a note; each saved comment stays as a numbered pin on the page. Saving a pin never sends a turn — when you're done, **Add N comments** attaches a cropped screenshot per pin and a short prompt naming each comment to the composer, and you still hit send yourself. Each element comment carries its CSS selector, its markup, and the computed styles that matter for layout, so the agent can find the element in your source instead of guessing from the picture. Password and hidden field values, and any attribute that looks like a key or token, are redacted on the page before the markup leaves it. Larger batches arrive grouped by which part of the page each comment sits in, so twenty-odd comments become a handful of pieces of work rather than one task each — and because the groups are separate DOM subtrees they usually touch separate files, which is what makes handing them to parallel workers safe. Pin numbers hold steady if you delete one, and switching chats clears the stack.
+ - **Composer history and queue editing** — press the up/down arrow keys in an empty composer to recall and reuse previous prompts, and edit messages you've queued up before they're sent. Pressing Stop (or Esc) while turns are queued pauses the queue and expands it above the composer; resume it from there, or send, edit, and delete individual entries.
+ - **Task progress above the composer** — expand the Tasks header to inspect each phase. Long lists stay bounded above the input; scroll inside the expanded list to reach the final tasks without moving the conversation.
+-- **A conversation timeline rail** — long chats get a slim rail of markers along the edge of the transcript, one per prompt. Hover it to pop open the list of prompts, click one to jump straight to that point in the conversation. After a jump, **Show earlier** at the top of the transcript keeps paging backwards from that prompt all the way to the start of the session. (It appears once the chat has a handful of turns.)
++- **A conversation timeline rail** — a slim rail of markers along the edge of the transcript, one per prompt. Hover a marker to see its prompt in a tooltip, and click one to jump straight to that point in the conversation. After a jump, **Show earlier** at the top of the transcript keeps paging backwards from that prompt all the way to the start of the session.
+ - **Reading-position memory** — returning to a session restores its saved distance from the bottom instead of always jumping to the latest message. Sessions left at the bottom continue following new output. Use **Scroll to bottom** to return to the live edge. Positions are kept in this Desktop installation's local storage; they are not synchronized through the backend.
+ - **Find in page** — press **Cmd/Ctrl+F** to open a find bar that searches the rendered chat transcript. Enter / Shift+Enter (or Cmd/Ctrl+G / Cmd/Ctrl+Shift+G while the bar is open) step through matches; Esc closes it.
+ 
+@@ -142,7 +142,7 @@ Each mode remembers its own arrangement: pane positions, sizes, active tabs, hid
+ 
+ Existing layouts are retained on upgrade. Advanced continues using the original storage keys. If you already explicitly selected Simple, its current layout is copied into Simple's separate storage without deleting the originals. An older arrangement that was overwritten before this separation cannot be reconstructed.
+ 
+-Simple shadows your display preferences instead of overwriting them. Every keybind still works in Simple — **Ctrl+`**, **Cmd/Ctrl+J** and **Cmd/Ctrl+G** open the terminal, file browser and review for the current session, and the next launch is quiet again. With more than one profile the profile rail stays, since it is then the only way to switch. First-run onboarding sets the mode from the layout you pick: *Basic* starts in Simple, *Elite* in Advanced; skipping leaves it on Advanced.
++Simple shadows your display preferences instead of overwriting them. Every keybind still works in Simple — **Ctrl+`**, **Cmd/Ctrl+J** and **Cmd/Ctrl+G** open the terminal, file browser and review for the current session, and the next launch is quiet again. With more than one profile or more than one registered gateway the profile rail stays, since it is then the only way to switch. First-run onboarding sets the mode from the layout you pick: *Basic* starts in Simple, *Elite* in Advanced; skipping leaves it on Advanced.
+ 
+ #### Minimize to tray
+ 
+@@ -467,7 +467,7 @@ Further down the same **Settings → Gateways** page, **Registered gateways** ma
+ - **Every connection needs a unique name** (a device name such as "Homelab" or "Work laptop"). When the same profile name exists on several registered gateways, surfaces disambiguate it as `@profile-device` (e.g. `@research-homelab`).
+ - **Switch gateways from the Sessions sidebar.** A named gateway selector appears when more than one gateway is registered and handles any registry size without making gateways look like profiles. The adjacent profile rail then shows only that gateway's agents and remembers the last profile used there; large profile sets condense independently.
+ - **Hide the profile rail.** If your profiles are bots rather than workspaces, the colored strip of profile squares at the foot of the sidebar duplicates the sessions list. Turn it off from the Sessions view menu (**Profile rail**), the shell's right-click menu, or **⌘K → Toggle profile rail**. While it is hidden, a **Profiles** dropdown appears in the status bar next to the gateway selector with the same choices — this gateway's profiles, other gateways' agents, **New profile**, **Import profile…**, **Manage profiles…** — so switching profiles always has a door.
+-- **Choose what opens after a restart.** **Open on launch** keeps the backward-compatible **Primary gateway** default, or can resume the **Last used** gateway after it connects successfully. This preference is stored outside the application bundle and survives Desktop updates.
++- **Choose what opens after a restart.** **At startup, return to Sessions on the last-used gateway** is off by default, so Sessions opens on the **Primary** gateway; turn it on to resume the last gateway that connected successfully. A profile you marked **Set as default** (right-click its square) takes precedence over both. This preference is stored outside the application bundle and survives Desktop updates.
+ - **Add / edit / remove / test** connections from the panel. The **Add** flow offers all four kinds — **Local**, **Hermes Cloud**, **Remote gateway**, and **SSH** (the Local button is disabled while the app-managed local entry exists, and a hint points cloud adds at the sign-in/discovery flow above). The local entry is managed by the app and cannot be removed. **Test** probes the connection's own HTTP and WebSocket legs directly.
+ - **Duplicates are rejected at save time**: only one **local** entry ever; remote and cloud entries are deduplicated on the normalized URL (trimmed, trailing slashes stripped, lowercased — across both kinds); SSH entries on the normalized `user@host:port` plus remote profile.
+ - Existing settings are **imported automatically** the first time you run a build with the registry: your current global connection and any legacy per-profile overrides become named entries. The legacy settings file is left untouched, so older builds keep working.
+diff --git a/website/docs/user-guide/multi-connection-desktop.md b/website/docs/user-guide/multi-connection-desktop.md
+index 294d2ddeab..842c8d1d35 100644
+--- a/website/docs/user-guide/multi-connection-desktop.md
++++ b/website/docs/user-guide/multi-connection-desktop.md
+@@ -59,10 +59,12 @@ Rules worth knowing:
+   **Make primary** does not switch the current Sessions workspace; removing
+   the primary falls back to the local entry.
+ - **At startup, return to Sessions on the last-used gateway** controls which
+-  gateway Sessions opens after a full app restart. It is off by default, so
+-  Sessions opens on **Primary**. Turn it on to resume the most recent gateway
+-  that connected successfully. A failed switch is never remembered, and a
+-  removed or unavailable saved gateway falls back to Primary.
++  gateway Sessions opens after a full app restart when no profile is set as
++  the default. It is off by default, so Sessions opens on **Primary**. Turn it
++  on to resume the most recent gateway that connected successfully. A failed
++  switch is never remembered, and a removed or unavailable saved gateway falls
++  back to Primary. A default profile (**Set as default** on its square) takes
++  precedence: startup opens that profile's gateway instead.
+ - **Test** probes the connection's own HTTP *and* WebSocket legs, so a pass
+   (the *"Reachable"* toast) means chat will actually work — not just that the
+   host pinged.
+@@ -228,7 +230,8 @@ that live on one gateway.
+   answers, and a dead target fails the click with a message rather than
+   leaving the window half-switched. Groups keep registry order whichever
+   gateway is active, so a square never moves under the pointer that clicked
+-  it. Right-click on an at-rest square offers **Switch to**, **Color**,
++  it. Right-click on an at-rest square offers **Open in new window** (when
++  the app can open one), **Set as default**, **Switch to**, **Color**,
+   **Rename**, **Edit SOUL.md** and **Delete**, all executed on the square's
+   own gateway; the delete confirmation names the machine.
+ - A gateway the last enumeration could not reach keeps its squares, marked
+@@ -237,7 +240,8 @@ that live on one gateway.
+   squares across the fleet, the strip condenses into one menu sectioned by
+   gateway.
+ - The selected gateway survives a quit and relaunch only when **Settings →
+-  Gateways → At startup, return to Sessions on the last-used gateway** is on.
++  Gateways → At startup, return to Sessions on the last-used gateway** is on
++  and no profile is set as the default.
+   The preference and gateway id live in the app's user-data registry, so
+   replacing or updating the application bundle does not reset them.
+ - With more than thirteen profiles on the active gateway, their avatar strip
+-- 
+2.55.0
+

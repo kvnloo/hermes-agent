@@ -1,0 +1,29 @@
+{
+ "fork_pr": 50,
+ "title": "fix(compaction): honor save_over_limit flag when writing compressed trajectories",
+ "claim": "With CompressionConfig.save_over_limit=false, trajectories whose metrics.still_over_limit is true must not be written to the compressed output.",
+ "verdict": "READY",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "source": "On main save_over_limit appears only at trajectory_compressor.py:102 (_YAML_SECTIONS processing) and :131 (dataclass default True); the write loop at :657-663 appends every non-None outcome ('if outcome is not None: results[file_path].append(outcome[0])'). AggregateMetrics counts still_over_limit (:227) so the report contradicts the output. All entry points (_run_file_mode/_run_dir_mode, scripts/sample_and_compress.py:284) funnel through process_directory. datagen-config-examples YAML that documented the flag was deleted upstream in 0c0875b746, but the flag is still parsed from user YAML.",
+  "red": "On main with only the new test: test_save_over_limit_controls_writing_still_over_limit_trajectories[False-written1] -> 'AssertionError: assert ['over', 'under'] == ['under']'; [True-written0] passes (control).",
+  "green": "With fix: tests/test_trajectory_compressor.py 19 passed.",
+  "negative_control": "Reverting the condition to 'if outcome is not None:' -> [False] case fails again with the same assertion; restored.",
+  "adjacent": "tests/test_trajectory_compressor.py, tests/test_trajectory_compressor_async.py, tests/tools/test_config_null_guard.py, tests/hermes_cli/test_arcee_provider.py, tests/agent/test_env_loader_secret_sources.py, tests/agent/test_stream_drop_logging.py -> 60 passed, 0 failed; ruff clean."
+ },
+ "upstream_overlap": [
+  "No PR/issue implements save_over_limit (gh search prs/issues 'save_over_limit')",
+  "#103709 OPEN (ajavanma) adds docs claiming over-limit results are 'handled by the existing save_over_limit setting' without changing the write loop - our fix makes that claim true; touches same file (different region)",
+  "#41512 OPEN (rrevenanttt) / #40728 OPEN (synapsesx) preserve timed-out trajectories in the same write loop - different defect, compatible (timeouts would carry empty metrics, not filtered)",
+  "#127966 OPEN (dskwe) bounds task batches in _process_directory_async - possible textual conflict only"
+ ],
+ "branch": "ready/fork-50-honor-save-over-limit",
+ "commit": "4d0e03c8a152e5122d158446e1f564b0ec9b6abd",
+ "files": [
+  "trajectory_compressor.py",
+  "tests/test_trajectory_compressor.py"
+ ],
+ "size": "+26/-2",
+ "depends_on": [],
+ "notes": "Main was heavily refactored (914aa20b06 etc.); fork hunks did not apply. Rebuilt as a one-condition filter. Dropped the fork's new trajectories_dropped_over_limit counter/to_dict field/report line as scope creep: with save_over_limit=false the dropped count equals the already-reported trajectories_still_over_limit (error-path entries carry empty metrics). Dropped fork's 5 tests (monkeypatched fake process_entry_async, to_dict change-detector) for one parametrized real-pipeline test. Kanban baggage excluded. NOT_TESTED: real tokenizer/summarizer run; timeout+save_over_limit combination (logic unchanged for None outcomes)."
+}

@@ -1,0 +1,47 @@
+memmon-heartbeat (#49773) — A/B summary
+main = 298a01c79b38018e029e50f77efe67c4a4fdbd40 (refs/w2/main)
+heads: #49782 33ec8f714d31  #49789 79977f20fdb1  #50472 0ee3fd402321  #54014 ebc75f07cea7  (refs/w2/pr/<N>)
+cmd: memmon-heartbeat_ab.sh <label> [port-<N>.diff] [extra files]  ==  reset to refs/w2/main, git apply port, drop in
+     test_memory_monitor_gateway_wiring.py, then PATH=<tripwire>:/usr/bin:/bin HOME=$S/testhome-W2-memmon-heartbeat
+     HERMES_HOME=$HOME/.hermes setsid -w bash scripts/run_tests.sh <files> -q -j 2 -rf -p no:randomly
+test: tests/gateway/test_memory_monitor_gateway_wiring.py (real start_gateway() + real gateway.memory_monitor thread)
+  enabled               logging.memory_monitor {enabled: true, interval_seconds: 42} -> running while serving, start(42), stopped after return
+  enabled-failure-exit  same, runner.should_exit_with_failure set during wait -> ok False, still stopped after return
+  disabled              {enabled: false} -> not running, no start call
+  unconfigured-default  no config.yaml -> running with 300
+  aborted startup       runner._running False -> no thread left running (guard; passes on main)
+
+GitHub mergeable (re-queried 2026-09-30): all four CONFLICTING/DIRTY. Locally every merge conflicts in gateway/run.py
+(main refactored start_gateway() on 2026-09-02, aed6720dab); ports re-anchor each PR's verbatim hunks (port-<N>.diff).
+
+main:                3 failed / 2 passed  (heartbeat state while serving: False is True; start_memory_monitoring has no caller)
+#49782 port:         3 failed / 2 passed  (interval: [300.0] == [42.0] x2; disabled: running True is False) — no config handling
+#49789 port:         5/5 PASS             own tests 3/7 pass: 3 use mm._interval_seconds (removed on main 2026-09-02), lifecycle test patches tools.mcp_tool.discover_mcp_tools (moved)
+#50472 port:         5/5 PASS             own tests 4/4 pass (default-config + 3 early-exit params); port = re-indent main's start_gateway tail into its try/finally (+105/-37 run.py)
+#54014 port:         5/5 PASS             own tests pass (8 new in test_memory_monitor.py + aborted-startup guard in test_startup_restart_race.py); 21/21 incl. regression
+#54014 literal:      4 failed / 1 passed  NameError: name '_load_gateway_runtime_config' is not defined — the helper block auto-merges cleanly but
+                                          main folded that loader into _load_gateway_config(); only the call site conflicts, so a conflict-only
+                                          resolution ships a gateway that raises at startup. Fix: one token (port-54014.diff vs port-54014-literal.diff).
+#49837 (closed):     not tested (closed by its author 2026-09-24 in a 4-PR batch self-close; GatewayRunner.start()/stop() placement would escape the stubbed runner)
+
+negative controls on carrier #54014 (negative-control-54014.log):
+  A call site reverted (await runner.wait_for_shutdown())  -> 3 fail (heartbeat state while serving)
+  B finally stop removed                                     -> 3 fail (heartbeat must stop when the gateway shuts down)
+  C resolver ignores logging.memory_monitor                  -> 3 fail (interval [300]!=[42] x2, disabled still running)
+
+probe (probe-matrix.log; fake start, so no hot loop): value passed to start_memory_monitoring
+  case                  #49782  #49789      #50472   #54014
+  interval: abc         300     (no start)  300      300
+  interval: 0           300     0           0        300
+  interval: -5          300     -5          -5       300
+  enabled: 'false'      300     300         300      (no start)
+  memory_monitor: false 300     300         300      (no start)
+probe-zero-interval-busy-loop.log: real monitor with interval 0 / -5 emits ~25,000 [MEMORY] records in 0.25 s (300 -> 4).
+
+adjacent (adjacent-files.txt: test_memory_monitor, test_startup_restart_race, test_runner_startup_failures, tests/test_hermes_logging, tests/hermes_cli/test_config + regression):
+  main:              235 passed, 3 failed (the 3 regression cases), 8 skipped
+  carrier #54014 + regression test: 246 passed, 0 failed, 8 skipped
+tripwire: 0 hits attributable to this cluster (the shared hits.log has hits from another cluster's test_close_stdin_allows_eof).
+
+regression origin: dc3d0fe148 (#27102, teknium1, 2026-05-16) added the start_gateway() start/stop wiring and the
+logging.memory_monitor DEFAULT_CONFIG block; 51c68d4ab ("Add Hermes desktop app (#20059)", 2026-05-31, 442 files) removed both.

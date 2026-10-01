@@ -1,0 +1,25 @@
+{
+ "fork_pr": 37,
+ "title": "fix(tui): show billing service retry message on subscription step-up transport failures",
+ "claim": "When billing.step_up cannot reach the gateway (rpc resolves null), the step-up must show the 'Could not reach the billing service ... retry' message, not the default admin-approval denial.",
+ "verdict": "READY",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "On main with only the new tests: 'step-up maps an unreachable gateway (rpc \u2192 null) to the retry message' fails: expected { error: undefined, granted: false, message: undefined } to deeply equal { granted: false, message: 'Could not reach the billing service \u2014 check your connection, then retry.' } (1 failed | 4 passed).",
+  "green": "With the null branch in .then(): subscriptionCommand.test.ts 5/5 pass.",
+  "negative_control": "Replacing only the null branch's message with undefined: the null test fails again (expected { granted:false, message: undefined } to deeply equal ...retry...).",
+  "adjacent": "vitest: subscriptionCommand, subscriptionOverlay, billingStepUp, topupCommand = 4 files, 53 passed. ui-tui npm run typecheck clean; eslint + prettier --check clean.",
+  "source": "main ui-tui/src/app/useMainApp.ts rpc(): try { ... } catch { sys(...) } return null (never rejects; GatewayRpc returns Promise<null|T>). subscription.ts requestRemoteSpending .then(r => ({error:r?.error, granted:!!(r&&r.ok&&r.granted), message:r?.message})).catch(...billingUnreachable) \u2014 catch unreachable. subscriptionOverlay.tsx stepUpDenialResult falls to T.notAllowed when error/message absent."
+ },
+ "upstream_overlap": [
+  "None found: gh search prs/issues for requestRemoteSpending, billingUnreachable, 'step-up billing service', 'Remote Spending transport'."
+ ],
+ "branch": "ready/fork-37-tui-step-up-unreachable",
+ "files": [
+  "ui-tui/src/app/slash/commands/subscription.ts",
+  "ui-tui/src/__tests__/subscriptionCommand.test.ts"
+ ],
+ "size": "+36/-6",
+ "depends_on": null,
+ "notes": "Rebuilt on main (subscription.ts now uses i18n t(); the fork hard-coded the English string). Dropped the fork's subscriptionOverlay.test.tsx additions: they mock requestRemoteSpending directly and do not exercise the fix. Kanban baggage dropped. Sibling note (not changed): topup.ts requestRemoteSpending has the same dead .catch but null and reject both map to false there, so no user-visible bug. NOT_TESTED: live authenticated step-up with a real gateway drop. Commit dceade1de1."
+}

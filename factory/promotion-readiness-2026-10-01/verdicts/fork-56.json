@@ -1,0 +1,37 @@
+{
+ "fork_pr": 56,
+ "title": "fix(tui): store expanded paste in the busy/no-session queue, keep the label as display",
+ "claim": "A collapsed paste submitted while busy (interrupt/steer/queue) or before a session exists must reach the model expanded, with the label kept in the transcript, and draining a queued item must take !/{!...} only from the typed display, never from pasted bytes.",
+ "verdict": "READY",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "New ui-tui/src/__tests__/queuedPasteSubmission.test.tsx on unchanged main: 6/6 fail. Interrupt/steer/queue/no-session all fail with expected ['review this: [[ line one line two line three line four line five [5 lines] ]]'] to deeply equal ['review this: line one\\nline two...'] (label sent, payload lost). Mixed witness: the payload is lost on main (prompt = 'show Fri for <label>'). /queue paste starting with '!' fails with expected ['echo pwned\\nz\\nz\\nz\\nz\\nz\\nend'] to deeply equal [] (main shell-executes pasted content when the queue drains).",
+  "green": "With the fix: 6/6 pass.",
+  "negative_control": "Five mutations, each re-fails the suite: interpolating item.text instead of display gives expected ['date','touch /tmp/pwned'] to deeply equal ['date']; gating ! on item.text re-fails the /queue-bang case; the busy path queueItem(full) re-fails interrupt/steer/queue/mixed; no-session enqueue(full) re-fails the no-session case; dropping display from the interrupt send re-fails interrupt (transcript).",
+  "adjacent": "18 ui-tui test files, 228 tests pass (queueScopeRenderer, useQueue, queueSubmission, useSubmission, submissionCore, useInputHandlers, attachments, createGatewayEventHandler, voiceSubmitModeRenderer, startupLatency*, orchestratorPromptSession, moaProgressActivity, libTextI18n, platform, gatewayClientKillLatch, inputSelectionClipboard). tsc --noEmit clean; eslint and prettier clean on touched files.",
+  "source": "main useSubmission.ts: clearIn() (line 311) synchronously empties tokensRef (useComposerState.ts:123-150). The busy path then does handleBusyInput(queueItem(full)) (line 338) and the no-session path enqueue(full) (line 304), both storing the display with its label. send(item.text) expands against the empty tokensRef; steer sends item.text raw. sendQueued(text) gates !/{!} on text, which for /queue items is the expanded paste (queueItemFromSlash). Double-tap and Ctrl+K drain via dispatchSubmission(text), re-parsing pasted bytes as fresh input.",
+  "fork_head_reproof": "Fork head 59571bda70: its busyQueuePasteRepro.test.ts passes 7/7 with every production fix reverted (sendQueued back to interpolate(item.text, send), busy back to queueItem(full), no-session back to enqueue(full)). The author's 'mixed witness' re-implements sendQueued inside the test and never drives production code. The production fix is sound, but the head's regression tests prove nothing. The head typechecks."
+ },
+ "upstream_overlap": [
+  "#99032 OPEN issue (P2, comp/tui): same symptom. Its later comments (mdelgadonyc 09-14, Ye1806431561 09-22, Khwan888 09-28, aiskrin-pixel 09-29) trace it to exactly the busy/no-session paths fixed here. kokhlo claimed the issue on 08-31.",
+  "#99042 OPEN (kokhlo): the only PR linked to #99032. It blocks submission when a placeholder is orphaned at dispatch time. It does not change the busy/steer/queue/no-session paths, so it does not fix this defect. Complementary. Merge interaction: it changes the expandTokens return type to {expanded, unresolved}.",
+  "Khwan888 posted a 'locally tested repair' design on #99032 but has no upstream PR; aiskrin-pixel did offline validation only, no PR.",
+  "#123756 OPEN (jonpol01): changes the Ctrl+K guard condition next to the line changed here; trivial rebase; its test may need to expect sendQueued.",
+  "#129525 OPEN (kvnloo, our own): useQueue.ts import and test overlap; trivial textual rebase, no semantic conflict.",
+  "#74689 OPEN (briandevans, queue session scoping): different defect, touches useQueue/useSubmission."
+ ],
+ "branch": "ready/fork-56-queued-paste-payload",
+ "commit": "e8d70c6409b3c06bfc7f1d5eb7469bfd88dbb115",
+ "files": [
+  "ui-tui/src/app/useSubmission.ts",
+  "ui-tui/src/hooks/useQueue.ts",
+  "ui-tui/src/app/interfaces.ts",
+  "ui-tui/src/app/useInputHandlers.ts",
+  "ui-tui/src/app/useMainApp.ts",
+  "ui-tui/src/__tests__/queuedPasteSubmission.test.tsx",
+  "ui-tui/src/__tests__/queueScopeRenderer.test.tsx"
+ ],
+ "size": "+248/-33 (production +51/-31 across 5 files; new test 193 lines)",
+ "depends_on": [],
+ "notes": "Rebuilt on current main from both fork commits. The production design is kept: an expander captured at enqueue, sendQueued(QueueItem) gated on display, dequeue returns QueueItem. The only drift fix was a 1-hunk conflict with reportSlashCommand telemetry. Dropped the fork's busyQueuePasteRepro.test.ts (mirror tests) and replaced it with a mounted-hook test that drives the real useSubmission and useQueue. Comments were shortened, and the fork's inaccurate claim that pasted bytes 'never reach interpolate' was removed. Behaviour change: manual drains (double-Enter, Ctrl+K) now go through sendQueued like the auto-drain, so a queued '/cmd' is sent as a prompt rather than re-run as a slash command. ADJACENT BOUNDARY FINDING (pre-existing, NOT fixed here, same on main and fork head): pasteTokenLabel embeds an edge preview of the paste (first 16 / last 28 chars). A paste whose head or tail contains {!...} puts that syntax into the visible display, so both the direct and the queued path execute it, and the paste body is then lost because the mutated label no longer matches its token. Probe: paste '{!touch /tmp/x} please' + 11 lines gives label '[[ {!touch /tmp/x} please q ... [12 lines] ]]', and the submit runs shell ['touch /tmp/x'] on main and with the fix. Candidate sibling fix: neutralize '{!' in edgePreview the same way it already neutralizes ']]'. Ownership: treated as not EXTERNAL-OWNED because no open PR fixes this root cause, but the caller may want to coordinate on #99032 (kokhlo's claim) before posting. Review-capacity gate per the Hermes audit is the caller's call. NOT_TESTED: live TUI against a real gateway; @hermes/ink and @hermes/shared resolve through the borrowed /workspace/hermes-home/hermes-agent node_modules (untouched by this change)."
+}

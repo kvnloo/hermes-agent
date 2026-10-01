@@ -1,0 +1,65 @@
+diff --git i/gateway/run.py w/gateway/run.py
+index 620fe26bfe..4882116efd 100644
+--- i/gateway/run.py
++++ w/gateway/run.py
+@@ -5799,6 +5799,13 @@ async def _start_gateway_shutdown_tail(
+                        "delivery may have been dropped.", _CRON_SHUTDOWN_DRAIN_TIMEOUT)
+     await _await_thread_exit(housekeeping_thread, timeout=_HOUSEKEEPING_SHUTDOWN_DRAIN_TIMEOUT)
+ 
++    # Stop memory monitor (logs a final RSS snapshot before teardown).
++    try:
++        from gateway.memory_monitor import stop_memory_monitoring
++        stop_memory_monitoring()
++    except Exception:
++        pass
++
+     # Stop the planned-stop watcher (daemon=True so this is belt-and-suspenders).
+     _planned_stop_watcher_stop.set()
+     _planned_stop_watcher_thread.join(timeout=2)
+@@ -5994,6 +6001,12 @@ async def start_gateway(config: Optional[GatewayConfig] = None, replace: bool =
+     cron_stop, cron_provider, cron_thread, housekeeping_thread = (
+         _start_gateway_start_cron_and_housekeeping(runner))
+ 
++    # Periodic memory usage heartbeat — daemon thread logs RSS + GC stats
++    # every 5 min so external watchdogs can monitor log freshness as a
++    # hung-detection heuristic.  Safe to call; creates its own daemon thread.
++    from gateway.memory_monitor import start_memory_monitoring
++    start_memory_monitoring()
++
+     # READY only once adapters, cron and housekeeping run; missing systemd state just disables watchdog.
+     runner._start_systemd_watchdog()
+ 
+diff --git i/tests/gateway/test_memory_monitor.py w/tests/gateway/test_memory_monitor.py
+index 179f76b8d4..3da4153a3e 100644
+--- i/tests/gateway/test_memory_monitor.py
++++ w/tests/gateway/test_memory_monitor.py
+@@ -7,6 +7,7 @@ leaks show up as a time series in agent.log / gateway.log.
+ 
+ from __future__ import annotations
+ 
++import inspect
+ 
+ import pytest
+ 
+@@ -37,3 +38,21 @@ def test_stop_ends_monitoring():
+     assert mm.is_running() is False
+ 
+ 
++def test_start_gateway_calls_start_memory_monitoring():
++    """Regression: start_gateway() must call start_memory_monitoring().
++
++    Issue #49773 — the memory heartbeat was never started because
++    start_gateway() did not import or call start_memory_monitoring().
++    This test verifies the call site exists in the source.
++    """
++    import gateway.run as run_mod
++
++    source = inspect.getsource(run_mod.start_gateway)
++    assert "start_memory_monitoring" in source, (
++        "start_gateway() must call start_memory_monitoring() for the "
++        "memory heartbeat to work — see issue #49773"
++    )
++    assert "from gateway.memory_monitor import" in source, (
++        "start_gateway() must import start_memory_monitoring from "
++        "gateway.memory_monitor — see issue #49773"
++    )

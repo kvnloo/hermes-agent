@@ -1,0 +1,33 @@
+{
+  "fork_pr": 79,
+  "title": "docs: correct manage_connections tool presence in tool-search guide",
+  "claim": "tool-search.md says manage_connections is present whether or not you are signed in; it is actually gated by the connectors check_fn.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "red": "website/docs/user-guide/features/tool-search.md:190-193 on main: \"The same tool also installs, enables and authorizes local MCP servers from the catalog (targets with `mcp: true`), so it is present whether or not you are signed in; only the managed-connector actions need the sign-in.\"",
+    "green": "Bundle text: the tool sits behind the same gate as connectors; in the schema only when tools.connectors.enabled is on and the user is on the Nous free tier or signed in to a Portal account with the managed_tools claim; signed-out sessions never see it.",
+    "negative_control": "N/A for docs (no executable behaviour). Equivalent check: the stale phrase is present on main and absent on the bundle (grep given in red/green).",
+    "adjacent": "python3 website/scripts/check_doc_links.py on the bundle tree: OK (no route-style links). All 7 B1 bundles cherry-pick together onto main cleanly, and each pairs cleanly with B2's current docs2-update/docs2-desktop/docs2-gateway/docs2-memory bundles.",
+    "source": "tools/connectors/tool.py:132-146 registry.register(name='manage_connections', ..., check_fn=lambda: gateway_config.connectors_available()); tools/connectors/gateway/config.py:82-106 connectors_available(): False unless load_config().enabled, True for is_guest_state (free tier), else managed_tools_rolled_out() (:68-79, logged_in and managed_tools claim)."
+  },
+  "upstream_overlap": [
+    "No open external PR/issue for this claim (gh search prs/issues; open docs PRs touching the same files edit other sections)"
+  ],
+  "branch": "ready/docs-mcp",
+  "bundle": {
+    "branch": "ready/docs-mcp",
+    "commit": "0081fb5e75",
+    "subject": "docs(mcp): correct catalog and plugin MCP install docs",
+    "bundle_size": "+36/-16",
+    "patch": "patches/docs-mcp.patch",
+    "body": "patches/docs-mcp.body.md"
+  },
+  "files": [
+    "website/docs/user-guide/features/tool-search.md"
+  ],
+  "size": "+6/-3",
+  "depends_on": null,
+  "fork_head": "cf65d39d15964d4a677a09aa3ebe58ca5f0fe12a",
+  "notes": "Fork wording ('only when the Portal has enabled connectors for the signed-in account') omitted the free-tier path and the tools.connectors.enabled switch; rebuilt wording covers both. No zh-Hans copy of tool-search.md."
+}

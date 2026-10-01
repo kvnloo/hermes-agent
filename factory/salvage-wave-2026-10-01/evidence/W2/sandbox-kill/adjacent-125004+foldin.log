@@ -1,0 +1,29 @@
+LABEL adjacent-125004+foldin  main=298a01c79b38018e029e50f77efe67c4a4fdbd40
+MERGE refs/w2/pr/125004 (2692841849): clean
+APPLY /mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/sandbox-kill/foldin-sandbox-kill-escalation.diff: ok
+▶ not activated — using HERMES_PYTHON: /workspace/hermes-home/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 12 test files (~202 tests) under ['tests/tools/test_sandbox_background_kill_tree.py', 'tests/tools/test_process_registry.py', 'tests/tools/test_local_temp_dir.py', 'tests/tools/test_process_registry_list_exit.py', 'tests/tools/test_terminal_compound_background.py', 'tests/tools/test_terminal_task_cwd.py', 'tests/tools/test_kill_verify_tree_death.py', 'tests/tools/test_process_checkpoint_readopt.py', 'tests/tools/test_process_wait_clarity.py', 'tests/tools/test_notify_on_complete.py', 'tests/gateway/test_abandoned_turn_process_cleanup.py', 'tests/tools/test_w2_probe_sandbox_kill_term_ignored.py']; running with -j 2
+[  2.5% |     5/~202 | ✓5 | ✗0] ✓ tests/tools/test_kill_verify_tree_death.py (5✓, 19.2s)
+[  5.9% |    12/~202 | ✓12 | ✗ 0] ✓ tests/tools/test_local_temp_dir.py (7✓, 2.2s)
+[ 13.4% |    27/~202 | ✓27 | ✗ 0] ✓ tests/gateway/test_abandoned_turn_process_cleanup.py (15✓, 25.1s)
+[ 20.8% |    42/~202 | ✓42 | ✗ 0] ✓ tests/tools/test_notify_on_complete.py (15✓, 5.0s)
+[ 23.8% |    48/~202 | ✓48 | ✗ 0] ✓ tests/tools/test_process_checkpoint_readopt.py (6✓, 3.2s)
+[ 24.8% |    50/~202 | ✓50 | ✗ 0] ✓ tests/tools/test_process_registry_list_exit.py (2✓, 36.5s)
+[ 26.7% |    54/~202 | ✓54 | ✗ 0] ✓ tests/tools/test_process_wait_clarity.py (4✓, 7.1s)
+[ 27.7% |    56/~202 | ✓58 | ✗ 0] ✓ tests/tools/test_sandbox_background_kill_tree.py (4✓, 5.1s)
+[ 40.1% |    81/~202 | ✓93 | ✗ 0] ✓ tests/tools/test_terminal_compound_background.py (35✓, 3.3s)
+[ 43.6% |    88/~202 | ✓100 | ✗  0] ✓ tests/tools/test_terminal_task_cwd.py (7✓, 5.2s)
+[ 44.1% |    89/~202 | ✓102 | ✗  0] ✓ tests/tools/test_w2_probe_sandbox_kill_term_ignored.py (2✓, 8.9s)
+[100.0% |   202/~202 | ✓212 | ✗  0] ✓ tests/tools/test_process_registry.py (110✓ 4s, 72.6s)
+
+=== Summary: 12 files, 212 tests passed, 0 failed, 4 skipped (100% complete) in 99.0s (2 workers) ===
+
+  note: platforms('windows') tests (in 1 file) were SKIPPED on this host (linux); they run on the Windows Python-tests lane.
+  Durations cached to test_durations.json (12 files)
+
+=== Per-file subprocess time distribution ===
+TRIPWIRE hits during run: 0

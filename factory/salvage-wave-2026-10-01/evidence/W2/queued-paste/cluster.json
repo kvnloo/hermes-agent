@@ -1,0 +1,173 @@
+{
+ "issue": "#99032",
+ "slug": "queued-paste",
+ "seed": "kvnloo READY local branch ready/fork-56-queued-paste-payload (fork #56, verdict READY on f848940560)",
+ "title": "TUI: a collapsed paste submitted while busy (interrupt/steer/queue) or before the first session reaches the model as its [[ … ]] label, and a queued paste whose bytes start with ! is shell-executed when the queue drains",
+ "main_sha": "298a01c79b38018e029e50f77efe67c4a4fdbd40",
+ "candidates": [
+  {
+   "pr": 99042,
+   "author": "kokhlo (commit author Konstantin Khlopkov <konstantin.khlopkov93@gmail.com>)",
+   "created": "2026-08-31T03:05:29Z",
+   "last_activity": "2026-08-31T12:48:42Z (one automated review comment by Enough1122; no maintainer review; head a549960398 unchanged since)",
+   "mergeable_github": "CONFLICTING (DIRTY); labels type/bug, comp/tui, P2; Closes #99032",
+   "merges_clean_on_pinned_main": "false: one conflict in ui-tui/src/app/useSubmission.ts (main removed the `queuePayload` line the PR edits, via 00b2e03c80/queueItemFromSlash). Resolved mechanically by keeping the PR's unresolved check and dropping `queuePayload` (pr99042-merge-resolution.cc.diff). Its package-lock.json -27 (`\"peer\": true` removals) is already on main and merges as a no-op.",
+   "diff_size": "+139/-56, 5 files (production +69/-13 in useSubmission.ts, attachments.ts, useComposerState.ts; package-lock.json -27; attachments.test.ts +70/-16)",
+   "has_tests": "yes: ui-tui/src/__tests__/attachments.test.ts (orphan detection unit tests). 3 of its 22 tests fail at its own head, and it breaks main's existing useSubmission.test.ts prepareSubmission toEqual (4 failed / 23 passed at head).",
+   "approach": "expandTokens returns {expanded, unresolved}; dispatchSubmission (and the interpolation callback) refuse to submit when a generated-looking [[ … [N lines] … ]] label has no token, with a sys error; paste.collapse failures become a sys warning. Does not change the busy, steer, queue or no-session paths."
+  },
+  {
+   "pr": "fork #56: local branch ready/fork-56-queued-paste-payload (e8d70c6409), not opened upstream",
+   "author": "kvnloo (Kevin Rajan <7121943+kvnloo@users.noreply.github.com>)",
+   "created": "2026-09-30T20:32:07-05:00 (rebuilt commit; fork PR kvnloo/hermes-agent#56 earlier)",
+   "last_activity": "2026-09-30 (promotion-readiness verdict READY)",
+   "mergeable_github": "n/a (no upstream PR)",
+   "merges_clean_on_pinned_main": true,
+   "diff_size": "+248/-33, 7 files (production +53/-31 in useSubmission.ts +32/-18, useQueue.ts +15/-9, interfaces.ts +4/-3, useInputHandlers.ts +1/-1, useMainApp.ts +1/-0; new test queuedPasteSubmission.test.tsx 193 lines; queueScopeRenderer.test.tsx +2/-2)",
+   "has_tests": "yes: queuedPasteSubmission.test.tsx, mounted real useSubmission + useQueue (6 cases)",
+   "approach": "Busy and no-session submits queue the expanded text with the label as display and a paste expander captured at enqueue; sendQueued takes the QueueItem and gates ! and {!...} on display, interpolates the display, then expands; dequeue returns the QueueItem so double-Enter and Ctrl+K drain through sendQueued; interrupt passes display to send."
+  }
+ ],
+ "candidates_checked_not_same_defect": [
+  {
+   "pr": 129581,
+   "author": "Wenfengcheng",
+   "why": "OPEN, MERGEABLE, 2026-09-30, Part of #32997: keeps collapsed text-draft tokens across automatic reconnect (resumeById). Different path (session recovery); it does not touch the busy/no-session submit or the queue drain. Related to Khwan888's first-session race (resetSession clears tokens), which neither candidate covers."
+  },
+  {
+   "pr": 123756,
+   "author": "jonpol01",
+   "why": "OPEN: Ctrl+K kill-to-end no longer also sends the next queued message. Adjacent line in useInputHandlers.ts; trivial rebase against fork-56 (its test may need to expect sendQueued)."
+  },
+  {
+   "pr": 129525,
+   "author": "kvnloo",
+   "why": "OPEN, MERGEABLE: perf(tui) queue wake-ups. Textual overlap in useQueue.ts and queueScopeRenderer.test.tsx only."
+  },
+  {
+   "pr": 74689,
+   "author": "briandevans",
+   "why": "OPEN: scopes the prompt queue to its origin session. Touches useQueue/useSubmission; different defect."
+  },
+  {
+   "pr": 129971,
+   "author": "dskwe",
+   "why": "OPEN, 2026-10-01: classic CLI (cli.py) paste expansion in slash commands. Not the Ink TUI."
+  },
+  {
+   "pr": 44034,
+   "author": "0xAdamFortuna",
+   "why": "OPEN: recursive CLI paste references. Not the Ink TUI."
+  },
+  {
+   "pr": 74797,
+   "author": "eloklam",
+   "why": "MERGED 2026-07-31: preserve collapsed /queue paste payloads (queueItemFromSlash). Prior partial fix; the busy and no-session paths remained."
+  },
+  {
+   "pr": 75565,
+   "author": "austinpickett",
+   "why": "MERGED 2026-07-31: expand collapsed paste tokens before idle submission. Prior partial fix."
+  },
+  {
+   "pr": 100837,
+   "author": "OutThisLife",
+   "why": "MERGED 2026-09-02: a collapsed paste resolves before a slash command runs. Prior partial fix."
+  }
+ ],
+ "regression_test": {
+  "source": "kvnloo fork #56 (ready/fork-56-queued-paste-payload e8d70c6409), used unchanged",
+  "path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/queued-paste/queuedPasteSubmission.test.tsx (placed at ui-tui/src/__tests__/queuedPasteSubmission.test.tsx)",
+  "tests": [
+   "reaches the model expanded (busy, interrupt mode)",
+   "reaches the model expanded (busy, steer mode)",
+   "reaches the model expanded (busy, queue mode)",
+   "reaches the model expanded (no session yet)",
+   "draining a queued collapsed paste: runs only the visible {!...}, not one carried by the paste",
+   "draining a queued collapsed paste: does not shell-execute a /queue paste whose content starts with !"
+  ],
+  "contract": "Driving the real useSubmission and useQueue hooks with a fake gateway: a collapsed paste submitted while busy (interrupt, steer, queue) or before a session exists reaches prompt.submit/session.steer expanded while the transcript keeps the label, and when a queued item drains, ! and {!...} are taken only from what the user typed, never from the pasted bytes (shell.exec is recorded, never executed).",
+  "evidence_path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/queued-paste/"
+ },
+ "ab_results": {
+  "main": {
+   "result": "fail",
+   "detail": "6 of 6 fail. R1-R4: prompt is 'review this: [[ line one line two line three line four line five [5 lines] ]]' (label sent, payload lost). R5: 'show Fri for [[ first line of th.. [21 lines] .. y y y y y y y y y y y y end ]]'. R6: shell.exec('echo pwned\\nz\\nz\\nz\\nz\\nz\\nend') from a `/queue <paste>` on double-Enter drain; probe P2 shows the useMainApp auto-drain path (dequeue then sendQueued) shell-executes the same pasted bytes. tsc clean."
+  },
+  "99042": {
+   "result": "fail",
+   "detail": "6 of 6 fail after a one-conflict mechanical merge. Interrupt and steer still send the label: the tokens still exist when dispatchSubmission runs its orphan check, and send() later expands against the cleared tokensRef. Queue and no-session drains re-enter dispatchSubmission with the bare label and are either refused or sent as the label depending on regex state (lastIndex bug). R6 still shell-executes the pasted bytes. Probe P4: a busy queue-mode paste drained by double-Enter is dequeued (queue 1 -> 0) and refused with 'cannot submit: 1 collapsed paste token missing ... The composer still has what you typed, so nothing is lost.' while the composer is empty. Own tests: 3 of 22 fail at its head and on main (unresolved [] for '[[ lost.. [5k lines] .. data ]]'; second orphan missed; fmtK label not recognized), plus main's useSubmission.test.ts toEqual fails on the new `unresolved` key. tsc clean."
+  },
+  "fork#56 ready branch (reference, not an upstream PR)": {
+   "result": "pass",
+   "detail": "6/6, clean merge, tsc clean. Probes P2-P6 pass (auto-drain, double-Enter and queue-edit paths). P1 fails: no orphaned-placeholder guard. #99042's attachments.test.ts on fork-56 alone: 15 of 22 fail (expandTokens returns a string, looksLikeOrphanedPasteToken absent), so fork-56 does not cover #99042's contract."
+  },
+  "99042+fork#56 (textual merge only)": {
+   "result": "fail",
+   "detail": "Same single textual conflict, but TypeScript reports 2 x TS2345 ('(value: string) => ExpandResult' is not assignable to 'QueueExpand', useSubmission.ts:331 and :365) and R5 sends an ExpandResult object {expanded, unresolved} as the prompt text: 5/6."
+  },
+  "99042+fork#56 (adapted, +2/-2)": {
+   "result": "pass",
+   "detail": "Wrapping fork-56's two expanders as `(value: string) => expandTokens(submissionTokens)(value).expanded` gives 6/6 and clean tsc. P6 fails: a busy queue-mode item loaded by cycleQueue and resubmitted is refused by #99042's check and stays queued."
+  },
+  "99042+fork#56+non-global regex": {
+   "result": "pass (regression) / regression on queue-edit",
+   "detail": "With #99042's detector using `new RegExp(PASTE_SNIPPET_RE.source)`, its attachments tests pass 22/22 and the consecutive-call probe is stable, regression 6/6, but both queue-edit probes (P5 /queue item, P6 busy item) are refused: cycleQueue loads only the display, so every edited-and-resubmitted collapsed paste trips the orphan check."
+  },
+  "99042+non-global regex (no fork-56)": {
+   "result": "fail",
+   "detail": "Regression 0/6. Probe P5: #99042 alone refuses the `/queue` item edit that main delivers today (main resolves it through takeQueueItem's display->text replace)."
+  }
+ },
+ "adjacent_tests": {
+  "files": [
+   "ui-tui/src/__tests__/attachments.test.ts",
+   "ui-tui/src/__tests__/gatewayClientKillLatch.test.ts",
+   "ui-tui/src/__tests__/inputSelectionClipboard.test.ts",
+   "ui-tui/src/__tests__/libTextI18n.test.ts",
+   "ui-tui/src/__tests__/orchestratorPromptSession.test.ts",
+   "ui-tui/src/__tests__/platform.test.ts",
+   "ui-tui/src/__tests__/queueScopeRenderer.test.tsx",
+   "ui-tui/src/__tests__/queueSubmission.test.ts",
+   "ui-tui/src/__tests__/submissionCore.test.ts",
+   "ui-tui/src/__tests__/useComposerState.test.ts",
+   "ui-tui/src/__tests__/useInputHandlers.test.ts",
+   "ui-tui/src/__tests__/useQueue.test.ts",
+   "ui-tui/src/__tests__/useSubmission.test.ts",
+   "ui-tui/src/__tests__/createGatewayEventHandler.test.ts",
+   "ui-tui/src/__tests__/voiceSubmitModeRenderer.test.tsx",
+   "ui-tui/src/__tests__/startupLatency.test.ts",
+   "ui-tui/src/__tests__/startupLatencyDashboard.test.ts",
+   "ui-tui/src/__tests__/moaProgressActivity.test.ts",
+   "ui-tui/src/__tests__/composerHighlights.test.ts",
+   "npm run typecheck (tsc --noEmit)"
+  ],
+  "result": "main 239/239; fork-56 239/239 (plus the 6 regression cases); #99042 242/246 (its 3 own attachments tests + useSubmission.test.ts 'keeps the collapsed paste for display and expands the model payload'); 99042+fork-56 adapted 242/246 (same 4). tsc clean on main, #99042, fork-56 and the adapted composition. Negative controls on fork-56 (negative-control-fork56.log): busy path reverted to handleBusyInput(queueItem(full)) fails R1/R2/R3/R5; no-session reverted to enqueue(full) fails R4; sendQueued gating ! on item.text fails R6. Tripwire log empty for every run."
+ },
+ "carrier": null,
+ "fold_ins": [],
+ "close_after_merge": [],
+ "exclude_reason": "No upstream PR fixes the defect, and the composition is not a fold-in. #99042 (the only upstream PR, Closes #99032) checks for orphaned labels at dispatch time, while the tokens still exist, so it fails all 6 regression cases on 298a01c7. It is also red at its own head: PASTE_SNIPPET_RE is a global regex and looksLikeOrphanedPasteToken calls .test() on it, so lastIndex carries over and every second consecutive orphan is missed (3 of its 22 tests fail), and the new `unresolved` key breaks main's useSubmission.test.ts. With the regex fixed, its block refuses every queue-edit resubmit of a collapsed paste, including the /queue-item edit main delivers today. On its own drain path it dequeues a busy queue-mode paste and refuses it while telling the user 'nothing is lost'. The whole fix is kvnloo's unpublished branch ready/fork-56-queued-paste-payload (6/6, clean merge, 239/239 adjacent, negative controls fire), which would be the entire production change (+53/-31, 5 files), not a fold-in onto #99042. Becomes a row once fork-56 is opened upstream as the carrier (see row_when_opened), after kvnloo coordinates on #99032 with kokhlo, who claimed the issue on 2026-08-31.",
+ "excluded_summary": "Issue #99032 (collapsed paste lost when busy or before a session): kokhlo's #99042, the only upstream PR, fails all 6 regression cases on 298a01c7. It checks for orphaned labels at dispatch, while the tokens still exist. It is also red at its own head: a stateful `PASTE_SNIPPET_RE.test()` (global regex, lastIndex) misses every second orphan, so 3 of its 22 tests fail, and its new `unresolved` key breaks main's useSubmission.test.ts. With that fixed, its block refuses queue-edit resubmits that main delivers. The fix that passes is kvnloo's unpublished `ready/fork-56-queued-paste-payload` (6/6, clean merge, 239/239 adjacent), which is the whole change, not a fold-in. Becomes a row once kvnloo coordinates with kokhlo on #99032 and opens it upstream (`row_when_opened` in the JSON). It also stops a queued paste starting with `!` from being shell-executed on drain, which main does on both drain paths.",
+ "row": null,
+ "carrier_when_opened": {
+  "pr": null,
+  "branch": "ready/fork-56-queued-paste-payload (e8d70c6409, $S/h.git); patch /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/patches/fork-56.patch, body fork-56.body.md",
+  "author": "kvnloo (Kevin Rajan <7121943+kvnloo@users.noreply.github.com>)",
+  "why": "Only change that satisfies the contract on 298a01c7 (6/6), merges clean, typechecks, keeps 239/239 adjacent tests, and its three key lines are each pinned by a negative control. It also closes the drain-time shell-exec of pasted bytes on both drain paths (double-Enter/Ctrl+K and the useMainApp auto-drain)."
+ },
+ "fold_ins_when_opened": [
+  {
+   "from": "#99042",
+   "author": "kokhlo",
+   "co_authored_by": "Konstantin Khlopkov <konstantin.khlopkov93@gmail.com>",
+   "hunk_scope": "ui-tui/src/app/useComposerState.ts only: paste.collapse `.catch(() => {})` -> `.catch(err => sys(`warning: paste.collapse failed ...`))` (+3/-1). Optional.",
+   "why": "Independent and sound: it surfaces the paste.collapse registration failure the issue reporter called out (plan item 2), and does not depend on the orphan guard.",
+   "test": "NOT_TESTED behaviourally (#99042 has no test for it); tsc clean in the adapted composition."
+  }
+ ],
+ "row_when_opened": "| #99032 | kvnloo branch `ready/fork-56-queued-paste-payload` (kvnloo; not yet opened upstream, coordinate on #99032 first) | main: FAIL, 6 of 6 (busy interrupt/steer/queue and no-session send the `[[ … [5 lines] ]]` label; a drained `/queue` paste starting with `!` is shell-executed); fork-56: PASS 6/6, clean merge; #99042: FAIL 6/6 (CONFLICTING, one mechanical conflict; 3 of its own 22 tests fail at its own head) | kokhlo (#99042): optional `ui-tui/src/app/useComposerState.ts` hunk that reports a failed `paste.collapse` as a sys warning instead of `.catch(() => {})` (+3/-1); `Co-authored-by: Konstantin Khlopkov <konstantin.khlopkov93@gmail.com>` | none (#99042 stays open for its orphaned-placeholder guard, which needs a non-global regex, a queue-edit exemption and a rebase) | Through the real useSubmission and useQueue hooks, main stores the display string after `clearIn()` has dropped the paste tokens, so every busy mode and the pre-session queue send the label, and the queue drain judges `!` on the expanded paste. fork-56 passes 6/6, typechecks, keeps 239/239 adjacent ui-tui tests, and each of three one-line reverts re-fails its cases. #99042 checks for orphans at dispatch, when the tokens still exist, so it misses all six cases; with it, a busy queue-mode paste drained by double-Enter is dequeued and refused with \"nothing is lost\" while the composer is empty. |",
+ "close_after_merge_when_opened": [],
+ "notes": "(1) Coordination: kokhlo claimed #99032 on 2026-08-31 and #99042 has had no activity since. The fork-56 verdict ruled it not EXTERNAL-OWNED because no open PR fixes this root cause. Before opening, kvnloo should post on #99032 with the A/B above, offer fork-56 as a complementary PR that `Refs #99042` (busy/no-session/drain paths), and leave the orphan-guard lane to kokhlo. Alternatively kokhlo can adopt fork-56's hunks into #99042 with `Co-authored-by: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>`. (2) Review notes for #99042: use a non-global regex in looksLikeOrphanedPasteToken (or drop the redundant PASTE_SNIPPET_RE.test, since `match` already is a snippet match); update useSubmission.test.ts for the `unresolved` key; exempt queue-edit resubmits (cycleQueue loads only the display; takeQueueItem resolves the payload); do not claim 'nothing is lost' on a drained item; rebase over main's queueItemFromSlash. (3) Merge interaction if both land: fork-56's two `expandTokens(submissionTokens)` expanders must become `(value: string) => expandTokens(submissionTokens)(value).expanded` (+2/-2). TypeScript flags it (TS2345); without it the `{!...}` drain sends an object as the prompt. (4) Security-relevant sub-finding, mocked only: on main, `/queue <collapsed paste>` whose pasted text begins with `!` is shell-executed via shell.exec when it drains, on both the double-Enter/Ctrl+K path (dispatchSubmission re-parses the expanded text) and the useMainApp auto-drain (sendQueued checks item.text). The direct submit path is safe because it checks the display (label). Observed call: shell.exec({command: 'echo pwned\\nz\\nz\\nz\\nz\\nz\\nend'}). fork-56 fixes both paths; #99042 fixes neither. (5) Pre-existing, not fixed by either candidate: pasteTokenLabel's edge preview (first 16 / last 28 chars) can carry `{!...}` into the visible label, which then interpolates on both direct and queued paths and orphans the paste (fork-56 verdict probe). Candidate sibling fix: neutralize `{!` in edgePreview as it already neutralizes `]]`. (6) Not covered by either candidate, NOT_TESTED: Khwan888's first-session race (paste before session.create returns, Enter after: resetSession clears the tokens while the label stays in the composer) and queue-edit token restoration when the edit changes the label itself. #129581 covers only the reconnect variant. (7) Behaviour change in fork-56: manual drains (double-Enter, Ctrl+K) now go through sendQueued, so a queued '/cmd' text is sent as a prompt rather than re-run as a slash command. (8) Order-dependence: because of the lastIndex bug, #99042 states give different probe outcomes depending on test order (e.g. the busy queue-mode drain was refused in one run and sent as the label in another). The regression test fails 6/6 on #99042 in every order. (9) Housekeeping: merge states pinned at refs/w2/queued-paste/{m99042,mfork56,mcompose-textual,mcompose,mcompose-lastidx,m99042-lastidx} in $S/h.git; rerere off for every merge; worktree removed. NOT_TESTED: live TUI against a real gateway; @hermes/ink and @hermes/shared resolve through the borrowed /workspace/hermes-home/hermes-agent node_modules.",
+ "evidence_dir": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/queued-paste/"
+}

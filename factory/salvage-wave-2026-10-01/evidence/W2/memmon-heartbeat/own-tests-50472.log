@@ -1,0 +1,16 @@
+label=own-50472 main=298a01c79b38018e029e50f77efe67c4a4fdbd40 port=/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/memmon-heartbeat/port-50472.diff
+▶ not activated — using HERMES_PYTHON: /workspace/hermes-home/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 3 test files (~16 tests) under ['tests/gateway/test_memory_monitor_gateway_wiring.py', 'tests/gateway/test_memory_monitor.py', 'tests/gateway/test_runner_startup_failures.py']; running with -j 2
+[ 18.8% |     3/~16 | ✓3 | ✗0] ✓ tests/gateway/test_memory_monitor.py (3✓, 1.9s)
+[ 31.2% |     5/~16 | ✓8 | ✗0] ✓ tests/gateway/test_memory_monitor_gateway_wiring.py (5✓, 2.7s)
+[100.0% |    16/~16 | ✓11 | ✗ 0] ✓ tests/gateway/test_runner_startup_failures.py (3✓, 2.5s)
+
+=== Summary: 3 files, 11 tests passed, 0 failed (100% complete) in 4.5s (2 workers) ===
+  Durations cached to test_durations.json (3 files)
+
+  Files:   3
+tripwire hits during run: 0

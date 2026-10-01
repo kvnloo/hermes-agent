@@ -1,0 +1,32 @@
+{
+  "fork_pr": 73,
+  "title": "chore(secrets): remove write-only dataclass fields in registry",
+  "claim": "registry AppliedVar.name/shape/overrode_env and SourceReport.skipped_claimed/_protected/_invalid are write-only and can be removed.",
+  "verdict": "HOLD",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "source": "The claim still holds structurally on main: production reads only AppliedVar.source/.authoritative and SourceReport.applied/.skipped_existing/.result/.label/.name (hermes_cli/env_loader.py:128-129, :226, :695, :714, :716-728, :735-742). No string/getattr/asdict access exists. But these are populated provenance-record fields, not unreachable code. AppliedVar is documented as the 'Provenance record' and the apply_all docstring documents skipped_claimed. tests/secret_sources/test_secret_source_registry.py:163-164 asserts .shape and .overrode_env as part of test_applies_secrets_and_records_provenance.",
+    "references_before": "registry.py:51-54 and :64-71 (fields), :358/:361/:364 (appends), :376 (positional AppliedVar(var, source.name, source.shape, overrode_env=..., authoritative=...)); tests: test_secret_source_registry.py:163-164, plus AppliedVar/SourceReport constructors in 4 test files.",
+    "references_after": "not built",
+    "red": "n/a",
+    "green": "n/a",
+    "negative_control": "n/a",
+    "adjacent": "not run (no change built)"
+  },
+  "upstream_overlap": [
+    "#115984 (kshitijk4poor, MERGED 2026-09-19) added AppliedVar.authoritative and reshaped registry into an applier class: the fork diff is stale and needs a full rebuild.",
+    "No open PR targets these fields."
+  ],
+  "branch": null,
+  "bundle": null,
+  "files": [],
+  "size": "+0/-0",
+  "depends_on": null,
+  "fork_head": "detail/dead-code/chore-secrets-remove-write-only-dataclass-fields-i-38422e",
+  "fork_head_oid": "52925708cf3bc7175bff2046263bb28ae5230768",
+  "wave": "W5-bot-chore",
+  "batch": "C",
+  "patch": null,
+  "body": null,
+  "notes": "HOLD, not READY. Removing provenance/diagnostic fields asserted by a behaviour test is a design call that shrinks the record, not mechanical dead-code deletion. It touches the security-sensitive secret-source path that was reworked recently (#74265/#115984), and the bot diff no longer applies. Low value and nonzero review cost. Revisit only if a maintainer wants the provenance record slimmed. Not plugin-facing: SecretSource plugins implement fetch() and never see ApplyReport."
+}

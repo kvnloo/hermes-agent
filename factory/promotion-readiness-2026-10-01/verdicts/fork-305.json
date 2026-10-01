@@ -1,0 +1,34 @@
+{
+  "fork_pr": 305,
+  "title": "docs: cover NVIDIA proprietary driver defaulting to XWayland on Linux",
+  "claim": "On a local Wayland session with the NVIDIA proprietary driver and no explicit hint, Desktop launches with --ozone-platform=x11.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "doc_text_on_main": "website/docs/user-guide/desktop.md:199 — \"On a local Wayland session ... Hermes launches with `--ozone-platform=wayland` so Electron does not fall back to XWayland.\"",
+    "source": "apps/desktop/electron/entry.ts:37 nvidiaProprietaryDriver = linux && existsSync('/proc/driver/nvidia/version'); wslg-launch.ts:43-53 defaultBackend(): explicit x11/wayland hint wins, else nvidiaProprietaryDriver ? 'x11' : 'wayland' (#126013). desktop.ozone_platform_hint reaches it as ELECTRON_OZONE_PLATFORM_HINT (hermes_cli/main_desktop.py:1651-1652).",
+    "red": "Doc states wayland unconditionally.",
+    "green": "NVIDIA exception added; override sentence now lists a hint of x11 or wayland. vitest wslg-launch.test.ts 'defaults the NVIDIA proprietary driver to x11 unless the user chose wayland' passes on main.",
+    "negative_control": "N/A — docs-only.",
+    "adjacent": "apps/desktop vitest: electron/update-order.test.ts electron/wslg-launch.test.ts electron/linux-nvidia-egl-fallback.test.ts electron/desktop-plugins-root.test.ts src/lib/remark-soft-breaks.test.ts src/app/session/hooks/use-hermes-config.test.ts -> 6 files, 57 passed. docs-site-checks equivalent on the bundle branch: website/scripts/extract-skills.py + generate-skill-docs.py leave website/docs, website/sidebars.ts and website/i18n unchanged (clean); website/scripts/check_doc_links.py OK. added lines scanned for MDX hazards ({ } or raw <tag> outside inline code / fences): none. NOT_TESTED: Docusaurus build (website/node_modules not installed in this environment).",
+    "mirrors": "No zh-Hans desktop.md; the WSLg paragraph is unaffected (no /proc/driver/nvidia under WSL dxg).",
+    "rebase": "verified on main f848940560; bundle merges cleanly onto refreshed main eb8d21f482 (git merge-tree); merges cleanly with every B1 ready/docs-* branch that touches the same files"
+  },
+  "upstream_overlap": [
+    "NousResearch/hermes-agent#100563 OPEN (astraltrekkin, Vulkan on Wayland ozone) — code-only"
+  ],
+  "branch": "ready/docs2-desktop",
+  "bundle_commit": "58f1374abe9b808711ba307c5b02d79a698398ba",
+  "patch": "patches/docs2-desktop.patch",
+  "pr_body": "patches/docs2-desktop.body.md",
+  "files": [
+    "website/docs/developer-guide/desktop-plugin-sdk.md",
+    "website/docs/reference/environment-variables.md",
+    "website/docs/user-guide/desktop.md",
+    "website/docs/user-guide/features/bot-screen.md",
+    "website/docs/user-guide/multi-connection-desktop.md"
+  ],
+  "size": "fork leaf +1/-1; bundle docs2-desktop +15/-8 (5 files changed, 15 insertions(+), 8 deletions(-))",
+  "depends_on": null,
+  "notes": "Drift introduced by e050902e7c (#127048). Bundled with: #124, #291, #292, #392, #395, #398. Packaging: one commit per area bundle (batch B2 lane W4-docs); publish one bundle at a time per kvnloo/hermes-agent#313."
+}

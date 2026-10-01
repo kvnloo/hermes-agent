@@ -1,0 +1,28 @@
+{
+ "fork_pr": 26,
+ "title": "fix(desktop): route broken-but-present venvs to --repair on Windows bootstrap hand-off",
+ "claim": "Windows bootstrap-recovery hand-off must pick --update only for a venv proven runnable, not merely one whose python.exe/hermes.exe exist; a broken-but-present venv must route to --repair.",
+ "verdict": "SUPERSEDED-ON-MAIN",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "NOT APPLICABLE - the fork's target code no longer exists on MAIN. MAIN windows-hermes-path.ts:70-76: `interface BootstrapRecoverySignals { runtimeUsable: boolean }`; `chooseUpdaterArgs` returns --update only when runtimeUsable. The file-existence fields (hasBootstrapMarker/hasVenvHermes/hasVenvPython) the fork extends were removed.",
+  "green": "MAIN's own test `chooseUpdaterArgs preserves the target and requires a usable runtime, not a marker` (windows-hermes-path.test.ts:42-45) asserts runtimeUsable:false -> ['--repair','--branch',...]. `npx vitest run --project electron electron/windows-hermes-path.test.ts` on MAIN: 13/13 passed.",
+  "negative_control": "n/a (no rebuild)",
+  "adjacent": "n/a (no rebuild)",
+  "source": "MAIN main.ts:4722 `chooseUpdaterArgs({ runtimeUsable: await isSourceRuntimeUsable(updateRoot) }, branch)`; main.ts:4832 isSourceRuntimeUsable -> source-backend.ts:26 resolveSourceInstallationBackend, which execProbe()s the installation launcher with `--version` and returns null on failure. hermes_cli/main.py:704-709 imports env_loader and calls load_hermes_dotenv at module import, so a venv with python-dotenv wiped fails the probe -> runtimeUsable=false -> --repair. Landed in 5e4a2a3d24 'refactor(pm): remove legacy dependency and launch managers' (ethernet8023, 2026-09-12), after the fork's merge-base 63279301bc."
+ },
+ "upstream_overlap": [
+  "5e4a2a3d24 (merged to main, ethernet8023) replaced the file-existence signal with a runnable probe - supersedes this fix.",
+  "#100192 OPEN nftpoetrist 'restore gateways when a bootstrap-recovery hand-off fails (Windows)' - different defect (post-failure gateway restore), no conflict.",
+  "#59204 MERGED teknium1 'probe the venv python before trusting it so Repair can escape a broken venv' - earlier sibling (resolveVenvHermesCommand)."
+ ],
+ "branch": null,
+ "files": [
+  "apps/desktop/electron/main.ts",
+  "apps/desktop/electron/windows-hermes-path.ts",
+  "apps/desktop/electron/windows-hermes-path.test.ts"
+ ],
+ "size": "+0/-0 (fork leaf was +136/-36 excl. kanban)",
+ "depends_on": null,
+ "notes": "Fork patch would not apply: chooseUpdaterArgs signature changed to {runtimeUsable}. Main's probe-based gate is stronger than the fork's threaded activeRuntime.usabilityReason hint (it probes updateRoot at hand-off time). Nothing to offer upstream; recommend retiring fork #26. NOT_TESTED: no real Windows packaged run (none needed for a superseded verdict). Kanban baggage ignored."
+}

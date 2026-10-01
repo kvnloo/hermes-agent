@@ -1,0 +1,62 @@
+label=54014-literal main=298a01c79b38018e029e50f77efe67c4a4fdbd40 port=/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/memmon-heartbeat/port-54014-literal.diff
+
+gateway/run.py:393: NameError
+_ test_serving_gateway_runs_memory_heartbeat_until_shutdown[unconfigured-default] _
+
+tmp_path = PosixPath('/var/tmp/hermes-pytest-1000/r-a37hov3b/pytest-of-kvn/pytest-0/test_serving_gateway_runs_memo3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f974b82c2d0>
+monitor_cfg = None, exit_with_failure = False, expect_running = True
+expect_interval = 300.0
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("monitor_cfg", "exit_with_failure", "expect_running", "expect_interval"),
+        [
+            pytest.param("    enabled: true\n    interval_seconds: 42\n", False, True, 42.0, id="enabled"),
+            pytest.param("    enabled: true\n    interval_seconds: 42\n", True, True, 42.0, id="enabled-failure-exit"),
+            pytest.param("    enabled: false\n    interval_seconds: 42\n", False, False, None, id="disabled"),
+            pytest.param(None, False, True, 300.0, id="unconfigured-default"),
+        ],
+    )
+    async def test_serving_gateway_runs_memory_heartbeat_until_shutdown(
+        tmp_path, monkeypatch, monitor_cfg, exit_with_failure, expect_running, expect_interval
+    ):
+        seen: dict = {}
+        runner_cls = _make_runner_cls(seen, running=True, exit_with_failure=exit_with_failure)
+        intervals = _boot(monkeypatch, tmp_path, monitor_cfg, runner_cls)
+    
+>       ok = await gateway_run.start_gateway(config=GatewayConfig(), replace=False, verbosity=None)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/gateway/test_memory_monitor_gateway_wiring.py:135: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+gateway/run.py:6083: in start_gateway
+    await _wait_with_gateway_memory_monitor(runner)
+gateway/run.py:437: in _wait_with_gateway_memory_monitor
+    memory_monitor_started = _start_gateway_memory_monitor()
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+gateway/run.py:414: in _start_gateway_memory_monitor
+    enabled, interval_seconds = _resolve_gateway_memory_monitor_config(config)
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+config = None
+
+    def _resolve_gateway_memory_monitor_config(
+        config: Optional[dict] = None,
+    ) -> tuple[bool, float]:
+>       cfg = config if isinstance(config, dict) else _load_gateway_runtime_config()
+                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       NameError: name '_load_gateway_runtime_config' is not defined
+
+gateway/run.py:393: NameError
+=========================== short test summary info ============================
+FAILED tests/gateway/test_memory_monitor_gateway_wiring.py::test_serving_gateway_runs_memory_heartbeat_until_shutdown[enabled]
+FAILED tests/gateway/test_memory_monitor_gateway_wiring.py::test_serving_gateway_runs_memory_heartbeat_until_shutdown[enabled-failure-exit]
+FAILED tests/gateway/test_memory_monitor_gateway_wiring.py::test_serving_gateway_runs_memory_heartbeat_until_shutdown[disabled]
+FAILED tests/gateway/test_memory_monitor_gateway_wiring.py::test_serving_gateway_runs_memory_heartbeat_until_shutdown[unconfigured-default]
+4 failed, 1 passed in 2.29s
+
+=== 1 file with test failures (4 tests failed) ===
+  tests/gateway/test_memory_monitor_gateway_wiring.py  (4 tests failed)
+tripwire hits during run: 0

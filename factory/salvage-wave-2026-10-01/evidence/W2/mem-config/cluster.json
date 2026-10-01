@@ -1,0 +1,124 @@
+{
+ "issue": "#125919",
+ "slug": "mem-config",
+ "seed": "fork #30 (kvnloo/hermes-agent)",
+ "title": "A failing `from tools.memory_tool import ...` in agent_init._init_memory leaves mem_config unbound and silently drops the configured external memory provider",
+ "main_sha": "298a01c79b38018e029e50f77efe67c4a4fdbd40",
+ "candidates": [
+  {
+   "pr": 126106,
+   "author": "Wenfengcheng",
+   "created": "2026-09-28T07:18:51Z",
+   "last_activity": "2026-09-28T07:36:56Z (no comments or reviews)",
+   "mergeable_github": "MERGEABLE/BLOCKED",
+   "merges_clean_on_pinned_main": true,
+   "diff_size": "+162/-1, 2 files (agent/agent_init.py +3/-1, tests/agent/test_memory_bootstrap_independence.py +159)",
+   "has_tests": "yes: 3 test functions / 10 cases (public AIAgent ctor, core/absent/malformed provider boundaries, disk-installed MemoryProvider through real config.yaml)",
+   "approach": "Provider selection reads _cfg_dict(_agent_cfg, 'memory').get('provider', '') instead of the built-in block's local mem_config. Same normalization as get_builtin_memory_config on the success path; the built-in store stays optional and silent. 'Part of #125919' (config-load diagnostics left to #125960). Labels type/bug, comp/agent, comp/plugins, tool/memory, P3, area/memory."
+  },
+  {
+   "pr": 87028,
+   "author": "richardclawbot",
+   "created": "2026-08-15T13:53:59Z",
+   "last_activity": "2026-09-06T04:08:38Z",
+   "mergeable_github": "UNKNOWN/UNKNOWN",
+   "merges_clean_on_pinned_main": "false: conflicts in agent/agent_init.py and agent/memory_manager.py (written against the pre-_init_memory init_agent layout)",
+   "diff_size": "+150/-10, 4 files",
+   "has_tests": "yes, for its own feature (tests/agent/test_agent_init_memory_prefetch_timeout.py)",
+   "approach": "Feature: honor memory.external_prefetch_timeout. Hoists mem_config = _agent_cfg.get('memory', {}) above the built-in try as a side effect, which would also bind it on import failure (raw section, so a malformed section has the same 'str'.get problem as fork #30). Does not reference #125919. Not A/B'd (conflicting, different defect)."
+  },
+  {
+   "pr": 18565,
+   "author": "natehale",
+   "created": "2026-05-01T22:10:11Z",
+   "last_activity": "2026-09-23T10:31:38Z",
+   "mergeable_github": "UNKNOWN/UNKNOWN",
+   "merges_clean_on_pinned_main": "false: conflicts in 11 files",
+   "diff_size": "+1068/-25, 18 files",
+   "has_tests": "yes, for its own feature",
+   "approach": "Feature: per-job cron external memory provider modes (needs-decision). Initializes mem_config = {} before the built-in block as a side effect. Not A/B'd (conflicting, design-gated feature)."
+  }
+ ],
+ "candidates_checked_not_same_defect": [
+  {
+   "pr": 125960,
+   "author": "YS-OH-CORE",
+   "why": "Open, MERGEABLE (2026-09-28). The other half of #125919: warns when load_config_readonly() fails at init_agent. It does not touch _init_memory or mem_config; #126106's body defers diagnostics to it. Complementary, stays open."
+  },
+  {
+   "pr": 43313,
+   "author": "bionicbutterfly13",
+   "why": "Open (2026-06-10). Raises the 'provider not found or not available' DEBUG line to a warning; it does not bind mem_config, so the import-failure path still raises UnboundLocalError."
+  },
+  {
+   "pr": 123055,
+   "author": "Synxneuos",
+   "why": "Open (2026-09-25). SystemExit containment in provider availability probes (#123042), a different trigger."
+  },
+  {
+   "pr": 123057,
+   "author": "kvnloo",
+   "why": "Open (2026-09-25), kvnloo's own. SystemExit containment for memory providers, a different trigger."
+  }
+ ],
+ "regression_test": {
+  "source": "#126106's tests/agent/test_memory_bootstrap_independence.py, unchanged (byte-identical to the previous run's leftover copy)",
+  "path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/mem-config/test_memory_bootstrap_independence.py (placed at tests/agent/test_memory_bootstrap_independence.py)",
+  "tests": [
+   "test_public_agent_preserves_provider_selection[skip_memory x fail_builtin_import] (4)",
+   "test_builtin_failure_does_not_invent_provider_or_plugin_error[None|{}|'malformed'|{'provider': ''}|{'provider': 'builtin'}] (5)",
+   "test_disk_provider_discovery_survives_builtin_import_failure (1)"
+  ],
+  "contract": "When `from tools.memory_tool import ...` fails inside _init_memory, a configured external provider is still loaded, initialized with the session id and its tools injected (public AIAgent ctor and a disk-installed provider via config.yaml), while skip_memory still loads nothing. Absent, blank, core or malformed provider settings load no provider and log no 'Memory provider plugin init failed'.",
+  "evidence_path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/mem-config/"
+ },
+ "ab_results": {
+  "main": {
+   "result": "fail",
+   "detail": "7 failed / 3 passed. Public ctor with skip_memory=False plus import failure: 'built-in import disabled the external provider' (_memory_manager is None). Disk provider: manager None. All 5 core/absent/malformed cases log \"Memory provider plugin init failed: cannot access local variable 'mem_config' where it is not associated with a value\"."
+  },
+  "126106": {
+   "result": "pass",
+   "detail": "10/10, merges clean (head 1d5d0a2562)."
+  },
+  "fork#30 (kvnloo, reference, not an upstream PR)": {
+   "result": "fail",
+   "detail": "1 failed / 9 passed. 381e59256b conflicts on main (init_agent was split into _init_memory with suppress()), so its production hunk was hand-ported (fork30-ported-onto-main.diff, +7/-1: raw default mem_config = _agent_cfg.get('memory', {}) before the block, plus the once-per-process 'Built-in memory store unavailable' warning). [malformed] fails: the raw default is the string 'malformed', so the import-failure path logs \"Memory provider plugin init failed: 'str' object has no attribute 'get'\"."
+  },
+  "87028": {
+   "result": "not run",
+   "detail": "CONFLICTING on main (agent/agent_init.py, agent/memory_manager.py). Same raw-section hoist as fork #30, as a side effect of a prefetch-timeout feature."
+  },
+  "18565": {
+   "result": "not run",
+   "detail": "CONFLICTING on main (11 files). Needs-decision cron feature; mem_config = {} default is a side effect."
+  },
+  "negative_control": {
+   "result": "fail (as intended)",
+   "detail": "On main + #126106 with its line reverted to mem_config.get('provider', '') if mem_config else '': 7 failed / 3 passed, identical to main."
+  }
+ },
+ "adjacent_tests": {
+  "files": [
+   "tests/agent/test_memory_provider_init.py",
+   "tests/agent/test_memory_provider.py",
+   "tests/agent/test_memory_provider_unavailable_warning.py",
+   "tests/agent/test_skip_memory_store.py",
+   "tests/agent/test_builtin_memory_disabled_surface.py",
+   "tests/gateway/test_api_server_memory_sessions.py"
+  ],
+  "result": "Main: 86 passed, 0 failed. Main + #126106: 96 passed, 0 failed (86 + its 10). kvnloo fork #30's own tests/run_agent/test_mem_config_unbound_init.py is stale (patches run_agent.get_tool_definitions, which no longer exists): 0/3 on main and on #126106."
+ },
+ "carrier": {
+  "pr": 126106,
+  "author": "Wenfengcheng <30426178+Wenfengcheng@users.noreply.github.com>",
+  "why": "The only upstream PR aimed at this defect. It is a 3-line production change that reuses the existing _cfg_dict normalization, so it is correct on malformed sections where the raw-section hoist (fork #30, #87028) is not. Its test drives the public AIAgent constructor and a real disk-installed provider, it merges clean and GitHub reports MERGEABLE. #87028 and #18565 fix it only as a side effect of conflicting feature PRs."
+ },
+ "fold_ins": [],
+ "close_after_merge": [],
+ "exclude_reason": null,
+ "row": "| #125919 (part: unbound `mem_config` drops the configured external memory provider) | #126106 (Wenfengcheng) | main: FAIL 7/10 on #126106's `tests/agent/test_memory_bootstrap_independence.py`; #126106: merges clean, PASS 10/10; kvnloo fork #30 (reference; conflicts, production hunk hand-ported): FAIL 1/10 (`memory: \"malformed\"` plus an import failure logs \"'str' object has no attribute 'get'\"); #87028, #18565: CONFLICTING, side effect of other features, not run | none (kvnloo fork #30's once-per-process \"Built-in memory store unavailable\" WARNING is a separate diagnostic contract next to #125960; offer it as a review note, not a fold-in) | none (#125960 is the config-load diagnostic half of #125919 and stays open; #87028 and #18565 carry other features; fork-side, close kvnloo/hermes-agent#30) | On main, `_init_memory` binds `mem_config` only inside the `suppress(Exception)` block whose first statement imports `tools.memory_tool`. When that import fails (the issue's missing-`ruamel.yaml` cron env), provider selection raises UnboundLocalError, which is logged as \"Memory provider plugin init failed\", and the configured provider never loads. #126106 reads the provider name from `_cfg_dict(_agent_cfg, \"memory\")` (+3/-1). Its test drives the public `AIAgent` constructor and a disk-installed provider, and reverting the line re-fails the same 7 cases. 6 adjacent memory-init files go from 86/86 to 96/96. |",
+ "row_fork_draft": "| #125919 (part: unbound mem_config) | #126106 (Wenfengcheng) | main 298a01c7 FAIL 7/10; #126106 PASS 10/10, merges clean; fork #30 (hand-ported) FAIL 1/10 (malformed section); #87028, #18565 CONFLICTING, not run | none (fork #30's built-in-unavailable WARNING = review note only) | none (#125960 stays open for diagnostics; close kvnloo/hermes-agent#30) | Import failure leaves mem_config unbound, so provider selection raises UnboundLocalError ('Memory provider plugin init failed') and the configured provider never loads. #126106 reads the provider from _cfg_dict(_agent_cfg, 'memory'); reverting re-fails 7/10; adjacent 86/86 -> 96/96. |",
+ "notes": "(1) Partial fix by design: #126106 is 'Part of #125919'. The config-load warning half is #125960 (YS-OH-CORE, MERGEABLE), which touches a different hunk (init_agent's load_config_readonly fallback) and composes with #126106 without a textual conflict (not merged together here). After both, the remaining silent case in #125919 is the built-in store itself: with tools.memory_tool unimportable, agent._memory_store stays None with no log at any level. (2) kvnloo fork #30's only distinct content is a once-per-process WARNING 'Built-in memory store unavailable: %s' replacing that silent suppress(). It is a separate diagnostic contract, adjacent to #125960 (which deliberately omits exception text because config errors can carry secrets) and #43313. Offer it as a review suggestion on #126106 or #125960, not as a fold-in. (3) Fork #30's raw-section default (and #87028's identical hoist) mishandles memory: <non-dict> on the import-failure path; #126106 does not. (4) Fork-side: close kvnloo/hermes-agent#30 after the carrier merges. (5) The previous run's leftover memcfg diff was #126106 merged as-is; everything was re-run here on 298a01c7. Refs pinned: refs/w2/pr/{126106,87028,18565}, refs/w2/fork/30 (hand-port, reference only). No tripwire hits.",
+ "evidence_dir": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/mem-config/"
+}

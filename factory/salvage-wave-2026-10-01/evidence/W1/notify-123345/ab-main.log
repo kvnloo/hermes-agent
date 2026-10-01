@@ -1,0 +1,25 @@
+
+tests/tools/test_terminal_notify_string_bool.py:39: AssertionError
+_______ test_foreground_string_notify_false_is_a_no_op_like_native_false _______
+
+captured = {}
+
+    def test_foreground_string_notify_false_is_a_no_op_like_native_false(captured):
+        result = _dispatch({"command": "echo hi", "notify": "false"})
+>       assert not result.get("error"), result
+E       AssertionError: {'error': 'notify/heartbeat only apply to background commands (foreground results return directly). Either drop them, or run as terminal(command=..., background=true, notify=...).'}
+E       assert not 'notify/heartbeat only apply to background commands (foreground results return directly). Either drop them, or run as terminal(command=..., background=true, notify=...).'
+E        +  where 'notify/heartbeat only apply to background commands (foreground results return directly). Either drop them, or run as terminal(command=..., background=true, notify=...).' = <built-in method get of dict object at 0x7f51f420ee80>('error')
+E        +    where <built-in method get of dict object at 0x7f51f420ee80> = {'error': 'notify/heartbeat only apply to background commands (foreground results return directly). Either drop them, or run as terminal(command=..., background=true, notify=...).'}.get
+
+tests/tools/test_terminal_notify_string_bool.py:46: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tools/test_terminal_notify_string_bool.py::test_background_bool_or_bool_string_notify_maps_to_notify_on_complete[true-True]
+FAILED tests/tools/test_terminal_notify_string_bool.py::test_background_bool_or_bool_string_notify_maps_to_notify_on_complete[True-True0]
+FAILED tests/tools/test_terminal_notify_string_bool.py::test_background_bool_or_bool_string_notify_maps_to_notify_on_complete[false-False]
+FAILED tests/tools/test_terminal_notify_string_bool.py::test_background_bool_or_bool_string_notify_maps_to_notify_on_complete[FALSE-False]
+FAILED tests/tools/test_terminal_notify_string_bool.py::test_foreground_string_notify_false_is_a_no_op_like_native_false
+5 failed, 5 passed in 1.43s
+
+=== 1 file with test failures (5 tests failed) ===
+  tests/tools/test_terminal_notify_string_bool.py  (5 tests failed)

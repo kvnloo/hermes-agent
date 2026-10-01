@@ -1,0 +1,31 @@
+{
+  "fork_pr": 12,
+  "title": "chore: remove unused has_provider auth helper",
+  "claim": "acp_adapter.auth.has_provider() has no production callers and can be removed.",
+  "verdict": "SUPERSEDED-ON-MAIN",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "source": "Every targeted name is absent on main f848940560: `git grep -n -w` across the whole tree (code, tests, plugins/, optional-skills/, website/, scripts/, tests/compat) finds 0 hits for has_provider. A first-parent bisect of acp_adapter/auth.py from fork base 63279301bc puts the removal in a5bd246865 (#126164 'plugin compat layer removed on schedule', 2026-09-28).",
+    "references_before": "0 (already gone on main)",
+    "references_after": "n/a",
+    "red": "n/a (pure deletion; nothing left to delete)",
+    "green": "n/a",
+    "negative_control": "n/a",
+    "adjacent": "n/a (no change built)"
+  },
+  "upstream_overlap": [
+    "removed upstream by a5bd246865 (#126164 'plugin compat layer removed on schedule', 2026-09-28)"
+  ],
+  "branch": null,
+  "bundle": null,
+  "files": [],
+  "size": "+0/-0",
+  "depends_on": null,
+  "fork_head": "detail/dead-code/chore-remove-unused-has-provider-auth-helper-657f3c",
+  "fork_head_oid": "ebd477cd3983bf872fb7952e3528dd8649811cae",
+  "wave": "W5-bot-chore",
+  "batch": "C",
+  "patch": null,
+  "body": null,
+  "notes": "The fork diff also carries unrelated Kanban baggage (hermes_cli/kanban_db.py, tests/hermes_cli/test_kanban_external_receipts.py) from merge commits; the intended tip commit was read in isolation. Retire the fork PR."
+}

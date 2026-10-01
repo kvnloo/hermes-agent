@@ -1,0 +1,33 @@
+{
+  "fork_pr": 394,
+  "title": "docs: reflect managed .env overlay in multiplex secret scope description",
+  "claim": "build_profile_secret_scope() overlays the administrator-managed .env last with override, so a secondary resolves from its own files plus the managed .env.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "doc_text_on_main": "website/docs/developer-guide/multiplexing-gateway.md:127-128 — \"merges the profile's `.env` with its configured secret sources, skipping globals.\"; :303 — \"a secondary resolves from its own files only.\"",
+    "source": "agent/secret_scope.py:391-419 build_profile_secret_scope(): .env, then secret sources (globals skipped), then load_managed_env() applied last with override (:409-418, #111187).",
+    "red": "Doc omits the managed overlay.",
+    "green": "Both passages mention the managed .env overlay. tests/hermes_cli/test_managed_scope_env.py passes on main.",
+    "negative_control": "N/A — docs-only.",
+    "adjacent": "tests/gateway/test_session_chat_approval.py tests/gateway/test_resume_command.py tests/gateway/test_handoff_secondary_profile_adapter.py tests/tui_gateway/test_profiles_describe_secret_scope.py tests/hermes_cli/test_managed_scope_env.py tests/gateway/test_sse_agent_cancel.py -> 46 passed. docs-site-checks equivalent on the bundle branch: website/scripts/extract-skills.py + generate-skill-docs.py leave website/docs, website/sidebars.ts and website/i18n unchanged (clean); website/scripts/check_doc_links.py OK. added lines scanned for MDX hazards ({ } or raw <tag> outside inline code / fences): none. NOT_TESTED: Docusaurus build (website/node_modules not installed in this environment).",
+    "mirrors": "No zh-Hans multiplexing-gateway.md.",
+    "rebase": "verified on main f848940560; bundle merges cleanly onto refreshed main eb8d21f482 (git merge-tree); merges cleanly with every B1 ready/docs-* branch that touches the same files"
+  },
+  "upstream_overlap": [],
+  "branch": "ready/docs2-gateway",
+  "bundle_commit": "c497e7abe5c386250e4ecba2e634c085b6828726",
+  "patch": "patches/docs2-gateway.patch",
+  "pr_body": "patches/docs2-gateway.body.md",
+  "files": [
+    "website/docs/developer-guide/gateway-session-lifecycle.md",
+    "website/docs/developer-guide/multiplexing-gateway.md",
+    "website/docs/developer-guide/programmatic-integration.md",
+    "website/docs/user-guide/bot-mode.md",
+    "website/docs/user-guide/features/api-server.md",
+    "website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/bot-mode.md"
+  ],
+  "size": "fork leaf +4/-2; bundle docs2-gateway +17/-11 (6 files changed, 17 insertions(+), 11 deletions(-))",
+  "depends_on": null,
+  "notes": "Drift introduced by b543b1053c (#126982). Bundled with: #123, #126, #287, #288, #294. Packaging: one commit per area bundle (batch B2 lane W4-docs); publish one bundle at a time per kvnloo/hermes-agent#313."
+}

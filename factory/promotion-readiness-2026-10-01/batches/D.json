@@ -1,0 +1,63 @@
+[
+ {
+  "fork_pr": 302,
+  "title": "feat(tui): halt live-agents dock clock while collapsed",
+  "wave": "W3-next-measured-perf",
+  "head": "feat/tui-agent-dock-collapsed-clock-halt",
+  "head_oid": "9433e49f818b76eab4cd11131288b9e59f097785",
+  "head_present": true,
+  "files": [
+   "ui-tui/src/__tests__/agentDockCollapsedClock.test.tsx",
+   "ui-tui/src/components/agentsPanel.tsx"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 2,
+  "origin_refs": [
+   99773,
+   111986,
+   127466
+  ],
+  "origin_states": {
+   "99773": "OPEN",
+   "111986": "OPEN",
+   "127466": "CLOSED"
+  },
+  "reason": "Narrow independent timer invariants with recorded focused tests; no permission to bypass current review slots.",
+  "next_action": "After capacity opens: current-main ownership/diff check and fresh exact-head negative-control + adjacent timer tests; #303 then #302.",
+  "depends_on": [
+   "#315 review-slot clearance",
+   "NousResearch/hermes-agent#127466 (closed history)"
+  ],
+  "tested_sha": [],
+  "author": "kvnloo"
+ },
+ {
+  "fork_pr": 303,
+  "title": "feat(tui): defer long-run charm 1s clock until DELAY_MS",
+  "wave": "W3-next-measured-perf",
+  "head": "feat/tui-long-run-charm-clock-defer",
+  "head_oid": "689436079ae259dae91ff86a60947092eed7965b",
+  "head_present": true,
+  "files": [
+   "ui-tui/src/__tests__/longRunCharmClockDefer.test.tsx",
+   "ui-tui/src/app/useLongRunToolCharms.ts"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 2,
+  "origin_refs": [
+   99773,
+   111986
+  ],
+  "origin_states": {
+   "99773": "OPEN",
+   "111986": "OPEN"
+  },
+  "reason": "Narrow independent timer invariants with recorded focused tests; no permission to bypass current review slots.",
+  "next_action": "After capacity opens: current-main ownership/diff check and fresh exact-head negative-control + adjacent timer tests; #303 then #302.",
+  "depends_on": [
+   "#315 review-slot clearance"
+  ],
+  "tested_sha": [],
+  "author": "kvnloo"
+ }
+]

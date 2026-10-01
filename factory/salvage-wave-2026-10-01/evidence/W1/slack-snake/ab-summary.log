@@ -1,0 +1,9 @@
+W1 slack-snake  main=af92ea8e5b852518c523c3e8b2cbd95f0f3d79dc
+Regression test: test_slack_block_kit_underscores.py (fork #23 TestEmphasis body-path x8 + #96941 header x5 + 1 body double-underscore case)
+main            : 5 passed, 9 failed (body snake_case list/quote/table + cross-pair, body SERVICE__US__EAST, 4 header tests e.g. 'SERVICEUSEAST' == 'SERVICE_US_EAST')
+#96941          : 1 conflict hunk (regex block adjacent to main's _SLACK_LINK_RE from da25b16662) resolved mechanically (keep main's _SLACK_LINK_RE, take PR regex split); 14/14 pass. Diff: 96941-merged-onto-af92ea8e.diff
+  negative control: drop \w from _ITALIC_UNDERSCORE_RE lookarounds -> 5 failed (body snake_case x4 + header SERVICE_US_EAST)
+  adjacent: test_slack.py, test_slack_approval_buttons.py, test_slack_block_kit.py (+PR tests) + regression file: 267 passed, 0 failed
+fork #23 (block_kit hunk applied cleanly): 9 passed, 5 failed (header x4 + body SERVICE__US__EAST)
+#56482 (CLOSED, merges clean): 9 passed, 5 failed (same as fork #23)
+#105534 / #114607 (conflict on merge; PR-head block_kit.py swapped in): 5 passed, 9 failed (keep _ITALIC_RE/_BOLD_RE and header re.sub; different defect)

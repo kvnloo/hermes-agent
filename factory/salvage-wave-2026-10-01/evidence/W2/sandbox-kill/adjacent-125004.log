@@ -1,0 +1,27 @@
+LABEL adjacent-125004  main=298a01c79b38018e029e50f77efe67c4a4fdbd40
+MERGE refs/w2/pr/125004 (2692841849): clean
+▶ not activated — using HERMES_PYTHON: /workspace/hermes-home/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 11 test files (~201 tests) under ['tests/tools/test_sandbox_background_kill_tree.py', 'tests/tools/test_process_registry.py', 'tests/tools/test_local_temp_dir.py', 'tests/tools/test_process_registry_list_exit.py', 'tests/tools/test_terminal_compound_background.py', 'tests/tools/test_terminal_task_cwd.py', 'tests/tools/test_kill_verify_tree_death.py', 'tests/tools/test_process_checkpoint_readopt.py', 'tests/tools/test_process_wait_clarity.py', 'tests/tools/test_notify_on_complete.py', 'tests/gateway/test_abandoned_turn_process_cleanup.py']; running with -j 2
+[  2.5% |     5/~201 | ✓5 | ✗0] ✓ tests/tools/test_kill_verify_tree_death.py (5✓, 8.3s)
+[  6.0% |    12/~201 | ✓12 | ✗ 0] ✓ tests/tools/test_local_temp_dir.py (7✓, 2.4s)
+[ 13.4% |    27/~201 | ✓27 | ✗ 0] ✓ tests/gateway/test_abandoned_turn_process_cleanup.py (15✓, 14.6s)
+[ 20.9% |    42/~201 | ✓42 | ✗ 0] ✓ tests/tools/test_notify_on_complete.py (15✓, 4.9s)
+[ 23.9% |    48/~201 | ✓48 | ✗ 0] ✓ tests/tools/test_process_checkpoint_readopt.py (6✓, 2.6s)
+[ 24.9% |    50/~201 | ✓50 | ✗ 0] ✓ tests/tools/test_process_registry_list_exit.py (2✓, 6.8s)
+[ 26.9% |    54/~201 | ✓54 | ✗ 0] ✓ tests/tools/test_process_wait_clarity.py (4✓, 5.8s)
+[ 83.1% |   167/~201 | ✓164 | ✗  0] ✓ tests/tools/test_process_registry.py (110✓ 4s, 17.5s)
+[ 84.1% |   169/~201 | ✓168 | ✗  0] ✓ tests/tools/test_sandbox_background_kill_tree.py (4✓, 4.4s)
+[ 96.5% |   194/~201 | ✓203 | ✗  0] ✓ tests/tools/test_terminal_compound_background.py (35✓, 3.0s)
+[100.0% |   201/~201 | ✓210 | ✗  0] ✓ tests/tools/test_terminal_task_cwd.py (7✓, 3.9s)
+
+=== Summary: 11 files, 210 tests passed, 0 failed, 4 skipped (100% complete) in 38.0s (2 workers) ===
+
+  note: platforms('windows') tests (in 1 file) were SKIPPED on this host (linux); they run on the Windows Python-tests lane.
+  Durations cached to test_durations.json (11 files)
+
+=== Per-file subprocess time distribution ===
+TRIPWIRE hits during run: 0

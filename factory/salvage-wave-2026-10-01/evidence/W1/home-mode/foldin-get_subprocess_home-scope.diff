@@ -1,0 +1,21 @@
+diff --git i/hermes_constants.py w/hermes_constants.py
+index bbdf2e9ea4..60ad7a567f 100644
+--- i/hermes_constants.py
++++ w/hermes_constants.py
+@@ -700,7 +700,15 @@ def get_subprocess_home(env: dict[str, str] | None = None) -> str | None:
+     """
+     env = env or {}
+     profile_home = _profile_home_path(env)
+-    mode = _env_get(env, "TERMINAL_HOME_MODE", "auto").lower() or "auto"
++    from tools.terminal_scope import get_terminal_scope  # lazy: keep hermes_constants import-light
++
++    scope = get_terminal_scope()
++    if scope is not None:
++        # Multiplexed turn: the routed profile's policy, never the launch process's env (a refusal
++        # scope is an empty mapping, so it resolves to the default).
++        mode = str(scope.get("TERMINAL_HOME_MODE") or "auto").strip().lower() or "auto"
++    else:
++        mode = _env_get(env, "TERMINAL_HOME_MODE", "auto").lower() or "auto"
+     mode = _HOME_MODE_ALIASES.get(mode, mode)
+ 
+     if mode == "profile":

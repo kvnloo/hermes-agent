@@ -1,0 +1,33 @@
+{
+  "fork_pr": 87,
+  "title": "docs: correct desktop session platform value in memory-provider plugin guide",
+  "claim": "memory-provider-plugin.md lists `gui` as a platform value; sessions report `desktop` or `tui`, never `gui`.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "red": "website/docs/developer-guide/memory-provider-plugin.md:124 on main: \"| `platform` | Session surface, such as `cli`, `gui`, `acp`, or `telegram`. |\"",
+    "green": "'such as `cli`, `tui`, `desktop`, `acp`, or `telegram`'.",
+    "negative_control": "N/A for docs (no executable behaviour). Equivalent check: the stale phrase is present on main and absent on the bundle (grep given in red/green).",
+    "adjacent": "python3 website/scripts/check_doc_links.py on the bundle tree: OK (no route-style links). All 7 B1 bundles cherry-pick together onto main cleanly, and each pairs cleanly with B2's current docs2-update/docs2-desktop/docs2-gateway/docs2-memory bundles.",
+    "source": "agent/agent_init.py:1273-1284 _memory_provider_init_kwargs forwards platform unchanged; tui_gateway/server.py:1518-1532 _resolve_session_platform -> 'desktop' (HERMES_DESKTOP without HERMES_DESKTOP_TERMINAL) else 'tui', used by _make_agent (:2623, platform=platform at :2642); acp_adapter/session.py:525 'platform': 'acp'."
+  },
+  "upstream_overlap": [
+    "No open external PR/issue for this claim (gh search prs/issues; open docs PRs touching the same files edit other sections)"
+  ],
+  "branch": "ready/docs-memory",
+  "bundle": {
+    "branch": "ready/docs-memory",
+    "commit": "25baa72ade",
+    "subject": "docs(memory): drop stale Supermemory session ingest and gui platform value",
+    "bundle_size": "+5/-5",
+    "patch": "patches/docs-memory.patch",
+    "body": "patches/docs-memory.body.md"
+  },
+  "files": [
+    "website/docs/developer-guide/memory-provider-plugin.md"
+  ],
+  "size": "+1/-1",
+  "depends_on": null,
+  "fork_head": "27cb9e47719f932c7e93bb918bd58991d23fc873",
+  "notes": "Fork replaced gui with desktop only; rebuilt adds tui as well. zh-Hans copy has no platform row."
+}

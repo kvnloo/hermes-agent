@@ -1,0 +1,13 @@
+W1 wecom-sig  main=af92ea8e5b852518c523c3e8b2cbd95f0f3d79dc
+Regression test: tests/gateway/test_inbound_auth_hardening.py from #127902 (copied unchanged; feishu param skips: lark_oapi not in venv)
+Cmd: HOME=$S/testhome-W1-wecom-sig HERMES_HOME=... HERMES_PYTHON=$PY bash scripts/run_tests.sh tests/gateway/test_inbound_auth_hardening.py -q -rfEs --tb=line
+main            : 5 failed, 1 skipped. [wecom] compare: "the secret was not compared with hmac.compare_digest"; [wecom] replay: validly signed ts-600 accepted.
+#127902         : merges clean; 5 passed, 1 skipped.
+#54617 (ported, CONFLICTING on main; drift only): [wecom] compare FAIL at assert not accepts(_HOSTILE): TypeError: comparing strings with non-ASCII characters is not supported
+#43937 (ported, old gateway/platforms path, CONFLICTING): same TypeError
+#39049 (ported, old path, CONFLICTING): same TypeError
+fork #43 (ported): [wecom] compare FAIL: UnicodeEncodeError (surrogates not allowed) at wecom_crypto.py .encode()
+#108390 (clean merge): [bluebubbles] FAIL UnicodeEncodeError; #108354 (clean merge): [google_meet] PASS; #9219/#44025/#51328/#44027: merge conflicts (not run)
+Probe (probe-nonascii.log) decrypt() with non-ASCII / lone-surrogate msg_signature:
+  main SignatureError/SignatureError; #54617,#43937,#39049 TypeError/TypeError; fork#43 SignatureError/UnicodeEncodeError; #127902 SignatureError/SignatureError
+Adjacent (#127902 merged, 21 files): 581 passed, 4 failed, 8 skipped; the 4 failures (test_msgraph_webhook [trio] x4) fail identically on main.

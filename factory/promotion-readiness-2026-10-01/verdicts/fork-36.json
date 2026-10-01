@@ -1,0 +1,30 @@
+{
+ "fork_pr": 36,
+ "title": "fix(gateway): keep /status reachable for non-admins on the cold slash-gate path",
+ "claim": "Under slash gating, a non-admin should be able to run /status on the cold path (no agent running), matching the busy fast path that pre-gates /status.",
+ "verdict": "HOLD",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "NOT_TESTED (policy hold). The asymmetry is confirmed by source reading only.",
+  "green": "NOT_TESTED",
+  "negative_control": "NOT_TESTED",
+  "adjacent": "NOT_TESTED",
+  "source": "main gateway/slash_access.py: _ALWAYS_ALLOWED_FOR_USERS = frozenset({'help','whoami'}). gateway/run_inbound.py _hm_busy_slash_or_photo: '/status and /context are intentionally pre-gate so users always see session state' (returns before _check_slash_access), while the cold path (run_inbound.py ~L876) gates every known command. The asymmetry is real. BUT the documented contract is the cold-path behaviour: website/docs/reference/slash-commands.md:18, user-guide/messaging/index.md:399 and 426, telegram.md:1207 and 1223, discord.md:664 and 680, multi-profile-gateways.md:669 all state the floor is exactly /help and /whoami. Upstream tests grant /status explicitly via user_allowed_commands: ['status'] (test_slash_access.py:86/98, test_slash_access_dispatch.py:133/153/194/261). The original salvage comment (a282434301) mentioned /status, but the set never included it."
+ },
+ "upstream_overlap": [
+  "#68581 (CLOSED by author santhiprakash, stale after restructure) bundled the same /status floor addition. Not an active owner.",
+  "#73010 (CLOSED) /whoami floor derivation.",
+  "No open issue/PR on the cold/busy asymmetry."
+ ],
+ "branch": null,
+ "files": [
+  "gateway/slash_access.py",
+  "gateway/slash_commands.py",
+  "gateway/run.py",
+  "tests/gateway/test_slash_access.py",
+  "tests/gateway/test_slash_access_dispatch.py"
+ ],
+ "size": "fork leaf +119/-4; no rebuild",
+ "depends_on": null,
+ "notes": "Design/policy decision, not a narrow correctness fix. Either widen the floor (add status, and arguably context, to _ALWAYS_ALLOWED_FOR_USERS, plus the /whoami list in slash_commands.py:336, plus 7+ doc sites), or make the busy path respect the documented floor (stop pre-gating /status and /context for non-admins). The fork picks the first, misses /context and all docs, and its run.py comment hunks target code that has moved to run_inbound.py. Recommend filing an issue asking maintainers which side is intended before any code. Kanban baggage ignored."
+}

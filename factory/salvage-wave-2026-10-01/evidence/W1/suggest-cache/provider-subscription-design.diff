@@ -1,0 +1,105 @@
+diff --git i/apps/desktop/src/store/gateway-switch.ts w/apps/desktop/src/store/gateway-switch.ts
+index bbb0f938a9..a7d80694de 100644
+--- i/apps/desktop/src/store/gateway-switch.ts
++++ w/apps/desktop/src/store/gateway-switch.ts
+@@ -31,6 +31,8 @@ import {
+ import { clearAllSessionControl } from '@/store/session-control'
+ import { resetSessionPinMirror } from '@/store/session-pin-sync'
+ import { clearAllSessionStates } from '@/store/session-states'
++import { invalidateMcpSuggestionIndex } from '@/store/suggestion-providers/mcp'
++import { invalidateSkillSuggestionIndex } from '@/store/suggestion-providers/skill'
+ import { clearAllSessionTodos } from '@/store/todos'
+ import { clearTranscriptTailPaging } from '@/store/transcript-tail'
+ import { clearTranscriptTails } from '@/store/transcript-tail-cache'
+@@ -258,6 +260,16 @@ export function wipeSessionListsForGatewaySwitch(): void {
+   clearTranscriptTails()
+   clearTranscriptTailPaging()
+ 
++  // The skill-match suggestion index is a module-level cache (not a Query), so
++  // invalidateProfileScopedQueries() below cannot evict it. It carries the
++  // PREVIOUS backend's skills for up to the TTL — drop it here so the new
++  // backend's skills load on the next sample. The wipe runs unconditionally on
++  // every connection switch, covering the shared-profile-key case (two
++  // connections both expose "default") that the profile-key subscription in
++  // skill.ts cannot detect on its own.
++  invalidateSkillSuggestionIndex()
++  invalidateMcpSuggestionIndex()
++
+   // Narrowed: account/marketplace/onboarding caches are global, not gateway-
+   // scoped, so a mode swap must not refetch them.
+   invalidateProfileScopedQueries()
+diff --git i/apps/desktop/src/store/suggestion-providers/mcp.ts w/apps/desktop/src/store/suggestion-providers/mcp.ts
+index 17fca6c589..59ccd7deb0 100644
+--- i/apps/desktop/src/store/suggestion-providers/mcp.ts
++++ w/apps/desktop/src/store/suggestion-providers/mcp.ts
+@@ -6,6 +6,7 @@ import { prettyName } from '@/lib/text'
+ import { type ComposerSuggestion, registerDraftProvider } from '@/store/composer-suggestions'
+ import { $gateway } from '@/store/gateway'
+ import { notifyError } from '@/store/notifications'
++import { $activeGatewayProfile, normalizeProfileKey } from '@/store/profile'
+ import type { McpCatalogEntry } from '@/types/hermes'
+ 
+ /**
+@@ -50,6 +51,21 @@ export function invalidateMcpSuggestionIndex(): void {
+   suggestibleAt = 0
+ }
+ 
++// configured servers are per-profile: drop the caches on a real profile change
++// (same pattern as skill.ts / slash-completion-cache.ts). Connection switches
++// that keep the profile key are covered by wipeSessionListsForGatewaySwitch().
++let cachedProfile: null | string = null
++
++$activeGatewayProfile.subscribe(value => {
++  const key = normalizeProfileKey(value)
++
++  if (cachedProfile !== null && cachedProfile !== key) {
++    invalidateMcpSuggestionIndex()
++  }
++
++  cachedProfile = key
++})
++
+ async function loadConfiguredNames(): Promise<Set<string>> {
+   if (configuredNames && Date.now() - configuredAt < CONFIGURED_TTL_MS) {
+     return configuredNames
+diff --git i/apps/desktop/src/store/suggestion-providers/skill.ts w/apps/desktop/src/store/suggestion-providers/skill.ts
+index d845a2680a..a411419470 100644
+--- i/apps/desktop/src/store/suggestion-providers/skill.ts
++++ w/apps/desktop/src/store/suggestion-providers/skill.ts
+@@ -3,6 +3,7 @@ import { getSkills } from '@/hermes'
+ import { translateNow } from '@/i18n'
+ import type { ChatMessage } from '@/lib/chat-messages'
+ import { type ComposerSuggestion, registerDraftProvider } from '@/store/composer-suggestions'
++import { $activeGatewayProfile, normalizeProfileKey } from '@/store/profile'
+ import { $activeSessionId, $currentCwd, $messages } from '@/store/session'
+ import { $sessionStates } from '@/store/session-states'
+ 
+@@ -101,6 +102,28 @@ async function loadIndex(): Promise<SkillIndexEntry[]> {
+   return index
+ }
+ 
++// Each profile has its own skills directory, so a cached index is only valid
++// for the profile that produced it. A live profile swap (selectProfile) does
++// NOT reload the renderer, so this module cache would otherwise serve the
++// PREVIOUS profile's skills for the full TTL. Mirror the sibling cache
++// (slash-completion-cache.ts) and drop the index on a normalized-key change.
++//
++// A profile-only subscription is NOT sufficient: two connections can share a
++// profile name (both expose "default"), so a connection switch with an
++// unchanged profile key skips this path. wipeSessionListsForGatewaySwitch()
++// covers that shape — it runs unconditionally on every beginGatewaySwitch.
++let cachedProfile: null | string = null
++
++$activeGatewayProfile.subscribe(value => {
++  const key = normalizeProfileKey(value)
++
++  if (cachedProfile !== null && cachedProfile !== key) {
++    invalidateSkillSuggestionIndex()
++  }
++
++  cachedProfile = key
++})
++
+ // ---------------------------------------------------------------------------
+ // Already-in-context guard: a skill the session has engaged with must not be
+ // re-offered. skill_view loads the whole SKILL.md into the conversation and

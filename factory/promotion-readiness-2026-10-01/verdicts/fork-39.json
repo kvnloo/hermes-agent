@@ -1,0 +1,29 @@
+{
+ "fork_pr": 39,
+ "title": "fix(desktop): worktree from non-origin remote no longer sets upstream tracking",
+ "claim": "A worktree branched from a remote-tracking base must be standalone (no upstream) whatever the remote is called; today --no-track is only added for bases starting with the literal 'origin/'.",
+ "verdict": "READY",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "On main with only the new tests. Electron: 'addWorktree: base on a remote not named origin does not set up upstream tracking' fails, + actual 'upstream/main' - expected ''. Python twin: test_worktree_add_from_remote_base_does_not_track[upstream] fails, assert 0 != 0, git rev-parse fresh@{upstream} stdout='upstream/main'. The [origin] case passes on main.",
+  "green": "With --no-track passed for every base in both twins: electron git-worktree-ops.test.ts 29/29; tests/hermes_cli/test_web_server_git.py 18/18.",
+  "negative_control": "Restoring only the origin/ gate on --no-track (TS: args.push(...(base.startsWith('origin/')?['--no-track']:[]), base); Python: (['--no-track'] if base.startswith('origin/') else [])+[base]): exactly the non-origin case fails in each twin (Electron 1 failed|28 passed; Python 17 passed|1 failed [upstream]).",
+  "adjacent": "vitest electron: git-worktree-ops, git-review-ops, git-repo-scan, git-root = 52 passed (includes tag-pinned narrow-clone tests). pytest: test_web_server_git, test_web_git_gh_stderr, test_worktree_selfheal, security/test_gitspawn_config_injection = 48 passed. tsc -p tsconfig.electron.json, eslint, prettier --check, ruff all clean.",
+  "source": "main git-worktree-ops.ts addWorktree: `if (base.startsWith('origin/')) { fetch; args.push('--no-track') }`; web_git.py worktree_add mirrors it. Base picker (base_branch_list / electron listing) returns every refs/remotes ref, so upstream/main is selectable. git-review-ops.ts reviewCommit/reviewPush: tracking -> git.push() (rejected by push.default=simple on name mismatch), else push -u origin <branch>."
+ },
+ "upstream_overlap": [
+  "#64627 (MERGED, ethernet8023) fixed only the origin/main case.",
+  "Recent maintainer work on the same function (6941423f45 tracking-refspec fetch, 0fe470b1f7 narrow clones, 77019b3b7d check-ref-format, e3fffd8c17) does not touch the non-origin tracking gap.",
+  "No open PR/issue found: searched remoteOfRef, 'worktree no-track', 'non-origin remote', 'upstream/main worktree'."
+ ],
+ "branch": "ready/fork-39-worktree-non-origin-no-track",
+ "files": [
+  "apps/desktop/electron/git-worktree-ops.ts",
+  "apps/desktop/electron/git-worktree-ops.test.ts",
+  "hermes_cli/web_git.py",
+  "tests/hermes_cli/test_web_server_git.py"
+ ],
+ "size": "+64/-15",
+ "depends_on": null,
+ "notes": "Rebuild differs from the fork on purpose. The fork gated on remoteOfRef(), which requires refs/remotes/<base> to already exist. That would skip the tracking-refspec fetch that 6941423f45 relies on for tag-pinned narrow clones (origin/main has no local ref there), a regression. The fork also fixed only the Electron twin, while maintainers keep web_git.py in lockstep ('Electron-op parity'). Unconditional --no-track is the smallest correct change: git only auto-tracks remote-tracking bases. Left out: generalizing the best-effort fetch and the isRemote flag to non-origin remotes. Kanban baggage dropped. Commit f31e218b00."
+}

@@ -1,0 +1,27 @@
+{
+ "fork_pr": 33,
+ "title": "fix(plugins): security-guidance scans skill_manage operations[] writes, not just the flat shape",
+ "claim": "security-guidance must scan skill_manage's advertised operations[] shape (each op's file_path/file_content/new_string) like the flat shape; on main _scan_args reads only top-level fields, so schema-shaped skill writes are never warned on or blocked.",
+ "verdict": "READY",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "tests only on main: tests/plugins/test_security_guidance_plugin.py -> 19 passed, 2 failed; test_skill_manage_operations_write_scanned: `assert isinstance(result, str)` -> isinstance(None, str) False; test_blocks_skill_manage_operations_patch: `assert isinstance(out, dict)` -> isinstance(None, dict) False",
+  "green": "with fix: tests/plugins/test_security_guidance_plugin.py -> 21 passed, 0 failed",
+  "negative_control": "replaced the operations-aware `targets = ...` with `targets = [args]` -> 19 passed, 2 failed (both new tests); restored",
+  "adjacent": "tests/plugins/test_security_guidance_plugin.py tests/plugins/test_transform_tool_result_hook.py tests/tools/test_skill_manager_tool.py -> 3 files, 97 passed, 0 failed; ruff clean",
+  "source": "main plugins/security-guidance/__init__.py:80-87 _scan_args reads args.get('file_path'/'file_content'/'new_string') at top level only. tools/skill_manager_tool.py SKILL_MANAGE_SCHEMA requires ['operations'] (per-op file_path/file_content/new_string); skill_manage() routes to _skill_manage_batch whenever operations is not None, ignoring flat fields; _skill_manage_batch rejects non-list operations. Hooks receive the model args unmodified (hermes_cli/plugins.py:2055; agent/tool_executor.py normal path for skill_manage)."
+ },
+ "upstream_overlap": [
+  "No owner. Open security-guidance PRs checked by diff: #126746 (0xShadowX, V4A patch paths), #116113 (kirkins, bounded windows), #124576 (liuhao1024, JS filters), #64235 (mudrii, block by default), #33186 (Sahil-SS9, severity tiers) \u2014 none handle skill_manage operations[]. #33186/#126746/#116113 keep the flat skill_manage tuple, so they would textually neighbor this hunk (possible trivial rebase conflict with #126746/#116113 in _scan_args)."
+ ],
+ "branch": "ready/fork-33-security-guidance-skill-ops",
+ "commit": "b4548bd64767a346d6179c2af737b0666462d112",
+ "files": [
+  "plugins/security-guidance/__init__.py",
+  "tests/plugins/test_security_guidance_plugin.py"
+ ],
+ "size": "+35/-2",
+ "depends_on": null,
+ "notes": "Rebuilt on current main (plugin was compacted: _extract_path_and_content -> _scan_args). Deliberately narrower than the fork: per-op scan uses the same content keys as the flat spec (file_content, new_string); the fork also added per-op `content` (create / full SKILL.md rewrite), which is a scanning-policy expansion (FP risk on SKILL.md code samples) not part of the shape-parity claim \u2014 noted in the PR body as a separate question. Fork's 132-line test suite trimmed to 2 contract tests using benign marker strings already used by the flat-shape tests (pickle.loads, eval(user_input)); no exploit reproduction. Duplicate rule names across multiple ops are possible in the warning block (cosmetic; same as existing multi-key behavior). Kanban baggage dropped.",
+ "lead_review": "Lead spot-check: RED reproduced (2 new tests fail: operations[] writes unscanned / not blocked), GREEN 21/21 in test_security_guidance_plugin.py. Verified SKILL_MANAGE_SCHEMA advertises operations[] only (tools/skill_manager_tool.py:861-916). Benign marker strings only; no exploit reproduction."
+}

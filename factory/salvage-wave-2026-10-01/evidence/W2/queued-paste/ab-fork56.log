@@ -1,0 +1,40 @@
+state=fork56 ref=refs/w2/queued-paste/mfork56 head=564ba9e2f5a54a24a56225ed9417a874208418c6
+npm notice run hermes-agent@1.0.0 npx
+npm notice run 'vitest' run src/__tests__/queuedPasteSubmission.test.tsx src/__tests__/queuedPasteProbe.test.tsx
+
+ RUN  v4.1.10 /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/paste/ui-tui
+
+ ❯ src/__tests__/queuedPasteProbe.test.tsx (6 tests | 1 failed) 82ms
+     × an idle submit whose collapsed label has no token is refused with a warning, not sent 38ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/__tests__/queuedPasteProbe.test.tsx > probe: orphaned placeholder (the #99042 contract) > an idle submit whose collapsed label has no token is refused with a warning, not sent
+AssertionError: expected [ Array(1) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "review this: [[ line one line two line three line four line five [5 lines] ]]",
++ ]
+
+ ❯ src/__tests__/queuedPasteProbe.test.tsx:151:26
+    149|       ui.submit(`review this: ${log.label}`)
+    150|       await settle()
+    151|       expect(ui.prompts).toEqual([])
+       |                          ^
+    152|       expect(ui.sysLines.some(line => line.includes('cannot submit')))…
+    153|     } finally {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 11 passed (12)
+   Start at  23:19:34
+   Duration  1.58s (transform 2.07s, setup 0ms, import 2.74s, tests 162ms, environment 0ms)
+
+=== typecheck
+typecheck rc=0

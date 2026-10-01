@@ -1,0 +1,91 @@
+LABEL probe-term-ignored-pr125004  main=298a01c79b38018e029e50f77efe67c4a4fdbd40
+MERGE refs/w2/pr/125004 (2692841849): clean
+▶ not activated — using HERMES_PYTHON: /workspace/hermes-home/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 2 test files (~3 tests) under ['tests/tools/test_sandbox_background_kill_tree.py', 'tests/tools/test_w2_probe_sandbox_kill_term_ignored.py']; running with -j 2
+[ 66.7% |     2/~3 | ✓4 | ✗0] ✓ tests/tools/test_sandbox_background_kill_tree.py (4✓, 4.2s)
+[100.0% |     3/~3 | ✓4 | ✗2] ✗ tests/tools/test_w2_probe_sandbox_kill_term_ignored.py (2✗, 40.3s)
+
+  ╔╍ Failed: tests/tools/test_w2_probe_sandbox_kill_term_ignored.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ _______ test_probe_kill_stops_a_command_that_ignores_sigterm[local_env] ________
+  ║ 
+  ║ spawn_and_kill = <function spawn_and_kill.<locals>._run at 0x7f3475d1f1a0>
+  ║ 
+  ║ >   ???
+  ║ E   AssertionError: survived: shell, child
+  ║ E   assert False
+  ║ E    +  where False = _wait_for(<function test_probe_kill_stops_a_command_that_ignores_sigterm.<locals>.<lambda> at 0x7f3475c534c0>, bound=8.0)
+  ║ 
+  ║ tests/tools/test_w2_probe_sandbox_kill_term_ignored.py:134: AssertionError
+  ║ _______ test_probe_kill_stops_a_command_that_ignores_sigterm[plain_bash] _______
+  ║ 
+  ║ spawn_and_kill = <function spawn_and_kill.<locals>._run at 0x7f34750d5e40>
+  ║ 
+  ║     def test_probe_kill_stops_a_command_that_ignores_sigterm(spawn_and_kill):
+  ║         _session, pids, result, exit_file = spawn_and_kill(
+  ║             "trap '' TERM; echo $$ > {0}; sleep 300 & echo $! > {1}; wait", ["shell.pid", "child.pid"])
+  ║     
+  ║         assert result["status"] == "killed"
+  ║ >       assert _wait_for(lambda: not any(_alive(p) for p in pids), bound=8.0), (
+  ║             "survived: " + ", ".join(n for n, p in zip(("shell", "child"), pids) if _alive(p)))
+  ║ E       AssertionError: survived: shell, child
+  ║ E       assert False
+  ║ E        +  where False = _wait_for(<function test_probe_kill_stops_a_command_that_ignores_sigterm.<locals>.<lambda> at 0x7f34750d6020>, bound=8.0)
+  ║ 
+  ║ tests/tools/test_w2_probe_sandbox_kill_term_ignored.py:134: AssertionError
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/tools/test_w2_probe_sandbox_kill_term_ignored.py::test_probe_kill_stops_a_command_that_ignores_sigterm[local_env]
+  ║ FAILED tests/tools/test_w2_probe_sandbox_kill_term_ignored.py::test_probe_kill_stops_a_command_that_ignores_sigterm[plain_bash]
+  ║ 2 failed in 18.94s
+  ║
+  ║  Repro: python -m pytest tests/tools/test_w2_probe_sandbox_kill_term_ignored.py -q -rf -p no:randomly
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 2 files, 4 tests passed, 2 failed (100% complete) in 40.3s (2 workers) ===
+  Durations cached to test_durations.json (1 files)
+
+=== Per-file subprocess time distribution ===
+
+=== Failure output ===
+
+--- tests/tools/test_w2_probe_sandbox_kill_term_ignored.py ---
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+_______ test_probe_kill_stops_a_command_that_ignores_sigterm[local_env] ________
+
+spawn_and_kill = <function spawn_and_kill.<locals>._run at 0x7f3475d1f1a0>
+
+>   ???
+E   AssertionError: survived: shell, child
+E   assert False
+E    +  where False = _wait_for(<function test_probe_kill_stops_a_command_that_ignores_sigterm.<locals>.<lambda> at 0x7f3475c534c0>, bound=8.0)
+
+tests/tools/test_w2_probe_sandbox_kill_term_ignored.py:134: AssertionError
+_______ test_probe_kill_stops_a_command_that_ignores_sigterm[plain_bash] _______
+
+spawn_and_kill = <function spawn_and_kill.<locals>._run at 0x7f34750d5e40>
+
+    def test_probe_kill_stops_a_command_that_ignores_sigterm(spawn_and_kill):
+        _session, pids, result, exit_file = spawn_and_kill(
+            "trap '' TERM; echo $$ > {0}; sleep 300 & echo $! > {1}; wait", ["shell.pid", "child.pid"])
+    
+        assert result["status"] == "killed"
+>       assert _wait_for(lambda: not any(_alive(p) for p in pids), bound=8.0), (
+            "survived: " + ", ".join(n for n, p in zip(("shell", "child"), pids) if _alive(p)))
+E       AssertionError: survived: shell, child
+E       assert False
+E        +  where False = _wait_for(<function test_probe_kill_stops_a_command_that_ignores_sigterm.<locals>.<lambda> at 0x7f34750d6020>, bound=8.0)
+
+tests/tools/test_w2_probe_sandbox_kill_term_ignored.py:134: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tools/test_w2_probe_sandbox_kill_term_ignored.py::test_probe_kill_stops_a_command_that_ignores_sigterm[local_env]
+FAILED tests/tools/test_w2_probe_sandbox_kill_term_ignored.py::test_probe_kill_stops_a_command_that_ignores_sigterm[plain_bash]
+2 failed in 18.94s
+
+=== 1 file with test failures (2 tests failed) ===
+  tests/tools/test_w2_probe_sandbox_kill_term_ignored.py  (2 tests failed)
+TRIPWIRE hits during run: 0

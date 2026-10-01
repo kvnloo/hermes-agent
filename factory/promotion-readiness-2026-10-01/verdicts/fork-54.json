@@ -1,0 +1,37 @@
+{
+ "fork_pr": 54,
+ "title": "fix(cli): restore all process-global plugin state after Plugin Doctor runs",
+ "claim": "Plugin Doctor's _doctor_runtime finally block leaves process-global plugin attribution (registry._scoped_tools, registry._plugin_module_scopes, hermes_cli.plugins._BARE_MODULE_SCOPE) pinned to its deleted temp HERMES_HOME, so later in-process loads see a dead scope and same-named plugins get a mangled __home_<digest> namespace.",
+ "verdict": "EXTERNAL-OWNED",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "Fork tests ported by hand to pinned main (test hunk no longer applies): 4 failed / 8 passed. test_doctor_restores_global_tool_policy_and_module_state: `Left contains 1 more item: {'hermes_plugins.cleanup_plugin': {'/var/tmp/.../hermes-plugin-doctor-zhtg97bz'}}` (_plugin_module_scopes leak); repeated-runs test: `assert 'hermes_plugins.leak__home_b1f809fa80ea' == 'hermes_plugins.leak'`; subsequent-real-load test: `_BARE_MODULE_SCOPE.get('hermes_plugins.leak')` = deleted temp path; import-failure test: `{'hermes_plugins.boom_plugin': {...doctor temp...}}` leaked. The _scoped_tools assertion PASSED on main: 024f1b07bd (2026-09-22, 'unload the doctor's temp plugin before removing its home') added manager.unload() which already restores scoped tools, superseding the fork's restore_registration(scope=temp_scope) hunk.",
+  "green": "Support delta on pinned main = hand-port of #99721's _plugin_module_scopes snapshot/restore (3 lines) + bare-name sweep `for bare, owner in list(_BARE_MODULE_SCOPE.items()): if owner == manager.scope_key: del ...` under _MODULE_NAMESPACE_LOCK (7 lines): test_plugin_dev.py 12 passed.",
+  "negative_control": "(a) #99721-style module-scope restore alone: still 4 failed (module-scopes assertion now passes; _BARE_MODULE_SCOPE / namespace-mangling / import-failure assertions fail). (b) bare-name sweep `del` replaced by `pass`: 4 failed (same four tests).",
+  "adjacent": "tests/hermes_cli/test_plugin_cli_registration.py, test_plugin_ownership_ledger.py, test_plugins.py, test_plugins_cmd.py, tests/tools/test_registry.py: 196 passed with the support delta.",
+  "source": "Only in-repo caller of doctor_plugin is hermes_cli/plugins_cmd.py:942 cmd_plugin_doctor (one-shot CLI), so there is no production observable today; observables fail only via in-process reuse of the public doctor_plugin()/registry.plugin_scope_for_module() API (and cross-test pollution: _BARE_MODULE_SCOPE held bad_plugin/network_plugin/... entries from sibling tests in the same worker)."
+ },
+ "upstream_overlap": [
+  {
+   "pr": 99721,
+   "author": "Fachri-analys",
+   "state": "OPEN",
+   "created": "2026-08-31",
+   "head": "090808fc1457a6ac7fdfd4d02c7951c739b42b7f",
+   "title": "Fix/plugin doctor scoped cleanup",
+   "relation": "same defect family (restore scoped registry + _plugin_module_scopes after doctor); no longer applies to f848940560 (conflicts with 024f1b07bd manager.unload()); does NOT cover _BARE_MODULE_SCOPE"
+  },
+  {
+   "commit": "024f1b07bd",
+   "relation": "merged on main 2026-09-22; manager.unload() in finally already restores _scoped_tools (fork hunk superseded)"
+  }
+ ],
+ "branch": null,
+ "files": [
+  "hermes_cli/plugin_dev.py",
+  "tests/hermes_cli/test_plugin_dev.py"
+ ],
+ "size": "+175/-5 (clean fork diff, kanban excluded); support delta on main +155/-1 (prod +10/-1)",
+ "depends_on": [],
+ "notes": "Do not open a competing PR. Review-support worth offering on #99721: (1) it misses _BARE_MODULE_SCOPE \u2014 after its fix a second doctor run (or doctor-then-real-load) of a same-named plugin in one process still imports as hermes_plugins.<slug>__home_<digest>; suggest the 7-line scope-keyed sweep (handles the import-failure path too, no manifest/slug recomputation needed, unlike the fork's manifest fallback; note the fork's _clear_plugin_submodules(manager) call would be a no-op on current main because manager.unload() clears manager._plugins first); (2) it needs a rebase over 024f1b07bd, whose manager.unload() already restores _scoped_tools, making #99721's wholesale _tools/_scoped_tools clear+update redundant and broader than needed. Suggested tests (1-2): plugin_scope_for_module(ns) is None after doctor (public API) + repeated doctor runs keep the bare namespace (parametrize first run over ok/import-error). Low product impact (one-shot CLI only)."
+}

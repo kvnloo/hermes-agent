@@ -1,0 +1,16 @@
+LABEL pr125004+foldin  main=298a01c79b38018e029e50f77efe67c4a4fdbd40
+APPLY /mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/sandbox-kill/pr125004+foldin-on-main.diff: ok
+▶ not activated — using HERMES_PYTHON: /workspace/hermes-home/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 2 test files (~3 tests) under ['tests/tools/test_sandbox_background_kill_tree.py', 'tests/tools/test_w2_probe_sandbox_kill_term_ignored.py']; running with -j 2
+[ 66.7% |     2/~3 | ✓4 | ✗0] ✓ tests/tools/test_sandbox_background_kill_tree.py (4✓, 5.3s)
+[100.0% |     3/~3 | ✓6 | ✗0] ✓ tests/tools/test_w2_probe_sandbox_kill_term_ignored.py (2✓, 8.4s)
+
+=== Summary: 2 files, 6 tests passed, 0 failed (100% complete) in 8.4s (2 workers) ===
+  Durations cached to test_durations.json (2 files)
+
+=== Per-file subprocess time distribution ===
+TRIPWIRE hits during run: 0

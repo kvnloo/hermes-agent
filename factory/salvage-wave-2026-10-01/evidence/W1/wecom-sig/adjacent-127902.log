@@ -1,0 +1,28 @@
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/gateway/test_msgraph_webhook.py::TestMSGraphNotifications::test_oversized_notification_rejected_by_content_length[trio]
+  /usr/lib/python3.11/ipaddress.py:1209: RuntimeWarning: coroutine 'TestMSGraphNotifications.test_valid_notification_accepted_and_scheduled.<locals>._capture' was never awaited
+    return int.from_bytes(map(cls._parse_octet, octets), 'big')
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/gateway/test_msgraph_webhook.py::TestMSGraphSourceIPAllowlist::test_loopback_bind_without_allowlist_still_accepts_local_requests[trio]
+  <attrs generated methods trio._core._run.Task>:16: RuntimeWarning: coroutine 'BasePlatformAdapter.handle_message' was never awaited
+    self._child_nurseries = __attr_factory__child_nurseries()
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/gateway/test_msgraph_webhook.py::TestMSGraphValidationHandshake::test_connect_allows_loopback_without_source_allowlist[trio]
+FAILED tests/gateway/test_msgraph_webhook.py::TestMSGraphNotifications::test_valid_notification_accepted_and_scheduled[trio]
+FAILED tests/gateway/test_msgraph_webhook.py::TestMSGraphNotifications::test_resource_patterns_accept_leading_slash[trio]
+FAILED tests/gateway/test_msgraph_webhook.py::TestMSGraphSourceIPAllowlist::test_loopback_bind_without_allowlist_still_accepts_local_requests[trio]
+4 failed, 17 passed, 3 warnings in 1.38s
+
+=== 1 file with test failures (4 tests failed) ===
+  tests/gateway/test_msgraph_webhook.py  (4 tests failed)
+=== Summary: 21 files, 581 tests passed, 4 failed, 8 skipped (100% complete) in 33.3s (20 workers) ===
+=== 1 file with test failures (4 tests failed) ===
+  tests/gateway/test_msgraph_webhook.py  (4 tests failed)

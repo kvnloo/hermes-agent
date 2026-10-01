@@ -1,0 +1,294 @@
+[
+ {
+  "fork_pr": 46,
+  "title": "fix(dashboard): show resume-loading overlay for implicit reconnect resume",
+  "wave": "W3-narrow-correctness",
+  "head": "detail/bug-fix/fix-dashboard-show-resume-loading-overlay-for-impl-781314",
+  "head_oid": "5fe57930f41d030d1597f7417e8bba0b05f90bfd",
+  "head_present": true,
+  "files": [
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py",
+   "web/src/lib/pty-resume-loading.test.ts",
+   "web/src/lib/pty-resume-loading.ts",
+   "web/src/pages/ChatPage.tsx"
+  ],
+  "kanban_baggage": [
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "changed_files": 5,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Comparison includes unrelated Kanban external-receipt files; never promote this full diff.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 47,
+  "title": "fix(agent): treat missing x-ratelimit-remaining-* as unknown, not 100% exhausted",
+  "wave": "W3-narrow-correctness",
+  "head": "detail/bug-fix/fix-agent-treat-missing-x-ratelimit-remaining-as-u-7ac41d",
+  "head_oid": "c3a9a1e2664bd9a17d68d7a73c548d71e82f033a",
+  "head_present": true,
+  "files": [
+   "agent/rate_limit_tracker.py",
+   "hermes_cli/kanban_db.py",
+   "tests/agent/test_nous_rate_guard.py",
+   "tests/agent/test_rate_limit_tracker.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "kanban_baggage": [
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "changed_files": 5,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Comparison includes unrelated Kanban external-receipt files; never promote this full diff.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 48,
+  "title": "fix(desktop): guard reviewDiff all-add synthesis against tracked files",
+  "wave": "W3-narrow-correctness",
+  "head": "detail/bug-fix/fix-desktop-guard-reviewdiff-all-add-synthesis-aga-cf47ee",
+  "head_oid": "a034b3284782e5a48652c16efa5eae6d5ff2bd1f",
+  "head_present": true,
+  "files": [
+   "apps/desktop/electron/git-review-ops.test.ts",
+   "apps/desktop/electron/git-review-ops.ts",
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "kanban_baggage": [
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "changed_files": 4,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Comparison includes unrelated Kanban external-receipt files; never promote this full diff.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 49,
+  "title": "fix(desktop): guard read-only transcript recovery from stale no-owner race",
+  "wave": "W3-narrow-correctness",
+  "head": "detail/bug-fix/fix-desktop-guard-read-only-transcript-recovery-fr-35e8dd",
+  "head_oid": "f7be48ec484c1cf68191da6d75d5bfb0c22614d4",
+  "head_present": true,
+  "files": [
+   "apps/desktop/src/app/contrib/hooks/use-session-tile-delegate.test.ts",
+   "apps/desktop/src/app/contrib/hooks/use-session-tile-delegate.ts",
+   "apps/desktop/src/store/read-only-transcript.race.test.ts",
+   "apps/desktop/src/store/read-only-transcript.ts",
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "kanban_baggage": [
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "changed_files": 6,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Comparison includes unrelated Kanban external-receipt files; never promote this full diff.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 50,
+  "title": "fix(compaction): honor save_over_limit flag when writing compressed trajectories",
+  "wave": "W3-narrow-correctness",
+  "head": "detail/bug-fix/fix-compaction-honor-save-over-limit-flag-when-wri-2322d6",
+  "head_oid": "168a475d36d3c37146e4c3700a582e3bb98b9b7c",
+  "head_present": true,
+  "files": [
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py",
+   "tests/test_trajectory_compressor.py",
+   "trajectory_compressor.py"
+  ],
+  "kanban_baggage": [
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "changed_files": 4,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Comparison includes unrelated Kanban external-receipt files; never promote this full diff.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 51,
+  "title": "fix(browser): derive controller profile_id from profile_home name",
+  "wave": "W3-narrow-correctness",
+  "head": "detail/bug-fix/fix-browser-derive-controller-profile-id-from-prof-5833eb",
+  "head_oid": "a2b896ff5c96a68532d7658ec18412cea7753685",
+  "head_present": true,
+  "files": [
+   "hermes_cli/kanban_db.py",
+   "tests/gateway/test_browser_control_cloud.py",
+   "tests/gateway/test_browser_control_profile_repro_real.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py",
+   "tui_gateway/methods_browser_control.py"
+  ],
+  "kanban_baggage": [
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "changed_files": 5,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Comparison includes unrelated Kanban external-receipt files; never promote this full diff.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 52,
+  "title": "fix(skills): preserve hyperlink theme color when bold/italic/font_size is set",
+  "wave": "W3-narrow-correctness",
+  "head": "detail/bug-fix/fix-skills-preserve-hyperlink-theme-color-when-bol-cb9195",
+  "head_oid": "3dfd7470afdbc905d42dff830621ab5c875b3911",
+  "head_present": true,
+  "files": [
+   "hermes_cli/kanban_db.py",
+   "skills/productivity/xlsx/scripts/xlsx_create.py",
+   "skills/productivity/xlsx/tests/test_xlsx_skill.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "kanban_baggage": [
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "changed_files": 4,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Comparison includes unrelated Kanban external-receipt files; never promote this full diff.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 53,
+  "title": "fix(gateway): enforce Group Chat storage budget on replica takeover and demotion",
+  "wave": "W3-narrow-correctness",
+  "head": "detail/bug-fix/fix-gateway-enforce-group-chat-storage-budget-on-r-6d4375",
+  "head_oid": "040633c3c4c39302451f0b73cfaa3aa74eb1ebcc",
+  "head_present": true,
+  "files": [
+   "gateway/hosted_room_replicas.py",
+   "hermes_cli/kanban_db.py",
+   "tests/gateway/test_hosted_room_replicas.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py",
+   "tui_gateway/methods_groups.py"
+  ],
+  "kanban_baggage": [
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "changed_files": 5,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Comparison includes unrelated Kanban external-receipt files; never promote this full diff.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 54,
+  "title": "fix(cli): restore all process-global plugin state after Plugin Doctor runs",
+  "wave": "W3-narrow-correctness",
+  "head": "detail/bug-fix/fix-cli-restore-all-process-global-plugin-state-af-116fc8",
+  "head_oid": "cbeb7a6ff64b3bb0a1f266d088d73998893722e8",
+  "head_present": true,
+  "files": [
+   "hermes_cli/kanban_db.py",
+   "hermes_cli/plugin_dev.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py",
+   "tests/hermes_cli/test_plugin_dev.py"
+  ],
+  "kanban_baggage": [
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "changed_files": 4,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Comparison includes unrelated Kanban external-receipt files; never promote this full diff.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 55,
+  "title": "fix(desktop): strip quoted/colon-delimited generated-image echoes",
+  "wave": "W3-narrow-correctness",
+  "head": "detail/bug-fix/fix-desktop-strip-quoted-colon-delimited-generated-b51936",
+  "head_oid": "ce261b3ff84049073b7f9121e90e66d6339a9d53",
+  "head_present": true,
+  "files": [
+   "apps/desktop/src/lib/generated-images.test.ts",
+   "apps/desktop/src/lib/generated-images.ts",
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "kanban_baggage": [
+   "hermes_cli/kanban_db.py",
+   "tests/hermes_cli/test_kanban_external_receipts.py"
+  ],
+  "changed_files": 4,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Comparison includes unrelated Kanban external-receipt files; never promote this full diff.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 56,
+  "title": "fix(tui): store expanded paste in the busy/no-session queue, keep the label as display",
+  "wave": "W3-narrow-correctness",
+  "head": "detail/bug-fix/fix-tui-store-expanded-paste-in-the-busy-no-sessio-c7baf9",
+  "head_oid": "59571bda70a5021361e44335f65d7ce8efa5e672",
+  "head_present": true,
+  "files": [
+   "ui-tui/src/__tests__/busyQueuePasteRepro.test.ts",
+   "ui-tui/src/__tests__/queueScopeRenderer.test.tsx",
+   "ui-tui/src/app/interfaces.ts",
+   "ui-tui/src/app/useInputHandlers.ts",
+   "ui-tui/src/app/useMainApp.ts",
+   "ui-tui/src/app/useSubmission.ts",
+   "ui-tui/src/hooks/useQueue.ts"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 7,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Earlier QA hold has an author reply claiming the exact missing regression repaired; that closes the discussion loop, not the fresh execution gate.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ }
+]

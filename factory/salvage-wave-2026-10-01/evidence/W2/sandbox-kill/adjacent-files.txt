@@ -1,0 +1,10 @@
+tests/tools/test_process_registry.py
+tests/tools/test_local_temp_dir.py
+tests/tools/test_process_registry_list_exit.py
+tests/tools/test_terminal_compound_background.py
+tests/tools/test_terminal_task_cwd.py
+tests/tools/test_kill_verify_tree_death.py
+tests/tools/test_process_checkpoint_readopt.py
+tests/tools/test_process_wait_clarity.py
+tests/tools/test_notify_on_complete.py
+tests/gateway/test_abandoned_turn_process_cleanup.py

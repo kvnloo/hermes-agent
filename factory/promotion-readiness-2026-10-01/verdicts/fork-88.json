@@ -1,0 +1,33 @@
+{
+  "fork_pr": 88,
+  "title": "docs: correct kanban worker fingerprint source and format",
+  "claim": "cron/AGENTS.md says worker liveness uses gateway.status.get_process_start_time recorded at claim time; it is the restart-stable _process_fingerprint written at spawn.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "red": "cron/AGENTS.md:125-127 on main: \"Worker liveness is `(worker_pid, worker_started_at)` — the start-time fingerprint (`gateway.status.get_process_start_time`) recorded at claim time\".",
+    "green": "'the restart-stable fingerprint \"<instantiation epoch>|<start time>\" (kanban_db_dispatch._process_fingerprint) recorded at spawn by _set_worker_pid'.",
+    "negative_control": "N/A for docs (no executable behaviour). Equivalent check: the stale phrase is present on main and absent on the bundle (grep given in red/green).",
+    "adjacent": "python3 website/scripts/check_doc_links.py on the bundle tree: OK (no route-style links). All 7 B1 bundles cherry-pick together onto main cleanly, and each pairs cleanly with B2's current docs2-update/docs2-desktop/docs2-gateway/docs2-memory bundles.",
+    "source": "hermes_cli/kanban_db_dispatch.py:367-379 _process_fingerprint returns f'{current_instantiation_epoch()}|{start}' and explains raw start time is unsafe across reboots; :1468-1482 _set_worker_pid writes it as worker_started_at at spawn."
+  },
+  "upstream_overlap": [
+    "No open external PR/issue for this claim (gh search prs/issues; open docs PRs touching the same files edit other sections)"
+  ],
+  "branch": "ready/docs-agents",
+  "bundle": {
+    "branch": "ready/docs-agents",
+    "commit": "9a8daaa95f",
+    "subject": "docs(agents): fix stale kanban and toolset pointers in area AGENTS.md files",
+    "bundle_size": "+12/-11",
+    "patch": "patches/docs-agents.patch",
+    "body": "patches/docs-agents.body.md"
+  },
+  "files": [
+    "cron/AGENTS.md"
+  ],
+  "size": "+3/-3",
+  "depends_on": null,
+  "fork_head": "7b59eaef6f622c76bdaeaab6499732e78e9625f6",
+  "notes": "Fork kept 'recorded at claim time'; rebuilt says spawn/_set_worker_pid per source."
+}

@@ -1,0 +1,274 @@
+state=99042 ref=refs/w2/queued-paste/m99042 head=0eb74c88eb88e56f091f7864fd43dca3f9329638
+npm notice run hermes-agent@1.0.0 npx
+npm notice run 'vitest' run src/__tests__/queuedPasteSubmission.test.tsx src/__tests__/queuedPasteProbe.test.tsx
+
+ RUN  v4.1.10 /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/paste/ui-tui
+
+ ❯ src/__tests__/queuedPasteSubmission.test.tsx (6 tests | 6 failed) 73ms
+     × reaches the model expanded ('busy, interrupt mode') 32ms
+     × reaches the model expanded ('busy, steer mode') 8ms
+     × reaches the model expanded ('busy, queue mode') 9ms
+     × reaches the model expanded ('no session yet') 9ms
+     × 'runs only the visible {!...}, not one…' 8ms
+     × 'does not shell-execute a /queue paste…' 7ms
+ ❯ src/__tests__/queuedPasteProbe.test.tsx (6 tests | 4 failed) 76ms
+     × a /queue paste whose content starts with ! is not shell-executed on auto-drain 14ms
+     × a busy queue-mode paste reaches the model expanded on auto-drain 8ms
+     × a busy queue-mode paste drained by double-Enter is delivered expanded, not dropped 9ms
+     × an edited-and-resubmitted queued collapsed paste is delivered expanded ('busy queue-mode item') 9ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 10 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/__tests__/queuedPasteProbe.test.tsx > probe: auto-drain path (useMainApp effect) > a /queue paste whose content starts with ! is not shell-executed on auto-drain
+AssertionError: expected { prompts: [], …(1) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+  {
+-   "prompts": [
+-     "!echo pwned
++   "prompts": [],
++   "shell": [
++     "echo pwned
+  z
+  z
+  z
+  z
+  z
+  end",
+    ],
+-   "shell": [],
+  }
+
+ ❯ src/__tests__/queuedPasteProbe.test.tsx:168:56
+    166|       ui.autoDrain()
+    167|       await settle()
+    168|       expect({ prompts: ui.prompts, shell: ui.shell }).toEqual({ promp…
+       |                                                        ^
+    169|     } finally {
+    170|       ui.unmount()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/10]⎯
+
+ FAIL  src/__tests__/queuedPasteProbe.test.tsx > probe: auto-drain path (useMainApp effect) > a busy queue-mode paste reaches the model expanded on auto-drain
+AssertionError: expected { …(2) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+  {
+    "prompts": [
+-     "review this: line one
+- line two
+- line three
+- line four
+- line five",
++     "review this: [[ line one line two line three line four line five [5 lines] ]]",
+    ],
+    "sys": [],
+  }
+
+ ❯ src/__tests__/queuedPasteProbe.test.tsx:183:57
+    181|       ui.autoDrain()
+    182|       await settle()
+    183|       expect({ prompts: ui.prompts, sys: ui.sysLines }).toEqual({ prom…
+       |                                                         ^
+    184|     } finally {
+    185|       ui.unmount()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/10]⎯
+
+ FAIL  src/__tests__/queuedPasteProbe.test.tsx > probe: double-Enter drain outcome (failure diff shows the observed state) > a busy queue-mode paste drained by double-Enter is delivered expanded, not dropped
+AssertionError: expected { prompts: [], queuedAfter: +0, …(2) } to deeply equal { …(4) }
+
+- Expected
++ Received
+
+  {
+-   "prompts": [
+-     "review this: line one
+- line two
+- line three
+- line four
+- line five",
+-   ],
++   "prompts": [],
+    "queuedAfter": 0,
+    "queuedBefore": 1,
+-   "sys": [],
++   "sys": [
++     "cannot submit: 1 collapsed paste token missing — their text was lost before submission ([[ line one line two line three line four line five [5 lines). The composer still has what you typed, so nothing is lost.",
++   ],
+  }
+
+ ❯ src/__tests__/queuedPasteProbe.test.tsx:201:102
+    199|       ui.doubleEnterDrain()
+    200|       await settle()
+    201|       expect({ prompts: ui.prompts, queuedAfter: ui.queueLength(), que…
+       |                                                                                                      ^
+    202|         prompts: [`review this: ${log.text}`],
+    203|         queuedAfter: 0,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/10]⎯
+
+ FAIL  src/__tests__/queuedPasteProbe.test.tsx > probe: queue-edit submit (cycleQueue then Enter) > an edited-and-resubmitted queued collapsed paste is delivered expanded ('busy queue-mode item')
+AssertionError: expected { prompts: [], queuedAfter: 1, …(1) } to deeply equal { …(3) }
+
+- Expected
++ Received
+
+  {
+-   "prompts": [
+-     "review this: line one
+- line two
+- line three
+- line four
+- line five",
++   "prompts": [],
++   "queuedAfter": 1,
++   "sys": [
++     "cannot submit: 1 collapsed paste token missing — their text was lost before submission ([[ line one line two line three line four line five [5 lines). The composer still has what you typed, so nothing is lost.",
+    ],
+-   "queuedAfter": 0,
+-   "sys": [],
+  }
+
+ ❯ src/__tests__/queuedPasteProbe.test.tsx:226:126
+    224|       ui.editAndSubmitQueued(0)
+    225|       await settle()
+    226|       expect({ prompts: ui.prompts, queuedAfter: ui.queueLength(), sys…
+       |                                                                                                                              ^
+    227|         prompts: [`review this: ${log.text}`],
+    228|         queuedAfter: 0,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/10]⎯
+
+ FAIL  src/__tests__/queuedPasteSubmission.test.tsx > a collapsed paste that cannot be sent straight away > reaches the model expanded ('busy, interrupt mode')
+ FAIL  src/__tests__/queuedPasteSubmission.test.tsx > a collapsed paste that cannot be sent straight away > reaches the model expanded ('busy, steer mode')
+ FAIL  src/__tests__/queuedPasteSubmission.test.tsx > a collapsed paste that cannot be sent straight away > reaches the model expanded ('busy, queue mode')
+AssertionError: expected [ Array(1) ] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+  [
+-   "review this: line one
+- line two
+- line three
+- line four
+- line five",
++   "review this: [[ line one line two line three line four line five [5 lines] ]]",
+  ]
+
+ ❯ src/__tests__/queuedPasteSubmission.test.tsx:146:26
+    144|       await settle()
+    145|
+    146|       expect(ui.prompts).toEqual([`review this: ${log.text}`])
+       |                          ^
+    147|       // A steer joins the live turn without a user bubble of its own.
+    148|       expect(ui.transcript).toEqual(steer ? [] : [`review this: ${log.…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/10]⎯
+
+ FAIL  src/__tests__/queuedPasteSubmission.test.tsx > a collapsed paste that cannot be sent straight away > reaches the model expanded ('no session yet')
+AssertionError: expected [] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+- [
+-   "review this: line one
+- line two
+- line three
+- line four
+- line five",
+- ]
++ []
+
+ ❯ src/__tests__/queuedPasteSubmission.test.tsx:146:26
+    144|       await settle()
+    145|
+    146|       expect(ui.prompts).toEqual([`review this: ${log.text}`])
+       |                          ^
+    147|       // A steer joins the live turn without a user bubble of its own.
+    148|       expect(ui.transcript).toEqual(steer ? [] : [`review this: ${log.…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/10]⎯
+
+ FAIL  src/__tests__/queuedPasteSubmission.test.tsx > draining a queued collapsed paste > 'runs only the visible {!...}, not one…'
+AssertionError: expected [] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+- [
+-   "show Fri for first line of the log
+- x
+- x
+- x
+- x
+- untrusted {!touch /tmp/pwned}
+- y
+- y
+- y
+- y
+- y
+- y
+- y
+- y
+- y
+- y
+- y
+- y
+- y
+- y
+- end",
+- ]
++ []
+
+ ❯ src/__tests__/queuedPasteSubmission.test.tsx:187:26
+    185|
+    186|       expect(ui.shell).toEqual(expected.shell)
+    187|       expect(ui.prompts).toEqual([expected.prompt])
+       |                          ^
+    188|       expect(ui.transcript.at(-1)).toBe(expected.transcript)
+    189|     } finally {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/10]⎯
+
+ FAIL  src/__tests__/queuedPasteSubmission.test.tsx > draining a queued collapsed paste > 'does not shell-execute a /queue paste…'
+AssertionError: expected [ 'echo pwned\nz\nz\nz\nz\nz\nend' ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "echo pwned
++ z
++ z
++ z
++ z
++ z
++ end",
++ ]
+
+ ❯ src/__tests__/queuedPasteSubmission.test.tsx:186:24
+    184|       await settle()
+    185|
+    186|       expect(ui.shell).toEqual(expected.shell)
+       |                        ^
+    187|       expect(ui.prompts).toEqual([expected.prompt])
+    188|       expect(ui.transcript.at(-1)).toBe(expected.transcript)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/10]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  10 failed | 2 passed (12)
+   Start at  23:19:26
+   Duration  1.49s (transform 1.94s, setup 0ms, import 2.53s, tests 149ms, environment 0ms)
+
+=== typecheck
+typecheck rc=0

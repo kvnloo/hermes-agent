@@ -1,0 +1,31 @@
+{
+ "fork_pr": 24,
+ "title": "fix(hosted-room): deferred-only round no longer closes discussion as silent_round",
+ "claim": "A hosted-room round whose only outcome is a retryable turn.deferred must not close as settled/silent_round, because closing deleted the policy projection and a later groups.retry then raised DiscussionReconstructionError forever, losing the reply and blocking every thread in the room.",
+ "verdict": "SUPERSEDED-ON-MAIN",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "Applied the fork's 5 new tests (test diff only) to f848940: all 5 fail, but ONLY on design assertions, not on the harm. Discussion-level: `assert 'settled' == 'idle'` (main still settles a deferred-only round). Service-level retry test (fork's harm test, single-mention '@ops please build' + local-lease-loss deferral + groups.retry + settle + 3x prepare_room): no DiscussionReconstructionError; events on main = ['message.user','turn.deferred','room.activity','message.member','turn.settled'] i.e. the recovered reply IS published once; the test only fails its ordering assertion `kinds.index('turn.settled') < kinds.index('room.activity')` (4 < 2). FIFO test fails at `assert not any(room.activity)` (design), not on thread-2 starvation.",
+  "green": "not rebuilt",
+  "negative_control": "n/a",
+  "adjacent": "tests/tui_gateway/test_hosted_room_settled_retry.py (upstream regression from #104919) on f848940: 2 passed (retry on a settled discussion publishes once, survives restart and bounded-transcript ageing, and later groups.send/stop keep working).",
+  "source": "Fork merge-base 63279301bc (2026-09-03) predates upstream #104919 (teknium1, MERGED 2026-09-07, squash 80b3346eee/b43d865f81, Refs #104007): 'Resolve task sources and committed member messages from the durable log, not disposable policy projections. Record late outcome receipts without reactivating settled discussions; retain frozen prompts and retry behavior.' #104007's repro is exactly a deferred+pass (no speaker) round closing as silent_round then groups.retry bricking the room; teknium's closing comment: fixed on main by #104919."
+ },
+ "upstream_overlap": [
+  "#104919 MERGED (teknium1) - fixes the harm (lost reply / reconstruction error / blocked sends) by reading sources from the durable log",
+  "#104007 CLOSED issue (ryangu00) - same scenario",
+  "#104020 OPEN (Halldrix) - earlier proposal for same defect, slim-redone by #104919; still open but effectively superseded"
+ ],
+ "branch": null,
+ "files": [
+  "gateway/hosted_room_discussion.py",
+  "gateway/hosted_room_policy_checkpoint.py",
+  "tui_gateway/hosted_room_service.py",
+  "tests/gateway/test_hosted_room_discussion.py",
+  "tests/gateway/test_hosted_rooms.py",
+  "tests/tui_gateway/test_hosted_room_service.py"
+ ],
+ "size": "fork +349/-6 (excl. kanban); not rebuilt",
+ "depends_on": null,
+ "notes": "Do not promote. The only residual behaviour difference on main is ordering: a deferred-only round posts room.activity silent_round before the late retried reply. Upstream chose that deliberately ('late outcome receipts without reactivating settled discussions'). The fork's Part 1 (idle/awaiting_retry) reverses that design, and Part 2 adds a schema migration (parked column + index rebuild + park_thread API) that exists only to work around starvation caused by Part 1. That is design-gated scope, not a narrow correctness fix. If anyone wants the status wording changed (e.g. silent_round with a pending deferred retry), raise it as a design question on #104007/#104919, not as this patch. Fork was built on pre-#104919 main (Detail scanned stale code)."
+}

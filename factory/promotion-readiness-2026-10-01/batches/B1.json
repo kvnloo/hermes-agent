@@ -1,0 +1,539 @@
+[
+ {
+  "fork_pr": 78,
+  "title": "docs: bump bundled llama.cpp tag in local-models config example",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-bump-bundled-llama-cpp-tag-in-local-models-co-96f222",
+  "head_oid": "c948899aff877528ee7672d759f3e30a6702d9d9",
+  "head_present": true,
+  "files": [
+   "website/docs/user-guide/local-models.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 79,
+  "title": "docs: correct manage_connections tool presence in tool-search guide",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-correct-manage-connections-tool-presence-in-t-1250c3",
+  "head_oid": "cf65d39d15964d4a677a09aa3ebe58ca5f0fe12a",
+  "head_present": true,
+  "files": [
+   "website/docs/user-guide/features/tool-search.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 81,
+  "title": "docs: drop stale -p <profile> flag from cron Bot Chat delivery lane",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-drop-stale-p-profile-flag-from-cron-bot-chat-11c87f",
+  "head_oid": "129a673b49d0447c74294dbc21489a1cb2605c6c",
+  "head_present": true,
+  "files": [
+   "website/docs/developer-guide/cron-internals.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 82,
+  "title": "docs(plugins): cover hardening-comment severity cap in install scan",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-plugins-cover-hardening-comment-severity-cap-2793fe",
+  "head_oid": "4b3c65b1a8dea978640c6fdf0fd8a20e082d3af8",
+  "head_present": true,
+  "files": [
+   "website/docs/user-guide/features/plugins.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 83,
+  "title": "docs: correct silence-token scope; note human-turn fallback reply",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-correct-silence-token-scope-note-human-turn-f-3d585b",
+  "head_oid": "269b90e2635322d1ea1c4fe08048a231e89c0108",
+  "head_present": true,
+  "files": [
+   "website/docs/user-guide/messaging/index.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 84,
+  "title": "docs: drop stale \"session graph ingest\" from Supermemory comparison table",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-drop-stale-session-graph-ingest-from-supermem-021257",
+  "head_oid": "bc1b2e9985a7a95e59c51923ec07f566464262b9",
+  "head_present": true,
+  "files": [
+   "website/docs/user-guide/features/memory-providers.md",
+   "website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/features/memory-providers.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 2,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 85,
+  "title": "docs: rename stale Supermemory session-ingest references to per-turn capture",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-rename-stale-supermemory-session-ingest-refer-577b5f",
+  "head_oid": "6900a3bf1a7dfa7ee37250c419593e54a52c321e",
+  "head_present": true,
+  "files": [
+   "website/docs/reference/environment-variables.md",
+   "website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/reference/environment-variables.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 2,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 86,
+  "title": "docs: correct computer-use docs that still said Hermes autodetection was planned",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-correct-computer-use-docs-that-still-said-her-fe6bc5",
+  "head_oid": "9ddf890e7c04a650eae842d62418c083ebbf60ea",
+  "head_present": true,
+  "files": [
+   "website/docs/user-guide/features/computer-use.md",
+   "website/docs/user-guide/skills/bundled/autonomous-ai-agents/autonomous-ai-agents-computer-use.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 2,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 87,
+  "title": "docs: correct desktop session platform value in memory-provider plugin guide",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-correct-desktop-session-platform-value-in-mem-ca6631",
+  "head_oid": "27cb9e47719f932c7e93bb918bd58991d23fc873",
+  "head_present": true,
+  "files": [
+   "website/docs/developer-guide/memory-provider-plugin.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 88,
+  "title": "docs: correct kanban worker fingerprint source and format",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-correct-kanban-worker-fingerprint-source-and-bc6d5c",
+  "head_oid": "7b59eaef6f622c76bdaeaab6499732e78e9625f6",
+  "head_present": true,
+  "files": [
+   "cron/AGENTS.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 89,
+  "title": "docs(profile): add migrate-identity to profile-commands summary table",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-profile-add-migrate-identity-to-profile-comma-1eab15",
+  "head_oid": "bf12e3d1011f88ad0e8a59d0a4824a38d862b220",
+  "head_present": true,
+  "files": [
+   "website/docs/reference/profile-commands.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 90,
+  "title": "docs(cron): point AGENTS.md at kanban_db_connect.connect helper",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-cron-point-agents-md-at-kanban-db-connect-con-fb29a9",
+  "head_oid": "1232b7d8ef522941445caa377736a2b14f9d62f4",
+  "head_present": true,
+  "files": [
+   "cron/AGENTS.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 91,
+  "title": "docs(desktop): remove stale timeline rail popover and turn-threshold claims",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-desktop-remove-stale-timeline-rail-popover-an-c9801c",
+  "head_oid": "03ba8a834746dc05ba83ac3b88f4575b6dba8789",
+  "head_present": true,
+  "files": [
+   "website/docs/user-guide/desktop.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 95,
+  "title": "docs(computer-use): align zh-Hans screenshot eviction with provider-limit behavior",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-computer-use-align-zh-hans-screenshot-evictio-564bab",
+  "head_oid": "63e859c70b24755e2c0883b9a1f25524e9eb8f0e",
+  "head_present": true,
+  "files": [
+   "website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/features/computer-use.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 96,
+  "title": "docs: add Open in new window / Set as default to at-rest square menu list",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-add-open-in-new-window-set-as-default-to-at-r-d6d293",
+  "head_oid": "d93e6fc8daadc4845b40d099567cbaa407ddbf83",
+  "head_present": true,
+  "files": [
+   "website/docs/user-guide/multi-connection-desktop.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 97,
+  "title": "docs: clarify startup warning checks the receipt's pulled code, not current checkout",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-clarify-startup-warning-checks-the-receipt-s-daede0",
+  "head_oid": "ece10894d409555104bfe3cd49f0e7547f006ae8",
+  "head_present": true,
+  "files": [
+   "website/docs/getting-started/updating.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 98,
+  "title": "docs(bot-mode): align zh-Hans DM signature placeholder with friendly-name form",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-bot-mode-align-zh-hans-dm-signature-placehold-d907c4",
+  "head_oid": "47b0e7d43b701149fc1f19f1eec2a9155aa752ae",
+  "head_present": true,
+  "files": [
+   "website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/bot-mode.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 99,
+  "title": "docs(desktop): drop stale completion-callback rule from card-stack design",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-desktop-drop-stale-completion-callback-rule-f-be834b",
+  "head_oid": "0027dab2798eabb91a16efc45ca45b092291e25a",
+  "head_present": true,
+  "files": [
+   "apps/desktop/DESIGN.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 100,
+  "title": "docs: correct room authority store name in bot-mode transfer section",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-correct-room-authority-store-name-in-bot-mode-03f93e",
+  "head_oid": "229a23a938265c571d8c8d1a90ba15997be94375",
+  "head_present": true,
+  "files": [
+   "website/docs/user-guide/bot-mode.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 101,
+  "title": "docs(desktop): default profile takes precedence over the launch toggle",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-desktop-default-profile-takes-precedence-over-1dfb05",
+  "head_oid": "0a91ce785bcc7b97b58dae5df4ae597fc991daed",
+  "head_present": true,
+  "files": [
+   "website/docs/user-guide/desktop.md",
+   "website/docs/user-guide/multi-connection-desktop.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 2,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 117,
+  "title": "docs(mcp): correct non-secret env destination for catalog installs",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-mcp-correct-non-secret-env-destination-for-ca-344846",
+  "head_oid": "ea0ef1a1460c6ef8529bcbf02e02d038e0b645b1",
+  "head_present": true,
+  "files": [
+   "website/docs/user-guide/features/mcp.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [
+   127377
+  ],
+  "origin_states": {
+   "127377": "CLOSED"
+  },
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Closed upstream counterpart belongs to issue-held docs wave.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [
+   "#313"
+  ],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 118,
+  "title": "docs(mcp): reflect inlining of non-secret Asana Client ID into config.yaml",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-mcp-reflect-inlining-of-non-secret-asana-clie-82561e",
+  "head_oid": "521df97c7c62e05edf383311e41a091eb0b4b46b",
+  "head_present": true,
+  "files": [
+   "website/docs/user-guide/features/mcp.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [
+   127378
+  ],
+  "origin_states": {
+   "127378": "CLOSED"
+  },
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Closed upstream counterpart belongs to issue-held docs wave.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [
+   "#313"
+  ],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 119,
+  "title": "docs: replace rotted toolset key list in tools/AGENTS.md with stub form",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-replace-rotted-toolset-key-list-in-tools-agen-419671",
+  "head_oid": "2308c79638566313feba7bae7ccb3f6713609395",
+  "head_present": true,
+  "files": [
+   "tools/AGENTS.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [
+   127379
+  ],
+  "origin_states": {
+   "127379": "CLOSED"
+  },
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Closed upstream counterpart belongs to issue-held docs wave.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [
+   "#313"
+  ],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 120,
+  "title": "docs: keep multi-gateway Simple-mode profile rail wording aligned",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-keep-multi-gateway-simple-mode-profile-rail-w-b5136f",
+  "head_oid": "4320731a2383079b29ecfad266769ec5111ca0a9",
+  "head_present": true,
+  "files": [
+   "website/docs/user-guide/desktop.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [
+   127380
+  ],
+  "origin_states": {
+   "127380": "CLOSED"
+  },
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Closed upstream counterpart belongs to issue-held docs wave.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [
+   "#313"
+  ],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 122,
+  "title": "docs: installed plugin MCP servers connect in place, not at mcp.reload",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-installed-plugin-mcp-servers-connect-in-place-f6f4d1",
+  "head_oid": "fe7e32af3dff0dfd1465eb4b65074a4fa0d975eb",
+  "head_present": true,
+  "files": [
+   "hermes_cli/plugins_activation.py",
+   "hermes_cli/plugins_loader.py",
+   "plugins/AGENTS.md",
+   "website/docs/developer-guide/plugins/index.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 4,
+  "origin_refs": [
+   127382
+  ],
+  "origin_states": {
+   "127382": "CLOSED"
+  },
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Closed upstream counterpart belongs to issue-held docs wave.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [
+   "#313"
+  ],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ }
+]

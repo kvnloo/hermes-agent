@@ -1,0 +1,28 @@
+{
+ "fork_pr": 27,
+ "title": "fix(agent): strip stray portal query from subscription manage URL",
+ "claim": "subscription_manage_url() must emit only org_id/plan on {portal_origin}/manage-subscription (as its docstring and the TUI/desktop .origin builders do); on main it forwards the server portalUrl's own query params.",
+ "verdict": "READY",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "tests only on main: tests/agent/test_subscription_view.py -> 1 failed, 14 passed; test_manage_url_drops_portal_query_params: AssertionError '- scription?org_id=org_1&plan=plus' vs '+ scription?topup=open&utm_source=email&org_id=org_1&plan=plus'",
+  "green": "with fix: tests/agent/test_subscription_view.py -> 15 passed, 0 failed",
+  "negative_control": "re-inserted `params = dict(parse_qsl(parts.query, keep_blank_values=True))` in place of `params = {}` -> 1 failed, 14 passed with the identical topup/utm diff; restored",
+  "adjacent": "tests/agent/test_subscription_view.py tests/hermes_cli/test_subscription_cli.py tests/hermes_cli/test_billing_portal_url.py tests/agent/test_billing_view.py -> 4 files, 46 passed, 0 failed; ruff check clean",
+  "source": "main agent/subscription_view.py:202-206 seeds params from parse_qsl(parts.query); ui-tui/src/app/slash/commands/subscription.ts buildManageUrl and apps/desktop/src/app/settings/billing/use-billing-state.ts:291 use new URL(portal_url).origin. Portal URL comes from server portalUrl via agent/billing_view.py fetch_portal_state -> _absolutize_portal_url (query preserved). Callers: hermes_cli/cli_billing_mixin.py:293/390/501."
+ },
+ "upstream_overlap": [
+  "#68689 MERGED (alt-glitch, 2026-07-22) introduced the query passthrough deliberately, citing 'matching the desktop URL builder' \u2014 but desktop already used new URL(portalUrl).origin at 9baad4e0aa, so the premise was wrong. Its pinning test test_manage_url_preserves_unrelated_query_params was later pruned in 6b81590c55 (suite-wide test prune), not reversed by design.",
+  "No open/closed PR or issue on subscription_manage_url / manage-subscription query found (gh search prs/issues, several variants)."
+ ],
+ "branch": "ready/fork-27-subscription-manage-url-query",
+ "commit": "5b0e3b0fad270186585bd0846d56896575274b9a",
+ "files": [
+  "agent/subscription_view.py",
+  "tests/agent/test_subscription_view.py"
+ ],
+ "size": "+16/-5",
+ "depends_on": null,
+ "notes": "Dropped kanban baggage and the fork's desktop vitest case (desktop builder already strips via .origin, so that test would pass on main \u2014 a pin of unchanged code, not a regression test). Trimmed the fork's 4-case parametrize + ordering + no-org tests to one contract test (no-org case already covered by test_manage_url_omits_org_when_absent). Impact is latent: needs the subscription endpoint to return a query-bearing portalUrl (not verified against the live server). PR body flags that this reverses #68689's intentional passthrough so the billing owner (alt-glitch) can decide. NOT_TESTED: live portal, desktop/TUI (unchanged).",
+ "lead_review": "Lead spot-check: RED reproduced (manage URL carried topup/utm/stale org_id), GREEN with fix. Verified desktop buildManageSubscriptionUrl (use-billing-state.ts:289-305) and TUI buildManageUrl use new URL(portal_url).origin at both 9baad4e0aa (#68689) and MAIN, so #68689's 'matching the desktop URL builder' premise was false. READY but LOW PRIORITY: latent (only bites if the API returns a query-bearing portalUrl) and reverses a deliberate, mis-premised maintainer choice \u2014 billing owner's call."
+}

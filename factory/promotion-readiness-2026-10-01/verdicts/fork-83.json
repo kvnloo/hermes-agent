@@ -1,0 +1,23 @@
+{
+  "fork_pr": 83,
+  "title": "docs: correct silence-token scope; note human-turn fallback reply",
+  "claim": "Silence-token docs should note the human-turn fallback reply and narrow the scope away from group chats.",
+  "verdict": "SUPERSEDED-ON-MAIN",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "red": "N/A",
+    "green": "N/A",
+    "negative_control": "N/A",
+    "adjacent": "N/A",
+    "source": "Main's messaging/index.md:157 already documents it: 'On a message from a person, a bare silence token is replaced by a short notice ... a message the platform adapter reports as not addressed to the bot [may stay silent]. Slack reports this for messages that open by @mentioning someone else and for unmentioned top-level messages ... in a free-response channel'. Added by 6c566fcd6d (fix(slack): thread follow-ups and reaction triggers keep the silence-marker fallback). Because Slack free-response group messages can still be silenced, the fork's removal of 'group chats' from the scope sentence would now be wrong."
+  },
+  "upstream_overlap": [],
+  "branch": null,
+  "files": [
+    "website/docs/user-guide/messaging/index.md"
+  ],
+  "size": null,
+  "depends_on": null,
+  "fork_head": "269b90e2635322d1ea1c4fe08048a231e89c0108",
+  "notes": "Residual nit only: the transcript example 'user: side-channel chatter' is valid for the Slack not-addressed case; not worth a change."
+}

@@ -1,0 +1,34 @@
+{
+  "fork_pr": 101,
+  "title": "docs(desktop): default profile takes precedence over the launch toggle",
+  "claim": "The launch-preference docs omit that a default profile takes precedence; desktop.md also names a non-existent 'Open on launch' control.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "red": "desktop.md:470 on main: \"**Open on launch** keeps the backward-compatible **Primary gateway** default, or can resume the **Last used** gateway\"; multi-connection-desktop.md:61-65 and :239-240 describe the last-used toggle with no default-profile caveat.",
+    "green": "desktop.md names the real toggle 'At startup, return to Sessions on the last-used gateway' and says a profile marked Set as default takes precedence; multi-connection-desktop.md bullets add the same precedence; grep 'Open on launch' returns nothing.",
+    "negative_control": "N/A for docs (no executable behaviour). Equivalent check: the stale phrase is present on main and absent on the bundle (grep given in red/green).",
+    "adjacent": "python3 website/scripts/check_doc_links.py on the bundle tree: OK (no route-style links). All 7 B1 bundles cherry-pick together onto main cleanly, and each pairs cleanly with B2's current docs2-update/docs2-desktop/docs2-gateway/docs2-memory bundles.",
+    "source": "apps/desktop/src/store/connections.ts:255-279 follows $defaultProfileRoute before reading registry.launchMode; apps/desktop/electron/main.ts:15279-15284,15609 connects the default route at startup; i18n en.ts:1529-1530 launchModeTitle is the only launch control (connections-registry.tsx:917-920); no 'Open on launch' string exists."
+  },
+  "upstream_overlap": [
+    "No open external PR/issue for this claim (gh search prs/issues; open docs PRs touching the same files edit other sections)"
+  ],
+  "branch": "ready/docs-desktop",
+  "bundle": {
+    "branch": "ready/docs-desktop",
+    "commit": "2ee1217746",
+    "subject": "docs(desktop): sync timeline rail, Simple-mode rail, square menu and launch precedence",
+    "bundle_size": "+13/-9",
+    "patch": "patches/docs-desktop.patch",
+    "body": "patches/docs-desktop.body.md"
+  },
+  "files": [
+    "website/docs/user-guide/desktop.md",
+    "website/docs/user-guide/multi-connection-desktop.md"
+  ],
+  "size": "~+8/-6",
+  "depends_on": null,
+  "fork_head": "0a91ce785bcc7b97b58dae5df4ae597fc991daed",
+  "notes": "Also corrected the stale 'Open on launch' label in the same sentence (the fork kept it). B2's docs2-desktop edits other lines of both files; no textual conflict."
+}

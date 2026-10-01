@@ -1,0 +1,37 @@
+▶ not activated — using HERMES_PYTHON: /workspace/hermes-home/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 11 test files (~86 tests) under ['tests/tools/test_terminal_scope_home_mode.py', 'tests/hermes_cli/test_kanban_worker_terminal_profile_env.py', 'tests/tools/test_terminal_config_env_sync.py', 'tests/tools/test_terminal_scope_multiplex.py', 'tests/agent/test_copilot_acp_client.py', 'tests/agent/test_file_safety_write_credentials.py', 'tests/agent/test_skill_utils.py', 'tests/tools/test_file_tools_tilde_profile.py', 'tests/tools/test_spawn_site_child_env.py', 'tests/tools/test_ssh_remote_cwd.py', 'tests/tools/test_subprocess_home_isolation.py']; running with -j 20
+[ 22.1% |    19/~86 | ✓19 | ✗ 0] ✓ tests/agent/test_skill_utils.py (19✓, 2.0s)
+[ 26.7% |    23/~86 | ✓23 | ✗ 0] ✓ tests/agent/test_file_safety_write_credentials.py (4✓, 2.0s)
+[ 31.4% |    27/~86 | ✓27 | ✗ 0] ✓ tests/tools/test_file_tools_tilde_profile.py (4✓, 2.8s)
+[ 33.7% |    29/~86 | ✓34 | ✗ 0] ✓ tests/tools/test_ssh_remote_cwd.py (7✓, 3.0s)
+[ 36.0% |    31/~86 | ✓38 | ✗ 0] ✓ tests/tools/test_terminal_scope_home_mode.py (4✓, 3.2s)
+[ 38.4% |    33/~86 | ✓40 | ✗ 0] ✓ tests/tools/test_terminal_config_env_sync.py (2✓, 3.4s)
+[ 62.8% |    54/~86 | ✓61 | ✗ 0] ✓ tests/agent/test_copilot_acp_client.py (21✓, 3.4s)
+[ 80.2% |    69/~86 | ✓76 | ✗ 0] ✓ tests/tools/test_subprocess_home_isolation.py (15✓, 3.5s)
+[ 84.9% |    73/~86 | ✓84 | ✗ 0] ✓ tests/tools/test_spawn_site_child_env.py (8✓, 3.6s)
+[ 87.2% |    75/~86 | ✓87 | ✗ 0] ✓ tests/hermes_cli/test_kanban_worker_terminal_profile_env.py (3✓, 3.8s)
+[100.0% |    86/~86 | ✓99 | ✗ 0] ✓ tests/tools/test_terminal_scope_multiplex.py (12✓, 4.2s)
+
+=== Summary: 11 files, 99 tests passed, 0 failed (100% complete) in 4.2s (20 workers) ===
+  Durations cached to test_durations.json (11 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   11
+  Total subprocess CPU-wall: 34.7s  (runner wall: 4.2s, parallelism: 20x)
+  P50: 3.37s  P90: 3.77s  P95: 4.17s  P99: 4.17s  Max: 4.17s
+  <1s: 0 files (0%)  <2s: 2 files (18%)
+  Top 10 slowest:
+      4.17s  tests/tools/test_terminal_scope_multiplex.py
+      3.77s  tests/hermes_cli/test_kanban_worker_terminal_profile_env.py
+      3.57s  tests/tools/test_spawn_site_child_env.py
+      3.51s  tests/tools/test_subprocess_home_isolation.py
+      3.40s  tests/agent/test_copilot_acp_client.py
+      3.37s  tests/tools/test_terminal_config_env_sync.py
+      3.17s  tests/tools/test_terminal_scope_home_mode.py
+      2.97s  tests/tools/test_ssh_remote_cwd.py
+      2.83s  tests/tools/test_file_tools_tilde_profile.py
+      1.99s  tests/agent/test_file_safety_write_credentials.py

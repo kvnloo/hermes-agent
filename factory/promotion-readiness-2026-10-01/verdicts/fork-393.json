@@ -1,0 +1,32 @@
+{
+  "fork_pr": 393,
+  "title": "docs(memory): drop stale hindsight-all lazy-install claim",
+  "claim": "With the current Hindsight catalog pin, local embedded mode does not lazy-install hindsight-all; its in-process packages are the plugin's declared dependencies.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "doc_text_on_main": "website/docs/user-guide/features/memory-providers.md:468 — \"In local embedded mode the plugin installs `hindsight-all` on first use through Hermes' lazy-install path, which honours `security.allow_lazy_installs`.\"; zh-Hans memory-providers.md:350 — \"本地用 `hindsight-all` ... 需要 `hindsight-client >= 0.4.22`（会话启动时若版本过旧则自动升级）\"",
+    "source": "plugin-catalog/hindsight.yaml:3 sha eb021da3 (bumped by 5e4857bf2e: 'drops the retired tools.lazy_deps call and the hindsight-all dependency ... local_embedded runs on PM-managed Hermes', known_issues removed). Plugin at that SHA (read-only gh api): pyproject dependencies hindsight-client>=0.10.1,<1 and hindsight-embed>=0.10.1,<1; embedded.py _check_local_runtime() imports only hindsight_client + hindsight_embed.daemon_embed_manager and documents that the server runs out of process. tools/lazy_deps.py on main is an old-updater stub.",
+    "red": "Doc names a dependency and install path the pinned plugin no longer has.",
+    "green": "Sentence replaced with the pinned plugin's behaviour; zh-Hans install text brought in line. The released v1.2.1 pin proposed upstream (#129093, d56c4ac) declares the same two dependencies in pyproject, so the text survives that bump.",
+    "negative_control": "N/A — docs-only.",
+    "adjacent": "external plugin read at the pinned SHA (gh api, read-only); no in-repo test covers the third-party plugin's install path. docs-site-checks equivalent on the bundle branch: website/scripts/extract-skills.py + generate-skill-docs.py leave website/docs, website/sidebars.ts and website/i18n unchanged (clean); website/scripts/check_doc_links.py OK. added lines scanned for MDX hazards ({ } or raw <tag> outside inline code / fences): none. NOT_TESTED: Docusaurus build (website/node_modules not installed in this environment).",
+    "mirrors": "zh-Hans memory-providers.md fixed in the same commit (its whole Hindsight install paragraph was bundled-era).",
+    "rebase": "verified on main f848940560; bundle merges cleanly onto refreshed main eb8d21f482 (git merge-tree); merges cleanly with every B1 ready/docs-* branch that touches the same files"
+  },
+  "upstream_overlap": [
+    "NousResearch/hermes-agent#129093 OPEN (nicoloboschi/Vectorize, pin v1.2.1) — catalog-only; compatible with this text",
+    "fork #286 / NousResearch/hermes-agent#127354 CLOSED: its 'embedded mode unsupported on PM-managed Hermes' replacement is obsolete since 5e4857bf2e removed known_issues — do not revive"
+  ],
+  "branch": "ready/docs2-memory",
+  "bundle_commit": "c9010e911f6f6ac8dc871195df8793ba4bcc6d4f",
+  "patch": "patches/docs2-memory.patch",
+  "pr_body": "patches/docs2-memory.body.md",
+  "files": [
+    "website/docs/user-guide/features/memory-providers.md",
+    "website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/features/memory-providers.md"
+  ],
+  "size": "fork leaf +1/-1; bundle docs2-memory +5/-4 (2 files changed, 5 insertions(+), 4 deletions(-))",
+  "depends_on": null,
+  "notes": "Hindsight cluster (#286 vs #393): #393 is right against the actual pin. B1's ready/docs-memory edits other rows of the same files; merge-tree clean. Drift introduced by 5e4857bf2e (#128442). Packaging: one commit per area bundle (batch B2 lane W4-docs); publish one bundle at a time per kvnloo/hermes-agent#313."
+}

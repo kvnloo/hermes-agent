@@ -1,0 +1,14 @@
+label=fork25-rebuilt main=298a01c79b38018e029e50f77efe67c4a4fdbd40
+APPLY /mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/export-pinned/fork25-rebuilt-onto-main.diff: ok
+▶ not activated — using HERMES_PYTHON: /workspace/hermes-home/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~3 tests) under ['tests/hermes_cli/test_sessions_export_filtered_pinned.py']; running with -j 2
+[100.0% |     3/~3 | ✓5 | ✗0] ✓ tests/hermes_cli/test_sessions_export_filtered_pinned.py (5✓, 7.1s)
+
+=== Summary: 1 files, 5 tests passed, 0 failed (100% complete) in 7.1s (2 workers) ===
+  Durations cached to test_durations.json (1 files)
+
+=== Per-file subprocess time distribution ===

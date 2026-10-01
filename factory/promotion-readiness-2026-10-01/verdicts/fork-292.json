@@ -1,0 +1,34 @@
+{
+  "fork_pr": 292,
+  "title": "docs(desktop): correct markdown line-break behavior to match soft-breaks plugin",
+  "claim": "The Desktop transcript renders single newlines in prose as line breaks (remarkSoftBreaks), not CommonMark soft breaks.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "doc_text_on_main": "website/docs/user-guide/desktop.md:46 — \"**Markdown line breaks** follow Markdown semantics: two trailing spaces create a hard line break; an ordinary newline stays a soft break.\"",
+    "source": "apps/desktop/src/lib/remark-soft-breaks.ts:7-35 (text nodes split on newlines into break nodes; code/inline code/math untouched); applied in markdown-text.tsx:104 REMARK_PLUGINS. Commit 9b17e80970 postdates the doc line (blame 55ad5afa12, an ancestor).",
+    "red": "Doc describes behaviour the renderer overrides.",
+    "green": "Bullet rewritten to the soft-breaks behaviour. vitest src/lib/remark-soft-breaks.test.ts passes on main.",
+    "negative_control": "N/A — docs-only.",
+    "adjacent": "apps/desktop vitest: electron/update-order.test.ts electron/wslg-launch.test.ts electron/linux-nvidia-egl-fallback.test.ts electron/desktop-plugins-root.test.ts src/lib/remark-soft-breaks.test.ts src/app/session/hooks/use-hermes-config.test.ts -> 6 files, 57 passed. docs-site-checks equivalent on the bundle branch: website/scripts/extract-skills.py + generate-skill-docs.py leave website/docs, website/sidebars.ts and website/i18n unchanged (clean); website/scripts/check_doc_links.py OK. added lines scanned for MDX hazards ({ } or raw <tag> outside inline code / fences): none. NOT_TESTED: Docusaurus build (website/node_modules not installed in this environment).",
+    "mirrors": "No zh-Hans desktop.md.",
+    "rebase": "verified on main f848940560; bundle merges cleanly onto refreshed main eb8d21f482 (git merge-tree); merges cleanly with every B1 ready/docs-* branch that touches the same files"
+  },
+  "upstream_overlap": [
+    "NousResearch/hermes-agent#127360 CLOSED (kvnloo, own parked carrier)"
+  ],
+  "branch": "ready/docs2-desktop",
+  "bundle_commit": "58f1374abe9b808711ba307c5b02d79a698398ba",
+  "patch": "patches/docs2-desktop.patch",
+  "pr_body": "patches/docs2-desktop.body.md",
+  "files": [
+    "website/docs/developer-guide/desktop-plugin-sdk.md",
+    "website/docs/reference/environment-variables.md",
+    "website/docs/user-guide/desktop.md",
+    "website/docs/user-guide/features/bot-screen.md",
+    "website/docs/user-guide/multi-connection-desktop.md"
+  ],
+  "size": "fork leaf +1/-1; bundle docs2-desktop +15/-8 (5 files changed, 15 insertions(+), 8 deletions(-))",
+  "depends_on": "kvnloo/hermes-agent#313 review-slot policy (publication capacity only)",
+  "notes": "Drift introduced by 9b17e80970 (#124345). Bundled with: #124, #291, #305, #392, #395, #398. Packaging: one commit per area bundle (batch B2 lane W4-docs); publish one bundle at a time per kvnloo/hermes-agent#313."
+}

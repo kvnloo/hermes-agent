@@ -1,0 +1,33 @@
+{
+  "fork_pr": 90,
+  "title": "docs(cron): point AGENTS.md at kanban_db_connect.connect helper",
+  "claim": "cron/AGENTS.md calls the kanban connection helper `kanban_db.connect`; it is kanban_db_connect.connect and kanban_db does not re-export it.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "red": "cron/AGENTS.md:114-115 on main: \"`kanban_db.connect` is its own connection helper — do not alias it to `projects_db.connect`\". Runtime on main: hasattr(hermes_cli.kanban_db, 'connect') -> False.",
+    "green": "'`kanban_db_connect.connect` is its own connection helper'.",
+    "negative_control": "N/A for docs (no executable behaviour). Equivalent check: the stale phrase is present on main and absent on the bundle (grep given in red/green).",
+    "adjacent": "python3 website/scripts/check_doc_links.py on the bundle tree: OK (no route-style links). All 7 B1 bundles cherry-pick together onto main cleanly, and each pairs cleanly with B2's current docs2-update/docs2-desktop/docs2-gateway/docs2-memory bundles.",
+    "source": "hermes_cli/kanban_db_connect.py:668 def connect; hermes_cli/kanban_db.py:4490-4493 tail import only re-exports _INITIALIZED_PATHS, init_db, write_txn; hermes_cli/projects_db.py:114 connect exists (the contrast still stands)."
+  },
+  "upstream_overlap": [
+    "No open external PR/issue for this claim (gh search prs/issues; open docs PRs touching the same files edit other sections)"
+  ],
+  "branch": "ready/docs-agents",
+  "bundle": {
+    "branch": "ready/docs-agents",
+    "commit": "9a8daaa95f",
+    "subject": "docs(agents): fix stale kanban and toolset pointers in area AGENTS.md files",
+    "bundle_size": "+12/-11",
+    "patch": "patches/docs-agents.patch",
+    "body": "patches/docs-agents.body.md"
+  },
+  "files": [
+    "cron/AGENTS.md"
+  ],
+  "size": "+2/-2",
+  "depends_on": null,
+  "fork_head": "1232b7d8ef522941445caa377736a2b14f9d62f4",
+  "notes": ""
+}

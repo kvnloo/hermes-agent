@@ -1,0 +1,18 @@
+diff --git i/hermes_cli/plugin_dev.py w/hermes_cli/plugin_dev.py
+index 1a04bd7adf..9193d96ccf 100644
+--- i/hermes_cli/plugin_dev.py
++++ w/hermes_cli/plugin_dev.py
+@@ -140,6 +140,13 @@ def _doctor_runtime(plugin_path: Path):
+             )
+ 
+             registry._generation += 1
++        # Release the bare ``hermes_plugins.<slug>`` claims made under the temp
++        # home, or a later doctor/real load of a same-named plugin is mangled.
++        from hermes_cli.plugins import _BARE_MODULE_SCOPE, _MODULE_NAMESPACE_LOCK
++        with _MODULE_NAMESPACE_LOCK:
++            for bare, owner in list(_BARE_MODULE_SCOPE.items()):
++                if owner == manager.scope_key:
++                    del _BARE_MODULE_SCOPE[bare]
+         for name in list(sys.modules):
+             if name not in modules_before and _is_plugin_module(name):
+                 sys.modules.pop(name, None)

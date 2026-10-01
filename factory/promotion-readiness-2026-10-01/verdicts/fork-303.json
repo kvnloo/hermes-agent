@@ -1,0 +1,29 @@
+{
+ "fork_pr": 303,
+ "title": "feat(tui): defer long-run charm 1s clock until DELAY_MS",
+ "claim": "useLongRunToolCharms should arm zero 1 s timers before any tool is DELAY_MS (8 s) old and exactly one after, without changing when charms fire.",
+ "verdict": "HOLD",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "source": "main ui-tui/src/app/useLongRunToolCharms.ts:23-67: effect on [tools] calls tick() and setInterval(tick, 1000) whenever busy && tools.length; tick skips tools younger than DELAY_MS=8000. Hook holds no React state: ticks never render. Unchanged since fork merge-base.",
+  "measured": "Real hook under vi fake timers (1 s callbacks counted via setInterval wrapper, charms via turnController.pushActivity spy): 20 s tool - main 7 no-op 1 s callbacks before eligibility (+1 immediate tick), rebuild 0; charms [8000, 18000] ms on both. 5 s tool - main 5 callbacks, rebuild 0, charms 0 on both. Renders/commits/frames saved: 0 (the ticks are no-op loops; no setState). During busy turns the status rule already repaints at >=1 Hz (FaceTicker 1 s clock + glyph timer), so the saving is one no-op timer callback per second (a loop over live tools; per-call CPU not separately measured) with no render, frame or user-visible effect.",
+  "red": "longRunCharmClock.test.tsx test 1 on main: 'AssertionError: expected [ 1000, 2000, 3000, 4000, 5000, …(2) ] to deeply equal []'.",
+  "fork_head_reproof": "Exact fork-head hook (689436079a) on main: test 2 FAILS 'expected [] to have a length of 2 but got +0'. Fork re-checks longRunCharmArmPlan at timeout fire and returns without arming when still 'deferred'; a wake 1 ms before Date.now() reaches startedAt+DELAY_MS therefore drops every charm for that tools array. Real Node 26.7 probe: 4/20 setTimeout(50) callbacks observed Date.now() delta 49 ms (early by 1 ms) -> fork head is NEEDS-REWORK on its own terms.",
+  "green": "Rebuild (one setTimeout to the first eligibility, then the unchanged tick + 1 s interval; tick re-checks ages so an early wake just costs one tick): 2/2 pass, 3x shuffled green.",
+  "negative_control": "NC1 no deferral (start immediately) -> test 1 fails (7 pre-eligibility ticks); NC2 fork-style re-check-and-bail in start() -> test 2 fails (0 charms).",
+  "adjacent": "moaProgressActivity, thinkingLiveCollapse, appChromeBlockedTimers + new file: 4 files/37 tests pass; turnControllerNotice, turnControllerTodos, turnStore: 3 files/9 tests pass. typecheck clean; eslint + prettier clean. NOT_TESTED: live TUI."
+ },
+ "upstream_overlap": [
+  "No file overlap with #129524/#129525/#129526/#129556; merge-tree clean against each and against the fork-302 rebuild",
+  "#22339 CLOSED (wesleysimplicio, charms content tests) - unrelated",
+  "Origin issues #111986/#99773 are kvnloo's own; no external owner"
+ ],
+ "branch": "ready/fork-303-charm-clock-defer",
+ "files": [
+  "ui-tui/src/app/useLongRunToolCharms.ts",
+  "ui-tui/src/__tests__/longRunCharmClock.test.tsx"
+ ],
+ "size": "+110/-3 (production +24/-3)",
+ "depends_on": null,
+ "notes": "HOLD = do not spend a review slot: the invariant is real and reproducible, but there is no user cost to name (0 renders/frames either way; only no-op timer wakeups while the busy UI is already repainting). Fork head itself is NEEDS-REWORK (lost-charm race above) - do not promote 689436079a. A corrected minimal rebuild (commit 35681443b4, author Kevin Rajan noreply, parent = pinned main) with a whole-interval regression through the real hook is parked on the branch in case maintainers ask for it; no patch/body written because not READY. Dropped the fork's exported plan type/pure helpers/constant renames (+98 lines) in favour of a +24/-3 inline change."
+}

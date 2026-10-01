@@ -1,0 +1,23 @@
+{
+  "fork_pr": 78,
+  "title": "docs: bump bundled llama.cpp tag in local-models config example",
+  "claim": "local-models.md config example pins an old llama.cpp tag (b10362).",
+  "verdict": "SUPERSEDED-ON-MAIN",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "red": "N/A",
+    "green": "N/A",
+    "negative_control": "N/A",
+    "adjacent": "N/A",
+    "source": "Main's local-models.md local_runtime example (:141-148) has no `tag:` key at all; the tag now comes from the PM lockfile (hermes_cli/local_runtime/binaries.py:47-51 pinned_tag reads pm.Lockfile ... version). Removed by bdb52ce711 'fix(local-models): use pm pins and resumable component downloads' (landed on main via 27df3b8847, 2026-09-24). `git grep 'tag: b1' website/` returns nothing."
+  },
+  "upstream_overlap": [],
+  "branch": null,
+  "files": [
+    "website/docs/user-guide/local-models.md"
+  ],
+  "size": null,
+  "depends_on": null,
+  "fork_head": "c948899aff877528ee7672d759f3e30a6702d9d9",
+  "notes": "No zh-Hans local-models.md. Nothing to promote."
+}

@@ -1,0 +1,17 @@
+main = 298a01c79b38018e029e50f77efe67c4a4fdbd40 (refs/w2/main)
+cmd: browser-4403_ab.sh <label> [ref]  ->  PATH=<tripwire>:/usr/bin:/bin HOME=$S/testhome-W2-browser-4403 HERMES_HOME=$HOME/.hermes HERMES_PYTHON=$PY setsid -w bash scripts/run_tests.sh tests/gateway/test_browser_controller_session_profile.py -q -j 2 -rf -p no:randomly
+test file: test_browser_controller_session_profile.py (production-shaped session.create -> browser.controller.register; built from #119346's round-trip test + kvnloo fork #51's artifact-store slot test)
+  A[launch-default] = default -> ops -> default, each registration succeeds with profile_id == canonical name
+  A[launch-named]   = gateway launched under 'work': no profile -> 'work', 'default' (home = Hermes root) -> 'default', 'ops' -> 'ops'
+  B                 = the attached cloud scope selects the local-API artifact-store slot keyed by that profile name
+
+main:                         FAIL 3/3  (4403 'controller_id, browser_profile_id, and server session profile are required' on every create->register)
+#119346 (d6c5a4a67e) merged:  merges clean, PASS 3/3
+kvnloo fork #51 (a2b896ff5c cherry-picked clean, reference): FAIL 2/3 (A[launch-named]: 'default' == 'work'; B: wrong store slot). Probe: launch 'work' + no profile -> 'default'; profile_home = Hermes root -> root basename ('hermes_test' here, '.hermes' on a real install)
+probe-matrix.log: 5 launch/request cases; main 5x 4403; #119346 all canonical; fork #51 wrong in 2 of 5
+negative control (#119346 line reverted to session.get('profile')): FAIL 3/3 (4403); fallback dropped (profile_name_for_home(...) or ""): FAIL 3/3 (4403 for launch-profile sessions, whose profile_home is None)
+#119346's own test on main: FAIL 1 (test_cloud_controller_registration_uses_created_session_profile), 15 others pass
+fixture masking (fixture-masking.log): main 15/15 with the six hand-rolled cloud fixtures carrying 'profile': 'default' (a key no production builder stamps); drop that key (production launch-profile shape) -> main FAILS 3 (round_trip, reconnect, explicit_detach; the other 3 fixtures test rejections); #119346 passes 16/16 with or without the key (with it, the key is dead and would hide a regression back to session['profile'])
+adjacent (5 browser_control files): main 84 passed / 0 failed; #119346 + fold-ins (fixture correction + regression test) 88 passed / 0 failed
+fork #51's own 4 repro tests (test_browser_control_profile_repro_real.py) on #119346: 4/4 pass
+tripwire hits: none

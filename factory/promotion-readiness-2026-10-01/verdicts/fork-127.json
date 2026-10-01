@@ -1,0 +1,30 @@
+{
+  "fork_pr": 127,
+  "title": "docs(cli): drop stale partner list from portal tools row",
+  "claim": "`hermes portal tools` no longer reports Firecrawl as the web partner; the reference row must not enumerate a stale partner list.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "doc_text_on_main": "website/docs/reference/cli-commands.md:437 — \"List every Tool Gateway partner (Firecrawl, FAL, OpenAI TTS, Browser Use, Modal) and which are routed via Nous.\"; zh-Hans cli-commands.md:299 same list.",
+    "source": "hermes_cli/portal_cli.py:14-20 _CATALOG: (\"web\", \"Web search & extract\", \"Nous-managed\"), FAL, OpenAI TTS, Browser Use, Modal.",
+    "red": "Probe on main: _CATALOG partners = Nous-managed, FAL, OpenAI TTS, Browser Use, Modal (no Firecrawl).",
+    "green": "Partner enumeration removed in en + zh-Hans (row now: 'List every Tool Gateway partner and which are routed via Nous.').",
+    "negative_control": "N/A — docs-only.",
+    "adjacent": "tests/hermes_cli/test_logs.py tests/hermes_cli/test_anon_surfaces.py -> 22 passed. docs-site-checks equivalent on the bundle branch: website/scripts/extract-skills.py + generate-skill-docs.py leave website/docs, website/sidebars.ts and website/i18n unchanged (clean); website/scripts/check_doc_links.py OK. added lines scanned for MDX hazards ({ } or raw <tag> outside inline code / fences): none. NOT_TESTED: Docusaurus build (website/node_modules not installed in this environment).",
+    "mirrors": "zh-Hans cli-commands.md:299 fixed in the same commit.",
+    "rebase": "verified on main f848940560; bundle merges cleanly onto refreshed main eb8d21f482 (git merge-tree); merges cleanly with every B1 ready/docs-* branch that touches the same files"
+  },
+  "upstream_overlap": [],
+  "branch": "ready/docs2-cli",
+  "bundle_commit": "b68897f77bc513e3614adb12522f3a0612952f7a",
+  "patch": "patches/docs2-cli.patch",
+  "pr_body": "patches/docs2-cli.body.md",
+  "files": [
+    "website/docs/reference/cli-commands.md",
+    "website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/reference/cli-commands.md",
+    "website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/configuration.md"
+  ],
+  "size": "fork leaf +2/-2; bundle docs2-cli +7/-9 (3 files changed, 7 insertions(+), 9 deletions(-))",
+  "depends_on": null,
+  "notes": "Drift introduced by 749220ef00 (#120320). Bundled with: #295, #306. Packaging: one commit per area bundle (batch B2 lane W4-docs); publish one bundle at a time per kvnloo/hermes-agent#313."
+}

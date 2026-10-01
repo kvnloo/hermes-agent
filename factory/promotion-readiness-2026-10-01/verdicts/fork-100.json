@@ -1,0 +1,34 @@
+{
+  "fork_pr": 100,
+  "title": "docs: correct room authority store name in bot-mode transfer section",
+  "claim": "bot-mode.md names the diverging per-gateway room stores `state.db`; hosted-room state lives in shared-state.db.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "red": "website/docs/user-guide/bot-mode.md:356-357 \"both independent `state.db` stores\"; zh-Hans :213 \"两个独立的 `state.db` 存储\".",
+    "green": "Both now say `shared-state.db`.",
+    "negative_control": "N/A for docs (no executable behaviour). Equivalent check: the stale phrase is present on main and absent on the bundle (grep given in red/green).",
+    "adjacent": "python3 website/scripts/check_doc_links.py on the bundle tree: OK (no route-style links). All 7 B1 bundles cherry-pick together onto main cleanly, and each pairs cleanly with B2's current docs2-update/docs2-desktop/docs2-gateway/docs2-memory bundles.",
+    "source": "gateway/hosted_rooms.py:398-413 default_db_path() -> root shared-state.db (docstring: kept separate from the master state.db); tui_gateway/methods_groups.py:506-519 groups.promote/demote act on it (gateway/hosted_room_replicas.py promote_replica/demote_room)."
+  },
+  "upstream_overlap": [
+    "No open external PR/issue for this claim (gh search prs/issues; open docs PRs touching the same files edit other sections)"
+  ],
+  "branch": "ready/docs-bot-mode",
+  "bundle": {
+    "branch": "ready/docs-bot-mode",
+    "commit": "36cf0f54d6",
+    "subject": "docs(bot-mode): correct Bot Chat delivery argv, DM stamp and room store name",
+    "bundle_size": "+4/-4",
+    "patch": "patches/docs-bot-mode.patch",
+    "body": "patches/docs-bot-mode.body.md"
+  },
+  "files": [
+    "website/docs/user-guide/bot-mode.md",
+    "website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/bot-mode.md"
+  ],
+  "size": "+2/-2",
+  "depends_on": null,
+  "fork_head": "229a23a938265c571d8c8d1a90ba15997be94375",
+  "notes": "Fork fixed EN only; rebuilt also fixes the zh-Hans copy."
+}

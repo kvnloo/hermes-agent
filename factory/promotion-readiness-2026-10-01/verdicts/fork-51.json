@@ -1,0 +1,34 @@
+{
+ "fork_pr": 51,
+ "title": "fix(browser): derive controller profile_id from profile_home name",
+ "claim": "browser.controller.register on /api/ws reads session.get('profile'), a key no production session builder (_init_session, _deferred_session_record, session.create) stamps, so every real cloud controller registration is rejected with 4403.",
+ "verdict": "EXTERNAL-OWNED",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "Defect confirmed on pinned main: tui_gateway/methods_browser_control.py:160 still `profile_id = str(session.get(\"profile\") or \"\").strip()`; builders stamp only profile_home (server.py:2724, :2817). Ran external #119346's test (session.create -> browser.controller.register) on unfixed main: FAILED KeyError 'result'; registration = {'error': {'code': 4403, 'message': 'controller_id, browser_profile_id, and server session profile are required'}}.",
+  "green": "External #119346 applied cleanly to pinned main (git apply --check OK): tests/gateway/test_browser_control_cloud.py + test_browser_control_broker.py 21 passed.",
+  "negative_control": "Implicit: the same test fails with 4403 on main without the one-line fix (RED above). Fork's own fix not rebuilt because an external owner exists.",
+  "adjacent": "With #119346 applied: tests/gateway/test_browser_control_{api,artifacts,broker_hardening}.py 64 passed; tests/tools/test_browser_extension_router{,_wiring}.py 20 passed.",
+  "source": "Intended profile_id semantic is a profile NAME: api_server.py:2636 uses profile_id=_api_request_profile.get() or 'default'; server.py:_set_session_context derives profile = profile_name_for_home(sess.get('profile_home')) or _current_profile_name(). #119346 uses exactly that canonical helper. The fork's `Path(home).name if home else 'default'` is WRONG in two cases: (a) launch profile is a named profile (profile_home None -> 'default' instead of the launch name); (b) explicit 'default' requested from a named-launch backend gives profile_home=~/.hermes -> '.hermes'. Do not offer the fork's production line."
+ },
+ "upstream_overlap": [
+  {
+   "pr": 119346,
+   "author": "musabatas",
+   "state": "OPEN",
+   "created": "2026-09-22",
+   "head": "d6c5a4a67ead0b3f5714177e2376f45e899d15cd",
+   "title": "fix(browser): resolve controller session profiles",
+   "relation": "same defect, same one-line site, canonical profile_name_for_home(...) or _current_profile_name(); applies cleanly to f848940560 and passes focused + adjacent tests"
+  }
+ ],
+ "branch": null,
+ "files": [
+  "tui_gateway/methods_browser_control.py",
+  "tests/gateway/test_browser_control_cloud.py",
+  "tests/gateway/test_browser_control_profile_repro_real.py"
+ ],
+ "size": "+276/-7 (clean fork diff, kanban excluded; not rebuilt)",
+ "depends_on": [],
+ "notes": "Support value vs #119346: (1) the fork migrates the six hand-rolled cloud fixtures from 'profile': 'default' to 'profile_home' (the masking fixture shape the bug hid behind) \u2014 worth suggesting as a review note; (2) the artifact-store slot test (cloud scope profile_id must equal the local-API name key so broker._artifact_store_for_scope resolves) is a real cross-producer invariant #119346 does not test. The new 244-line repro file and the 'stale profile key ignored' test are not needed. Possible receipt for #119346: applies cleanly on f848940560, RED 4403 / GREEN, adjacent 84 passed. Hermes ledger has no record of #119346 (origin_refs empty) \u2014 ownership was missed, not just uncertified. Dispatch scope matching (scope_for_session) ignores profile_id, so the only runtime observables are the 4403 rejection and artifact-store slot selection."
+}

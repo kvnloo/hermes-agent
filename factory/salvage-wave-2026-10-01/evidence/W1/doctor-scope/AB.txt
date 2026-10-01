@@ -1,0 +1,13 @@
+main = af92ea8e5b852518c523c3e8b2cbd95f0f3d79dc (refs/w1/main)
+cmd: HOME=$S/testhome-W1-doctor-scope HERMES_HOME=$S/testhome-W1-doctor-scope/.hermes HERMES_PYTHON=$PY bash scripts/run_tests.sh tests/hermes_cli/test_plugin_doctor_scope_release.py [-q + adjacent]
+test file: test_plugin_doctor_scope_release.py (2 tests: module-scope release = #99721 claim; repeated-run bare namespace = fork #54 gap)
+
+main:                 0 passed / 2 failed
+  plugin_scope_for_module('hermes_plugins.scopeprobe') == '/var/tmp/.../hermes-plugin-doctor-pyz5coy6' (expected None)
+  names[1] == 'hermes_plugins.barepro__home_18cc76ce5412' (expected bare)
+#99721 merged:        CONFLICT on main (GitHub: CONFLICTING/DIRTY) in hermes_cli/plugin_dev.py finally-block (main 024f1b07bd added manager.unload()) + test file tail.
+  resolved by hand keeping both sides (99721-merged-on-main.resolved.diff):  1 passed / 1 failed
+  module-scope test PASS; bare-namespace test FAIL: 'hermes_plugins.barepro__home_80bf9219adba' != 'hermes_plugins.barepro'
+  adjacent (test_plugin_dev, plugin_cli_registration, plugin_ownership_ledger, plugins, plugins_cmd, tools/test_registry): 206 passed / 0 failed
+#99721 + bare sweep fold-in (foldin-bare-sweep.diff): regression 2/2 + adjacent = 208 passed / 0 failed
+negative control (sweep `del` -> `pass`): bare-namespace test fails again ('barepro__home_8831fbc662fe')

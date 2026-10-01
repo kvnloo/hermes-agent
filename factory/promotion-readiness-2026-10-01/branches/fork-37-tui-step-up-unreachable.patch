@@ -1,0 +1,92 @@
+From dceade1de1a24f5020ea97da9655fe59354c70f4 Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:31:16 -0500
+Subject: [PATCH] fix(tui): show the retry message when the step-up cannot
+ reach the gateway
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The /subscription step-up ("Allow Remote Spending") relied on a .catch()
+to show "Could not reach the billing service — check your connection,
+then retry." But ctx.gateway.rpc never rejects: useMainApp's rpc catches
+every transport error (dropped socket, gateway restart, dead child) and
+resolves null. The .then() ran with r === null and produced
+{ granted: false, message: undefined }, which stepUpDenialResult maps to
+its default admin-approval copy ("someone with billing permissions ...
+must approve it"). A user who only needs to retry was told to chase an
+admin.
+
+requestRemoteSpending now maps a null response to the retry message in
+.then() and drops the unreachable .catch(). Typed denials and the
+granted path are unchanged.
+---
+ .../src/__tests__/subscriptionCommand.test.ts | 29 +++++++++++++++++++
+ ui-tui/src/app/slash/commands/subscription.ts | 13 +++++----
+ 2 files changed, 36 insertions(+), 6 deletions(-)
+
+diff --git a/ui-tui/src/__tests__/subscriptionCommand.test.ts b/ui-tui/src/__tests__/subscriptionCommand.test.ts
+index bc54517d65..92df699458 100644
+--- a/ui-tui/src/__tests__/subscriptionCommand.test.ts
++++ b/ui-tui/src/__tests__/subscriptionCommand.test.ts
+@@ -93,4 +93,33 @@ describe('/subscription slash command', () => {
+   it('/upgrade alias resolves to the same command', () => {
+     expect(findSlashCommand('upgrade')).toBe(subscriptionCommand)
+   })
++
++  // ctx.gateway.rpc never rejects: a dropped socket, restarted gateway or dead
++  // child resolves to null. The step-up must say "retry", not fall through to
++  // the "someone with billing permissions must approve it" admin copy.
++  it('step-up maps an unreachable gateway (rpc → null) to the retry message', async () => {
++    const { run } = buildCtx({ 'billing.step_up': null, 'subscription.state': loggedInState() })
++
++    await run('')
++
++    const res = await getOverlayState().subscription!.ctx.requestRemoteSpending()
++
++    expect(res).toEqual({
++      granted: false,
++      message: 'Could not reach the billing service — check your connection, then retry.'
++    })
++  })
++
++  it('step-up still carries a typed denial from the gateway', async () => {
++    const { run } = buildCtx({
++      'billing.step_up': { error: 'rate_limited', ok: false },
++      'subscription.state': loggedInState()
++    })
++
++    await run('')
++
++    const res = await getOverlayState().subscription!.ctx.requestRemoteSpending()
++
++    expect(res).toMatchObject({ error: 'rate_limited', granted: false })
++  })
+ })
+diff --git a/ui-tui/src/app/slash/commands/subscription.ts b/ui-tui/src/app/slash/commands/subscription.ts
+index 3d0e81f68a..c4c5faa4f5 100644
+--- a/ui-tui/src/app/slash/commands/subscription.ts
++++ b/ui-tui/src/app/slash/commands/subscription.ts
+@@ -109,12 +109,13 @@ const buildSubscriptionCtx = (
+     ctx.gateway
+       .rpc<BillingMutationResponse>('billing.step_up', { session_id: ctx.sid ?? undefined })
+       // Carry the typed denial (session_revoked / remote_spending_revoked /
+-      // rate_limited / …) so the stepup screen shows the right recovery.
+-      .then(r => ({ error: r?.error, granted: !!(r && r.ok && r.granted), message: r?.message }))
+-      .catch(() => ({
+-        granted: false,
+-        message: t('slashCmd.subscription.billingUnreachable')
+-      })),
++      // rate_limited / …) so the stepup screen shows the right recovery. rpc()
++      // never rejects: a transport failure resolves to null.
++      .then(r =>
++        r
++          ? { error: r.error, granted: !!(r.ok && r.granted), message: r.message }
++          : { granted: false, message: t('slashCmd.subscription.billingUnreachable') }
++      ),
+   resume: () =>
+     ctx.gateway
+       .rpc<BillingMutationResponse>('subscription.resume', {})
+-- 
+2.55.0
+

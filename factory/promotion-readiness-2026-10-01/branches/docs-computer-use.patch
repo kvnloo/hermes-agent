@@ -1,0 +1,91 @@
+From e6ed1c863de659fa561c93e6af8c0ebd5c71e9c1 Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:38:19 -0500
+Subject: [PATCH] docs(computer-use): cua-driver links its skill pack into
+ Hermes; sync zh-Hans eviction
+
+- computer-use.md still said, in three places, that Hermes autodetection
+  is a planned cua-driver follow-up and that users must point Hermes at
+  ~/.cua-driver/skills/cua-driver or symlink it. The same page's "Going
+  deeper" section, the cli-commands reference and the bundled
+  computer-use SKILL.md already say `cua-driver skills install` detects
+  Hermes and links the pack into ~/.hermes/skills/cua-driver; trycua/cua
+  shipped that ("skills: autodetect Hermes (NousResearch/hermes-agent) at
+  ~/.hermes/skills", trycua/cua#1963, later "honor HERMES_HOME for skill
+  links", trycua/cua#3291).
+- The zh-Hans computer-use page still described screenshot eviction as
+  "the Anthropic adapter keeps only the last 3 screenshots". Eviction is
+  now provider-independent and limit-triggered
+  (agent/image_eviction_policy.py: OUTBOUND_IMAGE_LIMIT = 20,
+  OUTBOUND_IMAGE_BUDGET_BYTES = 24_000_000, batch retirement), as the
+  English page says; the zh-Hans bullet now translates it.
+
+Docs only; no behaviour change.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../docs/user-guide/features/computer-use.md  | 20 +++++++------------
+ .../user-guide/features/computer-use.md       |  2 +-
+ 2 files changed, 8 insertions(+), 14 deletions(-)
+
+diff --git a/website/docs/user-guide/features/computer-use.md b/website/docs/user-guide/features/computer-use.md
+index d8649e42a4..5a48793c3c 100644
+--- a/website/docs/user-guide/features/computer-use.md
++++ b/website/docs/user-guide/features/computer-use.md
+@@ -89,10 +89,9 @@ selected with `HERMES_CUA_DRIVER_CMD` stays
+ under your control, so Hermes reports the incompatibility and leaves it
+ unchanged.
+ 
+-If you install Cua Driver first, `cua-driver skills install` installs Cua's
+-skill pack under `~/.cua-driver/skills/cua-driver`. Hermes autodetection is a
+-planned cua-driver follow-up, so currently point Hermes at that directory or
+-symlink it into your skill space. You can also register raw Cua MCP tools as a
++If you install Cua Driver first, `cua-driver skills install` detects Hermes and
++links Cua's skill pack into `~/.hermes/skills/cua-driver`, so there is nothing
++to point Hermes at or symlink. You can also register raw Cua MCP tools as a
+ custom MCP server, but that is an alternative for users who need the low-level
+ interface. The built-in toolset provides Hermes actions, configuration,
+ approvals, and diagnostics.
+@@ -294,12 +293,8 @@ element," it reads `WINDOWS.md` for the UIA / UWP context that
+ explains why and what to do differently.
+ 
+ `cua-driver skills status` shows what's installed and which agent
+-harnesses it's linked into. Today the autodetect list covers Claude
+-Code, Codex, OpenCode, OpenClaw, and Antigravity; **Hermes
+-autodetection is planned as a follow-up in `trycua/cua`** — until
+-then, run `cua-driver skills install` once and point your harness at
+-the resulting `~/.cua-driver/skills/cua-driver` directory (or symlink
+-it into your usual skill space).
++harnesses it's linked into, Hermes among them; no manual pointing or
++symlinking is needed.
+ 
+ ## Quick example
+ 
+@@ -695,9 +690,8 @@ autostart pattern — see
+   (macOS no-foreground contract, Windows UIA + Session 0, Linux AT-SPI
+   + X11/Wayland, recording, browser pages), run
+   `cua-driver skills install` and read `MACOS.md` / `WINDOWS.md` /
+-  `LINUX.md` / `RECORDING.md` / `WEB_APPS.md`. Hermes autodetection is a
+-  planned follow-up; currently point Hermes at the installed pack directory
+-  or symlink it into your skill space.
++  `LINUX.md` / `RECORDING.md` / `WEB_APPS.md`. The command links the pack
++  into `~/.hermes/skills/cua-driver` for you.
+ - **cua.ai/docs** — the cua-driver project's documentation:
+   - [What is computer use?](https://cua.ai/docs/explanation/what-is-computer-use) — concept intro
+   - [The no-foreground contract](https://cua.ai/docs/explanation/the-no-foreground-contract) — *why* background mode matters
+diff --git a/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/features/computer-use.md b/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/features/computer-use.md
+index ac979fb145..a8e7ad40fa 100644
+--- a/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/features/computer-use.md
++++ b/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/features/computer-use.md
+@@ -99,7 +99,7 @@ Hermes 应用多层防护机制：
+ 
+ 截图开销较大。Hermes 应用四层优化措施：
+ 
+-- **截图淘汰** — Anthropic 适配器在上下文中仅保留最近 3 张截图；较旧的截图替换为 `[screenshot removed to save context]` 占位符。
++- **截图淘汰** — 在每个 provider 上，截图随每次请求一同发送，直到即将越过 Anthropic 文档规定的单次请求图像上限（20 个图像块，或 24 MB 图像数据）；此时最旧的一批截图替换为 `[screenshot removed to save context]` 占位符。低于上限时不重写任何内容，因此 prompt-cache 前缀得以保留；达到上限时每批只产生一个较慢的回合，而非每张截图各一个。用户自行附加的图像计入该上限，但永不被移除。
+ - **客户端压缩裁剪** — 上下文压缩器检测多模态工具结果，并从旧结果中剥离图像部分。
+ - **图像感知 token 估算** — 每张图像计为约 1500 个 token（Anthropic 的固定费率），而非其 base64 字符长度。
+ - **服务端上下文编辑（仅限 Anthropic）** — 激活后，适配器通过 `context_management` 启用 `clear_tool_uses_20250919`，由 Anthropic API 在服务端清除旧工具结果。
+-- 
+2.55.0
+

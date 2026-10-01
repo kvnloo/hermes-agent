@@ -1,0 +1,31 @@
+{
+  "fork_pr": 21,
+  "title": "chore(relay): remove unused module-level emit_mark/ensure_session/run_in_session[_async] wrappers",
+  "claim": "relay_runtime module-level emit_mark/ensure_session/run_in_session/run_in_session_async wrappers are unused.",
+  "verdict": "SUPERSEDED-ON-MAIN",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "source": "Every targeted name is absent on main f848940560: `git grep -n -w` across the whole tree (code, tests, plugins/, optional-skills/, website/, scripts/, tests/compat) finds 0 hits for module-level def emit_mark/ensure_session/run_in_session/run_in_session_async (runtime methods of the same name are separate and live). A first-parent bisect of agent/relay_runtime.py from fork base 63279301bc puts the removal in a5bd246865 (#126164 'plugin compat layer removed on schedule', 2026-09-28).",
+    "references_before": "0 (already gone on main)",
+    "references_after": "n/a",
+    "red": "n/a (pure deletion; nothing left to delete)",
+    "green": "n/a",
+    "negative_control": "n/a",
+    "adjacent": "n/a (no change built)"
+  },
+  "upstream_overlap": [
+    "removed upstream by a5bd246865 (#126164 'plugin compat layer removed on schedule', 2026-09-28)"
+  ],
+  "branch": null,
+  "bundle": null,
+  "files": [],
+  "size": "+0/-0",
+  "depends_on": null,
+  "fork_head": "detail/dead-code/chore-relay-remove-unused-module-level-emit-mark-e-9d392b",
+  "fork_head_oid": "532c8a10e2837fecb64eaaadef5159bf5419b4fa",
+  "wave": "W5-bot-chore",
+  "batch": "C",
+  "patch": null,
+  "body": null,
+  "notes": "The fork diff also carries unrelated Kanban baggage (hermes_cli/kanban_db.py, tests/hermes_cli/test_kanban_external_receipts.py) from merge commits; the intended tip commit was read in isolation. Retire the fork PR."
+}

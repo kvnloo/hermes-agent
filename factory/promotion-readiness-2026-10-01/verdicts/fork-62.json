@@ -1,0 +1,24 @@
+{
+  "fork_pr": 62,
+  "title": "fix(debug): report honest retention and drop false delete hint for dpaste.com fallback",
+  "claim": "When debug share falls back to dpaste.com, no surface may promise 6-hour auto-delete or offer `hermes debug delete`, and the fallback should keep pastes for dpaste's 1-day minimum instead of 7 days.",
+  "verdict": "SUPERSEDED-ON-MAIN",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "red": "N/A - core claim already fixed on main. Main's own regression tests for it pass: tests/hermes_cli/test_debug.py -k dpaste -> 5 passed (incl. test_dpaste_url_error_explains_no_delete).",
+    "green": "N/A (not rebuilt).",
+    "negative_control": "N/A (not rebuilt).",
+    "adjacent": "N/A (not rebuilt).",
+    "source": "Upstream #106531 (teknium1, MERGED 2026-09-09, merge 2b9b3b829f82 is an ancestor of main) did the same change on CLI/gateway/delete/default: main hermes_cli/debug.py:188/197/445 default expiry_days=1; :140-155 _is_dpaste_url + dpaste-specific delete error; :549-560 CLI prints 'CANNOT be deleted' for dpaste and keeps '6 hours / To delete now' only for paste.rs; :113-127 privacy notices disclose the fallback; gateway/slash_commands.py:1227-1232 drops the 6-hour line for dpaste URLs; hermes_cli/subcommands/debug.py --expire default 1. Remaining 6h copy on main is only in web/src/pages/SystemPage.tsx:1466-1467,1515-1516 and apps/desktop/src/i18n/en.ts:2896 - exactly the remainder owned by open #107313."
+  },
+  "upstream_overlap": [
+    "#106531 MERGED teknium1 2026-09-09: debug share stops promising 6h auto-delete on the dpaste.com fallback and shrinks its retention to 1 day (#106164, salvage #106178) - supersedes the CLI/gateway/delete_paste/expiry-default hunks of fork #62 (fork opened 2026-09-13, after the merge).",
+    "#107313 OPEN bgrablin (external) 2026-09-10: fix(debug): qualify paste retention in dashboard and desktop (#106164) - owns the web SystemPage + desktop i18n remainder (en/ru/zh) that fork #62 also touches.",
+    "#106164 OPEN issue (dashboard/desktop remainder still open)."
+  ],
+  "branch": null,
+  "files": ["hermes_cli/debug.py", "hermes_cli/subcommands/debug.py", "gateway/slash_commands.py", "hermes_cli/web_models.py", "hermes_cli/web_server.py", "web/src/lib/api.ts", "web/src/pages/SystemPage.tsx", "apps/desktop/src/i18n/{en,ru,zh}.ts", "+ tests"],
+  "size": "+691/-26 excl. kanban baggage (18-file fork comparison incl. kanban); not rebuilt",
+  "depends_on": null,
+  "notes": "Kanban baggage excluded. Residuals unique to fork #62 that are NOT on main nor in #107313: (a) backend DebugShareResult.auto_delete_seconds stays 21600 for dpaste results and there is no `dpaste_fallback` flag / `expiry` field on the dashboard DebugShareRequest - #107313 deliberately derives service from returned URLs client-side, so this is an API-shape nicety, not a user-visible defect once #107313 lands; (b) CLI prints the raw `--expire` value ('stay public for 0 day(s)') without clamping to dpaste's [1,365] range - a separate small edge, not the stated claim, unverified against dpaste's actual handling. Neither justifies a competing PR; (a) could at most be mentioned as review support on #107313."
+}

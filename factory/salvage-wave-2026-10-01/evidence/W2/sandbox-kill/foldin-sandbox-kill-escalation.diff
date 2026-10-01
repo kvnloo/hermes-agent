@@ -1,0 +1,22 @@
+diff --git i/tools/process_registry.py w/tools/process_registry.py
+index 542a11717a..4eda7556eb 100644
+--- i/tools/process_registry.py
++++ w/tools/process_registry.py
+@@ -2324,7 +2324,16 @@ class ProcessRegistry(ProcessCheckpointMixin):
+         elif session.env_ref and session.pid:
+             # Signal the process group spawn_via_env created. Killing only the
+             # wrapper PID orphans the command, which keeps running.
+-            session.env_ref.execute(f"kill -TERM -- -{session.pid} 2>/dev/null", timeout=5)
++            group = f"-{int(session.pid)}"
++            kill_cmd = f"kill -TERM -- {group} 2>/dev/null"
++            grace = self._daemon_term_grace_seconds()
++            if grace > 0:
++                # Parity with the host path: SIGKILL the group if anything in it
++                # outlives SIGTERM by terminal.daemon_term_grace_seconds.
++                kill_cmd += (f"; n=0; while kill -0 -- {group} 2>/dev/null; do "
++                             f"if [ $n -ge {int(grace * 10 + 0.999)} ]; then kill -KILL -- {group} 2>/dev/null; break; fi; "
++                             f"sleep 0.1; n=$((n+1)); done")
++            session.env_ref.execute(kill_cmd, timeout=5 + int(grace + 0.999))
+         elif session.detached and session.pid_scope == "host" and session.pid:
+             # Same fate as poll/list: a gone or reused PID means our process is
+             # gone — never tree-kill the stranger — but a live PID with an

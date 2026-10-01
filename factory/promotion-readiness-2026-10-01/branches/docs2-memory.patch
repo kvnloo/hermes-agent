@@ -1,0 +1,74 @@
+From c9010e911f6f6ac8dc871195df8793ba4bcc6d4f Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:32:19 -0500
+Subject: [PATCH] docs(memory): Hindsight local embedded mode no longer
+ lazy-installs hindsight-all
+
+memory-providers.md said local embedded mode "installs hindsight-all on
+first use through Hermes' lazy-install path, which honours
+security.allow_lazy_installs". The catalog pin moved to vectorize-io/hindsight
+eb021da (5e4857bf2e), and that plugin no longer touches hindsight-all or
+tools.lazy_deps (now an old-updater stub): embedded mode composes
+hindsight-client with hindsight-embed's daemon manager, both declared in the
+plugin's pyproject, and the server runs out of process. The released v1.2.1
+pin proposed upstream (d56c4ac) declares the same two dependencies.
+
+Replace the sentence with what the pinned plugin actually does. The zh-Hans
+page still described the bundled-era wizard ("hindsight-all" for local mode,
+auto-upgrading hindsight-client >= 0.4.22); bring its install text in line
+with the English page.
+
+The older correction that called embedded mode unsupported on PM-managed
+Hermes (it cited the catalog known_issues entry) is obsolete: 5e4857bf2e
+removed that entry because embedded mode now works under PM.
+---
+ website/docs/user-guide/features/memory-providers.md       | 2 +-
+ .../current/user-guide/features/memory-providers.md        | 7 ++++---
+ 2 files changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/website/docs/user-guide/features/memory-providers.md b/website/docs/user-guide/features/memory-providers.md
+index beae77ee8a..76fe27eea1 100644
+--- a/website/docs/user-guide/features/memory-providers.md
++++ b/website/docs/user-guide/features/memory-providers.md
+@@ -465,7 +465,7 @@ hermes config set memory.provider hindsight
+ echo "HINDSIGHT_API_KEY=your-key" >> ~/.hermes/.env
+ ```
+ 
+-The plugin lands in `~/.hermes/plugins/hindsight/` (per profile home) and is enabled under `plugins.enabled` in `config.yaml`. `hermes memory setup`, `hermes memory status`, `hermes plugins list` and the dashboard Memory settings all work with the catalog-installed plugin. In local embedded mode the plugin installs `hindsight-all` on first use through Hermes' lazy-install path, which honours `security.allow_lazy_installs`.
++The plugin lands in `~/.hermes/plugins/hindsight/` (per profile home) and is enabled under `plugins.enabled` in `config.yaml`. `hermes memory setup`, `hermes memory status`, `hermes plugins list` and the dashboard Memory settings all work with the catalog-installed plugin. Local embedded mode has no first-use install step: the two packages it needs in-process, `hindsight-client` and `hindsight-embed`, are the plugin's declared dependencies, and the Hindsight server itself runs as a separate process that `hindsight-embed` starts.
+ 
+ **Local mode UI:** `hindsight-embed -p hermes ui start`
+ 
+diff --git a/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/features/memory-providers.md b/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/features/memory-providers.md
+index c5b9240036..fcc4279dd5 100644
+--- a/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/features/memory-providers.md
++++ b/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/features/memory-providers.md
+@@ -333,7 +333,7 @@ echo "MEM0_API_KEY=your-key" >> ~/.hermes/.env
+ | | |
+ |---|---|
+ | **适合场景** | 基于知识图谱的实体关系召回 |
+-| **依赖** | 云端：来自 [ui.hindsight.vectorize.io](https://ui.hindsight.vectorize.io) 的 API key。本地：LLM API key（OpenAI、Groq、OpenRouter 等） |
++| **依赖** | `hermes plugins install hindsight`。云端：来自 [ui.hindsight.vectorize.io](https://ui.hindsight.vectorize.io) 的 API key。本地：LLM API key（OpenAI、Groq、OpenRouter 等） |
+ | **数据存储** | Hindsight Cloud 或本地嵌入式 PostgreSQL |
+ | **费用** | Hindsight 定价（云端）或免费（本地） |
+ 
+@@ -341,13 +341,14 @@ echo "MEM0_API_KEY=your-key" >> ~/.hermes/.env
+ 
+ **安装：**
+ ```bash
+-hermes memory setup    # 选择 "hindsight"
++hermes plugins install hindsight   # 从插件目录安装
++hermes memory setup                # 选择 "hindsight"
+ # 或手动配置：
+ hermes config set memory.provider hindsight
+ echo "HINDSIGHT_API_KEY=your-key" >> ~/.hermes/.env
+ ```
+ 
+-安装向导会自动安装依赖，并仅安装所选模式所需的内容（云端用 `hindsight-client`，本地用 `hindsight-all`）。需要 `hindsight-client >= 0.4.22`（会话启动时若版本过旧则自动升级）。
++插件安装在 `~/.hermes/plugins/hindsight/`（每个 profile home 各一份），并在 `config.yaml` 的 `plugins.enabled` 下启用。`hermes memory setup`、`hermes memory status`、`hermes plugins list` 和仪表盘的 Memory 设置都可配合从插件目录安装的插件使用。本地嵌入模式没有首次使用时的安装步骤：它在进程内需要的两个包 `hindsight-client` 和 `hindsight-embed` 是插件声明的依赖，Hindsight 服务器本身则作为由 `hindsight-embed` 启动的独立进程运行。
+ 
+ **本地模式 UI：** `hindsight-embed -p hermes ui start`
+ 
+-- 
+2.55.0
+

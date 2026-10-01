@@ -1,0 +1,219 @@
+diff --git a/hermes_cli/sessions_cmd.py b/hermes_cli/sessions_cmd.py
+index f275bc33b0..90204d69b1 100644
+--- a/hermes_cli/sessions_cmd.py
++++ b/hermes_cli/sessions_cmd.py
+@@ -328,8 +328,10 @@ def _cmd_export(db, args):
+         except ValueError as e:
+             print(f"Error: {e}")
+             return
+-        # Unlike prune/archive, export includes archived sessions.
++        # Unlike prune/archive, export includes archived and pinned
++        # sessions (pin means "keep", not "hide from backups").
+         filters["archived"] = None
++        filters["include_pinned"] = True
+ 
+     def _redact(data):
+         if not args.redact or data is None:
+@@ -353,7 +355,7 @@ def _cmd_export(db, args):
+                 return None
+             return [data]
+         if filters:
+-            candidates = db.list_prune_candidates(**filters)
++            candidates = db.list_export_candidates(**filters)
+             if args.dry_run:
+                 return _print_dry_run_preview(candidates, filters)
+             return [s for s in (_one(row["id"]) for row in candidates) if s]
+@@ -441,7 +443,7 @@ def _export_trace(db, args, filters):
+     if session_id:
+         ids = [db.resolve_session_id(session_id)]
+     else:
+-        candidates = db.list_prune_candidates(**filters)
++        candidates = db.list_export_candidates(**filters)
+         if args.dry_run:
+             return _print_dry_run_preview(candidates, filters)
+         ids = [row["id"] for row in candidates]
+@@ -510,7 +512,7 @@ def _export_markdown(db, args, filters, redact):
+         print("Refusing bulk export without a filter. Pass --session-id or "
+               "at least one filter (e.g. --older-than 90, --source telegram).")
+         return
+-    candidates = db.list_prune_candidates(**filters)
++    candidates = db.list_export_candidates(**filters)
+     if args.dry_run:
+         return _print_dry_run_preview(candidates, filters)
+     exported = 0
+diff --git a/hermes_state_maintenance.py b/hermes_state_maintenance.py
+index 6ec0497489..bf5dbf6050 100644
+--- a/hermes_state_maintenance.py
++++ b/hermes_state_maintenance.py
+@@ -248,6 +248,32 @@ class SessionMaintenanceMixin:
+         """Dry-run: sessions a matching prune/archive would touch, oldest first (``older_than_days``
+         = inactivity threshold: freshest of ``last_activity_at`` / latest message / ``started_at``)."""
+         where, params = self._prune_where(older_than_days, source, filters, whole_lineages=whole_lineages)
++        return self._list_filtered_session_rows(where, params)
++
++    def list_export_candidates(self, older_than_days: Optional[float] = None, source: str = None,
++                               **filters) -> List[Dict[str, Any]]:
++        """Return matching sessions for non-destructive bulk export.
++
++        Export shares prune's filters but includes open sessions. The ended
++        guard stays mandatory in every destructive prune/archive caller.
++        """
++        where, params = self._prune_where(older_than_days, source, filters)
++        where = self._split_ended_guard(where).removeprefix(" AND ") or "1 = 1"
++        return self._list_filtered_session_rows(where, params)
++
++    @staticmethod
++    def _split_ended_guard(where: str) -> str:
++        """Return ``where`` with the leading mandatory ended-session guard
++        removed. Raises if :meth:`_prune_filter_where` ever stops emitting
++        the guard as its first clause, so guard-relaxing callers fail loud
++        instead of silently widening their selection.
++        """
++        ended_guard = "s.ended_at IS NOT NULL"
++        if not where.startswith(ended_guard):
++            raise RuntimeError("prune filter lost its ended-session safety guard")
++        return where[len(ended_guard):]
++
++    def _list_filtered_session_rows(self, where: str, params: list) -> List[Dict[str, Any]]:
+         return [dict(row) for row in self._read_all(
+             f"""SELECT s.id, s.source, s.title, s.model, s.started_at,
+                            {_LAST_ACTIVE_SQL} AS last_active,
+@@ -265,10 +291,7 @@ class SessionMaintenanceMixin:
+                                  **filters) -> int:
+         """Count open sessions a matching prune skips (``ended_at`` guard inverted); visibility-only."""
+         where, params = self._prune_where(older_than_days, source, filters)
+-        ended_guard = "s.ended_at IS NOT NULL"
+-        if not where.startswith(ended_guard):
+-            raise RuntimeError("prune filter lost its ended-session safety guard")
+-        open_where = f"s.ended_at IS NULL{where[len(ended_guard):]}"
++        open_where = f"s.ended_at IS NULL{self._split_ended_guard(where)}"
+         return int(self._read_one(f"SELECT COUNT(*) FROM sessions s WHERE {open_where}", params)[0])
+ 
+     def archive_stale_sessions(self, idle_days: float, *, exclude_pinned: bool = True) -> int:
+diff --git a/tests/hermes_cli/test_sessions_export_md_cli.py b/tests/hermes_cli/test_sessions_export_md_cli.py
+index 5673a7d560..7d2734ed27 100644
+--- a/tests/hermes_cli/test_sessions_export_md_cli.py
++++ b/tests/hermes_cli/test_sessions_export_md_cli.py
+@@ -65,6 +65,47 @@ def test_sessions_export_md_writes_single_session(monkeypatch, tmp_path, capsys)
+     assert str(files[0]) in output
+ 
+ 
++def test_sessions_export_filtered_includes_pinned_and_archived(
++    monkeypatch, tmp_path, capsys
++):
++    """Filtered export is non-destructive: it must select archived and
++    pinned sessions, which bulk prune/archive exclude by default."""
++    import hermes_cli.main as main_mod
++    import hermes_state
++
++    captured = {}
++
++    class FakeDB:
++        def list_export_candidates(self, **filters):
++            captured["filters"] = filters
++            return [
++                {"id": "s-plain", "source": "cli"},
++                {"id": "s-pinned", "source": "cli"},
++            ]
++
++        def close(self):
++            captured["closed"] = True
++
++    monkeypatch.setattr(hermes_state, "SessionDB", lambda: FakeDB())
++    monkeypatch.setattr(
++        sys,
++        "argv",
++        [
++            "hermes", "sessions", "export", "--format", "md",
++            "--source", "cli", "--dry-run", str(tmp_path),
++        ],
++    )
++
++    main_mod.main()
++
++    out = capsys.readouterr().out
++    assert "Would export 2 session(s)" in out
++    assert captured["filters"]["source"] == "cli"
++    assert captured["filters"]["archived"] is None
++    assert captured["filters"]["include_pinned"] is True
++    assert captured["closed"] is True
++
++
+ def test_sessions_export_redact_scrubs_secrets(monkeypatch, tmp_path):
+     """--redact runs exported content through force-mode secret redaction."""
+     import hermes_cli.main as main_mod
+diff --git a/tests/hermes_state/test_hermes_state.py b/tests/hermes_state/test_hermes_state.py
+index 49020057ba..086c5d2a38 100644
+--- a/tests/hermes_state/test_hermes_state.py
++++ b/tests/hermes_state/test_hermes_state.py
+@@ -1315,6 +1315,18 @@ class TestPruneSessions:
+         assert db.get_session("active") is not None
+         assert db.count_open_prune_matches(older_than_days=90) == 1
+ 
++    def test_export_filters_include_active_sessions(self, db):
++        db.create_session(session_id="active", source="telegram")
++        db.create_session(session_id="ended", source="telegram")
++        db.end_session("ended", end_reason="done")
++
++        exported = db.list_export_candidates(source="telegram")
++
++        assert {row["id"] for row in exported} == {"active", "ended"}
++        assert {row["id"] for row in db.list_prune_candidates(source="telegram")} == {
++            "ended"
++        }
++
+     def test_open_prune_match_count_applies_other_filters(self, db):
+         db.create_session(session_id="matching-open", source="cron")
+         db.create_session(session_id="other-source", source="cli")
+diff --git a/website/docs/user-guide/sessions.md b/website/docs/user-guide/sessions.md
+index 8ad285e000..3e05159f33 100644
+--- a/website/docs/user-guide/sessions.md
++++ b/website/docs/user-guide/sessions.md
+@@ -363,7 +363,7 @@ What's the weather in Las Vegas?                    3d ago        tele   2025030
+ 
+ Plus `--only user-prompts` for a prompts-only view (jsonl or md).
+ 
+-All formats share the same selection knobs: `--session-id` for one session, or the full `prune`/`archive` filter set for bulk — `--older-than` / `--newer-than` / `--before` / `--after` (durations like `5h`/`2d`/`1w`, bare days, or ISO timestamps), `--source`, `--title`, `--model`, `--provider`, `--cwd`, `--min/--max-messages`, `--min/--max-tokens`, `--min/--max-cost`, `--min/--max-tool-calls`, `--user`, `--chat-id`, `--chat-type`, `--branch`, `--end-reason`. `--dry-run` previews the match set without writing. `--redact` scrubs secrets (API keys, tokens, credentials) from exported content on any format — recommended for anything you plan to share. Note: bulk filters match *ended* sessions; unfiltered `export` dumps everything, including active ones.
++All formats share the same selection knobs: `--session-id` for one session, or the full `prune`/`archive` filter set for bulk — `--older-than` / `--newer-than` / `--before` / `--after` (durations like `5h`/`2d`/`1w`, bare days, or ISO timestamps), `--source`, `--title`, `--model`, `--provider`, `--cwd`, `--min/--max-messages`, `--min/--max-tokens`, `--min/--max-cost`, `--min/--max-tool-calls`, `--user`, `--chat-id`, `--chat-type`, `--branch`, `--end-reason`. `--dry-run` previews the match set without writing. `--redact` scrubs secrets (API keys, tokens, credentials) from exported content on any format — recommended for anything you plan to share. Note: export is non-destructive, so unlike `prune`/`archive` the bulk filters also match active, archived, and pinned sessions; unfiltered `export` likewise dumps everything.
+ 
+ #### JSONL (default)
+ 
+@@ -443,10 +443,10 @@ hermes sessions export --format md --session-id 20250305_091523_a1b2c3d4
+ # Export a compression lineage as one logical document
+ hermes sessions export --format md --session-id 20250305_091523_a1b2c3d4 --lineage logical
+ 
+-# Preview ended sessions older than 90 days without writing files
++# Preview sessions older than 90 days without writing files
+ hermes sessions export --format md --older-than 90 --dry-run
+ 
+-# Export ended Telegram sessions older than 2 weeks to QMD files
++# Export Telegram sessions older than 2 weeks to QMD files
+ hermes sessions export --format qmd --older-than 2w --source telegram
+ 
+ # Export long Claude sessions, secrets redacted
+diff --git a/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/sessions.md b/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/sessions.md
+index 208987be45..817562fcc9 100644
+--- a/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/sessions.md
++++ b/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/sessions.md
+@@ -283,7 +283,7 @@ What's the weather in Las Vegas?                    3d ago        tele   2025030
+ 
+ 另有 `--only user-prompts` 只导出你的 prompt（jsonl 或 md）。
+ 
+-所有格式共享同一套选择方式：`--session-id` 导出单个 session，或使用与 `prune` / `archive` 相同的完整过滤器进行批量导出 — `--older-than` / `--newer-than` / `--before` / `--after`（时长如 `5h`/`2d`/`1w`、纯数字天数或 ISO 时间戳）、`--source`、`--title`、`--model`、`--provider`、`--cwd`、`--min/--max-messages`、`--min/--max-tokens`、`--min/--max-cost`、`--min/--max-tool-calls`、`--user`、`--chat-id`、`--chat-type`、`--branch`、`--end-reason`。`--dry-run` 可预览匹配集而不写入。`--redact` 在任意格式下从导出内容中清除密钥（API key、token、凭据）— 任何打算分享的导出都建议加上。注意：带过滤器的批量导出只匹配*已结束*的 session；不带过滤器的 `export` 会导出所有 session（包括活跃的）。
++所有格式共享同一套选择方式：`--session-id` 导出单个 session，或使用与 `prune` / `archive` 相同的完整过滤器进行批量导出 — `--older-than` / `--newer-than` / `--before` / `--after`（时长如 `5h`/`2d`/`1w`、纯数字天数或 ISO 时间戳）、`--source`、`--title`、`--model`、`--provider`、`--cwd`、`--min/--max-messages`、`--min/--max-tokens`、`--min/--max-cost`、`--min/--max-tool-calls`、`--user`、`--chat-id`、`--chat-type`、`--branch`、`--end-reason`。`--dry-run` 可预览匹配集而不写入。`--redact` 在任意格式下从导出内容中清除密钥（API key、token、凭据）— 任何打算分享的导出都建议加上。注意：导出是非破坏性的，因此与 `prune` / `archive` 不同，带过滤器的批量导出同样会匹配活跃、已归档和已置顶（pinned）的 session；不带过滤器的 `export` 也会导出所有 session。
+ 
+ #### JSONL（默认）
+ 
+@@ -357,10 +357,10 @@ hermes sessions export --format md --session-id 20250305_091523_a1b2c3d4
+ # 将压缩链（compression lineage）导出为一个逻辑文档
+ hermes sessions export --format md --session-id 20250305_091523_a1b2c3d4 --lineage logical
+ 
+-# 预览 90 天前已结束的 session，不写入文件
++# 预览 90 天前的 session，不写入文件
+ hermes sessions export --format md --older-than 90 --dry-run
+ 
+-# 将 2 周前已结束的 Telegram session 导出为 QMD 文件
++# 将 2 周前的 Telegram session 导出为 QMD 文件
+ hermes sessions export --format qmd --older-than 2w --source telegram
+ 
+ # 导出长的 Claude session，并脱敏

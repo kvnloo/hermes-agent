@@ -1,0 +1,29 @@
+cluster suggest-cache (fork #38 vs #85253)   pinned main af92ea8e5b852518c523c3e8b2cbd95f0f3d79dc
+regression test: switch-cache.test.ts -> apps/desktop/src/store/suggestion-providers/switch-cache.test.ts (new; real providers/profile/gateway-switch, only REST reads + registerDraftProvider mocked)
+cmd: cd apps/desktop && HOME=$S/testhome-W1-suggest-cache npx vitest run src/store/suggestion-providers/switch-cache.test.ts
+
+main af92ea8e:
+  2 failed | 1 passed (3)
+  profile switch:     AssertionError: expected [ 'pr-ready' ] to deeply equal []  (skill, :106) ; expected [ 'linear' ] to deeply equal [] (mcp, :107)
+  connection switch:  same two assertions fail (:133, :134)
+  same-key re-set:    pass
+
+#85253 merged (git merge --no-ff refs/pr/85253 -> textual conflict in profile.ts subscribe block: main added invalidateProfileListFetches(); resolved by keeping both, mechanical):
+  1 failed | 2 passed (3) [+ profile.test.ts 27/27 incl. the PR's 2 tests]
+  profile switch: pass (skill + mcp) ; same-key: pass ; connection switch (same profile key): FAIL expected [ 'pr-ready' ] / [ 'linear' ] to deeply equal [] (out of the PR's scope)
+  NOTE: with the test importing store/profile before the providers, the file does not load at all:
+    TypeError: Cannot read properties of undefined (reading 'subscribe') at src/lib/slash-completion-cache.ts:99 <- desktop-slash-commands.ts:2 <- slash-refs.ts:13
+  Adjacent (91 desktop test files that import store/profile):
+    main:            1 failed | 90 passed files, 1182 tests passed (the 1 = use-session-actions.test.tsx, missing ../tests/fixtures in the sparse worktree; pre-existing/artifact)
+    #85253 merged:  62 failed | 29 passed files (61 new file-load failures: cycle TypeError above + mock-chain errors such as 'No "$activeSessionId" export is defined on the "@/store/session" mock')
+  Static ESM entry-order check from src/main.tsx (esm-order.py, approximate regex graph):
+    main: no back-edge into store/profile.ts ; #85253 merged: 6 modules evaluated while profile.ts is in progress (incl. lib/slash-completion-cache.ts with a top-level $activeGatewayProfile.subscribe) -> renderer would hit a TDZ at boot. Electron boot NOT_TESTED.
+  tsc -p . --noEmit: only error is the same sparse-checkout fixture import (pre-existing/artifact).
+
+fork #38 production hunks rebuilt on main (skill.ts $activeGatewayProfile subscription + gateway-switch wipe call; one import-block conflict resolved):
+  2 failed | 1 passed: skill assertions pass for profile AND connection switch; MCP assertions fail (fork #38 does not touch mcp.ts)
+
+provider-subscription design = fork #38 hunks + MCP twin (mcp.ts subscription + invalidateMcpSuggestionIndex() in wipeSessionListsForGatewaySwitch) (provider-subscription-design.diff, +51/-0, 3 files):
+  3 passed (3)
+  adjacent: 91 profile importers + src/store/suggestion-providers + gateway-switch.test.ts: 1 failed | 96 passed files, 1251 tests passed (same single sparse-fixture artifact as main)
+  static ESM check: no back-edge into store/profile.ts

@@ -1,0 +1,35 @@
+main = 298a01c79b38018e029e50f77efe67c4a4fdbd40 (refs/w2/main)
+issue #125003 (Adolanium): killing a sandbox background process leaves the command running
+cmd: sandbox-kill_ab.sh <label> [refs/diffs...] [-- extra files]  ->  PATH=<tripwire>:/usr/bin:/bin HOME=$S/testhome-W2-sandbox-kill HERMES_HOME=$HOME/.hermes HERMES_PYTHON=$PY setsid -w bash scripts/run_tests.sh tests/tools/test_sandbox_background_kill_tree.py -q -j 2 -rf -p no:randomly
+merges: git -c rerere.enabled=false merge --no-ff (no conflicts anywhere in this cluster)
+
+regression test: test_sandbox_background_kill_tree.py (placed at tests/tools/), 2 functions x 2 envs = 4 cases
+  A = test_kill_stops_the_command_and_everything_it_started[local_env|plain_bash]: after kill_process, the command's shell ($$ of nohup bash -lc), a direct child and a grandchild are all gone within 5 s
+  B = test_kill_records_the_termination_in_the_exit_file[local_env|plain_bash]: kill_process says "killed" and the wrapper writes 143 to hermes_bg_<id>.exit within 5 s
+  envs: local_env = real tools.environments.local.LocalEnvironment (fresh bash -c per call, own session); plain_bash = bash -c in the caller's group, stdout to a file (#125004's BashEnv shape)
+
+main:                         A 0/2 ("processes outlived the kill: shell, child, grandchild"), B 0/2 ("exit file was never written")  -> 4 failed
+#125004 merged (clean):       A 2/2, B 2/2 -> 4 passed
+kvnloo fork #41 rebuilt on main (reference, fork41-rebuilt-on-main.diff; hand port, cherry-pick conflicts in process_registry.py/local.py):
+                              A 0/2 ("processes outlived the kill: grandchild": pkill -P reaches only the worker's direct children), B 2/2 -> 2 failed / 2 passed
+#129674 merged (Froraut, adjacent: cwd/exit/log):  A 0/2, B 0/2 (different defect)
+#129674 then #125004:         both clean; regression 4/4; test_process_registry.py 115 passed / 4 skipped (109 main + 5 from #129674 + 1 from #125004)
+
+negative controls on #125004:
+  NC-A revert _signal_kill to `kill <pid>` (keep set -m wrapper): 4 failed (A: shell, child, grandchild survive; B: no exit file: the wrapper traps TERM and keeps waiting)
+  NC-B drop `set -m` (keep group kill) = simulated shell without job control: 4 failed (group kill hits ESRCH, nothing is signalled, kill still reports "killed")
+
+probe (not in the contract): probe_sandbox_kill_term_ignored.py, command `trap '' TERM; ... sleep 300 & ...; wait`
+  main:                       0/2 ("survived: shell, child")
+  #125004:                    0/2 ("survived: shell, child"); kill_process still returns status "killed" (sandbox sessions skip #115490 survivor verification by design)
+  fork #41 rebuilt:           2/2 (TERM, 0.5 s, then pkill -9 -P / kill -9)
+  #125004 + escalation fold-in (foldin-sandbox-kill-escalation.diff): 2/2; regression 4/4
+job control probe (jobcontrol-probe.log): bash 5.3 honours `set -m` with no tty: wrapper PGID == PID, `kill -TERM -- -PID` empties the group. Every backend's execute() runs `bash -c`/`bash -lc`.
+
+adjacent (10 files, adjacent-files.txt), all with
+  --deselect=tests/tools/test_process_registry.py::TestStdinHelpers::test_close_stdin_allows_eof_driven_process_to_finish
+  (that PTY test fork/execs bash via ptyprocess; the W2 tripwire blocks os.execvpe in the child, so it hangs to the 300 s per-file cap identically on every state; an earlier un-deselected run showed the cap on main, #125004 and fold-in alike)
+  main:                       205 passed, 4 skipped (+ regression 4 failed)
+  #125004:                    210 passed, 4 skipped (205 + its TestSandboxKillTree + regression 4)
+  #125004 + fold-in:          212 passed, 4 skipped (205 + 1 + regression 4 + probe 2)
+tripwire hits attributable to these runs: only the PTY test above (os.execvpe of /usr/bin/bash -lic in a ptyprocess child), identical on all states; none after the deselect.

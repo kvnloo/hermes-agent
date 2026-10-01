@@ -1,0 +1,10 @@
+MERGE 54617: CONFLICT
+Auto-merging plugins/platforms/wecom/wecom_crypto.py
+CONFLICT (content): Merge conflict in plugins/platforms/wecom/wecom_crypto.py
+Auto-merging tests/gateway/test_wecom_callback.py
+CONFLICT (content): Merge conflict in tests/gateway/test_wecom_callback.py
+Recorded preimage for 'plugins/platforms/wecom/wecom_crypto.py'
+Recorded preimage for 'tests/gateway/test_wecom_callback.py'
+Automatic merge failed; fix conflicts and then commit the result.
+plugins/platforms/wecom/wecom_crypto.py
+tests/gateway/test_wecom_callback.py

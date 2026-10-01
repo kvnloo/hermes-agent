@@ -1,0 +1,134 @@
+From 58f1374abe9b808711ba307c5b02d79a698398ba Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:36:32 -0500
+Subject: [PATCH] docs(desktop): sync desktop docs with plugin adoption,
+ transcript, Wayland, update and GPU behaviour
+
+Seven Desktop docs statements no longer match main:
+
+- desktop-plugin-sdk.md: a marker-less desktop-plugins/<id>/ folder with a
+  plugin.js was described only as a hand-installed standalone plugin.
+  materializeDesktopHalf() now adopts such a folder in place (marker
+  stamped, nothing else written) when its plugin.js byte-matches the
+  package's own half, which recovers pre-marker installs (#112450).
+- desktop.md, Reasoning Blocks: "(off shows answers only)" is false; the
+  tool feed follows display.tool_progress, never show_reasoning
+  (message-parts.tsx; use-hermes-config.test.ts pins the independence).
+- desktop.md, Markdown line breaks: the transcript renderer applies
+  remarkSoftBreaks, so a single newline in prose is a line break; it is not
+  plain CommonMark soft-break handling.
+- desktop.md, Linux/Wayland: wslgLaunchArgs() defaults the NVIDIA
+  proprietary driver to --ozone-platform=x11 unless a hint/flag chooses
+  otherwise (#126013); a wayland hint is honoured like an x11 one.
+- multi-connection-desktop.md: "Update all instances" is not fully
+  parallel; updateConnectionsBeforeLocal() settles remote/SSH updates
+  before the local handoff.
+- bot-screen.md: _make_run_env() (local terminal backend) also merges the
+  Bot Desktop's published DISPLAY/XAUTHORITY/D-Bus env while the screen is
+  up (#125830), not only cua-driver and headed-browser spawns.
+- environment-variables.md: HERMES_DESKTOP_NVIDIA_SWIFTSHADER no longer
+  overrides a 580.x driver-series list; the fallback is a behavioural probe
+  that engages after a witnessed GPU-process death (#124255).
+---
+ website/docs/developer-guide/desktop-plugin-sdk.md  | 7 +++++--
+ website/docs/reference/environment-variables.md     | 2 +-
+ website/docs/user-guide/desktop.md                  | 6 +++---
+ website/docs/user-guide/features/bot-screen.md      | 4 +++-
+ website/docs/user-guide/multi-connection-desktop.md | 4 +++-
+ 5 files changed, 15 insertions(+), 8 deletions(-)
+
+diff --git a/website/docs/developer-guide/desktop-plugin-sdk.md b/website/docs/developer-guide/desktop-plugin-sdk.md
+index 081bbb9c3c..87ad4b7ad5 100644
+--- a/website/docs/developer-guide/desktop-plugin-sdk.md
++++ b/website/docs/developer-guide/desktop-plugin-sdk.md
+@@ -1381,8 +1381,11 @@ target and renamed into place, so an interrupted copy (a transient file lock, a
+ crash mid-copy) never leaves a half-written folder behind; a leftover
+ `desktop-plugins/<id>/` that has no marker and no `plugin.js` is treated as
+ such damage and replaced on the next **Rescan**, while a marker-less folder
+-that *does* hold a `plugin.js` is a standalone plugin you installed by hand and
+-is never overwritten.
++that *does* hold a `plugin.js` is never overwritten. It is either a standalone
++plugin you installed by hand, or a copy of the package's own half that a
++pre-marker install left behind; when its `plugin.js` matches the package's
++half byte for byte, the next **Rescan** adopts it in place (stamps the marker,
++writes nothing else).
+ 
+ Two enable switches still apply, on purpose, and both default to **off**: the
+ desktop half ships opt-in — it inventories in **Capabilities → Plugins** but stays
+diff --git a/website/docs/reference/environment-variables.md b/website/docs/reference/environment-variables.md
+index 103d06b300..1e13c21d91 100644
+--- a/website/docs/reference/environment-variables.md
++++ b/website/docs/reference/environment-variables.md
+@@ -585,7 +585,7 @@ Three dashboard-auth providers ship in the box. For a remote Hermes Desktop conn
+ | `HERMES_DESKTOP_PYTHON` | Absolute path to a Python interpreter for the backend, checked before Electron auto-resolves one for the source checkout. Used by worktree dev helpers (see [TUI & Desktop from Worktrees](../developer-guide/worktree-ui-dev.md)) to reuse a shared venv. |
+ | `HERMES_DESKTOP_DEV_SERVER` | Vite dev-server URL the Electron shell loads instead of the packaged bundle (e.g. `http://127.0.0.1:5174`). Set automatically by `npm run dev`; only relevant when hacking on the app. |
+ | `HERMES_DESKTOP_CDP_PORT` | Overrides the Chrome DevTools Protocol port the renderer exposes on `127.0.0.1` for DOM/CSS inspection tooling (default `9222`). Dev-server runs (`npm run dev`, `hgui`) open it automatically; a packaged app never does, and no value here changes that. Set to `off` to disable it on a dev run. Anything that can reach the port can execute code in the renderer. |
+-| `HERMES_DESKTOP_NVIDIA_SWIFTSHADER` | (Desktop on Linux, NVIDIA only) Override for the EGL fallback that routes rendering through SwiftShader on driver series with a broken EGL probe (`580.x`, #40077): `1` forces the fallback on — the recovery hatch if a future series reintroduces the crash but is not yet in the closed list; `0` opts out and uses the native GPU path at your own risk. Force-on does not apply where another gate already disabled the GPU (remote display, WSLg, `HERMES_DESKTOP_DISABLE_GPU=0`). |
++| `HERMES_DESKTOP_NVIDIA_SWIFTSHADER` | (Desktop on Linux, NVIDIA only) Override for the EGL fallback that routes rendering through SwiftShader once a launch has witnessed the NVIDIA GPU process dying before the first window (#40077, #124255; sticky for that app version and full driver version, re-probed after either changes): `1` forces the fallback on — the recovery hatch if a host is broken but the probe has not caught it; `0` opts out and uses the native GPU path at your own risk. Force-on does not apply where another gate already disabled the GPU (remote display, WSLg, `HERMES_DESKTOP_DISABLE_GPU=0`). |
+ | `HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY` | (Desktop side) The in-app update check (`Help → Check for Updates…` and the passive update banner) reaches `api.github.com` through the proxy these standard variables name, with `NO_PROXY` exemptions honoured — the same convention `curl`, `npm` and `git` follow. Unset, the check connects directly. |
+ 
+ ### Microsoft Graph (Teams Meetings)
+diff --git a/website/docs/user-guide/desktop.md b/website/docs/user-guide/desktop.md
+index 2ed42b2bf9..30256c0315 100644
+--- a/website/docs/user-guide/desktop.md
++++ b/website/docs/user-guide/desktop.md
+@@ -43,7 +43,7 @@ Sidebar selection follows the focused chat pane. Opening or focusing a session t
+ The center of the app. You get:
+ 
+ - **Streaming responses** with live tool activity and structured tool-call summaries as the agent works. When a tool works on an image (for example `vision_analyze` on a file under the backend's filesystem), expand its activity row to see the image and click it to open it full-size; on a remote connection the image is fetched from the gateway, not from the machine running the app.
+-- **Markdown line breaks** follow Markdown semantics: two trailing spaces create a hard line break; an ordinary newline stays a soft break. Media and preview extraction preserve text outside removed attachment spans, including first-line code indentation and unfinished fenced-code spacing. Code display and Copy preserve leading blank lines, trailing spaces, and terminal blank lines from the Markdown parser.
++- **Markdown line breaks** — a single newline in prose renders as a line break (the way poems, addresses, and one-item-per-line lists read); code, inline code and math keep their own whitespace. Media and preview extraction preserve text outside removed attachment spans, including first-line code indentation and unfinished fenced-code spacing. Code display and Copy preserve leading blank lines, trailing spaces, and terminal blank lines from the Markdown parser.
+ - **The same conversation history** as every other Hermes surface — sessions started here resume in the CLI/TUI and vice versa.
+ - **Drag-and-drop files** anywhere in the chat area to attach them to your next message.
+ - **Independent background drafts** — hidden chat tabs can update their drafts without moving the caret or selection in the visible composer.
+@@ -196,7 +196,7 @@ Talk to Hermes and hear it back, the same [voice mode](./features/voice-mode.md)
+ 
+ #### Linux / Wayland
+ 
+-On a local Wayland session (`XDG_SESSION_TYPE=wayland`, or `WAYLAND_DISPLAY` set) Hermes launches with `--ozone-platform=wayland` so Electron does not fall back to XWayland. The platform has to be on the process command line before application JavaScript loads. An explicit `--ozone-platform`, `desktop.ozone_platform_hint: x11`, or an ozone platform in `desktop.electron_flags` still wins. Drag, click-through, and resize work on the native Wayland path.
++On a local Wayland session (`XDG_SESSION_TYPE=wayland`, or `WAYLAND_DISPLAY` set) Hermes launches with `--ozone-platform=wayland` so Electron does not fall back to XWayland. The NVIDIA proprietary driver (`/proc/driver/nvidia/version` present) is the exception: it defaults to XWayland (`--ozone-platform=x11`), because its GPU process dies on Wayland ozone under the bundled Chromium. The platform has to be on the process command line before application JavaScript loads. An explicit `--ozone-platform`, a `desktop.ozone_platform_hint` of `x11` or `wayland`, or an ozone platform in `desktop.electron_flags` still wins. Drag, click-through, and resize work on the native Wayland path.
+ 
+ On **Hyprland** (including Omarchy) the HUD is floated and pinned through the compositor's IPC after it maps — otherwise Hyprland tiles it like any other window, `always-on-top` is ignored, and compositor drag does nothing. No extra window rule is required.
+ 
+@@ -248,7 +248,7 @@ Manage providers, models, tools, and credentials from a real UI instead of editi
+ - **xAI Grok OAuth** — Grok is a first-class OAuth provider in the launcher; sign in through the browser flow like the other OAuth providers.
+ - **Tool-backend installs from the GUI** — run a tool backend's post-setup install steps directly from the app instead of dropping to a terminal. In the terminal backend picker, selecting a backend marked **Needs setup** asks for confirmation first; declining leaves the current backend selected.
+ - **Terminal font picker** — choose an installed font in **Settings → Appearance**. Nerd Fonts such as `MesloLGS NF` render Powerlevel10k separators and icons in both interactive and agent terminals; the setting is saved per profile.
+-- **Reasoning Blocks** — **Settings → Chat → Reasoning Blocks** (`display.show_reasoning` in `config.yaml`) shows or hides the model's thinking in the transcript (off shows answers only). Open chats update as soon as the setting saves. Typing `/reasoning hide` or `/reasoning show` in the composer flips the same setting and the open transcript follows immediately.
++- **Reasoning Blocks** — **Settings → Chat → Reasoning Blocks** (`display.show_reasoning` in `config.yaml`) shows or hides the model's thinking in the transcript. Open chats update as soon as the setting saves. Typing `/reasoning hide` or `/reasoning show` in the composer flips the same setting and the open transcript follows immediately.
+ - **Reopen Last Chat on Launch** — by default the app picks up where you left off on cold start. Turn it off in **Settings → Appearance** (or set `display.resume_last_session: false` in `config.yaml`) to always begin with a fresh chat. Deep links and explicit destinations are never overridden either way.
+ - **Auxiliary-model warning** — if you switch the main model to a new provider while auxiliary tasks (titling, summarization, and similar helpers) are still pinned to another provider, the app warns you so you don't unknowingly split work across two providers.
+ - **Per-task reasoning effort** — each row under **Settings → Model → Auxiliary models** has a reasoning selector next to its provider/model pick: a level, **Off**, or **inherit · main model effort** (the default, which removes the task's override). It is saved as `auxiliary.<task>.reasoning_effort` in `config.yaml`, the same key `hermes model` writes, and shows in the row's summary when set. Use it to run frequent helpers such as compression or titling at low or no reasoning while the main agent stays at high.
+diff --git a/website/docs/user-guide/features/bot-screen.md b/website/docs/user-guide/features/bot-screen.md
+index 1f90b8f7dc..b36e7d814e 100644
+--- a/website/docs/user-guide/features/bot-screen.md
++++ b/website/docs/user-guide/features/bot-screen.md
+@@ -375,7 +375,9 @@ Xauthority, launcher log, per-profile xfconf).
+   control copies; pasting into the screen still works.
+ - **Display binding.** The launcher publishes `DISPLAY`, `XAUTHORITY` and the
+   D-Bus address; every cua-driver and headed-browser spawn for that profile
+-  inherits them, so the bot never acts on a display a human is sitting at.
++  inherits them, and so does a GUI app the agent launches from a local
++  `terminal` command while the screen is up, so the bot never acts on a
++  display a human is sitting at.
+ 
+ ## Troubleshooting
+ 
+diff --git a/website/docs/user-guide/multi-connection-desktop.md b/website/docs/user-guide/multi-connection-desktop.md
+index 294d2ddeab..dbe79bab9c 100644
+--- a/website/docs/user-guide/multi-connection-desktop.md
++++ b/website/docs/user-guide/multi-connection-desktop.md
+@@ -292,7 +292,9 @@ side effect of sharing one Desktop window.
+ 
+ **Settings → Gateways → Update all instances** (shown once more than one
+ connection is registered) dispatches `hermes update` to every eligible
+-connection in parallel:
++connection — remote and SSH connections first, in parallel, then local once
++they have settled (the local update hands off to an updater that waits for the
++app to exit, so a still-running SSH update must finish first):
+ 
+ - **Local** updates through the app's own update pipeline (the same flow as
+   Settings → Updates).
+-- 
+2.55.0
+

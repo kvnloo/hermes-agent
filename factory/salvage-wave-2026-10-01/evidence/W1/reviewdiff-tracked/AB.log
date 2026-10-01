@@ -1,0 +1,33 @@
+cluster reviewdiff-tracked (fork #48 vs #81164)   pinned main af92ea8e5b852518c523c3e8b2cbd95f0f3d79dc
+regression tests (one contract, both backends):
+  Electron: review-diff-tracked.test.ts -> apps/desktop/electron/review-diff-tracked.test.ts (fork #48 support-diff tests, standalone file, real git, no child_process mock)
+  Python:   test_web_git_review_diff_tracked.py -> tests/hermes_cli/ (new twin; review_diff unit level)
+cmds: cd apps/desktop && HOME=$S/testhome-W1-reviewdiff-tracked npx vitest run electron/review-diff-tracked.test.ts
+      HOME=... HERMES_HOME=... HERMES_PYTHON=$PY bash scripts/run_tests.sh tests/hermes_cli/test_web_git_review_diff_tracked.py -q
+
+main af92ea8e:
+  Electron 1 failed | 1 passed: AssertionError strictly equal, actual 'diff --git a/tracked.txt b/tracked.txt\nnew file mode 100644 ... +tracked\n', expected ''
+  Python   1 failed | 1 passed: AssertionError: assert 'diff --git a...@\n+tracked\n' == ''
+  (untracked-file all-add test passes on main in both)
+
+#81164 merged (git merge --no-ff refs/pr/81164; GitHub mergeable=CONFLICTING):
+  conflicts: git-review-ops.ts x2 (main replaced the raw execFile --no-index call with execGit from no-console-git; PR replaced it with untrackedDiff) -> took PR side;
+             git-review-ops.test.ts x2 (main added reviewCreatePr import + file-wide vi.mock('node:child_process') execFile mock + gh tests; PR appended reviewDiff tests) -> union.
+  regression: Electron 2/2 pass ; Python 2/2 pass
+  semantic conflict: PR's new synthesizeAddDiff()/untrackedPathsUnder() call raw execFile(git); with main's file-wide execFile mock 8 of the PR's own git-review-ops tests fail
+    (21 passed / 8 failed, e.g. 'reviewDiff synthesizes an all-add diff for an untracked file': input '' did not match /\+alpha/).
+  rebase fix verified (81164-rebase-execgit-port.diff, +21/-22): port both helpers to execGit (main's hidden-console git spawn) -> git-review-ops.test.ts 29/29 + regression 2/2;
+    with fork #48's tracked-file test appended inside git-review-ops.test.ts: 30/30. Note execGit has no maxBuffer, so the PR's ls-files maxBuffer bound is lost in this port.
+  adjacent (as merged): electron git-binary-candidates, git-repo-scan, git-root, git-worktree-ops, no-console-git, src/components/chat/diff-lines + review-diff-tracked: pass (git-review-ops see above);
+    src/app/right-sidebar/review + diff-lines: 4 files / 18 tests pass;
+    python test_web_git_review_diff_tracked, test_web_git_review_pathspecs (PR), test_web_server_git, test_web_git_gh_stderr: 42 passed, 0 failed;
+    tsc -p tsconfig.electron.json and tsc -p . : clean (both as-merged and with the execGit port).
+
+#95554 merged (prod merges clean; test import-line conflict resolved mechanically):
+  regression: Electron 1 failed (same 'new file mode' tracked.txt assertion) ; Python 1 failed (untouched backend). Its own outside-repo test passes.
+  Not a fix for this defect (different defect: renderer-supplied path outside the repo).
+  Probe of #95554's outside-repo case: main FAILS (returns '+HERMES_OUTSIDE_REPO_SECRET'); #81164 merged (as-merged and execGit port) returns '' (ls-files rejects outside paths), so #81164 incidentally closes the Electron vector too.
+
+fork #48 guard (support diff prod hunk, `git status --porcelain` '??' check) on main: Electron 2/2 pass ; Python 1 failed (fork does not touch hermes_cli/web_git.py).
+
+other open PRs touching the same fallback, checked by code reading (not run) and not candidates: #58726 (Adolanium; _all_add_diff is_file guard, tracked file still all-adds), #63063 (gal064; diff context), #58036 (necoweb3; credential diffs), #110525 (teknium1; restack, does not touch the fallback), #65555 (dralkh; annotations).

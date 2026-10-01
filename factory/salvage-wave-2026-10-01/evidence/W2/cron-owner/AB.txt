@@ -1,0 +1,25 @@
+main = 298a01c79b38018e029e50f77efe67c4a4fdbd40 (refs/w2/main)
+cmd: cron-owner_ab.sh <label> [ref|patch] [extra files] -> PATH=<tripwire>:/usr/bin:/bin HOME=$S/testhome-W2-cron-owner HERMES_HOME=$HOME/.hermes setsid -w bash scripts/run_tests.sh tests/cron/test_cron_owner_null_fingerprint.py -q -j 2 -rf -p no:randomly
+test file: test_cron_owner_null_fingerprint.py (real child interpreter owns an execution + delivery row in a temp profile's SQLite ledgers; real PID probing; only get_process_start_time is faulted). Adapted from #108484 tests/cron/test_owner_uncertainty.py + kvnloo fork #60 anchors.
+  L = test_live_owner_without_fingerprint_finishes_both_ledgers[recorded|current]   (recover == (0,0); owner completes + delivers)
+  D = test_dead_owner_without_recorded_fingerprint_is_still_fenced                    (recover == (1,1); both rows unknown)
+  R = test_recycled_pid_with_known_mismatch_is_still_fenced                            (recorded fingerprint 50x drift tolerance off -> (1,1))
+
+main:                       L[recorded] FAIL, L[current] pass, D pass, R pass -> 1 failed / 3 passed.
+                            "live owner fenced: {'execution': None, 'delivered': False}"  assert (1, 1) == (0, 0)
+                            (cron/executions.py:136-137 `if started_at is None: return pid == os.getpid()`; the current-None branch was fixed by #117584)
+#108484 (9e29936e8e) merge: CONFLICT, one hunk in cron/executions.py: its second hunk (`return current is None or current == started_at`) collides with main's #117584 drift-tolerant tail. Resolved mechanically by keeping main's side; its started_at hunk auto-merges. Net production diff: 1 line (108484-merged-on-main.resolved.diff).
+#108484 merged (resolved):  4/4 PASS
+  negative control:         revert its one line to `return pid == os.getpid()` -> L[recorded] FAIL again, 1 failed / 3 passed (negctl-108484.log)
+  own test on main:         test_owner_uncertainty.py[current] FAILS: `assert not _owner_is_live(pid, started + 1)` is True because main's comparator tolerates 200 ticks; [recorded] passes.
+                            With the sentinel moved past the tolerance (108484-own-test-rebase-fix.diff): 2/2 pass.
+kvnloo fork #60 rebuilt:    executions hunk same as #108484 + delivery-local at-most-once _owner_is_live (fork60-rebuilt-onto-main.diff) -> 2 failed / 2 passed:
+                            L[recorded] and L[current] both `assert (0, 1) == (0, 0)` (execution preserved, delivery fenced; regresses the current-None case main already handles)
+#83939 (2c90864a50):        CONFLICT in 32 files (merge-83939.txt); +6392/-646 scheduler-handoff bundle; not run.
+
+adjacent (10 files in adjacent-files.txt; tests/cron/test_restart_safe_worker.py excluded: exercises systemd-run scope paths):
+  main + regression:                         11 files, 77 passed, 1 failed (L[recorded])
+  #108484 merged + regression + own test:     12 files, 79 passed, 1 failed (own test [current] sentinel drift)
+  #108484 + sentinel fix + regression:        12 files, 80 passed, 0 failed  (adjacent-carrier-108484+foldin.log)
+  fork #60 + regression:                      11 files, 76 passed, 2 failed (L[recorded], L[current])
+tripwire: no hit from this cluster's runs (hits.log lines are test_close_stdin_allows_eof_* from another fork's process-registry runs).

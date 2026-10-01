@@ -1,0 +1,33 @@
+{
+  "fork_pr": 123,
+  "title": "docs: note partial flag on failed provider turns",
+  "claim": "A provider/agent failure that already delivered reply text reaches API clients as run.failed with partial: true; the terminal-run-status table must say so.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "doc_text_on_main": "website/docs/developer-guide/programmatic-integration.md:194 — \"| Provider/agent failure | `failed` | `run.failed` | `completed: false`, `error` |\"",
+    "source": "agent/turn_recovery.py:1092 and :1240 set result[\"partial\"] = True when _with_delivered_partial() keeps already-delivered text (non-retryable and retry-exhausted paths, #119001); gateway/platforms/api_server_runs.py:181 terminal_run_status() emits {\"completed\": finished, \"partial\": bool(result.get(\"partial\")), ...} (:193) on every terminal event/status.",
+    "red": "Probe on main: terminal_run_status(_failed_turn_result(...) + partial=True) -> ('failed', {'completed': False, 'partial': True, 'interrupted': False}); the doc row lists no partial.",
+    "green": "Row now reads \"`completed: false`, `error`, `partial` when applicable (e.g. reply text was already streamed before a retry-exhausted or non-retryable provider error)\".",
+    "negative_control": "Probe without delivered text -> partial False, matching the 'when applicable' qualifier.",
+    "adjacent": "tests/gateway/test_session_chat_approval.py tests/gateway/test_resume_command.py tests/gateway/test_handoff_secondary_profile_adapter.py tests/tui_gateway/test_profiles_describe_secret_scope.py tests/hermes_cli/test_managed_scope_env.py tests/gateway/test_sse_agent_cancel.py -> 46 passed. docs-site-checks equivalent on the bundle branch: website/scripts/extract-skills.py + generate-skill-docs.py leave website/docs, website/sidebars.ts and website/i18n unchanged (clean); website/scripts/check_doc_links.py OK. added lines scanned for MDX hazards ({ } or raw <tag> outside inline code / fences): none. NOT_TESTED: Docusaurus build (website/node_modules not installed in this environment).",
+    "mirrors": "website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/developer-guide/programmatic-integration.md has no terminal-run-status table (older, shorter translation) — nothing to mirror.",
+    "rebase": "verified on main f848940560; bundle merges cleanly onto refreshed main eb8d21f482 (git merge-tree); merges cleanly with every B1 ready/docs-* branch that touches the same files"
+  },
+  "upstream_overlap": [],
+  "branch": "ready/docs2-gateway",
+  "bundle_commit": "c497e7abe5c386250e4ecba2e634c085b6828726",
+  "patch": "patches/docs2-gateway.patch",
+  "pr_body": "patches/docs2-gateway.body.md",
+  "files": [
+    "website/docs/developer-guide/gateway-session-lifecycle.md",
+    "website/docs/developer-guide/multiplexing-gateway.md",
+    "website/docs/developer-guide/programmatic-integration.md",
+    "website/docs/user-guide/bot-mode.md",
+    "website/docs/user-guide/features/api-server.md",
+    "website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/bot-mode.md"
+  ],
+  "size": "fork leaf +1/-1; bundle docs2-gateway +17/-11 (6 files changed, 17 insertions(+), 11 deletions(-))",
+  "depends_on": null,
+  "notes": "Wording differs from the fork leaf: adds what 'applicable' means. Drift introduced by e947f60689 (#121628). Bundled with: #126, #287, #288, #394, #294. Packaging: one commit per area bundle (batch B2 lane W4-docs); publish one bundle at a time per kvnloo/hermes-agent#313."
+}

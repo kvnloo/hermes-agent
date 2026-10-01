@@ -1,0 +1,34 @@
+{
+  "fork_pr": 119,
+  "title": "docs: replace rotted toolset key list in tools/AGENTS.md with stub form",
+  "claim": "tools/AGENTS.md lists a rotted TOOLSETS key list (and a non-existent tools.<platform>.enabled/disabled key).",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "red": "tools/AGENTS.md:69-74 on main lists messaging, moa, rl (absent from toolsets.TOOLSETS) and omits coding, setup, computer_use, connections, project, video_gen, x_search, bot_room, context_engine, desktop_ui and hermes-* bundles; says per-platform selection is `tools.<platform>.enabled/disabled`.",
+    "green": "Paragraph describes the families (capability sets, includes composites, coding posture, hermes-<platform> bundles, role-reserved setup), points at toolsets.TOOLSETS, and names platform_toolsets.<platform>.",
+    "negative_control": "N/A for docs (no executable behaviour). Equivalent check: the stale phrase is present on main and absent on the bundle (grep given in red/green).",
+    "adjacent": "python3 website/scripts/check_doc_links.py on the bundle tree: OK (no route-style links). All 7 B1 bundles cherry-pick together onto main cleanly, and each pairs cleanly with B2's current docs2-update/docs2-desktop/docs2-gateway/docs2-memory bundles.",
+    "source": "sorted(toolsets.TOOLSETS) on main (printed); toolsets.py:53-60 _ts/_bundle, :153-158 setup role='setup', :185-197 debugging/safe includes and coding posture; model_tools.py:330 role reservation; hermes_cli/tools_config.py:592 and :724-735 read/write platform_toolsets."
+  },
+  "upstream_overlap": [
+    "#127379 (our own, CLOSED/parked; superseded by this bundle)",
+    "No open external PR/issue for this claim (gh search prs/issues; open docs PRs touching the same files edit other sections)"
+  ],
+  "branch": "ready/docs-agents",
+  "bundle": {
+    "branch": "ready/docs-agents",
+    "commit": "9a8daaa95f",
+    "subject": "docs(agents): fix stale kanban and toolset pointers in area AGENTS.md files",
+    "bundle_size": "+12/-11",
+    "patch": "patches/docs-agents.patch",
+    "body": "patches/docs-agents.body.md"
+  },
+  "files": [
+    "tools/AGENTS.md"
+  ],
+  "size": "+7/-6",
+  "depends_on": null,
+  "fork_head": "2308c79638566313feba7bae7ccb3f6713609395",
+  "notes": "Rebuilt also fixes the per-platform config key in the same paragraph (fork kept tools.<platform>.enabled/disabled). Supersedes our parked upstream #127379."
+}

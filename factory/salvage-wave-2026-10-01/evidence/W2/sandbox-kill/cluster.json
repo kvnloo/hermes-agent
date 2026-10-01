@@ -1,0 +1,131 @@
+{
+ "issue": "#125003",
+ "slug": "sandbox-kill",
+ "seed": "fork #41 (kvnloo/hermes-agent)",
+ "title": "Killing a sandbox-backed background process (docker/ssh/modal/daytona/vercel/singularity) leaves the command running",
+ "main_sha": "298a01c79b38018e029e50f77efe67c4a4fdbd40",
+ "candidates": [
+  {
+   "pr": 125004,
+   "author": "Adolanium",
+   "created": "2026-09-27T09:03:45Z",
+   "last_activity": "2026-09-27T09:27:00Z (no comments or reviews)",
+   "mergeable_github": "UNKNOWN/UNKNOWN (not yet computed by GitHub)",
+   "merges_clean_on_pinned_main": true,
+   "diff_size": "+67/-4, 2 files (tools/process_registry.py +10/-4, tests/tools/test_process_registry.py +57)",
+   "has_tests": "yes: TestSandboxKillTree in tests/tools/test_process_registry.py (real bash via a fake env; child gone, exit file 143)",
+   "approach": "spawn_via_env starts the wrapper under `set -m`, so the wrapper is its own process-group leader (PGID == recorded PID). The wrapper traps TERM (`trap : TERM`) so it outlives its child and still writes the exit code, and its own stdio goes to /dev/null. The _signal_kill sandbox branch sends `kill -TERM -- -<pid>` to the whole group. No pkill/setsid needed in the image. Fixes #125003 (same author)."
+  }
+ ],
+ "candidates_checked_not_same_defect": [
+  {
+   "pr": 129674,
+   "author": "Froraut",
+   "why": "Open 2026-09-30, replaces closed #128735/#128033/#128102. Sandbox background cwd, exit-file completion and final log read. Does not touch the kill path; fails the regression test 4/4 alone. Merges clean together with #125004 (either order tested: #129674 then #125004) and the combination passes the regression test 4/4 and test_process_registry.py 115/115. Its exit-file poller is compatible with #125004's trapped wrapper writing 143."
+  },
+  {
+   "pr": 127778,
+   "author": "Froraut",
+   "why": "Reaps failed background launches; no kill-path change."
+  },
+  {
+   "pr": 8075,
+   "author": "tomqiaozc",
+   "why": "env_ref weakref so environments can be GC'd (#8041); touches kill_process only to handle a dead weakref."
+  },
+  {
+   "pr": 121822,
+   "author": "Finn763",
+   "why": "Unbuffered sandbox-bg python and poll output recency; no kill-path change."
+  },
+  {
+   "pr": 123304,
+   "author": "jonpol01",
+   "why": "Sandbox heartbeats carry polled output; no kill-path change."
+  },
+  {
+   "pr": 124896,
+   "author": "liuhao1024",
+   "why": "Windows PTY host-tree kill (_signal_kill PTY branch), not the sandbox branch."
+  },
+  {
+   "pr": 108992,
+   "author": "fangliquanflq",
+   "why": "Windows PTY descendants surviving kill; host PTY branch only."
+  },
+  {
+   "pr": "75753, 78199, 100036, 122170, 122329, 82013, 109846",
+   "author": "trippyogi, itskaism, fangliquanflq, beardthelion, salch-cred, fangliquanflq, Sahilvishnaliya",
+   "why": "Mention spawn_via_env (failed-spawn reporting, workdir, env temp dirs, offline backends, persist_on_release); none changes the wrapper kill or _signal_kill (diff grep for kill/set -m/killpg/pkill/worker_pid: 0 lines)."
+  }
+ ],
+ "regression_test": {
+  "source": "new, adapted from #125004's TestSandboxKillTree (Adolanium): adds the real LocalEnvironment as a second sandbox stand-in, the command's own shell and a grandchild in the asserted tree, and identity-checked kill(1) cleanup (the conftest live-system guard refuses os.kill on reparented survivors)",
+  "path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/sandbox-kill/test_sandbox_background_kill_tree.py (placed at tests/tools/test_sandbox_background_kill_tree.py)",
+  "tests": [
+   "test_kill_stops_the_command_and_everything_it_started[local_env|plain_bash]",
+   "test_kill_records_the_termination_in_the_exit_file[local_env|plain_bash]"
+  ],
+  "contract": "Through the real spawn_via_env and kill_process against real bash, killing a sandbox background session stops the command's shell and everything it started (direct child and grandchild gone within 5 s), kill_process reports 'killed', and the wrapper records the termination (143) in hermes_bg_<id>.exit.",
+  "evidence_path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/sandbox-kill/"
+ },
+ "ab_results": {
+  "main": {
+   "result": "fail",
+   "detail": "4 failed. A: 'processes outlived the kill: shell, child, grandchild' in both envs (kill <wrapper pid> orphans nohup bash -lc and its tree). B: 'exit file was never written' in both envs. kill_process still returns status 'killed'."
+  },
+  "125004": {
+   "result": "pass",
+   "detail": "4/4, merges clean. Negative controls: reverting _signal_kill to `kill <pid>` gives 4 failed (the trapped wrapper keeps waiting, nothing dies); dropping `set -m` gives 4 failed (group kill hits ESRCH)."
+  },
+  "fork#41 rebuilt (reference, not a candidate)": {
+   "result": "fail (partial)",
+   "detail": "Hand port onto main (cherry-pick conflicts in process_registry.py and local.py). B 2/2, A 0/2: 'processes outlived the kill: grandchild', because `pkill -P <worker>` reaches only the worker's direct children. It also depends on pkill, which minimal images lack."
+  },
+  "129674 (adjacent, not same defect)": {
+   "result": "fail",
+   "detail": "4 failed, same as main. #129674 then #125004: both merge clean, 4/4."
+  },
+  "125004 + escalation fold-in": {
+   "result": "pass",
+   "detail": "Regression 4/4 and TERM-ignoring probe 2/2 (carrier alone: probe 0/2, 'survived: shell, child')."
+  }
+ },
+ "adjacent_tests": {
+  "files": [
+   "tests/tools/test_process_registry.py",
+   "tests/tools/test_local_temp_dir.py",
+   "tests/tools/test_process_registry_list_exit.py",
+   "tests/tools/test_terminal_compound_background.py",
+   "tests/tools/test_terminal_task_cwd.py",
+   "tests/tools/test_kill_verify_tree_death.py",
+   "tests/tools/test_process_checkpoint_readopt.py",
+   "tests/tools/test_process_wait_clarity.py",
+   "tests/tools/test_notify_on_complete.py",
+   "tests/gateway/test_abandoned_turn_process_cleanup.py"
+  ],
+  "result": "Main: 205 passed, 4 skipped, 0 failed. #125004: 210 passed (205 + its TestSandboxKillTree + 4 regression cases). #125004 + escalation fold-in: 212 passed (adds the 2 probe cases). All runs deselect tests/tools/test_process_registry.py::TestStdinHelpers::test_close_stdin_allows_eof_driven_process_to_finish: its ptyprocess child calls os.execvpe('/usr/bin/bash', ...), which the W2 tripwire blocks, so the file hangs to the 300 s per-file cap identically on main and every candidate (seen in an earlier run). That is a tripwire-blocked local PTY spawn, not a re-exec of the install. No other tripwire hits."
+ },
+ "carrier": {
+  "pr": 125004,
+  "author": "Adolanium <94890352+Adolanium@users.noreply.github.com>",
+  "why": "The only open PR for #125003 (same author as the issue). It passes the full contract in both sandbox stand-ins, merges clean on 298a01c7, is the smallest footprint (+10/-4 production), needs no pkill/setsid in the image, keeps exit-code capture, and has a real-bash test. kvnloo fork #41 (earlier, 2026-09-13, fork-only) misses grandchildren and depends on pkill."
+ },
+ "fold_ins": [
+  {
+   "from": "fork #41 (kvnloo/hermes-agent)",
+   "author": "kvnloo",
+   "co_authored_by": "Kevin Rajan <7121943+kvnloo@users.noreply.github.com>",
+   "hunk_scope": "OPTIONAL, separable. tools/process_registry.py _signal_kill sandbox branch, +10/-1 on top of #125004 (foldin-sandbox-kill-escalation.diff): after `kill -TERM -- -<pid>`, poll `kill -0 -- -<pid>` every 0.1 s and send `kill -KILL -- -<pid>` if the group outlives terminal.daemon_term_grace_seconds (default 2.0; 0 disables), with the execute timeout raised by the grace. Plus one test: a command that ignores SIGTERM (`trap '' TERM; sleep 300 & ...; wait`) is gone after the kill (probe_sandbox_kill_term_ignored.py, or as a second test in #125004's TestSandboxKillTree). This re-expresses fork #41's TERM-then-KILL escalation for the carrier's process-group shape; fork #41's own pkill -P code does not carry over.",
+   "why": "Host-path parity (tools/AGENTS.md: the host teardown 'SIGKILLs whatever ignored both'). Without it a TERM-ignoring sandbox command keeps running while kill_process returns 'killed', because sandbox sessions skip the #115490 survivor check by design. Separable: the carrier alone satisfies the #125003 contract.",
+   "test": "Probe fails 2/2 on main and on #125004 ('survived: shell, child'), passes 2/2 with the fold-in; regression 4/4; adjacent 212/212.",
+   "optional": true
+  }
+ ],
+ "close_after_merge": [],
+ "exclude_reason": null,
+ "row": "| #125003 | #125004 (Adolanium) | main: FAIL, 4 of 4 (the command's shell, child and grandchild outlive the kill; no exit file); #125004: PASS 4/4, merges clean; kvnloo fork #41 rebuilt (reference): FAIL, 2 of 4 (grandchild survives `pkill -P`); #129674 (adjacent): FAIL 4/4, composes clean with #125004 | kvnloo (fork #41's TERM-then-KILL idea, re-expressed for the group shape; optional and separable, the carrier alone closes #125003): SIGKILL escalation for the sandbox process group after `terminal.daemon_term_grace_seconds` (`tools/process_registry.py` +10/-1, host-path parity) + a TERM-ignoring-command test; `Co-authored-by: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>` | none (no other open PR for #125003) | On main, `_signal_kill` sends `kill <wrapper pid>`, so the `nohup bash -lc` command and its tree keep running in the sandbox, no exit file is written, and `kill_process` still says \"killed\". #125004 puts the wrapper in its own group with `set -m`, traps TERM in it and signals the group: 4/4 in the real LocalEnvironment and a plain `bash -c` env; reverting either the group kill or `set -m` re-fails 4/4. Adjacent 10 files go from 205 to 210 passing. A command that ignores SIGTERM still survives #125004 with a \"killed\" receipt; the fold-in closes that (probe 0/2 to 2/2, adjacent 212/212). |",
+ "row_fork_draft": "| #125003 | #125004 (Adolanium) | main 298a01c7 FAIL 4/4; #125004 PASS 4/4 (clean merge); fork #41 rebuilt FAIL 2/4 (grandchild survives pkill -P); #129674 FAIL 4/4 (adjacent; composes clean) | kvnloo (fork #41 idea, Co-authored-by Kevin Rajan; optional, separable): group SIGKILL after terminal.daemon_term_grace_seconds (+10/-1) + TERM-ignoring test | none | main's kill <wrapper pid> orphans the command tree and writes no exit file while reporting killed; #125004's set -m group + trapped wrapper fixes both (NC: revert group kill or set -m re-fails 4/4); adjacent 205->210; fold-in closes the TERM-ignoring false receipt (probe 0/2 -> 2/2, adjacent 212). |",
+ "notes": "(1) Maintainer review point, not a test failure: tools/AGENTS.md documents a host teardown invariant, 'Background-process teardown signals the parent first ... Never SIGTERM descendants before the parent' (Chromium zygotes reaped mid-shutdown turn exit 0 into a SIGTRAP core dump). #125004 sends one SIGTERM to the whole sandbox group, so the command and its descendants are signalled together. Main's sandbox branch never followed the host ordering (it only signals the wrapper, which is not the command), and the invariant is written against _terminate_host_pid, but a reviewer may ask whether it should extend to sandboxes. Making it parent-first needs the command's PID (the wrapper would have to background it and forward TERM), which is a redesign of #125004, not a fold-in; neither the regression test nor the probe can observe the difference without a zygote-style program. (2) Job control: every backend's execute() runs `bash -c`/`bash -lc` (base.py, ssh.py, singularity.py, modal.py, vercel_sandbox.py), and bash 5.3 honours `set -m` with no tty (jobcontrol-probe.log: wrapper PGID == PID; the group kill empties it). Simulated missing job control (NC-B, `set -m` removed): the group kill hits ESRCH and the command, its tree and the wrapper all keep running with a 'killed' receipt; main also leaves the command running (it kills only the wrapper), so this is not worse for the user command. Residual: a bash built without job control. Real docker/ssh/modal backends NOT_TESTED (no sandbox available); LocalEnvironment uses the same spawn-per-call bash -c model. (3) Fold-in cost: on a container whose PID 1 does not reap (docker_snap_compat without --init) the exited wrapper stays a zombie, `kill -0 -- -<pgid>` keeps succeeding, and the kill waits the full grace (2 s) before a no-op SIGKILL. Not tested. (4) Side effect of #125004 worth knowing: main's wrapper keeps the exec stdout pipe open, so a LocalEnvironment launch of a long command waits on the orphaned-pipe guard (about 0.46 s measured) and a pipe-capturing env without that guard (subprocess.run(capture_output=True)) hangs until its 10 s timeout and records failed_start; #125004's `> /dev/null 2>&1` on the wrapper removes that (0.02 s). (5) #129674 (Froraut) is adjacent and composes cleanly; its exit-file poller reads #125004's 143. (6) kvnloo fork #41 is not competitive: its rebuild misses grandchildren, needs pkill, kills children before the worker (opposite of the AGENTS.md order) and adds a .worker_pid artifact plus a local.py cleanup regex. Fork-side: close kvnloo/hermes-agent#41 after the carrier merges. (7) Housekeeping: PR heads pinned at refs/w2/pr/125004 (2692841849) and refs/w2/pr/129674 (84ae319978). All test runs used setsid -w, isolated HOME/HERMES_HOME and the W2 tripwire; no `sleep 300` survivors were left after any run (checked by ps after each). A `systemd-run` stub was added to the shared tripwire bin (blocking direction only). The worktree was removed.",
+ "evidence_dir": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/sandbox-kill/"
+}

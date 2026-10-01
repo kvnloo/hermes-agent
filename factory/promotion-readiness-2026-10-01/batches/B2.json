@@ -1,0 +1,567 @@
+[
+ {
+  "fork_pr": 123,
+  "title": "docs: note partial flag on failed provider turns",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-note-partial-flag-on-failed-provider-turns-09cce9",
+  "head_oid": "99b82dbcde017aef051de537b6659529feb8efd5",
+  "head_present": true,
+  "files": [
+   "website/docs/developer-guide/programmatic-integration.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 124,
+  "title": "docs(desktop): cover marker-less copies of a package's own desktop half",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-desktop-cover-marker-less-copies-of-a-package-951d84",
+  "head_oid": "d9b29505e6d678c1316304c9a3652bbbd6337e82",
+  "head_present": true,
+  "files": [
+   "website/docs/developer-guide/desktop-plugin-sdk.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 126,
+  "title": "docs: add approval.request to /api/sessions/{id}/chat/stream event list",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-add-approval-request-to-api-sessions-id-chat-c8066d",
+  "head_oid": "4c2f8c604c0be0224c0d5deec9aa82b3c054ca04",
+  "head_present": true,
+  "files": [
+   "website/docs/user-guide/features/api-server.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 127,
+  "title": "docs(cli): drop stale partner list from portal tools row",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-cli-drop-stale-partner-list-from-portal-tools-a837c0",
+  "head_oid": "f5a3fa57169486b489bc1d75c3fa2a2c925c88d6",
+  "head_present": true,
+  "files": [
+   "website/docs/reference/cli-commands.md",
+   "website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/reference/cli-commands.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 2,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 287,
+  "title": "docs: document preserve_prompt_pin on SessionStore.switch_session",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-document-preserve-prompt-pin-on-sessionstore-04fd44",
+  "head_oid": "ac728ed409fb88c17d5fc3d13acf898de1d93ae3",
+  "head_present": true,
+  "files": [
+   "website/docs/developer-guide/gateway-session-lifecycle.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [
+   127355
+  ],
+  "origin_states": {
+   "127355": "CLOSED"
+  },
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Closed upstream counterpart belongs to issue-held docs wave.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [
+   "#313"
+  ],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 288,
+  "title": "docs: correct profiles RPC scope binding description in multiplexing-gateway",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-correct-profiles-rpc-scope-binding-descriptio-53d69c",
+  "head_oid": "c4fb8fb4e03cd9548b7654528801ca42db881f25",
+  "head_present": true,
+  "files": [
+   "website/docs/developer-guide/multiplexing-gateway.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [
+   127356
+  ],
+  "origin_states": {
+   "127356": "CLOSED"
+  },
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Closed upstream counterpart belongs to issue-held docs wave.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [
+   "#313"
+  ],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 289,
+  "title": "docs(agents): include hermes-serve* and hermes-dashboard* in restart-per-kind fleet scope",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-agents-include-hermes-serve-and-hermes-dashbo-ff9aed",
+  "head_oid": "3db8093e30ade5c66c899dc91db99fb99bd8c897",
+  "head_present": true,
+  "files": [
+   "hermes_cli/AGENTS.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [
+   127357
+  ],
+  "origin_states": {
+   "127357": "CLOSED"
+  },
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Closed upstream counterpart belongs to issue-held docs wave.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [
+   "#313"
+  ],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 290,
+  "title": "docs: drop stale claim that inventoryless markers can't auto-clear",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-drop-stale-claim-that-inventoryless-markers-c-ca0d05",
+  "head_oid": "d938b325bf6e1f522bc129d6d6719f3c9a5b1759",
+  "head_present": true,
+  "files": [
+   "website/docs/getting-started/updating.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [
+   127358
+  ],
+  "origin_states": {
+   "127358": "CLOSED"
+  },
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Closed upstream counterpart belongs to issue-held docs wave.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [
+   "#313"
+  ],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 291,
+  "title": "docs(desktop): drop stale \"off shows answers only\" claim for Reasoning Blocks",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-desktop-drop-stale-off-shows-answers-only-cla-615766",
+  "head_oid": "923b3caab303eadbaa6961a562df2bdf234c8cec",
+  "head_present": true,
+  "files": [
+   "website/docs/user-guide/desktop.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [
+   127359
+  ],
+  "origin_states": {
+   "127359": "CLOSED"
+  },
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Closed upstream counterpart belongs to issue-held docs wave.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [
+   "#313"
+  ],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 292,
+  "title": "docs(desktop): correct markdown line-break behavior to match soft-breaks plugin",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-desktop-correct-markdown-line-break-behavior-5cffae",
+  "head_oid": "29611632141a12efa3de628f4abbaf799c764d39",
+  "head_present": true,
+  "files": [
+   "website/docs/user-guide/desktop.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [
+   127360
+  ],
+  "origin_states": {
+   "127360": "CLOSED"
+  },
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Closed upstream counterpart belongs to issue-held docs wave.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [
+   "#313"
+  ],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 293,
+  "title": "docs: cover serve-ticker branch in cron status guidance",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-cover-serve-ticker-branch-in-cron-status-guid-ecf48b",
+  "head_oid": "10b1b4580c532d047fe01a0113abf74d1340de27",
+  "head_present": true,
+  "files": [
+   "website/docs/user-guide/multi-profile-gateways.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [
+   127361
+  ],
+  "origin_states": {
+   "127361": "CLOSED"
+  },
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Closed upstream counterpart belongs to issue-held docs wave.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [
+   "#313"
+  ],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 294,
+  "title": "docs(bot-mode): correct local-delivery launcher resolution order",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-bot-mode-correct-local-delivery-launcher-reso-14a708",
+  "head_oid": "cc0142bdc82096fffdf8f60ab78fc71e4342b579",
+  "head_present": true,
+  "files": [
+   "website/docs/user-guide/bot-mode.md",
+   "website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/bot-mode.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 2,
+  "origin_refs": [
+   127362
+  ],
+  "origin_states": {
+   "127362": "CLOSED"
+  },
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Closed upstream counterpart belongs to issue-held docs wave.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [
+   "#313"
+  ],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 295,
+  "title": "docs: correct stale hermes logs filter & timezone notes (en + zh-Hans)",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-correct-stale-hermes-logs-filter-timezone-not-d6f9c2",
+  "head_oid": "7169adf20c669c6f0e87b74617d92840014c57b5",
+  "head_present": true,
+  "files": [
+   "website/docs/reference/cli-commands.md",
+   "website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/reference/cli-commands.md",
+   "website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/configuration.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 3,
+  "origin_refs": [
+   127363
+  ],
+  "origin_states": {
+   "127363": "CLOSED"
+  },
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified. Closed upstream counterpart belongs to issue-held docs wave.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [
+   "#313"
+  ],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 304,
+  "title": "docs: correct bare noreply email auto-resolve claim in contributors README",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-correct-bare-noreply-email-auto-resolve-claim-3686dc",
+  "head_oid": "a4ae328f9e61fa14df1af0e328c9a2f2ed5dd08e",
+  "head_present": true,
+  "files": [
+   "contributors/README.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Canonical retained noreply cleanup lane for #80/#116/#125/#304. Current source confirms the README no-file-needed claim remains false for bare noreply; audit --fix resolution still creates a mapping file.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [
+   "#313 review-slot clearance"
+  ],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 305,
+  "title": "docs: cover NVIDIA proprietary driver defaulting to XWayland on Linux",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-cover-nvidia-proprietary-driver-defaulting-to-03f6b0",
+  "head_oid": "46d21dd8884ba6405e75686325cb140473cdde9b",
+  "head_present": true,
+  "files": [
+   "website/docs/user-guide/desktop.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 306,
+  "title": "docs(cli): correct fallback_providers redaction scope in dump config overrides",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-cli-correct-fallback-providers-redaction-scop-e22159",
+  "head_oid": "7b3b9d9c857d08f51e98dba2681d711d46a14077",
+  "head_present": true,
+  "files": [
+   "website/docs/reference/cli-commands.md",
+   "website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/reference/cli-commands.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 2,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 307,
+  "title": "docs(skills): correct clarify call shape and multi-select claims",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-skills-correct-clarify-call-shape-and-multi-s-053540",
+  "head_oid": "7bf52a4893e1a2208da0bf93e9c24e0f145a36f7",
+  "head_present": true,
+  "files": [
+   "optional-skills/creative/pixel-art/SKILL.md",
+   "optional-skills/migration/openclaw-migration/SKILL.md",
+   "website/docs/user-guide/skills/optional/creative/creative-pixel-art.md",
+   "website/docs/user-guide/skills/optional/migration/migration-openclaw-migration.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 4,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 392,
+  "title": "docs: correct Update all instances dispatch order to remote-then-local",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-correct-update-all-instances-dispatch-order-t-8e3e14",
+  "head_oid": "2fb525c01f291f5ba0d266280c33a0280a6a32b7",
+  "head_present": true,
+  "files": [
+   "website/docs/user-guide/multi-connection-desktop.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 393,
+  "title": "docs(memory): drop stale hindsight-all lazy-install claim",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-memory-drop-stale-hindsight-all-lazy-install-fa44ed",
+  "head_oid": "ba42295cf9af5d1a387c53a3036b3104e0755432",
+  "head_present": true,
+  "files": [
+   "website/docs/user-guide/features/memory-providers.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 394,
+  "title": "docs: reflect managed .env overlay in multiplex secret scope description",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-reflect-managed-env-overlay-in-multiplex-secr-a58422",
+  "head_oid": "8fe0658c46d623bade6577f552fde6a8d9552246",
+  "head_present": true,
+  "files": [
+   "website/docs/developer-guide/multiplexing-gateway.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 395,
+  "title": "docs(bot-screen): include terminal GUI launches in display-binding consumers",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-bot-screen-include-terminal-gui-launches-in-d-540e41",
+  "head_oid": "4cb95a948edea086d62356e63c348776666a2154",
+  "head_present": true,
+  "files": [
+   "website/docs/user-guide/features/bot-screen.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 396,
+  "title": "docs: cover gpt-6.1-sol omit-disable recovery in reasoning-mandatory note",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-cover-gpt-6-1-sol-omit-disable-recovery-in-re-033a8f",
+  "head_oid": "026b6ef27b44d83107d0d131c82b6a39b14c9907",
+  "head_present": true,
+  "files": [
+   "website/docs/user-guide/configuration.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 397,
+  "title": "docs(desktop): note publisher-signed macOS installs aren't replaced by a locally signed rebuild",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-desktop-note-publisher-signed-macos-installs-50a64d",
+  "head_oid": "6f62963819864814ec519e57bf205a502953a1a1",
+  "head_present": true,
+  "files": [
+   "website/docs/getting-started/updating.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 398,
+  "title": "docs: correct NVIDIA SwiftShader fallback to behavioral probe, not 580.x series",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-correct-nvidia-swiftshader-fallback-to-behavi-63bf9a",
+  "head_oid": "f13ebad24c11ddb5f06e57d086d526e4f9bb87c8",
+  "head_present": true,
+  "files": [
+   "website/docs/reference/environment-variables.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 1,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ },
+ {
+  "fork_pr": 399,
+  "title": "docs: cover gpt-6 Sol/Luna & gpt-6.1 Sol in Codex autoraise scope",
+  "wave": "W4-docs",
+  "head": "detail/fix-docs/docs-cover-gpt-6-sol-luna-gpt-6-1-sol-in-codex-aut-3f6c7a",
+  "head_oid": "05d53e0c78a84fd68bb58605885e66f8574059e3",
+  "head_present": true,
+  "files": [
+   "agent/auxiliary_client.py",
+   "website/docs/developer-guide/context-compression-and-caching.md"
+  ],
+  "kanban_baggage": [],
+  "changed_files": 2,
+  "origin_refs": [],
+  "origin_states": {},
+  "reason": "Distinct proposed leaf read in full; not independently re-executed here and current-main need/ownership is not certified.",
+  "next_action": "Check current-main need, overlapping PR/issue ownership, minimum intended diff, attribution, focused regression and available review slot before any promotion.",
+  "depends_on": [],
+  "tested_sha": [],
+  "author": "app/detail-app"
+ }
+]

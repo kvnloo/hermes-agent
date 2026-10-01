@@ -1,0 +1,34 @@
+{
+  "fork_pr": 120,
+  "title": "docs: keep multi-gateway Simple-mode profile rail wording aligned",
+  "claim": "Simple mode keeps the profile rail with more than one profile or more than one gateway, not only more than one profile.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "red": "website/docs/user-guide/desktop.md:145 on main: \"With more than one profile the profile rail stays, since it is then the only way to switch.\"",
+    "green": "'With more than one profile or more than one registered gateway the profile rail stays'.",
+    "negative_control": "N/A for docs (no executable behaviour). Equivalent check: the stale phrase is present on main and absent on the bundle (grep given in red/green).",
+    "adjacent": "python3 website/scripts/check_doc_links.py on the bundle tree: OK (no route-style links). All 7 B1 bundles cherry-pick together onto main cleanly, and each pairs cleanly with B2's current docs2-update/docs2-desktop/docs2-gateway/docs2-memory bundles.",
+    "source": "apps/desktop/src/store/interface-mode.ts:106-108 SIMPLE profileRailVisible: context => context.profileCount > 1 || context.connectionCount > 1."
+  },
+  "upstream_overlap": [
+    "#127380 (our own, CLOSED/parked; superseded by this bundle)",
+    "No open external PR/issue for this claim (gh search prs/issues; open docs PRs touching the same files edit other sections)"
+  ],
+  "branch": "ready/docs-desktop",
+  "bundle": {
+    "branch": "ready/docs-desktop",
+    "commit": "2ee1217746",
+    "subject": "docs(desktop): sync timeline rail, Simple-mode rail, square menu and launch precedence",
+    "bundle_size": "+13/-9",
+    "patch": "patches/docs-desktop.patch",
+    "body": "patches/docs-desktop.body.md"
+  },
+  "files": [
+    "website/docs/user-guide/desktop.md"
+  ],
+  "size": "+1/-1",
+  "depends_on": null,
+  "fork_head": "4320731a2383079b29ecfad266769ec5111ca0a9",
+  "notes": "Supersedes our parked upstream #127380."
+}

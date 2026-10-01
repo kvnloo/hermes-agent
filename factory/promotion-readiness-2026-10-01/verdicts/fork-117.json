@@ -1,0 +1,34 @@
+{
+  "fork_pr": 117,
+  "title": "docs(mcp): correct non-secret env destination for catalog installs",
+  "claim": "mcp.md says non-secret catalog values go to ~/.hermes/.env; install_entry inlines them into config.yaml and .env holds only secrets.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "red": "website/docs/user-guide/features/mcp.md:122-123 on main: \"writes the value to `~/.hermes/.env`. Non-secret values (base URLs) go to the same file.\"",
+    "green": "'Non-secret values (server URLs, OAuth client IDs) are not written to `.env`: Hermes inlines them into the server's `mcp_servers` block in `config.yaml`.'",
+    "negative_control": "N/A for docs (no executable behaviour). Equivalent check: the stale phrase is present on main and absent on the bundle (grep given in red/green).",
+    "adjacent": "python3 website/scripts/check_doc_links.py on the bundle tree: OK (no route-style links). All 7 B1 bundles cherry-pick together onto main cleanly, and each pairs cleanly with B2's current docs2-update/docs2-desktop/docs2-gateway/docs2-memory bundles.",
+    "source": "hermes_cli/mcp_catalog.py:468-495 _prompt_env_vars saves only spec.secret values; :794-798 install_entry inlines `secret: false` values via _inline_non_secret_value (:498); surfaces mcp_picker.py:107 and web_routers/mcp.py:561 both call install_entry. optional-mcps/n8n-official/manifest.yaml:18 (server URL) and asana :30 (client id) are the secret: false values."
+  },
+  "upstream_overlap": [
+    "#127377 (our own, CLOSED/parked; superseded by this bundle)",
+    "No open external PR/issue for this claim (gh search prs/issues; open docs PRs touching the same files edit other sections)"
+  ],
+  "branch": "ready/docs-mcp",
+  "bundle": {
+    "branch": "ready/docs-mcp",
+    "commit": "0081fb5e75",
+    "subject": "docs(mcp): correct catalog and plugin MCP install docs",
+    "bundle_size": "+36/-16",
+    "patch": "patches/docs-mcp.patch",
+    "body": "patches/docs-mcp.body.md"
+  },
+  "files": [
+    "website/docs/user-guide/features/mcp.md"
+  ],
+  "size": "+3/-1",
+  "depends_on": null,
+  "fork_head": "ea0ef1a1460c6ef8529bcbf02e02d038e0b645b1",
+  "notes": "Separate claim from #118 (generic rule vs Asana example), same code path; bundled together as one coherent MCP correction per the audit. Supersedes our parked upstream #127377."
+}

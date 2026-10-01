@@ -1,0 +1,187 @@
+From 1f94c329f2f2f0c86e26c83590f699d1dd8c5f1b Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:26:06 -0500
+Subject: [PATCH] perf(tui): halt the live-agents dock clock while collapsed
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The live-agents dock arms a 1 s `setNow` clock whenever a subagent is
+live, even while Ctrl+R has collapsed it to its one-line summary. That
+summary shows counts and the first row's activity, never agent elapsed,
+so every tick is a dock re-render and an Ink frame with nothing new to
+show: 10 commits / 10 frames per 10 s, now 0 / 0.
+
+Only the agent half of the clock is dropped while collapsed. Process rows
+keep it in either state: finished rows show `exit N · Ns ago` in the
+collapsed summary and age out of the dock after PROCESS_RETAIN_SECONDS,
+both driven by `now`. The clock re-seeds `now` when it re-arms (the same
+pattern FaceTicker/SessionDuration use on reveal), so expanding after a
+collapse paints the live elapsed instead of the value from when it folded.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../agentDockCollapsedClock.test.tsx          | 127 ++++++++++++++++++
+ ui-tui/src/components/agentsPanel.tsx         |   7 +-
+ 2 files changed, 132 insertions(+), 2 deletions(-)
+ create mode 100644 ui-tui/src/__tests__/agentDockCollapsedClock.test.tsx
+
+diff --git a/ui-tui/src/__tests__/agentDockCollapsedClock.test.tsx b/ui-tui/src/__tests__/agentDockCollapsedClock.test.tsx
+new file mode 100644
+index 0000000000..4b8e3da93c
+--- /dev/null
++++ b/ui-tui/src/__tests__/agentDockCollapsedClock.test.tsx
+@@ -0,0 +1,127 @@
++import { PassThrough } from 'node:stream'
++
++import { Box, renderSync, Text } from '@hermes/ink'
++import React, { Profiler } from 'react'
++import stripAnsi from 'strip-ansi'
++import { afterEach, beforeEach, expect, it, vi } from 'vitest'
++
++import { $agentDockCollapsed, applyAgentSnapshot } from '../app/agentRoster.js'
++import { applyProcessSnapshot, PROCESS_RETAIN_SECONDS } from '../app/processRoster.js'
++import { resetTurnState } from '../app/turnStore.js'
++import { patchUiState, resetUiState } from '../app/uiStore.js'
++import { LiveAgentsPanel } from '../components/agentsPanel.js'
++
++const T0 = 1_800_000_000_000
++const unmounts: Array<() => void> = []
++
++// React flushes passive effects on a real macrotask while Ink's frame throttle
++// runs on the faked clock, so step in small slices to let both settle.
++const settle = async () => {
++  for (let i = 0; i < 5; i += 1) {
++    await vi.advanceTimersByTimeAsync(10)
++  }
++}
++
++const mountDock = () => {
++  const stdout = Object.assign(new PassThrough(), { columns: 80, rows: 30 })
++  const frames: string[] = []
++  let commits = 0
++  let inkFrames = 0
++  stdout.on('data', chunk => frames.push(stripAnsi(chunk.toString())))
++
++  const view = renderSync(
++    <Box flexDirection="column">
++      <Text>[top]</Text>
++      <Profiler id="dock" onRender={() => void (commits += 1)}>
++        <LiveAgentsPanel cols={80} />
++      </Profiler>
++      <Text>[end]</Text>
++    </Box>,
++    {
++      onFrame: () => void (inkFrames += 1),
++      patchConsole: false,
++      stdin: new PassThrough() as unknown as NodeJS.ReadStream,
++      stdout: stdout as unknown as NodeJS.WriteStream
++    }
++  )
++
++  unmounts.push(() => {
++    view.unmount()
++    view.cleanup()
++  })
++
++  return { commits: () => commits, inkFrames: () => inkFrames, last: () => frames.at(-1) ?? '' }
++}
++
++beforeEach(() => {
++  vi.useFakeTimers({ now: T0 })
++  resetUiState()
++  resetTurnState()
++  patchUiState({ sid: 'sess-dock' })
++  $agentDockCollapsed.set(false)
++  applyAgentSnapshot(null)
++  applyProcessSnapshot(null)
++})
++
++afterEach(() => {
++  while (unmounts.length) {
++    unmounts.pop()!()
++  }
++
++  vi.useRealTimers()
++  $agentDockCollapsed.set(false)
++  applyAgentSnapshot(null)
++  applyProcessSnapshot(null)
++  resetUiState()
++  resetTurnState()
++})
++
++it('stops repainting agent elapsed while the dock is collapsed and expands to the live value', async () => {
++  applyAgentSnapshot('sess-dock', {
++    delegations: [],
++    subagents: [
++      { goal: 'probe auth', started_at: T0 / 1000 - 12, status: 'running', subagent_id: 'child-1', tool_count: 1 }
++    ]
++  })
++  $agentDockCollapsed.set(true)
++
++  const dock = mountDock()
++  await settle()
++  expect(dock.last()).toContain('▸ 1 live agents')
++
++  const [commits, frames] = [dock.commits(), dock.inkFrames()]
++  await vi.advanceTimersByTimeAsync(10_000)
++
++  // The collapsed summary carries no agent elapsed, so nothing re-renders.
++  expect([dock.commits() - commits, dock.inkFrames() - frames]).toEqual([0, 0])
++
++  $agentDockCollapsed.set(false)
++  await settle()
++  expect(dock.last()).toContain('probe auth 22s')
++
++  await vi.advanceTimersByTimeAsync(1_000)
++  expect(dock.last()).toContain('probe auth 23s')
++})
++
++it('keeps ageing finished processes out while the dock is collapsed', async () => {
++  applyProcessSnapshot('sess-dock', [
++    {
++      command: 'pytest tests/',
++      completion_reason: 'exited',
++      exit_code: 0,
++      exited_at: T0 / 1000 - 5,
++      session_id: 'proc-1',
++      status: 'exited',
++      uptime_seconds: 17
++    }
++  ])
++  $agentDockCollapsed.set(true)
++
++  const dock = mountDock()
++  await vi.advanceTimersByTimeAsync(3_000)
++  expect(dock.last()).toContain('exit 0 · 8s ago')
++
++  await vi.advanceTimersByTimeAsync(PROCESS_RETAIN_SECONDS * 1000)
++  expect(dock.last()).not.toContain('pytest')
++  expect(dock.last()).not.toContain('exit 0')
++})
+diff --git a/ui-tui/src/components/agentsPanel.tsx b/ui-tui/src/components/agentsPanel.tsx
+index 7952e3571d..680698edf2 100644
+--- a/ui-tui/src/components/agentsPanel.tsx
++++ b/ui-tui/src/components/agentsPanel.tsx
+@@ -152,13 +152,16 @@ export function LiveAgentsPanel({ cols }: { cols: number }) {
+   const live = subagents.some(s => s.status === 'running' || s.status === 'queued')
+   const [now, setNow] = useState(Date.now)
+   const processRows = useProcessRows(now)
+-  // Process rows carry `Ns ago` / elapsed text, so the clock ticks while any are shown.
+-  const ticking = live || processRows.length > 0
++  // Process rows carry `Ns ago` text and age out of the dock, so they keep the
++  // clock in either state; agent elapsed is only painted while expanded.
++  const ticking = processRows.length > 0 || (live && !collapsed)
+   useEffect(() => {
+     if (!ticking) {
+       return
+     }
+ 
++    // Re-seed on (re)arm so expanding after a collapse paints the live elapsed.
++    setNow(Date.now())
+     const timer = setInterval(() => setNow(Date.now()), 1000)
+ 
+     return () => clearInterval(timer)
+-- 
+2.55.0
+

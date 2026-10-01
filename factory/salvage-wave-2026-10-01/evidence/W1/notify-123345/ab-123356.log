@@ -1,0 +1,10 @@
+MERGE 123356: CONFLICT tools/terminal_tool.py (heartbeat error text drift only; resolved keeping main's message + PR's background/pty lines; see pr123356-resolved-terminal_tool.diff)
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 1.8s  (runner wall: 1.9s, parallelism: 20x)
+  P50: 1.82s  P90: 1.82s  P95: 1.82s  P99: 1.82s  Max: 1.82s
+  <1s: 0 files (0%)  <2s: 1 files (100%)
+  Top 10 slowest:
+      1.82s  tests/tools/test_terminal_notify_string_bool.py
+=== Summary: 1 files, 10 tests passed, 0 failed (100% complete) in 1.7s (20 workers) ===

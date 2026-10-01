@@ -1,0 +1,32 @@
+main=298a01c79b38018e029e50f77efe67c4a4fdbd40
+MERGE refs/w2/fork/51 (3ce476d2b1): clean
+        broker = get_browser_control_broker()
+        stores = {name: object() for name in ("default", "work", "ops")}
+        transport = _Transport()
+        for requested_profile, expected in ((None, "work"), ("default", "default"), ("ops", "ops")):
+            for name, store in stores.items():
+                broker.attach_artifact_store(store, profile_id=name)
+            session_id, registration = _create_and_register(transport, requested_profile)
+            try:
+                assert "error" not in registration, (requested_profile, registration)
+                payload = registration["result"]["scope"]
+                scope = broker.scope_for_session(
+                    session_id=session_id,
+                    principal_id=payload["principal_id"],
+                    transport_family=payload["transport_family"],
+                )
+                assert scope is not None
+>               assert broker._artifact_store_for_scope(scope) is stores[expected], requested_profile
+E               AssertionError: None
+E               assert <object object at 0x7fe10ebfc2c0> is <object object at 0x7fe10ebfc910>
+E                +  where <object object at 0x7fe10ebfc2c0> = _artifact_store_for_scope(ControllerScope(principal_id='principal:dashboard:3d4bd06f281798871ee499358742e8c2', profile_id='default', session_id=...profile_id='browser-profile-fixture', transport_family='cloud-ticket-ws', capabilities=frozenset({'browser_navigate'})))
+E                +    where _artifact_store_for_scope = <gateway.browser_control_broker.BrowserControlBroker object at 0x7fe110ee5850>._artifact_store_for_scope
+
+tests/gateway/test_browser_controller_session_profile.py:122: AssertionError
+=========================== short test summary info ============================
+FAILED tests/gateway/test_browser_controller_session_profile.py::test_created_session_registers_with_its_canonical_profile[launch-named]
+FAILED tests/gateway/test_browser_controller_session_profile.py::test_cloud_scope_selects_the_local_api_artifact_store_slot
+2 failed, 1 passed in 2.39s
+
+=== 1 file with test failures (2 tests failed) ===
+  tests/gateway/test_browser_controller_session_profile.py  (2 tests failed)

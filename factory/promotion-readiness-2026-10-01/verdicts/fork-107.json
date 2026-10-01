@@ -1,0 +1,32 @@
+{
+  "fork_pr": 107,
+  "title": "fix(desktop): isolate reused tool_call_id from prior lost-completion row",
+  "claim": "A running-phase tool event whose tool_call_id repeats a call from an already-settled turn whose tool.complete was lost must seed its own row in the live turn instead of re-arming and overwriting the prior turn's sealed-without-result row; a late tool.complete must still reconcile with that sealed row (#113035).",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "source": "main apps/desktop/src/lib/chat-messages/tool-parts.ts:432 toolCallOwnerMessageId returns any message holding a same-id part without a 'result' key, regardless of phase or turn; upsertToolPart:382-393 then unseals and overwrites it. Neither #113123 (result-bearing parts) nor #128009 (same-message finished rows, merged 2026-09-29) covers sealed-no-result rows across turns.",
+    "red": "Rebuilt test on main: 3/3 reuse shapes fail 'AssertionError: expected [ { messageIndex: +0, …(1) } ] to have a length of 2 but got 1' (late-tool-events.test.tsx:153); plain-settle late-completion guard passes on main. Fork's own 2 new tests also fail on main the same way.",
+    "fork_head_reproof": "Fork head d7f5663882 prod applied to main: its own 6 tests pass, but a new witness fails (1 failed / 6 passed): turn A seals the call behind message.interim (bubble interim:true), its completion is lost, final settles into a NEW bubble; turn B reuses the id -> A's row is overwritten with turn B's command+result and B gets no row. Cause: `interim` is only cleared on the bubble receiving the final (use-message-stream/index.ts completeMessage), so it persists after settle. The author's QA reply ('ownership evidence lives on the candidate row via interim') is therefore incorrect; the repair is incomplete in the canonical #113035 interim+lost-completion shape.",
+    "green": "Reworked fix (phase param + 'no settled reply newer than the candidate' boundary): late-tool-events.test.tsx 7/7 pass.",
+    "negative_control": "N1 drop settled-reply boundary (inFlight = pending||interim, i.e. fork head semantics) -> interim-in-A shape fails; N2 remove running-phase gate -> all 3 reuse shapes fail; N3 apply gate to both phases -> plain-settle late-completion guard fails.",
+    "adjacent": "vitest --project ui on src/app/session/hooks/use-message-stream (all), src/lib/chat-messages*, src/lib/tool-run-continuity.test.ts, src/components/assistant-ui/tool/inline-edit-persistence.test.tsx: 63 files / 442 tests passed. tsc -p . --noEmit clean; eslint + prettier clean on changed files. NOT_TESTED: electron typecheck projects (unchanged files), live Electron + gateway websocket drop."
+  },
+  "upstream_overlap": [
+    "#113035 CLOSED issue (late completion) - Refs, behaviour preserved",
+    "#113123 MERGED teknium1 (excluded result-bearing parts) - predecessor",
+    "#128009 MERGED alt-glitch 2026-09-29 (reused id vs finished row in same message, 'Refs NS-1029 B3') - adjacent, different case; maintainer is active in this lane (internal NS-1029 tracker), so mention it in the PR",
+    "#128003 MERGED alt-glitch (hydration rename scope) - adjacent",
+    "No open upstream PR/issue for the cross-turn sealed-no-result case (cached title scan of 42,912 PRs + GraphQL searches 'tool_call_id reused desktop', 'toolCallOwnerMessageId')"
+  ],
+  "branch": "ready/fork-107-reused-tool-id-settled-turn",
+  "files": [
+    "apps/desktop/src/lib/chat-messages/tool-parts.ts",
+    "apps/desktop/src/app/session/hooks/use-message-stream/index.ts",
+    "apps/desktop/src/app/session/hooks/use-message-stream/gateway-event/tools.ts",
+    "apps/desktop/src/app/session/hooks/use-message-stream/late-tool-events.test.tsx"
+  ],
+  "size": "+85/-6",
+  "depends_on": null,
+  "notes": "Commit bffc644b1b (author Kevin Rajan noreply), parent = pinned main. This is a REWORK, not a port: fork head's per-row gate (pending||interim) leaves the interim-sealed variant open; added a newest-first 'settled reply after candidate' boundary. Dropped fork's pure-reformat upsertToolPart hunk (already on main) and its verbose comments; folded its 3 tests into one 3-shape it.each + the pure-settle guard. Trade-off (inherited from fork design): a late RUNNING event for a call from a settled turn now seeds a new row instead of re-arming the sealed one. Original fork commits authored by detail-app[bot]; consider crediting in the PR."
+}

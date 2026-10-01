@@ -1,0 +1,535 @@
+From e8d70c6409b3c06bfc7f1d5eb7469bfd88dbb115 Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:32:07 -0500
+Subject: [PATCH] fix(tui): keep a collapsed paste's payload when a submit is
+ queued or busy
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+A collapsed paste lives in the composer's tokens, and `clearIn()` drops
+those tokens synchronously on submit. The idle path expands the paste
+before that happens. The busy path (`handleBusyInput(queueItem(full))`)
+and the no-session path (`enqueue(full)`) instead keep the display string
+with the `[[ … ]]` label and try to expand it later against tokens that
+are already gone. In every busy_input_mode (interrupt, steer, queue), and
+for input typed before the first session exists, the model gets the
+literal label and the pasted body is lost (#99032).
+
+The queue drain also judged `!` and `{!...}` by `item.text`. For a /queue
+item, that is the expanded paste. So a paste whose content starts with `!`
+was shell-executed when it drained, and `{!...}` inside a paste was
+interpolated.
+
+- Busy and no-session submits queue the expanded text, keep the label as
+  `display`, and carry their own paste expander, because the composer
+  tokens no longer exist when the item drains.
+- `sendQueued` takes the whole QueueItem. It gates `!` and `{!...}` on
+  `display`, interpolates the display, and then expands the paste into
+  the result. That is the same split the direct submit path already uses.
+  The model gets the payload, and the transcript keeps the label.
+- `dequeue()` returns the QueueItem. Double-Enter and Ctrl+K now drain
+  through `sendQueued`, like the idle drain effect, instead of
+  re-dispatching the text as if it were fresh composer input.
+- The interrupt path passes `display` to `send`, so the user bubble keeps
+  the label.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../src/__tests__/queueScopeRenderer.test.tsx |   4 +-
+ .../__tests__/queuedPasteSubmission.test.tsx  | 193 ++++++++++++++++++
+ ui-tui/src/app/interfaces.ts                  |   7 +-
+ ui-tui/src/app/useInputHandlers.ts            |   2 +-
+ ui-tui/src/app/useMainApp.ts                  |   1 +
+ ui-tui/src/app/useSubmission.ts               |  50 +++--
+ ui-tui/src/hooks/useQueue.ts                  |  24 ++-
+ 7 files changed, 248 insertions(+), 33 deletions(-)
+ create mode 100644 ui-tui/src/__tests__/queuedPasteSubmission.test.tsx
+
+diff --git a/ui-tui/src/__tests__/queueScopeRenderer.test.tsx b/ui-tui/src/__tests__/queueScopeRenderer.test.tsx
+index 895114a8f8..b40d1dc3b7 100644
+--- a/ui-tui/src/__tests__/queueScopeRenderer.test.tsx
++++ b/ui-tui/src/__tests__/queueScopeRenderer.test.tsx
+@@ -42,7 +42,7 @@ describe('pending input destination', () => {
+     try {
+       queue.enqueue('startup payload')
+       patchUiState({ info: info('alpha'), sid: 'same-session' })
+-      expect(queue.dequeue()).toBe('startup payload')
++      expect(queue.dequeue()).toEqual({ display: 'startup payload', text: 'startup payload' })
+       queue.enqueue('private payload', 'private preview')
+       queue.setQueueEdit(0)
+       patchUiState({ info: info(destination.profile), sid: destination.sid })
+@@ -57,7 +57,7 @@ describe('pending input destination', () => {
+       expect(queue.queueEditRef.current).toBe(0)
+       expect(queue.takeQ(0)).toEqual({ display: 'private preview', text: 'private payload' })
+       patchUiState({ info: info(destination.profile), sid: destination.sid })
+-      expect(queue.dequeue()).toBe('destination payload')
++      expect(queue.dequeue()).toEqual({ display: 'destination payload', text: 'destination payload' })
+       expect(queue.dequeue()).toBeUndefined()
+     } finally {
+       instance.unmount()
+diff --git a/ui-tui/src/__tests__/queuedPasteSubmission.test.tsx b/ui-tui/src/__tests__/queuedPasteSubmission.test.tsx
+new file mode 100644
+index 0000000000..dca1ab7b29
+--- /dev/null
++++ b/ui-tui/src/__tests__/queuedPasteSubmission.test.tsx
+@@ -0,0 +1,193 @@
++import { PassThrough } from 'node:stream'
++
++import { renderSync, Text } from '@hermes/ink'
++import React from 'react'
++import { afterEach, describe, expect, it, vi } from 'vitest'
++
++import type { ComposerActions, ComposerRefs, ComposerState, ComposerToken } from '../app/interfaces.js'
++import { patchUiState, resetUiState } from '../app/uiStore.js'
++import { useSubmission } from '../app/useSubmission.js'
++import { useQueue } from '../hooks/useQueue.js'
++import { pasteTokenLabel } from '../lib/text.js'
++
++const settle = async () => {
++  for (let i = 0; i < 5; i += 1) {
++    await new Promise(resolve => setTimeout(resolve, 0))
++  }
++}
++
++const paste = (text: string): ComposerToken => ({
++  kind: 'paste',
++  label: pasteTokenLabel(text, text.split('\n').length),
++  text
++})
++
++// The real useSubmission + useQueue, with a fake gateway. `clearIn` drops the
++// live tokens exactly like the composer does on submit, so anything that still
++// needs them after that point has to carry its own copy.
++function mount(tokens: ComposerToken[]) {
++  const tokensRef = { current: tokens }
++  // Text that reaches the model: prompt.submit, or session.steer into a live turn.
++  const prompts: string[] = []
++  const shell: string[] = []
++  const transcript: string[] = []
++  let api!: ReturnType<typeof useSubmission>
++
++  const gw = {
++    request: vi.fn(async (method: string, params: { command?: string; text?: string }) => {
++      if (method === 'prompt.submit' || method === 'session.steer') {
++        prompts.push(params.text!)
++      }
++
++      if (method === 'session.steer') {
++        return { status: 'queued' }
++      }
++
++      if (method === 'shell.exec') {
++        shell.push(params.command!)
++
++        return { code: 0, stderr: '', stdout: 'Fri' }
++      }
++
++      return method === 'input.detect_drop' ? { matched: false } : {}
++    })
++  }
++
++  function Harness() {
++    const queue = useQueue()
++
++    const composerActions = {
++      clearIn: () => {
++        tokensRef.current = []
++        queue.setQueueEdit(null)
++      },
++      dequeue: queue.dequeue,
++      enqueue: queue.enqueue,
++      prependQueue: queue.prependQ,
++      pushHistory: () => {},
++      setQueueEdit: queue.setQueueEdit,
++      takeQueue: queue.takeQ
++    } as unknown as ComposerActions
++
++    api = useSubmission({
++      appendMessage: msg => transcript.push(msg.text),
++      composerActions,
++      composerRefs: {
++        queueEditRef: queue.queueEditRef,
++        queueRef: queue.queueRef,
++        tokensRef
++      } as unknown as ComposerRefs,
++      composerState: {
++        compIdx: 0,
++        compReplace: 0,
++        completions: [],
++        input: '',
++        inputBuf: []
++      } as unknown as ComposerState,
++      gw: gw as never,
++      setLastUserMsg: () => {},
++      slashRef: { current: () => true },
++      submitRef: { current: () => {} },
++      sys: () => {}
++    })
++
++    return <Text>{queue.queuedDisplay.join('|') || 'empty queue'}</Text>
++  }
++
++  const stdout = new PassThrough()
++  Object.assign(stdout, { columns: 80, isTTY: false, rows: 20 })
++
++  const instance = renderSync(<Harness />, {
++    patchConsole: false,
++    stderr: new PassThrough() as unknown as NodeJS.WriteStream,
++    stdin: new PassThrough() as unknown as NodeJS.ReadStream,
++    stdout: stdout as unknown as NodeJS.WriteStream
++  })
++
++  return {
++    // Double Enter on an empty composer sends the head of the queue.
++    drainOne: () => {
++      api.submit('')
++      api.submit('')
++    },
++    prompts,
++    shell,
++    submit: (value: string) => api.submit(value),
++    transcript,
++    unmount: () => instance.unmount()
++  }
++}
++
++afterEach(resetUiState)
++
++describe('a collapsed paste that cannot be sent straight away', () => {
++  const log = paste('line one\nline two\nline three\nline four\nline five')
++
++  it.each([
++    { name: 'busy, interrupt mode', queued: false, state: { busy: true, busyInputMode: 'interrupt' as const } },
++    { name: 'busy, steer mode', queued: false, state: { busy: true, busyInputMode: 'steer' as const }, steer: true },
++    { name: 'busy, queue mode', queued: true, state: { busy: true, busyInputMode: 'queue' as const } },
++    { name: 'no session yet', queued: true, state: { busy: false, sid: null } }
++  ])('reaches the model expanded ($name)', async ({ queued, state, steer }) => {
++    patchUiState({ sid: 'session-1', ...state })
++    const ui = mount([log])
++
++    try {
++      ui.submit(`review this: ${log.label}`)
++
++      if (queued) {
++        expect(ui.prompts).toEqual([])
++        patchUiState({ busy: false, sid: 'session-1' })
++        ui.drainOne()
++      }
++
++      await settle()
++
++      expect(ui.prompts).toEqual([`review this: ${log.text}`])
++      // A steer joins the live turn without a user bubble of its own.
++      expect(ui.transcript).toEqual(steer ? [] : [`review this: ${log.label}`])
++    } finally {
++      ui.unmount()
++    }
++  })
++})
++
++describe('draining a queued collapsed paste', () => {
++  // Interpolation and `!` belong to what the user typed, never to pasted bytes.
++  const hidden = paste(`first line of the log\n${'x\n'.repeat(4)}untrusted {!touch /tmp/pwned}\n${'y\n'.repeat(14)}end`)
++  const bang = paste(`!echo pwned\n${'z\n'.repeat(5)}end`)
++
++  it.each([
++    {
++      expected: { prompt: `show Fri for ${hidden.text}`, shell: ['date'], transcript: `show Fri for ${hidden.label}` },
++      name: 'runs only the visible {!...}, not one carried by the paste',
++      queue: () => patchUiState({ busy: true }),
++      token: hidden,
++      typed: `show {!date} for ${hidden.label}`
++    },
++    {
++      expected: { prompt: bang.text, shell: [], transcript: bang.label },
++      name: 'does not shell-execute a /queue paste whose content starts with !',
++      queue: () => {},
++      token: bang,
++      typed: `/queue ${bang.label}`
++    }
++  ])('$name', async ({ expected, queue, token, typed }) => {
++    patchUiState({ busy: false, busyInputMode: 'queue', sid: 'session-1' })
++    const ui = mount([token])
++
++    try {
++      queue()
++      ui.submit(typed)
++      patchUiState({ busy: false })
++      ui.drainOne()
++      await settle()
++
++      expect(ui.shell).toEqual(expected.shell)
++      expect(ui.prompts).toEqual([expected.prompt])
++      expect(ui.transcript.at(-1)).toBe(expected.transcript)
++    } finally {
++      ui.unmount()
++    }
++  })
++})
+diff --git a/ui-tui/src/app/interfaces.ts b/ui-tui/src/app/interfaces.ts
+index 6bea7c363f..5700d5f86e 100644
+--- a/ui-tui/src/app/interfaces.ts
++++ b/ui-tui/src/app/interfaces.ts
+@@ -13,7 +13,7 @@ import type {
+   SubscriptionStateResponse,
+   SubscriptionUpgradeResponse
+ } from '../gatewayTypes.js'
+-import type { QueueItem } from '../hooks/useQueue.js'
++import type { QueueExpand, QueueItem } from '../hooks/useQueue.js'
+ import type { ParsedVoiceRecordKey } from '../lib/platform.js'
+ import type { RpcResult } from '../lib/rpc.js'
+ import type { ActiveWidget } from '../sdk/types.js'
+@@ -391,8 +391,8 @@ export interface ComposerActions {
+   /** Attach an image by path in as a token. */
+   attachImagePath: (path: string) => void
+   clearIn: () => void
+-  dequeue: () => string | undefined
+-  enqueue: (text: string, display?: string) => void
++  dequeue: () => QueueItem | undefined
++  enqueue: (text: string, display?: string, expand?: QueueExpand) => void
+   handleTextPaste: (event: PasteEvent) => MaybePromise<ComposerPasteResult | null>
+   openEditor: () => Promise<void>
+   prependQueue: (item: QueueItem) => void
+@@ -449,6 +449,7 @@ export interface InputHandlerActions {
+   dispatchSubmission: (full: string) => void
+   guardBusySessionSwitch: (what?: string) => boolean
+   newSession: (msg?: string, title?: string) => void
++  sendQueued: (item: QueueItem) => void
+   sys: (text: string) => void
+ }
+ 
+diff --git a/ui-tui/src/app/useInputHandlers.ts b/ui-tui/src/app/useInputHandlers.ts
+index 76febe62ca..6a4d852882 100644
+--- a/ui-tui/src/app/useInputHandlers.ts
++++ b/ui-tui/src/app/useInputHandlers.ts
+@@ -844,7 +844,7 @@ export function useInputHandlers(ctx: InputHandlerContext): InputHandlerResult {
+ 
+       if (next) {
+         cActions.setQueueEdit(null)
+-        actions.dispatchSubmission(next)
++        actions.sendQueued(next)
+       }
+     }
+   })
+diff --git a/ui-tui/src/app/useMainApp.ts b/ui-tui/src/app/useMainApp.ts
+index 46230d3e16..70dbe25ae1 100644
+--- a/ui-tui/src/app/useMainApp.ts
++++ b/ui-tui/src/app/useMainApp.ts
+@@ -883,6 +883,7 @@ export function useMainApp(gw: GatewayClient) {
+       dispatchSubmission,
+       guardBusySessionSwitch: session.guardBusySessionSwitch,
+       newSession: session.newSession,
++      sendQueued,
+       sys
+     },
+     composer: { actions: composerActions, refs: composerRefs, state: composerState },
+diff --git a/ui-tui/src/app/useSubmission.ts b/ui-tui/src/app/useSubmission.ts
+index 76fe467e4a..23e103d523 100644
+--- a/ui-tui/src/app/useSubmission.ts
++++ b/ui-tui/src/app/useSubmission.ts
+@@ -6,7 +6,7 @@ import { expandTokens } from '../domain/attachments.js'
+ import { completionToApplyOnSubmit } from '../domain/slash.js'
+ import type { GatewayClient } from '../gatewayClient.js'
+ import type { SessionSteerResponse, ShellExecResponse } from '../gatewayTypes.js'
+-import { queueItem, type QueueItem } from '../hooks/useQueue.js'
++import { type QueueExpand, queueItem, type QueueItem } from '../hooks/useQueue.js'
+ import { asRpcResult } from '../lib/rpc.js'
+ import { hasInterpolation, INTERPOLATION_RE } from '../protocol/interpolation.js'
+ import type { Msg } from '../types.js'
+@@ -27,14 +27,18 @@ export const expandPasteTokens = (tokens: ComposerToken[]) =>
+ 
+ const slashArgument = (command: string) => /^\/\S+\s+([\s\S]+)$/.exec(command)?.[1] ?? ''
+ 
+-export const queueItemFromSlash = (displayCommand: string, expandedCommand: string): QueueItem | undefined => {
++export const queueItemFromSlash = (
++  displayCommand: string,
++  expandedCommand: string,
++  expand?: QueueExpand
++): QueueItem | undefined => {
+   const display = slashArgument(displayCommand)
+ 
+   if (!display.trim()) {
+     return undefined
+   }
+ 
+-  return queueItem(slashArgument(expandedCommand), display)
++  return queueItem(slashArgument(expandedCommand), display, expand)
+ }
+ 
+ export const prepareSubmission = (display: string, tokens: ComposerToken[]) => ({
+@@ -179,18 +183,26 @@ export function useSubmission(opts: UseSubmissionOptions) {
+   )
+ 
+   const sendQueued = useCallback(
+-    (text: string) => {
+-      if (text.startsWith('!')) {
+-        return shellExec(text.slice(1).trim())
++    (item: QueueItem) => {
++      if (item.display.startsWith('!')) {
++        return shellExec(item.text.slice(1).trim())
+       }
+ 
+-      if (hasInterpolation(text)) {
++      // Same split as a direct submit: `!` and `{!...}` come from what the user
++      // typed (the display, where a paste is still its label), never from the
++      // pasted bytes in `item.text`. Interpolate the display, then expand the
++      // paste into the result with the expander captured at enqueue — the
++      // composer's tokens are gone by the time the queue drains.
++      if (hasInterpolation(item.display)) {
+         patchUiState({ busy: true })
++        const expand = item.expand ?? (value => value)
+ 
+-        return interpolate(text, send)
++        return interpolate(item.display, resolvedDisplay =>
++          send(expand(resolvedDisplay), true, resolvedDisplay, value => value)
++        )
+       }
+ 
+-      send(text)
++      send(item.text, true, item.display, value => value)
+     },
+     [interpolate, send, shellExec]
+   )
+@@ -215,7 +227,7 @@ export function useSubmission(opts: UseSubmissionOptions) {
+         if (opts.fallbackToFront) {
+           composerActions.prependQueue(item)
+         } else {
+-          composerActions.enqueue(item.text, item.display)
++          composerActions.enqueue(item.text, item.display, item.expand)
+         }
+       }
+ 
+@@ -246,7 +258,7 @@ export function useSubmission(opts: UseSubmissionOptions) {
+       // the agent is in model generation, tool execution, or an older runtime.
+       // Reuse the normal submit pipeline so the correction gets its user bubble
+       // and file-drop interpolation exactly once.
+-      send(item.text)
++      send(item.text, true, item.display, value => value)
+     },
+     [composerActions, gw, send, sys]
+   )
+@@ -275,12 +287,14 @@ export function useSubmission(opts: UseSubmissionOptions) {
+         const parsed = parseSlashCommand(full)
+ 
+         const queued =
+-          parsed.name === 'queue' || parsed.name === 'q' ? queueItemFromSlash(slash.display, slash.command) : undefined
++          parsed.name === 'queue' || parsed.name === 'q'
++            ? queueItemFromSlash(slash.display, slash.command, expandPasteTokens(submissionTokens))
++            : undefined
+ 
+         if (queued) {
+           // Handled here, before the slash handler, so it is counted here.
+           reportSlashCommand(gw, parsed.name, getUiState().sid)
+-          composerActions.enqueue(queued.text, queued.display)
++          composerActions.enqueue(queued.text, queued.display, queued.expand)
+           sys(`queued: "${queued.display.slice(0, 50)}${queued.display.length > 50 ? '…' : ''}"`)
+         } else {
+           slashRef.current(slash.command)
+@@ -301,7 +315,7 @@ export function useSubmission(opts: UseSubmissionOptions) {
+ 
+       if (!live.sid) {
+         composerActions.pushHistory(toHistory)
+-        composerActions.enqueue(full)
++        composerActions.enqueue(submission.text, full, expandTokens(submissionTokens))
+         composerActions.clearIn()
+ 
+         return
+@@ -329,13 +343,13 @@ export function useSubmission(opts: UseSubmissionOptions) {
+           return handleBusyInput(picked, { fallbackToFront: true })
+         }
+ 
+-        return sendQueued(picked.text)
++        return sendQueued(picked)
+       }
+ 
+       composerActions.pushHistory(toHistory)
+ 
+       if (getUiState().busy) {
+-        return handleBusyInput(queueItem(full))
++        return handleBusyInput(queueItem(submission.text, full, expandTokens(submissionTokens)))
+       }
+ 
+       if (shouldInterpolateSubmission(full)) {
+@@ -393,7 +407,7 @@ export function useSubmission(opts: UseSubmissionOptions) {
+ 
+           if (next) {
+             composerActions.setQueueEdit(null)
+-            dispatchSubmission(next)
++            sendQueued(next)
+           }
+         }
+ 
+@@ -410,7 +424,7 @@ export function useSubmission(opts: UseSubmissionOptions) {
+ 
+       dispatchSubmission([...composerState.inputBuf, value].join('\n'))
+     },
+-    [appendMessage, composerActions, composerRefs, composerState, dispatchSubmission, gw, sys]
++    [appendMessage, composerActions, composerRefs, composerState, dispatchSubmission, gw, sendQueued, sys]
+   )
+ 
+   submitRef.current = submit
+diff --git a/ui-tui/src/hooks/useQueue.ts b/ui-tui/src/hooks/useQueue.ts
+index 2e49b407fb..68bbba85fa 100644
+--- a/ui-tui/src/hooks/useQueue.ts
++++ b/ui-tui/src/hooks/useQueue.ts
+@@ -3,12 +3,19 @@ import { useCallback, useMemo, useRef, useState } from 'react'
+ 
+ import { $uiState, getUiState } from '../app/uiStore.js'
+ 
++export type QueueExpand = (value: string) => string
++
+ export interface QueueItem {
+   display: string
+   text: string
++  // Expands this item's paste labels in `display` (after interpolation).
++  // Captured at enqueue: the composer's tokens are cleared before the queue
++  // drains. Absent when `display` carries no labels to expand.
++  expand?: QueueExpand
+ }
+ 
+-export const queueItem = (text: string, display = text): QueueItem => ({ display, text })
++export const queueItem = (text: string, display = text, expand?: QueueExpand): QueueItem =>
++  expand ? { display, expand, text } : { display, text }
+ 
+ export function prependQueueItem(queue: QueueItem[], item: QueueItem): void {
+   queue.unshift(item)
+@@ -25,10 +32,9 @@ export function takeQueueItem(queue: QueueItem[], index: number, editedDisplay?:
+     return item
+   }
+ 
+-  return {
+-    display: editedDisplay,
+-    text: editedDisplay.includes(item.display) ? editedDisplay.replace(item.display, item.text) : editedDisplay
+-  }
++  const text = editedDisplay.includes(item.display) ? editedDisplay.replace(item.display, item.text) : editedDisplay
++
++  return item.expand ? { display: editedDisplay, expand: item.expand, text } : { display: editedDisplay, text }
+ }
+ 
+ // Mutates `arr` in place; returned reference is the same input array, kept
+@@ -121,8 +127,8 @@ export function useQueue() {
+   )
+ 
+   const enqueue = useCallback(
+-    (text: string, display = text) => {
+-      queueRef.current.push(queueItem(text, display))
++    (text: string, display = text, expand?: QueueExpand) => {
++      queueRef.current.push(queueItem(text, display, expand))
+       syncQueue()
+     },
+     [queueRef, syncQueue]
+@@ -136,8 +142,8 @@ export function useQueue() {
+     [queueRef, syncQueue]
+   )
+ 
+-  const dequeue = useCallback(() => {
+-    const head = queueRef.current.shift()?.text
++  const dequeue = useCallback((): QueueItem | undefined => {
++    const head = queueRef.current.shift()
+     syncQueue()
+ 
+     return head
+-- 
+2.55.0
+

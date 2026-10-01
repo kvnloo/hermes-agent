@@ -1,0 +1,203 @@
+From 6125946f9c8d474e5b601b58dd69c8453d974eb8 Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:46:22 -0500
+Subject: [PATCH] fix(desktop): clear a stale adoptedRunningTurn when this
+ window starts a turn
+
+adoptedRunningTurn marks a turn this window resumed onto mid-run: it never
+received the prompt row, so the settle path must hydrate stored history.
+Only the normal message.complete branch consumes the flag. When the adopted
+turn ends any other way (Stop -> cancelRun plus the interrupted late
+complete, an error frame, a running=false heartbeat settle), the flag stays
+true and leaks into the next turn this window submits itself. With a
+non-empty final, the stale flag alone makes shouldHydrate true, forcing a
+redundant stored-transcript fetch and reconcile over a reply that is
+already on screen.
+
+Clear the flag where this window originates a turn: the submit optimistic
+seed and the restore/edit/regenerate optimistic arms. It is deliberately
+not cleared at message.start: a subagent watch window resumes with
+running=true and then receives a synthetic message.start from
+tui_gateway's child mirror for that same adopted turn, which still needs
+its hydrate. Settle paths are left alone too, since a heartbeat can
+precede an adopted turn's reordered message.complete (#119569). A
+backend-originated next turn (queue drain elsewhere, goal follow-up) can
+still inherit a leaked flag; that only hydrates a turn whose prompt this
+window did not author.
+
+Tests: a fresh submit and the rewind/reload arms clear a leaked flag; an
+adopted watch turn that receives message.start still hydrates on settle.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../session-info-side-effects.test.tsx        | 26 ++++++++++++++++
+ .../hooks/use-prompt-actions/index.test.tsx   | 30 ++++++++++++++++++-
+ .../hooks/use-prompt-actions/rewind.test.ts   | 11 +++++++
+ .../hooks/use-prompt-actions/rewind.ts        |  4 +++
+ .../hooks/use-prompt-actions/submit.ts        |  7 +++++
+ 5 files changed, 77 insertions(+), 1 deletion(-)
+
+diff --git a/apps/desktop/src/app/session/hooks/use-message-stream/session-info-side-effects.test.tsx b/apps/desktop/src/app/session/hooks/use-message-stream/session-info-side-effects.test.tsx
+index dfaf57e365..2aa059b59a 100644
+--- a/apps/desktop/src/app/session/hooks/use-message-stream/session-info-side-effects.test.tsx
++++ b/apps/desktop/src/app/session/hooks/use-message-stream/session-info-side-effects.test.tsx
+@@ -375,6 +375,32 @@ describe('empty message.complete after streamed text (#95514)', () => {
+     expect(hydrateFromStoredSession).not.toHaveBeenCalled()
+   })
+ 
++  it('still hydrates an adopted subagent watch turn whose mirror emits message.start', () => {
++    // A child watch window opened mid-run resumes with running=true (so the
++    // flag is set), then tui_gateway's _mirror_subagent_to_child emits a
++    // synthetic message.start before relaying the child's output. The window
++    // never received the child's prompt/goal row, so settle must hydrate.
++    mountStream()
++    act(() => {
++      const current = stream.states.get(ACTIVE_SID) ?? createClientSessionState()
++      stream.states.set(ACTIVE_SID, {
++        ...current,
++        adoptedRunningTurn: true,
++        awaitingResponse: true,
++        busy: true,
++        turnLive: true
++      })
++    })
++
++    act(() => stream.handleEvent({ payload: {}, session_id: ACTIVE_SID, type: 'message.start' }))
++    act(() => stream.handleEvent({ payload: { text: 'Child output.' }, session_id: ACTIVE_SID, type: 'message.delta' }))
++    act(() =>
++      stream.handleEvent({ payload: { text: 'Child output.' }, session_id: ACTIVE_SID, type: 'message.complete' })
++    )
++
++    expect(hydrateFromStoredSession).toHaveBeenCalledWith(3, null, ACTIVE_SID)
++  })
++
+   it('still hydrates an empty complete when this turn streamed no text', () => {
+     mountStream()
+ 
+diff --git a/apps/desktop/src/app/session/hooks/use-prompt-actions/index.test.tsx b/apps/desktop/src/app/session/hooks/use-prompt-actions/index.test.tsx
+index 65b8325c70..6d3ef6944b 100644
+--- a/apps/desktop/src/app/session/hooks/use-prompt-actions/index.test.tsx
++++ b/apps/desktop/src/app/session/hooks/use-prompt-actions/index.test.tsx
+@@ -130,6 +130,7 @@ function Harness({
+   requestGateway,
+   resumeStoredSession,
+   runtimeIdByStoredSessionIdRef: runtimeIdByStoredSessionIdRefProp,
++  seedAdoptedRunningTurn,
+   seedMessages,
+   seedStreamId,
+   seedTurnStartedAt,
+@@ -155,6 +156,7 @@ function Harness({
+   requestGateway: <T>(method: string, params?: Record<string, unknown>, timeoutMs?: number) => Promise<T>
+   resumeStoredSession?: (storedSessionId: string) => Promise<void> | void
+   runtimeIdByStoredSessionIdRef?: MutableRefObject<Map<string, string>>
++  seedAdoptedRunningTurn?: boolean
+   seedMessages?: unknown[]
+   seedStreamId?: null | string
+   seedTurnStartedAt?: null | number
+@@ -192,7 +194,8 @@ function Harness({
+     interrupted: true,
+     streamId: seedStreamId ?? null,
+     turnStartedAt: seedTurnStartedAt ?? null,
+-    interimBoundaryPending: false
++    interimBoundaryPending: false,
++    ...(seedAdoptedRunningTurn ? { adoptedRunningTurn: true } : {})
+   } as never)
+ 
+   const actions = usePromptActions({
+@@ -2135,6 +2138,31 @@ describe('usePromptActions submit / queue drain semantics', () => {
+     )
+   })
+ 
++  it('clears a leaked adoptedRunningTurn on a fresh submit (this window owns the turn)', async () => {
++    // An adopted turn that ended by Stop / error / heartbeat (not a normal
++    // message.complete) leaves adoptedRunningTurn=true. Left in place, the
++    // next locally submitted turn settles with a forced stored-history
++    // hydrate over a reply this window streamed itself.
++    const seeds: Record<string, unknown>[] = []
++    const requestGateway = vi.fn(async () => ({}) as never)
++
++    let handle: HarnessHandle | null = null
++    await actRender(
++      <Harness
++        onReady={h => (handle = h)}
++        onSeedState={s => seeds.push(s)}
++        refreshSessions={async () => undefined}
++        requestGateway={requestGateway}
++        seedAdoptedRunningTurn
++      />
++    )
++
++    await handle!.submitText('my own prompt')
++
++    expect(seeds.length).toBeGreaterThan(0)
++    expect(seeds.every(s => s.adoptedRunningTurn === false)).toBe(true)
++  })
++
+   it('arms turnStartedAt at submit time instead of waiting for message.start', async () => {
+     const seeds: Record<string, unknown>[] = []
+     const requestGateway = vi.fn(async () => ({}) as never)
+diff --git a/apps/desktop/src/app/session/hooks/use-prompt-actions/rewind.test.ts b/apps/desktop/src/app/session/hooks/use-prompt-actions/rewind.test.ts
+index acae282482..ece672cd72 100644
+--- a/apps/desktop/src/app/session/hooks/use-prompt-actions/rewind.test.ts
++++ b/apps/desktop/src/app/session/hooks/use-prompt-actions/rewind.test.ts
+@@ -681,6 +681,17 @@ describe('optimistic rewind/reload turn-clock seeding (#86795)', () => {
+     expect(next.turnStartedAt).toBeGreaterThanOrEqual(before)
+   })
+ 
++  it('restore/edit/regenerate arms clear a leaked adoptedRunningTurn', () => {
++    // These arms start a turn from this window, so it is not adopted; a stale
++    // flag would force a stored-history hydrate over the reply it streams.
++    const state = seeded({ adoptedRunningTurn: true })
++    const plan = planReload(state.messages, null)
++
++    expect(plan).not.toBeNull()
++    expect(applyRewindOptimistic(state, 0).adoptedRunningTurn).toBe(false)
++    expect(applyReloadOptimistic(state, plan!).adoptedRunningTurn).toBe(false)
++  })
++
+   it('applyReloadOptimistic arms busy with a fresh turn clock', () => {
+     const state = seeded({ turnLive: true, turnStartedAt: Date.now() - 60_000 })
+     const plan = planReload(state.messages, null)
+diff --git a/apps/desktop/src/app/session/hooks/use-prompt-actions/rewind.ts b/apps/desktop/src/app/session/hooks/use-prompt-actions/rewind.ts
+index 82c4ef9787..1bca09577d 100644
+--- a/apps/desktop/src/app/session/hooks/use-prompt-actions/rewind.ts
++++ b/apps/desktop/src/app/session/hooks/use-prompt-actions/rewind.ts
+@@ -526,6 +526,8 @@ export function applyReloadOptimistic(state: ClientSessionState, plan: ReloadPla
+     awaitingResponse: true,
+     busy: true,
+     interrupted: false,
++    // Regenerate starts a turn from this window — not adopted (see submit.ts).
++    adoptedRunningTurn: false,
+     messages: [
+       ...state.messages.slice(0, plan.userIndex + 1),
+       ...state.messages
+@@ -664,6 +666,8 @@ export function applyRewindOptimistic(
+     awaitingResponse: true,
+     busy: true,
+     interrupted: false,
++    // Restore/edit starts a turn from this window — not adopted (see submit.ts).
++    adoptedRunningTurn: false,
+     messages: editedMessage
+       ? [...state.messages.slice(0, sourceIndex), editedMessage]
+       : state.messages.slice(0, sourceIndex + 1),
+diff --git a/apps/desktop/src/app/session/hooks/use-prompt-actions/submit.ts b/apps/desktop/src/app/session/hooks/use-prompt-actions/submit.ts
+index 8b30e3bc93..465ff1522c 100644
+--- a/apps/desktop/src/app/session/hooks/use-prompt-actions/submit.ts
++++ b/apps/desktop/src/app/session/hooks/use-prompt-actions/submit.ts
+@@ -476,6 +476,13 @@ export function useSubmitPrompt(deps: SubmitPromptDeps) {
+             // mutateStream/completeAssistantMessage drop every delta of this turn
+             // (what made drained-after-interrupt sends go silent).
+             interrupted: false,
++            // A turn this window submits is not adopted. Only a normal
++            // message.complete consumes adoptedRunningTurn, so an adopted turn
++            // that ended by Stop, error or heartbeat leaves it set — and the
++            // stale flag would force a stored-history hydrate over the reply
++            // this window is about to stream. (Not cleared at message.start:
++            // a subagent watch window's mirror emits one for a turn it adopted.)
++            adoptedRunningTurn: false,
+             // Arm the turn clock at send, not at the backend's message.start —
+             // the round trip (submit RPC → gateway accept → WS event) can take
+             // seconds under load, and the honest latency clock starts when the
+-- 
+2.55.0
+

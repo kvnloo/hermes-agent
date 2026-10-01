@@ -1,0 +1,14 @@
+label=108484-merged main=298a01c79b38018e029e50f77efe67c4a4fdbd40
+CHECKOUT refs/w2/cron-owner/108484-merged (a2d19879871b): pre-resolved merge
+▶ not activated — using HERMES_PYTHON: /workspace/hermes-home/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~3 tests) under ['tests/cron/test_cron_owner_null_fingerprint.py']; running with -j 2
+[100.0% |     3/~3 | ✓4 | ✗0] ✓ tests/cron/test_cron_owner_null_fingerprint.py (4✓, 4.0s)
+
+=== Summary: 1 files, 4 tests passed, 0 failed (100% complete) in 4.0s (2 workers) ===
+  Durations cached to test_durations.json (1 files)
+
+=== Per-file subprocess time distribution ===

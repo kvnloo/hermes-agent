@@ -1,0 +1,619 @@
+▶ not activated — using HERMES_PYTHON: /workspace/hermes-home/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 6 test files (~207 tests) under ['tests/hermes_cli/test_plugin_dev.py', 'tests/hermes_cli/test_plugin_cli_registration.py', 'tests/hermes_cli/test_plugin_ownership_ledger.py', 'tests/hermes_cli/test_plugins.py', 'tests/hermes_cli/test_plugins_cmd.py', 'tests/tools/test_registry.py']; running with -j 20
+[  1.0% |     2/~207 | ✓2 | ✗0] ✓ tests/hermes_cli/test_plugin_cli_registration.py (2✓, 1.5s)
+[  5.8% |    12/~207 | ✓12 | ✗ 0] ✓ tests/hermes_cli/test_plugin_dev.py (10✓, 1.9s)
+[ 18.8% |    39/~207 | ✓39 | ✗ 0] ✓ tests/hermes_cli/test_plugin_ownership_ledger.py (27✓, 2.6s)
+[ 37.7% |    78/~207 | ✓78 | ✗ 0] ✓ tests/tools/test_registry.py (39✓, 4.7s)
+[ 58.5% |   121/~207 | ✓119 | ✗  0] ✗ tests/hermes_cli/test_plugins_cmd.py (41✓ 8e, 8.7s)
+
+  ╔╍ Failed: tests/hermes_cli/test_plugins_cmd.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║     
+  ║             command.append("--all-extras")
+  ║             for extra in opt_in_extras(source):
+  ║                 command += ["--no-extra", extra]
+  ║         if no_install_project:
+  ║             # --all-packages has no single selected project in uv, so
+  ║             # --no-install-project alone does not exclude the root. Name it
+  ║             # explicitly without dropping member dependencies or installations.
+  ║             command += ["--no-install-project", "--no-install-package", _project_name(source)]
+  ║         for extra in sorted(set(extras)):
+  ║             command += ["--extra", extra]
+  ║         for group in sorted(set(groups)):
+  ║             command += ["--group", group]
+  ║         result = self._run(command, cwd=source, timeout=timeout)
+  ║         if result.returncode:
+  ║ >           raise classify_uv_failure("sync", result.returncode, result.stderr or result.stdout)
+  ║ E           pm.package.InstallError: venv: uv sync exited 2: Using CPython 3.11.14 interpreter at: /workspace/hermes-home/hermes-agent/venv/bin/python
+  ║ E           error: The requested interpreter resolved to Python 3.11.14, which is incompatible with the project's Python requirement: `==3.14.*` (from `project.requires-python`) — retry, or run `hermes pm doctor`
+  ║ 
+  ║ pm/environment.py:386: InstallError
+  ║ =========================== short test summary info ============================
+  ║ ERROR tests/hermes_cli/test_plugins_cmd.py::TestSubdirInstallE2E::test_installs_only_the_subdir_plugin
+  ║ ERROR tests/hermes_cli/test_plugins_cmd.py::TestSubdirInstallE2E::test_missing_subdir_raises
+  ║ ERROR tests/hermes_cli/test_plugins_cmd.py::TestSubdirInstallE2E::test_subdir_install_stays_updatable
+  ║ ERROR tests/hermes_cli/test_plugins_cmd.py::TestSubdirInstallE2E::test_installs_portable_root_package_disabled
+  ║ ERROR tests/hermes_cli/test_plugins_cmd.py::TestReviewedPinScanTrust::test_caution_trusted_only_at_the_reviewed_sha
+  ║ ERROR tests/hermes_cli/test_plugins_cmd.py::TestReviewedPinScanTrust::test_dangerous_blocks_even_at_the_reviewed_sha
+  ║ ERROR tests/hermes_cli/test_plugins_cmd.py::TestInstallReadabilityGate::test_unreadable_file_is_repaired_before_install
+  ║ ERROR tests/hermes_cli/test_plugins_cmd.py::TestInstallReadabilityGate::test_unrepairable_tree_rolls_back_and_names_the_fix
+  ║ 41 passed, 8 errors in 3.31s
+  ║
+  ║  Repro: python -m pytest tests/hermes_cli/test_plugins_cmd.py -q
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+[100.0% |   207/~207 | ✓206 | ✗  0] ✓ tests/hermes_cli/test_plugins.py (87✓, 11.2s)
+
+=== Summary: 6 files, 206 tests passed, 0 failed (100% complete) in 11.2s (20 workers) ===
+  Durations cached to test_durations.json (5 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   6
+  Total subprocess CPU-wall: 30.6s  (runner wall: 11.2s, parallelism: 20x)
+  P50: 4.70s  P90: 11.18s  P95: 11.18s  P99: 11.18s  Max: 11.18s
+  <1s: 0 files (0%)  <2s: 2 files (33%)
+  Top 10 slowest:
+     11.18s  tests/hermes_cli/test_plugins.py
+      8.65s  tests/hermes_cli/test_plugins_cmd.py
+      4.70s  tests/tools/test_registry.py
+      2.63s  tests/hermes_cli/test_plugin_ownership_ledger.py
+      1.93s  tests/hermes_cli/test_plugin_dev.py
+      1.52s  tests/hermes_cli/test_plugin_cli_registration.py
+
+=== Failure output ===
+
+--- tests/hermes_cli/test_plugins_cmd.py ---
+.....................................EEEEEEEE....                        [100%]
+==================================== ERRORS ====================================
+_ ERROR at setup of TestSubdirInstallE2E.test_installs_only_the_subdir_plugin __
+
+fixturedef = <FixtureDef argname='isolated_python' scope='module' baseid='tests/hermes_cli/test_plugins_cmd.py'>
+request = <SubRequest 'isolated_python' for <Function test_installs_only_the_subdir_plugin>>
+
+    @pytest.hookimpl(wrapper=True)
+    def pytest_fixture_setup(fixturedef: FixtureDef, request) -> object | None:
+        if (
+            fixturedef.argname == "event_loop_policy"
+            and fixturedef.func.__module__ != __name__
+        ):
+            warnings.warn(
+                PytestDeprecationWarning(_EVENT_LOOP_POLICY_FIXTURE_DEPRECATION_WARNING),
+            )
+        asyncio_mode = _get_asyncio_mode(request.config)
+        if not _is_asyncio_fixture_function(fixturedef.func):
+            if asyncio_mode == Mode.STRICT:
+                # Ignore async fixtures without explicit asyncio mark in strict mode
+                # This applies to pytest_trio fixtures, for example
+>               return (yield)
+                        ^^^^^
+
+/workspace/hermes-home/hermes-agent/venv/lib/python3.11/site-packages/pytest_asyncio/plugin.py:924: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/pm/_fixtures.py:122: in isolated_python
+    python = stage_runtime(Path(uv), Path(sys.executable), root)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pm/runtime_stage.py:40: in stage_runtime
+    environment.sync(snapshot, locked=True, no_default_groups=True,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PythonEnvironment(uv=PosixPath('/home/kvn/.local/bin/uv'), python=PosixPath('/workspace/hermes-home/hermes-agent/venv/...tput=<_io.TextIOWrapper name="<_io.FileIO name=8 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>, no_config=True)
+source = PosixPath('/var/tmp/hermes-pytest-1000/r-vbrn6496/pytest-of-kvn/pytest-0/pm-project-papjjxoc')
+extras = (), groups = (), timeout = 600, frozen = True, all_extras = False
+no_install_project = True, locked = True, no_default_groups = True
+
+    def sync(self, source: Path, *, extras: Sequence[str] = (), groups: Sequence[str] = (),
+             timeout: int = 1800, frozen: bool = True, all_extras: bool = False,
+             no_install_project: bool = False, locked: bool = False,
+             no_default_groups: bool = False) -> None:
+        """Install the root and every member; resolve only in a writable workspace.
+    
+        ``frozen=False`` is reserved for the caller-owned generated workspace,
+        never the original project's lock. Seed/replay policy belongs to PM.
+        """
+        if not frozen:
+            self.lock(source, timeout=timeout)
+        # Locking members alone is insufficient: plain sync only installs root deps.
+        # uv writes no __pycache__ (pip does): without --compile-bytecode the first import
+        # of every module in the foreground of a user request compiles it (#100461).
+        command = ["sync", "--locked" if locked else "--frozen", "--all-packages",
+                   "--python", str(self.python), "--compile-bytecode"]
+        if no_default_groups:
+            command.append("--no-default-groups")
+        if all_extras:
+            from pm.features import opt_in_extras
+    
+            command.append("--all-extras")
+            for extra in opt_in_extras(source):
+                command += ["--no-extra", extra]
+        if no_install_project:
+            # --all-packages has no single selected project in uv, so
+            # --no-install-project alone does not exclude the root. Name it
+            # explicitly without dropping member dependencies or installations.
+            command += ["--no-install-project", "--no-install-package", _project_name(source)]
+        for extra in sorted(set(extras)):
+            command += ["--extra", extra]
+        for group in sorted(set(groups)):
+            command += ["--group", group]
+        result = self._run(command, cwd=source, timeout=timeout)
+        if result.returncode:
+>           raise classify_uv_failure("sync", result.returncode, result.stderr or result.stdout)
+E           pm.package.InstallError: venv: uv sync exited 2: Using CPython 3.11.14 interpreter at: /workspace/hermes-home/hermes-agent/venv/bin/python
+E           error: The requested interpreter resolved to Python 3.11.14, which is incompatible with the project's Python requirement: `==3.14.*` (from `project.requires-python`) — retry, or run `hermes pm doctor`
+
+pm/environment.py:386: InstallError
+---------------------------- Captured stderr setup -----------------------------
+  → Installing Python dependencies…
+  ✗ Installing Python dependencies failed; last 2 lines of output:
+      Using CPython 3.11.14 interpreter at: /workspace/hermes-home/hermes-agent/venv/bin/python
+      error: The requested interpreter resolved to Python 3.11.14, which is incompatible with the project's Python requirement: `==3.14.*` (from `project.requires-python`)
+______ ERROR at setup of TestSubdirInstallE2E.test_missing_subdir_raises _______
+
+tmp_path_factory = TempPathFactory(_given_basetemp=None, _trace=<pluggy._tracing.TagTracerSub object at 0x7f9bb68cea50>, _basetemp=PosixPath('/var/tmp/hermes-pytest-1000/r-vbrn6496/pytest-of-kvn/pytest-0'), _retention_count=3, _retention_policy='all')
+
+    @pytest.fixture(scope="module")
+    def isolated_python(tmp_path_factory):
+        from pm.runtime_stage import stage_runtime
+    
+        root = tmp_path_factory.mktemp("pm-python")
+        uv = shutil.which("uv")
+        assert uv, "the worker contract requires real uv"
+>       python = stage_runtime(Path(uv), Path(sys.executable), root)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/pm/_fixtures.py:122: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+pm/runtime_stage.py:40: in stage_runtime
+    environment.sync(snapshot, locked=True, no_default_groups=True,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PythonEnvironment(uv=PosixPath('/home/kvn/.local/bin/uv'), python=PosixPath('/workspace/hermes-home/hermes-agent/venv/...tput=<_io.TextIOWrapper name="<_io.FileIO name=8 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>, no_config=True)
+source = PosixPath('/var/tmp/hermes-pytest-1000/r-vbrn6496/pytest-of-kvn/pytest-0/pm-project-papjjxoc')
+extras = (), groups = (), timeout = 600, frozen = True, all_extras = False
+no_install_project = True, locked = True, no_default_groups = True
+
+    def sync(self, source: Path, *, extras: Sequence[str] = (), groups: Sequence[str] = (),
+             timeout: int = 1800, frozen: bool = True, all_extras: bool = False,
+             no_install_project: bool = False, locked: bool = False,
+             no_default_groups: bool = False) -> None:
+        """Install the root and every member; resolve only in a writable workspace.
+    
+        ``frozen=False`` is reserved for the caller-owned generated workspace,
+        never the original project's lock. Seed/replay policy belongs to PM.
+        """
+        if not frozen:
+            self.lock(source, timeout=timeout)
+        # Locking members alone is insufficient: plain sync only installs root deps.
+        # uv writes no __pycache__ (pip does): without --compile-bytecode the first import
+        # of every module in the foreground of a user request compiles it (#100461).
+        command = ["sync", "--locked" if locked else "--frozen", "--all-packages",
+                   "--python", str(self.python), "--compile-bytecode"]
+        if no_default_groups:
+            command.append("--no-default-groups")
+        if all_extras:
+            from pm.features import opt_in_extras
+    
+            command.append("--all-extras")
+            for extra in opt_in_extras(source):
+                command += ["--no-extra", extra]
+        if no_install_project:
+            # --all-packages has no single selected project in uv, so
+            # --no-install-project alone does not exclude the root. Name it
+            # explicitly without dropping member dependencies or installations.
+            command += ["--no-install-project", "--no-install-package", _project_name(source)]
+        for extra in sorted(set(extras)):
+            command += ["--extra", extra]
+        for group in sorted(set(groups)):
+            command += ["--group", group]
+        result = self._run(command, cwd=source, timeout=timeout)
+        if result.returncode:
+>           raise classify_uv_failure("sync", result.returncode, result.stderr or result.stdout)
+E           pm.package.InstallError: venv: uv sync exited 2: Using CPython 3.11.14 interpreter at: /workspace/hermes-home/hermes-agent/venv/bin/python
+E           error: The requested interpreter resolved to Python 3.11.14, which is incompatible with the project's Python requirement: `==3.14.*` (from `project.requires-python`) — retry, or run `hermes pm doctor`
+
+pm/environment.py:386: InstallError
+__ ERROR at setup of TestSubdirInstallE2E.test_subdir_install_stays_updatable __
+
+tmp_path_factory = TempPathFactory(_given_basetemp=None, _trace=<pluggy._tracing.TagTracerSub object at 0x7f9bb68cea50>, _basetemp=PosixPath('/var/tmp/hermes-pytest-1000/r-vbrn6496/pytest-of-kvn/pytest-0'), _retention_count=3, _retention_policy='all')
+
+    @pytest.fixture(scope="module")
+    def isolated_python(tmp_path_factory):
+        from pm.runtime_stage import stage_runtime
+    
+        root = tmp_path_factory.mktemp("pm-python")
+        uv = shutil.which("uv")
+        assert uv, "the worker contract requires real uv"
+>       python = stage_runtime(Path(uv), Path(sys.executable), root)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/pm/_fixtures.py:122: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+pm/runtime_stage.py:40: in stage_runtime
+    environment.sync(snapshot, locked=True, no_default_groups=True,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PythonEnvironment(uv=PosixPath('/home/kvn/.local/bin/uv'), python=PosixPath('/workspace/hermes-home/hermes-agent/venv/...tput=<_io.TextIOWrapper name="<_io.FileIO name=8 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>, no_config=True)
+source = PosixPath('/var/tmp/hermes-pytest-1000/r-vbrn6496/pytest-of-kvn/pytest-0/pm-project-papjjxoc')
+extras = (), groups = (), timeout = 600, frozen = True, all_extras = False
+no_install_project = True, locked = True, no_default_groups = True
+
+    def sync(self, source: Path, *, extras: Sequence[str] = (), groups: Sequence[str] = (),
+             timeout: int = 1800, frozen: bool = True, all_extras: bool = False,
+             no_install_project: bool = False, locked: bool = False,
+             no_default_groups: bool = False) -> None:
+        """Install the root and every member; resolve only in a writable workspace.
+    
+        ``frozen=False`` is reserved for the caller-owned generated workspace,
+        never the original project's lock. Seed/replay policy belongs to PM.
+        """
+        if not frozen:
+            self.lock(source, timeout=timeout)
+        # Locking members alone is insufficient: plain sync only installs root deps.
+        # uv writes no __pycache__ (pip does): without --compile-bytecode the first import
+        # of every module in the foreground of a user request compiles it (#100461).
+        command = ["sync", "--locked" if locked else "--frozen", "--all-packages",
+                   "--python", str(self.python), "--compile-bytecode"]
+        if no_default_groups:
+            command.append("--no-default-groups")
+        if all_extras:
+            from pm.features import opt_in_extras
+    
+            command.append("--all-extras")
+            for extra in opt_in_extras(source):
+                command += ["--no-extra", extra]
+        if no_install_project:
+            # --all-packages has no single selected project in uv, so
+            # --no-install-project alone does not exclude the root. Name it
+            # explicitly without dropping member dependencies or installations.
+            command += ["--no-install-project", "--no-install-package", _project_name(source)]
+        for extra in sorted(set(extras)):
+            command += ["--extra", extra]
+        for group in sorted(set(groups)):
+            command += ["--group", group]
+        result = self._run(command, cwd=source, timeout=timeout)
+        if result.returncode:
+>           raise classify_uv_failure("sync", result.returncode, result.stderr or result.stdout)
+E           pm.package.InstallError: venv: uv sync exited 2: Using CPython 3.11.14 interpreter at: /workspace/hermes-home/hermes-agent/venv/bin/python
+E           error: The requested interpreter resolved to Python 3.11.14, which is incompatible with the project's Python requirement: `==3.14.*` (from `project.requires-python`) — retry, or run `hermes pm doctor`
+
+pm/environment.py:386: InstallError
+_ ERROR at setup of TestSubdirInstallE2E.test_installs_portable_root_package_disabled _
+
+tmp_path_factory = TempPathFactory(_given_basetemp=None, _trace=<pluggy._tracing.TagTracerSub object at 0x7f9bb68cea50>, _basetemp=PosixPath('/var/tmp/hermes-pytest-1000/r-vbrn6496/pytest-of-kvn/pytest-0'), _retention_count=3, _retention_policy='all')
+
+    @pytest.fixture(scope="module")
+    def isolated_python(tmp_path_factory):
+        from pm.runtime_stage import stage_runtime
+    
+        root = tmp_path_factory.mktemp("pm-python")
+        uv = shutil.which("uv")
+        assert uv, "the worker contract requires real uv"
+>       python = stage_runtime(Path(uv), Path(sys.executable), root)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/pm/_fixtures.py:122: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+pm/runtime_stage.py:40: in stage_runtime
+    environment.sync(snapshot, locked=True, no_default_groups=True,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PythonEnvironment(uv=PosixPath('/home/kvn/.local/bin/uv'), python=PosixPath('/workspace/hermes-home/hermes-agent/venv/...tput=<_io.TextIOWrapper name="<_io.FileIO name=8 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>, no_config=True)
+source = PosixPath('/var/tmp/hermes-pytest-1000/r-vbrn6496/pytest-of-kvn/pytest-0/pm-project-papjjxoc')
+extras = (), groups = (), timeout = 600, frozen = True, all_extras = False
+no_install_project = True, locked = True, no_default_groups = True
+
+    def sync(self, source: Path, *, extras: Sequence[str] = (), groups: Sequence[str] = (),
+             timeout: int = 1800, frozen: bool = True, all_extras: bool = False,
+             no_install_project: bool = False, locked: bool = False,
+             no_default_groups: bool = False) -> None:
+        """Install the root and every member; resolve only in a writable workspace.
+    
+        ``frozen=False`` is reserved for the caller-owned generated workspace,
+        never the original project's lock. Seed/replay policy belongs to PM.
+        """
+        if not frozen:
+            self.lock(source, timeout=timeout)
+        # Locking members alone is insufficient: plain sync only installs root deps.
+        # uv writes no __pycache__ (pip does): without --compile-bytecode the first import
+        # of every module in the foreground of a user request compiles it (#100461).
+        command = ["sync", "--locked" if locked else "--frozen", "--all-packages",
+                   "--python", str(self.python), "--compile-bytecode"]
+        if no_default_groups:
+            command.append("--no-default-groups")
+        if all_extras:
+            from pm.features import opt_in_extras
+    
+            command.append("--all-extras")
+            for extra in opt_in_extras(source):
+                command += ["--no-extra", extra]
+        if no_install_project:
+            # --all-packages has no single selected project in uv, so
+            # --no-install-project alone does not exclude the root. Name it
+            # explicitly without dropping member dependencies or installations.
+            command += ["--no-install-project", "--no-install-package", _project_name(source)]
+        for extra in sorted(set(extras)):
+            command += ["--extra", extra]
+        for group in sorted(set(groups)):
+            command += ["--group", group]
+        result = self._run(command, cwd=source, timeout=timeout)
+        if result.returncode:
+>           raise classify_uv_failure("sync", result.returncode, result.stderr or result.stdout)
+E           pm.package.InstallError: venv: uv sync exited 2: Using CPython 3.11.14 interpreter at: /workspace/hermes-home/hermes-agent/venv/bin/python
+E           error: The requested interpreter resolved to Python 3.11.14, which is incompatible with the project's Python requirement: `==3.14.*` (from `project.requires-python`) — retry, or run `hermes pm doctor`
+
+pm/environment.py:386: InstallError
+_ ERROR at setup of TestReviewedPinScanTrust.test_caution_trusted_only_at_the_reviewed_sha _
+
+tmp_path_factory = TempPathFactory(_given_basetemp=None, _trace=<pluggy._tracing.TagTracerSub object at 0x7f9bb68cea50>, _basetemp=PosixPath('/var/tmp/hermes-pytest-1000/r-vbrn6496/pytest-of-kvn/pytest-0'), _retention_count=3, _retention_policy='all')
+
+    @pytest.fixture(scope="module")
+    def isolated_python(tmp_path_factory):
+        from pm.runtime_stage import stage_runtime
+    
+        root = tmp_path_factory.mktemp("pm-python")
+        uv = shutil.which("uv")
+        assert uv, "the worker contract requires real uv"
+>       python = stage_runtime(Path(uv), Path(sys.executable), root)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/pm/_fixtures.py:122: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+pm/runtime_stage.py:40: in stage_runtime
+    environment.sync(snapshot, locked=True, no_default_groups=True,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PythonEnvironment(uv=PosixPath('/home/kvn/.local/bin/uv'), python=PosixPath('/workspace/hermes-home/hermes-agent/venv/...tput=<_io.TextIOWrapper name="<_io.FileIO name=8 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>, no_config=True)
+source = PosixPath('/var/tmp/hermes-pytest-1000/r-vbrn6496/pytest-of-kvn/pytest-0/pm-project-papjjxoc')
+extras = (), groups = (), timeout = 600, frozen = True, all_extras = False
+no_install_project = True, locked = True, no_default_groups = True
+
+    def sync(self, source: Path, *, extras: Sequence[str] = (), groups: Sequence[str] = (),
+             timeout: int = 1800, frozen: bool = True, all_extras: bool = False,
+             no_install_project: bool = False, locked: bool = False,
+             no_default_groups: bool = False) -> None:
+        """Install the root and every member; resolve only in a writable workspace.
+    
+        ``frozen=False`` is reserved for the caller-owned generated workspace,
+        never the original project's lock. Seed/replay policy belongs to PM.
+        """
+        if not frozen:
+            self.lock(source, timeout=timeout)
+        # Locking members alone is insufficient: plain sync only installs root deps.
+        # uv writes no __pycache__ (pip does): without --compile-bytecode the first import
+        # of every module in the foreground of a user request compiles it (#100461).
+        command = ["sync", "--locked" if locked else "--frozen", "--all-packages",
+                   "--python", str(self.python), "--compile-bytecode"]
+        if no_default_groups:
+            command.append("--no-default-groups")
+        if all_extras:
+            from pm.features import opt_in_extras
+    
+            command.append("--all-extras")
+            for extra in opt_in_extras(source):
+                command += ["--no-extra", extra]
+        if no_install_project:
+            # --all-packages has no single selected project in uv, so
+            # --no-install-project alone does not exclude the root. Name it
+            # explicitly without dropping member dependencies or installations.
+            command += ["--no-install-project", "--no-install-package", _project_name(source)]
+        for extra in sorted(set(extras)):
+            command += ["--extra", extra]
+        for group in sorted(set(groups)):
+            command += ["--group", group]
+        result = self._run(command, cwd=source, timeout=timeout)
+        if result.returncode:
+>           raise classify_uv_failure("sync", result.returncode, result.stderr or result.stdout)
+E           pm.package.InstallError: venv: uv sync exited 2: Using CPython 3.11.14 interpreter at: /workspace/hermes-home/hermes-agent/venv/bin/python
+E           error: The requested interpreter resolved to Python 3.11.14, which is incompatible with the project's Python requirement: `==3.14.*` (from `project.requires-python`) — retry, or run `hermes pm doctor`
+
+pm/environment.py:386: InstallError
+_ ERROR at setup of TestReviewedPinScanTrust.test_dangerous_blocks_even_at_the_reviewed_sha _
+
+tmp_path_factory = TempPathFactory(_given_basetemp=None, _trace=<pluggy._tracing.TagTracerSub object at 0x7f9bb68cea50>, _basetemp=PosixPath('/var/tmp/hermes-pytest-1000/r-vbrn6496/pytest-of-kvn/pytest-0'), _retention_count=3, _retention_policy='all')
+
+    @pytest.fixture(scope="module")
+    def isolated_python(tmp_path_factory):
+        from pm.runtime_stage import stage_runtime
+    
+        root = tmp_path_factory.mktemp("pm-python")
+        uv = shutil.which("uv")
+        assert uv, "the worker contract requires real uv"
+>       python = stage_runtime(Path(uv), Path(sys.executable), root)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/pm/_fixtures.py:122: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+pm/runtime_stage.py:40: in stage_runtime
+    environment.sync(snapshot, locked=True, no_default_groups=True,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PythonEnvironment(uv=PosixPath('/home/kvn/.local/bin/uv'), python=PosixPath('/workspace/hermes-home/hermes-agent/venv/...tput=<_io.TextIOWrapper name="<_io.FileIO name=8 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>, no_config=True)
+source = PosixPath('/var/tmp/hermes-pytest-1000/r-vbrn6496/pytest-of-kvn/pytest-0/pm-project-papjjxoc')
+extras = (), groups = (), timeout = 600, frozen = True, all_extras = False
+no_install_project = True, locked = True, no_default_groups = True
+
+    def sync(self, source: Path, *, extras: Sequence[str] = (), groups: Sequence[str] = (),
+             timeout: int = 1800, frozen: bool = True, all_extras: bool = False,
+             no_install_project: bool = False, locked: bool = False,
+             no_default_groups: bool = False) -> None:
+        """Install the root and every member; resolve only in a writable workspace.
+    
+        ``frozen=False`` is reserved for the caller-owned generated workspace,
+        never the original project's lock. Seed/replay policy belongs to PM.
+        """
+        if not frozen:
+            self.lock(source, timeout=timeout)
+        # Locking members alone is insufficient: plain sync only installs root deps.
+        # uv writes no __pycache__ (pip does): without --compile-bytecode the first import
+        # of every module in the foreground of a user request compiles it (#100461).
+        command = ["sync", "--locked" if locked else "--frozen", "--all-packages",
+                   "--python", str(self.python), "--compile-bytecode"]
+        if no_default_groups:
+            command.append("--no-default-groups")
+        if all_extras:
+            from pm.features import opt_in_extras
+    
+            command.append("--all-extras")
+            for extra in opt_in_extras(source):
+                command += ["--no-extra", extra]
+        if no_install_project:
+            # --all-packages has no single selected project in uv, so
+            # --no-install-project alone does not exclude the root. Name it
+            # explicitly without dropping member dependencies or installations.
+            command += ["--no-install-project", "--no-install-package", _project_name(source)]
+        for extra in sorted(set(extras)):
+            command += ["--extra", extra]
+        for group in sorted(set(groups)):
+            command += ["--group", group]
+        result = self._run(command, cwd=source, timeout=timeout)
+        if result.returncode:
+>           raise classify_uv_failure("sync", result.returncode, result.stderr or result.stdout)
+E           pm.package.InstallError: venv: uv sync exited 2: Using CPython 3.11.14 interpreter at: /workspace/hermes-home/hermes-agent/venv/bin/python
+E           error: The requested interpreter resolved to Python 3.11.14, which is incompatible with the project's Python requirement: `==3.14.*` (from `project.requires-python`) — retry, or run `hermes pm doctor`
+
+pm/environment.py:386: InstallError
+_ ERROR at setup of TestInstallReadabilityGate.test_unreadable_file_is_repaired_before_install _
+
+tmp_path_factory = TempPathFactory(_given_basetemp=None, _trace=<pluggy._tracing.TagTracerSub object at 0x7f9bb68cea50>, _basetemp=PosixPath('/var/tmp/hermes-pytest-1000/r-vbrn6496/pytest-of-kvn/pytest-0'), _retention_count=3, _retention_policy='all')
+
+    @pytest.fixture(scope="module")
+    def isolated_python(tmp_path_factory):
+        from pm.runtime_stage import stage_runtime
+    
+        root = tmp_path_factory.mktemp("pm-python")
+        uv = shutil.which("uv")
+        assert uv, "the worker contract requires real uv"
+>       python = stage_runtime(Path(uv), Path(sys.executable), root)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/pm/_fixtures.py:122: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+pm/runtime_stage.py:40: in stage_runtime
+    environment.sync(snapshot, locked=True, no_default_groups=True,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PythonEnvironment(uv=PosixPath('/home/kvn/.local/bin/uv'), python=PosixPath('/workspace/hermes-home/hermes-agent/venv/...tput=<_io.TextIOWrapper name="<_io.FileIO name=8 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>, no_config=True)
+source = PosixPath('/var/tmp/hermes-pytest-1000/r-vbrn6496/pytest-of-kvn/pytest-0/pm-project-papjjxoc')
+extras = (), groups = (), timeout = 600, frozen = True, all_extras = False
+no_install_project = True, locked = True, no_default_groups = True
+
+    def sync(self, source: Path, *, extras: Sequence[str] = (), groups: Sequence[str] = (),
+             timeout: int = 1800, frozen: bool = True, all_extras: bool = False,
+             no_install_project: bool = False, locked: bool = False,
+             no_default_groups: bool = False) -> None:
+        """Install the root and every member; resolve only in a writable workspace.
+    
+        ``frozen=False`` is reserved for the caller-owned generated workspace,
+        never the original project's lock. Seed/replay policy belongs to PM.
+        """
+        if not frozen:
+            self.lock(source, timeout=timeout)
+        # Locking members alone is insufficient: plain sync only installs root deps.
+        # uv writes no __pycache__ (pip does): without --compile-bytecode the first import
+        # of every module in the foreground of a user request compiles it (#100461).
+        command = ["sync", "--locked" if locked else "--frozen", "--all-packages",
+                   "--python", str(self.python), "--compile-bytecode"]
+        if no_default_groups:
+            command.append("--no-default-groups")
+        if all_extras:
+            from pm.features import opt_in_extras
+    
+            command.append("--all-extras")
+            for extra in opt_in_extras(source):
+                command += ["--no-extra", extra]
+        if no_install_project:
+            # --all-packages has no single selected project in uv, so
+            # --no-install-project alone does not exclude the root. Name it
+            # explicitly without dropping member dependencies or installations.
+            command += ["--no-install-project", "--no-install-package", _project_name(source)]
+        for extra in sorted(set(extras)):
+            command += ["--extra", extra]
+        for group in sorted(set(groups)):
+            command += ["--group", group]
+        result = self._run(command, cwd=source, timeout=timeout)
+        if result.returncode:
+>           raise classify_uv_failure("sync", result.returncode, result.stderr or result.stdout)
+E           pm.package.InstallError: venv: uv sync exited 2: Using CPython 3.11.14 interpreter at: /workspace/hermes-home/hermes-agent/venv/bin/python
+E           error: The requested interpreter resolved to Python 3.11.14, which is incompatible with the project's Python requirement: `==3.14.*` (from `project.requires-python`) — retry, or run `hermes pm doctor`
+
+pm/environment.py:386: InstallError
+_ ERROR at setup of TestInstallReadabilityGate.test_unrepairable_tree_rolls_back_and_names_the_fix _
+
+tmp_path_factory = TempPathFactory(_given_basetemp=None, _trace=<pluggy._tracing.TagTracerSub object at 0x7f9bb68cea50>, _basetemp=PosixPath('/var/tmp/hermes-pytest-1000/r-vbrn6496/pytest-of-kvn/pytest-0'), _retention_count=3, _retention_policy='all')
+
+    @pytest.fixture(scope="module")
+    def isolated_python(tmp_path_factory):
+        from pm.runtime_stage import stage_runtime
+    
+        root = tmp_path_factory.mktemp("pm-python")
+        uv = shutil.which("uv")
+        assert uv, "the worker contract requires real uv"
+>       python = stage_runtime(Path(uv), Path(sys.executable), root)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/pm/_fixtures.py:122: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+pm/runtime_stage.py:40: in stage_runtime
+    environment.sync(snapshot, locked=True, no_default_groups=True,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PythonEnvironment(uv=PosixPath('/home/kvn/.local/bin/uv'), python=PosixPath('/workspace/hermes-home/hermes-agent/venv/...tput=<_io.TextIOWrapper name="<_io.FileIO name=8 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>, no_config=True)
+source = PosixPath('/var/tmp/hermes-pytest-1000/r-vbrn6496/pytest-of-kvn/pytest-0/pm-project-papjjxoc')
+extras = (), groups = (), timeout = 600, frozen = True, all_extras = False
+no_install_project = True, locked = True, no_default_groups = True
+
+    def sync(self, source: Path, *, extras: Sequence[str] = (), groups: Sequence[str] = (),
+             timeout: int = 1800, frozen: bool = True, all_extras: bool = False,
+             no_install_project: bool = False, locked: bool = False,
+             no_default_groups: bool = False) -> None:
+        """Install the root and every member; resolve only in a writable workspace.
+    
+        ``frozen=False`` is reserved for the caller-owned generated workspace,
+        never the original project's lock. Seed/replay policy belongs to PM.
+        """
+        if not frozen:
+            self.lock(source, timeout=timeout)
+        # Locking members alone is insufficient: plain sync only installs root deps.
+        # uv writes no __pycache__ (pip does): without --compile-bytecode the first import
+        # of every module in the foreground of a user request compiles it (#100461).
+        command = ["sync", "--locked" if locked else "--frozen", "--all-packages",
+                   "--python", str(self.python), "--compile-bytecode"]
+        if no_default_groups:
+            command.append("--no-default-groups")
+        if all_extras:
+            from pm.features import opt_in_extras
+    
+            command.append("--all-extras")
+            for extra in opt_in_extras(source):
+                command += ["--no-extra", extra]
+        if no_install_project:
+            # --all-packages has no single selected project in uv, so
+            # --no-install-project alone does not exclude the root. Name it
+            # explicitly without dropping member dependencies or installations.
+            command += ["--no-install-project", "--no-install-package", _project_name(source)]
+        for extra in sorted(set(extras)):
+            command += ["--extra", extra]
+        for group in sorted(set(groups)):
+            command += ["--group", group]
+        result = self._run(command, cwd=source, timeout=timeout)
+        if result.returncode:
+>           raise classify_uv_failure("sync", result.returncode, result.stderr or result.stdout)
+E           pm.package.InstallError: venv: uv sync exited 2: Using CPython 3.11.14 interpreter at: /workspace/hermes-home/hermes-agent/venv/bin/python
+E           error: The requested interpreter resolved to Python 3.11.14, which is incompatible with the project's Python requirement: `==3.14.*` (from `project.requires-python`) — retry, or run `hermes pm doctor`
+
+pm/environment.py:386: InstallError
+=========================== short test summary info ============================
+ERROR tests/hermes_cli/test_plugins_cmd.py::TestSubdirInstallE2E::test_installs_only_the_subdir_plugin
+ERROR tests/hermes_cli/test_plugins_cmd.py::TestSubdirInstallE2E::test_missing_subdir_raises
+ERROR tests/hermes_cli/test_plugins_cmd.py::TestSubdirInstallE2E::test_subdir_install_stays_updatable
+ERROR tests/hermes_cli/test_plugins_cmd.py::TestSubdirInstallE2E::test_installs_portable_root_package_disabled
+ERROR tests/hermes_cli/test_plugins_cmd.py::TestReviewedPinScanTrust::test_caution_trusted_only_at_the_reviewed_sha
+ERROR tests/hermes_cli/test_plugins_cmd.py::TestReviewedPinScanTrust::test_dangerous_blocks_even_at_the_reviewed_sha
+ERROR tests/hermes_cli/test_plugins_cmd.py::TestInstallReadabilityGate::test_unreadable_file_is_repaired_before_install
+ERROR tests/hermes_cli/test_plugins_cmd.py::TestInstallReadabilityGate::test_unrepairable_tree_rolls_back_and_names_the_fix
+41 passed, 8 errors in 3.31s
+
+=== 1 file where all tests passed but pytest exited non-zero (warnings-as-errors, hook failures, etc.) ===
+  tests/hermes_cli/test_plugins_cmd.py  (41 passed)

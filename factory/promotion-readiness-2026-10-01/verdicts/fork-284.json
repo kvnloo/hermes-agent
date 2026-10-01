@@ -1,0 +1,39 @@
+{
+  "fork_pr": 284,
+  "title": "chore: remove _start_cron_ticker deprecated shim",
+  "claim": "gateway.run._start_cron_ticker (DEPRECATED shim from the #48275 CronScheduler refactor) has no production caller; start_gateway uses _start_gateway_start_cron_and_housekeeping -> SupervisedTickerThread(cron_provider.start).",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "source": "main gateway/run.py:4882 defines the shim. start_gateway calls only _start_gateway_start_cron_and_housekeeping (run.py:5994-5995), which starts SupervisedTickerThread(cron_provider.start) at :5736. hermes_cli/debug.py, the 'external caller' cited by open #67198, no longer references it. The deprecation was introduced by 2a5e9d994a (#48275 merge) with no promised removal timeline. Plugin-facing? No: it is a private underscore name in an internal module, and it is not in tests/compat/old_updater_surface.json.",
+    "references_before": "main: def at gateway/run.py:4882; tests/cron/test_scheduler_provider.py:11 (docstring), :45 and :57 (shim test); tests/gateway/test_startup_restart_race.py:214, :256, :315 (monkeypatch strings that are vacuous because start_gateway never calls the shim); website/i18n/zh-Hans/.../developer-guide/cron-internals.md:105. The English doc is already updated.",
+    "references_after": "0 (git grep -n -w _start_cron_ticker empty)",
+    "red": "n/a (pure deletion). Test-quality defect on main, shown statically: no production path calls _start_cron_ticker, so the three `cron_started is False` guards cannot fail.",
+    "green": "Guards repointed to gateway.run._start_gateway_start_cron_and_housekeeping. test_startup_restart_race.py passes 6/6.",
+    "negative_control": "(a) Forced `if not runner._running:` -> `if False:` in start_gateway: 3 guarded cases fail with 'TypeError: cannot unpack non-iterable NoneType object' at run.py:5987 (the patched seam). (b) Also forced the should_exit_cleanly branch off: test_start_gateway_does_not_start_cron_after_aborted_startup fails the same way. Restored byte-identically (git diff cmp).",
+    "adjacent": "Gateway bundle run, 13 files (test_scheduler_provider, test_startup_restart_race, test_cron_profile_gate, test_cron_ticks_every_profile, shutdown-forensics trio, yuanbao x5, compat surface): 715 passed, 0 failed, 1 skipped (macOS). main: 717 passed on the same files, the difference being the deleted shim test and the context_as_json test. The dropped shim test duplicated test_inprocess_provider_ticks_and_stops (still present)."
+  },
+  "upstream_overlap": [
+    "#127352 (kvnloo, our own parked carrier) CLOSED 2026-09-30",
+    "#67198 (arimu1, OPEN since 2026-08-04, mergeable UNKNOWN) adds test_start_cron_ticker_shim_forwards_kwargs_to_inprocess_provider; its stated reason (hermes_cli/debug.py caller) is false on main. Soft conflict: it would need that one test dropped. Not the same defect, so not EXTERNAL-OWNED.",
+    "#77735 (andrexibiza, decomposition slice 30) moves the shim into gateway/housekeeping.py. Stale vs #102117.",
+    "#39577/#26734/#54351/#8367 edit the pre-provider ticker body. Stale."
+  ],
+  "branch": "ready/chore-gateway",
+  "bundle": "chore-gateway",
+  "files": [
+    "gateway/run.py",
+    "tests/cron/test_scheduler_provider.py",
+    "tests/gateway/test_startup_restart_race.py",
+    "website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/developer-guide/cron-internals.md"
+  ],
+  "size": "+7/-46",
+  "depends_on": "#314 (fork wave issue: 'promote only if deletion is still mechanically safe'). Satisfied.",
+  "fork_head": "detail/dead-code/chore-remove-start-cron-ticker-deprecated-shim-47f356",
+  "fork_head_oid": "6a699014224bc00f36870850f3fbc10fe44ff86b",
+  "wave": "W5-bot-chore",
+  "batch": "C",
+  "patch": "/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/patches/fork-284.patch (slice of bundle-chore-gateway.patch)",
+  "body": "/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/patches/bundle-chore-gateway.body.md",
+  "notes": "Deviation from fork #284: it deleted the three guard monkeypatches and left vacuous asserts. This rebuild repoints them to the real seam so they can fail, proven by the negative control. Also fixed the stale zh-Hans doc line, which follows the English wording. Bundle commit 3d721162fc."
+}

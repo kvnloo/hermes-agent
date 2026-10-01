@@ -1,0 +1,228 @@
+diff --git i/gateway/run.py w/gateway/run.py
+index 620fe26bfe..d3e81c676d 100644
+--- i/gateway/run.py
++++ w/gateway/run.py
+@@ -5956,52 +5956,83 @@ async def start_gateway(config: Optional[GatewayConfig] = None, replace: bool =
+     except Exception as e:
+         logger.debug("MCP tool discovery failed: %s", e)
+ 
++    # Start monitoring only after this process owns the gateway lock. Every
++    # subsequent lifecycle exit is covered by the finally block below.
++    _memory_monitor_started = False
+     try:
+-        success = await runner.start()
+-    except BaseException:
+-        _shutdown_gateway_health_export(runner)
+-        raise
+-    if not success:
+-        _shutdown_gateway_health_export(runner)
+-        return False
++        from gateway import memory_monitor as _memory_monitor
+ 
+-    def _recover_pending() -> None:
+-        recovered = _recover_pending_flushes(runner)
+-        if recovered:
+-            logger.info("Recovered %d pending message(s) from shutdown flush", recovered)
+-
+-    _best_effort(_recover_pending)
+-    if runner.should_exit_cleanly:
+-        _shutdown_gateway_health_export(runner)
+-        if runner.exit_reason:
+-            logger.error("Gateway exiting cleanly: %s", runner.exit_reason)
+-        # Explicit exit codes (GATEWAY_FATAL_CONFIG_EXIT_CODE) must propagate so s6 finish maps 78 → 125.
+-        if runner.exit_code is not None:
+-            raise SystemExit(runner.exit_code)
+-        return True
+-    if not runner._running:
+-        # Startup aborted by restart/shutdown before running mode; preserve that path without starting cron.
++        _mm_cfg = {}
+         try:
+-            await runner.wait_for_shutdown()
++            from hermes_cli.config import load_config as _load_cli_config
++
++            _mm_cfg = (_load_cli_config() or {}).get("logging", {}).get("memory_monitor", {}) or {}
++        except Exception:
++            pass
++        if _mm_cfg.get("enabled", True):
+             try:
+-                await _shutdown_mcp_servers_nonblocking(config=getattr(runner, "config", None))
+-            except Exception:
+-                logger.warning("MCP shutdown failed; connections may be left open", exc_info=True)
+-            return _resolve_gateway_exit_verdict(runner, _signal_initiated_shutdown[0])
+-        finally:
++                _mm_interval = float(_mm_cfg.get("interval_seconds", 300))
++            except (TypeError, ValueError):
++                _mm_interval = 300.0
++            _memory_monitor_started = bool(
++                _memory_monitor.start_memory_monitoring(interval_seconds=_mm_interval)
++            )
++    except Exception as _mm_exc:
++        logger.debug("Failed to start memory monitor: %s", _mm_exc)
++
++    try:
++        try:
++            success = await runner.start()
++        except BaseException:
+             _shutdown_gateway_health_export(runner)
++            raise
++        if not success:
++            _shutdown_gateway_health_export(runner)
++            return False
+ 
+-    cron_stop, cron_provider, cron_thread, housekeeping_thread = (
+-        _start_gateway_start_cron_and_housekeeping(runner))
++        def _recover_pending() -> None:
++            recovered = _recover_pending_flushes(runner)
++            if recovered:
++                logger.info("Recovered %d pending message(s) from shutdown flush", recovered)
+ 
+-    # READY only once adapters, cron and housekeeping run; missing systemd state just disables watchdog.
+-    runner._start_systemd_watchdog()
++        _best_effort(_recover_pending)
++        if runner.should_exit_cleanly:
++            _shutdown_gateway_health_export(runner)
++            if runner.exit_reason:
++                logger.error("Gateway exiting cleanly: %s", runner.exit_reason)
++            # Explicit exit codes (GATEWAY_FATAL_CONFIG_EXIT_CODE) must propagate so s6 finish maps 78 → 125.
++            if runner.exit_code is not None:
++                raise SystemExit(runner.exit_code)
++            return True
++        if not runner._running:
++            # Startup aborted by restart/shutdown before running mode; preserve that path without starting cron.
++            try:
++                await runner.wait_for_shutdown()
++                try:
++                    await _shutdown_mcp_servers_nonblocking(config=getattr(runner, "config", None))
++                except Exception:
++                    logger.warning("MCP shutdown failed; connections may be left open", exc_info=True)
++                return _resolve_gateway_exit_verdict(runner, _signal_initiated_shutdown[0])
++            finally:
++                _shutdown_gateway_health_export(runner)
+ 
+-    await runner.wait_for_shutdown()
++        cron_stop, cron_provider, cron_thread, housekeeping_thread = (
++            _start_gateway_start_cron_and_housekeeping(runner))
+ 
+-    return await _start_gateway_shutdown_tail(
+-        runner, _control_server, cron_stop, cron_provider, cron_thread, housekeeping_thread,
+-        _planned_stop_watcher_stop, _planned_stop_watcher_thread, _signal_initiated_shutdown)
++        # READY only once adapters, cron and housekeeping run; missing systemd state just disables watchdog.
++        runner._start_systemd_watchdog()
++
++        await runner.wait_for_shutdown()
++
++        return await _start_gateway_shutdown_tail(
++            runner, _control_server, cron_stop, cron_provider, cron_thread, housekeeping_thread,
++            _planned_stop_watcher_stop, _planned_stop_watcher_thread, _signal_initiated_shutdown)
++    finally:
++        if _memory_monitor_started:
++            try:
++                _memory_monitor.stop_memory_monitoring(timeout=2.0)
++            except Exception:
++                pass
+ 
+ 
+ def _guard_corrupt_user_config() -> None:
+diff --git i/hermes_cli/config_defaults.py w/hermes_cli/config_defaults.py
+index 1196da7252..3c35ae4062 100644
+--- i/hermes_cli/config_defaults.py
++++ w/hermes_cli/config_defaults.py
+@@ -2029,6 +2029,14 @@ DEFAULT_CONFIG = {
+         "level": "INFO",       # minimum level for agent.log: DEBUG, INFO, WARNING
+         "max_size_mb": 5,      # max size per log file before rotation
+         "backup_count": 3,     # rotated backups to keep
++        # Periodic process memory usage logging (gateway only). Emits a
++        # grep-friendly "[MEMORY] rss=...MB ..." line at the configured
++        # interval so slow leaks in the long-lived gateway are visible
++        # in agent.log / gateway.log as a time series.
++        "memory_monitor": {
++            "enabled": True,
++            "interval_seconds": 300,
++        },
+     },
+     # Remote model-catalog manifest: curated OpenRouter / Nous Portal model lists fetched from this
+     # URL (falls back to the in-repo snapshot on network failure), so picker lists update without a
+diff --git i/tests/gateway/test_memory_monitor.py w/tests/gateway/test_memory_monitor.py
+index 179f76b8d4..bb3379e04b 100644
+--- i/tests/gateway/test_memory_monitor.py
++++ w/tests/gateway/test_memory_monitor.py
+@@ -13,6 +13,15 @@ import pytest
+ from gateway import memory_monitor as mm
+ 
+ 
++def test_default_config_enables_memory_monitoring():
++    from hermes_cli.config import DEFAULT_CONFIG
++
++    assert DEFAULT_CONFIG["logging"]["memory_monitor"] == {
++        "enabled": True,
++        "interval_seconds": 300,
++    }
++
++
+ @pytest.fixture(autouse=True)
+ def _ensure_monitor_stopped():
+     """Every test starts from a clean state and leaves one behind."""
+diff --git i/tests/gateway/test_runner_startup_failures.py w/tests/gateway/test_runner_startup_failures.py
+index cab556b907..3bad04e687 100644
+--- i/tests/gateway/test_runner_startup_failures.py
++++ w/tests/gateway/test_runner_startup_failures.py
+@@ -135,6 +135,59 @@ async def test_start_gateway_verbosity_imports_redacting_formatter(monkeypatch,
+     assert ok is True
+ 
+ 
++@pytest.mark.asyncio
++@pytest.mark.parametrize(
++    ("enabled", "startup_success"),
++    [
++        pytest.param(True, True, id="clean-early-exit"),
++        pytest.param(True, False, id="failed-early-exit"),
++        pytest.param(False, True, id="disabled"),
++    ],
++)
++async def test_start_gateway_manages_memory_monitor_across_early_exits(
++    monkeypatch, tmp_path, enabled, startup_success
++):
++    """A monitor started for a gateway must stop for every startup outcome."""
++    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
++    calls = []
++
++    class _EarlyExitRunner:
++        def __init__(self, config):
++            self.config = config
++            self.should_exit_cleanly = startup_success
++            self.exit_reason = None
++            self.exit_code = None
++            self.adapters = {}
++
++        async def start(self):
++            return startup_success
++
++    monkeypatch.setattr("gateway.status.get_running_pid", lambda: None)
++    monkeypatch.setattr("tools.skills_sync.sync_skills", lambda quiet=True: None)
++    monkeypatch.setattr("hermes_logging.setup_logging", lambda hermes_home, mode: tmp_path)
++    monkeypatch.setattr("hermes_logging._add_rotating_handler", lambda *args, **kwargs: None)
++    monkeypatch.setattr("gateway.run.GatewayRunner", _EarlyExitRunner)
++    monkeypatch.setattr(
++        "hermes_cli.config.load_config",
++        lambda: {"logging": {"memory_monitor": {"enabled": enabled, "interval_seconds": 17}}},
++    )
++    monkeypatch.setattr(
++        "gateway.memory_monitor.start_memory_monitoring",
++        lambda *, interval_seconds: calls.append(("start", interval_seconds)) or True,
++    )
++    monkeypatch.setattr(
++        "gateway.memory_monitor.stop_memory_monitoring",
++        lambda *, timeout: calls.append(("stop", timeout)),
++    )
++
++    from gateway.run import start_gateway
++
++    ok = await start_gateway(config=GatewayConfig(), replace=False, verbosity=None)
++
++    assert ok is startup_success
++    assert calls == ([('start', 17.0), ('stop', 2.0)] if enabled else [])
++
++
+ @pytest.mark.asyncio
+ async def test_start_gateway_replace_aborts_when_force_killed_pid_still_alive(
+     monkeypatch, tmp_path

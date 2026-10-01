@@ -1,0 +1,27 @@
+{
+ "fork_pr": 65,
+ "title": "fix(desktop): keep attachment indicators after a model/personality switch on older backends",
+ "claim": "reconcileResumeMessages must exclude role=user '[System:' gateway markers from role-ordinal pairing (as preserveLocalPendingTurnMessages already does), so a marker present only in the fresh transcript cannot shift user ordinals and skip the optimistic row's attachmentRefs carry-over.",
+ "verdict": "HOLD",
+ "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+ "evidence": {
+  "red": "Fork's 7 tests applied alone to main: 4 fail, e.g. 'carries attachmentRefs past an asymmetric [System: marker in next that is absent from previous' -> AssertionError: expected undefined to deeply equal [ '@image:/tmp/photo.png' ]. Unit-level asymmetry is real on main (utils.ts:414-424 has no marker guard).",
+  "green": "Fork's 8-line prod hunk applies cleanly to main: utils.test.ts 145/145 pass.",
+  "negative_control": "Removing the next-loop isGatewaySystemMarker guard: 5 of the new tests fail again.",
+  "adjacent": "vitest src/app/session/hooks/use-session-actions + use-session-tile-delegate: 13 files / 349 tests pass with the fix.",
+  "source": "User-visible reach on current main is effectively nil. (1) The gateway RPC projection drops every role=user '[System:' row (tui_gateway/session_history.py:228 _is_display_hidden_marker, since #69861, 2026-07-23). (2) Current backends type model/personality markers (display_kind model_switch since a4bc1ca502, personality_switch since abd85a94bc #82756); desktop hydrates those as role 'system' (hydration.ts:430), so they never take a user ordinal. (3) Since #70720 (2026-07-25) the gateway persists '@image:' refs inline, and toChatMessages lifts them into attachmentRefs on the authoritative row, so the carry-over is not needed and preserved.attachmentRefs is already set. Losing the chip needs a backend from before 2026-07-23..25, which is DESKTOP_BACKEND_CONTRACT 4. The current desktop requires 8 (store/updates.ts REQUIRED_BACKEND_CONTRACT) and already raises the GUI<->backend skew warning for that."
+ },
+ "upstream_overlap": [
+  "No open PR/issue for this claim (gh search reconcileResumeMessages / isGatewaySystemMarker; cached title scan).",
+  "#69861 MERGED (added the marker guard to preserveLocalPendingTurnMessages + server-side marker hiding; superseded #68665).",
+  "#81473 CLOSED issue (ordinal drift after model-switch markers, duplicate reply) - same family, closed."
+ ],
+ "branch": null,
+ "files": [
+  "apps/desktop/src/app/session/hooks/use-session-actions/utils.ts",
+  "apps/desktop/src/app/session/hooks/use-session-actions/utils.test.ts"
+ ],
+ "size": "+8/-0 prod (fork test hunk +182; a promotable rebuild would keep 1-2 cases, ~+50)",
+ "depends_on": null,
+ "notes": "Real reconciler asymmetry and a cheap consistency hardening, but the visible symptom only shows on an explicitly skewed old backend (contract <=4 vs required 8). Not worth a review slot on its own. If maintainers want reconciler symmetry with preserveLocalPendingTurnMessages, the prod hunk applies cleanly; trim the tests to the asymmetric-marker case plus the full reconcile->preserve pipeline case. Hermes' batch entry did not note that the claim is self-scoped to 'older backends' or that current backends filter/type markers server-side. Kanban baggage dropped. NOT_TESTED: a live old-backend run; whether REST /api/sessions/{id}/messages (hermes_cli/web_routers/sessions.py _project_for_display, which does not drop untyped '[System:' rows) plus a current untyped producer (surface_switch/verification_stop notes) can cause a different visible effect. Attachment refs are persisted inline on current backends, so the attachment symptom stays unreachable there."
+}

@@ -1,0 +1,37 @@
+{
+  "fork_pr": 285,
+  "title": "chore(gateway): remove unused context_as_json shutdown forensics helper",
+  "claim": "gateway.shutdown_forensics.context_as_json has no production caller (the snapshot is only rendered via format_context_for_log) and can be removed with its json import.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "source": "main: the only production consumers of shutdown_forensics are gateway/run.py:5307-5343 (snapshot_shutdown_context, format_context_for_log, spawn_async_diagnostic), run_startup.py:960 (check_systemd_timing_alignment), hermes_cli/gateway.py:1392 and update_cmd_fleet.py:732 (parse_systemd_duration_to_us). `json` in shutdown_forensics.py is used only by context_as_json (:195). Not in old_updater_surface.json; that file lists only parse_systemd_duration_to_us from this module.",
+    "references_before": "main: def at gateway/shutdown_forensics.py:192; tests/gateway/test_shutdown_forensics.py:38 (header), :45 (unit test), :83 (argv-canary assert).",
+    "references_after": "0 (git grep -n -w context_as_json empty)",
+    "red": "n/a (pure deletion)",
+    "green": "n/a (pure deletion)",
+    "negative_control": "The #112459 argv-canary assertion now checks `repr(ctx)` instead of the dead serializer. To prove it still guards the whole snapshot, _proc_summary was temporarily made to store the child's argv under a new key 'args'. Result: test_snapshot_and_log_line_identify_process_without_argv FAILS on the repr(ctx) half while the log-line half passes. Restored byte-identically.",
+    "adjacent": "test_shutdown_forensics, test_planned_stop_watcher, test_launchd_exit_timeout_drain_cap pass (in the 715/0/1 gateway bundle run). check-windows-footguns flags 2 pre-existing encoding='utf-8' reads in test_shutdown_forensics.py, identical on main."
+  },
+  "upstream_overlap": [
+    "#127353 (kvnloo, our own parked carrier) CLOSED 2026-09-30",
+    "#112508 (JoaoMarcos44, OPEN) references context_as_json only in tests; its fix already landed as #113075 (teknium1 salvage, MERGED), so it is effectively superseded.",
+    "#59929 (ilanoh, OPEN) mentions context_as_json only in tests.",
+    "#112460 (fml-agent, OPEN) does not touch it."
+  ],
+  "branch": "ready/chore-gateway",
+  "bundle": "chore-gateway",
+  "files": [
+    "gateway/shutdown_forensics.py",
+    "tests/gateway/test_shutdown_forensics.py"
+  ],
+  "size": "+2/-26",
+  "depends_on": "#314 satisfied",
+  "fork_head": "detail/dead-code/chore-gateway-remove-unused-context-as-json-shutdo-296ef0",
+  "fork_head_oid": "8e61c281ea27bee91eed356fd49a593e85db114c",
+  "wave": "W5-bot-chore",
+  "batch": "C",
+  "patch": "/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/patches/fork-285.patch (slice of bundle-chore-gateway.patch)",
+  "body": "/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/patches/bundle-chore-gateway.body.md",
+  "notes": "Deviation from fork #285: it simply dropped the JSON half of the argv-canary assert. This rebuild keeps equivalent coverage with `repr(ctx)`. Bundle commit 3d721162fc."
+}

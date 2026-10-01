@@ -1,0 +1,80 @@
+From 5b0e3b0fad270186585bd0846d56896575274b9a Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:15:12 -0500
+Subject: [PATCH] fix(agent): drop portal query params from the subscription
+ manage URL
+
+subscription_manage_url() documents its output as
+{portal_origin}/manage-subscription?org_id=<id>[&plan=<tier_id>] and says it
+mirrors the TUI's buildManageUrl. It actually seeded the outbound query from
+the server portalUrl's own query and only popped org_id/plan, so a
+query-bearing portalUrl (e.g. /billing?topup=open, utm_*, ref) leaked onto
+the CLI's /manage-subscription deep link. The TUI (buildManageUrl) and
+desktop (buildManageSubscriptionUrl) builders both keep only
+new URL(portal_url).origin, so the same subscription state produced a
+different URL on the CLI than on the other two surfaces.
+
+Build the query from the contract-owned keys only (org_id, then plan). The
+scheme/netloc guards are unchanged, and _absolutize_portal_url still keeps
+the query for the callers that use portalUrl directly.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ agent/subscription_view.py            |  9 ++++-----
+ tests/agent/test_subscription_view.py | 12 ++++++++++++
+ 2 files changed, 16 insertions(+), 5 deletions(-)
+
+diff --git a/agent/subscription_view.py b/agent/subscription_view.py
+index 9d390963d8..48a521cfb4 100644
+--- a/agent/subscription_view.py
++++ b/agent/subscription_view.py
+@@ -190,7 +190,7 @@ def subscription_manage_url(state: SubscriptionState, tier_id: Optional[str] = N
+     (the stable ``tiers[]`` id, never a name/slug) preselects the plan — the portal ignores an
+     unknown tier, so it's appended unconditionally.
+     """
+-    from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
++    from urllib.parse import urlencode, urlsplit, urlunsplit
+ 
+     try:
+         parts = urlsplit(state.portal_url or "")
+@@ -199,11 +199,10 @@ def subscription_manage_url(state: SubscriptionState, tier_id: Optional[str] = N
+     if parts.scheme not in ("http", "https") or not parts.netloc:
+         return None
+ 
+-    # Preserve unrelated portal query params; org_id / plan are contract-owned
++    # Only org_id / plan go on the manage page: like the TUI/desktop builders (which keep just
++    # the portal origin), the server portalUrl's own query never carries over
+     # (org_id before plan — insertion order is the emitted query order).
+-    params = dict(parse_qsl(parts.query, keep_blank_values=True))
+-    params.pop("org_id", None)
+-    params.pop("plan", None)
++    params: dict[str, str] = {}
+     if state.org_id:
+         params["org_id"] = state.org_id
+     if tier_id:
+diff --git a/tests/agent/test_subscription_view.py b/tests/agent/test_subscription_view.py
+index 9a1f2b414b..f619e1c4b7 100644
+--- a/tests/agent/test_subscription_view.py
++++ b/tests/agent/test_subscription_view.py
+@@ -48,6 +48,18 @@ def test_manage_url_omits_org_when_absent():
+     assert "org_id" not in url
+ 
+ 
++def test_manage_url_drops_portal_query_params():
++    # Same contract as the TUI/desktop builders (``new URL(portal_url).origin``):
++    # the server's portalUrl query (topup=open, utm_*, a stale org_id) never reaches
++    # /manage-subscription; only the contract-owned org_id / plan do, org_id first.
++    s = SubscriptionState(
++        logged_in=True,
++        org_id="org_1",
++        portal_url="https://portal.example/billing?topup=open&utm_source=email&org_id=stale",
++    )
++    assert subscription_manage_url(s, tier_id="plus") == "https://portal.example/manage-subscription?org_id=org_1&plan=plus"
++
++
+ 
+ 
+ 
+-- 
+2.55.0
+

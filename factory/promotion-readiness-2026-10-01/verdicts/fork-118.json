@@ -1,0 +1,34 @@
+{
+  "fork_pr": 118,
+  "title": "docs(mcp): reflect inlining of non-secret Asana Client ID into config.yaml",
+  "claim": "The Asana no-DCR example says both Client ID and secret are stored in .env with ${VAR} refs; the Client ID is secret: false and inlined into config.yaml.",
+  "verdict": "READY",
+  "main_sha": "f8489405600c9a7d9d2f307dace086f18d7173ba",
+  "evidence": {
+    "red": "website/docs/user-guide/features/mcp.md:246-261 on main: \"prompts for the Client ID / Client secret, stores them in the profile's `.env`, and writes only `${VAR}` references to `config.yaml`\" with `client_id: \"${ASANA_CLIENT_ID}\"`.",
+    "green": "Secret stays in .env with a ${VAR} ref; Client ID declared secret: false is inlined; example shows `client_id: \"<your Asana MCP app Client ID>\"   # inlined (non-secret)`.",
+    "negative_control": "N/A for docs (no executable behaviour). Equivalent check: the stale phrase is present on main and absent on the bundle (grep given in red/green).",
+    "adjacent": "python3 website/scripts/check_doc_links.py on the bundle tree: OK (no route-style links). All 7 B1 bundles cherry-pick together onto main cleanly, and each pairs cleanly with B2's current docs2-update/docs2-desktop/docs2-gateway/docs2-memory bundles.",
+    "source": "optional-mcps/asana/manifest.yaml:24-30 (ASANA_CLIENT_ID secret: false; comment 'non-secret values (client id below) are inlined into config.yaml'); hermes_cli/mcp_catalog.py:794-798."
+  },
+  "upstream_overlap": [
+    "#127378 (our own, CLOSED/parked; superseded by this bundle)",
+    "No open external PR/issue for this claim (gh search prs/issues; open docs PRs touching the same files edit other sections)"
+  ],
+  "branch": "ready/docs-mcp",
+  "bundle": {
+    "branch": "ready/docs-mcp",
+    "commit": "0081fb5e75",
+    "subject": "docs(mcp): correct catalog and plugin MCP install docs",
+    "bundle_size": "+36/-16",
+    "patch": "patches/docs-mcp.patch",
+    "body": "patches/docs-mcp.body.md"
+  },
+  "files": [
+    "website/docs/user-guide/features/mcp.md"
+  ],
+  "size": "+6/-4",
+  "depends_on": null,
+  "fork_head": "521df97c7c62e05edf383311e41a091eb0b4b46b",
+  "notes": "Supersedes our parked upstream #127378."
+}
