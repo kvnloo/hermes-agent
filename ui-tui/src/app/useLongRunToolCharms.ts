@@ -61,9 +61,30 @@ export function useLongRunToolCharms() {
       }
     }
 
-    tick()
-    const id = setInterval(tick, 1000)
+    // No charm can fire before a tool is DELAY_MS old, so sleep until the first
+    // one gets there. `tick` re-checks ages, so an early wake costs one tick.
+    const dueInMs = Math.min(...tools.map(t => (t.startedAt ? t.startedAt + DELAY_MS : Infinity))) - Date.now()
 
-    return () => clearInterval(id)
+    if (dueInMs === Infinity) {
+      return
+    }
+
+    let id: ReturnType<typeof setInterval> | undefined
+
+    const start = () => {
+      tick()
+      id = setInterval(tick, 1000)
+    }
+
+    const wake = dueInMs > 0 ? setTimeout(start, dueInMs) : undefined
+
+    if (!wake) {
+      start()
+    }
+
+    return () => {
+      clearTimeout(wake)
+      clearInterval(id)
+    }
   }, [tools])
 }
