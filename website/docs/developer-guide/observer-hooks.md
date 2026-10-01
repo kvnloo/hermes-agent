@@ -151,9 +151,24 @@ API hooks describe provider attempts inside the agent loop:
 `post_api_request` includes the same identity/runtime fields plus:
 
 - `api_duration`, `started_at`, `ended_at`
+- `first_chunk_at`: epoch seconds when this attempt's first stream chunk
+  arrived, or `None` when none was recorded (the response was not streamed,
+  no chunk arrived, the stream failed after sending output, or the call used
+  `bedrock_converse`). When nothing was retried, time to first byte is
+  `first_chunk_at - started_at`. A retry after a failed attempt or a dropped
+  stream keeps the first try's `started_at`, so after a retry the difference
+  can also include the failed tries and the wait between them (as
+  `api_duration` always does).
 - `finish_reason`, `message_count`, `response_model`
 - `usage`
+- `context_length`: the context window, in tokens, of the agent's context
+  engine (`None` if the agent has none)
 - `assistant_content_chars`, `assistant_tool_call_count`
+- `moa_references`: on a Mixture-of-Agents call, one entry per advisor from
+  the most recent fan-out (`label`, `model`, `provider`, `temperature`,
+  `usage`, `cost_usd`, `cost_status`, `cost_source`, and the advisor's
+  `output` text, which is redacted only when `moa.privacy_filter` is set);
+  `None` otherwise. `response` and `usage` cover only the aggregator call.
 - sanitized response payload: `response`
 - compatibility object: `assistant_message`
 
