@@ -102,7 +102,7 @@ tick()
 
 ### Gateway 集成
 
-在 gateway 模式下，调度器运行在专用后台线程中（`gateway/run.py` 中的 `_start_cron_ticker`），每 60 秒调用一次 `scheduler.tick()`，与消息处理并行运行。
+在 gateway 模式下，cron 触发器由可插拔的 `CronScheduler` provider 提供：gateway 调用 `resolve_cron_scheduler()`（`cron/scheduler_provider.py`），并在专用后台线程中运行所选 provider 的 `start()`。默认的内置 `InProcessCronScheduler` 每 60 秒调用一次 `scheduler.tick()`，与消息处理并行运行。
 
 在 CLI 模式下，cron 任务仅在运行 `hermes cron` 命令或活跃 CLI 会话期间触发。
 
