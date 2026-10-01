@@ -580,6 +580,7 @@ class ProcessSession:
     _reader_thread: Optional[threading.Thread] = field(default=None, repr=False)
     _reader_finish_requested: threading.Event = field(default_factory=threading.Event, repr=False)
     _reader_selectable: bool = field(default=False, repr=False)
+    _kill_source: str = field(default="", repr=False)  # set while kill_process is signalling
     _pty: Any = field(default=None, repr=False)  # ptyprocess handle (use_pty=True)
 
     def __post_init__(self):
@@ -598,8 +599,12 @@ class ProcessSession:
 
     def mark_exited(self, exit_code, reason: str = "exited", source: str = "") -> None:
         """Record an exit. A kill that raced the observer already recorded its own
-        exit_code/reason; never overwrite it."""
+        exit_code/reason; never overwrite it. An exit observed while the kill is still
+        signalling (``_kill_source``) is that kill, so the observer's receipt and
+        completion notification carry the kill's attribution, not a plain exit."""
         self.exited = True
+        if self._kill_source:
+            exit_code, reason, source = -15, "killed", self._kill_source
         if self.completion_reason != "killed":
             self.exit_code = exit_code
             self.completion_reason = reason
@@ -2289,6 +2294,9 @@ class ProcessRegistry(ProcessCheckpointMixin):
                 self._completion_consumed.add(session_id)
             return result
         try:
+            # The signal path can block for the SIGKILL grace window; an exit the reader
+            # observes meanwhile is this kill (see ``mark_exited``).
+            session._kill_source = source
             early = self._signal_kill(session, session_id, consume_output)
             if early is not None:
                 return early
@@ -2340,6 +2348,8 @@ class ProcessRegistry(ProcessCheckpointMixin):
                 "termination_source": session.termination_source, **output}
         except Exception as e:
             return {"status": "error", "error": str(e)}
+        finally:
+            session._kill_source = ""
 
     def _signal_kill(self, session: ProcessSession, session_id: str, consume_output: bool) -> Optional[dict]:
         """Deliver the kill via PTY, local Popen tree, sandbox exec or recovered host

@@ -1432,10 +1432,41 @@ class TestKillProcess:
             assert result["status"] == "killed"
             assert result["completion_reason"] == "killed"
             assert result["termination_source"] == "process.kill"
-            # First save: the reader won the race and persisted a plain exit.
-            assert saved[0] == ("exited", "", 0)
-            # Second save: the receipt rewritten with the kill outcome.
+            # The exit the reader observed mid-signal is the kill: no save, not even
+            # the reader's first one, records it as a plain exit.
+            assert saved[0] == ("killed", "process.kill", -15)
             assert saved[-1] == ("killed", "process.kill", -15)
+        finally:
+            registry._running.pop(s.id, None)
+            registry._finished.pop(s.id, None)
+
+    def test_kill_notification_keeps_kill_attribution_when_reader_finalises_first(self, registry):
+        """The reader's completion notification is the one the CLI/TUI drain delivers
+        when a bulk kill (``consume_output=False``) races it, so it must say who
+        killed the process rather than report a plain exit."""
+        s = _make_session(sid="proc_kill_race_live", command="sleep 999")
+        s.pid = 424244
+        s.detached = True
+        s.notify_on_complete = True
+        s.session_key = "t1"
+        registry._running[s.id] = s
+
+        def reader_wins_during_signal(pid, start=None):
+            registry._finish_exited(s, -15)
+
+        try:
+            with patch.object(ProcessRegistry, "_host_pid_is_ours", return_value=True), \
+                 patch.object(ProcessRegistry, "_terminate_host_pid",
+                              side_effect=reader_wins_during_signal), \
+                 patch("tools.process_registry.save_completed_result"):
+                registry.kill_process(s.id, source="kill_all", consume_output=False)
+
+            drained = registry.drain_notifications(session_key="t1")
+            assert len(drained) == 1
+            evt, text = drained[0]
+            assert (evt["completion_reason"], evt["termination_source"], evt["exit_code"]) == \
+                ("killed", "kill_all", -15)
+            assert "terminated by kill_all" in text
         finally:
             registry._running.pop(s.id, None)
             registry._finished.pop(s.id, None)
