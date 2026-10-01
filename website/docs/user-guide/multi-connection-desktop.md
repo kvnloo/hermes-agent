@@ -292,7 +292,9 @@ side effect of sharing one Desktop window.
 
 **Settings → Gateways → Update all instances** (shown once more than one
 connection is registered) dispatches `hermes update` to every eligible
-connection in parallel:
+connection — remote and SSH connections first, in parallel, then local once
+they have settled (the local update hands off to an updater that waits for the
+app to exit, so a still-running SSH update must finish first):
 
 - **Local** updates through the app's own update pipeline (the same flow as
   Settings → Updates).

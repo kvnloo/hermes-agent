@@ -375,7 +375,9 @@ Xauthority, launcher log, per-profile xfconf).
   control copies; pasting into the screen still works.
 - **Display binding.** The launcher publishes `DISPLAY`, `XAUTHORITY` and the
   D-Bus address; every cua-driver and headed-browser spawn for that profile
-  inherits them, so the bot never acts on a display a human is sitting at.
+  inherits them, and so does a GUI app the agent launches from a local
+  `terminal` command while the screen is up, so the bot never acts on a
+  display a human is sitting at.
 
 ## Troubleshooting
 
