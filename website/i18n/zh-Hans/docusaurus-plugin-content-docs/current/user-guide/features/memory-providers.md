@@ -333,7 +333,7 @@ echo "MEM0_API_KEY=your-key" >> ~/.hermes/.env
 | | |
 |---|---|
 | **适合场景** | 基于知识图谱的实体关系召回 |
-| **依赖** | 云端：来自 [ui.hindsight.vectorize.io](https://ui.hindsight.vectorize.io) 的 API key。本地：LLM API key（OpenAI、Groq、OpenRouter 等） |
+| **依赖** | `hermes plugins install hindsight`。云端：来自 [ui.hindsight.vectorize.io](https://ui.hindsight.vectorize.io) 的 API key。本地：LLM API key（OpenAI、Groq、OpenRouter 等） |
 | **数据存储** | Hindsight Cloud 或本地嵌入式 PostgreSQL |
 | **费用** | Hindsight 定价（云端）或免费（本地） |
 
@@ -341,13 +341,14 @@ echo "MEM0_API_KEY=your-key" >> ~/.hermes/.env
 
 **安装：**
 ```bash
-hermes memory setup    # 选择 "hindsight"
+hermes plugins install hindsight   # 从插件目录安装
+hermes memory setup                # 选择 "hindsight"
 # 或手动配置：
 hermes config set memory.provider hindsight
 echo "HINDSIGHT_API_KEY=your-key" >> ~/.hermes/.env
 ```
 
-安装向导会自动安装依赖，并仅安装所选模式所需的内容（云端用 `hindsight-client`，本地用 `hindsight-all`）。需要 `hindsight-client >= 0.4.22`（会话启动时若版本过旧则自动升级）。
+插件安装在 `~/.hermes/plugins/hindsight/`（每个 profile home 各一份），并在 `config.yaml` 的 `plugins.enabled` 下启用。`hermes memory setup`、`hermes memory status`、`hermes plugins list` 和仪表盘的 Memory 设置都可配合从插件目录安装的插件使用。本地嵌入模式没有首次使用时的安装步骤：它在进程内需要的两个包 `hindsight-client` 和 `hindsight-embed` 是插件声明的依赖，Hindsight 服务器本身则作为由 `hindsight-embed` 启动的独立进程运行。
 
 **本地模式 UI：** `hindsight-embed -p hermes ui start`
 
