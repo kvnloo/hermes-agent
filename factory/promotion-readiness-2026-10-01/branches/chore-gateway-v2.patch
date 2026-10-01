@@ -1,0 +1,380 @@
+From b3dfe57f33093e8c668fcef2f20b5776eb1002b0 Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:30:31 -0500
+Subject: [PATCH] chore(gateway): remove dead helpers with no production
+ callers
+
+Three gateway-side groups of symbols have no production caller on current
+main. Their only references were their own tests.
+
+- gateway/run.py `_start_cron_ticker`: the DEPRECATED shim kept when the
+  CronScheduler provider landed (#48275). start_gateway() now runs
+  `cron_provider.start` on a SupervisedTickerThread inside
+  `_start_gateway_start_cron_and_housekeeping`, and nothing imports the
+  shim any more, including hermes_cli/debug.py. Its characterization test
+  duplicated `test_inprocess_provider_ticks_and_stops`, so it is dropped.
+  The three "cron must not start after an aborted startup" guards in
+  test_startup_restart_race.py patched the shim, which start_gateway never
+  calls, so their `cron_started is False` assertions could not fail. They
+  now patch the real seam, `_start_gateway_start_cron_and_housekeeping`.
+  The zh-Hans cron-internals page still named the shim, so it now follows
+  the English provider wording.
+- gateway/shutdown_forensics.py `context_as_json` and its `json` import:
+  production renders the snapshot only through `format_context_for_log`.
+  The argv-canary regression (#112459) now asserts on `repr(ctx)`, which
+  covers the whole snapshot, instead of going through the dead serializer.
+- gateway/platforms/yuanbao_proto.py `PB_MSG_TYPES`, `BIZ_SERVICES`,
+  `encode_conn_msg`, `decode_biz_msg`: unused tables and wrappers. The proto
+  tests now call `encode_conn_msg_full` / `decode_conn_msg` directly, and
+  the fixed-bytes assertions stay unchanged.
+
+No behaviour change. None of the names are in
+tests/compat/old_updater_surface.json.
+
+Salvaged from kvnloo/hermes-agent#284, kvnloo/hermes-agent#285 and
+kvnloo/hermes-agent#298 (the current-main rebuild of
+kvnloo/hermes-agent#115) and rebuilt on current main.
+
+Co-authored-by: detail-app[bot] <180357370+detail-app[bot]@users.noreply.github.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ gateway/platforms/yuanbao_proto.py            | 28 --------------
+ gateway/run.py                                |  7 ----
+ gateway/shutdown_forensics.py                 |  9 -----
+ tests/cron/test_scheduler_provider.py         | 38 ++-----------------
+ tests/gateway/test_shutdown_forensics.py      | 19 +---------
+ tests/gateway/test_startup_restart_race.py    |  6 +--
+ tests/gateway/test_yuanbao_proto.py           | 24 ++++++------
+ .../current/developer-guide/cron-internals.md |  2 +-
+ 8 files changed, 20 insertions(+), 113 deletions(-)
+
+diff --git a/gateway/platforms/yuanbao_proto.py b/gateway/platforms/yuanbao_proto.py
+index 7937f29662..bfa02d7fab 100644
+--- a/gateway/platforms/yuanbao_proto.py
++++ b/gateway/platforms/yuanbao_proto.py
+@@ -11,11 +11,6 @@ import threading
+ import time
+ from typing import Optional
+ 
+-# conn 层消息类型（ConnMsg.Head.cmd_type）
+-PB_MSG_TYPES = {
+-    n: f"trpc.yuanbao.conn_common.{n}"
+-    for n in ("ConnMsg", "AuthBindReq", "AuthBindRsp", "PingReq", "PingRsp", "KickoutMsg", "DirectedPush", "PushMsg")
+-}
+ # cmd_type: 上行请求 / 请求回包 / 下行推送 / 推送 ACK
+ CMD_TYPE = {"Request": 0, "Response": 1, "Push": 2, "PushAck": 3}
+ CMD = {"AuthBind": "auth-bind", "Ping": "ping", "Kickout": "kickout", "UpdateMeta": "update-meta"}
+@@ -23,14 +18,6 @@ MODULE = {"ConnAccess": "conn_access"}
+ 
+ # biz 层服务/方法映射。TS client 使用短名 'yuanbao_openclaw_proxy'（非完整包路径）。
+ _BIZ_PKG = "yuanbao_openclaw_proxy"
+-BIZ_SERVICES = {
+-    n: f"{_BIZ_PKG}.{n}"
+-    for n in ("InboundMessagePush",) + tuple(
+-        f"{m}{k}" for m in ("SendC2CMessage", "SendGroupMessage", "QueryGroupInfo", "GetGroupMemberList",
+-                            "SendPrivateHeartbeat", "SendGroupHeartbeat") for k in ("Req", "Rsp")
+-    )
+-}
+-
+ HERMES_INSTANCE_ID = 17  # openclaw instance_id（固定值）
+ WS_HEARTBEAT_RUNNING = 1
+ WS_HEARTBEAT_FINISH = 2
+@@ -250,11 +237,6 @@ def encode_conn_msg_full(
+     return buf + _m(2, data) if data else buf
+ 
+ 
+-def encode_conn_msg(msg_type: int, seq_no: int, data: bytes) -> bytes:
+-    """编码 ConnMsg（简化接口：仅 cmd_type + seq_no + payload）"""
+-    return encode_conn_msg_full(msg_type, "", seq_no, "", "", data)
+-
+-
+ def decode_conn_msg(data: bytes) -> dict:
+     """解码 ConnMsg → {msg_type, seq_no, data, head}（head 为完整 Head dict）"""
+     fdict = _parse_dict(data)
+@@ -275,16 +257,6 @@ def encode_biz_msg(service: str, method: str, req_id: str, body: bytes) -> bytes
+     return _conn_request(CMD_TYPE["Request"], method, req_id, service, body)
+ 
+ 
+-def decode_biz_msg(data: bytes) -> dict:
+-    """解码 ConnMsg → {service, method, req_id, body, is_response, head}"""
+-    result = decode_conn_msg(data)
+-    head = result["head"]
+-    return {
+-        "service": head["module"], "method": head["cmd"], "req_id": head["msg_id"], "body": result["data"],
+-        "is_response": head["cmd_type"] == CMD_TYPE["Response"], "head": head,
+-    }
+-
+-
+ def _biz_request(method: str, prefix: str, body: bytes, msg_id: str = "") -> bytes:
+     """biz 请求 ConnMsg；req_id 为 msg_id，空则 '<prefix>_<seq>'（seq 在 conn seq_no 之前分配）"""
+     return encode_biz_msg(_BIZ_PKG, method, msg_id or f"{prefix}_{next_seq_no()}", body)
+diff --git a/gateway/run.py b/gateway/run.py
+index 620fe26bfe..0fbaf8a949 100644
+--- a/gateway/run.py
++++ b/gateway/run.py
+@@ -4879,13 +4879,6 @@ def _start_gateway_housekeeping(
+     logger.info("Gateway housekeeping stopped")
+ 
+ 
+-def _start_cron_ticker(stop_event: threading.Event, adapters=None, loop=None, interval: int = 60):
+-    """DEPRECATED shim — runs ONLY the built-in in-process cron tick loop; the trigger now lives behind
+-    the ``CronScheduler`` provider and housekeeping in ``_start_gateway_housekeeping``."""
+-    from cron.scheduler_provider import InProcessCronScheduler
+-    InProcessCronScheduler().start(stop_event, adapters=adapters, loop=loop, interval=interval)
+-
+-
+ def _stop_cron_provider(provider) -> None:
+     """Stop a cron provider without letting it choose the gateway exit code."""
+     try:
+diff --git a/gateway/shutdown_forensics.py b/gateway/shutdown_forensics.py
+index 2812c30340..2592860adb 100644
+--- a/gateway/shutdown_forensics.py
++++ b/gateway/shutdown_forensics.py
+@@ -8,7 +8,6 @@ subprocess. Anything that waits belongs in the async helper, never in the probe.
+ 
+ from __future__ import annotations
+ 
+-import json
+ import os
+ import shutil
+ import signal
+@@ -189,14 +188,6 @@ def format_context_for_log(ctx: Dict[str, Any]) -> str:
+     )
+ 
+ 
+-def context_as_json(ctx: Dict[str, Any]) -> str:
+-    """JSON-serialise a context dict for structured ingestion.  Never raises."""
+-    try:
+-        return json.dumps(ctx, default=str, sort_keys=True)
+-    except (TypeError, ValueError):
+-        return "{}"
+-
+-
+ def check_systemd_timing_alignment(
+     drain_timeout: float, cron_drain_timeout: float = DEFAULT_GATEWAY_CRON_DRAIN_TIMEOUT
+ ) -> Optional[Dict[str, Any]]:
+diff --git a/tests/cron/test_scheduler_provider.py b/tests/cron/test_scheduler_provider.py
+index 8995fc0372..e7b9c31f99 100644
+--- a/tests/cron/test_scheduler_provider.py
++++ b/tests/cron/test_scheduler_provider.py
+@@ -7,9 +7,9 @@ refactor — they are the regression harness that proves the built-in firing
+ behavior is byte-for-byte preserved when the ticker is moved behind the
+ CronScheduler provider interface.
+ 
+-No production code is exercised beyond the two ticker entry points:
+-  - gateway/run.py::_start_cron_ticker        (production gateway ticker)
+-  - hermes_cli/web_server.py::_start_desktop_cron_ticker  (desktop fallback)
++The ticker entry points exercised here:
++  - cron/scheduler_provider.py::InProcessCronScheduler.start  (built-in gateway ticker)
++  - hermes_cli/web_server.py::_start_desktop_cron_ticker      (desktop fallback)
+ 
+ Both call `cron.scheduler.tick(...)` on a loop and exit when their stop_event
+ is set. We patch `cron.scheduler.tick` (both tickers import it locally as
+@@ -39,38 +39,6 @@ def _wait_until(predicate, timeout=10.0, interval=0.005):
+     return predicate()
+ 
+ 
+-def test_ticker_calls_tick_at_least_once_then_stops():
+-    """The gateway in-process ticker loop calls cron.scheduler.tick repeatedly
+-    and exits promptly once the stop_event is set."""
+-    from gateway.run import _start_cron_ticker
+-
+-    calls = []
+-    stop = threading.Event()
+-
+-    def fake_tick(*args, **kwargs):
+-        calls.append(kwargs)
+-        return 0
+-
+-    with patch("cron.scheduler.tick", side_effect=fake_tick):
+-        # interval=0 keeps the loop tight; stop after the first observed tick.
+-        t = threading.Thread(
+-            target=_start_cron_ticker,
+-            args=(stop,),
+-            kwargs={"interval": 0},
+-            daemon=True,
+-        )
+-        t.start()
+-        assert _wait_until(lambda: len(calls) >= 1), "ticker never called tick()"
+-        stop.set()
+-        t.join(timeout=5)
+-
+-    assert not t.is_alive(), "ticker did not exit after stop_event was set"
+-    assert len(calls) >= 1, "ticker never called tick()"
+-    # Contract: the ticker invokes tick with sync=False (fire-and-forget from
+-    # the background thread, never the synchronous CLI path).
+-    assert calls[0].get("sync") is False
+-
+-
+ def test_desktop_ticker_calls_tick_then_stops():
+     """The desktop dashboard ticker loop calls cron.scheduler.tick and exits
+     once the stop_event is set. Desktop has no live adapters, so it ticks with
+diff --git a/tests/gateway/test_shutdown_forensics.py b/tests/gateway/test_shutdown_forensics.py
+index a51cbefe5b..3fe6730179 100644
+--- a/tests/gateway/test_shutdown_forensics.py
++++ b/tests/gateway/test_shutdown_forensics.py
+@@ -2,7 +2,6 @@
+ 
+ from __future__ import annotations
+ 
+-import json
+ import os
+ import signal
+ import subprocess
+@@ -34,20 +33,6 @@ class TestSnapshotShutdownContext:
+         assert "takeover_marker" in ctx
+         assert ctx["takeover_marker_for_self"] is True
+ 
+-# ---------------------------------------------------------------------------
+-# format_context_for_log / context_as_json
+-# ---------------------------------------------------------------------------
+-
+-class TestFormatters:
+-
+-    def test_context_as_json_handles_unserialisable_values(self):
+-        ctx = {"signal": "SIGTERM", "weird": object()}
+-        payload = sf.context_as_json(ctx)
+-        # default=str means objects get repr'd, JSON stays valid
+-        decoded = json.loads(payload)
+-        assert decoded["signal"] == "SIGTERM"
+-        assert "weird" in decoded
+-
+ # ---------------------------------------------------------------------------
+ # persisted snapshots must never include process argv (#112459)
+ # ---------------------------------------------------------------------------
+@@ -71,7 +56,7 @@ class TestArgvFreePersistence:
+     @pytest.mark.platforms("linux")
+     def test_snapshot_and_log_line_identify_process_without_argv(self, child_with_secret_argv):
+         """/proc-backed summaries keep pid/name/ppid/state but never the command line, so neither
+-        the JSON snapshot nor the warning line can carry a credential from a parent's argv."""
++        the snapshot dict nor the warning line can carry a credential from a parent's argv."""
+         summary = sf._proc_summary(child_with_secret_argv.pid)
+         assert summary["pid"] == child_with_secret_argv.pid
+         assert summary["name"]  # identity survives
+@@ -80,7 +65,7 @@ class TestArgvFreePersistence:
+         ctx = sf.snapshot_shutdown_context(signal.SIGTERM)
+         ctx["parent"] = summary
+         line = sf.format_context_for_log(ctx)
+-        assert _ARGV_CANARY not in line and _ARGV_CANARY not in sf.context_as_json(ctx)
++        assert _ARGV_CANARY not in line and _ARGV_CANARY not in repr(ctx)
+         assert f"parent_pid={child_with_secret_argv.pid}" in line
+ 
+ # ---------------------------------------------------------------------------
+diff --git a/tests/gateway/test_startup_restart_race.py b/tests/gateway/test_startup_restart_race.py
+index 233cc8a322..275213d444 100644
+--- a/tests/gateway/test_startup_restart_race.py
++++ b/tests/gateway/test_startup_restart_race.py
+@@ -211,7 +211,7 @@ async def test_start_gateway_does_not_start_cron_after_aborted_startup(tmp_path,
+         cron_started = True
+ 
+     _patch_aborted_startup(monkeypatch, AbortedStartupRunner)
+-    monkeypatch.setattr("gateway.run._start_cron_ticker", fail_if_cron_starts)
++    monkeypatch.setattr("gateway.run._start_gateway_start_cron_and_housekeeping", fail_if_cron_starts)
+     monkeypatch.setattr("tools.mcp_tool_lifecycle.shutdown_mcp_servers", lambda: None)
+ 
+     with pytest.raises(SystemExit) as exc:
+@@ -253,7 +253,7 @@ async def test_start_gateway_preserves_service_restart_fallback_after_aborted_st
+         cron_started = True
+ 
+     _patch_aborted_startup(monkeypatch, AbortedStartupRunner)
+-    monkeypatch.setattr("gateway.run._start_cron_ticker", fail_if_cron_starts)
++    monkeypatch.setattr("gateway.run._start_gateway_start_cron_and_housekeeping", fail_if_cron_starts)
+     monkeypatch.setattr("tools.mcp_tool_lifecycle.shutdown_mcp_servers", lambda: None)
+ 
+     with pytest.raises(SystemExit) as exc:
+@@ -312,7 +312,7 @@ async def test_start_gateway_classifies_startup_signal_exit(
+     monkeypatch.setattr(
+         "gateway.run._start_gateway_make_shutdown_signal_handler", capture_signal_state
+     )
+-    monkeypatch.setattr("gateway.run._start_cron_ticker", fail_if_cron_starts)
++    monkeypatch.setattr("gateway.run._start_gateway_start_cron_and_housekeeping", fail_if_cron_starts)
+     monkeypatch.setattr("tools.mcp_tool_lifecycle.shutdown_mcp_servers", lambda: None)
+ 
+     result = await gateway_run.start_gateway(
+diff --git a/tests/gateway/test_yuanbao_proto.py b/tests/gateway/test_yuanbao_proto.py
+index cfee655157..e48c6d26e5 100644
+--- a/tests/gateway/test_yuanbao_proto.py
++++ b/tests/gateway/test_yuanbao_proto.py
+@@ -28,12 +28,10 @@ from gateway.platforms.yuanbao_proto import (
+     _fields_to_dict,
+     _encode_msg_body_element,
+     _decode_msg_body_element,
+-    encode_conn_msg,
+     decode_conn_msg,
+     encode_conn_msg_full,
+     # biz 层
+     encode_biz_msg,
+-    decode_biz_msg,
+     # 入站/出站
+     decode_inbound_push,
+     encode_send_c2c_message,
+@@ -81,7 +79,7 @@ class TestVarint:
+ class TestConnCodec:
+     def test_basic_round_trip(self):
+         payload = b"hello world"
+-        encoded = encode_conn_msg(msg_type=0, seq_no=42, data=payload)
++        encoded = encode_conn_msg_full(cmd_type=0, cmd="", seq_no=42, msg_id="", module="", data=payload)
+         decoded = decode_conn_msg(encoded)
+         assert decoded["msg_type"] == 0
+         assert decoded["seq_no"] == 42
+@@ -94,12 +92,12 @@ class TestConnCodec:
+     # 固定 bytes 常量测试——防协议悄悄改动
+     def test_fixed_bytes_simple(self):
+         """
+-        encode_conn_msg(msg_type=0, seq_no=1, data=b"") 的固定编码。
++        encode_conn_msg_full(cmd_type=0, cmd="", seq_no=1, msg_id="", module="", data=b"") 的固定编码。
+         ConnMsg { head { seq_no=1 } }
+         head bytes: field3 varint(1) = 0x18 0x01
+         head field: field1 len(2) 0x18 0x01 = 0x0a 0x02 0x18 0x01
+         """
+-        enc = encode_conn_msg(msg_type=0, seq_no=1, data=b"")
++        enc = encode_conn_msg_full(cmd_type=0, cmd="", seq_no=1, msg_id="", module="", data=b"")
+         # head: field 3 (seq_no=1) => tag=0x18, value=0x01
+         head_content = bytes([0x18, 0x01])
+         # outer field 1 (head message)
+@@ -120,12 +118,12 @@ class TestBizCodec:
+             req_id="req-001",
+             body=body,
+         )
+-        dec = decode_biz_msg(enc)
+-        assert dec["service"] == "trpc.yuanbao.example"
+-        assert dec["method"] == "/im/send_c2c_msg"
+-        assert dec["req_id"] == "req-001"
+-        assert dec["body"] == body
+-        assert dec["is_response"] is False
++        dec = decode_conn_msg(enc)
++        assert dec["head"]["module"] == "trpc.yuanbao.example"
++        assert dec["head"]["cmd"] == "/im/send_c2c_msg"
++        assert dec["head"]["msg_id"] == "req-001"
++        assert dec["data"] == body
++        assert dec["head"]["cmd_type"] == CMD_TYPE["Request"]
+ 
+     def test_is_response_flag(self):
+         # Response cmd_type = 1
+@@ -137,8 +135,8 @@ class TestBizCodec:
+             module="svc",
+             data=b"\x01",
+         )
+-        dec = decode_biz_msg(enc)
+-        assert dec["is_response"] is True
++        dec = decode_conn_msg(enc)
++        assert dec["head"]["cmd_type"] == CMD_TYPE["Response"]
+ 
+ 
+ 
+diff --git a/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/developer-guide/cron-internals.md b/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/developer-guide/cron-internals.md
+index 9ccb812c6d..44adbd68c0 100644
+--- a/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/developer-guide/cron-internals.md
++++ b/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/developer-guide/cron-internals.md
+@@ -102,7 +102,7 @@ tick()
+ 
+ ### Gateway 集成
+ 
+-在 gateway 模式下，调度器运行在专用后台线程中（`gateway/run.py` 中的 `_start_cron_ticker`），每 60 秒调用一次 `scheduler.tick()`，与消息处理并行运行。
++在 gateway 模式下，cron 触发器由可插拔的 `CronScheduler` provider 提供：gateway 调用 `resolve_cron_scheduler()`（`cron/scheduler_provider.py`），并在专用后台线程中运行所选 provider 的 `start()`。默认的内置 `InProcessCronScheduler` 每 60 秒调用一次 `scheduler.tick()`，与消息处理并行运行。
+ 
+ 在 CLI 模式下，cron 任务仅在运行 `hermes cron` 命令或活跃 CLI 会话期间触发。
+ 
+-- 
+2.55.0
+

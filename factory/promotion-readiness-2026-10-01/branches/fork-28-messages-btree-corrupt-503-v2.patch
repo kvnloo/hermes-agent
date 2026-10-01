@@ -1,0 +1,173 @@
+From aa92a74a3ee7629177d5d2cb8b955e54152da9cc Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Thu, 1 Oct 2026 02:30:25 -0500
+Subject: [PATCH] fix(sessions): report a corrupt messages b-tree on transcript
+ reads as 503, not 500
+
+The session lookup only reads the sessions b-tree. `_resolve_session_id`
+(/messages) and `_timeline_session_id` (/timeline, /messages/around)
+both succeed when the sessions primary key is intact and only the
+messages b-tree is damaged, so the transcript read is the first query to
+hit the corruption. Its `sqlite3.DatabaseError` escaped all three
+handlers unclassified and FastAPI answered a bare 500 "Internal Server
+Error". The transcript view lost the `hermes doctor` repair path while
+the list endpoints for the same store already return the corrupt-store
+503.
+
+Run the three reads through a small `_read_transcript` helper that wraps
+the existing read-only `_with_db` call and re-raises a
+`sqlite3.DatabaseError` inside `corrupt_store_as_status`, using the same
+`with corrupt_store_as_status(...): raise` idiom the router already uses
+for `StateDbReplacedError`. Malformed-image errors become the shared 503
+corrupt-store payload; every other database error re-raises unchanged.
+The profile path lookup only runs on the exception path. On /timeline
+and /messages/around this also turns a malformed sessions b-tree, which
+`_timeline_session_id` used to surface as a 500, into the same 503.
+
+/export is unchanged: it sends its first chunk before it reads messages,
+so its status code cannot change.
+
+Tests: a real state.db with the messages root page zeroed now returns
+503 on /messages, /timeline and /messages/around through the mounted app
+(500 before), and an unrelated `DatabaseError` from the transcript read
+still propagates.
+
+Co-authored-by: detail-app[bot] <180357370+detail-app[bot]@users.noreply.github.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ hermes_cli/web_routers/sessions.py            | 17 ++++-
+ .../test_session_detail_malformed_db.py       | 72 +++++++++++++++++++
+ 2 files changed, 86 insertions(+), 3 deletions(-)
+
+diff --git a/hermes_cli/web_routers/sessions.py b/hermes_cli/web_routers/sessions.py
+index 3188bdc1a0..a9a3651d6c 100644
+--- a/hermes_cli/web_routers/sessions.py
++++ b/hermes_cli/web_routers/sessions.py
+@@ -144,6 +144,17 @@ def _with_db(profile: Optional[str], fn: Callable, *, read_only: bool):
+         db.close()
+ 
+ 
++async def _read_transcript(profile: Optional[str], fn: Callable):
++    """Read-only ``_with_db`` off the loop for the transcript endpoints. The session lookup
++    passes on an intact sessions b-tree, so a damaged messages b-tree first fails here:
++    same corrupt-store 503 as the other reads, not a bare 500."""
++    try:
++        return await asyncio.to_thread(_with_db, profile, fn, read_only=True)
++    except sqlite3.DatabaseError:
++        with corrupt_store_as_status(_session_db_path_for_profile(profile)):
++            raise
++
++
+ def _serving_profile(profile: Optional[str]) -> str:
+     """The profile name rows are stamped with: the requested one, else the
+     serving process's own — so default-profile rows never circulate unowned."""
+@@ -703,7 +714,7 @@ async def get_session_messages(
+             sid, limit=_limit, offset=offset, latest=latest_page,
+             include_compacted=include_compacted, include_ancestors=True)
+ 
+-    result = await asyncio.to_thread(_with_db, profile, _read, read_only=True)
++    result = await _read_transcript(profile, _read)
+     if result is None:
+         raise HTTPException(status_code=404, detail=_NOT_FOUND)
+     sid, _limit, messages = result
+@@ -756,7 +767,7 @@ async def get_session_timeline(
+         return {"session_id": sid, "profile": owner,
+                 **read_timeline(db, sid, limit=limit, after_row_id=after_row_id)}
+ 
+-    return await asyncio.to_thread(_with_db, profile, _read, read_only=True)
++    return await _read_transcript(profile, _read)
+ 
+ 
+ @manage_router.get("/api/sessions/{session_id}/messages/around")
+@@ -776,7 +787,7 @@ async def get_session_messages_around(
+             raise HTTPException(status_code=404, detail="Prompt not found")
+         return {"session_id": sid, "profile": owner, **page}
+ 
+-    result = await asyncio.to_thread(_with_db, profile, _read, read_only=True)
++    result = await _read_transcript(profile, _read)
+     result["messages"] = await asyncio.to_thread(
+         _project_for_display, result["messages"], home=_history_profile_home(profile))
+     return result
+diff --git a/tests/hermes_cli/test_session_detail_malformed_db.py b/tests/hermes_cli/test_session_detail_malformed_db.py
+index 6663bb0d3d..1a90bf38f9 100644
+--- a/tests/hermes_cli/test_session_detail_malformed_db.py
++++ b/tests/hermes_cli/test_session_detail_malformed_db.py
+@@ -162,3 +162,75 @@ async def test_non_corruption_database_error_is_not_swallowed(monkeypatch):
+     )
+     with pytest.raises(sqlite3.DatabaseError):
+         await sessions_router.get_session_detail("20260830_180820_744f05")
++
++
++# ── Corruption past the session lookup ──────────────────────────────────────
++#
++# The session lookup reads the *sessions* b-tree; the transcript reads
++# (/messages, /timeline, /messages/around) read the *messages* b-tree
++# afterwards. With the sessions primary key intact and only the messages b-tree
++# damaged, the lookup succeeds and the transcript read raised an unclassified
++# ``sqlite3.DatabaseError`` → bare 500.
++
++
++def _zero_messages_rootpage(db_path) -> None:
++    conn = sqlite3.connect(str(db_path))
++    try:
++        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
++        page_size = conn.execute("PRAGMA page_size").fetchone()[0]
++        rootpage = conn.execute(
++            "SELECT rootpage FROM sqlite_master WHERE type='table' AND name='messages'"
++        ).fetchone()[0]
++    finally:
++        conn.close()
++    with open(db_path, "r+b") as f:
++        f.seek((rootpage - 1) * page_size)
++        f.write(b"\x00" * page_size)
++
++
++@pytest.mark.parametrize("path", ["messages", "timeline", "messages/around?row_id=1"])
++def test_transcript_reads_report_corrupt_messages_btree_as_503(path):
++    from starlette.testclient import TestClient
++
++    from hermes_cli.web_server import _SESSION_HEADER_NAME, _SESSION_TOKEN, app
++    from hermes_state import SessionDB, _default_db_path
++
++    db = SessionDB()
++    sid = db.create_session(session_id="20260831_000000_abcdef", source="test")
++    for i in range(3):
++        db.append_message(sid, role="user", content=f"hello {i}")
++    db.close()
++    _zero_messages_rootpage(_default_db_path())
++
++    client = TestClient(app, raise_server_exceptions=False)
++    client.headers[_SESSION_HEADER_NAME] = _SESSION_TOKEN
++    resp = client.get(f"/api/sessions/{sid}/{path}")
++
++    assert resp.status_code == 503, resp.text
++    assert "hermes doctor" in str(resp.json()["detail"]).lower()
++
++
++class _MessagesReadErrorDB(_EmptyDB):
++    """Sessions PK intact (resolve succeeds); the transcript read fails."""
++
++    def resolve_session_id(self, session_id):
++        return session_id
++
++    def resolve_resume_session_id(self, session_id):
++        return session_id
++
++    def get_messages(self, session_id, **kwargs):
++        raise sqlite3.DatabaseError("some unrelated database failure")
++
++
++@pytest.mark.asyncio
++async def test_messages_read_non_corruption_error_is_not_relabelled(monkeypatch):
++    monkeypatch.setattr(
++        _web_server_sessions,
++        "_open_session_db_for_profile",
++        lambda profile, *, read_only: _MessagesReadErrorDB(),
++    )
++    with pytest.raises(sqlite3.DatabaseError):
++        await sessions_router.get_session_messages(
++            "20260830_180820_744f05", None, None, 0, None, False
++        )
+-- 
+2.55.0
+

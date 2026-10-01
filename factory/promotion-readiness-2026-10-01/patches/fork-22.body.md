@@ -8,7 +8,7 @@ This PR refreshes `last_updated_at` inside the existing `_STATE_LOCK` block of t
 
 Scope note: the bump fires at dispatch start/end, so it fixes the ordering against turns that were idle before the dispatch. It does not keep refreshing during one very long tool call; that would need a heartbeat and is out of scope.
 
-The source change was first proposed by detail-app[bot] (Detail) in kvnloo/hermes-agent#22. This PR rebuilds it on current main and replaces that PR's two regression tests (about 170 lines) with one parametrized test.
+The source change was first proposed by detail-app[bot] (Detail) in kvnloo/hermes-agent#22. This PR rebuilds it on current main and replaces that PR's two regression tests (about 170 lines) with one parametrized test. The commit keeps the original author's credit with a `Co-authored-by: detail-app[bot]` trailer.
 
 ## Related Issue
 
@@ -25,15 +25,14 @@ No upstream issue found. Searched PRs and issues for `last_updated_at`, `langfus
 
 ## How to Test
 
-1. `scripts/run_tests.sh tests/plugins/test_langfuse_plugin.py -q -k refreshes_eviction_clock`
-2. With only the test change applied to `main` (fix reverted), all 4 collected cases ([tool] and [subagent], each under TestTurnTraceIsolation and TestAtexitFinalization) fail: `AssertionError: assert 'task:live:turn:live-turn' in {...}`, meaning the live turn was evicted.
-3. With the patch, the same `-k` selection gives 4 passed, and `tests/plugins/test_langfuse_plugin.py`, `tests/plugins/test_langfuse_max_depth.py` and `tests/plugins/test_scoped_secret_readers_fail_closed.py` give 105 passed, 0 failed. `ruff check` is clean. (Run on `main` @ f8489405; no later upstream commits touch these files.)
+1. Check out `ready/fork-22-langfuse-tool-subagent-eviction-clock-v2` (one commit on `main` @ 330d9d6d) and run `scripts/run_tests.sh tests/plugins/test_langfuse_plugin.py -q -k refreshes_eviction_clock`.
+2. With only the test change applied to `main` (the plugin file reset to `main`), all 4 collected cases ([tool] and [subagent], each under TestTurnTraceIsolation and TestAtexitFinalization) fail at `assert live_key in mod._TRACE_STATE`: `AssertionError: assert 'task:live:turn:live-turn' in {...}`, meaning the live turn was evicted.
+3. With the patch, the same `-k` selection gives 4 passed. `tests/plugins/test_langfuse_plugin.py`, `tests/plugins/test_langfuse_max_depth.py` and `tests/plugins/test_scoped_secret_readers_fail_closed.py` together give 105 passed, 0 failed, and `ruff check` on both touched files is clean.
 
-Negative controls, each fix line reverted on its own:
-- Without the `on_pre_tool_call` bump, the `[tool]` cases fail.
-- Without the `on_subagent_start` bump, the `[subagent]` cases fail.
-
-The `on_post_tool_call` and `on_subagent_stop` bumps follow the same pattern, but no test asserts them directly.
+Negative controls, each fix line removed on its own (same `-k` selection):
+- Without the `on_pre_tool_call` bump, the 2 `[tool]` cases fail and the 2 `[subagent]` cases pass.
+- Without the `on_subagent_start` bump, the 2 `[subagent]` cases fail and the 2 `[tool]` cases pass.
+- Without the `on_post_tool_call` bump, or without the `on_subagent_stop` bump, all 4 still pass. These two follow the same pattern (the turn is still open after the dispatch ends), but no test asserts them directly.
 
 Not tested: a live Langfuse backend (the regression test uses a fake in-process client), and the full `scripts/run_tests.sh` suite.
 
@@ -56,5 +55,9 @@ Not tested: a live Langfuse backend (the regression test uses a fake in-process 
 - [x] I've updated `CONTRIBUTING.md` or `AGENTS.md` if I changed architecture or workflows — or N/A
 - [x] I've considered cross-platform impact (Windows, macOS) per the [compatibility guide](https://github.com/NousResearch/hermes-agent/blob/main/CONTRIBUTING.md#cross-platform-compatibility) — or N/A
 - [x] I've updated tool descriptions/schemas if I changed tool behavior — or N/A
+
+## Screenshots / Logs
+
+N/A. The failing and passing test output is summarized under How to Test.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)

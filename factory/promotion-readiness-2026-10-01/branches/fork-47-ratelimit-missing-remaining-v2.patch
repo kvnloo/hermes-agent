@@ -1,0 +1,152 @@
+From 1d31fe5193e1ee964e611bba6340ab2919c3192c Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:13:59 -0500
+Subject: [PATCH] fix(agent): read a missing x-ratelimit-remaining-* as no
+ data, not exhausted
+
+parse_rate_limit_headers() defaulted an absent remaining header to 0. Zero
+is also the genuine "exhausted" signal, so a response that carried
+x-ratelimit-limit-<tag> without the matching remaining header was recorded
+as 100% used:
+
+- /usage rendered a fabricated "100.0% 800/800 used" bar plus a
+  "requests/min at 100%" warning;
+- the last-known RateLimitState fed to is_genuine_nous_rate_limit() looked
+  like an exhausted bucket, so a later bare upstream-capacity 429 could trip
+  the cross-session Nous breaker when the prior response sent limit+reset but
+  no remaining.
+
+The 429-header path in nous_rate_guard already parses remaining with a None
+default; the tracker now does the same. An absent or unparseable remaining
+yields a "no data" bucket (limit=0), matching how a missing limit is already
+shown. RateLimitState.has_data additionally requires one usable window, so a
+state built only from partial headers counts as no data: the gateway /usage
+omits the Rate Limits line instead of printing it empty, and the CLI /usage
+omits the rate-limit block. A present remaining of 0 is still reported as
+exhaustion.
+
+Co-authored-by: detail-app[bot] <180357370+detail-app[bot]@users.noreply.github.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ agent/rate_limit_tracker.py            | 27 ++++++++++++++++----------
+ tests/agent/test_nous_rate_guard.py    | 14 +++++++++++++
+ tests/agent/test_rate_limit_tracker.py | 23 ++++++++++++++++++++++
+ 3 files changed, 54 insertions(+), 10 deletions(-)
+
+diff --git a/agent/rate_limit_tracker.py b/agent/rate_limit_tracker.py
+index 8f64f5727b..c3e8b0b4f7 100644
+--- a/agent/rate_limit_tracker.py
++++ b/agent/rate_limit_tracker.py
+@@ -56,7 +56,8 @@ class RateLimitState:
+ 
+     @property
+     def has_data(self) -> bool:
+-        return self.captured_at > 0
++        """Captured headers with at least one usable window (not just any x-ratelimit-* key)."""
++        return self.captured_at > 0 and any(getattr(self, attr).limit > 0 for attr, _tag in _BUCKET_TAGS)
+ 
+     @property
+     def age_seconds(self) -> float:
+@@ -93,18 +94,24 @@ def parse_rate_limit_headers(headers: Mapping[str, str], provider: str = "") ->
+         return None
+ 
+     now = time.time()
+-    buckets = {
+-        attr: RateLimitBucket(
+-            limit=_safe_int(lowered.get(f"x-ratelimit-limit-{tag}")),
+-            remaining=_safe_int(lowered.get(f"x-ratelimit-remaining-{tag}")),
+-            reset_seconds=_safe_float(lowered.get(f"x-ratelimit-reset-{tag}")),
+-            captured_at=now,
+-        )
+-        for attr, tag in _BUCKET_TAGS
+-    }
++    buckets = {attr: _parse_bucket(lowered, tag, now) for attr, tag in _BUCKET_TAGS}
+     return RateLimitState(captured_at=now, provider=provider, **buckets)
+ 
+ 
++def _parse_bucket(lowered: Mapping[str, str], tag: str, now: float) -> RateLimitBucket:
++    # remaining=0 is the exhaustion signal, so an absent/unparseable remaining is
++    # "no data" (limit=0), not a default 0 that reads as 100% used.
++    remaining = _safe_int(lowered.get(f"x-ratelimit-remaining-{tag}"), None)
++    if remaining is None:
++        return RateLimitBucket(captured_at=now)
++    return RateLimitBucket(
++        limit=_safe_int(lowered.get(f"x-ratelimit-limit-{tag}")),
++        remaining=remaining,
++        reset_seconds=_safe_float(lowered.get(f"x-ratelimit-reset-{tag}")),
++        captured_at=now,
++    )
++
++
+ # ── Formatting ──────────────────────────────────────────────────────────
+ 
+ 
+diff --git a/tests/agent/test_nous_rate_guard.py b/tests/agent/test_nous_rate_guard.py
+index 90bfc5da8c..d4d0a43cfa 100644
+--- a/tests/agent/test_nous_rate_guard.py
++++ b/tests/agent/test_nous_rate_guard.py
+@@ -241,6 +241,20 @@ class TestIsGenuineNousRateLimit:
+             headers=None, last_known_state=last_state
+         ) is False
+ 
++    def test_last_known_state_missing_remaining_stays_upstream(self):
++        # A prior response that sent limit+reset but no remaining header says
++        # nothing about exhaustion; it must not trip the breaker on a bare 429.
++        from agent.nous_rate_guard import is_genuine_nous_rate_limit
++        from agent.rate_limit_tracker import parse_rate_limit_headers
++
++        last_state = parse_rate_limit_headers(
++            {"x-ratelimit-limit-requests-1h": "800", "x-ratelimit-reset-requests-1h": "3100"},
++            provider="nous",
++        )
++        assert is_genuine_nous_rate_limit(
++            headers=None, last_known_state=last_state
++        ) is False
++
+ 
+ 
+ class TestWelcomeRouteCopy:
+diff --git a/tests/agent/test_rate_limit_tracker.py b/tests/agent/test_rate_limit_tracker.py
+index b5b34b9dea..d9388e4463 100644
+--- a/tests/agent/test_rate_limit_tracker.py
++++ b/tests/agent/test_rate_limit_tracker.py
+@@ -4,6 +4,8 @@ import time
+ import pytest
+ from agent.rate_limit_tracker import (
+     RateLimitBucket,
++    format_rate_limit_compact,
++    format_rate_limit_display,
+     parse_rate_limit_headers,
+ )
+ 
+@@ -49,6 +51,27 @@ class TestParseHeaders:
+         state = parse_rate_limit_headers({})
+         assert state is None
+ 
++    def test_missing_remaining_is_unknown_not_exhausted(self):
++        # A limit without its remaining header must not read as "0 left":
++        # remaining=0 is the real exhaustion signal, so an absent header is no data.
++        state = parse_rate_limit_headers(
++            {"x-ratelimit-limit-requests": "800", "x-ratelimit-reset-requests": "30"},
++            provider="custom",
++        )
++        assert state is not None
++        assert state.requests_min.usage_pct == 0.0
++        assert not state.has_data
++        assert format_rate_limit_compact(state) == "No rate limit data."
++
++        # A present remaining of 0 is still genuine exhaustion.
++        exhausted = parse_rate_limit_headers(
++            {"x-ratelimit-limit-requests": "800", "x-ratelimit-remaining-requests": "0",
++             "x-ratelimit-reset-requests": "120"},
++            provider="custom",
++        )
++        assert exhausted.requests_min.usage_pct == 100.0
++        assert "⚠ requests/min at 100%" in format_rate_limit_display(exhausted)
++
+ class TestBucket:
+ 
+     def test_usage_pct(self):
+-- 
+2.55.0
+

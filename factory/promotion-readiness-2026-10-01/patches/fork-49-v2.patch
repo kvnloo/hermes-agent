@@ -1,0 +1,396 @@
+From c67a728c2259015ae128d51f0e34b1fac1562d39 Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Thu, 1 Oct 2026 02:39:37 -0500
+Subject: [PATCH] fix(desktop): keep a stale no-owner recovery from latching a
+ live session read-only
+
+A no-owner recovery (#94724) awaits the owner probe and a cross-backend
+stored read before it opens the stored transcript read-only. If a live
+resume of the same stored id lands in the meantime (the owner backfill
+stamped the row), the stale recovery still finished last and:
+
+- set the global read-only latch over the live outcome, because the live
+  resume's clear ran while the latch was not set yet, so main-pane sends
+  for that session were refused; and
+- in a tile, repainted it read-only and repointed the stored -> runtime
+  binding onto the synthetic read-only:<id>, so the warm path kept reusing
+  it and the tile refused sends for good.
+
+The main pane already drops its own superseded resumes with
+isCurrentResume(); the helper-backed tile path had no analog, and neither
+path noticed a live resume of the same id made by the other.
+
+- read-only-transcript: every successful live resume bumps a per-stored-id
+  generation, even when the clear is a no-op, read via
+  liveResumeGeneration(). resumeWithStoredTranscriptFallback latches only
+  if it has not moved since the attempt started (optional snapshot
+  argument, defaulting to call time).
+- use-session-tile-delegate: resumeTile snapshots the generation on entry
+  and passes it to the helper; once a live resume has bound the session, a
+  read-only outcome returns that binding instead of painting.
+- use-session-actions: resumeSession snapshots it on entry; the main-pane
+  no-owner recovery latches and toasts only if it has not moved.
+
+Co-authored-by: detail-app[bot] <180357370+detail-app[bot]@users.noreply.github.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../hooks/use-session-tile-delegate.test.ts   | 94 ++++++++++++++++++-
+ .../hooks/use-session-tile-delegate.ts        | 18 +++-
+ .../hooks/use-session-actions.test.tsx        | 39 +++++++-
+ .../hooks/use-session-actions/index.ts        | 23 +++--
+ .../desktop/src/store/read-only-transcript.ts | 33 ++++++-
+ 5 files changed, 193 insertions(+), 14 deletions(-)
+
+diff --git a/apps/desktop/src/app/contrib/hooks/use-session-tile-delegate.test.ts b/apps/desktop/src/app/contrib/hooks/use-session-tile-delegate.test.ts
+index 973273ed2e..218c1207c5 100644
+--- a/apps/desktop/src/app/contrib/hooks/use-session-tile-delegate.test.ts
++++ b/apps/desktop/src/app/contrib/hooks/use-session-tile-delegate.test.ts
+@@ -6,7 +6,10 @@ import type { ClientSessionState } from '@/app/types'
+ import type * as HermesModule from '@/hermes'
+ import { textPart } from '@/lib/chat-messages'
+ import { createClientSessionState } from '@/lib/chat-runtime'
++import { $connectionsRegistry } from '@/store/connections'
+ import { $notifications } from '@/store/notifications'
++import { $profiles } from '@/store/profile'
++import { isStoredTranscriptReadOnly } from '@/store/read-only-transcript'
+ import { setSessionOwnerHint, setSessions } from '@/store/session'
+ import { $sessionTiles, sessionTileDelegate } from '@/store/session-states'
+ import type { SessionInfo } from '@/types/hermes'
+@@ -15,7 +18,11 @@ import { useSessionTileDelegate } from './use-session-tile-delegate'
+ 
+ vi.mock('@/hermes', async importActual => ({
+   ...(await importActual<typeof HermesModule>()),
+-  getLatestSessionMessages: vi.fn(async () => ({ messages: [], session_id: '' }))
++  fetchStoredTranscriptAcrossBackends: vi.fn(async () => ({ messages: [], session_id: '' })),
++  getLatestSessionMessages: vi.fn(async () => ({ messages: [], session_id: '' })),
++  getSession: vi.fn(async () => {
++    throw new Error('not found')
++  })
+ }))
+ vi.mock('@/store/gateway', async importActual => ({
+   ...(await importActual<Record<string, unknown>>()),
+@@ -23,7 +30,9 @@ vi.mock('@/store/gateway', async importActual => ({
+   requestGatewayForProfile: vi.fn()
+ }))
+ 
+-const { getLatestSessionMessages, PROMPT_SUBMIT_REQUEST_TIMEOUT_MS } = await import('@/hermes')
++const { fetchStoredTranscriptAcrossBackends, getLatestSessionMessages, PROMPT_SUBMIT_REQUEST_TIMEOUT_MS } =
++  await import('@/hermes')
++
+ const { requestGatewayForAgent, requestGatewayForProfile } = await import('@/store/gateway')
+ 
+ const row = (over: Partial<SessionInfo>): SessionInfo =>
+@@ -895,3 +904,84 @@ describe('useSessionTileDelegate submitToSession', () => {
+     )
+   })
+ })
++
++describe('useSessionTileDelegate resumeTile no-owner recovery race (#94724)', () => {
++  const registry = (...ids: string[]) =>
++    ({ connections: ids.map(id => ({ id })), lastUsed: ids[0], launchMode: 'primary', primary: ids[0] }) as never
++
++  // Mirrors the real cache: painting with a stored id records the stored -> runtime binding.
++  function bindingCache() {
++    const runtimeIdByStoredSessionIdRef = { current: new Map<string, string>() }
++    const sessionStateByRuntimeIdRef = { current: new Map<string, unknown>() }
++
++    const updateSessionState = vi.fn(
++      (id: string, updater: (state: { messages: unknown[] }) => unknown, stored?: string) => {
++        const next = updater((sessionStateByRuntimeIdRef.current.get(id) ?? { messages: [] }) as never)
++
++        sessionStateByRuntimeIdRef.current.set(id, next)
++
++        if (stored) {
++          runtimeIdByStoredSessionIdRef.current.set(stored, id)
++        }
++
++        return next
++      }
++    )
++
++    return { runtimeIdByStoredSessionIdRef, sessionStateByRuntimeIdRef, updateSessionState }
++  }
++
++  beforeEach(() => {
++    // Registry topology with two profiles: an unknown owner fails closed.
++    $connectionsRegistry.set(registry('gw-a', 'gw-b'))
++    $profiles.set([{ name: 'default' }, { name: 'researcher' }] as never)
++    vi.mocked(getLatestSessionMessages).mockRejectedValue(new Error('404'))
++  })
++
++  afterEach(() => {
++    $connectionsRegistry.set(null)
++    $profiles.set([])
++    setSessions([])
++    vi.mocked(getLatestSessionMessages).mockReset()
++    vi.mocked(getLatestSessionMessages).mockImplementation(async () => ({ messages: [], session_id: '' }))
++    vi.mocked(fetchStoredTranscriptAcrossBackends).mockReset()
++    vi.mocked(fetchStoredTranscriptAcrossBackends).mockImplementation(async () => ({ messages: [], session_id: '' }))
++    vi.mocked(requestGatewayForProfile).mockReset()
++  })
++
++  it('a stale recovery that resolves after a live resume leaves the tile live', async () => {
++    setSessions([row({ id: 'stored-race', profile: undefined })])
++
++    let resolveStored!: (value: { messages: unknown[]; session_id: string }) => void
++
++    vi.mocked(fetchStoredTranscriptAcrossBackends).mockImplementation(
++      () => new Promise(resolve => (resolveStored = resolve)) as never
++    )
++    vi.mocked(requestGatewayForProfile).mockResolvedValueOnce({ session_id: 'runtime-live' } as never)
++
++    const cache = bindingCache()
++
++    renderTile(
++      vi.fn(async () => ({}) as never),
++      cache
++    )
++    const delegate = sessionTileDelegate()!
++
++    // Call A: owner unresolvable -> parks on the slow cross-backend stored read.
++    const callA = delegate.resumeTile('stored-race')
++
++    await new Promise(resolve => setTimeout(resolve, 0))
++
++    // The owner backfill stamps the row; call B resumes live and binds the tile.
++    setSessions([row({ id: 'stored-race', profile: 'default' })])
++    await expect(delegate.resumeTile('stored-race')).resolves.toBe('runtime-live')
++
++    // Call A's stored read lands last.
++    resolveStored({ messages: [{ content: 'history', role: 'user' }], session_id: 'stored-race' })
++
++    await expect(callA).resolves.toBe('runtime-live')
++    expect(cache.runtimeIdByStoredSessionIdRef.current.get('stored-race')).toBe('runtime-live')
++    expect(cache.updateSessionState.mock.calls.some(([id]) => String(id).startsWith('read-only:'))).toBe(false)
++    expect(isStoredTranscriptReadOnly('stored-race')).toBe(false)
++  })
++})
+diff --git a/apps/desktop/src/app/contrib/hooks/use-session-tile-delegate.ts b/apps/desktop/src/app/contrib/hooks/use-session-tile-delegate.ts
+index 6136a9b041..d5bc722823 100644
+--- a/apps/desktop/src/app/contrib/hooks/use-session-tile-delegate.ts
++++ b/apps/desktop/src/app/contrib/hooks/use-session-tile-delegate.ts
+@@ -18,6 +18,7 @@ import { noteMessageSent } from '@/store/desktop-metrics'
+ import { notify } from '@/store/notifications'
+ import {
+   isReadOnlyRuntimeId,
++  liveResumeGeneration,
+   readOnlyRuntimeIdFor,
+   resumeWithStoredTranscriptFallback
+ } from '@/store/read-only-transcript'
+@@ -314,6 +315,10 @@ export function useSessionTileDelegate({
+         )
+       },
+       resumeTile: async (storedSessionId, options) => {
++        // Before any await: a live resume of this id that lands while this call
++        // is still recovering proves the session routable (#94724).
++        const liveResumesAtStart = liveResumeGeneration(storedSessionId)
++
+         // A retained tile can still own its runtime after the primary view drops
+         // its reverse lookup. Reconnect invalidates both bindings.
+         const existing =
+@@ -416,9 +421,20 @@ export function useSessionTileDelegate({
+             }
+ 
+             return stored
+-          }
++          },
++          liveResumesAtStart
+         )
+ 
++        // A live resume of this id (another tile call, the main pane) landed
++        // while this no-owner recovery was pending and bound the session.
++        // Painting this stale outcome would repoint stored -> runtime onto the
++        // synthetic read-only id, and the warm path would keep reusing it.
++        const binding = runtimeIdByStoredSessionIdRef.current.get(storedSessionId)
++
++        if (outcome.mode === 'read-only' && binding && liveResumeGeneration(storedSessionId) !== liveResumesAtStart) {
++          return binding
++        }
++
+         const prefetch = await prefetchPromise
+ 
+         if (outcome.mode === 'read-only') {
+diff --git a/apps/desktop/src/app/session/hooks/use-session-actions.test.tsx b/apps/desktop/src/app/session/hooks/use-session-actions.test.tsx
+index 98014f02c5..1e65572292 100644
+--- a/apps/desktop/src/app/session/hooks/use-session-actions.test.tsx
++++ b/apps/desktop/src/app/session/hooks/use-session-actions.test.tsx
+@@ -42,6 +42,7 @@ import {
+ } from '@/store/profile'
+ import { $projectScope, ALL_PROJECTS } from '@/store/project-scope'
+ import { $projectTree } from '@/store/projects'
++import { isStoredTranscriptReadOnly, resumeWithStoredTranscriptFallback } from '@/store/read-only-transcript'
+ import {
+   $activeSessionId,
+   $activeSessionStoredIdRotation,
+@@ -87,7 +88,7 @@ import {
+   setTurnStartedAt,
+   setUnlistedSessionOwnerRows
+ } from '@/store/session'
+-import { assertSessionOwnerResolved } from '@/store/session-owner-resolution'
++import { assertSessionOwnerResolved, SessionOwnerResolutionError } from '@/store/session-owner-resolution'
+ import { $removedSessionIds, $sessionMutationsInFlight } from '@/store/session-removal'
+ import { requestForSessionProfile, type SessionProfileRoute } from '@/store/session-request-router'
+ import {
+@@ -1874,6 +1875,42 @@ describe('resumeSession failure recovery', () => {
+     expect($messages.get().length).toBeGreaterThan(0)
+   })
+ 
++  it('does not latch a no-owner recovery read-only once a tile resumes the same id live (#94724)', async () => {
++    const storedRead = deferred<Awaited<ReturnType<typeof getLatestSessionMessages>>>()
++
++    const requestGateway = vi.fn(async (method: string) => {
++      if (method === 'session.resume') {
++        throw new SessionOwnerResolutionError('stored-race', 'session.resume')
++      }
++
++      return {} as never
++    }) as <T>(method: string, params?: Record<string, unknown>) => Promise<T>
++
++    vi.mocked(getLatestSessionMessages).mockReturnValue(storedRead.promise)
++
++    let resume: ((storedSessionId: string, replaceRoute?: boolean) => Promise<unknown>) | null = null
++    render(<ResumeHarness onReady={r => (resume = r)} requestGateway={requestGateway} />)
++    await waitFor(() => expect(resume).not.toBeNull())
++
++    // The main pane's owner fails closed and its recovery waits on the stored read.
++    const pending = resume!('stored-race', true)
++
++    // Meanwhile a tile resumes the same id live (the owner became resolvable).
++    await resumeWithStoredTranscriptFallback(
++      'stored-race',
++      async () => ({ session_id: 'runtime-tile' }),
++      async () => ({ messages: [] })
++    )
++
++    await act(async () => {
++      storedRead.resolve({ messages: [{ content: 'history', role: 'user', timestamp: 1 }], session_id: 'stored-race' })
++      await pending
++    })
++
++    expect(JSON.stringify($messages.get())).toContain('history')
++    expect(isStoredTranscriptReadOnly('stored-race')).toBe(false)
++  })
++
+   it('paints the REST transcript before a cold session.resume settles and keeps it when resume rejects', async () => {
+     // A cold profile build (skills/MCP/memory) can keep session.resume pending
+     // past the hydration budget; the already-available REST history must not
+diff --git a/apps/desktop/src/app/session/hooks/use-session-actions/index.ts b/apps/desktop/src/app/session/hooks/use-session-actions/index.ts
+index 50bd8ffed5..3c33d8856c 100644
+--- a/apps/desktop/src/app/session/hooks/use-session-actions/index.ts
++++ b/apps/desktop/src/app/session/hooks/use-session-actions/index.ts
+@@ -64,7 +64,11 @@ import {
+ import { $projectScope } from '@/store/project-scope'
+ import { projectProfile, resolveNewSessionCwd } from '@/store/projects'
+ import { clearAllPrompts, receiveApprovalRequest, replayPendingApproval } from '@/store/prompts'
+-import { clearStoredTranscriptReadOnly, markStoredTranscriptReadOnly } from '@/store/read-only-transcript'
++import {
++  clearStoredTranscriptReadOnly,
++  liveResumeGeneration,
++  markStoredTranscriptReadOnly
++} from '@/store/read-only-transcript'
+ import {
+   $activeSessionStoredIdRotation,
+   $connection,
+@@ -1306,6 +1310,9 @@ export function useSessionActions({
+       const routeToken = getRouteToken()
+       resumeRequestRef.current = requestId
+       const resumedSameSelectedSession = selectedStoredSessionIdRef.current === storedSessionId
++      // A live resume of this id elsewhere (a session tile) from here on proves
++      // the owner routable: the no-owner recovery below must not latch over it.
++      const liveResumesAtStart = liveResumeGeneration(storedSessionId)
+ 
+       const isCurrentResume = () =>
+         resumeRequestRef.current === requestId &&
+@@ -2598,12 +2605,14 @@ export function useSessionActions({
+           }
+ 
+           if (painted) {
+-            markStoredTranscriptReadOnly(storedSessionId)
+-            notify({
+-              kind: 'info',
+-              title: copy.readOnlyTranscriptTitle,
+-              message: copy.readOnlyTranscriptBody
+-            })
++            if (liveResumeGeneration(storedSessionId) === liveResumesAtStart) {
++              markStoredTranscriptReadOnly(storedSessionId)
++              notify({
++                kind: 'info',
++                title: copy.readOnlyTranscriptTitle,
++                message: copy.readOnlyTranscriptBody
++              })
++            }
+ 
+             return
+           }
+diff --git a/apps/desktop/src/store/read-only-transcript.ts b/apps/desktop/src/store/read-only-transcript.ts
+index 8cf3ca9bd6..035146d259 100644
+--- a/apps/desktop/src/store/read-only-transcript.ts
++++ b/apps/desktop/src/store/read-only-transcript.ts
+@@ -25,6 +25,16 @@ import { isSessionOwnerResolutionError } from './session-owner-resolution'
+  *  that has no routable live runtime. */
+ export const $readOnlyStoredTranscripts = atom<ReadonlySet<string>>(new Set())
+ 
++/** Bumped per stored id by every successful live resume (see
++ *  `clearStoredTranscriptReadOnly`). A no-owner recovery snapshots it when its
++ *  resume attempt starts; once it moved, the session was proven routable while
++ *  the recovery was pending, so the recovery must not open it read-only. */
++const liveResumeGenerationByStoredSessionId = new Map<string, number>()
++
++export function liveResumeGeneration(storedSessionId: string): number {
++  return liveResumeGenerationByStoredSessionId.get(storedSessionId.trim()) ?? 0
++}
++
+ export function markStoredTranscriptReadOnly(storedSessionId: string): void {
+   const id = storedSessionId.trim()
+ 
+@@ -38,7 +48,15 @@ export function markStoredTranscriptReadOnly(storedSessionId: string): void {
+ export function clearStoredTranscriptReadOnly(storedSessionId: string): void {
+   const id = storedSessionId.trim()
+ 
+-  if (!id || !$readOnlyStoredTranscripts.get().has(id)) {
++  if (!id) {
++    return
++  }
++
++  // A live success counts even when the latch is not set yet: a recovery
++  // that is still pending must not latch over it.
++  liveResumeGenerationByStoredSessionId.set(id, liveResumeGeneration(id) + 1)
++
++  if (!$readOnlyStoredTranscripts.get().has(id)) {
+     return
+   }
+ 
+@@ -80,11 +98,16 @@ export type StoredTranscriptResumeOutcome<TResumed, TTranscript> =
+  * rethrown: the caller's existing error UX (retry latch, stranded screen)
+  * stays authoritative and no misleading transport error replaces the real
+  * diagnosis.
++ *
++ * `liveResumesAtStart` is the `liveResumeGeneration` snapshot taken when the
++ * caller's attempt began (default: now). A caller that awaits before calling
++ * (e.g. owner resolution) passes its own earlier snapshot.
+  */
+ export async function resumeWithStoredTranscriptFallback<TResumed, TTranscript>(
+   storedSessionId: string,
+   resume: () => Promise<TResumed>,
+-  fetchStoredTranscript: () => Promise<TTranscript>
++  fetchStoredTranscript: () => Promise<TTranscript>,
++  liveResumesAtStart = liveResumeGeneration(storedSessionId)
+ ): Promise<StoredTranscriptResumeOutcome<TResumed, TTranscript>> {
+   try {
+     const resumed = await resume()
+@@ -107,7 +130,11 @@ export async function resumeWithStoredTranscriptFallback<TResumed, TTranscript>(
+       throw error
+     }
+ 
+-    markStoredTranscriptReadOnly(storedSessionId)
++    // A live resume of this id succeeded while this attempt was pending: the
++    // session is routable, so this stale recovery must not latch it.
++    if (liveResumeGeneration(storedSessionId) === liveResumesAtStart) {
++      markStoredTranscriptReadOnly(storedSessionId)
++    }
+ 
+     return { error, mode: 'read-only', transcript }
+   }
+-- 
+2.55.0
+

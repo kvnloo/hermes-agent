@@ -1,0 +1,81 @@
+From 701829fed4b0dead930053b6aa9864ecd15161c8 Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:40:28 -0500
+Subject: [PATCH] docs(cli): list missing profile subcommands; scope the
+ receipt successor check
+
+- Both `hermes profile` subcommand tables omitted commands registered in
+  hermes_cli/subcommands/profile.py: profile-commands.md lacked
+  migrate-identity and purge-identity (each already has its own section
+  further down that page), and the cli-commands.md summary also lacked
+  describe. The new rows use the parsers' help strings, and the
+  cli-commands.md rows give each parser's arguments like the rows around
+  them.
+- updating.md said startup / gateway-status warnings and update catch-up
+  all look for live successors on the current checkout. Only catch-up does
+  (_pending_fleet_restart_needed). The startup warning
+  (_warn_pending_fleet_restart_on_startup -> _update_owes_fleet_restart,
+  hermes_cli/update_cmd_fleet.py) first accepts successors at the SHA the
+  receipt's completed restart phase pulled, stale or current, so a later
+  `git pull` that moves the checkout does not re-raise the warning.
+
+Docs only; no behaviour change.
+
+Salvaged from kvnloo/hermes-agent#89 and kvnloo/hermes-agent#97 and
+rebuilt on current main.
+
+Co-authored-by: detail-app[bot] <180357370+detail-app[bot]@users.noreply.github.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ website/docs/getting-started/updating.md   | 2 +-
+ website/docs/reference/cli-commands.md     | 3 +++
+ website/docs/reference/profile-commands.md | 2 ++
+ 3 files changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/website/docs/getting-started/updating.md b/website/docs/getting-started/updating.md
+index cbd089c531..b2fd216a31 100644
+--- a/website/docs/getting-started/updating.md
++++ b/website/docs/getting-started/updating.md
+@@ -307,7 +307,7 @@ fleet caused only by the deferral does not make the update `partial`.
+ 
+ If an earlier update pulled code but did not finish restarting the fleet, the next `hermes update` retries even when the checkout is already current. An empty process scan does not prove recovery: failed systemd units and installed launchd jobs may have no live PID. If discovery or restart fails, or a requested service cannot be verified active, the marker stays pending and the update exits nonzero. Recover the affected services with the printed commands and retry.
+ 
+-A failed historical receipt alone does not prove that gateways are still stale. Startup and gateway-status warnings, as well as update catch-up, check for a live successor on the current checkout for every gateway profile recorded in that receipt. A manual gateway restart can settle receipt-only advice without rewriting the historical outcome. Manual backend obligations must first transfer to their separate reminders.
++A failed historical receipt alone does not prove that gateways are still stale. Update catch-up checks for a live successor on the current checkout for every gateway profile recorded in that receipt. Startup and gateway-status warnings also accept successors on the code the receipt's completed restart phase pulled, even if a later `git pull` has since moved the checkout past it. A manual gateway restart can settle receipt-only advice without rewriting the historical outcome. Manual backend obligations must first transfer to their separate reminders.
+ 
+ A pending restart marker records its own pre-update runtime inventory and target commit. Recovery checks that inventory, never an older receipt's inventory. Settlement requires a nonempty verified current fleet, a successor at the target commit for every recorded gateway profile, and successful handling of any identified manual backend obligations. A manual backend that is still alive or whose liveness is unknown needs a saved reminder; a confirmed exited process needs no reminder. Missing gateways, unsupported runtimes, or failed reminder writes keep the marker pending.
+ 
+diff --git a/website/docs/reference/cli-commands.md b/website/docs/reference/cli-commands.md
+index e59b7e73c3..189894efbc 100644
+--- a/website/docs/reference/cli-commands.md
++++ b/website/docs/reference/cli-commands.md
+@@ -1915,10 +1915,13 @@ Manage profiles — multiple isolated Hermes instances, each with its own config
+ | `list` | List all profiles. |
+ | `use <name>` | Set a sticky default profile. |
+ | `create <name> [--clone] [--clone-all] [--clone-from <source>] [--no-alias]` | Create a new profile. `--clone` copies config, `.env`, `SOUL.md`, skills, and the curated `MEMORY.md`/`USER.md` memory files from the active profile. `--clone-all` copies all state. `--clone-from` specifies a source profile and implies config clone unless paired with `--clone-all`. |
++| `describe [<name>] [--text TEXT] [--auto] [--overwrite] [--all]` | Read or set a profile's description (used by the kanban orchestrator for routing). |
+ | `delete <name> [-y]` | Delete a profile. |
+ | `show <name>` | Show profile details (home directory, config, etc.). |
+ | `alias <name> [--remove] [--name NAME]` | Manage wrapper scripts for quick profile access. |
+ | `rename <old> <new>` | Rename a profile. |
++| `migrate-identity <old> <new>` | Retry a renamed profile's session/routing identity migration. |
++| `purge-identity <name>` | Retry a deleted profile's session/routing identity purge. |
+ | `export <name> [-o FILE]` | Export a profile to a `.tar.gz` archive (local backup). |
+ | `import <archive> [--name NAME]` | Import a profile from a `.tar.gz` archive (local restore). |
+ | `install <source> [--name N] [--alias] [--force] [-y]` | Install a profile distribution from a git URL or local directory. |
+diff --git a/website/docs/reference/profile-commands.md b/website/docs/reference/profile-commands.md
+index 5f7ce5b577..cfa73bd4fd 100644
+--- a/website/docs/reference/profile-commands.md
++++ b/website/docs/reference/profile-commands.md
+@@ -24,6 +24,8 @@ Top-level command for managing profiles. Running `hermes profile` without a subc
+ | `show` | Show details about a profile. |
+ | `alias` | Regenerate the shell alias for a profile. |
+ | `rename` | Rename a profile. |
++| `migrate-identity` | Retry a renamed profile's session/routing identity migration. |
++| `purge-identity` | Retry a deleted profile's session/routing identity purge. |
+ | `export` | Export a profile to a tar.gz archive. |
+ | `import` | Import a profile from a tar.gz archive. |
+ | `install` | Install a profile distribution from a git URL or local directory. See [Profile Distributions](../user-guide/profile-distributions.md). |
+-- 
+2.55.0
+

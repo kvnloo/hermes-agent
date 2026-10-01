@@ -6,7 +6,7 @@ The CLI path doesn't have this problem. `tools.skills_hub_search.unified_search`
 
 This PR stable-sorts the deduped results by the trust rank the endpoint already defines, before the cut. Order within a rank is unchanged.
 
-The defect and the original fix were first produced by Detail's automated bug finder (detail-app[bot]). This PR rebuilds that fix on current `main`, where the router now goes through `tools.skills_hub_search`.
+The defect and the original fix were first produced by Detail's automated bug finder (detail-app[bot]), credited with a `Co-authored-by` trailer on the commit. This PR rebuilds that fix on current `main`, where the router now goes through `tools.skills_hub_search`.
 
 ## Related Issue
 
@@ -23,9 +23,9 @@ No upstream issue. Searched open/closed PRs and issues for `search_skills_hub`, 
 
 ## How to Test
 
-1. `scripts/run_tests.sh tests/hermes_cli/test_dashboard_admin_endpoints.py -q`
+1. Check out `ready/fork-31-hub-search-trust-sort-v2` (one commit on `main` @ 330d9d6d) and run `scripts/run_tests.sh tests/hermes_cli/test_dashboard_admin_endpoints.py -q`.
 2. Apply only the test hunk to `main` and rerun step 1. The new test fails with `At index 0 diff: 'skills-sh/x/s0' != 'official/cat/s-official'` (42 passed, 1 failed).
-3. With the fix: 43 passed. Adjacent: `tests/hermes_cli/test_web_server_skills_profiles.py tests/hermes_cli/test_web_server_skill_editor.py tests/tools/test_skill_bundle_provenance.py tests/tools/test_skills_hub_browse_sh.py` give 38 passed.
+3. With the fix: 43 passed, 0 failed. Adjacent: `tests/hermes_cli/test_web_server_skills_profiles.py tests/hermes_cli/test_web_server_skill_editor.py tests/tools/test_skill_bundle_provenance.py tests/tools/test_skills_hub_browse_sh.py` give 38 passed, 0 failed (`test_skill_bundle_provenance.py` holds the CLI-side `test_unified_search_trust_rank_survives_limit_cut`). `ruff check` is clean on both touched files.
 4. Negative control: inverting the sort key (ascending trust) makes the new test fail again with the same index-0 diff.
 5. Not tested: the full suite, and a live dashboard `/api/skills/hub/search` against real hub sources. The test stubs `parallel_search_sources`.
 

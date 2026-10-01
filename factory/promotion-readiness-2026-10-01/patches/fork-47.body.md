@@ -9,7 +9,7 @@ The 429-header path in `nous_rate_guard._parse_buckets_from_headers()` already p
 
 ## Related Issue
 
-No upstream issue. Found by Detail and first fixed in the fork as kvnloo/hermes-agent#47 (detail-app[bot]). This is a rebuild of that fix on current main, where bucket construction has moved to a `_BUCKET_TAGS` comprehension. It keeps the same approach: a missing `remaining` gives a no-data bucket, and `has_data` requires a usable window. Searched open/closed PRs and issues for `x-ratelimit-remaining`, `rate_limit_tracker` and `parse_rate_limit_headers`. Open PRs that touch `agent/rate_limit_tracker.py` (#40460 `_fmt_count` negative guard, #128670 Anthropic unified headers, #78167 proactive throttle) do not change how a missing `remaining` is handled. #78167 adds a proactive throttle on exhausted buckets. With the current `0` default, that throttle would also fire on these limit-only buckets.
+No upstream issue. Found by Detail and first fixed in the fork as kvnloo/hermes-agent#47 (detail-app[bot]). This is a rebuild of that fix on current main, where bucket construction has moved to a `_BUCKET_TAGS` comprehension. It keeps the same approach: a missing `remaining` gives a no-data bucket, and `has_data` requires a usable window. The commit credits detail-app[bot] with a `Co-authored-by` trailer. Searched open/closed PRs and issues for `x-ratelimit-remaining`, `rate_limit_tracker` and `parse_rate_limit_headers`. Open PRs that touch `agent/rate_limit_tracker.py` (#40460 `_fmt_count` negative guard, #128670 Anthropic unified headers, #78167 proactive throttle) do not change how a missing `remaining` is handled. #78167 adds a proactive throttle on exhausted buckets. With the current `0` default, that throttle would also fire on these limit-only buckets.
 
 ## Type of Change
 
@@ -23,13 +23,13 @@ No upstream issue. Found by Detail and first fixed in the fork as kvnloo/hermes-
 
 ## How to Test
 
-1. `scripts/run_tests.sh tests/agent/test_rate_limit_tracker.py tests/agent/test_nous_rate_guard.py -q`
+1. Check out `ready/fork-47-ratelimit-missing-remaining-v2` (one commit on `main` @ 330d9d6d) and run `scripts/run_tests.sh tests/agent/test_rate_limit_tracker.py tests/agent/test_nous_rate_guard.py -q`.
 2. Without the production change, both new tests fail: `assert 100.0 == 0.0` (usage_pct of the limit-only bucket) and `assert True is False` (`is_genuine_nous_rate_limit` trips on the partial last-known state).
 3. Reverting only the `None` default for `remaining` brings back both failures. Reverting only the `has_data` change fails the tracker test on `assert not state.has_data`.
 
 Adjacent suites pass with the change: `tests/gateway/test_usage_command.py`, `tests/hermes_cli/test_cli_status_bar.py`, `tests/agent/test_credits_cold_start.py`, `tests/agent/test_nous_welcome_client_contract.py`, `tests/agent/test_welcome_error_identity.py`, `tests/agent/test_welcome_tier_recovery.py` (139 tests in total across the 8 files). `ruff check` is clean on the touched files.
 
-Runs were on main f848940. Main has since moved ahead with no changes to the touched files, and the branch merges cleanly. Not tested: the full `pytest tests/` suite, and a live provider response with partial headers. The behaviour is covered only by the two unit tests above.
+All runs above were on main 330d9d6d. Not tested: the full `pytest tests/` suite, and a live provider response with partial headers. The behaviour is covered only by the two unit tests above.
 
 ## Checklist
 
@@ -50,3 +50,25 @@ Runs were on main f848940. Main has since moved ahead with no changes to the tou
 - [x] I've updated `CONTRIBUTING.md` or `AGENTS.md` if I changed architecture or workflows — or N/A
 - [x] I've considered cross-platform impact (Windows, macOS) per the [compatibility guide](https://github.com/NousResearch/hermes-agent/blob/main/CONTRIBUTING.md#cross-platform-compatibility) — or N/A
 - [x] I've updated tool descriptions/schemas if I changed tool behavior — or N/A
+
+## Screenshots / Logs
+
+`format_rate_limit_display()` for a response carrying `x-ratelimit-limit-requests: 800` and `x-ratelimit-reset-requests: 30` but no `remaining` header.
+
+Before (main):
+
+```
+Custom Rate Limits (captured just now):
+
+  Requests/min   [████████████████████] 100.0%  800/800 used  (0 left, resets in 29s)
+  Requests/hr     (no data)
+
+  Tokens/min      (no data)
+  Tokens/hr       (no data)
+
+  ⚠ requests/min at 100% — resets in 29s
+```
+
+`format_rate_limit_compact()` gives `RPM: 0/800`, and `has_data` is `True`.
+
+After: `has_data` is `False`, so `/usage` skips the block in both the CLI and the gateway. The formatters themselves return `No rate limit data yet — make an API request first.` and `No rate limit data.`

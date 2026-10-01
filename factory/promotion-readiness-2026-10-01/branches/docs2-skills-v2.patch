@@ -1,0 +1,250 @@
+From 1db6249b0c4a32fa2f48a98cbf9f6cc5e912559a Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:31:14 -0500
+Subject: [PATCH] docs(skills): use the questions=[...] clarify shape; drop
+ single-choice limits
+
+The clarify tool takes one argument, `questions` - a list of
+{question, choices?, multi_select?} entries (tools/clarify_tool.py). The
+pixel-art skill still showed the old top-level
+`clarify(question=..., choices=...)` form, which the tool rejects with
+"questions must be a non-empty array. Pass questions=[{question, choices?,
+multi_select?}]". The openclaw-migration skill still said the CLI handles
+"one choice at a time" and has no multi-select, but clarify takes several
+questions per call and `multi_select: true` renders checkbox rows in the
+CLI panel (hermes_cli/cli_modal_mixin.py, cli_tui_mixin.py). It also
+called its bare {"question", "choices"} examples "exact clarify payload
+shapes" and listed its per-question rules under "For every clarify call",
+both of which describe the same rejected top-level shape.
+
+- pixel-art SKILL.md: both examples moved to `clarify(questions=[{...}])`.
+- openclaw-migration SKILL.md: drop the two false limits; the rules and
+  the example list now say they apply to entries of the `questions`
+  array; note that independent decisions can share one call (the
+  existing decision flow is unchanged and still fits the 4-choice cap).
+- website per-skill pages regenerated with website/scripts/generate-skill-docs.py
+  (only these two pages change).
+- zh-Hans openclaw-migration page (hand-translated, not regenerated): the
+  same edits by hand, and its retry hint now names the `questions` array
+  as the English source already does.
+
+Co-authored-by: detail-app[bot] <180357370+detail-app[bot]@users.noreply.github.com>
+---
+ optional-skills/creative/pixel-art/SKILL.md      | 16 ++++++++--------
+ .../migration/openclaw-migration/SKILL.md        |  9 +++------
+ .../optional/creative/creative-pixel-art.md      | 16 ++++++++--------
+ .../migration/migration-openclaw-migration.md    |  9 +++------
+ .../migration/migration-openclaw-migration.md    | 11 ++++-------
+ 5 files changed, 26 insertions(+), 35 deletions(-)
+
+diff --git a/optional-skills/creative/pixel-art/SKILL.md b/optional-skills/creative/pixel-art/SKILL.md
+index 5305a69252..4a606ab47b 100644
+--- a/optional-skills/creative/pixel-art/SKILL.md
++++ b/optional-skills/creative/pixel-art/SKILL.md
+@@ -47,15 +47,15 @@ user asked for — don't just dump all 14.
+ Default menu when the user's intent is unclear:
+ 
+ ```python
+-clarify(
+-    question="Which pixel-art style do you want?",
+-    choices=[
++clarify(questions=[{
++    "question": "Which pixel-art style do you want?",
++    "choices": [
+         "arcade — bold, chunky 80s cabinet feel (16 colors, 8px)",
+         "nes — Nintendo 8-bit hardware palette (54 colors, 8px)",
+         "gameboy — 4-shade green Game Boy DMG",
+         "snes — cleaner 16-bit look (32 colors, 4px)",
+     ],
+-)
++}])
+ ```
+ 
+ When the user already named an era (e.g. "80s arcade", "Gameboy"), skip
+@@ -67,15 +67,15 @@ If the user asked for a video/GIF, or the output might benefit from motion,
+ ask which scene:
+ 
+ ```python
+-clarify(
+-    question="Want to animate it? Pick a scene or skip.",
+-    choices=[
++clarify(questions=[{
++    "question": "Want to animate it? Pick a scene or skip.",
++    "choices": [
+         "night — stars + fireflies + leaves",
+         "urban — rain + neon pulse",
+         "snow — falling snowflakes",
+         "skip — just the image",
+     ],
+-)
++}])
+ ```
+ 
+ Do NOT call `clarify` more than twice in a row. One for style, one for scene if
+diff --git a/optional-skills/migration/openclaw-migration/SKILL.md b/optional-skills/migration/openclaw-migration/SKILL.md
+index 0913366c91..d236bff1f2 100644
+--- a/optional-skills/migration/openclaw-migration/SKILL.md
++++ b/optional-skills/migration/openclaw-migration/SKILL.md
+@@ -86,13 +86,10 @@ With `--migrate-secrets`, it will also import a small allowlisted set of Hermes-
+ 
+ Hermes CLI supports the `clarify` tool for interactive prompts, but it is limited to:
+ 
+-- one choice at a time
+ - up to 4 predefined choices
+ - an automatic `Other` free-text option
+ 
+-It does **not** support true multi-select checkboxes in a single prompt.
+-
+-For every `clarify` call:
++For every entry in the `clarify` `questions` array:
+ 
+ - always include a non-empty `question`
+ - include `choices` only for real selectable prompts
+@@ -112,7 +109,7 @@ Do not end the turn with a normal assistant message such as:
+ - "Here are the options"
+ 
+ If a user decision is required, collect it via `clarify` before producing more prose.
+-If multiple unresolved decisions remain, do not insert an explanatory assistant message between them. After one `clarify` response is received, your next action should usually be the next required `clarify` call.
++If multiple unresolved decisions remain, do not insert an explanatory assistant message between them. Independent decisions can share one `clarify` call as separate `questions` entries. After one `clarify` response is received, your next action should usually be the next required `clarify` call.
+ 
+ Treat `workspace-agents` as an unresolved decision whenever the dry run reports:
+ 
+@@ -156,7 +153,7 @@ Execution gate:
+ - Absence of a workspace target in the dry run is not itself permission to execute.
+ - Do not execute while any required `clarify` decision remains unresolved.
+ 
+-Use these exact `clarify` payload shapes as the default pattern:
++Use these exact `questions` entries as the default pattern:
+ 
+ - `{"question":"Your existing SOUL.md conflicts with the imported one. What should I do?","choices":["keep existing","overwrite with backup","review first"]}`
+ - `{"question":"One or more imported OpenClaw skills already exist in Hermes. How should I handle those skill conflicts?","choices":["keep existing skills","overwrite conflicting skills with backup","import conflicting skills under renamed folders"]}`
+diff --git a/website/docs/user-guide/skills/optional/creative/creative-pixel-art.md b/website/docs/user-guide/skills/optional/creative/creative-pixel-art.md
+index 529ee6f59f..1ac5a8f969 100644
+--- a/website/docs/user-guide/skills/optional/creative/creative-pixel-art.md
++++ b/website/docs/user-guide/skills/optional/creative/creative-pixel-art.md
+@@ -62,15 +62,15 @@ user asked for — don't just dump all 14.
+ Default menu when the user's intent is unclear:
+ 
+ ```python
+-clarify(
+-    question="Which pixel-art style do you want?",
+-    choices=[
++clarify(questions=[{
++    "question": "Which pixel-art style do you want?",
++    "choices": [
+         "arcade — bold, chunky 80s cabinet feel (16 colors, 8px)",
+         "nes — Nintendo 8-bit hardware palette (54 colors, 8px)",
+         "gameboy — 4-shade green Game Boy DMG",
+         "snes — cleaner 16-bit look (32 colors, 4px)",
+     ],
+-)
++}])
+ ```
+ 
+ When the user already named an era (e.g. "80s arcade", "Gameboy"), skip
+@@ -82,15 +82,15 @@ If the user asked for a video/GIF, or the output might benefit from motion,
+ ask which scene:
+ 
+ ```python
+-clarify(
+-    question="Want to animate it? Pick a scene or skip.",
+-    choices=[
++clarify(questions=[{
++    "question": "Want to animate it? Pick a scene or skip.",
++    "choices": [
+         "night — stars + fireflies + leaves",
+         "urban — rain + neon pulse",
+         "snow — falling snowflakes",
+         "skip — just the image",
+     ],
+-)
++}])
+ ```
+ 
+ Do NOT call `clarify` more than twice in a row. One for style, one for scene if
+diff --git a/website/docs/user-guide/skills/optional/migration/migration-openclaw-migration.md b/website/docs/user-guide/skills/optional/migration/migration-openclaw-migration.md
+index dd4bc26368..1bf19483d6 100644
+--- a/website/docs/user-guide/skills/optional/migration/migration-openclaw-migration.md
++++ b/website/docs/user-guide/skills/optional/migration/migration-openclaw-migration.md
+@@ -104,13 +104,10 @@ With `--migrate-secrets`, it will also import a small allowlisted set of Hermes-
+ 
+ Hermes CLI supports the `clarify` tool for interactive prompts, but it is limited to:
+ 
+-- one choice at a time
+ - up to 4 predefined choices
+ - an automatic `Other` free-text option
+ 
+-It does **not** support true multi-select checkboxes in a single prompt.
+-
+-For every `clarify` call:
++For every entry in the `clarify` `questions` array:
+ 
+ - always include a non-empty `question`
+ - include `choices` only for real selectable prompts
+@@ -130,7 +127,7 @@ Do not end the turn with a normal assistant message such as:
+ - "Here are the options"
+ 
+ If a user decision is required, collect it via `clarify` before producing more prose.
+-If multiple unresolved decisions remain, do not insert an explanatory assistant message between them. After one `clarify` response is received, your next action should usually be the next required `clarify` call.
++If multiple unresolved decisions remain, do not insert an explanatory assistant message between them. Independent decisions can share one `clarify` call as separate `questions` entries. After one `clarify` response is received, your next action should usually be the next required `clarify` call.
+ 
+ Treat `workspace-agents` as an unresolved decision whenever the dry run reports:
+ 
+@@ -174,7 +171,7 @@ Execution gate:
+ - Absence of a workspace target in the dry run is not itself permission to execute.
+ - Do not execute while any required `clarify` decision remains unresolved.
+ 
+-Use these exact `clarify` payload shapes as the default pattern:
++Use these exact `questions` entries as the default pattern:
+ 
+ - `{"question":"Your existing SOUL.md conflicts with the imported one. What should I do?","choices":["keep existing","overwrite with backup","review first"]}`
+ - `{"question":"One or more imported OpenClaw skills already exist in Hermes. How should I handle those skill conflicts?","choices":["keep existing skills","overwrite conflicting skills with backup","import conflicting skills under renamed folders"]}`
+diff --git a/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/skills/optional/migration/migration-openclaw-migration.md b/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/skills/optional/migration/migration-openclaw-migration.md
+index 683e5f95b1..00a8c5e134 100644
+--- a/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/skills/optional/migration/migration-openclaw-migration.md
++++ b/website/i18n/zh-Hans/docusaurus-plugin-content-docs/current/user-guide/skills/optional/migration/migration-openclaw-migration.md
+@@ -104,13 +104,10 @@ CLI 命令运行与下文所述相同的迁移脚本。当需要交互式、引
+ 
+ Hermes CLI 支持 `clarify` 工具进行交互式提示，但有以下限制：
+ 
+-- 每次只能处理一个选择
+ - 最多 4 个预定义选项
+ - 自动提供 `Other` 自由文本选项
+ 
+-它**不**支持在单个提示中进行真正的多选复选框操作。
+-
+-每次 `clarify` 调用：
++`clarify` 的 `questions` 数组中的每个条目：
+ 
+ - 必须包含非空的 `question`
+ - 仅对真实可选提示包含 `choices`
+@@ -120,7 +117,7 @@ Hermes CLI 支持 `clarify` 工具进行交互式提示，但有以下限制：
+ - 不得在问题中包含虚假表单字段，如 `在此输入目录`、空白行或下划线 `_____`
+ - 对于开放式路径问题，只询问纯文本句子；用户在面板下方的普通 CLI 提示符中输入
+ 
+-如果 `clarify` 调用返回错误，检查错误文本，修正 payload，并使用有效的 `question` 和干净的 choices 重试一次。
++如果 `clarify` 调用返回错误，检查错误文本，修正 payload，并使用有效的 `questions` 数组和干净的 choices 重试一次。
+ 
+ 当 `clarify` 可用且 dry run 揭示任何需要用户决策的情况时，**下一个动作必须是 `clarify` 工具调用**。
+ 不得以如下普通助手消息结束对话：
+@@ -130,7 +127,7 @@ Hermes CLI 支持 `clarify` 工具进行交互式提示，但有以下限制：
+ - "以下是选项"
+ 
+ 如果需要用户决策，在生成更多文字之前通过 `clarify` 收集。
+-如果存在多个未解决的决策，不要在它们之间插入解释性助手消息。收到一个 `clarify` 响应后，下一个动作通常应是下一个必要的 `clarify` 调用。
++如果存在多个未解决的决策，不要在它们之间插入解释性助手消息。相互独立的决策可以作为单独的 `questions` 条目放在同一个 `clarify` 调用中。收到一个 `clarify` 响应后，下一个动作通常应是下一个必要的 `clarify` 调用。
+ 
+ 当 dry run 报告以下情况时，将 `workspace-agents` 视为未解决的决策：
+ 
+@@ -174,7 +171,7 @@ Hermes CLI 支持 `clarify` 工具进行交互式提示，但有以下限制：
+ - dry run 中缺少工作区目标本身并不构成执行许可。
+ - 当任何必要的 `clarify` 决策仍未解决时，不得执行。
+ 
+-使用以下精确的 `clarify` payload 形式作为默认模式：
++使用以下精确的 `questions` 条目作为默认模式：
+ 
+ - `{"question":"Your existing SOUL.md conflicts with the imported one. What should I do?","choices":["keep existing","overwrite with backup","review first"]}`
+ - `{"question":"One or more imported OpenClaw skills already exist in Hermes. How should I handle those skill conflicts?","choices":["keep existing skills","overwrite conflicting skills with backup","import conflicting skills under renamed folders"]}`
+-- 
+2.55.0
+

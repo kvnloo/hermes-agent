@@ -56,3 +56,6 @@ Note: `docs-bot-mode` and `docs2-gateway` edit different lines of `bot-mode.md` 
 
 ## Retire (fork PRs; superseded / not reproducible / duplicate lanes)
 SUPERSEDED-ON-MAIN: #12 #13 #14 #16 #17 #18 #19 #20 #21 #24 #26 #35 #42 #62 #67 #71 #72 #74 #75 #76 #77 #78 #82 #83 · NOT-REPRODUCIBLE: #99 · duplicate lanes: #80 #116 #125 (→ #304), #391 (→ #307), #286 (obsolete), #113 #114 (→ external owners), #115 (after chore-gateway lands), #121 (→ #399).
+
+## Update 2026-10-01 — upstream-readiness audit and v2 rebuilds
+All 40 PR bodies were audited against their commits and evidence and rewritten (claims, honest testing, credit, links, template). 13 commits needed changes; 12 were rebuilt as `ready/<name>-v2` (one commit on fresh main, re-proved RED/GREEN/negative/adjacent, independently re-verified): chore-gateway, docs-cli, docs2-memory, docs2-skills, fork-22, fork-28 (sibling paths), fork-29, fork-31, fork-33 (block-mode completed), fork-39, fork-47, fork-49 (rebased + sibling path). Use the v2 branch where it exists. Dropped: fork-34 — same fix already in Finn763's earlier open upstream #93186 (support there instead). Live queue: kvnloo/hermes-agent#404.

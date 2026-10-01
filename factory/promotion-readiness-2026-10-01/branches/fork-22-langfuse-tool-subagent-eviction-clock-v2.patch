@@ -1,0 +1,119 @@
+From 81af3df892e6d69e755146b0b5b64839006d5457 Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 20:12:48 -0500
+Subject: [PATCH] fix(langfuse): count tool and subagent hooks as turn activity
+ for eviction
+
+_get_or_start_state_locked bounds _TRACE_STATE by evicting the
+least-recently-updated turn, but only the LLM-request path (and the
+retryable api_request_error path) refreshed TraceState.last_updated_at.
+A live turn that had moved on to tool or subagent dispatch kept the
+clock of its last LLM request, so once the cap filled it could be
+picked as the stalest entry ahead of turns that were genuinely idle.
+Eviction ends its root span, drops its in-flight tool/subagent
+observation, and the turn's next LLM request opens a second root trace
+for the same turn.
+
+Refresh last_updated_at inside the existing _STATE_LOCK block of
+on_pre_tool_call, on_post_tool_call, on_subagent_start and
+on_subagent_stop, matching the LLM-path hooks. Adds a parametrized
+regression (tool / subagent) that pins the clocks so the live turn is
+oldest, fires the dispatch hook, forces one eviction, and asserts the
+live turn survives and keeps a single root trace.
+
+The source change was originally proposed by detail-app[bot]; this
+rebuilds it on current main with a smaller regression test.
+
+Co-authored-by: detail-app[bot] <180357370+detail-app[bot]@users.noreply.github.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ plugins/observability/langfuse/__init__.py |  4 +++
+ tests/plugins/test_langfuse_plugin.py      | 36 ++++++++++++++++++++++
+ 2 files changed, 40 insertions(+)
+
+diff --git a/plugins/observability/langfuse/__init__.py b/plugins/observability/langfuse/__init__.py
+index d5b83d1d6a..5775667d2d 100644
+--- a/plugins/observability/langfuse/__init__.py
++++ b/plugins/observability/langfuse/__init__.py
+@@ -891,6 +891,7 @@ def on_pre_tool_call(*, tool_name: str = "", args: Any = None, task_id: str = ""
+             state.tools[tool_call_id] = observation
+         else:
+             state.pending_tools_by_name.setdefault(tool_name, []).append(observation)
++        state.last_updated_at = time.time()
+ 
+ 
+ def on_post_tool_call(*, tool_name: str = "", args: Any = None, result: Any = None,
+@@ -907,6 +908,7 @@ def on_post_tool_call(*, tool_name: str = "", args: Any = None, result: Any = No
+             observation = queue.pop(0)
+             if not queue:
+                 state.pending_tools_by_name.pop(tool_name, None)
++        state.last_updated_at = time.time()
+     if observation is None:
+         return
+ 
+@@ -1007,6 +1009,7 @@ def on_subagent_start(*, parent_turn_id: str = "", parent_subagent_id: Any = Non
+         state.subagents[str(child_session_id)] = _start_child_observation(
+             state, name=f"Subagent: {child_role or 'delegate'}", as_type="span",
+             input_value=_capture_content(child_goal), metadata=metadata)
++        state.last_updated_at = time.time()
+ 
+ 
+ def on_subagent_stop(*, parent_turn_id: str = "", child_session_id: Any = None, child_role: str = "",
+@@ -1020,6 +1023,7 @@ def on_subagent_stop(*, parent_turn_id: str = "", child_session_id: Any = None,
+         if state is None:
+             return
+         observation = state.subagents.pop(str(child_session_id), None)
++        state.last_updated_at = time.time()
+     if observation is None:
+         return
+ 
+diff --git a/tests/plugins/test_langfuse_plugin.py b/tests/plugins/test_langfuse_plugin.py
+index 69b0eca9da..07ec135984 100644
+--- a/tests/plugins/test_langfuse_plugin.py
++++ b/tests/plugins/test_langfuse_plugin.py
+@@ -297,6 +297,42 @@ class TestTurnTraceIsolation:
+         surviving = sorted(int(k.rsplit("turn", 1)[1]) for k in mod._TRACE_STATE)
+         assert surviving == list(range(42, 50))
+ 
++    @pytest.mark.parametrize("progress", ["tool", "subagent"])
++    def test_tool_and_subagent_activity_refreshes_eviction_clock(self, monkeypatch, progress):
++        """Eviction drops the least-recently-updated turn. Tool and subagent
++        dispatch are turn activity too: a live turn that dispatched one after
++        the other states last moved must not be the eviction victim (its next
++        LLM request would open a second root trace for the same turn)."""
++        mod = self._fresh_plugin()
++        started: list = []
++        monkeypatch.setattr(mod, "_get_langfuse", lambda: self._fake_client(started))
++        monkeypatch.setattr(mod, "_end_observation", lambda *a, **k: None)
++        monkeypatch.setattr(mod, "_MAX_TRACE_STATE", 4)
++        mod._TRACE_STATE.clear()
++
++        live = {"task_id": "live", "session_id": "live", "turn_id": "live-turn"}
++        request = {"model": "m", "provider": "p", "api_mode": "chat",
++                   "request_messages": [{"role": "user", "content": "go"}]}
++        mod.on_pre_llm_request(**live, api_call_count=1, **request)
++        for n in range(3):
++            self._run_turn(mod, session=f"dead-{n}", turn_n=n, finalize=False)
++        # Pin the clocks: the live turn's last LLM request predates every other state.
++        for i, state in enumerate(mod._TRACE_STATE.values()):
++            state.last_updated_at = float(i + 1)
++        live_key = mod._trace_key("live", "live", turn_id="live-turn")
++        assert min(mod._TRACE_STATE, key=lambda k: mod._TRACE_STATE[k].last_updated_at) == live_key
++
++        if progress == "tool":
++            mod.on_pre_tool_call(tool_name="read_file", args={}, tool_call_id="tc-1", **live)
++        else:
++            mod.on_subagent_start(parent_turn_id="live-turn", child_session_id="child-1", child_role="r")
++        self._run_turn(mod, session="dead-new", turn_n=0, finalize=False)  # at cap: evicts one
++
++        assert live_key in mod._TRACE_STATE
++        roots = len(started)
++        mod.on_pre_llm_request(**live, api_call_count=2, **request)
++        assert len(started) == roots  # same turn, same root trace
++
+     def test_finish_trace_exits_root_context_manager(self, monkeypatch):
+         """_finish_trace must call root_ctx.__exit__(), not just root_span.end().
+ 
+-- 
+2.55.0
+

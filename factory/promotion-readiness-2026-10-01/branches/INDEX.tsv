@@ -39,3 +39,16 @@ ready/fork-56-queued-paste-payload	e8d70c6409	f848940560	fix(tui): keep a collap
 ready/fork-58-tts-lease-tile-ownership	cbb6d74ecf	f848940560	fix(desktop): keep the conversation TTS lease held across tile mount/unmount
 ready/fork-59-evm-compare-gas-headlines	57de52cf7b	f848940560	fix(skills): evm compare no longer names a failed or zero-gas chain most expensive
 ready/fork-66-weather-relaunch-epoch	5aad8cc6af	f848940560	fix(tui): drop stale weather fetches when /weather is relaunched
+ready/chore-gateway-v2	b3dfe57f33	330d9d6df9	chore(gateway): remove dead helpers with no production callers
+ready/docs-cli-v2	701829fed4	330d9d6df9	docs(cli): list missing profile subcommands; scope the receipt successor check
+ready/docs2-memory-v2	893f127fdd	330d9d6df9	docs(memory): Hindsight local embedded mode no longer lazy-installs hindsight-all
+ready/docs2-skills-v2	1db6249b0c	330d9d6df9	docs(skills): use the questions=[...] clarify shape; drop single-choice limits
+ready/fork-22-langfuse-tool-subagent-eviction-clock-v2	81af3df892	330d9d6df9	fix(langfuse): count tool and subagent hooks as turn activity for eviction
+ready/fork-28-messages-btree-corrupt-503-v2	aa92a74a3e	ffc74885c5	fix(sessions): report a corrupt messages b-tree on transcript reads as 503, not 500
+ready/fork-29-desktop-adopted-turn-stale-flag-v2	b62ca63dd8	330d9d6df9	fix(desktop): clear a stale adoptedRunningTurn when this window starts a turn
+ready/fork-31-hub-search-trust-sort-v2	e781967164	330d9d6df9	fix(skills): trust-sort dashboard hub search before the limit cut
+ready/fork-33-security-guidance-skill-ops-v2	28f6688d7f	330d9d6df9	fix(plugins): security-guidance scans skill_manage operations[] writes
+ready/fork-34-ws-probe-connect-timer-v2	8fe255c2e7	330d9d6df9	fix(desktop): clear the connect timer once the gateway probe socket opens
+ready/fork-39-worktree-non-origin-no-track-v2	82906c1efa	330d9d6df9	fix(worktree): don't track the base when it is on a remote not named origin
+ready/fork-47-ratelimit-missing-remaining-v2	1d31fe5193	330d9d6df9	fix(agent): read a missing x-ratelimit-remaining-* as no data, not exhausted
+ready/fork-49-tile-stale-readonly-recovery-v2	c67a728c22	895b506ec9	fix(desktop): keep a stale no-owner recovery from latching a live session read-only

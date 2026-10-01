@@ -17,12 +17,12 @@ This PR clears the flag where this window seeds a turn optimistically:
 
 Two places are left alone on purpose:
 
-- **`message.start`.** A subagent watch window resumes with `running=true`, which sets the flag. `tui_gateway`'s `_mirror_subagent_to_child` then sends a synthetic `message.start` into that window for the same adopted turn, and that turn still needs its hydrate to show the child's goal/prompt row. Watch windows have no composer, so clearing at submit cannot affect them.
+- **`message.start`.** A subagent watch window resumes with `running=true`, which sets the flag, and `tui_gateway`'s `_mirror_subagent_to_child` then sends a synthetic `message.start` for that same adopted turn, so clearing there would skip the hydrate that shows the child's goal/prompt row (watch windows have no composer, so clearing at submit cannot affect them).
 - **Settle paths.** A heartbeat can arrive before an adopted turn's reordered `message.complete` (#119569).
 
 Known remainder: a turn this window did not seed can still inherit a leaked flag. That covers backend-started turns (a queue drain from another window, a goal follow-up) and quick-entry sends (`submitToSession`). Those turns' prompts were not written in this window, so the extra hydrate is harmless.
 
-The leak and these three clear sites were first proposed by an automated Detail fix on my fork (kvnloo/hermes-agent#29). That version also cleared the flag at `message.start` and on every settle path; this PR drops those for the reasons above.
+The leak and these three clear sites were first proposed by an automated Detail fix on my fork (kvnloo/hermes-agent#29), credited with a `Co-authored-by` trailer. That version also cleared the flag at `message.start` and on every settle path; this PR drops those for the reasons above.
 
 ## Related Issue
 
@@ -39,20 +39,18 @@ There is no upstream issue for this. #127911 / #127939 are related but different
 - Tests:
   - `use-prompt-actions/index.test.tsx`: a fresh submit clears a leaked flag. The test Harness gains an optional `seedAdoptedRunningTurn` prop.
   - `use-prompt-actions/rewind.test.ts`: both rewind/reload arms clear a leaked flag.
-  - `use-message-stream/session-info-side-effects.test.tsx`: an adopted watch turn that receives `message.start` (the child-mirror case) still hydrates on settle. This guard passes on the base commit and with the fix, and fails if the flag is instead cleared at `message.start`.
 
 ## How to Test
 
-1. `cd apps/desktop && npx vitest run src/app/session/hooks/use-prompt-actions/index.test.tsx src/app/session/hooks/use-prompt-actions/rewind.test.ts src/app/session/hooks/use-message-stream/session-info-side-effects.test.tsx`
-   - **On f848940 (branch base), test changes only:** 2 failed / 194 passed. `index.test.tsx:2163` reports `expected false to be true` (`seeds.every(s => s.adoptedRunningTurn === false)`). `rewind.test.ts:691` reports `expected true to be false`. The child-mirror guard passes.
-   - **With the fix:** 196 / 196 pass.
-   - **Negative control:** with each new line changed to `adoptedRunningTurn: state.adoptedRunningTurn`, both new tests fail again.
-   - **Alternative rejected:** clearing the flag at `message.start` instead makes the child-mirror guard fail (`expected "vi.fn()" to be called with arguments: [ 3, null, 'session-active' ]`).
+Branch `ready/fork-29-desktop-adopted-turn-stale-flag-v2` is one commit on `main` at 330d9d6. All commands run from `apps/desktop`.
 
-   The branch merges cleanly with current main; these suites were not re-run there.
-2. **Adjacent suites:** `npx vitest run src/app/session/hooks/use-message-stream/ src/app/session/hooks/use-session-actions.test.tsx src/app/session/hooks/use-prompt-actions/ src/app/chat/` gives 228 files passed.
-3. **Typecheck:** `tsc -p . --noEmit` (covers every changed file), `tsc -p tsconfig.e2e.json --noEmit` and the electron-builder config check are clean. `tsc -p tsconfig.electron.json` excludes `src/`. In my local checkout it reported one TS2307 in the untouched `electron/channel-build-version.test.ts`, and the same error appears without this change.
-4. **Lint/format:** eslint and prettier are clean on the touched files. The one remaining eslint warning, `react-hooks/exhaustive-deps` on the test Harness `useEffect`, also appears on the base commit.
+1. `npx vitest run src/app/session/hooks/use-prompt-actions/index.test.tsx src/app/session/hooks/use-prompt-actions/rewind.test.ts`
+   - **On 330d9d6 with only the test changes:** 2 failed / 182 passed. `index.test.tsx:2214` reports `expected false to be true` (`seeds.every(s => s.adoptedRunningTurn === false)`). `rewind.test.ts:691` reports `expected true to be false`.
+   - **With the fix:** 184 / 184 pass.
+   - **Negative control:** with each new line changed to `adoptedRunningTurn: state.adoptedRunningTurn`, both new tests fail again with the same assertions.
+2. **Adjacent suites:** `npx vitest run src/app/session/hooks/use-message-stream/ src/app/session/hooks/use-session-actions.test.tsx src/app/session/hooks/use-prompt-actions/ src/app/chat/ src/app/contrib/` gives 258 files / 2292 tests passed.
+3. **Typecheck:** every step of `npm run typecheck` is clean: `tsc -p .`, `tsc -p tsconfig.electron.json`, `tsc -p tsconfig.e2e.json` and the electron-builder config check.
+4. **Lint/format:** eslint reports 0 errors and prettier is clean on the touched files. The one eslint warning, `react-hooks/exhaustive-deps` on the test Harness `useEffect`, is also on `main`.
 
 Not tested: a live Electron adopt → Stop → next-submit run. The leak path comes from reading the code. Also not addressed: a submit or queue drain that lands between a `running=false` heartbeat settle and the adopted turn's late reordered `message.complete` (#119569). That race exists on main.
 
