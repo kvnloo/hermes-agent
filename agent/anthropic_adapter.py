@@ -221,6 +221,8 @@ _TOOL_STREAMING_BETA = "fine-grained-tool-streaming-2025-05-14"
 _COMMON_BETAS = ["interleaved-thinking-2025-05-14", _TOOL_STREAMING_BETA]
 _CONTEXT_1M_BETA = "context-1m-2025-08-07"
 _FAST_MODE_BETA = "fast-mode-2026-02-01"
+# Sent only with a ``context_management`` payload (``agent/anthropic_context_editing.py``).
+_CONTEXT_MANAGEMENT_BETA = "context-management-2025-06-27"
 # Required for OAuth/subscription auth; matches Claude Code / pi-ai / OpenCode.
 _OAUTH_ONLY_BETAS = ["claude-code-20250219", "oauth-2025-04-20"]
 
@@ -616,6 +618,7 @@ def build_anthropic_kwargs(
     reasoning_config: Optional[Dict[str, Any]], tool_choice: Optional[str] = None,
     is_oauth: bool = False, preserve_dots: bool = False, context_length: Optional[int] = None,
     base_url: str | None = None, fast_mode: bool = False, drop_context_1m_beta: bool = False,
+    context_management: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Build kwargs for anthropic.messages.create(). ``max_tokens`` is the OUTPUT cap for one
     response; ``context_length`` is the TOTAL window (input + output). ``max_tokens=None`` uses the
@@ -624,7 +627,8 @@ def build_anthropic_kwargs(
     "max_tokens too large given prompt" and retry smaller (parse_available_output_tokens_from_error).
     ``is_oauth`` applies Claude Code compatibility transforms; ``preserve_dots`` keeps model-name
     dots (DashScope: qwen3.5-plus); a third-party ``base_url`` strips thinking signatures;
-    ``fast_mode`` adds ``extra_body.speed="fast"`` plus the fast-mode beta on native Anthropic only."""
+    ``fast_mode`` adds ``extra_body.speed="fast"`` plus the fast-mode beta on native Anthropic only;
+    ``context_management`` (already gated by the caller) rides ``extra_body`` with its beta."""
     system, anthropic_messages = convert_messages_to_anthropic(messages, base_url=base_url, model=model)
     anthropic_tools = convert_tools_to_anthropic(tools) if tools else []
     # Nous Portal routes on its own catalog ids (``anthropic/claude-opus-4.8``); normalizing would
@@ -672,10 +676,16 @@ def build_anthropic_kwargs(
     # Fast mode: native Anthropic only — third-party providers reject the unknown beta/param and
     # Anthropic scopes it to the Claude API (not Bedrock/Vertex/Foundry). Per-request extra_headers
     # OVERRIDE the client-level anthropic-beta header, so rebuild the full beta list.
+    request_betas = []
     if fast_mode and not _is_third_party_anthropic_endpoint(base_url) and _supports_fast_mode(model):
         kwargs.setdefault("extra_body", {})["speed"] = "fast"
+        request_betas.append(_FAST_MODE_BETA)
+    if context_management:
+        kwargs.setdefault("extra_body", {})["context_management"] = context_management
+        request_betas.append(_CONTEXT_MANAGEMENT_BETA)
+    if request_betas:
         betas = _common_betas_for_base_url(base_url, drop_context_1m_beta=drop_context_1m_beta)
-        kwargs["extra_headers"] = _beta_header(betas + (_OAUTH_ONLY_BETAS if is_oauth else []) + [_FAST_MODE_BETA])
+        kwargs["extra_headers"] = _beta_header(betas + (_OAUTH_ONLY_BETAS if is_oauth else []) + request_betas)
     return kwargs
 
 

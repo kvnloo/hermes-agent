@@ -680,6 +680,11 @@ DEFAULT_CONFIG = {
         # Absolute server compaction trigger (input tokens). None follows the local trigger with a
         # safety margin; explicit values only clamp downward so the server goes first.
         "codex_responses_compact_threshold": None,
+        # Opt in to Anthropic server-side context editing (clear_tool_uses) on the native Claude
+        # API: the server clears old tool results just below the local trigger. Local compression
+        # then sees the smaller post-clear prompt size the provider reports, so it fires later.
+        # A window tool, not a cost saver: each clear rewrites the cached prefix.
+        "anthropic_context_editing": False,
         # in_place: compaction rewrites the message list and system prompt WITHOUT rotating the
         # session id (no parent_session_id chain, no `name #N` renumbering), avoiding the
         # session-rotation bug cluster. Pre-compaction turns are soft-archived under the same id

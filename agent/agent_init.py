@@ -1601,6 +1601,8 @@ def _parse_compression_config(agent, _agent_cfg) -> CompressionSettings:
         codex_app_server_auto=app_server_auto,
         codex_responses_native=responses_native,
         codex_responses_compact_threshold=compact_threshold,
+        # Opt-in Anthropic server-side context editing (gate in agent/anthropic_context_editing.py).
+        anthropic_context_editing=is_truthy_value(cfg.get("anthropic_context_editing"), default=False),
         idle_compact_after_seconds=idle_compact_after_seconds,
     )
 
@@ -2044,6 +2046,7 @@ def _build_context_engine(agent, _agent_cfg, cs, _custom_providers, _effective_c
     agent.codex_app_server_auto_compaction = cs.codex_app_server_auto
     agent.codex_responses_native_compaction = cs.codex_responses_native
     agent.codex_responses_compact_threshold = cs.codex_responses_compact_threshold
+    agent.anthropic_context_editing = cs.anthropic_context_editing
     from agent.native_compaction import resolve_native_compaction_capabilities
     agent.runtime_capabilities = resolve_native_compaction_capabilities(
         model=agent.model, base_url=agent.base_url, provider=agent.provider,
