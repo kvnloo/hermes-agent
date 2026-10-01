@@ -3,12 +3,19 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 
 import { $uiState, getUiState } from '../app/uiStore.js'
 
+export type QueueExpand = (value: string) => string
+
 export interface QueueItem {
   display: string
   text: string
+  // Expands this item's paste labels in `display` (after interpolation).
+  // Captured at enqueue: the composer's tokens are cleared before the queue
+  // drains. Absent when `display` carries no labels to expand.
+  expand?: QueueExpand
 }
 
-export const queueItem = (text: string, display = text): QueueItem => ({ display, text })
+export const queueItem = (text: string, display = text, expand?: QueueExpand): QueueItem =>
+  expand ? { display, expand, text } : { display, text }
 
 export function prependQueueItem(queue: QueueItem[], item: QueueItem): void {
   queue.unshift(item)
@@ -25,10 +32,9 @@ export function takeQueueItem(queue: QueueItem[], index: number, editedDisplay?:
     return item
   }
 
-  return {
-    display: editedDisplay,
-    text: editedDisplay.includes(item.display) ? editedDisplay.replace(item.display, item.text) : editedDisplay
-  }
+  const text = editedDisplay.includes(item.display) ? editedDisplay.replace(item.display, item.text) : editedDisplay
+
+  return item.expand ? { display: editedDisplay, expand: item.expand, text } : { display: editedDisplay, text }
 }
 
 // Mutates `arr` in place; returned reference is the same input array, kept
@@ -121,8 +127,8 @@ export function useQueue() {
   )
 
   const enqueue = useCallback(
-    (text: string, display = text) => {
-      queueRef.current.push(queueItem(text, display))
+    (text: string, display = text, expand?: QueueExpand) => {
+      queueRef.current.push(queueItem(text, display, expand))
       syncQueue()
     },
     [queueRef, syncQueue]
@@ -136,8 +142,8 @@ export function useQueue() {
     [queueRef, syncQueue]
   )
 
-  const dequeue = useCallback(() => {
-    const head = queueRef.current.shift()?.text
+  const dequeue = useCallback((): QueueItem | undefined => {
+    const head = queueRef.current.shift()
     syncQueue()
 
     return head

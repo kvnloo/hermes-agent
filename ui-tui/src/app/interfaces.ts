@@ -13,7 +13,7 @@ import type {
   SubscriptionStateResponse,
   SubscriptionUpgradeResponse
 } from '../gatewayTypes.js'
-import type { QueueItem } from '../hooks/useQueue.js'
+import type { QueueExpand, QueueItem } from '../hooks/useQueue.js'
 import type { ParsedVoiceRecordKey } from '../lib/platform.js'
 import type { RpcResult } from '../lib/rpc.js'
 import type { ActiveWidget } from '../sdk/types.js'
@@ -391,8 +391,8 @@ export interface ComposerActions {
   /** Attach an image by path in as a token. */
   attachImagePath: (path: string) => void
   clearIn: () => void
-  dequeue: () => string | undefined
-  enqueue: (text: string, display?: string) => void
+  dequeue: () => QueueItem | undefined
+  enqueue: (text: string, display?: string, expand?: QueueExpand) => void
   handleTextPaste: (event: PasteEvent) => MaybePromise<ComposerPasteResult | null>
   openEditor: () => Promise<void>
   prependQueue: (item: QueueItem) => void
@@ -449,6 +449,7 @@ export interface InputHandlerActions {
   dispatchSubmission: (full: string) => void
   guardBusySessionSwitch: (what?: string) => boolean
   newSession: (msg?: string, title?: string) => void
+  sendQueued: (item: QueueItem) => void
   sys: (text: string) => void
 }
 
