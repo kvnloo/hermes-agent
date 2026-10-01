@@ -666,7 +666,13 @@ async def get_session_messages(
             sid, limit=_limit, offset=offset, latest=latest_page,
             include_compacted=include_compacted, include_ancestors=True)
 
-    result = await asyncio.to_thread(_with_db, profile, _read, read_only=True)
+    try:
+        result = await asyncio.to_thread(_with_db, profile, _read, read_only=True)
+    except sqlite3.DatabaseError:
+        # A readable sessions index lets the resolve step pass; a damaged messages
+        # b-tree then fails inside get_messages: same 503 payload, not a bare 500.
+        with corrupt_store_as_status(_session_db_path_for_profile(profile)):
+            raise
     if result is None:
         raise HTTPException(status_code=404, detail=_NOT_FOUND)
     sid, _limit, messages = result
