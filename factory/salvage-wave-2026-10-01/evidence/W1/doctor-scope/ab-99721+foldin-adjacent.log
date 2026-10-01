@@ -1,4 +1,4 @@
-▶ not activated — using HERMES_PYTHON: /workspace/hermes-home/hermes-agent/venv/bin/python
+▶ not activated — using HERMES_PYTHON: <hermes-home>/hermes-agent/venv/bin/python
 ▶ running per-file parallel test suite via run_tests_parallel.py
   (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
 ▶ pre-compiling bytecode cache
@@ -28,7 +28,7 @@ Discovered 7 test files (~209 tests) under ['tests/hermes_cli/test_plugin_doctor
   ║         result = self._run(command, cwd=source, timeout=timeout)
   ║         if result.returncode:
   ║ >           raise classify_uv_failure("sync", result.returncode, result.stderr or result.stdout)
-  ║ E           pm.package.InstallError: venv: uv sync exited 2: Using CPython 3.11.14 interpreter at: /workspace/hermes-home/hermes-agent/venv/bin/python
+  ║ E           pm.package.InstallError: venv: uv sync exited 2: Using CPython 3.11.14 interpreter at: <hermes-home>/hermes-agent/venv/bin/python
   ║ E           error: The requested interpreter resolved to Python 3.11.14, which is incompatible with the project's Python requirement: `==3.14.*` (from `project.requires-python`) — retry, or run `hermes pm doctor`
   ║ 
   ║ pm/environment.py:386: InstallError
@@ -92,7 +92,7 @@ request = <SubRequest 'isolated_python' for <Function test_installs_only_the_sub
 >               return (yield)
                         ^^^^^
 
-/workspace/hermes-home/hermes-agent/venv/lib/python3.11/site-packages/pytest_asyncio/plugin.py:924: 
+<hermes-home>/hermes-agent/venv/lib/python3.11/site-packages/pytest_asyncio/plugin.py:924: 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 tests/pm/_fixtures.py:122: in isolated_python
     python = stage_runtime(Path(uv), Path(sys.executable), root)
@@ -101,7 +101,7 @@ pm/runtime_stage.py:40: in stage_runtime
     environment.sync(snapshot, locked=True, no_default_groups=True,
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = PythonEnvironment(uv=PosixPath('/home/kvn/.local/bin/uv'), python=PosixPath('/workspace/hermes-home/hermes-agent/venv/...tput=<_io.TextIOWrapper name="<_io.FileIO name=8 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>, no_config=True)
+self = PythonEnvironment(uv=PosixPath('~/.local/bin/uv'), python=PosixPath('<hermes-home>/hermes-agent/venv/...tput=<_io.TextIOWrapper name="<_io.FileIO name=8 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>, no_config=True)
 source = PosixPath('/var/tmp/hermes-pytest-1000/r-azw_q_fu/pytest-of-kvn/pytest-0/pm-project-tcfe9seq')
 extras = (), groups = (), timeout = 600, frozen = True, all_extras = False
 no_install_project = True, locked = True, no_default_groups = True
@@ -142,14 +142,14 @@ no_install_project = True, locked = True, no_default_groups = True
         result = self._run(command, cwd=source, timeout=timeout)
         if result.returncode:
 >           raise classify_uv_failure("sync", result.returncode, result.stderr or result.stdout)
-E           pm.package.InstallError: venv: uv sync exited 2: Using CPython 3.11.14 interpreter at: /workspace/hermes-home/hermes-agent/venv/bin/python
+E           pm.package.InstallError: venv: uv sync exited 2: Using CPython 3.11.14 interpreter at: <hermes-home>/hermes-agent/venv/bin/python
 E           error: The requested interpreter resolved to Python 3.11.14, which is incompatible with the project's Python requirement: `==3.14.*` (from `project.requires-python`) — retry, or run `hermes pm doctor`
 
 pm/environment.py:386: InstallError
 ---------------------------- Captured stderr setup -----------------------------
   → Installing Python dependencies…
   ✗ Installing Python dependencies failed; last 2 lines of output:
-      Using CPython 3.11.14 interpreter at: /workspace/hermes-home/hermes-agent/venv/bin/python
+      Using CPython 3.11.14 interpreter at: <hermes-home>/hermes-agent/venv/bin/python
       error: The requested interpreter resolved to Python 3.11.14, which is incompatible with the project's Python requirement: `==3.14.*` (from `project.requires-python`)
 ______ ERROR at setup of TestSubdirInstallE2E.test_missing_subdir_raises _______
 
@@ -171,7 +171,7 @@ pm/runtime_stage.py:40: in stage_runtime
     environment.sync(snapshot, locked=True, no_default_groups=True,
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = PythonEnvironment(uv=PosixPath('/home/kvn/.local/bin/uv'), python=PosixPath('/workspace/hermes-home/hermes-agent/venv/...tput=<_io.TextIOWrapper name="<_io.FileIO name=8 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>, no_config=True)
+self = PythonEnvironment(uv=PosixPath('~/.local/bin/uv'), python=PosixPath('<hermes-home>/hermes-agent/venv/...tput=<_io.TextIOWrapper name="<_io.FileIO name=8 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>, no_config=True)
 source = PosixPath('/var/tmp/hermes-pytest-1000/r-azw_q_fu/pytest-of-kvn/pytest-0/pm-project-tcfe9seq')
 extras = (), groups = (), timeout = 600, frozen = True, all_extras = False
 no_install_project = True, locked = True, no_default_groups = True
@@ -212,7 +212,7 @@ no_install_project = True, locked = True, no_default_groups = True
         result = self._run(command, cwd=source, timeout=timeout)
         if result.returncode:
 >           raise classify_uv_failure("sync", result.returncode, result.stderr or result.stdout)
-E           pm.package.InstallError: venv: uv sync exited 2: Using CPython 3.11.14 interpreter at: /workspace/hermes-home/hermes-agent/venv/bin/python
+E           pm.package.InstallError: venv: uv sync exited 2: Using CPython 3.11.14 interpreter at: <hermes-home>/hermes-agent/venv/bin/python
 E           error: The requested interpreter resolved to Python 3.11.14, which is incompatible with the project's Python requirement: `==3.14.*` (from `project.requires-python`) — retry, or run `hermes pm doctor`
 
 pm/environment.py:386: InstallError
@@ -236,7 +236,7 @@ pm/runtime_stage.py:40: in stage_runtime
     environment.sync(snapshot, locked=True, no_default_groups=True,
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = PythonEnvironment(uv=PosixPath('/home/kvn/.local/bin/uv'), python=PosixPath('/workspace/hermes-home/hermes-agent/venv/...tput=<_io.TextIOWrapper name="<_io.FileIO name=8 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>, no_config=True)
+self = PythonEnvironment(uv=PosixPath('~/.local/bin/uv'), python=PosixPath('<hermes-home>/hermes-agent/venv/...tput=<_io.TextIOWrapper name="<_io.FileIO name=8 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>, no_config=True)
 source = PosixPath('/var/tmp/hermes-pytest-1000/r-azw_q_fu/pytest-of-kvn/pytest-0/pm-project-tcfe9seq')
 extras = (), groups = (), timeout = 600, frozen = True, all_extras = False
 no_install_project = True, locked = True, no_default_groups = True
@@ -277,7 +277,7 @@ no_install_project = True, locked = True, no_default_groups = True
         result = self._run(command, cwd=source, timeout=timeout)
         if result.returncode:
 >           raise classify_uv_failure("sync", result.returncode, result.stderr or result.stdout)
-E           pm.package.InstallError: venv: uv sync exited 2: Using CPython 3.11.14 interpreter at: /workspace/hermes-home/hermes-agent/venv/bin/python
+E           pm.package.InstallError: venv: uv sync exited 2: Using CPython 3.11.14 interpreter at: <hermes-home>/hermes-agent/venv/bin/python
 E           error: The requested interpreter resolved to Python 3.11.14, which is incompatible with the project's Python requirement: `==3.14.*` (from `project.requires-python`) — retry, or run `hermes pm doctor`
 
 pm/environment.py:386: InstallError
@@ -301,7 +301,7 @@ pm/runtime_stage.py:40: in stage_runtime
     environment.sync(snapshot, locked=True, no_default_groups=True,
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = PythonEnvironment(uv=PosixPath('/home/kvn/.local/bin/uv'), python=PosixPath('/workspace/hermes-home/hermes-agent/venv/...tput=<_io.TextIOWrapper name="<_io.FileIO name=8 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>, no_config=True)
+self = PythonEnvironment(uv=PosixPath('~/.local/bin/uv'), python=PosixPath('<hermes-home>/hermes-agent/venv/...tput=<_io.TextIOWrapper name="<_io.FileIO name=8 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>, no_config=True)
 source = PosixPath('/var/tmp/hermes-pytest-1000/r-azw_q_fu/pytest-of-kvn/pytest-0/pm-project-tcfe9seq')
 extras = (), groups = (), timeout = 600, frozen = True, all_extras = False
 no_install_project = True, locked = True, no_default_groups = True
@@ -342,7 +342,7 @@ no_install_project = True, locked = True, no_default_groups = True
         result = self._run(command, cwd=source, timeout=timeout)
         if result.returncode:
 >           raise classify_uv_failure("sync", result.returncode, result.stderr or result.stdout)
-E           pm.package.InstallError: venv: uv sync exited 2: Using CPython 3.11.14 interpreter at: /workspace/hermes-home/hermes-agent/venv/bin/python
+E           pm.package.InstallError: venv: uv sync exited 2: Using CPython 3.11.14 interpreter at: <hermes-home>/hermes-agent/venv/bin/python
 E           error: The requested interpreter resolved to Python 3.11.14, which is incompatible with the project's Python requirement: `==3.14.*` (from `project.requires-python`) — retry, or run `hermes pm doctor`
 
 pm/environment.py:386: InstallError
@@ -366,7 +366,7 @@ pm/runtime_stage.py:40: in stage_runtime
     environment.sync(snapshot, locked=True, no_default_groups=True,
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = PythonEnvironment(uv=PosixPath('/home/kvn/.local/bin/uv'), python=PosixPath('/workspace/hermes-home/hermes-agent/venv/...tput=<_io.TextIOWrapper name="<_io.FileIO name=8 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>, no_config=True)
+self = PythonEnvironment(uv=PosixPath('~/.local/bin/uv'), python=PosixPath('<hermes-home>/hermes-agent/venv/...tput=<_io.TextIOWrapper name="<_io.FileIO name=8 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>, no_config=True)
 source = PosixPath('/var/tmp/hermes-pytest-1000/r-azw_q_fu/pytest-of-kvn/pytest-0/pm-project-tcfe9seq')
 extras = (), groups = (), timeout = 600, frozen = True, all_extras = False
 no_install_project = True, locked = True, no_default_groups = True
@@ -407,7 +407,7 @@ no_install_project = True, locked = True, no_default_groups = True
         result = self._run(command, cwd=source, timeout=timeout)
         if result.returncode:
 >           raise classify_uv_failure("sync", result.returncode, result.stderr or result.stdout)
-E           pm.package.InstallError: venv: uv sync exited 2: Using CPython 3.11.14 interpreter at: /workspace/hermes-home/hermes-agent/venv/bin/python
+E           pm.package.InstallError: venv: uv sync exited 2: Using CPython 3.11.14 interpreter at: <hermes-home>/hermes-agent/venv/bin/python
 E           error: The requested interpreter resolved to Python 3.11.14, which is incompatible with the project's Python requirement: `==3.14.*` (from `project.requires-python`) — retry, or run `hermes pm doctor`
 
 pm/environment.py:386: InstallError
@@ -431,7 +431,7 @@ pm/runtime_stage.py:40: in stage_runtime
     environment.sync(snapshot, locked=True, no_default_groups=True,
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = PythonEnvironment(uv=PosixPath('/home/kvn/.local/bin/uv'), python=PosixPath('/workspace/hermes-home/hermes-agent/venv/...tput=<_io.TextIOWrapper name="<_io.FileIO name=8 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>, no_config=True)
+self = PythonEnvironment(uv=PosixPath('~/.local/bin/uv'), python=PosixPath('<hermes-home>/hermes-agent/venv/...tput=<_io.TextIOWrapper name="<_io.FileIO name=8 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>, no_config=True)
 source = PosixPath('/var/tmp/hermes-pytest-1000/r-azw_q_fu/pytest-of-kvn/pytest-0/pm-project-tcfe9seq')
 extras = (), groups = (), timeout = 600, frozen = True, all_extras = False
 no_install_project = True, locked = True, no_default_groups = True
@@ -472,7 +472,7 @@ no_install_project = True, locked = True, no_default_groups = True
         result = self._run(command, cwd=source, timeout=timeout)
         if result.returncode:
 >           raise classify_uv_failure("sync", result.returncode, result.stderr or result.stdout)
-E           pm.package.InstallError: venv: uv sync exited 2: Using CPython 3.11.14 interpreter at: /workspace/hermes-home/hermes-agent/venv/bin/python
+E           pm.package.InstallError: venv: uv sync exited 2: Using CPython 3.11.14 interpreter at: <hermes-home>/hermes-agent/venv/bin/python
 E           error: The requested interpreter resolved to Python 3.11.14, which is incompatible with the project's Python requirement: `==3.14.*` (from `project.requires-python`) — retry, or run `hermes pm doctor`
 
 pm/environment.py:386: InstallError
@@ -496,7 +496,7 @@ pm/runtime_stage.py:40: in stage_runtime
     environment.sync(snapshot, locked=True, no_default_groups=True,
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = PythonEnvironment(uv=PosixPath('/home/kvn/.local/bin/uv'), python=PosixPath('/workspace/hermes-home/hermes-agent/venv/...tput=<_io.TextIOWrapper name="<_io.FileIO name=8 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>, no_config=True)
+self = PythonEnvironment(uv=PosixPath('~/.local/bin/uv'), python=PosixPath('<hermes-home>/hermes-agent/venv/...tput=<_io.TextIOWrapper name="<_io.FileIO name=8 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>, no_config=True)
 source = PosixPath('/var/tmp/hermes-pytest-1000/r-azw_q_fu/pytest-of-kvn/pytest-0/pm-project-tcfe9seq')
 extras = (), groups = (), timeout = 600, frozen = True, all_extras = False
 no_install_project = True, locked = True, no_default_groups = True
@@ -537,7 +537,7 @@ no_install_project = True, locked = True, no_default_groups = True
         result = self._run(command, cwd=source, timeout=timeout)
         if result.returncode:
 >           raise classify_uv_failure("sync", result.returncode, result.stderr or result.stdout)
-E           pm.package.InstallError: venv: uv sync exited 2: Using CPython 3.11.14 interpreter at: /workspace/hermes-home/hermes-agent/venv/bin/python
+E           pm.package.InstallError: venv: uv sync exited 2: Using CPython 3.11.14 interpreter at: <hermes-home>/hermes-agent/venv/bin/python
 E           error: The requested interpreter resolved to Python 3.11.14, which is incompatible with the project's Python requirement: `==3.14.*` (from `project.requires-python`) — retry, or run `hermes pm doctor`
 
 pm/environment.py:386: InstallError
@@ -561,7 +561,7 @@ pm/runtime_stage.py:40: in stage_runtime
     environment.sync(snapshot, locked=True, no_default_groups=True,
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = PythonEnvironment(uv=PosixPath('/home/kvn/.local/bin/uv'), python=PosixPath('/workspace/hermes-home/hermes-agent/venv/...tput=<_io.TextIOWrapper name="<_io.FileIO name=8 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>, no_config=True)
+self = PythonEnvironment(uv=PosixPath('~/.local/bin/uv'), python=PosixPath('<hermes-home>/hermes-agent/venv/...tput=<_io.TextIOWrapper name="<_io.FileIO name=8 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>, no_config=True)
 source = PosixPath('/var/tmp/hermes-pytest-1000/r-azw_q_fu/pytest-of-kvn/pytest-0/pm-project-tcfe9seq')
 extras = (), groups = (), timeout = 600, frozen = True, all_extras = False
 no_install_project = True, locked = True, no_default_groups = True
@@ -602,7 +602,7 @@ no_install_project = True, locked = True, no_default_groups = True
         result = self._run(command, cwd=source, timeout=timeout)
         if result.returncode:
 >           raise classify_uv_failure("sync", result.returncode, result.stderr or result.stdout)
-E           pm.package.InstallError: venv: uv sync exited 2: Using CPython 3.11.14 interpreter at: /workspace/hermes-home/hermes-agent/venv/bin/python
+E           pm.package.InstallError: venv: uv sync exited 2: Using CPython 3.11.14 interpreter at: <hermes-home>/hermes-agent/venv/bin/python
 E           error: The requested interpreter resolved to Python 3.11.14, which is incompatible with the project's Python requirement: `==3.14.*` (from `project.requires-python`) — retry, or run `hermes pm doctor`
 
 pm/environment.py:386: InstallError

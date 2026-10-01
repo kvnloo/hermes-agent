@@ -3,16 +3,16 @@
 Goal: for each assigned downstream fork PR, decide whether it is worth promoting upstream and, if so, leave a clean, proven, single-commit branch + patch + PR body ready. **Nothing is published.** Output = evidence + verdict.
 
 ## Paths
-- Blobless bare repo (upstream `main` + fork refs `refs/fork/*`): `S=/tmp/claude-1000/-home-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad`; repo `$S/h.git`. Refresh main first: `git -C $S/h.git -c credential.helper= fetch -q --filter=blob:none https://github.com/NousResearch/hermes-agent.git +refs/heads/main:refs/heads/main`. Record the main SHA you tested on.
+- Blobless bare repo (upstream `main` + fork refs `refs/fork/*`): `S=$S`; repo `$S/h.git`. Refresh main first: `git -C $S/h.git -c credential.helper= fetch -q --filter=blob:none https://github.com/NousResearch/hermes-agent.git +refs/heads/main:refs/heads/main`. Record the main SHA you tested on.
 - Your worktrees: `$S/ready/<BATCH>/fork-<N>` via `git -C $S/h.git worktree add --detach <path> main` (remove them when done: `git -C $S/h.git worktree remove --force <path>`).
-- Outputs (durable): `D=/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01`; per item write `$D/verdicts/fork-<N>.json`, and for READY items `$D/patches/fork-<N>.patch` (`git format-patch -1 --stdout`) + `$D/patches/fork-<N>.body.md`. Create local branch `ready/fork-<N>-<slug>` in `$S/h.git`.
-- Hermes' audit for each item is in your batch JSON (`$D/batches/<BATCH>.json`); full ledger at `/home/kvn/.hermes/profiles/clean/reports/hermes-upstream-consolidation-20260930/` (DOWNSTREAM_AUDIT.md explains holds and contamination).
+- Outputs (durable): `D=$ARTIFACTS/promotion-readiness-2026-10-01`; per item write `$D/verdicts/fork-<N>.json`, and for READY items `$D/patches/fork-<N>.patch` (`git format-patch -1 --stdout`) + `$D/patches/fork-<N>.body.md`. Create local branch `ready/fork-<N>-<slug>` in `$S/h.git`.
+- Hermes' audit for each item is in your batch JSON (`$D/batches/<BATCH>.json`); full ledger at `~/.hermes/profiles/clean/reports/hermes-upstream-consolidation-20260930/` (DOWNSTREAM_AUDIT.md explains holds and contamination).
 - In zsh, quote refspecs: `"main:path"` (unquoted `$VAR:h...` is a zsh modifier).
 
 ## Running tests (Python)
-`PY=/workspace/hermes-home/hermes-agent/venv/bin/python`. ALWAYS isolate: `HOME=$S/testhome-<BATCH> HERMES_HOME=$S/testhome-<BATCH>/.hermes HERMES_PYTHON=$PY bash scripts/run_tests.sh <test files> -q` from the worktree root (mkdir the testhome first). Run only targeted files (the item's tests + sibling files of the touched module), never the whole suite. ~40 s per file is normal. A failure that also fails on plain `main` is pre-existing: record it, don't chase it.
+`PY=<hermes-home>/hermes-agent/venv/bin/python`. ALWAYS isolate: `HOME=$S/testhome-<BATCH> HERMES_HOME=$S/testhome-<BATCH>/.hermes HERMES_PYTHON=$PY bash scripts/run_tests.sh <test files> -q` from the worktree root (mkdir the testhome first). Run only targeted files (the item's tests + sibling files of the touched module), never the whole suite. ~40 s per file is normal. A failure that also fails on plain `main` is pre-existing: record it, don't chase it.
 ## Running tests (TypeScript: ui-tui / apps)
-In the worktree: `ln -sfn /workspace/hermes-home/hermes-agent/node_modules node_modules; ln -sfn /workspace/hermes-home/hermes-agent/ui-tui/node_modules ui-tui/node_modules` then `cd ui-tui && npx vitest run <files>` and `npm run typecheck`. (Desktop: same pattern with `apps/desktop/node_modules` if present.)
+In the worktree: `ln -sfn <hermes-home>/hermes-agent/node_modules node_modules; ln -sfn <hermes-home>/hermes-agent/ui-tui/node_modules ui-tui/node_modules` then `cd ui-tui && npx vitest run <files>` and `npm run typecheck`. (Desktop: same pattern with `apps/desktop/node_modules` if present.)
 
 ## Hard rules
 - No `git push`, no GitHub writes (no PRs/comments/labels/edits), no edits to existing fork branches. `gh` read-only only.
@@ -34,4 +34,4 @@ READY means: need confirmed on current main, no owner conflict, RED/GREEN/NEGATI
 
 ## UPDATE (mandatory, applies immediately)
 - **Never use `git stash`.** All worktrees share one bare repo and therefore ONE `refs/stash`; stashes have already crossed between batches. Save with `git diff > file`, restore with `git apply file`.
-- **/tmp is a 12 GB tmpfs and nearly full.** Create all NEW worktrees under `/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/<BATCH>/fork-<N>` (same `git -C $S/h.git worktree add --detach <path> main`), prefer sparse checkouts when you only need a subtree, and `git worktree remove --force` each worktree as soon as its item is done. Don't leave node_modules copies (symlink only).
+- **/tmp is a 12 GB tmpfs and nearly full.** Create all NEW worktrees under `$ARTIFACTS/promotion-readiness-2026-10-01/wt/<BATCH>/fork-<N>` (same `git -C $S/h.git worktree add --detach <path> main`), prefer sparse checkouts when you only need a subtree, and `git worktree remove --force` each worktree as soon as its item is done. Don't leave node_modules copies (symlink only).

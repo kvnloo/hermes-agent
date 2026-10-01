@@ -8,14 +8,14 @@
 #     refs/w2/queued-paste/mcompose     = main + #99042 + fork-56 (see compose-*.diff)
 # Runs the regression test + the probe file, then `npm run typecheck`, and logs to $E/ab-<label>.log.
 set -u
-S=/tmp/claude-1000/-home-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad
-W=/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/paste
-E=/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/queued-paste
+S=$S
+W=$ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/paste
+E=$ARTIFACTS/salvage-wave-2026-10-01/evidence/W2/queued-paste
 label=$1; ref=$2; shift 2
 cd "$W" || exit 2
 git reset -q --hard "$ref" && git clean -qfdx -e node_modules -e ui-tui/node_modules
-ln -sfn /workspace/hermes-home/hermes-agent/node_modules node_modules
-ln -sfn /workspace/hermes-home/hermes-agent/ui-tui/node_modules ui-tui/node_modules
+ln -sfn <hermes-home>/hermes-agent/node_modules node_modules
+ln -sfn <hermes-home>/hermes-agent/ui-tui/node_modules ui-tui/node_modules
 cp "$E/queuedPasteSubmission.test.tsx" ui-tui/src/__tests__/queuedPasteSubmission.test.tsx
 cp "$E/queuedPasteProbe.test.tsx" ui-tui/src/__tests__/queuedPasteProbe.test.tsx
 {

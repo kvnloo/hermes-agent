@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # usage: mem-config_ab.sh <label> [git-ref-to-merge ...] ; runs #126106's test file on refs/w2/main (+ merged refs)
 set -u
-S=/tmp/claude-1000/-home-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad
-WT=/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/memcfg
-E=/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/mem-config
-PY=/workspace/hermes-home/hermes-agent/venv/bin/python
+S=$S
+WT=$ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/memcfg
+E=$ARTIFACTS/salvage-wave-2026-10-01/evidence/W2/mem-config
+PY=<hermes-home>/hermes-agent/venv/bin/python
 TH=$S/testhome-W2-mem-config
 label=$1; shift
 mkdir -p $TH/.hermes; cp $S/w2-tripwire/pytest_live_guard.py $TH/.hermes/

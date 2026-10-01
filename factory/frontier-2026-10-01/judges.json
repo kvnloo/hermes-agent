@@ -348,7 +348,7 @@
   ]
  },
  {
-  "lens": "evidence: strength and independence of existing measurements, and whether an existing harness can produce red/green or A/B proof at $0 or on local models this week. Facts were re-checked read-only against upstream main ffc74885c5 (2026-10-01 02:29 -0500). That is 1 commit past the aeff051a18 the gap-fill used and well past the catalog's 663362680b. Binding local constraints: the router presets are 8K, below Hermes' 64K MINIMUM_CONTEXT_LENGTH (agent/model_metadata.py:272, enforced at agent_init.py:2071), so every live local-model arm is blocked as configured. There is no local 27B/30B model. The live install runs Python 3.11 (venv -> /usr/bin/python3.11), so it uses NoopRelayRuntime and has no shared-metrics store (/workspace/hermes-home/telemetry/shared_metrics is absent). Python 3.14.7 is available for a disposable venv. A 4.0 GB state.db plus agent.log, .1 and .2 (about 12.7 MB, Sep 1-28) exist for copy-based $0 forensics, which stay local per K1. cua-driver 0.28.2 is installed at ~/.local/bin. Bend, Lean, tiktoken and radon are not installed. landing_evidence.py and lab/omp-crosspoll/* are not on this host or on fork refs.",
+  "lens": "evidence: strength and independence of existing measurements, and whether an existing harness can produce red/green or A/B proof at $0 or on local models this week. Facts were re-checked read-only against upstream main ffc74885c5 (2026-10-01 02:29 -0500). That is 1 commit past the aeff051a18 the gap-fill used and well past the catalog's 663362680b. Binding local constraints: the router presets are 8K, below Hermes' 64K MINIMUM_CONTEXT_LENGTH (agent/model_metadata.py:272, enforced at agent_init.py:2071), so every live local-model arm is blocked as configured. There is no local 27B/30B model. The live install runs Python 3.11 (venv -> /usr/bin/python3.11), so it uses NoopRelayRuntime and has no shared-metrics store (<hermes-home>/telemetry/shared_metrics is absent). Python 3.14.7 is available for a disposable venv. A 4.0 GB state.db plus agent.log, .1 and .2 (about 12.7 MB, Sep 1-28) exist for copy-based $0 forensics, which stay local per K1. cua-driver 0.28.2 is installed at ~/.local/bin. Bend, Lean, tiktoken and radon are not installed. landing_evidence.py and lab/omp-crosspoll/* are not on this host or on fork refs.",
   "scores": [
    {
     "id": "cu-repeat-key-dedup-fix",
@@ -545,7 +545,7 @@
    {
     "id": "landing-evidence-ci",
     "score": 3,
-    "rationale": "The wave numbers (3/18 wrong flags, 12/44 misattributed) are self-reported, and the verifier is not on this host. A search of /home/kvn and project-artifacts found no landing_evidence*.py, so E53 cannot be re-run this week without reconstructing the tool.",
+    "rationale": "The wave numbers (3/18 wrong flags, 12/44 misattributed) are self-reported, and the verifier is not on this host. A search of ~ and project-artifacts found no landing_evidence*.py, so E53 cannot be re-run this week without reconstructing the tool.",
     "corrections": "The E53 runner path is unverified and not found locally."
    },
    {

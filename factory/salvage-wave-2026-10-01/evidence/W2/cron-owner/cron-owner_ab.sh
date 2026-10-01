@@ -3,10 +3,10 @@
 # A ref under refs/w2/cron-owner/ is checked out as-is (pre-resolved merge); any other ref is merged
 # onto refs/w2/main with rerere off; a file is applied as a patch. Then the regression test runs.
 set -u
-S=/tmp/claude-1000/-home-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad
-WT=/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/cron
-EV=/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/cron-owner
-PY=/workspace/hermes-home/hermes-agent/venv/bin/python
+S=$S
+WT=$ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/cron
+EV=$ARTIFACTS/salvage-wave-2026-10-01/evidence/W2/cron-owner
+PY=<hermes-home>/hermes-agent/venv/bin/python
 TH=$S/testhome-W2-cron-owner
 mkdir -p "$TH/.hermes"; cp "$S/w2-tripwire/pytest_live_guard.py" "$TH/.hermes/"
 label=$1; src=${2:-}; shift 2 2>/dev/null || shift $#

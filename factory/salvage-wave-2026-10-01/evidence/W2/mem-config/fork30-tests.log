@@ -1,11 +1,11 @@
 ## fork #30 test on #126106
-E   AttributeError: <module 'run_agent' from '/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/memcfg/run_agent.py'> does not have the attribute 'get_tool_definitions'
+E   AttributeError: <module 'run_agent' from '$ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/memcfg/run_agent.py'> does not have the attribute 'get_tool_definitions'
 FAILED tests/agent/test_mem_config_unbound_init.py::test_builtin_unavailable_warning_deduped_across_inits
 FAILED tests/agent/test_mem_config_unbound_init.py::test_builtin_unavailable_warning_emitted_on_import_failure
 FAILED tests/agent/test_mem_config_unbound_init.py::test_provider_activates_when_builtin_memory_tool_import_fails
 === Summary: 1 files, 0 tests passed, 3 failed (100% complete) in 5.6s (1 workers) ===
 ## fork #30 test on main
-E   AttributeError: <module 'run_agent' from '/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/memcfg/run_agent.py'> does not have the attribute 'get_tool_definitions'
+E   AttributeError: <module 'run_agent' from '$ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/memcfg/run_agent.py'> does not have the attribute 'get_tool_definitions'
 FAILED tests/agent/test_mem_config_unbound_init.py::test_builtin_unavailable_warning_deduped_across_inits
 FAILED tests/agent/test_mem_config_unbound_init.py::test_builtin_unavailable_warning_emitted_on_import_failure
 FAILED tests/agent/test_mem_config_unbound_init.py::test_provider_activates_when_builtin_memory_tool_import_fails

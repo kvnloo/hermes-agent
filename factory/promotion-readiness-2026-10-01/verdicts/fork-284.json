@@ -33,7 +33,7 @@
   "fork_head_oid": "6a699014224bc00f36870850f3fbc10fe44ff86b",
   "wave": "W5-bot-chore",
   "batch": "C",
-  "patch": "/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/patches/fork-284.patch (slice of bundle-chore-gateway.patch)",
-  "body": "/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/patches/bundle-chore-gateway.body.md",
+  "patch": "$ARTIFACTS/promotion-readiness-2026-10-01/patches/fork-284.patch (slice of bundle-chore-gateway.patch)",
+  "body": "$ARTIFACTS/promotion-readiness-2026-10-01/patches/bundle-chore-gateway.body.md",
   "notes": "Deviation from fork #284: it deleted the three guard monkeypatches and left vacuous asserts. This rebuild repoints them to the real seam so they can fail, proven by the negative control. Also fixed the stale zh-Hans doc line, which follows the English wording. Bundle commit 3d721162fc."
 }

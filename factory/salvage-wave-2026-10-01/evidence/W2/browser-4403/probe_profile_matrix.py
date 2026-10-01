@@ -16,7 +16,7 @@ def test_probe(monkeypatch, tmp_path, launch, req):
         import os
         root = str(w2.get_default_hermes_root())
         shown = None if home is None else str(home).replace(root, "<root>")
-        with open("/tmp/claude-1000/-home-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad/w2-browser-memcfg/probe.out", "a") as fh:
+        with open("$S/w2-browser-memcfg/probe.out", "a") as fh:
             fh.write(f"PROBE launch={launch} request={req} profile_home={shown} root_basename={pathlib.Path(root).name} -> profile_id={out!r}\n")
     finally:
         get_browser_control_broker().reset(); server._sessions.pop(sid, None)

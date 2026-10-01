@@ -3,10 +3,10 @@
 # Resets the worktree to pinned main, optionally applies a candidate port diff
 # (main -> candidate re-anchored on main), drops in the regression test and runs it.
 set -u
-S=/tmp/claude-1000/-home-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad
-WT=/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/memmon
-EV=/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/memmon-heartbeat
-PY=/workspace/hermes-home/hermes-agent/venv/bin/python
+S=$S
+WT=$ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/memmon
+EV=$ARTIFACTS/salvage-wave-2026-10-01/evidence/W2/memmon-heartbeat
+PY=<hermes-home>/hermes-agent/venv/bin/python
 TH=$S/testhome-W2-memmon-heartbeat
 label=$1; port=${2:-}; shift; [ $# -gt 0 ] && shift
 cd "$WT" || exit 2

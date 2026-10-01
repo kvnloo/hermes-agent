@@ -2,7 +2,7 @@ state=compose-lastidx ref=refs/w2/queued-paste/mcompose-lastidx head=b4404e6294f
 npm notice run hermes-agent@1.0.0 npx
 npm notice run 'vitest' run src/__tests__/queuedPasteSubmission.test.tsx src/__tests__/queuedPasteProbe.test.tsx src/__tests__/attachments.test.ts src/__tests__/orphanDetector.probe.test.ts
 
- RUN  v4.1.10 /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/paste/ui-tui
+ RUN  v4.1.10 $ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/paste/ui-tui
 
  ❯ src/__tests__/queuedPasteProbe.test.tsx (6 tests | 2 failed) 79ms
      × an edited-and-resubmitted queued collapsed paste is delivered expanded ('/queue item') 16ms

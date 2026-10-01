@@ -1,4 +1,4 @@
-label=49782 main=298a01c79b38018e029e50f77efe67c4a4fdbd40 port=/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/memmon-heartbeat/port-49782.diff
+label=49782 main=298a01c79b38018e029e50f77efe67c4a4fdbd40 port=$ARTIFACTS/salvage-wave-2026-10-01/evidence/W2/memmon-heartbeat/port-49782.diff
     async def test_serving_gateway_runs_memory_heartbeat_until_shutdown(
         tmp_path, monkeypatch, monitor_cfg, exit_with_failure, expect_running, expect_interval
     ):

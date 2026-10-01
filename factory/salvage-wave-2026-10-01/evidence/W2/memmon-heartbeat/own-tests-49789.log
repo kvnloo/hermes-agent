@@ -1,5 +1,5 @@
-label=own-49789 main=298a01c79b38018e029e50f77efe67c4a4fdbd40 port=/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/memmon-heartbeat/port-49789.diff
-▶ not activated — using HERMES_PYTHON: /workspace/hermes-home/hermes-agent/venv/bin/python
+label=own-49789 main=298a01c79b38018e029e50f77efe67c4a4fdbd40 port=$ARTIFACTS/salvage-wave-2026-10-01/evidence/W2/memmon-heartbeat/port-49789.diff
+▶ not activated — using HERMES_PYTHON: <hermes-home>/hermes-agent/venv/bin/python
 ▶ running per-file parallel test suite via run_tests_parallel.py
   (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
 ▶ pre-compiling bytecode cache
@@ -12,13 +12,13 @@ Discovered 2 test files (~9 tests) under ['tests/gateway/test_memory_monitor_gat
   ║ FF.F..F                                                                  [100%]
   ║ =================================== FAILURES ===================================
   ║ E   AttributeError: module 'gateway.memory_monitor' has no attribute '_interval_seconds'
-  ║ /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/memmon/tests/gateway/test_memory_monitor_runtime.py:53: AttributeError: module 'gateway.memory_monitor' has no attribute '_interval_seconds'
+  ║ $ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/memmon/tests/gateway/test_memory_monitor_runtime.py:53: AttributeError: module 'gateway.memory_monitor' has no attribute '_interval_seconds'
   ║ E   AttributeError: module 'gateway.memory_monitor' has no attribute '_interval_seconds'
-  ║ /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/memmon/tests/gateway/test_memory_monitor_runtime.py:69: AttributeError: module 'gateway.memory_monitor' has no attribute '_interval_seconds'
+  ║ $ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/memmon/tests/gateway/test_memory_monitor_runtime.py:69: AttributeError: module 'gateway.memory_monitor' has no attribute '_interval_seconds'
   ║ E   AttributeError: module 'gateway.memory_monitor' has no attribute '_interval_seconds'
-  ║ /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/memmon/tests/gateway/test_memory_monitor_runtime.py:98: AttributeError: module 'gateway.memory_monitor' has no attribute '_interval_seconds'
-  ║ E   AttributeError: <module 'tools.mcp_tool' from '/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/memmon/tools/mcp_tool.py'> has no attribute 'discover_mcp_tools'
-  ║ /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/memmon/tests/gateway/test_memory_monitor_runtime.py:202: AttributeError: <module 'tools.mcp_tool' from '/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/memmon/tools/mcp_tool.py'> has no attribute 'discover_mcp_tools'
+  ║ $ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/memmon/tests/gateway/test_memory_monitor_runtime.py:98: AttributeError: module 'gateway.memory_monitor' has no attribute '_interval_seconds'
+  ║ E   AttributeError: <module 'tools.mcp_tool' from '$ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/memmon/tools/mcp_tool.py'> has no attribute 'discover_mcp_tools'
+  ║ $ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/memmon/tests/gateway/test_memory_monitor_runtime.py:202: AttributeError: <module 'tools.mcp_tool' from '$ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/memmon/tools/mcp_tool.py'> has no attribute 'discover_mcp_tools'
   ║ =========================== short test summary info ============================
   ║ FAILED tests/gateway/test_memory_monitor_runtime.py::test_start_helper_starts_real_monitor_with_config_interval
   ║ FAILED tests/gateway/test_memory_monitor_runtime.py::test_start_helper_defaults_interval_when_unset
@@ -41,13 +41,13 @@ Discovered 2 test files (~9 tests) under ['tests/gateway/test_memory_monitor_gat
 FF.F..F                                                                  [100%]
 =================================== FAILURES ===================================
 E   AttributeError: module 'gateway.memory_monitor' has no attribute '_interval_seconds'
-/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/memmon/tests/gateway/test_memory_monitor_runtime.py:53: AttributeError: module 'gateway.memory_monitor' has no attribute '_interval_seconds'
+$ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/memmon/tests/gateway/test_memory_monitor_runtime.py:53: AttributeError: module 'gateway.memory_monitor' has no attribute '_interval_seconds'
 E   AttributeError: module 'gateway.memory_monitor' has no attribute '_interval_seconds'
-/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/memmon/tests/gateway/test_memory_monitor_runtime.py:69: AttributeError: module 'gateway.memory_monitor' has no attribute '_interval_seconds'
+$ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/memmon/tests/gateway/test_memory_monitor_runtime.py:69: AttributeError: module 'gateway.memory_monitor' has no attribute '_interval_seconds'
 E   AttributeError: module 'gateway.memory_monitor' has no attribute '_interval_seconds'
-/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/memmon/tests/gateway/test_memory_monitor_runtime.py:98: AttributeError: module 'gateway.memory_monitor' has no attribute '_interval_seconds'
-E   AttributeError: <module 'tools.mcp_tool' from '/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/memmon/tools/mcp_tool.py'> has no attribute 'discover_mcp_tools'
-/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/memmon/tests/gateway/test_memory_monitor_runtime.py:202: AttributeError: <module 'tools.mcp_tool' from '/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/memmon/tools/mcp_tool.py'> has no attribute 'discover_mcp_tools'
+$ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/memmon/tests/gateway/test_memory_monitor_runtime.py:98: AttributeError: module 'gateway.memory_monitor' has no attribute '_interval_seconds'
+E   AttributeError: <module 'tools.mcp_tool' from '$ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/memmon/tools/mcp_tool.py'> has no attribute 'discover_mcp_tools'
+$ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/memmon/tests/gateway/test_memory_monitor_runtime.py:202: AttributeError: <module 'tools.mcp_tool' from '$ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/memmon/tools/mcp_tool.py'> has no attribute 'discover_mcp_tools'
 =========================== short test summary info ============================
 FAILED tests/gateway/test_memory_monitor_runtime.py::test_start_helper_starts_real_monitor_with_config_interval
 FAILED tests/gateway/test_memory_monitor_runtime.py::test_start_helper_defaults_interval_when_unset

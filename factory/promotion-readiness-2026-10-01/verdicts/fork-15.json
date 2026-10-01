@@ -28,7 +28,7 @@
   "fork_head_oid": "593fa385645ded60444e0c17239037905a52238b",
   "wave": "W5-bot-chore",
   "batch": "C",
-  "patch": "/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/patches/fork-15.patch (identical to bundle-chore-agent.patch)",
-  "body": "/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/patches/bundle-chore-agent.body.md",
+  "patch": "$ARTIFACTS/promotion-readiness-2026-10-01/patches/fork-15.patch (identical to bundle-chore-agent.patch)",
+  "body": "$ARTIFACTS/promotion-readiness-2026-10-01/patches/bundle-chore-agent.body.md",
   "notes": "Bundle commit 71a0085e4e (author Kevin Rajan noreply, Co-authored-by detail-app[bot]), parent = pinned main. Also removed the `import pytest` the deleted tests left unused. Left the test-module docstring alone: it names bedrock's still-live helper."
 }

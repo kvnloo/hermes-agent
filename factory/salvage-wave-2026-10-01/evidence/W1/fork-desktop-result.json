@@ -26,7 +26,7 @@
         "suggestion caches on connection switch with an unchanged profile key > does not offer the previous connection skill or MCP pills"
       ],
       "contract": "After a switch to another backend (profile switch, or a connection switch that keeps the same profile key), the skill and MCP draft providers answer from the new backend, not from their 5-minute module caches; a same-key re-set keeps the cache.",
-      "evidence_path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W1/suggest-cache/"
+      "evidence_path": "$ARTIFACTS/salvage-wave-2026-10-01/evidence/W1/suggest-cache/"
     },
     "ab_results": {
       "main": {
@@ -96,7 +96,7 @@
         "test_unstaged_review_diff_still_all_adds_an_untracked_file"
       ],
       "contract": "With staged=false, a pristine or fully staged tracked file yields '' (never a 'new file mode' all-add) in both backends, while an untracked file still gets the synthesized all-add.",
-      "evidence_path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W1/reviewdiff-tracked/"
+      "evidence_path": "$ARTIFACTS/salvage-wave-2026-10-01/evidence/W1/reviewdiff-tracked/"
     },
     "ab_results": {
       "main": {

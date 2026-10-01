@@ -57,7 +57,7 @@
     "NousResearch#111127",
     "kvnloo#311"
    ],
-   "eval_harness": "PR #111127 evals/edittool/runner.py + report.py ($0, deterministic), plus scripts/run_tests.sh on tests/tools/test_fuzzy_match*.py and tests/tools/test_file_tools_live.py. Run in a disposable venv (python -m pm.build_env, under /mnt/zer0models) with HOME/HERMES_HOME under scratch. The A/B log uses the WAVE.md row format.",
+   "eval_harness": "PR #111127 evals/edittool/runner.py + report.py ($0, deterministic), plus scripts/run_tests.sh on tests/tools/test_fuzzy_match*.py and tests/tools/test_file_tools_live.py. Run in a disposable venv (python -m pm.build_env, under $MNT) with HOME/HERMES_HOME under scratch. The A/B log uses the WAVE.md row format.",
    "dependencies": [
     "None upstream; the carriers' authors own CI admission"
    ],
@@ -574,7 +574,7 @@
     "NousResearch#110671",
     "kvnloo/evolution-lab#20"
    ],
-   "eval_harness": "The runner itself, plus the evals/provider_fallback probe pattern, evals/token_accounting/replay_gates.py and evals/postmortem/forensics/rework.py. Disposable venv via python -m pm.build_env under /mnt/zer0models.",
+   "eval_harness": "The runner itself, plus the evals/provider_fallback probe pattern, evals/token_accounting/replay_gates.py and evals/postmortem/forensics/rework.py. Disposable venv via python -m pm.build_env under $MNT.",
    "dependencies": [
     "An owner-approved >=64K local router preset (L3) for E20",
     "A py3.14 disposable venv for ATOF and shared-metrics readouts"

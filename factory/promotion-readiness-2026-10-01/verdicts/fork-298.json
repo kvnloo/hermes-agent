@@ -29,7 +29,7 @@
   "fork_head_oid": "e42fb714558d11f2509473d98184d8d0fd0dd930",
   "wave": "W4-dead-code-rebuild",
   "batch": "C",
-  "patch": "/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/patches/fork-298.patch (slice of bundle-chore-gateway.patch)",
-  "body": "/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/patches/bundle-chore-gateway.body.md",
+  "patch": "$ARTIFACTS/promotion-readiness-2026-10-01/patches/fork-298.patch (slice of bundle-chore-gateway.patch)",
+  "body": "$ARTIFACTS/promotion-readiness-2026-10-01/patches/bundle-chore-gateway.body.md",
   "notes": "This rebuild keeps #298's distinction from #115: it does NOT carry #115's tests/gateway/test_yuanbao_integration.py rewrite. On main that file no longer references any yuanbao_proto helper, so the old hunk would not even apply. The salvage body said 'moved to encode_conn_msg_full'; more precisely, the proto round-trip class is gone from the integration test. Small judgment risk: PB_MSG_TYPES/BIZ_SERVICES double as an in-code protocol reference table for the TS client, and a yuanbao maintainer could prefer keeping them. Bundle commit 3d721162fc; original authored by kvnloo (salvage) from detail-app[bot] #115."
 }

@@ -73,8 +73,8 @@ A `staging/*` push fires 0 push workflows on this tree. `--no-follow-tags` is ma
 **Sandbox re-probe**
 
 - bubblewrap 0.12.0.
-- The read-only root returns EROFS under `/home/kvn/zer0`.
-- The masked `/workspace/hermes-home` lists 0 entries.
+- The read-only root returns EROFS under `~/zer0`.
+- The masked `<hermes-home>` lists 0 entries.
 - `connect(1.1.1.1:443)` under `--unshare-net` fails with OSError.
 - PID 1 is `bwrap`.
 - Correction to mvp-first: `/sys/class/net` still lists host interfaces, because sysfs is the host bind. Network isolation has to be asserted by a connect probe, not by listing interfaces.
@@ -89,19 +89,19 @@ A `staging/*` push fires 0 push workflows on this tree. `--no-follow-tags` is ma
 
 | Target | Location | Notes |
 |---|---|---|
-| evolution-lab | `/home/kvn/tmp/evolution-lab` @`4cf52bb` | Dirty: `slice_informativeness.py` and its test are untracked, `l2_benchmark.py` is modified. Has `capacity_queue.py`. |
+| evolution-lab | `~/tmp/evolution-lab` @`4cf52bb` | Dirty: `slice_informativeness.py` and its test are untracked, `l2_benchmark.py` is modified. Has `capacity_queue.py`. |
 | Older evolution-lab clone | `/workspace/evolution-lab` @`2c95b59` | |
 | evolver gates | fork `feat/evolver-phase0-gate-calibration` @`20eb166106` | |
 | hermes-stack receipt schema | fork `lab/evals/hermes-stack-receipts-v0` @`22b0c745d5` | |
-| Tokenomics | `/mnt/zer0models/workspace/tokenomics` @`cb83d42` | `spec/schemas/{event,experiment,outcome}.schema.json` |
-| z0evals | `/home/kvn/tmp/z0evals` @`0326c14` | `schemas/study-manifest.schema.json` |
+| Tokenomics | `$MNT/workspace/tokenomics` @`cb83d42` | `spec/schemas/{event,experiment,outcome}.schema.json` |
+| z0evals | `~/tmp/z0evals` @`0326c14` | `schemas/study-manifest.schema.json` |
 | z0int | `/tmp/z0intelligence` @`c4a4554` | `receipt.py` separates `execution_completed` from `verified_success`; `routines.py` `promote_credited` promotes only already-credited candidates and computes nothing |
-| hermes-k8s-lab | `/home/kvn/zer0/oss/hermes-k8s-lab` @`91caa78`, no remote | `bin/run-experiment`, `experiments/000-003` |
+| hermes-k8s-lab | `~/zer0/oss/hermes-k8s-lab` @`91caa78`, no remote | `bin/run-experiment`, `experiments/000-003` |
 | verified-oss-loop SPEC | @`8e6368a` | |
 | oss-factory | @`820c9f5` | |
 | kvnloo#322 | open | "[lab:S4] Build the common Hermes integration receipt + failure-injection runner" |
 
-**Live-install hazard.** `/workspace/hermes-home/hermes-agent` is the live install's checkout, and `/home/kvn/.hermes` resolves to `/workspace/hermes-home`. Neither is ever a source tree. All trees come from the bare mirror.
+**Live-install hazard.** `<hermes-home>/hermes-agent` is the live install's checkout, and `~/.hermes` resolves to `<hermes-home>`. Neither is ever a source tree. All trees come from the bare mirror.
 
 ---
 
@@ -140,7 +140,7 @@ mvp-first is the architecture. It is the only design whose enforcement is verifi
 
 | # | Conflict | Resolution | Why |
 |---|---|---|---|
-| R1 | Runner home: ledger (mvp), hermes-k8s-lab (scale), evolution-lab (evidence) | **The executor and gates go in kvnloo/evolution-lab** as `evolution_lab/hermes_factory/`, CLI alias `xf`. The package is Python stdlib only, so it runs with `python3 -m` from a worktree without evolution-lab's dependencies. It is built in a **fresh worktree off origin**, never in the dirty `/home/kvn/tmp/evolution-lab` checkout. In-tree Hermes adapters live on `staging/factory-replay-gate`. Public specs, receipts and STAGING.md live on `claude/ledger:factory/xf/`. hermes-k8s-lab supplies the 7-question lab contract, `stats.percentile` and the kind lane. | C1: one executor. Evolution Lab is the execution component (evidence-first cites the z0 registry; not re-verified). The ledger holds evidence, not code. Uncommitted work is never overwritten. Pending OD-5. |
+| R1 | Runner home: ledger (mvp), hermes-k8s-lab (scale), evolution-lab (evidence) | **The executor and gates go in kvnloo/evolution-lab** as `evolution_lab/hermes_factory/`, CLI alias `xf`. The package is Python stdlib only, so it runs with `python3 -m` from a worktree without evolution-lab's dependencies. It is built in a **fresh worktree off origin**, never in the dirty `~/tmp/evolution-lab` checkout. In-tree Hermes adapters live on `staging/factory-replay-gate`. Public specs, receipts and STAGING.md live on `claude/ledger:factory/xf/`. hermes-k8s-lab supplies the 7-question lab contract, `stats.percentile` and the kind lane. | C1: one executor. Evolution Lab is the execution component (evidence-first cites the z0 registry; not re-verified). The ledger holds evidence, not code. Uncommitted work is never overwritten. Pending OD-5. |
 | R2 | Branch names: `frontier/<slug>-vN` in all three designs vs the selected `staging/<id>` | **The selected names bind.** A rebuild takes a suffix (`staging/<id>-v2`, `-v3`). Never force-push. | The selection is binding. B1: earlier evidence is never mutated. Blocked by OD-0. |
 | R3 | Queue granularity: per experiment (mvp), per campaign (scale), comments (evidence) | **One campaign per staging branch** (14), posted as a `work_order` on the existing feature thread, or else on one `[frontier] <id>` thread with `dedupe_key frontier:<id>`. Each experiment is a child `work_order` comment with its own SPEC §2 lease. | C1, spray norm, write caps |
 | R4 | Spec format: TOML vs YAML | **TOML** for specs and STAGING.md front matter (stdlib `tomllib`). **JSON** for receipts. | No dependency to install in the sandbox |
@@ -192,7 +192,7 @@ These are constraint IDs as the source designs cite them. Each row says how the 
 |---|---|---|---|
 | **Queue / bus** | kvnloo/hermes-agent issues with `oss-factory:v1` envelopes, label `claude bot` | oss-factory CONTROL_PLANE; SPEC §2 leases; the `hermes-agent` entry in projects.json | One campaign per staging branch on its existing feature thread. The factory thread for xf and E48 is **kvnloo#322**. Each experiment is a child `work_order`. A claim is a `receipt` with a lease. A verdict is one `result`. The only queue authority. |
 | **Roadmap ranks** | `queue_rank` in the work order, owner-set | none | The factory may propose rank as cost × demand × readiness. Only the owner sets it. |
-| **Hypothesis source** | frontier-kb vault `/home/kvn/tmp/frontier-kb` @`8562d50`, `catalog.json`, demand report | KB permanent notes | Read-only. Results carry a `kb_candidate` text for the human curator. |
+| **Hypothesis source** | frontier-kb vault `~/tmp/frontier-kb` @`8562d50`, `catalog.json`, demand report | KB permanent notes | Read-only. Results carry a `kb_candidate` text for the human curator. |
 | **Spec registry** | `claude/ledger:factory/xf/specs/<id>.toml` | catalog E-ids | Public-safe. The commit that adds a spec is its pre-registration timestamp. A spec is immutable after first claim; edits create a new `rev`. |
 | **Executor `xf`** | kvnloo/evolution-lab `evolution_lab/hermes_factory/`, branch `exp/hermes-factory-v0` (collision-checked; push only after OD-5) | evolver `gates.py` and `calibrate.py`, pinned and vendored with the source SHA recorded; `slice_informativeness.py` (owner must commit it first); evolution-lab `run_pair` interleave idea; postmortem fresh-interpreter-per-probe pattern | Subcommands: `xf base`, `xf next`, `xf run <spec>`, `xf validate <receipt>`, `xf status`, `xf stage`. One claimed work order per invocation. About 500–800 LOC, stdlib only. |
 | **Capacity placement** | evolution-lab `capacity_queue.py` (`flyforge.capacity_queue_item.v1`) | Kerdoios constraints | Mirrors only GPU cells that are already claimed, with `provenance: <work_order id>`. Never assigns work. |
@@ -201,7 +201,7 @@ These are constraint IDs as the source designs cite them. Each row says how the 
 | **Upstream evals (guards and batteries)** | Run in-tree from the pinned arm worktree, unmodified | See F14 for the list | Standing regression set on base and on every arm |
 | **Postmortem forensics** | `evals/postmortem/forensics/{logcalls,tokens,tools,delegation,rework}.py`, `common.Run` | as shipped | T0 replay on **copies** of state.db and `agent.log*`. The private store keeps results; only aggregates publish. |
 | **Compaction replay** | `evals/compaction/scripts/{reconstruct_lineage,replay_lineage}.py`, `policies.py`, `fixtures.py`, `test_region_scoping.py` | as shipped | E03, F02, E37-offline |
-| **Object store and arms** | `/mnt/zer0models/project-artifacts/hermes-agent/factory/xf/{h.git,wt,venvs,cells,journal,frozen,private,locks}` | PROTOCOL.md worktree discipline; btrfs reflink | Blobless bare mirror. PR heads are fetched to `refs/xf/pr/<n>`. Arms are built with `git merge-tree --write-tree` plus `git apply`, keyed by tree SHA, and cloned by reflink. Never `git stash`. GC is reference-counted. |
+| **Object store and arms** | `$ARTIFACTS/factory/xf/{h.git,wt,venvs,cells,journal,frozen,private,locks}` | PROTOCOL.md worktree discipline; btrfs reflink | Blobless bare mirror. PR heads are fetched to `refs/xf/pr/<n>`. Arms are built with `git merge-tree --write-tree` plus `git apply`, keyed by tree SHA, and cloned by reflink. Never `git stash`. GC is reference-counted. |
 | **Disposable venv** | `.../factory/xf/venvs/<uv.lock sha256[:12]>/` | `python -m pm.build_env --source . --out <dir> --group dev --group test` on host python 3.14.7, which satisfies the nemo-relay marker | Built in bwrap with network on and a read-only root except the venv directory. Always passed as `HERMES_PYTHON`. Preflight checks it imports pytest and fails closed. The last 3 are kept. |
 | **Receipts** | Private: `factory/xf/{journal,cells,private}`. Public: `claude/ledger:factory/xf/receipts/` | SPEC §4 and §7; Tokenomics `event/experiment/outcome.v0` (`cb83d42`); `z0eval.hermes_stack_experiment.v0` (fork `22b0c745d5`) for z0 factorial work | Two levels, cell and experiment (§9) |
 | **Gate engine** | `evolution_lab/hermes_factory/gates.py` | evolver `validity_gate`, `activation_gate`, `paired_bootstrap_ci`, `credit_gate` (CREDIT_MIN_PAIRS); `slice_informativeness`; PROTOCOL READY definition | Computes RED, GREEN, NEG, ADJ, GUARDS, FLAKY, NOISE, CREDIT, INFORMATIVE, ROUTE_SCOPE and CACHE |
@@ -209,7 +209,7 @@ These are constraint IDs as the source designs cite them. Each row says how the 
 | **Promotion record** | `claude/ledger:factory/xf/staging/<id>/STAGING.md` plus `body.md` and `*.patch` | PROTOCOL packaging; WAVE.md rows; the #404 table; z0int eligibility rules | §10 |
 | **Promotion boards** | fork #402 (salvage wave) and #404 (staged PRs) | existing boards | A `state` comment proposes a row behind the existing ones. The owner decides. |
 | **Blind verifier** | A second worker (another Claude session, or the grok/codex lane), addressed by envelope | SPEC §5 reviewer verdicts | Gets only the branch or patch, the repo and the spec's oracle block. Returns `APPROVE_EXACT_HEAD / CHANGES_REQUIRED / DISCARD_DUPLICATE / DISCARD_WRONG_DIRECTION / BLOCKED_EXTERNAL` and a QA class `CLEAN / CHECK / HOLD / FAIL_GAP`. |
-| **Local models** | llama.cpp router `100.113.138.100:11530`; ollama `localhost:11434` | GPU flock `/tmp/claude-1000/gpu.lock` | L2 lane. Hermes arms are blocked by the 64K floor until OD-1. |
+| **Local models** | llama.cpp router `100.113.138.100:11530`; ollama `localhost:11434` | GPU flock `$TMP | L2 lane. Hermes arms are blocked by the 64K floor until OD-1. |
 | **HITL** | Linear, owner only | HITL.md | The factory writes 0 |
 
 **Not used:** hermes-agent-cluster (live, L5), fork CI (G2), any second queue or store.
@@ -283,13 +283,13 @@ Preflight refuses the cell if any item fails.
    ```
    bwrap --ro-bind / / --dev /dev --proc /proc
      --bind $RUN $RUN --bind $RUN/tmp /tmp
-     --tmpfs /workspace/hermes-home --tmpfs $HOME/.ssh --tmpfs $HOME/.config/gh
+     --tmpfs <hermes-home> --tmpfs $HOME/.ssh --tmpfs $HOME/.config/gh
      --tmpfs $HOME/.config/nemo-relay --tmpfs /etc/nemo-relay
      --unshare-net --unshare-pid --die-with-parent --clearenv
      --setenv HOME $RUN/home --setenv HERMES_HOME $RUN/home/.hermes
      --setenv HERMES_PYTHON $VENV/bin/python --setenv PATH $VENV/bin:/usr/bin:/bin
    ```
-   `$RUN` is on `/mnt/zer0models`, never on `/tmp` tmpfs.
+   `$RUN` is on `$MNT`, never on `/tmp` tmpfs.
    - `--clearenv` unsets `__HERMES_ACTIVATED`.
    - The fresh HOME has no `pytest_live_guard.py`, so `run_tests.sh:86-87` stays inert.
    - The explicit HERMES_HOME neutralizes `run.py:47`'s setdefault.
@@ -307,7 +307,7 @@ Preflight refuses the cell if any item fails.
    - Harnesses that exec the CLI (`toolperf_abeval`, `codebase_navigability/runtime_bench`, `hermes plugins validate`) need OD-2.
    - `cache_prefix_wire` defaults to `~/.hermes` and has an empty pass marker. It runs only after a patched copy is used.
    - `tool_search_livetest*` never runs.
-5. **Path layer.** The runner refuses any realpath under `~/.hermes`, `/workspace/hermes-home` or the live venv. Scratch homes are created with `exist_ok=False`.
+5. **Path layer.** The runner refuses any realpath under `~/.hermes`, `<hermes-home>` or the live venv. Scratch homes are created with `exist_ok=False`.
 6. **Relay.** If Relay is present, both arms get an identical `plugins.toml`, one process per arm, and `resolve_plugin_sources().config_paths` is recorded per cell.
 7. **Canary.** F15 proves layers 1–5 each block, and that each escapes when its guard is removed. F15 re-runs whenever bwrap, the kernel or the profile changes.
 
@@ -565,7 +565,7 @@ This is the Verified OSS Loop with no second scheduler. A worker with spare capa
     "verifier_class": "pytest-contract", "replay_grade": "direct-call"},
   "revisions": {"base_main": "e496ccc7d7", "arm_tree": "<sha>", "harness": {"tests/tools/test_fuzzy_match.py": "<blob>"},
     "adapters": "staging/factory-replay-gate@<sha>", "runner": "evolution-lab@<sha>", "dirty": false},
-  "env": {"host": "groot", "python": "3.14.7", "venv_lock": "<sha>", "sandbox": "bwrap-none",
+  "env": {"host": "<local-host>", "python": "3.14.7", "venv_lock": "<sha>", "sandbox": "bwrap-none",
     "relay": {"present": false, "plugins_toml_sha256": null, "config_paths": []}, "load1": 4.2},
   "substrate": {"tier": "T1", "model": null, "gguf_sha": null, "router_build": null, "ctx": null},
   "identity": {"turn_ids": [], "api_request_ids": []},
@@ -607,7 +607,7 @@ Path: `claude/ledger:factory/xf/receipts/<id>/<run-id>.json`.
   "head_revision": null,
   "changed_files": [],
   "policy_revision": {"AGENTS.md": "<blob@base>", "CONTRIBUTING.md": "<blob@base>", "factory": "FACTORY.md@<ledger sha>"},
-  "env": {"host": "groot", "python": "3.14.7", "venv_lock_sha256": "…", "sandbox": "bwrap ro-root netns-none home-masked clearenv pidns"},
+  "env": {"host": "<local-host>", "python": "3.14.7", "venv_lock_sha256": "…", "sandbox": "bwrap ro-root netns-none home-masked clearenv pidns"},
   "gates": {
     "validity": "PASS",
     "red": {"arm": "base", "result": "PASS", "observed": "3 failed / 5", "assertion": "…", "seam_covered": true, "reps_agree": "3/3"},
@@ -883,7 +883,7 @@ The staging cap means at most 5 rows are outstanding. Expected first READY candi
 - **S1.** Zero writes to origin: no NousResearch PRs, comments, reviews, labels or issues. Zero Linear writes. Humans promote.
 - **S2.** $0 by default. Paid runs need an owner-authored decision, checked by GitHub comment author, plus caps. Workers never hold credentials; the owner launches paid runs with injected credentials (K3, K4).
 - **S3.** Never touch the live install:
-  - `/workspace/hermes-home`, `/home/kvn/.hermes`, the live venv, the `hermes_cluster` process (L5), `/workspace/hermes-home/hermes-agent` as a source.
+  - `<hermes-home>`, `~/.hermes`, the live venv, the `hermes_cluster` process (L5), `<hermes-home>/hermes-agent` as a source.
   - Never run `hermes`, `python -m hermes_cli.main` or `hermes update` without OD-2, and then only in bwrap from the disposable venv.
 - **S4.** Network:
   - $0 lanes are loopback-only, enforced by netns and asserted by a connect probe.
@@ -906,10 +906,10 @@ The staging cap means at most 5 rows are outstanding. Expected first READY candi
   - experiments are comments on campaign threads;
   - one ledger commit per loop iteration.
 - **S11.** Resources:
-  - worktrees and runs on `/mnt/zer0models`, never on `/tmp` tmpfs;
+  - worktrees and runs on `$MNT`, never on `/tmp` tmpfs;
   - adaptive CPU admission; MemAvailable gate;
   - GPU flock, strictly serial, never preempting Quackles.
-- **S12.** Never modify dirty or uncommitted checkouts, including `/home/kvn/tmp/evolution-lab`. Work in fresh worktrees and never overwrite another lane's unpushed state.
+- **S12.** Never modify dirty or uncommitted checkouts, including `~/tmp/evolution-lab`. Work in fresh worktrees and never overwrite another lane's unpushed state.
 - **S13.** A worker never sets its own QA class. `execution_completed` never becomes `verified_success`. Promotion recomputes nothing.
 - **S14.** Agent-written tests may support invariants only. Credit and value claims use human-curated batteries (I1).
 - **S15.** Unlisted harnesses fail closed. A harness is added to the adapter allowlist only after a code read finds no exec, egress or credential access.
@@ -931,7 +931,7 @@ The staging cap means at most 5 rows are outstanding. Expected first READY candi
 
 | # | Id | Staging branch | Experiment | Cost | Runner | Primary metric (label) | Status at queue time |
 |---|---|---|---|---|---|---|---|
-| 1 | F15 (new) | factory-replay-gate | Sandbox canary. From inside the profile, attempt a non-loopback connect, a write outside `$RUN`, a read of `/workspace/hermes-home`, the `$HOME/.hermes` pytest-guard path, an exec of `hermes`, and selection of a denylisted test. Each is blocked. With each guard removed in turn, the probe escapes. | $0 | T0, bwrap | blocked and escaped per guard (OBSERVED); pass = 6/6 blocked and 6/6 sabotage escapes | Wave 0 |
+| 1 | F15 (new) | factory-replay-gate | Sandbox canary. From inside the profile, attempt a non-loopback connect, a write outside `$RUN`, a read of `<hermes-home>`, the `$HOME/.hermes` pytest-guard path, an exec of `hermes`, and selection of a denylisted test. Each is blocked. With each guard removed in turn, the probe escapes. | $0 | T0, bwrap | blocked and escaped per guard (OBSERVED); pass = 6/6 blocked and 6/6 sabotage escapes | Wave 0 |
 | 2 | F14 (new) | factory-replay-gate | Standing regression set ×2 on `e496ccc7d7`: `token_accounting/{replay_gates, ab_image_cost_calibration, worktree_prompt_prefix}`; `native_compaction/ab_checkpoint_preflight` capture/restore/over_threshold; `provider_fallback/probe_104120\|104260\|104360`; `goal_command_parity`; `compaction/test_region_scoping`; postmortem's 9 non-live probes plus 5 hand-run ones (context_cap, deadline, goal_scope, goal_repaste, finalizer_schedule) with an asserted red-on-base expectation table; readtool fixtures via direct `read_file` only | $0 | T1, upstream evals in-tree | verdict-map equality across runs (OBSERVED); becomes the per-arm guard baseline | Wave 0 |
 | 3 | E48 | factory-replay-gate | `xf validate` plus 10 fault fixtures: missing RED, GREEN base, flaky reps, infra exit, GREEN negative control, adjacent regression, private-field leak, MODELED headline, stale base, unpinned PR head | $0 | T0 | 10/10 refused, clean fixture accepted, `verified_success` stays null on faults | Wave 0 |
 | 4 | F11 | factory-replay-gate | Runner calibration: reproduce RED, GREEN and negative control on `ready/fork-47-ratelimit-missing-remaining-v2`, `ready/fork-112-kill-race-notify-attribution` and `ready/fork-50-honor-save-over-limit`; refuse 3 negatives taken from `rework.py` review-fix classes | $0 | T1, `run_tests.sh` | 6/6 classifications match recorded verdicts; false-READY = 0 | Wave 0 (exit criterion: 6/6) |
@@ -1079,7 +1079,7 @@ The staging cap means at most 5 rows are outstanding. Expected first READY candi
 **Sources:**
 - The three designs (mvp-first, scale-first, evidence-first).
 - The selected staging set.
-- `/mnt/zer0models/project-artifacts/hermes-agent/{frontier-2026-10-01, promotion-readiness-2026-10-01, salvage-wave-2026-10-01}/`.
+- `$ARTIFACTS/{frontier-2026-10-01, promotion-readiness-2026-10-01, salvage-wave-2026-10-01}/`.
 - Scratch mirror `h.git` at `e496ccc7d7`.
 - Scratch gap-fill reports `core_modules_gapfill.json`, `upstream_evals_reader.json` and `demand/out.json`.
 - The repos listed in §0.

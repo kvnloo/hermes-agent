@@ -1,4 +1,4 @@
-label=54014-literal main=298a01c79b38018e029e50f77efe67c4a4fdbd40 port=/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/memmon-heartbeat/port-54014-literal.diff
+label=54014-literal main=298a01c79b38018e029e50f77efe67c4a4fdbd40 port=$ARTIFACTS/salvage-wave-2026-10-01/evidence/W2/memmon-heartbeat/port-54014-literal.diff
 
 gateway/run.py:393: NameError
 _ test_serving_gateway_runs_memory_heartbeat_until_shutdown[unconfigured-default] _

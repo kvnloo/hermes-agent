@@ -1,6 +1,6 @@
 label=fork60-rebuilt main=298a01c79b38018e029e50f77efe67c4a4fdbd40
-APPLY /mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/cron-owner/fork60-rebuilt-onto-main.diff: ok
-▶ not activated — using HERMES_PYTHON: /workspace/hermes-home/hermes-agent/venv/bin/python
+APPLY $ARTIFACTS/salvage-wave-2026-10-01/evidence/W2/cron-owner/fork60-rebuilt-onto-main.diff: ok
+▶ not activated — using HERMES_PYTHON: <hermes-home>/hermes-agent/venv/bin/python
 ▶ running per-file parallel test suite via run_tests_parallel.py
   (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
 ▶ pre-compiling bytecode cache
@@ -55,7 +55,7 @@ FF..                                                                     [100%]
 =================================== FAILURES ===================================
 _____ test_live_owner_without_fingerprint_finishes_both_ledgers[recorded] ______
 
-ledgers = {'PATH': '/tmp/claude-1000/-home-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad/w2-tripwire/bin:/usr/bin:/bi...-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad/testhome-W2-cron-owner', 'TZ': 'UTC', 'LANG': 'C.UTF-8', ...}
+ledgers = {'PATH': '$S/w2-tripwire/bin:/usr/bin:/bi...-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad/testhome-W2-cron-owner', 'TZ': 'UTC', 'LANG': 'C.UTF-8', ...}
 monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f6a050464d0>
 missing = 'recorded'
 
@@ -69,7 +69,7 @@ E     Use -v to get more diff
 tests/cron/test_cron_owner_null_fingerprint.py:84: AssertionError
 ______ test_live_owner_without_fingerprint_finishes_both_ledgers[current] ______
 
-ledgers = {'PATH': '/tmp/claude-1000/-home-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad/w2-tripwire/bin:/usr/bin:/bi...-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad/testhome-W2-cron-owner', 'TZ': 'UTC', 'LANG': 'C.UTF-8', ...}
+ledgers = {'PATH': '$S/w2-tripwire/bin:/usr/bin:/bi...-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad/testhome-W2-cron-owner', 'TZ': 'UTC', 'LANG': 'C.UTF-8', ...}
 monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f6a04b30d10>
 missing = 'current'
 

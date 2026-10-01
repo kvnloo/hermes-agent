@@ -31,7 +31,7 @@
   "fork_head_oid": "8e61c281ea27bee91eed356fd49a593e85db114c",
   "wave": "W5-bot-chore",
   "batch": "C",
-  "patch": "/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/patches/fork-285.patch (slice of bundle-chore-gateway.patch)",
-  "body": "/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/patches/bundle-chore-gateway.body.md",
+  "patch": "$ARTIFACTS/promotion-readiness-2026-10-01/patches/fork-285.patch (slice of bundle-chore-gateway.patch)",
+  "body": "$ARTIFACTS/promotion-readiness-2026-10-01/patches/bundle-chore-gateway.body.md",
   "notes": "Deviation from fork #285: it simply dropped the JSON half of the argv-canary assert. This rebuild keeps equivalent coverage with `repr(ctx)`. Bundle commit 3d721162fc."
 }

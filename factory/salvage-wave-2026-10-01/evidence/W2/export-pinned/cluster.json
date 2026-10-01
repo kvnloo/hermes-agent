@@ -51,14 +51,14 @@
  ],
  "regression_test": {
   "source": "new; the real-SessionDB end-to-end idea from kvnloo fork #25 tests/hermes_cli/test_export_filters_include_pinned.py (whose committed tests are stale on main: they patch hermes_state.SessionDB with a zero-arg lambda and call the old cmd_sessions shape)",
-  "path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/export-pinned/test_sessions_export_filtered_pinned.py (placed at tests/hermes_cli/test_sessions_export_filtered_pinned.py)",
+  "path": "$ARTIFACTS/salvage-wave-2026-10-01/evidence/W2/export-pinned/test_sessions_export_filtered_pinned.py (placed at tests/hermes_cli/test_sessions_export_filtered_pinned.py)",
   "tests": [
    "test_filtered_export_writes_ended_pinned_and_pinned_archived_sessions[jsonl|md]",
    "test_filtered_export_dry_run_counts_pinned_sessions[jsonl|trace]",
    "test_prune_and_archive_still_spare_pinned_sessions"
   ],
   "contract": "Through the real `hermes sessions export --source cli` CLI against a real on-disk SessionDB, a filtered (read-only) export selects ended pinned and pinned+archived sessions in the jsonl, md and trace paths, as bare export and --session-id already do; the destructive prune/archive selector still excludes pinned rows.",
-  "evidence_path": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/export-pinned/"
+  "evidence_path": "$ARTIFACTS/salvage-wave-2026-10-01/evidence/W2/export-pinned/"
  },
  "ab_results": {
   "main": {
@@ -113,5 +113,5 @@
  ],
  "row_when_rebased": "| none (filtered export drops ended pinned sessions; kvnloo fork #25) | #99487 (alissonrgalindo), once rebased | main: FAIL, 4 of 5 (jsonl/md/trace filtered exports skip the pinned and pinned+archived rows); #99487 hand-ported: PASS 5/5 (negative control: dropping its `include_pinned=True` line re-fails 4 of 5); #89226 ported: FAIL, 4 of 5 (open-session fix only); kvnloo fork #25 rebuilt: PASS 5/5 | kvnloo (fork #25): real-SessionDB regression test `tests/hermes_cli/test_sessions_export_filtered_pinned.py` (jsonl, md and trace paths; prune still spares pins); `Co-authored-by: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>` | none (#89226 stays open for the #89223 open-session decision) | On main `_cmd_export` overrides `archived` but not `include_pinned`, so `_prune_filter_where` appends `COALESCE(s.pinned, 0) = 0` and every filtered export drops pinned sessions that bare export and --session-id include. #99487's one `include_pinned=True` line fixes it, and adjacent session files go from 320 passed / 4 failed to 325 passed / 1 failed (its own CLI test's `lambda: FakeDB()` drift). |",
  "notes": "(1) Need confirmed on main 298a01c7: `_cmd_export` (hermes_cli/sessions_cmd.py:322-332) sets filters['archived']=None but never include_pinned; all three export selectors (_collect_sessions L356, _export_trace L444, _export_markdown L513) call list_prune_candidates, and hermes_state_maintenance.py:224-225 appends `COALESCE(s.pinned, 0) = 0` unless include_pinned. No upstream issue exists for the pinned half. (2) Two contracts, two lanes: pinned (only #99487 fixes it) and open sessions (#89223: #89226 is earlier and triage-canonical; #99487's list_export_candidates competes). The test seeds only ended sessions so it never mixes them. A maintainer choosing between #89226's include_open flag and #99487's list_export_candidates is a design call outside this wave. (3) Suggested review note on #99487: rebase onto the mixin split, consider splitting the one-line pinned fix (which nobody contests) from the #89223 half, fix the CLI test's zero-arg SessionDB lambda, and add the real-SessionDB test. (4) Fork-side: kvnloo fork #25's own tests are stale on main (verdict notes); the regression test here replaces them. Close kvnloo/hermes-agent#25 after #99487 (or any pinned fix) merges. (5) Hygiene: `git apply -3` of #89226's tests recorded two preimage-only rerere entries in the shared rr-cache (no postimage was ever recorded, so nothing can be replayed); every merge in this cluster ran with rerere.enabled=false. The worktree was removed. Refs: refs/w2/pr/99487 e6ec55bbf9, refs/w2/pr/89226 1cc2350b63, fork commit bf7b7909c9.",
- "evidence_dir": "/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/export-pinned/"
+ "evidence_dir": "$ARTIFACTS/salvage-wave-2026-10-01/evidence/W2/export-pinned/"
 }

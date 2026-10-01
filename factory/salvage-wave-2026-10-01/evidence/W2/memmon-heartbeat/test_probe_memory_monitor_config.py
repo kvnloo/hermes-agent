@@ -38,5 +38,5 @@ async def test_probe(case, tmp_path, monkeypatch, capsys):
         ok = await gateway_run.start_gateway(config=GatewayConfig(), replace=False, verbosity=None)
     except BaseException as exc:  # record, don't fail
         ok, err = None, f"{type(exc).__name__}: {exc}"
-    with open("/tmp/claude-1000/-home-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad/memmon-probe.jsonl", "a", encoding="utf-8") as fh:
+    with open("$S/memmon-probe.jsonl", "a", encoding="utf-8") as fh:
         fh.write(json.dumps({"case": case, "start_calls": calls, "ok": ok, "error": err}) + "\n")

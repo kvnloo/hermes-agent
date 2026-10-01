@@ -1,5 +1,5 @@
 label=adjacent-99487 main=298a01c79b38018e029e50f77efe67c4a4fdbd40
-APPLY /mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/export-pinned/99487-port-onto-main.diff: ok
+APPLY $ARTIFACTS/salvage-wave-2026-10-01/evidence/W2/export-pinned/99487-port-onto-main.diff: ok
   (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
 ▶ pre-compiling bytecode cache
 ▶ launching test runner

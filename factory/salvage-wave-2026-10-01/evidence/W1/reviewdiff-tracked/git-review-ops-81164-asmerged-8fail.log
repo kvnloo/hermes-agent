@@ -1,7 +1,7 @@
 npm notice run hermes-agent@1.0.0 npx
 npm notice run 'vitest' run electron/git-review-ops.test.ts
 
- RUN  v4.1.10 /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/reviewdiff-tracked/apps/desktop
+ RUN  v4.1.10 $ARTIFACTS/promotion-readiness-2026-10-01/wt/W1/reviewdiff-tracked/apps/desktop
 
  ❯ |electron| electron/git-review-ops.test.ts (29 tests | 8 failed) 1480ms
    × reviewDiff synthesizes an all-add diff for an untracked file 66ms

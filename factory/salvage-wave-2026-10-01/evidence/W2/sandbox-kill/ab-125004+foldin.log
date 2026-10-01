@@ -1,6 +1,6 @@
 LABEL pr125004+foldin  main=298a01c79b38018e029e50f77efe67c4a4fdbd40
-APPLY /mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/sandbox-kill/pr125004+foldin-on-main.diff: ok
-▶ not activated — using HERMES_PYTHON: /workspace/hermes-home/hermes-agent/venv/bin/python
+APPLY $ARTIFACTS/salvage-wave-2026-10-01/evidence/W2/sandbox-kill/pr125004+foldin-on-main.diff: ok
+▶ not activated — using HERMES_PYTHON: <hermes-home>/hermes-agent/venv/bin/python
 ▶ running per-file parallel test suite via run_tests_parallel.py
   (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
 ▶ pre-compiling bytecode cache

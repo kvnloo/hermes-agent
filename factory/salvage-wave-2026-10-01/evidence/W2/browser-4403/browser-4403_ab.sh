@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # usage: browser-4403_ab.sh <label> [git-ref-to-merge ...] ; runs the W2 regression test on refs/w2/main (+ merged refs)
 set -u
-S=/tmp/claude-1000/-home-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad
-WT=/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/browser
-E=/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/browser-4403
-PY=/workspace/hermes-home/hermes-agent/venv/bin/python
+S=$S
+WT=$ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/browser
+E=$ARTIFACTS/salvage-wave-2026-10-01/evidence/W2/browser-4403
+PY=<hermes-home>/hermes-agent/venv/bin/python
 TH=$S/testhome-W2-browser-4403
 label=$1; shift
 mkdir -p $TH/.hermes; cp $S/w2-tripwire/pytest_live_guard.py $TH/.hermes/

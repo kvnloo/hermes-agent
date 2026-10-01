@@ -1,7 +1,7 @@
 npm notice run hermes-agent@1.0.0 npx
 npm notice run 'vitest' run src/__tests__/attachments.test.ts
 
- RUN  v4.1.10 /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/paste/ui-tui
+ RUN  v4.1.10 $ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/paste/ui-tui
 
  ❯ src/__tests__/attachments.test.ts (22 tests | 15 failed) 13ms
      × replaces a collapsed paste label with its full content 5ms

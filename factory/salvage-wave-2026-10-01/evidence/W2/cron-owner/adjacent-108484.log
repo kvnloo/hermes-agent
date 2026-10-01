@@ -1,6 +1,6 @@
 label=adjacent-108484 main=298a01c79b38018e029e50f77efe67c4a4fdbd40
 CHECKOUT refs/w2/cron-owner/108484-merged (a2d19879871b): pre-resolved merge
-▶ not activated — using HERMES_PYTHON: /workspace/hermes-home/hermes-agent/venv/bin/python
+▶ not activated — using HERMES_PYTHON: <hermes-home>/hermes-agent/venv/bin/python
 ▶ running per-file parallel test suite via run_tests_parallel.py
   (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
 ▶ pre-compiling bytecode cache
@@ -27,8 +27,8 @@ Discovered 12 test files (~61 tests) under ['tests/cron/test_cron_owner_null_fin
   ║ >   ???
   ║ E   AssertionError: assert not True
   ║ E    +  where True = <function _owner_is_live at 0x7fc1bc5d1ee0>(3508430, (13452497 + 1))
-  ║ E    +    where <function _owner_is_live at 0x7fc1bc5d1ee0> = <module 'cron.executions' from '/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/cron/cron/executions.py'>._owner_is_live
-  ║ E    +    and   3508430 = <Popen: returncode: None args: ['/workspace/hermes-home/hermes-agent/venv/bi...>.pid
+  ║ E    +    where <function _owner_is_live at 0x7fc1bc5d1ee0> = <module 'cron.executions' from '$ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/cron/cron/executions.py'>._owner_is_live
+  ║ E    +    and   3508430 = <Popen: returncode: None args: ['<hermes-home>/hermes-agent/venv/bi...>.pid
   ║ 
   ║ tests/cron/test_owner_uncertainty.py:52: AssertionError
   ║ =========================== short test summary info ============================
@@ -62,8 +62,8 @@ missing = 'current'
 >   ???
 E   AssertionError: assert not True
 E    +  where True = <function _owner_is_live at 0x7fc1bc5d1ee0>(3508430, (13452497 + 1))
-E    +    where <function _owner_is_live at 0x7fc1bc5d1ee0> = <module 'cron.executions' from '/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/cron/cron/executions.py'>._owner_is_live
-E    +    and   3508430 = <Popen: returncode: None args: ['/workspace/hermes-home/hermes-agent/venv/bi...>.pid
+E    +    where <function _owner_is_live at 0x7fc1bc5d1ee0> = <module 'cron.executions' from '$ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/cron/cron/executions.py'>._owner_is_live
+E    +    and   3508430 = <Popen: returncode: None args: ['<hermes-home>/hermes-agent/venv/bi...>.pid
 
 tests/cron/test_owner_uncertainty.py:52: AssertionError
 =========================== short test summary info ============================

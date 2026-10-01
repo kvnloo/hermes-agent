@@ -2,7 +2,7 @@ state=compose ref=refs/w2/queued-paste/mcompose head=c0a18b7d4f715e87855a2c8e0c1
 npm notice run hermes-agent@1.0.0 npx
 npm notice run 'vitest' run src/__tests__/queuedPasteSubmission.test.tsx src/__tests__/queuedPasteProbe.test.tsx
 
- RUN  v4.1.10 /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/paste/ui-tui
+ RUN  v4.1.10 $ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/paste/ui-tui
 
  ❯ src/__tests__/queuedPasteProbe.test.tsx (6 tests | 1 failed) 74ms
      × an edited-and-resubmitted queued collapsed paste is delivered expanded ('busy queue-mode item') 14ms

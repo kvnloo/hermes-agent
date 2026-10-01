@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # usage: w1notify_ab.sh <label> [pr-number] ; runs the regression test on pinned main (+ merged PR)
 set -u
-S=/tmp/claude-1000/-home-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad
-W=/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W1/notify-123345
-E=/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W1/notify-123345
-PY=/workspace/hermes-home/hermes-agent/venv/bin/python
+S=$S
+W=$ARTIFACTS/promotion-readiness-2026-10-01/wt/W1/notify-123345
+E=$ARTIFACTS/salvage-wave-2026-10-01/evidence/W1/notify-123345
+PY=<hermes-home>/hermes-agent/venv/bin/python
 label=$1; pr=${2:-}
 cd "$W" || exit 2
 git reset -q --hard refs/w1/main && git clean -qfdx -e node_modules

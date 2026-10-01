@@ -3,10 +3,10 @@
 # Resets the W2 sbkill worktree to refs/w2/main, merges each ref (rerere off),
 # drops in the regression test and runs it (plus any extra files) isolated.
 set -u
-S=/tmp/claude-1000/-home-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad
-WT=/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/sbkill
-E=/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/sandbox-kill
-PY=/workspace/hermes-home/hermes-agent/venv/bin/python
+S=$S
+WT=$ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/sbkill
+E=$ARTIFACTS/salvage-wave-2026-10-01/evidence/W2/sandbox-kill
+PY=<hermes-home>/hermes-agent/venv/bin/python
 TH=$S/testhome-W2-sandbox-kill
 label=$1; shift
 refs=(); extra=()

@@ -5,13 +5,13 @@ label=adjacent-main main=298a01c79b38018e029e50f77efe67c4a4fdbd40 port=none
   ║ ------------------------------ Captured log call -------------------------------
   ║ WARNING  hermes.security_audit:security_audit_startup.py:170 Security posture audit found 1 issue(s) — review your deployment:
   ║ WARNING  hermes.security_audit:security_audit_startup.py:172   [security 1/1] SSH password authentication is ENABLED (default — no explicit directive). Password auth is brute-forceable and dangerous on an internet-facing box. Set 'PasswordAuthentication no' in sshd_config and use key-based auth.
-  ║ /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/memmon/tests/gateway/test_memory_monitor_gateway_wiring.py:138: AssertionError: [MEMORY] heartbeat state while serving
+  ║ $ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/memmon/tests/gateway/test_memory_monitor_gateway_wiring.py:138: AssertionError: [MEMORY] heartbeat state while serving
   ║ E   AssertionError: [MEMORY] heartbeat state while serving
   ║     assert False is True
-  ║ /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/memmon/tests/gateway/test_memory_monitor_gateway_wiring.py:138: AssertionError: [MEMORY] heartbeat state while serving
+  ║ $ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/memmon/tests/gateway/test_memory_monitor_gateway_wiring.py:138: AssertionError: [MEMORY] heartbeat state while serving
   ║ E   AssertionError: [MEMORY] heartbeat state while serving
   ║     assert False is True
-  ║ /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/memmon/tests/gateway/test_memory_monitor_gateway_wiring.py:138: AssertionError: [MEMORY] heartbeat state while serving
+  ║ $ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/memmon/tests/gateway/test_memory_monitor_gateway_wiring.py:138: AssertionError: [MEMORY] heartbeat state while serving
   ║ =========================== short test summary info ============================
   ║ FAILED tests/gateway/test_memory_monitor_gateway_wiring.py::test_serving_gateway_runs_memory_heartbeat_until_shutdown[enabled]
   ║ FAILED tests/gateway/test_memory_monitor_gateway_wiring.py::test_serving_gateway_runs_memory_heartbeat_until_shutdown[enabled-failure-exit]
@@ -44,13 +44,13 @@ E   AssertionError: [MEMORY] heartbeat state while serving
 ------------------------------ Captured log call -------------------------------
 WARNING  hermes.security_audit:security_audit_startup.py:170 Security posture audit found 1 issue(s) — review your deployment:
 WARNING  hermes.security_audit:security_audit_startup.py:172   [security 1/1] SSH password authentication is ENABLED (default — no explicit directive). Password auth is brute-forceable and dangerous on an internet-facing box. Set 'PasswordAuthentication no' in sshd_config and use key-based auth.
-/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/memmon/tests/gateway/test_memory_monitor_gateway_wiring.py:138: AssertionError: [MEMORY] heartbeat state while serving
+$ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/memmon/tests/gateway/test_memory_monitor_gateway_wiring.py:138: AssertionError: [MEMORY] heartbeat state while serving
 E   AssertionError: [MEMORY] heartbeat state while serving
     assert False is True
-/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/memmon/tests/gateway/test_memory_monitor_gateway_wiring.py:138: AssertionError: [MEMORY] heartbeat state while serving
+$ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/memmon/tests/gateway/test_memory_monitor_gateway_wiring.py:138: AssertionError: [MEMORY] heartbeat state while serving
 E   AssertionError: [MEMORY] heartbeat state while serving
     assert False is True
-/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/memmon/tests/gateway/test_memory_monitor_gateway_wiring.py:138: AssertionError: [MEMORY] heartbeat state while serving
+$ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/memmon/tests/gateway/test_memory_monitor_gateway_wiring.py:138: AssertionError: [MEMORY] heartbeat state while serving
 =========================== short test summary info ============================
 FAILED tests/gateway/test_memory_monitor_gateway_wiring.py::test_serving_gateway_runs_memory_heartbeat_until_shutdown[enabled]
 FAILED tests/gateway/test_memory_monitor_gateway_wiring.py::test_serving_gateway_runs_memory_heartbeat_until_shutdown[enabled-failure-exit]

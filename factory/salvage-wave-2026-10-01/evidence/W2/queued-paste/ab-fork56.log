@@ -2,7 +2,7 @@ state=fork56 ref=refs/w2/queued-paste/mfork56 head=564ba9e2f5a54a24a56225ed9417a
 npm notice run hermes-agent@1.0.0 npx
 npm notice run 'vitest' run src/__tests__/queuedPasteSubmission.test.tsx src/__tests__/queuedPasteProbe.test.tsx
 
- RUN  v4.1.10 /mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/paste/ui-tui
+ RUN  v4.1.10 $ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/paste/ui-tui
 
  ❯ src/__tests__/queuedPasteProbe.test.tsx (6 tests | 1 failed) 82ms
      × an idle submit whose collapsed label has no token is refused with a warning, not sent 38ms

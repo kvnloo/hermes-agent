@@ -1,5 +1,5 @@
 label=adjacent-main main=298a01c79b38018e029e50f77efe67c4a4fdbd40
-▶ not activated — using HERMES_PYTHON: /workspace/hermes-home/hermes-agent/venv/bin/python
+▶ not activated — using HERMES_PYTHON: <hermes-home>/hermes-agent/venv/bin/python
 ▶ running per-file parallel test suite via run_tests_parallel.py
   (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
 ▶ pre-compiling bytecode cache
@@ -16,7 +16,7 @@ Discovered 11 test files (~60 tests) under ['tests/cron/test_cron_owner_null_fin
   ║ =================================== FAILURES ===================================
   ║ _____ test_live_owner_without_fingerprint_finishes_both_ledgers[recorded] ______
   ║ 
-  ║ ledgers = {'PATH': '/tmp/claude-1000/-home-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad/w2-tripwire/bin:/usr/bin:/bi...-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad/testhome-W2-cron-owner', 'TZ': 'UTC', 'LANG': 'C.UTF-8', ...}
+  ║ ledgers = {'PATH': '$S/w2-tripwire/bin:/usr/bin:/bi...-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad/testhome-W2-cron-owner', 'TZ': 'UTC', 'LANG': 'C.UTF-8', ...}
   ║ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fb32ca66450>
   ║ missing = 'recorded'
   ║ 
@@ -54,7 +54,7 @@ F...                                                                     [100%]
 =================================== FAILURES ===================================
 _____ test_live_owner_without_fingerprint_finishes_both_ledgers[recorded] ______
 
-ledgers = {'PATH': '/tmp/claude-1000/-home-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad/w2-tripwire/bin:/usr/bin:/bi...-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad/testhome-W2-cron-owner', 'TZ': 'UTC', 'LANG': 'C.UTF-8', ...}
+ledgers = {'PATH': '$S/w2-tripwire/bin:/usr/bin:/bi...-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad/testhome-W2-cron-owner', 'TZ': 'UTC', 'LANG': 'C.UTF-8', ...}
 monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fb32ca66450>
 missing = 'recorded'
 

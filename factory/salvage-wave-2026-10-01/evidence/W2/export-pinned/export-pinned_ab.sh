@@ -3,10 +3,10 @@
 # Resets the worktree to refs/w2/main, optionally merges a ref (rerere off) or applies a patch,
 # drops the regression test in, and runs it (plus any extra files) with isolated HOME + tripwires.
 set -u
-S=/tmp/claude-1000/-home-kvn-zer0/0c40e097-3138-4d4c-a137-74e0e9bc7d3d/scratchpad
-WT=/mnt/zer0models/project-artifacts/hermes-agent/promotion-readiness-2026-10-01/wt/W2/export
-EV=/mnt/zer0models/project-artifacts/hermes-agent/salvage-wave-2026-10-01/evidence/W2/export-pinned
-PY=/workspace/hermes-home/hermes-agent/venv/bin/python
+S=$S
+WT=$ARTIFACTS/promotion-readiness-2026-10-01/wt/W2/export
+EV=$ARTIFACTS/salvage-wave-2026-10-01/evidence/W2/export-pinned
+PY=<hermes-home>/hermes-agent/venv/bin/python
 TH=$S/testhome-W2-export-pinned
 mkdir -p "$TH/.hermes"; cp "$S/w2-tripwire/pytest_live_guard.py" "$TH/.hermes/"
 label=$1; src=${2:-}; shift 2 2>/dev/null || shift $#
