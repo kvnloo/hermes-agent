@@ -205,7 +205,9 @@ async def search_skills_hub(
             prev = seen.get(r.identifier)
             if prev is None or _rank.get(r.trust_level, 0) > _rank.get(prev.trust_level, 0):
                 seen[r.identifier] = r
-        deduped = list(seen.values())[:capped]
+        # Trust-sort before the limit cut (as unified_search does) so a community source that
+        # finished first cannot push builtin/trusted hits out; order is kept within a rank.
+        deduped = sorted(seen.values(), key=lambda r: -_rank.get(r.trust_level, 0))[:capped]
 
         return {
             "results": [_skill_meta_to_payload(m) for m in deduped], "source_counts": source_counts,

@@ -650,6 +650,30 @@ class TestSkillsHubSourcesEndpoint:
         assert isinstance(body["installed"], dict)
 
 
+class TestSkillsHubSearchEndpoint:
+    @pytest.fixture(autouse=True)
+    def _setup(self, _isolate_hermes_home):
+        self.client, _ = _client()
+
+    def test_trust_rank_survives_limit_cut(self, monkeypatch):
+        # Same contract as unified_search: a community source that finished first
+        # must not push a builtin entry past the limit cut (order kept within a rank).
+        community = [_FakeMeta(f"skills-sh/x/s{i}", "community", "skills.sh") for i in range(20)]
+        official = _FakeMeta("official/cat/s-official", "builtin", "official")
+        monkeypatch.setattr("tools.skills_hub_search.create_source_router", lambda: [])
+        monkeypatch.setattr(
+            "tools.skills_hub_search.parallel_search_sources",
+            lambda *a, **k: (community + [official], {}, []),
+        )
+        monkeypatch.setattr(
+            "hermes_cli.web_routers.skills._installed_hub_identifiers", lambda profile=None: {}
+        )
+        r = self.client.get("/api/skills/hub/search?q=s&limit=10")
+        assert r.status_code == 200
+        ids = [m["identifier"] for m in r.json()["results"]]
+        assert ids == ["official/cat/s-official"] + [f"skills-sh/x/s{i}" for i in range(9)]
+
+
 class TestOfficialSkillsCatalogEndpoint:
     @pytest.fixture(autouse=True)
     def _setup(self, _isolate_hermes_home):
