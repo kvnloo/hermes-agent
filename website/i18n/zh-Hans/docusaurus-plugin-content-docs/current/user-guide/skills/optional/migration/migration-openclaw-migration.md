@@ -104,13 +104,10 @@ CLI 命令运行与下文所述相同的迁移脚本。当需要交互式、引�
 
 Hermes CLI 支持 `clarify` 工具进行交互式提示，但有以下限制：
 
-- 每次只能处理一个选择
 - 最多 4 个预定义选项
 - 自动提供 `Other` 自由文本选项
 
-它**不**支持在单个提示中进行真正的多选复选框操作。
-
-每次 `clarify` 调用：
+`clarify` 的 `questions` 数组中的每个条目：
 
 - 必须包含非空的 `question`
 - 仅对真实可选提示包含 `choices`
@@ -120,7 +117,7 @@ Hermes CLI 支持 `clarify` 工具进行交互式提示，但有以下限制：
 - 不得在问题中包含虚假表单字段，如 `在此输入目录`、空白行或下划线 `_____`
 - 对于开放式路径问题，只询问纯文本句子；用户在面板下方的普通 CLI 提示符中输入
 
-如果 `clarify` 调用返回错误，检查错误文本，修正 payload，并使用有效的 `question` 和干净的 choices 重试一次。
+如果 `clarify` 调用返回错误，检查错误文本，修正 payload，并使用有效的 `questions` 数组和干净的 choices 重试一次。
 
 当 `clarify` 可用且 dry run 揭示任何需要用户决策的情况时，**下一个动作必须是 `clarify` 工具调用**。
 不得以如下普通助手消息结束对话：
@@ -130,7 +127,7 @@ Hermes CLI 支持 `clarify` 工具进行交互式提示，但有以下限制：
 - "以下是选项"
 
 如果需要用户决策，在生成更多文字之前通过 `clarify` 收集。
-如果存在多个未解决的决策，不要在它们之间插入解释性助手消息。收到一个 `clarify` 响应后，下一个动作通常应是下一个必要的 `clarify` 调用。
+如果存在多个未解决的决策，不要在它们之间插入解释性助手消息。相互独立的决策可以作为单独的 `questions` 条目放在同一个 `clarify` 调用中。收到一个 `clarify` 响应后，下一个动作通常应是下一个必要的 `clarify` 调用。
 
 当 dry run 报告以下情况时，将 `workspace-agents` 视为未解决的决策：
 
@@ -174,7 +171,7 @@ Hermes CLI 支持 `clarify` 工具进行交互式提示，但有以下限制：
 - dry run 中缺少工作区目标本身并不构成执行许可。
 - 当任何必要的 `clarify` 决策仍未解决时，不得执行。
 
-使用以下精确的 `clarify` payload 形式作为默认模式：
+使用以下精确的 `questions` 条目作为默认模式：
 
 - `{"question":"Your existing SOUL.md conflicts with the imported one. What should I do?","choices":["keep existing","overwrite with backup","review first"]}`
 - `{"question":"One or more imported OpenClaw skills already exist in Hermes. How should I handle those skill conflicts?","choices":["keep existing skills","overwrite conflicting skills with backup","import conflicting skills under renamed folders"]}`

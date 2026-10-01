@@ -86,13 +86,10 @@ With `--migrate-secrets`, it will also import a small allowlisted set of Hermes-
 
 Hermes CLI supports the `clarify` tool for interactive prompts, but it is limited to:
 
-- one choice at a time
 - up to 4 predefined choices
 - an automatic `Other` free-text option
 
-It does **not** support true multi-select checkboxes in a single prompt.
-
-For every `clarify` call:
+For every entry in the `clarify` `questions` array:
 
 - always include a non-empty `question`
 - include `choices` only for real selectable prompts
@@ -112,7 +109,7 @@ Do not end the turn with a normal assistant message such as:
 - "Here are the options"
 
 If a user decision is required, collect it via `clarify` before producing more prose.
-If multiple unresolved decisions remain, do not insert an explanatory assistant message between them. After one `clarify` response is received, your next action should usually be the next required `clarify` call.
+If multiple unresolved decisions remain, do not insert an explanatory assistant message between them. Independent decisions can share one `clarify` call as separate `questions` entries. After one `clarify` response is received, your next action should usually be the next required `clarify` call.
 
 Treat `workspace-agents` as an unresolved decision whenever the dry run reports:
 
@@ -156,7 +153,7 @@ Execution gate:
 - Absence of a workspace target in the dry run is not itself permission to execute.
 - Do not execute while any required `clarify` decision remains unresolved.
 
-Use these exact `clarify` payload shapes as the default pattern:
+Use these exact `questions` entries as the default pattern:
 
 - `{"question":"Your existing SOUL.md conflicts with the imported one. What should I do?","choices":["keep existing","overwrite with backup","review first"]}`
 - `{"question":"One or more imported OpenClaw skills already exist in Hermes. How should I handle those skill conflicts?","choices":["keep existing skills","overwrite conflicting skills with backup","import conflicting skills under renamed folders"]}`
