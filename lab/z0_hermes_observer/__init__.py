@@ -14,6 +14,8 @@ import time
 from pathlib import Path
 from typing import Any, Mapping
 
+from hermes_constants import get_hermes_home
+
 PLUGIN_ID = "z0-hermes-observer"
 SCHEMA = "z0int.hermes_observer_event.v1"
 _LOCK = threading.Lock()
@@ -50,18 +52,17 @@ def _truthy(name: str) -> bool:
 
 
 def _event_path() -> Path:
+    """Spool file of the active profile: ``<hermes home>/plugin-data/<id>/events.jsonl``.
+
+    Same layout as ``plugins.plugin_storage.plugin_data_dir`` but computed without touching
+    the filesystem, so it follows whichever profile is bound to the calling context. A
+    profile whose storage cannot be created loses its rows; it never falls back to another
+    profile's home.
+    """
     override = os.environ.get("Z0INT_HERMES_EVENT_PATH")
     if override:
-        path = Path(override).expanduser()
-        path.parent.mkdir(parents=True, exist_ok=True)
-        return path
-    try:
-        from plugins.plugin_storage import plugin_data_dir
-        return plugin_data_dir(PLUGIN_ID) / "events.jsonl"
-    except Exception:
-        path = Path.home() / ".hermes" / "plugin-data" / PLUGIN_ID / "events.jsonl"
-        path.parent.mkdir(parents=True, exist_ok=True)
-        return path
+        return Path(override).expanduser()
+    return get_hermes_home() / "plugin-data" / PLUGIN_ID / "events.jsonl"
 
 
 def _trace_id(payload: Mapping[str, Any]) -> str | None:
@@ -147,8 +148,10 @@ def _row(event: str, payload: Mapping[str, Any]) -> dict[str, Any]:
 
 def _write_row(row: Mapping[str, Any]) -> None:
     encoded = json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    path = _event_path()
     with _LOCK:
-        with _event_path().open("a", encoding="utf-8") as stream:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as stream:
             stream.write(encoded + "\n")
 
 
