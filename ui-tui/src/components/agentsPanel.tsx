@@ -152,13 +152,16 @@ export function LiveAgentsPanel({ cols }: { cols: number }) {
   const live = subagents.some(s => s.status === 'running' || s.status === 'queued')
   const [now, setNow] = useState(Date.now)
   const processRows = useProcessRows(now)
-  // Process rows carry `Ns ago` / elapsed text, so the clock ticks while any are shown.
-  const ticking = live || processRows.length > 0
+  // Process rows carry `Ns ago` text and age out of the dock, so they keep the
+  // clock in either state; agent elapsed is only painted while expanded.
+  const ticking = processRows.length > 0 || (live && !collapsed)
   useEffect(() => {
     if (!ticking) {
       return
     }
 
+    // Re-seed on (re)arm so expanding after a collapse paints the live elapsed.
+    setNow(Date.now())
     const timer = setInterval(() => setNow(Date.now()), 1000)
 
     return () => clearInterval(timer)
