@@ -434,7 +434,7 @@ Inspect Nous Portal auth, Tool Gateway routing, and reach the subscription page.
 |------------|-------------|
 | `status` (default) | Portal auth state + per-tool Tool Gateway routing summary. Also shown when no subcommand is given. |
 | `open` | Open `portal.nousresearch.com/manage-subscription` in your default browser. |
-| `tools` | List every Tool Gateway partner (Firecrawl, FAL, OpenAI TTS, Browser Use, Modal) and which are routed via Nous. |
+| `tools` | List every Tool Gateway partner and which are routed via Nous. |
 
 For configuration of the gateway itself, see [Tool Gateway](../user-guide/features/tool-gateway.md). For the one-shot setup path, see `hermes setup --portal` above.
 
@@ -1014,7 +1014,7 @@ Outputs a compact, plain-text summary of your entire Hermes setup. Designed to b
 | **Features** | Enabled toolsets, MCP server count, memory provider |
 | **Services** | Gateway status, configured messaging platforms |
 | **Workload** | Cron job counts, installed skill count |
-| **Config overrides** | Any config values that differ from defaults. Credentials in them are redacted: a `fallback_providers` entry's `api_key`, and credentials in its `base_url` (userinfo, `key`/token query parameters, signed-URL signatures). |
+| **Config overrides** | Any config values that differ from defaults. Credentials in them are redacted: every secret-named field of a `fallback_providers` entry (`api_key`, `token`, `password`, …), and credentials in its `base_url` (userinfo, `key`/token query parameters, signed-URL signatures). |
 
 ### Example output
 
@@ -1278,8 +1278,6 @@ Filters can be combined. When multiple filters are active, a log line must pass 
 # WARNING+ lines from the last 2 hours containing session "tg-12345"
 hermes logs --level WARNING --since 2h --session tg-12345
 ```
-
-Lines without a parseable timestamp are included when `--since` is active (they may be continuation lines from a multi-line log entry). Lines without a detectable level are included when `--level` is active.
 
 ### Log rotation
 

@@ -296,7 +296,7 @@ hermes portal [status|open|tools]
 |------------|-------------|
 | `status`（默认） | Portal 认证状态 + 每个工具的 Tool Gateway 路由摘要。不带子命令时也会显示。 |
 | `open` | 在默认浏览器中打开 `portal.nousresearch.com/manage-subscription`。 |
-| `tools` | 列出每个 Tool Gateway 合作伙伴（Firecrawl、FAL、OpenAI TTS、Browser Use、Modal）及哪些通过 Nous 路由。 |
+| `tools` | 列出每个 Tool Gateway 合作伙伴及哪些通过 Nous 路由。 |
 
 关于 gateway 本身的配置，请参阅 [Tool Gateway](../user-guide/features/tool-gateway.md)。关于一键设置路径，请参阅上方的 `hermes setup --portal`。
 
@@ -519,7 +519,7 @@ hermes dump [--show-keys]
 | **Features** | 已启用的 toolset、MCP 服务器数量、memory provider |
 | **Services** | Gateway 状态、已配置的消息平台 |
 | **Workload** | Cron 任务数量、已安装 skill 数量 |
-| **Config overrides** | 与默认值不同的所有 config 值。其中的凭据会被脱敏：`fallback_providers` 条目的 `api_key`，以及其 `base_url` 中的凭据（userinfo、`key`/token 查询参数、签名 URL 的签名）。 |
+| **Config overrides** | 与默认值不同的所有 config 值。其中的凭据会被脱敏：`fallback_providers` 条目中所有以秘密命名的字段（`api_key`、`token`、`password` 等），以及其 `base_url` 中的凭据（userinfo、`key`/token 查询参数、签名 URL 的签名）。 |
 
 ### 示例输出
 
@@ -716,6 +716,8 @@ hermes logs [log_name] [options]
 | `--since <TIME>` | 显示相对时间之前的行：`30m`、`1h`、`2d` 等。支持 `s`（秒）、`m`（分钟）、`h`（小时）、`d`（天）。 |
 | `--component <NAME>` | 按组件过滤：`gateway`、`agent`、`tools`、`cli`、`cron`。 |
 
+没有自己时间戳的行（例如 traceback 帧或多行消息的其余部分）会与它上方带时间戳的行一同显示或隐藏。
+
 ### 示例
 
 ```bash
@@ -749,8 +751,6 @@ hermes logs list
 # 最近 2 小时内包含会话 "tg-12345" 的 WARNING+ 行
 hermes logs --level WARNING --since 2h --session tg-12345
 ```
-
-当 `--since` 激活时，没有可解析时间戳的行会被包含（它们可能是多行日志条目的续行）。当 `--level` 激活时，没有可检测级别的行会被包含。
 
 ### 日志轮转
 
