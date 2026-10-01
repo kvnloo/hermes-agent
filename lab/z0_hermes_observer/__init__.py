@@ -83,12 +83,25 @@ def _event_path() -> Path:
     return get_hermes_home() / "plugin-data" / PLUGIN_ID / "events.jsonl"
 
 
-def _trace_id(payload: Mapping[str, Any]) -> str | None:
+def _coordinates(event: str, payload: Mapping[str, Any]) -> tuple[Any, Any]:
+    """(session_id, turn_id) of the turn an event belongs to.
+
+    The host announces ``subagent_stop`` from the parent's side, with ``parent_session_id`` /
+    ``parent_turn_id`` instead of ``session_id`` / ``turn_id``.  Keying it by the parent's
+    coordinates joins it to the rest of the turn that delegated.
+    """
+    session_id, turn_id = payload.get("session_id"), payload.get("turn_id")
+    if event == "subagent_stop":
+        session_id = session_id or payload.get("parent_session_id")
+        turn_id = turn_id or payload.get("parent_turn_id")
+    return session_id, turn_id
+
+
+def _trace_id(event: str, payload: Mapping[str, Any]) -> str | None:
     explicit = payload.get("trace_id")
     if explicit:
         return str(explicit)
-    session_id = str(payload.get("session_id") or "")
-    turn_id = str(payload.get("turn_id") or "")
+    session_id, turn_id = (str(part or "") for part in _coordinates(event, payload))
     if session_id and turn_id:
         return hashlib.sha256((session_id + "\0" + turn_id).encode("utf-8")).hexdigest()
     return session_id or str(payload.get("task_id") or "") or None
@@ -123,6 +136,9 @@ def _tool_shape(payload: Mapping[str, Any]) -> dict[str, Any]:
 def _subagent_shape(payload: Mapping[str, Any]) -> dict[str, Any]:
     history = payload.get("tool_call_history")
     return {
+        "parent_session_id": payload.get("parent_session_id"),
+        "parent_turn_id": payload.get("parent_turn_id"),
+        "child_session_id": payload.get("child_session_id"),
         "child_role": payload.get("child_role"),
         "child_status": payload.get("child_status"),
         "duration_ms": payload.get("duration_ms"),
@@ -131,12 +147,13 @@ def _subagent_shape(payload: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _row(event: str, payload: Mapping[str, Any]) -> dict[str, Any]:
+    session_id, turn_id = _coordinates(event, payload)
     identity = {
         "harness_id": "hermes",
-        "session_id": payload.get("session_id"),
+        "session_id": session_id,
         "task_id": payload.get("task_id"),
-        "turn_id": payload.get("turn_id"),
-        "trace_id": _trace_id(payload),
+        "turn_id": turn_id,
+        "trace_id": _trace_id(event, payload),
         "api_request_id": payload.get("api_request_id"),
         "tool_call_id": payload.get("tool_call_id"),
     }

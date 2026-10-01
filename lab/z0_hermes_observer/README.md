@@ -31,6 +31,14 @@ For tests or one-off experiments, set `Z0INT_HERMES_EVENT_PATH=$TMPDIR/z0-hermes
 The next slice will join independent outcomes and run DecisionBackend shadow
 questions over these receipts.
 
+## Identity
+
+Every row carries `identity.trace_id`: an explicit `trace_id` when the host supplies one,
+otherwise a hash of `session_id` and `turn_id`, falling back to the session (or task) id when
+there is no turn. The host announces `subagent_stop` from the parent's side, so that row is
+keyed by the parent's session and turn and joins the trace of the turn that delegated;
+`subagent.child_session_id` links to the child's own rows.
+
 ## Delivery
 
 Hook callbacks never wait on storage. Each row is encoded on the calling thread, tagged
