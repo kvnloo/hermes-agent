@@ -56,7 +56,8 @@ class RateLimitState:
 
     @property
     def has_data(self) -> bool:
-        return self.captured_at > 0
+        """Captured headers with at least one usable window (not just any x-ratelimit-* key)."""
+        return self.captured_at > 0 and any(getattr(self, attr).limit > 0 for attr, _tag in _BUCKET_TAGS)
 
     @property
     def age_seconds(self) -> float:
@@ -93,16 +94,22 @@ def parse_rate_limit_headers(headers: Mapping[str, str], provider: str = "") -> 
         return None
 
     now = time.time()
-    buckets = {
-        attr: RateLimitBucket(
-            limit=_safe_int(lowered.get(f"x-ratelimit-limit-{tag}")),
-            remaining=_safe_int(lowered.get(f"x-ratelimit-remaining-{tag}")),
-            reset_seconds=_safe_float(lowered.get(f"x-ratelimit-reset-{tag}")),
-            captured_at=now,
-        )
-        for attr, tag in _BUCKET_TAGS
-    }
+    buckets = {attr: _parse_bucket(lowered, tag, now) for attr, tag in _BUCKET_TAGS}
     return RateLimitState(captured_at=now, provider=provider, **buckets)
+
+
+def _parse_bucket(lowered: Mapping[str, str], tag: str, now: float) -> RateLimitBucket:
+    # remaining=0 is the exhaustion signal, so an absent/unparseable remaining is
+    # "no data" (limit=0), not a default 0 that reads as 100% used.
+    remaining = _safe_int(lowered.get(f"x-ratelimit-remaining-{tag}"), None)
+    if remaining is None:
+        return RateLimitBucket(captured_at=now)
+    return RateLimitBucket(
+        limit=_safe_int(lowered.get(f"x-ratelimit-limit-{tag}")),
+        remaining=remaining,
+        reset_seconds=_safe_float(lowered.get(f"x-ratelimit-reset-{tag}")),
+        captured_at=now,
+    )
 
 
 # ── Formatting ──────────────────────────────────────────────────────────
