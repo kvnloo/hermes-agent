@@ -6,7 +6,10 @@ import type { ClientSessionState } from '@/app/types'
 import type * as HermesModule from '@/hermes'
 import { textPart } from '@/lib/chat-messages'
 import { createClientSessionState } from '@/lib/chat-runtime'
+import { $connectionsRegistry } from '@/store/connections'
 import { $notifications } from '@/store/notifications'
+import { $profiles } from '@/store/profile'
+import { isStoredTranscriptReadOnly } from '@/store/read-only-transcript'
 import { setSessionOwnerHint, setSessions } from '@/store/session'
 import { $sessionTiles, sessionTileDelegate } from '@/store/session-states'
 import type { SessionInfo } from '@/types/hermes'
@@ -15,7 +18,11 @@ import { useSessionTileDelegate } from './use-session-tile-delegate'
 
 vi.mock('@/hermes', async importActual => ({
   ...(await importActual<typeof HermesModule>()),
-  getLatestSessionMessages: vi.fn(async () => ({ messages: [], session_id: '' }))
+  fetchStoredTranscriptAcrossBackends: vi.fn(async () => ({ messages: [], session_id: '' })),
+  getLatestSessionMessages: vi.fn(async () => ({ messages: [], session_id: '' })),
+  getSession: vi.fn(async () => {
+    throw new Error('not found')
+  })
 }))
 vi.mock('@/store/gateway', async importActual => ({
   ...(await importActual<Record<string, unknown>>()),
@@ -23,7 +30,9 @@ vi.mock('@/store/gateway', async importActual => ({
   requestGatewayForProfile: vi.fn()
 }))
 
-const { getLatestSessionMessages, PROMPT_SUBMIT_REQUEST_TIMEOUT_MS } = await import('@/hermes')
+const { fetchStoredTranscriptAcrossBackends, getLatestSessionMessages, PROMPT_SUBMIT_REQUEST_TIMEOUT_MS } =
+  await import('@/hermes')
+
 const { requestGatewayForAgent, requestGatewayForProfile } = await import('@/store/gateway')
 
 const row = (over: Partial<SessionInfo>): SessionInfo =>
@@ -893,5 +902,86 @@ describe('useSessionTileDelegate submitToSession', () => {
       PROMPT_SUBMIT_REQUEST_TIMEOUT_MS,
       undefined
     )
+  })
+})
+
+describe('useSessionTileDelegate resumeTile no-owner recovery race (#94724)', () => {
+  const registry = (...ids: string[]) =>
+    ({ connections: ids.map(id => ({ id })), lastUsed: ids[0], launchMode: 'primary', primary: ids[0] }) as never
+
+  // Mirrors the real cache: painting with a stored id records the stored -> runtime binding.
+  function bindingCache() {
+    const runtimeIdByStoredSessionIdRef = { current: new Map<string, string>() }
+    const sessionStateByRuntimeIdRef = { current: new Map<string, unknown>() }
+
+    const updateSessionState = vi.fn(
+      (id: string, updater: (state: { messages: unknown[] }) => unknown, stored?: string) => {
+        const next = updater((sessionStateByRuntimeIdRef.current.get(id) ?? { messages: [] }) as never)
+
+        sessionStateByRuntimeIdRef.current.set(id, next)
+
+        if (stored) {
+          runtimeIdByStoredSessionIdRef.current.set(stored, id)
+        }
+
+        return next
+      }
+    )
+
+    return { runtimeIdByStoredSessionIdRef, sessionStateByRuntimeIdRef, updateSessionState }
+  }
+
+  beforeEach(() => {
+    // Registry topology with two profiles: an unknown owner fails closed.
+    $connectionsRegistry.set(registry('gw-a', 'gw-b'))
+    $profiles.set([{ name: 'default' }, { name: 'researcher' }] as never)
+    vi.mocked(getLatestSessionMessages).mockRejectedValue(new Error('404'))
+  })
+
+  afterEach(() => {
+    $connectionsRegistry.set(null)
+    $profiles.set([])
+    setSessions([])
+    vi.mocked(getLatestSessionMessages).mockReset()
+    vi.mocked(getLatestSessionMessages).mockImplementation(async () => ({ messages: [], session_id: '' }))
+    vi.mocked(fetchStoredTranscriptAcrossBackends).mockReset()
+    vi.mocked(fetchStoredTranscriptAcrossBackends).mockImplementation(async () => ({ messages: [], session_id: '' }))
+    vi.mocked(requestGatewayForProfile).mockReset()
+  })
+
+  it('a stale recovery that resolves after a live resume leaves the tile live', async () => {
+    setSessions([row({ id: 'stored-race', profile: undefined })])
+
+    let resolveStored!: (value: { messages: unknown[]; session_id: string }) => void
+
+    vi.mocked(fetchStoredTranscriptAcrossBackends).mockImplementation(
+      () => new Promise(resolve => (resolveStored = resolve)) as never
+    )
+    vi.mocked(requestGatewayForProfile).mockResolvedValueOnce({ session_id: 'runtime-live' } as never)
+
+    const cache = bindingCache()
+
+    renderTile(
+      vi.fn(async () => ({}) as never),
+      cache
+    )
+    const delegate = sessionTileDelegate()!
+
+    // Call A: owner unresolvable -> parks on the slow cross-backend stored read.
+    const callA = delegate.resumeTile('stored-race')
+
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    // The owner backfill stamps the row; call B resumes live and binds the tile.
+    setSessions([row({ id: 'stored-race', profile: 'default' })])
+    await expect(delegate.resumeTile('stored-race')).resolves.toBe('runtime-live')
+
+    // Call A's stored read lands last.
+    resolveStored({ messages: [{ content: 'history', role: 'user' }], session_id: 'stored-race' })
+
+    await expect(callA).resolves.toBe('runtime-live')
+    expect(cache.runtimeIdByStoredSessionIdRef.current.get('stored-race')).toBe('runtime-live')
+    expect(cache.updateSessionState.mock.calls.some(([id]) => String(id).startsWith('read-only:'))).toBe(false)
+    expect(isStoredTranscriptReadOnly('stored-race')).toBe(false)
   })
 })

@@ -18,6 +18,7 @@ import { noteMessageSent } from '@/store/desktop-metrics'
 import { notify } from '@/store/notifications'
 import {
   isReadOnlyRuntimeId,
+  liveResumeGeneration,
   readOnlyRuntimeIdFor,
   resumeWithStoredTranscriptFallback
 } from '@/store/read-only-transcript'
@@ -314,6 +315,10 @@ export function useSessionTileDelegate({
         )
       },
       resumeTile: async (storedSessionId, options) => {
+        // Before any await: a live resume of this id that lands while this call
+        // is still recovering proves the session routable (#94724).
+        const liveResumesAtStart = liveResumeGeneration(storedSessionId)
+
         // A retained tile can still own its runtime after the primary view drops
         // its reverse lookup. Reconnect invalidates both bindings.
         const existing =
@@ -416,8 +421,19 @@ export function useSessionTileDelegate({
             }
 
             return stored
-          }
+          },
+          liveResumesAtStart
         )
+
+        // A live resume of this id (another tile call, the main pane) landed
+        // while this no-owner recovery was pending and bound the session.
+        // Painting this stale outcome would repoint stored -> runtime onto the
+        // synthetic read-only id, and the warm path would keep reusing it.
+        const binding = runtimeIdByStoredSessionIdRef.current.get(storedSessionId)
+
+        if (outcome.mode === 'read-only' && binding && liveResumeGeneration(storedSessionId) !== liveResumesAtStart) {
+          return binding
+        }
 
         const prefetch = await prefetchPromise
 

@@ -42,6 +42,7 @@ import {
 } from '@/store/profile'
 import { $projectScope, ALL_PROJECTS } from '@/store/project-scope'
 import { $projectTree } from '@/store/projects'
+import { isStoredTranscriptReadOnly, resumeWithStoredTranscriptFallback } from '@/store/read-only-transcript'
 import {
   $activeSessionId,
   $activeSessionStoredIdRotation,
@@ -87,7 +88,7 @@ import {
   setTurnStartedAt,
   setUnlistedSessionOwnerRows
 } from '@/store/session'
-import { assertSessionOwnerResolved } from '@/store/session-owner-resolution'
+import { assertSessionOwnerResolved, SessionOwnerResolutionError } from '@/store/session-owner-resolution'
 import { $removedSessionIds, $sessionMutationsInFlight } from '@/store/session-removal'
 import { requestForSessionProfile, type SessionProfileRoute } from '@/store/session-request-router'
 import {
@@ -1872,6 +1873,42 @@ describe('resumeSession failure recovery', () => {
     expect($resumeFailedSessionId.get()).toBeNull()
     // The fallback transcript is visible.
     expect($messages.get().length).toBeGreaterThan(0)
+  })
+
+  it('does not latch a no-owner recovery read-only once a tile resumes the same id live (#94724)', async () => {
+    const storedRead = deferred<Awaited<ReturnType<typeof getLatestSessionMessages>>>()
+
+    const requestGateway = vi.fn(async (method: string) => {
+      if (method === 'session.resume') {
+        throw new SessionOwnerResolutionError('stored-race', 'session.resume')
+      }
+
+      return {} as never
+    }) as <T>(method: string, params?: Record<string, unknown>) => Promise<T>
+
+    vi.mocked(getLatestSessionMessages).mockReturnValue(storedRead.promise)
+
+    let resume: ((storedSessionId: string, replaceRoute?: boolean) => Promise<unknown>) | null = null
+    render(<ResumeHarness onReady={r => (resume = r)} requestGateway={requestGateway} />)
+    await waitFor(() => expect(resume).not.toBeNull())
+
+    // The main pane's owner fails closed and its recovery waits on the stored read.
+    const pending = resume!('stored-race', true)
+
+    // Meanwhile a tile resumes the same id live (the owner became resolvable).
+    await resumeWithStoredTranscriptFallback(
+      'stored-race',
+      async () => ({ session_id: 'runtime-tile' }),
+      async () => ({ messages: [] })
+    )
+
+    await act(async () => {
+      storedRead.resolve({ messages: [{ content: 'history', role: 'user', timestamp: 1 }], session_id: 'stored-race' })
+      await pending
+    })
+
+    expect(JSON.stringify($messages.get())).toContain('history')
+    expect(isStoredTranscriptReadOnly('stored-race')).toBe(false)
   })
 
   it('paints the REST transcript before a cold session.resume settles and keeps it when resume rejects', async () => {

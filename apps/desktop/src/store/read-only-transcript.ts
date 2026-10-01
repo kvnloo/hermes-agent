@@ -25,6 +25,16 @@ import { isSessionOwnerResolutionError } from './session-owner-resolution'
  *  that has no routable live runtime. */
 export const $readOnlyStoredTranscripts = atom<ReadonlySet<string>>(new Set())
 
+/** Bumped per stored id by every successful live resume (see
+ *  `clearStoredTranscriptReadOnly`). A no-owner recovery snapshots it when its
+ *  resume attempt starts; once it moved, the session was proven routable while
+ *  the recovery was pending, so the recovery must not open it read-only. */
+const liveResumeGenerationByStoredSessionId = new Map<string, number>()
+
+export function liveResumeGeneration(storedSessionId: string): number {
+  return liveResumeGenerationByStoredSessionId.get(storedSessionId.trim()) ?? 0
+}
+
 export function markStoredTranscriptReadOnly(storedSessionId: string): void {
   const id = storedSessionId.trim()
 
@@ -38,7 +48,15 @@ export function markStoredTranscriptReadOnly(storedSessionId: string): void {
 export function clearStoredTranscriptReadOnly(storedSessionId: string): void {
   const id = storedSessionId.trim()
 
-  if (!id || !$readOnlyStoredTranscripts.get().has(id)) {
+  if (!id) {
+    return
+  }
+
+  // A live success counts even when the latch is not set yet: a recovery
+  // that is still pending must not latch over it.
+  liveResumeGenerationByStoredSessionId.set(id, liveResumeGeneration(id) + 1)
+
+  if (!$readOnlyStoredTranscripts.get().has(id)) {
     return
   }
 
@@ -80,11 +98,16 @@ export type StoredTranscriptResumeOutcome<TResumed, TTranscript> =
  * rethrown: the caller's existing error UX (retry latch, stranded screen)
  * stays authoritative and no misleading transport error replaces the real
  * diagnosis.
+ *
+ * `liveResumesAtStart` is the `liveResumeGeneration` snapshot taken when the
+ * caller's attempt began (default: now). A caller that awaits before calling
+ * (e.g. owner resolution) passes its own earlier snapshot.
  */
 export async function resumeWithStoredTranscriptFallback<TResumed, TTranscript>(
   storedSessionId: string,
   resume: () => Promise<TResumed>,
-  fetchStoredTranscript: () => Promise<TTranscript>
+  fetchStoredTranscript: () => Promise<TTranscript>,
+  liveResumesAtStart = liveResumeGeneration(storedSessionId)
 ): Promise<StoredTranscriptResumeOutcome<TResumed, TTranscript>> {
   try {
     const resumed = await resume()
@@ -107,7 +130,11 @@ export async function resumeWithStoredTranscriptFallback<TResumed, TTranscript>(
       throw error
     }
 
-    markStoredTranscriptReadOnly(storedSessionId)
+    // A live resume of this id succeeded while this attempt was pending: the
+    // session is routable, so this stale recovery must not latch it.
+    if (liveResumeGeneration(storedSessionId) === liveResumesAtStart) {
+      markStoredTranscriptReadOnly(storedSessionId)
+    }
 
     return { error, mode: 'read-only', transcript }
   }

@@ -64,7 +64,11 @@ import {
 import { $projectScope } from '@/store/project-scope'
 import { projectProfile, resolveNewSessionCwd } from '@/store/projects'
 import { clearAllPrompts, receiveApprovalRequest, replayPendingApproval } from '@/store/prompts'
-import { clearStoredTranscriptReadOnly, markStoredTranscriptReadOnly } from '@/store/read-only-transcript'
+import {
+  clearStoredTranscriptReadOnly,
+  liveResumeGeneration,
+  markStoredTranscriptReadOnly
+} from '@/store/read-only-transcript'
 import {
   $activeSessionStoredIdRotation,
   $connection,
@@ -1306,6 +1310,9 @@ export function useSessionActions({
       const routeToken = getRouteToken()
       resumeRequestRef.current = requestId
       const resumedSameSelectedSession = selectedStoredSessionIdRef.current === storedSessionId
+      // A live resume of this id elsewhere (a session tile) from here on proves
+      // the owner routable: the no-owner recovery below must not latch over it.
+      const liveResumesAtStart = liveResumeGeneration(storedSessionId)
 
       const isCurrentResume = () =>
         resumeRequestRef.current === requestId &&
@@ -2598,12 +2605,14 @@ export function useSessionActions({
           }
 
           if (painted) {
-            markStoredTranscriptReadOnly(storedSessionId)
-            notify({
-              kind: 'info',
-              title: copy.readOnlyTranscriptTitle,
-              message: copy.readOnlyTranscriptBody
-            })
+            if (liveResumeGeneration(storedSessionId) === liveResumesAtStart) {
+              markStoredTranscriptReadOnly(storedSessionId)
+              notify({
+                kind: 'info',
+                title: copy.readOnlyTranscriptTitle,
+                message: copy.readOnlyTranscriptBody
+              })
+            }
 
             return
           }
