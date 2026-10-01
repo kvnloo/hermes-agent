@@ -1,0 +1,620 @@
+{
+  "schema": "xf.receipt.v1",
+  "id": "F14/r20261001-01",
+  "experiment": "F14 standing regression set (Wave 0, FACTORY section 13 row 2): item arm vs the main baseline",
+  "tier": "T1",
+  "label_default": "OBSERVED",
+  "label_note": "Every verdict, count and wall time below comes from a cell the F14 runner executed in this run (OBSERVED). Nothing here is MODELED.",
+  "spec": {
+    "set": "F14",
+    "set_rev": 1,
+    "path": "<xf-root>/factory/w0/f14/f14_set.json",
+    "file_sha256": "8b4864a72dd07b6383f98fc1e67359143216889f9c36eda79dc56fc3579044c0",
+    "set_sha256": "aba79fe8f09dabc62950aacd0a53c2fdc30bc58746f405f9aa050bf474d739b9",
+    "set_sha256_note": "canonical-JSON sha256 the runner writes into every map; maps with different set hashes are never compared",
+    "decision_rule": "EQUAL iff, for every verdict id not marked flaky, (verdict, marker, fingerprint) is identical between the arm map and the baseline map (f14_run.py compare exit 0); the set marks no id flaky",
+    "verdict_ids": 40,
+    "probes": 19,
+    "excluded": [
+      "postmortem/goal_judge_wait",
+      "postmortem/cache_prefix_wire",
+      "postmortem/nested_delegate_deadline",
+      "postmortem/cache_concurrency_probe",
+      "postmortem/forensics/*",
+      "readtool/runner (model arm)",
+      "postmortem/hardline_scanner_matrix",
+      "postmortem/subagent_context_cap",
+      "postmortem/batch_failure_notice",
+      "postmortem/auth_stampede",
+      "postmortem/goal_repaste_probe"
+    ],
+    "excluded_note": "set-level exclusions (live/paid, private state.db, sandbox-denylisted); identical for every item and for the baseline; reasons are pinned in the set",
+    "flaky": []
+  },
+  "runner_revision": {
+    "runner": {
+      "path": "<xf-root>/factory/w0/f14/f14_run.py",
+      "sha256": "2323a5918435b06a56ca0f5f8b55d0a0c2274915f11cd31ef120649b0fad28fe"
+    },
+    "sandbox": {
+      "path": "<xf-root>/factory/w0/sandbox/xf-sandbox.sh",
+      "sha256": "c9586195c43a926317fa3d6bc18db1937527a6308dc30c683ce9c6a83398638a"
+    },
+    "probe_helpers": {
+      "readtool_direct.py": {
+        "path": "<xf-root>/factory/w0/f14/probes/readtool_direct.py",
+        "sha256": "0df21aee5fec293042bf4511b3b4c353d13d768711b8272c85b9f86438649229"
+      }
+    },
+    "same_as_baseline": true
+  },
+  "issue": "NousResearch/hermes-agent#526",
+  "staging": "anthropic-context-editing",
+  "base_revision": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+  "arms": {
+    "base": {
+      "head": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+      "baseline_map": {
+        "path": "<xf-root>/factory/w0/f14/baseline-34f8ec3b40.json",
+        "sha256": "a0cfdc3291783cb7f5fcfdbd81b6ef010cbc0cd82915786aea4e6176a56a1682"
+      },
+      "baseline_label": "base-r2",
+      "counts": {
+        "PASS": 36,
+        "FAIL": 4
+      },
+      "note": "the baseline map is a byte copy of base-r2; base-r1 and base-r2 compared EQUAL when the baseline was set"
+    },
+    "item": {
+      "head": "da974f840ca00ed306670dee2bbe768dce1eafe6",
+      "ref": "refs/xf/w0/anthropic-context-editing",
+      "cherry_pick": [
+        "05d6dbc172d24db4b237f8ef130fb4dc2e8651df"
+      ],
+      "cherry_pick_parent": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+      "applied_clean": true,
+      "patch_id_stable": {
+        "arm": "352f5b8a44bac49c1348e2514607dbba4be9a017",
+        "staging_branch_commit": "352f5b8a44bac49c1348e2514607dbba4be9a017",
+        "equal": true
+      },
+      "tree": "44e3f84714dfc14abc7e991e0012f1add6625c1f",
+      "author": "Kevin Rajan <7121943+kvnloo@users.noreply.github.com> (kept from the branch commit)",
+      "committer": "Kevin Rajan <7121943+kvnloo@users.noreply.github.com>",
+      "branch_parent": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+      "main_drift_since_branch_parent": {
+        "range": "44a1ce9724..34f8ec3b40",
+        "commits": 9,
+        "files": 10,
+        "files_shared_with_branch": 0
+      }
+    }
+  },
+  "head_revision": "da974f840ca00ed306670dee2bbe768dce1eafe6",
+  "changed_files": [
+    "agent/agent_init.py",
+    "agent/anthropic_adapter.py",
+    "agent/anthropic_context_editing.py",
+    "agent/chat_completion_helpers.py",
+    "agent/transports/anthropic.py",
+    "agent/turn_recovery.py",
+    "cli-config.yaml.example",
+    "gateway/run.py",
+    "hermes_cli/config_defaults.py",
+    "tests/agent/test_anthropic_context_editing.py",
+    "tui_gateway/session_compression.py",
+    "website/docs/developer-guide/context-compression-and-caching.md",
+    "website/docs/user-guide/features/computer-use.md"
+  ],
+  "corrections": [
+    {
+      "at": "2026-10-01T19:10Z",
+      "field": "changed_files",
+      "was": "website/docs/user-guide/features/context-compression-and-caching.md",
+      "now": "website/docs/developer-guide/context-compression-and-caching.md",
+      "why": "transcription error in the receipt: the old path does not exist at 34f8ec3b40; git diff --name-only 34f8ec3b40 da974f840c (and 44a1ce9724 24cc2cc869) lists the developer-guide path. No verdict, count or map changes; receipt not frozen (P8 pending)"
+    }
+  ],
+  "commands": {
+    "worktree": "git -C <h.git> worktree add --detach <worktree> 34f8ec3b407e50bad3ae27e4cd79d65212061356 && git -C <worktree> -c user.name='Kevin Rajan' -c user.email=7121943+kvnloo@users.noreply.github.com cherry-pick 05d6dbc172d24db4b237f8ef130fb4dc2e8651df",
+    "ref": "git -C <h.git> update-ref refs/xf/w0/anthropic-context-editing da974f840ca00ed306670dee2bbe768dce1eafe6 ''",
+    "run": "cd <xf-root>/factory/w0/f14 && PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py run <worktree> maps/anthropic-context-editing-r<N>.json --label anthropic-context-editing-r<N>   # N = 1, 2",
+    "compare": "PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py compare baseline-34f8ec3b40.json maps/anthropic-context-editing-r<N>.json",
+    "compare_r1_r2": "PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py compare maps/anthropic-context-editing-r1.json maps/anthropic-context-editing-r2.json"
+  },
+  "env": {
+    "host": "<local-host>",
+    "os": "Linux x86_64",
+    "python": "test venv interpreter passed by the sandbox as HERMES_PYTHON=<venv>/bin/python (read-only)",
+    "sandbox": "xf-sandbox.sh (bwrap): one fresh sandbox per probe cell, cleared env, HOME=<run>/home, HERMES_HOME=<run>/home/.hermes, PATH=<venv>/bin:/usr/bin:/bin",
+    "network": "loopback only",
+    "paid_api": "none",
+    "concurrency_note": "other factory workers ran F14 on other items at the same time; wall times are longer than the baseline's (51.9 s, 52.3 s) and are not a verdict input"
+  },
+  "runs": {
+    "r1": {
+      "label": "anthropic-context-editing-r1",
+      "map": {
+        "path": "<xf-root>/factory/w0/f14/maps/anthropic-context-editing-r1.json",
+        "sha256": "5500dfcbdf57adde28558f1c4d92c9b64b98cb2a7f7a718cc45519256a550ba8"
+      },
+      "worktree_head": "da974f840ca00ed306670dee2bbe768dce1eafe6",
+      "worktree_dirty": false,
+      "only": null,
+      "started_utc": "2026-10-01T18:21:36Z",
+      "wall_s": 129.2,
+      "counts": {
+        "PASS": 36,
+        "FAIL": 4
+      },
+      "cells": 19,
+      "blocked_exec_total": 0,
+      "sandbox_refusals": 0,
+      "nonzero_rc": {
+        "postmortem/notice_delivery_probe": 1
+      },
+      "expect_on_base_mismatches": [
+        "postmortem/context_cap_probe",
+        "postmortem/notice_delivery_probe"
+      ],
+      "compare_vs_baseline": {
+        "exit": 0,
+        "result": "EQUAL",
+        "diff_ids": []
+      },
+      "run_dir": "<xf-root>/factory/w0/runs/anthropic-context-editing-r1",
+      "log": "<xf-root>/factory/w0/runs/anthropic-context-editing-r1.log"
+    },
+    "r2": {
+      "label": "anthropic-context-editing-r2",
+      "map": {
+        "path": "<xf-root>/factory/w0/f14/maps/anthropic-context-editing-r2.json",
+        "sha256": "e5aa8a4e57bcd108a18d3b50924e31a6c4d8df65ff73155bf3c7556eb29d6b14"
+      },
+      "worktree_head": "da974f840ca00ed306670dee2bbe768dce1eafe6",
+      "worktree_dirty": false,
+      "only": null,
+      "started_utc": "2026-10-01T18:23:45Z",
+      "wall_s": 82.2,
+      "counts": {
+        "PASS": 36,
+        "FAIL": 4
+      },
+      "cells": 19,
+      "blocked_exec_total": 0,
+      "sandbox_refusals": 0,
+      "nonzero_rc": {
+        "postmortem/notice_delivery_probe": 1
+      },
+      "expect_on_base_mismatches": [
+        "postmortem/context_cap_probe",
+        "postmortem/notice_delivery_probe"
+      ],
+      "compare_vs_baseline": {
+        "exit": 0,
+        "result": "EQUAL",
+        "diff_ids": []
+      },
+      "run_dir": "<xf-root>/factory/w0/runs/anthropic-context-editing-r2",
+      "log": "<xf-root>/factory/w0/runs/anthropic-context-editing-r2.log"
+    }
+  },
+  "compare_r1_vs_r2": {
+    "exit": 0,
+    "result": "EQUAL",
+    "diff_ids": []
+  },
+  "verdicts": [
+    {
+      "id": "compaction/test_region_scoping",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true
+    },
+    {
+      "id": "goal_command_parity",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true,
+      "fingerprint": "d79dfafcaa4868dc"
+    },
+    {
+      "id": "native_compaction/ab_checkpoint_preflight::capture_cli_same_objects",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true,
+      "fingerprint": "f4f228c1f1712cc0"
+    },
+    {
+      "id": "native_compaction/ab_checkpoint_preflight::capture_gateway_reloaded_history",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true,
+      "fingerprint": "f4f228c1f1712cc0"
+    },
+    {
+      "id": "native_compaction/ab_checkpoint_preflight::over_threshold_negative",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true,
+      "fingerprint": "98dff750628aaa6f"
+    },
+    {
+      "id": "native_compaction/ab_checkpoint_preflight::restore",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true,
+      "fingerprint": "5ea433a5dd24f730"
+    },
+    {
+      "id": "postmortem/cache_estimator_probe",
+      "baseline": "FAIL",
+      "r1": "FAIL",
+      "r2": "FAIL",
+      "equal_to_baseline": true,
+      "marker": "rc=0 | marker absent: \"preflight_should_compress\": true"
+    },
+    {
+      "id": "postmortem/context_cap_probe",
+      "baseline": "FAIL",
+      "r1": "FAIL",
+      "r2": "FAIL",
+      "equal_to_baseline": true,
+      "marker": "spawn child trigger 850000 != 200000; cycle 0 trigger 850000 cap None; cycle 1 trigger 850000 cap None; cycle 2 trigger 850000 cap None; cycle 3 trigger 850000 cap None; model switch 1000000: trigger 850000 > 200000",
+      "fingerprint": "56dabc3674684245"
+    },
+    {
+      "id": "postmortem/credential_identity_probe",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true
+    },
+    {
+      "id": "postmortem/deadline_probe",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true
+    },
+    {
+      "id": "postmortem/finalizer_schedule_probe",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true,
+      "fingerprint": "bd7eea88f9cd9bc3"
+    },
+    {
+      "id": "postmortem/goal_scope_probe",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true,
+      "fingerprint": "b7eca3edb852af8a"
+    },
+    {
+      "id": "postmortem/notice_delivery_probe",
+      "baseline": "FAIL",
+      "r1": "FAIL",
+      "r2": "FAIL",
+      "equal_to_baseline": true,
+      "marker": "rc=1: KeyError: 'task_failure_notice' | marker absent: PROBE_COMPLETE"
+    },
+    {
+      "id": "postmortem/rewrite_hint_probe",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true
+    },
+    {
+      "id": "postmortem/scanner_bypass_probe",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true
+    },
+    {
+      "id": "provider_fallback/probe_104120",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true
+    },
+    {
+      "id": "provider_fallback/probe_104260",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true
+    },
+    {
+      "id": "provider_fallback/probe_104360",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true
+    },
+    {
+      "id": "readtool/fixtures_direct_read_file::empty_config",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true,
+      "fingerprint": "a8ac6986052f5c49"
+    },
+    {
+      "id": "readtool/fixtures_direct_read_file::fifo_hang",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true,
+      "fingerprint": "ed4dce4e99e87179"
+    },
+    {
+      "id": "readtool/fixtures_direct_read_file::lockfile_version",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true,
+      "fingerprint": "743a3317c2ec0d1b"
+    },
+    {
+      "id": "readtool/fixtures_direct_read_file::log_error_hunt",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true,
+      "fingerprint": "9d7aa5596d7504eb"
+    },
+    {
+      "id": "readtool/fixtures_direct_read_file::lying_extension",
+      "baseline": "FAIL",
+      "r1": "FAIL",
+      "r2": "FAIL",
+      "equal_to_baseline": true,
+      "marker": "failed: flagged binary",
+      "fingerprint": "d6f615b85009a2c9"
+    },
+    {
+      "id": "readtool/fixtures_direct_read_file::minified_backoff",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true,
+      "fingerprint": "ebc3d45cf379ba02"
+    },
+    {
+      "id": "readtool/fixtures_direct_read_file::near_miss_filename",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true,
+      "fingerprint": "e3788ea56dd56195"
+    },
+    {
+      "id": "readtool/fixtures_direct_read_file::past_eof",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true,
+      "fingerprint": "b8b15fb954e9dbf5"
+    },
+    {
+      "id": "readtool/fixtures_direct_read_file::unicode_filename",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true,
+      "fingerprint": "4e892f8bdb3d56d1"
+    },
+    {
+      "id": "token_accounting/ab_image_cost_calibration",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true
+    },
+    {
+      "id": "token_accounting/replay_gates::cli_deflated",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true
+    },
+    {
+      "id": "token_accounting/replay_gates::cli_inflated",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true
+    },
+    {
+      "id": "token_accounting/replay_gates::cli_past_window_inflated",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true
+    },
+    {
+      "id": "token_accounting/replay_gates::gateway_deflated",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true
+    },
+    {
+      "id": "token_accounting/replay_gates::gateway_inflated",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true
+    },
+    {
+      "id": "token_accounting/replay_gates::gateway_past_window_inflated",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true
+    },
+    {
+      "id": "token_accounting/replay_gates::overflow_recovery",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true
+    },
+    {
+      "id": "token_accounting/replay_gates::restore_deflated",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true
+    },
+    {
+      "id": "token_accounting/replay_gates::restore_inflated",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true
+    },
+    {
+      "id": "token_accounting/replay_gates::restore_past_window_inflated",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true
+    },
+    {
+      "id": "token_accounting/replay_gates::usage_less_fallback",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true
+    },
+    {
+      "id": "token_accounting/worktree_prompt_prefix",
+      "baseline": "PASS",
+      "r1": "PASS",
+      "r2": "PASS",
+      "equal_to_baseline": true,
+      "fingerprint": "5dd5c33ce53f80cb"
+    }
+  ],
+  "gates": {
+    "guards": {
+      "F14": "EQUAL"
+    },
+    "flaky": false,
+    "flaky_note": "the set marks no id flaky, and r1 and r2 are equal to each other and to the baseline on all 40 ids"
+  },
+  "measurements": [
+    {
+      "name": "verdict_ids_equal_to_baseline",
+      "arm": "item",
+      "run": "r1",
+      "value": 40,
+      "n": 40,
+      "label": "OBSERVED",
+      "statistic": "count"
+    },
+    {
+      "name": "verdict_ids_equal_to_baseline",
+      "arm": "item",
+      "run": "r2",
+      "value": 40,
+      "n": 40,
+      "label": "OBSERVED",
+      "statistic": "count"
+    },
+    {
+      "name": "pass",
+      "arm": "item",
+      "run": "r1",
+      "value": 36,
+      "n": 40,
+      "label": "OBSERVED",
+      "statistic": "count"
+    },
+    {
+      "name": "pass",
+      "arm": "item",
+      "run": "r2",
+      "value": 36,
+      "n": 40,
+      "label": "OBSERVED",
+      "statistic": "count"
+    },
+    {
+      "name": "pass",
+      "arm": "base",
+      "run": "baseline",
+      "value": 36,
+      "n": 40,
+      "label": "OBSERVED",
+      "statistic": "count"
+    }
+  ],
+  "fails_on_both_arms": {
+    "ids": [
+      "postmortem/cache_estimator_probe",
+      "postmortem/context_cap_probe",
+      "postmortem/notice_delivery_probe",
+      "readtool/fixtures_direct_read_file::lying_extension"
+    ],
+    "note": "the same 4 ids fail with the same marker and fingerprint on the baseline and on both item runs; all 4 are pre-existing on main 34f8ec3b40 (baseline receipt): cache_estimator_probe (fix PR #103476 still open), notice_delivery_probe and context_cap_probe (probe drift against main; expectation mismatches recorded in the set), readtool lying_extension (PNG bytes in a .txt not flagged binary)"
+  },
+  "denominators": {
+    "cells": 38,
+    "verdict_ids_per_run": 40,
+    "errored_scored_zero": 0,
+    "infra_excluded": 0,
+    "completeness": 1.0
+  },
+  "evidence_class": {
+    "local": true,
+    "ci": "none",
+    "simulation": false,
+    "runtime": false,
+    "kind": "regression"
+  },
+  "harness_abi": {
+    "harness": "hermes",
+    "editor_abi": "n/a",
+    "surface": "pinned F14 probes (scripts and pytest files from the worktree), each in its own sandbox cell"
+  },
+  "not_tested": [
+    "the set-level exclusions (live/paid probes, goal_repaste_probe which needs a private state.db copy, the sandbox-denylisted live_ab probes, the readtool model arm); identical for every item",
+    "the item's own contract test is not an F14 probe (it is covered by P-redgreen/r20261001-04)"
+  ],
+  "limitations": [
+    "F14 ran on main 34f8ec3b40 with the branch commit cherry-picked (same patch-id); the RED/GREEN/sabotage/adjacent receipts (P-redgreen/r20261001-04) were measured on base 44a1ce9724 with head 05d6dbc172. The 9 main commits in between share no file with the branch",
+    "none of the F14 probes exercises the anthropic_messages request path with compression.anthropic_context_editing on; EQUAL shows no regression in the guarded surfaces, not coverage of the new feature"
+  ],
+  "resource_usage": {
+    "wall_s": 211.4,
+    "cpu_core_s": null,
+    "gpu_s": 0,
+    "energy_j": null,
+    "api_cost_usd": 0.0,
+    "note": "wall_s is the sum of the two runner wall clocks; CPU time was not measured"
+  },
+  "verdict": "EQUAL",
+  "provenance": "self",
+  "frozen": {
+    "bundle_sha": null,
+    "cells": 38,
+    "supersedes": null,
+    "status": "NOT_FROZEN (P8 pending: no write-once bundle, not frozen to z0evals)"
+  },
+  "z0evals_study": null,
+  "ai_assistance": "Claude Code (Claude Opus 5.5) ran the F14 runner and wrote this receipt",
+  "privacy": "public-aggregate"
+}

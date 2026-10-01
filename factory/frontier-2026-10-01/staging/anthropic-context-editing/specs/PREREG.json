@@ -1,24 +1,31 @@
 {
-  "recorded_at": "2026-10-01T16:28:00Z",
-  "note": "Specs written before run r20261001-04 started; not committed to claude/ledger (xf not built), so prereg_commit is null. Rev 3 (run r20261001-03) is kept under superseded/r20261001-03/specs/.",
+  "recorded_at": "2026-10-01T19:51:04Z",
+  "note": "Specs written before run r20261001-05 started; not committed to claude/ledger (xf not built), so prereg_commit is null. Rev 4 (run r20261001-04) and G-guards rev 4 are kept under superseded/r20261001-04/specs/; G-guards is retired (P5 rests on the F14 set).",
   "specs": {
-    "F09": {
-      "path": "specs/F09.toml",
-      "rev": 4,
-      "sha256": "971115be2b460aac4bd66832468950c1c3635192587c76ee3eb209deefdd1396",
-      "decision_rule_sha256": "e76c3dbb8b0aa3f602ed87256c894cec992ce4e26828e33c066b355acf31c5d8"
-    },
-    "G-guards": {
-      "path": "specs/G-guards.toml",
-      "rev": 4,
-      "sha256": "011d121ef9b76aad6e152af97ee8828b1dfa61c1390643a3a8c8faf19bafb734",
-      "decision_rule_sha256": "76792474dc756903031d2672f0f3bc6bdc77b7ae4fa2e547098e99c68fffcf37"
-    },
     "P-redgreen": {
       "path": "specs/P-redgreen.toml",
-      "rev": 4,
-      "sha256": "f7be2f8264d3c5ff9b476753b356a454de82b5f51e052376a43eb2a4fa05d862",
+      "rev": 5,
+      "sha256": "5800615ce785957eae2efb6b14bc48e1329d1cff06fb2dc9506bd40c0312a8d8",
       "decision_rule_sha256": "1b7710826038e052b1c042b302461664157beb8971979c65bd1a0452176a7f09"
+    },
+    "F09": {
+      "path": "specs/F09.toml",
+      "rev": 5,
+      "sha256": "de91c5c86fd3a10e234f4d743f07f62a070c38097202fa13df65ed69bfba1f40",
+      "decision_rule_sha256": "e76c3dbb8b0aa3f602ed87256c894cec992ce4e26828e33c066b355acf31c5d8"
+    },
+    "F14": {
+      "path": "<xf-root>/factory/w0/f14/f14_set.json",
+      "set_rev": 1,
+      "file_sha256": "8b4864a72dd07b6383f98fc1e67359143216889f9c36eda79dc56fc3579044c0",
+      "set_sha256": "aba79fe8f09dabc62950aacd0a53c2fdc30bc58746f405f9aa050bf474d739b9",
+      "baseline": {
+        "path": "<xf-root>/factory/w0/f14/baseline-af7287ed22.json",
+        "sha256": "8041b1c08fbf73a44c57653104ad8009737628344203d8761eef175eaed23de3"
+      },
+      "runner_sha256": "2323a5918435b06a56ca0f5f8b55d0a0c2274915f11cd31ef120649b0fad28fe",
+      "decision_rule": "EQUAL iff f14_run.py compare of each v3 map against baseline-af7287ed22.json exits 0 (verdict, marker and fingerprint identical on every non-flaky id), and r1 vs r2 also compares EQUAL",
+      "decision_rule_sha256": "71f0aa3ecace84c0b7c12c7948700df22ec0a333c639596c82f21207ecaaaea1"
     }
   }
 }

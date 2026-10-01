@@ -1,4 +1,4 @@
-From 97efa68e9b7005f5c65624bf5f4f583ebf8e098f Mon Sep 17 00:00:00 2001
+From 24cc2cc8699dd5b4792264728ea484daeac82356 Mon Sep 17 00:00:00 2001
 From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
 Date: Thu, 1 Oct 2026 04:09:59 -0500
 Subject: [PATCH] feat(anthropic): opt-in server-side context editing
@@ -52,10 +52,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  create mode 100644 tests/agent/test_anthropic_context_editing.py
 
 diff --git a/agent/agent_init.py b/agent/agent_init.py
-index 4a043f66fd..909e58b379 100644
+index 60997e229c..c0f3a61707 100644
 --- a/agent/agent_init.py
 +++ b/agent/agent_init.py
-@@ -1603,6 +1603,8 @@ def _parse_compression_config(agent, _agent_cfg) -> CompressionSettings:
+@@ -1601,6 +1601,8 @@ def _parse_compression_config(agent, _agent_cfg) -> CompressionSettings:
          codex_app_server_auto=app_server_auto,
          codex_responses_native=responses_native,
          codex_responses_compact_threshold=compact_threshold,
@@ -64,7 +64,7 @@ index 4a043f66fd..909e58b379 100644
          idle_compact_after_seconds=idle_compact_after_seconds,
      )
  
-@@ -2046,6 +2048,7 @@ def _build_context_engine(agent, _agent_cfg, cs, _custom_providers, _effective_c
+@@ -2044,6 +2046,7 @@ def _build_context_engine(agent, _agent_cfg, cs, _custom_providers, _effective_c
      agent.codex_app_server_auto_compaction = cs.codex_app_server_auto
      agent.codex_responses_native_compaction = cs.codex_responses_native
      agent.codex_responses_compact_threshold = cs.codex_responses_compact_threshold
@@ -180,7 +180,7 @@ index 0000000000..b1c4e3f71f
 +        "clear_at_least": {"type": "input_tokens", "value": int(trigger * CLEAR_AT_LEAST_FRACTION)},
 +    }]}
 diff --git a/agent/chat_completion_helpers.py b/agent/chat_completion_helpers.py
-index 30b30f8dd2..1e29386876 100644
+index 5c114ec4be..f710077134 100644
 --- a/agent/chat_completion_helpers.py
 +++ b/agent/chat_completion_helpers.py
 @@ -1409,6 +1409,7 @@ def _consume_ephemeral_max_output(agent):
@@ -215,10 +215,10 @@ index 26598d14cd..fa45096cce 100644
  
  
 diff --git a/agent/turn_recovery.py b/agent/turn_recovery.py
-index 8472141cdb..bfc23272d3 100644
+index 5fdb162785..525ac63c31 100644
 --- a/agent/turn_recovery.py
 +++ b/agent/turn_recovery.py
-@@ -500,6 +500,14 @@ def _recover_stale_codex_reasoning(
+@@ -483,6 +483,14 @@ def _recover_stale_codex_reasoning(agent: Any, _retry: TurnRetryState, messages:
      return True
  
  
@@ -233,7 +233,7 @@ index 8472141cdb..bfc23272d3 100644
  def _recover_format_errors(
      agent: Any, api_error: Exception, classified: Any, _retry: TurnRetryState,
      messages: List[Dict[str, Any]], api_messages: Any,
-@@ -540,26 +548,26 @@ def _recover_format_errors(
+@@ -515,26 +523,26 @@ def _recover_format_errors(
      ):
          return True
  
@@ -320,7 +320,7 @@ index e4ba614893..2b1c3ea0f5 100644
          # session-rotation bug cluster. Pre-compaction turns are soft-archived under the same id
 diff --git a/tests/agent/test_anthropic_context_editing.py b/tests/agent/test_anthropic_context_editing.py
 new file mode 100644
-index 0000000000..2ae0c4d73c
+index 0000000000..fc48d77dbb
 --- /dev/null
 +++ b/tests/agent/test_anthropic_context_editing.py
 @@ -0,0 +1,91 @@
@@ -398,7 +398,7 @@ index 0000000000..2ae0c4d73c
 +        assert BETA in betas
 +        [edit] = payload["edits"]
 +        assert edit["type"] == "clear_tool_uses_20250919"
-+        # The server clears first; local compression keys on the reported post-clear size and fires later.
++        # The server clears first; the local compressor stays the fallback at its own trigger.
 +        assert edit["trigger"]["value"] < agent.context_compressor.threshold_tokens
 +        assert 0 < edit["clear_at_least"]["value"] < edit["trigger"]["value"]
 +

@@ -1,6 +1,6 @@
 xf_spec = 1
 id = "F09"
-rev = 5                          # rev 1 = r20261001-01 on 572e4f4fad (not pre-registered); rev 2 = r20261001-02 (superseded/r20261001-02/); rev 3 = r20261001-03 on e8c97320ac, head 61effa4dd8 (superseded/r20261001-03/); rev 4 = r20261001-04 on 44a1ce9724, head 05d6dbc172 (superseded/r20261001-04/); rev 5 = this file, written before run r20261001-05 (same contract and decision rule; new base af7287ed22, head 97efa68e9b = v2 cherry-picked plus one test-comment rewording; every test and probe now runs inside the xf sandbox)
+rev = 4                          # rev 1 = r20261001-01 on 572e4f4fad (not pre-registered); rev 2 = r20261001-02 (superseded/r20261001-02/); rev 3 = r20261001-03 on e8c97320ac, head 61effa4dd8 (superseded/r20261001-03/); rev 4 = this file, written before run r20261001-04 (same contract; new base and amended head: comment/docs/commit-message wording only)
 staging = "anthropic-context-editing"
 catalog_refs = ["F09"]
 feature = "anthropic-context-editing"
@@ -32,12 +32,11 @@ net = "loopback only (socket.connect guard records and refuses anything else)"
 data_class = "public"
 cli_entrypoint = false
 allow_exec = ["git rev-parse"]
-sandbox = "inside xf-sandbox.sh as well (bwrap, loopback-only netns); the probe also keeps its own loopback connect guard"
 owner_decisions = []
 
 [base]
 repo = "NousResearch/hermes-agent"
-pin = "af7287ed220a5ce0b0d00e95841956b60a31cb06"
+pin = "44a1ce9724502b9c692faaef00af3054bf11f1a6"
 
 [[arms]]
 id = "base"
@@ -45,13 +44,13 @@ tree = "@base"
 
 [[arms]]
 id = "head"
-branch = "staging/anthropic-context-editing-v3"
-head = "97efa68e9b7005f5c65624bf5f4f583ebf8e098f"
+branch = "staging/anthropic-context-editing"
+head = "05d6dbc172d24db4b237f8ef130fb4dc2e8651df"
 parent = "@base"
 
 [probe]
 kind = "probe"
-cmd = "<xf-sandbox.sh> <run> <worktree> -- python -B harness/f09_gate_probe.py --repo <worktree> --arm {arm} --out <run>/f09_{arm}.json   # then copied to raw/f09_{arm}.json"
+cmd = "<venv-python> harness/f09_gate_probe.py --repo <worktree> --arm {arm} --out raw/f09_{arm}.json"
 cells = ["native_claude_flag_false", "native_claude_flag_true", "native_claude_flag_true_compression_disabled", "native_claude_flag_true_checkpoint_required", "native_non_claude_flag_true", "third_party_endpoint_flag_true", "structured_400_disable_and_retry_once", "over_threshold_local_fallback_on", "over_threshold_local_fallback_off", "flag_absent_wire"]
 reps = 1
 order = "base then head"
@@ -62,7 +61,7 @@ type = "gate"
 decision_rule = "KEEP iff on head every gate cell passes (payload and beta present exactly when expected), the 400 cell gives [True, False, False], local compression fires >= 1 time on turn 2 in the flag-on over-threshold cell, the flag-absent body-minus-system and header hashes match base, and the host-normalised system hashes match base; base must send the payload on 0 cells."
 cache_read_ratio = "NOT_MEASURED (needs F10, paid, OD-3); caps the branch at LIMITED"
 
-guards = ["F14"]
+guards = ["G-guards"]
 invalidate_on = ["agent/anthropic_adapter.py", "agent/chat_completion_helpers.py", "agent/turn_recovery.py", "agent/agent_init.py", "agent/native_compaction.py", "agent/anthropic_endpoints.py", "tests/fakes/providers/anthropic_messages.py"]
 
 [outputs]

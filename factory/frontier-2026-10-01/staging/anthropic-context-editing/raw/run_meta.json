@@ -1,63 +1,65 @@
 {
-  "base": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
-  "head": "05d6dbc172d24db4b237f8ef130fb4dc2e8651df",
+  "base": "af7287ed220a5ce0b0d00e95841956b60a31cb06",
+  "head": "97efa68e9b7005f5c65624bf5f4f583ebf8e098f",
   "steps": [
     {
       "step": "red_base",
-      "wall_s": 15.3,
-      "cpu_core_s": 12.9
+      "wall_s": 40.1,
+      "cpu_core_s": 0.0
     },
     {
       "step": "adjacent_base",
-      "wall_s": 55.1,
-      "cpu_core_s": 106.0
-    },
-    {
-      "step": "f14_base",
-      "wall_s": 80.1,
-      "cpu_core_s": 53.0
+      "wall_s": 53.8,
+      "cpu_core_s": 0.0
     },
     {
       "step": "f09_base",
       "wall_s": 3.5,
-      "cpu_core_s": 3.1
+      "cpu_core_s": 0.0
     },
     {
       "step": "green_rep1",
-      "wall_s": 9.0,
-      "cpu_core_s": 7.1
+      "wall_s": 8.2,
+      "cpu_core_s": 0.0
     },
     {
       "step": "green_rep2",
-      "wall_s": 7.1,
-      "cpu_core_s": 6.6
+      "wall_s": 9.1,
+      "cpu_core_s": 0.0
     },
     {
       "step": "green_rep3",
-      "wall_s": 9.4,
-      "cpu_core_s": 7.4
+      "wall_s": 8.7,
+      "cpu_core_s": 0.0
     },
     {
       "step": "adjacent_head",
-      "wall_s": 60.5,
-      "cpu_core_s": 112.3
-    },
-    {
-      "step": "f14_head",
-      "wall_s": 96.8,
-      "cpu_core_s": 60.7
+      "wall_s": 52.2,
+      "cpu_core_s": 0.0
     },
     {
       "step": "f09_head",
-      "wall_s": 7.5,
-      "cpu_core_s": 5.9
+      "wall_s": 4.1,
+      "cpu_core_s": 0.0
     },
     {
       "step": "sabotage_head",
-      "wall_s": 283.7,
-      "cpu_core_s": 231.9
+      "wall_s": 230.1,
+      "cpu_core_s": 0.0
     }
   ],
-  "wall_s_total": 628.0,
-  "cpu_core_s_total": 606.9
+  "blocked_execs": {
+    "red-base": 0,
+    "adjacent-base": 0,
+    "f09-base": 0,
+    "green-1": 0,
+    "green-2": 0,
+    "green-3": 0,
+    "adjacent-head": 0,
+    "f09-head": 0,
+    "sabotage": 0
+  },
+  "sandbox": "xf-sandbox.sh, one run dir per step",
+  "wall_s_total": 409.8,
+  "cpu_core_s_total": 0.0
 }

@@ -1,0 +1,24 @@
+{
+  "recorded_at": "2026-10-01T16:28:00Z",
+  "note": "Specs written before run r20261001-04 started; not committed to claude/ledger (xf not built), so prereg_commit is null. Rev 3 (run r20261001-03) is kept under superseded/r20261001-03/specs/.",
+  "specs": {
+    "F09": {
+      "path": "specs/F09.toml",
+      "rev": 4,
+      "sha256": "971115be2b460aac4bd66832468950c1c3635192587c76ee3eb209deefdd1396",
+      "decision_rule_sha256": "e76c3dbb8b0aa3f602ed87256c894cec992ce4e26828e33c066b355acf31c5d8"
+    },
+    "G-guards": {
+      "path": "specs/G-guards.toml",
+      "rev": 4,
+      "sha256": "011d121ef9b76aad6e152af97ee8828b1dfa61c1390643a3a8c8faf19bafb734",
+      "decision_rule_sha256": "76792474dc756903031d2672f0f3bc6bdc77b7ae4fa2e547098e99c68fffcf37"
+    },
+    "P-redgreen": {
+      "path": "specs/P-redgreen.toml",
+      "rev": 4,
+      "sha256": "f7be2f8264d3c5ff9b476753b356a454de82b5f51e052376a43eb2a4fa05d862",
+      "decision_rule_sha256": "1b7710826038e052b1c042b302461664157beb8971979c65bd1a0452176a7f09"
+    }
+  }
+}

@@ -1,0 +1,3 @@
+=== Summary: 1 files, 7 tests passed, 0 failed (100% complete) in 6.6s (2 workers) ===
+=== Summary: 1 files, 7 tests passed, 0 failed (100% complete) in 6.2s (2 workers) ===
+=== Summary: 1 files, 7 tests passed, 0 failed (100% complete) in 7.5s (2 workers) ===

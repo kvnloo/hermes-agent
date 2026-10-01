@@ -1,7 +1,7 @@
 {
   "schema": "f09.gate_probe.v1",
   "arm": "head",
-  "repo_head": "97efa68e9b7005f5c65624bf5f4f583ebf8e098f",
+  "repo_head": "05d6dbc172d24db4b237f8ef130fb4dc2e8651df",
   "cells": [
     {
       "cell": "native_claude_flag_false",
@@ -167,9 +167,9 @@
           "beta_header": "interleaved-thinking-2025-05-14,fine-grained-tool-streaming-2025-05-14",
           "beta_present": false,
           "schema_errors": [],
-          "body_sha256": "45653a65cc20db0f6fdaa863de278fe447a54ed4be7df7ff0e338ceab7b69525",
+          "body_sha256": "358606bf531b8fa84bc67eea319bfeeef1361fd402ad1274962b377cf13c0cd5",
           "body_minus_system_sha256": "eab91ad3f12252c117aaeb842102822ade9b2fd2672d27386c5759172e4c9c66",
-          "system_sha256": "75188d1d24f9fedbdcdd66bbe8a518abf1eea87155933f07d3980b12c5dd9fe5",
+          "system_sha256": "ad8cdfe09989b8633bb5166326988875e332ba6cedee16fbdf9a89c5e2079661",
           "headers_sha256": "eb74173fa90f7f3759981331635312281b186d105415e735acefca4542876b84"
         },
         {
@@ -177,9 +177,9 @@
           "beta_header": "interleaved-thinking-2025-05-14,fine-grained-tool-streaming-2025-05-14",
           "beta_present": false,
           "schema_errors": [],
-          "body_sha256": "008add423a988474de297fefb15891399d5d3ee0d5031e32e3dad2f4e226bc62",
+          "body_sha256": "6cdda3c69e9fdd4736b7974d6ba7dd689189265a3ca76661313396b494158a21",
           "body_minus_system_sha256": "7fa573ed3c43d43e67c6f6c82d2384afe368bb1e1678c09d2316dc54bbdb751b",
-          "system_sha256": "75188d1d24f9fedbdcdd66bbe8a518abf1eea87155933f07d3980b12c5dd9fe5",
+          "system_sha256": "ad8cdfe09989b8633bb5166326988875e332ba6cedee16fbdf9a89c5e2079661",
           "headers_sha256": "eb74173fa90f7f3759981331635312281b186d105415e735acefca4542876b84"
         }
       ],

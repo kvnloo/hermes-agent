@@ -1,10 +1,8 @@
 """Static merge checks for staging/anthropic-context-editing: the branch against main, and each
 listed upstream PR (fetched read-only into refs/xf/pr/<n>) against main and against the branch.
-Roles: "related" = touches the same request field or beta (#71302: OAuth clear_thinking + the
-context-management beta); "neighbour" = edits the same compression config/docs block, or (#129882)
-an open PR that touches agent/context_compressor.py. Since run r20261001-05 there is no "dependency"
-role: the preserved-thinking work landed on main as #130645 (5d077106b8), #103476, #129620 and
-#129492 were closed unmerged as superseded by it, and #129882 stays open only for unrelated work. Writes receipts/MERGE-<run>.json.
+Roles: "dependency" = a preserved-thinking PR this waits on (P12); "related" = touches the same
+request field or beta (#71302: OAuth clear_thinking + the context-management beta); "neighbour" =
+edits the same compression config/docs block (file overlap only). Writes receipts/MERGE-<run>.json.
 Temporary merge commits are unreferenced objects.
 
 Usage: python merge_check.py --git-dir <bare repo> --main <sha> --branch <sha> --run r20261001-04
@@ -18,7 +16,8 @@ import time
 from pathlib import Path
 
 A = Path(__file__).resolve().parents[1]
-PRS = {71302: ("TrueNix", "related"), 129882: ("Sahilvishnaliya", "neighbour"), 128432: ("Julientalbot", "neighbour"),
+PRS = {103476: ("teknium1", "dependency"), 129620: ("JoaoMarcos44", "dependency"), 129492: ("SHL0MS", "dependency"),
+       129882: ("Sahilvishnaliya", "dependency"), 71302: ("TrueNix", "related"), 128432: ("Julientalbot", "neighbour"),
        129364: ("thanosapollo", "neighbour")}
 
 ap = argparse.ArgumentParser()
@@ -79,18 +78,18 @@ receipt = {
     "runner_revision": {"driver": {"path": "harness/merge_check.py", "sha256": hashlib.sha256((A / "harness/merge_check.py").read_bytes()).hexdigest()},
                         "git": subprocess.run(["git", "--version"], capture_output=True, text=True).stdout.strip()},
     "issue": "kvnloo/hermes-agent#322",
-    "origin_refs": [f"NousResearch/hermes-agent#{n}" for n in PRS] + ["NousResearch/hermes-agent#130645"],
+    "origin_refs": [f"NousResearch/hermes-agent#{n}" for n in PRS],
     "staging": "anthropic-context-editing",
     "base_revision": ARGS.main, "head_revision": ARGS.branch,
     "changed_files": sorted(branch_files),
     "policy_revision": {"factory": "FACTORY.md sha256 7726ba18b43a9367f91d7f70c3aaefb96a9863761ddf71225c61c26a30d688d4 (frontier-2026-10-01)"},
     "command": f"python3 harness/merge_check.py --git-dir <h.git> --main {ARGS.main} --branch {ARGS.branch} --run {ARGS.run}",
     "results": out,
-    "denominators": {"cells": len(MERGES), "cells_note": "merge-tree runs: branch x main, then per PR main x PR, main + PR x branch (only when main x PR is clean) and PR x branch; PR roles: related (same field/beta), neighbour (same config/docs block, or agent/context_compressor.py); the former dependencies landed on main as #130645 (5d077106b8) or were closed as superseded by it", "errored_scored_zero": 0, "infra_excluded": 0, "completeness": 1.0},
+    "denominators": {"cells": len(MERGES), "cells_note": "merge-tree runs: branch x main, then per PR main x PR, main + PR x branch (only when main x PR is clean) and PR x branch; PR roles: dependency (P12 ordering), related (same field/beta), neighbour (same config/docs block)", "errored_scored_zero": 0, "infra_excluded": 0, "completeness": 1.0},
     "evidence_class": {"local": True, "ci": "none", "simulation": False, "runtime": False, "kind": "static"},
     "resource_usage": {"wall_s": WALL, "cpu_core_s": CPU, "gpu_s": 0, "energy_j": None, "tokens": 0, "api_cost_usd": 0.0},
     "provenance": "self",
-    "frozen": {"bundle_sha": None, "cells": len(MERGES), "supersedes": "MERGE/r20261001-04 (superseded/r20261001-04/receipts/; main 44a1ce9724, 4 dependency PRs since closed or superseded)", "status": "NOT_FROZEN (P8 pending)"},
+    "frozen": {"bundle_sha": None, "cells": len(MERGES), "supersedes": "MERGE/r20261001-03 (superseded/r20261001-03/receipts/; it covered only the 4 dependency PRs)", "status": "NOT_FROZEN (P8 pending)"},
     "privacy": "public-aggregate",
     "verdict": "CLEAN" if out["branch_x_main"]["clean"] else "CONFLICT",
 }

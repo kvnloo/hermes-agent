@@ -1,14 +1,14 @@
 """Run every $0 proof for staging/anthropic-context-editing on one worktree, base then head.
 
-RED (contract test copied onto base), adjacent (base), F09 (base); then GREEN x3, adjacent, F09 and
-per-hunk sabotage on the head. Every test and probe runs inside the xf sandbox (xf-sandbox.sh: bwrap,
-loopback-only network, HOME and HERMES_HOME inside a fresh run dir per step, Hermes console scripts
-stubbed). The F14 guard set is run separately with the factory's f14_run.py. Writes raw outputs plus
-run_meta.json (wall and child CPU seconds per step) into --raw; nothing absolute is written there.
+RED (contract test copied onto base), adjacent (base), the F14 guard set (base, harness/f14_guards.py),
+F09 (base); then GREEN x3, adjacent, F14, F09 and per-hunk sabotage on the head. Writes raw outputs
+plus run_meta.json (wall and child CPU seconds per step) into --raw. Nothing absolute is written to
+--raw: f14_guards.py keeps full probe output under XF_PRIVATE (outside the artifact tree) and
+publishes a placeholder-only summary.
 
 Usage:
-  python3 -B run_proofs.py --sandbox <xf-sandbox.sh> --runs <run-dir root> --label <prefix> \
-    --worktree <checkout> --base <sha> --head <sha> --raw <dir>
+  HERMES_PYTHON=<venv python> XF_TESTHOME=<isolated test home> XF_PRIVATE=<scratch dir> \
+    python run_proofs.py --worktree <checkout> --base <sha> --head <sha> --raw <dir>
 """
 import argparse
 import json
@@ -36,17 +36,13 @@ ap.add_argument("--worktree", required=True)
 ap.add_argument("--base", required=True)
 ap.add_argument("--head", required=True)
 ap.add_argument("--raw", required=True)
-ap.add_argument("--sandbox", required=True)
-ap.add_argument("--runs", required=True)
-ap.add_argument("--label", required=True)
 ARGS = ap.parse_args()
 W = Path(ARGS.worktree).resolve()
 RAW = Path(ARGS.raw).resolve()
 RAW.mkdir(parents=True, exist_ok=True)
-SANDBOX = str(Path(ARGS.sandbox).resolve())
-RUNS = Path(ARGS.runs).resolve()
+PY = os.environ["HERMES_PYTHON"]
+HOME = Path(os.environ["XF_TESTHOME"])
 META: list[dict] = []
-BLOCKED: dict[str, int] = {}
 
 
 def step(name, fn):
@@ -63,19 +59,10 @@ def git(*args):
     return subprocess.run(["git", *args], cwd=W, check=True, capture_output=True, text=True).stdout
 
 
-def sandboxed(name, argv, timeout=1800):
-    """One fresh run dir per step; the sandbox sets HOME, HERMES_HOME and HERMES_PYTHON inside it."""
-    run = RUNS / f"{ARGS.label}-{name}"
-    run.mkdir(parents=True, exist_ok=False)
-    proc = subprocess.run([SANDBOX, str(run), str(W), "--", *argv], capture_output=True, text=True, timeout=timeout)
-    assert proc.returncode not in (64, 65, 97), f"sandbox refused {name}: rc {proc.returncode}"
-    log = run / "blocked-exec.log"
-    BLOCKED[name] = len(log.read_text().splitlines()) if log.exists() else 0
-    return run, proc
-
-
-def pytest(name, files):
-    _, proc = sandboxed(name, ["bash", "scripts/run_tests.sh", "-j", "2", *files, "-q"])
+def pytest(files):
+    env = {**os.environ, "HOME": str(HOME), "HERMES_HOME": str(HOME / ".hermes"), "HERMES_PYTHON": PY}
+    proc = subprocess.run(["bash", "scripts/run_tests.sh", "-j", "2", *files, "-q"], cwd=W, env=env,
+                          capture_output=True, text=True, timeout=1800)
     return proc.stdout + proc.stderr
 
 
@@ -83,28 +70,34 @@ def summary(out):
     return [ln.strip() for ln in out.splitlines() if ln.strip().startswith("=== Summary:")]
 
 
+def f14(arm):
+    subprocess.run([PY, "-B", str(HERE / "f14_guards.py"), "--worktree", str(W), "--arm", arm, "--raw", str(RAW),
+                    "--private", os.environ["XF_PRIVATE"]], env={**os.environ, "HERMES_PYTHON": PY},
+                   check=True, capture_output=True, text=True, timeout=3600)
+
+
 def f09(arm):
-    run, proc = sandboxed(f"f09-{arm}", ["python", "-B", str(HERE / "f09_gate_probe.py"), "--repo", str(W), "--arm", arm,
-                                         "--out", str(RUNS / f"{ARGS.label}-f09-{arm}" / f"f09_{arm}.json")], timeout=900)
-    assert proc.returncode == 0, proc.stderr[-2000:]
-    (RAW / f"f09_{arm}.json").write_bytes((run / f"f09_{arm}.json").read_bytes())
+    subprocess.run([PY, "-B", str(HERE / "f09_gate_probe.py"), "--repo", str(W), "--arm", arm, "--out", str(RAW / f"f09_{arm}.json")],
+                   check=True, capture_output=True, text=True, timeout=900)
 
 
 def main() -> int:
+    (HOME / ".hermes").mkdir(parents=True, exist_ok=True)
     test_src = git("show", f"{ARGS.head}:{TEST}")
 
     # ---- base ---------------------------------------------------------------------------------
     git("checkout", "-q", "--detach", ARGS.base)
     assert git("rev-parse", "HEAD").strip() == ARGS.base
     (W / TEST).write_text(test_src, encoding="utf-8")
-    red = step("red_base", lambda: pytest("red-base", [TEST]))
+    red = step("red_base", lambda: pytest([TEST]))
     (W / TEST).unlink()
     keep = [ln.rstrip() for ln in red.splitlines()
             if "FAILED tests/" in ln or ln.strip().startswith("=== Summary:") or re.match(r"^E\s", ln)]
     (RAW / "red_base.txt").write_text("\n".join(keep) + "\n", encoding="utf-8")
     assert git("status", "--porcelain").strip() == "", "base checkout dirty after RED"
-    adj = step("adjacent_base", lambda: pytest("adjacent-base", ADJACENT))
+    adj = step("adjacent_base", lambda: pytest(ADJACENT))
     (RAW / "adjacent_base.txt").write_text("\n".join(summary(adj)) + "\n", encoding="utf-8")
+    step("f14_base", lambda: f14("base"))
     step("f09_base", lambda: f09("base"))
 
     # ---- head ---------------------------------------------------------------------------------
@@ -112,20 +105,19 @@ def main() -> int:
     assert git("rev-parse", "HEAD").strip() == ARGS.head
     greens = []
     for rep in range(3):
-        greens += summary(step(f"green_rep{rep + 1}", lambda: pytest(f"green-{rep + 1}", [TEST])))
+        greens += summary(step(f"green_rep{rep + 1}", lambda: pytest([TEST])))
     (RAW / "green3.txt").write_text("\n".join(greens) + "\n", encoding="utf-8")
-    adj = step("adjacent_head", lambda: pytest("adjacent-head", ADJACENT))
+    adj = step("adjacent_head", lambda: pytest(ADJACENT))
     (RAW / "adjacent_head.txt").write_text("\n".join(summary(adj)) + "\n", encoding="utf-8")
+    step("f14_head", lambda: f14("head"))
     step("f09_head", lambda: f09("head"))
-    sab_run = RUNS / f"{ARGS.label}-sabotage"
-    _, sab = step("sabotage_head", lambda: sandboxed("sabotage", [
-        "bash", "-c", 'XF_TESTHOME="$HOME" exec python -B "$0" --worktree "$1" --out "$2"',
-        str(HERE / "sabotage.py"), str(W), str(sab_run / "sabotage.json")], timeout=3600))
-    assert sab.returncode == 0, sab.stderr[-2000:]
-    (RAW / "sabotage.json").write_bytes((sab_run / "sabotage.json").read_bytes())
+    env = {**os.environ}
+    step("sabotage_head", lambda: subprocess.run(
+        [PY, "-B", str(HERE / "sabotage.py"), "--worktree", str(W), "--out", str(RAW / "sabotage.json")],
+        env=env, check=True, capture_output=True, text=True, timeout=3600))
     assert git("status", "--porcelain").strip() == "", "head checkout dirty after sabotage"
 
-    (RAW / "run_meta.json").write_text(json.dumps({"base": ARGS.base, "head": ARGS.head, "steps": META, "blocked_execs": BLOCKED, "sandbox": "xf-sandbox.sh, one run dir per step",
+    (RAW / "run_meta.json").write_text(json.dumps({"base": ARGS.base, "head": ARGS.head, "steps": META,
                                                    "wall_s_total": round(sum(m["wall_s"] for m in META), 1),
                                                    "cpu_core_s_total": round(sum(m["cpu_core_s"] for m in META), 1)},
                                                   indent=2) + "\n", encoding="utf-8")

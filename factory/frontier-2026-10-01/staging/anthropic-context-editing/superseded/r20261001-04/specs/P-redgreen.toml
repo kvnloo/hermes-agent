@@ -1,6 +1,6 @@
 xf_spec = 1
 id = "P-redgreen"
-rev = 5                          # rev 1 = r20261001-01 on 572e4f4fad (not pre-registered); rev 2 = r20261001-02 (superseded/r20261001-02/); rev 3 = r20261001-03 on e8c97320ac, head 61effa4dd8 (superseded/r20261001-03/); rev 4 = r20261001-04 on 44a1ce9724, head 05d6dbc172 (superseded/r20261001-04/); rev 5 = this file, written before run r20261001-05 (same contract and decision rule; new base af7287ed22, head 97efa68e9b = v2 cherry-picked plus one test-comment rewording; every test and probe now runs inside the xf sandbox)
+rev = 4                          # rev 1 = r20261001-01 on 572e4f4fad (not pre-registered); rev 2 = r20261001-02 (superseded/r20261001-02/); rev 3 = r20261001-03 on e8c97320ac, head 61effa4dd8 (superseded/r20261001-03/); rev 4 = this file, written before run r20261001-04 (same contract; new base and amended head: comment/docs/commit-message wording only)
 staging = "anthropic-context-editing"
 catalog_refs = ["F09"]
 feature = "anthropic-context-editing"
@@ -13,7 +13,7 @@ priors = []
 question = "Does main send no context_management / context-management beta on the native Anthropic route when compression.anthropic_context_editing is true, and does the staging head send it only when opted in and eligible (compression enabled, no checkpoint_required, Claude model, native endpoint) and recover from a structured 400 by disabling it and retrying once?"
 hypothesis = "main ignores the key (the 2 flag-on cases are RED; the 5 cases that expect no field pass on both arms); the head passes all 7 cases"
 varied = "tree"
-fixed = ["contract test blob 2ae0c4d73c (fc48d77dbb plus the reworded line-75 comment; no assertion changed)", "SDK-oracle fake blob e46bb9b439", "venv interpreter", "isolated HOME/HERMES_HOME"]
+fixed = ["contract test blob fc48d77dbb", "SDK-oracle fake blob e46bb9b439", "venv interpreter", "isolated HOME/HERMES_HOME"]
 falsifier = "the flag-on cases pass on main (no live need -> SUPERSEDED_ON_MAIN), or the head is not GREEN 3/3, or no behavioural hunk re-REDs when reverted"
 kill = "falsifier met on the declared base"
 observer_effect = "none: real AIAgent loop; only the vendor HTTP boundary is replaced by the loopback fake"
@@ -32,12 +32,11 @@ net = "loopback only"
 data_class = "public"
 cli_entrypoint = false
 allow_exec = ["bash scripts/run_tests.sh"]
-sandbox = "every run inside xf-sandbox.sh (bwrap: loopback-only netns, read-only /, HOME and HERMES_HOME in the run dir, Hermes console scripts stubbed)"
 owner_decisions = []
 
 [base]
 repo = "NousResearch/hermes-agent"
-pin = "af7287ed220a5ce0b0d00e95841956b60a31cb06"
+pin = "44a1ce9724502b9c692faaef00af3054bf11f1a6"
 
 [[arms]]
 id = "base"
@@ -45,8 +44,8 @@ tree = "@base"
 
 [[arms]]
 id = "head"
-branch = "staging/anthropic-context-editing-v3"
-head = "97efa68e9b7005f5c65624bf5f4f583ebf8e098f"
+branch = "staging/anthropic-context-editing"
+head = "05d6dbc172d24db4b237f8ef130fb4dc2e8651df"
 parent = "@base"
 
 [inject]
@@ -55,7 +54,7 @@ carrier_tests = []
 
 [probe]
 kind = "pytest"
-cmd = "<xf-sandbox.sh> <run> <worktree> -- bash scripts/run_tests.sh -j 2 {files} -q   # the sandbox sets HOME=<run>/home, HERMES_HOME=<run>/home/.hermes, HERMES_PYTHON=<venv-python>"
+cmd = "HOME=<testhome> HERMES_HOME=<testhome>/.hermes HERMES_PYTHON=<venv-python> bash scripts/run_tests.sh -j 2 {files} -q"
 files = ["tests/agent/test_anthropic_context_editing.py"]
 reps = 3
 escalate_to = 3
@@ -72,8 +71,8 @@ sabotage = "per_hunk (harness/sabotage.py: 16 hunks against the contract test, e
 adjacent = { files = ["tests/agent/test_anthropic_adapter.py", "tests/hermes_cli/test_fast_command.py", "tests/agent/test_fast_mode_auto.py", "tests/agent/test_native_compaction.py", "tests/agent/test_nous_portal_anthropic_wire.py", "tests/gateway/test_agent_cache.py", "tests/tui_gateway/test_compression_config_hot_reload.py", "tests/hermes_cli/test_config_edit_seed.py", "tests/hermes_cli/test_config_unversioned_migration.py", "tests/agent/test_413_compression.py", "tests/agent/transports/test_transport.py", "tests/agent/test_anthropic_stream_fallbacks.py", "tests/agent/test_codex_token_expired_replay_recovery.py", "tests/agent/test_error_classifier.py", "tests/e2e/core/providers/test_anthropic_oracle.py"], rule = "identical pass/fail set to base" }
 decision_rule = "KEEP iff base shows 2 failed / 7 with both red markers, head shows 7/7 passed in each of 3 reps, at least one sabotage hunk re-REDs, each of the 5 gate-condition removals (flag, compression.enabled, checkpoint_required, Claude model, third-party endpoint) re-REDs, and the adjacent pass/fail counts are identical on base and head."
 
-guards = ["F14"]
-invalidate_on = ["agent/anthropic_adapter.py", "agent/chat_completion_helpers.py", "agent/turn_recovery.py", "agent/agent_init.py", "agent/transports/anthropic.py", "agent/native_compaction.py", "agent/anthropic_endpoints.py", "tests/fakes/providers/anthropic_messages.py", "agent/context_compressor.py"]
+guards = ["G-guards"]
+invalidate_on = ["agent/anthropic_adapter.py", "agent/chat_completion_helpers.py", "agent/turn_recovery.py", "agent/agent_init.py", "agent/transports/anthropic.py", "agent/native_compaction.py", "agent/anthropic_endpoints.py", "tests/fakes/providers/anthropic_messages.py"]
 
 [outputs]
 public = ["per-arm counts", "assertion text", "shas"]

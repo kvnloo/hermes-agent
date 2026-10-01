@@ -220,8 +220,8 @@
       "tests/agent/test_anthropic_context_editing.py::test_opt_in_sends_clear_tool_uses_with_its_beta_ahead_of_local_compression[on]"
     ],
     "assertions": [
-      "+    where <agent.context_compressor.ContextCompressor object at 0x7effe2cc5ed0> = <run_agent.AIAgent object at 0x7effe2cda310>.context_compressor",
-      "+  where 150000 = <agent.context_compressor.ContextCompressor object at 0x7effe2cc5ed0>.threshold_tokens",
+      "+    where <agent.context_compressor.ContextCompressor object at 0x7f2c595b8fd0> = <run_agent.AIAgent object at 0x7f2c68eaf510>.context_compressor",
+      "+  where 150000 = <agent.context_compressor.ContextCompressor object at 0x7f2c595b8fd0>.threshold_tokens",
       "assert 150001 < 150000"
     ],
     "rc": 1,

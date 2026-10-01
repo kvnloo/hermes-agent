@@ -1,0 +1,532 @@
+{
+  "schema": "xf.f14.verdicts.v1",
+  "label": "anthropic-context-editing-v3-r2",
+  "set": "F14",
+  "set_rev": 1,
+  "set_sha256": "aba79fe8f09dabc62950aacd0a53c2fdc30bc58746f405f9aa050bf474d739b9",
+  "runner_sha256": "2323a5918435b06a56ca0f5f8b55d0a0c2274915f11cd31ef120649b0fad28fe",
+  "sandbox_sha256": "c9586195c43a926317fa3d6bc18db1937527a6308dc30c683ce9c6a83398638a",
+  "probe_helpers_sha256": {
+    "readtool_direct.py": "0df21aee5fec293042bf4511b3b4c353d13d768711b8272c85b9f86438649229"
+  },
+  "worktree_head": "97efa68e9b7005f5c65624bf5f4f583ebf8e098f",
+  "worktree_dirty": false,
+  "only": null,
+  "started_utc": "2026-10-01T19:59:49Z",
+  "wall_s": 51.8,
+  "counts": {
+    "PASS": 37,
+    "FAIL": 3
+  },
+  "verdicts": {
+    "compaction/test_region_scoping": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": null
+    },
+    "goal_command_parity": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": "d79dfafcaa4868dc"
+    },
+    "native_compaction/ab_checkpoint_preflight::capture_cli_same_objects": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": "f4f228c1f1712cc0"
+    },
+    "native_compaction/ab_checkpoint_preflight::capture_gateway_reloaded_history": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": "f4f228c1f1712cc0"
+    },
+    "native_compaction/ab_checkpoint_preflight::over_threshold_negative": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": "98dff750628aaa6f"
+    },
+    "native_compaction/ab_checkpoint_preflight::restore": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": "5ea433a5dd24f730"
+    },
+    "postmortem/cache_estimator_probe": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": null
+    },
+    "postmortem/context_cap_probe": {
+      "verdict": "FAIL",
+      "marker": "spawn child trigger 850000 != 200000; cycle 0 trigger 850000 cap None; cycle 1 trigger 850000 cap None; cycle 2 trigger 850000 cap None; cycle 3 trigger 850000 cap None; model switch 1000000: trigger 850000 > 200000",
+      "fingerprint": "56dabc3674684245"
+    },
+    "postmortem/credential_identity_probe": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": null
+    },
+    "postmortem/deadline_probe": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": null
+    },
+    "postmortem/finalizer_schedule_probe": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": "bd7eea88f9cd9bc3"
+    },
+    "postmortem/goal_scope_probe": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": "b7eca3edb852af8a"
+    },
+    "postmortem/notice_delivery_probe": {
+      "verdict": "FAIL",
+      "marker": "rc=1: KeyError: 'task_failure_notice' | marker absent: PROBE_COMPLETE",
+      "fingerprint": null
+    },
+    "postmortem/rewrite_hint_probe": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": null
+    },
+    "postmortem/scanner_bypass_probe": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": null
+    },
+    "provider_fallback/probe_104120": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": null
+    },
+    "provider_fallback/probe_104260": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": null
+    },
+    "provider_fallback/probe_104360": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": null
+    },
+    "readtool/fixtures_direct_read_file::empty_config": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": "a8ac6986052f5c49"
+    },
+    "readtool/fixtures_direct_read_file::fifo_hang": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": "ed4dce4e99e87179"
+    },
+    "readtool/fixtures_direct_read_file::lockfile_version": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": "743a3317c2ec0d1b"
+    },
+    "readtool/fixtures_direct_read_file::log_error_hunt": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": "9d7aa5596d7504eb"
+    },
+    "readtool/fixtures_direct_read_file::lying_extension": {
+      "verdict": "FAIL",
+      "marker": "failed: flagged binary",
+      "fingerprint": "d6f615b85009a2c9"
+    },
+    "readtool/fixtures_direct_read_file::minified_backoff": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": "ebc3d45cf379ba02"
+    },
+    "readtool/fixtures_direct_read_file::near_miss_filename": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": "e3788ea56dd56195"
+    },
+    "readtool/fixtures_direct_read_file::past_eof": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": "b8b15fb954e9dbf5"
+    },
+    "readtool/fixtures_direct_read_file::unicode_filename": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": "4e892f8bdb3d56d1"
+    },
+    "token_accounting/ab_image_cost_calibration": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": null
+    },
+    "token_accounting/replay_gates::cli_deflated": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": null
+    },
+    "token_accounting/replay_gates::cli_inflated": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": null
+    },
+    "token_accounting/replay_gates::cli_past_window_inflated": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": null
+    },
+    "token_accounting/replay_gates::gateway_deflated": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": null
+    },
+    "token_accounting/replay_gates::gateway_inflated": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": null
+    },
+    "token_accounting/replay_gates::gateway_past_window_inflated": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": null
+    },
+    "token_accounting/replay_gates::overflow_recovery": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": null
+    },
+    "token_accounting/replay_gates::restore_deflated": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": null
+    },
+    "token_accounting/replay_gates::restore_inflated": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": null
+    },
+    "token_accounting/replay_gates::restore_past_window_inflated": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": null
+    },
+    "token_accounting/replay_gates::usage_less_fallback": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": null
+    },
+    "token_accounting/worktree_prompt_prefix": {
+      "verdict": "PASS",
+      "marker": "",
+      "fingerprint": "5dd5c33ce53f80cb"
+    }
+  },
+  "expect_on_base": {
+    "postmortem/scanner_bypass_probe": {
+      "expected": "PASS",
+      "observed": "PASS",
+      "match": true,
+      "why": "#103492 merged; run.py notes it also passed before the fix"
+    },
+    "postmortem/notice_delivery_probe": {
+      "expected": "PASS",
+      "observed": "FAIL",
+      "match": false,
+      "why": "#103549 merged; run.py notes it also passed before the fix"
+    },
+    "postmortem/cache_estimator_probe": {
+      "expected": "FAIL",
+      "observed": "PASS",
+      "match": false,
+      "why": "#103476 is OPEN upstream (gh read 2026-10-01), so the fix it guards is not on main: red on base"
+    },
+    "postmortem/rewrite_hint_probe": {
+      "expected": "PASS",
+      "observed": "PASS",
+      "match": true,
+      "why": "#103551 merged (fdd140557b)"
+    },
+    "postmortem/credential_identity_probe": {
+      "expected": "PASS",
+      "observed": "PASS",
+      "match": true,
+      "why": "#103526 merged (d97f318717)"
+    },
+    "postmortem/context_cap_probe": {
+      "expected": "PASS",
+      "observed": "FAIL",
+      "match": false,
+      "why": "#103513 merged (e5f8420be8)"
+    },
+    "postmortem/deadline_probe": {
+      "expected": "PASS",
+      "observed": "PASS",
+      "match": true,
+      "why": "#103486 merged (3d5831fa59)"
+    },
+    "postmortem/goal_scope_probe": {
+      "expected": "PASS",
+      "observed": "PASS",
+      "match": true,
+      "why": "#103496 merged (afb4e080f6) and #103534 merged (634109b7aa)"
+    },
+    "postmortem/finalizer_schedule_probe": {
+      "expected": "PASS",
+      "observed": "PASS",
+      "match": true,
+      "why": "#103507 merged (314e365363); README: 2 passed"
+    }
+  },
+  "flaky": [],
+  "excluded": [
+    {
+      "id": "postmortem/goal_judge_wait",
+      "status": "EXCLUDED",
+      "reason": "live: real provider calls (run.py marks it live, cents per run); needs OD-3"
+    },
+    {
+      "id": "postmortem/cache_prefix_wire",
+      "status": "EXCLUDED",
+      "reason": "live: ~6 real provider calls; empty pass marker (vacuous pass) and defaults HERMES_HOME to ~/.hermes and greps ~/.hermes/logs/agent.log (NousResearch/hermes-agent#127898, fix PR #127952 open). FACTORY 6.4: runs only after a patched copy is used. One sandboxed side observation is recorded in the baseline receipt, not in the set."
+    },
+    {
+      "id": "postmortem/nested_delegate_deadline",
+      "status": "EXCLUDED",
+      "reason": "live: copies auth.json and config.yaml from the real ~/.hermes and calls a real provider; the hand-run 'deadline' item is review_probes/deadline_probe.py, which is in the set"
+    },
+    {
+      "id": "postmortem/cache_concurrency_probe",
+      "status": "EXCLUDED",
+      "reason": "paid: about $50 per arm against real routes (README); needs OD-3"
+    },
+    {
+      "id": "postmortem/forensics/*",
+      "status": "EXCLUDED",
+      "reason": "not in the F14 row; needs a private state.db copy (OD-7)"
+    },
+    {
+      "id": "readtool/runner (model arm)",
+      "status": "EXCLUDED",
+      "reason": "drives the full AIAgent against a real model (README); needs OD-1 or OD-3. Only the fixtures via direct read_file are in the set"
+    },
+    {
+      "id": "postmortem/hardline_scanner_matrix",
+      "status": "EXCLUDED",
+      "origin": "#103492",
+      "reason": "blocked by the Wave 0 sandbox, not live: xf-sandbox.sh denylists the glob 'evals/postmortem/live_ab/*' wholesale (deliberately over-inclusive), so the cell is refused with rc 97 before bwrap starts (observed in f14-explore-1). run.py runs it offline with fake providers; re-admit after the sandbox owner narrows that glob and F15 re-runs",
+      "pinned_if_readmitted": {
+        "argv": [
+          "python",
+          "evals/postmortem/live_ab/hardline_scanner_matrix.py",
+          "{wt}"
+        ],
+        "env": {
+          "PYTHONPATH": "{wt}"
+        },
+        "judge": {
+          "name": "marker",
+          "marker": "ALL OK"
+        },
+        "expect_on_base": {
+          "verdict": "PASS",
+          "why": "#103492 merged (cd658b6a46)"
+        }
+      }
+    },
+    {
+      "id": "postmortem/subagent_context_cap",
+      "status": "EXCLUDED",
+      "origin": "#103513",
+      "reason": "blocked by the Wave 0 sandbox, not live: xf-sandbox.sh denylists the glob 'evals/postmortem/live_ab/*' wholesale (deliberately over-inclusive), so the cell is refused with rc 97 before bwrap starts (observed in f14-explore-1). run.py runs it offline with fake providers; re-admit after the sandbox owner narrows that glob and F15 re-runs",
+      "pinned_if_readmitted": {
+        "argv": [
+          "python",
+          "evals/postmortem/live_ab/subagent_context_cap.py",
+          "{wt}"
+        ],
+        "env": {
+          "PYTHONPATH": "{wt}"
+        },
+        "judge": {
+          "name": "marker",
+          "marker": "trigger=200,000"
+        },
+        "expect_on_base": {
+          "verdict": "PASS",
+          "why": "#103513 merged (e5f8420be8)"
+        }
+      }
+    },
+    {
+      "id": "postmortem/batch_failure_notice",
+      "status": "EXCLUDED",
+      "origin": "#103549",
+      "reason": "blocked by the Wave 0 sandbox, not live: xf-sandbox.sh denylists the glob 'evals/postmortem/live_ab/*' wholesale (deliberately over-inclusive), so the cell is refused with rc 97 before bwrap starts (observed in f14-explore-1). run.py runs it offline with fake providers; re-admit after the sandbox owner narrows that glob and F15 re-runs",
+      "pinned_if_readmitted": {
+        "argv": [
+          "python",
+          "evals/postmortem/live_ab/batch_failure_notice.py",
+          "{wt}"
+        ],
+        "env": {
+          "PYTHONPATH": "{wt}"
+        },
+        "judge": {
+          "name": "marker",
+          "marker": "TASK_FAILURE_NOTICE"
+        },
+        "expect_on_base": {
+          "verdict": "PASS",
+          "why": "#103549 merged (6b2d4faf36)"
+        }
+      }
+    },
+    {
+      "id": "postmortem/auth_stampede",
+      "status": "EXCLUDED",
+      "origin": "#103526",
+      "reason": "blocked by the Wave 0 sandbox, not live: xf-sandbox.sh denylists the glob 'evals/postmortem/live_ab/*' wholesale (deliberately over-inclusive), so the cell is refused with rc 97 before bwrap starts (observed in f14-explore-1). run.py runs it offline with fake providers; re-admit after the sandbox owner narrows that glob and F15 re-runs",
+      "pinned_if_readmitted": {
+        "argv": [
+          "python",
+          "evals/postmortem/live_ab/auth_stampede.py",
+          "{wt}",
+          "12"
+        ],
+        "env": {
+          "PYTHONPATH": "{wt}"
+        },
+        "judge": {
+          "name": "marker",
+          "marker": "server_401=0"
+        },
+        "expect_on_base": {
+          "verdict": "PASS",
+          "why": "#103526 merged (d97f318717)"
+        }
+      }
+    },
+    {
+      "id": "postmortem/goal_repaste_probe",
+      "status": "EXCLUDED",
+      "origin": "#103553",
+      "reason": "needs a private state.db copy: it opens RF_STATE_COPY (default <tmp>/rf/state_copy.db) read-only and reads message ids 264820 and 267045 from the #102117 run's database (observed: sqlite3.OperationalError unable to open database file in f14-explore-1). Private input, needs OD-7; never pointed at the live state.db"
+    }
+  ],
+  "cells": {
+    "token_accounting/replay_gates": {
+      "rc": 0,
+      "wall_s": 7.6,
+      "blocked_exec": 0,
+      "run_dir": "<runs>/anthropic-context-editing-v3-r2/01-token_accounting-replay_gates"
+    },
+    "token_accounting/ab_image_cost_calibration": {
+      "rc": 0,
+      "wall_s": 2.7,
+      "blocked_exec": 0,
+      "run_dir": "<runs>/anthropic-context-editing-v3-r2/02-token_accounting-ab_image_cost_calibration"
+    },
+    "token_accounting/worktree_prompt_prefix": {
+      "rc": 0,
+      "wall_s": 2.9,
+      "blocked_exec": 0,
+      "run_dir": "<runs>/anthropic-context-editing-v3-r2/03-token_accounting-worktree_prompt_prefix"
+    },
+    "native_compaction/ab_checkpoint_preflight": {
+      "rc": 0,
+      "wall_s": 4.0,
+      "blocked_exec": 0,
+      "run_dir": "<runs>/anthropic-context-editing-v3-r2/04-native_compaction-ab_checkpoint_preflight"
+    },
+    "provider_fallback/probe_104120": {
+      "rc": 0,
+      "wall_s": 2.3,
+      "blocked_exec": 0,
+      "run_dir": "<runs>/anthropic-context-editing-v3-r2/05-provider_fallback-probe_104120"
+    },
+    "provider_fallback/probe_104260": {
+      "rc": 0,
+      "wall_s": 1.8,
+      "blocked_exec": 0,
+      "run_dir": "<runs>/anthropic-context-editing-v3-r2/06-provider_fallback-probe_104260"
+    },
+    "provider_fallback/probe_104360": {
+      "rc": 0,
+      "wall_s": 2.4,
+      "blocked_exec": 0,
+      "run_dir": "<runs>/anthropic-context-editing-v3-r2/07-provider_fallback-probe_104360"
+    },
+    "goal_command_parity": {
+      "rc": 0,
+      "wall_s": 0.6,
+      "blocked_exec": 0,
+      "run_dir": "<runs>/anthropic-context-editing-v3-r2/08-goal_command_parity"
+    },
+    "compaction/test_region_scoping": {
+      "rc": 0,
+      "wall_s": 0.5,
+      "blocked_exec": 0,
+      "run_dir": "<runs>/anthropic-context-editing-v3-r2/09-compaction-test_region_scoping"
+    },
+    "postmortem/scanner_bypass_probe": {
+      "rc": 0,
+      "wall_s": 0.2,
+      "blocked_exec": 0,
+      "run_dir": "<runs>/anthropic-context-editing-v3-r2/10-postmortem-scanner_bypass_probe"
+    },
+    "postmortem/notice_delivery_probe": {
+      "rc": 1,
+      "wall_s": 0.6,
+      "blocked_exec": 0,
+      "run_dir": "<runs>/anthropic-context-editing-v3-r2/11-postmortem-notice_delivery_probe"
+    },
+    "postmortem/cache_estimator_probe": {
+      "rc": 0,
+      "wall_s": 0.3,
+      "blocked_exec": 0,
+      "run_dir": "<runs>/anthropic-context-editing-v3-r2/12-postmortem-cache_estimator_probe"
+    },
+    "postmortem/rewrite_hint_probe": {
+      "rc": 0,
+      "wall_s": 1.4,
+      "blocked_exec": 0,
+      "run_dir": "<runs>/anthropic-context-editing-v3-r2/13-postmortem-rewrite_hint_probe"
+    },
+    "postmortem/credential_identity_probe": {
+      "rc": 0,
+      "wall_s": 5.7,
+      "blocked_exec": 0,
+      "run_dir": "<runs>/anthropic-context-editing-v3-r2/14-postmortem-credential_identity_probe"
+    },
+    "postmortem/context_cap_probe": {
+      "rc": 0,
+      "wall_s": 2.1,
+      "blocked_exec": 0,
+      "run_dir": "<runs>/anthropic-context-editing-v3-r2/15-postmortem-context_cap_probe"
+    },
+    "postmortem/deadline_probe": {
+      "rc": 0,
+      "wall_s": 8.1,
+      "blocked_exec": 0,
+      "run_dir": "<runs>/anthropic-context-editing-v3-r2/16-postmortem-deadline_probe"
+    },
+    "postmortem/goal_scope_probe": {
+      "rc": 0,
+      "wall_s": 1.2,
+      "blocked_exec": 0,
+      "run_dir": "<runs>/anthropic-context-editing-v3-r2/17-postmortem-goal_scope_probe"
+    },
+    "postmortem/finalizer_schedule_probe": {
+      "rc": 0,
+      "wall_s": 3.7,
+      "blocked_exec": 0,
+      "run_dir": "<runs>/anthropic-context-editing-v3-r2/18-postmortem-finalizer_schedule_probe"
+    },
+    "readtool/fixtures_direct_read_file": {
+      "rc": 0,
+      "wall_s": 3.6,
+      "blocked_exec": 0,
+      "run_dir": "<runs>/anthropic-context-editing-v3-r2/19-readtool-fixtures_direct_read_file"
+    }
+  },
+  "label_note": "OBSERVED: every verdict comes from a cell this runner executed; <runs> is the factory runs dir"
+}
