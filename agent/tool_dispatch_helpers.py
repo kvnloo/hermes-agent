@@ -46,6 +46,10 @@ _PARALLEL_SAFE_TOOLS = frozenset({
     "web_search",
 })
 
+# (tool, action) pairs same-turn duplicate elimination keeps: a repeated key press is an
+# ordered input (Tab, Tab moves focus twice), not the same request sent twice.
+_ORDER_SIGNIFICANT_ACTIONS = frozenset({("computer_use", "key")})
+
 # Filesystem tools admitted by path overlap: readers may share a subtree, a writer conflicts
 # with ANY overlapping reservation (so a batched read never observes pre-mutation state).
 _PATH_SCOPED_READERS = frozenset({"read_file", "search_files"})
@@ -163,6 +167,34 @@ def _peel_bridge_call(tool_name: str, function_args: dict) -> tuple[str, dict]:
         return underlying, underlying_args
     except Exception:
         return tool_name, function_args
+
+
+def deduplicate_tool_calls(tool_calls: list) -> list:
+    """Drop duplicate (tool_name, arguments) pairs in one turn (first wins). Valid JSON arguments are
+    canonicalized so key order/whitespace can't evade dedup; ``_ORDER_SIGNIFICANT_ACTIONS`` calls are kept,
+    direct or through the ``tool_call`` bridge. Returns the original list when nothing was removed."""
+    seen, unique = set(), []
+    for tc in tool_calls:
+        arguments, parsed = tc.function.arguments, None
+        try:
+            parsed = json.loads(arguments)
+            arguments = json.dumps(parsed, separators=(",", ":"), sort_keys=True)
+        except (TypeError, ValueError):
+            pass
+        key = (tc.function.name, arguments)
+        if key in seen and not _is_order_significant(tc.function.name, parsed):
+            logger.warning("Removed duplicate tool call: %s", tc.function.name)
+            continue
+        seen.add(key)
+        unique.append(tc)
+    return unique if len(unique) < len(tool_calls) else tool_calls
+
+
+def _is_order_significant(tool_name: str, args: Any) -> bool:
+    if isinstance(args, dict):
+        tool_name, args = _peel_bridge_call(tool_name, args)
+    return isinstance(args, dict) and (
+        tool_name, str(args.get("action") or "").strip().lower()) in _ORDER_SIGNIFICANT_ACTIONS
 
 
 def _batch_admission(tool_call, execution_cwd: Optional[Path]) -> tuple[str, List[Path], bool] | None:
@@ -578,7 +610,7 @@ def _maybe_wrap_untrusted(name: str, content: Any) -> Any:
 __all__ = [
     "_NEVER_PARALLEL_TOOLS", "_PARALLEL_SAFE_TOOLS", "_PATH_SCOPED_TOOLS", "_PATH_SCOPED_READERS",
     "_PATH_SCOPED_WRITERS", "_DESTRUCTIVE_PATTERNS", "_REDIRECT_OVERWRITE", "_context_pruned_argument_paths",
-    "_is_destructive_command",
+    "_is_destructive_command", "deduplicate_tool_calls",
     "_plan_tool_batch_segments", "_should_parallelize_tool_batch", "_canonical_path",
     "_extract_parallel_scope_path", "_extract_parallel_scope_paths", "_paths_overlap",
     "_is_multimodal_tool_result", "_multimodal_text_summary", "_append_subdir_hint_to_multimodal",

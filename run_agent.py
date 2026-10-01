@@ -1217,24 +1217,7 @@ class AIAgent(
                        "max_concurrent_children=%d limit", delegate_count - max_children, max_children)
         return truncated
 
-    @staticmethod
-    def _deduplicate_tool_calls(tool_calls: list) -> list:
-        """Drop duplicate (tool_name, arguments) pairs in one turn (first wins). Valid JSON arguments are
-        canonicalized so key order/whitespace can't evade dedup; returns the original list when nothing was removed."""
-        seen, unique = set(), []
-        for tc in tool_calls:
-            arguments = tc.function.arguments
-            try:
-                arguments = json.dumps(json.loads(arguments), separators=(",", ":"), sort_keys=True)
-            except (TypeError, ValueError):
-                pass
-            key = (tc.function.name, arguments)
-            if key in seen:
-                logger.warning("Removed duplicate tool call: %s", tc.function.name)
-                continue
-            seen.add(key)
-            unique.append(tc)
-        return unique if len(unique) < len(tool_calls) else tool_calls
+    _deduplicate_tool_calls = _forward_static("agent.tool_dispatch_helpers", "deduplicate_tool_calls")
 
     # Distinct ids per assistant turn, in place (policy owner: ``message_sanitization``). Collisions get a
     # deterministic ``<id>_d<n>`` suffix — never uuid4, for prompt-cache prefix stability.
