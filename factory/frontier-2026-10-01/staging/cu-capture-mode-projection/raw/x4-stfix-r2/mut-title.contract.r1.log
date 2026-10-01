@@ -1,0 +1,220 @@
+▶ not activated — using HERMES_PYTHON: <HERMES_PYTHON>
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 3 test files (~18 tests) under ['tests/tools/test_computer_use_capture_lane_schema.py', 'tests/tools/test_computer_use_cheap_lanes.py', 'tests/tools/test_computer_use_ax_walk_bound.py']; running with -j 2
+[ 16.7% |     3/~18 | ✓5 | ✗0] ✓ tests/tools/test_computer_use_ax_walk_bound.py (5✓, 2.7s)
+[ 27.8% |     5/~18 | ✓ 9 | ✗ 2] ✗ tests/tools/test_computer_use_capture_lane_schema.py (4✓ 2✗, 5.8s)
+
+  ╔╍ Failed: tests/tools/test_computer_use_capture_lane_schema.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║         pytest.param("vision", "include_accessibility_tree", False, id="vision-cli-refetch"),
+  ║     ])
+  ║     def test_capture_skips_the_half_its_mode_discards(monkeypatch, mode, selector, mcp_images):
+  ║         backend, calls = _backend(monkeypatch, _GWS_0_28_2, mcp_images)
+  ║     
+  ║         cap = backend.capture(mode=mode, pid=123, window_id=456)
+  ║     
+  ║         sent = [args for name, args in calls if name == "get_window_state"]
+  ║         assert sent and all(args.get(selector) is False for args in sent)
+  ║         assert not any("include_accessibility_tree" in args and "include_screenshot" in args for args in sent)
+  ║         if mode == "ax":
+  ║             assert cap.png_b64 is None and [e.label for e in cap.elements] == ["OK"]
+  ║         else:  # no tree to read the title from: it has to come from the structured window metadata
+  ║ >           assert cap.png_b64 == _PNG_B64 and cap.elements == [] and cap.window_title == "Terminal"
+  ║ E           AssertionError: assert ('iVBORw0KGgoA...JRU5ErkJggg==' == 'iVBORw0KGgoA...JRU5ErkJggg=='
+  ║ E             
+  ║ E             Skipping 85 identical leading characters in diff, use -v to show
+  ║ E               U5ErkJggg== and [] == []
+  ║ E             
+  ║ E             Use -v to get more diff and '' == 'Terminal'
+  ║ E             
+  ║ E             - Terminal)
+  ║ 
+  ║ tests/tools/test_computer_use_capture_lane_schema.py:81: AssertionError
+  ║ ------------------------------ Captured log call -------------------------------
+  ║ WARNING  tools.computer_use.cua_backend:cua_backend_capture.py:148 cua-driver vision capture returned no image over MCP (window_id=456); re-fetching via CLI transport
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/tools/test_computer_use_capture_lane_schema.py::test_capture_skips_the_half_its_mode_discards[vision]
+  ║ FAILED tests/tools/test_computer_use_capture_lane_schema.py::test_capture_skips_the_half_its_mode_discards[vision-cli-refetch]
+  ║ 2 failed, 4 passed in 1.78s
+  ║
+  ║  Repro: python -m pytest tests/tools/test_computer_use_capture_lane_schema.py -q
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+[100.0% |    18/~18 | ✓20 | ✗ 4] ✗ tests/tools/test_computer_use_cheap_lanes.py (11✓ 2✗, 6.2s)
+
+  ╔╍ Failed: tests/tools/test_computer_use_cheap_lanes.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║         # The capture-only lane's whole point: title/metadata survive without the tree.
+  ║ >       assert cap.window_title == "Notes"
+  ║ E       AssertionError: assert '' == 'Notes'
+  ║ E         
+  ║ E         - Notes
+  ║ 
+  ║ tests/tools/test_computer_use_cheap_lanes.py:137: AssertionError
+  ║ _______ TestCaptureEndToEnd.test_ax_capture_asks_for_the_tree_only_lane ________
+  ║ 
+  ║ self = <tests.tools.test_computer_use_cheap_lanes.TestCaptureEndToEnd object at 0x7f2e2b3c2d90>
+  ║ 
+  ║     def test_ax_capture_asks_for_the_tree_only_lane(self):
+  ║         stub = _StubCapture(_StubSession(props=BOTH))
+  ║         out = {"structuredContent": {"elements": [{"index": 1, "role": "AXButton", "label": "OK"}],
+  ║                                      "window_title": "Notes"}}
+  ║         calls = self._recorder(stub, out)
+  ║         cap = stub.capture("ax")
+  ║         gws = [c for c in calls if c["name"] == "get_window_state"]
+  ║         assert gws and gws[0]["args"]["include_screenshot"] is False
+  ║ >       assert cap.png_b64 is None and cap.window_title == "Notes"
+  ║ E       AssertionError: assert (None is None and '' == 'Notes'
+  ║ E        +  where None = CaptureResult(mode='ax', width=0, height=0, png_b64=None, elements=[], app='Finder', window_title='', png_bytes_len=0, image_mime_type=None, note='', ax_max_elements=200).png_b64
+  ║ E         
+  ║ E         - Notes)
+  ║ 
+  ║ tests/tools/test_computer_use_cheap_lanes.py:148: AssertionError
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/tools/test_computer_use_cheap_lanes.py::TestCaptureEndToEnd::test_vision_capture_asks_for_the_capture_only_lane
+  ║ FAILED tests/tools/test_computer_use_cheap_lanes.py::TestCaptureEndToEnd::test_ax_capture_asks_for_the_tree_only_lane
+  ║ 2 failed, 11 passed in 1.88s
+  ║
+  ║  Repro: python -m pytest tests/tools/test_computer_use_cheap_lanes.py -q
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 3 files, 20 tests passed, 4 failed (100% complete) in 8.9s (2 workers) ===
+  Durations cached to test_durations.json (1 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   3
+  Total subprocess CPU-wall: 14.7s  (runner wall: 8.9s, parallelism: 2x)
+  P50: 5.84s  P90: 6.18s  P95: 6.18s  P99: 6.18s  Max: 6.18s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+      6.18s  tests/tools/test_computer_use_cheap_lanes.py
+      5.84s  tests/tools/test_computer_use_capture_lane_schema.py
+      2.69s  tests/tools/test_computer_use_ax_walk_bound.py
+
+=== Failure output ===
+
+--- tests/tools/test_computer_use_capture_lane_schema.py ---
+.FF...                                                                   [100%]
+=================================== FAILURES ===================================
+____________ test_capture_skips_the_half_its_mode_discards[vision] _____________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fcdef253810>
+mode = 'vision', selector = 'include_accessibility_tree', mcp_images = True
+
+    @pytest.mark.parametrize("mode, selector, mcp_images", [
+        pytest.param("ax", "include_screenshot", True, id="ax"),
+        pytest.param("vision", "include_accessibility_tree", True, id="vision"),
+        pytest.param("vision", "include_accessibility_tree", False, id="vision-cli-refetch"),
+    ])
+    def test_capture_skips_the_half_its_mode_discards(monkeypatch, mode, selector, mcp_images):
+        backend, calls = _backend(monkeypatch, _GWS_0_28_2, mcp_images)
+    
+        cap = backend.capture(mode=mode, pid=123, window_id=456)
+    
+        sent = [args for name, args in calls if name == "get_window_state"]
+        assert sent and all(args.get(selector) is False for args in sent)
+        assert not any("include_accessibility_tree" in args and "include_screenshot" in args for args in sent)
+        if mode == "ax":
+            assert cap.png_b64 is None and [e.label for e in cap.elements] == ["OK"]
+        else:  # no tree to read the title from: it has to come from the structured window metadata
+>           assert cap.png_b64 == _PNG_B64 and cap.elements == [] and cap.window_title == "Terminal"
+E           AssertionError: assert ('iVBORw0KGgoA...JRU5ErkJggg==' == 'iVBORw0KGgoA...JRU5ErkJggg=='
+E             
+E             Skipping 85 identical leading characters in diff, use -v to show
+E               U5ErkJggg== and [] == []
+E             
+E             Use -v to get more diff and '' == 'Terminal'
+E             
+E             - Terminal)
+
+tests/tools/test_computer_use_capture_lane_schema.py:81: AssertionError
+______ test_capture_skips_the_half_its_mode_discards[vision-cli-refetch] _______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fcdeecbe910>
+mode = 'vision', selector = 'include_accessibility_tree', mcp_images = False
+
+    @pytest.mark.parametrize("mode, selector, mcp_images", [
+        pytest.param("ax", "include_screenshot", True, id="ax"),
+        pytest.param("vision", "include_accessibility_tree", True, id="vision"),
+        pytest.param("vision", "include_accessibility_tree", False, id="vision-cli-refetch"),
+    ])
+    def test_capture_skips_the_half_its_mode_discards(monkeypatch, mode, selector, mcp_images):
+        backend, calls = _backend(monkeypatch, _GWS_0_28_2, mcp_images)
+    
+        cap = backend.capture(mode=mode, pid=123, window_id=456)
+    
+        sent = [args for name, args in calls if name == "get_window_state"]
+        assert sent and all(args.get(selector) is False for args in sent)
+        assert not any("include_accessibility_tree" in args and "include_screenshot" in args for args in sent)
+        if mode == "ax":
+            assert cap.png_b64 is None and [e.label for e in cap.elements] == ["OK"]
+        else:  # no tree to read the title from: it has to come from the structured window metadata
+>           assert cap.png_b64 == _PNG_B64 and cap.elements == [] and cap.window_title == "Terminal"
+E           AssertionError: assert ('iVBORw0KGgoA...JRU5ErkJggg==' == 'iVBORw0KGgoA...JRU5ErkJggg=='
+E             
+E             Skipping 85 identical leading characters in diff, use -v to show
+E               U5ErkJggg== and [] == []
+E             
+E             Use -v to get more diff and '' == 'Terminal'
+E             
+E             - Terminal)
+
+tests/tools/test_computer_use_capture_lane_schema.py:81: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  tools.computer_use.cua_backend:cua_backend_capture.py:148 cua-driver vision capture returned no image over MCP (window_id=456); re-fetching via CLI transport
+=========================== short test summary info ============================
+FAILED tests/tools/test_computer_use_capture_lane_schema.py::test_capture_skips_the_half_its_mode_discards[vision]
+FAILED tests/tools/test_computer_use_capture_lane_schema.py::test_capture_skips_the_half_its_mode_discards[vision-cli-refetch]
+2 failed, 4 passed in 1.78s
+
+--- tests/tools/test_computer_use_cheap_lanes.py ---
+........FF...                                                            [100%]
+=================================== FAILURES ===================================
+____ TestCaptureEndToEnd.test_vision_capture_asks_for_the_capture_only_lane ____
+
+self = <tests.tools.test_computer_use_cheap_lanes.TestCaptureEndToEnd object at 0x7f2e2b3c2710>
+
+    def test_vision_capture_asks_for_the_capture_only_lane(self):
+        stub = _StubCapture(_StubSession(props=BOTH))
+        out = {"images": ["aW1n"], "image_mime_types": ["image/png"],
+               "structuredContent": {"window_title": "Notes"}}
+        calls = self._recorder(stub, out)
+        cap = stub.capture("vision")
+        gws = [c for c in calls if c["name"] == "get_window_state"]
+        assert gws and gws[0]["args"]["include_accessibility_tree"] is False
+        # The capture-only lane's whole point: title/metadata survive without the tree.
+>       assert cap.window_title == "Notes"
+E       AssertionError: assert '' == 'Notes'
+E         
+E         - Notes
+
+tests/tools/test_computer_use_cheap_lanes.py:137: AssertionError
+_______ TestCaptureEndToEnd.test_ax_capture_asks_for_the_tree_only_lane ________
+
+self = <tests.tools.test_computer_use_cheap_lanes.TestCaptureEndToEnd object at 0x7f2e2b3c2d90>
+
+    def test_ax_capture_asks_for_the_tree_only_lane(self):
+        stub = _StubCapture(_StubSession(props=BOTH))
+        out = {"structuredContent": {"elements": [{"index": 1, "role": "AXButton", "label": "OK"}],
+                                     "window_title": "Notes"}}
+        calls = self._recorder(stub, out)
+        cap = stub.capture("ax")
+        gws = [c for c in calls if c["name"] == "get_window_state"]
+        assert gws and gws[0]["args"]["include_screenshot"] is False
+>       assert cap.png_b64 is None and cap.window_title == "Notes"
+E       AssertionError: assert (None is None and '' == 'Notes'
+E        +  where None = CaptureResult(mode='ax', width=0, height=0, png_b64=None, elements=[], app='Finder', window_title='', png_bytes_len=0, image_mime_type=None, note='', ax_max_elements=200).png_b64
+E         
+E         - Notes)
+
+tests/tools/test_computer_use_cheap_lanes.py:148: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tools/test_computer_use_cheap_lanes.py::TestCaptureEndToEnd::test_vision_capture_asks_for_the_capture_only_lane
+FAILED tests/tools/test_computer_use_cheap_lanes.py::TestCaptureEndToEnd::test_ax_capture_asks_for_the_tree_only_lane
+2 failed, 11 passed in 1.88s
+
+=== 2 files with test failures (4 tests failed) ===
+  tests/tools/test_computer_use_capture_lane_schema.py  (2 tests failed)
+  tests/tools/test_computer_use_cheap_lanes.py  (2 tests failed)

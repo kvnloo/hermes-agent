@@ -1,0 +1,14 @@
+== arm a1_pr121135 (main x carrier tree 798e76b64df1e1c17a3360e121b26ff8d0d042a7) overlay: agent/turn_usage.py agent/usage_pricing.py tests/agent/test_cache_log_states.py tests/agent/test_turn_usage_log_line.py
+[ 38.5% |     5/~13 | ✓5 | ✗0] ✓ evals/postmortem/tests/test_postmortem_harness.py (5✓, 0.8s)
+[ 61.5% |     8/~13 | ✓8 | ✗0] ✓ tests/agent/test_turn_usage_log_line.py (3✓, 3.9s)
+[100.0% |    13/~13 | ✓126 | ✗  0] ✓ tests/agent/test_cache_log_states.py (118✓, 9.7s)
+=== Summary: 3 files, 126 tests passed, 0 failed (100% complete) in 9.7s (2 workers) ===
+== arm a2_pr119713 (main x carrier tree 1f2049ee49cd66d7e65729fda05277a1ee3a6964) overlay: agent/turn_response_check.py agent/turn_usage.py tests/agent/test_turn_usage_log_line.py
+[ 50.0% |     5/~10 | ✓5 | ✗0] ✓ evals/postmortem/tests/test_postmortem_harness.py (5✓, 0.7s)
+[100.0% |    10/~10 | ✓10 | ✗ 0] ✓ tests/agent/test_turn_usage_log_line.py (5✓, 4.8s)
+=== Summary: 2 files, 10 tests passed, 0 failed (100% complete) in 4.8s (2 workers) ===
+tree after restore: f388caeb37c573dcd1dfb1211526f32b0c7abdc6
+M  evals/postmortem/forensics/logcalls.py
+M  evals/postmortem/live_ab/cache_prefix_live.py
+M  evals/postmortem/live_ab/cache_prefix_wire.py
+M  evals/postmortem/tests/test_postmortem_harness.py

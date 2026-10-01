@@ -1,0 +1,6 @@
+FAILED tests/tools/test_computer_use_cheap_lanes.py::TestGwsArgsLanes::test_flags_fail_closed_before_capability_discovery
+FAILED tests/tools/test_computer_use_cheap_lanes.py::TestGwsArgsLanes::test_sessionless_stub_is_unaffected
+FAILED tests/tools/test_computer_use_cheap_lanes.py::TestCaptureEndToEnd::test_ax_capture_asks_for_the_tree_only_lane
+3 failed, 10 passed in 1.84s
+=== 1 file with test failures (3 tests failed) ===
+  tests/tools/test_computer_use_cheap_lanes.py  (3 tests failed)

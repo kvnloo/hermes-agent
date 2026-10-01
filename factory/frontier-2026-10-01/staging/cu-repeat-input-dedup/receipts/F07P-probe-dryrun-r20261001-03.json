@@ -1,0 +1,195 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "F07P/r20261001-03",
+ "tier": "T1 (dry run of a T2/T3 harness)",
+ "label": "OBSERVED",
+ "question": "Does the repeat-key prevalence probe measure emitted vs kept vs delivered presses correctly before it is pointed at a real model?",
+ "harness": {
+  "path": "probes/repeat_key_prevalence.py",
+  "sha256": "02a4d52cd5e2bd51213c7704b183515fd82f224822e8c403bd3e1c5d3ef61106"
+ },
+ "command": "harness/probe_dryrun_r03.sh <main> <head>: per arm and mode, env -i PATH=/usr/bin:/bin HOME=$TH/probe-<arm>-<mode> HERMES_HOME=$HOME/.hermes TZ=UTC LANG=C.UTF-8 $HERMES_PYTHON probes/repeat_key_prevalence.py --tree <wt> --fake --trials 1 --tool-search {default|off} --out raw-r03/probe-dryrun-<arm>-<mode>.json (paths then replaced by placeholders)",
+ "driver": {
+  "path": "harness/probe_dryrun_r03.sh",
+  "sha256": "925234983fe236378e090c18883424a30b01482b5e016884ed7385a64bc97559"
+ },
+ "arms": {
+  "main": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+  "head": "2f79b549ef40aeb31cb3af36cd92d8d12b9ba799"
+ },
+ "results": {
+  "head-default": {
+   "summary": {
+    "label": "OBSERVED",
+    "tree": "<wt>",
+    "model": "fake-model",
+    "fake": true,
+    "tool_search": "default",
+    "n_turns": 3,
+    "turns_with_identical_key_repeat_in_one_message": 3,
+    "presses_emitted_in_repeat_turns": 6,
+    "presses_kept_by_dedup_in_repeat_turns": 6,
+    "backend_presses_whole_turn_in_repeat_turns": 6,
+    "errors": 0,
+    "egress_blocked": []
+   },
+   "file": "raw-r03/probe-dryrun-head-default.json",
+   "sha256": "b3e38f4a7044938c6f3ebd6bf1bc653e2ec878d0e3305128103db354e854017d"
+  },
+  "head-off": {
+   "summary": {
+    "label": "OBSERVED",
+    "tree": "<wt>",
+    "model": "fake-model",
+    "fake": true,
+    "tool_search": "off",
+    "n_turns": 3,
+    "turns_with_identical_key_repeat_in_one_message": 3,
+    "presses_emitted_in_repeat_turns": 6,
+    "presses_kept_by_dedup_in_repeat_turns": 6,
+    "backend_presses_whole_turn_in_repeat_turns": 6,
+    "errors": 0,
+    "egress_blocked": []
+   },
+   "file": "raw-r03/probe-dryrun-head-off.json",
+   "sha256": "6a0d6b162abc118ec032f7b16481491ae0f5dd70148ee0b0510c5dda938a530d"
+  },
+  "main-default": {
+   "summary": {
+    "label": "OBSERVED",
+    "tree": "<wt>",
+    "model": "fake-model",
+    "fake": true,
+    "tool_search": "default",
+    "n_turns": 3,
+    "turns_with_identical_key_repeat_in_one_message": 3,
+    "presses_emitted_in_repeat_turns": 6,
+    "presses_kept_by_dedup_in_repeat_turns": 3,
+    "backend_presses_whole_turn_in_repeat_turns": 3,
+    "errors": 0,
+    "egress_blocked": []
+   },
+   "file": "raw-r03/probe-dryrun-main-default.json",
+   "sha256": "10e63bca39bea9cf702b5a2b147cd514e84120d39240c71fffa4b2bd65b3ece6"
+  },
+  "main-off": {
+   "summary": {
+    "label": "OBSERVED",
+    "tree": "<wt>",
+    "model": "fake-model",
+    "fake": true,
+    "tool_search": "off",
+    "n_turns": 3,
+    "turns_with_identical_key_repeat_in_one_message": 3,
+    "presses_emitted_in_repeat_turns": 6,
+    "presses_kept_by_dedup_in_repeat_turns": 3,
+    "backend_presses_whole_turn_in_repeat_turns": 3,
+    "errors": 0,
+    "egress_blocked": []
+   },
+   "file": "raw-r03/probe-dryrun-main-off.json",
+   "sha256": "acaac1f9d234eadbc601f71ef1f5756f0766f0269a5650dbc064b49b77cc07d6"
+  }
+ },
+ "reading": "Scripted fake model only, so this validates the harness and says nothing about real-model emission rates.",
+ "verdict": "KEEP (harness works)",
+ "not_tested": [
+  "any real model"
+ ],
+ "limitations": [
+  "scripted model emits the repeat by construction"
+ ],
+ "learning": null,
+ "frozen": {
+  "bundle_sha": null,
+  "cells": 4,
+  "supersedes": "F07P/r20261001-02",
+  "status": "NOT_FROZEN (open P8 item)"
+ },
+ "spec": {
+  "path": null,
+  "rev": null,
+  "sha256": null,
+  "prereg_commit": null,
+  "decision_rule_sha": "321dc15247c2b37f68c88421669453db77d23b8c965c6d7def9ac3d09c1386b5",
+  "decision_rule": "RED: base arm fails 2/2 with the marker in 3/3 reps and the seam is hit. GREEN: head passes 2/2 in 3/3 reps. NEG/per-hunk: each reverted hunk fails again. ADJ: same failures on base and head. KEEP only if all four hold. Rule restated from the r01/r02 receipts; it was not committed before run 1.",
+  "status": "NOT_PREREGISTERED",
+  "gap": "FACTORY I5 wants the spec committed to claude/ledger before run 1. This run may not write the ledger, so there is no prereg commit. Open P8 item."
+ },
+ "runner_revision": "harness/proof-r03.py sha256=61197933f6d7821eefbbf4c6f1eb7c59d42207f55a454d3b123cdf11b37c5467",
+ "issue": "kvnloo/hermes-agent#316",
+ "origin_refs": [
+  "NousResearch/hermes-agent#124008",
+  "NousResearch/hermes-agent#112639"
+ ],
+ "staging": "cu-repeat-input-dedup",
+ "branch": {
+  "logical": "staging/cu-repeat-input-dedup",
+  "fork_physical": "staged/cu-repeat-input-dedup",
+  "pushed": false
+ },
+ "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+ "head_revision": "2f79b549ef40aeb31cb3af36cd92d8d12b9ba799",
+ "changed_files": [
+  {
+   "path": "agent/tool_dispatch_helpers.py",
+   "added": 33,
+   "deleted": 1
+  },
+  {
+   "path": "run_agent.py",
+   "added": 1,
+   "deleted": 18
+  },
+  {
+   "path": "tests/agent/test_tool_call_dedup_order_significant.py",
+   "added": 71,
+   "deleted": 0
+  }
+ ],
+ "policy_revision": {
+  "AGENTS.md": "65aa3e61bcba610da21279a17385671263be39e9",
+  "CONTRIBUTING.md": "b0baa59b5057c204b3c09d3dd170c0955cfdb39c",
+  "factory": "frontier-2026-10-01/FACTORY.md sha256=7726ba18b43a9367f91d7f70c3aaefb96a9863761ddf71225c61c26a30d688d4"
+ },
+ "inputs": {
+  "tests/agent/test_tool_call_dedup_order_significant.py@head": "f4d3d1e20d6f9e9be528f7b99bfd7a4c2d1ce14d",
+  "tests/agent/test_agent_guardrails.py@base": "a6f91bada3e3bc40f715981f7519aa56b97754bf",
+  "tests/fakes/fake_llm_provider.py@base": "339adb7e87ea1dcf961d4aa4e12cbd558e2de31e",
+  "scripts/run_tests.sh@base": "8fcc4294f48a16968fd68f6d5edad45d74354166",
+  "scripts/run_tests_parallel.py@base": "21178fd246edd2460d1d6ae4cfb7937262458ffc",
+  "guard_plugin harness/_xf_t1_guard.py sha256": "ede8cf473cf26e6b2e960cbd2d89e1754bc63f799894d22360311fde94daaeee",
+  "driver harness/proof-r03.py sha256": "61197933f6d7821eefbbf4c6f1eb7c59d42207f55a454d3b123cdf11b37c5467",
+  "donor": "refs/fork/fix/computer-use-repeat-input-dedup-current-main@570dc83ba65fc4ce86efb2c00e89dc84d19bd5ca (merge-base cb3142d3257b15ac42de544bd585793567400d0f)"
+ },
+ "env": {
+  "host": "local workstation, Linux x86_64",
+  "python": "3.11.14 via $HERMES_PYTHON (interpreter only)",
+  "venv_lock_sha256": null,
+  "sandbox": "run_tests.sh env -i + isolated HOME/HERMES_HOME ($TH = scratchpad/testhome-sf-cu-repeat-input-dedup) + in-process loopback-only connect guard; no bwrap",
+  "file_retries": 0,
+  "workers": 2
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "harness_abi": {
+  "harness": "hermes",
+  "editor_abi": "n/a (no edit tool; computer_use no-op backend as the device)"
+ },
+ "resource_usage": {
+  "api_cost_usd": 0.0,
+  "gpu_s": 0,
+  "tokens": 0,
+  "energy_j": null
+ },
+ "z0evals_study": null,
+ "provenance": "self",
+ "privacy": "public-aggregate (synthetic fixtures only; no absolute local paths)",
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the change, the test and these receipts",
+ "supersedes": "F07P/r20261001-02"
+}

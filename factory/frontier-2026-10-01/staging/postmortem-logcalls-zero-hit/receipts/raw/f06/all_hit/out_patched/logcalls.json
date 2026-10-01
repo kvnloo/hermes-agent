@@ -1,0 +1,53 @@
+{
+ "coverage": {
+  "calls_found": 420,
+  "run_api_calls": 420,
+  "fraction": 1.0,
+  "zero_hit": 0,
+  "no_cache_field": 0,
+  "usage_unavailable": 0,
+  "first_ts": "2026-09-06 19:00:07,051",
+  "last_ts": "2026-09-06 19:14:00,740",
+  "note": "rotated logs; extrapolations from this window are upper bounds"
+ },
+ "observed": {
+  "prompt_tokens": {
+   "median": 151894,
+   "p90": 306546,
+   "max": 433169
+  },
+  "share_of_calls_above": {
+   "150000": 0.507,
+   "200000": 0.293,
+   "300000": 0.105
+  },
+  "cache_hit_ratio_overall": 0.9795,
+  "hit_ratio_buckets": {
+   "50-90%": 15,
+   "90-97%": 115,
+   "97-99%": 213,
+   ">=99%": 77
+  },
+  "strict_plateau": {
+   "pairs_share": 0.0,
+   "share_of_uncached_input": 0.0
+  },
+  "non_advancing_hit": {
+   "pairs_share": 0.0,
+   "share_of_uncached_input": 0.0
+  },
+  "uncached_input_usd_in_window": 0.0
+ },
+ "modeled": {
+  "sawtooth_on_real_prompt_sizes": {
+   "cap": 200000,
+   "floor": 65000,
+   "prompt_tokens_ratio": 0.692,
+   "caveats": [
+    "compression-call cost excluded",
+    "read/write ratio assumed unchanged",
+    "window only"
+   ]
+  }
+ }
+}

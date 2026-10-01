@@ -1,0 +1,15 @@
+FAILED tests/tools/test_computer_use_cheap_lanes.py::TestGwsArgsLanes::test_vision_lane_skips_the_ax_walk_when_advertised
+FAILED tests/tools/test_computer_use_cheap_lanes.py::TestGwsArgsLanes::test_ax_lane_skips_the_grab_when_advertised
+FAILED tests/tools/test_computer_use_cheap_lanes.py::TestGwsArgsLanes::test_som_lane_always_wants_both_halves
+FAILED tests/tools/test_computer_use_cheap_lanes.py::TestGwsArgsLanes::test_flags_fail_closed_before_capability_discovery
+FAILED tests/tools/test_computer_use_cheap_lanes.py::TestGwsArgsLanes::test_old_driver_without_the_properties_sees_the_old_payload
+FAILED tests/tools/test_computer_use_cheap_lanes.py::TestGwsArgsLanes::test_sessionless_stub_is_unaffected
+FAILED tests/tools/test_computer_use_cheap_lanes.py::TestGwsArgsLanes::test_partial_schema_only_sends_the_advertised_flag
+FAILED tests/tools/test_computer_use_cheap_lanes.py::TestGwsArgsLanes::test_max_elements_bound_and_lane_flags_coexist
+FAILED tests/tools/test_computer_use_cheap_lanes.py::TestCaptureEndToEnd::test_vision_capture_asks_for_the_capture_only_lane
+FAILED tests/tools/test_computer_use_cheap_lanes.py::TestCaptureEndToEnd::test_ax_capture_asks_for_the_tree_only_lane
+10 failed, 3 passed in 1.78s
+=== 3 files with test failures (18 tests failed) ===
+  tests/tools/test_computer_use_capture_lane_schema.py  (2 tests failed)
+  tests/tools/test_computer_use_capture_modes.py  (6 tests failed)
+  tests/tools/test_computer_use_cheap_lanes.py  (10 tests failed)

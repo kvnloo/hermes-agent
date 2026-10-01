@@ -1,0 +1,4 @@
+FAILED tests/tools/test_computer_use_ax_walk_bound.py::TestAxWalkBound::test_configured_value_reaches_the_driver_args
+1 failed, 4 passed in 1.46s
+=== 1 file with test failures (1 test failed) ===
+  tests/tools/test_computer_use_ax_walk_bound.py  (1 test failed)

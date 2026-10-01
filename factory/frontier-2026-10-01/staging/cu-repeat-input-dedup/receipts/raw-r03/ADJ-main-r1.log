@@ -1,0 +1,59 @@
+▶ not activated — using HERMES_PYTHON: $HERMES_PYTHON
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 9 test files (~508 tests) under ['tests/agent/test_agent_guardrails.py', 'tests/agent/test_tool_batch_segmentation.py', 'tests/agent/test_tool_call_guardrail_runtime.py', 'tests/agent/test_file_mutation_verifier.py', 'tests/agent/test_run_agent.py', 'tests/tools/test_computer_use.py', 'tests/tools/test_computer_use_delivery_ladder.py', 'tests/tools/test_connector_bridge_wiring.py', 'tests/tools/test_tool_search.py']; running with -j 2
+[  5.1% |    26/~508 | ✓26 | ✗ 0] ✓ tests/agent/test_agent_guardrails.py (26✓, 6.3s)
+[  9.3% |    47/~508 | ✓49 | ✗ 0] ✓ tests/agent/test_file_mutation_verifier.py (23✓, 6.5s)
+[ 15.0% |    76/~508 | ✓80 | ✗ 0] ✓ tests/agent/test_tool_batch_segmentation.py (31✓ 1s, 18.8s)
+[ 17.7% |    90/~508 | ✓95 | ✗ 0] ✓ tests/agent/test_tool_call_guardrail_runtime.py (15✓, 18.5s)
+[ 34.8% |   177/~508 | ✓182 | ✗  0] ✓ tests/tools/test_computer_use.py (87✓, 26.9s)
+[ 37.6% |   191/~508 | ✓196 | ✗  0] ✓ tests/tools/test_computer_use_delivery_ladder.py (14✓, 10.4s)
+[ 43.1% |   219/~508 | ✓233 | ✗  0] ✓ tests/tools/test_connector_bridge_wiring.py (37✓, 12.6s)
+[ 51.2% |   260/~508 | ✓278 | ✗  0] ✓ tests/tools/test_tool_search.py (45✓, 24.4s)
+[100.0% |   508/~508 | ✓278 | ✗  0] ✗ tests/agent/test_run_agent.py (248 tests, 300.2s)
+
+  ╔╍ Failed: tests/agent/test_run_agent.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ (300s exceeded; process tree SIGKILL'd)
+  ║ ........................................................................ [ 25%]
+  ║ ........................................................................ [ 51%]
+  ║ ........................................................................ [ 76%]
+  ║ .............................................................
+  ║
+  ║  Repro: python -m pytest tests/agent/test_run_agent.py -q --tb=short -p _xf_t1_guard
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 9 files, 278 tests passed, 0 failed, 1 skipped (100% complete) in 306.6s (2 workers) ===
+
+  note: platforms('windows') tests (in 1 file) were SKIPPED on this host (linux); they run on the Windows Python-tests lane.
+  Durations cached to test_durations.json (8 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   9
+  Total subprocess CPU-wall: 424.7s  (runner wall: 306.6s, parallelism: 2x)
+  P50: 18.49s  P90: 300.20s  P95: 300.20s  P99: 300.20s  Max: 300.20s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+    300.20s  tests/agent/test_run_agent.py
+     26.92s  tests/tools/test_computer_use.py
+     24.43s  tests/tools/test_tool_search.py
+     18.78s  tests/agent/test_tool_batch_segmentation.py
+     18.49s  tests/agent/test_tool_call_guardrail_runtime.py
+     12.57s  tests/tools/test_connector_bridge_wiring.py
+     10.39s  tests/tools/test_computer_use_delivery_ladder.py
+      6.55s  tests/agent/test_file_mutation_verifier.py
+      6.33s  tests/agent/test_agent_guardrails.py
+
+=== Failure output ===
+
+--- tests/agent/test_run_agent.py ---
+(300s exceeded; process tree SIGKILL'd)
+........................................................................ [ 25%]
+........................................................................ [ 51%]
+........................................................................ [ 76%]
+.............................................................
+
+=== 1 file where no tests ran (collection/import error, timeout before collection, etc.) ===
+  tests/agent/test_run_agent.py

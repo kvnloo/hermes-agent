@@ -1,0 +1,14 @@
+--- a/acp_adapter/commands.py	2026-10-01 04:20:18.417529184 -0500
++++ b/acp_adapter/commands.py	2026-10-01 04:20:18.434557972 -0500
+@@ -267,9 +267,8 @@
+         try:
+             # Stable ACP session id: suppress _compress_context's SQLite session split.
+             agent._session_db = None
+-            result = compress_now(
+-                agent, state.history, request, system_message=getattr(agent, "_cached_system_prompt", "") or "",
+-                task_id=state.session_id)
++            # system_message=None: compress_now rebuilds the prompt; the cached prompt would nest (#15281).
++            result = compress_now(agent, state.history, request, task_id=state.session_id)
+         except Exception as e:
+             return f"Compression failed: {e}"
+         finally:

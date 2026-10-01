@@ -1,0 +1,67 @@
+From 9225807160327a648a21bd493e9ed943f8ce5baa Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Thu, 1 Oct 2026 06:11:16 -0500
+Subject: [PATCH] docs(observer-hooks): list first_chunk_at, context_length and
+ moa_references
+
+post_api_request passes first_chunk_at, context_length and moa_references
+(agent/turn_response_intake.py:83-97), but the post_api_request field list
+in the observer hooks guide stops at the older fields. Plugin authors
+cannot find the time-to-first-byte timestamp, the context window or the
+MoA advisor breakdown there without reading the emitter.
+
+Add the three fields to that list, described from their sources:
+
+- first_chunk_at is the epoch time of the attempt's first stream chunk,
+  reset before every attempt (agent/turn_api_request.py:107) and set by
+  the chat-completions/Anthropic stream (agent/chat_completion_helpers.py)
+  and the Codex Responses runner (agent/codex_runtime.py). It stays None
+  for non-streamed responses, streams that fail after sending output, and
+  bedrock_converse streams. first_chunk_at - started_at is time to first
+  byte only when nothing was retried: started_at is taken once before the
+  retry loop (agent/conversation_loop.py:1650), so a retried attempt or a
+  reconnected stream keeps the first try's start, as api_duration does.
+- context_length is the active context engine's window.
+- moa_references is the most recent fan-out's per-advisor slot_metrics
+  entries (agent/moa_trace.py), None off the MoA path. The hook's response
+  and usage describe only the aggregator call (agent/turn_usage.py).
+
+Docs only; no behaviour change.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ website/docs/developer-guide/observer-hooks.md | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/website/docs/developer-guide/observer-hooks.md b/website/docs/developer-guide/observer-hooks.md
+index 3d9c636706..9ede0fab4d 100644
+--- a/website/docs/developer-guide/observer-hooks.md
++++ b/website/docs/developer-guide/observer-hooks.md
+@@ -151,9 +151,24 @@ API hooks describe provider attempts inside the agent loop:
+ `post_api_request` includes the same identity/runtime fields plus:
+ 
+ - `api_duration`, `started_at`, `ended_at`
++- `first_chunk_at`: epoch seconds when this attempt's first stream chunk
++  arrived, or `None` when none was recorded (the response was not streamed,
++  no chunk arrived, the stream failed after sending output, or the call used
++  `bedrock_converse`). When nothing was retried, time to first byte is
++  `first_chunk_at - started_at`. A retry after a failed attempt or a dropped
++  stream keeps the first try's `started_at`, so after a retry the difference
++  can also include the failed tries and the wait between them (as
++  `api_duration` always does).
+ - `finish_reason`, `message_count`, `response_model`
+ - `usage`
++- `context_length`: the context window, in tokens, of the agent's context
++  engine (`None` if the agent has none)
+ - `assistant_content_chars`, `assistant_tool_call_count`
++- `moa_references`: on a Mixture-of-Agents call, one entry per advisor from
++  the most recent fan-out (`label`, `model`, `provider`, `temperature`,
++  `usage`, `cost_usd`, `cost_status`, `cost_source`, and the advisor's
++  `output` text, which is redacted only when `moa.privacy_filter` is set);
++  `None` otherwise. `response` and `usage` cover only the aggregator call.
+ - sanitized response payload: `response`
+ - compatibility object: `assistant_message`
+ 
+-- 
+2.55.0
+

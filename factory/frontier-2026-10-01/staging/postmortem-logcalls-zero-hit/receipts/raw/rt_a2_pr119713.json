@@ -1,0 +1,91 @@
+{
+ "arm": "a2_pr119713",
+ "repo_head_files": {},
+ "supports_ttfb": true,
+ "cases": [
+  "hit",
+  "miss",
+  "cold_write",
+  "no_field",
+  "unavailable"
+ ],
+ "lines": [
+  "API call #1: model=gpt-4o provider=openai in=100 out=7 total=107 latency=0.2s cache=40/100 (40%) id=r1 upstream=Fixture upstream ttfb=1.5s",
+  "API call #2: model=gpt-4o provider=openai in=100 out=7 total=107 latency=0.2s id=r2 upstream=Fixture upstream ttfb=1.5s",
+  "API call #3: model=gpt-4o provider=openai in=100 out=7 total=107 latency=0.2s write=60 id=r3 upstream=Fixture upstream ttfb=1.5s",
+  "API call #4: model=gpt-4o provider=openai in=100 out=7 total=107 latency=0.2s id=r4 upstream=Fixture upstream ttfb=1.5s",
+  "API call #5: model=gpt-4o provider=openai in=? out=? total=? latency=0.2s usage=unavailable ttfb=1.5s"
+ ],
+ "parsers": {
+  "main": {
+   "matched": 1,
+   "of": 5,
+   "per_case": {
+    "hit": {
+     "inp": 100,
+     "hit": 40,
+     "cache_state": null,
+     "upstream": "Fixture upstream"
+    },
+    "miss": null,
+    "cold_write": null,
+    "no_field": null,
+    "unavailable": null
+   }
+  },
+  "patched": {
+   "matched": 5,
+   "of": 5,
+   "per_case": {
+    "hit": {
+     "inp": 100,
+     "hit": 40,
+     "cache_state": null,
+     "upstream": "Fixture upstream"
+    },
+    "miss": {
+     "inp": 100,
+     "hit": 0,
+     "cache_state": null,
+     "upstream": "Fixture upstream"
+    },
+    "cold_write": {
+     "inp": 100,
+     "hit": 0,
+     "cache_state": null,
+     "upstream": "Fixture upstream"
+    },
+    "no_field": {
+     "inp": 100,
+     "hit": 0,
+     "cache_state": null,
+     "upstream": "Fixture upstream"
+    },
+    "unavailable": {
+     "inp": null,
+     "hit": null,
+     "cache_state": null,
+     "upstream": null
+    }
+   }
+  }
+ },
+ "safety": {
+  "egress_blocked": [],
+  "exec_blocked": [
+   "subprocess.Popen:python3:['python3', '-c', \"import sys; print('.'.join(map(str, sys.version_info[:3])))\"]"
+  ],
+  "probe_reads_allowed": [
+   "git rev-parse HEAD",
+   "git branch --show-current",
+   "git log -1 --format=%ct HEAD",
+   "git status --porcelain -uno",
+   "git tag --merged HEAD --list v[0-9]*",
+   "git describe --tags --long --match v2[0-9][0-9][0-9].* HEAD",
+   "git show v2026.9.24:pyproject.toml",
+   "git rev-parse --short=7 HEAD",
+   "/sbin/ldconfig -p"
+  ],
+  "home": "isolated-temp"
+ }
+}

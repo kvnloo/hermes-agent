@@ -1,0 +1,269 @@
+{
+  "schema": "xf.receipt.v1",
+  "staging": "cu-capture-mode-projection",
+  "issue": "kvnloo/hermes-agent#316",
+  "origin_refs": [
+    "NousResearch/hermes-agent#126447",
+    "NousResearch/hermes-agent#113389",
+    "NousResearch/hermes-agent#112639",
+    "NousResearch/hermes-agent#126449"
+  ],
+  "base_revision": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+  "provenance": "self",
+  "privacy": "public-aggregate",
+  "ai_assistance": "Claude Code (Opus 5.5) wrote the harness and the contract test; disclosed per repository policy",
+  "env": {
+    "host": "<local-host>",
+    "python_tests": "3.11.14 (venv interpreter, read-only; live home masked in bwrap runs)",
+    "sandbox": "X1/X2c-wrapper/X3: bwrap ro-root, --unshare-net, --unshare-pid, --clearenv, scratch HOME and HERMES_HOME, the live Hermes install masked except the venv; X2/X2b/X2c: scripts/run_tests.sh with scratch HOME/HERMES_HOME (no pytest_live_guard), -j 2",
+    "network": "none used by any cell (X1 egress_attempts = [] per version)"
+  },
+  "resource_usage": {
+    "api_cost_usd": 0.0,
+    "gpu_s": 0
+  },
+  "id": "X1-driver-schema/r20261001-04",
+  "tier": "T0 (real release binaries, no display, no network)",
+  "question": "Which get_window_state selectors do shipped Linux cua-driver releases advertise to Hermes' own capability seam, and does any release expose a standalone screenshot tool that would make vision mode skip get_window_state?",
+  "inputs": {
+    "worktree_commit": "ed420d8292349f27affb1a80fbf90e44f48c874a",
+    "seam": "tools/computer_use/cua_backend_session.py _CuaDriverSession.start -> _populate_capabilities -> supports_input_property",
+    "binaries": {
+      "0.21.0": "~/.cua-driver/packages/releases/0.21.0-x86_64-unknown-linux-gnu/cua-driver",
+      "0.22.2": "~/.cua-driver/packages/releases/0.22.2-x86_64-unknown-linux-gnu/cua-driver",
+      "0.23.2": "~/.cua-driver/packages/releases/0.23.2-x86_64-unknown-linux-gnu/cua-driver",
+      "0.24.0": "~/.cua-driver/packages/releases/0.24.0-x86_64-unknown-linux-gnu/cua-driver",
+      "0.28.2": "~/.cua-driver/packages/releases/0.28.2-x86_64-unknown-linux-gnu/cua-driver"
+    },
+    "harness": {
+      "harness/schema_probe.py": "dd1ce3a75dadffe86dc651613eb03aa6993f65e4c1f568e172b50b79ee152618",
+      "harness/run_schema_probe.sh": "e52df90d79b3a0641173b81f24bac5e60e28391dd0d02ddf9e7b4ec7007ddb46"
+    },
+    "harness_as_run": {
+      "harness/schema_probe.py": "d09181bc82984a8513d730b100c15d880145d8a47cd52eaf0ecb19d200175627",
+      "harness/run_schema_probe.sh": "307b93a195b847f8f5fb9bb76d611b5f94e9d24601b0b112e5cd137f6d43a7f9"
+    },
+    "harness_note": "2026-10-01 staging fix round 1: the hard-coded local paths in these harness files were replaced by environment parameters (SCRATCH, HERMES_PYTHON, LIVE_HERMES_ROOT, CUA_RELEASES, PROBE_FORBIDDEN) with no logic change; `harness` holds the published file hashes, `harness_as_run` the hashes of the files that ran. Raw outputs were path-sanitized by harness/sanitize_raw.py (raw files are not hashed by any receipt)."
+  },
+  "command": "PROBE_DISPATCH=1 bash harness/run_schema_probe.sh <worktree@ed420d8292> <run dir> 0.21.0 0.22.2 0.23.2 0.24.0 0.28.2",
+  "label": "OBSERVED",
+  "measurements": {
+    "0.21.0": {
+      "binary_sha256": "43d926a1b938012379db57cf351530f81e75a574017676815f85d1e13aff23f7",
+      "start_ok": true,
+      "tool_count": 60,
+      "advertises_include_screenshot": true,
+      "advertises_include_accessibility_tree": false,
+      "advertises_standalone_screenshot_tool": false,
+      "gws_additionalProperties": false,
+      "gws_properties": [
+        "capture_mode",
+        "include_screenshot",
+        "max_depth",
+        "max_elements",
+        "pid",
+        "query",
+        "screenshot_out_file",
+        "session",
+        "window_id"
+      ],
+      "unknown_or_unadvertised_property_rejected_before_target_check": false,
+      "dispatch": {
+        "base": {
+          "isError": true,
+          "text": "Window target pid 999999, window_id 1 is stale or no longer running; refresh list_windows."
+        },
+        "bogus_property": {
+          "isError": true,
+          "text": "Window target pid 999999, window_id 1 is stale or no longer running; refresh list_windows."
+        },
+        "include_accessibility_tree_false": {
+          "isError": true,
+          "text": "Window target pid 999999, window_id 1 is stale or no longer running; refresh list_windows."
+        },
+        "include_screenshot_false": {
+          "isError": true,
+          "text": "Window target pid 999999, window_id 1 is stale or no longer running; refresh list_windows."
+        }
+      },
+      "egress_attempts": [],
+      "session_start_s": 0.979
+    },
+    "0.22.2": {
+      "binary_sha256": "574c6c4b92e43361ee187b8bc345f0885cce4be5324ead383941df477ce3da4c",
+      "start_ok": true,
+      "tool_count": 60,
+      "advertises_include_screenshot": true,
+      "advertises_include_accessibility_tree": false,
+      "advertises_standalone_screenshot_tool": false,
+      "gws_additionalProperties": false,
+      "gws_properties": [
+        "capture_mode",
+        "include_screenshot",
+        "max_depth",
+        "max_elements",
+        "pid",
+        "query",
+        "screenshot_out_file",
+        "session",
+        "window_id"
+      ],
+      "unknown_or_unadvertised_property_rejected_before_target_check": false,
+      "dispatch": {
+        "base": {
+          "isError": true,
+          "text": "Window target pid 999999, window_id 1 is stale or no longer running; refresh list_windows."
+        },
+        "bogus_property": {
+          "isError": true,
+          "text": "Window target pid 999999, window_id 1 is stale or no longer running; refresh list_windows."
+        },
+        "include_accessibility_tree_false": {
+          "isError": true,
+          "text": "Window target pid 999999, window_id 1 is stale or no longer running; refresh list_windows."
+        },
+        "include_screenshot_false": {
+          "isError": true,
+          "text": "Window target pid 999999, window_id 1 is stale or no longer running; refresh list_windows."
+        }
+      },
+      "egress_attempts": [],
+      "session_start_s": 0.999
+    },
+    "0.23.2": {
+      "binary_sha256": "2aaad67b996d41cd909e4b7ac2ddd705653e8c7f9958010ac051838b02f64eeb",
+      "start_ok": true,
+      "tool_count": 60,
+      "advertises_include_screenshot": true,
+      "advertises_include_accessibility_tree": false,
+      "advertises_standalone_screenshot_tool": false,
+      "gws_additionalProperties": false,
+      "gws_properties": [
+        "capture_mode",
+        "include_screenshot",
+        "max_depth",
+        "max_elements",
+        "pid",
+        "query",
+        "screenshot_out_file",
+        "session",
+        "window_id"
+      ],
+      "unknown_or_unadvertised_property_rejected_before_target_check": false,
+      "dispatch": {
+        "base": {
+          "isError": true,
+          "text": "Window target pid 999999, window_id 1 is stale or no longer running; refresh list_windows."
+        },
+        "bogus_property": {
+          "isError": true,
+          "text": "Window target pid 999999, window_id 1 is stale or no longer running; refresh list_windows."
+        },
+        "include_accessibility_tree_false": {
+          "isError": true,
+          "text": "Window target pid 999999, window_id 1 is stale or no longer running; refresh list_windows."
+        },
+        "include_screenshot_false": {
+          "isError": true,
+          "text": "Window target pid 999999, window_id 1 is stale or no longer running; refresh list_windows."
+        }
+      },
+      "egress_attempts": [],
+      "session_start_s": 0.945
+    },
+    "0.24.0": {
+      "binary_sha256": "a033485d78a1c5966edd8ce29792d7f2d19a1988bcb58a6e292b6d17255262e1",
+      "start_ok": true,
+      "tool_count": 60,
+      "advertises_include_screenshot": true,
+      "advertises_include_accessibility_tree": true,
+      "advertises_standalone_screenshot_tool": false,
+      "gws_additionalProperties": false,
+      "gws_properties": [
+        "capture_mode",
+        "include_accessibility_tree",
+        "include_screenshot",
+        "max_depth",
+        "max_dimension",
+        "max_elements",
+        "pid",
+        "query",
+        "screenshot_out_file",
+        "session",
+        "window_id"
+      ],
+      "unknown_or_unadvertised_property_rejected_before_target_check": false,
+      "dispatch": {
+        "base": {
+          "isError": true,
+          "text": "Window target pid 999999, window_id 1 is stale or no longer running; refresh list_windows."
+        },
+        "bogus_property": {
+          "isError": true,
+          "text": "Window target pid 999999, window_id 1 is stale or no longer running; refresh list_windows."
+        },
+        "include_accessibility_tree_false": {
+          "isError": true,
+          "text": "Window target pid 999999, window_id 1 is stale or no longer running; refresh list_windows."
+        },
+        "include_screenshot_false": {
+          "isError": true,
+          "text": "Window target pid 999999, window_id 1 is stale or no longer running; refresh list_windows."
+        }
+      },
+      "egress_attempts": [],
+      "session_start_s": 1.03
+    },
+    "0.28.2": {
+      "binary_sha256": "3739101d072bdfdd83b7e70b3a16d9271f6eb124e7c5e69b3406f20f0910a4ca",
+      "start_ok": true,
+      "tool_count": 60,
+      "advertises_include_screenshot": true,
+      "advertises_include_accessibility_tree": true,
+      "advertises_standalone_screenshot_tool": false,
+      "gws_additionalProperties": false,
+      "gws_properties": [
+        "capture_mode",
+        "include_accessibility_tree",
+        "include_screenshot",
+        "max_depth",
+        "max_dimension",
+        "max_elements",
+        "pid",
+        "query",
+        "screenshot_out_file",
+        "session",
+        "window_id"
+      ],
+      "unknown_or_unadvertised_property_rejected_before_target_check": false,
+      "dispatch": {
+        "base": {
+          "isError": true,
+          "text": "Window target pid 999999, window_id 1 is stale or no longer running; refresh list_windows."
+        },
+        "bogus_property": {
+          "isError": true,
+          "text": "Window target pid 999999, window_id 1 is stale or no longer running; refresh list_windows."
+        },
+        "include_accessibility_tree_false": {
+          "isError": true,
+          "text": "Window target pid 999999, window_id 1 is stale or no longer running; refresh list_windows."
+        },
+        "include_screenshot_false": {
+          "isError": true,
+          "text": "Window target pid 999999, window_id 1 is stale or no longer running; refresh list_windows."
+        }
+      },
+      "egress_attempts": [],
+      "session_start_s": 0.949
+    }
+  },
+  "result": "All five releases start under the production session and list 60 tools; none has a standalone screenshot tool (so vision on main always calls get_window_state and walks AT-SPI). 0.21.0, 0.22.2 and 0.23.2 advertise include_screenshot only; 0.24.0 and 0.28.2 advertise both selectors. All declare additionalProperties:false, yet none rejects an unadvertised or bogus property before its stale-target check, so the capability gate preserves the request shape rather than avoiding a hard error (behaviour past the target check is NOT_TESTED: no display).",
+  "implication": "On default Linux host installs (pm/lock.json pins 0.21.0) the ax lane activates and the vision lane stays dormant until the pin moves (#126449) or the sandbox-desktop image (0.28.2) is used.",
+  "not_tested": [
+    "capture timing or AT-SPI walk cost (needs a display: E23)",
+    "macOS and Windows builds",
+    "releases 0.25.x-0.27.x, 0.29.x, 0.30.x (not installed as release dirs here)"
+  ],
+  "verdict": "KEEP (fact base for the fold-in test fixtures and the E23 design)"
+}

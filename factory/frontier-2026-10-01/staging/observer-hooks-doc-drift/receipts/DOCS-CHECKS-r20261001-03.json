@@ -1,0 +1,362 @@
+{
+  "schema": "xf.receipt.v1",
+  "id": "DOCS-CHECKS/r20261001-03",
+  "supersedes": "DOCS-CHECKS/r20261001-02 (head f47410f2ac on base 572e4f4fad; rebuilt on main aea969677c with the first_chunk_at retry qualification)",
+  "spec": {
+    "kind": "static",
+    "tier": "T0",
+    "cost": "$0",
+    "lane": "cpu",
+    "question": "Does the one-commit doc fix satisfy the D2 docs rule and the docs-site checks that run offline, without colliding with queued docs bundles or open upstream PRs?",
+    "observer_effect": "none"
+  },
+  "staging": "observer-hooks-doc-drift",
+  "origin_refs": [
+    "NousResearch/hermes-agent#64231",
+    "NousResearch/hermes-agent#16106"
+  ],
+  "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+  "head_revision": "9225807160327a648a21bd493e9ed943f8ce5baa",
+  "changed_files": [
+    "website/docs/developer-guide/observer-hooks.md (+15/-0)"
+  ],
+  "d2_docs_rule": {
+    "label": "OBSERVED",
+    "stale_text": {
+      "file": "website/docs/developer-guide/observer-hooks.md",
+      "blob": "3d9c636706ff28aa6a117c1c0700fa2767aa19ae",
+      "lines": "151-158",
+      "quote": [
+        "`post_api_request` includes the same identity/runtime fields plus:",
+        "- `api_duration`, `started_at`, `ended_at`",
+        "- `finish_reason`, `message_count`, `response_model`",
+        "- `usage`",
+        "- `assistant_content_chars`, `assistant_tool_call_count`",
+        "- sanitized response payload: `response`",
+        "- compatibility object: `assistant_message`"
+      ],
+      "occurrences_of_new_fields_in_page_at_base": 0
+    },
+    "contradicting_source": {
+      "file": "agent/turn_response_intake.py",
+      "blob": "eebd9d12debaef2d5b810dd7a2fc2f88775d960f",
+      "lines": "83-97",
+      "quote": [
+        "# First stream chunk time (epoch s); None if not streamed / no chunk.",
+        "# TTFB = first_chunk_at - started_at.",
+        "first_chunk_at=getattr(agent, \"_last_api_first_chunk_at\", None),",
+        "context_length=getattr(getattr(agent, \"context_compressor\", None), \"context_length\", None),",
+        "moa_references=_moa_reference_metrics_for_hook(agent),"
+      ]
+    },
+    "semantics_sources": [
+      {
+        "claim": "first_chunk_at reset before every attempt",
+        "file": "agent/turn_api_request.py:107",
+        "blob": "1be4db0a6286c81d9024197964902b99e975b089"
+      },
+      {
+        "claim": "first_chunk_at set from the first counted stream chunk (chat completions and anthropic_messages share _StreamingCall)",
+        "file": "agent/chat_completion_helpers.py:3005-3012,3196,3514,4064-4065",
+        "blob": "5c114ec4be899fed7c10c4d693af61ac4f92cdcb"
+      },
+      {
+        "claim": "codex_responses sets it on the first parsed SSE event",
+        "file": "agent/codex_runtime.py:1090-1096",
+        "blob": "0edc8a3e7cae3e68fe112ea1da16554d2a2306ba"
+      },
+      {
+        "claim": "a stream that errors after deltas were sent returns _partial_stream_stub() before the first-chunk copy, so post_api_request carries None (pinned by tests/agent/test_first_chunk_at_hook.py::test_partial_stream_stub_leaves_timestamp_none); Codex has no stub path (a failed Codex stream raises -> api_request_error)",
+        "file": "agent/chat_completion_helpers.py:4057-4065",
+        "blob": "5c114ec4be899fed7c10c4d693af61ac4f92cdcb"
+      },
+      {
+        "claim": "bedrock_converse streams (_BedrockStream, chat_completion_helpers.py:2618, dispatched at :4078-4079) never set it; only two setters exist repo-wide (git grep '_last_api_first_chunk_at\\s*=' outside tests)",
+        "file": "agent/chat_completion_helpers.py",
+        "blob": "5c114ec4be899fed7c10c4d693af61ac4f92cdcb"
+      },
+      {
+        "claim": "moa_references = client.last_reference_metrics(), None off the MoA path",
+        "file": "agent/conversation_loop.py:307-318",
+        "blob": "b88367a7963de894b212cc6ad6ce44dc4814ce11"
+      },
+      {
+        "claim": "entries are slot_metrics(acct, label, output=text) from the most recent fan-out, output privacy-redacted when moa.privacy_filter is set",
+        "file": "agent/moa_loop.py:1033-1035,1293-1307",
+        "blob": "141c5e4f4812160a452aee28531fa3a1f82770d0"
+      },
+      {
+        "claim": "entry keys: label, model, provider, temperature, usage{input,output,cache_read,cache_write,reasoning tokens}, cost_usd, cost_status, cost_source, output (input_messages popped)",
+        "file": "agent/moa_trace.py:46-72",
+        "blob": "06eb962dce2d705d6b4109846e0dfbeebdc30c30"
+      },
+      {
+        "claim": "only aggregator usage is returned by the MoA client; advisor spend is folded into session totals separately",
+        "file": "agent/turn_usage.py:48-58",
+        "blob": "76ea5dfe8adf1e9841524645da0438997f3073b0"
+      },
+      {
+        "claim": "maintainer sample payload agrees (first_chunk_at, context_length, moa_references)",
+        "file": "hermes_cli/hooks.py:141-153",
+        "blob": "0586aec24e2aede3b8d95a29a0cca15228496eec"
+      }
+    ],
+    "head_blob": {
+      "website/docs/developer-guide/observer-hooks.md": "9ede0fab4d2be2a886d86a12c53c3f3dc8a01d8b"
+    },
+    "note": "All cited source blobs are byte-identical on 572e4f4fad and aea969677c, so every line citation carries over unchanged."
+  },
+  "retry_qualification": {
+    "label": "OBSERVED",
+    "why": "phase-3 verifier: the superseded head stated 'Time to first byte is `first_chunk_at - started_at`' without qualification, which is wrong for a retried call",
+    "stale_text": {
+      "file": "website/docs/developer-guide/observer-hooks.md",
+      "rev": "f47410f2ac (superseded head)",
+      "blob": "d2cf2daca6f66049732227c6e89507057c3edc08",
+      "line": 157,
+      "quote": "`bedrock_converse`). Time to first byte is `first_chunk_at - started_at`."
+    },
+    "new_text": {
+      "blob": "9ede0fab4d2be2a886d86a12c53c3f3dc8a01d8b",
+      "lines": "157-161",
+      "quote": [
+        "`bedrock_converse`). When nothing was retried, time to first byte is",
+        "`first_chunk_at - started_at`. A retry after a failed attempt or a dropped",
+        "stream keeps the first try's `started_at`, so after a retry the difference",
+        "can also include the failed tries and the wait between them (as",
+        "`api_duration` always does)."
+      ]
+    },
+    "sources": [
+      {
+        "claim": "started_at (api_start_time) has one assignment repo-wide, once per API call before the retry loop",
+        "file": "agent/conversation_loop.py:1650",
+        "blob": "b88367a7963de894b212cc6ad6ce44dc4814ce11"
+      },
+      {
+        "claim": "the retry loop re-runs build_api_request for every try and leaves api_start_time alone",
+        "file": "agent/conversation_loop.py:1501-1530 (build_api_request at :1513)",
+        "blob": "b88367a7963de894b212cc6ad6ce44dc4814ce11"
+      },
+      {
+        "claim": "pre_api_request fires per try with the same started_at; first_chunk_at is reset per try",
+        "file": "agent/turn_api_request.py:85, :106-107",
+        "blob": "1be4db0a6286c81d9024197964902b99e975b089"
+      },
+      {
+        "claim": "the error path measures elapsed time across tries from the unchanged api_start_time",
+        "file": "agent/turn_api_error.py:139-140",
+        "blob": "90c095df3f694ef3919e33b87b88a71a0824bec8"
+      },
+      {
+        "claim": "api_duration = now - api_start_time, so api_duration/ended_at always span every try",
+        "file": "agent/turn_response_check.py:119",
+        "blob": "c79fe2b4680cd1174c6c16d37aa9a315faf56132"
+      },
+      {
+        "claim": "a dropped chat-completions/Anthropic stream reconnects inside one try after a backoff, and each reopened stream gets fresh diagnostics (first_chunk_at comes from the stream that answered)",
+        "file": "agent/chat_completion_helpers.py:3169, :3479, :3571-3590, :4063-4065",
+        "blob": "5c114ec4be899fed7c10c4d693af61ac4f92cdcb"
+      },
+      {
+        "claim": "the Codex Responses runner sets first_chunk_at only while it is None, across its own physical stream retry, so the difference may or may not include a failed Codex stream (hence 'can also include')",
+        "file": "agent/codex_runtime.py:1095-1096, :1210",
+        "blob": "0edc8a3e7cae3e68fe112ea1da16554d2a2306ba"
+      },
+      {
+        "claim": "restarts (compression, redirect, length continuation, rebuilt-for-fallback) leave the retry loop and start a new outer iteration with a fresh api_start_time, so the text speaks of retries, not restarts",
+        "file": "agent/turn_iteration_prep.py:383, :418; agent/conversation_loop.py:1650-1660"
+      }
+    ],
+    "runtime_probe": {
+      "file": "tools/test_probe_ttfb_retry.py (copied to tests/agent/ in the worktree for the run, removed afterwards; not part of the commit)",
+      "sha256": "8bec0bf29c45125265819767ea6df7a9edc0d7de0cf559e24352c37d350ded40",
+      "command": "HOME=$TH HERMES_HOME=$TH/.hermes HERMES_PYTHON=$HERMES_PYTHON unshare -rn bash scripts/run_tests.sh -j 2 tests/agent/test_probe_ttfb_retry.py -q",
+      "result": "PASS: 2 passed, 0 failed in each of 3 runs (2 through scripts/run_tests.sh, 1 through pytest -s to print the values below); the code under test is identical in all three (only the doc differs between the cherry-picked and amended trees)",
+      "observed": {
+        "main_loop_retry": {
+          "pre_api_request_events": 2,
+          "same_started_at_on_both_tries_and_post": true,
+          "first_chunk_at_minus_started_at_s": 0.64,
+          "first_chunk_at_minus_answering_try_start_s": 0.005,
+          "api_duration_s": 0.642,
+          "injected": "failed try 0.2 s + backoff 0.3 s"
+        },
+        "stream_reconnect": {
+          "pre_api_request_events": 1,
+          "first_chunk_at_minus_started_at_s": 0.307,
+          "first_chunk_at_minus_reopened_stream_s": 0.0,
+          "api_duration_s": 0.308,
+          "injected": "dead first stream + reconnect backoff 0.3 s"
+        }
+      },
+      "observed_command": "HOME=$TH HERMES_HOME=$TH/.hermes TZ=UTC PYTHONHASHSEED=0 unshare -rn $HERMES_PYTHON -m pytest tests/agent/test_probe_ttfb_retry.py -q -s -p no:cacheprovider",
+      "negative_control": {
+        "mutation": "agent/conversation_loop.py: set s.api_start_time = time.time() before every build_api_request in _run_api_retry_loop (started_at reset per try)",
+        "result": "RED: test_main_loop_retry_keeps_first_started_at fails at `pre[0]['started_at'] == pre[1]['started_at']` (1790853041.465 != 1790853042.094); the stream-reconnect case, which happens inside one try, stays green as expected. Mutation reverted with git checkout."
+      },
+      "label": "OBSERVED"
+    }
+  },
+  "checks": [
+    {
+      "name": "check_doc_links",
+      "command": "HOME=$TH HERMES_HOME=$TH/.hermes unshare -rn python3 website/scripts/check_doc_links.py",
+      "tree": "9225807160",
+      "result": "PASS",
+      "observed": "OK: no route-style links in hand-authored docs. rc=0",
+      "label": "OBSERVED"
+    },
+    {
+      "name": "skill-docs generator freshness (docs-site-checks.yml offline steps)",
+      "command": "same sandbox; $HERMES_PYTHON website/scripts/extract-skills.py && $HERMES_PYTHON website/scripts/generate-skill-docs.py && git status --porcelain -- website/docs website/sidebars.ts website/i18n",
+      "tree": "9225807160",
+      "result": "PASS",
+      "observed": "both rc=0; 0 changed paths",
+      "label": "OBSERVED"
+    },
+    {
+      "name": "network isolation probe inside the sandbox",
+      "result": "PASS",
+      "observed": "connect 1.1.1.1:443 -> OSError",
+      "label": "OBSERVED"
+    },
+    {
+      "name": "post_api_request list structure (CommonMark+GFM, mdast-util-from-markdown 2.0.3 + micromark-extension-gfm 3.0.0 + mdast-util-gfm 3.1.0) and MDX-hazard scan of added lines",
+      "command": "node tools/md_structure_check.mjs <node_modules> base.md head.md added.txt",
+      "inputs_sha256": {
+        "base.md (observer-hooks.md @ aea969677c)": "10b4ef32cfcacd08ccdf8774446cce474d375cb268aeef68abb77e05f01185fc",
+        "head.md (observer-hooks.md @ 9225807160)": "f99289300c210e2615ac96182fc372b74a4951c483617c1de6c01e5d5dad617d",
+        "tools/md_structure_check.mjs": "0a340f3eeeb0f45f28b5a73c258c6292c5ef0b37a012d8b69da734d3e014c7a0"
+      },
+      "result": "PASS",
+      "observed": {
+        "base_items": 6,
+        "head_items": 9,
+        "new_items_single_paragraph": true,
+        "added_lines": 15,
+        "mdx_hazards": 0
+      },
+      "negative_control": {
+        "mutation": "append '- `x`: a value like {x} or <x>' to the added lines",
+        "result": "flagged (1 hazard), rc=1"
+      },
+      "label": "OBSERVED"
+    },
+    {
+      "name": "adjacent emitter tests (pin first_chunk_at and moa_references semantics)",
+      "command": "HOME=$TH HERMES_HOME=$TH/.hermes HERMES_PYTHON=$HERMES_PYTHON unshare -rn bash scripts/run_tests.sh -j 2 tests/agent/test_first_chunk_at_hook.py tests/agent/test_moa_observability_bridge.py -q",
+      "tree": "9225807160 (code identical to base aea969677c)",
+      "result": "PASS",
+      "observed": "2 files, 17 passed, 0 failed (7 + 10)",
+      "blobs": {
+        "tests/agent/test_first_chunk_at_hook.py": "a7aa0dc10808de84486780f0a09a26c089e75171",
+        "tests/agent/test_moa_observability_bridge.py": "b2ae9f2ee279a084cd24d679f84da90e100ed06e"
+      },
+      "label": "OBSERVED"
+    },
+    {
+      "name": "merge-tree vs main",
+      "result": "PASS",
+      "observed": "parent is main aea969677c; freshness re-check: git merge-tree --write-tree main 9225807160 clean on e8c97320ac (6 commits later, none touching a cited file), tree d049544da9",
+      "label": "OBSERVED"
+    },
+    {
+      "name": "merge-tree vs 18 ready/docs* bundles",
+      "result": "PASS",
+      "observed": "18/18 clean",
+      "heads": {
+        "ready/docs-agents": "9a8daaa95f",
+        "ready/docs-bot-mode": "36cf0f54d6",
+        "ready/docs-cli": "3d969343fa",
+        "ready/docs-cli-v2": "701829fed4",
+        "ready/docs-computer-use": "e6ed1c863d",
+        "ready/docs-desktop": "2ee1217746",
+        "ready/docs-mcp": "0081fb5e75",
+        "ready/docs-memory": "25baa72ade",
+        "ready/docs2-cli": "b68897f77b",
+        "ready/docs2-contributors": "29319c49cd",
+        "ready/docs2-desktop": "58f1374abe",
+        "ready/docs2-gateway": "c497e7abe5",
+        "ready/docs2-memory": "c9010e911f",
+        "ready/docs2-memory-v2": "893f127fdd",
+        "ready/docs2-models": "69a146992b",
+        "ready/docs2-skills": "104ffb3757",
+        "ready/docs2-skills-v2": "1db6249b0c",
+        "ready/docs2-update": "ec60a9f5a7"
+      },
+      "label": "OBSERVED"
+    },
+    {
+      "name": "file-overlap sweep of ready/*, staging/*, staged/*, promote/* heads (67 refs besides this one)",
+      "result": "PASS",
+      "observed": "0 touch observer-hooks.md",
+      "label": "OBSERVED"
+    },
+    {
+      "name": "fork reference branch refs/fork/perf/first-visible-clocks",
+      "head": "6653c99cfde8ea0e2481552899fdadf2171055cc",
+      "result": "PASS",
+      "observed": "merge-tree with 9225807160 clean; nothing copied from it",
+      "label": "OBSERVED"
+    },
+    {
+      "name": "open upstream PR #53007 (OutThisLife, head 7fde663972) observer-hooks.md hunk applies on top",
+      "command": "gh pr diff 53007 | <observer-hooks.md hunk> | git apply --check",
+      "result": "PASS",
+      "observed": "Hunk #1 succeeded at 347 (offset 15 lines)",
+      "label": "OBSERVED"
+    },
+    {
+      "name": "interaction with open upstream PR #123978 (nekwo, head 09c927c745)",
+      "command": "git merge-tree main+#123978 (unreferenced probe commit d86cdbccb7, tree ee446a660f), then + this branch (probe commit 813f4f3906, tree 4704a4f80e); python3 tools/f13_hook_doc_diff.py --base d86cdbccb7 --head 813f4f3906",
+      "result": "INFORMATIONAL (not a gate)",
+      "observed": {
+        "file_overlap": "none (#123978 touches 11 files; observer-hooks.md is not one of them)",
+        "merge": "both merge-tree steps clean",
+        "emitter_sites": [
+          "agent/codex_runtime.py:159 (new: Codex app-server)",
+          "agent/turn_response_intake.py:68"
+        ],
+        "f13_red_on_main_plus_123978": [
+          "context_length",
+          "cost",
+          "first_chunk_at",
+          "moa_references"
+        ],
+        "f13_green_on_main_plus_123978_plus_branch": [
+          "cost"
+        ],
+        "emitter_lines_shift": "turn_response_intake.py: cost= inserted at :94-96 between context_length (:93) and assistant_message; moa_references moves from :97 to :100, so the cited range becomes :83-100",
+        "codex_app_server_emitter_values": "api_request_id/api_duration/started_at/ended_at/first_chunk_at/response_model/response/assistant_message/assistant_tool_call_count/moa_references = None; context_length set; cost set"
+      },
+      "consequence": "if #123978 lands first, this branch needs a rebase that adds a `cost` bullet and the Codex app-server None case (first_chunk_at, started_at, moa_references), and F13 re-run; if this lands first, #123978's cost line goes on top. Recorded in STAGING and the PR body.",
+      "label": "OBSERVED"
+    },
+    {
+      "name": "pr_body and commit line citations re-read on main aea969677c",
+      "result": "PASS",
+      "label": "OBSERVED",
+      "observed": "turn_response_intake.py:83-97, turn_api_request.py:85/106-107, chat_completion_helpers.py:3005-3012/3169/3479/3571-3590/4057-4065, codex_runtime.py:1090-1096/1210, conversation_loop.py:307-318/1501-1530/1650, turn_api_error.py:139-140, turn_response_check.py:119, moa_trace.py:64-72, moa_loop.py:1293-1307, turn_usage.py:48-58, hooks.py:141-153; 14 cited blobs identical on 572e4f4fad and aea969677c"
+    }
+  ],
+  "not_tested": [
+    "Docusaurus build:fast (website/node_modules absent; npm ci and prebuild need network)",
+    "ascii-guard lint:diagrams (ascii-guard not installed; the added lines carry no box-drawing or +-- patterns, checked statically)",
+    "zh-Hans locale: observer-hooks.md has no translated copy, so nothing to sync",
+    "Codex Responses physical stream retry with events on the failed stream (static reading only; the doc says 'can also include' to cover it)"
+  ],
+  "resource_usage": {
+    "api_cost_usd": 0.0
+  },
+  "verdict": "KEEP",
+  "ai_assistance": "Claude Code (Opus 5.5) ran these checks",
+  "privacy": "public-aggregate",
+  "placeholders": {
+    "$W": "worktree root",
+    "$TH": "isolated test HOME in scratch",
+    "$HERMES_PYTHON": "local venv python",
+    "<node_modules>": "a local node_modules with the listed parser versions",
+    "<scratch>": "local scratch directory"
+  }
+}

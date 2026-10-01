@@ -1,0 +1,435 @@
+{
+  "schema": "xf.receipt.v1",
+  "tier": "T1",
+  "staging": "prefix-parity-journeys",
+  "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+  "head_revision": "ddf4748d31cb5dc65e7cd0b0c5b27b98d63ae880",
+  "provenance": "self",
+  "cost_usd": 0.0,
+  "env": {
+    "python": "3.11.14 (<venv>, read-only bind; live home masked)",
+    "network": "loopback only (netns); egress canary below",
+    "relay": "nemo-relay init failed (installed plugin older than tree); journeys ran Relay-off",
+    "host_load": "shared host; load1 at the end of each run is recorded per run (7.91-18.43 over 25 runs, on 10 cores / 20 threads)"
+  },
+  "sandbox": "bwrap --dev-bind / / --tmpfs <live-home> --ro-bind <venv> <venv> --unshare-net --unshare-pid --die-with-parent --clearenv; HOME/HERMES_HOME = scratch testhome; children get fixture homes",
+  "raw": {
+    "dir": "private/raw-r02 (private; path-scrubbed before sealing; never published or frozen)",
+    "manifest": "private/raw-r02/MANIFEST.sha256",
+    "manifest_sha256": "99cb8fdfe8896a88b28a88e623659c4f5f958424a0ac16c049ad5a997923e635"
+  },
+  "egress_canary": {
+    "egress_1.1.1.1:443": "blocked errno=101",
+    "loopback": "CONNECTED"
+  },
+  "ai_assistance": "Claude Code (Opus 5.5) wrote the journeys, probes and arms; disclosed per repository policy",
+  "origin_refs": [
+    "NousResearch/hermes-agent#104414",
+    "NousResearch/hermes-agent#45499",
+    "NousResearch/hermes-agent#120116",
+    "NousResearch/hermes-agent#76215",
+    "NousResearch/hermes-agent#76224",
+    "NousResearch/hermes-agent#88364",
+    "kvnloo/hermes-agent#319"
+  ],
+  "privacy": "public-aggregate: no local paths, host name, session/turn ids or prompt text",
+  "id": "ACP-arms/r20261001-03",
+  "supersedes": {
+    "id": "ACP-arms/r20261001-02",
+    "sha256": "10101db1b6502aebe4d1ac4302c3ec795e3a0e9a7bef71a35717c5ded09b1d48",
+    "path": "private/superseded-r02/ACP-arms-r20261001-02.json"
+  },
+  "reissue": "Re-issue of r20261001-02 from the same sealed raw set (manifest sha256 unchanged); no run was repeated. Changed: env.host_load (r02 said '5-15 on 10 cores'; the recorded load1_end values range as stated here), raw.dir/manifest (the raw set moved to private/raw-r02/), inputs.harness (harness/ now takes local paths from the environment; the files that produced the raw are cited by sha256 in inputs.harness_as_run), id and supersedes. Every other field equals r02. Re-running with harness/ needs HERMES_VENV, LIVE_HOME and TH for sandbox.sh, and RAW and PROBE_TMP passed through to run_receipts.sh.",
+  "spec": {
+    "question": "Which change makes acp_restarts pass: dropping system_message from the ACP compress_now call (fixA), the in-place-compaction idea of #76224/#88364 hand-ported to acp_adapter/commands.py (hp76224), or both?",
+    "varied": "acp_adapter/commands.py only",
+    "falsifier": "fixA or hp76224 alone makes the journey pass"
+  },
+  "inputs": {
+    "harness": {
+      "harness/build_receipts.py": "f33caef9a2adbbb0cf1c419a9383e9a6ad5bfb956792ddfdd7c4e80c1b8d802b",
+      "harness/e09_first_delta.py": "759b69173f9726f532d8d230b2d407e249e19ee92d7999954752ef31874dee44",
+      "harness/journey_probe.py": "1fe717302e61857c64df5d0d59ae04afe355befba291d90403898b7b9483498d",
+      "harness/run_receipts.sh": "3d195a4f0e95fad6b9073e7d6264663225aa7d55e5285b0272b707eb993fce2a",
+      "harness/sandbox.sh": "5a3d50ef38c76dd10a515ad82aa712cab7832438bf608e880f10b715fa865ce9"
+    },
+    "harness_as_run": {
+      "dir": "private/harness-r02 (private: local paths inline)",
+      "note": "the files that produced the raw set; harness/ is the same code with local paths taken from the environment",
+      "sha256": {
+        "private/harness-r02/build_receipts.py": "d4f8e545a74857ea3e5246e871de212da942e2eab991fc21bbdccc787006580d",
+        "private/harness-r02/e09_first_delta.py": "759b69173f9726f532d8d230b2d407e249e19ee92d7999954752ef31874dee44",
+        "private/harness-r02/journey_probe.py": "1fe717302e61857c64df5d0d59ae04afe355befba291d90403898b7b9483498d",
+        "private/harness-r02/run_receipts.sh": "c567da32f405f64ae20278e5cc5cc48c0d5633fa1cc99a1506c2148c6874e2be",
+        "private/harness-r02/sandbox.sh": "0c5f23fea0b6ee0adc767126f3a1ed2f5fb0379c1692120cbbcd7e58735f855b"
+      }
+    },
+    "arms": {
+      "arms/acp-fixA-no-cached-system-message.patch": "a2cfde94aef3c4914a3f698532738f2416c2e0081facd10dc1337c2a2d246fde",
+      "arms/acp-hp76224-in-place-compaction.patch": "af24cfdda07151a9bac2f1205ea54e1f9f1d13338c228433b37c27cebf3aeb2d",
+      "arms/acp-both.patch": "a36cf29c8ff77469184f8191d471c290aa22312787d753db2bfa608a25468a81",
+      "arms/red-ungate-known.patch": "4af583a108313658fe4159c969127b1f4d98c83b94f42932cbe01682e3ee8a7c"
+    },
+    "test_blobs_at_head": {
+      "tests/e2e/core/history/test_prefix_stability.py": "1133468e43a4",
+      "tests/e2e/core/history/_helpers.py": "f13dbc84a5a3",
+      "tests/e2e/core/parity/_drive_acp.py": "37627770f32e",
+      "tests/e2e/core/parity/_drive_gateway.py": "dae72c6a23ee",
+      "tests/e2e/core/parity/_gateway_child.py": "91b33976cdab",
+      "tests/fakes/fake_llm_provider.py": "339adb7e87ea (unchanged)"
+    }
+  },
+  "external_fixes": [
+    {
+      "pr": 76224,
+      "author": "JonthanaHanh",
+      "commit_author": "RelaxJonh",
+      "head": "20a047b7f2",
+      "state": "OPEN, DIRTY (pre-#109610 acp_adapter/server.py + tests/acp/)"
+    },
+    {
+      "pr": 88364,
+      "author": "dosenr",
+      "head": "f02e1487a8",
+      "state": "OPEN, DIRTY; builds on #76224 (Co-authored-by RelaxJonh), sets compression_in_place at ACP agent construction, real-SessionDB restart test; also fixes #49226"
+    }
+  ],
+  "arm_note": "hp76224 is a hand-port of the shared idea (compression_in_place instead of detaching _session_db), not either PR head; folding it in would need Co-authored-by for RelaxJonh and dosenr",
+  "commands": [
+    "<wt>$ harness/sandbox.sh /usr/bin/env MAIN_REF=aea969677c60a1bb72fe227fdfb98f196a2092cc bash harness/run_receipts.sh (sequential; every run's rc/head/dirty/load1 in <raw>/runs.jsonl)",
+    "git apply arms/<patch> [+ arms/red-ungate-known.patch] && <wt>$ harness/sandbox.sh bash scripts/run_tests.sh -j 2 --include-integration tests/e2e/core/history/test_prefix_stability.py -q -rxX --tb=line --junitxml=<raw>/<run>.junit.xml (HERMES_TEST_FILE_RETRIES=0) -k acp_restarts; harness/journey_probe.py --journeys acp_restarts --out <raw>/acp_<arm>_probe.json"
+  ],
+  "arms": {
+    "main": {
+      "patch": null,
+      "gated": [
+        {
+          "test": "test_request_prefix_is_byte_stable_across_processes[acp_restarts]",
+          "time_s": 30.942,
+          "outcome": "xfailed",
+          "message": "#76215 ACP /compress is lost on reload (fixes in review: #76224, #88364), and its rebuilt prompt nests the cached one (acp_adapter/commands.py passes system_message=agent._cached_system_prompt) [observed: prompt-cache prefix broke outside the compaction boundary:]"
+        }
+      ],
+      "ungated": [
+        {
+          "test": "test_request_prefix_is_byte_stable_across_processes[acp_restarts]",
+          "time_s": 31.719,
+          "outcome": "failure",
+          "message": "AssertionError: prompt-cache prefix broke outside the compaction boundary:\n    request 9 (in hop 4 (acp in work-a)): messages[0] (system) changed; first diverging byte at 5377"
+        }
+      ],
+      "probe": {
+        "prefix_breaks": [
+          {
+            "request": 7,
+            "why": "message list shrank 15 -> 14"
+          },
+          {
+            "request": 9,
+            "why": "messages[0] (system) changed; first diverging byte at 5377"
+          }
+        ],
+        "compaction_nests_previous_prompt": true,
+        "system_prompt_chars": [
+          6242,
+          6242,
+          6242,
+          6242,
+          6242,
+          6242,
+          6242,
+          12486,
+          12486,
+          6242,
+          6242
+        ],
+        "summary_in_request": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          true,
+          true,
+          false,
+          false
+        ],
+        "verdict_e07": "FAIL"
+      }
+    },
+    "fixA": {
+      "patch": "arms/acp-fixA-no-cached-system-message.patch",
+      "gated": [
+        {
+          "test": "test_request_prefix_is_byte_stable_across_processes[acp_restarts]",
+          "time_s": 33.236,
+          "outcome": "xfailed",
+          "message": "#76215 ACP /compress is lost on reload (fixes in review: #76224, #88364), and its rebuilt prompt nests the cached one (acp_adapter/commands.py passes system_message=agent._cached_system_prompt) [observed: prompt-cache prefix broke outside the compaction boundary:]"
+        }
+      ],
+      "ungated": [
+        {
+          "test": "test_request_prefix_is_byte_stable_across_processes[acp_restarts]",
+          "time_s": 29.174,
+          "outcome": "failure",
+          "message": "AssertionError: prompt-cache prefix broke outside the compaction boundary:\n    request 9 (in hop 4 (acp in work-a)): messages[4] (assistant) changed; first diverging byte at 12"
+        }
+      ],
+      "runs": [
+        {
+          "run": "acp_fixA_c17",
+          "rc": 0,
+          "started": "2026-10-01T11:31:38Z",
+          "ended": "2026-10-01T11:32:15Z",
+          "wall_s": 37,
+          "head": "ddf4748d31cb5dc65e7cd0b0c5b27b98d63ae880",
+          "dirty": " M acp_adapter/commands.py ",
+          "load1_end": "16.22"
+        },
+        {
+          "run": "acp_fixA_ungated",
+          "rc": 1,
+          "started": "2026-10-01T11:32:15Z",
+          "ended": "2026-10-01T11:32:49Z",
+          "wall_s": 34,
+          "head": "ddf4748d31cb5dc65e7cd0b0c5b27b98d63ae880",
+          "dirty": " M acp_adapter/commands.py  M tests/e2e/core/history/test_prefix_stability.py ",
+          "load1_end": "15.08"
+        },
+        {
+          "run": "acp_fixA_probe",
+          "rc": 0,
+          "started": "2026-10-01T11:32:49Z",
+          "ended": "2026-10-01T11:33:18Z",
+          "wall_s": 29,
+          "head": "ddf4748d31cb5dc65e7cd0b0c5b27b98d63ae880",
+          "dirty": " M acp_adapter/commands.py ",
+          "load1_end": "13.45"
+        }
+      ],
+      "probe": {
+        "prefix_breaks": [
+          {
+            "request": 7,
+            "why": "message list shrank 15 -> 14"
+          },
+          {
+            "request": 9,
+            "why": "messages[4] (assistant) changed; first diverging byte at 12"
+          }
+        ],
+        "compaction_nests_previous_prompt": false,
+        "system_prompt_chars": [
+          6242,
+          6242,
+          6242,
+          6242,
+          6242,
+          6242,
+          6242,
+          6242,
+          6242,
+          6242,
+          6242
+        ],
+        "summary_in_request": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          true,
+          true,
+          false,
+          false
+        ],
+        "verdict_e07": "FAIL",
+        "usage_matches_billed": true,
+        "run_journey": "ok"
+      }
+    },
+    "hp76224": {
+      "patch": "arms/acp-hp76224-in-place-compaction.patch",
+      "gated": [
+        {
+          "test": "test_request_prefix_is_byte_stable_across_processes[acp_restarts]",
+          "time_s": 25.022,
+          "outcome": "xfailed",
+          "message": "#76215 ACP /compress is lost on reload (fixes in review: #76224, #88364), and its rebuilt prompt nests the cached one (acp_adapter/commands.py passes system_message=agent._cached_system_prompt) [observed: the prompt rebuilt at the compaction (request 7) nests the previous system prompt (6470 -> 12942 chars)]"
+        }
+      ],
+      "ungated": [
+        {
+          "test": "test_request_prefix_is_byte_stable_across_processes[acp_restarts]",
+          "time_s": 25.633,
+          "outcome": "failure",
+          "message": "AssertionError: the prompt rebuilt at the compaction (request 7) nests the previous system prompt (6470 -> 12942 chars)"
+        }
+      ],
+      "runs": [
+        {
+          "run": "acp_hp76224_c17",
+          "rc": 0,
+          "started": "2026-10-01T11:33:18Z",
+          "ended": "2026-10-01T11:33:46Z",
+          "wall_s": 28,
+          "head": "ddf4748d31cb5dc65e7cd0b0c5b27b98d63ae880",
+          "dirty": " M acp_adapter/commands.py ",
+          "load1_end": "11.68"
+        },
+        {
+          "run": "acp_hp76224_ungated",
+          "rc": 1,
+          "started": "2026-10-01T11:33:47Z",
+          "ended": "2026-10-01T11:34:15Z",
+          "wall_s": 28,
+          "head": "ddf4748d31cb5dc65e7cd0b0c5b27b98d63ae880",
+          "dirty": " M acp_adapter/commands.py  M tests/e2e/core/history/test_prefix_stability.py ",
+          "load1_end": "11.22"
+        },
+        {
+          "run": "acp_hp76224_probe",
+          "rc": 0,
+          "started": "2026-10-01T11:34:15Z",
+          "ended": "2026-10-01T11:34:39Z",
+          "wall_s": 24,
+          "head": "ddf4748d31cb5dc65e7cd0b0c5b27b98d63ae880",
+          "dirty": " M acp_adapter/commands.py ",
+          "load1_end": "10.12"
+        }
+      ],
+      "probe": {
+        "prefix_breaks": [
+          {
+            "request": 7,
+            "why": "message list shrank 15 -> 14"
+          }
+        ],
+        "compaction_nests_previous_prompt": true,
+        "system_prompt_chars": [
+          6242,
+          6242,
+          6242,
+          6242,
+          6242,
+          6242,
+          6242,
+          12486,
+          12486,
+          12486,
+          12486
+        ],
+        "summary_in_request": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          true,
+          true,
+          true,
+          true
+        ],
+        "verdict_e07": "FAIL",
+        "usage_matches_billed": true,
+        "run_journey": "ok"
+      }
+    },
+    "both": {
+      "patch": "arms/acp-both.patch",
+      "gated": [
+        {
+          "test": "test_request_prefix_is_byte_stable_across_processes[acp_restarts]",
+          "time_s": 23.726,
+          "outcome": "passed",
+          "message": ""
+        }
+      ],
+      "ungated": [
+        {
+          "test": "test_request_prefix_is_byte_stable_across_processes[acp_restarts]",
+          "time_s": 24.097,
+          "outcome": "passed",
+          "message": ""
+        }
+      ],
+      "runs": [
+        {
+          "run": "acp_both_c17",
+          "rc": 0,
+          "started": "2026-10-01T11:34:40Z",
+          "ended": "2026-10-01T11:35:06Z",
+          "wall_s": 26,
+          "head": "ddf4748d31cb5dc65e7cd0b0c5b27b98d63ae880",
+          "dirty": " M acp_adapter/commands.py ",
+          "load1_end": "8.49"
+        },
+        {
+          "run": "acp_both_ungated",
+          "rc": 0,
+          "started": "2026-10-01T11:35:06Z",
+          "ended": "2026-10-01T11:35:32Z",
+          "wall_s": 26,
+          "head": "ddf4748d31cb5dc65e7cd0b0c5b27b98d63ae880",
+          "dirty": " M acp_adapter/commands.py  M tests/e2e/core/history/test_prefix_stability.py ",
+          "load1_end": "7.91"
+        },
+        {
+          "run": "acp_both_probe",
+          "rc": 0,
+          "started": "2026-10-01T11:35:32Z",
+          "ended": "2026-10-01T11:35:57Z",
+          "wall_s": 25,
+          "head": "ddf4748d31cb5dc65e7cd0b0c5b27b98d63ae880",
+          "dirty": " M acp_adapter/commands.py ",
+          "load1_end": "8.34"
+        }
+      ],
+      "probe": {
+        "prefix_breaks": [
+          {
+            "request": 7,
+            "why": "message list shrank 15 -> 14"
+          }
+        ],
+        "compaction_nests_previous_prompt": false,
+        "system_prompt_chars": [
+          6242,
+          6242,
+          6242,
+          6242,
+          6242,
+          6242,
+          6242,
+          6242,
+          6242,
+          6242,
+          6242
+        ],
+        "summary_in_request": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          true,
+          true,
+          true,
+          true
+        ],
+        "verdict_e07": "PASS",
+        "usage_matches_billed": true,
+        "run_journey": "ok"
+      }
+    }
+  },
+  "label_default": "OBSERVED"
+}

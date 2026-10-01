@@ -1,0 +1,140 @@
+{
+ "push_workflows": 11,
+ "matches": {
+  "staged/cu-repeat-input-dedup": []
+ },
+ "rows": [
+  {
+   "file": "archive-inputs.yml",
+   "filter": {
+    "branches": [
+     "main"
+    ],
+    "paths": [
+     "pm/lock.json",
+     "pm/artifact-mirror.json",
+     "scripts/termux/runtime_libs.json",
+     "scripts/ci/archive_inputs.py",
+     ".github/workflows/archive-inputs.yml"
+    ]
+   },
+   "staged/cu-repeat-input-dedup": false
+  },
+  {
+   "file": "ci.yaml",
+   "filter": {
+    "branches": [
+     "main"
+    ]
+   },
+   "staged/cu-repeat-input-dedup": false
+  },
+  {
+   "file": "deploy-site.yml",
+   "filter": {
+    "branches": [
+     "main"
+    ],
+    "paths": [
+     "website/**",
+     "skills/**",
+     "optional-skills/**",
+     "plugin-catalog/**",
+     ".github/workflows/deploy-site.yml"
+    ]
+   },
+   "staged/cu-repeat-input-dedup": false
+  },
+  {
+   "file": "docker.yml",
+   "filter": {
+    "branches": [
+     "main"
+    ]
+   },
+   "staged/cu-repeat-input-dedup": false
+  },
+  {
+   "file": "js-autofix.yml",
+   "filter": {
+    "branches": [
+     "main"
+    ],
+    "paths": [
+     "**/*.js",
+     "**/*.cjs",
+     "**/*.mjs",
+     "**/*.ts",
+     "**/*.tsx",
+     "package.json",
+     "package-lock.json"
+    ]
+   },
+   "staged/cu-repeat-input-dedup": false
+  },
+  {
+   "file": "live-providers.yml",
+   "filter": {
+    "tags": [
+     "v*"
+    ]
+   },
+   "staged/cu-repeat-input-dedup": false
+  },
+  {
+   "file": "nix.yml",
+   "filter": {
+    "branches": [
+     "main"
+    ]
+   },
+   "staged/cu-repeat-input-dedup": false
+  },
+  {
+   "file": "skills-index.yml",
+   "filter": {
+    "branches": [
+     "main"
+    ],
+    "paths": [
+     "scripts/build_skills_index.py",
+     ".github/workflows/skills-index.yml"
+    ]
+   },
+   "staged/cu-repeat-input-dedup": false
+  },
+  {
+   "file": "termux-verify.yml",
+   "filter": {
+    "branches": [
+     "main"
+    ],
+    "paths": [
+     "scripts/termux/**",
+     "pm/**",
+     "tests/scripts/test_termux*",
+     ".github/workflows/termux-verify.yml"
+    ]
+   },
+   "staged/cu-repeat-input-dedup": false
+  },
+  {
+   "file": "windows-install-update-e2e.yml",
+   "filter": {
+    "branches": [
+     "wine2e-install/**"
+    ]
+   },
+   "staged/cu-repeat-input-dedup": false
+  },
+  {
+   "file": "windows-venv-e2e.yml",
+   "filter": {
+    "branches": [
+     "wine2e/**"
+    ]
+   },
+   "staged/cu-repeat-input-dedup": false
+  }
+ ]
+}

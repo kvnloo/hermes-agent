@@ -1,0 +1,225 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "STATIC/r20261001-03",
+ "tier": "T0",
+ "label": "OBSERVED",
+ "checks": {
+  "tool_name_branch_in_run_agent_py": {
+   "cmd": "git show <rev>:run_agent.py | grep -c computer_use",
+   "base": 0,
+   "head": 0,
+   "donor": 2
+  },
+  "facade_forwarders_run_agent_py": {
+   "cmd": "grep -oE '\\b_forward(_static)?\\(' run_agent.py | sort | uniq -c",
+   "base": {
+    "_forward_static": 5,
+    "_forward": 27,
+    "total": 32
+   },
+   "head": {
+    "_forward_static": 6,
+    "_forward": 27,
+    "total": 33
+   },
+   "note": "the head total includes this commit's own forwarder"
+  },
+  "file_size_lines": {
+   "run_agent.py": {
+    "base": 1582,
+    "head": 1565
+   },
+   "agent/tool_dispatch_helpers.py": {
+    "base": 588,
+    "head": 620
+   }
+  },
+  "numstat": [
+   {
+    "path": "agent/tool_dispatch_helpers.py",
+    "added": 33,
+    "deleted": 1
+   },
+   {
+    "path": "run_agent.py",
+    "added": 1,
+    "deleted": 18
+   },
+   {
+    "path": "tests/agent/test_tool_call_dedup_order_significant.py",
+    "added": 71,
+    "deleted": 0
+   }
+  ],
+  "diffstat": "3 files changed, 105 insertions(+), 19 deletions(-)",
+  "diff_identical_to_previous_head": {
+   "previous": "402e9b0bdb on 234badf401",
+   "identical": true,
+   "commit_message_change": "body line 'default config reaches it through tool_call. Every other duplicate is still dropped, including a' (96 chars) rewrapped; longest body line now 76"
+  },
+  "seam_not_patched_by_test": {
+   "cmd": "git show 2f79b549ef:tests/agent/test_tool_call_dedup_order_significant.py | grep -cE 'deduplicate_tool_calls|run_tool_round|_is_order_significant|_peel_bridge_call'",
+   "hits": 0,
+   "patched_boundaries": [
+    "tools.computer_use.cua_backend_driver.cua_driver_binary_available",
+    "tools.computer_use.tool._new_backend"
+   ]
+  },
+  "ruff": "ruff 0.15.2 (user install): All checks passed!; ruff 0.16.4 (venv): All checks passed!; files: agent/tool_dispatch_helpers.py run_agent.py tests/agent/test_tool_call_dedup_order_significant.py at 2f79b549ef with its pyproject.toml",
+  "merge_tree": {
+   "main_sha": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+   "clean": true,
+   "tree": "cb2b5fe5cf30c50a81a7436e3c34adb7c8fc581c",
+   "head_tree": "cb2b5fe5cf30c50a81a7436e3c34adb7c8fc581c",
+   "cmd": "git merge-tree --write-tree aea969677c 2f79b549ef",
+   "main_commits_since_previous_base": 36,
+   "of_which_touch_changed_or_seam_paths": 0
+  },
+  "freshness": "head is one commit on current main (fetched 2026-10-01T11:05Z); the F07 head GREEN cells are the freshness proof",
+  "workflow_push_trigger_scan": {
+   "branch": "staged/cu-repeat-input-dedup",
+   "push_workflows": 11,
+   "matches": 0,
+   "tree": "2f79b549ef40aeb31cb3af36cd92d8d12b9ba799",
+   "scanner": "harness/wfscan.py sha256=85b519c149c623d7beddbbf31ce841a96581ed759fe060eab2f59ce3720ee5c7"
+  },
+  "fork_ref_collision": {
+   "checked_at": "2026-10-01T11:06Z",
+   "cmd": "git ls-remote https://github.com/kvnloo/hermes-agent.git refs/heads/staged 'refs/heads/staged/*' refs/heads/staging 'refs/heads/staging/*'",
+   "result": "only refs/heads/staging 28790e597c (legacy); no refs/heads/staged or staged/*",
+   "reading": "staging/* cannot be created on the fork while refs/heads/staging exists; staged/cu-repeat-input-dedup has no collision (OD-0 resolved by the rename)"
+  },
+  "queue_board": {
+   "board": "kvnloo/hermes-agent#404",
+   "title": "[staged PRs] 39 reproved branches ready for manual upstream promotion",
+   "data_rows": 39,
+   "checked_at": "2026-10-01T11:06Z"
+  },
+  "upstream_dedupe_search": {
+   "searched_at": "2026-10-01T11:10Z",
+   "queries": [
+    "deduplicate tool calls computer_use",
+    "repeated key press computer use",
+    "same-turn duplicate tool call",
+    "_deduplicate_tool_calls",
+    "duplicate tool call",
+    "Removed duplicate tool call"
+   ],
+   "open_external_same_defect": [],
+   "nearby_open_prs_no_overlap": {
+    "119760": "edosulai: tool_call_id dedup across history (test_agent_guardrails.py; no shared hunk)",
+    "112303": "marcus912: bedrock sidecar order",
+    "118837": "hoshibara: codex same-id twins",
+    "6784": "jbarket: loop detection added after the dedup method; does not change it",
+    "84867": "jmeadlock: invalid-JSON recovery in turn_tool_round.py; no dedup change",
+    "106257": "Xrey995: plugin lifecycle hooks; no dedup change",
+    "74906": "Monekey: empty-message repair after dedup in agent_runtime_helpers.py"
+   },
+   "merged_related": {
+    "86887": "fangliquanflq: canonical JSON key in the same dedup (moved unchanged)"
+   },
+   "own_prior": {
+    "124008": "kvnloo, CLOSED 2026-09-30T03:15:51Z owner batch self-close; parked on kvnloo/hermes-agent#316",
+    "113453": "kvnloo, CLOSED 2026-09-26 (wider executor design, retired)"
+   }
+  }
+ },
+ "verdict": "KEEP",
+ "not_tested": [],
+ "limitations": [
+  "static checks only"
+ ],
+ "learning": null,
+ "frozen": {
+  "bundle_sha": null,
+  "cells": 0,
+  "supersedes": "STATIC/r20261001-02",
+  "status": "NOT_FROZEN (open P8 item)"
+ },
+ "spec": {
+  "path": null,
+  "rev": null,
+  "sha256": null,
+  "prereg_commit": null,
+  "decision_rule_sha": "321dc15247c2b37f68c88421669453db77d23b8c965c6d7def9ac3d09c1386b5",
+  "decision_rule": "RED: base arm fails 2/2 with the marker in 3/3 reps and the seam is hit. GREEN: head passes 2/2 in 3/3 reps. NEG/per-hunk: each reverted hunk fails again. ADJ: same failures on base and head. KEEP only if all four hold. Rule restated from the r01/r02 receipts; it was not committed before run 1.",
+  "status": "NOT_PREREGISTERED",
+  "gap": "FACTORY I5 wants the spec committed to claude/ledger before run 1. This run may not write the ledger, so there is no prereg commit. Open P8 item."
+ },
+ "runner_revision": "harness/proof-r03.py sha256=61197933f6d7821eefbbf4c6f1eb7c59d42207f55a454d3b123cdf11b37c5467",
+ "issue": "kvnloo/hermes-agent#316",
+ "origin_refs": [
+  "NousResearch/hermes-agent#124008",
+  "NousResearch/hermes-agent#112639"
+ ],
+ "staging": "cu-repeat-input-dedup",
+ "branch": {
+  "logical": "staging/cu-repeat-input-dedup",
+  "fork_physical": "staged/cu-repeat-input-dedup",
+  "pushed": false
+ },
+ "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+ "head_revision": "2f79b549ef40aeb31cb3af36cd92d8d12b9ba799",
+ "changed_files": [
+  {
+   "path": "agent/tool_dispatch_helpers.py",
+   "added": 33,
+   "deleted": 1
+  },
+  {
+   "path": "run_agent.py",
+   "added": 1,
+   "deleted": 18
+  },
+  {
+   "path": "tests/agent/test_tool_call_dedup_order_significant.py",
+   "added": 71,
+   "deleted": 0
+  }
+ ],
+ "policy_revision": {
+  "AGENTS.md": "65aa3e61bcba610da21279a17385671263be39e9",
+  "CONTRIBUTING.md": "b0baa59b5057c204b3c09d3dd170c0955cfdb39c",
+  "factory": "frontier-2026-10-01/FACTORY.md sha256=7726ba18b43a9367f91d7f70c3aaefb96a9863761ddf71225c61c26a30d688d4"
+ },
+ "inputs": {
+  "tests/agent/test_tool_call_dedup_order_significant.py@head": "f4d3d1e20d6f9e9be528f7b99bfd7a4c2d1ce14d",
+  "tests/agent/test_agent_guardrails.py@base": "a6f91bada3e3bc40f715981f7519aa56b97754bf",
+  "tests/fakes/fake_llm_provider.py@base": "339adb7e87ea1dcf961d4aa4e12cbd558e2de31e",
+  "scripts/run_tests.sh@base": "8fcc4294f48a16968fd68f6d5edad45d74354166",
+  "scripts/run_tests_parallel.py@base": "21178fd246edd2460d1d6ae4cfb7937262458ffc",
+  "guard_plugin harness/_xf_t1_guard.py sha256": "ede8cf473cf26e6b2e960cbd2d89e1754bc63f799894d22360311fde94daaeee",
+  "driver harness/proof-r03.py sha256": "61197933f6d7821eefbbf4c6f1eb7c59d42207f55a454d3b123cdf11b37c5467",
+  "donor": "refs/fork/fix/computer-use-repeat-input-dedup-current-main@570dc83ba65fc4ce86efb2c00e89dc84d19bd5ca (merge-base cb3142d3257b15ac42de544bd585793567400d0f)"
+ },
+ "env": {
+  "host": "local workstation, Linux x86_64",
+  "python": "3.11.14 via $HERMES_PYTHON (interpreter only)",
+  "venv_lock_sha256": null,
+  "sandbox": "run_tests.sh env -i + isolated HOME/HERMES_HOME ($TH = scratchpad/testhome-sf-cu-repeat-input-dedup) + in-process loopback-only connect guard; no bwrap",
+  "file_retries": 0,
+  "workers": 2
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "harness_abi": {
+  "harness": "hermes",
+  "editor_abi": "n/a (no edit tool; computer_use no-op backend as the device)"
+ },
+ "resource_usage": {
+  "api_cost_usd": 0.0,
+  "gpu_s": 0,
+  "tokens": 0,
+  "energy_j": null
+ },
+ "z0evals_study": null,
+ "provenance": "self",
+ "privacy": "public-aggregate (synthetic fixtures only; no absolute local paths)",
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the change, the test and these receipts",
+ "supersedes": "STATIC/r20261001-02"
+}

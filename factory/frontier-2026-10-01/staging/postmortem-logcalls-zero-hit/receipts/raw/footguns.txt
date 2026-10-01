@@ -1,0 +1,7 @@
+✗ 4 Windows footgun(s) found across 4 file(s) scanned.
+evals/postmortem/forensics/logcalls.py:53: [read with encoding='utf-8' (BOM-intolerant — use 'utf-8-sig')]
+evals/postmortem/tests/test_postmortem_harness.py:77: [read with encoding='utf-8' (BOM-intolerant — use 'utf-8-sig')]
+evals/postmortem/tests/test_postmortem_harness.py:78: [read with encoding='utf-8' (BOM-intolerant — use 'utf-8-sig')]
+evals/postmortem/tests/test_postmortem_harness.py:79: [read with encoding='utf-8' (BOM-intolerant — use 'utf-8-sig')]
+--- --all (CI mode):
+✓ No Windows footguns found (1860 file(s) scanned).

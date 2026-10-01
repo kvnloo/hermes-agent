@@ -1,0 +1,39 @@
+diff --git a/acp_adapter/commands.py b/acp_adapter/commands.py
+index f452e381ed..c2879b874a 100644
+--- a/acp_adapter/commands.py
++++ b/acp_adapter/commands.py
+@@ -267,9 +267,8 @@ class SlashCommandsMixin:
+         try:
+             # Stable ACP session id: suppress _compress_context's SQLite session split.
+             agent._session_db = None
+-            result = compress_now(
+-                agent, state.history, request, system_message=getattr(agent, "_cached_system_prompt", "") or "",
+-                task_id=state.session_id)
++            # system_message=None: compress_now rebuilds the prompt; the cached prompt would nest (#15281).
++            result = compress_now(agent, state.history, request, task_id=state.session_id)
+         except Exception as e:
+             return f"Compression failed: {e}"
+         finally:
+diff --git a/tests/acp_adapter/test_server.py b/tests/acp_adapter/test_server.py
+index d193476102..6a4cf092e0 100644
+--- a/tests/acp_adapter/test_server.py
++++ b/tests/acp_adapter/test_server.py
+@@ -556,7 +556,8 @@ class TestSlashCommands:
+         def _compress_context(messages, system_prompt, *, approx_tokens, task_id, force, **kwargs):
+             assert state.agent._session_db is None
+             assert messages == state.history
+-            assert system_prompt == "system"
++            # None makes _compress_context rebuild the prompt; the cached one would be nested into it.
++            assert system_prompt is None
+             assert approx_tokens == 40
+             assert task_id == state.session_id
+             assert force is True
+@@ -584,7 +585,7 @@ class TestSlashCommands:
+                 {"role": "user", "content": "three"},
+                 {"role": "assistant", "content": "four"},
+             ],
+-            "system",
++            None,
+             approx_tokens=40,
+             focus_topic=None,
+             force=True,

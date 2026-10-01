@@ -1,0 +1,392 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "PROOF/r20261001-01",
+ "tier": "T1",
+ "cost": "$0",
+ "experiment": "RED / GREEN x3 / per-hunk NEGATIVE / ADJACENT for the staging commit",
+ "spec": {
+  "path": null,
+  "rev": null,
+  "sha256": null,
+  "prereg_commit": null,
+  "decision_rule_sha": null,
+  "status": "NOT_PREREGISTERED",
+  "why": "Built before factory Wave 0: no factory/xf/specs/*.toml and no claude/ledger commit exist yet, so there is no spec file and no pre-registration commit. The decision rule applied is the selection entry's acceptance_gates. Its file hash below was taken at round-1 fix time; the file's mtime (2026-10-01T08:48Z) falls inside the build window, so it is not a pre-registration.",
+  "selection": {
+   "file": "frontier-2026-10-01/selection.json",
+   "entry": "staging_set[4] id=postmortem-logcalls-zero-hit",
+   "sha256": "207190d3fe1a7dcdd29ceafd84ff092d289079b93dff97ff5b6f1ea0586d55e3"
+  }
+ },
+ "runner_revision": "none: no xf runner exists before Wave 0; the scripts that ran are hashed under inputs (harness/)",
+ "issue": "kvnloo/hermes-agent (no campaign thread yet; OD-9)",
+ "origin_refs": [
+  "NousResearch/hermes-agent#121135",
+  "NousResearch/hermes-agent#84460",
+  "NousResearch/hermes-agent#119713",
+  "NousResearch/hermes-agent#103563",
+  "NousResearch/hermes-agent#103756"
+ ],
+ "staging": "postmortem-logcalls-zero-hit",
+ "base_revision": "234badf4012af380d23c91eae55d045a69c69ffb",
+ "arms": {
+  "base": {
+   "commit": "234badf4012af380d23c91eae55d045a69c69ffb",
+   "tree": "7c5bdaf2cca26699a961b711f9efebba37e93cf7"
+  },
+  "head": {
+   "commit": "dd4dd10611e8c23c7579a4ddb95655abebbaca27",
+   "tree": "9f262517dd06acc2f09fbadb401a0d70dc3e5936"
+  },
+  "red_arm": "head tree with evals/postmortem/forensics/logcalls.py reset to main's blob fa5be57125"
+ },
+ "head_revision": "dd4dd10611e8c23c7579a4ddb95655abebbaca27",
+ "changed_files": [
+  "evals/postmortem/forensics/logcalls.py",
+  "evals/postmortem/live_ab/cache_prefix_live.py",
+  "evals/postmortem/live_ab/cache_prefix_wire.py",
+  "evals/postmortem/tests/test_postmortem_harness.py"
+ ],
+ "policy_revision": {
+  "AGENTS.md": "65aa3e61bcba610da21279a17385671263be39e9@234badf401 (same blob @aea969677c)",
+  "CONTRIBUTING.md": "b0baa59b5057c204b3c09d3dd170c0955cfdb39c@234badf401 (same blob @aea969677c)",
+  ".github/PULL_REQUEST_TEMPLATE.md": "5496eb534fef9d08c091b8186e7edd1b5cf356db@234badf401 (same blob @aea969677c)",
+  "factory": "FACTORY.md sha256:7726ba18b43a9367f91d7f70c3aaefb96a9863761ddf71225c61c26a30d688d4 (no ledger commit exists; hashed at round-1 fix time, mtime 2026-10-01T08:48Z)",
+  "protocol": "promotion-readiness PROTOCOL.md sha256:182e3fbae771d7219497833b3f9d6f7ed385d70abace8736559026e4e60b90d4"
+ },
+ "env": {
+  "host": "groot",
+  "test_python": "3.11.14 (HERMES_PYTHON, not activated)",
+  "host_python": "3.14.7",
+  "sandbox": "no bwrap (xf executor not built); HOME/HERMES_HOME = fresh scratch dirs; loopback-only socket guard and exec audit hook in the T1 round trip",
+  "tz": "America/Chicago (CDT -0500)"
+ },
+ "inputs": {
+  "main": "234badf4012af380d23c91eae55d045a69c69ffb",
+  "commit": "dd4dd10611e8c23c7579a4ddb95655abebbaca27",
+  "mutator": {
+   "mutate.py": "4b2ed2b293ed40be162f52ebe1c7e28dbe020b1ab2196f36f22e36b6ec93b3ee"
+  },
+  "runner": {
+   "prove.sh": "64e1a41f8642f77af171d186e47d2519a93012918d956fb608f81fb7c3ef6131"
+  }
+ },
+ "command": "bash harness/prove.sh   # wraps, per run: env -u __HERMES_ACTIVATED HOME=$S/testhome-st-postmortem-logcalls-zero-hit HERMES_HOME=$HOME/.hermes HERMES_PYTHON=$HERMES_PYTHON bash scripts/run_tests.sh -j 2 <files> -q",
+ "gates": {
+  "validity": "PASS",
+  "validity_basis": "Fresh scratch HOME/HERMES_HOME per run; RED fails at the stated seam (coverage.calls_found loses the miss / cold_write / no_field lines), not in setup; 0 errored or infra runs.",
+  "red": {
+   "arm": "main parser + committed tests",
+   "result": "PASS",
+   "observed": {
+    "files": 1,
+    "passed": 3,
+    "failed": 2
+   },
+   "assertions": [
+    "E       assert (2 == 4)",
+    "E       assert 2 == 3"
+   ],
+   "marker": "calls_found 2 != 3 (miss dropped) and 2 != 4 (cold_write and no_field dropped)"
+  },
+  "green": {
+   "reps": [
+    {
+     "files": 2,
+     "passed": 8,
+     "failed": 0
+    },
+    {
+     "files": 2,
+     "passed": 8,
+     "failed": 0
+    },
+    {
+     "files": 2,
+     "passed": 8,
+     "failed": 0
+    }
+   ],
+   "reps_agree": "3/3",
+   "files": [
+    "evals/postmortem/tests/test_postmortem_harness.py",
+    "tests/agent/test_turn_usage_log_line.py"
+   ]
+  },
+  "sabotage": {
+   "per_hunk": {
+    "N1_require_cache": {
+     "hunk": "logcalls _LINE: cache= group made mandatory again",
+     "result": {
+      "files": 1,
+      "passed": 3,
+      "failed": 2
+     },
+     "red_again": true,
+     "assertions": [
+      "E       assert (2 == 4)",
+      "E       assert 2 == 3"
+     ]
+    },
+    "N2_no_unavailable": {
+     "hunk": "logcalls _LINE: in=?/out=?/total=? alternatives removed",
+     "result": {
+      "files": 1,
+      "passed": 3,
+      "failed": 2
+     },
+     "red_again": true,
+     "assertions": [
+      "E       assert (1 == 1 and 0 == 1)",
+      "E       assert (4 == 4 and 0 == 1)"
+     ]
+    },
+    "N3_no_field_counts": {
+     "hunk": "_cache_reported always True (no_field read as a miss)",
+     "result": {
+      "files": 1,
+      "passed": 4,
+      "failed": 1
+     },
+     "red_again": true,
+     "assertions": [
+      "E       assert (2 == 1)"
+     ]
+    },
+    "N4_cache_state_unread": {
+     "hunk": "cache_state= not captured by parse_logs",
+     "result": {
+      "files": 1,
+      "passed": 4,
+      "failed": 1
+     },
+     "red_again": true,
+     "assertions": [
+      "E       assert (2 == 1)"
+     ]
+    },
+    "N5_ratio_over_all": {
+     "hunk": "hit ratio summed over all metered calls instead of scored",
+     "result": {
+      "files": 1,
+      "passed": 4,
+      "failed": 1
+     },
+     "red_again": true,
+     "assertions": [
+      "E        +  where 0.5429 = round((1900 / 3500), 4)",
+      "E       assert 0.475 == 0.5429"
+     ]
+    },
+    "N6_plateau_unfiltered": {
+     "hunk": "plateau pairs include no_field calls",
+     "result": {
+      "files": 1,
+      "passed": 4,
+      "failed": 1
+     },
+     "red_again": true,
+     "assertions": [
+      "E       assert 0.3333 == 0.5"
+     ]
+    }
+   },
+   "probe_hunks_offline": {
+    "cache_prefix_live.py": {
+     "base_rows": 1,
+     "patched_rows": 4,
+     "metered_lines": 4
+    },
+    "cache_prefix_wire.py": {
+     "base_rows": 1,
+     "patched_rows": 4,
+     "metered_lines": 4
+    }
+   },
+   "unpinned_hunks": [
+    "logcalls docstring",
+    "logcalls early-exit message (`if not scored`)",
+    "logcalls coverage print line",
+    "live probes: `int(c or 0)` / `p or 0` print arithmetic (pinned offline only, see F06RT)"
+   ]
+  },
+  "adjacent": {
+   "files": [
+    "tests/agent/test_turn_usage_log_line.py (imports logcalls.parse_logs; teknium's parser test)",
+    "evals/postmortem/tests/test_postmortem_harness.py (3 pre-existing tests)"
+   ],
+   "base": "6 passed / 0 failed",
+   "arm": "all pre-existing pass",
+   "identical": true,
+   "pre_existing_failures": []
+  },
+  "lint": {
+   "ruff_repo_config": "All checks passed!",
+   "py_compile_probes": "ok",
+   "windows_footguns": [
+    "✗ 4 Windows footgun(s) found across 4 file(s) scanned.",
+    "evals/postmortem/forensics/logcalls.py:53: [read with encoding='utf-8' (BOM-intolerant — use 'utf-8-sig')]",
+    "evals/postmortem/tests/test_postmortem_harness.py:77: [read with encoding='utf-8' (BOM-intolerant — use 'utf-8-sig')]",
+    "evals/postmortem/tests/test_postmortem_harness.py:78: [read with encoding='utf-8' (BOM-intolerant — use 'utf-8-sig')]",
+    "evals/postmortem/tests/test_postmortem_harness.py:79: [read with encoding='utf-8' (BOM-intolerant — use 'utf-8-sig')]",
+    "--- --all (CI mode):",
+    "✓ No Windows footguns found (1860 file(s) scanned)."
+   ]
+  },
+  "flaky": false,
+  "guards": {
+   "F14": "NOT_RUN (factory Wave 0 standing set not built)"
+  },
+  "noise_floor": null,
+  "credit": null,
+  "informativeness": "N_A",
+  "route_scope": "n/a",
+  "cache_read_ratio": {
+   "status": "N_A",
+   "before": null,
+   "after": null
+  }
+ },
+ "ab": null,
+ "measurements": [
+  {
+   "name": "red_tests_failed",
+   "arm": "main",
+   "value": 2,
+   "n": 1,
+   "label": "OBSERVED",
+   "statistic": "count"
+  },
+  {
+   "name": "green_tests_passed",
+   "arm": "head",
+   "value": 8,
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "count per rep"
+  },
+  {
+   "name": "sabotage_hunks_red_again",
+   "arm": "head",
+   "value": 6,
+   "n": 6,
+   "label": "OBSERVED",
+   "statistic": "count"
+  }
+ ],
+ "denominators": {
+  "cells": 10,
+  "unit": "test-runner invocations: RED 1 + GREEN 3 + per-hunk sabotage 6",
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "completeness": 1.0
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "harness_abi": {
+  "harness": "hermes evals/postmortem",
+  "editor_abi": "n/a"
+ },
+ "not_tested": [
+  "evals/ is outside pytest testpaths, so CI does not run these tests",
+  "live probes not executed (real provider, paid)"
+ ],
+ "limitations": [
+  "evals/ is outside pytest testpaths, so there is no CI evidence",
+  "one host, one test interpreter (Python 3.11.14)",
+  "the sabotage set pins 6 logcalls hunks; the early-exit guard, the coverage print line and the docstring are not pinned by any test (gates.sabotage.unpinned_hunks; see PROOF/r20261001-02)",
+  "no bwrap sandbox; isolation came from scratch HOME/HERMES_HOME"
+ ],
+ "resource_usage": {
+  "api_cost_usd": 0.0,
+  "gpu_s": 0,
+  "energy_j": null
+ },
+ "verdict": "KEEP",
+ "carrier_choice": null,
+ "learning": {
+  "hypothesis": "main's _LINE regex drops every API-call line without cache= and every usage=unavailable line",
+  "result": "KEEP",
+  "observed_evidence": [
+   "RED: calls_found 2 vs 3 and 2 vs 4",
+   "GREEN 3/3 (8 passed)",
+   "6/6 sabotaged hunks red again"
+  ],
+  "regressions": [],
+  "reusable_lesson": "a per-hunk sabotage list must name the hunks it does not pin, and the PR body must not claim more coverage than that list",
+  "roadmap_effect": "stage as a fold-in on NousResearch/hermes-agent#121135"
+ },
+ "provenance": "self",
+ "frozen": null,
+ "z0evals_study": null,
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the patch, tests and harness scripts; disclosed per repository policy",
+ "privacy": "synthetic inputs only; no real state.db or agent.log was read",
+ "redaction": {
+  "applied_at": "2026-10-01T11:15Z",
+  "rule": "Absolute local paths in receipts/ and receipts/raw/ text replaced by placeholders: $S = scratch dir, $W = build worktree, $X = factory dir, <pytest-tmp> = pytest tmp root, $HERMES_PYTHON = test interpreter; the staging-dir prefix is dropped, so harness/... and receipts/... are relative to the staging dir. No other byte changed. Evidence sha256 values were recomputed after redaction.",
+  "script": "harness/receipts_r1.py"
+ },
+ "evidence": [
+  {
+   "path": "receipts/raw/heads.txt",
+   "sha256": "b22342d25128aa4ac584979f7c43b0275512ffdb60e5f6530590bc4af5fbddda"
+  },
+  {
+   "path": "receipts/raw/footguns.txt",
+   "sha256": "041a7cdd243246fbf04b717d2aef59f157c7a9ad21859c6c6cd4b1be6ed6caa8"
+  },
+  {
+   "path": "receipts/raw/red.txt",
+   "sha256": "ced95a22644be6c0d69070f2888b5e488391413f68a32f54aa5ad0ffbbdd534b"
+  },
+  {
+   "path": "receipts/raw/green1.txt",
+   "sha256": "5fc06d50b8a89c6c5e7ab04180a6519eb61562f685bdd81f517a2923724c4c9e"
+  },
+  {
+   "path": "receipts/raw/green2.txt",
+   "sha256": "59c55340d8a1a49858dd4d0e8a97b2615e3853f2eb4fe139cd9ec7f08cf8953a"
+  },
+  {
+   "path": "receipts/raw/green3.txt",
+   "sha256": "d81f54cc74c41ee7d775b5ec94c71679948cc0b76fac94333e3eb1a7a6704e6f"
+  },
+  {
+   "path": "receipts/raw/neg_N1_require_cache.txt",
+   "sha256": "cc24f81b44ba2a7e22ea4cf85490ff7e9801b3b0b0b81a9ca544b535a133187d"
+  },
+  {
+   "path": "receipts/raw/neg_N2_no_unavailable.txt",
+   "sha256": "0e9debb79a8b85a32d0375130a00e8bf49cc365b694413be086c5ed0319e603d"
+  },
+  {
+   "path": "receipts/raw/neg_N3_no_field_counts.txt",
+   "sha256": "b8a4688375678b9de5e5011534497d5740540fb5363ee1224c318167dd7717f5"
+  },
+  {
+   "path": "receipts/raw/neg_N4_cache_state_unread.txt",
+   "sha256": "78f506bc4ab240c23bfe09cd33d3667b3eed0f2bf1590946db09ea682af73385"
+  },
+  {
+   "path": "receipts/raw/neg_N5_ratio_over_all.txt",
+   "sha256": "ab351e8a325fe6d35dd5973ce5a43ece49cda864960eb03a8b78236c909aa548"
+  },
+  {
+   "path": "receipts/raw/neg_N6_plateau_unfiltered.txt",
+   "sha256": "10aef98d4be287d80bf7d794d6d788daf42d980089e2185d53639266a166d5d1"
+  },
+  {
+   "path": "receipts/raw/ruff.txt",
+   "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+  },
+  {
+   "path": "receipts/raw/sibling.json",
+   "sha256": "f8e7df0ea41ff4db381fe98121d72acca2063db41dc824eacf8a56ef3db3507d"
+  }
+ ]
+}

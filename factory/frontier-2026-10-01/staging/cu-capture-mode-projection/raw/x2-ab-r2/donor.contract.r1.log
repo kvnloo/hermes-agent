@@ -1,0 +1,138 @@
+▶ not activated — using HERMES_PYTHON: <HERMES_PYTHON>
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 3 test files (~19 tests) under ['tests/tools/test_computer_use_capture_lane_schema.py', 'tests/tools/test_computer_use_cheap_lanes.py', 'tests/tools/test_computer_use_capture_modes.py']; running with -j 2
+[ 10.5% |     2/~19 | ✓5 | ✗0] ✓ tests/tools/test_computer_use_capture_lane_schema.py (5✓, 2.4s)
+[ 31.6% |     6/~19 | ✓11 | ✗ 0] ✓ tests/tools/test_computer_use_capture_modes.py (6✓, 2.6s)
+[100.0% |    19/~19 | ✓21 | ✗ 3] ✗ tests/tools/test_computer_use_cheap_lanes.py (10✓ 3✗, 5.5s)
+
+  ╔╍ Failed: tests/tools/test_computer_use_cheap_lanes.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║         selector = {"ax": "include_screenshot", "vision": "include_accessibility_tree"}.get(mode)
+  ║ >       if selector and self._session.supports_input_property("get_window_state", selector):
+  ║                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  ║ E       AttributeError: 'NoneType' object has no attribute 'supports_input_property'
+  ║ 
+  ║ tools/computer_use/cua_backend_capture.py:253: AttributeError
+  ║ _______ TestCaptureEndToEnd.test_ax_capture_asks_for_the_tree_only_lane ________
+  ║ 
+  ║ self = <tests.tools.test_computer_use_cheap_lanes.TestCaptureEndToEnd object at 0x7f78351faf50>
+  ║ 
+  ║     def test_ax_capture_asks_for_the_tree_only_lane(self):
+  ║         stub = _StubCapture(_StubSession(props=BOTH))
+  ║         out = {"structuredContent": {"elements": [{"index": 1, "role": "AXButton", "label": "OK"}],
+  ║                                      "window_title": "Notes"}}
+  ║         calls = self._recorder(stub, out)
+  ║         cap = stub.capture("ax")
+  ║         gws = [c for c in calls if c["name"] == "get_window_state"]
+  ║         assert gws and gws[0]["args"]["include_screenshot"] is False
+  ║ >       assert cap.png_b64 is None and cap.window_title == "Notes"
+  ║ E       AssertionError: assert (None is None and '' == 'Notes'
+  ║ E        +  where None = CaptureResult(mode='ax', width=0, height=0, png_b64=None, elements=[], app='Finder', window_title='', png_bytes_len=0, image_mime_type=None, note='', ax_max_elements=200).png_b64
+  ║ E         
+  ║ E         - Notes)
+  ║ 
+  ║ tests/tools/test_computer_use_cheap_lanes.py:148: AssertionError
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/tools/test_computer_use_cheap_lanes.py::TestGwsArgsLanes::test_flags_fail_closed_before_capability_discovery
+  ║ FAILED tests/tools/test_computer_use_cheap_lanes.py::TestGwsArgsLanes::test_sessionless_stub_is_unaffected
+  ║ FAILED tests/tools/test_computer_use_cheap_lanes.py::TestCaptureEndToEnd::test_ax_capture_asks_for_the_tree_only_lane
+  ║ 3 failed, 10 passed in 1.73s
+  ║
+  ║  Repro: python -m pytest tests/tools/test_computer_use_cheap_lanes.py -q
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 3 files, 21 tests passed, 3 failed (100% complete) in 8.0s (2 workers) ===
+  Durations cached to test_durations.json (2 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   3
+  Total subprocess CPU-wall: 10.5s  (runner wall: 8.0s, parallelism: 2x)
+  P50: 2.55s  P90: 5.48s  P95: 5.48s  P99: 5.48s  Max: 5.48s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+      5.48s  tests/tools/test_computer_use_cheap_lanes.py
+      2.55s  tests/tools/test_computer_use_capture_modes.py
+      2.44s  tests/tools/test_computer_use_capture_lane_schema.py
+
+=== Failure output ===
+
+--- tests/tools/test_computer_use_cheap_lanes.py ---
+...F.F...F...                                                            [100%]
+=================================== FAILURES ===================================
+_____ TestGwsArgsLanes.test_flags_fail_closed_before_capability_discovery ______
+
+self = <tests.tools.test_computer_use_cheap_lanes.TestGwsArgsLanes object at 0x7f78351f8b10>
+
+    def test_flags_fail_closed_before_capability_discovery(self):
+        """Pre-discovery the schema map is empty by construction; the payload must not change."""
+        stub = _StubCapture(_StubSession(discovered=False, props=BOTH))
+        for mode in ("vision", "ax", "som"):
+            args = stub._gws_args(mode)
+>           assert "include_screenshot" not in args and "include_accessibility_tree" not in args
+E           AssertionError: assert ('include_screenshot' not in {'pid': 607, 'window_id': 382, 'session': None, 'max_elements': 200, ...} and 'include_accessibility_tree' not in {'pid': 607, 'window_id': 382, 'session': None, 'max_elements': 200, ...})
+
+tests/tools/test_computer_use_cheap_lanes.py:86: AssertionError
+_____________ TestGwsArgsLanes.test_sessionless_stub_is_unaffected _____________
+
+self = <tests.tools.test_computer_use_cheap_lanes.TestGwsArgsLanes object at 0x7f78351f9610>
+
+    def test_sessionless_stub_is_unaffected(self):
+        """The ax_walk_bound stubs run with ``_session = None`` — the lane gate must not raise there."""
+        stub = _StubCapture(None)
+>       assert "include_accessibility_tree" not in stub._gws_args("vision")
+                                                   ^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tools/test_computer_use_cheap_lanes.py:97: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <tests.tools.test_computer_use_cheap_lanes._StubCapture object at 0x7f7832132450>
+mode = 'vision'
+
+    def _gws_args(self, mode: str = "som") -> Dict[str, Any]:
+        """``get_window_state`` args, including capability-gated output projection.
+    
+        ``max_elements`` bounds the DRIVER's accessibility walk. When the live tool schema advertises the
+        relevant selector, AX-only capture also skips screenshot production and vision-only capture skips the
+        accessibility walk. SOM and older drivers keep the full request.
+        """
+        args: Dict[str, Any] = {"pid": self._active_pid, "window_id": self._active_window_id,
+                                "session": self._session_id}
+        from tools.computer_use import cua_backend as _cb  # lazy: cua_backend imports this module at import time
+        if capped := _cb._cua_configured_ax_max_elements():
+            args["max_elements"] = capped
+        selector = {"ax": "include_screenshot", "vision": "include_accessibility_tree"}.get(mode)
+>       if selector and self._session.supports_input_property("get_window_state", selector):
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'supports_input_property'
+
+tools/computer_use/cua_backend_capture.py:253: AttributeError
+_______ TestCaptureEndToEnd.test_ax_capture_asks_for_the_tree_only_lane ________
+
+self = <tests.tools.test_computer_use_cheap_lanes.TestCaptureEndToEnd object at 0x7f78351faf50>
+
+    def test_ax_capture_asks_for_the_tree_only_lane(self):
+        stub = _StubCapture(_StubSession(props=BOTH))
+        out = {"structuredContent": {"elements": [{"index": 1, "role": "AXButton", "label": "OK"}],
+                                     "window_title": "Notes"}}
+        calls = self._recorder(stub, out)
+        cap = stub.capture("ax")
+        gws = [c for c in calls if c["name"] == "get_window_state"]
+        assert gws and gws[0]["args"]["include_screenshot"] is False
+>       assert cap.png_b64 is None and cap.window_title == "Notes"
+E       AssertionError: assert (None is None and '' == 'Notes'
+E        +  where None = CaptureResult(mode='ax', width=0, height=0, png_b64=None, elements=[], app='Finder', window_title='', png_bytes_len=0, image_mime_type=None, note='', ax_max_elements=200).png_b64
+E         
+E         - Notes)
+
+tests/tools/test_computer_use_cheap_lanes.py:148: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tools/test_computer_use_cheap_lanes.py::TestGwsArgsLanes::test_flags_fail_closed_before_capability_discovery
+FAILED tests/tools/test_computer_use_cheap_lanes.py::TestGwsArgsLanes::test_sessionless_stub_is_unaffected
+FAILED tests/tools/test_computer_use_cheap_lanes.py::TestCaptureEndToEnd::test_ax_capture_asks_for_the_tree_only_lane
+3 failed, 10 passed in 1.73s
+
+=== 1 file with test failures (3 tests failed) ===
+  tests/tools/test_computer_use_cheap_lanes.py  (3 tests failed)

@@ -1,0 +1,531 @@
+{
+  "schema": "xf.receipt.v1",
+  "tier": "T1",
+  "staging": "prefix-parity-journeys",
+  "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+  "head_revision": "ddf4748d31cb5dc65e7cd0b0c5b27b98d63ae880",
+  "provenance": "self",
+  "cost_usd": 0.0,
+  "env": {
+    "python": "3.11.14 (<venv>, read-only bind; live home masked)",
+    "network": "loopback only (netns); egress canary below",
+    "relay": "nemo-relay init failed (installed plugin older than tree); journeys ran Relay-off",
+    "host_load": "shared host; load1 at the end of each run is recorded per run (7.91-18.43 over 25 runs, on 10 cores / 20 threads)"
+  },
+  "sandbox": "bwrap --dev-bind / / --tmpfs <live-home> --ro-bind <venv> <venv> --unshare-net --unshare-pid --die-with-parent --clearenv; HOME/HERMES_HOME = scratch testhome; children get fixture homes",
+  "raw": {
+    "dir": "private/raw-r02 (private; path-scrubbed before sealing; never published or frozen)",
+    "manifest": "private/raw-r02/MANIFEST.sha256",
+    "manifest_sha256": "99cb8fdfe8896a88b28a88e623659c4f5f958424a0ac16c049ad5a997923e635"
+  },
+  "egress_canary": {
+    "egress_1.1.1.1:443": "blocked errno=101",
+    "loopback": "CONNECTED"
+  },
+  "ai_assistance": "Claude Code (Opus 5.5) wrote the journeys, probes and arms; disclosed per repository policy",
+  "origin_refs": [
+    "NousResearch/hermes-agent#104414",
+    "NousResearch/hermes-agent#45499",
+    "NousResearch/hermes-agent#120116",
+    "NousResearch/hermes-agent#76215",
+    "NousResearch/hermes-agent#76224",
+    "NousResearch/hermes-agent#88364",
+    "kvnloo/hermes-agent#319"
+  ],
+  "privacy": "public-aggregate: no local paths, host name, session/turn ids or prompt text",
+  "id": "E07/r20261001-03",
+  "supersedes": {
+    "id": "E07/r20261001-02",
+    "sha256": "6a0957c7d76cef87b4384a4f688db1cc73825ca44175ac0d91eb12678e6fe807",
+    "path": "private/superseded-r02/E07-r20261001-02.json"
+  },
+  "reissue": "Re-issue of r20261001-02 from the same sealed raw set (manifest sha256 unchanged); no run was repeated. Changed: env.host_load (r02 said '5-15 on 10 cores'; the recorded load1_end values range as stated here), raw.dir/manifest (the raw set moved to private/raw-r02/), inputs.harness (harness/ now takes local paths from the environment; the files that produced the raw are cited by sha256 in inputs.harness_as_run), id and supersedes. Every other field equals r02. Re-running with harness/ needs HERMES_VENV, LIVE_HOME and TH for sandbox.sh, and RAW and PROBE_TMP passed through to run_receipts.sh.",
+  "spec": {
+    "question": "Is the request prefix byte-stable over process restarts and one compaction on the messaging gateway, api_server /v1/runs and ACP?",
+    "falsifier": "a journey green while a sabotage that breaks prefix bytes is applied (NC receipt), or a red journey with no reproducible product cause"
+  },
+  "inputs": {
+    "harness": {
+      "harness/build_receipts.py": "f33caef9a2adbbb0cf1c419a9383e9a6ad5bfb956792ddfdd7c4e80c1b8d802b",
+      "harness/e09_first_delta.py": "759b69173f9726f532d8d230b2d407e249e19ee92d7999954752ef31874dee44",
+      "harness/journey_probe.py": "1fe717302e61857c64df5d0d59ae04afe355befba291d90403898b7b9483498d",
+      "harness/run_receipts.sh": "3d195a4f0e95fad6b9073e7d6264663225aa7d55e5285b0272b707eb993fce2a",
+      "harness/sandbox.sh": "5a3d50ef38c76dd10a515ad82aa712cab7832438bf608e880f10b715fa865ce9"
+    },
+    "harness_as_run": {
+      "dir": "private/harness-r02 (private: local paths inline)",
+      "note": "the files that produced the raw set; harness/ is the same code with local paths taken from the environment",
+      "sha256": {
+        "private/harness-r02/build_receipts.py": "d4f8e545a74857ea3e5246e871de212da942e2eab991fc21bbdccc787006580d",
+        "private/harness-r02/e09_first_delta.py": "759b69173f9726f532d8d230b2d407e249e19ee92d7999954752ef31874dee44",
+        "private/harness-r02/journey_probe.py": "1fe717302e61857c64df5d0d59ae04afe355befba291d90403898b7b9483498d",
+        "private/harness-r02/run_receipts.sh": "c567da32f405f64ae20278e5cc5cc48c0d5633fa1cc99a1506c2148c6874e2be",
+        "private/harness-r02/sandbox.sh": "0c5f23fea0b6ee0adc767126f3a1ed2f5fb0379c1692120cbbcd7e58735f855b"
+      }
+    },
+    "arms": {
+      "arms/red-ungate-known.patch": "4af583a108313658fe4159c969127b1f4d98c83b94f42932cbe01682e3ee8a7c"
+    },
+    "test_blobs_at_head": {
+      "tests/e2e/core/history/test_prefix_stability.py": "1133468e43a4",
+      "tests/e2e/core/history/_helpers.py": "f13dbc84a5a3",
+      "tests/e2e/core/parity/_drive_acp.py": "37627770f32e",
+      "tests/e2e/core/parity/_drive_gateway.py": "dae72c6a23ee",
+      "tests/e2e/core/parity/_gateway_child.py": "91b33976cdab",
+      "tests/fakes/fake_llm_provider.py": "339adb7e87ea (unchanged)"
+    }
+  },
+  "commands": [
+    "<wt>$ harness/sandbox.sh /usr/bin/env MAIN_REF=aea969677c60a1bb72fe227fdfb98f196a2092cc bash harness/run_receipts.sh (sequential; every run's rc/head/dirty/load1 in <raw>/runs.jsonl)",
+    "<wt>$ harness/sandbox.sh bash scripts/run_tests.sh -j 2 --include-integration tests/e2e/core/history/test_prefix_stability.py -q -rxX --tb=line --junitxml=<raw>/<run>.junit.xml (HERMES_TEST_FILE_RETRIES=0)",
+    "red: git apply arms/red-ungate-known.patch && <wt>$ harness/sandbox.sh bash scripts/run_tests.sh -j 2 --include-integration tests/e2e/core/history/test_prefix_stability.py -q -rxX --tb=line --junitxml=<raw>/<run>.junit.xml (HERMES_TEST_FILE_RETRIES=0) -k acp_restarts",
+    "<wt>$ harness/sandbox.sh $PY harness/journey_probe.py --out <raw>/e07_probe.json"
+  ],
+  "runs": {
+    "slice_full": {
+      "run": "slice_full",
+      "rc": 0,
+      "started": "2026-10-01T11:13:38Z",
+      "ended": "2026-10-01T11:17:11Z",
+      "wall_s": 213,
+      "head": "ddf4748d31cb5dc65e7cd0b0c5b27b98d63ae880",
+      "dirty": "",
+      "load1_end": "15.28"
+    },
+    "red_ungated": {
+      "run": "red_ungated",
+      "rc": 1,
+      "started": "2026-10-01T11:17:11Z",
+      "ended": "2026-10-01T11:17:47Z",
+      "wall_s": 36,
+      "head": "ddf4748d31cb5dc65e7cd0b0c5b27b98d63ae880",
+      "dirty": " M tests/e2e/core/history/test_prefix_stability.py ",
+      "load1_end": "14.74"
+    },
+    "e07_probe": {
+      "run": "e07_probe",
+      "rc": 0,
+      "started": "2026-10-01T11:17:47Z",
+      "ended": "2026-10-01T11:20:55Z",
+      "wall_s": 188,
+      "head": "ddf4748d31cb5dc65e7cd0b0c5b27b98d63ae880",
+      "dirty": "",
+      "load1_end": "13.69"
+    }
+  },
+  "green": {
+    "run": "slice_full",
+    "tally": "5 passed, 1 xfailed",
+    "outcomes": [
+      {
+        "test": "test_request_prefix_is_byte_stable_across_processes[tui_gateway_restarts]",
+        "time_s": 28.382,
+        "outcome": "passed",
+        "message": ""
+      },
+      {
+        "test": "test_request_prefix_is_byte_stable_across_processes[oneshot_restarts]",
+        "time_s": 29.413,
+        "outcome": "passed",
+        "message": ""
+      },
+      {
+        "test": "test_request_prefix_is_byte_stable_across_processes[surface_switch]",
+        "time_s": 35.952,
+        "outcome": "passed",
+        "message": ""
+      },
+      {
+        "test": "test_request_prefix_is_byte_stable_across_processes[messaging_gateway_restarts]",
+        "time_s": 35.868,
+        "outcome": "passed",
+        "message": ""
+      },
+      {
+        "test": "test_request_prefix_is_byte_stable_across_processes[api_server_runs_restarts]",
+        "time_s": 32.428,
+        "outcome": "passed",
+        "message": ""
+      },
+      {
+        "test": "test_request_prefix_is_byte_stable_across_processes[acp_restarts]",
+        "time_s": 30.942,
+        "outcome": "xfailed",
+        "message": "#76215 ACP /compress is lost on reload (fixes in review: #76224, #88364), and its rebuilt prompt nests the cached one (acp_adapter/commands.py passes system_message=agent._cached_system_prompt) [observed: prompt-cache prefix broke outside the compaction boundary:]"
+      }
+    ]
+  },
+  "red": {
+    "run": "red_ungated",
+    "patch": "arms/red-ungate-known.patch (known_gate off; scratch, not shipped)",
+    "tally": "1 failure",
+    "outcomes": [
+      {
+        "test": "test_request_prefix_is_byte_stable_across_processes[acp_restarts]",
+        "time_s": 31.719,
+        "outcome": "failure",
+        "message": "AssertionError: prompt-cache prefix broke outside the compaction boundary:\n    request 9 (in hop 4 (acp in work-a)): messages[0] (system) changed; first diverging byte at 5377"
+      }
+    ]
+  },
+  "per_journey": {
+    "tui_gateway_restarts": {
+      "surfaces": [
+        "gw"
+      ],
+      "process_lives": 4,
+      "main_requests": 11,
+      "aux_requests": 2,
+      "compaction_idx": 7,
+      "prefix_breaks_total": 1,
+      "prefix_breaks_at_compaction": 1,
+      "prefix_breaks_unexpected": 0,
+      "prefix_breaks": [
+        {
+          "request": 7,
+          "why": "message list shrank 15 -> 14"
+        }
+      ],
+      "tools_drift": [],
+      "compaction_nests_previous_prompt": false,
+      "usage_matches_billed": true,
+      "db_integrity_ok": true,
+      "system_prompt_chars": [
+        6955,
+        6955,
+        6955,
+        6955,
+        6955,
+        6955,
+        6955,
+        6955,
+        6955,
+        6955,
+        6955
+      ],
+      "summary_in_request": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true
+      ],
+      "verdict_e07": "PASS",
+      "wall_s": 29.3,
+      "run_journey": "ok"
+    },
+    "oneshot_restarts": {
+      "surfaces": [
+        "cli"
+      ],
+      "process_lives": 8,
+      "main_requests": 10,
+      "aux_requests": 1,
+      "compaction_idx": null,
+      "prefix_breaks_total": 0,
+      "prefix_breaks_at_compaction": 0,
+      "prefix_breaks_unexpected": 0,
+      "prefix_breaks": [],
+      "tools_drift": [],
+      "compaction_nests_previous_prompt": null,
+      "usage_matches_billed": true,
+      "db_integrity_ok": true,
+      "system_prompt_chars": [
+        12483,
+        12483,
+        12483,
+        12483,
+        12483,
+        12483,
+        12483,
+        12483,
+        12483,
+        12483
+      ],
+      "summary_in_request": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "verdict_e07": "PASS",
+      "wall_s": 38.6,
+      "run_journey": "ok"
+    },
+    "surface_switch": {
+      "surfaces": [
+        "cli",
+        "gw"
+      ],
+      "process_lives": 7,
+      "main_requests": 13,
+      "aux_requests": 2,
+      "compaction_idx": 10,
+      "prefix_breaks_total": 1,
+      "prefix_breaks_at_compaction": 1,
+      "prefix_breaks_unexpected": 0,
+      "prefix_breaks": [
+        {
+          "request": 10,
+          "why": "message list shrank 21 -> 14"
+        }
+      ],
+      "tools_drift": [],
+      "compaction_nests_previous_prompt": false,
+      "usage_matches_billed": true,
+      "db_integrity_ok": true,
+      "system_prompt_chars": [
+        6931,
+        6931,
+        6931,
+        6931,
+        6931,
+        6931,
+        6931,
+        6931,
+        6931,
+        6931,
+        13558,
+        13558,
+        13558
+      ],
+      "summary_in_request": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true
+      ],
+      "verdict_e07": "PASS",
+      "wall_s": 36.4,
+      "run_journey": "ok"
+    },
+    "messaging_gateway_restarts": {
+      "surfaces": [
+        "msg"
+      ],
+      "process_lives": 4,
+      "main_requests": 11,
+      "aux_requests": 2,
+      "compaction_idx": 7,
+      "prefix_breaks_total": 1,
+      "prefix_breaks_at_compaction": 1,
+      "prefix_breaks_unexpected": 0,
+      "prefix_breaks": [
+        {
+          "request": 7,
+          "why": "message list shrank 15 -> 14"
+        }
+      ],
+      "tools_drift": [],
+      "compaction_nests_previous_prompt": false,
+      "usage_matches_billed": true,
+      "db_integrity_ok": true,
+      "system_prompt_chars": [
+        14093,
+        14093,
+        14093,
+        14093,
+        14093,
+        14093,
+        14093,
+        14093,
+        14093,
+        14093,
+        14093
+      ],
+      "summary_in_request": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true
+      ],
+      "verdict_e07": "PASS",
+      "wall_s": 30.8,
+      "run_journey": "ok"
+    },
+    "api_server_runs_restarts": {
+      "surfaces": [
+        "api"
+      ],
+      "process_lives": 4,
+      "main_requests": 11,
+      "aux_requests": 2,
+      "compaction_idx": 7,
+      "prefix_breaks_total": 1,
+      "prefix_breaks_at_compaction": 1,
+      "prefix_breaks_unexpected": 0,
+      "prefix_breaks": [
+        {
+          "request": 7,
+          "why": "message list shrank 15 -> 14"
+        }
+      ],
+      "tools_drift": [],
+      "compaction_nests_previous_prompt": false,
+      "usage_matches_billed": true,
+      "db_integrity_ok": true,
+      "system_prompt_chars": [
+        13550,
+        13550,
+        13550,
+        13550,
+        13550,
+        13550,
+        13550,
+        13550,
+        13550,
+        13550,
+        13550
+      ],
+      "summary_in_request": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true
+      ],
+      "verdict_e07": "PASS",
+      "wall_s": 25.7,
+      "run_journey": "ok"
+    },
+    "acp_restarts": {
+      "surfaces": [
+        "acp"
+      ],
+      "process_lives": 4,
+      "main_requests": 11,
+      "aux_requests": 2,
+      "compaction_idx": 7,
+      "prefix_breaks_total": 2,
+      "prefix_breaks_at_compaction": 1,
+      "prefix_breaks_unexpected": 1,
+      "prefix_breaks": [
+        {
+          "request": 7,
+          "why": "message list shrank 15 -> 14"
+        },
+        {
+          "request": 9,
+          "why": "messages[0] (system) changed; first diverging byte at 5377"
+        }
+      ],
+      "tools_drift": [],
+      "compaction_nests_previous_prompt": true,
+      "usage_matches_billed": true,
+      "db_integrity_ok": true,
+      "system_prompt_chars": [
+        6242,
+        6242,
+        6242,
+        6242,
+        6242,
+        6242,
+        6242,
+        12486,
+        12486,
+        6242,
+        6242
+      ],
+      "summary_in_request": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false
+      ],
+      "verdict_e07": "FAIL",
+      "wall_s": 27.4,
+      "run_journey": "ok"
+    }
+  },
+  "measurements": [
+    {
+      "name": "new_journeys_green",
+      "value": 2,
+      "of": 2,
+      "label": "OBSERVED"
+    },
+    {
+      "name": "acp_restarts_gated_outcome",
+      "value": "xfailed",
+      "label": "OBSERVED"
+    },
+    {
+      "name": "acp_unexpected_prefix_breaks",
+      "value": 1,
+      "label": "OBSERVED"
+    },
+    {
+      "name": "acp_system_prompt_chars_before_after_compaction",
+      "value": [
+        6242,
+        12486
+      ],
+      "label": "OBSERVED"
+    },
+    {
+      "name": "c17_file_wall_s_head",
+      "value": 213,
+      "label": "OBSERVED",
+      "detail": "6 journeys; new three 99.2s, existing three 93.7s (pytest per-test times); load1 at end 15.28"
+    },
+    {
+      "name": "c17_file_wall_s_main",
+      "value": 87,
+      "label": "OBSERVED",
+      "detail": "3 journeys on main aea969677c, same run; per-test 83.7s"
+    },
+    {
+      "name": "ci_e2e_budget_headroom",
+      "value": "far under HERMES_TEST_FILE_TIMEOUT=900 s; adds about one minute to one of 3 e2e workers",
+      "label": "MODELED"
+    }
+  ],
+  "verdict": "KEEP",
+  "not_tested": [
+    "real provider cache billing",
+    "Relay ATOF/ATIF exporters",
+    "serve WS, A2A, relay connector, /goal continuation",
+    "cwd change between lives on msg/api/acp"
+  ]
+}

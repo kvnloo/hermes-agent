@@ -1,0 +1,22 @@
+▶ not activated — using HERMES_PYTHON: <HERMES_PYTHON>
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 3 test files (~19 tests) under ['tests/tools/test_computer_use_capture_lane_schema.py', 'tests/tools/test_computer_use_cheap_lanes.py', 'tests/tools/test_computer_use_capture_modes.py']; running with -j 2
+[ 21.1% |     4/~19 | ✓6 | ✗0] ✓ tests/tools/test_computer_use_capture_modes.py (6✓, 2.5s)
+[ 31.6% |     6/~19 | ✓11 | ✗ 0] ✓ tests/tools/test_computer_use_capture_lane_schema.py (5✓, 2.6s)
+[100.0% |    19/~19 | ✓24 | ✗ 0] ✓ tests/tools/test_computer_use_cheap_lanes.py (13✓, 2.4s)
+
+=== Summary: 3 files, 24 tests passed, 0 failed (100% complete) in 5.0s (2 workers) ===
+  Durations cached to test_durations.json (3 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   3
+  Total subprocess CPU-wall: 7.5s  (runner wall: 5.0s, parallelism: 2x)
+  P50: 2.54s  P90: 2.57s  P95: 2.57s  P99: 2.57s  Max: 2.57s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+      2.57s  tests/tools/test_computer_use_capture_lane_schema.py
+      2.54s  tests/tools/test_computer_use_capture_modes.py
+      2.42s  tests/tools/test_computer_use_cheap_lanes.py

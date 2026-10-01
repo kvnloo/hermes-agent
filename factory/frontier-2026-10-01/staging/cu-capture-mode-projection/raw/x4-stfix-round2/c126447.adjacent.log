@@ -1,0 +1,52 @@
+▶ not activated — using HERMES_PYTHON: <HERMES_PYTHON>
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 23 test files (~221 tests) under ['tests/tools/test_computer_use.py', 'tests/tools/test_computer_use_approval_isolation.py', 'tests/tools/test_computer_use_ax_walk_bound.py', 'tests/tools/test_computer_use_backend_lifecycle.py', 'tests/tools/test_computer_use_backend_rebind.py', 'tests/tools/test_computer_use_capture_fence.py', 'tests/tools/test_computer_use_capture_routing.py', 'tests/tools/test_computer_use_cua_0_10_permissions.py', 'tests/tools/test_computer_use_cua_0_9.py', 'tests/tools/test_computer_use_cua_backend_linux.py', 'tests/tools/test_computer_use_cua_macos_identity.py', 'tests/tools/test_computer_use_delivery_ladder.py', 'tests/tools/test_computer_use_display_count_guard.py', 'tests/tools/test_computer_use_doctor_stale_units.py', 'tests/tools/test_computer_use_empty_discovery_diagnosis.py', 'tests/tools/test_computer_use_fullscreen_capture.py', 'tests/tools/test_computer_use_input_target_guard.py', 'tests/tools/test_computer_use_native_platform.py', 'tests/tools/test_computer_use_null_pid_windows.py', 'tests/tools/test_computer_use_placeholder_ids.py', 'tests/tools/test_computer_use_screenshot_dedup.py', 'tests/tools/test_computer_use_vision_routing.py', 'tests/tools/test_computer_use_zero_bounds.py']; running with -j 2
+[  1.8% |     4/~221 | ✓4 | ✗0] ✓ tests/tools/test_computer_use_approval_isolation.py (4✓, 3.7s)
+[  3.2% |     7/~221 | ✓9 | ✗0] ✓ tests/tools/test_computer_use_ax_walk_bound.py (5✓, 2.6s)
+[  4.5% |    10/~221 | ✓21 | ✗ 0] ✓ tests/tools/test_computer_use_backend_lifecycle.py (12✓, 3.4s)
+[ 43.9% |    97/~221 | ✓108 | ✗  0] ✓ tests/tools/test_computer_use.py (87✓, 11.5s)
+[ 44.3% |    98/~221 | ✓109 | ✗  0] ✓ tests/tools/test_computer_use_backend_rebind.py (1✓, 2.5s)
+[ 44.8% |    99/~221 | ✓111 | ✗  0] ✓ tests/tools/test_computer_use_capture_fence.py (2✓, 2.7s)
+[ 47.1% |   104/~221 | ✓116 | ✗  0] ✓ tests/tools/test_computer_use_capture_routing.py (5✓, 4.2s)
+[ 51.6% |   114/~221 | ✓126 | ✗  0] ✓ tests/tools/test_computer_use_cua_0_10_permissions.py (10✓, 3.2s)
+[ 53.8% |   119/~221 | ✓131 | ✗  0] ✓ tests/tools/test_computer_use_cua_backend_linux.py (5✓, 1.9s)
+[ 57.9% |   128/~221 | ✓143 | ✗  0] ✓ tests/tools/test_computer_use_cua_0_9.py (12✓, 3.5s)
+[ 63.3% |   140/~221 | ✓156 | ✗  0] ✓ tests/tools/test_computer_use_cua_macos_identity.py (13✓, 2.3s)
+[ 69.7% |   154/~221 | ✓170 | ✗  0] ✓ tests/tools/test_computer_use_delivery_ladder.py (14✓, 4.2s)
+[ 71.9% |   159/~221 | ✓175 | ✗  0] ✓ tests/tools/test_computer_use_display_count_guard.py (5✓, 2.5s)
+[ 73.8% |   163/~221 | ✓179 | ✗  0] ✓ tests/tools/test_computer_use_empty_discovery_diagnosis.py (4✓, 2.8s)
+[ 76.0% |   168/~221 | ✓184 | ✗  0] ✓ tests/tools/test_computer_use_doctor_stale_units.py (5✓, 3.1s)
+[ 79.6% |   176/~221 | ✓192 | ✗  0] ✓ tests/tools/test_computer_use_input_target_guard.py (8✓, 2.8s)
+[ 83.7% |   185/~221 | ✓205 | ✗  0] ✓ tests/tools/test_computer_use_fullscreen_capture.py (13✓, 3.1s)
+[ 84.2% |   186/~221 | ✓205 | ✗  0] ✓ tests/tools/test_computer_use_native_platform.py (8s, 0.8s)
+[ 85.5% |   189/~221 | ✓208 | ✗  0] ✓ tests/tools/test_computer_use_null_pid_windows.py (3✓, 2.9s)
+[ 88.2% |   195/~221 | ✓214 | ✗  0] ✓ tests/tools/test_computer_use_placeholder_ids.py (6✓, 3.3s)
+[ 93.7% |   207/~221 | ✓226 | ✗  0] ✓ tests/tools/test_computer_use_screenshot_dedup.py (12✓, 3.5s)
+[ 98.6% |   218/~221 | ✓237 | ✗  0] ✓ tests/tools/test_computer_use_vision_routing.py (11✓, 3.3s)
+[100.0% |   221/~221 | ✓240 | ✗  0] ✓ tests/tools/test_computer_use_zero_bounds.py (3✓, 2.1s)
+
+=== Summary: 23 files, 240 tests passed, 0 failed, 8 skipped (100% complete) in 38.6s (2 workers) ===
+
+  note: platforms('macos') tests (in 1 file) were SKIPPED on this host (linux); they run on the macOS Python-tests lane.
+  note: platforms('windows') tests (in 1 file) were SKIPPED on this host (linux); they run on the Windows Python-tests lane.
+  Durations cached to test_durations.json (23 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   23
+  Total subprocess CPU-wall: 76.0s  (runner wall: 38.6s, parallelism: 2x)
+  P50: 3.05s  P90: 4.16s  P95: 4.25s  P99: 11.55s  Max: 11.55s
+  <1s: 1 files (4%)  <2s: 2 files (9%)
+  Top 10 slowest:
+     11.55s  tests/tools/test_computer_use.py
+      4.25s  tests/tools/test_computer_use_capture_routing.py
+      4.16s  tests/tools/test_computer_use_delivery_ladder.py
+      3.73s  tests/tools/test_computer_use_approval_isolation.py
+      3.55s  tests/tools/test_computer_use_cua_0_9.py
+      3.46s  tests/tools/test_computer_use_screenshot_dedup.py
+      3.41s  tests/tools/test_computer_use_backend_lifecycle.py
+      3.35s  tests/tools/test_computer_use_placeholder_ids.py
+      3.27s  tests/tools/test_computer_use_vision_routing.py
+      3.21s  tests/tools/test_computer_use_cua_0_10_permissions.py

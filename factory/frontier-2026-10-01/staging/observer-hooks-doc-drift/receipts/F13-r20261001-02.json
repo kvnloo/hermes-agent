@@ -1,0 +1,605 @@
+{
+  "schema": "xf.receipt.v1",
+  "id": "F13/r20261001-02",
+  "supersedes": "F13/r20261001-01 (head d663ec667d, amended before publication: first_chunk_at bullet gained the failed-stream case)",
+  "spec": {
+    "kind": "static",
+    "tier": "T0",
+    "cost": "$0",
+    "lane": "cpu",
+    "question": "Does every kwarg the post_api_request emitter passes appear in observer-hooks.md?",
+    "falsifier": "base already documents all three fields (no need) or the branch still leaves any emitted kwarg undocumented",
+    "observer_effect": "none: static read of git blobs, no Hermes import or exec"
+  },
+  "staging": "observer-hooks-doc-drift",
+  "origin_refs": [
+    "NousResearch/hermes-agent#64231",
+    "NousResearch/hermes-agent#16106"
+  ],
+  "base_revision": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+  "head_revision": "f47410f2ac3414d4dd182a974e46ef4e57d16eda",
+  "changed_files": [
+    "website/docs/developer-guide/observer-hooks.md"
+  ],
+  "command": "python3 tools/f13_hook_doc_diff.py --repo <scratch>/h.git --base 572e4f4fad32bbdcfc948fb2ec833177ed5734c0 --head f47410f2ac3414d4dd182a974e46ef4e57d16eda --out receipts/F13-r20261001-02.json --run-id F13/r20261001-02 --supersedes F13/r20261001-01 (head d663ec667d, amended before publication: first_chunk_at bullet gained the failed-stream case)",
+  "inputs": {
+    "base": {
+      "website/docs/developer-guide/observer-hooks.md": "3d9c636706ff28aa6a117c1c0700fa2767aa19ae",
+      "website/docs/user-guide/features/hooks.md": "59975d14edf93509da71e8f886c1d0f98bcef97c",
+      "hermes_cli/plugins.py": "02222185a26e71dee323ab47c6021107939a742d",
+      "agent/turn_response_intake.py": "eebd9d12debaef2d5b810dd7a2fc2f88775d960f"
+    },
+    "head": {
+      "website/docs/developer-guide/observer-hooks.md": "d2cf2daca6f66049732227c6e89507057c3edc08",
+      "website/docs/user-guide/features/hooks.md": "59975d14edf93509da71e8f886c1d0f98bcef97c"
+    },
+    "python_files_scanned": 2089,
+    "checker_sha256": "bc5da4b030c1305ddd838b64a7d9968de011f86c2dad4c8817e663a0be8755dd"
+  },
+  "env": {
+    "python": "3.14.7",
+    "network": "none used",
+    "hermes_home": "not read"
+  },
+  "valid_hooks": 41,
+  "target_hook": {
+    "hook": "post_api_request",
+    "emitter_sites": [
+      "agent/turn_response_intake.py:68"
+    ],
+    "code_keys": [
+      "api_call_count",
+      "api_duration",
+      "api_mode",
+      "api_request_id",
+      "assistant_content_chars",
+      "assistant_message",
+      "assistant_tool_call_count",
+      "base_url",
+      "context_length",
+      "ended_at",
+      "finish_reason",
+      "first_chunk_at",
+      "message_count",
+      "moa_references",
+      "model",
+      "platform",
+      "provider",
+      "response",
+      "response_model",
+      "session_id",
+      "started_at",
+      "task_id",
+      "turn_id",
+      "usage"
+    ],
+    "correlation_table_keys": [
+      "api_call_count",
+      "api_request_id",
+      "child_session_id",
+      "child_subagent_id",
+      "parent_session_id",
+      "parent_subagent_id",
+      "parent_turn_id",
+      "session_id",
+      "task_id",
+      "tool_call_id",
+      "turn_id"
+    ]
+  },
+  "gates": {
+    "red": {
+      "arm": "base",
+      "result": "PASS",
+      "expected_subset": [
+        "context_length",
+        "first_chunk_at",
+        "moa_references"
+      ],
+      "observed_undocumented": [
+        "context_length",
+        "first_chunk_at",
+        "moa_references"
+      ],
+      "label": "OBSERVED"
+    },
+    "green": {
+      "arm": "head",
+      "result": "PASS",
+      "observed_undocumented": [],
+      "label": "OBSERVED"
+    },
+    "negative_control": {
+      "result": "PASS",
+      "cases": [
+        {
+          "mutation": "drop the `context_length` bullet from the branch page",
+          "undocumented": [
+            "context_length"
+          ],
+          "re_red": true
+        },
+        {
+          "mutation": "drop the `first_chunk_at` bullet from the branch page",
+          "undocumented": [
+            "first_chunk_at"
+          ],
+          "re_red": true
+        },
+        {
+          "mutation": "drop the `moa_references` bullet from the branch page",
+          "undocumented": [
+            "moa_references"
+          ],
+          "re_red": true
+        },
+        {
+          "mutation": "inject kwarg zz_f13_probe into the agent/turn_response_intake.py post_api_request call",
+          "undocumented": [
+            "zz_f13_probe"
+          ],
+          "re_red": true
+        }
+      ],
+      "label": "OBSERVED"
+    }
+  },
+  "measurements": [
+    {
+      "name": "post_api_request_undocumented_keys",
+      "arm": "base",
+      "value": 3,
+      "unit": "count",
+      "label": "OBSERVED"
+    },
+    {
+      "name": "post_api_request_undocumented_keys",
+      "arm": "head",
+      "value": 0,
+      "unit": "count",
+      "label": "OBSERVED"
+    },
+    {
+      "name": "hooks_with_detected_invoke_hook_site",
+      "value": 21,
+      "of": 41,
+      "unit": "count",
+      "label": "OBSERVED"
+    }
+  ],
+  "informational_matrix": {
+    "agent_loop_stopped": {
+      "emitter_sites": [
+        "gateway/run_agent_cache.py:511",
+        "tui_gateway/session_lifecycle.py:720"
+      ],
+      "code_keys": [
+        "invalidation_reason",
+        "platform",
+        "reason",
+        "session_key"
+      ],
+      "hooks_md_table_undocumented_base": [],
+      "hooks_md_table_undocumented_head": []
+    },
+    "api_request_error": {
+      "emitter_sites": [
+        "agent/api_request_hooks.py:176"
+      ],
+      "code_keys": [
+        "api_call_count",
+        "api_duration",
+        "api_mode",
+        "api_request_id",
+        "base_url",
+        "ended_at",
+        "error",
+        "max_retries",
+        "model",
+        "platform",
+        "provider",
+        "reason",
+        "request",
+        "retry_count",
+        "retryable",
+        "session_id",
+        "started_at",
+        "status_code",
+        "task_id",
+        "turn_id"
+      ],
+      "observer_hooks_md_undocumented": [
+        "error"
+      ],
+      "hooks_md_table_undocumented_base": [],
+      "hooks_md_table_undocumented_head": []
+    },
+    "gateway_platform_event": {
+      "emitter_sites": [
+        "gateway/run_adapters.py:1733"
+      ],
+      "code_keys": [],
+      "hooks_md_table_undocumented_base": [],
+      "hooks_md_table_undocumented_head": []
+    },
+    "on_kanban_dispatch_tick": {
+      "emitter_sites": [
+        "hermes_cli/kanban_db.py:266"
+      ],
+      "code_keys": [
+        "board",
+        "dry_run",
+        "outcome",
+        "profile_name",
+        "result"
+      ],
+      "hooks_md_table_undocumented_base": [],
+      "hooks_md_table_undocumented_head": []
+    },
+    "on_session_end": {
+      "emitter_sites": [
+        "hermes_cli/cli_shutdown.py:187",
+        "tui_gateway/session_lifecycle.py:388"
+      ],
+      "code_keys": [
+        "completed",
+        "interrupted",
+        "model",
+        "platform",
+        "reason",
+        "session_id"
+      ],
+      "hooks_md_table_undocumented_base": [],
+      "hooks_md_table_undocumented_head": []
+    },
+    "on_session_reset": {
+      "emitter_sites": [
+        "gateway/slash_commands_session.py:213"
+      ],
+      "code_keys": [
+        "new_session_id",
+        "old_session_id",
+        "platform",
+        "reason",
+        "session_id"
+      ],
+      "hooks_md_table_undocumented_base": [],
+      "hooks_md_table_undocumented_head": []
+    },
+    "on_session_start": {
+      "emitter_sites": [
+        "agent/conversation_loop.py:864"
+      ],
+      "code_keys": [
+        "model",
+        "platform",
+        "session_id"
+      ],
+      "hooks_md_table_undocumented_base": [],
+      "hooks_md_table_undocumented_head": []
+    },
+    "on_skill_lifecycle": {
+      "emitter_sites": [
+        "tools/skill_usage.py:477"
+      ],
+      "code_keys": [
+        "action",
+        "provenance",
+        "reuse_after_patch",
+        "reused",
+        "session_id",
+        "skill_name",
+        "task_id",
+        "use_count"
+      ],
+      "hooks_md_table_undocumented_base": [],
+      "hooks_md_table_undocumented_head": []
+    },
+    "post_api_request": {
+      "emitter_sites": [
+        "agent/turn_response_intake.py:68"
+      ],
+      "code_keys": [
+        "api_call_count",
+        "api_duration",
+        "api_mode",
+        "api_request_id",
+        "assistant_content_chars",
+        "assistant_message",
+        "assistant_tool_call_count",
+        "base_url",
+        "context_length",
+        "ended_at",
+        "finish_reason",
+        "first_chunk_at",
+        "message_count",
+        "moa_references",
+        "model",
+        "platform",
+        "provider",
+        "response",
+        "response_model",
+        "session_id",
+        "started_at",
+        "task_id",
+        "turn_id",
+        "usage"
+      ],
+      "observer_hooks_md_undocumented": [
+        "context_length",
+        "first_chunk_at",
+        "moa_references"
+      ],
+      "hooks_md_table_undocumented_base": [
+        "context_length",
+        "first_chunk_at",
+        "moa_references"
+      ],
+      "hooks_md_table_undocumented_head": [
+        "context_length",
+        "first_chunk_at",
+        "moa_references"
+      ]
+    },
+    "post_tool_call": {
+      "emitter_sites": [
+        "model_tools.py:697"
+      ],
+      "code_keys": [
+        "args",
+        "duration_ms",
+        "error_message",
+        "error_type",
+        "middleware_trace",
+        "result",
+        "status",
+        "tool_name"
+      ],
+      "observer_hooks_md_undocumented": [
+        "middleware_trace"
+      ],
+      "hooks_md_table_undocumented_base": [],
+      "hooks_md_table_undocumented_head": []
+    },
+    "pre_api_request": {
+      "emitter_sites": [
+        "agent/turn_api_request.py:63"
+      ],
+      "code_keys": [
+        "api_call_count",
+        "api_mode",
+        "api_request_id",
+        "approx_input_tokens",
+        "base_url",
+        "conversation_history",
+        "max_tokens",
+        "message_count",
+        "middleware_trace",
+        "model",
+        "platform",
+        "provider",
+        "request",
+        "request_char_count",
+        "request_messages",
+        "retry_count",
+        "session_id",
+        "started_at",
+        "system_prompt",
+        "task_id",
+        "tool_count",
+        "turn_id",
+        "user_message"
+      ],
+      "observer_hooks_md_undocumented": [
+        "conversation_history",
+        "middleware_trace",
+        "request_messages",
+        "retry_count",
+        "system_prompt",
+        "user_message"
+      ],
+      "hooks_md_table_undocumented_base": [
+        "system_prompt"
+      ],
+      "hooks_md_table_undocumented_head": [
+        "system_prompt"
+      ]
+    },
+    "pre_command": {
+      "emitter_sites": [
+        "hermes_cli/plugins.py:2002"
+      ],
+      "code_keys": [
+        "alias_used",
+        "args_raw",
+        "command",
+        "platform",
+        "session_key",
+        "surface"
+      ],
+      "hooks_md_table_undocumented_base": [
+        "alias_used",
+        "args_raw",
+        "command",
+        "platform",
+        "session_key"
+      ],
+      "hooks_md_table_undocumented_head": [
+        "alias_used",
+        "args_raw",
+        "command",
+        "platform",
+        "session_key"
+      ]
+    },
+    "pre_gateway_dispatch": {
+      "emitter_sites": [
+        "gateway/run_inbound.py:119"
+      ],
+      "code_keys": [
+        "event",
+        "gateway",
+        "session_store"
+      ],
+      "hooks_md_table_undocumented_base": [],
+      "hooks_md_table_undocumented_head": []
+    },
+    "pre_llm_call": {
+      "emitter_sites": [
+        "agent/turn_context.py:765"
+      ],
+      "code_keys": [
+        "conversation_history",
+        "is_first_turn",
+        "model",
+        "parent_session_id",
+        "platform",
+        "sender_id",
+        "session_id",
+        "task_id",
+        "turn_id",
+        "user_message"
+      ],
+      "observer_hooks_md_undocumented": [],
+      "hooks_md_table_undocumented_base": [],
+      "hooks_md_table_undocumented_head": []
+    },
+    "pre_transcription": {
+      "emitter_sites": [
+        "tools/transcription_command.py:229"
+      ],
+      "code_keys": [
+        "file_path",
+        "language",
+        "model",
+        "prompt",
+        "provider",
+        "source"
+      ],
+      "hooks_md_table_undocumented_base": [],
+      "hooks_md_table_undocumented_head": []
+    },
+    "pre_verify": {
+      "emitter_sites": [
+        "hermes_cli/plugins.py:2168"
+      ],
+      "code_keys": [
+        "attempt",
+        "changed_paths",
+        "coding",
+        "final_response",
+        "model",
+        "platform",
+        "session_id"
+      ],
+      "hooks_md_table_undocumented_base": [],
+      "hooks_md_table_undocumented_head": []
+    },
+    "subagent_start": {
+      "emitter_sites": [
+        "tools/delegate_tool.py:291"
+      ],
+      "code_keys": [
+        "child_goal",
+        "child_role",
+        "child_session_id",
+        "child_subagent_id",
+        "parent_session_id",
+        "parent_subagent_id",
+        "parent_turn_id"
+      ],
+      "observer_hooks_md_undocumented": [],
+      "hooks_md_table_undocumented_base": [],
+      "hooks_md_table_undocumented_head": []
+    },
+    "subagent_stop": {
+      "emitter_sites": [
+        "tools/delegate_tool_results.py:365"
+      ],
+      "code_keys": [
+        "child_role",
+        "child_session_id",
+        "child_status",
+        "child_summary",
+        "duration_ms",
+        "parent_session_id",
+        "parent_turn_id",
+        "tool_call_history"
+      ],
+      "observer_hooks_md_undocumented": [
+        "child_role",
+        "child_status"
+      ],
+      "hooks_md_table_undocumented_base": [],
+      "hooks_md_table_undocumented_head": []
+    },
+    "transform_api_error_classification": {
+      "emitter_sites": [
+        "hermes_cli/plugins.py:2203"
+      ],
+      "code_keys": [
+        "approx_tokens",
+        "context_length",
+        "error",
+        "error_body",
+        "error_code",
+        "error_message",
+        "error_type",
+        "model",
+        "num_messages",
+        "provider",
+        "status_code"
+      ],
+      "hooks_md_table_undocumented_base": [],
+      "hooks_md_table_undocumented_head": []
+    },
+    "transform_terminal_output": {
+      "emitter_sites": [
+        "tools/terminal_tool_result.py:144"
+      ],
+      "code_keys": [
+        "command",
+        "env_type",
+        "output",
+        "returncode",
+        "task_id",
+        "tool_call_id"
+      ],
+      "hooks_md_table_undocumented_base": [
+        "tool_call_id"
+      ],
+      "hooks_md_table_undocumented_head": [
+        "tool_call_id"
+      ]
+    },
+    "transform_tool_result": {
+      "emitter_sites": [
+        "model_tools.py:863"
+      ],
+      "code_keys": [
+        "args",
+        "duration_ms",
+        "error_message",
+        "error_type",
+        "result",
+        "status",
+        "tool_name"
+      ],
+      "hooks_md_table_undocumented_base": [],
+      "hooks_md_table_undocumented_head": []
+    }
+  },
+  "informational_matrix_note": "Not gated. Token matching only: prose mentions (e.g. api_request_error `error = {...}`, subagent_stop role/status fields, Payload Safety legacy fields) show up as undocumented. Each entry needs a source read before any doc claim.",
+  "not_tested": [
+    "hook dispatch through helpers other than *invoke_hook (stream observers, fire_pre_command_hook, shell hooks): not scanned; the matrix lists only hooks with a detected invoke_hook site",
+    "runtime payload values (types, None cases): the doc text was checked by source reading, not by a running agent",
+    "Docusaurus build (no website node_modules in the sandbox)"
+  ],
+  "resource_usage": {
+    "wall_s": 12.52,
+    "api_cost_usd": 0.0
+  },
+  "verdict": "KEEP",
+  "ai_assistance": "Claude Code (Opus 5.5) wrote this checker and the doc edit",
+  "privacy": "public-aggregate"
+}

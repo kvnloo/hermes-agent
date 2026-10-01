@@ -1,0 +1,238 @@
+From dd4dd10611e8c23c7579a4ddb95655abebbaca27 Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Thu, 1 Oct 2026 03:59:49 -0500
+Subject: [PATCH] fix(evals): postmortem log parsers count zero-hit and
+ usage-unavailable calls
+
+agent/turn_usage.py writes " cache=R/P" only when the provider read
+something from cache, and logs "in=? out=? total=? ... usage=unavailable"
+when a response carries no usage. Every reader of that line required
+cache=, so every full miss was silently dropped: the logcalls lane
+undercounted coverage and biased the overall hit ratio upward, most of
+all around model switches and cache expiry, where misses cluster. The two
+live cache probes dropped the same calls from their per-arm totals.
+
+forensics/logcalls.py:
+- cache= is optional; a line without it is a zero-hit call (hit=0).
+- usage=unavailable lines are parsed and reported as
+  coverage.usage_unavailable. They stay out of every token figure and out
+  of the coverage fraction, matching state.db's api_call_count, which
+  does not count them either.
+- cache_state= is read when the line carries it; cache_state=no_field
+  calls (no cache counter reported) stay out of the hit ratio, buckets
+  and plateau pairs instead of reading as misses. Trailing fields such as
+  ttfb= are tolerated.
+- The coverage block gains zero_hit, no_cache_field and
+  usage_unavailable, and the coverage print line shows them.
+
+live_ab/cache_prefix_live.py, live_ab/cache_prefix_wire.py: the same
+regex with the cache= group optional; a row without it reads cached=0.
+
+Two harness self-tests cover the current line shapes and the pending
+cache_state= / ttfb= shapes; both fail on the old regex.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ evals/postmortem/forensics/logcalls.py        | 44 +++++++++++++------
+ evals/postmortem/live_ab/cache_prefix_live.py |  6 +--
+ evals/postmortem/live_ab/cache_prefix_wire.py |  4 +-
+ .../tests/test_postmortem_harness.py          | 43 ++++++++++++++++++
+ 4 files changed, 79 insertions(+), 18 deletions(-)
+
+diff --git a/evals/postmortem/forensics/logcalls.py b/evals/postmortem/forensics/logcalls.py
+index fa5be57125..23badda96b 100644
+--- a/evals/postmortem/forensics/logcalls.py
++++ b/evals/postmortem/forensics/logcalls.py
+@@ -2,7 +2,13 @@
+ 
+ Hermes logs one line per API call::
+ 
+-    ... INFO [<session_id>] agent.conversation_loop: API call #N: model=... in=<prompt> out=<out> total=... latency=..s cache=<hit>/<total> (pct) [write=<n>] [id=<response id>] [upstream=<name>]
++    ... INFO [<session_id>] agent.conversation_loop: API call #N: model=... in=<prompt> out=<out> total=... latency=..s [cache=<hit>/<total> (pct)] [write=<n>] [id=<response id>] [upstream=<name>]
++
++``cache=`` is written only when the provider read something from cache, so a line without it is a zero-hit
++call. A response without usage logs ``in=? out=? total=? ... usage=unavailable``; those are counted on their
++own and stay out of every token figure (state.db's ``api_call_count`` does not count them either). A line
++with ``cache_state=no_field`` reports no cache counter at all, so it stays out of the hit-ratio figures
++instead of reading as a miss.
+ 
+ Given the rotated logs, this reproduces: prompt-size distribution, cache hit-ratio buckets, the
+ "plateau" signature of a broken cache prefix (hit count stuck at the previous call's breakpoint while
+@@ -26,13 +32,18 @@ from evals.postmortem.forensics.common import Run
+ 
+ _LINE = re.compile(
+     r"^(\S+ \S+) INFO \[(\S+)\] agent\.conversation_loop: API call #(\d+): model=(\S+) provider=\S+ "
+-    r"in=(\d+) out=(\d+) total=\d+ latency=([\d.]+)s cache=(\d+)/(\d+)"
++    r"in=(\d+|\?) out=(\d+|\?) total=(?:\d+|\?) latency=([\d.]+)s(?: cache=(\d+)/(\d+))?"
+ )
+ 
+ 
+ _WRITE = re.compile(r" write=(\d+)")
+ _ID = re.compile(r" id=(\S+)")
+ _UPSTREAM = re.compile(r" upstream=(.+?)(?: [a-z_]+=|$)")
++_CACHE_STATE = re.compile(r" cache_state=(\w+)")
++
++
++def _cache_reported(call: Dict[str, Any]) -> bool:
++    return call.get("cache_state") != "no_field"
+ 
+ 
+ def parse_logs(paths: List[str], sids: set) -> List[Dict[str, Any]]:
+@@ -46,11 +57,12 @@ def parse_logs(paths: List[str], sids: set) -> List[Dict[str, Any]]:
+             for line in fh:
+                 m = _LINE.match(line)
+                 if m and m.group(2) in sids:
++                    usage = m.group(5) != "?"  # in=? is the usage=unavailable line: no token counts
+                     rec = {"ts": m.group(1), "sid": m.group(2), "n": int(m.group(3)), "model": m.group(4),
+-                           "inp": int(m.group(5)), "out": int(m.group(6)), "lat": float(m.group(7)),
+-                           "hit": int(m.group(8))}
+-                    # Newer lines (post 2026-09) also carry write= / id= / upstream=; optional.
+-                    for key, pat in (("write", _WRITE), ("id", _ID), ("upstream", _UPSTREAM)):
++                           "inp": int(m.group(5)) if usage else None, "out": int(m.group(6)) if usage else None,
++                           "lat": float(m.group(7)), "hit": int(m.group(8) or 0) if usage else None}
++                    # Newer lines (post 2026-09) also carry write= / id= / upstream= / cache_state=; optional.
++                    for key, pat in (("write", _WRITE), ("id", _ID), ("upstream", _UPSTREAM), ("cache_state", _CACHE_STATE)):
+                         mm = pat.search(line)
+                         if mm:
+                             rec[key] = int(mm.group(1)) if key == "write" else mm.group(1)
+@@ -82,13 +94,16 @@ def main(argv=None) -> int:
+     run = Run.open(a.db, root=a.root, out=a.out)
+     paths = sorted(p for g in a.logs for p in glob.glob(g))
+     calls = parse_logs(paths, set(run.in_run))
++    unavailable = sum(1 for c in calls if c["inp"] is None)
++    calls = [c for c in calls if c["inp"] is not None]
++    scored = [c for c in calls if _cache_reported(c)]
+     total_calls = run.summary()["api_calls"]
+-    if not calls:
+-        print("[logcalls] no matching API-call lines found in", paths); return 1
++    if not scored:
++        print("[logcalls] no API-call lines with cache usage found in", paths); return 1
+     inp = [c["inp"] for c in calls]
+-    hit_total, in_total = sum(c["hit"] for c in calls), sum(inp)
++    hit_total, in_total = sum(c["hit"] for c in scored), sum(c["inp"] for c in scored)
+     buckets = collections.Counter()
+-    for c in calls:
++    for c in scored:
+         r = c["hit"] / c["inp"] if c["inp"] else 0
+         buckets["<50%" if r < .5 else "50-90%" if r < .9 else "90-97%" if r < .97 else "97-99%" if r < .99 else ">=99%"] += 1
+     by_sid: Dict[str, List[Dict[str, Any]]] = collections.defaultdict(list)
+@@ -99,7 +114,7 @@ def main(argv=None) -> int:
+     #   non-advancing:  hit count did not grow while input did (includes partial misses of other causes)
+     strict_pairs = strict_uncached = loose_pairs = loose_uncached = pairs = uncached_total = 0
+     for cs in by_sid.values():
+-        cs.sort(key=lambda c: c["n"])
++        cs = sorted(filter(_cache_reported, cs), key=lambda c: c["n"])
+         for prev, cur in zip(cs, cs[1:]):
+             pairs += 1
+             u = max(0, cur["inp"] - cur["hit"]); uncached_total += u
+@@ -112,6 +127,8 @@ def main(argv=None) -> int:
+     real = sum(inp); capped = sawtooth_real(by_sid, a.cap, a.floor)
+     report = {
+         "coverage": {"calls_found": len(calls), "run_api_calls": total_calls, "fraction": round(len(calls) / total_calls, 4) if total_calls else None,
++                     "zero_hit": sum(1 for c in scored if not c["hit"]), "no_cache_field": len(calls) - len(scored),
++                     "usage_unavailable": unavailable,
+                      "first_ts": min(c["ts"] for c in calls), "last_ts": max(c["ts"] for c in calls),
+                      "note": "rotated logs; extrapolations from this window are upper bounds"},
+         "observed": {
+@@ -133,8 +150,9 @@ def main(argv=None) -> int:
+         },
+     }
+     path = run.write("logcalls.json", report)
+-    o = report["observed"]
+-    print(f"[logcalls] coverage {len(calls):,}/{total_calls:,} calls ({report['coverage']['fraction']:.1%}) from {len(paths)} file(s)")
++    o, cov = report["observed"], report["coverage"]
++    print(f"[logcalls] coverage {len(calls):,}/{total_calls:,} calls ({cov['fraction']:.1%}) from {len(paths)} file(s): "
++          f"{cov['zero_hit']:,} zero-hit, {cov['no_cache_field']:,} without a cache field; {unavailable:,} usage=unavailable not counted")
+     print(f"[logcalls] OBSERVED median prompt {o['prompt_tokens']['median']:,} p90 {o['prompt_tokens']['p90']:,}; >200K: {o['share_of_calls_above'][200000]:.0%}; hit ratio {o['cache_hit_ratio_overall']:.1%}")
+     print(f"[logcalls] OBSERVED strict plateau (hit unchanged): {o['strict_plateau']['pairs_share']:.1%} of pairs, {o['strict_plateau']['share_of_uncached_input']:.1%} of uncached input; "
+           f"non-advancing hit: {o['non_advancing_hit']['pairs_share']:.1%} / {o['non_advancing_hit']['share_of_uncached_input']:.1%}; uncached in window ${o['uncached_input_usd_in_window']:,}")
+diff --git a/evals/postmortem/live_ab/cache_prefix_live.py b/evals/postmortem/live_ab/cache_prefix_live.py
+index cd64b8d530..bd4ad036d2 100644
+--- a/evals/postmortem/live_ab/cache_prefix_live.py
++++ b/evals/postmortem/live_ab/cache_prefix_live.py
+@@ -41,10 +41,10 @@ r = ag.run_conversation(task)
+ print("final:", (r.get("final_response") or "")[:80], "| wall", round(time.time() - t0, 1), "s")
+ time.sleep(1)
+ log = subprocess.run(f"grep -h '\\[{sid}\\]' ~/.hermes/logs/agent.log | grep 'API call #'", shell=True, capture_output=True).stdout.decode("utf-8", "replace")
+-rows = re.findall(r"API call #(\d+): .*in=(\d+) out=(\d+) .*cache=(\d+)/(\d+) \((\d+)%\)", log)
++rows = re.findall(r"API call #(\d+): .*in=(\d+) out=(\d+) (?:.*cache=(\d+)/(\d+) \((\d+)%\))?", log)  # no cache= on a full miss
+ tot_in = tot_c = 0
+ for n, i, o, c, ct, p in rows:
+-    i, c = int(i), int(c); tot_in += i; tot_c += c
+-    print(f"  call {n:>2} in={i:>7} out={o:>5} cached={c:>7} ({p}%)  uncached={i-c}")
++    i, c = int(i), int(c or 0); tot_in += i; tot_c += c
++    print(f"  call {n:>2} in={i:>7} out={o:>5} cached={c:>7} ({p or 0}%)  uncached={i-c}")
+ print(f"ARM {arm}: calls={len(rows)} input={tot_in} cached={tot_c} uncached={tot_in-tot_c} hit={100*tot_c/max(tot_in,1):.1f}%")
+ print(json.dumps({"arm": arm, "calls": len(rows), "input": tot_in, "cached": tot_c}))
+diff --git a/evals/postmortem/live_ab/cache_prefix_wire.py b/evals/postmortem/live_ab/cache_prefix_wire.py
+index 9415efb3c1..615a9d9b9c 100644
+--- a/evals/postmortem/live_ab/cache_prefix_wire.py
++++ b/evals/postmortem/live_ab/cache_prefix_wire.py
+@@ -58,8 +58,8 @@ task = (f"Work in {work} (create it). Before EACH tool call, think carefully for
+ ag.run_conversation(task)
+ time.sleep(1)
+ log = subprocess.run(f"grep -h '\\[{sid}\\]' ~/.hermes/logs/agent.log | grep 'API call #'", shell=True, capture_output=True).stdout.decode("utf-8", "replace")
+-rows = re.findall(r"API call #(\d+): .*in=(\d+) out=(\d+) .*cache=(\d+)/(\d+) \((\d+)%\)", log)
+-for r in rows: print(f"  call {r[0]:>2} in={int(r[1]):>6} out={int(r[2]):>5} cached={int(r[3]):>6} ({r[5]}%) uncached={int(r[1])-int(r[3])}")
++rows = re.findall(r"API call #(\d+): .*in=(\d+) out=(\d+) (?:.*cache=(\d+)/(\d+) \((\d+)%\))?", log)  # no cache= on a full miss
++for r in rows: print(f"  call {r[0]:>2} in={int(r[1]):>6} out={int(r[2]):>5} cached={int(r[3] or 0):>6} ({r[5] or 0}%) uncached={int(r[1])-int(r[3] or 0)}")
+ print(f"ARM {arm}: captured {len(captured)} payloads")
+ # prefix divergence check
+ def sig(m):  # message signature: role + block types + text/thinking lengths + signature presence
+diff --git a/evals/postmortem/tests/test_postmortem_harness.py b/evals/postmortem/tests/test_postmortem_harness.py
+index 870e81cfae..6f423efbb8 100644
+--- a/evals/postmortem/tests/test_postmortem_harness.py
++++ b/evals/postmortem/tests/test_postmortem_harness.py
+@@ -81,6 +81,49 @@ def test_every_lane_runs_and_writes_its_report(tmp_path, harness_path):
+     assert (out / "tokens.json").exists()
+ 
+ 
++def _logcalls(tmp_path, tails):
++    from evals.postmortem.forensics import logcalls
++    db = tmp_path / "state.db"; _mk_db(db)
++    log = tmp_path / "agent.log"
++    log.write_text("".join(
++        f"2026-09-06 19:32:0{n},549 INFO [root] agent.conversation_loop: API call #{n}: model=m provider=nous {tail}\n"
++        for n, tail in enumerate(tails, 1)), encoding="utf-8")
++    assert logcalls.main(["--db", str(db), "--out", str(tmp_path / "out"), "--logs", str(log)]) == 0
++    return json.loads((tmp_path / "out" / "logcalls.json").read_text(encoding="utf-8-sig"))
++
++
++def test_logcalls_counts_zero_hit_and_usage_unavailable_calls(tmp_path, harness_path):
++    """agent/turn_usage.py writes cache= only when the provider read something from cache, and logs
++    usage=unavailable when it sent no usage. A full miss still counts toward coverage and pulls the hit
++    ratio down; a usage-less call is counted on its own (state.db's api_call_count skips it too)."""
++    r = _logcalls(tmp_path, [
++        "in=1000 out=7 total=1007 latency=0.2s cache=900/1000 (90%) id=r1",
++        "in=1200 out=7 total=1207 latency=0.2s cache=1000/1200 (83%) id=r2",
++        "in=1300 out=7 total=1307 latency=0.2s id=r3",
++        "in=? out=? total=? latency=0.2s usage=unavailable",
++    ])
++    assert r["coverage"]["calls_found"] == 3
++    assert r["coverage"]["zero_hit"] == 1 and r["coverage"]["usage_unavailable"] == 1
++    assert r["observed"]["cache_hit_ratio_overall"] == round(1900 / 3500, 4)
++
++
++def test_logcalls_reads_cache_state_and_tolerates_trailing_fields(tmp_path, harness_path):
++    """Pending line shapes: cache_state= with cache_read=/cache_write= (#121135) and a trailing ttfb=
++    (#119713). cache_state=no_field means no cache counter was reported, so that call stays out of the hit
++    ratio instead of reading as a miss."""
++    r = _logcalls(tmp_path, [
++        "in=1000 out=7 total=1007 latency=0.2s cache=900/1000 (90%) id=r1 cache_state=hit cache_scope=response cache_read=900 cache_write=0",
++        "in=1200 out=7 total=1207 latency=3.0s cache=1000/1200 (83%) id=r2 upstream=Claude Platform on AWS ttfb=1.2s",
++        "in=1300 out=7 total=1307 latency=0.2s write=1300 id=r3 cache_state=cold_write cache_scope=response cache_read=0 cache_write=1300 ttfb=0.1s",
++        "in=500 out=7 total=507 latency=0.2s cache_state=no_field cache_scope=response",
++        "in=? out=? total=? latency=0.2s usage=unavailable cache_state=no_field ttfb=0.1s",
++    ])
++    assert r["coverage"]["calls_found"] == 4 and r["coverage"]["usage_unavailable"] == 1
++    assert r["coverage"]["zero_hit"] == 1 and r["coverage"]["no_cache_field"] == 1
++    assert r["observed"]["cache_hit_ratio_overall"] == round(1900 / 3500, 4)
++    assert r["observed"]["non_advancing_hit"]["pairs_share"] == 0.5  # pairs #1-#2, #2-#3; not #3-#4
++
++
+ def test_runner_lists_a_probe_per_pr(harness_path):
+     from evals.postmortem import run as runner
+     prs = {p[4] for p in runner.PROBES}
+-- 
+2.55.0
+

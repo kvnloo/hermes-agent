@@ -1,0 +1,235 @@
+{
+  "schema": "xf.receipt.v1",
+  "id": "DOCS-CHECKS/r20261001-02",
+  "spec": {
+    "kind": "static",
+    "tier": "T0",
+    "cost": "$0",
+    "lane": "cpu",
+    "question": "Does the one-commit doc fix satisfy the D2 docs rule and the docs-site checks that run offline, without colliding with queued docs bundles or open upstream PRs?",
+    "observer_effect": "none"
+  },
+  "staging": "observer-hooks-doc-drift",
+  "origin_refs": [
+    "NousResearch/hermes-agent#64231",
+    "NousResearch/hermes-agent#16106"
+  ],
+  "base_revision": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+  "head_revision": "f47410f2ac3414d4dd182a974e46ef4e57d16eda",
+  "changed_files": [
+    "website/docs/developer-guide/observer-hooks.md (+11/-0)"
+  ],
+  "d2_docs_rule": {
+    "label": "OBSERVED",
+    "stale_text": {
+      "file": "website/docs/developer-guide/observer-hooks.md",
+      "blob": "3d9c636706ff28aa6a117c1c0700fa2767aa19ae",
+      "lines": "151-158",
+      "quote": [
+        "`post_api_request` includes the same identity/runtime fields plus:",
+        "- `api_duration`, `started_at`, `ended_at`",
+        "- `finish_reason`, `message_count`, `response_model`",
+        "- `usage`",
+        "- `assistant_content_chars`, `assistant_tool_call_count`",
+        "- sanitized response payload: `response`",
+        "- compatibility object: `assistant_message`"
+      ],
+      "occurrences_of_new_fields_in_page_at_base": 0
+    },
+    "contradicting_source": {
+      "file": "agent/turn_response_intake.py",
+      "blob": "eebd9d12debaef2d5b810dd7a2fc2f88775d960f",
+      "lines": "83-97",
+      "quote": [
+        "# First stream chunk time (epoch s); None if not streamed / no chunk.",
+        "# TTFB = first_chunk_at - started_at.",
+        "first_chunk_at=getattr(agent, \"_last_api_first_chunk_at\", None),",
+        "context_length=getattr(getattr(agent, \"context_compressor\", None), \"context_length\", None),",
+        "moa_references=_moa_reference_metrics_for_hook(agent),"
+      ]
+    },
+    "semantics_sources": [
+      {
+        "claim": "first_chunk_at reset before every attempt",
+        "file": "agent/turn_api_request.py:107",
+        "blob": "1be4db0a6286c81d9024197964902b99e975b089"
+      },
+      {
+        "claim": "first_chunk_at set from the first counted stream chunk (chat completions and anthropic_messages share _StreamingCall)",
+        "file": "agent/chat_completion_helpers.py:3005-3012,3196,3514,4064-4065",
+        "blob": "5c114ec4be899fed7c10c4d693af61ac4f92cdcb"
+      },
+      {
+        "claim": "codex_responses sets it on the first parsed SSE event",
+        "file": "agent/codex_runtime.py:1090-1096",
+        "blob": "0edc8a3e7cae3e68fe112ea1da16554d2a2306ba"
+      },
+      {
+        "claim": "a stream that errors after deltas were sent returns _partial_stream_stub() before the first-chunk copy, so post_api_request carries None (pinned by tests/agent/test_first_chunk_at_hook.py::test_partial_stream_stub_leaves_timestamp_none); Codex has no stub path (a failed Codex stream raises -> api_request_error)",
+        "file": "agent/chat_completion_helpers.py:4057-4065",
+        "blob": "5c114ec4be899fed7c10c4d693af61ac4f92cdcb"
+      },
+      {
+        "claim": "bedrock_converse streams (_BedrockStream, chat_completion_helpers.py:2618, dispatched at :4078-4079) never set it; only two setters exist repo-wide (git grep '_last_api_first_chunk_at\\s*=' outside tests)",
+        "file": "agent/chat_completion_helpers.py",
+        "blob": "5c114ec4be899fed7c10c4d693af61ac4f92cdcb"
+      },
+      {
+        "claim": "moa_references = client.last_reference_metrics(), None off the MoA path",
+        "file": "agent/conversation_loop.py:307-318",
+        "blob": "b88367a7963de894b212cc6ad6ce44dc4814ce11"
+      },
+      {
+        "claim": "entries are slot_metrics(acct, label, output=text) from the most recent fan-out, output privacy-redacted when moa.privacy_filter is set",
+        "file": "agent/moa_loop.py:1033-1035,1293-1307",
+        "blob": "141c5e4f4812160a452aee28531fa3a1f82770d0"
+      },
+      {
+        "claim": "entry keys: label, model, provider, temperature, usage{input,output,cache_read,cache_write,reasoning tokens}, cost_usd, cost_status, cost_source, output (input_messages popped)",
+        "file": "agent/moa_trace.py:46-72",
+        "blob": "06eb962dce2d705d6b4109846e0dfbeebdc30c30"
+      },
+      {
+        "claim": "only aggregator usage is returned by the MoA client; advisor spend is folded into session totals separately",
+        "file": "agent/turn_usage.py:48-58",
+        "blob": "76ea5dfe8adf1e9841524645da0438997f3073b0"
+      },
+      {
+        "claim": "maintainer sample payload agrees (first_chunk_at, context_length, moa_references)",
+        "file": "hermes_cli/hooks.py:141-153",
+        "blob": "0586aec24e2aede3b8d95a29a0cca15228496eec"
+      }
+    ],
+    "head_blob": {
+      "website/docs/developer-guide/observer-hooks.md": "d2cf2daca6f66049732227c6e89507057c3edc08"
+    }
+  },
+  "checks": [
+    {
+      "name": "check_doc_links",
+      "command": "bwrap --ro-bind / / --dev /dev --proc /proc --bind $W $W --bind $TH $TH --unshare-net --unshare-pid --die-with-parent --setenv HOME $TH --setenv HERMES_HOME $TH/.hermes -- python3 website/scripts/check_doc_links.py",
+      "tree": "f47410f2ac",
+      "result": "PASS",
+      "observed": "OK: no route-style links in hand-authored docs. rc=0",
+      "label": "OBSERVED"
+    },
+    {
+      "name": "skill-docs generator freshness (docs-site-checks.yml steps 'Extract skill metadata' + 'Regenerate per-skill docs' + 'Committed skill docs match the generator')",
+      "command": "same bwrap; $HERMES_PYTHON website/scripts/extract-skills.py && $HERMES_PYTHON website/scripts/generate-skill-docs.py && git status --porcelain -- website/docs website/sidebars.ts website/i18n",
+      "tree": "f47410f2ac",
+      "result": "PASS",
+      "observed": "both rc=0; 0 changed paths",
+      "label": "OBSERVED"
+    },
+    {
+      "name": "network isolation probe inside the sandbox",
+      "result": "PASS",
+      "observed": "connect 1.1.1.1:443 -> OSError",
+      "label": "OBSERVED"
+    },
+    {
+      "name": "post_api_request list structure (CommonMark+GFM, mdast-util-from-markdown 2.0.3 + micromark-extension-gfm 3.0.0) and MDX-hazard scan of added lines",
+      "command": "node tools/md_structure_check.mjs <node_modules> base.md head.md added.txt",
+      "inputs_sha256": {
+        "base.md": "10b4ef32cfcacd08ccdf8774446cce474d375cb268aeef68abb77e05f01185fc",
+        "head.md": "e8cb03e6850ab281d758bf25d180c37c13d3b97995346b2bc6beb4a351221deb",
+        "tools/md_structure_check.mjs": "0a340f3eeeb0f45f28b5a73c258c6292c5ef0b37a012d8b69da734d3e014c7a0"
+      },
+      "result": "PASS",
+      "observed": {
+        "base_items": 6,
+        "head_items": 9,
+        "new_items_single_paragraph": true,
+        "added_lines": 11,
+        "mdx_hazards": 0
+      },
+      "negative_control": {
+        "mutation": "append '- `x`: a value like {x} or <x>' to the added lines",
+        "result": "flagged, rc=1"
+      },
+      "label": "OBSERVED"
+    },
+    {
+      "name": "adjacent emitter tests (pin first_chunk_at and moa_references semantics)",
+      "command": "HOME=$TH HERMES_HOME=$TH/.hermes HERMES_PYTHON=$HERMES_PYTHON bash scripts/run_tests.sh -j 2 tests/agent/test_first_chunk_at_hook.py tests/agent/test_moa_observability_bridge.py -q",
+      "tree": "f47410f2ac (code identical to base)",
+      "result": "PASS",
+      "observed": "2 files, 17 passed, 0 failed",
+      "blobs": {
+        "tests/agent/test_first_chunk_at_hook.py": "a7aa0dc10808de84486780f0a09a26c089e75171",
+        "tests/agent/test_moa_observability_bridge.py": "b2ae9f2ee279a084cd24d679f84da90e100ed06e"
+      },
+      "label": "OBSERVED"
+    },
+    {
+      "name": "merge-tree vs main",
+      "result": "PASS",
+      "observed": "clean (parent is main 572e4f4fad)",
+      "label": "OBSERVED"
+    },
+    {
+      "name": "merge-tree vs 18 ready/docs* bundles",
+      "result": "PASS",
+      "observed": "18/18 clean",
+      "heads": {
+        "ready/docs-agents": "9a8daaa95f",
+        "ready/docs-bot-mode": "36cf0f54d6",
+        "ready/docs-cli": "3d969343fa",
+        "ready/docs-cli-v2": "701829fed4",
+        "ready/docs-computer-use": "e6ed1c863d",
+        "ready/docs-desktop": "2ee1217746",
+        "ready/docs-mcp": "0081fb5e75",
+        "ready/docs-memory": "25baa72ade",
+        "ready/docs2-cli": "b68897f77b",
+        "ready/docs2-contributors": "29319c49cd",
+        "ready/docs2-desktop": "58f1374abe",
+        "ready/docs2-gateway": "c497e7abe5",
+        "ready/docs2-memory": "c9010e911f",
+        "ready/docs2-memory-v2": "893f127fdd",
+        "ready/docs2-models": "69a146992b",
+        "ready/docs2-skills": "104ffb3757",
+        "ready/docs2-skills-v2": "1db6249b0c",
+        "ready/docs2-update": "ec60a9f5a7"
+      },
+      "label": "OBSERVED"
+    },
+    {
+      "name": "file-overlap sweep of ready/*, staging/*, promote/* heads (57 refs) on observer-hooks.md, hooks.md, plugins/index.md",
+      "result": "PASS",
+      "observed": "0 touch observer-hooks.md; ready/docs-mcp touches plugins/index.md (not edited here)",
+      "label": "OBSERVED"
+    },
+    {
+      "name": "fork reference branch refs/fork/perf/first-visible-clocks",
+      "head": "6653c99cfde8ea0e2481552899fdadf2171055cc",
+      "result": "PASS",
+      "observed": "merge-tree with staging commit clean; its observer-hooks.md hunk (+3) sits under api_request_error and names fork-only first_reasoning_at/first_text_at, so nothing is copied",
+      "label": "OBSERVED"
+    },
+    {
+      "name": "open upstream PR #53007 (OutThisLife, head 7fde663972) observer-hooks.md hunk applies on top",
+      "command": "gh pr diff 53007 | <observer-hooks.md hunk> | git apply --check",
+      "result": "PASS",
+      "observed": "Hunk #1 succeeded at 343 (offset 11 lines)",
+      "label": "OBSERVED"
+    },
+    {
+      "name": "pr_body line citations re-read on main 572e4f4fad",
+      "result": "PASS",
+      "label": "OBSERVED",
+      "observed": "turn_response_intake.py:83-97, turn_api_request.py:107, chat_completion_helpers.py:3005-3012/4057-4065, codex_runtime.py:1090-1096, conversation_loop.py:307-318, moa_trace.py:64-72, moa_loop.py:1293-1307, turn_usage.py:48-58, hooks.py:141-153"
+    }
+  ],
+  "not_tested": [
+    "Docusaurus build:fast (website/node_modules absent; npm ci and prebuild need network)",
+    "ascii-guard lint:diagrams (ascii-guard not installed; the added lines carry no box-drawing or +-- patterns, checked statically)",
+    "zh-Hans locale: observer-hooks.md has no translated copy, so nothing to sync"
+  ],
+  "resource_usage": {
+    "api_cost_usd": 0.0
+  },
+  "verdict": "KEEP",
+  "ai_assistance": "Claude Code (Opus 5.5) ran these checks",
+  "privacy": "public-aggregate",
+  "supersedes": "DOCS-CHECKS/r20261001-01 (head d663ec667d, amended before publication: first_chunk_at bullet gained the failed-stream case)"
+}

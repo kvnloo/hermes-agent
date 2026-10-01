@@ -1,0 +1,20 @@
+▶ not activated — using HERMES_PYTHON: <hermes-home>/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 2 test files (~27 tests) under ['tests/agent/test_tool_call_dedup_order_significant.py', 'tests/agent/test_agent_guardrails.py']; running with -j 2
+[ 96.3% |    26/~27 | ✓26 | ✗ 0] ✓ tests/agent/test_agent_guardrails.py (26✓, 5.0s)
+[100.0% |    27/~27 | ✓28 | ✗ 0] ✓ tests/agent/test_tool_call_dedup_order_significant.py (2✓, 8.2s)
+
+=== Summary: 2 files, 28 tests passed, 0 failed (100% complete) in 8.2s (2 workers) ===
+  Durations cached to test_durations.json (2 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   2
+  Total subprocess CPU-wall: 13.2s  (runner wall: 8.2s, parallelism: 2x)
+  P50: 8.19s  P90: 8.19s  P95: 8.19s  P99: 8.19s  Max: 8.19s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+      8.19s  tests/agent/test_tool_call_dedup_order_significant.py
+      4.98s  tests/agent/test_agent_guardrails.py

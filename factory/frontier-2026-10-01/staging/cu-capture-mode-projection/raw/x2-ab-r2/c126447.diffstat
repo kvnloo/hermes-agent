@@ -1,0 +1,3 @@
+ tests/tools/test_computer_use_ax_walk_bound.py |  2 +-
+ tools/computer_use/cua_backend_capture.py      | 46 +++++++++++++++++++++-----
+ 2 files changed, 38 insertions(+), 10 deletions(-)

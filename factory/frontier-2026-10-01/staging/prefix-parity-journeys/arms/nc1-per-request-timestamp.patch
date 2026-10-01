@@ -1,0 +1,11 @@
+--- a/agent/turn_context.py
++++ b/agent/turn_context.py
+@@ -1289,7 +1289,7 @@
+     # Final system message = cached prompt + ephemeral additions (API-time only).
+     # Plugin/recall context goes into the user message, never the system prompt: the
+     # prompt is built ONCE per session and replayed verbatim (stable cache prefix).
+-    effective_system = active_system_prompt or ""
++    effective_system = (active_system_prompt or "") + f"\n<!-- sabotage {__import__('time').time_ns()} -->"
+     if agent.ephemeral_system_prompt:
+         effective_system = (effective_system + "\n\n" + agent.ephemeral_system_prompt).strip()
+     if effective_system:

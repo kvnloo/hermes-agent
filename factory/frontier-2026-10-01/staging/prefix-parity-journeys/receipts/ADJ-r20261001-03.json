@@ -1,0 +1,364 @@
+{
+  "schema": "xf.receipt.v1",
+  "tier": "T1",
+  "staging": "prefix-parity-journeys",
+  "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+  "head_revision": "ddf4748d31cb5dc65e7cd0b0c5b27b98d63ae880",
+  "provenance": "self",
+  "cost_usd": 0.0,
+  "env": {
+    "python": "3.11.14 (<venv>, read-only bind; live home masked)",
+    "network": "loopback only (netns); egress canary below",
+    "relay": "nemo-relay init failed (installed plugin older than tree); journeys ran Relay-off",
+    "host_load": "shared host; load1 at the end of each run is recorded per run (7.91-18.43 over 25 runs, on 10 cores / 20 threads)"
+  },
+  "sandbox": "bwrap --dev-bind / / --tmpfs <live-home> --ro-bind <venv> <venv> --unshare-net --unshare-pid --die-with-parent --clearenv; HOME/HERMES_HOME = scratch testhome; children get fixture homes",
+  "raw": {
+    "dir": "private/raw-r02 (private; path-scrubbed before sealing; never published or frozen)",
+    "manifest": "private/raw-r02/MANIFEST.sha256",
+    "manifest_sha256": "99cb8fdfe8896a88b28a88e623659c4f5f958424a0ac16c049ad5a997923e635"
+  },
+  "egress_canary": {
+    "egress_1.1.1.1:443": "blocked errno=101",
+    "loopback": "CONNECTED"
+  },
+  "ai_assistance": "Claude Code (Opus 5.5) wrote the journeys, probes and arms; disclosed per repository policy",
+  "origin_refs": [
+    "NousResearch/hermes-agent#104414",
+    "NousResearch/hermes-agent#45499",
+    "NousResearch/hermes-agent#120116",
+    "NousResearch/hermes-agent#76215",
+    "NousResearch/hermes-agent#76224",
+    "NousResearch/hermes-agent#88364",
+    "kvnloo/hermes-agent#319"
+  ],
+  "privacy": "public-aggregate: no local paths, host name, session/turn ids or prompt text",
+  "id": "ADJ/r20261001-03",
+  "supersedes": {
+    "id": "ADJ/r20261001-02",
+    "sha256": "b65b077875faa80fb6335d83470fe079d233f70255b739ea56674249a5c08b46",
+    "path": "private/superseded-r02/ADJ-r20261001-02.json"
+  },
+  "reissue": "Re-issue of r20261001-02 from the same sealed raw set (manifest sha256 unchanged); no run was repeated. Changed: env.host_load (r02 said '5-15 on 10 cores'; the recorded load1_end values range as stated here), raw.dir/manifest (the raw set moved to private/raw-r02/), inputs.harness (harness/ now takes local paths from the environment; the files that produced the raw are cited by sha256 in inputs.harness_as_run), id and supersedes. Every other field equals r02. Re-running with harness/ needs HERMES_VENV, LIVE_HOME and TH for sandbox.sh, and RAW and PROBE_TMP passed through to run_receipts.sh.",
+  "spec": {
+    "question": "Do the suites that share the changed helpers (including the refactored drive_acp) keep their pass/fail set?"
+  },
+  "inputs": {
+    "harness": {
+      "harness/build_receipts.py": "f33caef9a2adbbb0cf1c419a9383e9a6ad5bfb956792ddfdd7c4e80c1b8d802b",
+      "harness/e09_first_delta.py": "759b69173f9726f532d8d230b2d407e249e19ee92d7999954752ef31874dee44",
+      "harness/journey_probe.py": "1fe717302e61857c64df5d0d59ae04afe355befba291d90403898b7b9483498d",
+      "harness/run_receipts.sh": "3d195a4f0e95fad6b9073e7d6264663225aa7d55e5285b0272b707eb993fce2a",
+      "harness/sandbox.sh": "5a3d50ef38c76dd10a515ad82aa712cab7832438bf608e880f10b715fa865ce9"
+    },
+    "harness_as_run": {
+      "dir": "private/harness-r02 (private: local paths inline)",
+      "note": "the files that produced the raw set; harness/ is the same code with local paths taken from the environment",
+      "sha256": {
+        "private/harness-r02/build_receipts.py": "d4f8e545a74857ea3e5246e871de212da942e2eab991fc21bbdccc787006580d",
+        "private/harness-r02/e09_first_delta.py": "759b69173f9726f532d8d230b2d407e249e19ee92d7999954752ef31874dee44",
+        "private/harness-r02/journey_probe.py": "1fe717302e61857c64df5d0d59ae04afe355befba291d90403898b7b9483498d",
+        "private/harness-r02/run_receipts.sh": "c567da32f405f64ae20278e5cc5cc48c0d5633fa1cc99a1506c2148c6874e2be",
+        "private/harness-r02/sandbox.sh": "0c5f23fea0b6ee0adc767126f3a1ed2f5fb0379c1692120cbbcd7e58735f855b"
+      }
+    },
+    "arms": {},
+    "test_blobs_at_head": {
+      "tests/e2e/core/history/test_prefix_stability.py": "1133468e43a4",
+      "tests/e2e/core/history/_helpers.py": "f13dbc84a5a3",
+      "tests/e2e/core/parity/_drive_acp.py": "37627770f32e",
+      "tests/e2e/core/parity/_drive_gateway.py": "dae72c6a23ee",
+      "tests/e2e/core/parity/_gateway_child.py": "91b33976cdab",
+      "tests/fakes/fake_llm_provider.py": "339adb7e87ea (unchanged)"
+    }
+  },
+  "commands": [
+    "<wt>$ harness/sandbox.sh /usr/bin/env MAIN_REF=aea969677c60a1bb72fe227fdfb98f196a2092cc bash harness/run_receipts.sh (sequential; every run's rc/head/dirty/load1 in <raw>/runs.jsonl); branch first, then git checkout --detach MAIN_REF"
+  ],
+  "adjacent": {
+    "test_entrypoint_parity": {
+      "branch": {
+        "run": {
+          "run": "adjacent_branch_test_entrypoint_parity",
+          "rc": 0,
+          "started": "2026-10-01T11:36:46Z",
+          "ended": "2026-10-01T11:37:01Z",
+          "wall_s": 15,
+          "head": "ddf4748d31cb5dc65e7cd0b0c5b27b98d63ae880",
+          "dirty": "",
+          "load1_end": "8.97"
+        },
+        "tally": "8 passed",
+        "outcomes": [
+          {
+            "test": "test_entrypoint_parity[oneshot (-z)]",
+            "time_s": 12.358,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_entrypoint_parity[chat -q]",
+            "time_s": 0.003,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_entrypoint_parity[tui_gateway (stdio)]",
+            "time_s": 0.002,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_entrypoint_parity[serve (Desktop WS)]",
+            "time_s": 0.003,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_entrypoint_parity[gateway (fake adapter)]",
+            "time_s": 0.003,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_entrypoint_parity[api_server]",
+            "time_s": 0.003,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_entrypoint_parity[acp (stdio)]",
+            "time_s": 0.002,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_entrypoint_parity[cron (run-now)]",
+            "time_s": 0.002,
+            "outcome": "passed",
+            "message": ""
+          }
+        ]
+      },
+      "main": {
+        "run": {
+          "run": "adjacent_main_test_entrypoint_parity",
+          "rc": 0,
+          "started": "2026-10-01T11:38:08Z",
+          "ended": "2026-10-01T11:38:24Z",
+          "wall_s": 16,
+          "head": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+          "dirty": "",
+          "load1_end": "9.10"
+        },
+        "tally": "8 passed",
+        "outcomes": [
+          {
+            "test": "test_entrypoint_parity[oneshot (-z)]",
+            "time_s": 14.233,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_entrypoint_parity[chat -q]",
+            "time_s": 0.003,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_entrypoint_parity[tui_gateway (stdio)]",
+            "time_s": 0.003,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_entrypoint_parity[serve (Desktop WS)]",
+            "time_s": 0.002,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_entrypoint_parity[gateway (fake adapter)]",
+            "time_s": 0.003,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_entrypoint_parity[api_server]",
+            "time_s": 0.002,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_entrypoint_parity[acp (stdio)]",
+            "time_s": 0.002,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_entrypoint_parity[cron (run-now)]",
+            "time_s": 0.002,
+            "outcome": "passed",
+            "message": ""
+          }
+        ]
+      },
+      "identical_pass_fail_set": true
+    },
+    "test_transcript_ledger": {
+      "branch": {
+        "run": {
+          "run": "adjacent_branch_test_transcript_ledger",
+          "rc": 0,
+          "started": "2026-10-01T11:37:01Z",
+          "ended": "2026-10-01T11:38:08Z",
+          "wall_s": 67,
+          "head": "ddf4748d31cb5dc65e7cd0b0c5b27b98d63ae880",
+          "dirty": "",
+          "load1_end": "8.24"
+        },
+        "tally": "10 passed",
+        "outcomes": [
+          {
+            "test": "test_transcript_ledger[plain]",
+            "time_s": 5.686,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_transcript_ledger[tool_batches]",
+            "time_s": 4.93,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_transcript_ledger[steer]",
+            "time_s": 4.498,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_transcript_ledger[interrupt]",
+            "time_s": 4.739,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_transcript_ledger[stream_faults]",
+            "time_s": 4.712,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_transcript_ledger[manual_compress]",
+            "time_s": 9.227,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_transcript_ledger[compress_here]",
+            "time_s": 9.44,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_transcript_ledger[auto_compaction]",
+            "time_s": 8.54,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_transcript_ledger[micro_compaction]",
+            "time_s": 7.507,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_micro_compaction_resumed_display_shows_each_input_once",
+            "time_s": 4.774,
+            "outcome": "passed",
+            "message": ""
+          }
+        ]
+      },
+      "main": {
+        "run": {
+          "run": "adjacent_main_test_transcript_ledger",
+          "rc": 0,
+          "started": "2026-10-01T11:38:24Z",
+          "ended": "2026-10-01T11:39:56Z",
+          "wall_s": 92,
+          "head": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+          "dirty": "",
+          "load1_end": "11.38"
+        },
+        "tally": "10 passed",
+        "outcomes": [
+          {
+            "test": "test_transcript_ledger[plain]",
+            "time_s": 6.967,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_transcript_ledger[tool_batches]",
+            "time_s": 6.003,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_transcript_ledger[steer]",
+            "time_s": 5.715,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_transcript_ledger[interrupt]",
+            "time_s": 5.73,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_transcript_ledger[stream_faults]",
+            "time_s": 6.334,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_transcript_ledger[manual_compress]",
+            "time_s": 10.902,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_transcript_ledger[compress_here]",
+            "time_s": 11.086,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_transcript_ledger[auto_compaction]",
+            "time_s": 10.192,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_transcript_ledger[micro_compaction]",
+            "time_s": 8.053,
+            "outcome": "passed",
+            "message": ""
+          },
+          {
+            "test": "test_micro_compaction_resumed_display_shows_each_input_once",
+            "time_s": 5.483,
+            "outcome": "passed",
+            "message": ""
+          }
+        ]
+      },
+      "identical_pass_fail_set": true
+    }
+  },
+  "main_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+  "label_default": "OBSERVED"
+}

@@ -1,0 +1,90 @@
+xf_spec = 1
+id = "E23"
+rev = 2                          # rev 1 = catalog row 27 (main vs donor branch); rev 2 = main vs NousResearch#126447
+staging = "cu-capture-mode-projection"
+catalog_refs = ["E23"]
+feature = "cu-capture-mode-projection"
+kind = "ab"
+queue_rank = 0                   # owner-set (C2); unranked
+hypothesis_refs = ["NousResearch#126447", "NousResearch#113389", "receipt:X1-driver-schema/r20261001-04"]
+priors = [
+  "PRIOR: Windows/Unity, cua-driver 0.28.2, vision: main timed out at 3.942 s, projected capture 2.029 s (one sample, Xipong on #113389)",
+  "PRIOR: macOS M5 Max, 0.28.2: tree-only 47 ms vs full 248-478 ms; Finder AX walk 6.9 s (#126447 body, author-reported)",
+  "PRIOR: bare Xvfb, empty AX trees: 24.6 vs 25.4 ms, null by construction (catalog)",
+]
+
+[contract]
+question = "On a real Linux window manager with AT-SPI (sandbox-desktop image, cua-driver 0.28.2), does projecting the capture mode into get_window_state selectors cut capture wall time or timeouts in ax and vision modes beyond A/A noise?"
+hypothesis = "vision skips the AT-SPI walk and ax skips the grab, so their median and p95 drop on a large tree (headed Chromium, ~1500 controls); som is unchanged"
+varied = "tree"
+fixed = ["image id", "cua-driver 0.28.2", "targets", "host lane cpu-quiet", "harness sha256", "venv interpreter"]
+falsifier = "no ax or vision median delta outside both its bootstrap CI95 and the A/A bound, on either target"
+kill = "falsifier met -> record the null on the fork thread, defer the item (no upstream comment)"
+observer_effect = "call_tool is wrapped only to time get_window_state; identical wrapper on both arms"
+
+[class]
+cost = "local"
+tier = "docker"
+lane = "docker"
+evidence_class = "product"
+route_if_keep = "support-note"
+route_scope = "n/a"
+harness = { name = "hermes", editor_abi = "computer_use capture()", surface = "CuaDriverBackend over docker exec -i stdio" }
+
+[safety]
+net = "image build/pull only; container runs --network none"
+data_class = "public"
+cli_entrypoint = false
+allow_exec = ["docker build", "docker run", "docker exec"]
+owner_decisions = ["OD-6"]
+
+[base]
+repo = "NousResearch/hermes-agent"
+pin = "572e4f4fad"               # re-pin at claim
+
+[[arms]]
+id = "main"
+tree = "@base"
+
+[[arms]]
+id = "main-aa"
+tree = "@base"                   # separate blocks: noise floor
+
+[[arms]]
+id = "c126447"
+pr = 126447
+head = "8891ff469a"
+merge_onto = "@base"
+
+[probe]
+kind = "timing"
+cmd = "harness/e23_run.sh <main sha> <out dir>"
+targets = ["xfce4-terminal (small GTK tree)", "headed Chromium --force-renderer-accessibility on a 1500-control page"]
+modes = ["ax", "vision", "som"]
+reps = 40                        # per (target, mode, arm): 4 blocks x n=10, warmup 3 per block discarded
+order = "blocks A B A' / A' B A, alternating"
+timeout_s = 3600
+
+[oracle]
+type = "metric"
+metrics = [
+  { name = "capture_wall_ms", label = "OBSERVED", direction = "lower", primary = true },
+  { name = "get_window_state_ms", label = "OBSERVED", direction = "lower" },
+  { name = "timeouts", label = "OBSERVED", direction = "lower" },
+  { name = "png_bytes / elements per capture", label = "OBSERVED", direction = "report" },
+]
+aa_required = true
+statistic = ["median", "p95"]
+test = "bootstrap CI95 of the median delta (seed 0, 2000 resamples) and |delta| > A/A bound"
+denominator = "errored captures stay in n and count as errors; >10% infra errors -> INFRA verdict"
+
+[outputs]
+public = ["per-cell n, median, p95, timeouts, errors", "deltas with CI", "image id", "driver --version", "load before/after"]
+private = []
+not_tested = ["macOS", "Windows UIA (only the #113389 prior)", "Wayland compositors", "GPU-composited apps"]
+
+[budget]
+usd = 0
+wall_s = 5400
+max_cells = 1440
+lease_hours = 24

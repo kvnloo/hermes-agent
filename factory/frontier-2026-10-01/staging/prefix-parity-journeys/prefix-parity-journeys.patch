@@ -1,0 +1,644 @@
+From ddf4748d31cb5dc65e7cd0b0c5b27b98d63ae880 Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Thu, 1 Oct 2026 04:32:43 -0500
+Subject: [PATCH] test(e2e): prefix-stability journeys for the messaging
+ gateway, api_server and ACP
+
+C17 covers the tui_gateway and the oneshot CLI only. The surfaces that
+build a fresh agent per process had no restart journey, and that is
+where #45499 and #104414 lived. Each new journey drives one durable
+session through four process lives of one surface, with a parallel tool
+batch and one compaction:
+
+- messaging gateway: the real gateway.run.main behind the parity suite's
+  recording Telegram adapter (it can now deliver several DMs per life),
+  /compress sent as a DM;
+- api_server: POST /v1/runs addressed by the client's session_id; the
+  provider reports context pressure, so the next turn auto-compacts;
+- ACP: session/new, then session/load in a fresh `hermes acp`, /compress
+  as ACP's own slash command.
+
+The messaging gateway and api_server journeys pass. The ACP journey fails
+and is gated with known_gate on its own signature. After /compress, the
+first request of a reloaded session misses the whole prefix, for two
+reasons. The compacted transcript is not persisted (#76215; fixes in
+review: #76224, #88364). And the prompt rebuilt at the compaction nests the
+cached one, because acp_adapter/commands.py passes
+system_message=agent._cached_system_prompt to compress_now (the #15281
+shape). A new assertion pins the second cause on every surface: the
+prompt rebuilt at a compaction never contains the previous one.
+
+The ACP journey spawns and initializes `hermes acp` through the parity
+driver's new spawn_acp/close_acp, which drive_acp now uses too.
+
+Harness changes: model_payload skips the gateway's session_meta row,
+which is never sent and which every production reader filters. Usage and
+integrity are now asserted before the gated prefix block, so a gate
+cannot mask them.
+
+Refs #76215
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tests/e2e/core/history/_helpers.py            | 115 +++++++++++++++++-
+ .../e2e/core/history/test_prefix_stability.py | 110 +++++++++++++++--
+ tests/e2e/core/parity/_drive_acp.py           |  61 ++++++----
+ tests/e2e/core/parity/_drive_gateway.py       |  37 ++++--
+ tests/e2e/core/parity/_gateway_child.py       |  40 +++---
+ 5 files changed, 302 insertions(+), 61 deletions(-)
+
+diff --git a/tests/e2e/core/history/_helpers.py b/tests/e2e/core/history/_helpers.py
+index b81d0ed471..f13dbc84a5 100644
+--- a/tests/e2e/core/history/_helpers.py
++++ b/tests/e2e/core/history/_helpers.py
+@@ -26,6 +26,9 @@ import time
+ from pathlib import Path
+ from typing import Any, Iterable
+ 
++from tests.e2e.core.parity import _drive_acp, _drive_gateway
++from tests.e2e.core.parity._helpers import ParityHome
++
+ REPO_ROOT = Path(__file__).resolve().parents[4]
+ 
+ # Children get an ALLOWLISTED env: a developer or agent shell exports TERMINAL_CWD,
+@@ -190,7 +193,8 @@ def assert_exactly_once(msgs: Iterable[dict[str, Any]], where: str) -> None:
+ 
+ 
+ def model_payload(msgs: Iterable[dict[str, Any]]) -> list[tuple]:
+-    return [identity(m) for m in msgs if m.get("role") != "system"]
++    # session_meta rows (the gateway's tools/model snapshot of a fresh session) are never sent.
++    return [identity(m) for m in msgs if m.get("role") not in ("system", "session_meta")]
+ 
+ 
+ def assert_replay_equals_persisted(request: dict[str, Any], persisted: list[dict], where: str) -> None:
+@@ -516,6 +520,115 @@ class TuiGateway:
+         return self.wait_event("message.complete", sid, start=start, timeout=timeout).get("payload") or {}
+ 
+ 
++# ---------------------------------------------------------------------------------------------
++# messaging gateway, api_server and ACP: the parity matrix's drivers, one process life per hop
++
++
++class SurfaceHome(ParityHome):
++    """The ``ParityHome`` the parity drivers spawn and stop through, over THIS suite's allowlisted
++    child env, so every surface of a journey runs with the same env."""
++
++    def __init__(self, env: dict[str, str], cwd: Path, hermes_home: Path) -> None:
++        home = Path(env["HOME"])
++        super().__init__(root=home, home=home, hermes_home=hermes_home, project=cwd, markers=home,
++                         pid_log=home / "mcp_pids.log", tag="")
++        self._env = env
++
++    def env(self, extra: dict[str, str] | None = None) -> dict[str, str]:
++        return {**self._env, "PWD": str(self.project), **(extra or {})}
++
++
++def root_session(hermes_home: Path, source: str) -> str:
++    """The one root session a daemon surface created for this journey's conversation."""
++    with db_connect(hermes_home) as con:
++        rows = [r[0] for r in con.execute(
++            "SELECT id FROM sessions WHERE source=? AND parent_session_id IS NULL", (source,))]
++    assert len(rows) == 1, f"expected one root {source} session, found {rows}"
++    return rows[0]
++
++
++def run_messaging_gateway(env: dict[str, str], cwd: Path, hermes_home: Path, texts: list[str],
++                          spawned: Spawned) -> None:
++    """One life of the real messaging gateway (recording Telegram adapter): ``texts`` arrive as DMs
++    on one private chat, in order, then the ``hermes gateway stop`` path."""
++    proc, events, graceful = _drive_gateway.run_gateway(SurfaceHome(env, cwd, hermes_home), texts)
++    spawned.add(proc)
++    outcomes = [ev["outcome"] for ev in events if ev["kind"] == "complete"]
++    assert outcomes == ["success"] * len(texts) and graceful, (
++        f"messaging gateway life: outcomes={outcomes} graceful_exit={graceful}; events={events}")
++
++
++class ApiServerRuns:
++    """One life of ``python -m gateway.run`` serving only api_server; a turn is ``POST /v1/runs``
++    addressed by the client's ``session_id``, polled to its terminal state."""
++
++    def __init__(self, env: dict[str, str], cwd: Path, hermes_home: Path, spawned: Spawned) -> None:
++        self.ph, self.spawned = SurfaceHome(env, cwd, hermes_home), spawned
++
++    def __enter__(self) -> "ApiServerRuns":
++        self.proc, self.base, self.key = _drive_gateway.spawn_api_server(self.ph)
++        self.spawned.add(self.proc)
++        return self
++
++    def __exit__(self, exc_type: Any, *_exc: object) -> None:
++        graceful = _drive_gateway._stop(self.ph, self.proc)
++        assert exc_type is not None or graceful, f"api_server did not stop cleanly (rc={self.proc.returncode})"
++
++    def submit(self, sid: str, text: str, timeout: float = 120.0) -> dict:
++        status, raw = _drive_gateway._http("POST", f"{self.base}/v1/runs", key=self.key,
++                                           body={"input": text, "session_id": sid}, timeout=30)
++        assert status in (200, 202), f"POST /v1/runs -> {status}: {raw[-2000:]}"
++        run_id = json.loads(raw)["run_id"]
++        deadline = time.monotonic() + timeout
++        while True:
++            status, raw = _drive_gateway._http("GET", f"{self.base}/v1/runs/{run_id}", key=self.key, timeout=30)
++            run = json.loads(raw) if status == 200 else {}
++            if run.get("status") in ("completed", "failed", "cancelled", "interrupted"):
++                break
++            assert time.monotonic() < deadline, f"run {run_id} not finished in {timeout}s: {status} {raw[-500:]}"
++            time.sleep(0.1)
++        assert run["status"] == "completed", f"run {run_id} ended {run.get('status')}: {run.get('error')}"
++        return run
++
++
++class AcpStdio:
++    """One life of ``hermes acp`` (an editor host): ``session/new`` or ``session/load`` with the
++    hop's cwd, ``session/prompt`` per turn (``/compress`` is ACP's own slash command), stdin EOF."""
++
++    def __init__(self, env: dict[str, str], cwd: Path, hermes_home: Path, spawned: Spawned) -> None:
++        self.ph, self.spawned = SurfaceHome(env, cwd, hermes_home), spawned
++
++    def __enter__(self) -> "AcpStdio":
++        self._stderr = open(self.ph.home / "acp.stderr.log", "a", encoding="utf-8")  # noqa: SIM115
++        self.proc, self.client, _init = _drive_acp.spawn_acp(self.ph, self._stderr, "prefix-stability")
++        self.spawned.add(self.proc)
++        return self
++
++    def __exit__(self, exc_type: Any, *_exc: object) -> None:
++        try:
++            graceful = _drive_acp.close_acp(self.proc)
++        finally:
++            self._stderr.close()
++        assert exc_type is not None or graceful, "hermes acp did not exit on stdin EOF"
++
++    def open(self, sid: str | None) -> str:
++        params = {"cwd": str(self.ph.project), "mcpServers": []}
++        if sid is None:
++            return self.client.request("session/new", params, timeout=120)["sessionId"]
++        self.client.request("session/load", {**params, "sessionId": sid}, timeout=120)
++        return sid
++
++    def prompt(self, sid: str, text: str, timeout: float = 120.0) -> None:
++        res = self.client.request("session/prompt", {"sessionId": sid, "prompt": [{"type": "text", "text": text}]},
++                                  timeout=timeout)
++        assert res.get("stopReason") == "end_turn", f"ACP prompt {text[:40]!r} stopped {res}"
++
++
++def first_summary_request(requests: list[dict[str, Any]], start: int) -> int | None:
++    """Index of the first request at or after ``start`` that carries a compaction summary."""
++    return next((i for i in range(start, len(requests)) if any(is_summary(m) for m in requests[i]["messages"])), None)
++
++
+ # ---------------------------------------------------------------------------------------------
+ # scripted model
+ 
+diff --git a/tests/e2e/core/history/test_prefix_stability.py b/tests/e2e/core/history/test_prefix_stability.py
+index ba47cbf8f4..1133468e43 100644
+--- a/tests/e2e/core/history/test_prefix_stability.py
++++ b/tests/e2e/core/history/test_prefix_stability.py
+@@ -3,7 +3,9 @@
+ One durable session is driven for 10+ turns through fresh processes of the real entrypoints that
+ can continue it — the ``tui_gateway`` stdio JSON-RPC server (what the TUI/Desktop spawn) and the
+ ``hermes chat -q --resume`` oneshot CLI — switching process and working directory between turns,
+-with a parallel tool batch and (gateway journeys) one manual ``session.compress`` on the way.
++with a parallel tool batch and (gateway journeys) one manual ``session.compress`` on the way. The
++surfaces that build a fresh agent per process each get their own restart journey with one compaction:
++the messaging gateway, api_server ``/v1/runs`` and ACP.
+ 
+ Invariants over the fake provider's recorded request stream:
+ 
+@@ -22,9 +24,12 @@ from pathlib import Path
+ 
+ import pytest
+ 
++from tests.e2e.core._pending_fixes import known_gate
+ from tests.e2e.core.history._helpers import (
+     NO_BACKGROUND_REVIEW,
+     OFFLINE_CONFIG,
++    AcpStdio,
++    ApiServerRuns,
+     Script,
+     Spawned,
+     TuiGateway,
+@@ -32,11 +37,15 @@ from tests.e2e.core.history._helpers import (
+     assert_rows_exactly_once,
+     assert_usage_matches,
+     big,
++    canon,
+     child_env,
++    first_summary_request,
+     integrity_ok,
+     lineage,
+     prefix_breaks,
++    root_session,
+     row_counts,
++    run_messaging_gateway,
+     run_oneshot,
+     tools_breaks,
+     views,
+@@ -76,6 +85,49 @@ JOURNEYS: dict[str, list[Hop]] = {
+         ("gw", "a", ["sw6 before compress", "/compress", "sw6 after compress", "sw6 more"]),
+         ("cli", "b", ["sw7 oneshot after compaction"]),
+     ],
++    # The tui_gateway_restarts shape on surfaces that build a fresh agent per process: the messaging
++    # gateway (recording Telegram adapter, one DM chat), api_server /v1/runs addressed by the client's
++    # session_id, and ACP (session/new, then session/load). Their cwd is an explicit input
++    # (terminal.cwd, session/load cwd) and a changed cwd rebuilds the prompt by design, so it stays put.
++    "messaging_gateway_restarts": [
++        ("msg", "a", ["mg1 first turn", "TOOLS:mg1 runs a parallel batch", "mg1 third turn"]),
++        ("msg", "a", ["mg2 resumed turn", "mg2 another turn"]),
++        ("msg", "a", ["mg3 turn before compress", "/compress", "mg3 turn after compress", "mg3 more"]),
++        ("msg", "a", ["mg4 resumed after compaction", "mg4 last turn"]),
++    ],
++    # No manual compaction over HTTP: the provider reports context pressure ("PRESSURE:") and the
++    # next turn auto-compacts, as a long API session does.
++    "api_server_runs_restarts": [
++        ("api", "a", ["api1 first turn", "TOOLS:api1 runs a parallel batch", "api1 third turn"]),
++        ("api", "a", ["api2 resumed turn", "api2 another turn"]),
++        ("api", "a", ["PRESSURE:api3 turn near the window", "api3 turn after compaction", "api3 more"]),
++        ("api", "a", ["api4 resumed after compaction", "api4 last turn"]),
++    ],
++    "acp_restarts": [
++        ("acp", "a", ["acp1 first turn", "TOOLS:acp1 runs a parallel batch", "acp1 third turn"]),
++        ("acp", "a", ["acp2 loaded turn", "acp2 another turn"]),
++        ("acp", "a", ["acp3 turn before compress", "/compress", "acp3 turn after compress", "acp3 more"]),
++        ("acp", "a", ["acp4 loaded after compaction", "acp4 last turn"]),
++    ],
++}
++# Provider-reported prompt tokens for a "PRESSURE:" turn: above the 75% compaction threshold of the
++# fixture's 128K window, so the next turn's preflight compacts.
++PRESSURE_PROMPT_TOKENS = 110_000
++
++# journey -> (the gap's own failure signature, "#issue reason"); see _pending_fixes.known_gate.
++# acp_restarts repro: after ACP /compress, the first request of a fresh `hermes acp` (session/load) is a
++# full prefix miss. Two causes, each enough on its own: the compacted transcript is never persisted, so
++# the reload replays the pre-compaction rows; and the prompt rebuilt at the compaction wraps the cached
++# one (compress_now(system_message=agent._cached_system_prompt), the #15281 shape), which is not
++# persisted either, so the reload drops back to the stored copy. With only the first fixed, the nested
++# prompt is persisted instead and the nesting assertion below is the one that still fails.
++KNOWN: dict[str, tuple[str, str]] = {
++    "acp_restarts": (
++        r"^prompt-cache prefix broke outside the compaction boundary:\s+request \d+ \(in hop 4 \(acp in "
++        r"work-a\)\): messages\[\d+\] \(\w+\) changed;[^\n]*(?![\s\S]*request \d+ \(in hop)"
++        r"|^the prompt rebuilt at the compaction \(request \d+\) nests the previous system prompt",
++        "#76215 ACP /compress is lost on reload (fixes in review: #76224, #88364), and its rebuilt prompt nests the "
++        "cached one (acp_adapter/commands.py passes system_message=agent._cached_system_prompt)"),
+ }
+ 
+ class ToolsArrayDrift(Exception):
+@@ -104,6 +156,11 @@ def world(tmp_path):
+ 
+ def _queue_turn(script: Script, prompt: str) -> str:
+     """Script the model for one turn; returns the text the user types."""
++    if prompt == "/compress":
++        return prompt
++    pressure = prompt.startswith("PRESSURE:")
++    if pressure:
++        prompt = prompt[len("PRESSURE:"):]
+     if prompt.startswith("TOOLS:"):
+         prompt = prompt[len("TOOLS:"):]
+         tag = prompt.split()[0]
+@@ -113,7 +170,8 @@ def _queue_turn(script: Script, prompt: str) -> str:
+     # answer so a double-counted or dropped request is visible.
+     n = len(prompt)
+     script.actions.append(Text(big(f"answer-{prompt.replace(' ', '-')}", 12000),
+-                               prompt_tokens=2000 + n, completion_tokens=40 + n, cached_tokens=1500))
++                               prompt_tokens=(PRESSURE_PROMPT_TOKENS if pressure else 2000) + n,
++                               completion_tokens=40 + n, cached_tokens=1500))
+     return prompt
+ 
+ 
+@@ -146,6 +204,20 @@ def run_journey(world: dict, hops: list[Hop]) -> tuple[str, list[tuple[int, str]
+                         continue
+                     gw.submit(live, _queue_turn(script, turn))
+                 sid = sid or gw.stored[live]
++        elif surface == "msg":
++            run_messaging_gateway(env, cwd, home, [_queue_turn(script, t) for t in turns], world["spawned"])
++            sid = sid or root_session(home, "telegram")
++        elif surface == "api":
++            sid = sid or "prefix-journey-api"  # the client's own conversation id
++            with ApiServerRuns(env, cwd, home, world["spawned"]) as api:
++                for turn in turns:
++                    api.submit(sid, _queue_turn(script, turn))
++        elif surface == "acp":
++            with AcpStdio(env, cwd, home, world["spawned"]) as acp:
++                live = acp.open(sid)
++                for turn in turns:
++                    acp.prompt(live, _queue_turn(script, turn))
++            sid = sid or live
+         else:
+             for turn in turns:
+                 _out, got = run_oneshot(env, cwd, _queue_turn(script, turn), world["spawned"], resume=sid)
+@@ -153,6 +225,9 @@ def run_journey(world: dict, hops: list[Hop]) -> tuple[str, list[tuple[int, str]
+                 sid = got
+         main = srv.main_requests()
+         assert len(main) > opened_at, f"{label}: sent no model request"
++        if surface != "gw" and any(t == "/compress" or t.startswith("PRESSURE:") for t in turns):
++            compaction_idx = first_summary_request(main, opened_at)
++            assert compaction_idx is not None, f"{label}: no request after the compaction carries a summary"
+         if persisted is not None:
+             assert_replay_equals_persisted(main[opened_at], persisted, f"{label} opening request")
+         assert_rows_exactly_once(home, sid, label)
+@@ -164,6 +239,11 @@ def run_journey(world: dict, hops: list[Hop]) -> tuple[str, list[tuple[int, str]
+     return sid, openings, compaction_idx
+ 
+ 
++def _system_text(request: dict) -> str:
++    content = request["messages"][0].get("content")
++    return content if isinstance(content, str) else canon(content)
++
++
+ @pytest.mark.parametrize("journey", list(JOURNEYS))
+ def test_request_prefix_is_byte_stable_across_processes(world, journey):
+     sid, openings, compaction_idx = run_journey(world, JOURNEYS[journey])
+@@ -174,19 +254,25 @@ def test_request_prefix_is_byte_stable_across_processes(world, journey):
+     def where(i: int) -> str:
+         return f"request {i} (in {max((o for o in openings if o[0] <= i), default=(0, '?'))[1]})"
+ 
+-    # System prompt + messages first; the tools array is checked last, on its own, so a gated
+-    # tools-drift bug cannot mask a message-prefix, usage or integrity regression.
+-    breaks = prefix_breaks(main, tools=False)
+-    unexpected = [(i, why) for i, why in breaks if i != compaction_idx]
+-    assert not unexpected, "prompt-cache prefix broke outside the compaction boundary:\n" + "\n".join(
+-        f"  {where(i)}: {why}" for i, why in unexpected)
+-    if compaction_idx is not None:
+-        assert [i for i, _ in breaks] == [compaction_idx], (
+-            f"the manual /compress must break the prefix exactly once, at request {compaction_idx}: {breaks}")
+-
++    # Usage and integrity first, so a gated prefix gap (KNOWN) cannot mask them; the tools array is
++    # checked last, on its own, so a gated tools-drift bug cannot mask a message-prefix regression.
+     assert_usage_matches(home, lineage(home, sid), srv.requests, f"after journey {journey}")
+     integrity_ok(home)
+ 
++    breaks = prefix_breaks(main, tools=False)
++    unexpected = [(i, why) for i, why in breaks if i != compaction_idx]
++    with known_gate(KNOWN, journey):
++        assert not unexpected, "prompt-cache prefix broke outside the compaction boundary:\n" + "\n".join(
++            f"  {where(i)}: {why}" for i, why in unexpected)
++        if compaction_idx is not None:
++            assert [i for i, _ in breaks] == [compaction_idx], (
++                f"the compaction must break the prefix exactly once, at request {compaction_idx}: {breaks}")
++            # The one sanctioned break is a rebuild, never the old prompt wrapped in a new one (#15281).
++            before, after = (_system_text(main[i]) for i in (compaction_idx - 1, compaction_idx))
++            assert after == before or before not in after, (
++                f"the prompt rebuilt at the compaction (request {compaction_idx}) nests the previous system "
++                f"prompt ({len(before)} -> {len(after)} chars)")
++
+     drift = [(i, why) for i, why in tools_breaks(main) if i != compaction_idx]
+     if drift:
+         raise ToolsArrayDrift("tools array changed within one session:\n" + "\n".join(
+diff --git a/tests/e2e/core/parity/_drive_acp.py b/tests/e2e/core/parity/_drive_acp.py
+index 25bd77afef..37627770f3 100644
+--- a/tests/e2e/core/parity/_drive_acp.py
++++ b/tests/e2e/core/parity/_drive_acp.py
+@@ -15,7 +15,7 @@ import queue
+ import subprocess
+ import threading
+ import time
+-from typing import Any
++from typing import IO, Any
+ 
+ from tests.e2e.core.parity._helpers import TURN_TIMEOUT, DriveResult, ParityHome, hermes_argv, terminate
+ from tests.fakes.fake_llm_provider import FakeLLMServer
+@@ -99,22 +99,48 @@ class _AcpClient:
+                     "error": {"code": -32601, "message": f"client does not implement {method}"}})
+ 
+ 
++def spawn_acp(ph: ParityHome, stderr: IO[str],
++              client_name: str = "parity-suite") -> tuple[subprocess.Popen, _AcpClient, dict[str, Any]]:
++    """``hermes acp`` in ``ph.project``, initialized as an editor host without fs/terminal
++    capabilities. Returns (proc, client, initialize result); stop it with ``close_acp``."""
++    proc = subprocess.Popen(
++        hermes_argv("acp"), cwd=ph.project, env=ph.env(), stdin=subprocess.PIPE,
++        stdout=subprocess.PIPE, stderr=stderr, text=True, bufsize=1,
++    )
++    client = _AcpClient(proc)
++    try:
++        init = client.request("initialize", {
++            "protocolVersion": 1,
++            "clientCapabilities": {"fs": {"readTextFile": False, "writeTextFile": False}, "terminal": False},
++            "clientInfo": {"name": client_name, "version": "1.0"},
++        }, timeout=60)
++    except BaseException:
++        close_acp(proc)
++        raise
++    return proc, client, init
++
++
++def close_acp(proc: subprocess.Popen) -> bool:
++    """Normal host shutdown: close the pipe and let the server exit on EOF. False if it had to be
++    terminated instead."""
++    try:
++        proc.stdin.close()  # type: ignore[union-attr]
++    except OSError:
++        pass
++    try:
++        proc.wait(timeout=EOF_EXIT_TIMEOUT)
++    except subprocess.TimeoutExpired:
++        terminate(proc)
++        return False
++    return True
++
++
+ def drive_acp(ph: ParityHome, srv: FakeLLMServer, prompt: str) -> DriveResult:
+     stderr_path = ph.root / "acp_stderr.log"
+     with open(stderr_path, "w", encoding="utf-8") as stderr_fh:
+-        proc = subprocess.Popen(
+-            hermes_argv("acp"), cwd=ph.project, env=ph.env(), stdin=subprocess.PIPE,
+-            stdout=subprocess.PIPE, stderr=stderr_fh, text=True, bufsize=1,
+-        )
+-        client = _AcpClient(proc)
+-        graceful = True
++        proc, client, init = spawn_acp(ph, stderr_fh)
+         stop_reason = None
+         try:
+-            init = client.request("initialize", {
+-                "protocolVersion": 1,
+-                "clientCapabilities": {"fs": {"readTextFile": False, "writeTextFile": False}, "terminal": False},
+-                "clientInfo": {"name": "parity-suite", "version": "1.0"},
+-            }, timeout=60)
+             session = client.request("session/new", {"cwd": str(ph.project), "mcpServers": []},
+                                      timeout=120)
+             session_id = session["sessionId"]
+@@ -123,16 +149,7 @@ def drive_acp(ph: ParityHome, srv: FakeLLMServer, prompt: str) -> DriveResult:
+             }, timeout=TURN_TIMEOUT)
+             stop_reason = result.get("stopReason")
+         finally:
+-            # Normal host shutdown: close the pipe and let the server exit on EOF.
+-            try:
+-                proc.stdin.close()  # type: ignore[union-attr]
+-            except OSError:
+-                pass
+-            try:
+-                proc.wait(timeout=EOF_EXIT_TIMEOUT)
+-            except subprocess.TimeoutExpired:
+-                graceful = False
+-                terminate(proc)
++            graceful = close_acp(proc)
+     return DriveResult(
+         final_text="".join(client.chunks),
+         toolset=ACP_TOOLSET,
+diff --git a/tests/e2e/core/parity/_drive_gateway.py b/tests/e2e/core/parity/_drive_gateway.py
+index 8b93568f58..dae72c6a23 100644
+--- a/tests/e2e/core/parity/_drive_gateway.py
++++ b/tests/e2e/core/parity/_drive_gateway.py
+@@ -140,20 +140,22 @@ def _collect_delivered(events: list[dict[str, Any]]) -> str:
+     return "\n".join(messages.values())
+ 
+ 
+-def drive_gateway(ph: ParityHome, srv: FakeLLMServer, prompt: str) -> DriveResult:
++def run_gateway(ph: ParityHome, prompts: list[str]) -> tuple[subprocess.Popen, list[dict[str, Any]], bool]:
++    """One gateway life: the DMs in order on one private chat (each after the previous turn
++    completed), then the normal stop. Returns (proc, events, graceful)."""
+     ph.pin_terminal_cwd()
+     # A real Telegram setup: bot token + allowlisted user in the profile .env.
+     _append_env(ph, {"TELEGRAM_BOT_TOKEN": "123456:parity-fake-token",
+                      "TELEGRAM_ALLOWED_USERS": PARITY_USER_ID})
+     proc = _spawn(ph, [sys.executable, str(GATEWAY_CHILD)], "gateway.stderr.log",
+-                  {"PARITY_GATEWAY_PROMPT": prompt, "PARITY_GATEWAY_USER": PARITY_USER_ID})
++                  {"PARITY_GATEWAY_PROMPTS": json.dumps(prompts), "PARITY_GATEWAY_USER": PARITY_USER_ID})
+     lines = _stdout_pump(proc)
+     events: list[dict[str, Any]] = []
+-    outcome: str | None = None
++    completed = 0
+     graceful = False
+     try:
+         deadline = time.monotonic() + TURN_TIMEOUT
+-        while outcome is None:
++        while completed < len(prompts):
+             remaining = deadline - time.monotonic()
+             if remaining <= 0:
+                 raise AssertionError(f"gateway turn timed out; events={events}\n{_log_tail(proc)}")
+@@ -169,9 +171,16 @@ def drive_gateway(ph: ParityHome, srv: FakeLLMServer, prompt: str) -> DriveResul
+             ev = json.loads(line[len(_LINE_PREFIX):])
+             events.append(ev)
+             if ev["kind"] == "complete":
+-                outcome = ev["outcome"]
++                completed += 1
++                deadline = time.monotonic() + TURN_TIMEOUT
+     finally:
+         graceful = _stop(ph, proc)
++    return proc, events, graceful
++
++
++def drive_gateway(ph: ParityHome, srv: FakeLLMServer, prompt: str) -> DriveResult:
++    proc, events, graceful = run_gateway(ph, [prompt])
++    outcome = next((ev["outcome"] for ev in events if ev["kind"] == "complete"), None)
+     return DriveResult(
+         final_text=_collect_delivered(events), toolset="hermes-telegram", cwd_channel="terminal.cwd",
+         graceful_exit=graceful,
+@@ -227,10 +236,15 @@ def _await_own_api_server(proc: subprocess.Popen, base: str, key: str) -> bool:
+         time.sleep(0.2)
+ 
+ 
+-def drive_api_server(ph: ParityHome, srv: FakeLLMServer, prompt: str) -> DriveResult:
++def spawn_api_server(ph: ParityHome) -> tuple[subprocess.Popen, str, str]:
++    """``python -m gateway.run`` with only api_server enabled; (proc, base url, key) once OUR
++    child answers. Stop it with ``_stop``."""
+     ph.pin_terminal_cwd()
+     key = secrets.token_hex(32)
+-    env_before = (ph.hermes_home / ".env").read_text(encoding="utf-8") if (ph.hermes_home / ".env").exists() else ""
++    env_file = ph.hermes_home / ".env"
++    # A previous life's API_SERVER_* lines are replaced, never shadowed.
++    env_before = "".join(line for line in (env_file.read_text(encoding="utf-8") if env_file.exists() else "")
++                         .splitlines(keepends=True) if not line.startswith("API_SERVER_"))
+     for _attempt in range(PORT_ATTEMPTS):
+         port = _free_loopback_port()
+         (ph.hermes_home / ".env").write_text(env_before, encoding="utf-8")
+@@ -244,10 +258,13 @@ def drive_api_server(ph: ParityHome, srv: FakeLLMServer, prompt: str) -> DriveRe
+             _stop(ph, proc)
+             raise
+         if ready:
+-            break
++            return proc, base, key
+         _stop(ph, proc)
+-    else:
+-        raise AssertionError(f"api server lost the port race {PORT_ATTEMPTS} times\n{_log_tail(proc)}")
++    raise AssertionError(f"api server lost the port race {PORT_ATTEMPTS} times\n{_log_tail(proc)}")
++
++
++def drive_api_server(ph: ParityHome, srv: FakeLLMServer, prompt: str) -> DriveResult:
++    proc, base, key = spawn_api_server(ph)
+     status: int | None = None
+     payload: dict[str, Any] = {}
+     graceful = False
+diff --git a/tests/e2e/core/parity/_gateway_child.py b/tests/e2e/core/parity/_gateway_child.py
+index 8413b72d4e..91b33976cd 100644
+--- a/tests/e2e/core/parity/_gateway_child.py
++++ b/tests/e2e/core/parity/_gateway_child.py
+@@ -1,4 +1,4 @@
+-"""Lane-private child process for ``_drive_gateway.drive_gateway``.
++"""Lane-private child process for ``_drive_gateway.run_gateway``.
+ 
+ Runs the REAL messaging gateway entrypoint (``gateway.run.main`` — what
+ ``python -m gateway.run`` / the ``hermes gateway run`` service executes: host
+@@ -8,11 +8,12 @@ Telegram adapter instance is a recording fake. Everything behind the adapter
+ (authorization, session store, SessionDB, agent cache, AIAgent, hooks, plugins,
+ MCP) is production code.
+ 
+-The fake adapter injects ONE inbound DM through the adapter's normal
+-``handle_message`` path once the runner is running, prints every outbound
++The fake adapter injects each inbound DM of ``PARITY_GATEWAY_PROMPTS`` (a JSON
++list) in order, each once the previous one completed, through the adapter's
++normal ``handle_message`` path once the runner is running, prints every outbound
+ ``send()`` and the ``on_processing_complete`` outcome as ``PARITY-GW <json>``
+-lines on stdout, and otherwise waits for the parent's normal stop
+-(planned-stop marker + SIGTERM, exactly like ``hermes gateway stop``).
++lines on stdout, and otherwise waits for the parent's normal stop (planned-stop
++marker + SIGTERM, exactly like ``hermes gateway stop``).
+ """
+ 
+ from __future__ import annotations
+@@ -42,12 +43,13 @@ def emit(kind: str, **payload: Any) -> None:
+ 
+ 
+ class ParityTelegramAdapter(BasePlatformAdapter):
+-    """Telegram-shaped adapter: no network, records outbound text, injects one DM."""
++    """Telegram-shaped adapter: no network, records outbound text, injects the scripted DMs."""
+ 
+     def __init__(self, config: Any, platform: Platform) -> None:
+         super().__init__(config, platform)
+         self._sent = 0
+         self._inject_task: Optional[asyncio.Task] = None
++        self._completed = asyncio.Event()
+ 
+     async def connect(self, *, is_reconnect: bool = False) -> bool:
+         self._mark_connected()
+@@ -62,16 +64,21 @@ class ParityTelegramAdapter(BasePlatformAdapter):
+         while not getattr(runner, "_running", False) or getattr(runner, "_startup_restore_in_progress", True):
+             await asyncio.sleep(0.05)
+         emit("ready")
+-        source = self.build_source(
+-            chat_id=PARITY_CHAT_ID, chat_name="parity", chat_type="dm",
+-            user_id=PARITY_USER_ID, user_name="parity-user", message_id="1",
+-        )
+-        event = MessageEvent(
+-            text=os.environ["PARITY_GATEWAY_PROMPT"], source=source, message_id="1",
+-            user_id=PARITY_USER_ID, user_name="parity-user",
+-        )
+-        await self.handle_message(event)
+-        emit("accepted", accepted=bool(getattr(event, "_gateway_accepted", False)))
++        for n, text in enumerate(json.loads(os.environ["PARITY_GATEWAY_PROMPTS"])):
++            # Unique across gateway lives of one test, so a later life never sees a reused id.
++            message_id = f"{os.getpid()}{n:03d}"
++            source = self.build_source(
++                chat_id=PARITY_CHAT_ID, chat_name="parity", chat_type="dm",
++                user_id=PARITY_USER_ID, user_name="parity-user", message_id=message_id,
++            )
++            event = MessageEvent(
++                text=text, source=source, message_id=message_id,
++                user_id=PARITY_USER_ID, user_name="parity-user",
++            )
++            self._completed.clear()
++            await self.handle_message(event)
++            emit("accepted", accepted=bool(getattr(event, "_gateway_accepted", False)))
++            await self._completed.wait()
+ 
+     async def disconnect(self) -> None:
+         if self._inject_task is not None and not self._inject_task.done():
+@@ -95,6 +102,7 @@ class ParityTelegramAdapter(BasePlatformAdapter):
+ 
+     async def on_processing_complete(self, event: MessageEvent, outcome: Any) -> None:
+         emit("complete", outcome=str(getattr(outcome, "value", outcome)))
++        self._completed.set()
+ 
+ 
+ _real_instantiate = gateway_run.GatewayRunner._instantiate_adapter
+-- 
+2.55.0
+

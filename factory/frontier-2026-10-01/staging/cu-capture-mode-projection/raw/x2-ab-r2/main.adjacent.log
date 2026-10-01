@@ -1,0 +1,37 @@
+▶ not activated — using HERMES_PYTHON: <HERMES_PYTHON>
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 11 test files (~148 tests) under ['tests/tools/test_computer_use_ax_walk_bound.py', 'tests/tools/test_computer_use.py', 'tests/tools/test_computer_use_null_pid_windows.py', 'tests/tools/test_computer_use_capture_routing.py', 'tests/tools/test_computer_use_fullscreen_capture.py', 'tests/tools/test_computer_use_cua_backend_linux.py', 'tests/tools/test_computer_use_screenshot_dedup.py', 'tests/tools/test_computer_use_vision_routing.py', 'tests/tools/test_computer_use_cua_0_9.py', 'tests/tools/test_computer_use_capture_fence.py', 'tests/tools/test_computer_use_zero_bounds.py']; running with -j 2
+[  2.0% |     3/~148 | ✓5 | ✗0] ✓ tests/tools/test_computer_use_ax_walk_bound.py (5✓, 2.2s)
+[  2.7% |     4/~148 | ✓7 | ✗0] ✓ tests/tools/test_computer_use_capture_fence.py (2✓, 2.1s)
+[  6.1% |     9/~148 | ✓12 | ✗ 0] ✓ tests/tools/test_computer_use_capture_routing.py (5✓, 3.5s)
+[ 64.9% |    96/~148 | ✓99 | ✗ 0] ✓ tests/tools/test_computer_use.py (87✓, 8.7s)
+[ 68.2% |   101/~148 | ✓104 | ✗  0] ✓ tests/tools/test_computer_use_cua_backend_linux.py (5✓, 1.8s)
+[ 74.3% |   110/~148 | ✓116 | ✗  0] ✓ tests/tools/test_computer_use_cua_0_9.py (12✓, 3.0s)
+[ 76.4% |   113/~148 | ✓119 | ✗  0] ✓ tests/tools/test_computer_use_null_pid_windows.py (3✓, 1.9s)
+[ 82.4% |   122/~148 | ✓132 | ✗  0] ✓ tests/tools/test_computer_use_fullscreen_capture.py (13✓, 2.2s)
+[ 90.5% |   134/~148 | ✓144 | ✗  0] ✓ tests/tools/test_computer_use_screenshot_dedup.py (12✓, 2.1s)
+[ 98.0% |   145/~148 | ✓155 | ✗  0] ✓ tests/tools/test_computer_use_vision_routing.py (11✓, 2.1s)
+[100.0% |   148/~148 | ✓158 | ✗  0] ✓ tests/tools/test_computer_use_zero_bounds.py (3✓, 1.7s)
+
+=== Summary: 11 files, 158 tests passed, 0 failed (100% complete) in 16.7s (2 workers) ===
+  Durations cached to test_durations.json (11 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   11
+  Total subprocess CPU-wall: 31.5s  (runner wall: 16.7s, parallelism: 2x)
+  P50: 2.12s  P90: 3.53s  P95: 8.74s  P99: 8.74s  Max: 8.74s
+  <1s: 0 files (0%)  <2s: 3 files (27%)
+  Top 10 slowest:
+      8.74s  tests/tools/test_computer_use.py
+      3.53s  tests/tools/test_computer_use_capture_routing.py
+      3.03s  tests/tools/test_computer_use_cua_0_9.py
+      2.21s  tests/tools/test_computer_use_fullscreen_capture.py
+      2.16s  tests/tools/test_computer_use_ax_walk_bound.py
+      2.12s  tests/tools/test_computer_use_vision_routing.py
+      2.12s  tests/tools/test_computer_use_screenshot_dedup.py
+      2.11s  tests/tools/test_computer_use_capture_fence.py
+      1.92s  tests/tools/test_computer_use_null_pid_windows.py
+      1.79s  tests/tools/test_computer_use_cua_backend_linux.py

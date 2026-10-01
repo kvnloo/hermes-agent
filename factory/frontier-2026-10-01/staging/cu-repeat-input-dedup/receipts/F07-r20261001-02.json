@@ -1,0 +1,496 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "F07/r20261001-02",
+ "tier": "T1",
+ "label": "OBSERVED",
+ "question": "Through a real AIAgent turn (FakeLLMServer loopback + in-tree no-op computer_use backend), does one assistant message with two identical computer_use key=tab calls dispatch two presses? Bridge case uses the advertised tool_call shape {calls: [{name, arguments}]} (r01 used the tolerated legacy single shape).",
+ "command": "HOME=$TH HERMES_HOME=$TH/.hermes HERMES_PYTHON=<hermes-home>/hermes-agent/venv/bin/python HERMES_TEST_FILE_RETRIES=0 bash scripts/run_tests.sh -j 2 {files} -q --tb=short -p _xf_t1_guard",
+ "files": [
+  "tests/agent/test_tool_call_dedup_order_significant.py"
+ ],
+ "arms": {
+  "base": {
+   "tree": "b8e57199a9d30a700706ed2b28f0ec49f0313d1c",
+   "how": "main 234badf401 + tests/agent/test_tool_call_dedup_order_significant.py only (test inject)"
+  },
+  "head": {
+   "tree": "b5023a08451acaea5f888f3f087bad38bc29b780",
+   "how": "staging commit 402e9b0bdb"
+  },
+  "neg-empty-table": {
+   "how": "head with _ORDER_SIGNIFICANT_ACTIONS = frozenset()"
+  },
+  "sab-no-bridge-peel": {
+   "how": "head with the _peel_bridge_call line in _is_order_significant removed"
+  },
+  "sab-facade-revert": {
+   "how": "head with run_agent.py restored to main (old in-facade method)"
+  },
+  "sab-verdict-confirms": {
+   "how": "head with computer_use _classify_action_result fallback returning 'done' (test-sensitivity check for the verify_fresh_state assertion)"
+  },
+  "donor-fix+new-test": {
+   "how": "main + donor run_agent.py hunk (570dc83ba6) + tests/agent/test_tool_call_dedup_order_significant.py"
+  }
+ },
+ "gates": {
+  "red": {
+   "arm": "base",
+   "result": "PASS",
+   "observed": "2 failed / 2 in each of 3 reps",
+   "assertion": "AssertionError: assert ['key', 'click'] == ['key', 'key', 'click']",
+   "seam_covered": true,
+   "reps_agree": "3/3"
+  },
+  "green": [
+   {
+    "arm": "head",
+    "result": "PASS",
+    "reps_agree": "3/3",
+    "seam_covered": true
+   }
+  ],
+  "negative_control": {
+   "arm": "neg-empty-table",
+   "result": "RED",
+   "observed": "2 failed / 2"
+  },
+  "sabotage": {
+   "per_hunk": [
+    {
+     "hunk": "agent/tool_dispatch_helpers.py _ORDER_SIGNIFICANT_ACTIONS entry",
+     "arm": "neg-empty-table",
+     "red_again": true,
+     "failed": [
+      "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[direct]",
+      "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[tool_call-bridge]"
+     ]
+    },
+    {
+     "hunk": "agent/tool_dispatch_helpers.py _peel_bridge_call in _is_order_significant",
+     "arm": "sab-no-bridge-peel",
+     "red_again": true,
+     "failed": [
+      "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[tool_call-bridge]"
+     ]
+    },
+    {
+     "hunk": "run_agent.py _deduplicate_tool_calls forwarder",
+     "arm": "sab-facade-revert",
+     "red_again": true,
+     "failed": [
+      "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[direct]",
+      "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[tool_call-bridge]"
+     ]
+    }
+   ],
+   "unpinned_hunks": [
+    "agent/tool_dispatch_helpers.py __all__ entry (export list only)"
+   ],
+   "test_sensitivity": {
+    "arm": "sab-verdict-confirms",
+    "failed": 2,
+    "assertion": "AssertionError: assert ['done', 'done'] == ['verify_fres..._fresh_state']"
+   }
+  },
+  "adjacent": {
+   "files": [
+    "tests/agent/test_agent_guardrails.py",
+    "tests/agent/test_tool_batch_segmentation.py",
+    "tests/agent/test_tool_call_guardrail_runtime.py",
+    "tests/agent/test_file_mutation_verifier.py",
+    "tests/agent/test_run_agent.py",
+    "tests/tools/test_computer_use.py",
+    "tests/tools/test_computer_use_delivery_ladder.py",
+    "tests/tools/test_connector_bridge_wiring.py",
+    "tests/tools/test_tool_search.py"
+   ],
+   "base": "559 passed / 0 failed",
+   "arm": "561 passed / 0 failed (= base + the 2 new test cases)",
+   "identical": true,
+   "pre_existing_failures": [],
+   "note": "tests/agent/test_agent_guardrails.py is byte-identical on base and head"
+  },
+  "guards": {
+   "F14": "NOT_RUN (factory standing set not built yet)"
+  },
+  "flaky": false
+ },
+ "findings": [
+  "The donor fix (570dc83ba6, name-keyed 'computer_use' check in run_agent.py) leaves the default path broken: computer_use is in the default tools.tool_search.defer list, so the model calls it via the tool_call bridge, and the donor arm fails the tool_call-bridge case (failed: tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[tool_call-bridge]).",
+  "Each kept press returns its own verdict decision 'verify_fresh_state' (noop backend has no semantic effect), so the exemption neither collapses nor upgrades the verify ladder; pinned by the sab-verdict-confirms arm."
+ ],
+ "safety": {
+  "egress_blocked_in_new_test": 0,
+  "egress_blocked_in_adjacent_files": {
+   "base": 92,
+   "head": 92,
+   "note": "pre-existing attempts by tests/agent/test_run_agent.py (84), test_tool_batch_segmentation.py (4), test_tool_call_guardrail_runtime.py (4) to Cloudflare IPs; blocked by the guard on both arms, tests still pass. The guard covers connect(), not DNS resolution."
+  },
+  "credential_like_env_names_seen": [],
+  "home": "isolated"
+ },
+ "cells": [
+  {
+   "arm": "base",
+   "rep": 1,
+   "arm_tree": "b8e57199a9d30a700706ed2b28f0ec49f0313d1c",
+   "passed": 0,
+   "failed": 2,
+   "failed_ids": [
+    "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[direct]",
+    "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[tool_call-bridge]"
+   ],
+   "red_marker_matched": 2,
+   "egress_blocked": 0,
+   "loopback_connects": 8,
+   "seam_hits": {
+    "turn_tool_round.py::run_tool_round": 2,
+    "run_agent.py::_deduplicate_tool_calls": 2,
+    "tool_dispatch_helpers.py::_peel_bridge_call": 4,
+    "tool.py::handle_computer_use": 4
+   },
+   "wall_s": 11.6,
+   "load1_at_start": 8.04,
+   "raw_log": "raw-r02/F07-base-r1.log",
+   "raw_log_sha256": "49b1876476515101e581e86ccce29a8e59379bbe6c0b06aa000d09f0805306e3"
+  },
+  {
+   "arm": "base",
+   "rep": 2,
+   "arm_tree": "b8e57199a9d30a700706ed2b28f0ec49f0313d1c",
+   "passed": 0,
+   "failed": 2,
+   "failed_ids": [
+    "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[direct]",
+    "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[tool_call-bridge]"
+   ],
+   "red_marker_matched": 2,
+   "egress_blocked": 0,
+   "loopback_connects": 8,
+   "seam_hits": {
+    "turn_tool_round.py::run_tool_round": 2,
+    "run_agent.py::_deduplicate_tool_calls": 2,
+    "tool_dispatch_helpers.py::_peel_bridge_call": 4,
+    "tool.py::handle_computer_use": 4
+   },
+   "wall_s": 10.4,
+   "load1_at_start": 8.5,
+   "raw_log": "raw-r02/F07-base-r2.log",
+   "raw_log_sha256": "a680ffeefc50ef9adb592f59db39325632a37e247d5161811203d17e8fe52c12"
+  },
+  {
+   "arm": "base",
+   "rep": 3,
+   "arm_tree": "b8e57199a9d30a700706ed2b28f0ec49f0313d1c",
+   "passed": 0,
+   "failed": 2,
+   "failed_ids": [
+    "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[direct]",
+    "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[tool_call-bridge]"
+   ],
+   "red_marker_matched": 2,
+   "egress_blocked": 0,
+   "loopback_connects": 8,
+   "seam_hits": {
+    "turn_tool_round.py::run_tool_round": 2,
+    "run_agent.py::_deduplicate_tool_calls": 2,
+    "tool_dispatch_helpers.py::_peel_bridge_call": 4,
+    "tool.py::handle_computer_use": 4
+   },
+   "wall_s": 11.0,
+   "load1_at_start": 8.26,
+   "raw_log": "raw-r02/F07-base-r3.log",
+   "raw_log_sha256": "e7ce854128f59c0b2ddb426d911ef8fc090269d800b044e0adde2a8ccd58598d"
+  },
+  {
+   "arm": "head",
+   "rep": 1,
+   "arm_tree": "b5023a08451acaea5f888f3f087bad38bc29b780",
+   "passed": 2,
+   "failed": 0,
+   "failed_ids": [],
+   "red_marker_matched": 0,
+   "egress_blocked": 0,
+   "loopback_connects": 8,
+   "seam_hits": {
+    "turn_tool_round.py::run_tool_round": 2,
+    "tool_dispatch_helpers.py::deduplicate_tool_calls": 2,
+    "tool_dispatch_helpers.py::_is_order_significant": 4,
+    "tool_dispatch_helpers.py::_peel_bridge_call": 10,
+    "tool.py::handle_computer_use": 6
+   },
+   "wall_s": 9.1,
+   "load1_at_start": 8.14,
+   "raw_log": "raw-r02/F07-head-r1.log",
+   "raw_log_sha256": "c76e9724c75ccbec962d442082c8bfa29c2d4e4f47f4a4d2dd3e7d8621ee5b9a"
+  },
+  {
+   "arm": "head",
+   "rep": 2,
+   "arm_tree": "b5023a08451acaea5f888f3f087bad38bc29b780",
+   "passed": 2,
+   "failed": 0,
+   "failed_ids": [],
+   "red_marker_matched": 0,
+   "egress_blocked": 0,
+   "loopback_connects": 8,
+   "seam_hits": {
+    "turn_tool_round.py::run_tool_round": 2,
+    "tool_dispatch_helpers.py::deduplicate_tool_calls": 2,
+    "tool_dispatch_helpers.py::_is_order_significant": 4,
+    "tool_dispatch_helpers.py::_peel_bridge_call": 10,
+    "tool.py::handle_computer_use": 6
+   },
+   "wall_s": 9.9,
+   "load1_at_start": 8.2,
+   "raw_log": "raw-r02/F07-head-r2.log",
+   "raw_log_sha256": "679f5f1b0c4dbb922965a5c29a79e19df0e7a21ba204b8a41f270373329d3859"
+  },
+  {
+   "arm": "head",
+   "rep": 3,
+   "arm_tree": "b5023a08451acaea5f888f3f087bad38bc29b780",
+   "passed": 2,
+   "failed": 0,
+   "failed_ids": [],
+   "red_marker_matched": 0,
+   "egress_blocked": 0,
+   "loopback_connects": 8,
+   "seam_hits": {
+    "turn_tool_round.py::run_tool_round": 2,
+    "tool_dispatch_helpers.py::deduplicate_tool_calls": 2,
+    "tool_dispatch_helpers.py::_is_order_significant": 4,
+    "tool_dispatch_helpers.py::_peel_bridge_call": 10,
+    "tool.py::handle_computer_use": 6
+   },
+   "wall_s": 9.7,
+   "load1_at_start": 8.1,
+   "raw_log": "raw-r02/F07-head-r3.log",
+   "raw_log_sha256": "c24c91ea6f8a3f82a17ecac6b8cd2fa26ac605d2b8f667e262e0a4636a32edee"
+  },
+  {
+   "arm": "neg-empty-table",
+   "rep": 1,
+   "arm_tree": "ab8f42d9d5407cfeba7b330e80d57912c611941d",
+   "passed": 0,
+   "failed": 2,
+   "failed_ids": [
+    "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[direct]",
+    "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[tool_call-bridge]"
+   ],
+   "red_marker_matched": 2,
+   "egress_blocked": 0,
+   "loopback_connects": 8,
+   "seam_hits": {
+    "turn_tool_round.py::run_tool_round": 2,
+    "tool_dispatch_helpers.py::deduplicate_tool_calls": 2,
+    "tool_dispatch_helpers.py::_is_order_significant": 4,
+    "tool_dispatch_helpers.py::_peel_bridge_call": 8,
+    "tool.py::handle_computer_use": 4
+   },
+   "wall_s": 11.3,
+   "load1_at_start": 8.46,
+   "raw_log": "raw-r02/F07-neg-empty-table-r1.log",
+   "raw_log_sha256": "fce3d370f341b60c3d415b3cbb82c8e21d0b7f9030b318c6ce18b9c5315eb5ba"
+  },
+  {
+   "arm": "sab-no-bridge-peel",
+   "rep": 1,
+   "arm_tree": "31a18ddb85b2854272aa2510c175fb2b15f51b82",
+   "passed": 1,
+   "failed": 1,
+   "failed_ids": [
+    "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[tool_call-bridge]"
+   ],
+   "red_marker_matched": 1,
+   "egress_blocked": 0,
+   "loopback_connects": 8,
+   "seam_hits": {
+    "turn_tool_round.py::run_tool_round": 2,
+    "tool_dispatch_helpers.py::deduplicate_tool_calls": 2,
+    "tool_dispatch_helpers.py::_is_order_significant": 4,
+    "tool_dispatch_helpers.py::_peel_bridge_call": 5,
+    "tool.py::handle_computer_use": 5
+   },
+   "wall_s": 10.3,
+   "load1_at_start": 8.39,
+   "raw_log": "raw-r02/F07-sab-no-bridge-peel-r1.log",
+   "raw_log_sha256": "75a8235f24fe5a4cdda3a7178796474bad47a241d963c137ea12eaae1ccdaece"
+  },
+  {
+   "arm": "sab-facade-revert",
+   "rep": 1,
+   "arm_tree": "66f073f250d6d73991cd7210e373aa935969c430",
+   "passed": 0,
+   "failed": 2,
+   "failed_ids": [
+    "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[direct]",
+    "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[tool_call-bridge]"
+   ],
+   "red_marker_matched": 2,
+   "egress_blocked": 0,
+   "loopback_connects": 8,
+   "seam_hits": {
+    "turn_tool_round.py::run_tool_round": 2,
+    "run_agent.py::_deduplicate_tool_calls": 2,
+    "tool_dispatch_helpers.py::_peel_bridge_call": 4,
+    "tool.py::handle_computer_use": 4
+   },
+   "wall_s": 11.7,
+   "load1_at_start": 8.71,
+   "raw_log": "raw-r02/F07-sab-facade-revert-r1.log",
+   "raw_log_sha256": "4f8b66b6d5bea05a8782fb974772c03bc48aae8527d65ef14eda5db6e75dc3b3"
+  },
+  {
+   "arm": "donor-fix+new-test",
+   "rep": 1,
+   "arm_tree": "8599d7d2458bd452291e6e9785c8c939e9e66f8f",
+   "passed": 1,
+   "failed": 1,
+   "failed_ids": [
+    "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[tool_call-bridge]"
+   ],
+   "red_marker_matched": 1,
+   "egress_blocked": 0,
+   "loopback_connects": 8,
+   "seam_hits": {
+    "turn_tool_round.py::run_tool_round": 2,
+    "run_agent.py::_deduplicate_tool_calls": 2,
+    "tool_dispatch_helpers.py::_peel_bridge_call": 5,
+    "tool.py::handle_computer_use": 5
+   },
+   "wall_s": 10.5,
+   "load1_at_start": 9.24,
+   "raw_log": "raw-r02/F07-donor-fix+new-test-r1.log",
+   "raw_log_sha256": "b76832c2eba3df6d05142bd0db43a1d4e93e8c411fc553ca87fbc20b6ac1d552"
+  },
+  {
+   "arm": "sab-verdict-confirms",
+   "rep": 1,
+   "arm_tree": "c12456a39247d666dae5e3f7f6c6a51aa9d17782",
+   "passed": 0,
+   "failed": 2,
+   "failed_ids": [
+    "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[direct]",
+    "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[tool_call-bridge]"
+   ],
+   "red_marker_matched": 0,
+   "egress_blocked": 0,
+   "loopback_connects": 8,
+   "seam_hits": {
+    "turn_tool_round.py::run_tool_round": 2,
+    "tool_dispatch_helpers.py::deduplicate_tool_calls": 2,
+    "tool_dispatch_helpers.py::_is_order_significant": 4,
+    "tool_dispatch_helpers.py::_peel_bridge_call": 10,
+    "tool.py::handle_computer_use": 6
+   },
+   "wall_s": 12.4,
+   "load1_at_start": 10.21,
+   "raw_log": "raw-r02/F07-sab-verdict-confirms-r1.log",
+   "raw_log_sha256": "c95268420d5c84a1b55503e08c0d797bc43322241ec189b46a2f2af41743e503"
+  },
+  {
+   "arm": "main",
+   "rep": 1,
+   "arm_tree": "7c5bdaf2cca26699a961b711f9efebba37e93cf7",
+   "passed": 559,
+   "failed": 0,
+   "failed_ids": [],
+   "red_marker_matched": 0,
+   "egress_blocked": 92,
+   "loopback_connects": 6,
+   "seam_hits": {
+    "run_agent.py::_deduplicate_tool_calls": 25,
+    "tool_dispatch_helpers.py::_peel_bridge_call": 97,
+    "turn_tool_round.py::run_tool_round": 22,
+    "tool.py::handle_computer_use": 31
+   },
+   "wall_s": 237.9,
+   "load1_at_start": 12.72,
+   "raw_log": "raw-r02/ADJ-main-r1.log",
+   "raw_log_sha256": "d985fb7436c280fb8b6e813d198fa3c153f079c592d126436d36b09fd9717cf8"
+  },
+  {
+   "arm": "head",
+   "rep": 1,
+   "arm_tree": "b5023a08451acaea5f888f3f087bad38bc29b780",
+   "passed": 561,
+   "failed": 0,
+   "failed_ids": [],
+   "red_marker_matched": 0,
+   "egress_blocked": 92,
+   "loopback_connects": 14,
+   "seam_hits": {
+    "tool_dispatch_helpers.py::deduplicate_tool_calls": 27,
+    "tool_dispatch_helpers.py::_is_order_significant": 7,
+    "tool_dispatch_helpers.py::_peel_bridge_call": 109,
+    "turn_tool_round.py::run_tool_round": 24,
+    "tool.py::handle_computer_use": 37
+   },
+   "wall_s": 234.6,
+   "load1_at_start": 5.5,
+   "raw_log": "raw-r02/ADJ-head-r1.log",
+   "raw_log_sha256": "461239cc8366ac4fcff49254f1238c39532443921ceb545e7a618e7b8294b131"
+  }
+ ],
+ "denominators": {
+  "cells": 13,
+  "infra_excluded": 0,
+  "errored_scored_zero": 0,
+  "completeness": 1.0
+ },
+ "verdict": "KEEP",
+ "not_tested": [
+  "real cua-driver / desktop delivery of two presses",
+  "real-model emission rate of identical same-message key presses (queued T2/T3 probe)",
+  "macOS / Windows",
+  "F14 standing guard set"
+ ],
+ "base_revision": "234badf4012af380d23c91eae55d045a69c69ffb",
+ "head_revision": "402e9b0bdbfdf2a988971c6cd452e8115b134208",
+ "branch": "staging/cu-repeat-input-dedup",
+ "origin_refs": [
+  "NousResearch/hermes-agent#124008",
+  "NousResearch/hermes-agent#112639",
+  "kvnloo/hermes-agent#316"
+ ],
+ "policy_revision": {
+  "AGENTS.md": "65aa3e61bcba610da21279a17385671263be39e9",
+  "agent/AGENTS.md": "d76bfa6187e525770121280efac05b5aa49f276d",
+  "factory": "frontier-2026-10-01/FACTORY.md sha256=7726ba18b43a9367f91d7f70c3aaefb96a9863761ddf71225c61c26a30d688d4"
+ },
+ "inputs": {
+  "tests/agent/test_tool_call_dedup_order_significant.py@head": "f4d3d1e20d6f9e9be528f7b99bfd7a4c2d1ce14d",
+  "tests/agent/test_agent_guardrails.py@base": "a6f91bada3e3bc40f715981f7519aa56b97754bf",
+  "tests/fakes/fake_llm_provider.py@base": "339adb7e87ea1dcf961d4aa4e12cbd558e2de31e",
+  "scripts/run_tests.sh@base": "8fcc4294f48a16968fd68f6d5edad45d74354166",
+  "scripts/run_tests_parallel.py@base": "21178fd246edd2460d1d6ae4cfb7937262458ffc",
+  "guard_plugin _xf_t1_guard.py sha256": "ede8cf473cf26e6b2e960cbd2d89e1754bc63f799894d22360311fde94daaeee",
+  "driver proof-r02.py sha256": "e3ad28a61cc8d7aa80e95e3378ca569aa9d9fe4ce733b7cb670d6384682e8a98",
+  "donor": "refs/fork/fix/computer-use-repeat-input-dedup-current-main@570dc83ba65fc4ce86efb2c00e89dc84d19bd5ca (merge-base cb3142d3257b15ac42de544bd585793567400d0f)"
+ },
+ "env": {
+  "host": "groot",
+  "python": "3.11.14 (HERMES_PYTHON=<hermes-home>/hermes-agent/venv/bin/python, interpreter only)",
+  "sandbox": "run_tests.sh env -i + isolated HOME/HERMES_HOME (scratchpad/testhome-st-cu-repeat-input-dedup) + in-process loopback-only connect guard; no bwrap",
+  "file_retries": 0,
+  "workers": 2
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "resource_usage": {
+  "api_cost_usd": 0.0,
+  "gpu_s": 0,
+  "tokens": 0
+ },
+ "provenance": "self",
+ "privacy": "public-aggregate (synthetic fixtures only)",
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the change, the test and these receipts",
+ "supersedes": "F07/r20261001-01"
+}

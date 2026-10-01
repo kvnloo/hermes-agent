@@ -1,0 +1,271 @@
+▶ not activated — using HERMES_PYTHON: <HERMES_PYTHON>
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 3 test files (~18 tests) under ['tests/tools/test_computer_use_capture_lane_schema.py', 'tests/tools/test_computer_use_cheap_lanes.py', 'tests/tools/test_computer_use_ax_walk_bound.py']; running with -j 2
+[ 16.7% |     3/~18 | ✓5 | ✗0] ✓ tests/tools/test_computer_use_ax_walk_bound.py (5✓, 2.6s)
+[ 27.8% |     5/~18 | ✓ 8 | ✗ 3] ✗ tests/tools/test_computer_use_capture_lane_schema.py (3✓ 3✗, 5.7s)
+
+  ╔╍ Failed: tests/tools/test_computer_use_capture_lane_schema.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ 
+  ║ tests/tools/test_computer_use_capture_lane_schema.py:76: AssertionError
+  ║ ______ test_capture_skips_the_half_its_mode_discards[vision-cli-refetch] _______
+  ║ 
+  ║ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f0aee8ae650>
+  ║ mode = 'vision', selector = 'include_accessibility_tree', mcp_images = False
+  ║ 
+  ║     @pytest.mark.parametrize("mode, selector, mcp_images", [
+  ║         pytest.param("ax", "include_screenshot", True, id="ax"),
+  ║         pytest.param("vision", "include_accessibility_tree", True, id="vision"),
+  ║         pytest.param("vision", "include_accessibility_tree", False, id="vision-cli-refetch"),
+  ║     ])
+  ║     def test_capture_skips_the_half_its_mode_discards(monkeypatch, mode, selector, mcp_images):
+  ║         backend, calls = _backend(monkeypatch, _GWS_0_28_2, mcp_images)
+  ║     
+  ║         cap = backend.capture(mode=mode, pid=123, window_id=456)
+  ║     
+  ║         sent = [args for name, args in calls if name == "get_window_state"]
+  ║ >       assert sent and all(args.get(selector) is False for args in sent)
+  ║ E       AssertionError: assert ([{'pid': 123, 'window_id': 456, 'session': 'hermes-336203c1566f'}, {'pid': 123, 'window_id': 456, 'session': 'hermes-336203c1566f'}] and False)
+  ║ E        +  where False = all(<generator object test_capture_skips_the_half_its_mode_discards.<locals>.<genexpr> at 0x7f0aee7ac820>)
+  ║ 
+  ║ tests/tools/test_computer_use_capture_lane_schema.py:76: AssertionError
+  ║ ------------------------------ Captured log call -------------------------------
+  ║ WARNING  tools.computer_use.cua_backend:cua_backend_capture.py:148 cua-driver vision capture returned no image over MCP (window_id=456); re-fetching via CLI transport
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/tools/test_computer_use_capture_lane_schema.py::test_capture_skips_the_half_its_mode_discards[ax]
+  ║ FAILED tests/tools/test_computer_use_capture_lane_schema.py::test_capture_skips_the_half_its_mode_discards[vision]
+  ║ FAILED tests/tools/test_computer_use_capture_lane_schema.py::test_capture_skips_the_half_its_mode_discards[vision-cli-refetch]
+  ║ 3 failed, 3 passed in 1.72s
+  ║
+  ║  Repro: python -m pytest tests/tools/test_computer_use_capture_lane_schema.py -q
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+[100.0% |    18/~18 | ✓15 | ✗ 9] ✗ tests/tools/test_computer_use_cheap_lanes.py (7✓ 6✗, 6.6s)
+
+  ╔╍ Failed: tests/tools/test_computer_use_cheap_lanes.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║         gws = [c for c in calls if c["name"] == "get_window_state"]
+  ║ >       assert gws and gws[0]["args"]["include_accessibility_tree"] is False
+  ║                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  ║ E       KeyError: 'include_accessibility_tree'
+  ║ 
+  ║ tests/tools/test_computer_use_cheap_lanes.py:135: KeyError
+  ║ _______ TestCaptureEndToEnd.test_ax_capture_asks_for_the_tree_only_lane ________
+  ║ 
+  ║ self = <tests.tools.test_computer_use_cheap_lanes.TestCaptureEndToEnd object at 0x7f7fbb342fd0>
+  ║ 
+  ║     def test_ax_capture_asks_for_the_tree_only_lane(self):
+  ║         stub = _StubCapture(_StubSession(props=BOTH))
+  ║         out = {"structuredContent": {"elements": [{"index": 1, "role": "AXButton", "label": "OK"}],
+  ║                                      "window_title": "Notes"}}
+  ║         calls = self._recorder(stub, out)
+  ║         cap = stub.capture("ax")
+  ║         gws = [c for c in calls if c["name"] == "get_window_state"]
+  ║ >       assert gws and gws[0]["args"]["include_screenshot"] is False
+  ║                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  ║ E       KeyError: 'include_screenshot'
+  ║ 
+  ║ tests/tools/test_computer_use_cheap_lanes.py:147: KeyError
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/tools/test_computer_use_cheap_lanes.py::TestGwsArgsLanes::test_vision_lane_skips_the_ax_walk_when_advertised
+  ║ FAILED tests/tools/test_computer_use_cheap_lanes.py::TestGwsArgsLanes::test_ax_lane_skips_the_grab_when_advertised
+  ║ FAILED tests/tools/test_computer_use_cheap_lanes.py::TestGwsArgsLanes::test_partial_schema_only_sends_the_advertised_flag
+  ║ FAILED tests/tools/test_computer_use_cheap_lanes.py::TestGwsArgsLanes::test_max_elements_bound_and_lane_flags_coexist
+  ║ FAILED tests/tools/test_computer_use_cheap_lanes.py::TestCaptureEndToEnd::test_vision_capture_asks_for_the_capture_only_lane
+  ║ FAILED tests/tools/test_computer_use_cheap_lanes.py::TestCaptureEndToEnd::test_ax_capture_asks_for_the_tree_only_lane
+  ║ 6 failed, 7 passed in 2.13s
+  ║
+  ║  Repro: python -m pytest tests/tools/test_computer_use_cheap_lanes.py -q
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 3 files, 15 tests passed, 9 failed (100% complete) in 9.2s (2 workers) ===
+  Durations cached to test_durations.json (1 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   3
+  Total subprocess CPU-wall: 14.8s  (runner wall: 9.2s, parallelism: 2x)
+  P50: 5.67s  P90: 6.58s  P95: 6.58s  P99: 6.58s  Max: 6.58s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+      6.58s  tests/tools/test_computer_use_cheap_lanes.py
+      5.67s  tests/tools/test_computer_use_capture_lane_schema.py
+      2.57s  tests/tools/test_computer_use_ax_walk_bound.py
+
+=== Failure output ===
+
+--- tests/tools/test_computer_use_capture_lane_schema.py ---
+FFF...                                                                   [100%]
+=================================== FAILURES ===================================
+______________ test_capture_skips_the_half_its_mode_discards[ax] _______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f0af179ae90>
+mode = 'ax', selector = 'include_screenshot', mcp_images = True
+
+    @pytest.mark.parametrize("mode, selector, mcp_images", [
+        pytest.param("ax", "include_screenshot", True, id="ax"),
+        pytest.param("vision", "include_accessibility_tree", True, id="vision"),
+        pytest.param("vision", "include_accessibility_tree", False, id="vision-cli-refetch"),
+    ])
+    def test_capture_skips_the_half_its_mode_discards(monkeypatch, mode, selector, mcp_images):
+        backend, calls = _backend(monkeypatch, _GWS_0_28_2, mcp_images)
+    
+        cap = backend.capture(mode=mode, pid=123, window_id=456)
+    
+        sent = [args for name, args in calls if name == "get_window_state"]
+>       assert sent and all(args.get(selector) is False for args in sent)
+E       AssertionError: assert ([{'pid': 123, 'window_id': 456, 'session': 'hermes-40cff2b8d155'}] and False)
+E        +  where False = all(<generator object test_capture_skips_the_half_its_mode_discards.<locals>.<genexpr> at 0x7f0aee8a6f80>)
+
+tests/tools/test_computer_use_capture_lane_schema.py:76: AssertionError
+____________ test_capture_skips_the_half_its_mode_discards[vision] _____________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f0af173ae90>
+mode = 'vision', selector = 'include_accessibility_tree', mcp_images = True
+
+    @pytest.mark.parametrize("mode, selector, mcp_images", [
+        pytest.param("ax", "include_screenshot", True, id="ax"),
+        pytest.param("vision", "include_accessibility_tree", True, id="vision"),
+        pytest.param("vision", "include_accessibility_tree", False, id="vision-cli-refetch"),
+    ])
+    def test_capture_skips_the_half_its_mode_discards(monkeypatch, mode, selector, mcp_images):
+        backend, calls = _backend(monkeypatch, _GWS_0_28_2, mcp_images)
+    
+        cap = backend.capture(mode=mode, pid=123, window_id=456)
+    
+        sent = [args for name, args in calls if name == "get_window_state"]
+>       assert sent and all(args.get(selector) is False for args in sent)
+E       AssertionError: assert ([{'pid': 123, 'window_id': 456, 'session': 'hermes-c88f723bf61f'}] and False)
+E        +  where False = all(<generator object test_capture_skips_the_half_its_mode_discards.<locals>.<genexpr> at 0x7f0aee751fc0>)
+
+tests/tools/test_computer_use_capture_lane_schema.py:76: AssertionError
+______ test_capture_skips_the_half_its_mode_discards[vision-cli-refetch] _______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f0aee8ae650>
+mode = 'vision', selector = 'include_accessibility_tree', mcp_images = False
+
+    @pytest.mark.parametrize("mode, selector, mcp_images", [
+        pytest.param("ax", "include_screenshot", True, id="ax"),
+        pytest.param("vision", "include_accessibility_tree", True, id="vision"),
+        pytest.param("vision", "include_accessibility_tree", False, id="vision-cli-refetch"),
+    ])
+    def test_capture_skips_the_half_its_mode_discards(monkeypatch, mode, selector, mcp_images):
+        backend, calls = _backend(monkeypatch, _GWS_0_28_2, mcp_images)
+    
+        cap = backend.capture(mode=mode, pid=123, window_id=456)
+    
+        sent = [args for name, args in calls if name == "get_window_state"]
+>       assert sent and all(args.get(selector) is False for args in sent)
+E       AssertionError: assert ([{'pid': 123, 'window_id': 456, 'session': 'hermes-336203c1566f'}, {'pid': 123, 'window_id': 456, 'session': 'hermes-336203c1566f'}] and False)
+E        +  where False = all(<generator object test_capture_skips_the_half_its_mode_discards.<locals>.<genexpr> at 0x7f0aee7ac820>)
+
+tests/tools/test_computer_use_capture_lane_schema.py:76: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  tools.computer_use.cua_backend:cua_backend_capture.py:148 cua-driver vision capture returned no image over MCP (window_id=456); re-fetching via CLI transport
+=========================== short test summary info ============================
+FAILED tests/tools/test_computer_use_capture_lane_schema.py::test_capture_skips_the_half_its_mode_discards[ax]
+FAILED tests/tools/test_computer_use_capture_lane_schema.py::test_capture_skips_the_half_its_mode_discards[vision]
+FAILED tests/tools/test_computer_use_capture_lane_schema.py::test_capture_skips_the_half_its_mode_discards[vision-cli-refetch]
+3 failed, 3 passed in 1.72s
+
+--- tests/tools/test_computer_use_cheap_lanes.py ---
+FF....FFFF...                                                            [100%]
+=================================== FAILURES ===================================
+_____ TestGwsArgsLanes.test_vision_lane_skips_the_ax_walk_when_advertised ______
+
+self = <tests.tools.test_computer_use_cheap_lanes.TestGwsArgsLanes object at 0x7f7fbb8eeb10>
+
+    def test_vision_lane_skips_the_ax_walk_when_advertised(self):
+        stub = _StubCapture(_StubSession(props=BOTH))
+        args = stub._gws_args("vision")
+>       assert args["include_accessibility_tree"] is False
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'include_accessibility_tree'
+
+tests/tools/test_computer_use_cheap_lanes.py:66: KeyError
+_________ TestGwsArgsLanes.test_ax_lane_skips_the_grab_when_advertised _________
+
+self = <tests.tools.test_computer_use_cheap_lanes.TestGwsArgsLanes object at 0x7f7fbb3dbfd0>
+
+    def test_ax_lane_skips_the_grab_when_advertised(self):
+        stub = _StubCapture(_StubSession(props=BOTH))
+        args = stub._gws_args("ax")
+>       assert args["include_screenshot"] is False
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'include_screenshot'
+
+tests/tools/test_computer_use_cheap_lanes.py:73: KeyError
+_____ TestGwsArgsLanes.test_partial_schema_only_sends_the_advertised_flag ______
+
+self = <tests.tools.test_computer_use_cheap_lanes.TestGwsArgsLanes object at 0x7f7fbb341bd0>
+
+    def test_partial_schema_only_sends_the_advertised_flag(self):
+        """A driver that shipped include_screenshot but not the tree flag (or vice versa) gets one lane only."""
+        stub = _StubCapture(_StubSession(props=("include_screenshot",)))
+>       assert stub._gws_args("ax")["include_screenshot"] is False
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'include_screenshot'
+
+tests/tools/test_computer_use_cheap_lanes.py:102: KeyError
+_______ TestGwsArgsLanes.test_max_elements_bound_and_lane_flags_coexist ________
+
+self = <tests.tools.test_computer_use_cheap_lanes.TestGwsArgsLanes object at 0x7f7fbb342190>
+
+    def test_max_elements_bound_and_lane_flags_coexist(self):
+        """The ax_max_elements bound (prefix of the same walk) and the vision lane are independent keys."""
+        from tools.computer_use import cua_backend
+        stub = _StubCapture(_StubSession(props=BOTH))
+        # Whatever the configured bound is, the lane flag must ride along with it unchanged.
+        bound = cua_backend._cua_configured_ax_max_elements()
+        args = stub._gws_args("vision")
+        assert args.get("max_elements", 0) == bound
+>       assert args["include_accessibility_tree"] is False
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'include_accessibility_tree'
+
+tests/tools/test_computer_use_cheap_lanes.py:113: KeyError
+____ TestCaptureEndToEnd.test_vision_capture_asks_for_the_capture_only_lane ____
+
+self = <tests.tools.test_computer_use_cheap_lanes.TestCaptureEndToEnd object at 0x7f7fbb342950>
+
+    def test_vision_capture_asks_for_the_capture_only_lane(self):
+        stub = _StubCapture(_StubSession(props=BOTH))
+        out = {"images": ["aW1n"], "image_mime_types": ["image/png"],
+               "structuredContent": {"window_title": "Notes"}}
+        calls = self._recorder(stub, out)
+        cap = stub.capture("vision")
+        gws = [c for c in calls if c["name"] == "get_window_state"]
+>       assert gws and gws[0]["args"]["include_accessibility_tree"] is False
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'include_accessibility_tree'
+
+tests/tools/test_computer_use_cheap_lanes.py:135: KeyError
+_______ TestCaptureEndToEnd.test_ax_capture_asks_for_the_tree_only_lane ________
+
+self = <tests.tools.test_computer_use_cheap_lanes.TestCaptureEndToEnd object at 0x7f7fbb342fd0>
+
+    def test_ax_capture_asks_for_the_tree_only_lane(self):
+        stub = _StubCapture(_StubSession(props=BOTH))
+        out = {"structuredContent": {"elements": [{"index": 1, "role": "AXButton", "label": "OK"}],
+                                     "window_title": "Notes"}}
+        calls = self._recorder(stub, out)
+        cap = stub.capture("ax")
+        gws = [c for c in calls if c["name"] == "get_window_state"]
+>       assert gws and gws[0]["args"]["include_screenshot"] is False
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'include_screenshot'
+
+tests/tools/test_computer_use_cheap_lanes.py:147: KeyError
+=========================== short test summary info ============================
+FAILED tests/tools/test_computer_use_cheap_lanes.py::TestGwsArgsLanes::test_vision_lane_skips_the_ax_walk_when_advertised
+FAILED tests/tools/test_computer_use_cheap_lanes.py::TestGwsArgsLanes::test_ax_lane_skips_the_grab_when_advertised
+FAILED tests/tools/test_computer_use_cheap_lanes.py::TestGwsArgsLanes::test_partial_schema_only_sends_the_advertised_flag
+FAILED tests/tools/test_computer_use_cheap_lanes.py::TestGwsArgsLanes::test_max_elements_bound_and_lane_flags_coexist
+FAILED tests/tools/test_computer_use_cheap_lanes.py::TestCaptureEndToEnd::test_vision_capture_asks_for_the_capture_only_lane
+FAILED tests/tools/test_computer_use_cheap_lanes.py::TestCaptureEndToEnd::test_ax_capture_asks_for_the_tree_only_lane
+6 failed, 7 passed in 2.13s
+
+=== 2 files with test failures (9 tests failed) ===
+  tests/tools/test_computer_use_capture_lane_schema.py  (3 tests failed)
+  tests/tools/test_computer_use_cheap_lanes.py  (6 tests failed)

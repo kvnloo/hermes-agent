@@ -1,0 +1,117 @@
+▶ not activated — using HERMES_PYTHON: $HERMES_PYTHON
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~5 tests) under ['evals/postmortem/tests/test_postmortem_harness.py']; running with -j 2
+[100.0% |     5/~5 | ✓3 | ✗2] ✗ evals/postmortem/tests/test_postmortem_harness.py (3✓ 2✗, 1.3s)
+
+  ╔╍ Failed: evals/postmortem/tests/test_postmortem_harness.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ ________ test_logcalls_reads_cache_state_and_tolerates_trailing_fields _________
+  ║ 
+  ║ tmp_path = PosixPath('<pytest-tmp>/test_logcalls_reads_cache_stat0')
+  ║ harness_path = PosixPath('$W/evals')
+  ║ 
+  ║     def test_logcalls_reads_cache_state_and_tolerates_trailing_fields(tmp_path, harness_path):
+  ║         """Pending line shapes: cache_state= with cache_read=/cache_write= (#121135) and a trailing ttfb=
+  ║         (#119713). cache_state=no_field means no cache counter was reported, so that call stays out of the hit
+  ║         ratio instead of reading as a miss."""
+  ║         r = _logcalls(tmp_path, [
+  ║             "in=1000 out=7 total=1007 latency=0.2s cache=900/1000 (90%) id=r1 cache_state=hit cache_scope=response cache_read=900 cache_write=0",
+  ║             "in=1200 out=7 total=1207 latency=3.0s cache=1000/1200 (83%) id=r2 upstream=Claude Platform on AWS ttfb=1.2s",
+  ║             "in=1300 out=7 total=1307 latency=0.2s write=1300 id=r3 cache_state=cold_write cache_scope=response cache_read=0 cache_write=1300 ttfb=0.1s",
+  ║             "in=500 out=7 total=507 latency=0.2s cache_state=no_field cache_scope=response",
+  ║             "in=? out=? total=? latency=0.2s usage=unavailable cache_state=no_field ttfb=0.1s",
+  ║         ])
+  ║ >       assert r["coverage"]["calls_found"] == 4 and r["coverage"]["usage_unavailable"] == 1
+  ║ E       assert (2 == 4)
+  ║ 
+  ║ evals/postmortem/tests/test_postmortem_harness.py:121: AssertionError
+  ║ ----------------------------- Captured stdout call -----------------------------
+  ║ [logcalls] coverage 2/290 calls (0.7%) from 1 file(s): 0 zero-hit, 0 without a cache field; 0 usage=unavailable not counted
+  ║ [logcalls] OBSERVED median prompt 1,100 p90 1,200; >200K: 0%; hit ratio 86.4%
+  ║ [logcalls] OBSERVED strict plateau (hit unchanged): 0.0% of pairs, 0.0% of uncached input; non-advancing hit: 0.0% / 0.0%; uncached in window $0.0
+  ║ [logcalls] MODELED sawtooth cap 200000/65000 on real sizes: prompt volume x1.0
+  ║ [logcalls] wrote <pytest-tmp>/test_logcalls_reads_cache_stat0/out/logcalls.json
+  ║ =========================== short test summary info ============================
+  ║ FAILED evals/postmortem/tests/test_postmortem_harness.py::test_logcalls_counts_zero_hit_and_usage_unavailable_calls
+  ║ FAILED evals/postmortem/tests/test_postmortem_harness.py::test_logcalls_reads_cache_state_and_tolerates_trailing_fields
+  ║ 2 failed, 3 passed in 0.34s
+  ║
+  ║  Repro: python -m pytest evals/postmortem/tests/test_postmortem_harness.py -q
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 1 files, 3 tests passed, 2 failed (100% complete) in 1.3s (2 workers) ===
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 1.3s  (runner wall: 1.3s, parallelism: 2x)
+  P50: 1.27s  P90: 1.27s  P95: 1.27s  P99: 1.27s  Max: 1.27s
+  <1s: 0 files (0%)  <2s: 1 files (100%)
+  Top 10 slowest:
+      1.27s  evals/postmortem/tests/test_postmortem_harness.py
+
+=== Failure output ===
+
+--- evals/postmortem/tests/test_postmortem_harness.py ---
+..FF.                                                                    [100%]
+=================================== FAILURES ===================================
+__________ test_logcalls_counts_zero_hit_and_usage_unavailable_calls ___________
+
+tmp_path = PosixPath('<pytest-tmp>/test_logcalls_counts_zero_hit_0')
+harness_path = PosixPath('$W/evals')
+
+    def test_logcalls_counts_zero_hit_and_usage_unavailable_calls(tmp_path, harness_path):
+        """agent/turn_usage.py writes cache= only when the provider read something from cache, and logs
+        usage=unavailable when it sent no usage. A full miss still counts toward coverage and pulls the hit
+        ratio down; a usage-less call is counted on its own (state.db's api_call_count skips it too)."""
+        r = _logcalls(tmp_path, [
+            "in=1000 out=7 total=1007 latency=0.2s cache=900/1000 (90%) id=r1",
+            "in=1200 out=7 total=1207 latency=0.2s cache=1000/1200 (83%) id=r2",
+            "in=1300 out=7 total=1307 latency=0.2s id=r3",
+            "in=? out=? total=? latency=0.2s usage=unavailable",
+        ])
+>       assert r["coverage"]["calls_found"] == 3
+E       assert 2 == 3
+
+evals/postmortem/tests/test_postmortem_harness.py:105: AssertionError
+----------------------------- Captured stdout call -----------------------------
+[logcalls] coverage 2/290 calls (0.7%) from 1 file(s): 0 zero-hit, 0 without a cache field; 0 usage=unavailable not counted
+[logcalls] OBSERVED median prompt 1,100 p90 1,200; >200K: 0%; hit ratio 86.4%
+[logcalls] OBSERVED strict plateau (hit unchanged): 0.0% of pairs, 0.0% of uncached input; non-advancing hit: 0.0% / 0.0%; uncached in window $0.0
+[logcalls] MODELED sawtooth cap 200000/65000 on real sizes: prompt volume x1.0
+[logcalls] wrote <pytest-tmp>/test_logcalls_counts_zero_hit_0/out/logcalls.json
+________ test_logcalls_reads_cache_state_and_tolerates_trailing_fields _________
+
+tmp_path = PosixPath('<pytest-tmp>/test_logcalls_reads_cache_stat0')
+harness_path = PosixPath('$W/evals')
+
+    def test_logcalls_reads_cache_state_and_tolerates_trailing_fields(tmp_path, harness_path):
+        """Pending line shapes: cache_state= with cache_read=/cache_write= (#121135) and a trailing ttfb=
+        (#119713). cache_state=no_field means no cache counter was reported, so that call stays out of the hit
+        ratio instead of reading as a miss."""
+        r = _logcalls(tmp_path, [
+            "in=1000 out=7 total=1007 latency=0.2s cache=900/1000 (90%) id=r1 cache_state=hit cache_scope=response cache_read=900 cache_write=0",
+            "in=1200 out=7 total=1207 latency=3.0s cache=1000/1200 (83%) id=r2 upstream=Claude Platform on AWS ttfb=1.2s",
+            "in=1300 out=7 total=1307 latency=0.2s write=1300 id=r3 cache_state=cold_write cache_scope=response cache_read=0 cache_write=1300 ttfb=0.1s",
+            "in=500 out=7 total=507 latency=0.2s cache_state=no_field cache_scope=response",
+            "in=? out=? total=? latency=0.2s usage=unavailable cache_state=no_field ttfb=0.1s",
+        ])
+>       assert r["coverage"]["calls_found"] == 4 and r["coverage"]["usage_unavailable"] == 1
+E       assert (2 == 4)
+
+evals/postmortem/tests/test_postmortem_harness.py:121: AssertionError
+----------------------------- Captured stdout call -----------------------------
+[logcalls] coverage 2/290 calls (0.7%) from 1 file(s): 0 zero-hit, 0 without a cache field; 0 usage=unavailable not counted
+[logcalls] OBSERVED median prompt 1,100 p90 1,200; >200K: 0%; hit ratio 86.4%
+[logcalls] OBSERVED strict plateau (hit unchanged): 0.0% of pairs, 0.0% of uncached input; non-advancing hit: 0.0% / 0.0%; uncached in window $0.0
+[logcalls] MODELED sawtooth cap 200000/65000 on real sizes: prompt volume x1.0
+[logcalls] wrote <pytest-tmp>/test_logcalls_reads_cache_stat0/out/logcalls.json
+=========================== short test summary info ============================
+FAILED evals/postmortem/tests/test_postmortem_harness.py::test_logcalls_counts_zero_hit_and_usage_unavailable_calls
+FAILED evals/postmortem/tests/test_postmortem_harness.py::test_logcalls_reads_cache_state_and_tolerates_trailing_fields
+2 failed, 3 passed in 0.34s
+
+=== 1 file with test failures (2 tests failed) ===
+  evals/postmortem/tests/test_postmortem_harness.py  (2 tests failed)

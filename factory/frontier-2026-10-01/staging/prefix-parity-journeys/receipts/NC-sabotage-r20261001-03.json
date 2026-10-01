@@ -1,0 +1,270 @@
+{
+  "schema": "xf.receipt.v1",
+  "tier": "T1",
+  "staging": "prefix-parity-journeys",
+  "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+  "head_revision": "ddf4748d31cb5dc65e7cd0b0c5b27b98d63ae880",
+  "provenance": "self",
+  "cost_usd": 0.0,
+  "env": {
+    "python": "3.11.14 (<venv>, read-only bind; live home masked)",
+    "network": "loopback only (netns); egress canary below",
+    "relay": "nemo-relay init failed (installed plugin older than tree); journeys ran Relay-off",
+    "host_load": "shared host; load1 at the end of each run is recorded per run (7.91-18.43 over 25 runs, on 10 cores / 20 threads)"
+  },
+  "sandbox": "bwrap --dev-bind / / --tmpfs <live-home> --ro-bind <venv> <venv> --unshare-net --unshare-pid --die-with-parent --clearenv; HOME/HERMES_HOME = scratch testhome; children get fixture homes",
+  "raw": {
+    "dir": "private/raw-r02 (private; path-scrubbed before sealing; never published or frozen)",
+    "manifest": "private/raw-r02/MANIFEST.sha256",
+    "manifest_sha256": "99cb8fdfe8896a88b28a88e623659c4f5f958424a0ac16c049ad5a997923e635"
+  },
+  "egress_canary": {
+    "egress_1.1.1.1:443": "blocked errno=101",
+    "loopback": "CONNECTED"
+  },
+  "ai_assistance": "Claude Code (Opus 5.5) wrote the journeys, probes and arms; disclosed per repository policy",
+  "origin_refs": [
+    "NousResearch/hermes-agent#104414",
+    "NousResearch/hermes-agent#45499",
+    "NousResearch/hermes-agent#120116",
+    "NousResearch/hermes-agent#76215",
+    "NousResearch/hermes-agent#76224",
+    "NousResearch/hermes-agent#88364",
+    "kvnloo/hermes-agent#319"
+  ],
+  "privacy": "public-aggregate: no local paths, host name, session/turn ids or prompt text",
+  "id": "NC/r20261001-03",
+  "supersedes": {
+    "id": "NC/r20261001-02",
+    "sha256": "29bc24b0672979be1b1687df541c33f6a5349eae0d3f53bbde7822633a7abba5",
+    "path": "private/superseded-r02/NC-sabotage-r20261001-02.json"
+  },
+  "reissue": "Re-issue of r20261001-02 from the same sealed raw set (manifest sha256 unchanged); no run was repeated. Changed: env.host_load (r02 said '5-15 on 10 cores'; the recorded load1_end values range as stated here), raw.dir/manifest (the raw set moved to private/raw-r02/), inputs.harness (harness/ now takes local paths from the environment; the files that produced the raw are cited by sha256 in inputs.harness_as_run), id and supersedes. Every other field equals r02. Re-running with harness/ needs HERMES_VENV, LIVE_HOME and TH for sandbox.sh, and RAW and PROBE_TMP passed through to run_receipts.sh.",
+  "spec": {
+    "question": "Do the journeys catch prefix sabotage? NC1 = per-request timestamp in the system message (acceptance gate 2); NC2 = stored prompt treated stale on every fresh agent plus a per-build nonce (#104414 shape).",
+    "falsifier": "any journey still passing under NC1 or NC2"
+  },
+  "inputs": {
+    "harness": {
+      "harness/build_receipts.py": "f33caef9a2adbbb0cf1c419a9383e9a6ad5bfb956792ddfdd7c4e80c1b8d802b",
+      "harness/e09_first_delta.py": "759b69173f9726f532d8d230b2d407e249e19ee92d7999954752ef31874dee44",
+      "harness/journey_probe.py": "1fe717302e61857c64df5d0d59ae04afe355befba291d90403898b7b9483498d",
+      "harness/run_receipts.sh": "3d195a4f0e95fad6b9073e7d6264663225aa7d55e5285b0272b707eb993fce2a",
+      "harness/sandbox.sh": "5a3d50ef38c76dd10a515ad82aa712cab7832438bf608e880f10b715fa865ce9"
+    },
+    "harness_as_run": {
+      "dir": "private/harness-r02 (private: local paths inline)",
+      "note": "the files that produced the raw set; harness/ is the same code with local paths taken from the environment",
+      "sha256": {
+        "private/harness-r02/build_receipts.py": "d4f8e545a74857ea3e5246e871de212da942e2eab991fc21bbdccc787006580d",
+        "private/harness-r02/e09_first_delta.py": "759b69173f9726f532d8d230b2d407e249e19ee92d7999954752ef31874dee44",
+        "private/harness-r02/journey_probe.py": "1fe717302e61857c64df5d0d59ae04afe355befba291d90403898b7b9483498d",
+        "private/harness-r02/run_receipts.sh": "c567da32f405f64ae20278e5cc5cc48c0d5633fa1cc99a1506c2148c6874e2be",
+        "private/harness-r02/sandbox.sh": "0c5f23fea0b6ee0adc767126f3a1ed2f5fb0379c1692120cbbcd7e58735f855b"
+      }
+    },
+    "arms": {
+      "arms/nc1-per-request-timestamp.patch": "b0ee4c283695a311abb943be9a0067afa2a26f8ac6be9ae6aa73b326bbb2cdda",
+      "arms/nc2-restart-rebuild-nonce.patch": "e40fcbf69ef7c54e4c823b3766fd311580d01bd8b846d81f808811a90a5444e5"
+    },
+    "test_blobs_at_head": {
+      "tests/e2e/core/history/test_prefix_stability.py": "1133468e43a4",
+      "tests/e2e/core/history/_helpers.py": "f13dbc84a5a3",
+      "tests/e2e/core/parity/_drive_acp.py": "37627770f32e",
+      "tests/e2e/core/parity/_drive_gateway.py": "dae72c6a23ee",
+      "tests/e2e/core/parity/_gateway_child.py": "91b33976cdab",
+      "tests/fakes/fake_llm_provider.py": "339adb7e87ea (unchanged)"
+    }
+  },
+  "commands": [
+    "<wt>$ harness/sandbox.sh /usr/bin/env MAIN_REF=aea969677c60a1bb72fe227fdfb98f196a2092cc bash harness/run_receipts.sh (sequential; every run's rc/head/dirty/load1 in <raw>/runs.jsonl)",
+    "git apply arms/<nc patch> && <wt>$ harness/sandbox.sh bash scripts/run_tests.sh -j 2 --include-integration tests/e2e/core/history/test_prefix_stability.py -q -rxX --tb=line --junitxml=<raw>/<run>.junit.xml (HERMES_TEST_FILE_RETRIES=0) && git checkout -- <arm files>"
+  ],
+  "arms": {
+    "nc1_full": {
+      "arm_patch": "arms/nc1-per-request-timestamp.patch",
+      "run": {
+        "run": "nc1_full",
+        "rc": 1,
+        "started": "2026-10-01T11:24:03Z",
+        "ended": "2026-10-01T11:27:42Z",
+        "wall_s": 219,
+        "head": "ddf4748d31cb5dc65e7cd0b0c5b27b98d63ae880",
+        "dirty": " M agent/turn_context.py ",
+        "load1_end": "18.43"
+      },
+      "tally": "6 failure",
+      "outcomes": [
+        {
+          "test": "test_request_prefix_is_byte_stable_across_processes[tui_gateway_restarts]",
+          "time_s": 28.643,
+          "outcome": "failure",
+          "message": "AssertionError: prompt-cache prefix broke outside the compaction boundary:\n    request 1 (in hop 1 (gw in work-a)): messages[0] (system) changed; first diverging byte at 7237\n    request 2 (in hop 1 (gw in work-a)): messages[0] (system) changed; first diverging byte at 7238\n    request 3 (in hop 1 (gw in work-a)): messages[0] (system) changed; first diverging byte at 7237\n    request 4 (in hop 2 (gw in work-b)): messages[0] (system) changed; first diverging byte at 7237\n    request 5 (in hop 2 (gw in work-b)): messages[0] (system) changed; first diverging byte at 7236\n    request 6 (in hop 3 ("
+        },
+        {
+          "test": "test_request_prefix_is_byte_stable_across_processes[oneshot_restarts]",
+          "time_s": 34.703,
+          "outcome": "failure",
+          "message": "AssertionError: prompt-cache prefix broke outside the compaction boundary:\n    request 1 (in hop 2 (cli in work-a)): messages[0] (system) changed; first diverging byte at 12846\n    request 2 (in hop 2 (cli in work-a)): messages[0] (system) changed; first diverging byte at 12848\n    request 3 (in hop 3 (cli in work-b)): messages[0] (system) changed; first diverging byte at 12847\n    request 4 (in hop 4 (cli in work-a)): messages[0] (system) changed; first diverging byte at 12846\n    request 5 (in hop 5 (cli in work-b)): messages[0] (system) changed; first diverging byte at 12847\n    request 6 ("
+        },
+        {
+          "test": "test_request_prefix_is_byte_stable_across_processes[surface_switch]",
+          "time_s": 39.714,
+          "outcome": "failure",
+          "message": "AssertionError: prompt-cache prefix broke outside the compaction boundary:\n    request 1 (in hop 1 (gw in work-a)): messages[0] (system) changed; first diverging byte at 7237\n    request 2 (in hop 1 (gw in work-a)): messages[0] (system) changed; first diverging byte at 7238\n    request 3 (in hop 1 (gw in work-a)): messages[0] (system) changed; first diverging byte at 7237\n    request 4 (in hop 2 (cli in work-a)): messages[0] (system) changed; first diverging byte at 7236\n    request 5 (in hop 3 (cli in work-b)): messages[0] (system) changed; first diverging byte at 7237\n    request 6 (in hop 4"
+        },
+        {
+          "test": "test_request_prefix_is_byte_stable_across_processes[messaging_gateway_restarts]",
+          "time_s": 38.295,
+          "outcome": "failure",
+          "message": "AssertionError: prompt-cache prefix broke outside the compaction boundary:\n    request 1 (in hop 1 (msg in work-a)): messages[0] (system) changed; first diverging byte at 13791\n    request 2 (in hop 1 (msg in work-a)): messages[0] (system) changed; first diverging byte at 13792\n    request 3 (in hop 1 (msg in work-a)): messages[0] (system) changed; first diverging byte at 13791\n    request 4 (in hop 2 (msg in work-a)): messages[0] (system) changed; first diverging byte at 13790\n    request 5 (in hop 2 (msg in work-a)): messages[0] (system) changed; first diverging byte at 13791\n    request 6 ("
+        },
+        {
+          "test": "test_request_prefix_is_byte_stable_across_processes[api_server_runs_restarts]",
+          "time_s": 38.15,
+          "outcome": "failure",
+          "message": "AssertionError: prompt-cache prefix broke outside the compaction boundary:\n    request 1 (in hop 1 (api in work-a)): messages[0] (system) changed; first diverging byte at 13888\n    request 2 (in hop 1 (api in work-a)): messages[0] (system) changed; first diverging byte at 13889\n    request 3 (in hop 1 (api in work-a)): messages[0] (system) changed; first diverging byte at 13888\n    request 4 (in hop 2 (api in work-a)): messages[0] (system) changed; first diverging byte at 13885\n    request 5 (in hop 2 (api in work-a)): messages[0] (system) changed; first diverging byte at 13888\n    request 6 ("
+        },
+        {
+          "test": "test_request_prefix_is_byte_stable_across_processes[acp_restarts]",
+          "time_s": 35.607,
+          "outcome": "failure",
+          "message": "AssertionError: prompt-cache prefix broke outside the compaction boundary:\n    request 1 (in hop 1 (acp in work-a)): messages[0] (system) changed; first diverging byte at 6554\n    request 2 (in hop 1 (acp in work-a)): messages[0] (system) changed; first diverging byte at 6555\n    request 3 (in hop 1 (acp in work-a)): messages[0] (system) changed; first diverging byte at 6554\n    request 4 (in hop 2 (acp in work-a)): messages[0] (system) changed; first diverging byte at 6553\n    request 5 (in hop 2 (acp in work-a)): messages[0] (system) changed; first diverging byte at 6554\n    request 6 (in ho"
+        }
+      ],
+      "first_unexpected_break": {
+        "tui_gateway_restarts": {
+          "request": 1,
+          "hop": 1,
+          "surface": "gw"
+        },
+        "oneshot_restarts": {
+          "request": 1,
+          "hop": 2,
+          "surface": "cli"
+        },
+        "surface_switch": {
+          "request": 1,
+          "hop": 1,
+          "surface": "gw"
+        },
+        "messaging_gateway_restarts": {
+          "request": 1,
+          "hop": 1,
+          "surface": "msg"
+        },
+        "api_server_runs_restarts": {
+          "request": 1,
+          "hop": 1,
+          "surface": "api"
+        },
+        "acp_restarts": {
+          "request": 1,
+          "hop": 1,
+          "surface": "acp"
+        }
+      }
+    },
+    "nc2_full": {
+      "arm_patch": "arms/nc2-restart-rebuild-nonce.patch",
+      "run": {
+        "run": "nc2_full",
+        "rc": 1,
+        "started": "2026-10-01T11:27:42Z",
+        "ended": "2026-10-01T11:31:38Z",
+        "wall_s": 236,
+        "head": "ddf4748d31cb5dc65e7cd0b0c5b27b98d63ae880",
+        "dirty": " M agent/conversation_loop.py  M agent/system_prompt.py ",
+        "load1_end": "17.34"
+      },
+      "tally": "6 failure",
+      "outcomes": [
+        {
+          "test": "test_request_prefix_is_byte_stable_across_processes[tui_gateway_restarts]",
+          "time_s": 35.216,
+          "outcome": "failure",
+          "message": "AssertionError: prompt-cache prefix broke outside the compaction boundary:\n    request 4 (in hop 2 (gw in work-b)): messages[0] (system) changed; first diverging byte at 7233\n    request 6 (in hop 3 (gw in work-a)): messages[0] (system) changed; first diverging byte at 7234\n    request 9 (in hop 4 (gw in work-b)): messages[0] (system) changed; first diverging byte at 7234"
+        },
+        {
+          "test": "test_request_prefix_is_byte_stable_across_processes[oneshot_restarts]",
+          "time_s": 48.303,
+          "outcome": "failure",
+          "message": "AssertionError: prompt-cache prefix broke outside the compaction boundary:\n    request 1 (in hop 2 (cli in work-a)): messages[0] (system) changed; first diverging byte at 12843\n    request 3 (in hop 3 (cli in work-b)): messages[0] (system) changed; first diverging byte at 12843\n    request 4 (in hop 4 (cli in work-a)): messages[0] (system) changed; first diverging byte at 12844\n    request 5 (in hop 5 (cli in work-b)): messages[0] (system) changed; first diverging byte at 12843\n    request 7 (in hop 6 (cli in work-a)): messages[0] (system) changed; first diverging byte at 12844\n    request 8 ("
+        },
+        {
+          "test": "test_request_prefix_is_byte_stable_across_processes[surface_switch]",
+          "time_s": 42.815,
+          "outcome": "failure",
+          "message": "AssertionError: prompt-cache prefix broke outside the compaction boundary:\n    request 4 (in hop 2 (cli in work-a)): messages[0] (system) changed; first diverging byte at 981\n    request 5 (in hop 3 (cli in work-b)): messages[0] (system) changed; first diverging byte at 13361\n    request 6 (in hop 4 (gw in work-b)): messages[0] (system) changed; first diverging byte at 5522\n    request 8 (in hop 5 (cli in work-a)): messages[0] (system) changed; first diverging byte at 5522\n    request 9 (in hop 6 (gw in work-a)): messages[0] (system) changed; first diverging byte at 5522\n    request 12 (in hop"
+        },
+        {
+          "test": "test_request_prefix_is_byte_stable_across_processes[messaging_gateway_restarts]",
+          "time_s": 35.98,
+          "outcome": "failure",
+          "message": "AssertionError: prompt-cache prefix broke outside the compaction boundary:\n    request 4 (in hop 2 (msg in work-a)): messages[0] (system) changed; first diverging byte at 13786\n    request 6 (in hop 3 (msg in work-a)): messages[0] (system) changed; first diverging byte at 13787\n    request 9 (in hop 4 (msg in work-a)): messages[0] (system) changed; first diverging byte at 13787"
+        },
+        {
+          "test": "test_request_prefix_is_byte_stable_across_processes[api_server_runs_restarts]",
+          "time_s": 33.512,
+          "outcome": "failure",
+          "message": "AssertionError: prompt-cache prefix broke outside the compaction boundary:\n    request 1 (in hop 1 (api in work-a)): messages[0] (system) changed; first diverging byte at 13885\n    request 3 (in hop 1 (api in work-a)): messages[0] (system) changed; first diverging byte at 13885\n    request 4 (in hop 2 (api in work-a)): messages[0] (system) changed; first diverging byte at 13884\n    request 5 (in hop 2 (api in work-a)): messages[0] (system) changed; first diverging byte at 13885\n    request 6 (in hop 3 (api in work-a)): messages[0] (system) changed; first diverging byte at 13885\n    request 8 ("
+        },
+        {
+          "test": "test_request_prefix_is_byte_stable_across_processes[acp_restarts]",
+          "time_s": 34.678,
+          "outcome": "failure",
+          "message": "AssertionError: prompt-cache prefix broke outside the compaction boundary:\n    request 4 (in hop 2 (acp in work-a)): messages[0] (system) changed; first diverging byte at 6550\n    request 6 (in hop 3 (acp in work-a)): messages[0] (system) changed; first diverging byte at 6551\n    request 9 (in hop 4 (acp in work-a)): messages[0] (system) changed; first diverging byte at 5377"
+        }
+      ],
+      "first_unexpected_break": {
+        "tui_gateway_restarts": {
+          "request": 4,
+          "hop": 2,
+          "surface": "gw"
+        },
+        "oneshot_restarts": {
+          "request": 1,
+          "hop": 2,
+          "surface": "cli"
+        },
+        "surface_switch": {
+          "request": 4,
+          "hop": 2,
+          "surface": "cli"
+        },
+        "messaging_gateway_restarts": {
+          "request": 4,
+          "hop": 2,
+          "surface": "msg"
+        },
+        "api_server_runs_restarts": {
+          "request": 1,
+          "hop": 1,
+          "surface": "api"
+        },
+        "acp_restarts": {
+          "request": 4,
+          "hop": 2,
+          "surface": "acp"
+        }
+      }
+    }
+  },
+  "label_default": "OBSERVED",
+  "measurements": [
+    {
+      "name": "nc1_full_journeys_failed",
+      "value": 6,
+      "of": 6,
+      "label": "OBSERVED"
+    },
+    {
+      "name": "nc2_full_journeys_failed",
+      "value": 6,
+      "of": 6,
+      "label": "OBSERVED"
+    }
+  ],
+  "verdict": "PASS",
+  "reading": "first_unexpected_break gives, per journey, the first request outside the compaction whose prefix changed and the process life (hop) it belongs to; hop 1 = inside the first life"
+}

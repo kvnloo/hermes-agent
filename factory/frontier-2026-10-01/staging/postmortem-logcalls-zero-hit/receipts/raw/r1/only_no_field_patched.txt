@@ -1,0 +1,2 @@
+[logcalls] no API-call lines with cache usage found in ['$S/testhome-sf-postmortem-logcalls-zero-hit/tmp5jb9gzd2/agent.log']
+rc 1

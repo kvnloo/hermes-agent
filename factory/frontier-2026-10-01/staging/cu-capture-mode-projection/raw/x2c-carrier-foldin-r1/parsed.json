@@ -1,0 +1,118 @@
+{
+ "carrier-foldin.adjacent": {
+  "failed_tests": [],
+  "files": {
+   "tests/tools/test_computer_use.py": {
+    "failed": 0,
+    "passed": 87
+   },
+   "tests/tools/test_computer_use_capture_fence.py": {
+    "failed": 0,
+    "passed": 2
+   },
+   "tests/tools/test_computer_use_capture_routing.py": {
+    "failed": 0,
+    "passed": 5
+   },
+   "tests/tools/test_computer_use_cua_0_9.py": {
+    "failed": 0,
+    "passed": 12
+   },
+   "tests/tools/test_computer_use_cua_backend_linux.py": {
+    "failed": 0,
+    "passed": 5
+   },
+   "tests/tools/test_computer_use_fullscreen_capture.py": {
+    "failed": 0,
+    "passed": 13
+   },
+   "tests/tools/test_computer_use_null_pid_windows.py": {
+    "failed": 0,
+    "passed": 3
+   },
+   "tests/tools/test_computer_use_screenshot_dedup.py": {
+    "failed": 0,
+    "passed": 12
+   },
+   "tests/tools/test_computer_use_vision_routing.py": {
+    "failed": 0,
+    "passed": 11
+   },
+   "tests/tools/test_computer_use_zero_bounds.py": {
+    "failed": 0,
+    "passed": 3
+   }
+  },
+  "total": {
+   "failed": 0,
+   "files": 10,
+   "passed": 153
+  }
+ },
+ "carrier-foldin.contract.r1": {
+  "failed_tests": [],
+  "files": {
+   "tests/tools/test_computer_use_ax_walk_bound.py": {
+    "failed": 0,
+    "passed": 5
+   },
+   "tests/tools/test_computer_use_capture_lane_schema.py": {
+    "failed": 0,
+    "passed": 5
+   },
+   "tests/tools/test_computer_use_cheap_lanes.py": {
+    "failed": 0,
+    "passed": 13
+   }
+  },
+  "total": {
+   "failed": 0,
+   "files": 3,
+   "passed": 23
+  }
+ },
+ "carrier-foldin.contract.r2": {
+  "failed_tests": [],
+  "files": {
+   "tests/tools/test_computer_use_ax_walk_bound.py": {
+    "failed": 0,
+    "passed": 5
+   },
+   "tests/tools/test_computer_use_capture_lane_schema.py": {
+    "failed": 0,
+    "passed": 5
+   },
+   "tests/tools/test_computer_use_cheap_lanes.py": {
+    "failed": 0,
+    "passed": 13
+   }
+  },
+  "total": {
+   "failed": 0,
+   "files": 3,
+   "passed": 23
+  }
+ },
+ "carrier-foldin.contract.r3": {
+  "failed_tests": [],
+  "files": {
+   "tests/tools/test_computer_use_ax_walk_bound.py": {
+    "failed": 0,
+    "passed": 5
+   },
+   "tests/tools/test_computer_use_capture_lane_schema.py": {
+    "failed": 0,
+    "passed": 5
+   },
+   "tests/tools/test_computer_use_cheap_lanes.py": {
+    "failed": 0,
+    "passed": 13
+   }
+  },
+  "total": {
+   "failed": 0,
+   "files": 3,
+   "passed": 23
+  }
+ }
+}

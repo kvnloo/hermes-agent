@@ -1,0 +1,77 @@
+{
+ "seam-sabotage.r1": {
+  "failed_tests": [
+   "tests/tools/test_computer_use_capture_lane_schema.py::test_capture_skips_the_half_its_mode_discards[ax-include_screenshot]",
+   "tests/tools/test_computer_use_capture_lane_schema.py::test_capture_skips_the_half_its_mode_discards[vision-include_accessibility_tree]"
+  ],
+  "files": {
+   "tests/tools/test_computer_use_capture_lane_schema.py": {
+    "failed": 2,
+    "passed": 3
+   },
+   "tests/tools/test_computer_use_capture_modes.py": {
+    "failed": 0,
+    "passed": 6
+   },
+   "tests/tools/test_computer_use_cheap_lanes.py": {
+    "failed": 0,
+    "passed": 13
+   }
+  },
+  "total": {
+   "failed": 2,
+   "files": 3,
+   "passed": 22
+  }
+ },
+ "seam-sabotage.r2": {
+  "failed_tests": [
+   "tests/tools/test_computer_use_capture_lane_schema.py::test_capture_skips_the_half_its_mode_discards[ax-include_screenshot]",
+   "tests/tools/test_computer_use_capture_lane_schema.py::test_capture_skips_the_half_its_mode_discards[vision-include_accessibility_tree]"
+  ],
+  "files": {
+   "tests/tools/test_computer_use_capture_lane_schema.py": {
+    "failed": 2,
+    "passed": 3
+   },
+   "tests/tools/test_computer_use_capture_modes.py": {
+    "failed": 0,
+    "passed": 6
+   },
+   "tests/tools/test_computer_use_cheap_lanes.py": {
+    "failed": 0,
+    "passed": 13
+   }
+  },
+  "total": {
+   "failed": 2,
+   "files": 3,
+   "passed": 22
+  }
+ },
+ "seam-sabotage.r3": {
+  "failed_tests": [
+   "tests/tools/test_computer_use_capture_lane_schema.py::test_capture_skips_the_half_its_mode_discards[ax-include_screenshot]",
+   "tests/tools/test_computer_use_capture_lane_schema.py::test_capture_skips_the_half_its_mode_discards[vision-include_accessibility_tree]"
+  ],
+  "files": {
+   "tests/tools/test_computer_use_capture_lane_schema.py": {
+    "failed": 2,
+    "passed": 3
+   },
+   "tests/tools/test_computer_use_capture_modes.py": {
+    "failed": 0,
+    "passed": 6
+   },
+   "tests/tools/test_computer_use_cheap_lanes.py": {
+    "failed": 0,
+    "passed": 13
+   }
+  },
+  "total": {
+   "failed": 2,
+   "files": 3,
+   "passed": 22
+  }
+ }
+}

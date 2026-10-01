@@ -1,0 +1,754 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "F07/r20261001-03",
+ "tier": "T1",
+ "label": "OBSERVED",
+ "question": "Through a real AIAgent turn (FakeLLMServer loopback + in-tree no-op computer_use backend), does one assistant message with two identical computer_use key=tab calls dispatch two presses, directly and through the tool_search tool_call bridge in its advertised {calls: [...]} shape?",
+ "command": "HOME=$TH HERMES_HOME=$TH/.hermes HERMES_PYTHON=$HERMES_PYTHON HERMES_TEST_FILE_RETRIES=0 bash scripts/run_tests.sh -j 2 {files} -q --tb=short -p _xf_t1_guard",
+ "files": [
+  "tests/agent/test_tool_call_dedup_order_significant.py"
+ ],
+ "arms": {
+  "base": {
+   "tree": "fe9eb9e5d420f8722c22e95d206ff5115f5bdc6b",
+   "how": "main aea969677c + tests/agent/test_tool_call_dedup_order_significant.py only (test inject)"
+  },
+  "head": {
+   "head": "2f79b549ef40aeb31cb3af36cd92d8d12b9ba799",
+   "tree": "cb2b5fe5cf30c50a81a7436e3c34adb7c8fc581c",
+   "merge": "clean (head is one commit on base)",
+   "how": "staging commit 2f79b549ef"
+  },
+  "neg-empty-table": {
+   "how": "head with _ORDER_SIGNIFICANT_ACTIONS = frozenset()"
+  },
+  "sab-no-bridge-peel": {
+   "how": "head with the _peel_bridge_call line in _is_order_significant removed"
+  },
+  "sab-facade-revert": {
+   "how": "head with run_agent.py restored to main (old in-facade method)"
+  },
+  "sab-verdict-confirms": {
+   "how": "head with computer_use _classify_action_result fallback returning 'done' (test-sensitivity check for the verify_fresh_state assertion)"
+  },
+  "donor-fix+new-test": {
+   "how": "main + donor run_agent.py hunk (570dc83ba6) + tests/agent/test_tool_call_dedup_order_significant.py"
+  }
+ },
+ "gates": {
+  "validity": "PASS",
+  "red": {
+   "arm": "base",
+   "result": "PASS",
+   "observed": "r1: 2 failed / 2; r2: 2 failed / 2; r3: 2 failed / 2",
+   "assertion": "AssertionError: assert ['key', 'click'] == ['key', 'key', 'click']",
+   "seam_covered": true,
+   "reps_agree": "3/3"
+  },
+  "green": [
+   {
+    "arm": "head",
+    "result": "PASS",
+    "reps_agree": "3/3",
+    "seam_covered": true
+   }
+  ],
+  "negative_control": {
+   "arm": "neg-empty-table",
+   "result": "RED",
+   "observed": "2 failed / 2"
+  },
+  "sabotage": {
+   "per_hunk": [
+    {
+     "hunk": "agent/tool_dispatch_helpers.py _ORDER_SIGNIFICANT_ACTIONS entry",
+     "arm": "neg-empty-table",
+     "red_again": true,
+     "failed": [
+      "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[direct]",
+      "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[tool_call-bridge]"
+     ]
+    },
+    {
+     "hunk": "agent/tool_dispatch_helpers.py _peel_bridge_call in _is_order_significant",
+     "arm": "sab-no-bridge-peel",
+     "red_again": true,
+     "failed": [
+      "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[tool_call-bridge]"
+     ]
+    },
+    {
+     "hunk": "run_agent.py _deduplicate_tool_calls forwarder",
+     "arm": "sab-facade-revert",
+     "red_again": true,
+     "failed": [
+      "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[direct]",
+      "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[tool_call-bridge]"
+     ]
+    }
+   ],
+   "unpinned_hunks": [
+    "agent/tool_dispatch_helpers.py __all__ entry (export list only)"
+   ],
+   "test_sensitivity": {
+    "arm": "sab-verdict-confirms",
+    "failed": 2,
+    "assertion": "verify_fresh_state verdict assertion (see raw log)"
+   }
+  },
+  "adjacent": {
+   "files": [
+    "tests/agent/test_agent_guardrails.py",
+    "tests/agent/test_tool_batch_segmentation.py",
+    "tests/agent/test_tool_call_guardrail_runtime.py",
+    "tests/agent/test_file_mutation_verifier.py",
+    "tests/agent/test_run_agent.py",
+    "tests/tools/test_computer_use.py",
+    "tests/tools/test_computer_use_delivery_ladder.py",
+    "tests/tools/test_connector_bridge_wiring.py",
+    "tests/tools/test_tool_search.py"
+   ],
+   "attempt": {
+    "base": 2,
+    "arm": 2
+   },
+   "base": "559 passed / 0 failed",
+   "arm": "561 passed / 0 failed (base + the 2 new test cases)",
+   "identical": true,
+   "pre_existing_failures": [],
+   "note": "tests/agent/test_agent_guardrails.py is byte-identical on base and head"
+  },
+  "guards": {
+   "F14": "NOT_RUN (factory standing set not built yet)"
+  },
+  "flaky": false,
+  "noise_floor": null,
+  "credit": null,
+  "informativeness": "N_A",
+  "route_scope": "n/a",
+  "cache_read_ratio": {
+   "status": "N_A",
+   "before": null,
+   "after": null
+  }
+ },
+ "ab": null,
+ "measurements": [
+  {
+   "name": "backend_key_presses_for_tab_tab",
+   "arm": "base",
+   "value": 1,
+   "n": 6,
+   "label": "OBSERVED",
+   "statistic": "count per case (assertion ['key','click'])"
+  },
+  {
+   "name": "backend_key_presses_for_tab_tab",
+   "arm": "head",
+   "value": 2,
+   "n": 6,
+   "label": "OBSERVED",
+   "statistic": "count per case"
+  }
+ ],
+ "findings": [
+  "The donor fix (570dc83ba6, name-keyed 'computer_use' check in run_agent.py) leaves the default path broken: computer_use is in the default tools.tool_search.defer list, so the model calls it via the tool_call bridge, and the donor arm fails the tool_call-bridge case (failed: tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[tool_call-bridge]).",
+  "Each kept press returns its own verdict decision 'verify_fresh_state' (noop backend has no semantic effect), so the exemption neither collapses nor upgrades the verify ladder; pinned by the sab-verdict-confirms arm."
+ ],
+ "carrier_choice": {
+  "winner": "staging/cu-repeat-input-dedup@2f79b549ef",
+  "why": "own core leaf, no external carrier; the donor arm stays RED on the tool_call bridge case",
+  "alternatives": {
+   "donor 570dc83ba6": "1 failed / 2"
+  }
+ },
+ "safety": {
+  "egress_blocked_in_new_test": 0,
+  "egress_blocked_in_adjacent_files": {
+   "base": 92,
+   "base_by_file": {
+    "<wt>/tests/agent/test_run_agent.py": 84,
+    "<wt>/tests/agent/test_tool_batch_segmentation.py": 4,
+    "<wt>/tests/agent/test_tool_call_guardrail_runtime.py": 4
+   },
+   "head": 92,
+   "head_by_file": {
+    "<wt>/tests/agent/test_run_agent.py": 84,
+    "<wt>/tests/agent/test_tool_batch_segmentation.py": 4,
+    "<wt>/tests/agent/test_tool_call_guardrail_runtime.py": 4
+   },
+   "note": "pre-existing attempts by existing tests, blocked by the guard on both arms; the tests still pass. The guard covers connect(), not DNS resolution."
+  },
+  "credential_like_env_names_seen": [],
+  "home": "isolated"
+ },
+ "cells": [
+  {
+   "arm": "base",
+   "rep": 1,
+   "attempt": 1,
+   "exit_class": "ok",
+   "timed_out_files": [],
+   "arm_tree": "fe9eb9e5d420f8722c22e95d206ff5115f5bdc6b",
+   "passed": 0,
+   "failed": 2,
+   "failed_ids": [
+    "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[direct]",
+    "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[tool_call-bridge]"
+   ],
+   "red_marker_matched": 2,
+   "egress_blocked": 0,
+   "egress_blocked_by_file": {},
+   "loopback_connects": 8,
+   "seam_hits": {
+    "turn_tool_round.py::run_tool_round": 2,
+    "run_agent.py::_deduplicate_tool_calls": 2,
+    "tool_dispatch_helpers.py::_peel_bridge_call": 4,
+    "tool.py::handle_computer_use": 4
+   },
+   "wall_s": 22.9,
+   "load1_at_start": 6.27,
+   "raw_log": "raw-r03/F07-base-r1.log",
+   "cmd": "HOME=$TH HERMES_HOME=$TH/.hermes HERMES_PYTHON=$HERMES_PYTHON HERMES_TEST_FILE_RETRIES=0 bash scripts/run_tests.sh -j 2 tests/agent/test_tool_call_dedup_order_significant.py -q --tb=short -p _xf_t1_guard",
+   "raw_log_sha256": "d1bd67964a81054e801f83b366e46448ee2cd9048f933f799df1dc388400af2e"
+  },
+  {
+   "arm": "base",
+   "rep": 2,
+   "attempt": 1,
+   "exit_class": "ok",
+   "timed_out_files": [],
+   "arm_tree": "fe9eb9e5d420f8722c22e95d206ff5115f5bdc6b",
+   "passed": 0,
+   "failed": 2,
+   "failed_ids": [
+    "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[direct]",
+    "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[tool_call-bridge]"
+   ],
+   "red_marker_matched": 2,
+   "egress_blocked": 0,
+   "egress_blocked_by_file": {},
+   "loopback_connects": 8,
+   "seam_hits": {
+    "turn_tool_round.py::run_tool_round": 2,
+    "run_agent.py::_deduplicate_tool_calls": 2,
+    "tool_dispatch_helpers.py::_peel_bridge_call": 4,
+    "tool.py::handle_computer_use": 4
+   },
+   "wall_s": 10.9,
+   "load1_at_start": 6.48,
+   "raw_log": "raw-r03/F07-base-r2.log",
+   "cmd": "HOME=$TH HERMES_HOME=$TH/.hermes HERMES_PYTHON=$HERMES_PYTHON HERMES_TEST_FILE_RETRIES=0 bash scripts/run_tests.sh -j 2 tests/agent/test_tool_call_dedup_order_significant.py -q --tb=short -p _xf_t1_guard",
+   "raw_log_sha256": "2cfeb262a8cf24a1b84afd4d05ab62a8e2e42c67b7add98625fb75180ddad90d"
+  },
+  {
+   "arm": "base",
+   "rep": 3,
+   "attempt": 1,
+   "exit_class": "ok",
+   "timed_out_files": [],
+   "arm_tree": "fe9eb9e5d420f8722c22e95d206ff5115f5bdc6b",
+   "passed": 0,
+   "failed": 2,
+   "failed_ids": [
+    "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[direct]",
+    "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[tool_call-bridge]"
+   ],
+   "red_marker_matched": 2,
+   "egress_blocked": 0,
+   "egress_blocked_by_file": {},
+   "loopback_connects": 8,
+   "seam_hits": {
+    "turn_tool_round.py::run_tool_round": 2,
+    "run_agent.py::_deduplicate_tool_calls": 2,
+    "tool_dispatch_helpers.py::_peel_bridge_call": 4,
+    "tool.py::handle_computer_use": 4
+   },
+   "wall_s": 9.8,
+   "load1_at_start": 6.52,
+   "raw_log": "raw-r03/F07-base-r3.log",
+   "cmd": "HOME=$TH HERMES_HOME=$TH/.hermes HERMES_PYTHON=$HERMES_PYTHON HERMES_TEST_FILE_RETRIES=0 bash scripts/run_tests.sh -j 2 tests/agent/test_tool_call_dedup_order_significant.py -q --tb=short -p _xf_t1_guard",
+   "raw_log_sha256": "64ae72bb4e27f34ea661201fc23fe968d9b3a24da9f8840308700498eb42f87b"
+  },
+  {
+   "arm": "head",
+   "rep": 1,
+   "attempt": 1,
+   "exit_class": "ok",
+   "timed_out_files": [],
+   "arm_tree": "cb2b5fe5cf30c50a81a7436e3c34adb7c8fc581c",
+   "passed": 2,
+   "failed": 0,
+   "failed_ids": [],
+   "red_marker_matched": 0,
+   "egress_blocked": 0,
+   "egress_blocked_by_file": {},
+   "loopback_connects": 8,
+   "seam_hits": {
+    "turn_tool_round.py::run_tool_round": 2,
+    "tool_dispatch_helpers.py::deduplicate_tool_calls": 2,
+    "tool_dispatch_helpers.py::_is_order_significant": 4,
+    "tool_dispatch_helpers.py::_peel_bridge_call": 10,
+    "tool.py::handle_computer_use": 6
+   },
+   "wall_s": 9.5,
+   "load1_at_start": 6.83,
+   "raw_log": "raw-r03/F07-head-r1.log",
+   "cmd": "HOME=$TH HERMES_HOME=$TH/.hermes HERMES_PYTHON=$HERMES_PYTHON HERMES_TEST_FILE_RETRIES=0 bash scripts/run_tests.sh -j 2 tests/agent/test_tool_call_dedup_order_significant.py -q --tb=short -p _xf_t1_guard",
+   "raw_log_sha256": "ea6f342a6a62600381bf483783dea8eb32d23694a81fb84d0819bf9c167b6d57"
+  },
+  {
+   "arm": "head",
+   "rep": 2,
+   "attempt": 1,
+   "exit_class": "ok",
+   "timed_out_files": [],
+   "arm_tree": "cb2b5fe5cf30c50a81a7436e3c34adb7c8fc581c",
+   "passed": 2,
+   "failed": 0,
+   "failed_ids": [],
+   "red_marker_matched": 0,
+   "egress_blocked": 0,
+   "egress_blocked_by_file": {},
+   "loopback_connects": 8,
+   "seam_hits": {
+    "turn_tool_round.py::run_tool_round": 2,
+    "tool_dispatch_helpers.py::deduplicate_tool_calls": 2,
+    "tool_dispatch_helpers.py::_is_order_significant": 4,
+    "tool_dispatch_helpers.py::_peel_bridge_call": 10,
+    "tool.py::handle_computer_use": 6
+   },
+   "wall_s": 8.7,
+   "load1_at_start": 7.0,
+   "raw_log": "raw-r03/F07-head-r2.log",
+   "cmd": "HOME=$TH HERMES_HOME=$TH/.hermes HERMES_PYTHON=$HERMES_PYTHON HERMES_TEST_FILE_RETRIES=0 bash scripts/run_tests.sh -j 2 tests/agent/test_tool_call_dedup_order_significant.py -q --tb=short -p _xf_t1_guard",
+   "raw_log_sha256": "cfae38f557e6e5c83f7689ef1b1abc91b590b771a32fd8d1a15c28dc1665b4e1"
+  },
+  {
+   "arm": "head",
+   "rep": 3,
+   "attempt": 1,
+   "exit_class": "ok",
+   "timed_out_files": [],
+   "arm_tree": "cb2b5fe5cf30c50a81a7436e3c34adb7c8fc581c",
+   "passed": 2,
+   "failed": 0,
+   "failed_ids": [],
+   "red_marker_matched": 0,
+   "egress_blocked": 0,
+   "egress_blocked_by_file": {},
+   "loopback_connects": 8,
+   "seam_hits": {
+    "turn_tool_round.py::run_tool_round": 2,
+    "tool_dispatch_helpers.py::deduplicate_tool_calls": 2,
+    "tool_dispatch_helpers.py::_is_order_significant": 4,
+    "tool_dispatch_helpers.py::_peel_bridge_call": 10,
+    "tool.py::handle_computer_use": 6
+   },
+   "wall_s": 9.8,
+   "load1_at_start": 7.21,
+   "raw_log": "raw-r03/F07-head-r3.log",
+   "cmd": "HOME=$TH HERMES_HOME=$TH/.hermes HERMES_PYTHON=$HERMES_PYTHON HERMES_TEST_FILE_RETRIES=0 bash scripts/run_tests.sh -j 2 tests/agent/test_tool_call_dedup_order_significant.py -q --tb=short -p _xf_t1_guard",
+   "raw_log_sha256": "10976ab3a0364bed69ab3ae418a92437b456d68a6092ba4f8d6e51464c55f67c"
+  },
+  {
+   "arm": "neg-empty-table",
+   "rep": 1,
+   "attempt": 1,
+   "exit_class": "ok",
+   "timed_out_files": [],
+   "arm_tree": "f0ad4a7e61c3f8c5a23e9cacabe6aa4250f11f3e",
+   "passed": 0,
+   "failed": 2,
+   "failed_ids": [
+    "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[direct]",
+    "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[tool_call-bridge]"
+   ],
+   "red_marker_matched": 2,
+   "egress_blocked": 0,
+   "egress_blocked_by_file": {},
+   "loopback_connects": 8,
+   "seam_hits": {
+    "turn_tool_round.py::run_tool_round": 2,
+    "tool_dispatch_helpers.py::deduplicate_tool_calls": 2,
+    "tool_dispatch_helpers.py::_is_order_significant": 4,
+    "tool_dispatch_helpers.py::_peel_bridge_call": 8,
+    "tool.py::handle_computer_use": 4
+   },
+   "wall_s": 10.4,
+   "load1_at_start": 7.73,
+   "raw_log": "raw-r03/F07-neg-empty-table-r1.log",
+   "cmd": "HOME=$TH HERMES_HOME=$TH/.hermes HERMES_PYTHON=$HERMES_PYTHON HERMES_TEST_FILE_RETRIES=0 bash scripts/run_tests.sh -j 2 tests/agent/test_tool_call_dedup_order_significant.py -q --tb=short -p _xf_t1_guard",
+   "raw_log_sha256": "6bd0ae67bf6dfdf61ce9236c1ccca884afc91614c91e9758f7034abd33ef52e7"
+  },
+  {
+   "arm": "sab-no-bridge-peel",
+   "rep": 1,
+   "attempt": 1,
+   "exit_class": "ok",
+   "timed_out_files": [],
+   "arm_tree": "b97eb015032200c3cef5f5c161f9fecfd36cd36e",
+   "passed": 1,
+   "failed": 1,
+   "failed_ids": [
+    "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[tool_call-bridge]"
+   ],
+   "red_marker_matched": 1,
+   "egress_blocked": 0,
+   "egress_blocked_by_file": {},
+   "loopback_connects": 8,
+   "seam_hits": {
+    "turn_tool_round.py::run_tool_round": 2,
+    "tool_dispatch_helpers.py::deduplicate_tool_calls": 2,
+    "tool_dispatch_helpers.py::_is_order_significant": 4,
+    "tool_dispatch_helpers.py::_peel_bridge_call": 5,
+    "tool.py::handle_computer_use": 5
+   },
+   "wall_s": 10.5,
+   "load1_at_start": 7.62,
+   "raw_log": "raw-r03/F07-sab-no-bridge-peel-r1.log",
+   "cmd": "HOME=$TH HERMES_HOME=$TH/.hermes HERMES_PYTHON=$HERMES_PYTHON HERMES_TEST_FILE_RETRIES=0 bash scripts/run_tests.sh -j 2 tests/agent/test_tool_call_dedup_order_significant.py -q --tb=short -p _xf_t1_guard",
+   "raw_log_sha256": "3c75a8312d13f0febacb7a6c52af34f1f05029c5f66febb59c314cd063db03cb"
+  },
+  {
+   "arm": "sab-facade-revert",
+   "rep": 1,
+   "attempt": 1,
+   "exit_class": "ok",
+   "timed_out_files": [],
+   "arm_tree": "b81e673204387b8c5251751f642b5d6716f1fcdc",
+   "passed": 0,
+   "failed": 2,
+   "failed_ids": [
+    "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[direct]",
+    "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[tool_call-bridge]"
+   ],
+   "red_marker_matched": 2,
+   "egress_blocked": 0,
+   "egress_blocked_by_file": {},
+   "loopback_connects": 8,
+   "seam_hits": {
+    "turn_tool_round.py::run_tool_round": 2,
+    "run_agent.py::_deduplicate_tool_calls": 2,
+    "tool_dispatch_helpers.py::_peel_bridge_call": 4,
+    "tool.py::handle_computer_use": 4
+   },
+   "wall_s": 10.0,
+   "load1_at_start": 7.99,
+   "raw_log": "raw-r03/F07-sab-facade-revert-r1.log",
+   "cmd": "HOME=$TH HERMES_HOME=$TH/.hermes HERMES_PYTHON=$HERMES_PYTHON HERMES_TEST_FILE_RETRIES=0 bash scripts/run_tests.sh -j 2 tests/agent/test_tool_call_dedup_order_significant.py -q --tb=short -p _xf_t1_guard",
+   "raw_log_sha256": "32a8bfa800ca43f38a8712b3ed1c6baa5ec5152efcae99a512af5636cf259443"
+  },
+  {
+   "arm": "donor-fix+new-test",
+   "rep": 1,
+   "attempt": 1,
+   "exit_class": "ok",
+   "timed_out_files": [],
+   "arm_tree": "a9ba41d1e92bd4dc217618198ae2b7fde9ac01da",
+   "passed": 1,
+   "failed": 1,
+   "failed_ids": [
+    "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[tool_call-bridge]"
+   ],
+   "red_marker_matched": 1,
+   "egress_blocked": 0,
+   "egress_blocked_by_file": {},
+   "loopback_connects": 8,
+   "seam_hits": {
+    "turn_tool_round.py::run_tool_round": 2,
+    "run_agent.py::_deduplicate_tool_calls": 2,
+    "tool_dispatch_helpers.py::_peel_bridge_call": 5,
+    "tool.py::handle_computer_use": 5
+   },
+   "wall_s": 11.0,
+   "load1_at_start": 7.68,
+   "raw_log": "raw-r03/F07-donor-fix+new-test-r1.log",
+   "cmd": "HOME=$TH HERMES_HOME=$TH/.hermes HERMES_PYTHON=$HERMES_PYTHON HERMES_TEST_FILE_RETRIES=0 bash scripts/run_tests.sh -j 2 tests/agent/test_tool_call_dedup_order_significant.py -q --tb=short -p _xf_t1_guard",
+   "raw_log_sha256": "e7db78717679dc59b4e866d4e917d95aaaea86be94dba55fe4b38f1cd360275c"
+  },
+  {
+   "arm": "sab-verdict-confirms",
+   "rep": 1,
+   "attempt": 1,
+   "exit_class": "ok",
+   "timed_out_files": [],
+   "arm_tree": "0e5535305c8937cbfbd6106b9acf7cd3af4d946e",
+   "passed": 0,
+   "failed": 2,
+   "failed_ids": [
+    "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[direct]",
+    "tests/agent/test_tool_call_dedup_order_significant.py::test_repeated_key_press_in_one_turn_is_delivered_twice[tool_call-bridge]"
+   ],
+   "red_marker_matched": 0,
+   "egress_blocked": 0,
+   "egress_blocked_by_file": {},
+   "loopback_connects": 8,
+   "seam_hits": {
+    "turn_tool_round.py::run_tool_round": 2,
+    "tool_dispatch_helpers.py::deduplicate_tool_calls": 2,
+    "tool_dispatch_helpers.py::_is_order_significant": 4,
+    "tool_dispatch_helpers.py::_peel_bridge_call": 10,
+    "tool.py::handle_computer_use": 6
+   },
+   "wall_s": 11.1,
+   "load1_at_start": 8.04,
+   "raw_log": "raw-r03/F07-sab-verdict-confirms-r1.log",
+   "cmd": "HOME=$TH HERMES_HOME=$TH/.hermes HERMES_PYTHON=$HERMES_PYTHON HERMES_TEST_FILE_RETRIES=0 bash scripts/run_tests.sh -j 2 tests/agent/test_tool_call_dedup_order_significant.py -q --tb=short -p _xf_t1_guard",
+   "raw_log_sha256": "eb9efccfabdf8b471f6a9b1539b1948073915d84ebdd224679d65aa17c2e6ec8"
+  },
+  {
+   "arm": "main",
+   "rep": 1,
+   "attempt": 2,
+   "exit_class": "ok",
+   "timed_out_files": [],
+   "arm_tree": "aefff2f5884831d530ce341b3dcff968856d0be6",
+   "passed": 559,
+   "failed": 0,
+   "failed_ids": [],
+   "red_marker_matched": 0,
+   "egress_blocked": 92,
+   "egress_blocked_by_file": {
+    "<wt>/tests/agent/test_run_agent.py": 84,
+    "<wt>/tests/agent/test_tool_batch_segmentation.py": 4,
+    "<wt>/tests/agent/test_tool_call_guardrail_runtime.py": 4
+   },
+   "loopback_connects": 6,
+   "seam_hits": {
+    "run_agent.py::_deduplicate_tool_calls": 25,
+    "tool_dispatch_helpers.py::_peel_bridge_call": 97,
+    "turn_tool_round.py::run_tool_round": 22,
+    "tool.py::handle_computer_use": 31
+   },
+   "wall_s": 317.9,
+   "load1_at_start": 13.07,
+   "raw_log": "raw-r03/ADJ-main-r1-a2.log",
+   "cmd": "HOME=$TH HERMES_HOME=$TH/.hermes HERMES_PYTHON=$HERMES_PYTHON HERMES_TEST_FILE_RETRIES=0 HERMES_TEST_FILE_TIMEOUT=900 bash scripts/run_tests.sh -j 2 tests/agent/test_agent_guardrails.py tests/agent/test_tool_batch_segmentation.py tests/agent/test_tool_call_guardrail_runtime.py tests/agent/test_file_mutation_verifier.py tests/agent/test_run_agent.py tests/tools/test_computer_use.py tests/tools/test_computer_use_delivery_ladder.py tests/tools/test_connector_bridge_wiring.py tests/tools/test_tool_search.py -q --tb=short -p _xf_t1_guard",
+   "raw_log_sha256": "6a87f68fc42ec5a5ee540c9da77b2c391d8a6f6fae6aea58042e85555583dacd"
+  },
+  {
+   "arm": "head",
+   "rep": 1,
+   "attempt": 2,
+   "exit_class": "ok",
+   "timed_out_files": [],
+   "arm_tree": "cb2b5fe5cf30c50a81a7436e3c34adb7c8fc581c",
+   "passed": 561,
+   "failed": 0,
+   "failed_ids": [],
+   "red_marker_matched": 0,
+   "egress_blocked": 92,
+   "egress_blocked_by_file": {
+    "<wt>/tests/agent/test_run_agent.py": 84,
+    "<wt>/tests/agent/test_tool_batch_segmentation.py": 4,
+    "<wt>/tests/agent/test_tool_call_guardrail_runtime.py": 4
+   },
+   "loopback_connects": 14,
+   "seam_hits": {
+    "tool_dispatch_helpers.py::deduplicate_tool_calls": 27,
+    "tool_dispatch_helpers.py::_is_order_significant": 7,
+    "tool_dispatch_helpers.py::_peel_bridge_call": 109,
+    "turn_tool_round.py::run_tool_round": 24,
+    "tool.py::handle_computer_use": 37
+   },
+   "wall_s": 363.0,
+   "load1_at_start": 16.06,
+   "raw_log": "raw-r03/ADJ-head-r1-a2.log",
+   "cmd": "HOME=$TH HERMES_HOME=$TH/.hermes HERMES_PYTHON=$HERMES_PYTHON HERMES_TEST_FILE_RETRIES=0 HERMES_TEST_FILE_TIMEOUT=900 bash scripts/run_tests.sh -j 2 tests/agent/test_agent_guardrails.py tests/agent/test_tool_batch_segmentation.py tests/agent/test_tool_call_guardrail_runtime.py tests/agent/test_file_mutation_verifier.py tests/agent/test_run_agent.py tests/tools/test_computer_use.py tests/tools/test_computer_use_delivery_ladder.py tests/tools/test_connector_bridge_wiring.py tests/tools/test_tool_search.py tests/agent/test_tool_call_dedup_order_significant.py -q --tb=short -p _xf_t1_guard",
+   "raw_log_sha256": "f57fc80cde49e736b041b5acceee1d1af131c1de6751a082de59dd964b68de3a"
+  }
+ ],
+ "retried_infra_attempts": [
+  {
+   "arm": "main",
+   "rep": 1,
+   "attempt": 1,
+   "exit_class": "infra",
+   "timed_out_files": [
+    "tests/agent/test_run_agent.py"
+   ],
+   "arm_tree": "aefff2f5884831d530ce341b3dcff968856d0be6",
+   "passed": 278,
+   "failed": 0,
+   "failed_ids": [],
+   "red_marker_matched": 0,
+   "egress_blocked": 8,
+   "egress_blocked_by_file": {
+    "<wt>/tests/agent/test_tool_batch_segmentation.py": 4,
+    "<wt>/tests/agent/test_tool_call_guardrail_runtime.py": 4
+   },
+   "loopback_connects": 0,
+   "seam_hits": {
+    "run_agent.py::_deduplicate_tool_calls": 11,
+    "tool_dispatch_helpers.py::_peel_bridge_call": 89,
+    "turn_tool_round.py::run_tool_round": 6,
+    "tool.py::handle_computer_use": 31
+   },
+   "wall_s": 307.3,
+   "load1_at_start": 9.36,
+   "raw_log": "raw-r03/ADJ-main-r1.log",
+   "cmd": "HOME=$TH HERMES_HOME=$TH/.hermes HERMES_PYTHON=$HERMES_PYTHON HERMES_TEST_FILE_RETRIES=0 bash scripts/run_tests.sh -j 2 tests/agent/test_agent_guardrails.py tests/agent/test_tool_batch_segmentation.py tests/agent/test_tool_call_guardrail_runtime.py tests/agent/test_file_mutation_verifier.py tests/agent/test_run_agent.py tests/tools/test_computer_use.py tests/tools/test_computer_use_delivery_ladder.py tests/tools/test_connector_bridge_wiring.py tests/tools/test_tool_search.py -q --tb=short -p _xf_t1_guard",
+   "raw_log_sha256": "64a72327a1a4fee03ae9f90f23ada9bb7e3541d6ef8acf41117beb8fd00f9f8f"
+  },
+  {
+   "arm": "head",
+   "rep": 1,
+   "attempt": 1,
+   "exit_class": "infra",
+   "timed_out_files": [
+    "tests/agent/test_run_agent.py"
+   ],
+   "arm_tree": "cb2b5fe5cf30c50a81a7436e3c34adb7c8fc581c",
+   "passed": 280,
+   "failed": 0,
+   "failed_ids": [],
+   "red_marker_matched": 0,
+   "egress_blocked": 8,
+   "egress_blocked_by_file": {
+    "<wt>/tests/agent/test_tool_batch_segmentation.py": 4,
+    "<wt>/tests/agent/test_tool_call_guardrail_runtime.py": 4
+   },
+   "loopback_connects": 8,
+   "seam_hits": {
+    "tool_dispatch_helpers.py::deduplicate_tool_calls": 13,
+    "tool_dispatch_helpers.py::_is_order_significant": 7,
+    "tool_dispatch_helpers.py::_peel_bridge_call": 101,
+    "turn_tool_round.py::run_tool_round": 8,
+    "tool.py::handle_computer_use": 37
+   },
+   "wall_s": 309.6,
+   "load1_at_start": 14.54,
+   "raw_log": "raw-r03/ADJ-head-r1.log",
+   "cmd": "HOME=$TH HERMES_HOME=$TH/.hermes HERMES_PYTHON=$HERMES_PYTHON HERMES_TEST_FILE_RETRIES=0 bash scripts/run_tests.sh -j 2 tests/agent/test_agent_guardrails.py tests/agent/test_tool_batch_segmentation.py tests/agent/test_tool_call_guardrail_runtime.py tests/agent/test_file_mutation_verifier.py tests/agent/test_run_agent.py tests/tools/test_computer_use.py tests/tools/test_computer_use_delivery_ladder.py tests/tools/test_connector_bridge_wiring.py tests/tools/test_tool_search.py tests/agent/test_tool_call_dedup_order_significant.py -q --tb=short -p _xf_t1_guard",
+   "raw_log_sha256": "7d476f135a525c815e0b2c90d7b02b651b83cefd30eff8e8b57409b6ebbfe445"
+  }
+ ],
+ "denominators": {
+  "cells": 13,
+  "attempts": 15,
+  "infra_attempts_retried": 2,
+  "infra_final": 0,
+  "infra_excluded": 0,
+  "errored_scored_zero": 0,
+  "completeness": 1.0,
+  "note": "Attempt 1 of both ADJ cells lost tests/agent/test_run_agent.py to run_tests.sh's 300 s per-file timeout at load1 ~14 (no test failed; the file was killed). Both ADJ cells were re-run once as attempt 2 with HERMES_TEST_FILE_TIMEOUT=900; only attempt 2 is scored."
+ },
+ "verdict": "KEEP",
+ "not_tested": [
+  "real cua-driver / desktop delivery of two presses",
+  "real-model emission rate of identical same-message key presses (queued T2/T3 probe)",
+  "macOS / Windows",
+  "Gateway / TUI / ACP surfaces directly",
+  "F14 standing guard set",
+  "full test suite"
+ ],
+ "limitations": [
+  "T1 only: fake LLM endpoint and no-op device",
+  "single host, -j 2",
+  "ADJ run once per arm (n=1)",
+  "spec not preregistered (see spec.gap)"
+ ],
+ "learning": {
+  "hypothesis": "Two identical computer_use key calls in one assistant message both reach the backend on head, directly and through the tool_call bridge, and only one does on main.",
+  "result": "KEEP",
+  "observed_evidence": [
+   "F07/r20261001-03 red 3/3, green 3/3, per-hunk sabotage red"
+  ],
+  "regressions": [],
+  "reusable_lesson": "A tool-name exemption in dispatch misses deferred tools that the model reaches through the tool_search tool_call bridge; unwrap the bridge before matching.",
+  "roadmap_effect": "hold (OD-6)"
+ },
+ "frozen": {
+  "bundle_sha": null,
+  "cells": 18,
+  "supersedes": "F07/r20261001-02",
+  "status": "NOT_FROZEN (z0evals freeze needs a write this run may not make; open P8 item)"
+ },
+ "spec": {
+  "path": null,
+  "rev": null,
+  "sha256": null,
+  "prereg_commit": null,
+  "decision_rule_sha": "321dc15247c2b37f68c88421669453db77d23b8c965c6d7def9ac3d09c1386b5",
+  "decision_rule": "RED: base arm fails 2/2 with the marker in 3/3 reps and the seam is hit. GREEN: head passes 2/2 in 3/3 reps. NEG/per-hunk: each reverted hunk fails again. ADJ: same failures on base and head. KEEP only if all four hold. Rule restated from the r01/r02 receipts; it was not committed before run 1.",
+  "status": "NOT_PREREGISTERED",
+  "gap": "FACTORY I5 wants the spec committed to claude/ledger before run 1. This run may not write the ledger, so there is no prereg commit. Open P8 item."
+ },
+ "runner_revision": "harness/proof-r03.py sha256=61197933f6d7821eefbbf4c6f1eb7c59d42207f55a454d3b123cdf11b37c5467",
+ "issue": "kvnloo/hermes-agent#316",
+ "origin_refs": [
+  "NousResearch/hermes-agent#124008",
+  "NousResearch/hermes-agent#112639"
+ ],
+ "staging": "cu-repeat-input-dedup",
+ "branch": {
+  "logical": "staging/cu-repeat-input-dedup",
+  "fork_physical": "staged/cu-repeat-input-dedup",
+  "pushed": false
+ },
+ "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+ "head_revision": "2f79b549ef40aeb31cb3af36cd92d8d12b9ba799",
+ "changed_files": [
+  {
+   "path": "agent/tool_dispatch_helpers.py",
+   "added": 33,
+   "deleted": 1
+  },
+  {
+   "path": "run_agent.py",
+   "added": 1,
+   "deleted": 18
+  },
+  {
+   "path": "tests/agent/test_tool_call_dedup_order_significant.py",
+   "added": 71,
+   "deleted": 0
+  }
+ ],
+ "policy_revision": {
+  "AGENTS.md": "65aa3e61bcba610da21279a17385671263be39e9",
+  "CONTRIBUTING.md": "b0baa59b5057c204b3c09d3dd170c0955cfdb39c",
+  "factory": "frontier-2026-10-01/FACTORY.md sha256=7726ba18b43a9367f91d7f70c3aaefb96a9863761ddf71225c61c26a30d688d4"
+ },
+ "inputs": {
+  "tests/agent/test_tool_call_dedup_order_significant.py@head": "f4d3d1e20d6f9e9be528f7b99bfd7a4c2d1ce14d",
+  "tests/agent/test_agent_guardrails.py@base": "a6f91bada3e3bc40f715981f7519aa56b97754bf",
+  "tests/fakes/fake_llm_provider.py@base": "339adb7e87ea1dcf961d4aa4e12cbd558e2de31e",
+  "scripts/run_tests.sh@base": "8fcc4294f48a16968fd68f6d5edad45d74354166",
+  "scripts/run_tests_parallel.py@base": "21178fd246edd2460d1d6ae4cfb7937262458ffc",
+  "guard_plugin harness/_xf_t1_guard.py sha256": "ede8cf473cf26e6b2e960cbd2d89e1754bc63f799894d22360311fde94daaeee",
+  "driver harness/proof-r03.py sha256": "61197933f6d7821eefbbf4c6f1eb7c59d42207f55a454d3b123cdf11b37c5467",
+  "donor": "refs/fork/fix/computer-use-repeat-input-dedup-current-main@570dc83ba65fc4ce86efb2c00e89dc84d19bd5ca (merge-base cb3142d3257b15ac42de544bd585793567400d0f)"
+ },
+ "env": {
+  "host": "local workstation, Linux x86_64",
+  "python": "3.11.14 via $HERMES_PYTHON (interpreter only)",
+  "venv_lock_sha256": null,
+  "sandbox": "run_tests.sh env -i + isolated HOME/HERMES_HOME ($TH = scratchpad/testhome-sf-cu-repeat-input-dedup) + in-process loopback-only connect guard; no bwrap",
+  "file_retries": 0,
+  "workers": 2
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "harness_abi": {
+  "harness": "hermes",
+  "editor_abi": "n/a (no edit tool; computer_use no-op backend as the device)"
+ },
+ "resource_usage": {
+  "api_cost_usd": 0.0,
+  "gpu_s": 0,
+  "tokens": 0,
+  "energy_j": null
+ },
+ "z0evals_study": null,
+ "provenance": "self",
+ "privacy": "public-aggregate (synthetic fixtures only; no absolute local paths)",
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the change, the test and these receipts",
+ "supersedes": "F07/r20261001-02"
+}

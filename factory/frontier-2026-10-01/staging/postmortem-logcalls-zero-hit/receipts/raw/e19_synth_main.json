@@ -1,0 +1,21 @@
+{
+ "coverage": {
+  "calls_found": 389,
+  "run_api_calls": 413,
+  "fraction": 0.9419,
+  "usage_unavailable": 0
+ },
+ "k": 5,
+ "switches": [
+  {
+   "sid_index": 0,
+   "from": "anthropic/claude-fable-5.1",
+   "to": "openai/gpt-6",
+   "call_n": 62,
+   "before": 0.9838,
+   "after": 0.9884,
+   "n_before": 5,
+   "n_after": 5
+  }
+ ]
+}

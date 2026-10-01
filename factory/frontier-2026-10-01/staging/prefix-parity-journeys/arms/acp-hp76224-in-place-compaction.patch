@@ -1,0 +1,24 @@
+--- a/acp_adapter/commands.py	2026-10-01 04:20:18.417529184 -0500
++++ b/acp_adapter/commands.py	2026-10-01 04:20:18.434618848 -0500
+@@ -263,17 +263,17 @@
+         request = parse_compress_args(args)
+         if request.aggressive:
+             return AGGRESSIVE_UNSUPPORTED
+-        original_session_db = getattr(agent, "_session_db", None)
++        original_in_place = getattr(agent, "compression_in_place", True)
+         try:
+-            # Stable ACP session id: suppress _compress_context's SQLite session split.
+-            agent._session_db = None
++            # Hand-port of #76224: in-place compaction keeps the session id AND persists (#76215).
++            agent.compression_in_place = True
+             result = compress_now(
+                 agent, state.history, request, system_message=getattr(agent, "_cached_system_prompt", "") or "",
+                 task_id=state.session_id)
+         except Exception as e:
+             return f"Compression failed: {e}"
+         finally:
+-            agent._session_db = original_session_db
++            agent.compression_in_place = original_in_place
+         if result.status != "compressed":
+             return "\n".join(render_compress_result(result))
+         state.history = result.after_messages

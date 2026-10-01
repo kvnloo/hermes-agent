@@ -1,0 +1,13 @@
+diff --git i/tests/e2e/core/history/test_prefix_stability.py w/tests/e2e/core/history/test_prefix_stability.py
+index 1133468e43..47d9b74600 100644
+--- i/tests/e2e/core/history/test_prefix_stability.py
++++ w/tests/e2e/core/history/test_prefix_stability.py
+@@ -261,7 +261,7 @@ def test_request_prefix_is_byte_stable_across_processes(world, journey):
+ 
+     breaks = prefix_breaks(main, tools=False)
+     unexpected = [(i, why) for i, why in breaks if i != compaction_idx]
+-    with known_gate(KNOWN, journey):
++    with known_gate({}, journey):  # scratch: gate off
+         assert not unexpected, "prompt-cache prefix broke outside the compaction boundary:\n" + "\n".join(
+             f"  {where(i)}: {why}" for i, why in unexpected)
+         if compaction_idx is not None:

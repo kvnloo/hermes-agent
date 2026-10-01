@@ -1,0 +1,21 @@
+{
+ "cell": "ADJ-head-r1-a2 (cells-r03.jsonl)",
+ "source": "guard plugin output for that cell; prefixes only",
+ "blocked_by_file": {
+  "tests/agent/test_run_agent.py": {
+   "2606:4700::/32 port 443": 38,
+   "104.18.x.x port 443": 38,
+   "2607:6bc0::/32 port 443": 4,
+   "160.79.x.x port 443": 4
+  },
+  "tests/agent/test_tool_batch_segmentation.py": {
+   "2606:4700::/32 port 443": 2,
+   "104.18.x.x port 443": 2
+  },
+  "tests/agent/test_tool_call_guardrail_runtime.py": {
+   "2606:4700::/32 port 443": 2,
+   "104.18.x.x port 443": 2
+  }
+ },
+ "note": "guard output for the other cells was overwritten by the next cell, so only this cell's destinations are kept; counts per file for every cell are in cells-r03.jsonl"
+}

@@ -1,0 +1,38 @@
+▶ not activated — using HERMES_PYTHON: <hermes-home>/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 10 test files (~509 tests) under ['tests/agent/test_agent_guardrails.py', 'tests/agent/test_tool_batch_segmentation.py', 'tests/agent/test_tool_call_guardrail_runtime.py', 'tests/agent/test_file_mutation_verifier.py', 'tests/agent/test_run_agent.py', 'tests/tools/test_computer_use.py', 'tests/tools/test_computer_use_delivery_ladder.py', 'tests/tools/test_connector_bridge_wiring.py', 'tests/tools/test_tool_search.py', 'tests/agent/test_tool_call_dedup_order_significant.py']; running with -j 2
+[  5.1% |    26/~509 | ✓26 | ✗ 0] ✓ tests/agent/test_agent_guardrails.py (26✓, 4.9s)
+[  9.2% |    47/~509 | ✓49 | ✗ 0] ✓ tests/agent/test_file_mutation_verifier.py (23✓, 5.1s)
+[ 14.9% |    76/~509 | ✓80 | ✗ 0] ✓ tests/agent/test_tool_batch_segmentation.py (31✓ 1s, 14.1s)
+[ 15.1% |    77/~509 | ✓82 | ✗ 0] ✓ tests/agent/test_tool_call_dedup_order_significant.py (2✓, 7.9s)
+[ 17.9% |    91/~509 | ✓97 | ✗ 0] ✓ tests/agent/test_tool_call_guardrail_runtime.py (15✓, 13.3s)
+[ 35.0% |   178/~509 | ✓184 | ✗  0] ✓ tests/tools/test_computer_use.py (87✓, 19.5s)
+[ 37.7% |   192/~509 | ✓198 | ✗  0] ✓ tests/tools/test_computer_use_delivery_ladder.py (14✓, 7.5s)
+[ 43.2% |   220/~509 | ✓235 | ✗  0] ✓ tests/tools/test_connector_bridge_wiring.py (37✓, 11.1s)
+[ 51.3% |   261/~509 | ✓280 | ✗  0] ✓ tests/tools/test_tool_search.py (45✓, 18.2s)
+[100.0% |   509/~509 | ✓561 | ✗  0] ✓ tests/agent/test_run_agent.py (281✓, 227.4s)
+
+=== Summary: 10 files, 561 tests passed, 0 failed, 1 skipped (100% complete) in 232.4s (2 workers) ===
+
+  note: platforms('windows') tests (in 1 file) were SKIPPED on this host (linux); they run on the Windows Python-tests lane.
+  Durations cached to test_durations.json (10 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   10
+  Total subprocess CPU-wall: 329.0s  (runner wall: 232.4s, parallelism: 2x)
+  P50: 13.35s  P90: 227.44s  P95: 227.44s  P99: 227.44s  Max: 227.44s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+    227.44s  tests/agent/test_run_agent.py
+     19.48s  tests/tools/test_computer_use.py
+     18.16s  tests/tools/test_tool_search.py
+     14.12s  tests/agent/test_tool_batch_segmentation.py
+     13.35s  tests/agent/test_tool_call_guardrail_runtime.py
+     11.10s  tests/tools/test_connector_bridge_wiring.py
+      7.86s  tests/agent/test_tool_call_dedup_order_significant.py
+      7.52s  tests/tools/test_computer_use_delivery_ladder.py
+      5.08s  tests/agent/test_file_mutation_verifier.py
+      4.88s  tests/agent/test_agent_guardrails.py

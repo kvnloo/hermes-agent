@@ -1,0 +1,12 @@
+archive-inputs.yml: push={'branches': ['main'], 'paths': ['pm/lock.json', 'pm/artifact-mirror.json', 'scripts/termux/runtime_libs.json', 'scripts/ci/archive_inputs.py', '.github/workflows/archive-inputs.yml']} -> no match
+ci.yaml: push={'branches': ['main']} -> no match
+deploy-site.yml: push={'branches': ['main'], 'paths': ['website/**', 'skills/**', 'optional-skills/**', 'plugin-catalog/**', '.github/workflows/deploy-site.yml']} -> no match
+docker.yml: push={'branches': ['main']} -> no match
+js-autofix.yml: push={'branches': ['main'], 'paths': ['**/*.js', '**/*.cjs', '**/*.mjs', '**/*.ts', '**/*.tsx', 'package.json', 'package-lock.json']} -> no match
+live-providers.yml: push={'tags': ['v*']} -> no match
+nix.yml: push={'branches': ['main']} -> no match
+skills-index.yml: push={'branches': ['main'], 'paths': ['scripts/build_skills_index.py', '.github/workflows/skills-index.yml']} -> no match
+termux-verify.yml: push={'branches': ['main'], 'paths': ['scripts/termux/**', 'pm/**', 'tests/scripts/test_termux*', '.github/workflows/termux-verify.yml']} -> no match
+windows-install-update-e2e.yml: push={'branches': ['wine2e-install/**']} -> no match
+windows-venv-e2e.yml: push={'branches': ['wine2e/**']} -> no match
+branch=staged/postmortem-logcalls-zero-hit commit=dd4dd10611e8c23c7579a4ddb95655abebbaca27 push-trigger matches=0 []

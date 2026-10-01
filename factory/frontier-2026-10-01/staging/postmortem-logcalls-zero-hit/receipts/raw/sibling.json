@@ -1,0 +1,290 @@
+{
+ "probes": {
+  "cache_prefix_live.py": {
+   "base": "API call #(\\d+): .*in=(\\d+) out=(\\d+) .*cache=(\\d+)/(\\d+) \\((\\d+)%\\)",
+   "patched": "API call #(\\d+): .*in=(\\d+) out=(\\d+) (?:.*cache=(\\d+)/(\\d+) \\((\\d+)%\\))?"
+  },
+  "cache_prefix_wire.py": {
+   "base": "API call #(\\d+): .*in=(\\d+) out=(\\d+) .*cache=(\\d+)/(\\d+) \\((\\d+)%\\)",
+   "patched": "API call #(\\d+): .*in=(\\d+) out=(\\d+) (?:.*cache=(\\d+)/(\\d+) \\((\\d+)%\\))?"
+  }
+ },
+ "arms": {
+  "main": {
+   "lines": 5,
+   "metered_lines": 4,
+   "per_probe": {
+    "cache_prefix_live.py": {
+     "base": {
+      "rows": 1,
+      "input": 100,
+      "cached": 40,
+      "arm_hit_pct": 40.0,
+      "rows_detail": [
+       [
+        "1",
+        "100",
+        "40"
+       ]
+      ]
+     },
+     "patched": {
+      "rows": 4,
+      "input": 400,
+      "cached": 40,
+      "arm_hit_pct": 10.0,
+      "rows_detail": [
+       [
+        "1",
+        "100",
+        "40"
+       ],
+       [
+        "2",
+        "100",
+        "0"
+       ],
+       [
+        "3",
+        "100",
+        "0"
+       ],
+       [
+        "4",
+        "100",
+        "0"
+       ]
+      ]
+     }
+    },
+    "cache_prefix_wire.py": {
+     "base": {
+      "rows": 1,
+      "input": 100,
+      "cached": 40,
+      "arm_hit_pct": 40.0,
+      "rows_detail": [
+       [
+        "1",
+        "100",
+        "40"
+       ]
+      ]
+     },
+     "patched": {
+      "rows": 4,
+      "input": 400,
+      "cached": 40,
+      "arm_hit_pct": 10.0,
+      "rows_detail": [
+       [
+        "1",
+        "100",
+        "40"
+       ],
+       [
+        "2",
+        "100",
+        "0"
+       ],
+       [
+        "3",
+        "100",
+        "0"
+       ],
+       [
+        "4",
+        "100",
+        "0"
+       ]
+      ]
+     }
+    }
+   }
+  },
+  "a1_pr121135": {
+   "lines": 5,
+   "metered_lines": 4,
+   "per_probe": {
+    "cache_prefix_live.py": {
+     "base": {
+      "rows": 1,
+      "input": 100,
+      "cached": 40,
+      "arm_hit_pct": 40.0,
+      "rows_detail": [
+       [
+        "1",
+        "100",
+        "40"
+       ]
+      ]
+     },
+     "patched": {
+      "rows": 4,
+      "input": 400,
+      "cached": 40,
+      "arm_hit_pct": 10.0,
+      "rows_detail": [
+       [
+        "1",
+        "100",
+        "40"
+       ],
+       [
+        "2",
+        "100",
+        "0"
+       ],
+       [
+        "3",
+        "100",
+        "0"
+       ],
+       [
+        "4",
+        "100",
+        "0"
+       ]
+      ]
+     }
+    },
+    "cache_prefix_wire.py": {
+     "base": {
+      "rows": 1,
+      "input": 100,
+      "cached": 40,
+      "arm_hit_pct": 40.0,
+      "rows_detail": [
+       [
+        "1",
+        "100",
+        "40"
+       ]
+      ]
+     },
+     "patched": {
+      "rows": 4,
+      "input": 400,
+      "cached": 40,
+      "arm_hit_pct": 10.0,
+      "rows_detail": [
+       [
+        "1",
+        "100",
+        "40"
+       ],
+       [
+        "2",
+        "100",
+        "0"
+       ],
+       [
+        "3",
+        "100",
+        "0"
+       ],
+       [
+        "4",
+        "100",
+        "0"
+       ]
+      ]
+     }
+    }
+   }
+  },
+  "a2_pr119713": {
+   "lines": 5,
+   "metered_lines": 4,
+   "per_probe": {
+    "cache_prefix_live.py": {
+     "base": {
+      "rows": 1,
+      "input": 100,
+      "cached": 40,
+      "arm_hit_pct": 40.0,
+      "rows_detail": [
+       [
+        "1",
+        "100",
+        "40"
+       ]
+      ]
+     },
+     "patched": {
+      "rows": 4,
+      "input": 400,
+      "cached": 40,
+      "arm_hit_pct": 10.0,
+      "rows_detail": [
+       [
+        "1",
+        "100",
+        "40"
+       ],
+       [
+        "2",
+        "100",
+        "0"
+       ],
+       [
+        "3",
+        "100",
+        "0"
+       ],
+       [
+        "4",
+        "100",
+        "0"
+       ]
+      ]
+     }
+    },
+    "cache_prefix_wire.py": {
+     "base": {
+      "rows": 1,
+      "input": 100,
+      "cached": 40,
+      "arm_hit_pct": 40.0,
+      "rows_detail": [
+       [
+        "1",
+        "100",
+        "40"
+       ]
+      ]
+     },
+     "patched": {
+      "rows": 4,
+      "input": 400,
+      "cached": 40,
+      "arm_hit_pct": 10.0,
+      "rows_detail": [
+       [
+        "1",
+        "100",
+        "40"
+       ],
+       [
+        "2",
+        "100",
+        "0"
+       ],
+       [
+        "3",
+        "100",
+        "0"
+       ],
+       [
+        "4",
+        "100",
+        "0"
+       ]
+      ]
+     }
+    }
+   }
+  }
+ }
+}

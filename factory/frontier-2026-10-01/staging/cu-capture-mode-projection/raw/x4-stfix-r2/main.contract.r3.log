@@ -1,0 +1,132 @@
+▶ not activated — using HERMES_PYTHON: <HERMES_PYTHON>
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~2 tests) under ['tests/tools/test_computer_use_capture_lane_schema.py']; running with -j 2
+[100.0% |     2/~2 | ✓3 | ✗3] ✗ tests/tools/test_computer_use_capture_lane_schema.py (3✓ 3✗, 5.0s)
+
+  ╔╍ Failed: tests/tools/test_computer_use_capture_lane_schema.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ 
+  ║ tests/tools/test_computer_use_capture_lane_schema.py:76: AssertionError
+  ║ ______ test_capture_skips_the_half_its_mode_discards[vision-cli-refetch] _______
+  ║ 
+  ║ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7ff1abb500d0>
+  ║ mode = 'vision', selector = 'include_accessibility_tree', mcp_images = False
+  ║ 
+  ║     @pytest.mark.parametrize("mode, selector, mcp_images", [
+  ║         pytest.param("ax", "include_screenshot", True, id="ax"),
+  ║         pytest.param("vision", "include_accessibility_tree", True, id="vision"),
+  ║         pytest.param("vision", "include_accessibility_tree", False, id="vision-cli-refetch"),
+  ║     ])
+  ║     def test_capture_skips_the_half_its_mode_discards(monkeypatch, mode, selector, mcp_images):
+  ║         backend, calls = _backend(monkeypatch, _GWS_0_28_2, mcp_images)
+  ║     
+  ║         cap = backend.capture(mode=mode, pid=123, window_id=456)
+  ║     
+  ║         sent = [args for name, args in calls if name == "get_window_state"]
+  ║ >       assert sent and all(args.get(selector) is False for args in sent)
+  ║ E       AssertionError: assert ([{'pid': 123, 'window_id': 456, 'session': 'hermes-9f6b2b31c602'}, {'pid': 123, 'window_id': 456, 'session': 'hermes-9f6b2b31c602'}] and False)
+  ║ E        +  where False = all(<generator object test_capture_skips_the_half_its_mode_discards.<locals>.<genexpr> at 0x7ff1a8bbc820>)
+  ║ 
+  ║ tests/tools/test_computer_use_capture_lane_schema.py:76: AssertionError
+  ║ ------------------------------ Captured log call -------------------------------
+  ║ WARNING  tools.computer_use.cua_backend:cua_backend_capture.py:137 cua-driver vision capture returned no image over MCP (window_id=456); re-fetching via CLI transport
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/tools/test_computer_use_capture_lane_schema.py::test_capture_skips_the_half_its_mode_discards[ax]
+  ║ FAILED tests/tools/test_computer_use_capture_lane_schema.py::test_capture_skips_the_half_its_mode_discards[vision]
+  ║ FAILED tests/tools/test_computer_use_capture_lane_schema.py::test_capture_skips_the_half_its_mode_discards[vision-cli-refetch]
+  ║ 3 failed, 3 passed in 1.72s
+  ║
+  ║  Repro: python -m pytest tests/tools/test_computer_use_capture_lane_schema.py -q
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 1 files, 3 tests passed, 3 failed (100% complete) in 5.1s (2 workers) ===
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 5.0s  (runner wall: 5.1s, parallelism: 2x)
+  P50: 5.05s  P90: 5.05s  P95: 5.05s  P99: 5.05s  Max: 5.05s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+      5.05s  tests/tools/test_computer_use_capture_lane_schema.py
+
+=== Failure output ===
+
+--- tests/tools/test_computer_use_capture_lane_schema.py ---
+FFF...                                                                   [100%]
+=================================== FAILURES ===================================
+______________ test_capture_skips_the_half_its_mode_discards[ax] _______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7ff1abba2b10>
+mode = 'ax', selector = 'include_screenshot', mcp_images = True
+
+    @pytest.mark.parametrize("mode, selector, mcp_images", [
+        pytest.param("ax", "include_screenshot", True, id="ax"),
+        pytest.param("vision", "include_accessibility_tree", True, id="vision"),
+        pytest.param("vision", "include_accessibility_tree", False, id="vision-cli-refetch"),
+    ])
+    def test_capture_skips_the_half_its_mode_discards(monkeypatch, mode, selector, mcp_images):
+        backend, calls = _backend(monkeypatch, _GWS_0_28_2, mcp_images)
+    
+        cap = backend.capture(mode=mode, pid=123, window_id=456)
+    
+        sent = [args for name, args in calls if name == "get_window_state"]
+>       assert sent and all(args.get(selector) is False for args in sent)
+E       AssertionError: assert ([{'pid': 123, 'window_id': 456, 'session': 'hermes-c3bd42c413ab'}] and False)
+E        +  where False = all(<generator object test_capture_skips_the_half_its_mode_discards.<locals>.<genexpr> at 0x7ff1a8cb2f80>)
+
+tests/tools/test_computer_use_capture_lane_schema.py:76: AssertionError
+____________ test_capture_skips_the_half_its_mode_discards[vision] _____________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7ff1abb42c50>
+mode = 'vision', selector = 'include_accessibility_tree', mcp_images = True
+
+    @pytest.mark.parametrize("mode, selector, mcp_images", [
+        pytest.param("ax", "include_screenshot", True, id="ax"),
+        pytest.param("vision", "include_accessibility_tree", True, id="vision"),
+        pytest.param("vision", "include_accessibility_tree", False, id="vision-cli-refetch"),
+    ])
+    def test_capture_skips_the_half_its_mode_discards(monkeypatch, mode, selector, mcp_images):
+        backend, calls = _backend(monkeypatch, _GWS_0_28_2, mcp_images)
+    
+        cap = backend.capture(mode=mode, pid=123, window_id=456)
+    
+        sent = [args for name, args in calls if name == "get_window_state"]
+>       assert sent and all(args.get(selector) is False for args in sent)
+E       AssertionError: assert ([{'pid': 123, 'window_id': 456, 'session': 'hermes-7f0b9fd91c42'}] and False)
+E        +  where False = all(<generator object test_capture_skips_the_half_its_mode_discards.<locals>.<genexpr> at 0x7ff1a8b59fc0>)
+
+tests/tools/test_computer_use_capture_lane_schema.py:76: AssertionError
+______ test_capture_skips_the_half_its_mode_discards[vision-cli-refetch] _______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7ff1abb500d0>
+mode = 'vision', selector = 'include_accessibility_tree', mcp_images = False
+
+    @pytest.mark.parametrize("mode, selector, mcp_images", [
+        pytest.param("ax", "include_screenshot", True, id="ax"),
+        pytest.param("vision", "include_accessibility_tree", True, id="vision"),
+        pytest.param("vision", "include_accessibility_tree", False, id="vision-cli-refetch"),
+    ])
+    def test_capture_skips_the_half_its_mode_discards(monkeypatch, mode, selector, mcp_images):
+        backend, calls = _backend(monkeypatch, _GWS_0_28_2, mcp_images)
+    
+        cap = backend.capture(mode=mode, pid=123, window_id=456)
+    
+        sent = [args for name, args in calls if name == "get_window_state"]
+>       assert sent and all(args.get(selector) is False for args in sent)
+E       AssertionError: assert ([{'pid': 123, 'window_id': 456, 'session': 'hermes-9f6b2b31c602'}, {'pid': 123, 'window_id': 456, 'session': 'hermes-9f6b2b31c602'}] and False)
+E        +  where False = all(<generator object test_capture_skips_the_half_its_mode_discards.<locals>.<genexpr> at 0x7ff1a8bbc820>)
+
+tests/tools/test_computer_use_capture_lane_schema.py:76: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  tools.computer_use.cua_backend:cua_backend_capture.py:137 cua-driver vision capture returned no image over MCP (window_id=456); re-fetching via CLI transport
+=========================== short test summary info ============================
+FAILED tests/tools/test_computer_use_capture_lane_schema.py::test_capture_skips_the_half_its_mode_discards[ax]
+FAILED tests/tools/test_computer_use_capture_lane_schema.py::test_capture_skips_the_half_its_mode_discards[vision]
+FAILED tests/tools/test_computer_use_capture_lane_schema.py::test_capture_skips_the_half_its_mode_discards[vision-cli-refetch]
+3 failed, 3 passed in 1.72s
+
+=== 1 file with test failures (3 tests failed) ===
+  tests/tools/test_computer_use_capture_lane_schema.py  (3 tests failed)

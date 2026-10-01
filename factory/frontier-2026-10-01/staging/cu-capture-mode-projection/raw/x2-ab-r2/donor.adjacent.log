@@ -1,0 +1,136 @@
+▶ not activated — using HERMES_PYTHON: <HERMES_PYTHON>
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 11 test files (~148 tests) under ['tests/tools/test_computer_use_ax_walk_bound.py', 'tests/tools/test_computer_use.py', 'tests/tools/test_computer_use_null_pid_windows.py', 'tests/tools/test_computer_use_capture_routing.py', 'tests/tools/test_computer_use_fullscreen_capture.py', 'tests/tools/test_computer_use_cua_backend_linux.py', 'tests/tools/test_computer_use_screenshot_dedup.py', 'tests/tools/test_computer_use_vision_routing.py', 'tests/tools/test_computer_use_cua_0_9.py', 'tests/tools/test_computer_use_capture_fence.py', 'tests/tools/test_computer_use_zero_bounds.py']; running with -j 2
+[  2.0% |     3/~148 | ✓4 | ✗1] ✗ tests/tools/test_computer_use_ax_walk_bound.py (4✓ 1✗, 5.0s)
+
+  ╔╍ Failed: tests/tools/test_computer_use_ax_walk_bound.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║     def capture(self, mode: str = "som", app: Optional[str] = None, pid: Optional[int] = None,
+  ║                 window_id: Optional[int] = None) -> CaptureResult:
+  ║         """Capture the frontmost on-screen window or an exact known target: `list_windows` +
+  ║         `get_window_state` (ax/som) or `screenshot` (vision). Only the structured
+  ║         ``structuredContent.windows`` shape is supported."""
+  ║         # Schema-filler ids (models zero-fill optional properties) must not read as a targeting request.
+  ║         pid, window_id = [None if _is_placeholder_id(v) else v for v in (pid, window_id)]
+  ║         exact_target = pid is not None or window_id is not None
+  ║         # Full-screen lane bypasses enumeration entirely (also keeps screenshots working when Windows UIA
+  ║         # enumeration hangs). app='desktop' deliberately does NOT take it: desktop icons stay clickable.
+  ║         if not exact_target and app and app.strip().lower() in _FULL_SCREEN_SENTINELS:
+  ║             return self._capture_full_screen(mode)
+  ║         windows = self._resolve_capture_windows(mode, app, pid, window_id)
+  ║         if isinstance(windows, CaptureResult):
+  ║             return windows
+  ║         self._set_active_target(target := _select_capture_target(windows, app_requested=bool(app), exact_target=exact_target))
+  ║         app_name = target["app_name"]
+  ║         # Record the resolved app so capture_after= follow-ups re-target the same app rather than falling back
+  ║         # to the frontmost window.
+  ║         if app or not self._last_app:
+  ║             self._last_app = app_name or app or ""
+  ║         png_b64, image_mime_type, elements, window_title = (
+  ║ >           self._capture_vision() if mode == "vision" else self._capture_window_state(mode))
+  ║                                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  ║ E       TypeError: TestAxWalkBound.test_configured_value_reaches_the_driver_args.<locals>.<lambda>() takes 0 positional arguments but 1 was given
+  ║ 
+  ║ tools/computer_use/cua_backend_capture.py:325: TypeError
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/tools/test_computer_use_ax_walk_bound.py::TestAxWalkBound::test_configured_value_reaches_the_driver_args
+  ║ 1 failed, 4 passed in 1.46s
+  ║
+  ║  Repro: python -m pytest tests/tools/test_computer_use_ax_walk_bound.py -q
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+[  2.7% |     4/~148 | ✓6 | ✗1] ✓ tests/tools/test_computer_use_capture_fence.py (2✓, 2.2s)
+[ 61.5% |    91/~148 | ✓93 | ✗ 1] ✓ tests/tools/test_computer_use.py (87✓, 9.7s)
+[ 64.9% |    96/~148 | ✓98 | ✗ 1] ✓ tests/tools/test_computer_use_capture_routing.py (5✓, 3.6s)
+[ 68.2% |   101/~148 | ✓103 | ✗  1] ✓ tests/tools/test_computer_use_cua_backend_linux.py (5✓, 2.2s)
+[ 74.3% |   110/~148 | ✓115 | ✗  1] ✓ tests/tools/test_computer_use_cua_0_9.py (12✓, 3.5s)
+[ 76.4% |   113/~148 | ✓118 | ✗  1] ✓ tests/tools/test_computer_use_null_pid_windows.py (3✓, 2.5s)
+[ 82.4% |   122/~148 | ✓131 | ✗  1] ✓ tests/tools/test_computer_use_fullscreen_capture.py (13✓, 2.8s)
+[ 90.5% |   134/~148 | ✓143 | ✗  1] ✓ tests/tools/test_computer_use_screenshot_dedup.py (12✓, 2.3s)
+[ 98.0% |   145/~148 | ✓154 | ✗  1] ✓ tests/tools/test_computer_use_vision_routing.py (11✓, 2.3s)
+[100.0% |   148/~148 | ✓157 | ✗  1] ✓ tests/tools/test_computer_use_zero_bounds.py (3✓, 1.7s)
+
+=== Summary: 11 files, 157 tests passed, 1 failed (100% complete) in 19.8s (2 workers) ===
+  Durations cached to test_durations.json (10 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   11
+  Total subprocess CPU-wall: 37.8s  (runner wall: 19.8s, parallelism: 2x)
+  P50: 2.49s  P90: 5.01s  P95: 9.71s  P99: 9.71s  Max: 9.71s
+  <1s: 0 files (0%)  <2s: 1 files (9%)
+  Top 10 slowest:
+      9.71s  tests/tools/test_computer_use.py
+      5.01s  tests/tools/test_computer_use_ax_walk_bound.py
+      3.59s  tests/tools/test_computer_use_capture_routing.py
+      3.46s  tests/tools/test_computer_use_cua_0_9.py
+      2.82s  tests/tools/test_computer_use_fullscreen_capture.py
+      2.49s  tests/tools/test_computer_use_null_pid_windows.py
+      2.34s  tests/tools/test_computer_use_vision_routing.py
+      2.34s  tests/tools/test_computer_use_screenshot_dedup.py
+      2.18s  tests/tools/test_computer_use_cua_backend_linux.py
+      2.18s  tests/tools/test_computer_use_capture_fence.py
+
+=== Failure output ===
+
+--- tests/tools/test_computer_use_ax_walk_bound.py ---
+F....                                                                    [100%]
+=================================== FAILURES ===================================
+________ TestAxWalkBound.test_configured_value_reaches_the_driver_args _________
+
+self = <tests.tools.test_computer_use_ax_walk_bound.TestAxWalkBound object at 0x7fa3373721d0>
+tmp_path = PosixPath('<pytest-tmp>/r-33zh11am/pytest-of-<user>/pytest-0/test_configured_value_reaches_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fa3373811d0>
+
+    def test_configured_value_reaches_the_driver_args(self, tmp_path, monkeypatch):
+        """End to end through the loader the backend uses: config.yaml -> get_window_state args."""
+        _write_config(tmp_path, "computer_use:\n  ax_max_elements: 350\n")
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        assert cua_backend._cua_configured_ax_max_elements() == 350
+        stub = _StubCapture()
+        assert stub._gws_args()["max_elements"] == 350
+        # ... and capture() forwards the bound it actually sent onto the CaptureResult
+        monkeypatch.setattr(stub, "_capture_window_state", lambda: (None, None, [], ""))
+>       assert stub.capture("ax").ax_max_elements == 350
+               ^^^^^^^^^^^^^^^^^^
+
+tests/tools/test_computer_use_ax_walk_bound.py:53: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <tests.tools.test_computer_use_ax_walk_bound._StubCapture object at 0x7fa3353becd0>
+mode = 'ax', app = None, pid = None, window_id = None
+
+    def capture(self, mode: str = "som", app: Optional[str] = None, pid: Optional[int] = None,
+                window_id: Optional[int] = None) -> CaptureResult:
+        """Capture the frontmost on-screen window or an exact known target: `list_windows` +
+        `get_window_state` (ax/som) or `screenshot` (vision). Only the structured
+        ``structuredContent.windows`` shape is supported."""
+        # Schema-filler ids (models zero-fill optional properties) must not read as a targeting request.
+        pid, window_id = [None if _is_placeholder_id(v) else v for v in (pid, window_id)]
+        exact_target = pid is not None or window_id is not None
+        # Full-screen lane bypasses enumeration entirely (also keeps screenshots working when Windows UIA
+        # enumeration hangs). app='desktop' deliberately does NOT take it: desktop icons stay clickable.
+        if not exact_target and app and app.strip().lower() in _FULL_SCREEN_SENTINELS:
+            return self._capture_full_screen(mode)
+        windows = self._resolve_capture_windows(mode, app, pid, window_id)
+        if isinstance(windows, CaptureResult):
+            return windows
+        self._set_active_target(target := _select_capture_target(windows, app_requested=bool(app), exact_target=exact_target))
+        app_name = target["app_name"]
+        # Record the resolved app so capture_after= follow-ups re-target the same app rather than falling back
+        # to the frontmost window.
+        if app or not self._last_app:
+            self._last_app = app_name or app or ""
+        png_b64, image_mime_type, elements, window_title = (
+>           self._capture_vision() if mode == "vision" else self._capture_window_state(mode))
+                                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: TestAxWalkBound.test_configured_value_reaches_the_driver_args.<locals>.<lambda>() takes 0 positional arguments but 1 was given
+
+tools/computer_use/cua_backend_capture.py:325: TypeError
+=========================== short test summary info ============================
+FAILED tests/tools/test_computer_use_ax_walk_bound.py::TestAxWalkBound::test_configured_value_reaches_the_driver_args
+1 failed, 4 passed in 1.46s
+
+=== 1 file with test failures (1 test failed) ===
+  tests/tools/test_computer_use_ax_walk_bound.py  (1 test failed)

@@ -1,0 +1,3 @@
+ADJ-main-r1-a2 rc 0 pass 559 fail 0 [] marker 0 egress 92 seam {'run_agent.py::_deduplicate_tool_calls': 25, 'tool_dispatch_helpers.py::_peel_bridge_call': 97, 'turn_tool_round.py::run_tool_round': 22, 'tool.py::handle_computer_use': 31} 317.9s
+ADJ-head-r1-a2 rc 0 pass 561 fail 0 [] marker 0 egress 92 seam {'tool_dispatch_helpers.py::deduplicate_tool_calls': 27, 'tool_dispatch_helpers.py::_is_order_significant': 7, 'tool_dispatch_helpers.py::_peel_bridge_call': 109, 'turn_tool_round.py::run_tool_round': 24, 'tool.py::handle_computer_use': 37} 363.0s
+restored 2f79b549ef40aeb31cb3af36cd92d8d12b9ba799 

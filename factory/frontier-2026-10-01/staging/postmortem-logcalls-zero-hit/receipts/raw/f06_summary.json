@@ -1,0 +1,72 @@
+{
+ "e19_shaped": {
+  "truth": {
+   "metered": 413,
+   "unavailable": 7,
+   "zero_hit": 24,
+   "hit_tokens": 64079945,
+   "in_tokens": 68841780,
+   "true_hit_ratio": 0.9308
+  },
+  "coverage_fraction": {
+   "main": 0.9419,
+   "patched": 1.0
+  },
+  "calls_found": {
+   "main": 389,
+   "patched": 413
+  },
+  "cache_hit_ratio_overall": {
+   "main": 0.9796,
+   "patched": 0.9308
+  },
+  "hit_ratio_delta_pp": 4.88,
+  "patched_new_fields": {
+   "zero_hit": 24,
+   "no_cache_field": 0,
+   "usage_unavailable": 7
+  },
+  "observed_block_identical": false,
+  "modeled_block_identical": false,
+  "coverage_identical_except_new_keys": false,
+  "inputs_sha256": {
+   "state.db": "de1f610e98c3f54ff0dbb67d5e67528a7a6231b2b3218a11d17a9f9cd0632c5a",
+   "agent.log": "4f5734f62111f5218726f04fe685860ebc773a2a0d9b8e448987af9dc7ebc63c"
+  }
+ },
+ "all_hit": {
+  "truth": {
+   "metered": 420,
+   "unavailable": 0,
+   "zero_hit": 0,
+   "hit_tokens": 67673773,
+   "in_tokens": 69093049,
+   "true_hit_ratio": 0.9795
+  },
+  "coverage_fraction": {
+   "main": 1.0,
+   "patched": 1.0
+  },
+  "calls_found": {
+   "main": 420,
+   "patched": 420
+  },
+  "cache_hit_ratio_overall": {
+   "main": 0.9795,
+   "patched": 0.9795
+  },
+  "hit_ratio_delta_pp": 0.0,
+  "patched_new_fields": {
+   "zero_hit": 0,
+   "no_cache_field": 0,
+   "usage_unavailable": 0
+  },
+  "observed_block_identical": true,
+  "modeled_block_identical": true,
+  "coverage_identical_except_new_keys": true,
+  "inputs_sha256": {
+   "state.db": "cbf5d3d398c010438e12958c0822fdcb9e2b96f7262920d57914315b5a512f00",
+   "agent.log": "85bfbd161bf1bb817ffec794f972801bef130d63fbe375cab263c2f33c3ed69f"
+  }
+ }
+}

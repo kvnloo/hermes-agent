@@ -1,0 +1,684 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "DOCS-CHECKS/r20261001-04",
+ "supersedes": null,
+ "supplements": "DOCS-CHECKS/r20261001-03 (that receipt stays valid and cited; this one replaces only its single open-PR apply-check, which covered #53007 alone, with a full sweep of open PRs that edit the page)",
+ "spec": {
+  "kind": "static",
+  "tier": "T0",
+  "cost": "$0",
+  "lane": "cpu",
+  "question": "Which open upstream PRs edit website/docs/developer-guide/observer-hooks.md, does each one's hunk apply cleanly on top of this branch (and in the reverse order), and does any of them document first_chunk_at, context_length or moa_references or change the post_api_request emitter?",
+  "observer_effect": "none (gh read-only; blobless fetch of PR heads into the scratch repo with --no-write-fetch-head, no ref created)"
+ },
+ "staging": "observer-hooks-doc-drift",
+ "origin_refs": [
+  "NousResearch/hermes-agent#64231",
+  "NousResearch/hermes-agent#16106"
+ ],
+ "trigger": "round-1 re-verifier: MANIFEST INCOMPLETE (#113174, #121005, #124310 edit the page and were not recorded; its sweep covered 140 open PRs from 6 searches)",
+ "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+ "head_revision": "9225807160327a648a21bd493e9ed943f8ce5baa",
+ "main_revision": "040b6df2c40b0f4f88f51e4c2062eafc4d7463c5",
+ "main_revision_note": "fetched 2026-10-01T12:16:17Z; 8 commits after base, no invalidate_on path changed, observer-hooks.md blob 3d9c636706 identical on base, e8c97320ac and 040b6df2c4. The apply-checks were run against both e8c97320ac and 040b6df2c4 with identical results.",
+ "page_blob": {
+  "base": "3d9c636706ff28aa6a117c1c0700fa2767aa19ae",
+  "main": "3d9c636706ff28aa6a117c1c0700fa2767aa19ae",
+  "branch": "9ede0fab4d2be2a886d86a12c53c3f3dc8a01d8b"
+ },
+ "sweep": {
+  "label": "OBSERVED",
+  "scope": "every open PR in NousResearch/hermes-agent",
+  "enumeration": {
+   "method": "GraphQL repository.pullRequests(states:OPEN) numbers only, tools/open_pr_sweep/enum_numbers.py",
+   "started": "2026-10-01T11:45:39Z",
+   "ended": "2026-10-01T11:49:11Z",
+   "open_prs": 33478
+  },
+  "file_lists": {
+   "window": "2026-10-01T11:41:06Z .. 12:12:59Z",
+   "covered": "33478 of 33478 enumerated open PRs",
+   "sources": {
+    "graphql_cursor_sweeps": "9600 rows (sweep.py newest-first, sweep_asc.py oldest-first; stopped once the by-number pass took over, rows kept)",
+    "graphql_by_number": "23878 rows (fetch_by_number.py, 40 aliased pullRequest(number) per query, 4 workers)",
+    "graphql_list_used_as_is": 33319,
+    "rest_reread": "159 PRs whose GraphQL list was null (1) or capped at 100 files (158): rest_files.py. 141 complete; 17 hit REST's 3000-file cap; 1 null",
+    "local_tree_diff": "the 17 capped PRs plus #121502 (to get its hunk): PR heads fetched blobless with --no-write-fetch-head (no ref, no FETCH_HEAD), then git diff --name-only $(git merge-base main <head>) <head>. Only #120375 touches the page.",
+    "unresolvable": "#126874 (auroracapital): GitHub reports changedFiles=0 and +0/-0; head repository deleted, REST returns HTTP 422 'problem generating this diff', the head SHA is not fetchable ('not our ref'). Treated as touching no file, per GitHub's own count."
+   },
+   "closed_during_sweep": [
+    95768
+   ]
+  },
+  "topup": {
+   "at": "2026-10-01T12:16:30Z",
+   "method": "newest 100 open PRs with files",
+   "new_since_enumeration": 21,
+   "editors_among_new": 0,
+   "open_prs_now": 33494
+  },
+  "editors_by_github_file_list": [
+   53007,
+   108924,
+   113174,
+   119347,
+   120375,
+   121005,
+   121502,
+   124310,
+   125192
+  ],
+  "real_page_editors_vs_current_main": [
+   53007,
+   108924,
+   113174,
+   119347,
+   121005,
+   124310,
+   125192
+  ],
+  "listed_but_not_a_page_edit_against_current_main": [
+   {
+    "pr": 121502,
+    "author": "Sonnenwerk",
+    "head": "2b1f674eb4eec5326eb971ebca8753e3b6e67738",
+    "why": "GitHub lists 1519 files against its stored base a5bd246865. The page change in that range is main's own commit ab8a99c730 'fix(relay): honor ambient plugin configuration', absorbed by merging main. Against current main the PR changes 3 files (contributors/emails entry, hermes_cli/update_cmd_config.py, a test), not the page.",
+    "merge_tree": {
+     "with_branch_9225807160": "clean (tree a005b6e17b)",
+     "with_main_e8c97320ac": "clean (tree c9f975d78d)"
+    }
+   },
+   {
+    "pr": 120375,
+    "author": "ssxi341-alt",
+    "head": "b81354460ab1769dbaf605b59abc644ce338dc55",
+    "why": "'chore(sync): snapshot local working state (v0.21.3) onto June-2026 upstream baseline': one snapshot commit, 14123 files (+2,579,211/-798,697), on merge-base f3af489ec2, 35959 commits behind main. The page does not exist at that merge-base; the PR adds a whole older copy (blob 6a7d1389fb, 331 lines, 0 mentions of the three fields).",
+    "merge_effect": "add/add on the page against main already (main 3d9c636706 vs PR 6a7d1389fb); with this branch it is the same add/add (9ede0fab4d vs 6a7d1389fb). This branch neither creates nor removes that conflict."
+   }
+  ],
+  "round1_verifier_list_cross_check": "the verifier named #113174, #121005 and #124310 (plus #53007 already recorded). The full sweep confirms all four and adds #108924, #119347 and #125192, and the two non-edits #120375 and #121502."
+ },
+ "checks": [
+  {
+   "name": "apply-check of each real editor's observer-hooks.md hunk, both merge orders",
+   "command": "gh pr diff <N> -R NousResearch/hermes-agent > pr<N>.diff; python3 tools/open_pr_sweep/apply_checks.py <scratch>/h.git 9225807160 <main> aea969677c <N...>  (throwaway GIT_INDEX_FILE: read-tree, git apply --cached -v [--check])",
+   "order_A": "read-tree 9225807160, apply --check the PR hunk",
+   "order_B": "read-tree main, apply the PR hunk, then apply --check this branch's observer-hooks.md diff",
+   "result": "PASS",
+   "summary": {
+    "53007": {
+     "A_rc": 0,
+     "A_git": [
+      "Hunk #1 succeeded at 347 (offset 15 lines)."
+     ],
+     "B_rc": [
+      0,
+      0
+     ],
+     "B_git": [
+      "applied at the recorded position"
+     ]
+    },
+    "108924": {
+     "A_rc": 0,
+     "A_git": [
+      "applied at the recorded position"
+     ],
+     "B_rc": [
+      0,
+      0
+     ],
+     "B_git": [
+      "Hunk #1 succeeded at 159 (offset 8 lines)."
+     ]
+    },
+    "113174": {
+     "A_rc": 0,
+     "A_git": [
+      "applied at the recorded position"
+     ],
+     "B_rc": [
+      0,
+      0
+     ],
+     "B_git": [
+      "Hunk #1 succeeded at 181 (offset 30 lines)."
+     ]
+    },
+    "119347": {
+     "A_rc": 0,
+     "A_git": [
+      "applied at the recorded position"
+     ],
+     "B_rc": [
+      0,
+      0
+     ],
+     "B_git": [
+      "Hunk #1 succeeded at 152 (offset 1 line)."
+     ]
+    },
+    "121005": {
+     "A_rc": 0,
+     "A_git": [
+      "applied at the recorded position"
+     ],
+     "B_rc": [
+      0,
+      0
+     ],
+     "B_git": [
+      "applied at the recorded position"
+     ]
+    },
+    "124310": {
+     "A_rc": 0,
+     "A_git": [
+      "applied at the recorded position"
+     ],
+     "B_rc": [
+      0,
+      0
+     ],
+     "B_git": [
+      "Hunk #1 succeeded at 159 (offset 8 lines)."
+     ]
+    },
+    "125192": {
+     "A_rc": 0,
+     "A_git": [
+      "Hunk #1 succeeded at 243 (offset 15 lines)."
+     ],
+     "B_rc": [
+      0,
+      0
+     ],
+     "B_git": [
+      "applied at the recorded position"
+     ]
+    }
+   },
+   "per_pr": [
+    {
+     "pr": 53007,
+     "author": "OutThisLife",
+     "head": "7fde663972d036511393915b74ab0cf0542cab89",
+     "files_in_pr": 42,
+     "edit": "appends a NeMo Relay trace section after the page's last line (main :334)",
+     "hunk_headers": [
+      "@@ -332,3 +332,23 @@"
+     ],
+     "hunk_sha256": "2e193f55cf08efa424e607603788f5515b21784a1949f331d23c2585d9ff3872",
+     "invalidate_on_paths_touched": [],
+     "pm_lines_naming_emitter_or_fields": {
+      "hermes_cli/observability/relay_traces.py": 2,
+      "tests/hermes_cli/test_relay_traces.py": 2,
+      "website/docs/developer-guide/observer-hooks.md": 1
+     },
+     "added_doc_lines": 20,
+     "added_doc_lines_naming_the_three_fields": 0,
+     "order_A_branch_then_pr": {
+      "rc": 0,
+      "git": [
+       "Checking patch website/docs/developer-guide/observer-hooks.md...",
+       "Hunk #1 succeeded at 347 (offset 15 lines)."
+      ]
+     },
+     "order_B_main_then_pr_then_branch": {
+      "pr_rc": 0,
+      "pr_git": [
+       "Checking patch website/docs/developer-guide/observer-hooks.md...",
+       "Applied patch website/docs/developer-guide/observer-hooks.md cleanly."
+      ],
+      "branch_rc": 0,
+      "branch_git": [
+       "Checking patch website/docs/developer-guide/observer-hooks.md..."
+      ]
+     },
+     "note": "its pm-line hits are consumer code: hermes_cli/observability/relay_traces.py maps post_api_request to a span finisher and reads kw.get('first_chunk_at'); the test file calls invoke_hook in tests only. No production emitter or kwarg change; consistent with the documented field."
+    },
+    {
+     "pr": 108924,
+     "author": "Finn763",
+     "head": "d69414122a16c75e042e8090a15462fff4dab258",
+     "files_in_pr": 10,
+     "edit": "adds an on_turn_interrupted row to the turn-scoped table (:117) and rewrites the paragraph at :127-128",
+     "hunk_headers": [
+      "@@ -115,6 +115,7 @@",
+      "@@ -124,8 +125,15 @@"
+     ],
+     "hunk_sha256": "54cd716e0d8f8bf5d52083847cf9ec87f4ad5ca7e4bb71721dadc7c40e88bf27",
+     "invalidate_on_paths_touched": [
+      "hermes_cli/plugins.py"
+     ],
+     "pm_lines_naming_emitter_or_fields": {
+      "website/docs/user-guide/features/plugins.md": 2
+     },
+     "added_doc_lines": 10,
+     "added_doc_lines_naming_the_three_fields": 0,
+     "order_A_branch_then_pr": {
+      "rc": 0,
+      "git": [
+       "Checking patch website/docs/developer-guide/observer-hooks.md..."
+      ]
+     },
+     "order_B_main_then_pr_then_branch": {
+      "pr_rc": 0,
+      "pr_git": [
+       "Checking patch website/docs/developer-guide/observer-hooks.md...",
+       "Applied patch website/docs/developer-guide/observer-hooks.md cleanly."
+      ],
+      "branch_rc": 0,
+      "branch_git": [
+       "Checking patch website/docs/developer-guide/observer-hooks.md...",
+       "Hunk #1 succeeded at 159 (offset 8 lines)."
+      ]
+     },
+     "note": "its pm-line hits are a hook-name list in website/docs/user-guide/features/plugins.md (adds on_turn_interrupted next to post_api_request); no emitter change."
+    },
+    {
+     "pr": 113174,
+     "author": "fangliquanflq",
+     "head": "e528319005f81c566fde1f041947ca7c232251a6",
+     "files_in_pr": 22,
+     "edit": "inserts a '### Prompt-Builtin Completion' section at :130, above '### Request-Scoped API Hooks'",
+     "hunk_headers": [
+      "@@ -127,6 +127,36 @@"
+     ],
+     "hunk_sha256": "22e369383486a065d04b00817274309444f99c941f94d1589048e6326e054496",
+     "invalidate_on_paths_touched": [
+      "hermes_cli/plugins.py"
+     ],
+     "pm_lines_naming_emitter_or_fields": {},
+     "added_doc_lines": 30,
+     "added_doc_lines_naming_the_three_fields": 0,
+     "order_A_branch_then_pr": {
+      "rc": 0,
+      "git": [
+       "Checking patch website/docs/developer-guide/observer-hooks.md..."
+      ]
+     },
+     "order_B_main_then_pr_then_branch": {
+      "pr_rc": 0,
+      "pr_git": [
+       "Checking patch website/docs/developer-guide/observer-hooks.md...",
+       "Applied patch website/docs/developer-guide/observer-hooks.md cleanly."
+      ],
+      "branch_rc": 0,
+      "branch_git": [
+       "Checking patch website/docs/developer-guide/observer-hooks.md...",
+       "Hunk #1 succeeded at 181 (offset 30 lines)."
+      ]
+     }
+    },
+    {
+     "pr": 119347,
+     "author": "fangliquanflq",
+     "head": "4a527fc35d8ffb5dec742c85abda9e92d6880bda",
+     "files_in_pr": 10,
+     "edit": "inserts a transform_compaction_input row into the return-behaviour table after :64",
+     "hunk_headers": [
+      "@@ -62,6 +62,7 @@"
+     ],
+     "hunk_sha256": "1760cc937e5a39730f2c62d920d1e8a87ea578d2318ac9c7c8deef893f345fe9",
+     "invalidate_on_paths_touched": [
+      "hermes_cli/plugins.py"
+     ],
+     "pm_lines_naming_emitter_or_fields": {
+      "tests/agent/test_compaction_input_hook.py": 2
+     },
+     "added_doc_lines": 1,
+     "added_doc_lines_naming_the_three_fields": 0,
+     "order_A_branch_then_pr": {
+      "rc": 0,
+      "git": [
+       "Checking patch website/docs/developer-guide/observer-hooks.md..."
+      ]
+     },
+     "order_B_main_then_pr_then_branch": {
+      "pr_rc": 0,
+      "pr_git": [
+       "Checking patch website/docs/developer-guide/observer-hooks.md...",
+       "Applied patch website/docs/developer-guide/observer-hooks.md cleanly."
+      ],
+      "branch_rc": 0,
+      "branch_git": [
+       "Checking patch website/docs/developer-guide/observer-hooks.md...",
+       "Hunk #1 succeeded at 152 (offset 1 line)."
+      ]
+     },
+     "note": "its pm-line hits are test fixtures constructing ContextCompressor(config_context_length=...); no change to the context_length attribute or the emitter."
+    },
+    {
+     "pr": 121005,
+     "author": "fabiomotta0311",
+     "head": "b29e6193b195d322aefe2481236d7fe8d72f41bb",
+     "files_in_pr": 5,
+     "edit": "rewrites the pre_tool_call return-behaviour row at :63",
+     "hunk_headers": [
+      "@@ -60,7 +60,7 @@"
+     ],
+     "hunk_sha256": "1a88b9c091c2a9211e81f7b9bec9ea1540cd1352a594bc11e83dd4a5840cabae",
+     "invalidate_on_paths_touched": [
+      "hermes_cli/plugins.py"
+     ],
+     "pm_lines_naming_emitter_or_fields": {},
+     "added_doc_lines": 1,
+     "added_doc_lines_naming_the_three_fields": 0,
+     "order_A_branch_then_pr": {
+      "rc": 0,
+      "git": [
+       "Checking patch website/docs/developer-guide/observer-hooks.md..."
+      ]
+     },
+     "order_B_main_then_pr_then_branch": {
+      "pr_rc": 0,
+      "pr_git": [
+       "Checking patch website/docs/developer-guide/observer-hooks.md...",
+       "Applied patch website/docs/developer-guide/observer-hooks.md cleanly."
+      ],
+      "branch_rc": 0,
+      "branch_git": [
+       "Checking patch website/docs/developer-guide/observer-hooks.md..."
+      ]
+     }
+    },
+    {
+     "pr": 124310,
+     "author": "marcxxv",
+     "head": "b6d9c4cd803e5ca5754c1727926db31882fd0c1f",
+     "files_in_pr": 6,
+     "edit": "adds an on_session_end fallback paragraph after :109, above '### Turn-Scoped LLM Hooks'",
+     "hunk_headers": [
+      "@@ -107,6 +107,14 @@"
+     ],
+     "hunk_sha256": "08efacdfbb3e02c5d6843d5f1fd65a68ccb742608d673ea9aa266ed03a05dc2c",
+     "invalidate_on_paths_touched": [
+      "agent/conversation_loop.py"
+     ],
+     "pm_lines_naming_emitter_or_fields": {},
+     "added_doc_lines": 8,
+     "added_doc_lines_naming_the_three_fields": 0,
+     "order_A_branch_then_pr": {
+      "rc": 0,
+      "git": [
+       "Checking patch website/docs/developer-guide/observer-hooks.md..."
+      ]
+     },
+     "order_B_main_then_pr_then_branch": {
+      "pr_rc": 0,
+      "pr_git": [
+       "Checking patch website/docs/developer-guide/observer-hooks.md...",
+       "Applied patch website/docs/developer-guide/observer-hooks.md cleanly."
+      ],
+      "branch_rc": 0,
+      "branch_git": [
+       "Checking patch website/docs/developer-guide/observer-hooks.md...",
+       "Hunk #1 succeeded at 159 (offset 8 lines)."
+      ]
+     },
+     "note": "agent/conversation_loop.py +3/-1 wraps run_conversation in observe_turn_completion; the api_start_time assignment (:1650) is untouched."
+    },
+    {
+     "pr": 125192,
+     "author": "brucezyc",
+     "head": "52b505e68a2981f16d0a2f09b211d10e7d2db46c",
+     "files_in_pr": 46,
+     "edit": "rewrites the first subagent_stop sentence at :231 to name child_subagent_id",
+     "hunk_headers": [
+      "@@ -228,7 +228,8 @@"
+     ],
+     "hunk_sha256": "0601c04b7d20a008ef62599235d86d743ca2f82aba43e296f921f2c38fa232ee",
+     "invalidate_on_paths_touched": [
+      "hermes_cli/plugins.py"
+     ],
+     "pm_lines_naming_emitter_or_fields": {},
+     "added_doc_lines": 2,
+     "added_doc_lines_naming_the_three_fields": 0,
+     "order_A_branch_then_pr": {
+      "rc": 0,
+      "git": [
+       "Checking patch website/docs/developer-guide/observer-hooks.md...",
+       "Hunk #1 succeeded at 243 (offset 15 lines)."
+      ]
+     },
+     "order_B_main_then_pr_then_branch": {
+      "pr_rc": 0,
+      "pr_git": [
+       "Checking patch website/docs/developer-guide/observer-hooks.md...",
+       "Applied patch website/docs/developer-guide/observer-hooks.md cleanly."
+      ],
+      "branch_rc": 0,
+      "branch_git": [
+       "Checking patch website/docs/developer-guide/observer-hooks.md..."
+      ]
+     }
+    }
+   ],
+   "label": "OBSERVED"
+  },
+  {
+   "name": "all seven hunks stacked on this branch, and every pair on main vs on this branch",
+   "result": "PASS (no conflict involves this branch)",
+   "stack_on_branch": [
+    {
+     "pr": 53007,
+     "rc": 0,
+     "git": [
+      "Checking patch website/docs/developer-guide/observer-hooks.md...",
+      "Hunk #1 succeeded at 347 (offset 15 lines).",
+      "Applied patch website/docs/developer-guide/observer-hooks.md cleanly."
+     ]
+    },
+    {
+     "pr": 108924,
+     "rc": 0,
+     "git": [
+      "Checking patch website/docs/developer-guide/observer-hooks.md...",
+      "Applied patch website/docs/developer-guide/observer-hooks.md cleanly."
+     ]
+    },
+    {
+     "pr": 113174,
+     "rc": 1,
+     "git": [
+      "Checking patch website/docs/developer-guide/observer-hooks.md...",
+      "error: while searching for:",
+      "error: patch failed: website/docs/developer-guide/observer-hooks.md:127",
+      "error: website/docs/developer-guide/observer-hooks.md: patch does not apply"
+     ]
+    },
+    {
+     "pr": 119347,
+     "rc": 0,
+     "git": [
+      "Checking patch website/docs/developer-guide/observer-hooks.md...",
+      "Applied patch website/docs/developer-guide/observer-hooks.md cleanly."
+     ]
+    },
+    {
+     "pr": 121005,
+     "rc": 1,
+     "git": [
+      "Checking patch website/docs/developer-guide/observer-hooks.md...",
+      "error: while searching for:",
+      "error: patch failed: website/docs/developer-guide/observer-hooks.md:60",
+      "error: website/docs/developer-guide/observer-hooks.md: patch does not apply"
+     ]
+    },
+    {
+     "pr": 124310,
+     "rc": 0,
+     "git": [
+      "Checking patch website/docs/developer-guide/observer-hooks.md...",
+      "Hunk #1 succeeded at 108 (offset 1 line).",
+      "Applied patch website/docs/developer-guide/observer-hooks.md cleanly."
+     ]
+    },
+    {
+     "pr": 125192,
+     "rc": 0,
+     "git": [
+      "Checking patch website/docs/developer-guide/observer-hooks.md...",
+      "Hunk #1 succeeded at 260 (offset 32 lines).",
+      "Applied patch website/docs/developer-guide/observer-hooks.md cleanly."
+     ]
+    }
+   ],
+   "stack_final_blob": "4ef52ebb0afe031966ee1fa25d7fe584267b5110",
+   "pairwise_failures": [
+    {
+     "pair": [
+      108924,
+      113174
+     ],
+     "tree": "on_main",
+     "second_rc": 1,
+     "git": [
+      "Checking patch website/docs/developer-guide/observer-hooks.md...",
+      "error: while searching for:",
+      "error: patch failed: website/docs/developer-guide/observer-hooks.md:127",
+      "error: website/docs/developer-guide/observer-hooks.md: patch does not apply"
+     ]
+    },
+    {
+     "pair": [
+      108924,
+      113174
+     ],
+     "tree": "on_branch",
+     "second_rc": 1,
+     "git": [
+      "Checking patch website/docs/developer-guide/observer-hooks.md...",
+      "error: while searching for:",
+      "error: patch failed: website/docs/developer-guide/observer-hooks.md:127",
+      "error: website/docs/developer-guide/observer-hooks.md: patch does not apply"
+     ]
+    },
+    {
+     "pair": [
+      119347,
+      121005
+     ],
+     "tree": "on_main",
+     "second_rc": 1,
+     "git": [
+      "Checking patch website/docs/developer-guide/observer-hooks.md...",
+      "error: while searching for:",
+      "error: patch failed: website/docs/developer-guide/observer-hooks.md:60",
+      "error: website/docs/developer-guide/observer-hooks.md: patch does not apply"
+     ]
+    },
+    {
+     "pair": [
+      119347,
+      121005
+     ],
+     "tree": "on_branch",
+     "second_rc": 1,
+     "git": [
+      "Checking patch website/docs/developer-guide/observer-hooks.md...",
+      "error: while searching for:",
+      "error: patch failed: website/docs/developer-guide/observer-hooks.md:60",
+      "error: website/docs/developer-guide/observer-hooks.md: patch does not apply"
+     ]
+    }
+   ],
+   "reading": "Stacking in PR-number order fails twice: #113174 after #108924 (#108924 rewrites :127-128, which is #113174's context) and #121005 after #119347 (#119347 inserts a row after :64, inside the context of #121005's :63 row edit). Both pairs fail identically on plain main, so they conflict with each other, not with this branch. Every other pair applies on both trees, so the set of pairwise conflicts is the same on main and on this branch.",
+   "label": "OBSERVED"
+  },
+  {
+   "name": "do the editors document the three fields or touch the emitter?",
+   "command": "grep of each PR's added doc lines for first_chunk_at|context_length|moa_references, and of every +/- line in the whole PR diff for post_api_request|api_start_time|_last_api_first_chunk_at|first_chunk_at|context_length|moa_reference",
+   "result": "PASS",
+   "observed": {
+    "added_page_lines_naming_the_three_fields": {
+     "53007": 0,
+     "108924": 0,
+     "113174": 0,
+     "119347": 0,
+     "121005": 0,
+     "124310": 0,
+     "125192": 0
+    },
+    "pm_lines_naming_emitter_or_fields": {
+     "53007": {
+      "hermes_cli/observability/relay_traces.py": 2,
+      "tests/hermes_cli/test_relay_traces.py": 2,
+      "website/docs/developer-guide/observer-hooks.md": 1
+     },
+     "108924": {
+      "website/docs/user-guide/features/plugins.md": 2
+     },
+     "113174": {},
+     "119347": {
+      "tests/agent/test_compaction_input_hook.py": 2
+     },
+     "121005": {},
+     "124310": {},
+     "125192": {}
+    },
+    "invalidate_on_paths_touched": {
+     "53007": [],
+     "108924": [
+      "hermes_cli/plugins.py"
+     ],
+     "113174": [
+      "hermes_cli/plugins.py"
+     ],
+     "119347": [
+      "hermes_cli/plugins.py"
+     ],
+     "121005": [
+      "hermes_cli/plugins.py"
+     ],
+     "124310": [
+      "agent/conversation_loop.py"
+     ],
+     "125192": [
+      "hermes_cli/plugins.py"
+     ]
+    },
+    "#120375 page copy": "0 mentions"
+   },
+   "reading": "No editor documents the three fields, and none edits the post_api_request field list. Every pm-line hit is consumer code, a hook-name list or a test fixture (see per_pr notes), so none adds a kwarg or emitter. Ownership (P2) holds: no external owner. F13 was not re-run on main + each PR, because no PR changes a line that names the emitter or the three fields.",
+   "label": "OBSERVED"
+  },
+  {
+   "name": "freshness: main 040b6df2c4 vs this branch",
+   "command": "git merge-tree --write-tree --name-only 040b6df2c4 9225807160; git diff --stat aea969677c 040b6df2c4 -- <invalidate_on paths>",
+   "result": "PASS",
+   "observed": "merge-tree clean, tree 36e87a74ee; 0 invalidate_on paths changed in the 8 commits since base; 0 +/- lines naming post_api_request, _last_api_first_chunk_at or api_start_time",
+   "label": "OBSERVED"
+  }
+ ],
+ "not_tested": [
+  "Docusaurus build of the page with any of these PRs merged (no website/node_modules; same boundary as DOCS-CHECKS/r20261001-03)",
+  "PRs opened after the 12:16:30Z top-up",
+  "#126874's real tree (head repository deleted; GitHub reports 0 changed files)",
+  "semantic correctness of the other PRs' own doc text (not this item's concern)"
+ ],
+ "tools_sha256": {
+  "tools/open_pr_sweep/analyse.py": "2e821cc2faeabe52914e2aea5c2d19a26b279c554b65b612fa6f17551f9ceff4",
+  "tools/open_pr_sweep/apply_checks.py": "b847d70d82839b70542d7ff0d4b620495085254b60336f7ec20eb91173096d16",
+  "tools/open_pr_sweep/enum_numbers.py": "b4fd2fc43a162a33003d9a02f0c465780275f505ed64aae86023c0464be49498",
+  "tools/open_pr_sweep/fetch_by_number.py": "67013a15af2b6e1ea47dcb48f1c833426759c8b34433c9061f330334782d1f1d",
+  "tools/open_pr_sweep/rest_files.py": "0115c1ae006f5f9faea0e6155503eda7ac6ff3580c3223eea7b4418176505a6a",
+  "tools/open_pr_sweep/sweep.py": "af6b3184776b252a4a2691692538589a8a678843cf87544205feb8a482cd1f68",
+  "tools/open_pr_sweep/sweep_asc.py": "c1c7b5c28b25247a01951e795e74107bdeb3ed03ed7469e409ba044c71fd7eb4"
+ },
+ "resource_usage": {
+  "api_cost_usd": 0.0,
+  "github_graphql_points": "about 1,880 of 5,000 (4857 -> 2978)",
+  "github_rest_calls": "about 260",
+  "wall_s": "about 1,900 for the sweep"
+ },
+ "verdict": "KEEP",
+ "ai_assistance": "Claude Code (Opus 5.5) ran the sweep and checks",
+ "privacy": "public-aggregate (public PR numbers, logins, SHAs and file paths only)",
+ "placeholders": {
+  "<scratch>": "local scratch directory",
+  "<main>": "the main SHA under test (040b6df2c4; e8c97320ac gave identical output)",
+  "<N>": "PR number"
+ }
+}

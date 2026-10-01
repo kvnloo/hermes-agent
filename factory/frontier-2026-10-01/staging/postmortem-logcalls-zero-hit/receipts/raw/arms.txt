@@ -1,0 +1,19 @@
+== arm a1_pr121135 (tree 256dab57f9301d5826a776b5994da966084f0cda) overlay: agent/turn_usage.py agent/usage_pricing.py tests/agent/test_cache_log_states.py tests/agent/test_turn_usage_log_line.py
+M  agent/turn_usage.py
+M  agent/usage_pricing.py
+A  tests/agent/test_cache_log_states.py
+M  tests/agent/test_turn_usage_log_line.py
+roundtrip rc=0
+[ 38.5% |     5/~13 | ✓5 | ✗0] ✓ evals/postmortem/tests/test_postmortem_harness.py (5✓, 0.8s)
+[ 61.5% |     8/~13 | ✓8 | ✗0] ✓ tests/agent/test_turn_usage_log_line.py (3✓, 4.5s)
+[100.0% |    13/~13 | ✓126 | ✗  0] ✓ tests/agent/test_cache_log_states.py (118✓, 10.5s)
+=== Summary: 3 files, 126 tests passed, 0 failed (100% complete) in 10.6s (2 workers) ===
+== arm a2_pr119713 (tree 4506c3748f6d4efedaf0f9421e7aea1fc69f5e64) overlay: agent/turn_response_check.py agent/turn_usage.py tests/agent/test_turn_usage_log_line.py
+M  agent/turn_response_check.py
+M  agent/turn_usage.py
+M  tests/agent/test_turn_usage_log_line.py
+roundtrip rc=0
+[ 50.0% |     5/~10 | ✓5 | ✗0] ✓ evals/postmortem/tests/test_postmortem_harness.py (5✓, 0.8s)
+[100.0% |    10/~10 | ✓10 | ✗ 0] ✓ tests/agent/test_turn_usage_log_line.py (5✓, 4.7s)
+=== Summary: 2 files, 10 tests passed, 0 failed (100% complete) in 4.7s (2 workers) ===
+HEAD now: dd4dd10611e8c23c7579a4ddb95655abebbaca27

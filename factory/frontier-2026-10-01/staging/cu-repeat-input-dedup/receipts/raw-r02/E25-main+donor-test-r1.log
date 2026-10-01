@@ -1,0 +1,68 @@
+▶ not activated — using HERMES_PYTHON: <hermes-home>/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~28 tests) under ['tests/agent/test_agent_guardrails.py']; running with -j 2
+[100.0% |    28/~28 | ✓27 | ✗ 1] ✗ tests/agent/test_agent_guardrails.py (27✓ 1✗, 5.5s)
+
+  ╔╍ Failed: tests/agent/test_agent_guardrails.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ .................F..........                                             [100%]
+  ║ =================================== FAILURES ===================================
+  ║ ___ TestDeduplicateToolCalls.test_repeated_computer_key_inputs_are_preserved ___
+  ║ tests/agent/test_agent_guardrails.py:249: in test_repeated_computer_key_inputs_are_preserved
+  ║     assert out == [first, second]
+  ║ E   assert [namespace(fu...ys":"tab"}'))] == [namespace(fu...on":"key"}'))]
+  ║ E     
+  ║ E     Right contains one more item: namespace(function=namespace(name='computer_use', arguments='{"keys":"tab","action":"key"}'))
+  ║ E     Use -v to get more diff
+  ║ ------------------------------ Captured log call -------------------------------
+  ║ WARNING  run_agent:run_agent.py:1233 Removed duplicate tool call: computer_use
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/agent/test_agent_guardrails.py::TestDeduplicateToolCalls::test_repeated_computer_key_inputs_are_preserved
+  ║ 1 failed, 27 passed in 4.94s
+  ║ Exception ignored in: <function _removeHandlerRef at 0x7fdd1036c2c0>
+  ║ Traceback (most recent call last):
+  ║   File "/usr/lib/python3.11/logging/__init__.py", line 845, in _removeHandlerRef
+  ║   File "$ARTIFACTS/promotion-readiness-2026-10-01/wt/staging/cu-repeat-input-dedup/_xf_t1_guard.py", line 56, in _prof
+  ║ AttributeError: 'NoneType' object has no attribute 'path'
+  ║
+  ║  Repro: python -m pytest tests/agent/test_agent_guardrails.py -q --tb=short -p _xf_t1_guard
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 1 files, 27 tests passed, 1 failed (100% complete) in 5.5s (2 workers) ===
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 5.5s  (runner wall: 5.5s, parallelism: 2x)
+  P50: 5.51s  P90: 5.51s  P95: 5.51s  P99: 5.51s  Max: 5.51s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+      5.51s  tests/agent/test_agent_guardrails.py
+
+=== Failure output ===
+
+--- tests/agent/test_agent_guardrails.py ---
+.................F..........                                             [100%]
+=================================== FAILURES ===================================
+___ TestDeduplicateToolCalls.test_repeated_computer_key_inputs_are_preserved ___
+tests/agent/test_agent_guardrails.py:249: in test_repeated_computer_key_inputs_are_preserved
+    assert out == [first, second]
+E   assert [namespace(fu...ys":"tab"}'))] == [namespace(fu...on":"key"}'))]
+E     
+E     Right contains one more item: namespace(function=namespace(name='computer_use', arguments='{"keys":"tab","action":"key"}'))
+E     Use -v to get more diff
+------------------------------ Captured log call -------------------------------
+WARNING  run_agent:run_agent.py:1233 Removed duplicate tool call: computer_use
+=========================== short test summary info ============================
+FAILED tests/agent/test_agent_guardrails.py::TestDeduplicateToolCalls::test_repeated_computer_key_inputs_are_preserved
+1 failed, 27 passed in 4.94s
+Exception ignored in: <function _removeHandlerRef at 0x7fdd1036c2c0>
+Traceback (most recent call last):
+  File "/usr/lib/python3.11/logging/__init__.py", line 845, in _removeHandlerRef
+  File "$ARTIFACTS/promotion-readiness-2026-10-01/wt/staging/cu-repeat-input-dedup/_xf_t1_guard.py", line 56, in _prof
+AttributeError: 'NoneType' object has no attribute 'path'
+
+=== 1 file with test failures (1 test failed) ===
+  tests/agent/test_agent_guardrails.py  (1 test failed)

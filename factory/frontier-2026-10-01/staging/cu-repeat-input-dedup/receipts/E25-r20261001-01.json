@@ -1,0 +1,148 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "E25/r20261001-01",
+ "tier": "T1",
+ "label": "OBSERVED",
+ "question": "Is the repeat-key dedup bug still red on current main through the static method, and green with the guard?",
+ "command": "HOME=$TH HERMES_HOME=$TH/.hermes HERMES_PYTHON=<hermes-home>/hermes-agent/venv/bin/python HERMES_TEST_FILE_RETRIES=0 bash scripts/run_tests.sh -j 2 tests/agent/test_agent_guardrails.py -q --tb=short -p _xf_t1_guard",
+ "arms": {
+  "main+donor-test": {
+   "tree": "c9f428ee43f967fe3075824b5d49d2d067e0a0be",
+   "how": "main 572e4f4fad + donor tests/agent/test_agent_guardrails.py hunk"
+  },
+  "main+donor-full": {
+   "tree": "27af372b82ce733def02c5763d09ef44922661b5",
+   "how": "main + full donor diff cb3142d325..570dc83ba6 (git apply -3 clean)"
+  },
+  "head+donor-test": {
+   "tree": "eb66dc09c9c64b72b58e930e8b4c6611be6a6bf2",
+   "how": "staging head + donor test hunk (old static-method contract via the forwarder)"
+  }
+ },
+ "gates": {
+  "red": {
+   "arm": "main+donor-test",
+   "result": "PASS",
+   "observed": "27 passed / 1 failed",
+   "failed": [
+    "tests/agent/test_agent_guardrails.py::TestDeduplicateToolCalls::test_repeated_computer_key_inputs_are_preserved"
+   ],
+   "assertion": "assert [namespace(...keys tab...)] == [namespace(...), namespace(...)]; Right contains one more item"
+  },
+  "green_donor": {
+   "arm": "main+donor-full",
+   "observed": "28 passed / 0 failed"
+  },
+  "green_head": {
+   "arm": "head+donor-test",
+   "observed": "28 passed / 0 failed"
+  }
+ },
+ "note": "Static-method RED/GREEN only; the real-path proof is F07. Donor merge-tree vs main is clean.",
+ "cells": [
+  {
+   "arm": "main+donor-test",
+   "rep": 1,
+   "arm_tree": "c9f428ee43f967fe3075824b5d49d2d067e0a0be",
+   "passed": 27,
+   "failed": 1,
+   "failed_ids": [
+    "tests/agent/test_agent_guardrails.py::TestDeduplicateToolCalls::test_repeated_computer_key_inputs_are_preserved"
+   ],
+   "red_marker_matched": 0,
+   "egress_blocked": 0,
+   "loopback_connects": 0,
+   "seam_hits": {
+    "run_agent.py::_deduplicate_tool_calls": 7
+   },
+   "wall_s": 9.0,
+   "load1_at_start": 11.3,
+   "raw_log": "raw/E25-main+donor-test-r1.log",
+   "raw_log_sha256": "948dd1129fe3b933f661c13e84a23fd1f2d03d2caf7f5cdcbd1a435b4d925a47"
+  },
+  {
+   "arm": "main+donor-full",
+   "rep": 1,
+   "arm_tree": "27af372b82ce733def02c5763d09ef44922661b5",
+   "passed": 28,
+   "failed": 0,
+   "failed_ids": [],
+   "red_marker_matched": 0,
+   "egress_blocked": 0,
+   "loopback_connects": 0,
+   "seam_hits": {
+    "run_agent.py::_deduplicate_tool_calls": 7
+   },
+   "wall_s": 6.9,
+   "load1_at_start": 11.46,
+   "raw_log": "raw/E25-main+donor-full-r1.log",
+   "raw_log_sha256": "e3b6a7bf9f63584cc31746f784d00143962b34e6a78fd843f491faa19f0d5054"
+  },
+  {
+   "arm": "head+donor-test",
+   "rep": 1,
+   "arm_tree": "eb66dc09c9c64b72b58e930e8b4c6611be6a6bf2",
+   "passed": 28,
+   "failed": 0,
+   "failed_ids": [],
+   "red_marker_matched": 0,
+   "egress_blocked": 0,
+   "loopback_connects": 0,
+   "seam_hits": {
+    "tool_dispatch_helpers.py::deduplicate_tool_calls": 7,
+    "tool_dispatch_helpers.py::_is_order_significant": 5,
+    "tool_dispatch_helpers.py::_peel_bridge_call": 4
+   },
+   "wall_s": 6.7,
+   "load1_at_start": 11.26,
+   "raw_log": "raw/E25-head+donor-test-r1.log",
+   "raw_log_sha256": "ab274aa2b18f8296526df5dc6dbbd85fb87da308beb086d334febf8d665c8454"
+  }
+ ],
+ "verdict": "KEEP",
+ "base_revision": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+ "head_revision": "c9e8b2584c1ce9d4bd0ccbcc1fb89a82bda6f1e4",
+ "branch": "staging/cu-repeat-input-dedup",
+ "origin_refs": [
+  "NousResearch/hermes-agent#124008",
+  "NousResearch/hermes-agent#112639",
+  "kvnloo/hermes-agent#316"
+ ],
+ "policy_revision": {
+  "AGENTS.md": "65aa3e61bcba610da21279a17385671263be39e9",
+  "agent/AGENTS.md": "d76bfa6187e525770121280efac05b5aa49f276d",
+  "factory": "frontier-2026-10-01/FACTORY.md sha256=7726ba18b43a9367f91d7f70c3aaefb96a9863761ddf71225c61c26a30d688d4"
+ },
+ "inputs": {
+  "tests/agent/test_tool_call_dedup_order_significant.py@head": "a361417bf38cbbb124303bfb24ea17385504639b",
+  "tests/agent/test_agent_guardrails.py@base": "a6f91bada3e3bc40f715981f7519aa56b97754bf",
+  "tests/fakes/fake_llm_provider.py@base": "339adb7e87ea1dcf961d4aa4e12cbd558e2de31e",
+  "scripts/run_tests.sh@base": "8fcc4294f48a16968fd68f6d5edad45d74354166",
+  "scripts/run_tests_parallel.py@base": "21178fd246edd2460d1d6ae4cfb7937262458ffc",
+  "guard_plugin _xf_t1_guard.py sha256": "ede8cf473cf26e6b2e960cbd2d89e1754bc63f799894d22360311fde94daaeee",
+  "driver proof.py sha256": "6b27828a2d036534031bad8ac64015b61448c0d3b77be9a7be9df81cf72b720d",
+  "donor": "refs/fork/fix/computer-use-repeat-input-dedup-current-main@570dc83ba65fc4ce86efb2c00e89dc84d19bd5ca (merge-base cb3142d3257b15ac42de544bd585793567400d0f)"
+ },
+ "env": {
+  "host": "groot",
+  "python": "3.11.14 (HERMES_PYTHON=<hermes-home>/hermes-agent/venv/bin/python, interpreter only)",
+  "sandbox": "run_tests.sh env -i + isolated HOME/HERMES_HOME (scratchpad/testhome-st-cu-repeat-input-dedup) + in-process loopback-only connect guard; no bwrap",
+  "file_retries": 0,
+  "workers": 2
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "resource_usage": {
+  "api_cost_usd": 0.0,
+  "gpu_s": 0,
+  "tokens": 0
+ },
+ "provenance": "self",
+ "privacy": "public-aggregate (synthetic fixtures only)",
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the change, the test and these receipts"
+}

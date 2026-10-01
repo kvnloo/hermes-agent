@@ -1,0 +1,43 @@
+# source lines on main aea969677c60a1bb72fe227fdfb98f196a2092cc (git show aea969677c60a1bb72fe227fdfb98f196a2092cc:<path> | grep -n / sed -n)
+== agent/turn_usage.py (96p;192,193p)
+            "API call #%d: model=%s provider=%s in=? out=? total=? latency=%.1fs usage=unavailable",
+    if canonical_usage.cache_read_tokens and prompt_tokens:
+        _cache_pct = f" cache={canonical_usage.cache_read_tokens}/{prompt_tokens} ({100*canonical_usage.cache_read_tokens/prompt_tokens:.0f}%)"
+== agent/usage_pricing.py (625,627p)
+    prompt_total, output_tokens, cache_read_tokens, cache_write_tokens = (
+        _first_nonzero(u, *paths) for paths in shape
+    )
+== agent/bedrock_adapter.py (863,869p)
+        cache_read_tokens, cache_write_tokens, output_tokens = (
+            usage_data.get(k, 0) for k in ("cacheReadInputTokens", "cacheWriteInputTokens", "outputTokens")
+        )
+        prompt_tokens = usage_data.get("inputTokens", 0) + cache_read_tokens + cache_write_tokens
+        usage = SimpleNamespace(
+            prompt_tokens=prompt_tokens, completion_tokens=output_tokens, total_tokens=prompt_tokens + output_tokens,
+            cache_read_input_tokens=cache_read_tokens, cache_creation_input_tokens=cache_write_tokens,
+== agent/gemini_native_adapter.py (587,591p)
+    count = lambda key: int(usage_meta.get(key) or 0)  # noqa: E731
+    reasoning_tokens = count("thoughtsTokenCount")
+    return SimpleNamespace(
+        prompt_tokens=count("promptTokenCount"), completion_tokens=count("candidatesTokenCount") + reasoning_tokens,
+        total_tokens=count("totalTokenCount"), prompt_tokens_details=SimpleNamespace(cached_tokens=count("cachedContentTokenCount")),
+== agent/copilot_acp_client.py (344p)
+            usage=SimpleNamespace(prompt_tokens=0, completion_tokens=0, total_tokens=0, prompt_tokens_details=SimpleNamespace(cached_tokens=0)),
+== evals/postmortem/forensics/logcalls.py (27,30p)
+_LINE = re.compile(
+    r"^(\S+ \S+) INFO \[(\S+)\] agent\.conversation_loop: API call #(\d+): model=(\S+) provider=\S+ "
+    r"in=(\d+) out=(\d+) total=\d+ latency=([\d.]+)s cache=(\d+)/(\d+)"
+)
+== logcalls.py docstring at dd4dd10611 (lines 1-12)
+"""Lane 1b: per-call cache behaviour from ``agent.log`` (OBSERVED provider usage per call).
+
+Hermes logs one line per API call::
+
+    ... INFO [<session_id>] agent.conversation_loop: API call #N: model=... in=<prompt> out=<out> total=... latency=..s [cache=<hit>/<total> (pct)] [write=<n>] [id=<response id>] [upstream=<name>]
+
+``cache=`` is written only when the provider read something from cache, so a line without it is a zero-hit
+call. A response without usage logs ``in=? out=? total=? ... usage=unavailable``; those are counted on their
+own and stay out of every token figure (state.db's ``api_call_count`` does not count them either). A line
+with ``cache_state=no_field`` reports no cache counter at all, so it stays out of the hit-ratio figures
+instead of reading as a miss.
+

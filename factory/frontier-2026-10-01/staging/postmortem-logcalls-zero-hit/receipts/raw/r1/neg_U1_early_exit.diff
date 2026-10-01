@@ -1,0 +1,13 @@
+diff --git a/evals/postmortem/forensics/logcalls.py b/evals/postmortem/forensics/logcalls.py
+index 23badda96b..34bc7fc8c2 100644
+--- a/evals/postmortem/forensics/logcalls.py
++++ b/evals/postmortem/forensics/logcalls.py
+@@ -98,7 +98,7 @@ def main(argv=None) -> int:
+     calls = [c for c in calls if c["inp"] is not None]
+     scored = [c for c in calls if _cache_reported(c)]
+     total_calls = run.summary()["api_calls"]
+-    if not scored:
++    if not calls:
+         print("[logcalls] no API-call lines with cache usage found in", paths); return 1
+     inp = [c["inp"] for c in calls]
+     hit_total, in_total = sum(c["hit"] for c in scored), sum(c["inp"] for c in scored)

@@ -1,0 +1,185 @@
+{
+  "cells": {
+    "Terminal|ax|c126447": {
+      "elements_median": 1.0,
+      "errors": 0,
+      "gws_median_ms": 30.027,
+      "median_ms": 33.194,
+      "n": 20,
+      "ok": 20,
+      "p95_ms": 34.431,
+      "png_bytes_median": 0.0,
+      "sent": [
+        "include_screenshot"
+      ],
+      "timeouts": 0
+    },
+    "Terminal|ax|main": {
+      "elements_median": 1.0,
+      "errors": 0,
+      "gws_median_ms": 40.05,
+      "median_ms": 43.316500000000005,
+      "n": 20,
+      "ok": 20,
+      "p95_ms": 44.541,
+      "png_bytes_median": 70.0,
+      "sent": [
+        ""
+      ],
+      "timeouts": 0
+    },
+    "Terminal|ax|main-aa": {
+      "elements_median": 1.0,
+      "errors": 0,
+      "gws_median_ms": 40.051500000000004,
+      "median_ms": 43.3065,
+      "n": 20,
+      "ok": 20,
+      "p95_ms": 44.999,
+      "png_bytes_median": 70.0,
+      "sent": [
+        ""
+      ],
+      "timeouts": 0
+    },
+    "Terminal|som|c126447": {
+      "elements_median": 1.0,
+      "errors": 0,
+      "gws_median_ms": 40.0475,
+      "median_ms": 43.3345,
+      "n": 20,
+      "ok": 20,
+      "p95_ms": 44.984,
+      "png_bytes_median": 70.0,
+      "sent": [
+        ""
+      ],
+      "timeouts": 0
+    },
+    "Terminal|som|main": {
+      "elements_median": 1.0,
+      "errors": 0,
+      "gws_median_ms": 40.04,
+      "median_ms": 43.418,
+      "n": 20,
+      "ok": 20,
+      "p95_ms": 44.839,
+      "png_bytes_median": 70.0,
+      "sent": [
+        ""
+      ],
+      "timeouts": 0
+    },
+    "Terminal|som|main-aa": {
+      "elements_median": 1.0,
+      "errors": 0,
+      "gws_median_ms": 40.058499999999995,
+      "median_ms": 43.3095,
+      "n": 20,
+      "ok": 20,
+      "p95_ms": 45.131,
+      "png_bytes_median": 70.0,
+      "sent": [
+        ""
+      ],
+      "timeouts": 0
+    },
+    "Terminal|vision|c126447": {
+      "elements_median": 0.0,
+      "errors": 0,
+      "gws_median_ms": 10.025500000000001,
+      "median_ms": 11.503,
+      "n": 20,
+      "ok": 20,
+      "p95_ms": 12.545,
+      "png_bytes_median": 70.0,
+      "sent": [
+        "include_accessibility_tree"
+      ],
+      "timeouts": 0
+    },
+    "Terminal|vision|main": {
+      "elements_median": 0.0,
+      "errors": 0,
+      "gws_median_ms": 40.046499999999995,
+      "median_ms": 41.4935,
+      "n": 20,
+      "ok": 20,
+      "p95_ms": 42.611,
+      "png_bytes_median": 70.0,
+      "sent": [
+        ""
+      ],
+      "timeouts": 0
+    },
+    "Terminal|vision|main-aa": {
+      "elements_median": 0.0,
+      "errors": 0,
+      "gws_median_ms": 40.054500000000004,
+      "median_ms": 41.5805,
+      "n": 20,
+      "ok": 20,
+      "p95_ms": 41.868,
+      "png_bytes_median": 70.0,
+      "sent": [
+        ""
+      ],
+      "timeouts": 0
+    }
+  },
+  "deltas": {
+    "Terminal|ax|c126447-main": {
+      "aa_floor": {
+        "abs_bound_ms": 0.7714999999999961,
+        "ci95": [
+          -0.31150000000000944,
+          0.7714999999999961
+        ],
+        "median_delta_ms": -0.010000000000005116
+      },
+      "beyond_noise": true,
+      "ci95": [
+        -10.361500000000007,
+        -9.838999999999999
+      ],
+      "median_delta_ms": -10.122500000000002,
+      "p95_delta_ms": -10.11
+    },
+    "Terminal|som|c126447-main": {
+      "aa_floor": {
+        "abs_bound_ms": 0.9780000000000015,
+        "ci95": [
+          -0.9780000000000015,
+          0.3254999999999981
+        ],
+        "median_delta_ms": -0.10849999999999937
+      },
+      "beyond_noise": false,
+      "ci95": [
+        -0.9680000000000035,
+        0.3999999999999986
+      ],
+      "median_delta_ms": -0.0835000000000008,
+      "p95_delta_ms": 0.14500000000000313
+    },
+    "Terminal|vision|c126447-main": {
+      "aa_floor": {
+        "abs_bound_ms": 0.18299999999999983,
+        "ci95": [
+          -0.09299999999999642,
+          0.18299999999999983
+        ],
+        "median_delta_ms": 0.0870000000000033
+      },
+      "beyond_noise": true,
+      "ci95": [
+        -30.093999999999994,
+        -29.912500000000005
+      ],
+      "median_delta_ms": -29.990499999999997,
+      "p95_delta_ms": -30.065999999999995
+    }
+  },
+  "label": "MODELED (fake driver; harness check only)",
+  "rows": 180
+}

@@ -1,0 +1,327 @@
+{
+ "e19_shaped": {
+  "summary": {
+   "truth": {
+    "metered": 413,
+    "unavailable": 7,
+    "zero_hit": 24,
+    "hit_tokens": 64079945,
+    "in_tokens": 68841780,
+    "true_hit_ratio": 0.9308
+   },
+   "coverage_fraction": {
+    "main": 0.9419,
+    "patched": 1.0
+   },
+   "calls_found": {
+    "main": 389,
+    "patched": 413
+   },
+   "cache_hit_ratio_overall": {
+    "main": 0.9796,
+    "patched": 0.9308
+   },
+   "hit_ratio_delta_pp": 4.88,
+   "patched_new_fields": {
+    "zero_hit": 24,
+    "no_cache_field": 0,
+    "usage_unavailable": 7
+   },
+   "observed_block_identical": false,
+   "modeled_block_identical": false,
+   "coverage_identical_except_new_keys": false,
+   "inputs_sha256": {
+    "state.db": "de1f610e98c3f54ff0dbb67d5e67528a7a6231b2b3218a11d17a9f9cd0632c5a",
+    "agent.log": "4f5734f62111f5218726f04fe685860ebc773a2a0d9b8e448987af9dc7ebc63c"
+   }
+  },
+  "arms": {
+   "main": {
+    "rc": 0,
+    "stdout": [
+     "[logcalls] coverage 389/413 calls (94.2%) from 1 file(s)",
+     "[logcalls] OBSERVED median prompt 155,145 p90 315,931; >200K: 31%; hit ratio 98.0%",
+     "[logcalls] OBSERVED strict plateau (hit unchanged): 0.0% of pairs, 0.0% of uncached input; non-advancing hit: 0.0% / 0.0%; uncached in window $0.0",
+     "[logcalls] MODELED sawtooth cap 200000/65000 on real sizes: prompt volume x0.679",
+     "[logcalls] wrote $S/pmlc/final/f06/e19_shaped/out_main/logcalls.json"
+    ],
+    "report": {
+     "coverage": {
+      "calls_found": 389,
+      "run_api_calls": 413,
+      "fraction": 0.9419,
+      "first_ts": "2026-09-06 19:00:14,557",
+      "last_ts": "2026-09-06 19:14:00,493",
+      "note": "rotated logs; extrapolations from this window are upper bounds"
+     },
+     "observed": {
+      "prompt_tokens": {
+       "median": 155145,
+       "p90": 315931,
+       "max": 444365
+      },
+      "share_of_calls_above": {
+       "150000": 0.522,
+       "200000": 0.306,
+       "300000": 0.111
+      },
+      "cache_hit_ratio_overall": 0.9796,
+      "hit_ratio_buckets": {
+       "50-90%": 8,
+       "90-97%": 124,
+       "97-99%": 184,
+       ">=99%": 73
+      },
+      "strict_plateau": {
+       "pairs_share": 0.0,
+       "share_of_uncached_input": 0.0
+      },
+      "non_advancing_hit": {
+       "pairs_share": 0.0,
+       "share_of_uncached_input": 0.0
+      },
+      "uncached_input_usd_in_window": 0.0
+     },
+     "modeled": {
+      "sawtooth_on_real_prompt_sizes": {
+       "cap": 200000,
+       "floor": 65000,
+       "prompt_tokens_ratio": 0.679,
+       "caveats": [
+        "compression-call cost excluded",
+        "read/write ratio assumed unchanged",
+        "window only"
+       ]
+      }
+     }
+    }
+   },
+   "patched": {
+    "rc": 0,
+    "stdout": [
+     "[logcalls] coverage 413/413 calls (100.0%) from 1 file(s): 24 zero-hit, 0 without a cache field; 7 usage=unavailable not counted",
+     "[logcalls] OBSERVED median prompt 154,971 p90 307,985; >200K: 30%; hit ratio 93.1%",
+     "[logcalls] OBSERVED strict plateau (hit unchanged): 0.2% of pairs, 4.2% of uncached input; non-advancing hit: 4.4% / 70.7%; uncached in window $0.0",
+     "[logcalls] MODELED sawtooth cap 200000/65000 on real sizes: prompt volume x0.685",
+     "[logcalls] wrote $S/pmlc/final/f06/e19_shaped/out_patched/logcalls.json"
+    ],
+    "report": {
+     "coverage": {
+      "calls_found": 413,
+      "run_api_calls": 413,
+      "fraction": 1.0,
+      "zero_hit": 24,
+      "no_cache_field": 0,
+      "usage_unavailable": 7,
+      "first_ts": "2026-09-06 19:00:07,167",
+      "last_ts": "2026-09-06 19:14:00,493",
+      "note": "rotated logs; extrapolations from this window are upper bounds"
+     },
+     "observed": {
+      "prompt_tokens": {
+       "median": 154971,
+       "p90": 307985,
+       "max": 444365
+      },
+      "share_of_calls_above": {
+       "150000": 0.518,
+       "200000": 0.298,
+       "300000": 0.107
+      },
+      "cache_hit_ratio_overall": 0.9308,
+      "hit_ratio_buckets": {
+       "<50%": 24,
+       "50-90%": 8,
+       "90-97%": 124,
+       "97-99%": 184,
+       ">=99%": 73
+      },
+      "strict_plateau": {
+       "pairs_share": 0.0025,
+       "share_of_uncached_input": 0.0424
+      },
+      "non_advancing_hit": {
+       "pairs_share": 0.0442,
+       "share_of_uncached_input": 0.7069
+      },
+      "uncached_input_usd_in_window": 0.0
+     },
+     "modeled": {
+      "sawtooth_on_real_prompt_sizes": {
+       "cap": 200000,
+       "floor": 65000,
+       "prompt_tokens_ratio": 0.685,
+       "caveats": [
+        "compression-call cost excluded",
+        "read/write ratio assumed unchanged",
+        "window only"
+       ]
+      }
+     }
+    }
+   }
+  }
+ },
+ "all_hit": {
+  "summary": {
+   "truth": {
+    "metered": 420,
+    "unavailable": 0,
+    "zero_hit": 0,
+    "hit_tokens": 67673773,
+    "in_tokens": 69093049,
+    "true_hit_ratio": 0.9795
+   },
+   "coverage_fraction": {
+    "main": 1.0,
+    "patched": 1.0
+   },
+   "calls_found": {
+    "main": 420,
+    "patched": 420
+   },
+   "cache_hit_ratio_overall": {
+    "main": 0.9795,
+    "patched": 0.9795
+   },
+   "hit_ratio_delta_pp": 0.0,
+   "patched_new_fields": {
+    "zero_hit": 0,
+    "no_cache_field": 0,
+    "usage_unavailable": 0
+   },
+   "observed_block_identical": true,
+   "modeled_block_identical": true,
+   "coverage_identical_except_new_keys": true,
+   "inputs_sha256": {
+    "state.db": "cbf5d3d398c010438e12958c0822fdcb9e2b96f7262920d57914315b5a512f00",
+    "agent.log": "85bfbd161bf1bb817ffec794f972801bef130d63fbe375cab263c2f33c3ed69f"
+   }
+  },
+  "arms": {
+   "main": {
+    "rc": 0,
+    "stdout": [
+     "[logcalls] coverage 420/420 calls (100.0%) from 1 file(s)",
+     "[logcalls] OBSERVED median prompt 151,894 p90 306,546; >200K: 29%; hit ratio 98.0%",
+     "[logcalls] OBSERVED strict plateau (hit unchanged): 0.0% of pairs, 0.0% of uncached input; non-advancing hit: 0.0% / 0.0%; uncached in window $0.0",
+     "[logcalls] MODELED sawtooth cap 200000/65000 on real sizes: prompt volume x0.692",
+     "[logcalls] wrote $S/pmlc/final/f06/all_hit/out_main/logcalls.json"
+    ],
+    "report": {
+     "coverage": {
+      "calls_found": 420,
+      "run_api_calls": 420,
+      "fraction": 1.0,
+      "first_ts": "2026-09-06 19:00:07,051",
+      "last_ts": "2026-09-06 19:14:00,740",
+      "note": "rotated logs; extrapolations from this window are upper bounds"
+     },
+     "observed": {
+      "prompt_tokens": {
+       "median": 151894,
+       "p90": 306546,
+       "max": 433169
+      },
+      "share_of_calls_above": {
+       "150000": 0.507,
+       "200000": 0.293,
+       "300000": 0.105
+      },
+      "cache_hit_ratio_overall": 0.9795,
+      "hit_ratio_buckets": {
+       "50-90%": 15,
+       "90-97%": 115,
+       "97-99%": 213,
+       ">=99%": 77
+      },
+      "strict_plateau": {
+       "pairs_share": 0.0,
+       "share_of_uncached_input": 0.0
+      },
+      "non_advancing_hit": {
+       "pairs_share": 0.0,
+       "share_of_uncached_input": 0.0
+      },
+      "uncached_input_usd_in_window": 0.0
+     },
+     "modeled": {
+      "sawtooth_on_real_prompt_sizes": {
+       "cap": 200000,
+       "floor": 65000,
+       "prompt_tokens_ratio": 0.692,
+       "caveats": [
+        "compression-call cost excluded",
+        "read/write ratio assumed unchanged",
+        "window only"
+       ]
+      }
+     }
+    }
+   },
+   "patched": {
+    "rc": 0,
+    "stdout": [
+     "[logcalls] coverage 420/420 calls (100.0%) from 1 file(s): 0 zero-hit, 0 without a cache field; 0 usage=unavailable not counted",
+     "[logcalls] OBSERVED median prompt 151,894 p90 306,546; >200K: 29%; hit ratio 98.0%",
+     "[logcalls] OBSERVED strict plateau (hit unchanged): 0.0% of pairs, 0.0% of uncached input; non-advancing hit: 0.0% / 0.0%; uncached in window $0.0",
+     "[logcalls] MODELED sawtooth cap 200000/65000 on real sizes: prompt volume x0.692",
+     "[logcalls] wrote $S/pmlc/final/f06/all_hit/out_patched/logcalls.json"
+    ],
+    "report": {
+     "coverage": {
+      "calls_found": 420,
+      "run_api_calls": 420,
+      "fraction": 1.0,
+      "zero_hit": 0,
+      "no_cache_field": 0,
+      "usage_unavailable": 0,
+      "first_ts": "2026-09-06 19:00:07,051",
+      "last_ts": "2026-09-06 19:14:00,740",
+      "note": "rotated logs; extrapolations from this window are upper bounds"
+     },
+     "observed": {
+      "prompt_tokens": {
+       "median": 151894,
+       "p90": 306546,
+       "max": 433169
+      },
+      "share_of_calls_above": {
+       "150000": 0.507,
+       "200000": 0.293,
+       "300000": 0.105
+      },
+      "cache_hit_ratio_overall": 0.9795,
+      "hit_ratio_buckets": {
+       "50-90%": 15,
+       "90-97%": 115,
+       "97-99%": 213,
+       ">=99%": 77
+      },
+      "strict_plateau": {
+       "pairs_share": 0.0,
+       "share_of_uncached_input": 0.0
+      },
+      "non_advancing_hit": {
+       "pairs_share": 0.0,
+       "share_of_uncached_input": 0.0
+      },
+      "uncached_input_usd_in_window": 0.0
+     },
+     "modeled": {
+      "sawtooth_on_real_prompt_sizes": {
+       "cap": 200000,
+       "floor": 65000,
+       "prompt_tokens_ratio": 0.692,
+       "caveats": [
+        "compression-call cost excluded",
+        "read/write ratio assumed unchanged",
+        "window only"
+       ]
+      }
+     }
+    }
+   }
+  }
+ }
+}

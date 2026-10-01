@@ -1,0 +1,71 @@
+▶ not activated — using HERMES_PYTHON: <HERMES_PYTHON>
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 3 test files (~18 tests) under ['tests/tools/test_computer_use_capture_lane_schema.py', 'tests/tools/test_computer_use_cheap_lanes.py', 'tests/tools/test_computer_use_ax_walk_bound.py']; running with -j 2
+[ 11.1% |     2/~18 | ✓6 | ✗0] ✓ tests/tools/test_computer_use_capture_lane_schema.py (6✓, 2.9s)
+[ 27.8% |     5/~18 | ✓11 | ✗ 0] ✓ tests/tools/test_computer_use_ax_walk_bound.py (5✓, 2.9s)
+[100.0% |    18/~18 | ✓23 | ✗ 1] ✗ tests/tools/test_computer_use_cheap_lanes.py (12✓ 1✗, 5.9s)
+
+  ╔╍ Failed: tests/tools/test_computer_use_cheap_lanes.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ ...F.........                                                            [100%]
+  ║ =================================== FAILURES ===================================
+  ║ _____ TestGwsArgsLanes.test_flags_fail_closed_before_capability_discovery ______
+  ║ 
+  ║ self = <tests.tools.test_computer_use_cheap_lanes.TestGwsArgsLanes object at 0x7f0036340b50>
+  ║ 
+  ║     def test_flags_fail_closed_before_capability_discovery(self):
+  ║         """Pre-discovery the schema map is empty by construction; the payload must not change."""
+  ║         stub = _StubCapture(_StubSession(discovered=False, props=BOTH))
+  ║         for mode in ("vision", "ax", "som"):
+  ║             args = stub._gws_args(mode)
+  ║ >           assert "include_screenshot" not in args and "include_accessibility_tree" not in args
+  ║ E           AssertionError: assert ('include_screenshot' not in {'pid': 607, 'window_id': 382, 'session': None, 'max_elements': 200, ...} and 'include_accessibility_tree' not in {'pid': 607, 'window_id': 382, 'session': None, 'max_elements': 200, ...})
+  ║ 
+  ║ tests/tools/test_computer_use_cheap_lanes.py:86: AssertionError
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/tools/test_computer_use_cheap_lanes.py::TestGwsArgsLanes::test_flags_fail_closed_before_capability_discovery
+  ║ 1 failed, 12 passed in 1.98s
+  ║
+  ║  Repro: python -m pytest tests/tools/test_computer_use_cheap_lanes.py -q
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 3 files, 23 tests passed, 1 failed (100% complete) in 8.8s (2 workers) ===
+  Durations cached to test_durations.json (2 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   3
+  Total subprocess CPU-wall: 11.6s  (runner wall: 8.8s, parallelism: 2x)
+  P50: 2.91s  P90: 5.86s  P95: 5.86s  P99: 5.86s  Max: 5.86s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+      5.86s  tests/tools/test_computer_use_cheap_lanes.py
+      2.91s  tests/tools/test_computer_use_ax_walk_bound.py
+      2.86s  tests/tools/test_computer_use_capture_lane_schema.py
+
+=== Failure output ===
+
+--- tests/tools/test_computer_use_cheap_lanes.py ---
+...F.........                                                            [100%]
+=================================== FAILURES ===================================
+_____ TestGwsArgsLanes.test_flags_fail_closed_before_capability_discovery ______
+
+self = <tests.tools.test_computer_use_cheap_lanes.TestGwsArgsLanes object at 0x7f0036340b50>
+
+    def test_flags_fail_closed_before_capability_discovery(self):
+        """Pre-discovery the schema map is empty by construction; the payload must not change."""
+        stub = _StubCapture(_StubSession(discovered=False, props=BOTH))
+        for mode in ("vision", "ax", "som"):
+            args = stub._gws_args(mode)
+>           assert "include_screenshot" not in args and "include_accessibility_tree" not in args
+E           AssertionError: assert ('include_screenshot' not in {'pid': 607, 'window_id': 382, 'session': None, 'max_elements': 200, ...} and 'include_accessibility_tree' not in {'pid': 607, 'window_id': 382, 'session': None, 'max_elements': 200, ...})
+
+tests/tools/test_computer_use_cheap_lanes.py:86: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tools/test_computer_use_cheap_lanes.py::TestGwsArgsLanes::test_flags_fail_closed_before_capability_discovery
+1 failed, 12 passed in 1.98s
+
+=== 1 file with test failures (1 test failed) ===
+  tests/tools/test_computer_use_cheap_lanes.py  (1 test failed)

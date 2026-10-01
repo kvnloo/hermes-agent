@@ -1,0 +1,22 @@
+▶ not activated — using HERMES_PYTHON: <HERMES_PYTHON>
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 3 test files (~18 tests) under ['tests/tools/test_computer_use_capture_lane_schema.py', 'tests/tools/test_computer_use_cheap_lanes.py', 'tests/tools/test_computer_use_ax_walk_bound.py']; running with -j 2
+[ 16.7% |     3/~18 | ✓5 | ✗0] ✓ tests/tools/test_computer_use_ax_walk_bound.py (5✓, 2.6s)
+[ 27.8% |     5/~18 | ✓11 | ✗ 0] ✓ tests/tools/test_computer_use_capture_lane_schema.py (6✓, 2.6s)
+[100.0% |    18/~18 | ✓24 | ✗ 0] ✓ tests/tools/test_computer_use_cheap_lanes.py (13✓, 2.6s)
+
+=== Summary: 3 files, 24 tests passed, 0 failed (100% complete) in 5.2s (2 workers) ===
+  Durations cached to test_durations.json (3 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   3
+  Total subprocess CPU-wall: 7.7s  (runner wall: 5.2s, parallelism: 2x)
+  P50: 2.58s  P90: 2.60s  P95: 2.60s  P99: 2.60s  Max: 2.60s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+      2.60s  tests/tools/test_computer_use_cheap_lanes.py
+      2.58s  tests/tools/test_computer_use_capture_lane_schema.py
+      2.55s  tests/tools/test_computer_use_ax_walk_bound.py

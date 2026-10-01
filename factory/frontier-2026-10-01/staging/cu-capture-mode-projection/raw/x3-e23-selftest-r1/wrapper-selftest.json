@@ -1,0 +1,1 @@
+{"contract": {"ready": true, "reason": "", "version": "0.28.2"}, "list_windows_count_no_display": 0, "mcp_invocation": {"args": ["mcp", "--no-overlay"], "command_is_wrapper": true}, "started": true, "supports_include_accessibility_tree": true, "supports_include_screenshot": true}

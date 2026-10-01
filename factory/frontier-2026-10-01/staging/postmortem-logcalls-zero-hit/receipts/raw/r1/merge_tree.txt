@@ -1,0 +1,19 @@
+main=aea969677c60a1bb72fe227fdfb98f196a2092cc (fetched 2026-10-01T11:04Z; commit date 2026-10-01T10:56:05Z)
+staging=dd4dd10611e8c23c7579a4ddb95655abebbaca27 parent=234badf4012af380d23c91eae55d045a69c69ffb
+#121135 head=dd4a0ca4cf3345702eb7be95e11873308d3015b5
+#119713 head=7471d9915d7d1ce3e94f9d18c9d775461d269815
+main x staging: CLEAN tree=f388caeb37c573dcd1dfb1211526f32b0c7abdc6
+main x #121135: CLEAN tree=798e76b64df1e1c17a3360e121b26ff8d0d042a7
+main x #119713: CLEAN tree=1f2049ee49cd66d7e65729fda05277a1ee3a6964
+#121135 x staging: CLEAN tree=2e7d28d7d314538bf74cd0c42ad3fb2113c88f3a
+#119713 x staging: CLEAN tree=97793e195c23312e44526170bfe0901163790b38
+#121135 x #119713: CONFLICT
+    113a2c28bb5962a413b04f036ebdffdfac10f1db
+    agent/turn_usage.py
+    
+    Auto-merging agent/turn_usage.py
+    CONFLICT (content): Merge conflict in agent/turn_usage.py
+    Auto-merging tests/agent/test_turn_usage_log_line.py
+drift 234badf4012af380d23c91eae55d045a69c69ffb..aea969677c60a1bb72fe227fdfb98f196a2092cc: 36 commits
+drift commits touching evals/postmortem agent/turn_usage.py agent/usage_pricing.py hermes_logging.py tests/agent/test_turn_usage_log_line.py: 0
+drift commits touching .github/workflows: 0
