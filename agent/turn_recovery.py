@@ -500,6 +500,14 @@ def _recover_stale_codex_reasoning(
     return True
 
 
+# api_mode -> (agent flag, display name, config key) of the opt-in server-side feature that
+# sends ``context_management`` on that wire.
+_CONTEXT_MANAGEMENT_FEATURES = {
+    "codex_responses": ("codex_responses_native_compaction", "native compaction", "codex_responses_native"),
+    "anthropic_messages": ("anthropic_context_editing", "context editing", "anthropic_context_editing"),
+}
+
+
 def _recover_format_errors(
     agent: Any, api_error: Exception, classified: Any, _retry: TurnRetryState,
     messages: List[Dict[str, Any]], api_messages: Any,
@@ -540,26 +548,26 @@ def _recover_format_errors(
     ):
         return True
 
-    # Structured 400 naming ``context_management``: disable native compaction for the
-    # session, retry once; local compression takes over.
+    # Structured 400 naming ``context_management``: disable the server-side feature that sent it
+    # for the session, retry once; local compression takes over.
+    flag, name, config_key = _CONTEXT_MANAGEMENT_FEATURES.get(agent.api_mode, (None, "", ""))
     if (
-        agent.api_mode == "codex_responses"
+        flag
         and not _retry.native_compaction_reject_retry_attempted
-        and bool(getattr(agent, "codex_responses_native_compaction", False))
+        and bool(getattr(agent, flag, False))
     ):
         from agent.native_compaction import is_native_compaction_rejection
         if is_native_compaction_rejection(api_error, getattr(api_error, "status_code", None)):
             _retry.native_compaction_reject_retry_attempted = True
-            agent.codex_responses_native_compaction = False
+            setattr(agent, flag, False)
             _vlines(
                 agent,
-                "⚠️  Provider rejected native compaction (context_management) — disabled for this session, "
+                f"⚠️  Provider rejected {name} (context_management) — disabled for this session, "
                 "local compression stays active. Retrying...",
             )
             logger.warning(
-                "%sNative compaction rejection recovery: disabled "
-                "codex_responses_native for this session and retrying",
-                agent.log_prefix,
+                "%s%s rejection recovery: disabled %s for this session and retrying",
+                agent.log_prefix, name.capitalize(), config_key,
             )
             return True
 

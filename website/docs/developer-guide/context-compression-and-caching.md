@@ -247,6 +247,7 @@ compression:
   codex_app_server_auto: native  # native|hermes|off for Codex app-server thread compaction
   codex_responses_native: false  # Opt-in server compaction: gpt-5.6 on OpenAI/Codex; Astra on Codex OAuth
   codex_responses_compact_threshold: null  # Server compaction trigger; only used when codex_responses_native: true
+  anthropic_context_editing: false  # Opt-in server-side tool-result clearing on the native Claude API
   in_place: true             # Compact on the same session id, no rotation (default: true)
 
 # Summarization model/provider configured under auxiliary:
@@ -275,6 +276,7 @@ auxiliary:
 | `codex_app_server_auto` | `native` | `native`, `hermes`, `off` | Thread-compaction mode for Codex app-server sessions (see below) |
 | `codex_responses_native` | `false` | bool | Opt in to OpenAI's server-side compaction on the Responses API. Engages for gpt-5.6-family models on the direct OpenAI API or a ChatGPT Codex subscription, and `gpt-6-astra` (including its `-900k` picker alias) on official Codex OAuth (see below) |
 | `codex_responses_compact_threshold` | `null` | `null` or positive integer | Server-side compaction trigger, read **only when `codex_responses_native: true`** — it never changes when local compression fires; the local trigger is `threshold` (ratio) capped by `threshold_tokens`. `null` follows the resolved local compression trigger with an 8,192 token safety margin. A positive integer remains absolute and only clamps downward when required. Invalid values use automatic behavior. Automatic mode falls back to `200000` when no usable local trigger exists |
+| `anthropic_context_editing` | `false` | bool | Opt in to Anthropic's server-side context editing (`clear_tool_uses_20250919`, beta `context-management-2025-06-27`) for Claude models on the native Anthropic API only. The server clears the oldest tool results once the prompt crosses a trigger 8,192 tokens below the local one, and each clear must free at least 20% of that trigger. Local compression stays on, but it reads the prompt size the provider reports, which is smaller after a clear, so it fires later. A structured rejection disables it for the session and retries the request without it. This manages the context window; it does not cut cost, because each clear rewrites the cached prompt prefix |
 | `in_place` | `true` | bool | Compact on the same session id instead of rotating to a new one (see below) |
 
 ### In-place compaction (single stable session id)

@@ -767,6 +767,15 @@ compression:
   # the local trigger is unavailable, automatic mode uses 200000.
   codex_responses_compact_threshold: null
 
+  # Anthropic server-side context editing (default: false). When true, Claude
+  # models on the native Anthropic API ask the server to clear the oldest tool
+  # results (clear_tool_uses) just below the local compression trigger. No other
+  # provider or route is affected. Local compression stays on, but after a clear
+  # it sees the smaller post-clear prompt size the provider reports, so it fires
+  # later. This manages the context window and does not save money: each clear
+  # rewrites the cached prompt prefix.
+  anthropic_context_editing: false
+
   # Number of non-system messages to protect at the head of the transcript, in
   # ADDITION to the system prompt (which is always implicitly protected).
   # Head messages are NEVER summarized — they survive every compression

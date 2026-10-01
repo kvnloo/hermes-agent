@@ -405,8 +405,9 @@ Screenshots are expensive. Hermes applies four layers of optimisation:
   multimodal tool results and strips image parts from old ones.
 - **Image-aware token estimation** — each image is counted as ~1500
   tokens (Anthropic's flat rate) instead of its base64 char length.
-- **Server-side context editing (Anthropic only)** — when active, the
-  adapter enables `clear_tool_uses_20250919` via `context_management` so
+- **Server-side context editing (Anthropic only, opt-in)** — with
+  `compression.anthropic_context_editing: true`, Claude models on the native
+  Anthropic API send `clear_tool_uses_20250919` via `context_management` so
   Anthropic's API clears old tool results server-side.
 
 A 20-action session on a 1568×900 display typically costs ~30K tokens
