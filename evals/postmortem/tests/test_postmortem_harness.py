@@ -81,6 +81,49 @@ def test_every_lane_runs_and_writes_its_report(tmp_path, harness_path):
     assert (out / "tokens.json").exists()
 
 
+def _logcalls(tmp_path, tails):
+    from evals.postmortem.forensics import logcalls
+    db = tmp_path / "state.db"; _mk_db(db)
+    log = tmp_path / "agent.log"
+    log.write_text("".join(
+        f"2026-09-06 19:32:0{n},549 INFO [root] agent.conversation_loop: API call #{n}: model=m provider=nous {tail}\n"
+        for n, tail in enumerate(tails, 1)), encoding="utf-8")
+    assert logcalls.main(["--db", str(db), "--out", str(tmp_path / "out"), "--logs", str(log)]) == 0
+    return json.loads((tmp_path / "out" / "logcalls.json").read_text(encoding="utf-8-sig"))
+
+
+def test_logcalls_counts_zero_hit_and_usage_unavailable_calls(tmp_path, harness_path):
+    """agent/turn_usage.py writes cache= only when the provider read something from cache, and logs
+    usage=unavailable when it sent no usage. A full miss still counts toward coverage and pulls the hit
+    ratio down; a usage-less call is counted on its own (state.db's api_call_count skips it too)."""
+    r = _logcalls(tmp_path, [
+        "in=1000 out=7 total=1007 latency=0.2s cache=900/1000 (90%) id=r1",
+        "in=1200 out=7 total=1207 latency=0.2s cache=1000/1200 (83%) id=r2",
+        "in=1300 out=7 total=1307 latency=0.2s id=r3",
+        "in=? out=? total=? latency=0.2s usage=unavailable",
+    ])
+    assert r["coverage"]["calls_found"] == 3
+    assert r["coverage"]["zero_hit"] == 1 and r["coverage"]["usage_unavailable"] == 1
+    assert r["observed"]["cache_hit_ratio_overall"] == round(1900 / 3500, 4)
+
+
+def test_logcalls_reads_cache_state_and_tolerates_trailing_fields(tmp_path, harness_path):
+    """Pending line shapes: cache_state= with cache_read=/cache_write= (#121135) and a trailing ttfb=
+    (#119713). cache_state=no_field means no cache counter was reported, so that call stays out of the hit
+    ratio instead of reading as a miss."""
+    r = _logcalls(tmp_path, [
+        "in=1000 out=7 total=1007 latency=0.2s cache=900/1000 (90%) id=r1 cache_state=hit cache_scope=response cache_read=900 cache_write=0",
+        "in=1200 out=7 total=1207 latency=3.0s cache=1000/1200 (83%) id=r2 upstream=Claude Platform on AWS ttfb=1.2s",
+        "in=1300 out=7 total=1307 latency=0.2s write=1300 id=r3 cache_state=cold_write cache_scope=response cache_read=0 cache_write=1300 ttfb=0.1s",
+        "in=500 out=7 total=507 latency=0.2s cache_state=no_field cache_scope=response",
+        "in=? out=? total=? latency=0.2s usage=unavailable cache_state=no_field ttfb=0.1s",
+    ])
+    assert r["coverage"]["calls_found"] == 4 and r["coverage"]["usage_unavailable"] == 1
+    assert r["coverage"]["zero_hit"] == 1 and r["coverage"]["no_cache_field"] == 1
+    assert r["observed"]["cache_hit_ratio_overall"] == round(1900 / 3500, 4)
+    assert r["observed"]["non_advancing_hit"]["pairs_share"] == 0.5  # pairs #1-#2, #2-#3; not #3-#4
+
+
 def test_runner_lists_a_probe_per_pr(harness_path):
     from evals.postmortem import run as runner
     prs = {p[4] for p in runner.PROBES}

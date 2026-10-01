@@ -41,10 +41,10 @@ r = ag.run_conversation(task)
 print("final:", (r.get("final_response") or "")[:80], "| wall", round(time.time() - t0, 1), "s")
 time.sleep(1)
 log = subprocess.run(f"grep -h '\\[{sid}\\]' ~/.hermes/logs/agent.log | grep 'API call #'", shell=True, capture_output=True).stdout.decode("utf-8", "replace")
-rows = re.findall(r"API call #(\d+): .*in=(\d+) out=(\d+) .*cache=(\d+)/(\d+) \((\d+)%\)", log)
+rows = re.findall(r"API call #(\d+): .*in=(\d+) out=(\d+) (?:.*cache=(\d+)/(\d+) \((\d+)%\))?", log)  # no cache= on a full miss
 tot_in = tot_c = 0
 for n, i, o, c, ct, p in rows:
-    i, c = int(i), int(c); tot_in += i; tot_c += c
-    print(f"  call {n:>2} in={i:>7} out={o:>5} cached={c:>7} ({p}%)  uncached={i-c}")
+    i, c = int(i), int(c or 0); tot_in += i; tot_c += c
+    print(f"  call {n:>2} in={i:>7} out={o:>5} cached={c:>7} ({p or 0}%)  uncached={i-c}")
 print(f"ARM {arm}: calls={len(rows)} input={tot_in} cached={tot_c} uncached={tot_in-tot_c} hit={100*tot_c/max(tot_in,1):.1f}%")
 print(json.dumps({"arm": arm, "calls": len(rows), "input": tot_in, "cached": tot_c}))

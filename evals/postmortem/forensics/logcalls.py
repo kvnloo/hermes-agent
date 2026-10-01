@@ -2,7 +2,13 @@
 
 Hermes logs one line per API call::
 
-    ... INFO [<session_id>] agent.conversation_loop: API call #N: model=... in=<prompt> out=<out> total=... latency=..s cache=<hit>/<total> (pct) [write=<n>] [id=<response id>] [upstream=<name>]
+    ... INFO [<session_id>] agent.conversation_loop: API call #N: model=... in=<prompt> out=<out> total=... latency=..s [cache=<hit>/<total> (pct)] [write=<n>] [id=<response id>] [upstream=<name>]
+
+``cache=`` is written only when the provider read something from cache, so a line without it is a zero-hit
+call. A response without usage logs ``in=? out=? total=? ... usage=unavailable``; those are counted on their
+own and stay out of every token figure (state.db's ``api_call_count`` does not count them either). A line
+with ``cache_state=no_field`` reports no cache counter at all, so it stays out of the hit-ratio figures
+instead of reading as a miss.
 
 Given the rotated logs, this reproduces: prompt-size distribution, cache hit-ratio buckets, the
 "plateau" signature of a broken cache prefix (hit count stuck at the previous call's breakpoint while
@@ -26,13 +32,18 @@ from evals.postmortem.forensics.common import Run
 
 _LINE = re.compile(
     r"^(\S+ \S+) INFO \[(\S+)\] agent\.conversation_loop: API call #(\d+): model=(\S+) provider=\S+ "
-    r"in=(\d+) out=(\d+) total=\d+ latency=([\d.]+)s cache=(\d+)/(\d+)"
+    r"in=(\d+|\?) out=(\d+|\?) total=(?:\d+|\?) latency=([\d.]+)s(?: cache=(\d+)/(\d+))?"
 )
 
 
 _WRITE = re.compile(r" write=(\d+)")
 _ID = re.compile(r" id=(\S+)")
 _UPSTREAM = re.compile(r" upstream=(.+?)(?: [a-z_]+=|$)")
+_CACHE_STATE = re.compile(r" cache_state=(\w+)")
+
+
+def _cache_reported(call: Dict[str, Any]) -> bool:
+    return call.get("cache_state") != "no_field"
 
 
 def parse_logs(paths: List[str], sids: set) -> List[Dict[str, Any]]:
@@ -46,11 +57,12 @@ def parse_logs(paths: List[str], sids: set) -> List[Dict[str, Any]]:
             for line in fh:
                 m = _LINE.match(line)
                 if m and m.group(2) in sids:
+                    usage = m.group(5) != "?"  # in=? is the usage=unavailable line: no token counts
                     rec = {"ts": m.group(1), "sid": m.group(2), "n": int(m.group(3)), "model": m.group(4),
-                           "inp": int(m.group(5)), "out": int(m.group(6)), "lat": float(m.group(7)),
-                           "hit": int(m.group(8))}
-                    # Newer lines (post 2026-09) also carry write= / id= / upstream=; optional.
-                    for key, pat in (("write", _WRITE), ("id", _ID), ("upstream", _UPSTREAM)):
+                           "inp": int(m.group(5)) if usage else None, "out": int(m.group(6)) if usage else None,
+                           "lat": float(m.group(7)), "hit": int(m.group(8) or 0) if usage else None}
+                    # Newer lines (post 2026-09) also carry write= / id= / upstream= / cache_state=; optional.
+                    for key, pat in (("write", _WRITE), ("id", _ID), ("upstream", _UPSTREAM), ("cache_state", _CACHE_STATE)):
                         mm = pat.search(line)
                         if mm:
                             rec[key] = int(mm.group(1)) if key == "write" else mm.group(1)
@@ -82,13 +94,16 @@ def main(argv=None) -> int:
     run = Run.open(a.db, root=a.root, out=a.out)
     paths = sorted(p for g in a.logs for p in glob.glob(g))
     calls = parse_logs(paths, set(run.in_run))
+    unavailable = sum(1 for c in calls if c["inp"] is None)
+    calls = [c for c in calls if c["inp"] is not None]
+    scored = [c for c in calls if _cache_reported(c)]
     total_calls = run.summary()["api_calls"]
-    if not calls:
-        print("[logcalls] no matching API-call lines found in", paths); return 1
+    if not scored:
+        print("[logcalls] no API-call lines with cache usage found in", paths); return 1
     inp = [c["inp"] for c in calls]
-    hit_total, in_total = sum(c["hit"] for c in calls), sum(inp)
+    hit_total, in_total = sum(c["hit"] for c in scored), sum(c["inp"] for c in scored)
     buckets = collections.Counter()
-    for c in calls:
+    for c in scored:
         r = c["hit"] / c["inp"] if c["inp"] else 0
         buckets["<50%" if r < .5 else "50-90%" if r < .9 else "90-97%" if r < .97 else "97-99%" if r < .99 else ">=99%"] += 1
     by_sid: Dict[str, List[Dict[str, Any]]] = collections.defaultdict(list)
@@ -99,7 +114,7 @@ def main(argv=None) -> int:
     #   non-advancing:  hit count did not grow while input did (includes partial misses of other causes)
     strict_pairs = strict_uncached = loose_pairs = loose_uncached = pairs = uncached_total = 0
     for cs in by_sid.values():
-        cs.sort(key=lambda c: c["n"])
+        cs = sorted(filter(_cache_reported, cs), key=lambda c: c["n"])
         for prev, cur in zip(cs, cs[1:]):
             pairs += 1
             u = max(0, cur["inp"] - cur["hit"]); uncached_total += u
@@ -112,6 +127,8 @@ def main(argv=None) -> int:
     real = sum(inp); capped = sawtooth_real(by_sid, a.cap, a.floor)
     report = {
         "coverage": {"calls_found": len(calls), "run_api_calls": total_calls, "fraction": round(len(calls) / total_calls, 4) if total_calls else None,
+                     "zero_hit": sum(1 for c in scored if not c["hit"]), "no_cache_field": len(calls) - len(scored),
+                     "usage_unavailable": unavailable,
                      "first_ts": min(c["ts"] for c in calls), "last_ts": max(c["ts"] for c in calls),
                      "note": "rotated logs; extrapolations from this window are upper bounds"},
         "observed": {
@@ -133,8 +150,9 @@ def main(argv=None) -> int:
         },
     }
     path = run.write("logcalls.json", report)
-    o = report["observed"]
-    print(f"[logcalls] coverage {len(calls):,}/{total_calls:,} calls ({report['coverage']['fraction']:.1%}) from {len(paths)} file(s)")
+    o, cov = report["observed"], report["coverage"]
+    print(f"[logcalls] coverage {len(calls):,}/{total_calls:,} calls ({cov['fraction']:.1%}) from {len(paths)} file(s): "
+          f"{cov['zero_hit']:,} zero-hit, {cov['no_cache_field']:,} without a cache field; {unavailable:,} usage=unavailable not counted")
     print(f"[logcalls] OBSERVED median prompt {o['prompt_tokens']['median']:,} p90 {o['prompt_tokens']['p90']:,}; >200K: {o['share_of_calls_above'][200000]:.0%}; hit ratio {o['cache_hit_ratio_overall']:.1%}")
     print(f"[logcalls] OBSERVED strict plateau (hit unchanged): {o['strict_plateau']['pairs_share']:.1%} of pairs, {o['strict_plateau']['share_of_uncached_input']:.1%} of uncached input; "
           f"non-advancing hit: {o['non_advancing_hit']['pairs_share']:.1%} / {o['non_advancing_hit']['share_of_uncached_input']:.1%}; uncached in window ${o['uncached_input_usd_in_window']:,}")
