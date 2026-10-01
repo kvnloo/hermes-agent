@@ -9,6 +9,7 @@ import {
   PTY_RECONNECT_MAX_MS,
   PTY_TICKET_TIMEOUT_MS,
 } from "@/lib/pty-reconnect";
+import { PTY_RESUME_LOADING_MESSAGE } from "@/lib/pty-resume-loading";
 
 class FakeFitAddon {
   fit() {}
@@ -503,6 +504,36 @@ describe("ChatPage", () => {
     await vi.waitFor(() => expect(FakeWebSocket.instances).toHaveLength(2), {
       timeout: 3000,
     });
+  });
+
+  it("shows the resume wait notice for a server-announced resume with no ?resume= param", async () => {
+    const { default: ChatPage } = await import("./ChatPage");
+    await render(
+      <MemoryRouter initialEntries={["/chat"]}>
+        <ChatPage isActive />
+      </MemoryRouter>,
+    );
+    await vi.waitFor(() => expect(FakeWebSocket.instances).toHaveLength(1));
+    const socket = FakeWebSocket.instances[0];
+    await act(async () => socket.onopen?.());
+    const notice = () =>
+      container.querySelector(`[aria-label="${PTY_RESUME_LOADING_MESSAGE}"]`);
+
+    // A fresh chat with nothing to replay never shows the notice.
+    expect(notice()).toBeNull();
+
+    // The active-session fallback announces its replay with a control frame
+    // (#93518); the fresh --resume PTY is as blank as an explicit resume.
+    await act(async () =>
+      socket.onmessage?.({ data: JSON.stringify({ type: "resume", id: "sess-1" }) }),
+    );
+    expect(notice()).not.toBeNull();
+
+    // First real PTY output ends the blank window.
+    await act(async () =>
+      socket.onmessage?.({ data: new TextEncoder().encode("history\r\n").buffer }),
+    );
+    expect(notice()).toBeNull();
   });
 
   it("attaches visualViewport keyboard-inset listeners only while the chat tab is active", async () => {

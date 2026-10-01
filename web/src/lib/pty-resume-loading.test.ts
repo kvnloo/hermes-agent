@@ -41,37 +41,24 @@ describe("resume hydration gate over the real sanitizer", () => {
 });
 
 describe("shouldShowResumeLoadingOverlay", () => {
-  it("shows while a resume target is connecting or open and still hydrating", () => {
+  it("shows while connecting or open and still hydrating", () => {
     expect(
       shouldShowResumeLoadingOverlay({
-        hasResumeTarget: true,
         ptyState: "connecting",
         hydrating: true,
       }),
     ).toBe(true);
     expect(
       shouldShowResumeLoadingOverlay({
-        hasResumeTarget: true,
         ptyState: "open",
         hydrating: true,
       }),
     ).toBe(true);
   });
 
-  it("hides when there is no resume target", () => {
-    expect(
-      shouldShowResumeLoadingOverlay({
-        hasResumeTarget: false,
-        ptyState: "connecting",
-        hydrating: true,
-      }),
-    ).toBe(false);
-  });
-
   it("hides once hydration finishes", () => {
     expect(
       shouldShowResumeLoadingOverlay({
-        hasResumeTarget: true,
         ptyState: "open",
         hydrating: false,
       }),
@@ -82,7 +69,6 @@ describe("shouldShowResumeLoadingOverlay", () => {
     for (const ptyState of ["reconnecting", "closed", "ended"] as const) {
       expect(
         shouldShowResumeLoadingOverlay({
-          hasResumeTarget: true,
           ptyState,
           hydrating: true,
         }),

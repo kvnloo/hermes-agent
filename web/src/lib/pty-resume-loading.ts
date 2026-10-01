@@ -10,7 +10,6 @@ export const PTY_RESUME_LOADING_MESSAGE =
   "Please wait while the conversation loads…";
 
 export interface ResumeLoadingOverlayInput {
-  hasResumeTarget: boolean;
   ptyState: PtyConnectionState;
   hydrating: boolean;
 }
@@ -20,15 +19,18 @@ export interface ResumeLoadingOverlayInput {
  * first real PTY payload arrives the terminal has something to show, so
  * the notice hides and history can stream in underneath.
  *
+ * `hydrating` alone marks a resume replay: ChatPage sets it for an explicit
+ * `?resume=` and for the server's implicit active-session control frame
+ * (#93518), which has no URL param but the same blank `--resume` boot.
+ *
  * Reconnect / ended / closed states keep their own overlays and must not
  * stack this one on top.
  */
 export function shouldShowResumeLoadingOverlay({
-  hasResumeTarget,
   ptyState,
   hydrating,
 }: ResumeLoadingOverlayInput): boolean {
-  if (!hasResumeTarget || !hydrating) {
+  if (!hydrating) {
     return false;
   }
   if (
