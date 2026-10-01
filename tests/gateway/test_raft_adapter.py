@@ -288,3 +288,32 @@ class TestMultiplexProfileScope:
             assert "--profile default-profile-slug" in ctx.platform_kwargs["platform_hint"]
         finally:
             set_multiplex_active(False)
+
+
+@pytest.fixture
+def raft_context():
+    import plugins.platforms.raft.adapter as raft
+
+    tracked = (raft._RAFT_SESSION_IDS, raft._RAFT_TURN_IDS, raft._RAFT_PROMPT_TURN_IDS)
+    for ids in tracked:
+        ids.clear()
+    yield raft
+    for ids in tracked:
+        ids.clear()
+
+
+class TestRaftTurnTracking:
+    def test_session_finalize_without_turn_id_releases_the_sessions_turn_ids(self, raft_context):
+        raft = raft_context
+        raft._on_pre_llm_call(platform="raft", session_id="s1", turn_id="t1")
+        raft._on_pre_llm_call(platform="raft", session_id="s2", turn_id="t2")
+
+        # t1 never reached the per-turn on_session_end (an early-returned or force-reaped
+        # turn); the gateway's session finalize carries no turn_id.
+        raft._on_session_finalize(session_id="s1", platform="gateway", reason="shutdown")
+
+        assert "t1" not in raft._RAFT_TURN_IDS | raft._RAFT_PROMPT_TURN_IDS
+        # Another live session keeps its turn.
+        assert "t2" in raft._RAFT_TURN_IDS & raft._RAFT_PROMPT_TURN_IDS
+        raft._on_session_finalize(session_id="s2", platform="gateway", reason="shutdown")
+        assert not raft._RAFT_TURN_IDS | raft._RAFT_PROMPT_TURN_IDS

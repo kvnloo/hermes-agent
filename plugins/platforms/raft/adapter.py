@@ -71,6 +71,9 @@ _RAFT_CONTEXT_LOCK = threading.Lock()
 _RAFT_SESSION_IDS: set[str] = set()
 _RAFT_TURN_IDS: set[str] = set()
 _RAFT_PROMPT_TURN_IDS: set[str] = set()
+# Live turn id -> the session that registered it, so a session finalize that carries no turn_id
+# can still release turns whose per-turn on_session_end never fired (early-returned or reaped).
+_RAFT_TURN_SESSIONS: dict[str, str] = {}
 
 
 def _resolve_raft_profile() -> str:
@@ -206,11 +209,14 @@ class ActivityQueue:
 def _forget_raft_context(session_id: Any, turn_id: Any = None, *, forget_session: bool = False) -> None:
     safe_session_id, safe_turn_id = _safe_scalar(session_id), _safe_scalar(turn_id)
     with _RAFT_CONTEXT_LOCK:
-        if safe_turn_id:
-            _RAFT_TURN_IDS.discard(safe_turn_id)
-            _RAFT_PROMPT_TURN_IDS.discard(safe_turn_id)
+        released = {safe_turn_id} if safe_turn_id else set()
         if forget_session and safe_session_id:
             _RAFT_SESSION_IDS.discard(safe_session_id)
+            released.update(t for t, s in _RAFT_TURN_SESSIONS.items() if s == safe_session_id)
+        for released_turn_id in released:
+            _RAFT_TURN_IDS.discard(released_turn_id)
+            _RAFT_PROMPT_TURN_IDS.discard(released_turn_id)
+            _RAFT_TURN_SESSIONS.pop(released_turn_id, None)
 
 
 def _is_raft_context(**kwargs: Any) -> bool:
@@ -223,6 +229,8 @@ def _is_raft_context(**kwargs: Any) -> bool:
                 _RAFT_SESSION_IDS.add(safe_session_id)
             if safe_turn_id:
                 _RAFT_TURN_IDS.add(safe_turn_id)
+                if safe_session_id:
+                    _RAFT_TURN_SESSIONS.setdefault(safe_turn_id, safe_session_id)
             return True
         return bool((safe_turn_id and safe_turn_id in _RAFT_TURN_IDS)
                     or (safe_session_id and safe_session_id in _RAFT_SESSION_IDS))
@@ -263,6 +271,8 @@ def _on_pre_llm_call(**kwargs: Any) -> None:
             if safe_turn_id in _RAFT_PROMPT_TURN_IDS:
                 return
             _RAFT_PROMPT_TURN_IDS.add(safe_turn_id)
+            if safe_session_id := _safe_scalar(kwargs.get("session_id")):
+                _RAFT_TURN_SESSIONS.setdefault(safe_turn_id, safe_session_id)
     _emit("UserPromptSubmit", kwargs)
 
 
