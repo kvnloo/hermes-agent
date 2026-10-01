@@ -66,12 +66,13 @@ Rules for tool code:
 
 ## Toolsets (`toolsets.py`)
 
-Single `TOOLSETS` dict. Keys today: `browser, clarify, code_execution, cronjob, debugging,
-delegation, discord, discord_admin, feishu_doc, feishu_drive, file, homeassistant, image_gen,
-kanban, memory, messaging, moa, rl, safe, search, session_search, skills, spotify, terminal, todo,
-tts, video, vision, web, yuanbao` (don't assert the list in tests). Per-platform enable/disable via
-`hermes tools` (curses) or `tools.<platform>.enabled/disabled` in config.yaml. `browser_exec`
-replaces the other browser tools when `browser.backend` is `browser-use`.
+Single `TOOLSETS` dict: per-capability sets (`browser`, `file`, `terminal`, `web`, ...), composites
+built with `includes` (`debugging`, `safe`), the `coding` posture, one `hermes-<platform>` bundle per
+surface, and role-reserved sets such as `setup` (only a profile whose `profile.yaml` carries
+`role: setup` gets it). Read `toolsets.TOOLSETS` rather than keeping a key list here, and don't
+assert the list in tests. Per-platform enable/disable via `hermes tools` (curses) or
+`platform_toolsets.<platform>` in config.yaml. `browser_exec` replaces the other browser tools when
+`browser.backend` is `browser-use`.
 
 ## Backends and providers inside tools/
 

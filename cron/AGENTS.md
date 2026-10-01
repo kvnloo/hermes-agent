@@ -111,8 +111,8 @@ zero outside a kanban task (footprint ladder rung 3).
 - **Dispatcher:** long-lived loop (default 60s) that reclaims stale claims, promotes ready tasks,
   atomically claims, and spawns assigned profiles. Runs **inside the gateway** by default
   (`kanban.dispatch_in_gateway: true`). Standalone: `plugins/kanban/systemd/hermes-kanban-dispatcher.service`.
-- **Plugin assets:** `plugins/kanban/dashboard/` (web UI) + systemd unit. `kanban_db.connect` is its
-  own connection helper — do not alias it to `projects_db.connect` (a path-proximity generator did).
+- **Plugin assets:** `plugins/kanban/dashboard/` (web UI) + systemd unit. `kanban_db_connect.connect` is
+  its own connection helper — do not alias it to `projects_db.connect` (a path-proximity generator did).
 
 Isolation: **board** is the hard boundary — workers get `HERMES_KANBAN_BOARD` pinned in their env and
 cannot see other boards; **tenant** is a soft namespace within a board (workspace-path + memory-key
@@ -122,9 +122,9 @@ worker exit of `KANBAN_TERMINAL_PROVIDER_EXIT_CODE` (78 — credential revoked, 
 worker's own `failure_reason` classification via `cli._TERMINAL_PROVIDER_REASONS`) trips it on
 the first attempt, sticky, because no retry can heal it (#114587).
 Process-identity note: `kanban --preserve-cache` contains "serve" — never classify processes by argv
-substring (root). Worker liveness is `(worker_pid, worker_started_at)` — the start-time fingerprint
-(`gateway.status.get_process_start_time`) recorded at claim time — never bare PID existence, or a
-recycled PID gets killed on reclaim.
+substring (root). Worker liveness is `(worker_pid, worker_started_at)` — the restart-stable fingerprint
+`"<instantiation epoch>|<start time>"` (`kanban_db_dispatch._process_fingerprint`) recorded at spawn
+by `_set_worker_pid` — never bare PID existence, or a recycled PID gets killed on reclaim.
 
 - **Notifications leave through the task's owning profile.** `hermes_cli/kanban_db_notify.py`
   subscriptions carry the profile; `gateway/kanban_watchers_notifier.py` delivers via THAT
