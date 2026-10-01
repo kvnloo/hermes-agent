@@ -190,7 +190,7 @@ def subscription_manage_url(state: SubscriptionState, tier_id: Optional[str] = N
     (the stable ``tiers[]`` id, never a name/slug) preselects the plan — the portal ignores an
     unknown tier, so it's appended unconditionally.
     """
-    from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+    from urllib.parse import urlencode, urlsplit, urlunsplit
 
     try:
         parts = urlsplit(state.portal_url or "")
@@ -199,11 +199,10 @@ def subscription_manage_url(state: SubscriptionState, tier_id: Optional[str] = N
     if parts.scheme not in ("http", "https") or not parts.netloc:
         return None
 
-    # Preserve unrelated portal query params; org_id / plan are contract-owned
+    # Only org_id / plan go on the manage page: like the TUI/desktop builders (which keep just
+    # the portal origin), the server portalUrl's own query never carries over
     # (org_id before plan — insertion order is the emitted query order).
-    params = dict(parse_qsl(parts.query, keep_blank_values=True))
-    params.pop("org_id", None)
-    params.pop("plan", None)
+    params: dict[str, str] = {}
     if state.org_id:
         params["org_id"] = state.org_id
     if tier_id:

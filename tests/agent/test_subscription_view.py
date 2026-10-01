@@ -48,6 +48,18 @@ def test_manage_url_omits_org_when_absent():
     assert "org_id" not in url
 
 
+def test_manage_url_drops_portal_query_params():
+    # Same contract as the TUI/desktop builders (``new URL(portal_url).origin``):
+    # the server's portalUrl query (topup=open, utm_*, a stale org_id) never reaches
+    # /manage-subscription; only the contract-owned org_id / plan do, org_id first.
+    s = SubscriptionState(
+        logged_in=True,
+        org_id="org_1",
+        portal_url="https://portal.example/billing?topup=open&utm_source=email&org_id=stale",
+    )
+    assert subscription_manage_url(s, tier_id="plus") == "https://portal.example/manage-subscription?org_id=org_1&plan=plus"
+
+
 
 
 
