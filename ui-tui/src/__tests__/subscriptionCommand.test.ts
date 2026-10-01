@@ -93,4 +93,33 @@ describe('/subscription slash command', () => {
   it('/upgrade alias resolves to the same command', () => {
     expect(findSlashCommand('upgrade')).toBe(subscriptionCommand)
   })
+
+  // ctx.gateway.rpc never rejects: a dropped socket, restarted gateway or dead
+  // child resolves to null. The step-up must say "retry", not fall through to
+  // the "someone with billing permissions must approve it" admin copy.
+  it('step-up maps an unreachable gateway (rpc → null) to the retry message', async () => {
+    const { run } = buildCtx({ 'billing.step_up': null, 'subscription.state': loggedInState() })
+
+    await run('')
+
+    const res = await getOverlayState().subscription!.ctx.requestRemoteSpending()
+
+    expect(res).toEqual({
+      granted: false,
+      message: 'Could not reach the billing service — check your connection, then retry.'
+    })
+  })
+
+  it('step-up still carries a typed denial from the gateway', async () => {
+    const { run } = buildCtx({
+      'billing.step_up': { error: 'rate_limited', ok: false },
+      'subscription.state': loggedInState()
+    })
+
+    await run('')
+
+    const res = await getOverlayState().subscription!.ctx.requestRemoteSpending()
+
+    expect(res).toMatchObject({ error: 'rate_limited', granted: false })
+  })
 })

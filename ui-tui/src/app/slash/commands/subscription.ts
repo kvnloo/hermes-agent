@@ -109,12 +109,13 @@ const buildSubscriptionCtx = (
     ctx.gateway
       .rpc<BillingMutationResponse>('billing.step_up', { session_id: ctx.sid ?? undefined })
       // Carry the typed denial (session_revoked / remote_spending_revoked /
-      // rate_limited / …) so the stepup screen shows the right recovery.
-      .then(r => ({ error: r?.error, granted: !!(r && r.ok && r.granted), message: r?.message }))
-      .catch(() => ({
-        granted: false,
-        message: t('slashCmd.subscription.billingUnreachable')
-      })),
+      // rate_limited / …) so the stepup screen shows the right recovery. rpc()
+      // never rejects: a transport failure resolves to null.
+      .then(r =>
+        r
+          ? { error: r.error, granted: !!(r.ok && r.granted), message: r.message }
+          : { granted: false, message: t('slashCmd.subscription.billingUnreachable') }
+      ),
   resume: () =>
     ctx.gateway
       .rpc<BillingMutationResponse>('subscription.resume', {})
