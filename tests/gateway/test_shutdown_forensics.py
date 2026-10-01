@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 import signal
 import subprocess
@@ -35,20 +34,6 @@ class TestSnapshotShutdownContext:
         assert ctx["takeover_marker_for_self"] is True
 
 # ---------------------------------------------------------------------------
-# format_context_for_log / context_as_json
-# ---------------------------------------------------------------------------
-
-class TestFormatters:
-
-    def test_context_as_json_handles_unserialisable_values(self):
-        ctx = {"signal": "SIGTERM", "weird": object()}
-        payload = sf.context_as_json(ctx)
-        # default=str means objects get repr'd, JSON stays valid
-        decoded = json.loads(payload)
-        assert decoded["signal"] == "SIGTERM"
-        assert "weird" in decoded
-
-# ---------------------------------------------------------------------------
 # persisted snapshots must never include process argv (#112459)
 # ---------------------------------------------------------------------------
 
@@ -71,7 +56,7 @@ class TestArgvFreePersistence:
     @pytest.mark.platforms("linux")
     def test_snapshot_and_log_line_identify_process_without_argv(self, child_with_secret_argv):
         """/proc-backed summaries keep pid/name/ppid/state but never the command line, so neither
-        the JSON snapshot nor the warning line can carry a credential from a parent's argv."""
+        the snapshot dict nor the warning line can carry a credential from a parent's argv."""
         summary = sf._proc_summary(child_with_secret_argv.pid)
         assert summary["pid"] == child_with_secret_argv.pid
         assert summary["name"]  # identity survives
@@ -80,7 +65,7 @@ class TestArgvFreePersistence:
         ctx = sf.snapshot_shutdown_context(signal.SIGTERM)
         ctx["parent"] = summary
         line = sf.format_context_for_log(ctx)
-        assert _ARGV_CANARY not in line and _ARGV_CANARY not in sf.context_as_json(ctx)
+        assert _ARGV_CANARY not in line and _ARGV_CANARY not in repr(ctx)
         assert f"parent_pid={child_with_secret_argv.pid}" in line
 
 # ---------------------------------------------------------------------------
