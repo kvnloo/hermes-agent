@@ -1,6 +1,7 @@
 """Tests for trajectory_compressor.py — config, metrics, and compression logic."""
 
 import importlib
+import json
 import os
 import sys
 from types import SimpleNamespace
@@ -462,3 +463,25 @@ class TestCompressionNetSavingsGuard:
         assert sum(tc.count_turn_tokens(compressed)) == before
         tc._generate_summary.assert_not_called()
 
+
+@pytest.mark.parametrize("save_over_limit, written", [(True, ["over", "under"]), (False, ["under"])])
+def test_save_over_limit_controls_writing_still_over_limit_trajectories(tmp_path, save_over_limit, written):
+    guard = TestCompressionNetSavingsGuard()
+    config = guard._config()
+    config.save_over_limit = save_over_limit
+    tc = _make_compressor(config)
+    tc._generate_summary_async = AsyncMock()
+    entries = [
+        {"id": "over", "conversations": guard._tiny_middle_trajectory()},  # cannot shrink: still over limit
+        {"id": "under", "conversations": [{"from": "system", "value": "sys"}, {"from": "human", "value": "hi"}]},
+    ]
+    in_dir, out_dir = tmp_path / "in", tmp_path / "out"
+    in_dir.mkdir()
+    (in_dir / "t.jsonl").write_text("".join(json.dumps(e) + "\n" for e in entries), encoding="utf-8")
+
+    tc.process_directory(in_dir, out_dir)
+
+    lines = (out_dir / "t.jsonl").read_text(encoding="utf-8").splitlines()
+    assert [json.loads(line)["id"] for line in lines] == written
+    assert tc.aggregate_metrics.trajectories_still_over_limit == 1
+    tc._generate_summary_async.assert_not_called()

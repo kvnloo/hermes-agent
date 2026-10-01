@@ -654,12 +654,13 @@ Write only the summary, starting with "[CONTEXT SUMMARY]:" prefix."""
             outcomes = await asyncio.gather(*(self._process_one(run, *item) for item in all_entries))
             progress.remove_task(run.status_task)
 
-        # Write results preserving original order; timed-out entries are dropped.
+        # Write results preserving original order; timed-out entries are dropped, and so are
+        # trajectories still over the token target when save_over_limit is off.
         console.print("\n[dim]Writing output files...[/dim]")
         output_dir.mkdir(parents=True, exist_ok=True)
         results = {f: [] for f in jsonl_files}
         for (file_path, _, _), outcome in zip(all_entries, outcomes):
-            if outcome is not None:
+            if outcome is not None and (self.config.save_over_limit or not outcome[1].still_over_limit):
                 results[file_path].append(outcome[0])
         for file_path in jsonl_files:
             _write_jsonl(output_dir / file_path.name, results[file_path])
