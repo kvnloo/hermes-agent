@@ -1,0 +1,295 @@
+"""Wire contract for the opt-in tool-result projection (``compression.tool_result_projection``).
+
+The projection replaces old, large tool results with a stub in the per-call request only. A
+rewrite of an earlier row restarts the provider's prompt cache from that row onward, so the
+projection is only safe if it rewrites rarely and never undoes itself. These scenarios drive a
+real ``AIAgent`` (config from ``config.yaml``, real ``read_file`` tool, real request assembly)
+against recording loopback providers and check the request stream itself:
+
+* stale results leave the wire while the durable transcript keeps every byte;
+* every request is a byte-identical extension of the previous one, except at a projection pass;
+* each pass is paid for by at least ``tool_result_projection_min_tokens`` of newly archived
+  output, so the prefix breaks once per batch rather than once per turn;
+* a row archived once replays the same stub bytes for the rest of the session, including from a
+  fresh agent that resumes it;
+* on a native Anthropic route with a preserved-thinking model, no request replays a signed
+  thinking block whose conversation prefix was rewritten after the block was produced
+  (Anthropic invalidates such blocks: dropped, or a 400 on enforced accounts).
+"""
+
+from __future__ import annotations
+
+import hashlib
+import os
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from agent.model_metadata import estimate_messages_tokens_rough
+from tests.e2e.core.history._helpers import (
+    NO_BACKGROUND_REVIEW,
+    OFFLINE_CONFIG,
+    InProcessSession,
+    Script,
+    canon,
+    prefix_breaks,
+    views,
+)
+from tests.fakes.fake_llm_provider import FakeLLMServer, Text, ToolCall, write_hermes_home
+from tests.fakes.providers.anthropic_messages import AnthropicMessagesServer, Reply, Thinking, ToolUse
+from tests.fakes.providers.anthropic_messages import Text as AnthropicText
+from tests.fakes.providers.oauth_token_server import TLSInterceptProxy, make_test_ca
+
+MIN_TOKENS = 8_000
+PROJECTION_CONFIG = (
+    "compression:\n"
+    "  tool_result_projection: auto\n"
+    f"  tool_result_projection_min_tokens: {MIN_TOKENS}\n"
+    "  tool_result_projection_min_result_chars: 4000\n"
+    "  tool_result_projection_tail_ratio: 0.0\n"
+)
+FILE_LINES = 400  # ~20K chars per read_file result: several results per pass, one pass per batch
+TURNS = 12
+
+
+def write_corpus(workdir: Path, n: int) -> list[Path]:
+    """Distinct, plain-text files: each read is a large, non-error, unique tool result."""
+    paths = []
+    for i in range(n):
+        path = workdir / f"notes_{i:02d}.txt"
+        path.write_text("".join(f"file {i:02d} line {j:04d} alpha beta gamma delta epsilon zeta\n"
+                                for j in range(FILE_LINES)), encoding="utf-8")
+        paths.append(path)
+    return paths
+
+
+def tool_rows(messages: list[dict[str, Any]]) -> dict[str, str]:
+    """``tool_call_id -> content`` of the OpenAI-format tool rows in one request."""
+    return {m["tool_call_id"]: m.get("content") for m in messages
+            if m.get("role") == "tool" and m.get("tool_call_id")}
+
+
+def projection_ledger(requests: list[dict[str, Any]]) -> dict[str, Any]:
+    """Read the projection off the request stream alone: a row is projected on request ``i`` when
+    its bytes differ from (and are shorter than) the bytes it was first sent with."""
+    first_seen: dict[str, str] = {}
+    projected_at: dict[str, int] = {}
+    stub_of: dict[str, str] = {}
+    passes: dict[int, list[str]] = {}
+    unstable: list[str] = []
+    for i, request in enumerate(requests):
+        for tcid, content in tool_rows(request["messages"]).items():
+            original = first_seen.setdefault(tcid, content)
+            if tcid in projected_at:
+                if content != stub_of[tcid]:
+                    unstable.append(f"request {i}: {tcid} changed after it was archived at request "
+                                    f"{projected_at[tcid]} ({len(stub_of[tcid])} -> {len(content or '')} chars)")
+            elif content != original and isinstance(content, str) and len(content) < len(original):
+                projected_at[tcid], stub_of[tcid] = i, content
+                passes.setdefault(i, []).append(tcid)
+    reclaim = {
+        i: sum(estimate_messages_tokens_rough([{"role": "tool", "content": first_seen[t]}])
+               - estimate_messages_tokens_rough([{"role": "tool", "content": stub_of[t]}]) for t in rows)
+        for i, rows in passes.items()
+    }
+    return {"first_seen": first_seen, "projected_at": projected_at, "passes": passes,
+            "reclaim_tokens": reclaim, "unstable": unstable}
+
+
+@pytest.fixture()
+def world(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    home.mkdir()
+    hermes_home = Path(os.environ["HERMES_HOME"])  # hermetic per-test tmp dir from the conftest
+    workdir = tmp_path / "work"
+    workdir.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.chdir(workdir)
+    script = Script()
+    with FakeLLMServer(script) as srv:
+        write_hermes_home(hermes_home, srv.base_url,
+                          extra_config=OFFLINE_CONFIG + NO_BACKGROUND_REVIEW + PROJECTION_CONFIG)
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-fake-e2e")
+        yield {"srv": srv, "script": script, "hermes_home": hermes_home, "workdir": workdir}
+
+
+def run_read_turns(session: InProcessSession, script: Script, paths: list[Path], start: int, stop: int) -> None:
+    for i in range(start, stop):
+        script.actions += [ToolCall("read_file", {"path": str(paths[i])}), Text(f"noted file {i:02d}")]
+        result = session.turn(f"read notes_{i:02d}.txt and remember it")
+        script.raise_errors(f"turn {i}")
+        assert result.get("final_response") is not None, f"turn {i}: {result}"
+
+
+def test_projection_breaks_the_prefix_once_per_paid_batch_and_never_undoes_itself(world):
+    srv, script, hermes_home = world["srv"], world["script"], world["hermes_home"]
+    paths = write_corpus(world["workdir"], TURNS + 2)
+
+    session = InProcessSession(srv.base_url, hermes_home, "projection-wire")
+    try:
+        run_read_turns(session, script, paths, 0, TURNS)
+        sid = session.sid
+    finally:
+        session.close()
+    before_resume = len(srv.main_requests())
+
+    # A fresh agent resumes the session (new process state, same durable transcript).
+    resumed = InProcessSession(srv.base_url, hermes_home, sid)
+    resumed.history = views(hermes_home, sid)[0]
+    try:
+        run_read_turns(resumed, script, paths, TURNS, TURNS + 2)
+    finally:
+        resumed.close()
+
+    main = srv.main_requests()
+    ledger = projection_ledger(main)
+    passes = ledger["passes"]
+    assert passes, ("no tool result was ever archived on the wire: "
+                    f"{len(main)} requests, {len(ledger['first_seen'])} tool rows")
+
+    breaks = prefix_breaks(main, tools=False)
+    unexplained = [(i, why) for i, why in breaks if i not in passes]
+    assert not unexplained, "the request prefix changed outside a projection pass:\n" + "\n".join(
+        f"  request {i}{' (first after resume)' if i == before_resume else ''}: {why}"
+        for i, why in unexplained)
+    assert not ledger["unstable"], "an archived row did not replay its stub byte-identically:\n" + "\n".join(
+        f"  {line}" for line in ledger["unstable"])
+
+    cheap = {i: tokens for i, tokens in ledger["reclaim_tokens"].items() if tokens < MIN_TOKENS}
+    assert not cheap, (
+        f"a projection pass broke the prompt-cache prefix for less than tool_result_projection_min_tokens "
+        f"({MIN_TOKENS}) of newly archived output: { {i: (t, passes[i]) for i, t in cheap.items()} }; "
+        f"passes at requests {sorted(passes)} out of {len(main)}")
+
+    # The durable transcript keeps every byte of every archived result.
+    durable = tool_rows(views(hermes_home, sid)[0])
+    for tcid in ledger["projected_at"]:
+        assert durable.get(tcid) == ledger["first_seen"][tcid], f"{tcid} lost bytes in the durable transcript"
+
+
+# ---------------------------------------------------------------------------------------------
+# native Anthropic route, preserved-thinking model
+
+ANTHROPIC_MODEL = "claude-opus-5-5"  # preserved thinking: blocks are bound to their conversation prefix
+_THINKING_TYPES = ("thinking", "redacted_thinking")
+
+
+def _drop_cache_control(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {k: _drop_cache_control(v) for k, v in value.items() if k != "cache_control"}
+    if isinstance(value, list):
+        return [_drop_cache_control(v) for v in value]
+    return value
+
+
+def conversation_prefix_digest(body: dict[str, Any], upto: int) -> str:
+    """Digest of what a preserved-thinking block is bound to: ``system``, the tool set (name-sorted)
+    and every message before the block. Earlier thinking blocks and ``cache_control`` markers are not
+    part of it (moving markers or dropping a leading run of thinking is allowed)."""
+    messages = []
+    for msg in body.get("messages", [])[:upto]:
+        content = msg.get("content")
+        if isinstance(content, str):
+            content = [{"type": "text", "text": content}]
+        content = [b for b in content or [] if not (isinstance(b, dict) and b.get("type") in _THINKING_TYPES)]
+        messages.append({"role": msg.get("role"), "content": _drop_cache_control(content)})
+    tools = sorted(_drop_cache_control(body.get("tools") or []), key=lambda t: str(t.get("name")))
+    system = _drop_cache_control(body.get("system"))
+    if isinstance(system, str):
+        system = [{"type": "text", "text": system}]
+    return hashlib.sha256(canon([system, tools, messages]).encode()).hexdigest()
+
+
+class SigningProvider:
+    """Main-turn responder that signs each thinking block over its conversation prefix, and audits
+    every replayed block against the prefix it was signed over."""
+
+    def __init__(self) -> None:
+        self.turns: list[list[Any]] = []
+        self.bound: dict[str, str] = {}
+        self.replayed = 0
+        self.invalidated: list[str] = []
+        self.n = 0
+
+    def __call__(self, record: dict[str, Any]) -> Any:
+        body = record["body"]
+        self.n += 1
+        for m, msg in enumerate(body.get("messages", [])):
+            for b in msg.get("content") if isinstance(msg.get("content"), list) else []:
+                if isinstance(b, dict) and b.get("type") == "thinking":
+                    self.replayed += 1
+                    want = self.bound.get(b.get("signature", ""))
+                    if want != conversation_prefix_digest(body, m):
+                        self.invalidated.append(f"request {self.n}: messages[{m}] thinking block replayed over "
+                                                f"a rewritten prefix (signed: {want is not None})")
+        blocks = self.turns.pop(0) if self.turns else [AnthropicText("ok")]
+        digest = conversation_prefix_digest(body, len(body.get("messages", [])))
+        signature = f"sig-{self.n}-{digest[:32]}"
+        self.bound[signature] = digest
+        return Reply([Thinking(b.thinking, signature) if isinstance(b, Thinking) else b for b in blocks])
+
+
+@pytest.fixture()
+def native_anthropic(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    home.mkdir()
+    hermes_home = Path(os.environ["HERMES_HOME"])
+    workdir = tmp_path / "work"
+    workdir.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.chdir(workdir)
+    provider = SigningProvider()
+    srv = AnthropicMessagesServer(provider).start()
+    ca = make_test_ca(tmp_path / "ca", ["api.anthropic.com"])
+    proxy = TLSInterceptProxy(srv, ca, ["api.anthropic.com"]).start()  # type: ignore[arg-type]
+    # No base_url: the production native route (native thinking-signature policy); only the vendor
+    # HTTP boundary is faked, via a TLS-terminating proxy for api.anthropic.com.
+    monkeypatch.setenv("HTTPS_PROXY", proxy.url)
+    monkeypatch.setenv("https_proxy", proxy.url)
+    monkeypatch.setenv("NO_PROXY", "127.0.0.1,localhost")
+    monkeypatch.setenv("no_proxy", "127.0.0.1,localhost")
+    monkeypatch.setenv("SSL_CERT_FILE", str(ca.ca_pem))
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-api03-e2e-fake-key")
+    (hermes_home / "config.yaml").write_text(
+        "model:\n  provider: anthropic\n"
+        f"  default: {ANTHROPIC_MODEL}\n  context_length: 200000\n"
+        "agent:\n  api_max_retries: 1\n  reasoning_effort: medium\n"
+        "telemetry:\n  shared_metrics:\n    enabled: false\n"
+        + OFFLINE_CONFIG + NO_BACKGROUND_REVIEW + PROJECTION_CONFIG, encoding="utf-8")
+    try:
+        yield {"srv": srv, "provider": provider, "proxy": proxy, "workdir": workdir}
+    finally:
+        proxy.stop()
+        srv.stop()
+
+
+def test_projection_never_invalidates_replayed_preserved_thinking(native_anthropic):
+    from run_agent import AIAgent
+
+    srv, provider = native_anthropic["srv"], native_anthropic["provider"]
+    paths = write_corpus(native_anthropic["workdir"], TURNS)
+    agent = AIAgent(provider="anthropic", api_key="sk-ant-api03-e2e-fake-key", model=ANTHROPIC_MODEL,
+                    quiet_mode=True, platform="cli", enabled_toolsets=["file"], skip_memory=True,
+                    skip_context_files=True, max_iterations=4)
+    history: list[dict[str, Any]] = []
+    try:
+        for i, path in enumerate(paths):
+            provider.turns += [
+                [Thinking(f"plan the read of file {i:02d}", ""), ToolUse("read_file", {"path": str(path)})],
+                [Thinking(f"file {i:02d} read", ""), AnthropicText(f"noted file {i:02d}")],
+            ]
+            result = agent.run_conversation(f"read notes_{i:02d}.txt and remember it",
+                                            conversation_history=history, task_id="projection-thinking")
+            history = result.get("messages") or history
+            assert result.get("final_response") is not None, f"turn {i}: {result}"
+    finally:
+        agent.close()
+
+    assert not native_anthropic["proxy"].refused, native_anthropic["proxy"].refused
+    assert srv.main_requests(), "no request reached the native Messages endpoint"
+    assert provider.replayed, "the route never replayed a signed thinking block; the check would be vacuous"
+    assert not provider.invalidated, (
+        "a request replayed preserved-thinking blocks over a rewritten conversation prefix (Anthropic "
+        "drops them, or rejects the request on enforced accounts):\n"
+        + "\n".join(f"  {line}" for line in provider.invalidated))
