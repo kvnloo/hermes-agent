@@ -156,3 +156,64 @@ describe('weather reference app (async contract)', () => {
     expect(weatherApp.reduce(state, key({ return: true }))).toBeNull()
   })
 })
+
+describe('weather reference app (relaunch race)', () => {
+  const LATITUDE: Record<string, number> = { Paris: 48.85, Rome: 41.9 }
+
+  // Geocoding answers at once; each launch's forecast is held (keyed by
+  // latitude) until the test settles it, so an older launch can land last.
+  const holdForecasts = () => {
+    const held = new Map<string, { reject: (error: unknown) => void; resolve: (value: unknown) => void }>()
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: string | URL | Request) => {
+        const url = new URL(String(input))
+
+        if (url.hostname === 'geocoding-api.open-meteo.com') {
+          const name = url.searchParams.get('name') ?? ''
+          const country = name === 'Paris' ? 'France' : 'Italy'
+          const place = { country, latitude: LATITUDE[name], longitude: 10, name, timezone: 'Europe/Rome' }
+
+          return Promise.resolve({ json: async () => ({ results: [place] }), ok: true })
+        }
+
+        return new Promise((resolve, reject) => held.set(url.searchParams.get('latitude') ?? '', { reject, resolve }))
+      })
+    )
+
+    return (name: string) => held.get(String(LATITUDE[name]))!
+  }
+
+  const relaunchParisThenRome = async (forecast: (name: string) => unknown) => {
+    expect(launchWidget('weather', 'Paris')).toBeNull()
+    expect(launchWidget('weather', 'Rome')).toBeNull()
+    await vi.waitFor(() => expect(forecast('Paris') && forecast('Rome')).toBeTruthy())
+  }
+
+  it('a stale forecast resolving last does not replace the newer launch', async () => {
+    const forecast = holdForecasts()
+
+    await relaunchParisThenRome(forecast)
+    forecast('Rome').resolve({ json: async () => openMeteoForecast, ok: true })
+    await vi.waitFor(() => expect(activeState()?.phase.kind).toBe('ready'))
+
+    forecast('Paris').resolve({ json: async () => openMeteoForecast, ok: true })
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(activeState()).toMatchObject({ location: 'Rome', phase: { kind: 'ready', report: { area: 'Rome, Italy' } } })
+  })
+
+  it('a stale forecast failure does not flip the newer launch to error', async () => {
+    const forecast = holdForecasts()
+
+    await relaunchParisThenRome(forecast)
+    forecast('Rome').resolve({ json: async () => openMeteoForecast, ok: true })
+    await vi.waitFor(() => expect(activeState()?.phase.kind).toBe('ready'))
+
+    forecast('Paris').reject(new Error('The operation was aborted due to timeout'))
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(activeState()).toMatchObject({ location: 'Rome', phase: { kind: 'ready', report: { area: 'Rome, Italy' } } })
+  })
+})

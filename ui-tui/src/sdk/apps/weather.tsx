@@ -226,14 +226,23 @@ async function fetchReport(location: string): Promise<Report> {
   }
 }
 
+// updateWidget is app-scoped, so it cannot tell launches apart: only the
+// latest load (relaunch or `r` refresh) may land, never an older one that
+// settles after it.
+let loadEpoch = 0
+
 function load(location: string): void {
+  const epoch = ++loadEpoch
+
+  const settle = (phase: Phase) => {
+    if (epoch === loadEpoch) {
+      updateWidget(weatherApp, state => ({ ...state, phase }))
+    }
+  }
+
   fetchReport(location).then(
-    report => updateWidget(weatherApp, state => ({ ...state, phase: { kind: 'ready', report } as Phase })),
-    (error: unknown) =>
-      updateWidget(weatherApp, state => ({
-        ...state,
-        phase: { kind: 'error', message: error instanceof Error ? error.message : String(error) } as Phase
-      }))
+    report => settle({ kind: 'ready', report }),
+    (error: unknown) => settle({ kind: 'error', message: error instanceof Error ? error.message : String(error) })
   )
 }
 
