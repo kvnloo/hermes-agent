@@ -24,6 +24,8 @@ Top-level command for managing profiles. Running `hermes profile` without a subc
 | `show` | Show details about a profile. |
 | `alias` | Regenerate the shell alias for a profile. |
 | `rename` | Rename a profile. |
+| `migrate-identity` | Retry a renamed profile's session/routing identity migration. |
+| `purge-identity` | Retry a deleted profile's session/routing identity purge. |
 | `export` | Export a profile to a tar.gz archive. |
 | `import` | Import a profile from a tar.gz archive. |
 | `install` | Install a profile distribution from a git URL or local directory. See [Profile Distributions](../user-guide/profile-distributions.md). |
