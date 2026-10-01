@@ -1,0 +1,1071 @@
+{
+  "schema": "xf.receipt.v1",
+  "staging": "plugin-catalog-entries",
+  "provenance": "self",
+  "id": "F14/r20261001-01",
+  "label": "OBSERVED",
+  "tier": "T1, $0 (Wave 0 F14 standing regression set, run twice on the staging commit cherry-picked onto upstream main; every probe in its own bwrap cell with loopback-only network and its own HOME and HERMES_HOME; no paid API, no hermes binary, no plugin code run)",
+  "question": "With the one staging commit cherry-picked onto upstream main 34f8ec3b40, is the F14 verdict map equal to the main baseline on every non-flaky probe?",
+  "origin_refs": [],
+  "policy_revision": {
+    "factory": "FACTORY.md section 11.1 P5 ('F14 guards equal'), section 11.3 (Wave 0: F15, F14, E48, F11), section 13 row 2 (F14)"
+  },
+  "ai_assistance": "Claude Code (Opus 5.5) created the worktree, cherry-picked the commit, ran the F14 runner twice, compared the maps and wrote this receipt; disclosed per repository policy",
+  "privacy": "public aggregate: no host paths, no hostname; <xf-root> is the frontier artifact root, <runs> the factory runs dir, <worktree>/<run>/<tmp> are the F14 runner's own placeholders; run dirs and logs stay local-only",
+  "resource_usage": {
+    "api_cost_usd": 0.0,
+    "gpu_s": 0,
+    "tokens": 0,
+    "wall_s": {
+      "r1": 121.0,
+      "r2": 81.4
+    },
+    "wall_s_label": "OBSERVED (serial, one bwrap per probe; other factory workers ran in parallel on the same host, so wall time is not comparable with the baseline's 51.9 s / 52.3 s)"
+  },
+  "base_revision": {
+    "main_sha": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+    "main_note": "upstream current main as given to this run; 74 commits after the staging parent 234badf401 (ancestor); the manifest's declared main 44a1ce9724 is an ancestor 9 commits behind it",
+    "staging_ref": "refs/heads/staging/plugin-catalog-entries",
+    "staging_commit": "98c305b3ec8d03693f4dc94bade69035cb15ff7d",
+    "staging_parent": "234badf4012af380d23c91eae55d045a69c69ffb",
+    "arm_sha": "dd185c1f84a993aaadcc320399f2476bfb894b48",
+    "arm_ref": "refs/xf/w0/plugin-catalog-entries (scratch mirror only; not pushed)",
+    "arm_parent": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+    "arm_tree": "47e2acb8c252b61d26ea6e3e9239fcb41f5056bf",
+    "cherry_pick": {
+      "result": "clean (no conflict)",
+      "author": "Kevin Rajan <7121943+kvnloo@users.noreply.github.com>, author date 2026-10-01T09:03:41Z (kept)",
+      "committer": "Kevin Rajan <7121943+kvnloo@users.noreply.github.com>, 2026-10-01T18:21:18Z",
+      "patch_identical": true,
+      "patch_sha256": "091552753eaa2b62435f3fed7f53528fc312bba0440827e9cb394d8d47965acf",
+      "patch_note": "sha256 of 'git diff' for 234badf401..98c305b3ec and for 34f8ec3b40..dd185c1f84: the same bytes",
+      "merge_tree_on_main": "git merge-tree --write-tree 34f8ec3b40 98c305b3ec gives 47e2acb8c2, equal to arm_tree"
+    },
+    "catalog_paths_on_main": "git diff --stat 234badf401 34f8ec3b40 over plugin-catalog/, hermes_cli/plugin_catalog.py, scripts/validate_plugin_catalog.py and tests/hermes_cli/test_plugin_catalog.py is empty; plugin-catalog/paw-pii.yaml is absent on 34f8ec3b40 (349 .yaml files in plugin-catalog/)"
+  },
+  "changed_files": [
+    "plugin-catalog/paw-pii.yaml (+20)"
+  ],
+  "inputs": {
+    "set": "F14",
+    "set_rev": 1,
+    "set_sha256": "aba79fe8f09dabc62950aacd0a53c2fdc30bc58746f405f9aa050bf474d739b9",
+    "set_file_sha256": "8b4864a72dd07b6383f98fc1e67359143216889f9c36eda79dc56fc3579044c0",
+    "runner": "<xf-root>/factory/w0/f14/f14_run.py",
+    "runner_sha256": "2323a5918435b06a56ca0f5f8b55d0a0c2274915f11cd31ef120649b0fad28fe",
+    "sandbox": "<xf-root>/factory/w0/sandbox/xf-sandbox.sh",
+    "sandbox_sha256": "c9586195c43a926317fa3d6bc18db1937527a6308dc30c683ce9c6a83398638a",
+    "probe_helpers_sha256": {
+      "readtool_direct.py": "0df21aee5fec293042bf4511b3b4c353d13d768711b8272c85b9f86438649229"
+    },
+    "baseline": {
+      "map": "<xf-root>/factory/w0/f14/baseline-34f8ec3b40.json",
+      "map_sha256": "a0cfdc3291783cb7f5fcfdbd81b6ef010cbc0cd82915786aea4e6176a56a1682",
+      "label": "base-r2",
+      "worktree_head": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+      "counts": {
+        "PASS": 36,
+        "FAIL": 4
+      },
+      "note": "copy of base-r2; base-r1 and base-r2 compared EQUAL (F14 Wave 0 baseline)"
+    },
+    "hashes_equal_to_baseline_map": true
+  },
+  "env": {
+    "host": "<host>",
+    "interpreter": "<venv>/bin/python (the live venv's interpreter, read-only inside the sandbox)",
+    "sandbox": "xf-sandbox.sh: bwrap, ro root, tmpfs over the real home, the live install and /run (venv re-bound ro, hermes console scripts over-bound by a logging stub), unshare-net/pid/ipc/uts, clearenv, HOME=<run>/home, HERMES_HOME=<HOME>/.hermes, /tmp=<run>/tmp; run dirs and worktree on the artifact volume, never /tmp"
+  },
+  "commands": [
+    "git -C <bare> worktree add --detach <xf-root>/wt-w0/plugin-catalog-entries 34f8ec3b407e50bad3ae27e4cd79d65212061356",
+    "git -C <worktree> -c user.name='Kevin Rajan' -c user.email='7121943+kvnloo@users.noreply.github.com' cherry-pick 98c305b3ec8d03693f4dc94bade69035cb15ff7d",
+    "git -C <bare> update-ref refs/xf/w0/plugin-catalog-entries dd185c1f84a993aaadcc320399f2476bfb894b48 ''",
+    "cd <xf-root>/factory/w0/f14 && PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py run <worktree> maps/plugin-catalog-entries-r1.json --label plugin-catalog-entries-r1",
+    "PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py compare baseline-34f8ec3b40.json maps/plugin-catalog-entries-r1.json",
+    "PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py run <worktree> maps/plugin-catalog-entries-r2.json --label plugin-catalog-entries-r2",
+    "PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py compare baseline-34f8ec3b40.json maps/plugin-catalog-entries-r2.json",
+    "PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py compare maps/plugin-catalog-entries-r1.json maps/plugin-catalog-entries-r2.json",
+    "git -C <bare> worktree remove <worktree> && git -C <bare> worktree prune"
+  ],
+  "gates": {
+    "f14": {
+      "result": "EQUAL",
+      "label": "OBSERVED",
+      "compare": {
+        "baseline_vs_r1": {
+          "rc": 0,
+          "output": "EQUAL",
+          "diff_ids": []
+        },
+        "baseline_vs_r2": {
+          "rc": 0,
+          "output": "EQUAL",
+          "diff_ids": []
+        },
+        "r1_vs_r2": {
+          "rc": 0,
+          "output": "EQUAL",
+          "diff_ids": []
+        }
+      },
+      "ids_identical_to_baseline": "40 of 40 (verdict, marker and fingerprint) in each arm",
+      "flaky_excluded": [],
+      "counts": {
+        "baseline": {
+          "PASS": 36,
+          "FAIL": 4
+        },
+        "r1": {
+          "PASS": 36,
+          "FAIL": 4
+        },
+        "r2": {
+          "PASS": 36,
+          "FAIL": 4
+        }
+      },
+      "fails_shared_with_baseline": {
+        "postmortem/cache_estimator_probe": "rc=0 | marker absent: \"preflight_should_compress\": true",
+        "postmortem/context_cap_probe": "spawn child trigger 850000 != 200000; cycle 0 trigger 850000 cap None; cycle 1 trigger 850000 cap None; cycle 2 trigger 850000 cap None; cycle 3 trigger 850000 cap None; model switch 1000000: trigger 850000 > 200000",
+        "postmortem/notice_delivery_probe": "rc=1: KeyError: 'task_failure_notice' | marker absent: PROBE_COMPLETE",
+        "readtool/fixtures_direct_read_file::lying_extension": "failed: flagged binary"
+      },
+      "fails_note": "the same 4 deterministic FAILs as on main, with identical markers: cache_estimator (fix PR still open, expected red), notice_delivery (probe drift against main), context_cap (child cap opt-in on main), readtool lying_extension (PNG bytes in .txt not flagged binary). None is caused by this commit",
+      "expectation_mismatches": {
+        "baseline": [
+          "postmortem/context_cap_probe",
+          "postmortem/notice_delivery_probe"
+        ],
+        "r1": [
+          "postmortem/context_cap_probe",
+          "postmortem/notice_delivery_probe"
+        ],
+        "r2": [
+          "postmortem/context_cap_probe",
+          "postmortem/notice_delivery_probe"
+        ]
+      },
+      "blocked_exec_total": {
+        "r1": 0,
+        "r2": 0
+      },
+      "worktree_dirty_after": {
+        "r1": false,
+        "r2": false
+      },
+      "coverage_note": "No probe argv or judge in f14_set.json names plugin-catalog or 'plugin' (grep: 0 hits), and the commit adds one YAML data file. EQUAL shows the standing guard set did not move, which is the expected result for a data-only entry; it is not evidence about the entry itself (that is SLICE/r20261001-01, RECHECK/r20261001-04, F12/r20261001-01 and the T1 receipts)"
+    },
+    "p5_parts": {
+      "label": "read from STAGING.md and the cited receipts; nothing below was re-measured here except F14",
+      "red_with_marker": {
+        "status": "met",
+        "receipt": "SLICE/r20261001-01 (gates.need)",
+        "marker": "348/348 entries, entry_present=false",
+        "measured_on": "234badf401; also 44a1ce9724 (RECHECK/r20261001-04)"
+      },
+      "green_3_of_3": {
+        "status": "met",
+        "receipt": "SLICE/r20261001-01 (gates.green), RECHECK/r20261001-04",
+        "measured_on": "572e4f4fad (3/3) and 44a1ce9724 (3 of 3)"
+      },
+      "per_hunk_sabotage": {
+        "status": "not recorded as met",
+        "detail": "STAGING.md records 'per-hunk sabotage N_A for one data file'. FACTORY 11.1 P5 and section 8 step 9 give no N_A for sabotage. The recorded negative control ('sha: main' -> RED) is a mutation, not a hunk revert. The diff has one hunk (the whole new file); no receipt records it reverted alone with re-RED and 'unpinned_hunks: []'"
+      },
+      "adjacent_identical": {
+        "status": "met",
+        "receipt": "SLICE/r20261001-01 (gates.adjacent)",
+        "detail": "68 passed / 13 errors on both arms; the 13 setup errors are pre-existing (venv 3.11 vs ==3.14.*)"
+      },
+      "f14_guards_equal": {
+        "status": "met",
+        "receipt": "F14/r20261001-01 (this receipt)"
+      },
+      "flaky_false": {
+        "status": "not recorded",
+        "detail": "no flaky field in STAGING.md [evidence] or in any cited receipt; the GREEN reps agree (3/3), but 'flaky = false' itself is not recorded"
+      },
+      "p5": "PENDING"
+    }
+  },
+  "verdict_maps": {
+    "baseline": {
+      "label": "base-r2",
+      "map_sha256": "a0cfdc3291783cb7f5fcfdbd81b6ef010cbc0cd82915786aea4e6176a56a1682",
+      "counts": {
+        "PASS": 36,
+        "FAIL": 4
+      },
+      "verdicts": {
+        "compaction/test_region_scoping": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "goal_command_parity": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "d79dfafcaa4868dc"
+        },
+        "native_compaction/ab_checkpoint_preflight::capture_cli_same_objects": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "f4f228c1f1712cc0"
+        },
+        "native_compaction/ab_checkpoint_preflight::capture_gateway_reloaded_history": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "f4f228c1f1712cc0"
+        },
+        "native_compaction/ab_checkpoint_preflight::over_threshold_negative": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "98dff750628aaa6f"
+        },
+        "native_compaction/ab_checkpoint_preflight::restore": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "5ea433a5dd24f730"
+        },
+        "postmortem/cache_estimator_probe": {
+          "verdict": "FAIL",
+          "marker": "rc=0 | marker absent: \"preflight_should_compress\": true",
+          "fingerprint": null
+        },
+        "postmortem/context_cap_probe": {
+          "verdict": "FAIL",
+          "marker": "spawn child trigger 850000 != 200000; cycle 0 trigger 850000 cap None; cycle 1 trigger 850000 cap None; cycle 2 trigger 850000 cap None; cycle 3 trigger 850000 cap None; model switch 1000000: trigger 850000 > 200000",
+          "fingerprint": "56dabc3674684245"
+        },
+        "postmortem/credential_identity_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "postmortem/deadline_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "postmortem/finalizer_schedule_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "bd7eea88f9cd9bc3"
+        },
+        "postmortem/goal_scope_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "b7eca3edb852af8a"
+        },
+        "postmortem/notice_delivery_probe": {
+          "verdict": "FAIL",
+          "marker": "rc=1: KeyError: 'task_failure_notice' | marker absent: PROBE_COMPLETE",
+          "fingerprint": null
+        },
+        "postmortem/rewrite_hint_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "postmortem/scanner_bypass_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "provider_fallback/probe_104120": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "provider_fallback/probe_104260": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "provider_fallback/probe_104360": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "readtool/fixtures_direct_read_file::empty_config": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "a8ac6986052f5c49"
+        },
+        "readtool/fixtures_direct_read_file::fifo_hang": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "ed4dce4e99e87179"
+        },
+        "readtool/fixtures_direct_read_file::lockfile_version": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "743a3317c2ec0d1b"
+        },
+        "readtool/fixtures_direct_read_file::log_error_hunt": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "9d7aa5596d7504eb"
+        },
+        "readtool/fixtures_direct_read_file::lying_extension": {
+          "verdict": "FAIL",
+          "marker": "failed: flagged binary",
+          "fingerprint": "d6f615b85009a2c9"
+        },
+        "readtool/fixtures_direct_read_file::minified_backoff": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "ebc3d45cf379ba02"
+        },
+        "readtool/fixtures_direct_read_file::near_miss_filename": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "e3788ea56dd56195"
+        },
+        "readtool/fixtures_direct_read_file::past_eof": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "b8b15fb954e9dbf5"
+        },
+        "readtool/fixtures_direct_read_file::unicode_filename": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "4e892f8bdb3d56d1"
+        },
+        "token_accounting/ab_image_cost_calibration": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::cli_deflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::cli_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::cli_past_window_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::gateway_deflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::gateway_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::gateway_past_window_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::overflow_recovery": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::restore_deflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::restore_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::restore_past_window_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::usage_less_fallback": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/worktree_prompt_prefix": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "5dd5c33ce53f80cb"
+        }
+      }
+    },
+    "r1": {
+      "label": "plugin-catalog-entries-r1",
+      "map": "<xf-root>/factory/w0/f14/maps/plugin-catalog-entries-r1.json",
+      "map_sha256": "41e8ca9707a1b97404d7136a4537830bb558393bc693a6650fbb60c31f3ec869",
+      "run_dir": "<xf-root>/factory/w0/runs/plugin-catalog-entries-r1 (local-only)",
+      "log": "<xf-root>/factory/w0/runs/plugin-catalog-entries-r1.log (local-only)",
+      "worktree_head": "dd185c1f84a993aaadcc320399f2476bfb894b48",
+      "worktree_dirty": false,
+      "only": null,
+      "started_utc": "2026-10-01T18:21:33Z",
+      "wall_s": 121.0,
+      "counts": {
+        "PASS": 36,
+        "FAIL": 4
+      },
+      "blocked_exec_total": 0,
+      "cells": {
+        "token_accounting/replay_gates": {
+          "rc": 0,
+          "wall_s": 9.9,
+          "blocked_exec": 0
+        },
+        "token_accounting/ab_image_cost_calibration": {
+          "rc": 0,
+          "wall_s": 4.3,
+          "blocked_exec": 0
+        },
+        "token_accounting/worktree_prompt_prefix": {
+          "rc": 0,
+          "wall_s": 7.2,
+          "blocked_exec": 0
+        },
+        "native_compaction/ab_checkpoint_preflight": {
+          "rc": 0,
+          "wall_s": 8.0,
+          "blocked_exec": 0
+        },
+        "provider_fallback/probe_104120": {
+          "rc": 0,
+          "wall_s": 5.9,
+          "blocked_exec": 0
+        },
+        "provider_fallback/probe_104260": {
+          "rc": 0,
+          "wall_s": 4.0,
+          "blocked_exec": 0
+        },
+        "provider_fallback/probe_104360": {
+          "rc": 0,
+          "wall_s": 5.9,
+          "blocked_exec": 0
+        },
+        "goal_command_parity": {
+          "rc": 0,
+          "wall_s": 2.3,
+          "blocked_exec": 0
+        },
+        "compaction/test_region_scoping": {
+          "rc": 0,
+          "wall_s": 1.9,
+          "blocked_exec": 0
+        },
+        "postmortem/scanner_bypass_probe": {
+          "rc": 0,
+          "wall_s": 0.7,
+          "blocked_exec": 0
+        },
+        "postmortem/notice_delivery_probe": {
+          "rc": 1,
+          "wall_s": 2.3,
+          "blocked_exec": 0
+        },
+        "postmortem/cache_estimator_probe": {
+          "rc": 0,
+          "wall_s": 1.5,
+          "blocked_exec": 0
+        },
+        "postmortem/rewrite_hint_probe": {
+          "rc": 0,
+          "wall_s": 2.5,
+          "blocked_exec": 0
+        },
+        "postmortem/credential_identity_probe": {
+          "rc": 0,
+          "wall_s": 10.1,
+          "blocked_exec": 0
+        },
+        "postmortem/context_cap_probe": {
+          "rc": 0,
+          "wall_s": 6.5,
+          "blocked_exec": 0
+        },
+        "postmortem/deadline_probe": {
+          "rc": 0,
+          "wall_s": 11.6,
+          "blocked_exec": 0
+        },
+        "postmortem/goal_scope_probe": {
+          "rc": 0,
+          "wall_s": 4.4,
+          "blocked_exec": 0
+        },
+        "postmortem/finalizer_schedule_probe": {
+          "rc": 0,
+          "wall_s": 27.2,
+          "blocked_exec": 0
+        },
+        "readtool/fixtures_direct_read_file": {
+          "rc": 0,
+          "wall_s": 4.8,
+          "blocked_exec": 0
+        }
+      },
+      "expectation_mismatches": [
+        "postmortem/context_cap_probe",
+        "postmortem/notice_delivery_probe"
+      ],
+      "verdicts": {
+        "compaction/test_region_scoping": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "goal_command_parity": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "d79dfafcaa4868dc"
+        },
+        "native_compaction/ab_checkpoint_preflight::capture_cli_same_objects": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "f4f228c1f1712cc0"
+        },
+        "native_compaction/ab_checkpoint_preflight::capture_gateway_reloaded_history": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "f4f228c1f1712cc0"
+        },
+        "native_compaction/ab_checkpoint_preflight::over_threshold_negative": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "98dff750628aaa6f"
+        },
+        "native_compaction/ab_checkpoint_preflight::restore": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "5ea433a5dd24f730"
+        },
+        "postmortem/cache_estimator_probe": {
+          "verdict": "FAIL",
+          "marker": "rc=0 | marker absent: \"preflight_should_compress\": true",
+          "fingerprint": null
+        },
+        "postmortem/context_cap_probe": {
+          "verdict": "FAIL",
+          "marker": "spawn child trigger 850000 != 200000; cycle 0 trigger 850000 cap None; cycle 1 trigger 850000 cap None; cycle 2 trigger 850000 cap None; cycle 3 trigger 850000 cap None; model switch 1000000: trigger 850000 > 200000",
+          "fingerprint": "56dabc3674684245"
+        },
+        "postmortem/credential_identity_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "postmortem/deadline_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "postmortem/finalizer_schedule_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "bd7eea88f9cd9bc3"
+        },
+        "postmortem/goal_scope_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "b7eca3edb852af8a"
+        },
+        "postmortem/notice_delivery_probe": {
+          "verdict": "FAIL",
+          "marker": "rc=1: KeyError: 'task_failure_notice' | marker absent: PROBE_COMPLETE",
+          "fingerprint": null
+        },
+        "postmortem/rewrite_hint_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "postmortem/scanner_bypass_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "provider_fallback/probe_104120": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "provider_fallback/probe_104260": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "provider_fallback/probe_104360": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "readtool/fixtures_direct_read_file::empty_config": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "a8ac6986052f5c49"
+        },
+        "readtool/fixtures_direct_read_file::fifo_hang": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "ed4dce4e99e87179"
+        },
+        "readtool/fixtures_direct_read_file::lockfile_version": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "743a3317c2ec0d1b"
+        },
+        "readtool/fixtures_direct_read_file::log_error_hunt": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "9d7aa5596d7504eb"
+        },
+        "readtool/fixtures_direct_read_file::lying_extension": {
+          "verdict": "FAIL",
+          "marker": "failed: flagged binary",
+          "fingerprint": "d6f615b85009a2c9"
+        },
+        "readtool/fixtures_direct_read_file::minified_backoff": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "ebc3d45cf379ba02"
+        },
+        "readtool/fixtures_direct_read_file::near_miss_filename": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "e3788ea56dd56195"
+        },
+        "readtool/fixtures_direct_read_file::past_eof": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "b8b15fb954e9dbf5"
+        },
+        "readtool/fixtures_direct_read_file::unicode_filename": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "4e892f8bdb3d56d1"
+        },
+        "token_accounting/ab_image_cost_calibration": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::cli_deflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::cli_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::cli_past_window_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::gateway_deflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::gateway_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::gateway_past_window_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::overflow_recovery": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::restore_deflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::restore_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::restore_past_window_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::usage_less_fallback": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/worktree_prompt_prefix": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "5dd5c33ce53f80cb"
+        }
+      }
+    },
+    "r2": {
+      "label": "plugin-catalog-entries-r2",
+      "map": "<xf-root>/factory/w0/f14/maps/plugin-catalog-entries-r2.json",
+      "map_sha256": "fc77b4a3bb388a92643f83dd34d561a01d4be1abe63a3055eadda8d1e75c8128",
+      "run_dir": "<xf-root>/factory/w0/runs/plugin-catalog-entries-r2 (local-only)",
+      "log": "<xf-root>/factory/w0/runs/plugin-catalog-entries-r2.log (local-only)",
+      "worktree_head": "dd185c1f84a993aaadcc320399f2476bfb894b48",
+      "worktree_dirty": false,
+      "only": null,
+      "started_utc": "2026-10-01T18:23:49Z",
+      "wall_s": 81.4,
+      "counts": {
+        "PASS": 36,
+        "FAIL": 4
+      },
+      "blocked_exec_total": 0,
+      "cells": {
+        "token_accounting/replay_gates": {
+          "rc": 0,
+          "wall_s": 11.2,
+          "blocked_exec": 0
+        },
+        "token_accounting/ab_image_cost_calibration": {
+          "rc": 0,
+          "wall_s": 4.1,
+          "blocked_exec": 0
+        },
+        "token_accounting/worktree_prompt_prefix": {
+          "rc": 0,
+          "wall_s": 5.5,
+          "blocked_exec": 0
+        },
+        "native_compaction/ab_checkpoint_preflight": {
+          "rc": 0,
+          "wall_s": 6.5,
+          "blocked_exec": 0
+        },
+        "provider_fallback/probe_104120": {
+          "rc": 0,
+          "wall_s": 3.9,
+          "blocked_exec": 0
+        },
+        "provider_fallback/probe_104260": {
+          "rc": 0,
+          "wall_s": 2.8,
+          "blocked_exec": 0
+        },
+        "provider_fallback/probe_104360": {
+          "rc": 0,
+          "wall_s": 3.7,
+          "blocked_exec": 0
+        },
+        "goal_command_parity": {
+          "rc": 0,
+          "wall_s": 1.1,
+          "blocked_exec": 0
+        },
+        "compaction/test_region_scoping": {
+          "rc": 0,
+          "wall_s": 1.0,
+          "blocked_exec": 0
+        },
+        "postmortem/scanner_bypass_probe": {
+          "rc": 0,
+          "wall_s": 0.4,
+          "blocked_exec": 0
+        },
+        "postmortem/notice_delivery_probe": {
+          "rc": 1,
+          "wall_s": 1.1,
+          "blocked_exec": 0
+        },
+        "postmortem/cache_estimator_probe": {
+          "rc": 0,
+          "wall_s": 0.7,
+          "blocked_exec": 0
+        },
+        "postmortem/rewrite_hint_probe": {
+          "rc": 0,
+          "wall_s": 2.0,
+          "blocked_exec": 0
+        },
+        "postmortem/credential_identity_probe": {
+          "rc": 0,
+          "wall_s": 7.7,
+          "blocked_exec": 0
+        },
+        "postmortem/context_cap_probe": {
+          "rc": 0,
+          "wall_s": 3.7,
+          "blocked_exec": 0
+        },
+        "postmortem/deadline_probe": {
+          "rc": 0,
+          "wall_s": 9.5,
+          "blocked_exec": 0
+        },
+        "postmortem/goal_scope_probe": {
+          "rc": 0,
+          "wall_s": 2.9,
+          "blocked_exec": 0
+        },
+        "postmortem/finalizer_schedule_probe": {
+          "rc": 0,
+          "wall_s": 9.4,
+          "blocked_exec": 0
+        },
+        "readtool/fixtures_direct_read_file": {
+          "rc": 0,
+          "wall_s": 4.0,
+          "blocked_exec": 0
+        }
+      },
+      "expectation_mismatches": [
+        "postmortem/context_cap_probe",
+        "postmortem/notice_delivery_probe"
+      ],
+      "verdicts": {
+        "compaction/test_region_scoping": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "goal_command_parity": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "d79dfafcaa4868dc"
+        },
+        "native_compaction/ab_checkpoint_preflight::capture_cli_same_objects": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "f4f228c1f1712cc0"
+        },
+        "native_compaction/ab_checkpoint_preflight::capture_gateway_reloaded_history": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "f4f228c1f1712cc0"
+        },
+        "native_compaction/ab_checkpoint_preflight::over_threshold_negative": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "98dff750628aaa6f"
+        },
+        "native_compaction/ab_checkpoint_preflight::restore": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "5ea433a5dd24f730"
+        },
+        "postmortem/cache_estimator_probe": {
+          "verdict": "FAIL",
+          "marker": "rc=0 | marker absent: \"preflight_should_compress\": true",
+          "fingerprint": null
+        },
+        "postmortem/context_cap_probe": {
+          "verdict": "FAIL",
+          "marker": "spawn child trigger 850000 != 200000; cycle 0 trigger 850000 cap None; cycle 1 trigger 850000 cap None; cycle 2 trigger 850000 cap None; cycle 3 trigger 850000 cap None; model switch 1000000: trigger 850000 > 200000",
+          "fingerprint": "56dabc3674684245"
+        },
+        "postmortem/credential_identity_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "postmortem/deadline_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "postmortem/finalizer_schedule_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "bd7eea88f9cd9bc3"
+        },
+        "postmortem/goal_scope_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "b7eca3edb852af8a"
+        },
+        "postmortem/notice_delivery_probe": {
+          "verdict": "FAIL",
+          "marker": "rc=1: KeyError: 'task_failure_notice' | marker absent: PROBE_COMPLETE",
+          "fingerprint": null
+        },
+        "postmortem/rewrite_hint_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "postmortem/scanner_bypass_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "provider_fallback/probe_104120": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "provider_fallback/probe_104260": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "provider_fallback/probe_104360": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "readtool/fixtures_direct_read_file::empty_config": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "a8ac6986052f5c49"
+        },
+        "readtool/fixtures_direct_read_file::fifo_hang": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "ed4dce4e99e87179"
+        },
+        "readtool/fixtures_direct_read_file::lockfile_version": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "743a3317c2ec0d1b"
+        },
+        "readtool/fixtures_direct_read_file::log_error_hunt": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "9d7aa5596d7504eb"
+        },
+        "readtool/fixtures_direct_read_file::lying_extension": {
+          "verdict": "FAIL",
+          "marker": "failed: flagged binary",
+          "fingerprint": "d6f615b85009a2c9"
+        },
+        "readtool/fixtures_direct_read_file::minified_backoff": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "ebc3d45cf379ba02"
+        },
+        "readtool/fixtures_direct_read_file::near_miss_filename": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "e3788ea56dd56195"
+        },
+        "readtool/fixtures_direct_read_file::past_eof": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "b8b15fb954e9dbf5"
+        },
+        "readtool/fixtures_direct_read_file::unicode_filename": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "4e892f8bdb3d56d1"
+        },
+        "token_accounting/ab_image_cost_calibration": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::cli_deflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::cli_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::cli_past_window_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::gateway_deflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::gateway_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::gateway_past_window_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::overflow_recovery": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::restore_deflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::restore_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::restore_past_window_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::usage_less_fallback": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/worktree_prompt_prefix": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "5dd5c33ce53f80cb"
+        }
+      }
+    }
+  },
+  "artifacts": [
+    {
+      "path": "<xf-root>/factory/w0/f14/maps/plugin-catalog-entries-r1.json",
+      "sha256": "41e8ca9707a1b97404d7136a4537830bb558393bc693a6650fbb60c31f3ec869",
+      "public": false
+    },
+    {
+      "path": "<xf-root>/factory/w0/f14/maps/plugin-catalog-entries-r2.json",
+      "sha256": "fc77b4a3bb388a92643f83dd34d561a01d4be1abe63a3055eadda8d1e75c8128",
+      "public": false
+    },
+    {
+      "path": "<xf-root>/factory/w0/f14/baseline-34f8ec3b40.json",
+      "sha256": "a0cfdc3291783cb7f5fcfdbd81b6ef010cbc0cd82915786aea4e6176a56a1682",
+      "public": false
+    }
+  ],
+  "housekeeping": {
+    "worktree": "<xf-root>/wt-w0/plugin-catalog-entries removed with 'git worktree remove' (no --force needed: 0 tracked or untracked changes) and 'git worktree prune' run",
+    "refs": "created refs/xf/w0/plugin-catalog-entries only; refs/heads/main still 34f8ec3b40; refs/heads/staging/plugin-catalog-entries still 98c305b3ec; nothing deleted or moved",
+    "push": "none; no GitHub writes"
+  },
+  "verdict": "KEEP: F14 EQUAL. Both arms (dd185c1f84 = 98c305b3ec cherry-picked cleanly onto main 34f8ec3b40) give 36 PASS and 4 FAIL over 40 verdict ids, identical to the main baseline in verdict, marker and fingerprint on every id, with no flaky exclusions, 0 blocked execs and a clean worktree. P5 stays PENDING: per-hunk sabotage and 'flaky = false' are not recorded as met",
+  "not_tested": [
+    "anything F14 excludes (live or paid probes, goal_repaste_probe, the 4 sandbox-denylisted live_ab probes; see the set's 'excluded')",
+    "the catalog entry itself: no F14 probe reads plugin-catalog/; RED, GREEN and the negative control were not re-run on 34f8ec3b40",
+    "E52, T2 (unchanged from earlier receipts)"
+  ]
+}

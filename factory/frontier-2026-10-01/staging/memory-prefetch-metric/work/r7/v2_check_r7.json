@@ -1,0 +1,82 @@
+{
+ "id": "v2-check-r7",
+ "item": "memory-prefetch-metric",
+ "started": "2026-10-01T19:14:11Z",
+ "label": "OBSERVED",
+ "v2": {
+  "ref": "refs/heads/staging/memory-prefetch-metric-v2",
+  "sha": "c160f124827dff4d974cfe9db7f3d738d52133d1",
+  "head": "569ad4d84b0f9888ea2598c2a8ea416b2c75bad6",
+  "tree_equal": true,
+  "tree": "50ce6da7df",
+  "parent_equal": true,
+  "parent": "040b6df2c4",
+  "author_and_date_equal": true,
+  "patch_id_equal": true,
+  "diff_bytes_head_to_v2": 0,
+  "message_diff": [
+   "--- head",
+   "+++ v2",
+   "@@ -16,4 +16,7 @@",
+   "-The row is recorded on the caller's thread at each exit, so a stuck call",
+   "-that returns late adds nothing. The builtin path is unchanged. Opt-in like",
+   "-the rest of shared metrics; never the query or the recalled text. Schema",
+   "-and the \"what is collected\" doc gain the matching entry.",
+   "+The row is recorded on the caller's thread at each of these five exits,",
+   "+so a stuck call that returns late adds nothing. One case is not covered:",
+   "+if the prefetch thread cannot be started (thread.start() raises), the",
+   "+exception propagates as before and no row is written. The builtin path",
+   "+is unchanged. Opt-in like the rest of shared metrics; never the query or",
+   "+the recalled text. Schema and the \"what is collected\" doc gain the",
+   "+matching entry."
+  ],
+  "push_scan": {
+   "rev": "c160f12482",
+   "workflows": 52,
+   "with_push_trigger": 11,
+   "matches": []
+  }
+ },
+ "live_main": {
+  "sha": "6afef023c8d7c2108423f00d441cb343c6969ed7",
+  "committed": "2026-10-01T19:13:17Z",
+  "read_at": "2026-10-01T19:14:23Z",
+  "method": "gh api GET compare",
+  "commits_since_34f8ec3b40": 67,
+  "status": "ahead",
+  "files_changed": 52,
+  "files_list_complete": true,
+  "invalidate_on_changed": [
+   "agent/turn_context.py"
+  ],
+  "head_files_changed_on_main": [],
+  "github_changed": [
+   ".github/workflows/plugin-catalog-ci.yml"
+  ],
+  "changed_workflow_triggers": {
+   ".github/workflows/plugin-catalog-ci.yml": [
+    "pull_request"
+   ]
+  },
+  "turn_context_commits_since_34f8ec3b40": [
+   [
+    "6403dd325c",
+    "fix(anthropic): simplify recovery and make accounting explicit"
+   ],
+   [
+    "1fd41d8770",
+    "fix(anthropic): exclude rejected thinking from preflight"
+   ],
+   [
+    "ec26994742",
+    "fix(anthropic): align canonical preflight accounting"
+   ],
+   [
+    "582750e3f9",
+    "fix(anthropic): make preserved-thinking replay coherent"
+   ]
+  ],
+  "merge_note": "no merge-tree: the live main's objects were not fetched. None of the head's 6 files changed on main, so no file is changed on both sides (DERIVED, not an observed merge)"
+ },
+ "finished": "2026-10-01T19:14:23Z"
+}

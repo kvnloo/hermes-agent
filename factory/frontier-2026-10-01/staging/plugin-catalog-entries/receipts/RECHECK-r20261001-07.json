@@ -1,0 +1,261 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "plugin-catalog-entries",
+ "provenance": "self",
+ "id": "RECHECK/r20261001-07",
+ "tier": "T0/T1 (round-6 fix after the fresh verifier: a byte-identical move of local-only files under private/, a new completeness privacy scan with a negative control, git and gh read-only rechecks, and the catalog loader, validator and shipped test in the factory bwrap sandbox with an isolated HOME; no code run from the plugin, no hermes CLI, no network inside the sandbox)",
+ "question": "Is everything outside private/ publishable (no absolute local path, host name, local login, private term, binary or bytecode), with the local-only material moved byte-identical so every cited hash still matches; and is the branch still fresh on the newest upstream main?",
+ "origin_refs": [
+  "NousResearch/hermes-agent#102922",
+  "NousResearch/hermes-agent#129692",
+  "kvnloo/hermes-agent#404",
+  "kvnloo/hermes-agent#412"
+ ],
+ "policy_revision": {
+  "factory": "FACTORY.md section 11.1: P1 (RED on a main whose invalidate_on paths have not changed since), P7 (merge-tree clean on current main, workflow-trigger scan = 0), P8 (nothing private is public), P9 (privacy scan clean)"
+ },
+ "ai_assistance": "Claude Code (Opus 5.5) moved the files, wrote tools/privacy_scan_r6.py, ran the reads and checks, edited STAGING.md and wrote this receipt; disclosed per repository policy",
+ "privacy": "public aggregate (no host paths, no host name, no local login; artifact paths are relative to the staging directory; raw/r6_* show the scratch mirror as <bare> and sandbox paths as <worktree>, <run>, <run-home>, <venv> and <staging>; the private-terms list, the host name and the login are never printed). private/MOVED-r6.tsv is local-only and appears here as sha256 only",
+ "resource_usage": {
+  "api_cost_usd": 0.0,
+  "gpu_s": 0,
+  "tokens": 0,
+  "wall_s": 20,
+  "wall_s_label": "OBSERVED",
+  "wall_s_note": "catalog re-measure on 1798b335c4, 19:10:47Z to 19:11:07Z (raw/r6_catalog_recheck.txt); move, scans, git and gh reads not timed"
+ },
+ "base_revision": {
+  "declared_base": "234badf4012af380d23c91eae55d045a69c69ffb",
+  "branch_head": "98c305b3ec8d03693f4dc94bade69035cb15ff7d",
+  "branch_parent": "234badf4012af380d23c91eae55d045a69c69ffb",
+  "branch_tree": "3a915075078775928dd352fa2fe77bd200bdd714",
+  "declared_main": "1798b335c43d7e59066ad74a8c2d1d1c9fd537fe",
+  "declared_main_note": "newest upstream main by gh api repos/NousResearch/hermes-agent/commits/main at 2026-10-01T19:08:41Z (committed 19:08:13Z); object already present in the scratch mirror (not fetched by this round; no ref points at it); 137 commits after the base, 63 after the factory-given main 34f8ec3b40, 2 after 5d077106b8 (the main the round-6 verifier saw)",
+  "invalidate_on_changed_since": "363e9d5f0a15ffe143d4a8b573b4898d6e428115 : no (git diff --stat over the 18 invalidate_on specs and the 14 adjacent files is empty from 363e9d5f0a to 105e876586, to 5d077106b8 and to 1798b335c4)",
+  "factory_main": "34f8ec3b407e50bad3ae27e4cd79d65212061356 (the scratch mirror's refs/heads/main, unchanged; F14/r20261001-01 ran on it)"
+ },
+ "measurements": [
+  {
+   "name": "private_moves",
+   "label": "OBSERVED",
+   "source": "private/MOVED-r6.tsv (local-only)",
+   "value": {
+    "files_moved": 169,
+    "raw_r01_outputs": 41,
+    "tools": [
+     "tools/sandbox.sh"
+    ],
+    "run_tree_files": 127,
+    "rule": "byte-identical rename from <path> to private/<path>, same filesystem; every moved file re-hashed at its new path",
+    "post_move_hash_and_size_match": "169 of 169",
+    "left_at_old_path": 0,
+    "pre_move_counts": {
+     "raw_r01_with_absolute_path": 27,
+     "raw_r01_with_login": 6,
+     "sandbox_sh_with_absolute_path": 1,
+     "run_with_host_name": 3,
+     "run_with_login": 3,
+     "run_binary": 4,
+     "run_with_absolute_path": 0
+    },
+    "run_host_name_files": "the pinned clone's .git/logs/HEAD, logs/refs/heads/main and logs/refs/remotes/origin/HEAD (reflog identity line); never scanned before round 6, because tools/privacy_scan_r4.py skips run/",
+    "moved_tsv_sha256": "c0904e7ff0dea97c7d6b7830f929ae301554ab8004838da115b77d61ea81820b",
+    "receipt_cited_artifacts": {
+     "checked": 75,
+     "hash_match": 75,
+     "in_staging_dir": 72,
+     "cited_paths_now_under_private": 30,
+     "f14_maps_in_factory_dir": 3,
+     "note": "no receipt changed; a cited raw/<x> or tools/sandbox.sh is now at private/raw/<x> or private/tools/sandbox.sh with the same sha256"
+    }
+   }
+  },
+  {
+   "name": "privacy_scan_negative_control",
+   "label": "OBSERVED",
+   "source": "raw/r6_privacy_scan_negative_control.txt",
+   "value": {
+    "tool": "tools/privacy_scan_r6.py",
+    "target": "a scratch copy of this staging directory (deleted afterwards)",
+    "planted": [
+     "raw/adjacent_base.txt (r01 output: absolute paths, login)",
+     "tools/sandbox.sh (absolute paths)",
+     "run/src/HEAD (clone reflog: host name, login)",
+     "tools/__pycache__/z.cpython-314.pyc (bytecode, binary)",
+     "raw/r6_login_canary.txt (publishable name, login only)"
+    ],
+    "result": "FAIL, rc=1",
+    "flagged_by_privacy_scan_py": 3,
+    "unclassified": 4,
+    "login_files": 3,
+    "binary": 1,
+    "bytecode_entries": 2,
+    "every_plant_flagged": true
+   }
+  },
+  {
+   "name": "freshness_newest_main",
+   "label": "OBSERVED",
+   "source": "raw/r6_git_recheck.txt",
+   "value": {
+    "main": "1798b335c43d7e59066ad74a8c2d1d1c9fd537fe",
+    "parent_main_is_ancestor": "5d077106b89aa9f8d3bffa39d22a8533ba88306b",
+    "commits_after_base": 137,
+    "commits_after_34f8ec3b40": 63,
+    "merge_tree_clean": true,
+    "merge_tree": "064f9e0c6750e05e019129c5e954c4058c170bf4",
+    "invalidate_on_and_adjacent_changed_since_363e9d5f0a": false,
+    "changed_since_5d077106b8": "10 files: agent/ (5), run_agent.py, tests/agent/ (2), tests/e2e/core/providers/ (1), website/docs/developer-guide/ (1); none is an invalidate_on or adjacent path",
+    "paw_pii_yaml": "absent",
+    "entry_files": 349,
+    "plugin_index_json": "absent",
+    "validator_blob_equals_363e9d5f0a": true,
+    "member_behind_counts": {
+     "paw-pii-plugin-index": 13969,
+     "groq-orpheus-tts": 20742,
+     "tinyfish-browser-provider": 39989,
+     "spatial-canvas-upstream": 23930
+    }
+   }
+  },
+  {
+   "name": "freshness_5d077106b8",
+   "label": "OBSERVED",
+   "source": "raw/r6_git_recheck.txt",
+   "value": {
+    "main": "5d077106b89aa9f8d3bffa39d22a8533ba88306b",
+    "commits_after_105e876586": 33,
+    "commits_after_base": 135,
+    "commits_after_34f8ec3b40": 61,
+    "merge_tree": "81e469021027d6c382cfa6c4fef55ad4af897c2a",
+    "changed_since_105e876586": "agent/ (12 files) and tests/agent/ (2 files) only",
+    "invalidate_on_and_adjacent_changed_since_105e876586": false,
+    "paw_pii_yaml": "absent",
+    "entry_files": 349
+   }
+  },
+  {
+   "name": "catalog_remeasure_newest_main",
+   "label": "OBSERVED",
+   "source": "raw/r6_catalog_recheck.txt",
+   "value": {
+    "main": "1798b335c43d7e59066ad74a8c2d1d1c9fd537fe",
+    "sandbox": "xf-sandbox.sh, loopback only, isolated HOME and HERMES_HOME, cleared env",
+    "reps_green": 3,
+    "need": {
+     "loader": "349/349",
+     "entry_present": false,
+     "validator": "OK: 350 file(s) valid",
+     "shipped_test_on_main": "1 passed"
+    },
+    "green": {
+     "index_tree": "064f9e0c6750e05e019129c5e954c4058c170bf4",
+     "equals_merge_tree": true,
+     "entry_blob": "845dc6cce78e67a8989e267debcc5b4a4dcf473c",
+     "loader": "350/350",
+     "entry_present": true,
+     "validator": "OK: 351 file(s) valid",
+     "shipped_test": "3 of 3 runs pass"
+    },
+    "negative_control": {
+     "mutation": "sha: main",
+     "validator_rc": 1,
+     "shipped_test": "1 failed, AssertionError: assert 349 == 350"
+    },
+    "blocked_exec_lines": 0,
+    "worktree_after": "0 tracked changes; removed with git worktree remove (no --force) and pruned"
+   }
+  },
+  {
+   "name": "push_workflow_scan",
+   "label": "OBSERVED",
+   "source": "raw/r6_wf_push_scan_staged_1798b335c4.json",
+   "value": {
+    "main": "1798b335c43d7e59066ad74a8c2d1d1c9fd537fe",
+    "branch": "staged/plugin-catalog-entries",
+    "push_workflows": 11,
+    "matches": 0
+   }
+  },
+  {
+   "name": "f14_patch_sha256_reproduction",
+   "label": "OBSERVED",
+   "source": "raw/r6_git_recheck.txt",
+   "value": {
+    "receipt_value": "091552753eaa2b62435f3fed7f53528fc312bba0440827e9cb394d8d47965acf",
+    "with_core_abbrev_10": "091552753eaa2b62435f3fed7f53528fc312bba0440827e9cb394d8d47965acf (both 234badf401..98c305b3ec and 34f8ec3b40..dd185c1f84)",
+    "with_mirror_default": "74f80da512b80c17c270fc57761b513ccdc2ee638220a80dae89dd8aa589332a (both)",
+    "mirror_core_abbrev": "unset",
+    "note": "the F14 receipt's patch_sha256 is the sha256 of 'git diff' output with 10-hex index abbreviations; the patch-identity claim holds under either setting"
+   }
+  },
+  {
+   "name": "gh_reads",
+   "label": "OBSERVED",
+   "source": "raw/r6_gh_reads.json",
+   "value": {
+    "upstream_main": "1798b335c43d7e59066ad74a8c2d1d1c9fd537fe at 19:08:41Z",
+    "paw_pii_yaml_upstream": "404",
+    "open_prs_paw_pii": 0,
+    "open_prs_PII": 111,
+    "kvnloo_pii_main": "d891ebdd3a3dab27a3451923eb56f955253a2782",
+    "fork_staged_ref": "refs/heads/staged/plugin-catalog-entries 98c305b3ec8d03693f4dc94bade69035cb15ff7d",
+    "pr_129692": "OPEN, reviewDecision CHANGES_REQUESTED",
+    "issue_102922": "OPEN",
+    "fork_issue_412": "OPEN, HOLD in title",
+    "fork_issue_404": "OPEN"
+   }
+  }
+ ],
+ "artifacts": [
+  {
+   "path": "raw/r6_git_recheck.txt",
+   "sha256": "7199a676a03480fdcae56997985b353e8da2d58c0f3cc2d91fd84befc1c713cb"
+  },
+  {
+   "path": "raw/r6_catalog_recheck.txt",
+   "sha256": "d840d6a1d047debbbd0d630e0c5ea455a5b8693db6774654757d320156908238"
+  },
+  {
+   "path": "raw/r6_gh_reads.json",
+   "sha256": "39e70577433898388b3df65f92dcf0d6fdd23a639596fafa5c619f4623f56891"
+  },
+  {
+   "path": "raw/r6_wf_push_scan_staged_1798b335c4.json",
+   "sha256": "4d1908b64e660406d2f12370941cb1c21e839dd1f12e9d2200b9a89707b71615"
+  },
+  {
+   "path": "raw/r6_privacy_scan_negative_control.txt",
+   "sha256": "f253f3119ee0c0db3fc097545fd9003894c46e7cce6cb78471d02e8a03357bad"
+  },
+  {
+   "path": "tools/privacy_scan_r6.py",
+   "sha256": "03e99afc1edca91de8a6daa5d01ace6f789e96abfb138d134bf06667fadc7c58"
+  },
+  {
+   "path": "tools/catalog_probe.py",
+   "sha256": "df35fe7c1404e4711ade335517bbbc90de96426c74ba28d4be2618a8276d3075"
+  },
+  {
+   "path": "tools/wf_scan.py",
+   "sha256": "2c686f5df2f6b85051528f2278d11ae1ec5ddd3394b2de8cbeb0a5e788aa78bc"
+  },
+  {
+   "path": "tools/privacy_scan.py",
+   "sha256": "c20c602b0990f7329036e3b07b9609c9ddad2d0e582989fa94fbf233b5d5def5"
+  },
+  {
+   "path": "private/MOVED-r6.tsv",
+   "sha256": "c0904e7ff0dea97c7d6b7830f929ae301554ab8004838da115b77d61ea81820b",
+   "public": false
+  }
+ ],
+ "verdict": "KEEP: the publishable set is now exactly everything outside private/. The 169 local-only files (41 r01 raw outputs, tools/sandbox.sh, the 127-file run/ tree whose clone reflogs carry the host name and the login) moved byte-identical to private/<same path>, and all 75 receipt-cited hashes still match. tools/privacy_scan_r6.py walks every file outside private/ and catches each planted leak in its negative control; its final run is raw/r6_privacy_scan.txt, written after this receipt. The branch is fresh on the newest upstream main 1798b335c4: merge-tree clean, invalidate_on unchanged since 363e9d5f0a, need, green 3 of 3 and the negative control re-measured in the sandbox, 0 of 11 push workflows. The plugin at the pin is unchanged (kvnloo/pii main d891ebdd), so the HOLD stands.",
+ "not_tested": [
+  "adjacent test files on 1798b335c4 (tests/scripts/test_validate_plugin_catalog.py changed on 363e9d5f0a and was not run)",
+  "per-hunk sabotage and a recorded flaky field (P5 stays PENDING)",
+  "E52, T2 (unchanged from earlier receipts)",
+  "independent privacy scan (P9 privacy_scan stays PENDING)",
+  "F14 on 1798b335c4 (F14 is pinned to the factory main 34f8ec3b40; no F14 probe reads plugin-catalog/)"
+ ]
+}

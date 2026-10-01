@@ -1,6 +1,6 @@
 This PR touches the same table as something I was about to propose, so I'd rather offer it here than open a second PR that conflicts with yours.
 
-The 2026-09-19 Jev scorecard (`evals/compaction/results/SCORECARD-2026-09-19-jev.md`) says the summary's misses were "delegation ids, root causes, config keys, exact error strings" in assistant text, and calls that "a summariser-retention target (anchor index / identifier capture)". Delegation ids and config keys have no row in `_ANCHOR_PATTERNS`, either here or on main. Exact error strings are only partly covered: `errors` catches lines with an exception name, but not CLI error lines such as `fatal: …` or gh's `GraphQL: …`. These three rows cover them:
+The 2026-09-19 Jev scorecard (`evals/compaction/results/SCORECARD-2026-09-19-jev.md`) says the summary's misses were "delegation ids, root causes, config keys, exact error strings" in assistant text, and calls that "a summariser-retention target (anchor index / identifier capture)". Delegation ids and config keys have no row in `_ANCHOR_PATTERNS`, either here or on main. Exact error strings are only partly covered: `errors` catches lines with an exception name, but not CLI error lines such as `fatal: …` or gh's `GraphQL: …`. These three rows target those gaps (their limits are listed further down):
 
 | row | captures | stays out |
 |---|---|---|
@@ -8,7 +8,7 @@ The 2026-09-19 Jev scorecard (`evals/compaction/results/SCORECARD-2026-09-19-jev
 | `dotted keys` | `plugins.stream_reasoning_deltas`, `compression.tail_mode` | `config.yaml`, `api.openai.com`, `e.g` (the last segment must be snake_case), and fragments like `router.add_post` inside `self._app.router.add_post` (a match never starts right after `x.`, which also keeps the scan linear on long `a.b.c…` runs) |
 | `error messages` | `GraphQL: … (mergePullRequest)`, ``Blocked: `git checkout` …``, `fatal: …`, `error: …`, `error TS2741: …` | annotations like `error: Exception)` and `"error: %s"` log formats (`fatal:`/`error:` only count where a line starts, after a quote or backtick, or after an escaped `\n` in JSON tool output) |
 
-If you want them, the patch below adds the three rows after `errors`, at the end of your table, plus one test file. It applies to `2c19948e15` with `git apply`, and 7 of 7 tests in the two files pass there (your 5 and these 2). With your PR merged into current main and this patch applied, the same 7 pass, and so do the six neighbouring compressor test files (372 of 372 tests across the 8 files).
+If you want them, the patch below adds the three rows after `errors`, at the end of your table, plus one test file. It applies to `2c19948e15` with `git apply`, and 7 of 7 tests in the two files pass there (your 5 and these 2). With your PR merged into main as of 2026-10-01 and this patch applied, the same 7 pass, and so do the six neighbouring compressor test files (372 of 372 tests across the 8 files).
 
 Because the rows come last, no line your PR already emits changes. That was checked on 180 seeded synthetic regions and on 3 regions built from `agent/*.py` as `read_file` output: with and without the patch, every existing section line is byte-identical.
 

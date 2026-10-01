@@ -1,0 +1,213 @@
+{
+ "fetched_at": "2026-10-01T18:40:55Z",
+ "tool": "gh (read-only: api GET, search, issue view)",
+ "upstream_main": {
+  "sha": "105e8765863f23f837b19433c648de1208415f2f",
+  "committer_date": "2026-10-01T18:33:01Z"
+ },
+ "compare_34f8ec3b40_to_upstream_main": {
+  "status": "ahead",
+  "ahead_by": 28,
+  "behind_by": 0,
+  "files": [
+   ".github/workflows/plugin-catalog-ci.yml",
+   "agent/agent_runtime_helpers.py",
+   "agent/codex_runtime.py",
+   "agent/credential_pool.py",
+   "agent/model_metadata.py",
+   "agent/transports/codex_app_server_session.py",
+   "contributors/emails/241698038+cucurigoo@users.noreply.github.com",
+   "hermes_cli/nous_account.py",
+   "plugin-catalog/README.md",
+   "plugin-catalog/woof.yaml",
+   "plugins/web/perplexity/provider.py",
+   "scripts/validate_plugin_catalog.py",
+   "tests/agent/test_codex_runtime_prompt_handoff.py",
+   "tests/agent/test_fallback_restore_codex_early_reopen.py",
+   "tests/agent/test_model_metadata.py",
+   "tests/agent/transports/test_codex_app_server_session.py",
+   "tests/ci/test_plugin_catalog_ci_confinement.py",
+   "tests/scripts/test_validate_plugin_catalog.py",
+   "tests/tools/test_web_free_fast_search.py",
+   "tests/tools/test_web_managed_routing.py",
+   "tools/managed_tool_gateway.py",
+   "tools/tool_backend_helpers.py",
+   "tools/web_tools.py",
+   "tools/web_tools_rescue.py",
+   "website/docs/user-guide/features/codex-app-server-runtime.md",
+   "website/docs/user-guide/features/plugin-catalog.md",
+   "website/docs/user-guide/features/web-search.md"
+  ]
+ },
+ "cited": {
+  "102922": {
+   "kind": "issue",
+   "state": "open",
+   "author": "kvnloo",
+   "title": "Plugin proposal: local PAW PII redaction (standalone middleware + tools)",
+   "updated": "2026-09-28T00:44:38Z",
+   "comments": 2,
+   "merged_at": null
+  },
+  "102924": {
+   "kind": "pr",
+   "state": "closed",
+   "author": "kvnloo",
+   "title": "feat(plugins): seed index entry for standalone paw-pii",
+   "updated": "2026-09-30T03:15:21Z",
+   "comments": 2,
+   "merged_at": null
+  },
+  "87495": {
+   "kind": "pr",
+   "state": "closed",
+   "author": "kvnloo",
+   "title": "feat(desktop): add Spatial runtime plugin",
+   "updated": "2026-08-25T01:09:25Z",
+   "comments": 2,
+   "merged_at": null
+  },
+  "98105": {
+   "kind": "pr",
+   "state": "closed",
+   "author": "kvnloo",
+   "title": "feat(tts): add Groq Orpheus as a first-class TTS provider",
+   "updated": "2026-09-27T06:53:41Z",
+   "comments": 3,
+   "merged_at": null
+  },
+  "129692": {
+   "kind": "pr",
+   "state": "open",
+   "author": "saiteja-madha",
+   "title": "feat(plugin-catalog): add privacy-gateway",
+   "updated": "2026-10-01T17:14:04Z",
+   "comments": 2,
+   "merged_at": null
+  },
+  "63917": {
+   "kind": "pr",
+   "state": "open",
+   "author": "Micka420-collab",
+   "title": "feat(privacy): prompt-level PII anonymization middleware",
+   "updated": "2026-07-16T01:08:04Z",
+   "comments": 0,
+   "merged_at": null
+  },
+  "95186": {
+   "kind": "pr",
+   "state": "open",
+   "author": "Ilannuko",
+   "title": "Fail closed when required LLM privacy middleware is unavailable",
+   "updated": "2026-08-29T01:50:40Z",
+   "comments": 1,
+   "merged_at": null
+  },
+  "102049": {
+   "kind": "pr",
+   "state": "open",
+   "author": "yurymolodykh",
+   "title": "feat(privacy): anonymize document PII before model requests",
+   "updated": "2026-09-03T09:54:30Z",
+   "comments": 1,
+   "merged_at": null
+  },
+  "14624": {
+   "kind": "pr",
+   "state": "open",
+   "author": "Ushamax",
+   "title": "feat(pii-filter): transparent PII masking middleware for OpenRouter",
+   "updated": "2026-07-12T18:21:24Z",
+   "comments": 0,
+   "merged_at": null
+  },
+  "17472": {
+   "kind": "pr",
+   "state": "open",
+   "author": "teodorofodocrispin-cmyk",
+   "title": "feat(skill): add trustboost-pii-sanitizer v2.0.4 \u2014 blockchain-verified PII sanitization",
+   "updated": "2026-07-29T15:07:41Z",
+   "comments": 7,
+   "merged_at": null
+  },
+  "122574": {
+   "kind": "pr",
+   "state": "closed",
+   "author": "yubingz",
+   "title": "feat(plugin-catalog): add desensitize (community, tools)",
+   "updated": "2026-09-26T18:45:00Z",
+   "comments": 1,
+   "merged_at": "2026-09-26T18:42:25Z"
+  },
+  "1542": {
+   "kind": "pr",
+   "state": "closed",
+   "author": "teknium1",
+   "title": "feat(privacy): redact PII from LLM context when privacy.redact_pii is enabled",
+   "updated": "2026-03-16T13:08:18Z",
+   "comments": 0,
+   "merged_at": "2026-03-16T13:08:18Z"
+  }
+ },
+ "pr_129692_comments": [
+  {
+   "created": "2026-10-01T04:08:40Z",
+   "author": "saiteja-madha",
+   "author_association": "NONE",
+   "body": "Updated the catalog pin from `v0.1.0` to `v0.1.1` (`ead68009b0bb0f27a0b0f397d32181d35333fb92`).\n\nThe new release fixes a Responses API compatibility issue: the original middleware sanitized every string under `input`, which could replace protocol item IDs with bracketed PII aliases and trigger HTTP 400 malformed-ID errors. `v0.1.1` preserves IDs and other protocol metadata while sanitizing model-visible text and tool argument/output payloads.\n\nSource fix PR: https://github.com/saiteja-madha/hermes-privacy-gateway/pull/2\nRelease: https://github.com/saiteja-madha/hermes-privacy-gateway/releases/tag/v0.1.1\n\nLocal validation: 16 tests passed, Plugin Doctor passed, checksum manifest passed, and the catalog entry validator passed.\n"
+  },
+  {
+   "created": "2026-10-01T17:09:56Z",
+   "author": "teknium1",
+   "author_association": "COLLABORATOR",
+   "body": "Opened saiteja-madha/hermes-privacy-gateway#3 with a fix for fail-open registration when Presidio is missing (middleware now always registers and blocks), runtime spaCy model download (now refused with a clear error), and the missing `provides_middleware` in plugin.yaml. It is stacked on the author's #2 (the currently pinned ead6800). After it merges, update `sha:` in this PR to the merge commit and we'll re-review the delta.\n"
+  }
+ ],
+ "pr_129692_reviews": [
+  {
+   "submitted": "2026-10-01T17:14:04Z",
+   "author": "teknium1",
+   "state": "CHANGES_REQUESTED",
+   "author_association": "COLLABORATOR",
+   "body": "Reviewed at saiteja-madha/hermes-privacy-gateway@ead68009\nThe design is careful: errors inside the callbacks fail closed, tool-argument rehydration is allowlist-only and empty by default, and the vault key handling (HKDF subkeys plus a key-check HMAC) looks sound.\n\n**Needs changes before listing**\n\n1. **Medium:** If `presidio_analyzer` is not installed, `register()` raises while importing `.privacy` (which imports presidio at module top). No middleware gets registered, and Hermes then sends the plaintext request as normal, so a missing dependency silently leaks PII instead of blocking. See [`__init__.py:66-77`](https://github.com/saiteja-madha/hermes-privacy-gateway/blob/ead68009b0bb0f27a0b0f397d32181d35333fb92/__init__.py#L66-L77) and [`privacy.py:9-10`](https://github.com/saiteja-madha/hermes-privacy-gateway/blob/ead68009b0bb0f27a0b0f397d32181d35333fb92/privacy.py#L9-L10). Fix: make `register()` independent of presidio. Move `BLOCKED_TOOL_RESULT`, `blocked_content_for_key` and `contains_non_text_model_content` into a dependency-free module (or define them in `__init__.py`), so a missing presidio surfaces through `_get_engine` ([`__init__.py:28-35`](https://github.com/saiteja-madha/hermes-privacy-gateway/blob/ead68009b0bb0f27a0b0f397d32181d35333fb92/__init__.py#L28-L35)) and blocks requests.\n2. **Medium:** When the spaCy model named in [`nlp.yaml:4`](https://github.com/saiteja-madha/hermes-privacy-gateway/blob/ead68009b0bb0f27a0b0f397d32181d35333fb92/nlp.yaml#L4) (`en_core_web_lg`) is not installed, Presidio's spaCy engine falls back to `spacy.cli.download`. The first LLM request after enabling the plugin can therefore pip-install a ~560 MB wheel from GitHub, with no hash pinning, into the Hermes runtime. See [`privacy.py:188-189`](https://github.com/saiteja-madha/hermes-privacy-gateway/blob/ead68009b0bb0f27a0b0f397d32181d35333fb92/privacy.py#L188-L189). Fix: before `NlpEngineProvider(...).create_engine()`, check `spacy.util.is_package(<model from nlp.yaml>)` and raise a clear error that points to the manual install steps in [`docs/INSTALL.md:50-81`](https://github.com/saiteja-madha/hermes-privacy-gateway/blob/ead68009b0bb0f27a0b0f397d32181d35333fb92/docs/INSTALL.md#L50-L81).\n3. The manifest doesn't declare the middleware the plugin registers: `plugin.yaml` lists only the two hooks, while `register()` calls `register_middleware` for `llm_request` and `tool_request`. Validation's declared-middleware check will fail once the dependencies are installed. See [`plugin.yaml:12-14`](https://github.com/saiteja-madha/hermes-privacy-gateway/blob/ead68009b0bb0f27a0b0f397d32181d35333fb92/plugin.yaml#L12-L14) and [`__init__.py:176-177`](https://github.com/saiteja-madha/hermes-privacy-gateway/blob/ead68009b0bb0f27a0b0f397d32181d35333fb92/__init__.py#L176-L177). Fix: add `provides_middleware: [llm_request, tool_request]` to `plugin.yaml`.\n4. There is no `requires_hermes` floor, but the vault uses `plugins.plugin_storage.plugin_db`, which first shipped in Hermes 0.20.4. On older Hermes the vault import fails and every request is blocked. See [`vault.py:66-70`](https://github.com/saiteja-madha/hermes-privacy-gateway/blob/ead68009b0bb0f27a0b0f397d32181d35333fb92/vault.py#L66-L70). Fix: add `requires_hermes: \">=0.20.4\"` to `plugin.yaml` (and the catalog entry).\n\n**Smaller notes (non-blocking)**\n\n- The `[langextract]` extra in [`pyproject.toml:7`](https://github.com/saiteja-madha/hermes-privacy-gateway/blob/ead68009b0bb0f27a0b0f397d32181d35333fb92/pyproject.toml#L7) always pulls `langextract`, `openai` and `azure-identity`, even with LangExtract off. Consider making it an optional extra, or document it.\n- The vault database is created with the process umask (no chmod), and the alias/kind/lookup columns are stored in plaintext. Consider `0600` on the file.\n- Tools outside `rehydrate_tool_allowlist` receive alias tokens, so for example a `write_file`/`patch` after an aliased `read_file` writes `[PERSON_...]` into the user's files. This is only partly documented ([`docs/GMAIL.md:68-70`](https://github.com/saiteja-madha/hermes-privacy-gateway/blob/ead68009b0bb0f27a0b0f397d32181d35333fb92/docs/GMAIL.md#L68-L70)); a short README note would help.\n\nPush a new commit, update `sha:` in this PR, and we'll re-review the delta.\n"
+  }
+ ],
+ "issue_102922_comment_authors": [
+  "kvnloo",
+  "kvnloo"
+ ],
+ "kvnloo_pii_pin": {
+  "sha": "d891ebdd3a3dab27a3451923eb56f955253a2782",
+  "author_login": "kvnloo",
+  "committer_login": "kvnloo",
+  "author_name_equals_committer_name": true,
+  "note": "the git display name itself is not copied here"
+ },
+ "kvnloo_pii_main": "d891ebdd3a3dab27a3451923eb56f955253a2782",
+ "plugin_yaml_at_pin": {
+  "blob_sha": "46b01d122399d1b18b43b4c52e28ec174056fc8a",
+  "has_provides_middleware_key": false,
+  "provides_tools": [
+   "detect_pii",
+   "redact_pii"
+  ]
+ },
+ "search_PII_open": {
+  "query": "gh search prs 'PII' -R NousResearch/hermes-agent --state open --limit 200",
+  "returned": 111,
+  "new_since_r2": [],
+  "gone_since_r2": []
+ },
+ "search_other_open": {
+  "paw-pii": [],
+  "programasweights": [],
+  "pii plugin-catalog": [],
+  "desensitize": []
+ },
+ "fork_404": {
+  "state": "OPEN",
+  "title": "[staged PRs] 39 reproved branches ready for manual upstream promotion",
+  "updated": "2026-10-01T08:11:50Z",
+  "table_lines_excl_separators": 40
+ }
+}

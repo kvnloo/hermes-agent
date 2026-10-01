@@ -1,0 +1,20 @@
+▶ not activated — using HERMES_PYTHON: <venv>/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 2 test files (~6 tests) under ['tests/agent/test_turn_usage_log_line.py', 'evals/postmortem/tests/test_postmortem_harness.py']; running with -j 20
+[ 50.0% |     3/~6 | ✓3 | ✗0] ✓ evals/postmortem/tests/test_postmortem_harness.py (3✓, 0.4s)
+[100.0% |     6/~6 | ✓6 | ✗0] ✓ tests/agent/test_turn_usage_log_line.py (3✓, 2.2s)
+
+=== Summary: 2 files, 6 tests passed, 0 failed (100% complete) in 2.3s (20 workers) ===
+  Durations cached to test_durations.json (2 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   2
+  Total subprocess CPU-wall: 2.7s  (runner wall: 2.3s, parallelism: 20x)
+  P50: 2.24s  P90: 2.24s  P95: 2.24s  P99: 2.24s  Max: 2.24s
+  <1s: 1 files (50%)  <2s: 1 files (50%)
+  Top 10 slowest:
+      2.24s  tests/agent/test_turn_usage_log_line.py
+      0.43s  evals/postmortem/tests/test_postmortem_harness.py

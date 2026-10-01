@@ -1,0 +1,964 @@
+{
+  "schema": "xf.receipt.v1",
+  "id": "F14/r20261001-01",
+  "experiment": "F14 standing regression set x2 on the item arm, compared to the base baseline (FACTORY.md section 13 row 2; P5 'F14 guards equal')",
+  "label": "OBSERVED",
+  "staging": "postmortem-logcalls-zero-hit",
+  "spec": {
+    "path": "factory/w0/f14/f14_set.json",
+    "rev": 1,
+    "set_sha256": "aba79fe8f09dabc62950aacd0a53c2fdc30bc58746f405f9aa050bf474d739b9",
+    "file_sha256": "8b4864a72dd07b6383f98fc1e67359143216889f9c36eda79dc56fc3579044c0",
+    "prereg": "set and postmortem expectation table pinned before the baseline runs (F14/baseline-r20261001-01)"
+  },
+  "base_revision": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+  "arms": {
+    "base": {
+      "revision": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+      "baseline_receipt": "factory/w0/receipts/F14-baseline-r20261001-01.json",
+      "baseline_receipt_sha256": "8e43c1ee4ee6b09a30604e2a436ddea8d73fd2c9573d821633aafc471dd5f2cf",
+      "baseline_map": "factory/w0/f14/baseline-34f8ec3b40.json (copy of base-r2)",
+      "baseline_map_sha256": "a0cfdc3291783cb7f5fcfdbd81b6ef010cbc0cd82915786aea4e6176a56a1682",
+      "base_r1_map_sha256": "67d1d6f586bab1bd914918b524fa012adb35b1109c2b329d6fde68f335b1dde4",
+      "base_r2_map_sha256": "a0cfdc3291783cb7f5fcfdbd81b6ef010cbc0cd82915786aea4e6176a56a1682",
+      "counts": {
+        "PASS": 36,
+        "FAIL": 4
+      }
+    },
+    "arm": {
+      "source_commit": "dd4dd10611e8c23c7579a4ddb95655abebbaca27 (refs/heads/staging/postmortem-logcalls-zero-hit, parent 234badf401)",
+      "method": "git cherry-pick onto the base revision in a detached worktree, original author kept, committer Kevin Rajan <7121943+kvnloo@users.noreply.github.com>",
+      "applied_clean": true,
+      "conflicts": [],
+      "arm_sha": "42b77489697c72fca99d7de61257b7deb640c4f5",
+      "arm_tree": "c7460b5c539e76cff2dbe5cdb7961cec1334a892",
+      "ref": "refs/xf/w0/postmortem-logcalls-zero-hit",
+      "patch_id_stable": {
+        "source": "17439f4d007c1ba4073f697671e79e8fc4cab5fd",
+        "arm": "17439f4d007c1ba4073f697671e79e8fc4cab5fd",
+        "identical": true
+      },
+      "author": "Kevin Rajan <7121943+kvnloo@users.noreply.github.com>"
+    }
+  },
+  "changed_files": [
+    "evals/postmortem/forensics/logcalls.py",
+    "evals/postmortem/live_ab/cache_prefix_live.py",
+    "evals/postmortem/live_ab/cache_prefix_wire.py",
+    "evals/postmortem/tests/test_postmortem_harness.py"
+  ],
+  "runner": {
+    "path": "factory/w0/f14/f14_run.py",
+    "sha256": "2323a5918435b06a56ca0f5f8b55d0a0c2274915f11cd31ef120649b0fad28fe",
+    "probe_helpers": {
+      "factory/w0/f14/probes/readtool_direct.py": "0df21aee5fec293042bf4511b3b4c353d13d768711b8272c85b9f86438649229"
+    }
+  },
+  "sandbox": {
+    "path": "factory/w0/sandbox/xf-sandbox.sh",
+    "sha256": "c9586195c43a926317fa3d6bc18db1937527a6308dc30c683ce9c6a83398638a",
+    "cells": "one fresh bwrap per probe, own run dir <runs>/<label>/<NN>-<slug>, HOME=<run>/home, HERMES_HOME=<run>/home/.hermes, netns loopback only, ro root, clearenv; serial; pytest -j 1, no file retry"
+  },
+  "env": {
+    "python": "<venv>/bin/python (live hermes-agent venv, read-only)",
+    "host_runner": "system python3, stdlib only",
+    "worktree": "<xf-root>/wt-w0/postmortem-logcalls-zero-hit (detached at the arm sha; clean after both runs; removed and pruned afterwards)"
+  },
+  "runs": {
+    "postmortem-logcalls-zero-hit-r1": {
+      "counts": {
+        "PASS": 36,
+        "FAIL": 4
+      },
+      "wall_s": 121.3,
+      "started_utc": "2026-10-01T18:21:31Z",
+      "worktree_head": "42b77489697c72fca99d7de61257b7deb640c4f5",
+      "worktree_dirty": false,
+      "blocked_exec_lines": 0,
+      "sandbox_refusals": 0,
+      "timeouts": 0,
+      "map": "factory/w0/f14/maps/postmortem-logcalls-zero-hit-r1.json",
+      "map_sha256": "b35ff99a0a546d16f61fdb307a4f88fee816a9a1c081b71a8423825cf77de163",
+      "log": "factory/w0/runs/postmortem-logcalls-zero-hit-r1.log",
+      "cells_dir": "<runs>/postmortem-logcalls-zero-hit-r1/",
+      "expectation_mismatches_vs_base_table": [
+        "postmortem/context_cap_probe",
+        "postmortem/notice_delivery_probe"
+      ]
+    },
+    "postmortem-logcalls-zero-hit-r2": {
+      "counts": {
+        "PASS": 36,
+        "FAIL": 4
+      },
+      "wall_s": 83.1,
+      "started_utc": "2026-10-01T18:23:44Z",
+      "worktree_head": "42b77489697c72fca99d7de61257b7deb640c4f5",
+      "worktree_dirty": false,
+      "blocked_exec_lines": 0,
+      "sandbox_refusals": 0,
+      "timeouts": 0,
+      "map": "factory/w0/f14/maps/postmortem-logcalls-zero-hit-r2.json",
+      "map_sha256": "6fd415d5e181381b396554e812a1be9345c0d900d4290619ad7ac58da7fee4b7",
+      "log": "factory/w0/runs/postmortem-logcalls-zero-hit-r2.log",
+      "cells_dir": "<runs>/postmortem-logcalls-zero-hit-r2/",
+      "expectation_mismatches_vs_base_table": [
+        "postmortem/context_cap_probe",
+        "postmortem/notice_delivery_probe"
+      ]
+    }
+  },
+  "equality": {
+    "rule": "per verdict id not listed in flaky: verdict, marker and fingerprint are equal",
+    "result": "EQUAL",
+    "commands": [
+      "f14_run.py compare baseline-34f8ec3b40.json maps/postmortem-logcalls-zero-hit-r1.json -> EQUAL (rc 0)",
+      "f14_run.py compare baseline-34f8ec3b40.json maps/postmortem-logcalls-zero-hit-r2.json -> EQUAL (rc 0)",
+      "f14_run.py compare maps/postmortem-logcalls-zero-hit-r1.json maps/postmortem-logcalls-zero-hit-r2.json -> EQUAL (rc 0)"
+    ],
+    "verdict_ids_compared": 40,
+    "changed_ids": [],
+    "flaky_excluded": [],
+    "same_runner_sandbox_helpers_as_baseline": true
+  },
+  "per_probe": {
+    "compaction/test_region_scoping": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "equal_to_baseline": true
+    },
+    "goal_command_parity": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "d79dfafcaa4868dc"
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "d79dfafcaa4868dc"
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "d79dfafcaa4868dc"
+      },
+      "equal_to_baseline": true
+    },
+    "native_compaction/ab_checkpoint_preflight::capture_cli_same_objects": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "f4f228c1f1712cc0"
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "f4f228c1f1712cc0"
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "f4f228c1f1712cc0"
+      },
+      "equal_to_baseline": true
+    },
+    "native_compaction/ab_checkpoint_preflight::capture_gateway_reloaded_history": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "f4f228c1f1712cc0"
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "f4f228c1f1712cc0"
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "f4f228c1f1712cc0"
+      },
+      "equal_to_baseline": true
+    },
+    "native_compaction/ab_checkpoint_preflight::over_threshold_negative": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "98dff750628aaa6f"
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "98dff750628aaa6f"
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "98dff750628aaa6f"
+      },
+      "equal_to_baseline": true
+    },
+    "native_compaction/ab_checkpoint_preflight::restore": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "5ea433a5dd24f730"
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "5ea433a5dd24f730"
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "5ea433a5dd24f730"
+      },
+      "equal_to_baseline": true
+    },
+    "postmortem/cache_estimator_probe": {
+      "baseline": {
+        "verdict": "FAIL",
+        "marker": "rc=0 | marker absent: \"preflight_should_compress\": true",
+        "fingerprint": null
+      },
+      "arm_r1": {
+        "verdict": "FAIL",
+        "marker": "rc=0 | marker absent: \"preflight_should_compress\": true",
+        "fingerprint": null
+      },
+      "arm_r2": {
+        "verdict": "FAIL",
+        "marker": "rc=0 | marker absent: \"preflight_should_compress\": true",
+        "fingerprint": null
+      },
+      "equal_to_baseline": true
+    },
+    "postmortem/context_cap_probe": {
+      "baseline": {
+        "verdict": "FAIL",
+        "marker": "spawn child trigger 850000 != 200000; cycle 0 trigger 850000 cap None; cycle 1 trigger 850000 cap None; cycle 2 trigger 850000 cap None; cycle 3 trigger 850000 cap None; model switch 1000000: trigger 850000 > 200000",
+        "fingerprint": "56dabc3674684245"
+      },
+      "arm_r1": {
+        "verdict": "FAIL",
+        "marker": "spawn child trigger 850000 != 200000; cycle 0 trigger 850000 cap None; cycle 1 trigger 850000 cap None; cycle 2 trigger 850000 cap None; cycle 3 trigger 850000 cap None; model switch 1000000: trigger 850000 > 200000",
+        "fingerprint": "56dabc3674684245"
+      },
+      "arm_r2": {
+        "verdict": "FAIL",
+        "marker": "spawn child trigger 850000 != 200000; cycle 0 trigger 850000 cap None; cycle 1 trigger 850000 cap None; cycle 2 trigger 850000 cap None; cycle 3 trigger 850000 cap None; model switch 1000000: trigger 850000 > 200000",
+        "fingerprint": "56dabc3674684245"
+      },
+      "equal_to_baseline": true
+    },
+    "postmortem/credential_identity_probe": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "equal_to_baseline": true
+    },
+    "postmortem/deadline_probe": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "equal_to_baseline": true
+    },
+    "postmortem/finalizer_schedule_probe": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "bd7eea88f9cd9bc3"
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "bd7eea88f9cd9bc3"
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "bd7eea88f9cd9bc3"
+      },
+      "equal_to_baseline": true
+    },
+    "postmortem/goal_scope_probe": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "b7eca3edb852af8a"
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "b7eca3edb852af8a"
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "b7eca3edb852af8a"
+      },
+      "equal_to_baseline": true
+    },
+    "postmortem/notice_delivery_probe": {
+      "baseline": {
+        "verdict": "FAIL",
+        "marker": "rc=1: KeyError: 'task_failure_notice' | marker absent: PROBE_COMPLETE",
+        "fingerprint": null
+      },
+      "arm_r1": {
+        "verdict": "FAIL",
+        "marker": "rc=1: KeyError: 'task_failure_notice' | marker absent: PROBE_COMPLETE",
+        "fingerprint": null
+      },
+      "arm_r2": {
+        "verdict": "FAIL",
+        "marker": "rc=1: KeyError: 'task_failure_notice' | marker absent: PROBE_COMPLETE",
+        "fingerprint": null
+      },
+      "equal_to_baseline": true
+    },
+    "postmortem/rewrite_hint_probe": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "equal_to_baseline": true
+    },
+    "postmortem/scanner_bypass_probe": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "equal_to_baseline": true
+    },
+    "provider_fallback/probe_104120": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "equal_to_baseline": true
+    },
+    "provider_fallback/probe_104260": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "equal_to_baseline": true
+    },
+    "provider_fallback/probe_104360": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "equal_to_baseline": true
+    },
+    "readtool/fixtures_direct_read_file::empty_config": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "a8ac6986052f5c49"
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "a8ac6986052f5c49"
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "a8ac6986052f5c49"
+      },
+      "equal_to_baseline": true
+    },
+    "readtool/fixtures_direct_read_file::fifo_hang": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "ed4dce4e99e87179"
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "ed4dce4e99e87179"
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "ed4dce4e99e87179"
+      },
+      "equal_to_baseline": true
+    },
+    "readtool/fixtures_direct_read_file::lockfile_version": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "743a3317c2ec0d1b"
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "743a3317c2ec0d1b"
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "743a3317c2ec0d1b"
+      },
+      "equal_to_baseline": true
+    },
+    "readtool/fixtures_direct_read_file::log_error_hunt": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "9d7aa5596d7504eb"
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "9d7aa5596d7504eb"
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "9d7aa5596d7504eb"
+      },
+      "equal_to_baseline": true
+    },
+    "readtool/fixtures_direct_read_file::lying_extension": {
+      "baseline": {
+        "verdict": "FAIL",
+        "marker": "failed: flagged binary",
+        "fingerprint": "d6f615b85009a2c9"
+      },
+      "arm_r1": {
+        "verdict": "FAIL",
+        "marker": "failed: flagged binary",
+        "fingerprint": "d6f615b85009a2c9"
+      },
+      "arm_r2": {
+        "verdict": "FAIL",
+        "marker": "failed: flagged binary",
+        "fingerprint": "d6f615b85009a2c9"
+      },
+      "equal_to_baseline": true
+    },
+    "readtool/fixtures_direct_read_file::minified_backoff": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "ebc3d45cf379ba02"
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "ebc3d45cf379ba02"
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "ebc3d45cf379ba02"
+      },
+      "equal_to_baseline": true
+    },
+    "readtool/fixtures_direct_read_file::near_miss_filename": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "e3788ea56dd56195"
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "e3788ea56dd56195"
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "e3788ea56dd56195"
+      },
+      "equal_to_baseline": true
+    },
+    "readtool/fixtures_direct_read_file::past_eof": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "b8b15fb954e9dbf5"
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "b8b15fb954e9dbf5"
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "b8b15fb954e9dbf5"
+      },
+      "equal_to_baseline": true
+    },
+    "readtool/fixtures_direct_read_file::unicode_filename": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "4e892f8bdb3d56d1"
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "4e892f8bdb3d56d1"
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "4e892f8bdb3d56d1"
+      },
+      "equal_to_baseline": true
+    },
+    "token_accounting/ab_image_cost_calibration": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "equal_to_baseline": true
+    },
+    "token_accounting/replay_gates::cli_deflated": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "equal_to_baseline": true
+    },
+    "token_accounting/replay_gates::cli_inflated": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "equal_to_baseline": true
+    },
+    "token_accounting/replay_gates::cli_past_window_inflated": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "equal_to_baseline": true
+    },
+    "token_accounting/replay_gates::gateway_deflated": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "equal_to_baseline": true
+    },
+    "token_accounting/replay_gates::gateway_inflated": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "equal_to_baseline": true
+    },
+    "token_accounting/replay_gates::gateway_past_window_inflated": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "equal_to_baseline": true
+    },
+    "token_accounting/replay_gates::overflow_recovery": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "equal_to_baseline": true
+    },
+    "token_accounting/replay_gates::restore_deflated": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "equal_to_baseline": true
+    },
+    "token_accounting/replay_gates::restore_inflated": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "equal_to_baseline": true
+    },
+    "token_accounting/replay_gates::restore_past_window_inflated": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "equal_to_baseline": true
+    },
+    "token_accounting/replay_gates::usage_less_fallback": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "equal_to_baseline": true
+    },
+    "token_accounting/worktree_prompt_prefix": {
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "5dd5c33ce53f80cb"
+      },
+      "arm_r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "5dd5c33ce53f80cb"
+      },
+      "arm_r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "5dd5c33ce53f80cb"
+      },
+      "equal_to_baseline": true
+    }
+  },
+  "expect_on_base": {
+    "note": "the expectation table is pinned for the base; on the arm it is informational. Every row is the same as the baseline on both arm runs",
+    "rows": {
+      "postmortem/scanner_bypass_probe": {
+        "expected_on_base": "PASS",
+        "baseline": "PASS",
+        "arm_r1": "PASS",
+        "arm_r2": "PASS",
+        "same_as_baseline": true
+      },
+      "postmortem/notice_delivery_probe": {
+        "expected_on_base": "PASS",
+        "baseline": "FAIL",
+        "arm_r1": "FAIL",
+        "arm_r2": "FAIL",
+        "same_as_baseline": true
+      },
+      "postmortem/cache_estimator_probe": {
+        "expected_on_base": "FAIL",
+        "baseline": "FAIL",
+        "arm_r1": "FAIL",
+        "arm_r2": "FAIL",
+        "same_as_baseline": true
+      },
+      "postmortem/rewrite_hint_probe": {
+        "expected_on_base": "PASS",
+        "baseline": "PASS",
+        "arm_r1": "PASS",
+        "arm_r2": "PASS",
+        "same_as_baseline": true
+      },
+      "postmortem/credential_identity_probe": {
+        "expected_on_base": "PASS",
+        "baseline": "PASS",
+        "arm_r1": "PASS",
+        "arm_r2": "PASS",
+        "same_as_baseline": true
+      },
+      "postmortem/context_cap_probe": {
+        "expected_on_base": "PASS",
+        "baseline": "FAIL",
+        "arm_r1": "FAIL",
+        "arm_r2": "FAIL",
+        "same_as_baseline": true
+      },
+      "postmortem/deadline_probe": {
+        "expected_on_base": "PASS",
+        "baseline": "PASS",
+        "arm_r1": "PASS",
+        "arm_r2": "PASS",
+        "same_as_baseline": true
+      },
+      "postmortem/goal_scope_probe": {
+        "expected_on_base": "PASS",
+        "baseline": "PASS",
+        "arm_r1": "PASS",
+        "arm_r2": "PASS",
+        "same_as_baseline": true
+      },
+      "postmortem/finalizer_schedule_probe": {
+        "expected_on_base": "PASS",
+        "baseline": "PASS",
+        "arm_r1": "PASS",
+        "arm_r2": "PASS",
+        "same_as_baseline": true
+      }
+    }
+  },
+  "coverage_of_change": {
+    "label": "OBSERVED (static grep on the arm worktree and the pinned argv in the set)",
+    "result": "no F14 probe reaches a changed file",
+    "detail": "the only importers or readers of logcalls / cache_prefix_live / cache_prefix_wire in the arm tree are the changed files themselves, evals/postmortem/run.py (lists cache_prefix_wire as a live probe) and tests/agent/test_turn_usage_log_line.py; none is a pinned F14 argv. forensics/* and cache_prefix_wire are EXCLUDED from the set, and evals/postmortem/live_ab/* is denylisted by the sandbox",
+    "meaning": "EQUAL here shows the change does not disturb the guarded areas; it is not evidence about the changed parser. That evidence is PROOF/r20261001-01 and PROOF/r20261001-02"
+  },
+  "gates": {
+    "guards": {
+      "F14": "EQUAL"
+    },
+    "note": "F14 is one part of P5 (FACTORY 11.1); the P5 decision is recorded in STAGING.md from this receipt plus the PROOF receipts"
+  },
+  "denominators": {
+    "cells_per_run": 19,
+    "verdict_ids_per_run": 40,
+    "infra": 0,
+    "errored": 0,
+    "completeness": 1.0
+  },
+  "evidence_class": {
+    "local": true,
+    "ci": "none",
+    "simulation": false,
+    "runtime": false,
+    "kind": "regression-guard"
+  },
+  "not_tested": [
+    "the changed files themselves (see coverage_of_change)",
+    "the 4 non-live postmortem live_ab probes: refused by the sandbox denylist glob evals/postmortem/live_ab/*",
+    "goal_repaste_probe (needs a private state.db copy)",
+    "live/paid probes: goal_judge_wait, cache_prefix_wire, nested_delegate_deadline, cache_concurrency_probe, readtool model arm"
+  ],
+  "limitations": [
+    "wall clock per run (121.3 s and 83.1 s) is higher than the baseline (51.9 s and 52.3 s): other F14 arms ran on the host at the same time (load average about 13); wall time is not compared",
+    "the arm is the item commit cherry-picked onto the base revision 34f8ec3b40, not the staged branch head dd4dd10611 (parent 234badf401); the patch-id is identical"
+  ],
+  "resource_usage": {
+    "wall_s": {
+      "postmortem-logcalls-zero-hit-r1": 121.3,
+      "postmortem-logcalls-zero-hit-r2": 83.1
+    },
+    "api_cost_usd": 0.0,
+    "label": "OBSERVED"
+  },
+  "verdict": "EQUAL",
+  "provenance": "self",
+  "created_utc": "2026-10-01T18:27:44Z",
+  "ai_assistance": "Claude Code (Opus 5.5) created the arm, ran both F14 runs and wrote this receipt",
+  "privacy": "placeholders only (<xf-root>, <runs>, <run>, <worktree>, <venv>, <tmp>)"
+}

@@ -1,26 +1,34 @@
 {
  "PROOF/r20261001-01": {
   "path": "receipts/PROOF_r20261001-01.json",
-  "sha256": "54d97f8e9036335f577fb4b7b1b36b09dfcf2ce4cca4a019c7ead07d24562116"
+  "sha256": "f3395ee6a93ebe06ab324216e50b4d9a7f503dfa18a498af20f93a521cb9accd"
  },
  "F06RT/r20261001-01": {
   "path": "receipts/F06RT_r20261001-01.json",
-  "sha256": "405b09859f9d0416205052a52d8ba5594a35eb09d01ee4fc1948b5c181a7e714"
+  "sha256": "2dd8206b43e5363994bed7d7ad1ca21dadc5dc88ae2fe010c6b3fd06097cad90"
  },
  "F06SYN/r20261001-01": {
   "path": "receipts/F06SYN_r20261001-01.json",
-  "sha256": "caf296a4d5ffd738925a634d6c6618f6039e5b0dfc142d73452aa1bbaaf2a684"
+  "sha256": "d7d27185727df7ccc19beecb858c2d9f4a2e3d29e714cff36d7cae2161e59116"
  },
  "E19SYN/r20261001-01": {
   "path": "receipts/E19SYN_r20261001-01.json",
-  "sha256": "40c53149e6a83d20b41da91c4650bb0a992cabc1b32bf72af4dc2cd8375578c1"
+  "sha256": "72e36943e5424cbeb19cfd77333b33050d6e86e5d442da7d9227babf72b52b3e"
  },
  "CARRIER/r20261001-01": {
   "path": "receipts/CARRIER_r20261001-01.json",
-  "sha256": "c653b35e41ea90343a9fc89acfd9979cb7cf521e997183f62dc8f2671896d851"
+  "sha256": "88c85a7f868c57053058982114a329603b44f993a97c784e43247250b5d8ae22"
  },
  "PROOF/r20261001-02": {
   "path": "receipts/PROOF_r20261001-02.json",
-  "sha256": "aa48e790d70c443e3659ac7d7d3b33f4edfadba593ccb447f3ce21e4e561bace"
+  "sha256": "d62ad6a3bfaeccb06f89dae7cc2dc0a4bbe18e5c138e65ac70477b09feeb4011"
+ },
+ "F14/r20261001-01": {
+  "path": "receipts/F14-r20261001-01.json",
+  "sha256": "26d2b140e6e9483132c25e1d2c9510f4c6b08e713efe77e7d930f90c1221a52c"
+ },
+ "PROOF/r20261001-03": {
+  "path": "receipts/PROOF_r20261001-03.json",
+  "sha256": "1cc44075691ddf3aedeb6fca77bb9ced4391596ce9892e0a0123f33451c655d6"
  }
 }

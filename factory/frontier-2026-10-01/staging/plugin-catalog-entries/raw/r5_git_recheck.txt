@@ -1,0 +1,129 @@
+# r5 git recheck (round-5 polish; bare mirror, read-only; run at 2026-10-01T18:40:23Z)
+# declared main for round 5 (given by the factory as upstream main): 34f8ec3b407e50bad3ae27e4cd79d65212061356
+# newer upstream main seen by gh api repos/NousResearch/hermes-agent/commits/main at 18:32:47Z: 363e9d5f0a15ffe143d4a8b573b4898d6e428115 (object present in <bare>, no ref points at it)
+$ git -C <bare> rev-parse refs/heads/staging/plugin-catalog-entries refs/heads/staging/plugin-catalog-entries^ refs/heads/staging/plugin-catalog-entries^{tree}
+98c305b3ec8d03693f4dc94bade69035cb15ff7d
+234badf4012af380d23c91eae55d045a69c69ffb
+3a915075078775928dd352fa2fe77bd200bdd714
+rc=0
+$ git -C <bare> log -1 --format=%H parent=%P author=%an <%ae> committer=%cn committer_date=%cI subject=%s refs/heads/staging/plugin-catalog-entries
+98c305b3ec8d03693f4dc94bade69035cb15ff7d parent=234badf4012af380d23c91eae55d045a69c69ffb author=Kevin Rajan <7121943+kvnloo@users.noreply.github.com> committer=Kevin Rajan committer_date=2026-10-01T04:14:45-05:00 subject=feat(plugin-catalog): add paw-pii
+rc=0
+$ git -C <bare> log -1 --format=%H committer_date=%cI 34f8ec3b407e50bad3ae27e4cd79d65212061356
+34f8ec3b407e50bad3ae27e4cd79d65212061356 committer_date=2026-10-01T22:59:37+05:30
+rc=0
+$ git -C <bare> log -1 --format=%H committer_date=%cI 363e9d5f0a15ffe143d4a8b573b4898d6e428115
+363e9d5f0a15ffe143d4a8b573b4898d6e428115 committer_date=2026-10-01T23:55:54+05:30
+rc=0
+# ---- main 34f8ec3b40 ----
+$ git -C <bare> merge-base --is-ancestor 234badf4012af380d23c91eae55d045a69c69ffb 34f8ec3b407e50bad3ae27e4cd79d65212061356
+rc=0
+$ git -C <bare> merge-base --is-ancestor 44a1ce9724502b9c692faaef00af3054bf11f1a6 34f8ec3b407e50bad3ae27e4cd79d65212061356
+rc=0
+$ git -C <bare> rev-list --count 234badf4012af380d23c91eae55d045a69c69ffb..34f8ec3b407e50bad3ae27e4cd79d65212061356
+74
+rc=0
+$ git -C <bare> rev-list --count 44a1ce9724502b9c692faaef00af3054bf11f1a6..34f8ec3b407e50bad3ae27e4cd79d65212061356
+9
+rc=0
+$ git -C <bare> merge-tree --write-tree 34f8ec3b407e50bad3ae27e4cd79d65212061356 98c305b3ec8d03693f4dc94bade69035cb15ff7d
+47e2acb8c252b61d26ea6e3e9239fcb41f5056bf
+rc=0
+$ git -C <bare> diff --stat 234badf4012af380d23c91eae55d045a69c69ffb 34f8ec3b407e50bad3ae27e4cd79d65212061356 -- <18 invalidate_on path specs (F12 receipt base_revision.invalidate_on)>
+rc=0 (empty = unchanged)
+$ git -C <bare> diff --stat 234badf4012af380d23c91eae55d045a69c69ffb 34f8ec3b407e50bad3ae27e4cd79d65212061356 -- <7 other adjacent test files, tests/conftest.py, scripts/run_tests.sh, pyproject.toml, uv.lock, PR template, CONTRIBUTING.md, AGENTS.md>
+rc=0 (empty = unchanged)
+$ git -C <bare> cat-file -e 34f8ec3b407e50bad3ae27e4cd79d65212061356:plugin-catalog/paw-pii.yaml
+absent (need still holds)
+$ git -C <bare> ls-tree --name-only 34f8ec3b407e50bad3ae27e4cd79d65212061356 plugin-catalog/ | grep '\.yaml$' | grep -vc '^plugin-catalog/removed.yaml$' (entry files)
+348
+$ git -C <bare> cat-file -e 34f8ec3b407e50bad3ae27e4cd79d65212061356:hermes_cli/data/plugin_index.json
+absent (old route still gone)
+$ git -C <bare> rev-parse 34f8ec3b407e50bad3ae27e4cd79d65212061356:.github/PULL_REQUEST_TEMPLATE.md 34f8ec3b407e50bad3ae27e4cd79d65212061356:plugin-catalog/README.md 34f8ec3b407e50bad3ae27e4cd79d65212061356:CONTRIBUTING.md 34f8ec3b407e50bad3ae27e4cd79d65212061356:AGENTS.md
+5496eb534fef9d08c091b8186e7edd1b5cf356db
+6e18bd33b2be9e83fd1dbd7a8cb4d6f67f403bc2
+b0baa59b5057c204b3c09d3dd170c0955cfdb39c
+65aa3e61bcba610da21279a17385671263be39e9
+$ git -C <bare> ls-tree --name-only 34f8ec3b407e50bad3ae27e4cd79d65212061356 contributors/emails/ | grep -c '^contributors/emails/7121943+kvnloo@users.noreply.github.com$'
+1
+# ---- main 363e9d5f0a ----
+$ git -C <bare> merge-base --is-ancestor 234badf4012af380d23c91eae55d045a69c69ffb 363e9d5f0a15ffe143d4a8b573b4898d6e428115
+rc=0
+$ git -C <bare> merge-base --is-ancestor 44a1ce9724502b9c692faaef00af3054bf11f1a6 363e9d5f0a15ffe143d4a8b573b4898d6e428115
+rc=0
+$ git -C <bare> rev-list --count 234badf4012af380d23c91eae55d045a69c69ffb..363e9d5f0a15ffe143d4a8b573b4898d6e428115
+97
+rc=0
+$ git -C <bare> rev-list --count 44a1ce9724502b9c692faaef00af3054bf11f1a6..363e9d5f0a15ffe143d4a8b573b4898d6e428115
+32
+rc=0
+$ git -C <bare> merge-tree --write-tree 363e9d5f0a15ffe143d4a8b573b4898d6e428115 98c305b3ec8d03693f4dc94bade69035cb15ff7d
+a997753eec28eed39d8db10ca706f0231c07b685
+rc=0
+$ git -C <bare> diff --stat 234badf4012af380d23c91eae55d045a69c69ffb 363e9d5f0a15ffe143d4a8b573b4898d6e428115 -- <18 invalidate_on path specs (F12 receipt base_revision.invalidate_on)>
+ .github/workflows/plugin-catalog-ci.yml | 182 +++++++++++++++++++++++++++-----
+ plugin-catalog/README.md                |   4 +-
+ plugin-catalog/woof.yaml                |  29 +++++
+ scripts/validate_plugin_catalog.py      |  29 ++++-
+ 4 files changed, 213 insertions(+), 31 deletions(-)
+rc=0 (empty = unchanged)
+$ git -C <bare> diff --stat 234badf4012af380d23c91eae55d045a69c69ffb 363e9d5f0a15ffe143d4a8b573b4898d6e428115 -- <7 other adjacent test files, tests/conftest.py, scripts/run_tests.sh, pyproject.toml, uv.lock, PR template, CONTRIBUTING.md, AGENTS.md>
+ tests/scripts/test_validate_plugin_catalog.py | 20 ++++++++++++++++++++
+ 1 file changed, 20 insertions(+)
+rc=0 (empty = unchanged)
+$ git -C <bare> cat-file -e 363e9d5f0a15ffe143d4a8b573b4898d6e428115:plugin-catalog/paw-pii.yaml
+absent (need still holds)
+$ git -C <bare> ls-tree --name-only 363e9d5f0a15ffe143d4a8b573b4898d6e428115 plugin-catalog/ | grep '\.yaml$' | grep -vc '^plugin-catalog/removed.yaml$' (entry files)
+349
+$ git -C <bare> cat-file -e 363e9d5f0a15ffe143d4a8b573b4898d6e428115:hermes_cli/data/plugin_index.json
+absent (old route still gone)
+$ git -C <bare> rev-parse 363e9d5f0a15ffe143d4a8b573b4898d6e428115:.github/PULL_REQUEST_TEMPLATE.md 363e9d5f0a15ffe143d4a8b573b4898d6e428115:plugin-catalog/README.md 363e9d5f0a15ffe143d4a8b573b4898d6e428115:CONTRIBUTING.md 363e9d5f0a15ffe143d4a8b573b4898d6e428115:AGENTS.md
+5496eb534fef9d08c091b8186e7edd1b5cf356db
+8af453826b3a4a49880e824cdc3fbbfa3c424675
+b0baa59b5057c204b3c09d3dd170c0955cfdb39c
+65aa3e61bcba610da21279a17385671263be39e9
+$ git -C <bare> ls-tree --name-only 363e9d5f0a15ffe143d4a8b573b4898d6e428115 contributors/emails/ | grep -c '^contributors/emails/7121943+kvnloo@users.noreply.github.com$'
+1
+# ---- what moved between 34f8ec3b407e50bad3ae27e4cd79d65212061356 and 363e9d5f0a15ffe143d4a8b573b4898d6e428115 on the invalidate_on and adjacent paths ----
+$ git -C <bare> diff --stat 34f8ec3b407e50bad3ae27e4cd79d65212061356 363e9d5f0a15ffe143d4a8b573b4898d6e428115 -- <18 invalidate_on specs> <adjacent files>
+ .github/workflows/plugin-catalog-ci.yml       | 182 ++++++++++++++++++++++----
+ plugin-catalog/README.md                      |   4 +-
+ plugin-catalog/woof.yaml                      |  29 ++++
+ scripts/validate_plugin_catalog.py            |  29 +++-
+ tests/scripts/test_validate_plugin_catalog.py |  20 +++
+ 5 files changed, 233 insertions(+), 31 deletions(-)
+rc=0
+$ git -C <bare> log --format='%h %cI %s' 34f8ec3b407e50bad3ae27e4cd79d65212061356..363e9d5f0a15ffe143d4a8b573b4898d6e428115 -- <18 invalidate_on specs> <adjacent files>
+b12e672e23 2026-10-01T10:46:45-07:00 test: consolidate the catalog-gate confinement tests to behavioural cases
+e780748afc 2026-10-01T10:46:45-07:00 refactor: keep subdir/sha shape rules at the admission gate only
+b909c01d07 2026-10-01T10:46:45-07:00 fix(ci): scope the catalog data-only guard to entry PRs; diff the merge commit shallowly
+7e52bd0fa9 2026-10-01T10:46:45-07:00 fix(ci): close remaining pin-gate escapes found in review
+eb9cb6c8e1 2026-10-01T10:46:45-07:00 fix(ci): make the -I shadow guard load-bearing; widen clone timeout to 600s
+8444e9eb18 2026-10-01T10:46:45-07:00 fix(ci): confine plugin-catalog admission gate to the pinned clone
+b9204ea975 2026-10-01T10:46:10-07:00 feat(plugin-catalog): add woof
+rc=0
+# member branches: commits behind (rev-list --count <ref>..<sha>)
+refs/fork/feat/paw-pii-plugin-index cd7b9d3bcf0bf7373ab8b5893adceb7fda0ca8c6 behind_234badf401=13832 behind_34f8ec3b40=13906
+refs/fork/feat/groq-orpheus-tts 548df5dcc037e85d8ed47de57ddb75cce3661af7 behind_234badf401=20605 behind_34f8ec3b40=20679
+refs/fork/feat/tinyfish-browser-provider 739b30bc021fc2d8202b4fea8aed91c389f7fc33 behind_234badf401=39852 behind_34f8ec3b40=39926
+refs/fork/feat/spatial-canvas-upstream 486a620b5a66bd41dbe45247d4734932e17c4409 behind_234badf401=23793 behind_34f8ec3b40=23867
+# refs of this item in <bare>
+34f8ec3b407e50bad3ae27e4cd79d65212061356 refs/heads/main
+98c305b3ec8d03693f4dc94bade69035cb15ff7d refs/heads/staging/plugin-catalog-entries
+dd185c1f84a993aaadcc320399f2476bfb894b48 refs/xf/w0/plugin-catalog-entries
+# ---- appended at 2026-10-01T18:41:34Z: upstream main moved again; gh api repos/NousResearch/hermes-agent/commits/main at 18:40:55Z gives 105e8765863f23f837b19433c648de1208415f2f (committed 18:33:01Z; object present in <bare>, no ref points at it) ----
+$ git -C <bare> merge-base --is-ancestor 363e9d5f0a15ffe143d4a8b573b4898d6e428115 105e8765863f23f837b19433c648de1208415f2f
+rc=0
+$ git -C <bare> rev-list --count 34f8ec3b407e50bad3ae27e4cd79d65212061356..105e8765863f23f837b19433c648de1208415f2f
+28
+rc=0
+$ git -C <bare> rev-list --count 234badf4012af380d23c91eae55d045a69c69ffb..105e8765863f23f837b19433c648de1208415f2f
+102
+rc=0
+$ git -C <bare> merge-tree --write-tree 105e8765863f23f837b19433c648de1208415f2f 98c305b3ec8d03693f4dc94bade69035cb15ff7d
+47d51b343d325abf775e9e0da378ca068d9d1f00
+rc=0
+$ git -C <bare> diff --stat 363e9d5f0a15ffe143d4a8b573b4898d6e428115 105e8765863f23f837b19433c648de1208415f2f -- <18 invalidate_on specs> <adjacent files>
+rc=0 (empty = unchanged since 363e9d5f0a15ffe143d4a8b573b4898d6e428115, where the catalog re-measure ran)
+$ git -C <bare> cat-file -e 105e8765863f23f837b19433c648de1208415f2f:plugin-catalog/paw-pii.yaml
+absent (need still holds)

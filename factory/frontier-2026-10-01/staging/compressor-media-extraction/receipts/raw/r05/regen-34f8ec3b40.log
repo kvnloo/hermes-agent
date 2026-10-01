@@ -1,0 +1,3 @@
+facade imports from sibling: _is_image_part, _retire_stale_tool_result_images, _rewritten, _strip_historical_media, _strip_images_from_tool_msg, _summary_part_text
+import statements rewritten in: agent/chat_completion_helpers.py, agent/turn_request_assembly.py, tests/agent/test_compressor_historical_media.py, tests/agent/test_compressor_stale_tool_images.py, tests/agent/test_outbound_stale_vision.py, tests/agent/test_protected_tail_pressure.py
+text references repointed in: agent/image_eviction_policy.py, tests/agent/test_image_eviction_policy.py

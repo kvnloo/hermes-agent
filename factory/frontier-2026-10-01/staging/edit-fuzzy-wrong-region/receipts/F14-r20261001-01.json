@@ -1,0 +1,326 @@
+{
+ "schema": "xf.receipt.v1 (hand-run; F14 maps are xf.f14.verdicts.v1)",
+ "id": "F14/r20261001-01",
+ "staging": "edit-fuzzy-wrong-region",
+ "kind": "F14 standing-regression guard comparison: the staged commit cherry-picked onto main 34f8ec3b40, run twice and compared with the F14 baseline map of that main",
+ "label": "OBSERVED",
+ "measured_at": "2026-10-01T18:21Z-18:30Z",
+ "main": {
+  "sha": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+  "role": "upstream main named by the F14 baseline (base-r1 and base-r2 on this SHA)",
+  "since_proof_main": "9 commits after 44a1ce9724 (the F01/r20261001-04 proof main). git diff --name-only 44a1ce9724 34f8ec3b40 lists 10 files (agent/codex_responses_adapter.py, agent/model_metadata.py, gateway/media_policy.py and 7 test files under tests/agent, tests/gateway, tests/hermes_cli and tests/scripts/install); none is under tools/, acp_adapter/, tests/tools/, tests/acp_adapter/ or .github, and none is one of the 13 adjacent files"
+ },
+ "branch": {
+  "ref": "staging/edit-fuzzy-wrong-region",
+  "sha": "fdaaf5b7295125dd2c38bf66980e4016ce3bfb09",
+  "parent": "44a1ce9724502b9c692faaef00af3054bf11f1a6"
+ },
+ "arm": {
+  "ref": "refs/xf/w0/edit-fuzzy-wrong-region (local, scratch bare repo; not pushed)",
+  "sha": "29fa1ef9bafd848194b7896305998af8a8c1af24",
+  "parent": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+  "tree": "8481ea2357922477f73f0b41a1a33cb6a81ad719",
+  "built": [
+   "git -C <bare> worktree add --detach <worktree> 34f8ec3b40",
+   "git -C <worktree> -c user.name='Kevin Rajan' -c user.email=<kvnloo GitHub noreply address> cherry-pick fdaaf5b729 -> clean, rc 0, no conflicts",
+   "git -C <bare> update-ref refs/xf/w0/edit-fuzzy-wrong-region 29fa1ef9ba '' (new ref)"
+  ],
+  "applied_clean": true,
+  "author_kept": "author name, address and date and the full message (subject, body, six trailers) are byte-identical to fdaaf5b729; committer is Kevin Rajan (kvnloo, GitHub noreply address)",
+  "files": {
+   "tests/tools/test_fuzzy_match_wrong_region.py": {
+    "added": 106,
+    "removed": 0,
+    "blob": "e059b025c81fe9b4154c201c658d0bd07ce1e5e4",
+    "same_blob_as_branch": true
+   }
+  },
+  "merge_tree_check": "git merge-tree --write-tree 34f8ec3b40 fdaaf5b729: clean (rc 0), tree 8481ea2357, equal to the arm's tree"
+ },
+ "set": {
+  "name": "F14 standing regression set",
+  "rev": 1,
+  "sha256": "aba79fe8f09dabc62950aacd0a53c2fdc30bc58746f405f9aa050bf474d739b9",
+  "file": {
+   "path": "<xf-root>/factory/w0/f14/f14_set.json",
+   "sha256": "8b4864a72dd07b6383f98fc1e67359143216889f9c36eda79dc56fc3579044c0"
+  },
+  "probes": 19,
+  "verdict_ids": 40,
+  "flaky": []
+ },
+ "tooling": {
+  "runner": {
+   "path": "<xf-root>/factory/w0/f14/f14_run.py",
+   "sha256": "2323a5918435b06a56ca0f5f8b55d0a0c2274915f11cd31ef120649b0fad28fe"
+  },
+  "sandbox": {
+   "path": "<xf-root>/factory/w0/sandbox/xf-sandbox.sh",
+   "sha256": "c9586195c43a926317fa3d6bc18db1937527a6308dc30c683ce9c6a83398638a"
+  },
+  "probe_helpers": {
+   "readtool_direct.py": "0df21aee5fec293042bf4511b3b4c353d13d768711b8272c85b9f86438649229"
+  },
+  "same_as_baseline": true
+ },
+ "baseline": {
+  "map": {
+   "path": "<xf-root>/factory/w0/f14/baseline-34f8ec3b40.json",
+   "sha256": "a0cfdc3291783cb7f5fcfdbd81b6ef010cbc0cd82915786aea4e6176a56a1682"
+  },
+  "label": "base-r2",
+  "worktree_head": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+  "worktree_dirty": false,
+  "counts": {
+   "PASS": 36,
+   "FAIL": 4
+  },
+  "fail_ids_on_base": {
+   "postmortem/cache_estimator_probe": "rc=0 | marker absent: \"preflight_should_compress\": true",
+   "postmortem/context_cap_probe": "spawn child trigger 850000 != 200000; cycle 0 trigger 850000 cap None; cycle 1 trigger 850000 cap None; cycle 2 trigger 850000 cap None; cycle 3 trigger 850000 cap None; model switch 1000000: trigger 850000 > 200000",
+   "postmortem/notice_delivery_probe": "rc=1: KeyError: 'task_failure_notice' | marker absent: PROBE_COMPLETE",
+   "readtool/fixtures_direct_read_file::lying_extension": "failed: flagged binary"
+  },
+  "expectation_mismatches_on_base": [
+   "postmortem/context_cap_probe",
+   "postmortem/notice_delivery_probe"
+  ],
+  "note": "The 4 FAILs and 2 expectation mismatches are the baseline's own (pre-registered red, probe drift against main, and a main-side default change), deterministic across base-r1 and base-r2; they are carried unchanged here, not introduced by this arm"
+ },
+ "runs": [
+  {
+   "label": "edit-fuzzy-wrong-region-r1",
+   "arm": "arm",
+   "map": {
+    "path": "receipts/raw/f14-r20261001-01/edit-fuzzy-wrong-region-r1.json",
+    "sha256": "ec2ba84f8ccba9f02120e3130dec341d505719647628ba88fda230fd53f58360"
+   },
+   "log": {
+    "path": "receipts/raw/f14-r20261001-01/edit-fuzzy-wrong-region-r1.log",
+    "sha256": "69a349ec8361d32bc50613e9eb26eff6a7925750b48cc58074c8a495a239a057"
+   },
+   "worktree_head": "29fa1ef9bafd848194b7896305998af8a8c1af24",
+   "worktree_dirty": false,
+   "started_utc": "2026-10-01T18:22:01Z",
+   "wall_s": 129.3,
+   "counts": {
+    "PASS": 36,
+    "FAIL": 4
+   },
+   "verdict_ids": 40,
+   "blocked_exec_total": 0,
+   "infra_or_error": 0,
+   "set_sha256": "aba79fe8f09dabc62950aacd0a53c2fdc30bc58746f405f9aa050bf474d739b9",
+   "runner_sha256": "2323a5918435b06a56ca0f5f8b55d0a0c2274915f11cd31ef120649b0fad28fe",
+   "sandbox_sha256": "c9586195c43a926317fa3d6bc18db1937527a6308dc30c683ce9c6a83398638a",
+   "probe_helpers_sha256": {
+    "readtool_direct.py": "0df21aee5fec293042bf4511b3b4c353d13d768711b8272c85b9f86438649229"
+   },
+   "compare_vs_baseline": {
+    "command_rc": 0,
+    "result": "EQUAL",
+    "diff_ids": []
+   },
+   "verdicts_identical_to_baseline": true,
+   "expectation_mismatches": [
+    "postmortem/context_cap_probe",
+    "postmortem/notice_delivery_probe"
+   ]
+  },
+  {
+   "label": "edit-fuzzy-wrong-region-r2",
+   "arm": "arm",
+   "map": {
+    "path": "receipts/raw/f14-r20261001-01/edit-fuzzy-wrong-region-r2.json",
+    "sha256": "630440e646be7ef0493c6c7bde09d7dec24ae8bb9c5bd6b3fe2306f230447191"
+   },
+   "log": {
+    "path": "receipts/raw/f14-r20261001-01/edit-fuzzy-wrong-region-r2.log",
+    "sha256": "e52a86053249cf2ff21ea7cd31f93a847af5e9cd4320de0c007feec9fd53dfdc"
+   },
+   "worktree_head": "29fa1ef9bafd848194b7896305998af8a8c1af24",
+   "worktree_dirty": false,
+   "started_utc": "2026-10-01T18:24:25Z",
+   "wall_s": 75.8,
+   "counts": {
+    "PASS": 36,
+    "FAIL": 4
+   },
+   "verdict_ids": 40,
+   "blocked_exec_total": 0,
+   "infra_or_error": 0,
+   "set_sha256": "aba79fe8f09dabc62950aacd0a53c2fdc30bc58746f405f9aa050bf474d739b9",
+   "runner_sha256": "2323a5918435b06a56ca0f5f8b55d0a0c2274915f11cd31ef120649b0fad28fe",
+   "sandbox_sha256": "c9586195c43a926317fa3d6bc18db1937527a6308dc30c683ce9c6a83398638a",
+   "probe_helpers_sha256": {
+    "readtool_direct.py": "0df21aee5fec293042bf4511b3b4c353d13d768711b8272c85b9f86438649229"
+   },
+   "compare_vs_baseline": {
+    "command_rc": 0,
+    "result": "EQUAL",
+    "diff_ids": []
+   },
+   "verdicts_identical_to_baseline": true,
+   "expectation_mismatches": [
+    "postmortem/context_cap_probe",
+    "postmortem/notice_delivery_probe"
+   ]
+  }
+ ],
+ "r1_vs_r2": {
+  "command": "f14_run.py compare <r1 map> <r2 map>",
+  "command_rc": 0,
+  "result": "EQUAL"
+ },
+ "supplementary_green_arm": {
+  "why": "Not asked by the F14 task; added because this manifest's own queued F14 step named the fix tree ($RUN/wt/fix = main + #54575 + 5f3f5896a4 + fold-in). The staged commit is test-only and no F14 probe reaches the edit path, so the arm comparison alone cannot show a regression from the carriers' production change.",
+  "built": [
+   "git -C <bare> worktree add --detach <worktree-green> 29fa1ef9ba (the arm)",
+   "git apply c54575-rebased-on-main.diff (clean)",
+   "git diff 5f3f5896a4^ 5f3f5896a4 | git apply (clean)",
+   "git apply foldin-125376-stripped-guard.diff (clean)",
+   "left uncommitted (overlay, the way F01 built its arms), so the maps record worktree_dirty = true and worktree_head = the arm"
+  ],
+  "numstat_vs_arm": {
+   "tools/fuzzy_match.py": [
+    36,
+    0
+   ],
+   "tests/tools/test_fuzzy_match.py": [
+    84,
+    0
+   ],
+   "tests/tools/test_file_tools_live.py": [
+    69,
+    0
+   ]
+  },
+  "fuzzy_match_sha256": "145fb70356117a9ab7a9356f8f40f8257d7bdfd5ff045510d19b47cbbf6fc9a7",
+  "fuzzy_match_matches_F01_r04_both_fold": true,
+  "overlay_diff_sha256": "7cdb1730a195a1ad53a19ca344a0ecf068d6e73a8e5a9dd2afc5dea6ef298f00",
+  "overlay_unchanged_after_runs": true,
+  "runs": [
+   {
+    "label": "edit-fuzzy-wrong-region-green-r1",
+    "arm": "green (supplementary)",
+    "map": {
+     "path": "receipts/raw/f14-r20261001-01/edit-fuzzy-wrong-region-green-r1.json",
+     "sha256": "cc0e635a79bb18a0392aabf718c07e0bcb16b296dbdacea8fd63e9273dce8c7a"
+    },
+    "log": {
+     "path": "receipts/raw/f14-r20261001-01/edit-fuzzy-wrong-region-green-r1.log",
+     "sha256": "9aa375fbde68422d66b13e0c5f9af91defeb65eaa6a3dc3dca8571b972c3efd9"
+    },
+    "worktree_head": "29fa1ef9bafd848194b7896305998af8a8c1af24",
+    "worktree_dirty": true,
+    "started_utc": "2026-10-01T18:27:18Z",
+    "wall_s": 86.8,
+    "counts": {
+     "PASS": 36,
+     "FAIL": 4
+    },
+    "verdict_ids": 40,
+    "blocked_exec_total": 0,
+    "infra_or_error": 0,
+    "set_sha256": "aba79fe8f09dabc62950aacd0a53c2fdc30bc58746f405f9aa050bf474d739b9",
+    "runner_sha256": "2323a5918435b06a56ca0f5f8b55d0a0c2274915f11cd31ef120649b0fad28fe",
+    "sandbox_sha256": "c9586195c43a926317fa3d6bc18db1937527a6308dc30c683ce9c6a83398638a",
+    "probe_helpers_sha256": {
+     "readtool_direct.py": "0df21aee5fec293042bf4511b3b4c353d13d768711b8272c85b9f86438649229"
+    },
+    "compare_vs_baseline": {
+     "command_rc": 0,
+     "result": "EQUAL",
+     "diff_ids": []
+    },
+    "verdicts_identical_to_baseline": true,
+    "expectation_mismatches": [
+     "postmortem/context_cap_probe",
+     "postmortem/notice_delivery_probe"
+    ]
+   },
+   {
+    "label": "edit-fuzzy-wrong-region-green-r2",
+    "arm": "green (supplementary)",
+    "map": {
+     "path": "receipts/raw/f14-r20261001-01/edit-fuzzy-wrong-region-green-r2.json",
+     "sha256": "7bdfe0654f1a2f0d62c85a03ab648a34c5af5d48be764d586fdf7454cbc45874"
+    },
+    "log": {
+     "path": "receipts/raw/f14-r20261001-01/edit-fuzzy-wrong-region-green-r2.log",
+     "sha256": "52b4ad25ee47a5ce69bfefbec91196863ea1b3edb86418f955c09172846facde"
+    },
+    "worktree_head": "29fa1ef9bafd848194b7896305998af8a8c1af24",
+    "worktree_dirty": true,
+    "started_utc": "2026-10-01T18:28:45Z",
+    "wall_s": 52.5,
+    "counts": {
+     "PASS": 36,
+     "FAIL": 4
+    },
+    "verdict_ids": 40,
+    "blocked_exec_total": 0,
+    "infra_or_error": 0,
+    "set_sha256": "aba79fe8f09dabc62950aacd0a53c2fdc30bc58746f405f9aa050bf474d739b9",
+    "runner_sha256": "2323a5918435b06a56ca0f5f8b55d0a0c2274915f11cd31ef120649b0fad28fe",
+    "sandbox_sha256": "c9586195c43a926317fa3d6bc18db1937527a6308dc30c683ce9c6a83398638a",
+    "probe_helpers_sha256": {
+     "readtool_direct.py": "0df21aee5fec293042bf4511b3b4c353d13d768711b8272c85b9f86438649229"
+    },
+    "compare_vs_baseline": {
+     "command_rc": 0,
+     "result": "EQUAL",
+     "diff_ids": []
+    },
+    "verdicts_identical_to_baseline": true,
+    "expectation_mismatches": [
+     "postmortem/context_cap_probe",
+     "postmortem/notice_delivery_probe"
+    ]
+   }
+  ],
+  "result": "EQUAL (both runs, every verdict id, verdict + marker + fingerprint)"
+ },
+ "comparison_rule": "f14_run.py compare <baseline> <map>: per verdict id, (verdict, marker, fingerprint) must be equal; flaky ids are excluded (the set lists none); a different set hash or an --only run is NOT COMPARABLE (exit 2). Every map here has the baseline's set hash and no --only",
+ "scope": "No probe in f14_set.json and nothing in probes/readtool_direct.py names tools/fuzzy_match.py, fuzzy_find_and_replace, patch_replace, patch_v4a or tools/file_operations.py (grep), and tools.fuzzy_match is imported lazily inside the patch functions only. F14 is therefore a no-collateral-regression guard for this item: it shows the arm (and the green overlay) leave the 40 standing verdicts unchanged. The wrong-region contract itself is proven by F01/r20261001-04 (RED, GREEN 3/3, per-hunk sabotage, adjacent).",
+ "verdict": "EQUAL",
+ "f14": "EQUAL",
+ "commands": [
+  "cd <xf-root>/factory/w0/f14 && PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py run <worktree> maps/edit-fuzzy-wrong-region-r1.json --label edit-fuzzy-wrong-region-r1",
+  "PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py compare baseline-34f8ec3b40.json maps/edit-fuzzy-wrong-region-r1.json  # rc 0 EQUAL",
+  "(same for -r2; then compare r1 r2: rc 0 EQUAL)",
+  "(same for -green-r1 and -green-r2 on <worktree-green>: each rc 0 EQUAL against the baseline)"
+ ],
+ "env": {
+  "host": "<local-workstation> (name withheld)",
+  "sandbox": "bwrap via xf-sandbox.sh: one fresh sandbox, process and run dir per probe (<run> = <xf-root>/factory/w0/runs/<label>/<NN>-<probe>), created with exist_ok=False",
+  "HOME": "<run>/home",
+  "HERMES_HOME": "<run>/home/.hermes",
+  "python": "<venv>/bin/python (interpreter only, read-only)",
+  "network": "none beyond loopback; no model, no provider, no credentials",
+  "concurrency": "serial within each run; other items' F14 runs shared the machine, so wall_s varies (52.5 s to 129.3 s) while every verdict stays identical"
+ },
+ "run_dirs": "<xf-root>/factory/w0/runs/edit-fuzzy-wrong-region-r1/, -r2/, -green-r1/, -green-r2/ (private, kept; the maps and logs are copied into receipts/raw/f14-r20261001-01/)",
+ "housekeeping": {
+  "worktrees": "both worktrees (arm, green) removed with git worktree remove --force, then git worktree prune",
+  "refs_created": [
+   "refs/xf/w0/edit-fuzzy-wrong-region -> 29fa1ef9ba"
+  ],
+  "refs_unchanged": {
+   "refs/heads/main": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+   "refs/heads/staging/edit-fuzzy-wrong-region": "fdaaf5b7295125dd2c38bf66980e4016ce3bfb09"
+  },
+  "pushed": false,
+  "github_writes": 0
+ },
+ "not_tested": [
+  "The F14 set does not reach the edit path (see scope); F14 equality says nothing about the wrong-region contract, which F01 covers",
+  "Probes the F14 set excludes (live or paid probes, goal_repaste_probe, the 4 sandbox-denylisted live_ab probes), as listed in the set"
+ ],
+ "resource_usage": {
+  "cost_usd": 0,
+  "wall_s_total": 344.4
+ },
+ "ai_assistance": "Claude Code (Opus 5.5) built the arm, ran the F14 runs and comparisons and wrote this receipt",
+ "privacy": "public-aggregate: placeholders only (<xf-root>, <bare>, <worktree>, <worktree-green>, <run>, <runs>, <venv>); no host name, no email addresses, no credentials; this receipt and the copied maps and logs were scanned for absolute local path prefixes, the host name and email patterns (the only hits are the <run>/home placeholders)"
+}

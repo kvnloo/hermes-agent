@@ -1,0 +1,2092 @@
+{
+ "id": "path-redaction-r7",
+ "item": "memory-prefetch-metric",
+ "at": "2026-10-01T19:12:01Z",
+ "label": "OBSERVED",
+ "why": "fresh verifier BLOCKING privacy finding (check c): files under work/ printed absolute local paths and the host name",
+ "command": "cd <staging>/work/r7 && PYTHONDONTWRITEBYTECODE=1 python3 -B redact_r7.py <staging> --scratch <scratchpad dir> --artifacts <artifacts root> --hermes-home <live install root> --host <host name> --pytest-base <pytest base> --user <local user> --ledger-tsv <run>/ledger_tree.tsv --ledger-prefix factory/frontier-2026-10-01/staging/memory-prefetch-metric/",
+ "rules": [
+  {
+   "step": 1,
+   "from": "<scratchpad dir>",
+   "to": "$S"
+  },
+  {
+   "step": 1,
+   "from": "<artifacts root>",
+   "to": "$ARTIFACTS"
+  },
+  {
+   "step": 1,
+   "from": "<live install root>",
+   "to": "<hermes-home>"
+  },
+  {
+   "step": 1,
+   "from": "<host name>",
+   "to": "<local-host>"
+  },
+  {
+   "step": 2,
+   "from": "<pytest base>/r-<random>/pytest-of-<local user>/pytest-<n>",
+   "to": "<pytest-tmp>"
+  }
+ ],
+ "step1_note": "step 1 is the owner's claude/ledger a3e1aa4878 scrub; step1_equals_ledger says it reproduces that copy's blob byte for byte",
+ "originals": "private/as-written/<path>: byte-identical to the file as written (sha256_as_written), kept for checking the receipts' cited hashes; private/ is never published",
+ "receipts_unchanged": true,
+ "summary": {
+  "files_rewritten": 102,
+  "step1_equals_ledger": 102,
+  "final_equals_ledger": 47,
+  "files_with_pytest_tmp": 55,
+  "as_written_hash_cited": 73,
+  "publishable_files_scanned": 203,
+  "scan_hits": 0,
+  "scan_allowed": 15
+ },
+ "files": [
+  {
+   "path": "work/adjacent_base.log",
+   "sha256_as_written": "cdeb761186fb57333a52af5da6221beee9d328d52fd8ee6ac4aad3e207660a60",
+   "sha256": "317909caf816235e1c8d9805898ef32d2dc88456496bbc6184e23a5a6d79686f",
+   "git_blob": "b25b6080dc4d52af3b44301406ab29f75439bece",
+   "bytes_as_written": 3088,
+   "bytes": 3079,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/adjacent_base.log",
+   "ledger_a3e1aa4878_blob": "b25b6080dc4d52af3b44301406ab29f75439bece",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": []
+  },
+  {
+   "path": "work/adjacent_head.log",
+   "sha256_as_written": "d8ef747f01789dfebb772cb3166eb98f587d65f8e4e354e02912242ca06f7c73",
+   "sha256": "c82832b4a54c741289dfb1066b3b99778a38ef537efa2097e82a09d28204a76a",
+   "git_blob": "4ac2bb5108ccc6b82aede2ae87723447fbfc41cb",
+   "bytes_as_written": 3088,
+   "bytes": 3079,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/adjacent_head.log",
+   "ledger_a3e1aa4878_blob": "4ac2bb5108ccc6b82aede2ae87723447fbfc41cb",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": []
+  },
+  {
+   "path": "work/e17_prefetch_fault_probe.py",
+   "sha256_as_written": "14db2ff5cc8f144781fa0b952b99c9ef59aee26a563516cb0a64c5f9afd4f9de",
+   "sha256": "ebe77e736463ff8e3bf04f699824ed092f5f276665aeb099a93d463d9e3516bc",
+   "git_blob": "faf79a11401d356810f8f592eda067f6b9e69ef3",
+   "bytes_as_written": 16358,
+   "bytes": 16281,
+   "replacements": {
+    "<scratchpad dir>": 1
+   },
+   "original_copy": "private/as-written/work/e17_prefetch_fault_probe.py",
+   "ledger_a3e1aa4878_blob": "faf79a11401d356810f8f592eda067f6b9e69ef3",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "receipts/E17-r20261001-01.json",
+    "receipts/E17-r20261001-02.json",
+    "receipts/E17-r20261001-03.json",
+    "receipts/E17-r20261001-04.json"
+   ]
+  },
+  {
+   "path": "work/e17_result.json",
+   "sha256_as_written": "2fa516e0325dd553bbd6100221532653dad9fa2a0cc2cd995b0d1f17dbe0a599",
+   "sha256": "edc7e7204c8ccde83bcb895bda17156373baab4d1068afe4bacf6aac551edde8",
+   "git_blob": "1c93bc50fe980d397f0447be306979b99478a994",
+   "bytes_as_written": 9122,
+   "bytes": 9050,
+   "replacements": {
+    "<artifacts root>": 2
+   },
+   "original_copy": "private/as-written/work/e17_result.json",
+   "ledger_a3e1aa4878_blob": "1c93bc50fe980d397f0447be306979b99478a994",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "receipts/E17-r20261001-01.json",
+    "receipts/E17-r20261001-02.json",
+    "receipts/E17-r20261001-03.json"
+   ]
+  },
+  {
+   "path": "work/e17c_holographic_probe.py",
+   "sha256_as_written": "240178e8fa5415ae3cbd0698a0520f177c66c4017158291d62b53aa300df78ba",
+   "sha256": "b07776fa1687cc4d0ba02c9840d1627e9cb6efc033a920f9da52f3184e0fe642",
+   "git_blob": "6ba2a770bf5f5fdee60e5f48a0f72f60fc9ad3c5",
+   "bytes_as_written": 4173,
+   "bytes": 4096,
+   "replacements": {
+    "<scratchpad dir>": 1
+   },
+   "original_copy": "private/as-written/work/e17c_holographic_probe.py",
+   "ledger_a3e1aa4878_blob": "6ba2a770bf5f5fdee60e5f48a0f72f60fc9ad3c5",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "receipts/E17-r20261001-02.json",
+    "receipts/E17-r20261001-03.json",
+    "receipts/E17-r20261001-04.json"
+   ]
+  },
+  {
+   "path": "work/green_1.log",
+   "sha256_as_written": "c56314759b86474db38becae5c6d9e732b802bd1bdbdf7b9a9769e555a4a38d3",
+   "sha256": "70d54c1a317276a6abafd841a3db0223c096f3c8684b266329da3b9338745e2b",
+   "git_blob": "db897b07a5402e11361d637756fc16599594c661",
+   "bytes_as_written": 932,
+   "bytes": 923,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/green_1.log",
+   "ledger_a3e1aa4878_blob": "db897b07a5402e11361d637756fc16599594c661",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-01.json"
+   ]
+  },
+  {
+   "path": "work/green_2.log",
+   "sha256_as_written": "e969fbe1f7ce4f94cbbcace0b6bdeabdca0f949f8cf9c4d5359aefc8348286b3",
+   "sha256": "df49fe8d9342832be277433fce9ab9aad945aa15dd540b914e88b3fdd45526a9",
+   "git_blob": "1d143af30490edf125d2c588d9d1a2b1a9a9a421",
+   "bytes_as_written": 932,
+   "bytes": 923,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/green_2.log",
+   "ledger_a3e1aa4878_blob": "1d143af30490edf125d2c588d9d1a2b1a9a9a421",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-01.json"
+   ]
+  },
+  {
+   "path": "work/green_3.log",
+   "sha256_as_written": "113c444a19a2580974ae7d7925f8150b3fdbe36c8ce8835b4f9c77590c3b3251",
+   "sha256": "259bdaf11cff75409589ccde8d444471da9783f470fd821577fd1b9a8b3e3ce1",
+   "git_blob": "ecc39707c2d3b0ba45835a6abbd7e4c996e82dec",
+   "bytes_as_written": 932,
+   "bytes": 923,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/green_3.log",
+   "ledger_a3e1aa4878_blob": "ecc39707c2d3b0ba45835a6abbd7e4c996e82dec",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-01.json"
+   ]
+  },
+  {
+   "path": "work/make_receipts.py",
+   "sha256_as_written": "7ca7ad53badf4801aeda6cddbd7ff6dc9952fbb0af74a53c8627c20aeff171ad",
+   "sha256": "855f9b076bb215cb21df67875202f935365369d2f51da54e41c5a694f7cf24b6",
+   "git_blob": "af748e9c1c362c5d75b4ef2d4650d37bf5634911",
+   "bytes_as_written": 18641,
+   "bytes": 18481,
+   "replacements": {
+    "<scratchpad dir>": 1,
+    "<artifacts root>": 2,
+    "<live install root>": 2,
+    "<host name>": 1
+   },
+   "original_copy": "private/as-written/work/make_receipts.py",
+   "ledger_a3e1aa4878_blob": "af748e9c1c362c5d75b4ef2d4650d37bf5634911",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": []
+  },
+  {
+   "path": "work/merge_124151_tests.log",
+   "sha256_as_written": "a5fd874f549f1a469948f46c9587ee1ea01df9e0f43737c02442a1b486ff4cec",
+   "sha256": "716ea2864b33b6e610dc25997f35424a6b28a69d7692525caaf5c9efcfd36760",
+   "git_blob": "695dbcd513e3ddf6bc0b5d662332e89602c0fd95",
+   "bytes_as_written": 1112,
+   "bytes": 1103,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/merge_124151_tests.log",
+   "ledger_a3e1aa4878_blob": "695dbcd513e3ddf6bc0b5d662332e89602c0fd95",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "receipts/MERGE-r20261001-01.json"
+   ]
+  },
+  {
+   "path": "work/micro_gate_cost.py",
+   "sha256_as_written": "2e0960442d0d0def4ee7e0c1c6c0b58d773c8b60b23ffdf316134542653d98dc",
+   "sha256": "040ad3d00e2ca5c2bb4ac66953598509d4869cdeeb380bdaaeb0fae41dcf6dcc",
+   "git_blob": "0c88434b9ce7a857305d456fd2e0bfa68e05eeb3",
+   "bytes_as_written": 3390,
+   "bytes": 3313,
+   "replacements": {
+    "<scratchpad dir>": 1
+   },
+   "original_copy": "private/as-written/work/micro_gate_cost.py",
+   "ledger_a3e1aa4878_blob": "0c88434b9ce7a857305d456fd2e0bfa68e05eeb3",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "receipts/E17-r20261001-01.json",
+    "receipts/E17-r20261001-02.json",
+    "receipts/E17-r20261001-03.json"
+   ]
+  },
+  {
+   "path": "work/mpm_prove.py",
+   "sha256_as_written": "9f0e98fc8dcf946de4ca79aacf619d9822866f6a6dff340215425f320ec7e9f9",
+   "sha256": "efec7e99f11f7aa39b2f1180a0069e33afc340ade5ceee0657ed378bcd46ebf3",
+   "git_blob": "017f6bba8f57a6d22ca8a55de01cf62894cdc11a",
+   "bytes_as_written": 7018,
+   "bytes": 6860,
+   "replacements": {
+    "<scratchpad dir>": 1,
+    "<artifacts root>": 2,
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/mpm_prove.py",
+   "ledger_a3e1aa4878_blob": "017f6bba8f57a6d22ca8a55de01cf62894cdc11a",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": []
+  },
+  {
+   "path": "work/prove_results.json",
+   "sha256_as_written": "0aca3d68ead9b274fa189ead53bfb9242bee83432d79c842c9ae919b0b6e9b15",
+   "sha256": "5821aab883d511a1e98ddbc4f6f1454793addbdc79a410815fb541e946ae63f5",
+   "git_blob": "c329c54c40cb31be5eb2f60e699301e2e9acd3a9",
+   "bytes_as_written": 16503,
+   "bytes": 15999,
+   "replacements": {
+    "<artifacts root>": 14
+   },
+   "original_copy": "private/as-written/work/prove_results.json",
+   "ledger_a3e1aa4878_blob": "c329c54c40cb31be5eb2f60e699301e2e9acd3a9",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-01.json"
+   ]
+  },
+  {
+   "path": "work/red.log",
+   "sha256_as_written": "60e9aca94b87dac9a496c83cbfc073319c67b80b89bcf3fb072c6f319c0ae048",
+   "sha256": "7dba44387b9da77388780dcbac33c792d857484f0aff925d4647184474cbe4c9",
+   "git_blob": "e65b1812a188e8380b540a3051e4dce1e7ab5686",
+   "bytes_as_written": 6168,
+   "bytes": 6110,
+   "replacements": {
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/red.log",
+   "ledger_a3e1aa4878_blob": "6fe56aab07e345b93b3d48696f672d00d5b54a6a",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-01.json"
+   ]
+  },
+  {
+   "path": "work/red_run1.log",
+   "sha256_as_written": "acbc6e5b3f19c3dc2fba56806533d427cb0a9fad4e9f01daed0d47795b22fdbf",
+   "sha256": "ad6dbf3fe53bfa3dfc001bfdc48c7565ac109cffc5747f83fa526ab4e4cd44ab",
+   "git_blob": "45bc63fca430d81e34f3cae7a6c080b34a7b26db",
+   "bytes_as_written": 6168,
+   "bytes": 6110,
+   "replacements": {
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/red_run1.log",
+   "ledger_a3e1aa4878_blob": "fa4303e40a3cc4cf2d4c41cd1c055570ba1c33b6",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": []
+  },
+  {
+   "path": "work/sabotage_S1-skip-exit.log",
+   "sha256_as_written": "cfce0ea130fc85a759e085b6ad5c9993faba98063ca5d5cb5602bdcfe081652d",
+   "sha256": "b2e19dbe118ceb958fe60a29a6b1a13ceb3035716f82123f0c47c342d7ee118c",
+   "git_blob": "49c8b46f7d1ad6f0d3a7e6579672de14181d7624",
+   "bytes_as_written": 7177,
+   "bytes": 6975,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/sabotage_S1-skip-exit.log",
+   "ledger_a3e1aa4878_blob": "6e87fff455b498cdba25ca88be68588d74b44678",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-01.json"
+   ]
+  },
+  {
+   "path": "work/sabotage_S2-timeout-exit.log",
+   "sha256_as_written": "a22c25c02eff3e40d36a6a81428ddffb44fe4d1d23d35529a59be7b6e3b2c2ac",
+   "sha256": "dcd3a0248d57042b3cc27c2fe4e33a9c0dfa57584f4c91f5cbdd550b0e28ef55",
+   "git_blob": "b4feee252f0d889ed7b059bc9beea276fafbb305",
+   "bytes_as_written": 7193,
+   "bytes": 6991,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/sabotage_S2-timeout-exit.log",
+   "ledger_a3e1aa4878_blob": "f0b026021138f8fa25596c5fa1266a25e856e860",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-01.json"
+   ]
+  },
+  {
+   "path": "work/sabotage_S3-error-exit.log",
+   "sha256_as_written": "b9b41558a81a5049fe44dff1da593323d7950e375e804266200a04db5b124410",
+   "sha256": "80dd400ae0639e59d2dfc32e94d61d1c404203349fd27918f3892a94e32997a1",
+   "git_blob": "472ff615ae0e2384577bfe892c871d2c3207c74b",
+   "bytes_as_written": 7185,
+   "bytes": 6983,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/sabotage_S3-error-exit.log",
+   "ledger_a3e1aa4878_blob": "e8020927efed367f0aa793182f7d1b9b40471113",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-01.json"
+   ]
+  },
+  {
+   "path": "work/sabotage_S4-success-empty-exit.log",
+   "sha256_as_written": "cfe1beeafcc6f7afc7661fa7fe7545c8ed9515fa820e1e977a68ddbf9d71d063",
+   "sha256": "6e7aa9dec5bb02f080ee2cc28bbcc124dfd21ce6694719c1065ec5e1bc54cf97",
+   "git_blob": "387280f466210a20da1918b58a7f19963f7b3ac9",
+   "bytes_as_written": 7247,
+   "bytes": 7045,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/sabotage_S4-success-empty-exit.log",
+   "ledger_a3e1aa4878_blob": "60bfba7e8f5ea72660fe1793f922ea2eabab1342",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-01.json"
+   ]
+  },
+  {
+   "path": "work/sabotage_S5-mark-to-metric-mapping.log",
+   "sha256_as_written": "b7f3cf83eb512c290288e10b5d4d16628134d7eac364f4c96a591938792bcd17",
+   "sha256": "971c603ce774eda5713001a462b7dac0c1f364b6b7d53bed33be7dd94643e641",
+   "git_blob": "8b2525070fe688b9df8e805b7f633409999244fa",
+   "bytes_as_written": 7221,
+   "bytes": 7019,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/sabotage_S5-mark-to-metric-mapping.log",
+   "ledger_a3e1aa4878_blob": "98d707050990f79bbf1d95334750c229c207123e",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-01.json"
+   ]
+  },
+  {
+   "path": "work/sabotage_S6-provider-rule-raw-name.log",
+   "sha256_as_written": "d4cc92bd1f22a6c7fbee06e333dd23a53add0f70d5da1104330957ecdafe1053",
+   "sha256": "b9b5c111d6e964d8d0c2f32ba466c7f2f5a856e2a8ca31896514746ce8cf4f87",
+   "git_blob": "448c81397fe29f0fcc7bd909974be5d7d2020e7e",
+   "bytes_as_written": 7234,
+   "bytes": 7032,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/sabotage_S6-provider-rule-raw-name.log",
+   "ledger_a3e1aa4878_blob": "008b26ca3b6f83d53418f5c9b3eec16fc97fa229",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-01.json"
+   ]
+  },
+  {
+   "path": "work/sabotage_S7-outcome-vocabulary-drift.log",
+   "sha256_as_written": "0dce52226580110638a8506771e09397d7b67ea5577092f1ef639dbfabf697b8",
+   "sha256": "6270933ed3e005dbbc2d0e450c6e18a29557e18e64209bd4f73e78c478bbf0ff",
+   "git_blob": "a79e87ee55c15b045f05e8eed446fdfabc49cd1f",
+   "bytes_as_written": 7223,
+   "bytes": 7021,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/sabotage_S7-outcome-vocabulary-drift.log",
+   "ledger_a3e1aa4878_blob": "881eeffa8f84a4b8168bd3492cb2f4d34509f98d",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-01.json"
+   ]
+  },
+  {
+   "path": "work/sabotage_S8-latency-not-measured.log",
+   "sha256_as_written": "5cdd2fc8c4cedd306d9a3cbd9032caa991a48416e948455093532589667f27fa",
+   "sha256": "7045ede5908ddc8a72dbc1b42a4a4df3f15835cee0802393dd20aceee4f94667",
+   "git_blob": "b40ee351171cf571a4c12f4eb56242db37ca9a67",
+   "bytes_as_written": 7217,
+   "bytes": 7015,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/sabotage_S8-latency-not-measured.log",
+   "ledger_a3e1aa4878_blob": "760d30a31114b548b8fdc3ec9acc6659017054e7",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-01.json"
+   ]
+  },
+  {
+   "path": "work/r2/make_receipts_r2.py",
+   "sha256_as_written": "27f6d1e3da217902511d3f943eb43883c75db3ff283b14a52102146084d2d09a",
+   "sha256": "bfdc3aab1fdac258c8c1a47b94652635d1e463bc1c1999049fa7a127389662aa",
+   "git_blob": "34b313ab3f7d6a142b1124b22696b6e9ca0adadc",
+   "bytes_as_written": 23126,
+   "bytes": 23133,
+   "replacements": {
+    "<host name>": 1
+   },
+   "original_copy": "private/as-written/work/r2/make_receipts_r2.py",
+   "ledger_a3e1aa4878_blob": "34b313ab3f7d6a142b1124b22696b6e9ca0adadc",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": []
+  },
+  {
+   "path": "work/r2/merged_124151_tests.log",
+   "sha256_as_written": "184765e94f923b7d500252dacb1287d9c7fb7b76aa960ea07bd9f7a8e39bc061",
+   "sha256": "62d95573a853383fd534df7f789837aea3b4f4fe17dc41ba84bb41bda8742f4d",
+   "git_blob": "67a8a35558ddf67464001007ec8e688a4ad39d1c",
+   "bytes_as_written": 1112,
+   "bytes": 1103,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/r2/merged_124151_tests.log",
+   "ledger_a3e1aa4878_blob": "67a8a35558ddf67464001007ec8e688a4ad39d1c",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "receipts/MERGE-r20261001-02.json"
+   ]
+  },
+  {
+   "path": "work/r2/prove/adjacent_base.log",
+   "sha256_as_written": "e109a7ab6e7d903424d06f7fe5b90a22886ce398d25e4c1247aa66c0008a2770",
+   "sha256": "862f938d2be4b1d341216e743788fa8167e4181cbd19d434dee78ccd31b9f23c",
+   "git_blob": "61d48b37a188f4ba74bd14a566a9bb942cd35e31",
+   "bytes_as_written": 3090,
+   "bytes": 3081,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/r2/prove/adjacent_base.log",
+   "ledger_a3e1aa4878_blob": "61d48b37a188f4ba74bd14a566a9bb942cd35e31",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "work/r2/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r2/prove/adjacent_head.log",
+   "sha256_as_written": "b1efbd48b7deaa5a250de9c128b0d2dc357407258b849e2c465e52e39154d803",
+   "sha256": "8eacef0c77466692fbef2089bdf44c0f9ae06ed4704c64d2a558cdfc9c3a5e2f",
+   "git_blob": "b23ef0c4448256ffe5767fa108de164d41aadb1c",
+   "bytes_as_written": 3090,
+   "bytes": 3081,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/r2/prove/adjacent_head.log",
+   "ledger_a3e1aa4878_blob": "b23ef0c4448256ffe5767fa108de164d41aadb1c",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "work/r2/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r2/prove/green_1.log",
+   "sha256_as_written": "1bccda3c5b529faed6176b486ce5c89e3631534a5374927cd2cc0f22c4ee9ee4",
+   "sha256": "ed9a71dc7e8a85c22bbeb3255743efe0f12b2ea5471b0a0ad35157f1b6fb69e0",
+   "git_blob": "b1483a4d5a45a672af6b1c2d53e00b84b9a3857c",
+   "bytes_as_written": 932,
+   "bytes": 923,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/r2/prove/green_1.log",
+   "ledger_a3e1aa4878_blob": "b1483a4d5a45a672af6b1c2d53e00b84b9a3857c",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-02.json",
+    "work/r2/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r2/prove/green_2.log",
+   "sha256_as_written": "80e6e014b772a26fb4b090f664bea00e6509e1b8a017c23672377356372b36ff",
+   "sha256": "220671cbebd6801bc28fd4e926cc34698ed3936646a4bb5ef47b4b46eb56a9c4",
+   "git_blob": "b0b8d6821dfac9ab964a4638e950789666eda94f",
+   "bytes_as_written": 932,
+   "bytes": 923,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/r2/prove/green_2.log",
+   "ledger_a3e1aa4878_blob": "b0b8d6821dfac9ab964a4638e950789666eda94f",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-02.json",
+    "work/r2/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r2/prove/green_3.log",
+   "sha256_as_written": "12d6fc79d29a24d9a108241afc5d27b38e91edf0d42288129a7ab7ec8a11d390",
+   "sha256": "765fe56eb6a71870b93057e1f7aae2c98322277263451e6eac946da1b3d13ed7",
+   "git_blob": "1c1b56ad43c0dfcada7e96c41b0ed202e5f5b739",
+   "bytes_as_written": 932,
+   "bytes": 923,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/r2/prove/green_3.log",
+   "ledger_a3e1aa4878_blob": "1c1b56ad43c0dfcada7e96c41b0ed202e5f5b739",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-02.json",
+    "work/r2/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r2/prove/red.log",
+   "sha256_as_written": "5572733dd184f14248880e2180b4ee3540fe92d0e195483279f81ac581b7d30d",
+   "sha256": "f4f68feb0b2a778bbe4eda85bee3511d66f872bfeecdc7e3fe1f75585b4d3fe8",
+   "git_blob": "3554d9edacaacd0d702497c4f23cf1a0a1a08640",
+   "bytes_as_written": 6168,
+   "bytes": 6110,
+   "replacements": {
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r2/prove/red.log",
+   "ledger_a3e1aa4878_blob": "92d4816c620cc42da402cf508cd496c0d3869122",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-02.json",
+    "work/r2/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r2/prove/sabotage_S1-skip-exit.log",
+   "sha256_as_written": "ea507ef7ef9f6b08436b81bf25faec720b010dce361474baaed796aa8a89cb04",
+   "sha256": "fe653b97c2feff9ee537b20a7b9628ca582d443c14f0bfd888214d26d1eb23b4",
+   "git_blob": "f6990bb78f0c17c8e6fbfe84c5663fdefa3a8d40",
+   "bytes_as_written": 7169,
+   "bytes": 6967,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r2/prove/sabotage_S1-skip-exit.log",
+   "ledger_a3e1aa4878_blob": "7a49923e0e5e796e1cf76c288603efc1e9c2cfe1",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-02.json",
+    "work/r2/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r2/prove/sabotage_S2-timeout-exit.log",
+   "sha256_as_written": "36c025fd729193d42eec891264a683970a5ab3b78656de80b57131bec688691e",
+   "sha256": "adeff85cf0a3b9fc727cd8490b1f157bef63c653808796ab6900683a1d0b1302",
+   "git_blob": "1f6a6815a3cdaabe70946cd621c23826c7717416",
+   "bytes_as_written": 7185,
+   "bytes": 6983,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r2/prove/sabotage_S2-timeout-exit.log",
+   "ledger_a3e1aa4878_blob": "233096f53d426be2ca04b0206f18ed4af932814e",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-02.json",
+    "work/r2/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r2/prove/sabotage_S3-error-exit.log",
+   "sha256_as_written": "2f1db4d20de3870edfeb7fe1ddedc641e5c65f164f7a5fef545e653ef524019f",
+   "sha256": "f799dee451678060ef1ca041dee023c66c4c571f48bdea3ef1726dd91fc3ddf5",
+   "git_blob": "2cdd46574afdecfdf44134b0d1a3833e060f0722",
+   "bytes_as_written": 7177,
+   "bytes": 6975,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r2/prove/sabotage_S3-error-exit.log",
+   "ledger_a3e1aa4878_blob": "1b64f9301f0f677e43a600ca06b7f5d6dd465420",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-02.json",
+    "work/r2/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r2/prove/sabotage_S4-success-empty-exit.log",
+   "sha256_as_written": "aa5c6f1ce0432d636083d9641bb6f99416aeea120a177813df6a0cafb79f654c",
+   "sha256": "2191ba96cbb050e9dd3d944f0d40def7bcfcae3b198ecaf44c5bddf6eef9ca18",
+   "git_blob": "2a9dd9b0abff79e5b3790ccd38b2fd81893bda61",
+   "bytes_as_written": 7239,
+   "bytes": 7037,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r2/prove/sabotage_S4-success-empty-exit.log",
+   "ledger_a3e1aa4878_blob": "65dd4f242001029157e54e99e07ac8809ff56042",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-02.json",
+    "work/r2/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r2/prove/sabotage_S5-mark-to-metric-mapping.log",
+   "sha256_as_written": "2c173ad8cf598d6cb15423eceb0e1ea731fcc0995a155d9a74926c0eea2f156f",
+   "sha256": "18bc762d64e9a1eb0567030f9914cc18da2f63837b9ce3a095912df83e940d05",
+   "git_blob": "187433410705996e96ddaa79afe21ce7d2c6dbbe",
+   "bytes_as_written": 7213,
+   "bytes": 7011,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r2/prove/sabotage_S5-mark-to-metric-mapping.log",
+   "ledger_a3e1aa4878_blob": "22c6e957df4eb72c2326ec7be9822320171b37c5",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-02.json",
+    "work/r2/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r2/prove/sabotage_S6-provider-rule-raw-name.log",
+   "sha256_as_written": "1374a04e96354b5402bca2196a58a1ebc8154c14f3fdcf3f44e3d56c2e3f8e78",
+   "sha256": "fed9108ce9924833a182391b0e37e8a36a40f0b6a8e85bf7c81d5acc3e142458",
+   "git_blob": "2e9e80a0e99b7d49ea4d4170a6d4d4210d02e6d2",
+   "bytes_as_written": 7226,
+   "bytes": 7024,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r2/prove/sabotage_S6-provider-rule-raw-name.log",
+   "ledger_a3e1aa4878_blob": "4b2d12a456cc5af001e04c1394d867da912d43f2",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-02.json",
+    "work/r2/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r2/prove/sabotage_S7-outcome-vocabulary-drift.log",
+   "sha256_as_written": "e93f9d938ead55e9d8a829b8e2c5680000f274472d0de8c29519c445f57d06da",
+   "sha256": "de9d6b1bf08142a33d51c955583bda5ec17ef5431a62eaa54cd8975b27fa43e9",
+   "git_blob": "4d5fdce737cca84844e724f4562c5a018089ee14",
+   "bytes_as_written": 7215,
+   "bytes": 7013,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r2/prove/sabotage_S7-outcome-vocabulary-drift.log",
+   "ledger_a3e1aa4878_blob": "916feb8958f4d91955ee68b9ef9c1aec2a2625f7",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-02.json",
+    "work/r2/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r2/prove/sabotage_S8-latency-not-measured.log",
+   "sha256_as_written": "f1f3bb700c98472ecb258e44c35224e108f12beff67e088a54e553627e31a857",
+   "sha256": "fa2856abce29129c01b8eb24232a83eda6b0ea4e1e42957a79af930522e5b7fd",
+   "git_blob": "664b76698257f16be38605908486c6ec0c08b2bc",
+   "bytes_as_written": 7209,
+   "bytes": 7007,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r2/prove/sabotage_S8-latency-not-measured.log",
+   "ledger_a3e1aa4878_blob": "e8c2109d90d9d58f6bca8b5fc2f3ea59c95f22da",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-02.json",
+    "work/r2/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r3/e17_result_r3.json",
+   "sha256_as_written": "15edd39b02d6e4a9f704372f2bfa6f48f93c511eef20323b108c598c89f6c935",
+   "sha256": "9c9b82df904c502967e63df402a639ea6685d44036d569d446c9d265f9221794",
+   "git_blob": "0be83439ae786624fab37731167465595ff61ed5",
+   "bytes_as_written": 9124,
+   "bytes": 9052,
+   "replacements": {
+    "<artifacts root>": 2
+   },
+   "original_copy": "private/as-written/work/r3/e17_result_r3.json",
+   "ledger_a3e1aa4878_blob": "0be83439ae786624fab37731167465595ff61ed5",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "receipts/E17-r20261001-04.json"
+   ]
+  },
+  {
+   "path": "work/r3/e17c_run_r3.log",
+   "sha256_as_written": "44a4066185f5d4a96333a2935f0d5b5b362dfda4b371ff7809c3bc4128352918",
+   "sha256": "77bdbc635b75703efeebbd434f754900cb7ae019afcbdfbd57b2da66ec22e4ac",
+   "git_blob": "660154bcb1f044c542e3a5926e837f7cc1983fdf",
+   "bytes_as_written": 1495,
+   "bytes": 1423,
+   "replacements": {
+    "<artifacts root>": 2
+   },
+   "original_copy": "private/as-written/work/r3/e17c_run_r3.log",
+   "ledger_a3e1aa4878_blob": "660154bcb1f044c542e3a5926e837f7cc1983fdf",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": []
+  },
+  {
+   "path": "work/r3/make_receipts_r3.py",
+   "sha256_as_written": "253932c5a7c8a8c88ce4c60ea0c3abfe8d9bc0604e41e2d10de199520e5b3490",
+   "sha256": "c5bc048152eea80b10d5fdb7feffdf51926ca228d9b34aa6f8e6fff6d931efa0",
+   "git_blob": "824ac38582015af00515483532acb9480bff4428",
+   "bytes_as_written": 46106,
+   "bytes": 46127,
+   "replacements": {
+    "<host name>": 3
+   },
+   "original_copy": "private/as-written/work/r3/make_receipts_r3.py",
+   "ledger_a3e1aa4878_blob": "824ac38582015af00515483532acb9480bff4428",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": []
+  },
+  {
+   "path": "work/r3/merged_120042_tests.log",
+   "sha256_as_written": "a0308d17f6776d08ce43973f3666fe18411e0865999d27737bf743d811205703",
+   "sha256": "0040f914645d379ed29ea96bdb6ee95a06bb6cdc17657a109d85238949225747",
+   "git_blob": "9d546e111374300a7b19a852b769085473294db7",
+   "bytes_as_written": 1120,
+   "bytes": 1111,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/r3/merged_120042_tests.log",
+   "ledger_a3e1aa4878_blob": "9d546e111374300a7b19a852b769085473294db7",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "receipts/MERGE-r20261001-03.json"
+   ]
+  },
+  {
+   "path": "work/r3/merged_124151_tests.log",
+   "sha256_as_written": "9f4d3dd7de70efd1b2a458236c8794ef7141b2d51b9140e185f03b530039bf03",
+   "sha256": "b1dc17d2e4b38745ad67cce9b64d52185f71a342c32851a49dfb429683fbfb78",
+   "git_blob": "d86aac6293bf7fdca28105d6eea9877599e14fe2",
+   "bytes_as_written": 1111,
+   "bytes": 1102,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/r3/merged_124151_tests.log",
+   "ledger_a3e1aa4878_blob": "d86aac6293bf7fdca28105d6eea9877599e14fe2",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "receipts/MERGE-r20261001-03.json"
+   ]
+  },
+  {
+   "path": "work/r3/merged_126457_tests.log",
+   "sha256_as_written": "f7000224ed0c4da859b5534999dfd1c789677f61f898227921a7e01084e5b844",
+   "sha256": "7e15b3b9c4d25d322901a6031df9cfa0e21933de25050230956cb0a318fd5c9d",
+   "git_blob": "168032694d744aa873fbb4a2d756a701516a230d",
+   "bytes_as_written": 1292,
+   "bytes": 1283,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/r3/merged_126457_tests.log",
+   "ledger_a3e1aa4878_blob": "168032694d744aa873fbb4a2d756a701516a230d",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "receipts/MERGE-r20261001-03.json"
+   ]
+  },
+  {
+   "path": "work/r3/rerun_after_prove.sh",
+   "sha256_as_written": "8e367992f0f4d91265a842ebd93cf9843b30df2c1434ea7bace3d2b7ede993f7",
+   "sha256": "dbfb41b7235e452f5ad2e03b8e4083ec5e009cd6d7d0c05f11579ca94435589f",
+   "git_blob": "79b3ce886a2243d23c8a829b3c4f474fd686c59a",
+   "bytes_as_written": 3443,
+   "bytes": 3208,
+   "replacements": {
+    "<scratchpad dir>": 2,
+    "<artifacts root>": 2,
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/r3/rerun_after_prove.sh",
+   "ledger_a3e1aa4878_blob": "79b3ce886a2243d23c8a829b3c4f474fd686c59a",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": []
+  },
+  {
+   "path": "work/r3/prove/adjacent_base.log",
+   "sha256_as_written": "991281f95569fcf982650efbcd7619b8b1973db1ff72c2deb2352473cab7aee7",
+   "sha256": "bc904f904fde0100afa95dbcf5c70364cec3f1819f31de7c8ba2daf23ad56bc2",
+   "git_blob": "822f7bce76cd62870f19e86b186e86e296339301",
+   "bytes_as_written": 3091,
+   "bytes": 3082,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/r3/prove/adjacent_base.log",
+   "ledger_a3e1aa4878_blob": "822f7bce76cd62870f19e86b186e86e296339301",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-03.json",
+    "work/r3/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r3/prove/adjacent_head.log",
+   "sha256_as_written": "89c285c088a4b83dee6e3c5e11cec8f3e9bffa0633b5bdea5fcfec8f386ce453",
+   "sha256": "86f9bb6d8db56e1ad33d76f2e324924168f595f43f0ad6d48851c763ddb1e5dd",
+   "git_blob": "a05b2ce4bbfd212ca901e92b7de6c21f3ee42c8e",
+   "bytes_as_written": 3091,
+   "bytes": 3082,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/r3/prove/adjacent_head.log",
+   "ledger_a3e1aa4878_blob": "a05b2ce4bbfd212ca901e92b7de6c21f3ee42c8e",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-03.json",
+    "work/r3/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r3/prove/green_1.log",
+   "sha256_as_written": "b4d7e6f73f106e2c5ccad34b710aabdfa0fe85a933d9bab1aac84ae05457d8d6",
+   "sha256": "ab8b9b067f5e68c2a2b851c3a9ef94472f06de817faf6c96667e4662e0d546b8",
+   "git_blob": "e8fd3ac82a67a9fc4b4144f3bb0bc37a06fa7f14",
+   "bytes_as_written": 932,
+   "bytes": 923,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/r3/prove/green_1.log",
+   "ledger_a3e1aa4878_blob": "e8fd3ac82a67a9fc4b4144f3bb0bc37a06fa7f14",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-03.json",
+    "work/r3/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r3/prove/green_2.log",
+   "sha256_as_written": "ac4996714f0554fc23a142689e341d9a7695f5463e143cbf0dd881a3e21eb850",
+   "sha256": "0be5d916e3dd5e2ac3f86f154ec4118532816393727584c31849eb42838d5d68",
+   "git_blob": "d25aadf23742d7b6fe48f9137891a57906419a4c",
+   "bytes_as_written": 932,
+   "bytes": 923,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/r3/prove/green_2.log",
+   "ledger_a3e1aa4878_blob": "d25aadf23742d7b6fe48f9137891a57906419a4c",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-03.json",
+    "work/r3/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r3/prove/green_3.log",
+   "sha256_as_written": "0d43c236baa6b10b564524ff5afa633bbf2330474f6d38d5749bf535a6c8e1f4",
+   "sha256": "67aa7d65ed6a315a360a81b017ee66d36c5bc8f212459e71cdc5b1c3d833d8f8",
+   "git_blob": "a704ad1c95ba1a54efaa10901826b98d8e291e31",
+   "bytes_as_written": 932,
+   "bytes": 923,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/r3/prove/green_3.log",
+   "ledger_a3e1aa4878_blob": "a704ad1c95ba1a54efaa10901826b98d8e291e31",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-03.json",
+    "work/r3/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r3/prove/red.log",
+   "sha256_as_written": "e8392e843fcedce3ad70ce08366addd70a860112b324aa2a8805fe1188ab592d",
+   "sha256": "179ef305d28a56b34e6b3492b8278371d3c36d1a3bf54d70ed5323a9b2154787",
+   "git_blob": "3bf62fead43bf6674332210ec44ec71a8e152ed3",
+   "bytes_as_written": 6268,
+   "bytes": 6210,
+   "replacements": {
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r3/prove/red.log",
+   "ledger_a3e1aa4878_blob": "d93cc21df47c0fc86a3c51c68892c95832ef6f15",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-03.json",
+    "work/r3/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r3/prove/sabotage_S1-skip-exit.log",
+   "sha256_as_written": "07d165b7f253f72d10c4aee040557fb444b47b93a4f39c54739a8df9b74e6299",
+   "sha256": "6f4a26d70aeed3cc0d1c3326a5cfb3c3b644a6aa0c003c4e7fbf059d5889e25a",
+   "git_blob": "0a7de225a0f74cf38d61057d8324f73886d59e23",
+   "bytes_as_written": 7542,
+   "bytes": 7340,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r3/prove/sabotage_S1-skip-exit.log",
+   "ledger_a3e1aa4878_blob": "a12999cf6a9669145ef31158344b6a28e9378198",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-03.json",
+    "work/r3/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r3/prove/sabotage_S10-constant-latency-above-timeout.log",
+   "sha256_as_written": "3ff8629c6a39c65fc529b5817fd4e38e95caefb390f55dee296f8e74ece8f842",
+   "sha256": "466eb4c28a4defdad80743abacc97dc75b0adac3b0fe0017b158632925d2e7ca",
+   "git_blob": "a9bb94c57c1df30d8127f76884a66e7b3fcffdbd",
+   "bytes_as_written": 8080,
+   "bytes": 7878,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r3/prove/sabotage_S10-constant-latency-above-timeout.log",
+   "ledger_a3e1aa4878_blob": "aeee8bc7023d6ae81ae15ad3340e632e79a5920b",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-03.json",
+    "work/r3/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r3/prove/sabotage_S2-timeout-exit.log",
+   "sha256_as_written": "4bd6988dc635d1b0adc1469d79b5be7241b5387e451d59cbe60e40d73ae6ffdf",
+   "sha256": "a3990e51be8040335a003dc06a8e7b51db94ce8a1c9d4eaf0d959f1fb20602a4",
+   "git_blob": "2c4582cce84aaceea0c30e3d6f5e0554372759cf",
+   "bytes_as_written": 7550,
+   "bytes": 7348,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r3/prove/sabotage_S2-timeout-exit.log",
+   "ledger_a3e1aa4878_blob": "f62891feedce5e7efc9f3b1e8d87f7d0780629aa",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-03.json",
+    "work/r3/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r3/prove/sabotage_S3-error-exit.log",
+   "sha256_as_written": "e42033bcb810a075bd66ef5a9e1e2007f0ccc25d3596822b2993bd2ea5c5e0c1",
+   "sha256": "bf6056037b1de92f99df4b3ccb552c68c96f669115206737fdf3f30f016c364a",
+   "git_blob": "b6ddf87de58fb343b8c0772aa8dad4dcad6dd3c9",
+   "bytes_as_written": 7414,
+   "bytes": 7212,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r3/prove/sabotage_S3-error-exit.log",
+   "ledger_a3e1aa4878_blob": "a31eb3e134c76e138039ed1f099593dfc51dd296",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-03.json",
+    "work/r3/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r3/prove/sabotage_S4-success-empty-exit.log",
+   "sha256_as_written": "6a16a079af4e0bf531723efe0a3e559f8fe19c51e11494a5195535936fc55b69",
+   "sha256": "c974fa5e385e21136ce52870801392cbd5b15bfcb8db66dacc6781f3d37224d8",
+   "git_blob": "fe3ad803c0aee68080e1a02c6dbca81c5dc68b3e",
+   "bytes_as_written": 7568,
+   "bytes": 7366,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r3/prove/sabotage_S4-success-empty-exit.log",
+   "ledger_a3e1aa4878_blob": "bc815fcbd5e9dd339f95297918f16768665cd199",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-03.json",
+    "work/r3/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r3/prove/sabotage_S5-mark-to-metric-mapping.log",
+   "sha256_as_written": "79e3ca657ae5035e6075c5e99cfd836db19306a001c4b72927d2100a26600ff7",
+   "sha256": "06973ec45a02ce879fb071e4949f433b912269bf9123892dc1b2da40dc1f8dda",
+   "git_blob": "7504f1b695f5b8b498380d8be053c43a38e6a3cb",
+   "bytes_as_written": 7384,
+   "bytes": 7182,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r3/prove/sabotage_S5-mark-to-metric-mapping.log",
+   "ledger_a3e1aa4878_blob": "22c6c77aaa701accf26e8b2afd1d00396d0636d4",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-03.json",
+    "work/r3/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r3/prove/sabotage_S6-provider-rule-raw-name.log",
+   "sha256_as_written": "066517e657e86e297493a863e8b8d40c522f13a06eb19181663ad1dbe76ecbbe",
+   "sha256": "c4844b3cc889f3a8e6a70a660f3dc08a363e7c071f971758d4020c050a43499a",
+   "git_blob": "aa250584ae9ab1b69b6e3ca42ddc7fcaa008ac35",
+   "bytes_as_written": 7576,
+   "bytes": 7374,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r3/prove/sabotage_S6-provider-rule-raw-name.log",
+   "ledger_a3e1aa4878_blob": "93c6910e1aa479dce05d82569f7c2736100b2c3e",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-03.json",
+    "work/r3/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r3/prove/sabotage_S7-outcome-vocabulary-drift.log",
+   "sha256_as_written": "88dcb67ce1aed22418647a59bb4b739edede113ea7371c7422d1b537e7b82ed3",
+   "sha256": "983d1d6c105be890cd6b5a2414f3b58c11644dd834691aa172fb4f49fc795321",
+   "git_blob": "dd733447577cc2256ab97525ef09a26fbb7b89c3",
+   "bytes_as_written": 7434,
+   "bytes": 7232,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r3/prove/sabotage_S7-outcome-vocabulary-drift.log",
+   "ledger_a3e1aa4878_blob": "2bc29508221a1b6c97cef02523ad9a953568be13",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-03.json",
+    "work/r3/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r3/prove/sabotage_S8-latency-not-measured.log",
+   "sha256_as_written": "ed39be59c10de739066541a1d9bb6ed28b12b33fbceb40db5090a1c782defe9b",
+   "sha256": "eeb4ba9c4e7e2b27bba3aa8860b34c65a032ac5a288c43eee9007d64c3053b88",
+   "git_blob": "5fa6291c2e34746430acc35a444a5949cbaf106b",
+   "bytes_as_written": 7902,
+   "bytes": 7700,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r3/prove/sabotage_S8-latency-not-measured.log",
+   "ledger_a3e1aa4878_blob": "ad1f1f7199c915c75acb34e72906b6b1ce0073db",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-03.json",
+    "work/r3/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r3/prove/sabotage_S9-empty-classification.log",
+   "sha256_as_written": "c51d6e029f973776508455d35fee3f9515aa6dcd67816a74a5ca3d50658e1d24",
+   "sha256": "10a44bdba7b78ad70b561270c0b2b5acd58a915fa098b39665c13647c46e6098",
+   "git_blob": "f89510436fcc0d9699ce11e02b0409ad26a5f29b",
+   "bytes_as_written": 7424,
+   "bytes": 7222,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r3/prove/sabotage_S9-empty-classification.log",
+   "ledger_a3e1aa4878_blob": "a36740231f6fca0e7976b0ff44a6235c2bfd9bd5",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-03.json",
+    "work/r3/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r3/prove/stall_amended_1500ms.log",
+   "sha256_as_written": "e5e16d046b474f652fb6d3fea646ecca4885971e4738c0818c88e71adfb4bd74",
+   "sha256": "5982f2dfbfb6f867737e9367cc8e6bcd47022e31eb82996a644c00d316ba90f3",
+   "git_blob": "c8fb49e1a8f117fb19df67415f7a8434452e908c",
+   "bytes_as_written": 941,
+   "bytes": 932,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/r3/prove/stall_amended_1500ms.log",
+   "ledger_a3e1aa4878_blob": "c8fb49e1a8f117fb19df67415f7a8434452e908c",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-03.json",
+    "work/r3/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r3/prove/stall_round2_150ms.log",
+   "sha256_as_written": "c2d5e1a7d46cd4a49ebe7723bd5071cdeae85299dccebb70243528743138a6f5",
+   "sha256": "d5ae1e51271ee59117999f066a11643e31f521fa19841a53ebcfef9bb6751545",
+   "git_blob": "68071b7c1c3e0fd7201c65fedbb0673ed53e1e65",
+   "bytes_as_written": 7333,
+   "bytes": 7131,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r3/prove/stall_round2_150ms.log",
+   "ledger_a3e1aa4878_blob": "d6431d75c6abac04604b8e666f01ba45e9767d44",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-03.json",
+    "work/r3/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r3/superseded-61fc6ea62d/prove/adjacent_base.log",
+   "sha256_as_written": "5e14df541fc5b44edd0936434fb7e4aba0edd0e9b67a076021e7966a7d46ab2b",
+   "sha256": "aefab359a1580bacab0087cb90b158298bb03b0a45a7bdc9655a5f177518a214",
+   "git_blob": "b6eb9578233b49b68b21b5c7f55d24132118d4ef",
+   "bytes_as_written": 3086,
+   "bytes": 3077,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/r3/superseded-61fc6ea62d/prove/adjacent_base.log",
+   "ledger_a3e1aa4878_blob": "b6eb9578233b49b68b21b5c7f55d24132118d4ef",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": []
+  },
+  {
+   "path": "work/r3/superseded-61fc6ea62d/prove/adjacent_head.log",
+   "sha256_as_written": "3e4fa28de1312aa24163141be94cc80dcc46c8097720645bae9bd547b8407bd5",
+   "sha256": "f267e978b1d49f6bffddd7c1b6d13ba9260ef2db6cbfdc4804195d8c1aa9086e",
+   "git_blob": "058db7eec9a2166742651e3e4a1bd4489fdf7ee6",
+   "bytes_as_written": 3086,
+   "bytes": 3077,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/r3/superseded-61fc6ea62d/prove/adjacent_head.log",
+   "ledger_a3e1aa4878_blob": "058db7eec9a2166742651e3e4a1bd4489fdf7ee6",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": []
+  },
+  {
+   "path": "work/r3/superseded-61fc6ea62d/prove/green_1.log",
+   "sha256_as_written": "cce26e3f2c23bc1fe79b60c9543a12d2138b630e3eeb35fd6eda7c044e0bf99d",
+   "sha256": "05ece292d33ee9232e59f6da3f350fa5e0524c6bee33e933d8203c953df60fcd",
+   "git_blob": "e23879402a55b3c95c1e916b83fe98a40a75cb91",
+   "bytes_as_written": 932,
+   "bytes": 923,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/r3/superseded-61fc6ea62d/prove/green_1.log",
+   "ledger_a3e1aa4878_blob": "e23879402a55b3c95c1e916b83fe98a40a75cb91",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": []
+  },
+  {
+   "path": "work/r3/superseded-61fc6ea62d/prove/green_2.log",
+   "sha256_as_written": "3a9b8f708501c609252f133c8a1f1c02d6f4b8b19cf9be382e810a6675951c6b",
+   "sha256": "435f8a7dc2036e8673768ec2f786a191e8c6a1cc50b6dafcf1f6ab47b4a2051f",
+   "git_blob": "27dae9e88ac1feaa8336ccf73e201f618ae2f03f",
+   "bytes_as_written": 932,
+   "bytes": 923,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/r3/superseded-61fc6ea62d/prove/green_2.log",
+   "ledger_a3e1aa4878_blob": "27dae9e88ac1feaa8336ccf73e201f618ae2f03f",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": []
+  },
+  {
+   "path": "work/r3/superseded-61fc6ea62d/prove/green_3.log",
+   "sha256_as_written": "5eee3da4881706cfad50dce805fe6800a551604edc83613d6d3e68ba9a8a9f92",
+   "sha256": "93707323a356b1deb63347b156153b82e5c42cf0467590ac114af2c465cde11c",
+   "git_blob": "da3e1f20d019f4315b7396822de60ba3db811975",
+   "bytes_as_written": 932,
+   "bytes": 923,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/r3/superseded-61fc6ea62d/prove/green_3.log",
+   "ledger_a3e1aa4878_blob": "da3e1f20d019f4315b7396822de60ba3db811975",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": []
+  },
+  {
+   "path": "work/r3/superseded-61fc6ea62d/prove/red.log",
+   "sha256_as_written": "cc3e28fa6cfad21a81f08d895f20b6d9d2555f153ec369b57720badfc5b62497",
+   "sha256": "28f5ab1e9ec0cbe4ca375eee2799017449c5ec8094a726effd8d5450caea289c",
+   "git_blob": "73cdbd6427423a359a35adfc26dc140908424a93",
+   "bytes_as_written": 6264,
+   "bytes": 6206,
+   "replacements": {
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r3/superseded-61fc6ea62d/prove/red.log",
+   "ledger_a3e1aa4878_blob": "b3f6730b573e9fe40fb09c5a40d2febf9893dc45",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": []
+  },
+  {
+   "path": "work/r3/superseded-61fc6ea62d/prove/sabotage_S1-skip-exit.log",
+   "sha256_as_written": "d855a91181ace8ac521692f94f3eb4911a0d547e10ac5170f5b912514a4e335b",
+   "sha256": "9833ce32d156c11a9db2bdb80fe074bb6f8800074226ffe44d93305f597cf638",
+   "git_blob": "2c54385058984a95bb81684606e76e057d113f01",
+   "bytes_as_written": 7538,
+   "bytes": 7336,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r3/superseded-61fc6ea62d/prove/sabotage_S1-skip-exit.log",
+   "ledger_a3e1aa4878_blob": "2220da8cffb6c7d92617353c3c319aa13a83da44",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": []
+  },
+  {
+   "path": "work/r3/superseded-61fc6ea62d/prove/sabotage_S10-constant-latency-above-timeout.log",
+   "sha256_as_written": "52c9f6b23a13a521bd75178b4c1dfd08e9ba5a981d40ada45720488b7a0c0b2c",
+   "sha256": "de1c24547e2cd7cd7c0322270551f16370fc6caf57f059116736184aaf86963a",
+   "git_blob": "afab61771c33fda1a48d8742233b8644bbf60459",
+   "bytes_as_written": 8076,
+   "bytes": 7874,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r3/superseded-61fc6ea62d/prove/sabotage_S10-constant-latency-above-timeout.log",
+   "ledger_a3e1aa4878_blob": "7c3eefe06703914569af2d58b03ab41c38cfd2e6",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": []
+  },
+  {
+   "path": "work/r3/superseded-61fc6ea62d/prove/sabotage_S2-timeout-exit.log",
+   "sha256_as_written": "ca4711c4378510f495ad1c3942c7d00e5c7ab52b8fee3716113f5ecc9fa0e7f5",
+   "sha256": "e98baeb77c1621d05a1a1825d02977e12a79b5e4cc09e153239bd837e7f164e9",
+   "git_blob": "816c4d277e56ad58869ecd4acb05972cd026cb55",
+   "bytes_as_written": 7546,
+   "bytes": 7344,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r3/superseded-61fc6ea62d/prove/sabotage_S2-timeout-exit.log",
+   "ledger_a3e1aa4878_blob": "8b45943b81fc90ee340bec2b0b69ccee95071128",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": []
+  },
+  {
+   "path": "work/r3/superseded-61fc6ea62d/prove/sabotage_S3-error-exit.log",
+   "sha256_as_written": "103e9b8072e2d90c7484e15b476ea30e76a408ef3fe480ab236419436fd991ff",
+   "sha256": "d37d19ec914b03d2f26fc76591ab009596328d61b5c58ce92bc97fbcec00a60a",
+   "git_blob": "af21ac4cc5f45983836bc64533b968deae2a0381",
+   "bytes_as_written": 7410,
+   "bytes": 7208,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r3/superseded-61fc6ea62d/prove/sabotage_S3-error-exit.log",
+   "ledger_a3e1aa4878_blob": "4d6383b4bf7bd258cf267113e15b70ecc9bf6bcb",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": []
+  },
+  {
+   "path": "work/r3/superseded-61fc6ea62d/prove/sabotage_S4-success-empty-exit.log",
+   "sha256_as_written": "fd31fe532249dd5e88809bee843366b248a525665d31528f50a348ba2f448e79",
+   "sha256": "3c5d1b7f8be4139bc4b8f33fb157a25d3bf4fe049d8da74c5a9ea2f3e13bcdab",
+   "git_blob": "f15be265e9b799fe529dcf8d5613ba6e3c9b8d44",
+   "bytes_as_written": 7564,
+   "bytes": 7362,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r3/superseded-61fc6ea62d/prove/sabotage_S4-success-empty-exit.log",
+   "ledger_a3e1aa4878_blob": "9cf20f7680598cf2190ad07c49918c23760db0a2",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": []
+  },
+  {
+   "path": "work/r3/superseded-61fc6ea62d/prove/sabotage_S5-mark-to-metric-mapping.log",
+   "sha256_as_written": "a8ac6e372b4da76ff28287d0f98e05d73266b6504c9cf4415713cb6227a40628",
+   "sha256": "0b858ee42616adf4aacf6ed576c53f2279440bf063a4d15f4f4c76de28e7faa1",
+   "git_blob": "183766f040d6e67ca3533458b5ca5df29cccd21e",
+   "bytes_as_written": 7380,
+   "bytes": 7178,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r3/superseded-61fc6ea62d/prove/sabotage_S5-mark-to-metric-mapping.log",
+   "ledger_a3e1aa4878_blob": "60f24b13d4922f59d797682f8282e1944f786494",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": []
+  },
+  {
+   "path": "work/r3/superseded-61fc6ea62d/prove/sabotage_S6-provider-rule-raw-name.log",
+   "sha256_as_written": "f60637ae8e3cfea42f52d56839b94bca223f8cf68bc4cd6a7d5c3b9cb6a14c9f",
+   "sha256": "21edd68c1a6bdacd63da62cfd5ec20d6830d2493d10b7b75089caca2faa3ad4b",
+   "git_blob": "f5d233d17e04e901eda088b0c877de4a3fa5b076",
+   "bytes_as_written": 7572,
+   "bytes": 7370,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r3/superseded-61fc6ea62d/prove/sabotage_S6-provider-rule-raw-name.log",
+   "ledger_a3e1aa4878_blob": "1c9d0cd554d03b913436f58df3e59cf48c476c09",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": []
+  },
+  {
+   "path": "work/r3/superseded-61fc6ea62d/prove/sabotage_S7-outcome-vocabulary-drift.log",
+   "sha256_as_written": "0cffcccec8b3597a5f7674a8282a65c89d68966591f7b88640a15f1739c6825a",
+   "sha256": "a9ebb420b108f97064e40ef16cfa582dab0a780f412d6a172e1bceb0baa5c4a6",
+   "git_blob": "9ad67c1fb660cbb08c45aff5d1a0d7e52b121c2d",
+   "bytes_as_written": 7430,
+   "bytes": 7228,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r3/superseded-61fc6ea62d/prove/sabotage_S7-outcome-vocabulary-drift.log",
+   "ledger_a3e1aa4878_blob": "5a19f016b610fafc00e79eac5faef980f4fe6e44",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": []
+  },
+  {
+   "path": "work/r3/superseded-61fc6ea62d/prove/sabotage_S8-latency-not-measured.log",
+   "sha256_as_written": "c5e3b8c01dc859c2d736a225a18cec0c482ffef98b209ae05ae5f9fa52528332",
+   "sha256": "85be7f297bbf5d7628da3c96a0acf58b5e87cf1ad2fbae43fb2732b703c2bbe5",
+   "git_blob": "8f1949336be971d9a5b3b454e71eed8f75d499fb",
+   "bytes_as_written": 7898,
+   "bytes": 7696,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r3/superseded-61fc6ea62d/prove/sabotage_S8-latency-not-measured.log",
+   "ledger_a3e1aa4878_blob": "60cdfdda3e85834c82daf1397680dac0b799ba56",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": []
+  },
+  {
+   "path": "work/r3/superseded-61fc6ea62d/prove/sabotage_S9-empty-classification.log",
+   "sha256_as_written": "9c679e2872b1d576ca7639c097acd0f96ddc19b64521eb43ffa13c16e71ee594",
+   "sha256": "92b20f4c1c155b069071665e0cbf582a1b7e96d821288876675a4c4e60996000",
+   "git_blob": "955808122dfc206e030a1bcfb1507489ad84f4ed",
+   "bytes_as_written": 7420,
+   "bytes": 7218,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r3/superseded-61fc6ea62d/prove/sabotage_S9-empty-classification.log",
+   "ledger_a3e1aa4878_blob": "6f42739135a58f4dc4e6de767c3d1c43b29b7144",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": []
+  },
+  {
+   "path": "work/r3/superseded-61fc6ea62d/prove/stall_amended_1500ms.log",
+   "sha256_as_written": "f90705b39b078692870ef57a385365f63322140f35b9eb4392404c40c6c774fc",
+   "sha256": "862cc7e60dddac87f96065683ce6b9ab0df3a9556ed688a71b6e072b1b7520bd",
+   "git_blob": "a5ee8c117f98d91d51f1867f7c2a43dc4e7b5ad3",
+   "bytes_as_written": 941,
+   "bytes": 932,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/r3/superseded-61fc6ea62d/prove/stall_amended_1500ms.log",
+   "ledger_a3e1aa4878_blob": "a5ee8c117f98d91d51f1867f7c2a43dc4e7b5ad3",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": []
+  },
+  {
+   "path": "work/r3/superseded-61fc6ea62d/prove/stall_round2_150ms.log",
+   "sha256_as_written": "5469932533c83057f06132916c551743822003dcd5eba647f6bf7e0ee6917ff3",
+   "sha256": "67b3e98fb0c6086a0c7ee4399f007515b9979c83e01207d8aee5d7e5acf58912",
+   "git_blob": "32a4d2a11f5ea6b3f4d0b953772584cbdcc0d827",
+   "bytes_as_written": 7333,
+   "bytes": 7131,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r3/superseded-61fc6ea62d/prove/stall_round2_150ms.log",
+   "ledger_a3e1aa4878_blob": "179e42e6055ec97376223567b3c622f6e191f55c",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": []
+  },
+  {
+   "path": "work/r4/freshness_1605.txt",
+   "sha256_as_written": "1e4bbed28a6b07116971682d1f5e1235da13253513d2143e7dfe258995c3da50",
+   "sha256": "4be57369ab4cf72221a0657ef94eb581c1d2c4ee672334c2a1c19602e7dc5183",
+   "git_blob": "0543821d04c0def18690671675321e24fc491388",
+   "bytes_as_written": 652,
+   "bytes": 344,
+   "replacements": {
+    "<scratchpad dir>": 4
+   },
+   "original_copy": "private/as-written/work/r4/freshness_1605.txt",
+   "ledger_a3e1aa4878_blob": "0543821d04c0def18690671675321e24fc491388",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": []
+  },
+  {
+   "path": "work/r5/make_receipts_r5.py",
+   "sha256_as_written": "660489b936d47165fceb374649d9c8cd421566f577e1a777fcc0bd8aeeffa696",
+   "sha256": "534e85ed911f7de7dd4fbdec53b5cd6ae58c889c1adce3dae94ed7978268ebb8",
+   "git_blob": "221b00eb328607614978818af7480e3b6eb14b52",
+   "bytes_as_written": 18071,
+   "bytes": 18078,
+   "replacements": {
+    "<host name>": 1
+   },
+   "original_copy": "private/as-written/work/r5/make_receipts_r5.py",
+   "ledger_a3e1aa4878_blob": "221b00eb328607614978818af7480e3b6eb14b52",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": []
+  },
+  {
+   "path": "work/r5/prove/adjacent_base.log",
+   "sha256_as_written": "b85403d9fe0122ca93de9410d1e08f045ba2cb3fe6adb0fa9c6e96cc8c267c41",
+   "sha256": "ee7a5d52cbf7f62f28afe66220bf438b4b27d2e158384c335990ef18714fdb2c",
+   "git_blob": "f695d80764570188b965d4a2b28e5772a02dc581",
+   "bytes_as_written": 3088,
+   "bytes": 3079,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/r5/prove/adjacent_base.log",
+   "ledger_a3e1aa4878_blob": "f695d80764570188b965d4a2b28e5772a02dc581",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-04.json",
+    "work/r5/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r5/prove/adjacent_head.log",
+   "sha256_as_written": "fb7f93a65f1fe3f4823738cb75d6477205c76bd15208a93ff6dbe3f065c76144",
+   "sha256": "037c118cc4063445075133473f16b3575b8f5c4f00d270dc4a756c807ece499b",
+   "git_blob": "95eccd71f9a86da515002d50383d69524bdbb68f",
+   "bytes_as_written": 3089,
+   "bytes": 3080,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/r5/prove/adjacent_head.log",
+   "ledger_a3e1aa4878_blob": "95eccd71f9a86da515002d50383d69524bdbb68f",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-04.json",
+    "work/r5/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r5/prove/green_1.log",
+   "sha256_as_written": "f33fc267cb92e036ac87f4c82885852f0db1be64e5ede1caeb5af842ecf07872",
+   "sha256": "1287a5126ef8903f79b9b34d3a2c2697d0012e16f7fea7465318d0b3c35a5aa9",
+   "git_blob": "a04639cceb0b5607d86f933003e6179ae05e03dc",
+   "bytes_as_written": 932,
+   "bytes": 923,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/r5/prove/green_1.log",
+   "ledger_a3e1aa4878_blob": "a04639cceb0b5607d86f933003e6179ae05e03dc",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-04.json",
+    "work/r5/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r5/prove/green_2.log",
+   "sha256_as_written": "2f4b206fa6ff0f12f075a8f634e8ac7bb11b0420a977a9071c415d8fa73e6455",
+   "sha256": "aa5d6106fe43250d19fe7f808775c7347041038435a0a77511a769a0eed59177",
+   "git_blob": "67adc01b86fe6b1842842fd95b3c67495574c09e",
+   "bytes_as_written": 932,
+   "bytes": 923,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/r5/prove/green_2.log",
+   "ledger_a3e1aa4878_blob": "67adc01b86fe6b1842842fd95b3c67495574c09e",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-04.json",
+    "work/r5/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r5/prove/green_3.log",
+   "sha256_as_written": "b5431a68dfaf58b3566be6ece357c79154ff4f92c4db53c8027d1d8b26b447f8",
+   "sha256": "f0e35586541710b93578c47829a60f91230a8c85506f39ab9164df9327d2d979",
+   "git_blob": "4c23cfa12c84239d48ad82c844aa296e9b4fc7fe",
+   "bytes_as_written": 932,
+   "bytes": 923,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/r5/prove/green_3.log",
+   "ledger_a3e1aa4878_blob": "4c23cfa12c84239d48ad82c844aa296e9b4fc7fe",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-04.json",
+    "work/r5/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r5/prove/red.log",
+   "sha256_as_written": "237d6067b2aba1bf6d45284751b45c741506333638b0c43bc77857fb8252d08e",
+   "sha256": "c0ef10b2f51c2a6a7ad9639a483081b3e57116599796bd5ba2c13ba7c51bf684",
+   "git_blob": "1be2d7268a3194a58d0af3fd3ef03a3e91437392",
+   "bytes_as_written": 6268,
+   "bytes": 6210,
+   "replacements": {
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r5/prove/red.log",
+   "ledger_a3e1aa4878_blob": "0260bd73ad814007e4ca2bb6be28e03d9a194b44",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-04.json",
+    "work/r5/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r5/prove/sabotage_S1-skip-exit.log",
+   "sha256_as_written": "3937df33654ee7df461d21cb0456b8ebcb40519c0c50c8e81ca0c072d8ce7864",
+   "sha256": "1fdca0c4f46d7cac4bd23ba29ab01cbd33f141849d71764c4a8ea9d64b195428",
+   "git_blob": "4dce4010d22e9eb4c48f9303a2c3a11dce6ea490",
+   "bytes_as_written": 7546,
+   "bytes": 7344,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r5/prove/sabotage_S1-skip-exit.log",
+   "ledger_a3e1aa4878_blob": "447d353367d0ea2afd06cf13a566390c7a93edb8",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-04.json",
+    "work/r5/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r5/prove/sabotage_S10-constant-latency-above-timeout.log",
+   "sha256_as_written": "7fc17234ffb50645dbf5ff20df70ccbe27613183578793ffa9813ca5016e736f",
+   "sha256": "3d2c41f614ee12b8d47fe924e42d787e61f2472cf52a0b6b8a095721513c901c",
+   "git_blob": "5a44cc204a02cf947e6d96afd08018bfbe87925f",
+   "bytes_as_written": 8084,
+   "bytes": 7882,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r5/prove/sabotage_S10-constant-latency-above-timeout.log",
+   "ledger_a3e1aa4878_blob": "50cc52e070de889823ca0d8cbd51d32b9f6d03a5",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-04.json",
+    "work/r5/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r5/prove/sabotage_S2-timeout-exit.log",
+   "sha256_as_written": "a132a3b9094ad9f2ab942b0b6ccf95baf87e3dd376b08a0398caecf050515afa",
+   "sha256": "ef8dfe9c12d18c7545cb4f96d55b7e7942d62be542698ef3eddf4ac109ac43cf",
+   "git_blob": "2ee81a53988bede44399338cebabc42df5b035b9",
+   "bytes_as_written": 7554,
+   "bytes": 7352,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r5/prove/sabotage_S2-timeout-exit.log",
+   "ledger_a3e1aa4878_blob": "313b7cd518e65cf24437ba524d93c5c048340c1b",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-04.json",
+    "work/r5/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r5/prove/sabotage_S3-error-exit.log",
+   "sha256_as_written": "046d9d528e9e9b9cb13247a2f3a1acdeb991646c1b8e6eb92bc37a4f26f6b549",
+   "sha256": "4b336772d964198752333a3a82d9788c2255016a5d532b5005eab3e192dcb061",
+   "git_blob": "81e1e3d6c27922311c7866e00b0d46cdf5ff0958",
+   "bytes_as_written": 7418,
+   "bytes": 7216,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r5/prove/sabotage_S3-error-exit.log",
+   "ledger_a3e1aa4878_blob": "f1f26356d83c70b2674fe944bcbea02bea93dcd6",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-04.json",
+    "work/r5/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r5/prove/sabotage_S4-success-empty-exit.log",
+   "sha256_as_written": "cbe310377f697c6f856c8f669d3062f49d1ad5c044bcc9e5edfeaf2b6723c5a3",
+   "sha256": "f18449c58b64a34fc2ff21441d42d928cb39131bd8417604e67436dff88e90cf",
+   "git_blob": "4a6726cff2cfbabbcd384676a2742f9477b1a652",
+   "bytes_as_written": 7572,
+   "bytes": 7370,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r5/prove/sabotage_S4-success-empty-exit.log",
+   "ledger_a3e1aa4878_blob": "e8eb5bda91969a063386a0c95a7cc80b8b9dfe91",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-04.json",
+    "work/r5/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r5/prove/sabotage_S5-mark-to-metric-mapping.log",
+   "sha256_as_written": "679c2f6c093c3e4a3832d00cad05da27be2c53363b312d203166227f938fe108",
+   "sha256": "990addda0d178c6990e7867bd8636b763c34db19be63384c07dfe166918e5a1c",
+   "git_blob": "dbea3bc03e1bf09703b2d6c9fc5aee4f9c4278fa",
+   "bytes_as_written": 7388,
+   "bytes": 7186,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r5/prove/sabotage_S5-mark-to-metric-mapping.log",
+   "ledger_a3e1aa4878_blob": "6603cb1c679e4174fe5585d2ee9a5c583d47a0b1",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-04.json",
+    "work/r5/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r5/prove/sabotage_S6-provider-rule-raw-name.log",
+   "sha256_as_written": "e6fc38cd0510e0231934ff8b23c1f8019312297147d4f34c10004dad65969424",
+   "sha256": "685d9367bf3b7d55436fbb2aaa07192ed9b5930ee16f36e1d740c22b114b5507",
+   "git_blob": "b96b7702e2eb3e260f6993c3cba90022a5054131",
+   "bytes_as_written": 7580,
+   "bytes": 7378,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r5/prove/sabotage_S6-provider-rule-raw-name.log",
+   "ledger_a3e1aa4878_blob": "287e60061f4f8c5a1b92dc6f8f37e514b5f52c4b",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-04.json",
+    "work/r5/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r5/prove/sabotage_S7-outcome-vocabulary-drift.log",
+   "sha256_as_written": "4fa03d5f316266c12975cc472c3c531a2bf2037149a671145ea75ee6942fd9da",
+   "sha256": "898c1aa19c8a9442bf2c891af9998be093c5d75413cdda19639f0dce7ded9fbb",
+   "git_blob": "566b32e9746f53a32f523eaff16cb54fc4ccf182",
+   "bytes_as_written": 7438,
+   "bytes": 7236,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r5/prove/sabotage_S7-outcome-vocabulary-drift.log",
+   "ledger_a3e1aa4878_blob": "657a85736725f9984cc6de9524e963d6625994d1",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-04.json",
+    "work/r5/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r5/prove/sabotage_S8-latency-not-measured.log",
+   "sha256_as_written": "53db30670f1d60f1dbc3f8da104c8e7c6ff6358852970841e48fa11170aab7d8",
+   "sha256": "1c25b3ba749690be97a05759bfae7c939b7bdf682ca0468aaeb96ea712889efd",
+   "git_blob": "10b96bea4299c139b2cfa75a62b958f2e261a1da",
+   "bytes_as_written": 7906,
+   "bytes": 7704,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r5/prove/sabotage_S8-latency-not-measured.log",
+   "ledger_a3e1aa4878_blob": "9f59b1e2868c8142e5baf2bfebbdc52360abd79e",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-04.json",
+    "work/r5/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r5/prove/sabotage_S9-empty-classification.log",
+   "sha256_as_written": "5eddf9c1ff10f693707d4457acf111ff93bf111e1f8d19beb17c3163eb847064",
+   "sha256": "5a760ffa72b3c4a15bf142f8169fa94851465514c951beb1ea0e16d49d8cacbe",
+   "git_blob": "fb9cf4e50406628e0c42ecf1dd8a044de7e8db54",
+   "bytes_as_written": 7428,
+   "bytes": 7226,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r5/prove/sabotage_S9-empty-classification.log",
+   "ledger_a3e1aa4878_blob": "1ead0e8d23dfc1cb3a60461c541622b8f09c06f7",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-04.json",
+    "work/r5/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r5/prove/stall_amended_1500ms.log",
+   "sha256_as_written": "1737bc7a266f4ddfef6001875e05185000e74e2952e9d2111f55cc3edb2f8a4d",
+   "sha256": "8ac864054f1b7db2ed9c2e095fe77f1d806d1f57f167508c982a1dfd00be9c28",
+   "git_blob": "c546b308fa08f48a5e3392f6db55509ec4a65bba",
+   "bytes_as_written": 941,
+   "bytes": 932,
+   "replacements": {
+    "<live install root>": 1
+   },
+   "original_copy": "private/as-written/work/r5/prove/stall_amended_1500ms.log",
+   "ledger_a3e1aa4878_blob": "c546b308fa08f48a5e3392f6db55509ec4a65bba",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": true,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-04.json",
+    "work/r5/prove/prove_results.json"
+   ]
+  },
+  {
+   "path": "work/r5/prove/stall_round2_150ms.log",
+   "sha256_as_written": "3e6a3560b618a6f1d24e4ce91dea2e7b61b8437955b45d783a161435fb152bee",
+   "sha256": "b2586a45ce25a35ebb94153be1095a38ae966e902e6dcf19bd6e93dd2e81a5fc",
+   "git_blob": "caa4ca695e3c55126209e7c0c945f34b8ec920a6",
+   "bytes_as_written": 7337,
+   "bytes": 7135,
+   "replacements": {
+    "<artifacts root>": 4,
+    "<live install root>": 1,
+    "<pytest base>/r-*/pytest-of-<user>/pytest-N": 1
+   },
+   "original_copy": "private/as-written/work/r5/prove/stall_round2_150ms.log",
+   "ledger_a3e1aa4878_blob": "b561917bcc475d6ccb4182ff2aa4351f12998310",
+   "step1_equals_ledger": true,
+   "final_equals_ledger": false,
+   "as_written_hash_cited_in": [
+    "receipts/F08-r20261001-04.json",
+    "work/r5/prove/prove_results.json"
+   ]
+  }
+ ],
+ "scan": {
+  "hits": [],
+  "allowed": [
+   {
+    "path": "work/pr124151.diff",
+    "line": 107,
+    "class": "abs home path",
+    "why": "upstream #124151 diff text (a container path in its runbook), not a local path"
+   },
+   {
+    "path": "work/r2/pr124151.diff",
+    "line": 107,
+    "class": "abs home path",
+    "why": "upstream #124151 diff text (a container path in its runbook), not a local path"
+   },
+   {
+    "path": "work/r2/make_receipts_r2.py",
+    "line": 53,
+    "class": "abs mount path",
+    "why": "scanner needle tuple (generic directory names only)"
+   },
+   {
+    "path": "work/r2/make_receipts_r2.py",
+    "line": 53,
+    "class": "abs workspace path",
+    "why": "scanner needle tuple (generic directory names only)"
+   },
+   {
+    "path": "work/r3/make_receipts_r3.py",
+    "line": 47,
+    "class": "abs mount path",
+    "why": "scanner needle assert (generic directory names only)"
+   },
+   {
+    "path": "work/r3/make_receipts_r3.py",
+    "line": 47,
+    "class": "abs workspace path",
+    "why": "scanner needle assert (generic directory names only)"
+   },
+   {
+    "path": "work/r4/make_receipts_r4.py",
+    "line": 162,
+    "class": "abs mount path",
+    "why": "scanner needle tuple (generic directory names only)"
+   },
+   {
+    "path": "work/r4/make_receipts_r4.py",
+    "line": 162,
+    "class": "abs workspace path",
+    "why": "scanner needle tuple (generic directory names only)"
+   },
+   {
+    "path": "work/r5/make_receipts_r5.py",
+    "line": 265,
+    "class": "abs mount path",
+    "why": "scanner needle tuple (generic directory names only)"
+   },
+   {
+    "path": "work/r5/make_receipts_r5.py",
+    "line": 265,
+    "class": "abs workspace path",
+    "why": "scanner needle tuple (generic directory names only)"
+   },
+   {
+    "path": "work/r7/redact_r7.py",
+    "line": 13,
+    "class": "pytest user dir",
+    "why": "this script's docstring and regex fragment (no user name)"
+   },
+   {
+    "path": "work/r7/redact_r7.py",
+    "line": 61,
+    "class": "pytest user dir",
+    "why": "this script's docstring and regex fragment (no user name)"
+   },
+   {
+    "path": "work/r7/redact_r7.py",
+    "line": 95,
+    "class": "pytest user dir",
+    "why": "this script's docstring and regex fragment (no user name)"
+   },
+   {
+    "path": "work/r7/redact_r7.py",
+    "line": 135,
+    "class": "pytest user dir",
+    "why": "this script's docstring and regex fragment (no user name)"
+   },
+   {
+    "path": "work/r7/redact_r7.py",
+    "line": 205,
+    "class": "pytest user dir",
+    "why": "this script's docstring and regex fragment (no user name)"
+   }
+  ]
+ },
+ "dry_run": false
+}

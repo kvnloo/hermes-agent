@@ -1,0 +1,136 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compressor-media-extraction",
+ "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+ "head_revision": "c5e8be14b43bf75bcc2e4e8d95f2d4810a7e2779",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#80636",
+  "NousResearch/hermes-agent#78645"
+ ],
+ "provenance": "self",
+ "privacy": "public-aggregate",
+ "cost_usd": 0.0,
+ "ai_assistance": "Claude Code (Opus 5.5) ran the re-checks and wrote this receipt",
+ "created_at": "2026-10-01T13:45:00-05:00",
+ "spec": {
+  "path": null,
+  "prereg_commit": null,
+  "note": "not pre-registered on claude/ledger (no ledger writes in this run)"
+ },
+ "env": {
+  "host": "<local-host>",
+  "python": "system python3 for git/gh collection; <venv>/bin/python (3.11) inside the xf bwrap sandbox for extract_media.py and verify_media.py",
+  "sandbox": "xf-sandbox.sh (sha256 c9586195c43a926317fa3d6bc18db1937527a6308dc30c683ce9c6a83398638a): loopback-only netns, read-only root, HOME/HERMES_HOME under <run>/home; blocked-exec.log empty for both cells",
+  "worktrees": "two detached worktrees of the scratch h.git at 34f8ec3b40 under <xf-root>/wt-w0/ (removed and pruned after)",
+  "regen_sha256": {
+   "extract_media.py": "88b143d7b0600ad5197fb5630d6c92bdbaf075cefa5af3477aeebfa03d140a06",
+   "verify_media.py": "569fc7e4bb407f4071249911ba927ddbb1ec501c72772c3acaa2468f57daf1f1"
+  }
+ },
+ "id": "recheck/r20261001-05",
+ "experiment": "polish round 5 re-measure: merge-tree and regeneration on main 34f8ec3b40, the six static gates on the regenerated tree, cited upstream states and flagged-PR heads, the #102117 review breakdown, and #80636's media-module members vs this branch",
+ "tier": "T0",
+ "label": "OBSERVED",
+ "supersedes": null,
+ "round_note": "polish round 5 (round-4 advisories). Branch unchanged (c5e8be14b4, local, never pushed). Refreshes, does not replace, recheck/r20261001-04 and regen/r20261001-02. The overlap census was not re-run; the flagged PRs' heads were re-read instead.",
+ "inputs": {
+  "main": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+  "main_committed_at": "2026-10-01T22:59:37+05:30",
+  "commits_past_base": 38,
+  "commits_past_44a1ce9724": 9,
+  "gh_read_at": "2026-10-01T18:38:35Z"
+ },
+ "command": "git --no-lazy-fetch -C h.git diff aea969677c 34f8ec3b40 -- agent/context_compressor*.py agent/turn_request_assembly.py agent/chat_completion_helpers.py agent/image_eviction_policy.py; git --no-lazy-fetch -C h.git merge-tree --write-tree 34f8ec3b40 c5e8be14b4; git -C h.git worktree add --detach <worktree>/cme-polish-base 34f8ec3b40 (and cme-polish-head); xf-sandbox.sh <run>/cme-polish-r5-regen <worktree>/cme-polish-head -- python3 -B regen/extract_media.py <worktree>/cme-polish-head; git -C <worktree>/cme-polish-head add -A agent tests && git write-tree; xf-sandbox.sh <run>/cme-polish-r5-verify <worktree>/cme-polish-head -- python3 -B regen/verify_media.py <worktree>/cme-polish-base <worktree>/cme-polish-head --python <venv>/bin/python --json <run>/verify-34f8ec3b40.json; gh api repos/NousResearch/hermes-agent/issues/<n>; gh api graphql (pullRequest headRefOid); gh api --paginate pulls/102117/reviews",
+ "result": {
+  "merge_check": {
+   "commits_past_base": 38,
+   "commits_past_44a1ce9724": 9,
+   "invalidate_on_diff_lines": 0,
+   "all_same": true,
+   "merge_tree": "7f7e21c2cc84992050d9a1a68d59fefc873745ef",
+   "regenerated_tree_on_fresh_main": "7f7e21c2cc84992050d9a1a68d59fefc873745ef",
+   "regenerated_equals_merge_tree": true,
+   "regen_shortstat": "10 files changed, 264 insertions(+), 243 deletions(-)",
+   "facade_lines_head": 5531,
+   "sibling_lines_head": 243,
+   "workflows_diff_lines_base_to_main": 0,
+   "workflows_count_on_main": 52
+  },
+  "verify_media_on_regenerated_tree": {
+   "verbatim": "PASS",
+   "facade_rest": "PASS",
+   "no_shim": "PASS",
+   "old_path_zero": "PASS",
+   "native_coupling": "PASS",
+   "imports": "PASS",
+   "overall": "PASS"
+  },
+  "verify_identical_to_r04": true,
+  "upstream_states": {
+   "all_as_stated": true,
+   "read_at": "2026-10-01T18:38:35Z",
+   "note": "every cited PR/issue has the state the texts give (OPEN, #80628 and #113887 CLOSED, #102117 and #104920 MERGED)"
+  },
+  "flagged_heads_unchanged_since_r04": true,
+  "pr_102117_reviews": {
+   "total": 24,
+   "by_state": {
+    "COMMENTED": 21,
+    "CHANGES_REQUESTED": 1,
+    "DISMISSED": 1,
+    "APPROVED": 1
+   }
+  },
+  "topic_cut_vs_80636": {
+   "pr_80636_module_names": [
+    "_append_text_to_content",
+    "_strip_image_parts_from_parts",
+    "_truncate_tool_call_args_json",
+    "_IMAGE_PART_TYPES",
+    "_is_image_part",
+    "_content_has_images",
+    "_strip_images_from_content",
+    "_strip_historical_media",
+    "_image_part_label"
+   ],
+   "kept_in_facade_here": [
+    "_append_text_to_content"
+   ],
+   "gone_from_main": [
+    "_strip_image_parts_from_parts",
+    "_truncate_tool_call_args_json"
+   ]
+  },
+  "old_path_importable_moved_names": 6,
+  "old_path_not_importable_moved_names": 10
+ },
+ "raw": [
+  {
+   "path": "raw/r05/merge-freshness-34f8ec3b40.json",
+   "sha256": "849eef1e863d9ea51a3f62eb798c60752384ee8a5f05e869f27b24090449f105",
+   "source_sha256": "849eef1e863d9ea51a3f62eb798c60752384ee8a5f05e869f27b24090449f105"
+  },
+  {
+   "path": "raw/r05/regen-34f8ec3b40.log",
+   "sha256": "fecc8ff2b77aa961cb81a39cef590440ab8d12e723417c72b17631b4de756766",
+   "source_sha256": "fecc8ff2b77aa961cb81a39cef590440ab8d12e723417c72b17631b4de756766"
+  },
+  {
+   "path": "raw/r05/topic-cut-vs-80636.json",
+   "sha256": "129e14b2542ff5b0db90b020f3e7b6f63ebbb8326fe7bee3db08e727f4004944",
+   "source_sha256": "129e14b2542ff5b0db90b020f3e7b6f63ebbb8326fe7bee3db08e727f4004944"
+  },
+  {
+   "path": "raw/r05/upstream-states-r05.json",
+   "sha256": "e059b9c411f200b4dcb3531a89d7343717633b062df1070ef861c3a9da4ed011",
+   "source_sha256": "e059b9c411f200b4dcb3531a89d7343717633b062df1070ef861c3a9da4ed011"
+  },
+  {
+   "path": "raw/r05/verify-34f8ec3b40.json",
+   "sha256": "03c134af08037bee2c3a8a6bf7c14cd6716204dc7b6488c114168505e1aaec34",
+   "source_sha256": "03c134af08037bee2c3a8a6bf7c14cd6716204dc7b6488c114168505e1aaec34"
+  }
+ ],
+ "verdict": "PASS for the re-checks: on main 34f8ec3b40 (38 commits past base, 0 invalidate_on diff lines, all touched and coupled files at the base's blob ids) merge-tree is clean (7f7e21c2cc), extract_media.py regenerates exactly that tree, and verify_media.py gives 6/6 PASS with output identical to round 4's. All cited upstream items are in the stated state and all 13 flagged/stack PR heads are unchanged since round 4."
+}

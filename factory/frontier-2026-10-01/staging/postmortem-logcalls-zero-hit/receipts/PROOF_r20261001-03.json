@@ -1,0 +1,322 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "PROOF/r20261001-03",
+ "tier": "T1",
+ "cost": "$0",
+ "experiment": "Round-3 freshness re-measure on upstream main 34f8ec3b40, staging commit unchanged: merge-tree matrix with both carriers, invalidate_on drift since the base, RED, GREEN x3 and ADJACENT, each test run in the factory bwrap sandbox.",
+ "spec": {
+  "path": null,
+  "rev": null,
+  "sha256": null,
+  "prereg_commit": null,
+  "decision_rule_sha": null,
+  "status": "NOT_PREREGISTERED",
+  "why": "Built before factory Wave 0: no factory/xf/specs/*.toml and no claude/ledger commit exist yet, so there is no spec file and no pre-registration commit. The decision rule applied is the selection entry's acceptance_gates. Its file hash below was taken at round-1 fix time; the file's mtime (2026-10-01T08:48Z) falls inside the build window, so it is not a pre-registration.",
+  "selection": {
+   "file": "frontier-2026-10-01/selection.json",
+   "entry": "staging_set[4] id=postmortem-logcalls-zero-hit",
+   "sha256": "207190d3fe1a7dcdd29ceafd84ff092d289079b93dff97ff5b6f1ea0586d55e3"
+  }
+ },
+ "runner_revision": "none: no xf runner exists for this item; the sandbox wrapper and the r3 script are hashed under inputs",
+ "issue": "kvnloo/hermes-agent (no campaign thread yet; OD-9). Queue board kvnloo/hermes-agent#404 has no row for this id.",
+ "origin_refs": [
+  "NousResearch/hermes-agent#121135",
+  "NousResearch/hermes-agent#84460",
+  "NousResearch/hermes-agent#119713",
+  "NousResearch/hermes-agent#103563",
+  "NousResearch/hermes-agent#103756"
+ ],
+ "staging": "postmortem-logcalls-zero-hit",
+ "base_revision": "234badf4012af380d23c91eae55d045a69c69ffb",
+ "declared_main": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+ "arms": {
+  "main": {
+   "commit": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+   "tree": "f05476c596c08b41c5370661dabc20fce223c9c9",
+   "commit_date": "2026-10-01T17:29:37Z",
+   "read_at": "2026-10-01T18:34Z (h.git refs/heads/main; the upstream main named for this round)"
+  },
+  "main_x_staging": {
+   "merge_tree": "c7460b5c539e76cff2dbe5cdb7961cec1334a892",
+   "merge": "clean",
+   "note": "tests ran on main with the head's 4 files checked out; git write-tree equal to the merge tree"
+  },
+  "main_with_head_tests_main_parser": {
+   "note": "RED arm: as main_x_staging, with logcalls.py reset to main"
+  },
+  "base_main": {
+   "tree": "f05476c596c08b41c5370661dabc20fce223c9c9",
+   "note": "ADJACENT base arm: all of evals/postmortem reset to main; write-tree equal to main's tree"
+  }
+ },
+ "head_revision": "dd4dd10611e8c23c7579a4ddb95655abebbaca27",
+ "changed_files": [
+  "evals/postmortem/forensics/logcalls.py",
+  "evals/postmortem/live_ab/cache_prefix_live.py",
+  "evals/postmortem/live_ab/cache_prefix_wire.py",
+  "evals/postmortem/tests/test_postmortem_harness.py"
+ ],
+ "policy_revision": {
+  "AGENTS.md": "65aa3e61bcba610da21279a17385671263be39e9@34f8ec3b40 (same blob @234badf401)",
+  "CONTRIBUTING.md": "b0baa59b5057c204b3c09d3dd170c0955cfdb39c@34f8ec3b40 (same blob @234badf401)",
+  ".github/PULL_REQUEST_TEMPLATE.md": "5496eb534fef9d08c091b8186e7edd1b5cf356db@34f8ec3b40 (same blob @234badf401)",
+  "factory": "FACTORY.md sha256:7726ba18b43a9367f91d7f70c3aaefb96a9863761ddf71225c61c26a30d688d4 (unchanged since round 1)",
+  "protocol": "promotion-readiness PROTOCOL.md sha256:182e3fbae771d7219497833b3f9d6f7ed385d70abace8736559026e4e60b90d4"
+ },
+ "env": {
+  "host": "<host>",
+  "test_python": "HERMES_PYTHON = <venv>/bin/python, set by the sandbox wrapper (same venv as r01/r02)",
+  "sandbox": "xf-sandbox.sh: bwrap, read-only root, own netns (loopback only), clearenv, real home masked, HOME/HERMES_HOME under the run dir, both temp dirs inside the run dir, Hermes console scripts stubbed",
+  "tz": "UTC timestamps"
+ },
+ "inputs": {
+  "scripts": {
+   "harness/r3/mt_r3.sh": "9af2167443555065c90b9a14e0a660f76756a5a1377f0f52b84f911d37c4674b"
+  },
+  "sandbox_sha256": "c9586195c43a926317fa3d6bc18db1937527a6308dc30c683ce9c6a83398638a",
+  "gh_read_at": "2026-10-01T18:34Z",
+  "carriers": {
+   "#121135": {
+    "head": "dd4a0ca4cf3345702eb7be95e11873308d3015b5",
+    "state": "OPEN"
+   },
+   "#119713": {
+    "head": "7471d9915d7d1ce3e94f9d18c9d775461d269815",
+    "state": "OPEN"
+   }
+  }
+ },
+ "command": [
+  "bash harness/r3/mt_r3.sh <h.git> > receipts/raw/r3/merge_tree.txt",
+  "git -C <h.git> worktree add --detach <worktree> 34f8ec3b40; git -C <worktree> checkout dd4dd10611 -- <the 4 changed files>   # write-tree c7460b5c53",
+  "cd <worktree> && <xf-sandbox> <runs>/plc-r3-green{1,2,3} <worktree> -- scripts/run_tests.sh evals/postmortem/tests/test_postmortem_harness.py tests/agent/test_turn_usage_log_line.py -q",
+  "git -C <worktree> checkout 34f8ec3b40 -- evals/postmortem/forensics/logcalls.py; <xf-sandbox> <runs>/plc-r3-red <worktree> -- scripts/run_tests.sh evals/postmortem/tests/test_postmortem_harness.py tests/agent/test_turn_usage_log_line.py -q",
+  "git -C <worktree> checkout 34f8ec3b40 -- evals/postmortem   # write-tree f05476c596 = main's tree; <xf-sandbox> <runs>/plc-r3-adj-base <worktree> -- scripts/run_tests.sh tests/agent/test_turn_usage_log_line.py evals/postmortem/tests/test_postmortem_harness.py -q",
+  "git -C <h.git> worktree remove <worktree>; git -C <h.git> worktree prune",
+  "run logs copied to receipts/raw/r3/ with <venv>, <pytest-tmp> and <worktree> substituted for local paths"
+ ],
+ "gates": {
+  "validity": "PASS",
+  "validity_basis": "Sandboxed runs with fresh HOME/HERMES_HOME per run dir; 0 blocked-exec entries; RED fails at the stated seam (calls_found); GREEN tree equals the merge tree; ADJACENT base tree equals main's tree; 0 errored runs.",
+  "red": {
+   "arm": "main 34f8ec3b40 + head tests, logcalls.py reset to main",
+   "result": "PASS",
+   "observed": {
+    "files": 2,
+    "passed": 6,
+    "failed": 2
+   },
+   "assertions": [
+    "E       assert (2 == 4)",
+    "E       assert 2 == 3"
+   ],
+   "seam_covered": true
+  },
+  "green": {
+   "arm": "main + head (tree c7460b5c53)",
+   "result": "PASS",
+   "reps": [
+    {
+     "files": 2,
+     "passed": 8,
+     "failed": 0
+    },
+    {
+     "files": 2,
+     "passed": 8,
+     "failed": 0
+    },
+    {
+     "files": 2,
+     "passed": 8,
+     "failed": 0
+    }
+   ],
+   "reps_agree": "3/3"
+  },
+  "sabotage": {
+   "per_hunk": "not re-run: the commit is unchanged; per-hunk sabotage is PROOF/r20261001-01 (6/6) and the early-exit check is PROOF/r20261001-02",
+   "unpinned_hunks": [
+    "logcalls early-exit guard (`if not scored`): reverting it to `if not calls` passes every test. With only cache_state=no_field calls, the reverted code raises ZeroDivisionError at hit_total / in_total; the committed code prints a message and returns 1 (raw/r1/only_no_field_*.txt). Behaviour is correct as committed, but no test pins it.",
+    "logcalls coverage print line",
+    "logcalls docstring"
+   ]
+  },
+  "adjacent": {
+   "files": [
+    "tests/agent/test_turn_usage_log_line.py"
+   ],
+   "base": "3 passed",
+   "arm": "3 passed",
+   "identical": true,
+   "pre_existing_failures": [],
+   "harness_file": {
+    "base": "3 passed",
+    "arm": "5 passed",
+    "note": "the arm adds the 2 new tests; the 3 existing ones pass on both"
+   }
+  },
+  "guards": {
+   "F14": "EQUAL (F14/r20261001-01, arm on main 34f8ec3b40; not re-run here)"
+  },
+  "flaky": false,
+  "noise_floor": null,
+  "credit": null,
+  "informativeness": "N_A",
+  "route_scope": "n/a",
+  "cache_read_ratio": {
+   "status": "N_A",
+   "before": null,
+   "after": null
+  }
+ },
+ "ab": null,
+ "measurements": [
+  {
+   "name": "red_tests_failed",
+   "arm": "main 34f8ec3b40",
+   "value": 2,
+   "n": 1,
+   "label": "OBSERVED",
+   "statistic": "count"
+  },
+  {
+   "name": "green_tests_passed",
+   "arm": "main 34f8ec3b40 + head",
+   "value": 8,
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "count per rep"
+  },
+  {
+   "name": "adjacent_base_tests_passed",
+   "arm": "main 34f8ec3b40",
+   "value": 6,
+   "failed": 0,
+   "label": "OBSERVED"
+  },
+  {
+   "name": "merge_tree_pairs_clean",
+   "value": 5,
+   "of": 6,
+   "label": "OBSERVED",
+   "note": "the one conflict is #121135 x #119713, in agent/turn_usage.py (not ours)"
+  }
+ ],
+ "denominators": {
+  "cells": 11,
+  "unit": "RED 1 + GREEN 3 + ADJACENT base 1 + merge-tree pairs 6",
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "completeness": 1.0
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "harness_abi": {
+  "harness": "hermes evals/postmortem",
+  "editor_abi": "n/a"
+ },
+ "not_tested": [
+  "evals/ is outside pytest testpaths, so CI does not run these tests",
+  "carrier suites on main 34f8ec3b40 x carrier (126 and 10 passed on aea969677c, PROOF/r20261001-02) not re-run; only the merges were re-checked",
+  "round trip and synthetic F06/E19 not re-run; carried by the freshness argument below",
+  "live probes not executed (real provider, paid)",
+  "real agent.log / state.db (OD-7)"
+ ],
+ "limitations": [
+  "one host, one test interpreter",
+  "the staging commit's parent stays 234badf401 (not rebased); tests ran on main with the head's 4 files"
+ ],
+ "resource_usage": {
+  "api_cost_usd": 0.0,
+  "gpu_s": 0,
+  "energy_j": null,
+  "runner_wall_s_per_run": "2.3-2.5 (OBSERVED, run_tests.sh summary)"
+ },
+ "verdict": "KEEP",
+ "carrier_choice": null,
+ "learning": {
+  "hypothesis": "the staged commit still applies, proves and composes on upstream main 34f8ec3b40",
+  "result": "KEEP",
+  "observed_evidence": [
+   "merge clean (tree c7460b5c53)",
+   "RED 2 failed with the same assertions",
+   "GREEN 3/3",
+   "ADJACENT identical",
+   "only agent/usage_pricing.py changed among invalidate_on paths (model alias table)"
+  ],
+  "regressions": [],
+  "reusable_lesson": null,
+  "roadmap_effect": "declared main promoted to 34f8ec3b40; commit unchanged"
+ },
+ "provenance": "self",
+ "frozen": null,
+ "z0evals_study": null,
+ "ai_assistance": "Claude Code (Opus 5.5) ran the re-measure and wrote this receipt; disclosed per repository policy",
+ "privacy": "synthetic inputs only; placeholders only (<h.git>, <worktree>, <runs>, <xf-sandbox>, <venv>, <pytest-tmp>, <host>)",
+ "evidence": [
+  {
+   "path": "receipts/raw/r3/merge_tree.txt",
+   "sha256": "3fad5fa00253b9a1cf5598f315d91c5d153b91a3662a2c3791db94d00c4980db"
+  },
+  {
+   "path": "receipts/raw/r3/red.txt",
+   "sha256": "8870e16a3b64b95926784514fcab2218cfbd116d93125ae3299fa68a3b99afd3"
+  },
+  {
+   "path": "receipts/raw/r3/green1.txt",
+   "sha256": "6a7dd6e837f568b79dccdc49999176943220a576705e4e5a9a3d008c109a128d"
+  },
+  {
+   "path": "receipts/raw/r3/green2.txt",
+   "sha256": "30709697dd8eb9cdc661d6ac6a2d03f9c1f6610e3d78ce99422dc37bd274663e"
+  },
+  {
+   "path": "receipts/raw/r3/green3.txt",
+   "sha256": "9ad97816c94ade1478bb37e86459abbdbf282751a0ad3e7709a3112da404ffd4"
+  },
+  {
+   "path": "receipts/raw/r3/adj_base.txt",
+   "sha256": "5b419dbbe990d482cb3598cbb5ee7588a339d2f400472acc3c1a08e8add407c3"
+  }
+ ],
+ "freshness": {
+  "drift_range": "234badf401..34f8ec3b40",
+  "drift_commits": 74,
+  "since_previous_declared_main": "aea969677c..34f8ec3b40: 38 commits",
+  "invalidate_on": [
+   "evals/postmortem",
+   "agent/turn_usage.py",
+   "agent/usage_pricing.py",
+   "hermes_logging.py",
+   "tests/agent/test_turn_usage_log_line.py",
+   ".github/workflows"
+  ],
+  "invalidate_on_changed": [
+   {
+    "path": "agent/usage_pricing.py",
+    "commits": [
+     "e2d311e5e6",
+     "5bb6127c5b"
+    ],
+    "what": "the model-pricing alias table near line 340 (gpt-6.1-sol aliases moved into the tier loop; net -1 line); normalize_usage and the producer path are untouched"
+   }
+  ],
+  "carrier_heads_unchanged": true,
+  "merge_tree": [
+   "main x staging: CLEAN tree=c7460b5c539e76cff2dbe5cdb7961cec1334a892",
+   "main x #121135: CLEAN tree=a40a4c7890abdb6080daa07dbb2714c263d626fa",
+   "main x #119713: CLEAN tree=18821688bd411078bd0b2683990ff786ddba7cd7",
+   "#121135 x staging: CLEAN tree=2e7d28d7d314538bf74cd0c42ad3fb2113c88f3a",
+   "#119713 x staging: CLEAN tree=97793e195c23312e44526170bfe0901163790b38",
+   "#121135 x #119713: CONFLICT"
+  ],
+  "consequence": "RED, GREEN and ADJACENT were re-observed on 34f8ec3b40. F06RT, F06SYN and E19SYN were measured on 234badf401; the only invalidate_on change since is the alias table, which none of them reads, so those results carry."
+ }
+}

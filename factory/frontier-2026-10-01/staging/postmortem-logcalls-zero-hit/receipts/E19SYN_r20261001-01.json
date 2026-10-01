@@ -55,7 +55,7 @@
   "protocol": "promotion-readiness PROTOCOL.md sha256:182e3fbae771d7219497833b3f9d6f7ed385d70abace8736559026e4e60b90d4"
  },
  "env": {
-  "host": "<local-host>",
+  "host": "<host>",
   "test_python": "3.11.14 (HERMES_PYTHON, not activated)",
   "host_python": "3.14.7",
   "sandbox": "no bwrap (xf executor not built); HOME/HERMES_HOME = fresh scratch dirs; loopback-only socket guard and exec audit hook in the T1 round trip",
@@ -181,7 +181,12 @@
  "redaction": {
   "applied_at": "2026-10-01T11:15Z",
   "rule": "Absolute local paths in receipts/ and receipts/raw/ text replaced by placeholders: $S = scratch dir, $W = build worktree, $X = factory dir, <pytest-tmp> = pytest tmp root, $HERMES_PYTHON = test interpreter; the staging-dir prefix is dropped, so harness/... and receipts/... are relative to the staging dir. No other byte changed. Evidence sha256 values were recomputed after redaction.",
-  "script": "harness/receipts_r1.py"
+  "script": "harness/receipts_r1.py",
+  "r3": {
+   "applied_at": "2026-10-01T18:42Z",
+   "rule": "env.host replaced by <host>. The harness scripts cited under inputs keep their as-run sha256; those bytes held local paths inline and are kept privately (private/harness-as-run/, never published). The published harness/ copies take the paths from the environment; their sha256 values are under inputs.scripts_published. No measurement changed.",
+   "script": "harness/r3/receipts_r3.py"
+  }
  },
  "evidence": [
   {

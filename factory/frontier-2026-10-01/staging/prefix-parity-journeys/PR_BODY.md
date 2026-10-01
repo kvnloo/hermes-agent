@@ -16,7 +16,7 @@ How each surface is driven:
 | `api_server_runs_restarts` | `python -m gateway.run` with only api_server | `POST /v1/runs` addressed by the client's `session_id` | The provider reports context pressure on one turn, so the next turn auto-compacts. There is no manual compaction over HTTP. |
 | `acp_restarts` | `hermes acp` | `session/new`, then `session/load` in each new process | ACP's own `/compress` slash command |
 
-**Results on current main:**
+**Results on main at this branch's base (`aea969677c`):**
 
 - The messaging gateway and api_server journeys pass.
 - The ACP journey fails, and it fails for a real reason. After `/compress`, the first request of a session reloaded in a fresh `hermes acp` misses the whole cached prefix. There are two causes, and each is enough on its own:
@@ -31,17 +31,17 @@ How each surface is driven:
 |---|---|
 | Neither fix (main today) | XFAIL: the reload request breaks at `messages[0]` |
 | Only the cause-2 fix | XFAIL: the reload request breaks at a message (stale transcript; `messages[4]` in the recorded run) |
-| Only the cause-1 fix (#76224 or #88364) | XFAIL: the nesting assertion fails |
+| Only the cause-1 fix (the in-place compaction of #76224 and #88364, hand-ported) | XFAIL: the nesting assertion fails |
 | Both fixes | PASS. Delete the `KNOWN` entry then. |
 
-Any other failure fails loudly. The test file explains the mechanism in a comment, so the gate doubles as a repro note.
+The last three rows were measured with scratch patches (How to Test, step 3). Both PR heads currently conflict with main, so the cause-1 row uses a hand-port of the in-place compaction they share, not either head. Any other failure fails loudly. The test file explains the mechanism in a comment, so the gate doubles as a repro note.
 
 **How this relates to the #76224 reviews.** The sweeper review on #76224 asked for "a real-SessionDB ACP regression that compacts a seeded session, restores the same session ID, and verifies the compacted live history plus retained inactive/compacted original rows". dosenr wrote such a test. It is posted on #76224 as `tests/acp/test_76215_regression.py`, and #88364 carries `test_compact_survives_process_restart`, which checks both the compacted active transcript and the archived original rows. This journey does not replace either. It never checks that the original rows are kept as inactive/compacted. What it adds is the same reload done through real `hermes acp` processes and checked on the request bytes the provider receives. That is where cause 2 shows up.
 
 ## Related Issue
 
 Refs #76215
-Refs #76224 and #88364 (the persistence fixes this journey exercises)
+Refs #76224 and #88364 (open fixes for cause 1; the journey was run against a hand-port of their in-place compaction, not against either head)
 Motivated by #104414, #45499 and #120116 (all closed; this guards the class)
 
 ## Type of Change
@@ -70,11 +70,11 @@ No production code changes.
 ## How to Test
 
 1. `scripts/run_tests.sh --include-integration tests/e2e/core/history/test_prefix_stability.py -rxX`
-   - Local result: 5 passed and 1 xfailed (`acp_restarts`), 213 s for the file, against 87 s for the three existing journeys on main in the same run. The machine was shared and busy (load average about 12 to 15 on 10 cores), so these times run long.
+   - Local result: 5 passed and 1 xfailed (`acp_restarts`), 213 s for the file. Main's version of the file (the three existing journeys) took 87 s in a separate run in the same session. The machine was shared and busy (1-minute load average 15.3 and 12.4 at the end of those two runs, on 10 cores), so these times run long.
    - The new journeys took 36 s (messaging gateway), 32 s (api_server) and 31 s (ACP).
 2. Negative controls. Each one was applied as a scratch patch that is not part of this PR:
-   - Add a per-request timestamp to the system message in `agent/turn_context.py`: every journey fails, including the three new ones.
-   - Force a prompt rebuild on every resume, plus a per-build nonce (the #104414 shape): every journey fails. In five of the six journeys the first break is the first request of the second process. For api_server it is the second request of the first process, because api_server re-runs the stored-prompt restore on every turn, not once per process.
+   - Add a per-request timestamp to the system message in `agent/turn_context.py`: 6 of 6 journeys fail, including the three new ones.
+   - Force a prompt rebuild on every resume, plus a per-build nonce (the #104414 shape): 6 of 6 journeys fail. In 5 of the 6 the first break is the first request of the second process. For api_server it is the second request of the first process, because api_server re-runs the stored-prompt restore on every turn, not once per process.
 3. ACP arms, each applied as a scratch patch to `acp_adapter/commands.py`:
    - stop passing `system_message`;
    - hand-port the in-place compaction of #76224 and #88364 (`compression_in_place = True` instead of detaching `_session_db`);
@@ -93,7 +93,7 @@ No production code changes.
 - [x] My commit messages follow [Conventional Commits](https://www.conventionalcommits.org/) (`fix(scope):`, `feat(scope):`, etc.)
 - [x] I searched for [existing PRs](https://github.com/NousResearch/hermes-agent/pulls) to make sure this isn't a duplicate
 - [x] My PR contains **only** changes related to this fix/feature (no unrelated commits)
-- [ ] I've run `pytest tests/ -q` and all tests pass. I ran only the targeted files listed above, not the whole suite.
+- [ ] I've run `pytest tests/ -q` and all tests pass. Only the targeted files listed above were run, not the whole suite.
 - [x] I've added tests for my changes (required for bug fixes, strongly encouraged for features)
 - [x] I've tested on my platform: Linux (CachyOS, kernel 7.2), Python 3.11
 
@@ -123,4 +123,4 @@ ACP after `/compress`, from the fake provider's recorded requests:
 - Changing the cwd between lives. For these surfaces cwd is an explicit input (`terminal.cwd`, the `session/load` cwd), and `_stored_prompt_matches_runtime` rebuilds the prompt on a cwd change by design.
 - That the original rows survive as inactive/compacted after an ACP `/compress`. dosenr's real-SessionDB test in #88364 covers that.
 
-AI assistance: Claude Code (Opus 5.5) wrote the journeys, the probes and this description. I reviewed and ran them.
+AI assistance: Claude Code (Claude Opus 5.5) wrote the test code in this PR and this description, and ran the tests and scratch-patch experiments described above.

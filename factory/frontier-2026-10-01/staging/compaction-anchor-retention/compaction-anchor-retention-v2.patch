@@ -1,0 +1,162 @@
+From fdd99fb1b7a9b6fbb4f6513ef29758fb5ac92403 Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Thu, 1 Oct 2026 06:16:25 -0500
+Subject: [PATCH] fix(compression): anchor index keeps task ids, dotted keys
+ and CLI error lines
+
+The 2026-09-19 compaction scorecard traced the summary's misses to
+identifiers in assistant text (delegation ids, config keys, exact error
+strings) and named the anchor index as the place to capture them.
+Delegation ids and config keys match no row in _ANCHOR_PATTERNS today,
+and an exact error string only matches the errors row when it contains
+an exception name, so the index drops the rest no matter how much budget
+is left:
+
+- task ids: delegate_tool subagent ids (sa-<n>-<hex8>) and kanban task ids
+  (t_<hex8>). The commits row needs 9+ hex chars.
+- dotted keys: dotted names whose last segment is snake_case
+  (plugins.stream_reasoning_deltas, compression.tail_mode). File names and
+  hosts stay out because their last segment has no underscore; the same
+  rule leaves out config keys whose last segment is one word
+  (terminal.backend). A match never starts in the middle of a longer name
+  (right after "x."), so self._app.router.add_post does not yield the
+  fragment router.add_post, and a long a.b.c... run is scanned once rather
+  than once per segment.
+- error messages: CLI error lines without an exception class name (git
+  "fatal:"/"error:", tsc "error TS2741:", gh "GraphQL: ...") and Hermes
+  tool refusals ("Blocked: ..."). "fatal:"/"error:" only count where a
+  line starts (or after a quote, a backtick or an escaped newline in JSON
+  tool output), so Python annotations such as "error: Exception)" and
+  "error: %s" log formats stay out.
+
+The rows go after the existing ones, so every existing section keeps its
+exact line under the shared 7,000-char budget and the new sections only
+use what is left. No prompt, cadence or budget change.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ agent/context_compressor.py                   | 10 +++
+ .../test_context_compressor_anchor_index.py   | 90 +++++++++++++++++++
+ 2 files changed, 100 insertions(+)
+ create mode 100644 tests/agent/test_context_compressor_anchor_index.py
+
+diff --git a/agent/context_compressor.py b/agent/context_compressor.py
+index 6da13625b3..829a788ce2 100644
+--- a/agent/context_compressor.py
++++ b/agent/context_compressor.py
+@@ -1062,6 +1062,16 @@ _ANCHOR_PATTERNS: "list[tuple[str, re.Pattern[str], int]]" = [
+     ("errors", re.compile(r"\b(?:[A-Z][a-zA-Z]*Error|Exception|ENOSPC|EACCES|SIGKILL|Traceback)\b[^\n]{0,90}"), 40),
+     ("handles", re.compile(r"@[A-Za-z0-9-]{3,30}\b"), 40),
+     ("urls", re.compile(r"https?://[^\s)\"']{10,110}"), 30),
++    # Classes the recall exam lost from assistant text (SCORECARD-2026-09-19-jev). Appended
++    # last so every existing section keeps its line under the shared budget.
++    ("task ids", re.compile(r"\b(?:sa-\d+-[0-9a-f]{8}|t_[0-9a-f]{8})\b"), 40),  # delegate_tool / kanban_db ids
++    # Never starts mid-name (after "x."): no fragments, and a long a.b.c... run is scanned once, not per segment.
++    ("dotted keys", re.compile(r"(?<!\w)(?<!\w\.)[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)*\.[a-z][a-z0-9]*_[a-z0-9_]*[a-z0-9](?!\.?\w)"), 40),
++    # CLI error lines (git fatal:/error:, tsc error TS####:, gh GraphQL:) and Hermes tool refusals (Blocked:).
++    # fatal:/error: only at a line start (or after a quote, backtick, JSON-escaped \n); not annotations or %s/{}.
++    ("error messages", re.compile(
++        r"(?:(?:^|(?<=[`\"])|(?<=\\n))(?:fatal|[Ee]rror)|\berror TS\d{4,5}|\bGraphQL|\bBlocked): "
++        r"(?![%{])(?:(?!\\n)[^\n]){8,110}", re.M), 20),
+ ]
+ _ANCHOR_NOISE = frozenset({
+     "@teknium", "@teknium1",  # session owner, in every transcript
+diff --git a/tests/agent/test_context_compressor_anchor_index.py b/tests/agent/test_context_compressor_anchor_index.py
+new file mode 100644
+index 0000000000..361d48ad48
+--- /dev/null
++++ b/tests/agent/test_context_compressor_anchor_index.py
+@@ -0,0 +1,90 @@
++"""Anchor index: identifier classes the compaction recall exam lost from assistant text.
++
++SCORECARD-2026-09-19-jev.md: the facts the summary dropped (delegation ids, config keys,
++exact error strings) sat in assistant text. ``_build_anchor_index`` keeps only what a row
++in ``_ANCHOR_PATTERNS`` matches, so each class needs a row that captures it verbatim,
++stays inside its cap and the shared budget, and does not soak up neighbouring classes.
++"""
++import json
++
++import agent.context_compressor as cc
++
++
++def _line(index: str, label: str) -> str:
++    return next((ln for ln in index.splitlines() if ln.startswith(f"{label}: ")), "")
++
++
++def _cap(label: str) -> int:
++    return next(cap for name, _pattern, cap in cc._ANCHOR_PATTERNS if name == label)
++
++
++def test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim():
++    turns = [
++        {"role": "user", "content": "Land the desktop batch and turn on reasoning deltas."},
++        {
++            "role": "assistant",
++            "content": (
++                "Delegated the inflight-journal cluster to sa-2-7318d0ba; kanban card t_4f9c2a1e tracks it.\n"
++                "Set plugins.stream_reasoning_deltas: true in config.yaml.\n"
++                "Merging #86589 failed:\n"
++                "GraphQL: Pull Request has merge conflicts (mergePullRequest)\n"
++                "The worktree checkout was refused:\n"
++                "Blocked: `git checkout` would rewrite Hermes's live source checkout\n"
++                "The pull stopped at `fatal: refusing to merge unrelated histories`\n"
++            ),
++        },
++        {
++            "role": "tool",
++            "content": json.dumps({
++                "output": "Updating 1a2b3c4..5d6e7f8\nerror: Your local changes to the following files would be overwritten by merge\n",
++                "exit_code": 1,
++            }),
++        },
++    ]
++
++    index = cc._build_anchor_index(turns)
++
++    for needle in (
++        "sa-2-7318d0ba",
++        "t_4f9c2a1e",
++        "plugins.stream_reasoning_deltas",
++        "GraphQL: Pull Request has merge conflicts (mergePullRequest)",
++        "Blocked: `git checkout` would rewrite Hermes's live source checkout",
++        "fatal: refusing to merge unrelated histories",
++        "error: Your local changes to the following files would be overwritten by merge",
++    ):
++        assert needle in index, f"{needle!r} missing from anchor index:\n{index}"
++    assert "exit_code" not in _line(index, "error messages")  # stops at the escaped newline
++
++
++def test_new_anchor_classes_stay_exact_and_bounded():
++    prose = (
++        "See agent/context_compressor.py and config.yaml (e.g. api.openai.com); "
++        "compression.tail_mode stays lean and the task_7 retry passed.\n"
++    )
++    ids = " ".join(f"sa-{i}-{i:08x}" for i in range(60))
++    errors = "\n".join(f"fatal: unable to reach remote mirror {i} over https" for i in range(60))
++    source = (  # code: annotations and log formats are not error lines, a mid-name fragment is not a key
++        "    def _on_failure(self, error: Exception) -> Dict[str, Any]:\n"
++        '        logger.warning("error: %s", exc)\n'
++        "    error: Optional[Exception] = None\n"
++        '    self._app.router.add_post("/hook", handler)\n'
++    ) * 2
++    turns = [
++        {"role": "assistant", "content": prose + ids + "\n" + errors},
++        {"role": "tool", "content": source},
++    ]
++
++    index = cc._build_anchor_index(turns)
++
++    dotted = _line(index, "dotted keys")
++    assert "compression.tail_mode" in dotted
++    for not_a_key in ("context_compressor.py", "config.yaml", "api.openai.com", "e.g", "task_7", "router.add_post"):
++        assert not_a_key not in dotted, f"{not_a_key!r} leaked into dotted keys: {dotted!r}"
++    assert _line(index, "task ids").count("sa-") == _cap("task ids")
++    messages = _line(index, "error messages")
++    for not_an_error in ("Exception)", "%s", "Optional["):
++        assert not_an_error not in messages, f"{not_an_error!r} leaked into error messages: {messages!r}"
++    assert messages.count("fatal: ") == _cap("error messages")
++    sections = index.split("\n")[3:-1]  # between the heading and the trailing note
++    assert sum(len(s) for s in sections) <= cc._LEAN_ANCHOR_BUDGET_CHARS
+-- 
+2.55.0
+

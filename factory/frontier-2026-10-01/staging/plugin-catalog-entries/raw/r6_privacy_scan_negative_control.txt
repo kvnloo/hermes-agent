@@ -1,0 +1,42 @@
+# r6 privacy-scan negative control (2026-10-01T19:13:41Z): tools/privacy_scan_r6.py run on a scratch copy <copy> of this staging directory with five planted leaks:
+#   raw/adjacent_base.txt   (copy of private/raw/adjacent_base.txt: absolute paths and the login; not a raw/r<round>_ name)
+#   tools/sandbox.sh        (copy of private/tools/sandbox.sh: absolute paths)
+#   run/src/HEAD            (copy of the pinned clone's .git/logs/HEAD: the host name and the login in the reflog identity line)
+#   tools/__pycache__/z.cpython-314.pyc  (bytecode, binary)
+#   raw/r6_login_canary.txt (a publishable name holding only the local login)
+# expected: FAIL, each plant flagged; the copy was deleted afterwards. Same local private-terms list as the real scan.
+# r6 privacy scan: XF_PRIVATE_TERMS=<local list> PYTHONDONTWRITEBYTECODE=1 python3 -B tools/privacy_scan_r6.py
+bytecode writing: off (sys.dont_write_bytecode=True)
+login check: on (whole word)
+terms from local list: 9; hostname check: on
+raw/r2_privacy_scan.txt	abs_path=0	hostname=0	terms=0	reviewed_generic=/tmp/hh
+raw/r3_privacy_scan.txt	abs_path=0	hostname=0	terms=0	reviewed_generic=/tmp/hh
+raw/r4_privacy_scan.txt	abs_path=0	hostname=0	terms=0	reviewed_generic=/tmp/hh
+raw/r4_privacy_scan_before.txt	abs_path=0	hostname=0	terms=0	reviewed_generic=/tmp/hh
+raw/r5_privacy_scan.txt	abs_path=0	hostname=0	terms=0	reviewed_generic=/tmp/hh
+tools/privacy_scan.py	abs_path=0	hostname=0	terms=0	reviewed_generic=/tmp/hh
+tools/t1_probe.py	abs_path=0	hostname=0	terms=0	reviewed_generic=/tmp/hh
+raw/adjacent_base.txt	abs_path=68	hostname=0	terms=30
+run/src/HEAD	abs_path=0	hostname=2	terms=0
+tools/sandbox.sh	abs_path=4	hostname=0	terms=5
+files flagged: 3
+completeness (round 6): every file under the staging directory walked; only private/ is outside the publishable set
+publishable by rule: 52
+unclassified (outside private/ and matching no publishable rule): 4
+unclassified	raw/adjacent_base.txt
+unclassified	run/src/HEAD
+unclassified	tools/__pycache__/z.cpython-314.pyc
+unclassified	tools/sandbox.sh
+login hits among publishable and unclassified: 3 files
+login	raw/r6_login_canary.txt	hits=1
+login	raw/adjacent_base.txt	hits=38
+login	run/src/HEAD	hits=2
+binary (NUL byte or invalid UTF-8) among publishable and unclassified: 1
+binary	tools/__pycache__/z.cpython-314.pyc	abs_path_bytes=0
+bytecode outside private/ (__pycache__ or *.pyc/*.pyo): 2
+bytecode	tools/__pycache__/
+bytecode	tools/__pycache__/z.cpython-314.pyc
+private/ (local-only, never published; for the record, not a failure): 170 files; with an absolute path 28, with the host name 3, with the login 9, binary 4
+scanned by the privacy_scan.py checks: 56 (52 publishable + 4 unclassified)
+result: FAIL
+rc=1

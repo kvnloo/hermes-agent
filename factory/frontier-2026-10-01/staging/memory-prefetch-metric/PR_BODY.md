@@ -16,11 +16,14 @@ The row is recorded on the caller's thread at each of these five exits. A stuck 
 
 ## Related Issue
 
-No tracking issue. Related:
+No issue asks for this counter. Related:
 
-- #124151 raises the Hindsight prefetch bound after measuring it by hand, and #120042 raises the default bound to 12 s after a production audit. This counter would have shown the `timed_out` rate directly. Each of them merges cleanly with this PR. With either one applied, every test in `tests/hermes_cli/test_shared_metrics_loop.py` and `tests/agent/test_memory_provider.py` passes: 74 of 74 with #124151 and 72 of 72 with #120042. Under #124151's 20 s bound, a Hindsight timeout would land in `10s_to_30s`, as provider `plugin`, because Hindsight is not a bundled provider. That follows from the bucket and provider rules; I did not run that path.
-- One open PR, #92118, conflicts with this one in `agent/memory_manager.py`. It rewrites the `if result and result.strip():` line right after the success/empty record call, and it lets a provider return a structured result. Keeping both sides' lines resolves the conflict. With both merged, a structured result would count as `empty` until the builder reads its `.context`. That is a one-line follow-up for whichever PR lands second.
+- #124151 raises the Hindsight prefetch bound after measuring it by hand, and #120042 raises the default bound to 12 s after a production audit. #85135 and #104405 report the same 8 s drop for Honcho and Hindsight. This counter would have shown the `timed_out` rate directly. #124151 and #120042 each merge cleanly with this PR. With either one applied, every test in `tests/hermes_cli/test_shared_metrics_loop.py` and `tests/agent/test_memory_provider.py` passes: 74 of 74 with #124151 and 72 of 72 with #120042. Under #124151's 20 s bound, a Hindsight timeout would land in `10s_to_30s`, as provider `plugin`, because Hindsight is not a bundled provider. That follows from the bucket and provider rules; I did not run that path.
+- #47021 asks for per-provider prefetch diagnostics: whether prefetch ran, whether it returned context, errors, and how long it took. This PR covers the outcome and wait counts as an opt-in shared metric. It does not add the local `hermes memory status` view that the issue proposes.
+- #92118 is the one open PR that merges cleanly with `main` but conflicts with this one, in `agent/memory_manager.py`. It rewrites the `if result and result.strip():` line right after the success/empty record call, and it lets a provider return a structured result. Keeping both sides' lines resolves the conflict. With both merged, a structured result would count as `empty` until the builder reads its `.context`. That is a one-line follow-up for whichever PR lands second.
+- #130788 reopens #104562 with the same head, for #104405. It makes the timeout configurable and keeps a late result for a later turn with the same query. It already conflicts with `main` in `agent/agent_init.py` and `hermes_cli/config_defaults.py`, and its `_prefetch_provider` rewrite touches the same lines as this PR. If both land, its return of a cached late result is a new exit, and it needs its own record call to be counted. I found this by reading its diff and did not run it.
 - #125881 merges cleanly, but its memory-admission check runs right after the success/empty record call. With both merged, a recalled context that the check blocks would still be counted as `success`. I found this by reading the merged code and did not run it.
+- #65329 adds an opt-in local turn trace with a `prologue.memory_prefetch` span. That span times prefetch for all providers together and writes to a local file on one machine. This PR counts each provider's outcome as a shared metric. The two PRs change different files.
 
 ## Type of Change
 
@@ -101,4 +104,4 @@ Not tested:
 
 The holographic provider returns `""` when its own recall fails, so a failure there shows as `empty`, not `failed`. That is how the provider behaves; the metric reports what it returns.
 
-The code, the tests, the test and benchmark runs, and this description were done with Claude Code (AI-assisted). I reviewed the diff and the test results.
+This PR was prepared with Claude Code (AI-assisted). That covers the code, the tests, the test and benchmark runs, and this description.

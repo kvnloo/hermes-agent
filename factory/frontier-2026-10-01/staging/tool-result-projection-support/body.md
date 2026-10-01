@@ -1,6 +1,6 @@
-Some evidence on the open questions here. It comes from a $0 harness: a real `AIAgent`, the real `read_file` tool and the real request assembly, against the repo's recording loopback providers. No paid calls were made. Everything below was measured on main at `44a1ce9724`.
+Some evidence on the open questions here. It comes from a $0 harness: a real `AIAgent`, the real `read_file` tool and the real request assembly, against the repo's recording loopback providers. No paid calls were made. Everything below was measured on main at `44a1ce9724`. The 9 commits since then, up to current main `34f8ec3b40`, change Codex catalog, Responses replay and media-policy code plus some unrelated tests. None of them touches this PR's files, the fixtures the new test uses, or the converter code it relies on.
 
-**Rebase.** Merged onto main at `44a1ce9724`, only `tests/tui_gateway/test_compression_config_hot_reload.py` conflicts. It is an add/add at the end of the file, and keeping both sides works. On the rebased tree, 130 of 130 tests pass across this PR's new test file and the four touched-module test files. 55 of the 130 come from this PR: 53 in `tests/agent/test_tool_result_projection.py` and 2 added to the hot-reload file. On main without this PR, 75 of 75 pass in the four existing files. `replay_gates` (11 of 11 pass) and the compaction region-scoping tripwire give the same results with projection forced on as on main. Their transcripts hold no tool rows that projection could archive, though, so they never exercise it.
+**Rebase.** Merged onto main at `44a1ce9724`, only `tests/tui_gateway/test_compression_config_hot_reload.py` conflicts, and it is still the only conflict on `34f8ec3b40`. It is an add/add at the end of the file, and keeping both sides works. On the rebased tree, 130 of 130 tests pass across this PR's new test file and the four touched-module test files. 55 of the 130 come from this PR: 53 in `tests/agent/test_tool_result_projection.py` and 2 added to the hot-reload file. On main without this PR, 75 of 75 pass in the four existing files. `replay_gates` (11 of 11 pass) and the compaction region-scoping tripwire give the same results with projection forced on as on main. Their transcripts hold no tool rows that projection could archive, though, so they never exercise it.
 
 **1. Boundary stability (OpenAI-compatible route, no cache markers).** This checks teknium1's point that a pass should break the prefix once per batch at a stable boundary, not once per turn. The run was 14 turns, each reading a distinct ~20K-char file, with `min_tokens: 8000` and `tail_ratio: 0`.
 - There were 6 projection passes in 28 requests. Every other request was a byte-identical extension of the one before it.
@@ -36,7 +36,7 @@ The cost, plainly: **with this gate, projection does not run on native Claude (a
 | projection, uncached trigger | 6 | 0.802 | -11.7% |
 | projection, cached-route trigger | 3 | 0.872 | -8.1% |
 
-Wire tokens fell 47% (uncached trigger) and 27% (cached-route trigger). The before/after cache-read ratio on a real caching route is still the measurement this needs, and it is not here.
+Measured on the loopback wire, the total characters sent over the session fell 47% (uncached trigger) and 27% (cached-route trigger). The before/after cache-read ratio on a real caching route is still the measurement this needs, and it is not here.
 
 <details><summary>Gate diff (on this PR's <code>agent/tool_result_projection.py</code>)</summary>
 

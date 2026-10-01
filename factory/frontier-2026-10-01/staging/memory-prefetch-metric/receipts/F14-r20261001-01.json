@@ -1,0 +1,1251 @@
+{
+  "schema": "xf.receipt.v1",
+  "id": "F14/r20261001-01",
+  "experiment": "F14 standing regression set (Wave 0 guard) on the staging head's single commit cherry-picked onto upstream main 34f8ec3b40, run twice and compared with the baseline map of 34f8ec3b40 itself. P5's 'F14 guards equal' part.",
+  "tier": "T1",
+  "cost_usd": 0.0,
+  "lane": "cpu",
+  "label": "OBSERVED",
+  "staging": "memory-prefetch-metric",
+  "issue": "kvnloo/hermes-agent#322",
+  "head_revision": "569ad4d84b0f9888ea2598c2a8ea416b2c75bad6",
+  "main_revision": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+  "arms": {
+    "base": {
+      "commit": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+      "map": {
+        "path": "<xf-root>/factory/w0/f14/baseline-34f8ec3b40.json",
+        "sha256": "a0cfdc3291783cb7f5fcfdbd81b6ef010cbc0cd82915786aea4e6176a56a1682",
+        "label": "base-r2",
+        "counts": {
+          "PASS": 36,
+          "FAIL": 4
+        },
+        "note": "copy of base-r2; base-r1 and base-r2 compared EQUAL (factory F14 baseline run, not re-run here)"
+      }
+    },
+    "arm": {
+      "cherry_pick": [
+        "569ad4d84b0f9888ea2598c2a8ea416b2c75bad6"
+      ],
+      "onto": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+      "commit": "e23dcd91fa9aa46882c4c3689122e38f75fafdd9",
+      "ref": "refs/xf/w0/memory-prefetch-metric (local scratch mirror only, not pushed)",
+      "applied_clean": true,
+      "conflicts": [],
+      "tree": "e263337135",
+      "tree_equals_merge_tree": "yes: git merge-tree --write-tree 34f8ec3b40 569ad4d84b gives the same tree e263337135",
+      "patch_id_stable": {
+        "head": "2e8304193f9b97fcd6afac7495ed328a64827c6c",
+        "arm": "2e8304193f9b97fcd6afac7495ed328a64827c6c"
+      },
+      "changed_blobs_equal_head": {
+        "agent/memory_manager.py": "d7302aeb11",
+        "hermes_cli/observability/shared_metrics_loop.py": "0689e32eaf",
+        "hermes_cli/observability/shared_metrics_contract.py": "c8443e4600",
+        "hermes_cli/observability/schemas/hermes.shared_metrics.v3.schema.json": "21cfe11bf7",
+        "tests/hermes_cli/test_shared_metrics_loop.py": "b196fa421f",
+        "website/docs/developer-guide/relay-shared-metrics.md": "c050c62d5e"
+      },
+      "author": "Kevin Rajan <7121943+kvnloo@users.noreply.github.com> (kept, author date 2026-10-01T03:59:04-05:00)",
+      "committer": "Kevin Rajan <7121943+kvnloo@users.noreply.github.com>",
+      "worktree": "<xf-root>/wt-w0/memory-prefetch-metric (detached; removed with plain git worktree remove, then git worktree prune)"
+    }
+  },
+  "freshness": {
+    "commits_aaa863f7ff_to_34f8ec3b40": 5,
+    "commits_040b6df2c4_to_34f8ec3b40": 30,
+    "invalidate_on_changed_since_aaa863f7ff": [],
+    "method": "git log aaa863f7ff..34f8ec3b40 -- <the 8 invalidate_on paths>: no commit"
+  },
+  "set": {
+    "name": "F14",
+    "rev": 1,
+    "set_sha256": "aba79fe8f09dabc62950aacd0a53c2fdc30bc58746f405f9aa050bf474d739b9",
+    "set_file_sha256": "8b4864a72dd07b6383f98fc1e67359143216889f9c36eda79dc56fc3579044c0",
+    "probes": 19,
+    "verdict_ids": 40,
+    "flaky": [],
+    "equality": "per id not listed in flaky: verdict, marker and fingerprint are equal"
+  },
+  "runner_sha256": "2323a5918435b06a56ca0f5f8b55d0a0c2274915f11cd31ef120649b0fad28fe",
+  "sandbox_sha256": "c9586195c43a926317fa3d6bc18db1937527a6308dc30c683ce9c6a83398638a",
+  "probe_helpers_sha256": {
+    "readtool_direct.py": "0df21aee5fec293042bf4511b3b4c353d13d768711b8272c85b9f86438649229"
+  },
+  "env": {
+    "host": "<host>",
+    "host_python": "3.14.7 (runner only; it never imports worktree code)",
+    "probe_python": "<venv>/bin/python 3.11.14 (read-only), inside the bwrap sandbox",
+    "sandbox": "xf-sandbox.sh: bwrap, cleared env, HOME=<run>/home, HERMES_HOME=<run>/home/.hermes, PATH=<venv>/bin:/usr/bin:/bin, no network egress except loopback",
+    "load_note": "host shared with other F14 runs; load average rose from about 2.9 to 12.0 during these two runs"
+  },
+  "command": [
+    "git -C <h.git> worktree add --detach <xf-root>/wt-w0/memory-prefetch-metric 34f8ec3b407e50bad3ae27e4cd79d65212061356",
+    "git -C <worktree> -c user.name='Kevin Rajan' -c user.email='7121943+kvnloo@users.noreply.github.com' cherry-pick 569ad4d84b0f9888ea2598c2a8ea416b2c75bad6",
+    "git -C <h.git> update-ref refs/xf/w0/memory-prefetch-metric e23dcd91fa9aa46882c4c3689122e38f75fafdd9 ''",
+    "cd <xf-root>/factory/w0/f14 && PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py run <worktree> maps/memory-prefetch-metric-r1.json --label memory-prefetch-metric-r1",
+    "PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py compare baseline-34f8ec3b40.json maps/memory-prefetch-metric-r1.json",
+    "(the same two commands with -r2)",
+    "PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py compare maps/memory-prefetch-metric-r1.json maps/memory-prefetch-metric-r2.json"
+  ],
+  "runs": [
+    {
+      "label": "memory-prefetch-metric-r1",
+      "started_utc": "2026-10-01T18:21:51Z",
+      "wall_s": 129.4,
+      "wall_label": "OBSERVED",
+      "counts": {
+        "PASS": 36,
+        "FAIL": 4
+      },
+      "verdict_ids": 40,
+      "worktree_head": "e23dcd91fa9aa46882c4c3689122e38f75fafdd9",
+      "worktree_dirty": false,
+      "only": null,
+      "blocked_exec_total": 0,
+      "cell_rc": {
+        "token_accounting/replay_gates": 0,
+        "token_accounting/ab_image_cost_calibration": 0,
+        "token_accounting/worktree_prompt_prefix": 0,
+        "native_compaction/ab_checkpoint_preflight": 0,
+        "provider_fallback/probe_104120": 0,
+        "provider_fallback/probe_104260": 0,
+        "provider_fallback/probe_104360": 0,
+        "goal_command_parity": 0,
+        "compaction/test_region_scoping": 0,
+        "postmortem/scanner_bypass_probe": 0,
+        "postmortem/notice_delivery_probe": 1,
+        "postmortem/cache_estimator_probe": 0,
+        "postmortem/rewrite_hint_probe": 0,
+        "postmortem/credential_identity_probe": 0,
+        "postmortem/context_cap_probe": 0,
+        "postmortem/deadline_probe": 0,
+        "postmortem/goal_scope_probe": 0,
+        "postmortem/finalizer_schedule_probe": 0,
+        "readtool/fixtures_direct_read_file": 0
+      },
+      "cell_wall_s": {
+        "token_accounting/replay_gates": 12.8,
+        "token_accounting/ab_image_cost_calibration": 6.8,
+        "token_accounting/worktree_prompt_prefix": 9.4,
+        "native_compaction/ab_checkpoint_preflight": 9.6,
+        "provider_fallback/probe_104120": 6.0,
+        "provider_fallback/probe_104260": 4.0,
+        "provider_fallback/probe_104360": 6.7,
+        "goal_command_parity": 2.3,
+        "compaction/test_region_scoping": 1.5,
+        "postmortem/scanner_bypass_probe": 0.5,
+        "postmortem/notice_delivery_probe": 1.8,
+        "postmortem/cache_estimator_probe": 1.2,
+        "postmortem/rewrite_hint_probe": 2.2,
+        "postmortem/credential_identity_probe": 9.7,
+        "postmortem/context_cap_probe": 5.7,
+        "postmortem/deadline_probe": 12.2,
+        "postmortem/goal_scope_probe": 5.1,
+        "postmortem/finalizer_schedule_probe": 26.8,
+        "readtool/fixtures_direct_read_file": 4.8
+      },
+      "expect_on_base": {
+        "postmortem/scanner_bypass_probe": {
+          "expected": "PASS",
+          "observed": "PASS",
+          "match": true,
+          "why": "#103492 merged; run.py notes it also passed before the fix"
+        },
+        "postmortem/notice_delivery_probe": {
+          "expected": "PASS",
+          "observed": "FAIL",
+          "match": false,
+          "why": "#103549 merged; run.py notes it also passed before the fix"
+        },
+        "postmortem/cache_estimator_probe": {
+          "expected": "FAIL",
+          "observed": "FAIL",
+          "match": true,
+          "why": "#103476 is OPEN upstream (gh read 2026-10-01), so the fix it guards is not on main: red on base"
+        },
+        "postmortem/rewrite_hint_probe": {
+          "expected": "PASS",
+          "observed": "PASS",
+          "match": true,
+          "why": "#103551 merged (fdd140557b)"
+        },
+        "postmortem/credential_identity_probe": {
+          "expected": "PASS",
+          "observed": "PASS",
+          "match": true,
+          "why": "#103526 merged (d97f318717)"
+        },
+        "postmortem/context_cap_probe": {
+          "expected": "PASS",
+          "observed": "FAIL",
+          "match": false,
+          "why": "#103513 merged (e5f8420be8)"
+        },
+        "postmortem/deadline_probe": {
+          "expected": "PASS",
+          "observed": "PASS",
+          "match": true,
+          "why": "#103486 merged (3d5831fa59)"
+        },
+        "postmortem/goal_scope_probe": {
+          "expected": "PASS",
+          "observed": "PASS",
+          "match": true,
+          "why": "#103496 merged (afb4e080f6) and #103534 merged (634109b7aa)"
+        },
+        "postmortem/finalizer_schedule_probe": {
+          "expected": "PASS",
+          "observed": "PASS",
+          "match": true,
+          "why": "#103507 merged (314e365363); README: 2 passed"
+        }
+      },
+      "map": {
+        "path": "<xf-root>/factory/w0/f14/maps/memory-prefetch-metric-r1.json",
+        "sha256": "c7a9a9d434dbbd5c6a70c1da711e45fa1aa7d5d78f1e933f959a99327a88a2e6"
+      },
+      "log": {
+        "path": "<xf-root>/factory/w0/runs/memory-prefetch-metric-r1.log",
+        "sha256": "df635a9bd2a66c0e734e30e16766d84df2dc56f47ac0e656dc3d2a7cbda889ba"
+      },
+      "run_dir": "<xf-root>/factory/w0/runs/memory-prefetch-metric-r1/ (one <run> per probe; private, not copied)",
+      "compare_vs_baseline": {
+        "command": "f14_run.py compare baseline-34f8ec3b40.json maps/memory-prefetch-metric-r1.json",
+        "rc": 0,
+        "stdout": "EQUAL"
+      }
+    },
+    {
+      "label": "memory-prefetch-metric-r2",
+      "started_utc": "2026-10-01T18:24:07Z",
+      "wall_s": 80.0,
+      "wall_label": "OBSERVED",
+      "counts": {
+        "PASS": 36,
+        "FAIL": 4
+      },
+      "verdict_ids": 40,
+      "worktree_head": "e23dcd91fa9aa46882c4c3689122e38f75fafdd9",
+      "worktree_dirty": false,
+      "only": null,
+      "blocked_exec_total": 0,
+      "cell_rc": {
+        "token_accounting/replay_gates": 0,
+        "token_accounting/ab_image_cost_calibration": 0,
+        "token_accounting/worktree_prompt_prefix": 0,
+        "native_compaction/ab_checkpoint_preflight": 0,
+        "provider_fallback/probe_104120": 0,
+        "provider_fallback/probe_104260": 0,
+        "provider_fallback/probe_104360": 0,
+        "goal_command_parity": 0,
+        "compaction/test_region_scoping": 0,
+        "postmortem/scanner_bypass_probe": 0,
+        "postmortem/notice_delivery_probe": 1,
+        "postmortem/cache_estimator_probe": 0,
+        "postmortem/rewrite_hint_probe": 0,
+        "postmortem/credential_identity_probe": 0,
+        "postmortem/context_cap_probe": 0,
+        "postmortem/deadline_probe": 0,
+        "postmortem/goal_scope_probe": 0,
+        "postmortem/finalizer_schedule_probe": 0,
+        "readtool/fixtures_direct_read_file": 0
+      },
+      "cell_wall_s": {
+        "token_accounting/replay_gates": 11.2,
+        "token_accounting/ab_image_cost_calibration": 4.3,
+        "token_accounting/worktree_prompt_prefix": 4.8,
+        "native_compaction/ab_checkpoint_preflight": 7.5,
+        "provider_fallback/probe_104120": 4.3,
+        "provider_fallback/probe_104260": 3.2,
+        "provider_fallback/probe_104360": 4.1,
+        "goal_command_parity": 1.3,
+        "compaction/test_region_scoping": 1.3,
+        "postmortem/scanner_bypass_probe": 0.5,
+        "postmortem/notice_delivery_probe": 1.3,
+        "postmortem/cache_estimator_probe": 0.6,
+        "postmortem/rewrite_hint_probe": 2.0,
+        "postmortem/credential_identity_probe": 8.1,
+        "postmortem/context_cap_probe": 3.9,
+        "postmortem/deadline_probe": 9.2,
+        "postmortem/goal_scope_probe": 1.8,
+        "postmortem/finalizer_schedule_probe": 6.9,
+        "readtool/fixtures_direct_read_file": 3.8
+      },
+      "expect_on_base": {
+        "postmortem/scanner_bypass_probe": {
+          "expected": "PASS",
+          "observed": "PASS",
+          "match": true,
+          "why": "#103492 merged; run.py notes it also passed before the fix"
+        },
+        "postmortem/notice_delivery_probe": {
+          "expected": "PASS",
+          "observed": "FAIL",
+          "match": false,
+          "why": "#103549 merged; run.py notes it also passed before the fix"
+        },
+        "postmortem/cache_estimator_probe": {
+          "expected": "FAIL",
+          "observed": "FAIL",
+          "match": true,
+          "why": "#103476 is OPEN upstream (gh read 2026-10-01), so the fix it guards is not on main: red on base"
+        },
+        "postmortem/rewrite_hint_probe": {
+          "expected": "PASS",
+          "observed": "PASS",
+          "match": true,
+          "why": "#103551 merged (fdd140557b)"
+        },
+        "postmortem/credential_identity_probe": {
+          "expected": "PASS",
+          "observed": "PASS",
+          "match": true,
+          "why": "#103526 merged (d97f318717)"
+        },
+        "postmortem/context_cap_probe": {
+          "expected": "PASS",
+          "observed": "FAIL",
+          "match": false,
+          "why": "#103513 merged (e5f8420be8)"
+        },
+        "postmortem/deadline_probe": {
+          "expected": "PASS",
+          "observed": "PASS",
+          "match": true,
+          "why": "#103486 merged (3d5831fa59)"
+        },
+        "postmortem/goal_scope_probe": {
+          "expected": "PASS",
+          "observed": "PASS",
+          "match": true,
+          "why": "#103496 merged (afb4e080f6) and #103534 merged (634109b7aa)"
+        },
+        "postmortem/finalizer_schedule_probe": {
+          "expected": "PASS",
+          "observed": "PASS",
+          "match": true,
+          "why": "#103507 merged (314e365363); README: 2 passed"
+        }
+      },
+      "map": {
+        "path": "<xf-root>/factory/w0/f14/maps/memory-prefetch-metric-r2.json",
+        "sha256": "464f73a5e01a14fe5b40c45e39f08109c88da26f00d81dd6755b5c3881930de9"
+      },
+      "log": {
+        "path": "<xf-root>/factory/w0/runs/memory-prefetch-metric-r2.log",
+        "sha256": "fd985e4ebef41a71ce8e35584f8cfb0e114d5575cf7a209b5e3b429481557d58"
+      },
+      "run_dir": "<xf-root>/factory/w0/runs/memory-prefetch-metric-r2/ (one <run> per probe; private, not copied)",
+      "compare_vs_baseline": {
+        "command": "f14_run.py compare baseline-34f8ec3b40.json maps/memory-prefetch-metric-r2.json",
+        "rc": 0,
+        "stdout": "EQUAL"
+      }
+    }
+  ],
+  "compare_r1_vs_r2": {
+    "rc": 0,
+    "stdout": "EQUAL"
+  },
+  "result": {
+    "f14": "EQUAL",
+    "ids_compared": 40,
+    "ids_different_r1": [],
+    "ids_different_r2": [],
+    "flaky_excluded": [],
+    "counts_baseline": {
+      "PASS": 36,
+      "FAIL": 4
+    },
+    "counts_r1": {
+      "PASS": 36,
+      "FAIL": 4
+    },
+    "counts_r2": {
+      "PASS": 36,
+      "FAIL": 4
+    },
+    "fails_shared_with_base": [
+      "postmortem/cache_estimator_probe",
+      "postmortem/context_cap_probe",
+      "postmortem/notice_delivery_probe",
+      "readtool/fixtures_direct_read_file::lying_extension"
+    ],
+    "fails_note": "The same 4 ids fail on main 34f8ec3b40 with byte-identical markers and fingerprints; none is caused by this commit. cache_estimator_probe matches its pre-registered red expectation; notice_delivery_probe and context_cap_probe are the two pre-registered PASS expectations that main itself does not meet (probe drift and main's opt-in child cap, as the baseline records); readtool lying_extension fails on main too."
+  },
+  "verdict_map_vs_baseline": [
+    {
+      "id": "compaction/test_region_scoping",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "goal_command_parity",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "d79dfafcaa4868dc"
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "d79dfafcaa4868dc"
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "d79dfafcaa4868dc"
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "native_compaction/ab_checkpoint_preflight::capture_cli_same_objects",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "f4f228c1f1712cc0"
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "f4f228c1f1712cc0"
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "f4f228c1f1712cc0"
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "native_compaction/ab_checkpoint_preflight::capture_gateway_reloaded_history",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "f4f228c1f1712cc0"
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "f4f228c1f1712cc0"
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "f4f228c1f1712cc0"
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "native_compaction/ab_checkpoint_preflight::over_threshold_negative",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "98dff750628aaa6f"
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "98dff750628aaa6f"
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "98dff750628aaa6f"
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "native_compaction/ab_checkpoint_preflight::restore",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "5ea433a5dd24f730"
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "5ea433a5dd24f730"
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "5ea433a5dd24f730"
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "postmortem/cache_estimator_probe",
+      "baseline": {
+        "verdict": "FAIL",
+        "marker": "rc=0 | marker absent: \"preflight_should_compress\": true",
+        "fingerprint": null
+      },
+      "r1": {
+        "verdict": "FAIL",
+        "marker": "rc=0 | marker absent: \"preflight_should_compress\": true",
+        "fingerprint": null
+      },
+      "r2": {
+        "verdict": "FAIL",
+        "marker": "rc=0 | marker absent: \"preflight_should_compress\": true",
+        "fingerprint": null
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "postmortem/context_cap_probe",
+      "baseline": {
+        "verdict": "FAIL",
+        "marker": "spawn child trigger 850000 != 200000; cycle 0 trigger 850000 cap None; cycle 1 trigger 850000 cap None; cycle 2 trigger 850000 cap None; cycle 3 trigger 850000 cap None; model switch 1000000: trigger 850000 > 200000",
+        "fingerprint": "56dabc3674684245"
+      },
+      "r1": {
+        "verdict": "FAIL",
+        "marker": "spawn child trigger 850000 != 200000; cycle 0 trigger 850000 cap None; cycle 1 trigger 850000 cap None; cycle 2 trigger 850000 cap None; cycle 3 trigger 850000 cap None; model switch 1000000: trigger 850000 > 200000",
+        "fingerprint": "56dabc3674684245"
+      },
+      "r2": {
+        "verdict": "FAIL",
+        "marker": "spawn child trigger 850000 != 200000; cycle 0 trigger 850000 cap None; cycle 1 trigger 850000 cap None; cycle 2 trigger 850000 cap None; cycle 3 trigger 850000 cap None; model switch 1000000: trigger 850000 > 200000",
+        "fingerprint": "56dabc3674684245"
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "postmortem/credential_identity_probe",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "postmortem/deadline_probe",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "postmortem/finalizer_schedule_probe",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "bd7eea88f9cd9bc3"
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "bd7eea88f9cd9bc3"
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "bd7eea88f9cd9bc3"
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "postmortem/goal_scope_probe",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "b7eca3edb852af8a"
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "b7eca3edb852af8a"
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "b7eca3edb852af8a"
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "postmortem/notice_delivery_probe",
+      "baseline": {
+        "verdict": "FAIL",
+        "marker": "rc=1: KeyError: 'task_failure_notice' | marker absent: PROBE_COMPLETE",
+        "fingerprint": null
+      },
+      "r1": {
+        "verdict": "FAIL",
+        "marker": "rc=1: KeyError: 'task_failure_notice' | marker absent: PROBE_COMPLETE",
+        "fingerprint": null
+      },
+      "r2": {
+        "verdict": "FAIL",
+        "marker": "rc=1: KeyError: 'task_failure_notice' | marker absent: PROBE_COMPLETE",
+        "fingerprint": null
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "postmortem/rewrite_hint_probe",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "postmortem/scanner_bypass_probe",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "provider_fallback/probe_104120",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "provider_fallback/probe_104260",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "provider_fallback/probe_104360",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "readtool/fixtures_direct_read_file::empty_config",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "a8ac6986052f5c49"
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "a8ac6986052f5c49"
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "a8ac6986052f5c49"
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "readtool/fixtures_direct_read_file::fifo_hang",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "ed4dce4e99e87179"
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "ed4dce4e99e87179"
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "ed4dce4e99e87179"
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "readtool/fixtures_direct_read_file::lockfile_version",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "743a3317c2ec0d1b"
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "743a3317c2ec0d1b"
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "743a3317c2ec0d1b"
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "readtool/fixtures_direct_read_file::log_error_hunt",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "9d7aa5596d7504eb"
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "9d7aa5596d7504eb"
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "9d7aa5596d7504eb"
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "readtool/fixtures_direct_read_file::lying_extension",
+      "baseline": {
+        "verdict": "FAIL",
+        "marker": "failed: flagged binary",
+        "fingerprint": "d6f615b85009a2c9"
+      },
+      "r1": {
+        "verdict": "FAIL",
+        "marker": "failed: flagged binary",
+        "fingerprint": "d6f615b85009a2c9"
+      },
+      "r2": {
+        "verdict": "FAIL",
+        "marker": "failed: flagged binary",
+        "fingerprint": "d6f615b85009a2c9"
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "readtool/fixtures_direct_read_file::minified_backoff",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "ebc3d45cf379ba02"
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "ebc3d45cf379ba02"
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "ebc3d45cf379ba02"
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "readtool/fixtures_direct_read_file::near_miss_filename",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "e3788ea56dd56195"
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "e3788ea56dd56195"
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "e3788ea56dd56195"
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "readtool/fixtures_direct_read_file::past_eof",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "b8b15fb954e9dbf5"
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "b8b15fb954e9dbf5"
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "b8b15fb954e9dbf5"
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "readtool/fixtures_direct_read_file::unicode_filename",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "4e892f8bdb3d56d1"
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "4e892f8bdb3d56d1"
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "4e892f8bdb3d56d1"
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "token_accounting/ab_image_cost_calibration",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "token_accounting/replay_gates::cli_deflated",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "token_accounting/replay_gates::cli_inflated",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "token_accounting/replay_gates::cli_past_window_inflated",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "token_accounting/replay_gates::gateway_deflated",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "token_accounting/replay_gates::gateway_inflated",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "token_accounting/replay_gates::gateway_past_window_inflated",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "token_accounting/replay_gates::overflow_recovery",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "token_accounting/replay_gates::restore_deflated",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "token_accounting/replay_gates::restore_inflated",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "token_accounting/replay_gates::restore_past_window_inflated",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "token_accounting/replay_gates::usage_less_fallback",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    },
+    {
+      "id": "token_accounting/worktree_prompt_prefix",
+      "baseline": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "5dd5c33ce53f80cb"
+      },
+      "r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "5dd5c33ce53f80cb"
+      },
+      "r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "5dd5c33ce53f80cb"
+      },
+      "r1_equals_baseline": true,
+      "r2_equals_baseline": true
+    }
+  ],
+  "relevance": "No probe in the F14 set targets memory prefetch or shared metrics (0 matches for memory, shared_metric or prefetch in f14_set.json). EQUAL shows the commit does not change any standing-set verdict, marker or fingerprint; it is not evidence for the item's invariant, which F08/r20261001-03 and F08/r20261001-04 carry.",
+  "gates": {
+    "guards": {
+      "F14": "equal"
+    },
+    "flaky": false
+  },
+  "p5_decision": {
+    "value": "PASS",
+    "parts": {
+      "red_marker_matched": "MET: F08/r20261001-03 (on 040b6df2c4), replayed in F08/r20261001-04 (on aaa863f7ff)",
+      "green_3_of_3": "MET: F08/r20261001-03, F08/r20261001-04",
+      "sabotage_re_red_unpinned_listed": "MET: 10/10 re-RED, unpinned_hunks listed (doc row, schema JSON def; checked by T0-SCHEMA/r20261001-03) in F08/r20261001-03",
+      "adjacent_identical": "MET: 12 files, 330/0 base vs 331/0 head (+1 new test) in F08/r20261001-03 and F08/r20261001-04",
+      "f14_guards_equal": "MET: this receipt",
+      "flaky_false": "MET: F08/r20261001-03 gates.flaky = false (no wall-clock bound below 2 s; 1.5 s stall cell passes)"
+    },
+    "rule": "FACTORY.md section 11.1 P5"
+  },
+  "evidence_class": {
+    "local": true,
+    "ci": "none",
+    "simulation": false,
+    "runtime": false,
+    "kind": "guard"
+  },
+  "not_tested": [
+    "the exact head 569ad4d84b on its own parent 040b6df2c4 (no F14 baseline exists there); the arm has the same patch-id and the same 6 blobs",
+    "the 5 live or paid probes and goal_repaste_probe excluded from the set, and the 4 sandbox-denylisted live_ab probes (see f14_set.json excluded)",
+    "py3.14 + nemo-relay 0.9 (probes ran on the read-only py3.11 venv)"
+  ],
+  "limitations": [
+    "Wall time was 129.4 s and 80.0 s against 52.3 s for the baseline run, because the host was shared with other F14 runs; no probe timed out and timing does not enter the equality",
+    "Only standing-set guard evidence; see relevance"
+  ],
+  "resource_usage": {
+    "wall_s": 209.4,
+    "gpu_s": 0,
+    "api_cost_usd": 0.0,
+    "network": "none (loopback only)"
+  },
+  "verdict": "KEEP",
+  "provenance": "self",
+  "privacy": "public-aggregate",
+  "ai_assistance": "Claude Code (Opus 5.5) ran the cherry-pick, both F14 runs and the comparisons, and wrote this receipt",
+  "raw_artifacts": {
+    "map_r1": {
+      "path": "<xf-root>/factory/w0/f14/maps/memory-prefetch-metric-r1.json",
+      "sha256": "c7a9a9d434dbbd5c6a70c1da711e45fa1aa7d5d78f1e933f959a99327a88a2e6"
+    },
+    "map_r2": {
+      "path": "<xf-root>/factory/w0/f14/maps/memory-prefetch-metric-r2.json",
+      "sha256": "464f73a5e01a14fe5b40c45e39f08109c88da26f00d81dd6755b5c3881930de9"
+    },
+    "baseline": {
+      "path": "<xf-root>/factory/w0/f14/baseline-34f8ec3b40.json",
+      "sha256": "a0cfdc3291783cb7f5fcfdbd81b6ef010cbc0cd82915786aea4e6176a56a1682"
+    }
+  },
+  "housekeeping": {
+    "worktree_removed": true,
+    "worktree_pruned": true,
+    "refs_created": [
+      "refs/xf/w0/memory-prefetch-metric"
+    ],
+    "refs_moved_or_deleted": [],
+    "main_unchanged": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+    "pushed": false,
+    "github_writes": 0
+  },
+  "supersedes": null
+}

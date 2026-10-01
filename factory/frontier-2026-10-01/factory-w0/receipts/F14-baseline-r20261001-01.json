@@ -1,0 +1,801 @@
+{
+  "schema": "xf.receipt.v1",
+  "id": "F14/baseline-r20261001-01",
+  "experiment": "F14 standing regression set x2 on base (FACTORY.md section 13 row 2)",
+  "label": "OBSERVED",
+  "base_revision": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+  "worktree": "<xf-root>/wt-w0/base-a (detached at base, clean after both runs: worktree_dirty false)",
+  "set": {
+    "path": "factory/w0/f14/f14_set.json",
+    "rev": 1,
+    "set_sha256": "aba79fe8f09dabc62950aacd0a53c2fdc30bc58746f405f9aa050bf474d739b9",
+    "file_sha256": "8b4864a72dd07b6383f98fc1e67359143216889f9c36eda79dc56fc3579044c0",
+    "probes_run": 19,
+    "verdict_ids": 40,
+    "excluded": [
+      {
+        "id": "postmortem/goal_judge_wait",
+        "status": "EXCLUDED",
+        "reason": "live: real provider calls (run.py marks it live, cents per run); needs OD-3"
+      },
+      {
+        "id": "postmortem/cache_prefix_wire",
+        "status": "EXCLUDED",
+        "reason": "live: ~6 real provider calls; empty pass marker (vacuous pass) and defaults HERMES_HOME to ~/.hermes and greps ~/.hermes/logs/agent.log (NousResearch/hermes-agent#127898, fix PR #127952 open). FACTORY 6.4: runs only after a patched copy is used. One sandboxed side observation is recorded in the baseline receipt, not in the set."
+      },
+      {
+        "id": "postmortem/nested_delegate_deadline",
+        "status": "EXCLUDED",
+        "reason": "live: copies auth.json and config.yaml from the real ~/.hermes and calls a real provider; the hand-run 'deadline' item is review_probes/deadline_probe.py, which is in the set"
+      },
+      {
+        "id": "postmortem/cache_concurrency_probe",
+        "status": "EXCLUDED",
+        "reason": "paid: about $50 per arm against real routes (README); needs OD-3"
+      },
+      {
+        "id": "postmortem/forensics/*",
+        "status": "EXCLUDED",
+        "reason": "not in the F14 row; needs a private state.db copy (OD-7)"
+      },
+      {
+        "id": "readtool/runner (model arm)",
+        "status": "EXCLUDED",
+        "reason": "drives the full AIAgent against a real model (README); needs OD-1 or OD-3. Only the fixtures via direct read_file are in the set"
+      },
+      {
+        "id": "postmortem/hardline_scanner_matrix",
+        "status": "EXCLUDED",
+        "origin": "#103492",
+        "reason": "blocked by the Wave 0 sandbox, not live: xf-sandbox.sh denylists the glob 'evals/postmortem/live_ab/*' wholesale (deliberately over-inclusive), so the cell is refused with rc 97 before bwrap starts (observed in f14-explore-1). run.py runs it offline with fake providers; re-admit after the sandbox owner narrows that glob and F15 re-runs",
+        "pinned_if_readmitted": {
+          "argv": [
+            "python",
+            "evals/postmortem/live_ab/hardline_scanner_matrix.py",
+            "{wt}"
+          ],
+          "env": {
+            "PYTHONPATH": "{wt}"
+          },
+          "judge": {
+            "name": "marker",
+            "marker": "ALL OK"
+          },
+          "expect_on_base": {
+            "verdict": "PASS",
+            "why": "#103492 merged (cd658b6a46)"
+          }
+        }
+      },
+      {
+        "id": "postmortem/subagent_context_cap",
+        "status": "EXCLUDED",
+        "origin": "#103513",
+        "reason": "blocked by the Wave 0 sandbox, not live: xf-sandbox.sh denylists the glob 'evals/postmortem/live_ab/*' wholesale (deliberately over-inclusive), so the cell is refused with rc 97 before bwrap starts (observed in f14-explore-1). run.py runs it offline with fake providers; re-admit after the sandbox owner narrows that glob and F15 re-runs",
+        "pinned_if_readmitted": {
+          "argv": [
+            "python",
+            "evals/postmortem/live_ab/subagent_context_cap.py",
+            "{wt}"
+          ],
+          "env": {
+            "PYTHONPATH": "{wt}"
+          },
+          "judge": {
+            "name": "marker",
+            "marker": "trigger=200,000"
+          },
+          "expect_on_base": {
+            "verdict": "PASS",
+            "why": "#103513 merged (e5f8420be8)"
+          }
+        }
+      },
+      {
+        "id": "postmortem/batch_failure_notice",
+        "status": "EXCLUDED",
+        "origin": "#103549",
+        "reason": "blocked by the Wave 0 sandbox, not live: xf-sandbox.sh denylists the glob 'evals/postmortem/live_ab/*' wholesale (deliberately over-inclusive), so the cell is refused with rc 97 before bwrap starts (observed in f14-explore-1). run.py runs it offline with fake providers; re-admit after the sandbox owner narrows that glob and F15 re-runs",
+        "pinned_if_readmitted": {
+          "argv": [
+            "python",
+            "evals/postmortem/live_ab/batch_failure_notice.py",
+            "{wt}"
+          ],
+          "env": {
+            "PYTHONPATH": "{wt}"
+          },
+          "judge": {
+            "name": "marker",
+            "marker": "TASK_FAILURE_NOTICE"
+          },
+          "expect_on_base": {
+            "verdict": "PASS",
+            "why": "#103549 merged (6b2d4faf36)"
+          }
+        }
+      },
+      {
+        "id": "postmortem/auth_stampede",
+        "status": "EXCLUDED",
+        "origin": "#103526",
+        "reason": "blocked by the Wave 0 sandbox, not live: xf-sandbox.sh denylists the glob 'evals/postmortem/live_ab/*' wholesale (deliberately over-inclusive), so the cell is refused with rc 97 before bwrap starts (observed in f14-explore-1). run.py runs it offline with fake providers; re-admit after the sandbox owner narrows that glob and F15 re-runs",
+        "pinned_if_readmitted": {
+          "argv": [
+            "python",
+            "evals/postmortem/live_ab/auth_stampede.py",
+            "{wt}",
+            "12"
+          ],
+          "env": {
+            "PYTHONPATH": "{wt}"
+          },
+          "judge": {
+            "name": "marker",
+            "marker": "server_401=0"
+          },
+          "expect_on_base": {
+            "verdict": "PASS",
+            "why": "#103526 merged (d97f318717)"
+          }
+        }
+      },
+      {
+        "id": "postmortem/goal_repaste_probe",
+        "status": "EXCLUDED",
+        "origin": "#103553",
+        "reason": "needs a private state.db copy: it opens RF_STATE_COPY (default <tmp>/rf/state_copy.db) read-only and reads message ids 264820 and 267045 from the #102117 run's database (observed: sqlite3.OperationalError unable to open database file in f14-explore-1). Private input, needs OD-7; never pointed at the live state.db"
+      }
+    ],
+    "flaky": []
+  },
+  "runner": {
+    "path": "factory/w0/f14/f14_run.py",
+    "sha256": "2323a5918435b06a56ca0f5f8b55d0a0c2274915f11cd31ef120649b0fad28fe",
+    "probe_helpers": {
+      "factory/w0/f14/probes/readtool_direct.py": "0df21aee5fec293042bf4511b3b4c353d13d768711b8272c85b9f86438649229"
+    }
+  },
+  "sandbox": {
+    "path": "factory/w0/sandbox/xf-sandbox.sh",
+    "sha256": "c9586195c43a926317fa3d6bc18db1937527a6308dc30c683ce9c6a83398638a",
+    "canary": "receipts/F15-full-r20261001-01.json",
+    "cells": "one fresh bwrap per probe, own run dir <runs>/<label>/<NN>-<slug>, HOME=<run>/home, HERMES_HOME=<run>/home/.hermes, netns loopback only, ro root, clearenv; serial; pytest -j 1, no file retry",
+    "blocked_exec_lines": {
+      "base-r1": 0,
+      "base-r2": 0
+    }
+  },
+  "env": {
+    "python": "<venv>/bin/python (live hermes-agent venv, read-only)",
+    "host_runner": "system python3, stdlib only"
+  },
+  "runs": {
+    "base-r1": {
+      "counts": {
+        "PASS": 36,
+        "FAIL": 4
+      },
+      "wall_s": 51.9,
+      "started_utc": "2026-10-01T18:16:48Z",
+      "worktree_head": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+      "worktree_dirty": false,
+      "map": "factory/w0/f14/maps/base-r1.json",
+      "map_sha256": "67d1d6f586bab1bd914918b524fa012adb35b1109c2b329d6fde68f335b1dde4"
+    },
+    "base-r2": {
+      "counts": {
+        "PASS": 36,
+        "FAIL": 4
+      },
+      "wall_s": 52.3,
+      "started_utc": "2026-10-01T18:17:40Z",
+      "worktree_head": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+      "worktree_dirty": false,
+      "map": "factory/w0/f14/maps/base-r2.json",
+      "map_sha256": "a0cfdc3291783cb7f5fcfdbd81b6ef010cbc0cd82915786aea4e6176a56a1682"
+    }
+  },
+  "equality": {
+    "rule": "per probe id not listed in flaky: verdict, marker and fingerprint are equal",
+    "result": "EQUAL",
+    "command": "f14_run.py compare maps/base-r1.json maps/base-r2.json -> EQUAL (rc 0)",
+    "flaky_excluded": [],
+    "reruns_needed": 0
+  },
+  "per_probe": {
+    "compaction/test_region_scoping": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      }
+    },
+    "goal_command_parity": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "d79dfafcaa4868dc"
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "d79dfafcaa4868dc"
+      }
+    },
+    "native_compaction/ab_checkpoint_preflight::capture_cli_same_objects": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "f4f228c1f1712cc0"
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "f4f228c1f1712cc0"
+      }
+    },
+    "native_compaction/ab_checkpoint_preflight::capture_gateway_reloaded_history": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "f4f228c1f1712cc0"
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "f4f228c1f1712cc0"
+      }
+    },
+    "native_compaction/ab_checkpoint_preflight::over_threshold_negative": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "98dff750628aaa6f"
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "98dff750628aaa6f"
+      }
+    },
+    "native_compaction/ab_checkpoint_preflight::restore": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "5ea433a5dd24f730"
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "5ea433a5dd24f730"
+      }
+    },
+    "postmortem/cache_estimator_probe": {
+      "base-r1": {
+        "verdict": "FAIL",
+        "marker": "rc=0 | marker absent: \"preflight_should_compress\": true",
+        "fingerprint": null
+      },
+      "base-r2": {
+        "verdict": "FAIL",
+        "marker": "rc=0 | marker absent: \"preflight_should_compress\": true",
+        "fingerprint": null
+      }
+    },
+    "postmortem/context_cap_probe": {
+      "base-r1": {
+        "verdict": "FAIL",
+        "marker": "spawn child trigger 850000 != 200000; cycle 0 trigger 850000 cap None; cycle 1 trigger 850000 cap None; cycle 2 trigger 850000 cap None; cycle 3 trigger 850000 cap None; model switch 1000000: trigger 850000 > 200000",
+        "fingerprint": "56dabc3674684245"
+      },
+      "base-r2": {
+        "verdict": "FAIL",
+        "marker": "spawn child trigger 850000 != 200000; cycle 0 trigger 850000 cap None; cycle 1 trigger 850000 cap None; cycle 2 trigger 850000 cap None; cycle 3 trigger 850000 cap None; model switch 1000000: trigger 850000 > 200000",
+        "fingerprint": "56dabc3674684245"
+      }
+    },
+    "postmortem/credential_identity_probe": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      }
+    },
+    "postmortem/deadline_probe": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      }
+    },
+    "postmortem/finalizer_schedule_probe": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "bd7eea88f9cd9bc3"
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "bd7eea88f9cd9bc3"
+      }
+    },
+    "postmortem/goal_scope_probe": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "b7eca3edb852af8a"
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "b7eca3edb852af8a"
+      }
+    },
+    "postmortem/notice_delivery_probe": {
+      "base-r1": {
+        "verdict": "FAIL",
+        "marker": "rc=1: KeyError: 'task_failure_notice' | marker absent: PROBE_COMPLETE",
+        "fingerprint": null
+      },
+      "base-r2": {
+        "verdict": "FAIL",
+        "marker": "rc=1: KeyError: 'task_failure_notice' | marker absent: PROBE_COMPLETE",
+        "fingerprint": null
+      }
+    },
+    "postmortem/rewrite_hint_probe": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      }
+    },
+    "postmortem/scanner_bypass_probe": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      }
+    },
+    "provider_fallback/probe_104120": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      }
+    },
+    "provider_fallback/probe_104260": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      }
+    },
+    "provider_fallback/probe_104360": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      }
+    },
+    "readtool/fixtures_direct_read_file::empty_config": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "a8ac6986052f5c49"
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "a8ac6986052f5c49"
+      }
+    },
+    "readtool/fixtures_direct_read_file::fifo_hang": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "ed4dce4e99e87179"
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "ed4dce4e99e87179"
+      }
+    },
+    "readtool/fixtures_direct_read_file::lockfile_version": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "743a3317c2ec0d1b"
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "743a3317c2ec0d1b"
+      }
+    },
+    "readtool/fixtures_direct_read_file::log_error_hunt": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "9d7aa5596d7504eb"
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "9d7aa5596d7504eb"
+      }
+    },
+    "readtool/fixtures_direct_read_file::lying_extension": {
+      "base-r1": {
+        "verdict": "FAIL",
+        "marker": "failed: flagged binary",
+        "fingerprint": "d6f615b85009a2c9"
+      },
+      "base-r2": {
+        "verdict": "FAIL",
+        "marker": "failed: flagged binary",
+        "fingerprint": "d6f615b85009a2c9"
+      }
+    },
+    "readtool/fixtures_direct_read_file::minified_backoff": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "ebc3d45cf379ba02"
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "ebc3d45cf379ba02"
+      }
+    },
+    "readtool/fixtures_direct_read_file::near_miss_filename": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "e3788ea56dd56195"
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "e3788ea56dd56195"
+      }
+    },
+    "readtool/fixtures_direct_read_file::past_eof": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "b8b15fb954e9dbf5"
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "b8b15fb954e9dbf5"
+      }
+    },
+    "readtool/fixtures_direct_read_file::unicode_filename": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "4e892f8bdb3d56d1"
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "4e892f8bdb3d56d1"
+      }
+    },
+    "token_accounting/ab_image_cost_calibration": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      }
+    },
+    "token_accounting/replay_gates::cli_deflated": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      }
+    },
+    "token_accounting/replay_gates::cli_inflated": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      }
+    },
+    "token_accounting/replay_gates::cli_past_window_inflated": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      }
+    },
+    "token_accounting/replay_gates::gateway_deflated": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      }
+    },
+    "token_accounting/replay_gates::gateway_inflated": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      }
+    },
+    "token_accounting/replay_gates::gateway_past_window_inflated": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      }
+    },
+    "token_accounting/replay_gates::overflow_recovery": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      }
+    },
+    "token_accounting/replay_gates::restore_deflated": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      }
+    },
+    "token_accounting/replay_gates::restore_inflated": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      }
+    },
+    "token_accounting/replay_gates::restore_past_window_inflated": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      }
+    },
+    "token_accounting/replay_gates::usage_less_fallback": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": null
+      }
+    },
+    "token_accounting/worktree_prompt_prefix": {
+      "base-r1": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "5dd5c33ce53f80cb"
+      },
+      "base-r2": {
+        "verdict": "PASS",
+        "marker": "",
+        "fingerprint": "5dd5c33ce53f80cb"
+      }
+    }
+  },
+  "expect_on_base": {
+    "postmortem/scanner_bypass_probe": {
+      "expected": "PASS",
+      "observed_r1": "PASS",
+      "observed_r2": "PASS",
+      "match": true,
+      "why": "#103492 merged; run.py notes it also passed before the fix",
+      "note": null
+    },
+    "postmortem/notice_delivery_probe": {
+      "expected": "PASS",
+      "observed_r1": "FAIL",
+      "observed_r2": "FAIL",
+      "match": false,
+      "why": "#103549 merged; run.py notes it also passed before the fix",
+      "note": "pre-registered PASS kept. Exploration (f14-explore-1/2) saw FAIL: the probe calls the private tools.delegate_tool _Batch(...) with an older positional signature (TypeError: missing 'overall_start'), so the worker thread dies and the notice never arrives (KeyError 'task_failure_notice'). Probe drift against main, not a product regression shown by this probe"
+    },
+    "postmortem/cache_estimator_probe": {
+      "expected": "FAIL",
+      "observed_r1": "FAIL",
+      "observed_r2": "FAIL",
+      "match": true,
+      "why": "#103476 is OPEN upstream (gh read 2026-10-01), so the fix it guards is not on main: red on base",
+      "note": "exploration matched: preflight_should_compress false on main"
+    },
+    "postmortem/rewrite_hint_probe": {
+      "expected": "PASS",
+      "observed_r1": "PASS",
+      "observed_r2": "PASS",
+      "match": true,
+      "why": "#103551 merged (fdd140557b)",
+      "note": null
+    },
+    "postmortem/credential_identity_probe": {
+      "expected": "PASS",
+      "observed_r1": "PASS",
+      "observed_r2": "PASS",
+      "match": true,
+      "why": "#103526 merged (d97f318717)",
+      "note": null
+    },
+    "postmortem/context_cap_probe": {
+      "expected": "PASS",
+      "observed_r1": "FAIL",
+      "observed_r2": "FAIL",
+      "match": false,
+      "why": "#103513 merged (e5f8420be8)",
+      "note": "pre-registered PASS kept. Exploration saw FAIL: main made the child cap opt-in (tools/delegate_tool.py _apply_child_compression_cap: 'Off by default'; config_defaults delegation.compression_threshold_tokens = 0), so with the probe's default config the child trigger is 850,000 with no cap. The judge keeps the README's 200,000 criterion; the fingerprint pins the observed cycle/config lines"
+    },
+    "postmortem/deadline_probe": {
+      "expected": "PASS",
+      "observed_r1": "PASS",
+      "observed_r2": "PASS",
+      "match": true,
+      "why": "#103486 merged (3d5831fa59)",
+      "note": null
+    },
+    "postmortem/goal_scope_probe": {
+      "expected": "PASS",
+      "observed_r1": "PASS",
+      "observed_r2": "PASS",
+      "match": true,
+      "why": "#103496 merged (afb4e080f6) and #103534 merged (634109b7aa)",
+      "note": null
+    },
+    "postmortem/finalizer_schedule_probe": {
+      "expected": "PASS",
+      "observed_r1": "PASS",
+      "observed_r2": "PASS",
+      "match": true,
+      "why": "#103507 merged (314e365363); README: 2 passed",
+      "note": null
+    }
+  },
+  "side_observations": {
+    "cache_prefix_wire (NousResearch/hermes-agent#127898)": {
+      "label": "OBSERVED",
+      "result": "refused by the sandbox before bwrap started: rc 97, 'xf-sandbox: denylisted selection: evals/postmortem/live_ab/cache_prefix_wire.py'. It never ran, so it read no log, real or masked, and made no provider call.",
+      "if_admitted": "MODELED (static read of the probe, not run): HERMES_HOME is already set by the sandbox, so its setdefault keeps <run>/home/.hermes; its shell grep of ~/.hermes/logs/agent.log expands ~ to HOME=<run>/home, the isolated home; the real home is a tmpfs; with no credentials and no network the provider call fails, and run.py's empty pass marker would still count rc 0 as PASS (the vacuous pass #127898 reports; fix PR #127952 open)"
+    },
+    "region_scoping_via_pytest": {
+      "label": "OBSERVED",
+      "result": "scripts/run_tests.sh evals/compaction/test_region_scoping.py collects 0 tests (the file has a __main__ block and no test_ functions) and the runner prints 'NO TESTS RAN ... This is NOT a pass'; the set runs it as a script with its own 'scoping tripwire: ALL PASS' marker. The command in factory-replay-gate STAGING.md ('bash scripts/run_tests.sh evals/compaction/test_region_scoping.py -q') would not exercise it"
+    },
+    "exploration_runs": "f14-explore-1 and f14-explore-2 (earlier set revisions, set hashes differ, not used for equality) are kept under <runs>/"
+  },
+  "base_findings_red": [
+    "postmortem/cache_estimator_probe FAIL: preflight_should_compress false (fix PR #103476 open): expected red",
+    "postmortem/notice_delivery_probe FAIL: probe drift, private _Batch signature changed (TypeError missing 'overall_start')",
+    "postmortem/context_cap_probe FAIL vs README 200,000 criterion: main made the child cap opt-in (default off, trigger 850,000)",
+    "readtool lying_extension FAIL: PNG bytes in a .txt are transcoded as UTF-16-BE text, not flagged binary"
+  ],
+  "not_tested": [
+    "the 4 non-live postmortem live_ab probes (hardline_scanner_matrix, subagent_context_cap, batch_failure_notice, auth_stampede): refused by the sandbox denylist glob evals/postmortem/live_ab/*",
+    "goal_repaste_probe (needs a private state.db copy)",
+    "live/paid probes: goal_judge_wait, cache_prefix_wire, nested_delegate_deadline, cache_concurrency_probe, readtool model arm",
+    "parallel execution (runner is serial by design)",
+    "a candidate arm (this is the base baseline only)"
+  ],
+  "gates": {
+    "note": "F14 is Wave 0 (FACTORY 11.3), not a P1-P12 gate itself; this baseline is what P5 'F14 guards equal' compares arms against. No STAGING.md was edited; no P-gate status was changed by this receipt"
+  },
+  "resource_usage": {
+    "wall_s": {
+      "base-r1": 51.9,
+      "base-r2": 52.3
+    },
+    "api_cost_usd": 0.0,
+    "label": "OBSERVED"
+  },
+  "privacy": "placeholders only (<xf-root>, <runs>, <run>, <worktree>, <venv>, <tmp>)",
+  "provenance": "self",
+  "ai_assistance": "Claude Code (Opus 5.5) wrote the runner, set and readtool helper and ran both baseline runs"
+}

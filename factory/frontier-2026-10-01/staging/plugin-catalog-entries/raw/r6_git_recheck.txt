@@ -1,0 +1,130 @@
+# r6 git recheck (round-6 fix; bare mirror, read-only; run at 2026-10-01T19:08:24Z)
+# newest upstream main: gh api repos/NousResearch/hermes-agent/commits/main gave 5d077106b89aa9f8d3bffa39d22a8533ba88306b (see raw/r6_gh_reads.json); object present in <bare>, no ref points at it; not fetched
+$ git -C <bare> rev-parse refs/heads/staging/plugin-catalog-entries refs/heads/staging/plugin-catalog-entries^ refs/heads/staging/plugin-catalog-entries^{tree} refs/heads/main
+98c305b3ec8d03693f4dc94bade69035cb15ff7d
+234badf4012af380d23c91eae55d045a69c69ffb
+3a915075078775928dd352fa2fe77bd200bdd714
+34f8ec3b407e50bad3ae27e4cd79d65212061356
+rc=0
+$ git -C <bare> log -1 --format=%H committer_date=%cI subject=%s 5d077106b89aa9f8d3bffa39d22a8533ba88306b
+5d077106b89aa9f8d3bffa39d22a8533ba88306b committer_date=2026-10-02T00:18:00+05:30 subject=fix(anthropic): future Claude ids keep prior thinking by default
+rc=0
+$ git -C <bare> merge-base --is-ancestor 105e8765863f23f837b19433c648de1208415f2f 5d077106b89aa9f8d3bffa39d22a8533ba88306b
+rc=0
+$ git -C <bare> merge-base --is-ancestor 234badf4012af380d23c91eae55d045a69c69ffb 5d077106b89aa9f8d3bffa39d22a8533ba88306b
+rc=0
+$ git -C <bare> rev-list --count 234badf4012af380d23c91eae55d045a69c69ffb..5d077106b89aa9f8d3bffa39d22a8533ba88306b
+135
+rc=0
+$ git -C <bare> rev-list --count 34f8ec3b407e50bad3ae27e4cd79d65212061356..5d077106b89aa9f8d3bffa39d22a8533ba88306b
+61
+rc=0
+$ git -C <bare> rev-list --count 105e8765863f23f837b19433c648de1208415f2f..5d077106b89aa9f8d3bffa39d22a8533ba88306b
+33
+rc=0
+$ git -C <bare> merge-tree --write-tree 5d077106b89aa9f8d3bffa39d22a8533ba88306b 98c305b3ec8d03693f4dc94bade69035cb15ff7d
+81e469021027d6c382cfa6c4fef55ad4af897c2a
+rc=0
+$ git -C <bare> diff --stat 105e8765863f23f837b19433c648de1208415f2f 5d077106b89aa9f8d3bffa39d22a8533ba88306b -- <18 invalidate_on specs> <14 adjacent files>
+rc=0 (empty = unchanged since 105e8765863f23f837b19433c648de1208415f2f; and 105e8765863f23f837b19433c648de1208415f2f is unchanged on these paths since 363e9d5f0a15ffe143d4a8b573b4898d6e428115, where round 5 re-measured)
+$ git -C <bare> diff --stat 363e9d5f0a15ffe143d4a8b573b4898d6e428115 5d077106b89aa9f8d3bffa39d22a8533ba88306b -- <18 invalidate_on specs> <14 adjacent files>
+rc=0 (empty = unchanged since 363e9d5f0a15ffe143d4a8b573b4898d6e428115)
+$ git -C <bare> diff --stat 234badf4012af380d23c91eae55d045a69c69ffb 5d077106b89aa9f8d3bffa39d22a8533ba88306b -- <18 invalidate_on specs> <14 adjacent files>
+ .github/workflows/plugin-catalog-ci.yml       | 182 ++++++++++++++++++++++----
+ plugin-catalog/README.md                      |   4 +-
+ plugin-catalog/woof.yaml                      |  29 ++++
+ scripts/validate_plugin_catalog.py            |  29 +++-
+ tests/scripts/test_validate_plugin_catalog.py |  20 +++
+ 5 files changed, 233 insertions(+), 31 deletions(-)
+rc=0
+$ git -C <bare> diff --name-only 105e8765863f23f837b19433c648de1208415f2f 5d077106b89aa9f8d3bffa39d22a8533ba88306b | cut -d/ -f1 | sort | uniq -c   (top-level dirs touched since 105e8765863f23f837b19433c648de1208415f2f)
+     12 agent
+      2 tests
+$ git -C <bare> diff --name-only 105e8765863f23f837b19433c648de1208415f2f 5d077106b89aa9f8d3bffa39d22a8533ba88306b | cut -d/ -f1-2 | sort | uniq -c
+      1 agent/anthropic_message_convert.py
+      1 agent/anthropic_thinking_policy.py
+      1 agent/anthropic_thinking_replay.py
+      1 agent/context_compressor.py
+      1 agent/conversation_compression.py
+      1 agent/message_sanitization.py
+      1 agent/model_metadata.py
+      1 agent/prompt_builder.py
+      1 agent/system_prompt.py
+      1 agent/turn_context.py
+      1 agent/turn_recovery.py
+      1 agent/turn_request_assembly.py
+      2 tests/agent
+$ git -C <bare> cat-file -e 5d077106b89aa9f8d3bffa39d22a8533ba88306b:plugin-catalog/paw-pii.yaml
+absent (need still holds)
+$ git -C <bare> ls-tree --name-only 5d077106b89aa9f8d3bffa39d22a8533ba88306b plugin-catalog/ | grep '\.yaml$' | grep -vc '^plugin-catalog/removed.yaml$' (entry files)
+349
+$ git -C <bare> cat-file -e 5d077106b89aa9f8d3bffa39d22a8533ba88306b:hermes_cli/data/plugin_index.json
+absent (old route still gone)
+$ git -C <bare> rev-parse 5d077106b89aa9f8d3bffa39d22a8533ba88306b:.github/PULL_REQUEST_TEMPLATE.md 5d077106b89aa9f8d3bffa39d22a8533ba88306b:plugin-catalog/README.md 5d077106b89aa9f8d3bffa39d22a8533ba88306b:CONTRIBUTING.md 5d077106b89aa9f8d3bffa39d22a8533ba88306b:AGENTS.md 5d077106b89aa9f8d3bffa39d22a8533ba88306b:scripts/validate_plugin_catalog.py 363e9d5f0a15ffe143d4a8b573b4898d6e428115:scripts/validate_plugin_catalog.py
+5496eb534fef9d08c091b8186e7edd1b5cf356db
+8af453826b3a4a49880e824cdc3fbbfa3c424675
+b0baa59b5057c204b3c09d3dd170c0955cfdb39c
+65aa3e61bcba610da21279a17385671263be39e9
+8179eaf5f314a2a067cc70aa4f3403f5ef4ef05f
+8179eaf5f314a2a067cc70aa4f3403f5ef4ef05f
+rc=0
+# member branches: commits behind (rev-list --count <ref>..<sha>)
+refs/fork/feat/paw-pii-plugin-index cd7b9d3bcf0bf7373ab8b5893adceb7fda0ca8c6 behind_234badf401=13832 behind_5d077106b8=13967
+refs/fork/feat/groq-orpheus-tts 548df5dcc037e85d8ed47de57ddb75cce3661af7 behind_234badf401=20605 behind_5d077106b8=20740
+refs/fork/feat/tinyfish-browser-provider 739b30bc021fc2d8202b4fea8aed91c389f7fc33 behind_234badf401=39852 behind_5d077106b8=39987
+refs/fork/feat/spatial-canvas-upstream 486a620b5a66bd41dbe45247d4734932e17c4409 behind_234badf401=23793 behind_5d077106b8=23928
+# refs of this item in <bare>
+34f8ec3b407e50bad3ae27e4cd79d65212061356 refs/heads/main
+98c305b3ec8d03693f4dc94bade69035cb15ff7d refs/heads/staging/plugin-catalog-entries
+dd185c1f84a993aaadcc320399f2476bfb894b48 refs/xf/w0/plugin-catalog-entries
+# ---- appended at 2026-10-01T19:10:12Z: upstream main moved again; gh api repos/NousResearch/hermes-agent/commits/main at 19:08:41Z gives 1798b335c43d7e59066ad74a8c2d1d1c9fd537fe (committed 19:08:13Z; object present in <bare>, no ref points at it; not fetched by this round) ----
+$ git -C <bare> log -1 --format=%H committer_date=%cI subject=%s 1798b335c43d7e59066ad74a8c2d1d1c9fd537fe
+1798b335c43d7e59066ad74a8c2d1d1c9fd537fe committer_date=2026-10-01T12:08:13-07:00 subject=fix(agent): reasoning replay verdict resets when the route changes
+rc=0
+$ git -C <bare> merge-base --is-ancestor 5d077106b89aa9f8d3bffa39d22a8533ba88306b 1798b335c43d7e59066ad74a8c2d1d1c9fd537fe
+rc=0
+$ git -C <bare> rev-list --count 5d077106b89aa9f8d3bffa39d22a8533ba88306b..1798b335c43d7e59066ad74a8c2d1d1c9fd537fe
+2
+rc=0
+$ git -C <bare> rev-list --count 34f8ec3b407e50bad3ae27e4cd79d65212061356..1798b335c43d7e59066ad74a8c2d1d1c9fd537fe
+63
+rc=0
+$ git -C <bare> rev-list --count 234badf4012af380d23c91eae55d045a69c69ffb..1798b335c43d7e59066ad74a8c2d1d1c9fd537fe
+137
+rc=0
+$ git -C <bare> merge-tree --write-tree 1798b335c43d7e59066ad74a8c2d1d1c9fd537fe 98c305b3ec8d03693f4dc94bade69035cb15ff7d
+064f9e0c6750e05e019129c5e954c4058c170bf4
+rc=0
+$ git -C <bare> diff --stat 5d077106b89aa9f8d3bffa39d22a8533ba88306b 1798b335c43d7e59066ad74a8c2d1d1c9fd537fe -- <18 invalidate_on specs> <14 adjacent files>
+rc=0 (empty = unchanged since 5d077106b89aa9f8d3bffa39d22a8533ba88306b)
+$ git -C <bare> diff --name-only 5d077106b89aa9f8d3bffa39d22a8533ba88306b 1798b335c43d7e59066ad74a8c2d1d1c9fd537fe
+agent/agent_init.py
+agent/agent_runtime_helpers.py
+agent/chat_completion_helpers.py
+agent/codex_responses_adapter.py
+agent/turn_recovery.py
+run_agent.py
+tests/agent/test_codex_token_expired_replay_recovery.py
+tests/agent/test_primary_runtime_restore.py
+tests/e2e/core/providers/test_openai_responses.py
+website/docs/developer-guide/provider-runtime.md
+$ git -C <bare> cat-file -e 1798b335c43d7e59066ad74a8c2d1d1c9fd537fe:plugin-catalog/paw-pii.yaml
+absent (need still holds)
+$ git -C <bare> ls-tree --name-only 1798b335c43d7e59066ad74a8c2d1d1c9fd537fe plugin-catalog/ | grep '\.yaml$' | grep -vc '^plugin-catalog/removed.yaml$' (entry files)
+349
+$ git -C <bare> cat-file -e 1798b335c43d7e59066ad74a8c2d1d1c9fd537fe:hermes_cli/data/plugin_index.json
+absent (old route still gone)
+# member branches: commits behind 1798b335c43d7e59066ad74a8c2d1d1c9fd537fe
+refs/fork/feat/paw-pii-plugin-index behind_1798b335c4=13969
+refs/fork/feat/groq-orpheus-tts behind_1798b335c4=20742
+refs/fork/feat/tinyfish-browser-provider behind_1798b335c4=39989
+refs/fork/feat/spatial-canvas-upstream behind_1798b335c4=23930
+# ---- F14 receipt patch_sha256 (091552753e...) reproduction, appended at 2026-10-01T19:12:23Z ----
+$ git -C <bare> diff 98c305b3ec^ 98c305b3ec | sha256sum ; git -C <bare> diff dd185c1f84^ dd185c1f84 | sha256sum   (mirror default abbrev)
+74f80da512b80c17c270fc57761b513ccdc2ee638220a80dae89dd8aa589332a  -
+74f80da512b80c17c270fc57761b513ccdc2ee638220a80dae89dd8aa589332a  -
+$ git -C <bare> -c core.abbrev=10 diff 98c305b3ec^ 98c305b3ec | sha256sum ; git -C <bare> -c core.abbrev=10 diff dd185c1f84^ dd185c1f84 | sha256sum
+091552753eaa2b62435f3fed7f53528fc312bba0440827e9cb394d8d47965acf  -
+091552753eaa2b62435f3fed7f53528fc312bba0440827e9cb394d8d47965acf  -
+$ git -C <bare> config core.abbrev
+(unset)

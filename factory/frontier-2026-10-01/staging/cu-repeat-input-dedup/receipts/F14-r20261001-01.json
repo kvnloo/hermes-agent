@@ -1,0 +1,500 @@
+{
+ "schema": "xf.f14.guard.v1",
+ "id": "F14/r20261001-01",
+ "experiment": "F14 (standing guard set, Wave 0)",
+ "staging": "cu-repeat-input-dedup",
+ "tier": "T1",
+ "label": "OBSERVED",
+ "label_note": "Every verdict, count, hash and rc below comes from runs this worker executed on 2026-10-01 (receipt maps and run dirs exist). The coverage note is a static grep, labelled as such. Nothing here is MODELED.",
+ "verdict": "EQUAL",
+ "verdict_rule": "EQUAL when both arm maps match the main baseline on verdict, marker and fingerprint for every non-flaky verdict id (f14_run.py compare rc 0 on each). The baseline flaky list is empty, so all 40 ids count.",
+ "main_sha": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+ "staging_commit": {
+  "sha": "2f79b549ef40aeb31cb3af36cd92d8d12b9ba799",
+  "parent": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+  "ref": "refs/heads/staging/cu-repeat-input-dedup"
+ },
+ "arm": {
+  "sha": "3748b3c9cbdb07812dfc90ef54cdc3acb439fb28",
+  "ref": "refs/xf/w0/cu-repeat-input-dedup",
+  "parent": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+  "construction": "git worktree add --detach <worktree> 34f8ec3b40; git cherry-pick 2f79b549ef (author kept: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>; committer set to the same identity via -c user.name/user.email)",
+  "applied_clean": true,
+  "patch_id_stable": {
+   "staging_commit": "5ecfa72dbc8b6de517084f8bc098be729a3e9def",
+   "arm": "5ecfa72dbc8b6de517084f8bc098be729a3e9def",
+   "equal": true
+  },
+  "numstat": {
+   "agent/tool_dispatch_helpers.py": "+33/-1",
+   "run_agent.py": "+1/-18",
+   "tests/agent/test_tool_call_dedup_order_significant.py": "+71/-0"
+  },
+  "note": "The arm is the staging diff replayed on current main for this guard only. The staging branch itself (2f79b549ef on aea969677c) is unchanged; no staging/<id>-v2 ref was made."
+ },
+ "set": {
+  "name": "F14",
+  "rev": 1,
+  "set_sha256": "aba79fe8f09dabc62950aacd0a53c2fdc30bc58746f405f9aa050bf474d739b9",
+  "set_file": "<xf-root>/factory/w0/f14/f14_set.json",
+  "set_file_sha256": "8b4864a72dd07b6383f98fc1e67359143216889f9c36eda79dc56fc3579044c0",
+  "probes": 19,
+  "verdict_ids": 40,
+  "excluded_entries": 11
+ },
+ "runner": {
+  "path": "<xf-root>/factory/w0/f14/f14_run.py",
+  "sha256": "2323a5918435b06a56ca0f5f8b55d0a0c2274915f11cd31ef120649b0fad28fe"
+ },
+ "sandbox": {
+  "path": "<xf-root>/factory/w0/sandbox/xf-sandbox.sh",
+  "sha256": "c9586195c43a926317fa3d6bc18db1937527a6308dc30c683ce9c6a83398638a"
+ },
+ "probe_helpers_sha256": {
+  "readtool_direct.py": "0df21aee5fec293042bf4511b3b4c353d13d768711b8272c85b9f86438649229"
+ },
+ "baseline": {
+  "map": "<xf-root>/factory/w0/f14/baseline-34f8ec3b40.json",
+  "map_sha256": "a0cfdc3291783cb7f5fcfdbd81b6ef010cbc0cd82915786aea4e6176a56a1682",
+  "label": "base-r2",
+  "worktree_head": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+  "counts": {
+   "PASS": 36,
+   "FAIL": 4
+  },
+  "flaky": [],
+  "fails": [
+   "postmortem/cache_estimator_probe",
+   "postmortem/context_cap_probe",
+   "postmortem/notice_delivery_probe",
+   "readtool/fixtures_direct_read_file::lying_extension"
+  ]
+ },
+ "runs": [
+  {
+   "label": "cu-repeat-input-dedup-r1",
+   "map": "<xf-root>/factory/w0/f14/maps/cu-repeat-input-dedup-r1.json",
+   "map_sha256": "7f1b468d99cce8ca1695ce13a3d855c27e0c8dd1d8da18cc2a8aafbdfe38691f",
+   "run_dir": "<runs>/cu-repeat-input-dedup-r1",
+   "started_utc": "2026-10-01T18:21:29Z",
+   "wall_s": 123.0,
+   "counts": {
+    "PASS": 36,
+    "FAIL": 4
+   },
+   "verdict_ids": 40,
+   "worktree_head": "3748b3c9cbdb07812dfc90ef54cdc3acb439fb28",
+   "worktree_dirty": false,
+   "only": null,
+   "flaky": [],
+   "blocked_exec_total": 0,
+   "nonzero_rc_cells": [
+    "postmortem/notice_delivery_probe"
+   ],
+   "set_sha256": "aba79fe8f09dabc62950aacd0a53c2fdc30bc58746f405f9aa050bf474d739b9",
+   "runner_sha256": "2323a5918435b06a56ca0f5f8b55d0a0c2274915f11cd31ef120649b0fad28fe",
+   "sandbox_sha256": "c9586195c43a926317fa3d6bc18db1937527a6308dc30c683ce9c6a83398638a",
+   "probe_helpers_sha256": {
+    "readtool_direct.py": "0df21aee5fec293042bf4511b3b4c353d13d768711b8272c85b9f86438649229"
+   },
+   "expectation_mismatches_on_base_table": [
+    "postmortem/context_cap_probe",
+    "postmortem/notice_delivery_probe"
+   ],
+   "compare_vs_baseline": {
+    "rc": 0,
+    "result": "EQUAL",
+    "differing_ids": []
+   }
+  },
+  {
+   "label": "cu-repeat-input-dedup-r2",
+   "map": "<xf-root>/factory/w0/f14/maps/cu-repeat-input-dedup-r2.json",
+   "map_sha256": "56bddf4cc4cef0cafca28651fd7655288e061bf1641ef5e589b37e5e1719d1a6",
+   "run_dir": "<runs>/cu-repeat-input-dedup-r2",
+   "started_utc": "2026-10-01T18:23:39Z",
+   "wall_s": 85.5,
+   "counts": {
+    "PASS": 36,
+    "FAIL": 4
+   },
+   "verdict_ids": 40,
+   "worktree_head": "3748b3c9cbdb07812dfc90ef54cdc3acb439fb28",
+   "worktree_dirty": false,
+   "only": null,
+   "flaky": [],
+   "blocked_exec_total": 0,
+   "nonzero_rc_cells": [
+    "postmortem/notice_delivery_probe"
+   ],
+   "set_sha256": "aba79fe8f09dabc62950aacd0a53c2fdc30bc58746f405f9aa050bf474d739b9",
+   "runner_sha256": "2323a5918435b06a56ca0f5f8b55d0a0c2274915f11cd31ef120649b0fad28fe",
+   "sandbox_sha256": "c9586195c43a926317fa3d6bc18db1937527a6308dc30c683ce9c6a83398638a",
+   "probe_helpers_sha256": {
+    "readtool_direct.py": "0df21aee5fec293042bf4511b3b4c353d13d768711b8272c85b9f86438649229"
+   },
+   "expectation_mismatches_on_base_table": [
+    "postmortem/context_cap_probe",
+    "postmortem/notice_delivery_probe"
+   ],
+   "compare_vs_baseline": {
+    "rc": 0,
+    "result": "EQUAL",
+    "differing_ids": []
+   }
+  }
+ ],
+ "r1_vs_r2": {
+  "rc": 0,
+  "result": "EQUAL",
+  "differing_ids": []
+ },
+ "verdict_maps_vs_baseline": {
+  "compaction/test_region_scoping": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true
+  },
+  "goal_command_parity": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true,
+   "fingerprint": "d79dfafcaa4868dc"
+  },
+  "native_compaction/ab_checkpoint_preflight::capture_cli_same_objects": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true,
+   "fingerprint": "f4f228c1f1712cc0"
+  },
+  "native_compaction/ab_checkpoint_preflight::capture_gateway_reloaded_history": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true,
+   "fingerprint": "f4f228c1f1712cc0"
+  },
+  "native_compaction/ab_checkpoint_preflight::over_threshold_negative": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true,
+   "fingerprint": "98dff750628aaa6f"
+  },
+  "native_compaction/ab_checkpoint_preflight::restore": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true,
+   "fingerprint": "5ea433a5dd24f730"
+  },
+  "postmortem/cache_estimator_probe": {
+   "baseline": "FAIL",
+   "r1": "FAIL",
+   "r1_equal_to_baseline": true,
+   "r2": "FAIL",
+   "r2_equal_to_baseline": true,
+   "marker": "rc=0 | marker absent: \"preflight_should_compress\": true"
+  },
+  "postmortem/context_cap_probe": {
+   "baseline": "FAIL",
+   "r1": "FAIL",
+   "r1_equal_to_baseline": true,
+   "r2": "FAIL",
+   "r2_equal_to_baseline": true,
+   "marker": "spawn child trigger 850000 != 200000; cycle 0 trigger 850000 cap None; cycle 1 trigger 850000 cap None; cycle 2 trigger 850000 cap None; cycle 3 trigger 850000 cap None; model switch 1000000: trigger 850000 > 200000",
+   "fingerprint": "56dabc3674684245"
+  },
+  "postmortem/credential_identity_probe": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true
+  },
+  "postmortem/deadline_probe": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true
+  },
+  "postmortem/finalizer_schedule_probe": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true,
+   "fingerprint": "bd7eea88f9cd9bc3"
+  },
+  "postmortem/goal_scope_probe": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true,
+   "fingerprint": "b7eca3edb852af8a"
+  },
+  "postmortem/notice_delivery_probe": {
+   "baseline": "FAIL",
+   "r1": "FAIL",
+   "r1_equal_to_baseline": true,
+   "r2": "FAIL",
+   "r2_equal_to_baseline": true,
+   "marker": "rc=1: KeyError: 'task_failure_notice' | marker absent: PROBE_COMPLETE"
+  },
+  "postmortem/rewrite_hint_probe": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true
+  },
+  "postmortem/scanner_bypass_probe": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true
+  },
+  "provider_fallback/probe_104120": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true
+  },
+  "provider_fallback/probe_104260": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true
+  },
+  "provider_fallback/probe_104360": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true
+  },
+  "readtool/fixtures_direct_read_file::empty_config": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true,
+   "fingerprint": "a8ac6986052f5c49"
+  },
+  "readtool/fixtures_direct_read_file::fifo_hang": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true,
+   "fingerprint": "ed4dce4e99e87179"
+  },
+  "readtool/fixtures_direct_read_file::lockfile_version": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true,
+   "fingerprint": "743a3317c2ec0d1b"
+  },
+  "readtool/fixtures_direct_read_file::log_error_hunt": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true,
+   "fingerprint": "9d7aa5596d7504eb"
+  },
+  "readtool/fixtures_direct_read_file::lying_extension": {
+   "baseline": "FAIL",
+   "r1": "FAIL",
+   "r1_equal_to_baseline": true,
+   "r2": "FAIL",
+   "r2_equal_to_baseline": true,
+   "marker": "failed: flagged binary",
+   "fingerprint": "d6f615b85009a2c9"
+  },
+  "readtool/fixtures_direct_read_file::minified_backoff": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true,
+   "fingerprint": "ebc3d45cf379ba02"
+  },
+  "readtool/fixtures_direct_read_file::near_miss_filename": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true,
+   "fingerprint": "e3788ea56dd56195"
+  },
+  "readtool/fixtures_direct_read_file::past_eof": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true,
+   "fingerprint": "b8b15fb954e9dbf5"
+  },
+  "readtool/fixtures_direct_read_file::unicode_filename": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true,
+   "fingerprint": "4e892f8bdb3d56d1"
+  },
+  "token_accounting/ab_image_cost_calibration": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true
+  },
+  "token_accounting/replay_gates::cli_deflated": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true
+  },
+  "token_accounting/replay_gates::cli_inflated": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true
+  },
+  "token_accounting/replay_gates::cli_past_window_inflated": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true
+  },
+  "token_accounting/replay_gates::gateway_deflated": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true
+  },
+  "token_accounting/replay_gates::gateway_inflated": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true
+  },
+  "token_accounting/replay_gates::gateway_past_window_inflated": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true
+  },
+  "token_accounting/replay_gates::overflow_recovery": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true
+  },
+  "token_accounting/replay_gates::restore_deflated": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true
+  },
+  "token_accounting/replay_gates::restore_inflated": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true
+  },
+  "token_accounting/replay_gates::restore_past_window_inflated": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true
+  },
+  "token_accounting/replay_gates::usage_less_fallback": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true
+  },
+  "token_accounting/worktree_prompt_prefix": {
+   "baseline": "PASS",
+   "r1": "PASS",
+   "r1_equal_to_baseline": true,
+   "r2": "PASS",
+   "r2_equal_to_baseline": true,
+   "fingerprint": "5dd5c33ce53f80cb"
+  }
+ },
+ "base_fails_unchanged": {
+  "ids": [
+   "postmortem/cache_estimator_probe",
+   "postmortem/context_cap_probe",
+   "postmortem/notice_delivery_probe",
+   "readtool/fixtures_direct_read_file::lying_extension"
+  ],
+  "note": "The same 4 ids FAIL on main and on the arm with identical marker and fingerprint. They are pre-existing on main (see the F14 baseline notes: cache_estimator open fix #103476; notice_delivery and context_cap probe drift against main; readtool lying_extension). None is in a file this commit changes."
+ },
+ "commands": [
+  "cd <xf-root>/factory/w0/f14 && PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py run <worktree> maps/cu-repeat-input-dedup-r1.json --label cu-repeat-input-dedup-r1",
+  "PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py compare baseline-34f8ec3b40.json maps/cu-repeat-input-dedup-r1.json   # rc 0 EQUAL",
+  "PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py run <worktree> maps/cu-repeat-input-dedup-r2.json --label cu-repeat-input-dedup-r2",
+  "PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py compare baseline-34f8ec3b40.json maps/cu-repeat-input-dedup-r2.json   # rc 0 EQUAL",
+  "PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py compare maps/cu-repeat-input-dedup-r1.json maps/cu-repeat-input-dedup-r2.json   # rc 0 EQUAL"
+ ],
+ "isolation": "Each probe ran under the bwrap sandbox wrapper: cleared env, HERMES_PYTHON=<venv>/bin/python, HOME=<run>/home, HERMES_HOME=<run>/home/.hermes, PATH=<venv>/bin:/usr/bin:/bin, loopback only. blocked_exec 0 in every cell of both runs. No paid API, no network egress, no live install read.",
+ "wall_clock_note": "Wall time is not part of equality. r1 123.0 s and r2 85.5 s vs 51.9 s / 52.3 s for the baseline runs; load1 was 11.4 before r2 and 13.0 after it (other workers running tests on the host).",
+ "coverage_note": {
+  "label": "STATIC (grep of the probe entry files on the arm tree)",
+  "observation": "9 of the 19 probe entry files reference run_agent or AIAgent (replay_gates, ab_image_cost_calibration, worktree_prompt_prefix, ab_checkpoint_preflight, probe_104120, context_cap, credential_identity, deadline, the finalizer_schedule test file), so they load the facade this commit edits. None names deduplicate_tool_calls or tool_dispatch_helpers, and the set has no computer_use dedup probe.",
+  "meaning": "F14 here guards neighbouring behaviour against regressions. It is not evidence for the fix itself, which is F07/r20261001-03. Whether the dedup function executes inside any F14 probe was not measured."
+ },
+ "git_housekeeping": {
+  "created_refs": [
+   "refs/xf/w0/cu-repeat-input-dedup"
+  ],
+  "refs_heads_main": "34f8ec3b407e50bad3ae27e4cd79d65212061356 (unchanged)",
+  "staging_ref": "2f79b549ef40aeb31cb3af36cd92d8d12b9ba799 (unchanged)",
+  "worktree": "clean after both runs (0 porcelain lines); removed with git worktree remove, then git worktree prune",
+  "pushed": false,
+  "github_writes": 0
+ },
+ "not_tested": [
+  "Excluded F14 entries (live/paid probes, goal_repaste_probe, the 4 sandbox-denylisted live_ab probes); see the set's excluded list.",
+  "Whether the dedup path runs inside any F14 probe (not measured; see coverage_note)."
+ ],
+ "frozen": {
+  "status": "NOT_FROZEN (open P8 item)",
+  "bundle_sha": null
+ },
+ "privacy": "Placeholders only: <xf-root>, <runs>, <run>, <worktree>, <venv>. No host name, no secrets.",
+ "ai_assistance": "Run and written by Claude Code (Opus 5.5) as a factory worker.",
+ "generated_utc": "2026-10-01"
+}

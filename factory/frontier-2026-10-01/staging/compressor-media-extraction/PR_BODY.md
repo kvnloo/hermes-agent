@@ -2,7 +2,7 @@
 
 Moves the image/media cluster of `agent/context_compressor.py` (5,753 lines on `main`) into a new sibling, `agent/context_compressor_media.py`. The code moves unchanged. No behaviour changes.
 
-This is the media slice of #80636 by andrexibiza, rebuilt on current `main`. #80636 was cut in August from a 6,883-line pin. It stacks four slices (text utils, skill prune, budget, media) and keeps the old names importable through a re-export seam. It no longer applies to `main`: `git merge-tree` reports a conflict in `agent/context_compressor.py` for the whole PR and for its media commit alone. Its new module also carries the August versions of functions that have changed since. For example, `_strip_historical_media` has no `spared` argument there. The media code has also grown since then (tool-image retirement inside the protected tail, the send-path `evict_stale_outbound_tool_images`, the `_multimodal` envelope). The sibling skill-prune slice, #80628, was closed as stale on 2026-09-02. AGENTS.md also now rules out re-export shims for internal moves. So this PR keeps that PR's module name and topic cut, drops the seam, and points callers at the new module. Andrex is credited as co-author on the commit. The name follows the `<stem>_<topic>` pattern that `agent/context_compressor_summary.py` already uses on `main`. Micro-compaction was already moved out separately, to `agent/micro_compaction.py`.
+This is the media slice of #80636 by andrexibiza, rebuilt on current `main`. #80636 was cut in August from a 6,883-line pin. It stacks four slices (text utils, skill prune, budget, media) and keeps the old names importable through a re-export seam. It no longer applies to `main`: `git merge-tree` reports a conflict in `agent/context_compressor.py` for the whole PR and for its media commit alone. Its new module also carries the August versions of functions that have changed since. For example, `_strip_historical_media` has no `spared` argument there. The media code has also grown since then (tool-image retirement inside the protected tail, the send-path `evict_stale_outbound_tool_images`, the `_multimodal` envelope). The sibling skill-prune slice, #80628, was closed as stale on 2026-09-02. AGENTS.md also now rules out re-export shims for internal moves. So this PR keeps that PR's module name and media topic, drops the seam, and points callers at the new module. It leaves one helper that #80636 moves, `_append_text_to_content`, in the facade (see below). Andrex is credited as co-author on the commit. The name follows the `<stem>_<topic>` pattern that `agent/context_compressor_summary.py` already uses on `main`. Micro-compaction was already moved out separately, to `agent/micro_compaction.py`.
 
 The same media commit is also in four PRs that stack on #80636: #80645, #80644, #81074 and #81181. Each carries it unchanged, so each also adds `agent/context_compressor_media.py`. If this PR lands, that commit is obsolete in all five, and each would drop it when rebased (otherwise the new file conflicts as add/add). The rest of those PRs is untouched here.
 
@@ -15,7 +15,9 @@ What moved (16 top-level statements, in their original order, with their comment
 - shared helpers: `_IMAGE_PART_TYPES`, `_is_image_part`, `_content_has_images`, `_tool_content_has_images`, `_tool_result_parts`, `_replace_image_parts`, `_strip_images_from_content`, `_strip_images_from_tool_msg`, `_rewritten`
 - summarizer labels: `_summary_part_text`, `_image_part_label`
 
-What stays in the facade: the content-text helpers (`_part_text`, `_content_text_for_contains`, `_append_text_to_content`, …). They are text utilities, not media, and `conversation_compression.py` imports one of them from the facade.
+What stays in the facade: the five content-text helpers (`_part_text`, `_with_part_text`, `_content_text_for_contains`, `_is_text_only_content`, `_append_text_to_content`). They are text utilities, not media, and `conversation_compression.py` imports `_append_text_to_content` from the facade. This is where the cut differs from #80636, whose media module also takes `_append_text_to_content`. Two other helpers in that module, `_strip_image_parts_from_parts` and `_truncate_tool_call_args_json`, no longer exist on `main`.
+
+Import paths: the six moved names the facade still calls stay importable from `agent.context_compressor`. The other ten, including `evict_stale_outbound_tool_images`, are now importable only from `agent.context_compressor_media`. Nothing in the tree imports them through the old path (step 2 below). AGENTS.md treats internal paths as non-API and rules out re-export shims, so this PR adds none. Runtime behaviour is unchanged.
 
 ## Related Issue
 
@@ -80,7 +82,7 @@ Shape, from `evals/codebase_navigability/static_metrics.py`: one more module. Th
 
 ## Screenshots / Logs
 
-Based on `main` @ `aea969677c60`. It merges cleanly onto `main` @ `44a1ce972450` (29 commits newer), and none of the touched files changed in between. Re-running the move script on `44a1ce972450` gives exactly the merged tree.
+Based on `main` @ `aea969677c60`. It merges cleanly onto `main` @ `34f8ec3b407e` (38 commits newer), and none of the touched files changed in between. Re-running the move script on `34f8ec3b407e` gives exactly the merged tree, and the source/AST identity, old-path and import checks described above pass on it. The test suites below ran on `aea969677c60`.
 
 ```
 main @ aea969677c60:

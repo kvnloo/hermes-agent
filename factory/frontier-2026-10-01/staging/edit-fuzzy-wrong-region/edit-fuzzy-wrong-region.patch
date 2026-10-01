@@ -1,4 +1,4 @@
-From fdaaf5b7295125dd2c38bf66980e4016ce3bfb09 Mon Sep 17 00:00:00 2001
+From b08709fd92dfe7e1b8bcaa769c1e5eddaaaea584 Mon Sep 17 00:00:00 2001
 From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
 Date: Thu, 1 Oct 2026 04:32:21 -0500
 Subject: [PATCH] test(tools): pin the fail-loud contract for wrong-region
@@ -18,15 +18,17 @@ Two near misses, from #54575 and from the battery, must still apply,
 and the matcher must name a non-exact strategy for them.
 
 On main every wrong-region case fails (block_anchor or context_aware,
-count=1, error=None). This adds no production change. It is meant to
-be folded into the open fixes in #54575 and #125376.
+count=1, error=None). This adds no production change. It is offered as
+an optional regression test for the open fixes in #54575 and #125376;
+it passes once #54575, the fix commit of #125376 and the one-line
+stripped-pattern guard proposed in review on #125376 are all applied.
 
 Refs #54572, #111116
 
 Co-authored-by: Max Freedom Pollard <272618364+MaxFreedomPollard@users.noreply.github.com>
 Co-authored-by: finn763 <165816600+finn763@users.noreply.github.com>
-Co-authored-by: KoNit-K <konit.block@protonmail.com>
-Co-authored-by: likivik <likivik@gmail.com>
+Co-authored-by: KoNit-K <124019182+KoNit-K@users.noreply.github.com>
+Co-authored-by: likivik <11075952+Likivik@users.noreply.github.com>
 Co-authored-by: Enough1122 <10966420+Enough1122@users.noreply.github.com>
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
@@ -36,7 +38,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 diff --git a/tests/tools/test_fuzzy_match_wrong_region.py b/tests/tools/test_fuzzy_match_wrong_region.py
 new file mode 100644
-index 0000000000..e059b025c8
+index 00000000000..e059b025c81
 --- /dev/null
 +++ b/tests/tools/test_fuzzy_match_wrong_region.py
 @@ -0,0 +1,106 @@

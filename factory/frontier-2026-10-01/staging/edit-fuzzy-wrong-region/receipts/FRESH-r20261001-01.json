@@ -1,0 +1,372 @@
+{
+ "schema": "xf.receipt.v1 (hand-run; xf executor not built)",
+ "id": "FRESH/r20261001-01",
+ "staging": "edit-fuzzy-wrong-region",
+ "kind": "polish round: message-only rebuild identity + freshness on main 34f8ec3b40; no test was run",
+ "measured_at": "2026-10-01T18:44Z",
+ "evidence_class": "OBSERVED (git object reads, merge-tree, apply --check on a throwaway index, read-only gh queries)",
+ "head_identity": {
+  "v3": {
+   "sha": "fdaaf5b7295125dd2c38bf66980e4016ce3bfb09",
+   "tree": "f23cd04b5de44fb2cbe2b9822232203ea42f259d",
+   "parent": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+   "author_name": "Kevin Rajan",
+   "author_date": "2026-10-01T04:32:21-05:00",
+   "committer_name": "Kevin Rajan",
+   "committer_date": "2026-10-01T11:38:04-05:00",
+   "patch_id_stable": "7255ea8ed2a0334412b09b198cdcc5bbbd48fa08"
+  },
+  "v4": {
+   "sha": "b08709fd92dfe7e1b8bcaa769c1e5eddaaaea584",
+   "tree": "f23cd04b5de44fb2cbe2b9822232203ea42f259d",
+   "parent": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+   "author_name": "Kevin Rajan",
+   "author_date": "2026-10-01T04:32:21-05:00",
+   "committer_name": "Kevin Rajan",
+   "committer_date": "2026-10-01T13:41:03-05:00",
+   "patch_id_stable": "7255ea8ed2a0334412b09b198cdcc5bbbd48fa08"
+  },
+  "v4_ref": "refs/heads/staging/edit-fuzzy-wrong-region-v2",
+  "identical": {
+   "tree": true,
+   "parent": true,
+   "author_name": true,
+   "author_date": true,
+   "patch_id_stable": true
+  },
+  "message_change": {
+   "body_text_changed": true,
+   "summary": "paragraph 3: 'It is meant to be folded into the open fixes in #54575 and #125376.' -> it is offered as an optional regression test for them and passes once #54575, the fix commit of #125376 and the stripped-pattern guard line from review on #125376 are applied together. Trailers: KoNit-K and likivik now use GitHub id+login noreply addresses (ids from gh api users/<login>; dbc91693bb and 5444b1a2a8 resolve to those same accounts); the other four trailers are unchanged.",
+   "trailers_v3": [
+    {
+     "name": "Max Freedom Pollard",
+     "address_form": "github-noreply"
+    },
+    {
+     "name": "finn763",
+     "address_form": "github-noreply"
+    },
+    {
+     "name": "KoNit-K",
+     "address_form": "commit-author address (withheld here)"
+    },
+    {
+     "name": "likivik",
+     "address_form": "commit-author address (withheld here)"
+    },
+    {
+     "name": "Enough1122",
+     "address_form": "github-noreply"
+    },
+    {
+     "name": "Claude Opus 5.5",
+     "address_form": "github-noreply"
+    }
+   ],
+   "trailers_v4": [
+    {
+     "name": "Max Freedom Pollard",
+     "address_form": "github-noreply"
+    },
+    {
+     "name": "finn763",
+     "address_form": "github-noreply"
+    },
+    {
+     "name": "KoNit-K",
+     "address_form": "github-noreply"
+    },
+    {
+     "name": "likivik",
+     "address_form": "github-noreply"
+    },
+    {
+     "name": "Enough1122",
+     "address_form": "github-noreply"
+    },
+    {
+     "name": "Claude Opus 5.5",
+     "address_form": "github-noreply"
+    }
+   ]
+  },
+  "consequence": "same tree, parent, author, author date and stable patch-id: every receipt measured on fdaaf5b729 applies to v4 unchanged"
+ },
+ "freshness": {
+  "main": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+  "base": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+  "commits_base_to_main": 9,
+  "commits": [
+   "34f8ec3b407 test(media-policy): build the env list from the module's constants; say why multiplex is set",
+   "aeaeba74b7a fix(cron): a routed profile's cron delivery no longer rewrites the launch profile's media policy",
+   "07ab19b0a39 refactor(responses): one role-item constructor carries a validated phase",
+   "e19de264c5a fix(responses): preserve explicit assistant phase in role-message replay",
+   "18d125cc1bd test(install): give install.ps1 subprocess tests the stage budget their siblings use",
+   "aaa863f7ff2 test(auth): read the pool row through pool.entries()",
+   "03487e9ed9b fix(models): keep an observed Codex catalog cap when a refresh fails",
+   "e0a8749ca03 fix(models): publish the Codex catalog cap before its context entry",
+   "bb734b45ac9 test(models): pin gpt-6.1-sol-900k's catalog cap through the public resolver"
+  ],
+  "files_changed_base_to_main": [
+   "agent/codex_responses_adapter.py",
+   "agent/model_metadata.py",
+   "gateway/media_policy.py",
+   "tests/agent/test_codex_responses_adapter.py",
+   "tests/agent/test_model_metadata.py",
+   "tests/gateway/test_multiplex_process_memo_scope.py",
+   "tests/hermes_cli/test_auth_codex_quota_probe.py",
+   "tests/hermes_cli/test_gpt6_tiers_registration.py",
+   "tests/scripts/install/test_install_ps1_json_failure_frame.py",
+   "tests/scripts/install/test_install_ps1_staged_git.py"
+  ],
+  "invalidate_on": [
+   "tools/fuzzy_match.py",
+   "tools/file_operations.py",
+   "tools/patch_parser.py"
+  ],
+  "invalidate_on_changed": [],
+  "adjacent_13_changed": [],
+  "tools_tests_tools_github_changed": [],
+  "edit_path_blobs_on_main": {
+   "tools/fuzzy_match.py": "a6a439d70e7d31a2ff781db3ab9baa6686ea4ee9",
+   "tools/file_operations.py": "cc028e89f130b2629cbcb6448203b1a5d770c45a",
+   "tools/patch_parser.py": "8e6ce92ed7b68d3ca32c57b346a4a1087af0c8bf"
+  },
+  "merge_tree_v4_on_main": {
+   "rc": 0,
+   "tree": "8481ea2357922477f73f0b41a1a33cb6a81ad719"
+  },
+  "merge_tree_v4_on_base": {
+   "rc": 0,
+   "tree": "f23cd04b5de44fb2cbe2b9822232203ea42f259d"
+  },
+  "member_heads_on_main": {
+   "#54575": {
+    "head": "e28d7c772d",
+    "merge_tree_on_main": "CONFLICTING",
+    "conflicted_files": [
+     "tests/tools/test_file_tools_live.py",
+     "tests/tools/test_fuzzy_match.py"
+    ]
+   },
+   "#125376": {
+    "head": "5f3f5896a4",
+    "merge_tree_on_main": "CONFLICTING",
+    "conflicted_files": [
+     "tui_gateway/methods_bot_relay.py"
+    ]
+   },
+   "#126502": {
+    "head": "6d4fbff950",
+    "merge_tree_on_main": "clean",
+    "conflicted_files": []
+   },
+   "#93717": {
+    "head": "3c4c81f706",
+    "merge_tree_on_main": "CONFLICTING",
+    "conflicted_files": [
+     "tools/fuzzy_match.py"
+    ]
+   },
+   "#111127": {
+    "head": "5444b1a2a8",
+    "merge_tree_on_main": "clean",
+    "conflicted_files": []
+   },
+   "#128138": {
+    "head": "83401c2591",
+    "merge_tree_on_main": "clean",
+    "conflicted_files": []
+   },
+   "#129645": {
+    "head": "29789718ff",
+    "merge_tree_on_main": "clean",
+    "conflicted_files": []
+   }
+  },
+  "c125376_fix_cherry_pick_sim_on_main": {
+   "tree": "31e713759a0ce99101b911d7a6f87d40cd2ce351",
+   "tools/fuzzy_match.py_blob": "e01522910cf9ab15766dbdb780a2453345ab9fbd"
+  },
+  "c54575_diff_apply_check_on_main_rc": 0,
+  "green_overlay_on_main": {
+   "recipe": "main + 5f3f5896a4 (cherry-pick sim) + c54575-rebased-on-main.diff + foldin-125376-stripped-guard.diff",
+   "tree": "b1779d810a124e4f64dfc7a86a8712255e6de177",
+   "tools/fuzzy_match.py_sha256": "145fb70356117a9ab7a9356f8f40f8257d7bdfd5ff045510d19b47cbbf6fc9a7",
+   "equals_F01_r04_both_fold": true
+  }
+ },
+ "body_round_trip": {
+  "section3_diff_sha256": "e8da44106d152e99ea6c6d4905c4c3db6897f1f7bf0ea236dff3a700635b4c5d",
+  "c54575_diff_file_sha256": "e8da44106d152e99ea6c6d4905c4c3db6897f1f7bf0ea236dff3a700635b4c5d",
+  "section2_test_git_blob": "e059b025c81fe9b4154c201c658d0bd07ce1e5e4",
+  "commit_test_blob": "e059b025c81fe9b4154c201c658d0bd07ce1e5e4"
+ },
+ "upstream_read_only": {
+  "prs": {
+   "#54575": {
+    "state": "OPEN",
+    "head": "e28d7c772d",
+    "author": "MaxFreedomPollard",
+    "created": "2026-06-29T02:37:38Z",
+    "merged": null,
+    "title": "fix(patch): reject wrong-region matches in the fuzzy edit fallback"
+   },
+   "#125376": {
+    "state": "OPEN",
+    "head": "5f3f5896a4",
+    "author": "Finn763",
+    "created": "2026-09-27T15:18:58Z",
+    "merged": null,
+    "title": "Fail loud on single-line wrong-token edit anchors (Related to #111116)"
+   },
+   "#126502": {
+    "state": "OPEN",
+    "head": "6d4fbff950",
+    "author": "Finn763",
+    "created": "2026-09-28T13:52:11Z",
+    "merged": null,
+    "title": "fix(tools): block_anchor single-candidate threshold 0.50->0.70"
+   },
+   "#93717": {
+    "state": "OPEN",
+    "head": "3c4c81f706",
+    "author": "fangliquanflq",
+    "created": "2026-08-24T08:48:58Z",
+    "merged": null,
+    "title": "fix(patch): stop weak fuzzy hunks from rewriting nearby content"
+   },
+   "#111127": {
+    "state": "OPEN",
+    "head": "5444b1a2a8",
+    "author": "KoNit-K",
+    "created": "2026-09-14T19:00:41Z",
+    "merged": null,
+    "title": "feat(evals): add edit-tool shape audit"
+   },
+   "#128138": {
+    "state": "OPEN",
+    "head": "83401c2591",
+    "author": "elisam0",
+    "created": "2026-09-29T16:11:46Z",
+    "merged": null,
+    "title": "fix(tools): patch writefile verification warning"
+   },
+   "#129645": {
+    "state": "OPEN",
+    "head": "29789718ff",
+    "author": "Froraut",
+    "created": "2026-09-30T20:45:26Z",
+    "merged": null,
+    "title": "fix(patch): V4A Add File newline, @@ hint validation, line endings"
+   },
+   "#124168": {
+    "state": "OPEN",
+    "head": "1964d2406e",
+    "author": "rodricksz4h5",
+    "created": "2026-09-26T17:29:46Z",
+    "merged": null,
+    "title": "fix(patch): match a CRLF file on its LF view so a trailing newline in old_string still matches"
+   },
+   "#77271": {
+    "state": "OPEN",
+    "head": "0bf68c0509",
+    "author": "jlwebs",
+    "created": "2026-08-03T03:06:39Z",
+    "merged": null,
+    "title": "fix(fuzzy_match): guard against model indentation typos in non-exact matches"
+   },
+   "#89660": {
+    "state": "OPEN",
+    "head": "40e5fa1f76",
+    "author": "Jiaaqiliu",
+    "created": "2026-08-19T02:49:45Z",
+    "merged": null,
+    "title": "fix(tools): stop line-based match strategies emitting overlapping spans"
+   },
+   "#128020": {
+    "state": "OPEN",
+    "head": "dc4ab9b8b3",
+    "author": "elisam0",
+    "created": "2026-09-29T15:55:37Z",
+    "merged": null,
+    "title": "fix(tools): patch reindent midline anchor"
+   },
+   "#130746": {
+    "state": "OPEN",
+    "head": "9e89af3073",
+    "author": "dskwe",
+    "created": "2026-10-01T18:01:21Z",
+    "merged": null,
+    "title": "fix(tools): prevent read_file gutters from corrupting patches"
+   }
+  },
+  "issues": {
+   "#54572": "OPEN",
+   "#93698": "OPEN",
+   "#111116": "OPEN",
+   "#130139": "OPEN"
+  },
+  "dedupe_open_prs_created_since_2026-09-30": {
+   "fuzzy_match": [],
+   "block_anchor": [],
+   "context_aware": [
+    130746
+   ],
+   "wrong region": [],
+   "fuzzy_find_and_replace": [
+    129645
+   ],
+   "patch_replace": [
+    129645
+   ]
+  },
+  "upstream_main_at_check": "105e8765863f23f837b19433c648de1208415f2f",
+  "compare_34f8ec3b40_to_upstream_main": {
+   "ahead_by": 28,
+   "behind_by": 0,
+   "files": [
+    ".github/workflows/plugin-catalog-ci.yml",
+    "agent/agent_runtime_helpers.py",
+    "agent/codex_runtime.py",
+    "agent/credential_pool.py",
+    "agent/model_metadata.py",
+    "agent/transports/codex_app_server_session.py",
+    "contributors/emails/241698038+cucurigoo@users.noreply.github.com",
+    "hermes_cli/nous_account.py",
+    "plugin-catalog/README.md",
+    "plugin-catalog/woof.yaml",
+    "plugins/web/perplexity/provider.py",
+    "scripts/validate_plugin_catalog.py",
+    "tests/agent/test_codex_runtime_prompt_handoff.py",
+    "tests/agent/test_fallback_restore_codex_early_reopen.py",
+    "tests/agent/test_model_metadata.py",
+    "tests/agent/transports/test_codex_app_server_session.py",
+    "tests/ci/test_plugin_catalog_ci_confinement.py",
+    "tests/scripts/test_validate_plugin_catalog.py",
+    "tests/tools/test_web_free_fast_search.py",
+    "tests/tools/test_web_managed_routing.py",
+    "tools/managed_tool_gateway.py",
+    "tools/tool_backend_helpers.py",
+    "tools/web_tools.py",
+    "tools/web_tools_rescue.py",
+    "website/docs/user-guide/features/codex-app-server-runtime.md",
+    "website/docs/user-guide/features/plugin-catalog.md",
+    "website/docs/user-guide/features/web-search.md"
+   ],
+   "invalidate_on_changed": [],
+   "adjacent_13_changed": [],
+   "github_changed": [
+    ".github/workflows/plugin-catalog-ci.yml"
+   ],
+   "note": "file list from the GitHub compare API only; not fetched, no merge-tree or test run on it"
+  }
+ },
+ "command": "python3 -B make_fresh_receipt.py <h.git> <staging-dir> <run> <out> (private run dir; read-only git + gh)",
+ "not_tested": [
+  "no RED/GREEN/A-B run on 34f8ec3b40 in this round; F01/r20261001-04 (main 44a1ce9724) stays the proof",
+  "#124168, #130746, #77271, #89660, #128020 are recorded from their PR metadata and diffs, not run"
+ ],
+ "privacy": "handles only; trailer addresses summarised by form, no email addresses, host names or local paths",
+ "cost_usd": 0
+}

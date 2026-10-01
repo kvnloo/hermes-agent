@@ -1,0 +1,280 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "F15-full/r20261001-01",
+ "experiment": "F15",
+ "tier": "T0",
+ "label_default": "OBSERVED",
+ "cost_usd": 0,
+ "question": "From inside the kernel sandbox, is each of 6 probes blocked, and does each escape when exactly one guard is removed?",
+ "spec": {
+  "path": "FACTORY.md section 13 row 1, section 6 layers 1, 4, 5",
+  "rev": 1,
+  "decision_rule": "PASS iff 6/6 probes BLOCKED in the intact sandbox and 6/6 ESCAPED in a wrapper copy with exactly one guard removed (one changed line each)"
+ },
+ "runner_revision": {
+  "sandbox": {
+   "path": "factory/w0/sandbox/xf-sandbox.sh",
+   "sha256": "c9586195c43a926317fa3d6bc18db1937527a6308dc30c683ce9c6a83398638a"
+  },
+  "probe": {
+   "path": "factory/w0/sandbox/f15_probe.py",
+   "sha256": "bfcb1d347fff16af45d233760438574feff866310b333a95d3e412eaaea7406e"
+  },
+  "driver": {
+   "path": "factory/w0/sandbox/f15_full.py",
+   "sha256": "adfd011657e5fd58fda87b4fbe5417a4b2191db7bd5b951d2ae38f55590e65da"
+  },
+  "sabotage_copies": {
+   "xf-sandbox-no-denylist.sh": "748edad894a549633e3fdceeda41196e10558b815f90d4ac563498e6a1fe11ff",
+   "xf-sandbox-no-exec.sh": "fd214459719ad6182cd0f30f69c027bb8870fd620c3870c8500b883cd03bd163",
+   "xf-sandbox-no-hermes_home.sh": "5b200b6b4bf172769d6aa96f0cdb31069948e8b03feba9ca5e4cf88239a7368f",
+   "xf-sandbox-no-home.sh": "33089bc55490b0b673127419deed52acd2647148027d4f9da9137c97eb36bbdd",
+   "xf-sandbox-no-net.sh": "6bda463c5f4fe4c1d22b1f84ee5601f89a1817690b7642aebc3d568d0c3cc6a7",
+   "xf-sandbox-no-write.sh": "ade29938e96587fcf58fc69409f758e7202ae4c3ecc16f6563bca20eec3113a7"
+  }
+ },
+ "staging": "factory-replay-gate",
+ "base_revision": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+ "env": {
+  "host": "<local-host>",
+  "os": "Linux x86_64",
+  "bwrap": "bubblewrap 0.12.0",
+  "interpreter": "<venv>/bin/python 3.11 (read-only, re-bound inside the mask)",
+  "sandbox": "bwrap ro-root, rw <run> + <worktree> only, netns loopback-only, pidns, new session, die-with-parent, clearenv, real home tmpfs, /run tmpfs, live install tmpfs + venv ro, console scripts stubbed, H1 denylist pre-exec",
+  "network": "loopback only inside; sabotage net arm reached a decoy listener on this host's LAN address"
+ },
+ "command": "PYTHONDONTWRITEBYTECODE=1 python3 -B factory/w0/sandbox/f15_full.py <worktree> <run-id>",
+ "started_at": "2026-10-01T18:00:27Z",
+ "finished_at": "2026-10-01T18:00:32Z",
+ "results": {
+  "blocked": "6/6",
+  "sabotage_escapes": "6/6",
+  "label": "OBSERVED"
+ },
+ "probes": [
+  {
+   "guard": "net",
+   "arm": "intact",
+   "result": "BLOCKED",
+   "ok": true,
+   "rc": 0,
+   "probe": {
+    "probe": "net",
+    "blocked": true,
+    "errno": 101,
+    "error": "OSError"
+   },
+   "listener_accepts": 0,
+   "target": "<lan-addr>:<free-port> (decoy listener on this host)",
+   "label": "OBSERVED",
+   "at": "2026-10-01T18:00:28Z"
+  },
+  {
+   "guard": "net",
+   "arm": "sabotage",
+   "result": "ESCAPED",
+   "ok": true,
+   "rc": 0,
+   "probe": {
+    "probe": "net",
+    "blocked": false,
+    "connected": true
+   },
+   "listener_accepts": 1,
+   "target": "<lan-addr>:<free-port> (decoy listener on this host)",
+   "label": "OBSERVED",
+   "at": "2026-10-01T18:00:28Z"
+  },
+  {
+   "guard": "write",
+   "arm": "intact",
+   "result": "BLOCKED",
+   "ok": true,
+   "rc": 0,
+   "probe": {
+    "probe": "write",
+    "blocked": true,
+    "errno": 30,
+    "error": "OSError"
+   },
+   "marker_on_host": false,
+   "target": "<xf-root>/factory/w0/sandbox/decoy-outside",
+   "label": "OBSERVED",
+   "at": "2026-10-01T18:00:28Z"
+  },
+  {
+   "guard": "write",
+   "arm": "sabotage",
+   "result": "ESCAPED",
+   "ok": true,
+   "rc": 0,
+   "probe": {
+    "probe": "write",
+    "blocked": false,
+    "wrote": true
+   },
+   "marker_on_host": true,
+   "target": "<xf-root>/factory/w0/sandbox/decoy-outside",
+   "label": "OBSERVED",
+   "at": "2026-10-01T18:00:28Z"
+  },
+  {
+   "guard": "hermes_home",
+   "arm": "intact",
+   "result": "BLOCKED",
+   "ok": true,
+   "rc": 0,
+   "probe": {
+    "probe": "hermes_home",
+    "blocked": true,
+    "public_source_file_visible": false,
+    "mask_view": {
+     "<live-install>": [
+      "hermes-agent"
+     ],
+     "<live-install>/hermes-agent": [
+      "venv"
+     ]
+    }
+   },
+   "label": "OBSERVED",
+   "at": "2026-10-01T18:00:28Z"
+  },
+  {
+   "guard": "hermes_home",
+   "arm": "sabotage",
+   "result": "ESCAPED",
+   "ok": true,
+   "rc": 0,
+   "probe": {
+    "probe": "hermes_home",
+    "blocked": false,
+    "public_source_file_visible": true
+   },
+   "label": "OBSERVED",
+   "at": "2026-10-01T18:00:28Z"
+  },
+  {
+   "guard": "home",
+   "arm": "intact",
+   "result": "BLOCKED",
+   "ok": true,
+   "rc": 0,
+   "probe": {
+    "probe": "home",
+    "blocked": true,
+    "real_dot_hermes_isdir": false
+   },
+   "label": "OBSERVED",
+   "at": "2026-10-01T18:00:28Z"
+  },
+  {
+   "guard": "home",
+   "arm": "sabotage",
+   "result": "ESCAPED",
+   "ok": true,
+   "rc": 0,
+   "probe": {
+    "probe": "home",
+    "blocked": false,
+    "real_dot_hermes_isdir": true
+   },
+   "label": "OBSERVED",
+   "at": "2026-10-01T18:00:28Z"
+  },
+  {
+   "guard": "exec",
+   "arm": "intact",
+   "result": "BLOCKED",
+   "ok": true,
+   "rc": 0,
+   "probe": {
+    "probe": "exec",
+    "blocked": true,
+    "resolved": "found",
+    "is_stub": true,
+    "executed": true,
+    "rc": 126,
+    "logged": true,
+    "other_console_scripts_are_stub": {
+     "hermes-agent": true,
+     "hermes-acp": true
+    }
+   },
+   "blocked_exec_log_lines": 1,
+   "label": "OBSERVED",
+   "at": "2026-10-01T18:00:28Z"
+  },
+  {
+   "guard": "exec",
+   "arm": "sabotage",
+   "result": "ESCAPED",
+   "ok": true,
+   "rc": 0,
+   "probe": {
+    "probe": "exec",
+    "blocked": false,
+    "resolved": "found",
+    "is_stub": false,
+    "executed": false
+   },
+   "blocked_exec_log_lines": 0,
+   "label": "OBSERVED",
+   "at": "2026-10-01T18:00:28Z"
+  },
+  {
+   "guard": "denylist",
+   "arm": "intact",
+   "result": "BLOCKED",
+   "ok": true,
+   "rc": 97,
+   "probe": {
+    "blocked": true,
+    "collected": false,
+    "stderr_tail": "xf-sandbox: denylisted selection: tests/hermes_cli/test_update_command.py"
+   },
+   "selection": "tests/hermes_cli/test_update_command.py::test_managed_install_refuses_and_does_not_set_pending_relaunch",
+   "mode": "pytest --collect-only (never run)",
+   "label": "OBSERVED",
+   "at": "2026-10-01T18:00:28Z"
+  },
+  {
+   "guard": "denylist",
+   "arm": "sabotage",
+   "result": "ESCAPED",
+   "ok": true,
+   "rc": 0,
+   "probe": {
+    "blocked": false,
+    "collected": true,
+    "stderr_tail": ""
+   },
+   "selection": "tests/hermes_cli/test_update_command.py::test_managed_install_refuses_and_does_not_set_pending_relaunch",
+   "mode": "pytest --collect-only (never run)",
+   "label": "OBSERVED",
+   "at": "2026-10-01T18:00:30Z"
+  }
+ ],
+ "side_checks": {
+  "imports_resolve_to_worktree": {
+   "ok": true,
+   "hermes_cli_file": "<worktree>/hermes_cli/__init__.py",
+   "label": "OBSERVED"
+  },
+  "usage_run_tests": {
+   "command": "<xf-root>/factory/w0/sandbox/xf-sandbox.sh <run> <worktree> -- scripts/run_tests.sh tests/test_hermes_constants.py -q",
+   "rc": 0,
+   "summary": "=== Summary: 1 files, 49 tests passed, 0 failed, 2 skipped (100% complete) in 1.3s (20 workers) ===",
+   "label": "OBSERVED"
+  }
+ },
+ "verdict": "PASS",
+ "not_tested": [
+  "console scripts in the venv whose names are not in the worktree's pyproject [project.scripts] (the venv bin dir is not listed); any such script would still run worktree code under the isolated home with no network",
+  "other paths outside the real home and the live install stay readable (read-only); only those two plus /run are masked",
+  "the denylist parses argv words, not shell grammar; selections built at runtime inside the sandbox are contained by the kernel layer, not refused",
+  "C-extension or ctypes egress is covered by the netns, but no such probe was run",
+  "the 'not live and not integration' marker filter comes from the repo's pytest addopts, not from the wrapper"
+ ],
+ "privacy": "public-aggregate; paths are placeholders"
+}

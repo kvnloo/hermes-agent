@@ -1,0 +1,298 @@
+{
+ "read_at": "2026-10-01T18:38:35Z",
+ "states": {
+  "80636": {
+   "state": "open",
+   "is_pr": true,
+   "merged_at": null,
+   "closed_at": null,
+   "title": "refactor(context_compressor): extract content/media strip helpers (LB4)"
+  },
+  "80645": {
+   "state": "open",
+   "is_pr": true,
+   "merged_at": null,
+   "closed_at": null,
+   "title": "refactor(context_compressor): extract tool-result summarizers (LB5a)"
+  },
+  "80644": {
+   "state": "open",
+   "is_pr": true,
+   "merged_at": null,
+   "closed_at": null,
+   "title": "refactor(context_compressor): extract threshold coercion mixin (LB7)"
+  },
+  "81074": {
+   "state": "open",
+   "is_pr": true,
+   "merged_at": null,
+   "closed_at": null,
+   "title": "refactor(context_compressor): extract durable session guards mixin (LB6)"
+  },
+  "81181": {
+   "state": "open",
+   "is_pr": true,
+   "merged_at": null,
+   "closed_at": null,
+   "title": "refactor(context_compressor): extract summary kernel and preserve compatibility"
+  },
+  "80628": {
+   "state": "closed",
+   "is_pr": true,
+   "merged_at": null,
+   "closed_at": "2026-09-02T10:06:56Z",
+   "title": "refactor(context_compressor): extract skill-prune/ghost-skill cluster (LB2)"
+  },
+  "113887": {
+   "state": "closed",
+   "is_pr": false,
+   "merged_at": null,
+   "closed_at": "2026-09-19T02:08:11Z",
+   "title": "[Wave] Refactor PR triage: superseded/stale (268 rows; corrected 2026-09-18 after maintainer re-verify)"
+  },
+  "102117": {
+   "state": "closed",
+   "is_pr": true,
+   "merged_at": "2026-09-04T12:50:53Z",
+   "closed_at": "2026-09-04T12:50:53Z",
+   "title": "refactor: whole-codebase simplification \u2014 \u221234% source LOC, every god file decomposed, zero behavior change"
+  },
+  "104920": {
+   "state": "closed",
+   "is_pr": true,
+   "merged_at": "2026-09-07T12:59:09Z",
+   "closed_at": "2026-09-07T12:59:09Z",
+   "title": "fix: legacy context engines keep compressing (salvage #104214)"
+  },
+  "80626": {
+   "state": "open",
+   "is_pr": true,
+   "merged_at": null,
+   "closed_at": null,
+   "title": "refactor(context_compressor): extract text-util leaves into context_compressor_text_utils"
+  },
+  "80634": {
+   "state": "open",
+   "is_pr": true,
+   "merged_at": null,
+   "closed_at": null,
+   "title": "refactor(context_compressor): extract token-budget estimators into context_compressor_budget (LB3)"
+  },
+  "81243": {
+   "state": "open",
+   "is_pr": true,
+   "merged_at": null,
+   "closed_at": null,
+   "title": "refactor(context_compressor): extract message marker helpers"
+  },
+  "125186": {
+   "state": "open",
+   "is_pr": false,
+   "merged_at": null,
+   "closed_at": null,
+   "title": "Decompose `agent/auxiliary_client.py` (8,251 lines, 325 top-level functions, 92 broad excepts)"
+  },
+  "127838": {
+   "state": "open",
+   "is_pr": true,
+   "merged_at": null,
+   "closed_at": null,
+   "title": "refactor(aux): extract exception-classifier cluster into agent/auxiliary_predicates"
+  },
+  "90910": {
+   "state": "open",
+   "is_pr": true,
+   "merged_at": null,
+   "closed_at": null,
+   "title": "fix: [Architecture] Make observable state proof-carrying from source to side effect (closes #90866)"
+  },
+  "106867": {
+   "state": "open",
+   "is_pr": true,
+   "merged_at": null,
+   "closed_at": null,
+   "title": "fix(agent): avoid duplicating unfinished user task across compression handoff"
+  },
+  "107589": {
+   "state": "open",
+   "is_pr": true,
+   "merged_at": null,
+   "closed_at": null,
+   "title": "fix(compression): guard non-scalar content-part `type` in the two compressor siblings #104840 missed"
+  },
+  "110103": {
+   "state": "open",
+   "is_pr": true,
+   "merged_at": null,
+   "closed_at": null,
+   "title": "compressor: guard non-scalar content-part types in the two unfixed image checks (fixes #107628)"
+  },
+  "130634": {
+   "state": "open",
+   "is_pr": true,
+   "merged_at": null,
+   "closed_at": null,
+   "title": "feat: dashboard zh localization, model routing controls, and native audio handling"
+  },
+  "85481": {
+   "state": "open",
+   "is_pr": true,
+   "merged_at": null,
+   "closed_at": null,
+   "title": "feat(compression): cache-aware summarization + thinking-off aux titles"
+  },
+  "104914": {
+   "state": "open",
+   "is_pr": true,
+   "merged_at": null,
+   "closed_at": null,
+   "title": "fix(agent): strip oldest images and retry on provider per-prompt image count limits"
+  },
+  "120403": {
+   "state": "open",
+   "is_pr": true,
+   "merged_at": null,
+   "closed_at": null,
+   "title": "fix(compaction): recovery pointers name the discovery shape that can reach compacted rows (salvage of #89998)"
+  },
+  "82129": {
+   "state": "open",
+   "is_pr": true,
+   "merged_at": null,
+   "closed_at": null,
+   "title": "feat: integrate agent runtime and prompt diagnostics"
+  },
+  "90771": {
+   "state": "open",
+   "is_pr": true,
+   "merged_at": null,
+   "closed_at": null,
+   "title": "feat(agent): allow pre_llm_call hooks to route the answerer model"
+  },
+  "129147": {
+   "state": "open",
+   "is_pr": true,
+   "merged_at": null,
+   "closed_at": null,
+   "title": "fix(compression): use Unicode-aware estimates for multimodal text"
+  },
+  "118847": {
+   "state": "open",
+   "is_pr": true,
+   "merged_at": null,
+   "closed_at": null,
+   "title": "feat(plugins): add post_compaction hook (#118382)"
+  },
+  "119347": {
+   "state": "open",
+   "is_pr": true,
+   "merged_at": null,
+   "closed_at": null,
+   "title": "feat(compaction): let plugins filter summaries by current task"
+  },
+  "78645": {
+   "state": "open",
+   "is_pr": false,
+   "merged_at": null,
+   "closed_at": null,
+   "title": "Shard agent/context_compressor.py (god-file decomposition)"
+  },
+  "78647": {
+   "state": "open",
+   "is_pr": false,
+   "merged_at": null,
+   "closed_at": null,
+   "title": "Repo-wide godfile eradication: residual 2K tasks after #102117"
+  }
+ },
+ "flagged_heads_vs_r04": {
+  "80636": {
+   "head_r04": "5aa1746a288f6401b6b2b28ae3607e99d9b72e74",
+   "head_now": "5aa1746a288f6401b6b2b28ae3607e99d9b72e74",
+   "state_now": "OPEN",
+   "unchanged": true
+  },
+  "80645": {
+   "head_r04": "2ace2a70c00ac818d0759fec406f3735a6f6d8f5",
+   "head_now": "2ace2a70c00ac818d0759fec406f3735a6f6d8f5",
+   "state_now": "OPEN",
+   "unchanged": true
+  },
+  "80644": {
+   "head_r04": "c871197b77b4fbe6cf0059a74161322b5dc02ad2",
+   "head_now": "c871197b77b4fbe6cf0059a74161322b5dc02ad2",
+   "state_now": "OPEN",
+   "unchanged": true
+  },
+  "81074": {
+   "head_r04": "4effdf33967f49f19069c00c5b5348fd8c10539b",
+   "head_now": "4effdf33967f49f19069c00c5b5348fd8c10539b",
+   "state_now": "OPEN",
+   "unchanged": true
+  },
+  "81181": {
+   "head_r04": "e40f2db1402cb629dedcff57e656dee439bb51c3",
+   "head_now": "e40f2db1402cb629dedcff57e656dee439bb51c3",
+   "state_now": "OPEN",
+   "unchanged": true
+  },
+  "85481": {
+   "head_r04": "f4b17c32ff9038eb043a47fbf3e5310dcd8a914c",
+   "head_now": "f4b17c32ff9038eb043a47fbf3e5310dcd8a914c",
+   "state_now": "OPEN",
+   "unchanged": true
+  },
+  "90910": {
+   "head_r04": "306f512fe062c7b1a0fba57204395081443f93fe",
+   "head_now": "306f512fe062c7b1a0fba57204395081443f93fe",
+   "state_now": "OPEN",
+   "unchanged": true
+  },
+  "104914": {
+   "head_r04": "62bd42ff590c00f52d82707c37d5c200ad9576fe",
+   "head_now": "62bd42ff590c00f52d82707c37d5c200ad9576fe",
+   "state_now": "OPEN",
+   "unchanged": true
+  },
+  "106867": {
+   "head_r04": "ded9a96da59f01c3c5193bb9423ef0064174875a",
+   "head_now": "ded9a96da59f01c3c5193bb9423ef0064174875a",
+   "state_now": "OPEN",
+   "unchanged": true
+  },
+  "107589": {
+   "head_r04": "168d47f949066e847992e4a9ad555035d55a61f3",
+   "head_now": "168d47f949066e847992e4a9ad555035d55a61f3",
+   "state_now": "OPEN",
+   "unchanged": true
+  },
+  "110103": {
+   "head_r04": "641134e774747117cda2b2d208f90d130d9b2f64",
+   "head_now": "641134e774747117cda2b2d208f90d130d9b2f64",
+   "state_now": "OPEN",
+   "unchanged": true
+  },
+  "120403": {
+   "head_r04": "473d89fa6658ecce933fddb08aaf74e9c7e2ec5e",
+   "head_now": "473d89fa6658ecce933fddb08aaf74e9c7e2ec5e",
+   "state_now": "OPEN",
+   "unchanged": true
+  },
+  "130634": {
+   "head_r04": "efb88e4601d45b340c449c97cc8b57db880e04a9",
+   "head_now": "efb88e4601d45b340c449c97cc8b57db880e04a9",
+   "state_now": "OPEN",
+   "unchanged": true
+  }
+ },
+ "all_flagged_heads_unchanged": true,
+ "pr_102117_reviews": {
+  "total": 24,
+  "by_state": {
+   "COMMENTED": 21,
+   "CHANGES_REQUESTED": 1,
+   "DISMISSED": 1,
+   "APPROVED": 1
+  }
+ }
+}

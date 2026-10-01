@@ -1,0 +1,48 @@
+main=34f8ec3b407e50bad3ae27e4cd79d65212061356 commit_date=2026-10-01T22:59:37+05:30 tree=f05476c596c08b41c5370661dabc20fce223c9c9
+staging=dd4dd10611e8c23c7579a4ddb95655abebbaca27 parent=234badf4012af380d23c91eae55d045a69c69ffb tree=9f262517dd06acc2f09fbadb401a0d70dc3e5936
+#121135 head=dd4a0ca4cf3345702eb7be95e11873308d3015b5
+#119713 head=7471d9915d7d1ce3e94f9d18c9d775461d269815
+base_is_ancestor_of_main=yes
+commits base..main=74 previous_declared..main=38
+main x staging: CLEAN tree=c7460b5c539e76cff2dbe5cdb7961cec1334a892
+main x #121135: CLEAN tree=a40a4c7890abdb6080daa07dbb2714c263d626fa
+main x #119713: CLEAN tree=18821688bd411078bd0b2683990ff786ddba7cd7
+#121135 x staging: CLEAN tree=2e7d28d7d314538bf74cd0c42ad3fb2113c88f3a
+#119713 x staging: CLEAN tree=97793e195c23312e44526170bfe0901163790b38
+#121135 x #119713: CONFLICT
+    113a2c28bb5962a413b04f036ebdffdfac10f1db
+    agent/turn_usage.py
+    
+    Auto-merging agent/turn_usage.py
+    CONFLICT (content): Merge conflict in agent/turn_usage.py
+    Auto-merging tests/agent/test_turn_usage_log_line.py
+--- invalidate_on paths changed base..main:
+ agent/usage_pricing.py | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+e2d311e5e6 refactor(pricing): generate the gpt-6.1-sol -pro/-900k aliases from the tier loop
+5bb6127c5b feat(models): add the gpt-6.1-sol-900k Codex OAuth picker variant
+--- invalidate_on paths changed previous_declared..main:
+e2d311e5e6 refactor(pricing): generate the gpt-6.1-sol -pro/-900k aliases from the tier loop
+5bb6127c5b feat(models): add the gpt-6.1-sol-900k Codex OAuth picker variant
+--- diff of those paths base..main:
+diff --git a/agent/usage_pricing.py b/agent/usage_pricing.py
+index 0aea86bcfa..7d930389ab 100644
+--- a/agent/usage_pricing.py
++++ b/agent/usage_pricing.py
+@@ -339,9 +339,8 @@ del _BEDROCK_URL, _ANTHROPIC_URL, _GOOGLE_URL, _OPUS, _SONNET
+ # by both the documented stable name and the emitted ID.
+ for _provider, _alias, _canonical in (
+     *((("openai", f"{m}-{suffix}", m)
+-       for m in ("gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-6-sol", "gpt-6-luna")
++       for m in ("gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-6-sol", "gpt-6-luna", "gpt-6.1-sol")
+        for suffix in ("pro", "900k"))),
+-    ("openai", "gpt-6.1-sol-pro", "gpt-6.1-sol"),  # no -900k: not verified above 272K on Codex
+     ("google", "gemini-3.1-pro-preview", "gemini-3.1-pro"),
+     ("google", "gemini-3.1-flash-lite-preview", "gemini-3.1-flash-lite"),
+ ):
+--- changed by the staging commit:
+ evals/postmortem/forensics/logcalls.py            | 44 ++++++++++++++++-------
+ evals/postmortem/live_ab/cache_prefix_live.py     |  6 ++--
+ evals/postmortem/live_ab/cache_prefix_wire.py     |  4 +--
+ evals/postmortem/tests/test_postmortem_harness.py | 43 ++++++++++++++++++++++
+ 4 files changed, 79 insertions(+), 18 deletions(-)

@@ -1,0 +1,313 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "plugin-catalog-entries",
+ "provenance": "self",
+ "id": "RECHECK/r20261001-06",
+ "tier": "T0/T1 (round-5 polish: git and gh read-only rechecks, and the catalog loader, validator and shipped test in the factory bwrap sandbox with an isolated HOME; no code run from the plugin, no hermes CLI, no network inside the sandbox)",
+ "question": "Is the branch still fresh on the upstream main the factory declares (34f8ec3b40), and on the newer upstream mains gh reports, and are the five round-4 advisories still real?",
+ "origin_refs": [
+  "NousResearch/hermes-agent#102922",
+  "NousResearch/hermes-agent#129692",
+  "NousResearch/hermes-agent#95186",
+  "NousResearch/hermes-agent#63917",
+  "kvnloo/hermes-agent#404",
+  "kvnloo/hermes-agent#412"
+ ],
+ "policy_revision": {
+  "factory": "FACTORY.md section 11.1: P1 (RED on a main whose invalidate_on paths have not changed since), P5, P7 (one commit on fresh main, merge-tree clean on current main, workflow-trigger scan = 0), P9 (template-conformant body, no factory jargon, AI assistance disclosed, privacy scan clean)"
+ },
+ "ai_assistance": "Claude Code (Opus 5.5) ran the reads and checks, edited body.md and STAGING.md, and wrote this receipt; disclosed per repository policy",
+ "privacy": "public aggregate (no host paths, no hostname; artifact paths are relative to the staging directory; raw/r5_* show the scratch mirror as <bare> and sandbox paths as <worktree>, <run>, <run-home>, <venv> and <staging>; the pinned commit's git display name is not copied, only whether author and committer names are equal)",
+ "resource_usage": {
+  "api_cost_usd": 0.0,
+  "gpu_s": 0,
+  "tokens": 0,
+  "wall_s": 51,
+  "wall_s_label": "OBSERVED",
+  "wall_s_note": "catalog re-measure on both mains, 18:37:45Z to 18:38:36Z (raw/r5_catalog_recheck.txt); git and gh reads not timed"
+ },
+ "base_revision": {
+  "declared_base": "234badf4012af380d23c91eae55d045a69c69ffb",
+  "branch_head": "98c305b3ec8d03693f4dc94bade69035cb15ff7d",
+  "branch_parent": "234badf4012af380d23c91eae55d045a69c69ffb",
+  "branch_tree": "3a915075078775928dd352fa2fe77bd200bdd714",
+  "declared_main": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+  "declared_main_note": "given by the factory as upstream main for round 5 (committed 2026-10-01T17:29:37Z); 74 commits after the base, 9 after 44a1ce9724; the scratch mirror's refs/heads/main is this SHA",
+  "invalidate_on_changed_since": false,
+  "invalidate_on_note": "base to 34f8ec3b40: the 18 invalidate_on specs and the 14 adjacent files are unchanged (git diff --stat empty)",
+  "newer_upstream_mains": [
+   {
+    "sha": "363e9d5f0a15ffe143d4a8b573b4898d6e428115",
+    "seen": "gh api commits/main at 2026-10-01T18:32:47Z",
+    "committed": "2026-10-01T18:25:54Z",
+    "commits_after_declared_main": 23,
+    "invalidate_on_changed_since_base": true,
+    "changed": [
+     ".github/workflows/plugin-catalog-ci.yml",
+     "plugin-catalog/README.md",
+     "plugin-catalog/woof.yaml (new entry)",
+     "scripts/validate_plugin_catalog.py",
+     "tests/scripts/test_validate_plugin_catalog.py (adjacent)"
+    ]
+   },
+   {
+    "sha": "105e8765863f23f837b19433c648de1208415f2f",
+    "seen": "gh api commits/main at 2026-10-01T18:40:55Z",
+    "committed": "2026-10-01T18:33:01Z",
+    "commits_after_declared_main": 28,
+    "invalidate_on_changed_since": "363e9d5f0a15ffe143d4a8b573b4898d6e428115 : no (git diff --stat empty)"
+   }
+  ]
+ },
+ "measurements": [
+  {
+   "name": "freshness_declared_main",
+   "label": "OBSERVED",
+   "source": "raw/r5_git_recheck.txt",
+   "value": {
+    "main": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+    "base_is_ancestor": true,
+    "commits_after_base": 74,
+    "merge_tree_clean": true,
+    "merge_tree": "47e2acb8c252b61d26ea6e3e9239fcb41f5056bf",
+    "equals_f14_arm_tree": true,
+    "invalidate_on_unchanged": true,
+    "adjacent_unchanged": true,
+    "paw_pii_yaml": "absent",
+    "entry_files": 348,
+    "plugin_index_json": "absent",
+    "pr_template_blob": "5496eb534fef9d08c091b8186e7edd1b5cf356db",
+    "catalog_readme_blob": "6e18bd33b2be9e83fd1dbd7a8cb4d6f67f403bc2",
+    "kvnloo_contributor_email_map": "present"
+   }
+  },
+  {
+   "name": "freshness_newer_main_363e9d5f0a",
+   "label": "OBSERVED",
+   "source": "raw/r5_git_recheck.txt",
+   "value": {
+    "main": "363e9d5f0a15ffe143d4a8b573b4898d6e428115",
+    "commits_after_base": 97,
+    "merge_tree_clean": true,
+    "merge_tree": "a997753eec28eed39d8db10ca706f0231c07b685",
+    "invalidate_on_changed": [
+     "plugin-catalog-ci.yml +182 lines changed",
+     "plugin-catalog/README.md 4",
+     "plugin-catalog/woof.yaml +29 (new)",
+     "scripts/validate_plugin_catalog.py 29"
+    ],
+    "adjacent_changed": [
+     "tests/scripts/test_validate_plugin_catalog.py +20"
+    ],
+    "commits_touching": 7,
+    "paw_pii_yaml": "absent",
+    "entry_files": 349,
+    "catalog_readme_blob": "8af453826b3a4a49880e824cdc3fbbfa3c424675"
+   }
+  },
+  {
+   "name": "freshness_newest_main_105e876586",
+   "label": "OBSERVED",
+   "source": "raw/r5_git_recheck.txt",
+   "value": {
+    "main": "105e8765863f23f837b19433c648de1208415f2f",
+    "commits_after_base": 102,
+    "merge_tree_clean": true,
+    "merge_tree": "47d51b343d325abf775e9e0da378ca068d9d1f00",
+    "invalidate_on_and_adjacent_changed_since_363e9d5f0a": false,
+    "paw_pii_yaml": "absent"
+   }
+  },
+  {
+   "name": "catalog_on_declared_main",
+   "label": "OBSERVED",
+   "source": "raw/r5_catalog_recheck.txt",
+   "value": {
+    "main": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+    "red": {
+     "loader": "348/348",
+     "entry_present": false,
+     "validator": "OK: 349 file(s) valid",
+     "shipped_test_on_main": "1 of 1 pass"
+    },
+    "arm_b_index_tree": "47e2acb8c252b61d26ea6e3e9239fcb41f5056bf",
+    "arm_b_equals_merge_tree": true,
+    "green": {
+     "loader": "349/349",
+     "entry_present": true,
+     "validator": "OK: 350 file(s) valid",
+     "shipped_test": "3 of 3 runs pass"
+    },
+    "negative_control_sha_main": {
+     "validator_rc": 1,
+     "shipped_test": "1 failed, 'assert 348 == 349'"
+    },
+    "blocked_execs": 0,
+    "worktree_clean_after": true
+   }
+  },
+  {
+   "name": "catalog_on_newer_main_363e9d5f0a",
+   "label": "OBSERVED",
+   "source": "raw/r5_catalog_recheck.txt",
+   "value": {
+    "main": "363e9d5f0a15ffe143d4a8b573b4898d6e428115",
+    "red": {
+     "loader": "349/349",
+     "entry_present": false,
+     "validator": "OK: 350 file(s) valid",
+     "shipped_test_on_main": "1 of 1 pass"
+    },
+    "arm_b_index_tree": "a997753eec28eed39d8db10ca706f0231c07b685",
+    "arm_b_equals_merge_tree": true,
+    "green": {
+     "loader": "350/350",
+     "entry_present": true,
+     "validator": "OK: 351 file(s) valid (new subdir and repo shape rules included)",
+     "shipped_test": "3 of 3 runs pass"
+    },
+    "negative_control_sha_main": {
+     "validator_rc": 1,
+     "shipped_test": "1 failed, 'assert 349 == 350'"
+    },
+    "blocked_execs": 0,
+    "worktree_clean_after": true,
+    "carries_to": "105e8765863f23f837b19433c648de1208415f2f (invalidate_on and adjacent paths unchanged since 363e9d5f0a15ffe143d4a8b573b4898d6e428115)"
+   }
+  },
+  {
+   "name": "workflow_push_matches",
+   "label": "OBSERVED",
+   "source": "raw/r5_wf_push_scan_staged_34f8ec3b40.json, raw/r5_wf_push_scan_staged_363e9d5f0a.json (tools/wf_scan.py, python3 -B -I)",
+   "value": {
+    "34f8ec3b407e50bad3ae27e4cd79d65212061356": "0 of 11",
+    "363e9d5f0a15ffe143d4a8b573b4898d6e428115": "0 of 11"
+   }
+  },
+  {
+   "name": "admission_ci_rework_on_363e9d5f0a",
+   "label": "OBSERVED (read) / NOT_TESTED (run)",
+   "source": "git diff 34f8ec3b40 363e9d5f0a -- .github/workflows/plugin-catalog-ci.yml; local clone run/src/pii at d891ebdd",
+   "value": {
+    "data_only_guard": "an entry PR may touch only plugin-catalog/** and contributors/emails/**; this branch's diff is plugin-catalog/paw-pii.yaml only",
+    "symlinks_in_pinned_clone": 0,
+    "js_or_ts_files_in_plugin_subdir": 0,
+    "job_run": "not run (needs the hermes CLI, a network clone and --install-deps)"
+   }
+  },
+  {
+   "name": "advisory_4_plugin_yaml_at_pin",
+   "label": "OBSERVED",
+   "source": "raw/r5_gh_reads.json (gh api contents at d891ebdd)",
+   "value": {
+    "has_provides_middleware_key": false,
+    "provides_tools": [
+     "detect_pii",
+     "redact_pii"
+    ],
+    "kvnloo_pii_main": "d891ebdd3a3dab27a3451923eb56f955253a2782 (no owner fix landed yet)"
+   }
+  },
+  {
+   "name": "advisory_5_display_name",
+   "label": "OBSERVED",
+   "source": "raw/r5_gh_reads.json",
+   "value": {
+    "author_login": "kvnloo",
+    "committer_login": "kvnloo",
+    "author_name_equals_committer_name": true
+   }
+  },
+  {
+   "name": "maintainer_review_on_adjacent_pr_129692",
+   "label": "OBSERVED",
+   "source": "raw/r5_gh_reads.json",
+   "value": {
+    "reviewer": "teknium1 (author_association COLLABORATOR)",
+    "state": "CHANGES_REQUESTED",
+    "submitted": "2026-10-01T17:14:04Z",
+    "comment": "2026-10-01T17:09:56Z",
+    "asks": [
+     "fail closed when a dependency is missing (no middleware registered means plaintext egress)",
+     "refuse the runtime spaCy model download (~560 MB, unpinned) with a clear error pointing to manual install",
+     "declare provides_middleware in plugin.yaml",
+     "add a requires_hermes floor for the plugin_storage API used"
+    ],
+    "relevance": "the same classes as owner fix items 1 and 3 for paw-pii, plus two new ones (no request-time download; requires_hermes floor)"
+   }
+  },
+  {
+   "name": "cited_states",
+   "label": "OBSERVED",
+   "source": "raw/r5_gh_reads.json",
+   "value": {
+    "changed_since_round_4": [
+     "#129692: maintainer comment and CHANGES_REQUESTED review (still open, not merged)"
+    ],
+    "unchanged": "#102922 open (2 author comments), #102924 closed, #87495 closed, #98105 closed, #63917, #95186, #102049, #14624, #17472 open, #122574 and #1542 merged",
+    "search_PII_open": "111, the same numbers as round 2",
+    "other_searches_open": "0 each",
+    "fork_404": "open, 39 rows",
+    "fork_branch_staged_plugin_catalog_entries": "present at 98c305b3ec (gh api matching-refs, 18:43:13Z)",
+    "fork_tracking_issue": "kvnloo/hermes-agent#412 (open, created 17:40:49Z, title carries HOLD)"
+   }
+  },
+  {
+   "name": "member_behind_counts_on_declared_main",
+   "label": "OBSERVED",
+   "source": "raw/r5_git_recheck.txt",
+   "value": {
+    "paw-pii-plugin-index": 13906,
+    "groq-orpheus-tts": 20679,
+    "tinyfish-browser-provider": 39926,
+    "spatial-canvas-upstream": 23867
+   }
+  }
+ ],
+ "artifacts": [
+  {
+   "path": "raw/r5_git_recheck.txt",
+   "sha256": "46fa0ab257ebe244c9a7e10a6489b056199ae0b6d100254c03d4cfc638a90b0d"
+  },
+  {
+   "path": "raw/r5_catalog_recheck.txt",
+   "sha256": "88c327548160d42864671ab016e8e10445fa16d83ed36f1a126ecf22c17f75be"
+  },
+  {
+   "path": "raw/r5_gh_reads.json",
+   "sha256": "67b592001e5cf196a285038fd5539914db793b43eff227455a35f4c0764586ea"
+  },
+  {
+   "path": "raw/r5_wf_push_scan_staged_34f8ec3b40.json",
+   "sha256": "4a1255fd631241f7d16b1ece2c93063cfb1d922d6ea89411e84fc73df8a0f3c8"
+  },
+  {
+   "path": "raw/r5_wf_push_scan_staged_363e9d5f0a.json",
+   "sha256": "5386adb16c9b9761ce4ef240edf816c6868ec3c4956b7fd9b088d87422541218"
+  },
+  {
+   "path": "tools/catalog_probe.py",
+   "sha256": "df35fe7c1404e4711ade335517bbbc90de96426c74ba28d4be2618a8276d3075"
+  },
+  {
+   "path": "tools/wf_scan.py",
+   "sha256": "2c686f5df2f6b85051528f2278d11ae1ec5ddd3394b2de8cbeb0a5e788aa78bc"
+  },
+  {
+   "path": "tools/privacy_scan.py",
+   "sha256": "c20c602b0990f7329036e3b07b9609c9ddad2d0e582989fa94fbf233b5d5def5"
+  },
+  {
+   "path": "tools/privacy_scan_r4.py",
+   "sha256": "41abafafce2e9bc639e70c9ccc1cf036085693f7e0dd2e57e131cb4f114b7302"
+  }
+ ],
+ "verdict": "KEEP: fresh on the declared main 34f8ec3b40 (merge-tree clean, invalidate_on unchanged, need, green 3 of 3 and the negative control re-measured). On the newer upstream main 363e9d5f0a the validator, catalog README and admission CI changed; need, green 3 of 3 and the negative control were re-measured there and hold, and nothing on those paths moved again by 105e876586. Advisories 4 and 5 confirmed; the plugin at the pin is unchanged, so the HOLD stands.",
+ "not_tested": [
+  "the reworked plugin-catalog-ci.yml admission job (needs the CLI, a network clone and --install-deps; E52 still queued)",
+  "adjacent test files on 34f8ec3b40 or 363e9d5f0a (unchanged on 34f8ec3b40; tests/scripts/test_validate_plugin_catalog.py changed on 363e9d5f0a and was not run)",
+  "per-hunk sabotage and a recorded flaky field (P5 stays PENDING)",
+  "E52, T2 (unchanged from earlier receipts)",
+  "independent privacy scan (P9 privacy_scan stays PENDING)"
+ ]
+}

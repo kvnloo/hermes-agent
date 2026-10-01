@@ -1,0 +1,65 @@
+{
+ "pr_80636_media_module_blob": "ffd4d2346545c6539954b609bd0db7c9e5672aeb",
+ "pr_80636_media_module_top_level_names": [
+  "_append_text_to_content",
+  "_strip_image_parts_from_parts",
+  "_truncate_tool_call_args_json",
+  "_IMAGE_PART_TYPES",
+  "_is_image_part",
+  "_content_has_images",
+  "_strip_images_from_content",
+  "_strip_historical_media",
+  "_image_part_label"
+ ],
+ "files_on_main_naming_each": {
+  "_append_text_to_content": [
+   "agent/context_compressor.py",
+   "agent/conversation_compression.py"
+  ],
+  "_strip_image_parts_from_parts": [],
+  "_truncate_tool_call_args_json": [],
+  "_IMAGE_PART_TYPES": [
+   "agent/chat_completion_helpers.py",
+   "agent/codex_responses_adapter.py",
+   "agent/context_compressor.py",
+   "agent/message_sanitization.py",
+   "agent/model_metadata.py",
+   "agent/session_persistence.py",
+   "agent/transports/codex_app_server_session.py",
+   "agent/vision_message_prep.py",
+   "gateway/platforms/api_server.py"
+  ],
+  "_is_image_part": [
+   "agent/context_compressor.py",
+   "agent/vision_message_prep.py",
+   "tests/agent/test_compressor_historical_media.py"
+  ],
+  "_content_has_images": [
+   "agent/context_compressor.py",
+   "tests/agent/test_compressor_historical_media.py",
+   "tests/agent/test_compressor_stale_tool_images.py"
+  ],
+  "_strip_images_from_content": [
+   "agent/context_compressor.py",
+   "tests/agent/test_compressor_historical_media.py"
+  ],
+  "_strip_historical_media": [
+   "agent/context_compressor.py",
+   "tests/agent/test_compressor_historical_media.py",
+   "tests/agent/test_compressor_zero_user_guard.py"
+  ],
+  "_image_part_label": [
+   "agent/context_compressor.py"
+  ]
+ },
+ "note": "_append_text_to_content is defined in the facade on main and conversation_compression.py imports it from there; this branch leaves it in the facade. _strip_image_parts_from_parts and _truncate_tool_call_args_json no longer exist anywhere on main.",
+ "facade_imports_from_sibling_on_this_branch": [
+  "_is_image_part",
+  "_retire_stale_tool_result_images",
+  "_rewritten",
+  "_strip_historical_media",
+  "_strip_images_from_tool_msg",
+  "_summary_part_text"
+ ],
+ "moved_names_not_importable_from_old_path": 10
+}

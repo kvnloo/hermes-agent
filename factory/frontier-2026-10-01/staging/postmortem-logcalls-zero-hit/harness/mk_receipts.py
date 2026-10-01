@@ -1,17 +1,22 @@
-"""Write the xf.receipt.v1-shaped receipts for staging/postmortem-logcalls-zero-hit from the raw outputs."""
+"""Write the xf.receipt.v1-shaped receipts for staging/postmortem-logcalls-zero-hit from the raw outputs.
+
+Published copy: the local paths and the host name are replaced by <placeholders> (<xf-root>, <worktree>,
+<scratch>, <venv>, <host>); re-point them before running. The as-run copy is kept privately
+(sha256 3dfc66041b5d93dbab6315173bba59948928c5d35501b394dd7e6871d5ce6910).
+"""
 import hashlib
 import json
 import re
 from pathlib import Path
 
-R = Path("$ARTIFACTS/frontier-2026-10-01/staging/postmortem-logcalls-zero-hit")
+R = Path("<xf-root>/staging/postmortem-logcalls-zero-hit")
 RAW = R / "receipts" / "raw"
 MAIN = "234badf4012af380d23c91eae55d045a69c69ffb"
 HEAD = "dd4dd10611e8c23c7579a4ddb95655abebbaca27"
 PR121135 = "dd4a0ca4cf3345702eb7be95e11873308d3015b5"
 PR119713 = "7471d9915d7d1ce3e94f9d18c9d775461d269815"
-WT = "$ARTIFACTS/promotion-readiness-2026-10-01/wt/staging/postmortem-logcalls-zero-hit"
-S = "$S"
+WT = "<worktree>"
+S = "<scratch>"
 TS = "2026-10-01"
 
 
@@ -46,7 +51,7 @@ COMMON = {
     "head_revision": HEAD,
     "changed_files": ["evals/postmortem/forensics/logcalls.py", "evals/postmortem/live_ab/cache_prefix_live.py",
                       "evals/postmortem/live_ab/cache_prefix_wire.py", "evals/postmortem/tests/test_postmortem_harness.py"],
-    "env": {"host": "<local-host>", "test_python": "3.11.14 (HERMES_PYTHON, not activated)", "host_python": "3.14.7",
+    "env": {"host": "<host>", "test_python": "3.11.14 (HERMES_PYTHON, not activated)", "host_python": "3.14.7",
             "sandbox": "no bwrap (xf executor not built); HOME/HERMES_HOME = fresh scratch dirs; loopback-only socket guard and exec audit hook in the T1 round trip",
             "tz": "America/Chicago (CDT -0500)"},
     "evidence_class": {"local": True, "ci": "none", "simulation": False, "runtime": False, "kind": "mechanism"},
@@ -79,7 +84,7 @@ receipts["PROOF"] = {**COMMON,
     "experiment": "RED / GREEN x3 / per-hunk NEGATIVE / ADJACENT for the staging commit",
     "inputs": {"main": MAIN, "commit": HEAD, "mutator": harness("mutate.py"), "runner": harness("prove.sh")},
     "command": (f"bash {R}/harness/prove.sh   # wraps, per run: env -u __HERMES_ACTIVATED HOME={S}/testhome-st-postmortem-logcalls-zero-hit "
-                f"HERMES_HOME=$HOME/.hermes HERMES_PYTHON=<hermes-home>/hermes-agent/venv/bin/python bash scripts/run_tests.sh -j 2 <files> -q"),
+                f"HERMES_HOME=$HOME/.hermes HERMES_PYTHON=<venv>/bin/python bash scripts/run_tests.sh -j 2 <files> -q"),
     "gates": {
         "red": {"arm": "main parser + committed tests", "result": "PASS", "observed": summary("red.txt"), "assertions": e_lines("red.txt"),
                 "marker": "calls_found 2 != 3 (miss dropped) and 2 != 4 (cold_write and no_field dropped)"},
@@ -116,7 +121,7 @@ receipts["F06RT"] = {**COMMON,
                              "overlay": ["agent/turn_response_check.py", "agent/turn_usage.py"]}},
     "inputs": {"parser_main": {"path": "receipts/raw/logcalls.main@234badf401.py", "sha256": sha(RAW / "logcalls.main@234badf401.py")},
                "parser_patched": f"{HEAD}:evals/postmortem/forensics/logcalls.py", "scripts": harness("roundtrip.py", "sibling_regex.py", "arms.sh")},
-    "command": [f"<hermes-home>/hermes-agent/venv/bin/python {R}/harness/roundtrip.py {WT} <arm> main=<logcalls.main.py> patched={WT}/evals/postmortem/forensics/logcalls.py",
+    "command": [f"<venv>/bin/python {R}/harness/roundtrip.py {WT} <arm> main=<logcalls.main.py> patched={WT}/evals/postmortem/forensics/logcalls.py",
                 f"bash {R}/harness/arms.sh   # overlays each carrier merge tree's files, runs the round trip, restores HEAD",
                 f"python3 {R}/harness/sibling_regex.py <dir with main's live_ab probes> {WT} rt_main.json rt_a1_pr121135.json rt_a2_pr119713.json"],
     "measurements": (

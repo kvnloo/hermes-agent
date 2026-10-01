@@ -10,6 +10,10 @@
 4. Writes PROOF/r20261001-02 (re-measure on the declared main) from receipts/raw/r1/.
 5. Rewrites receipts/INDEX.json and prints the sha256 of every receipt.
 Deterministic and idempotent: re-running yields byte-identical files.
+
+Published copy: the local path patterns and the host name are replaced by <placeholders>; re-point them
+before running. The as-run copy is kept privately
+(sha256 2139a186475f1f6090fb42f55fcd4adefae682125e5cde55bfac4e5985ad3aeb).
 """
 import hashlib, json, pathlib, re, sys
 
@@ -22,14 +26,14 @@ MAIN = "aea969677c60a1bb72fe227fdfb98f196a2092cc"
 HEAD = "dd4dd10611e8c23c7579a4ddb95655abebbaca27"
 
 REDACT = [  # (pattern, placeholder); order matters
-    (r"/tmp/claude-\d+/[^/\s\"']+/[0-9a-f-]{36}/scratchpad", "$S"),
-    (r"$ARTIFACTS/frontier-2026-10-01/staging/postmortem-logcalls-zero-hit/", ""),
-    (r"$ARTIFACTS/promotion-readiness-2026-10-01/wt/(?:staging|stfix)/postmortem-logcalls-zero-hit", "$W"),
-    (r"$ARTIFACTS/factory/xf", "$X"),
-    (r"(?:/var)?/tmp/hermes-pytest-\d+/r-[^/\s\"']+/pytest-of-[^/\s\"']+/pytest-\d+", "<pytest-tmp>"),
-    (r"<hermes-home>/hermes-agent/venv/bin/python", "$HERMES_PYTHON"),
+    (r"<scratch>", "$S"),  # published copy: the local path patterns below are <placeholders>
+    (r"<xf-root>/staging/postmortem-logcalls-zero-hit/", ""),
+    (r"<build-worktree>", "$W"),
+    (r"<factory-xf-dir>", "$X"),
+    (r"(?:/var)?/(?:tmp)/hermes-pytest-\d+/r-[^/\s\"']+/pytest-of-[^/\s\"']+/pytest-\d+", "<pytest-tmp>"),
+    (r"<venv>/bin/python", "$HERMES_PYTHON"),
 ]
-ABS = re.compile(r"(/mnt/|/tmp/|/var/|/home/|/workspace/|/root/|/Users/)")
+ABS = re.compile(r"(/(?:mnt|tmp|var|home|workspace|root|Users)/)")
 
 
 def sha(p): return hashlib.sha256(p.read_bytes()).hexdigest()
@@ -263,7 +267,7 @@ def r02():
         "changed_files": ["evals/postmortem/forensics/logcalls.py", "evals/postmortem/live_ab/cache_prefix_live.py",
                           "evals/postmortem/live_ab/cache_prefix_wire.py", "evals/postmortem/tests/test_postmortem_harness.py"],
         "policy_revision": POLICY,
-        "env": {"host": "<local-host>", "test_python": "3.11.14 (HERMES_PYTHON, not activated)", "host_python": "3.14.7",
+        "env": {"host": "<host>", "test_python": "3.11.14 (HERMES_PYTHON, not activated)", "host_python": "3.14.7",
                 "sandbox": "no bwrap (xf executor not built); HOME/HERMES_HOME = fresh scratch dirs", "tz": "UTC timestamps"},
         "inputs": {"scripts": scripts, "gh_read_at": "2026-10-01T11:05Z",
                    "carriers": {"#121135": {"head": "dd4a0ca4cf3345702eb7be95e11873308d3015b5", "state": "OPEN"},

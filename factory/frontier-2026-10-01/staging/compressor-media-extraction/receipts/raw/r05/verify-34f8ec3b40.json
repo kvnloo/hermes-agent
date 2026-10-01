@@ -1,0 +1,82 @@
+{
+  "overall": "PASS",
+  "gates": {
+    "verbatim": {
+      "result": "PASS",
+      "moved": 16,
+      "problems": []
+    },
+    "facade_rest": {
+      "result": "PASS",
+      "statements_compared": 194,
+      "head_still_defines_moved": [],
+      "first_mismatch": null
+    },
+    "no_shim": {
+      "result": "PASS",
+      "facade_imports_from_sibling": [
+        "_is_image_part",
+        "_retire_stale_tool_result_images",
+        "_rewritten",
+        "_strip_historical_media",
+        "_strip_images_from_tool_msg",
+        "_summary_part_text"
+      ],
+      "imported_but_unread": [],
+      "sibling_imports_facade_at_lines": [],
+      "facade_defines___all__": false
+    },
+    "old_path_zero": {
+      "result": "PASS",
+      "references": 0,
+      "hits": {
+        "import": [],
+        "dotted": [],
+        "alias_attr": [],
+        "quoted_with_facade": [],
+        "doc_path_mention": []
+      }
+    },
+    "native_coupling": {
+      "result": "PASS",
+      "native_compaction_identical": true,
+      "facade_defines_is_compaction_summary_message": true,
+      "native_compaction_references_it": true
+    },
+    "imports": {
+      "result": "PASS",
+      "probes": [
+        {
+          "module": "agent.context_compressor_media",
+          "facade_loaded": false,
+          "rc": 0
+        },
+        {
+          "module": "agent.context_compressor",
+          "facade_loaded": true,
+          "rc": 0
+        },
+        {
+          "module": "agent.native_compaction",
+          "facade_loaded": true,
+          "rc": 0
+        },
+        {
+          "module": "agent.chat_completion_helpers",
+          "facade_loaded": false,
+          "rc": 0
+        },
+        {
+          "module": "agent.turn_request_assembly",
+          "facade_loaded": false,
+          "rc": 0
+        }
+      ]
+    }
+  },
+  "sizes": {
+    "facade_lines_base": 5753,
+    "facade_lines_head": 5531,
+    "sibling_lines_head": 243
+  }
+}

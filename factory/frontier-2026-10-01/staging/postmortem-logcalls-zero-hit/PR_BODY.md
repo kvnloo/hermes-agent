@@ -48,7 +48,7 @@ The harness landed in #103756 (tracking issue #103563).
 
 ## How to Test
 
-1. `scripts/run_tests.sh evals/postmortem/tests/test_postmortem_harness.py tests/agent/test_turn_usage_log_line.py -q` gives 8 passed (3 out of 3 runs). With `main`'s `logcalls.py`, both new tests fail on the dropped lines: `assert 2 == 3` and `assert (2 == 4)` on `calls_found`.
+1. `scripts/run_tests.sh evals/postmortem/tests/test_postmortem_harness.py tests/agent/test_turn_usage_log_line.py -q` gives 8 passed (3 of 3 runs). With `main`'s `logcalls.py`, both new tests fail on the dropped lines: `assert 2 == 3` and `assert (2 == 4)` on `calls_found`.
 2. Six of the changes in `logcalls.py` are pinned by a test. Reverting any one of these turns at least one test red:
    - the optional `cache=` group;
    - the `in=?` alternative;
@@ -63,7 +63,7 @@ The harness landed in #103756 (tracking issue #103563).
    - On each merged tree, the real producer's five lines all parse with the new regex.
    - With #121135 applied, its `tests/agent/test_cache_log_states.py` plus `tests/agent/test_turn_usage_log_line.py` and the harness give 126 passed.
    - With #119713 applied, its `test_turn_usage_log_line.py` plus the harness give 10 passed.
-4. Live probes: I pulled the exact regex out of each file with `ast` and replayed the same producer lines through it. The old regex reads 1 of the 4 usage-bearing rows, giving an arm hit of 40.0%. The new one reads 4 of 4, giving 10.0%, which is the true 40 cached of 400 input.
+4. Live probes: I pulled the exact regex out of each file with `ast` and replayed the same producer lines through it. The old regex reads 1 of the 4 usage-bearing rows, giving an arm hit of 40.0%. The new one reads 4 of 4: 40 cached of 400 input, or 10.0%. The probes don't read `cache_state=`, so the row with no cache field counts as 0 cached even when its line says `cache_state=no_field`. Leaving that row out, as `logcalls.py` does, would give 13.3% (40 of 300).
 5. Synthetic `state.db` plus `agent.log` input, 420 calls:
    - When every call reads from cache, the `observed` and `modeled` blocks of `logcalls.json` are identical before and after the change.
    - With a model switch, three idle-gap misses per session and about 2% usage-less responses:
@@ -110,4 +110,4 @@ The coverage line on the synthetic input, before and after:
 === Summary: 2 files, 8 tests passed, 0 failed (100% complete) ===
 ```
 
-I prepared this change with AI assistance (Claude Code). The commit sits on `main` @ `234badf401`, and I ran the checks above locally there, except the early-exit check in step 2, which I ran on `main` @ `aea969677c`. On `aea969677c` I also re-ran step 1 and the merges and test counts in step 3, with the same results. None of the 36 commits in between touch these files, `agent/turn_usage.py`, `agent/usage_pricing.py` or `hermes_logging.py`.
+AI assistance: Claude Code wrote this change, its tests and this description, and ran the checks above locally. The commit sits on `main` @ `234badf401` and the checks ran there, except the early-exit check in step 2, which ran on `main` @ `aea969677c`. Step 1 and the merges and test counts in step 3 were re-run on `aea969677c`, and step 1 and the merges again on `main` @ `34f8ec3b40`, with the same results. Between `234badf401` and `34f8ec3b40`, no commit touches these files, `agent/turn_usage.py` or `hermes_logging.py`, and `agent/usage_pricing.py` changed only in its model alias table.

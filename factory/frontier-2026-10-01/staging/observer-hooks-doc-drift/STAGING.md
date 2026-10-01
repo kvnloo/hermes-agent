@@ -2,7 +2,7 @@
 xf_staging = 1
 id = "observer-hooks-doc-drift"
 title = "Document post_api_request's first_chunk_at, context_length and moa_references"
-version = 2               # round-1 rebuild after the phase-3 verifier (CHANGES_REQUIRED on f47410f2ac); local branch forced to the new commit as instructed, nothing was ever pushed. Round 2 (2026-10-01T12:20Z) changed only this manifest and added receipt DOCS-CHECKS/r20261001-04; the commit, patch and PR body are unchanged
+version = 2               # round-1 rebuild after the phase-3 verifier (CHANGES_REQUIRED on f47410f2ac); local branch forced to the new commit as instructed, nothing was ever pushed. Round 2 (2026-10-01T12:20Z) changed only this manifest and added receipt DOCS-CHECKS/r20261001-04; the commit, patch and PR body are unchanged. Polish round (2026-10-01T18:36Z) changed PR_BODY.md (line references pinned to main 34f8ec3b40; AI disclosure names the docs change and the description) and this manifest, and added receipt DOCS-CHECKS/r20261001-05; the commit, patch and local branch are unchanged, no -v2
 branch = "staging/observer-hooks-doc-drift"
 branch_physical = "local ref staging/observer-hooks-doc-drift in scratch h.git, not pushed. It publishes to kvnloo/hermes-agent as staged/observer-hooks-doc-drift: the fork's legacy refs/heads/staging @28790e597c blocks staging/*, so OD-0 is resolved by the staged/ rename. staged/observer-hooks-doc-drift is free on the fork (ls-remote ~2026-10-01T11:18Z, no staged/* refs yet)."
 branch_sha = "9225807160327a648a21bd493e9ed943f8ce5baa"
@@ -17,7 +17,8 @@ sha = "aea969677c60a1bb72fe227fdfb98f196a2092cc"
 fetched_at = "2026-10-01T11:0xZ (start of round 1; exact minute not recorded)"
 previous_base = "572e4f4fad32bbdcfc948fb2ec833177ed5734c0 (round-0 head f47410f2ac; 47 commits before aea969677c, none touching a cited file)"
 invalidate_on = ["website/docs/developer-guide/observer-hooks.md", "agent/turn_response_intake.py", "agent/turn_api_request.py", "agent/chat_completion_helpers.py", "agent/codex_runtime.py", "agent/conversation_loop.py", "agent/turn_response_check.py", "agent/moa_trace.py", "agent/moa_loop.py", "agent/turn_usage.py", "hermes_cli/plugins.py", "any new post_api_request emitter or kwarg (re-run F13)"]
-freshness_recheck = { main = "040b6df2c40b0f4f88f51e4c2062eafc4d7463c5", checked_at = "2026-10-01T12:16:17Z", commits_since_base = 8, invalidate_on_changed = false, page_blob_unchanged = true, merge_tree_clean = true, tree = "36e87a74ee", previous = "e8c97320ac at 11:16:21Z, 6 commits, tree d049544da9" }
+freshness_recheck = { main = "34f8ec3b407e50bad3ae27e4cd79d65212061356", checked_at = "2026-10-01T18:35:56Z", commits_since_base = 38, invalidate_on_changed = false, new_emitter_or_kwarg = false, page_blob_unchanged = true, merge_tree_clean = true, tree = "ac1a4ea154", receipt = "DOCS-CHECKS/r20261001-05", note = "0 of the 11 invalidate_on files changed; 0 diff lines name post_api_request and 0 added lines call invoke_hook; all 14 cited spans in PR_BODY.md re-read on this main and match (blobs identical to base); tree equals the F14 arm be5c73d230", previous = "040b6df2c4 at 12:16:17Z, 8 commits, tree 36e87a74ee; before that e8c97320ac at 11:16:21Z, 6 commits, tree d049544da9" }
+beyond_pinned_main = "Informational, not a gate input: upstream main was 363e9d5f0a (committed 2026-10-01T18:25:54Z, 23 commits after 34f8ec3b40) at the polish round. Read with gh only (compare + contents); it is not in the local mirror, so no merge-tree was run on it. Of the invalidate_on files only agent/codex_runtime.py changed (+35/-10, 4 hunks in app-server session code at :534-:693, 0 +/- lines name first_chunk_at, post_api_request, moa_references, context_length or invoke_hook). It moves the cited codex_runtime.py:1090-1096 to :1115-1121; the PR body pins its line references to 34f8ec3b40, so they stay correct (DOCS-CHECKS/r20261001-05)"
 
 [upstream]
 issues = ["NousResearch/hermes-agent#64231 (teknium1 hook catalog; DOCS_ONLY class: #63339, #60735)", "NousResearch/hermes-agent#16106 (yepyhun, provider timing trace / TTFB)"]
@@ -44,6 +45,7 @@ field_origin = ["first_chunk_at: NousResearch/hermes-agent#100425 (salvage of #9
 close_after = []
 demand = { score = 20, source = "catalog.json (impact 1, evidence strong)" }
 maintainer_signal = "teknium1's #64231 verdict table accepts a DOCS_ONLY class"
+prs_recheck = "2026-10-01T18:36Z (DOCS-CHECKS/r20261001-05): every PR above and in listed_not_page_edits is still OPEN with the recorded head; #100425 and #115819 are MERGED and touch no website/ file; #16106 and #64231 are open issues. Top-up of PRs created 12:16:34Z-18:32:49Z: 288 (267 open), 6 truncated file lists re-read over REST, 0 touch observer-hooks.md, turn_response_intake.py, hermes_cli/hooks.py or user-guide features/hooks.md"
 wave_issues = "kvnloo/hermes-agent#402 is closed and was posted upstream as NousResearch/hermes-agent#130139 (salvage wave); kvnloo#403 became NousResearch/hermes-agent#130140 (close wave). Neither mentions this item (gh read 2026-10-01)."
 
 [ownership]
@@ -64,6 +66,8 @@ receipts = [
   { id = "F13/r20261001-03", path = "receipts/F13-r20261001-03.json", sha256 = "7e0a6d0a66d6736b5d6936fa358be6134e78fe39aa421de5c9a09ba3fa5391ff" },
   { id = "DOCS-CHECKS/r20261001-03", path = "receipts/DOCS-CHECKS-r20261001-03.json", sha256 = "c0ea273063130fcf1444c47c4f6c3cb6fa6c7744c2e125e5bc980f4044449960" },
   { id = "DOCS-CHECKS/r20261001-04", path = "receipts/DOCS-CHECKS-r20261001-04.json", sha256 = "fc82032ebf821b37a556a0a76b1b7f61f8142f78ddf12308fdadbaab58c3101d", note = "round 2, supplements -03: sweep of every open PR's file list, plus apply-checks in both orders for the 7 that edit observer-hooks.md; freshness on main 040b6df2c4" },
+  { id = "F14/r20261001-01", path = "receipts/F14-r20261001-01.json", sha256 = "ea3f200d9c545c5df052e3e67526be97a3b6a7c3397548e8cab7c2ce7994739f", note = "Wave 0 F14 guard set (rev 1, set sha256 aba79fe8f09d...) on 9225807160 cherry-picked onto main 34f8ec3b40 (arm be5c73d230, ref refs/xf/w0/observer-hooks-doc-drift); 2 runs, both EQUAL to the baseline on all 40 verdict ids" },
+  { id = "DOCS-CHECKS/r20261001-05", path = "receipts/DOCS-CHECKS-r20261001-05.json", sha256 = "19bbef44704bcc52c97347a379ca346903332d5888f5d2a0eb561d1131aa40ff", note = "polish round, supplements -04: freshness on main 34f8ec3b40 (merge-tree clean, tree ac1a4ea154, 0 invalidate_on changes, 14/14 cited spans match), referenced-PR states, open-PR top-up (288, 0 hits), informational look at newer main 363e9d5f0a" },
 ]
 superseded_receipts = [
   { id = "F13/r20261001-02", path = "receipts/F13-r20261001-02.json", sha256 = "67c26e8b5b5c16358f6ef9db417baa81bd437f2f73e02d3ae85f4372277f4faa", sha256_before_redaction = "8e3146fb21308f3c1a2da8c7ebd129e849f70d0a95e900f295ed5fbf781dce83", why = "head f47410f2ac on base 572e4f4fad; rebuilt in round 1" },
@@ -78,7 +82,7 @@ green = { reps = "3/3 (deterministic static check; --reps 3, all three passes id
 negative_control = { mutation = "drop each new bullet (3 cases) + inject a synthetic kwarg into the emitter (1 case); retry probe: reset started_at per try", result = "4/4 re-RED with exactly the mutated key; retry probe RED at the started_at equality", receipt = "F13/r20261001-03, DOCS-CHECKS/r20261001-03" }
 retry_caveat = { stale = "f47410f2ac observer-hooks.md:157 'Time to first byte is `first_chunk_at - started_at`.'", sources = "conversation_loop.py:1650 (one api_start_time per API call, before the retry loop), :1501-1530 (build_api_request per try), turn_api_request.py:106-107 (first_chunk_at reset per try), turn_response_check.py:119 (api_duration spans every try), chat_completion_helpers.py:3571-3590 (stream reconnect backoff)", probe = "2 passed x3 runs; main-loop retry: difference 0.640 s vs 0.005 s for the answering try; stream reconnect: 0.307 s vs 0.000 s", receipt = "DOCS-CHECKS/r20261001-03" }
 adjacent = { identical = true, observed = "tests/agent/test_first_chunk_at_hook.py + tests/agent/test_moa_observability_bridge.py: 17 passed, 0 failed on 9225807160 (code identical to base)", pre_existing = [] }
-guards = { F14 = "N_A (docs-only, no code path changes)" }
+guards = { F14 = "EQUAL", receipt = "F14/r20261001-01", observed = "arm be5c73d230 (9225807160 cherry-picked clean onto main 34f8ec3b40, patch-id identical): r1 and r2 each 36 PASS / 4 FAIL over 40 verdict ids, identical (verdict, marker, fingerprint) to baseline-34f8ec3b40 on every id; the 4 FAILs are the baseline's own; flaky list empty", previous = "N_A (docs-only, no code path changes), before the Wave 0 F14 set existed" }
 quantitative = []
 cache_read_ratio = { status = "N_A" }
 route_scope = "n/a"
@@ -90,7 +94,7 @@ P1 = "PASS"
 P2 = "PASS"
 P3 = "PASS"
 P4 = "N_A"
-P5 = "PASS"
+P5 = "PASS"   # re-checked in the F14 round: F14 EQUAL (F14/r20261001-01) plus RED, GREEN 3/3, sabotage, ADJACENT and flaky=false already recorded with receipts
 P6 = "N_A"
 P7 = "PASS"
 P8 = "PENDING"
@@ -109,24 +113,26 @@ qa_class = ""      # never set by the author worker
 prior = "phase-3 verifier on f47410f2ac: accept=false (CHANGES_REQUIRED), 5 problems, all fixed in round 1. Round-1 re-verifier on 9225807160: 2 minor manifest problems (3 unrecorded editors of observer-hooks.md; 'no file overlap' wording for #53007), commit and PR body need no change; both fixed in round 2. See History"
 
 [merge_check]
-main_sha = "040b6df2c40b0f4f88f51e4c2062eafc4d7463c5"
-checked_at = "2026-10-01T12:16:17Z"
+main_sha = "34f8ec3b407e50bad3ae27e4cd79d65212061356"
+checked_at = "2026-10-01T18:35:56Z"
 clean = true
-tree = "36e87a74ee"
+tree = "ac1a4ea15479ae2239f244365078fac89a1cf816"   # same tree as the F14 arm be5c73d230 (DOCS-CHECKS/r20261001-05)
+previous = "040b6df2c4 at 12:16:17Z, clean, tree 36e87a74ee"
 recheck = "git merge-tree --write-tree main staging/observer-hooks-doc-drift"
 
 [push]
 target = "kvnloo/hermes-agent refs/heads/staged/observer-hooks-doc-drift"
 no_follow_tags = true
-workflow_push_matches = 0     # .github/workflows on aea969677c: 11 push workflows, no push filter matches staged/observer-hooks-doc-drift; only tag trigger is v* (live-providers)
+workflow_push_matches = 0     # .github/workflows on aea969677c: 11 push workflows, no push filter matches staged/observer-hooks-doc-drift; only tag trigger is v* (live-providers). 0 workflow files changed between aea969677c and 34f8ec3b40 (DOCS-CHECKS/r20261001-05), so the scan still holds there
 pushed_at = ""
 
 [body]
 path = "PR_BODY.md"
 kind = "pr-body"
 tone_gate = { peer = true, no_labor = true, no_internal_leak = true, smallest_ask = true, self_service = true, local_voice = true, easy_decline = true }   # self-assessed; P10 re-checks
-jargon_lint = "PASS"          # grep for envelope/lane/E##/F##/factory/staging/receipt/probe/@mention/home paths/kvnloo: 0 hits
-privacy_scan = "PASS"
+jargon_lint = "PASS"          # grep for envelope/lane/E##/F##/P1-P12/OD-n/xf/factory/staging/receipt/probe/@mention/home paths/kvnloo: 0 hits (re-run in the polish round on the edited body)
+privacy_scan = "PASS"         # re-run 2026-10-01T18:38Z over STAGING.md, PR_BODY.md, the patch, receipts/ and tools/: no absolute local paths, host name, secrets or bytecode
+sha256 = "34441a20ecdb2aa9b21683fc1c7196ddc5b8d9ed208c738ab9b7b7d39fc8feab"   # PR_BODY.md after the polish round
 
 [queue]
 board = "kvnloo/hermes-agent#404"
@@ -142,7 +148,7 @@ origin_actions_taken = 0
 
 **Promotion form:** docs (route `docs-leaf`), unchanged by rounds 1 and 2. Round 2 found no external owner, so the form stays docs; salvage-support and HOLD don't apply. It rides the docs-bundle queue on kvnloo/hermes-agent#404 and takes no slot of its own.
 **RFC / issue links:** NousResearch/hermes-agent#64231 (hook catalog, DOCS_ONLY class) and NousResearch/hermes-agent#16106 (provider timing trace). Fork board: kvnloo/hermes-agent#404 (39 rows). The old wave boards kvnloo#402 and kvnloo#403 are closed; they became NousResearch/hermes-agent#130139 and #130140, and neither mentions this item.
-**Branch:** local `staging/observer-hooks-doc-drift` @ `9225807160327a648a21bd493e9ed943f8ce5baa` in scratch `h.git`. On the fork it will be `staged/observer-hooks-doc-drift`, because the fork's legacy `staging` branch blocks `staging/*`. That rename resolves OD-0. It is one commit on upstream main `aea969677c`, and merge-tree is clean on the newer `040b6df2c4` (12:16Z, 8 commits later).
+**Branch:** local `staging/observer-hooks-doc-drift` @ `9225807160327a648a21bd493e9ed943f8ce5baa` in scratch `h.git`. On the fork it will be `staged/observer-hooks-doc-drift`, because the fork's legacy `staging` branch blocks `staging/*`. That rename resolves OD-0. It is one commit on upstream main `aea969677c`, and merge-tree is clean on the newer `34f8ec3b40` (18:36Z, 38 commits later, tree `ac1a4ea154`; DOCS-CHECKS/r20261001-05). The commit was not rebased.
 **Artifacts in this directory:** `PR_BODY.md`, `observer-hooks-doc-drift.patch` (sha256 `5e44f54fbaa6bdae761770d3900b14dcd1a9fda44b8513d38f7614f51327a741`, byte-identical to `git format-patch -1 --stdout 9225807160`), `receipts/`, and `tools/` (the F13 checker, the markdown structure check, the retry probe and, from round 2, `tools/open_pr_sweep/` for the open-PR file-list sweep and apply-checks, so others can reproduce the results).
 
 ## Invariant
@@ -218,7 +224,7 @@ All 14 cited blobs are byte-identical on `572e4f4fad` and `aea969677c`, so every
 
 | Ref | SHA | Role | Rebase status |
 |---|---|---|---|
-| `staging/observer-hooks-doc-drift` (local, scratch h.git; fork name `staged/observer-hooks-doc-drift`) | `9225807160` | The staged docs commit (author Kevin Rajan, `docs(observer-hooks):`, +15/-0) | On main `aea969677c`. merge-tree clean on `040b6df2c4` (+8 commits, no invalidating path changed; tree `36e87a74ee`). |
+| `staging/observer-hooks-doc-drift` (local, scratch h.git; fork name `staged/observer-hooks-doc-drift`) | `9225807160` | The staged docs commit (author Kevin Rajan, `docs(observer-hooks):`, +15/-0) | On main `aea969677c`. merge-tree clean on `34f8ec3b40` (+38 commits, no invalidating path changed; tree `ac1a4ea154`, the same tree as the F14 arm). |
 | `refs/fork/perf/first-visible-clocks` | `6653c99cfd` | Reference only. Its 3 `observer-hooks.md` lines document fork-only fields and are not copied. | merge-tree with `9225807160` is clean |
 
 ## First slice
@@ -240,6 +246,8 @@ The local branch was forced from `f47410f2ac` to `9225807160` as the fix instruc
 | F13 code-vs-docs key diff (T0, static, $0) | `receipts/F13-r20261001-03.json` (sha256 `7e0a6d0a…`) | KEEP | OBSERVED | 1 run of 3 deterministic reps (all identical), 2,089 files, wall 35.79 s | RED on `aea969677c`: 3 undocumented (`context_length`, `first_chunk_at`, `moa_references`). GREEN on `9225807160`: 0, reps 3/3. Negatives: 4/4 re-RED. Coverage: 21 of 41 VALID_HOOKS have a detected `*invoke_hook` site. |
 | Docs checks + retry probe (T0, $0) | `receipts/DOCS-CHECKS-r20261001-03.json` (sha256 `c0ea2730…`) | KEEP | OBSERVED | probe 2 tests x 3 runs | See below |
 | Open-PR editors of the page (T0, $0, round 2; supplements `-03`) | `receipts/DOCS-CHECKS-r20261001-04.json` (sha256 `fc82032e…`) | KEEP | OBSERVED | 33,478 open PRs (+21 top-up); 7 editors x 2 merge orders; 21 pairs x 2 trees | 7 real editors, all clean on top and in reverse order; 0 document the three fields; 0 change the emitter. 2 GitHub-listed non-edits (#120375, #121502). Freshness on `040b6df2c4`: merge-tree clean, 0 `invalidate_on` changes. |
+| Polish-round freshness and open-PR top-up (T0, $0; supplements `-04`) | `receipts/DOCS-CHECKS-r20261001-05.json` (sha256 `19bbef44…`) | KEEP | OBSERVED | 1 merge-tree, 14 cited spans, 14 PRs + 2 issues, 288 new PRs (6 re-read over REST) | merge-tree clean on `34f8ec3b40` (tree `ac1a4ea154`); 0 of 11 `invalidate_on` files changed; 14 of 14 cited spans match; every referenced PR in its recorded state; 0 of 288 new PRs touch the page or the emitter. Informational: newer main `363e9d5f0a` moves the cited `codex_runtime.py:1090-1096` to `:1115-1121`. |
+| F14 standing-regression guards (Wave 0 set rev 1, T0, $0, sandboxed) | `receipts/F14-r20261001-01.json` (sha256 `ea3f200d…`) | KEEP | OBSERVED | 2 runs x 19 cells (40 verdict ids) vs the 2-run baseline on main `34f8ec3b40` | **EQUAL.** `9225807160` cherry-picks cleanly onto `34f8ec3b40` (arm `be5c73d230`, same patch-id, ref `refs/xf/w0/observer-hooks-doc-drift`). r1 and r2: 36 PASS / 4 FAIL each, identical verdict, marker and fingerprint to the baseline on all 40 ids, and r1 = r2. The 4 FAILs are the baseline's own; none added. 0 blocked execs. |
 
 The docs checks, all OBSERVED on `9225807160`:
 
@@ -275,18 +283,18 @@ These are follow-up candidates for a later bundle, not part of this commit.
 
 ## Gate checklist (P1-P12)
 
-- **P1 Need: PASS.** RED on `aea969677c` (F13/r20261001-03). Re-check at 12:16Z on `040b6df2c4`: no `invalidate_on` path changed, page blob unchanged (DOCS-CHECKS/r20261001-04).
+- **P1 Need: PASS.** RED on `aea969677c` (F13/r20261001-03). Re-check at 18:36Z on `34f8ec3b40` (38 commits later): 0 of 11 `invalidate_on` files changed, no new emitter or kwarg (0 diff lines name `post_api_request`), page blob unchanged (DOCS-CHECKS/r20261001-05). The earlier 12:16Z re-check on `040b6df2c4` is in DOCS-CHECKS/r20261001-04. The RED was reproduced on 2026-10-01 (round 1, ~11:20Z). If the row is queued more than 24 h after that, the promotion-day F13 re-run in Experiments must refresh it first.
 - **P2 Ownership: PASS.** No open or merged PR documents these fields. That was re-searched in rounds 1 and 2; round 2 read the file list of every open PR. Seven open PRs edit `observer-hooks.md`: #53007, #108924, #113174, #119347, #121005, #124310 and #125192. Each is in the same file with no hunk conflict, and each applies cleanly on top of this commit in both merge orders (#53007 and #125192 at offset 15, the others with no offset). None documents the three fields (DOCS-CHECKS/r20261001-04). #120375 and #121502 are listed by GitHub but are not real edits. #123978 has no file overlap. Its semantic dependency is recorded above, with the rebase rule. The claimant lanes are TUI work. No Hermes-lane item is known, but PLAN.txt was not read (it's under `~/.hermes`).
 - **P3 Shape: PASS.** One file, +15/-0, no env vars, no hooks, no code.
 - **P4 Real path: N_A.** It's docs-only. Three things stand in for it: the D2 source quote, the exhaustive setter grep, and the retry probe through the real conversation loop. The adjacent tests pin the other described semantics.
-- **P5 Proof: PASS.** F13 RED, GREEN 3/3 (`--reps 3`, identical), 4/4 negative controls. Adjacent tests 17/17. The retry probe passes 2/2 in 3 runs, and its negative control goes RED. `flaky = false` (deterministic).
+- **P5 Proof: PASS.** F13 RED with the marker matched (`[context_length, first_chunk_at, moa_references]`), GREEN 3/3 (`--reps 3`, identical), 4/4 negative controls (F13/r20261001-03). The commit is one hunk (`@@ -151,9 +151,24 @@`), and its 15 added lines are exactly the three bullets the sabotage cases drop, so no hunk is unpinned. Adjacent tests 17/17, identical to base (DOCS-CHECKS/r20261001-03). The retry probe passes 2/2 in 3 runs, and its negative control goes RED. `flaky = false` (deterministic). F14 guards: EQUAL (F14/r20261001-01). The docs change can't move any F14 probe; the run shows that the cherry-pick onto main `34f8ec3b40` leaves the 40-id guard set unchanged.
 - **P6 Numbers: N_A.** The body makes no value claim. The probe timings illustrate the caveat and are not a performance claim.
-- **P7 Package: PASS (local).** One commit on fresh main `aea969677c`, correct author and subject. merge-tree is clean on `040b6df2c4`. The workflow push-trigger scan for `staged/observer-hooks-doc-drift` found 0 matches, and `--no-follow-tags` is required. Not pushed.
-- **P8 Freeze: PENDING.** Receipt sha256 hashes are recorded and the files are `chmod a-w`. They are not yet copied to `claude/ledger:factory/xf/receipts/`, and no z0evals study exists. Copy only the cited receipts as evidence: both `-03` receipts and DOCS-CHECKS `-04`.
-- **P9 Text: PASS (self-assessed).** The template sections are filled and NOT_TESTED is honest. AI assistance is disclosed and there are no @mentions. The jargon and privacy grep found 0 hits. The body now carries the retry caveat, the #123978 interaction and the Correlation IDs pointer.
+- **P7 Package: PASS (local).** One commit on main `aea969677c`, correct author and subject. merge-tree is clean on current main `34f8ec3b40` (tree `ac1a4ea154`, DOCS-CHECKS/r20261001-05). The workflow push-trigger scan for `staged/observer-hooks-doc-drift` found 0 matches, and no workflow file changed between base and `34f8ec3b40`. `--no-follow-tags` is required. Not pushed.
+- **P8 Freeze: PENDING.** Receipt sha256 hashes are recorded and the files are `chmod a-w`. They are not yet copied to `claude/ledger:factory/xf/receipts/`, and no z0evals study exists. Copy only the cited receipts as evidence: both `-03` receipts, DOCS-CHECKS `-04` and `-05`, and F14 `-01`.
+- **P9 Text: PASS (self-assessed).** The template sections are filled (the "For New Skills" section is deleted, as the template asks for non-skill PRs) and NOT_TESTED is honest. AI assistance is disclosed for both the docs change and the description, and there are no @mentions. The jargon and privacy grep found 0 hits (re-run in the polish round). The body carries the retry caveat, the #123978 interaction and the Correlation IDs pointer, and pins its line references to `main` at `34f8ec3b40`.
 - **P10 Independent read: PENDING.** A different worker needs to re-verify exact head `9225807160` after the round-1 and round-2 fixes. Round 2 changed only this manifest and added a receipt; the head is unchanged.
 - **P11 Demand: RECORDED.** Impact is 1 and evidence is 9. This is a real docs fix, not test infra.
-- **P12 Queue: PENDING.** Owner decision. The Wave 0 global precondition (F15, F14, E48, F11) is not met in this run, and the staging cap applies. The row goes behind the 39 existing #404 rows.
+- **P12 Queue: PENDING.** Owner decision. The Wave 0 global precondition (F15, F14, E48, F11) was not met when this gate was last assessed. F14 has since run for this item (EQUAL); F15, E48 and F11 were not re-checked here. The staging cap applies. The row goes behind the 39 existing #404 rows.
 
 ## Experiments
 
@@ -294,6 +302,7 @@ These are follow-up candidates for a later bundle, not part of this commit.
 - F13: `python3 tools/f13_hook_doc_diff.py --repo <scratch>/h.git --base aea969677c60a1bb72fe227fdfb98f196a2092cc --head 9225807160327a648a21bd493e9ed943f8ce5baa --out receipts/F13-r20261001-03.json --run-id F13/r20261001-03 --supersedes ... --reps 3` (run from this directory under `unshare -rn`). Result: KEEP, 3 to 0 undocumented, GREEN 3/3, 4/4 negatives.
 - Docs checks and the retry probe: the commands are recorded per check in `receipts/DOCS-CHECKS-r20261001-03.json`, with `$TH`, `$HERMES_PYTHON` and `<scratch>` placeholders. Result: KEEP.
 - #123978 interaction (informational): F13 with `--base` = main + #123978 and `--head` = that + this branch. Both are unreferenced probe commits, and no ref was created. Result: as recorded above.
+- F14 guards (Wave 0): a worktree detached at main `34f8ec3b40`, then `git cherry-pick 9225807160` with the author kept. Then `f14_run.py run <worktree> maps/observer-hooks-doc-drift-r{1,2}.json --label observer-hooks-doc-drift-r{1,2}` and `f14_run.py compare baseline-34f8ec3b40.json <map>`, all from the factory's `f14/` directory, with one sandboxed cell per probe. The full command list is in `receipts/F14-r20261001-01.json`. Result: EQUAL in both runs.
 - Open-PR editor sweep (round 2, gh read-only), run from a scratch copy of `tools/open_pr_sweep/`:
   - `enum_numbers.py` lists every open PR number;
   - `sweep.py`/`sweep_asc.py` and `fetch_by_number.py <numbers> <out>` read the file lists;
@@ -306,7 +315,8 @@ These are follow-up candidates for a later bundle, not part of this commit.
 **Queued:**
 - T2 (local GPU) and T3 (paid): **none**. The selection lists no experiments beyond F13, and the change makes no value claim (P6 N_A).
 - Optional T1, not needed for promotion: a runtime check that a streamed `bedrock_converse` attempt emits `first_chunk_at = None`. It would drive `_BedrockStream` with a fake `converse_stream` client and a recording `post_api_request` hook, from a test file outside the commit: `HOME=<scratch>/testhome-st-observer-hooks-doc-drift HERMES_HOME=$HOME/.hermes HERMES_PYTHON=<venv python> bash scripts/run_tests.sh -j 2 <probe file> -q`. The static evidence is exhaustive (two setters repo-wide), so this is a nice-to-have.
-- On promotion day, the freshness re-run: the F13 command above with `--base main --head staging/observer-hooks-doc-drift --run-id F13/r<date>-01 --supersedes F13/r20261001-03 --reps 3`, plus `git merge-tree --write-tree main staging/observer-hooks-doc-drift`. Check #123978, #101688 and #70690 first: if any has merged, rebase and extend the list before re-running. If any of the seven page editors (#53007, #108924, #113174, #119347, #121005, #124310, #125192) has merged, the merge-tree run covers it; all seven apply cleanly with this commit in both orders today. Re-run `apply_checks.py` for the ones still open if their heads moved.
+- Polish round (gh read-only + local git, $0): the merge-tree, `invalidate_on` diff, cited-span re-read, referenced-PR state and open-PR top-up commands are recorded in `receipts/DOCS-CHECKS-r20261001-05.json`, with a `<scratch>` placeholder. Result: KEEP.
+- On promotion day, the freshness re-run: the F13 command above with `--base main --head staging/observer-hooks-doc-drift --run-id F13/r<date>-01 --supersedes F13/r20261001-03 --reps 3`, plus `git merge-tree --write-tree main staging/observer-hooks-doc-drift`. The PR body pins its line references to `main` at `34f8ec3b40`, so they stay correct as main moves. If the commit is rebased (for example after #123978), re-check every cited line and re-pin the body to the new base. Check #123978, #101688 and #70690 first: if any has merged, rebase and extend the list before re-running. If any of the seven page editors (#53007, #108924, #113174, #119347, #121005, #124310, #125192) has merged, the merge-tree run covers it; all seven apply cleanly with this commit in both orders today. Re-run `apply_checks.py` for the ones still open if their heads moved.
 
 ## NOT_TESTED
 
@@ -321,7 +331,7 @@ These are follow-up candidates for a later bundle, not part of this commit.
 
 1. Push `staging/observer-hooks-doc-drift` to the fork as `staged/observer-hooks-doc-drift`. OD-0 is resolved by that rename. Use `--no-follow-tags`, quote the refspec, and run an `ls-remote` collision check first. Owner action; not run here.
 2. A blind exact-head verifier, a different worker, re-reads `9225807160` with the raw diff, the repo and the D2 oracle, and sets the QA class. This is P10.
-3. Copy `STAGING.md`, `PR_BODY.md` (as `body.md`), the patch, both `-03` receipts and DOCS-CHECKS `-04` to `claude/ledger:factory/xf/staging/observer-hooks-doc-drift/` and `factory/xf/receipts/`, then freeze the cited receipts. This is P8.
+3. Copy `STAGING.md`, `PR_BODY.md` (as `body.md`), the patch, both `-03` receipts, DOCS-CHECKS `-04` and `-05`, and F14 `-01` to `claude/ledger:factory/xf/staging/observer-hooks-doc-drift/` and `factory/xf/receipts/`, then freeze the cited receipts. This is P8.
 4. Fold into the next docs bundle in kvnloo/hermes-agent#404 order, behind the 39 existing rows, with no separate slot.
 5. Rebase triggers: #123978 (or #101688 / #70690) merging. Add `cost` (or `rate_limit`) and the Codex app-server `None` case to the list, then re-run F13. A merge of one of the seven page editors is not a rebase trigger: they apply cleanly in both orders. Just re-run merge-tree.
 6. Optionally, after #123978 lands or closes, add the same three fields to the `hooks.md` plugin-hook table row as a follow-up, plus the informational-matrix items after a source read of each.
@@ -358,3 +368,11 @@ These are follow-up candidates for a later bundle, not part of this commit.
   2. P2 now reads "same file, no hunk conflict" for the page editors (#53007 at offset 15), with "no file overlap" kept only for #123978.
 
   Also re-measured: main `040b6df2c4` (8 commits after base, no `invalidate_on` path changed, page blob unchanged, merge-tree clean, tree `36e87a74ee`); 18/18 docs bundles clean; 0 of 71 local heads touch the page. Promotion form unchanged (docs): no external owner. OD-0 stays resolved by the `staged/` rename. Sweep tools are in `tools/open_pr_sweep/`. No worktree was needed (temporary index files only); PR heads were fetched into scratch `h.git` with no ref created; no stash, no push, no GitHub writes.
+- 2026-10-01T18:29Z | STAGED | Wave 0 F14 guard run (Claude Code, Opus 5.5) | **F14 EQUAL** (F14/r20261001-01, frozen, sha256 `ea3f200d…`). `9225807160` cherry-picked cleanly onto upstream main `34f8ec3b40`, with the original author kept and Kevin Rajan as committer. The result is arm `be5c73d230`: same patch-id, tree `ac1a4ea154`, the same tree `git merge-tree` gives. New ref `refs/xf/w0/observer-hooks-doc-drift`. Two runs of the 40-id F14 set (rev 1, set sha256 `aba79fe8f09d…`): each 36 PASS / 4 FAIL, identical verdict, marker and fingerprint to `baseline-34f8ec3b40` on every id. r1 = r2, flaky list empty, 0 blocked execs. The 4 FAILs are the baseline's own (cache_estimator, notice_delivery, context_cap, readtool lying_extension). `guards.F14` changed from N_A to EQUAL. P5 stays PASS: RED with marker, GREEN 3/3, sabotage (1 hunk, no unpinned lines), ADJACENT identical and flaky=false were already recorded with receipts. Side observation (OBSERVED, not gated; P1 not changed): 0 `invalidate_on` files changed and 0 diff lines name `post_api_request` between `aea969677c` and `34f8ec3b40` (38 commits). That is a text check, not the F13 freshness re-run. Commit, patch, PR body and the local branch are unchanged. Worktree removed and pruned. `refs/heads/main` unchanged; no stash, no push, no GitHub writes.
+- 2026-10-01T18:38Z | STAGED | polish round (Claude Code, Opus 5.5) | Round-4 advisories for this item: none (empty list). Upstream-facing text re-read against the source on main `34f8ec3b40`:
+  1. `PR_BODY.md`: every cited span (14) still matches and every referenced PR and issue is in the stated state. #100425 and #115819 touched no `website/` file, so "the guide's list wasn't updated either time" holds. Two edits: line references are now pinned to `main` at `34f8ec3b40` (upstream main had already moved to `363e9d5f0a`, where the cited `codex_runtime.py:1090-1096` sits at `:1115-1121`), and the AI-assistance line now names both the docs change and the description. No owner-review claim. Template check: "For New Skills" is correctly deleted.
+  2. Commit message: accurate, no fork jargon, AI co-author trailer present. Unchanged, so no `-v2` ref was created; the branch stays `9225807160`.
+  3. Freshness (DOCS-CHECKS/r20261001-05, frozen, sha256 `19bbef44…`): merge-tree clean on `34f8ec3b40` (tree `ac1a4ea154`, same as the F14 arm); 38 commits since base, 0 of 11 `invalidate_on` files changed, no new emitter or kwarg, page blob unchanged, 0 workflow files changed. `[base].freshness_recheck`, `[merge_check]`, the Branch line, the member-branches row and P1/P7 now cite `34f8ec3b40`. Open-PR top-up: 288 PRs created since 12:16Z (267 open), 6 truncated lists re-read over REST, 0 touch the page or the emitter; the 10 recorded open PRs keep their heads.
+  4. Privacy scan of STAGING.md, PR_BODY.md, the patch, receipts/ and tools/: clean (only the `<run>/home` placeholder and a fake test key in the probe). No bytecode. Patch still byte-identical to `git format-patch -1 9225807160`. TOML front matter parses.
+
+  Gates unchanged: P8, P10 and P12 stay PENDING, so status stays STAGED. No worktree was needed (read-only git and gh); no ref created or moved, no stash, no push, no GitHub writes.

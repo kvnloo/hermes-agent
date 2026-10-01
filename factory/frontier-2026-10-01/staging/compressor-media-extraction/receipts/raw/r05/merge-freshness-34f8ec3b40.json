@@ -1,0 +1,103 @@
+{
+ "main": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+ "main_committed_at": "2026-10-01T22:59:37+05:30",
+ "main_matches_task_pin": true,
+ "base_is_ancestor": true,
+ "commits_past_base": 38,
+ "commits_past_44a1ce9724": 9,
+ "invalidate_on_paths": [
+  "agent/context_compressor*.py",
+  "agent/turn_request_assembly.py",
+  "agent/chat_completion_helpers.py",
+  "agent/image_eviction_policy.py"
+ ],
+ "invalidate_on_diff_lines": 0,
+ "blob_ids_base_vs_main": {
+  "agent/chat_completion_helpers.py": {
+   "base": "5c114ec4be899fed7c10c4d693af61ac4f92cdcb",
+   "main": "5c114ec4be899fed7c10c4d693af61ac4f92cdcb",
+   "same": true
+  },
+  "agent/context_compressor.py": {
+   "base": "6da13625b39cc3b9d24a1d4de71775cc82d9fd43",
+   "main": "6da13625b39cc3b9d24a1d4de71775cc82d9fd43",
+   "same": true
+  },
+  "agent/context_compressor_media.py": {
+   "base": null,
+   "main": null,
+   "same": true
+  },
+  "agent/image_eviction_policy.py": {
+   "base": "cde689d3d19a421c76bb5eb219ef9f74fd0ffcfd",
+   "main": "cde689d3d19a421c76bb5eb219ef9f74fd0ffcfd",
+   "same": true
+  },
+  "agent/turn_request_assembly.py": {
+   "base": "79a56c6278a07dbd20da42a45fea4d9064a7966e",
+   "main": "79a56c6278a07dbd20da42a45fea4d9064a7966e",
+   "same": true
+  },
+  "tests/agent/test_compressor_historical_media.py": {
+   "base": "5a24f3ad0552247edccffaa562bd2f4667ff2914",
+   "main": "5a24f3ad0552247edccffaa562bd2f4667ff2914",
+   "same": true
+  },
+  "tests/agent/test_compressor_stale_tool_images.py": {
+   "base": "638ef5dde0be926f48e6d726d011018a18d92c72",
+   "main": "638ef5dde0be926f48e6d726d011018a18d92c72",
+   "same": true
+  },
+  "tests/agent/test_image_eviction_policy.py": {
+   "base": "2f3cfa6de20f6b973dd3fb13beff10c7b10c582c",
+   "main": "2f3cfa6de20f6b973dd3fb13beff10c7b10c582c",
+   "same": true
+  },
+  "tests/agent/test_outbound_stale_vision.py": {
+   "base": "30b9aad5aebacd5996f6424244557af44007c2c8",
+   "main": "30b9aad5aebacd5996f6424244557af44007c2c8",
+   "same": true
+  },
+  "tests/agent/test_protected_tail_pressure.py": {
+   "base": "a86f0d7af719325ed01c515ec9072264a176073e",
+   "main": "a86f0d7af719325ed01c515ec9072264a176073e",
+   "same": true
+  },
+  "tests/agent/test_compressor_zero_user_guard.py": {
+   "base": "27973befc9f910f1b62b3f1f63cd7fda33e1c452",
+   "main": "27973befc9f910f1b62b3f1f63cd7fda33e1c452",
+   "same": true
+  },
+  "agent/native_compaction.py": {
+   "base": "f0f44fab8ac04f0bae25bffe985f5bc1cd7fc0af",
+   "main": "f0f44fab8ac04f0bae25bffe985f5bc1cd7fc0af",
+   "same": true
+  },
+  "agent/turn_context.py": {
+   "base": "ac00c87229bf547c50a20ec1def5eb7648ce2754",
+   "main": "ac00c87229bf547c50a20ec1def5eb7648ce2754",
+   "same": true
+  },
+  "agent/conversation_compression.py": {
+   "base": "f832e65dd75def450e5e25734dfc3e072c5ac156",
+   "main": "f832e65dd75def450e5e25734dfc3e072c5ac156",
+   "same": true
+  },
+  "AGENTS.md": {
+   "base": "65aa3e61bcba610da21279a17385671263be39e9",
+   "main": "65aa3e61bcba610da21279a17385671263be39e9",
+   "same": true
+  }
+ },
+ "all_same": true,
+ "merge_tree_rc": 0,
+ "merge_tree": "7f7e21c2cc84992050d9a1a68d59fefc873745ef",
+ "regenerated_tree_on_fresh_main": "7f7e21c2cc84992050d9a1a68d59fefc873745ef",
+ "regenerated_equals_merge_tree": true,
+ "regen_shortstat": "10 files changed, 264 insertions(+), 243 deletions(-)",
+ "facade_lines_head": 5531,
+ "sibling_lines_head": 243,
+ "workflows_diff_lines_base_to_main": 0,
+ "workflows_count_on_main": 52,
+ "f14_arm_tree_note": "7f7e21c2cc is also the tree of the F14 arm 639aa4c211 (receipt F14/r20261001-01)"
+}

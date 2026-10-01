@@ -1,9 +1,11 @@
 #!/bin/bash
+# Published copy: local paths come from the environment (S = scratch dir holding h.git, W = staging worktree,
+# HERMES_PYTHON = test venv python). The as-run copy had them inline; its sha256 is the one cited in the receipts.
 set -u
-S=$S
-W=$ARTIFACTS/promotion-readiness-2026-10-01/wt/staging/postmortem-logcalls-zero-hit
+S=${S:?set S to the scratch dir holding h.git}
+W=${W:?set W to the staging worktree}
 TH=$S/testhome-st-postmortem-logcalls-zero-hit
-PY=<hermes-home>/hermes-agent/venv/bin/python
+PY=${HERMES_PYTHON:?set HERMES_PYTHON to the test venv python}
 cd $W
 run_tests() { env -u __HERMES_ACTIVATED HOME=$TH HERMES_HOME=$TH/.hermes HERMES_PYTHON=$PY bash scripts/run_tests.sh -j 2 "$@" -q 2>&1; }
 arm() {

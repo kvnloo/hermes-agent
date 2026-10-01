@@ -1,0 +1,339 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "DOCS-CHECKS/r20261001-05",
+ "supersedes": null,
+ "supplements": "DOCS-CHECKS/r20261001-04 (freshness on a newer main plus an open-PR top-up only; -03 and -04 stay valid and cited)",
+ "spec": {
+  "kind": "static",
+  "tier": "T0",
+  "cost": "$0",
+  "question": "Is the staged commit still fresh on upstream main 34f8ec3b40 (merge-tree, invalidate_on, page blob, cited lines), are the referenced PRs unchanged, and does any PR opened since the round-2 sweep touch the page or the emitter?"
+ },
+ "staging": "observer-hooks-doc-drift",
+ "origin_refs": [
+  "NousResearch/hermes-agent#64231",
+  "NousResearch/hermes-agent#16106"
+ ],
+ "trigger": "polish round before owner copy-paste promotion",
+ "run_at": "2026-10-01T18:35:56Z",
+ "label": "OBSERVED",
+ "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+ "head_revision": "9225807160327a648a21bd493e9ed943f8ce5baa",
+ "main_revision": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+ "checks": {
+  "merge_tree": {
+   "cmd": "git -C <scratch>/h.git merge-tree --write-tree 34f8ec3b40 9225807160",
+   "rc": 0,
+   "tree": "ac1a4ea15479ae2239f244365078fac89a1cf816",
+   "equals_f14_arm_tree": true
+  },
+  "commits_since_base": 38,
+  "base_is_ancestor_of_main": true,
+  "files_changed_base_to_main": 100,
+  "invalidate_on_changed": [],
+  "page_blob": {
+   "base": "3d9c636706ff28aa6a117c1c0700fa2767aa19ae",
+   "main": "3d9c636706ff28aa6a117c1c0700fa2767aa19ae",
+   "head": "9ede0fab4d2be2a886d86a12c53c3f3dc8a01d8b"
+  },
+  "diff_lines_naming_post_api_request": 0,
+  "added_lines_with_invoke_hook": 0,
+  "first_chunk_at_assignments_on_main": [
+   "agent/chat_completion_helpers.py:4065:            self.agent._last_api_first_chunk_at = float(self.clients.diag[\"first_chunk_at\"])",
+   "agent/codex_runtime.py:1096:            agent._last_api_first_chunk_at = now",
+   "agent/turn_api_request.py:107:    agent._last_api_first_chunk_at = None"
+  ],
+  "workflow_files_changed_base_to_main": [],
+  "cited_lines_on_main": [
+   {
+    "cite": "agent/turn_response_intake.py:83-97",
+    "needles": [
+     "first_chunk_at=",
+     "context_length=",
+     "moa_references="
+    ],
+    "match": true,
+    "blob_same_as_base": true
+   },
+   {
+    "cite": "agent/turn_api_request.py:107",
+    "needles": [
+     "_last_api_first_chunk_at = None"
+    ],
+    "match": true,
+    "blob_same_as_base": true
+   },
+   {
+    "cite": "agent/chat_completion_helpers.py:3005-3012",
+    "needles": [
+     "diag[\"first_chunk_at\"] = "
+    ],
+    "match": true,
+    "blob_same_as_base": true
+   },
+   {
+    "cite": "agent/chat_completion_helpers.py:4057-4059",
+    "needles": [
+     "_partial_stream_stub()"
+    ],
+    "match": true,
+    "blob_same_as_base": true
+   },
+   {
+    "cite": "agent/chat_completion_helpers.py:4063-4065",
+    "needles": [
+     "_last_api_first_chunk_at = float("
+    ],
+    "match": true,
+    "blob_same_as_base": true
+   },
+   {
+    "cite": "agent/chat_completion_helpers.py:3571",
+    "needles": [
+     "def _retry_after_drop"
+    ],
+    "match": true,
+    "blob_same_as_base": true
+   },
+   {
+    "cite": "agent/codex_runtime.py:1090-1096",
+    "needles": [
+     "def _on_event",
+     "_last_api_first_chunk_at = now"
+    ],
+    "match": true,
+    "blob_same_as_base": true
+   },
+   {
+    "cite": "agent/conversation_loop.py:1650",
+    "needles": [
+     "s.api_start_time"
+    ],
+    "match": true,
+    "blob_same_as_base": true
+   },
+   {
+    "cite": "agent/conversation_loop.py:307-318",
+    "needles": [
+     "last_reference_metrics"
+    ],
+    "match": true,
+    "blob_same_as_base": true
+   },
+   {
+    "cite": "agent/turn_response_check.py:119",
+    "needles": [
+     "api_duration = time.time() - api_start_time"
+    ],
+    "match": true,
+    "blob_same_as_base": true
+   },
+   {
+    "cite": "agent/moa_trace.py:64-72",
+    "needles": [
+     "def slot_metrics"
+    ],
+    "match": true,
+    "blob_same_as_base": true
+   },
+   {
+    "cite": "agent/turn_usage.py:48-58",
+    "needles": [
+     "def _fold_moa_usage"
+    ],
+    "match": true,
+    "blob_same_as_base": true
+   },
+   {
+    "cite": "hermes_cli/hooks.py:141-153",
+    "needles": [
+     "\"first_chunk_at\"",
+     "\"context_length\"",
+     "\"moa_references\""
+    ],
+    "match": true,
+    "blob_same_as_base": true
+   },
+   {
+    "cite": "website/docs/developer-guide/observer-hooks.md:151-158",
+    "needles": [
+     "`post_api_request` includes the same identity/runtime fields plus:"
+    ],
+    "match": true,
+    "blob_same_as_base": true
+   }
+  ],
+  "referenced_prs": [
+   {
+    "pr": 100425,
+    "state": "MERGED",
+    "merged_at": "2026-09-01T15:30:46Z",
+    "head": "69996e11e7"
+   },
+   {
+    "pr": 115819,
+    "state": "MERGED",
+    "merged_at": "2026-09-19T17:00:04Z",
+    "head": "6584242190"
+   },
+   {
+    "pr": 123978,
+    "state": "OPEN",
+    "merged_at": null,
+    "head": "09c927c745"
+   },
+   {
+    "pr": 101688,
+    "state": "OPEN",
+    "merged_at": null,
+    "head": "86a079b3ed"
+   },
+   {
+    "pr": 70690,
+    "state": "OPEN",
+    "merged_at": null,
+    "head": "b52dc53c66"
+   },
+   {
+    "pr": 53007,
+    "state": "OPEN",
+    "merged_at": null,
+    "head": "7fde663972"
+   },
+   {
+    "pr": 108924,
+    "state": "OPEN",
+    "merged_at": null,
+    "head": "d69414122a"
+   },
+   {
+    "pr": 113174,
+    "state": "OPEN",
+    "merged_at": null,
+    "head": "e528319005"
+   },
+   {
+    "pr": 119347,
+    "state": "OPEN",
+    "merged_at": null,
+    "head": "4a527fc35d"
+   },
+   {
+    "pr": 121005,
+    "state": "OPEN",
+    "merged_at": null,
+    "head": "b29e6193b1"
+   },
+   {
+    "pr": 124310,
+    "state": "OPEN",
+    "merged_at": null,
+    "head": "b6d9c4cd80"
+   },
+   {
+    "pr": 125192,
+    "state": "OPEN",
+    "merged_at": null,
+    "head": "52b505e68a"
+   },
+   {
+    "pr": 121502,
+    "state": "OPEN",
+    "merged_at": null,
+    "head": "2b1f674eb4"
+   },
+   {
+    "pr": 120375,
+    "state": "OPEN",
+    "merged_at": null,
+    "head": "b81354460a"
+   }
+  ],
+  "referenced_issues": [
+   {
+    "number": 16106,
+    "is_pr": false,
+    "state": "open"
+   },
+   {
+    "number": 64231,
+    "is_pr": false,
+    "state": "open"
+   }
+  ],
+  "field_origin_prs_docs_files": {
+   "#100425": {
+    "files": 5,
+    "docs_files": []
+   },
+   "#115819": {
+    "files": 2,
+    "docs_files": []
+   }
+  },
+  "open_pr_topup": {
+   "query": "gh pr list -R NousResearch/hermes-agent --state all --search 'created:>=2026-10-01T12:16:00Z' --limit 400 --json number,state,changedFiles / --json number,files",
+   "created_range": "2026-10-01T12:16:34Z .. 2026-10-01T18:32:49Z",
+   "prs": 288,
+   "open": 267,
+   "pattern": "observer-hooks|turn_response_intake|hermes_cli/hooks.py|features/hooks.md",
+   "graphql_hits": [],
+   "truncated_reread_rest": {
+    "#130706": {
+     "changed_files": 110,
+     "rest_listed": 110,
+     "hits": 0
+    },
+    "#130719": {
+     "changed_files": 147,
+     "rest_listed": 147,
+     "hits": 0
+    },
+    "#130739": {
+     "changed_files": 358,
+     "rest_listed": 358,
+     "hits": 0
+    },
+    "#130790": {
+     "changed_files": 109,
+     "rest_listed": 109,
+     "hits": 0
+    },
+    "#130791": {
+     "changed_files": 155,
+     "rest_listed": 155,
+     "hits": 0
+    },
+    "#130802": {
+     "changed_files": 367,
+     "rest_listed": 367,
+     "hits": 0
+    }
+   },
+   "hits_total": 0
+  },
+  "newer_main_informational": {
+   "sha": "363e9d5f0a15ffe143d4a8b573b4898d6e428115",
+   "committed_at": "2026-10-01T18:25:54Z",
+   "how": "gh api compare 34f8ec3b40...363e9d5f0a and contents?ref= (read-only); the commit is not in the local mirror, so no merge-tree was run on it",
+   "ahead_by": 23,
+   "invalidate_on_files_changed": [
+    "agent/codex_runtime.py"
+   ],
+   "codex_runtime_hunks": [
+    "-534,6 +534,29",
+    "-542,10 +565,14",
+    "-578,22 +605,18",
+    "-670,7 +693,9"
+   ],
+   "codex_runtime_pm_lines_naming_fields_or_hook": 0,
+   "cited_codex_runtime_1090_1096_on_newer": "1115-1121 (def _on_event at :1115, first_chunk_at setter at :1121)"
+  }
+ },
+ "verdict": "KEEP: merge-tree clean on 34f8ec3b40, 0 invalidate_on paths changed, page blob unchanged, every cited line still matches, every referenced PR in its recorded state, 0 new PRs touch the page or the emitter",
+ "ai_assistance": "run and written by Claude Code (Opus 5.5)",
+ "privacy": "no absolute local paths, host name or secrets; placeholders only",
+ "placeholders": {
+  "<scratch>": "the scratch bare mirror directory"
+ }
+}

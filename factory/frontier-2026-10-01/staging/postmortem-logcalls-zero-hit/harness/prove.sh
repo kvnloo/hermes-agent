@@ -1,10 +1,12 @@
 #!/bin/bash
 # Full proof on the exact staging commit. Outputs to $S/pmlc/final/.
+# Published copy: local paths come from the environment (S = scratch dir, W = staging worktree,
+# HERMES_PYTHON = test venv python). The as-run copy had them inline; its sha256 is the one cited in the receipt.
 set -u
-S=$S
-W=$ARTIFACTS/promotion-readiness-2026-10-01/wt/staging/postmortem-logcalls-zero-hit
+S=${S:?set S to the scratch dir}
+W=${W:?set W to the staging worktree}
 TH=$S/testhome-st-postmortem-logcalls-zero-hit
-PY=<hermes-home>/hermes-agent/venv/bin/python
+PY=${HERMES_PYTHON:?set HERMES_PYTHON to the test venv python}
 O=$S/pmlc/final; rm -rf $O; mkdir -p $O
 cd $W
 echo "HEAD=$(git rev-parse HEAD) main=$(git rev-parse main)" | tee $O/heads.txt

@@ -2,7 +2,7 @@
 xf_staging = 1
 id = "prefix-parity-journeys"
 version = 1
-manifest_revision = 3      # r3 (2026-10-01): round-1 re-verifier fixes (text, receipt hygiene, freshness, r1 ref); branch and commit unchanged; receipts r03 re-issued from the r02 raw set
+manifest_revision = 5      # r5 (2026-10-01T18:50Z): polish round, text only; branch, commit, message, patch and receipts unchanged (no -v2). PR_BODY: AI disclosure no longer claims an owner review, hand-port wording for the cause-1 row and the Refs line, counts as N of M, main-side timing described as a separate run; manifest: explicit invalidate_on + freshness on 34f8ec3b40, P10 rationale, 193.0 s rounding, main-side run traceability, ownership refresh, AcpStdio nit recorded as not fixed. r4 (2026-10-01T18:30Z): F14 guard run on main 34f8ec3b40 (EQUAL, receipt F14/r20261001-01); P5 PASS -> PENDING per FACTORY 11.1 (GREEN 3/3, flaky=false and per-hunk sabotage not recorded); branch and commit unchanged. r3: round-1 re-verifier fixes; receipts r03 re-issued from the r02 raw set
 title = "Prefix-stability journeys for uncovered surfaces: messaging gateway, api_server /v1/runs, ACP (first slice); relay connector, A2A, /goal queued"
 branch = "staging/prefix-parity-journeys"
 branch_fork = "staged/prefix-parity-journeys"
@@ -21,7 +21,9 @@ repo = "NousResearch/hermes-agent"
 sha = "aea969677c60a1bb72fe227fdfb98f196a2092cc"
 fetched_at = "2026-10-01T11:04Z"
 previous = "572e4f4fad32bbdcfc948fb2ec833177ed5734c0 (r1 parent; 47 commits before this base)"
-freshness_recheck = { main = "aea969677c60a1bb72fe227fdfb98f196a2092cc", checked_at = "2026-10-01T11:04Z", merge_tree_clean = true, invalidate_on_hits = [], note = "branch rebuilt on this main; no commit in 572e4f4fad..aea969677c touches acp_adapter/, tests/e2e/ or tests/fakes/; RED/GREEN re-proved on it" }
+invalidate_on = ["acp_adapter/", "tests/acp_adapter/", "tests/e2e/", "tests/fakes/", "gateway/session_context.py", "agent/conversation_compression_manual.py", "agent/conversation_compression.py", "agent/compression_facade.py", "agent/conversation_loop.py", "agent/system_prompt.py", "hermes_state.py"]   # r5: the RED's call path (hermes acp -> acp_adapter -> compress_now / _compress_context, prompt build and restore, SessionDB) plus the item's own test files. From gateway/, acp_adapter imports only gateway/session_context.py (git grep on 34f8ec3b40)
+green_watch = ["gateway/"]   # r5: the messaging-gateway and api_server journeys run gateway.run; a change here calls for re-running the gated file (GREEN, P5), not the RED. Earlier checks watched the union of both lists ("acp_adapter/, tests/e2e/, tests/fakes/, tests/acp_adapter/, gateway/ or the compression/prompt modules"); r5 names the modules and splits the list
+freshness_recheck = { main = "34f8ec3b407e50bad3ae27e4cd79d65212061356", checked_at = "2026-10-01T18:34Z", commits_since_base = 38, merge_tree_clean = true, tree = "28d3cffb37", head_files_changed_since_base = 0, invalidate_on_changed = false, invalidate_on_hits = [], green_watch_hits = ["gateway/media_policy.py", "gateway/run_topics.py", "gateway/run_turn_runner.py"], note = "git diff --name-only aea969677c 34f8ec3b40: 100 files; none under invalidate_on and none of the head's 5 files. The 3 green_watch hits, read from the diff: run_turn_runner/run_topics move the Discord auto-thread title-retry recovery into _recover_discord_auto_thread_source, which returns the source unchanged unless the platform is Discord and the chat is a thread; media_policy.apply_media_policy_env returns early under get_hermes_home_override(), a context-local profile override (contextvar, not the HERMES_HOME env var). Neither changes a path the Telegram-fake DM journey or api_server takes; the gated file was not re-run on 34f8ec3b40 (last re-run: the merge with 040b6df2c4, r3). Other changed agent/ and tools/ files (Codex Responses replay, Codex catalog cap, pricing aliases, kanban tool gating, MCP transport) are outside the prompt/compression modules", upstream_after = "gh api 2026-10-01T18:41Z: upstream main is 105e876586 (28 commits after 34f8ec3b40; not fetched into the mirror, so no local merge-tree). gh compare lists 27 files: plugin catalog CI, Codex app-server/runtime, credential pool, model metadata, web search tools, docs; none under invalidate_on or green_watch and none of the head's 5 files", previous = "aea969677c at 11:04Z (branch rebuilt on it; no commit in 572e4f4fad..aea969677c touches acp_adapter/, tests/e2e/ or tests/fakes/; RED/GREEN re-proved on it)" }
 
 [upstream]
 rfc_or_issue = [
@@ -39,7 +41,7 @@ related_prs = [
   { pr = 72694, author = "necoweb3", head = "48ef9c82d5", state = "OPEN (acp_adapter/session.py hard-delete path; different defect)" },
   { pr = 109610, author = "teknium1", state = "MERGED 2026-09-13 (7114da3de6): manual /compress has one core; the ACP caller kept system_message=_cached_system_prompt" },
 ]
-competitors = []          # no open upstream PR edits tests/e2e/core/history/test_prefix_stability.py (gh search 2026-10-01T11:08Z)
+competitors = []          # no open upstream PR edits tests/e2e/core/history/test_prefix_stability.py (gh search 2026-10-01T11:08Z; re-run 18:36Z, see [ownership].refresh_r5)
 close_after = []
 demand = { score = "0 (judges)", source = "judges.json: maintainer-fit 4, evidence 6, impact 4" }
 maintainer_signal = "C17 is teknium1's suite (51a1205be0, 09d62097a3). Outside e2e edits land only alongside fixes. The #76224 reviews (teknium1 sweeper + pestoura) asked for a real-SessionDB ACP reload regression; dosenr supplied it (#76224 comment 2026-08-12, and in #88364)."
@@ -74,14 +76,15 @@ hard_hold = [69, 70]
 design_holds = ["CU/Jev", "realtime-voice", "agents-overlay", "row-budget", "glyph"]
 hermes_lane_overlap = "none found"
 verdict = "journeys: OURS (no competitor). #76215 cause 1: EXTERNAL (#88364 by dosenr, the issue filer, building on #76224) -> support and credit. Nesting cause 2: unowned -> own leaf. r1 missed #88364; found by the r2 '76215' search."
+refresh_r5 = { at = "2026-10-01T18:36Z", queries = ["76215", "acp compress", "prefix stability", "test_prefix_stability", "compress_now", "_cached_system_prompt", "acp session/load compaction", "system prompt nesting compress"], result = "no new owner or competitor. No open PR edits test_prefix_stability.py or the ACP system_message argument. Newest hits checked by file list: #125586 (jonpol01, '/compress here N') touches gateway/slash_commands_session.py and hermes_cli/partial_compress.py only; #128788 (jonpol01) is Discord prompt-input parity", states = "gh api 18:38Z: #76224 open, mergeable_state dirty, head 20a047b7f2; #88364 open, dirty, head f02e1487a8; #72694 open, dirty; #110763 closed; #109610 merged; #76215 and #49226 open. Both #76224 and #88364 still pass agent._cached_system_prompt as the compression system message (in acp_adapter/commands.py #88364 only drops the _session_db detach; it sets compression_in_place = True in acp_adapter/session.py)" }
 
 excluded_paths = ["hermes_cli/kanban_db.py", "tests/hermes_cli/test_kanban_external_receipts.py"]
 
 [evidence]
 revision = "r03 re-issues r02 from the same sealed raw set (no run repeated): corrected env.host_load, raw set and as-run harness moved under private/, parametrized harness. r02 superseded r01. Both earlier sets are kept unchanged: private/superseded-r02/ (clean, but carries the wrong host-load range) and private/superseded-r01/ (carried local paths, the host name and synthetic session/turn ids)"
-public = ["receipts/ (the 7 r03 receipts + SHA256SUMS)", "harness/ (no local paths, host or user names: they come from the environment)", "arms/", "prefix-parity-journeys.patch", "PR_BODY.md", "STAGING.md"]
+public = ["receipts/ (the 7 r03 receipts + F14-r20261001-01 + SHA256SUMS)", "harness/ (no local paths, host or user names: they come from the environment)", "arms/", "prefix-parity-journeys.patch", "PR_BODY.md", "STAGING.md"]
 private = "private/: raw-r02 (sealed raw set), harness-r02 (the as-run harness, local paths inline), harness-check-r03 (r3 fixer runs), superseded-r01, superseded-r02. Cited by sha256 only; never published, never frozen."
-freeze_set = "exactly the 7 receipts below plus receipts/SHA256SUMS; nothing under private/"
+freeze_set = "exactly the 8 receipts below (7 r03 + F14/r20261001-01) plus receipts/SHA256SUMS; nothing under private/"
 errata = [
   "r02 env.host_load said '(5-15 on 10 cores)' in all 7 receipts; the recorded per-run load1_end values (raw runs.jsonl, 25 runs) range 7.91-18.43 on 10 cores / 20 threads. Fixed in r03, which computes the range from runs.jsonl instead of typing it.",
   "r02 receipts cite raw at receipts/raw-r02/ and the harness at harness/; since r3 the same bytes are at private/raw-r02/ (manifest sha256 unchanged) and private/harness-r02/ (sha256 values unchanged).",
@@ -94,6 +97,7 @@ receipts = [
   { id = "LEAF-acp-nesting/r20261001-03", path = "receipts/LEAF-acp-nesting-r20261001-03.json", sha256 = "7c5c7bf501ef55ff9bb33c174213ec853bcb144572a536de9de680eaa19de57f", supersedes = "LEAF-acp-nesting/r20261001-02 (da28c7333692)" },
   { id = "ADJ/r20261001-03", path = "receipts/ADJ-r20261001-03.json", sha256 = "f0328f39ee54ebdf5cbee08d430b72e0c413255f6ad7ea6b9497d2d691092f99", supersedes = "ADJ/r20261001-02 (b65b077875fa)" },
   { id = "E09-smoke/r20261001-03", path = "receipts/E09-smoke-r20261001-03.json", sha256 = "4804c886eeabbfc95359246e1c61c75c5697d305d15e6d65a030e1a5b04f71ba", supersedes = "E09-smoke/r20261001-02 (8a5c3d586aa5)" },
+  { id = "F14/r20261001-01", path = "receipts/F14-r20261001-01.json", sha256 = "18c9178924d2a411abad8f08e34619de4b6a613fb833adaa45e08b95dfb3ab39", supersedes = "none (first F14 run for this item)" },
 ]
 r03_diff_check = "field-by-field diff of each r03 receipt against its r02: 18 changed leaves each, all in id, supersedes, reissue, env.host_load, raw.dir, raw.manifest, inputs.harness and inputs.harness_as_run; every measurement, outcome and command is unchanged"
 raw_manifest = { path = "private/raw-r02/MANIFEST.sha256", sha256 = "99cb8fdfe8896a88b28a88e623659c4f5f958424a0ac16c049ad5a997923e635", note = "private; path-scrubbed before sealing; never published or frozen; moved from receipts/raw-r02/ in r3, bytes unchanged (sha256sum -c OK)" }
@@ -102,6 +106,7 @@ red = { test = "test_request_prefix_is_byte_stable_across_processes[acp_restarts
 green = { result = "5 passed + 1 xfailed (acp_restarts) on the head (gated file)", receipt = "E07/r20261001-03" }
 negative_control = { mutation = "NC1 per-request timestamp in the system message; NC2 stored prompt stale on every fresh agent + per-build nonce", result = "NC1 (per-request timestamp in the system message) fails 6/6 journeys and NC2 (#104414 shape) fails 6/6; the ACP gate excused neither", receipt = "NC/r20261001-03" }
 adjacent = { identical = true, files = ["tests/e2e/core/parity/test_entrypoint_parity.py 8/8 both (exercises the refactored drive_acp)", "tests/e2e/core/history/test_transcript_ledger.py 10/10 both"], main = "aea969677c", pre_existing = [], receipt = "ADJ/r20261001-03" }
+guards = { F14 = "EQUAL", receipt = "F14/r20261001-01", base = "main 34f8ec3b407e50bad3ae27e4cd79d65212061356 (factory baseline map, base-r1 = base-r2)", arm = "71f166dc4d26e674209a06ae467d66b421d603cc = clean cherry-pick of ddf4748d31 onto 34f8ec3b40 (stable patch-id equal, tree 28d3cffb37 = merge-tree of main and the branch)", runs = "2 runs, each 40 verdict ids: 36 PASS / 4 FAIL, (verdict, marker, fingerprint) identical to base on every id; r1 = r2", flaky = "none in the set", set_sha256 = "aba79fe8f09dabc62950aacd0a53c2fdc30bc58746f405f9aa050bf474d739b9", note = "no F14 probe runs or imports the 5 changed test files, so EQUAL is the expected outcome; F14 guards unrelated behaviour and is not this item's own proof" }
 leaf = { result = "on main: base 37 passed; updated unit test alone 36 passed / 1 failed (Compression failed: assert 'system' is None); fix + updated test 37 passed; fix + current test 36 / 1 failed (assert None == 'system'), so the current test pins the bug", main = "aea969677c (re-checked on 040b6df2c4 in r3: same four results)", receipt = "LEAF-acp-nesting/r20261001-03" }
 quantitative = []
 cache_read_ratio = { status = "NOT_MEASURED", note = "fake provider records bytes, not cache billing; real-cache arm queued (T3)" }
@@ -109,23 +114,23 @@ route_scope = "n/a"
 not_tested = ["real provider cache billing", "Relay exporters (venv nemo-relay older than tree)", "serve WS / A2A / relay connector / /goal journeys", "cwd change between lives on msg/api/acp", "retained inactive/compacted rows after ACP /compress (covered by dosenr's test in #88364, not here)"]
 
 [gates]
-P1 = "PASS (ACP red reproduced on aea969677c with the gate off; branch rebuilt on that main)"
+P1 = "PASS (ACP red reproduced on aea969677c with the gate off; branch rebuilt on that main; RED marker unchanged on the merge with 040b6df2c4 in r3. Up to main 34f8ec3b40 no invalidate_on path changed ([base].freshness_recheck, r5); the RED was not re-run on 34f8ec3b40. The 24 h queue-time re-run is Next step 5)"
 P2 = "PASS (no competitor for the journeys; #76215 cause 1 owned by #88364/#76224 -> support with credit; nesting unowned)"
 P3 = "PASS (test-only, one invariant family, no env vars, no new hooks; +302/-61 in 5 test files; drive_acp reuse instead of a copy)"
 P4 = "PASS (real entrypoints in subprocesses; only the LLM is faked; Telegram adapter is the parity suite's recording fake)"
-P5 = "PASS (RED: ACP on main, gate off, marker matched; GREEN 5 passed + 1 xfailed (acp_restarts); NC1+NC2 NC1 6/6 + NC2 6/6 FAIL; ADJ identical; LEAF RED/GREEN with raw logs)"
+P5 = "PENDING (r4: F14 guards EQUAL (F14/r20261001-01). Met with receipts: RED with the marker matched (E07, gate off on main aea969677c), ADJACENT identical (ADJ), invariant-level sabotage NC1 6/6 + NC2 6/6 re-RED (NC), LEAF RED/GREEN (LEAF). Missing for FACTORY 11.1: (1) GREEN 3/3: E07 holds one GREEN run of the gated file on the head (slice_full, 5 passed + 1 xfailed); ACP-arms 'main' reuses that same run; the r3 fixer rerun and the round-1 re-verifier rerun are not receipts. (2) flaky = false: never recorded for the item's own test. (3) per-hunk SABOTAGE with unpinned hunks listed: NC1/NC2 are two product mutations, not a per-hunk map of the 5 changed files, and no unpinned-hunk list exists. r3 had PASS, recorded before F14 existed.)"
 P6 = "N_A (no value claim)"
 P7 = "PASS (one commit on fresh main aea969677c, author + conventional subject; push-trigger scan of the head's workflows: 11 have push triggers, none matches staged/prefix-parity-journeys; never pushed)"
-P8 = "PENDING (r03 receipts written locally, scrubbed of paths/host/ids; raw and as-run harness sealed under private/; freeze set = the 7 r03 receipts + SHA256SUMS only; not frozen to z0evals)"
-P9 = "PASS (PR_BODY.md: template sections, honest NOT_TESTED, AI disclosure, no @mentions, no factory jargon; r2 corrected the NC2 and #76224 statements)"
-P10 = "PENDING (the r1 blind verification covered 8df66fe4d7; the r2 head needs its own exact-head read)"
+P8 = "PENDING (r03 receipts written locally, scrubbed of paths/host/ids; raw and as-run harness sealed under private/; freeze set = the 7 r03 receipts + F14/r20261001-01 + SHA256SUMS only; not frozen to z0evals)"
+P9 = "PASS (PR_BODY.md: template sections, honest NOT_TESTED, AI disclosure covering code, runs and description, no @mentions, no factory jargon; r2 corrected the NC2 and #76224 statements; r5: the disclosure no longer says the owner reviewed or ran anything, the cause-1 row and Refs line say 'hand-ported', counts read N of M, the main-side 87 s is described as a separate run; jargon and privacy scans re-run in r5)"
+P10 = "PENDING (exact head ddf4748d31: the round-1 re-verifier did not accept (code sound, 7 text/receipt problems, fixed in r3); the round-2 re-verifier accepted the r3 texts with 5 non-blocking advisories, but no APPROVE_EXACT_HEAD verdict or QA class was recorded, and r4 (F14, P5) and r5 (those advisories) have changed the manifest and PR body since. A fresh blind read of ddf4748d31 with the r5 texts is needed)"
 P11 = "FAIL alone (D5): test-only; promotable only with the ACP nesting fix plus a cause-1 fix, or on maintainer request (see [ride_with])"
 P12 = "PENDING (owner queue)"
 
 [acceptance_gates]       # from selection.json
 each_journey_green_or_typed_pin = "MET: messaging + api_server GREEN; ACP pinned with known_gate on its own signature + repro comment"
 sabotage_negative_control = "MET: NC1 (per-request timestamp in the system message) fails 6/6 journeys and NC2 (#104414 shape) fails 6/6; the ACP gate excused neither"
-within_e2e_runtime_budget = "MET (OBSERVED local, busy host): file 213 s for 6 journeys on the head vs 87 s for the 3 existing journeys on main in the same pass (load1 15.3 and 12.4); per-test sums 192.9 s vs 83.7 s. r1 measured 137 s vs 68 s at load1 about 4-5; per-file CI timeout 900 s; adds about one minute to one of 3 e2e workers (MODELED)"
+within_e2e_runtime_budget = "MET (OBSERVED local, busy host): file 213 s for 6 journeys on the head vs 87 s for the 3 existing journeys on main in the same sequential pass (load1 15.3 and 12.4); per-test sums 193.0 s (192.985) vs 83.7 s (83.676). Traceability: the head numbers are E07 runs.slice_full and green.outcomes; the main-side run (adjacent_main_test_prefix_stability, 11:39:56-11:41:23Z, load1 12.37) is in no public receipt's runs block. E07 cites it only in measurements.c17_file_wall_s_main; its record is in the sealed private raw set (runs.jsonl; junit sha256 e193011d850e, log aaf47ffa2c0c, both listed in MANIFEST.sha256 99cb8fdfe889). r1 measured 137 s vs 68 s at load1 about 4-5; per-file CI timeout 900 s; adds about one minute to one of 3 e2e workers (MODELED)"
 promote_only_with_real_fix = "HOLD (by design): candidates exist (own nesting leaf; #88364/#76224 support)"
 
 [verification]
@@ -135,7 +140,7 @@ exact_head = "ddf4748d31cb5dc65e7cd0b0c5b27b98d63ae880"
 inputs = "raw diff + repo + oracle block only"
 verdict = ""
 qa_class = ""
-prior = "r1 phase-3 verifier (8df66fe4d7): code sound, manifest inaccurate; all listed problems addressed in r2. Round-1 re-verifier (ddf4748d31): not accepted, code sound, reruns on current main reproduced GREEN, RED, the three ACP arms, NC1, NC2, LEAF and ADJ (reported); 7 text/receipt/hygiene problems, all addressed in r3 (see History)"
+prior = "r1 phase-3 verifier (8df66fe4d7): code sound, manifest inaccurate; all listed problems addressed in r2. Round-1 re-verifier (ddf4748d31): not accepted, code sound, reruns on current main reproduced GREEN, RED, the three ACP arms, NC1, NC2, LEAF and ADJ (reported); 7 text/receipt/hygiene problems, all addressed in r3 (see History). Round-2 re-verifier (ddf4748d31 + r3 texts): accepted with 5 non-blocking advisories (stale P10 reason, freshness row, 192.9 rounding and main-side run traceability, 'hand-ported' wording in PR_BODY, AcpStdio stderr handle on a failed spawn). No verdict or QA class was recorded in this block. r5 addressed the 4 text advisories; the code nit is recorded as not fixed (Next step 8)"
 
 [merge_check]
 main_sha = "aea969677c60a1bb72fe227fdfb98f196a2092cc"
@@ -145,7 +150,9 @@ note = "the branch is one commit on this main"
 later_checks = [
   { main = "e8c97320ac8691d4de92af49f98459f9ef9ddb08", checked_at = "2026-10-01T11:46Z", merge_tree_clean = true, tree = "5e69382ef6", note = "6 commits after the base; none touches acp_adapter/, tests/e2e/, tests/fakes/, tests/acp_adapter/, gateway/ or the compression/prompt modules; tests not re-run on it" },
   { main = "040b6df2c40b0f4f88f51e4c2062eafc4d7463c5", checked_at = "2026-10-01T12:09Z (git ls-remote: still the upstream head)", merge_tree_clean = true, tree = "a0f5d700fc", note = "8 commits after the base aea969677c, 2 after e8c97320ac (f1df745d71, 040b6df2c4: test(auth) only, touching tests/agent/test_credential_pool_codex_quota_probe_rotation.py and tests/hermes_cli/test_auth_codex_quota_probe.py). None of the 8 touches acp_adapter/, tests/e2e/, tests/fakes/, tests/acp_adapter/, gateway/ or the prompt/compression modules. Re-run on the merged tree in r3: gated file 5 passed + 1 xfailed, RED marker unchanged, LEAF unchanged ([evidence].harness_check_r3)" },
+  { main = "34f8ec3b407e50bad3ae27e4cd79d65212061356", checked_at = "2026-10-01T18:21Z", merge_tree_clean = true, tree = "28d3cffb37", note = "38 commits after the base aea969677c. git cherry-pick of ddf4748d31 onto it applied clean (71f166dc4d, stable patch-id equal; tree equals merge-tree). Of the 100 files changed since the base, none is in acp_adapter/, tests/e2e/, tests/fakes/ or tests/acp_adapter/. gateway/media_policy.py, gateway/run_topics.py and gateway/run_turn_runner.py changed (Discord auto-thread marker recovery, cron media-policy routing). Only F14 was run on this tree (EQUAL, F14/r20261001-01); the journeys were not re-run on it. r5 re-check at 18:34Z: git merge-tree --write-tree 34f8ec3b40 ddf4748d31 rc 0, same tree 28d3cffb37; 0 invalidate_on hits, 3 green_watch hits (the gateway/ files above), all read as off the journeys' paths ([base].freshness_recheck)" },
 ]
+upstream_after_34f8ec3b40 = "upstream main 105e876586 at 18:41Z (gh api), 28 commits after 34f8ec3b40, not in the mirror. gh compare: 27 files, none under invalidate_on or green_watch and none of the head's 5 files. A clean merge follows from the disjoint paths, but no merge-tree was run on it"
 recheck = "git -C <h.git> merge-tree --write-tree main staging/prefix-parity-journeys"
 
 [push]
@@ -159,8 +166,8 @@ pushed_at = ""
 path = "frontier-2026-10-01/staging/prefix-parity-journeys/PR_BODY.md"
 kind = "pr-body"
 tone_gate = { peer = true, no_labor = true, no_internal_leak = true, smallest_ask = true, self_service = true, local_voice = true, easy_decline = true }
-jargon_lint = "PASS (manual)"
-privacy_scan = "PASS (no home paths, emails, session ids or message text in the body)"
+jargon_lint = "PASS (manual; r5 grep for P1-P12, OD-n, xf, receipt paths, E##/F##, envelope, lane, fork names, staging/staged, @mentions: 0 hits)"
+privacy_scan = "PASS (no home paths, emails, session ids or message text in the body; r5 scan of the publishable set: see History)"
 
 [queue]
 board = "kvnloo/hermes-agent#404"
@@ -219,7 +226,7 @@ Receipts r03 are in `receipts/`, with sha256 values in `receipts/SHA256SUMS`. Th
 - Raw path: the raw set moved from `receipts/raw-r02/` to `private/raw-r02/`, bytes and `MANIFEST.sha256` unchanged.
 - Harness: `harness/` now takes every local path, the user and the host from the environment. The files that produced the raw set are kept byte-identical and private in `private/harness-r02/`, cited by sha256 in `inputs.harness_as_run`.
 
-The receipts carry no local paths, host name, session or turn ids, or prompt text: paths are placeholders (`<wt>`, `<venv>`, `<raw>`), E08 samples are dropped, and failure messages are cut after the diverging byte offset. Earlier sets are kept unchanged and private: r02 in `private/superseded-r02/`, and r01 (receipts, raw and harness) in `private/superseded-r01/`. Each receipt names the one it supersedes, with its sha256. Everything under `private/` is cited by sha256 only and is never published or frozen. The freeze set is the 7 r03 receipts plus `receipts/SHA256SUMS`.
+The receipts carry no local paths, host name, session or turn ids, or prompt text: paths are placeholders (`<wt>`, `<venv>`, `<raw>`), E08 samples are dropped, and failure messages are cut after the diverging byte offset. Earlier sets are kept unchanged and private: r02 in `private/superseded-r02/`, and r01 (receipts, raw and harness) in `private/superseded-r01/`. Each receipt names the one it supersedes, with its sha256. Everything under `private/` is cited by sha256 only and is never published or frozen. The freeze set is the 7 r03 receipts, the r4 F14 receipt (`F14-r20261001-01`) and `receipts/SHA256SUMS`.
 
 Every r02 run happened inside the as-run `sandbox.sh`, in one sequential `run_receipts.sh` pass on head `ddf4748d31` with `MAIN_REF=aea969677c` (both now in `private/harness-r02/`):
 
@@ -241,6 +248,7 @@ In r3 the parametrized `harness/` was run end to end in the same sandbox (`[evid
 | Candidate leaf at unit level, with raw logs | `receipts/LEAF-acp-nesting-r20261001-03.json` | `7c5c7bf501ef` | KEEP (candidate) | OBSERVED | 4 runs × 2 files, 37 tests | See note 4 |
 | Adjacent suites | `receipts/ADJ-r20261001-03.json` | `f0328f39ee54` | identical | OBSERVED | 2 files × 2 trees | parity 8/8 and ledger 10/10 on main `aea969677c` and on the head |
 | E09 smoke (harness validation) | `receipts/E09-smoke-r20261001-03.json` | `4804c886eeab` | HARNESS_OK (not evidence) | OBSERVED (smoke) | 3 surfaces × 5 reps | See note 5 |
+| F14 guards (standing regression set) | `receipts/F14-r20261001-01.json` | `18c9178924d2` | EQUAL | OBSERVED | 2 runs × 40 verdict ids (19 probes) on the arm vs the base map | See note 6 |
 
 Notes:
 
@@ -249,6 +257,7 @@ Notes:
 3. **NC sabotage.** NC1 fails 6 of 6 journeys. Its first break is request 1, inside the first process life, everywhere except `oneshot_restarts`, whose first life sends a single request. NC2 fails 6 of 6. For 5 journeys the first NC2 break is the first request of the second process life (request 4, or request 1 for the oneshot). For api_server it is request 1, inside the first life (see Observations).
 4. **Candidate leaf.** On main `aea969677c`, `tests/acp_adapter/test_server.py` + `test_acp_commands.py`: 37 passed as is. The updated unit test alone fails once (`Compression failed: assert 'system' is None`). With the fix, 37 passed. The fix with the current unit test fails once (`assert None == 'system'`), because that test pins the bug. r1 had no raw output for these claims; since r02 the logs are in the raw set. r3 re-ran the four runs on main `040b6df2c4` with the same results.
 5. **E09 smoke.** Medians with provider TTFT fixed at 50 ms, load1 about 8: tui_gateway 142 ms, api_server 101 ms, ACP 77 ms submit → first delta; pre-API 91 / 50 / 26 ms. These numbers are not a measurement.
+6. **F14 guards (r4).** The arm is `71f166dc4d`, a clean cherry-pick of `ddf4748d31` onto main `34f8ec3b40` (stable patch-id equal). Both arm runs gave 36 PASS / 4 FAIL over 40 verdict ids, and `f14_run.py compare` returned EQUAL against the base map for each, with no flaky ids skipped. Verdict, marker and fingerprint match on every id, and r1 equals r2. The 4 FAILs are the base's own (`cache_estimator_probe`, `notice_delivery_probe`, `context_cap_probe`, readtool `lying_extension`), with the same markers. No F14 probe runs or imports the 5 changed test files, so EQUAL is what a test-only commit should give. F14 guards other behaviour; it is not this item's proof. The runner, sandbox and set hashes are the baseline's. Arm wall times were 130.4 s and 74.7 s, against about 52 s on base, on a shared host (load1 6-12). Wall time is not compared.
 
 Inputs pinned:
 
@@ -266,16 +275,16 @@ Inputs pinned:
 
 | Gate | Status | Basis |
 |---|---|---|
-| P1 Need | PASS | ACP red reproduced on `aea969677c` with the gate off; the branch is one commit on that main |
+| P1 Need | PASS | ACP red reproduced on `aea969677c` with the gate off; the branch is one commit on that main. No `invalidate_on` path changed up to main `34f8ec3b40` (r5); the RED was not re-run there, so it gets re-run within 24 h of any queue action |
 | P2 Ownership | PASS | Journeys: no competitor. #76215 cause 1 belongs to #88364 (and #76224), so we support and credit dosenr's test. The nesting defect is unowned. |
 | P3 Shape | PASS | Test-only, one invariant family, no new env vars or hooks, +302/-61 across 5 files; ACP spawn/initialize reused from the parity driver instead of copied |
 | P4 Real path | PASS | Real entrypoints in subprocesses; only the LLM and the Telegram adapter instance are fake |
-| P5 Proof | PASS | RED (gate off) + GREEN 5 passed + 1 xfailed (acp_restarts), NC1 6/6 + NC2 6/6 FAIL, ADJ identical, LEAF with raw logs |
+| P5 Proof | PENDING | F14 guards EQUAL (`F14-r20261001-01`). Met with receipts: RED with the marker (gate off), ADJ identical, NC1 6/6 + NC2 6/6 re-RED, LEAF with raw logs. Missing: GREEN 3/3 (E07 has one GREEN run of the gated file; ACP-arms `main` reuses it), `flaky = false` (not recorded), and per-hunk SABOTAGE with unpinned hunks listed (NC1/NC2 are invariant-level mutations). r3's PASS predates F14. |
 | P6 Numbers | N/A | No value claim |
 | P7 Package | PASS | One commit on `aea969677c`, correct author and subject; 11 workflows have push triggers and none matches `staged/prefix-parity-journeys`; not pushed |
-| P8 Freeze | PENDING | r03 receipts are local, write-once and scrubbed; raw and as-run harness sealed under `private/`; the freeze set is the 7 r03 receipts + `SHA256SUMS`; not frozen to z0evals |
-| P9 Text | PASS | `PR_BODY.md` (r2 corrected the NC2 and #76224 statements and credits #88364) |
-| P10 Independent read | PENDING | The r1 verifier read `8df66fe4d7`; the r2 head needs its own exact-head read |
+| P8 Freeze | PENDING | r03 receipts are local, write-once and scrubbed; raw and as-run harness sealed under `private/`; the freeze set is the 7 r03 receipts + `F14-r20261001-01` + `SHA256SUMS`; not frozen to z0evals |
+| P9 Text | PASS | `PR_BODY.md` (r2 corrected the NC2 and #76224 statements and credits #88364; r5: the AI disclosure covers code, runs and description without claiming an owner review, the cause-1 row says hand-ported, counts read N of M) |
+| P10 Independent read | PENDING | Exact head `ddf4748d31`: round-1 re-verify not accepted (text); round-2 re-verify accepted the r3 texts with 5 advisories, with no verdict or QA class recorded. The r4/r5 texts need a fresh blind read |
 | P11 Not lone substrate | FAIL alone (by design) | Promote only together with the nesting leaf plus a cause-1 fix, or on maintainer request |
 | P12 Queue | PENDING | Owner's call; never claims a slot |
 
@@ -283,7 +292,7 @@ Inputs pinned:
 
 1. **Each new journey is green, or pinned with a typed known failure plus a repro: MET.** Messaging gateway and api_server are green. ACP has a `known_gate` with an anchored pattern and the mechanism written in the test as a comment.
 2. **The sabotage negative control fails a journey: MET.** NC1 (per-request timestamp in the system message) fails 6/6 journeys and NC2 (#104414 shape) fails 6/6; the ACP gate excused neither.
-3. **The suite stays within the e2e runtime budget: MET, measured locally on a busy host.** file 213 s for 6 journeys on the head vs 87 s for the 3 existing journeys on main in the same pass (load1 15.3 and 12.4); per-test sums 192.9 s vs 83.7 s. r1 measured 137 s vs 68 s at load1 about 4-5. The per-file CI timeout is 900 s.
+3. **The suite stays within the e2e runtime budget: MET, measured locally on a busy host.** file 213 s for 6 journeys on the head vs 87 s for the 3 existing journeys on main in the same sequential pass (load1 15.3 and 12.4); per-test sums 193.0 s vs 83.7 s. r1 measured 137 s vs 68 s at load1 about 4-5. The per-file CI timeout is 900 s. The head figures are in E07 (`runs.slice_full`, `green.outcomes`). The main-side run (`adjacent_main_test_prefix_stability`, load1 12.37) is in no public receipt's `runs` block: E07 cites its 87 s / 83.7 s in `measurements` only, and its junit and log are in the sealed private raw set, listed in `MANIFEST.sha256`.
 4. **Promote only together with a real prefix fix: HOLD (by design).** Real fixes now exist to ride with; see Next steps.
 
 ## Experiments queued (not run)
@@ -333,13 +342,15 @@ Paths below are placeholders: `<h.git>` the scratch bare repo, `<wt>` a worktree
    - report cause 2: even with in-place compaction (arm hp76224), the prompt rebuilt by ACP `/compress` nests the cached one (6242 → 12486 chars) and is then persisted and restored, so a reloaded session keeps the doubled prompt;
    - offer the process-level journey only as an optional complement, and note that both PRs need a rebase onto the post-#109610 `acp_adapter/commands.py` and `tests/acp_adapter/`.
 3. **Blind exact-head verification** of `ddf4748d31` by a different worker (P10).
-4. **Freeze the cited r03 receipts** to z0evals once STAGING is accepted (P8): the 7 files listed in `[evidence].receipts` plus `receipts/SHA256SUMS`, and nothing under `private/` (the raw set and the as-run harness stay private, sha256 only).
-5. **Freshness re-check** within 24 h of any queue action (last: main `040b6df2c4`, 2026-10-01T12:09Z, clean; see `[merge_check].later_checks`):
+4. **Freeze the cited receipts** to z0evals once STAGING is accepted (P8): the 8 files listed in `[evidence].receipts` (7 r03 + F14) plus `receipts/SHA256SUMS`, and nothing under `private/` (the raw set and the as-run harness stay private, sha256 only).
+5. **Freshness re-check** within 24 h of any queue action (last: main `34f8ec3b40`, 2026-10-01T18:21Z, re-checked 18:34Z: clean, tree `28d3cffb37`, 0 `invalidate_on` hits and 3 `green_watch` hits under `gateway/`; upstream main has since moved to `105e876586`, with no path overlap per `gh compare`; the journeys were last re-run on `040b6df2c4`; see `[base].freshness_recheck` and `[merge_check].later_checks`):
    ```
    git -C <h.git> merge-tree --write-tree main staging/prefix-parity-journeys
    ```
    Then re-run `-k acp_restarts`. A merge of #88364, #76224 or the nesting fix changes the gate outcome, as the arm table shows.
-6. **OD-0: resolved by the rename.** The branch goes to the fork as `staged/prefix-parity-journeys`; the fork's legacy `staging` branch stays untouched. Run the `ls-remote` collision check again right before the push.
+6. **Close P5** ($0, sandboxed): run the gated file 3 times on the exact head and record GREEN 3/3 with `flaky = false` in a receipt. Then either do per-hunk sabotage of the 5 changed files, listing the unpinned hunks, or record why NC1/NC2 stand in for it on a test-only commit.
+7. **OD-0: resolved by the rename.** The branch goes to the fork as `staged/prefix-parity-journeys`; the fork's legacy `staging` branch stays untouched. Run the `ls-remote` collision check again right before the push.
+8. **Optional test-code nit (round-2 re-verifier advisory; not fixed in r5).** `AcpStdio.__enter__` in `tests/e2e/core/history/_helpers.py` opens `acp.stderr.log` before `_drive_acp.spawn_acp`. If the spawn or `initialize` raises, `__exit__` never runs, so the handle stays open (`spawn_acp` cleans up the process, not the handle). It only bites on a failure path in test code. The fix is a code change (close the handle when the spawn raises, or open it with an `ExitStack`), so it needs a new commit as `staging/prefix-parity-journeys-v2` plus a re-run of the gated file and ADJ. That is out of scope for a text-only round. Fold it into the next code change on this branch, if there is one.
 
 ## Origin action (owner only)
 
@@ -363,3 +374,5 @@ One of these, never run by the factory:
 | 2026-10-01T11:04–11:50Z | STAGED | fixer (Claude Code) | r2: rebuilt on main `aea969677c` with `spawn_acp`/`close_acp` reuse (`ddf4748d31`); receipts r02 (scrubbed, LEAF raw included); #88364 added to ownership; text corrected; branch on the fork will be `staged/prefix-parity-journeys` (OD-0) |
 | 2026-10-01 (round-1 re-verify) | STAGED | verifier | Not accepted; code sound, reruns on current main reproduced every claim. Problems: harness/ held local paths and the host name although receipts cite it; raw set inside receipts/; STAGING named two local paths; r02 host_load range wrong; hp76224 char-count reason wrong; #76215 repro date wrong; freshness stopped at `e8c97320ac`; no ref kept on the r1 head |
 | 2026-10-01T12:05–12:25Z | STAGED | fixer (Claude Code) | r3, branch and commit unchanged (`ddf4748d31`). harness/ parametrized (paths, user, host from the environment), as-run copy moved to `private/harness-r02/`; raw moved to `private/raw-r02/`; receipts r03 re-issued from the same raw (host_load corrected, diff-checked against r02), r02 kept in `private/superseded-r02/`; STAGING placeholders `<live-home>`/`<probe-tmp>`; arm-table and #76215 wording fixed; freshness at main `040b6df2c4` (clean, tree `a0f5d700fc`; gated file, RED and LEAF re-run). r1 head: r2 had moved the branch rather than rebuilding it as `-v2`. The preserved artifact is `private/superseded-r01/prefix-parity-journeys.patch` (identical to `git format-patch` of `8df66fe4d7`), and `refs/heads/staging/prefix-parity-journeys-r1` now points at `8df66fe4d7` again |
+| 2026-10-01T18:21–18:31Z | STAGED | F14 guard runner (Claude Code, Opus 5.5) | r4, branch and commit unchanged. `ddf4748d31` cherry-picked clean onto main `34f8ec3b40` as `71f166dc4d` (patch-id equal; local ref `refs/xf/w0/prefix-parity-journeys`). F14 ran twice in the sandbox: 36 PASS / 4 FAIL each, and `compare` returned EQUAL against the base map for both runs and r1 against r2 (`F14-r20261001-01`, added to `[evidence].receipts`, `SHA256SUMS` and the freeze set). `[evidence].guards` added. P5 moved PASS → PENDING: FACTORY 11.1 also needs GREEN 3/3, `flaky = false` and per-hunk sabotage, and none is recorded (Next step 6). Freshness row for `34f8ec3b40` added. The worktree was removed and pruned. Nothing was pushed. |
+| 2026-10-01T18:33–18:50Z | STAGED | polish round (Claude Code, Opus 5.5) | r5, text only. Branch, commit `ddf4748d31`, commit message, patch (sha256 matches `git format-patch`), receipts and `SHA256SUMS` unchanged (`sha256sum -c` OK, 8 of 8). The commit message was checked against the sources and left as is, so no `-v2` ref was made. The round-2 re-verifier's 5 advisories were re-checked against the sources. (1) Stale P10 reason: fixed in `[gates]`, the checklist and `[verification].prior`, which now records the round-2 acceptance. (2) Freshness: covered by the r4 `34f8ec3b40` row and re-checked here. `invalidate_on` is now explicit (the RED's call path plus the item's test files) and `gateway/` is split out as `green_watch`. Of 100 changed files: 0 `invalidate_on` hits, 3 `green_watch` hits, all Discord title-retry or routed-profile media policy. merge-tree is clean, tree `28d3cffb37`. Upstream main moved to `105e876586` (gh compare, no path overlap). (3) 192.9 → 193.0 s (192.985), and the main-side 87 s run is traced to the private raw set (it is in no public `runs` block). (4) PR_BODY: the cause-1 row and the Refs line say hand-ported, with a note that both heads conflict with main (gh: both dirty, both still pass `_cached_system_prompt`). (5) AcpStdio stderr handle on a failed spawn: real, but a code change, so it is recorded as not fixed (Next step 8). Also in PR_BODY: the AI disclosure no longer claims the owner reviewed or ran anything; "I ran only…" was reworded; "every journey" became "6 of 6"; "on main in the same run" became a separate run; and the results line names `aea969677c`. Ownership refresh at 18:36Z: no new owner or competitor. Privacy scan of the publishable set (STAGING, PR_BODY, patch, receipts/, harness/, arms/; 24 files): 0 hits for absolute paths, host name, secrets or non-noreply emails, and no bytecode. P-gates unchanged (P1 and P9 bases updated). No refs created or moved, no worktree, no tests run, no push, no GitHub writes. |

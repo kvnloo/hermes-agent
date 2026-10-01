@@ -1,0 +1,195 @@
+# r6 catalog re-measure (round-6 fix): need, green 3 reps and the sha: main negative control on the newest upstream main.
+# Every Hermes command ran inside the factory bwrap sandbox (<sandbox> = xf-sandbox.sh: loopback-only network, read-only /, real home and live install masked,
+# HOME=<run-home>, HERMES_HOME=<run-home>/.hermes, cleared env, PATH=<venv>/bin:/usr/bin:/bin). One detached worktree <worktree>, one run dir <run>.
+# Paths are placeholders: <worktree>, <run>, <run-home>, <venv>, <staging> (this staging directory). pytest truncates long paths with '...'; the truncated tail is also replaced.
+# main 1798b335c43d7e59066ad74a8c2d1d1c9fd537fe (run dir <run>, worktree <worktree>; started 2026-10-01T19:10:47Z)
+$ git rev-parse HEAD
+1798b335c43d7e59066ad74a8c2d1d1c9fd537fe
+# arm A: main as is
+$ git write-tree
+cbb6571dadcdf40938553eac15c29137e3696e5f
+$ <sandbox> python -B -I <staging>/tools/catalog_probe.py paw-pii
+{"all_loaded": true, "capability_summary": null, "catalog_dir": "<worktree>/plugin-catalog", "entry": null, "entry_present": false, "files": 349, "install_identifier": null, "loaded": 349, "name_collisions": [], "removed_match": null}
+rc=0
+$ <sandbox> python -B -I scripts/validate_plugin_catalog.py plugin-catalog/
+OK: 350 file(s) valid
+rc=0
+$ <sandbox> bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_plugin_catalog.py -q -k test_shipped_catalog_entries_are_all_valid_and_pinned
+▶ not activated — using HERMES_PYTHON: <venv>/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~12 tests) under ['tests/hermes_cli/test_plugin_catalog.py']; running with -j 2
+[100.0% |    12/~12 | ✓1 | ✗0] ✓ tests/hermes_cli/test_plugin_catalog.py (1✓, 0.9s)
+
+=== Summary: 1 files, 1 tests passed, 0 failed (100% complete) in 1.0s (2 workers) ===
+  Durations cached to test_durations.json (1 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 0.9s  (runner wall: 1.0s, parallelism: 2x)
+  P50: 0.95s  P90: 0.95s  P95: 0.95s  P99: 0.95s  Max: 0.95s
+  <1s: 1 files (100%)  <2s: 1 files (100%)
+  Top 10 slowest:
+      0.95s  tests/hermes_cli/test_plugin_catalog.py
+rc=0
+# arm B: main plus the branch's only change (git checkout 98c305b3ec8d03693f4dc94bade69035cb15ff7d -- plugin-catalog/paw-pii.yaml)
+$ git write-tree (must equal git merge-tree --write-tree 1798b335c43d7e59066ad74a8c2d1d1c9fd537fe 98c305b3ec8d03693f4dc94bade69035cb15ff7d)
+064f9e0c6750e05e019129c5e954c4058c170bf4
+$ git merge-tree --write-tree 1798b335c43d7e59066ad74a8c2d1d1c9fd537fe 98c305b3ec8d03693f4dc94bade69035cb15ff7d
+064f9e0c6750e05e019129c5e954c4058c170bf4
+$ git rev-parse :plugin-catalog/paw-pii.yaml
+845dc6cce78e67a8989e267debcc5b4a4dcf473c
+$ <sandbox> python -B -I <staging>/tools/catalog_probe.py paw-pii
+{"all_loaded": true, "capability_summary": "paw-pii (community, maintained by kvnloo) On-device PII detection and redaction using the ProgramAsWeights PII program (model and library by programasweights/pii; Hermes integration by kvnloo). Adds detect_pii and redact_pii tools, plus llm_request and tool_execution middleware that replace names, emails, phone numbers, secrets and other PII with a placeholder in provider requests and tool results. Disclosure: on first use the PAW program bundle downloads from programasweights.com and a ~600 MB base model from Hugging Face; after that, inference runs locally through llama.cpp and no text is sent to a remote service. Redaction fails open: if the program or its runtime cannot load, requests and tool results pass through unchanged. Every string in a request is scanned separately, so long conversations add local inference time per turn. This plugin registers tool(s): detect_pii, redact_pii; middleware: llm_request, tool_execution.", "catalog_dir": "<worktree>/plugin-catalog", "entry": {"capabilities": {"provides_hooks": [], "provides_middleware": ["llm_request", "tool_execution"], "provides_tools": ["detect_pii", "redact_pii"], "requires_env": []}, "category": "tools", "description": "On-device PII detection and redaction using the ProgramAsWeights PII program (model and library by programasweights/pii; Hermes integration by kvnloo). Adds detect_pii and redact_pii tools, plus llm_request and tool_execution middleware that replace names, emails, phone numbers, secrets and other PII with a placeholder in provider requests and tool results. Disclosure: on first use the PAW program bundle downloads from programasweights.com and a ~600 MB base model from Hugging Face; after that, inference runs locally through llama.cpp and no text is sent to a remote service. Redaction fails open: if the program or its runtime cannot load, requests and tool results pass through unchanged. Every string in a request is scanned separately, so long conversations add local inference time per turn.", "docs_url": "https://github.com/kvnloo/pii/blob/d891ebdd3a3dab27a3451923eb56f955253a2782/README.md#agent-harness-plugins", "image": "", "known_issues": [], "maintainer": "kvnloo", "name": "paw-pii", "onboarding": false, "platforms": [], "readme": false, "repo": "https://github.com/kvnloo/pii", "requires_hermes": "", "screenshots": [], "sha": "d891ebdd3a3dab27a3451923eb56f955253a2782", "subdir": "integrations/hermes", "tier": "community", "title": "", "version": "0.1.0"}, "entry_present": true, "files": 350, "install_identifier": "https://github.com/kvnloo/pii#integrations/hermes", "loaded": 350, "name_collisions": ["paw-pii.yaml"], "removed_match": null}
+rc=0
+$ <sandbox> python -B -I scripts/validate_plugin_catalog.py plugin-catalog/
+OK: 351 file(s) valid
+rc=0
+# arm B rep 1 (19:11:00Z)
+$ <sandbox> bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_plugin_catalog.py -q -k test_shipped_catalog_entries_are_all_valid_and_pinned
+▶ not activated — using HERMES_PYTHON: <venv>/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~12 tests) under ['tests/hermes_cli/test_plugin_catalog.py']; running with -j 2
+[100.0% |    12/~12 | ✓1 | ✗0] ✓ tests/hermes_cli/test_plugin_catalog.py (1✓, 0.9s)
+
+=== Summary: 1 files, 1 tests passed, 0 failed (100% complete) in 0.9s (2 workers) ===
+  Durations cached to test_durations.json (1 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 0.9s  (runner wall: 0.9s, parallelism: 2x)
+  P50: 0.88s  P90: 0.88s  P95: 0.88s  P99: 0.88s  Max: 0.88s
+  <1s: 1 files (100%)  <2s: 1 files (100%)
+  Top 10 slowest:
+      0.88s  tests/hermes_cli/test_plugin_catalog.py
+rc=0
+# arm B rep 2 (19:11:02Z)
+$ <sandbox> bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_plugin_catalog.py -q -k test_shipped_catalog_entries_are_all_valid_and_pinned
+▶ not activated — using HERMES_PYTHON: <venv>/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~12 tests) under ['tests/hermes_cli/test_plugin_catalog.py']; running with -j 2
+[100.0% |    12/~12 | ✓1 | ✗0] ✓ tests/hermes_cli/test_plugin_catalog.py (1✓, 0.9s)
+
+=== Summary: 1 files, 1 tests passed, 0 failed (100% complete) in 0.9s (2 workers) ===
+  Durations cached to test_durations.json (1 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 0.9s  (runner wall: 0.9s, parallelism: 2x)
+  P50: 0.88s  P90: 0.88s  P95: 0.88s  P99: 0.88s  Max: 0.88s
+  <1s: 1 files (100%)  <2s: 1 files (100%)
+  Top 10 slowest:
+      0.88s  tests/hermes_cli/test_plugin_catalog.py
+rc=0
+# arm B rep 3 (19:11:03Z)
+$ <sandbox> bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_plugin_catalog.py -q -k test_shipped_catalog_entries_are_all_valid_and_pinned
+▶ not activated — using HERMES_PYTHON: <venv>/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~12 tests) under ['tests/hermes_cli/test_plugin_catalog.py']; running with -j 2
+[100.0% |    12/~12 | ✓1 | ✗0] ✓ tests/hermes_cli/test_plugin_catalog.py (1✓, 0.9s)
+
+=== Summary: 1 files, 1 tests passed, 0 failed (100% complete) in 0.9s (2 workers) ===
+  Durations cached to test_durations.json (1 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 0.9s  (runner wall: 0.9s, parallelism: 2x)
+  P50: 0.89s  P90: 0.89s  P95: 0.89s  P99: 0.89s  Max: 0.89s
+  <1s: 1 files (100%)  <2s: 1 files (100%)
+  Top 10 slowest:
+      0.89s  tests/hermes_cli/test_plugin_catalog.py
+rc=0
+# negative control on arm B: sed -i 's/^sha: .*/sha: main/' plugin-catalog/paw-pii.yaml
+$ grep -c '^sha: main$' plugin-catalog/paw-pii.yaml
+1
+$ <sandbox> python -B -I scripts/validate_plugin_catalog.py plugin-catalog/
+plugin-catalog/paw-pii.yaml: ERROR: sha 'main' must be exactly 40 lowercase hex characters
+FAIL: 1/351 file(s) invalid
+rc=1
+$ <sandbox> bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_plugin_catalog.py -q -k test_shipped_catalog_entries_are_all_valid_and_pinned
+▶ not activated — using HERMES_PYTHON: <venv>/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~12 tests) under ['tests/hermes_cli/test_plugin_catalog.py']; running with -j 2
+[100.0% |    12/~12 | ✓0 | ✗1] ✗ tests/hermes_cli/test_plugin_catalog.py (1✗, 1.9s)
+
+  ╔╍ Failed: tests/hermes_cli/test_plugin_catalog.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ F                                                                        [100%]
+  ║ =================================== FAILURES ===================================
+  ║ ____________ test_shipped_catalog_entries_are_all_valid_and_pinned _____________
+  ║ 
+  ║     def test_shipped_catalog_entries_are_all_valid_and_pinned():
+  ║         """Every file in plugin-catalog/ (minus removed.yaml) must parse — a dropped entry is a silent
+  ║         shipping regression the admission CI only catches on changed files."""
+  ║         root = pc.get_catalog_dir()
+  ║         files = [p for p in root.glob("*.yaml") if p.name != "removed.yaml"]
+  ║         entries = pc.load_catalog()
+  ║ >       assert len(entries) == len(files) >= 1
+  ║ E       AssertionError: assert 349 == 350
+  ║ E        +  where 349 = len([PluginCatalogEntry(name='adspirer', repo='https://github.com/Adspirer/adspirer-hermes-plugin', sha='4688c38295a7b86f8...=[], provides_hooks=[], provides_middleware=[], requires_env=['AGENTPLAYBOOKS_MEMORY_API_KEY']), known_issues=[]), ...])
+  ║ E        +  and   350 = len([PosixPath('<worktree>/plugin-...<worktree>/plugin-catalog/agentplaybooks-memory.yaml'), ...])
+  ║ 
+  ║ tests/hermes_cli/test_plugin_catalog.py:31: AssertionError
+  ║ ------------------------------ Captured log call -------------------------------
+  ║ WARNING  hermes_cli.plugin_catalog:plugin_catalog.py:148 Plugin catalog: <worktree>/plugin-catalog/paw-pii.yaml: sha must be a full 40-character hex commit SHA (got 'main')
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/hermes_cli/test_plugin_catalog.py::test_shipped_catalog_entries_are_all_valid_and_pinned
+  ║ 1 failed, 12 deselected in 0.62s
+  ║
+  ║  Repro: python -m pytest tests/hermes_cli/test_plugin_catalog.py -q -k test_shipped_catalog_entries_are_all_valid_and_pinned
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 1 files, 0 tests passed, 1 failed (100% complete) in 1.9s (2 workers) ===
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 1.9s  (runner wall: 1.9s, parallelism: 2x)
+  P50: 1.92s  P90: 1.92s  P95: 1.92s  P99: 1.92s  Max: 1.92s
+  <1s: 0 files (0%)  <2s: 1 files (100%)
+  Top 10 slowest:
+      1.92s  tests/hermes_cli/test_plugin_catalog.py
+
+=== Failure output ===
+
+--- tests/hermes_cli/test_plugin_catalog.py ---
+F                                                                        [100%]
+=================================== FAILURES ===================================
+____________ test_shipped_catalog_entries_are_all_valid_and_pinned _____________
+
+    def test_shipped_catalog_entries_are_all_valid_and_pinned():
+        """Every file in plugin-catalog/ (minus removed.yaml) must parse — a dropped entry is a silent
+        shipping regression the admission CI only catches on changed files."""
+        root = pc.get_catalog_dir()
+        files = [p for p in root.glob("*.yaml") if p.name != "removed.yaml"]
+        entries = pc.load_catalog()
+>       assert len(entries) == len(files) >= 1
+E       AssertionError: assert 349 == 350
+E        +  where 349 = len([PluginCatalogEntry(name='adspirer', repo='https://github.com/Adspirer/adspirer-hermes-plugin', sha='4688c38295a7b86f8...=[], provides_hooks=[], provides_middleware=[], requires_env=['AGENTPLAYBOOKS_MEMORY_API_KEY']), known_issues=[]), ...])
+E        +  and   350 = len([PosixPath('<worktree>/plugin-...<worktree>/plugin-catalog/agentplaybooks-memory.yaml'), ...])
+
+tests/hermes_cli/test_plugin_catalog.py:31: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_cli.plugin_catalog:plugin_catalog.py:148 Plugin catalog: <worktree>/plugin-catalog/paw-pii.yaml: sha must be a full 40-character hex commit SHA (got 'main')
+=========================== short test summary info ============================
+FAILED tests/hermes_cli/test_plugin_catalog.py::test_shipped_catalog_entries_are_all_valid_and_pinned
+1 failed, 12 deselected in 0.62s
+
+=== 1 file with test failures (1 test failed) ===
+  tests/hermes_cli/test_plugin_catalog.py  (1 test failed)
+rc=1
+# restored main: 0 tracked changes; blocked-exec lines: 0
+# finished 2026-10-01T19:11:07Z

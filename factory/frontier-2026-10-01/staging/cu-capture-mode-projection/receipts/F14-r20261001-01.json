@@ -1,0 +1,592 @@
+{
+  "schema": "xf.receipt.v1",
+  "staging": "cu-capture-mode-projection",
+  "id": "F14/r20261001-01",
+  "tier": "T0",
+  "label": "OBSERVED",
+  "label_note": "every count and verdict below comes from the two F14 runs this worker executed (maps and run logs exist); nothing here is MODELED",
+  "question": "Does the staging commit, cherry-picked onto current upstream main, leave every verdict, marker and fingerprint of the pinned F14 standing regression set identical to the main baseline?",
+  "result": "EQUAL",
+  "f14_guard": "EQUAL",
+  "provenance": "self",
+  "privacy": "public-aggregate",
+  "ai_assistance": "Claude Code (Opus 5.5) ran the factory F14 runner and wrote this receipt",
+  "main_sha": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+  "staging_head": "3d64efc27d1247da5dd6b170a87c44ef9e653776",
+  "staging_head_parent": "e8c97320ac8691d4de92af49f98459f9ef9ddb08",
+  "arm": {
+    "sha": "df1a4215275f710b21eb8cd68059e5e049730626",
+    "ref": "refs/xf/w0/cu-capture-mode-projection",
+    "how": "git worktree add --detach <worktree> 34f8ec3b40; git cherry-pick 3d64efc27d (clean, no conflicts); author kept (Kevin Rajan <7121943+kvnloo@users.noreply.github.com>, 2026-10-01T04:05:18-05:00); committer Kevin Rajan <7121943+kvnloo@users.noreply.github.com>",
+    "patch_id_equal_to_staging_head": true,
+    "patch_id": "e6c2837d4432e6e9895480fccc468a89947c0be4",
+    "files": [
+      "tests/tools/test_computer_use_capture_lane_schema.py (+90, new file)"
+    ]
+  },
+  "set": {
+    "name": "F14",
+    "rev": 1,
+    "set_sha256": "aba79fe8f09dabc62950aacd0a53c2fdc30bc58746f405f9aa050bf474d739b9",
+    "set_file": "<xf-root>/factory/w0/f14/f14_set.json",
+    "set_file_sha256": "8b4864a72dd07b6383f98fc1e67359143216889f9c36eda79dc56fc3579044c0",
+    "verdict_ids": 40,
+    "flaky": []
+  },
+  "inputs": {
+    "runner": "<xf-root>/factory/w0/f14/f14_run.py",
+    "runner_sha256": "2323a5918435b06a56ca0f5f8b55d0a0c2274915f11cd31ef120649b0fad28fe",
+    "sandbox": "<xf-root>/factory/w0/sandbox/xf-sandbox.sh",
+    "sandbox_sha256": "c9586195c43a926317fa3d6bc18db1937527a6308dc30c683ce9c6a83398638a",
+    "probe_helpers_sha256": {
+      "readtool_direct.py": "0df21aee5fec293042bf4511b3b4c353d13d768711b8272c85b9f86438649229"
+    },
+    "python": "<venv>/bin/python (read-only, set by the sandbox wrapper)"
+  },
+  "env": {
+    "host": "<local-host>",
+    "sandbox": "one bwrap per probe via xf-sandbox.sh; cleared env; HOME=<run>/home, HERMES_HOME=<run>/home/.hermes; PATH=<venv>/bin:/usr/bin:/bin",
+    "network": "loopback only; no paid API, no live install, no real hermes binary",
+    "serial": "probes run one at a time in set order; pytest probe uses -j 1 --file-retries 0"
+  },
+  "resource_usage": {
+    "api_cost_usd": 0.0,
+    "gpu_s": 0,
+    "wall_s": [
+      130.4,
+      79.8
+    ]
+  },
+  "commands": [
+    "cd <xf-root>/factory/w0/f14 && PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py run <worktree> maps/cu-capture-mode-projection-r1.json --label cu-capture-mode-projection-r1",
+    "cd <xf-root>/factory/w0/f14 && PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py run <worktree> maps/cu-capture-mode-projection-r2.json --label cu-capture-mode-projection-r2",
+    "PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py compare baseline-34f8ec3b40.json maps/cu-capture-mode-projection-r1.json",
+    "PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py compare baseline-34f8ec3b40.json maps/cu-capture-mode-projection-r2.json",
+    "PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py compare maps/cu-capture-mode-projection-r1.json maps/cu-capture-mode-projection-r2.json"
+  ],
+  "baseline": {
+    "map": "<xf-root>/factory/w0/f14/baseline-34f8ec3b40.json",
+    "map_sha256": "a0cfdc3291783cb7f5fcfdbd81b6ef010cbc0cd82915786aea4e6176a56a1682",
+    "label": "base-r2",
+    "worktree_head": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+    "counts": {
+      "PASS": 36,
+      "FAIL": 4
+    },
+    "fails_on_base": [
+      "postmortem/cache_estimator_probe",
+      "postmortem/context_cap_probe",
+      "postmortem/notice_delivery_probe",
+      "readtool/fixtures_direct_read_file::lying_extension"
+    ],
+    "note": "copy of base-r2; base-r1 and base-r2 compared EQUAL (factory Wave 0 F14 baseline)"
+  },
+  "runs": {
+    "r1": {
+      "label": "cu-capture-mode-projection-r1",
+      "map": "<xf-root>/factory/w0/f14/maps/cu-capture-mode-projection-r1.json",
+      "map_sha256": "1a971e085674f1f5e10eab952b13d0c928ed413df47027f32591a0b807f6ca6d",
+      "run_log": "<xf-root>/factory/w0/runs/cu-capture-mode-projection-r1.log",
+      "run_dir": "<xf-root>/factory/w0/runs/cu-capture-mode-projection-r1/",
+      "started_utc": "2026-10-01T18:21:39Z",
+      "wall_s": 130.4,
+      "worktree_head": "df1a4215275f710b21eb8cd68059e5e049730626",
+      "worktree_dirty": false,
+      "only": null,
+      "counts": {
+        "PASS": 36,
+        "FAIL": 4
+      },
+      "set_sha256": "aba79fe8f09dabc62950aacd0a53c2fdc30bc58746f405f9aa050bf474d739b9",
+      "runner_sha256": "2323a5918435b06a56ca0f5f8b55d0a0c2274915f11cd31ef120649b0fad28fe",
+      "sandbox_sha256": "c9586195c43a926317fa3d6bc18db1937527a6308dc30c683ce9c6a83398638a",
+      "probe_helpers_sha256": {
+        "readtool_direct.py": "0df21aee5fec293042bf4511b3b4c353d13d768711b8272c85b9f86438649229"
+      },
+      "expect_on_base_mismatches": [
+        "postmortem/context_cap_probe",
+        "postmortem/notice_delivery_probe"
+      ],
+      "vs_baseline": {
+        "compare": {
+          "rc": 0,
+          "stdout": "EQUAL"
+        },
+        "diff_ids": []
+      },
+      "verdicts": {
+        "compaction/test_region_scoping": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "goal_command_parity": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "d79dfafcaa4868dc"
+        },
+        "native_compaction/ab_checkpoint_preflight::capture_cli_same_objects": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "f4f228c1f1712cc0"
+        },
+        "native_compaction/ab_checkpoint_preflight::capture_gateway_reloaded_history": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "f4f228c1f1712cc0"
+        },
+        "native_compaction/ab_checkpoint_preflight::over_threshold_negative": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "98dff750628aaa6f"
+        },
+        "native_compaction/ab_checkpoint_preflight::restore": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "5ea433a5dd24f730"
+        },
+        "postmortem/cache_estimator_probe": {
+          "verdict": "FAIL",
+          "marker": "rc=0 | marker absent: \"preflight_should_compress\": true",
+          "fingerprint": null
+        },
+        "postmortem/context_cap_probe": {
+          "verdict": "FAIL",
+          "marker": "spawn child trigger 850000 != 200000; cycle 0 trigger 850000 cap None; cycle 1 trigger 850000 cap None; cycle 2 trigger 850000 cap None; cycle 3 trigger 850000 cap None; model switch 1000000: trigger 850000 > 200000",
+          "fingerprint": "56dabc3674684245"
+        },
+        "postmortem/credential_identity_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "postmortem/deadline_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "postmortem/finalizer_schedule_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "bd7eea88f9cd9bc3"
+        },
+        "postmortem/goal_scope_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "b7eca3edb852af8a"
+        },
+        "postmortem/notice_delivery_probe": {
+          "verdict": "FAIL",
+          "marker": "rc=1: KeyError: 'task_failure_notice' | marker absent: PROBE_COMPLETE",
+          "fingerprint": null
+        },
+        "postmortem/rewrite_hint_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "postmortem/scanner_bypass_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "provider_fallback/probe_104120": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "provider_fallback/probe_104260": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "provider_fallback/probe_104360": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "readtool/fixtures_direct_read_file::empty_config": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "a8ac6986052f5c49"
+        },
+        "readtool/fixtures_direct_read_file::fifo_hang": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "ed4dce4e99e87179"
+        },
+        "readtool/fixtures_direct_read_file::lockfile_version": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "743a3317c2ec0d1b"
+        },
+        "readtool/fixtures_direct_read_file::log_error_hunt": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "9d7aa5596d7504eb"
+        },
+        "readtool/fixtures_direct_read_file::lying_extension": {
+          "verdict": "FAIL",
+          "marker": "failed: flagged binary",
+          "fingerprint": "d6f615b85009a2c9"
+        },
+        "readtool/fixtures_direct_read_file::minified_backoff": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "ebc3d45cf379ba02"
+        },
+        "readtool/fixtures_direct_read_file::near_miss_filename": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "e3788ea56dd56195"
+        },
+        "readtool/fixtures_direct_read_file::past_eof": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "b8b15fb954e9dbf5"
+        },
+        "readtool/fixtures_direct_read_file::unicode_filename": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "4e892f8bdb3d56d1"
+        },
+        "token_accounting/ab_image_cost_calibration": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::cli_deflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::cli_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::cli_past_window_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::gateway_deflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::gateway_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::gateway_past_window_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::overflow_recovery": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::restore_deflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::restore_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::restore_past_window_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::usage_less_fallback": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/worktree_prompt_prefix": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "5dd5c33ce53f80cb"
+        }
+      }
+    },
+    "r2": {
+      "label": "cu-capture-mode-projection-r2",
+      "map": "<xf-root>/factory/w0/f14/maps/cu-capture-mode-projection-r2.json",
+      "map_sha256": "46f47ab8b6f5e0b22ddf5a11eedb276d50a27d1f39c3eebed26467da7765f802",
+      "run_log": "<xf-root>/factory/w0/runs/cu-capture-mode-projection-r2.log",
+      "run_dir": "<xf-root>/factory/w0/runs/cu-capture-mode-projection-r2/",
+      "started_utc": "2026-10-01T18:23:56Z",
+      "wall_s": 79.8,
+      "worktree_head": "df1a4215275f710b21eb8cd68059e5e049730626",
+      "worktree_dirty": false,
+      "only": null,
+      "counts": {
+        "PASS": 36,
+        "FAIL": 4
+      },
+      "set_sha256": "aba79fe8f09dabc62950aacd0a53c2fdc30bc58746f405f9aa050bf474d739b9",
+      "runner_sha256": "2323a5918435b06a56ca0f5f8b55d0a0c2274915f11cd31ef120649b0fad28fe",
+      "sandbox_sha256": "c9586195c43a926317fa3d6bc18db1937527a6308dc30c683ce9c6a83398638a",
+      "probe_helpers_sha256": {
+        "readtool_direct.py": "0df21aee5fec293042bf4511b3b4c353d13d768711b8272c85b9f86438649229"
+      },
+      "expect_on_base_mismatches": [
+        "postmortem/context_cap_probe",
+        "postmortem/notice_delivery_probe"
+      ],
+      "vs_baseline": {
+        "compare": {
+          "rc": 0,
+          "stdout": "EQUAL"
+        },
+        "diff_ids": []
+      },
+      "verdicts": {
+        "compaction/test_region_scoping": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "goal_command_parity": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "d79dfafcaa4868dc"
+        },
+        "native_compaction/ab_checkpoint_preflight::capture_cli_same_objects": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "f4f228c1f1712cc0"
+        },
+        "native_compaction/ab_checkpoint_preflight::capture_gateway_reloaded_history": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "f4f228c1f1712cc0"
+        },
+        "native_compaction/ab_checkpoint_preflight::over_threshold_negative": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "98dff750628aaa6f"
+        },
+        "native_compaction/ab_checkpoint_preflight::restore": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "5ea433a5dd24f730"
+        },
+        "postmortem/cache_estimator_probe": {
+          "verdict": "FAIL",
+          "marker": "rc=0 | marker absent: \"preflight_should_compress\": true",
+          "fingerprint": null
+        },
+        "postmortem/context_cap_probe": {
+          "verdict": "FAIL",
+          "marker": "spawn child trigger 850000 != 200000; cycle 0 trigger 850000 cap None; cycle 1 trigger 850000 cap None; cycle 2 trigger 850000 cap None; cycle 3 trigger 850000 cap None; model switch 1000000: trigger 850000 > 200000",
+          "fingerprint": "56dabc3674684245"
+        },
+        "postmortem/credential_identity_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "postmortem/deadline_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "postmortem/finalizer_schedule_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "bd7eea88f9cd9bc3"
+        },
+        "postmortem/goal_scope_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "b7eca3edb852af8a"
+        },
+        "postmortem/notice_delivery_probe": {
+          "verdict": "FAIL",
+          "marker": "rc=1: KeyError: 'task_failure_notice' | marker absent: PROBE_COMPLETE",
+          "fingerprint": null
+        },
+        "postmortem/rewrite_hint_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "postmortem/scanner_bypass_probe": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "provider_fallback/probe_104120": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "provider_fallback/probe_104260": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "provider_fallback/probe_104360": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "readtool/fixtures_direct_read_file::empty_config": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "a8ac6986052f5c49"
+        },
+        "readtool/fixtures_direct_read_file::fifo_hang": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "ed4dce4e99e87179"
+        },
+        "readtool/fixtures_direct_read_file::lockfile_version": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "743a3317c2ec0d1b"
+        },
+        "readtool/fixtures_direct_read_file::log_error_hunt": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "9d7aa5596d7504eb"
+        },
+        "readtool/fixtures_direct_read_file::lying_extension": {
+          "verdict": "FAIL",
+          "marker": "failed: flagged binary",
+          "fingerprint": "d6f615b85009a2c9"
+        },
+        "readtool/fixtures_direct_read_file::minified_backoff": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "ebc3d45cf379ba02"
+        },
+        "readtool/fixtures_direct_read_file::near_miss_filename": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "e3788ea56dd56195"
+        },
+        "readtool/fixtures_direct_read_file::past_eof": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "b8b15fb954e9dbf5"
+        },
+        "readtool/fixtures_direct_read_file::unicode_filename": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "4e892f8bdb3d56d1"
+        },
+        "token_accounting/ab_image_cost_calibration": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::cli_deflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::cli_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::cli_past_window_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::gateway_deflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::gateway_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::gateway_past_window_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::overflow_recovery": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::restore_deflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::restore_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::restore_past_window_inflated": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/replay_gates::usage_less_fallback": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": null
+        },
+        "token_accounting/worktree_prompt_prefix": {
+          "verdict": "PASS",
+          "marker": "",
+          "fingerprint": "5dd5c33ce53f80cb"
+        }
+      }
+    }
+  },
+  "r1_vs_r2": {
+    "rc": 0,
+    "stdout": "EQUAL"
+  },
+  "summary": {
+    "r1": "{'PASS': 36, 'FAIL': 4} vs baseline {'PASS': 36, 'FAIL': 4}; compare rc 0 (EQUAL); 0 differing ids",
+    "r2": "{'PASS': 36, 'FAIL': 4} vs baseline {'PASS': 36, 'FAIL': 4}; compare rc 0 (EQUAL); 0 differing ids",
+    "same_4_fails_as_base": [
+      "postmortem/cache_estimator_probe",
+      "postmortem/context_cap_probe",
+      "postmortem/notice_delivery_probe",
+      "readtool/fixtures_direct_read_file::lying_extension"
+    ],
+    "expectation_mismatches_same_as_base": [
+      "postmortem/context_cap_probe",
+      "postmortem/notice_delivery_probe"
+    ]
+  },
+  "scope_note": "No F14 probe imports tools/computer_use/ or runs tests/tools/test_computer_use*; the arm adds one new test file only. EQUAL therefore shows that the fold-in leaves the standing set unchanged; it says nothing about the fold-in's own behaviour (that is X4 r2). The fold-in test itself is RED on main by design (3 of 6 cases) and is not part of the F14 set.",
+  "not_tested": [
+    "the fold-in test file on 34f8ec3b40 (not part of F14; X4 r2 covers it on e8c97320ac)",
+    "the carrier #126447 on 34f8ec3b40",
+    "the full suite"
+  ],
+  "housekeeping": {
+    "worktree_dirty_after_runs": [
+      false,
+      false
+    ],
+    "worktree_removed": true,
+    "refs_created": [
+      "refs/xf/w0/cu-capture-mode-projection"
+    ],
+    "refs_heads_main_unchanged": true,
+    "pushed": false
+  }
+}

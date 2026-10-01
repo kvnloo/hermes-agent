@@ -59,7 +59,7 @@ Discovered 1 test files (~16 tests) under ['tests/hermes_cli/test_shared_metrics
 =================================== FAILURES ===================================
 ____ test_external_prefetch_records_each_exit_with_how_long_the_turn_waited ____
 
-home = PosixPath('/var/tmp/hermes-pytest-1000/r-ms_in7rn/pytest-of-kvn/pytest-0/test_external_prefetch_records0/hermes-home')
+home = PosixPath('<pytest-tmp>/test_external_prefetch_records0/hermes-home')
 
     def test_external_prefetch_records_each_exit_with_how_long_the_turn_waited(home):
         from agent.memory_manager import MemoryManager

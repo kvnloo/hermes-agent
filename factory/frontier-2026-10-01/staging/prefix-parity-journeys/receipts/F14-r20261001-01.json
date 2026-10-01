@@ -1,0 +1,1092 @@
+{
+  "schema": "xf.receipt.v1",
+  "id": "F14/r20261001-01",
+  "experiment": "F14 standing regression set (FACTORY 13 row 2): per-arm guard map compared with the base map (P5 'F14 guards equal')",
+  "tier": "T1",
+  "staging": "prefix-parity-journeys",
+  "label_default": "OBSERVED",
+  "provenance": "self",
+  "cost_usd": 0.0,
+  "base_revision": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+  "head_revision": "71f166dc4d26e674209a06ae467d66b421d603cc",
+  "arms": {
+    "base": {
+      "revision": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+      "map": "<xf-root>/factory/w0/f14/baseline-34f8ec3b40.json (byte copy of base-r2; base-r1 and base-r2 compared EQUAL in the factory baseline run)",
+      "map_sha256": "a0cfdc3291783cb7f5fcfdbd81b6ef010cbc0cd82915786aea4e6176a56a1682",
+      "label": "base-r2",
+      "counts": {
+        "PASS": 36,
+        "FAIL": 4
+      },
+      "wall_s": 52.3
+    },
+    "arm": {
+      "revision": "71f166dc4d26e674209a06ae467d66b421d603cc",
+      "tree": "28d3cffb372547e389828a0c09642d443329e166",
+      "ref": "refs/xf/w0/prefix-parity-journeys (new ref, local scratch repo only)",
+      "construction": "worktree detached at main 34f8ec3b40; git cherry-pick of staging/prefix-parity-journeys ddf4748d31 (one commit, parent aea969677c); applied clean; author and author date kept (Kevin Rajan), committer Kevin Rajan",
+      "source_branch_head": "ddf4748d31cb5dc65e7cd0b0c5b27b98d63ae880",
+      "patch_id_stable": {
+        "branch_commit": "2e6adbab28226481d688721c2d76b31b3e484033",
+        "arm_commit": "2e6adbab28226481d688721c2d76b31b3e484033",
+        "equal": true
+      },
+      "merge_tree_write_tree_main_vs_branch": "28d3cffb372547e389828a0c09642d443329e166",
+      "merge_tree_equals_arm_tree": true,
+      "changed_files": [
+        "tests/e2e/core/history/_helpers.py",
+        "tests/e2e/core/history/test_prefix_stability.py",
+        "tests/e2e/core/parity/_drive_acp.py",
+        "tests/e2e/core/parity/_drive_gateway.py",
+        "tests/e2e/core/parity/_gateway_child.py"
+      ]
+    }
+  },
+  "set": {
+    "name": "F14",
+    "rev": 1,
+    "set_sha256_canonical": "aba79fe8f09dabc62950aacd0a53c2fdc30bc58746f405f9aa050bf474d739b9",
+    "set_file_sha256": "8b4864a72dd07b6383f98fc1e67359143216889f9c36eda79dc56fc3579044c0",
+    "probes": 19,
+    "verdict_ids": 40,
+    "flaky": [],
+    "excluded": "as listed in f14_set.json (live/paid probes, goal_repaste_probe, the 4 sandbox-denylisted live_ab probes); unchanged from the baseline"
+  },
+  "inputs": {
+    "runner_sha256": "2323a5918435b06a56ca0f5f8b55d0a0c2274915f11cd31ef120649b0fad28fe",
+    "sandbox_sha256": "c9586195c43a926317fa3d6bc18db1937527a6308dc30c683ce9c6a83398638a",
+    "probe_helpers_sha256": {
+      "readtool_direct.py": "0df21aee5fec293042bf4511b3b4c353d13d768711b8272c85b9f86438649229"
+    },
+    "same_as_baseline": true
+  },
+  "commands": [
+    "<xf-root>/factory/w0/f14$ PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py run <worktree> maps/prefix-parity-journeys-r1.json --label prefix-parity-journeys-r1",
+    "<xf-root>/factory/w0/f14$ PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py run <worktree> maps/prefix-parity-journeys-r2.json --label prefix-parity-journeys-r2",
+    "<xf-root>/factory/w0/f14$ PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py compare baseline-34f8ec3b40.json maps/prefix-parity-journeys-r1.json",
+    "<xf-root>/factory/w0/f14$ PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py compare baseline-34f8ec3b40.json maps/prefix-parity-journeys-r2.json",
+    "<xf-root>/factory/w0/f14$ PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py compare maps/prefix-parity-journeys-r1.json maps/prefix-parity-journeys-r2.json"
+  ],
+  "runs": {
+    "r1": {
+      "label": "prefix-parity-journeys-r1",
+      "map": "<xf-root>/factory/w0/f14/maps/prefix-parity-journeys-r1.json",
+      "map_sha256": "968fdc7c8fe8e2890116307c6da8945f9faabb9d1339860cdb5ca3ec1f0a25e8",
+      "worktree_head": "71f166dc4d26e674209a06ae467d66b421d603cc",
+      "worktree_dirty": false,
+      "started_utc": "2026-10-01T18:22:07Z",
+      "wall_s": 130.4,
+      "counts": {
+        "PASS": 36,
+        "FAIL": 4
+      },
+      "verdict_ids": 40,
+      "blocked_exec_total": 0,
+      "cells": {
+        "token_accounting/replay_gates": {
+          "rc": 0,
+          "wall_s": 13.8,
+          "blocked_exec": 0
+        },
+        "token_accounting/ab_image_cost_calibration": {
+          "rc": 0,
+          "wall_s": 6.9,
+          "blocked_exec": 0
+        },
+        "token_accounting/worktree_prompt_prefix": {
+          "rc": 0,
+          "wall_s": 9.8,
+          "blocked_exec": 0
+        },
+        "native_compaction/ab_checkpoint_preflight": {
+          "rc": 0,
+          "wall_s": 9.9,
+          "blocked_exec": 0
+        },
+        "provider_fallback/probe_104120": {
+          "rc": 0,
+          "wall_s": 5.4,
+          "blocked_exec": 0
+        },
+        "provider_fallback/probe_104260": {
+          "rc": 0,
+          "wall_s": 3.7,
+          "blocked_exec": 0
+        },
+        "provider_fallback/probe_104360": {
+          "rc": 0,
+          "wall_s": 6.2,
+          "blocked_exec": 0
+        },
+        "goal_command_parity": {
+          "rc": 0,
+          "wall_s": 2.0,
+          "blocked_exec": 0
+        },
+        "compaction/test_region_scoping": {
+          "rc": 0,
+          "wall_s": 2.0,
+          "blocked_exec": 0
+        },
+        "postmortem/scanner_bypass_probe": {
+          "rc": 0,
+          "wall_s": 0.5,
+          "blocked_exec": 0
+        },
+        "postmortem/notice_delivery_probe": {
+          "rc": 1,
+          "wall_s": 2.2,
+          "blocked_exec": 0
+        },
+        "postmortem/cache_estimator_probe": {
+          "rc": 0,
+          "wall_s": 1.5,
+          "blocked_exec": 0
+        },
+        "postmortem/rewrite_hint_probe": {
+          "rc": 0,
+          "wall_s": 2.5,
+          "blocked_exec": 0
+        },
+        "postmortem/credential_identity_probe": {
+          "rc": 0,
+          "wall_s": 10.2,
+          "blocked_exec": 0
+        },
+        "postmortem/context_cap_probe": {
+          "rc": 0,
+          "wall_s": 6.8,
+          "blocked_exec": 0
+        },
+        "postmortem/deadline_probe": {
+          "rc": 0,
+          "wall_s": 11.3,
+          "blocked_exec": 0
+        },
+        "postmortem/goal_scope_probe": {
+          "rc": 0,
+          "wall_s": 5.1,
+          "blocked_exec": 0
+        },
+        "postmortem/finalizer_schedule_probe": {
+          "rc": 0,
+          "wall_s": 26.1,
+          "blocked_exec": 0
+        },
+        "readtool/fixtures_direct_read_file": {
+          "rc": 0,
+          "wall_s": 4.4,
+          "blocked_exec": 0
+        }
+      },
+      "expectation_mismatches": [
+        "postmortem/context_cap_probe",
+        "postmortem/notice_delivery_probe"
+      ]
+    },
+    "r2": {
+      "label": "prefix-parity-journeys-r2",
+      "map": "<xf-root>/factory/w0/f14/maps/prefix-parity-journeys-r2.json",
+      "map_sha256": "1ad695b8a6a8bed6bd55749884d8fd41e3c6ddcbc480e8c7aa12f95ec8445e2c",
+      "worktree_head": "71f166dc4d26e674209a06ae467d66b421d603cc",
+      "worktree_dirty": false,
+      "started_utc": "2026-10-01T18:24:29Z",
+      "wall_s": 74.7,
+      "counts": {
+        "PASS": 36,
+        "FAIL": 4
+      },
+      "verdict_ids": 40,
+      "blocked_exec_total": 0,
+      "cells": {
+        "token_accounting/replay_gates": {
+          "rc": 0,
+          "wall_s": 11.9,
+          "blocked_exec": 0
+        },
+        "token_accounting/ab_image_cost_calibration": {
+          "rc": 0,
+          "wall_s": 4.6,
+          "blocked_exec": 0
+        },
+        "token_accounting/worktree_prompt_prefix": {
+          "rc": 0,
+          "wall_s": 6.0,
+          "blocked_exec": 0
+        },
+        "native_compaction/ab_checkpoint_preflight": {
+          "rc": 0,
+          "wall_s": 8.3,
+          "blocked_exec": 0
+        },
+        "provider_fallback/probe_104120": {
+          "rc": 0,
+          "wall_s": 4.2,
+          "blocked_exec": 0
+        },
+        "provider_fallback/probe_104260": {
+          "rc": 0,
+          "wall_s": 3.1,
+          "blocked_exec": 0
+        },
+        "provider_fallback/probe_104360": {
+          "rc": 0,
+          "wall_s": 3.3,
+          "blocked_exec": 0
+        },
+        "goal_command_parity": {
+          "rc": 0,
+          "wall_s": 1.0,
+          "blocked_exec": 0
+        },
+        "compaction/test_region_scoping": {
+          "rc": 0,
+          "wall_s": 0.7,
+          "blocked_exec": 0
+        },
+        "postmortem/scanner_bypass_probe": {
+          "rc": 0,
+          "wall_s": 0.3,
+          "blocked_exec": 0
+        },
+        "postmortem/notice_delivery_probe": {
+          "rc": 1,
+          "wall_s": 0.7,
+          "blocked_exec": 0
+        },
+        "postmortem/cache_estimator_probe": {
+          "rc": 0,
+          "wall_s": 0.4,
+          "blocked_exec": 0
+        },
+        "postmortem/rewrite_hint_probe": {
+          "rc": 0,
+          "wall_s": 1.7,
+          "blocked_exec": 0
+        },
+        "postmortem/credential_identity_probe": {
+          "rc": 0,
+          "wall_s": 6.5,
+          "blocked_exec": 0
+        },
+        "postmortem/context_cap_probe": {
+          "rc": 0,
+          "wall_s": 3.0,
+          "blocked_exec": 0
+        },
+        "postmortem/deadline_probe": {
+          "rc": 0,
+          "wall_s": 8.3,
+          "blocked_exec": 0
+        },
+        "postmortem/goal_scope_probe": {
+          "rc": 0,
+          "wall_s": 1.6,
+          "blocked_exec": 0
+        },
+        "postmortem/finalizer_schedule_probe": {
+          "rc": 0,
+          "wall_s": 5.6,
+          "blocked_exec": 0
+        },
+        "readtool/fixtures_direct_read_file": {
+          "rc": 0,
+          "wall_s": 3.6,
+          "blocked_exec": 0
+        }
+      },
+      "expectation_mismatches": [
+        "postmortem/context_cap_probe",
+        "postmortem/notice_delivery_probe"
+      ]
+    }
+  },
+  "compare": [
+    {
+      "a": "base",
+      "b": "r1",
+      "result": "EQUAL",
+      "rc": 0,
+      "diff_ids": []
+    },
+    {
+      "a": "base",
+      "b": "r2",
+      "result": "EQUAL",
+      "rc": 0,
+      "diff_ids": []
+    },
+    {
+      "a": "r1",
+      "b": "r2",
+      "result": "EQUAL",
+      "rc": 0,
+      "diff_ids": []
+    }
+  ],
+  "compare_rule": "f14_run.py compare: per verdict id, (verdict, marker, fingerprint) must be identical; ids in the set's flaky list are skipped (none); maps with a different set hash or an --only run are never compared",
+  "verdicts_note": "each entry is [verdict, marker, fingerprint] from the base map, arm run r1 and arm run r2; markers and fingerprints are normalised by the runner (paths become <run>/<worktree>/<tmp>)",
+  "verdicts": {
+    "compaction/test_region_scoping": {
+      "base": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "equal": true
+    },
+    "goal_command_parity": {
+      "base": [
+        "PASS",
+        "",
+        "d79dfafcaa4868dc"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "d79dfafcaa4868dc"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "d79dfafcaa4868dc"
+      ],
+      "equal": true
+    },
+    "native_compaction/ab_checkpoint_preflight::capture_cli_same_objects": {
+      "base": [
+        "PASS",
+        "",
+        "f4f228c1f1712cc0"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "f4f228c1f1712cc0"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "f4f228c1f1712cc0"
+      ],
+      "equal": true
+    },
+    "native_compaction/ab_checkpoint_preflight::capture_gateway_reloaded_history": {
+      "base": [
+        "PASS",
+        "",
+        "f4f228c1f1712cc0"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "f4f228c1f1712cc0"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "f4f228c1f1712cc0"
+      ],
+      "equal": true
+    },
+    "native_compaction/ab_checkpoint_preflight::over_threshold_negative": {
+      "base": [
+        "PASS",
+        "",
+        "98dff750628aaa6f"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "98dff750628aaa6f"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "98dff750628aaa6f"
+      ],
+      "equal": true
+    },
+    "native_compaction/ab_checkpoint_preflight::restore": {
+      "base": [
+        "PASS",
+        "",
+        "5ea433a5dd24f730"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "5ea433a5dd24f730"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "5ea433a5dd24f730"
+      ],
+      "equal": true
+    },
+    "postmortem/cache_estimator_probe": {
+      "base": [
+        "FAIL",
+        "rc=0 | marker absent: \"preflight_should_compress\": true",
+        null
+      ],
+      "r1": [
+        "FAIL",
+        "rc=0 | marker absent: \"preflight_should_compress\": true",
+        null
+      ],
+      "r2": [
+        "FAIL",
+        "rc=0 | marker absent: \"preflight_should_compress\": true",
+        null
+      ],
+      "equal": true
+    },
+    "postmortem/context_cap_probe": {
+      "base": [
+        "FAIL",
+        "spawn child trigger 850000 != 200000; cycle 0 trigger 850000 cap None; cycle 1 trigger 850000 cap None; cycle 2 trigger 850000 cap None; cycle 3 trigger 850000 cap None; model switch 1000000: trigger 850000 > 200000",
+        "56dabc3674684245"
+      ],
+      "r1": [
+        "FAIL",
+        "spawn child trigger 850000 != 200000; cycle 0 trigger 850000 cap None; cycle 1 trigger 850000 cap None; cycle 2 trigger 850000 cap None; cycle 3 trigger 850000 cap None; model switch 1000000: trigger 850000 > 200000",
+        "56dabc3674684245"
+      ],
+      "r2": [
+        "FAIL",
+        "spawn child trigger 850000 != 200000; cycle 0 trigger 850000 cap None; cycle 1 trigger 850000 cap None; cycle 2 trigger 850000 cap None; cycle 3 trigger 850000 cap None; model switch 1000000: trigger 850000 > 200000",
+        "56dabc3674684245"
+      ],
+      "equal": true
+    },
+    "postmortem/credential_identity_probe": {
+      "base": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "equal": true
+    },
+    "postmortem/deadline_probe": {
+      "base": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "equal": true
+    },
+    "postmortem/finalizer_schedule_probe": {
+      "base": [
+        "PASS",
+        "",
+        "bd7eea88f9cd9bc3"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "bd7eea88f9cd9bc3"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "bd7eea88f9cd9bc3"
+      ],
+      "equal": true
+    },
+    "postmortem/goal_scope_probe": {
+      "base": [
+        "PASS",
+        "",
+        "b7eca3edb852af8a"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "b7eca3edb852af8a"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "b7eca3edb852af8a"
+      ],
+      "equal": true
+    },
+    "postmortem/notice_delivery_probe": {
+      "base": [
+        "FAIL",
+        "rc=1: KeyError: 'task_failure_notice' | marker absent: PROBE_COMPLETE",
+        null
+      ],
+      "r1": [
+        "FAIL",
+        "rc=1: KeyError: 'task_failure_notice' | marker absent: PROBE_COMPLETE",
+        null
+      ],
+      "r2": [
+        "FAIL",
+        "rc=1: KeyError: 'task_failure_notice' | marker absent: PROBE_COMPLETE",
+        null
+      ],
+      "equal": true
+    },
+    "postmortem/rewrite_hint_probe": {
+      "base": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "equal": true
+    },
+    "postmortem/scanner_bypass_probe": {
+      "base": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "equal": true
+    },
+    "provider_fallback/probe_104120": {
+      "base": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "equal": true
+    },
+    "provider_fallback/probe_104260": {
+      "base": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "equal": true
+    },
+    "provider_fallback/probe_104360": {
+      "base": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "equal": true
+    },
+    "readtool/fixtures_direct_read_file::empty_config": {
+      "base": [
+        "PASS",
+        "",
+        "a8ac6986052f5c49"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "a8ac6986052f5c49"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "a8ac6986052f5c49"
+      ],
+      "equal": true
+    },
+    "readtool/fixtures_direct_read_file::fifo_hang": {
+      "base": [
+        "PASS",
+        "",
+        "ed4dce4e99e87179"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "ed4dce4e99e87179"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "ed4dce4e99e87179"
+      ],
+      "equal": true
+    },
+    "readtool/fixtures_direct_read_file::lockfile_version": {
+      "base": [
+        "PASS",
+        "",
+        "743a3317c2ec0d1b"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "743a3317c2ec0d1b"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "743a3317c2ec0d1b"
+      ],
+      "equal": true
+    },
+    "readtool/fixtures_direct_read_file::log_error_hunt": {
+      "base": [
+        "PASS",
+        "",
+        "9d7aa5596d7504eb"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "9d7aa5596d7504eb"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "9d7aa5596d7504eb"
+      ],
+      "equal": true
+    },
+    "readtool/fixtures_direct_read_file::lying_extension": {
+      "base": [
+        "FAIL",
+        "failed: flagged binary",
+        "d6f615b85009a2c9"
+      ],
+      "r1": [
+        "FAIL",
+        "failed: flagged binary",
+        "d6f615b85009a2c9"
+      ],
+      "r2": [
+        "FAIL",
+        "failed: flagged binary",
+        "d6f615b85009a2c9"
+      ],
+      "equal": true
+    },
+    "readtool/fixtures_direct_read_file::minified_backoff": {
+      "base": [
+        "PASS",
+        "",
+        "ebc3d45cf379ba02"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "ebc3d45cf379ba02"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "ebc3d45cf379ba02"
+      ],
+      "equal": true
+    },
+    "readtool/fixtures_direct_read_file::near_miss_filename": {
+      "base": [
+        "PASS",
+        "",
+        "e3788ea56dd56195"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "e3788ea56dd56195"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "e3788ea56dd56195"
+      ],
+      "equal": true
+    },
+    "readtool/fixtures_direct_read_file::past_eof": {
+      "base": [
+        "PASS",
+        "",
+        "b8b15fb954e9dbf5"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "b8b15fb954e9dbf5"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "b8b15fb954e9dbf5"
+      ],
+      "equal": true
+    },
+    "readtool/fixtures_direct_read_file::unicode_filename": {
+      "base": [
+        "PASS",
+        "",
+        "4e892f8bdb3d56d1"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "4e892f8bdb3d56d1"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "4e892f8bdb3d56d1"
+      ],
+      "equal": true
+    },
+    "token_accounting/ab_image_cost_calibration": {
+      "base": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "equal": true
+    },
+    "token_accounting/replay_gates::cli_deflated": {
+      "base": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "equal": true
+    },
+    "token_accounting/replay_gates::cli_inflated": {
+      "base": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "equal": true
+    },
+    "token_accounting/replay_gates::cli_past_window_inflated": {
+      "base": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "equal": true
+    },
+    "token_accounting/replay_gates::gateway_deflated": {
+      "base": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "equal": true
+    },
+    "token_accounting/replay_gates::gateway_inflated": {
+      "base": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "equal": true
+    },
+    "token_accounting/replay_gates::gateway_past_window_inflated": {
+      "base": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "equal": true
+    },
+    "token_accounting/replay_gates::overflow_recovery": {
+      "base": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "equal": true
+    },
+    "token_accounting/replay_gates::restore_deflated": {
+      "base": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "equal": true
+    },
+    "token_accounting/replay_gates::restore_inflated": {
+      "base": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "equal": true
+    },
+    "token_accounting/replay_gates::restore_past_window_inflated": {
+      "base": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "equal": true
+    },
+    "token_accounting/replay_gates::usage_less_fallback": {
+      "base": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "equal": true
+    },
+    "token_accounting/worktree_prompt_prefix": {
+      "base": [
+        "PASS",
+        "",
+        "5dd5c33ce53f80cb"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "5dd5c33ce53f80cb"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "5dd5c33ce53f80cb"
+      ],
+      "equal": true
+    }
+  },
+  "fails_on_base_and_arm": {
+    "postmortem/cache_estimator_probe": "expected red on base (fix PR #103476 still open); same marker on the arm",
+    "postmortem/notice_delivery_probe": "rc=1 KeyError 'task_failure_notice' on base (recorded in the baseline as probe drift against main); expectation table says PASS; same marker on the arm",
+    "postmortem/context_cap_probe": "main made the child cap opt-in (trigger 850000, not 200000); expectation table says PASS; same marker and fingerprint on the arm",
+    "readtool/fixtures_direct_read_file::lying_extension": "PNG bytes in a .txt read as UTF-16-BE text; same marker and fingerprint on the arm"
+  },
+  "relevance": {
+    "label": "OBSERVED (static check of the set and the one e2e file it runs)",
+    "what": "No F14 probe runs or imports the 5 changed files. The only tests/e2e path in f14_set.json is tests/e2e/test_relay_native_openai_stream.py (finalizer_schedule_probe), which imports agent.chat_completion_helpers, relay_llm, relay_runtime and run_agent.AIAgent, none of the changed modules. An EQUAL map is therefore the expected outcome for this test-only commit; F14 guards unrelated behaviour and is not the item's own proof."
+  },
+  "gates": {
+    "guards": {
+      "F14": "equal"
+    },
+    "f14_flaky_ids": [],
+    "p5_note": "F14 is one P5 part. GREEN 3/3, per-hunk sabotage and flaky=false for the item's own test are outside this receipt; see STAGING.md [gates].P5"
+  },
+  "env": {
+    "sandbox": "xf-sandbox.sh per probe cell (bwrap: own netns loopback-only, own pidns, read-only /, writable run dir + worktree only, real home and live install masked except the read-only venv, Hermes console scripts stubbed to exit 126, env cleared; HOME and HERMES_HOME under each cell's own run dir)",
+    "python": "<venv> interpreter, read-only bind",
+    "host_load": "shared host with other workers; load1 6.05 before r1, 12.15 between r1 and r2, 10.42 after r2 (nproc 10)",
+    "wall_time_note": "arm runs took 130.4 s and 74.7 s against 51.9 s and 52.3 s on base; wall time is not part of the comparison and the difference tracks host load"
+  },
+  "freshness": {
+    "main": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+    "commits_after_branch_parent": 38,
+    "overlap_with_branch_dirs": "of the 100 files changed in aea969677c..34f8ec3b40, none is in acp_adapter/, tests/e2e/, tests/fakes/ or tests/acp_adapter/; gateway/media_policy.py, gateway/run_topics.py and gateway/run_turn_runner.py changed (Discord auto-thread marker recovery and cron media-policy routing); the journeys themselves were not re-run on this main"
+  },
+  "not_tested": [
+    "the item's own journeys (test_prefix_stability.py) on main 34f8ec3b40: F14 does not include them",
+    "excluded F14 probes (live, paid, private-state and denylisted ones), as in the baseline"
+  ],
+  "limitations": [
+    "the arm is a cherry-pick (71f166dc4d) of the branch head ddf4748d31 onto current main, not the branch head itself; stable patch-ids are equal",
+    "two runs per arm, as the baseline; no probe is in the set's flaky list"
+  ],
+  "verdict": "EQUAL",
+  "worktree_after": "clean (git status --porcelain empty after both runs); removed and pruned after the receipt",
+  "ai_assistance": "Claude Code (Opus 5.5) ran the guard set and wrote this receipt",
+  "privacy": "public-aggregate: placeholders only (<xf-root>, <worktree>, <venv>, <run>); no host name, home paths or credentials"
+}

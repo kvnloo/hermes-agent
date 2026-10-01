@@ -1,0 +1,722 @@
+{
+ "checked_at": "2026-10-01T18:43:03Z",
+ "main": {
+  "sha": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+  "committer_date": "2026-10-01T22:59:37+05:30",
+  "base_is_ancestor": true,
+  "since_base": {
+   "commits": 30,
+   "invalidate_on_commits": [],
+   "invalidate_on_blobs_equal_base": "8 of 8",
+   "github_commits": 0,
+   "github_files": []
+  },
+  "since_prev_main_aaa863f7ff": {
+   "commits": 5,
+   "invalidate_on_commits": [],
+   "invalidate_on_blobs_equal_base": "8 of 8",
+   "github_commits": 0,
+   "github_files": []
+  },
+  "merge_tree_head": {
+   "clean": true,
+   "tree": "e263337135",
+   "conflicted_files": []
+  },
+  "arm_tree": "e263337135",
+  "arm_parent": "34f8ec3b40"
+ },
+ "live_main": {
+  "sha": "105e8765863f23f837b19433c648de1208415f2f",
+  "committer_date": "2026-10-01T18:33:01Z",
+  "read_at": "2026-10-01T18:43:04Z",
+  "in_mirror": true,
+  "main_is_ancestor": true,
+  "since_base": {
+   "commits": 58,
+   "invalidate_on_commits": [],
+   "invalidate_on_blobs_equal_base": "8 of 8",
+   "github_commits": 4,
+   "github_files": [
+    ".github/workflows/plugin-catalog-ci.yml"
+   ]
+  },
+  "since_main_34f8ec3b40": {
+   "commits": 28,
+   "invalidate_on_commits": [],
+   "invalidate_on_blobs_equal_base": "8 of 8",
+   "github_commits": 4,
+   "github_files": [
+    ".github/workflows/plugin-catalog-ci.yml"
+   ]
+  },
+  "merge_tree_head": {
+   "clean": true,
+   "tree": "96e81ec729",
+   "conflicted_files": []
+  }
+ },
+ "workflow_push_scan": [
+  {
+   "rev": "569ad4d84b",
+   "workflows": 52,
+   "with_push_trigger": 11,
+   "matches": []
+  },
+  {
+   "rev": "105e876586",
+   "workflows": 52,
+   "with_push_trigger": 11,
+   "matches": []
+  }
+ ],
+ "cited_state": {
+  "15412": {
+   "kind": "pr",
+   "state": "open",
+   "merged": false,
+   "head": "69c5a41321",
+   "author": "tabtablabs-dev",
+   "created_at": "2026-04-24T23:28:57Z",
+   "closed_at": null,
+   "mergeable_state": "dirty"
+  },
+  "65329": {
+   "kind": "pr",
+   "state": "open",
+   "merged": false,
+   "head": "c868eaaa02",
+   "author": "Soju06",
+   "created_at": "2026-07-16T02:31:06Z",
+   "closed_at": null,
+   "mergeable_state": "dirty"
+  },
+  "86948": {
+   "kind": "pr",
+   "state": "open",
+   "merged": false,
+   "head": "cc1c2a1f2c",
+   "author": "V0v1kkkAssistant",
+   "created_at": "2026-08-15T12:00:50Z",
+   "closed_at": null,
+   "mergeable_state": "dirty"
+  },
+  "87028": {
+   "kind": "pr",
+   "state": "open",
+   "merged": false,
+   "head": "f63bfa2a5c",
+   "author": "richardclawbot",
+   "created_at": "2026-08-15T13:53:59Z",
+   "closed_at": null,
+   "mergeable_state": "dirty"
+  },
+  "92118": {
+   "kind": "pr",
+   "state": "open",
+   "merged": false,
+   "head": "2ad5cc73fa",
+   "author": "seradin",
+   "created_at": "2026-08-22T07:27:51Z",
+   "closed_at": null,
+   "mergeable_state": "blocked"
+  },
+  "98045": {
+   "kind": "pr",
+   "state": "closed",
+   "merged": false,
+   "head": "77f018b7db",
+   "author": "Navlem",
+   "created_at": "2026-08-29T17:24:07Z",
+   "closed_at": "2026-10-01T12:51:06Z",
+   "mergeable_state": "clean"
+  },
+  "104562": {
+   "kind": "pr",
+   "state": "closed",
+   "merged": false,
+   "head": "5709dec5ee",
+   "author": "RaviTharuma",
+   "created_at": "2026-09-06T20:31:30Z",
+   "closed_at": "2026-09-24T07:53:14Z",
+   "mergeable_state": "dirty"
+  },
+  "108965": {
+   "kind": "pr",
+   "state": "open",
+   "merged": false,
+   "head": "39dd41fe68",
+   "author": "jonpol01",
+   "created_at": "2026-09-12T09:14:05Z",
+   "closed_at": null,
+   "mergeable_state": "blocked"
+  },
+  "113678": {
+   "kind": "pr",
+   "state": "open",
+   "merged": false,
+   "head": "b94a482497",
+   "author": "teknium1",
+   "created_at": "2026-09-17T02:16:18Z",
+   "closed_at": null,
+   "mergeable_state": "dirty"
+  },
+  "120042": {
+   "kind": "pr",
+   "state": "open",
+   "merged": false,
+   "head": "641f6b94c5",
+   "author": "Navlem",
+   "created_at": "2026-09-23T08:45:46Z",
+   "closed_at": null,
+   "mergeable_state": "blocked"
+  },
+  "124151": {
+   "kind": "pr",
+   "state": "open",
+   "merged": false,
+   "head": "3ee6189dba",
+   "author": "kweez007",
+   "created_at": "2026-09-26T17:14:46Z",
+   "closed_at": null,
+   "mergeable_state": "blocked"
+  },
+  "125802": {
+   "kind": "pr",
+   "state": "open",
+   "merged": false,
+   "head": "543af5de19",
+   "author": "Finn763",
+   "created_at": "2026-09-27T22:50:00Z",
+   "closed_at": null,
+   "mergeable_state": "dirty"
+  },
+  "125881": {
+   "kind": "pr",
+   "state": "open",
+   "merged": false,
+   "head": "d3fdffcf82",
+   "author": "pstarkgit",
+   "created_at": "2026-09-28T01:05:16Z",
+   "closed_at": null,
+   "mergeable_state": "blocked"
+  },
+  "126457": {
+   "kind": "pr",
+   "state": "closed",
+   "merged": false,
+   "head": "822f7b2835",
+   "author": "mozhongzhou",
+   "created_at": "2026-09-28T13:24:52Z",
+   "closed_at": "2026-10-01T16:23:32Z",
+   "mergeable_state": "blocked"
+  },
+  "130788": {
+   "kind": "pr",
+   "state": "open",
+   "merged": false,
+   "head": "5709dec5ee",
+   "author": "RaviTharuma",
+   "created_at": "2026-10-01T18:16:10Z",
+   "closed_at": null,
+   "mergeable_state": "dirty"
+  },
+  "47119": {
+   "kind": "issue",
+   "state": "open",
+   "author": "jbienz",
+   "created_at": "2026-06-16T08:06:44Z",
+   "title": "[Bug]: Memory provider tools sometimes not injected"
+  },
+  "21566": {
+   "kind": "issue",
+   "state": "open",
+   "author": "pikos-apikos",
+   "created_at": "2026-05-07T23:38:01Z",
+   "title": "Auxiliary LLM calls (session_search, skills_hub, etc.) use short 30s default timeout with no local-endpoint detection \u2014 causes retry storms on slow local inference"
+  },
+  "47021": {
+   "kind": "issue",
+   "state": "open",
+   "author": "dplush",
+   "created_at": "2026-06-16T03:53:05Z",
+   "title": "Add memory provider diagnostics for prefetch/sync health"
+  },
+  "85135": {
+   "kind": "issue",
+   "state": "open",
+   "author": "stig1102",
+   "created_at": "2026-08-13T08:04:35Z",
+   "title": "Make external memory prefetch timeout configurable (hardcoded 8s is too short for cold Honcho dialectic calls)"
+  },
+  "104405": {
+   "kind": "issue",
+   "state": "open",
+   "author": "cursor[bot]",
+   "created_at": "2026-09-06T15:55:58Z",
+   "title": "Memory prefetch timeout discards late results and parks a slow provider"
+  },
+  "43891": {
+   "kind": "issue",
+   "state": "open",
+   "author": "UniGood",
+   "created_at": "2026-06-11T01:36:25Z",
+   "title": "[Feature]: Make Hindsight prefetch join timeout configurable"
+  },
+  "84263": {
+   "kind": "issue",
+   "state": "open",
+   "author": "andrexibiza",
+   "created_at": "2026-08-12T03:25:02Z",
+   "title": "Timed-out external memory prefetch threads remain detached and uncancellable"
+  }
+ },
+ "adjacent_heads_unchanged": {
+  "124151": true,
+  "120042": true,
+  "92118": true,
+  "125881": true,
+  "65329": true,
+  "87028": true,
+  "86948": true,
+  "125802": true,
+  "108965": true,
+  "15412": true
+ },
+ "adjacent_merge_matrix": {
+  "124151": {
+   "main": {
+    "clean": true,
+    "tree": "acf0ae0745",
+    "conflicted_files": []
+   },
+   "main_plus_head": {
+    "clean": true,
+    "tree": "dd4e34ca33",
+    "conflicted_files": []
+   }
+  },
+  "120042": {
+   "main": {
+    "clean": true,
+    "tree": "a481f6c84b",
+    "conflicted_files": []
+   },
+   "main_plus_head": {
+    "clean": true,
+    "tree": "a873da1a92",
+    "conflicted_files": []
+   }
+  },
+  "92118": {
+   "main": {
+    "clean": true,
+    "tree": "42205ad112",
+    "conflicted_files": []
+   },
+   "main_plus_head": {
+    "clean": false,
+    "tree": "8b61a18a97",
+    "conflicted_files": [
+     "agent/memory_manager.py"
+    ]
+   }
+  },
+  "125881": {
+   "main": {
+    "clean": true,
+    "tree": "dbb31a34b7",
+    "conflicted_files": []
+   },
+   "main_plus_head": {
+    "clean": true,
+    "tree": "4de11b212d",
+    "conflicted_files": []
+   }
+  },
+  "65329": {
+   "main": {
+    "clean": false,
+    "tree": "4c14f534c9",
+    "conflicted_files": [
+     "agent/chat_completion_helpers.py",
+     "agent/conversation_loop.py",
+     "agent/tool_executor.py",
+     "agent/turn_context.py",
+     "agent/turn_finalizer.py",
+     "gateway/platforms/base.py",
+     "gateway/run.py",
+     "gateway/turn_context.py",
+     "hermes_cli/config_defaults.py",
+     "plugins/platforms/telegram/adapter.py",
+     "run_agent.py"
+    ]
+   },
+   "main_plus_head": {
+    "clean": false,
+    "tree": "495e2385d4",
+    "conflicted_files": [
+     "agent/chat_completion_helpers.py",
+     "agent/conversation_loop.py",
+     "agent/tool_executor.py",
+     "agent/turn_context.py",
+     "agent/turn_finalizer.py",
+     "gateway/platforms/base.py",
+     "gateway/run.py",
+     "gateway/turn_context.py",
+     "hermes_cli/config_defaults.py",
+     "plugins/platforms/telegram/adapter.py",
+     "run_agent.py"
+    ]
+   }
+  },
+  "87028": {
+   "main": {
+    "clean": false,
+    "tree": "980e305793",
+    "conflicted_files": [
+     "agent/agent_init.py",
+     "agent/memory_manager.py"
+    ]
+   },
+   "main_plus_head": {
+    "clean": false,
+    "tree": "959378b533",
+    "conflicted_files": [
+     "agent/agent_init.py",
+     "agent/memory_manager.py"
+    ]
+   }
+  },
+  "86948": {
+   "main": {
+    "clean": false,
+    "tree": "beed382fda",
+    "conflicted_files": [
+     "agent/memory_manager.py",
+     "plugins/memory/byterover/__init__.py"
+    ]
+   },
+   "main_plus_head": {
+    "clean": false,
+    "tree": "c8deaa8201",
+    "conflicted_files": [
+     "agent/memory_manager.py",
+     "plugins/memory/byterover/__init__.py"
+    ]
+   }
+  },
+  "125802": {
+   "main": {
+    "clean": false,
+    "tree": "eca60506b0",
+    "conflicted_files": [
+     "agent/turn_context.py",
+     "tests/agent/test_api_content_sidecar.py",
+     "tests/agent/test_turn_context.py"
+    ]
+   },
+   "main_plus_head": {
+    "clean": false,
+    "tree": "fdcd5cd8e8",
+    "conflicted_files": [
+     "agent/turn_context.py",
+     "tests/agent/test_api_content_sidecar.py",
+     "tests/agent/test_turn_context.py"
+    ]
+   }
+  },
+  "108965": {
+   "main": {
+    "clean": true,
+    "tree": "dfd4b326c9",
+    "conflicted_files": []
+   },
+   "main_plus_head": {
+    "clean": true,
+    "tree": "db776dcf0d",
+    "conflicted_files": []
+   }
+  },
+  "15412": {
+   "main": {
+    "clean": false,
+    "tree": "89b6126f2a",
+    "conflicted_files": [
+     "agent/memory_manager.py",
+     "gateway/display_config.py",
+     "gateway/run.py",
+     "run_agent.py",
+     "tests/agent/test_memory_provider.py",
+     "tests/gateway/test_display_config.py",
+     "tests/gateway/test_run_progress_topics.py",
+     "tests/run_agent/test_run_agent.py"
+    ]
+   },
+   "main_plus_head": {
+    "clean": false,
+    "tree": "04983fafbb",
+    "conflicted_files": [
+     "agent/memory_manager.py",
+     "gateway/display_config.py",
+     "gateway/run.py",
+     "run_agent.py",
+     "tests/agent/test_memory_provider.py",
+     "tests/gateway/test_display_config.py",
+     "tests/gateway/test_run_progress_topics.py",
+     "tests/run_agent/test_run_agent.py"
+    ]
+   }
+  }
+ },
+ "pr130788": {
+  "head_in_mirror": false,
+  "same_head_as_104562": true,
+  "patch_dry_run": {
+   "agent/agent_init.py": {
+    "main": {
+     "applies": false,
+     "failed_hunks": [
+      1
+     ]
+    },
+    "head": {
+     "applies": false,
+     "failed_hunks": [
+      1
+     ]
+    }
+   },
+   "agent/memory_manager.py": {
+    "main": {
+     "applies": true,
+     "failed_hunks": []
+    },
+    "head": {
+     "applies": false,
+     "failed_hunks": [
+      1,
+      6
+     ]
+    }
+   },
+   "hermes_cli/config_defaults.py": {
+    "main": {
+     "applies": false,
+     "failed_hunks": [
+      1
+     ]
+    },
+    "head": {
+     "applies": false,
+     "failed_hunks": [
+      1
+     ]
+    }
+   },
+   "tests/agent/test_memory_provider.py": {
+    "main": {
+     "applies": true,
+     "failed_hunks": []
+    },
+    "head": {
+     "applies": true,
+     "failed_hunks": []
+    }
+   }
+  }
+ },
+ "delta_pr_search": {
+  "updated_since": "2026-10-01T16:50:00Z",
+  "queries": {
+   "prefetch": {
+    "total": 6,
+    "hits": [
+     "#130788 open",
+     "#104562 closed",
+     "#127847 open",
+     "#30578 closed",
+     "#128757 open",
+     "#98703 open"
+    ]
+   },
+   "memory.prefetch": {
+    "total": 0,
+    "hits": []
+   },
+   "record_memory_prefetch": {
+    "total": 0,
+    "hits": []
+   },
+   "prefetch metric": {
+    "total": 1,
+    "hits": [
+     "#128757 open"
+    ]
+   },
+   "prefetch telemetry": {
+    "total": 1,
+    "hits": [
+     "#128757 open"
+    ]
+   },
+   "shared metrics memory": {
+    "total": 3,
+    "hits": [
+     "#129857 open",
+     "#128757 open",
+     "#65982 open"
+    ]
+   }
+  }
+ },
+ "delta_hit_file_scan": {
+  "65982": {
+   "files": 178,
+   "watched": [
+    "hermes_cli/observability/__init__.py",
+    "hermes_cli/observability/relay_shared_metrics.py"
+   ],
+   "prefetch_metric_added_lines": 0
+  },
+  "98703": {
+   "files": 40,
+   "watched": [],
+   "prefetch_metric_added_lines": 0
+  },
+  "127847": {
+   "files": 1,
+   "watched": [],
+   "prefetch_metric_added_lines": 0
+  },
+  "128757": {
+   "files": 9,
+   "watched": [],
+   "prefetch_metric_added_lines": 0
+  },
+  "129857": {
+   "files": 1,
+   "watched": [],
+   "prefetch_metric_added_lines": 0
+  },
+  "130788": {
+   "files": 4,
+   "watched": [
+    "agent/memory_manager.py"
+   ],
+   "prefetch_metric_added_lines": 0
+  }
+ },
+ "open_issue_search": {
+  "\"prefetch\" timeout memory": {
+   "total": 26,
+   "first_page": [
+    104405,
+    43891,
+    84263,
+    85135,
+    14950,
+    107517,
+    70067,
+    24770,
+    88985,
+    37632,
+    50765,
+    52485,
+    90728,
+    37661,
+    7718,
+    123042,
+    16106,
+    61442,
+    4751,
+    46082,
+    112639,
+    15003,
+    20728,
+    15128,
+    12130,
+    82591
+   ]
+  },
+  "prefetch timed out": {
+   "total": 14,
+   "first_page": [
+    84263,
+    104405,
+    107517,
+    43891,
+    94613,
+    14950,
+    79087,
+    112639,
+    103788,
+    7718,
+    4751,
+    115001,
+    46082,
+    82591
+   ]
+  },
+  "memory prefetch": {
+   "total": 104,
+   "first_page": [
+    104405,
+    115104,
+    89385,
+    84263,
+    44016,
+    47021,
+    78801,
+    85135,
+    43891,
+    87107,
+    111205,
+    46253,
+    85524,
+    117082,
+    92036,
+    88985,
+    24770,
+    99573,
+    46955,
+    118382,
+    70067,
+    107517,
+    39492,
+    29902,
+    79698,
+    32803,
+    38705,
+    14950,
+    44779,
+    37632
+   ]
+  }
+ },
+ "fork": {
+  "staged_branch_sha": "569ad4d84b0f9888ea2598c2a8ea416b2c75bad6",
+  "staged_branch_equals_head": true,
+  "branch_activity": [
+   {
+    "type": "branch_creation",
+    "at": "2026-10-01T17:39:23Z",
+    "actor": "kvnloo",
+    "after": "569ad4d84b"
+   }
+  ],
+  "staged_refs": 14,
+  "issue_417": {
+   "state": "open",
+   "created_at": "2026-10-01T17:40:59Z",
+   "comments": 0,
+   "title": "[staged] Record external memory prefetch outcome and latency in opt-in shared metrics"
+  },
+  "ledger_copy": {
+   "commit": "a3e1aa4878",
+   "at": "2026-10-01T17:39:42Z",
+   "receipts": 20,
+   "has_F14_receipt": false
+  }
+ }
+}

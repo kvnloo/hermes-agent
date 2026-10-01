@@ -2,7 +2,8 @@
 # Round-1: carrier suites + harness on (declared main x carrier) with the staging patch applied. Worktree = main + staging patch.
 set -u
 S=$1; W=$2; R=$3
-TH=$S/testhome-sf-postmortem-logcalls-zero-hit; PY=<hermes-home>/hermes-agent/venv/bin/python
+# Published copy: the test venv python comes from HERMES_PYTHON; the as-run copy had it inline (its sha256 is in the receipt).
+TH=$S/testhome-sf-postmortem-logcalls-zero-hit; PY=${HERMES_PYTHON:?set HERMES_PYTHON to the test venv python}
 cd "$W"
 M=aea969677c60a1bb72fe227fdfb98f196a2092cc
 run_tests() { env -u __HERMES_ACTIVATED HOME=$TH HERMES_HOME=$TH/.hermes HERMES_PYTHON=$PY bash scripts/run_tests.sh -j 2 "$@" -q 2>&1; }

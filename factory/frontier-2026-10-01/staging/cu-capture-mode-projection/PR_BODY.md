@@ -1,46 +1,61 @@
-# cu-capture-mode-projection: upstream text (owner use only, nothing here has been posted)
+# cu-capture-mode-projection: upstream text
+
+**Owner notes, not for posting.** Nothing in this file has been posted. In each section, only the text between
+"Copy from here" and "Copy to here" is meant for upstream; everything else is a note for the owner.
 
 This item is **not a new upstream PR**. NousResearch/hermes-agent#126447 (MwC-Trexx, open since 2026-09-28) already
-makes this exact change, and our own NousResearch/hermes-agent#113389 is closed. Our part is a fold-in contract test
-plus Linux evidence. The sections below are in priority order:
+makes this change, and our own NousResearch/hermes-agent#113389 is closed. Our part is a fold-in contract test plus
+Linux evidence. The sections below are in priority order:
 
-- **A**: the delta comment for #126447. **Not to be posted while the item is HOLD.** It can go only after OD-6 is
-  resolved (this invariant is outside the CU design hold) and the kvnloo/hermes-agent#316 handoff is posted. Then it
-  can go with the test and schema facts alone, or later with the Linux timing table added.
+- **A**: the delta comment for #126447. **Not to be posted while the item is on hold.** It can go only after the
+  owner's computer-use design-hold decision says this invariant is outside the hold, and the handoff on
+  kvnloo/hermes-agent#316 is posted. Then it can go with the test and schema facts alone, or later with the Linux
+  timing table added.
 - **B**: a fallback PR body. Use it only if #126447 closes without merging and the owner decides to carry the change.
 
-There is no wave-row form any more. The salvage-wave board it targeted, kvnloo/hermes-agent#402, closed on
-2026-10-01 and was posted upstream as NousResearch/hermes-agent#130139 without this item. The fork queue is
-kvnloo/hermes-agent#404, and this item gets no row there while it is HOLD. The fold-in branch will be on the fork as
-`staged/cu-capture-mode-projection`.
+There is no wave-row form. The salvage-wave board it targeted, kvnloo/hermes-agent#402, closed on 2026-10-01 and was
+posted upstream as NousResearch/hermes-agent#130139 without this item. The fork queue is kvnloo/hermes-agent#404, and
+this item gets no row there while it is on hold.
 
 ---
 
 ## A. Delta comment for NousResearch/hermes-agent#126447 (one comment, no @mentions)
 
+Before posting:
+1. Push the fold-in branch to the fork as `staged/cu-capture-mode-projection`, so the commit reference
+   kvnloo/hermes-agent@3d64efc27d in the comment resolves.
+2. Check that the PR head is still `8891ff469a`.
+3. Re-run the counts on the newest main and put that main's short SHA in place of `e8c97320ac` in the fourth
+   paragraph. Main has moved to `34f8ec3b40` since, with no change under `tools/computer_use/` or
+   `tests/tools/test_computer_use*`, and the merge is still clean there. The counts themselves were not re-run on it.
+
+Copy from here:
+
 > Follow-up to my earlier static review, with two things that might be useful here.
 >
 > **1. A contract test that goes through the real capability seam.** The tests in this PR and in my older #113389 both
-> stub `supports_input_property`. I made `_CuaDriverSession.supports_input_property` return `False` on this branch,
-> and all 13 tests here still passed. This one fails in that case:
+> stub `supports_input_property`. With `_CuaDriverSession.supports_input_property` forced to return `False` on this
+> branch, all 13 tests here still pass, while 3 of the 6 cases of this test fail:
 > `tests/tools/test_computer_use_capture_lane_schema.py` (2 tests, 6 cases, 90 lines, test-only). It fills the
 > capability map through `_CuaDriverSession._populate_capabilities` using the `get_window_state` property names that
 > the Linux release binaries list. Only the driver calls are faked (the MCP call and the CLI re-fetch), and they
 > answer the way the Linux driver does. It checks two things:
-> - ax sends `include_screenshot: false` and vision sends `include_accessibility_tree: false`, and the capture keeps
->   what the mode uses: elements for ax; pixels plus `window_title` for vision.
+> - when the selector is advertised, ax sends `include_screenshot: false` and vision sends
+>   `include_accessibility_tree: false`, and the capture keeps what the mode uses: elements for ax; pixels plus
+>   `window_title` for vision.
 > - som, and a schema that lacks the selector, send neither selector. It doesn't pin the rest of the request, so a
 >   new default argument in `_gws_args` won't break it.
 >
 > It also covers a second call path. When MCP returns no image, vision re-fetches over the CLI with
-> `self._gws_args("vision")`. If that call site goes back to `self._gws_args()`, the 13 tests here still pass, and the
-> `vision-cli-refetch` case fails. I reverted each production hunk of this PR one at a time, and that call site was
-> the only one none of the 13 tests noticed.
+> `self._gws_args("vision")`. If that call site goes back to `self._gws_args()`, the 13 tests here still pass and the
+> `vision-cli-refetch` case fails. Reverting each of this PR's 8 production hunks one at a time, that call site was
+> the only one that none of the 13 tests noticed.
 >
-> It fails on main and passes on this head (`8891ff469a`) 3/3. It also passes on current main with this PR merged in
-> (`merge-tree` clean). All 23 `tests/tools/test_computer_use*.py` files give the same result with this PR merged as
-> on main: 240 passed, 8 skipped. Patch: <attach `cu-capture-mode-projection.patch`, or offer to push it as a commit
-> on this branch>.
+> On main (`e8c97320ac`), 3 of its 6 cases fail. On this head (`8891ff469a`), and on that main with this PR merged in
+> (`merge-tree` clean), all 6 pass, in 3 of 3 runs. All 23 `tests/tools/test_computer_use*.py` files give the same
+> result with this PR merged as on main: 240 passed, 8 skipped. AGENTS.md sets 2 tests or fewer as the salvage bar,
+> so if this PR gets trimmed, these two could stand in for some of the stubbed tests rather than add to them. The
+> test is one commit, kvnloo/hermes-agent@3d64efc27d, and it cherry-picks cleanly onto this branch.
 >
 > **2. What five Linux release binaries advertise.** Read via `tools/list` through Hermes' own session, x86_64 builds
 > only:
@@ -52,26 +67,28 @@ kvnloo/hermes-agent#404, and this item gets no row there while it is HOLD. The f
 > | 0.24.0, 0.28.2 | yes | yes | no |
 >
 > So on a default Linux install the ax skip takes effect as soon as this lands. The vision skip waits for the pin bump
-> in #126449, or for the `hermes-sandbox:desktop` image, which already ships 0.28.2. None of these five has a
-> standalone `screenshot` tool, so with them vision on main always goes through `get_window_state` and walks AT-SPI.
-> All five declare `additionalProperties: false`, but none rejected an unknown property before its target check. I had
-> no display, so I couldn't see what happens after that check. Either way, the gate here means older drivers get
-> exactly today's request.
+> in #126449, or for the `nousresearch/hermes-sandbox:desktop` image, which already ships 0.28.2. None of these five
+> has a standalone `screenshot` tool, so with them vision on main always goes through `get_window_state` and walks
+> AT-SPI. All five declare `additionalProperties: false`, but none rejected an unknown property before its target
+> check. No display was available, so what happens after that check is untested. Either way, the gate here sends a
+> selector only when the driver advertises it, so drivers that don't advertise one get exactly today's request.
 >
 > One side effect, for the description: on Linux the AT-SPI tree markdown has no `AXWindow "…"` line. So the
 > `structuredContent.window_title` fallback in `_tree_and_title` also fills `window_title` for som and ax captures,
 > where it is empty on main today. That looks like an improvement (it feeds the screenshot-dedup key), but it is a
 > visible change for som and ax too, not only for the two skips.
 >
-> Not measured yet: capture latency on a Linux desktop with a real AT-SPI tree. The bare-Xvfb numbers I had earlier
-> are null by construction. I have a timing harness ready for the sandbox-desktop image and can post median/p95 per
-> mode if that would help.
+> Not measured yet: capture latency on a Linux desktop with a real AT-SPI tree. Bare Xvfb has no AT-SPI tree to walk,
+> so Xvfb timings can't show this saving. A timing harness for the sandbox-desktop image is ready, and I can post
+> median/p95 per mode if that would help.
 >
-> AI assistance (Claude Code) was used to write the test and the probe; I reviewed and ran them.
+> AI assistance: Claude Code wrote the test and the probe harness, ran the checks above and drafted this comment.
 
-If E23 has run, append its table in place of the "Not measured yet" paragraph, labelled with the image id, the driver
-version, n per arm and the A/A bound. If E23 shows nothing beyond noise, say so in one sentence and drop the offer.
-Before posting, re-check that the head is still `8891ff469a` and re-run the counts above on the newest main.
+Copy to here.
+
+If the Linux desktop timing run has happened, replace the "Not measured yet" paragraph with its table, labelled with
+the image id, the driver version, n per arm and the A/A bound. If it shows nothing beyond noise, say so in one
+sentence and drop the offer.
 
 ---
 
@@ -79,6 +96,9 @@ Before posting, re-check that the head is still `8891ff469a` and re-run the coun
 
 Before using it, the branch must gain #126447's production change as its own commit, authored by MwC-Trexx or
 carrying `Co-authored-by: MwC-Trexx <MwC-Trexx@users.noreply.github.com>`. Re-run the full proof on the new head.
+"I've read the Contributing Guide" is left unticked: tick it yourself if it is true.
+
+Copy from here:
 
 ## What does this PR do?
 
@@ -111,8 +131,8 @@ Refs #126447, #113389, #112639
 
 ## How to Test
 
-1. `scripts/run_tests.sh tests/tools/test_computer_use_capture_lane_schema.py -q`: fails on main (the request is sent
-   without either selector) and passes on this branch.
+1. `scripts/run_tests.sh tests/tools/test_computer_use_capture_lane_schema.py -q`: 3 of the 6 cases fail on main
+   (the request is sent without either selector), and all 6 pass on this branch.
 2. `scripts/run_tests.sh tests/tools/test_computer_use_cheap_lanes.py tests/tools/test_computer_use_ax_walk_bound.py -q`
 3. Sibling suites: every `tests/tools/test_computer_use*.py` file; the pass set is the same as on main.
 
@@ -120,7 +140,7 @@ Refs #126447, #113389, #112639
 
 ### Code
 
-- [x] I've read the Contributing Guide
+- [ ] I've read the Contributing Guide
 - [x] My commit messages follow Conventional Commits
 - [x] I searched for existing PRs (this exists only because #126447 closed)
 - [x] My PR contains only changes related to this feature
@@ -146,4 +166,7 @@ Refs #126447, #113389, #112639
   #113389 showed vision recovering from a 4 s UIA timeout (3.942 s timeout vs 2.029 s valid PNG). That is one
   sample, reported by Xipong, not a benchmark.
 
-AI assistance (Claude Code) was used for the test and the probe harness; disclosed per repository policy.
+AI assistance: Claude Code wrote the contract test and the probe harness, ran the checks, and drafted this
+description. The production change is MwC-Trexx's (#126447).
+
+Copy to here.

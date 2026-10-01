@@ -1,0 +1,546 @@
+{
+ "set": "F14",
+ "rev": 1,
+ "factory_ref": "FACTORY.md section 13 row 2",
+ "pinned_on": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+ "argv_placeholders": {
+  "{wt}": "the worktree under test (cwd inside the sandbox)",
+  "{run}": "this probe's own run dir (HOME=<run>/home, HERMES_HOME=<run>/home/.hermes)",
+  "{out}": "<run>/out, created by the runner before the sandbox starts",
+  "{probes}": "the f14/probes dir beside the runner (read-only inside the sandbox)"
+ },
+ "equality": "per probe id not listed in flaky: verdict, marker and fingerprint are equal",
+ "probes": [
+  {
+   "id": "token_accounting/replay_gates",
+   "origin": "#104462",
+   "kind": "script",
+   "argv": [
+    "python",
+    "evals/token_accounting/replay_gates.py",
+    "--out",
+    "{out}/result.json"
+   ],
+   "judge": {
+    "name": "json_verdict_map",
+    "file": "result.json",
+    "subs": [
+     "cli_past_window_inflated",
+     "cli_inflated",
+     "cli_deflated",
+     "gateway_past_window_inflated",
+     "gateway_inflated",
+     "gateway_deflated",
+     "restore_past_window_inflated",
+     "restore_inflated",
+     "restore_deflated",
+     "overflow_recovery",
+     "usage_less_fallback"
+    ]
+   }
+  },
+  {
+   "id": "token_accounting/ab_image_cost_calibration",
+   "origin": "#70328",
+   "kind": "script",
+   "argv": [
+    "python",
+    "evals/token_accounting/ab_image_cost_calibration.py",
+    "--out",
+    "{out}/result.json"
+   ],
+   "judge": {
+    "name": "json_verdict_field",
+    "file": "result.json",
+    "field": "verdict"
+   }
+  },
+  {
+   "id": "token_accounting/worktree_prompt_prefix",
+   "origin": "offline prompt-prefix probe",
+   "kind": "script",
+   "argv": [
+    "python",
+    "evals/token_accounting/worktree_prompt_prefix.py"
+   ],
+   "env": {
+    "PROBE_OUT": "{out}/probe"
+   },
+   "judge": {
+    "name": "worktree_prefix",
+    "file": "probe/measurements.json"
+   }
+  },
+  {
+   "id": "native_compaction/ab_checkpoint_preflight",
+   "origin": "#100611",
+   "kind": "script",
+   "argv": [
+    "python",
+    "evals/native_compaction/ab_checkpoint_preflight.py",
+    "--out",
+    "{out}/result.json"
+   ],
+   "judge": {
+    "name": "native_preflight",
+    "file": "result.json",
+    "subs": [
+     "capture_cli_same_objects",
+     "capture_gateway_reloaded_history",
+     "restore",
+     "over_threshold_negative"
+    ]
+   }
+  },
+  {
+   "id": "provider_fallback/probe_104120",
+   "origin": "#104120",
+   "kind": "script",
+   "argv": [
+    "python",
+    "evals/provider_fallback/probe_104120.py",
+    "{wt}"
+   ],
+   "judge": {
+    "name": "marker",
+    "marker": "PROBE_OK:"
+   }
+  },
+  {
+   "id": "provider_fallback/probe_104260",
+   "origin": "#104260 (issue/PR number not resolvable on upstream)",
+   "kind": "script",
+   "argv": [
+    "python",
+    "evals/provider_fallback/probe_104260.py",
+    "{wt}"
+   ],
+   "judge": {
+    "name": "marker",
+    "marker": "PASS: sync/async local fallback"
+   }
+  },
+  {
+   "id": "provider_fallback/probe_104360",
+   "origin": "#104360 (issue/PR number not resolvable on upstream)",
+   "kind": "script",
+   "argv": [
+    "python",
+    "evals/provider_fallback/probe_104360.py",
+    "{wt}"
+   ],
+   "judge": {
+    "name": "marker",
+    "marker": "\"anthropic_rotating_handoff\": \"200,200\""
+   }
+  },
+  {
+   "id": "goal_command_parity",
+   "origin": "CLI /goal semantic oracle",
+   "kind": "script",
+   "argv": [
+    "python",
+    "evals/goal_command_parity.py",
+    "{wt}",
+    "{run}/goal-home",
+    "{out}/goal_parity.json"
+   ],
+   "judge": {
+    "name": "goal_parity",
+    "file": "goal_parity.json",
+    "rows": 22
+   }
+  },
+  {
+   "id": "compaction/test_region_scoping",
+   "origin": "compaction region-scoping tripwire",
+   "kind": "script",
+   "argv": [
+    "python",
+    "evals/compaction/test_region_scoping.py"
+   ],
+   "judge": {
+    "name": "marker",
+    "marker": "scoping tripwire: ALL PASS"
+   },
+   "timeout_s": 300,
+   "note": "a plain script with a __main__ block and no test_ functions: scripts/run_tests.sh on it collects 0 tests (observed in exploration run f14-explore-1), so it runs as a script; its pass marker is its own final line"
+  },
+  {
+   "id": "postmortem/scanner_bypass_probe",
+   "origin": "#103492",
+   "kind": "script",
+   "postmortem": "run.py",
+   "argv": [
+    "python",
+    "evals/postmortem/review_probes/scanner_bypass_probe.py",
+    "{wt}"
+   ],
+   "env": {
+    "PYTHONPATH": "{wt}"
+   },
+   "judge": {
+    "name": "marker",
+    "marker": "\"hardline\": true"
+   },
+   "timeout_s": 240,
+   "expect_on_base": {
+    "verdict": "PASS",
+    "why": "#103492 merged; run.py notes it also passed before the fix"
+   }
+  },
+  {
+   "id": "postmortem/notice_delivery_probe",
+   "origin": "#103549",
+   "kind": "script",
+   "postmortem": "run.py",
+   "argv": [
+    "python",
+    "evals/postmortem/review_probes/notice_delivery_probe.py",
+    "{wt}"
+   ],
+   "env": {
+    "PYTHONPATH": "{wt}"
+   },
+   "judge": {
+    "name": "marker",
+    "marker": "PROBE_COMPLETE"
+   },
+   "timeout_s": 240,
+   "expect_on_base": {
+    "verdict": "PASS",
+    "why": "#103549 merged; run.py notes it also passed before the fix",
+    "exploration_note": "pre-registered PASS kept. Exploration (f14-explore-1/2) saw FAIL: the probe calls the private tools.delegate_tool _Batch(...) with an older positional signature (TypeError: missing 'overall_start'), so the worker thread dies and the notice never arrives (KeyError 'task_failure_notice'). Probe drift against main, not a product regression shown by this probe"
+   }
+  },
+  {
+   "id": "postmortem/cache_estimator_probe",
+   "origin": "#103476",
+   "kind": "script",
+   "postmortem": "run.py",
+   "argv": [
+    "python",
+    "evals/postmortem/review_probes/cache_estimator_probe.py",
+    "{wt}"
+   ],
+   "env": {
+    "PYTHONPATH": "{wt}"
+   },
+   "judge": {
+    "name": "marker",
+    "marker": "\"preflight_should_compress\": true"
+   },
+   "timeout_s": 240,
+   "expect_on_base": {
+    "verdict": "FAIL",
+    "why": "#103476 is OPEN upstream (gh read 2026-10-01), so the fix it guards is not on main: red on base",
+    "exploration_note": "exploration matched: preflight_should_compress false on main"
+   }
+  },
+  {
+   "id": "postmortem/rewrite_hint_probe",
+   "origin": "#103551",
+   "kind": "script",
+   "postmortem": "run.py",
+   "argv": [
+    "python",
+    "evals/postmortem/review_probes/rewrite_hint_probe.py",
+    "{wt}"
+   ],
+   "env": {
+    "PYTHONPATH": "{wt}"
+   },
+   "judge": {
+    "name": "marker",
+    "marker": "remote_fifo"
+   },
+   "timeout_s": 240,
+   "expect_on_base": {
+    "verdict": "PASS",
+    "why": "#103551 merged (fdd140557b)"
+   }
+  },
+  {
+   "id": "postmortem/credential_identity_probe",
+   "origin": "#103526",
+   "kind": "script",
+   "postmortem": "run.py",
+   "argv": [
+    "python",
+    "evals/postmortem/review_probes/credential_identity_probe.py",
+    "{wt}",
+    "pr"
+   ],
+   "env": {
+    "PYTHONPATH": "{wt}"
+   },
+   "judge": {
+    "name": "marker",
+    "marker": "\"after_sub\": \"account-A\""
+   },
+   "timeout_s": 240,
+   "expect_on_base": {
+    "verdict": "PASS",
+    "why": "#103526 merged (d97f318717)"
+   }
+  },
+  {
+   "id": "postmortem/context_cap_probe",
+   "origin": "#103513",
+   "kind": "script",
+   "postmortem": "hand-run",
+   "argv": [
+    "python",
+    "evals/postmortem/review_probes/context_cap_probe.py",
+    "{wt}",
+    "f14"
+   ],
+   "judge": {
+    "name": "context_cap",
+    "cap": 200000
+   },
+   "timeout_s": 300,
+   "expect_on_base": {
+    "verdict": "PASS",
+    "why": "#103513 merged (e5f8420be8)",
+    "exploration_note": "pre-registered PASS kept. Exploration saw FAIL: main made the child cap opt-in (tools/delegate_tool.py _apply_child_compression_cap: 'Off by default'; config_defaults delegation.compression_threshold_tokens = 0), so with the probe's default config the child trigger is 850,000 with no cap. The judge keeps the README's 200,000 criterion; the fingerprint pins the observed cycle/config lines"
+   }
+  },
+  {
+   "id": "postmortem/deadline_probe",
+   "origin": "#103486",
+   "kind": "script",
+   "postmortem": "hand-run",
+   "argv": [
+    "python",
+    "evals/postmortem/review_probes/deadline_probe.py",
+    "{wt}"
+   ],
+   "judge": {
+    "name": "marker",
+    "marker": "PROBE_COMPLETE"
+   },
+   "timeout_s": 300,
+   "expect_on_base": {
+    "verdict": "PASS",
+    "why": "#103486 merged (3d5831fa59)"
+   }
+  },
+  {
+   "id": "postmortem/goal_scope_probe",
+   "origin": "#103496/#103534",
+   "kind": "script",
+   "postmortem": "hand-run",
+   "argv": [
+    "python",
+    "evals/postmortem/review_probes/goal_scope_probe.py",
+    "{out}/goal_scope.json"
+   ],
+   "judge": {
+    "name": "goal_scope",
+    "file": "goal_scope.json"
+   },
+   "timeout_s": 300,
+   "expect_on_base": {
+    "verdict": "PASS",
+    "why": "#103496 merged (afb4e080f6) and #103534 merged (634109b7aa)"
+   }
+  },
+  {
+   "id": "postmortem/finalizer_schedule_probe",
+   "origin": "#103507",
+   "kind": "pytest",
+   "postmortem": "hand-run",
+   "argv": [
+    "scripts/run_tests.sh",
+    "-j",
+    "1",
+    "--file-retries",
+    "0",
+    "tests/e2e/test_relay_native_openai_stream.py",
+    "--",
+    "-q",
+    "-pno:cacheprovider",
+    "-pevals.postmortem.review_probes.finalizer_schedule_probe",
+    "--finalizer-probe=consumer-first",
+    "--junitxml={out}/junit.xml",
+    "-o",
+    "junit_logging=system-out"
+   ],
+   "judge": {
+    "name": "pytest_junit",
+    "file": "junit.xml",
+    "expect_tests": 2,
+    "stdout_marker": "PROBE_STATS"
+   },
+   "timeout_s": 600,
+   "expect_on_base": {
+    "verdict": "PASS",
+    "why": "#103507 merged (314e365363); README: 2 passed"
+   }
+  },
+  {
+   "id": "readtool/fixtures_direct_read_file",
+   "origin": "evals/readtool fixtures, direct read_file only",
+   "kind": "script",
+   "argv": [
+    "python",
+    "{probes}/readtool_direct.py",
+    "{wt}",
+    "{out}/readtool"
+   ],
+   "judge": {
+    "name": "readtool",
+    "file": "readtool/readtool.json",
+    "subs": [
+     "lockfile_version",
+     "minified_backoff",
+     "log_error_hunt",
+     "past_eof",
+     "empty_config",
+     "unicode_filename",
+     "near_miss_filename",
+     "fifo_hang",
+     "lying_extension"
+    ]
+   },
+   "note": "lying_extension: exploration saw FAIL on main: PNG bytes behind a .txt name are transcoded as UTF-16-BE text (is_binary false, about 2k chars returned) instead of being flagged binary by content sniffing"
+  }
+ ],
+ "excluded": [
+  {
+   "id": "postmortem/goal_judge_wait",
+   "status": "EXCLUDED",
+   "reason": "live: real provider calls (run.py marks it live, cents per run); needs OD-3"
+  },
+  {
+   "id": "postmortem/cache_prefix_wire",
+   "status": "EXCLUDED",
+   "reason": "live: ~6 real provider calls; empty pass marker (vacuous pass) and defaults HERMES_HOME to ~/.hermes and greps ~/.hermes/logs/agent.log (NousResearch/hermes-agent#127898, fix PR #127952 open). FACTORY 6.4: runs only after a patched copy is used. One sandboxed side observation is recorded in the baseline receipt, not in the set."
+  },
+  {
+   "id": "postmortem/nested_delegate_deadline",
+   "status": "EXCLUDED",
+   "reason": "live: copies auth.json and config.yaml from the real ~/.hermes and calls a real provider; the hand-run 'deadline' item is review_probes/deadline_probe.py, which is in the set"
+  },
+  {
+   "id": "postmortem/cache_concurrency_probe",
+   "status": "EXCLUDED",
+   "reason": "paid: about $50 per arm against real routes (README); needs OD-3"
+  },
+  {
+   "id": "postmortem/forensics/*",
+   "status": "EXCLUDED",
+   "reason": "not in the F14 row; needs a private state.db copy (OD-7)"
+  },
+  {
+   "id": "readtool/runner (model arm)",
+   "status": "EXCLUDED",
+   "reason": "drives the full AIAgent against a real model (README); needs OD-1 or OD-3. Only the fixtures via direct read_file are in the set"
+  },
+  {
+   "id": "postmortem/hardline_scanner_matrix",
+   "status": "EXCLUDED",
+   "origin": "#103492",
+   "reason": "blocked by the Wave 0 sandbox, not live: xf-sandbox.sh denylists the glob 'evals/postmortem/live_ab/*' wholesale (deliberately over-inclusive), so the cell is refused with rc 97 before bwrap starts (observed in f14-explore-1). run.py runs it offline with fake providers; re-admit after the sandbox owner narrows that glob and F15 re-runs",
+   "pinned_if_readmitted": {
+    "argv": [
+     "python",
+     "evals/postmortem/live_ab/hardline_scanner_matrix.py",
+     "{wt}"
+    ],
+    "env": {
+     "PYTHONPATH": "{wt}"
+    },
+    "judge": {
+     "name": "marker",
+     "marker": "ALL OK"
+    },
+    "expect_on_base": {
+     "verdict": "PASS",
+     "why": "#103492 merged (cd658b6a46)"
+    }
+   }
+  },
+  {
+   "id": "postmortem/subagent_context_cap",
+   "status": "EXCLUDED",
+   "origin": "#103513",
+   "reason": "blocked by the Wave 0 sandbox, not live: xf-sandbox.sh denylists the glob 'evals/postmortem/live_ab/*' wholesale (deliberately over-inclusive), so the cell is refused with rc 97 before bwrap starts (observed in f14-explore-1). run.py runs it offline with fake providers; re-admit after the sandbox owner narrows that glob and F15 re-runs",
+   "pinned_if_readmitted": {
+    "argv": [
+     "python",
+     "evals/postmortem/live_ab/subagent_context_cap.py",
+     "{wt}"
+    ],
+    "env": {
+     "PYTHONPATH": "{wt}"
+    },
+    "judge": {
+     "name": "marker",
+     "marker": "trigger=200,000"
+    },
+    "expect_on_base": {
+     "verdict": "PASS",
+     "why": "#103513 merged (e5f8420be8)"
+    }
+   }
+  },
+  {
+   "id": "postmortem/batch_failure_notice",
+   "status": "EXCLUDED",
+   "origin": "#103549",
+   "reason": "blocked by the Wave 0 sandbox, not live: xf-sandbox.sh denylists the glob 'evals/postmortem/live_ab/*' wholesale (deliberately over-inclusive), so the cell is refused with rc 97 before bwrap starts (observed in f14-explore-1). run.py runs it offline with fake providers; re-admit after the sandbox owner narrows that glob and F15 re-runs",
+   "pinned_if_readmitted": {
+    "argv": [
+     "python",
+     "evals/postmortem/live_ab/batch_failure_notice.py",
+     "{wt}"
+    ],
+    "env": {
+     "PYTHONPATH": "{wt}"
+    },
+    "judge": {
+     "name": "marker",
+     "marker": "TASK_FAILURE_NOTICE"
+    },
+    "expect_on_base": {
+     "verdict": "PASS",
+     "why": "#103549 merged (6b2d4faf36)"
+    }
+   }
+  },
+  {
+   "id": "postmortem/auth_stampede",
+   "status": "EXCLUDED",
+   "origin": "#103526",
+   "reason": "blocked by the Wave 0 sandbox, not live: xf-sandbox.sh denylists the glob 'evals/postmortem/live_ab/*' wholesale (deliberately over-inclusive), so the cell is refused with rc 97 before bwrap starts (observed in f14-explore-1). run.py runs it offline with fake providers; re-admit after the sandbox owner narrows that glob and F15 re-runs",
+   "pinned_if_readmitted": {
+    "argv": [
+     "python",
+     "evals/postmortem/live_ab/auth_stampede.py",
+     "{wt}",
+     "12"
+    ],
+    "env": {
+     "PYTHONPATH": "{wt}"
+    },
+    "judge": {
+     "name": "marker",
+     "marker": "server_401=0"
+    },
+    "expect_on_base": {
+     "verdict": "PASS",
+     "why": "#103526 merged (d97f318717)"
+    }
+   }
+  },
+  {
+   "id": "postmortem/goal_repaste_probe",
+   "status": "EXCLUDED",
+   "origin": "#103553",
+   "reason": "needs a private state.db copy: it opens RF_STATE_COPY (default <tmp>/rf/state_copy.db) read-only and reads message ids 264820 and 267045 from the #102117 run's database (observed: sqlite3.OperationalError unable to open database file in f14-explore-1). Private input, needs OD-7; never pointed at the live state.db"
+  }
+ ],
+ "flaky": []
+}

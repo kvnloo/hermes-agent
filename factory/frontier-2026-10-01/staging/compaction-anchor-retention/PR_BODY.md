@@ -7,7 +7,7 @@ This PR adds three rows:
 | row | captures | stays out |
 |---|---|---|
 | `task ids` | `sa-2-7318d0ba` (delegate_tool), `t_4f9c2a1e` (kanban) | hex fragments inside longer words |
-| `dotted keys` | `plugins.stream_reasoning_deltas`, `compression.tail_mode`, `hermes_cli.dashboard_auth` | `config.yaml`, `context_compressor.py`, `api.openai.com`, `e.g.` (the last segment must be snake_case). Fragments such as `router.add_post` inside `self._app.router.add_post`: a match never starts right after `x.` |
+| `dotted keys` | `plugins.stream_reasoning_deltas`, `compression.tail_mode`, `hermes_cli.dashboard_auth` | `config.yaml`, `context_compressor.py`, `api.openai.com`, `e.g` (the last segment must be snake_case). Fragments such as `router.add_post` inside `self._app.router.add_post`: a match never starts right after `x.` |
 | `error messages` | CLI error lines: `fatal: …`, `error: …`, `error TS2741: …`, gh's `GraphQL: Pull Request has merge conflicts (mergePullRequest)`. Hermes tool refusals: ``Blocked: `git checkout` would rewrite …`` | `TypeError: …` and other exception names, which the existing `errors` row already covers. Python annotations (`error: Exception)`) and log formats (`"error: %s"`): `fatal:`/`error:` only count where a line starts, after a quote or backtick, or after an escaped `\n` in JSON tool output. |
 
 The rows go after the existing ones. Every existing section keeps its exact line under the shared 7,000-char budget, and the new sections only use what is left. There is no prompt, cadence, budget or config change. Scope is local-compressor routes in lean tail mode only: legacy mode doesn't build the index, and native compaction summaries are opaque.
@@ -19,7 +19,7 @@ The rows go after the existing ones. Every existing section keeps its exact line
 
 The rows were written after reading those golds, so this is an in-sample count, not a held-out result. It only checks that the gold strings match a row; it does not measure recall. The 09-19 scorecard asks to check the index's coverage on its prreview/sysprompt/sigsegv banks first. Those banks aren't committed, so that check wasn't run. The recall exam wasn't run either, because it needs the aux model; the commands are below if you want numbers before merging.
 
-**Relationship to #117462.** That PR changes the same function: it harvests tool-call arguments, puts cheap ids first, truncates per section instead of `break`ing, and adds session ids, todo ids and more path extensions. It covers different classes in the same table. I offered these rows there as a fold-in first, appended after its last row so none of its lines change; this is the standalone version. With both applied, 7 of 7 tests in the two test files pass (its 5 and these 2). If #117462 lands first, this needs a small rebase of the table.
+**Relationship to #117462.** That PR changes the same function: it harvests tool-call arguments, puts cheap ids first, truncates per section instead of `break`ing, and adds session ids, todo ids and more path extensions. It covers different classes in the same table. I offered these rows there as a fold-in first, appended after its last row so none of its lines change; this is the standalone version. With the fold-in version applied to #117462's head, 7 of 7 tests in the two test files pass (its 5 and these 2). This branch and #117462 conflict as they stand, because both edit the table. If #117462 lands first, this needs a small rebase of the table.
 
 The cost of appending: the new sections only get the budget the existing ones leave, so in dense regions they get little or nothing. On main the loop also `break`s at the first section that doesn't fit, so a new section that overflows is dropped whole. #117462's per-section truncation keeps the first values of such a section, but the rows still come last there, so dense regions stay mostly out of reach.
 
@@ -43,7 +43,7 @@ Refs #116246 (scorecard), #87326 (lean tail and recall exam), #117462 (same func
 ## How to Test
 
 1. `scripts/run_tests.sh tests/agent/test_context_compressor_anchor_index.py`: 2 of 2 tests pass (3 runs). On main both fail (`AssertionError: 'sa-2-7318d0ba' missing from anchor index`, `assert 'compression.tail_mode' in ''`). Removing any one of the three rows turns the tests red again. So does loosening the error row's line-start rule or its `%s` guard, or letting a dotted key start mid-name.
-2. Neighbouring files: 365 of 365 tests pass on main and on this branch (the branch run adds the 2 new tests, which pass too):
+2. Neighbouring files: on main, 365 of 365 tests in these six files pass. On this branch, 367 of 367 pass across the same six files plus the new test file:
    - `tests/agent/test_context_compressor.py`
    - `test_lean_single_aux_call.py`
    - `test_compression_rotation_state.py`

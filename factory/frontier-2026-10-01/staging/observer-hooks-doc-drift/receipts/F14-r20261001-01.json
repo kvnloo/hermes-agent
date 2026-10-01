@@ -1,0 +1,986 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "F14/r20261001-01",
+ "kind": "F14 standing-regression guard comparison (Wave 0 set rev 1) for one staging arm",
+ "staging": "observer-hooks-doc-drift",
+ "promotion_form": "docs (route docs-leaf); no code path changes, so EQUAL is the expected outcome",
+ "label": "OBSERVED",
+ "base_revision": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+ "staged_commit": "9225807160327a648a21bd493e9ed943f8ce5baa",
+ "staged_commit_parent": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+ "arms": {
+  "base": {
+   "tree": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+   "map": "<xf-root>/factory/w0/f14/baseline-34f8ec3b40.json",
+   "map_sha256": "a0cfdc3291783cb7f5fcfdbd81b6ef010cbc0cd82915786aea4e6176a56a1682",
+   "baseline_label": "base-r2",
+   "note": "baseline verdict map is a copy of base-r2; base-r1 vs base-r2 compared EQUAL (Wave 0 baseline run, not re-run here)"
+  },
+  "observer-hooks-doc-drift": {
+   "cherry_pick": [
+    "9225807160327a648a21bd493e9ed943f8ce5baa"
+   ],
+   "onto": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+   "result": "clean",
+   "head": "be5c73d230ea764068a5c4b1f292d7b5ec5d8aeb",
+   "tree": "ac1a4ea15479ae2239f244365078fac89a1cf816",
+   "ref": "refs/xf/w0/observer-hooks-doc-drift",
+   "author": "Kevin Rajan <7121943+kvnloo@users.noreply.github.com> (original, kept)",
+   "committer": "Kevin Rajan <7121943+kvnloo@users.noreply.github.com>",
+   "patch_id_stable": {
+    "arm": "0e8ef460515db0be97b2038a275533a4730c1a4e",
+    "staged_commit": "0e8ef460515db0be97b2038a275533a4730c1a4e",
+    "identical": true
+   },
+   "changed_files": [
+    "website/docs/developer-guide/observer-hooks.md"
+   ],
+   "page_blob": {
+    "main_34f8ec3b40": "3d9c636706ff28aa6a117c1c0700fa2767aa19ae",
+    "staged_parent_aea969677c": "3d9c636706ff28aa6a117c1c0700fa2767aa19ae",
+    "arm": "9ede0fab4d2be2a886d86a12c53c3f3dc8a01d8b"
+   },
+   "merge_tree_check": {
+    "command": "git merge-tree --write-tree 34f8ec3b40 9225807160",
+    "rc": 0,
+    "tree": "ac1a4ea15479ae2239f244365078fac89a1cf816",
+    "same_as_cherry_pick_tree": true
+   }
+  }
+ },
+ "set": {
+  "sha256": "aba79fe8f09dabc62950aacd0a53c2fdc30bc58746f405f9aa050bf474d739b9",
+  "rev": 1,
+  "file": "<xf-root>/factory/w0/f14/f14_set.json",
+  "file_sha256": "8b4864a72dd07b6383f98fc1e67359143216889f9c36eda79dc56fc3579044c0",
+  "verdict_ids": 40,
+  "probes": 19,
+  "flaky": [],
+  "excluded_count": 11
+ },
+ "tooling_sha256": {
+  "runner f14_run.py": "2323a5918435b06a56ca0f5f8b55d0a0c2274915f11cd31ef120649b0fad28fe",
+  "sandbox xf-sandbox.sh": "c9586195c43a926317fa3d6bc18db1937527a6308dc30c683ce9c6a83398638a",
+  "probe helper readtool_direct.py": "0df21aee5fec293042bf4511b3b4c353d13d768711b8272c85b9f86438649229"
+ },
+ "env": {
+  "python_host": "3.14.7",
+  "interpreter_in_sandbox": "<venv>/bin/python (read-only)",
+  "sandbox": "xf-sandbox.sh: bwrap, one fresh cell per probe, clearenv, HOME=<run>/home, HERMES_HOME=<run>/home/.hermes, loopback only",
+  "network": "loopback only",
+  "paid_api_calls": 0
+ },
+ "commands": [
+  "git -C <scratch>/h.git worktree add --detach <worktree> 34f8ec3b407e50bad3ae27e4cd79d65212061356",
+  "git -C <worktree> -c user.name='Kevin Rajan' -c user.email=7121943+kvnloo@users.noreply.github.com cherry-pick 9225807160327a648a21bd493e9ed943f8ce5baa",
+  "git -C <scratch>/h.git update-ref refs/xf/w0/observer-hooks-doc-drift be5c73d230ea764068a5c4b1f292d7b5ec5d8aeb ''",
+  "cd <xf-root>/factory/w0/f14 && PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py run <worktree> maps/observer-hooks-doc-drift-r1.json --label observer-hooks-doc-drift-r1",
+  "PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py compare baseline-34f8ec3b40.json maps/observer-hooks-doc-drift-r1.json",
+  "PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py run <worktree> maps/observer-hooks-doc-drift-r2.json --label observer-hooks-doc-drift-r2",
+  "PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py compare baseline-34f8ec3b40.json maps/observer-hooks-doc-drift-r2.json",
+  "PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py compare maps/observer-hooks-doc-drift-r1.json maps/observer-hooks-doc-drift-r2.json",
+  "git -C <scratch>/h.git worktree remove --force <worktree> && git -C <scratch>/h.git worktree prune"
+ ],
+ "runs": [
+  {
+   "label": "observer-hooks-doc-drift-r1",
+   "map": "<xf-root>/factory/w0/f14/maps/observer-hooks-doc-drift-r1.json",
+   "map_sha256": "c567438191411b7b9ae49a7f3ad7d580a34e5dddc9f3b50971bd282d30ce4127",
+   "runs_dir": "<xf-root>/factory/w0/runs/observer-hooks-doc-drift-r1",
+   "worktree_head": "be5c73d230ea764068a5c4b1f292d7b5ec5d8aeb",
+   "worktree_dirty": false,
+   "started_utc": "2026-10-01T18:21:37Z",
+   "wall_s": 123.6,
+   "counts": {
+    "PASS": 36,
+    "FAIL": 4
+   },
+   "cells": 19,
+   "cell_rc_nonzero": {
+    "postmortem/notice_delivery_probe": 1
+   },
+   "blocked_exec_total": 0,
+   "expect_on_base_mismatches": [
+    "postmortem/context_cap_probe",
+    "postmortem/notice_delivery_probe"
+   ],
+   "compare_vs_baseline": {
+    "rc": 0,
+    "output": "EQUAL"
+   },
+   "label_note": "OBSERVED"
+  },
+  {
+   "label": "observer-hooks-doc-drift-r2",
+   "map": "<xf-root>/factory/w0/f14/maps/observer-hooks-doc-drift-r2.json",
+   "map_sha256": "03e16c348800343081452ff325fd9636d500bc8b8ddd52aa741116f22ecd9d07",
+   "runs_dir": "<xf-root>/factory/w0/runs/observer-hooks-doc-drift-r2",
+   "worktree_head": "be5c73d230ea764068a5c4b1f292d7b5ec5d8aeb",
+   "worktree_dirty": false,
+   "started_utc": "2026-10-01T18:23:51Z",
+   "wall_s": 81.4,
+   "counts": {
+    "PASS": 36,
+    "FAIL": 4
+   },
+   "cells": 19,
+   "cell_rc_nonzero": {
+    "postmortem/notice_delivery_probe": 1
+   },
+   "blocked_exec_total": 0,
+   "expect_on_base_mismatches": [
+    "postmortem/context_cap_probe",
+    "postmortem/notice_delivery_probe"
+   ],
+   "compare_vs_baseline": {
+    "rc": 0,
+    "output": "EQUAL"
+   },
+   "label_note": "OBSERVED"
+  }
+ ],
+ "compare_r1_vs_r2": {
+  "rc": 0,
+  "output": "EQUAL"
+ },
+ "result": {
+  "f14": "EQUAL",
+  "rule": "equality on (verdict, marker, fingerprint) for every verdict id not in the set's flaky list (flaky list is empty)",
+  "ids_compared": 40,
+  "ids_changed_r1": [],
+  "ids_changed_r2": [],
+  "base_fails_carried_identically": {
+   "postmortem/cache_estimator_probe": {
+    "verdict": "FAIL",
+    "marker": "rc=0 | marker absent: \"preflight_should_compress\": true",
+    "fingerprint": null
+   },
+   "postmortem/context_cap_probe": {
+    "verdict": "FAIL",
+    "marker": "spawn child trigger 850000 != 200000; cycle 0 trigger 850000 cap None; cycle 1 trigger 850000 cap None; cycle 2 trigger 850000 cap None; cycle 3 trigger 850000 cap None; model switch 1000000: trigger 850000 > 200000",
+    "fingerprint": "56dabc3674684245"
+   },
+   "postmortem/notice_delivery_probe": {
+    "verdict": "FAIL",
+    "marker": "rc=1: KeyError: 'task_failure_notice' | marker absent: PROBE_COMPLETE",
+    "fingerprint": null
+   },
+   "readtool/fixtures_direct_read_file::lying_extension": {
+    "verdict": "FAIL",
+    "marker": "failed: flagged binary",
+    "fingerprint": "d6f615b85009a2c9"
+   }
+  },
+  "base_fails_note": "the 4 FAILs are the baseline's own (main 34f8ec3b40, documented in the Wave 0 baseline: open fix #103476, notice_delivery probe drift, context-cap default change, readtool lying_extension); the arm reproduces each with the same marker and fingerprint and adds none",
+  "expect_on_base_mismatches_same_as_baseline": true,
+  "label": "OBSERVED"
+ },
+ "verdict_maps_vs_baseline": {
+  "compaction/test_region_scoping": {
+   "baseline": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1": [
+    "PASS",
+    "",
+    null
+   ],
+   "r2": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "goal_command_parity": {
+   "baseline": [
+    "PASS",
+    "",
+    "d79dfafcaa4868dc"
+   ],
+   "r1": [
+    "PASS",
+    "",
+    "d79dfafcaa4868dc"
+   ],
+   "r2": [
+    "PASS",
+    "",
+    "d79dfafcaa4868dc"
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "native_compaction/ab_checkpoint_preflight::capture_cli_same_objects": {
+   "baseline": [
+    "PASS",
+    "",
+    "f4f228c1f1712cc0"
+   ],
+   "r1": [
+    "PASS",
+    "",
+    "f4f228c1f1712cc0"
+   ],
+   "r2": [
+    "PASS",
+    "",
+    "f4f228c1f1712cc0"
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "native_compaction/ab_checkpoint_preflight::capture_gateway_reloaded_history": {
+   "baseline": [
+    "PASS",
+    "",
+    "f4f228c1f1712cc0"
+   ],
+   "r1": [
+    "PASS",
+    "",
+    "f4f228c1f1712cc0"
+   ],
+   "r2": [
+    "PASS",
+    "",
+    "f4f228c1f1712cc0"
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "native_compaction/ab_checkpoint_preflight::over_threshold_negative": {
+   "baseline": [
+    "PASS",
+    "",
+    "98dff750628aaa6f"
+   ],
+   "r1": [
+    "PASS",
+    "",
+    "98dff750628aaa6f"
+   ],
+   "r2": [
+    "PASS",
+    "",
+    "98dff750628aaa6f"
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "native_compaction/ab_checkpoint_preflight::restore": {
+   "baseline": [
+    "PASS",
+    "",
+    "5ea433a5dd24f730"
+   ],
+   "r1": [
+    "PASS",
+    "",
+    "5ea433a5dd24f730"
+   ],
+   "r2": [
+    "PASS",
+    "",
+    "5ea433a5dd24f730"
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "postmortem/cache_estimator_probe": {
+   "baseline": [
+    "FAIL",
+    "rc=0 | marker absent: \"preflight_should_compress\": true",
+    null
+   ],
+   "r1": [
+    "FAIL",
+    "rc=0 | marker absent: \"preflight_should_compress\": true",
+    null
+   ],
+   "r2": [
+    "FAIL",
+    "rc=0 | marker absent: \"preflight_should_compress\": true",
+    null
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "postmortem/context_cap_probe": {
+   "baseline": [
+    "FAIL",
+    "spawn child trigger 850000 != 200000; cycle 0 trigger 850000 cap None; cycle 1 trigger 850000 cap None; cycle 2 trigger 850000 cap None; cycle 3 trigger 850000 cap None; model switch 1000000: trigger 850000 > 200000",
+    "56dabc3674684245"
+   ],
+   "r1": [
+    "FAIL",
+    "spawn child trigger 850000 != 200000; cycle 0 trigger 850000 cap None; cycle 1 trigger 850000 cap None; cycle 2 trigger 850000 cap None; cycle 3 trigger 850000 cap None; model switch 1000000: trigger 850000 > 200000",
+    "56dabc3674684245"
+   ],
+   "r2": [
+    "FAIL",
+    "spawn child trigger 850000 != 200000; cycle 0 trigger 850000 cap None; cycle 1 trigger 850000 cap None; cycle 2 trigger 850000 cap None; cycle 3 trigger 850000 cap None; model switch 1000000: trigger 850000 > 200000",
+    "56dabc3674684245"
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "postmortem/credential_identity_probe": {
+   "baseline": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1": [
+    "PASS",
+    "",
+    null
+   ],
+   "r2": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "postmortem/deadline_probe": {
+   "baseline": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1": [
+    "PASS",
+    "",
+    null
+   ],
+   "r2": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "postmortem/finalizer_schedule_probe": {
+   "baseline": [
+    "PASS",
+    "",
+    "bd7eea88f9cd9bc3"
+   ],
+   "r1": [
+    "PASS",
+    "",
+    "bd7eea88f9cd9bc3"
+   ],
+   "r2": [
+    "PASS",
+    "",
+    "bd7eea88f9cd9bc3"
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "postmortem/goal_scope_probe": {
+   "baseline": [
+    "PASS",
+    "",
+    "b7eca3edb852af8a"
+   ],
+   "r1": [
+    "PASS",
+    "",
+    "b7eca3edb852af8a"
+   ],
+   "r2": [
+    "PASS",
+    "",
+    "b7eca3edb852af8a"
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "postmortem/notice_delivery_probe": {
+   "baseline": [
+    "FAIL",
+    "rc=1: KeyError: 'task_failure_notice' | marker absent: PROBE_COMPLETE",
+    null
+   ],
+   "r1": [
+    "FAIL",
+    "rc=1: KeyError: 'task_failure_notice' | marker absent: PROBE_COMPLETE",
+    null
+   ],
+   "r2": [
+    "FAIL",
+    "rc=1: KeyError: 'task_failure_notice' | marker absent: PROBE_COMPLETE",
+    null
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "postmortem/rewrite_hint_probe": {
+   "baseline": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1": [
+    "PASS",
+    "",
+    null
+   ],
+   "r2": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "postmortem/scanner_bypass_probe": {
+   "baseline": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1": [
+    "PASS",
+    "",
+    null
+   ],
+   "r2": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "provider_fallback/probe_104120": {
+   "baseline": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1": [
+    "PASS",
+    "",
+    null
+   ],
+   "r2": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "provider_fallback/probe_104260": {
+   "baseline": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1": [
+    "PASS",
+    "",
+    null
+   ],
+   "r2": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "provider_fallback/probe_104360": {
+   "baseline": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1": [
+    "PASS",
+    "",
+    null
+   ],
+   "r2": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "readtool/fixtures_direct_read_file::empty_config": {
+   "baseline": [
+    "PASS",
+    "",
+    "a8ac6986052f5c49"
+   ],
+   "r1": [
+    "PASS",
+    "",
+    "a8ac6986052f5c49"
+   ],
+   "r2": [
+    "PASS",
+    "",
+    "a8ac6986052f5c49"
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "readtool/fixtures_direct_read_file::fifo_hang": {
+   "baseline": [
+    "PASS",
+    "",
+    "ed4dce4e99e87179"
+   ],
+   "r1": [
+    "PASS",
+    "",
+    "ed4dce4e99e87179"
+   ],
+   "r2": [
+    "PASS",
+    "",
+    "ed4dce4e99e87179"
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "readtool/fixtures_direct_read_file::lockfile_version": {
+   "baseline": [
+    "PASS",
+    "",
+    "743a3317c2ec0d1b"
+   ],
+   "r1": [
+    "PASS",
+    "",
+    "743a3317c2ec0d1b"
+   ],
+   "r2": [
+    "PASS",
+    "",
+    "743a3317c2ec0d1b"
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "readtool/fixtures_direct_read_file::log_error_hunt": {
+   "baseline": [
+    "PASS",
+    "",
+    "9d7aa5596d7504eb"
+   ],
+   "r1": [
+    "PASS",
+    "",
+    "9d7aa5596d7504eb"
+   ],
+   "r2": [
+    "PASS",
+    "",
+    "9d7aa5596d7504eb"
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "readtool/fixtures_direct_read_file::lying_extension": {
+   "baseline": [
+    "FAIL",
+    "failed: flagged binary",
+    "d6f615b85009a2c9"
+   ],
+   "r1": [
+    "FAIL",
+    "failed: flagged binary",
+    "d6f615b85009a2c9"
+   ],
+   "r2": [
+    "FAIL",
+    "failed: flagged binary",
+    "d6f615b85009a2c9"
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "readtool/fixtures_direct_read_file::minified_backoff": {
+   "baseline": [
+    "PASS",
+    "",
+    "ebc3d45cf379ba02"
+   ],
+   "r1": [
+    "PASS",
+    "",
+    "ebc3d45cf379ba02"
+   ],
+   "r2": [
+    "PASS",
+    "",
+    "ebc3d45cf379ba02"
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "readtool/fixtures_direct_read_file::near_miss_filename": {
+   "baseline": [
+    "PASS",
+    "",
+    "e3788ea56dd56195"
+   ],
+   "r1": [
+    "PASS",
+    "",
+    "e3788ea56dd56195"
+   ],
+   "r2": [
+    "PASS",
+    "",
+    "e3788ea56dd56195"
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "readtool/fixtures_direct_read_file::past_eof": {
+   "baseline": [
+    "PASS",
+    "",
+    "b8b15fb954e9dbf5"
+   ],
+   "r1": [
+    "PASS",
+    "",
+    "b8b15fb954e9dbf5"
+   ],
+   "r2": [
+    "PASS",
+    "",
+    "b8b15fb954e9dbf5"
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "readtool/fixtures_direct_read_file::unicode_filename": {
+   "baseline": [
+    "PASS",
+    "",
+    "4e892f8bdb3d56d1"
+   ],
+   "r1": [
+    "PASS",
+    "",
+    "4e892f8bdb3d56d1"
+   ],
+   "r2": [
+    "PASS",
+    "",
+    "4e892f8bdb3d56d1"
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "token_accounting/ab_image_cost_calibration": {
+   "baseline": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1": [
+    "PASS",
+    "",
+    null
+   ],
+   "r2": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "token_accounting/replay_gates::cli_deflated": {
+   "baseline": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1": [
+    "PASS",
+    "",
+    null
+   ],
+   "r2": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "token_accounting/replay_gates::cli_inflated": {
+   "baseline": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1": [
+    "PASS",
+    "",
+    null
+   ],
+   "r2": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "token_accounting/replay_gates::cli_past_window_inflated": {
+   "baseline": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1": [
+    "PASS",
+    "",
+    null
+   ],
+   "r2": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "token_accounting/replay_gates::gateway_deflated": {
+   "baseline": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1": [
+    "PASS",
+    "",
+    null
+   ],
+   "r2": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "token_accounting/replay_gates::gateway_inflated": {
+   "baseline": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1": [
+    "PASS",
+    "",
+    null
+   ],
+   "r2": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "token_accounting/replay_gates::gateway_past_window_inflated": {
+   "baseline": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1": [
+    "PASS",
+    "",
+    null
+   ],
+   "r2": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "token_accounting/replay_gates::overflow_recovery": {
+   "baseline": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1": [
+    "PASS",
+    "",
+    null
+   ],
+   "r2": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "token_accounting/replay_gates::restore_deflated": {
+   "baseline": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1": [
+    "PASS",
+    "",
+    null
+   ],
+   "r2": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "token_accounting/replay_gates::restore_inflated": {
+   "baseline": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1": [
+    "PASS",
+    "",
+    null
+   ],
+   "r2": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "token_accounting/replay_gates::restore_past_window_inflated": {
+   "baseline": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1": [
+    "PASS",
+    "",
+    null
+   ],
+   "r2": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "token_accounting/replay_gates::usage_less_fallback": {
+   "baseline": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1": [
+    "PASS",
+    "",
+    null
+   ],
+   "r2": [
+    "PASS",
+    "",
+    null
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  },
+  "token_accounting/worktree_prompt_prefix": {
+   "baseline": [
+    "PASS",
+    "",
+    "5dd5c33ce53f80cb"
+   ],
+   "r1": [
+    "PASS",
+    "",
+    "5dd5c33ce53f80cb"
+   ],
+   "r2": [
+    "PASS",
+    "",
+    "5dd5c33ce53f80cb"
+   ],
+   "r1_equal": true,
+   "r2_equal": true
+  }
+ },
+ "gates": {
+  "guards": {
+   "F14": "EQUAL"
+  },
+  "flaky": false,
+  "note": "F14 is a Wave 0 guard; it feeds the P5 'F14 guards equal' clause only. The other P5 clauses come from F13/r20261001-03 and DOCS-CHECKS/r20261001-03"
+ },
+ "side_observations": [
+  {
+   "what": "invalidate_on paths changed between the staged parent aea969677c and main 34f8ec3b40 (38 commits)",
+   "value": 0,
+   "command": "git diff --name-only aea969677c 34f8ec3b40 -- <the 11 invalidate_on files>",
+   "label": "OBSERVED"
+  },
+  {
+   "what": "lines naming post_api_request in git diff aea969677c 34f8ec3b40",
+   "value": 0,
+   "label": "OBSERVED",
+   "note": "a text check only; the F13 AST emitter scan was not re-run here, so this does not replace the P1 freshness re-run"
+  }
+ ],
+ "not_tested": [
+  "docs rendering (Docusaurus build), as in the manifest; F14 probes do not read website/docs",
+  "probes the set excludes (live/paid, private-data and sandbox-denylisted ones; reasons in f14_set.json)"
+ ],
+ "limitations": [
+  "wall time per run (123.6 s, 81.4 s) is above the baseline's ~52 s; not investigated and not a gated quantity",
+  "a docs-only arm cannot move any probe, so EQUAL here shows the cherry-pick onto current main leaves the guard set untouched, not that the docs are right (that is F13 and DOCS-CHECKS)"
+ ],
+ "resource_usage": {
+  "wall_s": 205.0,
+  "gpu_s": 0,
+  "energy_j": null,
+  "tokens": 0,
+  "api_cost_usd": 0.0
+ },
+ "verdict": "KEEP",
+ "provenance": "self",
+ "frozen": {
+  "bundle_sha": null,
+  "supersedes": null,
+  "note": "chmod a-w after writing; sha256 recorded in STAGING.md [evidence].receipts"
+ },
+ "ai_assistance": "Claude Code (Opus 5.5) ran the cherry-pick and both F14 runs and wrote this receipt",
+ "privacy": "public-aggregate; placeholders only (<xf-root>, <scratch>, <worktree>, <run>, <venv>)",
+ "recorded_utc": "2026-10-01T18:28Z"
+}

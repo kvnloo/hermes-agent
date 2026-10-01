@@ -1,6 +1,6 @@
 ## What does this PR do?
 
-Docs-only. `post_api_request` already passes three fields that the observer hooks guide doesn't list, so plugin authors can't find them without reading the emitter. This adds them to the guide's `post_api_request` field list. Each description was checked against the code that produces the value, not just the comments next to it; that's where the retry caveat below comes from. No behaviour changes.
+Docs-only. `post_api_request` already passes three fields that the observer hooks guide doesn't list, so plugin authors can't find them without reading the emitter. This adds them to the guide's `post_api_request` field list. Each description was checked against the code that produces the value, not just the comments next to it; that's where the retry caveat below comes from. No behaviour changes. File and line references below are to `main` at `34f8ec3b40`.
 
 - **Was:** website/docs/developer-guide/observer-hooks.md:151-158 lists `api_duration`, `started_at`, `ended_at`, `finish_reason`, `message_count`, `response_model`, `usage`, `assistant_content_chars`, `assistant_tool_call_count`, `response` and `assistant_message`. The page never mentions `first_chunk_at`, `context_length` or `moa_references`.
 - **Source on main:** agent/turn_response_intake.py:83-97 passes all three:
@@ -81,4 +81,4 @@ N/A
 
 ---
 
-Prepared with AI assistance (Claude Code). Every statement above was checked against the cited source lines on `main`.
+Both the docs change and this description were written with AI assistance (Claude Code). Every statement above was checked against the cited source lines.

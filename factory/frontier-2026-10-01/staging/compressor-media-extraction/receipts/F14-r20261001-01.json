@@ -1,0 +1,938 @@
+{
+  "schema": "xf.receipt.v1",
+  "staging": "compressor-media-extraction",
+  "id": "F14/r20261001-01",
+  "experiment": "F14 standing guard set (Wave 0): the staging commit cherry-picked onto current main, run twice, each verdict map compared with the main baseline",
+  "tier": "T1",
+  "label": "OBSERVED",
+  "provenance": "self",
+  "privacy": "public-aggregate",
+  "cost_usd": 0.0,
+  "ai_assistance": "Claude Code (Opus 5.5) created the arm, ran the F14 runner twice, compared the maps and wrote this receipt",
+  "created_at": "2026-10-01T13:28:17-05:00",
+  "supersedes": null,
+  "spec": {
+    "path": "<xf-root>/factory/w0/f14/f14_set.json",
+    "set": "F14",
+    "set_rev": 1,
+    "note": "set pinned on main 34f8ec3b40 before the baseline runs; not pre-registered on claude/ledger"
+  },
+  "base_revision": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+  "head_revision": "639aa4c211e7437b6c0d6e3473fd1bfc9c18c0dc",
+  "arm": {
+    "main_sha": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+    "arm_sha": "639aa4c211e7437b6c0d6e3473fd1bfc9c18c0dc",
+    "arm_ref": "refs/xf/w0/compressor-media-extraction (scratch h.git, local only)",
+    "staging_branch_sha": "c5e8be14b43bf75bcc2e4e8d95f2d4810a7e2779",
+    "staging_branch_parent": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+    "commits_main_past_branch_parent": 38,
+    "cherry_pick": "clean (no conflict); author kept (Kevin Rajan <7121943+kvnloo@users.noreply.github.com>, 2026-10-01T06:06:31-05:00); committer Kevin Rajan <7121943+kvnloo@users.noreply.github.com>; message unchanged",
+    "patch_id": "2c92e56fb8480749643d9e6275c1940b7fd02919 (same for c5e8be14b4 and 639aa4c211)",
+    "arm_tree": "7f7e21c2cc84992050d9a1a68d59fefc873745ef (equals git merge-tree --write-tree 34f8ec3b40 c5e8be14b4)",
+    "touched_files_on_main": "all 9 pre-existing files the commit touches have the same blob ids on aea969677c and 34f8ec3b40; agent/context_compressor_media.py exists on neither",
+    "worktree_dirty_after_runs": [
+      false,
+      false
+    ]
+  },
+  "env": {
+    "host": "<local-host>",
+    "python": "<venv>/bin/python (HERMES_PYTHON set by the sandbox wrapper; read-only use of the installed interpreter)",
+    "sandbox": "xf-sandbox.sh: one bwrap per probe, env cleared, HOME=<run>/home, HERMES_HOME=<run>/home/.hermes, PATH=<venv>/bin:/usr/bin:/bin, loopback-only network; serial, one cell at a time; pytest probes -j 1, no file retry",
+    "worktree": "<worktree> = a detached worktree of the scratch h.git at the arm sha, on the data disk (removed after the runs)",
+    "paths": "placeholders only: <xf-root>, <worktree>, <run>, <runs>, <venv>"
+  },
+  "hashes": {
+    "set_sha256": "aba79fe8f09dabc62950aacd0a53c2fdc30bc58746f405f9aa050bf474d739b9",
+    "set_file_sha256": "8b4864a72dd07b6383f98fc1e67359143216889f9c36eda79dc56fc3579044c0",
+    "runner_sha256": "2323a5918435b06a56ca0f5f8b55d0a0c2274915f11cd31ef120649b0fad28fe",
+    "sandbox_sha256": "c9586195c43a926317fa3d6bc18db1937527a6308dc30c683ce9c6a83398638a",
+    "probe_helpers_sha256": {
+      "readtool_direct.py": "0df21aee5fec293042bf4511b3b4c353d13d768711b8272c85b9f86438649229"
+    },
+    "same_in_baseline_r1_r2": true
+  },
+  "command": "git -C h.git worktree add --detach <worktree> 34f8ec3b40; git -C <worktree> -c user.name='Kevin Rajan' -c user.email=7121943+kvnloo@users.noreply.github.com cherry-pick c5e8be14b4; git -C h.git update-ref refs/xf/w0/compressor-media-extraction 639aa4c211 ''; cd <xf-root>/factory/w0/f14 && PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py run <worktree> maps/compressor-media-extraction-r<N>.json --label compressor-media-extraction-r<N> (N = 1, 2, serial); PYTHONDONTWRITEBYTECODE=1 python3 -B f14_run.py compare baseline-34f8ec3b40.json maps/compressor-media-extraction-r<N>.json; git -C h.git worktree remove --force <worktree> && git -C h.git worktree prune",
+  "baseline": {
+    "file": "<xf-root>/factory/w0/f14/baseline-34f8ec3b40.json",
+    "file_sha256": "a0cfdc3291783cb7f5fcfdbd81b6ef010cbc0cd82915786aea4e6176a56a1682",
+    "label": "base-r2",
+    "worktree_head": "34f8ec3b407e50bad3ae27e4cd79d65212061356",
+    "counts": {
+      "PASS": 36,
+      "FAIL": 4
+    },
+    "note": "copy of base-r2 on main 34f8ec3b40; base-r1 and base-r2 compared EQUAL, so the set lists no flaky probe"
+  },
+  "runs": {
+    "r1": {
+      "label": "compressor-media-extraction-r1",
+      "started_utc": "2026-10-01T18:22:02Z",
+      "wall_s": 130.0,
+      "worktree_head": "639aa4c211e7437b6c0d6e3473fd1bfc9c18c0dc",
+      "worktree_dirty": false,
+      "only": null,
+      "counts": {
+        "PASS": 36,
+        "FAIL": 4
+      },
+      "verdict_ids": 40,
+      "expect_on_base_mismatches": [
+        "postmortem/context_cap_probe",
+        "postmortem/notice_delivery_probe"
+      ],
+      "map": {
+        "path": "receipts/raw/F14-r20261001-01/compressor-media-extraction-r1.json",
+        "sha256": "897fa9ee9e959e229f19d32bbb66323473ebdd0586248639bb2b2295deffb0cd"
+      },
+      "map_source": "<xf-root>/factory/w0/f14/maps/compressor-media-extraction-r1.json",
+      "cells": "<runs>/compressor-media-extraction-r1/NN-<probe>"
+    },
+    "r2": {
+      "label": "compressor-media-extraction-r2",
+      "started_utc": "2026-10-01T18:24:27Z",
+      "wall_s": 75.6,
+      "worktree_head": "639aa4c211e7437b6c0d6e3473fd1bfc9c18c0dc",
+      "worktree_dirty": false,
+      "only": null,
+      "counts": {
+        "PASS": 36,
+        "FAIL": 4
+      },
+      "verdict_ids": 40,
+      "expect_on_base_mismatches": [
+        "postmortem/context_cap_probe",
+        "postmortem/notice_delivery_probe"
+      ],
+      "map": {
+        "path": "receipts/raw/F14-r20261001-01/compressor-media-extraction-r2.json",
+        "sha256": "993b30ed2669dc3e7af2490736f8cb57fd3c66f675ef3f339c5dbb12e8c4f1e6"
+      },
+      "map_source": "<xf-root>/factory/w0/f14/maps/compressor-media-extraction-r2.json",
+      "cells": "<runs>/compressor-media-extraction-r2/NN-<probe>"
+    }
+  },
+  "compare": [
+    {
+      "a": "baseline-34f8ec3b40.json",
+      "b": "maps/compressor-media-extraction-r1.json",
+      "rc": 0,
+      "stdout": "EQUAL"
+    },
+    {
+      "a": "baseline-34f8ec3b40.json",
+      "b": "maps/compressor-media-extraction-r2.json",
+      "rc": 0,
+      "stdout": "EQUAL"
+    },
+    {
+      "a": "maps/compressor-media-extraction-r1.json",
+      "b": "maps/compressor-media-extraction-r2.json",
+      "rc": 0,
+      "stdout": "EQUAL"
+    }
+  ],
+  "result": {
+    "f14_equal": "EQUAL",
+    "verdict_ids": 40,
+    "changed_vs_baseline_r1": [],
+    "changed_vs_baseline_r2": [],
+    "flaky_excluded": [],
+    "summary": "Both runs give the same verdict, marker and fingerprint as the main baseline on all 40 verdict ids (36 PASS, 4 FAIL). The 4 FAILs are the baseline's own failures on main with identical markers, so the commit neither fixes nor causes any of them. r1 vs r2 is also EQUAL.",
+    "fails_shared_with_main": {
+      "postmortem/cache_estimator_probe": [
+        "FAIL",
+        "rc=0 | marker absent: \"preflight_should_compress\": true",
+        null
+      ],
+      "postmortem/context_cap_probe": [
+        "FAIL",
+        "spawn child trigger 850000 != 200000; cycle 0 trigger 850000 cap None; cycle 1 trigger 850000 cap None; cycle 2 trigger 850000 cap None; cycle 3 trigger 850000 cap None; model switch 1000000: trigger 850000 > 200000",
+        "56dabc3674684245"
+      ],
+      "postmortem/notice_delivery_probe": [
+        "FAIL",
+        "rc=1: KeyError: 'task_failure_notice' | marker absent: PROBE_COMPLETE",
+        null
+      ],
+      "readtool/fixtures_direct_read_file::lying_extension": [
+        "FAIL",
+        "failed: flagged binary",
+        "d6f615b85009a2c9"
+      ]
+    },
+    "expect_on_base_mismatches_note": "notice_delivery_probe and context_cap_probe miss their pre-registered PASS on main too (probe drift against main, recorded in the baseline receipt); identical on the arm",
+    "wall_clock_note": "r1 130.0 s and r2 75.6 s vs 51.9/52.3 s for the baseline; other workers were running F14 on the same machine at the same time. No timeout and no verdict depends on wall time"
+  },
+  "coverage_note": "OBSERVED by grep on the arm tree: the sources of 12 of the 19 probes (13 files) reference the compressor or the send path (context_compressor / ContextCompressor / turn_request_assembly / chat_completion_helpers / image_eviction / run_agent / AIAgent): replay_gates, ab_image_cost_calibration, worktree_prompt_prefix, ab_checkpoint_preflight, probe_104120, probe_104360, test_region_scoping, cache_estimator_probe, context_cap_probe, credential_identity_probe, deadline_probe, finalizer_schedule_probe (and its tests/e2e/test_relay_native_openai_stream.py). Runtime call coverage of the 16 moved statements under F14 was not measured, so EQUAL is evidence of no regression on these guards, not a coverage proof of the move (that is the job of the item's own golden-parity, test-parity and per-hunk sabotage receipts).",
+  "per_id": {
+    "compaction/test_region_scoping": {
+      "baseline": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "goal_command_parity": {
+      "baseline": [
+        "PASS",
+        "",
+        "d79dfafcaa4868dc"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "d79dfafcaa4868dc"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "d79dfafcaa4868dc"
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "native_compaction/ab_checkpoint_preflight::capture_cli_same_objects": {
+      "baseline": [
+        "PASS",
+        "",
+        "f4f228c1f1712cc0"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "f4f228c1f1712cc0"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "f4f228c1f1712cc0"
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "native_compaction/ab_checkpoint_preflight::capture_gateway_reloaded_history": {
+      "baseline": [
+        "PASS",
+        "",
+        "f4f228c1f1712cc0"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "f4f228c1f1712cc0"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "f4f228c1f1712cc0"
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "native_compaction/ab_checkpoint_preflight::over_threshold_negative": {
+      "baseline": [
+        "PASS",
+        "",
+        "98dff750628aaa6f"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "98dff750628aaa6f"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "98dff750628aaa6f"
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "native_compaction/ab_checkpoint_preflight::restore": {
+      "baseline": [
+        "PASS",
+        "",
+        "5ea433a5dd24f730"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "5ea433a5dd24f730"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "5ea433a5dd24f730"
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "postmortem/cache_estimator_probe": {
+      "baseline": [
+        "FAIL",
+        "rc=0 | marker absent: \"preflight_should_compress\": true",
+        null
+      ],
+      "r1": [
+        "FAIL",
+        "rc=0 | marker absent: \"preflight_should_compress\": true",
+        null
+      ],
+      "r2": [
+        "FAIL",
+        "rc=0 | marker absent: \"preflight_should_compress\": true",
+        null
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "postmortem/context_cap_probe": {
+      "baseline": [
+        "FAIL",
+        "spawn child trigger 850000 != 200000; cycle 0 trigger 850000 cap None; cycle 1 trigger 850000 cap None; cycle 2 trigger 850000 cap None; cycle 3 trigger 850000 cap None; model switch 1000000: trigger 850000 > 200000",
+        "56dabc3674684245"
+      ],
+      "r1": [
+        "FAIL",
+        "spawn child trigger 850000 != 200000; cycle 0 trigger 850000 cap None; cycle 1 trigger 850000 cap None; cycle 2 trigger 850000 cap None; cycle 3 trigger 850000 cap None; model switch 1000000: trigger 850000 > 200000",
+        "56dabc3674684245"
+      ],
+      "r2": [
+        "FAIL",
+        "spawn child trigger 850000 != 200000; cycle 0 trigger 850000 cap None; cycle 1 trigger 850000 cap None; cycle 2 trigger 850000 cap None; cycle 3 trigger 850000 cap None; model switch 1000000: trigger 850000 > 200000",
+        "56dabc3674684245"
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "postmortem/credential_identity_probe": {
+      "baseline": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "postmortem/deadline_probe": {
+      "baseline": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "postmortem/finalizer_schedule_probe": {
+      "baseline": [
+        "PASS",
+        "",
+        "bd7eea88f9cd9bc3"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "bd7eea88f9cd9bc3"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "bd7eea88f9cd9bc3"
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "postmortem/goal_scope_probe": {
+      "baseline": [
+        "PASS",
+        "",
+        "b7eca3edb852af8a"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "b7eca3edb852af8a"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "b7eca3edb852af8a"
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "postmortem/notice_delivery_probe": {
+      "baseline": [
+        "FAIL",
+        "rc=1: KeyError: 'task_failure_notice' | marker absent: PROBE_COMPLETE",
+        null
+      ],
+      "r1": [
+        "FAIL",
+        "rc=1: KeyError: 'task_failure_notice' | marker absent: PROBE_COMPLETE",
+        null
+      ],
+      "r2": [
+        "FAIL",
+        "rc=1: KeyError: 'task_failure_notice' | marker absent: PROBE_COMPLETE",
+        null
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "postmortem/rewrite_hint_probe": {
+      "baseline": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "postmortem/scanner_bypass_probe": {
+      "baseline": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "provider_fallback/probe_104120": {
+      "baseline": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "provider_fallback/probe_104260": {
+      "baseline": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "provider_fallback/probe_104360": {
+      "baseline": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "readtool/fixtures_direct_read_file::empty_config": {
+      "baseline": [
+        "PASS",
+        "",
+        "a8ac6986052f5c49"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "a8ac6986052f5c49"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "a8ac6986052f5c49"
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "readtool/fixtures_direct_read_file::fifo_hang": {
+      "baseline": [
+        "PASS",
+        "",
+        "ed4dce4e99e87179"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "ed4dce4e99e87179"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "ed4dce4e99e87179"
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "readtool/fixtures_direct_read_file::lockfile_version": {
+      "baseline": [
+        "PASS",
+        "",
+        "743a3317c2ec0d1b"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "743a3317c2ec0d1b"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "743a3317c2ec0d1b"
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "readtool/fixtures_direct_read_file::log_error_hunt": {
+      "baseline": [
+        "PASS",
+        "",
+        "9d7aa5596d7504eb"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "9d7aa5596d7504eb"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "9d7aa5596d7504eb"
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "readtool/fixtures_direct_read_file::lying_extension": {
+      "baseline": [
+        "FAIL",
+        "failed: flagged binary",
+        "d6f615b85009a2c9"
+      ],
+      "r1": [
+        "FAIL",
+        "failed: flagged binary",
+        "d6f615b85009a2c9"
+      ],
+      "r2": [
+        "FAIL",
+        "failed: flagged binary",
+        "d6f615b85009a2c9"
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "readtool/fixtures_direct_read_file::minified_backoff": {
+      "baseline": [
+        "PASS",
+        "",
+        "ebc3d45cf379ba02"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "ebc3d45cf379ba02"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "ebc3d45cf379ba02"
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "readtool/fixtures_direct_read_file::near_miss_filename": {
+      "baseline": [
+        "PASS",
+        "",
+        "e3788ea56dd56195"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "e3788ea56dd56195"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "e3788ea56dd56195"
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "readtool/fixtures_direct_read_file::past_eof": {
+      "baseline": [
+        "PASS",
+        "",
+        "b8b15fb954e9dbf5"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "b8b15fb954e9dbf5"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "b8b15fb954e9dbf5"
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "readtool/fixtures_direct_read_file::unicode_filename": {
+      "baseline": [
+        "PASS",
+        "",
+        "4e892f8bdb3d56d1"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "4e892f8bdb3d56d1"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "4e892f8bdb3d56d1"
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "token_accounting/ab_image_cost_calibration": {
+      "baseline": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "token_accounting/replay_gates::cli_deflated": {
+      "baseline": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "token_accounting/replay_gates::cli_inflated": {
+      "baseline": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "token_accounting/replay_gates::cli_past_window_inflated": {
+      "baseline": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "token_accounting/replay_gates::gateway_deflated": {
+      "baseline": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "token_accounting/replay_gates::gateway_inflated": {
+      "baseline": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "token_accounting/replay_gates::gateway_past_window_inflated": {
+      "baseline": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "token_accounting/replay_gates::overflow_recovery": {
+      "baseline": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "token_accounting/replay_gates::restore_deflated": {
+      "baseline": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "token_accounting/replay_gates::restore_inflated": {
+      "baseline": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "token_accounting/replay_gates::restore_past_window_inflated": {
+      "baseline": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "token_accounting/replay_gates::usage_less_fallback": {
+      "baseline": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1": [
+        "PASS",
+        "",
+        null
+      ],
+      "r2": [
+        "PASS",
+        "",
+        null
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    },
+    "token_accounting/worktree_prompt_prefix": {
+      "baseline": [
+        "PASS",
+        "",
+        "5dd5c33ce53f80cb"
+      ],
+      "r1": [
+        "PASS",
+        "",
+        "5dd5c33ce53f80cb"
+      ],
+      "r2": [
+        "PASS",
+        "",
+        "5dd5c33ce53f80cb"
+      ],
+      "r1_equal": true,
+      "r2_equal": true
+    }
+  },
+  "not_measured": [
+    "the exact staging head c5e8be14b4 on its own parent aea969677c (F14 ran on the cherry-pick onto main 34f8ec3b40, same patch-id)",
+    "flakiness of the item's own tests beyond GREEN 3/3 (P5's flaky = false part)"
+  ],
+  "gates_effect": {
+    "guards.F14": "EQUAL",
+    "P5": "stays PENDING: F14 is now equal, and RED, GREEN 3/3, per-hunk sabotage (unpinned rows listed) and ADJACENT identical are recorded with receipts, but flaky = false is not recorded (the manifest says flaky was not measured beyond GREEN 3/3)"
+  }
+}

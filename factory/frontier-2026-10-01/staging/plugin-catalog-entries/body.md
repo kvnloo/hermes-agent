@@ -31,14 +31,14 @@ Refs #102922
 ## Changes Made
 
 - `plugin-catalog/paw-pii.yaml`: a new entry pinned to `<new-sha>` in kvnloo/pii, subdir `integrations/hermes`.
-  - The capabilities match what `register()` wires at that commit and what the plugin's own `plugin.yaml` declares: tools `detect_pii` and `redact_pii`, and middleware `llm_request` and `tool_execution`.
-  - The description discloses what happens on first use. The program downloads from programasweights.com and a base model (`<size measured at first use>`) downloads from Hugging Face. After that, inference is local.
+  - The capabilities match what `register()` wires at that commit: tools `detect_pii` and `redact_pii`, and middleware `llm_request` and `tool_execution`. `hermes plugins validate` (step 2 below) checks that the plugin's own `plugin.yaml` declares the same.
+  - The description discloses the downloads the plugin needs: the program from programasweights.com and a base model (`<base-model size at the new pin>`) from Hugging Face, `<when they download at the new pin>`. After that, inference is local.
   - The description also states what happens when the model cannot load (`<behaviour at the new pin>`) and that each string is scanned separately, which adds local inference time per turn.
 
 ## How to Test
 
 1. `python3 scripts/validate_plugin_catalog.py plugin-catalog/`
-2. `hermes plugins validate --install-deps <clone of kvnloo/pii at <new-sha>>/integrations/hermes`
+2. `git clone https://github.com/kvnloo/pii && git -C pii checkout <new-sha>`, then `hermes plugins validate --install-deps pii/integrations/hermes`
 3. `scripts/run_tests.sh tests/hermes_cli/test_plugin_catalog.py tests/scripts/test_validate_plugin_catalog.py tests/website/test_extract_plugins.py`
 
 ## Checklist
@@ -67,7 +67,7 @@ Refs #102922
 $ python3 scripts/validate_plugin_catalog.py plugin-catalog/
 <output at <new-sha>>
 
-$ hermes plugins validate --install-deps <clone>/integrations/hermes
+$ hermes plugins validate --install-deps pii/integrations/hermes
 <output at <new-sha>>
 
 $ scripts/run_tests.sh tests/hermes_cli/test_plugin_catalog.py tests/scripts/test_validate_plugin_catalog.py tests/website/test_extract_plugins.py

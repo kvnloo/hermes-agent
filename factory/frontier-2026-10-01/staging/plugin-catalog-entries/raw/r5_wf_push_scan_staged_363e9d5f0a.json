@@ -1,0 +1,97 @@
+{
+ "ref": "363e9d5f0a15ffe143d4a8b573b4898d6e428115",
+ "ref_sha": "363e9d5f0a15ffe143d4a8b573b4898d6e428115",
+ "branch": "staged/plugin-catalog-entries",
+ "push_workflows": [
+  {
+   "file": ".github/workflows/archive-inputs.yml",
+   "branches": [
+    "main"
+   ],
+   "branches-ignore": null,
+   "tags": null
+  },
+  {
+   "file": ".github/workflows/ci.yaml",
+   "branches": [
+    "main"
+   ],
+   "branches-ignore": null,
+   "tags": null
+  },
+  {
+   "file": ".github/workflows/deploy-site.yml",
+   "branches": [
+    "main"
+   ],
+   "branches-ignore": null,
+   "tags": null
+  },
+  {
+   "file": ".github/workflows/docker.yml",
+   "branches": [
+    "main"
+   ],
+   "branches-ignore": null,
+   "tags": null
+  },
+  {
+   "file": ".github/workflows/js-autofix.yml",
+   "branches": [
+    "main"
+   ],
+   "branches-ignore": null,
+   "tags": null
+  },
+  {
+   "file": ".github/workflows/live-providers.yml",
+   "branches": null,
+   "branches-ignore": null,
+   "tags": [
+    "v*"
+   ]
+  },
+  {
+   "file": ".github/workflows/nix.yml",
+   "branches": [
+    "main"
+   ],
+   "branches-ignore": null,
+   "tags": null
+  },
+  {
+   "file": ".github/workflows/skills-index.yml",
+   "branches": [
+    "main"
+   ],
+   "branches-ignore": null,
+   "tags": null
+  },
+  {
+   "file": ".github/workflows/termux-verify.yml",
+   "branches": [
+    "main"
+   ],
+   "branches-ignore": null,
+   "tags": null
+  },
+  {
+   "file": ".github/workflows/windows-install-update-e2e.yml",
+   "branches": [
+    "wine2e-install/**"
+   ],
+   "branches-ignore": null,
+   "tags": null
+  },
+  {
+   "file": ".github/workflows/windows-venv-e2e.yml",
+   "branches": [
+    "wine2e/**"
+   ],
+   "branches-ignore": null,
+   "tags": null
+  }
+ ],
+ "matching_branch_push": [],
+ "workflow_push_matches": 0
+}

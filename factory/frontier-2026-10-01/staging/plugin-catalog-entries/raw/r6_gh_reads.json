@@ -1,0 +1,94 @@
+{
+ "round": "r6 (fix after the fresh verifier)",
+ "note": "read-only gh queries; no writes",
+ "reads": [
+  {
+   "cmd": "gh api repos/NousResearch/hermes-agent/commits/main --jq .sha + \" \" + .commit.committer.date",
+   "rc": 0,
+   "out": "1798b335c43d7e59066ad74a8c2d1d1c9fd537fe 2026-10-01T19:08:13Z",
+   "err": "",
+   "label": "upstream main",
+   "at": "2026-10-01T19:08:41Z"
+  },
+  {
+   "cmd": "gh api repos/NousResearch/hermes-agent/contents/plugin-catalog/paw-pii.yaml?ref=main --jq .sha",
+   "rc": 1,
+   "out": "{\"message\":\"Not Found\",\"documentation_url\":\"https://docs.github.com/rest/repos/contents#get-repository-content\",\"status\":\"404\"}",
+   "err": "gh: Not Found (HTTP 404)",
+   "label": "paw-pii.yaml on upstream main",
+   "at": "2026-10-01T19:08:48Z"
+  },
+  {
+   "cmd": "gh api repos/NousResearch/hermes-agent/compare/105e8765863f23f837b19433c648de1208415f2f...main --jq [.status, .ahead_by, ([.files[].filename|split(\"/\")[0]]|unique)] | @json",
+   "rc": 0,
+   "out": "[\"ahead\",35,[\"agent\",\"run_agent.py\",\"tests\",\"website\"]]",
+   "err": "",
+   "label": "compare 105e876586...main: files",
+   "at": "2026-10-01T19:08:57Z"
+  },
+  {
+   "cmd": "gh search prs paw-pii --repo NousResearch/hermes-agent --state open --json number --jq length",
+   "rc": 0,
+   "out": "0",
+   "err": "",
+   "label": "open PRs 'paw-pii'",
+   "at": "2026-10-01T19:08:58Z"
+  },
+  {
+   "cmd": "gh search prs PII --repo NousResearch/hermes-agent --state open --limit 200 --json number --jq length",
+   "rc": 0,
+   "out": "111",
+   "err": "",
+   "label": "open PRs 'PII' (count, limit 200)",
+   "at": "2026-10-01T19:09:01Z"
+  },
+  {
+   "cmd": "gh api repos/kvnloo/pii/commits/main --jq .sha",
+   "rc": 0,
+   "out": "d891ebdd3a3dab27a3451923eb56f955253a2782",
+   "err": "",
+   "label": "kvnloo/pii main",
+   "at": "2026-10-01T19:09:02Z"
+  },
+  {
+   "cmd": "gh api repos/kvnloo/hermes-agent/git/matching-refs/heads/staged/plugin-catalog-entries --jq [.[] | .ref + \" \" + .object.sha] | @json",
+   "rc": 0,
+   "out": "[\"refs/heads/staged/plugin-catalog-entries 98c305b3ec8d03693f4dc94bade69035cb15ff7d\"]",
+   "err": "",
+   "label": "fork staged/plugin-catalog-entries",
+   "at": "2026-10-01T19:09:02Z"
+  },
+  {
+   "cmd": "gh pr view 129692 -R NousResearch/hermes-agent --json state,reviewDecision --jq [.state,.reviewDecision]|@json",
+   "rc": 0,
+   "out": "[\"OPEN\",\"CHANGES_REQUESTED\"]",
+   "err": "",
+   "label": "#129692 state and review states",
+   "at": "2026-10-01T19:09:04Z"
+  },
+  {
+   "cmd": "gh issue view 102922 -R NousResearch/hermes-agent --json state --jq .state",
+   "rc": 0,
+   "out": "OPEN",
+   "err": "",
+   "label": "#102922 state",
+   "at": "2026-10-01T19:09:05Z"
+  },
+  {
+   "cmd": "gh issue view 412 -R kvnloo/hermes-agent --json state,title --jq [.state, (.title|test(\"HOLD\"))]|@json",
+   "rc": 0,
+   "out": "[\"OPEN\",true]",
+   "err": "",
+   "label": "kvnloo/hermes-agent#412 state and HOLD in title",
+   "at": "2026-10-01T19:09:05Z"
+  },
+  {
+   "cmd": "gh issue view 404 -R kvnloo/hermes-agent --json state --jq .state",
+   "rc": 0,
+   "out": "OPEN",
+   "err": "",
+   "label": "kvnloo/hermes-agent#404 state",
+   "at": "2026-10-01T19:09:05Z"
+  }
+ ]
+}

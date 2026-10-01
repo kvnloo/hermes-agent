@@ -33,7 +33,7 @@ common = {
     "base_revision": BASE,
     "head_revision": HEAD,
     "policy_revision": {"factory": "FACTORY.md (frontier-2026-10-01)", "protocol": "promotion-readiness-2026-10-01/PROTOCOL.md"},
-    "env": {"host": "<local-host>", "python": "3.11.14 (HERMES_PYTHON venv, read-only bind)",
+    "env": {"host": "<host>", "python": "3.11.14 (HERMES_PYTHON venv, read-only bind)",
             "sandbox": "bwrap ro-root, --unshare-net (connect 1.1.1.1:443 -> ENETUNREACH), pidns, clearenv, "
                        "$HERMES_INSTALL masked except venv, isolated HOME/HERMES_HOME"},
     "provenance": "self",

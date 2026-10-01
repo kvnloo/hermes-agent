@@ -40,17 +40,17 @@ The loopback-only connect guard and the environment reset follow Teknium's `eval
   - NousResearch/hermes-agent#123635 by Halldrix landed on main as 9 commits. Its first 8 (from `a7c2df3846`, the commit it landed on, up to `ac0b07597d`, the 8th, a write-path hardening commit) were graded on the tests the same author added in the 9th commit (`8ded06be29`, a separate read-path fix). Any red/green check refuses them, because those 8 commits never touched that path. The case does exercise "grade head on the later tests too".
   - A fork head that conflicts with main was refused by `git merge-tree`, before any check ran.
 - **Tuning.** After the first pass, the runner was changed (so that head is graded on the later tests) and one known-good spec's expected failure text was rewritten. There is no held-out set.
-- **One false credit.** One reverted upstream fix (NousResearch/hermes-agent#124792) passed every check. Its tests pin the behaviour it changed, not the one it broke. Red/green checks cannot see that class of problem.
+- **One false credit.** One reverted upstream fix (NousResearch/hermes-agent#124792) passed all four checks (only the recorded ownership step, which was not graded for it, kept it from a full pass). Its tests pin the behaviour it changed, not the one it broke. Red/green checks cannot see that class of problem.
 
 ## Found along the way
 
-On main `aea969677c` (the test file, `agent/agent_init.py` and the cited fetch at `agent/model_metadata.py` line 909 are unchanged on `44a1ce9724`), `tests/agent/test_length_continuation_thinking_exhaustion.py`, run under `scripts/run_tests.sh`, starts `agent/model_metadata.py` `fetch_model_metadata` in a background thread. That thread resolves `openrouter.ai` to fetch the models list. The 10 tests still pass, so an unguarded run quietly contacts openrouter.ai. The trace is consistent with the `openrouter-prewarm` thread that `agent/agent_init.py` starts, but this is not confirmed, and it is not known which fixture leaves it enabled. It has not been reported upstream. NousResearch/hermes-agent#109924 (MaxFreedomPollard, open) changes how that prewarm thread is claimed, not test hermeticity.
+On main `aea969677c` (the test file, `agent/agent_init.py` and the cited fetch at `agent/model_metadata.py` line 909 are unchanged on `44a1ce9724` and on `34f8ec3b40`), `tests/agent/test_length_continuation_thinking_exhaustion.py`, run under `scripts/run_tests.sh`, starts `agent/model_metadata.py` `fetch_model_metadata` in a background thread. That thread resolves `openrouter.ai` to fetch the models list. The 10 tests still pass, so an unguarded run quietly contacts openrouter.ai. The trace is consistent with the `openrouter-prewarm` thread that `agent/agent_init.py` starts, but this is not confirmed, and it is not known which fixture leaves it enabled. It has not been reported upstream. NousResearch/hermes-agent#109924 (MaxFreedomPollard, open) changes how that prewarm thread is claimed, not test hermeticity. NousResearch/hermes-agent#122843 (dskwe, open) adds two tests to the same test file with the same fixture; it fixes a truncation notice, not hermeticity, but a hermeticity fix there would touch the same module.
 
 ## If it ever rides along upstream
 
 The only form considered is a ride-along on a real fix, never this branch as it stands. The candidate is a hermeticity fix for the test above. If that fix's thread wants review tooling:
 
-- drop the work-order envelope and the receipt format;
+- drop the work-order wrapper and the receipt format;
 - move the code out of `evals/_factory` to a neutral path;
 - offer only the guard and the per-hunk revert check, as a small helper used by that fix's own regression test.
 
@@ -75,6 +75,8 @@ That PR would get its own body, following `.github/PULL_REQUEST_TEMPLATE.md`. Th
   - the verdict ignores tainted processes outside the four checks;
   - the pin process imports `agent.relay_runtime` even when the checkout lacks it. This one is red only on an interpreter whose editable hermes-agent install points into the real `~/.hermes`, as the one used here does. Elsewhere no test catches it.
 - Adjacent: `scripts/run_tests.sh tests/evals/ evals/postmortem/tests/test_postmortem_harness.py -q`: 9 of 9 tests pass, in 4 files.
-- POSIX-only (`pwd`, `nice`, process groups); the test skips on Windows. Not tried on macOS. Linux (CachyOS), Python 3.11.14.
+- Upstream's own eval probes: the commit, replayed onto main `34f8ec3b40` (clean cherry-pick, same patch-id), was run twice through a standing set of 19 probes built on upstream's `evals/` (40 verdicts) in a kernel sandbox. 17 of them run upstream's own probe scripts. One of those, the worktree prompt-prefix script, prints no verdict, so we judge its output on fixed invariants. The other two are different: the `read_file` check is a small helper we wrote that reads upstream's own fixtures, and the finalizer-schedule check is a pytest run of `tests/e2e` with an `evals` pytest plugin. Both runs matched main on every verdict: 36 of 40 pass, and the same 4 fail with the same failure text. No probe references the new files, so this shows only that the branch leaves those probes alone. The commit also merges cleanly onto `34f8ec3b40` (`git merge-tree`).
+- Lint: `ruff check` is clean. `ruff format --check` would reformat 2 of the 3 files; it is not enforced by CI.
+- POSIX-only (`pwd`, `nice`, process groups); the test skips on Windows. Not tried on macOS. Linux, Python 3.11.14.
 
 AI assistance: the runner, the tests, the runs above and this note were written with Claude Code (Opus 5.5).
