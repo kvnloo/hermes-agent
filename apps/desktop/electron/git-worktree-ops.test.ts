@@ -270,9 +270,10 @@ test('addWorktree: base param branches off a specified local branch', async () =
   }
 })
 
-test('addWorktree: base origin/main does not set up upstream tracking', async () => {
-  // Two repos: a bare "remote" and a clone, so origin/main resolves as a
-  // remote-tracking ref — the condition that triggers auto-tracking.
+test.each(['origin', 'upstream'])('addWorktree: base %s/main does not set up upstream tracking', async remote => {
+  // Two repos: a bare "remote" and a clone, so <remote>/main resolves as a
+  // remote-tracking ref — the condition that triggers auto-tracking, whatever
+  // the remote is called (`upstream` is the usual fork layout).
   const remoteDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hermes-remote-'))
   const cloneDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hermes-clone-'))
   const git = (...args) => execFileSync('git', args, { cwd: cloneDir }).toString().trim()
@@ -294,12 +295,12 @@ test('addWorktree: base origin/main does not set up upstream tracking', async ()
       'root'
     ])
 
-    // Clone so origin/main exists as a remote-tracking ref.
-    execFileSync('git', ['clone', remoteDir, cloneDir])
+    // Clone so <remote>/main exists as a remote-tracking ref.
+    execFileSync('git', ['clone', '--origin', remote, remoteDir, cloneDir])
 
     const result = await addWorktree(
       cloneDir,
-      { base: 'origin/main', branch: 'feature-branch', name: 'feature-branch' },
+      { base: `${remote}/main`, branch: 'feature-branch', name: 'feature-branch' },
       'git'
     )
 

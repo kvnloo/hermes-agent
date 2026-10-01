@@ -350,16 +350,16 @@ async function addWorktree(repoPath, options, gitBin) {
       if (await gitOk(gitBin, ['check-ref-format', '--branch', remoteBranch], root)) {
         await fetchTrackingRef(gitBin, root, 'origin', remoteBranch)
       }
-
-      // When branching off a remote-tracking ref, git auto-sets up tracking
-      // (e.g. `new-branch` → tracks `origin/main`). The user almost certainly
-      // wants a standalone local branch — like `git checkout origin/main &&
-      // git checkout -b new-branch` — not a branch silently wired to the
-      // remote's upstream. `--no-track` prevents that.
-      args.push('--no-track')
     }
 
-    args.push(base)
+    // When branching off a remote-tracking ref, git auto-sets up tracking
+    // (e.g. `new-branch` → tracks `origin/main`, or `upstream/main` in a fork
+    // layout). The user almost certainly wants a standalone local branch — like
+    // `git checkout origin/main && git checkout -b new-branch` — not a branch
+    // silently wired to the remote's upstream. `--no-track` prevents that for
+    // any remote name. Under git's default branch.autoSetupMerge a local base is
+    // not tracked anyway; under always/inherit `--no-track` keeps it standalone too.
+    args.push('--no-track', base)
   }
 
   try {

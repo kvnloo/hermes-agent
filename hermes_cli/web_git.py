@@ -670,10 +670,11 @@ def worktree_add(cwd: str, options: dict) -> dict:
             # "origin/*" would fetch every branch: only fetch valid branch names.
             if _git(root, ["check-ref-format", "--branch", remote_branch])[0] == 0:
                 _fetch_tracking_ref(root, "origin", remote_branch)
-            # Branching off a remote-tracking ref auto-wires upstream tracking; the user wants
-            # a standalone local branch (Electron-op parity).
-            args.append("--no-track")
-        args.append(base)
+        # Branching off a remote-tracking ref auto-wires upstream tracking for any remote name
+        # (origin, upstream, ...); the user wants a standalone local branch (Electron-op parity).
+        # Under git's default branch.autoSetupMerge a local base is not tracked anyway; under
+        # always/inherit --no-track keeps it standalone too.
+        args += ["--no-track", base]
     code, _, err = _git(root, args)
     if code != 0:
         if "already exists" not in (err or "").lower():
