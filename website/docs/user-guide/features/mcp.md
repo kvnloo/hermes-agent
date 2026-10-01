@@ -120,7 +120,9 @@ available. This change does not migrate existing connections to
 Catalog entries can require:
 
 - **API key** — Hermes prompts at install time and writes the value to
-  `~/.hermes/.env`. Non-secret values (base URLs) go to the same file.
+  `~/.hermes/.env`. Non-secret values (server URLs, OAuth client IDs) are
+  not written to `.env`: Hermes inlines them into the server's
+  `mcp_servers` block in `config.yaml`.
 - **OAuth** (remote MCP) — written as `auth: oauth` in your config; the MCP
   client opens a browser on first connection.
 - **OAuth** (third-party provider like Google/GitHub) — Hermes points you at
@@ -245,8 +247,10 @@ the vendor's developer console. Asana's V2 server
 
 Such a manifest declares the credentials under `auth.env` and pins the
 client under `auth.oauth`, so installing it (CLI picker, web dashboard or
-Desktop) prompts for the Client ID / Client secret, stores them in the
-profile's `.env`, and writes only `${VAR}` references to `config.yaml`:
+Desktop) prompts for the Client ID / Client secret. The secret is stored in
+the profile's `.env` and `config.yaml` keeps only its `${VAR}` reference; the
+Client ID is declared `secret: false`, so its value is inlined into
+`config.yaml`:
 
 ```yaml
 mcp_servers:
@@ -254,8 +258,8 @@ mcp_servers:
     url: https://mcp.asana.com/v2/mcp
     auth: oauth
     oauth:
-      client_id: "${ASANA_CLIENT_ID}"
-      client_secret: "${ASANA_CLIENT_SECRET}"
+      client_id: "<your Asana MCP app Client ID>"   # inlined (non-secret)
+      client_secret: "${ASANA_CLIENT_SECRET}"       # resolved from .env
       redirect_host: localhost      # the vendor matches the redirect URL exactly
       redirect_port: 27890          # register http://localhost:27890/callback on the app
 ```

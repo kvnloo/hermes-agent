@@ -188,9 +188,12 @@ their connection state and starts an authorization: in the desktop app the call
 shows a card, blocks until each app is connected or skipped, and reports the
 outcomes; elsewhere it returns a connect link per app for the user to open.
 Disconnecting an account is done by the user in the Portal. The same tool also installs, enables and authorizes
-local MCP servers from the catalog (targets with `mcp: true`), so it is
-present whether or not you are signed in; only the managed-connector actions
-need the sign-in.
+local MCP servers from the catalog (targets with `mcp: true`), but it sits
+behind the same gate as connectors: the tool is in the schema only when
+`tools.connectors.enabled` is on and you are on the Nous free tier or signed
+in to a Portal account that has connectors enabled (the `managed_tools` claim
+on its token). Signed-out sessions and accounts without that claim never see
+it.
 
 The desktop backend's account-list and disconnect APIs use the Portal's
 account-management service, including its organization membership checks and

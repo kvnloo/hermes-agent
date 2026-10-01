@@ -193,7 +193,8 @@ class PluginLoaderMixin:
         short-circuits on ``_discovered`` and never fires). See
         :func:`hermes_cli.plugins_activation.plugin_activation_summary` for the payload: ``activated_now``
         (gateway commands/transforms/hooks/callbacks, live at once) vs ``deferred`` (``tools``/``prompt``
-        until the next session, ``mcp_servers`` — the plugin's mcp.json server names — until ``mcp.reload``).
+        until the next session, ``mcp_servers`` — the plugin's mcp.json server names — until
+        ``plugins_activation.load_and_go_live`` connects them in place, else ``/reload-mcp``).
         Listeners belong to the process (gateway runner, TUI server), not to a plugin, so ``unload()``
         never clears them. Returns an unsubscribe callable. Fires on the discovering thread with the
         discovery lock released; marshal onto your own loop."""

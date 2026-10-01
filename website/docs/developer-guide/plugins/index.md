@@ -1582,15 +1582,23 @@ re-discovery. Every one of those paths runs a **real forced rescan** (`discover_
   by a late plugin is wired without a restart. Re-wiring is deduped per native client by `(plugin, factory
   qualname)`; on Telegram the late handlers are hoisted ahead of core's catch-all `filters.COMMAND` /
   `CallbackQueryHandler` (PTB dispatches the first match per group), exactly as they would sit at connect.
+- **Live in open chats now** — after an install/enable/update, `activate_plugin_now` runs
+  `load_and_go_live` (`hermes_cli/plugins_activation.py`) in the process that hosts the profile's chats
+  (`hermes plugins install` asks the running dashboard/Desktop backend to do it). It connects the summary's
+  `mcp_servers` (the plugin's `mcp.json` servers, by their mcp.json names) and lists the plugin's skills,
+  reports both as `live_now`, and hands them to every open chat of that profile on its next turn. MCP tools
+  stay deferred behind `tool_search`/`tool_call`, so the cached prompt prefix is unchanged.
 - **Deferred** — `tools` and `prompt` sections apply from the **next session** (the running session's
-  prompt/tool schema is cache-stable, same rule as `/skills install`); `mcp_servers` (the plugin's
-  `mcp.json` servers, by their mcp.json names) connect on `mcp.reload` or the next session.
+  prompt/tool schema is cache-stable, same rule as `/skills install`). A process that did not run
+  `load_and_go_live` (such as the messaging gateway answering `reload-plugins`) still lists `mcp_servers`
+  under `deferred`; there they connect on `/reload-mcp` or the next session.
 - There is no un-wire: disabling a plugin mid-run keeps its already-wired handlers until the gateway
   restarts, and the surfaces say so.
 
 Install surfaces report exactly this split: `hermes plugins install/enable` prints it after nudging the running
-gateway (`reload-plugins` control-socket verb), `plugins.manage install/toggle/update` returns `activation` +
-`gateway_reloaded` (`restart_required` is true only when no gateway answered).
+gateway (`reload-plugins` control-socket verb), `plugins.manage install/toggle/update` returns `activation`
+(`live_now` MCP servers and skills, `deferred` tools and prompt sections) + `gateway_reloaded`
+(`restart_required` is true only when no gateway answered).
 
 :::tip
 This guide covers **general plugins** (tools, hooks, slash commands, CLI commands). The sections below sketch the authoring pattern for each specialized plugin type; each links to its full guide for field reference and examples.

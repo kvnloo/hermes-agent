@@ -307,7 +307,8 @@ Plugins that load after the adapters connected (install/enable from the CLI, Des
   running gateway to force-rescan the requested (served) home; the answer carries `plugins`, per-plugin
   `activations` and `adapters_rewired`, so the caller can say "active now" truthfully.
 - **Scope limit** — handlers only. Tools and system-prompt sections of a late plugin wait for the next
-  session (prompt-cache invariant); portable MCP servers wait for `mcp.reload`. Nothing un-wires on disable.
+  session (prompt-cache invariant); portable MCP servers wait for `/reload-mcp` or the next session
+  (only the chat host's `load_and_go_live` connects them in place). Nothing un-wires on disable.
 
 ## Related Docs
 
