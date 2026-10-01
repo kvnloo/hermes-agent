@@ -131,6 +131,7 @@ function Harness({
   requestGateway,
   resumeStoredSession,
   runtimeIdByStoredSessionIdRef: runtimeIdByStoredSessionIdRefProp,
+  seedAdoptedRunningTurn,
   seedMessages,
   seedStreamId,
   seedTurnStartedAt,
@@ -156,6 +157,7 @@ function Harness({
   requestGateway: <T>(method: string, params?: Record<string, unknown>, timeoutMs?: number) => Promise<T>
   resumeStoredSession?: (storedSessionId: string) => Promise<void> | void
   runtimeIdByStoredSessionIdRef?: MutableRefObject<Map<string, string>>
+  seedAdoptedRunningTurn?: boolean
   seedMessages?: unknown[]
   seedStreamId?: null | string
   seedTurnStartedAt?: null | number
@@ -193,7 +195,8 @@ function Harness({
     interrupted: true,
     streamId: seedStreamId ?? null,
     turnStartedAt: seedTurnStartedAt ?? null,
-    interimBoundaryPending: false
+    interimBoundaryPending: false,
+    ...(seedAdoptedRunningTurn ? { adoptedRunningTurn: true } : {})
   } as never)
 
   const actions = usePromptActions({
@@ -2184,6 +2187,31 @@ describe('usePromptActions submit / queue drain semantics', () => {
       },
       1_800_000
     )
+  })
+
+  it('clears a leaked adoptedRunningTurn on a fresh submit (this window owns the turn)', async () => {
+    // An adopted turn that ended by Stop / error / heartbeat (not a normal
+    // message.complete) leaves adoptedRunningTurn=true. Left in place, the
+    // next locally submitted turn settles with a forced stored-history
+    // hydrate over a reply this window streamed itself.
+    const seeds: Record<string, unknown>[] = []
+    const requestGateway = vi.fn(async () => ({}) as never)
+
+    let handle: HarnessHandle | null = null
+    await actRender(
+      <Harness
+        onReady={h => (handle = h)}
+        onSeedState={s => seeds.push(s)}
+        refreshSessions={async () => undefined}
+        requestGateway={requestGateway}
+        seedAdoptedRunningTurn
+      />
+    )
+
+    await handle!.submitText('my own prompt')
+
+    expect(seeds.length).toBeGreaterThan(0)
+    expect(seeds.every(s => s.adoptedRunningTurn === false)).toBe(true)
   })
 
   it('arms turnStartedAt at submit time instead of waiting for message.start', async () => {

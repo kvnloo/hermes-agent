@@ -503,6 +503,13 @@ export function useSubmitPrompt(deps: SubmitPromptDeps) {
             // mutateStream/completeAssistantMessage drop every delta of this turn
             // (what made drained-after-interrupt sends go silent).
             interrupted: false,
+            // A turn this window submits is not adopted. Only a normal
+            // message.complete consumes adoptedRunningTurn, so an adopted turn
+            // that ended by Stop, error or heartbeat leaves it set — and the
+            // stale flag would force a stored-history hydrate over the reply
+            // this window is about to stream. (Not cleared at message.start:
+            // a subagent watch window's mirror emits one for a turn it adopted.)
+            adoptedRunningTurn: false,
             // Arm the turn clock at send, not at the backend's message.start —
             // the round trip (submit RPC → gateway accept → WS event) can take
             // seconds under load, and the honest latency clock starts when the

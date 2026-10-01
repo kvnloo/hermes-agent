@@ -526,6 +526,8 @@ export function applyReloadOptimistic(state: ClientSessionState, plan: ReloadPla
     awaitingResponse: true,
     busy: true,
     interrupted: false,
+    // Regenerate starts a turn from this window — not adopted (see submit.ts).
+    adoptedRunningTurn: false,
     messages: [
       ...state.messages.slice(0, plan.userIndex + 1),
       ...state.messages
@@ -664,6 +666,8 @@ export function applyRewindOptimistic(
     awaitingResponse: true,
     busy: true,
     interrupted: false,
+    // Restore/edit starts a turn from this window — not adopted (see submit.ts).
+    adoptedRunningTurn: false,
     messages: editedMessage
       ? [...state.messages.slice(0, sourceIndex), editedMessage]
       : state.messages.slice(0, sourceIndex + 1),
