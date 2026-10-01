@@ -1,6 +1,6 @@
 """Arithmetic contract of the shared send-path image-eviction policy (#113517).
 
-Both outbound passes (``context_compressor.evict_stale_outbound_tool_images`` and
+Both outbound passes (``context_compressor_media.evict_stale_outbound_tool_images`` and
 ``anthropic_message_convert._evict_old_screenshots``) translate their message shapes into
 ``(carrier blocks newest-first, reserved)`` and call this one function; the shape tests in
 ``test_outbound_stale_vision.py`` / ``test_computer_use.py`` cover the translation, this file

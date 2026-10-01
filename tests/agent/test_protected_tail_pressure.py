@@ -22,8 +22,8 @@ from agent.context_compressor import (
     ContextCompressor,
     _MAX_TAIL_MESSAGE_FLOOR,
     _PRESSURE_KEEP_RECENT_MESSAGES,
-    _tool_content_has_images,
 )
+from agent.context_compressor_media import _tool_content_has_images
 from agent.model_metadata import estimate_messages_tokens_rough
 from agent.prompt_builder import steer_user_row
 from agent.turn_context import compression_made_progress

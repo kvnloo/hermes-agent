@@ -150,7 +150,7 @@ def assemble_api_request(
     # when prune fires, and the Anthropic adapter's keep-window never sees
     # OpenAI-style tool-result image_url parts. The per-call clone is rewritten in
     # place; persisted history is untouched.
-    from agent.context_compressor import evict_stale_outbound_tool_images
+    from agent.context_compressor_media import evict_stale_outbound_tool_images
 
     evict_stale_outbound_tool_images(api_messages)
 

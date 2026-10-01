@@ -13,8 +13,8 @@ from unittest.mock import patch
 
 import pytest
 
-from agent.context_compressor import (
-    ContextCompressor,
+from agent.context_compressor import ContextCompressor
+from agent.context_compressor_media import (
     _content_has_images,
     _is_image_part,
     _strip_historical_media,

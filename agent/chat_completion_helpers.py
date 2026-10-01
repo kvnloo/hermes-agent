@@ -2254,7 +2254,7 @@ def _iteration_summary_api_messages(agent, messages: list) -> list:
     # Compression/resume can orphan a tool result whose parent tool_call was summarized away.
     api_messages = agent._sanitize_api_messages(api_messages)
     # Same send-path vision eviction as the main loop (#89296).
-    from agent.context_compressor import evict_stale_outbound_tool_images
+    from agent.context_compressor_media import evict_stale_outbound_tool_images
     evict_stale_outbound_tool_images(api_messages)
     # Same per-model image strip as turn_api_request.build_api_request: this path builds
     # api_messages by hand and calls _build_api_kwargs directly, so a model recorded in
