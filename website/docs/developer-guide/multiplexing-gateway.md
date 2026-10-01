@@ -125,7 +125,8 @@ profile `.env` files into `os.environ` — leaks profile A's keys into profile
 B's turns and into every subprocess spawned with `env=dict(os.environ)`.
 
 - `build_profile_secret_scope(home)` merges the profile's `.env` with its
-  configured secret sources, skipping globals.
+  configured secret sources, skipping globals, then overlays the
+  administrator-managed `.env` last, with override.
 - `set_secret_scope(mapping)` installs it for the current task.
 - `get_secret(name)` resolves: global allowlist → active scope → fallback.
   The fallback is the load-bearing part:
@@ -279,8 +280,11 @@ Desktop plugins reach the gateway only through the ws JSON-RPC door, so
 profile enumeration and configuration live in
 `tui_gateway/methods_profiles.py`: `profiles.list`, `profiles.create`,
 `profiles.describe`, `profiles.configure`, `profiles.set_asset`,
-`profiles.get_asset`. Reads and writes run under the target profile's
-HERMES_HOME override. Asset writes are atomic, type- and size-capped.
+`profiles.get_asset`. Bodies that read or write a profile's config or
+credentials (`profiles.describe`, `profiles.configure`, and `profiles.create`'s
+seeding) run under the target profile's full runtime scope — home, secret
+scope and terminal scope, the same composition `@_profile_scoped` binds — not
+just its HERMES_HOME override. Asset writes are atomic, type- and size-capped.
 
 ## Failure modes
 
@@ -300,7 +304,8 @@ HERMES_HOME override. Asset writes are atomic, type- and size-capped.
   owner's fresh scope at every connect and reconnect, so it heals once that
   profile's `.env` or secret source supplies the value. The launch profile's
   mapping still includes its frozen launch env (systemd `Environment=` /
-  `op run` credentials resolve); a secondary resolves from its own files only.
+  `op run` credentials resolve); a secondary never inherits that frozen env
+  and resolves from its own files plus the administrator-managed `.env`.
 - Scoped platform gates: A2A (`A2A_PORT`) and Buzz enablement are read through
   the profile's own scope / `platforms.<name>` section, so a launch-profile
   env var no longer enables an inbound listener in every secondary.
