@@ -1,0 +1,2472 @@
+{
+ "architecture_brief": "Hermes upstream main was 663362680b on 2026-09-30 and had reached 298a01c79b by the end of the sweep (about 700 commits/day). Hermes is a narrow-waist core with a wide plugin edge.\n\nTurn pipeline. AIAgent.run_conversation takes a turn lease, then runs build_turn_context. Memory prefetch and pre_llm_call context are attached to the CURRENT user message's api_content sidecar, so replay stays byte-identical. The phase loop then runs, with every phase dispatched through conversation_loop._run_phase:\n- assemble request\n- preflight gate\n- API retry loop (llm_request/llm_execution middleware; transform_api_error_classification)\n- then either a tool round (8 workers or fewer, segmented batches, tool_request/tool_execution middleware, pre/post_tool_call) or finish_text_response\n- then stop gates: verify-on-stop (opt-in since #84383), pre_verify (only after edits), and the kanban guard.\nfinalize_turn then does persist, post_llm_call, ContextEngine.on_turn_complete, memory sync_all + queue_prefetch, and the background-review fork. It also fires plugin on_session_end, which runs every turn despite its name.\n\nHard invariants:\n1. The per-conversation prompt cache is sacred. The system prompt stays byte-stable across its stable/context/volatile tiers. Compression is the only sanctioned cache break. Mid-conversation content must ride a user message or a tool result. Per-turn switching of the main model breaks the cache.\n2. Roles strictly alternate. The only synthetic user rows are /steer and the flagged stop-gate nudges.\n3. Profile scope is bound per activity. Use spawn_context_thread, secret_scope and hermes_home_key; background threads must carry their ContextVars.\n4. Code shape: split files over ~2k lines; no elif ladders on names, no re-export shims, no defensive try/except-pass.\n\nFootprint ladder, in order of preference: extend existing \u2192 CLI+skill \u2192 check_fn tool \u2192 plugin \u2192 catalog MCP \u2192 core tool. The surface already includes:\n- 41 VALID_HOOKS. Examples: pre/post_api_request, whose payload already carries first_chunk_at and context_length; transform_tool_result (str-only); transform_terminal_output; pre_verify; subagent_*; on_skill_lifecycle; approval and kanban observers.\n- 4 middleware kinds.\n- 37 PluginContext members, including a single-slot register_context_engine, register_auxiliary_task, ctx.llm.complete_structured, and register_system_prompt_section (after_memory, \u22644k).\n- ABCs: MemoryProvider (builtin plus ONE external; the provider owns prefetch caching), ContextEngine (select_context is request-only and fails open), ProviderProfile, SecretSource.\n- Hook timeout is 30 s. pre_tool_call fails closed.\n\nPolicy:\n- The in-tree memory-provider set is closed.\n- No third-party-product plugins in plugins/. They ship as a standalone repo plus a SHA-pinned plugin-catalog/*.yaml (350 entries today; Jev, z0, Bend, SoL-Pi and Kerdoios belong there).\n- New hooks only with a real fire site and a consumer. The hook taxonomy (#64231) is still open.\n- When 3+ PRs compete for the same category, design the ABC first.\n- Use config.yaml, not new HERMES_* env vars. No outbound telemetry without opt-in.\n- Each fix needs 1\u20132 invariant tests that are red on base. Scope or config changes need E2E against a temp HERMES_HOME, including A\u2192B\u2192A multiplex. No change-detector tests. Run tests only through scripts/run_tests.sh.\n- Salvage by cherry-pick, preserving authorship.\n- Maintainers want ~3 open PRs per contributor. kvnloo has 13 open, 1 merged and 175 closed.\n\nEvidence culture: evals/ holds two-arm A/B harnesses whose verdicts live in SUMMARY/SCORECARD files: core_tool_deferral (288 runs), toolperf_abeval, the compaction recall exam (\u00b13.3 pt noise), readtool, codebase_navigability, and token_accounting replay_gates. Caching-adjacent changes need a cache-read ratio measured before and after. Teknium rejected prune-first compaction because of cache breaks, and named summary identifier retention as the real gap.\n\nWhat this means for the experiment factory:\n- Fork CI is unusable for this. Fork PR CI shows action_required or stays queued, and ACT-001 disabled 253 workflows. Run experiments locally or on k8s instead: FakeLLMServer or scripted replay at $0, or local llama.cpp on a single RTX 3080 Ti, where latency cells must run serially.\n- 97 of the 138 focus fork branches are more than 5k commits behind main. So a staging branch must be a promote/<slug>-vN rebuild recipe: one commit on fresh main, plus a manifest of member-branch SHAs, the RFC/issue, and the eval receipts. Never use one as a merge target for stale branches.\n- Third-party consumers promote as catalog entries, not core PRs.",
+ "features": [
+  {
+   "id": "cu-capture-mode-projection",
+   "title": "Capability-gated computer-use capture-mode projection",
+   "one_liner": "Pass the ax/vision capture mode to cua-driver output selectors when the driver advertises them, so it stops producing a screenshot or AX tree that Hermes then discards; som mode and older drivers are unchanged.",
+   "integration_point": "tools/computer_use/cua_backend_capture.py (_capture_vision,_capture_window_state,_gws_args); cua_backend_session.py:370 supports_input_property",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "strong",
+   "evidence_summary": "Xipong ran it on Windows against a Unity window with cua-driver 0.28.2 in vision mode: main timed out at 3.942 s, the PR returned a valid 321x608 PNG in 2.029 s (#113389). The vision path still discards the tree on main, and the file blob d60bce2b is identical at the branch base and on main. That a clean rebase works is unverified. The maintainer-salvaged AX-walk bound (#116512\u2192#118964) is a precedent for this class of change. On bare Xvfb the effect is null (26\u201332 ms), so the next measurement should use the sandbox-desktop image.",
+   "impact": 3,
+   "policy_fit": "fits (perf/robustness, no schema/config change)",
+   "readiness": "stage-now",
+   "score": 60,
+   "branches": [
+    "fork/feat/cu-capture-mode-projection-112639@7e809555e6"
+   ],
+   "issues": [
+    "NousResearch#113389",
+    "NousResearch#112639",
+    "kvnloo#316"
+   ],
+   "rfc": "NousResearch#112639",
+   "merged_from": [
+    "arch-surfaces:cu-capture-mode-projection",
+    "upstream-rfcs:cu-capture-mode-projection",
+    "fork-branches:cu-capture-projection"
+   ],
+   "experiments_needed": [
+    "E23"
+   ]
+  },
+  {
+   "id": "edit-tool-fail-loud-and-meter",
+   "title": "Fail-loud edit anchors + evals/edittool meter",
+   "one_liner": "Stop the context_aware fuzzy strategy from silently applying edits at wrong anchors, and ship a deterministic edittool battery.",
+   "integration_point": "tools/fuzzy_match.py:261,302 (_strategy_context_aware); callers file_operations.patch_replace, patch_parser; new evals/edittool/",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "strong",
+   "evidence_summary": "KeyArgo's meter on #111127 scored str_replace 6/6 and hermes_patch 5/6; on the missing_anchor trap the patch was applied through context_aware. #125376 is red on main: 'trim()' matched 'strip()' at similarity 0.923. A reviewer also found a trailing-newline bypass, and multi-line wrong anchors still apply. The KB reports a ~20 pt swing between edit-tool shapes on Qwen3.6-27B. Both PRs belong to other contributors, so the right move is to review or salvage them, not compete.",
+   "impact": 3,
+   "policy_fit": "fits",
+   "readiness": "stage-now",
+   "score": 58,
+   "issues": [
+    "NousResearch#111116",
+    "NousResearch#111127",
+    "NousResearch#125376",
+    "kvnloo#311"
+   ],
+   "merged_from": [
+    "fkb-harnesses:edit-tool-fail-loud-and-meter"
+   ],
+   "experiments_needed": [
+    "E01",
+    "E02"
+   ]
+  },
+  {
+   "id": "compaction-identifier-anchor-retention",
+   "title": "Summarizer identifier retention: anchor-index audit + v2 patterns",
+   "one_liner": "Measure which gold identifiers survive _build_anchor_index plus the summary, then capture the missing classes (delegation/kanban ids, config keys, env vars, exact error strings, root-cause lines from assistant text) without changing compaction cadence.",
+   "integration_point": "agent/context_compressor.py _ANCHOR_PATTERNS (L1057) / _build_anchor_index (L1071) / PRESERVE EXACTLY prompt; evals/compaction runner+reconstruct_lineage",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "strong",
+   "evidence_summary": "SCORECARD-2026-09-19-jev says the lost facts sat in assistant text and calls this a summariser-retention target. The shipping configuration scores 78.9% @55K. The 08-15 scorecard shows the anchor index lifted GUI closed-book recall from 23.3 to 60.0. Four readers proposed this independently.",
+   "impact": 4,
+   "policy_fit": "fits (teknium-owned eval line)",
+   "readiness": "needs-eval",
+   "score": 56,
+   "issues": [
+    "NousResearch#122274",
+    "NousResearch#122522",
+    "NousResearch#87326"
+   ],
+   "merged_from": [
+    "arch-core:anchor-index-identifier-coverage",
+    "fkb-harnesses:compaction-identifier-retention",
+    "fkb-literature:compaction-anchor-index-v2",
+    "z0evals:identifier-anchor-retention"
+   ],
+   "experiments_needed": [
+    "E03",
+    "E04",
+    "E05"
+   ]
+  },
+  {
+   "id": "surface-parity-invariant-cells",
+   "title": "Extend C17 prefix-stability + observer-correlation cells to every entrypoint",
+   "one_liner": "Add prefix-stability journeys for the gateway, api_server (/api/sessions and /v1/runs), ACP, serve WS and Bot Mode surface switches, plus parity cells that check observer payloads join on turn_id/api_request_id/tool_call_id.",
+   "integration_point": "tests/e2e/core/history/test_prefix_stability.py JOURNEYS; tests/e2e/core/parity/_helpers.py check_invariants; drivers _drive_gateway/_drive_acp/_drive_rpc",
+   "footprint_rung": "docs-or-eval-only",
+   "evidence_strength": "strong",
+   "evidence_summary": "#104414: a surface switch that rebuilt the prompt brought a 220K-token session back at a 1% cache hit. #45499 shows that surfaces which rebuild the agent per request are where prefix bugs hide. C17 currently covers only tui_gateway and the CLI (3 journeys). z0 receipts (#319) need identity joins on every surface. Includes measuring api_server's per-request _create_agent cost (currently unmeasured).",
+   "impact": 3,
+   "policy_fit": "fits (serves invariant #1; test-only)",
+   "readiness": "stage-now",
+   "score": 54,
+   "branches": [
+    "fork/lab/z0int/full-observer-v0"
+   ],
+   "issues": [
+    "NousResearch#104414",
+    "NousResearch#45499",
+    "NousResearch#120116",
+    "kvnloo#319"
+   ],
+   "merged_from": [
+    "arch-surfaces:prefix-stability-all-surfaces",
+    "arch-surfaces:observer-correlation-parity-cells",
+    "arch-surfaces:api-server-agent-reuse"
+   ],
+   "experiments_needed": [
+    "E07",
+    "E08",
+    "E09"
+   ]
+  },
+  {
+   "id": "offline-replay-ab-substrate",
+   "title": "Shared scripted-provider replay + surface-parametric paired A/B harness (factory core)",
+   "one_liner": "Pull the ~15 hand-rolled fake OpenAI servers into one evals/_replay fixture. Generalize core_tool_deferral and toolperf_abeval so an arm is defined as {SHA, config overlay, plugin set, provider tier} and can be driven through any of the 8 parity drivers.",
+   "integration_point": "evals/ shared module; tests/fakes/fake_llm_provider.py; evals/core_tool_deferral/{worker,orchestrator,report}.py; evals/toolperf_abeval; batch_runner.py base_url",
+   "footprint_rung": "docs-or-eval-only",
+   "evidence_strength": "strong",
+   "evidence_summary": "At least 6\u201315 evals re-implement a fake provider. The 288-run core_tool_deferral battery produced a ship decision plus the clarify fix, and toolperf_abeval ran 108 runs in 2.5 h. The z0 run_pair.py design adds interleaved, reversed arms, create-only JSONL and receipts. A shared library would need a maintainer call, so start it downstream.",
+   "impact": 4,
+   "policy_fit": "fits as evals/ code; shared library is a maintainer call",
+   "readiness": "stage-now",
+   "score": 52,
+   "branches": [
+    "fork/lab/evals/hermes-stack-receipts-v0"
+   ],
+   "issues": [
+    "NousResearch#77056",
+    "NousResearch#97979",
+    "NousResearch#104462",
+    "kvnloo#322",
+    "kvnloo#323"
+   ],
+   "merged_from": [
+    "arch-core:offline-replay-substrate",
+    "arch-surfaces:surface-parametric-ab-harness",
+    "lab-infra:hermes-paired-ab-harness",
+    "lab-infra:scripted-provider-replay"
+   ],
+   "experiments_needed": [
+    "E20",
+    "E07"
+   ]
+  },
+  {
+   "id": "promotion-gates-factory",
+   "title": "Downstream promotion gates: validity / activation red-on-base / credit + slice-informativeness + validation matrix",
+   "one_liner": "Every promote/* staging branch must pass a manifest-driven exact-head lane: patch applies, the witness test is red on base and green on head, the paired bootstrap CI lower bound is >0 with at least 5 pairs, and the slice must be informative (a constant or majority predictor cannot clear the gate).",
+   "integration_point": "fork evolver/{gates,calibrate}.py; validation/* workflows \u2192 one reusable matrix; evolution-lab slice_informativeness.py (uncommitted); scripts/run_tests.sh",
+   "footprint_rung": "standalone-repo",
+   "evidence_strength": "moderate",
+   "evidence_summary": "The activation gate encodes upstream's 'red on base' rule, and 14 validation/* lanes already run it (e.g. #112428: 58/0). Uninformative-gate incidents show why the slice check is needed: the recovery_action canary passed on an OOD slice where all 32 labels were 'escalate', and Phase-2 validation had 45/45 zero-shot gold. Evolver calibration has used synthetic negatives only. The fork CI is starved.",
+   "impact": 4,
+   "policy_fit": "fits downstream; in-tree evolver/ unlikely",
+   "readiness": "stage-now",
+   "score": 44,
+   "branches": [
+    "fork/feat/evolver-phase0-gate-calibration",
+    "validate/app-cpu-evidence-20260925",
+    "fork/exp/bend-hermes-verify (CI lane pattern)"
+   ],
+   "issues": [
+    "NousResearch#110671",
+    "kvnloo/z0evals#72",
+    "kvnloo/evolution-lab#20",
+    "kvnloo#323"
+   ],
+   "merged_from": [
+    "arch-core:promotion-gates",
+    "lab-infra:slice-informativeness-gate",
+    "lab-infra:ci-experiment-lanes",
+    "fork-branches:validation-lanes",
+    "fkb-harnesses:harness-evolver-phase0-credit-gates (gate part)"
+   ],
+   "experiments_needed": [
+    "E30",
+    "E20"
+   ]
+  },
+  {
+   "id": "compaction-decision-ledger",
+   "title": "Structured decision ledger carried verbatim across compaction",
+   "one_liner": "Record explicit approvals, denials and redirect-corrections in a capped per-session ledger and fold it into the compaction handoff; mid-turn steers must not become durable preferences.",
+   "integration_point": "tools/approval.py; agent/interrupt_control.py:234; agent/conversation_compression.py; hermes_state schema; evals/compaction consent arm",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "strong",
+   "evidence_summary": "teknium1 wrote on #113537 that durable preferences belong in a structured ledger 'the direction of #113305'. This is the only direct maintainer endorsement found for any of these RFCs. KoNit-K's #113309 (+151, 4 tests) already implements a ledger, but its review notes the steer-as-preference bug. Plan: salvage it by cherry-pick and prove it with a consent arm.",
+   "impact": 3,
+   "policy_fit": "fits",
+   "readiness": "needs-eval",
+   "score": 42,
+   "issues": [
+    "NousResearch#113305",
+    "NousResearch#113309",
+    "NousResearch#113537"
+   ],
+   "rfc": "NousResearch#113305",
+   "merged_from": [
+    "upstream-rfcs:compaction-decision-ledger"
+   ],
+   "experiments_needed": [
+    "E04"
+   ]
+  },
+  {
+   "id": "tui-render-fanout-perf",
+   "title": "TUI render-fanout and idle-clock elimination",
+   "one_liner": "One-commit slices that narrow Nanostores subscriptions and stop idle or hidden clocks.",
+   "integration_point": "ui-tui/src/app/uiStore.ts, hooks/useQueue.ts, LiveAgentsPanel, agents overlay, OverlayScrollbar",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "strong",
+   "evidence_summary": "Measured on #129524\u20136, #129918 and #129928: about 200 setNow/min dropped to 0; 20 unrelated writes cause 0 rerenders; a collapsed dock produces 0 clock commits over 2 minutes; the full suite passes (176 files / 1,611 tests); the witness tests fail when the parent code is restored. harshmoney123 asked for \u22643 open PRs, but 6 TUI PRs are open now. Hold the remaining slices.",
+   "impact": 2,
+   "policy_fit": "fits",
+   "readiness": "stage-now",
+   "score": 40,
+   "branches": [
+    "promote/tui-agents-idle-clock-v2",
+    "promote/tui-queue-scope-v2",
+    "promote/tui-theme-leaves-v2",
+    "promote/tui-collapsed-dock-clock-20260930",
+    "promote/tui-long-run-charm-clock-20260930",
+    "feat/tui-sid-busy-subscription-narrow"
+   ],
+   "issues": [
+    "NousResearch#99773",
+    "NousResearch#111986",
+    "NousResearch#129524",
+    "NousResearch#129525",
+    "NousResearch#129526",
+    "NousResearch#129556",
+    "kvnloo#315"
+   ],
+   "merged_from": [
+    "arch-surfaces:tui-render-budget-wave",
+    "fork-branches:tui-render-fanout-perf",
+    "upstream-rfcs:tui-attention-budget-perf",
+    "fork-rfcs-lab:issue-held-upstream-promotion-queue"
+   ],
+   "experiments_needed": [
+    "E29"
+   ]
+  },
+  {
+   "id": "tool-effect-algebra-table",
+   "title": "Unified per-tool effect declaration replacing four disagreeing tables",
+   "one_liner": "Derive the parallel-safe set, NO_EFFECT, IDEMPOTENT and MUTATING from a single registry declaration. Ship as a behavior-identical refactor first, then widen one tool class per PR. Read-only terminal commutation is a later, trap-gated widening.",
+   "integration_point": "tools/registry.py metadata; agent/tool_dispatch_helpers.py:30-53,168-244; agent/tool_result_classification.py; agent/tool_guardrails.py:20-32",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "strong",
+   "evidence_summary": "A static comparison at 663362680b found 5 tools parallel-safe but not no-effect, 4 no-effect but never parallelized, and 8 idempotent but not no-effect. 26 of 49 tools appear in no table (e.g. x_search, video_analyze). #64460 and #75954 are precedent for accepted batch-segmentation PRs. The benefit is unmeasured. Some divergences may be intentional (browser session state, live HA reads), which is unverified. The `git status` index.lock trap is unverified.",
+   "impact": 3,
+   "policy_fit": "fits (refactor; no schema change)",
+   "readiness": "needs-eval",
+   "score": 36,
+   "issues": [
+    "kvnloo#338",
+    "kvnloo#363",
+    "kvnloo#365",
+    "kvnloo#380",
+    "NousResearch#64460",
+    "NousResearch#75954"
+   ],
+   "rfc": "kvnloo#338",
+   "merged_from": [
+    "beyond-agent:tool-effect-algebra-table",
+    "beyond-agent:readonly-terminal-commutation"
+   ],
+   "experiments_needed": [
+    "E31"
+   ]
+  },
+  {
+   "id": "compression-god-file-decomposition",
+   "title": "Mechanical decomposition of compression and auxiliary god files",
+   "one_liner": "Split context_compressor.py (5,673 lines), conversation_compression.py (4,579) and auxiliary_client.py (8,255) into <stem>_<topic> siblings, which also de-risks the compaction features above.",
+   "integration_point": "agent/context_compressor*.py, agent/conversation_compression*.py, agent/auxiliary_*.py",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "strong",
+   "evidence_summary": "Line counts measured at 663362680b, against the root rule of splitting at ~2,000 lines. #125186 is open. Measure before and after with evals/codebase_navigability/static_metrics.py. Conflict risk with active compression fixes is high, so land it in its own commit on fresh main.",
+   "impact": 2,
+   "policy_fit": "fits (explicitly wanted work)",
+   "readiness": "stage-now",
+   "score": 34,
+   "issues": [
+    "NousResearch#125186"
+   ],
+   "merged_from": [
+    "arch-core:compression-god-file-decomposition"
+   ],
+   "experiments_needed": [
+    "E14"
+   ]
+  },
+  {
+   "id": "before-turn-end-gate",
+   "title": "Unified bounded before_turn_end continuation gate (generalize pre_verify)",
+   "one_liner": "A directive hook at the final-response chokepoint, returning allow, continue(message) or fail, under a Hermes-owned budget. It reuses the flagged synthetic-nudge pattern from the stop gates.",
+   "integration_point": "agent/turn_stop_gates.py apply_stop_gates (4th gate); turn_finalizer stream withholding; VALID_HOOKS + plugins_dispatch directive parser; config agent.max_final_continuations",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "strong",
+   "evidence_summary": "Requested in #101910. Four or more competing PRs exist (#124956, #128724, #68142, #124747), so the 'design one contract' rule applies. Today pre_verify fires only after code edits. This waits on the hook taxonomy (#64231). The verify-on-stop noise precedent (#84383) argues for strict bounding.",
+   "impact": 4,
+   "policy_fit": "needs-maintainer-decision",
+   "readiness": "needs-eval",
+   "score": 34,
+   "issues": [
+    "NousResearch#101910",
+    "NousResearch#124956",
+    "NousResearch#128724",
+    "NousResearch#68142",
+    "NousResearch#124747",
+    "NousResearch#64231"
+   ],
+   "rfc": "NousResearch#101910",
+   "merged_from": [
+    "arch-core:before-turn-end-gate"
+   ],
+   "experiments_needed": [
+    "E11"
+   ]
+  },
+  {
+   "id": "evidence-layer-hygiene",
+   "title": "Evidence-layer corrections: z0evals erratum and freeze, repinning, frontier-kb refresh, canary plumbing",
+   "one_liner": "Before any upstream citation, correct the published z0 claims (selection safety is INVALID, the 2x2 is rank-deficient, Nemotron ran under a 256-token cap), repin the function-routing evidence, refresh stale KB gap claims, and add work orders and schema fields for the beyond-agent waves A\u2013C.",
+   "integration_point": "z0evals chore/study-supersession; z0int claim-status.json; frontier-kb harnesses/hermes.md + kb_store ingest; fork lab/beyond-agent/result.schema.json",
+   "footprint_rung": "docs-or-eval-only",
+   "evidence_strength": "strong",
+   "evidence_summary": "z0int 6f3345e claim-status.json: the 6/84 'dangerous selections' result did not replicate (0 in every cell). It currently exists only on feat/steal-sweep. Function-routing cites 78869d9, which lacks the JSONL; the data is in z0int master 28927fa. The KB lists select_context, middleware and worktree isolation as gaps, but all have landed. The Postgres store's last write was 2026-09-10. Only the wave-D canaries have work orders.",
+   "impact": 2,
+   "policy_fit": "fits (downstream)",
+   "readiness": "stage-now",
+   "score": 30,
+   "issues": [
+    "kvnloo/z0evals#1",
+    "kvnloo/z0evals#75",
+    "kvnloo/z0evals#76",
+    "kvnloo#341",
+    "kvnloo#372"
+   ],
+   "merged_from": [
+    "z0evals:z0evals-freeze-and-erratum",
+    "fkb-harnesses:kb-hermes-note-refresh",
+    "beyond-agent:beyond-agent-canary-plumbing"
+   ]
+  },
+  {
+   "id": "turn-timing-observability",
+   "title": "Turn timing: _run_phase observer + first-reasoning/first-visible clocks + typed timing block on completion events",
+   "one_liner": "Wrap the single _run_phase dispatch to get a closed phase vocabulary. Split stream clocks per attempt, and expose one typed timing block on message.complete, /v1/runs run.completed and ACP. Needs one concrete consumer.",
+   "integration_point": "agent/conversation_loop.py::_run_phase (L1480-1498); stream_delivery/turn_api_request; tui_gateway/contracts/events.py MessageCompletePayload; api_server_runs; acp_adapter",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "moderate",
+   "evidence_summary": "#16106 has competing one-surface PRs (#113523, #119713, #129229). #48204: chat -q took 31\u201333 s while the model took 2.6 s. #108139: plugin discovery hung for 90 s and was found only through faulthandler. Fork branches carry tests (critical-path-turn-binding 10 commits, first-visible-clocks +113) but sit at merge-base 1ec61e4df2, and whether they rebase cleanly is unverified. A primitive with no consumer would be speculative.",
+   "impact": 3,
+   "policy_fit": "needs-maintainer-decision (#125255); timing block fits",
+   "readiness": "needs-eval",
+   "score": 29,
+   "branches": [
+    "fork/perf/critical-path-turn-binding",
+    "fork/perf/critical-path-context-engine",
+    "fork/perf/first-visible-clocks"
+   ],
+   "issues": [
+    "NousResearch#125255",
+    "NousResearch#16106",
+    "NousResearch#117082",
+    "NousResearch#117083",
+    "NousResearch#113523",
+    "NousResearch#119713"
+   ],
+   "merged_from": [
+    "arch-core:turn-phase-observer-hook",
+    "arch-surfaces:turn-timing-block-on-completion",
+    "arch-surfaces:critical-path-spans",
+    "lab-infra:turn-critical-path-clocks",
+    "fork-branches:turn-timing-clocks",
+    "upstream-rfcs:critical-path-attribution"
+   ],
+   "experiments_needed": [
+    "E09",
+    "E10"
+   ]
+  },
+  {
+   "id": "skills-efficacy-paired-eval",
+   "title": "evals/skills paired-arm harness for agent-written skills, with credit-gated promotion",
+   "one_liner": "Test whether background_review/curator skills actually help. Stage 1 is retrospective ledger and usage metrics at no cost; stage 2 is live arms with skills on vs off in an isolated HERMES_HOME. Later, gate promotion from draft to live on measured credit from human-curated traps.",
+   "integration_point": "new evals/skills/; tools/skill_ledger.py, skill_usage.py, agent/background_review.py, agent/curator.py, tools/write_approval.py",
+   "footprint_rung": "docs-or-eval-only",
+   "evidence_strength": "moderate",
+   "evidence_summary": "RFC #96704 (10 comments) plus PR #122544 (+429 offline metrics). The skill ledger is documented as 'TELEMETRY, NOT A GATE', and background-review add writes are ungated. Voyager-style verify-then-promote comes from the literature only. Credit must not come from tests the agent wrote itself.",
+   "impact": 3,
+   "policy_fit": "fits (evals/); promotion gate needs decision",
+   "readiness": "needs-eval",
+   "score": 29,
+   "issues": [
+    "NousResearch#96704",
+    "NousResearch#122544",
+    "NousResearch#110676",
+    "NousResearch#38753"
+   ],
+   "rfc": "NousResearch#96704",
+   "merged_from": [
+    "arch-core:skills-efficacy-paired-eval",
+    "fkb-harnesses:eval-gated-skill-promotion",
+    "fkb-literature:skill-efficacy-paired-arms"
+   ],
+   "experiments_needed": [
+    "E15",
+    "E16"
+   ]
+  },
+  {
+   "id": "cu-repeat-key-dedup-fix",
+   "title": "Preserve intentional repeated computer_use key inputs",
+   "one_liner": "Exempt only parsed computer_use action=key calls from same-turn duplicate-call elimination, so Tab,Tab stays two presses.",
+   "integration_point": "agent turn tool-call dedup; tests/agent/test_agent_guardrails.py",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "moderate",
+   "evidence_summary": "Historically red on base (2\u21921 calls deduplicated). Fork branch +32/-4. Needs re-proving on 663362680b and must still respect verify_fresh_state.",
+   "impact": 2,
+   "policy_fit": "fits (bug fix)",
+   "readiness": "stage-now",
+   "score": 28,
+   "branches": [
+    "fork/fix/computer-use-repeat-input-dedup-current-main@570dc83ba6"
+   ],
+   "issues": [
+    "NousResearch#124008",
+    "kvnloo#316"
+   ],
+   "merged_from": [
+    "upstream-rfcs:cu-repeat-key-dedup-fix"
+   ],
+   "experiments_needed": [
+    "E25"
+   ]
+  },
+  {
+   "id": "bend-verifier-standalone-plugin",
+   "title": "Bend proof verifier (bend_verify) with session-pinned kernel and pre_verify edit gate, as a standalone plugin",
+   "one_liner": "An opt-in tool that runs Bend without a shell. It confines paths, scrubs the environment, snapshots the import closure, pins and hashes the binary and kernel, returns typed verdicts, and can serve as a pre_verify gate after .bend edits.",
+   "integration_point": "plugins/bend/* via ctx.register_tool \u2192 standalone repo + plugin-catalog yaml; pre_verify hook (agent/turn_stop_gates.py)",
+   "footprint_rung": "plugin",
+   "evidence_strength": "strong",
+   "evidence_summary": "Matrix 225/225 and concurrency 200/200 with 0 mismatches. TOCTOU forged passes fell from 25/25 to 0/25. A poisoned shared kernel cache gave 10/10 forged passes; the pinned kernel gives 0/10, with warm p50 ~209 ms and a 29.5 s bootstrap. Throughput saturates at about 4 workers. Stock Bend 2.0.32\u201334 mis-certifies #1212; the patched kvnloo/bend#2 shows 0 mismatches over 336 corpus runs (that result is not yet reported). W6\u2013W8 are pending. The plugin imports tools.registry, which is an internal path.",
+   "impact": 2,
+   "policy_fit": "fits only as standalone+catalog (in-tree plugins/bend conflicts)",
+   "readiness": "needs-eval",
+   "score": 28,
+   "branches": [
+    "fork/exp/bend-hermes-verify@55afb244",
+    "kvnloo/bend:exp/hermes-verdict-semantic-attestation-1212"
+   ],
+   "issues": [
+    "kvnloo#324",
+    "kvnloo#325",
+    "kvnloo#388",
+    "kvnloo#389",
+    "kvnloo#390",
+    "kvnloo/bend#2"
+   ],
+   "merged_from": [
+    "fork-rfcs-lab:bend-verify-standalone-plugin",
+    "fork-rfcs-lab:bend-session-pinned-kernel",
+    "fork-rfcs-lab:bend-semantic-release-qualification",
+    "fork-rfcs-lab:bend-pre-verify-gate",
+    "fork-rfcs-lab:bend-hub-dependency-provenance",
+    "fork-branches:bend-proof-verifier"
+   ],
+   "experiments_needed": [
+    "E27",
+    "E28",
+    "E52"
+   ]
+  },
+  {
+   "id": "off-critical-path-compaction",
+   "title": "Move threshold compaction off the turn path (between turns or speculative pre-threshold)",
+   "one_liner": "Run the summary between turns under the session lease, or start it in a pre-threshold band (as OMP's asyncEnabled does) and commit at the threshold, so the ~37 s compaction no longer lands inside a user turn.",
+   "integration_point": "agent/turn_context_compaction.py:134-182, turn_preflight.py, conversation_compression.py lease/fence; prototype as ContextCompressor subclass via register_context_engine",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "moderate",
+   "evidence_summary": "The scorecard puts a compaction event at 25\u201349 s and about $0.06, all inside the user turn. #117886 (P2) has an open implementation in #117895. OMP ships speculative compaction on by default, with discard rules. Risks: races with new messages, the #120582 data-loss class, and wasted spend when a speculative summary is discarded.",
+   "impact": 4,
+   "policy_fit": "needs-maintainer-decision (sweeper:risk-session-state)",
+   "readiness": "needs-eval",
+   "score": 27,
+   "issues": [
+    "NousResearch#117886",
+    "NousResearch#117895",
+    "NousResearch#120582",
+    "NousResearch#117083"
+   ],
+   "merged_from": [
+    "arch-core:post-turn-background-compaction",
+    "omp-crosspoll:async-speculative-compaction",
+    "fkb-literature:plan-boundary-compaction-trigger"
+   ],
+   "experiments_needed": [
+    "E12",
+    "E13"
+   ]
+  },
+  {
+   "id": "z0-observer-shadow-plugin",
+   "title": "Metadata-only z0 observer + outcome-grounded shadow evaluator (standalone plugin)",
+   "one_liner": "Uses 11 existing hooks to write a profile-scoped JSONL spool, then scores shadow questions (api.attempt_will_fail, retry_will_succeed) with Brier, log loss and calibration, with promotion_ready hard-wired to false. Should also absorb Tokenomics receipts, runtime attestation and native failure taxonomies.",
+   "integration_point": "lab/z0_hermes_observer/* \u2192 standalone repo + catalog; hooks only; plugins.plugin_storage",
+   "footprint_rung": "plugin",
+   "evidence_strength": "weak",
+   "evidence_summary": "Code (+764 lines) and 10 unit tests exist. CI is red on #386 and #387 because of a literal /tmp at SHADOW_API_FAILURE.md:20, and the lab tests were never run. There is no receipt cohort. The trace_id definitions diverge: z0int normalize_envelope uses session_id while #385 uses sha256(session,turn). The evaluator drops unscored rows and does not group retries. Hermes has 0 of 315 Tokenomics rows, versus 7,979/day for OMP.",
+   "impact": 3,
+   "policy_fit": "fits as standalone plugin; conflicts in-tree",
+   "readiness": "stage-now",
+   "score": 26,
+   "branches": [
+    "fork/lab/z0int/full-observer-v0",
+    "fork/lab/z0int/retry-shadow-v0",
+    "fork/lab/z0int/shadow-eval-v0"
+   ],
+   "issues": [
+    "kvnloo#319",
+    "kvnloo#322",
+    "kvnloo#323",
+    "kvnloo#385",
+    "kvnloo#386",
+    "kvnloo#387",
+    "kvnloo/z0intelligence#62",
+    "kvnloo/z0intelligence#14"
+   ],
+   "merged_from": [
+    "arch-core:z0-observer-standalone-plugin",
+    "z0int:z0-hermes-observer-plugin",
+    "z0int:hermes-identity-contract-unification",
+    "z0int:api-attempt-failure-shadow",
+    "z0int:shadow-eval-gate-v2-and-z0evals-export",
+    "z0int:hermes-z0-shadow-bridge-endpoint",
+    "lab-infra:z0-shadow-decision-lane",
+    "lab-infra:hermes-tokenomics-observer",
+    "fork-rfcs-lab:z0-observer-lifecycle-spool",
+    "fork-rfcs-lab:z0-shadow-decision-eval",
+    "fork-branches:z0-observer-receipts",
+    "z0-map:z0-hermes-shadow-observer",
+    "z0-map:tokenomics-hook-plugin",
+    "arch-surfaces:relay-atof-receipt-source",
+    "fkb-harnesses:native-pathology-trace-stream",
+    "fkb-literature:experience-receipt-contract",
+    "fkb-harnesses:cost-per-verified-success-receipts",
+    "omp-crosspoll:runtime-attestation-receipts"
+   ],
+   "experiments_needed": [
+    "E21",
+    "E22",
+    "E08"
+   ]
+  },
+  {
+   "id": "hermes-decision-dataset-v2",
+   "title": "Per-turn Hermes decision extractor from a copied state.db",
+   "one_liner": "Replace compile.py's degenerate corpus by pairing tool_calls with results via tool_call_id, splitting by session and normalized prompt, and stratifying cron/kanban template turns.",
+   "integration_point": "read-only COPY of state.db (hermes_state_common.py:443 schema); z0int benchmarks/julia_claims port of omp_decisions.py",
+   "footprint_rung": "docs-or-eval-only",
+   "evidence_strength": "strong",
+   "evidence_summary": "The current corpus has 76,970 rows but only 1,644 distinct prompts, one repeated 10,755 times (9e6a993). So earlier GPU-MB results on it are suspect. The OMP v2 extractor produced 35,248 action rows. This is the substrate for any outcome-labelled Hermes decision work.",
+   "impact": 2,
+   "policy_fit": "fits (local data only)",
+   "readiness": "stage-now",
+   "score": 26,
+   "branches": [
+    "kvnloo/z0intelligence:master@88c2b54"
+   ],
+   "issues": [
+    "kvnloo/z0intelligence#54",
+    "kvnloo/z0intelligence#62"
+   ],
+   "merged_from": [
+    "z0int:hermes-decision-dataset-v2"
+   ],
+   "experiments_needed": [
+    "E35"
+   ]
+  },
+  {
+   "id": "cognitive-state-context-virtualization",
+   "title": "State Packet / cognitive-state context virtualization as a standalone plugin (shadow, then select_context canary)",
+   "one_liner": "Compile a provenance-pointed state packet. Shadow it first, logging token and recall deltas while returning None, then canary it through ContextEngine.select_context with a typed native fallback. pre_llm_call only appends context and cannot cut tokens.",
+   "integration_point": "agent/context_engine.py:121 select_context (single slot \u2192 must wrap ContextCompressor); pre_api_request observer for shadow; evals/unified_memory lane",
+   "footprint_rung": "plugin",
+   "evidence_strength": "moderate",
+   "evidence_summary": "OMP P1, on 20 frozen tasks with a mock provider and a substring verifier: root tokens fell 39.4%, but the median ratio was 0.96 and 8 of 20 tasks grew. On Claude Code Sonnet, lean+packet scored 22/22 at $0.861 vs stock 21/22 at $2.186. The Hermes lane has only n=1 smoke runs (cold 2,910 ms, warm 1,234 ms). The frozen cohort preflight is blocked on the conflict_a/b slots, and the lane predates executable-cohort.v1. Every non-None selection costs cache prefix. The bar to beat is 78.9% @55K.",
+   "impact": 4,
+   "policy_fit": "fits as standalone plugin",
+   "readiness": "needs-eval",
+   "score": 24,
+   "branches": [
+    "study/hermes-unified-memory-56@c84663880a (local only)",
+    "kvnloo/oh-my-pi:feat/cognitive-state-shadow-rfc79",
+    "z0intelligence:feat/state-packet-v0@f2ea159"
+   ],
+   "issues": [
+    "kvnloo#320",
+    "kvnloo#312",
+    "kvnloo/z0evals#56",
+    "kvnloo/oh-my-pi#107",
+    "NousResearch#129584"
+   ],
+   "rfc": "kvnloo#320",
+   "merged_from": [
+    "arch-core:context-engine-select-context-plugins",
+    "fork-rfcs-lab:rlm-state-packet-injection",
+    "fork-rfcs-lab:rlm-context-replacement-middleware",
+    "omp-crosspoll:cognitive-state-packet-port",
+    "z0evals:state-packet-session-start",
+    "unified-memory:unified-memory-hermes-lane",
+    "unified-memory:source-backed-context-plugin",
+    "z0-map:unified-memory-context-packet",
+    "unified-memory:hook-context-provenance-receipt"
+   ],
+   "experiments_needed": [
+    "E04",
+    "E18",
+    "E56"
+   ]
+  },
+  {
+   "id": "memory-prefetch-telemetry-and-probe",
+   "title": "Memory prefetch outcome telemetry + deterministic fault probe",
+   "one_liner": "Emit per-provider prefetch metrics (ok, empty, timeout, inflight-skip, error, ms, bytes), and add an evals/memory probe with delay, hang, empty and write-then-read fixtures. Prefetch currently blocks the turn for up to 8 s per provider without being measured.",
+   "integration_point": "agent/memory_manager.py::_prefetch_provider (L457-501); shared_metrics_loop (next to 25c1b008c8 record_provider_memory_call); evals/memory/ (honcho_current_query.py pattern)",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "moderate",
+   "evidence_summary": "Memory tool calls were instrumented by 25c1b008c8; prefetch was not. _EXTERNAL_PREFETCH_TIMEOUT_S is 8.0. Upstream already accepts deterministic memory probes. This is the prerequisite for any decision about a cache.",
+   "impact": 2,
+   "policy_fit": "fits",
+   "readiness": "stage-now",
+   "score": 24,
+   "merged_from": [
+    "unified-memory:memory-prefetch-telemetry",
+    "unified-memory:memory-prefetch-fault-probe"
+   ],
+   "experiments_needed": [
+    "E17"
+   ]
+  },
+  {
+   "id": "typed-explorer-and-delegation-receipts",
+   "title": "Typed read-only explorer subagent + parent-token-delta receipts per delegation",
+   "one_liner": "A skill or preset that uses delegate_task output_schema to return {files:[{path,ranges}]} so it replaces parent exploration, together with a receipt that makes the 'contribution \u2260 savings' gap visible before any automatic delegation.",
+   "integration_point": "tools/delegation_output_schema.py, delegate_tool_toolsets.py; subagent_start/stop hooks; evals/codebase_navigability",
+   "footprint_rung": "cli+skill",
+   "evidence_strength": "moderate",
+   "evidence_summary": "In z0evals Cerebras runs (60 pairs), untyped delegation added parent tokens: +68,564 raw, and +522 or +1,008 per pair at equal cache, though the full-cohort CIs include zero. FastContext reports up to \u221260% tokens (literature; code availability unverified). Tiny offloads added 1,347 tokens. Typed artifacts themselves are unmeasured.",
+   "impact": 3,
+   "policy_fit": "fits as optional skill; core preset needs decision",
+   "readiness": "needs-eval",
+   "score": 23,
+   "issues": [
+    "NousResearch#93436",
+    "NousResearch#102977",
+    "kvnloo/z0evals#69"
+   ],
+   "merged_from": [
+    "fkb-harnesses:explore-subagent-typed-retrieval",
+    "fkb-literature:typed-explorer-subagent",
+    "fkb-literature:delegation-parent-token-delta-receipt",
+    "z0evals:typed-delegation-results"
+   ],
+   "experiments_needed": [
+    "E39",
+    "E40"
+   ]
+  },
+  {
+   "id": "superseded-read-compaction",
+   "title": "Version-supersession quotient in compaction Pass 1",
+   "one_liner": "At compaction time, demote older read_file/search results whose file version was later re-read or overwritten to a pointer. Today Pass 1 deduplicates only by exact md5.",
+   "integration_point": "agent/context_compressor.py _dedupe_tool_results (:3037), _prune_old_tool_results (:3156); tools/file_tools_read_tracking.py",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "moderate",
+   "evidence_summary": "Pass 1 uses md5[:12] identity only. Per-version read coverage already exists. This is cache-safe only inside compaction. Gains are unmeasured. 'What changed' probes are the kill signal (#374).",
+   "impact": 3,
+   "policy_fit": "fits",
+   "readiness": "needs-eval",
+   "score": 21,
+   "issues": [
+    "kvnloo#332",
+    "kvnloo#345",
+    "kvnloo#347",
+    "kvnloo#374"
+   ],
+   "rfc": "kvnloo#332",
+   "merged_from": [
+    "beyond-agent:superseded-read-compaction"
+   ],
+   "experiments_needed": [
+    "E32"
+   ]
+  },
+  {
+   "id": "boundary-stable-tool-result-projection",
+   "title": "ObservationPack-style tool-result projection, triggered at a stable boundary and gated on cache economics",
+   "one_liner": "Salvage #107731 with authorship preserved. Use a wire-only projection of large old tool results that triggers once at a compaction or prune boundary, keeps per-session stickiness and costs one verification per key, and that holds up on a measured cache-read ratio.",
+   "integration_point": "agent/turn_request_assembly.py:106 (before prompt_caching.py:260); prune cursor; tools/tool_result_storage.py 24h spill prune; compression.proactive_prune_* config",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "moderate",
+   "evidence_summary": "teknium1 cited SoL-Pi on #107731 but asked for a boundary-stable trigger and a cache-read A/B. kshitijk4poor's review found the stickiness reverts on restart, and the \u221277% figure comes from a synthetic estimator. On Claude Code long sessions it cut cost 30.3% (n=12, p=0.0068), with no effect on short tasks. Upstream rejected prune-first compaction. Hermes already spills over 100K chars and does a cache-gated prune, so the headroom may be small. The image-rich CU premise in RFC-2 is wrong: the projection is text-only.",
+   "impact": 3,
+   "policy_fit": "needs-maintainer-decision (#107731 open questions)",
+   "readiness": "needs-eval",
+   "score": 21,
+   "branches": [
+    "kvnloo/sol-pi-hermes:exp/capture-result-observationpack-shadow-v0"
+   ],
+   "issues": [
+    "NousResearch#107731",
+    "kvnloo#310",
+    "kvnloo#321",
+    "kvnloo/z0evals#69"
+   ],
+   "rfc": "kvnloo#310",
+   "merged_from": [
+    "fkb-harnesses:boundary-stable-tool-result-projection",
+    "fkb-literature:observationpack-port",
+    "z0evals:observation-pack-immediate",
+    "fork-rfcs-lab:solpi-observationpack-shadow"
+   ],
+   "experiments_needed": [
+    "E37",
+    "E56"
+   ]
+  },
+  {
+   "id": "observer-hooks-doc-drift",
+   "title": "Document first_chunk_at / context_length / moa_references in observer-hooks.md",
+   "one_liner": "post_api_request already emits a TTFB field that plugin authors cannot discover from the docs.",
+   "integration_point": "website/docs/developer-guide/observer-hooks.md",
+   "footprint_rung": "docs-or-eval-only",
+   "evidence_strength": "strong",
+   "evidence_summary": "agent/turn_response_intake.py:70-97 emits these fields; the docs at observer-hooks.md:150-158 omit them.",
+   "impact": 1,
+   "policy_fit": "fits",
+   "readiness": "stage-now",
+   "score": 20,
+   "issues": [
+    "NousResearch#16106"
+   ],
+   "merged_from": [
+    "arch-surfaces:observer-hooks-doc-drift"
+   ]
+  },
+  {
+   "id": "compaction-summary-safety-canary",
+   "title": "Compaction-injection and concealment canary eval",
+   "one_liner": "Plant 'note to future self' directives and concealed failures in the region being compacted, then check whether the summary turns them into instructions or drops the failure facts.",
+   "integration_point": "evals/compaction/fixtures.py + tripwire next to test_region_scoping.py; context_compressor.py:1050 'data to log, never instructions'",
+   "footprint_rung": "docs-or-eval-only",
+   "evidence_strength": "moderate",
+   "evidence_summary": "OpenAI's 2026-09-16 misalignment reports name self-instructions and concealment in compaction summaries. Hermes mitigates this only through prompt wording, and nothing measures it.",
+   "impact": 2,
+   "policy_fit": "fits",
+   "readiness": "stage-now",
+   "score": 20,
+   "merged_from": [
+    "fkb-harnesses:compaction-summary-safety-tripwire",
+    "fkb-literature:compaction-injection-canary-eval"
+   ],
+   "experiments_needed": [
+    "E06"
+   ]
+  },
+  {
+   "id": "experiment-manifest-receipt-envelope",
+   "title": "Experiment manifest + hermes_stack_experiment receipt validator + singleton-first factorial protocol",
+   "one_liner": "One manifest per experiment: issue/RFC, arms, fixture sha256, verifier, budget tier, parallelism class and kill criterion. Plus a validator with 10 failure-injection cases. Compositions stay blocked until each singleton factor passes its frozen gate.",
+   "integration_point": "fork lab/hermes-stack-v0/experiment.schema.json; evolution-lab factorized_stack.py (PR #28); openjev freeze.json pattern",
+   "footprint_rung": "docs-or-eval-only",
+   "evidence_strength": "weak",
+   "evidence_summary": "Only a schema exists (+91 lines); no validator or runner. evolution-lab PR #28 has red CI. The freeze.json pattern already works for phase1b. The design is agreed across #318, #323 and z0evals#69.",
+   "impact": 3,
+   "policy_fit": "fits (downstream)",
+   "readiness": "stage-now",
+   "score": 20,
+   "branches": [
+    "fork/lab/evals/hermes-stack-receipts-v0",
+    "kvnloo/evolution-lab:exp/z0-factorized-stack-v0"
+   ],
+   "issues": [
+    "kvnloo#318",
+    "kvnloo#322",
+    "kvnloo#323",
+    "kvnloo/z0evals#69",
+    "kvnloo/evolution-lab#27"
+   ],
+   "merged_from": [
+    "lab-infra:hermes-experiment-receipt-runner",
+    "lab-infra:lab-experiment-registry-and-promote-branches",
+    "lab-infra:factorized-singleton-first-protocol",
+    "fork-rfcs-lab:hermes-stack-experiment-receipt",
+    "fork-rfcs-lab:factorial-lab-harness",
+    "fork-branches:hermes-stack-experiment-receipts"
+   ],
+   "experiments_needed": [
+    "E48",
+    "E49"
+   ]
+  },
+  {
+   "id": "landing-evidence-ci",
+   "title": "Landing-evidence verifier as factory tooling",
+   "one_liner": "For every 'done', 'duplicate' or 'superseded' claim, find the merged PR and spot-check that its content is actually on main before closing anything.",
+   "integration_point": "standalone script/Action (landing_evidence.py; host path unverified)",
+   "footprint_rung": "standalone-repo",
+   "evidence_strength": "strong",
+   "evidence_summary": "Wave 1: 3 of 18 'completed' flags were wrong. Wave 2: 12 of 44 LANDED pairs were misattributed until ranking was fixed (#111084). Read-only. Posting results requires approval.",
+   "impact": 2,
+   "policy_fit": "needs-maintainer-decision (posting)",
+   "readiness": "stage-now",
+   "score": 18,
+   "issues": [
+    "NousResearch#111084",
+    "NousResearch#111189"
+   ],
+   "merged_from": [
+    "fkb-harnesses:landing-evidence-ci"
+   ],
+   "experiments_needed": [
+    "E53"
+   ]
+  },
+  {
+   "id": "eval-safe-memory-isolation",
+   "title": "Eval-safe memory isolation (agent_context='eval' / read-without-persist)",
+   "one_liner": "Keep test suites from writing chatter into users' external memory. Retrieval stays live while turn sync, mirrors, the session-end flush and tool writes are suppressed. A prerequisite for live factory arms.",
+   "integration_point": "agent/agent_init.py::_init_memory; memory_provider.py initialize(agent_context); memory_manager.py sync_all/on_session_end; CLI flag (not HERMES_* env)",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "strong",
+   "evidence_summary": "#121935 is a real incident; reviewers of #121948 showed a single boolean does not cover explicit tool writes. The ABC already enumerates agent_context values. Must default to no writes for plugins that don't recognize the new value.",
+   "impact": 3,
+   "policy_fit": "needs-maintainer-decision",
+   "readiness": "needs-design",
+   "score": 18,
+   "issues": [
+    "NousResearch#121935",
+    "NousResearch#121948"
+   ],
+   "merged_from": [
+    "arch-core:eval-safe-memory-isolation"
+   ],
+   "experiments_needed": [
+    "E18"
+   ]
+  },
+  {
+   "id": "lean-prefix-skill-exposure",
+   "title": "Lean per-session prefix and task-conditioned skill exposure",
+   "one_liner": "Cut the static prefix that every cold session must write. Hide a skill only if the selector misses a needed skill no more than once in 30.",
+   "integration_point": "skills index rendering; evals/prompt_footprint, evals/core_tool_deferral, token_accounting/worktree_prompt_prefix.py",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "moderate",
+   "evidence_summary": "On Claude Code, lean cut cold-session cost by a median 64.7% (10/10, p=0.002) and warm by 27.2% (15/15). Hiding 45 skills saved about 5.7k tokens, but selectors missed needed skills 2\u20133 times in 30, so it was NOT promoted. Hermes's #95681 already cut about 15\u201320K tokens per call, so headroom is smaller.",
+   "impact": 3,
+   "policy_fit": "fits",
+   "readiness": "needs-eval",
+   "score": 18,
+   "branches": [
+    "z0intelligence:feat/claude-code-harness@11a943b"
+   ],
+   "issues": [
+    "NousResearch#95681"
+   ],
+   "merged_from": [
+    "z0evals:lean-prefix-skill-exposure",
+    "fkb-literature:evolve-tools-middleware-before-prompts"
+   ],
+   "experiments_needed": [
+    "E56",
+    "E20"
+   ]
+  },
+  {
+   "id": "session-search-bounded-ordering",
+   "title": "Bounded-candidate ranking for session_search FTS",
+   "one_liner": "Rank an inner LIMIT-N candidate set instead of applying ORDER BY rank or timestamp to every match.",
+   "integration_point": "hermes_state_search.py:57,1119",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "moderate",
+   "evidence_summary": "On an agentsview DB (348,934 messages), MATCH 'the' with an unsorted LIMIT 20 took 0.031 ms vs 135.8 ms with ORDER BY rank (4,382\u00d7), and 8 s cold. Hermes uses the same query shape, but this is not measured on its own state.db. Recall parity must be proven.",
+   "impact": 2,
+   "policy_fit": "fits",
+   "readiness": "needs-eval",
+   "score": 17,
+   "merged_from": [
+    "z0-map:session-search-bounded-ordering"
+   ],
+   "experiments_needed": [
+    "E36"
+   ]
+  },
+  {
+   "id": "terminal-output-reducers-plugin",
+   "title": "Terminal-output reducers plugin (command-aware minimizer + evidence-preserving reducer)",
+   "one_liner": "Use transform_terminal_output to compress git, pytest, npm and cargo output with a raw-artifact escape hatch, and to emit quote-verified receipts for diagnostic logs.",
+   "integration_point": "transform_terminal_output hook (tools/terminal_tool_result.py:139); register_auxiliary_task; tools/tool_result_storage.py spillover",
+   "footprint_rung": "plugin",
+   "evidence_strength": "weak",
+   "evidence_summary": "OMP ships 67 TOML definitions and 25 filters, on by default. SoL-Pi EPR is one of the 4 mechanisms behind its 44.7\u201349% token cut, but it was never isolated, and the TB4 solve rate fell 18\u219215 of 63. Hermes does only 40/60 head/tail truncation. The toolperf err_big_output trap can serve as the information-loss guard.",
+   "impact": 3,
+   "policy_fit": "fits (standalone plugin)",
+   "readiness": "needs-eval",
+   "score": 17,
+   "issues": [
+    "kvnloo#311"
+   ],
+   "merged_from": [
+    "omp-crosspoll:shell-output-minimizer",
+    "fkb-literature:evidence-preserving-reducer-plugin",
+    "z0-map:sol-pi-efficiency-plugin (EPR part)"
+   ],
+   "experiments_needed": [
+    "E38",
+    "E04"
+   ]
+  },
+  {
+   "id": "delegated-effort-solution-space",
+   "title": "Per-task effort / solution_space for delegated children (zero classifier calls)",
+   "one_liner": "The parent sets effort or a solution-space bucket per delegate_task item. Today delegation effort is set only globally.",
+   "integration_point": "tools/delegate_tool_config.py:562-575; delegate_task schema; agent/reasoning_effort.py",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "moderate",
+   "evidence_summary": "OMP does this with solutionSpace. On #88522, wall time went from 28.4 s to 5.4 s at equal correctness with 0 extra API calls. Coordinate with the 3 open auto-effort carriers rather than opening a fourth.",
+   "impact": 2,
+   "policy_fit": "fits",
+   "readiness": "needs-eval",
+   "score": 17,
+   "issues": [
+    "NousResearch#40306",
+    "NousResearch#88522"
+   ],
+   "merged_from": [
+    "omp-crosspoll:delegated-effort-solution-space"
+   ],
+   "experiments_needed": [
+    "E46"
+   ]
+  },
+  {
+   "id": "verify-policy-voc-gating",
+   "title": "Per-model / value-of-computation-gated verification via pre_verify",
+   "one_liner": "A plugin varies the verify nudge's text and budget by model family and fires it only when expected decision change justifies the cost.",
+   "integration_point": "pre_verify hook; agent/verification_stop.py; verification_evidence.py; agent.max_verify_nudges",
+   "footprint_rung": "plugin",
+   "evidence_strength": "moderate",
+   "evidence_summary": "verify-on-stop was made opt-in after being judged 'more noise than signal' (#84383), which is a negative datapoint for unpriced verification. glm made 30 'verifying' calls after finishing the task. The literature says the right verify policy is model-specific.",
+   "impact": 3,
+   "policy_fit": "fits as plugin; default changes need decision",
+   "readiness": "needs-eval",
+   "score": 17,
+   "issues": [
+    "NousResearch#84383",
+    "NousResearch#106387",
+    "kvnloo#357",
+    "kvnloo#378"
+   ],
+   "merged_from": [
+    "fkb-literature:per-model-verify-policy",
+    "beyond-agent:voc-gated-verify-on-stop"
+   ],
+   "experiments_needed": [
+    "E45",
+    "E43"
+   ]
+  },
+  {
+   "id": "compaction-lifecycle-hooks",
+   "title": "post_compaction observer + task-aware pre-compaction directive",
+   "one_liner": "Generic plugin signals around the one sanctioned cache break. Micro-compaction has no pre-compress checkpoint hook.",
+   "integration_point": "agent/conversation_compression.py (~L2968-3001), micro_compaction.py, agent_init.py:2025, VALID_HOOKS",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "strong",
+   "evidence_summary": "Five issues and two PRs (#118382/#118847, #119317/#119347, #125384). A maintainer narrowed the premise because memory providers already have on_pre_compress. A per-block directive risks the #120582 data-loss class.",
+   "impact": 3,
+   "policy_fit": "needs-maintainer-decision",
+   "readiness": "needs-design",
+   "score": 16,
+   "issues": [
+    "NousResearch#118382",
+    "NousResearch#119317",
+    "NousResearch#125384",
+    "NousResearch#64231"
+   ],
+   "merged_from": [
+    "arch-core:compaction-lifecycle-hooks"
+   ],
+   "experiments_needed": [
+    "E12"
+   ]
+  },
+  {
+   "id": "tui-small-ux-promotions",
+   "title": "TUI fast model hop + always-visible reasoning effort",
+   "one_liner": "Pick a typed model directly at /model step 1 (#126847), and back KoNit-K's #111373 for effort visibility instead of writing a duplicate.",
+   "integration_point": "ui-tui/src/components/modelPicker.tsx; appChrome.tsx effortLabel; tui_gateway/model_switch.py",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "weak",
+   "evidence_summary": "The author claims #126847 is red then green, but no CI ran. It competes with #110134, and the comments disagree about which vehicle is canonical. #111373 has a red-to-green gateway test.",
+   "impact": 2,
+   "policy_fit": "fits",
+   "readiness": "stage-now",
+   "score": 16,
+   "branches": [
+    "fork/feat/tui-session-model-hop-v2"
+   ],
+   "issues": [
+    "NousResearch#126847",
+    "NousResearch#110134",
+    "NousResearch#111373"
+   ],
+   "merged_from": [
+    "fork-branches:tui-model-hop",
+    "upstream-rfcs:tui-fast-model-hop",
+    "upstream-rfcs:tui-reasoning-effort-visibility"
+   ]
+  },
+  {
+   "id": "cron-routine-miner",
+   "title": "Compile repeated cron/kanban runs to existing monitor_script / no_agent gating",
+   "one_liner": "Offline miner over state.db that proposes monitor gating where agent runs produced unchanged output, with credit gates and forced periodic agent runs.",
+   "integration_point": "cron/jobs.py monitor_script/no_agent; hermes cron CLI + skill",
+   "footprint_rung": "cli+skill",
+   "evidence_strength": "weak",
+   "evidence_summary": "In a third-party fleet, about 79% of turns were cron/kanban template turns. kvn's corpus has one prompt repeated 10,755 times; whether that is cron is unverified. The routine compiler has been tested on synthetic data only.",
+   "impact": 3,
+   "policy_fit": "fits (zero new core surface)",
+   "readiness": "needs-design",
+   "score": 14,
+   "issues": [
+    "kvnloo/z0intelligence#56"
+   ],
+   "merged_from": [
+    "z0int:cron-routine-miner"
+   ],
+   "experiments_needed": [
+    "E34"
+   ]
+  },
+  {
+   "id": "autoresearch-experiment-loop",
+   "title": "Autoresearch keep/discard experiment loop (plugin + skill)",
+   "one_liner": "Port OMP's metric-driven loop (fixed harness, noise-floor confidence, KEEP rejected when it violates scope) as the factory's inner loop.",
+   "integration_point": "out-of-tree plugin tools init/run/log_experiment + skill; hermes_cli/worktree_ops.py",
+   "footprint_rung": "cli+skill",
+   "evidence_strength": "weak",
+   "evidence_summary": "Fork autoresearch/session-20260823 has 30 tests including a cache-stability guard, but it is contaminated with kanban and mobile commits and hard-pins a model. The OMP protocol is complete. Upstream does not want another optimizer in core (#117083).",
+   "impact": 3,
+   "policy_fit": "fits out-of-tree",
+   "readiness": "needs-design",
+   "score": 14,
+   "branches": [
+    "fork/autoresearch/session-20260823"
+   ],
+   "merged_from": [
+    "omp-crosspoll:autoresearch-experiment-loop",
+    "fork-branches:autoresearch-cli"
+   ]
+  },
+  {
+   "id": "verified-memory-writes",
+   "title": "Stage or verify uncertain memory adds and session-end extractions",
+   "one_liner": "Extend the fail-closed staging that #105921 added for replace/remove to background `add` writes and on_session_end extraction, with an isolated verifier.",
+   "integration_point": "tools/memory_tool.py:166; tools/write_approval.py; memory_provider.on_session_end",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "moderate",
+   "evidence_summary": "Code confirms that add is ungated. The literature (arXiv 2609.15364 and 2609.11060) is not yet in the KB. No long-horizon recall eval exists.",
+   "impact": 3,
+   "policy_fit": "needs-maintainer-decision",
+   "readiness": "needs-eval",
+   "score": 12,
+   "issues": [
+    "NousResearch#112102",
+    "NousResearch#107914"
+   ],
+   "merged_from": [
+    "fkb-harnesses:verified-memory-writes"
+   ],
+   "experiments_needed": [
+    "E15"
+   ]
+  },
+  {
+   "id": "skill-visibility-hook",
+   "title": "filter_skill_visible hook evaluated at skills-index build",
+   "one_liner": "Lets plugins hide skills that don't work with the current backend. The index is frozen per session, so the decision is cache-safe.",
+   "integration_point": "agent/prompt_builder.py:1334, L1261-1308; tools/skills_tool.py",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "moderate",
+   "evidence_summary": "#125257 and PR #125275 (+370) include a prompt-cache invariant test. Risk: dangling related_skills pointers.",
+   "impact": 2,
+   "policy_fit": "needs-maintainer-decision",
+   "readiness": "needs-eval",
+   "score": 12,
+   "issues": [
+    "NousResearch#125257",
+    "NousResearch#125275"
+   ],
+   "merged_from": [
+    "arch-core:skill-visibility-hook"
+   ],
+   "experiments_needed": [
+    "E07"
+   ]
+  },
+  {
+   "id": "cu-shadow-semantic-state",
+   "title": "Shadow GuiStateV0 semantic deltas (measurement-only)",
+   "one_liner": "Reconcile AX captures into internal state to measure identity stability before any contract that sends deltas to the model.",
+   "integration_point": "tools/computer_use/semantic_state.py, state_diff.py, tool.py capture path",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "moderate",
+   "evidence_summary": "40 captures per arm: 24.6 vs 25.4 ms (noise); reconciliation p95 0.51 ms. Unbounded growth was fixed on f8ff341d1e. There are no real-session metrics, and bare Xvfb had empty AX trees. The sandbox-desktop image (#121169) now allows a real test.",
+   "impact": 2,
+   "policy_fit": "needs-maintainer-decision",
+   "readiness": "needs-eval",
+   "score": 12,
+   "branches": [
+    "fork/feat/cu-shadow-state-112734@f8ff341d1e"
+   ],
+   "issues": [
+    "NousResearch#112734",
+    "NousResearch#113252",
+    "kvnloo#317"
+   ],
+   "merged_from": [
+    "arch-surfaces:cu-shadow-semantic-state",
+    "fork-rfcs-lab:cu-semantic-shadow-state",
+    "fork-branches:cu-shadow-semantic-state",
+    "upstream-rfcs:cu-shadow-semantic-state"
+   ],
+   "experiments_needed": [
+    "E24"
+   ]
+  },
+  {
+   "id": "third-party-plugin-repackaging",
+   "title": "Repackage third-party integrations as standalone repos + catalog entries",
+   "one_liner": "Groq Orpheus TTS, PAW-PII, orb animation, Spatial canvas, TinyFish, MoA orbs and Kerdoios, each published with tags and an exact-SHA catalog pin.",
+   "integration_point": "register_tts_provider / register_redaction_patterns / Desktop plugin SDK; plugin-catalog/<name>.yaml",
+   "footprint_rung": "plugin",
+   "evidence_strength": "strong",
+   "evidence_summary": "#87495 and #98105 were closed specifically to move them onto plugin seams. Kerdoios has no tags, and Spatial canvas has no remote.",
+   "impact": 1,
+   "policy_fit": "fits",
+   "readiness": "needs-design",
+   "score": 12,
+   "branches": [
+    "feat/groq-orpheus-tts",
+    "feat/paw-pii-plugin-index",
+    "feat/spatial-canvas-upstream",
+    "feat/tinyfish-browser-provider"
+   ],
+   "merged_from": [
+    "fork-branches:third-party-plugin-repackaging",
+    "z0-map:desktop-projection-plugins",
+    "z0-map:kerdoios-compute-portfolio"
+   ],
+   "experiments_needed": [
+    "E52"
+   ]
+  },
+  {
+   "id": "outcome-signal-hook-widening",
+   "title": "Outcome-signal surface: friction signals, verification status and turn-settled on hooks",
+   "one_liner": "Expose retry, undo, interrupt, quick_abandon and switch_away, plus verification_evidence status and a settled-turn event, to observer plugins, each shipped together with a concrete consumer.",
+   "integration_point": "VALID_HOOKS; shared_metrics_model.record_model_friction callers; pre_verify/on_session_end kwargs; conversation_loop.py:1342",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "moderate",
+   "evidence_summary": "teknium's friction taxonomy (2efa4f3caa) reaches only gated shared metrics. The verification ledger is not exposed to hooks. z0 has n=2 rows for verification_needed. SoL-Pi OCC has no effect on stock Hermes. Validity as a label is unproven.",
+   "impact": 3,
+   "policy_fit": "needs-maintainer-decision",
+   "readiness": "needs-design",
+   "score": 11,
+   "issues": [
+    "kvnloo#322",
+    "NousResearch#111237",
+    "NousResearch#96704"
+   ],
+   "merged_from": [
+    "arch-surfaces:turn-outcome-signal-hook",
+    "z0int:verification-evidence-outcome-join",
+    "fkb-harnesses:turn-settled-and-plan-step-hooks",
+    "z0int:approval-outcome-shadow"
+   ],
+   "experiments_needed": [
+    "E43",
+    "E44"
+   ]
+  },
+  {
+   "id": "cache-safe-model-routing",
+   "title": "Model/effort routing confined to cache-safe seams",
+   "one_liner": "Route only per auxiliary task, per delegated child, or at session start; shadow first through observe-only llm_request.",
+   "integration_point": "agent/auxiliary_client.py::_resolve_auto_route; delegate_tool_config; review_engine credentials_cfg; config smart_model_routing (vestigial)",
+   "footprint_rung": "plugin",
+   "evidence_strength": "moderate",
+   "evidence_summary": "Demand is strong (#98703 +2105, #103965). smart_model_routing has no runtime reader. A per-turn routing replay raised cost 8.4\u201366.8% at an 81.8% cache-hit rate.",
+   "impact": 3,
+   "policy_fit": "needs-maintainer-decision",
+   "readiness": "needs-design",
+   "score": 11,
+   "issues": [
+    "NousResearch#123388",
+    "NousResearch#98703",
+    "NousResearch#103965",
+    "kvnloo#319"
+   ],
+   "merged_from": [
+    "arch-core:cache-safe-model-routing"
+   ],
+   "experiments_needed": [
+    "E19"
+   ]
+  },
+  {
+   "id": "context-filter-web-extract",
+   "title": "Query-aware BM25 selection for web_extract via transform_tool_result",
+   "one_liner": "Replace the head+tail window for pages over 15K characters with a deterministic BM25 packet and keep the full-text footer.",
+   "integration_point": "transform_tool_result hook; tools/web_tools.py:522; z0int context_filter.py",
+   "footprint_rung": "plugin",
+   "evidence_strength": "weak",
+   "evidence_summary": "54 tests on feat/z0-live; BM25 matches GPT Researcher to 1e-9. No retention or outcome eval yet. Query drift within tool loops is a known risk.",
+   "impact": 2,
+   "policy_fit": "fits",
+   "readiness": "needs-eval",
+   "score": 11,
+   "branches": [
+    "z0intelligence:feat/z0-live@25aa4dc"
+   ],
+   "merged_from": [
+    "z0int:context-filter-tool-results"
+   ],
+   "experiments_needed": [
+    "E41"
+   ]
+  },
+  {
+   "id": "effective-token-cap-receipts",
+   "title": "Record effective max_tokens; treat length + empty + reasoning as truncation",
+   "one_liner": "Receipts recorded a cap of 1024 while the wire sent 256, and reasoning models then returned empty content with finish_reason=length.",
+   "integration_point": "agent/empty_response_guard.py; auxiliary_reasoning_floor.py; auxiliary_client.py small-cap lanes",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "moderate",
+   "evidence_summary": "Nemotron scored 57.1%, 82.1% and 85.7% at caps of 256, 512 and 1024, and the gold answer was in the reasoning in 100% of cases. 4 of 6 arms ran under a smaller cap than recorded. Seen on llama.cpp dialects; whether any Hermes aux path is affected is unverified.",
+   "impact": 2,
+   "policy_fit": "fits",
+   "readiness": "needs-design",
+   "score": 11,
+   "merged_from": [
+    "z0evals:effective-token-cap-receipts"
+   ],
+   "experiments_needed": [
+    "E42"
+   ]
+  },
+  {
+   "id": "realtime-voice-followups",
+   "title": "Realtime voice: epoch-fenced tool admission + heard-boundary follow-ups",
+   "one_liner": "Contribute narrow, test-first invariants to whichever contract is canonical: #101808, or the GPT-Live client delegation teknium shipped. Do not submit a competing ABC.",
+   "integration_point": "#101808 orchestrator (not on main); tools/voice_live.py delegation registry",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "moderate",
+   "evidence_summary": "On #101808 head 311446cd91, a late tool call executes after barge-in. The fork guard covers late results, not admission. teknium shipped f923faa0b8 with a different topology. The fork branches are about 19k commits behind.",
+   "impact": 3,
+   "policy_fit": "needs-maintainer-decision",
+   "readiness": "needs-design",
+   "score": 11,
+   "branches": [
+    "feat/realtime-voice-stale-tool-guard",
+    "feat/realtime-voice-identity",
+    "wt/realtime-voice-heard-boundary"
+   ],
+   "issues": [
+    "NousResearch#101808",
+    "NousResearch#77111",
+    "NousResearch#112403",
+    "kvnloo#317"
+   ],
+   "merged_from": [
+    "arch-surfaces:realtime-voice-epoch-fenced-tool-authority",
+    "arch-surfaces:voice-live-provider-neutral-delegation",
+    "fork-branches:realtime-voice-invariants",
+    "upstream-rfcs:realtime-voice-core-contract",
+    "fork-branches:webui-mobile-voice"
+   ],
+   "experiments_needed": [
+    "E26"
+   ]
+  },
+  {
+   "id": "cow-reflink-worktrees",
+   "title": "Copy-on-write worktrees for isolated subagents",
+   "one_liner": "Clone the checkout with reflink so children keep ignored build caches; fall back to plain worktree add.",
+   "integration_point": "tools/subagent_worktree.py:88",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "weak",
+   "evidence_summary": "Shipped in OMP 18.4.3. Hermes uses plain `git worktree add`.",
+   "impact": 2,
+   "policy_fit": "fits",
+   "readiness": "needs-eval",
+   "score": 11,
+   "merged_from": [
+    "omp-crosspoll:cow-reflink-subagent-worktrees"
+   ],
+   "experiments_needed": [
+    "E47"
+   ]
+  },
+  {
+   "id": "hashline-anchored-edits",
+   "title": "Hashline content-hash-anchored edit dialect, per model",
+   "one_liner": "Edits address [PATH#TAG] and line numbers, and stale tags are rejected. Opt in per model, following the V4A precedent.",
+   "integration_point": "tools/file_tools.py _patch_schema_overrides; read_file tag via transform_tool_result; plugin register_tool",
+   "footprint_rung": "plugin",
+   "evidence_strength": "weak",
+   "evidence_summary": "Vendor-reported results only (Grok Code Fast 6.7%\u219268.3%). The OMP edit-bench is single-arm. Another edit tool showed no lift in the KB (McNemar p=1.00). Every schema byte is billed on every call.",
+   "impact": 3,
+   "policy_fit": "needs-maintainer-decision",
+   "readiness": "needs-eval",
+   "score": 10,
+   "merged_from": [
+    "omp-crosspoll:hashline-anchored-edits"
+   ],
+   "experiments_needed": [
+    "E02"
+   ]
+  },
+  {
+   "id": "prompt-cache-warming",
+   "title": "Economic prompt-cache warming (idle / long-tool)",
+   "one_liner": "Replay the last request just before cache expiry, cut off at the first token, and only when the expected saving exceeds $0.05.",
+   "integration_point": "agent/prompt_caching.py:84-97; agent/side_question.py replay primitive; gateway idle scheduler",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "weak",
+   "evidence_summary": "OMP ships this on by default. Hermes has 5m/1h TTL selection but no warmer. It spends money without being asked, so it must be opt-in.",
+   "impact": 3,
+   "policy_fit": "needs-maintainer-decision",
+   "readiness": "needs-eval",
+   "score": 10,
+   "merged_from": [
+    "omp-crosspoll:prompt-cache-warming"
+   ],
+   "experiments_needed": [
+    "E38"
+   ]
+  },
+  {
+   "id": "tool-output-sidecar-fts",
+   "title": "Opt-in sidecar FTS index over role='tool' rows",
+   "one_liner": "Make facts that exist only in tool output searchable without growing the main index.",
+   "integration_point": "hermes_state_fts.py:40-44; session_search; config.yaml flag",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "moderate",
+   "evidence_summary": "Tool rows are 58% of kvn's Hermes messages, and 6 of 10 phrases were reachable only through a tool index. The exclusion is deliberate design, so a close as 'intentional' is a risk.",
+   "impact": 2,
+   "policy_fit": "needs-maintainer-decision",
+   "readiness": "needs-eval",
+   "score": 10,
+   "merged_from": [
+    "z0-map:tool-output-search-index"
+   ],
+   "experiments_needed": [
+    "E36"
+   ]
+  },
+  {
+   "id": "decision-relevant-monitor-trigger",
+   "title": "Declared projection before hashing for cron monitor mode",
+   "one_liner": "Ignore irrelevant byte changes (timestamps, ordering, invisible unicode) before deciding to wake the agent.",
+   "integration_point": "cron/monitor.py hash_monitor_output",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "moderate",
+   "evidence_summary": "Exact-bytes hashing is deliberate (#81138); #112199 fixed jobs blocked by invisible unicode. Cron schema tokens are expensive (#95287), so a script-side helper is the lower-footprint option.",
+   "impact": 2,
+   "policy_fit": "needs-maintainer-decision",
+   "readiness": "needs-eval",
+   "score": 10,
+   "issues": [
+    "kvnloo#336",
+    "kvnloo#358",
+    "NousResearch#81138"
+   ],
+   "merged_from": [
+    "beyond-agent:decision-relevant-monitor-trigger"
+   ],
+   "experiments_needed": [
+    "E33"
+   ]
+  },
+  {
+   "id": "action-fusion-then-run",
+   "title": "Action Fusion: then_run command after a successful write or patch",
+   "one_liner": "Save the edit\u2192test round-trip and report [then_run:failed] honestly. Keep it in a plugin.",
+   "integration_point": "sol-pi-hermes plugin tools; core would touch tools/file_tools.py schema",
+   "footprint_rung": "plugin",
+   "evidence_strength": "weak",
+   "evidence_summary": "sol-pi-hermes PR #4 fixed 6 subcases (20 tests), with no model run. Hermes already lints after writes. A core version would grow the schema, against the shrink direction set by #97979.",
+   "impact": 2,
+   "policy_fit": "fits as plugin",
+   "readiness": "needs-eval",
+   "score": 10,
+   "merged_from": [
+    "fkb-harnesses:action-fusion-then-run",
+    "fkb-literature:action-fusion-then-run"
+   ],
+   "experiments_needed": [
+    "E02"
+   ]
+  },
+  {
+   "id": "learn-completion-hook",
+   "title": "Structured /learn completion for plugins",
+   "one_liner": "Fire pre_command from tui_gateway and keep 'learn' provenance separate in on_skill_lifecycle; or review #113174 instead.",
+   "integration_point": "tui_gateway slash dispatch; tools/skill_usage.py:470-532",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "strong",
+   "evidence_summary": "pre_command fires only at cli.py:1211 and gateway/run_inbound.py:807. The 'learn' marker is folded into 'local'. A competing implementation exists (#113174, +656).",
+   "impact": 2,
+   "policy_fit": "needs-maintainer-decision",
+   "readiness": "needs-design",
+   "score": 9,
+   "issues": [
+    "NousResearch#113066",
+    "NousResearch#113174"
+   ],
+   "merged_from": [
+    "upstream-rfcs:learn-completion-hook"
+   ]
+  },
+  {
+   "id": "decision-provider-seam-evidence",
+   "title": "Typed DecisionProvider seam (#113008): evidence package before any code",
+   "one_liner": "Audit the 20 Jev/TypeSafe catalog plugins for duplicated abstention, redaction and receipt semantics. Require compiler-first filtering, which is valid for exposure only. Start shadow-only.",
+   "integration_point": "agent/provider_base.py; ctx.llm.complete_structured; #113020",
+   "footprint_rung": "plugin",
+   "evidence_strength": "moderate",
+   "evidence_summary": "20 catalog entries from about 15 maintainers may meet the RFC's 2-consumer gate (unaudited). Quality evidence is negative: NanoJev 45/84 vs compiler+Hammer 75/84; Julia/Laya fall below the keyword rule; confidence is anti-correlated with correctness; upstream said 'do not adopt Jev' for compaction.",
+   "impact": 3,
+   "policy_fit": "needs-maintainer-decision",
+   "readiness": "research-only",
+   "score": 8,
+   "issues": [
+    "NousResearch#113008",
+    "NousResearch#113020",
+    "NousResearch#113837"
+   ],
+   "rfc": "NousResearch#113008",
+   "merged_from": [
+    "z0-map:decision-provider-abc",
+    "z0int:decision-provider-runtime-evidence",
+    "upstream-rfcs:decision-provider-seam",
+    "z0-map:compiler-first-legal-action-filter",
+    "z0evals:compiler-first-exposure-filter",
+    "z0int:skill-routing-outcome-dataset"
+   ],
+   "experiments_needed": [
+    "E51",
+    "E50",
+    "E42"
+   ]
+  },
+  {
+   "id": "cu-bounded-multi-action",
+   "title": "Bounded multi-action computer_use (sequence / guarded runs)",
+   "one_liner": "One model decision drives several guarded inputs, stopping on any verdict other than done. Must be rebuilt on the lease, approval and verdict seams.",
+   "integration_point": "tools/computer_use/schema.py, tool.py:532-540 verdict ladder",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "weak",
+   "evidence_summary": "On X11 with a simulated 1.5 s model latency, p50 improved 46\u201362% and API calls dropped from 4\u20136 to 2, but this predates #108914 and did not use cua-driver. The old design continued after 'unverifiable', which conflicts with the current verdict contract. The rest of the Sept-16 CU stack is retired.",
+   "impact": 3,
+   "policy_fit": "needs-maintainer-decision",
+   "readiness": "needs-design",
+   "score": 8,
+   "branches": [
+    "feat/cu-sequence-primitive-112639",
+    "feat/cu-guarded-desktop-runs-112639",
+    "feat/cu-bounded-readiness-112639"
+   ],
+   "issues": [
+    "NousResearch#112639",
+    "NousResearch#113306",
+    "NousResearch#113453"
+   ],
+   "merged_from": [
+    "upstream-rfcs:cu-bounded-multi-action",
+    "fork-branches:cu-sequence-bounded",
+    "fork-branches:cu-legacy-rfc-stack"
+   ],
+   "experiments_needed": [
+    "E24"
+   ]
+  },
+  {
+   "id": "read-structural-summary",
+   "title": "Tree-sitter structural summaries on read for large code files",
+   "one_liner": "Return declarations with bodies elided and concrete re-read ranges.",
+   "integration_point": "tools/file_tools.py read_file; transform_tool_result prototype",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "weak",
+   "evidence_summary": "Default-on in OMP. Extra re-reads can cost more than the tokens saved (the #97979 lesson). Offline lookup_sim gives a free estimate.",
+   "impact": 2,
+   "policy_fit": "needs-maintainer-decision",
+   "readiness": "needs-eval",
+   "score": 8,
+   "merged_from": [
+    "omp-crosspoll:read-structural-summary"
+   ],
+   "experiments_needed": [
+    "E38"
+   ]
+  },
+  {
+   "id": "rlm-subcalls-execute-code",
+   "title": "RLM-style recursive llm_query from execute_code kernels",
+   "one_liner": "Allow-list an aux LLM call and context-as-variable handles inside persistent kernels.",
+   "integration_point": "tools/code_execution_tool.py:43 SANDBOX_ALLOWED_TOOLS; code_execution_rpc.py",
+   "footprint_rung": "core-tool",
+   "evidence_strength": "moderate",
+   "evidence_summary": "The RLM paper reports +26% median over compaction on GPT-5 (literature only). It widens a security-sensitive allow-list that plugins cannot widen.",
+   "impact": 3,
+   "policy_fit": "needs-maintainer-decision",
+   "readiness": "needs-design",
+   "score": 8,
+   "merged_from": [
+    "fkb-literature:rlm-subcalls-in-execute-code"
+   ],
+   "experiments_needed": [
+    "E04"
+   ]
+  },
+  {
+   "id": "omp-long-tail",
+   "title": "OMP long-tail ports: TTSR stream rules, speculative delegate launch, prewalk cascade, concurrent advisor, edit auto-repair, unexpected-stop judge, judgment cache, LSP nav tool, snapcompact, subagent steer, metaharness",
+   "one_liner": "Each one is either unmeasured or needs a new plugin surface. Size them with offline trace replays first.",
+   "integration_point": "various: interrupt_control.redirect (TTSR primitive, not plugin-reachable); delegate batch path; turn_final_response.py; agent/lsp",
+   "footprint_rung": "plugin",
+   "evidence_strength": "weak",
+   "evidence_summary": "These ship in OMP. Hermes already has redirect() and pre_tool_call blocking. #77291 found 80.1% of turns are single-call, which caps the gain from speculation. Building metaharness upstream would contradict #117083.",
+   "impact": 2,
+   "policy_fit": "needs-maintainer-decision",
+   "readiness": "needs-design",
+   "score": 5,
+   "merged_from": [
+    "omp-crosspoll:ttsr-stream-rules",
+    "omp-crosspoll:speculative-tool-dispatch",
+    "omp-crosspoll:prewalk-model-cascade",
+    "omp-crosspoll:concurrent-advisor-reviewer",
+    "omp-crosspoll:edit-parse-autorepair",
+    "omp-crosspoll:unexpected-stop-judge",
+    "omp-crosspoll:typed-judgment-plane-cache",
+    "omp-crosspoll:lsp-navigation-tool",
+    "omp-crosspoll:snapcompact-vision-compaction",
+    "omp-crosspoll:subagent-steer-peer-messaging",
+    "omp-crosspoll:unified-experiment-manager"
+   ],
+   "experiments_needed": [
+    "E38"
+   ]
+  },
+  {
+   "id": "harness-evolver-product",
+   "title": "In-tree Harness Evolver / user-facing self-tuning",
+   "one_liner": "Reshape: the credit gates live downstream or in NousResearch/hermes-agent-self-evolution, and the evolvable surface should be tools and middleware before prompts (per AHE).",
+   "integration_point": "external self-evolution repo; evals/ only upstream",
+   "footprint_rung": "standalone-repo",
+   "evidence_strength": "moderate",
+   "evidence_summary": "Phase 0 calibration passed, but with synthetic negatives only. #110691 is closed and #110684 competes. Xipong took apart the self-tuning product argument (#111237) and kvnloo conceded. No maintainer has engaged on #110671\u20136.",
+   "impact": 3,
+   "policy_fit": "conflicts-with-policy (in-tree); fits as standalone",
+   "readiness": "research-only",
+   "score": 5,
+   "branches": [
+    "fork/feat/evolver-phase0-gate-calibration"
+   ],
+   "issues": [
+    "NousResearch#110671",
+    "NousResearch#110684",
+    "NousResearch#110691",
+    "NousResearch#111237"
+   ],
+   "merged_from": [
+    "fkb-literature:evolver-credit-gates-in-self-evolution",
+    "upstream-rfcs:harness-evolver",
+    "lab-infra:harness-evolver-gates",
+    "fork-branches:evolver-phase0"
+   ],
+   "experiments_needed": [
+    "E30"
+   ]
+  },
+  {
+   "id": "memory-packet-cache-core",
+   "title": "MemoryManager-level prefetch packet cache (reshape into the provider plugin)",
+   "one_liner": "A core cache conflicts with the ABC, which assigns caching to providers. If kept at all, it belongs in the out-of-tree provider or behind an opt-in capability.",
+   "integration_point": "agent/memory_manager.py::_prefetch_provider; agent/memory_packet_cache.py (fork)",
+   "footprint_rung": "extend-existing",
+   "evidence_strength": "weak",
+   "evidence_summary": "Measured 0.09 vs 1.03 ms, but only against a fake or down gateway. Code reading finds three problems: sync_all invalidates the cache every completed turn, so fresh hits are effectively impossible; stale pre-write packets are injected unmarked for up to 300 s; and the refresh runs on a bare threading.Thread, breaking spawn_context_thread scope. Four in-tree providers already queue_prefetch.",
+   "impact": 2,
+   "policy_fit": "conflicts-with-policy as core; fits inside provider plugin",
+   "readiness": "research-only",
+   "score": 4,
+   "branches": [
+    "fork/memory-packet-cache@3e762e9d8f"
+   ],
+   "merged_from": [
+    "arch-core:memory-prefetch-packet-cache",
+    "unified-memory:memory-packet-cache",
+    "fork-rfcs-lab:memory-prefetch-packet-cache",
+    "fork-branches:memory-packet-cache",
+    "z0-map:memory-packet-cache"
+   ],
+   "experiments_needed": [
+    "E17"
+   ]
+  },
+  {
+   "id": "jev-hot-path-routing",
+   "title": "Per-turn Jev routing, Jev-in-core, System-One CU lane, local-SLM hot-path deciders",
+   "one_liner": "Keep these as opt-in standalone plugins at most. Every measurement argues against using them in the hot path.",
+   "integration_point": "hermes-jev-skills plugin; catalog (hermes-switchyard already ships jev_computer_use)",
+   "footprint_rung": "plugin",
+   "evidence_strength": "strong",
+   "evidence_summary": "Routing cost rose 8.4\u201366.8%. The j1_1 '40/40 agreement' result is an artifact: both models picked candidate_set[0] every time. NanoJev agreed with Jev on only 13 of 27. Julia scored 0.104 vs 0.740 for the keyword rule. The composition hurt (18\u219213 of 28). In-tree Jev PRs were closed (#114376, #113847, #124944). Jev's evidence-sufficiency accuracy of 0.9514 reproduces, but ECE does not (0.0306 vs 0.0334).",
+   "impact": 2,
+   "policy_fit": "conflicts-with-policy",
+   "readiness": "research-only",
+   "score": 3,
+   "branches": [
+    "feat/jev-computer-use-113850",
+    "feat/jev-into-hermes",
+    "pr-113855-jev-lane"
+   ],
+   "issues": [
+    "NousResearch#113850",
+    "NousResearch#114376",
+    "NousResearch#124944"
+   ],
+   "merged_from": [
+    "z0-map:jev-per-turn-model-routing",
+    "fork-branches:cu-jev-system-one-lane",
+    "upstream-rfcs:jev-system-one-cu",
+    "fork-branches:jev-provider-profile",
+    "z0evals:jev-evidence-sufficiency",
+    "z0evals:bounded-local-decider",
+    "z0int:local-cascade-for-hermes-workers",
+    "z0int:hermes-z0intelligence-live-adapter-hardening"
+   ],
+   "experiments_needed": [
+    "E19",
+    "E42"
+   ]
+  },
+  {
+   "id": "research-backlog",
+   "title": "Research-only backlog",
+   "one_liner": "Covers the beyond-agent paradigms (assumption worlds, sheaf, plasticity, causal scale, failure early-warning, recoverability), memory research (decay eval, topic/dream provider), Hermes Mesh/Keel, the secrets/vault broker, HOTL IR, DAP, hosted-room evals, free-model inventory, the remote MCP bridge, the turn-isolation default, the experiment cockpit, and the free-capacity scheduler/protected evaluator.",
+   "integration_point": "various; mostly standalone or eval-only",
+   "footprint_rung": "unknown",
+   "evidence_strength": "none",
+   "evidence_summary": "0 of 42 beyond-agent leaves have verdicts and 0 of 42 branches exist. The unified-memory conflict slots are unbound. Mesh and Keel have synthetic adapters only. The secret/vault issues have no maintainer signal. dashboard.turn_isolation defaults to False, for an unknown reason.",
+   "impact": 2,
+   "policy_fit": "unknown",
+   "readiness": "research-only",
+   "score": 3,
+   "issues": [
+    "kvnloo#330-#384",
+    "NousResearch#94363",
+    "NousResearch#107700",
+    "NousResearch#88589",
+    "NousResearch#112143"
+   ],
+   "merged_from": [
+    "beyond-agent:*research items",
+    "fkb-harnesses:identity-fill/broker/dap/hotl/keel",
+    "z0-map:remote-mcp-agent-bridge",
+    "z0-map:signed-mesh-kanban-dispatch",
+    "upstream-rfcs:hermes-mesh",
+    "upstream-rfcs:free-model-availability-inventory",
+    "arch-surfaces:hosted-room-replay-evals",
+    "arch-surfaces:dashboard-turn-isolation-default",
+    "arch-surfaces:experiment-cockpit-surface-plugins",
+    "lab-infra:free-capacity-experiment-scheduler",
+    "lab-infra:protected-evaluator-api",
+    "fkb-literature:memory-decay-retention-eval",
+    "fkb-harnesses:topic-memory-dream-consolidation"
+   ],
+   "experiments_needed": [
+    "E54",
+    "E55"
+   ]
+  },
+  {
+   "id": "do-not-promote",
+   "title": "Landed / superseded / contaminated branches",
+   "one_liner": "Archive these: session-activity-watchdog (#76354 landed), gateway-picker-prewarm (closed as fixed), cron-silent-suppression, candidate/steer-112428-*, cursor/project-checker-repair-loop-dd97 (57 of 66 commits already on main), plus review/* copies and backups.",
+   "integration_point": "n/a",
+   "footprint_rung": "docs-or-eval-only",
+   "evidence_strength": "moderate",
+   "evidence_summary": "Subject and file-identity checks against main 298a01c79b (scratchpad fb/landed.tsv).",
+   "impact": 1,
+   "policy_fit": "n/a",
+   "readiness": "research-only",
+   "score": 0,
+   "merged_from": [
+    "arch-surfaces:gateway-picker-prewarm",
+    "arch-surfaces:session-activity-watchdog",
+    "fork-branches:fork-branch-hygiene",
+    "fork-branches:factory-vol-skills"
+   ]
+  }
+ ],
+ "experiment_catalog": [
+  {
+   "id": "E01",
+   "question": "Does hermes patch silently apply wrong anchors on current main, and which traps diverge from str_replace semantics?",
+   "runner": "PR #111127 head 602e596389b: python evals/edittool/runner.py --label current-main && report.py",
+   "metric": "per-trap outcome vs EXPECTED_OUTCOMES; score/6",
+   "runs_without_paid_api": true,
+   "needs": "Hermes venv",
+   "feature_ids": [
+    "edit-tool-fail-loud-and-meter"
+   ],
+   "last_result": "str_replace 6/6, hermes_patch 5/6; missing_anchor applied via context_aware"
+  },
+  {
+   "id": "E02",
+   "question": "Do fail-loud anchors, or alternative edit ABIs (hashline, then_run), cut wrong edits, turns and errors on small models?",
+   "runner": "evals/toolperf_abeval/run_all.sh <base> <arm> 3 <models> with edittool-derived traps",
+   "metric": "wrong-edit rate, turns, tool calls, errors, success (n>=3)",
+   "runs_without_paid_api": true,
+   "needs": "local qwen3-coder-30b-class model via OpenAI-compatible endpoint (or OpenRouter)",
+   "feature_ids": [
+    "edit-tool-fail-loud-and-meter",
+    "hashline-anchored-edits",
+    "action-fusion-then-run"
+   ],
+   "last_result": "not run; prior batch #77056 qwen3-coder-30b -21% turns"
+  },
+  {
+   "id": "E03",
+   "question": "What fraction of gold identifiers survive verbatim in the anchor index plus summary, by category, at a 7K-character budget?",
+   "runner": "reconstruct_lineage.py on a COPY of state.db \u2192 script calling ContextCompressor._build_anchor_index over the scoped region vs cached question banks",
+   "metric": "identifier recall@anchor per category; chars used",
+   "runs_without_paid_api": true,
+   "needs": "state.db copy + cached question banks (not committed)",
+   "feature_ids": [
+    "compaction-identifier-anchor-retention"
+   ],
+   "last_result": "not run; 08-15 anchor lift 23.3\u219260.0"
+  },
+  {
+   "id": "E04",
+   "question": "Do anchor-v2, the decision ledger, summary_source=original, or select_context/RLM/LCM/SoL-Pi/handoff-budget arms beat current+recovery beyond the noise floor?",
+   "runner": "python evals/compaction/runner.py --transcript <lineage.json> --policies current+recovery,<arm> --questions 30; report.py",
+   "metric": "recall % @ retained tokens; paired wins/losses; compaction $ and seconds; consent/denial recall and false standing-constraint rate (ledger arm)",
+   "runs_without_paid_api": false,
+   "needs": "aux compression/judge model (paid, or local via auxiliary.compression); private lineages",
+   "feature_ids": [
+    "compaction-identifier-anchor-retention",
+    "compaction-decision-ledger",
+    "cognitive-state-context-virtualization",
+    "boundary-stable-tool-result-projection",
+    "terminal-output-reducers-plugin",
+    "rlm-subcalls-execute-code"
+   ],
+   "last_result": "2026-09-19: current+recovery 78.9%@55K; jev 75.5%@115K; jev-skills whole-dialogue@1200w 58.7/75.0"
+  },
+  {
+   "id": "E05",
+   "question": "What is the compaction exam's run-to-run SD at 15 vs 30 questions?",
+   "runner": "evals/compaction/runner.py, same policy repeated 3x on a fixed bank",
+   "metric": "SD of recall, MDE",
+   "runs_without_paid_api": false,
+   "needs": "aux LLM",
+   "feature_ids": [
+    "compaction-identifier-anchor-retention",
+    "compaction-decision-ledger"
+   ],
+   "last_result": "stated \u00b13.3 pt at 15q"
+  },
+  {
+   "id": "E06",
+   "question": "Do planted self-instructions or concealed failures survive into compaction summaries?",
+   "runner": "new tripwire next to evals/compaction/test_region_scoping.py over fixtures.py synthetic transcripts (deterministic half)",
+   "metric": "directive propagation rate; failure-omission rate",
+   "runs_without_paid_api": true,
+   "needs": "none (LLM half optional)",
+   "feature_ids": [
+    "compaction-summary-safety-canary"
+   ],
+   "last_result": "not run"
+  },
+  {
+   "id": "E07",
+   "question": "Is the request prefix byte-stable over turns, restarts and one compaction on the gateway, api_server, ACP, serve and Bot Mode surface switches, with new hooks or skill filters on?",
+   "runner": "add JOURNEYS to tests/e2e/core/history/test_prefix_stability.py; evals/token_accounting/worktree_prompt_prefix.py; scripts/run_tests.sh",
+   "metric": "prefix_breaks per journey (expect 1 at compaction); rows exactly once; usage==billed",
+   "runs_without_paid_api": true,
+   "needs": "Linux, FakeLLMServer, temp HERMES_HOME",
+   "feature_ids": [
+    "surface-parity-invariant-cells",
+    "skill-visibility-hook",
+    "before-turn-end-gate"
+   ],
+   "last_result": "C17 covers only gw+cli (3 journeys)"
+  },
+  {
+   "id": "E08",
+   "question": "Do observer payloads carry consistent session/turn/api_request/tool_call ids and first_chunk_at on all 8 entrypoints?",
+   "runner": "extend tests/e2e/core/parity/_helpers.py with a recording plugin on observer hooks",
+   "metric": "join completeness % per entrypoint",
+   "runs_without_paid_api": true,
+   "needs": "Linux, FakeLLMServer",
+   "feature_ids": [
+    "surface-parity-invariant-cells",
+    "z0-observer-shadow-plugin"
+   ],
+   "last_result": "not run"
+  },
+  {
+   "id": "E09",
+   "question": "How much latency does each surface add between submit and first visible delta, and what share of api_server TTFB is spent in _create_agent?",
+   "runner": "FakeLLMServer(delay_per_chunk) + parity drivers, 30 reps/entrypoint; 50 sequential /v1/runs with a timed _create_agent probe",
+   "metric": "surface overhead ms split pre-API/provider/delivery; build/TTFB ratio",
+   "runs_without_paid_api": true,
+   "needs": "FakeLLMServer",
+   "feature_ids": [
+    "turn-timing-observability",
+    "surface-parity-invariant-cells"
+   ],
+   "last_result": "#48204: chat -q 31-33s vs model 2.6s"
+  },
+  {
+   "id": "E10",
+   "question": "What does an on_turn_phase wrap in _run_phase cost on the hot path, and do named phases cover at least 95% of wall time?",
+   "runner": "fork tests test_critical_path_trace.py, test_turn_latency_binding.py + fake-provider loop N=1000 turns (after rebase onto 663362680b)",
+   "metric": "\u00b5s/turn (0 and 1 subscriber); attributed wall fraction",
+   "runs_without_paid_api": true,
+   "needs": "rebased perf/critical-path-* (clean rebase unverified)",
+   "feature_ids": [
+    "turn-timing-observability"
+   ],
+   "last_result": "fork unit tests green at 691445c296 (not re-run)"
+  },
+  {
+   "id": "E11",
+   "question": "Does a before_turn_end gate keep role alternation, a byte-stable prompt and no draft leaks, and what does it cost?",
+   "runner": "fake-provider loop (replay_gates pattern) + scripted policy plugin; scripts/run_tests.sh invariant tests",
+   "metric": "alternation violations (0); prompt byte diffs (0); draft leaks (0); extra calls/tokens per gated turn",
+   "runs_without_paid_api": true,
+   "needs": "none",
+   "feature_ids": [
+    "before-turn-end-gate"
+   ],
+   "last_result": "not run"
+  },
+  {
+   "id": "E12",
+   "question": "Do between-turn compaction and post_compaction hooks preserve the real-usage gate decisions and avoid the #120582 data-loss class?",
+   "runner": "evals/token_accounting/replay_gates.py + evals/compaction/test_region_scoping.py",
+   "metric": "gate decisions vs real-usage oracle; stubbed results (0); turn latency",
+   "runs_without_paid_api": true,
+   "needs": "none",
+   "feature_ids": [
+    "off-critical-path-compaction",
+    "compaction-lifecycle-hooks"
+   ],
+   "last_result": "not run"
+  },
+  {
+   "id": "E13",
+   "question": "Does speculative pre-threshold compaction take ~37 s off the critical path with no loss of recall?",
+   "runner": "evals/compaction/runner.py with a 'speculative' ContextCompressor-subclass arm + mock-provider commit/discard tests",
+   "metric": "recall @ tokens; critical-path compaction seconds; discard rate; wasted aux $",
+   "runs_without_paid_api": false,
+   "needs": "aux LLM; 500K lineages",
+   "feature_ids": [
+    "off-critical-path-compaction"
+   ],
+   "last_result": "baseline $0.061 / 36.9 s per event"
+  },
+  {
+   "id": "E14",
+   "question": "Does decomposing the god files cut size and complexity metrics without changing behavior?",
+   "runner": "evals/codebase_navigability/static_metrics.py + lookup_sim.py; scripts/run_tests.sh tests/agent/",
+   "metric": "max file lines, >300-line fns, CC>30, lookup tool calls; test parity",
+   "runs_without_paid_api": true,
+   "needs": "none",
+   "feature_ids": [
+    "compression-god-file-decomposition"
+   ],
+   "last_result": "baseline 8,255 / 5,673 / 4,579 lines"
+  },
+  {
+   "id": "E15",
+   "question": "Do agent-written skills correlate with fewer turns or errors, and what fraction would a draft gate block? (offline/retrospective)",
+   "runner": "PR #122544 evals/skills offline metrics over COPIES of .usage.json, .curator_ledger.jsonl and state.db",
+   "metric": "turns/errors/tokens with vs without skill on matched families (correlational); zero-use rate",
+   "runs_without_paid_api": true,
+   "needs": "copied profile data (privacy review)",
+   "feature_ids": [
+    "skills-efficacy-paired-eval",
+    "verified-memory-writes"
+   ],
+   "last_result": "not run"
+  },
+  {
+   "id": "E16",
+   "question": "In paired live arms (skills on vs off, curator on vs off) on frozen task families, is there a credited success delta?",
+   "runner": "core_tool_deferral-style orchestrator in isolated HERMES_HOME; credit gate (paired bootstrap, >=5 pairs)",
+   "metric": "paired success delta CI, tokens/turns, patch churn",
+   "runs_without_paid_api": false,
+   "needs": "live model (paid or local GPU); eval-safe memory isolation",
+   "feature_ids": [
+    "skills-efficacy-paired-eval"
+   ],
+   "last_result": "not run"
+  },
+  {
+   "id": "E17",
+   "question": "Under delay, hang, empty and error faults, how much turn latency does external prefetch add, and in the real loop (sync_all every turn) how often would a packet cache hit FRESH or serve stale data after a write? Does the refresh thread keep profile scope?",
+   "runner": "new evals/memory/ probe (local fake HTTP backend) + offline cache-key replay over a state.db copy + pytest for ContextVar propagation",
+   "metric": "prefetch p50/p95 ms, remote calls, FRESH/STALE/MISS share, stale-after-write turns, scope pass/fail",
+   "runs_without_paid_api": true,
+   "needs": "Hermes venv; state.db copy",
+   "feature_ids": [
+    "memory-prefetch-telemetry-and-probe",
+    "memory-packet-cache-core"
+   ],
+   "last_result": "fake provider 0.09 vs 1.03 ms; predicted FRESH\u22480 and scope FAIL (code reading)"
+  },
+  {
+   "id": "E18",
+   "question": "On the frozen six-case cohort, does Hermes plus State Packet injection give verified support, abstention and supersession at minimal bytes?",
+   "runner": "evals/unified_memory/run.py (c84663880a) rebased onto z0evals executable-cohort.v1 cohort_contract",
+   "metric": "per-case verified support, stale-answer rate, abstention, injected bytes vs 3.27 GB baseline",
+   "runs_without_paid_api": false,
+   "needs": "conflict_a/b sources bound; AgentsView reader; v1 adapter; model",
+   "feature_ids": [
+    "cognitive-state-context-virtualization",
+    "eval-safe-memory-isolation"
+   ],
+   "last_result": "BLOCKED: preflight passed=false; Hermes smoke n=1 only"
+  },
+  {
+   "id": "E19",
+   "question": "How much cache-read share is lost on a mid-conversation model switch, and does per-turn routing ever save money once cache pricing is included?",
+   "runner": "python -m evals.postmortem.forensics.logcalls --db <state copy> --logs agent.log*; jevkit.replay.compare (heuristic arm free)",
+   "metric": "cache-read ratio before/after switch; $/turn delta; template-turn share",
+   "runs_without_paid_api": true,
+   "needs": "state.db copy + rotated logs",
+   "feature_ids": [
+    "cache-safe-model-routing",
+    "jev-hot-path-routing"
+   ],
+   "last_result": "third-party fleet: +8.4% to +66.8% cost, 81.8% cache hit"
+  },
+  {
+   "id": "E20",
+   "question": "What is the run-to-run noise floor of toolperf/core_tool_deferral metrics on local models (A/A), and do tool-visibility changes hold up on small models?",
+   "runner": "evals/toolperf_abeval/run_all.sh <same> <same> N <model>; evals/core_tool_deferral/orchestrator.py <local model> 3 --parallel=5 (needs base_url plumbing)",
+   "metric": "per-task SD, MDE; accuracy/turns/tokens",
+   "runs_without_paid_api": true,
+   "needs": "GPU + local OpenAI-compatible server",
+   "feature_ids": [
+    "offline-replay-ab-substrate",
+    "promotion-gates-factory",
+    "lean-prefix-skill-exposure"
+   ],
+   "last_result": "288 live runs: 0.923 vs 0.916; no A/A done"
+  },
+  {
+   "id": "E21",
+   "question": "Does enabling the z0 observer leave requests and tool sequences byte-identical, and do all three producers mint the same trace_id for one turn?",
+   "runner": "lab/z0_hermes_observer README step 4 in temp HERMES_HOME with local model; new unit fixture importing z0int adapter + observer",
+   "metric": "request/tool identity; overhead p50/p95; trace_id equality",
+   "runs_without_paid_api": true,
+   "needs": "local model or recorded fixtures; z0int checkout",
+   "feature_ids": [
+    "z0-observer-shadow-plugin"
+   ],
+   "last_result": "identity join expected FAIL (session_id vs sha256(session,turn)); CI skipped tests"
+  },
+  {
+   "id": "E22",
+   "question": "Does any z0int backend beat the base rate or a logistic-on-counters model on api.attempt_will_fail and retry_will_succeed, using grouped splits?",
+   "runner": "shadow_api_failure.py --backend {laya_421m,nanojev,openjev} \u2192 evaluate_shadow.py (+coverage, grouping by api_request_id)",
+   "metric": "Brier vs base rate, log loss, calibration, coverage, latency",
+   "runs_without_paid_api": true,
+   "needs": "real observer cohort; local GPU",
+   "feature_ids": [
+    "z0-observer-shadow-plugin"
+   ],
+   "last_result": "no cohort"
+  },
+  {
+   "id": "E23",
+   "question": "On a real desktop with a WM and AT-SPI, does capture projection cut capture ms and timeouts in ax/vision modes with no correctness loss?",
+   "runner": "docker/sandbox-desktop.Dockerfile + cua-driver; at least 40 captures/mode/arm, main vs fork branch; Windows UIA replay optional",
+   "metric": "capture_ms p50/p95, bytes, timeout rate, valid image/tree, window_title kept",
+   "runs_without_paid_api": true,
+   "needs": "docker, cua-driver 0.28.x",
+   "feature_ids": [
+    "cu-capture-mode-projection"
+   ],
+   "last_result": "Windows Unity 3.942 s timeout \u2192 2.029 s valid; Xvfb null"
+  },
+  {
+   "id": "E24",
+   "question": "With real input, what is the verdict distribution per action type, and are AT-SPI identities stable enough for deltas?",
+   "runner": "sandbox-desktop image, scripted 3-step policies + feat/cu-shadow-state-112734 metrics (no model)",
+   "metric": "confirmed/unverifiable/noop share; identity retention; ambiguity; reconcile p95; verify_state vs capture ms",
+   "runs_without_paid_api": true,
+   "needs": "docker sandbox-desktop",
+   "feature_ids": [
+    "cu-shadow-semantic-state",
+    "cu-bounded-multi-action",
+    "cu-repeat-key-dedup-fix"
+   ],
+   "last_result": "Xvfb: input no-op; verify_state ~5 ms vs capture ~28 ms"
+  },
+  {
+   "id": "E25",
+   "question": "Is the repeat-key dedup bug still red on 663362680b, and green with the guard?",
+   "runner": "scripts/run_tests.sh tests/agent/test_agent_guardrails.py on fork/fix/computer-use-repeat-input-dedup-current-main",
+   "metric": "red-on-base/green-on-head",
+   "runs_without_paid_api": true,
+   "needs": "none",
+   "feature_ids": [
+    "cu-repeat-key-dedup-fix"
+   ],
+   "last_result": "historically 2\u21921 deduped"
+  },
+  {
+   "id": "E26",
+   "question": "On #101808, does a late tool call from a barged-in response still execute, and does an admission fence close the gap?",
+   "runner": "pytest on #101808 head 311446cd91 + port of fork ff6d276477 and an admission guard; fake provider event sequence",
+   "metric": "late executor calls (0); legitimate calls once",
+   "runs_without_paid_api": true,
+   "needs": "read-only PR checkout",
+   "feature_ids": [
+    "realtime-voice-followups"
+   ],
+   "last_result": "executor.calls == [('charge',{})], reproduced"
+  },
+  {
+   "id": "E27",
+   "question": "Does Bend fail closed and typed under failure injection, invalidate receipts on replay, and keep tenant isolation across CLI, gateway, subagent and profile scopes?",
+   "runner": ".github/workflows/bend-hermes-experiments.yml + new W6/W7 injectors; tests/plugins via real discovery with temp HERMES_HOME",
+   "metric": "forged passes (0), fail-closed rate, invalidation precision/recall, cross-profile leakage",
+   "runs_without_paid_api": true,
+   "needs": "Bend 2.0.34 + Lean 4.34.0",
+   "feature_ids": [
+    "bend-verifier-standalone-plugin"
+   ],
+   "last_result": "W1-W4 green; pinned kernel 0/10 forged, warm p50 ~209 ms"
+  },
+  {
+   "id": "E28",
+   "question": "Does a pre_verify Bend gate cut false completions without excess turns?",
+   "runner": "plugin registering pre_verify + Bend repair task set",
+   "metric": "false-completion rate, verified completion, turns, tokens",
+   "runs_without_paid_api": false,
+   "needs": "LLM trajectories (paid or capable local)",
+   "feature_ids": [
+    "bend-verifier-standalone-plugin"
+   ],
+   "last_result": "not run"
+  },
+  {
+   "id": "E29",
+   "question": "How many renders, RPCs, timers and subprocesses per minute does an idle TUI cost before and after the render-fanout slices land?",
+   "runner": "ui-tui vitest render-count suites + 60 s idle gateway RPC counter on a combined promote/* rebuild",
+   "metric": "renders/min, RPC/min, processes/min, timer callbacks/min",
+   "runs_without_paid_api": true,
+   "needs": "Node + ui-tui deps",
+   "feature_ids": [
+    "tui-render-fanout-perf"
+   ],
+   "last_result": "per-slice 0 rerenders; pet 24 RPC/min; config 12/min; git ~4 proc/min"
+  },
+  {
+   "id": "E30",
+   "question": "Do the validity/activation/credit gates separate known-good fixes from plausible-bad human patches (reverted or superseded PRs), with infra errors counted in the denominator?",
+   "runner": "python -m evolver.calibrate --repo <full clone> --venv <venv> --workdir <scratch> --report report.json (+ reverted-PR negatives, completeness fields)",
+   "metric": "acceptance, rejection, completeness_rate, infra_error_cases",
+   "runs_without_paid_api": true,
+   "needs": "full-history clone, venv",
+   "feature_ids": [
+    "promotion-gates-factory",
+    "harness-evolver-product"
+   ],
+   "last_result": "calibration_passed true on synthetic negatives only (#110691; not re-verified)"
+  },
+  {
+   "id": "E31",
+   "question": "With all effect tables derived from the registry, is behavior identical, and does each widening (x_search, mcp_filesystem readers, read-only terminal) pass hidden-side-effect traps?",
+   "runner": "offline pytest over _plan_tool_batch_segments + #365 trap stubs; tests/run_agent/test_tool_batch_segmentation.py",
+   "metric": "unsound admissions (0); parallel segments gained on mined traces",
+   "runs_without_paid_api": true,
+   "needs": "none",
+   "feature_ids": [
+    "tool-effect-algebra-table"
+   ],
+   "last_result": "not run"
+  },
+  {
+   "id": "E32",
+   "question": "Does supersession pruning reduce retained tokens while keeping latest-content and 'what changed' probes passing?",
+   "runner": "new deterministic arm beside evals/compaction/policies.py with a string-match oracle",
+   "metric": "tokens retained vs probe pass rate",
+   "runs_without_paid_api": true,
+   "needs": "none",
+   "feature_ids": [
+    "superseded-read-compaction"
+   ],
+   "last_result": "not run"
+  },
+  {
+   "id": "E33",
+   "question": "What are exact-bytes vs projected-hash false-wake and false-sleep rates on synthetic monitor streams?",
+   "runner": "offline harness importing cron/monitor.py hash_monitor_output",
+   "metric": "false-wake, false-sleep, max sleep interval under drift",
+   "runs_without_paid_api": true,
+   "needs": "none",
+   "feature_ids": [
+    "decision-relevant-monitor-trigger"
+   ],
+   "last_result": "not run"
+  },
+  {
+   "id": "E34",
+   "question": "What fraction of cron agent runs could monitor gating have suppressed while keeping at least 99% no-missed-change precision?",
+   "runner": "offline script over state.db copy grouped by cron job; z0int routines.py credit gates",
+   "metric": "suppressible fraction; calls/tokens avoided; demotion rate on future split",
+   "runs_without_paid_api": true,
+   "needs": "state.db copy",
+   "feature_ids": [
+    "cron-routine-miner"
+   ],
+   "last_result": "not run"
+  },
+  {
+   "id": "E35",
+   "question": "Once compiled per turn, which capabilities reach 500 or more outcome-backed rows, and do the OMP rankings (keyword > Laya > Julia) replicate on Hermes?",
+   "runner": "port omp_decisions.py \u2192 hermes_decisions.py over state.db copy; z0_capability_compare.py grouped splits",
+   "metric": "rows/capability; sealed acc/macroF1 vs majority and keyword rule; template share",
+   "runs_without_paid_api": true,
+   "needs": "state.db copy; CPU",
+   "feature_ids": [
+    "hermes-decision-dataset-v2"
+   ],
+   "last_result": "OMP: keyword 0.740 > majority 0.520 > Laya 0.195 > Julia 0.104"
+  },
+  {
+   "id": "E36",
+   "question": "On a Hermes state.db, does bounded-candidate ranking cut tail latency at top-k parity, and what would a tool-row sidecar cost and recover?",
+   "runner": "script over state.db copy: current ORDER BY rank vs inner LIMIT N; contentless FTS5 sidecar builder + 10-phrase control",
+   "metric": "p50/p95/cold ms, recall@10; sidecar MB, build s, tool-only recall",
+   "runs_without_paid_api": true,
+   "needs": "state.db copy",
+   "feature_ids": [
+    "session-search-bounded-ordering",
+    "tool-output-sidecar-fts"
+   ],
+   "last_result": "agentsview DB: 0.031 vs 135.8 ms (4,382\u00d7)"
+  },
+  {
+   "id": "E37",
+   "question": "Does boundary-stable projection cut billed input tokens per turn without lowering the cache-read ratio or success?",
+   "runner": "offline replay_lineage.py arm on state.db copies; decisive live two-arm run on a caching route recording cache_read/write",
+   "metric": "cache_read/input before vs after; billed tokens/turn; prefix rewrites; success",
+   "runs_without_paid_api": false,
+   "needs": "provider with prompt caching",
+   "feature_ids": [
+    "boundary-stable-tool-result-projection"
+   ],
+   "last_result": "#107731 \u221277% is synthetic; CC \u221230.3% on long sessions"
+  },
+  {
+   "id": "E38",
+   "question": "Offline sizing of OMP ports: shell minimizer token savings and retention, read-outline lookup cost, TTSR trigger rate and lateness, cache-warm gap economics, auto-repair incidents, judgment-cache hit rate.",
+   "runner": "lab/omp-crosspoll/{minimizer_replay.py, ttsr_replay.py, cache_warm_replay.py, autorepair_sizing.py, judgment_cache_replay.py}; evals/codebase_navigability/lookup_sim.py summarize-first arm",
+   "metric": "tokens saved + error/exit/path retention; tokens & calls per lookup; triggers/1k turns; net $ saved; incidents/100 edits; hit rate",
+   "runs_without_paid_api": true,
+   "needs": "local trajectories/observer receipts; tree-sitter",
+   "feature_ids": [
+    "terminal-output-reducers-plugin",
+    "read-structural-summary",
+    "prompt-cache-warming",
+    "omp-long-tail"
+   ],
+   "last_result": "not run"
+  },
+  {
+   "id": "E39",
+   "question": "Across historical delegate_task calls, how many parent tokens did child results add vs replace?",
+   "runner": "offline analysis over state.db copy + delegate cost records",
+   "metric": "parent-token delta per delegation by task size",
+   "runs_without_paid_api": true,
+   "needs": "state.db copy",
+   "feature_ids": [
+    "typed-explorer-and-delegation-receipts"
+   ],
+   "last_result": "z0 Cerebras: +522/+1,008 per equal-cache pair; full-cohort CI includes 0"
+  },
+  {
+   "id": "E40",
+   "question": "Does a typed explorer child cut parent tokens at equal success vs no delegation and untyped delegation?",
+   "runner": "core_tool_deferral-pattern 3-arm battery on codebase_navigability symbols",
+   "metric": "success, parent uncached tokens (equal cache), turns, F0.5",
+   "runs_without_paid_api": false,
+   "needs": "model API or local qwen3.8-27b",
+   "feature_ids": [
+    "typed-explorer-and-delegation-receipts"
+   ],
+   "last_result": "not run"
+  },
+  {
+   "id": "E41",
+   "question": "Does BM25 selection keep more answer-bearing spans than web_extract's head+tail at an equal budget?",
+   "runner": "z0int context filter --mode keyword --pre-chunked vs head+tail reimplementation over frozen long pages with gold spans",
+   "metric": "gold-span retention, context chars, latency",
+   "runs_without_paid_api": true,
+   "needs": "frozen page/question fixtures",
+   "feature_ids": [
+    "context-filter-web-extract"
+   ],
+   "last_result": "54 unit tests only"
+  },
+  {
+   "id": "E42",
+   "question": "Local bounded-decision campaigns: phase1b arms, token-cap sensitivity, compiler-ablation 2x2, composition. Finish the pending Nemotron and Qwen9B n=84 cells.",
+   "runner": "openjev scripts/phase1b_campaign.sh; z0int 6f3345e results/token-cap-20260922/run_token_cap.py, compiler-ablation run_ablation.py, composition_eval.py",
+   "metric": "success (Wilson), dangerous exposed/selected, p50 ms, accuracy by cap",
+   "runs_without_paid_api": true,
+   "needs": "RTX 3080 Ti (serial), local GGUFs, z0int supervisor",
+   "feature_ids": [
+    "decision-provider-seam-evidence",
+    "jev-hot-path-routing",
+    "effective-token-cap-receipts"
+   ],
+   "last_result": "Hammer3B 75/84 @195 ms; selection-safety claim INVALID; Nemotron 57.1\u219285.7% at 256\u21921024; 983/1176 measured"
+  },
+  {
+   "id": "E43",
+   "question": "Can verification_evidence.db plus pre_verify and on_session_end supply enough labels to score a verification_needed shadow?",
+   "runner": "observer extension recording pre_verify state, joined offline to a copy of verification_events",
+   "metric": "labelled turns/week; Brier vs always/never baselines; false skip rate",
+   "runs_without_paid_api": true,
+   "needs": "lab-profile coding sessions",
+   "feature_ids": [
+    "outcome-signal-hook-widening",
+    "verify-policy-voc-gating"
+   ],
+   "last_result": "z0 evidence n=2 (Brier 0.365)"
+  },
+  {
+   "id": "E44",
+   "question": "Do friction signals predict independently judged turn failure well enough to serve as labels?",
+   "runner": "join local state.db turns with friction events; hand-label a stratified sample of 200 turns",
+   "metric": "precision/recall per signal; Brier of combined label",
+   "runs_without_paid_api": true,
+   "needs": "local history + human labels",
+   "feature_ids": [
+    "outcome-signal-hook-widening"
+   ],
+   "last_result": "not run"
+  },
+  {
+   "id": "E45",
+   "question": "Do model-specific pre_verify policies improve success or cut post-completion verification?",
+   "runner": "core_tool_deferral + toolperf_abeval with a pre_verify plugin arm",
+   "metric": "accuracy, post-completion verify calls, tokens, turns",
+   "runs_without_paid_api": false,
+   "needs": "OpenRouter or local models",
+   "feature_ids": [
+    "verify-policy-voc-gating"
+   ],
+   "last_result": "glm made 30 verify calls after completion (#97979 anomaly)"
+  },
+  {
+   "id": "E46",
+   "question": "Does per-task effort or solution_space cut child reasoning tokens and wall time at equal correctness, with 0 extra calls?",
+   "runner": "#40306 shared battery with delegation cells",
+   "metric": "correctness, child tier, reasoning tokens, API calls, wall",
+   "runs_without_paid_api": false,
+   "needs": "paid multi-provider",
+   "feature_ids": [
+    "delegated-effort-solution-space"
+   ],
+   "last_result": "#88522 28.4\u21925.4 s, 0 extra calls"
+  },
+  {
+   "id": "E47",
+   "question": "How much faster is a subagent ready to test on a reflink worktree?",
+   "runner": "lab/omp-crosspoll/cow_worktree_bench.sh on btrfs/XFS",
+   "metric": "create s, first test/build s, disk delta",
+   "runs_without_paid_api": true,
+   "needs": "reflink filesystem",
+   "feature_ids": [
+    "cow-reflink-worktrees"
+   ],
+   "last_result": "not run"
+  },
+  {
+   "id": "E48",
+   "question": "Do the Hermes, verifier and component receipts join into one envelope, and do injected faults keep verified_success null?",
+   "runner": "validator + 10 failure-injection fixtures for lab/hermes-stack-v0/experiment.schema.json",
+   "metric": "join completeness; correct fail-open/closed per case",
+   "runs_without_paid_api": true,
+   "needs": "fixtures only",
+   "feature_ids": [
+    "experiment-manifest-receipt-envelope"
+   ],
+   "last_result": "schema only"
+  },
+  {
+   "id": "E49",
+   "question": "Stage-0 factorial: do 5 frozen cases per arm (H0/Z/R/S) run with joined receipts, without shadow components changing execution?",
+   "runner": "not built (kvnloo#323)",
+   "metric": "join completeness, shadow divergence, fail-open",
+   "runs_without_paid_api": false,
+   "needs": "observer + R/S Hermes code (missing); model calls",
+   "feature_ids": [
+    "experiment-manifest-receipt-envelope"
+   ],
+   "last_result": "not run"
+  },
+  {
+   "id": "E50",
+   "question": "On real turns, does a local typed backend cut wrong or needless skill loads vs no hint and vs keyword rules?",
+   "runner": "observer capture of on_skill_lifecycle + roster (opt-in content); offline scoring laya/openjev vs keyword",
+   "metric": "wrong/needless load rate, top-1 agreement, p50 ms",
+   "runs_without_paid_api": true,
+   "needs": "lab profile, local GPU",
+   "feature_ids": [
+    "decision-provider-seam-evidence",
+    "skill-visibility-hook"
+   ],
+   "last_result": "vendor eval 16.8\u21927.3% wrong (synthetic positives)"
+  },
+  {
+   "id": "E51",
+   "question": "Do the 20 Jev/TypeSafe catalog plugins duplicate redaction, threshold, fail-open and receipt semantics (the #113008 gate)?",
+   "runner": "clone each catalog repo at its pinned SHA; AST/grep census",
+   "metric": "duplicated LOC; distinct semantics; consumer categories",
+   "runs_without_paid_api": true,
+   "needs": "network clone only",
+   "feature_ids": [
+    "decision-provider-seam-evidence"
+   ],
+   "last_result": "inventory only: 20 entries, ~15 maintainers"
+  },
+  {
+   "id": "E52",
+   "question": "Which z0 standalone plugins pass catalog admission today?",
+   "runner": "hermes plugins validate <dir> in isolated HERMES_HOME (Bend, observer, kerdoios, sol-pi-hermes, spatial canvas, tokenmaxxing)",
+   "metric": "verdict + findings; release/tag presence",
+   "runs_without_paid_api": true,
+   "needs": "permission to run hermes CLI",
+   "feature_ids": [
+    "third-party-plugin-repackaging",
+    "bend-verifier-standalone-plugin",
+    "z0-observer-shadow-plugin"
+   ],
+   "last_result": "not run; kerdoios untagged, spatial has no remote"
+  },
+  {
+   "id": "E53",
+   "question": "Does the ranked landing verifier reproduce maintainer verdicts on past waves?",
+   "runner": "landing_evidence.py --pairs <wave1+2> (path unverified on this host)",
+   "metric": "verdict agreement, misattribution rate",
+   "runs_without_paid_api": true,
+   "needs": "GitHub read quota, full clone",
+   "feature_ids": [
+    "landing-evidence-ci"
+   ],
+   "last_result": "wave1 3/18 wrong flags caught; wave2 12/44 misattributed before fix"
+  },
+  {
+   "id": "E54",
+   "question": "Do the wave-A synthetic beyond-agent leaves (#342, #345, #348, #351, #354, #360, #363, #366, #370, #371) give supports or falsifies verdicts against old-world baselines?",
+   "runner": "lab/beyond-agent/<issue>/ per result.schema.json (none built)",
+   "metric": "verdict, novelty_survives, kill_criterion_triggered",
+   "runs_without_paid_api": true,
+   "needs": "pure Python fixtures",
+   "feature_ids": [
+    "research-backlog"
+   ],
+   "last_result": "0/42 verdicts"
+  },
+  {
+   "id": "E55",
+   "question": "Does dashboard.turn_isolation reduce serve event-loop lag under K concurrent streaming turns?",
+   "runner": "hermes serve --port 0 in temp home, arms on/off, K\u2208{1,4,8,16} WS clients + 50 ms ping RPC against FakeLLMServer",
+   "metric": "ping RTT p50/max, delta jitter, CPU",
+   "runs_without_paid_api": true,
+   "needs": "FakeLLMServer, Linux",
+   "feature_ids": [
+    "research-backlog"
+   ],
+   "last_result": "unmeasured; default False"
+  },
+  {
+   "id": "E56",
+   "question": "(Completed, external harness) Which z0 levers cut billed cost at held quality in Claude Code?",
+   "runner": "z0intelligence feat/claude-code-harness benchmarks/claude_code/run_pair.py; benchmarks/state_packet/run.py",
+   "metric": "paired billed cost, Wilcoxon/sign, verified quality",
+   "runs_without_paid_api": false,
+   "needs": "Claude subscription",
+   "feature_ids": [
+    "boundary-stable-tool-result-projection",
+    "cognitive-state-context-virtualization",
+    "lean-prefix-skill-exposure"
+   ],
+   "last_result": "lean cold \u221264.7%; ObservationPack long \u221230.3% (n=12, p=0.0068), null on short tasks; lean+packet 22/22 at $0.861 vs 21/22 at $2.186; raw n=12 JSONL lives on another host (not regenerable here)"
+  }
+ ],
+ "key_datapoints": [
+  "Compaction SCORECARD-2026-09-19 (upstream): current+session_search recovery 78.9% @55K vs Jev 75.5% @115K. Compaction costs $0.061 and 36.9 s per event (Jev $0.007 / 1.4 s). Exam noise \u00b13.3 pt at 15 questions. Verdict: do not adopt Jev. Prune-first compaction multiplies cache breaks. The named gap is identifier retention in the summary.",
+  "Compaction SCORECARD-2026-08-15: the anchor index lifted GUI closed-book recall 23.3\u219260.0 (+recovery 46.7\u219280.0). lean+recovery 68.3% @49K vs current 45.8% @162K.",
+  "core_tool_deferral (#97979, 288 runs): schema \u221256% (47.4\u219221.0 KB); tokens \u221223% / \u221211% / \u22127%; accuracy 0.923\u21920.916; clarify use fell 18/18\u21927/18, so clarify is kept eager.",
+  "toolperf_abeval (#77056): qwen3-coder-30b \u221221% turns, \u221229% tool calls, errors to 0, \u221223% wall time; 108 runs in about 2.5 h. readtool stat-guard: \u221279% tokens with score held.",
+  "Edittool meter (#111127): str_replace 6/6 vs hermes_patch 5/6. On #125376, the wrong anchor 'trim()' applies against 'strip()' at similarity 0.923 on main.",
+  "CU #113389, Windows Unity window, vision mode: main timed out at 3.942 s; the PR returned a valid PNG in 2.029 s. Bare Xvfb shows no effect. cua_backend_capture.py is byte-identical at the branch base and on main.",
+  "#104414: a surface switch that rebuilt the prompt brought a 220K-token session back at a 1% cache hit. C17 prefix-stability covers only the tui_gateway and CLI surfaces.",
+  "#48204: chat -q took 31\u201333 s while the model call took 2.6 s. tokenmaxxing oneshot wall time ranged 626\u201350,107 ms against direct HTTP TTFB of 155\u20131,324 ms.",
+  "#77291: 80.1% of turns are single-call; 96.4% of prefix bytes hit the cache; latency \u2248 3.19 s + 22.11 s per 1k output tokens.",
+  "Bend verifier: 225/225 matrix runs and 200/200 concurrency runs with 0 mismatches; TOCTOU forged passes fell 25/25\u21920/25. A poisoned shared kernel cache gave 10/10 forged passes; the session-pinned kernel gives 0/10, with warm p50 ~209 ms and a 29.5 s bootstrap. Stock Bend 2.0.32\u201334 mis-certifies #1212; the patched kvnloo/bend#2 shows 0 mismatches over 336 corpus runs (not yet reported).",
+  "TUI slices: the replay ticker went from ~200 setNow/min to 0; 20 unrelated status writes cause 0 rerenders or notifications; a collapsed dock produces 0 clock commits over 2 minutes; full ui-tui suite passes (176 files / 1,611 tests).",
+  "Memory packet cache: 0.09 vs 1.03 ms, measured against a fake or down gateway only. sync_all invalidates the cache after every completed turn, so fresh hits are effectively impossible (code reading). Stale pre-write packets are served unmarked for up to 300 s.",
+  "Unified memory: frozen-cohort preflight passed=false (conflict_a/b unbound, 0 receipts). The Hermes smoke run is n=1 per arm: cold 2,910 ms, warm 1,234 ms, retrieval 1.54\u21920.11 ms.",
+  "Claude Code (z0evals claude-code-savings-v0): lean cut cold cost by a median 64.7% (10/10, p=0.002) and warm by 27.2% (15/15). ObservationPack cut long-session cost 30.3% (n=12, Wilcoxon p=0.0068) with no effect on short tasks. lean+obspack \u221238.2% (6/6). State Packet: lean+packet 22/22 at $0.861 vs stock+raw 21/22 at $2.186.",
+  "Delegation economics (Cerebras, 60 pairs): uncached parent tokens rose 358,575\u2192427,139. At equal cache, +522.1 [506\u2013536] and +1,008.1 [959\u20131,064] per pair, but full-cohort CIs include zero. A tiny-task offload added 1,347 tokens.",
+  "Phase 1B (1,102 receipts, $0): compiler+Hammer2.1-3B 75/84 @195 ms; compiler+NanoJev 45/84 @31 ms. ERRATUM (z0int 6f3345e): the '6/84 dangerous selections' result does not replicate (0 in every cell); the framing\u00d7filter 2x2 is rank-deficient; Nemotron ran under a silent 256-token cap (0.619\u21920.857 at 1024, preliminary).",
+  "julia-claims, sealed n=77: keyword rule 0.740 > majority 0.520 > Laya 0.195 > Julia 0.104; option order flipped the winner on 51 of 77. The Hermes-derived corpus has 76,970 rows but only 1,644 distinct prompts, one repeated 10,755 times.",
+  "On real Hermes next-action traffic the fly/mushroom champion scores 0.143, vs majority 0.514 and ridge 0.643. A recovery_action canary was minted on an OOD slice where all 32 labels were 'escalate'. The autoresearch loop ran 80 sessions with 0 keeps.",
+  "Jev routing: a per-turn replay raised cost 8.4\u201366.8%; 79% of fleet turns are cron/kanban template; cache hit 81.8%. hermes-k8s-lab's j1_1 '40/40 agreement' is a positional artifact (both picked candidate_set[0]). An independent pilot shows NanoJev agreeing with Jev on 13 of 27. Jev authored144 accuracy reproduces at 0.9514; ECE reproduces as 0.0306, not the claimed 0.0334.",
+  "Tokenomics: 0 of 315 local events are harness=hermes, while OMP emitted 7,979 events on 2026-09-19. The Hermes emitter exists but nothing calls it; post_api_request already carries usage and first_chunk_at.",
+  "Effect tables: 4 hand-maintained tables disagree (5/4/8/2 set differences), and 26 of 49 statically matched tools appear in none.",
+  "Session search: on an agentsview DB, an unsorted LIMIT 20 is 4,382\u00d7 faster than ORDER BY rank (0.031 vs 135.8 ms). In kvn's Hermes stores, 58% of messages are role='tool', and FTS excludes them by design.",
+  "OMP cognitive-state P1 (20 tasks, mock provider): root tokens \u221239.4% with 20/20 'verified' by substring check, but the median ratio is 0.96 and 8 of 20 tasks grew. Packet stays at 960 B/turn vs +80 KB/turn native (#107).",
+  "Realtime: on #101808 head 311446cd91, a late tool call from a settled (barged-in) response still executes. teknium shipped GPT-Live client delegation instead (f923faa0b8).",
+  "Upstream reception: kvnloo has 1 merged PR (#123069), 13 open, 175 closed unmerged, and 33 commits on main, all fix/test/docs/chore with no feat. teknium endorsed only the structured decision ledger (#113537\u2192#113305). The plugin catalog has 350 entries, 20 of them Jev/TypeSafe from ~15 maintainers.",
+  "Velocity and staleness: 19,490 upstream commits in September. 97 of 138 focus fork branches are more than 5k commits behind; only 24 are within 1k.",
+  "Factory CI: fork PR CI is action_required or queued. Lab PRs #385\u2013#387 are red, from a literal /tmp at SHADOW_API_FAILURE.md:20. ACT-001 disabled 253 workflows across 84 forks after 3,674 runs in 24 h.",
+  "Beyond-Agent: 55 of 55 issues are open, 0 of 42 experiment leaves have a verdict, and 0 of 42 planned branches exist. Only wave D has oss-factory work orders.",
+  "Announced lab branches lab/track2/solpi-observation-shadow-v0, lab/track3/* and lab/track4/rlm-state-shadow-v0 are absent from the fork remote. The study branch study/hermes-unified-memory-56@c84663880a is local-only, a worktree of the live install's .git."
+ ]
+}
