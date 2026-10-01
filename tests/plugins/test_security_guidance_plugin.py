@@ -17,6 +17,7 @@ Covers ``plugins/security-guidance/``:
 """
 
 import importlib.util
+import json
 import sys
 import types
 from pathlib import Path
@@ -195,6 +196,20 @@ class TestTransformToolResultHook:
         assert isinstance(result, str)
         assert "eval_injection" in result
 
+    def test_skill_manage_operations_write_scanned(self):
+        # skill_manage's advertised shape nests each write in operations[]; it must be
+        # scanned like the flat shape, against the op's own file_path.
+        mod = _load_plugin_init()
+        args = {"operations": [
+            {"name": "demo", "action": "write_file", "file_path": "scripts/load.py",
+             "file_content": "import pickle\nx = pickle.loads(b)\n"},
+        ]}
+        result = mod._on_transform_tool_result(
+            tool_name="skill_manage", args=args, result='{"success": true}'
+        )
+        assert isinstance(result, str)
+        assert "pickle_deserialization" in result
+
     def test_untargeted_tool_skipped(self):
         mod = _load_plugin_init()
         # The plugin only scans write_file/patch/skill_manage. terminal output
@@ -242,6 +257,25 @@ class TestPreToolCallHook:
         assert out["action"] == "block"
         assert "pickle_deserialization" in out["message"]
         assert "SECURITY_GUIDANCE_BLOCK" in out["message"]  # tells user how to disable
+
+    _EVAL_PATCH_OP = {"name": "demo", "action": "patch", "file_path": "scripts/run.py",
+                      "old_string": "x = 1", "new_string": "x = eval(user_input)"}
+
+    # pre_tool_call sees the raw model args; dispatch coerces the last three shapes into an
+    # op list only after the hook has run, so block mode must scan them too.
+    @pytest.mark.parametrize("operations", [
+        [_EVAL_PATCH_OP],
+        json.dumps([_EVAL_PATCH_OP]),
+        _EVAL_PATCH_OP,
+        [json.dumps(_EVAL_PATCH_OP)],
+    ], ids=["list", "json_string", "bare_op", "json_string_ops"])
+    def test_blocks_skill_manage_operations_patch(self, monkeypatch, operations):
+        mod = _load_plugin_init()
+        monkeypatch.setenv("SECURITY_GUIDANCE_BLOCK", "1")
+        out = mod._on_pre_tool_call(tool_name="skill_manage", args={"operations": operations})
+        assert isinstance(out, dict)
+        assert out["action"] == "block"
+        assert "eval_injection" in out["message"]
 
 # ---------------------------------------------------------------------------
 # Bundled-plugin discovery
