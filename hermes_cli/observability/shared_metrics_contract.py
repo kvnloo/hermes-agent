@@ -67,10 +67,12 @@ MEMORY_OP_MARK = "hermes.memory.op"
 CURATOR_RUN_MARK = "hermes.curator.run"
 DELEGATION_RUN_MARK = "hermes.delegation.run"
 EXECUTION_BACKEND_MARK = "hermes.execution_backend"
+MEMORY_PREFETCH_MARK = "hermes.memory.prefetch"
 MEMORY_OP_METRIC = "hermes.memory.op.count"
 CURATOR_RUN_METRIC = "hermes.curator.run.count"
 DELEGATION_RUN_METRIC = "hermes.delegation.run.count"
 EXECUTION_BACKEND_METRIC = "hermes.execution_backend.count"
+MEMORY_PREFETCH_METRIC = "hermes.memory.prefetch.count"
 # ---- end v4 loop ----
 # ---- v4 model ----
 MODEL_TOOL_QUALITY_MARK = "hermes.model_tool_quality"
@@ -237,6 +239,9 @@ MEMORY_OPS = frozenset({"add", "other", "read", "remove", "replace", "search"})
 MEMORY_OP_OUTCOMES = frozenset({"failed", "rejected", "success"})
 # Who asked: the user's turn, or the unattended self-improvement review fork.
 MEMORY_OP_ORIGINS = frozenset({"background_review", "foreground"})
+# An external provider's turn-start recall: context returned, nothing returned, raised, hit the
+# prefetch timeout, or not asked because its previous call is still running.
+MEMORY_PREFETCH_OUTCOMES = frozenset({"empty", "failed", "skipped", "success", "timed_out"})
 CURATOR_OUTCOMES = frozenset({"failed", "skipped", "success"})
 CURATOR_TRIGGERS = frozenset({"manual", "scheduled"})
 DELEGATION_OUTCOMES = frozenset({"cancelled", "failed", "partial", "success"})
@@ -749,6 +754,9 @@ _COUNTER_DIMENSION_VALUES: dict[str, dict[str, frozenset[str]]] = {
         "backend": EXECUTION_BACKENDS, "error_class": TOOL_ERROR_CLASSES, "kind": EXECUTION_KINDS,
         "outcome": EXECUTION_OUTCOMES,
     },
+    MEMORY_PREFETCH_METRIC: {
+        "latency_bucket": TOOL_LATENCY_BUCKETS, "outcome": MEMORY_PREFETCH_OUTCOMES, "provider": MEMORY_PROVIDERS,
+    },
     # ---- end v4 loop ----
     # ---- v4 gateway ----
     PLATFORM_HEALTH_METRIC: {
@@ -945,6 +953,7 @@ _DECISION_MARK_METRICS = {
     # ---- v4 loop ----
     MEMORY_OP_MARK: MEMORY_OP_METRIC, CURATOR_RUN_MARK: CURATOR_RUN_METRIC,
     DELEGATION_RUN_MARK: DELEGATION_RUN_METRIC, EXECUTION_BACKEND_MARK: EXECUTION_BACKEND_METRIC,
+    MEMORY_PREFETCH_MARK: MEMORY_PREFETCH_METRIC,
     # ---- end v4 loop ----
     # ---- v4 gateway ----
     PLATFORM_HEALTH_MARK: PLATFORM_HEALTH_METRIC, PLATFORM_DELIVERY_MARK: PLATFORM_DELIVERY_METRIC,

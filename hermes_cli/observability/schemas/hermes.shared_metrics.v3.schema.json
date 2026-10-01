@@ -170,6 +170,9 @@
             "$ref": "#/$defs/execution_backend_counter"
           },
           {
+            "$ref": "#/$defs/memory_prefetch_counter"
+          },
+          {
             "$ref": "#/$defs/platform_health_counter"
           },
           {
@@ -1956,6 +1959,54 @@
                 "failed",
                 "success"
               ]
+            }
+          }
+        },
+        "value": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "memory_prefetch_counter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "type",
+        "dimensions",
+        "value"
+      ],
+      "properties": {
+        "name": {
+          "const": "hermes.memory.prefetch.count"
+        },
+        "type": {
+          "const": "counter"
+        },
+        "dimensions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "latency_bucket",
+            "outcome",
+            "provider"
+          ],
+          "properties": {
+            "latency_bucket": {
+              "$ref": "#/$defs/tool_latency_bucket"
+            },
+            "outcome": {
+              "enum": [
+                "empty",
+                "failed",
+                "skipped",
+                "success",
+                "timed_out"
+              ]
+            },
+            "provider": {
+              "$ref": "#/$defs/vocabulary_identifier"
             }
           }
         },

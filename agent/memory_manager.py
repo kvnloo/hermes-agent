@@ -12,6 +12,7 @@ import json
 import logging
 import re
 import threading
+import time
 from concurrent.futures import Future, ThreadPoolExecutor, wait
 from functools import partial
 from typing import Any, Callable, Dict, List, Optional
@@ -460,6 +461,8 @@ class MemoryManager:
         if provider.name == "builtin":
             return provider.prefetch(query, session_id=session_id)
 
+        from hermes_cli.observability.shared_metrics_loop import record_memory_prefetch
+        started = time.monotonic()
         result_box: Dict[str, Any] = {}
 
         def _run() -> None:
@@ -471,11 +474,14 @@ class MemoryManager:
         thread = spawn_context_thread(_run, name=f"memory-prefetch-{provider.name}")
         with self._external_prefetch_lock:
             existing = self._external_prefetch_threads.get(provider.name)
-            if existing is not None and existing.is_alive():
-                logger.debug("Memory provider '%s' prefetch is still running; skipping this turn", provider.name)
-                return ""
-            self._external_prefetch_threads[provider.name] = thread
-            thread.start()
+            in_flight = existing is not None and existing.is_alive()
+            if not in_flight:
+                self._external_prefetch_threads[provider.name] = thread
+                thread.start()
+        if in_flight:
+            logger.debug("Memory provider '%s' prefetch is still running; skipping this turn", provider.name)
+            record_memory_prefetch(provider.name, "skipped", started)
+            return ""
 
         thread.join(self._external_prefetch_timeout)
         if thread.is_alive():
@@ -483,14 +489,17 @@ class MemoryManager:
                 "Memory provider '%s' prefetch timed out after %.1fs; skipping it until "
                 "the stuck call returns", provider.name, self._external_prefetch_timeout,
             )
+            record_memory_prefetch(provider.name, "timed_out", started)
             return ""
 
         with self._external_prefetch_lock:
             if self._external_prefetch_threads.get(provider.name) is thread:
                 self._external_prefetch_threads.pop(provider.name, None)
         if "error" in result_box:
+            record_memory_prefetch(provider.name, "failed", started)
             raise result_box["error"]
         result = result_box.get("value", "")
+        record_memory_prefetch(provider.name, "success", started, recalled=result)
         if result and result.strip():
             # Prefetch is stamped into the user turn's api_content and replayed every later turn;
             # spill oversized results like plugin hook output so one provider can't inflate the prefix.
