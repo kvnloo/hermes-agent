@@ -1062,6 +1062,16 @@ _ANCHOR_PATTERNS: "list[tuple[str, re.Pattern[str], int]]" = [
     ("errors", re.compile(r"\b(?:[A-Z][a-zA-Z]*Error|Exception|ENOSPC|EACCES|SIGKILL|Traceback)\b[^\n]{0,90}"), 40),
     ("handles", re.compile(r"@[A-Za-z0-9-]{3,30}\b"), 40),
     ("urls", re.compile(r"https?://[^\s)\"']{10,110}"), 30),
+    # Classes the recall exam lost from assistant text (SCORECARD-2026-09-19-jev). Appended
+    # last so every existing section keeps its line under the shared budget.
+    ("task ids", re.compile(r"\b(?:sa-\d+-[0-9a-f]{8}|t_[0-9a-f]{8})\b"), 40),  # delegate_tool / kanban_db ids
+    # Never starts mid-name (after "x."): no fragments, and a long a.b.c... run is scanned once, not per segment.
+    ("dotted keys", re.compile(r"(?<!\w)(?<!\w\.)[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)*\.[a-z][a-z0-9]*_[a-z0-9_]*[a-z0-9](?!\.?\w)"), 40),
+    # CLI error lines (git fatal:/error:, tsc error TS####:, gh GraphQL:) and Hermes tool refusals (Blocked:).
+    # fatal:/error: only at a line start (or after a quote, backtick, JSON-escaped \n); not annotations or %s/{}.
+    ("error messages", re.compile(
+        r"(?:(?:^|(?<=[`\"])|(?<=\\n))(?:fatal|[Ee]rror)|\berror TS\d{4,5}|\bGraphQL|\bBlocked): "
+        r"(?![%{])(?:(?!\\n)[^\n]){8,110}", re.M), 20),
 ]
 _ANCHOR_NOISE = frozenset({
     "@teknium", "@teknium1",  # session owner, in every transcript
