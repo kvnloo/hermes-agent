@@ -213,7 +213,7 @@ no_follow_tags = true   # the instruction in the Origin action; whether the owne
 workflow_push_matches = 0   # FRESH r01: 52 workflows, 11 with a push trigger, 0 matches on the head tree and on the live main
 pushed_at = "2026-10-01T17:39:23Z"   # by the owner (kvnloo): fork branch activity branch_creation, after = 569ad4d84b; not a factory push
 pushed_sha = "569ad4d84b0f9888ea2598c2a8ea416b2c75bad6"   # gh api git/ref at 2026-10-01T18:43Z
-v2_pushed = false   # offered_heads c160f12482 exists only in the scratch h.git; if adopted it goes to a new fork branch (no force-push)
+v2_pushed = true    # pushed 2026-10-01 as kvnloo/hermes-agent staged/memory-prefetch-metric-v2 @ c160f12482 (new branch, no force-push); same tree, parent and patch-id as 569ad4d84b, message only
 
 [body]
 path = "PR_BODY.md"
