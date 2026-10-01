@@ -83,8 +83,15 @@ def _scan_args(tool_name: str, args: Any) -> List[Tuple[str, str]]:
     if _env_flag("SECURITY_GUIDANCE_DISABLE") or spec is None or not isinstance(args, dict):
         return []
     path_key, content_keys = spec
-    path = raw_path if isinstance(raw_path := args.get(path_key), str) else ""
-    return [finding for val in (args.get(ck) for ck in content_keys) if isinstance(val, str) and val for finding in _scan_content(path, val)]
+    # skill_manage's advertised shape nests each write in ``operations[]`` (the handler ignores the
+    # legacy flat fields once it is present), so scan every op against its own file_path.
+    ops = args.get("operations") if tool_name == "skill_manage" else None
+    targets = [op for op in ops if isinstance(op, dict)] if isinstance(ops, list) else [args]
+    findings: List[Tuple[str, str]] = []
+    for target in targets:
+        path = raw_path if isinstance(raw_path := target.get(path_key), str) else ""
+        findings += [finding for val in (target.get(ck) for ck in content_keys) if isinstance(val, str) and val for finding in _scan_content(path, val)]
+    return findings
 
 
 def _format_warning_block(findings: List[Tuple[str, str]]) -> str:

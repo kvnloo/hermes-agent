@@ -195,6 +195,20 @@ class TestTransformToolResultHook:
         assert isinstance(result, str)
         assert "eval_injection" in result
 
+    def test_skill_manage_operations_write_scanned(self):
+        # skill_manage's advertised shape nests each write in operations[]; it must be
+        # scanned like the flat shape, against the op's own file_path.
+        mod = _load_plugin_init()
+        args = {"operations": [
+            {"name": "demo", "action": "write_file", "file_path": "scripts/load.py",
+             "file_content": "import pickle\nx = pickle.loads(b)\n"},
+        ]}
+        result = mod._on_transform_tool_result(
+            tool_name="skill_manage", args=args, result='{"success": true}'
+        )
+        assert isinstance(result, str)
+        assert "pickle_deserialization" in result
+
     def test_untargeted_tool_skipped(self):
         mod = _load_plugin_init()
         # The plugin only scans write_file/patch/skill_manage. terminal output
@@ -242,6 +256,18 @@ class TestPreToolCallHook:
         assert out["action"] == "block"
         assert "pickle_deserialization" in out["message"]
         assert "SECURITY_GUIDANCE_BLOCK" in out["message"]  # tells user how to disable
+
+    def test_blocks_skill_manage_operations_patch(self, monkeypatch):
+        mod = _load_plugin_init()
+        monkeypatch.setenv("SECURITY_GUIDANCE_BLOCK", "1")
+        args = {"operations": [
+            {"name": "demo", "action": "patch", "file_path": "scripts/run.py",
+             "old_string": "x = 1", "new_string": "x = eval(user_input)"},
+        ]}
+        out = mod._on_pre_tool_call(tool_name="skill_manage", args=args)
+        assert isinstance(out, dict)
+        assert out["action"] == "block"
+        assert "eval_injection" in out["message"]
 
 # ---------------------------------------------------------------------------
 # Bundled-plugin discovery
