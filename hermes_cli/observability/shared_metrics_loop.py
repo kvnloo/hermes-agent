@@ -15,6 +15,7 @@ import contextvars
 import json
 import logging
 import threading
+import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Iterable, Iterator
 
@@ -156,6 +157,29 @@ def record_provider_memory_call(provider: Any, tool_name: Any, args: Any, result
     """One row per memory-provider tool call (plugin providers expose their own tools)."""
     outcome = "failed" if raised or _provider_result_failed(result) else "success"
     _record_memory_ops([memory_provider_op(tool_name, args)], provider=provider, outcome=outcome)
+
+
+def memory_prefetch_fields(*, provider: Any, outcome: Any, waited_ms: Any, recalled: Any = None) -> dict[str, str]:
+    from .shared_metrics_contract import MEMORY_PREFETCH_OUTCOMES, tool_latency_bucket
+
+    outcome_value = _norm(outcome)
+    if outcome_value == "success" and not (isinstance(recalled, str) and recalled.strip()):
+        outcome_value = "empty"
+    return {
+        "latency_bucket": tool_latency_bucket(waited_ms),
+        "outcome": outcome_value if outcome_value in MEMORY_PREFETCH_OUTCOMES else "failed",
+        "provider": memory_provider_name(provider),
+    }
+
+
+def record_memory_prefetch(provider: Any, outcome: str, started: float, *, recalled: Any = None) -> None:
+    """One row per external-provider prefetch: what it returned and how long the turn waited on it
+    (``started`` is the caller's ``time.monotonic()``). A ``success`` whose ``recalled`` value holds no
+    text counts as ``empty``. Never the query or the recalled text."""
+    _emit(
+        "MEMORY_PREFETCH_MARK", memory_prefetch_fields, provider=provider, outcome=outcome, recalled=recalled,
+        waited_ms=(time.monotonic() - started) * 1000,
+    )
 
 
 # ---- curator ---------------------------------------------------------------------------------

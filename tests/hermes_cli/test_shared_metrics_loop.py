@@ -16,7 +16,7 @@ from tests.hermes_cli.test_relay_shared_metrics_runtime import direct_runtime  #
 
 _LOOP_METRICS = {
     "hermes.memory.op.count", "hermes.curator.run.count", "hermes.delegation.run.count",
-    "hermes.execution_backend.count",
+    "hermes.execution_backend.count", "hermes.memory.prefetch.count",
 }
 
 
@@ -95,13 +95,58 @@ def test_memory_provider_tools_report_bounded_provider_and_op(home):
     assert rows == [("honcho", "search", "success"), ("plugin", "add", "failed")]
 
 
+class _PrefetchProvider:
+    def __init__(self, name, prefetch):
+        self.name, self._prefetch = name, prefetch
+
+    def prefetch(self, query, *, session_id=""):
+        return self._prefetch()
+
+
+def test_external_prefetch_records_each_exit_with_how_long_the_turn_waited(home):
+    from agent.memory_manager import MemoryManager
+    from hermes_cli.observability.shared_metrics_contract import tool_latency_bucket
+
+    timeout = 2.0  # no wall-clock bound in this test is under 2 s (the AGENTS.md timing-test rule)
+    release = threading.Event()
+    hung = _PrefetchProvider("acme-private-memory", lambda: release.wait(10) and "late")
+    manager = MemoryManager(external_prefetch_timeout=timeout)
+    manager._providers = [
+        _PrefetchProvider("honcho", lambda: "- prefers tabs"),
+        _PrefetchProvider("mem0", lambda: "  "),
+        _PrefetchProvider("supermemory", lambda: _raise()),
+        hung,
+    ]
+    assert manager.prefetch_all("what do I prefer?") == "- prefers tabs"
+    manager._providers = [hung]
+    assert manager.prefetch_all("and now?") == ""  # the first call is still stuck: not asked again
+    release.set()
+    manager._external_prefetch_threads["acme-private-memory"].join(5)  # its late return adds no row
+
+    rows = [(d["provider"], d["outcome"], d["latency_bucket"], v) for d, v in _rows(home, "hermes.memory.prefetch.count")]
+    assert sorted((provider, outcome, n) for provider, outcome, _, n in rows) == [
+        ("honcho", "success", 1), ("mem0", "empty", 1), ("plugin", "skipped", 1), ("plugin", "timed_out", 1),
+        ("supermemory", "failed", 1),
+    ]
+    # The turn waited out the whole timeout on the stuck provider and less than that at every other exit.
+    shorter = {tool_latency_bucket(ms) for ms in range(int(timeout * 1000))}
+    assert {outcome: "shorter" if bucket in shorter else bucket for _, outcome, bucket, _ in rows} == {
+        "success": "shorter", "empty": "shorter", "failed": "shorter", "skipped": "shorter",
+        "timed_out": tool_latency_bucket(timeout * 1000),
+    }
+
+
 def test_disabled_shared_metrics_record_no_loop_rows(home, monkeypatch):
     monkeypatch.setattr(
         "hermes_cli.config.read_raw_config_readonly", lambda: {"telemetry": {"shared_metrics": {"enabled": False}}},
     )
+    from agent.memory_manager import MemoryManager
     from tools.memory_tool import memory_tool
 
     memory_tool("add", content="x", store=_memory_store())
+    manager = MemoryManager()
+    manager._providers = [_PrefetchProvider("honcho", lambda: "- prefers tabs")]
+    manager.prefetch_all("what do I prefer?")
     loop.record_execution_backend("terminal", "local", '{"exit_code": 0, "error": null}')
     loop.record_curator_run(trigger="manual", outcome="success")
     relay_shared_metrics._reset_for_tests()
