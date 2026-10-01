@@ -375,6 +375,32 @@ describe('empty message.complete after streamed text (#95514)', () => {
     expect(hydrateFromStoredSession).not.toHaveBeenCalled()
   })
 
+  it('still hydrates an adopted subagent watch turn whose mirror emits message.start', () => {
+    // A child watch window opened mid-run resumes with running=true (so the
+    // flag is set), then tui_gateway's _mirror_subagent_to_child emits a
+    // synthetic message.start before relaying the child's output. The window
+    // never received the child's prompt/goal row, so settle must hydrate.
+    mountStream()
+    act(() => {
+      const current = stream.states.get(ACTIVE_SID) ?? createClientSessionState()
+      stream.states.set(ACTIVE_SID, {
+        ...current,
+        adoptedRunningTurn: true,
+        awaitingResponse: true,
+        busy: true,
+        turnLive: true
+      })
+    })
+
+    act(() => stream.handleEvent({ payload: {}, session_id: ACTIVE_SID, type: 'message.start' }))
+    act(() => stream.handleEvent({ payload: { text: 'Child output.' }, session_id: ACTIVE_SID, type: 'message.delta' }))
+    act(() =>
+      stream.handleEvent({ payload: { text: 'Child output.' }, session_id: ACTIVE_SID, type: 'message.complete' })
+    )
+
+    expect(hydrateFromStoredSession).toHaveBeenCalledWith(3, null, ACTIVE_SID)
+  })
+
   it('still hydrates an empty complete when this turn streamed no text', () => {
     mountStream()
 

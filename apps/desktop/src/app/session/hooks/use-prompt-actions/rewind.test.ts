@@ -681,6 +681,17 @@ describe('optimistic rewind/reload turn-clock seeding (#86795)', () => {
     expect(next.turnStartedAt).toBeGreaterThanOrEqual(before)
   })
 
+  it('restore/edit/regenerate arms clear a leaked adoptedRunningTurn', () => {
+    // These arms start a turn from this window, so it is not adopted; a stale
+    // flag would force a stored-history hydrate over the reply it streams.
+    const state = seeded({ adoptedRunningTurn: true })
+    const plan = planReload(state.messages, null)
+
+    expect(plan).not.toBeNull()
+    expect(applyRewindOptimistic(state, 0).adoptedRunningTurn).toBe(false)
+    expect(applyReloadOptimistic(state, plan!).adoptedRunningTurn).toBe(false)
+  })
+
   it('applyReloadOptimistic arms busy with a fresh turn clock', () => {
     const state = seeded({ turnLive: true, turnStartedAt: Date.now() - 60_000 })
     const plan = planReload(state.messages, null)
