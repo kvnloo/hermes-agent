@@ -434,6 +434,7 @@ from gateway.platforms.base_exec_approval import (
 from gateway.platforms.event import MessageEvent, MessageType, ProcessingOutcome, TurnContextUpdate
 from gateway.platforms.base_pending import (
     pending_dispatch_scope, release_pending_dispatch, reserve_pending_dispatch,
+    pending_dispatch_needs_snapshot,
 )
 from gateway.warning_notifications import diagnostic_wake_muted
 from hermes_cli.observability.shared_metrics_gateway import records_delivery, stop_reply_clock
@@ -3797,7 +3798,7 @@ class BasePlatformAdapter(BaseTextBatchingMixin, BaseTextDebounceMixin, ABC):
                 logger.debug("[%s] Session cancellation raised while unwinding %s", self.name,
                              session_key, exc_info=True)
         if reserved is not None and (task is None or task.done()):
-            if not discard_pending and not reserved.claimed:
+            if not discard_pending and pending_dispatch_needs_snapshot(self, reserved):
                 restore = getattr(self.gateway_runner, "_restore_pending_dispatch", None)
                 if callable(restore):
                     restore(session_key, reserved.event, self)
