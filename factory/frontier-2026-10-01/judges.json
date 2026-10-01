@@ -1,0 +1,1016 @@
+[
+ {
+  "lens": "impact (demand x breadth x user-visible value, plus leverage for the factory). Checked read-only against upstream main ffc74885c5 (2026-10-01) with gh reads of issue and PR state and reactions. Nothing was executed. Scored: all 42 catalog features with score >= 12 or stage-now; 3 catalog features below the cutoff whose demand the catalog underweights; 12 missing candidates.",
+  "scores": [
+   {
+    "id": "edit-tool-fail-loud-and-meter",
+    "score": 7,
+    "rationale": "This is a correctness defect in the patch tool, which nearly every coding session uses. The last-resort context_aware strategy (tools/fuzzy_match.py:261, per-line similarity >= 0.80) can apply an edit at the wrong anchor without any warning. #125376 shows 'trim()' matching 'strip()' at 0.923 on main. A silent wrong-region edit corrupts the user's code, which is worse than a failed edit, and CONTRIBUTING puts bug fixes first and asks to 'fail loud at integration boundaries'. The demand is a cluster of zero-reaction issues: #54572 (c=7) with carrier PR #54575, #125376, #111116, #111127, #93699, #124166, #125240 and #30962. Many independent reporters but few reactions. How often context_aware actually fires in real use is unmeasured, which is why this is not an 8.",
+    "corrections": "#111127's author is KoNit-K, not KeyArgo (critic). The 'meter' half already exists in-tree: hermes.file_edit.count by outcome x match strategy, including context_aware (website/docs/developer-guide/relay-shared-metrics.md:397). But it only exists on py3.14 with opt-in shared metrics (pyproject.toml:216; requires-python is >=3.11,<3.15), so it sizes prevalence for a subset of users only. evals/edittool is not on main (it exists only on the #111127 head). toolperf_abeval already has err_replay_patch and err_ambiguous_edit traps. #125376 (Finn763) and #54575 (MaxFreedomPollard) belong to other contributors, so salvage them with Co-authored-by credit rather than competing. #54575 (0.90 similarity floor) is missing from the catalog's issue list."
+   },
+   {
+    "id": "compaction-identifier-anchor-retention",
+    "score": 7,
+    "rationale": "Every long session on the default local compressor goes through compaction. Losing identifiers there (ids, config keys, exact error strings) shows up to the user as forgetting and rework. The maintainer's own scorecards name summarizer identifier retention as the remaining gap. #122274 is a teknium-authored (harness-scout) issue, and #122522 is an open contributor carrier. The evals/compaction recall exam already exists and is accepted, so value can be shown in the maintainer's own currency. Demand from users is thin: #78457 (r=1), plus maintainer interest. Headroom is real but bounded: the 78.9% figure is a mean of 76.7, 90.0 and 70.0 across lineages, so a gain must be shown on a frozen lineage mix.",
+    "corrections": "Scope this to local-compressor routes. Native compaction (agent/native_compaction.py, opt-in codex_responses_native) keeps a local summary only whole and only up to RETAINED_SUMMARY_TOKEN_BUDGET = 32_000 (native_compaction.py:146), so a larger anchor index must keep summaries under that limit. #122522 (Nagisa-3000, summary_source=original) is a different mechanism that may compete or complement, so coordinate rather than duplicate. context_compressor.py is now 5,753 lines; _ANCHOR_PATTERNS is still at L1057."
+   },
+   {
+    "id": "boundary-stable-tool-result-projection",
+    "score": 7,
+    "rationale": "This has the strongest demand of any catalog feature. #39691 (headroom-ai tool-output compression, r=17, c=12) and teknium's #47866 evaluation report (r=27) show users care about tool-output token cost. teknium's 2026-09-23 harness-scout note on #107731 prescribes exactly this shape: a wire-only projection fired once per row at a compaction/prune boundary, with a cache-read ratio reported before and after, and with value resting on eviction, not recall. The benefit is token and cost reduction on long sessions, for every user on local routes. Two limits on the score: #47866 found lossless gains negligible and CCR net-negative, and the -30.3% Claude Code figure is only a prior.",
+    "corrections": "The catalog's 'Hermes does a cache-gated prune, so headroom may be small' is wrong for the default config: proactive_prune_tokens is 0 and micro_compact is False (hermes_cli/config_defaults.py:617,628), so headroom is not reduced. Arms need both prune-off and prune-on baselines. #107731 is by lorencato23; it is a salvage, not ours. The teknium comment is a design note ('not a review verdict'), not an approval. Cache instruments already exist: evals/postmortem/live_ab/cache_concurrency_probe (~$50/arm, paid) or shared-metrics cache_break.count + model_tokens.sum (py3.14). The postmortem logcalls baseline undercounts misses until its cache= regex is fixed (logcalls.py:27-29 vs agent/turn_usage.py:192)."
+   },
+   {
+    "id": "skills-efficacy-paired-eval",
+    "score": 6,
+    "rationale": "background_review and the curator writing skills is a headline Hermes capability that runs for every user with learning on, and nobody has measured whether it helps. The maintainers explicitly deferred 'task-outcome attribution after a patch' (relay-shared-metrics.md:255), so this fills a gap they have acknowledged. Adjacent user demand is real: #32925 SkillOpt (r=14), #13265 (r=8), #38753, and RFC #96704 (c=10). Breadth is high and the answer could change the defaults. Stage 1 is $0. Stage 2's live arms need paid models or a 64K-context local preset, which does not exist (MINIMUM_CONTEXT_LENGTH = 64_000 at agent/model_metadata.py:272 vs 8K router presets), so near-term impact is capped.",
+    "corrections": "evals/skills is not on main; it exists only on the PR #122544 head (Nagisa-3000). RFC #96704 is by AngelCampa1. Both are external carriers, so support or salvage them. background_review cost per turn is already observable at $0 via post_auxiliary_call(aux_task='background_review'). The core_tool_deferral orchestrator is the template, but it hard-codes OpenRouter (worker.py:212)."
+   },
+   {
+    "id": "offline-replay-ab-substrate",
+    "score": 6,
+    "rationale": "This has no direct user value and no upstream demand (demand 5), so the score is almost all factory leverage. A shared $0 fake-provider arm runner unlocks E07-E09, E11, E12, E20 and most of the regression set without paid APIs. That matters more now, because local live-model arms are blocked by the 64K context floor. The duplication is worse than the catalog says, which strengthens the leverage case. Upstream will not take a shared library alone (test-infra waves went 4/4 NOT_PLANNED), so the outward impact only arrives when it rides along with a real fix.",
+    "corrections": "There are 33 hand-rolled ThreadingHTTPServer fakes in evals/, not ~6-15. 0 evals import tests/fakes/fake_llm_provider.FakeLLMServer. Start from evals/token_accounting/replay_gates.py plus the provider_fallback loopback egress guard and os.environ.clear(), not a new design. core_tool_deferral needs base_url plumbing (worker.py:212, :26). toolperf_abeval scoring needs NeMo Relay ATOF, which is py3.14 only and needs an identical plugins.toml and one process per arm. Local-model arms fail at startup (agent_init.py:2071) until a 64K preset exists, which is an owner-approved change to a shared service."
+   },
+   {
+    "id": "off-critical-path-compaction",
+    "score": 5,
+    "rationale": "The user-visible value is removing a 25-49 s stall (scorecard baseline $0.061 / 36.9 s per event) from inside the turn where compaction fires. Every long session on local-compressor routes feels this, and gateway users feel it most as a delayed reply. Demand is moderate: #117886 (c=2), #76151, #79357 and #73468 (r=2 each), with open carrier #117895. The cost side is noise, per SCORECARD-2026-09-19, and a stall roughly once per ~150K tokens is noticeable but not dominant. Existing knobs may capture much of the value with no new code.",
+    "corrections": "#117895 is fangliquanflq's PR, so this is review or salvage. Existing primitives to extend first: compression.idle_compact_after_seconds (default 0, config_defaults.py:698) and the gateway hygiene detached worker. A default-flip experiment on the idle knob is the cheapest arm. Native routes (opt-in) have no client summarizer call and are out of scope. Measure critical-path seconds as post_auxiliary_call(aux_task='compression').api_duration. Regression guards: replay_gates, native_compaction/ab_checkpoint_preflight, cache_estimator_probe. Risk class: #120582."
+   },
+   {
+    "id": "turn-timing-observability",
+    "score": 5,
+    "rationale": "Demand is real but scattered across tps and latency display asks: #9527 (r=4), #26877 (r=3), #15618 (r=3), #16106 (c=5), and competing one-surface PRs #113523, #119713 and #129229. Much of the value is already shipping or in flight from the maintainer. Shared metrics has ttft_bucket and gateway.reply_latency. Relay scopes time session, turn, LLM and tool. teknium's own open PR #119713 adds time-to-first-chunk to the per-call usage log line. What is left is a typed timing block on message.complete, /v1/runs and ACP, plus attribution for non-LLM, non-tool phases (preflight, compaction, memory prefetch, MoA fan-out). That residual is useful, with moderate breadth.",
+    "corrections": "Shared metrics and Relay exist only on Python 3.14 (pyproject.toml:216; requires-python >=3.11), so users on 3.11-3.13 still have no timing, which keeps part of the value alive. teknium-authored #119713 (open) overlaps and is missing from the catalog. #48204 (31-33 s vs 2.6 s) is stale and has not been re-checked on current main. Start with an ATOF residual (turn - llm - tool) before instrumenting _run_phase."
+   },
+   {
+    "id": "lean-prefix-skill-exposure",
+    "score": 5,
+    "rationale": "Direct user demand is high: #71894 (r=6), #13332 (r=5), #2045 lazy skill loading (r=4, c=8), #19986 (c=12), #11431. A smaller cold prefix cuts cost for every session. But the maintainer already captured most of the headroom: #95681 is closed COMPLETE at ~15.2K tokens, and core_tool_deferral #97979 cut the schema 56%. On Claude Code, selectors missed needed skills 2-3 times in 30, and the gate is at most 1 in 30. So the residual (the skill index for users with many skills) is real but smaller, and needs a miss rate the maintainer will accept.",
+    "corrections": "Use the Claude Code -64.7% figure only as a prior (critic). tool_overhead.count and tool_enabled_unused.count already measure the residual for py3.14 opt-in users. evals/prompt_footprint/property_guidance.py and token_accounting/worktree_prompt_prefix.py are $0 hosts. core_tool_deferral (primary evidence shape) hard-codes OpenRouter."
+   },
+   {
+    "id": "terminal-output-reducers-plugin",
+    "score": 5,
+    "rationale": "This rides the same demand as projection (#39691 r=17, #11488 r=3). teknium's #47866 measurement shows terminal output is the unaddressed token bulk (2.26M tokens over 1,149 outputs) with ~0% lossless gain. So the value is real but needs lossy, evidence-preserving reducers, which carry information-loss risk: the SoL-Pi stack's TB4 solve rate fell 18 to 15 of 63. As a standalone catalog plugin it reaches only users who opt in, which limits breadth even though per-user savings could be large.",
+    "corrections": "forensics/tools.py already gives output volume by tool at $0 (the E38 sizing source), so lab/omp-crosspoll is not needed. toolperf err_big_output and err_inline_script are the information-loss guards. Per CONTRIBUTING this must be a standalone repo plus a plugin-catalog entry, and must be measured with #47866's corpus method."
+   },
+   {
+    "id": "promotion-gates-factory",
+    "score": 5,
+    "rationale": "This is pure factory leverage. Every dead close costs -3 and spray costs -10 (metrics/formula.toml), so a gate that reliably shows red-on-base, green, negative control and an ownership check protects the reputation that carries every future promotion. Throughput is capped by 0 free upstream slots (13 open kvnloo PRs vs ~3), with 73 READY items and 40 in #404 already queued. So the gate's marginal impact is quality, not volume. There is no upstream user value.",
+    "corrections": "Add PLAN \u00a78 steps 2 (ownership/duplicate) and 6 (negative control) (critic). The existing evals/postmortem/run.py pattern has two hazards: run.py:47 env.setdefault('HERMES_HOME') leaks a real home, and the run.py:41 marker '' makes cache_prefix_wire pass vacuously. Red-on-base is never asserted. promote/* collides with existing fork heads, so use a distinct namespace. Fork CI is not the substrate (ACT-001, INC-2026-09-30)."
+   },
+   {
+    "id": "eval-safe-memory-isolation",
+    "score": 5,
+    "rationale": "#121935 (c=7) is a real incident: eval, test and batch runs writing chatter into users' external memory. It affects external-memory-provider users who run evals, cron or batch jobs. It is also a hard prerequisite for any live factory arm on a profile with memory (E16, E22, E43, E50), so the leverage is real. Reactions are low (r=0) and a maintainer decision is needed.",
+    "corrections": "Carrier PR #121948 is fangliquanflq's, and its reviewers showed a single boolean does not cover explicit tool writes, so salvage it rather than writing a new one. Inbound A2A tasks (plugins/platforms/a2a) run in the live session with full memory, which is another isolation hole to cover (core-modules gap-fill, inference)."
+   },
+   {
+    "id": "compaction-decision-ledger",
+    "score": 4,
+    "rationale": "Keeping standing constraints and consent across compaction is a correctness issue in long sessions, but the maintainer signal is mixed. teknium closed #113537 not_planned on 2026-09-19 and rejected #113543 and #113574, while saying durable preferences 'belong in memory / a structured ledger (the direction of #113305)'. That points at a direction; it does not endorse #113309. User demand is close to zero.",
+    "corrections": "'The only direct maintainer endorsement' is overstated. It is one directional sentence inside a not_planned close (verified in the #113537 comments), and it is about preferences, not approvals or denials. #113305 is kvnloo-authored. #113309 is by KoNit-K (mass-PR flag in memory) and needs a fresh red-on-base proof. On native routes, separate ledger rows are dropped; the ledger survives only inside the 32k canonical summary carrier."
+   },
+   {
+    "id": "tui-render-fanout-perf",
+    "score": 4,
+    "rationale": "The TUI is a primary surface. Idle rerender and CPU fixes are user-visible: #37893 (macOS 60% CPU, r=2), #85935 (busy-loop) and #95955 (flicker) are adjacent. But the measured wins are micro (setNow/min to 0), and nobody has shown they map onto the reported CPU and flicker bugs. The best slices are already open upstream, so remaining impact is incremental.",
+    "corrections": "Six of these slices are already open upstream as kvnloo PRs (#129524, #129525, #129526, #129556, #129918, #129928), and 13 kvnloo PRs are open in total. Nothing new can promote until slots free up. 'stage-now' should read 'held'."
+   },
+   {
+    "id": "surface-parity-invariant-cells",
+    "score": 4,
+    "rationale": "The cache-break class it guards is costly: a 220K-token session came back at a 1% cache hit. But every motivating bug is already fixed upstream, so this is regression prevention, not a user-visible fix. Demand is 0, and standalone test-only PRs go NOT_PLANNED. Leverage for the factory is moderate: it is the E07/E08 substrate and the identity-join oracle.",
+    "corrections": "#104414, #45499 and #120116 are all closed as completed (gh, 2026-10-01). Add journeys for the gateway/relay connector (tests/gateway/relay/stub_connector.py), A2A JSON-RPC and /goal continuation. Whitelist the MoA aggregator's intentional user/user wire adjacency. The ATOF scope tree with turn_id equality is an existing oracle (py3.14 only). Ship it alongside a real prefix fix, never alone."
+   },
+   {
+    "id": "compaction-summary-safety-canary",
+    "score": 4,
+    "rationale": "This is security-adjacent (CONTRIBUTING priority #3) and touches every local compaction, but the risk to Hermes is not demonstrated. teknium's harness-scout #120439 (needs-repro, r=0) asks for exactly this guard, and the canary is the repro it lacks, which gives it a clear maintainer hook. Breadth is broad, demand is speculative, and native routes cannot be inspected.",
+    "corrections": "The catalog lists issues: null; link #120439. The $0 half lives in evals/compaction/fixtures.py next to test_region_scoping.py. The behavioural half needs summarizer LLM calls (T2/T3). Native summaries are encrypted, so report those routes as uninspectable."
+   },
+   {
+    "id": "compaction-lifecycle-hooks",
+    "score": 4,
+    "rationale": "teknium's #64231 verdict table marks PR #53806 (ledfoot631) SALVAGE as the observer hook on_compression_start, and #8643 is folded into it. That is a real maintainer-approved seam, and it is still absent from VALID_HOOKS on main. Beneficiaries are plugin authors (memory, observability, context engines), not end users directly, and part of the cost half is already served by post_auxiliary_call(aux_task='compression').",
+    "corrections": "The catalog omits the salvage-approved carrier #53806. Salvage it under the taxonomy name rather than designing anew. The local fire site already exists: _notify_context_engine_compression_complete (conversation_compression.py:2564-2600). Native compaction emits no client event. No compression hook exists on main (grep of hermes_cli/plugins.py)."
+   },
+   {
+    "id": "before-turn-end-gate",
+    "score": 4,
+    "rationale": "Plugin authors (retrieval, verification) want a continuation-capable final-response control point: #101910 (r=1) and 4+ competing PRs. Value is moderate and goes to a narrow audience. teknium REJECTED the universal-gate framing (#47092 in the #64231 verdict table), and four in-tree continuation mechanisms already cover much of the user need: /goal with GoalGate, verify-on-stop, pre_verify and kanban_stop.",
+    "corrections": "Design it against /goal (hermes_cli/goals.py evaluate_after_turn) and the verify-on-stop -> pre_verify -> kanban_stop order and budgets (agent/turn_stop_gates.py). Frame it as a narrow fail-closed control point, never as universal. The brief's invariant 2 understates synthetic user turns: goal continuations and kanban recovery nudges are unflagged."
+   },
+   {
+    "id": "typed-explorer-and-delegation-receipts",
+    "score": 4,
+    "rationale": "Delegation is widely used, and downstream evidence suggests untyped delegation adds parent tokens. The CIs include zero, so the problem itself is unproven. Demand is modest: #102977 (c=2), #11431. A skill-level typed explorer reaches only users who adopt it.",
+    "corrections": "Use evals/postmortem/forensics/delegation.py ($0) before ad-hoc scripts. delegation.run.count already reports width, depth and outcome. a2a_call and a2a_orchestrate delegate outside delegate_task and are invisible to subagent hooks."
+   },
+   {
+    "id": "superseded-read-compaction",
+    "score": 4,
+    "rationale": "There is user demand for smarter pruning (#20717 reopened, r=4; #2667 r=3), and per-version read tracking makes this cheap. But gains are unmeasured and only apply inside compaction, or post-checkpoint on native routes. Anthropic Context Editing (#526) is a maintainer-authored server-side alternative.",
+    "corrections": "proactive_prune_tokens defaults to 0 (config_defaults.py:617), so the deterministic prune is off by default. Include a prune-on baseline. E32 can be a $0 string-oracle arm beside evals/compaction/policies.py."
+   },
+   {
+    "id": "delegated-effort-solution-space",
+    "score": 4,
+    "rationale": "Demand is broad: #40306 (c=10), #41889 (r=5), #80222, #88891 and others. #88522 shows 28.4 s to 5.4 s wall time at equal correctness. But about 10 carrier PRs are already stacked (including #112741), and it is blocked on needs-decision. The feature has moderate impact, and the factory can add little beyond evidence for an existing carrier.",
+    "corrections": "#88522 is zons-zhaozhy's plugin PR and #112741 is DresvyanskiyDenis's, so do not file an 11th. The subagent_context_cap probe (evals/postmortem) is the $0 template for checking that per-task effort reaches the child."
+   },
+   {
+    "id": "cron-routine-miner",
+    "score": 4,
+    "rationale": "There is potentially large cost savings for cron-heavy users: skip agent runs when monitored output is unchanged. #5354, a deterministic workflow engine (r=10), is partial demand. The 79% template-turn share comes from a third-party fleet, and whether kvn's own corpus is cron-dominated is unverified. Evidence is synthetic only.",
+    "corrections": "Reuse the evals/postmortem/forensics common.Run loader. In-place kanban turn recovery (agent/kanban_turn_recovery.py) changes per-card cold-prefix economics and has no hook receipts."
+   },
+   {
+    "id": "cognitive-state-context-virtualization",
+    "score": 4,
+    "rationale": "The ceiling is high (large token cuts on long sessions) but expected impact is low. On the OMP P1 cohort the median ratio was 0.96 and 8 of 20 tasks grew. The Hermes lane has only n=1 smoke runs. Every non-None selection costs cache prefix, and arms need paid models. Demand is near zero (#129584, r=0).",
+    "corrections": "Use the Claude Code 22/22 at $0.861 figure only as a prior. On native routes, packets placed before the newest checkpoint are dropped unless they are user rows or canonical summaries. The frozen-cohort preflight is still blocked (conflict_a/b unbound)."
+   },
+   {
+    "id": "tool-effect-algebra-table",
+    "score": 3,
+    "rationale": "This is a behaviour-identical refactor first. Any user-visible gain (more safe parallelism, consistent guardrails) is unmeasured, and some divergences may be intentional. The precedents (#64460, #75954) show the maintainer values batch-planner correctness, but there is no user demand (#518 is a teknium wishlist item, r=0).",
+    "corrections": "Relay tool intercepts run before middleware, pre_tool_call and guardrails (hermes_cli/middleware.py:103-121), so effect classification sees post-intercept args. evals/postmortem hardline_scanner_matrix and review_probes/scanner_bypass_probe are existing hidden-side-effect trap templates."
+   },
+   {
+    "id": "compression-god-file-decomposition",
+    "score": 3,
+    "rationale": "AGENTS.md calls this 'wanted work', and it de-risks the compaction features. But it has no user-visible value, carries high conflict risk at ~700 commits/day, and is heavy to review. #102117 drew 125 post-open commits. #125186 belongs to granolacowboy (r=0).",
+    "corrections": "context_compressor.py is 5,753 lines on main (the catalog says 5,673). native_compaction imports context_compressor.is_compaction_summary_message, and no re-export shims are allowed, so callers must move in the same commit. Use codebase_navigability plus forensics/rework.py for evidence."
+   },
+   {
+    "id": "cu-capture-mode-projection",
+    "score": 3,
+    "rationale": "Computer use is an opt-in toolset, and the effect is shown on one Windows/Unity sample (3.942 s timeout vs 2.029 s) with a null result on Xvfb. Breadth is narrow and there is no external demand: CU issues have at most 1 reaction, and demand scores it 10/100. Its catalog rank of #1 (score 60) comes from readiness, not impact.",
+    "corrections": "Evidence 'strong' is overstated: n=1, a single platform, and no Linux or macOS desktop datapoint (critic). #113389 was owner-closed in the 2026-09-30 budget batch, not rejected by a maintainer. The #116512 to #118964 salvage was a different change (an AX-walk bound). The sandbox-desktop image (#121169) now allows a real Linux measurement."
+   },
+   {
+    "id": "cu-repeat-key-dedup-fix",
+    "score": 3,
+    "rationale": "This is a real, deterministic correctness bug (Tab,Tab collapsed to one press), but only CU users hit it. Small blast radius, small breadth, no demand signal.",
+    "corrections": "#124008 was owner-closed in the same 2026-09-30 batch. It must be re-proved red on current main through the real dedup path."
+   },
+   {
+    "id": "verify-policy-voc-gating",
+    "score": 3,
+    "rationale": "verify_on_stop has been opt-in since #84383 ('more noise than signal'), so a VOC plugin reaches only opt-in users. The strongest user signal, #53828 (r=8), asks for something different: preserve the final answer and attach verification.",
+    "corrections": "#53828 is a UX/bug fix distinct from VOC gating and is a better-demanded leaf. #52612 (r=1) asks for path-aware triggering. GoalGate's gate-then-judge ordering is the in-tree precedent to benchmark against."
+   },
+   {
+    "id": "memory-prefetch-telemetry-and-probe",
+    "score": 3,
+    "rationale": "Only users with an external memory provider are affected (policy allows builtin plus one external). Telemetry alone does not change the user experience. Demand is small (#47119 r=2, #21566 r=1).",
+    "corrections": "Verified: _prefetch_provider joins the thread for up to 8.0 s (agent/memory_manager.py:457-501). But queue_prefetch_all pre-warms the next turn and providers own their caching, so 'blocks every turn for up to 8 s' overstates the typical case (unverified in practice). Prefetch is neither a Relay LLM nor a tool scope, so it shows up as unattributed turn time. evals/memory/honcho_current_query.py exists; extend it."
+   },
+   {
+    "id": "session-search-bounded-ordering",
+    "score": 3,
+    "rationale": "The 4,382x figure is from a foreign DB, and the absolute numbers (135 ms warm) are negligible next to LLM latency. Only the 8 s cold case matters, and it is unmeasured on Hermes state.db. session_search is on the recovery path, so recall parity matters more than speed.",
+    "corrections": "evals/session_search_schema swaps only tools/session_search_tool.py (runner.py:60-71), and SessionDB comes from the live tree for both arms, so as written it cannot A/B hermes_state_search.py. The committed results/pr95570 JSONL is a $0 baseline."
+   },
+   {
+    "id": "experiment-manifest-receipt-envelope",
+    "score": 3,
+    "rationale": "This is factory hygiene with modest leverage. Only a schema exists, and its value depends on a runner that does not. There is no upstream user value.",
+    "corrections": "Adopt evals/postmortem's OBSERVED/MODELED labels. Pin the Relay schema version, plugins.toml sha256 and resolved config_paths per run."
+   },
+   {
+    "id": "landing-evidence-ci",
+    "score": 3,
+    "rationale": "Downstream only. It prevents wrong 'done' or 'duplicate' claims (3 of 18 and 12 of 44 error rates in past waves), which directly avoids dead-close and spray penalties and protects the owner's reputation with maintainers. There is no end-user value.",
+    "corrections": "Posting output upstream is forbidden under factory rule A1 (zero NousResearch writes), so it has to stay a read-only local tool."
+   },
+   {
+    "id": "z0-observer-shadow-plugin",
+    "score": 2,
+    "rationale": "Downstream, weak evidence, and mostly superseded. Relay ATOF/ATIF exporters plus the maintainer's opt-in shared metrics and pre/post_auxiliary_call already provide the spool, retry labels and timing. Demand is 0.",
+    "corrections": "Settle trace_id on Hermes turn_id ('<session>:<task>:<8hex>', turn_facade.py:65), not a third hash. ATOF carries full payloads, so a metadata-only projection must be enforced in the converter."
+   },
+   {
+    "id": "hermes-decision-dataset-v2",
+    "score": 2,
+    "rationale": "This is a substrate fix for z0 decision-learning lanes whose results so far are negative (the fly champion scores 0.143 against majority 0.514). Fixing the degenerate corpus prevents bogus claims, but there is no user or upstream impact.",
+    "corrections": "Reuse the evals/postmortem/forensics common.Run loader. Goal-loop continuations and kanban recovery nudges are unflagged synthetic user rows and must be pattern-stratified."
+   },
+   {
+    "id": "evidence-layer-hygiene",
+    "score": 2,
+    "rationale": "It protects the credibility of any future upstream citation of z0 results, but it is purely downstream with no user value."
+   },
+   {
+    "id": "verified-memory-writes",
+    "score": 2,
+    "rationale": "The maintainer measured the adjacent environment-probing review as NEUTRAL (#107914: 0% vs 0% contradicted), so no PR. Shipping needs an aged-transcript corpus or a user-visible staleness incident. Low impact until that evidence exists.",
+    "corrections": "Baseline from memory.op.count origin=background_review x outcome. #112102 is kvnloo-authored."
+   },
+   {
+    "id": "autoresearch-experiment-loop",
+    "score": 2,
+    "rationale": "Downstream, with 80 sessions and 0 keeps on record. /goal plus contract plus GoalGate plus wait barriers already form a keep-going-until-metric loop in-tree.",
+    "corrections": "Re-scope as a skill that drives /goal with a metric GoalGate, adding keep/discard and noise-floor bookkeeping only."
+   },
+   {
+    "id": "tui-small-ux-promotions",
+    "score": 2,
+    "rationale": "Small UX gain, already open upstream, not a staging candidate.",
+    "corrections": "#126847 is at 56050e7610 (modelPicker.tsx plus 2 tests). #111470 closed 2026-09-29. The appChrome.tsx and model_switch.py integration points are not in the PR (critic)."
+   },
+   {
+    "id": "skill-visibility-hook",
+    "score": 2,
+    "rationale": "It serves a narrow set of plugin authors who need backend-specific skill hiding. The carrier exists (#125275, dskwe) and there is no broad demand.",
+    "corrections": "#125257 is by nekwo and #125275 by dskwe, so it is external-owned. Dangling related_skills pointers remain a risk."
+   },
+   {
+    "id": "third-party-plugin-repackaging",
+    "score": 2,
+    "rationale": "This is the sanctioned channel, but the seven items are niche with no measurable user pull.",
+    "corrections": "'MoA orbs' is UI only; the MoA core stays in-tree."
+   },
+   {
+    "id": "cu-shadow-semantic-state",
+    "score": 1,
+    "rationale": "A research measurement with no user-facing behaviour until a later contract exists. Owner-closed (#113252), no demand."
+   },
+   {
+    "id": "bend-verifier-standalone-plugin",
+    "score": 1,
+    "rationale": "Rigorous engineering, but the Hermes users who write Bend are a tiny group. The more impactful artefact is the upstream Bend mis-certification fix (kvnloo/bend#2), which is outside Hermes.",
+    "corrections": "The plugin imports tools.registry, an internal path. It must ship as a standalone repo plus a catalog pin."
+   },
+   {
+    "id": "observer-hooks-doc-drift",
+    "score": 1,
+    "rationale": "A docs-only fix for plugin authors. Trivial impact, though cheap.",
+    "corrections": "The drift is wider than the catalog says. observer-hooks.md documents pre/post_auxiliary_call (L139-140) but not first_chunk_at, context_length or moa_references, all emitted at agent/turn_response_intake.py:85,93,97."
+   },
+   {
+    "id": "cache-safe-model-routing",
+    "score": 6,
+    "rationale": "Catalog score 11, below the cutoff, but demand is strong. #5143 multi-role auto-routing (r=16), #12788 per-route model override (r=5), #14327 per-platform model (r=3), PR #98703 pre-agent routing middleware (c=43), and PRs #74272/#74408. Per-route and per-platform model selection is a real capability gap, and the cache constraint limits the safe granularity to session or aux-task. The setup wizard writes a smart_model_routing config key that nothing reads at runtime.",
+    "corrections": "smart_model_routing appears only in hermes_cli/config.py:1008 and setup_quick; there are no agent/ or gateway/ readers on main. MoA is the in-tree precedent: fixed acting model, advisors as aux calls. Relay LLM intercepts can rewrite the model outside config.yaml, so shadow arms must assert no Relay middleware."
+   },
+   {
+    "id": "outcome-signal-hook-widening",
+    "score": 4,
+    "rationale": "Catalog score 11. teknium's #64231 table marks PR #56720 (on_turn_failed, brandonedley) SALVAGE and #4169 (usage in post_llm_call, r=2) SALVAGE. Neither has landed (no turn_failed hook on main). These are maintainer-approved, cheap observer seams with external carriers, and they serve plugin authors.",
+    "corrections": "Salvage #56720 and #4169 under their taxonomy names rather than designing new hooks. The friction taxonomy already exists in shared metrics (py3.14, opt-in only)."
+   },
+   {
+    "id": "effective-token-cap-receipts",
+    "score": 3,
+    "rationale": "Catalog score 11. It can be done as a $0 aux observer: pair pre_auxiliary_call max_tokens with post finish_reason=='length' and assistant_content_chars==0. model_reply_issue already covers truncation on primary calls. Modest demand (#55276 r=5).",
+    "corrections": "max_tokens is in the PRE payload only, so join on (api_request_id, retry_count). Check against the #104868 output-cap removal direction first. Move readiness from needs-design to stage-now as an eval/observer."
+   },
+   {
+    "id": "split-runtime-remote-tools",
+    "score": 8,
+    "rationale": "MISSING. This is the largest agent-runtime demand cluster: #18715 (r=38, c=20), #1855 (r=16), #11014 (r=8), #689 (r=8), PR #90423 (r=5), #42807 (r=4), PR #63966 (r=3), about 80 reactions in all. It means a remote brain with local tool execution, a broad capability for gateway and remote users. Planned seam: the placeholder 'split_runtime': False at gateway/platforms/api_server.py:2544. Impact is high, but it needs a maintainer design decision, and the factory's realistic contribution is reviewing or salvaging #63966 (mxyyz), not authoring."
+   },
+   {
+    "id": "rate-limit-429-throttling",
+    "score": 7,
+    "rationale": "MISSING. Seven open issues total about 51 reactions: #49031 (11), #31802 (10), #7489 (8), #58061 (8), #5570 (6), PR #17749 (5), #18697 (3). This is robustness (CONTRIBUTING priority #4) and affects anyone on rate-limited keys. Main has partial coverage: a Nous-only cross-session breaker (agent/nous_rate_guard.py), provider-reset fallback cooldown (agent/fallback_cooldown.py), Retry-After handling and auto_recovery_cycles for 5xx. agent/rate_limit_tracker.py only parses x-ratelimit headers for /usage display. There is no proactive RPM/TPM throttle for other providers and no configurable 429 backoff (not exhaustively verified). Fork ready/fork-47-ratelimit-missing-remaining is an adjacent bug fix already queued."
+   },
+   {
+    "id": "gateway-multitenancy-rbac",
+    "score": 7,
+    "rationale": "MISSING, out of the agent-loop frontier scope. #527 (teknium, r=24, c=20, reopened), #34352 (r=16, c=25), #9514 (r=7), #27182 (r=6), PR #65571. High maintainer-authored demand with broad gateway impact, but large design surface and security-adjacent. Flagged for completeness; poor factory fit."
+   },
+   {
+    "id": "anthropic-context-editing",
+    "score": 6,
+    "rationale": "MISSING. #526 is teknium-authored (P3, triage reopened 2026-06-29). It would wire context_management clear_tool_uses / clear_thinking on anthropic_messages. Anthropic is a major Hermes route, and this is a server-side, boundary-triggered alternative to projection and superseded-read. No context_management code exists in agent/anthropic_adapter.py on main. The value is unproven: a clear invalidates the cache past the edit point, so cache-read after a clear must be measured, and that needs paid Anthropic calls ($0 not possible). Copy the native_compaction per-request gate pattern, with the local compressor as fallback."
+   },
+   {
+    "id": "pluggable-sessiondb-durability",
+    "score": 6,
+    "rationale": "MISSING. #23717 (r=19, c=24), PRs #104018 (draft), #71945, #39301 (r=3) and #77065, so the 3+PR ABC rule applies. Plus teknium's pain-cluster #110054 (c=10) and #80921, a machine-checked crash/resume conformance suite (teknium, c=7). The full provider ABC is a maintainer design call. The factory-sized, maintainer-authored entry point is #80921: a $0 deterministic conformance suite that improves durability for every user."
+   },
+   {
+    "id": "default-knob-tuning-experiments",
+    "score": 6,
+    "rationale": "MISSING (critic). This uses the lowest rung, with zero new code. It measures existing opt-in knobs whose defaults affect every user: compression.proactive_prune_tokens (0), proactive_prune_min_reclaim_tokens, micro_compact (False), idle_compact_after_seconds (0), fallback.min_switch_reset_seconds (0), cache TTL and verify_on_stop. Tools: replay_gates, the compaction exam and the cache-read ratio. A validated default flip has the broadest blast radius of anything here. The maintainers are conservative on defaults (#84383 flipped verify_on_stop off), and the compaction-exam arms need an aux LLM."
+   },
+   {
+    "id": "memory-consolidation-dreaming",
+    "score": 5,
+    "rationale": "MISSING. #5533 (r=18), teknium's #553 (r=8) and #509 (r=6), #10771 (r=6, c=12). Real demand, but it must ship as a standalone memory-provider plugin (CONTRIBUTING), and the #107914 NEUTRAL validation gate applies. The curator covers agent-created skills only."
+   },
+   {
+    "id": "relay-shared-metrics-arm-readout",
+    "score": 5,
+    "rationale": "MISSING, factory leverage. Read each arm's local shared-metrics store (enabled:true, send:false) and ATOF traces for cache_break cause, file_edit strategy, model_reply_issue, compression and tool_overhead deltas. That gives $0 paired readouts for the caching and edit arms (E02 sizing, E19, E37), joined on Hermes turn_id, and supersedes most of the z0 observer spool. Requires py3.14 and one process per arm, and the SQLite schema's suitability is unverified."
+   },
+   {
+    "id": "postmortem-logcalls-zero-hit-fix",
+    "score": 4,
+    "rationale": "MISSING. Verified bug in the maintainer's own forensic harness. evals/postmortem/forensics/logcalls.py:27-29 requires 'cache=R/P', but agent/turn_usage.py:192 emits it only when cache_read_tokens > 0. So zero-hit calls (exactly the misses a model switch or cache expiry causes) and 'usage=unavailable' lines are never parsed. Hit ratios come out biased up and coverage undercounted (24.1% on the #102117 reference). The fix is small, makes E19, E37 and cache-warming sizing trustworthy, and could ride along as a concrete upstream evals fix."
+   },
+   {
+    "id": "kanban-worker-economics",
+    "score": 4,
+    "rationale": "MISSING (critic). Kanban is heavily developed, with 9 hooks plus kanban_stop and kanban_turn_recovery. Fleet traffic is dominated by template turns (79% cron/kanban in a third-party fleet). In-place recovery has no hook or metric receipts. Candidates: per-worker cold-prefix cost, cross-worker cache reuse, lean worker profiles. Breadth is limited to kanban fleet users."
+   },
+   {
+    "id": "plugin-tool-override-prototypes",
+    "score": 4,
+    "rationale": "MISSING, factory leverage. hermes_cli/plugins.py register_tool(override=True), gated by plugins.entries.<id>.allow_tool_override, lets a plugin shadow patch, write_file and read_file. That means fail-loud edits, hashline, then_run and read-outline arms can be A/B-tested out of tree with no core diff, which removes the plugin-reachability blocker for several E02 arms."
+   },
+   {
+    "id": "moa-efficacy-paired-eval",
+    "score": 3,
+    "rationale": "MISSING. MoA (agent/moa_loop.py) is opt-in and niche. A fan-out cadence A/B (user_turn vs every_n vs off) with moa.save_traces and aux-hook usage gives $0 cost receipts, but the quality arm needs real providers."
+   }
+  ],
+  "missing_candidates": [
+   "split-runtime-remote-tools: #18715 r=38, #1855 r=16, #11014, #689, PR #90423, PR #63966; placeholder split_runtime False at gateway/platforms/api_server.py:2544. Impact 8. Salvage or review only.",
+   "rate-limit-429-throttling: #49031 r=11, #31802 r=10, #7489, #58061, #5570, PR #17749. Partly shipped (nous_rate_guard.py Nous-only, fallback_cooldown.py). No proactive per-provider RPM/TPM throttle (not exhaustively verified). Impact 7.",
+   "gateway-multitenancy-rbac: #527 teknium r=24, #34352 r=16. Out of agent-loop scope. Impact 7.",
+   "anthropic-context-editing: #526 teknium-authored. No context_management in agent/anthropic_adapter.py. Measuring it needs paid calls. Impact 6.",
+   "pluggable-sessiondb-durability: #23717 r=19 plus 4 competing PRs. The factory-sized entry is teknium's #80921 crash/resume conformance suite ($0). Impact 6.",
+   "default-knob-tuning-experiments: proactive_prune_tokens / micro_compact / idle_compact_after_seconds / fallback.min_switch_reset_seconds defaults (config_defaults.py:617,628,698). Zero code. Impact 6.",
+   "memory-consolidation-dreaming: #5533 r=18, teknium #553/#509, #10771. Standalone memory-provider plugin only. Impact 5.",
+   "relay-shared-metrics-arm-readout: ATOF plus local metrics.sqlite3 as $0 paired readouts, py3.14 only. Impact 5 (factory leverage).",
+   "postmortem-logcalls-zero-hit-fix: logcalls.py:27-29 regex drops zero-cache-read calls emitted without cache= (turn_usage.py:192). Impact 4.",
+   "kanban-worker-economics: cold-prefix and recovery receipts for kanban workers. Impact 4.",
+   "plugin-tool-override-prototypes: register_tool(override=True) lets edit-tool arms run out of tree. Impact 4.",
+   "moa-efficacy-paired-eval: Impact 3.",
+   "verify_on_stop answer preservation (#53828, r=8): a better-demanded leaf than verify-policy-voc-gating. Unscored; folded into the verify-policy entry."
+  ]
+ },
+ {
+  "lens": "evidence: strength and independence of existing measurements, and whether an existing harness can produce red/green or A/B proof at $0 or on local models this week. Facts were re-checked read-only against upstream main ffc74885c5 (2026-10-01 02:29 -0500). That is 1 commit past the aeff051a18 the gap-fill used and well past the catalog's 663362680b. Binding local constraints: the router presets are 8K, below Hermes' 64K MINIMUM_CONTEXT_LENGTH (agent/model_metadata.py:272, enforced at agent_init.py:2071), so every live local-model arm is blocked as configured. There is no local 27B/30B model. The live install runs Python 3.11 (venv -> /usr/bin/python3.11), so it uses NoopRelayRuntime and has no shared-metrics store (/workspace/hermes-home/telemetry/shared_metrics is absent). Python 3.14.7 is available for a disposable venv. A 4.0 GB state.db plus agent.log, .1 and .2 (about 12.7 MB, Sep 1-28) exist for copy-based $0 forensics, which stay local per K1. cua-driver 0.28.2 is installed at ~/.local/bin. Bend, Lean, tiktoken and radon are not installed. landing_evidence.py and lab/omp-crosspoll/* are not on this host or on fork refs.",
+  "scores": [
+   {
+    "id": "cu-repeat-key-dedup-fix",
+    "score": 9,
+    "rationale": "This is the most locally provable item in the catalog. AIAgent._deduplicate_tool_calls on main ffc74885c5 (run_agent.py:1221-1237) is byte-for-byte the pre-fix logic, and it is reached from the real loop at agent/turn_tool_round.py:88. Fork branch 570dc83ba6 (+32/-4, run_agent.py plus 16 test lines in tests/agent/test_agent_guardrails.py) merge-trees clean onto main. RED on base, GREEN with the guard and a negative control are therefore one targeted run_tests.sh file at $0, deterministic, needing no model. It is not a 10 because the existing test exercises the static method rather than a FakeLLMServer turn through turn_tool_round, the verify_fresh_state interaction is unproven, and nobody outside our lane has measured user impact (the #124008 PR was self-closed in the 2026-09-30 batch).",
+    "corrections": "Re-proof base is now ffc74885c5, not 663362680b: the code is unchanged and merge-tree is clean (verified). #124008 was closed by kvnloo in the budget batch, not rejected by a maintainer."
+   },
+   {
+    "id": "observer-hooks-doc-drift",
+    "score": 9,
+    "rationale": "The proof is the D2 docs rule: quote the stale text and the contradicting source. Verified on main: agent/turn_response_intake.py passes first_chunk_at, context_length and moa_references to post_api_request, while website/docs/developer-guide/observer-hooks.md has no occurrence of any of the three (grep). That is fully reproducible at $0 with no harness. The core-modules gap-fill confirms it independently. It is not a 10 only because there is no behavioural claim to measure.",
+    "corrections": "The fork branch perf/first-visible-clocks (6653c99cfd) already edits observer-hooks.md (+3); reconcile with it instead of writing a second doc patch."
+   },
+   {
+    "id": "edit-tool-fail-loud-and-meter",
+    "score": 8,
+    "rationale": "This has the strongest independent evidence in the set. A third party (KeyArgo, 2026-09-16) ran KoNit-K's deterministic 6-trap battery on PR #111127 head 602e596389b on Linux and posted str_replace 6/6 vs hermes_patch 5/6, with missing_anchor applied through context_aware. A separate contributor PR, #125376 (Finn763), is red on main for the 0.923 'trim()'/'strip()' case. tools/fuzzy_match.py:261-282 on main still uses a per-line threshold of 0.80, so the defect class persists. Correctness red/green is $0 this week from the PR head battery plus fuzzy_match unit tests. What keeps it from 9-10 is the behavioural half (E02: does fail-loud reduce wrong edits and turns on small models). That cannot run locally: there is no 30B-class model, router presets are 8K under the 64K floor, toolperf_abeval scoring needs NeMo Relay ATOF (py>=3.14), and the harness runs `hermes chat`.",
+    "corrections": "Attribution: the catalog is right that KeyArgo produced the 6/6 vs 5/6 scorecard. The critic's 'author is KoNit-K' is about the PR author, not the meter run. #111127 head has moved to 5444b1a2a8, so the scorecard was on 602e596389b and should be re-run on the current head. evals/edittool is not on main (confirmed). The core-modules claim that the local shared-metrics store 'sizes real-use context_aware prevalence at $0' does not hold here: the live install is py3.11, so there is no Relay host and no metrics store. Salvage carriers are #125376 and #54575 (MaxFreedomPollard), not ours."
+   },
+   {
+    "id": "compression-god-file-decomposition",
+    "score": 8,
+    "rationale": "For a behaviour-preserving refactor the proof is deterministic and fully local: test parity through scripts/run_tests.sh tests/agent/ plus before/after evals/codebase_navigability static_metrics.py, bench.py and lookup_sim.py. Those are $0 with no model (they need a separate venv with tiktoken and radon, which are not installed). The navigability 'benefit' is MODELED (simulated lookups), not observed agent behaviour. Conflict churn on these files is the practical risk, not missing evidence.",
+    "corrections": "Baselines on ffc74885c5 are auxiliary_client.py 8,255, context_compressor.py 5,753 (not 5,673) and conversation_compression.py 4,579. Skip runtime_bench.py: it runs the hermes CLI and pytest --collect-only, which collides with the read-only rules without operator approval. native_compaction imports context_compressor.is_compaction_summary_message, so callers have to move in the same commit."
+   },
+   {
+    "id": "tui-render-fanout-perf",
+    "score": 7,
+    "rationale": "The measurements are mechanical and come with witness tests (setNow ~200/min to 0, 0 rerenders on unrelated writes, witness tests fail when parent code is restored, 176 files / 1,611 vitest). ui-tui vitest re-runs them at $0 this week, and E29's combined idle-RPC count is a cheap Node script. Two reasons it is not higher: every number is self-reported by our own lane with no independent run, and all six open PRs (#129524, #129525, #129526, #129556, #129918, #129928) show 0 check runs on their head SHAs (CI never admitted). The user-visible effect (CPU or battery) is also unmeasured; render counts are a proxy.",
+    "corrections": "All six PRs are already open upstream, so this is review support, not staging. 13 kvnloo PRs are open in total (the critic's count) against the ~3-slot preference."
+   },
+   {
+    "id": "session-search-bounded-ordering",
+    "score": 7,
+    "rationale": "The query shape is confirmed on main (hermes_state_search.py:57 _FTS_ORDER_BY, :1119 default 'ORDER BY rank'). A 4.0 GB Hermes state.db exists to copy, so E36 is a short, deterministic $0 script (p50/p95/cold ms plus recall@10 against current BM25 order), and the results stay local. The existing number (0.031 vs 135.8 ms, 4,382x) is from a third-party agentsview DB with a different schema, and its 'unsorted LIMIT 20' arm changes semantics, so it is not usable evidence. The real arm is a bounded inner candidate set re-ranked, gated on top-k parity.",
+    "corrections": "Do not cite the 4,382x unsorted-LIMIT figure as the expected gain, because it drops ranking. session_search_schema cannot A/B the DB layer as written (runner.py swaps only tools/session_search_tool.py), so parity has to come from the state.db-copy script. The committed results/pr95570 JSONL is only a tool-level baseline."
+   },
+   {
+    "id": "surface-parity-invariant-cells",
+    "score": 6,
+    "rationale": "The harness exists and is $0: tests/e2e/core/history/test_prefix_stability.py (C17, 3 JOURNEYS including surface_switch) plus the parity drivers _drive_gateway, _drive_acp, _drive_rpc and _drive_cron on FakeLLMServer. New journeys plus a sabotage negative control can be produced this week. The evidence that a bug currently exists on an uncovered surface is weak, though. The motivating #104414 (220K session at 1% cache) and #45499 are both closed as completed, and no red cell on api_server, ACP or serve is known. Proof will most likely be 'green plus catches injected sabotage', which makes this a regression guard. The 4/4 NOT_PLANNED record for test-only PRs means it needs a real red to ride with.",
+    "corrections": "#104414 and #45499 are CLOSED (completed), so they motivate the cells but are not live reds. E08's identity oracle should be Hermes turn_id, which already equals the Relay turn scope (turn_facade.py:65). Surfaces missing from E07/E08: A2A JSON-RPC and gateway/relay stub_connector. The MoA aggregator wire user/user adjacency must be whitelisted."
+   },
+   {
+    "id": "tool-effect-algebra-table",
+    "score": 6,
+    "rationale": "Soundness proof is $0 and deterministic. After deriving the tables from registry metadata, the existing segmentation tests must stay identical, and widenings must pass hidden-side-effect traps, which can be lifted from evals/postmortem hardline_scanner_matrix.py and review_probes/scanner_bypass_probe.py. The 'benefit' (parallel segments gained) can be sized offline from a state.db copy through forensics/tools.py, but that is MODELED, not a latency A/B. The static divergence census was done at 663362680b, about 2,800 commits old, and needs a cheap re-run. 'Intentional divergence' cases (browser state, live HA reads) remain unverified.",
+    "corrections": "E31's test path is wrong: it is tests/agent/test_tool_batch_segmentation.py (plus tests/agent/test_run_agent.py and tests/tools/test_deferral_fixes.py); tests/run_agent/test_tool_batch_segmentation.py does not exist on main. Guardrails see post-Relay-intercept args (middleware.py:113-121). 'strong' evidence is overstated, since the benefit is unmeasured."
+   },
+   {
+    "id": "memory-prefetch-telemetry-and-probe",
+    "score": 6,
+    "rationale": "The probe pattern already exists upstream. evals/memory/honcho_current_query.py is a $0 local-HTTP lifecycle probe with delay/release events, so a prefetch fault-injection probe (delay, hang, empty, error against _EXTERNAL_PREFETCH_TIMEOUT_S=8.0 at memory_manager.py:32) can produce p50/p95 receipts this week. There is no existing measurement that prefetch hurts real turns: the 0.09 vs 1.03 ms fake-provider numbers say nothing about real backends, and the packet-cache FRESH\u22480 prediction is code reading only. Confirmed: 25c1b008c8 wired memory tool, curator and delegation call sites, not _prefetch_provider (L457).",
+    "corrections": "E17 should extend evals/memory/ rather than create it. The offline packet-cache replay belongs to memory-packet-cache-core (research-only), so keep it out of this feature's gate."
+   },
+   {
+    "id": "compaction-lifecycle-hooks",
+    "score": 6,
+    "rationale": "No-regression proof is $0 with existing harnesses: token_accounting/replay_gates.py (fake provider, real compression), evals/compaction/test_region_scoping.py and native_compaction/ab_checkpoint_preflight.py all run this week with no model. post_auxiliary_call(aux_task='compression') already prices each attempt. What cannot be proven is value: the feature's justification is a consumer that does not exist yet, and the per-block directive variant risks the #120582 data-loss class, which needs its own fixture. The 'strong' label reflects demand (maintainer SALVAGE of #53806 in #64231), not a measurement.",
+    "corrections": "Fire site: _notify_context_engine_compression_complete (conversation_compression.py:2564-2600) on local routes. Native compaction has no client event, so the feature cannot cover native routes. #53806 (ledfoot631) is the carrier to salvage under the on_compression_start name."
+   },
+   {
+    "id": "offline-replay-ab-substrate",
+    "score": 5,
+    "rationale": "The duplication evidence is real and verified: 33 evals hand-roll ThreadingHTTPServer fakes and 0 import tests/fakes FakeLLMServer, while 75 test files do. The $0 prototypes (replay_gates, provider_fallback's egress guard) exist. Proof for a substrate means reproducing existing verdicts through the shared lib plus an A/A noise floor. The $0 half is doable this week. The local-model A/A cannot run: core_tool_deferral hard-codes OpenRouter (worker.py:212, :26), toolperf scoring needs ATOF on py3.14 and runs `hermes chat`, and router presets are 8K under the 64K floor. The headline numbers it leans on (288-run deferral, 108-run toolperf) are upstream's, are paid, and have no A/A.",
+    "corrections": "The catalog says '6-15' re-implement a fake provider; the verified count is 33, with 0 using FakeLLMServer. E20 cannot run on local models as configured (8K presets < 64K floor; no 27B/30B GGUF). Per D5 and the critic, it must ship alongside a real fix."
+   },
+   {
+    "id": "hermes-decision-dataset-v2",
+    "score": 5,
+    "rationale": "E35 is CPU-only and $0 on a state.db copy, and forensics/common.Run supplies root discovery and rollover exclusion. It needs a port of omp_decisions.py, so it is not an existing harness. The cited benchmark (keyword 0.740 > majority 0.520 > Laya 0.195 > Julia 0.104, z0int 9e6a993) is a sealed n=77 set (\u00b111pp by the commit's own statement) with label_quality 'low', drawn from ~/.z0int/episodes. It is informative mainly as a free-baseline warning, not as Hermes decision evidence.",
+    "corrections": "The 76,970-row / 1,644-prompt / 10,755-repeat figures come from ~/.z0int/episodes/next_action.jsonl, where the `user` field is the session request copied onto every turn (9e6a993 message). The repetition is an extraction artifact, not evidence of template or cron turns. The E35 'OMP:' label on 0.740/0.520/0.195/0.104 should cite 9e6a993 and its n=77 caveat."
+   },
+   {
+    "id": "superseded-read-compaction",
+    "score": 5,
+    "rationale": "The E32 deterministic arm beside evals/compaction/policies.py with a string-match oracle is $0 and buildable this week, and tokens-retained is exactly measurable. But a string oracle ('latest content present', 'what changed' probes) is far weaker than the LLM recall exam, and recall or cache effects need paid or \u226564K-local runs. There is no existing measurement of any gain.",
+    "corrections": "Proactive prune is OFF by default (proactive_prune_tokens: 0, micro_compact off per hermes_cli/config_defaults.py), so arms need prune-off and prune-on baselines. On native-compaction routes, pre-checkpoint tool results are already dropped server-side, so the gain is local and post-checkpoint only."
+   },
+   {
+    "id": "eval-safe-memory-isolation",
+    "score": 5,
+    "rationale": "The motivating incident (#121935: a promptfoo suite wrote dozens of Honcho sessions into a real user's representation) is real, but it is one report, and the reviewer findings on #121948 are the only independent evidence. The catalog maps this to E18, which is blocked and is the wrong experiment. The right proof is a $0 test with a fake MemoryProvider asserting zero sync_all/on_session_end and explicit memory-tool writes under the new agent_context. That is buildable this week on #121948's head, but no harness exists yet.",
+    "corrections": "Replace E18 with a dedicated $0 provider-write test. #121948 (fangliquanflq) is the carrier to review or salvage. 'strong' overstates a single incident."
+   },
+   {
+    "id": "evidence-layer-hygiene",
+    "score": 5,
+    "rationale": "There is no experiment to run. Each correction is a mechanical read (claim-status.json, missing JSONL at 78869d9 vs data in 28927fa, KB gap list vs landed code), so 'proof' is a quote-and-source diff producible immediately. The underlying claims are internal to z0 repos and self-referential, with no independent measurement. It scores mid-range because it is cheap to verify, not because anything is measured.",
+    "corrections": "Adopt postmortem's OBSERVED vs MODELED labels as the hygiene convention. The uncommitted j1_1/nanojev_shadow files in hermes-k8s-lab still need a retraction note (40/40 was a positional artifact)."
+   },
+   {
+    "id": "skill-visibility-hook",
+    "score": 5,
+    "rationale": "Contributor PR #125275 (dskwe, +370) ships its own prompt-cache invariant test. Prefix stability with a filter on is checkable at $0 via worktree_prompt_prefix.py and an E07 journey this week. The value half (fewer wrong or needless loads without missing needed skills) has only vendor-synthetic evidence (16.8 to 7.3% wrong) and needs E50 (lab profile plus GPU) or a live battery, which the local 8K/64K mismatch blocks.",
+    "corrections": "Pair it with evals/prompt_footprint/property_guidance.py ($0, tiktoken plus real skill_view) for token receipts."
+   },
+   {
+    "id": "cache-safe-model-routing",
+    "score": 5,
+    "rationale": "Included for demand (demand report 40). E19 runs at $0 on a state.db copy plus the local agent.log rotations with upstream's forensics/logcalls, but only after a fix. Verified: logcalls._LINE (logcalls.py:27-29) requires 'cache=R/P', and agent/turn_usage.py:191-193 emits it only when cache_read_tokens>0, while 'usage=unavailable' lines (:96) never match. Zero-hit calls, exactly the misses a model switch causes, are dropped and the hit ratio is biased upward. The +8.4% to +66.8% figure comes from a third-party fleet. The live install has no shared-metrics cache_break counters (py3.11).",
+    "corrections": "Make cache= optional before quoting any E19 number. Many local routes (llama.cpp) never report cache reads, so they would be invisible. Relay LLM intercepts can change model or params outside config.yaml, so shadow arms must assert that no Relay middleware is present."
+   },
+   {
+    "id": "turn-timing-observability",
+    "score": 4,
+    "rationale": "The cheap half is feasible. E10 overhead microbenchmarks live on fork perf/critical-path-* and perf/first-visible-clocks, which now merge-tree clean onto ffc74885c5, and the E09 parity drivers plus FakeLLMServer exist. The motivating evidence is stale or weak, though. #48204 (31-33 s vs 2.6 s) is Windows-only and CLOSED not_planned, and #108139 is a single hang anecdote. Shared metrics already ship TTFT and gateway reply latency (on py3.14 Relay hosts only). No measurement shows unattributed non-LLM, non-tool time is large on current main.",
+    "corrections": "#48204 is closed not_planned and Windows-specific, so it cannot motivate E09. The fork branches are textually clean on main (critic, re-verified here), so 'rebuild only' is too strong. Start with an ATOF residual (turn minus llm minus tool) in a py3.14 venv."
+   },
+   {
+    "id": "compaction-identifier-anchor-retention",
+    "score": 4,
+    "rationale": "The measurements are maintainer-produced and independent of us, which is good, but thin. The 23.3 to 60.0 anchor lift is one transcript (GUI) at 15 questions, against a 'current' score from a previous question bank (SCORECARD-2026-08-15 footnote). The 78.9 bar is a 3-lineage mean (76.7/90.0/70.0) whose 09-19 banks are unpublished. The 08-15 scorecard embeds 90 gold answers, but its lineages are the maintainer's private state.db, so neither bar is reproducible locally. E03 on our own state.db needs new question banks, which are LLM-generated, while E04 and E05 need an aux judge (paid or \u226564K-local). The summarizer reads 52-60K-token inputs, which local 8K presets cannot serve.",
+    "corrections": "'strong' is overstated: n=1 transcript for the anchor lift. 'Beat 78.9' is not testable locally; establish our own current+recovery baseline on frozen local lineages first. Scope to local-compressor routes, and keep summaries under the 32K RETAINED_SUMMARY_TOKEN_BUDGET for native checkpoints. Note that runner.py:241 does a network GET to openrouter.ai for pricing."
+   },
+   {
+    "id": "cu-capture-mode-projection",
+    "score": 4,
+    "rationale": "This is the top-ranked feature on the thinnest evidence. It rests on one Windows/Unity sample (3.942 s timeout to 2.029 s valid, #113389, a self-closed draft), and Xvfb shows a null effect. The fork's 114-line test (tests/tools/test_computer_use_capture_modes.py) is MagicMock-based, so its red/green mocks away the production seam (D3). The real-path harness does not exist. docker/sandbox-desktop.Dockerfile on main pins cua-driver 0.28.2 with Xfce and AT-SPI, and the same driver is installed on this host, so E23 is $0 but still needs a new 40-captures-per-arm timing script and an image build. Feasible this week, not existing.",
+    "corrections": "Blob d60bce2b is identical at the branch base and on main (verified) and merge-tree is clean on ffc74885c5. tools/computer_use/tool.py changed on main since the base (86 lines), so semantic re-test is needed. Downgrade evidence_strength from strong to weak (n=1, one OS)."
+   },
+   {
+    "id": "promotion-gates-factory",
+    "score": 4,
+    "rationale": "evolver/calibrate.py exists on fork feat/evolver-phase0-gate-calibration (20eb166106), but calibration_passed was shown only on synthetic negatives (#110691, not re-verified). Real negatives exist at $0 (forensics/rework.py review-fix and revert commits), but E30 means running Hermes tests over many patches in a disposable venv, which is heavy. postmortem/run.py is the closest runner, but it never asserts red-on-base, run.py:47 setdefaults HERMES_HOME (it can hit a real home), and the cache_prefix_wire marker '' passes vacuously (run.py:41).",
+    "corrections": "Missing gate steps per PLAN \u00a78: an ownership/duplicate check and a negative control. Fix run.py:47 and :41 before any reuse. Fork CI is not the substrate (G2)."
+   },
+   {
+    "id": "before-turn-end-gate",
+    "score": 3,
+    "rationale": "There is no measurement of benefit. The 'strong' label reflects demand (#101910 and four competing PRs), and the maintainer explicitly REJECTED the universal-gate framing (#47092 in the #64231 verdict table). E11's invariants (alternation, byte-stable prompt, no draft leaks) could be built at $0 on the replay_gates pattern plus goal_command_parity and the goal_* probes, but no such harness exists today. Extra calls and tokens per gated turn are unmeasured.",
+    "corrections": "It must be designed against the existing gates: verify-on-stop, then pre_verify, then kanban_stop (turn_stop_gates.py), the between-turn /goal loop (hermes_cli/goals.py) and kanban recovery. E11 needs /goal-active, kanban-worker and MoA wire-adjacency cells."
+   },
+   {
+    "id": "bend-verifier-standalone-plugin",
+    "score": 4,
+    "rationale": "The adversarial numbers are many and well designed (225/225, 200/200, TOCTOU 25/25 to 0/25, poisoned cache 10/10 to 0/10), but all are self-run on the fork CI lane, and the patched-Bend result (kvnloo/bend#2, 0/336) is unreported. Bend 2.0.34 and Lean 4.34.0 are not installed on this host, so E27 cannot be re-run locally without a toolchain install, and fork CI is not the substrate. E28 (does a pre_verify gate cut false completions) needs paid or capable-local trajectories and has no data.",
+    "corrections": "E52 (hermes plugins validate) needs explicit operator approval to run the hermes CLI. The plugin imports tools.registry (an internal path), which catalog admission may flag."
+   },
+   {
+    "id": "off-critical-path-compaction",
+    "score": 4,
+    "rationale": "The latency baseline is maintainer-measured (36.9 s and $0.061 per event over 3 lineages), and the same scorecard calls compaction cost 'noise' and says 'Nothing structural'. Gate safety is provable at $0 this week by running token_accounting/replay_gates.py and native_compaction/ab_checkpoint_preflight.py against #117895's head. The value claim (37 s off the critical path at equal recall, E13) needs an aux LLM over 500K lineages (paid, since local is blocked), and the #120582 data-loss class needs a dedicated fixture.",
+    "corrections": "#117895 is fangliquanflq's PR, so this is review or salvage. Native compaction already removes the client summarizer on gpt-5.6/Astra routes. Baseline against compression.idle_compact_after_seconds and the gateway hygiene detached worker. Critical-path seconds = sum of post_auxiliary_call(aux_task=compression).api_duration under a live turn_id."
+   },
+   {
+    "id": "typed-explorer-and-delegation-receipts",
+    "score": 4,
+    "rationale": "E39 can run at $0 this week with an existing upstream harness: evals/postmortem/forensics/delegation.py on a state.db copy (results carried, truncated summaries, withheld child-hours). It is observational, though, and cannot attribute parent-token deltas to typing. The prior z0evals result (+522/+1,008 per equal-cache pair) has full-cohort CIs that include zero, and FastContext's -60% is literature. E40, the causal 3-arm test, needs a 27B local model or a paid API and is blocked.",
+    "corrections": "Use forensics/delegation.py instead of an ad-hoc script. a2a_call/a2a_orchestrate delegate outside delegate_task, so receipts must classify or exclude them. evals/delegation_group_schema/probe.py ($0) prices the schema cost of a typed explorer."
+   },
+   {
+    "id": "cu-shadow-semantic-state",
+    "score": 4,
+    "rationale": "The existing data is null by construction: 40 captures per arm on bare Xvfb, 24.6 vs 25.4 ms, with empty AX trees. Branch f8ff341d1e merges clean, and the sandbox-desktop image plus the local cua-driver 0.28.2 make E24 $0, but a scripted-policy runner still has to be written. There are no real-session metrics.",
+    "corrections": "Merge-tree is clean on ffc74885c5 (verified); tools/computer_use/tool.py drifted on main, so a semantic re-test is required."
+   },
+   {
+    "id": "cron-routine-miner",
+    "score": 3,
+    "rationale": "The headline signals do not support the feature. The 79% template-turn share is from a third-party fleet, and the '10,755 repeats' figure is an artifact of z0int's next_action.jsonl copying the session request onto every turn (9e6a993), not cron repetition. E34 can run at $0 on a state.db copy (group by cron job) using the forensics common.Run loader, but nothing has been measured on Hermes data, and the routine compiler has only synthetic tests.",
+    "corrections": "Drop the 10,755-repeat datapoint as cron evidence. Kanban in-place recovery (kanban_turn_recovery) changes per-card cold-prefix economics and has no hook receipts."
+   },
+   {
+    "id": "skills-efficacy-paired-eval",
+    "score": 3,
+    "rationale": "E15 depends on PR #122544's evals/skills (not on main) over copies of private .usage.json, curator ledger and state.db. It is correlational and needs a privacy review. E16, the credited paired test, needs live arms (paid, or local and blocked by 8K/64K) plus memory isolation. The maintainer explicitly deferred 'task-outcome attribution after a patch' (relay-shared-metrics.md:255), which confirms there is a gap, but there is no measurement.",
+    "corrections": "evals/skills exists only on PR #122544 (Nagisa-3000). aux_task=background_review cost is observable at $0 via post_auxiliary_call."
+   },
+   {
+    "id": "z0-observer-shadow-plugin",
+    "score": 2,
+    "rationale": "There is no cohort, the lab tests were never run, CI is red on #386 and #387, and the identity join is expected to FAIL (session_id vs sha256(session,turn)). E22 needs a real cohort and a GPU. E21 byte-identity could use FakeLLMServer fixtures, but nothing exists yet.",
+    "corrections": "trace_id should be Hermes turn_id ('<session>:<task>:<8hex>', turn_facade.py:65), which hooks, Relay scopes and aux payloads already share. ATOF/ATIF exporters cover most of the spool on py3.14 with no plugin."
+   },
+   {
+    "id": "cognitive-state-context-virtualization",
+    "score": 2,
+    "rationale": "Evidence is either external or negative. OMP P1 has a median ratio of 0.96 with 8 of 20 tasks growing. The Claude Code numbers (22/22 at $0.861) are priors from another harness. The Hermes lane has n=1 smoke runs, E18 is BLOCKED (preflight passed=false), and E04 and E56 are paid. Nothing can produce Hermes proof locally this week.",
+    "corrections": "On native routes, packets placed before the newest checkpoint are dropped unless they are user rows or canonical summaries. The branch study/hermes-unified-memory-56 is local-only."
+   },
+   {
+    "id": "compaction-summary-safety-canary",
+    "score": 3,
+    "rationale": "The only evidence is an external vendor report; nothing is measured in Hermes. The 'deterministic half' of E06 (a tripwire over fixtures.py with call_llm mocked, as test_region_scoping does) cannot observe whether an LLM summarizer propagates planted directives. It can only check the prompt wording or the mechanical anchor index. A meaningful canary needs a real summarizer: paid, or \u226564K local, which is blocked by the 8K presets.",
+    "corrections": "Native summaries are encrypted and cannot be inspected, so restrict to local compressors. #120439 (harness-scout, needs-repro) is the issue the canary would supply a repro for."
+   },
+   {
+    "id": "experiment-manifest-receipt-envelope",
+    "score": 3,
+    "rationale": "Only a +91-line schema exists (fork lab/evals/hermes-stack-receipts-v0, 22b0c745d5). There is no validator, and evolution-lab PR #28 is red. E48 (10 fault fixtures) is $0 but self-referential: our schema validated by our fixtures. E49 is unbuilt and needs model calls.",
+    "corrections": "Pin hermes.relay.runtime.v1, the nemo-relay version, the plugins.toml sha256 and the resolved config_paths. Adopt postmortem's OBSERVED vs MODELED labels."
+   },
+   {
+    "id": "landing-evidence-ci",
+    "score": 3,
+    "rationale": "The wave numbers (3/18 wrong flags, 12/44 misattributed) are self-reported, and the verifier is not on this host. A search of /home/kvn and project-artifacts found no landing_evidence*.py, so E53 cannot be re-run this week without reconstructing the tool.",
+    "corrections": "The E53 runner path is unverified and not found locally."
+   },
+   {
+    "id": "lean-prefix-skill-exposure",
+    "score": 3,
+    "rationale": "All effect sizes are Claude Code priors (-64.7% cold, -27.2% warm). Hermes already shipped #95681 (-15 to -20K tokens per call) and core_tool_deferral (-56% schema), so the residual is unknown. Token receipts are $0 (prompt_footprint, worktree_prompt_prefix), but the decisive measurement, a discovery-rate regression at equal success, needs the core_tool_deferral battery, which is OpenRouter-hard-coded (worker.py:212) and blocked locally by 8K/64K. Selectors missed needed skills 2-3 times in 30 even in the prior harness.",
+    "corrections": "Treat the CC numbers as priors (critic). tool_overhead and tool_enabled_unused shared-metric counters exist only on py3.14 Relay hosts, not the live install."
+   },
+   {
+    "id": "terminal-output-reducers-plugin",
+    "score": 3,
+    "rationale": "The maintainer measured this class directly in #47866: terminal output is the token bulk, but lossless gain was ~0%, and CCR-style removal was ruled net-negative. That is a negative prior for lossless reducers. Lossy reducers need an information-loss guard (toolperf err_big_output, compaction E04), and both are paid or locally blocked. Output-volume sizing is $0 via forensics/tools.py on a state.db copy, but that only sizes the opportunity. SoL-Pi's EPR was never isolated, and TB4 solves fell from 18 to 15.",
+    "corrections": "The E38 runners (lab/omp-crosspoll/*.py) were not found on fork refs or local disk. Use evals/postmortem/forensics/tools.py for sizing. Must be measured with #47866's corpus method."
+   },
+   {
+    "id": "third-party-plugin-repackaging",
+    "score": 3,
+    "rationale": "The evidence is policy (#87495 and #98105 closed to move onto plugin seams), not measurement. E52 requires running `hermes plugins validate`, which needs explicit operator approval under the read-only rules. Kerdoios has no tags and Spatial canvas has no remote, so admission is not provable this week.",
+    "corrections": "'strong' describes policy fit, not evidence."
+   },
+   {
+    "id": "outcome-signal-hook-widening",
+    "score": 3,
+    "rationale": "Included for demand (37). E44 needs about 200 human-labelled turns and E43 needs lab-profile sessions, with z0 evidence at n=2 (Brier 0.365). Label sources exist at $0 (forensics/goal_loop.py and tools.py on a state.db copy, plus goal verdicts in SessionDB meta), but nothing has been scored. Friction counters exist only in shared metrics on py3.14 hosts.",
+    "corrections": "Goal verdicts and gate outcomes persist per session but are not exposed on hooks. Kanban nudge and recovery attempts are invisible to plugins."
+   },
+   {
+    "id": "compaction-decision-ledger",
+    "score": 2,
+    "rationale": "The cited 'endorsement' is a maintainer closing #113537 as not_planned (verified state_reason not_planned) and rejecting both candidate PRs, so the maintainer signal runs against this feature. The carrier #113309 (KoNit-K) has a known steer-as-preference bug and needs fresh red-on-base proof. E04's consent arm does not exist and needs a paid or \u226564K-local judge.",
+    "corrections": "#113537 is CLOSED not_planned, not an endorsement. On native routes a ledger survives only inside the 32K canonical-summary carrier. A2A's a2a_history is an in-tree precedent for recall-on-demand side-channel state."
+   },
+   {
+    "id": "tui-small-ux-promotions",
+    "score": 5,
+    "rationale": "#126847 is already open upstream at 56050e7610 (3 files, +156/-19, vitest 9/9, red on main per our record). The vitest red/green is re-runnable at $0, but it is author-reported with no upstream CI admitted. It is not a staging candidate.",
+    "corrections": "The listed integration points (appChrome.tsx effortLabel, tui_gateway/model_switch.py) are not in the PR. #111470 closed 2026-09-29."
+   },
+   {
+    "id": "delegated-effort-solution-space",
+    "score": 2,
+    "rationale": "The only number (#88522: 28.4 to 5.4 s, 0 extra calls) comes from a contributor PR's own run. E46 needs paid multi-provider runs with no $0 substitute (K4). The subagent_context_cap spawn-path probe can prove at $0 that per-task effort reaches the child (wiring), but that says nothing about value.",
+    "corrections": "Join one of the existing auto-effort carriers instead of opening a fourth."
+   },
+   {
+    "id": "verify-policy-voc-gating",
+    "score": 2,
+    "rationale": "The available evidence is negative or anecdotal: verify-on-stop was demoted as 'more noise than signal' (#84383), and glm's 30 post-completion verify calls are a single anomaly from the paid #97979 battery. E45 is paid, and E43 has n=2.",
+    "corrections": "Benchmark against GoalGate, which runs the gate first and then the judge (hermes_cli/goals.py evaluate_after_turn)."
+   },
+   {
+    "id": "autoresearch-experiment-loop",
+    "score": 1,
+    "rationale": "No experiment is mapped. The fork branch (acbb9516bb) is contaminated with kanban and mobile commits and hard-pins a model. /goal plus a metric GoalGate plus a contract already gives a keep-going-until-metric loop. There is nothing to measure this week.",
+    "corrections": "Consider re-scoping it as a cli+skill driving /goal (core-modules goal-gate-autoresearch-skill)."
+   },
+   {
+    "id": "verified-memory-writes",
+    "score": 2,
+    "rationale": "The maintainer already ran the decisive kind of test and it came back NEUTRAL. teknium1 on #107914 (2026-09-11): 10 real sessions, 2 arms x 2 reps = 40 generator runs, 0% vs 0% contradicted, so no PR was shipped. Re-opening needs an aged-transcript replay corpus or a staleness incident. E15 is correlational over private data.",
+    "corrections": "The catalog omits #107914's NEUTRAL A/B. The memory.op.count rejected/failed baseline exists only on Relay hosts."
+   },
+   {
+    "id": "missing:logcalls-zero-hit-coverage-fix",
+    "score": 9,
+    "rationale": "This is not in the catalog, and it gates E19 and E37's offline baselines. A verified code-read defect: evals/postmortem/forensics/logcalls.py:27-29 requires 'cache=R/P', while agent/turn_usage.py:191-193 omits it on zero cache reads and :96 logs 'usage=unavailable', so every full miss is dropped and the hit ratio is biased upward. That may explain part of the 24.1% reference coverage (unverified). Red/green is $0 and deterministic on the harness's own synthetic-DB self-test (evals/postmortem/tests/test_postmortem_harness.py), and it can be validated on local agent.log copies. Per D5 it is eval-only, so it rides with a real fix.",
+    "corrections": "live_ab/cache_prefix_wire.py:61 has the same regex dependency and hard-codes ~/.hermes/logs/agent.log (line 60)."
+   },
+   {
+    "id": "missing:aux-cap-truncation-observer",
+    "score": 6,
+    "rationale": "The pre/post_auxiliary_call hooks (agent/auxiliary_hooks.py, #79733) carry max_tokens (pre) and finish_reason, assistant_content_chars and usage (post) per physical attempt, independent of Relay. An observer that flags finish_reason=='length' && content==0 can be proven red/green at $0 with a scripted fake aux server this week. Real-world incidence is unknown (no data in the live home), and streaming aux attempts report None.",
+    "corrections": "This replaces the needs-design core part of effective-token-cap-receipts. Check it against #104868's output-cap removal direction."
+   },
+   {
+    "id": "missing:rate-limit-429-throttling",
+    "score": 5,
+    "rationale": "High demand (demand 51: #49031 11, #31802 10, #7489 8, #58061 8, #5570 6). A $0 red/green harness pattern exists in evals/provider_fallback/probe_*.py (loopback fake, os.environ.clear, egress guard) and FakeLLMServer, so proactive RPM or x-ratelimit behaviour can be tested deterministically. There is no measurement of user harm beyond issue reports, and the existing retry/jitter config (config_defaults.py:132-139) may already cover part of it (unverified).",
+    "corrections": ""
+   },
+   {
+    "id": "missing:sessiondb-crash-resume-conformance",
+    "score": 5,
+    "rationale": "teknium1-authored #80921 specifies a deterministic, LLM-free fault-matrix harness (SIGKILL mid-step, double and concurrent resume) and lists real Hermes incidents of that class (#78232, #70077/#75756, #73277, #77881). It would produce $0 red/green proof locally, but the harness has to be written; the paper's harness availability is unverified. It is the measurable entry point into the pluggable-SessionDB cluster (#23717, 19 reactions, 24 comments, 3+ competing PRs).",
+    "corrections": ""
+   },
+   {
+    "id": "missing:anthropic-context-editing",
+    "score": 3,
+    "rationale": "Maintainer-authored #526 (P3, open). Gate correctness can be proven at $0 by copying evals/native_compaction/ab_checkpoint_preflight.py's fake-server pattern. The decisive question, cache-read behaviour after clear_tool_uses, needs paid Anthropic calls, and no measurement exists.",
+    "corrections": "agent/anthropic_adapter.py sends no context_management on main (critic)."
+   },
+   {
+    "id": "missing:default-flip-prune-tuning",
+    "score": 3,
+    "rationale": "Critic's default-tuning class (proactive_prune_tokens 0 vs 48000, micro_compact, cache TTL). Gate safety is $0 via replay_gates. The recall and billed-cost effects need the compaction exam (paid, or \u226564K local, blocked) and a caching route. No measurement exists.",
+    "corrections": ""
+   },
+   {
+    "id": "missing:multi-role-session-routing",
+    "score": 2,
+    "rationale": "Demand 30 (#5143, 16 reactions; PRs #74272/#74408). No eval exists, and a routing-contract decision is pending. Cost evidence would come from E19 after the logcalls fix.",
+    "corrections": ""
+   },
+   {
+    "id": "missing:split-runtime-remote-tools",
+    "score": 1,
+    "rationale": "Largest agent-runtime demand cluster (#18715, 38 reactions; PR #63966), but there is no harness and no measurement, and the scope is an architectural seam (api_server.py split_runtime placeholder). Nothing is provable this week.",
+    "corrections": ""
+   },
+   {
+    "id": "missing:memory-consolidation-dreaming",
+    "score": 1,
+    "rationale": "Demand 48 (#5533, #553, #10771, #509), but #107914's validation gate (NEUTRAL A/B) applies, and there is no corpus, harness or metric. It must ship as a standalone memory-provider plugin.",
+    "corrections": ""
+   }
+  ],
+  "missing_candidates": [
+   "logcalls-zero-hit-coverage-fix: evals/postmortem/forensics/logcalls.py:27-29 drops every zero-cache-read and usage=unavailable call (turn_usage.py:96,191-193); $0 red/green on tests/test_postmortem_harness.py; this gates every E19 and E37 offline number",
+   "aux-cap-truncation-observer: pre/post_auxiliary_call (auxiliary_hooks.py, #79733) max_tokens + finish_reason=length + assistant_content_chars==0; $0 with a fake aux server; replaces the core part of effective-token-cap-receipts",
+   "rate-limit-429-throttling: demand 51 (#49031 #31802 #7489 #58061 #5570); $0 harness pattern in evals/provider_fallback probes",
+   "sessiondb-crash-resume-conformance: teknium1 #80921 deterministic LLM-free fault matrix; entry point into pluggable SessionDB (#23717, 3+ competing PRs)",
+   "anthropic-context-editing: teknium1 #526; gate via the native_compaction fake-server pattern; cache-after-clear needs paid Anthropic",
+   "default-flip-prune-tuning: proactive_prune_tokens / micro_compact / TTL default experiments (zero new code)",
+   "multi-role-session-routing: #5143 (16 reactions), PRs #74272/#74408",
+   "split-runtime-remote-tools: #18715 (38 reactions), PR #63966; no harness",
+   "memory-consolidation-dreaming: #5533 cluster (demand 48); blocked by the #107914 validation gate",
+   "local-64K-router-preset (enabler, not a feature): every live local-model arm (E02, E04-local, E16, E20, E40, E45) fails at agent_init.py:2071 against the 8K presets; one owner-approved preset (for example Qwen3-8B q8_0 KV or Qwen3-4B at 64K, VRAM estimates unverified) changes the evidence readiness of about 8 features",
+   "py3.14-disposable-venv (enabler): the live install is py3.11, so it is NoopRelay with no shared metrics and no ATOF; a /usr/bin/python3.14 disposable venv is required for toolperf_abeval scoring, ATOF receipts and shared-metrics arm readouts"
+  ]
+ },
+ {
+  "lens": "maintainer-fit: architecture fit and maintainer acceptance (invariants, Footprint-Ladder rung, documented policy, resemblance to merged/salvaged work, avoidance of rejected shapes). Checked against upstream main ffc74885c5 (fetched 2026-10-01 02:29 -0500, newer than the aeff051a18 the gap-fill reports used) plus read-only gh. Five base-rate facts drive most scores. (a) All 14 evals/ harnesses on main are maintainer-authored (Teknium, teknium1, ethernet, kshitijk4poor, Siddharth Balyan). Since 2026-09-01, outside authors have touched evals/ or tests/e2e only inside bug fixes (e.g. Halldrix 0d4dbde837, mnajafian-nv 2cf5e68c5d). Eval-only and test-only contributions therefore score low. (b) plugin-catalog/ merges routinely: 135 teknium1 catalog commits plus many community authors since 09-17. Rule 5 in plugin-catalog/README.md allows submissions from the plugin's owner. That is the sanctioned third-party channel. (c) kvnloo's landed work is all narrow bug fixes (#123069; 3632f9173d, ce2a747be9, 459b3ee6cd, ...). kvnloo has 13 open PRs, verified, 9 of them TUI. (d) AGENTS.md@main says: god-file extraction is 'wanted work'; 'new behaviour ... never appended to a facade'; no name-keyed ladders; plugins build on ctx and not internal paths; no speculative hooks; config.yaml, not env vars. (e) Teknium's #64231 verdict table (2026-08-13) and hermes-sweeper keep_open/salvageability reviews posted from the teknium1 account are the strongest maintainer-intent signals available. A 10 means 'maintainers would plausibly merge a clean slice soon'. Downstream-only items score 1 because nothing reaches upstream (this is not a judgment of their value). In nearly every row kvnloo's correct posture is support or salvage of another author's carrier, and all slots are full.",
+  "scores": [
+   {
+    "id": "compaction-identifier-anchor-retention",
+    "score": 8,
+    "rationale": "The maintainer has already named this as the next step. Teknium built the anchor index himself (c4bbb14e52 'mechanical anchor index + region-scoping tripwire', 2026-08-15). His SCORECARD-2026-09-19-jev.md:28-30 and :105-108 says the facts the summary loses sat in assistant text, calls that 'a summariser-retention target (anchor index / identifier capture), not a reason to change compaction cadence', and says to 'check its coverage on these three banks before touching anything else'. The fix extends the existing table _ANCHOR_PATTERNS (context_compressor.py:1057) and the PRESERVE EXACTLY prompt (:1047). That is rung 1, table-driven, cache-neutral (it does not change cadence), and measured with his own exam. Not a 9-10 for three reasons. (1) The three banks and lineages are private, so an outside PR must bring its own frozen lineage mix, and the 78.9 bar is a mean of 76.7/90.0/70.0. (2) The exam needs aux-LLM calls, paid or a local 64K-ctx model. (3) Anchor growth must keep summaries under the 32k native-checkpoint carrier budget or they are silently dropped on native routes.",
+    "corrections": "The issues list is wrong. #122274 (teknium harness-scout, r=0) and PR #122522 (Nagisa-3000) are opt-in summary_source=original, which re-derives the summary from original turns. That is a different mechanism from anchor-index retention. The right anchors are #87326 (teknium, merged 2026-08-16: lean tail plus the recall-eval harness), c4bbb14e52 and SCORECARD-2026-09-19-jev.md. Add a scope note: local-compressor routes only (native compaction is opaque). The context_compressor.py line count is 5,753 on ffc74885c5, not 5,673."
+   },
+   {
+    "id": "cu-capture-mode-projection",
+    "score": 7,
+    "rationale": "Capture-path perf work in computer_use is actively merged. Examples: vgarlu a85b6f9cdd 'bound the driver's accessibility-tree walk per capture' (09-19), followed by kshitijk4poor's 76c3b0c735 and 8b41224bfc (09-22). The fork patch has the same shape. It is capability-gated on what the driver advertises, older drivers keep their byte shape, and there is no model-schema or config change. The diff is 2 files, +140/-14, with one test file. cua_backend_capture.py still has blob d60bce2b on ffc74885c5, identical to the branch base d0288be5b3, so it applies at file level. It also fits PLAN.txt \u00a710F ('recover useful invariants, not old 5k-line aggregates'). Not higher, for three reasons. The evidence is a single Windows/Unity sample, with a null result on Xvfb. The parent RFC #112639 has about 12 kvnloo self-comments and zero maintainer replies, which reads as spray. Reopening costs a slot that does not exist (13 open).",
+    "corrections": "#113389 was not rejected. kvnloo self-closed it on 2026-09-26, and #124008 was batch-self-closed 2026-09-30 03:15. Evidence 'strong' is overstated (one sample). The precedent is the merged AX-walk bound a85b6f9cdd and its follow-ups, so name kshitijk4poor as the active CU-capture reviewer."
+   },
+   {
+    "id": "observer-hooks-doc-drift",
+    "score": 7,
+    "rationale": "The drift is confirmed on ffc74885c5. agent/turn_response_intake.py:83-97 passes first_chunk_at (with the TTFB formula in a comment), context_length and moa_references to post_api_request, and website/docs/developer-guide/observer-hooks.md:151-158 lists none of them. #64231's verdict table accepts a DOCS_ONLY class (#63339, #60735). The change is small, verifiable and cache-neutral. CONTRIBUTING ranks docs last, and PLAN.txt \u00a79 wants docs fixes consolidated into one source-verified correction owned by the Hermes lane, so this should ride in that bundle rather than take its own slot.",
+    "corrections": "Name all three fields (first_chunk_at, context_length, moa_references), not just 'a TTFB field'. The doc lines are now observer-hooks.md:151-158 and the emitter is turn_response_intake.py:83-97."
+   },
+   {
+    "id": "third-party-plugin-repackaging",
+    "score": 7,
+    "rationale": "This matches written policy exactly: AGENTS.md 'Third-party products ... Ship as a standalone plugin repo', plus the TTSProvider and redaction plugin seams. Catalog PRs are human-merged at high volume, and an owner submission is explicitly allowed (plugin-catalog/README.md rule 5). The gates are mechanical: a 40-hex SHA pin, capabilities that match what the plugin registers, the install scanner, and Desktop plugins staying inside the SDK surface. Impact is low and each entry still uses a PR slot. Spatial canvas has no remote, and anything Desktop-side must pass the desktop-surface check.",
+    "corrections": "#87495 and #98105 were self-closed by kvnloo (2026-08-25 and 2026-09-27), citing policy. They were not closed by maintainers. Tags are not needed (the catalog requires exact SHA pins), so 'Kerdoios has no tags' does not block anything."
+   },
+   {
+    "id": "compaction-lifecycle-hooks",
+    "score": 6,
+    "rationale": "#64231's verdict table (teknium, 2026-08-13) gives PR #53806 'SALVAGE: rename to observer form on_compression_start (or pre_ only with fail-closed semantics)'. The teknium-account sweeper review on #53806 says keep_open, salvageability=medium. VALID_HOOKS on ffc74885c5 still has no compression hook. A single post-commit fan-out site already exists (_notify_context_engine_compression_complete), and post_auxiliary_call(aux_task=compression) already covers cost. So an observer-only on_compression_start/complete salvage with a named consumer, cherry-picked to keep ledfoot631's authorship, is a maintainer-blessed slice. The per-block keep/drop directive (#119317) and micro-compaction checkpoint hooks are not: they run into the #120582 data-loss class and 'speculative hooks'. Native compaction has no client event, so declare the hook local-route only.",
+    "corrections": "Readiness: the observer slice is closer to stage-after-salvage than to needs-design. Cite the #64231 SALVAGE verdict. The catalog omits it."
+   },
+   {
+    "id": "memory-prefetch-telemetry-and-probe",
+    "score": 6,
+    "rationale": "The telemetry half extends a series teknium is running right now. 25c1b008c8 (2026-09-27) wired memory, curator, delegation and backend call sites into shared metrics, using red-with-source-reverted tests that read rows back from the real store. Prefetch is still unmetered on ffc74885c5: memory_manager.py:457-501, with timeout, inflight-skip and spill paths but no record_ call. A prefetch outcome and latency-bucket row in the metric catalog (doc table plus enumerated values, opt-in, send:false) fits rung 1 and the opt-in telemetry rule. The evals/memory probe half is lower-fit: evals are maintainer-authored, and evals/memory already exists (honcho_current_query.py). Lead with the counter.",
+    "corrections": "Make the integration point an addition to the shared-metrics doc table (relay-shared-metrics.md around :315, next to memory.op.count). Note that shared metrics need py>=3.14 with Relay available."
+   },
+   {
+    "id": "compression-god-file-decomposition",
+    "score": 6,
+    "rationale": "AGENTS.md@main: 'Huge mechanical +N/-N extraction PRs are wanted work', and 'a file passing ~2,000 lines ... split along <stem>_<topic> FIRST, in its own commit'. Partial siblings already exist (context_compressor_summary.py, conversation_compression_{archive,manual,reply_anchor}.py, nine auxiliary_* modules). Line counts on ffc74885c5: context_compressor 5,753, conversation_compression 4,579, auxiliary_client 8,255. Three things hold it below 8. Maintainers are doing most splits themselves (ethernet, Brooklyn and teknium refactor commits in late September). Iwang-f already has an open aux extraction, #127838 (+484/-316, 2026-09-29), that competes on auxiliary_client. Compression is teknium's hottest file, so a large external move conflicts within days. It needs no re-export shims (compat layer removed in a5bd246865), callers and docs moved in the same commit, and the native_compaction to is_compaction_summary_message coupling kept intact.",
+    "corrections": "#125186 belongs to granolacowboy, not kvnloo. Coordinate with or defer to #127838 for auxiliary_client. context_compressor is 5,753 lines on current main."
+   },
+   {
+    "id": "edit-tool-fail-loud-and-meter",
+    "score": 6,
+    "rationale": "A fail-loud fuzzy-edit fix is a bug fix (CONTRIBUTING priority 1) and matches 'fail loud at integration boundaries'. tools/fuzzy_match.py:261-302 on ffc74885c5 still accepts context_aware at >=0.80 per line. The good carrier is not ours. PR #54575 (MaxFreedomPollard, opened 2026-06-29) adds a 0.90 normalized-similarity floor, has green CI and Likivik's cherry-picked live patch_replace test, and a triage bot marked it 'best fix'. It has still had no maintainer review in 3 months, a negative throughput signal for this area. #125376 (Finn763) has a reviewer-found trailing-newline bypass. The 'meter' half already exists as hermes.file_edit.count, keyed by outcome and fuzzy strategy including context_aware (relay-shared-metrics.md:397). evals/edittool (KoNit-K #111127) is an external eval and unlikely to merge. The fit is high only as support for #54575; a competing PR would hurt.",
+    "corrections": "#111127's author is KoNit-K; KeyArgo commented on #111116. Add #54572 (issue) and #54575 (best carrier), which the catalog omits. Recast the meter as reuse of hermes.file_edit.count, not a new meter."
+   },
+   {
+    "id": "tui-render-fanout-perf",
+    "score": 6,
+    "rationale": "The slice shape is explicitly welcomed. On #99773 (2026-09-29) harshmoney123 called 'measure one mechanism, ship one bounded slice' 'exactly what we want' and said #127143/#127152/#127170 'look good'. These are one-commit, measured, witness-tested perf leaves (CONTRIBUTING priority 4). Two things cap it. harshmoney123 has author_association NONE, is not a public NousResearch member and has no commits on main, so the authority is unverified. And the same comment asked for at most ~3 open PRs, while kvnloo has 13 open, including 6 TUI perf PRs (#129524/5/6, #129556, #129918, #129928). No outside TUI perf PR has merged since 09-10 (ui-tui authors are mostly teknium1 and ethernet). Fit for the class is good; fit for staging more is low until these land.",
+    "corrections": "The open count is 13, not 6 (6 TUI perf PRs plus #126847, #111514 and #111511 are TUI). PLAN.txt \u00a710B-C design holds (#113241 overlay, #270/#283 row budget) must stay out of any slice."
+   },
+   {
+    "id": "anthropic-context-editing",
+    "score": 6,
+    "rationale": "MISSING CANDIDATE. #526 is teknium-authored (2026-03-06, P3; reopened by triage 2026-06-29 because #1147 only did header plumbing). On ffc74885c5 there is no context_management or clear_tool_uses code on the Anthropic path; only the OpenAI native path has it (chat_completion_helpers.py:1437-1466). The template is maintainer-built: Teknium wrote agent/native_compaction.py (5e1b50115f and 11 of its commits), which is opt-in config, a per-request gate, the local compressor kept armed as fallback, and disable-on-structured-400. Copying that for anthropic_messages is rung 1 and server-side, and it is the cache-friendly alternative to #107731 and superseded-read. It is not higher because the issue's cache claim ('without destroying prompt cache prefixes') is unproven. Teknium's bar for caching-adjacent work (#107731 note) needs a cache-read before/after. Open #103476 (thinking-block byte stability) interacts with clear_thinking. It is also P3 with no recent maintainer activity."
+   },
+   {
+    "id": "tool-effect-algebra-table",
+    "score": 5,
+    "rationale": "This is table-driven unification in an area teknium owns personally. Both precedents are his (#64460 batch segmentation, #75954 path roles), and the tables live in agent/tool_dispatch_helpers.py:25-50 (_NEVER_PARALLEL_TOOLS, _PARALLEL_SAFE_TOOLS, _PATH_SCOPED_*). A behavior-identical first PR that derives the existing sets from registry metadata fits 'extend, don't duplicate' and the table-over-ladder rule. Risks: the 26 tools in no table and some divergences may be intentional (browser session state, live HA reads), which hits 'fixes that destroy the feature'. Reviewers will ask why a refactor with no measured benefit should merge. Widening parallelism is caching-neutral but correctness-sensitive. A dispatch-layer refactor from a contributor with 13 open PRs is a hard sell without a concrete bug it fixes.",
+    "corrections": "Teknium authored both precedents (#64460, #75954). Name him as the area owner."
+   },
+   {
+    "id": "superseded-read-compaction",
+    "score": 5,
+    "rationale": "It runs only inside compaction (_dedupe_tool_results, context_compressor.py:3117 on ffc74885c5), so it respects the one sanctioned cache break. It is deterministic and rung 1. Teknium's #107731 note cites Fan et al. arXiv:2609.20804: 'rule-based elision before LLM summarization was the most efficient context strategy'. It touches teknium's own compressor, so it needs exam evidence (recall must not drop on the 'what changed' probe) and a no-cache-change receipt. Gains are unmeasured, the benefit is local-route only (native compaction already drops pre-checkpoint tool results), and the default proactive_prune_tokens is 0.",
+    "corrections": "_dedupe_tool_results is at context_compressor.py:3117 on ffc74885c5 (catalog says :3037). Add the native-route scope note."
+   },
+   {
+    "id": "boundary-stable-tool-result-projection",
+    "score": 5,
+    "rationale": "The shape is maintainer-specified. Teknium's 2026-09-23 harness-scout note on #107731 asks for a fixed-boundary trigger behind the compaction/prune cursor and a cache-read ratio before/after, and says recall is 'a safety valve, not the value case'. kshitijk4poor's 2026-09-22 review leaves three maintainer-only questions open. Is a second wire view of history acceptable? Must stickiness be session-persisted? Four new keys, or a proactive_prune mode? The PR's author (lorencato23) is active and responsive (three review rounds, live A/B on DeepSeek and Luna). So 'salvage' is wrong: kvnloo should supply evidence on the author's PR, not compete. Fit for the feature is moderate. The architectural question (a divergent wire view vs 'compression is the only sanctioned break') may go either way.",
+    "corrections": "#107731 is lorencato23's live PR, not a salvage target. The 'cache-gated prune, so headroom may be small' claim is wrong on defaults: proactive_prune_tokens is 0 (critic, confirmed). The catalog lists the projection's \u221277% as synthetic, but #107731 now has provider-usage live A/Bs (\u221289.5% DeepSeek, \u221290.2% Luna prompt tokens; recall 8/8 vs 8/8)."
+   },
+   {
+    "id": "terminal-output-reducers-plugin",
+    "score": 5,
+    "rationale": "As a standalone repo with a catalog entry over the existing transform_terminal_output hook, it matches policy: edge capability, no core change, opt-in. Teknium's #47866 evaluation rules out core adoption of lossy or remove-and-retrieve compression: CCR is 'net-negative for an agent that re-reads its outputs', lossless-only gives 0.34% net savings, and terminal has ~0% lossless gain. So the in-tree path is closed and the catalog path is open. A catalog entry needs an owner repo, declared hooks, and survival of reviewer scrutiny against #47866's findings. Expect questions about information loss, so ship a raw-artifact escape hatch and toolperf err_big_output parity.",
+    "corrections": "Cite #47866 (teknium, merged 2026-06-17) as the binding maintainer position: lossless or evidence-preserving, measured on a real transcript corpus, no heavyweight dependency."
+   },
+   {
+    "id": "outcome-signal-hook-widening",
+    "score": 5,
+    "rationale": "There are two maintainer-blessed narrow slices: #64231 SALVAGE for #56720 (rename to on_turn_failed) and for #4169 (usage/sender_id on post_llm_call). Neither has landed on ffc74885c5. Salvaging those by cherry-pick with credit fits. The broad version (retry, undo, interrupt, quick_abandon, switch_away and verification status all as hooks) runs into 'speculative infrastructure'. The friction taxonomy deliberately reaches only the opt-in shared-metrics subscriber, and each new hook needs its own consumer.",
+    "corrections": "Scope the feature to the two #64231 SALVAGE items. Kanban recovery and nudge attempts and goal verdicts are also invisible to plugins (core-modules gap-fill); list them as label sources, not as new hooks."
+   },
+   {
+    "id": "cu-repeat-key-dedup-fix",
+    "score": 5,
+    "rationale": "The bug is real and current. run_agent.py:1221-1237 on ffc74885c5 still dedups identical (name, args) pairs, so Tab,Tab collapses to one press. The fix is tiny. But the fork patch adds a name-keyed special case (tc.function.name == 'computer_use' and action in {'key'}) inside a method on the run_agent.py facade. AGENTS.md lists 'appendages to facades' as a salvage reject pattern and says 'never special-case it in core'. A maintainer-style version declares repeatability per tool, which links to tool-effect-algebra-table, or lives in agent/turn_tool_round.py (the caller at :88). The original #124008 was self-closed in the 2026-09-30 batch, so a new PR is another slot.",
+    "corrections": "The touched function is run_agent.py::_deduplicate_tool_calls (:1221), called from agent/turn_tool_round.py:88. The fork branch modifies run_agent.py, not a generic 'agent turn tool-call dedup' module. Restructure before staging."
+   },
+   {
+    "id": "aux-reply-issue-shared-metric",
+    "score": 5,
+    "rationale": "MISSING CANDIDATE (from core-modules aux-cap-truncation-observer, recast). hermes.model_reply_issue.count covers primary responses only (relay-shared-metrics.md:401). pre_auxiliary_call carries max_tokens, and post_auxiliary_call carries finish_reason and assistant_content_chars (agent/auxiliary_hooks.py, #79733). An aux_task-keyed reply-issue row (truncated_length, empty, reasoning_only) would extend teknium's own opt-in metric catalog with no new hook. It answers effective-token-cap-receipts' aux question at $0. Streaming aux attempts report None usage, and #104868 is removing user-facing output caps, so check that the metric still has a reason to exist after that campaign."
+   },
+   {
+    "id": "rate-limit-proactive-throttle",
+    "score": 5,
+    "rationale": "MISSING CANDIDATE (demand 51: #49031 P2 r=11, #31802, #7489, #58061, draft #17749). Most of the substrate is in-tree. agent/rate_limit_tracker.py already parses x-ratelimit-{requests,tokens} headers, and agent/nous_rate_guard.py is a cross-session guard for Nous only. api_max_retries and auto_recovery_cycles are in config_defaults.py:132-139. Generalizing the Nous guard into an opt-in config.yaml throttle per provider is rung 1 and robustness work (CONTRIBUTING priority 4). AGENTS.md cites a closed rate-limit 're-probe during cooldown' PR as a wrong-premise example, so the design must follow the breaker semantics. Five overlapping asks also mean one contract, not a fifth PR."
+   },
+   {
+    "id": "compaction-decision-ledger",
+    "score": 5,
+    "rationale": "The maintainer pointer is real but narrow. When teknium closed #113537 he wrote 'Durable user preferences belong in memory / a structured ledger (the direction of #113305), not in free-form summary text', and #113305 is kvnloo's RFC. That closure rejected two prompt/regex PRs (#113543 wording-only; #113574's regex ladder), not the ledger. His objection is that one-off vs standing is 'a semantic judgement', and #113309's steer-as-preference capture (interrupt_control.py:234) recreates exactly that judgement. Other costs: a new hermes_state table and migration (sweeper:risk-session-state class), salvage of KoNit-K's #113309 (flagged in memory as a mass-PR account) needing fresh red-on-base proof, and on native routes the ledger survives only inside the 32k canonical summary carrier. A ledger limited to explicit structured decisions, scoped to local routes, fits. A steer-capturing ledger does not.",
+    "corrections": "The critic's 'overstated' is partly wrong: the teknium quote is accurate and endorses the ledger direction. The demand reader's M=-10 ('#113537 not_planned') misreads it. The not_planned verdict was for summary-text fixes and points to the ledger. Still, it is not 'the only direct maintainer endorsement': teknium also authored #526, #80790, #120439 and #122274."
+   },
+   {
+    "id": "surface-parity-invariant-cells",
+    "score": 4,
+    "rationale": "C17 (tests/e2e/core/history/test_prefix_stability.py) is teknium's suite. It was created 2026-09-23 (51a1205be0) and edited through 09-24 (09d62097a3, 'make E2E known-bug pins merge-order safe'). Outside authors have touched tests/e2e since 09-01 only alongside fixes (e.g. brooklyn 5f8067a92b enforcing an ACP parity cell after #74582 was fixed). A standalone journey PR for the messaging gateway, api_server and ACP is test-only and will likely sit or be NOT_PLANNED (the fork's 4/4 history agrees). The fit rises sharply if a new journey finds a real prefix break and ships with the fix, or as a known_failure pin (the suite supports ToolsArrayDrift-typed pins). The observer-correlation cells (z0 identity joins) are downstream motivation that maintainers will not weigh.",
+    "corrections": "'gw' in C17 means the tui_gateway stdio server, so the 3 journeys cover tui_gateway plus oneshot CLI. Messaging gateway, api_server, ACP, relay connector, A2A and /goal continuation are uncovered. #104414 and #45499 are both closed completed. MoA's aggregator wire request has a sanctioned user/user adjacency, so cells must allow it."
+   },
+   {
+    "id": "turn-timing-observability",
+    "score": 4,
+    "rationale": "Most of this ships already or is owned by the maintainer. Shared metrics have hermes.model_route ttft_bucket and gateway.reply_latency (relay-shared-metrics.md:309,321). Relay scopes time session, turn, LLM and tool. Teknium has his own open #119713 putting time-to-first-chunk on the usage log line. A _run_phase observer hook (#125255, no maintainer reply) is speculative unless shipped with a consumer. The typed timing block on message.complete, run.completed and ACP has real consumers (tps-display asks #9527 and #26877) and is the only plausible slice. The fork branches sit at an old merge-base and #48204's 31-33 s figure has not been rechecked.",
+    "corrections": "Add teknium's open #119713 and the existing shared-metrics TTFT and reply-latency counters as prior art. Reduce scope to the non-LLM, non-tool phases (preflight, compaction, memory prefetch, MoA fan-out) plus the completion-event timing block."
+   },
+   {
+    "id": "off-critical-path-compaction",
+    "score": 4,
+    "rationale": "The architecture is acceptable in principle. The live carrier is fangliquanflq's #117895: an opt-in compression.post_turn_background_compaction gateway mode that reuses the hygiene compressor's durable lock and watermark fence, with answered exact-head reviews. compression.idle_compact_after_seconds already exists. For kvnloo the fit is support, not a carrier. Teknium's scorecard calls compaction $ and seconds 'noise against the per-turn cost', so the value case is user-visible latency (#117886: p50 184 s on one gateway session). The speculative pre-threshold variant (OMP-style) adds discard and validation lifecycle risk (#120582 data-loss class). Native routes gain nothing.",
+    "corrections": "Impact 4 is too high per SCORECARD-2026-09-19-jev ('Nothing structural'). #117895 is fangliquanflq's, and hugoalvespereira offered the advance-preparation variant as a follow-up. Do not stage a competitor."
+   },
+   {
+    "id": "session-search-bounded-ordering",
+    "score": 4,
+    "rationale": "It is a perf fix in hermes_state_search.py (_FTS_ORDER_BY at :57, the default 'ORDER BY rank' at :1119), which is the right rung. But ranking only an inner LIMIT-N candidate set changes result semantics. A top-N by BM25 over a subset is not a top-N over all matches, so 'fixes that destroy the feature' scrutiny applies. The premise has not been measured on a Hermes state.db; the 4,382x figure is from agentsview. session_search_schema (#95570, maintainer-run) cannot A/B the DB layer as written. A maintainer will want recall parity on a real-size DB plus a line-level account of the slow path.",
+    "corrections": "Note that evals/session_search_schema swaps only tools/session_search_tool.py (runner.py:60-71), so it cannot isolate hermes_state_search.py without extension."
+   },
+   {
+    "id": "compaction-summary-safety-canary",
+    "score": 4,
+    "rationale": "Teknium's harness-scout issue #120439 (type/security, needs-repro) asks for a summarizer output guard (section whitelist plus a directive filter) and lacks a repro. A canary that reproduces self-authored directives in summaries makes the guard PR mergeable: the canary becomes its red test (at most 2 tests) and the guard is the fix. As standalone evals/compaction fixture code it is maintainer-owned territory and is not in CI, so its own merge odds are low. Native summaries are encrypted, so local routes only. Keep security repros off the public fork until the issue owner agrees (K2).",
+    "corrections": "Link #120439 (teknium, from-harness-scout, needs-repro) as the consumer; the catalog lists no upstream issue."
+   },
+   {
+    "id": "bend-verifier-standalone-plugin",
+    "score": 4,
+    "rationale": "The standalone repo plus catalog route is the right channel and owner submissions are allowed. As shipped, the plugin imports tools.registry, an internal path, against AGENTS.md: 'Internal paths are not API: plugins build on ctx'. It also needs capabilities declared to match at the pinned SHA and must pass the install scanner. Value is niche (Bend/HVM users), and the patched kvnloo/bend#2 result is unreported. Merge plausibility is moderate after porting to ctx.register_tool and pinning, not before.",
+    "corrections": "Port from the tools.registry import to ctx.register_tool before any catalog PR. The in-tree plugins/bend path conflicts with policy, as the catalog notes."
+   },
+   {
+    "id": "tui-small-ux-promotions",
+    "score": 4,
+    "rationale": "#126847 (kvnloo, 3 files, +156/-19, head 56050e7610) is already open upstream, so it is not a staging candidate. PLAN.txt \u00a710A makes the model hop a product decision ('resolve this before choosing a carrier'). The last public product note prefers bare /model as the flat fuzzy hop, which conflicts with #126847's session-only contract. Backing KoNit-K's #111373 (effort visibility) is fine as support. Reviewer fit is gated on that product decision, not on code quality.",
+    "corrections": "Integration points are wrong: #126847 touches modelPicker.tsx plus 2 tests, not appChrome.tsx or tui_gateway/model_switch.py. #111470 closed 2026-09-29. The competing vehicle is KoNit-K's #110134."
+   },
+   {
+    "id": "memory-consolidation-dreaming-plugin",
+    "score": 4,
+    "rationale": "MISSING CANDIDATE (demand 48: #5533 r=18; teknium-authored #553 and #509). Policy forces the route: the in-tree memory-provider set is closed, so it would ship as a standalone memory-provider plugin with a catalog entry. That is plausible to merge as a catalog entry, but it occupies the single external-provider slot, and teknium's #107914 validation gate (an environment-probing memory review gave a NEUTRAL A/B, so 'no PR') signals skepticism about LLM-driven memory writes without an aged-transcript replay corpus. A CLI+skill+cron variant over the existing curator is lower footprint."
+   },
+   {
+    "id": "pluggable-sessiondb-durability",
+    "score": 4,
+    "rationale": "MISSING CANDIDATE (demand 40: #23717 r=19, c=24; draft #104018 plus #71945, #39301 and #77065). With 3+ competing PRs the AGENTS.md rule is 'design an ABC + orchestrator, wrap the built-in as first provider'. But it is labelled needs-decision with sweeper:risk-session-state and risk-compatibility, and is a large core change. The maintainer-authored entry point is teknium's #80921 (type/test, a machine-checked crash/resume conformance suite for session persistence). That suite fits about 6 as a slice, because it is a maintainer-requested test asset that any future ABC must pass. The ABC itself fits about 3 until a maintainer decides."
+   },
+   {
+    "id": "default-tuning-evidence",
+    "score": 4,
+    "rationale": "MISSING CANDIDATE (critic). Changing defaults on existing opt-in knobs needs no new code: compression.proactive_prune_tokens (0 vs the commented 48000), micro_compact, cache TTL, verify_on_stop. Teknium makes these calls himself from his own evals (e.g. 6e5413844e made lean tail the default). An outside default-flip PR fits only with exam plus cache-read receipts on frozen lineages, and caching-adjacent defaults sit at teknium's highest bar. The likeliest merge path is evidence posted on an existing thread, not a PR."
+   },
+   {
+    "id": "cache-safe-model-routing",
+    "score": 3,
+    "rationale": "The cache-safe seams already exist as config: auxiliary.<task> provider/model (config_defaults.py:740), delegation provider/model (:1332), and MoA's fixed-acting-model pattern (#112358). smart_model_routing has no runtime reader (only hermes_cli/config.py:1008 and setup_quick.py:203). A routing plugin through llm_request middleware is allowed but needs a consumer and a maintainer routing-contract decision (#5143, PRs #74272/#74408 needs-decision). A Relay LLM intercept could also reroute invisibly outside config.yaml. The mergeable slices are small: docs for per-aux and per-child routing, or a verified dead-config removal of smart_model_routing.",
+    "corrections": "Per-aux-task and per-child routing are already shipped config, not new work. The vestigial smart_model_routing key is still written by setup_quick.py:203, so removing it needs a setup-wizard change too."
+   },
+   {
+    "id": "before-turn-end-gate",
+    "score": 3,
+    "rationale": "A new directive hook at the final-answer chokepoint is the shape maintainers resist: 'narrow control point', the #64231 REJECT of #47092 (a catch-all gate), and 'speculative hooks'. The maintainer-favored slice already exists. The teknium-account sweeper review on #68142 (trac3r00, 'run pre_verify on every candidate final answer') says keep_open with salvageability=high, asking only for a hooks.md row fix. pre_verify is already a bounded directive hook (agent.max_verify_nudges). With four or more competing PRs (#124956, #128724, #68142, #124747) plus #101910, the fit for a kvnloo-designed fourth contract is low. Supporting a rebase of #68142 is the right move. Any design must also slot into the verify-on-stop, pre_verify, kanban_stop order and not double-charge /goal's budget.",
+    "corrections": "The #64231 REJECT was #47092 pre_agent_invocation (a start-of-run gate), so it applies by analogy, not directly. Add #68142's sweeper verdict (salvageability=high) as the maintainer-indicated path, plus the /goal and kanban_stop interactions."
+   },
+   {
+    "id": "skills-efficacy-paired-eval",
+    "score": 3,
+    "rationale": "There is a maintainer-acknowledged gap: relay-shared-metrics.md:255 says 'task-outcome attribution after a patch remains deferred'. But no maintainer has commented on RFC #96704 or PR #122544 (Nagisa-3000), and every merged evals/ harness is maintainer-authored. An external evals/skills harness is unlikely to merge. The value goes upstream as evidence posted on #96704 or used by teknium's curator and learning-loop work. A promotion gate (draft to live on credit) would be a core change needing a decision.",
+    "corrections": "Add the doc:255 'deferred' acknowledgement and the skill.load reuse/reused_after_patch marks as the existing baseline."
+   },
+   {
+    "id": "typed-explorer-and-delegation-receipts",
+    "score": 3,
+    "rationale": "delegate_task already supports output_schema, so a skill or preset is the right low rung and needs no core change. Upstream skills are 'broadly useful skills', priority 5. The typed artifact is unmeasured, and the z0evals evidence shows untyped delegation adding parent tokens, with CIs that include zero. A core preset needs a decision. delegation.run.count already reports width, depth and outcome. a2a_call and a2a_orchestrate delegate outside delegate_task, so receipts would misattribute them. Ship as a standalone skill first.",
+    "corrections": "Use evals/postmortem/forensics/delegation.py (maintainer-written, $0) as the receipt substrate, not a new script."
+   },
+   {
+    "id": "cognitive-state-context-virtualization",
+    "score": 3,
+    "rationale": "The only upstream-mergeable form is a standalone ContextEngine plugin through register_context_engine plus a catalog entry. Plugins can do that, but it is a single slot, so it must wrap ContextCompressor. Every non-None select_context costs cache prefix, which contradicts the 'sacred cache' invariant unless it is boundary-gated. Packets placed before the newest native checkpoint are dropped. Evidence is Claude Code priors plus n=1 Hermes smoke runs. Low merge plausibility beyond a catalog listing."
+   },
+   {
+    "id": "eval-safe-memory-isolation",
+    "score": 3,
+    "rationale": "The incident is real (#121935), but the issue is labelled needs-decision and has no maintainer reply. The thread (YS-OH-CORE, mdhaseeb343q-pixel) shows a single boolean cannot express 'read but do not persist' when explicit tool writes still reach providers. The fix changes the MemoryProvider ABC agent_context semantics for every external provider, and plugins that do not recognize the value must default to no writes. That is a design decision for maintainers, and fangliquanflq's #121948 already exists.",
+    "corrections": "Note the needs-decision label and the open carrier #121948 (fangliquanflq)."
+   },
+   {
+    "id": "lean-prefix-skill-exposure",
+    "score": 3,
+    "rationale": "Teknium closed the context-burden campaign #95681 as COMPLETE (36 merged surfaces, about 15-20K tokens per call saved, core-tool deferral #97979). His preferred next shape for the skill index is deterministic executability gating (#80790, 'stop offering skills that can't run'), not selector-based hiding with a 2-3 in 30 miss rate. Selector hiding at session start is cache-safe but core-visible, and the evidence is a Claude Code prior. Doing #80790 instead would fit about 6.",
+    "corrections": "Link #80790 (teknium) as the maintainer-preferred shape. Headroom must be measured against tool_overhead and tool_enabled_unused, which are already in shared metrics."
+   },
+   {
+    "id": "skill-visibility-hook",
+    "score": 3,
+    "rationale": "#125275 (dskwe) is someone else's carrier with active fixes, including a warm-cache invariant. A plugin filter hook needs a concrete consumer (nekwo's backend use case in #125257, with no maintainer reply). The maintainer's own direction is in-core deterministic readiness annotation (#80790). The fit is support or neutral, not a carrier for kvnloo."
+   },
+   {
+    "id": "verify-policy-voc-gating",
+    "score": 3,
+    "rationale": "A plugin over the existing pre_verify hook is policy-compatible and could ship via the catalog. Teknium's #84383 made verify_on_stop opt-in ('more noise than signal'), so any default-on or VOC-driven core change faces a high bar. GoalGate (a deterministic gate before the judge) is the in-tree verification precedent to benchmark against. User asks (#53828 preserve the answer, #119893 long-running hooks) are concrete bug-fix-shaped slices that fit better than a policy layer."
+   },
+   {
+    "id": "z0-observer-shadow-plugin",
+    "score": 3,
+    "rationale": "A standalone observer plus catalog entry fits policy (observer-only, local spool, no outbound telemetry). But most of its value is now covered in-tree. Teknium's opt-in shared metrics (cache_break cause, friction, reply issues, and more; 607dff390a through 7a06cb50d7) and the Relay ATOF/ATIF exporters keyed on Hermes turn_id cover most of the spool. CI is red, there is no receipt cohort, and the trace_id design ignores Hermes' native turn_id. A catalog reviewer would see little user value.",
+    "corrections": "Use trace_id := Hermes turn_id ('<session>:<task>:<8hex>', turn_facade.py:65), which is shared by hooks, Relay turn scope and aux-hook payloads, instead of either z0int or #385 hash. Most of the spool can be an ATOF converter rather than a plugin."
+   },
+   {
+    "id": "multi-role-session-routing",
+    "score": 3,
+    "rationale": "MISSING CANDIDATE (#5143 r=16; PRs #74272/#74408 add message:pre_route, needs-decision, sweeper:blast-broad). pre_gateway_dispatch already offers skip and rewrite. Session-start routing is cache-safe, but adding a routing event needs a maintainer routing-contract decision and overlaps cache-safe-model-routing. Low fit until decided."
+   },
+   {
+    "id": "delegated-effort-solution-space",
+    "score": 2,
+    "rationale": "#40306 is needs-decision, with about 10 stacked open carriers (including #88522 adaptive-reasoning and #112741). A per-item effort field grows the delegate_task schema, which is sent on every call. Adding an 11th competitor would be spray. The only fitting move is support for whichever carrier a maintainer picks."
+   },
+   {
+    "id": "cron-routine-miner",
+    "score": 2,
+    "rationale": "CLI+skill is the right rung and cron monitor_script/no_agent exist. But evidence is synthetic plus a third-party fleet, and it is unverified whether kvn's repeated prompt is cron. There is no upstream ask. An optional skill without demonstrated value would be preserved as research rather than merged."
+   },
+   {
+    "id": "autoresearch-experiment-loop",
+    "score": 2,
+    "rationale": "Upstream does not want another optimizer in core (#117083). /goal plus a completion contract, GoalGate metric commands and wait barriers already form a keep-going-until-metric loop in-tree, so the remaining delta (noise floor, keep/discard bookkeeping) is a downstream skill. The fork branch is contaminated with kanban and mobile commits and hard-pins a model. It also collides with the factory's own 'no second scheduler' rule.",
+    "corrections": "Footprint drops to a skill driving /goal with a metric GoalGate (core-modules gap-fill)."
+   },
+   {
+    "id": "verified-memory-writes",
+    "score": 2,
+    "rationale": "Teknium's #107914 records a NEUTRAL A/B (0% vs 0% contradicted) and states that shipping needs an aged-transcript replay corpus or a user-visible staleness incident. kvnloo's follow-up #112102 has no engagement. The narrow salvage in #64231 is the memory-write OBSERVER (#55765 as on_memory_write), not gated writes. Until the corpus exists, maintainers have said no PR.",
+    "corrections": "Point to the #64231 SALVAGE of #55765 (observer form) as the only maintainer-blessed slice in this space."
+   },
+   {
+    "id": "cu-shadow-semantic-state",
+    "score": 2,
+    "rationale": "It adds 478 lines (semantic_state.py, state_diff.py, plus 59 lines in tool.py) of shadow-only reconciliation with no user-visible behavior and no consumer. That is the 'dead code wired in without E2E proof' rejection class. PLAN.txt \u00a710F also says 'no new competing authority abstraction without the current owner/design decision'. #113252 was batch-self-closed. Measurement on the #121169 sandbox-desktop image could justify it later as a decision request, not as a PR."
+   },
+   {
+    "id": "offline-replay-ab-substrate",
+    "score": 2,
+    "rationale": "Folding the roughly 33 hand-rolled ThreadingHTTPServer fakes into one evals/_replay library is a refactor of maintainer-owned eval code (every evals/ harness on main is maintainer-authored, and evals/ is outside pytest testpaths and CI). Theme and infra PRs went 4/4 NOT_PLANNED. The core-modules report adds Relay constraints (py3.14, identical plugins.toml per arm, one process per arm). The value stays downstream, in the factory's runner (provider_fallback's loopback egress guard, replay_gates), unless it rides with a real fix.",
+    "corrections": "'~15 hand-rolled fake servers' is wrong: 33 evals hand-roll ThreadingHTTPServer and 0 import tests/fakes/fake_llm_provider.FakeLLMServer (upstream-evals gap-fill). Start from token_accounting/replay_gates plus FakeLLMServer, not a new design."
+   },
+   {
+    "id": "split-runtime-remote-tools",
+    "score": 2,
+    "rationale": "MISSING CANDIDATE (demand 50: #18715 r=38, P2, needs-decision; PR #63966 has sweeper risk labels for session-state, security-boundary and compatibility, blast-moderate). The placeholder 'split_runtime': False at gateway/platforms/api_server.py marks an intended seam, but this is a large cross-cutting change behind a maintainer decision, with competing PRs. Not mergeable from us soon. At most, review or support #63966."
+   },
+   {
+    "id": "gateway-multitenancy-rbac",
+    "score": 2,
+    "rationale": "MISSING CANDIDATE (demand 61: #527 teknium, #34352, PR #65571). It is high demand but outside the agent-loop frontier scope and touches security boundaries (CONTRIBUTING priority 3, needs a design). Flag only."
+   },
+   {
+    "id": "relay-atof-receipt-converter",
+    "score": 2,
+    "rationale": "MISSING CANDIDATE (core-modules). An offline ATOF/ATIF-to-receipt converter generalizing toolperf_abeval's score_run is the right downstream tool. It removes most of the z0 observer and settles E08/E21 identity on turn_id. Upstream it would be eval code (maintainer-owned) and Relay is py3.14-only, so it is a factory asset, not a PR."
+   },
+   {
+    "id": "moa-efficacy-paired-eval",
+    "score": 2,
+    "rationale": "MISSING CANDIDATE (critic and core-modules). Comparing fan-out cadence (user_turn vs every_n vs off), with moa.save_traces plus aux-hook usage as cost receipts, is useful decision evidence. As evals/ code it is maintainer territory. Its upstream value is a posted measurement on an MoA thread."
+   },
+   {
+    "id": "promotion-gates-factory",
+    "score": 1,
+    "rationale": "Downstream standalone tooling with no upstream merge surface; in-tree evolver/ is explicitly unlikely. The maintainer-fit question is really conformance to factory rules: it must add PLAN.txt \u00a78's ownership/duplicate check and negative control, assert red-on-base (postmortem/run.py only gates the last column), and stay an executor of envelope work orders, not a second scheduler.",
+    "corrections": "Fix the postmortem/run.py hazards before reuse: env.setdefault('HERMES_HOME') at :47, and the vacuous cache_prefix_wire marker '' at :41."
+   },
+   {
+    "id": "evidence-layer-hygiene",
+    "score": 1,
+    "rationale": "Downstream corrections (z0evals erratum, repins, KB refresh) with no upstream surface. They are worth doing before any upstream citation, but there is nothing for maintainers to merge."
+   },
+   {
+    "id": "hermes-decision-dataset-v2",
+    "score": 1,
+    "rationale": "Local-data downstream corpus work; per K1, state.db-derived data must never be pushed. Nothing upstream. Reuse evals/postmortem/forensics/common.Run for loading and stratify unflagged synthetic turns (goal continuations, kanban recovery nudges).",
+    "corrections": "Goal-loop prompts and kanban recovery nudges are unflagged synthetic user rows, so the extractor must pattern-match them (core-modules)."
+   },
+   {
+    "id": "experiment-manifest-receipt-envelope",
+    "score": 1,
+    "rationale": "Downstream schema and validator. No upstream surface. Adopt postmortem's OBSERVED/MODELED labels and pin the Relay runtime version and plugins.toml sha256 per run."
+   },
+   {
+    "id": "landing-evidence-ci",
+    "score": 1,
+    "rationale": "A downstream read-only script. Posting results upstream needs approval, and an alt-glitch AI triage bot already comments on related and resolved PRs, so there is no clear upstream consumer."
+   },
+   {
+    "id": "effective-token-cap-receipts",
+    "score": 3,
+    "rationale": "The receipts are a downstream eval artifact. Upstream, the primary half is already measured (model_reply_issue truncated_length, reasoning_only, empty) and teknium's #104868 campaign is removing user-facing output caps, so a core change risks fighting an active maintainer direction. The fitting upstream slice is the aux-task reply-issue metric (scored separately as aux-reply-issue-shared-metric), which needs no core patch.",
+    "corrections": "Readiness should move from needs-design to an eval/observer: pre_auxiliary_call has max_tokens; post has finish_reason and assistant_content_chars (agent/auxiliary_hooks.py, #79733). Check against evals/output_caps_* and #104868 before building."
+   }
+  ],
+  "missing_candidates": [
+   "anthropic-context-editing (#526, teknium-authored P3): opt-in context_management.edits on anthropic_messages, built to the pattern of teknium's agent/native_compaction.py; maintainer-fit 6",
+   "rate-limit-proactive-throttle: generalize agent/nous_rate_guard.py plus rate_limit_tracker.py into an opt-in config.yaml throttle per provider (#49031, #31802, #7489, #58061, #17749); maintainer-fit 5",
+   "aux-reply-issue-shared-metric: aux_task-keyed truncated_length/empty rows in teknium's opt-in shared-metrics catalog from pre/post_auxiliary_call; replaces the effective-token-cap core change; maintainer-fit 5",
+   "compaction-hook salvage slice: cherry-pick #53806 as observer-only on_compression_start/complete per the #64231 SALVAGE verdict (scored within compaction-lifecycle-hooks; maintainer-fit 6)",
+   "outcome-signal salvage slices: #56720 renamed to on_turn_failed and #4169 usage/sender_id on post_llm_call, both #64231 SALVAGE and unlanded on ffc74885c5",
+   "pre_verify-on-every-final support: rebase/support trac3r00's #68142 (teknium-account sweeper keep_open, salvageability=high) instead of a new before_turn_end hook",
+   "readiness-annotated skill index (#80790, teknium): deterministic executability gating; this is the maintainer-preferred replacement for lean-prefix selector hiding and the skill-visibility hook, maintainer-fit about 6",
+   "session crash/resume conformance suite (#80921, teknium, type/test): the maintainer-requested entry point for the pluggable-SessionDB cluster, maintainer-fit about 6",
+   "memory-consolidation-dreaming as a standalone memory-provider plugin or catalog entry (#5533, #553, #509); gated by the #107914 aged-transcript validation bar; maintainer-fit 4",
+   "default-tuning-evidence for existing knobs (proactive_prune_tokens 0 vs 48000, micro_compact, cache TTL): evidence on threads rather than PRs; maintainer-fit 4",
+   "split-runtime-remote-tools (#18715, PR #63966): needs-decision, maintainer-fit 2",
+   "gateway-multitenancy-rbac (#527): out of agent-loop scope, maintainer-fit 2",
+   "relay-atof-receipt-converter and moa-efficacy-paired-eval: downstream factory assets, maintainer-fit 2"
+  ]
+ }
+]
