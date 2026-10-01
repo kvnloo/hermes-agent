@@ -297,6 +297,42 @@ class TestTurnTraceIsolation:
         surviving = sorted(int(k.rsplit("turn", 1)[1]) for k in mod._TRACE_STATE)
         assert surviving == list(range(42, 50))
 
+    @pytest.mark.parametrize("progress", ["tool", "subagent"])
+    def test_tool_and_subagent_activity_refreshes_eviction_clock(self, monkeypatch, progress):
+        """Eviction drops the least-recently-updated turn. Tool and subagent
+        dispatch are turn activity too: a live turn that dispatched one after
+        the other states last moved must not be the eviction victim (its next
+        LLM request would open a second root trace for the same turn)."""
+        mod = self._fresh_plugin()
+        started: list = []
+        monkeypatch.setattr(mod, "_get_langfuse", lambda: self._fake_client(started))
+        monkeypatch.setattr(mod, "_end_observation", lambda *a, **k: None)
+        monkeypatch.setattr(mod, "_MAX_TRACE_STATE", 4)
+        mod._TRACE_STATE.clear()
+
+        live = {"task_id": "live", "session_id": "live", "turn_id": "live-turn"}
+        request = {"model": "m", "provider": "p", "api_mode": "chat",
+                   "request_messages": [{"role": "user", "content": "go"}]}
+        mod.on_pre_llm_request(**live, api_call_count=1, **request)
+        for n in range(3):
+            self._run_turn(mod, session=f"dead-{n}", turn_n=n, finalize=False)
+        # Pin the clocks: the live turn's last LLM request predates every other state.
+        for i, state in enumerate(mod._TRACE_STATE.values()):
+            state.last_updated_at = float(i + 1)
+        live_key = mod._trace_key("live", "live", turn_id="live-turn")
+        assert min(mod._TRACE_STATE, key=lambda k: mod._TRACE_STATE[k].last_updated_at) == live_key
+
+        if progress == "tool":
+            mod.on_pre_tool_call(tool_name="read_file", args={}, tool_call_id="tc-1", **live)
+        else:
+            mod.on_subagent_start(parent_turn_id="live-turn", child_session_id="child-1", child_role="r")
+        self._run_turn(mod, session="dead-new", turn_n=0, finalize=False)  # at cap: evicts one
+
+        assert live_key in mod._TRACE_STATE
+        roots = len(started)
+        mod.on_pre_llm_request(**live, api_call_count=2, **request)
+        assert len(started) == roots  # same turn, same root trace
+
     def test_finish_trace_exits_root_context_manager(self, monkeypatch):
         """_finish_trace must call root_ctx.__exit__(), not just root_span.end().
 

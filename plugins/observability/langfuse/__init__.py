@@ -891,6 +891,7 @@ def on_pre_tool_call(*, tool_name: str = "", args: Any = None, task_id: str = ""
             state.tools[tool_call_id] = observation
         else:
             state.pending_tools_by_name.setdefault(tool_name, []).append(observation)
+        state.last_updated_at = time.time()
 
 
 def on_post_tool_call(*, tool_name: str = "", args: Any = None, result: Any = None,
@@ -907,6 +908,7 @@ def on_post_tool_call(*, tool_name: str = "", args: Any = None, result: Any = No
             observation = queue.pop(0)
             if not queue:
                 state.pending_tools_by_name.pop(tool_name, None)
+        state.last_updated_at = time.time()
     if observation is None:
         return
 
@@ -1007,6 +1009,7 @@ def on_subagent_start(*, parent_turn_id: str = "", parent_subagent_id: Any = Non
         state.subagents[str(child_session_id)] = _start_child_observation(
             state, name=f"Subagent: {child_role or 'delegate'}", as_type="span",
             input_value=_capture_content(child_goal), metadata=metadata)
+        state.last_updated_at = time.time()
 
 
 def on_subagent_stop(*, parent_turn_id: str = "", child_session_id: Any = None, child_role: str = "",
@@ -1020,6 +1023,7 @@ def on_subagent_stop(*, parent_turn_id: str = "", child_session_id: Any = None, 
         if state is None:
             return
         observation = state.subagents.pop(str(child_session_id), None)
+        state.last_updated_at = time.time()
     if observation is None:
         return
 
