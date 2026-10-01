@@ -22,7 +22,7 @@ def voice_home(tmp_path, monkeypatch):
     for var in (
         "GROQ_API_KEY", "OPENAI_API_KEY", "VOICE_TOOLS_OPENAI_KEY",
         "MISTRAL_API_KEY", "XAI_API_KEY", "ELEVENLABS_API_KEY",
-        "DEEPINFRA_API_KEY", "HERMES_LOCAL_STT_LANGUAGE",
+        "DEEPINFRA_API_KEY", "HERMES_LOCAL_STT_LANGUAGE", "STT_XAI_MODEL",
     ):
         monkeypatch.delenv(var, raising=False)
 
@@ -33,6 +33,7 @@ def voice_home(tmp_path, monkeypatch):
         for name in list(sys.modules):
             if name in {
                 "hermes_cli.config",
+                "tools.transcription_common",
                 "tools.transcription_tools",
                 "tools.tts_tool",
                 "tools.voice_client_config",
@@ -196,6 +197,13 @@ def test_xai_env_key_goes_direct(voice_home, monkeypatch):
 
 def test_xai_config_model_reaches_client(voice_home, monkeypatch):
     voice_home({"stt": {"provider": "xai", "xai": {"model": "grok-voice-transcribe-1.0"}}})
+    monkeypatch.setenv("XAI_API_KEY", "xai_key1")
+    assert _resolve()["stt"]["model"] == "grok-voice-transcribe-1.0"
+
+
+def test_xai_env_model_reaches_client(voice_home, monkeypatch):
+    monkeypatch.setenv("STT_XAI_MODEL", "grok-voice-transcribe-1.0")
+    voice_home({"stt": {"provider": "xai"}})
     monkeypatch.setenv("XAI_API_KEY", "xai_key1")
     assert _resolve()["stt"]["model"] == "grok-voice-transcribe-1.0"
 
