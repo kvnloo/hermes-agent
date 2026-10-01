@@ -17,7 +17,7 @@ Generate examples without loading a backend:
 ```bash
 python lab/z0_hermes_observer/shadow_api_failure.py \
   ~/.hermes/plugin-data/z0-hermes-observer/events.jsonl \
-  --output /tmp/api-failure-examples.jsonl
+  --output "$TMPDIR/api-failure-examples.jsonl"
 ```
 
 Score the same frozen examples with a real z0int backend:
