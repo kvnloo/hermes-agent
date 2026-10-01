@@ -1,0 +1,12 @@
+<class 'dict'> ['searched_at', 'queries']
+prefetch metric added [] removed []
+prefetch telemetry added [] removed []
+memory prefetch added [9308, 11678, 17405, 19448, 22876, 24209, 25344, 28436, 37150, 37635, 38706, 44246, 45927, 49538, 50086, 50134, 51222, 53315, 55172, 58597, 61129, 61685, 63759, 64528, 65329, 66137, 66979, 67559, 67833, 67894, 68325, 68721, 70715, 73644, 74984, 78584, 80517, 81386, 81582, 83647, 85071, 85728, 89822, 90385, 91974, 98703, 98768, 100008, 104178, 108965, 119191, 128757, 130474, 130491] removed [98045]
+prefetch_provider added [] removed []
+prefetch shared metrics added [] removed []
+memory.prefetch added [] removed []
+record_memory_prefetch added [] removed []
+external prefetch added [129620] removed [98045]
+prefetch timeout added [] removed [98045]
+prefetch latency added [98703] removed [98045]
+<class 'list'> 260

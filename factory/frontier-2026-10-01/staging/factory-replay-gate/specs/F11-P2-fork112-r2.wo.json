@@ -1,0 +1,18 @@
+{
+ "id": "xf-F11-P2-fork112-r2",
+ "kind": "work_order",
+ "project": "hermes-agent",
+ "from": "factory-replay-gate staging builder",
+ "to": [
+  "factory"
+ ],
+ "status": "claimed",
+ "civ": {
+  "city_id": "oss:hermes-agent"
+ },
+ "dedupe_key": "frontier:factory-replay-gate",
+ "spec": "F11-P2-fork112.r2.toml",
+ "spec_sha256": "7f5a9ebea72f587b7e6b95d36089973817d688a2308d548c77925f7b57285890",
+ "queue_rank": null,
+ "staging": "factory-replay-gate"
+}

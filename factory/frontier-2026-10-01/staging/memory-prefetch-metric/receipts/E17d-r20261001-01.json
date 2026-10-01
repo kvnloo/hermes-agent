@@ -1,0 +1,274 @@
+{
+  "schema": "xf.receipt.v1",
+  "id": "E17d/r20261001-01",
+  "experiment": "E17d: attribute the per-call cost the staging commit adds to MemoryManager._prefetch_provider (in place, base vs head variants), collection off and on",
+  "tier": "T1",
+  "cost_usd": 0.0,
+  "lane": "cpu",
+  "spec": {
+    "path": null,
+    "prereg_commit": null,
+    "note": "Not pre-registered. Question fixed before the run: of the round-1 +47 us off-delta, the standalone record call explained 26.7 us; where is the rest?"
+  },
+  "staging": "memory-prefetch-metric",
+  "origin_refs": [
+    "E17/r20261001-03 (round-1 microbenchmark and standalone record cost)"
+  ],
+  "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+  "head_revision": "519876fa02f5e5812f5763cef03c5fed054d6cf7",
+  "head_tree": "81c2e4fab31c9a6622c57d928e399dbe8afa2986",
+  "arms": {
+    "base": "main's agent/memory_manager.py (blob d023a57f8b, sha256 048842c1...) loaded from source into the head tree",
+    "base_aa": "the same base class again (A/A)",
+    "head": "the staging commit's MemoryManager",
+    "head_noop": "head, with shared_metrics_loop.record_memory_prefetch swapped for a no-op during the block (head - head_noop = the record call in place)",
+    "head_hoisted": "head source with the function-level `from hermes_cli.observability.shared_metrics_loop import record_memory_prefetch` moved to module level (head - head_hoisted = the per-call import statement)"
+  },
+  "inputs": {
+    "script": {
+      "path": "work/r2/micro_attribution.py",
+      "sha256": "ec1cc6a299805dcb02245b27e65cb89780d30301cf84a239418a79e00fb93087"
+    },
+    "base_memory_manager": {
+      "path": "work/r2/base_memory_manager_aea969677c.py",
+      "sha256": "048842c1c3725e6fe6aef8f2b7fe3ea06baec02cebdea1e9ab0e9da06473930d"
+    }
+  },
+  "env": {
+    "host": "<host>",
+    "python": "3.11.14 (<read-only py3.11 venv>, used read-only)",
+    "nemo_relay_native": true,
+    "sandbox": "env -i; os.environ cleared, HOME/HERMES_HOME set to a fresh scratch sandbox with collection-off and collection-on profiles (send: false)",
+    "network": "none; loopback-only socket.connect guard installed",
+    "load1": {
+      "start": 12.32666015625,
+      "end": 13.4248046875
+    },
+    "provider": "in-process instant provider (not bundled, reports as plugin); every call takes the success exit"
+  },
+  "command": "env -i PATH=/usr/bin:/bin <read-only py3.11 venv>/bin/python work/r2/micro_attribution.py --repo <worktree at 519876fa02> --base-mm work/r2/base_memory_manager_aea969677c.py --sandbox-root <scratch> --out work/r2/micro_attribution.json",
+  "design": {
+    "blocks": 16,
+    "calls_per_block": 400,
+    "order": "arms rotated by block index, reversed on odd blocks",
+    "statistic": "median and p05/p95 of per-block differences (us per call)",
+    "standalone_calls_per_block": 2000
+  },
+  "results": {
+    "collection_off": {
+      "us_per_call_median": {
+        "base": 60.59,
+        "base_aa": 58.26,
+        "head": 104.25,
+        "head_noop": 61.71,
+        "head_hoisted": 100.99
+      },
+      "contrasts_us": {
+        "head_minus_base": {
+          "median": 44.12,
+          "p05": 38.33,
+          "p95": 59.29
+        },
+        "head_noop_minus_base": {
+          "median": 1.1,
+          "p05": -3.84,
+          "p95": 8.14
+        },
+        "head_hoisted_minus_base": {
+          "median": 41.61,
+          "p05": 31.47,
+          "p95": 48.62
+        },
+        "head_minus_head_noop": {
+          "median": 44.18,
+          "p05": 33.93,
+          "p95": 55.22
+        },
+        "head_minus_head_hoisted": {
+          "median": 4.92,
+          "p05": -5.91,
+          "p95": 16.91
+        },
+        "aa_base_aa_minus_base": {
+          "median": 0.46,
+          "p05": -4.69,
+          "p95": 8.9
+        }
+      },
+      "standalone_us_median": {
+        "enabled_gate_only": 14.64,
+        "record_memory_prefetch": 28.21,
+        "record_execution_backend_existing": 28.58
+      }
+    },
+    "collection_on": {
+      "us_per_call_median": {
+        "base": 81.79,
+        "base_aa": 88.4,
+        "head": 215.3,
+        "head_noop": 86.78,
+        "head_hoisted": 209.46
+      },
+      "contrasts_us": {
+        "head_minus_base": {
+          "median": 132.5,
+          "p05": 114.82,
+          "p95": 161.58
+        },
+        "head_noop_minus_base": {
+          "median": 6.0,
+          "p05": -13.11,
+          "p95": 25.76
+        },
+        "head_hoisted_minus_base": {
+          "median": 130.28,
+          "p05": 103.04,
+          "p95": 146.45
+        },
+        "head_minus_head_noop": {
+          "median": 128.82,
+          "p05": 107.07,
+          "p95": 159.06
+        },
+        "head_minus_head_hoisted": {
+          "median": 7.84,
+          "p05": -15.91,
+          "p95": 29.41
+        },
+        "aa_base_aa_minus_base": {
+          "median": 4.34,
+          "p05": -1.82,
+          "p95": 23.65
+        }
+      },
+      "standalone_us_median": {
+        "enabled_gate_only": 15.67,
+        "record_memory_prefetch": 100.59,
+        "record_execution_backend_existing": 98.82
+      }
+    }
+  },
+  "measurements": [
+    {
+      "name": "delta_head_minus_base_us_off",
+      "value": {
+        "median": 44.12,
+        "p05": 38.33,
+        "p95": 59.29
+      },
+      "aa": {
+        "median": 0.46,
+        "p05": -4.69,
+        "p95": 8.9
+      },
+      "label": "OBSERVED"
+    },
+    {
+      "name": "record_call_in_place_us_off (head - head_noop)",
+      "value": {
+        "median": 44.18,
+        "p05": 33.93,
+        "p95": 55.22
+      },
+      "label": "OBSERVED"
+    },
+    {
+      "name": "everything_but_the_record_call_us_off (head_noop - base)",
+      "value": {
+        "median": 1.1,
+        "p05": -3.84,
+        "p95": 8.14
+      },
+      "label": "OBSERVED"
+    },
+    {
+      "name": "per_call_import_statement_us_off (head - head_hoisted)",
+      "value": {
+        "median": 4.92,
+        "p05": -5.91,
+        "p95": 16.91
+      },
+      "label": "OBSERVED"
+    },
+    {
+      "name": "delta_head_minus_base_us_on",
+      "value": {
+        "median": 132.5,
+        "p05": 114.82,
+        "p95": 161.58
+      },
+      "aa": {
+        "median": 4.34,
+        "p05": -1.82,
+        "p95": 23.65
+      },
+      "label": "OBSERVED"
+    },
+    {
+      "name": "record_call_in_place_us_on (head - head_noop)",
+      "value": {
+        "median": 128.82,
+        "p05": 107.07,
+        "p95": 159.06
+      },
+      "label": "OBSERVED"
+    },
+    {
+      "name": "everything_but_the_record_call_us_on (head_noop - base)",
+      "value": {
+        "median": 6.0,
+        "p05": -13.11,
+        "p95": 25.76
+      },
+      "label": "OBSERVED"
+    },
+    {
+      "name": "standalone_us_median",
+      "value": {
+        "off": {
+          "enabled_gate_only": 14.64,
+          "record_memory_prefetch": 28.21,
+          "record_execution_backend_existing": 28.58
+        },
+        "on": {
+          "enabled_gate_only": 15.67,
+          "record_memory_prefetch": 100.59,
+          "record_execution_backend_existing": 98.82
+        }
+      },
+      "label": "OBSERVED"
+    }
+  ],
+  "interpretation": {
+    "attribution": "Collection off: head - base median +44.12 us (p05..p95 +38.33..+59.29); A/A median +0.46 (-4.69..+8.90). Swapping the record call for a no-op leaves +1.10 us (-3.84..+8.14), inside A/A, so the other edits (the function-level import, the clock read, the lock reshuffle) cost about 1 us and the record call in place costs about 44 us (head - head_noop +44.18, +33.93..+55.22). Hoisting the import changes about 4.92 us (-5.91..+16.91), inside noise. Collection on: head - base +132.50 (+114.82..+161.58), head_noop - base +6.00 (-13.11..+25.76) against A/A +4.34 (-1.82..+23.65), record call in place +128.82.",
+    "gap": "Measured alone in a tight loop, record_memory_prefetch costs 28.21 us off (enabled() alone 14.64 us) and 100.59 us on, about the same as record_execution_backend (28.58 / 98.82). In place it costs about 44 us off and 129 us on. The reason for that gap was not isolated, and the in-place cost of the existing record_* sites was not measured, so 'no worse than the existing record_* sites' holds for the standalone cost only.",
+    "correction": "Round 1's builder note said the per-call cost is the shared enabled() check. That is not supported: enabled() is about 15 us of the roughly 44 us the record call costs in place.",
+    "gate": "The selection gate 'hot-path overhead stays below noise in a microbenchmark' is NOT met: +44 us/call off and +133 us/call on against A/A p05..p95 of about -5..+9 us and -2..+24 us. Owner decision."
+  },
+  "evidence_class": {
+    "local": true,
+    "ci": "none",
+    "simulation": true,
+    "runtime": false,
+    "kind": "cost"
+  },
+  "not_tested": [
+    "py3.14 with nemo-relay 0.9",
+    "the in-place cost of the existing record_* call sites",
+    "why the in-place record call costs more than the tight-loop call",
+    "other exits (only the success exit is benchmarked)"
+  ],
+  "limitations": [
+    "Loaded shared host (load1 about 12-13, other agents); absolute microseconds are inflated, A/A included",
+    "Different run and block count from E17's microbenchmark; the two runs agree on the head - base delta within noise (+47.05 vs +44.12 off)"
+  ],
+  "verdict": "KEEP (cost attribution); hot-path gate NOT MET as worded",
+  "provenance": "self",
+  "privacy": "public-aggregate (synthetic fixtures only)",
+  "raw_artifacts": {
+    "result": {
+      "path": "work/r2/micro_attribution.json",
+      "sha256": "bf110e373a0c57dd35588dd0142b48b5f1f6cc8698c3cd8e673b7e87a3b283be"
+    }
+  }
+}

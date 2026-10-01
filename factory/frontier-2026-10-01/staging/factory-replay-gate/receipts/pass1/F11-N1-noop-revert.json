@@ -1,0 +1,222 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "F11-N1-noop-revert/r20261001T091905Z",
+ "generated_at": "2026-10-01T09:20:33Z",
+ "spec": {
+  "id": "F11-N1-noop-revert",
+  "rev": 1,
+  "sha256": "08806da251366ab3a92782cc86b11243f01c1fc7e851595714dcf13b8ccf69f1",
+  "kind": "redgreen"
+ },
+ "work_order": {
+  "id": "xf-F11-N1-noop-revert",
+  "from": "factory-replay-gate staging builder",
+  "status": "claimed"
+ },
+ "runner_revision": "evals/_factory/gate_runner.py@2f9f69cf03b2",
+ "issue": "kvnloo/hermes-agent#322",
+ "origin_refs": [
+  "rework:revert 658e6c885d"
+ ],
+ "base_revision": "658e6c885d40a2b27a5c3f35bb6276fa5801daf8",
+ "head_revision": "354d499511adc75769cafd9224de8b0ac6ea16ec",
+ "arms": {
+  "base": {
+   "commit": "658e6c885d40a2b27a5c3f35bb6276fa5801daf8",
+   "tree": "204524152fde05eb2176e1fa8950b2332e46c2c9",
+   "inject": {
+    "from": "354d499511adc75769cafd9224de8b0ac6ea16ec",
+    "source_commit": "354d499511adc75769cafd9224de8b0ac6ea16ec",
+    "files": [
+     "tests/agent/test_length_continuation_thinking_exhaustion.py"
+    ]
+   }
+  },
+  "head": {
+   "commit": "354d499511adc75769cafd9224de8b0ac6ea16ec",
+   "merge": "direct",
+   "arm_commit": "354d499511adc75769cafd9224de8b0ac6ea16ec",
+   "tree": "316534f26cf7c8f89ca2ffa52c004f9dd5a5bd8a"
+  }
+ },
+ "changed_files": [
+  "agent/turn_truncation.py",
+  "tests/agent/test_length_continuation_thinking_exhaustion.py"
+ ],
+ "tests": {
+  "red": {
+   "command": "bash scripts/run_tests.sh -j 2 tests/agent/test_length_continuation_thinking_exhaustion.py -q -m 'not live and not integration'",
+   "arm": "base + injected tests",
+   "expected_failure": [
+    "AssertionError"
+   ],
+   "observed": null
+  },
+  "green": {
+   "command": "bash scripts/run_tests.sh -j 2 tests/agent/test_length_continuation_thinking_exhaustion.py -q -m 'not live and not integration'",
+   "arm": "head",
+   "observed": null
+  }
+ },
+ "gates": {
+  "validity": {
+   "result": "PASS"
+  },
+  "red": {
+   "result": "INFRA",
+   "reason": "guard blocked an attempt, never reached pytest, or the cell timed out"
+  },
+  "green": {
+   "result": "INFRA",
+   "reason": "guard blocked an attempt, never reached pytest, or the cell timed out"
+  },
+  "sabotage": {
+   "result": "N_A",
+   "reason": "skipped: RED or GREEN did not pass"
+  },
+  "adjacent": {
+   "result": "N_A",
+   "reason": "skipped: RED or GREEN did not pass"
+  },
+  "ownership": {
+   "result": "PENDING",
+   "recorded": "unknown",
+   "searched_at": null,
+   "queries": []
+  },
+  "flaky": false
+ },
+ "measurements": [
+  {
+   "name": "red_reps_failing_with_marker",
+   "value": null,
+   "unit": "reps",
+   "label": "OBSERVED",
+   "source": "probe",
+   "primary": true
+  },
+  {
+   "name": "red-0_exit",
+   "value": 0,
+   "unit": "exit code",
+   "label": "OBSERVED",
+   "source": "probe"
+  },
+  {
+   "name": "red-1_exit",
+   "value": 0,
+   "unit": "exit code",
+   "label": "OBSERVED",
+   "source": "probe"
+  },
+  {
+   "name": "red-2_exit",
+   "value": 0,
+   "unit": "exit code",
+   "label": "OBSERVED",
+   "source": "probe"
+  },
+  {
+   "name": "green-0_exit",
+   "value": 0,
+   "unit": "exit code",
+   "label": "OBSERVED",
+   "source": "probe"
+  },
+  {
+   "name": "green-1_exit",
+   "value": 0,
+   "unit": "exit code",
+   "label": "OBSERVED",
+   "source": "probe"
+  },
+  {
+   "name": "green-2_exit",
+   "value": 0,
+   "unit": "exit code",
+   "label": "OBSERVED",
+   "source": "probe"
+  }
+ ],
+ "denominators": {
+  "cells": 6,
+  "infra": 6,
+  "completeness": 0.0
+ },
+ "env": {
+  "python": "3.11.14",
+  "sandbox": "in-process guard per cell (loopback-only connect, name lookups, live-home opens, hermes exec); fresh HOME/HERMES_HOME per cell; empty env; no kernel network namespace",
+  "relay": {
+   "error": "relay pin probe failed"
+  }
+ },
+ "safety": {
+  "canary": {
+   "passed": true,
+   "checks": {
+    "loopback_connect": true,
+    "nonloopback_connect": true,
+    "name_lookup": true,
+    "live_home_open": true,
+    "hermes_exec": true,
+    "hermes_exec_ran": true,
+    "guard": true,
+    "home_isolated": true,
+    "logged": true
+   },
+   "blocked_events": [
+    "open",
+    "socket.connect",
+    "socket.getaddrinfo",
+    "subprocess.Popen"
+   ],
+   "python": "3.11.14",
+   "rc": 0
+  },
+  "egress_blocked": 6,
+  "home_blocked": 0,
+  "exec_blocked": 0,
+  "interpreter_writes_refused": 0,
+  "hermes_home_isolated": true
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "builds": [],
+ "runtime_evidence": [],
+ "security_checks": [],
+ "resource_usage": {
+  "wall_s": 88.2,
+  "cpu_core_s": null,
+  "tokens": 0,
+  "api_cost_usd": 0.0
+ },
+ "outcome": {
+  "execution_completed": false,
+  "verified_success": null,
+  "verification_source": "self-run gate runner (not independent)"
+ },
+ "provenance": "self",
+ "verdict": "INFRA",
+ "refused": true,
+ "refusal_reasons": [
+  "red: guard blocked an attempt, never reached pytest, or the cell timed out",
+  "green: guard blocked an attempt, never reached pytest, or the cell timed out",
+  "ownership: PENDING"
+ ],
+ "unpinned_hunks": [],
+ "limitations": [
+  "in-process guard only; pair with a kernel network namespace for a hard boundary"
+ ],
+ "not_tested": [
+  "full test suite",
+  "real provider responses",
+  "kernel network namespace (in-process guard only)"
+ ],
+ "ai_assistance": "Spec and runner written with Claude Code (Opus 5.5); disclosed per repository policy",
+ "privacy": "public-aggregate"
+}

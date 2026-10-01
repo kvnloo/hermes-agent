@@ -1,0 +1,462 @@
+From 61effa4dd8a0b81c8eda50a6119239b2aa19e52a Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Thu, 1 Oct 2026 04:09:59 -0500
+Subject: [PATCH] feat(anthropic): opt-in server-side context editing
+ (clear_tool_uses)
+
+#526 asks for Anthropic's context editing API on Claude routes. #1147 only
+changed beta-header plumbing, and main still sends no context_management on
+the anthropic_messages path, although the computer-use docs already describe
+it as active.
+
+compression.anthropic_context_editing (default false) adds
+context_management.edits = [clear_tool_uses_20250919] and the
+context-management-2025-06-27 beta to main-turn requests, for Claude models
+on the native Anthropic API only. The gate follows native compaction: it is
+re-checked per request and stays off when compression is disabled or
+checkpoint_required is set. The trigger sits 8,192 tokens below the local
+compression trigger, and each clear must free at least 20% of it, so the
+server goes first and the local compressor stays armed as the fallback. A
+structured 400 naming context_management disables the feature for the
+session and retries once, through the recovery rung native compaction
+already uses. Like codex_responses_native, the key busts the gateway agent
+cache and hot-reloads in TUI sessions. The computer-use page now names the
+key that turns it on.
+
+With the flag off, requests are unchanged. The feature manages the context
+window and does not save money: each clear rewrites the cached prefix from
+the first cleared result onward. clear_thinking is not sent.
+
+Refs #526
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ agent/agent_init.py                           |  3 +
+ agent/anthropic_adapter.py                    | 14 ++-
+ agent/anthropic_context_editing.py            | 51 +++++++++++
+ agent/chat_completion_helpers.py              |  5 +-
+ agent/transports/anthropic.py                 |  1 +
+ agent/turn_recovery.py                        | 26 ++++--
+ cli-config.yaml.example                       |  8 ++
+ gateway/run.py                                |  2 +-
+ hermes_cli/config_defaults.py                 |  4 +
+ tests/agent/test_anthropic_context_editing.py | 91 +++++++++++++++++++
+ tui_gateway/session_compression.py            |  1 +
+ .../context-compression-and-caching.md        |  2 +
+ .../docs/user-guide/features/computer-use.md  |  5 +-
+ 13 files changed, 198 insertions(+), 15 deletions(-)
+ create mode 100644 agent/anthropic_context_editing.py
+ create mode 100644 tests/agent/test_anthropic_context_editing.py
+
+diff --git a/agent/agent_init.py b/agent/agent_init.py
+index 60997e229c..c0f3a61707 100644
+--- a/agent/agent_init.py
++++ b/agent/agent_init.py
+@@ -1601,6 +1601,8 @@ def _parse_compression_config(agent, _agent_cfg) -> CompressionSettings:
+         codex_app_server_auto=app_server_auto,
+         codex_responses_native=responses_native,
+         codex_responses_compact_threshold=compact_threshold,
++        # Opt-in Anthropic server-side context editing (gate in agent/anthropic_context_editing.py).
++        anthropic_context_editing=is_truthy_value(cfg.get("anthropic_context_editing"), default=False),
+         idle_compact_after_seconds=idle_compact_after_seconds,
+     )
+ 
+@@ -2044,6 +2046,7 @@ def _build_context_engine(agent, _agent_cfg, cs, _custom_providers, _effective_c
+     agent.codex_app_server_auto_compaction = cs.codex_app_server_auto
+     agent.codex_responses_native_compaction = cs.codex_responses_native
+     agent.codex_responses_compact_threshold = cs.codex_responses_compact_threshold
++    agent.anthropic_context_editing = cs.anthropic_context_editing
+     from agent.native_compaction import resolve_native_compaction_capabilities
+     agent.runtime_capabilities = resolve_native_compaction_capabilities(
+         model=agent.model, base_url=agent.base_url, provider=agent.provider,
+diff --git a/agent/anthropic_adapter.py b/agent/anthropic_adapter.py
+index bad91015b3..2ac90c03b0 100644
+--- a/agent/anthropic_adapter.py
++++ b/agent/anthropic_adapter.py
+@@ -221,6 +221,8 @@ _TOOL_STREAMING_BETA = "fine-grained-tool-streaming-2025-05-14"
+ _COMMON_BETAS = ["interleaved-thinking-2025-05-14", _TOOL_STREAMING_BETA]
+ _CONTEXT_1M_BETA = "context-1m-2025-08-07"
+ _FAST_MODE_BETA = "fast-mode-2026-02-01"
++# Sent only with a ``context_management`` payload (``agent/anthropic_context_editing.py``).
++_CONTEXT_MANAGEMENT_BETA = "context-management-2025-06-27"
+ # Required for OAuth/subscription auth; matches Claude Code / pi-ai / OpenCode.
+ _OAUTH_ONLY_BETAS = ["claude-code-20250219", "oauth-2025-04-20"]
+ 
+@@ -616,6 +618,7 @@ def build_anthropic_kwargs(
+     reasoning_config: Optional[Dict[str, Any]], tool_choice: Optional[str] = None,
+     is_oauth: bool = False, preserve_dots: bool = False, context_length: Optional[int] = None,
+     base_url: str | None = None, fast_mode: bool = False, drop_context_1m_beta: bool = False,
++    context_management: Optional[Dict[str, Any]] = None,
+ ) -> Dict[str, Any]:
+     """Build kwargs for anthropic.messages.create(). ``max_tokens`` is the OUTPUT cap for one
+     response; ``context_length`` is the TOTAL window (input + output). ``max_tokens=None`` uses the
+@@ -624,7 +627,8 @@ def build_anthropic_kwargs(
+     "max_tokens too large given prompt" and retry smaller (parse_available_output_tokens_from_error).
+     ``is_oauth`` applies Claude Code compatibility transforms; ``preserve_dots`` keeps model-name
+     dots (DashScope: qwen3.5-plus); a third-party ``base_url`` strips thinking signatures;
+-    ``fast_mode`` adds ``extra_body.speed="fast"`` plus the fast-mode beta on native Anthropic only."""
++    ``fast_mode`` adds ``extra_body.speed="fast"`` plus the fast-mode beta on native Anthropic only;
++    ``context_management`` (already gated by the caller) rides ``extra_body`` with its beta."""
+     system, anthropic_messages = convert_messages_to_anthropic(messages, base_url=base_url, model=model)
+     anthropic_tools = convert_tools_to_anthropic(tools) if tools else []
+     # Nous Portal routes on its own catalog ids (``anthropic/claude-opus-4.8``); normalizing would
+@@ -672,10 +676,16 @@ def build_anthropic_kwargs(
+     # Fast mode: native Anthropic only — third-party providers reject the unknown beta/param and
+     # Anthropic scopes it to the Claude API (not Bedrock/Vertex/Foundry). Per-request extra_headers
+     # OVERRIDE the client-level anthropic-beta header, so rebuild the full beta list.
++    request_betas = []
+     if fast_mode and not _is_third_party_anthropic_endpoint(base_url) and _supports_fast_mode(model):
+         kwargs.setdefault("extra_body", {})["speed"] = "fast"
++        request_betas.append(_FAST_MODE_BETA)
++    if context_management:
++        kwargs.setdefault("extra_body", {})["context_management"] = context_management
++        request_betas.append(_CONTEXT_MANAGEMENT_BETA)
++    if request_betas:
+         betas = _common_betas_for_base_url(base_url, drop_context_1m_beta=drop_context_1m_beta)
+-        kwargs["extra_headers"] = _beta_header(betas + (_OAUTH_ONLY_BETAS if is_oauth else []) + [_FAST_MODE_BETA])
++        kwargs["extra_headers"] = _beta_header(betas + (_OAUTH_ONLY_BETAS if is_oauth else []) + request_betas)
+     return kwargs
+ 
+ 
+diff --git a/agent/anthropic_context_editing.py b/agent/anthropic_context_editing.py
+new file mode 100644
+index 0000000000..555d027570
+--- /dev/null
++++ b/agent/anthropic_context_editing.py
+@@ -0,0 +1,51 @@
++"""Opt-in Anthropic server-side context editing on the native Messages API (#526).
++
++With ``compression.anthropic_context_editing: true`` the main-turn request carries
++``context_management={"edits": [{"type": "clear_tool_uses_20250919", ...}]}`` (beta
++``context-management-2025-06-27``, attached in ``build_anthropic_kwargs``), and the API clears the
++oldest tool results server-side once the prompt crosses ``trigger``. The client keeps the full
++transcript, and on preserved-thinking models a server-side clear is not a history edit (a
++client-side prune is).
++
++It manages the context window; it does not save money. Each clear rewrites the cached prefix
++from the first cleared result onward, so the trigger sits just under the local compressor's
++(the server goes first), ``clear_at_least`` keeps clears large and rare, and the local
++compressor stays armed as the fallback. Same gate shape as ``agent/native_compaction.py``:
++opt-in, re-checked per request, disabled for the session by a structured 400
++(``agent/turn_recovery.py``). Native Anthropic API and Claude models only;
++``clear_thinking_20251015`` is not sent.
++"""
++
++from __future__ import annotations
++
++from typing import Any, Dict, Optional
++
++from agent.anthropic_endpoints import _is_third_party_anthropic_endpoint
++from agent.native_compaction import resolve_compact_threshold
++
++# A clear must free at least this share of the trigger; otherwise the server skips it and the
++# local compressor handles the session at its usual threshold.
++CLEAR_AT_LEAST_FRACTION = 0.2
++
++
++def anthropic_context_management(agent: Any) -> Optional[Dict[str, Any]]:
++    """Return the ``context_management`` payload for this ``anthropic_messages`` request, or None
++    ("do not send"). Called only from that wire's kwargs builder."""
++    # compression.enabled: false disables ALL automatic compaction, server-side included.
++    if not getattr(agent, "anthropic_context_editing", False) or not getattr(agent, "compression_enabled", True):
++        return None
++    # A server-side clear is a lossy boundary no pre-compress checkpoint can precede.
++    if getattr(agent, "compression_checkpoint_required", False) is True:
++        return None
++    if "claude" not in str(getattr(agent, "model", None) or "").lower():
++        return None
++    # Third-party Messages endpoints (Bedrock, Azure, Portal, MiniMax, proxies) never see the field.
++    if _is_third_party_anthropic_endpoint(getattr(agent, "_anthropic_base_url", None)):
++        return None
++    compressor = getattr(agent, "context_compressor", None)
++    trigger = resolve_compact_threshold(None, getattr(compressor, "threshold_tokens", None))
++    return {"edits": [{
++        "type": "clear_tool_uses_20250919",
++        "trigger": {"type": "input_tokens", "value": trigger},
++        "clear_at_least": {"type": "input_tokens", "value": int(trigger * CLEAR_AT_LEAST_FRACTION)},
++    }]}
+diff --git a/agent/chat_completion_helpers.py b/agent/chat_completion_helpers.py
+index 5c114ec4be..f710077134 100644
+--- a/agent/chat_completion_helpers.py
++++ b/agent/chat_completion_helpers.py
+@@ -1409,6 +1409,7 @@ def _consume_ephemeral_max_output(agent):
+ 
+ 
+ def _build_anthropic_kwargs(agent, api_messages, tools_for_api, reasoning_config, request_overrides):
++    from agent.anthropic_context_editing import anthropic_context_management
+     ctx_len = getattr(agent, "context_compressor", None)
+     ephemeral_out = _consume_ephemeral_max_output(agent)
+     anthropic_kwargs = agent._get_transport().build_kwargs(model=agent.model,
+@@ -1419,7 +1420,9 @@ def _build_anthropic_kwargs(agent, api_messages, tools_for_api, reasoning_config
+         context_length=ctx_len.context_length if ctx_len else None,
+         base_url=getattr(agent, "_anthropic_base_url", None),
+         fast_mode=request_overrides.get("speed") == "fast",
+-        drop_context_1m_beta=bool(getattr(agent, "_oauth_1m_beta_disabled", False)))
++        drop_context_1m_beta=bool(getattr(agent, "_oauth_1m_beta_disabled", False)),
++        # Opt-in server-side tool-result clearing; None (the default) leaves the request unchanged.
++        context_management=anthropic_context_management(agent))
+     # Portal reads ``tags`` / ``session_id`` on its Messages route too, but the profile hook
+     # is only consulted by the OpenAI-wire transport — merge here to keep sticky routing.
+     return _merge_nous_portal_messages_extra_body(agent, anthropic_kwargs)
+diff --git a/agent/transports/anthropic.py b/agent/transports/anthropic.py
+index 26598d14cd..fa45096cce 100644
+--- a/agent/transports/anthropic.py
++++ b/agent/transports/anthropic.py
+@@ -27,6 +27,7 @@ def _unprefix_oauth_tool_name(name: str) -> str:
+ _BUILD_KWARG_DEFAULTS = {
+     "max_tokens": 16384, "reasoning_config": None, "tool_choice": None, "is_oauth": False, "preserve_dots": False,
+     "context_length": None, "base_url": None, "fast_mode": False, "drop_context_1m_beta": False,
++    "context_management": None,
+ }
+ 
+ 
+diff --git a/agent/turn_recovery.py b/agent/turn_recovery.py
+index 5fdb162785..525ac63c31 100644
+--- a/agent/turn_recovery.py
++++ b/agent/turn_recovery.py
+@@ -483,6 +483,14 @@ def _recover_stale_codex_reasoning(agent: Any, _retry: TurnRetryState, messages:
+     return True
+ 
+ 
++# api_mode -> (agent flag, display name, config key) of the opt-in server-side feature that
++# sends ``context_management`` on that wire.
++_CONTEXT_MANAGEMENT_FEATURES = {
++    "codex_responses": ("codex_responses_native_compaction", "native compaction", "codex_responses_native"),
++    "anthropic_messages": ("anthropic_context_editing", "context editing", "anthropic_context_editing"),
++}
++
++
+ def _recover_format_errors(
+     agent: Any, api_error: Exception, classified: Any, _retry: TurnRetryState,
+     messages: List[Dict[str, Any]], api_messages: Any,
+@@ -515,26 +523,26 @@ def _recover_format_errors(
+     ):
+         return True
+ 
+-    # Structured 400 naming ``context_management``: disable native compaction for the
+-    # session, retry once; local compression takes over.
++    # Structured 400 naming ``context_management``: disable the server-side feature that sent it
++    # for the session, retry once; local compression takes over.
++    flag, name, config_key = _CONTEXT_MANAGEMENT_FEATURES.get(agent.api_mode, (None, "", ""))
+     if (
+-        agent.api_mode == "codex_responses"
++        flag
+         and not _retry.native_compaction_reject_retry_attempted
+-        and bool(getattr(agent, "codex_responses_native_compaction", False))
++        and bool(getattr(agent, flag, False))
+     ):
+         from agent.native_compaction import is_native_compaction_rejection
+         if is_native_compaction_rejection(api_error, getattr(api_error, "status_code", None)):
+             _retry.native_compaction_reject_retry_attempted = True
+-            agent.codex_responses_native_compaction = False
++            setattr(agent, flag, False)
+             _vlines(
+                 agent,
+-                "⚠️  Provider rejected native compaction (context_management) — disabled for this session, "
++                f"⚠️  Provider rejected {name} (context_management) — disabled for this session, "
+                 "local compression stays active. Retrying...",
+             )
+             logger.warning(
+-                "%sNative compaction rejection recovery: disabled "
+-                "codex_responses_native for this session and retrying",
+-                agent.log_prefix,
++                "%s%s rejection recovery: disabled %s for this session and retrying",
++                agent.log_prefix, name.capitalize(), config_key,
+             )
+             return True
+ 
+diff --git a/cli-config.yaml.example b/cli-config.yaml.example
+index 8fefa9aa66..406e384dc2 100644
+--- a/cli-config.yaml.example
++++ b/cli-config.yaml.example
+@@ -767,6 +767,14 @@ compression:
+   # the local trigger is unavailable, automatic mode uses 200000.
+   codex_responses_compact_threshold: null
+ 
++  # Anthropic server-side context editing (default: false). When true, Claude
++  # models on the native Anthropic API ask the server to clear the oldest tool
++  # results (clear_tool_uses) just below the local compression trigger. No other
++  # provider or route is affected, and local compression stays armed as the
++  # fallback. This manages the context window and does not save money: each
++  # clear rewrites the cached prompt prefix.
++  anthropic_context_editing: false
++
+   # Number of non-system messages to protect at the head of the transcript, in
+   # ADDITION to the system prompt (which is always implicitly protected).
+   # Head messages are NEVER summarized — they survive every compression
+diff --git a/gateway/run.py b/gateway/run.py
+index 620fe26bfe..6f99bfaa68 100644
+--- a/gateway/run.py
++++ b/gateway/run.py
+@@ -4401,7 +4401,7 @@ class GatewayRunner(
+         ("compression", "progress_notices"), ("compression", "threshold"),
+         ("compression", "model_thresholds"), ("compression", "threshold_tokens"),
+         ("compression", "codex_gpt55_autoraise"), ("compression", "codex_app_server_auto"),
+-        ("compression", "codex_responses_native"),
++        ("compression", "codex_responses_native"), ("compression", "anthropic_context_editing"),
+         ("compression", "codex_responses_compact_threshold"), ("compression", "in_place"),
+         ("compression", "checkpoint_required"), ("compression", "micro_compact"),
+         ("compression", "micro_compact_every_n_turns"),
+diff --git a/hermes_cli/config_defaults.py b/hermes_cli/config_defaults.py
+index e4ba614893..42b17fbbe3 100644
+--- a/hermes_cli/config_defaults.py
++++ b/hermes_cli/config_defaults.py
+@@ -680,6 +680,10 @@ DEFAULT_CONFIG = {
+         # Absolute server compaction trigger (input tokens). None follows the local trigger with a
+         # safety margin; explicit values only clamp downward so the server goes first.
+         "codex_responses_compact_threshold": None,
++        # Opt in to Anthropic server-side context editing (clear_tool_uses) on the native Claude
++        # API: the server clears old tool results just below the local trigger, which stays armed
++        # as the fallback. A window tool, not a cost saver: each clear rewrites the cached prefix.
++        "anthropic_context_editing": False,
+         # in_place: compaction rewrites the message list and system prompt WITHOUT rotating the
+         # session id (no parent_session_id chain, no `name #N` renumbering), avoiding the
+         # session-rotation bug cluster. Pre-compaction turns are soft-archived under the same id
+diff --git a/tests/agent/test_anthropic_context_editing.py b/tests/agent/test_anthropic_context_editing.py
+new file mode 100644
+index 0000000000..fc48d77dbb
+--- /dev/null
++++ b/tests/agent/test_anthropic_context_editing.py
+@@ -0,0 +1,91 @@
++"""Anthropic server-side context editing, ``compression.anthropic_context_editing`` (#526).
++
++The real ``AIAgent`` turn loop runs on the production native route (``api.anthropic.com``) against
++the SDK-oracle Messages fake: an ``HTTPS_PROXY`` terminates TLS for that host with a throwaway CA,
++so only the vendor HTTP boundary is faked and every request body is validated against the
++installed SDK's beta request types.
++"""
++
++import pytest
++
++from tests.fakes.providers.anthropic_messages import AnthropicMessagesServer, ApiError, Reply, Text
++from tests.fakes.providers.oauth_token_server import TLSInterceptProxy, make_test_ca
++
++BETA = "context-management-2025-06-27"
++HOST = "api.anthropic.com"
++ON = "anthropic_context_editing: true"
++
++
++@pytest.fixture
++def native_agent(tmp_path, monkeypatch):
++    """``build(responder, compression, ...)`` -> ``(agent, server)``; config.yaml in a temp HERMES_HOME."""
++    started = []
++
++    def build(responder, compression, *, model="claude-sonnet-4-5", native=True):
++        srv = AnthropicMessagesServer(responder).start()
++        ca = make_test_ca(tmp_path / "ca", [HOST])
++        started.extend([srv, TLSInterceptProxy(srv, ca, [HOST]).start()])
++        for var in ("HTTPS_PROXY", "https_proxy"):
++            monkeypatch.setenv(var, started[-1].url)
++        for var in ("NO_PROXY", "no_proxy"):
++            monkeypatch.setenv(var, "127.0.0.1,localhost")
++        monkeypatch.setenv("SSL_CERT_FILE", str(ca.ca_pem))
++        home = tmp_path / ".hermes"
++        home.mkdir()
++        (home / "config.yaml").write_text(f"compression:\n  {compression}\n", encoding="utf-8")
++        monkeypatch.setenv("HERMES_HOME", str(home))
++        from run_agent import AIAgent
++
++        agent = AIAgent(
++            api_key="sk-ant-api03-fake-key", base_url=f"https://{HOST}" if native else srv.base_url,
++            provider="anthropic", model=model, quiet_mode=True, skip_context_files=True, skip_memory=True,
++            enabled_toolsets=["file"], max_iterations=3,
++        )
++        return agent, srv
++
++    yield build
++    for item in reversed(started):
++        item.stop()
++
++
++@pytest.mark.parametrize(("compression", "route", "sent"), [
++    ("anthropic_context_editing: false", {}, False),
++    (ON, {}, True),
++    (ON + "\n  enabled: false", {}, False),
++    (ON + "\n  checkpoint_required: true", {}, False),
++    (ON, {"model": "glm-4.6"}, False),
++    (ON, {"native": False}, False),
++], ids=["off", "on", "compression-disabled", "checkpoint-required", "non-claude-model", "third-party-endpoint"])
++def test_opt_in_sends_clear_tool_uses_with_its_beta_ahead_of_local_compression(native_agent, compression, route, sent):
++    agent, srv = native_agent(lambda _record: Reply([Text("ok")]), compression, **route)
++
++    assert agent.run_conversation("hi")["completed"]
++
++    main = srv.main_requests()
++    assert main and srv.schema_errors() == []
++    for record in main:
++        payload = record["body"].get("context_management")
++        betas = record["headers"].get("anthropic-beta", "").split(",")
++        if not sent:
++            assert payload is None and BETA not in betas
++            continue
++        assert BETA in betas
++        [edit] = payload["edits"]
++        assert edit["type"] == "clear_tool_uses_20250919"
++        # The server clears first; the local compressor stays the fallback at its own trigger.
++        assert edit["trigger"]["value"] < agent.context_compressor.threshold_tokens
++        assert 0 < edit["clear_at_least"]["value"] < edit["trigger"]["value"]
++
++
++def test_structured_rejection_disables_it_for_the_session_and_retries_once(native_agent):
++    def responder(record):
++        if "context_management" in record["body"]:
++            return ApiError(400, "invalid_request_error", "context_management: Extra inputs are not permitted")
++        return Reply([Text("ok")])
++
++    agent, srv = native_agent(responder, ON)
++    first = agent.run_conversation("hi")
++    second = agent.run_conversation("again", conversation_history=first["messages"])
++
++    assert first["completed"] and second["completed"]
++    assert ["context_management" in r["body"] for r in srv.main_requests()] == [True, False, False]
+diff --git a/tui_gateway/session_compression.py b/tui_gateway/session_compression.py
+index 0c828efc46..1f0d0315a5 100644
+--- a/tui_gateway/session_compression.py
++++ b/tui_gateway/session_compression.py
+@@ -101,6 +101,7 @@ def _apply_live_compression_config(agent: Any, cfg: dict | None) -> None:
+     enabled_raw = compression.get("enabled", True)
+     agent.compression_enabled = enabled_raw if isinstance(enabled_raw, bool) else str(enabled_raw).lower() in {"true", "1", "yes"}
+     agent.codex_responses_native_compaction = is_truthy_value(compression.get("codex_responses_native", False))
++    agent.anthropic_context_editing = is_truthy_value(compression.get("anthropic_context_editing", False))
+     native_threshold_raw = compression.get("codex_responses_compact_threshold", 200_000)
+     try:
+         if isinstance(native_threshold_raw, bool) or (native_threshold := int(native_threshold_raw)) <= 0:
+diff --git a/website/docs/developer-guide/context-compression-and-caching.md b/website/docs/developer-guide/context-compression-and-caching.md
+index 693d164ae1..c76d0e8b3c 100644
+--- a/website/docs/developer-guide/context-compression-and-caching.md
++++ b/website/docs/developer-guide/context-compression-and-caching.md
+@@ -247,6 +247,7 @@ compression:
+   codex_app_server_auto: native  # native|hermes|off for Codex app-server thread compaction
+   codex_responses_native: false  # Opt-in server compaction: gpt-5.6 on OpenAI/Codex; Astra on Codex OAuth
+   codex_responses_compact_threshold: null  # Server compaction trigger; only used when codex_responses_native: true
++  anthropic_context_editing: false  # Opt-in server-side tool-result clearing on the native Claude API
+   in_place: true             # Compact on the same session id, no rotation (default: true)
+ 
+ # Summarization model/provider configured under auxiliary:
+@@ -275,6 +276,7 @@ auxiliary:
+ | `codex_app_server_auto` | `native` | `native`, `hermes`, `off` | Thread-compaction mode for Codex app-server sessions (see below) |
+ | `codex_responses_native` | `false` | bool | Opt in to OpenAI's server-side compaction on the Responses API. Engages for gpt-5.6-family models on the direct OpenAI API or a ChatGPT Codex subscription, and `gpt-6-astra` (including its `-900k` picker alias) on official Codex OAuth (see below) |
+ | `codex_responses_compact_threshold` | `null` | `null` or positive integer | Server-side compaction trigger, read **only when `codex_responses_native: true`** — it never changes when local compression fires; the local trigger is `threshold` (ratio) capped by `threshold_tokens`. `null` follows the resolved local compression trigger with an 8,192 token safety margin. A positive integer remains absolute and only clamps downward when required. Invalid values use automatic behavior. Automatic mode falls back to `200000` when no usable local trigger exists |
++| `anthropic_context_editing` | `false` | bool | Opt in to Anthropic's server-side context editing (`clear_tool_uses_20250919`, beta `context-management-2025-06-27`) for Claude models on the native Anthropic API only. The server clears the oldest tool results once the prompt crosses a trigger 8,192 tokens below the local one, and each clear must free at least 20% of that trigger. Local compression stays armed as the fallback. A structured rejection disables it for the session and retries the request without it. This manages the context window; it does not cut cost, because each clear rewrites the cached prompt prefix |
+ | `in_place` | `true` | bool | Compact on the same session id instead of rotating to a new one (see below) |
+ 
+ ### In-place compaction (single stable session id)
+diff --git a/website/docs/user-guide/features/computer-use.md b/website/docs/user-guide/features/computer-use.md
+index d8649e42a4..863c03a4d4 100644
+--- a/website/docs/user-guide/features/computer-use.md
++++ b/website/docs/user-guide/features/computer-use.md
+@@ -405,8 +405,9 @@ Screenshots are expensive. Hermes applies four layers of optimisation:
+   multimodal tool results and strips image parts from old ones.
+ - **Image-aware token estimation** — each image is counted as ~1500
+   tokens (Anthropic's flat rate) instead of its base64 char length.
+-- **Server-side context editing (Anthropic only)** — when active, the
+-  adapter enables `clear_tool_uses_20250919` via `context_management` so
++- **Server-side context editing (Anthropic only, opt-in)** — with
++  `compression.anthropic_context_editing: true`, Claude models on the native
++  Anthropic API send `clear_tool_uses_20250919` via `context_management` so
+   Anthropic's API clears old tool results server-side.
+ 
+ A 20-action session on a 1568×900 display typically costs ~30K tokens
+-- 
+2.55.0
+

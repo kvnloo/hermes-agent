@@ -1,0 +1,97 @@
+{
+ "head_fn": {
+  "records": 4,
+  "returns": 4,
+  "raises": 1
+ },
+ "prs": {
+  "64421": {
+   "author": "yingliang-zhang",
+   "title": "fix(memory): frame recalled context as untrusted data",
+   "fn_changed": false,
+   "records": 4,
+   "returns": 4,
+   "raises": 1
+  },
+  "68903": {
+   "author": "nuffin",
+   "title": "feat(agent): add memory_mode parameter with 'on_demand' option for sub-agents",
+   "fn_changed": false,
+   "records": 4,
+   "returns": 4,
+   "raises": 1
+  },
+  "81582": {
+   "author": "x7peeps",
+   "title": "feat(agent): proactive feature router — suggest the right Hermes capability at the right time",
+   "fn_changed": false,
+   "records": 4,
+   "returns": 4,
+   "raises": 1
+  },
+  "84360": {
+   "author": "TurboAnbeli",
+   "title": "fix(memory): frame recalled memory as untrusted, non-authoritative context (#84251)",
+   "fn_changed": false,
+   "records": 4,
+   "returns": 4,
+   "raises": 1
+  },
+  "108965": {
+   "author": "jonpol01",
+   "title": "fix(memory): sanitize recalled context to a fixed point so overlapping fence tags cannot reassemble",
+   "fn_changed": false,
+   "records": 4,
+   "returns": 4,
+   "raises": 1
+  },
+  "115109": {
+   "author": "liuhao1024",
+   "title": "fix(memory): scrub provider-synced turns with the egress redactor",
+   "fn_changed": false,
+   "records": 4,
+   "returns": 4,
+   "raises": 1
+  },
+  "115694": {
+   "author": "aniruddhaadak80",
+   "title": "fix(memory): scrub secrets before memory-provider egress",
+   "fn_changed": false,
+   "records": 4,
+   "returns": 4,
+   "raises": 1
+  },
+  "120042": {
+   "author": "Navlem",
+   "title": "fix(agent): raise external prefetch bound to 12s so real slow recalls are not dropped",
+   "fn_changed": false,
+   "records": 4,
+   "returns": 4,
+   "raises": 1
+  },
+  "124151": {
+   "author": "kweez007",
+   "title": "fix(memory): raise Hindsight external-prefetch timeout 8s -> 20s",
+   "fn_changed": true,
+   "records": 4,
+   "returns": 4,
+   "raises": 1
+  },
+  "125881": {
+   "author": "pstarkgit",
+   "title": "Add fail-closed policy hooks for memory admission and compression commits",
+   "fn_changed": true,
+   "records": 4,
+   "returns": 5,
+   "raises": 1
+  },
+  "129620": {
+   "author": "JoaoMarcos44",
+   "title": "fix(anthropic): make preserved-thinking replay coherent",
+   "fn_changed": false,
+   "records": 4,
+   "returns": 4,
+   "raises": 1
+  }
+ }
+}

@@ -1,0 +1,332 @@
+{
+  "schema": "xf.receipt.v1",
+  "staging": "plugin-catalog-entries",
+  "provenance": "self",
+  "origin_refs": [
+    "NousResearch/hermes-agent#102922",
+    "NousResearch/hermes-agent#102924",
+    "NousResearch/hermes-agent#87495",
+    "NousResearch/hermes-agent#98105"
+  ],
+  "policy_revision": {
+    "plugin-catalog/README.md": "rules 2,3,5,6,7,8,9 @ 234badf4012af380d23c91eae55d045a69c69ffb"
+  },
+  "ai_assistance": "Claude Code (Opus 5.5) wrote the census, the probes and these receipts; disclosed per repository policy",
+  "privacy": "local aggregate (synthetic canary text only; no state.db, logs or credentials read). Host paths and the hostname replaced by placeholders <staging>, <worktree>, <venv>, <testhome>, <host>; artifact paths are relative to the staging directory. raw/ outputs and tools/sandbox.sh are local-only (public: false) and still carry host paths.",
+  "resource_usage": {
+    "api_cost_usd": 0.0,
+    "gpu_s": 0,
+    "tokens": 0,
+    "wall_s": null,
+    "wall_s_label": "NOT_MEASURED"
+  },
+  "id": "F12/r20261001-01",
+  "tier": "T0 (static: ast + hermes static check functions; plugin code never imported)",
+  "question": "At its pinned SHA, does paw-pii register exactly what its manifest and the catalog entry declare, and is it free of internal-path imports, self-updaters and desktop-surface violations?",
+  "base_revision": {
+    "hermes_tree": "2b05ac2bb8423c987ba8051f6cc22939104b4da7 (slice on 572e4f4fad32bbdcfc948fb2ec833177ed5734c0)",
+    "current_main": "234badf4012af380d23c91eae55d045a69c69ffb",
+    "invalidate_on_changed_since": false,
+    "invalidate_on": [
+      "plugin-catalog/",
+      "hermes_cli/plugin_validate.py",
+      "hermes_cli/plugin_validate_desktop.py",
+      "hermes_cli/plugin_catalog.py",
+      "hermes_cli/middleware.py",
+      "hermes_cli/plugins.py",
+      "hermes_cli/plugins_dispatch.py",
+      "hermes_cli/plugins_loader.py",
+      "scripts/validate_plugin_catalog.py",
+      "website/scripts/extract-plugins.py",
+      "tools/plugin_guard.py",
+      "tools/skills_guard.py",
+      "hermes_cli/plugins_cmd_git.py",
+      "hermes_cli/plugins_cmd_install.py",
+      "hermes_cli/plugins_cmd_catalog.py",
+      ".github/workflows/",
+      "tests/hermes_cli/test_plugin_catalog.py",
+      "pm/plugin_declarations.py"
+    ]
+  },
+  "inputs": {
+    "plugin": {
+      "repo": "https://github.com/kvnloo/pii",
+      "sha": "d891ebdd3a3dab27a3451923eb56f955253a2782",
+      "subdir": "integrations/hermes",
+      "parent_repo": "programasweights/pii",
+      "parent_main": "454b8df4e35b207d84afa2ce1761079ea2975346",
+      "ahead_of_parent": 1,
+      "pinned_commit_author": "GitHub login kvnloo (author and committer); committer display name lesseradmin"
+    },
+    "plugin_manifest_sha256": "ff7f50fb6ceb1b3d2235abb24a544f9e3afbf1553c64a449ba18122bf63e10f2",
+    "catalog_entry_sha256": "2671f1a69f1d88fa4b032d13ba9d2d88c5a283021e1f5e3593bac2f3697a6264",
+    "census_script": {
+      "path": "tools/f12_census.py",
+      "sha256": "4f55ac29a24f35471b8c2bd3c50e90b29ce6e16a3c1e8ef357cdf94c66edf32f"
+    },
+    "sandbox": {
+      "path": "tools/sandbox.sh",
+      "sha256": "1f8f65efffcec1e0e6b6b2d51a843359720b6b03f209bcabeb9027bdd67b5d3c",
+      "public": false
+    },
+    "hermes_blobs": {
+      "plugin-catalog/paw-pii.yaml": "845dc6cce78e67a8989e267debcc5b4a4dcf473c",
+      "hermes_cli/plugin_validate.py": "2f31a9a4b1d66bd0c89a676f7f57f2f541605d33",
+      "hermes_cli/middleware.py": "c0940d26bbd4d31fd307aa54f3f8d21e0108f2a6",
+      "scripts/validate_plugin_catalog.py": "c5da7f113b2d1c794b4650ba3bbf36348ef45bd5",
+      "website/scripts/extract-plugins.py": "a751462f9e802ea5d87e61ae62138ed89cabb779",
+      "tools/plugin_guard.py": "41de8272156177ad7b4b1e0e6f6c7dca676f9530",
+      "hermes_cli/plugins_cmd_git.py": "75d0180d0966ce272e92d80327bed106e193e5fd",
+      "hermes_cli/plugins_cmd_install.py": "58ac003270078e7fde9fbea9759a819e6d2d4aec",
+      ".github/workflows/plugin-catalog-ci.yml": "0b4bc2adbd06a72b7d532e81a63a5187b090c480",
+      "tests/hermes_cli/test_plugin_catalog.py": "e1a7f2ac2dbbd82bd8a94f73e454defbac751da0"
+    }
+  },
+  "command": "RUN=<staging>/run VENV=1 CHDIR=<worktree> <staging>/tools/sandbox.sh <venv>/bin/python -I <staging>/tools/f12_census.py --clone <staging>/run/src/pii --repo https://github.com/kvnloo/pii --sha d891ebdd3a3dab27a3451923eb56f955253a2782 --subdir integrations/hermes --catalog-entry <worktree>/plugin-catalog/paw-pii.yaml --hermes-tree <worktree> --variant <as-pinned|fixed-manifest|sabotage> [--plugin-dir-override <staging>/run/variants/{variant}] --context-methods-out <staging>/run/context_methods.json",
+  "env": {
+    "host": "<host>",
+    "python_system": "3.14.7",
+    "python_hermes_venv": "3.11.14 (live venv interpreter, read-only; main requires ==3.14.*, see pre-existing env errors)",
+    "sandbox": "bwrap 0.12.0: ro-root, tmpfs over the user home and the live Hermes home (venv re-bound ro), unshare-net, unshare-pid, clearenv, writable $RUN on the artifact volume only",
+    "in_process_guard": "t1 probes: loopback-only socket.connect + exec audit hook (read-only git allowlisted)"
+  },
+  "measurements": [
+    {
+      "name": "pin_head_matches_and_reachable",
+      "value": true,
+      "label": "OBSERVED"
+    },
+    {
+      "name": "registered_tools",
+      "value": [
+        "detect_pii",
+        "redact_pii"
+      ],
+      "label": "OBSERVED (ast)"
+    },
+    {
+      "name": "registered_middleware",
+      "value": [
+        "llm_request",
+        "tool_execution"
+      ],
+      "label": "OBSERVED (ast)"
+    },
+    {
+      "name": "registered_hooks",
+      "value": [],
+      "label": "OBSERVED (ast)"
+    },
+    {
+      "name": "capability_mismatch_plugin_manifest",
+      "value": 2,
+      "unit": "count",
+      "label": "OBSERVED (ast)",
+      "detail": {
+        "declared": [],
+        "registered": [
+          "llm_request",
+          "tool_execution"
+        ],
+        "undeclared": [
+          "llm_request",
+          "tool_execution"
+        ],
+        "unregistered": [],
+        "match": false
+      }
+    },
+    {
+      "name": "capability_mismatch_catalog_entry",
+      "value": 0,
+      "unit": "count",
+      "label": "OBSERVED (ast)"
+    },
+    {
+      "name": "internal_path_imports",
+      "value": 0,
+      "unit": "count",
+      "label": "OBSERVED (ast)"
+    },
+    {
+      "name": "syspath_mutations",
+      "value": 1,
+      "unit": "count",
+      "label": "OBSERVED (ast)",
+      "detail": [
+        {
+          "line": 38,
+          "expr": "sys.path.insert(0, str(_REPO_SRC))",
+          "file": "__init__.py"
+        }
+      ]
+    },
+    {
+      "name": "imports_unresolvable_under_catalog_install_layout",
+      "value": 1,
+      "unit": "count",
+      "label": "OBSERVED (ast + layout)",
+      "detail": [
+        {
+          "file": "__init__.py",
+          "line": 44,
+          "module": "paw_pii",
+          "resolvable_in_full_clone_via_syspath": true,
+          "resolvable_in_catalog_install_layout": false
+        }
+      ]
+    },
+    {
+      "name": "out_of_subdir_package_third_party_imports",
+      "value": {
+        "paw_pii": [
+          "datasets",
+          "httpx",
+          "programasweights",
+          "torch",
+          "transformers"
+        ]
+      },
+      "label": "OBSERVED (ast)"
+    },
+    {
+      "name": "self_updater_signals",
+      "value": 0,
+      "unit": "count",
+      "label": "OBSERVED (ast + CI regex)"
+    },
+    {
+      "name": "desktop_surface_bundles",
+      "value": 0,
+      "unit": "count",
+      "label": "OBSERVED"
+    },
+    {
+      "name": "declared_install_dependencies",
+      "value": [],
+      "label": "OBSERVED"
+    },
+    {
+      "name": "repo_root_deps_without_upper_bound",
+      "value": 8,
+      "of": 8,
+      "label": "OBSERVED",
+      "detail": [
+        "datasets>=3.6",
+        "huggingface-hub>=0.34",
+        "httpx>=0.28",
+        "programasweights>=0.4.2",
+        "requests>=2.32",
+        "safetensors>=0.5",
+        "torch>=2.5",
+        "transformers>=4.51"
+      ]
+    },
+    {
+      "name": "hermes_static_subchecks_failed",
+      "value": [],
+      "label": "OBSERVED"
+    },
+    {
+      "name": "security_scan_verdict",
+      "value": "safe",
+      "findings": 0,
+      "scanner": "plugin-guard-v8",
+      "label": "OBSERVED"
+    },
+    {
+      "name": "builtin_tool_registry_size_and_collisions",
+      "value": {
+        "size": 89,
+        "collisions": []
+      },
+      "label": "OBSERVED"
+    },
+    {
+      "name": "predicted_validate_capability_check",
+      "value": "FAIL",
+      "reasons": [
+        "undeclared middleware registered: llm_request, tool_execution"
+      ],
+      "label": "MODELED (confirmed OBSERVED by T1-capability-probe-r20261001-01)"
+    }
+  ],
+  "calibration": {
+    "fixed-manifest (plugin.yaml + provides_middleware)": {
+      "predicted": "PASS",
+      "counts": {
+        "capability_mismatch_manifest": 0,
+        "capability_mismatch_catalog": 0,
+        "internal_path_imports": 0,
+        "syspath_mutations": 1,
+        "unresolved_imports_catalog_layout": 1,
+        "self_updater_signals": 0,
+        "desktop_surface_bundles": 0,
+        "declared_deps_without_upper_bound": 0,
+        "label": "OBSERVED (static)"
+      }
+    },
+    "sabotage (undeclared hook + hermes_cli import + git-pull self-updater + desktop/plugin.js fetch+write+eval)": {
+      "predicted": "FAIL",
+      "counts": {
+        "capability_mismatch_manifest": 3,
+        "capability_mismatch_catalog": 1,
+        "internal_path_imports": 1,
+        "syspath_mutations": 1,
+        "unresolved_imports_catalog_layout": 1,
+        "self_updater_signals": 2,
+        "desktop_surface_bundles": 1,
+        "declared_deps_without_upper_bound": 0,
+        "label": "OBSERVED (static)"
+      },
+      "hermes_failed": [
+        {
+          "name": "desktop surface",
+          "ok": false,
+          "detail": "dynamic code evaluation (desktop/plugin.js:2)"
+        }
+      ],
+      "scan": "caution"
+    },
+    "nc2 (catalog entry with provides_middleware: [])": {
+      "catalog_mismatch": 2,
+      "structural_validator": "OK (does not catch it)"
+    },
+    "result": "census discriminates: as-pinned FAIL, fixed-manifest PASS, every sabotage class flagged, catalog-side drift flagged"
+  },
+  "artifacts": [
+    {
+      "path": "raw/f12_as-pinned.json",
+      "sha256": "fd9eacfc839b5e05aec03ad780d1c31fed7e15d698c4f6b2471007e2d6872369",
+      "public": false
+    },
+    {
+      "path": "raw/f12_fixed-manifest.json",
+      "sha256": "efde3b8ec4a390b036238be3cf4bed07173195f5a9d6ec3842922db395a995c8",
+      "public": false
+    },
+    {
+      "path": "raw/f12_sabotage.json",
+      "sha256": "b7cb384deddd0a534436316a582c37cd00b7d9cc6e19f85074c4c0995665fb71",
+      "public": false
+    },
+    {
+      "path": "raw/f12_nc2_catalog_no_middleware.json",
+      "sha256": "0ac6edd190ab021d70316aba74f575e394864cb20e984ed8425cd9db2375fb5f",
+      "public": false
+    }
+  ],
+  "verdict": "KEEP (census) / gate result: FAIL at the pinned SHA",
+  "learning": {
+    "hypothesis": "paw-pii at d891ebdd passes catalog admission",
+    "result": "falsified: plugin.yaml omits provides_middleware (validate capability check fails); the subdir-only catalog install cannot import paw_pii (no declared deps, code lives outside the subdir)"
+  },
+  "not_tested": [
+    "hermes plugins validate CLI itself (E52, operator approval)",
+    "runtime with programasweights installed and the model downloaded (T2)"
+  ],
+  "limitations": [
+    "registrations reached through dynamic dispatch would be invisible to the ast census; the T1 probe covers register() at runtime",
+    "hermes static checks ran under the 3.11 venv interpreter while main requires 3.14"
+  ]
+}

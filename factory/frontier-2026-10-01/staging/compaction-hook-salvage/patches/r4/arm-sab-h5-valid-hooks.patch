@@ -1,0 +1,191 @@
+diff --git a/agent/conversation_compression.py b/agent/conversation_compression.py
+index f832e65dd7..e1077b9c93 100644
+--- a/agent/conversation_compression.py
++++ b/agent/conversation_compression.py
+@@ -2561,8 +2561,11 @@ def _hand_off_metrics_segment(old_session_id: str, new_session_id: str) -> None:
+         rotate_segment(old_session_id, new_session_id)
+ 
+ 
+-def _notify_context_engine_compression_complete(agent: Any, *, new_session_id: str, old_session_id: str) -> bool:
+-    """Notify the active context engine after a durable compression commit."""
++def _notify_context_engine_compression_complete(
++    agent: Any, *, new_session_id: str, old_session_id: str, tokens_before: Optional[int] = None,
++    tokens_after: Optional[int] = None,
++) -> bool:
++    """Notify the active context engine and ``on_compression_complete`` plugins after a durable compression commit."""
+     # Opt-in relay session-span segmentation. Observer semantics — failure must
+     # never undo or delay the committed compression.
+     with _swallow('relay segment rotation notification failed', exc_info=True):
+@@ -2571,6 +2574,14 @@ def _notify_context_engine_compression_complete(agent: Any, *, new_session_id: s
+             profile_key=relay_runtime.current_profile_key(), session_id=new_session_id, old_session_id=old_session_id
+         )
+     _hand_off_metrics_segment(old_session_id, new_session_id)
++    with _swallow('on_compression_complete plugin hook failed', exc_info=True):
++        from hermes_cli.lifecycle import has_hook, invoke_hook
++        if has_hook("on_compression_complete"):
++            invoke_hook(
++                "on_compression_complete", session_id=new_session_id, old_session_id=old_session_id,
++                in_place=new_session_id == old_session_id, tokens_before=tokens_before, tokens_after=tokens_after,
++                platform=getattr(agent, "platform", None) or "cli",
++            )
+     callback = getattr(agent.context_compressor, "on_session_start", None)
+     if not callable(callback):
+         return False
+@@ -2588,14 +2599,16 @@ def _notify_context_engine_compression_complete(agent: Any, *, new_session_id: s
+         return False
+ 
+ 
+-def _queue_context_engine_compression_notification(agent: Any, *, new_session_id: str, old_session_id: str) -> None:
++def _queue_context_engine_compression_notification(
++    agent: Any, *, new_session_id: str, old_session_id: str, **payload: Any,
++) -> None:
+     """Stage exactly one existing hook call for an outer host transaction."""
+     if callable(getattr(agent, _PENDING_CONTEXT_ENGINE_NOTIFICATION, None)):
+         raise RuntimeError("a compression notification is already pending")
+ 
+     def _notify() -> bool:
+         return _notify_context_engine_compression_complete(
+-            agent, new_session_id=new_session_id, old_session_id=old_session_id
++            agent, new_session_id=new_session_id, old_session_id=old_session_id, **payload
+         )
+ 
+     setattr(agent, _PENDING_CONTEXT_ENGINE_NOTIFICATION, _notify)
+@@ -3455,7 +3468,7 @@ def _finish_compaction_boundary(
+     agent: Any, compressed: list, *, new_system_prompt: str, old_session_id: Optional[str], in_place: bool,
+     compacted_in_place: bool, session_commit_succeeded: bool, defer_context_engine_notification: bool,
+     compression_made_progress: bool, compression_used_fallback: bool, compression_feasibility_skip: bool,
+-    task_id: str,
++    task_id: str, tokens_before: Optional[int] = None,
+ ) -> int:
+     """Post-commit bookkeeping: notify engines/providers/hooks, re-arm usage tracking.
+     Returns the rough post-compression token estimate (diagnostics only)."""
+@@ -3472,6 +3485,11 @@ def _finish_compaction_boundary(
+             if callable(_clear_labels := getattr(type(_labels_db), "clear_session_activity_labels", None)):
+                 _clear_labels(_labels_db, _old_sid)
+ 
++    # Diagnostics only, not provider usage: schema-heavy rough estimates can stay
++    # above threshold even after the next real request fits.
++    _compressed_est = estimate_request_tokens_rough(
++        compressed, system_prompt=new_system_prompt or "", tools=agent.tools or None
++    )
+     # Plugin engines use boundary_reason="compression" to keep lineage/checkpoint
+     # state. Fires in BOTH modes: in-place passes the same id, the boundary is real.
+     if session_commit_succeeded and (bool(_old_sid) or compacted_in_place):
+@@ -3480,7 +3498,10 @@ def _finish_compaction_boundary(
+             if defer_context_engine_notification
+             else _notify_context_engine_compression_complete
+         )
+-        notify(agent, new_session_id=agent.session_id or "", old_session_id=_boundary_parent)
++        notify(
++            agent, new_session_id=agent.session_id or "", old_session_id=_boundary_parent,
++            tokens_before=tokens_before, tokens_after=_compressed_est,
++        )
+ 
+     # Providers refresh cached per-session state; reset=False, conversation goes on.
+     # Fires in BOTH modes so buffers don't double-count dropped turns in-place.
+@@ -3519,11 +3540,6 @@ def _finish_compaction_boundary(
+     agent._last_compression_attempt_in_place = compacted_in_place
+     agent._last_compaction_in_place = compacted_in_place
+ 
+-    # Diagnostics only, not provider usage: schema-heavy rough estimates can stay
+-    # above threshold even after the next real request fits.
+-    _compressed_est = estimate_request_tokens_rough(
+-        compressed, system_prompt=new_system_prompt or "", tools=agent.tools or None
+-    )
+     compressor.last_compression_rough_tokens = _compressed_est
+     compressor.last_prompt_tokens = -1
+     compressor.last_completion_tokens = 0
+@@ -3889,7 +3905,7 @@ def _run_summary_phase(
+     agent: Any, messages: list, *, lease: _CompressionLease, in_place: bool, checkpoint_required: bool,
+     approx_tokens: Optional[int], focus_topic: Optional[str], force: bool, bypass_cooldown: bool,
+     commit_fence: Optional[CompressionCommitFence], hard_cancel_event: Any, system_message: str,
+-    attempt: _Attempt,
++    attempt: _Attempt, task_id: str,
+ ) -> _SummaryPhase:
+     """Adopt a grown durable parent, gather memory context and run the summarizer.
+     A hard cancel restores the compressor snapshot + live list, records a stall backoff while the lease is
+@@ -3922,6 +3938,26 @@ def _run_summary_phase(
+             bypass_cooldown=bypass_cooldown,
+         )
+         messages_before_compression = copy.deepcopy(messages)
++        # Notify generic plugins before compression discards/summarizes older turns.
++        # Observer-only: return values are ignored. Plugins can persist task-state,
++        # handoff breadcrumbs, or external-memory snapshots without mutating the
++        # live conversation or breaking prompt caching.
++        try:
++            from hermes_cli.plugins import invoke_hook as _invoke_hook
++            _invoke_hook(
++                "pre_context_compression",
++                session_id=agent.session_id or "",
++                task_id=task_id,
++                conversation_history=list(messages),
++                approx_tokens=approx_tokens,
++                focus_topic=focus_topic,
++                force=force,
++                model=getattr(agent, "model", ""),
++                platform=getattr(agent, "platform", None) or "cli",
++                conversation_id=getattr(agent, "_gateway_session_key", None),
++            )
++        except Exception as _plugin_err:
++            logger.debug("plugin pre_context_compression failed: %s", _plugin_err)
+         _activity_heartbeat = _CompressionActivityHeartbeat(
+             agent, commit_fence=commit_fence, emit_client_status=lease.status_emitted,
+         ).start()
+@@ -4179,6 +4215,7 @@ def compress_context(
+         agent, messages, lease=lease, in_place=in_place, checkpoint_required=checkpoint_required,
+         approx_tokens=approx_tokens, focus_topic=focus_topic, force=force, bypass_cooldown=bypass_cooldown,
+         commit_fence=commit_fence, hard_cancel_event=_hard_cancel_event, system_message=system_message, attempt=attempt,
++        task_id=task_id,
+     )
+     if phase.abort_prompt is not None:
+         return phase.messages, phase.abort_prompt
+@@ -4262,6 +4299,7 @@ def compress_context(
+             defer_context_engine_notification=defer_context_engine_notification,
+             compression_made_progress=commit.made_progress, compression_used_fallback=_compression_used_fallback,
+             compression_feasibility_skip=_compression_feasibility_skip, task_id=task_id,
++            tokens_before=approx_tokens,
+         )
+         logger.info(
+             "context compression done: session=%s messages=%d->%d rough_tokens=~%s awaiting_real_usage=true",
+diff --git a/hermes_cli/hooks.py b/hermes_cli/hooks.py
+index 0586aec24e..559bcd4f9f 100644
+--- a/hermes_cli/hooks.py
++++ b/hermes_cli/hooks.py
+@@ -131,6 +131,10 @@ _DEFAULT_PAYLOADS = {
+     },
+     "on_session_finalize": {"session_id": "test-session"},
+     "on_session_reset": {"session_id": "test-session"},
++    "on_compression_complete": {
++        "session_id": "test-session-2", "old_session_id": "test-session", "in_place": False,
++        "tokens_before": 120000, "tokens_after": 30000, "platform": "cli",
++    },
+     "pre_api_request": {
+         "session_id": "test-session", "task_id": "test-task", "platform": "cli",
+         "model": "claude-sonnet-4-6", "provider": "anthropic",
+diff --git a/hermes_cli/plugins.py b/hermes_cli/plugins.py
+index 02222185a2..ff091a848d 100644
+--- a/hermes_cli/plugins.py
++++ b/hermes_cli/plugins.py
+@@ -131,6 +131,10 @@ VALID_HOOKS: Set[str] = {
+     # error_body may be unredacted.
+     "transform_api_error_classification", "on_session_start", "on_session_end",
+     "on_session_finalize", "on_session_reset",
++    # Fired immediately before context compression drops/summarizes older
++    # turns. Observer-only: return values are ignored. Plugins can persist
++    # task-state or handoff breadcrumbs without mutating the live message list.
++    "pre_context_compression",
+     # on_skill_lifecycle: successful skill lifecycle facts (local skill name visible to plugins).
+     "on_skill_lifecycle", "subagent_start", "subagent_stop",
+     # pre_gateway_dispatch: once per incoming MessageEvent, after the internal-event guard, BEFORE
+diff --git a/website/docs/user-guide/features/hooks.md b/website/docs/user-guide/features/hooks.md
+index 59975d14ed..317917dff8 100644
+--- a/website/docs/user-guide/features/hooks.md
++++ b/website/docs/user-guide/features/hooks.md
+@@ -471,6 +471,7 @@ Payload fields below are the exact event-specific fields supplied by each call s
+ | `on_session_end` | Observer | Canonically at each turn finalization; CLI/TUI exits have additional reduced legacy shapes. Return ignored. | Canonical: `session_id`, `task_id`, `turn_id`, `completed`, `failed`, `interrupted`, `turn_exit_reason`, `model`, `platform`; exit paths may add `reason`/`api_request_id` and omit fields. | IDs, model/platform, and outcome; canonical payload has no message body. |
+ | `on_session_finalize` | Observer | CLI/TUI/gateway teardown through `finalize_session`; gateway shutdown may finalize without a reset. Return ignored. | Surface-dependent `session_id`, `platform`, optionally `reason`, `old_session_id`, `new_session_id` | Session and routing identifiers. |
+ | `on_session_reset` | Observer | CLI/TUI session boundary and gateway after the replacement session exists; return ignored. | CLI: `session_id`, `platform`, `reason`; TUI: `session_id`, `platform`; gateway: those plus `reason`, `old_session_id`, `new_session_id` | Session and routing identifiers. |
++| `on_compression_complete` | Observer | Once per local context compaction, after the compacted transcript is durable in the session store; a manual `/compress` waits for its host to commit and stays silent if the host discards it. Never for an attempt that did not commit (aborted summary, would-grow refusal, store write failure), and never for native or Codex server-side compaction. Return ignored; a raising callback is logged and skipped. | `session_id` (current), `old_session_id` (equal to `session_id` when compacted in place), `in_place`, `tokens_before` (caller's estimate or `None`), `tokens_after` (rough estimate), `platform` | Session identifiers and token counts only; no message body. |
+ | `agent_loop_stopped` | Observer | Immediately after a real running agent is interrupted — gateway `_interrupt_and_clear_session` or TUI/desktop `session.interrupt`; return ignored. | `session_key`, `platform`, `reason`, `invalidation_reason` | Session/routing identifiers and interruption reasons; no message body. |
+ | `on_skill_lifecycle` | Observer | After an authoritative skill-usage state change; return ignored. | `action`, `skill_name`, `provenance`, `task_id`, `session_id`, `use_count`, `reused`, `reuse_after_patch` | Exposes the local skill name and provenance. |
+ | `subagent_start` | Observer | Child constructed and about to run; return ignored. | `parent_session_id`, `parent_turn_id`, `parent_subagent_id`, `child_session_id`, `child_subagent_id`, `child_role`, `child_goal` | Child goal may contain user/project content. |

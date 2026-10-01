@@ -1,0 +1,38 @@
+▶ not activated — using HERMES_PYTHON: <hermes-home>/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 12 test files (~248 tests) under ['tests/agent/test_memory_provider.py', 'tests/agent/test_memory_async_sync.py', 'tests/agent/test_memory_session_switch.py', 'tests/agent/test_memory_skill_scaffolding.py', 'tests/agent/test_memory_sync_interrupted.py', 'tests/agent/test_turn_context.py', 'tests/hermes_cli/test_relay_shared_metrics.py', 'tests/hermes_cli/test_relay_shared_metrics_runtime.py', 'tests/hermes_cli/test_shared_metrics_signals.py', 'tests/hermes_cli/test_shared_metrics_efficiency.py', 'tests/hermes_cli/test_shared_metrics_harness.py', 'tests/hermes_cli/test_shared_metrics_loop.py']; running with -j 2
+[  1.2% |     3/~248 | ✓3 | ✗0] ✓ tests/agent/test_memory_async_sync.py (3✓, 1.0s)
+[  2.0% |     5/~248 | ✓5 | ✗0] ✓ tests/agent/test_memory_session_switch.py (2✓, 0.6s)
+[  4.0% |    10/~248 | ✓10 | ✗ 0] ✓ tests/agent/test_memory_skill_scaffolding.py (5✓, 0.7s)
+[ 24.2% |    60/~248 | ✓65 | ✗ 0] ✓ tests/agent/test_memory_provider.py (55✓, 3.8s)
+[ 25.0% |    62/~248 | ✓67 | ✗ 0] ✓ tests/agent/test_memory_sync_interrupted.py (2✓, 1.6s)
+[ 33.1% |    82/~248 | ✓93 | ✗ 0] ✓ tests/agent/test_turn_context.py (26✓, 6.4s)
+[ 54.8% |   136/~248 | ✓185 | ✗  0] ✓ tests/hermes_cli/test_relay_shared_metrics.py (92✓, 15.8s)
+[ 58.9% |   146/~248 | ✓201 | ✗  0] ✓ tests/hermes_cli/test_shared_metrics_efficiency.py (16✓, 16.8s)
+[ 64.1% |   159/~248 | ✓227 | ✗  0] ✓ tests/hermes_cli/test_shared_metrics_harness.py (26✓, 10.1s)
+[ 83.1% |   206/~248 | ✓279 | ✗  0] ✓ tests/hermes_cli/test_relay_shared_metrics_runtime.py (52✓, 44.2s)
+[ 89.1% |   221/~248 | ✓294 | ✗  0] ✓ tests/hermes_cli/test_shared_metrics_loop.py (15✓, 8.5s)
+[100.0% |   248/~248 | ✓330 | ✗  0] ✓ tests/hermes_cli/test_shared_metrics_signals.py (36✓, 6.0s)
+
+=== Summary: 12 files, 330 tests passed, 0 failed (100% complete) in 60.5s (2 workers) ===
+  Durations cached to test_durations.json (12 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   12
+  Total subprocess CPU-wall: 115.6s  (runner wall: 60.5s, parallelism: 2x)
+  P50: 6.42s  P90: 16.80s  P95: 44.20s  P99: 44.20s  Max: 44.20s
+  <1s: 2 files (17%)  <2s: 4 files (33%)
+  Top 10 slowest:
+     44.20s  tests/hermes_cli/test_relay_shared_metrics_runtime.py
+     16.80s  tests/hermes_cli/test_shared_metrics_efficiency.py
+     15.80s  tests/hermes_cli/test_relay_shared_metrics.py
+     10.12s  tests/hermes_cli/test_shared_metrics_harness.py
+      8.48s  tests/hermes_cli/test_shared_metrics_loop.py
+      6.42s  tests/agent/test_turn_context.py
+      5.98s  tests/hermes_cli/test_shared_metrics_signals.py
+      3.81s  tests/agent/test_memory_provider.py
+      1.60s  tests/agent/test_memory_sync_interrupted.py
+      1.02s  tests/agent/test_memory_async_sync.py

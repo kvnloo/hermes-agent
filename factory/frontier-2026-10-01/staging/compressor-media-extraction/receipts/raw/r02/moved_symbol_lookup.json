@@ -1,0 +1,182 @@
+{
+ "tokenizer": "tiktoken o200k_base",
+ "label": "MODELED",
+ "policy": "lookup_sim.simulate (grep + 200-line first read + 2,000-line paging)",
+ "moved_functions": {
+  "names": 14,
+  "base": {
+   "tasks": 14,
+   "calls_total": 28,
+   "tokens_total": 33428,
+   "tokens_mean": 2388,
+   "tokens_p50": 2338,
+   "grep_hits_mean": 1.07,
+   "file_lines_p50": 5754
+  },
+  "head": {
+   "tasks": 14,
+   "calls_total": 28,
+   "tokens_total": 23195,
+   "tokens_mean": 1657,
+   "tokens_p50": 1991,
+   "grep_hits_mean": 1.07,
+   "file_lines_p50": 244
+  },
+  "head_cheaper": 10,
+  "head_costlier": 1,
+  "equal": 3,
+  "rows": [
+   {
+    "name": "_replace_image_parts",
+    "base_file": "agent/context_compressor.py",
+    "head_file": "agent/context_compressor_media.py",
+    "base_tokens": 2344,
+    "head_tokens": 2351,
+    "base_calls": 2,
+    "head_calls": 2
+   },
+   {
+    "name": "_tool_result_parts",
+    "base_file": "agent/context_compressor.py",
+    "head_file": "agent/context_compressor_media.py",
+    "base_tokens": 2317,
+    "head_tokens": 2317,
+    "base_calls": 2,
+    "head_calls": 2
+   },
+   {
+    "name": "_tool_content_has_images",
+    "base_file": "agent/context_compressor.py",
+    "head_file": "agent/context_compressor_media.py",
+    "base_tokens": 2322,
+    "head_tokens": 2322,
+    "base_calls": 2,
+    "head_calls": 2
+   },
+   {
+    "name": "_strip_images_from_tool_msg",
+    "base_file": "agent/context_compressor.py",
+    "head_file": "agent/context_compressor_media.py",
+    "base_tokens": 2308,
+    "head_tokens": 2308,
+    "base_calls": 2,
+    "head_calls": 2
+   },
+   {
+    "name": "_rewritten",
+    "base_file": "agent/context_compressor.py",
+    "head_file": "agent/context_compressor_media.py",
+    "base_tokens": 2288,
+    "head_tokens": 2287,
+    "base_calls": 2,
+    "head_calls": 2
+   },
+   {
+    "name": "_retire_stale_tool_result_images",
+    "base_file": "agent/context_compressor.py",
+    "head_file": "agent/context_compressor_media.py",
+    "base_tokens": 2285,
+    "head_tokens": 2191,
+    "base_calls": 2,
+    "head_calls": 2
+   },
+   {
+    "name": "_image_payload",
+    "base_file": "agent/context_compressor.py",
+    "head_file": "agent/context_compressor_media.py",
+    "base_tokens": 2338,
+    "head_tokens": 1877,
+    "base_calls": 2,
+    "head_calls": 2
+   },
+   {
+    "name": "evict_stale_outbound_tool_images",
+    "base_file": "agent/context_compressor.py",
+    "head_file": "agent/context_compressor_media.py",
+    "base_tokens": 2398,
+    "head_tokens": 1641,
+    "base_calls": 2,
+    "head_calls": 2
+   },
+   {
+    "name": "_is_image_part",
+    "base_file": "agent/context_compressor.py",
+    "head_file": "agent/vision_message_prep.py",
+    "base_tokens": 2549,
+    "head_tokens": 2105,
+    "base_calls": 2,
+    "head_calls": 2
+   },
+   {
+    "name": "_content_has_images",
+    "base_file": "agent/context_compressor.py",
+    "head_file": "agent/context_compressor_media.py",
+    "base_tokens": 2558,
+    "head_tokens": 1175,
+    "base_calls": 2,
+    "head_calls": 2
+   },
+   {
+    "name": "_strip_images_from_content",
+    "base_file": "agent/context_compressor.py",
+    "head_file": "agent/context_compressor_media.py",
+    "base_tokens": 2541,
+    "head_tokens": 1117,
+    "base_calls": 2,
+    "head_calls": 2
+   },
+   {
+    "name": "_strip_historical_media",
+    "base_file": "agent/context_compressor.py",
+    "head_file": "agent/context_compressor_media.py",
+    "base_tokens": 2524,
+    "head_tokens": 1053,
+    "base_calls": 2,
+    "head_calls": 2
+   },
+   {
+    "name": "_summary_part_text",
+    "base_file": "agent/context_compressor.py",
+    "head_file": "agent/context_compressor_media.py",
+    "base_tokens": 2317,
+    "head_tokens": 271,
+    "base_calls": 2,
+    "head_calls": 2
+   },
+   {
+    "name": "_image_part_label",
+    "base_file": "agent/context_compressor.py",
+    "head_file": "agent/context_compressor_media.py",
+    "base_tokens": 2339,
+    "head_tokens": 180,
+    "base_calls": 2,
+    "head_calls": 2
+   }
+  ]
+ },
+ "facade_remaining_defs": {
+  "names": 264,
+  "base": {
+   "tasks": 264,
+   "calls_total": 530,
+   "tokens_total": 722032,
+   "tokens_mean": 2735,
+   "tokens_p50": 2584,
+   "grep_hits_mean": 1.25,
+   "file_lines_p50": 5754
+  },
+  "head": {
+   "tasks": 264,
+   "calls_total": 530,
+   "tokens_total": 722848,
+   "tokens_mean": 2738,
+   "tokens_p50": 2586,
+   "grep_hits_mean": 1.25,
+   "file_lines_p50": 5532
+  },
+  "head_cheaper": 6,
+  "head_costlier": 16,
+  "equal": 242,
+  "rows": []
+ }
+}

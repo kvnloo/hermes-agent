@@ -1,0 +1,225 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "F11-P2-fork112/r20261001T092035Z",
+ "generated_at": "2026-10-01T09:22:54Z",
+ "spec": {
+  "id": "F11-P2-fork112",
+  "rev": 1,
+  "sha256": "68a548857ebfb902e0ed2b1e2783874e5e01c18f3f4fdd13dbab6478f640f721",
+  "kind": "redgreen"
+ },
+ "work_order": {
+  "id": "xf-F11-P2-fork112",
+  "from": "factory-replay-gate staging builder",
+  "status": "claimed"
+ },
+ "runner_revision": "evals/_factory/gate_runner.py@2f9f69cf03b2",
+ "issue": "kvnloo/hermes-agent#322",
+ "origin_refs": [
+  "kvnloo/hermes-agent#112"
+ ],
+ "base_revision": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+ "head_revision": "83190e3859755602629b06017891152788e3d728",
+ "arms": {
+  "base": {
+   "commit": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+   "tree": "6ec691f75dee76b62b90b7c9f01d2ec02bf282aa",
+   "inject": {
+    "from": "83190e3859755602629b06017891152788e3d728",
+    "source_commit": "bd003b43d9dd2a5a6bb17a383d305444dc0e6dd4",
+    "files": [
+     "tests/tools/test_process_registry.py"
+    ]
+   }
+  },
+  "head": {
+   "commit": "83190e3859755602629b06017891152788e3d728",
+   "merge": "merge-tree",
+   "arm_commit": "bd003b43d9dd2a5a6bb17a383d305444dc0e6dd4",
+   "tree": "59e35b0f023faf1a18a7c5e5d89e914dc64160f4"
+  }
+ },
+ "changed_files": [
+  "tests/tools/test_process_registry.py",
+  "tools/process_registry.py"
+ ],
+ "tests": {
+  "red": {
+   "command": "bash scripts/run_tests.sh -j 2 tests/tools/test_process_registry.py -q -m 'not live and not integration'",
+   "arm": "base + injected tests",
+   "expected_failure": [
+    "assert ('exited', '', 0) == ('killed', 'process.kill', -15)",
+    "assert ('exited', '', -15) == ('killed', 'kill_all', -15)"
+   ],
+   "observed": "0/3"
+  },
+  "green": {
+   "command": "bash scripts/run_tests.sh -j 2 tests/tools/test_process_registry.py -q -m 'not live and not integration'",
+   "arm": "head",
+   "observed": "3/3"
+  }
+ },
+ "gates": {
+  "validity": {
+   "result": "PASS"
+  },
+  "red": {
+   "result": "FAIL",
+   "reps_agree": "0/3",
+   "reason": "failed, but not with the expected marker"
+  },
+  "green": {
+   "result": "PASS",
+   "reps_agree": "3/3"
+  },
+  "sabotage": {
+   "result": "N_A",
+   "reason": "skipped: RED or GREEN did not pass"
+  },
+  "adjacent": {
+   "result": "N_A",
+   "reason": "skipped: RED or GREEN did not pass"
+  },
+  "ownership": {
+   "result": "PASS",
+   "recorded": "clear",
+   "searched_at": "2026-09-30",
+   "queries": [
+    "completion_queue stale killed",
+    "kill_all exited completion_reason"
+   ]
+  },
+  "flaky": false
+ },
+ "measurements": [
+  {
+   "name": "red_reps_failing_with_marker",
+   "value": "0/3",
+   "unit": "reps",
+   "label": "OBSERVED",
+   "source": "probe",
+   "primary": true
+  },
+  {
+   "name": "red-0_exit",
+   "value": 1,
+   "unit": "exit code",
+   "label": "OBSERVED",
+   "source": "probe"
+  },
+  {
+   "name": "red-1_exit",
+   "value": 1,
+   "unit": "exit code",
+   "label": "OBSERVED",
+   "source": "probe"
+  },
+  {
+   "name": "red-2_exit",
+   "value": 1,
+   "unit": "exit code",
+   "label": "OBSERVED",
+   "source": "probe"
+  },
+  {
+   "name": "green-0_exit",
+   "value": 0,
+   "unit": "exit code",
+   "label": "OBSERVED",
+   "source": "probe"
+  },
+  {
+   "name": "green-1_exit",
+   "value": 0,
+   "unit": "exit code",
+   "label": "OBSERVED",
+   "source": "probe"
+  },
+  {
+   "name": "green-2_exit",
+   "value": 0,
+   "unit": "exit code",
+   "label": "OBSERVED",
+   "source": "probe"
+  }
+ ],
+ "denominators": {
+  "cells": 6,
+  "infra": 0,
+  "completeness": 1.0
+ },
+ "env": {
+  "python": "3.11.14",
+  "sandbox": "in-process guard per cell (loopback-only connect, name lookups, live-home opens, hermes exec); fresh HOME/HERMES_HOME per cell; empty env; no kernel network namespace",
+  "relay": {
+   "error": "relay pin probe failed"
+  }
+ },
+ "safety": {
+  "canary": {
+   "passed": true,
+   "checks": {
+    "loopback_connect": true,
+    "nonloopback_connect": true,
+    "name_lookup": true,
+    "live_home_open": true,
+    "hermes_exec": true,
+    "hermes_exec_ran": true,
+    "guard": true,
+    "home_isolated": true,
+    "logged": true
+   },
+   "blocked_events": [
+    "open",
+    "socket.connect",
+    "socket.getaddrinfo",
+    "subprocess.Popen"
+   ],
+   "python": "3.11.14",
+   "rc": 0
+  },
+  "egress_blocked": 0,
+  "home_blocked": 0,
+  "exec_blocked": 0,
+  "interpreter_writes_refused": 0,
+  "hermes_home_isolated": true
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "builds": [],
+ "runtime_evidence": [],
+ "security_checks": [],
+ "resource_usage": {
+  "wall_s": 138.4,
+  "cpu_core_s": null,
+  "tokens": 0,
+  "api_cost_usd": 0.0
+ },
+ "outcome": {
+  "execution_completed": true,
+  "verified_success": null,
+  "verification_source": "self-run gate runner (not independent)"
+ },
+ "provenance": "self",
+ "verdict": "DISCARD",
+ "refused": true,
+ "refusal_reasons": [
+  "red: failed, but not with the expected marker"
+ ],
+ "unpinned_hunks": [],
+ "limitations": [
+  "in-process guard only; pair with a kernel network namespace for a hard boundary"
+ ],
+ "not_tested": [
+  "full test suite",
+  "real provider responses",
+  "kernel network namespace (in-process guard only)"
+ ],
+ "ai_assistance": "Spec and runner written with Claude Code (Opus 5.5); disclosed per repository policy",
+ "privacy": "public-aggregate"
+}

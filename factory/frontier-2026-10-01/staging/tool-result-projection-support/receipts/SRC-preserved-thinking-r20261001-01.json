@@ -1,0 +1,122 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "tool-result-projection-support",
+ "origin_refs": [
+  "NousResearch/hermes-agent#107731",
+  "NousResearch/hermes-agent#39691",
+  "NousResearch/hermes-agent#47866",
+  "NousResearch/hermes-agent#129620",
+  "NousResearch/hermes-agent#129492",
+  "NousResearch/hermes-agent#129882",
+  "kvnloo/hermes-agent#310"
+ ],
+ "base_revision": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+ "env": {
+  "host": "withheld (one local workstation; receipts carry no host names)",
+  "python": "3.11.14 ($PY = the repo venv interpreter, used read-only)",
+  "isolation": "env -i; fresh HOME/HERMES_HOME under scratch; loopback-only socket.connect + getaddrinfo guard (probe_104260.py:11-39 pattern); no credentials",
+  "network": "loopback only (asserted: egress_blocked list per run)",
+  "relay": {
+   "present": true,
+   "package": "nemo-relay 0.8.4 (installed in the shared repo venv; not part of this change)",
+   "state": "FAILED at initialize(): agent/relay_runtime.py calls relay.plugin.initialize({}, additional_plugins_toml=...), which nemo-relay 0.8.4 does not accept, so Hermes logs 'Hermes Relay plugin initialization failed' and disables Relay middleware. No Relay plugin was active in any run (recorded in round 2; the venv was the same in this round).",
+   "plugins_toml_sha256": null,
+   "config_paths": [],
+   "explicit_plugins_toml": "none: HERMES_NEMO_RELAY_PLUGINS_TOML unset and the isolated HERMES_HOME has no relay-plugins.toml"
+  }
+ },
+ "provenance": "self",
+ "cost": {
+  "api_cost_usd": 0.0,
+  "tier_cost": "$0"
+ },
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the harness and tests; disclosed per repository policy",
+ "privacy": "synthetic fixtures only; no state.db / agent.log / credentials read",
+ "id": "SRC-preserved-thinking/r20261001-01",
+ "tier": "T0",
+ "kind": "static",
+ "experiment": "Source verification of the preserved-thinking premise and the Hermes code it touches",
+ "sources": {
+  "reference": "claude-api skill (bundled 2.1.286) shared/model-migration.md: 'Breaking change 3: thinking blocks are preserved only in the conversation that produced them' (Fable 5.1 section) and 'Breaking change 3: thinking blocks are tied to the model and the conversation' (Opus 5.5 section: 'the mechanics ... apply verbatim')",
+  "quotes": [
+   "What invalidates every later thinking block: Editing, reordering, or removing an earlier turn while keeping later ones - including deleting old tool results (use server-side tool-result clearing instead).",
+   "Who is enforced: new accounts created on or after August 31, 2026, on every platform. Enforcement scope is decided per model - Claude Opus 5.5 also enforces it for new accounts only",
+   "server-side compaction and context editing, including thinking-block clearing (they don't count as edits, because the check compares the conversation as you sent it, not the server's edited copy",
+   "Where the check is enforced, a request that replays an invalidated block is rejected with a 400 invalid_request_error, decided before any output. Retrying the same body fails the same way"
+  ],
+  "hermes_main": {
+   "agent/anthropic_message_convert.py:567-602": "_manage_thinking_signatures keeps signed thinking on the LATEST assistant turn on direct Anthropic / Nous Portal; third-party endpoints strip all thinking",
+   "agent/anthropic_message_convert.py:393-397": "assistant replay prefers the ordered anthropic_content_blocks carrier (thinking included) over reasoning_details",
+   "agent/turn_recovery.py:493-506": "thinking-signature recovery strips reasoning_details from api_messages only",
+   "agent/anthropic_adapter.py": "no context_management / clear_tool_uses on main (server-side tool-result clearing absent; NousResearch/hermes-agent#526 open)"
+  }
+ },
+ "verdict": "CONFIRMED: a wire-only rewrite of an earlier tool row is a history edit for preserved-thinking routes",
+ "spec": {
+  "path": null,
+  "rev": null,
+  "sha256": null,
+  "prereg_commit": null,
+  "decision_rule_sha": null,
+  "note": "not pre-registered: an ad-hoc staging run under FACTORY.md section 8. The decision rule is the assertion set of tests/e2e/core/history/test_tool_result_projection_wire.py (blob 7347ad045b) and, for probes, the harness outputs named in command."
+ },
+ "policy_revision": {
+  "AGENTS.md": "65aa3e61bc@572e4f4fad (unchanged at 234badf401 and aea969677c)",
+  "CONTRIBUTING.md": "b0baa59b50@572e4f4fad (unchanged at 234badf401 and aea969677c)",
+  "factory": "FACTORY.md sha256:7726ba18b43a9367 (frontier-2026-10-01 ledger copy, read at round-1 fix)"
+ },
+ "denominators": {
+  "cells": 0,
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "completeness": 1.0,
+  "note": "static source reading; no runs"
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "resource_usage": {
+  "wall_s": null,
+  "cpu_core_s": null,
+  "gpu_s": 0,
+  "energy_j": null,
+  "api_cost_usd": 0.0,
+  "note": "wall_s summed from the raw outputs; CPU time and energy were not recorded"
+ },
+ "corrections": [
+  {
+   "date": "2026-10-01",
+   "by": "staging fix round 1 (phase-3 verifier findings)",
+   "changes": [
+    "env.python: was '$PY (3.14.x, read-only use as interpreter)' (wrong: every raw output records \"python\": \"3.11.14\" and the venv interpreter prints Python 3.11.14)",
+    "added the xf.receipt.v1 fields spec (not pre-registered), policy_revision, denominators, evidence_class, resource_usage"
+   ]
+  },
+  {
+   "date": "2026-10-01",
+   "by": "staging fix round 2 (round-1 re-verifier findings)",
+   "changes": [
+    "env.relay added (the shared venv's nemo-relay 0.8.4 fails to initialize; no Relay plugin was active)",
+    "z0evals_study added (not frozen; P8 pending)"
+   ]
+  },
+  {
+   "date": "2026-10-01",
+   "by": "staging fix round 3 (fix of the round-2 re-verifier findings)",
+   "changes": [
+    "env.host: the workstation's host name replaced by 'withheld' (receipts must not carry host names)"
+   ]
+  }
+ ],
+ "superseded_by": "SRC-preserved-thinking/r20261001-02",
+ "z0evals_study": {
+  "repo": "kvnloo/z0evals",
+  "branch": "study/hermes-tool-result-projection-support",
+  "commit": null,
+  "status": "not frozen (P8 pending)"
+ }
+}

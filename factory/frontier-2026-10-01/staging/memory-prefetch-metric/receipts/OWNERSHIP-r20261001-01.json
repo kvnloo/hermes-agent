@@ -1,0 +1,74 @@
+{
+  "schema": "xf.receipt.v1",
+  "id": "OWNERSHIP/r20261001-01",
+  "experiment": "P2 ownership: does any open upstream PR already add a memory prefetch metric? Full scan of teknium1's open PRs plus the prefetch search queries",
+  "tier": "T0",
+  "cost_usd": 0.0,
+  "lane": "cpu (gh, read-only)",
+  "staging": "memory-prefetch-metric",
+  "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+  "head_revision": "519876fa02f5e5812f5763cef03c5fed054d6cf7",
+  "results": {
+    "teknium1_open_prs": {
+      "scanned_at": "2026-10-01T11:13Z",
+      "count": 260,
+      "count_check": "gh search total_count = 260",
+      "files_scanned": 2871,
+      "title_regex": "prefetch|telemetry|metric",
+      "file_regex": "memory_manager|shared_metrics",
+      "title_hits": [],
+      "file_hits": [
+        {
+          "number": 113678,
+          "files": [
+            "agent/memory_manager.py"
+          ]
+        }
+      ],
+      "file_hit_detail": {
+        "113678": "feat(cli): --disable-tools ... (head b94a482497): changes inject_memory_provider_tools (skips disabled tool names); does not touch _prefetch_provider"
+      },
+      "commands": [
+        "gh pr list -R NousResearch/hermes-agent --author teknium1 --state open --limit 1000 --json number,title,headRefOid",
+        "gh api -X GET search/issues -f q='repo:NousResearch/hermes-agent is:pr is:open author:teknium1' --jq .total_count",
+        "gh api --paginate repos/NousResearch/hermes-agent/pulls/<N>/files?per_page=100 --jq '.[].filename'   # for each of the PRs"
+      ],
+      "correction": "STAGING.md v1 said teknium1 had 40 open PRs; there are 260, and v1's scan covered only the first 40 listed."
+    },
+    "prefetch_search": {
+      "searched_at": "2026-10-01T11:14Z",
+      "queries": {
+        "prefetch metric": 3,
+        "prefetch telemetry": 9,
+        "memory prefetch": 151,
+        "prefetch_provider": 0,
+        "prefetch shared metrics": 1,
+        "memory.prefetch": 1
+      },
+      "open_prs_touching_prefetch_provider": {
+        "124151": "kweez007: per-provider Hindsight timeout (adjacent, compatible; MERGE)",
+        "87028": "richardclawbot: honor external prefetch timeout (adjacent; adds no record/metric lines)",
+        "86948": "V0v1kkkAssistant: configurable provider timeouts (adjacent; adds no record/metric lines)",
+        "92118": "seradin: structured prefetch observations side channel; its body says Hermes adds no persistence, outbound delivery or telemetry (adjacent; not a counter)"
+      },
+      "adds_prefetch_metric": []
+    }
+  },
+  "verdict": "OURS (no external owner); adjacent same-function PRs listed; risk: teknium1 may land the same row himself",
+  "label": "OBSERVED",
+  "not_tested": [
+    "merge order against #87028, #86948 and #92118 (only #124151 was merged-tree tested)"
+  ],
+  "provenance": "self",
+  "privacy": "public-aggregate (public PR metadata only)",
+  "raw_artifacts": {
+    "teknium1_scan": {
+      "path": "work/r2/ownership_teknium1_scan.json",
+      "sha256": "889c74f70cb09f3a96d5d879d9993a21498cbeaf21c7537bc9fa4a27434dbf4f"
+    },
+    "prefetch_search": {
+      "path": "work/r2/ownership_prefetch_search.json",
+      "sha256": "291f9a37446b8a65ca243c6146ea2485502a9d85fafcd52430e90805be3a66ac"
+    }
+  }
+}

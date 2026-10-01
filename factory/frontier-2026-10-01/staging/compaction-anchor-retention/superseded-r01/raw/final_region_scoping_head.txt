@@ -1,0 +1,3 @@
+  legacy: OK (1 summarizer call(s), 71 msgs out)
+  lean: OK (1 summarizer call(s), 71 msgs out)
+scoping tripwire: ALL PASS

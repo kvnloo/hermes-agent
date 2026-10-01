@@ -1,0 +1,97 @@
+{
+  "arm": "prune-on",
+  "turns": 20,
+  "repo_head": "2090d94da9b0ac6ed6e0fbb2ff77075a102c012b",
+  "repo_tree": "1a299bc7f75303383451f174479aca03df2c27bd",
+  "dirty_files": [],
+  "config_overlay": "compression:\n  proactive_prune_tokens: 48000\n",
+  "provider_reports_cached_input": false,
+  "observed": {
+    "label": "OBSERVED (loopback wire)",
+    "main_requests": 40,
+    "aux_requests": 1,
+    "prefix_breaks": [
+      13,
+      29
+    ],
+    "prefix_break_reasons": [
+      "messages[3] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 00 line 0000 alpha beta gamma delta e'  vs  '",
+      "messages[11] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 02 line 0000 alpha beta gamma delta e'  vs  "
+    ],
+    "projection_passes": {
+      "13": [
+        "call_fake_1",
+        "call_fake_2"
+      ],
+      "29": [
+        "call_fake_3",
+        "call_fake_4",
+        "call_fake_5",
+        "call_fake_6",
+        "call_fake_7",
+        "call_fake_8",
+        "call_fake_9",
+        "call_fake_10"
+      ]
+    },
+    "rows_projected": 10,
+    "unstable_archived_rows": [],
+    "wire_chars_per_request": [
+      7536,
+      31909,
+      32016,
+      56389,
+      56496,
+      80869,
+      80976,
+      105349,
+      105456,
+      129829,
+      129936,
+      154309,
+      154416,
+      131055,
+      131162,
+      155535,
+      155642,
+      180015,
+      180122,
+      204497,
+      204604,
+      228979,
+      229086,
+      253461,
+      253568,
+      277943,
+      278050,
+      302425,
+      302532,
+      135971,
+      136078,
+      160453,
+      160560,
+      184935,
+      185042,
+      209417,
+      209524,
+      233899,
+      234006,
+      258381
+    ],
+    "last_request_chars": 258381,
+    "max_request_chars": 302532,
+    "sum_request_chars": 6702428,
+    "durable_model_view_tool_rows_chars": 237960,
+    "turn_errors": []
+  },
+  "modeled": {
+    "label": "MODELED (chars/4 tokens; perfect prefix cache; write 1.25x, read 0.10x)",
+    "cache_read_ratio": 0.8958,
+    "billed_input_tokens_no_cache": 1675607,
+    "billed_input_token_units_cached": 368373,
+    "reprefill_tokens_after_breaks": 172735
+  },
+  "egress_blocked": [],
+  "wall_s": 3.68,
+  "python": "3.11.14"
+}

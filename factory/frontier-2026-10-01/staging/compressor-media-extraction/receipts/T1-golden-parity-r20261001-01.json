@@ -1,0 +1,111 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compressor-media-extraction",
+ "base_revision": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+ "head_revision": "d2bff3a59edd1a9be5a90f5d84bbded1fbe04e8b",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#80636",
+  "NousResearch/hermes-agent#78645"
+ ],
+ "provenance": "self",
+ "privacy": "public-aggregate",
+ "cost_usd": 0.0,
+ "ai_assistance": "Claude Code (Opus 5.5) ran the experiment and wrote this receipt",
+ "created_at": "2026-10-01T05:21:43-05:00",
+ "spec": {
+  "path": null,
+  "prereg_commit": null,
+  "note": "not pre-registered on claude/ledger (no ledger writes in this run)"
+ },
+ "env": {
+  "host": "<local-host>",
+  "test_python": "3.11.14 (pytest 9.1.1, HERMES_PYTHON)",
+  "nav_python": "3.14.7 separate uv venv (tiktoken 0.14.0, radon 6.0.1)",
+  "sandbox": "none (no bwrap); HOME/HERMES_HOME pointed at scratch test homes; run_tests.sh env -i",
+  "load1_range": "3.4-13 (shared host)"
+ },
+ "id": "golden/r20261001-01",
+ "experiment": "differential output parity of the 14 moved functions over a seeded synthetic corpus (no model, loopback-only socket guard)",
+ "tier": "T1",
+ "label": "OBSERVED",
+ "inputs": {
+  "script_sha256": "5ec7c2954fbbb9166eb5da15be7bc0c3f50dee0fbe11b77a1c632dc2559795d8",
+  "seed": 20261001,
+  "conversations": 400,
+  "python": "3.11.14"
+ },
+ "command": "env -i HOME=$tmp HERMES_HOME=$tmp/.hermes PYTHONPATH=<tree> PYTHONHASHSEED=0 $HERMES_PYTHON regen/golden_parity.py --n 400 --out golden-<tree>.json  (base, head)",
+ "result": {
+  "resolved_from": {
+   "base": "agent.context_compressor",
+   "head": "agent.context_compressor_media"
+  },
+  "calls": 63998,
+  "calls_equal": true,
+  "overall_digest": {
+   "base": "983b2307308ce689e9a4d24fc0f4c4db032df0ab1a63859c3e3c81e921354545",
+   "head": "983b2307308ce689e9a4d24fc0f4c4db032df0ab1a63859c3e3c81e921354545"
+  },
+  "identical": true,
+  "per_function_identical": {
+   "_strip_historical_media": true,
+   "_retire_stale_tool_result_images": true,
+   "evict_stale_outbound_tool_images": true,
+   "_summary_part_text": true,
+   "_image_part_label": true,
+   "_content_has_images": true,
+   "_tool_content_has_images": true,
+   "_image_payload": true,
+   "_strip_images_from_tool_msg": true,
+   "_strip_images_from_content": true,
+   "_is_image_part": true,
+   "_tool_result_parts": true,
+   "_replace_image_parts": true,
+   "_rewritten": true
+  },
+  "corpus_coverage": {
+   "conversations": 400,
+   "with_images": 367,
+   "strip_historical_changed": 258,
+   "retire_rewrote": 162,
+   "outbound_evicted": 59,
+   "outbound_messages_rewritten": 1069
+  },
+  "negative_control": {
+   "mutation": "sibling _image_part_label returns '[img]' for data URLs; evict ignores user-upload blocks (reserved_blocks += 0)",
+   "identical": false,
+   "digests_that_changed": [
+    "evict_stale_outbound_tool_images",
+    "_summary_part_text",
+    "_image_part_label"
+   ]
+  }
+ },
+ "reading": "Every call returned the same value and left its copied input mutated the same way on both trees, so for this corpus the compactor and the send path hand the provider the same bytes (prompt-cache neutral). The corpus is synthetic, not real transcripts.",
+ "raw": [
+  {
+   "path": "raw/golden-base.json",
+   "sha256": "9831e23aad231acd552832413fd510e299f969988da40a0c048bfd4daf2e6abc",
+   "source_sha256": "9831e23aad231acd552832413fd510e299f969988da40a0c048bfd4daf2e6abc"
+  },
+  {
+   "path": "raw/golden-head.json",
+   "sha256": "128c4def86f7618d2d18a4bfee06fc19d64407fba65269f9bd0072a994b59502",
+   "source_sha256": "128c4def86f7618d2d18a4bfee06fc19d64407fba65269f9bd0072a994b59502"
+  },
+  {
+   "path": "raw/golden-head-neg.json",
+   "sha256": "58e9d2e96587833c162013415b1fc011ab72253e2d4f3555079f81b78f838268",
+   "source_sha256": "58e9d2e96587833c162013415b1fc011ab72253e2d4f3555079f81b78f838268"
+  },
+  {
+   "path": "raw/golden-coverage.json",
+   "sha256": "f26d06d78942a431bc89bb6baad29cf0fd117753e1035be59eaec6f10b867511",
+   "source_sha256": "f26d06d78942a431bc89bb6baad29cf0fd117753e1035be59eaec6f10b867511"
+  }
+ ],
+ "verdict": "PASS",
+ "superseded_by": "golden/r20261001-02",
+ "superseded_note": "first build d2bff3a59e on 572e4f4fad; replaced in fix round 1 by c5e8be14b4 on aea969677c (same patch-id 2c92e56f)"
+}

@@ -58,7 +58,7 @@ common = {
         "driver proof.py sha256": sha256(PROOF / "proof.py"),
         "donor": f"refs/fork/fix/computer-use-repeat-input-dedup-current-main@{DONOR} (merge-base {DONOR_MB})",
     },
-    "env": {"host": "groot", "python": "3.11.14 (HERMES_PYTHON=<hermes-home>/hermes-agent/venv/bin/python, "
+    "env": {"host": "<local-host>", "python": "3.11.14 (HERMES_PYTHON=<hermes-home>/hermes-agent/venv/bin/python, "
             "interpreter only)", "sandbox": "run_tests.sh env -i + isolated HOME/HERMES_HOME "
             "(scratchpad/testhome-st-cu-repeat-input-dedup) + in-process loopback-only connect guard; no bwrap",
             "file_retries": 0, "workers": 2},

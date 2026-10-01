@@ -1,0 +1,100 @@
+{
+ "schema": "xf.receipt.v1 (hand-run)",
+ "id": "M01/r20261001-01",
+ "staging": "edit-fuzzy-wrong-region",
+ "tier": "T1 ($0): patch_replace inside the shared-metrics edit probe, mapped with file_edit_fields; no metrics store written",
+ "question": "Are the hermes.file_edit.count outcome and strategy label sets unchanged, and what does the meter record per case?",
+ "command": "per arm: overlay tools/fuzzy_match.py; python receipts/raw/scripts/meter_probe.py <worktree>",
+ "results": {
+  "base": {
+   "cases": {
+    "block_anchor_middle": "applied/block_anchor",
+    "single_line_wrong_token": "applied/context_aware",
+    "single_line_missing_anchor": "applied/context_aware",
+    "single_line_trailing_newline": "applied/context_aware",
+    "block_drift": "applied/block_anchor",
+    "indentation_drift": "applied/whitespace_normalized"
+   },
+   "labels_in_contract": true,
+   "raw": {
+    "path": "receipts/raw/m01/base.json",
+    "sha256": "3230b48e1ffea3e54085cec4b2f86de60e8e5191bd6892b65b1e256658eb94b4"
+   }
+  },
+  "c54575": {
+   "cases": {
+    "block_anchor_middle": "no_match/none",
+    "single_line_wrong_token": "applied/context_aware",
+    "single_line_missing_anchor": "applied/context_aware",
+    "single_line_trailing_newline": "applied/context_aware",
+    "block_drift": "applied/block_anchor",
+    "indentation_drift": "applied/whitespace_normalized"
+   },
+   "labels_in_contract": true,
+   "raw": {
+    "path": "receipts/raw/m01/c54575.json",
+    "sha256": "d496f5e832b64f39de5d5c984ce6e475cb236b3aab27eff4455672a72e33d78d"
+   }
+  },
+  "c125376-leaf": {
+   "cases": {
+    "block_anchor_middle": "applied/block_anchor",
+    "single_line_wrong_token": "no_match/none",
+    "single_line_missing_anchor": "no_match/none",
+    "single_line_trailing_newline": "applied/context_aware",
+    "block_drift": "applied/block_anchor",
+    "indentation_drift": "applied/whitespace_normalized"
+   },
+   "labels_in_contract": true,
+   "raw": {
+    "path": "receipts/raw/m01/c125376-leaf.json",
+    "sha256": "51c9b063b1d622bb52997c14d650d9b0128c71d168c049fe0b00c786d63b0468"
+   }
+  },
+  "both": {
+   "cases": {
+    "block_anchor_middle": "no_match/none",
+    "single_line_wrong_token": "no_match/none",
+    "single_line_missing_anchor": "no_match/none",
+    "single_line_trailing_newline": "applied/context_aware",
+    "block_drift": "applied/block_anchor",
+    "indentation_drift": "applied/whitespace_normalized"
+   },
+   "labels_in_contract": true,
+   "raw": {
+    "path": "receipts/raw/m01/both.json",
+    "sha256": "808788e6f2f71803f0735ee33475b8ea6f5f7dacd2b59965ceada034ac217f24"
+   }
+  },
+  "both+fold": {
+   "cases": {
+    "block_anchor_middle": "no_match/none",
+    "single_line_wrong_token": "no_match/none",
+    "single_line_missing_anchor": "no_match/none",
+    "single_line_trailing_newline": "no_match/none",
+    "block_drift": "applied/block_anchor",
+    "indentation_drift": "applied/whitespace_normalized"
+   },
+   "labels_in_contract": true,
+   "raw": {
+    "path": "receipts/raw/m01/both+fold.json",
+    "sha256": "31a0c7d14934dfa14a8ff1ea05f4c7810a8a7a3b28323639e38d6e021092cd87"
+   }
+  }
+ },
+ "label": "OBSERVED",
+ "label_sets_identical_across_arms": true,
+ "findings": [
+  "Label sets (match_strategy, outcome) and the strategy chain are identical on every arm.",
+  "On main the meter counts every wrong-region edit as applied/block_anchor or applied/context_aware, the same bucket as a legitimate rescue. On both+fold they move to no_match/none; near-miss labels are unchanged."
+ ],
+ "env": {
+  "host": "<local-workstation> (name withheld)",
+  "python_interpreter": "<venv-python> (interpreter only; HOME/HERMES_HOME isolated)",
+  "HOME": "$S/testhome-st-edit-fuzzy-wrong-region",
+  "HERMES_HOME": "$HOME/.hermes",
+  "network": "loopback-only by construction (no provider, no model, direct tool calls)",
+  "sandbox": "process isolation via run_tests.sh clean env; bwrap NOT used (xf executor not built)"
+ },
+ "verdict": "KEEP"
+}

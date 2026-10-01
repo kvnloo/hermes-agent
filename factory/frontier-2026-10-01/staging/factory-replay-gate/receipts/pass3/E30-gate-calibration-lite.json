@@ -1,0 +1,108 @@
+{
+ "schema": "xf.experiment.v1",
+ "tier": "T1",
+ "cost_usd": 0,
+ "label": "OBSERVED",
+ "runner_commit": "c430541d16e639ac6379f2897e888b2890a6ac6c",
+ "pass": "pass3",
+ "specs_base_main": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0 (the specs' pin; not current main)",
+ "command": "specs/run_all.sh <spec ids>  (python -m evals._factory.gate_runner run --work-order specs/<id>.wo.json --repo h.git --scratch <wt>/.xf-runs --python <hermes venv python> --out receipts/<id>.json)",
+ "id": "E30-lite/r20261001T113459Z",
+ "question": "Do the red/green/sabotage/adjacent gates separate a merged upstream fix from later-reverted human patches?",
+ "results": {
+  "positives_four_columns_pass": "1/1",
+  "negatives_refused": "1/2",
+  "false_credit_on_negatives": "1/2",
+  "n": 3
+ },
+ "positives": [
+  {
+   "spec": "E30-P1-8ded06be29",
+   "rev": 1,
+   "receipt": "receipts/E30-P1-8ded06be29.json",
+   "receipt_sha256": "54773653ad21155d02b69d91762dbb3ec8e4ba5e890d747c9bd6ca06cda3495c",
+   "base": "ac0b07597d",
+   "head": "8ded06be29",
+   "pre_registered": "4 columns PASS (ownership not applicable -> PARTIAL)",
+   "verdict": "PARTIAL",
+   "refused": false,
+   "four_columns_pass": true,
+   "gates": {
+    "validity": "PASS",
+    "red": "PASS",
+    "green": "PASS",
+    "sabotage": "PASS",
+    "adjacent": "PASS",
+    "ownership": "PENDING"
+   },
+   "underlying_when_infra": {},
+   "cells": 12,
+   "infra_cells": 0,
+   "egress_blocked": 0,
+   "wall_s": 208.0
+  }
+ ],
+ "negatives": [
+  {
+   "spec": "E30-N1-79dbb1450e",
+   "rev": 1,
+   "receipt": "receipts/E30-N1-79dbb1450e.json",
+   "receipt_sha256": "7e05e8d099bbfe02e249da671fae994c4ac0a0c23f40bd29a168d621eb4edcf9",
+   "base": "652fb2eb57",
+   "head": "79dbb1450e",
+   "pre_registered": "should be refused; a red/green gate is predicted to miss it (false credit)",
+   "verdict": "PARTIAL",
+   "refused": false,
+   "four_columns_pass": true,
+   "gates": {
+    "validity": "PASS",
+    "red": "PASS",
+    "green": "PASS",
+    "sabotage": "PASS",
+    "adjacent": "PASS",
+    "ownership": "PENDING"
+   },
+   "underlying_when_infra": {},
+   "cells": 10,
+   "infra_cells": 0,
+   "egress_blocked": 0,
+   "wall_s": 89.1
+  },
+  {
+   "spec": "F11-N1-noop-revert",
+   "rev": 1,
+   "receipt": "receipts/F11-N1-noop-revert.json",
+   "receipt_sha256": "7caa060b69ae45e76d471340e49f0f45cecf30f6e415180df92fef7aea445b79",
+   "base": "658e6c885d",
+   "head": "354d499511",
+   "pre_registered": "refused at RED (no_repro_on_base)",
+   "verdict": "INFRA",
+   "refused": true,
+   "four_columns_pass": false,
+   "gates": {
+    "validity": "PASS",
+    "red": "INFRA",
+    "green": "INFRA",
+    "sabotage": "N_A",
+    "adjacent": "N_A",
+    "ownership": "PENDING"
+   },
+   "underlying_when_infra": {
+    "red": "FAIL",
+    "green": "PASS"
+   },
+   "cells": 6,
+   "infra_cells": 6,
+   "egress_blocked": 6,
+   "wall_s": 119.6,
+   "pre_registered_gate_match": false,
+   "discrimination": "none: refused only as INFRA (every cell's test resolves openrouter.ai, see FINDING); the pre-registered refusal was RED no_repro_on_base, which the guard-tainted cells cannot certify"
+  }
+ ],
+ "reading": "79dbb1450e (#124792) passes all four columns: its own tests pin the new PATH order, and the reason it was reverted (a later PATH entry shadowing earlier ones for the child's other lookups) has no test. Red/green gates certify the claim a patch tests, not the invariants it breaks elsewhere.",
+ "verdict": "UNINFORMATIVE for the kill switch (n=3 < pre-registered minimum); one concrete false credit recorded",
+ "not_tested": [
+  "evolver.calibrate (20eb166106) synthetic-negative harness",
+  "a reverted-PR battery of >= 10 negatives"
+ ]
+}

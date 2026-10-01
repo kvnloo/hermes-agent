@@ -1,0 +1,30 @@
+{
+  "arm": "carrier-foldin-v1",
+  "endpoint": "https://api.minimax.io/anthropic",
+  "provider": "minimax",
+  "model": "MiniMax-M2.7",
+  "repo_head": "15dff75cc860a14d06414c6bf31459397e1de912",
+  "repo_tree": "b733be3f0d7be6561ca550dd6eb1425f4eae1854",
+  "dirty_files": [
+    "M agent/tool_result_projection.py"
+  ],
+  "agent_api_mode": "anthropic_messages",
+  "agent_anthropic_base_url": "https://api.minimax.io/anthropic",
+  "requests": 24,
+  "errors": [],
+  "proxy_refused": [],
+  "stored_assistant_rows_with_signed_copies": 24,
+  "thinking_blocks_on_wire": 0,
+  "signed_thinking_blocks_on_wire": 0,
+  "replayed_thinking_blocks_audited": 0,
+  "invalidated_thinking_blocks": 0,
+  "tool_results": 12,
+  "rows_archived": 0,
+  "projection_passes": 0,
+  "pass_request_indices": [],
+  "unstable_archived_rows": 0,
+  "sum_request_chars": 3536108,
+  "egress_blocked": [],
+  "wall_s": 2.28,
+  "python": "3.11.14"
+}

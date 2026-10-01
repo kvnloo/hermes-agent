@@ -1,0 +1,152 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compressor-media-extraction",
+ "base_revision": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+ "head_revision": "d2bff3a59edd1a9be5a90f5d84bbded1fbe04e8b",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#80636",
+  "NousResearch/hermes-agent#78645"
+ ],
+ "provenance": "self",
+ "privacy": "public-aggregate",
+ "cost_usd": 0.0,
+ "ai_assistance": "Claude Code (Opus 5.5) ran the experiment and wrote this receipt",
+ "created_at": "2026-10-01T05:21:51-05:00",
+ "spec": {
+  "path": null,
+  "prereg_commit": null,
+  "note": "not pre-registered on claude/ledger (no ledger writes in this run)"
+ },
+ "env": {
+  "host": "<local-host>",
+  "test_python": "3.11.14 (pytest 9.1.1, HERMES_PYTHON)",
+  "nav_python": "3.14.7 separate uv venv (tiktoken 0.14.0, radon 6.0.1)",
+  "sandbox": "none (no bwrap); HOME/HERMES_HOME pointed at scratch test homes; run_tests.sh env -i",
+  "load1_range": "3.4-13 (shared host)"
+ },
+ "id": "E14-parity/r20261001-01",
+ "experiment": "E14 tests/agent + tests/tools pass/fail parity, base vs head",
+ "tier": "T1",
+ "label": "OBSERVED",
+ "inputs": {
+  "harness_blobs_at_base": {
+   "scripts/run_tests.sh": "8fcc4294f48a16968fd68f6d5edad45d74354166",
+   "scripts/run_tests_parallel.py": "21178fd246edd2460d1d6ae4cfb7937262458ffc"
+  },
+  "parity_script_sha256": "bc99048d3cbc402a079a2ee098f9f209c2f86d34e65388074c0547bb4635989b"
+ },
+ "command": "HOME=$S/testhome-st-compressor-media-extraction[-head] HERMES_HOME=$HOME/.hermes HERMES_PYTHON=$HERMES_PYTHON bash scripts/run_tests.sh -j 2 tests/agent/ tests/tools/ -q -rfE  (base worktree, then head worktree); python3 regen/parity_compare.py base.log head.log",
+ "result": {
+  "identical": true,
+  "files_base": 1681,
+  "files_head": 1681,
+  "summary_base": "=== Summary: 1681 files, 20105 tests passed, 16 failed, 131 skipped (100% complete) in 2712.6s (2 workers) ===",
+  "summary_head": "=== Summary: 1681 files, 20105 tests passed, 16 failed, 131 skipped (100% complete) in 2301.0s (2 workers) ===",
+  "failing_files_base": [
+   "tests/agent/lsp/test_workspace.py",
+   "tests/agent/test_relay_atof_cwd.py",
+   "tests/agent/test_relay_runtime_plugins.py",
+   "tests/agent/test_relay_tools.py",
+   "tests/tools/test_browser_use_harness.py",
+   "tests/tools/test_fal_sdk.py",
+   "tests/tools/test_local_env_blocklist.py",
+   "tests/tools/test_microsoft_graph_auth.py",
+   "tests/tools/test_modal_sandbox_fixes.py",
+   "tests/tools/test_plugin_guard.py",
+   "tests/tools/test_tts_deepinfra.py",
+   "tests/tools/test_tts_mistral.py",
+   "tests/tools/test_web_keyless_fallback.py"
+  ],
+  "failing_files_head": [
+   "tests/agent/lsp/test_workspace.py",
+   "tests/agent/test_relay_atof_cwd.py",
+   "tests/agent/test_relay_runtime_plugins.py",
+   "tests/agent/test_relay_tools.py",
+   "tests/tools/test_browser_use_harness.py",
+   "tests/tools/test_fal_sdk.py",
+   "tests/tools/test_local_env_blocklist.py",
+   "tests/tools/test_microsoft_graph_auth.py",
+   "tests/tools/test_modal_sandbox_fixes.py",
+   "tests/tools/test_plugin_guard.py",
+   "tests/tools/test_tts_deepinfra.py",
+   "tests/tools/test_tts_mistral.py",
+   "tests/tools/test_web_keyless_fallback.py"
+  ],
+  "failing_ids_base": [
+   "tests/agent/lsp/test_workspace.py::test_resolve_workspace_for_file_survives_deleted_cwd",
+   "tests/agent/test_relay_atof_cwd.py::test_run_conversation_exports_session_and_turn_cwds",
+   "tests/agent/test_relay_runtime_plugins.py::test_real_binding_discovers_user_and_ignores_project_config",
+   "tests/agent/test_relay_runtime_plugins.py::test_real_binding_explicit_config_replaces_user_and_ignores_project",
+   "tests/agent/test_relay_runtime_plugins.py::test_real_binding_hands_dynamic_records_to_relay_and_fails_open_on_rejection",
+   "tests/agent/test_relay_runtime_plugins.py::test_real_binding_keeps_two_profile_trajectories_separate_in_shared_exporters",
+   "tests/agent/test_relay_runtime_plugins.py::test_real_binding_leaves_foreign_plugin_host_unchanged",
+   "tests/agent/test_relay_tools.py::test_request_rewrite_reaches_authorized_callback_once",
+   "tests/tools/test_browser_use_harness.py::test_harness_runs_on_an_interpreter_without_its_own_site_packages",
+   "tests/tools/test_fal_sdk.py",
+   "tests/tools/test_local_env_blocklist.py::test_runtime_provenance_is_independent_of_aliases_and_virtual_env[True]",
+   "tests/tools/test_microsoft_graph_auth.py::TestMicrosoftGraphTokenProvider::test_concurrent_calls_share_one_token_fetch[trio]",
+   "tests/tools/test_modal_sandbox_fixes.py::TestDockerHostBindApproval::test_host_bound_docker_requires_approval",
+   "tests/tools/test_plugin_guard.py::TestInstallIntegration::test_caution_plugin_accepted_via_callback[desktop/plugin.js-const",
+   "tests/tools/test_plugin_guard.py::TestInstallIntegration::test_caution_plugin_accepted_via_callback[helper.py-eval('1",
+   "tests/tools/test_plugin_guard.py::TestInstallIntegration::test_clean_plugin_installs",
+   "tests/tools/test_plugin_guard.py::TestInstallIntegration::test_dangerous_plugin_is_blocked",
+   "tests/tools/test_plugin_guard.py::TestInstallIntegration::test_dashboard_install_reports_scan_block",
+   "tests/tools/test_plugin_guard.py::TestInstallIntegration::test_scan_disabled_via_config",
+   "tests/tools/test_tts_deepinfra.py::test_unselected_cloud_credentials_do_not_expose_edge_tool",
+   "tests/tools/test_tts_mistral.py::TestCheckTtsRequirementsMistral::test_mistral_key_missing_returns_false",
+   "tests/tools/test_web_keyless_fallback.py::TestProviderRouting::test_keyless_disabled_falls_through_to_key_error",
+   "tests/tools/test_web_keyless_fallback.py::TestProviderRouting::test_tier_paid_forces_keyed_without_key"
+  ],
+  "failing_ids_head": [
+   "tests/agent/lsp/test_workspace.py::test_resolve_workspace_for_file_survives_deleted_cwd",
+   "tests/agent/test_relay_atof_cwd.py::test_run_conversation_exports_session_and_turn_cwds",
+   "tests/agent/test_relay_runtime_plugins.py::test_real_binding_discovers_user_and_ignores_project_config",
+   "tests/agent/test_relay_runtime_plugins.py::test_real_binding_explicit_config_replaces_user_and_ignores_project",
+   "tests/agent/test_relay_runtime_plugins.py::test_real_binding_hands_dynamic_records_to_relay_and_fails_open_on_rejection",
+   "tests/agent/test_relay_runtime_plugins.py::test_real_binding_keeps_two_profile_trajectories_separate_in_shared_exporters",
+   "tests/agent/test_relay_runtime_plugins.py::test_real_binding_leaves_foreign_plugin_host_unchanged",
+   "tests/agent/test_relay_tools.py::test_request_rewrite_reaches_authorized_callback_once",
+   "tests/tools/test_browser_use_harness.py::test_harness_runs_on_an_interpreter_without_its_own_site_packages",
+   "tests/tools/test_fal_sdk.py",
+   "tests/tools/test_local_env_blocklist.py::test_runtime_provenance_is_independent_of_aliases_and_virtual_env[True]",
+   "tests/tools/test_microsoft_graph_auth.py::TestMicrosoftGraphTokenProvider::test_concurrent_calls_share_one_token_fetch[trio]",
+   "tests/tools/test_modal_sandbox_fixes.py::TestDockerHostBindApproval::test_host_bound_docker_requires_approval",
+   "tests/tools/test_plugin_guard.py::TestInstallIntegration::test_caution_plugin_accepted_via_callback[desktop/plugin.js-const",
+   "tests/tools/test_plugin_guard.py::TestInstallIntegration::test_caution_plugin_accepted_via_callback[helper.py-eval('1",
+   "tests/tools/test_plugin_guard.py::TestInstallIntegration::test_clean_plugin_installs",
+   "tests/tools/test_plugin_guard.py::TestInstallIntegration::test_dangerous_plugin_is_blocked",
+   "tests/tools/test_plugin_guard.py::TestInstallIntegration::test_dashboard_install_reports_scan_block",
+   "tests/tools/test_plugin_guard.py::TestInstallIntegration::test_scan_disabled_via_config",
+   "tests/tools/test_tts_deepinfra.py::test_unselected_cloud_credentials_do_not_expose_edge_tool",
+   "tests/tools/test_tts_mistral.py::TestCheckTtsRequirementsMistral::test_mistral_key_missing_returns_false",
+   "tests/tools/test_web_keyless_fallback.py::TestProviderRouting::test_keyless_disabled_falls_through_to_key_error",
+   "tests/tools/test_web_keyless_fallback.py::TestProviderRouting::test_tier_paid_forces_keyed_without_key"
+  ],
+  "status_differs": [],
+  "per_file_counts_differ": [],
+  "failing_only_base": [],
+  "failing_only_head": []
+ },
+ "raw": [
+  {
+   "path": "raw/base-agent-tools.log.gz",
+   "sha256": "ad53aaed07d44c69f3f948daa0b23a2e8e173386088d30c87690c14f829f8abc",
+   "source_sha256": "083a815b9f6b55b51dbd9d93676c15c5a8a392a6482cc42d4599f9e1fd075102"
+  },
+  {
+   "path": "raw/head-agent-tools.log.gz",
+   "sha256": "1e8d28db7aefceea440365fbe03871e2f4aa55169990ca698e393d40b2a103ec",
+   "source_sha256": "6b0b7b6353c2453c984b87c798431c59d0286d24ed7c35955b24a763bdb513bc"
+  },
+  {
+   "path": "raw/parity.json",
+   "sha256": "e539388feb9a56fd74875045269f888bcbf91362a2cecb0ed44cc4ecde3704c8",
+   "source_sha256": "e539388feb9a56fd74875045269f888bcbf91362a2cecb0ed44cc4ecde3704c8"
+  }
+ ],
+ "verdict": "PASS",
+ "privacy_scrub": "fix round 1 (2026-10-01): absolute local paths and the local user name were replaced with placeholders ($W/<tree>, $S, $HERMES_PYTHON, $HERMES_VENV, <uv>, <pytest-tmp>, pytest-of-<user>, ~). raw[].sha256 is the file as shipped after that scrub; raw[].source_sha256 is the pre-scrub original.",
+ "superseded_by": "E14-parity/r20261001-02",
+ "superseded_note": "first build d2bff3a59e on 572e4f4fad; replaced in fix round 1 by c5e8be14b4 on aea969677c (same patch-id 2c92e56f)"
+}

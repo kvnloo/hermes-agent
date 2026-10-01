@@ -1,0 +1,138 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compressor-media-extraction",
+ "base_revision": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+ "head_revision": "d2bff3a59edd1a9be5a90f5d84bbded1fbe04e8b",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#80636",
+  "NousResearch/hermes-agent#78645"
+ ],
+ "provenance": "self",
+ "privacy": "public-aggregate",
+ "cost_usd": 0.0,
+ "ai_assistance": "Claude Code (Opus 5.5) ran the experiment and wrote this receipt",
+ "created_at": "2026-10-01T05:21:43-05:00",
+ "spec": {
+  "path": null,
+  "prereg_commit": null,
+  "note": "not pre-registered on claude/ledger (no ledger writes in this run)"
+ },
+ "env": {
+  "host": "<local-host>",
+  "test_python": "3.11.14 (pytest 9.1.1, HERMES_PYTHON)",
+  "nav_python": "3.14.7 separate uv venv (tiktoken 0.14.0, radon 6.0.1)",
+  "sandbox": "none (no bwrap); HOME/HERMES_HOME pointed at scratch test homes; run_tests.sh env -i",
+  "load1_range": "3.4-13 (shared host)"
+ },
+ "id": "E14-static/r20261001-01",
+ "experiment": "E14 static_metrics (first-party source, tests excluded)",
+ "tier": "T0",
+ "label": "OBSERVED",
+ "inputs": {
+  "harness_blobs_at_base": {
+   "evals/codebase_navigability/static_metrics.py": "25fb1b3cd6f014608579f4a534a9565ceac1c7c0"
+  },
+  "trees": {
+   "base": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+   "head": "d2bff3a59edd1a9be5a90f5d84bbded1fbe04e8b"
+  }
+ },
+ "command": "NAV_OUT=out $NAVVENV/bin/python $W/head/evals/codebase_navigability/static_metrics.py $W/base base ; same for head",
+ "result": {
+  "delta": {
+   "files": {
+    "base": 2083,
+    "head": 2084
+   },
+   "lines": {
+    "base": 831080,
+    "head": 831101
+   },
+   "code": {
+    "base": 565499,
+    "head": 565509
+   },
+   "docstring": {
+    "base": 94036,
+    "head": 94043
+   },
+   "import_edges": {
+    "base": 10731,
+    "head": 10734
+   },
+   "largest_cycle": {
+    "base": 1130,
+    "head": 1131
+   },
+   "modules_in_cycles": {
+    "base": 1172,
+    "head": 1173
+   }
+  },
+  "unchanged": {
+   "comment": 57972,
+   "functions": 41122,
+   "files_gt_2000": 49,
+   "files_gt_5000": 7,
+   "funcs_gt_300": 5,
+   "func_len_max": 612,
+   "elif_chains_ge4": 191,
+   "import_cycles": 11,
+   "radon_cc_avg": 4.94,
+   "radon_cc_gt_30": 185,
+   "radon_mi_avg": 51.34
+  },
+  "facade_lines": {
+   "base": 5753,
+   "head": 5531
+  },
+  "sibling_lines": 243,
+  "largest_files_head_top6": [
+   [
+    8255,
+    "agent/auxiliary_client.py"
+   ],
+   [
+    7470,
+    "plugins/platforms/discord/adapter.py"
+   ],
+   [
+    7380,
+    "plugins/platforms/telegram/adapter.py"
+   ],
+   [
+    6925,
+    "plugins/platforms/slack/adapter.py"
+   ],
+   [
+    6154,
+    "gateway/run.py"
+   ],
+   [
+    5744,
+    "hermes_cli/gateway.py"
+   ]
+  ]
+ },
+ "reading": "One file added (+21 lines of header/imports). agent/context_compressor.py drops 5,753 -> 5,531 lines but stays above both the 2,000 and 5,000 thresholds, so files_gt_2000/files_gt_5000 do not move. The sibling joins the largest import cycle (1130 -> 1131 modules) through agent.turn_context, the module that owns drop_stale_api_content; the README predicts this for splits. parse_all_s is wall time on a loaded host and is not compared.",
+ "raw": [
+  {
+   "path": "raw/base.static.json",
+   "sha256": "4e38e59d2645a383d99ebd71a3b4e44e09da478f0f62a803a6c007a11c8ef203",
+   "source_sha256": "b532668e65b00613acbe59017c172ae89992a3d2ab46d9debbc99be3ac4fe6c6"
+  },
+  {
+   "path": "raw/head.static.json",
+   "sha256": "fdd2af4d21431a4f6c2b13dec1bba35c9257c1cc38d32fb3d67d19e1c351884f",
+   "source_sha256": "d223fa1c5758e4e7df51d89aaad16966403b969e2cbb2d577883883f1e27468f"
+  }
+ ],
+ "verdict": "KEEP (shape change as expected; no regression in cc/mi/func metrics)",
+ "not_tested": [
+  "runtime_bench.py (runs the hermes CLI; needs OD-2)"
+ ],
+ "privacy_scrub": "fix round 1 (2026-10-01): absolute local paths and the local user name were replaced with placeholders ($W/<tree>, $S, $HERMES_PYTHON, $HERMES_VENV, <uv>, <pytest-tmp>, pytest-of-<user>, ~). raw[].sha256 is the file as shipped after that scrub; raw[].source_sha256 is the pre-scrub original.",
+ "superseded_by": "E14-static/r20261001-02",
+ "superseded_note": "first build d2bff3a59e on 572e4f4fad; replaced in fix round 1 by c5e8be14b4 on aea969677c (same patch-id 2c92e56f)"
+}

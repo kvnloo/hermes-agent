@@ -1,0 +1,136 @@
+{
+ "main": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+ "commits": {
+  "4a64d42f9b": {
+   "sha": "4a64d42f9b70698295d07ded55759c48360824b9",
+   "author": "Teknium",
+   "authored": "2026-09-02T13:25:15-07:00",
+   "committed": "2026-09-02T13:29:38-07:00",
+   "subject": "refactor(agent): extract micro-compaction into agent/micro_compaction.py",
+   "numstat": [
+    "2\t580\tagent/context_compressor.py",
+    "629\t0\tagent/micro_compaction.py"
+   ],
+   "on_main_first_parent": false,
+   "ancestor_of_main": true,
+   "reachable_before_102117_merge_via_first_parent": false,
+   "github_associated_prs": []
+  },
+  "77086b1439": {
+   "sha": "77086b1439168950a10bdf4b63c59d6b16adf764",
+   "author": "Teknium",
+   "authored": "2026-09-07T02:10:58-07:00",
+   "committed": "2026-09-07T05:59:08-07:00",
+   "subject": "refactor: isolate compression summary dispatch",
+   "numstat": [
+    "2\t18\tagent/context_compressor.py",
+    "30\t0\tagent/context_compressor_summary.py"
+   ],
+   "on_main_first_parent": true,
+   "ancestor_of_main": true,
+   "reachable_before_102117_merge_via_first_parent": false,
+   "github_associated_prs": [
+    104920
+   ]
+  },
+  "806d2c3274": {
+   "sha": "806d2c32746cea026622b08053b631dfbdbd7349",
+   "author": "Teknium",
+   "authored": "2026-09-02T18:24:29-07:00",
+   "committed": "2026-09-02T18:24:29-07:00",
+   "subject": "refactor(agent/context_compressor): dedupe image-part stripping, summarizer one-liners into dispatch table, alias coerce helper",
+   "numstat": [
+    "39\t109\tagent/context_compressor.py"
+   ],
+   "on_main_first_parent": false,
+   "ancestor_of_main": true,
+   "reachable_before_102117_merge_via_first_parent": false,
+   "github_associated_prs": []
+  },
+  "d3b93c45c9": {
+   "sha": "d3b93c45c955a8c2c9324b20e589651cdeb4172b",
+   "author": "Teknium",
+   "authored": "2026-09-02T19:49:48-07:00",
+   "committed": "2026-09-02T19:49:48-07:00",
+   "subject": "refactor(agent/context_compressor): flatten historical-media strip, summarizer part/tool-call rendering, orphan sanitizer",
+   "numstat": [
+    "72\t102\tagent/context_compressor.py"
+   ],
+   "on_main_first_parent": false,
+   "ancestor_of_main": true,
+   "reachable_before_102117_merge_via_first_parent": false,
+   "github_associated_prs": []
+  }
+ },
+ "facade_lines": {
+  "63279301bc": {
+   "label": "main just before the #102117 merge",
+   "lines": 9246
+  },
+  "d3630f8532": {
+   "label": "#102117 merge commit",
+   "lines": 4918
+  },
+  "77086b1439": {
+   "label": "77086b1439",
+   "lines": 4906
+  },
+  "aea969677c": {
+   "label": "base",
+   "lines": 5753
+  },
+  "44a1ce9724": {
+   "label": "main, fix round 3",
+   "lines": 5753
+  }
+ },
+ "prs": {
+  "102117": {
+   "author": "teknium1",
+   "state": "closed",
+   "merged": true,
+   "merged_by": "teknium1",
+   "created_at": "2026-09-03T11:19:15Z",
+   "merged_at": "2026-09-04T12:50:53Z",
+   "closed_at": "2026-09-04T12:50:53Z",
+   "merge_commit_sha": "d3630f853239e8c41ce7201e09fbdf39bcbc5431",
+   "title": "refactor: whole-codebase simplification \u2014 \u221234% source LOC, every god file decomposed, zero behavior change"
+  },
+  "104920": {
+   "author": "teknium1",
+   "state": "closed",
+   "merged": true,
+   "merged_by": "teknium1",
+   "created_at": "2026-09-07T09:29:24Z",
+   "merged_at": "2026-09-07T12:59:09Z",
+   "closed_at": "2026-09-07T12:59:09Z",
+   "merge_commit_sha": "95ce1af77218b7656c8fc757c65675176f6fd203",
+   "title": "fix: legacy context engines keep compressing (salvage #104214)"
+  },
+  "80628": {
+   "author": "andrexibiza",
+   "state": "closed",
+   "merged": false,
+   "merged_by": null,
+   "created_at": "2026-08-06T22:49:38Z",
+   "merged_at": null,
+   "closed_at": "2026-09-02T10:06:56Z",
+   "merge_commit_sha": "93c648217d7d82a6cc668a00ea98ef390dfecefb",
+   "title": "refactor(context_compressor): extract skill-prune/ghost-skill cluster (LB2)"
+  }
+ },
+ "comments": {
+  "5727991843": {
+   "user": "teknium1",
+   "created_at": "2026-09-18T09:23:43Z",
+   "issue_url": "NousResearch/hermes-agent/issues/113887",
+   "html_url": "https://github.com/NousResearch/hermes-agent/issues/113887#issuecomment-5727991843"
+  },
+  "5507897412": {
+   "user": "teknium1",
+   "created_at": "2026-09-02T10:06:54Z",
+   "issue_url": "NousResearch/hermes-agent/issues/80628",
+   "html_url": "https://github.com/NousResearch/hermes-agent/pull/80628#issuecomment-5507897412"
+  }
+ }
+}

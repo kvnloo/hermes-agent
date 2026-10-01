@@ -1,0 +1,9 @@
+[ 13.3% |     6/~45 | ✓6 | ✗0] ✓ tests/agent/test_compressor_stale_tool_images.py (6✓, 0.9s)
+[ 46.7% |    21/~45 | ✓21 | ✗ 0] ✓ tests/agent/test_compressor_historical_media.py (15✓, 1.6s)
+[ 60.0% |    27/~45 | ✓27 | ✗ 0] ✓ tests/agent/test_compressor_zero_user_guard.py (6✓, 1.5s)
+[ 64.4% |    29/~45 | ✓39 | ✗ 0] ✓ tests/agent/test_image_eviction_policy.py (12✓, 1.0s)
+[ 73.3% |    33/~45 | ✓45 | ✗ 0] ✓ tests/agent/test_protected_tail_pressure.py (6✓, 1.1s)
+[100.0% |    45/~45 | ✓57 | ✗ 0] ✓ tests/agent/test_outbound_stale_vision.py (12✓, 2.4s)
+=== Summary: 6 files, 57 tests passed, 0 failed (100% complete) in 4.9s (2 workers) ===
+rep2 === Summary: 6 files, 57 tests passed, 0 failed (100% complete) in 5.1s (2 workers) ===
+rep3 === Summary: 6 files, 57 tests passed, 0 failed (100% complete) in 4.5s (2 workers) ===

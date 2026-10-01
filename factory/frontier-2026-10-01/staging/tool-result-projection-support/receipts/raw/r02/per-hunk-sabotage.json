@@ -1,0 +1,277 @@
+{
+  "label": "OBSERVED (scripts/run_tests.sh -j 2, one run per hunk)",
+  "main": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+  "arm": "9d3381904e98effa23dba675906dc848abd2e4db",
+  "gate_patch": "foldin-preserved-thinking-gate-v2.diff",
+  "baseline": {
+    "failed": [],
+    "errors": [],
+    "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 11.5s (2 workers) ===",
+    "first_error_line": "",
+    "wall_s": 13.5
+  },
+  "hunks": [
+    {
+      "n": 1,
+      "file": "agent/agent_init.py",
+      "hunk": "@@ -350,6 +350,17 @@ def _parse_config_int(raw: Any, default: int) -> int:",
+      "added_lines": 11,
+      "reverted": true,
+      "failed": [
+        "A",
+        "B"
+      ],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 10.9s (2 workers) ===",
+      "first_error_line": "E       NameError: name '_parse_config_ratio' is not defined",
+      "wall_s": 11.8,
+      "red_again": true
+    },
+    {
+      "n": 2,
+      "file": "agent/agent_init.py",
+      "hunk": "@@ -1575,6 +1586,20 @@ def _parse_compression_config(agent, _agent_cfg) -> CompressionSettings:",
+      "added_lines": 14,
+      "reverted": true,
+      "failed": [
+        "A",
+        "B"
+      ],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 10.0s (2 workers) ===",
+      "first_error_line": "E           AttributeError: 'CompressionSettings' object has no attribute 'tool_result_projection'",
+      "wall_s": 11.7,
+      "red_again": true
+    },
+    {
+      "n": 3,
+      "file": "agent/agent_init.py",
+      "hunk": "@@ -2012,6 +2037,10 @@ def _build_context_engine(agent, _agent_cfg, cs, _custom_providers, _effective_c",
+      "added_lines": 4,
+      "reverted": true,
+      "failed": [
+        "A"
+      ],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 19.8s (2 workers) ===",
+      "first_error_line": "E       AssertionError: no tool result was ever archived on the wire: 28 requests, 14 tool rows",
+      "wall_s": 20.3,
+      "red_again": true
+    },
+    {
+      "n": 4,
+      "file": "agent/context_compressor.py",
+      "hunk": "@@ -2776,6 +2776,11 @@ class ContextCompressor(SummaryDispatchMixin, MicroCompactionMixin, ContextEngin",
+      "added_lines": 5,
+      "reverted": true,
+      "failed": [
+        "A",
+        "B"
+      ],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 9.9s (2 workers) ===",
+      "first_error_line": "E           TypeError: ContextCompressor.__init__() got an unexpected keyword argument 'tool_result_projection'",
+      "wall_s": 10.9,
+      "red_again": true
+    },
+    {
+      "n": 5,
+      "file": "agent/context_compressor.py",
+      "hunk": "@@ -2804,6 +2809,19 @@ class ContextCompressor(SummaryDispatchMixin, MicroCompactionMixin, ContextEngin",
+      "added_lines": 13,
+      "reverted": true,
+      "failed": [
+        "A"
+      ],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 20.2s (2 workers) ===",
+      "first_error_line": "E       AssertionError: no tool result was ever archived on the wire: 28 requests, 14 tool rows",
+      "wall_s": 20.8,
+      "red_again": true
+    },
+    {
+      "n": 6,
+      "file": "agent/tool_result_projection.py",
+      "hunk": "@@ -0,0 +1,736 @@",
+      "added_lines": 736,
+      "reverted": true,
+      "failed": [
+        "A",
+        "B"
+      ],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 11.6s (2 workers) ===",
+      "first_error_line": "E       ModuleNotFoundError: No module named 'agent.tool_result_projection'",
+      "wall_s": 12.4,
+      "red_again": true
+    },
+    {
+      "n": 7,
+      "file": "agent/turn_request_assembly.py",
+      "hunk": "@@ -187,6 +187,15 @@ def assemble_api_request(",
+      "added_lines": 9,
+      "reverted": true,
+      "failed": [
+        "A"
+      ],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 20.5s (2 workers) ===",
+      "first_error_line": "E       AssertionError: no tool result was ever archived on the wire: 28 requests, 14 tool rows",
+      "wall_s": 21.0,
+      "red_again": true
+    },
+    {
+      "n": 8,
+      "file": "cli-config.yaml.example",
+      "hunk": "@@ -830,6 +830,40 @@ compression:",
+      "added_lines": 34,
+      "reverted": true,
+      "failed": [],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 10.0s (2 workers) ===",
+      "first_error_line": "",
+      "wall_s": 10.9,
+      "red_again": false
+    },
+    {
+      "n": 9,
+      "file": "gateway/run.py",
+      "hunk": "@@ -4410,6 +4410,10 @@ class GatewayRunner(",
+      "added_lines": 4,
+      "reverted": true,
+      "failed": [],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 10.1s (2 workers) ===",
+      "first_error_line": "",
+      "wall_s": 11.9,
+      "red_again": false
+    },
+    {
+      "n": 10,
+      "file": "hermes_cli/config_defaults.py",
+      "hunk": "@@ -621,6 +621,30 @@ DEFAULT_CONFIG = {",
+      "added_lines": 24,
+      "reverted": true,
+      "failed": [],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 9.7s (2 workers) ===",
+      "first_error_line": "",
+      "wall_s": 10.3,
+      "red_again": false
+    },
+    {
+      "n": 11,
+      "file": "scripts/bench_tool_result_projection.py",
+      "hunk": "@@ -0,0 +1,159 @@",
+      "added_lines": 159,
+      "reverted": true,
+      "failed": [],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 10.0s (2 workers) ===",
+      "first_error_line": "",
+      "wall_s": 10.5,
+      "red_again": false
+    },
+    {
+      "n": 12,
+      "file": "tools/tool_result_storage.py",
+      "hunk": "@@ -290,6 +290,79 @@ def extract_persisted_path(content: str) -> str | None:",
+      "added_lines": 73,
+      "reverted": true,
+      "failed": [
+        "A"
+      ],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 23.2s (2 workers) ===",
+      "first_error_line": "E       AssertionError: no tool result was ever archived on the wire: 28 requests, 14 tool rows",
+      "wall_s": 24.3,
+      "red_again": true
+    },
+    {
+      "n": 13,
+      "file": "tui_gateway/session_compression.py",
+      "hunk": "@@ -78,6 +78,8 @@ _COMPRESSION_INT_KEYS = (",
+      "added_lines": 2,
+      "reverted": true,
+      "failed": [],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 9.7s (2 workers) ===",
+      "first_error_line": "",
+      "wall_s": 10.3,
+      "red_again": false
+    },
+    {
+      "n": 14,
+      "file": "tui_gateway/session_compression.py",
+      "hunk": "@@ -119,6 +121,10 @@ def _apply_live_compression_config(agent: Any, cfg: dict | None) -> None:",
+      "added_lines": 4,
+      "reverted": true,
+      "failed": [],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 10.2s (2 workers) ===",
+      "first_error_line": "",
+      "wall_s": 10.7,
+      "red_again": false
+    },
+    {
+      "n": 15,
+      "file": "tui_gateway/session_compression.py",
+      "hunk": "@@ -127,6 +133,12 @@ def _apply_live_compression_config(agent: Any, cfg: dict | None) -> None:",
+      "added_lines": 6,
+      "reverted": true,
+      "failed": [],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 10.0s (2 workers) ===",
+      "first_error_line": "",
+      "wall_s": 10.5,
+      "red_again": false
+    },
+    {
+      "n": 16,
+      "file": "website/docs/user-guide/configuration.md",
+      "hunk": "@@ -1013,6 +1013,10 @@ compression:",
+      "added_lines": 4,
+      "reverted": true,
+      "failed": [],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 9.9s (2 workers) ===",
+      "first_error_line": "",
+      "wall_s": 10.4,
+      "red_again": false
+    },
+    {
+      "n": 17,
+      "file": "website/docs/user-guide/configuration.md",
+      "hunk": "@@ -1056,6 +1060,16 @@ The value is the **first rung** of an escalating ladder, not a fixed interval: c",
+      "added_lines": 10,
+      "reverted": true,
+      "failed": [],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 10.0s (2 workers) ===",
+      "first_error_line": "",
+      "wall_s": 11.2,
+      "red_again": false
+    }
+  ],
+  "pinned": [
+    "agent/agent_init.py @@ -350,6 +350,17 @@ def _parse_config_int(raw: Any, default: int) -> int:",
+    "agent/agent_init.py @@ -1575,6 +1586,20 @@ def _parse_compression_config(agent, _agent_cfg) -> CompressionSettings:",
+    "agent/agent_init.py @@ -2012,6 +2037,10 @@ def _build_context_engine(agent, _agent_cfg, cs, _custom_providers, _effective_c",
+    "agent/context_compressor.py @@ -2776,6 +2776,11 @@ class ContextCompressor(SummaryDispatchMixin, MicroCompactionMixin, ContextEngin",
+    "agent/context_compressor.py @@ -2804,6 +2809,19 @@ class ContextCompressor(SummaryDispatchMixin, MicroCompactionMixin, ContextEngin",
+    "agent/tool_result_projection.py @@ -0,0 +1,736 @@",
+    "agent/turn_request_assembly.py @@ -187,6 +187,15 @@ def assemble_api_request(",
+    "tools/tool_result_storage.py @@ -290,6 +290,79 @@ def extract_persisted_path(content: str) -> str | None:"
+  ],
+  "unpinned": [
+    "cli-config.yaml.example @@ -830,6 +830,40 @@ compression:",
+    "gateway/run.py @@ -4410,6 +4410,10 @@ class GatewayRunner(",
+    "hermes_cli/config_defaults.py @@ -621,6 +621,30 @@ DEFAULT_CONFIG = {",
+    "scripts/bench_tool_result_projection.py @@ -0,0 +1,159 @@",
+    "tui_gateway/session_compression.py @@ -78,6 +78,8 @@ _COMPRESSION_INT_KEYS = (",
+    "tui_gateway/session_compression.py @@ -119,6 +121,10 @@ def _apply_live_compression_config(agent: Any, cfg: dict | None) -> None:",
+    "tui_gateway/session_compression.py @@ -127,6 +133,12 @@ def _apply_live_compression_config(agent: Any, cfg: dict | None) -> None:",
+    "website/docs/user-guide/configuration.md @@ -1013,6 +1013,10 @@ compression:",
+    "website/docs/user-guide/configuration.md @@ -1056,6 +1060,16 @@ The value is the **first rung** of an escalating ladder, not a fixed interval: c"
+  ]
+}

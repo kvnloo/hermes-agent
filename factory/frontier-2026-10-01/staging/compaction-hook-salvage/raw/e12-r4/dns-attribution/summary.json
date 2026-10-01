@@ -1,0 +1,101 @@
+{
+ "base-replay_gates.egress.stacks": {
+  "total": 0,
+  "by_thread_file_and_source": {}
+ },
+ "base-ab_checkpoint_preflight.egress.stacks": {
+  "total": 0,
+  "by_thread_file_and_source": {}
+ },
+ "base-test_region_scoping.egress.stacks": {
+  "total": 2,
+  "by_thread_file_and_source": {
+   "dns | thread=MainThread | evals/compaction/test_region_scoping.py | OpenRouter model-metadata GET (fetch_model_metadata)": 2
+  }
+ },
+ "base-adjacent.egress.stacks": {
+  "total": 231,
+  "by_thread_file_and_source": {
+   "dns | thread=MainThread | tests/agent/test_compression_attempt_lifecycle.py | OpenRouter model-metadata GET (fetch_model_metadata)": 10,
+   "dns | thread=MainThread | tests/agent/test_compression_attempt_lifecycle.py | OpenRouter video catalog GET (tool definitions build)": 18,
+   "dns | thread=MainThread | tests/agent/test_compression_boundary_hook.py | OpenRouter model-metadata GET (fetch_model_metadata)": 7,
+   "dns | thread=MainThread | tests/agent/test_compression_boundary_hook.py | OpenRouter video catalog GET (tool definitions build)": 14,
+   "dns | thread=MainThread | tests/agent/test_compression_commit_fence_race.py | OpenRouter model-metadata GET (fetch_model_metadata)": 2,
+   "dns | thread=MainThread | tests/agent/test_compression_commit_fence_race.py | OpenRouter video catalog GET (tool definitions build)": 4,
+   "dns | thread=MainThread | tests/agent/test_compression_persistence.py | OpenRouter model-metadata GET (fetch_model_metadata)": 6,
+   "dns | thread=MainThread | tests/agent/test_compression_persistence.py | OpenRouter video catalog GET (tool definitions build)": 12,
+   "dns | thread=MainThread | tests/agent/test_compression_rotation_state.py | OpenRouter model-metadata GET (fetch_model_metadata)": 40,
+   "dns | thread=MainThread | tests/agent/test_compression_rotation_state.py | OpenRouter video catalog GET (tool definitions build)": 72,
+   "dns | thread=MainThread | tests/agent/test_conversation_compression_manual.py | OpenRouter model-metadata GET (fetch_model_metadata)": 12,
+   "dns | thread=MainThread | tests/agent/test_conversation_compression_manual.py | OpenRouter video catalog GET (tool definitions build)": 22,
+   "dns | thread=MainThread | tests/agent/test_pre_compress_memory_context_handoff.py | OpenRouter model-metadata GET (fetch_model_metadata)": 5,
+   "dns | thread=openrouter-prewarm | (no test frame: openrouter-prewarm thread) | OpenRouter model-metadata GET (fetch_model_metadata)": 7
+  }
+ },
+ "c53806-foldin-replay_gates.egress.stacks": {
+  "total": 0,
+  "by_thread_file_and_source": {}
+ },
+ "c53806-foldin-ab_checkpoint_preflight.egress.stacks": {
+  "total": 0,
+  "by_thread_file_and_source": {}
+ },
+ "c53806-foldin-test_region_scoping.egress.stacks": {
+  "total": 2,
+  "by_thread_file_and_source": {
+   "dns | thread=MainThread | evals/compaction/test_region_scoping.py | OpenRouter model-metadata GET (fetch_model_metadata)": 2
+  }
+ },
+ "c53806-foldin-adjacent.egress.stacks": {
+  "total": 231,
+  "by_thread_file_and_source": {
+   "dns | thread=MainThread | tests/agent/test_compression_attempt_lifecycle.py | OpenRouter model-metadata GET (fetch_model_metadata)": 10,
+   "dns | thread=MainThread | tests/agent/test_compression_attempt_lifecycle.py | OpenRouter video catalog GET (tool definitions build)": 18,
+   "dns | thread=MainThread | tests/agent/test_compression_boundary_hook.py | OpenRouter model-metadata GET (fetch_model_metadata)": 7,
+   "dns | thread=MainThread | tests/agent/test_compression_boundary_hook.py | OpenRouter video catalog GET (tool definitions build)": 14,
+   "dns | thread=MainThread | tests/agent/test_compression_commit_fence_race.py | OpenRouter model-metadata GET (fetch_model_metadata)": 2,
+   "dns | thread=MainThread | tests/agent/test_compression_commit_fence_race.py | OpenRouter video catalog GET (tool definitions build)": 4,
+   "dns | thread=MainThread | tests/agent/test_compression_persistence.py | OpenRouter model-metadata GET (fetch_model_metadata)": 6,
+   "dns | thread=MainThread | tests/agent/test_compression_persistence.py | OpenRouter video catalog GET (tool definitions build)": 12,
+   "dns | thread=MainThread | tests/agent/test_compression_rotation_state.py | OpenRouter model-metadata GET (fetch_model_metadata)": 40,
+   "dns | thread=MainThread | tests/agent/test_compression_rotation_state.py | OpenRouter video catalog GET (tool definitions build)": 72,
+   "dns | thread=MainThread | tests/agent/test_conversation_compression_manual.py | OpenRouter model-metadata GET (fetch_model_metadata)": 12,
+   "dns | thread=MainThread | tests/agent/test_conversation_compression_manual.py | OpenRouter video catalog GET (tool definitions build)": 22,
+   "dns | thread=MainThread | tests/agent/test_pre_compress_memory_context_handoff.py | OpenRouter model-metadata GET (fetch_model_metadata)": 5,
+   "dns | thread=openrouter-prewarm | (no test frame: openrouter-prewarm thread) | OpenRouter model-metadata GET (fetch_model_metadata)": 7
+  }
+ },
+ "foldin-bounded-replay_gates.egress.stacks": {
+  "total": 0,
+  "by_thread_file_and_source": {}
+ },
+ "foldin-bounded-ab_checkpoint_preflight.egress.stacks": {
+  "total": 0,
+  "by_thread_file_and_source": {}
+ },
+ "foldin-bounded-test_region_scoping.egress.stacks": {
+  "total": 2,
+  "by_thread_file_and_source": {
+   "dns | thread=MainThread | evals/compaction/test_region_scoping.py | OpenRouter model-metadata GET (fetch_model_metadata)": 2
+  }
+ },
+ "foldin-bounded-adjacent.egress.stacks": {
+  "total": 231,
+  "by_thread_file_and_source": {
+   "dns | thread=MainThread | tests/agent/test_compression_attempt_lifecycle.py | OpenRouter model-metadata GET (fetch_model_metadata)": 10,
+   "dns | thread=MainThread | tests/agent/test_compression_attempt_lifecycle.py | OpenRouter video catalog GET (tool definitions build)": 18,
+   "dns | thread=MainThread | tests/agent/test_compression_boundary_hook.py | OpenRouter model-metadata GET (fetch_model_metadata)": 7,
+   "dns | thread=MainThread | tests/agent/test_compression_boundary_hook.py | OpenRouter video catalog GET (tool definitions build)": 14,
+   "dns | thread=MainThread | tests/agent/test_compression_commit_fence_race.py | OpenRouter model-metadata GET (fetch_model_metadata)": 2,
+   "dns | thread=MainThread | tests/agent/test_compression_commit_fence_race.py | OpenRouter video catalog GET (tool definitions build)": 4,
+   "dns | thread=MainThread | tests/agent/test_compression_persistence.py | OpenRouter model-metadata GET (fetch_model_metadata)": 6,
+   "dns | thread=MainThread | tests/agent/test_compression_persistence.py | OpenRouter video catalog GET (tool definitions build)": 12,
+   "dns | thread=MainThread | tests/agent/test_compression_rotation_state.py | OpenRouter model-metadata GET (fetch_model_metadata)": 40,
+   "dns | thread=MainThread | tests/agent/test_compression_rotation_state.py | OpenRouter video catalog GET (tool definitions build)": 72,
+   "dns | thread=MainThread | tests/agent/test_conversation_compression_manual.py | OpenRouter model-metadata GET (fetch_model_metadata)": 12,
+   "dns | thread=MainThread | tests/agent/test_conversation_compression_manual.py | OpenRouter video catalog GET (tool definitions build)": 22,
+   "dns | thread=MainThread | tests/agent/test_pre_compress_memory_context_handoff.py | OpenRouter model-metadata GET (fetch_model_metadata)": 5,
+   "dns | thread=openrouter-prewarm | (no test frame: openrouter-prewarm thread) | OpenRouter model-metadata GET (fetch_model_metadata)": 7
+  }
+ }
+}

@@ -1,0 +1,85 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compressor-media-extraction",
+ "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+ "head_revision": "c5e8be14b43bf75bcc2e4e8d95f2d4810a7e2779",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#80636",
+  "NousResearch/hermes-agent#78645"
+ ],
+ "provenance": "self",
+ "privacy": "public-aggregate",
+ "cost_usd": 0.0,
+ "ai_assistance": "Claude Code (Opus 5.5) ran the experiment and wrote this receipt",
+ "created_at": "2026-10-01T07:47:16-05:00",
+ "spec": {
+  "path": null,
+  "prereg_commit": null,
+  "note": "not pre-registered on claude/ledger (no ledger writes in this run)"
+ },
+ "env": {
+  "host": "<local-host>",
+  "test_python": "3.11.14 (pytest 9.1.1, HERMES_PYTHON)",
+  "nav_python": "3.14.7 separate uv venv (tiktoken 0.14.0, radon 6.0.1)",
+  "sandbox": "none (no bwrap); HOME/HERMES_HOME pointed at scratch test homes; run_tests.sh env -i",
+  "load1_range": "3-16 (shared host; base and head full runs ran concurrently)",
+  "paths": "absolute local paths in commands and raw files are replaced by $W/<tree>, $S, $HERMES_PYTHON, <uv>, <pytest-tmp>, pytest-of-<user>"
+ },
+ "id": "regen/r20261001-02",
+ "experiment": "extract_media.py regenerates the exact commit tree from clean main",
+ "tier": "T0",
+ "label": "OBSERVED",
+ "supersedes": "regen/r20261001-01",
+ "round_note": "fix round 1: head rebuilt on main aea969677c (c5e8be14b4 replaces the unpushed d2bff3a59e; same patch-id 2c92e56f, corrected commit message)",
+ "inputs": {
+  "regen_scripts_sha256": {
+   "COMMIT_MSG.txt": "0aed055a5d3212ebc3c27cfd1327db4f4487c2f99542834c3013c9615dbe9d3e",
+   "extract_media.py": "88b143d7b0600ad5197fb5630d6c92bdbaf075cefa5af3477aeebfa03d140a06",
+   "golden_coverage.py": "8f702b09cc002ec8f4a274d91a0752dc37e23192a46af373e437e56d8fa253f8",
+   "golden_parity.py": "5ec7c2954fbbb9166eb5da15be7bc0c3f50dee0fbe11b77a1c632dc2559795d8",
+   "moved_symbol_lookup.py": "137868172480a30d09ed2a0afe60bca0b28ab6a81fff73d21618ceb37a7c3141",
+   "parity_compare.py": "bc99048d3cbc402a079a2ee098f9f209c2f86d34e65388074c0547bb4635989b",
+   "sabotage_perhunk.py": "1d43bc17cc0d13dac5b64258928d54fc801743a6dc6fbd2472ce405660397085",
+   "verify_media.py": "569fc7e4bb407f4071249911ba927ddbb1ec501c72772c3acaa2468f57daf1f1"
+  },
+  "main": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+  "commits_since_first_build_base": 47,
+  "invalidate_on_paths_changed_since_572e4f4fad": []
+ },
+ "command": "git worktree add --detach $W/head aea969677c60a1bb72fe227fdfb98f196a2092cc; python3 regen/extract_media.py $W/head; git -C $W/head add -A agent tests; git -C $W/head commit -F regen/COMMIT_MSG.txt; git merge-tree --write-tree main d2bff3a59e; git patch-id --stable",
+ "result": {
+  "extract_rc": 0,
+  "regenerated_tree": "0cb7ba9d0c24c0f55df4bdc6b80d04d39ba36475",
+  "commit_tree": "0cb7ba9d0c24c0f55df4bdc6b80d04d39ba36475",
+  "merge_tree_of_first_build_d2bff3a59e_onto_main": "0cb7ba9d0c24c0f55df4bdc6b80d04d39ba36475",
+  "identical": true,
+  "patch_id": {
+   "c5e8be14b4": "2c92e56fb8480749643d9e6275c1940b7fd02919",
+   "d2bff3a59e": "2c92e56fb8480749643d9e6275c1940b7fd02919"
+  },
+  "commit_message": "regen/COMMIT_MSG.txt (says four test modules; the first build said five)",
+  "git_color_moved": {
+   "moved_deleted_lines": 230,
+   "moved_added_lines": 235,
+   "plain_deleted_lines": 13,
+   "plain_added_lines": 29,
+   "command": "git show --color-moved=plain HEAD"
+  },
+  "verify_media": "PASS 6/6 (static-gates/r20261001-02)",
+  "rehearsal_on_newer_main": {
+   "main": "a3b56cac95488242856b6fb1f121842a38c3e391",
+   "commits_since_base": 12,
+   "invalidate_on_paths_changed": [],
+   "extract_rc": 0,
+   "regenerated_tree": "6a8a815796a09d242891ace017092b24304e3c82",
+   "merge_tree_of_branch_onto_it": "6a8a815796a09d242891ace017092b24304e3c82",
+   "identical": true,
+   "checked_at": "2026-10-01T07:46:49-05:00"
+  },
+  "ruff_repo_config": "All checks passed on the 10 touched files",
+  "ruff_select_F": "2 F401 on both trees (same statistics before and after)",
+  "check_windows_footguns": "no footguns (10 files scanned)"
+ },
+ "verdict": "PASS"
+}

@@ -1,0 +1,131 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "tool-result-projection-support",
+ "origin_refs": [
+  "NousResearch/hermes-agent#107731",
+  "NousResearch/hermes-agent#39691",
+  "NousResearch/hermes-agent#47866",
+  "NousResearch/hermes-agent#129620",
+  "NousResearch/hermes-agent#129492",
+  "NousResearch/hermes-agent#129882",
+  "kvnloo/hermes-agent#310"
+ ],
+ "base_revision": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+ "env": {
+  "host": "withheld (one local workstation; receipts carry no host names)",
+  "python": "3.11.14 ($PY = the repo venv interpreter, used read-only)",
+  "isolation": "env -i; fresh HOME/HERMES_HOME under scratch; loopback-only socket.connect + getaddrinfo guard (probe_104260.py:11-39 pattern); no credentials",
+  "network": "loopback only (asserted: egress_blocked list per run)",
+  "relay": {
+   "present": true,
+   "package": "nemo-relay 0.8.4 (installed in the shared repo venv; not part of this change)",
+   "state": "FAILED at initialize(): agent/relay_runtime.py calls relay.plugin.initialize({}, additional_plugins_toml=...), which nemo-relay 0.8.4 does not accept, so Hermes logs 'Hermes Relay plugin initialization failed' and disables Relay middleware. No Relay plugin was active in any run (recorded in round 2; the venv was the same in this round).",
+   "plugins_toml_sha256": null,
+   "config_paths": [],
+   "explicit_plugins_toml": "none: HERMES_NEMO_RELAY_PLUGINS_TOML unset and the isolated HERMES_HOME has no relay-plugins.toml"
+  }
+ },
+ "provenance": "self",
+ "cost": {
+  "api_cost_usd": 0.0,
+  "tier_cost": "$0"
+ },
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the harness and tests; disclosed per repository policy",
+ "privacy": "synthetic fixtures only; no state.db / agent.log / credentials read",
+ "id": "CARRIER-rebase/r20261001-01",
+ "tier": "T0",
+ "kind": "static",
+ "experiment": "Carrier re-check on current main",
+ "command": {
+  "merge_tree": "git merge-tree --write-tree --name-only 572e4f4fad32bbdcfc948fb2ec833177ed5734c0 069adfb67e57287ac8df996ef48e082fe8455e2c",
+  "rebuild": "git checkout --detach 572e4f4fad32bbdcfc948fb2ec833177ed5734c0 && git merge --no-commit --no-ff refs/pr/107731 && resolve add/add (keep both) && commit (local)"
+ },
+ "results": {
+  "merge_base": "67764dc0863349a384c16425e73ee8571f3a94b7",
+  "commits_behind_main": 13447,
+  "conflicts": [
+   "tests/tui_gateway/test_compression_config_hot_reload.py (add/add at file end: main's #115572 regression test vs the carrier's two projection hot-reload tests)"
+  ],
+  "resolution": "keep both sides; patches/carrier-rebase-handport-hot-reload-test.diff",
+  "rebased_arm": "e04f4f9e2cbecd1760df3ed7f19da9db065a4f2d",
+  "carrier_state": {
+   "pr": 107731,
+   "author": "lorencato23",
+   "head": "069adfb67e57287ac8df996ef48e082fe8455e2c",
+   "state": "OPEN",
+   "last_update": "2026-09-23T16:12:11Z",
+   "files": 13,
+   "additions": 1936
+  },
+  "test_helpers_at_carrier_head": "tests/e2e/core/history/_helpers.py, tests/fakes/* absent at 67764dc086: the wire test needs the rebased carrier"
+ },
+ "verdict": "RECORDED",
+ "spec": {
+  "path": null,
+  "rev": null,
+  "sha256": null,
+  "prereg_commit": null,
+  "decision_rule_sha": null,
+  "note": "not pre-registered: an ad-hoc staging run under FACTORY.md section 8. The decision rule is the assertion set of tests/e2e/core/history/test_tool_result_projection_wire.py (blob 7347ad045b) and, for probes, the harness outputs named in command."
+ },
+ "policy_revision": {
+  "AGENTS.md": "65aa3e61bc@572e4f4fad (unchanged at 234badf401 and aea969677c)",
+  "CONTRIBUTING.md": "b0baa59b50@572e4f4fad (unchanged at 234badf401 and aea969677c)",
+  "factory": "FACTORY.md sha256:7726ba18b43a9367 (frontier-2026-10-01 ledger copy, read at round-1 fix)"
+ },
+ "denominators": {
+  "cells": 1,
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "completeness": 1.0,
+  "note": "one static merge-tree / rebuild check"
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "regression"
+ },
+ "resource_usage": {
+  "wall_s": null,
+  "cpu_core_s": null,
+  "gpu_s": 0,
+  "energy_j": null,
+  "api_cost_usd": 0.0,
+  "note": "wall_s summed from the raw outputs; CPU time and energy were not recorded"
+ },
+ "corrections": [
+  {
+   "date": "2026-10-01",
+   "by": "staging fix round 1 (phase-3 verifier findings)",
+   "changes": [
+    "env.python: was '$PY (3.14.x, read-only use as interpreter)' (wrong: every raw output records \"python\": \"3.11.14\" and the venv interpreter prints Python 3.11.14)",
+    "added the xf.receipt.v1 fields spec (not pre-registered), policy_revision, denominators, evidence_class, resource_usage",
+    "commits_behind_main 13,447 is measured against this receipt's base 572e4f4fad. Against 234badf401 it is 13,458 (git rev-list --count 67764dc086..234badf401); STAGING.md had placed 13,447 next to the 234badf401 merge-tree run."
+   ]
+  },
+  {
+   "date": "2026-10-01",
+   "by": "staging fix round 2 (round-1 re-verifier findings)",
+   "changes": [
+    "env.relay added (the shared venv's nemo-relay 0.8.4 fails to initialize; no Relay plugin was active)",
+    "z0evals_study added (not frozen; P8 pending)"
+   ]
+  },
+  {
+   "date": "2026-10-01",
+   "by": "staging fix round 3 (fix of the round-2 re-verifier findings)",
+   "changes": [
+    "env.host: the workstation's host name replaced by 'withheld' (receipts must not carry host names)"
+   ]
+  }
+ ],
+ "superseded_by": "CARRIER-rebase/r20261001-02",
+ "z0evals_study": {
+  "repo": "kvnloo/z0evals",
+  "branch": "study/hermes-tool-result-projection-support",
+  "commit": null,
+  "status": "not frozen (P8 pending)"
+ }
+}

@@ -1,0 +1,402 @@
+{
+  "schema": "xf.receipt.v1",
+  "id": "F09/r20261001-04",
+  "tier": "T1",
+  "label_default": "OBSERVED",
+  "spec": {
+    "path": "specs/F09.toml",
+    "rev": 4,
+    "sha256": "971115be2b460aac4bd66832468950c1c3635192587c76ee3eb209deefdd1396",
+    "prereg_commit": null,
+    "prereg_recorded_at": "2026-10-01T16:28:00Z",
+    "decision_rule_sha": "e76c3dbb8b0aa3f602ed87256c894cec992ce4e26828e33c066b355acf31c5d8",
+    "decision_rule": "KEEP iff on head every gate cell passes (payload and beta present exactly when expected), the 400 cell gives [True, False, False], local compression fires >= 1 time on turn 2 in the flag-on over-threshold cell, the flag-absent body-minus-system and header hashes match base, and the host-normalised system hashes match base; base must send the payload on 0 cells.",
+    "prereg_note": "spec written and hashed before the run started (specs/PREREG.json); not committed to claude/ledger because xf is not built yet"
+  },
+  "runner_revision": {
+    "driver": {
+      "path": "harness/run_proofs.py",
+      "sha256": "ea1de46d50082e83a4d645c7578b046fa5ce8952338e0729e84f79d15ec2ad5e"
+    },
+    "test_runner": "scripts/run_tests.sh blob 8fcc4294f4@44a1ce9724",
+    "receipt_writer": {
+      "path": "harness/write_receipts.py",
+      "sha256": "58b41dafb904dc717f8d7b8fe274dc605f848a7f31f474bad6a28baeeb983769"
+    }
+  },
+  "issue": "kvnloo/hermes-agent#322",
+  "origin_refs": [
+    "NousResearch/hermes-agent#526",
+    "NousResearch/hermes-agent#1147",
+    "NousResearch/hermes-agent#528"
+  ],
+  "staging": "anthropic-context-editing",
+  "base_revision": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+  "arms": {
+    "base": {
+      "commit": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+      "tree": "6a18f0eebdb6f90887fa6588781c20ec50fc6e1d"
+    },
+    "head": {
+      "commit": "05d6dbc172d24db4b237f8ef130fb4dc2e8651df",
+      "tree": "2c45d3cd5381cbff8fdf95807af5b026d3b02f2c",
+      "parent": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+      "merge": "clean (one commit on base)"
+    }
+  },
+  "head_revision": "05d6dbc172d24db4b237f8ef130fb4dc2e8651df",
+  "changed_files": [
+    "agent/agent_init.py",
+    "agent/anthropic_adapter.py",
+    "agent/anthropic_context_editing.py",
+    "agent/chat_completion_helpers.py",
+    "agent/transports/anthropic.py",
+    "agent/turn_recovery.py",
+    "cli-config.yaml.example",
+    "gateway/run.py",
+    "hermes_cli/config_defaults.py",
+    "tests/agent/test_anthropic_context_editing.py",
+    "tui_gateway/session_compression.py",
+    "website/docs/developer-guide/context-compression-and-caching.md",
+    "website/docs/user-guide/features/computer-use.md"
+  ],
+  "policy_revision": {
+    "AGENTS.md": "65aa3e61bcba610da21279a17385671263be39e9@44a1ce9724",
+    "CONTRIBUTING.md": "b0baa59b5057c204b3c09d3dd170c0955cfdb39c@44a1ce9724",
+    ".github/PULL_REQUEST_TEMPLATE.md": "5496eb534fef9d08c091b8186e7edd1b5cf356db@44a1ce9724",
+    "factory": "FACTORY.md sha256 7726ba18b43a9367f91d7f70c3aaefb96a9863761ddf71225c61c26a30d688d4 (frontier-2026-10-01)",
+    "protocol": "PROTOCOL.md sha256 182e3fbae771d7219497833b3f9d6f7ed385d70abace8736559026e4e60b90d4 (promotion-readiness-2026-10-01)"
+  },
+  "env": {
+    "host": "<local-host>",
+    "host_note": "name withheld, as F09 strips host facts from system prompts",
+    "os": "Linux x86_64",
+    "python": "3.11.14 (test venv, passed as HERMES_PYTHON)",
+    "anthropic_sdk": "0.87.0",
+    "httpx": "0.28.1",
+    "pydantic": "2.13.4",
+    "venv_lock_sha256": null,
+    "sandbox": "no bwrap; loopback-only connect guard in the F09 probe; isolated HOME/HERMES_HOME for every run",
+    "network": "loopback only"
+  },
+  "denominators": {
+    "cells": 20,
+    "errored_scored_zero": 0,
+    "infra_excluded": 0,
+    "completeness": 1.0
+  },
+  "evidence_class": {
+    "local": true,
+    "ci": "none",
+    "simulation": false,
+    "runtime": false,
+    "kind": "mechanism"
+  },
+  "harness_abi": {
+    "harness": "hermes",
+    "editor_abi": "n/a",
+    "surface": "AIAgent.run_conversation; vendor HTTP boundary replaced by the in-repo SDK-oracle fake"
+  },
+  "resource_usage": {
+    "wall_s": 11.0,
+    "cpu_core_s": 9.0,
+    "gpu_s": 0,
+    "energy_j": null,
+    "tokens": 0,
+    "api_cost_usd": 0.0,
+    "steps": {
+      "f09_base": {
+        "wall_s": 3.5,
+        "cpu_core_s": 3.1
+      },
+      "f09_head": {
+        "wall_s": 7.5,
+        "cpu_core_s": 5.9
+      }
+    }
+  },
+  "carrier_choice": {
+    "winner": "head (own leaf)",
+    "why": "no open or merged implementation and no carrier; #528 was closed as superseded by #1147, which only changed beta-header/OAuth plumbing; no code reused",
+    "related_open": "NousResearch/hermes-agent#71302 (TrueNix, OPEN, CONFLICTING): on OAuth requests with thinking it sets extra_body.context_management to clear_thinking_20251015 keep all, and adds the context-management beta to _OAUTH_ONLY_BETAS; related (OAuth fingerprint parity), not an owner; see MERGE/r20261001-04"
+  },
+  "provenance": "self",
+  "frozen": {
+    "bundle_sha": null,
+    "cells": 20,
+    "supersedes": "F09/r20261001-03",
+    "status": "NOT_FROZEN (P8 pending: no write-once bundle, not frozen to z0evals)"
+  },
+  "z0evals_study": {
+    "repo": "kvnloo/z0evals",
+    "branch": "study/hermes-anthropic-context-editing",
+    "commit": null
+  },
+  "ai_assistance": "Claude Code (Claude Opus 5.5) wrote the change, tests and probes",
+  "privacy": "public-aggregate",
+  "inputs": {
+    "harness": {
+      "path": "harness/f09_gate_probe.py",
+      "sha256": "cec13eb1d0cb49acf463816ca055cb8e541ef5d21cfc49a20dd69097fc727756"
+    },
+    "fake_server": {
+      "path": "tests/fakes/providers/anthropic_messages.py",
+      "blob": "e46bb9b43945210f8b7521bc10d05cdb8da57e4c",
+      "same_on_both_arms": true
+    }
+  },
+  "commands": [
+    "<venv-python> harness/f09_gate_probe.py --repo <worktree> --arm base --out raw/f09_base.json  # <worktree> at 44a1ce9724",
+    "<venv-python> harness/f09_gate_probe.py --repo <worktree> --arm head --out raw/f09_head.json  # <worktree> at 05d6dbc172"
+  ],
+  "raw": {
+    "base": {
+      "path": "raw/f09_base.json",
+      "sha256": "522ec0d6e247030f793e3f9d454593bebec780c622ce171f619878ab9ad57e34"
+    },
+    "head": {
+      "path": "raw/f09_head.json",
+      "sha256": "f8f92f999683c67745fdc5b656da2c173aa7011e15110c78b7216fad4499f1ef"
+    }
+  },
+  "gate_matrix": {
+    "native_claude_flag_false": {
+      "base_payload_sent": [
+        false
+      ],
+      "head_payload_sent": [
+        false
+      ],
+      "head_beta_present": [
+        false
+      ],
+      "expect_payload_on_head": false,
+      "head_pass": true
+    },
+    "native_claude_flag_true": {
+      "base_payload_sent": [
+        false
+      ],
+      "head_payload_sent": [
+        true
+      ],
+      "head_beta_present": [
+        true
+      ],
+      "expect_payload_on_head": true,
+      "head_pass": true
+    },
+    "native_claude_flag_true_compression_disabled": {
+      "base_payload_sent": [
+        false
+      ],
+      "head_payload_sent": [
+        false
+      ],
+      "head_beta_present": [
+        false
+      ],
+      "expect_payload_on_head": false,
+      "head_pass": true
+    },
+    "native_claude_flag_true_checkpoint_required": {
+      "base_payload_sent": [
+        false
+      ],
+      "head_payload_sent": [
+        false
+      ],
+      "head_beta_present": [
+        false
+      ],
+      "expect_payload_on_head": false,
+      "head_pass": true
+    },
+    "native_non_claude_flag_true": {
+      "base_payload_sent": [
+        false
+      ],
+      "head_payload_sent": [
+        false
+      ],
+      "head_beta_present": [
+        false
+      ],
+      "expect_payload_on_head": false,
+      "head_pass": true
+    },
+    "third_party_endpoint_flag_true": {
+      "base_payload_sent": [
+        false
+      ],
+      "head_payload_sent": [
+        false
+      ],
+      "head_beta_present": [
+        false
+      ],
+      "expect_payload_on_head": false,
+      "head_pass": true
+    }
+  },
+  "head_payload_example": {
+    "local_threshold_tokens": 150000,
+    "payload": {
+      "edits": [
+        {
+          "type": "clear_tool_uses_20250919",
+          "trigger": {
+            "type": "input_tokens",
+            "value": 141808
+          },
+          "clear_at_least": {
+            "type": "input_tokens",
+            "value": 28361
+          }
+        }
+      ]
+    }
+  },
+  "structured_400": {
+    "base": [
+      false,
+      false
+    ],
+    "head": [
+      true,
+      false,
+      false
+    ],
+    "head_flag_after": false,
+    "rejection_text": "context_management: Extra inputs are not permitted (scripted; real API wording NOT_MEASURED)"
+  },
+  "local_compressor_over_threshold": {
+    "base": {
+      "flag_on": {
+        "local_threshold_tokens": 50000,
+        "turn1_real_input_tokens": 60000,
+        "local_compress_calls_turn2": 1,
+        "payload_sent_per_request": [
+          false,
+          false
+        ],
+        "trigger_sent": []
+      },
+      "flag_off": {
+        "local_compress_calls_turn2": 1,
+        "payload_sent_per_request": [
+          false,
+          false
+        ]
+      }
+    },
+    "head": {
+      "flag_on": {
+        "local_threshold_tokens": 50000,
+        "turn1_real_input_tokens": 60000,
+        "local_compress_calls_turn2": 1,
+        "payload_sent_per_request": [
+          true,
+          true
+        ],
+        "trigger_sent": [
+          41808,
+          41808
+        ]
+      },
+      "flag_off": {
+        "local_compress_calls_turn2": 1,
+        "payload_sent_per_request": [
+          false,
+          false
+        ]
+      }
+    }
+  },
+  "flag_absent_wire": {
+    "requests_per_arm": 2,
+    "body_minus_system_identical": true,
+    "headers_identical": true,
+    "anthropic_beta_header": "interleaved-thinking-2025-05-14,fine-grained-tool-streaming-2025-05-14",
+    "system_identical_after_host_normalisation": true,
+    "host_normalisation": [
+      "<SANDBOX>",
+      "Host: <HOST>",
+      "python3=<PY>"
+    ],
+    "verdict": "IDENTICAL"
+  },
+  "sdk_schema_errors": {
+    "base": 0,
+    "head": 0
+  },
+  "egress_blocked": {
+    "base": [],
+    "head": []
+  },
+  "gates": {
+    "validity": "PASS",
+    "cache_read_ratio": {
+      "status": "NOT_MEASURED",
+      "before": null,
+      "after": null,
+      "needs": "F10 (paid, OD-3)"
+    },
+    "route_scope": "native Anthropic API, Claude models; local compressor unchanged"
+  },
+  "ab": null,
+  "measurements": [
+    {
+      "name": "gate_cells_with_payload_head",
+      "arm": "head",
+      "value": 1,
+      "n": 6,
+      "label": "OBSERVED",
+      "statistic": "count"
+    },
+    {
+      "name": "ineligible_cells_with_payload_head",
+      "arm": "head",
+      "value": 0,
+      "n": 5,
+      "label": "OBSERVED",
+      "statistic": "count"
+    },
+    {
+      "name": "gate_cells_with_payload_base",
+      "arm": "base",
+      "value": 0,
+      "n": 6,
+      "label": "OBSERVED",
+      "statistic": "count"
+    },
+    {
+      "name": "cache_read_before_after_clear",
+      "value": null,
+      "label": "NOT_MEASURED",
+      "note": "needs F10 (paid, OD-3)"
+    }
+  ],
+  "not_tested": [
+    "real Anthropic acceptance of the payload and the real rejection wording",
+    "cache_read/cache_creation after a server-side clear (F10)",
+    "OAuth (Claude subscription) route acceptance of the beta",
+    "whether the server re-clears on every request once over trigger (client resends full history)",
+    "local fallback after a real server-side clear: local compression decides on the provider-reported prompt size, which after a clear is the post-clear size, so the fallback is deferred while the resent transcript keeps growing; the fake reports 60K whether or not the payload is sent, so this regime is not exercised",
+    "compaction-exam recall with clears (F10-exam harness not written)"
+  ],
+  "limitations": [
+    "one rep per cell (deterministic fake)",
+    "the over-threshold cells count _compress_context calls via a wrapper",
+    "the over-threshold cells show the local trigger still fires when reported usage is high; they do not model usage after a real clear"
+  ],
+  "verdict": "KEEP",
+  "learning": {
+    "hypothesis": "payload only when opted in and eligible; 400 disables and retries once; local fallback intact; flag-absent wire unchanged",
+    "result": "KEEP",
+    "observed_evidence": [],
+    "regressions": [],
+    "reusable_lesson": "system prompts embed host facts (temp HOME, kernel, python); compare host-normalised hashes, never store the text",
+    "roadmap_effect": "hold at LIMITED until F10"
+  }
+}

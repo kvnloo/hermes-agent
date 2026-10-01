@@ -1,0 +1,905 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compaction-anchor-retention",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch#87326",
+  "NousResearch#117462",
+  "NousResearch#122274",
+  "NousResearch#122522",
+  "NousResearch#78457"
+ ],
+ "base_revision": "234badf4012af380d23c91eae55d045a69c69ffb",
+ "head_revision": "6e0fa629a0f6227b03417d1d6ff7f7d81208346a",
+ "policy_revision": {
+  "factory": "FACTORY.md (frontier-2026-10-01)",
+  "protocol": "promotion-readiness-2026-10-01/PROTOCOL.md"
+ },
+ "env": {
+  "host": "<local-host>",
+  "python": "3.11.14 (HERMES_PYTHON venv, read-only bind)",
+  "sandbox": "bwrap ro-root, --unshare-net (connect 1.1.1.1:443 -> ENETUNREACH), pidns, clearenv, $HERMES_INSTALL masked except venv, isolated HOME/HERMES_HOME"
+ },
+ "provenance": "self",
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the rows, tests, harness and gold labels; disclosed per repository policy",
+ "privacy": "public-aggregate (all inputs are committed upstream text or seeded synthetic data; no state.db, no lineages)",
+ "resource_usage": {
+  "api_cost_usd": 0.0,
+  "gpu_s": 0,
+  "tokens": 0
+ },
+ "id": "E03p/r20261001-01",
+ "kind": "static",
+ "question": "Which identifier classes in the committed recall-exam gold answers can main's anchor rows capture at all, and which classes are missing?",
+ "substitutes_for": "E03 (gold-identifier survival over reconstruct_lineage outputs from a LOCAL state.db copy) — not runnable here: reading state.db is forbidden in this run and needs OD-7",
+ "inputs": {
+  "scorecard": "evals/compaction/results/SCORECARD-2026-08-15.md",
+  "scorecard_sha256": "6d93f90b435e4f2ae2dd3187103c18e0c881ad68b88b92bfd3deacb1cf79180e",
+  "harness_sha256": {
+   "anchor_coverage.py": "5cb0e034146fe2ed4103765b8a42610d3735300c1627631f5168d9be4b7dabb7",
+   "build_receipts.py": "6009a0d931aabf1bef52b6cc2b261412769ce4833e2e6abb4ebd37fe032757c3"
+  },
+  "arms": {
+   "base": {
+    "tree": "234badf4012af380d23c91eae55d045a69c69ffb:agent/context_compressor.py",
+    "sha256": "86f4b7a8a647f1bf520cb17497b68719f6d907028bdc7151c7921818b7e043f1"
+   },
+   "branch": {
+    "head": "6e0fa629a0f6227b03417d1d6ff7f7d81208346a",
+    "sha256": "98d9e8d058557eee2fd4e89641b6350a2b21ab62c563ac741986db61ae1d98a8"
+   },
+   "c117462": {
+    "pr": 117462,
+    "head": "2c19948e15d68492d048250bae7707ca77063db5",
+    "merge_tree": "8dfb180bae5909ccd06f79f7268885f3309c9af6",
+    "merge": "clean",
+    "sha256": "fdb7abd8050b4944171522c7e713004d7fbce9b2d8ddfb1c8de93414f206ebe0"
+   },
+   "c117462_foldin": {
+    "onto": "c117462",
+    "patch": "foldin-on-117462.patch",
+    "patch_sha256": "2b32d18636cb60f86c54bbc1c31f42ae062df48e13876edc34a01ae5b33c0224",
+    "merge": "handported (rows placed in #117462's cheap-first order)",
+    "sha256": "2d8e3a1712c349a40824ab8e3e8f87b01556b0c2809731b5e510686423b6a4e3"
+   }
+  },
+  "coverage_json_sha256": "a12cbcdcbce3be7e891658e134ce6ff68e44f9d28aaa1d02a82e5876c6b5d6d1",
+  "checkout_tree_for_imports": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0 (agent/* other than context_compressor.py identical to 234badf4012af380d23c91eae55d045a69c69ffb)"
+ },
+ "command": "$S/car_sandbox.sh $WT $VENV/bin/python $STAGING/harness/anchor_coverage.py --checkout $WT --arm base=$STAGING/raw/arms/base.py --arm branch=$STAGING/raw/arms/branch.py --arm c117462=$STAGING/raw/arms/c117462.py --arm c117462_foldin=$STAGING/raw/arms/c117462_foldin.py --seeds 10 --out $STAGING/raw/sbhome/coverage.json  # then moved to raw/coverage.json",
+ "method": "90 gold answers (6 banks x 15, lineages sweep/gui/prmerge/acp) parsed from the committed scorecard; each hand-labelled by class (frozen LABELS table in the harness); 49 are identifier classes. A gold is reachable when every needle in it is contained in some value an anchor row extracts from the gold string itself (needles >100 chars compare on the first 100). 'natural' re-tests 4 golds inside the line their emitter prints (gh 'GraphQL: ', tsc 'error TS2741: ', GNU as 'Fatal error: ', 'PR #82980') — that column is MODELED.",
+ "measurements": [
+  {
+   "name": "identifier_golds_reachable_raw",
+   "arm": "base",
+   "value": 24,
+   "n": 49,
+   "label": "OBSERVED"
+  },
+  {
+   "name": "identifier_golds_reachable_raw",
+   "arm": "branch",
+   "value": 31,
+   "n": 49,
+   "label": "OBSERVED"
+  },
+  {
+   "name": "identifier_golds_reachable_raw",
+   "arm": "c117462",
+   "value": 24,
+   "n": 49,
+   "label": "OBSERVED"
+  },
+  {
+   "name": "identifier_golds_reachable_raw",
+   "arm": "c117462_foldin",
+   "value": 31,
+   "n": 49,
+   "label": "OBSERVED"
+  },
+  {
+   "name": "identifier_golds_reachable_in_emitter_line",
+   "arm": "base",
+   "value": 25,
+   "n": 49,
+   "label": "MODELED"
+  },
+  {
+   "name": "identifier_golds_reachable_in_emitter_line",
+   "arm": "branch",
+   "value": 35,
+   "n": 49,
+   "label": "MODELED"
+  },
+  {
+   "name": "identifier_golds_reachable_in_emitter_line",
+   "arm": "c117462",
+   "value": 25,
+   "n": 49,
+   "label": "MODELED"
+  },
+  {
+   "name": "identifier_golds_reachable_in_emitter_line",
+   "arm": "c117462_foldin",
+   "value": 35,
+   "n": 49,
+   "label": "MODELED"
+  }
+ ],
+ "per_class": {
+  "base": {
+   "symbol": {
+    "golds": 6,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "acp",
+     "gui",
+     "prmerge",
+     "sweep"
+    ],
+    "lineages_unreached": [
+     "acp",
+     "gui",
+     "prmerge",
+     "sweep"
+    ]
+   },
+   "error_message": {
+    "golds": 9,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "acp",
+     "gui",
+     "sweep"
+    ],
+    "lineages_unreached": [
+     "acp",
+     "gui",
+     "sweep"
+    ]
+   },
+   "file_path": {
+    "golds": 4,
+    "reachable_raw": 4,
+    "reachable_natural": 4,
+    "lineages": [
+     "acp",
+     "gui",
+     "sweep"
+    ],
+    "lineages_unreached": []
+   },
+   "pr_issue": {
+    "golds": 13,
+    "reachable_raw": 12,
+    "reachable_natural": 13,
+    "lineages": [
+     "acp",
+     "gui",
+     "prmerge",
+     "sweep"
+    ],
+    "lineages_unreached": [
+     "sweep"
+    ]
+   },
+   "sha": {
+    "golds": 4,
+    "reachable_raw": 4,
+    "reachable_natural": 4,
+    "lineages": [
+     "acp",
+     "gui",
+     "sweep"
+    ],
+    "lineages_unreached": []
+   },
+   "command": {
+    "golds": 2,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "sweep"
+    ],
+    "lineages_unreached": [
+     "sweep"
+    ]
+   },
+   "error_keyword": {
+    "golds": 2,
+    "reachable_raw": 2,
+    "reachable_natural": 2,
+    "lineages": [
+     "gui",
+     "sweep"
+    ],
+    "lineages_unreached": []
+   },
+   "file_path_suffix": {
+    "golds": 2,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "acp",
+     "gui"
+    ],
+    "lineages_unreached": [
+     "acp",
+     "gui"
+    ]
+   },
+   "email": {
+    "golds": 1,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "gui"
+    ],
+    "lineages_unreached": [
+     "gui"
+    ]
+   },
+   "handle": {
+    "golds": 2,
+    "reachable_raw": 2,
+    "reachable_natural": 2,
+    "lineages": [
+     "acp",
+     "gui"
+    ],
+    "lineages_unreached": []
+   },
+   "task_id": {
+    "golds": 1,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "gui"
+    ],
+    "lineages_unreached": [
+     "gui"
+    ]
+   },
+   "file_bare": {
+    "golds": 1,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "gui"
+    ],
+    "lineages_unreached": [
+     "gui"
+    ]
+   },
+   "config_key": {
+    "golds": 1,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "prmerge"
+    ],
+    "lineages_unreached": [
+     "prmerge"
+    ]
+   },
+   "sql": {
+    "golds": 1,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "acp"
+    ],
+    "lineages_unreached": [
+     "acp"
+    ]
+   }
+  },
+  "branch": {
+   "symbol": {
+    "golds": 6,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "acp",
+     "gui",
+     "prmerge",
+     "sweep"
+    ],
+    "lineages_unreached": [
+     "acp",
+     "gui",
+     "prmerge",
+     "sweep"
+    ]
+   },
+   "error_message": {
+    "golds": 9,
+    "reachable_raw": 5,
+    "reachable_natural": 8,
+    "lineages": [
+     "acp",
+     "gui",
+     "sweep"
+    ],
+    "lineages_unreached": [
+     "gui",
+     "sweep"
+    ]
+   },
+   "file_path": {
+    "golds": 4,
+    "reachable_raw": 4,
+    "reachable_natural": 4,
+    "lineages": [
+     "acp",
+     "gui",
+     "sweep"
+    ],
+    "lineages_unreached": []
+   },
+   "pr_issue": {
+    "golds": 13,
+    "reachable_raw": 12,
+    "reachable_natural": 13,
+    "lineages": [
+     "acp",
+     "gui",
+     "prmerge",
+     "sweep"
+    ],
+    "lineages_unreached": [
+     "sweep"
+    ]
+   },
+   "sha": {
+    "golds": 4,
+    "reachable_raw": 4,
+    "reachable_natural": 4,
+    "lineages": [
+     "acp",
+     "gui",
+     "sweep"
+    ],
+    "lineages_unreached": []
+   },
+   "command": {
+    "golds": 2,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "sweep"
+    ],
+    "lineages_unreached": [
+     "sweep"
+    ]
+   },
+   "error_keyword": {
+    "golds": 2,
+    "reachable_raw": 2,
+    "reachable_natural": 2,
+    "lineages": [
+     "gui",
+     "sweep"
+    ],
+    "lineages_unreached": []
+   },
+   "file_path_suffix": {
+    "golds": 2,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "acp",
+     "gui"
+    ],
+    "lineages_unreached": [
+     "acp",
+     "gui"
+    ]
+   },
+   "email": {
+    "golds": 1,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "gui"
+    ],
+    "lineages_unreached": [
+     "gui"
+    ]
+   },
+   "handle": {
+    "golds": 2,
+    "reachable_raw": 2,
+    "reachable_natural": 2,
+    "lineages": [
+     "acp",
+     "gui"
+    ],
+    "lineages_unreached": []
+   },
+   "task_id": {
+    "golds": 1,
+    "reachable_raw": 1,
+    "reachable_natural": 1,
+    "lineages": [
+     "gui"
+    ],
+    "lineages_unreached": []
+   },
+   "file_bare": {
+    "golds": 1,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "gui"
+    ],
+    "lineages_unreached": [
+     "gui"
+    ]
+   },
+   "config_key": {
+    "golds": 1,
+    "reachable_raw": 1,
+    "reachable_natural": 1,
+    "lineages": [
+     "prmerge"
+    ],
+    "lineages_unreached": []
+   },
+   "sql": {
+    "golds": 1,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "acp"
+    ],
+    "lineages_unreached": [
+     "acp"
+    ]
+   }
+  },
+  "c117462": {
+   "symbol": {
+    "golds": 6,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "acp",
+     "gui",
+     "prmerge",
+     "sweep"
+    ],
+    "lineages_unreached": [
+     "acp",
+     "gui",
+     "prmerge",
+     "sweep"
+    ]
+   },
+   "error_message": {
+    "golds": 9,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "acp",
+     "gui",
+     "sweep"
+    ],
+    "lineages_unreached": [
+     "acp",
+     "gui",
+     "sweep"
+    ]
+   },
+   "file_path": {
+    "golds": 4,
+    "reachable_raw": 4,
+    "reachable_natural": 4,
+    "lineages": [
+     "acp",
+     "gui",
+     "sweep"
+    ],
+    "lineages_unreached": []
+   },
+   "pr_issue": {
+    "golds": 13,
+    "reachable_raw": 12,
+    "reachable_natural": 13,
+    "lineages": [
+     "acp",
+     "gui",
+     "prmerge",
+     "sweep"
+    ],
+    "lineages_unreached": [
+     "sweep"
+    ]
+   },
+   "sha": {
+    "golds": 4,
+    "reachable_raw": 4,
+    "reachable_natural": 4,
+    "lineages": [
+     "acp",
+     "gui",
+     "sweep"
+    ],
+    "lineages_unreached": []
+   },
+   "command": {
+    "golds": 2,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "sweep"
+    ],
+    "lineages_unreached": [
+     "sweep"
+    ]
+   },
+   "error_keyword": {
+    "golds": 2,
+    "reachable_raw": 2,
+    "reachable_natural": 2,
+    "lineages": [
+     "gui",
+     "sweep"
+    ],
+    "lineages_unreached": []
+   },
+   "file_path_suffix": {
+    "golds": 2,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "acp",
+     "gui"
+    ],
+    "lineages_unreached": [
+     "acp",
+     "gui"
+    ]
+   },
+   "email": {
+    "golds": 1,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "gui"
+    ],
+    "lineages_unreached": [
+     "gui"
+    ]
+   },
+   "handle": {
+    "golds": 2,
+    "reachable_raw": 2,
+    "reachable_natural": 2,
+    "lineages": [
+     "acp",
+     "gui"
+    ],
+    "lineages_unreached": []
+   },
+   "task_id": {
+    "golds": 1,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "gui"
+    ],
+    "lineages_unreached": [
+     "gui"
+    ]
+   },
+   "file_bare": {
+    "golds": 1,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "gui"
+    ],
+    "lineages_unreached": [
+     "gui"
+    ]
+   },
+   "config_key": {
+    "golds": 1,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "prmerge"
+    ],
+    "lineages_unreached": [
+     "prmerge"
+    ]
+   },
+   "sql": {
+    "golds": 1,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "acp"
+    ],
+    "lineages_unreached": [
+     "acp"
+    ]
+   }
+  },
+  "c117462_foldin": {
+   "symbol": {
+    "golds": 6,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "acp",
+     "gui",
+     "prmerge",
+     "sweep"
+    ],
+    "lineages_unreached": [
+     "acp",
+     "gui",
+     "prmerge",
+     "sweep"
+    ]
+   },
+   "error_message": {
+    "golds": 9,
+    "reachable_raw": 5,
+    "reachable_natural": 8,
+    "lineages": [
+     "acp",
+     "gui",
+     "sweep"
+    ],
+    "lineages_unreached": [
+     "gui",
+     "sweep"
+    ]
+   },
+   "file_path": {
+    "golds": 4,
+    "reachable_raw": 4,
+    "reachable_natural": 4,
+    "lineages": [
+     "acp",
+     "gui",
+     "sweep"
+    ],
+    "lineages_unreached": []
+   },
+   "pr_issue": {
+    "golds": 13,
+    "reachable_raw": 12,
+    "reachable_natural": 13,
+    "lineages": [
+     "acp",
+     "gui",
+     "prmerge",
+     "sweep"
+    ],
+    "lineages_unreached": [
+     "sweep"
+    ]
+   },
+   "sha": {
+    "golds": 4,
+    "reachable_raw": 4,
+    "reachable_natural": 4,
+    "lineages": [
+     "acp",
+     "gui",
+     "sweep"
+    ],
+    "lineages_unreached": []
+   },
+   "command": {
+    "golds": 2,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "sweep"
+    ],
+    "lineages_unreached": [
+     "sweep"
+    ]
+   },
+   "error_keyword": {
+    "golds": 2,
+    "reachable_raw": 2,
+    "reachable_natural": 2,
+    "lineages": [
+     "gui",
+     "sweep"
+    ],
+    "lineages_unreached": []
+   },
+   "file_path_suffix": {
+    "golds": 2,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "acp",
+     "gui"
+    ],
+    "lineages_unreached": [
+     "acp",
+     "gui"
+    ]
+   },
+   "email": {
+    "golds": 1,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "gui"
+    ],
+    "lineages_unreached": [
+     "gui"
+    ]
+   },
+   "handle": {
+    "golds": 2,
+    "reachable_raw": 2,
+    "reachable_natural": 2,
+    "lineages": [
+     "acp",
+     "gui"
+    ],
+    "lineages_unreached": []
+   },
+   "task_id": {
+    "golds": 1,
+    "reachable_raw": 1,
+    "reachable_natural": 1,
+    "lineages": [
+     "gui"
+    ],
+    "lineages_unreached": []
+   },
+   "file_bare": {
+    "golds": 1,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "gui"
+    ],
+    "lineages_unreached": [
+     "gui"
+    ]
+   },
+   "config_key": {
+    "golds": 1,
+    "reachable_raw": 1,
+    "reachable_natural": 1,
+    "lineages": [
+     "prmerge"
+    ],
+    "lineages_unreached": []
+   },
+   "sql": {
+    "golds": 1,
+    "reachable_raw": 0,
+    "reachable_natural": 0,
+    "lineages": [
+     "acp"
+    ],
+    "lineages_unreached": [
+     "acp"
+    ]
+   }
+  }
+ },
+ "newly_reachable_on_branch": [
+  {
+   "bank": "sweep/5be475cde0",
+   "n": 10,
+   "class": "error_message",
+   "rows": [
+    "error messages"
+   ]
+  },
+  {
+   "bank": "gui/36d3d87e0b",
+   "n": 8,
+   "class": "error_message",
+   "rows": [
+    "error messages"
+   ]
+  },
+  {
+   "bank": "gui/36d3d87e0b",
+   "n": 10,
+   "class": "error_message",
+   "rows": [
+    "error messages"
+   ]
+  },
+  {
+   "bank": "gui/9c55c707b6",
+   "n": 8,
+   "class": "task_id",
+   "rows": [
+    "task ids"
+   ]
+  },
+  {
+   "bank": "gui/9c55c707b6",
+   "n": 14,
+   "class": "error_message",
+   "rows": [
+    "error messages"
+   ]
+  },
+  {
+   "bank": "prmerge/703ae2774a",
+   "n": 9,
+   "class": "config_key",
+   "rows": [
+    "dotted keys"
+   ]
+  },
+  {
+   "bank": "acp/f45358df19",
+   "n": 6,
+   "class": "error_message",
+   "rows": [
+    "error messages"
+   ]
+  }
+ ],
+ "missing_class_evidence": {
+  "error_message": {
+   "golds": 9,
+   "reachable_on_main": 0,
+   "lineages": [
+    "acp",
+    "gui",
+    "sweep"
+   ],
+   "gate_3_lineages": true
+  },
+  "task_id": {
+   "golds": 1,
+   "lineages": [
+    "gui"
+   ],
+   "plus": "maintainer statement (SCORECARD-2026-09-19-jev.md: 'delegation ids') — source-only"
+  },
+  "config_key": {
+   "golds": 1,
+   "lineages": [
+    "prmerge"
+   ],
+   "plus": "maintainer statement ('config keys') — source-only"
+  },
+  "env_var": {
+   "golds": 0,
+   "decision": "no row added (no evidence)"
+  },
+  "symbol": {
+   "golds": 6,
+   "lineages": [
+    "acp",
+    "gui",
+    "prmerge",
+    "sweep"
+   ],
+   "decision": "largest residual unreachable class; not addressed (a bare snake/camel identifier row would be dominated by frequent code tokens)"
+  }
+ },
+ "limitations": [
+  "reachability is an upper bound: it does not show the gold text was in the compacted region, nor that it survives caps/budget",
+  "labels are agent-assigned (not human-curated); value claims need the human-curated exam",
+  "the 09-19 banks (prreview/sysprompt/sigsegv) are not committed, so the classes the maintainer named there are not counted"
+ ],
+ "verdict": "KEEP (missing classes confirmed: error messages on 3 lineages; task id and config key on 1 each)",
+ "learning": {
+  "hypothesis": "classes named in SCORECARD-2026-09-19 are absent from _ANCHOR_PATTERNS",
+  "result": "confirmed for error lines, subagent ids, dotted config keys; env vars unevidenced; symbols are the larger residual"
+ }
+}

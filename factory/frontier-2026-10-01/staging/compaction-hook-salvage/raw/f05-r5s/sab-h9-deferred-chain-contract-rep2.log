@@ -1,0 +1,90 @@
+▶ not activated — using HERMES_PYTHON: <hermes-home>/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~2 tests) under ['tests/agent/test_compaction_observer_hook_contract.py']; running with -j 2
+[100.0% |     2/~2 | ✓6 | ✗1] ✗ tests/agent/test_compaction_observer_hook_contract.py (6✓ 1✗, 24.4s)
+
+  ╔╍ Failed: tests/agent/test_compaction_observer_hook_contract.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ ..F....                                                                  [100%]
+  ║ =================================== FAILURES ===================================
+  ║ ______ test_observer_fires_once_after_the_durable_commit[manual_deferred] ______
+  ║ 
+  ║ tmp_path = PosixPath('/var/tmp/hermes-pytest-1000/r-sbxm3lgy/pytest-of-kvn/pytest-0/test_observer_fires_once_after2')
+  ║ plugin_ctx = <hermes_cli.plugins.PluginContext object at 0x7f20ccbf5bd0>
+  ║ mode = 'manual_deferred'
+  ║ 
+  ║ >   ???
+  ║ E   AssertionError: on_compression_complete fired 0 times
+  ║ E   assert 0 == 1
+  ║ E    +  where 0 = len([])
+  ║ 
+  ║ tests/agent/test_compaction_observer_hook_contract.py:123: AssertionError
+  ║ ----------------------------- Captured stdout call -----------------------------
+  ║ 🗜️ Compacting context — summarizing earlier conversation so I can continue...
+  ║ 🗜️ Compacting context — summarizing earlier conversation so I can continue...
+  ║ ------------------------------ Captured log call -------------------------------
+  ║ INFO     run_agent:agent_runtime_helpers.py:1990 OpenAI client created (agent_init, shared=True) thread=MainThread:139779075091328 provider= base_url=https://openrouter.ai/api/v1 model=test/model
+  ║ INFO     tools.tool_search:tool_search.py:379 tool_search activated (tier 1): 14 core/visible tools kept, 15 deferred (~4511 tokens), listing full (budget ~4000 tokens)
+  ║ INFO     agent.conversation_compression:conversation_compression.py:4053 context compression started: session=original-session messages=21 tokens=~75,000 model=test/model focus=None
+  ║ INFO     agent.conversation_compression:conversation_compression.py:4279 context compression done: session=original-session messages=21->13 rough_tokens=~11,637 awaiting_real_usage=true
+  ║ INFO     agent.conversation_compression:conversation_compression.py:1497 context compression attempt telemetry: {"attempt_id":"2373c564ce77480bbec2323884e7295a","chunk_count":0,"chunking":false,"commit_ms":17,"commit_status":"committed","event":"compression_attempt","fallback_used":false,"session_id":"original-session","split_status":"in_place_committed","total_duration_ms":92}
+  ║ INFO     run_agent:agent_runtime_helpers.py:1990 OpenAI client created (agent_init, shared=True) thread=MainThread:139779075091328 provider= base_url=https://openrouter.ai/api/v1 model=test/model
+  ║ INFO     agent.conversation_compression:conversation_compression.py:4053 context compression started: session=original-session messages=21 tokens=~75,000 model=test/model focus=None
+  ║ INFO     agent.conversation_compression:conversation_compression.py:4279 context compression done: session=original-session messages=21->13 rough_tokens=~11,637 awaiting_real_usage=true
+  ║ INFO     agent.conversation_compression:conversation_compression.py:1497 context compression attempt telemetry: {"attempt_id":"8e7cf53a543944afaecf86c5aa66b1dd","chunk_count":0,"chunking":false,"commit_ms":12,"commit_status":"committed","event":"compression_attempt","fallback_used":false,"session_id":"original-session","split_status":"in_place_committed","total_duration_ms":73}
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]
+  ║ 1 failed, 6 passed in 11.55s
+  ║
+  ║  Repro: python -m pytest tests/agent/test_compaction_observer_hook_contract.py -q
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 1 files, 6 tests passed, 1 failed (100% complete) in 24.4s (2 workers) ===
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 24.4s  (runner wall: 24.4s, parallelism: 2x)
+  P50: 24.37s  P90: 24.37s  P95: 24.37s  P99: 24.37s  Max: 24.37s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+     24.37s  tests/agent/test_compaction_observer_hook_contract.py
+
+=== Failure output ===
+
+--- tests/agent/test_compaction_observer_hook_contract.py ---
+..F....                                                                  [100%]
+=================================== FAILURES ===================================
+______ test_observer_fires_once_after_the_durable_commit[manual_deferred] ______
+
+tmp_path = PosixPath('/var/tmp/hermes-pytest-1000/r-sbxm3lgy/pytest-of-kvn/pytest-0/test_observer_fires_once_after2')
+plugin_ctx = <hermes_cli.plugins.PluginContext object at 0x7f20ccbf5bd0>
+mode = 'manual_deferred'
+
+>   ???
+E   AssertionError: on_compression_complete fired 0 times
+E   assert 0 == 1
+E    +  where 0 = len([])
+
+tests/agent/test_compaction_observer_hook_contract.py:123: AssertionError
+----------------------------- Captured stdout call -----------------------------
+🗜️ Compacting context — summarizing earlier conversation so I can continue...
+🗜️ Compacting context — summarizing earlier conversation so I can continue...
+------------------------------ Captured log call -------------------------------
+INFO     run_agent:agent_runtime_helpers.py:1990 OpenAI client created (agent_init, shared=True) thread=MainThread:139779075091328 provider= base_url=https://openrouter.ai/api/v1 model=test/model
+INFO     tools.tool_search:tool_search.py:379 tool_search activated (tier 1): 14 core/visible tools kept, 15 deferred (~4511 tokens), listing full (budget ~4000 tokens)
+INFO     agent.conversation_compression:conversation_compression.py:4053 context compression started: session=original-session messages=21 tokens=~75,000 model=test/model focus=None
+INFO     agent.conversation_compression:conversation_compression.py:4279 context compression done: session=original-session messages=21->13 rough_tokens=~11,637 awaiting_real_usage=true
+INFO     agent.conversation_compression:conversation_compression.py:1497 context compression attempt telemetry: {"attempt_id":"2373c564ce77480bbec2323884e7295a","chunk_count":0,"chunking":false,"commit_ms":17,"commit_status":"committed","event":"compression_attempt","fallback_used":false,"session_id":"original-session","split_status":"in_place_committed","total_duration_ms":92}
+INFO     run_agent:agent_runtime_helpers.py:1990 OpenAI client created (agent_init, shared=True) thread=MainThread:139779075091328 provider= base_url=https://openrouter.ai/api/v1 model=test/model
+INFO     agent.conversation_compression:conversation_compression.py:4053 context compression started: session=original-session messages=21 tokens=~75,000 model=test/model focus=None
+INFO     agent.conversation_compression:conversation_compression.py:4279 context compression done: session=original-session messages=21->13 rough_tokens=~11,637 awaiting_real_usage=true
+INFO     agent.conversation_compression:conversation_compression.py:1497 context compression attempt telemetry: {"attempt_id":"8e7cf53a543944afaecf86c5aa66b1dd","chunk_count":0,"chunking":false,"commit_ms":12,"commit_status":"committed","event":"compression_attempt","fallback_used":false,"session_id":"original-session","split_status":"in_place_committed","total_duration_ms":73}
+=========================== short test summary info ============================
+FAILED tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]
+1 failed, 6 passed in 11.55s
+
+=== 1 file with test failures (1 test failed) ===
+  tests/agent/test_compaction_observer_hook_contract.py  (1 test failed)

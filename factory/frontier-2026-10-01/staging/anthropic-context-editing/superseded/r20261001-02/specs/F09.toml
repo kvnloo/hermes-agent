@@ -1,0 +1,77 @@
+xf_spec = 1
+id = "F09"
+rev = 2                          # rev 1 = run r20261001-01 on 572e4f4fad (not pre-registered); rev 2 = this file, written before run r20261001-02
+staging = "anthropic-context-editing"
+catalog_refs = ["F09"]
+feature = "anthropic-context-editing"
+kind = "ab"
+queue_rank = 0
+hypothesis_refs = ["NousResearch#526"]
+priors = []
+
+[contract]
+question = "Is the context_management payload sent only when opted in and eligible; does a structured 400 disable it and retry once; does the local compressor still fire over threshold; is the flag-absent wire unchanged?"
+hypothesis = "head sends the payload on exactly the 1 eligible cell of 6, base on none; head 400 sequence [True, False, False]; local compression fires on turn 2 in all 4 over-threshold cells; flag-absent bodies and headers identical"
+varied = "tree"
+fixed = ["harness/f09_gate_probe.py sha256 at run time", "SDK-oracle fake of each checkout (same blob on both arms)", "venv interpreter", "cleared env, throwaway HOME/HERMES_HOME"]
+falsifier = "payload on an ineligible cell, no retry after a structured 400, no local compression over threshold, or any flag-absent wire byte difference after host normalisation"
+kill = "falsifier met -> DISCARD the slice"
+observer_effect = "the over-threshold cells replace agent._compress_context with a counter (same wrapper on both arms)"
+
+[class]
+cost = "$0"
+tier = "T1"
+lane = "cpu"
+evidence_class = "mechanism"
+route_if_keep = "core-leaf"
+route_scope = "native Anthropic API, Claude models; local compressor unchanged"
+harness = { name = "hermes", editor_abi = "n/a", surface = "AIAgent.run_conversation over TLS-intercepted api.anthropic.com" }
+
+[safety]
+net = "loopback only (socket.connect guard records and refuses anything else)"
+data_class = "public"
+cli_entrypoint = false
+allow_exec = ["git rev-parse"]
+owner_decisions = []
+
+[base]
+repo = "NousResearch/hermes-agent"
+pin = "aea969677c60a1bb72fe227fdfb98f196a2092cc"
+
+[[arms]]
+id = "base"
+tree = "@base"
+
+[[arms]]
+id = "head"
+branch = "staging/anthropic-context-editing"
+head = "b83e778103d36c48c7736bae07c01658dfb97158"
+parent = "@base"
+
+[probe]
+kind = "probe"
+cmd = "<venv-python> harness/f09_gate_probe.py --repo <worktree> --arm {arm} --out raw/f09_{arm}.json"
+cells = ["native_claude_flag_false", "native_claude_flag_true", "native_claude_flag_true_compression_disabled", "native_claude_flag_true_checkpoint_required", "native_non_claude_flag_true", "third_party_endpoint_flag_true", "structured_400_disable_and_retry_once", "over_threshold_local_fallback_on", "over_threshold_local_fallback_off", "flag_absent_wire"]
+reps = 1
+order = "base then head"
+timeout_s = 900
+
+[oracle]
+type = "gate"
+decision_rule = "KEEP iff on head every gate cell passes (payload and beta present exactly when expected), the 400 cell gives [True, False, False], local compression fires >= 1 time on turn 2 in the flag-on over-threshold cell, the flag-absent body-minus-system and header hashes match base, and the host-normalised system hashes match base; base must send the payload on 0 cells."
+cache_read_ratio = "NOT_MEASURED (needs F10, paid, OD-3); caps the branch at LIMITED"
+
+guards = ["G-guards"]
+invalidate_on = ["agent/anthropic_adapter.py", "agent/chat_completion_helpers.py", "agent/turn_recovery.py", "agent/agent_init.py", "agent/native_compaction.py", "agent/anthropic_endpoints.py", "tests/fakes/providers/anthropic_messages.py"]
+
+[outputs]
+public = ["per-cell booleans", "payload example", "hashes", "counts"]
+private = []
+not_tested = ["real Anthropic acceptance and rejection wording", "cache_read/cache_creation around a clear", "OAuth route"]
+
+[budget]
+usd = 0
+wall_s = 1800
+cpu_core_s = 3600
+max_cells = 20
+lease_hours = 24

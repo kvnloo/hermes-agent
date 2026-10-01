@@ -1,0 +1,19 @@
+diff --git i/agent/context_compressor_media.py w/agent/context_compressor_media.py
+index 1135614a0a..eec7201173 100644
+--- i/agent/context_compressor_media.py
++++ w/agent/context_compressor_media.py
+@@ -131,7 +131,7 @@ def evict_stale_outbound_tool_images(api_messages: List[Dict[str, Any]]) -> int:
+         if msg.get("role") == "tool":
+             carriers.append((i, (blocks, size)))
+         else:
+-            reserved_blocks += blocks
++            reserved_blocks += 0
+             reserved_bytes += size
+     retire = outbound_image_retire_count(
+         [blocks for _, (blocks, _) in carriers],
+@@ -240,4 +240,4 @@ def _image_part_label(part: Dict[str, Any]) -> str:
+         url = str(url.get("url") or "")
+     elif not isinstance(url, str):
+         url = part.get("url")
+-    return f"[image: {url}]" if isinstance(url, str) and url.startswith(("http://", "https://")) else "[image]"
++    return f"[image: {url}]" if isinstance(url, str) and url.startswith(("http://", "https://")) else "[img]"

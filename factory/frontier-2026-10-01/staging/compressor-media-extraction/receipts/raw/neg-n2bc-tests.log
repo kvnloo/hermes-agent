@@ -1,0 +1,7 @@
+[ 78.9% |    15/~19 | ✓15 | ✗ 0] ✓ tests/agent/test_compressor_historical_media.py (15✓, 2.2s)
+[100.0% |    19/~19 | ✓15 | ✗ 0] ✗ tests/agent/test_protected_tail_pressure.py (1e, 2.3s)
+  ║ ImportError while importing test module '$W/head/tests/agent/test_protected_tail_pressure.py'.
+  ║ E   ImportError: cannot import name '_tool_content_has_images' from 'agent.context_compressor' ($W/head/agent/context_compressor.py)
+=== Summary: 2 files, 15 tests passed, 0 failed (100% complete) in 2.3s (2 workers) ===
+ImportError while importing test module '$W/head/tests/agent/test_protected_tail_pressure.py'.
+E   ImportError: cannot import name '_tool_content_has_images' from 'agent.context_compressor' ($W/head/agent/context_compressor.py)

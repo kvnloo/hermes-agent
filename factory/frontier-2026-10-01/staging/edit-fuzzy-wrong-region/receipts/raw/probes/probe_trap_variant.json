@@ -1,0 +1,22 @@
+{
+ "base": {
+  "trap_as_written(new='return value')": "applied:context_aware",
+  "variant(new='return value.casefold()')": "applied:context_aware"
+ },
+ "c54575": {
+  "trap_as_written(new='return value')": "applied:context_aware",
+  "variant(new='return value.casefold()')": "applied:context_aware"
+ },
+ "c125376-leaf": {
+  "trap_as_written(new='return value')": "no_change",
+  "variant(new='return value.casefold()')": "rejected"
+ },
+ "both": {
+  "trap_as_written(new='return value')": "no_change",
+  "variant(new='return value.casefold()')": "rejected"
+ },
+ "both+fold": {
+  "trap_as_written(new='return value')": "no_change",
+  "variant(new='return value.casefold()')": "rejected"
+ }
+}

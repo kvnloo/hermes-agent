@@ -1,0 +1,120 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compressor-media-extraction",
+ "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+ "head_revision": "c5e8be14b43bf75bcc2e4e8d95f2d4810a7e2779",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#80636",
+  "NousResearch/hermes-agent#78645"
+ ],
+ "provenance": "self",
+ "privacy": "public-aggregate",
+ "cost_usd": 0.0,
+ "ai_assistance": "Claude Code (Opus 5.5) ran the experiment and wrote this receipt",
+ "created_at": "2026-10-01T07:47:16-05:00",
+ "spec": {
+  "path": null,
+  "prereg_commit": null,
+  "note": "not pre-registered on claude/ledger (no ledger writes in this run)"
+ },
+ "env": {
+  "host": "<local-host>",
+  "test_python": "3.11.14 (pytest 9.1.1, HERMES_PYTHON)",
+  "nav_python": "3.14.7 separate uv venv (tiktoken 0.14.0, radon 6.0.1)",
+  "sandbox": "none (no bwrap); HOME/HERMES_HOME pointed at scratch test homes; run_tests.sh env -i",
+  "load1_range": "3-16 (shared host; base and head full runs ran concurrently)",
+  "paths": "absolute local paths in commands and raw files are replaced by $W/<tree>, $S, $HERMES_PYTHON, <uv>, <pytest-tmp>, pytest-of-<user>"
+ },
+ "id": "static-gates/r20261001-02",
+ "experiment": "verify_media.py parity / no-shim / old-path gates, plus negative controls",
+ "tier": "T0",
+ "label": "OBSERVED",
+ "supersedes": "static-gates/r20261001-01",
+ "round_note": "fix round 1: head rebuilt on main aea969677c (c5e8be14b4 replaces the unpushed d2bff3a59e; same patch-id 2c92e56f, corrected commit message)",
+ "inputs": {
+  "regen_scripts_sha256": {
+   "COMMIT_MSG.txt": "0aed055a5d3212ebc3c27cfd1327db4f4487c2f99542834c3013c9615dbe9d3e",
+   "extract_media.py": "88b143d7b0600ad5197fb5630d6c92bdbaf075cefa5af3477aeebfa03d140a06",
+   "golden_coverage.py": "8f702b09cc002ec8f4a274d91a0752dc37e23192a46af373e437e56d8fa253f8",
+   "golden_parity.py": "5ec7c2954fbbb9166eb5da15be7bc0c3f50dee0fbe11b77a1c632dc2559795d8",
+   "moved_symbol_lookup.py": "137868172480a30d09ed2a0afe60bca0b28ab6a81fff73d21618ceb37a7c3141",
+   "parity_compare.py": "bc99048d3cbc402a079a2ee098f9f209c2f86d34e65388074c0547bb4635989b",
+   "sabotage_perhunk.py": "1d43bc17cc0d13dac5b64258928d54fc801743a6dc6fbd2472ce405660397085",
+   "verify_media.py": "569fc7e4bb407f4071249911ba927ddbb1ec501c72772c3acaa2468f57daf1f1"
+  }
+ },
+ "command": "python3 regen/verify_media.py $W/base $W/sab --python $HERMES_PYTHON --json verify-head.json",
+ "result": {
+  "head": {
+   "overall": "PASS",
+   "gates": {
+    "verbatim": "PASS",
+    "facade_rest": "PASS",
+    "no_shim": "PASS",
+    "old_path_zero": "PASS",
+    "native_coupling": "PASS",
+    "imports": "PASS"
+   },
+   "sizes": {
+    "facade_lines_base": 5753,
+    "facade_lines_head": 5531,
+    "sibling_lines_head": 243
+   },
+   "facade_imports_from_sibling": [
+    "_is_image_part",
+    "_retire_stale_tool_result_images",
+    "_rewritten",
+    "_strip_historical_media",
+    "_strip_images_from_tool_msg",
+    "_summary_part_text"
+   ],
+   "facade_rest_statements_compared": 194,
+   "import_probes": [
+    {
+     "module": "agent.context_compressor_media",
+     "facade_loaded": false,
+     "rc": 0
+    },
+    {
+     "module": "agent.context_compressor",
+     "facade_loaded": true,
+     "rc": 0
+    },
+    {
+     "module": "agent.native_compaction",
+     "facade_loaded": true,
+     "rc": 0
+    },
+    {
+     "module": "agent.chat_completion_helpers",
+     "facade_loaded": false,
+     "rc": 0
+    },
+    {
+     "module": "agent.turn_request_assembly",
+     "facade_loaded": false,
+     "rc": 0
+    }
+   ]
+  },
+  "negative_controls": {
+   "N2a re-export added": {
+    "row": "control:reexport:_replace_image_parts",
+    "failed_gates": [
+     "no_shim"
+    ],
+    "tests": "GREEN"
+   },
+   "old-path imports (N2bc kind)": "per-hunk rows: reverting any test import hunk flips old_path_zero; 3 of those reverts pass pytest (test_compressor_stale_tool_images #2-#4), so only this gate catches them"
+  }
+ },
+ "raw": [
+  {
+   "path": "raw/r02/verify-head.json",
+   "sha256": "03c134af08037bee2c3a8a6bf7c14cd6716204dc7b6488c114168505e1aaec34",
+   "source_sha256": "03c134af08037bee2c3a8a6bf7c14cd6716204dc7b6488c114168505e1aaec34"
+  }
+ ],
+ "verdict": "PASS (all 6 gates on head; each control flips its gate)"
+}

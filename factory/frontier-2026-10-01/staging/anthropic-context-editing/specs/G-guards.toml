@@ -1,0 +1,77 @@
+xf_spec = 1
+id = "G-guards"
+rev = 4                          # rev 1 = r20261001-01 on 572e4f4fad (not pre-registered); rev 2 = r20261001-02 (superseded/r20261001-02/); rev 3 = r20261001-03 on e8c97320ac, head 61effa4dd8, ran only 2 F14 scripts (superseded/r20261001-03/); rev 4 = this file, written before run r20261001-04
+staging = "anthropic-context-editing"
+catalog_refs = ["F14"]
+feature = "anthropic-context-editing"
+kind = "ab"
+queue_rank = 0
+hypothesis_refs = ["NousResearch#526"]
+priors = ["rev 3 ran replay_gates + ab_checkpoint_preflight only; the round-2 verifier ran probe_104120/104260/104360 and worktree_prompt_prefix on both arms and found them equal"]
+
+[contract]
+question = "Does the F14 standing regression set (FACTORY.md section 13, row 2) give the same verdict map on base and head?"
+hypothesis = "identical verdict maps: the slice is default-off and only touches the anthropic_messages request path, the generalised recovery table and config plumbing"
+varied = "tree"
+fixed = ["F14 scripts at base blobs: replay_gates 66fa6a42d4, ab_image_cost_calibration 36750cbf3a, worktree_prompt_prefix 8826e39e70, ab_checkpoint_preflight d698994e54, probe_104120 7b97d52637, probe_104260 c31e4e431e, probe_104360 26338d8115, goal_command_parity f8b5bc55ac, compaction/test_region_scoping a6c29c32ba, postmortem tree e148fbe877 (run.py 5d078e3ab0, context_cap 144adc65ac, deadline 630795b7ac, goal_scope e0f127b11f, finalizer_schedule 596309560f), tests/e2e/test_relay_native_openai_stream.py 7c0aef79c5 (the slice changes none of them)", "venv interpreter", "env -i with a fresh throwaway HOME/HERMES_HOME per probe"]
+falsifier = "any probe verdict differs between arms, or any replay gate is not PASS on head"
+kill = "falsifier met -> DISCARD the slice (or explain the change in the receipt)"
+observer_effect = "none beyond the scripts' own fakes"
+
+[class]
+cost = "$0"
+tier = "T1"
+lane = "cpu"
+evidence_class = "regression"
+route_if_keep = "core-leaf"
+route_scope = "the standing regression set; it does not exercise the Anthropic payload (F09 does)"
+harness = { name = "hermes", editor_abi = "n/a", surface = "eval scripts and probes, unmodified, from each arm's checkout" }
+
+[safety]
+net = "loopback only (each probe's own guard); no live probes (postmortem --live not passed)"
+data_class = "public"
+cli_entrypoint = false
+allow_exec = ["git (worktree_prompt_prefix builds its own fixture repo under its output dir)"]
+owner_decisions = []
+
+[base]
+repo = "NousResearch/hermes-agent"
+pin = "44a1ce9724502b9c692faaef00af3054bf11f1a6"
+
+[[arms]]
+id = "base"
+tree = "@base"
+
+[[arms]]
+id = "head"
+branch = "staging/anthropic-context-editing"
+head = "05d6dbc172d24db4b237f8ef130fb4dc2e8651df"
+parent = "@base"
+
+[probe]
+kind = "script"
+driver = "harness/f14_guards.py --worktree <worktree> --arm {arm} --raw raw --private <private>"
+probes = ["token_accounting/replay_gates", "token_accounting/ab_image_cost_calibration", "token_accounting/worktree_prompt_prefix", "native_compaction/ab_checkpoint_preflight", "provider_fallback/probe_104120", "provider_fallback/probe_104260", "provider_fallback/probe_104360", "goal_command_parity", "compaction/test_region_scoping", "postmortem/run_non_live (9 probes)", "postmortem/context_cap_probe", "postmortem/deadline_probe", "postmortem/goal_scope_probe", "postmortem/finalizer_schedule_probe"]
+not_run = ["postmortem/goal_repaste_probe: needs RF_STATE_COPY, a copy of a real session state.db, which this run may not touch", "readtool fixtures via direct read_file only: F14 names no command"]
+reps = 1
+order = "base then head"
+timeout_s = 900
+
+[oracle]
+type = "equal"
+decision_rule = "EQUAL iff every run probe has the same verdict (exit code + documented marker; replay_gates: its verdict map; postmortem runner: its per-probe PASS/FAIL table) on base and head, and replay_gates is 11/11 PASS on head. Normalised-output hashes are reported per probe; a hash difference with equal verdicts is explained in the receipt. A probe that fails on base too is recorded as pre-existing, not as a regression. Because 2 F14 items are not run, P5 can be at most PARTIAL."
+
+guards = []
+invalidate_on = ["agent/turn_recovery.py", "agent/native_compaction.py", "agent/context_compressor.py", "agent/anthropic_adapter.py", "agent/chat_completion_helpers.py"]
+
+[outputs]
+public = ["per-probe verdicts", "key result fields (normalised)", "normalised-output hashes"]
+private = ["full probe stdout/stderr and output files (local paths), kept outside the artifact tree"]
+not_tested = ["the Anthropic payload (covered by F09)", "postmortem/goal_repaste_probe", "readtool fixtures"]
+
+[budget]
+usd = 0
+wall_s = 1800
+cpu_core_s = 3600
+max_cells = 28
+lease_hours = 24

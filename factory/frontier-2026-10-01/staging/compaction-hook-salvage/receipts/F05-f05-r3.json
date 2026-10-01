@@ -1,0 +1,3396 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "F05/f05-r3",
+ "label": "OBSERVED",
+ "spec": {
+  "path": null,
+  "factory_row": "FACTORY.md \u00a713 row 8 (F05)",
+  "rev": 3,
+  "sha256": null,
+  "prereg_commit": null,
+  "note": "no xf_spec TOML was written; the decision rule below was fixed in STAGING.md's acceptance gates before r3 ran",
+  "decision_rule": "RED: the contract fails on the staging commit with marker 'on_compression_complete fired 0 times' in 3/3 reps. GREEN: every case passes on the arm in 3/3 reps. NEGATIVE/SABOTAGE: the mutated arm re-fails at least one case in 3/3 reps; a sabotage arm that stays green marks its hunk unpinned."
+ },
+ "runner_revision": {
+  "runner": {
+   "path": "tools/chs_ab_runner.py",
+   "sha256": "c54b6148b75adedaa975f4a6de6f7d5184dd348efd173504d3687db28e2b67f8"
+  },
+  "probe": {
+   "path": "tools/chs_clause_probe.py",
+   "sha256": "4555d022f0ba58fbffd40f1c00c40db0b68006c5a234a256bc8758a7365fde2d"
+  },
+  "arm_builder": {
+   "path": "tools/chs_build_arms_r3.py",
+   "sha256": "37229ec2484a3715e3227afdee9f3604c0075bf6697098e4d35f63cc559ae771"
+  },
+  "egress_guard": {
+   "path": "tools/chs_egress_guard.py",
+   "sha256": "92d7c9a3167b561d0c3247f0269bd757c668e6abed35a909d33d5ca7dc108db0"
+  }
+ },
+ "issue": null,
+ "issue_note": "no fork campaign thread exists for this item (OD-9)",
+ "origin_refs": [
+  "NousResearch/hermes-agent#64231",
+  "NousResearch/hermes-agent#118382",
+  "NousResearch/hermes-agent#53806",
+  "NousResearch/hermes-agent#93391",
+  "NousResearch/hermes-agent#118847",
+  "NousResearch/hermes-agent#119347",
+  "NousResearch/hermes-agent#125881"
+ ],
+ "staging": "compaction-hook-salvage",
+ "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+ "head_revision": "de819a7d0660be8fd560c35bbc4c56676bc8408b",
+ "changed_files": [
+  "tests/agent/test_compaction_observer_hook_contract.py"
+ ],
+ "contract_test_blob": "95d731de9399ecbd1d191234d3cf336b4fd159f4",
+ "inputs_pinned": {
+  "carrier_heads": {
+   "53806": "6067388d0c03ed86b596c3125f1a09804410221f",
+   "93391": "9da3734b8e",
+   "118847": "222e3e26c3",
+   "119347": "4a527fc35d",
+   "125881": "d3fdffcf82"
+  }
+ },
+ "arms": {
+  "base": {
+   "run": "f05-r3",
+   "commit": "de819a7d0660be8fd560c35bbc4c56676bc8408b",
+   "tree": "98fd26c2f43cb581ffe1b26d8b45c04b00f08f34",
+   "hook_subscribed": "on_compression_complete",
+   "contract_as_committed": {
+    "reps": 3,
+    "per_rep": [
+     "4 passed / 3 failed",
+     "4 passed / 3 failed",
+     "4 passed / 3 failed"
+    ],
+    "reps_agree": true,
+    "failing": [
+     "test_observer_fires_once_after_the_durable_commit[in_place]",
+     "test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+     "test_observer_fires_once_after_the_durable_commit[rotated]"
+    ],
+    "assertions": [
+     "AssertionError: on_compression_complete fired 0 times"
+    ],
+    "all_green": false,
+    "exit_classes": [
+     "ok"
+    ],
+    "logs_private": [
+     "raw/f05-r3/base-contract-rep1.log",
+     "raw/f05-r3/base-contract-rep2.log",
+     "raw/f05-r3/base-contract-rep3.log"
+    ]
+   },
+   "contract_adapted_to_carrier_hook": null,
+   "probe": {
+    "passed": 9,
+    "failed": 0,
+    "exit_class": "ok",
+    "egress": {
+     "connect": 0,
+     "dns": 0,
+     "prewarm_suppressed": 1
+    },
+    "clauses": {
+     "rotated": {
+      "fires": 0,
+      "expect_fire": true,
+      "ok_count": false,
+      "timing": null,
+      "order": [
+       "summary",
+       "publish_compression_child:start",
+       "publish_compression_child:end"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "in_place": {
+      "fires": 0,
+      "expect_fire": true,
+      "ok_count": false,
+      "timing": null,
+      "order": [
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:end"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "manual_deferred": {
+      "fires": 0,
+      "expect_fire": true,
+      "ok_count": false,
+      "timing": null,
+      "order": [
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:end",
+       "finalize:True"
+      ],
+      "fires_before_host_finalize": 0,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "summary_aborted": {
+      "fires": 0,
+      "expect_fire": false,
+      "ok_count": true,
+      "timing": null,
+      "order": [
+       "summary"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": true,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "would_grow_refused": {
+      "fires": 0,
+      "expect_fire": false,
+      "ok_count": true,
+      "timing": null,
+      "order": [
+       "summary"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": true,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "fallback_committed": {
+      "fires": 0,
+      "expect_fire": true,
+      "ok_count": false,
+      "timing": null,
+      "order": [
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:end"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 13,
+      "messages_in": 61,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "commit_failed_in_place": {
+      "fires": 0,
+      "expect_fire": false,
+      "ok_count": true,
+      "timing": null,
+      "order": [
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:raised"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "commit_failed_rotated": {
+      "fires": 0,
+      "expect_fire": false,
+      "ok_count": true,
+      "timing": null,
+      "order": [
+       "summary",
+       "publish_compression_child:start",
+       "publish_compression_child:raised"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 21,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "manual_discarded": {
+      "fires": 0,
+      "expect_fire": false,
+      "ok_count": true,
+      "timing": null,
+      "order": [
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:end",
+       "finalize:False"
+      ],
+      "fires_before_host_finalize": 0,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     }
+    }
+   }
+  },
+  "c53806-foldin": {
+   "run": "f05-r3",
+   "commit": "77bbc5f9a4dbeef9cb00ba24bed224fb6e7613ae",
+   "tree": "2af800ec30a57b88771395b890a12806cef34258",
+   "hook_subscribed": "on_compression_complete",
+   "contract_as_committed": {
+    "reps": 3,
+    "per_rep": [
+     "7 passed / 0 failed",
+     "7 passed / 0 failed",
+     "7 passed / 0 failed"
+    ],
+    "reps_agree": true,
+    "failing": [],
+    "assertions": [],
+    "all_green": true,
+    "exit_classes": [
+     "ok"
+    ],
+    "logs_private": [
+     "raw/f05-r3/c53806-foldin-contract-rep1.log",
+     "raw/f05-r3/c53806-foldin-contract-rep2.log",
+     "raw/f05-r3/c53806-foldin-contract-rep3.log"
+    ]
+   },
+   "contract_adapted_to_carrier_hook": null,
+   "probe": {
+    "passed": 9,
+    "failed": 0,
+    "exit_class": "ok",
+    "egress": {
+     "connect": 0,
+     "dns": 0,
+     "prewarm_suppressed": 1
+    },
+    "clauses": {
+     "rotated": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "after_durable_commit",
+      "order": [
+       "summary",
+       "publish_compression_child:start",
+       "publish_compression_child:end",
+       "hook"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "in_place",
+       "old_session_id",
+       "platform",
+       "session_id",
+       "telemetry_schema_version",
+       "tokens_after",
+       "tokens_before"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "in_place": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "after_durable_commit",
+      "order": [
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:end",
+       "hook"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "in_place",
+       "old_session_id",
+       "platform",
+       "session_id",
+       "telemetry_schema_version",
+       "tokens_after",
+       "tokens_before"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "manual_deferred": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "after_durable_commit",
+      "order": [
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:end",
+       "finalize:True",
+       "hook"
+      ],
+      "fires_before_host_finalize": 0,
+      "payload_keys": [
+       "in_place",
+       "old_session_id",
+       "platform",
+       "session_id",
+       "telemetry_schema_version",
+       "tokens_after",
+       "tokens_before"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "summary_aborted": {
+      "fires": 0,
+      "expect_fire": false,
+      "ok_count": true,
+      "timing": null,
+      "order": [
+       "summary"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": true,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "would_grow_refused": {
+      "fires": 0,
+      "expect_fire": false,
+      "ok_count": true,
+      "timing": null,
+      "order": [
+       "summary"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": true,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "fallback_committed": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "after_durable_commit",
+      "order": [
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:end",
+       "hook"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "in_place",
+       "old_session_id",
+       "platform",
+       "session_id",
+       "telemetry_schema_version",
+       "tokens_after",
+       "tokens_before"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 61,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "commit_failed_in_place": {
+      "fires": 0,
+      "expect_fire": false,
+      "ok_count": true,
+      "timing": null,
+      "order": [
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:raised"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "commit_failed_rotated": {
+      "fires": 0,
+      "expect_fire": false,
+      "ok_count": true,
+      "timing": null,
+      "order": [
+       "summary",
+       "publish_compression_child:start",
+       "publish_compression_child:raised"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 21,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "manual_discarded": {
+      "fires": 0,
+      "expect_fire": false,
+      "ok_count": true,
+      "timing": null,
+      "order": [
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:end",
+       "finalize:False"
+      ],
+      "fires_before_host_finalize": 0,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     }
+    }
+   },
+   "diff_vs_staging": "4 files changed, 62 insertions(+), 11 deletions(-)",
+   "merge": "handported carrier + fold-in"
+  },
+  "foldin-ref": {
+   "run": "f05-r3",
+   "commit": "584ed12b3199f250ad58b7ca28b31d357c46e767",
+   "tree": "ec9c808953d7fc1ecc3393abda4d817339286974",
+   "hook_subscribed": "on_compression_complete",
+   "contract_as_committed": {
+    "reps": 3,
+    "per_rep": [
+     "7 passed / 0 failed",
+     "7 passed / 0 failed",
+     "7 passed / 0 failed"
+    ],
+    "reps_agree": true,
+    "failing": [],
+    "assertions": [],
+    "all_green": true,
+    "exit_classes": [
+     "ok"
+    ],
+    "logs_private": [
+     "raw/f05-r3/foldin-ref-contract-rep1.log",
+     "raw/f05-r3/foldin-ref-contract-rep2.log",
+     "raw/f05-r3/foldin-ref-contract-rep3.log"
+    ]
+   },
+   "contract_adapted_to_carrier_hook": null,
+   "probe": {
+    "passed": 9,
+    "failed": 0,
+    "exit_class": "ok",
+    "egress": {
+     "connect": 0,
+     "dns": 0,
+     "prewarm_suppressed": 1
+    },
+    "clauses": {
+     "rotated": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "after_durable_commit",
+      "order": [
+       "summary",
+       "publish_compression_child:start",
+       "publish_compression_child:end",
+       "hook"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "in_place",
+       "old_session_id",
+       "platform",
+       "session_id",
+       "telemetry_schema_version",
+       "tokens_after",
+       "tokens_before"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "in_place": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "after_durable_commit",
+      "order": [
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:end",
+       "hook"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "in_place",
+       "old_session_id",
+       "platform",
+       "session_id",
+       "telemetry_schema_version",
+       "tokens_after",
+       "tokens_before"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "manual_deferred": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "after_durable_commit",
+      "order": [
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:end",
+       "finalize:True",
+       "hook"
+      ],
+      "fires_before_host_finalize": 0,
+      "payload_keys": [
+       "in_place",
+       "old_session_id",
+       "platform",
+       "session_id",
+       "telemetry_schema_version",
+       "tokens_after",
+       "tokens_before"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "summary_aborted": {
+      "fires": 0,
+      "expect_fire": false,
+      "ok_count": true,
+      "timing": null,
+      "order": [
+       "summary"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": true,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "would_grow_refused": {
+      "fires": 0,
+      "expect_fire": false,
+      "ok_count": true,
+      "timing": null,
+      "order": [
+       "summary"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": true,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "fallback_committed": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "after_durable_commit",
+      "order": [
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:end",
+       "hook"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "in_place",
+       "old_session_id",
+       "platform",
+       "session_id",
+       "telemetry_schema_version",
+       "tokens_after",
+       "tokens_before"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 61,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "commit_failed_in_place": {
+      "fires": 0,
+      "expect_fire": false,
+      "ok_count": true,
+      "timing": null,
+      "order": [
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:raised"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "commit_failed_rotated": {
+      "fires": 0,
+      "expect_fire": false,
+      "ok_count": true,
+      "timing": null,
+      "order": [
+       "summary",
+       "publish_compression_child:start",
+       "publish_compression_child:raised"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 21,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "manual_discarded": {
+      "fires": 0,
+      "expect_fire": false,
+      "ok_count": true,
+      "timing": null,
+      "order": [
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:end",
+       "finalize:False"
+      ],
+      "fires_before_host_finalize": 0,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     }
+    }
+   },
+   "diff_vs_staging": "4 files changed, 39 insertions(+), 11 deletions(-)"
+  },
+  "foldin-bounded": {
+   "run": "f05-r3",
+   "commit": "b459478759a9a25bea5e6e69bc2b1b54c5126925",
+   "tree": "83225c9d28a35adcd71620066074d096f8e47755",
+   "hook_subscribed": "on_compression_complete",
+   "contract_as_committed": {
+    "reps": 3,
+    "per_rep": [
+     "7 passed / 0 failed",
+     "7 passed / 0 failed",
+     "7 passed / 0 failed"
+    ],
+    "reps_agree": true,
+    "failing": [],
+    "assertions": [],
+    "all_green": true,
+    "exit_classes": [
+     "ok"
+    ],
+    "logs_private": [
+     "raw/f05-r3/foldin-bounded-contract-rep1.log",
+     "raw/f05-r3/foldin-bounded-contract-rep2.log",
+     "raw/f05-r3/foldin-bounded-contract-rep3.log"
+    ]
+   },
+   "contract_adapted_to_carrier_hook": null,
+   "probe": {
+    "passed": 9,
+    "failed": 0,
+    "exit_class": "ok",
+    "egress": {
+     "connect": 0,
+     "dns": 0,
+     "prewarm_suppressed": 1
+    },
+    "clauses": {
+     "rotated": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "after_durable_commit",
+      "order": [
+       "summary",
+       "publish_compression_child:start",
+       "publish_compression_child:end",
+       "hook"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "in_place",
+       "old_session_id",
+       "platform",
+       "session_id",
+       "telemetry_schema_version",
+       "tokens_after",
+       "tokens_before"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "in_place": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "after_durable_commit",
+      "order": [
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:end",
+       "hook"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "in_place",
+       "old_session_id",
+       "platform",
+       "session_id",
+       "telemetry_schema_version",
+       "tokens_after",
+       "tokens_before"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "manual_deferred": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "after_durable_commit",
+      "order": [
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:end",
+       "finalize:True",
+       "hook"
+      ],
+      "fires_before_host_finalize": 0,
+      "payload_keys": [
+       "in_place",
+       "old_session_id",
+       "platform",
+       "session_id",
+       "telemetry_schema_version",
+       "tokens_after",
+       "tokens_before"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "summary_aborted": {
+      "fires": 0,
+      "expect_fire": false,
+      "ok_count": true,
+      "timing": null,
+      "order": [
+       "summary"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": true,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "would_grow_refused": {
+      "fires": 0,
+      "expect_fire": false,
+      "ok_count": true,
+      "timing": null,
+      "order": [
+       "summary"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": true,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "fallback_committed": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "after_durable_commit",
+      "order": [
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:end",
+       "hook"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "in_place",
+       "old_session_id",
+       "platform",
+       "session_id",
+       "telemetry_schema_version",
+       "tokens_after",
+       "tokens_before"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 61,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "commit_failed_in_place": {
+      "fires": 0,
+      "expect_fire": false,
+      "ok_count": true,
+      "timing": null,
+      "order": [
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:raised"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "commit_failed_rotated": {
+      "fires": 0,
+      "expect_fire": false,
+      "ok_count": true,
+      "timing": null,
+      "order": [
+       "summary",
+       "publish_compression_child:start",
+       "publish_compression_child:raised"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 21,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "manual_discarded": {
+      "fires": 0,
+      "expect_fire": false,
+      "ok_count": true,
+      "timing": null,
+      "order": [
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:end",
+       "finalize:False"
+      ],
+      "fires_before_host_finalize": 0,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     }
+    }
+   },
+   "diff_vs_staging": "5 files changed, 63 insertions(+), 11 deletions(-)"
+  },
+  "c53806-handport": {
+   "run": "f05-r3",
+   "commit": "96bd5a54e4a3ff111b6754e18279fc397662b6b2",
+   "tree": "a8f9a6764eb9678b84f5683b645075ac597b0100",
+   "hook_subscribed": "on_session_start",
+   "contract_as_committed": {
+    "reps": 3,
+    "per_rep": [
+     "4 passed / 3 failed",
+     "4 passed / 3 failed",
+     "4 passed / 3 failed"
+    ],
+    "reps_agree": true,
+    "failing": [
+     "test_observer_fires_once_after_the_durable_commit[in_place]",
+     "test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+     "test_observer_fires_once_after_the_durable_commit[rotated]"
+    ],
+    "assertions": [
+     "AssertionError: on_compression_complete fired 0 times"
+    ],
+    "all_green": false,
+    "exit_classes": [
+     "ok"
+    ],
+    "logs_private": [
+     "raw/f05-r3/c53806-handport-contract-rep1.log",
+     "raw/f05-r3/c53806-handport-contract-rep2.log",
+     "raw/f05-r3/c53806-handport-contract-rep3.log"
+    ]
+   },
+   "contract_adapted_to_carrier_hook": {
+    "reps": 3,
+    "per_rep": [
+     "3 passed / 4 failed",
+     "3 passed / 4 failed",
+     "3 passed / 4 failed"
+    ],
+    "reps_agree": true,
+    "failing": [
+     "test_observer_fires_once_after_the_durable_commit[in_place]",
+     "test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+     "test_observer_fires_once_after_the_durable_commit[rotated]",
+     "test_observer_is_silent_when_nothing_commits[manual_discarded]"
+    ],
+    "assertions": [
+     "KeyError: 'in_place'",
+     "AssertionError: a deferred manual compaction must wait for the host's own commit",
+     "AssertionError: on_session_start fired for a compaction its host never committed: [{'session_id': 'original-session', 'boundary_reason': 'compression', 'old_session_id': 'original-session', 'platform': 'cli', 'model': 'test/model', 'context"
+    ],
+    "all_green": false,
+    "exit_classes": [
+     "ok"
+    ],
+    "logs_private": [
+     "raw/f05-r3/c53806-handport-adapted-rep1.log",
+     "raw/f05-r3/c53806-handport-adapted-rep2.log",
+     "raw/f05-r3/c53806-handport-adapted-rep3.log"
+    ]
+   },
+   "probe": {
+    "passed": 9,
+    "failed": 0,
+    "exit_class": "ok",
+    "egress": {
+     "connect": 0,
+     "dns": 0,
+     "prewarm_suppressed": 1
+    },
+    "clauses": {
+     "rotated": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "after_durable_commit",
+      "order": [
+       "summary",
+       "publish_compression_child:start",
+       "publish_compression_child:end",
+       "hook"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "boundary_reason",
+       "context_length",
+       "conversation_id",
+       "model",
+       "old_session_id",
+       "platform",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "in_place": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "after_durable_commit",
+      "order": [
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:end",
+       "hook"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "boundary_reason",
+       "context_length",
+       "conversation_id",
+       "model",
+       "old_session_id",
+       "platform",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "manual_deferred": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "after_durable_commit",
+      "order": [
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:end",
+       "hook",
+       "finalize:True"
+      ],
+      "fires_before_host_finalize": 1,
+      "payload_keys": [
+       "boundary_reason",
+       "context_length",
+       "conversation_id",
+       "model",
+       "old_session_id",
+       "platform",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "summary_aborted": {
+      "fires": 0,
+      "expect_fire": false,
+      "ok_count": true,
+      "timing": null,
+      "order": [
+       "summary"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": true,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "would_grow_refused": {
+      "fires": 0,
+      "expect_fire": false,
+      "ok_count": true,
+      "timing": null,
+      "order": [
+       "summary"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": true,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "fallback_committed": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "after_durable_commit",
+      "order": [
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:end",
+       "hook"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "boundary_reason",
+       "context_length",
+       "conversation_id",
+       "model",
+       "old_session_id",
+       "platform",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 61,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "commit_failed_in_place": {
+      "fires": 0,
+      "expect_fire": false,
+      "ok_count": true,
+      "timing": null,
+      "order": [
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:raised"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "commit_failed_rotated": {
+      "fires": 0,
+      "expect_fire": false,
+      "ok_count": true,
+      "timing": null,
+      "order": [
+       "summary",
+       "publish_compression_child:start",
+       "publish_compression_child:raised"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 21,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "manual_discarded": {
+      "fires": 1,
+      "expect_fire": false,
+      "ok_count": false,
+      "timing": "after_durable_commit",
+      "order": [
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:end",
+       "hook",
+       "finalize:False"
+      ],
+      "fires_before_host_finalize": 1,
+      "payload_keys": [
+       "boundary_reason",
+       "context_length",
+       "conversation_id",
+       "model",
+       "old_session_id",
+       "platform",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     }
+    }
+   },
+   "diff_vs_staging": "2 files changed, 42 insertions(+)",
+   "merge": "handported (compression commit e560abd758: conversation_compression.py + plugins.py hunks)"
+  },
+  "c53806-handport-pre": {
+   "run": "f05-r3",
+   "commit": "96bd5a54e4a3ff111b6754e18279fc397662b6b2",
+   "tree": "a8f9a6764eb9678b84f5683b645075ac597b0100",
+   "hook_subscribed": "pre_context_compression",
+   "contract_as_committed": {
+    "reps": 3,
+    "per_rep": [
+     "4 passed / 3 failed",
+     "4 passed / 3 failed",
+     "4 passed / 3 failed"
+    ],
+    "reps_agree": true,
+    "failing": [
+     "test_observer_fires_once_after_the_durable_commit[in_place]",
+     "test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+     "test_observer_fires_once_after_the_durable_commit[rotated]"
+    ],
+    "assertions": [
+     "AssertionError: on_compression_complete fired 0 times"
+    ],
+    "all_green": false,
+    "exit_classes": [
+     "ok"
+    ],
+    "logs_private": [
+     "raw/f05-r3/c53806-handport-pre-contract-rep1.log",
+     "raw/f05-r3/c53806-handport-pre-contract-rep2.log",
+     "raw/f05-r3/c53806-handport-pre-contract-rep3.log"
+    ]
+   },
+   "contract_adapted_to_carrier_hook": {
+    "reps": 3,
+    "per_rep": [
+     "0 passed / 7 failed",
+     "0 passed / 7 failed",
+     "0 passed / 7 failed"
+    ],
+    "reps_agree": true,
+    "failing": [
+     "test_observer_fires_once_after_the_durable_commit[in_place]",
+     "test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+     "test_observer_fires_once_after_the_durable_commit[rotated]",
+     "test_observer_is_silent_when_nothing_commits[commit_failed]",
+     "test_observer_is_silent_when_nothing_commits[manual_discarded]",
+     "test_observer_is_silent_when_nothing_commits[summary_aborted]",
+     "test_observer_is_silent_when_nothing_commits[would_grow_refused]"
+    ],
+    "assertions": [
+     "AssertionError: observer ran before the compacted transcript was durable",
+     "AssertionError: a deferred manual compaction must wait for the host's own commit",
+     "AssertionError: pre_context_compression fired for a compaction its host never committed: [{'session_id': 'original-session', 'conversation_history': [{'role': 'system', 'content': 'system prompt'}, {'role': 'user', 'content': 'user message "
+    ],
+    "all_green": false,
+    "exit_classes": [
+     "ok"
+    ],
+    "logs_private": [
+     "raw/f05-r3/c53806-handport-pre-adapted-rep1.log",
+     "raw/f05-r3/c53806-handport-pre-adapted-rep2.log",
+     "raw/f05-r3/c53806-handport-pre-adapted-rep3.log"
+    ]
+   },
+   "probe": {
+    "passed": 9,
+    "failed": 0,
+    "exit_class": "ok",
+    "egress": {
+     "connect": 0,
+     "dns": 0,
+     "prewarm_suppressed": 1
+    },
+    "clauses": {
+     "rotated": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "before_summary",
+      "order": [
+       "hook",
+       "summary",
+       "publish_compression_child:start",
+       "publish_compression_child:end"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "approx_tokens",
+       "conversation_id",
+       "focus_topic",
+       "force",
+       "model",
+       "platform",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "in_place": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "before_summary",
+      "order": [
+       "hook",
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:end"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "approx_tokens",
+       "conversation_id",
+       "focus_topic",
+       "force",
+       "model",
+       "platform",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "manual_deferred": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "before_summary",
+      "order": [
+       "hook",
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:end",
+       "finalize:True"
+      ],
+      "fires_before_host_finalize": 1,
+      "payload_keys": [
+       "approx_tokens",
+       "conversation_id",
+       "focus_topic",
+       "force",
+       "model",
+       "platform",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "summary_aborted": {
+      "fires": 1,
+      "expect_fire": false,
+      "ok_count": false,
+      "timing": "before_summary",
+      "order": [
+       "hook",
+       "summary"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "approx_tokens",
+       "conversation_id",
+       "focus_topic",
+       "force",
+       "model",
+       "platform",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": true,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "would_grow_refused": {
+      "fires": 1,
+      "expect_fire": false,
+      "ok_count": false,
+      "timing": "before_summary",
+      "order": [
+       "hook",
+       "summary"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "approx_tokens",
+       "conversation_id",
+       "focus_topic",
+       "force",
+       "model",
+       "platform",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": true,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "fallback_committed": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "before_summary",
+      "order": [
+       "hook",
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:end"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "approx_tokens",
+       "conversation_id",
+       "focus_topic",
+       "force",
+       "model",
+       "platform",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 61,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "commit_failed_in_place": {
+      "fires": 1,
+      "expect_fire": false,
+      "ok_count": false,
+      "timing": "before_summary",
+      "order": [
+       "hook",
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:raised"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "approx_tokens",
+       "conversation_id",
+       "focus_topic",
+       "force",
+       "model",
+       "platform",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "commit_failed_rotated": {
+      "fires": 1,
+      "expect_fire": false,
+      "ok_count": false,
+      "timing": "before_summary",
+      "order": [
+       "hook",
+       "summary",
+       "publish_compression_child:start",
+       "publish_compression_child:raised"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "approx_tokens",
+       "conversation_id",
+       "focus_topic",
+       "force",
+       "model",
+       "platform",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 21,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "manual_discarded": {
+      "fires": 1,
+      "expect_fire": false,
+      "ok_count": false,
+      "timing": "before_summary",
+      "order": [
+       "hook",
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:end",
+       "finalize:False"
+      ],
+      "fires_before_host_finalize": 1,
+      "payload_keys": [
+       "approx_tokens",
+       "conversation_id",
+       "focus_topic",
+       "force",
+       "model",
+       "platform",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     }
+    }
+   },
+   "diff_vs_staging": "2 files changed, 42 insertions(+)",
+   "merge": "handported (same arm, start-side hook subscribed)"
+  },
+  "c93391-code": {
+   "run": "f05-r3",
+   "commit": "57997c26071973d5a00122375f16a620bf4f1832",
+   "tree": "b96ef4d0cd7515773ee36e999cf5dd37dd49c7b3",
+   "hook_subscribed": "pre_compression",
+   "contract_as_committed": {
+    "reps": 3,
+    "per_rep": [
+     "4 passed / 3 failed",
+     "4 passed / 3 failed",
+     "4 passed / 3 failed"
+    ],
+    "reps_agree": true,
+    "failing": [
+     "test_observer_fires_once_after_the_durable_commit[in_place]",
+     "test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+     "test_observer_fires_once_after_the_durable_commit[rotated]"
+    ],
+    "assertions": [
+     "AssertionError: on_compression_complete fired 0 times"
+    ],
+    "all_green": false,
+    "exit_classes": [
+     "ok"
+    ],
+    "logs_private": [
+     "raw/f05-r3/c93391-code-contract-rep1.log",
+     "raw/f05-r3/c93391-code-contract-rep2.log",
+     "raw/f05-r3/c93391-code-contract-rep3.log"
+    ]
+   },
+   "contract_adapted_to_carrier_hook": {
+    "reps": 3,
+    "per_rep": [
+     "0 passed / 7 failed",
+     "0 passed / 7 failed",
+     "0 passed / 7 failed"
+    ],
+    "reps_agree": true,
+    "failing": [
+     "test_observer_fires_once_after_the_durable_commit[in_place]",
+     "test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+     "test_observer_fires_once_after_the_durable_commit[rotated]",
+     "test_observer_is_silent_when_nothing_commits[commit_failed]",
+     "test_observer_is_silent_when_nothing_commits[manual_discarded]",
+     "test_observer_is_silent_when_nothing_commits[summary_aborted]",
+     "test_observer_is_silent_when_nothing_commits[would_grow_refused]"
+    ],
+    "assertions": [
+     "AssertionError: observer ran before the compacted transcript was durable",
+     "AssertionError: a deferred manual compaction must wait for the host's own commit",
+     "AssertionError: pre_compression fired for a compaction its host never committed: [{'messages': [{'role': 'system', 'content': 'system prompt'}, {'role': 'user', 'content': 'user message 0 detail detail detail detail detail detail detail det"
+    ],
+    "all_green": false,
+    "exit_classes": [
+     "ok"
+    ],
+    "logs_private": [
+     "raw/f05-r3/c93391-code-adapted-rep1.log",
+     "raw/f05-r3/c93391-code-adapted-rep2.log",
+     "raw/f05-r3/c93391-code-adapted-rep3.log"
+    ]
+   },
+   "probe": {
+    "passed": 9,
+    "failed": 0,
+    "exit_class": "ok",
+    "egress": {
+     "connect": 0,
+     "dns": 0,
+     "prewarm_suppressed": 1
+    },
+    "clauses": {
+     "rotated": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "before_summary",
+      "order": [
+       "hook",
+       "summary",
+       "publish_compression_child:start",
+       "publish_compression_child:end"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "compression_count",
+       "in_place",
+       "platform",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "in_place": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "before_summary",
+      "order": [
+       "hook",
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:end"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "compression_count",
+       "in_place",
+       "platform",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "manual_deferred": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "before_summary",
+      "order": [
+       "hook",
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:end",
+       "finalize:True"
+      ],
+      "fires_before_host_finalize": 1,
+      "payload_keys": [
+       "compression_count",
+       "in_place",
+       "platform",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "summary_aborted": {
+      "fires": 1,
+      "expect_fire": false,
+      "ok_count": false,
+      "timing": "before_summary",
+      "order": [
+       "hook",
+       "summary"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "compression_count",
+       "in_place",
+       "platform",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": true,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "would_grow_refused": {
+      "fires": 1,
+      "expect_fire": false,
+      "ok_count": false,
+      "timing": "before_summary",
+      "order": [
+       "hook",
+       "summary"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "compression_count",
+       "in_place",
+       "platform",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": true,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "fallback_committed": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "before_summary",
+      "order": [
+       "hook",
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:end"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "compression_count",
+       "in_place",
+       "platform",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 61,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "commit_failed_in_place": {
+      "fires": 1,
+      "expect_fire": false,
+      "ok_count": false,
+      "timing": "before_summary",
+      "order": [
+       "hook",
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:raised"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "compression_count",
+       "in_place",
+       "platform",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "commit_failed_rotated": {
+      "fires": 1,
+      "expect_fire": false,
+      "ok_count": false,
+      "timing": "before_summary",
+      "order": [
+       "hook",
+       "summary",
+       "publish_compression_child:start",
+       "publish_compression_child:raised"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "compression_count",
+       "in_place",
+       "platform",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 21,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "manual_discarded": {
+      "fires": 1,
+      "expect_fire": false,
+      "ok_count": false,
+      "timing": "before_summary",
+      "order": [
+       "hook",
+       "summary",
+       "archive_and_compact:start",
+       "archive_and_compact:end",
+       "finalize:False"
+      ],
+      "fires_before_host_finalize": 1,
+      "payload_keys": [
+       "compression_count",
+       "in_place",
+       "platform",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     }
+    }
+   },
+   "diff_vs_staging": "3 files changed, 88 insertions(+)",
+   "merge": "conflict in 3 website docs files only; code + tests apply 3-way clean"
+  },
+  "c118847-handport": {
+   "run": "f05-r3",
+   "commit": "12ebf32dc22158e98b73fdd4f2f300047e187535",
+   "tree": "573be603967d5aa242067201dd7488746473e010",
+   "hook_subscribed": "post_compaction",
+   "contract_as_committed": {
+    "reps": 3,
+    "per_rep": [
+     "4 passed / 3 failed",
+     "4 passed / 3 failed",
+     "4 passed / 3 failed"
+    ],
+    "reps_agree": true,
+    "failing": [
+     "test_observer_fires_once_after_the_durable_commit[in_place]",
+     "test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+     "test_observer_fires_once_after_the_durable_commit[rotated]"
+    ],
+    "assertions": [
+     "AssertionError: on_compression_complete fired 0 times"
+    ],
+    "all_green": false,
+    "exit_classes": [
+     "ok"
+    ],
+    "logs_private": [
+     "raw/f05-r3/c118847-handport-contract-rep1.log",
+     "raw/f05-r3/c118847-handport-contract-rep2.log",
+     "raw/f05-r3/c118847-handport-contract-rep3.log"
+    ]
+   },
+   "contract_adapted_to_carrier_hook": {
+    "reps": 3,
+    "per_rep": [
+     "1 passed / 6 failed",
+     "1 passed / 6 failed",
+     "1 passed / 6 failed"
+    ],
+    "reps_agree": true,
+    "failing": [
+     "test_observer_fires_once_after_the_durable_commit[in_place]",
+     "test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+     "test_observer_fires_once_after_the_durable_commit[rotated]",
+     "test_observer_is_silent_when_nothing_commits[commit_failed]",
+     "test_observer_is_silent_when_nothing_commits[manual_discarded]",
+     "test_observer_is_silent_when_nothing_commits[would_grow_refused]"
+    ],
+    "assertions": [
+     "AssertionError: observer ran before the compacted transcript was durable",
+     "AssertionError: a deferred manual compaction must wait for the host's own commit",
+     "AssertionError: post_compaction fired for a compaction its host never committed: [{'session_id': 'original-session', 'before_tokens': 1672, 'after_tokens': 3365, 'messages_removed': 8, 'reason': 'compaction', 'telemetry_schema_version': 'he",
+     "AssertionError: post_compaction fired for a compaction its host never committed: [{'session_id': 'original-session', 'before_tokens': 1672, 'after_tokens': 1119, 'messages_removed': 8, 'reason': 'compaction', 'telemetry_schema_version': 'he"
+    ],
+    "all_green": false,
+    "exit_classes": [
+     "ok"
+    ],
+    "logs_private": [
+     "raw/f05-r3/c118847-handport-adapted-rep1.log",
+     "raw/f05-r3/c118847-handport-adapted-rep2.log",
+     "raw/f05-r3/c118847-handport-adapted-rep3.log"
+    ]
+   },
+   "probe": {
+    "passed": 9,
+    "failed": 0,
+    "exit_class": "ok",
+    "egress": {
+     "connect": 0,
+     "dns": 0,
+     "prewarm_suppressed": 1
+    },
+    "clauses": {
+     "rotated": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "after_summary_before_commit",
+      "order": [
+       "summary",
+       "hook",
+       "publish_compression_child:start",
+       "publish_compression_child:end"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "after_tokens",
+       "before_tokens",
+       "messages_removed",
+       "reason",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "in_place": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "after_summary_before_commit",
+      "order": [
+       "summary",
+       "hook",
+       "archive_and_compact:start",
+       "archive_and_compact:end"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "after_tokens",
+       "before_tokens",
+       "messages_removed",
+       "reason",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "manual_deferred": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "after_summary_before_commit",
+      "order": [
+       "summary",
+       "hook",
+       "archive_and_compact:start",
+       "archive_and_compact:end",
+       "finalize:True"
+      ],
+      "fires_before_host_finalize": 1,
+      "payload_keys": [
+       "after_tokens",
+       "before_tokens",
+       "messages_removed",
+       "reason",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "summary_aborted": {
+      "fires": 0,
+      "expect_fire": false,
+      "ok_count": true,
+      "timing": null,
+      "order": [
+       "summary"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": true,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "would_grow_refused": {
+      "fires": 1,
+      "expect_fire": false,
+      "ok_count": false,
+      "timing": "after_summary_before_commit",
+      "order": [
+       "summary",
+       "hook"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "after_tokens",
+       "before_tokens",
+       "messages_removed",
+       "reason",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": true,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "fallback_committed": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "after_summary_before_commit",
+      "order": [
+       "summary",
+       "hook",
+       "archive_and_compact:start",
+       "archive_and_compact:end"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "after_tokens",
+       "before_tokens",
+       "messages_removed",
+       "reason",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 61,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "commit_failed_in_place": {
+      "fires": 1,
+      "expect_fire": false,
+      "ok_count": false,
+      "timing": "after_summary_before_commit",
+      "order": [
+       "summary",
+       "hook",
+       "archive_and_compact:start",
+       "archive_and_compact:raised"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "after_tokens",
+       "before_tokens",
+       "messages_removed",
+       "reason",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "commit_failed_rotated": {
+      "fires": 1,
+      "expect_fire": false,
+      "ok_count": false,
+      "timing": "after_summary_before_commit",
+      "order": [
+       "summary",
+       "hook",
+       "publish_compression_child:start",
+       "publish_compression_child:raised"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "after_tokens",
+       "before_tokens",
+       "messages_removed",
+       "reason",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 21,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "manual_discarded": {
+      "fires": 1,
+      "expect_fire": false,
+      "ok_count": false,
+      "timing": "after_summary_before_commit",
+      "order": [
+       "summary",
+       "hook",
+       "archive_and_compact:start",
+       "archive_and_compact:end",
+       "finalize:False"
+      ],
+      "fires_before_host_finalize": 1,
+      "payload_keys": [
+       "after_tokens",
+       "before_tokens",
+       "messages_removed",
+       "reason",
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 13,
+      "messages_in": 21,
+      "compacted_transcript_committed": true,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     }
+    }
+   },
+   "diff_vs_staging": "3 files changed, 174 insertions(+), 1 deletion(-)",
+   "merge": "handported (1 conflicting hunk in agent/context_compressor.py)"
+  },
+  "c125881-merge": {
+   "run": "f05-r3",
+   "commit": "f7b42fa597c788a5fde28f395cf8920efefa93c9",
+   "tree": "77241e07fd6de3b6dcb59b8f42d14514e4693302",
+   "hook_subscribed": "pre_compression_commit",
+   "contract_as_committed": {
+    "reps": 3,
+    "per_rep": [
+     "4 passed / 3 failed",
+     "4 passed / 3 failed",
+     "4 passed / 3 failed"
+    ],
+    "reps_agree": true,
+    "failing": [
+     "test_observer_fires_once_after_the_durable_commit[in_place]",
+     "test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+     "test_observer_fires_once_after_the_durable_commit[rotated]"
+    ],
+    "assertions": [
+     "AssertionError: on_compression_complete fired 0 times"
+    ],
+    "all_green": false,
+    "exit_classes": [
+     "ok"
+    ],
+    "logs_private": [
+     "raw/f05-r3/c125881-merge-contract-rep1.log",
+     "raw/f05-r3/c125881-merge-contract-rep2.log",
+     "raw/f05-r3/c125881-merge-contract-rep3.log"
+    ]
+   },
+   "contract_adapted_to_carrier_hook": {
+    "reps": 3,
+    "per_rep": [
+     "1 passed / 6 failed",
+     "1 passed / 6 failed",
+     "1 passed / 6 failed"
+    ],
+    "reps_agree": true,
+    "failing": [
+     "test_observer_fires_once_after_the_durable_commit[in_place]",
+     "test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+     "test_observer_fires_once_after_the_durable_commit[rotated]",
+     "test_observer_is_silent_when_nothing_commits[commit_failed]",
+     "test_observer_is_silent_when_nothing_commits[manual_discarded]",
+     "test_observer_is_silent_when_nothing_commits[would_grow_refused]"
+    ],
+    "assertions": [
+     "AssertionError: observer ran before the compacted transcript was durable",
+     "AssertionError: a deferred manual compaction must wait for the host's own commit",
+     "AssertionError: scenario precondition: would-grow refusal",
+     "AssertionError: pre_compression_commit fired for a compaction its host never committed: [{'state': {'original_messages': 21, 'candidate_messages': 13, 'original_chars': 5963, 'candidate_chars': 3757, 'original_terms': 7, 'retained_terms': 7",
+     "AssertionError: the manual attempt itself must have compacted"
+    ],
+    "all_green": false,
+    "exit_classes": [
+     "ok"
+    ],
+    "logs_private": [
+     "raw/f05-r3/c125881-merge-adapted-rep1.log",
+     "raw/f05-r3/c125881-merge-adapted-rep2.log",
+     "raw/f05-r3/c125881-merge-adapted-rep3.log"
+    ]
+   },
+   "probe": {
+    "passed": 9,
+    "failed": 0,
+    "exit_class": "ok",
+    "egress": {
+     "connect": 0,
+     "dns": 0,
+     "prewarm_suppressed": 1
+    },
+    "clauses": {
+     "rotated": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "after_summary_before_commit",
+      "order": [
+       "summary",
+       "hook"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": false,
+      "raised": null
+     },
+     "in_place": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "after_summary_before_commit",
+      "order": [
+       "summary",
+       "hook"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": false,
+      "raised": null
+     },
+     "manual_deferred": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "after_summary_before_commit",
+      "order": [
+       "summary",
+       "hook",
+       "finalize:True"
+      ],
+      "fires_before_host_finalize": 1,
+      "payload_keys": [
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": false,
+      "raised": null
+     },
+     "summary_aborted": {
+      "fires": 0,
+      "expect_fire": false,
+      "ok_count": true,
+      "timing": null,
+      "order": [
+       "summary"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": null,
+      "payload_session_id_is_live": null,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": true,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "would_grow_refused": {
+      "fires": 1,
+      "expect_fire": false,
+      "ok_count": false,
+      "timing": "after_summary_before_commit",
+      "order": [
+       "summary",
+       "hook"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "fallback_committed": {
+      "fires": 1,
+      "expect_fire": true,
+      "ok_count": true,
+      "timing": "after_summary_before_commit",
+      "order": [
+       "summary",
+       "hook"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 0,
+      "messages_in": 61,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": false,
+      "raised": null
+     },
+     "commit_failed_in_place": {
+      "fires": 1,
+      "expect_fire": false,
+      "ok_count": false,
+      "timing": "after_summary_before_commit",
+      "order": [
+       "summary",
+       "hook"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "commit_failed_rotated": {
+      "fires": 1,
+      "expect_fire": false,
+      "ok_count": false,
+      "timing": "after_summary_before_commit",
+      "order": [
+       "summary",
+       "hook"
+      ],
+      "fires_before_host_finalize": null,
+      "payload_keys": [
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": true,
+      "raised": null
+     },
+     "manual_discarded": {
+      "fires": 1,
+      "expect_fire": false,
+      "ok_count": false,
+      "timing": "after_summary_before_commit",
+      "order": [
+       "summary",
+       "hook",
+       "finalize:False"
+      ],
+      "fires_before_host_finalize": 1,
+      "payload_keys": [
+       "session_id",
+       "telemetry_schema_version"
+      ],
+      "payload_session_id_is_live": true,
+      "state_db_rows_after": 0,
+      "messages_in": 21,
+      "compacted_transcript_committed": false,
+      "compressor_aborted": false,
+      "commit_site_refused_would_grow": false,
+      "output_identical_with_raising_and_directive_subscribers": false,
+      "raised": null
+     }
+    }
+   },
+   "diff_vs_staging": "7 files changed, 361 insertions(+), 9 deletions(-)",
+   "merge": "clean (merge-tree result)"
+  },
+  "neg-prefire": {
+   "run": "f05-r3s",
+   "commit": "872a518d7e6c1502e1ccb06863d51c2295f6011b",
+   "tree": "75842d3305b63bdea4d0dc288edd8f61103d2319",
+   "hook_subscribed": "on_compression_complete",
+   "contract_as_committed": {
+    "reps": 3,
+    "per_rep": [
+     "1 passed / 6 failed",
+     "1 passed / 6 failed",
+     "1 passed / 6 failed"
+    ],
+    "reps_agree": true,
+    "failing": [
+     "test_observer_fires_once_after_the_durable_commit[in_place]",
+     "test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+     "test_observer_fires_once_after_the_durable_commit[rotated]",
+     "test_observer_is_silent_when_nothing_commits[commit_failed]",
+     "test_observer_is_silent_when_nothing_commits[manual_discarded]",
+     "test_observer_is_silent_when_nothing_commits[would_grow_refused]"
+    ],
+    "assertions": [
+     "AssertionError: observer ran before the compacted transcript was durable",
+     "AssertionError: a deferred manual compaction must wait for the host's own commit",
+     "AssertionError: on_compression_complete fired for a compaction its host never committed: [{'session_id': 'original-session', 'old_session_id': 'original-session', 'in_place': True, 'tokens_before': 75000, 'tokens_after': 5610, 'platform': '",
+     "AssertionError: on_compression_complete fired for a compaction its host never committed: [{'session_id': 'original-session', 'old_session_id': 'original-session', 'in_place': True, 'tokens_before': 75000, 'tokens_after': 3364, 'platform': '"
+    ],
+    "all_green": false,
+    "exit_classes": [
+     "ok"
+    ],
+    "logs_private": [
+     "raw/f05-r3s/neg-prefire-contract-rep1.log",
+     "raw/f05-r3s/neg-prefire-contract-rep2.log",
+     "raw/f05-r3s/neg-prefire-contract-rep3.log"
+    ]
+   },
+   "contract_adapted_to_carrier_hook": null,
+   "diff_vs_staging": "4 files changed, 64 insertions(+), 11 deletions(-)"
+  },
+  "neg-nodefer": {
+   "run": "f05-r3s",
+   "commit": "861fa0738e7a4eada195e005f7b490424545c8a0",
+   "tree": "dc8ef88dcd7945c7e47b1c745cde00b50add2f9d",
+   "hook_subscribed": "on_compression_complete",
+   "contract_as_committed": {
+    "reps": 3,
+    "per_rep": [
+     "5 passed / 2 failed",
+     "5 passed / 2 failed",
+     "5 passed / 2 failed"
+    ],
+    "reps_agree": true,
+    "failing": [
+     "test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+     "test_observer_is_silent_when_nothing_commits[manual_discarded]"
+    ],
+    "assertions": [
+     "AssertionError: a deferred manual compaction must wait for the host's own commit",
+     "AssertionError: on_compression_complete fired for a compaction its host never committed: [{'session_id': 'original-session', 'old_session_id': 'original-session', 'in_place': True, 'tokens_before': 75000, 'tokens_after': 11670, 'platform': "
+    ],
+    "all_green": false,
+    "exit_classes": [
+     "ok"
+    ],
+    "logs_private": [
+     "raw/f05-r3s/neg-nodefer-contract-rep1.log",
+     "raw/f05-r3s/neg-nodefer-contract-rep2.log",
+     "raw/f05-r3s/neg-nodefer-contract-rep3.log"
+    ]
+   },
+   "contract_adapted_to_carrier_hook": null,
+   "diff_vs_staging": "4 files changed, 62 insertions(+), 15 deletions(-)"
+  },
+  "sab-h1-observer-call": {
+   "run": "f05-r3s",
+   "commit": "e64de5a2fc438027df9715c0a91bb496b1756082",
+   "tree": "aa731ad8ce8498b2095b3bb5b8b5f4c44ec073e7",
+   "hook_subscribed": "on_compression_complete",
+   "contract_as_committed": {
+    "reps": 3,
+    "per_rep": [
+     "4 passed / 3 failed",
+     "4 passed / 3 failed",
+     "4 passed / 3 failed"
+    ],
+    "reps_agree": true,
+    "failing": [
+     "test_observer_fires_once_after_the_durable_commit[in_place]",
+     "test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+     "test_observer_fires_once_after_the_durable_commit[rotated]"
+    ],
+    "assertions": [
+     "AssertionError: on_compression_complete fired 0 times"
+    ],
+    "all_green": false,
+    "exit_classes": [
+     "ok"
+    ],
+    "logs_private": [
+     "raw/f05-r3s/sab-h1-observer-call-contract-rep1.log",
+     "raw/f05-r3s/sab-h1-observer-call-contract-rep2.log",
+     "raw/f05-r3s/sab-h1-observer-call-contract-rep3.log"
+    ]
+   },
+   "contract_adapted_to_carrier_hook": null,
+   "diff_vs_staging": "4 files changed, 54 insertions(+), 11 deletions(-)"
+  },
+  "sab-h2-queue-payload": {
+   "run": "f05-r3s",
+   "commit": "d3d7aa96f110afa35a424af943409d00f73448ca",
+   "tree": "c8664fbcf4798cc23dc874adc98c7bdefe5fd141",
+   "hook_subscribed": "on_compression_complete",
+   "contract_as_committed": {
+    "reps": 3,
+    "per_rep": [
+     "6 passed / 1 failed",
+     "6 passed / 1 failed",
+     "6 passed / 1 failed"
+    ],
+    "reps_agree": true,
+    "failing": [
+     "test_observer_fires_once_after_the_durable_commit[manual_deferred]"
+    ],
+    "assertions": [],
+    "all_green": false,
+    "exit_classes": [
+     "ok"
+    ],
+    "logs_private": [
+     "raw/f05-r3s/sab-h2-queue-payload-contract-rep1.log",
+     "raw/f05-r3s/sab-h2-queue-payload-contract-rep2.log",
+     "raw/f05-r3s/sab-h2-queue-payload-contract-rep3.log"
+    ]
+   },
+   "contract_adapted_to_carrier_hook": null,
+   "diff_vs_staging": "4 files changed, 61 insertions(+), 10 deletions(-)"
+  },
+  "sab-h3-tokens-before": {
+   "run": "f05-r3s",
+   "commit": "c7b903c2d6ae6976db1eeb124917df7249cbce18",
+   "tree": "e41e3ed0600ce7939ce280e9b52815786176a2a6",
+   "hook_subscribed": "on_compression_complete",
+   "contract_as_committed": {
+    "reps": 3,
+    "per_rep": [
+     "4 passed / 3 failed",
+     "4 passed / 3 failed",
+     "4 passed / 3 failed"
+    ],
+    "reps_agree": true,
+    "failing": [
+     "test_observer_fires_once_after_the_durable_commit[in_place]",
+     "test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+     "test_observer_fires_once_after_the_durable_commit[rotated]"
+    ],
+    "assertions": [
+     "TypeError: '<' not supported between instances of 'int' and 'NoneType'"
+    ],
+    "all_green": false,
+    "exit_classes": [
+     "ok"
+    ],
+    "logs_private": [
+     "raw/f05-r3s/sab-h3-tokens-before-contract-rep1.log",
+     "raw/f05-r3s/sab-h3-tokens-before-contract-rep2.log",
+     "raw/f05-r3s/sab-h3-tokens-before-contract-rep3.log"
+    ]
+   },
+   "contract_adapted_to_carrier_hook": null,
+   "diff_vs_staging": "4 files changed, 61 insertions(+), 11 deletions(-)"
+  },
+  "sab-h4-tokens-after": {
+   "run": "f05-r3s",
+   "commit": "6415fedad0f82bc4569c4030ab525498122b0fd0",
+   "tree": "22cd2699817a65ac8f49e97e319e9aed2beed26c",
+   "hook_subscribed": "on_compression_complete",
+   "contract_as_committed": {
+    "reps": 3,
+    "per_rep": [
+     "4 passed / 3 failed",
+     "4 passed / 3 failed",
+     "4 passed / 3 failed"
+    ],
+    "reps_agree": true,
+    "failing": [
+     "test_observer_fires_once_after_the_durable_commit[in_place]",
+     "test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+     "test_observer_fires_once_after_the_durable_commit[rotated]"
+    ],
+    "assertions": [],
+    "all_green": false,
+    "exit_classes": [
+     "ok"
+    ],
+    "logs_private": [
+     "raw/f05-r3s/sab-h4-tokens-after-contract-rep1.log",
+     "raw/f05-r3s/sab-h4-tokens-after-contract-rep2.log",
+     "raw/f05-r3s/sab-h4-tokens-after-contract-rep3.log"
+    ]
+   },
+   "contract_adapted_to_carrier_hook": null,
+   "diff_vs_staging": "4 files changed, 62 insertions(+), 11 deletions(-)"
+  },
+  "sab-h5-valid-hooks": {
+   "run": "f05-r3s",
+   "commit": "7c22d89da4cc6e88a0013784f6b377af7420e329",
+   "tree": "03a71520faaacd8d287cb68a1e3a5ed2347b5ad9",
+   "hook_subscribed": "on_compression_complete",
+   "contract_as_committed": {
+    "reps": 3,
+    "per_rep": [
+     "7 passed / 0 failed",
+     "7 passed / 0 failed",
+     "7 passed / 0 failed"
+    ],
+    "reps_agree": true,
+    "failing": [],
+    "assertions": [],
+    "all_green": true,
+    "exit_classes": [
+     "ok"
+    ],
+    "logs_private": [
+     "raw/f05-r3s/sab-h5-valid-hooks-contract-rep1.log",
+     "raw/f05-r3s/sab-h5-valid-hooks-contract-rep2.log",
+     "raw/f05-r3s/sab-h5-valid-hooks-contract-rep3.log"
+    ]
+   },
+   "contract_adapted_to_carrier_hook": null,
+   "diff_vs_staging": "4 files changed, 56 insertions(+), 11 deletions(-)"
+  },
+  "sab-h6-keep-carrier-post-commit": {
+   "run": "f05-r3s",
+   "commit": "eb788bbae1cc6660f49aa6e86dbd1771bd3606cb",
+   "tree": "aa2f05e3945562c4994fe570944a53feb287f915",
+   "hook_subscribed": "on_compression_complete",
+   "contract_as_committed": {
+    "reps": 3,
+    "per_rep": [
+     "7 passed / 0 failed",
+     "7 passed / 0 failed",
+     "7 passed / 0 failed"
+    ],
+    "reps_agree": true,
+    "failing": [],
+    "assertions": [],
+    "all_green": true,
+    "exit_classes": [
+     "ok"
+    ],
+    "logs_private": [
+     "raw/f05-r3s/sab-h6-keep-carrier-post-commit-contract-rep1.log",
+     "raw/f05-r3s/sab-h6-keep-carrier-post-commit-contract-rep2.log",
+     "raw/f05-r3s/sab-h6-keep-carrier-post-commit-contract-rep3.log"
+    ]
+   },
+   "contract_adapted_to_carrier_hook": null,
+   "diff_vs_staging": "4 files changed, 81 insertions(+), 11 deletions(-)"
+  },
+  "sab-h7-payload-and-docs": {
+   "run": "f05-r3s",
+   "commit": "8c73a4675a0a6af3f586565d438373e312324e32",
+   "tree": "3b490a175b0f4fc92c7bee54ec23e5d2fca20a01",
+   "hook_subscribed": "on_compression_complete",
+   "contract_as_committed": {
+    "reps": 3,
+    "per_rep": [
+     "7 passed / 0 failed",
+     "7 passed / 0 failed",
+     "7 passed / 0 failed"
+    ],
+    "reps_agree": true,
+    "failing": [],
+    "assertions": [],
+    "all_green": true,
+    "exit_classes": [
+     "ok"
+    ],
+    "logs_private": [
+     "raw/f05-r3s/sab-h7-payload-and-docs-contract-rep1.log",
+     "raw/f05-r3s/sab-h7-payload-and-docs-contract-rep2.log",
+     "raw/f05-r3s/sab-h7-payload-and-docs-contract-rep3.log"
+    ]
+   },
+   "contract_adapted_to_carrier_hook": null,
+   "diff_vs_staging": "2 files changed, 57 insertions(+), 11 deletions(-)"
+  }
+ },
+ "policy_revision": {
+  "AGENTS.md": "65aa3e61bcba610da21279a17385671263be39e9",
+  "CONTRIBUTING.md": "b0baa59b5057c204b3c09d3dd170c0955cfdb39c",
+  "factory": "FACTORY.md sha256:7726ba18b43a9367f91d7f70c3aaefb96a9863761ddf71225c61c26a30d688d4",
+  "protocol": "promotion-readiness-2026-10-01/PROTOCOL.md sha256:182e3fbae771d7219497833b3f9d6f7ed385d70abace8736559026e4e60b90d4"
+ },
+ "env": {
+  "host": "withheld (redacted in round 3; receipts name no host)",
+  "python": "3.11.14 (the live venv's interpreter, used read-only through HERMES_PYTHON; never as a source)",
+  "sandbox": "no bwrap/netns (FACTORY \u00a76 layer 1 not used). In-process layer only: tools/chs_egress_guard.py (non-loopback connect and DNS refused and logged; the openrouter-prewarm metadata thread is not started), loaded through the isolated test HOME's pytest_live_guard.py shim; scripts/run_tests.sh runs pytest under env -i with isolated HOME and HERMES_HOME (placeholders: $TESTHOME, $TESTHOME/.hermes)"
+ },
+ "command": "python3 tools/chs_ab_runner.py --worktree $WORKTREE --run-id f05-r3 --arms \"$(cat raw/f05-r3.arms)\" --reps 3 --testhome $TESTHOME --python $PY; then the same with --run-id f05-r3s --arms \"$(cat raw/f05-r3s.arms)\" --skip-probe",
+ "gates": {
+  "validity": "INFRA",
+  "red": {
+   "arm": "base",
+   "result": "PASS",
+   "observed": "4 passed / 3 failed",
+   "assertion": "AssertionError: on_compression_complete fired 0 times",
+   "seam_covered": true,
+   "reps_agree": "3/3"
+  },
+  "green": [
+   {
+    "arm": "c53806-foldin",
+    "result": "PASS",
+    "reps_agree": "3/3"
+   },
+   {
+    "arm": "foldin-ref",
+    "result": "PASS",
+    "reps_agree": "3/3"
+   },
+   {
+    "arm": "foldin-bounded",
+    "result": "PASS",
+    "reps_agree": "3/3"
+   }
+  ],
+  "sabotage": {
+   "per_hunk": [
+    {
+     "arm": "neg-nodefer",
+     "per_rep": [
+      "5 passed / 2 failed",
+      "5 passed / 2 failed",
+      "5 passed / 2 failed"
+     ],
+     "red_again": true,
+     "reps_agree": true,
+     "failing": [
+      "test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+      "test_observer_is_silent_when_nothing_commits[manual_discarded]"
+     ]
+    },
+    {
+     "arm": "neg-prefire",
+     "per_rep": [
+      "1 passed / 6 failed",
+      "1 passed / 6 failed",
+      "1 passed / 6 failed"
+     ],
+     "red_again": true,
+     "reps_agree": true,
+     "failing": [
+      "test_observer_fires_once_after_the_durable_commit[in_place]",
+      "test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+      "test_observer_fires_once_after_the_durable_commit[rotated]",
+      "test_observer_is_silent_when_nothing_commits[commit_failed]",
+      "test_observer_is_silent_when_nothing_commits[manual_discarded]",
+      "test_observer_is_silent_when_nothing_commits[would_grow_refused]"
+     ]
+    },
+    {
+     "arm": "sab-h1-observer-call",
+     "per_rep": [
+      "4 passed / 3 failed",
+      "4 passed / 3 failed",
+      "4 passed / 3 failed"
+     ],
+     "red_again": true,
+     "reps_agree": true,
+     "failing": [
+      "test_observer_fires_once_after_the_durable_commit[in_place]",
+      "test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+      "test_observer_fires_once_after_the_durable_commit[rotated]"
+     ]
+    },
+    {
+     "arm": "sab-h2-queue-payload",
+     "per_rep": [
+      "6 passed / 1 failed",
+      "6 passed / 1 failed",
+      "6 passed / 1 failed"
+     ],
+     "red_again": true,
+     "reps_agree": true,
+     "failing": [
+      "test_observer_fires_once_after_the_durable_commit[manual_deferred]"
+     ]
+    },
+    {
+     "arm": "sab-h3-tokens-before",
+     "per_rep": [
+      "4 passed / 3 failed",
+      "4 passed / 3 failed",
+      "4 passed / 3 failed"
+     ],
+     "red_again": true,
+     "reps_agree": true,
+     "failing": [
+      "test_observer_fires_once_after_the_durable_commit[in_place]",
+      "test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+      "test_observer_fires_once_after_the_durable_commit[rotated]"
+     ]
+    },
+    {
+     "arm": "sab-h4-tokens-after",
+     "per_rep": [
+      "4 passed / 3 failed",
+      "4 passed / 3 failed",
+      "4 passed / 3 failed"
+     ],
+     "red_again": true,
+     "reps_agree": true,
+     "failing": [
+      "test_observer_fires_once_after_the_durable_commit[in_place]",
+      "test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+      "test_observer_fires_once_after_the_durable_commit[rotated]"
+     ]
+    },
+    {
+     "arm": "sab-h5-valid-hooks",
+     "per_rep": [
+      "7 passed / 0 failed",
+      "7 passed / 0 failed",
+      "7 passed / 0 failed"
+     ],
+     "red_again": false,
+     "reps_agree": true,
+     "failing": []
+    },
+    {
+     "arm": "sab-h6-keep-carrier-post-commit",
+     "per_rep": [
+      "7 passed / 0 failed",
+      "7 passed / 0 failed",
+      "7 passed / 0 failed"
+     ],
+     "red_again": false,
+     "reps_agree": true,
+     "failing": []
+    },
+    {
+     "arm": "sab-h7-payload-and-docs",
+     "per_rep": [
+      "7 passed / 0 failed",
+      "7 passed / 0 failed",
+      "7 passed / 0 failed"
+     ],
+     "red_again": false,
+     "reps_agree": true,
+     "failing": []
+    }
+   ],
+   "unpinned_hunks": [
+    "sab-h5-valid-hooks",
+    "sab-h6-keep-carrier-post-commit",
+    "sab-h7-payload-and-docs"
+   ]
+  },
+  "adjacent": "see E12/e12-r3",
+  "guards": "see E12/e12-r3",
+  "flaky": false,
+  "noise_floor": null,
+  "credit": null,
+  "informativeness": "N_A",
+  "route_scope": "local-compressor",
+  "cache_read_ratio": {
+   "status": "N_A",
+   "before": null,
+   "after": null
+  },
+  "validity_as_issued": "PASS"
+ },
+ "ab": null,
+ "measurements": [
+  {
+   "name": "cases_failed",
+   "arm": "base",
+   "value": "4 passed / 3 failed",
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "count"
+  },
+  {
+   "name": "cases_failed",
+   "arm": "c53806-foldin",
+   "value": "7 passed / 0 failed",
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "count"
+  },
+  {
+   "name": "cases_failed",
+   "arm": "foldin-ref",
+   "value": "7 passed / 0 failed",
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "count"
+  },
+  {
+   "name": "cases_failed",
+   "arm": "foldin-bounded",
+   "value": "7 passed / 0 failed",
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "count"
+  },
+  {
+   "name": "cases_failed",
+   "arm": "c53806-handport",
+   "value": "4 passed / 3 failed",
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "count"
+  },
+  {
+   "name": "cases_failed",
+   "arm": "c53806-handport-pre",
+   "value": "4 passed / 3 failed",
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "count"
+  },
+  {
+   "name": "cases_failed",
+   "arm": "c93391-code",
+   "value": "4 passed / 3 failed",
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "count"
+  },
+  {
+   "name": "cases_failed",
+   "arm": "c118847-handport",
+   "value": "4 passed / 3 failed",
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "count"
+  },
+  {
+   "name": "cases_failed",
+   "arm": "c125881-merge",
+   "value": "4 passed / 3 failed",
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "count"
+  },
+  {
+   "name": "cases_failed",
+   "arm": "neg-prefire",
+   "value": "1 passed / 6 failed",
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "count"
+  },
+  {
+   "name": "cases_failed",
+   "arm": "neg-nodefer",
+   "value": "5 passed / 2 failed",
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "count"
+  },
+  {
+   "name": "cases_failed",
+   "arm": "sab-h1-observer-call",
+   "value": "4 passed / 3 failed",
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "count"
+  },
+  {
+   "name": "cases_failed",
+   "arm": "sab-h2-queue-payload",
+   "value": "6 passed / 1 failed",
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "count"
+  },
+  {
+   "name": "cases_failed",
+   "arm": "sab-h3-tokens-before",
+   "value": "4 passed / 3 failed",
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "count"
+  },
+  {
+   "name": "cases_failed",
+   "arm": "sab-h4-tokens-after",
+   "value": "4 passed / 3 failed",
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "count"
+  },
+  {
+   "name": "cases_failed",
+   "arm": "sab-h5-valid-hooks",
+   "value": "7 passed / 0 failed",
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "count"
+  },
+  {
+   "name": "cases_failed",
+   "arm": "sab-h6-keep-carrier-post-commit",
+   "value": "7 passed / 0 failed",
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "count"
+  },
+  {
+   "name": "cases_failed",
+   "arm": "sab-h7-payload-and-docs",
+   "value": "7 passed / 0 failed",
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "count"
+  }
+ ],
+ "denominators": {
+  "cells": 78,
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "infra": 78,
+  "completeness": 1.0
+ },
+ "egress": {
+  "dns": 0,
+  "connect": 0,
+  "prewarm_suppressed": 129,
+  "s16": "0 of 78 cells INFRA (blocked connect or DNS); experiment INFRA: False. prewarm_suppressed counts the openrouter-prewarm thread the guard did not start (one per pytest worker process), a prevention rather than a blocked attempt."
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "harness_abi": {
+  "harness": "hermes",
+  "seam": "hermes_cli.lifecycle.invoke_hook -> PluginManager.invoke_hook at the local compaction notify fence (agent/conversation_compression.py)"
+ },
+ "not_tested": [
+  "native and Codex app-server compaction (no local commit)",
+  "session_db=None agents",
+  "per-host manual /compress handlers (deferral driven through compress_context + finalize only)",
+  "real summarizer (fixed text)",
+  "shell hooks",
+  "hung subscriber",
+  "#53806's start-side pre_context_compression beyond the A/B row (no contract case)"
+ ],
+ "limitations": [
+  "agent-written oracle; per-hunk sabotage listed",
+  "competitor hand-ports are ours, not the authors'",
+  "probe 'committed' = 0 < state.db rows < messages handed in (rotation failures re-flush the full transcript)"
+ ],
+ "resource_usage": {
+  "wall_s": 1877.8,
+  "cpu_core_s": null,
+  "gpu_s": 0,
+  "energy_j": null,
+  "api_cost_usd": 0.0
+ },
+ "verdict": "INFRA",
+ "carrier_choice": {
+  "winner": "c53806-foldin",
+  "why": "#53806 is the only carrier whose post-commit hook fires after the durable commit and stays silent on uncommitted attempts; with the fold-in it passes every case. #93391 and #53806's own pre hook are start-side, #118847 fires before the commit, #125881 is a fail-closed admission gate"
+ },
+ "learning": {
+  "hypothesis": "one observer contract separates the five carriers",
+  "result": "KEEP",
+  "reusable_lesson": "a failed summary under the default config commits a deterministic fallback; 'silent on summary failure' only holds with abort_on_summary_failure=true",
+  "roadmap_effect": "salvage-support"
+ },
+ "provenance": "self",
+ "frozen": null,
+ "z0evals_study": null,
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the contract test, the fold-in and the harness; disclosed per repository policy",
+ "privacy": "public-aggregate: repo-relative paths and placeholders only; synthetic fixtures; no session ids, home paths, emails, message text or secrets. Raw logs under raw/ are private and contain local paths.",
+ "artifacts": [
+  {
+   "uri": "raw/f05-r3/",
+   "public": false
+  },
+  {
+   "uri": "raw/f05-r3s/",
+   "public": false
+  },
+  {
+   "uri": "raw/f05-r3/summary.json",
+   "sha256": "07cc60d860c25a51ec1bd62e53942c62a7d17526e6624713f62ece5effed62cb",
+   "public": false
+  },
+  {
+   "uri": "raw/f05-r3s/summary.json",
+   "sha256": "57ab1d9b78c371a783c999dd2712df63a0b57b62977a3e6e5b1f7dba15bfd88e",
+   "public": false
+  }
+ ],
+ "verdict_as_issued": "KEEP",
+ "s16_round2": "INFRA under a strict S16 reading: all 78 cells logged prewarm_suppressed (129 in total), i.e. a prevented egress attempt from the openrouter-prewarm thread. Pass/fail counts are kept as history.",
+ "superseded_by": "F05/f05-r4",
+ "superseded_why": "the r3 guard refused to start the openrouter-prewarm thread (prewarm_suppressed), which hid one DNS lookup per pytest worker; the round-1 contract test itself triggered that thread. Round 2 stubs the metadata prewarm in the test and uses an r4 guard that suppresses nothing"
+}

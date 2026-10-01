@@ -1,0 +1,20 @@
+▶ no local venv — using Nix dev venv via HERMES_PYTHON: $VENV/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 2 test files (~7 tests) under ['tests/agent/test_context_compressor_anchor_harvest.py', 'tests/agent/test_context_compressor_anchor_index.py']; running with -j 2
+[ 28.6% |     2/~7 | ✓2 | ✗0] ✓ tests/agent/test_context_compressor_anchor_index.py (2✓, 1.1s)
+[100.0% |     7/~7 | ✓7 | ✗0] ✓ tests/agent/test_context_compressor_anchor_harvest.py (5✓, 1.1s)
+
+=== Summary: 2 files, 7 tests passed, 0 failed (100% complete) in 1.1s (2 workers) ===
+  Durations cached to test_durations.json (2 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   2
+  Total subprocess CPU-wall: 2.2s  (runner wall: 1.1s, parallelism: 2x)
+  P50: 1.09s  P90: 1.09s  P95: 1.09s  P99: 1.09s  Max: 1.09s
+  <1s: 0 files (0%)  <2s: 2 files (100%)
+  Top 10 slowest:
+      1.09s  tests/agent/test_context_compressor_anchor_harvest.py
+      1.07s  tests/agent/test_context_compressor_anchor_index.py

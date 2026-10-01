@@ -1,0 +1,397 @@
+{
+  "schema": "xf.receipt.v1",
+  "id": "F09/r20261001-02",
+  "tier": "T1",
+  "label_default": "OBSERVED",
+  "spec": {
+    "path": "specs/F09.toml",
+    "rev": 2,
+    "sha256": "4603d995a35cc3f0183db35d3afcf0a5bcfed8033bef20e397c587fc4abefb7a",
+    "prereg_commit": null,
+    "prereg_recorded_at": "2026-10-01T11:08:35Z",
+    "decision_rule_sha": "e76c3dbb8b0aa3f602ed87256c894cec992ce4e26828e33c066b355acf31c5d8",
+    "decision_rule": "KEEP iff on head every gate cell passes (payload and beta present exactly when expected), the 400 cell gives [True, False, False], local compression fires >= 1 time on turn 2 in the flag-on over-threshold cell, the flag-absent body-minus-system and header hashes match base, and the host-normalised system hashes match base; base must send the payload on 0 cells.",
+    "prereg_note": "spec written and hashed before the run started (specs/PREREG.json); not committed to claude/ledger because xf is not built yet"
+  },
+  "runner_revision": {
+    "driver": {
+      "path": "harness/run_proofs.py",
+      "sha256": "375e77549fb1d14f7c5de0d512838ed4d38b9f342e837f3948d84a3d4421f772"
+    },
+    "test_runner": "scripts/run_tests.sh blob 8fcc4294f4@aea969677c",
+    "receipt_writer": {
+      "path": "harness/write_receipts.py",
+      "sha256": "7bcd8adec4958b8e99dc2a268c434eddc5ad740059fba2e554413dc3e204fe86"
+    }
+  },
+  "issue": "kvnloo/hermes-agent#322",
+  "origin_refs": [
+    "NousResearch/hermes-agent#526",
+    "NousResearch/hermes-agent#1147",
+    "NousResearch/hermes-agent#528"
+  ],
+  "staging": "anthropic-context-editing",
+  "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+  "arms": {
+    "base": {
+      "commit": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+      "tree": "aefff2f5884831d530ce341b3dcff968856d0be6"
+    },
+    "head": {
+      "commit": "b83e778103d36c48c7736bae07c01658dfb97158",
+      "tree": "0dc2aa7d9774855d1474399faa7cc2535fa43c4a",
+      "parent": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+      "merge": "clean (one commit on base)"
+    }
+  },
+  "head_revision": "b83e778103d36c48c7736bae07c01658dfb97158",
+  "changed_files": [
+    "agent/agent_init.py",
+    "agent/anthropic_adapter.py",
+    "agent/anthropic_context_editing.py",
+    "agent/chat_completion_helpers.py",
+    "agent/transports/anthropic.py",
+    "agent/turn_recovery.py",
+    "cli-config.yaml.example",
+    "gateway/run.py",
+    "hermes_cli/config_defaults.py",
+    "tests/agent/test_anthropic_context_editing.py",
+    "tui_gateway/session_compression.py",
+    "website/docs/developer-guide/context-compression-and-caching.md",
+    "website/docs/user-guide/features/computer-use.md"
+  ],
+  "policy_revision": {
+    "AGENTS.md": "65aa3e61bcba610da21279a17385671263be39e9@aea969677c",
+    "CONTRIBUTING.md": "b0baa59b5057c204b3c09d3dd170c0955cfdb39c@aea969677c",
+    ".github/PULL_REQUEST_TEMPLATE.md": "5496eb534fef9d08c091b8186e7edd1b5cf356db@aea969677c",
+    "factory": "FACTORY.md sha256 7726ba18b43a9367f91d7f70c3aaefb96a9863761ddf71225c61c26a30d688d4 (frontier-2026-10-01)",
+    "protocol": "PROTOCOL.md sha256 182e3fbae771d7219497833b3f9d6f7ed385d70abace8736559026e4e60b90d4 (promotion-readiness-2026-10-01)"
+  },
+  "env": {
+    "host": "<local-host>",
+    "os": "Linux x86_64",
+    "python": "3.11.14 (test venv, passed as HERMES_PYTHON)",
+    "anthropic_sdk": "0.87.0",
+    "httpx": "0.28.1",
+    "pydantic": "2.13.4",
+    "venv_lock_sha256": null,
+    "sandbox": "no bwrap; loopback-only connect guard in the F09 probe; isolated HOME/HERMES_HOME for every run",
+    "network": "loopback only"
+  },
+  "denominators": {
+    "cells": 20,
+    "errored_scored_zero": 0,
+    "infra_excluded": 0,
+    "completeness": 1.0
+  },
+  "evidence_class": {
+    "local": true,
+    "ci": "none",
+    "simulation": false,
+    "runtime": false,
+    "kind": "mechanism"
+  },
+  "harness_abi": {
+    "harness": "hermes",
+    "editor_abi": "n/a",
+    "surface": "AIAgent.run_conversation; vendor HTTP boundary replaced by the in-repo SDK-oracle fake"
+  },
+  "resource_usage": {
+    "wall_s": 10.5,
+    "cpu_core_s": 9.6,
+    "gpu_s": 0,
+    "energy_j": null,
+    "tokens": 0,
+    "api_cost_usd": 0.0,
+    "steps": {
+      "f09_base": {
+        "wall_s": 5.1,
+        "cpu_core_s": 4.7
+      },
+      "f09_head": {
+        "wall_s": 5.4,
+        "cpu_core_s": 4.9
+      }
+    }
+  },
+  "carrier_choice": {
+    "winner": "head (own leaf)",
+    "why": "no open or merged implementation and no carrier; #528 closed unmerged, no code reused"
+  },
+  "provenance": "self",
+  "frozen": {
+    "bundle_sha": null,
+    "cells": 20,
+    "supersedes": "F09/r20261001-01",
+    "status": "NOT_FROZEN (P8 pending: no write-once bundle, not frozen to z0evals)"
+  },
+  "z0evals_study": {
+    "repo": "kvnloo/z0evals",
+    "branch": "study/hermes-anthropic-context-editing",
+    "commit": null
+  },
+  "ai_assistance": "Claude Code (Claude Opus 5.5) wrote the change, tests and probes",
+  "privacy": "public-aggregate",
+  "inputs": {
+    "harness": {
+      "path": "harness/f09_gate_probe.py",
+      "sha256": "cec13eb1d0cb49acf463816ca055cb8e541ef5d21cfc49a20dd69097fc727756"
+    },
+    "fake_server": {
+      "path": "tests/fakes/providers/anthropic_messages.py",
+      "blob": "e46bb9b43945210f8b7521bc10d05cdb8da57e4c",
+      "same_on_both_arms": true
+    }
+  },
+  "commands": [
+    "<venv-python> harness/f09_gate_probe.py --repo <worktree> --arm base --out raw/f09_base.json  # <worktree> at aea969677c",
+    "<venv-python> harness/f09_gate_probe.py --repo <worktree> --arm head --out raw/f09_head.json  # <worktree> at b83e778103"
+  ],
+  "raw": {
+    "base": {
+      "path": "raw/f09_base.json",
+      "sha256": "ad801226f493053ddae744f8dcec930956233f6617d8e8b02547554b0c3b5d05"
+    },
+    "head": {
+      "path": "raw/f09_head.json",
+      "sha256": "7fcec319a4d659585f9c70acab52b035e745548fa06d118a76a6a02780498c91"
+    }
+  },
+  "gate_matrix": {
+    "native_claude_flag_false": {
+      "base_payload_sent": [
+        false
+      ],
+      "head_payload_sent": [
+        false
+      ],
+      "head_beta_present": [
+        false
+      ],
+      "expect_payload_on_head": false,
+      "head_pass": true
+    },
+    "native_claude_flag_true": {
+      "base_payload_sent": [
+        false
+      ],
+      "head_payload_sent": [
+        true
+      ],
+      "head_beta_present": [
+        true
+      ],
+      "expect_payload_on_head": true,
+      "head_pass": true
+    },
+    "native_claude_flag_true_compression_disabled": {
+      "base_payload_sent": [
+        false
+      ],
+      "head_payload_sent": [
+        false
+      ],
+      "head_beta_present": [
+        false
+      ],
+      "expect_payload_on_head": false,
+      "head_pass": true
+    },
+    "native_claude_flag_true_checkpoint_required": {
+      "base_payload_sent": [
+        false
+      ],
+      "head_payload_sent": [
+        false
+      ],
+      "head_beta_present": [
+        false
+      ],
+      "expect_payload_on_head": false,
+      "head_pass": true
+    },
+    "native_non_claude_flag_true": {
+      "base_payload_sent": [
+        false
+      ],
+      "head_payload_sent": [
+        false
+      ],
+      "head_beta_present": [
+        false
+      ],
+      "expect_payload_on_head": false,
+      "head_pass": true
+    },
+    "third_party_endpoint_flag_true": {
+      "base_payload_sent": [
+        false
+      ],
+      "head_payload_sent": [
+        false
+      ],
+      "head_beta_present": [
+        false
+      ],
+      "expect_payload_on_head": false,
+      "head_pass": true
+    }
+  },
+  "head_payload_example": {
+    "local_threshold_tokens": 150000,
+    "payload": {
+      "edits": [
+        {
+          "type": "clear_tool_uses_20250919",
+          "trigger": {
+            "type": "input_tokens",
+            "value": 141808
+          },
+          "clear_at_least": {
+            "type": "input_tokens",
+            "value": 28361
+          }
+        }
+      ]
+    }
+  },
+  "structured_400": {
+    "base": [
+      false,
+      false
+    ],
+    "head": [
+      true,
+      false,
+      false
+    ],
+    "head_flag_after": false,
+    "rejection_text": "context_management: Extra inputs are not permitted (scripted; real API wording NOT_MEASURED)"
+  },
+  "local_compressor_over_threshold": {
+    "base": {
+      "flag_on": {
+        "local_threshold_tokens": 50000,
+        "turn1_real_input_tokens": 60000,
+        "local_compress_calls_turn2": 1,
+        "payload_sent_per_request": [
+          false,
+          false
+        ],
+        "trigger_sent": []
+      },
+      "flag_off": {
+        "local_compress_calls_turn2": 1,
+        "payload_sent_per_request": [
+          false,
+          false
+        ]
+      }
+    },
+    "head": {
+      "flag_on": {
+        "local_threshold_tokens": 50000,
+        "turn1_real_input_tokens": 60000,
+        "local_compress_calls_turn2": 1,
+        "payload_sent_per_request": [
+          true,
+          true
+        ],
+        "trigger_sent": [
+          41808,
+          41808
+        ]
+      },
+      "flag_off": {
+        "local_compress_calls_turn2": 1,
+        "payload_sent_per_request": [
+          false,
+          false
+        ]
+      }
+    }
+  },
+  "flag_absent_wire": {
+    "requests_per_arm": 2,
+    "body_minus_system_identical": true,
+    "headers_identical": true,
+    "anthropic_beta_header": "interleaved-thinking-2025-05-14,fine-grained-tool-streaming-2025-05-14",
+    "system_identical_after_host_normalisation": true,
+    "host_normalisation": [
+      "<SANDBOX>",
+      "Host: <HOST>",
+      "python3=<PY>"
+    ],
+    "verdict": "IDENTICAL"
+  },
+  "sdk_schema_errors": {
+    "base": 0,
+    "head": 0
+  },
+  "egress_blocked": {
+    "base": [],
+    "head": []
+  },
+  "gates": {
+    "validity": "PASS",
+    "cache_read_ratio": {
+      "status": "NOT_MEASURED",
+      "before": null,
+      "after": null,
+      "needs": "F10 (paid, OD-3)"
+    },
+    "route_scope": "native Anthropic API, Claude models; local compressor unchanged"
+  },
+  "ab": null,
+  "measurements": [
+    {
+      "name": "gate_cells_with_payload_head",
+      "arm": "head",
+      "value": 1,
+      "n": 6,
+      "label": "OBSERVED",
+      "statistic": "count"
+    },
+    {
+      "name": "ineligible_cells_with_payload_head",
+      "arm": "head",
+      "value": 0,
+      "n": 5,
+      "label": "OBSERVED",
+      "statistic": "count"
+    },
+    {
+      "name": "gate_cells_with_payload_base",
+      "arm": "base",
+      "value": 0,
+      "n": 6,
+      "label": "OBSERVED",
+      "statistic": "count"
+    },
+    {
+      "name": "cache_read_before_after_clear",
+      "value": null,
+      "label": "NOT_MEASURED",
+      "note": "needs F10 (paid, OD-3)"
+    }
+  ],
+  "not_tested": [
+    "real Anthropic acceptance of the payload and the real rejection wording",
+    "cache_read/cache_creation after a server-side clear (F10)",
+    "OAuth (Claude subscription) route acceptance of the beta",
+    "whether the server re-clears on every request once over trigger (client resends full history)"
+  ],
+  "limitations": [
+    "one rep per cell (deterministic fake)",
+    "the over-threshold cells count _compress_context calls via a wrapper"
+  ],
+  "verdict": "KEEP",
+  "learning": {
+    "hypothesis": "payload only when opted in and eligible; 400 disables and retries once; local fallback intact; flag-absent wire unchanged",
+    "result": "KEEP",
+    "observed_evidence": [],
+    "regressions": [],
+    "reusable_lesson": "system prompts embed host facts (temp HOME, kernel, python); compare host-normalised hashes, never store the text",
+    "roadmap_effect": "hold at LIMITED until F10"
+  }
+}

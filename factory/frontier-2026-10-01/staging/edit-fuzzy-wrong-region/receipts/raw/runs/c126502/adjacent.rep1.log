@@ -1,0 +1,134 @@
+# arm=c126502 rep=1 sabotage=none head=01bf8d379e fuzzy_match.py sha256[:16]=a2024727f6c084ed
+# files: tests/tools/test_fuzzy_match.py tests/tools/test_file_tools_live.py tests/tools/test_file_operations.py tests/tools/test_file_operations_edge_cases.py tests/tools/test_file_operations_delete.py tests/tools/test_patch_parser.py tests/tools/test_patch_already_applied.py tests/tools/test_patch_multimatch_locations.py tests/tools/test_patch_ws_diagnosis.py tests/tools/test_patch_v4a_gate.py tests/tools/test_file_tools.py tests/acp_adapter/test_edit_approval.py tests/hermes_cli/test_shared_metrics_harness.py
+▶ not activated — using HERMES_PYTHON: <venv-python>
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 13 test files (~268 tests) under ['tests/tools/test_fuzzy_match.py', 'tests/tools/test_file_tools_live.py', 'tests/tools/test_file_operations.py', 'tests/tools/test_file_operations_edge_cases.py', 'tests/tools/test_file_operations_delete.py', 'tests/tools/test_patch_parser.py', 'tests/tools/test_patch_already_applied.py', 'tests/tools/test_patch_multimatch_locations.py', 'tests/tools/test_patch_ws_diagnosis.py', 'tests/tools/test_patch_v4a_gate.py', 'tests/tools/test_file_tools.py', 'tests/acp_adapter/test_edit_approval.py', 'tests/hermes_cli/test_shared_metrics_harness.py']; running with -j 2
+[  2.2% |     6/~268 | ✓6 | ✗0] ✓ tests/acp_adapter/test_edit_approval.py (6✓, 2.9s)
+[  7.1% |    19/~268 | ✓32 | ✗ 0] ✓ tests/hermes_cli/test_shared_metrics_harness.py (26✓, 6.6s)
+[ 26.9% |    72/~268 | ✓83 | ✗ 0] ✓ tests/tools/test_file_operations.py (51✓ 6s, 3.9s)
+[ 34.3% |    92/~268 | ✓103 | ✗  0] ✓ tests/tools/test_file_operations_edge_cases.py (20✓, 2.6s)
+[ 35.4% |    95/~268 | ✓113 | ✗  0] ✓ tests/tools/test_file_operations_delete.py (10✓, 4.3s)
+[ 51.5% |   138/~268 | ✓154 | ✗  0] ✓ tests/tools/test_file_tools.py (41✓ 2s, 4.4s)
+[ 56.7% |   152/~268 | ✓168 | ✗  0] ✓ tests/tools/test_file_tools_live.py (14✓, 5.4s)
+[ 77.6% |   208/~268 | ✓222 | ✗  2] ✗ tests/tools/test_fuzzy_match.py (54✓ 2✗, 6.3s)
+
+  ╔╍ Failed: tests/tools/test_fuzzy_match.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║         # This particular pair won't match anything, so it exits via
+  ║         # no-match path. Build a case where a non-exact strategy DOES match.
+  ║         content = "line\n    x = 1\nline"
+  ║         old_string = "line\n  x = \\'a\\'\nline"
+  ║         new_string = "line\n  x = \\'b\\'\nline"
+  ║         new, count, strategy, err = fuzzy_find_and_replace(content, old_string, new_string)
+  ║         assert count == 0
+  ║ >       assert err is not None and "Escape-drift" in err
+  ║ E       AssertionError: assert ('Could not find a match for old_string in the file' is not None and 'Escape-drift' in 'Could not find a match for old_string in the file')
+  ║ 
+  ║ tests/tools/test_fuzzy_match.py:349: AssertionError
+  ║ _____________ TestEscapeDriftGuard.test_drift_blocked_double_quote _____________
+  ║ 
+  ║ self = <tests.tools.test_fuzzy_match.TestEscapeDriftGuard object at 0x7f881ce064d0>
+  ║ 
+  ║     def test_drift_blocked_double_quote(self):
+  ║         """Same idea but with \\" drift instead of \\'."""
+  ║         content = 'line\n    x = 1\nline'
+  ║         old_string = 'line\n  x = \\"a\\"\nline'
+  ║         new_string = 'line\n  x = \\"b\\"\nline'
+  ║         new, count, strategy, err = fuzzy_find_and_replace(content, old_string, new_string)
+  ║         assert count == 0
+  ║ >       assert err is not None and "Escape-drift" in err
+  ║ E       AssertionError: assert ('Could not find a match for old_string in the file' is not None and 'Escape-drift' in 'Could not find a match for old_string in the file')
+  ║ 
+  ║ tests/tools/test_fuzzy_match.py:360: AssertionError
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/tools/test_fuzzy_match.py::TestEscapeDriftGuard::test_drift_blocked_apostrophe
+  ║ FAILED tests/tools/test_fuzzy_match.py::TestEscapeDriftGuard::test_drift_blocked_double_quote
+  ║ 2 failed, 54 passed in 2.49s
+  ║
+  ║  Repro: python -m pytest tests/tools/test_fuzzy_match.py -q -m not live and not integration
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+[ 82.8% |   222/~268 | ✓236 | ✗  2] ✓ tests/tools/test_patch_already_applied.py (14✓, 4.0s)
+[ 84.0% |   225/~268 | ✓239 | ✗  2] ✓ tests/tools/test_patch_multimatch_locations.py (3✓, 1.6s)
+[ 97.0% |   260/~268 | ✓274 | ✗  2] ✓ tests/tools/test_patch_parser.py (35✓, 2.5s)
+[ 98.5% |   264/~268 | ✓278 | ✗  2] ✓ tests/tools/test_patch_ws_diagnosis.py (4✓, 2.0s)
+[100.0% |   268/~268 | ✓282 | ✗  2] ✓ tests/tools/test_patch_v4a_gate.py (4✓, 4.1s)
+
+=== Summary: 13 files, 282 tests passed, 2 failed, 8 skipped (100% complete) in 25.9s (2 workers) ===
+
+  note: platforms('windows') tests (in 2 files) were SKIPPED on this host (linux); they run on the Windows Python-tests lane.
+  Durations cached to test_durations.json (12 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   13
+  Total subprocess CPU-wall: 50.6s  (runner wall: 25.9s, parallelism: 2x)
+  P50: 3.98s  P90: 6.31s  P95: 6.58s  P99: 6.58s  Max: 6.58s
+  <1s: 0 files (0%)  <2s: 1 files (8%)
+  Top 10 slowest:
+      6.58s  tests/hermes_cli/test_shared_metrics_harness.py
+      6.31s  tests/tools/test_fuzzy_match.py
+      5.38s  tests/tools/test_file_tools_live.py
+      4.41s  tests/tools/test_file_tools.py
+      4.32s  tests/tools/test_file_operations_delete.py
+      4.08s  tests/tools/test_patch_v4a_gate.py
+      3.98s  tests/tools/test_patch_already_applied.py
+      3.88s  tests/tools/test_file_operations.py
+      2.89s  tests/acp_adapter/test_edit_approval.py
+      2.63s  tests/tools/test_file_operations_edge_cases.py
+
+=== Failure output ===
+
+--- tests/tools/test_fuzzy_match.py ---
+.......................FF...............................                 [100%]
+=================================== FAILURES ===================================
+______________ TestEscapeDriftGuard.test_drift_blocked_apostrophe ______________
+
+self = <tests.tools.test_fuzzy_match.TestEscapeDriftGuard object at 0x7f881ce150d0>
+
+    def test_drift_blocked_apostrophe(self):
+        """File has ', old_string and new_string both have \\' — classic
+        tool-call drift. Guard must block with a helpful error instead of
+        writing \\' literals into source code."""
+        content = "x = \"hello there\"\n"
+        # Simulate transport-corrupted old_string and new_string where an
+        # apostrophe-like context got prefixed with a backslash. The content
+        # itself has no apostrophe, but both strings do — matching via
+        # whitespace/anchor strategies would otherwise succeed.
+        old_string = "x = \"hello there\" # don\\'t edit\n"
+        new_string = "x = \"hi there\" # don\\'t edit\n"
+        # This particular pair won't match anything, so it exits via
+        # no-match path. Build a case where a non-exact strategy DOES match.
+        content = "line\n    x = 1\nline"
+        old_string = "line\n  x = \\'a\\'\nline"
+        new_string = "line\n  x = \\'b\\'\nline"
+        new, count, strategy, err = fuzzy_find_and_replace(content, old_string, new_string)
+        assert count == 0
+>       assert err is not None and "Escape-drift" in err
+E       AssertionError: assert ('Could not find a match for old_string in the file' is not None and 'Escape-drift' in 'Could not find a match for old_string in the file')
+
+tests/tools/test_fuzzy_match.py:349: AssertionError
+_____________ TestEscapeDriftGuard.test_drift_blocked_double_quote _____________
+
+self = <tests.tools.test_fuzzy_match.TestEscapeDriftGuard object at 0x7f881ce064d0>
+
+    def test_drift_blocked_double_quote(self):
+        """Same idea but with \\" drift instead of \\'."""
+        content = 'line\n    x = 1\nline'
+        old_string = 'line\n  x = \\"a\\"\nline'
+        new_string = 'line\n  x = \\"b\\"\nline'
+        new, count, strategy, err = fuzzy_find_and_replace(content, old_string, new_string)
+        assert count == 0
+>       assert err is not None and "Escape-drift" in err
+E       AssertionError: assert ('Could not find a match for old_string in the file' is not None and 'Escape-drift' in 'Could not find a match for old_string in the file')
+
+tests/tools/test_fuzzy_match.py:360: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tools/test_fuzzy_match.py::TestEscapeDriftGuard::test_drift_blocked_apostrophe
+FAILED tests/tools/test_fuzzy_match.py::TestEscapeDriftGuard::test_drift_blocked_double_quote
+2 failed, 54 passed in 2.49s
+
+=== 1 file with test failures (2 tests failed) ===
+  tests/tools/test_fuzzy_match.py  (2 tests failed)
+# rc=1

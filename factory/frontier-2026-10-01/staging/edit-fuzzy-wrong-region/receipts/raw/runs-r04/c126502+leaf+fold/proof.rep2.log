@@ -1,0 +1,21 @@
+# arm=c126502+leaf+fold rep=2 sabotage=none carrier_tests=0 head=fdaaf5b729 main=44a1ce9724 fuzzy_match.py sha256[:16]=89b94ed1dbd9b15c
+# files: tests/tools/test_fuzzy_match_wrong_region.py
+▶ not activated — using HERMES_PYTHON: <venv-python>
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~2 tests) under ['tests/tools/test_fuzzy_match_wrong_region.py']; running with -j 2
+[100.0% |     2/~2 | ✓10 | ✗ 0] ✓ tests/tools/test_fuzzy_match_wrong_region.py (10✓, 4.2s)
+
+=== Summary: 1 files, 10 tests passed, 0 failed (100% complete) in 4.3s (2 workers) ===
+  Durations cached to test_durations.json (1 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 4.2s  (runner wall: 4.3s, parallelism: 2x)
+  P50: 4.24s  P90: 4.24s  P95: 4.24s  P99: 4.24s  Max: 4.24s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+      4.24s  tests/tools/test_fuzzy_match_wrong_region.py
+# rc=0

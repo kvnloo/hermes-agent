@@ -1,0 +1,30 @@
+xf_spec = 1
+id = "F11-P1-fork50"
+rev = 1
+kind = "redgreen"
+issue = "kvnloo/hermes-agent#322"
+ai_assistance = "Spec and runner written with Claude Code (Opus 5.5); disclosed per repository policy"
+origin_refs = ["kvnloo/hermes-agent#50"]
+expected = "KEEP (4 columns PASS)"
+[base]
+repo = "NousResearch/hermes-agent"
+pin = "572e4f4fad32bbdcfc948fb2ec833177ed5734c0"
+[head]
+commit = "4d0e03c8a152e5122d158446e1f564b0ec9b6abd"
+merge_onto_base = true
+[probe]
+kind = "pytest"
+files = ["tests/test_trajectory_compressor.py"]
+reps = 3
+jobs = 2
+timeout_s = 900
+[oracle]
+red_markers = ["assert ['over', 'under'] == ['under']"]
+sabotage = "per_hunk"
+adjacent = ["tests/test_trajectory_compressor.py", "tests/test_trajectory_compressor_async.py"]
+[ownership]
+verdict = "clear"
+searched_at = "2026-09-30"
+queries = ["save_over_limit"]
+[outputs]
+not_tested = ["full test suite", "real provider responses", "kernel network namespace (in-process guard only)"]

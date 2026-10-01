@@ -1,0 +1,148 @@
+{
+ "common_symbols": 36715,
+ "sampled": 4000,
+ "seed": 7,
+ "window": 2000,
+ "first_read": 200,
+ "base": {
+  "tasks": 4000,
+  "calls_mean": 2.006,
+  "calls_total": 8024,
+  "multi_window_tasks": 24,
+  "tokens_mean": 1950,
+  "tokens_p50": 2171,
+  "tokens_p90": 2672,
+  "tokens_total": 7799925,
+  "file_lines_p50": 711,
+  "def_lines_p50": 10,
+  "ambiguous_hits_mean": 1.15,
+  "exact_def_tokens_mean": 243,
+  "exact_def_tokens_total": 972309
+ },
+ "head": {
+  "tasks": 4000,
+  "calls_mean": 2.006,
+  "calls_total": 8024,
+  "multi_window_tasks": 24,
+  "tokens_mean": 1950,
+  "tokens_p50": 2171,
+  "tokens_p90": 2672,
+  "tokens_total": 7799935,
+  "file_lines_p50": 711,
+  "def_lines_p50": 10,
+  "ambiguous_hits_mean": 1.15,
+  "exact_def_tokens_mean": 243,
+  "exact_def_tokens_total": 972309
+ },
+ "head_cheaper": 0,
+ "head_costlier": 1,
+ "equal": 3999,
+ "worst_regressions": [
+  {
+   "name": "_collect_protected_skill_names",
+   "base_tok": 2423,
+   "head_tok": 2433,
+   "head_file": "agent/context_compressor.py"
+  },
+  {
+   "name": "_PeerResponseTooLarge",
+   "base_tok": 2084,
+   "head_tok": 2084,
+   "head_file": "tui_gateway/hosted_room_peer_http.py"
+  },
+  {
+   "name": "_fs_regular_file",
+   "base_tok": 1963,
+   "head_tok": 1963,
+   "head_file": "hermes_cli/web_routers/files.py"
+  },
+  {
+   "name": "_parse_meeting",
+   "base_tok": 1019,
+   "head_tok": 1019,
+   "head_file": "plugins/platforms/feishu/feishu_meeting_invite.py"
+  },
+  {
+   "name": "_is_bionic_libc",
+   "base_tok": 1785,
+   "head_tok": 1785,
+   "head_file": "pm/store.py"
+  },
+  {
+   "name": "_enqueue_clauses",
+   "base_tok": 1979,
+   "head_tok": 1979,
+   "head_file": "gateway/streaming_tts_consumer.py"
+  },
+  {
+   "name": "_hermes_root",
+   "base_tok": 2191,
+   "head_tok": 2191,
+   "head_file": "tools/bot_mode_probe.py"
+  },
+  {
+   "name": "_authorized_headers",
+   "base_tok": 1046,
+   "head_tok": 1046,
+   "head_file": "tools/connectors/portal/client.py"
+  }
+ ],
+ "best_wins": [
+  {
+   "name": "_PeerResponseTooLarge",
+   "base_tok": 2084,
+   "head_tok": 2084,
+   "base_file": "tui_gateway/hosted_room_peer_http.py",
+   "head_file": "tui_gateway/hosted_room_peer_http.py"
+  },
+  {
+   "name": "_fs_regular_file",
+   "base_tok": 1963,
+   "head_tok": 1963,
+   "base_file": "hermes_cli/web_routers/files.py",
+   "head_file": "hermes_cli/web_routers/files.py"
+  },
+  {
+   "name": "_parse_meeting",
+   "base_tok": 1019,
+   "head_tok": 1019,
+   "base_file": "plugins/platforms/feishu/feishu_meeting_invite.py",
+   "head_file": "plugins/platforms/feishu/feishu_meeting_invite.py"
+  },
+  {
+   "name": "_is_bionic_libc",
+   "base_tok": 1785,
+   "head_tok": 1785,
+   "base_file": "pm/store.py",
+   "head_file": "pm/store.py"
+  },
+  {
+   "name": "_enqueue_clauses",
+   "base_tok": 1979,
+   "head_tok": 1979,
+   "base_file": "gateway/streaming_tts_consumer.py",
+   "head_file": "gateway/streaming_tts_consumer.py"
+  },
+  {
+   "name": "_hermes_root",
+   "base_tok": 2191,
+   "head_tok": 2191,
+   "base_file": "tools/bot_mode_probe.py",
+   "head_file": "tools/bot_mode_probe.py"
+  },
+  {
+   "name": "_authorized_headers",
+   "base_tok": 1046,
+   "head_tok": 1046,
+   "base_file": "tools/connectors/portal/client.py",
+   "head_file": "tools/connectors/portal/client.py"
+  },
+  {
+   "name": "tool_may_have_side_effect",
+   "base_tok": 384,
+   "head_tok": 384,
+   "base_file": "agent/tool_result_classification.py",
+   "head_file": "agent/tool_result_classification.py"
+  }
+ ]
+}

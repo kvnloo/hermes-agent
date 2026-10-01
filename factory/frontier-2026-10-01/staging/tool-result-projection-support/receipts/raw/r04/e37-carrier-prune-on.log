@@ -1,0 +1,21 @@
+  ┊ 📖 read      notes_00.txt  0.3s
+  ┊ 📖 read      notes_01.txt  0.0s
+  ┊ 📖 read      notes_02.txt  0.0s
+  ┊ 📖 read      notes_03.txt  0.0s
+  ┊ 📖 read      notes_04.txt  0.0s
+  ┊ 📖 read      notes_05.txt  0.0s
+  ┊ 📖 read      notes_06.txt  0.0s
+  ┊ 📖 read      notes_07.txt  0.0s
+  ┊ 📖 read      notes_08.txt  0.0s
+  ┊ 📖 read      notes_09.txt  0.0s
+  ┊ 📖 read      notes_10.txt  0.0s
+  ┊ 📖 read      notes_11.txt  0.0s
+  ┊ 📖 read      notes_12.txt  0.0s
+  ┊ 📖 read      notes_13.txt  0.0s
+  ┊ 📖 read      notes_14.txt  0.0s
+  ┊ 📖 read      notes_15.txt  0.0s
+  ┊ 📖 read      notes_16.txt  0.0s
+  ┊ 📖 read      notes_17.txt  0.0s
+  ┊ 📖 read      notes_18.txt  0.0s
+  ┊ 📖 read      notes_19.txt  0.0s
+{"arm": "prune-on", "main": 40, "aux": 1, "breaks": [13, 29], "passes": ["13", "29"], "sum_chars": 6707342, "last": 258619, "cache_read_ratio": 0.8958, "billed_input_tokens_no_cache": 1676835, "billed_input_token_units_cached": 368596, "reprefill_tokens_after_breaks": 172815, "errors": [], "egress": []}

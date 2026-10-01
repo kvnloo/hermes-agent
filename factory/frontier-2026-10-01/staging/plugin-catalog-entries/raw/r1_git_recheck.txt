@@ -1,0 +1,31 @@
+# r1 git recheck (bare mirror; upstream main read with git ls-remote at the same time)
+$ git ls-remote https://github.com/NousResearch/hermes-agent.git refs/heads/main
+aea969677c60a1bb72fe227fdfb98f196a2092cc	refs/heads/main
+$ git rev-parse main staging/plugin-catalog-entries
+aea969677c60a1bb72fe227fdfb98f196a2092cc
+98c305b3ec8d03693f4dc94bade69035cb15ff7d
+$ git log -1 --format='%H %P %an <%ae> %s' staging/plugin-catalog-entries
+98c305b3ec8d03693f4dc94bade69035cb15ff7d 234badf4012af380d23c91eae55d045a69c69ffb Kevin Rajan <7121943+kvnloo@users.noreply.github.com> feat(plugin-catalog): add paw-pii
+$ git rev-list --count 234badf4012af380d23c91eae55d045a69c69ffb..main
+36
+$ git diff --stat 234badf4012af380d23c91eae55d045a69c69ffb main -- <invalidate_on paths>
+(empty = unchanged)
+$ git diff --stat 234badf4012af380d23c91eae55d045a69c69ffb main -- <adjacent tests, runner, lock, PR template, policy docs>
+(empty = unchanged)
+$ git merge-tree --write-tree main staging/plugin-catalog-entries
+0f33a17f5c53e39fc185d63f0f1ee8b2b48760a7
+rc=0
+$ git cat-file -e main:plugin-catalog/paw-pii.yaml
+absent (need still holds)
+$ git ls-tree main plugin-catalog/desensitize.yaml
+100644 blob a2d58eb13f2f16bcedb190b1e7c3b88107f0567f	plugin-catalog/desensitize.yaml
+$ git rev-parse main:.github/PULL_REQUEST_TEMPLATE.md
+5496eb534fef9d08c091b8186e7edd1b5cf356db
+# member branches: commits behind (rev-list --count <ref>..<base>)
+refs/fork/feat/paw-pii-plugin-index cd7b9d3bcf0bf7373ab8b5893adceb7fda0ca8c6 behind_234badf401=13832 behind_aea969677c=13868
+refs/fork/feat/groq-orpheus-tts 548df5dcc037e85d8ed47de57ddb75cce3661af7 behind_234badf401=20605 behind_aea969677c=20641
+refs/fork/feat/tinyfish-browser-provider 739b30bc021fc2d8202b4fea8aed91c389f7fc33 behind_234badf401=39852 behind_aea969677c=39888
+refs/fork/feat/spatial-canvas-upstream 486a620b5a66bd41dbe45247d4734932e17c4409 behind_234badf401=23793 behind_aea969677c=23829
+$ git ls-remote https://github.com/kvnloo/hermes-agent.git refs/heads/staging 'refs/heads/staging/*' 'refs/heads/staged/*'
+28790e597cdd497aef31f2c16327f8b347669354	refs/heads/staging
+(no staged/* refs: the staged/<id> name is free)

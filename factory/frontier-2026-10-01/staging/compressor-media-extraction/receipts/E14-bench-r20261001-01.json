@@ -1,0 +1,106 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compressor-media-extraction",
+ "base_revision": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+ "head_revision": "d2bff3a59edd1a9be5a90f5d84bbded1fbe04e8b",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#80636",
+  "NousResearch/hermes-agent#78645"
+ ],
+ "provenance": "self",
+ "privacy": "public-aggregate",
+ "cost_usd": 0.0,
+ "ai_assistance": "Claude Code (Opus 5.5) ran the experiment and wrote this receipt",
+ "created_at": "2026-10-01T05:21:43-05:00",
+ "spec": {
+  "path": null,
+  "prereg_commit": null,
+  "note": "not pre-registered on claude/ledger (no ledger writes in this run)"
+ },
+ "env": {
+  "host": "<local-host>",
+  "test_python": "3.11.14 (pytest 9.1.1, HERMES_PYTHON)",
+  "nav_python": "3.14.7 separate uv venv (tiktoken 0.14.0, radon 6.0.1)",
+  "sandbox": "none (no bwrap); HOME/HERMES_HOME pointed at scratch test homes; run_tests.sh env -i",
+  "load1_range": "3.4-13 (shared host)"
+ },
+ "id": "E14-bench/r20261001-01",
+ "experiment": "E14 bench.py naive locate-X cost over every first-party import in tests/",
+ "tier": "T0",
+ "label": "MODELED",
+ "inputs": {
+  "harness_blobs_at_base": {
+   "evals/codebase_navigability/bench.py": "307d41872ff00cef2ae3ccde5a5546cc89431023"
+  },
+  "tokenizer": "tiktoken o200k_base, cache file sha256 446a9538cb6c348e3516120d7c08b09f57c36495e2acfffe59a5bf8b0cfb1a2d"
+ },
+ "command": "TIKTOKEN_CACHE_DIR=... $NAVVENV/bin/python $W/head/evals/codebase_navigability/bench.py $W/base base --out out ; same for head",
+ "result": {
+  "tasks": {
+   "base": 24675,
+   "head": 24675
+  },
+  "distinct_defining_files": {
+   "base": 1328,
+   "head": 1329
+  },
+  "file_tokens_mean": {
+   "base": 19302,
+   "head": 19221
+  },
+  "overhead_tokens_mean": {
+   "base": 16192,
+   "head": 16112
+  },
+  "overhead_ratio_mean": {
+   "base": 222.8,
+   "head": 220.7
+  },
+  "total_file_tokens_if_read_whole": {
+   "base": 476275493,
+   "head": 474278692
+  },
+  "tasks_file_over_32k": {
+   "base": 4775,
+   "head": 4762
+  },
+  "tasks_file_over_8k": {
+   "base": 15170,
+   "head": 15157
+  },
+  "tasks_file_over_2000_lines": {
+   "base": 5633,
+   "head": 5620
+  },
+  "siblings_mean": {
+   "base": 76.5,
+   "head": 76.2
+  },
+  "total_symbol_tokens": {
+   "base": 76726307,
+   "head": 76726309
+  },
+  "reexport_hops": {
+   "base": 1120,
+   "head": 1120
+  }
+ },
+ "reading": "13 test-import tasks that resolved to a >2,000-line file now resolve to the 243-line sibling. Whole-file read cost summed over all 24,675 tasks drops by 1,996,801 tokens (-0.42%). total_symbol_tokens moves by 2 (the longer module path in the import lines). This is the naive read-the-whole-file workload, simulated; it is not observed agent behaviour.",
+ "raw": [
+  {
+   "path": null,
+   "sha256": "1bdb36ad7c063674ce4dcaf04b8537a3f672dc5300a0c3a54cdd937d45a61c71",
+   "note": "base.navigability.json (8 MB) kept locally only"
+  },
+  {
+   "path": null,
+   "sha256": "eb82dfdb16dc8f0c8ab066174d12846f1031e7de0d56296f77d8c02583c57404",
+   "note": "head.navigability.json (8 MB) kept locally only"
+  }
+ ],
+ "verdict": "KEEP (MODELED; never a headline)",
+ "privacy_scrub": "fix round 1 (2026-10-01): absolute local paths and the local user name were replaced with placeholders ($W/<tree>, $S, $HERMES_PYTHON, $HERMES_VENV, <uv>, <pytest-tmp>, pytest-of-<user>, ~). raw[].sha256 is the file as shipped after that scrub; raw[].source_sha256 is the pre-scrub original.",
+ "superseded_by": "E14-bench/r20261001-02",
+ "superseded_note": "first build d2bff3a59e on 572e4f4fad; replaced in fix round 1 by c5e8be14b4 on aea969677c (same patch-id 2c92e56f)"
+}

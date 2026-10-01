@@ -1,0 +1,475 @@
+{
+ "checked_at": "2026-10-01T12:34Z",
+ "main": "040b6df2c40b0f4f88f51e4c2062eafc4d7463c5",
+ "arms": {
+  "main": "040b6df2c40b0f4f88f51e4c2062eafc4d7463c5",
+  "staging_head": "569ad4d84b0f9888ea2598c2a8ea416b2c75bad6",
+  "round2_head": "519876fa02f5e5812f5763cef03c5fed054d6cf7"
+ },
+ "prs": {
+  "124151": {
+   "author": "kweez007",
+   "pr_head": "3ee6189dbad0485790893c5098b20f00d27a1d51",
+   "main": {
+    "clean": true,
+    "tree": "850c9a8ff6",
+    "conflicts": []
+   },
+   "staging_head": {
+    "clean": true,
+    "tree": "9c83bc2e46",
+    "conflicts": []
+   },
+   "round2_head": {
+    "clean": true,
+    "tree": "e39976d7b2",
+    "conflicts": []
+   }
+  },
+  "120042": {
+   "author": "Navlem",
+   "pr_head": "641f6b94c5e11f4758844af6112705083862562d",
+   "main": {
+    "clean": true,
+    "tree": "6e75ebeee8",
+    "conflicts": []
+   },
+   "staging_head": {
+    "clean": true,
+    "tree": "f789be4dc9",
+    "conflicts": []
+   },
+   "round2_head": {
+    "clean": true,
+    "tree": "87972f6579",
+    "conflicts": []
+   }
+  },
+  "98045": {
+   "author": "Navlem",
+   "pr_head": "77f018b7db7bb82c0163531a61605bf7245d03ce",
+   "main": {
+    "clean": true,
+    "tree": "91176634b7",
+    "conflicts": []
+   },
+   "staging_head": {
+    "clean": true,
+    "tree": "f2d32d0f95",
+    "conflicts": []
+   },
+   "round2_head": {
+    "clean": true,
+    "tree": "bbc808f259",
+    "conflicts": []
+   }
+  },
+  "92118": {
+   "author": "seradin",
+   "pr_head": "2ad5cc73fac3e519deec7d4d9ff6eccb494aa953",
+   "main": {
+    "clean": true,
+    "tree": "18a8e0a65c",
+    "conflicts": []
+   },
+   "staging_head": {
+    "clean": false,
+    "tree": "8ade2df6b9",
+    "conflicts": [
+     "agent/memory_manager.py"
+    ]
+   },
+   "round2_head": {
+    "clean": false,
+    "tree": "bff0e7780d",
+    "conflicts": [
+     "agent/memory_manager.py"
+    ]
+   }
+  },
+  "126457": {
+   "author": "mozhongzhou",
+   "pr_head": "822f7b28358e47b1c6517981df2f791b67f2bd4a",
+   "main": {
+    "clean": true,
+    "tree": "24ffd2d8d0",
+    "conflicts": []
+   },
+   "staging_head": {
+    "clean": false,
+    "tree": "340a0e50f7",
+    "conflicts": [
+     "agent/memory_manager.py"
+    ]
+   },
+   "round2_head": {
+    "clean": false,
+    "tree": "c86c72d392",
+    "conflicts": [
+     "agent/memory_manager.py"
+    ]
+   }
+  },
+  "87028": {
+   "author": "richardclawbot",
+   "pr_head": "f63bfa2a5c3c614a19dc2f8a7440d3e7f71d349b",
+   "main": {
+    "clean": false,
+    "tree": "86b693fce2",
+    "conflicts": [
+     "agent/agent_init.py",
+     "agent/memory_manager.py"
+    ]
+   },
+   "staging_head": {
+    "clean": false,
+    "tree": "ab5c1287da",
+    "conflicts": [
+     "agent/agent_init.py",
+     "agent/memory_manager.py"
+    ]
+   },
+   "round2_head": {
+    "clean": false,
+    "tree": "d106c68c37",
+    "conflicts": [
+     "agent/agent_init.py",
+     "agent/memory_manager.py"
+    ]
+   }
+  },
+  "86948": {
+   "author": "V0v1kkkAssistant",
+   "pr_head": "cc1c2a1f2c4875f29c63f27981dfb8b3f54252e9",
+   "main": {
+    "clean": false,
+    "tree": "1a757a9c5a",
+    "conflicts": [
+     "agent/memory_manager.py",
+     "plugins/memory/byterover/__init__.py"
+    ]
+   },
+   "staging_head": {
+    "clean": false,
+    "tree": "5ae03e001c",
+    "conflicts": [
+     "agent/memory_manager.py",
+     "plugins/memory/byterover/__init__.py"
+    ]
+   },
+   "round2_head": {
+    "clean": false,
+    "tree": "123524422e",
+    "conflicts": [
+     "agent/memory_manager.py",
+     "plugins/memory/byterover/__init__.py"
+    ]
+   }
+  },
+  "65329": {
+   "author": "Soju06",
+   "pr_head": "c868eaaa02a340071e14fdaaec99fad9b77357f9",
+   "main": {
+    "clean": false,
+    "tree": "4093c75fcf",
+    "conflicts": [
+     "agent/chat_completion_helpers.py",
+     "agent/conversation_loop.py",
+     "agent/tool_executor.py",
+     "agent/turn_context.py",
+     "agent/turn_finalizer.py",
+     "gateway/platforms/base.py",
+     "gateway/run.py",
+     "gateway/turn_context.py",
+     "hermes_cli/config_defaults.py",
+     "plugins/platforms/telegram/adapter.py",
+     "run_agent.py"
+    ]
+   },
+   "staging_head": {
+    "clean": false,
+    "tree": "3d0a2229d3",
+    "conflicts": [
+     "agent/chat_completion_helpers.py",
+     "agent/conversation_loop.py",
+     "agent/tool_executor.py",
+     "agent/turn_context.py",
+     "agent/turn_finalizer.py",
+     "gateway/platforms/base.py",
+     "gateway/run.py",
+     "gateway/turn_context.py",
+     "hermes_cli/config_defaults.py",
+     "plugins/platforms/telegram/adapter.py",
+     "run_agent.py"
+    ]
+   },
+   "round2_head": {
+    "clean": false,
+    "tree": "d00b18a882",
+    "conflicts": [
+     "agent/chat_completion_helpers.py",
+     "agent/conversation_loop.py",
+     "agent/tool_executor.py",
+     "agent/turn_context.py",
+     "agent/turn_finalizer.py",
+     "gateway/platforms/base.py",
+     "gateway/run.py",
+     "gateway/turn_context.py",
+     "hermes_cli/config_defaults.py",
+     "plugins/platforms/telegram/adapter.py",
+     "run_agent.py"
+    ]
+   }
+  },
+  "125802": {
+   "author": "Finn763",
+   "pr_head": "543af5de1910ba995540d71435cae30307c65b69",
+   "main": {
+    "clean": false,
+    "tree": "ca5fcb349d",
+    "conflicts": [
+     "agent/turn_context.py",
+     "tests/agent/test_api_content_sidecar.py",
+     "tests/agent/test_turn_context.py"
+    ]
+   },
+   "staging_head": {
+    "clean": false,
+    "tree": "605b024bd7",
+    "conflicts": [
+     "agent/turn_context.py",
+     "tests/agent/test_api_content_sidecar.py",
+     "tests/agent/test_turn_context.py"
+    ]
+   },
+   "round2_head": {
+    "clean": false,
+    "tree": "4aec4ed57c",
+    "conflicts": [
+     "agent/turn_context.py",
+     "tests/agent/test_api_content_sidecar.py",
+     "tests/agent/test_turn_context.py"
+    ]
+   }
+  },
+  "78584": {
+   "author": "iso2kx",
+   "pr_head": "e7c6f83e8a1d50e2091eaafbe9b686df245bc60c",
+   "main": {
+    "clean": false,
+    "tree": "226fdb78c0",
+    "conflicts": [
+     "agent/agent_init.py",
+     "agent/agent_runtime_helpers.py",
+     "agent/background_review.py",
+     "agent/conversation_compression.py",
+     "agent/memory_manager.py",
+     "agent/prompt_builder.py",
+     "agent/system_prompt.py",
+     "agent/title_generator.py",
+     "agent/tool_executor.py",
+     "agent/turn_context.py",
+     "apps/desktop/src/app/chat/composer/index.tsx",
+     "apps/desktop/src/app/chat/index.tsx",
+     "apps/desktop/src/app/chat/sidebar/index.tsx",
+     "apps/desktop/src/app/session/hooks/use-message-stream/gateway-event.ts",
+     "apps/desktop/src/app/session/hooks/use-session-actions/index.ts",
+     "apps/desktop/src/app/types.ts",
+     "apps/desktop/src/i18n/ar.ts",
+     "apps/desktop/src/i18n/en.ts",
+     "apps/desktop/src/i18n/ja.ts",
+     "apps/desktop/src/i18n/types.ts",
+     "apps/desktop/src/i18n/zh-hant.ts",
+     "apps/desktop/src/i18n/zh.ts",
+     "apps/desktop/src/lib/chat-messages.ts",
+     "apps/desktop/src/lib/keybinds/actions.ts",
+     "cli.py",
+     "gateway/platforms/base.py",
+     "gateway/run.py",
+     "gateway/session.py",
+     "gateway/slash_commands.py",
+     "hermes_cli/_parser.py",
+     "hermes_cli/cli_agent_setup_mixin.py",
+     "hermes_cli/cli_commands_mixin.py",
+     "hermes_cli/commands.py",
+     "hermes_cli/lifecycle.py",
+     "hermes_cli/main.py",
+     "hermes_cli/oneshot.py",
+     "hermes_cli/plugins.py",
+     "hermes_cli/tips.py",
+     "hermes_state.py",
+     "locales/af.yaml",
+     "locales/ar.yaml",
+     "locales/de.yaml",
+     "locales/en.yaml",
+     "locales/es.yaml",
+     "locales/fr.yaml",
+     "locales/ga.yaml",
+     "locales/hu.yaml",
+     "locales/it.yaml",
+     "locales/ja.yaml",
+     "locales/ko.yaml",
+     "locales/pt.yaml",
+     "locales/ru.yaml",
+     "locales/tr.yaml",
+     "locales/uk.yaml",
+     "locales/zh-hant.yaml",
+     "locales/zh.yaml",
+     "plugins/memory/hindsight/__init__.py",
+     "plugins/memory/honcho/__init__.py",
+     "plugins/memory/supermemory/__init__.py",
+     "run_agent.py",
+     "tests/agent/test_ephemeral_tool_guard_executors.py",
+     "tools/delegate_tool.py",
+     "tui_gateway/methods_session.py",
+     "tui_gateway/server.py"
+    ]
+   },
+   "staging_head": {
+    "clean": false,
+    "tree": "6cf77156b2",
+    "conflicts": [
+     "agent/agent_init.py",
+     "agent/agent_runtime_helpers.py",
+     "agent/background_review.py",
+     "agent/conversation_compression.py",
+     "agent/memory_manager.py",
+     "agent/prompt_builder.py",
+     "agent/system_prompt.py",
+     "agent/title_generator.py",
+     "agent/tool_executor.py",
+     "agent/turn_context.py",
+     "apps/desktop/src/app/chat/composer/index.tsx",
+     "apps/desktop/src/app/chat/index.tsx",
+     "apps/desktop/src/app/chat/sidebar/index.tsx",
+     "apps/desktop/src/app/session/hooks/use-message-stream/gateway-event.ts",
+     "apps/desktop/src/app/session/hooks/use-session-actions/index.ts",
+     "apps/desktop/src/app/types.ts",
+     "apps/desktop/src/i18n/ar.ts",
+     "apps/desktop/src/i18n/en.ts",
+     "apps/desktop/src/i18n/ja.ts",
+     "apps/desktop/src/i18n/types.ts",
+     "apps/desktop/src/i18n/zh-hant.ts",
+     "apps/desktop/src/i18n/zh.ts",
+     "apps/desktop/src/lib/chat-messages.ts",
+     "apps/desktop/src/lib/keybinds/actions.ts",
+     "cli.py",
+     "gateway/platforms/base.py",
+     "gateway/run.py",
+     "gateway/session.py",
+     "gateway/slash_commands.py",
+     "hermes_cli/_parser.py",
+     "hermes_cli/cli_agent_setup_mixin.py",
+     "hermes_cli/cli_commands_mixin.py",
+     "hermes_cli/commands.py",
+     "hermes_cli/lifecycle.py",
+     "hermes_cli/main.py",
+     "hermes_cli/oneshot.py",
+     "hermes_cli/plugins.py",
+     "hermes_cli/tips.py",
+     "hermes_state.py",
+     "locales/af.yaml",
+     "locales/ar.yaml",
+     "locales/de.yaml",
+     "locales/en.yaml",
+     "locales/es.yaml",
+     "locales/fr.yaml",
+     "locales/ga.yaml",
+     "locales/hu.yaml",
+     "locales/it.yaml",
+     "locales/ja.yaml",
+     "locales/ko.yaml",
+     "locales/pt.yaml",
+     "locales/ru.yaml",
+     "locales/tr.yaml",
+     "locales/uk.yaml",
+     "locales/zh-hant.yaml",
+     "locales/zh.yaml",
+     "plugins/memory/hindsight/__init__.py",
+     "plugins/memory/honcho/__init__.py",
+     "plugins/memory/supermemory/__init__.py",
+     "run_agent.py",
+     "tests/agent/test_ephemeral_tool_guard_executors.py",
+     "tools/delegate_tool.py",
+     "tui_gateway/methods_session.py",
+     "tui_gateway/server.py"
+    ]
+   },
+   "round2_head": {
+    "clean": false,
+    "tree": "431b405498",
+    "conflicts": [
+     "agent/agent_init.py",
+     "agent/agent_runtime_helpers.py",
+     "agent/background_review.py",
+     "agent/conversation_compression.py",
+     "agent/memory_manager.py",
+     "agent/prompt_builder.py",
+     "agent/system_prompt.py",
+     "agent/title_generator.py",
+     "agent/tool_executor.py",
+     "agent/turn_context.py",
+     "apps/desktop/src/app/chat/composer/index.tsx",
+     "apps/desktop/src/app/chat/index.tsx",
+     "apps/desktop/src/app/chat/sidebar/index.tsx",
+     "apps/desktop/src/app/session/hooks/use-message-stream/gateway-event.ts",
+     "apps/desktop/src/app/session/hooks/use-session-actions/index.ts",
+     "apps/desktop/src/app/types.ts",
+     "apps/desktop/src/i18n/ar.ts",
+     "apps/desktop/src/i18n/en.ts",
+     "apps/desktop/src/i18n/ja.ts",
+     "apps/desktop/src/i18n/types.ts",
+     "apps/desktop/src/i18n/zh-hant.ts",
+     "apps/desktop/src/i18n/zh.ts",
+     "apps/desktop/src/lib/chat-messages.ts",
+     "apps/desktop/src/lib/keybinds/actions.ts",
+     "cli.py",
+     "gateway/platforms/base.py",
+     "gateway/run.py",
+     "gateway/session.py",
+     "gateway/slash_commands.py",
+     "hermes_cli/_parser.py",
+     "hermes_cli/cli_agent_setup_mixin.py",
+     "hermes_cli/cli_commands_mixin.py",
+     "hermes_cli/commands.py",
+     "hermes_cli/lifecycle.py",
+     "hermes_cli/main.py",
+     "hermes_cli/oneshot.py",
+     "hermes_cli/plugins.py",
+     "hermes_cli/tips.py",
+     "hermes_state.py",
+     "locales/af.yaml",
+     "locales/ar.yaml",
+     "locales/de.yaml",
+     "locales/en.yaml",
+     "locales/es.yaml",
+     "locales/fr.yaml",
+     "locales/ga.yaml",
+     "locales/hu.yaml",
+     "locales/it.yaml",
+     "locales/ja.yaml",
+     "locales/ko.yaml",
+     "locales/pt.yaml",
+     "locales/ru.yaml",
+     "locales/tr.yaml",
+     "locales/uk.yaml",
+     "locales/zh-hant.yaml",
+     "locales/zh.yaml",
+     "plugins/memory/hindsight/__init__.py",
+     "plugins/memory/honcho/__init__.py",
+     "plugins/memory/supermemory/__init__.py",
+     "run_agent.py",
+     "tests/agent/test_ephemeral_tool_guard_executors.py",
+     "tools/delegate_tool.py",
+     "tui_gateway/methods_session.py",
+     "tui_gateway/server.py"
+    ]
+   }
+  }
+ },
+ "staging_head_vs_main": {
+  "clean": true,
+  "tree": "50ce6da7df",
+  "conflicts": []
+ }
+}

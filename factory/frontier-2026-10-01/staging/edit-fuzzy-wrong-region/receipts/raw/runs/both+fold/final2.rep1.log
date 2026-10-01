@@ -1,0 +1,25 @@
+# arm=both+fold rep=1 sabotage=none head=ea25f06132 fuzzy_match.py sha256[:16]=145fb70356117a9a
+# files: tests/tools/test_fuzzy_match_wrong_region.py tests/tools/test_fuzzy_match.py tests/tools/test_file_tools_live.py
+▶ not activated — using HERMES_PYTHON: <venv-python>
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 3 test files (~79 tests) under ['tests/tools/test_fuzzy_match_wrong_region.py', 'tests/tools/test_fuzzy_match.py', 'tests/tools/test_file_tools_live.py']; running with -j 2
+[ 77.2% |    61/~79 | ✓61 | ✗ 0] ✓ tests/tools/test_fuzzy_match.py (61✓, 3.1s)
+[ 97.5% |    77/~79 | ✓77 | ✗ 0] ✓ tests/tools/test_file_tools_live.py (16✓, 5.8s)
+[100.0% |    79/~79 | ✓87 | ✗ 0] ✓ tests/tools/test_fuzzy_match_wrong_region.py (10✓, 4.2s)
+
+=== Summary: 3 files, 87 tests passed, 0 failed (100% complete) in 7.3s (2 workers) ===
+  Durations cached to test_durations.json (3 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   3
+  Total subprocess CPU-wall: 13.0s  (runner wall: 7.3s, parallelism: 2x)
+  P50: 4.15s  P90: 5.75s  P95: 5.75s  P99: 5.75s  Max: 5.75s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+      5.75s  tests/tools/test_file_tools_live.py
+      4.15s  tests/tools/test_fuzzy_match_wrong_region.py
+      3.14s  tests/tools/test_fuzzy_match.py
+# rc=0

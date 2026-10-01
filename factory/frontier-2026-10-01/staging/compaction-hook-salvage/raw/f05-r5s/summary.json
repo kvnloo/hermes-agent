@@ -1,0 +1,894 @@
+{
+ "run_id": "f05-r5s",
+ "reps": 3,
+ "arms": {
+  "neg-prefire": {
+   "commit": "a64815d62967a7053761c989ee05a057c05bd3cf",
+   "tree": "6c8abbac294216b82f69505ca2df424c268b936e",
+   "hook": null,
+   "boundary_filter": false,
+   "cells": [
+    {
+     "kind": "contract",
+     "rep": 1,
+     "rc": 1,
+     "wall_s": 15.8,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/neg-prefire-contract-rep1.log",
+     "passed": 1,
+     "failed": 6,
+     "failing": [
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[in_place]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[rotated]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_is_silent_when_nothing_commits[commit_failed]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_is_silent_when_nothing_commits[manual_discarded]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_is_silent_when_nothing_commits[would_grow_refused]"
+     ],
+     "assertions": [
+      "AssertionError: observer ran before the compacted transcript was durable",
+      "AssertionError: a deferred manual compaction must wait for the host's own commit",
+      "AssertionError: on_compression_complete fired for a compaction its host never committed: [{'session_id': 'original-session', 'old_session_id': 'original-session', 'in_place': True, 'tokens_before': 75000, 'tokens_after': 5575, 'platform': '",
+      "AssertionError: on_compression_complete fired for a compaction its host never committed: [{'session_id': 'original-session', 'old_session_id': 'original-session', 'in_place': True, 'tokens_before': 75000, 'tokens_after': 3329, 'platform': '"
+     ]
+    },
+    {
+     "kind": "contract",
+     "rep": 2,
+     "rc": 1,
+     "wall_s": 17.5,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/neg-prefire-contract-rep2.log",
+     "passed": 1,
+     "failed": 6,
+     "failing": [
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[in_place]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[rotated]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_is_silent_when_nothing_commits[commit_failed]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_is_silent_when_nothing_commits[manual_discarded]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_is_silent_when_nothing_commits[would_grow_refused]"
+     ],
+     "assertions": [
+      "AssertionError: observer ran before the compacted transcript was durable",
+      "AssertionError: a deferred manual compaction must wait for the host's own commit",
+      "AssertionError: on_compression_complete fired for a compaction its host never committed: [{'session_id': 'original-session', 'old_session_id': 'original-session', 'in_place': True, 'tokens_before': 75000, 'tokens_after': 5575, 'platform': '",
+      "AssertionError: on_compression_complete fired for a compaction its host never committed: [{'session_id': 'original-session', 'old_session_id': 'original-session', 'in_place': True, 'tokens_before': 75000, 'tokens_after': 3329, 'platform': '"
+     ]
+    },
+    {
+     "kind": "contract",
+     "rep": 3,
+     "rc": 1,
+     "wall_s": 16.3,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/neg-prefire-contract-rep3.log",
+     "passed": 1,
+     "failed": 6,
+     "failing": [
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[in_place]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[rotated]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_is_silent_when_nothing_commits[commit_failed]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_is_silent_when_nothing_commits[manual_discarded]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_is_silent_when_nothing_commits[would_grow_refused]"
+     ],
+     "assertions": [
+      "AssertionError: observer ran before the compacted transcript was durable",
+      "AssertionError: a deferred manual compaction must wait for the host's own commit",
+      "AssertionError: on_compression_complete fired for a compaction its host never committed: [{'session_id': 'original-session', 'old_session_id': 'original-session', 'in_place': True, 'tokens_before': 75000, 'tokens_after': 5575, 'platform': '",
+      "AssertionError: on_compression_complete fired for a compaction its host never committed: [{'session_id': 'original-session', 'old_session_id': 'original-session', 'in_place': True, 'tokens_before': 75000, 'tokens_after': 3329, 'platform': '"
+     ]
+    }
+   ]
+  },
+  "neg-infence": {
+   "commit": "bc6272c1c58fb7297f3bdfafd0cb496d5603de97",
+   "tree": "0faaf6ebe56ad4170155b19d02c8280c1ce9fe96",
+   "hook": null,
+   "boundary_filter": false,
+   "cells": [
+    {
+     "kind": "contract",
+     "rep": 1,
+     "rc": 1,
+     "wall_s": 16.9,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/neg-infence-contract-rep1.log",
+     "passed": 5,
+     "failed": 2,
+     "failing": [
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[in_place]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[rotated]"
+     ],
+     "assertions": [
+      "AssertionError: observer ran inside the commit fence, so an interrupt waits behind it"
+     ]
+    },
+    {
+     "kind": "contract",
+     "rep": 2,
+     "rc": 1,
+     "wall_s": 21.4,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/neg-infence-contract-rep2.log",
+     "passed": 5,
+     "failed": 2,
+     "failing": [
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[in_place]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[rotated]"
+     ],
+     "assertions": [
+      "AssertionError: observer ran inside the commit fence, so an interrupt waits behind it"
+     ]
+    },
+    {
+     "kind": "contract",
+     "rep": 3,
+     "rc": 1,
+     "wall_s": 21.7,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/neg-infence-contract-rep3.log",
+     "passed": 5,
+     "failed": 2,
+     "failing": [
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[in_place]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[rotated]"
+     ],
+     "assertions": [
+      "AssertionError: observer ran inside the commit fence, so an interrupt waits behind it"
+     ]
+    }
+   ]
+  },
+  "neg-nodefer": {
+   "commit": "4970204cde8ea1cc80941978eb30350c1ec9d633",
+   "tree": "59e3de17cefc86529e97b8b7a033d85891a65b35",
+   "hook": null,
+   "boundary_filter": false,
+   "cells": [
+    {
+     "kind": "contract",
+     "rep": 1,
+     "rc": 1,
+     "wall_s": 20.1,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/neg-nodefer-contract-rep1.log",
+     "passed": 5,
+     "failed": 2,
+     "failing": [
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_is_silent_when_nothing_commits[manual_discarded]"
+     ],
+     "assertions": [
+      "AssertionError: a deferred manual compaction must wait for the host's own commit",
+      "AssertionError: on_compression_complete fired for a compaction its host never committed: [{'session_id': 'original-session', 'old_session_id': 'original-session', 'in_place': True, 'tokens_before': 75000, 'tokens_after': 11635, 'platform': "
+     ]
+    },
+    {
+     "kind": "contract",
+     "rep": 2,
+     "rc": 1,
+     "wall_s": 16.4,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/neg-nodefer-contract-rep2.log",
+     "passed": 5,
+     "failed": 2,
+     "failing": [
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_is_silent_when_nothing_commits[manual_discarded]"
+     ],
+     "assertions": [
+      "AssertionError: a deferred manual compaction must wait for the host's own commit",
+      "AssertionError: on_compression_complete fired for a compaction its host never committed: [{'session_id': 'original-session', 'old_session_id': 'original-session', 'in_place': True, 'tokens_before': 75000, 'tokens_after': 11635, 'platform': "
+     ]
+    },
+    {
+     "kind": "contract",
+     "rep": 3,
+     "rc": 1,
+     "wall_s": 17.6,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/neg-nodefer-contract-rep3.log",
+     "passed": 5,
+     "failed": 2,
+     "failing": [
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_is_silent_when_nothing_commits[manual_discarded]"
+     ],
+     "assertions": [
+      "AssertionError: a deferred manual compaction must wait for the host's own commit",
+      "AssertionError: on_compression_complete fired for a compaction its host never committed: [{'session_id': 'original-session', 'old_session_id': 'original-session', 'in_place': True, 'tokens_before': 75000, 'tokens_after': 11635, 'platform': "
+     ]
+    }
+   ]
+  },
+  "sab-h1-stage-call": {
+   "commit": "80a8d96f11c5475c6ccf97ca14c489e13d4db772",
+   "tree": "04856e46fe25ba3c19ea0e0c6391f02ec292d503",
+   "hook": null,
+   "boundary_filter": false,
+   "cells": [
+    {
+     "kind": "contract",
+     "rep": 1,
+     "rc": 1,
+     "wall_s": 17.0,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/sab-h1-stage-call-contract-rep1.log",
+     "passed": 4,
+     "failed": 3,
+     "failing": [
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[in_place]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[rotated]"
+     ],
+     "assertions": [
+      "AssertionError: on_compression_complete fired 0 times"
+     ]
+    },
+    {
+     "kind": "contract",
+     "rep": 2,
+     "rc": 1,
+     "wall_s": 16.5,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/sab-h1-stage-call-contract-rep2.log",
+     "passed": 4,
+     "failed": 3,
+     "failing": [
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[in_place]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[rotated]"
+     ],
+     "assertions": [
+      "AssertionError: on_compression_complete fired 0 times"
+     ]
+    },
+    {
+     "kind": "contract",
+     "rep": 3,
+     "rc": 1,
+     "wall_s": 15.9,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/sab-h1-stage-call-contract-rep3.log",
+     "passed": 4,
+     "failed": 3,
+     "failing": [
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[in_place]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[rotated]"
+     ],
+     "assertions": [
+      "AssertionError: on_compression_complete fired 0 times"
+     ]
+    }
+   ]
+  },
+  "sab-h2-finally-call": {
+   "commit": "c9439470ec3f3ff4abd104027b53e5d055c5ba57",
+   "tree": "9895bc82a1ce310c346ecbc02b457f727a1856fe",
+   "hook": null,
+   "boundary_filter": false,
+   "cells": [
+    {
+     "kind": "contract",
+     "rep": 1,
+     "rc": 1,
+     "wall_s": 16.3,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/sab-h2-finally-call-contract-rep1.log",
+     "passed": 5,
+     "failed": 2,
+     "failing": [
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[in_place]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[rotated]"
+     ],
+     "assertions": [
+      "AssertionError: on_compression_complete fired 0 times"
+     ]
+    },
+    {
+     "kind": "contract",
+     "rep": 2,
+     "rc": 1,
+     "wall_s": 23.6,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/sab-h2-finally-call-contract-rep2.log",
+     "passed": 5,
+     "failed": 2,
+     "failing": [
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[in_place]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[rotated]"
+     ],
+     "assertions": [
+      "AssertionError: on_compression_complete fired 0 times"
+     ]
+    },
+    {
+     "kind": "contract",
+     "rep": 3,
+     "rc": 1,
+     "wall_s": 43.4,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/sab-h2-finally-call-contract-rep3.log",
+     "passed": 5,
+     "failed": 2,
+     "failing": [
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[in_place]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[rotated]"
+     ],
+     "assertions": [
+      "AssertionError: on_compression_complete fired 0 times"
+     ]
+    }
+   ]
+  },
+  "sab-h3-tokens-before": {
+   "commit": "de3483efbb5c2b5d931016abc906888b5ddec726",
+   "tree": "2691bbb4a93c7dc63c5075c1e704be37db5025d0",
+   "hook": null,
+   "boundary_filter": false,
+   "cells": [
+    {
+     "kind": "contract",
+     "rep": 1,
+     "rc": 1,
+     "wall_s": 37.5,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/sab-h3-tokens-before-contract-rep1.log",
+     "passed": 4,
+     "failed": 3,
+     "failing": [
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[in_place]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[rotated]"
+     ],
+     "assertions": [
+      "TypeError: '<' not supported between instances of 'int' and 'NoneType'"
+     ]
+    },
+    {
+     "kind": "contract",
+     "rep": 2,
+     "rc": 1,
+     "wall_s": 34.9,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/sab-h3-tokens-before-contract-rep2.log",
+     "passed": 4,
+     "failed": 3,
+     "failing": [
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[in_place]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[rotated]"
+     ],
+     "assertions": [
+      "TypeError: '<' not supported between instances of 'int' and 'NoneType'"
+     ]
+    },
+    {
+     "kind": "contract",
+     "rep": 3,
+     "rc": 1,
+     "wall_s": 34.2,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/sab-h3-tokens-before-contract-rep3.log",
+     "passed": 4,
+     "failed": 3,
+     "failing": [
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[in_place]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[rotated]"
+     ],
+     "assertions": [
+      "TypeError: '<' not supported between instances of 'int' and 'NoneType'"
+     ]
+    }
+   ]
+  },
+  "sab-h4-tokens-after": {
+   "commit": "50f142ab862313f4868ee9940638e98571504432",
+   "tree": "0c0642a855b601c1ac04469682ee4940e0163178",
+   "hook": null,
+   "boundary_filter": false,
+   "cells": [
+    {
+     "kind": "contract",
+     "rep": 1,
+     "rc": 1,
+     "wall_s": 32.9,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/sab-h4-tokens-after-contract-rep1.log",
+     "passed": 4,
+     "failed": 3,
+     "failing": [
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[in_place]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[rotated]"
+     ],
+     "assertions": []
+    },
+    {
+     "kind": "contract",
+     "rep": 2,
+     "rc": 1,
+     "wall_s": 24.4,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/sab-h4-tokens-after-contract-rep2.log",
+     "passed": 4,
+     "failed": 3,
+     "failing": [
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[in_place]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[rotated]"
+     ],
+     "assertions": []
+    },
+    {
+     "kind": "contract",
+     "rep": 3,
+     "rc": 1,
+     "wall_s": 26.4,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/sab-h4-tokens-after-contract-rep3.log",
+     "passed": 4,
+     "failed": 3,
+     "failing": [
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[in_place]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[rotated]"
+     ],
+     "assertions": []
+    }
+   ]
+  },
+  "sab-h5-valid-hooks": {
+   "commit": "94492cfa5db89caaef27542649e1f36d2630adbd",
+   "tree": "b8f26aed525323b5c1539a4909aaedb1bd466ac5",
+   "hook": null,
+   "boundary_filter": false,
+   "cells": [
+    {
+     "kind": "contract",
+     "rep": 1,
+     "rc": 0,
+     "wall_s": 10.7,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/sab-h5-valid-hooks-contract-rep1.log",
+     "passed": 7,
+     "failed": 0,
+     "failing": [],
+     "assertions": []
+    },
+    {
+     "kind": "contract",
+     "rep": 2,
+     "rc": 0,
+     "wall_s": 12.5,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/sab-h5-valid-hooks-contract-rep2.log",
+     "passed": 7,
+     "failed": 0,
+     "failing": [],
+     "assertions": []
+    },
+    {
+     "kind": "contract",
+     "rep": 3,
+     "rc": 0,
+     "wall_s": 11.6,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/sab-h5-valid-hooks-contract-rep3.log",
+     "passed": 7,
+     "failed": 0,
+     "failing": [],
+     "assertions": []
+    }
+   ]
+  },
+  "sab-h6-bounded": {
+   "commit": "995179999255ca211f7e0797646bb51d6d6e044a",
+   "tree": "4a92050fc882311e72dd618767e5ff39fda2ad0d",
+   "hook": null,
+   "boundary_filter": false,
+   "cells": [
+    {
+     "kind": "contract",
+     "rep": 1,
+     "rc": 0,
+     "wall_s": 11.3,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/sab-h6-bounded-contract-rep1.log",
+     "passed": 7,
+     "failed": 0,
+     "failing": [],
+     "assertions": []
+    },
+    {
+     "kind": "contract",
+     "rep": 2,
+     "rc": 0,
+     "wall_s": 9.3,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/sab-h6-bounded-contract-rep2.log",
+     "passed": 7,
+     "failed": 0,
+     "failing": [],
+     "assertions": []
+    },
+    {
+     "kind": "contract",
+     "rep": 3,
+     "rc": 0,
+     "wall_s": 10.6,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/sab-h6-bounded-contract-rep3.log",
+     "passed": 7,
+     "failed": 0,
+     "failing": [],
+     "assertions": []
+    }
+   ]
+  },
+  "sab-h7-payload-and-docs": {
+   "commit": "38bf5828f0a71030467983c82f9a4efcb1481286",
+   "tree": "85e358c362d5e9171f4a82174b39db2ec694beb5",
+   "hook": null,
+   "boundary_filter": false,
+   "cells": [
+    {
+     "kind": "contract",
+     "rep": 1,
+     "rc": 0,
+     "wall_s": 12.6,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/sab-h7-payload-and-docs-contract-rep1.log",
+     "passed": 7,
+     "failed": 0,
+     "failing": [],
+     "assertions": []
+    },
+    {
+     "kind": "contract",
+     "rep": 2,
+     "rc": 0,
+     "wall_s": 14.7,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/sab-h7-payload-and-docs-contract-rep2.log",
+     "passed": 7,
+     "failed": 0,
+     "failing": [],
+     "assertions": []
+    },
+    {
+     "kind": "contract",
+     "rep": 3,
+     "rc": 0,
+     "wall_s": 13.6,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/sab-h7-payload-and-docs-contract-rep3.log",
+     "passed": 7,
+     "failed": 0,
+     "failing": [],
+     "assertions": []
+    }
+   ]
+  },
+  "sab-h8-start-call": {
+   "commit": "cc9303be63826f324465ed47e80bb257b801681b",
+   "tree": "f99ba3b40ddb8239e7118af592776cb61d5937ca",
+   "hook": null,
+   "boundary_filter": false,
+   "cells": [
+    {
+     "kind": "contract",
+     "rep": 1,
+     "rc": 0,
+     "wall_s": 21.0,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/sab-h8-start-call-contract-rep1.log",
+     "passed": 7,
+     "failed": 0,
+     "failing": [],
+     "assertions": []
+    },
+    {
+     "kind": "contract",
+     "rep": 2,
+     "rc": 0,
+     "wall_s": 16.5,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/sab-h8-start-call-contract-rep2.log",
+     "passed": 7,
+     "failed": 0,
+     "failing": [],
+     "assertions": []
+    },
+    {
+     "kind": "contract",
+     "rep": 3,
+     "rc": 0,
+     "wall_s": 14.6,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/sab-h8-start-call-contract-rep3.log",
+     "passed": 7,
+     "failed": 0,
+     "failing": [],
+     "assertions": []
+    }
+   ]
+  },
+  "sab-h9-deferred-chain": {
+   "commit": "e126a77a4bb59885e0b0b77c265f5006f100ad66",
+   "tree": "93c1a2a868d59e3bf82fa7ef6a487c7d67a771a7",
+   "hook": null,
+   "boundary_filter": false,
+   "cells": [
+    {
+     "kind": "contract",
+     "rep": 1,
+     "rc": 1,
+     "wall_s": 29.1,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/sab-h9-deferred-chain-contract-rep1.log",
+     "passed": 6,
+     "failed": 1,
+     "failing": [
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]"
+     ],
+     "assertions": [
+      "AssertionError: on_compression_complete fired 0 times"
+     ]
+    },
+    {
+     "kind": "contract",
+     "rep": 2,
+     "rc": 1,
+     "wall_s": 26.5,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/sab-h9-deferred-chain-contract-rep2.log",
+     "passed": 6,
+     "failed": 1,
+     "failing": [
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]"
+     ],
+     "assertions": [
+      "AssertionError: on_compression_complete fired 0 times"
+     ]
+    },
+    {
+     "kind": "contract",
+     "rep": 3,
+     "rc": 1,
+     "wall_s": 25.5,
+     "exit_class": "ok",
+     "egress": {
+      "connect": 0,
+      "dns": 0,
+      "prewarm_suppressed": 0
+     },
+     "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_compaction_observer_hook_contract.py -q",
+     "log": "raw/f05-r5s/sab-h9-deferred-chain-contract-rep3.log",
+     "passed": 6,
+     "failed": 1,
+     "failing": [
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]"
+     ],
+     "assertions": [
+      "AssertionError: on_compression_complete fired 0 times"
+     ]
+    }
+   ]
+  }
+ }
+}

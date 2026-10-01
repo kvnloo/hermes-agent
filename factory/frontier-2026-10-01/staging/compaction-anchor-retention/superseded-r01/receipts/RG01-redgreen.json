@@ -1,0 +1,155 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compaction-anchor-retention",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch#87326",
+  "NousResearch#117462",
+  "NousResearch#122274",
+  "NousResearch#122522",
+  "NousResearch#78457"
+ ],
+ "base_revision": "234badf4012af380d23c91eae55d045a69c69ffb",
+ "head_revision": "6e0fa629a0f6227b03417d1d6ff7f7d81208346a",
+ "policy_revision": {
+  "factory": "FACTORY.md (frontier-2026-10-01)",
+  "protocol": "promotion-readiness-2026-10-01/PROTOCOL.md"
+ },
+ "env": {
+  "host": "<local-host>",
+  "python": "3.11.14 (HERMES_PYTHON venv, read-only bind)",
+  "sandbox": "bwrap ro-root, --unshare-net (connect 1.1.1.1:443 -> ENETUNREACH), pidns, clearenv, $HERMES_INSTALL masked except venv, isolated HOME/HERMES_HOME"
+ },
+ "provenance": "self",
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the rows, tests, harness and gold labels; disclosed per repository policy",
+ "privacy": "public-aggregate (all inputs are committed upstream text or seeded synthetic data; no state.db, no lineages)",
+ "resource_usage": {
+  "api_cost_usd": 0.0,
+  "gpu_s": 0,
+  "tokens": 0
+ },
+ "id": "RG01/r20261001-01",
+ "kind": "redgreen",
+ "question": "Does main's anchor index capture delegation/kanban task ids, dotted config keys and CLI error lines, and do the three new rows fix that without disturbing neighbours?",
+ "inputs": {
+  "test": "tests/agent/test_context_compressor_anchor_index.py",
+  "production_seam": "agent/context_compressor.py::_build_anchor_index / _ANCHOR_PATTERNS",
+  "branch_patch_sha256": "26f8485aa9c538a2f7c8ca64b6903f711ca428b932e97b6a9ff902773f9ac5a8"
+ },
+ "commands": {
+  "tests": "HOME=$S/testhome-st-compaction-anchor-retention HERMES_HOME=$HOME/.hermes HERMES_PYTHON=$VENV/bin/python bash scripts/run_tests.sh -j 2 <files> -q",
+  "red": "git show HEAD~1:agent/context_compressor.py > agent/context_compressor.py; run tests/agent/test_context_compressor_anchor_index.py; git checkout -- agent/context_compressor.py",
+  "negative_controls": "delete one new row at a time (and a precision sabotage of the dotted-keys regex), rerun the test file, restore",
+  "guards": "car_sandbox.sh <wt> $PY evals/compaction/test_region_scoping.py ; car_sandbox.sh <wt> $PY evals/token_accounting/replay_gates.py --out <json>"
+ },
+ "gates": {
+  "red": {
+   "arm": "base 234badf4012af380d23c91eae55d045a69c69ffb (and 572e4f4fad32bbdcfc948fb2ec833177ed5734c0)",
+   "result": "PASS",
+   "observed": "2 failed / 2",
+   "assertion": "AssertionError: 'sa-2-7318d0ba' missing from anchor index / assert 'compression.tail_mode' in ''",
+   "label": "OBSERVED"
+  },
+  "green": [
+   {
+    "arm": "branch 6e0fa629a0f6227b03417d1d6ff7f7d81208346a",
+    "result": "PASS",
+    "reps_agree": "3/3",
+    "observed": "2 passed / 2",
+    "label": "OBSERVED"
+   }
+  ],
+  "sabotage": {
+   "per_hunk": [
+    {
+     "mutation": "drop row 'task ids'",
+     "red_again": true,
+     "observed": "2 failed"
+    },
+    {
+     "mutation": "drop row 'dotted keys'",
+     "red_again": true,
+     "observed": "2 failed"
+    },
+    {
+     "mutation": "drop row 'error messages'",
+     "red_again": true,
+     "observed": "2 failed"
+    },
+    {
+     "mutation": "dotted-keys last segment no longer needs '_'",
+     "red_again": true,
+     "observed": "1 failed (config.yaml / context_compressor.py / api.openai.com leak)"
+    }
+   ],
+   "unpinned_hunks": [],
+   "label": "OBSERVED"
+  },
+  "adjacent": {
+   "files": [
+    "tests/agent/test_context_compressor.py",
+    "tests/agent/test_lean_single_aux_call.py",
+    "tests/agent/test_compression_rotation_state.py",
+    "tests/agent/test_context_compressor_summary_continuity.py",
+    "tests/agent/test_compaction_redaction_boundaries.py",
+    "tests/agent/test_native_compaction_summary_retention.py"
+   ],
+   "base": "365 passed / 0 failed (6 files)",
+   "arm": "365 passed + 2 new = 367 passed / 0 failed (7 files)",
+   "identical": true,
+   "pre_existing_failures": [],
+   "label": "OBSERVED"
+  },
+  "guards": {
+   "evals/compaction/test_region_scoping.py": "ALL PASS on base and head (legacy + lean)",
+   "evals/token_accounting/replay_gates.py": "11/11 PASS on base and head; full result dict equal apart from compressor_sha256",
+   "files_unchanged": true,
+   "egress_attempts_blocked": "1 per region_scoping run (model-metadata fetch to openrouter.ai, ENETUNREACH in sandbox; same on base)",
+   "label": "OBSERVED"
+  },
+  "flaky": false,
+  "route_scope": "local-compressor (lean tail mode only; _augment_summary_lean is a no-op in legacy mode; native summaries are opaque)",
+  "cache_read_ratio": {
+   "status": "N_A",
+   "why": "rows change summary text only at a compaction event, which already breaks the prompt cache; cadence unchanged"
+  }
+ },
+ "denominators": {
+  "cells": 12,
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "completeness": 1.0
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "not_tested": [
+  "recall exam (E04/E05): needs an aux LLM",
+  "real lineages (state.db copies) — forbidden here / OD-7",
+  "native compaction routes"
+ ],
+ "verdict": "KEEP",
+ "raw": {
+  "red": "raw/final_red.txt",
+  "green": [
+   "raw/final_green_1.txt",
+   "raw/final_green_2.txt",
+   "raw/final_green_3.txt"
+  ],
+  "negative_controls": "raw/negative_controls.txt",
+  "adjacent": [
+   "raw/adjacent_base.txt",
+   "raw/final_adjacent_head.txt"
+  ],
+  "guards": [
+   "raw/region_scoping_base.txt",
+   "raw/final_region_scoping_head.txt",
+   "raw/replay_gates_base.json",
+   "raw/final_replay_gates_head.json"
+  ]
+ }
+}

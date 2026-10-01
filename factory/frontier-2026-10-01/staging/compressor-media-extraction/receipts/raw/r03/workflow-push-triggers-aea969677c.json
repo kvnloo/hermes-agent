@@ -1,0 +1,156 @@
+{
+ "ref": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+ "workflows_parsed": 52,
+ "with_push_trigger": [
+  {
+   "workflow": "archive-inputs.yml",
+   "branches": [
+    "main"
+   ],
+   "branches_ignore": null,
+   "tags": null,
+   "tags_ignore": null,
+   "paths": [
+    "pm/lock.json",
+    "pm/artifact-mirror.json",
+    "scripts/termux/runtime_libs.json",
+    "scripts/ci/archive_inputs.py",
+    ".github/workflows/archive-inputs.yml"
+   ],
+   "branch_push_matches": false
+  },
+  {
+   "workflow": "ci.yaml",
+   "branches": [
+    "main"
+   ],
+   "branches_ignore": null,
+   "tags": null,
+   "tags_ignore": null,
+   "paths": null,
+   "branch_push_matches": false
+  },
+  {
+   "workflow": "deploy-site.yml",
+   "branches": [
+    "main"
+   ],
+   "branches_ignore": null,
+   "tags": null,
+   "tags_ignore": null,
+   "paths": [
+    "website/**",
+    "skills/**",
+    "optional-skills/**",
+    "plugin-catalog/**",
+    ".github/workflows/deploy-site.yml"
+   ],
+   "branch_push_matches": false
+  },
+  {
+   "workflow": "docker.yml",
+   "branches": [
+    "main"
+   ],
+   "branches_ignore": null,
+   "tags": null,
+   "tags_ignore": null,
+   "paths": null,
+   "branch_push_matches": false
+  },
+  {
+   "workflow": "js-autofix.yml",
+   "branches": [
+    "main"
+   ],
+   "branches_ignore": null,
+   "tags": null,
+   "tags_ignore": null,
+   "paths": [
+    "**/*.js",
+    "**/*.cjs",
+    "**/*.mjs",
+    "**/*.ts",
+    "**/*.tsx",
+    "package.json",
+    "package-lock.json"
+   ],
+   "branch_push_matches": false
+  },
+  {
+   "workflow": "live-providers.yml",
+   "branches": null,
+   "branches_ignore": null,
+   "tags": [
+    "v*"
+   ],
+   "tags_ignore": null,
+   "paths": null,
+   "branch_push_matches": false
+  },
+  {
+   "workflow": "nix.yml",
+   "branches": [
+    "main"
+   ],
+   "branches_ignore": null,
+   "tags": null,
+   "tags_ignore": null,
+   "paths": null,
+   "branch_push_matches": false
+  },
+  {
+   "workflow": "skills-index.yml",
+   "branches": [
+    "main"
+   ],
+   "branches_ignore": null,
+   "tags": null,
+   "tags_ignore": null,
+   "paths": [
+    "scripts/build_skills_index.py",
+    ".github/workflows/skills-index.yml"
+   ],
+   "branch_push_matches": false
+  },
+  {
+   "workflow": "termux-verify.yml",
+   "branches": [
+    "main"
+   ],
+   "branches_ignore": null,
+   "tags": null,
+   "tags_ignore": null,
+   "paths": [
+    "scripts/termux/**",
+    "pm/**",
+    "tests/scripts/test_termux*",
+    ".github/workflows/termux-verify.yml"
+   ],
+   "branch_push_matches": false
+  },
+  {
+   "workflow": "windows-install-update-e2e.yml",
+   "branches": [
+    "wine2e-install/**"
+   ],
+   "branches_ignore": null,
+   "tags": null,
+   "tags_ignore": null,
+   "paths": null,
+   "branch_push_matches": false
+  },
+  {
+   "workflow": "windows-venv-e2e.yml",
+   "branches": [
+    "wine2e/**"
+   ],
+   "branches_ignore": null,
+   "tags": null,
+   "tags_ignore": null,
+   "paths": null,
+   "branch_push_matches": false
+  }
+ ],
+ "branch_push_matches": 0
+}

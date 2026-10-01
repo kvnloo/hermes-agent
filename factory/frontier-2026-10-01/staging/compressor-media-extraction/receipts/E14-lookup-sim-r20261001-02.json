@@ -1,0 +1,145 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compressor-media-extraction",
+ "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+ "head_revision": "c5e8be14b43bf75bcc2e4e8d95f2d4810a7e2779",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#80636",
+  "NousResearch/hermes-agent#78645"
+ ],
+ "provenance": "self",
+ "privacy": "public-aggregate",
+ "cost_usd": 0.0,
+ "ai_assistance": "Claude Code (Opus 5.5) ran the experiment and wrote this receipt",
+ "created_at": "2026-10-01T07:47:16-05:00",
+ "spec": {
+  "path": null,
+  "prereg_commit": null,
+  "note": "not pre-registered on claude/ledger (no ledger writes in this run)"
+ },
+ "env": {
+  "host": "<local-host>",
+  "test_python": "3.11.14 (pytest 9.1.1, HERMES_PYTHON)",
+  "nav_python": "3.14.7 separate uv venv (tiktoken 0.14.0, radon 6.0.1)",
+  "sandbox": "none (no bwrap); HOME/HERMES_HOME pointed at scratch test homes; run_tests.sh env -i",
+  "load1_range": "3-16 (shared host; base and head full runs ran concurrently)",
+  "paths": "absolute local paths in commands and raw files are replaced by $W/<tree>, $S, $HERMES_PYTHON, <uv>, <pytest-tmp>, pytest-of-<user>"
+ },
+ "id": "E14-lookup/r20261001-02",
+ "experiment": "E14 lookup_sim.py (stock, sample 4000 seed 7) + targeted census of the moved functions",
+ "tier": "T0",
+ "label": "MODELED",
+ "supersedes": "E14-lookup/r20261001-01",
+ "round_note": "fix round 1: head rebuilt on main aea969677c (c5e8be14b4 replaces the unpushed d2bff3a59e; same patch-id 2c92e56f, corrected commit message)",
+ "inputs": {
+  "harness_blobs_at_base": {
+   "evals/codebase_navigability/lookup_sim.py": "ac0c624e45a0b54d963e478cbbd3c3873e409cbc"
+  },
+  "targeted_script_sha256": "137868172480a30d09ed2a0afe60bca0b28ab6a81fff73d21618ceb37a7c3141"
+ },
+ "command": [
+  "$NAVVENV/bin/python $W/head/evals/codebase_navigability/lookup_sim.py $W/base $W/head --sample 4000 --seed 7 --out out",
+  "$NAVVENV/bin/python regen/moved_symbol_lookup.py $W/base $W/head $W/head/evals/codebase_navigability/lookup_sim.py --out moved_symbol_lookup.json"
+ ],
+ "result": {
+  "stock": {
+   "common_symbols": 36715,
+   "sampled": 4000,
+   "seed": 7,
+   "head_cheaper": 0,
+   "head_costlier": 1,
+   "equal": 3999,
+   "tokens_total": {
+    "base": 7799925,
+    "head": 7799935
+   },
+   "calls_total": {
+    "base": 8024,
+    "head": 8024
+   },
+   "worst_regressions_top3": [
+    {
+     "name": "_collect_protected_skill_names",
+     "base_tok": 2423,
+     "head_tok": 2433,
+     "head_file": "agent/context_compressor.py"
+    },
+    {
+     "name": "_PeerResponseTooLarge",
+     "base_tok": 2084,
+     "head_tok": 2084,
+     "head_file": "tui_gateway/hosted_room_peer_http.py"
+    },
+    {
+     "name": "_fs_regular_file",
+     "base_tok": 1963,
+     "head_tok": 1963,
+     "head_file": "hermes_cli/web_routers/files.py"
+    }
+   ]
+  },
+  "targeted_moved_functions": {
+   "names": 14,
+   "base": {
+    "tasks": 14,
+    "calls_total": 28,
+    "tokens_total": 33428,
+    "tokens_mean": 2388,
+    "tokens_p50": 2338,
+    "grep_hits_mean": 1.07,
+    "file_lines_p50": 5754
+   },
+   "head": {
+    "tasks": 14,
+    "calls_total": 28,
+    "tokens_total": 23195,
+    "tokens_mean": 1657,
+    "tokens_p50": 1991,
+    "grep_hits_mean": 1.07,
+    "file_lines_p50": 244
+   },
+   "head_cheaper": 10,
+   "head_costlier": 1,
+   "equal": 3
+  },
+  "facade_remaining_defs": {
+   "names": 264,
+   "base": {
+    "tasks": 264,
+    "calls_total": 530,
+    "tokens_total": 722032,
+    "tokens_mean": 2735,
+    "tokens_p50": 2584,
+    "grep_hits_mean": 1.25,
+    "file_lines_p50": 5754
+   },
+   "head": {
+    "tasks": 264,
+    "calls_total": 530,
+    "tokens_total": 722848,
+    "tokens_mean": 2738,
+    "tokens_p50": 2586,
+    "grep_hits_mean": 1.25,
+    "file_lines_p50": 5532
+   },
+   "head_cheaper": 6,
+   "head_costlier": 16,
+   "equal": 242
+  }
+ },
+ "reading": "Stock sample: no moved name was drawn this time (common_symbols 36,715); total 7,799,925 -> 7,799,935 tokens. Targeted: the 14 moved functions cost 33,428 -> 23,195 simulated tokens (-30.6%) with the same 28 tool calls. The facade's remaining 264 defs: 722,032 -> 722,848 (+0.1%); the first build measured -2.1% for the same unchanged facade file, so this census moves with unrelated tree and walk-order changes and carries no weight.",
+ "raw": [
+  {
+   "path": "raw/r02/lookup_sim_w200.json",
+   "sha256": "3e31fe64e744021b876c8421d01aaa1681c3f60b1097d4c0b2e6491f8263fcff",
+   "source_sha256": "3e31fe64e744021b876c8421d01aaa1681c3f60b1097d4c0b2e6491f8263fcff"
+  },
+  {
+   "path": "raw/r02/moved_symbol_lookup.json",
+   "sha256": "c14e9012071f0b04f71b3a7187911e50239e5951e10ead92bb7f9361869a393c",
+   "source_sha256": "c14e9012071f0b04f71b3a7187911e50239e5951e10ead92bb7f9361869a393c"
+  }
+ ],
+ "verdict": "KEEP (MODELED; never a headline)"
+}

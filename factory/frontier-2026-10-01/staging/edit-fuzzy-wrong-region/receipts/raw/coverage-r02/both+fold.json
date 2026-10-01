@@ -1,0 +1,264 @@
+{
+ "arm": "both+fold",
+ "landmarks": {
+  "fm.block_anchor.similar_ratio": {
+   "file": "tools/fuzzy_match.py",
+   "line": 256
+  },
+  "fm.context_aware.accept_all_lines": {
+   "file": "tools/fuzzy_match.py",
+   "line": 287
+  },
+  "fm.context_aware.single_line_guard": {
+   "file": "tools/fuzzy_match.py",
+   "line": 267
+  },
+  "fm.context_aware.single_line_guard.return": {
+   "file": "tools/fuzzy_match.py",
+   "line": 272
+  },
+  "fm.floor.check": {
+   "file": "tools/fuzzy_match.py",
+   "line": 422
+  },
+  "fm.floor.continue": {
+   "file": "tools/fuzzy_match.py",
+   "line": 425
+  },
+  "fm.no_match_return": {
+   "file": "tools/fuzzy_match.py",
+   "line": 437
+  },
+  "fm.replacement_applied": {
+   "file": "tools/fuzzy_match.py",
+   "line": 434
+  },
+  "fo.patch_replace.calls_matcher": {
+   "file": "tools/file_operations.py",
+   "line": 1583
+  },
+  "fo.patch_replace.no_match_result": {
+   "file": "tools/file_operations.py",
+   "line": 1586
+  },
+  "fo.patch_replace.write_file": {
+   "file": "tools/file_operations.py",
+   "line": 1592
+  },
+  "fo.patch_v4a.apply": {
+   "file": "tools/file_operations.py",
+   "line": 1612
+  },
+  "pp.apply_update.calls_matcher": {
+   "file": "tools/patch_parser.py",
+   "line": 420
+  },
+  "pp.apply_update.fail_no_match": {
+   "file": "tools/patch_parser.py",
+   "line": 439
+  },
+  "pp.apply_update.write_file": {
+   "file": "tools/patch_parser.py",
+   "line": 442
+  },
+  "pp.validate.calls_matcher": {
+   "file": "tools/patch_parser.py",
+   "line": 205
+  }
+ },
+ "method": "stdlib sys.settrace line events; via=seam when the stack passes through tools/file_operations.py or tools/patch_parser.py",
+ "per_test": {
+  "tests/tools/test_fuzzy_match_wrong_region.py::test_near_miss_edit_still_applies_via_a_non_exact_strategy[block_drift]": {
+   "fm.block_anchor.similar_ratio": "direct+seam",
+   "fm.context_aware.accept_all_lines": "-",
+   "fm.context_aware.single_line_guard": "-",
+   "fm.context_aware.single_line_guard.return": "-",
+   "fm.floor.check": "direct+seam",
+   "fm.floor.continue": "-",
+   "fm.no_match_return": "-",
+   "fm.replacement_applied": "direct+seam",
+   "fo.patch_replace.calls_matcher": "seam",
+   "fo.patch_replace.no_match_result": "-",
+   "fo.patch_replace.write_file": "seam",
+   "fo.patch_v4a.apply": "-",
+   "pp.apply_update.calls_matcher": "-",
+   "pp.apply_update.fail_no_match": "-",
+   "pp.apply_update.write_file": "-",
+   "pp.validate.calls_matcher": "-"
+  },
+  "tests/tools/test_fuzzy_match_wrong_region.py::test_near_miss_edit_still_applies_via_a_non_exact_strategy[indentation_drift]": {
+   "fm.block_anchor.similar_ratio": "-",
+   "fm.context_aware.accept_all_lines": "-",
+   "fm.context_aware.single_line_guard": "-",
+   "fm.context_aware.single_line_guard.return": "-",
+   "fm.floor.check": "-",
+   "fm.floor.continue": "-",
+   "fm.no_match_return": "-",
+   "fm.replacement_applied": "direct+seam",
+   "fo.patch_replace.calls_matcher": "seam",
+   "fo.patch_replace.no_match_result": "-",
+   "fo.patch_replace.write_file": "seam",
+   "fo.patch_v4a.apply": "-",
+   "pp.apply_update.calls_matcher": "-",
+   "pp.apply_update.fail_no_match": "-",
+   "pp.apply_update.write_file": "-",
+   "pp.validate.calls_matcher": "-"
+  },
+  "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[block_anchor_middle-replace]": {
+   "fm.block_anchor.similar_ratio": "direct+seam",
+   "fm.context_aware.accept_all_lines": "direct+seam",
+   "fm.context_aware.single_line_guard": "direct+seam",
+   "fm.context_aware.single_line_guard.return": "-",
+   "fm.floor.check": "direct+seam",
+   "fm.floor.continue": "direct+seam",
+   "fm.no_match_return": "direct+seam",
+   "fm.replacement_applied": "-",
+   "fo.patch_replace.calls_matcher": "seam",
+   "fo.patch_replace.no_match_result": "seam",
+   "fo.patch_replace.write_file": "-",
+   "fo.patch_v4a.apply": "-",
+   "pp.apply_update.calls_matcher": "-",
+   "pp.apply_update.fail_no_match": "-",
+   "pp.apply_update.write_file": "-",
+   "pp.validate.calls_matcher": "-"
+  },
+  "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[block_anchor_middle-v4a]": {
+   "fm.block_anchor.similar_ratio": "direct+seam",
+   "fm.context_aware.accept_all_lines": "direct+seam",
+   "fm.context_aware.single_line_guard": "direct+seam",
+   "fm.context_aware.single_line_guard.return": "-",
+   "fm.floor.check": "direct+seam",
+   "fm.floor.continue": "direct+seam",
+   "fm.no_match_return": "direct+seam",
+   "fm.replacement_applied": "-",
+   "fo.patch_replace.calls_matcher": "-",
+   "fo.patch_replace.no_match_result": "-",
+   "fo.patch_replace.write_file": "-",
+   "fo.patch_v4a.apply": "seam",
+   "pp.apply_update.calls_matcher": "-",
+   "pp.apply_update.fail_no_match": "-",
+   "pp.apply_update.write_file": "-",
+   "pp.validate.calls_matcher": "seam"
+  },
+  "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_missing_anchor-replace]": {
+   "fm.block_anchor.similar_ratio": "-",
+   "fm.context_aware.accept_all_lines": "-",
+   "fm.context_aware.single_line_guard": "direct+seam",
+   "fm.context_aware.single_line_guard.return": "direct+seam",
+   "fm.floor.check": "-",
+   "fm.floor.continue": "-",
+   "fm.no_match_return": "direct+seam",
+   "fm.replacement_applied": "-",
+   "fo.patch_replace.calls_matcher": "seam",
+   "fo.patch_replace.no_match_result": "seam",
+   "fo.patch_replace.write_file": "-",
+   "fo.patch_v4a.apply": "-",
+   "pp.apply_update.calls_matcher": "-",
+   "pp.apply_update.fail_no_match": "-",
+   "pp.apply_update.write_file": "-",
+   "pp.validate.calls_matcher": "-"
+  },
+  "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_missing_anchor-v4a]": {
+   "fm.block_anchor.similar_ratio": "-",
+   "fm.context_aware.accept_all_lines": "-",
+   "fm.context_aware.single_line_guard": "direct+seam",
+   "fm.context_aware.single_line_guard.return": "direct+seam",
+   "fm.floor.check": "-",
+   "fm.floor.continue": "-",
+   "fm.no_match_return": "direct+seam",
+   "fm.replacement_applied": "-",
+   "fo.patch_replace.calls_matcher": "-",
+   "fo.patch_replace.no_match_result": "-",
+   "fo.patch_replace.write_file": "-",
+   "fo.patch_v4a.apply": "seam",
+   "pp.apply_update.calls_matcher": "-",
+   "pp.apply_update.fail_no_match": "-",
+   "pp.apply_update.write_file": "-",
+   "pp.validate.calls_matcher": "seam"
+  },
+  "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-replace]": {
+   "fm.block_anchor.similar_ratio": "-",
+   "fm.context_aware.accept_all_lines": "-",
+   "fm.context_aware.single_line_guard": "direct+seam",
+   "fm.context_aware.single_line_guard.return": "direct+seam",
+   "fm.floor.check": "-",
+   "fm.floor.continue": "-",
+   "fm.no_match_return": "direct+seam",
+   "fm.replacement_applied": "-",
+   "fo.patch_replace.calls_matcher": "seam",
+   "fo.patch_replace.no_match_result": "seam",
+   "fo.patch_replace.write_file": "-",
+   "fo.patch_v4a.apply": "-",
+   "pp.apply_update.calls_matcher": "-",
+   "pp.apply_update.fail_no_match": "-",
+   "pp.apply_update.write_file": "-",
+   "pp.validate.calls_matcher": "-"
+  },
+  "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-v4a]": {
+   "fm.block_anchor.similar_ratio": "-",
+   "fm.context_aware.accept_all_lines": "-",
+   "fm.context_aware.single_line_guard": "direct+seam",
+   "fm.context_aware.single_line_guard.return": "direct+seam",
+   "fm.floor.check": "-",
+   "fm.floor.continue": "-",
+   "fm.no_match_return": "direct+seam",
+   "fm.replacement_applied": "-",
+   "fo.patch_replace.calls_matcher": "-",
+   "fo.patch_replace.no_match_result": "-",
+   "fo.patch_replace.write_file": "-",
+   "fo.patch_v4a.apply": "seam",
+   "pp.apply_update.calls_matcher": "-",
+   "pp.apply_update.fail_no_match": "-",
+   "pp.apply_update.write_file": "-",
+   "pp.validate.calls_matcher": "seam"
+  },
+  "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_wrong_token-replace]": {
+   "fm.block_anchor.similar_ratio": "-",
+   "fm.context_aware.accept_all_lines": "-",
+   "fm.context_aware.single_line_guard": "direct+seam",
+   "fm.context_aware.single_line_guard.return": "direct+seam",
+   "fm.floor.check": "-",
+   "fm.floor.continue": "-",
+   "fm.no_match_return": "direct+seam",
+   "fm.replacement_applied": "-",
+   "fo.patch_replace.calls_matcher": "seam",
+   "fo.patch_replace.no_match_result": "seam",
+   "fo.patch_replace.write_file": "-",
+   "fo.patch_v4a.apply": "-",
+   "pp.apply_update.calls_matcher": "-",
+   "pp.apply_update.fail_no_match": "-",
+   "pp.apply_update.write_file": "-",
+   "pp.validate.calls_matcher": "-"
+  },
+  "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_wrong_token-v4a]": {
+   "fm.block_anchor.similar_ratio": "-",
+   "fm.context_aware.accept_all_lines": "-",
+   "fm.context_aware.single_line_guard": "direct+seam",
+   "fm.context_aware.single_line_guard.return": "direct+seam",
+   "fm.floor.check": "-",
+   "fm.floor.continue": "-",
+   "fm.no_match_return": "direct+seam",
+   "fm.replacement_applied": "-",
+   "fo.patch_replace.calls_matcher": "-",
+   "fo.patch_replace.no_match_result": "-",
+   "fo.patch_replace.write_file": "-",
+   "fo.patch_v4a.apply": "seam",
+   "pp.apply_update.calls_matcher": "-",
+   "pp.apply_update.fail_no_match": "-",
+   "pp.apply_update.write_file": "-",
+   "pp.validate.calls_matcher": "seam"
+  }
+ },
+ "pytest_rc": 0,
+ "totals": {
+  "tools/file_operations.py": {
+   "distinct_lines_hit_via_seam": 205
+  },
+  "tools/fuzzy_match.py": {
+   "distinct_lines_hit_via_seam": 192
+  },
+  "tools/patch_parser.py": {
+   "distinct_lines_hit_via_seam": 153
+  }
+ }
+}

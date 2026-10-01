@@ -1,0 +1,29 @@
+xf_spec = 1
+id = "E30-N1-79dbb1450e"
+rev = 1
+kind = "redgreen"
+issue = "kvnloo/hermes-agent#322"
+ai_assistance = "Spec and runner written with Claude Code (Opus 5.5); disclosed per repository policy"
+origin_refs = ["NousResearch/hermes-agent#124792", "revert 6ca1924763"]
+expected = "should be refused; a red/green gate is predicted to miss it (false credit)"
+[base]
+repo = "NousResearch/hermes-agent"
+pin = "652fb2eb57de84ea8648bce88b40fce07cad33d6"
+[head]
+commit = "79dbb1450ec404a2240529f5554526da4cfec498"
+merge_onto_base = false
+[probe]
+kind = "pytest"
+files = ["tests/tools/test_mcp_tool_issue_948.py"]
+reps = 3
+jobs = 2
+timeout_s = 900
+[oracle]
+red_markers = ["AssertionError"]
+sabotage = "per_hunk"
+adjacent = ["tests/tools/test_mcp_tool_issue_948.py", "tests/tools/test_mcp_bridge_single_failure.py"]
+[ownership]
+verdict = "unknown"
+queries = []
+[outputs]
+not_tested = ["full test suite", "real provider responses", "kernel network namespace (in-process guard only)"]

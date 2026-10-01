@@ -1,0 +1,205 @@
+{
+  "schema": "f09.gate_probe.v1",
+  "arm": "head",
+  "repo_head": "61effa4dd8a0b81c8eda50a6119239b2aa19e52a",
+  "cells": [
+    {
+      "cell": "native_claude_flag_false",
+      "completed": true,
+      "requests": 1,
+      "payload_sent": [
+        false
+      ],
+      "beta_present": [
+        false
+      ],
+      "payload": null,
+      "schema_errors": [],
+      "local_threshold_tokens": 150000,
+      "expect_payload": false,
+      "pass": true
+    },
+    {
+      "cell": "native_claude_flag_true",
+      "completed": true,
+      "requests": 1,
+      "payload_sent": [
+        true
+      ],
+      "beta_present": [
+        true
+      ],
+      "payload": {
+        "edits": [
+          {
+            "type": "clear_tool_uses_20250919",
+            "trigger": {
+              "type": "input_tokens",
+              "value": 141808
+            },
+            "clear_at_least": {
+              "type": "input_tokens",
+              "value": 28361
+            }
+          }
+        ]
+      },
+      "schema_errors": [],
+      "local_threshold_tokens": 150000,
+      "expect_payload": true,
+      "pass": true
+    },
+    {
+      "cell": "native_claude_flag_true_compression_disabled",
+      "completed": true,
+      "requests": 1,
+      "payload_sent": [
+        false
+      ],
+      "beta_present": [
+        false
+      ],
+      "payload": null,
+      "schema_errors": [],
+      "local_threshold_tokens": 150000,
+      "expect_payload": false,
+      "pass": true
+    },
+    {
+      "cell": "native_claude_flag_true_checkpoint_required",
+      "completed": true,
+      "requests": 1,
+      "payload_sent": [
+        false
+      ],
+      "beta_present": [
+        false
+      ],
+      "payload": null,
+      "schema_errors": [],
+      "local_threshold_tokens": 150000,
+      "expect_payload": false,
+      "pass": true
+    },
+    {
+      "cell": "native_non_claude_flag_true",
+      "completed": true,
+      "requests": 1,
+      "payload_sent": [
+        false
+      ],
+      "beta_present": [
+        false
+      ],
+      "payload": null,
+      "schema_errors": [],
+      "local_threshold_tokens": 153600,
+      "expect_payload": false,
+      "pass": true
+    },
+    {
+      "cell": "third_party_endpoint_flag_true",
+      "completed": true,
+      "requests": 1,
+      "payload_sent": [
+        false
+      ],
+      "beta_present": [
+        false
+      ],
+      "payload": null,
+      "schema_errors": [],
+      "local_threshold_tokens": 150000,
+      "expect_payload": false,
+      "pass": true
+    },
+    {
+      "cell": "structured_400_disable_and_retry_once",
+      "turn1_completed": true,
+      "turn2_completed": true,
+      "payload_sent_per_request": [
+        true,
+        false,
+        false
+      ],
+      "flag_after": false,
+      "pass": true
+    },
+    {
+      "cell": "over_threshold_local_fallback_on",
+      "turn1_completed": true,
+      "turn2_completed": true,
+      "local_threshold_tokens": 50000,
+      "turn1_real_input_tokens": 60000,
+      "local_compress_calls_turn1": 0,
+      "local_compress_calls_turn2": 1,
+      "payload_sent_per_request": [
+        true,
+        true
+      ],
+      "trigger_sent": [
+        41808,
+        41808
+      ],
+      "pass": true
+    },
+    {
+      "cell": "over_threshold_local_fallback_off",
+      "turn1_completed": true,
+      "turn2_completed": true,
+      "local_threshold_tokens": 50000,
+      "turn1_real_input_tokens": 60000,
+      "local_compress_calls_turn1": 0,
+      "local_compress_calls_turn2": 1,
+      "payload_sent_per_request": [
+        false,
+        false
+      ],
+      "trigger_sent": [],
+      "pass": true
+    },
+    {
+      "cell": "flag_absent_wire",
+      "completed": true,
+      "requests": [
+        {
+          "context_management": null,
+          "beta_header": "interleaved-thinking-2025-05-14,fine-grained-tool-streaming-2025-05-14",
+          "beta_present": false,
+          "schema_errors": [],
+          "body_sha256": "14993093e98a99a47c14a62ec44c8ac04d0689e8c619af0b42e66290905dc0ce",
+          "body_minus_system_sha256": "eab91ad3f12252c117aaeb842102822ade9b2fd2672d27386c5759172e4c9c66",
+          "system_sha256": "1e26194b5d6b391cd5bfe8693274463345423dc5ed53d23c6b6e607ca4f03879",
+          "headers_sha256": "eb74173fa90f7f3759981331635312281b186d105415e735acefca4542876b84"
+        },
+        {
+          "context_management": null,
+          "beta_header": "interleaved-thinking-2025-05-14,fine-grained-tool-streaming-2025-05-14",
+          "beta_present": false,
+          "schema_errors": [],
+          "body_sha256": "edf06001322239395dc093be4cfa7e66c5d84c5a14af786b38ec915717d46d78",
+          "body_minus_system_sha256": "7fa573ed3c43d43e67c6f6c82d2384afe368bb1e1678c09d2316dc54bbdb751b",
+          "system_sha256": "1e26194b5d6b391cd5bfe8693274463345423dc5ed53d23c6b6e607ca4f03879",
+          "headers_sha256": "eb74173fa90f7f3759981331635312281b186d105415e735acefca4542876b84"
+        }
+      ],
+      "system_normalised_sha256": "9d4472d1d3d060cf9e3d08ee08a9d82fcbe5ee8995c50890c78a8f503b9ffec8",
+      "system_host_substitutions": [
+        {
+          "placeholder": "<SANDBOX>",
+          "count": 4
+        },
+        {
+          "placeholder": "Host: <HOST>",
+          "count": 1
+        },
+        {
+          "placeholder": "python3=<PY>",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "egress_blocked": [],
+  "sdk_schema_errors_total": 0
+}

@@ -1,0 +1,44 @@
+▶ not activated — using HERMES_PYTHON: <hermes-home>/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 16 test files (~280 tests) under ['tests/agent/test_compression_boundary_hook.py', 'tests/hermes_cli/test_cli_manual_compress.py', 'tests/hermes_cli/test_shared_metrics_engagement.py', 'tests/agent/test_compression_attempt_telemetry.py', 'tests/agent/test_auxiliary_hooks.py', 'tests/agent/test_shell_hooks.py', 'tests/gateway/test_gateway_platform_event_hook.py', 'tests/hermes_cli/test_hooks_cli.py', 'tests/hermes_cli/test_plugins.py', 'tests/hermes_cli/test_kanban_lifecycle_hooks.py', 'tests/agent/test_conversation_compression_manual.py', 'tests/agent/test_compression_rotation_state.py', 'tests/agent/test_compression_persistence.py', 'tests/agent/test_compression_commit_fence_race.py', 'tests/agent/test_compression_attempt_lifecycle.py', 'tests/agent/test_pre_compress_memory_context_handoff.py']; running with -j 2
+[  0.7% |     2/~280 | ✓2 | ✗0] ✓ tests/agent/test_auxiliary_hooks.py (2✓, 1.7s)
+[  2.1% |     6/~280 | ✓6 | ✗0] ✓ tests/agent/test_compression_attempt_telemetry.py (4✓, 2.6s)
+[  4.6% |    13/~280 | ✓13 | ✗ 0] ✓ tests/agent/test_compression_boundary_hook.py (7✓, 19.7s)
+[  8.6% |    24/~280 | ✓24 | ✗ 0] ✓ tests/agent/test_compression_attempt_lifecycle.py (11✓, 26.5s)
+[ 10.0% |    28/~280 | ✓28 | ✗ 0] ✓ tests/agent/test_compression_commit_fence_race.py (4✓, 5.6s)
+[ 13.6% |    38/~280 | ✓38 | ✗ 0] ✓ tests/agent/test_compression_persistence.py (10✓, 13.3s)
+[ 17.5% |    49/~280 | ✓59 | ✗ 0] ✓ tests/agent/test_conversation_compression_manual.py (21✓, 23.9s)
+[ 19.3% |    54/~280 | ✓64 | ✗ 0] ✓ tests/agent/test_pre_compress_memory_context_handoff.py (5✓, 4.5s)
+[ 36.8% |   103/~280 | ✓114 | ✗  0] ✓ tests/agent/test_shell_hooks.py (50✓ 2s, 3.8s)
+[ 46.4% |   130/~280 | ✓143 | ✗  0] ✓ tests/gateway/test_gateway_platform_event_hook.py (29✓, 2.1s)
+[ 47.1% |   132/~280 | ✓145 | ✗  0] ✓ tests/hermes_cli/test_cli_manual_compress.py (2✓, 1.3s)
+[ 50.0% |   140/~280 | ✓153 | ✗  0] ✓ tests/hermes_cli/test_hooks_cli.py (8✓, 1.2s)
+[ 50.7% |   142/~280 | ✓155 | ✗  0] ✓ tests/hermes_cli/test_kanban_lifecycle_hooks.py (2✓, 2.5s)
+[ 81.4% |   228/~280 | ✓242 | ✗  0] ✓ tests/hermes_cli/test_plugins.py (87✓, 10.5s)
+[ 86.1% |   241/~280 | ✓258 | ✗  0] ✓ tests/hermes_cli/test_shared_metrics_engagement.py (16✓, 13.4s)
+[100.0% |   280/~280 | ✓298 | ✗  0] ✓ tests/agent/test_compression_rotation_state.py (40✓, 101.7s)
+
+=== Summary: 16 files, 298 tests passed, 0 failed, 2 skipped (100% complete) in 131.5s (2 workers) ===
+
+  note: platforms('windows') tests (in 1 file) were SKIPPED on this host (linux); they run on the Windows Python-tests lane.
+  Durations cached to test_durations.json (16 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   16
+  Total subprocess CPU-wall: 234.6s  (runner wall: 131.5s, parallelism: 2x)
+  P50: 5.58s  P90: 26.50s  P95: 101.73s  P99: 101.73s  Max: 101.73s
+  <1s: 0 files (0%)  <2s: 3 files (19%)
+  Top 10 slowest:
+    101.73s  tests/agent/test_compression_rotation_state.py
+     26.50s  tests/agent/test_compression_attempt_lifecycle.py
+     23.88s  tests/agent/test_conversation_compression_manual.py
+     19.71s  tests/agent/test_compression_boundary_hook.py
+     13.44s  tests/hermes_cli/test_shared_metrics_engagement.py
+     13.34s  tests/agent/test_compression_persistence.py
+     10.53s  tests/hermes_cli/test_plugins.py
+      5.58s  tests/agent/test_compression_commit_fence_race.py
+      4.50s  tests/agent/test_pre_compress_memory_context_handoff.py
+      3.84s  tests/agent/test_shell_hooks.py

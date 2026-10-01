@@ -1,0 +1,507 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "F04-enforced/r20261001-03",
+ "staging": "tool-result-projection-support",
+ "origin_refs": [
+  "NousResearch/hermes-agent#107731",
+  "NousResearch/hermes-agent#39691",
+  "NousResearch/hermes-agent#47866",
+  "NousResearch/hermes-agent#129620",
+  "NousResearch/hermes-agent#129492",
+  "NousResearch/hermes-agent#129882",
+  "NousResearch/hermes-agent#106426",
+  "NousResearch/hermes-agent#70107",
+  "NousResearch/hermes-agent#526",
+  "kvnloo/hermes-agent#310"
+ ],
+ "base_revision": "e8c97320ac8691d4de92af49f98459f9ef9ddb08",
+ "env": {
+  "host": "withheld (one local workstation; receipts carry no host names)",
+  "python": "3.11.14 ($PY = the repo venv interpreter, used read-only)",
+  "isolation": "probes: env -i, fresh HOME/HERMES_HOME under scratch, loopback-only socket.connect + getaddrinfo guard; canonical runner: scripts/run_tests.sh -j 2 with HOME=$S/testhome-sf-tool-result-projection-support, HERMES_HOME=$HOME/.hermes; no credentials",
+  "network": "loopback only (egress_blocked recorded per probe run)",
+  "relay": {
+   "present": true,
+   "package": "nemo-relay 0.8.4 (installed in the shared repo venv; not part of this change)",
+   "state": "FAILED at initialize(): agent/relay_runtime.py:346 calls relay.plugin.initialize({}, additional_plugins_toml=...), which nemo-relay 0.8.4 does not accept, so _activate() logs 'Hermes Relay plugin initialization failed' (relay_runtime.py:328) and returns FAILED. No Relay plugin or Hermes-managed Relay middleware was active in any run.",
+   "plugins_toml_sha256": null,
+   "config_paths": [],
+   "explicit_plugins_toml": "none: HERMES_NEMO_RELAY_PLUGINS_TOML unset and the isolated HERMES_HOME has no relay-plugins.toml",
+   "seen_in": "canonical-runner logs (captured WARNING on failing tests); probes run the same agent init"
+  }
+ },
+ "spec": {
+  "path": null,
+  "rev": null,
+  "sha256": null,
+  "prereg_commit": null,
+  "decision_rule_sha": null,
+  "note": "not pre-registered: an ad-hoc staging re-run under FACTORY.md section 8 (round-2 fix of the round-1 re-verifier findings). Decision rule: the assertions of tests/e2e/core/history/test_tool_result_projection_wire.py (blob 7347ad045b) and the harness outputs named in command."
+ },
+ "policy_revision": {
+  "AGENTS.md": "65aa3e61bc@e8c97320ac",
+  "CONTRIBUTING.md": "b0baa59b50@e8c97320ac",
+  "factory": "FACTORY.md sha256:7726ba18b43a9367 (frontier-2026-10-01 ledger copy)"
+ },
+ "provenance": "self",
+ "cost": {
+  "api_cost_usd": 0.0,
+  "tier_cost": "$0"
+ },
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the harness, tests and fold-in gate; disclosed per repository policy",
+ "privacy": "synthetic fixtures only; no state.db / agent.log / credentials read; absolute local paths replaced by placeholders",
+ "inputs": {
+  "shas": {
+   "main": "e8c97320ac8691d4de92af49f98459f9ef9ddb08",
+   "main_previous_round": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+   "staging_commit": "8c783ff4ac2fcd7906e074eefec7f0d3fcfc0782",
+   "staging_commit_parent": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+   "staging_merge_tree_on_main": "7016f82dc28a05fed0f6c6b67bb99df237e54244",
+   "main_plus_test_arm": "434aa0b1083993444ec0cd5aa7cc61ec3422bd16",
+   "main_plus_test_arm_tree": "7016f82dc28a05fed0f6c6b67bb99df237e54244",
+   "carrier_head": "069adfb67e57287ac8df996ef48e082fe8455e2c",
+   "carrier_merge_base": "67764dc0863349a384c16425e73ee8571f3a94b7",
+   "carrier_rebased_arm": "4b5b438de8f6ed77d38c675e0077666ef8b2f75b",
+   "carrier_rebased_arm_tree": "7f099e3b93326d04e266d0c9b5c49984cab43be7",
+   "carrier_rebased_arm_plus_test": "dedece6d1937938ae9b5cfa92babaa380cbe584c",
+   "carrier_rebased_arm_plus_test_tree": "03cf488911915a6823873c344e57f3f805ca875a",
+   "test_blob": "7347ad045bf049afabce5b78435d5746273160f1",
+   "carrier_module_blob": "a76fb42f76e3bb7d71643da6a5f58890878d4d32",
+   "carrier_module_blob_with_gate_v3": "852be44f4f4306ec177a191591bc6f2529c927ce"
+  },
+  "harness_sha256": {
+   "harness/e37_synthetic.py": "4de16b55331c737d8db15eaf0acdfacb69cb458808f59bc3c912cd4c424c2f85",
+   "harness/f04_bedrock_probe.py": "8159c09229dce68316973ff10486d4da87ee356d815f5a6188f59ac76c53286c",
+   "harness/f04_probe.py": "a23b3b14b3cd7a4c4e8bfd35a6da50c06656f183fc842afca738e3f46e051bb9",
+   "harness/f04_thirdparty_probe.py": "b102cd9093f284907b41409d3d1f4b825f7eef1844fea942f8ec1d0d0fc184c6",
+   "harness/guarded_run.py": "be17793cdf4bad466fb2e05b5c67d63430a1e79c8c40949a7e45c897d35d654f",
+   "harness/per_hunk_sabotage.py": "73a31ca6888f7384b58993924ee66f5795962af8fdabe98b1d5d678dc84866fd",
+   "harness/per_hunk_sabotage_r2.py": "57219f128cb8f90cb9bb87df659c0d499da9c716e018a2de626be9a9b9ed9d60",
+   "harness/predicate_direct.py": "5996ac8a92033342ae18a71a052257773235ba8d470c5829f733ed554d0ae4bb",
+   "harness/predicate_wire_truth.py": "b5ee90a984238695c9837a0c7edbedb5c87c28111b46a77389c91b3568be5f4b",
+   "harness/readtool_direct.py": "e8dd892a0a2a835550467d4ccf4732470860692b6200a6e150be50950d9a96f4",
+   "harness/seam_trace.py": "b1c1efa4e7fd6d37b3c4ab37ee770d09c9308e5fcb06f91c2c67004197645750"
+  },
+  "patches_sha256": {
+   "patches/carrier-rebase-handport-hot-reload-test.diff": "6024fcb1457cdc1bf8d6762da6ca372d3109d41d532311dd8a0264c609d7d741",
+   "patches/foldin-preserved-thinking-gate-v2.diff": "acac8a736c2503a122a986622c8003f813e331363f2a92832eb709b6738d6e84",
+   "patches/foldin-preserved-thinking-gate-v3.diff": "12e83bd0dc82dc1042ef37cf93a65ea810d6a118eb322785b6c27cbe7c1acaed",
+   "patches/foldin-preserved-thinking-gate.diff": "1490213c6d074a6cae190b4bf138d09b431ab78c535961159e3982b4f06ae6ab",
+   "patches/sabotage-S1-per-turn-reevaluation.diff": "a7f55f013f779c6a12aaab89b56c3b2af0bf4380883fda474df2b3757582a132",
+   "patches/sabotage-S2-no-stickiness.diff": "3b8b144c13805d30e117621a2fc3f7ed316434be4bcfd06197a8b865b1abbfd3",
+   "patches/tool-result-projection-support.v1-d5854fdd7b.patch": "a71a2123f6bd3f9d6d67a9b1c7c88a8ffbb1149a125332209333636042e95a0c",
+   "patches/tool-result-projection-support.v2-8c783ff4ac.patch": "b9d18435f4d1c45eacc77912f217b8e034295c3adec0667bdedd5bbd9da5d7f9"
+  }
+ },
+ "tier": "T1",
+ "kind": "forensic",
+ "experiment": "Enforced-account emulation on main e8c97320ac: the fake Messages server answers the documented 400 whenever a replayed thinking block's prefix changed (MODELED server rule); Hermes' behaviour against it is OBSERVED. 3 reps per arm.",
+ "z0evals_study": {
+  "repo": "kvnloo/z0evals",
+  "branch": "study/hermes-tool-result-projection-support",
+  "commit": null,
+  "status": "not frozen (P8 pending; freeze when the comment is posted)"
+ },
+ "frozen": null,
+ "command": {
+  "probe": "env -i PATH=/usr/bin:/bin PYTHONHASHSEED=0 F04_SCRATCH=$S/sf-trp3/scratch $PY harness/f04_probe.py <worktree> <out.json> <arm> enforce  (3 reps per arm)",
+  "arm_setup": {
+   "base": "git checkout --detach e8c97320ac8691d4de92af49f98459f9ef9ddb08 && git cherry-pick 8c783ff4ac2fcd7906e074eefec7f0d3fcfc0782 -> 434aa0b1083993444ec0cd5aa7cc61ec3422bd16 (main + test, local evidence commit)",
+   "carrier": "dedece6d1937938ae9b5cfa92babaa380cbe584c (main + refs/pr/107731 merged, hot-reload add/add kept both sides, + test; local evidence commits)",
+   "carrier-foldin-v1": "carrier + git apply patches/foldin-preserved-thinking-gate.diff (round-0 gate)",
+   "carrier-foldin-v2": "carrier + git apply patches/foldin-preserved-thinking-gate-v2.diff (round-1 gate)",
+   "carrier-foldin-v3": "carrier + git apply patches/foldin-preserved-thinking-gate-v3.diff (round-2 gate)"
+  }
+ },
+ "results": {
+  "label": "OBSERVED Hermes behaviour against a MODELED server rule",
+  "n_per_arm": 3,
+  "arms": {
+   "base": {
+    "n": 3,
+    "reps_agree": "3/3",
+    "test_A_openai_route": "failed",
+    "test_B_native_anthropic": "passed",
+    "openai_route": {
+     "requests": 28,
+     "tool_rows": 14,
+     "rows_archived": 0,
+     "projection_passes": 0,
+     "pass_request_indices": [],
+     "reclaim_estimator_tokens_per_pass": [],
+     "unstable_archived_rows": 0,
+     "sum_request_chars": 5025476
+    },
+    "native_anthropic_route": {
+     "requests": 24,
+     "replayed_thinking_blocks": 23,
+     "invalidated_thinking_blocks": 0,
+     "rejected_400": 0,
+     "sum_request_chars": 3539687
+    },
+    "egress_blocked": [],
+    "repo_head": "434aa0b1083993444ec0cd5aa7cc61ec3422bd16",
+    "dirty_files": []
+   },
+   "carrier": {
+    "n": 3,
+    "reps_agree": "3/3",
+    "test_A_openai_route": "passed",
+    "test_B_native_anthropic": "failed",
+    "openai_route": {
+     "requests": 28,
+     "tool_rows": 14,
+     "rows_archived": 12,
+     "projection_passes": 6,
+     "pass_request_indices": [
+      7,
+      11,
+      15,
+      19,
+      23,
+      27
+     ],
+     "reclaim_estimator_tokens_per_pass": [
+      11692
+     ],
+     "unstable_archived_rows": 0,
+     "sum_request_chars": 1936683
+    },
+    "native_anthropic_route": {
+     "requests": 25,
+     "replayed_thinking_blocks": 24,
+     "invalidated_thinking_blocks": 16,
+     "rejected_400": 16,
+     "sum_request_chars": 1337250
+    },
+    "egress_blocked": [],
+    "repo_head": "dedece6d1937938ae9b5cfa92babaa380cbe584c",
+    "dirty_files": []
+   },
+   "carrier-foldin-v1": {
+    "n": 3,
+    "reps_agree": "3/3",
+    "test_A_openai_route": "passed",
+    "test_B_native_anthropic": "passed",
+    "openai_route": {
+     "requests": 28,
+     "tool_rows": 14,
+     "rows_archived": 12,
+     "projection_passes": 6,
+     "pass_request_indices": [
+      7,
+      11,
+      15,
+      19,
+      23,
+      27
+     ],
+     "reclaim_estimator_tokens_per_pass": [
+      11692
+     ],
+     "unstable_archived_rows": 0,
+     "sum_request_chars": 1936683
+    },
+    "native_anthropic_route": {
+     "requests": 24,
+     "replayed_thinking_blocks": 23,
+     "invalidated_thinking_blocks": 0,
+     "rejected_400": 0,
+     "sum_request_chars": 3539687
+    },
+    "egress_blocked": [],
+    "repo_head": "dedece6d1937938ae9b5cfa92babaa380cbe584c",
+    "dirty_files": [
+     "M agent/tool_result_projection.py"
+    ]
+   },
+   "carrier-foldin-v2": {
+    "n": 3,
+    "reps_agree": "3/3",
+    "test_A_openai_route": "passed",
+    "test_B_native_anthropic": "passed",
+    "openai_route": {
+     "requests": 28,
+     "tool_rows": 14,
+     "rows_archived": 12,
+     "projection_passes": 6,
+     "pass_request_indices": [
+      7,
+      11,
+      15,
+      19,
+      23,
+      27
+     ],
+     "reclaim_estimator_tokens_per_pass": [
+      11692
+     ],
+     "unstable_archived_rows": 0,
+     "sum_request_chars": 1936683
+    },
+    "native_anthropic_route": {
+     "requests": 24,
+     "replayed_thinking_blocks": 23,
+     "invalidated_thinking_blocks": 0,
+     "rejected_400": 0,
+     "sum_request_chars": 3539687
+    },
+    "egress_blocked": [],
+    "repo_head": "dedece6d1937938ae9b5cfa92babaa380cbe584c",
+    "dirty_files": [
+     "M agent/tool_result_projection.py"
+    ]
+   },
+   "carrier-foldin-v3": {
+    "n": 3,
+    "reps_agree": "3/3",
+    "test_A_openai_route": "passed",
+    "test_B_native_anthropic": "passed",
+    "openai_route": {
+     "requests": 28,
+     "tool_rows": 14,
+     "rows_archived": 12,
+     "projection_passes": 6,
+     "pass_request_indices": [
+      7,
+      11,
+      15,
+      19,
+      23,
+      27
+     ],
+     "reclaim_estimator_tokens_per_pass": [
+      11692
+     ],
+     "unstable_archived_rows": 0,
+     "sum_request_chars": 1936683
+    },
+    "native_anthropic_route": {
+     "requests": 24,
+     "replayed_thinking_blocks": 23,
+     "invalidated_thinking_blocks": 0,
+     "rejected_400": 0,
+     "sum_request_chars": 3539687
+    },
+    "egress_blocked": [],
+    "repo_head": "dedece6d1937938ae9b5cfa92babaa380cbe584c",
+    "dirty_files": [
+     "M agent/tool_result_projection.py"
+    ]
+   }
+  }
+ },
+ "measurements": [
+  {
+   "name": "rejected_400_thinking_binding",
+   "arm": "base",
+   "value": 0,
+   "n": 3,
+   "label": "OBSERVED (against a MODELED rule)",
+   "statistic": "count over 12 turns"
+  },
+  {
+   "name": "rejected_400_thinking_binding",
+   "arm": "carrier",
+   "value": 16,
+   "n": 3,
+   "label": "OBSERVED (against a MODELED rule)",
+   "statistic": "count over 12 turns"
+  },
+  {
+   "name": "rejected_400_thinking_binding",
+   "arm": "carrier-foldin-v1",
+   "value": 0,
+   "n": 3,
+   "label": "OBSERVED (against a MODELED rule)",
+   "statistic": "count over 12 turns"
+  },
+  {
+   "name": "rejected_400_thinking_binding",
+   "arm": "carrier-foldin-v2",
+   "value": 0,
+   "n": 3,
+   "label": "OBSERVED (against a MODELED rule)",
+   "statistic": "count over 12 turns"
+  },
+  {
+   "name": "rejected_400_thinking_binding",
+   "arm": "carrier-foldin-v3",
+   "value": 0,
+   "n": 3,
+   "label": "OBSERVED (against a MODELED rule)",
+   "statistic": "count over 12 turns"
+  }
+ ],
+ "denominators": {
+  "cells": 15,
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "completeness": 1.0,
+  "note": "5 arms x 3 probe runs"
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "not_tested": [
+  "real enforcement on an enforced account (queued item 4, OD-3)"
+ ],
+ "limitations": [
+  "the 400 rule is emulated from the claude-api reference; the real server may differ"
+ ],
+ "resource_usage": {
+  "wall_s": 104.3,
+  "cpu_core_s": null,
+  "gpu_s": 0,
+  "energy_j": null,
+  "api_cost_usd": 0.0,
+  "note": "wall_s summed from raw outputs; CPU time and energy not recorded"
+ },
+ "artifacts": [
+  {
+   "path": "receipts/raw/r03/probe-base-enforced-r1.json",
+   "sha256": "59e8c76aded179981d0697c21263c8e1663b55dcd5470a819c8f526919d93ad1"
+  },
+  {
+   "path": "receipts/raw/r03/probe-base-enforced-r1.json.log",
+   "sha256": "7f2ca0d7b0102a6666ee04857f115b2e2adecbdf0aad833a998814cde5cb038f"
+  },
+  {
+   "path": "receipts/raw/r03/probe-base-enforced-r2.json",
+   "sha256": "cae6a20df5f3cfedef31b30487649005408ec915bba6085db06c6794ac590267"
+  },
+  {
+   "path": "receipts/raw/r03/probe-base-enforced-r2.json.log",
+   "sha256": "b2b160100e693dab51f7bc9029e9b996517c280cfccd40d601a4943eff9063d1"
+  },
+  {
+   "path": "receipts/raw/r03/probe-base-enforced-r3.json",
+   "sha256": "68610822e4b944bfc535921b6b8bc44c1a33599f204095ffe07c022d99567ac2"
+  },
+  {
+   "path": "receipts/raw/r03/probe-base-enforced-r3.json.log",
+   "sha256": "5858333a00d42d8d2b598249df32e600b6bfe2b95c9ebc0e553715f430b89103"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-enforced-r1.json",
+   "sha256": "a06312a5ba1cc54688d241aac3259786dc408911fe8784c6fd640f7dce396c12"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-enforced-r1.json.log",
+   "sha256": "d1ae8574d1528e7e65d222f2cbdb14a8f118b2d6bdbe399f0c302c8662df00dc"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-enforced-r2.json",
+   "sha256": "56b425733c465028046daa25d80635192a0adecd3771655ade228cf1a901846c"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-enforced-r2.json.log",
+   "sha256": "446e0e83b9381f4f27c4b4b35e946942b9fb9c57f4df940cc364443cb20fb7c8"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-enforced-r3.json",
+   "sha256": "da5eb3709ef72c5142fa38a64e69dac895374e8b9215305384639984e71372f4"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-enforced-r3.json.log",
+   "sha256": "85ea0011e1e53cf21d5c37b91fc66e02158875d7a2ff25560b6102e1b3962d94"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v1-enforced-r1.json",
+   "sha256": "013b246c4eba64077ed76559a79b4c37225201ccc2e39a2b0acc954d027a798b"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v1-enforced-r1.json.log",
+   "sha256": "37449e0d6c34d0b31fa4b3741091dfb1e8d485ef7e875e420fa05d24a40649ee"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v1-enforced-r2.json",
+   "sha256": "2f58fe0b6f2c7a881e408fd826584b0890de796dc6954c27179c8ffa8e111c35"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v1-enforced-r2.json.log",
+   "sha256": "1216de21d58dfde20e0726761234f954f2c19a61c843010a740866d483dbcecf"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v1-enforced-r3.json",
+   "sha256": "90d8f0c3465c06390ac36b27302be34dae8a89de9b48344aeff7d2dc16709e37"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v1-enforced-r3.json.log",
+   "sha256": "fc2eac5e689274117c9557c78a65566227539ffb58e108b63690da4aa946debf"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v2-enforced-r1.json",
+   "sha256": "6e419ec1bafbf0e8edc4a5a9fc96646dcdd702e21c1c54e2a955e5e76f72d824"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v2-enforced-r1.json.log",
+   "sha256": "d1592b6dae68e00932438172b22f791af0d5667aca79e7d58366912b3e48a7a7"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v2-enforced-r2.json",
+   "sha256": "819dd2d7882b09a0286f2794b3b801aa016db60988c51a1f612c2e796b453cff"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v2-enforced-r2.json.log",
+   "sha256": "35708ac8bfcd121317e654ba8203082361d3956af4f92917d0043697d4863ada"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v2-enforced-r3.json",
+   "sha256": "a39dcbe0e821c460fb0c35fbf217d6793eca53ac80ca7040d999653b050edab7"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v2-enforced-r3.json.log",
+   "sha256": "374e644b7590ff9beb0c755c844e6991f6eb379daefa6443470c8d11e3444fa8"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v3-enforced-r1.json",
+   "sha256": "c27ed19e67158598d9c9a88de8f1c7ec96dddad6f626950785de124d8ee58589"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v3-enforced-r1.json.log",
+   "sha256": "dd8c69ed1e04ac4dd73ff669c04b24ae6a693a459cfe00d397d52fa3fb8f1cec"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v3-enforced-r2.json",
+   "sha256": "4d6094dbd6872332e4d9957a055059bd2b9e1c8158bb36740056ffe00b1a788b"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v3-enforced-r2.json.log",
+   "sha256": "691568a561056c90ece948f7aea3e18748f5bbe274ea0c59e483a1a84f0825d4"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v3-enforced-r3.json",
+   "sha256": "ac02f627919830d874f2a90980b1147954055c1d000b054a0705c277d32e193c"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v3-enforced-r3.json.log",
+   "sha256": "a95a8390942de08234eb6976cd8ef3f123376217d972e96093b1ac685df29f8b"
+  }
+ ],
+ "verdict": "KEEP (risk): on the carrier, emulated enforcement rejects 16 requests in 12 turns; with gate v1, v2 or v3 there are 0; main 0",
+ "supersedes": "F04-enforced/r20261001-02",
+ "corrections": [
+  {
+   "date": "2026-10-01",
+   "by": "staging fix round 3 (fix of the round-2 re-verifier findings)",
+   "changes": [
+    "env.host: the workstation's host name replaced by 'withheld' (receipts must not carry host names)",
+    "artifacts: repr-truncated scratch-path fragments (a session-id fragment of the scratch directory path) in pytest locals were scrubbed to '...$S/...' in receipts/raw/r03/probe-base-enforced-r1.json.log, receipts/raw/r03/probe-base-enforced-r2.json.log, receipts/raw/r03/probe-base-enforced-r3.json.log, receipts/raw/r03/probe-carrier-enforced-r1.json.log, receipts/raw/r03/probe-carrier-enforced-r2.json.log, receipts/raw/r03/probe-carrier-enforced-r3.json.log; before/after hashes: {\"receipts/raw/r03/probe-base-enforced-r1.json.log\": {\"before\": \"34d21ff90a559e85bafdcd0e17c384851c36645fcaf333663be1044a0b030e7c\", \"after\": \"7f2ca0d7b0102a6666ee04857f115b2e2adecbdf0aad833a998814cde5cb038f\"}, \"receipts/raw/r03/probe-base-enforced-r2.json.log\": {\"before\": \"b7d452e59a68ca44295729e3e72e0ebc957cfabb726434d3a1ba8a314b98fb36\", \"after\": \"b2b160100e693dab51f7bc9029e9b996517c280cfccd40d601a4943eff9063d1\"}, \"receipts/raw/r03/probe-base-enforced-r3.json.log\": {\"before\": \"2845f59153671e29783b6229617819f06996aaa22d4f792b5be31e36e7f68e06\", \"after\": \"5858333a00d42d8d2b598249df32e600b6bfe2b95c9ebc0e553715f430b89103\"}, \"receipts/raw/r03/probe-carrier-enforced-r1.json.log\": {\"before\": \"c556926c0b4a3c49c5a296ee57f36f1deefc945665c4d3cd573ba39f965b023c\", \"after\": \"d1ae8574d1528e7e65d222f2cbdb14a8f118b2d6bdbe399f0c302c8662df00dc\"}, \"receipts/raw/r03/probe-carrier-enforced-r2.json.log\": {\"before\": \"4cd2164ad6b4ccfe9e404038ea7e4b8d4e6ef05b6e28a63670d670f978cddfb0\", \"after\": \"446e0e83b9381f4f27c4b4b35e946942b9fb9c57f4df940cc364443cb20fb7c8\"}, \"receipts/raw/r03/probe-carrier-enforced-r3.json.log\": {\"before\": \"f69b68685a28988b95f4e5c0f7abd0fd5f6e6131f7518c3f8f44d265b55ff6f4\", \"after\": \"85ea0011e1e53cf21d5c37b91fc66e02158875d7a2ff25560b6102e1b3962d94\"}}"
+   ]
+  },
+  {
+   "date": "2026-10-01",
+   "by": "staging fix round 3 (fix of the round-2 re-verifier findings)",
+   "changes": [
+    "superseded_by F04-enforced/r20261001-04 (round 3, re-measured on main 44a1ce9724 with the staging commit 3b47753d54 and gate v4)",
+    "verdict '0 x 400 with gate v1, v2 or v3' holds within one agent; across a restart see RESTART/r20261001-01"
+   ]
+  }
+ ],
+ "superseded_by": "F04-enforced/r20261001-04"
+}

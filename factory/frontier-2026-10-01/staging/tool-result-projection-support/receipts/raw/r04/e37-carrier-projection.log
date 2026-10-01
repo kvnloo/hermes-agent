@@ -1,0 +1,21 @@
+  ┊ 📖 read      notes_00.txt  0.2s
+  ┊ 📖 read      notes_01.txt  0.0s
+  ┊ 📖 read      notes_02.txt  0.0s
+  ┊ 📖 read      notes_03.txt  0.0s
+  ┊ 📖 read      notes_04.txt  0.0s
+  ┊ 📖 read      notes_05.txt  0.0s
+  ┊ 📖 read      notes_06.txt  0.0s
+  ┊ 📖 read      notes_07.txt  0.0s
+  ┊ 📖 read      notes_08.txt  0.0s
+  ┊ 📖 read      notes_09.txt  0.0s
+  ┊ 📖 read      notes_10.txt  0.0s
+  ┊ 📖 read      notes_11.txt  0.0s
+  ┊ 📖 read      notes_12.txt  0.0s
+  ┊ 📖 read      notes_13.txt  0.0s
+  ┊ 📖 read      notes_14.txt  0.0s
+  ┊ 📖 read      notes_15.txt  0.0s
+  ┊ 📖 read      notes_16.txt  0.0s
+  ┊ 📖 read      notes_17.txt  0.0s
+  ┊ 📖 read      notes_18.txt  0.0s
+  ┊ 📖 read      notes_19.txt  0.0s
+{"arm": "projection", "main": 40, "aux": 1, "breaks": [9, 15, 21, 27, 33, 39], "passes": ["9", "15", "21", "27", "33", "39"], "sum_chars": 3338725, "last": 74906, "cache_read_ratio": 0.802, "billed_input_tokens_no_cache": 834681, "billed_input_token_units_cached": 273491, "reprefill_tokens_after_breaks": 163344, "errors": [], "egress": []}

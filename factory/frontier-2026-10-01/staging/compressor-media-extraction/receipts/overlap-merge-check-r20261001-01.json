@@ -1,0 +1,94 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compressor-media-extraction",
+ "base_revision": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+ "head_revision": "d2bff3a59edd1a9be5a90f5d84bbded1fbe04e8b",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#80636",
+  "NousResearch/hermes-agent#78645"
+ ],
+ "provenance": "self",
+ "privacy": "public-aggregate",
+ "cost_usd": 0.0,
+ "ai_assistance": "Claude Code (Opus 5.5) ran the experiment and wrote this receipt",
+ "created_at": "2026-10-01T05:21:43-05:00",
+ "spec": {
+  "path": null,
+  "prereg_commit": null,
+  "note": "not pre-registered on claude/ledger (no ledger writes in this run)"
+ },
+ "env": {
+  "host": "<local-host>",
+  "test_python": "3.11.14 (pytest 9.1.1, HERMES_PYTHON)",
+  "nav_python": "3.14.7 separate uv venv (tiktoken 0.14.0, radon 6.0.1)",
+  "sandbox": "none (no bwrap); HOME/HERMES_HOME pointed at scratch test homes; run_tests.sh env -i",
+  "load1_range": "3.4-13 (shared host)"
+ },
+ "id": "overlap/r20261001-01",
+ "experiment": "ownership + conflict surface against open upstream PRs touching the moved code",
+ "tier": "T0",
+ "label": "OBSERVED",
+ "inputs": {
+  "pr_heads": {
+   "80636": "5aa1746a288f6401b6b2b28ae3607e99d9b72e74",
+   "129147": "d912e76a6419062953cebca19d0a41122aa55b49",
+   "118847": "222e3e26c3",
+   "119347": "4a527fc35d"
+  }
+ },
+ "command": "git -C h.git merge-tree --write-tree --name-only <main|staging> refs/xf/pr/<n>; count '^<<<<<<<' in agent/context_compressor.py of the result tree",
+ "result": {
+  "NousResearch/hermes-agent#80636": {
+   "author": "andrexibiza",
+   "state": "OPEN",
+   "updated": "2026-08-15",
+   "base_pin": "6e9cae6ac4",
+   "behind_main_commits": 25926,
+   "shape": "4 stacked commits (text utils, skill prune, budget, media) with an is-identical re-export seam",
+   "merge_tree_vs_main": {
+    "whole_pr": "CONFLICT agent/context_compressor.py (1 hunk)",
+    "media_commit_alone (base 5aa1746a28^)": "CONFLICT agent/context_compressor.py"
+   },
+   "stale_example": "its _strip_historical_media(messages) predates main's spared= parameter",
+   "media_module_members_then": [
+    "_append_text_to_content",
+    "_strip_image_parts_from_parts",
+    "_truncate_tool_call_args_json",
+    "_IMAGE_PART_TYPES",
+    "_is_image_part",
+    "_content_has_images",
+    "_strip_images_from_content",
+    "_strip_historical_media",
+    "_image_part_label"
+   ],
+   "maintainer_signal": "teknium1 on #113887 (2026-09-18): HOLD, not closed while its claimed superseder #81074 is open; sibling LB2 #80628 closed as stale 2026-09-02 ('no longer applies cleanly ... seam tests fail on main')"
+  },
+  "NousResearch/hermes-agent#78645": {
+   "author": "andrexibiza",
+   "state": "OPEN",
+   "labels": [
+    "needs-decision",
+    "area/compression"
+   ],
+   "claim": "shard agent/context_compressor.py"
+  },
+  "NousResearch/hermes-agent#129147": {
+   "main_plus_pr": "clean",
+   "staging_plus_pr": "clean",
+   "note": "adds a facade use of _is_image_part, which the facade still imports"
+  },
+  "NousResearch/hermes-agent#118847": {
+   "main_plus_pr_conflict_hunks": 1,
+   "staging_plus_pr_conflict_hunks": 1
+  },
+  "NousResearch/hermes-agent#119347": {
+   "main_plus_pr_conflict_hunks": 3,
+   "staging_plus_pr_conflict_hunks": 3
+  },
+  "reading": "The staging commit adds no conflict hunk to any open PR checked; #118847/#119347 already conflict with main. Ownership: #80636 owns this slice, so the route is salvage-support with Co-authored-by, not a parallel PR."
+ },
+ "verdict": "ROUTE: salvage-support",
+ "superseded_by": "overlap/r20261001-02",
+ "superseded_note": "first build d2bff3a59e on 572e4f4fad; replaced in fix round 1 by c5e8be14b4 on aea969677c (same patch-id 2c92e56f); it missed the four PRs stacked on #80636 (#80645, #80644, #81074, #81181), which carry the same LB4 commit"
+}

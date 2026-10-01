@@ -1,0 +1,251 @@
+{
+ "label": "base",
+ "tree": "$W/base",
+ "source": {
+  "files": 2083,
+  "lines": 831454,
+  "code": 565714,
+  "comment": 58048,
+  "docstring": 94080,
+  "bytes": 41084406,
+  "functions": 41134,
+  "classes": 2908,
+  "parse_all_s": 27.26,
+  "files_gt_1000": 159,
+  "files_gt_2000": 50,
+  "files_gt_5000": 7,
+  "largest_files": [
+   [
+    8256,
+    "agent/auxiliary_client.py"
+   ],
+   [
+    7470,
+    "plugins/platforms/discord/adapter.py"
+   ],
+   [
+    7380,
+    "plugins/platforms/telegram/adapter.py"
+   ],
+   [
+    6925,
+    "plugins/platforms/slack/adapter.py"
+   ],
+   [
+    6154,
+    "gateway/run.py"
+   ],
+   [
+    5753,
+    "agent/context_compressor.py"
+   ],
+   [
+    5744,
+    "hermes_cli/gateway.py"
+   ],
+   [
+    4912,
+    "gateway/platforms/base.py"
+   ],
+   [
+    4646,
+    "gateway/platforms/api_server.py"
+   ],
+   [
+    4579,
+    "agent/conversation_compression.py"
+   ]
+  ],
+  "median_file_lines": 206,
+  "funcs_gt_100": 261,
+  "funcs_gt_300": 5,
+  "func_len_p50": 10,
+  "func_len_p95": 49,
+  "func_len_max": 612,
+  "elif_chains_ge4": 191,
+  "elif_chains_ge8": 13,
+  "longest_elif_chain": 14,
+  "nesting_ge5": 487,
+  "nesting_max": 14,
+  "modules": 2083,
+  "import_edges": 10739,
+  "fan_out_avg": 5.29,
+  "fan_out_max": 158,
+  "fan_in_max": 528,
+  "fan_in_top": [
+   [
+    "hermes_constants",
+    528
+   ],
+   [
+    "hermes_cli.config",
+    433
+   ],
+   [
+    "utils",
+    260
+   ],
+   [
+    "hermes_cli",
+    143
+   ],
+   [
+    "agent.secret_scope",
+    126
+   ]
+  ],
+  "import_cycles": 11,
+  "largest_cycle": 1131,
+  "modules_in_cycles": 1173,
+  "radon_cc_blocks": 41363,
+  "radon_cc_avg": 4.94,
+  "radon_cc_p95": 15,
+  "radon_cc_max": 105,
+  "radon_cc_gt_15": 1801,
+  "radon_cc_gt_30": 187,
+  "radon_cc_gt_50": 14,
+  "radon_cc_worst": [
+   [
+    105,
+    "scripts/run_tests_parallel.py",
+    "main"
+   ],
+   [
+    81,
+    "plugins/platforms/discord/adapter.py",
+    "_handle_message"
+   ],
+   [
+    75,
+    "hermes_cli/backup.py",
+    "run_import"
+   ],
+   [
+    60,
+    "hermes_cli/cli_status_bar_mixin.py",
+    "_get_status_bar_snapshot"
+   ],
+   [
+    60,
+    "agent/turn_final_response.py",
+    "finish_text_response"
+   ],
+   [
+    58,
+    "scripts/profile-tui.py",
+    "format_report"
+   ],
+   [
+    56,
+    "tools/checkpoint_maintenance.py",
+    "_prune_checkpoints"
+   ],
+   [
+    54,
+    "agent/turn_finalizer.py",
+    "finalize_turn"
+   ]
+  ],
+  "radon_mi_files": 2084,
+  "radon_mi_avg": 51.34,
+  "radon_mi_lt_20": 297,
+  "radon_mi_lt_10": 190
+ },
+ "tests": {
+  "files": 5632,
+  "lines": 1275175,
+  "code": 871866,
+  "comment": 50778,
+  "docstring": 113604,
+  "bytes": 51728905,
+  "functions": 76307,
+  "classes": 12332,
+  "parse_all_s": 35.47,
+  "files_gt_1000": 145,
+  "files_gt_2000": 38,
+  "files_gt_5000": 6,
+  "largest_files": [
+   [
+    23452,
+    "tests/tui_gateway/test_tui_gateway_server.py"
+   ],
+   [
+    7012,
+    "tests/agent/test_run_agent.py"
+   ],
+   [
+    6719,
+    "tests/hermes_state/test_hermes_state.py"
+   ],
+   [
+    5727,
+    "tests/gateway/test_slack.py"
+   ],
+   [
+    5703,
+    "tests/hermes_cli/test_web_server.py"
+   ],
+   [
+    5254,
+    "tests/agent/test_auxiliary_client.py"
+   ],
+   [
+    3695,
+    "tests/agent/test_context_compressor.py"
+   ],
+   [
+    3554,
+    "tests/gateway/test_buzz_adapter.py"
+   ],
+   [
+    3245,
+    "tests/gateway/test_matrix.py"
+   ],
+   [
+    3169,
+    "tests/gateway/test_api_server.py"
+   ]
+  ],
+  "median_file_lines": 130,
+  "funcs_gt_100": 135,
+  "funcs_gt_300": 2,
+  "func_len_p50": 9,
+  "func_len_p95": 39,
+  "func_len_max": 415,
+  "elif_chains_ge4": 85,
+  "elif_chains_ge8": 16,
+  "longest_elif_chain": 20,
+  "nesting_ge5": 94,
+  "nesting_max": 20,
+  "modules": 5632,
+  "import_edges": 797,
+  "fan_out_avg": 0.14,
+  "fan_out_max": 5,
+  "fan_in_max": 81,
+  "fan_in_top": [
+   [
+    "tests.fakes.fake_llm_provider",
+    81
+   ],
+   [
+    "tests.e2e.core._pending_fixes",
+    44
+   ],
+   [
+    "tests.e2e.core.upgrade",
+    38
+   ],
+   [
+    "tests.pm._fixtures",
+    36
+   ],
+   [
+    "tests.pm._range_server",
+    21
+   ]
+  ],
+  "import_cycles": 0,
+  "largest_cycle": 0,
+  "modules_in_cycles": 0
+ }
+}

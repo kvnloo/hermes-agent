@@ -1,0 +1,30 @@
+{
+  "arm": "base",
+  "repo_head": "434aa0b1083993444ec0cd5aa7cc61ec3422bd16",
+  "repo_tree": "7016f82dc28a05fed0f6c6b67bb99df237e54244",
+  "dirty_files": [],
+  "route": {
+    "provider": "bedrock",
+    "api_mode": "bedrock_converse",
+    "model": "anthropic.claude-opus-5-5"
+  },
+  "outcome": "passed",
+  "message": "",
+  "requests": 24,
+  "replayed_reasoning_blocks": 276,
+  "invalidated_reasoning_blocks": 0,
+  "invalidated": [],
+  "fake_rejections": [],
+  "projection": {
+    "tool_rows": 12,
+    "rows_projected": 0,
+    "pass_request_indices": [],
+    "passes": {}
+  },
+  "egress_blocked": [
+    "getaddrinfo 'bedrock-runtime.us-east-1.amazonaws.com'",
+    "getaddrinfo 'bedrock-runtime.us-east-1.amazonaws.com'"
+  ],
+  "wall_s": 3.09,
+  "python": "3.11.14"
+}

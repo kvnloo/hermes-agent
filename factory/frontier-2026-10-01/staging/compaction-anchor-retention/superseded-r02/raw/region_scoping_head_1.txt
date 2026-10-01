@@ -1,0 +1,6 @@
+Failed to fetch model metadata from OpenRouter: [Errno -3] Temporary failure in name resolution
+Failed to fetch model metadata from OpenRouter: [Errno -3] Temporary failure in name resolution
+  legacy: OK (1 summarizer call(s), 71 msgs out)
+  lean: OK (1 summarizer call(s), 71 msgs out)
+scoping tripwire: ALL PASS
+rc=0

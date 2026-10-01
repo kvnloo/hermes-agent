@@ -1,0 +1,76 @@
+xf_spec = 1
+id = "G-guards"
+rev = 3                          # rev 1 = r20261001-01 on 572e4f4fad (not pre-registered); rev 2 = r20261001-02 on aea969677c (head b83e778103, superseded/r20261001-02/); rev 3 = this file, written before run r20261001-03
+staging = "anthropic-context-editing"
+catalog_refs = ["F14"]
+feature = "anthropic-context-editing"
+kind = "ab"
+queue_rank = 0
+hypothesis_refs = ["NousResearch#526"]
+priors = []
+
+[contract]
+question = "Do the existing token-accounting replay gates and the native-compaction checkpoint preflight give the same verdicts on base and head?"
+hypothesis = "identical verdict maps (the shared turn_recovery rung and compression gates are unchanged for the OpenAI wire)"
+varied = "tree"
+fixed = ["evals/token_accounting/replay_gates.py blob 66fa6a42d4", "evals/native_compaction/ab_checkpoint_preflight.py blob d698994e54", "venv interpreter", "env -i with throwaway HOME/HERMES_HOME"]
+falsifier = "any verdict differs between arms, or any replay gate is not PASS on head"
+kill = "falsifier met -> DISCARD the slice"
+observer_effect = "none beyond the scripts' own fakes"
+
+[class]
+cost = "$0"
+tier = "T1"
+lane = "cpu"
+evidence_class = "regression"
+route_if_keep = "core-leaf"
+route_scope = "local-compressor and codex native compaction (OpenAI wire); does not exercise the Anthropic payload"
+harness = { name = "hermes", editor_abi = "n/a", surface = "eval scripts" }
+
+[safety]
+net = "loopback only"
+data_class = "public"
+cli_entrypoint = false
+allow_exec = []
+owner_decisions = []
+
+[base]
+repo = "NousResearch/hermes-agent"
+pin = "e8c97320ac8691d4de92af49f98459f9ef9ddb08"
+
+[[arms]]
+id = "base"
+tree = "@base"
+
+[[arms]]
+id = "head"
+branch = "staging/anthropic-context-editing"
+head = "61effa4dd8a0b81c8eda50a6119239b2aa19e52a"
+parent = "@base"
+
+[probe]
+kind = "script"
+cmd = "env -i PATH=/usr/bin:/bin HOME=<testhome> HERMES_HOME=<testhome>/.hermes HERMES_DISABLE_LAZY_INSTALLS=1 HERMES_DISABLE_MODEL_METADATA_FETCH=1 TZ=UTC LANG=C.UTF-8 <venv-python> {script} --out raw/{name}_{arm}.json"
+scripts = ["evals/token_accounting/replay_gates.py", "evals/native_compaction/ab_checkpoint_preflight.py"]
+reps = 1
+order = "base then head"
+timeout_s = 900
+
+[oracle]
+type = "equal"
+decision_rule = "EQUAL iff replay_gates verdict maps are identical across arms with 11/11 PASS on head, and the four ab_checkpoint_preflight scenario summaries are identical across arms."
+
+guards = []
+invalidate_on = ["agent/turn_recovery.py", "agent/native_compaction.py", "agent/context_compressor.py"]
+
+[outputs]
+public = ["verdict maps", "scenario summaries", "hashes"]
+private = []
+not_tested = ["the Anthropic payload (covered by F09)"]
+
+[budget]
+usd = 0
+wall_s = 1200
+cpu_core_s = 2400
+max_cells = 4
+lease_hours = 24

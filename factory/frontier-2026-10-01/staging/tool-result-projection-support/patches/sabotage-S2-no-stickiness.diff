@@ -1,0 +1,12 @@
+diff --git i/agent/tool_result_projection.py w/agent/tool_result_projection.py
+index a76fb42f76..c3c1c19007 100644
+--- i/agent/tool_result_projection.py
++++ w/agent/tool_result_projection.py
+@@ -136,6 +136,7 @@ class ProjectionState:
+     order: List[str] = field(default_factory=list)
+ 
+     def remember(self, token: str) -> None:
++        return  # SABOTAGE S2: stickiness dropped
+         if not token or token in self.projected:
+             return
+         self.projected.add(token)

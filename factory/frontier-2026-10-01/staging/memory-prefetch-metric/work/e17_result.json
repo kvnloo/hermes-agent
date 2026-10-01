@@ -1,0 +1,413 @@
+{
+  "schema": "e17.prefetch_fault_probe.v1",
+  "repo": "$ARTIFACTS/promotion-readiness-2026-10-01/wt/staging/memory-prefetch-metric",
+  "base_mm": "$ARTIFACTS/frontier-2026-10-01/staging/memory-prefetch-metric/work/base_memory_manager.py",
+  "python": "3.11.14",
+  "relay_native": true,
+  "timeout_s": 1.0,
+  "reps": 12,
+  "faults": {
+    "ok": {
+      "backend_path": "ok",
+      "expected_outcome": "success",
+      "turn_wait_ms": {
+        "base": {
+          "n": 12,
+          "p50": 0.65,
+          "p95": 1.01,
+          "max": 1.22
+        },
+        "head": {
+          "n": 12,
+          "p50": 0.74,
+          "p95": 2.9,
+          "max": 4.58
+        }
+      },
+      "returned_context_identical_across_arms": true,
+      "returned_context": [
+        "- fixture recalled fact"
+      ],
+      "head_rows": [
+        {
+          "dims": {
+            "latency_bucket": "lt_100ms",
+            "outcome": "success",
+            "provider": "plugin"
+          },
+          "value": 12
+        }
+      ],
+      "base_rows": [],
+      "head_rows_total": 12,
+      "head_outcomes": [
+        "success"
+      ]
+    },
+    "delay_0.05": {
+      "backend_path": "delay_0.05",
+      "expected_outcome": "success",
+      "turn_wait_ms": {
+        "base": {
+          "n": 12,
+          "p50": 51.15,
+          "p95": 51.84,
+          "max": 52.2
+        },
+        "head": {
+          "n": 12,
+          "p50": 51.32,
+          "p95": 52.24,
+          "max": 52.81
+        }
+      },
+      "returned_context_identical_across_arms": true,
+      "returned_context": [
+        "- fixture recalled fact"
+      ],
+      "head_rows": [
+        {
+          "dims": {
+            "latency_bucket": "lt_100ms",
+            "outcome": "success",
+            "provider": "plugin"
+          },
+          "value": 12
+        }
+      ],
+      "base_rows": [],
+      "head_rows_total": 12,
+      "head_outcomes": [
+        "success"
+      ]
+    },
+    "delay_0.4": {
+      "backend_path": "delay_0.4",
+      "expected_outcome": "success",
+      "turn_wait_ms": {
+        "base": {
+          "n": 12,
+          "p50": 401.25,
+          "p95": 401.53,
+          "max": 401.56
+        },
+        "head": {
+          "n": 12,
+          "p50": 401.64,
+          "p95": 403.13,
+          "max": 404.59
+        }
+      },
+      "returned_context_identical_across_arms": true,
+      "returned_context": [
+        "- fixture recalled fact"
+      ],
+      "head_rows": [
+        {
+          "dims": {
+            "latency_bucket": "250ms_to_500ms",
+            "outcome": "success",
+            "provider": "plugin"
+          },
+          "value": 12
+        }
+      ],
+      "base_rows": [],
+      "head_rows_total": 12,
+      "head_outcomes": [
+        "success"
+      ]
+    },
+    "slow_over_timeout": {
+      "backend_path": "delay_1.5",
+      "expected_outcome": "timed_out",
+      "turn_wait_ms": {
+        "base": {
+          "n": 12,
+          "p50": 1000.39,
+          "p95": 1000.56,
+          "max": 1000.59
+        },
+        "head": {
+          "n": 12,
+          "p50": 1000.87,
+          "p95": 1001.7,
+          "max": 1002.34
+        }
+      },
+      "returned_context_identical_across_arms": true,
+      "returned_context": [
+        ""
+      ],
+      "head_rows": [
+        {
+          "dims": {
+            "latency_bucket": "1s_to_2s",
+            "outcome": "timed_out",
+            "provider": "plugin"
+          },
+          "value": 12
+        }
+      ],
+      "base_rows": [],
+      "head_rows_total": 12,
+      "head_outcomes": [
+        "timed_out"
+      ]
+    },
+    "empty": {
+      "backend_path": "empty",
+      "expected_outcome": "empty",
+      "turn_wait_ms": {
+        "base": {
+          "n": 12,
+          "p50": 0.79,
+          "p95": 0.97,
+          "max": 0.99
+        },
+        "head": {
+          "n": 12,
+          "p50": 0.9,
+          "p95": 3.41,
+          "max": 6.08
+        }
+      },
+      "returned_context_identical_across_arms": true,
+      "returned_context": [
+        ""
+      ],
+      "head_rows": [
+        {
+          "dims": {
+            "latency_bucket": "lt_100ms",
+            "outcome": "empty",
+            "provider": "plugin"
+          },
+          "value": 12
+        }
+      ],
+      "base_rows": [],
+      "head_rows_total": 12,
+      "head_outcomes": [
+        "empty"
+      ]
+    },
+    "error": {
+      "backend_path": "error",
+      "expected_outcome": "failed",
+      "turn_wait_ms": {
+        "base": {
+          "n": 12,
+          "p50": 0.82,
+          "p95": 1.43,
+          "max": 1.52
+        },
+        "head": {
+          "n": 12,
+          "p50": 1.0,
+          "p95": 1.95,
+          "max": 2.47
+        }
+      },
+      "returned_context_identical_across_arms": true,
+      "returned_context": [
+        ""
+      ],
+      "head_rows": [
+        {
+          "dims": {
+            "latency_bucket": "lt_100ms",
+            "outcome": "failed",
+            "provider": "plugin"
+          },
+          "value": 12
+        }
+      ],
+      "base_rows": [],
+      "head_rows_total": 12,
+      "head_outcomes": [
+        "failed"
+      ]
+    },
+    "refused": {
+      "backend_path": "refused",
+      "expected_outcome": "failed",
+      "turn_wait_ms": {
+        "base": {
+          "n": 12,
+          "p50": 0.33,
+          "p95": 0.45,
+          "max": 0.47
+        },
+        "head": {
+          "n": 12,
+          "p50": 0.51,
+          "p95": 1.19,
+          "max": 1.94
+        }
+      },
+      "returned_context_identical_across_arms": true,
+      "returned_context": [
+        ""
+      ],
+      "head_rows": [
+        {
+          "dims": {
+            "latency_bucket": "lt_100ms",
+            "outcome": "failed",
+            "provider": "plugin"
+          },
+          "value": 12
+        }
+      ],
+      "base_rows": [],
+      "head_rows_total": 12,
+      "head_outcomes": [
+        "failed"
+      ]
+    },
+    "hang": {
+      "expected_outcomes": [
+        "timed_out",
+        "skipped",
+        "skipped",
+        "skipped",
+        "success(after release)"
+      ],
+      "turn_wait_ms": [
+        1001.99,
+        0.29,
+        0.18,
+        0.15
+      ],
+      "after_release_ms": 1.03,
+      "backend_calls_while_hung": 1,
+      "head_rows": [
+        {
+          "dims": {
+            "latency_bucket": "1s_to_2s",
+            "outcome": "timed_out",
+            "provider": "plugin"
+          },
+          "value": 1
+        },
+        {
+          "dims": {
+            "latency_bucket": "lt_100ms",
+            "outcome": "skipped",
+            "provider": "plugin"
+          },
+          "value": 3
+        },
+        {
+          "dims": {
+            "latency_bucket": "lt_100ms",
+            "outcome": "success",
+            "provider": "plugin"
+          },
+          "value": 1
+        }
+      ]
+    },
+    "hang_default_timeout": {
+      "timeout_s": 8.0,
+      "turn_wait_ms": 8002.28,
+      "head_rows": [
+        {
+          "dims": {
+            "latency_bucket": "5s_to_10s",
+            "outcome": "timed_out",
+            "provider": "plugin"
+          },
+          "value": 1
+        }
+      ]
+    }
+  },
+  "checks": {
+    "profile_scope": {
+      "rows_in_owner_profile": 1,
+      "rows_in_default_home": 0,
+      "pass": true
+    },
+    "collection_off": {
+      "rows": 0,
+      "store_created": false,
+      "pass": true
+    },
+    "egress_blocked_attempts": [],
+    "outcome_classes_match_expected": {
+      "ok": true,
+      "delay_0.05": true,
+      "delay_0.4": true,
+      "slow_over_timeout": true,
+      "empty": true,
+      "error": true,
+      "refused": true
+    },
+    "one_row_per_turn_head": {
+      "ok": true,
+      "delay_0.05": true,
+      "delay_0.4": true,
+      "slow_over_timeout": true,
+      "empty": true,
+      "error": true,
+      "refused": true
+    },
+    "base_records_nothing": true,
+    "returned_context_identical_across_arms": true
+  },
+  "microbenchmark": {
+    "collection_off": {
+      "us_per_call_median": {
+        "base": 62.54,
+        "head": 110.94,
+        "base_aa": 62.68
+      },
+      "us_per_call_p95": {
+        "base": 71.82,
+        "head": 121.46,
+        "base_aa": 66.02
+      },
+      "delta_head_minus_base_us": {
+        "median": 47.05,
+        "p05": 41.95,
+        "p95": 56.71
+      },
+      "aa_base_minus_base_us": {
+        "median": -0.18,
+        "p05": -8.34,
+        "p95": 4.68
+      },
+      "blocks": 12,
+      "calls_per_block": 400,
+      "order": "ABA/ABA alternating"
+    },
+    "collection_on": {
+      "us_per_call_median": {
+        "base": 99.99,
+        "head": 263.27,
+        "base_aa": 105.06
+      },
+      "us_per_call_p95": {
+        "base": 110.93,
+        "head": 290.81,
+        "base_aa": 120.48
+      },
+      "delta_head_minus_base_us": {
+        "median": 158.76,
+        "p05": 140.4,
+        "p95": 203.67
+      },
+      "aa_base_minus_base_us": {
+        "median": 3.95,
+        "p05": -12.25,
+        "p95": 33.55
+      },
+      "blocks": 12,
+      "calls_per_block": 400,
+      "order": "ABA/ABA alternating"
+    }
+  },
+  "load1_end": 13.07275390625
+}

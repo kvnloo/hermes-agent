@@ -1,0 +1,78 @@
+# r3 git recheck (round-3 manifest fix; bare mirror, read-only; run at 2026-10-01T16:17:07Z)
+# upstream main read with git ls-remote at the same time
+$ git ls-remote https://github.com/NousResearch/hermes-agent.git refs/heads/main
+44a1ce9724502b9c692faaef00af3054bf11f1a6	refs/heads/main
+rc=0
+$ git -C <bare> rev-parse main refs/heads/staging/plugin-catalog-entries
+44a1ce9724502b9c692faaef00af3054bf11f1a6
+98c305b3ec8d03693f4dc94bade69035cb15ff7d
+rc=0
+$ git -C <bare> log -1 --date=iso-strict-local --format=%H committer=%cd 44a1ce9724502b9c692faaef00af3054bf11f1a6
+44a1ce9724502b9c692faaef00af3054bf11f1a6 committer=2026-10-01T15:56:40Z
+rc=0
+$ git -C <bare> log -1 --format=%H %P %an <%ae> %s refs/heads/staging/plugin-catalog-entries
+98c305b3ec8d03693f4dc94bade69035cb15ff7d 234badf4012af380d23c91eae55d045a69c69ffb Kevin Rajan <7121943+kvnloo@users.noreply.github.com> feat(plugin-catalog): add paw-pii
+rc=0
+# declared main for round 3: 44a1ce9724502b9c692faaef00af3054bf11f1a6
+$ git -C <bare> merge-base --is-ancestor 234badf4012af380d23c91eae55d045a69c69ffb 44a1ce9724502b9c692faaef00af3054bf11f1a6
+rc=0
+$ git -C <bare> merge-base --is-ancestor aea969677c60a1bb72fe227fdfb98f196a2092cc 44a1ce9724502b9c692faaef00af3054bf11f1a6
+rc=0
+$ git -C <bare> rev-list --count 234badf4012af380d23c91eae55d045a69c69ffb..44a1ce9724502b9c692faaef00af3054bf11f1a6
+65
+rc=0
+$ git -C <bare> rev-list --count aea969677c60a1bb72fe227fdfb98f196a2092cc..44a1ce9724502b9c692faaef00af3054bf11f1a6
+29
+rc=0
+$ git -C <bare> merge-tree --write-tree 44a1ce9724502b9c692faaef00af3054bf11f1a6 98c305b3ec8d03693f4dc94bade69035cb15ff7d
+60459843c290c8d7062e5d8af03603607eedbe51
+rc=0
+$ git -C <bare> diff --stat 234badf4012af380d23c91eae55d045a69c69ffb 44a1ce9724502b9c692faaef00af3054bf11f1a6 -- <18 invalidate_on path specs (F12 receipt base_revision.invalidate_on)>
+(empty = unchanged)
+rc=0
+$ git -C <bare> diff --stat 234badf4012af380d23c91eae55d045a69c69ffb 44a1ce9724502b9c692faaef00af3054bf11f1a6 -- <7 other adjacent test files, tests/conftest.py, scripts/run_tests.sh, pyproject.toml, uv.lock, PR template, CONTRIBUTING.md, AGENTS.md>
+# files: tests/scripts/test_validate_plugin_catalog.py tests/website/test_extract_plugins.py tests/hermes_cli/test_plugins_cmd_catalog.py tests/hermes_cli/test_plugin_catalog_known_issues.py tests/hermes_cli/test_web_plugins_catalog.py tests/hermes_cli/test_plugins_hub_perf_guard.py tests/hermes_cli/test_plugins_hub_live_catalog.py tests/conftest.py scripts/run_tests.sh pyproject.toml uv.lock .github/PULL_REQUEST_TEMPLATE.md CONTRIBUTING.md AGENTS.md
+(empty = unchanged)
+$ git -C <bare> cat-file -e 44a1ce9724502b9c692faaef00af3054bf11f1a6:plugin-catalog/paw-pii.yaml
+absent (need still holds)
+$ git -C <bare> ls-tree --name-only 44a1ce9724502b9c692faaef00af3054bf11f1a6 plugin-catalog/ | grep -c '\.yaml$' (all yaml incl. removed.yaml)
+349
+$ git -C <bare> ls-tree --name-only 44a1ce9724502b9c692faaef00af3054bf11f1a6 plugin-catalog/ | grep '\.yaml$' | grep -vc '^plugin-catalog/removed.yaml$' (entry files)
+348
+$ git -C <bare> ls-tree 44a1ce9724502b9c692faaef00af3054bf11f1a6 plugin-catalog/desensitize.yaml
+100644 blob a2d58eb13f2f16bcedb190b1e7c3b88107f0567f	plugin-catalog/desensitize.yaml
+rc=0
+$ git -C <bare> cat-file -e 44a1ce9724502b9c692faaef00af3054bf11f1a6:hermes_cli/data/plugin_index.json
+absent (old route still gone)
+$ git -C <bare> rev-parse 44a1ce9724502b9c692faaef00af3054bf11f1a6:.github/PULL_REQUEST_TEMPLATE.md 44a1ce9724502b9c692faaef00af3054bf11f1a6:plugin-catalog/README.md 44a1ce9724502b9c692faaef00af3054bf11f1a6:CONTRIBUTING.md 44a1ce9724502b9c692faaef00af3054bf11f1a6:AGENTS.md
+5496eb534fef9d08c091b8186e7edd1b5cf356db
+6e18bd33b2be9e83fd1dbd7a8cb4d6f67f403bc2
+b0baa59b5057c204b3c09d3dd170c0955cfdb39c
+65aa3e61bcba610da21279a17385671263be39e9
+rc=0
+# the 10 hermes blobs pinned in the SLICE and F12 receipts, read on the branch head and on the declared main (paw-pii.yaml only on the head)
+plugin-catalog/paw-pii.yaml head=845dc6cce78e67a8989e267debcc5b4a4dcf473c main=absent
+hermes_cli/plugin_validate.py head=2f31a9a4b1d66bd0c89a676f7f57f2f541605d33 main=2f31a9a4b1d66bd0c89a676f7f57f2f541605d33
+hermes_cli/middleware.py head=c0940d26bbd4d31fd307aa54f3f8d21e0108f2a6 main=c0940d26bbd4d31fd307aa54f3f8d21e0108f2a6
+scripts/validate_plugin_catalog.py head=c5da7f113b2d1c794b4650ba3bbf36348ef45bd5 main=c5da7f113b2d1c794b4650ba3bbf36348ef45bd5
+website/scripts/extract-plugins.py head=a751462f9e802ea5d87e61ae62138ed89cabb779 main=a751462f9e802ea5d87e61ae62138ed89cabb779
+tools/plugin_guard.py head=41de8272156177ad7b4b1e0e6f6c7dca676f9530 main=41de8272156177ad7b4b1e0e6f6c7dca676f9530
+hermes_cli/plugins_cmd_git.py head=75d0180d0966ce272e92d80327bed106e193e5fd main=75d0180d0966ce272e92d80327bed106e193e5fd
+hermes_cli/plugins_cmd_install.py head=58ac003270078e7fde9fbea9759a819e6d2d4aec main=58ac003270078e7fde9fbea9759a819e6d2d4aec
+.github/workflows/plugin-catalog-ci.yml head=0b4bc2adbd06a72b7d532e81a63a5187b090c480 main=0b4bc2adbd06a72b7d532e81a63a5187b090c480
+tests/hermes_cli/test_plugin_catalog.py head=e1a7f2ac2dbbd82bd8a94f73e454defbac751da0 main=e1a7f2ac2dbbd82bd8a94f73e454defbac751da0
+# member branches: commits behind (rev-list --count <ref>..<sha>)
+refs/fork/feat/paw-pii-plugin-index cd7b9d3bcf0bf7373ab8b5893adceb7fda0ca8c6 behind_234badf401=13832 behind_44a1ce9724=13897
+refs/fork/feat/groq-orpheus-tts 548df5dcc037e85d8ed47de57ddb75cce3661af7 behind_234badf401=20605 behind_44a1ce9724=20670
+refs/fork/feat/tinyfish-browser-provider 739b30bc021fc2d8202b4fea8aed91c389f7fc33 behind_234badf401=39852 behind_44a1ce9724=39917
+refs/fork/feat/spatial-canvas-upstream 486a620b5a66bd41dbe45247d4734932e17c4409 behind_234badf401=23793 behind_44a1ce9724=23858
+$ git ls-remote https://github.com/kvnloo/hermes-agent.git refs/heads/staging 'refs/heads/staging/*' 'refs/heads/staged/*'
+3d64efc27d1247da5dd6b170a87c44ef9e653776	refs/heads/staged/cu-capture-mode-projection
+2f79b549ef40aeb31cb3af36cd92d8d12b9ba799	refs/heads/staged/cu-repeat-input-dedup
+9225807160327a648a21bd493e9ed943f8ce5baa	refs/heads/staged/observer-hooks-doc-drift
+dd4dd10611e8c23c7579a4ddb95655abebbaca27	refs/heads/staged/postmortem-logcalls-zero-hit
+ddf4748d31cb5dc65e7cd0b0c5b27b98d63ae880	refs/heads/staged/prefix-parity-journeys
+28790e597cdd497aef31f2c16327f8b347669354	refs/heads/staging
+rc=0
+# staged/plugin-catalog-entries on the fork:
+absent (name free)

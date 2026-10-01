@@ -1,0 +1,18 @@
+▶ not activated — using HERMES_PYTHON: $VENV/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~5 tests) under ['tests/agent/test_context_compressor_anchor_harvest.py']; running with -j 2
+[100.0% |     5/~5 | ✓5 | ✗0] ✓ tests/agent/test_context_compressor_anchor_harvest.py (5✓, 1.3s)
+
+=== Summary: 1 files, 5 tests passed, 0 failed (100% complete) in 1.3s (2 workers) ===
+  Durations cached to test_durations.json (1 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 1.3s  (runner wall: 1.3s, parallelism: 2x)
+  P50: 1.28s  P90: 1.28s  P95: 1.28s  P99: 1.28s  Max: 1.28s
+  <1s: 0 files (0%)  <2s: 1 files (100%)
+  Top 10 slowest:
+      1.28s  tests/agent/test_context_compressor_anchor_harvest.py

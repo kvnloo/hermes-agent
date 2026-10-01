@@ -1,0 +1,36 @@
+checked_at 2026-10-01T13:39:38Z
+main 666b9f04c4229341c9188b096eb64d2a5e807347 2026-10-01T09:36:23-04:00
+commits_since_base 4
+invalidate_on_changed []
+merge_tree_main 240424fa9cd7e2f1c13a125987a4d12c813b51c6 rc=0
+staging_tree c3e9452f8bbf6b9ff86e57f1409059709cde0802
+branch 111f361fb0003405e4724b4c6523f6ce5d118c22
+body diff == patches/arm-c53806-foldin.patch
+body diff applies on 111f361fb0003405e4724b4c6523f6ce5d118c22
+diff vs c53806-foldin-r4: []
+worktree clean
+staging patch applies on a3b56cac95488242856b6fb1f121842a38c3e391
+fork_refs [28790e597cdd497aef31f2c16327f8b347669354	refs/heads/staging ] at 2026-10-01T13:39:40Z
+HTTP 403: You have exceeded a secondary rate limit. Please wait a few minutes before you try again. For more on scraping GitHub and how it may affect your rights, please review our Terms of Service (https://docs.github.com/en/site-policy/github-terms/github-terms-of-service) If you reach out to GitHub Support for help, please include the request ID 65EE:183C29:9CE320:20204F7:6ABE629C. (https://api.github.com/graphql)
+pr 53806 
+HTTP 403: You have exceeded a secondary rate limit. Please wait a few minutes before you try again. For more on scraping GitHub and how it may affect your rights, please review our Terms of Service (https://docs.github.com/en/site-policy/github-terms/github-terms-of-service) If you reach out to GitHub Support for help, please include the request ID 65F6:15094C:8F3AD8:1D53A95:6ABE629C. (https://api.github.com/graphql)
+pr 93391 
+HTTP 403: You have exceeded a secondary rate limit. Please wait a few minutes before you try again. For more on scraping GitHub and how it may affect your rights, please review our Terms of Service (https://docs.github.com/en/site-policy/github-terms/github-terms-of-service) If you reach out to GitHub Support for help, please include the request ID 65F8:1F3813:A793D1:21EC2E4:6ABE629D. (https://api.github.com/graphql)
+pr 118847 
+HTTP 403: You have exceeded a secondary rate limit. Please wait a few minutes before you try again. For more on scraping GitHub and how it may affect your rights, please review our Terms of Service (https://docs.github.com/en/site-policy/github-terms/github-terms-of-service) If you reach out to GitHub Support for help, please include the request ID 6602:589ED:885DF0:1C0DF45:6ABE629D. (https://api.github.com/graphql)
+pr 125881 
+HTTP 403: You have exceeded a secondary rate limit. Please wait a few minutes before you try again. For more on scraping GitHub and how it may affect your rights, please review our Terms of Service (https://docs.github.com/en/site-policy/github-terms/github-terms-of-service) If you reach out to GitHub Support for help, please include the request ID 660A:109248:92EE43:1E25D8C:6ABE629D. (https://api.github.com/graphql)
+pr 119347 
+non-200 OK status code: 403 Forbidden body: "{\n  \"documentation_url\": \"https://docs.github.com/graphql/overview/rate-limits-and-node-limits-for-the-graphql-api#secondary-rate-limits\",\n  \"message\": \"You have exceeded a secondary rate limit. Please wait a few minutes before you try again. For more on scraping GitHub and how it may affect your rights, please review our Terms of Service (https://docs.github.com/en/site-policy/github-terms/github-terms-of-service) If you reach out to GitHub Support for help, please include the request ID 6618:3FDFC1:91105E:1DBB99D:6ABE629D.\"\n}"
+non-200 OK status code: 403 Forbidden body: "{\n  \"documentation_url\": \"https://docs.github.com/graphql/overview/rate-limits-and-node-limits-for-the-graphql-api#secondary-rate-limits\",\n  \"message\": \"You have exceeded a secondary rate limit. Please wait a few minutes before you try again. For more on scraping GitHub and how it may affect your rights, please review our Terms of Service (https://docs.github.com/en/site-policy/github-terms/github-terms-of-service) If you reach out to GitHub Support for help, please include the request ID 6620:334935:9056AF:1D8D597:6ABE629D.\"\n}"
+new_hook_prs_today [|]
+HTTP 403: You have exceeded a secondary rate limit. Please wait a few minutes before you try again. For more on scraping GitHub and how it may affect your rights, please review our Terms of Service (https://docs.github.com/en/site-policy/github-terms/github-terms-of-service) If you reach out to GitHub Support for help, please include the request ID 662A:283A9D:8F51B8:1D6D258:6ABE629E. (https://api.github.com/graphql)
+issue_118382_last 
+HTTP 403: You have exceeded a secondary rate limit. Please wait a few minutes before you try again. For more on scraping GitHub and how it may affect your rights, please review our Terms of Service (https://docs.github.com/en/site-policy/github-terms/github-terms-of-service) If you reach out to GitHub Support for help, please include the request ID 6632:2D46C4:8F6E35:1D77D61:6ABE629E. (https://api.github.com/graphql)
+issue_130139 
+non-200 OK status code: 403 Forbidden body: "{\n  \"documentation_url\": \"https://docs.github.com/graphql/overview/rate-limits-and-node-limits-for-the-graphql-api#secondary-rate-limits\",\n  \"message\": \"You have exceeded a secondary rate limit. Please wait a few minutes before you try again. For more on scraping GitHub and how it may affect your rights, please review our Terms of Service (https://docs.github.com/en/site-policy/github-terms/github-terms-of-service) If you reach out to GitHub Support for help, please include the request ID 663E:22CA71:9489C3:1E55B0C:6ABE629E.\"\n}"
+kvnloo_issues_24h []
+non-200 OK status code: 403 Forbidden body: "{\n  \"documentation_url\": \"https://docs.github.com/graphql/overview/rate-limits-and-node-limits-for-the-graphql-api#secondary-rate-limits\",\n  \"message\": \"You have exceeded a secondary rate limit. Please wait a few minutes before you try again. For more on scraping GitHub and how it may affect your rights, please review our Terms of Service (https://docs.github.com/en/site-policy/github-terms/github-terms-of-service) If you reach out to GitHub Support for help, please include the request ID 6648:19A65D:923C59:1DF81CF:6ABE629F.\"\n}"
+kvnloo_prs_today []
+done 2026-10-01T13:39:43Z
+rc=0

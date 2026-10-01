@@ -1,0 +1,1458 @@
+{
+ "started_at": "2026-10-01T16:17Z",
+ "watch_regex": "^(agent/memory_manager\\.py|agent/memory_provider\\.py|agent/turn_context\\.py|hermes_cli/observability/shared_metrics[^/]*\\.py|hermes_cli/observability/schemas/.*shared_metrics.*)$",
+ "scanned": 178,
+ "prs": {
+  "5688": {
+   "files": 9,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/memory_provider.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "7789": {
+   "files": 6,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/memory_provider.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "9308": {
+   "files": 5,
+   "watch_hits": []
+  },
+  "11678": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "12126": {
+   "files": 2,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "13176": {
+   "files": 9,
+   "watch_hits": []
+  },
+  "14150": {
+   "files": 15,
+   "watch_hits": []
+  },
+  "15412": {
+   "files": 8,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": true
+  },
+  "17405": {
+   "files": 11,
+   "watch_hits": []
+  },
+  "18372": {
+   "files": 8,
+   "watch_hits": []
+  },
+  "18565": {
+   "files": 18,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "19448": {
+   "files": 12,
+   "watch_hits": []
+  },
+  "19833": {
+   "files": 7,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "21416": {
+   "files": 4,
+   "watch_hits": []
+  },
+  "22876": {
+   "files": 8,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "24209": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "24270": {
+   "files": 7,
+   "watch_hits": []
+  },
+  "25344": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "28436": {
+   "files": 5,
+   "watch_hits": []
+  },
+  "30965": {
+   "files": 12,
+   "watch_hits": []
+  },
+  "30991": {
+   "files": 5,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "31664": {
+   "files": 5,
+   "watch_hits": []
+  },
+  "32744": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "33166": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "34215": {
+   "files": 9,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "34521": {
+   "files": 20,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [
+    "+        metrics = {",
+    "+        if metrics['retrieval_hit_rate'] < 0.3:",
+    "+        if metrics['consolidation_yield'] < 0.1:",
+    "+        return metrics",
+    "+## 2. Memory Lifecycle Metrics",
+    "+| Metric                              | Value |",
+    "+| Metric                    | Value |",
+    "+When any metric drifts below threshold, parameters are adjusted to restore"
+   ],
+   "touches_prefetch_provider": false
+  },
+  "35604": {
+   "files": 4,
+   "watch_hits": []
+  },
+  "35965": {
+   "files": 4,
+   "watch_hits": []
+  },
+  "37150": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "37635": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "37783": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "38706": {
+   "files": 6,
+   "watch_hits": []
+  },
+  "39664": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "40425": {
+   "files": 16,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "40930": {
+   "files": 1,
+   "watch_hits": []
+  },
+  "40967": {
+   "files": 8,
+   "watch_hits": [
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "44246": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "44308": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "44378": {
+   "files": 2,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "45743": {
+   "files": 9,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/memory_provider.py",
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [
+    "+  - Success metric: A Hermes-core sandbox test modeled on `clean-holographic/scripts/evaluate_production_recall.py` passes all governed context-injection cases",
+    "+  - Success metric: built-in memory and one external provider can still register, prefetch, and sync without API breakage.",
+    "+  - Success metric: tests run under temporary `HERMES_HOME` or `HERMES_FORBID_LIVE_DB=1`; no test touches `~/.hermes/memory_store.db`.",
+    "+  - Success metric: debug/report data can distinguish raw provider output from governed injected context without exposing secrets.",
+    "+## 8. Success Metrics"
+   ],
+   "touches_prefetch_provider": false
+  },
+  "45927": {
+   "files": 1,
+   "watch_hits": []
+  },
+  "47457": {
+   "files": 4,
+   "watch_hits": []
+  },
+  "49538": {
+   "files": 3,
+   "watch_hits": []
+  },
+  "50086": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "50134": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "51012": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "51222": {
+   "files": 10,
+   "watch_hits": []
+  },
+  "52186": {
+   "files": 3,
+   "watch_hits": []
+  },
+  "53182": {
+   "files": 15,
+   "watch_hits": [
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "53315": {
+   "files": 4,
+   "watch_hits": []
+  },
+  "55172": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "55729": {
+   "files": 3,
+   "watch_hits": []
+  },
+  "55849": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "58346": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "58597": {
+   "files": 28,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "60953": {
+   "files": 3,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "61129": {
+   "files": 4,
+   "watch_hits": []
+  },
+  "61685": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "62703": {
+   "files": 19,
+   "watch_hits": []
+  },
+  "62841": {
+   "files": 41,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/memory_provider.py",
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "63759": {
+   "files": 9,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "63791": {
+   "files": 1,
+   "watch_hits": []
+  },
+  "63931": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "64288": {
+   "files": 5,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "64421": {
+   "files": 2,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "64528": {
+   "files": 9,
+   "watch_hits": [
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "65329": {
+   "files": 15,
+   "watch_hits": [
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "66137": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "66684": {
+   "files": 10,
+   "watch_hits": []
+  },
+  "66979": {
+   "files": 10,
+   "watch_hits": []
+  },
+  "67559": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "67679": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "67833": {
+   "files": 4,
+   "watch_hits": []
+  },
+  "67894": {
+   "files": 4,
+   "watch_hits": []
+  },
+  "68028": {
+   "files": 7,
+   "watch_hits": []
+  },
+  "68325": {
+   "files": 5,
+   "watch_hits": []
+  },
+  "68692": {
+   "files": 3,
+   "watch_hits": []
+  },
+  "68721": {
+   "files": 28,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "68903": {
+   "files": 21,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/memory_provider.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "69606": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "70715": {
+   "files": 7,
+   "watch_hits": []
+  },
+  "72385": {
+   "files": 7,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "73644": {
+   "files": 3,
+   "watch_hits": []
+  },
+  "73901": {
+   "files": 3,
+   "watch_hits": []
+  },
+  "74984": {
+   "files": 3,
+   "watch_hits": []
+  },
+  "75446": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "76351": {
+   "files": 3,
+   "watch_hits": []
+  },
+  "76655": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "78234": {
+   "files": 9,
+   "watch_hits": []
+  },
+  "78584": {
+   "files": 91,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/memory_provider.py",
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [
+    "+# values the core never consumes: telemetry marks, trajectory/ATIF exports,",
+    "+  lifecycle, API request/response, tool-call and subagent telemetry) are"
+   ],
+   "touches_prefetch_provider": false
+  },
+  "80517": {
+   "files": 5,
+   "watch_hits": []
+  },
+  "80909": {
+   "files": 5,
+   "watch_hits": []
+  },
+  "81386": {
+   "files": 1,
+   "watch_hits": []
+  },
+  "81582": {
+   "files": 5,
+   "watch_hits": [
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "82512": {
+   "files": 1,
+   "watch_hits": []
+  },
+  "83152": {
+   "files": 9,
+   "watch_hits": []
+  },
+  "83647": {
+   "files": 10,
+   "watch_hits": []
+  },
+  "84360": {
+   "files": 2,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "84382": {
+   "files": 4,
+   "watch_hits": []
+  },
+  "84412": {
+   "files": 7,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/memory_provider.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": true
+  },
+  "85071": {
+   "files": 4,
+   "watch_hits": []
+  },
+  "85728": {
+   "files": 5,
+   "watch_hits": []
+  },
+  "86948": {
+   "files": 11,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "87028": {
+   "files": 4,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "89282": {
+   "files": 10,
+   "watch_hits": []
+  },
+  "89283": {
+   "files": 3,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "89418": {
+   "files": 1,
+   "watch_hits": []
+  },
+  "89822": {
+   "files": 9,
+   "watch_hits": []
+  },
+  "90385": {
+   "files": 34,
+   "watch_hits": [
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "90800": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "91974": {
+   "files": 7,
+   "watch_hits": [
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "92039": {
+   "files": 3,
+   "watch_hits": []
+  },
+  "92118": {
+   "files": 21,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/memory_provider.py",
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [
+    "+    evaluation metrics.",
+    "+    # must opt in deliberately and must not treat this as outbound telemetry.",
+    "+        assert event[\"telemetry_schema_version\"]",
+    "+isolated by the host-owned observer dispatcher. Hermes provides no telemetry,",
+    "+outbound telemetry or storage for this privacy-sensitive in-process event, and",
+    "+| `memory_prefetch` | Observer (Python plugins only) | Queued asynchronously after one memory-manager prefetch operation has produced at least one valid struct",
+    "+payload. There is no built-in telemetry or storage. The operation-bound tuple and explicit IDs prevent a callback from using query,"
+   ],
+   "touches_prefetch_provider": true
+  },
+  "92149": {
+   "files": 4,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "93676": {
+   "files": 5,
+   "watch_hits": []
+  },
+  "94180": {
+   "files": 26,
+   "watch_hits": []
+  },
+  "94214": {
+   "files": 10,
+   "watch_hits": []
+  },
+  "94243": {
+   "files": 4,
+   "watch_hits": []
+  },
+  "94259": {
+   "files": 3,
+   "watch_hits": []
+  },
+  "94983": {
+   "files": 16,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "95387": {
+   "files": 4,
+   "watch_hits": [
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "98703": {
+   "files": 37,
+   "watch_hits": []
+  },
+  "98768": {
+   "files": 4,
+   "watch_hits": [
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "100008": {
+   "files": 1,
+   "watch_hits": []
+  },
+  "101531": {
+   "files": 4,
+   "watch_hits": []
+  },
+  "101580": {
+   "files": 19,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/memory_provider.py",
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": true
+  },
+  "102837": {
+   "files": 1,
+   "watch_hits": []
+  },
+  "102928": {
+   "files": 4,
+   "watch_hits": []
+  },
+  "104178": {
+   "files": 11,
+   "watch_hits": []
+  },
+  "105292": {
+   "files": 3,
+   "watch_hits": []
+  },
+  "105495": {
+   "files": 3,
+   "watch_hits": []
+  },
+  "106813": {
+   "files": 3,
+   "watch_hits": []
+  },
+  "107526": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "108864": {
+   "files": 3,
+   "watch_hits": []
+  },
+  "108965": {
+   "files": 2,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "109286": {
+   "files": 4,
+   "watch_hits": []
+  },
+  "109498": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "109688": {
+   "files": 3,
+   "watch_hits": []
+  },
+  "111510": {
+   "files": 6,
+   "watch_hits": []
+  },
+  "112351": {
+   "files": 29,
+   "watch_hits": []
+  },
+  "112681": {
+   "files": 23,
+   "watch_hits": []
+  },
+  "115109": {
+   "files": 4,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [
+    "+    memory provider (a remote reader like chat platforms or telemetry). Returns the input list",
+    "+        not reach them even with ``security.redact_secrets`` on (it covers display/telemetry surfaces).",
+    "+    telemetry, memory providers). ``redact_sensitive_text(force=True)`` — the only secret-pattern",
+    "+``security.redact_secrets`` covers display/telemetry surfaces, but",
+    "+fail-closed scrub telemetry uses (``agent.redact.redact_for_egress``) is"
+   ],
+   "touches_prefetch_provider": true
+  },
+  "115244": {
+   "files": 8,
+   "watch_hits": []
+  },
+  "115694": {
+   "files": 2,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [
+    "+    as telemetry export. Never mutates the caller's transcript: untouched",
+    "+        telemetry export — so secrets are never archived verbatim in a provider's store (#115104)."
+   ],
+   "touches_prefetch_provider": false
+  },
+  "117358": {
+   "files": 5,
+   "watch_hits": []
+  },
+  "117692": {
+   "files": 8,
+   "watch_hits": []
+  },
+  "117888": {
+   "files": 1,
+   "watch_hits": []
+  },
+  "117945": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "118051": {
+   "files": 4,
+   "watch_hits": []
+  },
+  "118895": {
+   "files": 4,
+   "watch_hits": []
+  },
+  "119191": {
+   "files": 6,
+   "watch_hits": [
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "120042": {
+   "files": 2,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "120146": {
+   "files": 3,
+   "watch_hits": []
+  },
+  "120893": {
+   "files": 4,
+   "watch_hits": []
+  },
+  "121063": {
+   "files": 4,
+   "watch_hits": []
+  },
+  "121513": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "121793": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "121837": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "122287": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "122763": {
+   "files": 8,
+   "watch_hits": []
+  },
+  "124151": {
+   "files": 3,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [
+    "+| Metric | Before (300 candidates) | After (100 candidates) |",
+    "+| Metric | Result |"
+   ],
+   "touches_prefetch_provider": false
+  },
+  "125418": {
+   "files": 6,
+   "watch_hits": []
+  },
+  "125802": {
+   "files": 3,
+   "watch_hits": [
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "125881": {
+   "files": 7,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [
+    "+    _emit_aborted_attempt_telemetry(agent, attempt.started_at, \"context_governance_block\")",
+    "+    monkeypatch.setattr(compression, \"_emit_aborted_attempt_telemetry\", lambda *a, **kw: None)"
+   ],
+   "touches_prefetch_provider": true
+  },
+  "126193": {
+   "files": 1,
+   "watch_hits": []
+  },
+  "126457": {
+   "files": 11,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/memory_provider.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": true
+  },
+  "126519": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "126890": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "127339": {
+   "files": 4,
+   "watch_hits": []
+  },
+  "127847": {
+   "files": 1,
+   "watch_hits": []
+  },
+  "128757": {
+   "files": 9,
+   "watch_hits": []
+  },
+  "129093": {
+   "files": 1,
+   "watch_hits": []
+  },
+  "129164": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "129324": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "129620": {
+   "files": 9,
+   "watch_hits": [
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "130240": {
+   "files": 2,
+   "watch_hits": []
+  },
+  "130474": {
+   "files": 1,
+   "watch_hits": []
+  },
+  "130491": {
+   "files": 2,
+   "watch_hits": []
+  }
+ },
+ "flagged": {
+  "5688": {
+   "files": 9,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/memory_provider.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "7789": {
+   "files": 6,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/memory_provider.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "12126": {
+   "files": 2,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "15412": {
+   "files": 8,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": true
+  },
+  "18565": {
+   "files": 18,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "19833": {
+   "files": 7,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "22876": {
+   "files": 8,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "30991": {
+   "files": 5,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "34215": {
+   "files": 9,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "34521": {
+   "files": 20,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [
+    "+        metrics = {",
+    "+        if metrics['retrieval_hit_rate'] < 0.3:",
+    "+        if metrics['consolidation_yield'] < 0.1:",
+    "+        return metrics",
+    "+## 2. Memory Lifecycle Metrics",
+    "+| Metric                              | Value |",
+    "+| Metric                    | Value |",
+    "+When any metric drifts below threshold, parameters are adjusted to restore"
+   ],
+   "touches_prefetch_provider": false
+  },
+  "40425": {
+   "files": 16,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "40967": {
+   "files": 8,
+   "watch_hits": [
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "44378": {
+   "files": 2,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "45743": {
+   "files": 9,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/memory_provider.py",
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [
+    "+  - Success metric: A Hermes-core sandbox test modeled on `clean-holographic/scripts/evaluate_production_recall.py` passes all governed context-injection cases",
+    "+  - Success metric: built-in memory and one external provider can still register, prefetch, and sync without API breakage.",
+    "+  - Success metric: tests run under temporary `HERMES_HOME` or `HERMES_FORBID_LIVE_DB=1`; no test touches `~/.hermes/memory_store.db`.",
+    "+  - Success metric: debug/report data can distinguish raw provider output from governed injected context without exposing secrets.",
+    "+## 8. Success Metrics"
+   ],
+   "touches_prefetch_provider": false
+  },
+  "53182": {
+   "files": 15,
+   "watch_hits": [
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "58597": {
+   "files": 28,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "60953": {
+   "files": 3,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "62841": {
+   "files": 41,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/memory_provider.py",
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "63759": {
+   "files": 9,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "64288": {
+   "files": 5,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "64421": {
+   "files": 2,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "64528": {
+   "files": 9,
+   "watch_hits": [
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "65329": {
+   "files": 15,
+   "watch_hits": [
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "68721": {
+   "files": 28,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "68903": {
+   "files": 21,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/memory_provider.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "72385": {
+   "files": 7,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "78584": {
+   "files": 91,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/memory_provider.py",
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [
+    "+# values the core never consumes: telemetry marks, trajectory/ATIF exports,",
+    "+  lifecycle, API request/response, tool-call and subagent telemetry) are"
+   ],
+   "touches_prefetch_provider": false
+  },
+  "81582": {
+   "files": 5,
+   "watch_hits": [
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "84360": {
+   "files": 2,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "84412": {
+   "files": 7,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/memory_provider.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": true
+  },
+  "86948": {
+   "files": 11,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "87028": {
+   "files": 4,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "89283": {
+   "files": 3,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "90385": {
+   "files": 34,
+   "watch_hits": [
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "91974": {
+   "files": 7,
+   "watch_hits": [
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "92118": {
+   "files": 21,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/memory_provider.py",
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [
+    "+    evaluation metrics.",
+    "+    # must opt in deliberately and must not treat this as outbound telemetry.",
+    "+        assert event[\"telemetry_schema_version\"]",
+    "+isolated by the host-owned observer dispatcher. Hermes provides no telemetry,",
+    "+outbound telemetry or storage for this privacy-sensitive in-process event, and",
+    "+| `memory_prefetch` | Observer (Python plugins only) | Queued asynchronously after one memory-manager prefetch operation has produced at least one valid struct",
+    "+payload. There is no built-in telemetry or storage. The operation-bound tuple and explicit IDs prevent a callback from using query,"
+   ],
+   "touches_prefetch_provider": true
+  },
+  "92149": {
+   "files": 4,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "94983": {
+   "files": 16,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "95387": {
+   "files": 4,
+   "watch_hits": [
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "98768": {
+   "files": 4,
+   "watch_hits": [
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "101580": {
+   "files": 19,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/memory_provider.py",
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": true
+  },
+  "108965": {
+   "files": 2,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "115109": {
+   "files": 4,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [
+    "+    memory provider (a remote reader like chat platforms or telemetry). Returns the input list",
+    "+        not reach them even with ``security.redact_secrets`` on (it covers display/telemetry surfaces).",
+    "+    telemetry, memory providers). ``redact_sensitive_text(force=True)`` — the only secret-pattern",
+    "+``security.redact_secrets`` covers display/telemetry surfaces, but",
+    "+fail-closed scrub telemetry uses (``agent.redact.redact_for_egress``) is"
+   ],
+   "touches_prefetch_provider": true
+  },
+  "115694": {
+   "files": 2,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [
+    "+    as telemetry export. Never mutates the caller's transcript: untouched",
+    "+        telemetry export — so secrets are never archived verbatim in a provider's store (#115104)."
+   ],
+   "touches_prefetch_provider": false
+  },
+  "119191": {
+   "files": 6,
+   "watch_hits": [
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "120042": {
+   "files": 2,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "124151": {
+   "files": 3,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [
+    "+| Metric | Before (300 candidates) | After (100 candidates) |",
+    "+| Metric | Result |"
+   ],
+   "touches_prefetch_provider": false
+  },
+  "125802": {
+   "files": 3,
+   "watch_hits": [
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  },
+  "125881": {
+   "files": 7,
+   "watch_hits": [
+    "agent/memory_manager.py"
+   ],
+   "added_metric_lines": [
+    "+    _emit_aborted_attempt_telemetry(agent, attempt.started_at, \"context_governance_block\")",
+    "+    monkeypatch.setattr(compression, \"_emit_aborted_attempt_telemetry\", lambda *a, **kw: None)"
+   ],
+   "touches_prefetch_provider": true
+  },
+  "126457": {
+   "files": 11,
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/memory_provider.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": true
+  },
+  "129620": {
+   "files": 9,
+   "watch_hits": [
+    "agent/turn_context.py"
+   ],
+   "added_metric_lines": [],
+   "touches_prefetch_provider": false
+  }
+ },
+ "finished_at": "2026-10-01T16:20Z"
+}

@@ -1,0 +1,53 @@
+{
+  "blocks": 15,
+  "calls_per_block": 2000,
+  "load1_start": 15.080078125,
+  "modes": {
+    "off": {
+      "noop_baseline": {
+        "median_us": 0.03,
+        "p95_us": 0.06
+      },
+      "enabled_gate_only": {
+        "median_us": 16.65,
+        "p95_us": 21.38
+      },
+      "record_memory_prefetch": {
+        "median_us": 26.69,
+        "p95_us": 34.31
+      },
+      "record_execution_backend_existing": {
+        "median_us": 32.8,
+        "p95_us": 36.23
+      },
+      "record_provider_memory_call_existing": {
+        "median_us": 33.14,
+        "p95_us": 40.7
+      }
+    },
+    "on": {
+      "noop_baseline": {
+        "median_us": 0.03,
+        "p95_us": 0.06
+      },
+      "enabled_gate_only": {
+        "median_us": 21.1,
+        "p95_us": 27.69
+      },
+      "record_memory_prefetch": {
+        "median_us": 112.95,
+        "p95_us": 132.79
+      },
+      "record_execution_backend_existing": {
+        "median_us": 114.43,
+        "p95_us": 132.82
+      },
+      "record_provider_memory_call_existing": {
+        "median_us": 117.31,
+        "p95_us": 127.6
+      }
+    }
+  },
+  "egress_blocked_attempts": [],
+  "load1_end": 16.85888671875
+}

@@ -1,0 +1,91 @@
+{
+  "schema": "xf.receipt.v1",
+  "id": "MERGE/r20261001-02",
+  "experiment": "Freshness and overlap: the head rebased onto current main, a simulated merge with the open PR that edits the same function, and the workflow push-trigger scan for the fork branch name",
+  "tier": "T0",
+  "cost_usd": 0.0,
+  "lane": "cpu",
+  "staging": "memory-prefetch-metric",
+  "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+  "head_revision": "519876fa02f5e5812f5763cef03c5fed054d6cf7",
+  "results": {
+    "rebase": {
+      "from": {
+        "head": "c815543bc2504eccaae9f6adce5046f41710f38c",
+        "base": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0"
+      },
+      "to": {
+        "head": "519876fa02f5e5812f5763cef03c5fed054d6cf7",
+        "base": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+        "tree": "81c2e4fab31c9a6622c57d928e399dbe8afa2986"
+      },
+      "commits_between_bases": 47,
+      "invalidate_on_changed": false,
+      "method": "git cherry-pick c815543bc2 onto aea969677c (clean); diff byte-identical to round 1; HEAD^{tree} equals `git merge-tree --write-tree aea969677c c815543bc2`",
+      "main_checked": {
+        "sha": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+        "how": "git ls-remote https://github.com/NousResearch/hermes-agent.git refs/heads/main",
+        "committed_at": "2026-10-01T05:56:05-05:00"
+      }
+    },
+    "with_NousResearch_124151": {
+      "pr": 124151,
+      "author": "kweez007",
+      "state": "OPEN",
+      "head": "3ee6189dbad0485790893c5098b20f00d27a1d51",
+      "diff_sha256": "7242a5eb7a1b6e1590fd4ab7023e167be25d10a6d6bace505113efa87cbf2078",
+      "diff_note": "round 1 recorded e43f8f1d… for the same head; the two diffs differ only in abbreviated index-hash width",
+      "method": "gh pr diff applied onto aea969677c as an unreferenced temp commit 3ed268422f (tree d43d03a2f0), then merge-tree with the staging commit both ways",
+      "merge_tree": "e39976d7b2c00cee0346b379eae0cb94d1cfc979",
+      "clean_both_ways": true,
+      "tests_on_merged_tree": {
+        "commit": "e5e0a7e336 (temp, unreferenced)",
+        "command": "scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py tests/agent/test_memory_provider.py -q",
+        "observed": "2 files, 74 tests passed, 0 failed",
+        "log_sha256": "184765e94f923b7d500252dacb1287d9c7fb7b76aa960ea07bd9f7a8e39bc061"
+      },
+      "semantics": {
+        "label": "DERIVED (not run)",
+        "statement": "The record calls time the real wait, so a timeout under #124151's per-provider 20 s Hindsight bound would land in latency_bucket 10s_to_30s, under provider `plugin` (Hindsight is not a bundled memory provider).",
+        "basis": "tool_latency_bucket(20000) == '10s_to_30s' (T0 builder sample mem0/EMPTY/20000) and memory_provider_name('hindsight') == 'plugin' (T0 builder sample hindsight/timed_out/8000.4). No run exercised #124151's 20 s path; the merged-tree run is the 74 targeted tests only."
+      }
+    },
+    "workflow_push_trigger_scan": {
+      "tree": "81c2e4fab31c9a6622c57d928e399dbe8afa2986",
+      "workflows": 52,
+      "with_push_trigger": 11,
+      "branch_names": [
+        "staged/memory-prefetch-metric",
+        "staging/memory-prefetch-metric"
+      ],
+      "matches_for_branch": 0,
+      "note": "push filters are main (9), wine2e/** and wine2e-install/**; live-providers.yml is tag-only"
+    },
+    "fork_ref_check": {
+      "command": "git ls-remote https://github.com/kvnloo/hermes-agent.git 'refs/heads/staged/*' refs/heads/staging",
+      "staged_refs": 0,
+      "legacy_staging_ref": "28790e597c",
+      "note": "staged/memory-prefetch-metric is free on the fork; the legacy refs/heads/staging is why the fork branch is staged/<id> (OD-0 resolved by that rename)"
+    }
+  },
+  "label": "OBSERVED (except results.with_NousResearch_124151.semantics, which is DERIVED)",
+  "verdict": "KEEP",
+  "provenance": "self",
+  "privacy": "public-aggregate",
+  "raw_artifacts": {
+    "merged_tree_tests_log": {
+      "path": "work/r2/merged_124151_tests.log",
+      "sha256": "184765e94f923b7d500252dacb1287d9c7fb7b76aa960ea07bd9f7a8e39bc061"
+    },
+    "pr_124151_diff": {
+      "path": "work/r2/pr124151.diff",
+      "sha256": "7242a5eb7a1b6e1590fd4ab7023e167be25d10a6d6bace505113efa87cbf2078"
+    }
+  },
+  "supersedes": {
+    "id": "MERGE/r20261001-01",
+    "path": "receipts/MERGE-r20261001-01.json",
+    "sha256_as_written": "95e81c42398cb6fa4fea8aaef7c67a028d9b513379b13ab60ba1256bf2f71a22",
+    "why": "head rebased onto aea969677c; r01's semantics sentence read as observed, it is derived; adds the staged/<id> fork-name checks"
+  }
+}

@@ -1,0 +1,202 @@
+{
+  "metric": "hermes.memory.prefetch.count",
+  "schema": "hermes_cli/observability/schemas/hermes.shared_metrics.v3.schema.json",
+  "checks": {
+    "schema_def_present": true,
+    "schema_def_referenced_by_metrics_items": true,
+    "dimension_fields_equal": true,
+    "outcome_enum_equals_contract": true,
+    "latency_enum_equals_contract": true,
+    "mark_projects_to_metric": true,
+    "is_counter_metric": true,
+    "all_contract_combinations_valid": {
+      "accepted": 450,
+      "total": 450,
+      "pass": true
+    },
+    "all_contract_combinations_pass_contract_check": true,
+    "out_of_contract_rows_rejected": {
+      "rejected_by_schema_or_contract": 6,
+      "rejected_by_schema": 5,
+      "rejected_by_contract": 6,
+      "total": 6,
+      "pass": true
+    },
+    "builder_samples": [
+      {
+        "raw": {
+          "provider": "honcho",
+          "outcome": "success",
+          "waited_ms": 12
+        },
+        "got": {
+          "latency_bucket": "lt_100ms",
+          "outcome": "success",
+          "provider": "honcho"
+        },
+        "expected": {
+          "provider": "honcho",
+          "outcome": "success",
+          "latency_bucket": "lt_100ms"
+        },
+        "pass": true
+      },
+      {
+        "raw": {
+          "provider": "hindsight",
+          "outcome": "timed_out",
+          "waited_ms": 8000.4
+        },
+        "got": {
+          "latency_bucket": "5s_to_10s",
+          "outcome": "timed_out",
+          "provider": "plugin"
+        },
+        "expected": {
+          "provider": "plugin",
+          "outcome": "timed_out",
+          "latency_bucket": "5s_to_10s"
+        },
+        "pass": true
+      },
+      {
+        "raw": {
+          "provider": "Acme-Private",
+          "outcome": "weird",
+          "waited_ms": null
+        },
+        "got": {
+          "latency_bucket": "unknown",
+          "outcome": "failed",
+          "provider": "plugin"
+        },
+        "expected": {
+          "provider": "plugin",
+          "outcome": "failed",
+          "latency_bucket": "unknown"
+        },
+        "pass": true
+      },
+      {
+        "raw": {
+          "provider": "",
+          "outcome": "skipped",
+          "waited_ms": 0.2
+        },
+        "got": {
+          "latency_bucket": "lt_100ms",
+          "outcome": "skipped",
+          "provider": "builtin"
+        },
+        "expected": {
+          "provider": "builtin",
+          "outcome": "skipped",
+          "latency_bucket": "lt_100ms"
+        },
+        "pass": true
+      },
+      {
+        "raw": {
+          "provider": "mem0",
+          "outcome": "EMPTY",
+          "waited_ms": 20000
+        },
+        "got": {
+          "latency_bucket": "10s_to_30s",
+          "outcome": "empty",
+          "provider": "mem0"
+        },
+        "expected": {
+          "provider": "mem0",
+          "outcome": "empty",
+          "latency_bucket": "10s_to_30s"
+        },
+        "pass": true
+      }
+    ],
+    "doc_row_present": true,
+    "doc_row_lists_outcomes": true,
+    "doc_row_latency_range": true,
+    "doc_row_says_never_content": true
+  },
+  "rejection_split": [
+    {
+      "row": "bad outcome",
+      "dimensions": {
+        "provider": "plugin",
+        "outcome": "timeout",
+        "latency_bucket": "lt_100ms"
+      },
+      "schema_rejects": true,
+      "contract_rejects": true
+    },
+    {
+      "row": "bad bucket",
+      "dimensions": {
+        "provider": "plugin",
+        "outcome": "success",
+        "latency_bucket": "7s"
+      },
+      "schema_rejects": true,
+      "contract_rejects": true
+    },
+    {
+      "row": "raw provider name, capitals and spaces",
+      "dimensions": {
+        "provider": "Acme Private Memory",
+        "outcome": "success",
+        "latency_bucket": "lt_100ms"
+      },
+      "schema_rejects": true,
+      "contract_rejects": true
+    },
+    {
+      "row": "raw provider name, lowercase identifier",
+      "dimensions": {
+        "provider": "hindsight",
+        "outcome": "success",
+        "latency_bucket": "lt_100ms"
+      },
+      "schema_rejects": false,
+      "contract_rejects": true
+    },
+    {
+      "row": "extra field carrying the query",
+      "dimensions": {
+        "provider": "plugin",
+        "outcome": "success",
+        "latency_bucket": "lt_100ms",
+        "query": "what do I prefer?"
+      },
+      "schema_rejects": true,
+      "contract_rejects": true
+    },
+    {
+      "row": "missing field",
+      "dimensions": {
+        "provider": "plugin",
+        "outcome": "success"
+      },
+      "schema_rejects": true,
+      "contract_rejects": true
+    }
+  ],
+  "schema_provider_type": {
+    "ref": "#/$defs/vocabulary_identifier",
+    "pattern": "^[a-z0-9][a-z0-9_]{0,63}$",
+    "same_as_memory_op_counter": true
+  },
+  "doc_row": "| `hermes.memory.prefetch.count` | provider (a bundled memory plugin, else `plugin`), outcome (`success`/`empty`/`failed`/`timed_out`/`skipped`), latency bucket (the tool-call buckets, `lt_100ms` \u2026 `gte_30s`) | How often the external memory provider's turn-start recall returns context, comes back empty, fails or hits the prefetch timeout, and how long the turn waited on it. `skipped` means its previous recall is still running, so this turn did not ask it. Never the query or the recalled text. |",
+  "bundled_memory_providers": [
+    "builtin",
+    "byterover",
+    "holographic",
+    "honcho",
+    "mem0",
+    "openviking",
+    "plugin",
+    "retaindb",
+    "supermemory"
+  ],
+  "all_pass": true
+}

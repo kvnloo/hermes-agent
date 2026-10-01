@@ -1,0 +1,30 @@
+▶ not activated — using HERMES_PYTHON: $VENV/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 7 test files (~222 tests) under ['tests/agent/test_context_compressor.py', 'tests/agent/test_lean_single_aux_call.py', 'tests/agent/test_compression_rotation_state.py', 'tests/agent/test_context_compressor_summary_continuity.py', 'tests/agent/test_compaction_redaction_boundaries.py', 'tests/agent/test_native_compaction_summary_retention.py', 'tests/agent/test_context_compressor_anchor_index.py']; running with -j 2
+[  3.6% |     8/~222 | ✓8 | ✗0] ✓ tests/agent/test_compaction_redaction_boundaries.py (8✓, 1.6s)
+[ 63.1% |   140/~222 | ✓284 | ✗  0] ✓ tests/agent/test_context_compressor.py (276✓, 22.3s)
+[ 64.0% |   142/~222 | ✓286 | ✗  0] ✓ tests/agent/test_context_compressor_anchor_index.py (2✓, 0.7s)
+[ 68.5% |   152/~222 | ✓296 | ✗  0] ✓ tests/agent/test_context_compressor_summary_continuity.py (10✓, 1.6s)
+[ 71.6% |   159/~222 | ✓303 | ✗  0] ✓ tests/agent/test_lean_single_aux_call.py (7✓, 1.4s)
+[ 82.4% |   183/~222 | ✓327 | ✗  0] ✓ tests/agent/test_native_compaction_summary_retention.py (24✓, 1.2s)
+[100.0% |   222/~222 | ✓367 | ✗  0] ✓ tests/agent/test_compression_rotation_state.py (40✓, 119.9s)
+
+=== Summary: 7 files, 367 tests passed, 0 failed (100% complete) in 120.0s (2 workers) ===
+  Durations cached to test_durations.json (7 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   7
+  Total subprocess CPU-wall: 148.8s  (runner wall: 120.0s, parallelism: 2x)
+  P50: 1.58s  P90: 119.94s  P95: 119.94s  P99: 119.94s  Max: 119.94s
+  <1s: 1 files (14%)  <2s: 5 files (71%)
+  Top 10 slowest:
+    119.94s  tests/agent/test_compression_rotation_state.py
+     22.30s  tests/agent/test_context_compressor.py
+      1.62s  tests/agent/test_context_compressor_summary_continuity.py
+      1.58s  tests/agent/test_compaction_redaction_boundaries.py
+      1.44s  tests/agent/test_lean_single_aux_call.py
+      1.21s  tests/agent/test_native_compaction_summary_retention.py
+      0.75s  tests/agent/test_context_compressor_anchor_index.py

@@ -1,0 +1,315 @@
+{
+  "schema": "xf.receipt.v1",
+  "id": "MERGE/r20261001-04",
+  "tier": "T0",
+  "label_default": "OBSERVED",
+  "spec": {
+    "path": null,
+    "prereg_commit": null,
+    "note": "static merge-tree check; no oracle beyond clean/conflict"
+  },
+  "runner_revision": {
+    "driver": {
+      "path": "harness/merge_check.py",
+      "sha256": "1d8e5b8949ac118041547e1b2cc4dde1c7d1ac4fdbb185f22d4939db20809300"
+    },
+    "git": "git version 2.55.0"
+  },
+  "issue": "kvnloo/hermes-agent#322",
+  "origin_refs": [
+    "NousResearch/hermes-agent#103476",
+    "NousResearch/hermes-agent#129620",
+    "NousResearch/hermes-agent#129492",
+    "NousResearch/hermes-agent#129882",
+    "NousResearch/hermes-agent#71302",
+    "NousResearch/hermes-agent#128432",
+    "NousResearch/hermes-agent#129364"
+  ],
+  "staging": "anthropic-context-editing",
+  "base_revision": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+  "head_revision": "05d6dbc172d24db4b237f8ef130fb4dc2e8651df",
+  "changed_files": [
+    "agent/agent_init.py",
+    "agent/anthropic_adapter.py",
+    "agent/anthropic_context_editing.py",
+    "agent/chat_completion_helpers.py",
+    "agent/transports/anthropic.py",
+    "agent/turn_recovery.py",
+    "cli-config.yaml.example",
+    "gateway/run.py",
+    "hermes_cli/config_defaults.py",
+    "tests/agent/test_anthropic_context_editing.py",
+    "tui_gateway/session_compression.py",
+    "website/docs/developer-guide/context-compression-and-caching.md",
+    "website/docs/user-guide/features/computer-use.md"
+  ],
+  "policy_revision": {
+    "factory": "FACTORY.md sha256 7726ba18b43a9367f91d7f70c3aaefb96a9863761ddf71225c61c26a30d688d4 (frontier-2026-10-01)"
+  },
+  "command": "python3 harness/merge_check.py --git-dir <h.git> --main 44a1ce9724502b9c692faaef00af3054bf11f1a6 --branch 05d6dbc172d24db4b237f8ef130fb4dc2e8651df --run r20261001-04",
+  "results": {
+    "branch_x_main": {
+      "clean": true,
+      "tree": "2c45d3cd5381cbff8fdf95807af5b026d3b02f2c",
+      "conflicted_files": []
+    },
+    "prs": {
+      "103476": {
+        "author": "teknium1",
+        "role": "dependency",
+        "head": "bc9511af3f92ee22fbcaccd77733d7d048ee5fa6",
+        "files": [
+          "agent/anthropic_endpoints.py",
+          "agent/anthropic_message_convert.py",
+          "agent/message_sanitization.py",
+          "tests/agent/test_anthropic_adapter.py",
+          "tests/agent/test_anthropic_keep_all_thinking_cache.py"
+        ],
+        "overlap_with_branch": [],
+        "main_x_pr": {
+          "clean": true,
+          "tree": "8b5164b88c54b5f848b532c5c2fa6073139139e3",
+          "conflicted_files": []
+        },
+        "main_plus_pr_x_branch": {
+          "clean": true,
+          "tree": "a91d9d043adffd2925acd22f40e756f114444b69",
+          "conflicted_files": []
+        },
+        "pr_x_branch_direct": {
+          "clean": true,
+          "tree": "a91d9d043adffd2925acd22f40e756f114444b69",
+          "conflicted_files": []
+        }
+      },
+      "129620": {
+        "author": "JoaoMarcos44",
+        "role": "dependency",
+        "head": "588b746cf6a092a974629aec44dcb8077107307b",
+        "files": [
+          "agent/anthropic_message_convert.py",
+          "agent/anthropic_thinking_policy.py",
+          "agent/anthropic_thinking_replay.py",
+          "agent/message_sanitization.py",
+          "agent/model_metadata.py",
+          "agent/turn_context.py",
+          "agent/turn_recovery.py",
+          "agent/turn_request_assembly.py",
+          "tests/agent/test_anthropic_preserved_thinking_replay.py"
+        ],
+        "overlap_with_branch": [
+          "agent/turn_recovery.py"
+        ],
+        "main_x_pr": {
+          "clean": true,
+          "tree": "900b8bc2c954f52c0b2873f01e126160a126b234",
+          "conflicted_files": []
+        },
+        "main_plus_pr_x_branch": {
+          "clean": true,
+          "tree": "599f721782e1cc1befa29c878258127729503b5f",
+          "conflicted_files": []
+        },
+        "pr_x_branch_direct": {
+          "clean": true,
+          "tree": "599f721782e1cc1befa29c878258127729503b5f",
+          "conflicted_files": []
+        }
+      },
+      "129492": {
+        "author": "SHL0MS",
+        "role": "dependency",
+        "head": "7df230b4c3670ea6a7b53461b21b01fe6552fc28",
+        "files": [
+          "agent/anthropic_message_convert.py",
+          "tests/agent/test_anthropic_adapter.py"
+        ],
+        "overlap_with_branch": [],
+        "main_x_pr": {
+          "clean": true,
+          "tree": "64e3cfa3234007b1c3b1f382b6d6526d6dfc0a42",
+          "conflicted_files": []
+        },
+        "main_plus_pr_x_branch": {
+          "clean": true,
+          "tree": "ee9f069a77f3627577c8037c0a7f4e32c044d43b",
+          "conflicted_files": []
+        },
+        "pr_x_branch_direct": {
+          "clean": true,
+          "tree": "ee9f069a77f3627577c8037c0a7f4e32c044d43b",
+          "conflicted_files": []
+        }
+      },
+      "129882": {
+        "author": "Sahilvishnaliya",
+        "role": "dependency",
+        "head": "66987608bcb897156510ad0ada9ea09643637bd0",
+        "files": [
+          "agent/anthropic_message_convert.py",
+          "agent/context_compressor.py",
+          "agent/conversation_compression.py",
+          "agent/jiter_preload.py",
+          "apps/desktop/src/lib/stale-transcript-guard.test.ts",
+          "apps/desktop/src/lib/stale-transcript-guard.ts",
+          "cli.py",
+          "cron/lifecycle_guard.py",
+          "gateway/run_voice.py",
+          "hermes_cli/uninstall.py",
+          "hermes_cli/venv_sync.py",
+          "hermes_cli/web_routers/config_env.py",
+          "locales/en.yaml",
+          "plugins/platforms/discord/adapter.py",
+          "pm/runtime.py",
+          "tools/file_operations.py",
+          "tools/tool_result_storage.py"
+        ],
+        "overlap_with_branch": [],
+        "main_x_pr": {
+          "clean": false,
+          "tree": "e1d872529f94a43562a534dbd417b8b3b4c25431",
+          "conflicted_files": [
+            "cron/lifecycle_guard.py"
+          ]
+        },
+        "main_plus_pr_x_branch": {
+          "skipped": "main x PR conflicts, so there is no main + PR tree to merge with the branch"
+        },
+        "pr_x_branch_direct": {
+          "clean": false,
+          "tree": "6bb220d06fe60f074856b4a4d1e95ea8c9b70b3f",
+          "conflicted_files": [
+            "cron/lifecycle_guard.py"
+          ]
+        }
+      },
+      "71302": {
+        "author": "TrueNix",
+        "role": "related",
+        "head": "e7095408720c4290ea6c6182ea85f05581c5c655",
+        "files": [
+          "agent/anthropic_adapter.py",
+          "tests/agent/test_anthropic_oauth_ua_prefix.py"
+        ],
+        "overlap_with_branch": [
+          "agent/anthropic_adapter.py"
+        ],
+        "main_x_pr": {
+          "clean": false,
+          "tree": "bf97ea9dc758df05084650e44ce67f9b61999243",
+          "conflicted_files": [
+            "agent/anthropic_adapter.py",
+            "tests/agent/test_anthropic_oauth_ua_prefix.py"
+          ]
+        },
+        "main_plus_pr_x_branch": {
+          "skipped": "main x PR conflicts, so there is no main + PR tree to merge with the branch"
+        },
+        "pr_x_branch_direct": {
+          "clean": false,
+          "tree": "0c48be0d08433cd973dbf263ac2d8d06f2984c0f",
+          "conflicted_files": [
+            "agent/anthropic_adapter.py",
+            "tests/agent/test_anthropic_oauth_ua_prefix.py"
+          ]
+        }
+      },
+      "128432": {
+        "author": "Julientalbot",
+        "role": "neighbour",
+        "head": "804222bf487dce068d6d0168baa2fbce8ac8f819",
+        "files": [
+          "agent/chat_completion_helpers.py",
+          "agent/codex_responses_adapter.py",
+          "agent/conversation_compression.py",
+          "agent/native_compaction.py",
+          "agent/transports/codex.py",
+          "cli-config.yaml.example",
+          "tests/agent/test_native_compaction_xai.py",
+          "website/docs/developer-guide/context-compression-and-caching.md"
+        ],
+        "overlap_with_branch": [
+          "agent/chat_completion_helpers.py",
+          "cli-config.yaml.example",
+          "website/docs/developer-guide/context-compression-and-caching.md"
+        ],
+        "main_x_pr": {
+          "clean": true,
+          "tree": "1162c2193ac0c45d769540c68b040d3e34cb32d6",
+          "conflicted_files": []
+        },
+        "main_plus_pr_x_branch": {
+          "clean": true,
+          "tree": "f7ee221bb70f326a601763cc0d683944eac20650",
+          "conflicted_files": []
+        },
+        "pr_x_branch_direct": {
+          "clean": true,
+          "tree": "f7ee221bb70f326a601763cc0d683944eac20650",
+          "conflicted_files": []
+        }
+      },
+      "129364": {
+        "author": "thanosapollo",
+        "role": "neighbour",
+        "head": "e9ea24219bb7e1e085db3e70d4010e33bfe8b422",
+        "files": [
+          "agent/native_compaction.py",
+          "cli-config.yaml.example",
+          "tests/agent/test_astra_oauth_native_compaction.py",
+          "website/docs/developer-guide/context-compression-and-caching.md"
+        ],
+        "overlap_with_branch": [
+          "cli-config.yaml.example",
+          "website/docs/developer-guide/context-compression-and-caching.md"
+        ],
+        "main_x_pr": {
+          "clean": true,
+          "tree": "fc222ae9e9c7da509a008038a0bd20561be8d9ba",
+          "conflicted_files": []
+        },
+        "main_plus_pr_x_branch": {
+          "clean": true,
+          "tree": "be5677333095db21a2e91af372567df51600d633",
+          "conflicted_files": []
+        },
+        "pr_x_branch_direct": {
+          "clean": true,
+          "tree": "be5677333095db21a2e91af372567df51600d633",
+          "conflicted_files": []
+        }
+      }
+    }
+  },
+  "denominators": {
+    "cells": 20,
+    "cells_note": "merge-tree runs: branch x main, then per PR main x PR, main + PR x branch (only when main x PR is clean) and PR x branch; PR roles: dependency (P12 ordering), related (same field/beta), neighbour (same config/docs block)",
+    "errored_scored_zero": 0,
+    "infra_excluded": 0,
+    "completeness": 1.0
+  },
+  "evidence_class": {
+    "local": true,
+    "ci": "none",
+    "simulation": false,
+    "runtime": false,
+    "kind": "static"
+  },
+  "resource_usage": {
+    "wall_s": 1.2,
+    "cpu_core_s": 0.3,
+    "gpu_s": 0,
+    "energy_j": null,
+    "tokens": 0,
+    "api_cost_usd": 0.0
+  },
+  "provenance": "self",
+  "frozen": {
+    "bundle_sha": null,
+    "cells": 20,
+    "supersedes": "MERGE/r20261001-03 (superseded/r20261001-03/receipts/; it covered only the 4 dependency PRs)",
+    "status": "NOT_FROZEN (P8 pending)"
+  },
+  "privacy": "public-aggregate",
+  "verdict": "CLEAN"
+}

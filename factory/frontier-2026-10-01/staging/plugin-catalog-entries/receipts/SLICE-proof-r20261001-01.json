@@ -1,0 +1,197 @@
+{
+  "schema": "xf.receipt.v1",
+  "staging": "plugin-catalog-entries",
+  "provenance": "self",
+  "origin_refs": [
+    "NousResearch/hermes-agent#102922",
+    "NousResearch/hermes-agent#102924",
+    "NousResearch/hermes-agent#87495",
+    "NousResearch/hermes-agent#98105"
+  ],
+  "policy_revision": {
+    "plugin-catalog/README.md": "rules 2,3,5,6,7,8,9 @ 234badf4012af380d23c91eae55d045a69c69ffb"
+  },
+  "ai_assistance": "Claude Code (Opus 5.5) wrote the census, the probes and these receipts; disclosed per repository policy",
+  "privacy": "local aggregate (synthetic canary text only; no state.db, logs or credentials read). Host paths and the hostname replaced by placeholders <staging>, <worktree>, <venv>, <testhome>, <host>; artifact paths are relative to the staging directory. raw/ outputs and tools/sandbox.sh are local-only (public: false) and still carry host paths.",
+  "resource_usage": {
+    "api_cost_usd": 0.0,
+    "gpu_s": 0,
+    "tokens": 0,
+    "wall_s": null,
+    "wall_s_label": "NOT_MEASURED"
+  },
+  "id": "SLICE/r20261001-01",
+  "tier": "T0 (catalog loader, structural validator, docs extractor, targeted pytest)",
+  "question": "Is plugin-catalog/paw-pii.yaml a well-formed, loadable, page-generating catalog entry on current main, and do the catalog gates reject a broken variant?",
+  "base_revision": "234badf4012af380d23c91eae55d045a69c69ffb",
+  "head_revision": "98c305b3ec8d03693f4dc94bade69035cb15ff7d",
+  "changed_files": [
+    "plugin-catalog/paw-pii.yaml (+20)"
+  ],
+  "inputs": {
+    "entry_blob": "845dc6cce78e67a8989e267debcc5b4a4dcf473c",
+    "probe": {
+      "path": "tools/catalog_probe.py",
+      "sha256": "df35fe7c1404e4711ade335517bbbc90de96426c74ba28d4be2618a8276d3075"
+    },
+    "hermes_blobs": {
+      "plugin-catalog/paw-pii.yaml": "845dc6cce78e67a8989e267debcc5b4a4dcf473c",
+      "hermes_cli/plugin_validate.py": "2f31a9a4b1d66bd0c89a676f7f57f2f541605d33",
+      "hermes_cli/middleware.py": "c0940d26bbd4d31fd307aa54f3f8d21e0108f2a6",
+      "scripts/validate_plugin_catalog.py": "c5da7f113b2d1c794b4650ba3bbf36348ef45bd5",
+      "website/scripts/extract-plugins.py": "a751462f9e802ea5d87e61ae62138ed89cabb779",
+      "tools/plugin_guard.py": "41de8272156177ad7b4b1e0e6f6c7dca676f9530",
+      "hermes_cli/plugins_cmd_git.py": "75d0180d0966ce272e92d80327bed106e193e5fd",
+      "hermes_cli/plugins_cmd_install.py": "58ac003270078e7fde9fbea9759a819e6d2d4aec",
+      ".github/workflows/plugin-catalog-ci.yml": "0b4bc2adbd06a72b7d532e81a63a5187b090c480",
+      "tests/hermes_cli/test_plugin_catalog.py": "e1a7f2ac2dbbd82bd8a94f73e454defbac751da0"
+    }
+  },
+  "env": {
+    "host": "<host>",
+    "python_system": "3.14.7",
+    "python_hermes_venv": "3.11.14 (live venv interpreter, read-only; main requires ==3.14.*, see pre-existing env errors)",
+    "sandbox": "bwrap 0.12.0: ro-root, tmpfs over the user home and the live Hermes home (venv re-bound ro), unshare-net, unshare-pid, clearenv, writable $RUN on the artifact volume only",
+    "in_process_guard": "t1 probes: loopback-only socket.connect + exec audit hook (read-only git allowlisted)"
+  },
+  "commands": {
+    "structural": "env -i PATH=/usr/bin:/bin HOME=<testhome> HERMES_HOME=<testhome>/.hermes <venv>/bin/python scripts/validate_plugin_catalog.py plugin-catalog/",
+    "loader": "env -i PATH=/usr/bin:/bin HOME=<testhome> HERMES_HOME=<testhome>/.hermes <venv>/bin/python <staging>/tools/catalog_probe.py paw-pii",
+    "docs_extract": "env -i PATH=/usr/bin:/bin HOME=<testhome> HERMES_HOME=<testhome>/.hermes <venv>/bin/python website/scripts/extract-plugins.py --output-dir <scratch> --stars-file <missing-file>",
+    "tests": "HOME=<testhome> HERMES_HOME=<testhome>/.hermes HERMES_PYTHON=<venv>/bin/python bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_plugin_catalog.py tests/scripts/test_validate_plugin_catalog.py tests/website/test_extract_plugins.py tests/hermes_cli/test_plugins_cmd_catalog.py tests/hermes_cli/test_plugin_catalog_known_issues.py tests/hermes_cli/test_web_plugins_catalog.py tests/hermes_cli/test_plugins_hub_perf_guard.py tests/hermes_cli/test_plugins_hub_live_catalog.py -q",
+    "nc1": "sed -i 's/^sha: <pin>$/sha: main/' plugin-catalog/paw-pii.yaml; structural + tests/hermes_cli/test_plugin_catalog.py::test_shipped_catalog_entries_are_all_valid_and_pinned; git checkout -- plugin-catalog/paw-pii.yaml",
+    "merge": "git merge-tree --write-tree main staging/plugin-catalog-entries  (main=234badf4012af380d23c91eae55d045a69c69ffb)"
+  },
+  "gates": {
+    "need": {
+      "result": "PASS",
+      "observed": "paw-pii absent on main: loader 348/348 entries, entry_present=False, no kill-list match, no name collision; upstream route hermes_cli/data/plugin_index.json removed by 46ab5aa365",
+      "label": "OBSERVED"
+    },
+    "green": {
+      "result": "PASS",
+      "observed": "structural OK 350 files (entry: errors=[], warnings=[]); loader 349/349 with entry capabilities {'provides_hooks': [], 'provides_middleware': ['llm_request', 'tool_execution'], 'provides_tools': ['detect_pii', 'redact_pii'], 'requires_env': []}; extract-plugins emits the page entry (installCommand 'hermes plugins install paw-pii', readme off); test_shipped_catalog_entries_are_all_valid_and_pinned 3/3 on 572e4f4fad32bbdcfc948fb2ec833177ed5734c0 + 1/1 on 234badf4012af380d23c91eae55d045a69c69ffb",
+      "label": "OBSERVED"
+    },
+    "negative_control": {
+      "result": "PASS",
+      "observed": "sha: main -> validator 'sha 'main' must be exactly 40 lowercase hex characters' rc=1; shipped-entries test 'AssertionError: assert 348 == 349'. Catalog provides_middleware: [] -> structural OK but F12 catalog mismatch 2 (reviewer-side rule 6)",
+      "label": "OBSERVED"
+    },
+    "adjacent": {
+      "result": "PASS",
+      "base": "68 passed / 13 errors",
+      "branch": "68 passed / 13 errors",
+      "identical": true,
+      "pre_existing_failures": [
+        "tests/hermes_cli/test_plugins_cmd_catalog.py: 13 setup errors, isolated_python fixture: 'The requested interpreter resolved to Python 3.11.14, which is incompatible with the project's Python requirement: ==3.14.*' (environment: mandated venv is 3.11)"
+      ],
+      "label": "OBSERVED"
+    },
+    "merge_tree": {
+      "result": "PASS",
+      "tree": "3a915075078775928dd352fa2fe77bd200bdd714",
+      "main": "234badf4012af380d23c91eae55d045a69c69ffb"
+    },
+    "workflow_push_matches": {
+      "result": "PASS",
+      "value": 0,
+      "push_workflows_scanned": 11
+    },
+    "docs_url": {
+      "result": "PASS",
+      "observed": "https://github.com/kvnloo/pii/blob/<pin>/README.md -> HTTP 200, anchor agent-harness-plugins present; subdir README -> 404, hence readme: false"
+    },
+    "upstream_dedupe": {
+      "result": "PASS",
+      "observed": "gh search prs 'pii plugin-catalog' -> none; 'paw-pii' -> only #102924 (kvnloo, closed by author 2026-09-30, obsolete plugin_index.json route); 'programasweights' -> none; issue #102922 (kvnloo) open"
+    }
+  },
+  "artifacts": [
+    {
+      "path": "raw/structural_base.txt",
+      "sha256": "740adc05e8588a846ed6243ca7ff88d8979a89363ee25754dc10b20befb8a993",
+      "public": false
+    },
+    {
+      "path": "raw/structural_branch.txt",
+      "sha256": "860383ff1a2cfd0627fca2e09eed9845bc5cf56c9c8f126f8808b4ab60d3c1ea",
+      "public": false
+    },
+    {
+      "path": "raw/structural_branch_entry.json",
+      "sha256": "ef7967446ec590d47dcb8f8299c10896c08971f72aa82affdc7725728f1d93c3",
+      "public": false
+    },
+    {
+      "path": "raw/loader_base_v234.json",
+      "sha256": "2455ee57205dd342ebb75d6fc97a109fe5efb5a59d59d1402b1881877a1b9d9a",
+      "public": false
+    },
+    {
+      "path": "raw/loader_branch_v234.json",
+      "sha256": "11fd8b817b4c74339a93b0719ab150009420c0c7346e66bd83f7937da2b9a1be",
+      "public": false
+    },
+    {
+      "path": "raw/extract_branch.txt",
+      "sha256": "3317fd4463a30dc517e123cac6f287a653ece8bbb859f90d82039dc2accb06df",
+      "public": false
+    },
+    {
+      "path": "raw/adjacent_base_v234.txt",
+      "sha256": "2598f0b66208087bd1c18df572db2a7bb8254d11f44d6d1cf56b98985d9b7a3b",
+      "public": false
+    },
+    {
+      "path": "raw/adjacent_branch_v234.txt",
+      "sha256": "7b3a43e04d1132832944d835a32a75c36b2407f02d85fe5008d7e3b970141469",
+      "public": false
+    },
+    {
+      "path": "raw/adjacent_base.txt",
+      "sha256": "994360bad31cde3b5aef368b5d005d896ac1a493ea85e936a3e83394bbc7f650",
+      "public": false
+    },
+    {
+      "path": "raw/adjacent_branch.txt",
+      "sha256": "b671a0df1a65b6de1c9700cfd0a270dfdfff6b82af1b66414955953d606cdc6f",
+      "public": false
+    },
+    {
+      "path": "raw/nc1_structural.txt",
+      "sha256": "b0a2ba7c4a020521a0619ac116454ad279e832e3d92f829c5b618deea2e3ab09",
+      "public": false
+    },
+    {
+      "path": "raw/nc1_shipped_test.txt",
+      "sha256": "becfe3a4126366a3ca461d88881e103ef34152d3d16fe0a6a4cf48e77d111ace",
+      "public": false
+    },
+    {
+      "path": "raw/green_shipped_test_rep1.txt",
+      "sha256": "b7c2226fb4bf179705e81e4195136820809e388adff892bb0156463fd25a57b1",
+      "public": false
+    },
+    {
+      "path": "raw/green_shipped_test_rep2.txt",
+      "sha256": "ff0d33d3e70d62aede7436742612ca6faee5347086ccd71cfe8fd31888bd7f83",
+      "public": false
+    },
+    {
+      "path": "raw/green_shipped_test_rep3.txt",
+      "sha256": "442fa63e7042898bc9b4d1fcff97f5c70be42c8719a7d259e041311ae62fd8a5",
+      "public": false
+    },
+    {
+      "path": "raw/workflow_push_scan.json",
+      "sha256": "513107a3782429775de6f2fa587b79f406cc40776aab490df31bffb82461cafc",
+      "public": false
+    }
+  ],
+  "verdict": "KEEP (the entry file is correct for its pin) / not promotable at this pin (see F12 + T1 receipts)",
+  "not_tested": [
+    "plugin-catalog-ci.yml pinned-source-validate job (needs the CLI; E52)",
+    "docs site build with README fetch (readme: false)"
+  ]
+}

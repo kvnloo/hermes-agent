@@ -1,0 +1,148 @@
+{
+ "common_symbols": 36705,
+ "sampled": 4000,
+ "seed": 7,
+ "window": 2000,
+ "first_read": 200,
+ "base": {
+  "tasks": 4000,
+  "calls_mean": 2.007,
+  "calls_total": 8027,
+  "multi_window_tasks": 27,
+  "tokens_mean": 1943,
+  "tokens_p50": 2157,
+  "tokens_p90": 2669,
+  "tokens_total": 7771663,
+  "file_lines_p50": 685,
+  "def_lines_p50": 10,
+  "ambiguous_hits_mean": 1.16,
+  "exact_def_tokens_mean": 247,
+  "exact_def_tokens_total": 987210
+ },
+ "head": {
+  "tasks": 4000,
+  "calls_mean": 2.007,
+  "calls_total": 8027,
+  "multi_window_tasks": 27,
+  "tokens_mean": 1942,
+  "tokens_p50": 2156,
+  "tokens_p90": 2669,
+  "tokens_total": 7769992,
+  "file_lines_p50": 684,
+  "def_lines_p50": 10,
+  "ambiguous_hits_mean": 1.16,
+  "exact_def_tokens_mean": 247,
+  "exact_def_tokens_total": 987210
+ },
+ "head_cheaper": 1,
+ "head_costlier": 2,
+ "equal": 3997,
+ "worst_regressions": [
+  {
+   "name": "_model",
+   "base_tok": 2270,
+   "head_tok": 2644,
+   "head_file": "agent/chat_completion_nonstream.py"
+  },
+  {
+   "name": "_iteration_summary_api_messages",
+   "base_tok": 2636,
+   "head_tok": 2637,
+   "head_file": "agent/chat_completion_helpers.py"
+  },
+  {
+   "name": "_config_cdp_url",
+   "base_tok": 2375,
+   "head_tok": 2375,
+   "head_file": "tools/browser_camofox.py"
+  },
+  {
+   "name": "_close_time_checkpoint_configurable",
+   "base_tok": 2698,
+   "head_tok": 2698,
+   "head_file": "hermes_state.py"
+  },
+  {
+   "name": "_cmd_boards_set_default_workdir",
+   "base_tok": 830,
+   "head_tok": 830,
+   "head_file": "hermes_cli/kanban_boards.py"
+  },
+  {
+   "name": "_read_shared",
+   "base_tok": 2191,
+   "head_tok": 2191,
+   "head_file": "hermes_cli/windows_ssh_runtime.py"
+  },
+  {
+   "name": "CommandContext",
+   "base_tok": 2023,
+   "head_tok": 2023,
+   "head_file": "hermes_cli/slash_exec.py"
+  },
+  {
+   "name": "_close_stalled_pty_input",
+   "base_tok": 2047,
+   "head_tok": 2047,
+   "head_file": "hermes_cli/web_server_chat.py"
+  }
+ ],
+ "best_wins": [
+  {
+   "name": "_summary_part_text",
+   "base_tok": 2317,
+   "head_tok": 271,
+   "base_file": "agent/context_compressor.py",
+   "head_file": "agent/context_compressor_media.py"
+  },
+  {
+   "name": "_config_cdp_url",
+   "base_tok": 2375,
+   "head_tok": 2375,
+   "base_file": "tools/browser_camofox.py",
+   "head_file": "tools/browser_camofox.py"
+  },
+  {
+   "name": "_close_time_checkpoint_configurable",
+   "base_tok": 2698,
+   "head_tok": 2698,
+   "base_file": "hermes_state.py",
+   "head_file": "hermes_state.py"
+  },
+  {
+   "name": "_cmd_boards_set_default_workdir",
+   "base_tok": 830,
+   "head_tok": 830,
+   "base_file": "hermes_cli/kanban_boards.py",
+   "head_file": "hermes_cli/kanban_boards.py"
+  },
+  {
+   "name": "_read_shared",
+   "base_tok": 2191,
+   "head_tok": 2191,
+   "base_file": "hermes_cli/windows_ssh_runtime.py",
+   "head_file": "hermes_cli/windows_ssh_runtime.py"
+  },
+  {
+   "name": "CommandContext",
+   "base_tok": 2023,
+   "head_tok": 2023,
+   "base_file": "hermes_cli/slash_exec.py",
+   "head_file": "hermes_cli/slash_exec.py"
+  },
+  {
+   "name": "_close_stalled_pty_input",
+   "base_tok": 2047,
+   "head_tok": 2047,
+   "base_file": "hermes_cli/web_server_chat.py",
+   "head_file": "hermes_cli/web_server_chat.py"
+  },
+  {
+   "name": "OnePasswordSource",
+   "base_tok": 791,
+   "head_tok": 791,
+   "base_file": "agent/secret_sources/onepassword.py",
+   "head_file": "agent/secret_sources/onepassword.py"
+  }
+ ]
+}

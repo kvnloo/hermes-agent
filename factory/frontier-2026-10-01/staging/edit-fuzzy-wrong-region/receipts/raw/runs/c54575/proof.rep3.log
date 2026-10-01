@@ -1,0 +1,309 @@
+# arm=c54575 rep=3 sabotage=none head=01bf8d379e fuzzy_match.py sha256[:16]=fc55b3d0563cee1e
+# files: tests/tools/test_fuzzy_match_wrong_region.py tests/tools/test_fuzzy_match.py tests/tools/test_file_tools_live.py
+▶ not activated — using HERMES_PYTHON: <venv-python>
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 3 test files (~79 tests) under ['tests/tools/test_fuzzy_match_wrong_region.py', 'tests/tools/test_fuzzy_match.py', 'tests/tools/test_file_tools_live.py']; running with -j 2
+[ 20.3% |    16/~79 | ✓16 | ✗ 0] ✓ tests/tools/test_file_tools_live.py (16✓, 6.3s)
+[ 97.5% |    77/~79 | ✓76 | ✗ 1] ✗ tests/tools/test_fuzzy_match.py (60✓ 1✗, 7.3s)
+
+  ╔╍ Failed: tests/tools/test_fuzzy_match.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ ...........................................................F.            [100%]
+  ║ =================================== FAILURES ===================================
+  ║ ___ TestEdittoolShapeSingleLineFailLoud.test_wrong_token_single_line_refused ___
+  ║ 
+  ║ self = <tests.tools.test_fuzzy_match.TestEdittoolShapeSingleLineFailLoud object at 0x7f9424b236d0>
+  ║ 
+  ║     def test_wrong_token_single_line_refused(self):
+  ║         from tools.fuzzy_match import fuzzy_find_and_replace
+  ║     
+  ║         content = "def f(v):\n    return value.strip()\n"
+  ║         new, count, strategy, err = fuzzy_find_and_replace(
+  ║             content, "    return value.trim()", "    return value.fixed()"
+  ║         )
+  ║ >       assert count == 0, f"wrong anchor applied via {strategy}: {new!r}"
+  ║ E       AssertionError: wrong anchor applied via context_aware: 'def f(v):\n    return value.fixed()\n'
+  ║ E       assert 1 == 0
+  ║ 
+  ║ tests/tools/test_fuzzy_match.py:832: AssertionError
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/tools/test_fuzzy_match.py::TestEdittoolShapeSingleLineFailLoud::test_wrong_token_single_line_refused
+  ║ 1 failed, 60 passed in 3.02s
+  ║
+  ║  Repro: python -m pytest tests/tools/test_fuzzy_match.py -q -m not live and not integration
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+[100.0% |    79/~79 | ✓80 | ✗ 7] ✗ tests/tools/test_fuzzy_match_wrong_region.py (4✓ 6✗, 12.6s)
+
+  ╔╍ Failed: tests/tools/test_fuzzy_match_wrong_region.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║     def test_wrong_region_edit_fails_loud_and_leaves_file_untouched(ops, tmp_path, case, mode):
+  ║         content, old, new = WRONG_REGION[case]
+  ║         target = tmp_path / "target.py"
+  ║         target.write_text(content, encoding="utf-8")
+  ║         _, count, strategy, err = fuzzy_find_and_replace(content, old, new)
+  ║     
+  ║         if mode == "replace":
+  ║             result = ops.patch_replace(str(target), old, new)
+  ║         else:
+  ║             result = ops.patch_v4a(_v4a(str(target), old, new))
+  ║     
+  ║         on_disk = target.read_text(encoding="utf-8")
+  ║ >       assert result.error is not None and not result.success and on_disk == content, (
+  ║             f"wrong region replaced via {strategy}: count={count}, error={err!r}\n{on_disk}")
+  ║ E       AssertionError: wrong region replaced via context_aware: count=1, error=None
+  ║ E         def f(v):
+  ║ E             return value.fixed()
+  ║ E         
+  ║ E       assert (None is not None)
+  ║ E        +  where None = PatchResult(success=True, diff='--- a/<pytest-tmp>/pytest-0/test_wrong_region_...dit_fails_l7/target.py': {'status': 'ok', 'output': ''}}, lsp_diagnostics=None, error=None, no_change=False, note=None).error
+  ║ 
+  ║ tests/tools/test_fuzzy_match_wrong_region.py:89: AssertionError
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_wrong_token-replace]
+  ║ FAILED tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_wrong_token-v4a]
+  ║ FAILED tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_missing_anchor-replace]
+  ║ FAILED tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_missing_anchor-v4a]
+  ║ FAILED tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-replace]
+  ║ FAILED tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-v4a]
+  ║ 6 failed, 4 passed in 5.72s
+  ║
+  ║  Repro: python -m pytest tests/tools/test_fuzzy_match_wrong_region.py -q -m not live and not integration
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 3 files, 80 tests passed, 7 failed (100% complete) in 19.0s (2 workers) ===
+  Durations cached to test_durations.json (1 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   3
+  Total subprocess CPU-wall: 26.2s  (runner wall: 19.0s, parallelism: 2x)
+  P50: 7.28s  P90: 12.63s  P95: 12.63s  P99: 12.63s  Max: 12.63s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+     12.63s  tests/tools/test_fuzzy_match_wrong_region.py
+      7.28s  tests/tools/test_fuzzy_match.py
+      6.32s  tests/tools/test_file_tools_live.py
+
+=== Failure output ===
+
+--- tests/tools/test_fuzzy_match.py ---
+...........................................................F.            [100%]
+=================================== FAILURES ===================================
+___ TestEdittoolShapeSingleLineFailLoud.test_wrong_token_single_line_refused ___
+
+self = <tests.tools.test_fuzzy_match.TestEdittoolShapeSingleLineFailLoud object at 0x7f9424b236d0>
+
+    def test_wrong_token_single_line_refused(self):
+        from tools.fuzzy_match import fuzzy_find_and_replace
+    
+        content = "def f(v):\n    return value.strip()\n"
+        new, count, strategy, err = fuzzy_find_and_replace(
+            content, "    return value.trim()", "    return value.fixed()"
+        )
+>       assert count == 0, f"wrong anchor applied via {strategy}: {new!r}"
+E       AssertionError: wrong anchor applied via context_aware: 'def f(v):\n    return value.fixed()\n'
+E       assert 1 == 0
+
+tests/tools/test_fuzzy_match.py:832: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tools/test_fuzzy_match.py::TestEdittoolShapeSingleLineFailLoud::test_wrong_token_single_line_refused
+1 failed, 60 passed in 3.02s
+
+--- tests/tools/test_fuzzy_match_wrong_region.py ---
+..FFFFFF..                                                               [100%]
+=================================== FAILURES ===================================
+_ test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_wrong_token-replace] _
+
+ops = <tools.file_operations.ShellFileOperations object at 0x7f43fc0210d0>
+tmp_path = PosixPath('<pytest-tmp>/pytest-0/test_wrong_region_edit_fails_l2')
+case = 'single_line_wrong_token', mode = 'replace'
+
+    @pytest.mark.parametrize("mode", ["replace", "v4a"])
+    @pytest.mark.parametrize("case", list(WRONG_REGION))
+    def test_wrong_region_edit_fails_loud_and_leaves_file_untouched(ops, tmp_path, case, mode):
+        content, old, new = WRONG_REGION[case]
+        target = tmp_path / "target.py"
+        target.write_text(content, encoding="utf-8")
+        _, count, strategy, err = fuzzy_find_and_replace(content, old, new)
+    
+        if mode == "replace":
+            result = ops.patch_replace(str(target), old, new)
+        else:
+            result = ops.patch_v4a(_v4a(str(target), old, new))
+    
+        on_disk = target.read_text(encoding="utf-8")
+>       assert result.error is not None and not result.success and on_disk == content, (
+            f"wrong region replaced via {strategy}: count={count}, error={err!r}\n{on_disk}")
+E       AssertionError: wrong region replaced via context_aware: count=1, error=None
+E         def f(v):
+E             return value.fixed()
+E         
+E       assert (None is not None)
+E        +  where None = PatchResult(success=True, diff='--- a/<pytest-tmp>/pytest-0/test_wrong_region_...], files_deleted=[], lint={'status': 'ok', 'output': ''}, lsp_diagnostics=None, error=None, no_change=False, note=None).error
+
+tests/tools/test_fuzzy_match_wrong_region.py:89: AssertionError
+_ test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_wrong_token-v4a] _
+
+ops = <tools.file_operations.ShellFileOperations object at 0x7f43f8459c50>
+tmp_path = PosixPath('<pytest-tmp>/pytest-0/test_wrong_region_edit_fails_l3')
+case = 'single_line_wrong_token', mode = 'v4a'
+
+    @pytest.mark.parametrize("mode", ["replace", "v4a"])
+    @pytest.mark.parametrize("case", list(WRONG_REGION))
+    def test_wrong_region_edit_fails_loud_and_leaves_file_untouched(ops, tmp_path, case, mode):
+        content, old, new = WRONG_REGION[case]
+        target = tmp_path / "target.py"
+        target.write_text(content, encoding="utf-8")
+        _, count, strategy, err = fuzzy_find_and_replace(content, old, new)
+    
+        if mode == "replace":
+            result = ops.patch_replace(str(target), old, new)
+        else:
+            result = ops.patch_v4a(_v4a(str(target), old, new))
+    
+        on_disk = target.read_text(encoding="utf-8")
+>       assert result.error is not None and not result.success and on_disk == content, (
+            f"wrong region replaced via {strategy}: count={count}, error={err!r}\n{on_disk}")
+E       AssertionError: wrong region replaced via context_aware: count=1, error=None
+E         def f(v):
+E             return value.fixed()
+E         
+E       assert (None is not None)
+E        +  where None = PatchResult(success=True, diff='--- a/<pytest-tmp>/pytest-0/test_wrong_region_...dit_fails_l3/target.py': {'status': 'ok', 'output': ''}}, lsp_diagnostics=None, error=None, no_change=False, note=None).error
+
+tests/tools/test_fuzzy_match_wrong_region.py:89: AssertionError
+_ test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_missing_anchor-replace] _
+
+ops = <tools.file_operations.ShellFileOperations object at 0x7f43f84b0290>
+tmp_path = PosixPath('<pytest-tmp>/pytest-0/test_wrong_region_edit_fails_l4')
+case = 'single_line_missing_anchor', mode = 'replace'
+
+    @pytest.mark.parametrize("mode", ["replace", "v4a"])
+    @pytest.mark.parametrize("case", list(WRONG_REGION))
+    def test_wrong_region_edit_fails_loud_and_leaves_file_untouched(ops, tmp_path, case, mode):
+        content, old, new = WRONG_REGION[case]
+        target = tmp_path / "target.py"
+        target.write_text(content, encoding="utf-8")
+        _, count, strategy, err = fuzzy_find_and_replace(content, old, new)
+    
+        if mode == "replace":
+            result = ops.patch_replace(str(target), old, new)
+        else:
+            result = ops.patch_v4a(_v4a(str(target), old, new))
+    
+        on_disk = target.read_text(encoding="utf-8")
+>       assert result.error is not None and not result.success and on_disk == content, (
+            f"wrong region replaced via {strategy}: count={count}, error={err!r}\n{on_disk}")
+E       AssertionError: wrong region replaced via context_aware: count=1, error=None
+E         def normalize(value):
+E             return value.casefold()
+E         
+E       assert (None is not None)
+E        +  where None = PatchResult(success=True, diff='--- a/<pytest-tmp>/pytest-0/test_wrong_region_...], files_deleted=[], lint={'status': 'ok', 'output': ''}, lsp_diagnostics=None, error=None, no_change=False, note=None).error
+
+tests/tools/test_fuzzy_match_wrong_region.py:89: AssertionError
+_ test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_missing_anchor-v4a] _
+
+ops = <tools.file_operations.ShellFileOperations object at 0x7f43f99a1d90>
+tmp_path = PosixPath('<pytest-tmp>/pytest-0/test_wrong_region_edit_fails_l5')
+case = 'single_line_missing_anchor', mode = 'v4a'
+
+    @pytest.mark.parametrize("mode", ["replace", "v4a"])
+    @pytest.mark.parametrize("case", list(WRONG_REGION))
+    def test_wrong_region_edit_fails_loud_and_leaves_file_untouched(ops, tmp_path, case, mode):
+        content, old, new = WRONG_REGION[case]
+        target = tmp_path / "target.py"
+        target.write_text(content, encoding="utf-8")
+        _, count, strategy, err = fuzzy_find_and_replace(content, old, new)
+    
+        if mode == "replace":
+            result = ops.patch_replace(str(target), old, new)
+        else:
+            result = ops.patch_v4a(_v4a(str(target), old, new))
+    
+        on_disk = target.read_text(encoding="utf-8")
+>       assert result.error is not None and not result.success and on_disk == content, (
+            f"wrong region replaced via {strategy}: count={count}, error={err!r}\n{on_disk}")
+E       AssertionError: wrong region replaced via context_aware: count=1, error=None
+E         def normalize(value):
+E             return value.casefold()
+E         
+E       assert (None is not None)
+E        +  where None = PatchResult(success=True, diff='--- a/<pytest-tmp>/pytest-0/test_wrong_region_...dit_fails_l5/target.py': {'status': 'ok', 'output': ''}}, lsp_diagnostics=None, error=None, no_change=False, note=None).error
+
+tests/tools/test_fuzzy_match_wrong_region.py:89: AssertionError
+_ test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-replace] _
+
+ops = <tools.file_operations.ShellFileOperations object at 0x7f43f84e1d90>
+tmp_path = PosixPath('<pytest-tmp>/pytest-0/test_wrong_region_edit_fails_l6')
+case = 'single_line_trailing_newline', mode = 'replace'
+
+    @pytest.mark.parametrize("mode", ["replace", "v4a"])
+    @pytest.mark.parametrize("case", list(WRONG_REGION))
+    def test_wrong_region_edit_fails_loud_and_leaves_file_untouched(ops, tmp_path, case, mode):
+        content, old, new = WRONG_REGION[case]
+        target = tmp_path / "target.py"
+        target.write_text(content, encoding="utf-8")
+        _, count, strategy, err = fuzzy_find_and_replace(content, old, new)
+    
+        if mode == "replace":
+            result = ops.patch_replace(str(target), old, new)
+        else:
+            result = ops.patch_v4a(_v4a(str(target), old, new))
+    
+        on_disk = target.read_text(encoding="utf-8")
+>       assert result.error is not None and not result.success and on_disk == content, (
+            f"wrong region replaced via {strategy}: count={count}, error={err!r}\n{on_disk}")
+E       AssertionError: wrong region replaced via context_aware: count=1, error=None
+E         def f(v):
+E             return value.fixed()
+E         
+E       assert (None is not None)
+E        +  where None = PatchResult(success=True, diff='--- a/<pytest-tmp>/pytest-0/test_wrong_region_...], files_deleted=[], lint={'status': 'ok', 'output': ''}, lsp_diagnostics=None, error=None, no_change=False, note=None).error
+
+tests/tools/test_fuzzy_match_wrong_region.py:89: AssertionError
+_ test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-v4a] _
+
+ops = <tools.file_operations.ShellFileOperations object at 0x7f43f8432b90>
+tmp_path = PosixPath('<pytest-tmp>/pytest-0/test_wrong_region_edit_fails_l7')
+case = 'single_line_trailing_newline', mode = 'v4a'
+
+    @pytest.mark.parametrize("mode", ["replace", "v4a"])
+    @pytest.mark.parametrize("case", list(WRONG_REGION))
+    def test_wrong_region_edit_fails_loud_and_leaves_file_untouched(ops, tmp_path, case, mode):
+        content, old, new = WRONG_REGION[case]
+        target = tmp_path / "target.py"
+        target.write_text(content, encoding="utf-8")
+        _, count, strategy, err = fuzzy_find_and_replace(content, old, new)
+    
+        if mode == "replace":
+            result = ops.patch_replace(str(target), old, new)
+        else:
+            result = ops.patch_v4a(_v4a(str(target), old, new))
+    
+        on_disk = target.read_text(encoding="utf-8")
+>       assert result.error is not None and not result.success and on_disk == content, (
+            f"wrong region replaced via {strategy}: count={count}, error={err!r}\n{on_disk}")
+E       AssertionError: wrong region replaced via context_aware: count=1, error=None
+E         def f(v):
+E             return value.fixed()
+E         
+E       assert (None is not None)
+E        +  where None = PatchResult(success=True, diff='--- a/<pytest-tmp>/pytest-0/test_wrong_region_...dit_fails_l7/target.py': {'status': 'ok', 'output': ''}}, lsp_diagnostics=None, error=None, no_change=False, note=None).error
+
+tests/tools/test_fuzzy_match_wrong_region.py:89: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_wrong_token-replace]
+FAILED tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_wrong_token-v4a]
+FAILED tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_missing_anchor-replace]
+FAILED tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_missing_anchor-v4a]
+FAILED tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-replace]
+FAILED tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-v4a]
+6 failed, 4 passed in 5.72s
+
+=== 2 files with test failures (7 tests failed) ===
+  tests/tools/test_fuzzy_match.py  (1 test failed)
+  tests/tools/test_fuzzy_match_wrong_region.py  (6 tests failed)
+# rc=1

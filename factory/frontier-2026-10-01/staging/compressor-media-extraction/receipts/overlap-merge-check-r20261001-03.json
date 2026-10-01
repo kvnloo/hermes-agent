@@ -1,0 +1,346 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compressor-media-extraction",
+ "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+ "head_revision": "c5e8be14b43bf75bcc2e4e8d95f2d4810a7e2779",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#80636",
+  "NousResearch/hermes-agent#78645"
+ ],
+ "provenance": "self",
+ "privacy": "public-aggregate",
+ "cost_usd": 0.0,
+ "ai_assistance": "Claude Code (Opus 5.5) ran the census and wrote this receipt",
+ "created_at": "2026-10-01T10:20:00-05:00",
+ "spec": {
+  "path": null,
+  "prereg_commit": null,
+  "note": "not pre-registered on claude/ledger (no ledger writes in this run)"
+ },
+ "env": {
+  "host": "<local-host>",
+  "python": "system python3 (stdlib + regen/extract_media.py for the statement segment rule)",
+  "sandbox": "none; GitHub GraphQL/REST reads only (gh api). No local git object store was read or written by the census.",
+  "paths": "no local paths recorded"
+ },
+ "id": "overlap/r20261001-03",
+ "experiment": "ownership + conflict surface against open upstream PRs: full census of open PRs touching agent/context_compressor.py, plus the merge-tree sample carried from overlap/r20261001-02",
+ "tier": "T0",
+ "label": "OBSERVED",
+ "supersedes": "overlap/r20261001-02",
+ "round_note": "fix round 2: the round-1 text read the 3-PR merge-tree sample as if it were every open PR touching the facade. This receipt records the total and a statement-level census of all of them. Branch unchanged (c5e8be14b4).",
+ "inputs": {
+  "main_compared": "bd394e2a4bdf55fa2f14b0f6963d343049787f90",
+  "main_note": "agent/context_compressor.py has the same blob (6da13625b3) on bd394e2a4b and on the base aea969677c",
+  "pr_listing": "GraphQL repository.pullRequests(states:OPEN) with files(first:100), streamed ASC and DESC by createdAt plus 8 createdAt windows; PRs whose file list was truncated (>100) or null re-read via REST pulls/<n>/files",
+  "label_listing": "GraphQL label(name:\"area/compression\").pullRequests(states:OPEN), for comparison with the round-1 re-verifier's 692/221",
+  "merge_tree_sample": "carried unchanged from overlap/r20261001-02 (main aea969677c): #129147, #118847, #119347, #80636 and its four stacked PRs"
+ },
+ "command": "python3 regen/overlap_scan.py ASC|DESC <pages> <out.jsonl> and regen/overlap_scan_segment.py <start> <end> <out.jsonl> (GraphQL listing); OVERLAP_MAIN=bd394e2a4bdf55fa2f14b0f6963d343049787f90 python3 regen/overlap_census.py regen census.json <jsonl...>; python3 regen/overlap_summary.py census.json. Per PR: rebuild the facade pre-image by reverse-applying the PR's own patch to its head blob (merge-base blob when GitHub omits the patch), cut the 16 moved statements with extract_media's segment rule, and compare pre-image, head and main.",
+ "result": {
+  "census": {
+   "open_prs_listed": 33537,
+   "touching_facade": 404,
+   "touching_facade_analysed": 403,
+   "touching_facade_not_analysed": {
+    "42793": "3,000-file diff; GraphQL lists the facade, but REST pulls/42793/files came back empty"
+   },
+   "touching_facade_in_area_compression_label": 223,
+   "touching_facade_without_that_label": 181,
+   "area_compression_open_prs": 694,
+   "adds_media_module": [
+    80636,
+    80644,
+    80645,
+    81074,
+    81181
+   ],
+   "A_edit_a_moved_statement": {
+    "count": 25,
+    "outside_80636_stack": 20,
+    "prs": [
+     22200,
+     22209,
+     32761,
+     56911,
+     80636,
+     80644,
+     80645,
+     81074,
+     81181,
+     82129,
+     90771,
+     90888,
+     90910,
+     93119,
+     94074,
+     96359,
+     100467,
+     101882,
+     106867,
+     107589,
+     110103,
+     110342,
+     112391,
+     114731,
+     120375
+    ],
+    "by_kind": {
+     "stack": [
+      80636,
+      80644,
+      80645,
+      81074,
+      81181
+     ],
+     "stale-base mega-diff": [
+      22200,
+      22209,
+      32761,
+      56911,
+      82129,
+      90771,
+      90888,
+      93119,
+      94074,
+      96359,
+      100467,
+      101882,
+      110342,
+      112391,
+      114731,
+      120375
+     ],
+     "focused": [
+      90910,
+      106867,
+      107589,
+      110103
+     ]
+    },
+    "mergeable_today": [
+     90888,
+     106867,
+     107589,
+     110342,
+     112391
+    ]
+   },
+   "A_note": "head text of a moved statement differs from both the PR's own pre-image and main; such a change would have to be ported to agent/context_compressor_media.py (a merge would conflict or re-add the statement to the facade)",
+   "carry_main_text_only": {
+    "count": 0,
+    "prs": [],
+    "note": "the PR's diff touches a moved statement only because its base predates main and its head already has main's exact text; nothing to port"
+   },
+   "B_new_facade_use_of_non_imported_moved_name": {
+    "count": 4,
+    "prs": {
+     "82129": [
+      "_image_part_label"
+     ],
+     "85481": [
+      "_image_part_label"
+     ],
+     "90771": [
+      "_image_part_label"
+     ],
+     "104914": [
+      "_MAX_KEEP_TOOL_IMAGES",
+      "_content_has_images",
+      "_strip_images_from_content"
+     ]
+    }
+   },
+   "B_note": "the branch's facade imports back only _is_image_part, _retire_stale_tool_result_images, _rewritten, _strip_historical_media, _strip_images_from_tool_msg, _summary_part_text; a new facade use of any other moved name would be a NameError after a textually clean merge",
+   "C_new_old_path_reference_in_other_files": {
+    "count": 9,
+    "prs": [
+     80636,
+     80644,
+     80645,
+     81074,
+     81181,
+     104914,
+     107589,
+     110103,
+     120403
+    ],
+    "would_fail_to_import": [
+     80636,
+     80644,
+     80645,
+     81074,
+     81181,
+     104914,
+     107589
+    ]
+   },
+   "C_note": "references not on main; names the facade imports back still resolve (only the old_path_zero gate flags them)",
+   "A_or_B_or_C": {
+    "count": 28,
+    "outside_80636_stack": [
+     22200,
+     22209,
+     32761,
+     56911,
+     82129,
+     85481,
+     90771,
+     90888,
+     90910,
+     93119,
+     94074,
+     96359,
+     100467,
+     101882,
+     104914,
+     106867,
+     107589,
+     110103,
+     110342,
+     112391,
+     114731,
+     120375,
+     120403
+    ],
+    "focused_outside_stack": [
+     85481,
+     90910,
+     104914,
+     106867,
+     107589,
+     110103,
+     120403
+    ],
+    "focused_outside_stack_mergeable_today": [
+     106867,
+     107589,
+     120403
+    ]
+   },
+   "github_mergeable_checked_at": "2026-10-01T10:14:54-05:00 (GraphQL PullRequest.mergeable)",
+   "anomaly": {
+    "107532": "head agent/context_compressor.py is a 90,061-byte single line of mojibake (the PR deletes all 5,753 lines); GitHub reports it MERGEABLE"
+   },
+   "not_analysable": {
+    "107532": "head unparseable: invalid non-printable character U+E78A (<unknown>, line 1)",
+    "126874": "file list unavailable: GitHub HTTP 422 (cannot generate the diff) (0 changed files; does not touch the facade)"
+   },
+   "other_file_scan_skipped_mega_diffs": [
+    3418,
+    16633,
+    22209,
+    26527,
+    30199,
+    32761,
+    32994,
+    56911,
+    62078,
+    73720,
+    73726,
+    90771,
+    90888,
+    96359,
+    100467,
+    101882,
+    120375
+   ],
+   "pre_image_method": {
+    "reverse-patch": 385,
+    "merge-base": 14,
+    "none": 4
+   }
+  },
+  "merge_tree_sample_carried_from_r02": {
+   "NousResearch/hermes-agent#80636": {
+    "author": "andrexibiza",
+    "state": "OPEN",
+    "behind_main_commits": 25973,
+    "merge_tree_vs_main": "CONFLICT agent/context_compressor.py (1 hunk); media commit alone: CONFLICT",
+    "merge_tree_vs_branch": "CONFLICT agent/context_compressor.py (1) + add/add agent/context_compressor_media.py (1)",
+    "media_module_blob": "ffd4d23465",
+    "seam_test_blob": "bc9aaa9691"
+   },
+   "stack_carrying_5aa1746a28": {
+    "80645": {
+     "author": "andrexibiza",
+     "state": "OPEN",
+     "head": "2ace2a70c00ac818d0759fec406f3735a6f6d8f5",
+     "contains_5aa1746a28": true,
+     "behind_main_commits": 25973,
+     "media_module_blob": "ffd4d23465 (identical to 5aa1746a28; no later commit touches it)",
+     "context_compressor_conflict_hunks_vs_main": 1,
+     "vs_branch": "1 + add/add agent/context_compressor_media.py (1)"
+    },
+    "80644": {
+     "author": "andrexibiza",
+     "state": "OPEN",
+     "head": "c871197b77b4fbe6cf0059a74161322b5dc02ad2",
+     "contains_5aa1746a28": true,
+     "behind_main_commits": 25973,
+     "media_module_blob": "ffd4d23465 (identical to 5aa1746a28; no later commit touches it)",
+     "context_compressor_conflict_hunks_vs_main": 3,
+     "vs_branch": "3 + add/add agent/context_compressor_media.py (1)"
+    },
+    "81074": {
+     "author": "andrexibiza",
+     "state": "OPEN",
+     "head": "4effdf33967f49f19069c00c5b5348fd8c10539b",
+     "contains_5aa1746a28": true,
+     "behind_main_commits": 25973,
+     "media_module_blob": "ffd4d23465 (identical to 5aa1746a28; no later commit touches it)",
+     "context_compressor_conflict_hunks_vs_main": 5,
+     "vs_branch": "5 + add/add agent/context_compressor_media.py (1)"
+    },
+    "81181": {
+     "author": "andrexibiza",
+     "state": "OPEN",
+     "head": "e40f2db1402cb629dedcff57e656dee439bb51c3",
+     "contains_5aa1746a28": true,
+     "behind_main_commits": 25973,
+     "media_module_blob": "ffd4d23465 (identical to 5aa1746a28; no later commit touches it)",
+     "context_compressor_conflict_hunks_vs_main": 9,
+     "vs_branch": "9 + add/add agent/context_compressor_media.py (1)"
+    }
+   },
+   "not_adding_the_module": [
+    "#80626",
+    "#80634",
+    "#81243"
+   ],
+   "NousResearch/hermes-agent#129147": {
+    "main_plus_pr": "clean",
+    "staging_plus_pr": "clean"
+   },
+   "NousResearch/hermes-agent#118847": {
+    "main_plus_pr_conflict_hunks": 1,
+    "staging_plus_pr_conflict_hunks": 1
+   },
+   "NousResearch/hermes-agent#119347": {
+    "main_plus_pr_conflict_hunks": 3,
+    "staging_plus_pr_conflict_hunks": 3
+   },
+   "branch_onto_main": "clean"
+  }
+ },
+ "reading": "The 3-PR merge-tree sample (#129147 clean; #118847 and #119347 already conflicting, no new hunk) is a sample: 404 of 33,537 open PRs touch agent/context_compressor.py (223 of the 694 open area/compression PRs, 181 without that label). Statement-level census of the 403 analysable ones against main bd394e2a4b: 25 edit one of the 16 moved statements (5 are #80636's stack; 16 are stale-base diffs of 619-3,000 files with unrelated titles, 13 of them already CONFLICTING with main; 4 are focused media edits: #90910, #106867, #107589, #110103). 4 add a facade use of a moved name the branch's facade does not import (#82129, #85481, #90771, #104914). 9 add an old-path reference elsewhere (the 5 stack seam tests; #104914 and #107589 would fail to import; #110103 and #120403 still resolve through the facade's import). Focused PRs outside the stack that would need a port or an import fix: #85481, #90910, #104914, #106867, #107589, #110103, #120403; GitHub reports #106867, #107589 and #120403 MERGEABLE with main today. Ownership is unchanged: route salvage-support.",
+ "raw": [
+  {
+   "path": "raw/r02/overlap-merge-tree.txt",
+   "sha256": "0b7c38f7afd08f0c16049acdb17910997a10b709286ea2b801e90ce58ca825d1",
+   "source_sha256": "0b7c38f7afd08f0c16049acdb17910997a10b709286ea2b801e90ce58ca825d1"
+  },
+  {
+   "path": "raw/r03/overlap-census-all-open.json",
+   "sha256": "e31de9893776c4a529439e756b7f1436b75dc98a362f7418922f703a589e10dc",
+   "source_sha256": "e31de9893776c4a529439e756b7f1436b75dc98a362f7418922f703a589e10dc"
+  },
+  {
+   "path": "raw/r03/overlap-census-area-compression.json",
+   "sha256": "7007aa477013d373e73a642ccfea5981eddd1128f9dc66359a0279b9139d43eb",
+   "source_sha256": "7007aa477013d373e73a642ccfea5981eddd1128f9dc66359a0279b9139d43eb"
+  }
+ ],
+ "verdict": "ROUTE: salvage-support (unchanged). The facade is busy: the merge-tree sample of 3 non-stack PRs is a sample, not the overlap surface."
+}

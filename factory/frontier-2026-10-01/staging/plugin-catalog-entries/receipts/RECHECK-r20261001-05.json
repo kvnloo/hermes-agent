@@ -1,0 +1,306 @@
+{
+  "schema": "xf.receipt.v1",
+  "staging": "plugin-catalog-entries",
+  "provenance": "self",
+  "id": "RECHECK/r20261001-05",
+  "tier": "T0 (round-4 fix: privacy completeness of the declared publishable set, git and gh read-only rechecks on the declared main; no code run from the plugin, no hermes code run, no model download)",
+  "question": "Does the declared publishable set contain anything private that the round-3 scan missed, and once it is removed and the scope narrowed, does a scan that walks every file come back clean? Does the declared main still hold?",
+  "origin_refs": [
+    "NousResearch/hermes-agent#102922",
+    "NousResearch/hermes-agent#95186",
+    "NousResearch/hermes-agent#129692",
+    "NousResearch/hermes-agent#63917",
+    "kvnloo/hermes-agent#404"
+  ],
+  "policy_revision": {
+    "factory": "FACTORY.md section 10 (STAGING.md is published to the ledger); section 11.1 P7 (merge-tree clean on current main) and P8 (nothing private is public)"
+  },
+  "ai_assistance": "Claude Code (Opus 5.5) ran the reads, checks and deletion, wrote tools/privacy_scan_r4.py and wrote this receipt; disclosed per repository policy",
+  "privacy": "public aggregate (no host paths, no hostname; artifact paths are relative to the staging directory; raw/r4_* show the scratch mirror as <bare>; the .pyc's embedded path is described by shape only; GitHub logins only)",
+  "resource_usage": {
+    "api_cost_usd": 0.0,
+    "gpu_s": 0,
+    "tokens": 0,
+    "wall_s": null,
+    "wall_s_label": "NOT_MEASURED"
+  },
+  "base_revision": {
+    "declared_base": "234badf4012af380d23c91eae55d045a69c69ffb",
+    "branch_head": "98c305b3ec8d03693f4dc94bade69035cb15ff7d",
+    "branch_parent": "234badf4012af380d23c91eae55d045a69c69ffb",
+    "declared_main": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+    "declared_main_note": "unchanged from round 3; upstream main by git ls-remote at 2026-10-01T16:46:36Z is still this SHA",
+    "invalidate_on_changed_since": false,
+    "invalidate_on_note": "main is the same SHA that RECHECK/r20261001-04 measured, so its invalidate_on, adjacent-file and blob checks carry over unchanged"
+  },
+  "measurements": [
+    {
+      "name": "pycache_in_declared_publishable_set",
+      "label": "OBSERVED",
+      "source": "raw/r4_pycache_removal.txt",
+      "value": {
+        "file": "tools/__pycache__/privacy_scan.cpython-314.pyc",
+        "size_bytes": 5384,
+        "sha256": "0af2b07ae12bfc4607a7baa26bfc458a148255d60a2071eaedfcaa9b5ff11a32",
+        "mtime_utc": "2026-10-01T16:21:49Z",
+        "compiled_from": "tools/privacy_scan.py (header source size 2801 bytes and source mtime equal to the file's; magic equals CPython 3.14)",
+        "co_filename": "absolute host path, equal to <staging>/tools/privacy_scan.py (119 characters; not printed)",
+        "pinned_by_any_receipt": false,
+        "in_declared_set_round3": "yes: public_scope said 'tools/ except sandbox.sh'",
+        "created_by": "the round-3 run of tools/privacy_scan_r3.py (importlib exec_module of privacy_scan.py without -B): written at 16:21:49Z, after privacy_scan_r3.py (16:21:22Z) and before raw/r3_privacy_scan.txt (16:23:07Z)",
+        "why_round3_missed_it": "privacy_scan.publishable() lists tools/ with iterdir() plus is_file(), which skips the __pycache__ directory"
+      }
+    },
+    {
+      "name": "round3_scan_coverage",
+      "label": "OBSERVED",
+      "source": "raw/r3_privacy_scan.txt, raw/r4_privacy_scan_before.txt",
+      "value": {
+        "declared_set_files_round3": 32,
+        "scanned_round3": 31,
+        "missed": [
+          "tools/__pycache__/privacy_scan.cpython-314.pyc"
+        ]
+      },
+      "note": "corrects the reading of RECHECK/r20261001-04 'privacy_scan_publishable_set' (files_scanned 31, files_flagged 0) and of the manifest's 'Privacy scan of the publishable set in round 3: 0 host paths': true of the 31 files scanned, not of the whole declared set. RECHECK/r20261001-04 stays byte-identical because STAGING.md pins it"
+    },
+    {
+      "name": "privacy_scan_r4_before_removal",
+      "label": "OBSERVED",
+      "source": "raw/r4_privacy_scan_before.txt (tools/privacy_scan_r4.py, python3 -B, .pyc present)",
+      "value": {
+        "rc": 1,
+        "result": "FAIL",
+        "publishable": 32,
+        "unclassified": 1,
+        "binary": 1,
+        "bytecode_entries": 2,
+        "files_flagged": 1,
+        "flagged_file": "tools/__pycache__/privacy_scan.cpython-314.pyc: abs_path 1, hostname 0, private terms 4; binary, 2 absolute-path tokens in its bytes"
+      },
+      "role": "negative control for the round-4 scanner: it catches the file round 3 missed"
+    },
+    {
+      "name": "pycache_removed",
+      "label": "OBSERVED",
+      "source": "raw/r4_pycache_removal.txt",
+      "value": {
+        "command": "rm -r tools/__pycache__",
+        "exists_after": false,
+        "bytecode_left_outside_run": 0
+      }
+    },
+    {
+      "name": "privacy_scan_r4_after_removal",
+      "label": "OBSERVED",
+      "source": "raw/r4_privacy_scan.txt (tools/privacy_scan_r4.py --out raw/r4_privacy_scan.txt, python3 -B, PYTHONDONTWRITEBYTECODE=1)",
+      "scope": "publishable (narrowed): STAGING.md, body.md, *.patch, receipts/*.json, raw/r<round>_*, tools/*.py (direct children); local-only: run/ (not walked), other raw/ files (r20261001-01 outputs), tools/sandbox.sh; anything else unclassified",
+      "value": {
+        "rc": 0,
+        "publishable": 38,
+        "scanned_by_privacy_scan_checks": 37,
+        "output_file_self_checked": 1,
+        "unclassified": 0,
+        "binary": 0,
+        "bytecode_entries": 0,
+        "files_flagged": 0,
+        "summary": "0 of 38 publishable files flagged",
+        "local_terms": 16,
+        "local_terms_note": "a new local list, not the round-3 list (which was not kept); never printed or published"
+      },
+      "timing_note": "run after every other round-4 edit; afterwards sha256 digests were written into this receipt and into STAGING.md [evidence], the History timestamp was set, and one phrase in STAGING.md [evidence].receipt_privacy gained raw/r4_*; a post-check of those final bytes with the same tool (kept local, not an artifact) again gave 0 of 38 flagged, 0 unclassified, 0 binary, 0 bytecode"
+    },
+    {
+      "name": "no_bytecode_written_by_round4",
+      "label": "OBSERVED",
+      "source": "find over the staging directory outside run/ after the final scan",
+      "value": 0
+    },
+    {
+      "name": "declared_main_and_merge",
+      "label": "OBSERVED",
+      "source": "raw/r4_git_recheck.txt",
+      "measured_at": "2026-10-01T16:46:36Z",
+      "value": {
+        "upstream_main_ls_remote": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+        "branch_head": "98c305b3ec8d03693f4dc94bade69035cb15ff7d",
+        "branch_parent": "234badf4012af380d23c91eae55d045a69c69ffb",
+        "branch_tree": "3a915075078775928dd352fa2fe77bd200bdd714",
+        "branch_diff": "plugin-catalog/paw-pii.yaml, 1 file, +20",
+        "base_is_ancestor_of_main": true,
+        "commits_after_base": 65,
+        "merge_tree": "clean",
+        "merge_tree_tree": "60459843c290c8d7062e5d8af03603607eedbe51",
+        "paw_pii_yaml_on_main": "absent",
+        "entry_files_on_main": 348
+      },
+      "p7_reading": "P7 rests on merge-tree: the parent is 65 commits behind the declared main, and the merge-tree result equals main plus the entry, the tree round 3 tested green; v2 must be built directly on fresh main"
+    },
+    {
+      "name": "fork_refs",
+      "label": "OBSERVED",
+      "source": "raw/r4_git_recheck.txt",
+      "value": {
+        "legacy_staging": "28790e597cdd497aef31f2c16327f8b347669354",
+        "other_staged_refs": 5,
+        "staged/plugin-catalog-entries": "absent (name free)"
+      }
+    },
+    {
+      "name": "cited_pr_and_issue_states",
+      "label": "OBSERVED",
+      "source": "raw/r4_gh_reads.json",
+      "fetched_at": "2026-10-01T16:41:04Z",
+      "value": {
+        "ours": {
+          "102922": "OPEN",
+          "102924": "CLOSED",
+          "87495": "CLOSED",
+          "98105": "CLOSED"
+        },
+        "adjacent_open": {
+          "63917": "OPEN",
+          "129692": "OPEN",
+          "95186": "OPEN",
+          "102049": "OPEN",
+          "14624": "OPEN",
+          "17472": "OPEN"
+        },
+        "merged_overlap": {
+          "122574": "CLOSED (merged)",
+          "1542": "CLOSED (merged)"
+        },
+        "not_listed_examples": "all 11 OPEN",
+        "claimant_lanes": "all 5 OPEN",
+        "fork_hard_hold": {
+          "69": "OPEN",
+          "70": "OPEN"
+        }
+      },
+      "issue_102922_comment_authors": [
+        "kvnloo"
+      ],
+      "unchanged_since_round3": true
+    },
+    {
+      "name": "ownership_pii_search_open",
+      "label": "OBSERVED",
+      "source": "raw/r4_gh_reads.json",
+      "value": 111,
+      "new_since_round2": 0,
+      "gone_since_round2": 0,
+      "other_searches_zero_hits": [
+        "paw-pii",
+        "programasweights",
+        "pii plugin-catalog",
+        "desensitize"
+      ]
+    },
+    {
+      "name": "fork_404",
+      "label": "OBSERVED",
+      "source": "raw/r4_gh_reads.json",
+      "value": {
+        "state": "OPEN",
+        "table_rows": 39,
+        "note": "40 table lines excluding separators, minus one header line"
+      }
+    },
+    {
+      "name": "body_placeholders",
+      "label": "OBSERVED",
+      "source": "body.md (grep for <...> placeholders)",
+      "value": {
+        "distinct": 9,
+        "occurrences": 11,
+        "line_52": "now reads '<N of M pass>'"
+      }
+    },
+    {
+      "name": "tools_pinned_by",
+      "label": "OBSERVED (sha256 of each tools/ file searched in receipts/*.json)",
+      "value": {
+        "tools/catalog_probe.py": [
+          "SLICE/r20261001-01",
+          "RECHECK/r20261001-04"
+        ],
+        "tools/f12_census.py": [
+          "F12/r20261001-01"
+        ],
+        "tools/t1_probe.py": [
+          "T1-capability/r20261001-01",
+          "T1-failopen/r20261001-01"
+        ],
+        "tools/sandbox.sh": [
+          "F12/r20261001-01",
+          "T1-capability/r20261001-01",
+          "T1-failopen/r20261001-01",
+          "RECHECK/r20261001-03"
+        ],
+        "tools/wf_scan.py": [
+          "RECHECK/r20261001-02",
+          "RECHECK/r20261001-04"
+        ],
+        "tools/build_receipts.py": [
+          "RECHECK/r20261001-03"
+        ],
+        "tools/scrub_receipts.py": [
+          "RECHECK/r20261001-03"
+        ],
+        "tools/privacy_scan.py": [
+          "RECHECK/r20261001-03",
+          "RECHECK/r20261001-05"
+        ],
+        "tools/privacy_scan_r3.py": [
+          "RECHECK/r20261001-04"
+        ],
+        "tools/privacy_scan_r4.py": [
+          "RECHECK/r20261001-05"
+        ]
+      },
+      "note": "no existing tools/ file was edited in round 4"
+    },
+    {
+      "name": "worktree_slot_hygiene",
+      "label": "OBSERVED",
+      "value": "this item's fixer worktree slot held _out/ (8 scratch logs of an earlier worker) and _repo/ (an empty partial-clone bare repo: 0 refs, objects only through alternates); both removed with the slot; 0 worktrees of the scratch mirror registered there"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "raw/r4_privacy_scan_before.txt",
+      "sha256": "6af72c00cf533a9271f705e28ca3a00a4340500303e45b3ddaef0d2cf37d9428"
+    },
+    {
+      "path": "raw/r4_pycache_removal.txt",
+      "sha256": "7e6ec14e4fa70a4688ddb2ce84ec3ed1063e3fa42036277b24566137778f7f2c"
+    },
+    {
+      "path": "raw/r4_git_recheck.txt",
+      "sha256": "9fc0e6a143e5fcb0f320a6665467e1237b2a948c655bc188a4f6ed9fb7f5133b"
+    },
+    {
+      "path": "raw/r4_gh_reads.json",
+      "sha256": "f614f5134309bfcf77eb911f06ac1ab44c3cf2a0e7754e6d4a4669beb0300c0e"
+    },
+    {
+      "path": "raw/r4_privacy_scan.txt",
+      "sha256": "824ed9fbc3154484ac43a20d08e2de300f735c6d6e938cf54fc8f49d5f592634"
+    },
+    {
+      "path": "tools/privacy_scan_r4.py",
+      "sha256": "41abafafce2e9bc639e70c9ccc1cf036085693f7e0dd2e57e131cb4f114b7302"
+    },
+    {
+      "path": "tools/privacy_scan.py",
+      "sha256": "c20c602b0990f7329036e3b07b9609c9ddad2d0e582989fa94fbf233b5d5def5"
+    }
+  ],
+  "verdict": "KEEP: the declared publishable set held a host path (round-3 bytecode) that the round-3 scan skipped; it is deleted, the scope is narrowed to tools/*.py, and a scan that walks every file finds 0 of 38 publishable files flagged with no bytecode left; the declared main, merge, need and cited states are unchanged; the slice and its HOLD are unchanged",
+  "not_tested": [
+    "F14 standing regression set (not run; P5 PENDING)",
+    "no catalog, validator or test rerun in round 4: the branch and the declared main are the same SHAs RECHECK/r20261001-04 measured",
+    "E52, T2 (unchanged from earlier receipts)",
+    "independent privacy scan (P9 privacy_scan stays PENDING)"
+  ]
+}

@@ -1,0 +1,26 @@
+▶ not activated — using HERMES_PYTHON: $PY
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 5 test files (~110 tests) under ['tests/agent/test_compression_config_defaults.py', 'tests/agent/test_proactive_tool_result_pruning.py', 'tests/tools/test_tool_result_storage.py', 'tests/tui_gateway/test_compression_config_hot_reload.py', 'tests/agent/test_tool_result_projection.py']; running with -j 2
+[  0.9% |     1/~110 | ✓2 | ✗0] ✓ tests/agent/test_compression_config_defaults.py (2✓, 1.3s)
+[  7.3% |     8/~110 | ✓9 | ✗0] ✓ tests/agent/test_proactive_tool_result_pruning.py (7✓, 2.2s)
+[ 44.5% |    49/~110 | ✓61 | ✗ 0] ✓ tests/tools/test_tool_result_storage.py (52✓, 5.0s)
+[ 85.5% |    94/~110 | ✓114 | ✗  0] ✓ tests/agent/test_tool_result_projection.py (53✓, 8.2s)
+[100.0% |   110/~110 | ✓130 | ✗  0] ✓ tests/tui_gateway/test_compression_config_hot_reload.py (16✓, 4.3s)
+
+=== Summary: 5 files, 130 tests passed, 0 failed (100% complete) in 11.6s (2 workers) ===
+  Durations cached to test_durations.json (5 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   5
+  Total subprocess CPU-wall: 20.9s  (runner wall: 11.6s, parallelism: 2x)
+  P50: 4.28s  P90: 8.16s  P95: 8.16s  P99: 8.16s  Max: 8.16s
+  <1s: 0 files (0%)  <2s: 1 files (20%)
+  Top 10 slowest:
+      8.16s  tests/agent/test_tool_result_projection.py
+      4.96s  tests/tools/test_tool_result_storage.py
+      4.28s  tests/tui_gateway/test_compression_config_hot_reload.py
+      2.25s  tests/agent/test_proactive_tool_result_pruning.py
+      1.29s  tests/agent/test_compression_config_defaults.py

@@ -1,0 +1,216 @@
+{
+ "schema": "xf.experiment.v1",
+ "tier": "T1",
+ "cost_usd": 0,
+ "label": "OBSERVED",
+ "runner_commit": "c430541d16e639ac6379f2897e888b2890a6ac6c",
+ "pass": "pass3",
+ "specs_base_main": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0 (the specs' pin; not current main)",
+ "command": "specs/run_all.sh <spec ids>  (python -m evals._factory.gate_runner run --work-order specs/<id>.wo.json --repo h.git --scratch <wt>/.xf-runs --python <hermes venv python> --out receipts/<id>.json)",
+ "id": "F11/r20261001T113459Z",
+ "question": "Does the runner reproduce RED/GREEN/negative/adjacent on 3 READY branches re-based on main 572e4f4fad, and refuse 3 known-bad candidates?",
+ "results": {
+  "known_good_four_columns_pass": "3/3",
+  "known_good_keep": "3/3",
+  "known_bad_refused": "3/3",
+  "false_ready": 0,
+  "classifications_matching_keep_vs_refused": "6/6",
+  "classifications_matching_pre_registered_gate": "5/6",
+  "known_bad_with_non_trivial_gate_discrimination": "0/3"
+ },
+ "positives": [
+  {
+   "spec": "F11-P1-fork50",
+   "rev": 1,
+   "receipt": "receipts/F11-P1-fork50.json",
+   "receipt_sha256": "397064a24b69b01d2c301b4d043425ff14f3b08ed979b25027b84abc4f8ed98a",
+   "base": "572e4f4fad",
+   "head": "4d0e03c8a1",
+   "pre_registered": "KEEP (4 columns PASS)",
+   "verdict": "KEEP",
+   "refused": false,
+   "four_columns_pass": true,
+   "gates": {
+    "validity": "PASS",
+    "red": "PASS",
+    "green": "PASS",
+    "sabotage": "PASS",
+    "adjacent": "PASS",
+    "ownership": "PASS"
+   },
+   "underlying_when_infra": {},
+   "cells": 9,
+   "infra_cells": 0,
+   "egress_blocked": 0,
+   "wall_s": 72.4,
+   "pre_registered_gate_match": true
+  },
+  {
+   "spec": "F11-P2-fork112",
+   "rev": 2,
+   "receipt": "receipts/F11-P2-fork112-r2.json",
+   "receipt_sha256": "e06236146946705ce91ac0131adb394b8adc455c3092d84b777c3a3b70b0d811",
+   "base": "572e4f4fad",
+   "head": "83190e3859",
+   "pre_registered": "KEEP (4 columns PASS)",
+   "verdict": "KEEP",
+   "refused": false,
+   "four_columns_pass": true,
+   "gates": {
+    "validity": "PASS",
+    "red": "PASS",
+    "green": "PASS",
+    "sabotage": "PASS",
+    "adjacent": "PASS",
+    "ownership": "PASS"
+   },
+   "underlying_when_infra": {},
+   "cells": 12,
+   "infra_cells": 0,
+   "egress_blocked": 0,
+   "wall_s": 297.1,
+   "pre_registered_gate_match": true
+  },
+  {
+   "spec": "F11-P3-fork47v2",
+   "rev": 1,
+   "receipt": "receipts/F11-P3-fork47v2.json",
+   "receipt_sha256": "221030aa2bc69a20033a95e24a977cf864f3ca7912ba938eb7c987469c189ac0",
+   "base": "572e4f4fad",
+   "head": "1d31fe5193",
+   "pre_registered": "KEEP (4 columns PASS)",
+   "verdict": "KEEP",
+   "refused": false,
+   "four_columns_pass": true,
+   "gates": {
+    "validity": "PASS",
+    "red": "PASS",
+    "green": "PASS",
+    "sabotage": "PASS",
+    "adjacent": "PASS",
+    "ownership": "PASS"
+   },
+   "underlying_when_infra": {},
+   "cells": 10,
+   "infra_cells": 0,
+   "egress_blocked": 0,
+   "wall_s": 93.1,
+   "pre_registered_gate_match": true
+  }
+ ],
+ "negatives": [
+  {
+   "spec": "F11-N1-noop-revert",
+   "rev": 1,
+   "receipt": "receipts/F11-N1-noop-revert.json",
+   "receipt_sha256": "7caa060b69ae45e76d471340e49f0f45cecf30f6e415180df92fef7aea445b79",
+   "base": "658e6c885d",
+   "head": "354d499511",
+   "pre_registered": "refused at RED (no_repro_on_base)",
+   "verdict": "INFRA",
+   "refused": true,
+   "four_columns_pass": false,
+   "gates": {
+    "validity": "PASS",
+    "red": "INFRA",
+    "green": "INFRA",
+    "sabotage": "N_A",
+    "adjacent": "N_A",
+    "ownership": "PENDING"
+   },
+   "underlying_when_infra": {
+    "red": "FAIL",
+    "green": "PASS"
+   },
+   "cells": 6,
+   "infra_cells": 6,
+   "egress_blocked": 6,
+   "wall_s": 119.6,
+   "pre_registered_gate_match": false,
+   "discrimination": "none: refused only as INFRA (every cell's test resolves openrouter.ai, see FINDING); the pre-registered refusal was RED no_repro_on_base, which the guard-tainted cells cannot certify"
+  },
+  {
+   "spec": "F11-N2-review-fix",
+   "rev": 1,
+   "receipt": "receipts/F11-N2-review-fix.json",
+   "receipt_sha256": "33f236afe13dda4bda4609a0eedc2f0ddef537d1c6a8e0ca351be798709a6611",
+   "base": "a7c2df3846",
+   "head": "ac0b07597d",
+   "pre_registered": "refused at GREEN (not_fixed)",
+   "verdict": "DISCARD",
+   "refused": true,
+   "four_columns_pass": false,
+   "gates": {
+    "validity": "PASS",
+    "red": "PASS",
+    "green": "FAIL",
+    "sabotage": "N_A",
+    "adjacent": "N_A",
+    "ownership": "PENDING"
+   },
+   "underlying_when_infra": {},
+   "cells": 6,
+   "infra_cells": 0,
+   "egress_blocked": 0,
+   "wall_s": 135.6,
+   "pre_registered_gate_match": true,
+   "discrimination": "trivial: head ac0b07597d (write-path hardening) never attempted the read-path defect that 8ded06be29's tests pin, so any red/green check refuses it; it does exercise tests_from injection into head"
+  },
+  {
+   "spec": "F11-N3-fork111-conflict",
+   "rev": 1,
+   "receipt": "receipts/F11-N3-fork111-conflict.json",
+   "receipt_sha256": "3b05b1ac2bd95df9661bbfb75f979c39f1436076bc85601ebecbf5901deebd72",
+   "base": "572e4f4fad",
+   "head": "df1b7e4ed7",
+   "pre_registered": "refused at materialization (BLOCKED, conflicting)",
+   "verdict": "BLOCKED",
+   "refused": true,
+   "four_columns_pass": false,
+   "gates": {
+    "validity": "FAIL",
+    "red": null,
+    "green": null,
+    "sabotage": null,
+    "adjacent": null,
+    "ownership": "PENDING"
+   },
+   "underlying_when_infra": {},
+   "cells": 0,
+   "infra_cells": 0,
+   "egress_blocked": 0,
+   "wall_s": 0.1,
+   "pre_registered_gate_match": true,
+   "discrimination": "pre-gate: refused at materialization by a merge-tree conflict; no gate ran"
+  }
+ ],
+ "history": {
+  "pass1": {
+   "receipts": "receipts/pass1/",
+   "runner_commit": "b01d6dcb8b",
+   "findings": [
+    "F11-N2 falsely accepted (PARTIAL): tests from inject.tests_from were applied to base only, so head was graded on its own weaker test -> runner fixed after pass 1 (head gets them too) and pinned by the unit test",
+    "F11-P2 rev 1 refused a known-good item: its marker quoted the untruncated repr but pytest -q prints ('killed', 'p...ss.kill', -15) -> spec rev 2 written after pass 1 (04:25 vs 04:17)",
+    "E30-N1 BLOCKED by the exec denylist on a docstring mentioning execvp -> denylist now matches call syntax only",
+    "Relay pin probe crashed on an installed-but-incompatible nemo_relay -> recorded as an error field"
+   ]
+  },
+  "pass2": {
+   "receipts": "receipts/pass2/ (F11-N1 and E30-N1 kept local only: their Relay error carried an absolute run-directory path)",
+   "runner_commit": "be292fd2ba"
+  },
+  "pass3": {
+   "runner_commit": "c430541d16e639ac6379f2897e888b2890a6ac6c",
+   "change": "amended runner (shell-text exec guard, PATH shim, Relay pin path scrub, absolute-path validator rule, spec-relative sabotage patch); specs unchanged since pass 2"
+  }
+ },
+ "verdict": "6/6 at the KEEP/refused level, false-READY 0; WEAK as calibration (see caveats)",
+ "caveats": [
+  "no known-bad candidate shows non-trivial gate discrimination: N1 refused only as INFRA, N2 trivially, N3 before any gate ran",
+  "pre-registered gate-level match is 5/6: F11-N1 was pre-registered 'refused at RED (no_repro_on_base)' and observed INFRA (underlying RED FAIL no_repro_on_base, but from guard-tainted cells)",
+  "the specs are not all pre-registered before pass 1: F11-P2 rev 2 (its RED marker) was rewritten after pass 1 refused rev 1",
+  "the runner was changed after pass 1 so that N2 would be refused (tests_from injected into head)",
+  "no held-out set: every calibration item was seen while the runner was being fixed",
+  "ownership verdicts were recorded inputs from the 2026-09-30 readiness verdicts, not re-searched by the runner"
+ ]
+}

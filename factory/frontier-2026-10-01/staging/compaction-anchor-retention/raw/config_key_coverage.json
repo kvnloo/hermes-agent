@@ -1,0 +1,99 @@
+{
+ "inputs": {
+  "config_defaults_sha256": "57ce0ab8d8b913cc94538bb67f13f373c293547fa0590440a1650a9b467848a8",
+  "context_compressor_sha256": "424c8dd83747b73b7b1883c726e60823f55a656d5424c3eb948297ca07f4abc7",
+  "dotted_keys_row": "(?<!\\w)(?<!\\w\\.)[a-z][a-z0-9_]*(?:\\.[a-z][a-z0-9_]*)*\\.[a-z][a-z0-9]*_[a-z0-9_]*[a-z0-9](?!\\.?\\w)"
+ },
+ "flattened_paths_total": 1095,
+ "flattened_paths_without_dot": 99,
+ "all_dotted_paths": {
+  "dotted_paths": 996,
+  "fully_matched": 726,
+  "fully_matched_pct": 72.9,
+  "not_fully_matched": 270,
+  "not_fully_matched_pct": 27.1,
+  "partial_only": 0,
+  "partial_examples": [],
+  "misses_by_reason": {
+   "last segment is one word (no underscore), e.g. terminal.backend": {
+    "count": 270,
+    "examples": [
+     "agent.empty_response_guard.enabled",
+     "approvals.deny",
+     "approvals.mode",
+     "approvals.timeout",
+     "attachments.storage",
+     "auxiliary.approval",
+     "auxiliary.approval.model",
+     "auxiliary.approval.provider",
+     "auxiliary.approval.timeout",
+     "auxiliary.background_review.enabled",
+     "auxiliary.background_review.model",
+     "auxiliary.background_review.provider"
+    ]
+   }
+  }
+ },
+ "leaf_dotted_paths": {
+  "dotted_paths": 870,
+  "fully_matched": 658,
+  "fully_matched_pct": 75.6,
+  "not_fully_matched": 212,
+  "not_fully_matched_pct": 24.4,
+  "partial_only": 0,
+  "partial_examples": [],
+  "misses_by_reason": {
+   "last segment is one word (no underscore), e.g. terminal.backend": {
+    "count": 212,
+    "examples": [
+     "agent.empty_response_guard.enabled",
+     "approvals.deny",
+     "approvals.mode",
+     "approvals.timeout",
+     "attachments.storage",
+     "auxiliary.approval.model",
+     "auxiliary.approval.provider",
+     "auxiliary.approval.timeout",
+     "auxiliary.background_review.enabled",
+     "auxiliary.background_review.model",
+     "auxiliary.background_review.provider",
+     "auxiliary.background_review.timeout"
+    ]
+   }
+  }
+ },
+ "named_examples": {
+  "terminal.backend": {
+   "in_DEFAULT_CONFIG": true,
+   "row_values_when_scanned_alone": []
+  },
+  "compression.threshold": {
+   "in_DEFAULT_CONFIG": true,
+   "row_values_when_scanned_alone": []
+  },
+  "compression.enabled": {
+   "in_DEFAULT_CONFIG": true,
+   "row_values_when_scanned_alone": []
+  },
+  "browser.backend": {
+   "in_DEFAULT_CONFIG": true,
+   "row_values_when_scanned_alone": []
+  },
+  "checkpoints.enabled": {
+   "in_DEFAULT_CONFIG": true,
+   "row_values_when_scanned_alone": []
+  },
+  "compression.tail_mode": {
+   "in_DEFAULT_CONFIG": true,
+   "row_values_when_scanned_alone": [
+    "compression.tail_mode"
+   ]
+  },
+  "plugins.stream_reasoning_deltas": {
+   "in_DEFAULT_CONFIG": false,
+   "row_values_when_scanned_alone": [
+    "plugins.stream_reasoning_deltas"
+   ]
+  }
+ }
+}

@@ -1,0 +1,89 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "SANDBOX/guard-canary-r3",
+ "label": "OBSERVED",
+ "spec": {
+  "path": null,
+  "rev": 3,
+  "decision_rule": "each guard layer blocks and logs; loopback still works"
+ },
+ "runner_revision": {
+  "egress_guard": {
+   "path": "tools/chs_egress_guard.py",
+   "sha256": "92d7c9a3167b561d0c3247f0269bd757c668e6abed35a909d33d5ca7dc108db0"
+  },
+  "canary": {
+   "path": "tools/chs_guard_canary_r3.py",
+   "sha256": "d12cad77ac69b91e2c96a0761a8384692ff141e95dda80d14dd3be5e19dd483f"
+  }
+ },
+ "staging": "compaction-hook-salvage",
+ "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+ "head_revision": "de819a7d0660be8fd560c35bbc4c56676bc8408b",
+ "what": "tools/chs_egress_guard.py loaded by scripts/run_tests.sh through the isolated HOME's pytest_live_guard.py shim",
+ "cases": [
+  "guard loaded from the isolated test HOME (log path not under the real ~/.hermes)",
+  "connect to 1.1.1.1:443 refused",
+  "getaddrinfo('example.com') refused",
+  "loopback connect + localhost DNS still work",
+  "openrouter-prewarm thread not started; other threads start"
+ ],
+ "result": {
+  "files": 1,
+  "passed": 5,
+  "failed": 0,
+  "skipped_per_worker_lines": [],
+  "failing": []
+ },
+ "egress_log_counts": {
+  "connect": 1,
+  "dns": 1,
+  "prewarm_suppressed": 1
+ },
+ "expected_egress_log_counts": {
+  "connect": 1,
+  "dns": 1,
+  "prewarm_suppressed": 1
+ },
+ "command": "cp tools/chs_guard_canary_r3.py tests/agent/test_zz_chs_guard_canary.py; HOME=$TESTHOME HERMES_HOME=$TESTHOME/.hermes HERMES_PYTHON=$PY bash scripts/run_tests.sh -j 2 tests/agent/test_zz_chs_guard_canary.py -q",
+ "policy_revision": {
+  "AGENTS.md": "65aa3e61bcba610da21279a17385671263be39e9",
+  "CONTRIBUTING.md": "b0baa59b5057c204b3c09d3dd170c0955cfdb39c",
+  "factory": "FACTORY.md sha256:7726ba18b43a9367f91d7f70c3aaefb96a9863761ddf71225c61c26a30d688d4",
+  "protocol": "promotion-readiness-2026-10-01/PROTOCOL.md sha256:182e3fbae771d7219497833b3f9d6f7ed385d70abace8736559026e4e60b90d4"
+ },
+ "env": {
+  "host": "withheld (redacted in round 3; receipts name no host)",
+  "python": "3.11.14 (the live venv's interpreter, used read-only through HERMES_PYTHON; never as a source)",
+  "sandbox": "no bwrap/netns (FACTORY \u00a76 layer 1 not used). In-process layer only: tools/chs_egress_guard.py (non-loopback connect and DNS refused and logged; the openrouter-prewarm metadata thread is not started), loaded through the isolated test HOME's pytest_live_guard.py shim; scripts/run_tests.sh runs pytest under env -i with isolated HOME and HERMES_HOME (placeholders: $TESTHOME, $TESTHOME/.hermes)"
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "gates": {
+  "validity": "PASS"
+ },
+ "denominators": {
+  "cells": 5,
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "infra": 0,
+  "completeness": 1.0
+ },
+ "verdict": "PASS",
+ "limitations": [
+  "in-process guard only: a native extension or subprocess could bypass it (no netns)"
+ ],
+ "provenance": "self",
+ "frozen": null,
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the contract test, the fold-in and the harness; disclosed per repository policy",
+ "privacy": "public-aggregate: repo-relative paths and placeholders only; synthetic fixtures; no session ids, home paths, emails, message text or secrets. Raw logs under raw/ are private and contain local paths.",
+ "verdict_as_issued": "PASS",
+ "round2_note": "PASS stands for the five cases it tested, but the suppression it proved (openrouter-prewarm not started) is retired: it hid an egress attempt. r4 guard and canary suppress nothing",
+ "superseded_by": "SANDBOX/guard-canary-r4",
+ "superseded_why": "the r3 guard refused to start the openrouter-prewarm thread (prewarm_suppressed), which hid one DNS lookup per pytest worker; the round-1 contract test itself triggered that thread. Round 2 stubs the metadata prewarm in the test and uses an r4 guard that suppresses nothing"
+}

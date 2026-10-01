@@ -1,0 +1,157 @@
+{
+  "arm": "carrier-foldin-v4",
+  "mode": "restart",
+  "turns": {
+    "A_reasoning_off": 6,
+    "B_reasoning_on": 4,
+    "C_restart": 2
+  },
+  "repo_head": "15dff75cc860a14d06414c6bf31459397e1de912",
+  "repo_tree": "b733be3f0d7be6561ca550dd6eb1425f4eae1854",
+  "dirty_files": [
+    "M agent/tool_result_projection.py"
+  ],
+  "projection_module_blob": "a3227c92a75c4cbcd196e309142530d64b534817",
+  "agent_api_modes": [
+    "anthropic_messages",
+    "anthropic_messages",
+    "anthropic_messages"
+  ],
+  "requests": 24,
+  "phase_start_request_index": {
+    "A": 0,
+    "B": 12,
+    "C": 20
+  },
+  "errors": [],
+  "proxy_refused": [],
+  "resumed_assistant_rows_with_signed_reasoning_details": 8,
+  "tool_results": 12,
+  "rows_archived": 4,
+  "projection_passes": 2,
+  "pass_request_indices": [
+    9,
+    12
+  ],
+  "rows_archived_before_phase_C": 4,
+  "first_request_of_phase_C": {
+    "request_index": 20,
+    "rows_stubbed_on_last_phase_B_request": 4,
+    "of_those_sent_in_full": 4,
+    "of_those_same_stub_bytes": 0,
+    "rows_newly_stubbed": 0,
+    "invalidated_thinking_blocks": 1
+  },
+  "archived_rows_changed_later": [
+    {
+      "request": 20,
+      "tool_use_id": "toolu_e2e_0001",
+      "archived_at": 9,
+      "back_to_full_bytes": true
+    },
+    {
+      "request": 20,
+      "tool_use_id": "toolu_e2e_0003",
+      "archived_at": 9,
+      "back_to_full_bytes": true
+    },
+    {
+      "request": 20,
+      "tool_use_id": "toolu_e2e_0007",
+      "archived_at": 9,
+      "back_to_full_bytes": true
+    },
+    {
+      "request": 20,
+      "tool_use_id": "toolu_e2e_0009",
+      "archived_at": 12,
+      "back_to_full_bytes": true
+    },
+    {
+      "request": 21,
+      "tool_use_id": "toolu_e2e_0001",
+      "archived_at": 9,
+      "back_to_full_bytes": true
+    },
+    {
+      "request": 21,
+      "tool_use_id": "toolu_e2e_0003",
+      "archived_at": 9,
+      "back_to_full_bytes": true
+    },
+    {
+      "request": 21,
+      "tool_use_id": "toolu_e2e_0007",
+      "archived_at": 9,
+      "back_to_full_bytes": true
+    },
+    {
+      "request": 21,
+      "tool_use_id": "toolu_e2e_0009",
+      "archived_at": 12,
+      "back_to_full_bytes": true
+    },
+    {
+      "request": 22,
+      "tool_use_id": "toolu_e2e_0001",
+      "archived_at": 9,
+      "back_to_full_bytes": true
+    },
+    {
+      "request": 22,
+      "tool_use_id": "toolu_e2e_0003",
+      "archived_at": 9,
+      "back_to_full_bytes": true
+    },
+    {
+      "request": 22,
+      "tool_use_id": "toolu_e2e_0007",
+      "archived_at": 9,
+      "back_to_full_bytes": true
+    },
+    {
+      "request": 22,
+      "tool_use_id": "toolu_e2e_0009",
+      "archived_at": 12,
+      "back_to_full_bytes": true
+    },
+    {
+      "request": 23,
+      "tool_use_id": "toolu_e2e_0001",
+      "archived_at": 9,
+      "back_to_full_bytes": true
+    },
+    {
+      "request": 23,
+      "tool_use_id": "toolu_e2e_0003",
+      "archived_at": 9,
+      "back_to_full_bytes": true
+    },
+    {
+      "request": 23,
+      "tool_use_id": "toolu_e2e_0007",
+      "archived_at": 9,
+      "back_to_full_bytes": true
+    },
+    {
+      "request": 23,
+      "tool_use_id": "toolu_e2e_0009",
+      "archived_at": 12,
+      "back_to_full_bytes": true
+    }
+  ],
+  "replayed_thinking_blocks_audited": 11,
+  "invalidated_thinking_blocks": 1,
+  "invalidated_by_phase": {
+    "A": 0,
+    "B": 0,
+    "C": 1
+  },
+  "invalidated": [
+    "request 21: messages[39] thinking block replayed over a rewritten prefix (signed: True)"
+  ],
+  "sum_request_chars": 2574666,
+  "egress_blocked": [],
+  "wall_s": 2.17,
+  "python": "3.11.14"
+}

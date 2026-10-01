@@ -1,0 +1,948 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "E12/e12-r2",
+ "label": "OBSERVED",
+ "staging": "compaction-hook-salvage",
+ "harness": {
+  "replay_gates": "evals/token_accounting/replay_gates.py",
+  "ab_checkpoint_preflight": "evals/native_compaction/ab_checkpoint_preflight.py",
+  "test_region_scoping": "evals/compaction/test_region_scoping.py",
+  "wrapper": "tools/r1/chs_guard_wrap.py",
+  "wrapper_sha256": "a5ef295c07ea7384b8dba442c49b4dbf289df1ed9c6a54b9f237254c3024e1f6",
+  "script": "tools/r1/chs_guards.sh",
+  "script_sha256": "2e4b88c4b6ce13edc8990a2d2a476e14feca59dbf057fcf2040931b270e62bfa"
+ },
+ "arms": {
+  "base": {
+   "commit": "8c834af1e4c8bfe50ab35a26d99f423b0b0a2c18",
+   "tree": "d7044854d3518b5a011cc7b708cc89bd085fd634",
+   "replay_gates": {
+    "file": "raw/e12-r2/base-replay_gates.json",
+    "sha256": "eaeef11ecd998614dec3c5a6fedc6e27ca611b06ba3efa52651d849b9491964a",
+    "verdicts": {
+     "compressor_sha256": "86f4b7a8a647f1bf520cb17497b68719f6d907028bdc7151c7921818b7e043f1",
+     "cli_past_window_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 160113,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 3
+     },
+     "cli_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 120113,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 3
+     },
+     "cli_deflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 45000,
+      "rough_estimate_turn1_messages": 213,
+      "local_compress_calls_by_turn": [
+       0,
+       1,
+       1
+      ],
+      "local_compress_approx_tokens": [
+       45015,
+       45015
+      ],
+      "provider_requests": 3
+     },
+     "gateway_past_window_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 160113,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 3
+     },
+     "gateway_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 120113,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 3
+     },
+     "gateway_deflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 45000,
+      "rough_estimate_turn1_messages": 213,
+      "local_compress_calls_by_turn": [
+       0,
+       1,
+       1
+      ],
+      "local_compress_approx_tokens": [
+       45015,
+       45015
+      ],
+      "provider_requests": 3
+     },
+     "restore_past_window_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 160074,
+      "persisted_messages": 4,
+      "anchor_restored_in_fresh_agent": true,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 4
+     },
+     "restore_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 120074,
+      "persisted_messages": 4,
+      "anchor_restored_in_fresh_agent": true,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 4
+     },
+     "restore_deflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 45000,
+      "rough_estimate_turn1_messages": 174,
+      "persisted_messages": 4,
+      "anchor_restored_in_fresh_agent": true,
+      "local_compress_calls_by_turn": [
+       0,
+       1,
+       1
+      ],
+      "local_compress_approx_tokens": [
+       45020,
+       45020
+      ],
+      "provider_requests": 4
+     },
+     "overflow_recovery": {
+      "completed": true,
+      "response": "ok",
+      "compression_after_provider_requests": [
+       1
+      ],
+      "first_turn_compressions": 1,
+      "provider_request_sizes": [
+       643238,
+       130770
+      ],
+      "provider_omits_usage": false,
+      "pass": true
+     },
+     "usage_less_fallback": {
+      "completed": true,
+      "response": "ok",
+      "compression_after_provider_requests": [
+       1
+      ],
+      "first_turn_compressions": 0,
+      "provider_request_sizes": [
+       643238,
+       130857
+      ],
+      "provider_omits_usage": true,
+      "pass": true
+     },
+     "verdict": {
+      "cli_past_window_inflated": "PASS",
+      "cli_inflated": "PASS",
+      "cli_deflated": "PASS",
+      "gateway_past_window_inflated": "PASS",
+      "gateway_inflated": "PASS",
+      "gateway_deflated": "PASS",
+      "restore_past_window_inflated": "PASS",
+      "restore_inflated": "PASS",
+      "restore_deflated": "PASS",
+      "overflow_recovery": "PASS",
+      "usage_less_fallback": "PASS"
+     }
+    },
+    "observer_counts": {
+     "rc": 0,
+     "hook_fires": 0,
+     "commits_total": 2,
+     "commits_succeeded": 0,
+     "detail": {
+      "hook_fires": [],
+      "commits": [
+       {
+        "split_status": "not_applicable",
+        "succeeded": false
+       },
+       {
+        "split_status": "not_applicable",
+        "succeeded": false
+       }
+      ]
+     }
+    }
+   },
+   "ab_checkpoint_preflight": {
+    "file": "raw/e12-r2/base-ab_checkpoint_preflight.json",
+    "verdicts": {
+     "capture_cli_same_objects": {
+      "turn1_completed": true,
+      "checkpoint_persisted": true,
+      "checkpoint_chars": 5169420,
+      "preflight_estimate_before_turn2": 64,
+      "threshold": 204000,
+      "latch_armed_after_turn1": true,
+      "turn2_completed": true,
+      "local_compress_calls_turn2": 0,
+      "turn3_completed": true,
+      "local_compress_calls_turn3": 0,
+      "local_compress_approx_tokens": [],
+      "provider_requests_total": 3,
+      "latch_after_turn3": false,
+      "last_real_prompt_tokens": 115802
+     },
+     "capture_gateway_reloaded_history": {
+      "turn1_completed": true,
+      "checkpoint_persisted": true,
+      "checkpoint_chars": 5169420,
+      "preflight_estimate_before_turn2": 64,
+      "threshold": 204000,
+      "latch_armed_after_turn1": true,
+      "turn2_completed": true,
+      "local_compress_calls_turn2": 0,
+      "turn3_completed": true,
+      "local_compress_calls_turn3": 0,
+      "local_compress_approx_tokens": [],
+      "provider_requests_total": 3,
+      "latch_after_turn3": false,
+      "last_real_prompt_tokens": 115802
+     },
+     "restore": {
+      "turn1_completed": true,
+      "restored_checkpoint_chars": 5169420,
+      "preflight_estimate_fresh_agent": 53,
+      "threshold": 204000,
+      "resume_completed": true,
+      "local_compress_calls_resume": 0,
+      "local_compress_approx_tokens": [],
+      "provider_requests_resume": 1,
+      "latch_after_resume": false,
+      "last_real_prompt_tokens": 115802
+     },
+     "over_threshold_negative": {
+      "turn1_completed": true,
+      "checkpoint_persisted": true,
+      "checkpoint_chars": 5169420,
+      "preflight_estimate_before_turn2": 64,
+      "threshold": 204000,
+      "latch_armed_after_turn1": true,
+      "turn2_completed": true,
+      "local_compress_calls_turn2": 0,
+      "turn3_completed": true,
+      "local_compress_calls_turn3": 1,
+      "local_compress_approx_tokens": [
+       209021
+      ],
+      "provider_requests_total": 3,
+      "latch_after_turn3": false,
+      "last_real_prompt_tokens": 209000
+     }
+    },
+    "observer_counts": {
+     "rc": 0,
+     "hook_fires": 0,
+     "commits_total": 0,
+     "commits_succeeded": 0,
+     "detail": {
+      "hook_fires": [],
+      "commits": []
+     }
+    }
+   },
+   "test_region_scoping": {
+    "verdict": "ALL PASS",
+    "tail": [
+     "  legacy: OK (1 summarizer call(s), 71 msgs out)",
+     "  lean: OK (1 summarizer call(s), 71 msgs out)",
+     "scoping tripwire: ALL PASS"
+    ]
+   },
+   "adjacent": {
+    "files": 8,
+    "passed": 113,
+    "failed": 3,
+    "failing": [
+     "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[in_place]",
+     "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+     "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[rotated]"
+    ]
+   }
+  },
+  "c53806-foldin": {
+   "commit": "e1b4456c6ed47245eba37b93d8cce4ad6b6afa5b",
+   "tree": "35c25809705d1417ebe2505d6a01aec1dc0e465c",
+   "replay_gates": {
+    "file": "raw/e12-r2/c53806-foldin-replay_gates.json",
+    "sha256": "b236cd5a50e0e74a99f42a58a6091b89ea49ba88a0a176b2278cf6883eac94c6",
+    "verdicts": {
+     "compressor_sha256": "86f4b7a8a647f1bf520cb17497b68719f6d907028bdc7151c7921818b7e043f1",
+     "cli_past_window_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 160113,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 3
+     },
+     "cli_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 120113,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 3
+     },
+     "cli_deflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 45000,
+      "rough_estimate_turn1_messages": 213,
+      "local_compress_calls_by_turn": [
+       0,
+       1,
+       1
+      ],
+      "local_compress_approx_tokens": [
+       45015,
+       45015
+      ],
+      "provider_requests": 3
+     },
+     "gateway_past_window_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 160113,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 3
+     },
+     "gateway_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 120113,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 3
+     },
+     "gateway_deflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 45000,
+      "rough_estimate_turn1_messages": 213,
+      "local_compress_calls_by_turn": [
+       0,
+       1,
+       1
+      ],
+      "local_compress_approx_tokens": [
+       45015,
+       45015
+      ],
+      "provider_requests": 3
+     },
+     "restore_past_window_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 160074,
+      "persisted_messages": 4,
+      "anchor_restored_in_fresh_agent": true,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 4
+     },
+     "restore_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 120074,
+      "persisted_messages": 4,
+      "anchor_restored_in_fresh_agent": true,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 4
+     },
+     "restore_deflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 45000,
+      "rough_estimate_turn1_messages": 174,
+      "persisted_messages": 4,
+      "anchor_restored_in_fresh_agent": true,
+      "local_compress_calls_by_turn": [
+       0,
+       1,
+       1
+      ],
+      "local_compress_approx_tokens": [
+       45020,
+       45020
+      ],
+      "provider_requests": 4
+     },
+     "overflow_recovery": {
+      "completed": true,
+      "response": "ok",
+      "compression_after_provider_requests": [
+       1
+      ],
+      "first_turn_compressions": 1,
+      "provider_request_sizes": [
+       643238,
+       130770
+      ],
+      "provider_omits_usage": false,
+      "pass": true
+     },
+     "usage_less_fallback": {
+      "completed": true,
+      "response": "ok",
+      "compression_after_provider_requests": [
+       1
+      ],
+      "first_turn_compressions": 0,
+      "provider_request_sizes": [
+       643238,
+       130857
+      ],
+      "provider_omits_usage": true,
+      "pass": true
+     },
+     "verdict": {
+      "cli_past_window_inflated": "PASS",
+      "cli_inflated": "PASS",
+      "cli_deflated": "PASS",
+      "gateway_past_window_inflated": "PASS",
+      "gateway_inflated": "PASS",
+      "gateway_deflated": "PASS",
+      "restore_past_window_inflated": "PASS",
+      "restore_inflated": "PASS",
+      "restore_deflated": "PASS",
+      "overflow_recovery": "PASS",
+      "usage_less_fallback": "PASS"
+     }
+    },
+    "observer_counts": {
+     "rc": 0,
+     "hook_fires": 0,
+     "commits_total": 2,
+     "commits_succeeded": 0,
+     "detail": {
+      "hook_fires": [],
+      "commits": [
+       {
+        "split_status": "not_applicable",
+        "succeeded": false
+       },
+       {
+        "split_status": "not_applicable",
+        "succeeded": false
+       }
+      ]
+     }
+    }
+   },
+   "ab_checkpoint_preflight": {
+    "file": "raw/e12-r2/c53806-foldin-ab_checkpoint_preflight.json",
+    "verdicts": {
+     "capture_cli_same_objects": {
+      "turn1_completed": true,
+      "checkpoint_persisted": true,
+      "checkpoint_chars": 5169420,
+      "preflight_estimate_before_turn2": 64,
+      "threshold": 204000,
+      "latch_armed_after_turn1": true,
+      "turn2_completed": true,
+      "local_compress_calls_turn2": 0,
+      "turn3_completed": true,
+      "local_compress_calls_turn3": 0,
+      "local_compress_approx_tokens": [],
+      "provider_requests_total": 3,
+      "latch_after_turn3": false,
+      "last_real_prompt_tokens": 115802
+     },
+     "capture_gateway_reloaded_history": {
+      "turn1_completed": true,
+      "checkpoint_persisted": true,
+      "checkpoint_chars": 5169420,
+      "preflight_estimate_before_turn2": 64,
+      "threshold": 204000,
+      "latch_armed_after_turn1": true,
+      "turn2_completed": true,
+      "local_compress_calls_turn2": 0,
+      "turn3_completed": true,
+      "local_compress_calls_turn3": 0,
+      "local_compress_approx_tokens": [],
+      "provider_requests_total": 3,
+      "latch_after_turn3": false,
+      "last_real_prompt_tokens": 115802
+     },
+     "restore": {
+      "turn1_completed": true,
+      "restored_checkpoint_chars": 5169420,
+      "preflight_estimate_fresh_agent": 53,
+      "threshold": 204000,
+      "resume_completed": true,
+      "local_compress_calls_resume": 0,
+      "local_compress_approx_tokens": [],
+      "provider_requests_resume": 1,
+      "latch_after_resume": false,
+      "last_real_prompt_tokens": 115802
+     },
+     "over_threshold_negative": {
+      "turn1_completed": true,
+      "checkpoint_persisted": true,
+      "checkpoint_chars": 5169420,
+      "preflight_estimate_before_turn2": 64,
+      "threshold": 204000,
+      "latch_armed_after_turn1": true,
+      "turn2_completed": true,
+      "local_compress_calls_turn2": 0,
+      "turn3_completed": true,
+      "local_compress_calls_turn3": 1,
+      "local_compress_approx_tokens": [
+       209021
+      ],
+      "provider_requests_total": 3,
+      "latch_after_turn3": false,
+      "last_real_prompt_tokens": 209000
+     }
+    },
+    "observer_counts": {
+     "rc": 0,
+     "hook_fires": 0,
+     "commits_total": 0,
+     "commits_succeeded": 0,
+     "detail": {
+      "hook_fires": [],
+      "commits": []
+     }
+    }
+   },
+   "test_region_scoping": {
+    "verdict": "ALL PASS",
+    "tail": [
+     "  legacy: OK (1 summarizer call(s), 71 msgs out)",
+     "  lean: OK (1 summarizer call(s), 71 msgs out)",
+     "scoping tripwire: ALL PASS"
+    ]
+   },
+   "adjacent": {
+    "files": 8,
+    "passed": 116,
+    "failed": 0,
+    "failing": []
+   },
+   "equal_to_base": {
+    "replay_gates": true,
+    "ab_checkpoint_preflight": true,
+    "test_region_scoping": true
+   }
+  },
+  "foldin-bounded": {
+   "commit": "6ef91714c8053d32a3f2c8152c21ed15ddb53abc",
+   "tree": "49e136f384fd501f5868f5356e06c8ad4f31d666",
+   "replay_gates": {
+    "file": "raw/e12-r2/foldin-bounded-replay_gates.json",
+    "sha256": "47f51460951d23350bd0197926b756a24dd33425f62c466fd2bfbc422c907b00",
+    "verdicts": {
+     "compressor_sha256": "86f4b7a8a647f1bf520cb17497b68719f6d907028bdc7151c7921818b7e043f1",
+     "cli_past_window_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 160113,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 3
+     },
+     "cli_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 120113,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 3
+     },
+     "cli_deflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 45000,
+      "rough_estimate_turn1_messages": 213,
+      "local_compress_calls_by_turn": [
+       0,
+       1,
+       1
+      ],
+      "local_compress_approx_tokens": [
+       45015,
+       45015
+      ],
+      "provider_requests": 3
+     },
+     "gateway_past_window_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 160113,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 3
+     },
+     "gateway_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 120113,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 3
+     },
+     "gateway_deflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 45000,
+      "rough_estimate_turn1_messages": 213,
+      "local_compress_calls_by_turn": [
+       0,
+       1,
+       1
+      ],
+      "local_compress_approx_tokens": [
+       45015,
+       45015
+      ],
+      "provider_requests": 3
+     },
+     "restore_past_window_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 160074,
+      "persisted_messages": 4,
+      "anchor_restored_in_fresh_agent": true,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 4
+     },
+     "restore_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 120074,
+      "persisted_messages": 4,
+      "anchor_restored_in_fresh_agent": true,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 4
+     },
+     "restore_deflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 45000,
+      "rough_estimate_turn1_messages": 174,
+      "persisted_messages": 4,
+      "anchor_restored_in_fresh_agent": true,
+      "local_compress_calls_by_turn": [
+       0,
+       1,
+       1
+      ],
+      "local_compress_approx_tokens": [
+       45020,
+       45020
+      ],
+      "provider_requests": 4
+     },
+     "overflow_recovery": {
+      "completed": true,
+      "response": "ok",
+      "compression_after_provider_requests": [
+       1
+      ],
+      "first_turn_compressions": 1,
+      "provider_request_sizes": [
+       643238,
+       130770
+      ],
+      "provider_omits_usage": false,
+      "pass": true
+     },
+     "usage_less_fallback": {
+      "completed": true,
+      "response": "ok",
+      "compression_after_provider_requests": [
+       1
+      ],
+      "first_turn_compressions": 0,
+      "provider_request_sizes": [
+       643238,
+       130857
+      ],
+      "provider_omits_usage": true,
+      "pass": true
+     },
+     "verdict": {
+      "cli_past_window_inflated": "PASS",
+      "cli_inflated": "PASS",
+      "cli_deflated": "PASS",
+      "gateway_past_window_inflated": "PASS",
+      "gateway_inflated": "PASS",
+      "gateway_deflated": "PASS",
+      "restore_past_window_inflated": "PASS",
+      "restore_inflated": "PASS",
+      "restore_deflated": "PASS",
+      "overflow_recovery": "PASS",
+      "usage_less_fallback": "PASS"
+     }
+    },
+    "observer_counts": {
+     "rc": 0,
+     "hook_fires": 0,
+     "commits_total": 2,
+     "commits_succeeded": 0,
+     "detail": {
+      "hook_fires": [],
+      "commits": [
+       {
+        "split_status": "not_applicable",
+        "succeeded": false
+       },
+       {
+        "split_status": "not_applicable",
+        "succeeded": false
+       }
+      ]
+     }
+    }
+   },
+   "ab_checkpoint_preflight": {
+    "file": "raw/e12-r2/foldin-bounded-ab_checkpoint_preflight.json",
+    "verdicts": {
+     "capture_cli_same_objects": {
+      "turn1_completed": true,
+      "checkpoint_persisted": true,
+      "checkpoint_chars": 5169420,
+      "preflight_estimate_before_turn2": 64,
+      "threshold": 204000,
+      "latch_armed_after_turn1": true,
+      "turn2_completed": true,
+      "local_compress_calls_turn2": 0,
+      "turn3_completed": true,
+      "local_compress_calls_turn3": 0,
+      "local_compress_approx_tokens": [],
+      "provider_requests_total": 3,
+      "latch_after_turn3": false,
+      "last_real_prompt_tokens": 115802
+     },
+     "capture_gateway_reloaded_history": {
+      "turn1_completed": true,
+      "checkpoint_persisted": true,
+      "checkpoint_chars": 5169420,
+      "preflight_estimate_before_turn2": 64,
+      "threshold": 204000,
+      "latch_armed_after_turn1": true,
+      "turn2_completed": true,
+      "local_compress_calls_turn2": 0,
+      "turn3_completed": true,
+      "local_compress_calls_turn3": 0,
+      "local_compress_approx_tokens": [],
+      "provider_requests_total": 3,
+      "latch_after_turn3": false,
+      "last_real_prompt_tokens": 115802
+     },
+     "restore": {
+      "turn1_completed": true,
+      "restored_checkpoint_chars": 5169420,
+      "preflight_estimate_fresh_agent": 53,
+      "threshold": 204000,
+      "resume_completed": true,
+      "local_compress_calls_resume": 0,
+      "local_compress_approx_tokens": [],
+      "provider_requests_resume": 1,
+      "latch_after_resume": false,
+      "last_real_prompt_tokens": 115802
+     },
+     "over_threshold_negative": {
+      "turn1_completed": true,
+      "checkpoint_persisted": true,
+      "checkpoint_chars": 5169420,
+      "preflight_estimate_before_turn2": 64,
+      "threshold": 204000,
+      "latch_armed_after_turn1": true,
+      "turn2_completed": true,
+      "local_compress_calls_turn2": 0,
+      "turn3_completed": true,
+      "local_compress_calls_turn3": 1,
+      "local_compress_approx_tokens": [
+       209021
+      ],
+      "provider_requests_total": 3,
+      "latch_after_turn3": false,
+      "last_real_prompt_tokens": 209000
+     }
+    },
+    "observer_counts": {
+     "rc": 0,
+     "hook_fires": 0,
+     "commits_total": 0,
+     "commits_succeeded": 0,
+     "detail": {
+      "hook_fires": [],
+      "commits": []
+     }
+    }
+   },
+   "test_region_scoping": {
+    "verdict": "ALL PASS",
+    "tail": [
+     "  legacy: OK (1 summarizer call(s), 71 msgs out)",
+     "  lean: OK (1 summarizer call(s), 71 msgs out)",
+     "scoping tripwire: ALL PASS"
+    ]
+   },
+   "adjacent": {
+    "files": 8,
+    "passed": 116,
+    "failed": 0,
+    "failing": []
+   },
+   "equal_to_base": {
+    "replay_gates": true,
+    "ab_checkpoint_preflight": true,
+    "test_region_scoping": true
+   }
+  }
+ },
+ "command": "cd . && bash tools/r1/chs_guards.sh base 8c834af1e4c8bfe50ab35a26d99f423b0b0a2c18 e12-r2 && bash tools/r1/chs_guards.sh c53806-foldin refs/xf/arms/compaction-hook-salvage/c53806-foldin-latest e12-r2 && bash tools/r1/chs_guards.sh foldin-bounded refs/xf/arms/compaction-hook-salvage/foldin-bounded-latest e12-r2 && python3 tools/r1/chs_e12_receipt.py e12-r2",
+ "inputs_pinned": {
+  "base_main": "bafb42b431fca313471958fdf77f9c30e455f86b"
+ },
+ "egress": {
+  "blocked_attempts": 616,
+  "by_address": {
+   "2606:4700::6812:273": 154,
+   "104.18.2.115": 154,
+   "2606:4700::6812:373": 154,
+   "104.18.3.115": 154
+  },
+  "resolves_to": "openrouter.ai:443 (agent/agent_init.py:507 openrouter-prewarm -> agent/model_metadata.py:909)",
+  "log": "raw/e12-r2/egress_blocked.log"
+ },
+ "cost": {
+  "usd": 0,
+  "tier": "T1",
+  "lane": "cpu"
+ },
+ "summary": {
+  "replay_gates": "11/11 PASS on base, c53806-foldin, foldin-bounded; verdict maps equal after removing volatile fields (OBSERVED)",
+  "ab_checkpoint_preflight": "local compress calls identical: capture turn2/3 = 0/0 (cli and gateway), restore resume = 0, over_threshold turn2/3 = 0/1 (OBSERVED)",
+  "test_region_scoping": "scoping tripwire: ALL PASS (legacy + lean) on all arms (OBSERVED)",
+  "adjacent_8_files": "base 113 passed / 3 failed (the 3 failures are the new contract RED) / 2 skipped; c53806-foldin 116/0; foldin-bounded 116/0 (OBSERVED)",
+  "observer_counts": "hook_fires 0 on every arm: the real-compression replay_gates scenarios run without a SessionDB (split_status not_applicable, 2 attempts, 0 durable commits) and ab_checkpoint_preflight stubs _compress_context, so 0 is by construction, not a native-route measurement (MODELED/structural)"
+ },
+ "spec": {
+  "path": null,
+  "rev": 2,
+  "sha256": null,
+  "prereg_commit": null,
+  "note": "no xf_spec TOML was written"
+ },
+ "issue": null,
+ "provenance": "self",
+ "frozen": null,
+ "privacy": "public-aggregate after the round-1 scrub: local paths replaced by placeholders ($S, $TESTHOME, $WORKTREE, $PY)",
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "policy_revision": {
+  "factory": "FACTORY.md (round 0; not hashed at the time)"
+ },
+ "verdict": "INFRA",
+ "gates": {
+  "validity": "INFRA"
+ },
+ "denominators": {
+  "cells": 12,
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "infra": 12,
+  "completeness": 1.0
+ },
+ "s16": "INFRA under FACTORY S16 (unattributable): the r1 guard logged 616 blocked connects to openrouter.ai:443 for the whole run, not per harness, and did not guard DNS. No cell can be shown clean, so every cell is counted INFRA. Superseded by E12/e12-r3 (per-harness egress logs, 0 blocked attempts).",
+ "superseded_by": "E12/e12-r3",
+ "round1_note": "scrubbed and re-labelled in round 1 (2026-10-01): r1/r2 tool versions kept under tools/r1/ (their sha256 values above still match), r2 patches moved to patches/r2/"
+}

@@ -1,0 +1,362 @@
+{
+ "fetched_at": "2026-10-01T16:15:42Z",
+ "tool": "gh (read-only: gh api GET, gh search)",
+ "cited": {
+  "ours": {
+   "102922": {
+    "kind": "issue",
+    "state": "OPEN",
+    "state_reason": null,
+    "author": "kvnloo",
+    "title": "Plugin proposal: local PAW PII redaction (standalone middleware + tools)",
+    "updated": "2026-09-28T00:44:38Z",
+    "comments": 2
+   },
+   "102924": {
+    "kind": "pr",
+    "state": "CLOSED",
+    "state_reason": null,
+    "author": "kvnloo",
+    "title": "feat(plugins): seed index entry for standalone paw-pii",
+    "updated": "2026-09-30T03:15:21Z",
+    "comments": 2,
+    "merged_at": null,
+    "closed_by": "kvnloo",
+    "closed_at": "2026-09-30T03:15:21Z"
+   },
+   "87495": {
+    "kind": "pr",
+    "state": "CLOSED",
+    "state_reason": null,
+    "author": "kvnloo",
+    "title": "feat(desktop): add Spatial runtime plugin",
+    "updated": "2026-08-25T01:09:25Z",
+    "comments": 2,
+    "merged_at": null,
+    "closed_by": "kvnloo",
+    "closed_at": "2026-08-25T01:04:37Z"
+   },
+   "98105": {
+    "kind": "pr",
+    "state": "CLOSED",
+    "state_reason": null,
+    "author": "kvnloo",
+    "title": "feat(tts): add Groq Orpheus as a first-class TTS provider",
+    "updated": "2026-09-27T06:53:41Z",
+    "comments": 3,
+    "merged_at": null,
+    "closed_by": "kvnloo",
+    "closed_at": "2026-09-27T06:53:43Z"
+   }
+  },
+  "adjacent_open": {
+   "63917": {
+    "kind": "pr",
+    "state": "OPEN",
+    "state_reason": null,
+    "author": "Micka420-collab",
+    "title": "feat(privacy): prompt-level PII anonymization middleware",
+    "updated": "2026-07-16T01:08:04Z",
+    "comments": 0,
+    "merged_at": null
+   },
+   "129692": {
+    "kind": "pr",
+    "state": "OPEN",
+    "state_reason": null,
+    "author": "saiteja-madha",
+    "title": "feat(plugin-catalog): add privacy-gateway",
+    "updated": "2026-10-01T04:08:40Z",
+    "comments": 1,
+    "merged_at": null
+   },
+   "95186": {
+    "kind": "pr",
+    "state": "OPEN",
+    "state_reason": null,
+    "author": "Ilannuko",
+    "title": "Fail closed when required LLM privacy middleware is unavailable",
+    "updated": "2026-08-29T01:50:40Z",
+    "comments": 1,
+    "merged_at": null
+   },
+   "102049": {
+    "kind": "pr",
+    "state": "OPEN",
+    "state_reason": null,
+    "author": "yurymolodykh",
+    "title": "feat(privacy): anonymize document PII before model requests",
+    "updated": "2026-09-03T09:54:30Z",
+    "comments": 1,
+    "merged_at": null
+   },
+   "14624": {
+    "kind": "pr",
+    "state": "OPEN",
+    "state_reason": null,
+    "author": "Ushamax",
+    "title": "feat(pii-filter): transparent PII masking middleware for OpenRouter",
+    "updated": "2026-07-12T18:21:24Z",
+    "comments": 0,
+    "merged_at": null
+   },
+   "17472": {
+    "kind": "pr",
+    "state": "OPEN",
+    "state_reason": null,
+    "author": "teodorofodocrispin-cmyk",
+    "title": "feat(skill): add trustboost-pii-sanitizer v2.0.4 \u2014 blockchain-verified PII sanitization",
+    "updated": "2026-07-29T15:07:41Z",
+    "comments": 7,
+    "merged_at": null
+   }
+  },
+  "merged_overlap": {
+   "122574": {
+    "kind": "pr",
+    "state": "CLOSED",
+    "state_reason": null,
+    "author": "yubingz",
+    "title": "feat(plugin-catalog): add desensitize (community, tools)",
+    "updated": "2026-09-26T18:45:00Z",
+    "comments": 1,
+    "merged_at": "2026-09-26T18:42:25Z"
+   },
+   "1542": {
+    "kind": "pr",
+    "state": "CLOSED",
+    "state_reason": null,
+    "author": "teknium1",
+    "title": "feat(privacy): redact PII from LLM context when privacy.redact_pii is enabled",
+    "updated": "2026-03-16T13:08:18Z",
+    "comments": 0,
+    "merged_at": "2026-03-16T13:08:18Z"
+   }
+  },
+  "not_listed_examples": {
+   "37833": {
+    "kind": "pr",
+    "state": "OPEN",
+    "state_reason": null,
+    "author": "zapabob",
+    "title": "fix(debug): redact PII in debug share logs",
+    "updated": "2026-09-13T05:00:32Z",
+    "comments": 3,
+    "merged_at": null
+   },
+   "57741": {
+    "kind": "pr",
+    "state": "OPEN",
+    "state_reason": null,
+    "author": "JoaoMarcos44",
+    "title": "fix(agent): redact PII (email/SSN) before session-log export",
+    "updated": "2026-07-20T06:37:32Z",
+    "comments": 2,
+    "merged_at": null
+   },
+   "88608": {
+    "kind": "pr",
+    "state": "OPEN",
+    "state_reason": null,
+    "author": "elchic00",
+    "title": "fix(langfuse): fully redact secrets and emails before cloud upload",
+    "updated": "2026-08-19T03:49:31Z",
+    "comments": 2,
+    "merged_at": null
+   },
+   "34693": {
+    "kind": "pr",
+    "state": "OPEN",
+    "state_reason": null,
+    "author": "naterchrdsn",
+    "title": "feat(redact): add durable redaction controls",
+    "updated": "2026-09-23T23:35:39Z",
+    "comments": 2,
+    "merged_at": null
+   },
+   "129805": {
+    "kind": "pr",
+    "state": "OPEN",
+    "state_reason": null,
+    "author": "Froraut",
+    "title": "fix(debug): redact support egress before truncation",
+    "updated": "2026-10-01T01:04:27Z",
+    "comments": 0,
+    "merged_at": null
+   },
+   "69890": {
+    "kind": "pr",
+    "state": "OPEN",
+    "state_reason": null,
+    "author": "anuragbanerjee",
+    "title": "fix(redact): reclassify E.164 phone numbers as PII, not secrets",
+    "updated": "2026-09-25T18:54:11Z",
+    "comments": 3,
+    "merged_at": null
+   },
+   "82196": {
+    "kind": "pr",
+    "state": "OPEN",
+    "state_reason": null,
+    "author": "earonesty",
+    "title": "fix: separate phone and secret redaction",
+    "updated": "2026-08-10T16:24:55Z",
+    "comments": 2,
+    "merged_at": null
+   },
+   "84611": {
+    "kind": "pr",
+    "state": "OPEN",
+    "state_reason": null,
+    "author": "wesleion",
+    "title": "feat(moa): add advisor input privacy controls",
+    "updated": "2026-08-24T16:22:01Z",
+    "comments": 1,
+    "merged_at": null
+   },
+   "115109": {
+    "kind": "pr",
+    "state": "OPEN",
+    "state_reason": null,
+    "author": "liuhao1024",
+    "title": "fix(memory): scrub provider-synced turns with the egress redactor",
+    "updated": "2026-09-24T23:40:13Z",
+    "comments": 11,
+    "merged_at": null
+   },
+   "10730": {
+    "kind": "pr",
+    "state": "OPEN",
+    "state_reason": null,
+    "author": "AlexanderWhitestone",
+    "title": "feat: input sanitizer \u2014 risk scoring for prompt injection, jailbreaks\u2026",
+    "updated": "2026-07-12T13:37:12Z",
+    "comments": 2,
+    "merged_at": null
+   },
+   "125178": {
+    "kind": "pr",
+    "state": "OPEN",
+    "state_reason": null,
+    "author": "warrenhermes1-cell",
+    "title": "feat(gateway): emit agent:message:filter / agent:response:filter for user text filters",
+    "updated": "2026-10-01T06:55:41Z",
+    "comments": 9,
+    "merged_at": null
+   }
+  },
+  "claimant_lanes": {
+   "127373": {
+    "kind": "issue",
+    "state": "OPEN",
+    "state_reason": null,
+    "author": "kvnloo",
+    "title": "perf(tui): drive pet refresh from pet.changed with a slow backstop",
+    "updated": "2026-09-29T05:56:31Z",
+    "comments": 1
+   },
+   "127374": {
+    "kind": "issue",
+    "state": "OPEN",
+    "state_reason": null,
+    "author": "kvnloo",
+    "title": "perf(tui): replace steady config mtime RPC polling with a gateway change signal",
+    "updated": "2026-09-29T06:10:30Z",
+    "comments": 2
+   },
+   "127375": {
+    "kind": "issue",
+    "state": "OPEN",
+    "state_reason": null,
+    "author": "kvnloo",
+    "title": "perf(tui): pause git branch subprocess polling when the status label is hidden",
+    "updated": "2026-09-29T05:56:27Z",
+    "comments": 1
+   },
+   "127332": {
+    "kind": "issue",
+    "state": "OPEN",
+    "state_reason": null,
+    "author": "kvnloo",
+    "title": "TUI: give the composer a zero-row visual boundary",
+    "updated": "2026-09-29T06:10:32Z",
+    "comments": 3
+   },
+   "127228": {
+    "kind": "issue",
+    "state": "OPEN",
+    "state_reason": null,
+    "author": "kvnloo",
+    "title": "[Feature]: HUD quicklaunch \u2014 warm summon under 200ms, not a cold Desktop boot",
+    "updated": "2026-09-29T05:56:40Z",
+    "comments": 1
+   }
+  }
+ },
+ "issue_102922_comment_authors": [
+  "kvnloo"
+ ],
+ "pr_129692_comments": [
+  {
+   "login": "saiteja-madha",
+   "created_at": "2026-10-01T04:08:40Z",
+   "first_line": "Updated the catalog pin from `v0.1.0` to `v0.1.1` (`ead68009b0bb0f27a0b0f397d32181d35333fb92`)."
+  }
+ ],
+ "pr_95186_comments": [
+  {
+   "login": "Ilannuko",
+   "created_at": "2026-08-26T03:56:27Z"
+  }
+ ],
+ "search_PII_open": {
+  "query": "gh search prs 'PII' -R NousResearch/hermes-agent --state open --limit 200",
+  "returned": 111,
+  "new_since_r2": [],
+  "gone_since_r2": []
+ },
+ "search_other_open": {
+  "paw-pii": [],
+  "programasweights": [],
+  "pii plugin-catalog": [],
+  "redact PII": [
+   14624,
+   17472,
+   21464,
+   22711,
+   34818,
+   36689,
+   37833,
+   50050,
+   57741,
+   58140,
+   59081,
+   62088,
+   69890,
+   76516,
+   77117,
+   116106,
+   127944,
+   128722,
+   129086
+  ],
+  "anonymization": [
+   63917,
+   89488,
+   95186,
+   102049,
+   115172
+  ],
+  "privacy middleware": [
+   95186,
+   96043
+  ],
+  "desensitize": []
+ },
+ "fork_404": {
+  "state": "OPEN",
+  "title": "[staged PRs] 39 reproved branches ready for manual upstream promotion",
+  "table_lines_excl_separators": 40,
+  "updated": "2026-10-01T08:11:50Z"
+ }
+}

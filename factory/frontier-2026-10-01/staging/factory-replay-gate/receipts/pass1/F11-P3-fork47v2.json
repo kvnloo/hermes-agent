@@ -1,0 +1,274 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "F11-P3-fork47v2/r20261001T092256Z",
+ "generated_at": "2026-10-01T09:23:58Z",
+ "spec": {
+  "id": "F11-P3-fork47v2",
+  "rev": 1,
+  "sha256": "251e847562f9993b09455a6d20dfec1061e6688a1c889f929fb0c0f3614d3a89",
+  "kind": "redgreen"
+ },
+ "work_order": {
+  "id": "xf-F11-P3-fork47v2",
+  "from": "factory-replay-gate staging builder",
+  "status": "claimed"
+ },
+ "runner_revision": "evals/_factory/gate_runner.py@2f9f69cf03b2",
+ "issue": "kvnloo/hermes-agent#322",
+ "origin_refs": [
+  "kvnloo/hermes-agent#47"
+ ],
+ "base_revision": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+ "head_revision": "1d31fe5193e1ee964e611bba6340ab2919c3192c",
+ "arms": {
+  "base": {
+   "commit": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+   "tree": "6ec691f75dee76b62b90b7c9f01d2ec02bf282aa",
+   "inject": {
+    "from": "1d31fe5193e1ee964e611bba6340ab2919c3192c",
+    "source_commit": "46e5e2094da8bcc1329557310ca7c40d69652911",
+    "files": [
+     "tests/agent/test_nous_rate_guard.py",
+     "tests/agent/test_rate_limit_tracker.py"
+    ]
+   }
+  },
+  "head": {
+   "commit": "1d31fe5193e1ee964e611bba6340ab2919c3192c",
+   "merge": "merge-tree",
+   "arm_commit": "46e5e2094da8bcc1329557310ca7c40d69652911",
+   "tree": "7462b8a07dc3391f3772622c9a3d1e560268fcb5"
+  }
+ },
+ "changed_files": [
+  "agent/rate_limit_tracker.py",
+  "tests/agent/test_nous_rate_guard.py",
+  "tests/agent/test_rate_limit_tracker.py"
+ ],
+ "tests": {
+  "red": {
+   "command": "bash scripts/run_tests.sh -j 2 tests/agent/test_rate_limit_tracker.py tests/agent/test_nous_rate_guard.py -q -m 'not live and not integration'",
+   "arm": "base + injected tests",
+   "expected_failure": [
+    "assert 100.0 == 0.0",
+    "assert True is False"
+   ],
+   "observed": "3/3"
+  },
+  "green": {
+   "command": "bash scripts/run_tests.sh -j 2 tests/agent/test_rate_limit_tracker.py tests/agent/test_nous_rate_guard.py -q -m 'not live and not integration'",
+   "arm": "head",
+   "observed": "3/3"
+  },
+  "sabotage": {
+   "command": "bash scripts/run_tests.sh -j 2 tests/agent/test_rate_limit_tracker.py tests/agent/test_nous_rate_guard.py -q -m 'not live and not integration'",
+   "mode": "per-hunk revert",
+   "expected_failure": "rc != 0",
+   "observed": "2/2 re-RED"
+  }
+ },
+ "gates": {
+  "validity": {
+   "result": "PASS"
+  },
+  "red": {
+   "result": "PASS",
+   "reps_agree": "3/3"
+  },
+  "green": {
+   "result": "PASS",
+   "reps_agree": "3/3"
+  },
+  "sabotage": {
+   "result": "PASS",
+   "per_hunk": [
+    {
+     "hunk": "agent/rate_limit_tracker.py -56,7 +56,8",
+     "red_again": true
+    },
+    {
+     "hunk": "agent/rate_limit_tracker.py -93,18 +94,24",
+     "red_again": true
+    }
+   ],
+   "unpinned_hunks": []
+  },
+  "adjacent": {
+   "result": "PASS",
+   "files": [
+    "tests/gateway/test_usage_command.py",
+    "tests/hermes_cli/test_cli_status_bar.py"
+   ],
+   "base_failing": [],
+   "head_failing": [],
+   "pre_existing_failures": []
+  },
+  "ownership": {
+   "result": "PASS",
+   "recorded": "clear",
+   "searched_at": "2026-09-30",
+   "queries": [
+    "x-ratelimit-remaining missing",
+    "rate_limit_tracker remaining default"
+   ]
+  },
+  "flaky": false
+ },
+ "measurements": [
+  {
+   "name": "red_reps_failing_with_marker",
+   "value": "3/3",
+   "unit": "reps",
+   "label": "OBSERVED",
+   "source": "probe",
+   "primary": true
+  },
+  {
+   "name": "red-0_exit",
+   "value": 1,
+   "unit": "exit code",
+   "label": "OBSERVED",
+   "source": "probe"
+  },
+  {
+   "name": "red-1_exit",
+   "value": 1,
+   "unit": "exit code",
+   "label": "OBSERVED",
+   "source": "probe"
+  },
+  {
+   "name": "red-2_exit",
+   "value": 1,
+   "unit": "exit code",
+   "label": "OBSERVED",
+   "source": "probe"
+  },
+  {
+   "name": "green-0_exit",
+   "value": 0,
+   "unit": "exit code",
+   "label": "OBSERVED",
+   "source": "probe"
+  },
+  {
+   "name": "green-1_exit",
+   "value": 0,
+   "unit": "exit code",
+   "label": "OBSERVED",
+   "source": "probe"
+  },
+  {
+   "name": "green-2_exit",
+   "value": 0,
+   "unit": "exit code",
+   "label": "OBSERVED",
+   "source": "probe"
+  },
+  {
+   "name": "sabotage-0_exit",
+   "value": 1,
+   "unit": "exit code",
+   "label": "OBSERVED",
+   "source": "probe"
+  },
+  {
+   "name": "sabotage-1_exit",
+   "value": 1,
+   "unit": "exit code",
+   "label": "OBSERVED",
+   "source": "probe"
+  },
+  {
+   "name": "adjacent-base-0_exit",
+   "value": 0,
+   "unit": "exit code",
+   "label": "OBSERVED",
+   "source": "probe"
+  },
+  {
+   "name": "adjacent-head-0_exit",
+   "value": 0,
+   "unit": "exit code",
+   "label": "OBSERVED",
+   "source": "probe"
+  }
+ ],
+ "denominators": {
+  "cells": 10,
+  "infra": 0,
+  "completeness": 1.0
+ },
+ "env": {
+  "python": "3.11.14",
+  "sandbox": "in-process guard per cell (loopback-only connect, name lookups, live-home opens, hermes exec); fresh HOME/HERMES_HOME per cell; empty env; no kernel network namespace",
+  "relay": {
+   "error": "relay pin probe failed"
+  }
+ },
+ "safety": {
+  "canary": {
+   "passed": true,
+   "checks": {
+    "loopback_connect": true,
+    "nonloopback_connect": true,
+    "name_lookup": true,
+    "live_home_open": true,
+    "hermes_exec": true,
+    "hermes_exec_ran": true,
+    "guard": true,
+    "home_isolated": true,
+    "logged": true
+   },
+   "blocked_events": [
+    "open",
+    "socket.connect",
+    "socket.getaddrinfo",
+    "subprocess.Popen"
+   ],
+   "python": "3.11.14",
+   "rc": 0
+  },
+  "egress_blocked": 0,
+  "home_blocked": 0,
+  "exec_blocked": 0,
+  "interpreter_writes_refused": 0,
+  "hermes_home_isolated": true
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "builds": [],
+ "runtime_evidence": [],
+ "security_checks": [],
+ "resource_usage": {
+  "wall_s": 62.3,
+  "cpu_core_s": null,
+  "tokens": 0,
+  "api_cost_usd": 0.0
+ },
+ "outcome": {
+  "execution_completed": true,
+  "verified_success": null,
+  "verification_source": "self-run gate runner (not independent)"
+ },
+ "provenance": "self",
+ "verdict": "KEEP",
+ "refused": false,
+ "refusal_reasons": [],
+ "unpinned_hunks": [],
+ "limitations": [
+  "in-process guard only; pair with a kernel network namespace for a hard boundary"
+ ],
+ "not_tested": [
+  "full test suite",
+  "real provider responses",
+  "kernel network namespace (in-process guard only)"
+ ],
+ "ai_assistance": "Spec and runner written with Claude Code (Opus 5.5); disclosed per repository policy",
+ "privacy": "public-aggregate"
+}

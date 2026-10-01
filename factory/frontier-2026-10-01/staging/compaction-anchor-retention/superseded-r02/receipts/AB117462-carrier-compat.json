@@ -1,0 +1,102 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compaction-anchor-retention",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#116246",
+  "NousResearch/hermes-agent#87326",
+  "NousResearch/hermes-agent#117462",
+  "NousResearch/hermes-agent#122274",
+  "NousResearch/hermes-agent#122522",
+  "NousResearch/hermes-agent#78457"
+ ],
+ "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+ "head_revision": "b11e27d5f9c60a420cbbe94fa967fc1454df92a6",
+ "supersedes": "6e0fa629a0 receipts r20261001-01 (superseded-r01/)",
+ "policy_revision": {
+  "factory": "FACTORY.md (frontier-2026-10-01)",
+  "protocol": "promotion-readiness-2026-10-01/PROTOCOL.md"
+ },
+ "env": {
+  "python": "3.11 (HERMES_PYTHON venv, read-only bind)",
+  "sandbox": "harness/sandbox.sh: bwrap ro-root, --unshare-net (connect -> ENETUNREACH), systemd-resolved socket masked (DNS -> EAI_AGAIN), pidns, clearenv, live Hermes install masked except the venv, fresh HOME/HERMES_HOME per run; harness/egress_sitecustomize.py logs every non-loopback DNS lookup and connect attempt (the script run had these paths inlined; the copy here takes them from env)",
+  "tests": "HOME=$S/testhome-sf-compaction-anchor-retention HERMES_HOME=$HOME/.hermes HERMES_PYTHON=$PY bash scripts/run_tests.sh -j 2 <files> -q"
+ },
+ "provenance": "self",
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the rows, tests, harness and gold labels; disclosed per repository policy",
+ "privacy": "public-aggregate (inputs are committed upstream text or seeded synthetic data; no state.db, no lineages); no absolute local paths",
+ "resource_usage": {
+  "api_cost_usd": 0.0,
+  "gpu_s": 0,
+  "tokens": 0
+ },
+ "id": "AB117462/r20261001-02",
+ "kind": "carrier-ab",
+ "question": "Is this slice duplicated by the open #117462 (Seldash, anchor harvest surface + truncation), and does it compose with it?",
+ "inputs": {
+  "arms": {
+   "base": {
+    "tree": "aea969677c60a1bb72fe227fdfb98f196a2092cc:agent/context_compressor.py",
+    "sha256": "86f4b7a8a647f1bf520cb17497b68719f6d907028bdc7151c7921818b7e043f1"
+   },
+   "branch": {
+    "head": "b11e27d5f9c60a420cbbe94fa967fc1454df92a6",
+    "sha256": "eea32ae2600e20ac7729cc894bf9afdd8987a33d97f6f98e1671dcc5e13a3ef2"
+   },
+   "c117462": {
+    "pr": 117462,
+    "head": "2c19948e15d68492d048250bae7707ca77063db5",
+    "merge_tree_with_base": "8d48e1bbf2de02ca54cdf4aa6bdc9bb029183db1",
+    "merge": "clean",
+    "sha256": "fdb7abd8050b4944171522c7e713004d7fbce9b2d8ddfb1c8de93414f206ebe0"
+   },
+   "c117462_foldin": {
+    "onto": "c117462",
+    "patch": "foldin-on-117462.patch (rows + tests/agent/test_context_compressor_anchor_index.py)",
+    "patch_sha256": "06369375643c1233d72e7f7a705f150c9909a9d906aa8bcf19215ffab6ef6228",
+    "merge": "hand-ported (rows placed in #117462's cheap-first order)",
+    "sha256": "c8994fc54bfe99312707a53d7d4ac7a20d0d66614d66c059bd392adad3c1f7ca"
+   }
+  },
+  "tests": {
+   "ours": "tests/agent/test_context_compressor_anchor_index.py",
+   "theirs": "tests/agent/test_context_compressor_anchor_harvest.py @ 2c19948e15d68492d048250bae7707ca77063db5"
+  }
+ },
+ "command": "in $WT at HEAD: copy each arm file over agent/context_compressor.py (plus #117462's test file), run both test files with run_tests.sh; restore",
+ "matrix": {
+  "c117462": {
+   "ours": "Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 2.2s (2 workers)",
+   "theirs": "Summary: 1 files, 5 tests passed, 0 failed (100% complete) in 1.3s (2 workers)"
+  },
+  "c117462_foldin": {
+   "ours": "Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 1.1s (2 workers)",
+   "theirs": "Summary: 1 files, 5 tests passed, 0 failed (100% complete) in 1.3s (2 workers)",
+   "adjacent_8_files": "Summary: 8 files, 372 tests passed, 0 failed (100% complete) in 95.3s (2 workers)"
+  },
+  "branch": {
+   "ours": "Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 1.2s (2 workers)",
+   "theirs": "Summary: 1 files, 2 tests passed, 3 failed (100% complete) in 2.6s (2 workers)",
+   "theirs_failing": [
+    "test_anchor_index_cheap_ids_survive_a_tight_budget",
+    "test_anchor_index_harvests_tool_call_arguments_and_artifact_paths",
+    "test_anchor_index_names_a_class_whose_values_cannot_fit"
+   ]
+  }
+ },
+ "merge": {
+  "branch_vs_main": "clean",
+  "117462_vs_main": "clean (tree 8d48e1bbf2)",
+  "branch_vs_117462_head": "conflict in agent/context_compressor.py (both edit the _ANCHOR_PATTERNS table)",
+  "foldin_patch_applies_to_117462_head": "yes, exactly (git apply, no offset; the patch is a git diff of #117462's tree plus the rows and our test file)",
+  "foldin_patch_applies_to_main_plus_117462": "yes (offset +105 lines); the result is byte-identical to the tested c117462_foldin arm",
+  "branch_vs_122522_head": "clean (f596584b01)"
+ },
+ "pr_state_read_only": {
+  "117462": "OPEN, head 2c19948e15, 0 formal reviews; 1 issue comment from a User account (kyssta-exe) signed 'Reviewed using Hermes-Agent', verdict 'Looks good to merge'; author follow-up 2026-09-22",
+  "122522": "OPEN, head f596584b01"
+ },
+ "label": "OBSERVED",
+ "readout": "not a duplicate: #117462 does not capture these classes (our tests RED on it) and this slice does not do its work (3 of its 5 tests RED here); the two compose (fold-in GREEN on both suites)",
+ "verdict": "KEEP (complementary; this slice is offered to #117462 as a fold-in)"
+}

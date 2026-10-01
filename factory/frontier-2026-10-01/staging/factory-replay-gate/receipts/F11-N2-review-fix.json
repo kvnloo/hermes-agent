@@ -1,0 +1,248 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "F11-N2-review-fix/r20261001T162938Z",
+ "generated_at": "2026-10-01T16:31:01Z",
+ "spec": {
+  "id": "F11-N2-review-fix",
+  "rev": 1,
+  "sha256": "904169800be4cf3e4cdf0c73da889b428934cdf41f1e52269b54d0767926dc04",
+  "kind": "redgreen"
+ },
+ "work_order": {
+  "id": "xf-F11-N2-review-fix",
+  "from": "factory-replay-gate staging builder",
+  "status": "claimed"
+ },
+ "runner_revision": "evals/_factory/gate_runner.py@66da486d13e3",
+ "issue": "kvnloo/hermes-agent#322",
+ "origin_refs": [
+  "rework:review-fix 8ded06be29",
+  "NousResearch/hermes-agent#123545"
+ ],
+ "base_revision": "a7c2df3846f7d6040dd81b7573bd962da546222e",
+ "head_revision": "ac0b07597d767ce8aa3390b60fde1020e3274e72",
+ "arms": {
+  "base": {
+   "commit": "a7c2df3846f7d6040dd81b7573bd962da546222e",
+   "tree": "764031e5ee924fe062a826d4dd6faa533acb5263",
+   "inject": {
+    "from": "8ded06be29cff20f284a474f6e304bda38b84940",
+    "source_commit": "8ded06be29cff20f284a474f6e304bda38b84940",
+    "files": [
+     "tests/tui_gateway/test_submit_row_session_target.py"
+    ]
+   }
+  },
+  "head": {
+   "commit": "ac0b07597d767ce8aa3390b60fde1020e3274e72",
+   "merge": "direct",
+   "arm_commit": "ac0b07597d767ce8aa3390b60fde1020e3274e72",
+   "tree": "550ff9663ba07e02162ef991b91ef0e926a5ec2f",
+   "inject": [
+    "tests/tui_gateway/test_submit_row_session_target.py"
+   ]
+  }
+ },
+ "changed_files": [
+  "agent/message_metadata.py",
+  "hermes_state_messages.py",
+  "tests/tui_gateway/test_submit_row_session_target.py",
+  "tests/tui_gateway/test_tui_gateway_server.py",
+  "tui_gateway/methods_session.py",
+  "tui_gateway/server.py",
+  "tui_gateway/session_auto_continue.py",
+  "tui_gateway/session_workdir.py"
+ ],
+ "tests": {
+  "red": {
+   "command": "bash scripts/run_tests.sh -j 2 tests/tui_gateway/test_submit_row_session_target.py -q -m 'not live and not integration'",
+   "arm": "base + injected tests",
+   "expected_failure": [
+    "AssertionError"
+   ],
+   "observed": "3/3"
+  },
+  "green": {
+   "command": "bash scripts/run_tests.sh -j 2 tests/tui_gateway/test_submit_row_session_target.py -q -m 'not live and not integration'",
+   "arm": "head + injected tests",
+   "observed": "0/3"
+  }
+ },
+ "gates": {
+  "validity": {
+   "result": "PASS"
+  },
+  "red": {
+   "result": "PASS",
+   "reps_agree": "3/3"
+  },
+  "green": {
+   "result": "FAIL",
+   "reps_agree": "0/3",
+   "reason": "not_fixed"
+  },
+  "sabotage": {
+   "result": "N_A",
+   "reason": "skipped: RED or GREEN did not pass"
+  },
+  "adjacent": {
+   "result": "N_A",
+   "reason": "skipped: RED or GREEN did not pass"
+  },
+  "ownership": {
+   "result": "PENDING",
+   "recorded": "unknown",
+   "searched_at": null,
+   "queries": []
+  },
+  "flaky": false
+ },
+ "measurements": [
+  {
+   "name": "red_reps_failing_with_marker",
+   "value": "3/3",
+   "unit": "reps",
+   "label": "OBSERVED",
+   "source": "probe",
+   "primary": true
+  },
+  {
+   "name": "relay-pin_exit",
+   "value": 0,
+   "unit": "exit code",
+   "label": "OBSERVED",
+   "source": "probe"
+  },
+  {
+   "name": "red-0_exit",
+   "value": 1,
+   "unit": "exit code",
+   "label": "OBSERVED",
+   "source": "probe"
+  },
+  {
+   "name": "red-1_exit",
+   "value": 1,
+   "unit": "exit code",
+   "label": "OBSERVED",
+   "source": "probe"
+  },
+  {
+   "name": "red-2_exit",
+   "value": 1,
+   "unit": "exit code",
+   "label": "OBSERVED",
+   "source": "probe"
+  },
+  {
+   "name": "green-0_exit",
+   "value": 1,
+   "unit": "exit code",
+   "label": "OBSERVED",
+   "source": "probe"
+  },
+  {
+   "name": "green-1_exit",
+   "value": 1,
+   "unit": "exit code",
+   "label": "OBSERVED",
+   "source": "probe"
+  },
+  {
+   "name": "green-2_exit",
+   "value": 1,
+   "unit": "exit code",
+   "label": "OBSERVED",
+   "source": "probe"
+  }
+ ],
+ "denominators": {
+  "cells": 7,
+  "infra": 0,
+  "completeness": 1.0
+ },
+ "env": {
+  "python": "3.11.14",
+  "sandbox": "in-process guard per cell (loopback-only connect, name lookups, live-home opens, hermes exec); fresh HOME/HERMES_HOME per cell; empty env; no kernel network namespace",
+  "relay": {
+   "present": true,
+   "runtime_schema": "hermes.relay.runtime.v1",
+   "plugins_toml_sha256": null,
+   "config_paths": [],
+   "version": null,
+   "error": "TypeError: validate() got an unexpected keyword argument 'additional_plugins_toml'"
+  }
+ },
+ "safety": {
+  "canary": {
+   "passed": true,
+   "checks": {
+    "loopback_connect": true,
+    "nonloopback_connect": true,
+    "name_lookup": true,
+    "live_home_open": true,
+    "hermes_exec": true,
+    "hermes_exec_shell": true,
+    "hermes_exec_bash_c": true,
+    "hermes_exec_path": true,
+    "hermes_exec_ran": true,
+    "hermes_on_path": true,
+    "guard": true,
+    "home_isolated": true,
+    "logged": true
+   },
+   "blocked_events": [
+    "open",
+    "socket.connect",
+    "socket.getaddrinfo",
+    "subprocess.Popen"
+   ],
+   "python": "3.11.14",
+   "rc": 0
+  },
+  "egress_blocked": 0,
+  "home_blocked": 0,
+  "exec_blocked": 0,
+  "interpreter_writes_refused": 0,
+  "hermes_home_isolated": true
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "builds": [],
+ "runtime_evidence": [],
+ "security_checks": [],
+ "resource_usage": {
+  "wall_s": 82.5,
+  "cpu_core_s": null,
+  "tokens": 0,
+  "api_cost_usd": 0.0
+ },
+ "outcome": {
+  "execution_completed": true,
+  "verified_success": null,
+  "verification_source": "self-run gate runner (not independent)"
+ },
+ "provenance": "self",
+ "verdict": "DISCARD",
+ "refused": true,
+ "refusal_reasons": [
+  "green: not_fixed",
+  "ownership: PENDING"
+ ],
+ "unpinned_hunks": [],
+ "limitations": [
+  "in-process guard only; pair with a kernel network namespace for a hard boundary"
+ ],
+ "not_tested": [
+  "full test suite",
+  "real provider responses",
+  "kernel network namespace (in-process guard only)"
+ ],
+ "ai_assistance": "Spec and runner written with Claude Code (Opus 5.5); disclosed per repository policy",
+ "privacy": "public-aggregate"
+}

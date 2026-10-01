@@ -1,0 +1,194 @@
+[
+  {
+    "passed": 1,
+    "failed": 2,
+    "failed_tests": [
+      "tests/agent/test_anthropic_context_editing.py::test_opt_in_sends_clear_tool_uses_with_its_beta_ahead_of_local_compression[on]",
+      "tests/agent/test_anthropic_context_editing.py::test_structured_rejection_disables_it_for_the_session_and_retries_once"
+    ],
+    "assertions": [
+      "AssertionError: assert 'context-management-2025-06-27' in ['interleaved-thinking-2025-05-14', 'fine-grained-tool-streaming-2025-05-14']",
+      "E         At index 0 diff: False != True",
+      "Right contains one more item: False",
+      "Use -v to get more diff",
+      "assert [False, False] == [True, False, False]"
+    ],
+    "rc": 1,
+    "id": "helpers-call-site",
+    "file": "agent/chat_completion_helpers.py",
+    "re_red": true
+  },
+  {
+    "passed": 1,
+    "failed": 2,
+    "failed_tests": [
+      "tests/agent/test_anthropic_context_editing.py::test_opt_in_sends_clear_tool_uses_with_its_beta_ahead_of_local_compression[on]",
+      "tests/agent/test_anthropic_context_editing.py::test_structured_rejection_disables_it_for_the_session_and_retries_once"
+    ],
+    "assertions": [
+      "E         At index 0 diff: False != True",
+      "Right contains one more item: False",
+      "TypeError: 'NoneType' object is not subscriptable",
+      "Use -v to get more diff",
+      "assert [False, False] == [True, False, False]"
+    ],
+    "rc": 1,
+    "id": "adapter-extra-body",
+    "file": "agent/anthropic_adapter.py",
+    "re_red": true
+  },
+  {
+    "passed": 2,
+    "failed": 1,
+    "failed_tests": [
+      "tests/agent/test_anthropic_context_editing.py::test_opt_in_sends_clear_tool_uses_with_its_beta_ahead_of_local_compression[on]"
+    ],
+    "assertions": [
+      "AssertionError: assert 'context-management-2025-06-27' in ['interleaved-thinking-2025-05-14', 'fine-grained-tool-streaming-2025-05-14']"
+    ],
+    "rc": 1,
+    "id": "adapter-beta",
+    "file": "agent/anthropic_adapter.py",
+    "re_red": true
+  },
+  {
+    "passed": 1,
+    "failed": 2,
+    "failed_tests": [
+      "tests/agent/test_anthropic_context_editing.py::test_opt_in_sends_clear_tool_uses_with_its_beta_ahead_of_local_compression[on]",
+      "tests/agent/test_anthropic_context_editing.py::test_structured_rejection_disables_it_for_the_session_and_retries_once"
+    ],
+    "assertions": [
+      "AssertionError: assert 'context-management-2025-06-27' in ['interleaved-thinking-2025-05-14', 'fine-grained-tool-streaming-2025-05-14']",
+      "E         At index 0 diff: False != True",
+      "Right contains one more item: False",
+      "Use -v to get more diff",
+      "assert [False, False] == [True, False, False]"
+    ],
+    "rc": 1,
+    "id": "agent-init-parse",
+    "file": "agent/agent_init.py",
+    "re_red": true
+  },
+  {
+    "passed": 1,
+    "failed": 2,
+    "failed_tests": [
+      "tests/agent/test_anthropic_context_editing.py::test_opt_in_sends_clear_tool_uses_with_its_beta_ahead_of_local_compression[on]",
+      "tests/agent/test_anthropic_context_editing.py::test_structured_rejection_disables_it_for_the_session_and_retries_once"
+    ],
+    "assertions": [
+      "AssertionError: assert 'context-management-2025-06-27' in ['interleaved-thinking-2025-05-14', 'fine-grained-tool-streaming-2025-05-14']",
+      "E         At index 0 diff: False != True",
+      "Right contains one more item: False",
+      "Use -v to get more diff",
+      "assert [False, False] == [True, False, False]"
+    ],
+    "rc": 1,
+    "id": "agent-init-attr",
+    "file": "agent/agent_init.py",
+    "re_red": true
+  },
+  {
+    "passed": 2,
+    "failed": 1,
+    "failed_tests": [
+      "tests/agent/test_anthropic_context_editing.py::test_structured_rejection_disables_it_for_the_session_and_retries_once"
+    ],
+    "assertions": [
+      "assert (False)"
+    ],
+    "rc": 1,
+    "id": "recovery-anthropic-row",
+    "file": "agent/turn_recovery.py",
+    "re_red": true
+  },
+  {
+    "passed": 2,
+    "failed": 1,
+    "failed_tests": [
+      "tests/agent/test_anthropic_context_editing.py::test_structured_rejection_disables_it_for_the_session_and_retries_once"
+    ],
+    "assertions": [
+      "assert (False)"
+    ],
+    "rc": 1,
+    "id": "recovery-setattr",
+    "file": "agent/turn_recovery.py",
+    "re_red": true
+  },
+  {
+    "passed": 1,
+    "failed": 2,
+    "failed_tests": [
+      "tests/agent/test_anthropic_context_editing.py::test_opt_in_sends_clear_tool_uses_with_its_beta_ahead_of_local_compression[on]",
+      "tests/agent/test_anthropic_context_editing.py::test_structured_rejection_disables_it_for_the_session_and_retries_once"
+    ],
+    "assertions": [
+      "AssertionError: assert 'context-management-2025-06-27' in ['interleaved-thinking-2025-05-14', 'fine-grained-tool-streaming-2025-05-14']",
+      "E         At index 0 diff: False != True",
+      "Right contains one more item: False",
+      "Use -v to get more diff",
+      "assert [False, False] == [True, False, False]"
+    ],
+    "rc": 1,
+    "id": "gate-native-route",
+    "file": "agent/anthropic_context_editing.py",
+    "re_red": true
+  },
+  {
+    "passed": 2,
+    "failed": 1,
+    "failed_tests": [
+      "tests/agent/test_anthropic_context_editing.py::test_opt_in_sends_clear_tool_uses_with_its_beta_ahead_of_local_compression[on]"
+    ],
+    "assertions": [
+      "+    where <agent.context_compressor.ContextCompressor object at 0x7f3ccc6bdbd0> = <run_agent.AIAgent object at 0x7f3ccc6bdd90>.context_compressor",
+      "+  where 150000 = <agent.context_compressor.ContextCompressor object at 0x7f3ccc6bdbd0>.threshold_tokens",
+      "assert 150001 < 150000"
+    ],
+    "rc": 1,
+    "id": "gate-trigger-margin",
+    "file": "agent/anthropic_context_editing.py",
+    "re_red": true
+  },
+  {
+    "passed": 1,
+    "failed": 2,
+    "failed_tests": [
+      "tests/agent/test_anthropic_context_editing.py::test_opt_in_sends_clear_tool_uses_with_its_beta_ahead_of_local_compression[on]",
+      "tests/agent/test_anthropic_context_editing.py::test_structured_rejection_disables_it_for_the_session_and_retries_once"
+    ],
+    "assertions": [
+      "AssertionError: assert 'context-management-2025-06-27' in ['interleaved-thinking-2025-05-14', 'fine-grained-tool-streaming-2025-05-14']",
+      "E         At index 0 diff: False != True",
+      "Right contains one more item: False",
+      "Use -v to get more diff",
+      "assert [False, False] == [True, False, False]"
+    ],
+    "rc": 1,
+    "id": "transport-default",
+    "file": "agent/transports/anthropic.py",
+    "re_red": true
+  },
+  {
+    "passed": 3,
+    "failed": 0,
+    "failed_tests": [],
+    "assertions": [],
+    "rc": 0,
+    "id": "tui-hot-reload",
+    "file": "tui_gateway/session_compression.py",
+    "re_red": false
+  },
+  {
+    "passed": 3,
+    "failed": 0,
+    "failed_tests": [],
+    "assertions": [],
+    "rc": 0,
+    "id": "gateway-cache-key",
+    "file": "gateway/run.py",
+    "re_red": false
+  }
+]

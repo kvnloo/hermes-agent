@@ -1,0 +1,49 @@
+main 44a1ce9724 21 [] {'clean': True, 'tree': '675e1aa029'}
+98045 closed 77f018b7db 2026-10-01T12:51:06Z
+87028 open f63bfa2a5c None
+124151 open 3ee6189dba None
+120042 open 641f6b94c5 None
+47119 open None None
+21566 open None None
+92118 open 2ad5cc73fa None
+126457 open 822f7b2835 None
+86948 open cc1c2a1f2c None
+65329 open c868eaaa02 None
+125802 open 543af5de19 None
+15412 open 69c5a41321 None
+113678 open b94a482497 None
+78584 open e7c6f83e8a None
+127373 open None None
+127374 open None None
+127375 open None None
+127332 open None None
+127228 open None None
+prefetch metric 4 4 added 0 removed []
+prefetch telemetry 10 10 added 0 removed []
+memory prefetch 153 153 added 54 removed [98045]
+prefetch_provider 0 0 added 0 removed []
+prefetch shared metrics 2 2 added 0 removed []
+memory.prefetch 1 1 added 0 removed []
+record_memory_prefetch 0 0 added 0 removed []
+external prefetch 61 61 added 1 removed [98045]
+prefetch timeout 55 55 added 0 removed [98045]
+prefetch latency 22 22 added 1 removed [98045]
+teknium1 260 True [] []
+scan hit 58597 ['agent/memory_manager.py', 'agent/turn_context.py']
+scan hit 63759 ['agent/memory_manager.py']
+scan hit 64528 ['agent/turn_context.py']
+scan hit 91974 ['agent/turn_context.py']
+scan hit 98768 ['agent/turn_context.py']
+scan hit 108965 ['agent/memory_manager.py']
+scan hit 119191 ['agent/turn_context.py']
+merge 124151 True True {'clean': True, 'conflicts': []}
+merge 120042 True True {'clean': True, 'conflicts': []}
+merge 98045 True True {'clean': True, 'conflicts': []}
+merge 92118 True True {'clean': False, 'conflicts': ['agent/memory_manager.py']}
+merge 126457 True True {'clean': False, 'conflicts': ['agent/memory_manager.py']}
+merge 87028 True False {'clean': False, 'conflicts': ['agent/agent_init.py', 'agent/memory_manager.py']}
+merge 86948 True False {'clean': False, 'conflicts': ['agent/memory_manager.py', 'plugins/memory/byterover/__init__.py']}
+merge 65329 True False {'clean': False, 'conflicts': ['agent/chat_completion_helpers.py', 'agent/conversation_loop.py', 'agent/tool_executor.py', 'agent/turn_context.py', 'agent/turn_finalizer.py', 'gateway/platforms/base.py', 'gateway/run.py', 'gateway/turn_context.py', 'hermes_cli/config_defaults.py', 'plugins/platforms/telegram/adapter.py', 'run_agent.py']}
+merge 125802 True False {'clean': False, 'conflicts': ['agent/turn_context.py', 'tests/agent/test_api_content_sidecar.py', 'tests/agent/test_turn_context.py']}
+merge 78584 True False {'clean': False, 'conflicts': ['agent/agent_init.py', 'agent/agent_runtime_helpers.py', 'agent/background_review.py', 'agent/conversation_compression.py', 'agent/memory_manager.py', 'agent/prompt_builder.py', 'agent/system_prompt.py', 'agent/title_generator.py', 'agent/tool_executor.py', 'agent/turn_context.py', 'apps/desktop/src/app/chat/composer/index.tsx', 'apps/desktop/src/app/chat/index.tsx', 'apps/desktop/src/app/chat/sidebar/index.tsx', 'apps/desktop/src/app/session/hooks/use-message-stream/gateway-event.ts', 'apps/desktop/src/app/session/hooks/use-session-actions/index.ts', 'apps/desktop/src/app/types.ts', 'apps/desktop/src/i18n/ar.ts', 'apps/desktop/src/i18n/en.ts', 'apps/desktop/src/i18n/ja.ts', 'apps/desktop/src/i18n/types.ts', 'apps/desktop/src/i18n/zh-hant.ts', 'apps/desktop/src/i18n/zh.ts', 'apps/desktop/src/lib/chat-messages.ts', 'apps/desktop/src/lib/keybinds/actions.ts', 'cli.py', 'gateway/platforms/base.py', 'gateway/run.py', 'gateway/session.py', 'gateway/slash_commands.py', 'hermes_cli/_parser.py', 'hermes_cli/cli_agent_setup_mixin.py', 'hermes_cli/cli_commands_mixin.py', 'hermes_cli/commands.py', 'hermes_cli/lifecycle.py', 'hermes_cli/main.py', 'hermes_cli/oneshot.py', 'hermes_cli/plugins.py', 'hermes_cli/tips.py', 'hermes_state.py', 'locales/af.yaml', 'locales/ar.yaml', 'locales/de.yaml', 'locales/en.yaml', 'locales/es.yaml', 'locales/fr.yaml', 'locales/ga.yaml', 'locales/hu.yaml', 'locales/it.yaml', 'locales/ja.yaml', 'locales/ko.yaml', 'locales/pt.yaml', 'locales/ru.yaml', 'locales/tr.yaml', 'locales/uk.yaml', 'locales/zh-hant.yaml', 'locales/zh.yaml', 'plugins/memory/hindsight/__init__.py', 'plugins/memory/honcho/__init__.py', 'plugins/memory/supermemory/__init__.py', 'run_agent.py', 'tests/agent/test_ephemeral_tool_guard_executors.py', 'tools/delegate_tool.py', 'tui_gateway/methods_session.py', 'tui_gateway/server.py']}
+wrote recheck_r4.json

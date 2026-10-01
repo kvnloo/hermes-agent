@@ -1,0 +1,44 @@
+# r4 git recheck (round-4 manifest fix; bare mirror, read-only; run at 2026-10-01T16:46:36Z)
+$ git ls-remote https://github.com/NousResearch/hermes-agent.git refs/heads/main
+44a1ce9724502b9c692faaef00af3054bf11f1a6	refs/heads/main
+rc=0
+# declared main (unchanged from round 3): 44a1ce9724502b9c692faaef00af3054bf11f1a6
+$ git -C <bare> rev-parse main refs/heads/staging/plugin-catalog-entries refs/heads/staging/plugin-catalog-entries^
+44a1ce9724502b9c692faaef00af3054bf11f1a6
+98c305b3ec8d03693f4dc94bade69035cb15ff7d
+234badf4012af380d23c91eae55d045a69c69ffb
+rc=0
+$ git -C <bare> log -1 --format=%H parent=%P author=%an <%ae> committer_date=%cI subject=%s refs/heads/staging/plugin-catalog-entries
+98c305b3ec8d03693f4dc94bade69035cb15ff7d parent=234badf4012af380d23c91eae55d045a69c69ffb author=Kevin Rajan <7121943+kvnloo@users.noreply.github.com> committer_date=2026-10-01T04:14:45-05:00 subject=feat(plugin-catalog): add paw-pii
+rc=0
+$ git -C <bare> rev-parse refs/heads/staging/plugin-catalog-entries^{tree}
+3a915075078775928dd352fa2fe77bd200bdd714
+rc=0
+$ git -C <bare> diff --stat 234badf4012af380d23c91eae55d045a69c69ffb refs/heads/staging/plugin-catalog-entries
+ plugin-catalog/paw-pii.yaml | 20 ++++++++++++++++++++
+ 1 file changed, 20 insertions(+)
+rc=0
+$ git -C <bare> merge-base --is-ancestor 234badf4012af380d23c91eae55d045a69c69ffb 44a1ce9724502b9c692faaef00af3054bf11f1a6
+rc=0
+$ git -C <bare> rev-list --count 234badf4012af380d23c91eae55d045a69c69ffb..44a1ce9724502b9c692faaef00af3054bf11f1a6
+65
+rc=0
+$ git -C <bare> merge-tree --write-tree 44a1ce9724502b9c692faaef00af3054bf11f1a6 98c305b3ec8d03693f4dc94bade69035cb15ff7d
+60459843c290c8d7062e5d8af03603607eedbe51
+rc=0
+$ git -C <bare> cat-file -e 44a1ce9724502b9c692faaef00af3054bf11f1a6:plugin-catalog/paw-pii.yaml
+absent (need still holds)
+$ git -C <bare> ls-tree --name-only 44a1ce9724502b9c692faaef00af3054bf11f1a6 plugin-catalog/ | grep '\.yaml$' | grep -vc '^plugin-catalog/removed.yaml$' (entry files)
+348
+$ git ls-remote https://github.com/kvnloo/hermes-agent.git refs/heads/staging 'refs/heads/staged/*'
+3d64efc27d1247da5dd6b170a87c44ef9e653776	refs/heads/staged/cu-capture-mode-projection
+2f79b549ef40aeb31cb3af36cd92d8d12b9ba799	refs/heads/staged/cu-repeat-input-dedup
+9225807160327a648a21bd493e9ed943f8ce5baa	refs/heads/staged/observer-hooks-doc-drift
+dd4dd10611e8c23c7579a4ddb95655abebbaca27	refs/heads/staged/postmortem-logcalls-zero-hit
+ddf4748d31cb5dc65e7cd0b0c5b27b98d63ae880	refs/heads/staged/prefix-parity-journeys
+28790e597cdd497aef31f2c16327f8b347669354	refs/heads/staging
+rc=0
+# staged/plugin-catalog-entries on the fork:
+absent (name free)
+# worktrees of <bare> registered under this item's fixer worktree slot:
+0 registered

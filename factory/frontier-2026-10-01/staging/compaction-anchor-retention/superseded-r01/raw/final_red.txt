@@ -1,0 +1,6 @@
+=== Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 2.2s (2 workers) ===
+FAILED tests/agent/test_context_compressor_anchor_index.py::test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim
+FAILED tests/agent/test_context_compressor_anchor_index.py::test_new_anchor_classes_stay_exact_and_bounded
+=== 1 file with test failures (2 tests failed) ===
+  tests/agent/test_context_compressor_anchor_index.py  (2 tests failed)
+rc=1

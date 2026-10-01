@@ -1,0 +1,43 @@
+== F05 r4 2026-10-01T12:53:28Z
+base [('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok')]
+c53806-foldin [('contract', 7, 0, 'ok'), ('contract', 7, 0, 'ok'), ('contract', 7, 0, 'ok')]
+foldin-ref [('contract', 7, 0, 'ok'), ('contract', 7, 0, 'ok'), ('contract', 7, 0, 'ok')]
+foldin-bounded [('contract', 7, 0, 'ok'), ('contract', 7, 0, 'ok'), ('contract', 7, 0, 'ok')]
+c53806-handport [('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok'), ('adapted', 3, 4, 'ok'), ('adapted', 3, 4, 'ok'), ('adapted', 3, 4, 'ok')]
+c53806-handport-pre [('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok'), ('adapted', 0, 7, 'ok'), ('adapted', 0, 7, 'ok'), ('adapted', 0, 7, 'ok')]
+c93391-code [('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok'), ('adapted', 0, 7, 'ok'), ('adapted', 0, 7, 'ok'), ('adapted', 0, 7, 'ok')]
+c118847-handport [('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok'), ('adapted', 1, 6, 'ok'), ('adapted', 1, 6, 'ok'), ('adapted', 1, 6, 'ok')]
+c125881-merge [('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok'), ('adapted', 1, 6, 'ok'), ('adapted', 1, 6, 'ok'), ('adapted', 1, 6, 'ok')]
+== F05 r4s 2026-10-01T13:04:46Z
+neg-prefire [('contract', 1, 6, 'ok'), ('contract', 1, 6, 'ok'), ('contract', 1, 6, 'ok')]
+neg-nodefer [('contract', 5, 2, 'ok'), ('contract', 5, 2, 'ok'), ('contract', 5, 2, 'ok')]
+sab-h1-observer-call [('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok')]
+sab-h2-queue-payload [('contract', 6, 1, 'ok'), ('contract', 6, 1, 'ok'), ('contract', 6, 1, 'ok')]
+sab-h3-tokens-before [('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok')]
+sab-h4-tokens-after [('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok')]
+sab-h5-valid-hooks [('contract', 7, 0, 'ok'), ('contract', 7, 0, 'ok'), ('contract', 7, 0, 'ok')]
+sab-h6-keep-carrier-post-commit [('contract', 7, 0, 'ok'), ('contract', 7, 0, 'ok'), ('contract', 7, 0, 'ok')]
+sab-h7-payload-and-docs [('contract', 7, 0, 'ok'), ('contract', 7, 0, 'ok'), ('contract', 7, 0, 'ok')]
+== E12 r4 2026-10-01T13:11:02Z
+done base
+done c53806-foldin
+done foldin-bounded
+== OWN r4 2026-10-01T13:16:14Z
+base-rotation_state === Summary: 1 files, 40 tests passed, 0 failed (100% complete) in 84.6s (2 workers) ===
+c93391-code === Summary: 1 files, 43 tests passed, 0 failed (100% complete) in 89.1s (2 workers) ===
+c118847-handport === Summary: 1 files, 7 tests passed, 0 failed (100% complete) in 0.9s (2 workers) ===
+c125881-merge === Summary: 1 files, 9 tests passed, 0 failed (100% complete) in 1.0s (2 workers) ===
+base-c53806-own === Summary: 1 files, 0 tests passed, 3 failed (100% complete) in 15.0s (2 workers) ===
+c53806-handport-own === Summary: 1 files, 0 tests passed, 3 failed (100% complete) in 15.7s (2 workers) ===
+c53806-foldin-own === Summary: 1 files, 0 tests passed, 3 failed (100% complete) in 15.8s (2 workers) ===
+base-c53806-own-adapted === Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 13.9s (2 workers) ===
+c53806-handport-own-adapted === Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 7.0s (2 workers) ===
+c53806-foldin-own-adapted === Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 14.4s (2 workers) ===
+own-r4 done
+== canary r4 2026-10-01T13:20:44Z
+fatal: sha1 file '$S/h.git/worktrees/compaction-hook-salvage/index.lock' write error. Out of diskspace
+ M agent/conversation_compression.py
+ M hermes_cli/hooks.py
+ M hermes_cli/plugins.py
+ M website/docs/user-guide/features/hooks.md
+== done 2026-10-01T13:20:46Z

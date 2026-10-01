@@ -1,0 +1,90 @@
+===== GREEN rep 1 =====
+▶ not activated — using HERMES_PYTHON: $HERMES_PYTHON
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 6 test files (~45 tests) under ['tests/agent/test_compressor_historical_media.py', 'tests/agent/test_compressor_stale_tool_images.py', 'tests/agent/test_outbound_stale_vision.py', 'tests/agent/test_protected_tail_pressure.py', 'tests/agent/test_image_eviction_policy.py', 'tests/agent/test_compressor_zero_user_guard.py']; running with -j 2
+[ 13.3% |     6/~45 | ✓6 | ✗0] ✓ tests/agent/test_compressor_stale_tool_images.py (6✓, 0.9s)
+[ 46.7% |    21/~45 | ✓21 | ✗ 0] ✓ tests/agent/test_compressor_historical_media.py (15✓, 1.7s)
+[ 60.0% |    27/~45 | ✓27 | ✗ 0] ✓ tests/agent/test_compressor_zero_user_guard.py (6✓, 1.5s)
+[ 64.4% |    29/~45 | ✓39 | ✗ 0] ✓ tests/agent/test_image_eviction_policy.py (12✓, 1.0s)
+[ 73.3% |    33/~45 | ✓45 | ✗ 0] ✓ tests/agent/test_protected_tail_pressure.py (6✓, 1.1s)
+[100.0% |    45/~45 | ✓57 | ✗ 0] ✓ tests/agent/test_outbound_stale_vision.py (12✓, 2.3s)
+
+=== Summary: 6 files, 57 tests passed, 0 failed (100% complete) in 4.8s (2 workers) ===
+  Durations cached to test_durations.json (6 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   6
+  Total subprocess CPU-wall: 8.6s  (runner wall: 4.8s, parallelism: 2x)
+  P50: 1.50s  P90: 2.34s  P95: 2.34s  P99: 2.34s  Max: 2.34s
+  <1s: 2 files (33%)  <2s: 5 files (83%)
+  Top 10 slowest:
+      2.34s  tests/agent/test_outbound_stale_vision.py
+      1.71s  tests/agent/test_compressor_historical_media.py
+      1.50s  tests/agent/test_compressor_zero_user_guard.py
+      1.13s  tests/agent/test_protected_tail_pressure.py
+      0.99s  tests/agent/test_image_eviction_policy.py
+      0.92s  tests/agent/test_compressor_stale_tool_images.py
+exit=0
+===== GREEN rep 2 =====
+▶ not activated — using HERMES_PYTHON: $HERMES_PYTHON
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 6 test files (~45 tests) under ['tests/agent/test_compressor_historical_media.py', 'tests/agent/test_compressor_stale_tool_images.py', 'tests/agent/test_outbound_stale_vision.py', 'tests/agent/test_protected_tail_pressure.py', 'tests/agent/test_image_eviction_policy.py', 'tests/agent/test_compressor_zero_user_guard.py']; running with -j 2
+[ 13.3% |     6/~45 | ✓6 | ✗0] ✓ tests/agent/test_compressor_stale_tool_images.py (6✓, 0.8s)
+[ 46.7% |    21/~45 | ✓21 | ✗ 0] ✓ tests/agent/test_compressor_historical_media.py (15✓, 1.6s)
+[ 60.0% |    27/~45 | ✓27 | ✗ 0] ✓ tests/agent/test_compressor_zero_user_guard.py (6✓, 1.5s)
+[ 64.4% |    29/~45 | ✓39 | ✗ 0] ✓ tests/agent/test_image_eviction_policy.py (12✓, 1.0s)
+[ 73.3% |    33/~45 | ✓45 | ✗ 0] ✓ tests/agent/test_protected_tail_pressure.py (6✓, 1.1s)
+[100.0% |    45/~45 | ✓57 | ✗ 0] ✓ tests/agent/test_outbound_stale_vision.py (12✓, 2.5s)
+
+=== Summary: 6 files, 57 tests passed, 0 failed (100% complete) in 4.8s (2 workers) ===
+  Durations cached to test_durations.json (6 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   6
+  Total subprocess CPU-wall: 8.5s  (runner wall: 4.8s, parallelism: 2x)
+  P50: 1.46s  P90: 2.49s  P95: 2.49s  P99: 2.49s  Max: 2.49s
+  <1s: 1 files (17%)  <2s: 5 files (83%)
+  Top 10 slowest:
+      2.49s  tests/agent/test_outbound_stale_vision.py
+      1.62s  tests/agent/test_compressor_historical_media.py
+      1.46s  tests/agent/test_compressor_zero_user_guard.py
+      1.12s  tests/agent/test_protected_tail_pressure.py
+      1.01s  tests/agent/test_image_eviction_policy.py
+      0.85s  tests/agent/test_compressor_stale_tool_images.py
+exit=0
+===== GREEN rep 3 =====
+▶ not activated — using HERMES_PYTHON: $HERMES_PYTHON
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 6 test files (~45 tests) under ['tests/agent/test_compressor_historical_media.py', 'tests/agent/test_compressor_stale_tool_images.py', 'tests/agent/test_outbound_stale_vision.py', 'tests/agent/test_protected_tail_pressure.py', 'tests/agent/test_image_eviction_policy.py', 'tests/agent/test_compressor_zero_user_guard.py']; running with -j 2
+[ 13.3% |     6/~45 | ✓6 | ✗0] ✓ tests/agent/test_compressor_stale_tool_images.py (6✓, 0.9s)
+[ 46.7% |    21/~45 | ✓21 | ✗ 0] ✓ tests/agent/test_compressor_historical_media.py (15✓, 1.5s)
+[ 60.0% |    27/~45 | ✓27 | ✗ 0] ✓ tests/agent/test_compressor_zero_user_guard.py (6✓, 1.3s)
+[ 64.4% |    29/~45 | ✓39 | ✗ 0] ✓ tests/agent/test_image_eviction_policy.py (12✓, 0.9s)
+[ 73.3% |    33/~45 | ✓45 | ✗ 0] ✓ tests/agent/test_protected_tail_pressure.py (6✓, 1.0s)
+[100.0% |    45/~45 | ✓57 | ✗ 0] ✓ tests/agent/test_outbound_stale_vision.py (12✓, 2.1s)
+
+=== Summary: 6 files, 57 tests passed, 0 failed (100% complete) in 4.3s (2 workers) ===
+  Durations cached to test_durations.json (6 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   6
+  Total subprocess CPU-wall: 7.6s  (runner wall: 4.3s, parallelism: 2x)
+  P50: 1.27s  P90: 2.08s  P95: 2.08s  P99: 2.08s  Max: 2.08s
+  <1s: 3 files (50%)  <2s: 5 files (83%)
+  Top 10 slowest:
+      2.08s  tests/agent/test_outbound_stale_vision.py
+      1.51s  tests/agent/test_compressor_historical_media.py
+      1.27s  tests/agent/test_compressor_zero_user_guard.py
+      0.97s  tests/agent/test_protected_tail_pressure.py
+      0.87s  tests/agent/test_compressor_stale_tool_images.py
+      0.86s  tests/agent/test_image_eviction_policy.py
+exit=0

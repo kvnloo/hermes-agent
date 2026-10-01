@@ -1,0 +1,32 @@
+{
+  "provider": "holographic (bundled, local SQLite)",
+  "turns": 20,
+  "rows": [
+    {
+      "dims": {
+        "latency_bucket": "lt_100ms",
+        "outcome": "empty",
+        "provider": "holographic"
+      },
+      "value": 10
+    },
+    {
+      "dims": {
+        "latency_bucket": "lt_100ms",
+        "outcome": "success",
+        "provider": "holographic"
+      },
+      "value": 10
+    }
+  ],
+  "turns_with_context": 10,
+  "turns_without_context": 10,
+  "row_outcome_counts": {
+    "success": 10,
+    "empty": 10
+  },
+  "rows_match_turns": true,
+  "wait_ms_p50": 1.062,
+  "wait_ms_max": 26.249,
+  "egress_blocked_attempts": []
+}

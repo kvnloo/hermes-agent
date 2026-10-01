@@ -1,0 +1,85 @@
+{
+  "arm": "prune-off",
+  "turns": 20,
+  "repo_head": "c1ed8c9f081450bc01a08d7c638ff2d2eeecbfd8",
+  "repo_tree": "0716cfeee11444de16c5fb36a5fc2854a820d0d5",
+  "dirty_files": [],
+  "config_overlay": "",
+  "provider_reports_cached_input": false,
+  "observed": {
+    "label": "OBSERVED (loopback wire)",
+    "main_requests": 40,
+    "aux_requests": 2,
+    "prefix_breaks": [
+      27
+    ],
+    "prefix_break_reasons": [
+      "message list shrank 54 -> 14"
+    ],
+    "projection_passes": {
+      "27": [
+        "call_fake_1",
+        "call_fake_12"
+      ]
+    },
+    "rows_projected": 2,
+    "unstable_archived_rows": [],
+    "wire_chars_per_request": [
+      7540,
+      31914,
+      32021,
+      56395,
+      56502,
+      80876,
+      80983,
+      105357,
+      105464,
+      129838,
+      129945,
+      154319,
+      154426,
+      178800,
+      178907,
+      203281,
+      203388,
+      227762,
+      227869,
+      252245,
+      252352,
+      276728,
+      276835,
+      301211,
+      301318,
+      325694,
+      325801,
+      61104,
+      61211,
+      85587,
+      85694,
+      110070,
+      110177,
+      134553,
+      134660,
+      159036,
+      159143,
+      183519,
+      183626,
+      208002
+    ],
+    "last_request_chars": 208002,
+    "max_request_chars": 325801,
+    "sum_request_chars": 6334153,
+    "durable_model_view_tool_rows_chars": 189338,
+    "turn_errors": []
+  },
+  "modeled": {
+    "label": "MODELED (chars/4 tokens; perfect prefix cache; write 1.25x, read 0.10x)",
+    "cache_read_ratio": 0.917,
+    "billed_input_tokens_no_cache": 1583538,
+    "billed_input_token_units_cached": 309575,
+    "reprefill_tokens_after_breaks": 129611
+  },
+  "egress_blocked": [],
+  "wall_s": 4.08,
+  "python": "3.11.14"
+}

@@ -1,0 +1,277 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compaction-anchor-retention",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#116246",
+  "NousResearch/hermes-agent#87326",
+  "NousResearch/hermes-agent#117462",
+  "NousResearch/hermes-agent#122274",
+  "NousResearch/hermes-agent#122522",
+  "NousResearch/hermes-agent#78457"
+ ],
+ "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+ "head_revision": "b11e27d5f9c60a420cbbe94fa967fc1454df92a6",
+ "supersedes": "6e0fa629a0 receipts r20261001-01 (superseded-r01/)",
+ "policy_revision": {
+  "factory": "FACTORY.md (frontier-2026-10-01)",
+  "protocol": "promotion-readiness-2026-10-01/PROTOCOL.md"
+ },
+ "env": {
+  "python": "3.11 (HERMES_PYTHON venv, read-only bind)",
+  "sandbox": "harness/sandbox.sh: bwrap ro-root, --unshare-net (connect -> ENETUNREACH), systemd-resolved socket masked (DNS -> EAI_AGAIN), pidns, clearenv, live Hermes install masked except the venv, fresh HOME/HERMES_HOME per run; harness/egress_sitecustomize.py logs every non-loopback DNS lookup and connect attempt (the script run had these paths inlined; the copy here takes them from env)",
+  "tests": "HOME=$S/testhome-sf-compaction-anchor-retention HERMES_HOME=$HOME/.hermes HERMES_PYTHON=$PY bash scripts/run_tests.sh -j 2 <files> -q"
+ },
+ "provenance": "self",
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the rows, tests, harness and gold labels; disclosed per repository policy",
+ "privacy": "public-aggregate (inputs are committed upstream text or seeded synthetic data; no state.db, no lineages); no absolute local paths",
+ "resource_usage": {
+  "api_cost_usd": 0.0,
+  "gpu_s": 0,
+  "tokens": 0
+ },
+ "id": "RG01/r20261001-02",
+ "kind": "redgreen",
+ "question": "Does main's anchor index capture delegation/kanban task ids, dotted config keys and CLI error lines, do the three new rows fix that without catching Python annotations or log format strings, and do neighbours stay unchanged?",
+ "inputs": {
+  "test": "tests/agent/test_context_compressor_anchor_index.py",
+  "test_sha256": "5f2f16b360ee25677eff7450ae37d66946f9d45841c892db8559afbe216d3da5",
+  "production_seam": "agent/context_compressor.py::_build_anchor_index / _ANCHOR_PATTERNS",
+  "production_sha256": {
+   "base": "86f4b7a8a647f1bf520cb17497b68719f6d907028bdc7151c7921818b7e043f1",
+   "head": "eea32ae2600e20ac7729cc894bf9afdd8987a33d97f6f98e1671dcc5e13a3ef2"
+  },
+  "branch_patch_sha256": "90bea6dba82605dd49b94230b387b57dcba6da532e8bfa9cc76818146b1fa214"
+ },
+ "commands": {
+  "tests": "HOME=$S/testhome-sf-compaction-anchor-retention HERMES_HOME=$HOME/.hermes HERMES_PYTHON=$PY bash scripts/run_tests.sh -j 2 <files> -q",
+  "red": "git checkout --detach BASE; git show HEAD_SHA:tests/agent/test_context_compressor_anchor_index.py > <same path>; run it; rm it",
+  "red_prev_rows": "at HEAD: git show 6e0fa629a0:agent/context_compressor.py > agent/context_compressor.py; run the test file; git checkout -- agent/context_compressor.py",
+  "negative_controls": "cd $WT; TESTHOME=... HERMES_PYTHON=$PY $PY $STAGING/harness/negative_controls.py <out>  (one mutation at a time; each mutated table must compile; file restored after)",
+  "guards": "$SANDBOX $WT <fresh home> <log> $PY evals/compaction/test_region_scoping.py ; $SANDBOX $WT <fresh home> <log> $PY evals/token_accounting/replay_gates.py --out <home>/out.json"
+ },
+ "gates": {
+  "red": {
+   "arm": "base aea969677c60a1bb72fe227fdfb98f196a2092cc",
+   "result": "PASS",
+   "observed": "Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 2.8s (2 workers)",
+   "assertion": "AssertionError: 'sa-2-7318d0ba' missing from anchor index / AssertionError: assert 'compression.tail_mode' in ''",
+   "label": "OBSERVED"
+  },
+  "red_prev_rows": {
+   "arm": "previous staging head 6e0fa629a0 rows",
+   "observed": "Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 2.4s (2 workers)",
+   "assertion": "'error: Your local changes ... overwritten by merge' missing (no word boundary after an escaped \\n) / 'Exception)' leaked into error messages ('error: Optional[Exception] = None(x2), error: %s\", exc)(x2), ...')",
+   "label": "OBSERVED",
+   "note": "the precision and JSON-output assertions are new in this round"
+  },
+  "green": [
+   {
+    "arm": "branch b11e27d5f9c60a420cbbe94fa967fc1454df92a6",
+    "result": "PASS",
+    "reps_agree": "3/3",
+    "observed": [
+     "Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 1.3s (2 workers)",
+     "Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 1.3s (2 workers)",
+     "Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 1.5s (2 workers)"
+    ],
+    "label": "OBSERVED"
+   }
+  ],
+  "sabotage": {
+   "per_hunk": [
+    {
+     "mutation": "drop row 'task ids'",
+     "red_again": true,
+     "observed": "Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 2.7s (2 workers)",
+     "failed": [
+      "test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim",
+      "test_new_anchor_classes_stay_exact_and_bounded"
+     ]
+    },
+    {
+     "mutation": "drop row 'dotted keys'",
+     "red_again": true,
+     "observed": "Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 2.7s (2 workers)",
+     "failed": [
+      "test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim",
+      "test_new_anchor_classes_stay_exact_and_bounded"
+     ]
+    },
+    {
+     "mutation": "drop row 'error messages'",
+     "red_again": true,
+     "observed": "Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 2.5s (2 workers)",
+     "failed": [
+      "test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim",
+      "test_new_anchor_classes_stay_exact_and_bounded"
+     ]
+    },
+    {
+     "mutation": "dotted keys: last segment no longer needs '_'",
+     "red_again": true,
+     "observed": "Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 2.8s (2 workers)",
+     "failed": [
+      "test_new_anchor_classes_stay_exact_and_bounded"
+     ]
+    },
+    {
+     "mutation": "error messages: fatal:/error: anywhere (\\b instead of line-start anchor)",
+     "red_again": true,
+     "observed": "Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 2.5s (2 workers)",
+     "failed": [
+      "test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim",
+      "test_new_anchor_classes_stay_exact_and_bounded"
+     ]
+    },
+    {
+     "mutation": "error messages: drop the escaped-newline anchor (?<=\\\\n)",
+     "red_again": true,
+     "observed": "Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 2.7s (2 workers)",
+     "failed": [
+      "test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim"
+     ]
+    },
+    {
+     "mutation": "error messages: drop the quote/backtick anchor (?<=[`\"])",
+     "red_again": true,
+     "observed": "Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 2.5s (2 workers)",
+     "failed": [
+      "test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim"
+     ]
+    },
+    {
+     "mutation": "error messages: drop re.M",
+     "red_again": true,
+     "observed": "Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 2.3s (2 workers)",
+     "failed": [
+      "test_new_anchor_classes_stay_exact_and_bounded"
+     ]
+    },
+    {
+     "mutation": "error messages: drop the %s/{} placeholder guard",
+     "red_again": true,
+     "observed": "Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 2.2s (2 workers)",
+     "failed": [
+      "test_new_anchor_classes_stay_exact_and_bounded"
+     ]
+    },
+    {
+     "mutation": "error messages: value no longer stops at an escaped newline",
+     "red_again": true,
+     "observed": "Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 2.6s (2 workers)",
+     "failed": [
+      "test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim"
+     ]
+    }
+   ],
+   "unpinned_hunks": [],
+   "label": "OBSERVED"
+  },
+  "adjacent": {
+   "files": [
+    "tests/agent/test_context_compressor.py",
+    "tests/agent/test_lean_single_aux_call.py",
+    "tests/agent/test_compression_rotation_state.py",
+    "tests/agent/test_context_compressor_summary_continuity.py",
+    "tests/agent/test_compaction_redaction_boundaries.py",
+    "tests/agent/test_native_compaction_summary_retention.py"
+   ],
+   "base": "Summary: 6 files, 365 tests passed, 0 failed (100% complete) in 101.2s (2 workers)",
+   "arm": "Summary: 7 files, 367 tests passed, 0 failed (100% complete) in 94.1s (2 workers) (the 6 files + the new test file)",
+   "identical": true,
+   "pre_existing_failures": [],
+   "label": "OBSERVED"
+  },
+  "guards": {
+   "evals/compaction/test_region_scoping.py": {
+    "base": [
+     "scoping tripwire: ALL PASS",
+     "scoping tripwire: ALL PASS"
+    ],
+    "head": [
+     "scoping tripwire: ALL PASS",
+     "scoping tripwire: ALL PASS"
+    ]
+   },
+   "evals/token_accounting/replay_gates.py": {
+    "base": "11/11 PASS",
+    "head": "11/11 PASS",
+    "result_dict_keys_differing": [
+     "compressor_sha256"
+    ]
+   },
+   "files_unchanged": true,
+   "egress_attempts": {
+    "region_scoping_per_run": {
+     "base_1": {
+      "getaddrinfo openrouter.ai": 2
+     },
+     "base_2": {
+      "getaddrinfo openrouter.ai": 2
+     },
+     "head_1": {
+      "getaddrinfo openrouter.ai": 2
+     },
+     "head_2": {
+      "getaddrinfo openrouter.ai": 2
+     }
+    },
+    "replay_gates": {
+     "base": {},
+     "head": {}
+    },
+    "readout": "region_scoping: 2 DNS lookups of openrouter.ai per run (the model-metadata fetch, logged as 'Failed to fetch model metadata from OpenRouter' twice), on base and head alike, each run in a fresh home; both fail inside the sandbox, so 0 connect attempts follow. replay_gates: 0 attempts on both."
+   },
+   "label": "OBSERVED"
+  },
+  "flaky": false,
+  "route_scope": "local-compressor (lean tail mode only; _augment_summary_lean is a no-op in legacy mode; native summaries are opaque)",
+  "cache_read_ratio": {
+   "status": "N_A",
+   "why": "rows change summary text only at a compaction event, which already breaks the prompt cache; cadence unchanged"
+  }
+ },
+ "denominators": {
+  "cells": 23,
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "completeness": 1.0
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "not_tested": [
+  "recall exam (E04/E05): needs an aux LLM",
+  "real lineages (state.db copies): forbidden here / OD-7",
+  "native compaction routes"
+ ],
+ "verdict": "KEEP",
+ "raw": {
+  "red": "raw/red_main.full",
+  "red_prev_rows": "raw/red_prev_rows.full",
+  "green": [
+   "raw/green_1.full",
+   "raw/green_2.full",
+   "raw/green_3.full"
+  ],
+  "negative_controls": "raw/negative_controls.json",
+  "adjacent": [
+   "raw/adjacent_base.full",
+   "raw/adjacent_head.full"
+  ],
+  "guards": [
+   "raw/region_scoping_base_1.txt",
+   "raw/region_scoping_base_2.txt",
+   "raw/region_scoping_head_1.txt",
+   "raw/region_scoping_head_2.txt",
+   "raw/replay_gates_base.json",
+   "raw/replay_gates_head.json",
+   "raw/egress/"
+  ]
+ }
+}

@@ -1,0 +1,24 @@
+..                                                                       [100%]
+=============================== warnings summary ===============================
+../../../../../../../../..<shared venv checkout>/venv/lib/python3.11/site-packages/_pytest/config/__init__.py:1345
+  <shared venv checkout>/venv/lib/python3.11/site-packages/_pytest/config/__init__.py:1345: PytestAssertRewriteWarning: Module already imported so cannot be rewritten; anyio
+    self._mark_plugins_for_rewrite(hook, disable_autoload)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+2 passed, 1 warning in 6.26s
+{
+  "arm": "carrier-foldin-v4",
+  "repo_head": "15dff75cc860a14d06414c6bf31459397e1de912",
+  "pytest_rc": 0,
+  "outcomes": {
+    "test_projection_breaks_the_prefix_once_per_paid_batch_and_never_undoes_itself": {
+      "outcome": "passed",
+      "message": ""
+    },
+    "test_projection_never_invalidates_replayed_preserved_thinking": {
+      "outcome": "passed",
+      "message": ""
+    }
+  },
+  "egress_blocked": []
+}

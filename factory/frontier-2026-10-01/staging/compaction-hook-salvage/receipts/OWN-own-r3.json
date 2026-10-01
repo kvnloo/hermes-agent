@@ -1,0 +1,169 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "OWN/own-r3",
+ "label": "OBSERVED",
+ "spec": {
+  "path": null,
+  "rev": 3,
+  "decision_rule": "fairness only: each carrier's own tests pass on its arm"
+ },
+ "runner_revision": {
+  "egress_guard": {
+   "path": "tools/chs_egress_guard.py",
+   "sha256": "92d7c9a3167b561d0c3247f0269bd757c668e6abed35a909d33d5ca7dc108db0"
+  }
+ },
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#64231",
+  "NousResearch/hermes-agent#118382",
+  "NousResearch/hermes-agent#53806",
+  "NousResearch/hermes-agent#93391",
+  "NousResearch/hermes-agent#118847",
+  "NousResearch/hermes-agent#119347",
+  "NousResearch/hermes-agent#125881"
+ ],
+ "staging": "compaction-hook-salvage",
+ "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+ "head_revision": "de819a7d0660be8fd560c35bbc4c56676bc8408b",
+ "changed_files": [],
+ "purpose": "fairness check: each carrier proves its own, different contract with its own tests",
+ "cells": [
+  {
+   "cell": "base-rotation_state",
+   "commit": "de819a7d0660be8fd560c35bbc4c56676bc8408b",
+   "file": "tests/agent/test_compression_rotation_state.py",
+   "summary": {
+    "files": 1,
+    "passed": 40,
+    "failed": 0,
+    "skipped_per_worker_lines": [],
+    "failing": []
+   },
+   "egress": {
+    "connect": 0,
+    "dns": 112,
+    "prewarm_suppressed": 1
+   },
+   "exit_class": "INFRA",
+   "log_private": "raw/own-r3/base-rotation_state.log"
+  },
+  {
+   "cell": "c93391-code",
+   "commit": "57997c26071973d5a00122375f16a620bf4f1832",
+   "file": "tests/agent/test_compression_rotation_state.py",
+   "summary": {
+    "files": 1,
+    "passed": 43,
+    "failed": 0,
+    "skipped_per_worker_lines": [],
+    "failing": []
+   },
+   "egress": {
+    "connect": 0,
+    "dns": 118,
+    "prewarm_suppressed": 1
+   },
+   "exit_class": "INFRA",
+   "log_private": "raw/own-r3/c93391-code.log"
+  },
+  {
+   "cell": "c118847-handport",
+   "commit": "12ebf32dc22158e98b73fdd4f2f300047e187535",
+   "file": "tests/agent/test_post_compaction_hook.py",
+   "summary": {
+    "files": 1,
+    "passed": 7,
+    "failed": 0,
+    "skipped_per_worker_lines": [],
+    "failing": []
+   },
+   "egress": {
+    "connect": 0,
+    "dns": 0,
+    "prewarm_suppressed": 0
+   },
+   "exit_class": "ok",
+   "log_private": "raw/own-r3/c118847-handport.log"
+  },
+  {
+   "cell": "c125881-merge",
+   "commit": "f7b42fa597c788a5fde28f395cf8920efefa93c9",
+   "file": "tests/agent/test_context_governance.py",
+   "summary": {
+    "files": 1,
+    "passed": 9,
+    "failed": 0,
+    "skipped_per_worker_lines": [],
+    "failing": []
+   },
+   "egress": {
+    "connect": 0,
+    "dns": 0,
+    "prewarm_suppressed": 0
+   },
+   "exit_class": "ok",
+   "log_private": "raw/own-r3/c125881-merge.log"
+  }
+ ],
+ "policy_revision": {
+  "AGENTS.md": "65aa3e61bcba610da21279a17385671263be39e9",
+  "CONTRIBUTING.md": "b0baa59b5057c204b3c09d3dd170c0955cfdb39c",
+  "factory": "FACTORY.md sha256:7726ba18b43a9367f91d7f70c3aaefb96a9863761ddf71225c61c26a30d688d4",
+  "protocol": "promotion-readiness-2026-10-01/PROTOCOL.md sha256:182e3fbae771d7219497833b3f9d6f7ed385d70abace8736559026e4e60b90d4"
+ },
+ "env": {
+  "host": "withheld (redacted in round 3; receipts name no host)",
+  "python": "3.11.14 (the live venv's interpreter, used read-only through HERMES_PYTHON; never as a source)",
+  "sandbox": "no bwrap/netns (FACTORY \u00a76 layer 1 not used). In-process layer only: tools/chs_egress_guard.py (non-loopback connect and DNS refused and logged; the openrouter-prewarm metadata thread is not started), loaded through the isolated test HOME's pytest_live_guard.py shim; scripts/run_tests.sh runs pytest under env -i with isolated HOME and HERMES_HOME (placeholders: $TESTHOME, $TESTHOME/.hermes)"
+ },
+ "command": "HOME=$TESTHOME HERMES_HOME=$TESTHOME/.hermes HERMES_PYTHON=$PY bash scripts/run_tests.sh -j 2 <file> -q",
+ "gates": {
+  "validity": "INFRA (strict S16; the recorded exception was never accepted and one of its premises is false)",
+  "validity_as_issued": "PASS under the recorded S16 exception (INFRA without it)"
+ },
+ "denominators": {
+  "cells": 4,
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "infra": 2,
+  "completeness": 1.0
+ },
+ "egress": {
+  "dns": 230,
+  "connect": 0,
+  "prewarm_suppressed": 2,
+  "s16_exception": {
+   "status": "recorded exception, never accepted by the owner; superseded by the r4 exception text in E12/e12-r4",
+   "scope": "upstream test and eval code this item does not change: 7 sibling compression test files, evals/compaction/test_region_scoping.py, and (OWN) tests/agent/test_compression_rotation_state.py",
+   "what": "best-effort DNS lookups for openrouter.ai from two upstream paths: the model-metadata GET at AIAgent init (agent_init._enforce_minimum_context -> model_metadata.get_model_context_length -> fetch_model_metadata) and the video-catalog GET while tool definitions are built (plugins/video_gen/openrouter._catalog)",
+   "why_results_stand": [
+    "the guard refused every lookup at DNS; 0 connects",
+    "both paths catch the failure and fall back (the 256K default window; the bundled catalog snapshot)",
+    "the same counts occur on base and on every arm (adjacent 224/224/224; per-file attribution identical on base and c53806-foldin)",
+    "pass/fail is identical apart from the new contract test",
+    "the new contract test itself makes 0 lookups (F05 r3: 0 dns in 78 cells) [round-2 correction: false. The r3 guard did not start the openrouter-prewarm thread, which the contract test triggered: 1 blocked lookup per pytest worker under a guard that suppresses nothing. See SANDBOX/guard-canary-r4 contract_test_prewarm_check]"
+   ],
+   "attribution": "raw/e12-r3/dns-attribution/summary.json (from tools/chs_dns_attribution.py over guard stack dumps)",
+   "without_exception": "these cells are INFRA, and E12/OWN would be INFRA (rate > 10%)"
+  }
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "limitations": [
+  "#118847's own tests mock hermes_cli.lifecycle.invoke_hook, the seam itself"
+ ],
+ "verdict": "N_A (fairness)",
+ "provenance": "self",
+ "frozen": null,
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the contract test, the fold-in and the harness; disclosed per repository policy",
+ "privacy": "public-aggregate: repo-relative paths and placeholders only; synthetic fixtures; no session ids, home paths, emails, message text or secrets. Raw logs under raw/ are private and contain local paths.",
+ "verdict_as_issued": "N_A (fairness)",
+ "superseded_by": "OWN/own-r4",
+ "superseded_why": "the r3 guard refused to start the openrouter-prewarm thread (prewarm_suppressed), which hid one DNS lookup per pytest worker; the round-1 contract test itself triggered that thread. Round 2 stubs the metadata prewarm in the test and uses an r4 guard that suppresses nothing"
+}

@@ -1,0 +1,211 @@
+▶ not activated — using HERMES_PYTHON: <hermes-home>/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~2 tests) under ['tests/agent/test_zz_chs_c53806_own.py']; running with -j 2
+[100.0% |     2/~2 | ✓0 | ✗2] ✗ tests/agent/test_zz_chs_c53806_own.py (2✗, 13.9s)
+
+  ╔╍ Failed: tests/agent/test_zz_chs_c53806_own.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-ddgs' registered web provider: ddgs
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-exa' registered web provider: exa
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-firecrawl' registered web provider: firecrawl
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-keenable' registered web provider: keenable
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-openai-native' registered web provider: openai-native
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-parallel' registered web provider: parallel
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-perplexity' registered web provider: perplexity
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-searxng' registered web provider: searxng
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-tavily' registered web provider: tavily
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-xai' registered web provider: xai
+  ║ INFO     hermes_cli.plugins:plugins.py:1499 Plugin discovery complete: 58 found, 53 enabled
+  ║ INFO     tools.registry:registry.py:381 check_fn _a2a_tools_available returned False; dependent tools will be unavailable this turn
+  ║ INFO     agent.credential_pool:credential_pool.py:2155 credential pool: no available entries (all exhausted or empty)
+  ║ INFO     tools.tool_search:tool_search.py:379 tool_search activated (tier 1): 16 core/visible tools kept, 16 deferred (~4962 tokens), listing full (budget ~4000 tokens)
+  ║ WARNING  agent.model_metadata:model_metadata.py:928 Failed to fetch model metadata from OpenRouter: [Errno -2] chs egress guard: non-loopback DNS lookup blocked
+  ║ INFO     agent.conversation_compression:conversation_compression.py:4048 context compression started: session=original-session messages=10 tokens=~100 model=test/model focus=None
+  ║ INFO     agent.credential_pool:credential_pool.py:2155 credential pool: no available entries (all exhausted or empty)
+  ║ INFO     agent.credential_pool:credential_pool.py:2155 credential pool: no available entries (all exhausted or empty)
+  ║ WARNING  agent.auxiliary_client:auxiliary_client.py:2367 Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+  ║ WARNING  agent.auxiliary_client:auxiliary_client.py:4646 Auxiliary auto-detect: no provider available (tried: openrouter, nous, local/custom, api-key). Compression, summarization, and memory flush will not work. Set OPENROUTER_API_KEY or configure a local model in config.yaml.
+  ║ WARNING  agent.conversation_compression:conversation_compression.py:2125 No auxiliary LLM provider for compression — summaries will be unavailable.
+  ║ WARNING  agent.conversation_compression:conversation_compression.py:3426 Configured compression model <MagicMock name='mock._last_aux_model_failure_model' id='140481144708816'> failed (<MagicMock name='mock._last_aux_model_failure_error' id='140481144716240'>); recovered using the main model.
+  ║ INFO     agent.conversation_compression:conversation_compression.py:4266 context compression done: session=20261001_132019_fb5ebe messages=10->1 rough_tokens=~11,037 awaiting_real_usage=true
+  ║ INFO     agent.conversation_compression:conversation_compression.py:1497 context compression attempt telemetry: {"attempt_id":"61aba021889a4a92a2b9025bf275ca8a","chunk_count":0,"chunking":false,"commit_ms":500,"commit_status":"committed","event":"compression_attempt","fallback_used":true,"session_id":"20261001_132019_fb5ebe","split_status":"rotated_committed","total_duration_ms":1044}
+  ║ ---------------------------- Captured log teardown -----------------------------
+  ║ ERROR    hermes_state:hermes_state.py:1398 Could not capture the retired WAL generation of /var/tmp/hermes-pytest-1000/r-81rcfpkm/tmpozh137um/test.db at close: cannot read the main image header of /var/tmp/hermes-pytest-1000/r-81rcfpkm/tmpozh137um/test.db. The handle stays open and close() retries the capture; those frames are NOT yet preserved.
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/agent/test_zz_chs_c53806_own.py::TestCarrier53806OwnTestsAdapted::test_pre_context_compression_plugin_hook_fires_before_compress
+  ║ FAILED tests/agent/test_zz_chs_c53806_own.py::TestCarrier53806OwnTestsAdapted::test_plugin_on_session_start_called_with_compression_boundary
+  ║ 2 failed in 6.32s
+  ║
+  ║  Repro: python -m pytest tests/agent/test_zz_chs_c53806_own.py -q
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 13.9s (2 workers) ===
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 13.9s  (runner wall: 13.9s, parallelism: 2x)
+  P50: 13.86s  P90: 13.86s  P95: 13.86s  P99: 13.86s  Max: 13.86s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+     13.86s  tests/agent/test_zz_chs_c53806_own.py
+
+=== Failure output ===
+
+--- tests/agent/test_zz_chs_c53806_own.py ---
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+_ TestCarrier53806OwnTestsAdapted.test_pre_context_compression_plugin_hook_fires_before_compress _
+
+self = <tests.agent.test_zz_chs_c53806_own.TestCarrier53806OwnTestsAdapted object at 0x7fc452cab010>
+
+>   ???
+E   AssertionError: pre_context_compression hook did not fire: []
+E   assert []
+
+tests/agent/test_zz_chs_c53806_own.py:61: AssertionError
+----------------------------- Captured stdout call -----------------------------
+<MagicMock name='mock.get_automatic_compaction_status_message()' id='140481085493904'>
+⚠ No auxiliary LLM provider configured: Hermes has no helper model for summarising long chats, so older messages will be cut without a summary. Run `hermes setup` to add one.
+ℹ Configured compression model '<MagicMock name='mock._last_aux_model_failure_model' id='140481095152528'>' failed, so Hermes summarised with your main model instead. Check auxiliary.compression.model in your config.
+------------------------------ Captured log call -------------------------------
+WARNING  agent.model_metadata:model_metadata.py:928 Failed to fetch model metadata from OpenRouter: [Errno -2] chs egress guard: non-loopback DNS lookup blocked
+INFO     run_agent:agent_runtime_helpers.py:1990 OpenAI client created (agent_init, shared=True) thread=MainThread:140481232513920 provider= base_url=https://openrouter.ai/api/v1 model=test/model
+INFO     tools.registry:registry.py:381 check_fn _a2a_tools_available returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_back_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn _browser_cdp_check returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_click_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn _browser_dialog_check returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn is_browser_use_cli_mode returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_navigate_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_press_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_scroll_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_snapshot_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_type_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_vision_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_computer_use_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_cronjob_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_discord_tool_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn _check_feishu returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn _check_ha_available returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_image_generation_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn <lambda> returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_react_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn _check_spotify_available returned False; dependent tools will be unavailable this turn
+WARNING  agent.credential_pool:credential_pool.py:2878 Ingested OPENROUTER_API_KEY from environment into the openrouter credential pool — this enables OpenRouter spend. Remove the key or run hermes auth remove openrouter <n> to suppress.
+INFO     agent.credential_pool:credential_pool.py:2155 credential pool: no available entries (all exhausted or empty)
+INFO     agent.credential_pool:credential_pool.py:2155 credential pool: no available entries (all exhausted or empty)
+INFO     tools.registry:registry.py:381 check_fn check_x_search_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn _check_xai_video_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn _check_yuanbao returned False; dependent tools will be unavailable this turn
+INFO     tools.tool_search:tool_search.py:379 tool_search activated (tier 1): 16 core/visible tools kept, 16 deferred (~4962 tokens), listing full (budget ~4000 tokens)
+WARNING  agent.model_metadata:model_metadata.py:928 Failed to fetch model metadata from OpenRouter: [Errno -2] chs egress guard: non-loopback DNS lookup blocked
+WARNING  agent.model_metadata:model_metadata.py:264 Could not determine context length for model 'test/model' (base_url=https://openrouter.ai/api/v1) — falling back to 256,000 tokens. Set model.context_length in config.yaml to override.
+INFO     agent.conversation_compression:conversation_compression.py:4048 context compression started: session=original-session messages=1 tokens=~123 model=test/model focus=None
+INFO     agent.credential_pool:credential_pool.py:2155 credential pool: no available entries (all exhausted or empty)
+INFO     agent.credential_pool:credential_pool.py:2155 credential pool: no available entries (all exhausted or empty)
+WARNING  agent.auxiliary_unavailable:auxiliary_unavailable.py:259 Auxiliary Nous client unavailable: Nous Portal runtime credentials unavailable: Hermes is not logged into Nous Portal. Run `hermes model` to re-authenticate. (code: nous_auth_missing)
+WARNING  agent.auxiliary_client:auxiliary_client.py:2367 Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+WARNING  agent.auxiliary_client:auxiliary_client.py:4646 Auxiliary auto-detect: no provider available (tried: openrouter, nous, local/custom, api-key). Compression, summarization, and memory flush will not work. Set OPENROUTER_API_KEY or configure a local model in config.yaml.
+WARNING  agent.conversation_compression:conversation_compression.py:2125 No auxiliary LLM provider for compression — summaries will be unavailable.
+WARNING  agent.conversation_compression:conversation_compression.py:3426 Configured compression model <MagicMock name='mock._last_aux_model_failure_model' id='140481095152528'> failed (<MagicMock name='mock._last_aux_model_failure_error' id='140481095154000'>); recovered using the main model.
+INFO     agent.conversation_compression:conversation_compression.py:4266 context compression done: session=20261001_132017_8d7db1 messages=1->1 rough_tokens=~11,037 awaiting_real_usage=true
+INFO     agent.conversation_compression:conversation_compression.py:1497 context compression attempt telemetry: {"attempt_id":"97f22893eed34792b4c541014b23c15a","chunk_count":0,"chunking":false,"commit_ms":462,"commit_status":"committed","event":"compression_attempt","fallback_used":true,"session_id":"20261001_132017_8d7db1","split_status":"rotated_committed","total_duration_ms":1178}
+---------------------------- Captured log teardown -----------------------------
+ERROR    hermes_state:hermes_state.py:1398 Could not capture the retired WAL generation of /var/tmp/hermes-pytest-1000/r-81rcfpkm/tmpx_m9e1eo/test.db at close: cannot read the main image header of /var/tmp/hermes-pytest-1000/r-81rcfpkm/tmpx_m9e1eo/test.db. The handle stays open and close() retries the capture; those frames are NOT yet preserved.
+_ TestCarrier53806OwnTestsAdapted.test_plugin_on_session_start_called_with_compression_boundary _
+
+self = <tests.agent.test_zz_chs_c53806_own.TestCarrier53806OwnTestsAdapted object at 0x7fc452cabb90>
+
+    def test_plugin_on_session_start_called_with_compression_boundary(self):
+        """Generic plugins get the same compression boundary signal as context engines."""
+        from hermes_state import SessionDB
+    
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db = SessionDB(db_path=Path(tmpdir) / "test.db")
+            agent = self._make_agent(db)
+            compressor = MagicMock()
+            compressor.compress.return_value = [{"role": "user", "content": "summary"}]
+            compressor.compression_count = 1
+            compressor.last_prompt_tokens = 0
+            compressor.last_completion_tokens = 0
+            compressor._last_summary_error = None
+            compressor._last_compress_aborted = False
+            agent.context_compressor = compressor
+            original_sid = agent.session_id
+    
+            with patch("hermes_cli.plugins.invoke_hook") as invoke_hook:
+                # DRIFT ADAPTATION: a 1-message compaction no longer commits on main; 10 messages, as in
+                # main's own test_on_session_start_called_with_compression_boundary.
+                agent._compress_context([{"role": "user", "content": f"m{i}"} for i in range(10)], "sys", approx_tokens=100)
+    
+            start_calls = [
+                c for c in invoke_hook.call_args_list
+                if c.args and c.args[0] == "on_session_start"
+                and c.kwargs.get("boundary_reason") == "compression"
+            ]
+>           assert start_calls, f"plugin on_session_start compression boundary did not fire: {invoke_hook.call_args_list!r}"
+E           AssertionError: plugin on_session_start compression boundary did not fire: []
+E           assert []
+
+tests/agent/test_zz_chs_c53806_own.py:99: AssertionError
+----------------------------- Captured stdout call -----------------------------
+<MagicMock name='mock.get_automatic_compaction_status_message()' id='140481095143184'>
+⚠ No auxiliary LLM provider configured: Hermes has no helper model for summarising long chats, so older messages will be cut without a summary. Run `hermes setup` to add one.
+ℹ Configured compression model '<MagicMock name='mock._last_aux_model_failure_model' id='140481144708816'>' failed, so Hermes summarised with your main model instead. Check auxiliary.compression.model in your config.
+------------------------------ Captured log call -------------------------------
+INFO     run_agent:agent_runtime_helpers.py:1990 OpenAI client created (agent_init, shared=True) thread=MainThread:140481232513920 provider= base_url=https://openrouter.ai/api/v1 model=test/model
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-browser-use' registered browser provider: browser-use
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-browserbase' registered browser provider: browserbase
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-firecrawl' registered browser provider: firecrawl
+ERROR    hermes_state:hermes_state.py:1398 Could not capture the retired WAL generation of /var/tmp/hermes-pytest-1000/r-81rcfpkm/tmpx_m9e1eo/test.db at close: cannot read the main image header of /var/tmp/hermes-pytest-1000/r-81rcfpkm/tmpx_m9e1eo/test.db. The handle stays open and close() retries the capture; those frames are NOT yet preserved.
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered image_gen provider: deepinfra
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered image_gen provider: fal
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'krea' registered image_gen provider: krea
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'meta-ai-image-gen' registered image_gen provider: meta-ai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai' registered image_gen provider: openai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai-codex' registered image_gen provider: openai-codex
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: openrouter
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: nous
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered image_gen provider: xai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered video_gen provider: deepinfra
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered video_gen provider: fal
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered video_gen provider: openrouter
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered video_gen provider: xai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-brave-free' registered web provider: brave-free
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-ddgs' registered web provider: ddgs
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-exa' registered web provider: exa
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-firecrawl' registered web provider: firecrawl
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-keenable' registered web provider: keenable
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-openai-native' registered web provider: openai-native
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-parallel' registered web provider: parallel
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-perplexity' registered web provider: perplexity
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-searxng' registered web provider: searxng
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-tavily' registered web provider: tavily
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-xai' registered web provider: xai
+INFO     hermes_cli.plugins:plugins.py:1499 Plugin discovery complete: 58 found, 53 enabled
+INFO     tools.registry:registry.py:381 check_fn _a2a_tools_available returned False; dependent tools will be unavailable this turn
+INFO     agent.credential_pool:credential_pool.py:2155 credential pool: no available entries (all exhausted or empty)
+INFO     tools.tool_search:tool_search.py:379 tool_search activated (tier 1): 16 core/visible tools kept, 16 deferred (~4962 tokens), listing full (budget ~4000 tokens)
+WARNING  agent.model_metadata:model_metadata.py:928 Failed to fetch model metadata from OpenRouter: [Errno -2] chs egress guard: non-loopback DNS lookup blocked
+INFO     agent.conversation_compression:conversation_compression.py:4048 context compression started: session=original-session messages=10 tokens=~100 model=test/model focus=None
+INFO     agent.credential_pool:credential_pool.py:2155 credential pool: no available entries (all exhausted or empty)
+INFO     agent.credential_pool:credential_pool.py:2155 credential pool: no available entries (all exhausted or empty)
+WARNING  agent.auxiliary_client:auxiliary_client.py:2367 Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+WARNING  agent.auxiliary_client:auxiliary_client.py:4646 Auxiliary auto-detect: no provider available (tried: openrouter, nous, local/custom, api-key). Compression, summarization, and memory flush will not work. Set OPENROUTER_API_KEY or configure a local model in config.yaml.
+WARNING  agent.conversation_compression:conversation_compression.py:2125 No auxiliary LLM provider for compression — summaries will be unavailable.
+WARNING  agent.conversation_compression:conversation_compression.py:3426 Configured compression model <MagicMock name='mock._last_aux_model_failure_model' id='140481144708816'> failed (<MagicMock name='mock._last_aux_model_failure_error' id='140481144716240'>); recovered using the main model.
+INFO     agent.conversation_compression:conversation_compression.py:4266 context compression done: session=20261001_132019_fb5ebe messages=10->1 rough_tokens=~11,037 awaiting_real_usage=true
+INFO     agent.conversation_compression:conversation_compression.py:1497 context compression attempt telemetry: {"attempt_id":"61aba021889a4a92a2b9025bf275ca8a","chunk_count":0,"chunking":false,"commit_ms":500,"commit_status":"committed","event":"compression_attempt","fallback_used":true,"session_id":"20261001_132019_fb5ebe","split_status":"rotated_committed","total_duration_ms":1044}
+---------------------------- Captured log teardown -----------------------------
+ERROR    hermes_state:hermes_state.py:1398 Could not capture the retired WAL generation of /var/tmp/hermes-pytest-1000/r-81rcfpkm/tmpozh137um/test.db at close: cannot read the main image header of /var/tmp/hermes-pytest-1000/r-81rcfpkm/tmpozh137um/test.db. The handle stays open and close() retries the capture; those frames are NOT yet preserved.
+=========================== short test summary info ============================
+FAILED tests/agent/test_zz_chs_c53806_own.py::TestCarrier53806OwnTestsAdapted::test_pre_context_compression_plugin_hook_fires_before_compress
+FAILED tests/agent/test_zz_chs_c53806_own.py::TestCarrier53806OwnTestsAdapted::test_plugin_on_session_start_called_with_compression_boundary
+2 failed in 6.32s
+
+=== 1 file with test failures (2 tests failed) ===
+  tests/agent/test_zz_chs_c53806_own.py  (2 tests failed)

@@ -1,0 +1,47 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "SANDBOX/guard-canary",
+ "label": "OBSERVED",
+ "staging": "compaction-hook-salvage",
+ "what": "loopback-only socket guard (tools/r1/chs_loopback_guard.py) loaded by scripts/run_tests.sh through the isolated HOME's pytest_live_guard.py shim; canary test connects to 1.1.1.1:443 and asserts the guard blocked it, and asserts HOME/HERMES_HOME are not the live install",
+ "guard_sha256": "9daa920f206f41bfce9227747483166dd71e9620930f080dfe39fcfb3cbc4d25",
+ "command": "HOME=$TESTHOME HERMES_HOME=$HOME/.hermes HERMES_PYTHON=$PY bash scripts/run_tests.sh -j 2 tests/agent/test_zz_chs_guard_canary.py -q  (canary file created, run, deleted)",
+ "result": "2 passed / 0 failed; egress log recorded ('1.1.1.1', 443)",
+ "log": "raw/guard-canary.log",
+ "egress_log": "raw/guard-canary-egress_blocked.log",
+ "note": "guard_sha256 is of the final guard file (a stack-dump switch was added after f05-r1 for diagnostics; blocking logic unchanged)",
+ "spec": {
+  "path": null,
+  "rev": 1,
+  "sha256": null,
+  "prereg_commit": null,
+  "note": "no xf_spec TOML was written"
+ },
+ "issue": null,
+ "provenance": "self",
+ "frozen": null,
+ "privacy": "public-aggregate after the round-1 scrub: local paths replaced by placeholders ($S, $TESTHOME, $WORKTREE, $PY)",
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "policy_revision": {
+  "factory": "FACTORY.md (round 0; not hashed at the time)"
+ },
+ "verdict": "PASS (connect() only)",
+ "gates": {
+  "validity": "PARTIAL: connect() refused and logged; DNS lookups were not guarded, so 'loopback-only' overstated it"
+ },
+ "denominators": {
+  "cells": 2,
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "infra": 0,
+  "completeness": 1.0
+ },
+ "superseded_by": "SANDBOX/guard-canary-r3",
+ "round1_note": "scrubbed and re-labelled in round 1 (2026-10-01): r1/r2 tool versions kept under tools/r1/ (their sha256 values above still match), r2 patches moved to patches/r2/"
+}

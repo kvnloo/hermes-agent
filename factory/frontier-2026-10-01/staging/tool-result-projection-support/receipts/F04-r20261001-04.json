@@ -1,0 +1,1684 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "F04/r20261001-04",
+ "staging": "tool-result-projection-support",
+ "origin_refs": [
+  "NousResearch/hermes-agent#107731",
+  "NousResearch/hermes-agent#39691",
+  "NousResearch/hermes-agent#47866",
+  "NousResearch/hermes-agent#129620",
+  "NousResearch/hermes-agent#129492",
+  "NousResearch/hermes-agent#129882",
+  "NousResearch/hermes-agent#106426",
+  "NousResearch/hermes-agent#70107",
+  "NousResearch/hermes-agent#526",
+  "kvnloo/hermes-agent#310"
+ ],
+ "base_revision": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+ "env": {
+  "host": "withheld (one local workstation; receipts carry no host names)",
+  "python": "3.11.14 ($PY = the repo venv interpreter, used read-only)",
+  "isolation": "probes: env -i, fresh HOME/HERMES_HOME under scratch, loopback-only socket.connect + getaddrinfo guard; canonical runner: scripts/run_tests.sh -j 2 with HOME=$S/testhome-sf3-tool-result-projection-support, HERMES_HOME=$HOME/.hermes; no credentials",
+  "network": "loopback only (egress_blocked recorded per probe run)",
+  "relay": {
+   "present": true,
+   "package": "nemo-relay 0.8.4 (installed in the shared repo venv; not part of this change)",
+   "state": "FAILED at initialize(): agent/relay_runtime.py:346 calls relay.plugin.initialize({}, additional_plugins_toml=...), which nemo-relay 0.8.4 does not accept, so _activate() logs 'Hermes Relay plugin initialization failed' (relay_runtime.py:328) and returns FAILED. No Relay plugin or Hermes-managed Relay middleware was active in any run.",
+   "plugins_toml_sha256": null,
+   "config_paths": [],
+   "explicit_plugins_toml": "none: HERMES_NEMO_RELAY_PLUGINS_TOML unset and the isolated HERMES_HOME has no relay-plugins.toml",
+   "seen_in": "canonical-runner logs (captured WARNING on failing tests); probes run the same agent init"
+  }
+ },
+ "spec": {
+  "path": null,
+  "rev": null,
+  "sha256": null,
+  "prereg_commit": null,
+  "decision_rule_sha": null,
+  "note": "not pre-registered: an ad-hoc staging re-run under FACTORY.md section 8 (round 3 (fix of the round-2 re-verifier findings)). Decision rule: the assertions of tests/e2e/core/history/test_tool_result_projection_wire.py (blob 7347ad045b) and the harness outputs named in command."
+ },
+ "policy_revision": {
+  "AGENTS.md": "65aa3e61bc@44a1ce9724",
+  "CONTRIBUTING.md": "b0baa59b50@44a1ce9724",
+  "factory": "FACTORY.md sha256:7726ba18b43a9367 (frontier-2026-10-01 ledger copy)"
+ },
+ "provenance": "self",
+ "cost": {
+  "api_cost_usd": 0.0,
+  "tier_cost": "$0"
+ },
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the harness, the tests, the fold-in gate and the comment text (body.md); disclosed per repository policy",
+ "privacy": "synthetic fixtures only; no state.db / agent.log / credentials read; absolute local paths and host names replaced by placeholders",
+ "inputs": {
+  "shas": {
+   "main": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+   "main_previous_round": "e8c97320ac8691d4de92af49f98459f9ef9ddb08",
+   "staging_commit": "3b47753d54be51a06a7f9a939f9edea579f3c949",
+   "staging_commit_parent": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+   "staging_commit_tree": "70a3bd18653dc5f97ec86cd01a75c96e7a7d5576",
+   "staging_commit_previous_version": "8c783ff4ac2fcd7906e074eefec7f0d3fcfc0782",
+   "main_plus_test_arm": "3b47753d54be51a06a7f9a939f9edea579f3c949",
+   "carrier_head": "069adfb67e57287ac8df996ef48e082fe8455e2c",
+   "carrier_merge_base": "67764dc0863349a384c16425e73ee8571f3a94b7",
+   "carrier_rebased_arm": "5d4adb328093184ef1d0e616f9b7bf5f3cef2fe2",
+   "carrier_rebased_arm_tree": "a7b3340eca13b13d34d929cff705d6673693c8f1",
+   "carrier_rebased_arm_plus_test": "15dff75cc860a14d06414c6bf31459397e1de912",
+   "carrier_rebased_arm_plus_test_tree": "b733be3f0d7be6561ca550dd6eb1425f4eae1854",
+   "test_blob": "7347ad045bf049afabce5b78435d5746273160f1",
+   "hot_reload_resolved_blob": "b94e723f76280aee56e959fa4d72b46cc62e0bdc",
+   "carrier_module_blob": "a76fb42f76e3bb7d71643da6a5f58890878d4d32",
+   "carrier_module_blob_with_gate_v3": "852be44f4f4306ec177a191591bc6f2529c927ce",
+   "carrier_module_blob_with_gate_v4": "a3227c92a75c4cbcd196e309142530d64b534817"
+  },
+  "harness_sha256": {
+   "harness/e37_synthetic.py": "4de16b55331c737d8db15eaf0acdfacb69cb458808f59bc3c912cd4c424c2f85",
+   "harness/f04_bedrock_probe.py": "8159c09229dce68316973ff10486d4da87ee356d815f5a6188f59ac76c53286c",
+   "harness/f04_probe.py": "a23b3b14b3cd7a4c4e8bfd35a6da50c06656f183fc842afca738e3f46e051bb9",
+   "harness/f04_restart_probe.py": "6c6e1e6776edbb0a5dc7a94f1247b410b8e863ef7b1968746ee962082fd531da",
+   "harness/f04_thirdparty_probe.py": "b102cd9093f284907b41409d3d1f4b825f7eef1844fea942f8ec1d0d0fc184c6",
+   "harness/guarded_run.py": "be17793cdf4bad466fb2e05b5c67d63430a1e79c8c40949a7e45c897d35d654f",
+   "harness/per_hunk_sabotage.py": "73a31ca6888f7384b58993924ee66f5795962af8fdabe98b1d5d678dc84866fd",
+   "harness/per_hunk_sabotage_r2.py": "57219f128cb8f90cb9bb87df659c0d499da9c716e018a2de626be9a9b9ed9d60",
+   "harness/predicate_direct.py": "5996ac8a92033342ae18a71a052257773235ba8d470c5829f733ed554d0ae4bb",
+   "harness/predicate_wire_truth.py": "b5ee90a984238695c9837a0c7edbedb5c87c28111b46a77389c91b3568be5f4b",
+   "harness/readtool_direct.py": "e8dd892a0a2a835550467d4ccf4732470860692b6200a6e150be50950d9a96f4",
+   "harness/restart_direct.py": "3a8c4c72f055be6bbced24f682ad84a4b1531c24ea0a56ea71f25135c8b4a62f",
+   "harness/seam_trace.py": "b1c1efa4e7fd6d37b3c4ab37ee770d09c9308e5fcb06f91c2c67004197645750"
+  },
+  "patches_sha256": {
+   "patches/carrier-rebase-handport-hot-reload-test.diff": "6024fcb1457cdc1bf8d6762da6ca372d3109d41d532311dd8a0264c609d7d741",
+   "patches/foldin-preserved-thinking-gate-v2.diff": "acac8a736c2503a122a986622c8003f813e331363f2a92832eb709b6738d6e84",
+   "patches/foldin-preserved-thinking-gate-v3.diff": "12e83bd0dc82dc1042ef37cf93a65ea810d6a118eb322785b6c27cbe7c1acaed",
+   "patches/foldin-preserved-thinking-gate-v4.diff": "0d2b808bd2a9d581e23411fcfbffa429109706360218425c96e0917e2013712c",
+   "patches/foldin-preserved-thinking-gate.diff": "1490213c6d074a6cae190b4bf138d09b431ab78c535961159e3982b4f06ae6ab",
+   "patches/sabotage-S1-per-turn-reevaluation.diff": "a7f55f013f779c6a12aaab89b56c3b2af0bf4380883fda474df2b3757582a132",
+   "patches/sabotage-S2-no-stickiness.diff": "3b8b144c13805d30e117621a2fc3f7ed316434be4bcfd06197a8b865b1abbfd3",
+   "patches/tool-result-projection-support.v1-d5854fdd7b.patch": "a71a2123f6bd3f9d6d67a9b1c7c88a8ffbb1149a125332209333636042e95a0c",
+   "patches/tool-result-projection-support.v2-8c783ff4ac.patch": "b9d18435f4d1c45eacc77912f217b8e034295c3adec0667bdedd5bbd9da5d7f9",
+   "patches/tool-result-projection-support.v3-3b47753d54.patch": "e6cd277dc7a04299a2e742a2449af3d46214c14d7950240f36cb01590176a972"
+  }
+ },
+ "tier": "T1",
+ "kind": "redgreen",
+ "experiment": "F04 re-run on main 44a1ce9724 with the round-3 staging commit 3b47753d54 (commit message corrected; same test blob): projection byte-stability between paid boundaries (OpenAI-compatible route) and the preserved-thinking check (native Anthropic), with fold-in gate v4 (v3 code, corrected docstring); per-hunk sabotage and seam line trace re-run on v4",
+ "z0evals_study": {
+  "repo": "kvnloo/z0evals",
+  "branch": "study/hermes-tool-result-projection-support",
+  "commit": null,
+  "status": "not frozen (P8 pending; freeze when the comment is posted)"
+ },
+ "frozen": null,
+ "command": {
+  "proof": "HOME=$S/testhome-sf3-tool-result-projection-support HERMES_HOME=$HOME/.hermes HERMES_PYTHON=$PY bash scripts/run_tests.sh -j 2 tests/e2e/core/history/test_tool_result_projection_wire.py -q  (3 reps per arm: base, carrier, carrier+foldin-v1, -v2, -v4)",
+  "probe": "env -i PATH=/usr/bin:/bin PYTHONHASHSEED=0 F04_SCRATCH=$S/sf-trp4/scratch $PY harness/f04_probe.py <worktree> <out.json> <arm>  (3 reps per arm)",
+  "seam_trace": "env -i PATH=/usr/bin:/bin PYTHONHASHSEED=0 F04_SCRATCH=$S/sf-trp4/scratch $PY harness/seam_trace.py <worktree> <out.json> receipts/raw/r04/fix-v4.diff",
+  "per_hunk_sabotage": "env -i PATH=/usr/bin:/bin TMPDIR=$S/sf-trp4/sabtmp $PY harness/per_hunk_sabotage_r2.py <worktree> 44a1ce9724 <carrier+test> patches/foldin-preserved-thinking-gate-v4.diff <out.json> <testhome> bedrock=harness/f04_bedrock_probe.py thirdparty=harness/f04_thirdparty_probe.py",
+  "adjacent": "run_tests.sh -j 2 tests/agent/test_compression_config_defaults.py tests/agent/test_proactive_tool_result_pruning.py tests/tools/test_tool_result_storage.py tests/tui_gateway/test_compression_config_hot_reload.py [tests/agent/test_tool_result_projection.py] -q",
+  "arm_setup": {
+   "base": "the staging commit 3b47753d54 itself (parent = main 44a1ce9724; tree 70a3bd1865)",
+   "carrier": "15dff75cc860a14d06414c6bf31459397e1de912 = main 44a1ce9724 + refs/pr/107731 merged (5d4adb3280; the hot-reload add/add was resolved by keeping both sides: git rerere replayed the recorded resolution, byte-identical to patches/carrier-rebase-handport-hot-reload-test.diff, blob b94e723f76) + the staging commit cherry-picked; local evidence commits",
+   "carrier-S1": "carrier + git apply patches/sabotage-S1-per-turn-reevaluation.diff",
+   "carrier-S2": "carrier + git apply patches/sabotage-S2-no-stickiness.diff",
+   "carrier-foldin-v1": "carrier + git apply patches/foldin-preserved-thinking-gate.diff (round-0 gate)",
+   "carrier-foldin-v2": "carrier + git apply patches/foldin-preserved-thinking-gate-v2.diff (round-1 gate)",
+   "carrier-foldin-v4": "carrier + git apply patches/foldin-preserved-thinking-gate-v4.diff (round-3 gate: v3 with a corrected docstring; the code lines are byte-identical to v3)"
+  }
+ },
+ "arms": {
+  "base": {
+   "commit": "3b47753d54be51a06a7f9a939f9edea579f3c949",
+   "tree": "70a3bd18653dc5f97ec86cd01a75c96e7a7d5576",
+   "note": "the staging commit itself (parent = main)"
+  },
+  "carrier": {
+   "head": "069adfb67e57287ac8df996ef48e082fe8455e2c",
+   "merge": "conflict (tests/tui_gateway/test_compression_config_hot_reload.py, add/add) -> keep both sides (rerere replayed the recorded resolution; identical to the hand-port patch)",
+   "patch": "patches/carrier-rebase-handport-hot-reload-test.diff",
+   "commit": "15dff75cc860a14d06414c6bf31459397e1de912",
+   "tree": "b733be3f0d7be6561ca550dd6eb1425f4eae1854"
+  },
+  "carrier-S1": {
+   "patch": "patches/sabotage-S1-per-turn-reevaluation.diff"
+  },
+  "carrier-S2": {
+   "patch": "patches/sabotage-S2-no-stickiness.diff"
+  },
+  "carrier-foldin-v1": {
+   "patch": "patches/foldin-preserved-thinking-gate.diff"
+  },
+  "carrier-foldin-v2": {
+   "patch": "patches/foldin-preserved-thinking-gate-v2.diff"
+  },
+  "carrier-foldin-v4": {
+   "patch": "patches/foldin-preserved-thinking-gate-v4.diff"
+  }
+ },
+ "head_revision": "3b47753d54be51a06a7f9a939f9edea579f3c949",
+ "changed_files": [
+  "tests/e2e/core/history/test_tool_result_projection_wire.py"
+ ],
+ "gates": {
+  "validity": "PASS",
+  "red": {
+   "arm": "base",
+   "result": "PASS",
+   "observed": "test A failed 3/3 (canonical runner) and 3/3 (probe); test B passed",
+   "assertion": "no tool result was ever archived on the wire: 28 requests, 14 tool rows",
+   "seam_covered": "n/a on base: the projection seam is absent on main by design (feature RED); the seam trace on the GREEN arm is below",
+   "reps_agree": "3/3"
+  },
+  "green": [
+   {
+    "arm": "carrier",
+    "test": "A (OpenAI-compatible route)",
+    "result": "PASS",
+    "reps_agree": "3/3"
+   },
+   {
+    "arm": "carrier",
+    "test": "B (native Anthropic, preserved thinking)",
+    "result": "FAIL (expected: the carrier gap)",
+    "reps_agree": "3/3"
+   },
+   {
+    "arm": "carrier+foldin-v4",
+    "test": "A and B",
+    "result": "PASS",
+    "reps_agree": "3/3"
+   },
+   {
+    "arm": "carrier+foldin-v2",
+    "test": "A and B",
+    "result": "PASS",
+    "reps_agree": "3/3"
+   },
+   {
+    "arm": "carrier+foldin-v1",
+    "test": "A and B",
+    "result": "PASS",
+    "reps_agree": "3/3"
+   }
+  ],
+  "green_pins": "The test file passes with v1, v2 and v4 alike: it pins only that some gate exists on native Messages within one agent. What v2 and v3/v4 add (the anthropic_content_blocks and bedrock_content_blocks reads; the skip for third-party Messages endpoints) is pinned only by harnesses outside the repo: PREDICATE/r20261001-03, F04-bedrock/r20261001-03, F04-thirdparty/r20261001-02. The file does not cover a restart either; the gate's restart failure is shown by RESTART/r20261001-01 only.",
+  "seam_coverage": {
+   "tool": "harness/seam_trace.py (sys.settrace line tracer; the venv has no coverage package)",
+   "arm": "carrier+test+foldin-v4",
+   "outcomes": {
+    "test_projection_breaks_the_prefix_once_per_paid_batch_and_never_undoes_itself": "passed",
+    "test_projection_never_invalidates_replayed_preserved_thinking": "passed"
+   },
+   "hunks": [
+    {
+     "file": "agent/agent_init.py",
+     "new_start": 350,
+     "added_lines": 11,
+     "executable_added": 8,
+     "executed_added": 5
+    },
+    {
+     "file": "agent/agent_init.py",
+     "new_start": 1586,
+     "added_lines": 14,
+     "executable_added": 7,
+     "executed_added": 7
+    },
+    {
+     "file": "agent/agent_init.py",
+     "new_start": 2037,
+     "added_lines": 4,
+     "executable_added": 4,
+     "executed_added": 4
+    },
+    {
+     "file": "agent/context_compressor.py",
+     "new_start": 2776,
+     "added_lines": 5,
+     "executable_added": 3,
+     "executed_added": 3
+    },
+    {
+     "file": "agent/context_compressor.py",
+     "new_start": 2809,
+     "added_lines": 13,
+     "executable_added": 5,
+     "executed_added": 5
+    },
+    {
+     "file": "agent/tool_result_projection.py",
+     "new_start": 1,
+     "added_lines": 750,
+     "executable_added": 388,
+     "executed_added": 296
+    },
+    {
+     "file": "agent/turn_request_assembly.py",
+     "new_start": 187,
+     "added_lines": 9,
+     "executable_added": 2,
+     "executed_added": 2
+    },
+    {
+     "file": "cli-config.yaml.example",
+     "new_start": 830,
+     "added_lines": 34,
+     "executable_added": 0,
+     "executed_added": 0
+    },
+    {
+     "file": "gateway/run.py",
+     "new_start": 4410,
+     "added_lines": 4,
+     "executable_added": 0,
+     "executed_added": 0
+    },
+    {
+     "file": "hermes_cli/config_defaults.py",
+     "new_start": 621,
+     "added_lines": 24,
+     "executable_added": 4,
+     "executed_added": 4
+    },
+    {
+     "file": "scripts/bench_tool_result_projection.py",
+     "new_start": 1,
+     "added_lines": 159,
+     "executable_added": 106,
+     "executed_added": 0
+    },
+    {
+     "file": "tools/tool_result_storage.py",
+     "new_start": 290,
+     "added_lines": 73,
+     "executable_added": 43,
+     "executed_added": 13
+    },
+    {
+     "file": "tui_gateway/session_compression.py",
+     "new_start": 78,
+     "added_lines": 2,
+     "executable_added": 0,
+     "executed_added": 0
+    },
+    {
+     "file": "tui_gateway/session_compression.py",
+     "new_start": 121,
+     "added_lines": 4,
+     "executable_added": 3,
+     "executed_added": 0
+    },
+    {
+     "file": "tui_gateway/session_compression.py",
+     "new_start": 133,
+     "added_lines": 6,
+     "executable_added": 5,
+     "executed_added": 0
+    },
+    {
+     "file": "website/docs/user-guide/configuration.md",
+     "new_start": 1013,
+     "added_lines": 4,
+     "executable_added": 0,
+     "executed_added": 0
+    },
+    {
+     "file": "website/docs/user-guide/configuration.md",
+     "new_start": 1060,
+     "added_lines": 10,
+     "executable_added": 0,
+     "executed_added": 0
+    }
+   ],
+   "gate_v4_lines_not_executed": "_is_signed_thinking: the non-dict return and the Bedrock reasoningContent branch; replays_bound_thinking: the third-party early return (module lines 462, 465-466, 494 in the v4 blob a3227c92a7; v3's line 490 moved to 494 with the longer docstring)",
+   "module_not_executed_lines": [
+    144,
+    160,
+    161,
+    168,
+    171,
+    172,
+    178,
+    181,
+    182,
+    215,
+    237,
+    238,
+    239,
+    240,
+    270,
+    273,
+    314,
+    333,
+    334,
+    335,
+    336,
+    337,
+    338,
+    339,
+    340,
+    341,
+    346,
+    347,
+    348,
+    356,
+    357,
+    358,
+    359,
+    360,
+    365,
+    397,
+    399,
+    401,
+    429,
+    430,
+    448,
+    449,
+    450,
+    462,
+    465,
+    466,
+    494,
+    515,
+    518,
+    523,
+    524,
+    525,
+    543,
+    544,
+    545,
+    547,
+    552,
+    555,
+    569,
+    570
+   ],
+   "unexecuted_function": "_estimate_region_tokens (cache-capable break-cost path)"
+  },
+  "sabotage": {
+   "per_hunk": [
+    {
+     "n": 1,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "agent/agent_init.py -350,6 +350,17",
+     "added_lines": 11,
+     "red_again": true,
+     "failed_tests": [
+      "A",
+      "B"
+     ],
+     "failed_how": "crash",
+     "swallowed_exceptions": [],
+     "first_error_line": "E       NameError: name '_parse_config_ratio' is not defined"
+    },
+    {
+     "n": 2,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "agent/agent_init.py -1575,6 +1586,20",
+     "added_lines": 14,
+     "red_again": true,
+     "failed_tests": [
+      "A",
+      "B"
+     ],
+     "failed_how": "crash",
+     "swallowed_exceptions": [],
+     "first_error_line": "E           AttributeError: 'CompressionSettings' object has no attribute 'tool_result_projection'"
+    },
+    {
+     "n": 3,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "agent/agent_init.py -2012,6 +2037,10",
+     "added_lines": 4,
+     "red_again": true,
+     "failed_tests": [
+      "A"
+     ],
+     "failed_how": "assertion",
+     "swallowed_exceptions": [],
+     "first_error_line": "E       AssertionError: no tool result was ever archived on the wire: 28 requests, 14 tool rows"
+    },
+    {
+     "n": 4,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "agent/context_compressor.py -2776,6 +2776,11",
+     "added_lines": 5,
+     "red_again": true,
+     "failed_tests": [
+      "A",
+      "B"
+     ],
+     "failed_how": "crash",
+     "swallowed_exceptions": [],
+     "first_error_line": "E           TypeError: ContextCompressor.__init__() got an unexpected keyword argument 'tool_result_projection'"
+    },
+    {
+     "n": 5,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "agent/context_compressor.py -2804,6 +2809,19",
+     "added_lines": 13,
+     "red_again": true,
+     "failed_tests": [
+      "A"
+     ],
+     "failed_how": "assertion",
+     "swallowed_exceptions": [],
+     "first_error_line": "E       AssertionError: no tool result was ever archived on the wire: 28 requests, 14 tool rows"
+    },
+    {
+     "n": 6,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "agent/tool_result_projection.py -0,0 +1,750",
+     "added_lines": 750,
+     "red_again": true,
+     "failed_tests": [
+      "A",
+      "B"
+     ],
+     "failed_how": "crash",
+     "swallowed_exceptions": [],
+     "first_error_line": "E       ModuleNotFoundError: No module named 'agent.tool_result_projection'"
+    },
+    {
+     "n": 7,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "agent/turn_request_assembly.py -187,6 +187,15",
+     "added_lines": 9,
+     "red_again": true,
+     "failed_tests": [
+      "A"
+     ],
+     "failed_how": "assertion",
+     "swallowed_exceptions": [],
+     "first_error_line": "E       AssertionError: no tool result was ever archived on the wire: 28 requests, 14 tool rows"
+    },
+    {
+     "n": 8,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "cli-config.yaml.example -830,6 +830,40",
+     "added_lines": 34,
+     "red_again": false,
+     "failed_tests": [],
+     "failed_how": null,
+     "swallowed_exceptions": [],
+     "first_error_line": ""
+    },
+    {
+     "n": 9,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "gateway/run.py -4410,6 +4410,10",
+     "added_lines": 4,
+     "red_again": false,
+     "failed_tests": [],
+     "failed_how": null,
+     "swallowed_exceptions": [],
+     "first_error_line": ""
+    },
+    {
+     "n": 10,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "hermes_cli/config_defaults.py -621,6 +621,30",
+     "added_lines": 24,
+     "red_again": false,
+     "failed_tests": [],
+     "failed_how": null,
+     "swallowed_exceptions": [],
+     "first_error_line": ""
+    },
+    {
+     "n": 11,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "scripts/bench_tool_result_projection.py -0,0 +1,159",
+     "added_lines": 159,
+     "red_again": false,
+     "failed_tests": [],
+     "failed_how": null,
+     "swallowed_exceptions": [],
+     "first_error_line": ""
+    },
+    {
+     "n": 12,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "tools/tool_result_storage.py -290,6 +290,79",
+     "added_lines": 73,
+     "red_again": true,
+     "failed_tests": [
+      "A"
+     ],
+     "failed_how": "assertion_via_swallowed_exception",
+     "swallowed_exceptions": [
+      "ImportError: cannot import name 'spillover_path_is_readable' from 'tools.tool_result_storage' ($WT..."
+     ],
+     "first_error_line": "E       AssertionError: no tool result was ever archived on the wire: 28 requests, 14 tool rows"
+    },
+    {
+     "n": 13,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "tui_gateway/session_compression.py -78,6 +78,8",
+     "added_lines": 2,
+     "red_again": false,
+     "failed_tests": [],
+     "failed_how": null,
+     "swallowed_exceptions": [],
+     "first_error_line": ""
+    },
+    {
+     "n": 14,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "tui_gateway/session_compression.py -119,6 +121,10",
+     "added_lines": 4,
+     "red_again": false,
+     "failed_tests": [],
+     "failed_how": null,
+     "swallowed_exceptions": [],
+     "first_error_line": ""
+    },
+    {
+     "n": 15,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "tui_gateway/session_compression.py -127,6 +133,12",
+     "added_lines": 6,
+     "red_again": false,
+     "failed_tests": [],
+     "failed_how": null,
+     "swallowed_exceptions": [],
+     "first_error_line": ""
+    },
+    {
+     "n": 16,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "website/docs/user-guide/configuration.md -1013,6 +1013,10",
+     "added_lines": 4,
+     "red_again": false,
+     "failed_tests": [],
+     "failed_how": null,
+     "swallowed_exceptions": [],
+     "first_error_line": ""
+    },
+    {
+     "n": 17,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "website/docs/user-guide/configuration.md -1056,6 +1060,16",
+     "added_lines": 10,
+     "red_again": false,
+     "failed_tests": [],
+     "failed_how": null,
+     "swallowed_exceptions": [],
+     "first_error_line": ""
+    },
+    {
+     "n": 18,
+     "source": "gate patch hunk 1",
+     "hunk": "agent/tool_result_projection.py -450,6 +450,57",
+     "added_lines": 51,
+     "red_again": true,
+     "failed_tests": [
+      "A"
+     ],
+     "failed_how": "assertion_via_swallowed_exception",
+     "swallowed_exceptions": [
+      "NameError: name 'replays_bound_thinking' is not defined"
+     ],
+     "first_error_line": "E       AssertionError: no tool result was ever archived on the wire: 28 requests, 14 tool rows",
+     "probes": {
+      "bedrock": {
+       "outcome": "passed",
+       "invalidated_block_replays": 0,
+       "projection_passes": 0,
+       "raw": "receipts/raw/r04/gate-revert-v4-hunk1-bedrock.json"
+      },
+      "thirdparty": {
+       "projection_passes": 0,
+       "pass_request_indices": [],
+       "thinking_blocks_on_wire": 0,
+       "raw": "receipts/raw/r04/gate-revert-v4-hunk1-thirdparty.json"
+      }
+     }
+    },
+    {
+     "n": 19,
+     "source": "gate patch hunk 2",
+     "hunk": "agent/tool_result_projection.py -565,6 +616,9",
+     "added_lines": 3,
+     "red_again": true,
+     "failed_tests": [
+      "B"
+     ],
+     "failed_how": "assertion",
+     "swallowed_exceptions": [],
+     "first_error_line": "E       AssertionError: a request replayed preserved-thinking blocks over a rewritten conversation prefix (Anthropic drops them, or rejects the request on enforced accounts):",
+     "probes": {
+      "bedrock": {
+       "outcome": "failed",
+       "invalidated_block_replays": 214,
+       "projection_passes": 5,
+       "raw": "receipts/raw/r04/gate-revert-v4-hunk2-bedrock.json"
+      },
+      "thirdparty": {
+       "projection_passes": 3,
+       "pass_request_indices": [
+        9,
+        15,
+        21
+       ],
+       "thinking_blocks_on_wire": 0,
+       "raw": "receipts/raw/r04/gate-revert-v4-hunk2-thirdparty.json"
+      }
+     }
+    }
+   ],
+   "pinned": [
+    "agent/agent_init.py @@ -350,6 +350,17 @@ def _parse_config_int(raw: Any, default: int) -> int: [crash]",
+    "agent/agent_init.py @@ -1575,6 +1586,20 @@ def _parse_compression_config(agent, _agent_cfg) -> CompressionSettings: [crash]",
+    "agent/agent_init.py @@ -2012,6 +2037,10 @@ def _build_context_engine(agent, _agent_cfg, cs, _custom_providers, _effective_c [assertion]",
+    "agent/context_compressor.py @@ -2776,6 +2776,11 @@ class ContextCompressor(SummaryDispatchMixin, MicroCompactionMixin, ContextEngin [crash]",
+    "agent/context_compressor.py @@ -2804,6 +2809,19 @@ class ContextCompressor(SummaryDispatchMixin, MicroCompactionMixin, ContextEngin [assertion]",
+    "agent/tool_result_projection.py @@ -0,0 +1,750 @@ [crash]",
+    "agent/turn_request_assembly.py @@ -187,6 +187,15 @@ def assemble_api_request( [assertion]",
+    "tools/tool_result_storage.py @@ -290,6 +290,79 @@ def extract_persisted_path(content: str) -> str | None: [assertion_via_swallowed_exception]",
+    "agent/tool_result_projection.py @@ -450,6 +450,57 @@ def _backend_is_remote() -> Optional[bool]: [assertion_via_swallowed_exception]",
+    "agent/tool_result_projection.py @@ -565,6 +616,9 @@ def _project(agent: Any, api_messages: List[Dict[str, Any]], env: Any) -> int: [assertion]"
+   ],
+   "unpinned_hunks": [
+    "cli-config.yaml.example @@ -830,6 +830,40 @@ compression:",
+    "gateway/run.py @@ -4410,6 +4410,10 @@ class GatewayRunner(",
+    "hermes_cli/config_defaults.py @@ -621,6 +621,30 @@ DEFAULT_CONFIG = {",
+    "scripts/bench_tool_result_projection.py @@ -0,0 +1,159 @@",
+    "tui_gateway/session_compression.py @@ -78,6 +78,8 @@ _COMPRESSION_INT_KEYS = (",
+    "tui_gateway/session_compression.py @@ -119,6 +121,10 @@ def _apply_live_compression_config(agent: Any, cfg: dict | None) -> None:",
+    "tui_gateway/session_compression.py @@ -127,6 +133,12 @@ def _apply_live_compression_config(agent: Any, cfg: dict | None) -> None:",
+    "website/docs/user-guide/configuration.md @@ -1013,6 +1013,10 @@ compression:",
+    "website/docs/user-guide/configuration.md @@ -1056,6 +1060,16 @@ The value is the **first rung** of an escalating ladder, not a fixed interval: c"
+   ],
+   "not_reverted": [],
+   "classification": {
+    "assertion": 4,
+    "assertion_via_swallowed_exception": 2,
+    "crash": 4,
+    "unpinned": 9
+   },
+   "classification_note": "project_stale_tool_results is fail-open: an exception inside the pass is logged and the request goes out unprojected. A revert that raises there turns projection off, and test A then fails by assertion; those flips are labelled assertion_via_swallowed_exception.",
+   "named": {
+    "S1 trigger=1": "A RED 3/3 (probe): 12 passes, rows per pass [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], reclaim per pass [5846]",
+    "S2 stickiness dropped": "A RED 3/3 (probe): 11 passes, rows per pass [2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], reclaim per pass [11692, 5846, 5846, 5846, 5846, 5846, 5846, 5846, 5846, 5846, 5846]",
+    "gate third-party skip removed": "= the carrier+foldin-v2 arm: third-party probe 0 passes vs 3 with v4 (F04-thirdparty/r20261001-02); test file GREEN either way"
+   },
+   "baseline": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 8.6s (2 workers) ==="
+  },
+  "adjacent": {
+   "files": [
+    "tests/agent/test_compression_config_defaults.py",
+    "tests/agent/test_proactive_tool_result_pruning.py",
+    "tests/tools/test_tool_result_storage.py",
+    "tests/tui_gateway/test_compression_config_hot_reload.py",
+    "(carrier arms only) tests/agent/test_tool_result_projection.py"
+   ],
+   "base": "=== Summary: 4 files, 75 tests passed, 0 failed (100% complete) in 5.4s (2 workers) ===",
+   "arm_carrier": "=== Summary: 5 files, 130 tests passed, 0 failed (100% complete) in 8.7s (2 workers) ===",
+   "arm_carrier_foldin_v4": "=== Summary: 5 files, 130 tests passed, 0 failed (100% complete) in 6.9s (2 workers) ===",
+   "count_note": "130 = 75 (the four files on main) + 2 (the carrier's two hot-reload tests, added to an existing file) + 53 (tests/agent/test_tool_result_projection.py); 55 of the 130 come from the carrier",
+   "identical": true,
+   "pre_existing_failures": []
+  },
+  "guards": {
+   "F14": "NOT_RUN (the standing set is not built; it lives on staging/factory-replay-gate)",
+   "members_run": "replay_gates, region_scoping, readtool direct calls: see GUARDS/r20261001-04 (equal)"
+  },
+  "flaky": false,
+  "route_scope": "OpenAI-compatible (test A) and native Anthropic Messages (test B); Bedrock Converse in F04-bedrock/r20261001-03; third-party Messages endpoint in F04-thirdparty/r20261001-02; restart in RESTART/r20261001-01",
+  "cache_read_ratio": {
+   "status": "MODELED_ONLY",
+   "see": "E37-synthetic/r20261001-04"
+  }
+ },
+ "proof_reps": {
+  "base": [
+   {
+    "rep": 1,
+    "summary": "=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 20.1s (2 workers) ===",
+    "failed": [
+     "A"
+    ],
+    "wall_s": 20.1,
+    "relay_init_failed_logged": true
+   },
+   {
+    "rep": 2,
+    "summary": "=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 21.4s (2 workers) ===",
+    "failed": [
+     "A"
+    ],
+    "wall_s": 21.4,
+    "relay_init_failed_logged": true
+   },
+   {
+    "rep": 3,
+    "summary": "=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 19.8s (2 workers) ===",
+    "failed": [
+     "A"
+    ],
+    "wall_s": 19.8,
+    "relay_init_failed_logged": true
+   }
+  ],
+  "carrier": [
+   {
+    "rep": 1,
+    "summary": "=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 20.4s (2 workers) ===",
+    "failed": [
+     "B"
+    ],
+    "wall_s": 20.4,
+    "relay_init_failed_logged": false
+   },
+   {
+    "rep": 2,
+    "summary": "=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 20.1s (2 workers) ===",
+    "failed": [
+     "B"
+    ],
+    "wall_s": 20.1,
+    "relay_init_failed_logged": false
+   },
+   {
+    "rep": 3,
+    "summary": "=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 19.2s (2 workers) ===",
+    "failed": [
+     "B"
+    ],
+    "wall_s": 19.2,
+    "relay_init_failed_logged": false
+   }
+  ],
+  "carrier-foldin-v1": [
+   {
+    "rep": 1,
+    "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 10.5s (2 workers) ===",
+    "failed": [],
+    "wall_s": 10.5,
+    "relay_init_failed_logged": false
+   },
+   {
+    "rep": 2,
+    "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 9.2s (2 workers) ===",
+    "failed": [],
+    "wall_s": 9.2,
+    "relay_init_failed_logged": false
+   },
+   {
+    "rep": 3,
+    "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 10.2s (2 workers) ===",
+    "failed": [],
+    "wall_s": 10.2,
+    "relay_init_failed_logged": false
+   }
+  ],
+  "carrier-foldin-v2": [
+   {
+    "rep": 1,
+    "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 11.9s (2 workers) ===",
+    "failed": [],
+    "wall_s": 11.9,
+    "relay_init_failed_logged": false
+   },
+   {
+    "rep": 2,
+    "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 8.7s (2 workers) ===",
+    "failed": [],
+    "wall_s": 8.7,
+    "relay_init_failed_logged": false
+   },
+   {
+    "rep": 3,
+    "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 9.9s (2 workers) ===",
+    "failed": [],
+    "wall_s": 9.9,
+    "relay_init_failed_logged": false
+   }
+  ],
+  "carrier-foldin-v4": [
+   {
+    "rep": 1,
+    "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 10.3s (2 workers) ===",
+    "failed": [],
+    "wall_s": 10.3,
+    "relay_init_failed_logged": false
+   },
+   {
+    "rep": 2,
+    "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 8.5s (2 workers) ===",
+    "failed": [],
+    "wall_s": 8.5,
+    "relay_init_failed_logged": false
+   },
+   {
+    "rep": 3,
+    "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 10.4s (2 workers) ===",
+    "failed": [],
+    "wall_s": 10.4,
+    "relay_init_failed_logged": false
+   }
+  ]
+ },
+ "probe_results": {
+  "label": "OBSERVED (loopback wire)",
+  "n_per_arm": 3,
+  "arms": {
+   "base": {
+    "n": 3,
+    "reps_agree": "3/3",
+    "test_A_openai_route": "failed",
+    "test_B_native_anthropic": "passed",
+    "openai_route": {
+     "requests": 28,
+     "tool_rows": 14,
+     "rows_archived": 0,
+     "projection_passes": 0,
+     "pass_request_indices": [],
+     "rows_per_pass": [],
+     "reclaim_estimator_tokens_per_pass": [],
+     "unstable_archived_rows": 0,
+     "sum_request_chars": 5025476
+    },
+    "native_anthropic_route": {
+     "requests": 24,
+     "replayed_thinking_blocks": 23,
+     "invalidated_thinking_blocks": 0,
+     "rejected_400": 0,
+     "sum_request_chars": 3539687
+    },
+    "egress_blocked": [],
+    "repo_head": "3b47753d54be51a06a7f9a939f9edea579f3c949",
+    "dirty_files": []
+   },
+   "carrier": {
+    "n": 3,
+    "reps_agree": "3/3",
+    "test_A_openai_route": "passed",
+    "test_B_native_anthropic": "failed",
+    "openai_route": {
+     "requests": 28,
+     "tool_rows": 14,
+     "rows_archived": 12,
+     "projection_passes": 6,
+     "pass_request_indices": [
+      7,
+      11,
+      15,
+      19,
+      23,
+      27
+     ],
+     "rows_per_pass": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+     ],
+     "reclaim_estimator_tokens_per_pass": [
+      11692,
+      11692,
+      11692,
+      11692,
+      11692,
+      11692
+     ],
+     "unstable_archived_rows": 0,
+     "sum_request_chars": 1936683
+    },
+    "native_anthropic_route": {
+     "requests": 24,
+     "replayed_thinking_blocks": 23,
+     "invalidated_thinking_blocks": 3,
+     "rejected_400": 0,
+     "sum_request_chars": 1644530
+    },
+    "egress_blocked": [],
+    "repo_head": "15dff75cc860a14d06414c6bf31459397e1de912",
+    "dirty_files": []
+   },
+   "carrier-S1": {
+    "n": 3,
+    "reps_agree": "3/3",
+    "test_A_openai_route": "failed",
+    "test_B_native_anthropic": "failed",
+    "openai_route": {
+     "requests": 28,
+     "tool_rows": 14,
+     "rows_archived": 12,
+     "projection_passes": 12,
+     "pass_request_indices": [
+      5,
+      7,
+      9,
+      11,
+      13,
+      15,
+      17,
+      19,
+      21,
+      23,
+      25,
+      27
+     ],
+     "rows_per_pass": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ],
+     "reclaim_estimator_tokens_per_pass": [
+      5846,
+      5846,
+      5846,
+      5846,
+      5846,
+      5846,
+      5846,
+      5846,
+      5846,
+      5846,
+      5846,
+      5846
+     ],
+     "unstable_archived_rows": 0,
+     "sum_request_chars": 1655885
+    },
+    "native_anthropic_route": {
+     "requests": 24,
+     "replayed_thinking_blocks": 23,
+     "invalidated_thinking_blocks": 3,
+     "rejected_400": 0,
+     "sum_request_chars": 1644530
+    },
+    "egress_blocked": [],
+    "repo_head": "15dff75cc860a14d06414c6bf31459397e1de912",
+    "dirty_files": [
+     "M agent/tool_result_projection.py"
+    ]
+   },
+   "carrier-S2": {
+    "n": 3,
+    "reps_agree": "3/3",
+    "test_A_openai_route": "failed",
+    "test_B_native_anthropic": "failed",
+    "openai_route": {
+     "requests": 28,
+     "tool_rows": 14,
+     "rows_archived": 12,
+     "projection_passes": 11,
+     "pass_request_indices": [
+      7,
+      9,
+      11,
+      13,
+      15,
+      17,
+      19,
+      21,
+      23,
+      25,
+      27
+     ],
+     "rows_per_pass": [
+      2,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ],
+     "reclaim_estimator_tokens_per_pass": [
+      11692,
+      5846,
+      5846,
+      5846,
+      5846,
+      5846,
+      5846,
+      5846,
+      5846,
+      5846,
+      5846
+     ],
+     "unstable_archived_rows": 0,
+     "sum_request_chars": 1702685
+    },
+    "native_anthropic_route": {
+     "requests": 24,
+     "replayed_thinking_blocks": 23,
+     "invalidated_thinking_blocks": 8,
+     "rejected_400": 0,
+     "sum_request_chars": 1340369
+    },
+    "egress_blocked": [],
+    "repo_head": "15dff75cc860a14d06414c6bf31459397e1de912",
+    "dirty_files": [
+     "M agent/tool_result_projection.py"
+    ]
+   },
+   "carrier-foldin-v1": {
+    "n": 3,
+    "reps_agree": "3/3",
+    "test_A_openai_route": "passed",
+    "test_B_native_anthropic": "passed",
+    "openai_route": {
+     "requests": 28,
+     "tool_rows": 14,
+     "rows_archived": 12,
+     "projection_passes": 6,
+     "pass_request_indices": [
+      7,
+      11,
+      15,
+      19,
+      23,
+      27
+     ],
+     "rows_per_pass": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+     ],
+     "reclaim_estimator_tokens_per_pass": [
+      11692,
+      11692,
+      11692,
+      11692,
+      11692,
+      11692
+     ],
+     "unstable_archived_rows": 0,
+     "sum_request_chars": 1936683
+    },
+    "native_anthropic_route": {
+     "requests": 24,
+     "replayed_thinking_blocks": 23,
+     "invalidated_thinking_blocks": 0,
+     "rejected_400": 0,
+     "sum_request_chars": 3539687
+    },
+    "egress_blocked": [],
+    "repo_head": "15dff75cc860a14d06414c6bf31459397e1de912",
+    "dirty_files": [
+     "M agent/tool_result_projection.py"
+    ]
+   },
+   "carrier-foldin-v2": {
+    "n": 3,
+    "reps_agree": "3/3",
+    "test_A_openai_route": "passed",
+    "test_B_native_anthropic": "passed",
+    "openai_route": {
+     "requests": 28,
+     "tool_rows": 14,
+     "rows_archived": 12,
+     "projection_passes": 6,
+     "pass_request_indices": [
+      7,
+      11,
+      15,
+      19,
+      23,
+      27
+     ],
+     "rows_per_pass": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+     ],
+     "reclaim_estimator_tokens_per_pass": [
+      11692,
+      11692,
+      11692,
+      11692,
+      11692,
+      11692
+     ],
+     "unstable_archived_rows": 0,
+     "sum_request_chars": 1936683
+    },
+    "native_anthropic_route": {
+     "requests": 24,
+     "replayed_thinking_blocks": 23,
+     "invalidated_thinking_blocks": 0,
+     "rejected_400": 0,
+     "sum_request_chars": 3539687
+    },
+    "egress_blocked": [],
+    "repo_head": "15dff75cc860a14d06414c6bf31459397e1de912",
+    "dirty_files": [
+     "M agent/tool_result_projection.py"
+    ]
+   },
+   "carrier-foldin-v4": {
+    "n": 3,
+    "reps_agree": "3/3",
+    "test_A_openai_route": "passed",
+    "test_B_native_anthropic": "passed",
+    "openai_route": {
+     "requests": 28,
+     "tool_rows": 14,
+     "rows_archived": 12,
+     "projection_passes": 6,
+     "pass_request_indices": [
+      7,
+      11,
+      15,
+      19,
+      23,
+      27
+     ],
+     "rows_per_pass": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+     ],
+     "reclaim_estimator_tokens_per_pass": [
+      11692,
+      11692,
+      11692,
+      11692,
+      11692,
+      11692
+     ],
+     "unstable_archived_rows": 0,
+     "sum_request_chars": 1936683
+    },
+    "native_anthropic_route": {
+     "requests": 24,
+     "replayed_thinking_blocks": 23,
+     "invalidated_thinking_blocks": 0,
+     "rejected_400": 0,
+     "sum_request_chars": 3539687
+    },
+    "egress_blocked": [],
+    "repo_head": "15dff75cc860a14d06414c6bf31459397e1de912",
+    "dirty_files": [
+     "M agent/tool_result_projection.py"
+    ]
+   }
+  }
+ },
+ "measurements": [
+  {
+   "name": "projection_passes_openai_route",
+   "arm": "carrier",
+   "value": 6,
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "count (all reps equal)"
+  },
+  {
+   "name": "rows_per_pass_openai_route",
+   "arm": "carrier",
+   "value": [
+    2,
+    2,
+    2,
+    2,
+    2,
+    2
+   ],
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "count per pass"
+  },
+  {
+   "name": "reclaim_estimator_tokens_per_pass",
+   "arm": "carrier",
+   "value": [
+    11692,
+    11692,
+    11692,
+    11692,
+    11692,
+    11692
+   ],
+   "n": 3,
+   "label": "OBSERVED (per-environment)",
+   "statistic": "value"
+  },
+  {
+   "name": "S1_passes_and_rows",
+   "arm": "carrier-S1",
+   "value": {
+    "passes": 12,
+    "rows_per_pass": [
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1
+    ],
+    "reclaim": [
+     5846,
+     5846,
+     5846,
+     5846,
+     5846,
+     5846,
+     5846,
+     5846,
+     5846,
+     5846,
+     5846,
+     5846
+    ]
+   },
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "counts"
+  },
+  {
+   "name": "S2_passes_and_rows",
+   "arm": "carrier-S2",
+   "value": {
+    "passes": 11,
+    "rows_per_pass": [
+     2,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1
+    ],
+    "reclaim": [
+     11692,
+     5846,
+     5846,
+     5846,
+     5846,
+     5846,
+     5846,
+     5846,
+     5846,
+     5846,
+     5846
+    ]
+   },
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "counts"
+  },
+  {
+   "name": "thinking_blocks_replayed_over_rewritten_prefix",
+   "arm": "carrier",
+   "value": 3,
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "count"
+  },
+  {
+   "name": "thinking_blocks_replayed_over_rewritten_prefix",
+   "arm": "carrier+foldin-v4",
+   "value": 0,
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "count"
+  },
+  {
+   "name": "native_anthropic_sum_request_chars",
+   "arm": "base / carrier / carrier+foldin-v4",
+   "value": [
+    3539687,
+    1644530,
+    3539687
+   ],
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "sum of request chars; equal base and fold-in values mean no projection pass ran on the native route with the gate"
+  }
+ ],
+ "denominators": {
+  "cells": 64,
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "completeness": 1.0,
+  "note": "15 canonical-runner proof runs, 21 probe runs (7 arms x 3), 1 seam trace, 1 sabotage baseline + one run per hunk (17 carrier + 2 gate), 3 adjacent runs, 4 gate-revert probe runs (Bedrock + third-party per gate hunk)"
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "harness_abi": {
+  "harness": "hermes",
+  "editor_abi": "n/a"
+ },
+ "not_tested": [
+  "real provider prompt cache (cache_read_input_tokens) - MODELED only",
+  "Vertex Claude; Claude thinking over chat completions (OpenRouter / Nous Portal chat wire: Hermes replays signed reasoning_details there, the gate does not look at that wire, binding unknown)",
+  "Nous Portal Messages route on the wire (direct call only, PREDICATE/r20261001-03)",
+  "remote terminal backends (docker/ssh/modal) for the spillover path",
+  "compaction mid-session in the F04 scenario (no compaction fired in 28 requests)",
+  "preserved-thinking replay of every assistant turn on the native route (#129620/#129492/#129882 not applied)",
+  "the restart case (an archived row sent in full again after a restart when the history holds signed thinking) is shown by harness only (RESTART/r20261001-01: f04_restart_probe.py end to end with a SessionDB resume, restart_direct.py by direct call); the test file does not cover it. The /model switch and fallback-provider paths into it were not run end to end",
+  "the F14 standing regression set (only three of its members ran: replay_gates, region_scoping, readtool direct calls)"
+ ],
+ "limitations": [
+  "a passing per-hunk sabotage run only means the wire test does not pin that hunk; see unpinned_hunks",
+  "the estimator token counts are per-environment (the stub embeds sandbox paths): [11692] here, 11,692 in round 2, 11,694 in round 1, 11,696 in round 0, 11,800-11,802 in the phase-3 verifier's rerun"
+ ],
+ "resource_usage": {
+  "wall_s": 693.3,
+  "cpu_core_s": null,
+  "gpu_s": 0,
+  "energy_j": null,
+  "api_cost_usd": 0.0,
+  "note": "wall_s summed from raw outputs; CPU time and energy not recorded"
+ },
+ "artifacts": [
+  {
+   "path": "receipts/raw/r04/adjacent-base.txt",
+   "sha256": "bba7fe743dc1d9ccb36bc17d14b761ef665833c0b9bd70bc61a314aea1a3ce44"
+  },
+  {
+   "path": "receipts/raw/r04/adjacent-carrier-foldin-v4.txt",
+   "sha256": "9454b7160eddcda489c83adce3ef99968c36b81482964504097b313f9ae62451"
+  },
+  {
+   "path": "receipts/raw/r04/adjacent-carrier.txt",
+   "sha256": "5bcd7b74659555dc34739c951be6108470892b23298188dd55cb0a2d8b48535c"
+  },
+  {
+   "path": "receipts/raw/r04/fix-v4.diff",
+   "sha256": "4a6529991c315345a0dfb9d9bd1b067feeeff3f49c28ce029c01ce89ed5ac5a0"
+  },
+  {
+   "path": "receipts/raw/r04/gate-revert-v4-hunk1-bedrock.json",
+   "sha256": "17837ba2df60bb1db74101d82f7a9d3b1a8b6d82f93302826da79f2398d236b3"
+  },
+  {
+   "path": "receipts/raw/r04/gate-revert-v4-hunk1-thirdparty.json",
+   "sha256": "828dbb2cdd54d0c5fab6f46bc67850991459131676eeb28e4335e06c425095dd"
+  },
+  {
+   "path": "receipts/raw/r04/gate-revert-v4-hunk2-bedrock.json",
+   "sha256": "b5528d0038b7e05681abfc08cbc97dfffed0dadf7c0a493ea498f80b4addf608"
+  },
+  {
+   "path": "receipts/raw/r04/gate-revert-v4-hunk2-thirdparty.json",
+   "sha256": "ab2532e5bda4d150fe137cdb90751e9f672779f8442b0271da0f01b38fdd2812"
+  },
+  {
+   "path": "receipts/raw/r04/per-hunk-sabotage.json",
+   "sha256": "fb5936e5ac1eb4b56e2cb9924ba1a5a3f30e52b1112512071c832fbf7b498f24"
+  },
+  {
+   "path": "receipts/raw/r04/probe-base-wire-r1.json",
+   "sha256": "035f8fa0726abb61f769570c73339037ebb372121b04b7e66c663cd4fb2849c9"
+  },
+  {
+   "path": "receipts/raw/r04/probe-base-wire-r1.json.log",
+   "sha256": "11530870ab9e2997bd4e2b02b0b2cf7cd998a94b58f05c188eef78aac681f2dd"
+  },
+  {
+   "path": "receipts/raw/r04/probe-base-wire-r2.json",
+   "sha256": "677539d52f2398d9677b0d65b7e468b4a55beccec4e3c76ef7e740e5fef02222"
+  },
+  {
+   "path": "receipts/raw/r04/probe-base-wire-r2.json.log",
+   "sha256": "16102dbde93d9c4d09ae1efecc4c172c924aceef3b6c4ce90d0328629b741e4a"
+  },
+  {
+   "path": "receipts/raw/r04/probe-base-wire-r3.json",
+   "sha256": "f3a9188a0d7d0a428a1e8fa567a0bce093f5b244302a7cd5ba000eed138994ca"
+  },
+  {
+   "path": "receipts/raw/r04/probe-base-wire-r3.json.log",
+   "sha256": "1100fcf6a599d278707585f3578b12a631f90acf095db7fe9fd8335c5892fa9d"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-S1-wire-r1.json",
+   "sha256": "061666ad1f10dad6d7633f662416d402af6b1866087cce11537e95a8a418bffd"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-S1-wire-r1.json.log",
+   "sha256": "365a6fb437d6907ab2df0ec00883946f0c9c132b4f980bd2d5f5d1c06f2428ed"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-S1-wire-r2.json",
+   "sha256": "3877814011defb6ab76c2ef7a51be2ebbd3692b940061fa95aeb96235d87c29d"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-S1-wire-r2.json.log",
+   "sha256": "a28c6ff0edb1e00c79e871ae1bf9e4e8f6ef2c6302c9455574be15b974773267"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-S1-wire-r3.json",
+   "sha256": "837bb9b437e50ad27addf54889ae298294f1eb620088e725876ff62540fa2e8b"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-S1-wire-r3.json.log",
+   "sha256": "069d9be5c99010e2738654ad55945c41341fc72dfa8eee7fb20a6ecf66e2632f"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-S2-wire-r1.json",
+   "sha256": "ee18f1d6c953ca3663f2adb6bd71e9b766e8ffeac8f821d628fcbc57152d1e56"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-S2-wire-r1.json.log",
+   "sha256": "533df96cf94663da70d4d240d0a14b37d2f83afdfb414d7bff82097750e73715"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-S2-wire-r2.json",
+   "sha256": "8bd9ef70eb08deef6e8101a7dbc633c05ee90e761ddaa475669c1baa9d73aee1"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-S2-wire-r2.json.log",
+   "sha256": "089cf9cd5c67042b67d0bf4cee0b77b38549e306e61a198ae32635a416618991"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-S2-wire-r3.json",
+   "sha256": "983b31f0bea113ef630de4bd1f11ba0c4f0150f8843eeea3a0405f2382d1f28e"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-S2-wire-r3.json.log",
+   "sha256": "861c92a600b6f609807fa075d379b24f204a0d8f97cbce52f48241ac22caead9"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-foldin-v1-wire-r1.json",
+   "sha256": "83a342f1b8923ac97cb463b75ffc2140324a454c9f4b1de2a181bc139c064a11"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-foldin-v1-wire-r1.json.log",
+   "sha256": "9a0671ddedde84422b1fa557098f56e63d4812f88b18ccbc9f76120bd4d44bb2"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-foldin-v1-wire-r2.json",
+   "sha256": "abf226d788f1d196e22f94995f326a1b50f35d8b69f05c8c629abd9bee6f31fc"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-foldin-v1-wire-r2.json.log",
+   "sha256": "8f5cb724656a08fc06f0d5d5d72a78e8067a015109db6ebed888a36956220ae8"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-foldin-v1-wire-r3.json",
+   "sha256": "1411234675780a4a8749f3ab24a9fb136edef827030ba8f568ac889a669a4edb"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-foldin-v1-wire-r3.json.log",
+   "sha256": "bf1ff2ae90f6713c5ba508f0347c3969518480a21bb7c40f03fd1f701b864b6e"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-foldin-v2-wire-r1.json",
+   "sha256": "afa27bb637b72cbf01fc6a438d5713daafc29d190539373db20ec33c11b4664f"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-foldin-v2-wire-r1.json.log",
+   "sha256": "9cd6c1abd996aab87dcec8fa5f02def03d5ccb12256c4eb2045c57377bfd8be0"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-foldin-v2-wire-r2.json",
+   "sha256": "53c97d089e2e9a5d1c851698316efc7b138ad4b6c2eb72a5cebf688691abd8ad"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-foldin-v2-wire-r2.json.log",
+   "sha256": "f010c3c858d77911b46569f50427945b3904790c1031c2912ef6feaf5110143d"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-foldin-v2-wire-r3.json",
+   "sha256": "4d474d6c176f80471f3fa638aec1e8e2de0ef0fbb539477b2248b55f949f554a"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-foldin-v2-wire-r3.json.log",
+   "sha256": "29aec19c5db86868c64e8d430b9dd091c108b5123da3a803e39fecbc8420f068"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-foldin-v4-wire-r1.json",
+   "sha256": "cbfb4b333a434a4257c9b3141c850f9689a68129d7e6426f868a10853b0328c3"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-foldin-v4-wire-r1.json.log",
+   "sha256": "359478d129e059c79c8fd0cc336bcf327e19f6ea895f2962848c54c957baa901"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-foldin-v4-wire-r2.json",
+   "sha256": "04df8b4c7d101c9c2819e47d813597d769229df482d4dd71aff9af49b0705357"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-foldin-v4-wire-r2.json.log",
+   "sha256": "8499b6d5d4c5f04fc41f25d336a50b6b7d68d4f44fdacf46f5c67683d9ad1f46"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-foldin-v4-wire-r3.json",
+   "sha256": "658d458dd29604c413a2caca4aa7a07a52927b80b5788ccb6c40c82a097d947c"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-foldin-v4-wire-r3.json.log",
+   "sha256": "b3248e8dfdd33a48a99d5c27d2c787878e48f32e58d4b71bed428fab5cad4335"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-wire-r1.json",
+   "sha256": "e179e2d47a6738159d0310a1ffbc119964da8bad57791f367fdc9daeec862faf"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-wire-r1.json.log",
+   "sha256": "09e98244e3a3b698d4c9b88666700b27682e785a54e811e37026aea963a09ff9"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-wire-r2.json",
+   "sha256": "5b508125efb8a366d0e11cbc8564dba1ba2dfe11658d735d2c48595a9d1aa0e9"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-wire-r2.json.log",
+   "sha256": "cc6c1728d72153759d2a88c41dcdccfd90d586f0d01f55e632ed835fbee2bb58"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-wire-r3.json",
+   "sha256": "9683f799d6f25bd2500f2c3c85900260d8339bf6e960310eec09160b819b0cde"
+  },
+  {
+   "path": "receipts/raw/r04/probe-carrier-wire-r3.json.log",
+   "sha256": "e67dfea9ec7c0f9d5b3e6879d6baba25969f708ac64e9bd7cb5dd6b7a3a8ee1b"
+  },
+  {
+   "path": "receipts/raw/r04/proof-base-r1.txt",
+   "sha256": "4c19cbc55a784c0395278ecdec21e94c88951e44e9de8c7b887cff28a14c7fd2"
+  },
+  {
+   "path": "receipts/raw/r04/proof-base-r2.txt",
+   "sha256": "12f984c78336456af5a63fc548104156a19cab83b2bfb8495944d0bfb19698d3"
+  },
+  {
+   "path": "receipts/raw/r04/proof-base-r3.txt",
+   "sha256": "7db604f0990593b937c62e3d173313b02c834863a6030df9b0edd4d7521cf329"
+  },
+  {
+   "path": "receipts/raw/r04/proof-carrier-foldin-v1-r1.txt",
+   "sha256": "31d9c162f8af1047089c15c814bc9786e56dcfab2ccfffe1939e051827cbc16f"
+  },
+  {
+   "path": "receipts/raw/r04/proof-carrier-foldin-v1-r2.txt",
+   "sha256": "e027da7095006efed2607dbacbd3d197738282d44545ccdbe1aec0e527314057"
+  },
+  {
+   "path": "receipts/raw/r04/proof-carrier-foldin-v1-r3.txt",
+   "sha256": "76a5c05d8972760d0e8a2073097284d5064152ea969c39c8a8fc6fc16b81041a"
+  },
+  {
+   "path": "receipts/raw/r04/proof-carrier-foldin-v2-r1.txt",
+   "sha256": "34021f828d6c58ec99c5ed886304463a630ddf879f46fa2892386f7bba13dc32"
+  },
+  {
+   "path": "receipts/raw/r04/proof-carrier-foldin-v2-r2.txt",
+   "sha256": "27437c9a26aff1ded22f6d7a27ed591a25f0db2a8d9be16d8b852370ef66b1ed"
+  },
+  {
+   "path": "receipts/raw/r04/proof-carrier-foldin-v2-r3.txt",
+   "sha256": "971d9610b08313190196010773d1b538fda9c635546c552133b8079729a1ed14"
+  },
+  {
+   "path": "receipts/raw/r04/proof-carrier-foldin-v4-r1.txt",
+   "sha256": "ffaadd9092ce37e695fab6e8a5f31d56d8b63ca9e1b51ba1ba9cc6f9b24e4aa4"
+  },
+  {
+   "path": "receipts/raw/r04/proof-carrier-foldin-v4-r2.txt",
+   "sha256": "8bc88e4d20bba5f83232e0983f8c337341f7ae73e5e743a8f8454365dfd230c3"
+  },
+  {
+   "path": "receipts/raw/r04/proof-carrier-foldin-v4-r3.txt",
+   "sha256": "d7c6ce8cbcf4280da208f2d41c575c175ace70c392e5bd4b84753be8ed9cf7c5"
+  },
+  {
+   "path": "receipts/raw/r04/proof-carrier-r1.txt",
+   "sha256": "83a259b72de251c2f34aa80462816a08279a4e5c45ea43ac6ef8506ab6fae49b"
+  },
+  {
+   "path": "receipts/raw/r04/proof-carrier-r2.txt",
+   "sha256": "3444224cbb37240bc3650bd3ff8440216601c681a694adfe3aeda901e565d439"
+  },
+  {
+   "path": "receipts/raw/r04/proof-carrier-r3.txt",
+   "sha256": "1aed12e0ce90c83b3cf302b3b7de4fc760b48e56ab04a2314c67479030fb6aa7"
+  },
+  {
+   "path": "receipts/raw/r04/seam-trace.json",
+   "sha256": "ff9ea830d3c6a884bd384ee99c0a8a8f8ed848956fb88a86d00ba7ad76e303f0"
+  },
+  {
+   "path": "receipts/raw/r04/seam-trace.log",
+   "sha256": "80e07c2b2757a8bb87881c13aaae43337aa64b0a81d846885bf8496ebf169d9e"
+  }
+ ],
+ "verdict": "KEEP (support evidence): the carrier holds the OpenAI-route byte-stability / paid-batch / sticky / resume contract; it invalidates replayed signed thinking on native Anthropic; fold-in gate v4 closes that within one agent (v2 and v1 do too on this route: the test file does not tell them apart). P5 stays PENDING: F14 not run.",
+ "supersedes": "F04/r20261001-03"
+}

@@ -1,0 +1,491 @@
+{
+  "label": "OBSERVED (scripts/run_tests.sh -j 2, one run per hunk)",
+  "main": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+  "arm": "15dff75cc860a14d06414c6bf31459397e1de912",
+  "gate_patch": "foldin-preserved-thinking-gate-v4.diff",
+  "baseline": {
+    "failed": [],
+    "errors": [],
+    "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 8.6s (2 workers) ===",
+    "first_error_line": "",
+    "swallowed_exceptions": [],
+    "failed_how": null,
+    "wall_s": 10.5
+  },
+  "hunks": [
+    {
+      "n": 1,
+      "source": "carrier (+ gate where it sits in the new module)",
+      "file": "agent/agent_init.py",
+      "hunk": "@@ -350,6 +350,17 @@ def _parse_config_int(raw: Any, default: int) -> int:",
+      "added_lines": 11,
+      "reverted": true,
+      "failed": [
+        "A",
+        "B"
+      ],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 8.2s (2 workers) ===",
+      "first_error_line": "E       NameError: name '_parse_config_ratio' is not defined",
+      "swallowed_exceptions": [],
+      "failed_how": "crash",
+      "wall_s": 8.8,
+      "red_again": true
+    },
+    {
+      "n": 2,
+      "source": "carrier (+ gate where it sits in the new module)",
+      "file": "agent/agent_init.py",
+      "hunk": "@@ -1575,6 +1586,20 @@ def _parse_compression_config(agent, _agent_cfg) -> CompressionSettings:",
+      "added_lines": 14,
+      "reverted": true,
+      "failed": [
+        "A",
+        "B"
+      ],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 12.7s (2 workers) ===",
+      "first_error_line": "E           AttributeError: 'CompressionSettings' object has no attribute 'tool_result_projection'",
+      "swallowed_exceptions": [],
+      "failed_how": "crash",
+      "wall_s": 13.3,
+      "red_again": true
+    },
+    {
+      "n": 3,
+      "source": "carrier (+ gate where it sits in the new module)",
+      "file": "agent/agent_init.py",
+      "hunk": "@@ -2012,6 +2037,10 @@ def _build_context_engine(agent, _agent_cfg, cs, _custom_providers, _effective_c",
+      "added_lines": 4,
+      "reverted": true,
+      "failed": [
+        "A"
+      ],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 25.3s (2 workers) ===",
+      "first_error_line": "E       AssertionError: no tool result was ever archived on the wire: 28 requests, 14 tool rows",
+      "swallowed_exceptions": [],
+      "failed_how": "assertion",
+      "wall_s": 27.9,
+      "red_again": true
+    },
+    {
+      "n": 4,
+      "source": "carrier (+ gate where it sits in the new module)",
+      "file": "agent/context_compressor.py",
+      "hunk": "@@ -2776,6 +2776,11 @@ class ContextCompressor(SummaryDispatchMixin, MicroCompactionMixin, ContextEngin",
+      "added_lines": 5,
+      "reverted": true,
+      "failed": [
+        "A",
+        "B"
+      ],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 11.8s (2 workers) ===",
+      "first_error_line": "E           TypeError: ContextCompressor.__init__() got an unexpected keyword argument 'tool_result_projection'",
+      "swallowed_exceptions": [],
+      "failed_how": "crash",
+      "wall_s": 13.9,
+      "red_again": true
+    },
+    {
+      "n": 5,
+      "source": "carrier (+ gate where it sits in the new module)",
+      "file": "agent/context_compressor.py",
+      "hunk": "@@ -2804,6 +2809,19 @@ class ContextCompressor(SummaryDispatchMixin, MicroCompactionMixin, ContextEngin",
+      "added_lines": 13,
+      "reverted": true,
+      "failed": [
+        "A"
+      ],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 23.0s (2 workers) ===",
+      "first_error_line": "E       AssertionError: no tool result was ever archived on the wire: 28 requests, 14 tool rows",
+      "swallowed_exceptions": [],
+      "failed_how": "assertion",
+      "wall_s": 25.2,
+      "red_again": true
+    },
+    {
+      "n": 6,
+      "source": "carrier (+ gate where it sits in the new module)",
+      "file": "agent/tool_result_projection.py",
+      "hunk": "@@ -0,0 +1,750 @@",
+      "added_lines": 750,
+      "reverted": true,
+      "failed": [
+        "A",
+        "B"
+      ],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 11.1s (2 workers) ===",
+      "first_error_line": "E       ModuleNotFoundError: No module named 'agent.tool_result_projection'",
+      "swallowed_exceptions": [],
+      "failed_how": "crash",
+      "wall_s": 13.2,
+      "red_again": true
+    },
+    {
+      "n": 7,
+      "source": "carrier (+ gate where it sits in the new module)",
+      "file": "agent/turn_request_assembly.py",
+      "hunk": "@@ -187,6 +187,15 @@ def assemble_api_request(",
+      "added_lines": 9,
+      "reverted": true,
+      "failed": [
+        "A"
+      ],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 22.4s (2 workers) ===",
+      "first_error_line": "E       AssertionError: no tool result was ever archived on the wire: 28 requests, 14 tool rows",
+      "swallowed_exceptions": [],
+      "failed_how": "assertion",
+      "wall_s": 23.1,
+      "red_again": true
+    },
+    {
+      "n": 8,
+      "source": "carrier (+ gate where it sits in the new module)",
+      "file": "cli-config.yaml.example",
+      "hunk": "@@ -830,6 +830,40 @@ compression:",
+      "added_lines": 34,
+      "reverted": true,
+      "failed": [],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 12.1s (2 workers) ===",
+      "first_error_line": "",
+      "swallowed_exceptions": [],
+      "failed_how": null,
+      "wall_s": 16.5,
+      "red_again": false
+    },
+    {
+      "n": 9,
+      "source": "carrier (+ gate where it sits in the new module)",
+      "file": "gateway/run.py",
+      "hunk": "@@ -4410,6 +4410,10 @@ class GatewayRunner(",
+      "added_lines": 4,
+      "reverted": true,
+      "failed": [],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 10.3s (2 workers) ===",
+      "first_error_line": "",
+      "swallowed_exceptions": [],
+      "failed_how": null,
+      "wall_s": 12.6,
+      "red_again": false
+    },
+    {
+      "n": 10,
+      "source": "carrier (+ gate where it sits in the new module)",
+      "file": "hermes_cli/config_defaults.py",
+      "hunk": "@@ -621,6 +621,30 @@ DEFAULT_CONFIG = {",
+      "added_lines": 24,
+      "reverted": true,
+      "failed": [],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 12.4s (2 workers) ===",
+      "first_error_line": "",
+      "swallowed_exceptions": [],
+      "failed_how": null,
+      "wall_s": 16.0,
+      "red_again": false
+    },
+    {
+      "n": 11,
+      "source": "carrier (+ gate where it sits in the new module)",
+      "file": "scripts/bench_tool_result_projection.py",
+      "hunk": "@@ -0,0 +1,159 @@",
+      "added_lines": 159,
+      "reverted": true,
+      "failed": [],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 11.6s (2 workers) ===",
+      "first_error_line": "",
+      "swallowed_exceptions": [],
+      "failed_how": null,
+      "wall_s": 15.7,
+      "red_again": false
+    },
+    {
+      "n": 12,
+      "source": "carrier (+ gate where it sits in the new module)",
+      "file": "tools/tool_result_storage.py",
+      "hunk": "@@ -290,6 +290,79 @@ def extract_persisted_path(content: str) -> str | None:",
+      "added_lines": 73,
+      "reverted": true,
+      "failed": [
+        "A"
+      ],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 19.0s (2 workers) ===",
+      "first_error_line": "E       AssertionError: no tool result was ever archived on the wire: 28 requests, 14 tool rows",
+      "swallowed_exceptions": [
+        "ImportError: cannot import name 'spillover_path_is_readable' from 'tools.tool_result_storage' ($WT..."
+      ],
+      "failed_how": "assertion_via_swallowed_exception",
+      "wall_s": 19.6,
+      "red_again": true
+    },
+    {
+      "n": 13,
+      "source": "carrier (+ gate where it sits in the new module)",
+      "file": "tui_gateway/session_compression.py",
+      "hunk": "@@ -78,6 +78,8 @@ _COMPRESSION_INT_KEYS = (",
+      "added_lines": 2,
+      "reverted": true,
+      "failed": [],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 10.3s (2 workers) ===",
+      "first_error_line": "",
+      "swallowed_exceptions": [],
+      "failed_how": null,
+      "wall_s": 10.9,
+      "red_again": false
+    },
+    {
+      "n": 14,
+      "source": "carrier (+ gate where it sits in the new module)",
+      "file": "tui_gateway/session_compression.py",
+      "hunk": "@@ -119,6 +121,10 @@ def _apply_live_compression_config(agent: Any, cfg: dict | None) -> None:",
+      "added_lines": 4,
+      "reverted": true,
+      "failed": [],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 10.1s (2 workers) ===",
+      "first_error_line": "",
+      "swallowed_exceptions": [],
+      "failed_how": null,
+      "wall_s": 10.7,
+      "red_again": false
+    },
+    {
+      "n": 15,
+      "source": "carrier (+ gate where it sits in the new module)",
+      "file": "tui_gateway/session_compression.py",
+      "hunk": "@@ -127,6 +133,12 @@ def _apply_live_compression_config(agent: Any, cfg: dict | None) -> None:",
+      "added_lines": 6,
+      "reverted": true,
+      "failed": [],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 8.3s (2 workers) ===",
+      "first_error_line": "",
+      "swallowed_exceptions": [],
+      "failed_how": null,
+      "wall_s": 8.9,
+      "red_again": false
+    },
+    {
+      "n": 16,
+      "source": "carrier (+ gate where it sits in the new module)",
+      "file": "website/docs/user-guide/configuration.md",
+      "hunk": "@@ -1013,6 +1013,10 @@ compression:",
+      "added_lines": 4,
+      "reverted": true,
+      "failed": [],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 9.0s (2 workers) ===",
+      "first_error_line": "",
+      "swallowed_exceptions": [],
+      "failed_how": null,
+      "wall_s": 9.5,
+      "red_again": false
+    },
+    {
+      "n": 17,
+      "source": "carrier (+ gate where it sits in the new module)",
+      "file": "website/docs/user-guide/configuration.md",
+      "hunk": "@@ -1056,6 +1060,16 @@ The value is the **first rung** of an escalating ladder, not a fixed interval: c",
+      "added_lines": 10,
+      "reverted": true,
+      "failed": [],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 8.3s (2 workers) ===",
+      "first_error_line": "",
+      "swallowed_exceptions": [],
+      "failed_how": null,
+      "wall_s": 8.9,
+      "red_again": false
+    },
+    {
+      "n": 18,
+      "source": "gate patch hunk 1",
+      "file": "agent/tool_result_projection.py",
+      "hunk": "@@ -450,6 +450,57 @@ def _backend_is_remote() -> Optional[bool]:",
+      "added_lines": 51,
+      "reverted": true,
+      "failed": [
+        "A"
+      ],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 18.2s (2 workers) ===",
+      "first_error_line": "E       AssertionError: no tool result was ever archived on the wire: 28 requests, 14 tool rows",
+      "swallowed_exceptions": [
+        "NameError: name 'replays_bound_thinking' is not defined"
+      ],
+      "failed_how": "assertion_via_swallowed_exception",
+      "wall_s": 18.8,
+      "red_again": true,
+      "probes": {
+        "bedrock": {
+          "rc": 0,
+          "requests": 24,
+          "egress_blocked": [
+            "getaddrinfo 'bedrock-runtime.us-east-1.amazonaws.com'",
+            "getaddrinfo 'bedrock-runtime.us-east-1.amazonaws.com'"
+          ],
+          "keys": [
+            "arm",
+            "dirty_files",
+            "fake_rejections",
+            "invalidated",
+            "invalidated_reasoning_blocks",
+            "message",
+            "outcome",
+            "projection",
+            "python",
+            "replayed_reasoning_blocks",
+            "repo_head",
+            "repo_tree",
+            "route",
+            "wall_s"
+          ]
+        },
+        "thirdparty": {
+          "rc": 0,
+          "requests": 24,
+          "projection_passes": 0,
+          "pass_request_indices": [],
+          "invalidated_thinking_blocks": 0,
+          "thinking_blocks_on_wire": 0,
+          "sum_request_chars": 3540572,
+          "egress_blocked": [],
+          "keys": [
+            "agent_anthropic_base_url",
+            "agent_api_mode",
+            "arm",
+            "dirty_files",
+            "endpoint",
+            "errors",
+            "model",
+            "provider",
+            "proxy_refused",
+            "python",
+            "replayed_thinking_blocks_audited",
+            "repo_head",
+            "repo_tree",
+            "rows_archived",
+            "signed_thinking_blocks_on_wire",
+            "stored_assistant_rows_with_signed_copies",
+            "tool_results",
+            "unstable_archived_rows",
+            "wall_s"
+          ]
+        }
+      }
+    },
+    {
+      "n": 19,
+      "source": "gate patch hunk 2",
+      "file": "agent/tool_result_projection.py",
+      "hunk": "@@ -565,6 +616,9 @@ def _project(agent: Any, api_messages: List[Dict[str, Any]], env: Any) -> int:",
+      "added_lines": 3,
+      "reverted": true,
+      "failed": [
+        "B"
+      ],
+      "errors": [],
+      "summary": "=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 19.4s (2 workers) ===",
+      "first_error_line": "E       AssertionError: a request replayed preserved-thinking blocks over a rewritten conversation prefix (Anthropic drops them, or rejects the request on enforced accounts):",
+      "swallowed_exceptions": [],
+      "failed_how": "assertion",
+      "wall_s": 20.0,
+      "red_again": true,
+      "probes": {
+        "bedrock": {
+          "rc": 0,
+          "requests": 24,
+          "egress_blocked": [
+            "getaddrinfo 'bedrock-runtime.us-east-1.amazonaws.com'",
+            "getaddrinfo 'bedrock-runtime.us-east-1.amazonaws.com'"
+          ],
+          "keys": [
+            "arm",
+            "dirty_files",
+            "fake_rejections",
+            "invalidated",
+            "invalidated_reasoning_blocks",
+            "message",
+            "outcome",
+            "projection",
+            "python",
+            "replayed_reasoning_blocks",
+            "repo_head",
+            "repo_tree",
+            "route",
+            "wall_s"
+          ]
+        },
+        "thirdparty": {
+          "rc": 0,
+          "requests": 24,
+          "projection_passes": 3,
+          "pass_request_indices": [
+            9,
+            15,
+            21
+          ],
+          "invalidated_thinking_blocks": 0,
+          "thinking_blocks_on_wire": 0,
+          "sum_request_chars": 1643309,
+          "egress_blocked": [],
+          "keys": [
+            "agent_anthropic_base_url",
+            "agent_api_mode",
+            "arm",
+            "dirty_files",
+            "endpoint",
+            "errors",
+            "model",
+            "provider",
+            "proxy_refused",
+            "python",
+            "replayed_thinking_blocks_audited",
+            "repo_head",
+            "repo_tree",
+            "rows_archived",
+            "signed_thinking_blocks_on_wire",
+            "stored_assistant_rows_with_signed_copies",
+            "tool_results",
+            "unstable_archived_rows",
+            "wall_s"
+          ]
+        }
+      }
+    }
+  ],
+  "pinned": [
+    "agent/agent_init.py @@ -350,6 +350,17 @@ def _parse_config_int(raw: Any, default: int) -> int: [crash]",
+    "agent/agent_init.py @@ -1575,6 +1586,20 @@ def _parse_compression_config(agent, _agent_cfg) -> CompressionSettings: [crash]",
+    "agent/agent_init.py @@ -2012,6 +2037,10 @@ def _build_context_engine(agent, _agent_cfg, cs, _custom_providers, _effective_c [assertion]",
+    "agent/context_compressor.py @@ -2776,6 +2776,11 @@ class ContextCompressor(SummaryDispatchMixin, MicroCompactionMixin, ContextEngin [crash]",
+    "agent/context_compressor.py @@ -2804,6 +2809,19 @@ class ContextCompressor(SummaryDispatchMixin, MicroCompactionMixin, ContextEngin [assertion]",
+    "agent/tool_result_projection.py @@ -0,0 +1,750 @@ [crash]",
+    "agent/turn_request_assembly.py @@ -187,6 +187,15 @@ def assemble_api_request( [assertion]",
+    "tools/tool_result_storage.py @@ -290,6 +290,79 @@ def extract_persisted_path(content: str) -> str | None: [assertion_via_swallowed_exception]",
+    "agent/tool_result_projection.py @@ -450,6 +450,57 @@ def _backend_is_remote() -> Optional[bool]: [assertion_via_swallowed_exception]",
+    "agent/tool_result_projection.py @@ -565,6 +616,9 @@ def _project(agent: Any, api_messages: List[Dict[str, Any]], env: Any) -> int: [assertion]"
+  ],
+  "unpinned": [
+    "cli-config.yaml.example @@ -830,6 +830,40 @@ compression:",
+    "gateway/run.py @@ -4410,6 +4410,10 @@ class GatewayRunner(",
+    "hermes_cli/config_defaults.py @@ -621,6 +621,30 @@ DEFAULT_CONFIG = {",
+    "scripts/bench_tool_result_projection.py @@ -0,0 +1,159 @@",
+    "tui_gateway/session_compression.py @@ -78,6 +78,8 @@ _COMPRESSION_INT_KEYS = (",
+    "tui_gateway/session_compression.py @@ -119,6 +121,10 @@ def _apply_live_compression_config(agent: Any, cfg: dict | None) -> None:",
+    "tui_gateway/session_compression.py @@ -127,6 +133,12 @@ def _apply_live_compression_config(agent: Any, cfg: dict | None) -> None:",
+    "website/docs/user-guide/configuration.md @@ -1013,6 +1013,10 @@ compression:",
+    "website/docs/user-guide/configuration.md @@ -1056,6 +1060,16 @@ The value is the **first rung** of an escalating ladder, not a fixed interval: c"
+  ],
+  "not_reverted": []
+}

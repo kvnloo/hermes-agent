@@ -1,0 +1,382 @@
+{
+  "head": "61fc6ea62dddeb2d9d847db90fff0d6d50dbe52d",
+  "base": "e8c97320ac8691d4de92af49f98459f9ef9ddb08",
+  "head_tree": "24f6d49bbb1cd8f357f23dc49fbde669d494ed62",
+  "old_head": "519876fa02f5e5812f5763cef03c5fed054d6cf7",
+  "started": "2026-10-01T12:14:51Z",
+  "load1_at_start": 4.828125,
+  "runs": {
+    "red": {
+      "label": "red",
+      "cmd": "bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py -q",
+      "rc": 1,
+      "wall_s": 15.6,
+      "summary": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 15.0s (2 workers) ===",
+      "failed": [
+        "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+      ],
+      "assertion_lines": [
+        "E",
+        "E         Right contains 5 more items, first extra item: ('honcho', 'success', 1)",
+        "E         Use -v to get more diff",
+        "E       AssertionError: assert [] == [('honcho', '... 'failed', 1)]"
+      ],
+      "log": "red.log",
+      "flaky_retry_printed": false,
+      "log_sha256": "cc3e28fa6cfad21a81f08d895f20b6d9d2555f153ec369b57720badfc5b62497"
+    },
+    "green": [
+      {
+        "label": "green_1",
+        "cmd": "bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py -q",
+        "rc": 0,
+        "wall_s": 8.6,
+        "summary": "=== Summary: 1 files, 16 tests passed, 0 failed (100% complete) in 8.0s (2 workers) ===",
+        "failed": [],
+        "assertion_lines": [],
+        "log": "green_1.log",
+        "flaky_retry_printed": false,
+        "log_sha256": "cce26e3f2c23bc1fe79b60c9543a12d2138b630e3eeb35fd6eda7c044e0bf99d"
+      },
+      {
+        "label": "green_2",
+        "cmd": "bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py -q",
+        "rc": 0,
+        "wall_s": 7.5,
+        "summary": "=== Summary: 1 files, 16 tests passed, 0 failed (100% complete) in 7.0s (2 workers) ===",
+        "failed": [],
+        "assertion_lines": [],
+        "log": "green_2.log",
+        "flaky_retry_printed": false,
+        "log_sha256": "3a9b8f708501c609252f133c8a1f1c02d6f4b8b19cf9be382e810a6675951c6b"
+      },
+      {
+        "label": "green_3",
+        "cmd": "bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py -q",
+        "rc": 0,
+        "wall_s": 8.4,
+        "summary": "=== Summary: 1 files, 16 tests passed, 0 failed (100% complete) in 7.9s (2 workers) ===",
+        "failed": [],
+        "assertion_lines": [],
+        "log": "green_3.log",
+        "flaky_retry_printed": false,
+        "log_sha256": "5eee3da4881706cfad50dce805fe6800a551604edc83613d6d3e68ba9a8a9f92"
+      }
+    ],
+    "sabotage": [
+      {
+        "label": "sabotage_S1-skip-exit",
+        "cmd": "bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py -q",
+        "rc": 1,
+        "wall_s": 14.7,
+        "summary": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 14.2s (2 workers) ===",
+        "failed": [
+          "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+        ],
+        "assertion_lines": [
+          "E",
+          "E         At index 2 diff: ('plugin', 'timed_out', 1) != ('plugin', 'skipped', 1)",
+          "E         Right contains one more item: ('supermemory', 'failed', 1)",
+          "E         Use -v to get more diff",
+          "E       AssertionError: assert [('honcho', '... 'failed', 1)] == [('honcho', '... 'failed', 1)]"
+        ],
+        "log": "sabotage_S1-skip-exit.log",
+        "flaky_retry_printed": false,
+        "log_sha256": "d855a91181ace8ac521692f94f3eb4911a0d547e10ac5170f5b912514a4e335b",
+        "mutation": {
+          "file": "agent/memory_manager.py",
+          "old": "            record_memory_prefetch(provider.name, \"skipped\", started)\n",
+          "new": ""
+        }
+      },
+      {
+        "label": "sabotage_S2-timeout-exit",
+        "cmd": "bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py -q",
+        "rc": 1,
+        "wall_s": 14.3,
+        "summary": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 13.8s (2 workers) ===",
+        "failed": [
+          "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+        ],
+        "assertion_lines": [
+          "E",
+          "E         At index 3 diff: ('supermemory', 'failed', 1) != ('plugin', 'timed_out', 1)",
+          "E         Right contains one more item: ('supermemory', 'failed', 1)",
+          "E         Use -v to get more diff",
+          "E       AssertionError: assert [('honcho', '... 'failed', 1)] == [('honcho', '... 'failed', 1)]"
+        ],
+        "log": "sabotage_S2-timeout-exit.log",
+        "flaky_retry_printed": false,
+        "log_sha256": "ca4711c4378510f495ad1c3942c7d00e5c7ab52b8fee3716113f5ecc9fa0e7f5",
+        "mutation": {
+          "file": "agent/memory_manager.py",
+          "old": "            record_memory_prefetch(provider.name, \"timed_out\", started)\n",
+          "new": ""
+        }
+      },
+      {
+        "label": "sabotage_S3-error-exit",
+        "cmd": "bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py -q",
+        "rc": 1,
+        "wall_s": 14.3,
+        "summary": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 13.8s (2 workers) ===",
+        "failed": [
+          "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+        ],
+        "assertion_lines": [
+          "E",
+          "E         Right contains one more item: ('supermemory', 'failed', 1)",
+          "E         Use -v to get more diff",
+          "E       AssertionError: assert [('honcho', '...imed_out', 1)] == [('honcho', '... 'failed', 1)]"
+        ],
+        "log": "sabotage_S3-error-exit.log",
+        "flaky_retry_printed": false,
+        "log_sha256": "103e9b8072e2d90c7484e15b476ea30e76a408ef3fe480ab236419436fd991ff",
+        "mutation": {
+          "file": "agent/memory_manager.py",
+          "old": "            record_memory_prefetch(provider.name, \"failed\", started)\n",
+          "new": ""
+        }
+      },
+      {
+        "label": "sabotage_S4-success-empty-exit",
+        "cmd": "bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py -q",
+        "rc": 1,
+        "wall_s": 15.3,
+        "summary": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 14.8s (2 workers) ===",
+        "failed": [
+          "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+        ],
+        "assertion_lines": [
+          "E",
+          "E         At index 0 diff: ('plugin', 'skipped', 1) != ('honcho', 'success', 1)",
+          "E         Right contains 2 more items, first extra item: ('plugin', 'timed_out', 1)",
+          "E         Use -v to get more diff",
+          "E       AssertionError: assert [('plugin', '... 'failed', 1)] == [('honcho', '... 'failed', 1)]"
+        ],
+        "log": "sabotage_S4-success-empty-exit.log",
+        "flaky_retry_printed": false,
+        "log_sha256": "fd31fe532249dd5e88809bee843366b248a525665d31528f50a348ba2f448e79",
+        "mutation": {
+          "file": "agent/memory_manager.py",
+          "old": "        record_memory_prefetch(provider.name, \"success\", started, recalled=result)\n",
+          "new": ""
+        }
+      },
+      {
+        "label": "sabotage_S5-mark-to-metric-mapping",
+        "cmd": "bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py -q",
+        "rc": 1,
+        "wall_s": 14.3,
+        "summary": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 13.8s (2 workers) ===",
+        "failed": [
+          "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+        ],
+        "assertion_lines": [
+          "E",
+          "E         Right contains 5 more items, first extra item: ('honcho', 'success', 1)",
+          "E         Use -v to get more diff",
+          "E       AssertionError: assert [] == [('honcho', '... 'failed', 1)]"
+        ],
+        "log": "sabotage_S5-mark-to-metric-mapping.log",
+        "flaky_retry_printed": false,
+        "log_sha256": "a8ac6e372b4da76ff28287d0f98e05d73266b6504c9cf4415713cb6227a40628",
+        "mutation": {
+          "file": "hermes_cli/observability/shared_metrics_contract.py",
+          "old": "    MEMORY_PREFETCH_MARK: MEMORY_PREFETCH_METRIC,\n",
+          "new": ""
+        }
+      },
+      {
+        "label": "sabotage_S6-provider-rule-raw-name",
+        "cmd": "bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py -q",
+        "rc": 1,
+        "wall_s": 14.4,
+        "summary": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 13.8s (2 workers) ===",
+        "failed": [
+          "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+        ],
+        "assertion_lines": [
+          "E",
+          "E         At index 2 diff: ('supermemory', 'failed', 1) != ('plugin', 'skipped', 1)",
+          "E         Right contains 2 more items, first extra item: ('plugin', 'timed_out', 1)",
+          "E         Use -v to get more diff",
+          "E       AssertionError: assert [('honcho', '... 'failed', 1)] == [('honcho', '... 'failed', 1)]"
+        ],
+        "log": "sabotage_S6-provider-rule-raw-name.log",
+        "flaky_retry_printed": false,
+        "log_sha256": "f60637ae8e3cfea42f52d56839b94bca223f8cf68bc4cd6a7d5c3b9cb6a14c9f",
+        "mutation": {
+          "file": "hermes_cli/observability/shared_metrics_loop.py",
+          "old": "        \"outcome\": outcome_value if outcome_value in MEMORY_PREFETCH_OUTCOMES else \"failed\",\n        \"provider\": memory_provider_name(provider),",
+          "new": "        \"outcome\": outcome_value if outcome_value in MEMORY_PREFETCH_OUTCOMES else \"failed\",\n        \"provider\": _norm(provider),"
+        }
+      },
+      {
+        "label": "sabotage_S7-outcome-vocabulary-drift",
+        "cmd": "bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py -q",
+        "rc": 1,
+        "wall_s": 14.3,
+        "summary": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 13.7s (2 workers) ===",
+        "failed": [
+          "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+        ],
+        "assertion_lines": [
+          "E",
+          "E         At index 2 diff: ('plugin', 'failed', 1) != ('plugin', 'skipped', 1)",
+          "E         Use -v to get more diff",
+          "E       AssertionError: assert [('honcho', '... 'failed', 1)] == [('honcho', '... 'failed', 1)]"
+        ],
+        "log": "sabotage_S7-outcome-vocabulary-drift.log",
+        "flaky_retry_printed": false,
+        "log_sha256": "0cffcccec8b3597a5f7674a8282a65c89d68966591f7b88640a15f1739c6825a",
+        "mutation": {
+          "file": "agent/memory_manager.py",
+          "old": "\"timed_out\", started)",
+          "new": "\"timeout\", started)"
+        }
+      },
+      {
+        "label": "sabotage_S8-latency-not-measured",
+        "cmd": "bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py -q",
+        "rc": 1,
+        "wall_s": 14.2,
+        "summary": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 13.7s (2 workers) ===",
+        "failed": [
+          "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+        ],
+        "assertion_lines": [
+          "E",
+          "E         Differing items:",
+          "E         Omitting 4 identical items, use -vv to show",
+          "E         Use -v to get more diff",
+          "E         {'timed_out': 'shorter'} != {'timed_out': '2s_to_5s'}",
+          "E       AssertionError: assert {'empty': 'sh...shorter', ...} == {'success': '...shorter', ...}"
+        ],
+        "log": "sabotage_S8-latency-not-measured.log",
+        "flaky_retry_printed": false,
+        "log_sha256": "c5e3b8c01dc859c2d736a225a18cec0c482ffef98b209ae05ae5f9fa52528332",
+        "mutation": {
+          "file": "hermes_cli/observability/shared_metrics_loop.py",
+          "old": "waited_ms=(time.monotonic() - started) * 1000,",
+          "new": "waited_ms=0,"
+        }
+      },
+      {
+        "label": "sabotage_S9-empty-classification",
+        "cmd": "bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py -q",
+        "rc": 1,
+        "wall_s": 14.2,
+        "summary": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 13.7s (2 workers) ===",
+        "failed": [
+          "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+        ],
+        "assertion_lines": [
+          "E",
+          "E         At index 1 diff: ('mem0', 'success', 1) != ('mem0', 'empty', 1)",
+          "E         Use -v to get more diff",
+          "E       AssertionError: assert [('honcho', '... 'failed', 1)] == [('honcho', '... 'failed', 1)]"
+        ],
+        "log": "sabotage_S9-empty-classification.log",
+        "flaky_retry_printed": false,
+        "log_sha256": "9c679e2872b1d576ca7639c097acd0f96ddc19b64521eb43ffa13c16e71ee594",
+        "mutation": {
+          "file": "hermes_cli/observability/shared_metrics_loop.py",
+          "old": "    if outcome_value == \"success\" and not (isinstance(recalled, str) and recalled.strip()):\n        outcome_value = \"empty\"\n",
+          "new": ""
+        }
+      },
+      {
+        "label": "sabotage_S10-constant-latency-above-timeout",
+        "cmd": "bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py -q",
+        "rc": 1,
+        "wall_s": 14.3,
+        "summary": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 13.8s (2 workers) ===",
+        "failed": [
+          "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+        ],
+        "assertion_lines": [
+          "E",
+          "E         Differing items:",
+          "E         Omitting 1 identical items, use -vv to show",
+          "E         Use -v to get more diff",
+          "E         {'empty': '2s_to_5s'} != {'empty': 'shorter'}",
+          "E         {'failed': '2s_to_5s'} != {'failed': 'shorter'}",
+          "E         {'skipped': '2s_to_5s'} != {'skipped': 'shorter'}",
+          "E         {'success': '2s_to_5s'} != {'success': 'shorter'}",
+          "E       AssertionError: assert {'empty': '2s...s_to_5s', ...} == {'success': '...shorter', ...}"
+        ],
+        "log": "sabotage_S10-constant-latency-above-timeout.log",
+        "flaky_retry_printed": false,
+        "log_sha256": "52c9f6b23a13a521bd75178b4c1dfd08e9ba5a981d40ada45720488b7a0c0b2c",
+        "mutation": {
+          "file": "hermes_cli/observability/shared_metrics_loop.py",
+          "old": "waited_ms=(time.monotonic() - started) * 1000,",
+          "new": "waited_ms=2500,"
+        }
+      }
+    ],
+    "stall_amended_1500ms": {
+      "label": "stall_amended_1500ms",
+      "cmd": "bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py -q",
+      "rc": 0,
+      "wall_s": 13.3,
+      "summary": "=== Summary: 1 files, 16 tests passed, 0 failed (100% complete) in 12.8s (2 workers) ===",
+      "failed": [],
+      "assertion_lines": [],
+      "log": "stall_amended_1500ms.log",
+      "flaky_retry_printed": false,
+      "log_sha256": "f90705b39b078692870ef57a385365f63322140f35b9eb4392404c40c6c774fc"
+    },
+    "stall_round2_150ms": {
+      "label": "stall_round2_150ms",
+      "cmd": "bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py -q",
+      "rc": 1,
+      "wall_s": 12.0,
+      "summary": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 11.5s (2 workers) ===",
+      "failed": [
+        "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+      ],
+      "assertion_lines": [
+        "E",
+        "E          ('mem0', 'empty', '100ms_to_250ms'): 1,",
+        "E          ('supermemory', 'failed', '100ms_to_250ms'): 1}",
+        "E         ...Full output truncated (4 lines hidden), use '-vv' to show",
+        "E         Left contains 3 more items:",
+        "E         Omitting 2 identical items, use -vv to show",
+        "E         Right contains 3 more items:...",
+        "E         {('honcho', 'success', '100ms_to_250ms'): 1,",
+        "E       AssertionError: assert {('mem0', 'em...0ms'): 1, ...} == {('honcho', '...0ms'): 1, ...}"
+      ],
+      "log": "stall_round2_150ms.log",
+      "flaky_retry_printed": false,
+      "log_sha256": "5469932533c83057f06132916c551743822003dcd5eba647f6bf7e0ee6917ff3"
+    },
+    "adjacent_base": {
+      "label": "adjacent_base",
+      "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_memory_provider.py tests/agent/test_memory_async_sync.py tests/agent/test_memory_session_switch.py tests/agent/test_memory_skill_scaffolding.py tests/agent/test_memory_sync_interrupted.py tests/agent/test_turn_context.py tests/hermes_cli/test_relay_shared_metrics.py tests/hermes_cli/test_relay_shared_metrics_runtime.py tests/hermes_cli/test_shared_metrics_signals.py tests/hermes_cli/test_shared_metrics_efficiency.py tests/hermes_cli/test_shared_metrics_harness.py tests/hermes_cli/test_shared_metrics_loop.py -q",
+      "rc": 0,
+      "wall_s": 29.8,
+      "summary": "=== Summary: 12 files, 330 tests passed, 0 failed (100% complete) in 29.3s (2 workers) ===",
+      "failed": [],
+      "assertion_lines": [],
+      "log": "adjacent_base.log",
+      "flaky_retry_printed": false,
+      "log_sha256": "5e14df541fc5b44edd0936434fb7e4aba0edd0e9b67a076021e7966a7d46ab2b"
+    },
+    "adjacent_head": {
+      "label": "adjacent_head",
+      "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_memory_provider.py tests/agent/test_memory_async_sync.py tests/agent/test_memory_session_switch.py tests/agent/test_memory_skill_scaffolding.py tests/agent/test_memory_sync_interrupted.py tests/agent/test_turn_context.py tests/hermes_cli/test_relay_shared_metrics.py tests/hermes_cli/test_relay_shared_metrics_runtime.py tests/hermes_cli/test_shared_metrics_signals.py tests/hermes_cli/test_shared_metrics_efficiency.py tests/hermes_cli/test_shared_metrics_harness.py tests/hermes_cli/test_shared_metrics_loop.py -q",
+      "rc": 0,
+      "wall_s": 29.9,
+      "summary": "=== Summary: 12 files, 331 tests passed, 0 failed (100% complete) in 28.2s (2 workers) ===",
+      "failed": [],
+      "assertion_lines": [],
+      "log": "adjacent_head.log",
+      "flaky_retry_printed": false,
+      "log_sha256": "3e4fa28de1312aa24163141be94cc80dcc46c8097720645bae9bd547b8407bd5"
+    }
+  },
+  "finished": "2026-10-01T12:19:21Z",
+  "load1_at_end": 5.6943359375
+}

@@ -1,0 +1,19 @@
+{
+ "rc": 0,
+ "hook_fires": 0,
+ "commits_total": 2,
+ "commits_succeeded": 0,
+ "detail": {
+  "hook_fires": [],
+  "commits": [
+   {
+    "split_status": "not_applicable",
+    "succeeded": false
+   },
+   {
+    "split_status": "not_applicable",
+    "succeeded": false
+   }
+  ]
+ }
+}

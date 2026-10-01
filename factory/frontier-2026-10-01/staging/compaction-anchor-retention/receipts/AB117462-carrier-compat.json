@@ -1,0 +1,230 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compaction-anchor-retention",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#116246",
+  "NousResearch/hermes-agent#87326",
+  "NousResearch/hermes-agent#117462",
+  "NousResearch/hermes-agent#122274",
+  "NousResearch/hermes-agent#122522",
+  "NousResearch/hermes-agent#78457"
+ ],
+ "base_revision": "040b6df2c40b0f4f88f51e4c2062eafc4d7463c5",
+ "head_revision": "30a746f7920c2b4101f121353778d94f5ce001b5",
+ "main_recheck": {
+  "sha": "aaa863f7ff2dec1821be1652b5d15ad14ecea70b",
+  "note": "agent/context_compressor.py, hermes_cli/config_defaults.py and the 6 neighbouring test files are byte-identical on 040b6df2c4, 44a1ce9724 and aaa863f7ff; main+#117462 merges clean on all three (trees f4139cef66, 7beb2da248, ee14a0acac) and gives the same compressor file (the c117462 arm); the branch merges clean on aaa863f7ff (tree e2c14b39ee)"
+ },
+ "supersedes": "the r20261001-03 receipt of the same name (superseded-r04/receipts/), which measured the round-3 fold-in order",
+ "policy_revision": {
+  "factory": "FACTORY.md (frontier-2026-10-01)",
+  "protocol": "promotion-readiness-2026-10-01/PROTOCOL.md"
+ },
+ "env": {
+  "python": "3.11 (HERMES_PYTHON venv, read-only bind)",
+  "sandbox": "harness/sandbox.sh: bwrap ro-root, --unshare-net (connect -> ENETUNREACH), systemd-resolved socket masked (DNS -> EAI_AGAIN), pidns, clearenv, live Hermes install masked except the venv, fresh HOME/HERMES_HOME per run; harness/egress_sitecustomize.py logs every non-loopback DNS lookup and connect attempt",
+  "tests": "HOME=$S/testhome-sf3-compaction-anchor-retention HERMES_HOME=$HOME/.hermes HERMES_PYTHON=$PY bash scripts/run_tests.sh -j 2 <files> -q"
+ },
+ "provenance": "self",
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the rows, tests, harness, gold labels and this receipt; disclosed per repository policy",
+ "privacy": "public-aggregate (inputs are committed upstream text or seeded synthetic data; no state.db, no lineages); no absolute local paths",
+ "resource_usage": {
+  "api_cost_usd": 0.0,
+  "gpu_s": 0,
+  "tokens": 0
+ },
+ "id": "AB117462/r20261001-05",
+ "kind": "carrier-ab",
+ "question": "Is this slice duplicated by the open #117462, does the fold-in compose with it, and does the fold-in leave #117462's own lines unchanged?",
+ "inputs": {
+  "arms": {
+   "base": {
+    "tree": "040b6df2c40b0f4f88f51e4c2062eafc4d7463c5:agent/context_compressor.py",
+    "sha256": "86f4b7a8a647f1bf520cb17497b68719f6d907028bdc7151c7921818b7e043f1"
+   },
+   "branch": {
+    "head": "30a746f7920c2b4101f121353778d94f5ce001b5",
+    "sha256": "424c8dd83747b73b7b1883c726e60823f55a656d5424c3eb948297ca07f4abc7"
+   },
+   "c117462": {
+    "pr": 117462,
+    "head": "2c19948e15d68492d048250bae7707ca77063db5",
+    "merge_tree_with_base": "f4139cef66cd97f30f7fc450301551d233ebf616",
+    "merge_tree_with_main_now": "7beb2da24840f32329d5c5d47837fe52fef9e249",
+    "merge": "clean",
+    "sha256": "fdb7abd8050b4944171522c7e713004d7fbce9b2d8ddfb1c8de93414f206ebe0"
+   },
+   "c117462_foldin": {
+    "onto": "c117462",
+    "patch": "foldin-on-117462.patch (rows + tests/agent/test_context_compressor_anchor_index.py)",
+    "patch_sha256": "f2db42bef2c90360beb775de62f1bc4c2c944dea2fbab5672610dbcd957ceb8d",
+    "placement": "round 5: the three rows appended after 'errors', the last row of #117462's table; the rows block (rows and comments) is byte-identical to the standalone commit's",
+    "sha256": "35bb31c83b7db61d5f694ea86f6cc8ca960ee027d44bf5e5b914f9b12259439e",
+    "equals": "git apply foldin-on-117462.patch on main 44a1ce9724 + #117462 (tree 7beb2da248), offset +105"
+   },
+   "c117462_foldin_r03": {
+    "onto": "c117462",
+    "patch": "superseded-r04/foldin-on-117462.patch (sha256 3713e44bbb4edfdbd493b80c290b013a3d26b3a21e88c734bd733f6fad3e9bf5)",
+    "placement": "round 3: 'task ids' after 'todo ids', 'dotted keys' before 'files', 'error messages' last",
+    "sha256": "b880b9a14eaf0949e51926004856b3e0e3109b784222cef87048b8ca7cb36cf3",
+    "role": "comparison only (the order round 5 replaces)"
+   }
+  },
+  "tests": {
+   "ours": "tests/agent/test_context_compressor_anchor_index.py",
+   "theirs": "tests/agent/test_context_compressor_anchor_harvest.py @ 2c19948e15d68492d048250bae7707ca77063db5"
+  }
+ },
+ "command": {
+  "foldin": "worktree at 44a1ce9724; git restore --source=7beb2da248 (main+#117462); git apply foldin-on-117462.patch (offset +105); run ours, theirs and the 8 adjacent files with run_tests.sh",
+  "117462_head": "worktree at 2c19948e15; git apply foldin-on-117462.patch (no offset); run both test files",
+  "negative_controls": "in the 2c19948e15 worktree with the patch applied: TESTHOME=... HERMES_PYTHON=$PY $PY $STAGING/harness/negative_controls.py <out>",
+  "other_arms": "round 3 (unchanged arm files): in $WT at HEAD, copy each arm over agent/context_compressor.py plus #117462's test file; run both"
+ },
+ "matrix": {
+  "c117462": {
+   "ours": "Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 1.6s (2 workers)",
+   "theirs": "Summary: 1 files, 5 tests passed, 0 failed (100% complete) in 0.9s (2 workers)",
+   "run": "round 3"
+  },
+  "c117462_foldin": {
+   "ours": "Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 0.8s (2 workers)",
+   "theirs": "Summary: 1 files, 5 tests passed, 0 failed (100% complete) in 0.8s (2 workers)",
+   "adjacent_8_files": "Summary: 8 files, 372 tests passed, 0 failed (100% complete) in 72.3s (2 workers)",
+   "run": "round 5, on main 44a1ce9724 + #117462 + patch",
+   "adjacent_8_files_on_latest_main": "Summary: 8 files, 372 tests passed, 0 failed (100% complete) in 77.5s (2 workers)",
+   "latest_main_run": "round 5, on main aaa863f7ff + #117462 (tree ee14a0acac) + patch (offset +105); compressor file byte-identical to the arm"
+  },
+  "117462_head_plus_foldin_patch": {
+   "both_files": "Summary: 2 files, 7 tests passed, 0 failed (100% complete) in 1.1s (2 workers)",
+   "run": "round 5"
+  },
+  "branch": {
+   "ours": "Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 0.8s (2 workers)",
+   "theirs": "Summary: 1 files, 2 tests passed, 3 failed (100% complete) in 1.9s (2 workers)",
+   "run": "round 3",
+   "theirs_failing": [
+    "test_anchor_index_cheap_ids_survive_a_tight_budget",
+    "test_anchor_index_harvests_tool_call_arguments_and_artifact_paths",
+    "test_anchor_index_names_a_class_whose_values_cannot_fit"
+   ]
+  }
+ },
+ "foldin_negative_controls": {
+  "result": "12/12 re-RED on 2c19948e15 + patch",
+  "per_mutation": [
+   {
+    "mutation": "drop row 'task ids'",
+    "observed": "Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 1.4s (2 workers)",
+    "failed": [
+     "test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim",
+     "test_new_anchor_classes_stay_exact_and_bounded"
+    ]
+   },
+   {
+    "mutation": "drop row 'dotted keys'",
+    "observed": "Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 1.4s (2 workers)",
+    "failed": [
+     "test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim",
+     "test_new_anchor_classes_stay_exact_and_bounded"
+    ]
+   },
+   {
+    "mutation": "drop row 'error messages'",
+    "observed": "Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 1.6s (2 workers)",
+    "failed": [
+     "test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim",
+     "test_new_anchor_classes_stay_exact_and_bounded"
+    ]
+   },
+   {
+    "mutation": "dotted keys: drop the mid-name guard (?<!\\w\\.)",
+    "observed": "Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 1.5s (2 workers)",
+    "failed": [
+     "test_new_anchor_classes_stay_exact_and_bounded"
+    ]
+   },
+   {
+    "mutation": "dotted keys: drop the word-start guard (?<!\\w)",
+    "observed": "Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 1.5s (2 workers)",
+    "failed": [
+     "test_new_anchor_classes_stay_exact_and_bounded"
+    ]
+   },
+   {
+    "mutation": "dotted keys: last segment no longer needs '_'",
+    "observed": "Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 1.4s (2 workers)",
+    "failed": [
+     "test_new_anchor_classes_stay_exact_and_bounded"
+    ]
+   },
+   {
+    "mutation": "error messages: fatal:/error: anywhere (\\b instead of line-start anchor)",
+    "observed": "Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 1.4s (2 workers)",
+    "failed": [
+     "test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim",
+     "test_new_anchor_classes_stay_exact_and_bounded"
+    ]
+   },
+   {
+    "mutation": "error messages: drop the escaped-newline anchor (?<=\\\\n)",
+    "observed": "Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 1.6s (2 workers)",
+    "failed": [
+     "test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim"
+    ]
+   },
+   {
+    "mutation": "error messages: drop the quote/backtick anchor (?<=[`\"])",
+    "observed": "Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 1.5s (2 workers)",
+    "failed": [
+     "test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim"
+    ]
+   },
+   {
+    "mutation": "error messages: drop re.M",
+    "observed": "Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 1.5s (2 workers)",
+    "failed": [
+     "test_new_anchor_classes_stay_exact_and_bounded"
+    ]
+   },
+   {
+    "mutation": "error messages: drop the %s/{} placeholder guard",
+    "observed": "Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 1.5s (2 workers)",
+    "failed": [
+     "test_new_anchor_classes_stay_exact_and_bounded"
+    ]
+   },
+   {
+    "mutation": "error messages: value no longer stops at an escaped newline",
+    "observed": "Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 1.5s (2 workers)",
+    "failed": [
+     "test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim"
+    ]
+   }
+  ]
+ },
+ "placement": {
+  "rows": "appended after 'errors' (round 5), the same block and position as the standalone commit",
+  "117462_lines_unchanged": {
+   "synthetic": "180/180",
+   "real_text": "3/3"
+  },
+  "round3_order_for_comparison": "a #117462 line changed in 101 of 180 synthetic regions (see F02s foldin_order)"
+ },
+ "merge": {
+  "117462_vs_main": "clean (040b6df2c4: tree f4139cef66; 44a1ce9724: tree 7beb2da248; aaa863f7ff: tree ee14a0acac)",
+  "branch_vs_main": "clean (aaa863f7ff: tree e2c14b39ee)",
+  "branch_vs_117462_head": "conflict in agent/context_compressor.py (both edit the _ANCHOR_PATTERNS table)",
+  "foldin_patch_applies_to_117462_head": "yes, exactly (git apply, no offset); both test files pass there",
+  "foldin_patch_applies_to_main_plus_117462": "yes on 44a1ce9724 + #117462 (offset +105); the result is byte-identical to the c117462_foldin arm file",
+  "branch_vs_122522_head": "clean (f596584b01)"
+ },
+ "pr_state_read_only": {
+  "117462": "OPEN, head 2c19948e15, 0 formal reviews, 2 issue comments (kyssta-exe's review-style comment and Seldash's reply)",
+  "122522": "OPEN, head f596584b01"
+ },
+ "label": "OBSERVED",
+ "readout": "not a duplicate: #117462 does not capture these classes (our tests 0 of 2 pass on it) and this slice does not do its work (3 of its 5 tests fail on our branch); the round-5 fold-in passes both suites (2 of 2 and 5 of 5) and the 8-file adjacent suite, and leaves every #117462 line unchanged",
+ "verdict": "KEEP (complementary; offered to #117462 as a fold-in appended after its last row)"
+}

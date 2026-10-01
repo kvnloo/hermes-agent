@@ -1,0 +1,335 @@
+{
+  "schema": "xf.receipt.v1",
+  "staging": "plugin-catalog-entries",
+  "provenance": "self",
+  "id": "RECHECK/r20261001-04",
+  "tier": "T0/T1 (round-3 re-measurement on the declared main: git, gh read-only, the in-tree catalog loader, validator and shipped-entries test in an isolated HOME, privacy scan; no code run from the plugin, no model download)",
+  "question": "On the current upstream main, do the need, the green and negative-control results, the merge, the push-trigger scan and the cited PR states still hold, and which receipts pin each tools/ file?",
+  "origin_refs": [
+    "NousResearch/hermes-agent#102922",
+    "NousResearch/hermes-agent#95186",
+    "NousResearch/hermes-agent#129692",
+    "NousResearch/hermes-agent#63917",
+    "kvnloo/hermes-agent#404"
+  ],
+  "policy_revision": {
+    "factory": "FACTORY.md section 10 (STAGING.md is published to the ledger); section 11.1 P5 (F14 guards equal)"
+  },
+  "ai_assistance": "Claude Code (Opus 5.5) ran the reads and checks and wrote this receipt; disclosed per repository policy",
+  "privacy": "public aggregate (no host paths, no hostname; artifact paths are relative to the staging directory; raw/r3_* show scratch locations as <bare>, <worktree>, <testhome> and <venv>; GitHub logins only)",
+  "resource_usage": {
+    "api_cost_usd": 0.0,
+    "gpu_s": 0,
+    "tokens": 0,
+    "wall_s": null,
+    "wall_s_label": "NOT_MEASURED"
+  },
+  "base_revision": {
+    "declared_base": "234badf4012af380d23c91eae55d045a69c69ffb",
+    "branch_head": "98c305b3ec8d03693f4dc94bade69035cb15ff7d",
+    "branch_parent": "234badf4012af380d23c91eae55d045a69c69ffb",
+    "declared_main": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+    "declared_main_note": "upstream main by git ls-remote at 2026-10-01T16:10:55Z and 16:17:07Z (committed 15:56:40Z); replaces aea969677c, the declared main of rounds 1 and 2",
+    "invalidate_on_changed_since": false
+  },
+  "measurements": [
+    {
+      "name": "declared_main_position",
+      "label": "OBSERVED",
+      "source": "raw/r3_git_recheck.txt",
+      "value": {
+        "base_is_ancestor": true,
+        "aea969677c_is_ancestor": true,
+        "commits_after_base": 65,
+        "commits_after_aea969677c": 29
+      }
+    },
+    {
+      "name": "merge_tree_declared_main",
+      "main": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+      "head": "98c305b3ec8d03693f4dc94bade69035cb15ff7d",
+      "value": "clean",
+      "tree": "60459843c290c8d7062e5d8af03603607eedbe51",
+      "label": "OBSERVED",
+      "measured_at": "2026-10-01T16:17:07Z"
+    },
+    {
+      "name": "paths_unchanged_base_to_declared_main",
+      "label": "OBSERVED",
+      "source": "raw/r3_git_recheck.txt",
+      "value": {
+        "invalidate_on_specs": 18,
+        "invalidate_on_changed": 0,
+        "other_files": [
+          "tests/scripts/test_validate_plugin_catalog.py",
+          "tests/website/test_extract_plugins.py",
+          "tests/hermes_cli/test_plugins_cmd_catalog.py",
+          "tests/hermes_cli/test_plugin_catalog_known_issues.py",
+          "tests/hermes_cli/test_web_plugins_catalog.py",
+          "tests/hermes_cli/test_plugins_hub_perf_guard.py",
+          "tests/hermes_cli/test_plugins_hub_live_catalog.py",
+          "tests/conftest.py",
+          "scripts/run_tests.sh",
+          "pyproject.toml",
+          "uv.lock",
+          ".github/PULL_REQUEST_TEMPLATE.md",
+          "CONTRIBUTING.md",
+          "AGENTS.md"
+        ],
+        "other_files_changed": 0,
+        "pr_template_blob": "5496eb534fef9d08c091b8186e7edd1b5cf356db",
+        "pinned_hermes_blobs_identical": "9 of 9 (plugin-catalog/paw-pii.yaml exists on the head only: 845dc6cce78e67a8989e267debcc5b4a4dcf473c)"
+      }
+    },
+    {
+      "name": "need_declared_main",
+      "label": "OBSERVED",
+      "source": "raw/r3_git_recheck.txt, raw/r3_catalog_green.txt",
+      "value": {
+        "paw_pii_yaml": "absent",
+        "plugin_index_json": "absent",
+        "loader": {
+          "files": 348,
+          "loaded": 348,
+          "entry_present": false
+        },
+        "validator": "OK: 349 file(s) valid (348 entries plus removed.yaml)"
+      }
+    },
+    {
+      "name": "green_declared_main_plus_entry",
+      "label": "OBSERVED",
+      "source": "raw/r3_catalog_green.txt",
+      "arm": "44a1ce9724 plus plugin-catalog/paw-pii.yaml from 98c305b3ec; git write-tree 60459843c290c8d7062e5d8af03603607eedbe51, equal to the merge-tree result",
+      "value": {
+        "loader": {
+          "files": 349,
+          "loaded": 349,
+          "entry_present": true,
+          "install_identifier": "https://github.com/kvnloo/pii#integrations/hermes"
+        },
+        "validator": "OK: 350 file(s) valid",
+        "test_shipped_catalog_entries_are_all_valid_and_pinned": "3 of 3 runs pass"
+      }
+    },
+    {
+      "name": "negative_control_declared_main",
+      "label": "OBSERVED",
+      "source": "raw/r3_catalog_green.txt",
+      "mutation": "sha: main in plugin-catalog/paw-pii.yaml",
+      "value": {
+        "validator": "rc=1, \"sha 'main' must be exactly 40 lowercase hex characters\", FAIL 1/350",
+        "shipped_test": "1 of 1 run fails, AssertionError: assert 348 == 349"
+      },
+      "control_main_as_is": "shipped test 1 of 1 run passes (index tree 6a18f0eebdb6f90887fa6588781c20ec50fc6e1d = main tree)"
+    },
+    {
+      "name": "workflow_push_matches_declared_main",
+      "label": "OBSERVED",
+      "source": "raw/r3_wf_push_scan_staged_44a1ce9724.json",
+      "branch": "staged/plugin-catalog-entries",
+      "value": 0,
+      "push_workflows_scanned": 11,
+      "push_triggers_same_as_aea969677c": true
+    },
+    {
+      "name": "member_behind_counts",
+      "label": "OBSERVED",
+      "source": "raw/r3_git_recheck.txt",
+      "value": {
+        "refs/fork/feat/paw-pii-plugin-index": {
+          "behind_234badf401": 13832,
+          "behind_44a1ce9724": 13897
+        },
+        "refs/fork/feat/groq-orpheus-tts": {
+          "behind_234badf401": 20605,
+          "behind_44a1ce9724": 20670
+        },
+        "refs/fork/feat/tinyfish-browser-provider": {
+          "behind_234badf401": 39852,
+          "behind_44a1ce9724": 39917
+        },
+        "refs/fork/feat/spatial-canvas-upstream": {
+          "behind_234badf401": 23793,
+          "behind_44a1ce9724": 23858
+        }
+      }
+    },
+    {
+      "name": "fork_refs",
+      "label": "OBSERVED",
+      "source": "raw/r3_git_recheck.txt",
+      "value": {
+        "legacy_staging": "28790e597cdd497aef31f2c16327f8b347669354",
+        "other_staged_refs": 5,
+        "staged/plugin-catalog-entries": "absent (name free)"
+      }
+    },
+    {
+      "name": "cited_pr_and_issue_states",
+      "label": "OBSERVED",
+      "source": "raw/r3_gh_reads.json",
+      "fetched_at": "2026-10-01T16:15:42Z",
+      "value": {
+        "ours": {
+          "102922": "OPEN",
+          "102924": "CLOSED",
+          "87495": "CLOSED",
+          "98105": "CLOSED"
+        },
+        "adjacent_open": {
+          "63917": "OPEN",
+          "129692": "OPEN",
+          "95186": "OPEN",
+          "102049": "OPEN",
+          "14624": "OPEN",
+          "17472": "OPEN"
+        },
+        "merged_overlap": {
+          "122574": "CLOSED (merged)",
+          "1542": "CLOSED (merged)"
+        },
+        "not_listed_examples": {
+          "37833": "OPEN",
+          "57741": "OPEN",
+          "88608": "OPEN",
+          "34693": "OPEN",
+          "129805": "OPEN",
+          "69890": "OPEN",
+          "82196": "OPEN",
+          "84611": "OPEN",
+          "115109": "OPEN",
+          "10730": "OPEN",
+          "125178": "OPEN"
+        },
+        "claimant_lanes": {
+          "127373": "OPEN",
+          "127374": "OPEN",
+          "127375": "OPEN",
+          "127332": "OPEN",
+          "127228": "OPEN"
+        }
+      },
+      "issue_102922_comment_authors": [
+        "kvnloo"
+      ],
+      "closed_by_author": {
+        "102924": "kvnloo",
+        "87495": "kvnloo",
+        "98105": "kvnloo"
+      }
+    },
+    {
+      "name": "ownership_pii_search_open",
+      "label": "OBSERVED",
+      "source": "raw/r3_gh_reads.json",
+      "value": 111,
+      "new_since_round2": 0,
+      "gone_since_round2": 0,
+      "other_searches_zero_hits": [
+        "paw-pii",
+        "programasweights",
+        "pii plugin-catalog",
+        "desensitize"
+      ]
+    },
+    {
+      "name": "fork_404",
+      "label": "OBSERVED",
+      "source": "raw/r3_gh_reads.json",
+      "value": {
+        "state": "OPEN",
+        "table_rows": 39,
+        "note": "table lines excluding separators, minus one header line"
+      }
+    },
+    {
+      "name": "tools_pinned_by",
+      "label": "OBSERVED (sha256 of each tools/ file searched in receipts/*.json)",
+      "value": {
+        "tools/catalog_probe.py": [
+          "SLICE/r20261001-01"
+        ],
+        "tools/f12_census.py": [
+          "F12/r20261001-01"
+        ],
+        "tools/t1_probe.py": [
+          "T1-capability/r20261001-01",
+          "T1-failopen/r20261001-01"
+        ],
+        "tools/sandbox.sh": [
+          "F12/r20261001-01",
+          "T1-capability/r20261001-01",
+          "T1-failopen/r20261001-01",
+          "RECHECK/r20261001-03"
+        ],
+        "tools/wf_scan.py": [
+          "RECHECK/r20261001-02"
+        ],
+        "tools/build_receipts.py": [
+          "RECHECK/r20261001-03"
+        ],
+        "tools/scrub_receipts.py": [
+          "RECHECK/r20261001-03"
+        ],
+        "tools/privacy_scan.py": [
+          "RECHECK/r20261001-03"
+        ],
+        "tools/privacy_scan_r3.py": [
+          "RECHECK/r20261001-04"
+        ]
+      },
+      "note": "corrects the round-2 manifest text 'No receipt pins either file' for build_receipts.py and scrub_receipts.py; no existing tools/ file was edited in round 3"
+    },
+    {
+      "name": "privacy_scan_publishable_set",
+      "label": "OBSERVED",
+      "source": "raw/r3_privacy_scan.txt (tools/privacy_scan_r3.py)",
+      "value": {
+        "files_scanned": 31,
+        "files_flagged": 0,
+        "local_terms": 12
+      }
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "raw/r3_git_recheck.txt",
+      "sha256": "9550a4916a378ae9a4bc638654f560efdbd2dab2fdc05f927936a2c5a717eb3e"
+    },
+    {
+      "path": "raw/r3_gh_reads.json",
+      "sha256": "87085e06ef1445b88ec4429e94922ed379cb16e7f66b7c01de9bc64623f92ecf"
+    },
+    {
+      "path": "raw/r3_wf_push_scan_staged_44a1ce9724.json",
+      "sha256": "308921009c939fc5d80660de1122d2c64ed6a0ee7ca6c53946b8f4c341a38fc2"
+    },
+    {
+      "path": "raw/r3_catalog_green.txt",
+      "sha256": "fec5a67ab0f435c8deb6be90b83d8ed5f2da10eb3d7c3d4fcfd91da94b28e356"
+    },
+    {
+      "path": "raw/r3_privacy_scan.txt",
+      "sha256": "b84896249a66f41aace1abc1c8ed3b7d42885619d034d08d2005594bb9a216fb"
+    },
+    {
+      "path": "tools/privacy_scan_r3.py",
+      "sha256": "6a578ec49d8ce77a5dbe4b7cb5d117f95ace1baf68e467cfc9e75bdb50053aff"
+    },
+    {
+      "path": "tools/catalog_probe.py",
+      "sha256": "df35fe7c1404e4711ade335517bbbc90de96426c74ba28d4be2618a8276d3075"
+    },
+    {
+      "path": "tools/wf_scan.py",
+      "sha256": "2c686f5df2f6b85051528f2278d11ae1ec5ddd3394b2de8cbeb0a5e788aa78bc"
+    }
+  ],
+  "verdict": "KEEP: on the declared main 44a1ce9724 the need, green (3 of 3 runs pass), negative control, clean merge and 0 of 11 push matches all hold; cited PR states unchanged; every tools/ file is pinned by a receipt; the slice and its HOLD are unchanged",
+  "not_tested": [
+    "F14 standing regression set (not run; P5 PENDING)",
+    "the 7 other adjacent test files were not rerun on 44a1ce9724; they and every invalidate_on path are byte-identical to the base, where both arms gave 68 passed / 13 errors",
+    "E52, T2 (unchanged from earlier receipts)"
+  ]
+}

@@ -1,0 +1,907 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compaction-anchor-retention",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch#87326",
+  "NousResearch#117462",
+  "NousResearch#122274",
+  "NousResearch#122522",
+  "NousResearch#78457"
+ ],
+ "base_revision": "234badf4012af380d23c91eae55d045a69c69ffb",
+ "head_revision": "6e0fa629a0f6227b03417d1d6ff7f7d81208346a",
+ "policy_revision": {
+  "factory": "FACTORY.md (frontier-2026-10-01)",
+  "protocol": "promotion-readiness-2026-10-01/PROTOCOL.md"
+ },
+ "env": {
+  "host": "<local-host>",
+  "python": "3.11.14 (HERMES_PYTHON venv, read-only bind)",
+  "sandbox": "bwrap ro-root, --unshare-net (connect 1.1.1.1:443 -> ENETUNREACH), pidns, clearenv, $HERMES_INSTALL masked except venv, isolated HOME/HERMES_HOME"
+ },
+ "provenance": "self",
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the rows, tests, harness and gold labels; disclosed per repository policy",
+ "privacy": "public-aggregate (all inputs are committed upstream text or seeded synthetic data; no state.db, no lineages)",
+ "resource_usage": {
+  "api_cost_usd": 0.0,
+  "gpu_s": 0,
+  "tokens": 0
+ },
+ "id": "E03s/r20261001-01",
+ "kind": "sizing",
+ "question": "If each identifier gold is mentioned once in assistant text inside a region of a given density, does it survive into the anchor index?",
+ "inputs": {
+  "scorecard": "evals/compaction/results/SCORECARD-2026-08-15.md",
+  "scorecard_sha256": "6d93f90b435e4f2ae2dd3187103c18e0c881ad68b88b92bfd3deacb1cf79180e",
+  "harness_sha256": {
+   "anchor_coverage.py": "5cb0e034146fe2ed4103765b8a42610d3735300c1627631f5168d9be4b7dabb7",
+   "build_receipts.py": "6009a0d931aabf1bef52b6cc2b261412769ce4833e2e6abb4ebd37fe032757c3"
+  },
+  "arms": {
+   "base": {
+    "tree": "234badf4012af380d23c91eae55d045a69c69ffb:agent/context_compressor.py",
+    "sha256": "86f4b7a8a647f1bf520cb17497b68719f6d907028bdc7151c7921818b7e043f1"
+   },
+   "branch": {
+    "head": "6e0fa629a0f6227b03417d1d6ff7f7d81208346a",
+    "sha256": "98d9e8d058557eee2fd4e89641b6350a2b21ab62c563ac741986db61ae1d98a8"
+   },
+   "c117462": {
+    "pr": 117462,
+    "head": "2c19948e15d68492d048250bae7707ca77063db5",
+    "merge_tree": "8dfb180bae5909ccd06f79f7268885f3309c9af6",
+    "merge": "clean",
+    "sha256": "fdb7abd8050b4944171522c7e713004d7fbce9b2d8ddfb1c8de93414f206ebe0"
+   },
+   "c117462_foldin": {
+    "onto": "c117462",
+    "patch": "foldin-on-117462.patch",
+    "patch_sha256": "2b32d18636cb60f86c54bbc1c31f42ae062df48e13876edc34a01ae5b33c0224",
+    "merge": "handported (rows placed in #117462's cheap-first order)",
+    "sha256": "2d8e3a1712c349a40824ab8e3e8f87b01556b0c2809731b5e510686423b6a4e3"
+   }
+  },
+  "coverage_json_sha256": "a12cbcdcbce3be7e891658e134ce6ff68e44f9d28aaa1d02a82e5876c6b5d6d1",
+  "checkout_tree_for_imports": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0 (agent/* other than context_compressor.py identical to 234badf4012af380d23c91eae55d045a69c69ffb)"
+ },
+ "command": "$S/car_sandbox.sh $WT $VENV/bin/python $STAGING/harness/anchor_coverage.py --checkout $WT --arm base=$STAGING/raw/arms/base.py --arm branch=$STAGING/raw/arms/branch.py --arm c117462=$STAGING/raw/arms/c117462.py --arm c117462_foldin=$STAGING/raw/arms/c117462_foldin.py --seeds 10 --out $STAGING/raw/sbhome/coverage.json  # then moved to raw/coverage.json",
+ "method": "seeded synthetic regions (DENSITIES in harness; 10 seeds x 6 banks x 3 densities = 180 regions per arm); each bank's identifier golds planted once on their own line in an assistant message (emitter line where defined); survival = needle substring of the real _build_anchor_index output",
+ "label": "MODELED",
+ "results": {
+  "base": {
+   "sparse": {
+    "all": [
+     280,
+     570
+    ],
+    "new_classes": [
+     0,
+     110
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      0,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      20,
+      20
+     ],
+     "error_message": [
+      0,
+      90
+     ],
+     "file_bare": [
+      10,
+      20
+     ],
+     "file_path": [
+      40,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      20,
+      20
+     ],
+     "pr_issue": [
+      150,
+      150
+     ],
+     "sha": [
+      40,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      0,
+      10
+     ]
+    }
+   },
+   "medium": {
+    "all": [
+     280,
+     570
+    ],
+    "new_classes": [
+     0,
+     110
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      0,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      20,
+      20
+     ],
+     "error_message": [
+      0,
+      90
+     ],
+     "file_bare": [
+      10,
+      20
+     ],
+     "file_path": [
+      40,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      20,
+      20
+     ],
+     "pr_issue": [
+      150,
+      150
+     ],
+     "sha": [
+      40,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      0,
+      10
+     ]
+    }
+   },
+   "dense": {
+    "all": [
+     13,
+     570
+    ],
+    "new_classes": [
+     0,
+     110
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      0,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      0,
+      20
+     ],
+     "error_message": [
+      0,
+      90
+     ],
+     "file_bare": [
+      0,
+      20
+     ],
+     "file_path": [
+      0,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      0,
+      20
+     ],
+     "pr_issue": [
+      10,
+      150
+     ],
+     "sha": [
+      3,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      0,
+      10
+     ]
+    }
+   }
+  },
+  "branch": {
+   "sparse": {
+    "all": [
+     380,
+     570
+    ],
+    "new_classes": [
+     100,
+     110
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      10,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      20,
+      20
+     ],
+     "error_message": [
+      80,
+      90
+     ],
+     "file_bare": [
+      10,
+      20
+     ],
+     "file_path": [
+      40,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      20,
+      20
+     ],
+     "pr_issue": [
+      150,
+      150
+     ],
+     "sha": [
+      40,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      10,
+      10
+     ]
+    }
+   },
+   "medium": {
+    "all": [
+     297,
+     570
+    ],
+    "new_classes": [
+     17,
+     110
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      7,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      20,
+      20
+     ],
+     "error_message": [
+      0,
+      90
+     ],
+     "file_bare": [
+      10,
+      20
+     ],
+     "file_path": [
+      40,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      20,
+      20
+     ],
+     "pr_issue": [
+      150,
+      150
+     ],
+     "sha": [
+      40,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      10,
+      10
+     ]
+    }
+   },
+   "dense": {
+    "all": [
+     13,
+     570
+    ],
+    "new_classes": [
+     0,
+     110
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      0,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      0,
+      20
+     ],
+     "error_message": [
+      0,
+      90
+     ],
+     "file_bare": [
+      0,
+      20
+     ],
+     "file_path": [
+      0,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      0,
+      20
+     ],
+     "pr_issue": [
+      10,
+      150
+     ],
+     "sha": [
+      3,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      0,
+      10
+     ]
+    }
+   }
+  },
+  "c117462": {
+   "sparse": {
+    "all": [
+     280,
+     570
+    ],
+    "new_classes": [
+     0,
+     110
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      0,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      20,
+      20
+     ],
+     "error_message": [
+      0,
+      90
+     ],
+     "file_bare": [
+      10,
+      20
+     ],
+     "file_path": [
+      40,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      20,
+      20
+     ],
+     "pr_issue": [
+      150,
+      150
+     ],
+     "sha": [
+      40,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      0,
+      10
+     ]
+    }
+   },
+   "medium": {
+    "all": [
+     280,
+     570
+    ],
+    "new_classes": [
+     0,
+     110
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      0,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      20,
+      20
+     ],
+     "error_message": [
+      0,
+      90
+     ],
+     "file_bare": [
+      10,
+      20
+     ],
+     "file_path": [
+      40,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      20,
+      20
+     ],
+     "pr_issue": [
+      150,
+      150
+     ],
+     "sha": [
+      40,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      0,
+      10
+     ]
+    }
+   },
+   "dense": {
+    "all": [
+     25,
+     570
+    ],
+    "new_classes": [
+     0,
+     110
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      0,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      0,
+      20
+     ],
+     "error_message": [
+      0,
+      90
+     ],
+     "file_bare": [
+      0,
+      20
+     ],
+     "file_path": [
+      0,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      12,
+      20
+     ],
+     "pr_issue": [
+      10,
+      150
+     ],
+     "sha": [
+      3,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      0,
+      10
+     ]
+    }
+   }
+  },
+  "c117462_foldin": {
+   "sparse": {
+    "all": [
+     380,
+     570
+    ],
+    "new_classes": [
+     100,
+     110
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      10,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      20,
+      20
+     ],
+     "error_message": [
+      80,
+      90
+     ],
+     "file_bare": [
+      10,
+      20
+     ],
+     "file_path": [
+      40,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      20,
+      20
+     ],
+     "pr_issue": [
+      150,
+      150
+     ],
+     "sha": [
+      40,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      10,
+      10
+     ]
+    }
+   },
+   "medium": {
+    "all": [
+     299,
+     570
+    ],
+    "new_classes": [
+     20,
+     110
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      10,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      19,
+      20
+     ],
+     "error_message": [
+      0,
+      90
+     ],
+     "file_bare": [
+      10,
+      20
+     ],
+     "file_path": [
+      40,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      20,
+      20
+     ],
+     "pr_issue": [
+      150,
+      150
+     ],
+     "sha": [
+      40,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      10,
+      10
+     ]
+    }
+   },
+   "dense": {
+    "all": [
+     25,
+     570
+    ],
+    "new_classes": [
+     0,
+     110
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      0,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      0,
+      20
+     ],
+     "error_message": [
+      0,
+      90
+     ],
+     "file_bare": [
+      0,
+      20
+     ],
+     "file_path": [
+      0,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      12,
+      20
+     ],
+     "pr_issue": [
+      10,
+      150
+     ],
+     "sha": [
+      3,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      0,
+      10
+     ]
+    }
+   }
+  }
+ },
+ "readout": [
+  "sparse: branch and fold-in keep 100/110 new-class needles (main 0/110); the miss is 'Hermes backend exited (0)', which no row targets",
+  "medium: main-only branch keeps 17/110 (rows are appended last, so they only get leftover budget; error messages 0/90), fold-in 20/110 (task ids and dotted keys 20/20, error messages still 0/90)",
+  "dense: every arm loses almost all once-mentioned needles of every class (main 13/570, #117462 25/570); frequency-first ranking plus the 7,000-char budget, not the row set, is the binding limit"
+ ],
+ "limitations": [
+  "filler distributions are invented; real regions mention important identifiers more than once",
+  "no LLM summary text is included (index only)"
+ ],
+ "verdict": "PARTIAL (mechanism works where budget remains; full effect on main needs #117462's per-section truncation; dense regions are bounded by ranking)"
+}

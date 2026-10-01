@@ -1,0 +1,379 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compressor-media-extraction",
+ "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+ "head_revision": "c5e8be14b43bf75bcc2e4e8d95f2d4810a7e2779",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#80636",
+  "NousResearch/hermes-agent#78645"
+ ],
+ "provenance": "self",
+ "privacy": "public-aggregate",
+ "cost_usd": 0.0,
+ "ai_assistance": "Claude Code (Opus 5.5) ran the experiment and wrote this receipt",
+ "created_at": "2026-10-01T07:47:16-05:00",
+ "spec": {
+  "path": null,
+  "prereg_commit": null,
+  "note": "not pre-registered on claude/ledger (no ledger writes in this run)"
+ },
+ "env": {
+  "host": "<local-host>",
+  "test_python": "3.11.14 (pytest 9.1.1, HERMES_PYTHON)",
+  "nav_python": "3.14.7 separate uv venv (tiktoken 0.14.0, radon 6.0.1)",
+  "sandbox": "none (no bwrap); HOME/HERMES_HOME pointed at scratch test homes; run_tests.sh env -i",
+  "load1_range": "3-16 (shared host; base and head full runs ran concurrently)",
+  "paths": "absolute local paths in commands and raw files are replaced by $W/<tree>, $S, $HERMES_PYTHON, <uv>, <pytest-tmp>, pytest-of-<user>"
+ },
+ "id": "sabotage/r20261001-02",
+ "experiment": "per-hunk sabotage: every -U0 hunk of the commit outside the new file reversed alone, the facade's sibling import split per name, the new file sabotaged per moved statement",
+ "tier": "T1",
+ "label": "OBSERVED",
+ "round_note": "fix round 1: head rebuilt on main aea969677c (c5e8be14b4 replaces the unpushed d2bff3a59e; same patch-id 2c92e56f, corrected commit message)",
+ "inputs": {
+  "script": "regen/sabotage_perhunk.py",
+  "script_sha256": "1d43bc17cc0d13dac5b64258928d54fc801743a6dc6fbd2472ce405660397085",
+  "narrow_set": [
+   "tests/agent/test_compressor_historical_media.py",
+   "tests/agent/test_compressor_stale_tool_images.py",
+   "tests/agent/test_outbound_stale_vision.py",
+   "tests/agent/test_protected_tail_pressure.py",
+   "tests/agent/test_image_eviction_policy.py",
+   "tests/agent/test_compressor_zero_user_guard.py",
+   "tests/agent/test_image_rejection_fallback.py",
+   "tests/agent/test_iteration_summary_reasoning_details.py",
+   "tests/agent/test_dict_tool_call_args.py",
+   "tests/agent/test_context_token_tracking.py",
+   "tests/agent/test_degenerate_final_recovery.py"
+  ],
+  "wide_set": "365 test files that mention context_compressor, turn_request_assembly, chat_completion_helpers, image_eviction or conversation_loop",
+  "known_failures": "the 23 failing ids of the head full run (E14-parity/r20261001-02)"
+ },
+ "command": [
+  "python3 regen/sabotage_perhunk.py $W/sab $W/base --python $HERMES_PYTHON --home $S/testhome-sf-compressor-media-extraction/sab --json sabotage-run1.json --wide-files-from wide.txt   (run 1: 38 rows; the script then had no --known-failures and no #deletions/control rows)",
+  "python3 regen/sabotage_perhunk.py $W/<sab|sab2|sab3> $W/base ... --wide-files-from wide.txt --known-failures known-failures.txt --only <rows>   (run 2, three worktrees in parallel: facade-import rows re-run with the wide set, plus the #deletions and control:reexport rows)"
+ ],
+ "result": {
+  "rows": {
+   "hunk:agent/chat_completion_helpers.py#1": {
+    "tests": "RED",
+    "static_fail": [
+     "old_path_zero"
+    ],
+    "wide": null
+   },
+   "hunk:agent/context_compressor.py#1": {
+    "tests": "GREEN",
+    "static_fail": [],
+    "wide": null
+   },
+   "hunk:agent/context_compressor.py#2": {
+    "tests": "RED",
+    "static_fail": [],
+    "wide": null
+   },
+   "hunk:agent/context_compressor.py#3": {
+    "tests": "GREEN",
+    "static_fail": [
+     "facade_rest"
+    ],
+    "wide": null
+   },
+   "hunk:agent/context_compressor.py#4": {
+    "tests": "RED",
+    "static_fail": [
+     "facade_rest",
+     "imports"
+    ],
+    "wide": null
+   },
+   "hunk:agent/image_eviction_policy.py#1": {
+    "tests": "GREEN",
+    "static_fail": [
+     "old_path_zero"
+    ],
+    "wide": null
+   },
+   "hunk:agent/turn_request_assembly.py#1": {
+    "tests": "RED",
+    "static_fail": [
+     "old_path_zero"
+    ],
+    "wide": null
+   },
+   "hunk:tests/agent/test_compressor_historical_media.py#1": {
+    "tests": "RED",
+    "static_fail": [
+     "old_path_zero"
+    ],
+    "wide": null
+   },
+   "hunk:tests/agent/test_compressor_stale_tool_images.py#1": {
+    "tests": "RED",
+    "static_fail": [
+     "old_path_zero"
+    ],
+    "wide": null
+   },
+   "hunk:tests/agent/test_compressor_stale_tool_images.py#2": {
+    "tests": "GREEN",
+    "static_fail": [
+     "old_path_zero"
+    ],
+    "wide": null
+   },
+   "hunk:tests/agent/test_compressor_stale_tool_images.py#3": {
+    "tests": "GREEN",
+    "static_fail": [
+     "old_path_zero"
+    ],
+    "wide": null
+   },
+   "hunk:tests/agent/test_compressor_stale_tool_images.py#4": {
+    "tests": "GREEN",
+    "static_fail": [
+     "old_path_zero"
+    ],
+    "wide": null
+   },
+   "hunk:tests/agent/test_image_eviction_policy.py#1": {
+    "tests": "GREEN",
+    "static_fail": [
+     "old_path_zero"
+    ],
+    "wide": null
+   },
+   "hunk:tests/agent/test_outbound_stale_vision.py#1": {
+    "tests": "RED",
+    "static_fail": [
+     "old_path_zero"
+    ],
+    "wide": null
+   },
+   "hunk:tests/agent/test_protected_tail_pressure.py#1": {
+    "tests": "RED",
+    "static_fail": [
+     "old_path_zero"
+    ],
+    "wide": null
+   },
+   "hunk:tests/agent/test_protected_tail_pressure.py#2": {
+    "tests": "RED",
+    "static_fail": [],
+    "wide": null
+   },
+   "facade-import:_is_image_part": {
+    "tests": "RED",
+    "static_fail": [],
+    "wide": null
+   },
+   "facade-import:_retire_stale_tool_result_images": {
+    "tests": "RED",
+    "static_fail": [],
+    "wide": null
+   },
+   "facade-import:_strip_historical_media": {
+    "tests": "RED",
+    "static_fail": [],
+    "wide": null
+   },
+   "sibling:_MAX_KEEP_TOOL_IMAGES": {
+    "tests": "RED",
+    "static_fail": [
+     "verbatim"
+    ],
+    "wide": null
+   },
+   "sibling:_replace_image_parts": {
+    "tests": "RED",
+    "static_fail": [
+     "verbatim"
+    ],
+    "wide": null
+   },
+   "sibling:_tool_result_parts": {
+    "tests": "RED",
+    "static_fail": [
+     "verbatim"
+    ],
+    "wide": null
+   },
+   "sibling:_tool_content_has_images": {
+    "tests": "RED",
+    "static_fail": [
+     "verbatim"
+    ],
+    "wide": null
+   },
+   "sibling:_strip_images_from_tool_msg": {
+    "tests": "RED",
+    "static_fail": [
+     "verbatim"
+    ],
+    "wide": null
+   },
+   "sibling:_rewritten": {
+    "tests": "RED",
+    "static_fail": [
+     "verbatim"
+    ],
+    "wide": null
+   },
+   "sibling:_retire_stale_tool_result_images": {
+    "tests": "RED",
+    "static_fail": [
+     "verbatim"
+    ],
+    "wide": null
+   },
+   "sibling:_image_payload": {
+    "tests": "RED",
+    "static_fail": [
+     "verbatim"
+    ],
+    "wide": null
+   },
+   "sibling:evict_stale_outbound_tool_images": {
+    "tests": "RED",
+    "static_fail": [
+     "verbatim"
+    ],
+    "wide": null
+   },
+   "sibling:_IMAGE_PART_TYPES": {
+    "tests": "RED",
+    "static_fail": [
+     "verbatim"
+    ],
+    "wide": null
+   },
+   "sibling:_is_image_part": {
+    "tests": "RED",
+    "static_fail": [
+     "verbatim"
+    ],
+    "wide": null
+   },
+   "sibling:_content_has_images": {
+    "tests": "RED",
+    "static_fail": [
+     "verbatim"
+    ],
+    "wide": null
+   },
+   "sibling:_strip_images_from_content": {
+    "tests": "RED",
+    "static_fail": [
+     "verbatim"
+    ],
+    "wide": null
+   },
+   "sibling:_strip_historical_media": {
+    "tests": "RED",
+    "static_fail": [
+     "verbatim"
+    ],
+    "wide": null
+   },
+   "sibling:_summary_part_text": {
+    "tests": "RED",
+    "static_fail": [
+     "verbatim"
+    ],
+    "wide": "RED"
+   },
+   "sibling:_image_part_label": {
+    "tests": "RED",
+    "static_fail": [
+     "verbatim"
+    ],
+    "wide": "RED"
+   },
+   "facade-import:_rewritten": {
+    "tests": "GREEN",
+    "static_fail": [],
+    "wide": "GREEN"
+   },
+   "hunk:agent/context_compressor.py#deletions": {
+    "tests": "GREEN",
+    "static_fail": [
+     "facade_rest"
+    ],
+    "wide": null
+   },
+   "control:reexport:_replace_image_parts": {
+    "tests": "GREEN",
+    "static_fail": [
+     "no_shim"
+    ],
+    "wide": null
+   },
+   "facade-import:_strip_images_from_tool_msg": {
+    "tests": "RED",
+    "static_fail": [],
+    "wide": "RED"
+   },
+   "facade-import:_summary_part_text": {
+    "tests": "RED",
+    "static_fail": [],
+    "wide": "RED"
+   }
+  },
+  "counts": {
+   "rows": 40,
+   "tests_red": 30,
+   "green_under_tests_caught_by_static_gate": 8,
+   "unpinned": 2
+  },
+  "green_under_tests_caught_by_static_gate": [
+   "control:reexport:_replace_image_parts",
+   "hunk:agent/context_compressor.py#3",
+   "hunk:agent/context_compressor.py#deletions",
+   "hunk:agent/image_eviction_policy.py#1",
+   "hunk:tests/agent/test_compressor_stale_tool_images.py#2",
+   "hunk:tests/agent/test_compressor_stale_tool_images.py#3",
+   "hunk:tests/agent/test_compressor_stale_tool_images.py#4",
+   "hunk:tests/agent/test_image_eviction_policy.py#1"
+  ],
+  "unpinned": [
+   "facade-import:_rewritten",
+   "hunk:agent/context_compressor.py#1"
+  ],
+  "unpinned_detail": {
+   "hunk:agent/context_compressor.py#1": "re-adds the facade's now-unused `from agent.image_eviction_policy import outbound_image_retire_count`. Behaviour-neutral; no test and no verify_media gate sees it. `ruff check --select F` flags it (F401: 0 -> 1 on the facade); the repo's ruff selection does not include F401.",
+   "facade-import:_rewritten": "drops `_rewritten` from the facade's sibling import. Its only facade call site, ContextCompressor._demote_stale_tail_tools (the lean-recovery stub rewrite), is reached by none of the 365 wide-set test files, so the NameError never fires in tests. The same line is equally untested on main. `ruff check --select F821` flags the undefined name; the repo's ruff selection does not include F821."
+  },
+  "static_backstop": "ruff check --select F on the 10 touched files gives identical statistics on base and head (2 x F401, pre-existing). Comparing them would catch both unpinned rows; this is not part of verify_media.py.",
+  "pinned_by_wide_set_only": {
+   "facade-import:_strip_images_from_tool_msg": "tests/tools/test_computer_use.py::TestCompressorScreenshotPruning (2 tests, via _demote_tool_result_at)",
+   "facade-import:_summary_part_text": "tests/agent/test_compressor_media_stripping.py::TestMediaDirectiveStripping::test_multimodal_list_content_does_not_crash (via _serialize_records_for_summary)",
+   "sibling:_summary_part_text": "same test_compressor_media_stripping test",
+   "sibling:_image_part_label": "same test_compressor_media_stripping test"
+  },
+  "baseline_narrow": 132
+ },
+ "raw": [
+  {
+   "path": "raw/r02/sabotage-run1.json",
+   "sha256": "9ed75ecc2a5d6005277174b8d1d53d6609820730aa18c78490993087da67fbad",
+   "source_sha256": "9ed75ecc2a5d6005277174b8d1d53d6609820730aa18c78490993087da67fbad"
+  },
+  {
+   "path": "raw/r02/sabotage-run2-a.json",
+   "sha256": "a4e645429ff7e0094af9ac062b4948576e5a5865188b59081f0602f88fe21842",
+   "source_sha256": "a4e645429ff7e0094af9ac062b4948576e5a5865188b59081f0602f88fe21842"
+  },
+  {
+   "path": "raw/r02/sabotage-run2-b.json",
+   "sha256": "a4640c2099ffeec37d1903a06c52bd819d5ff05f8331387b3375674b119f3d0d",
+   "source_sha256": "a4640c2099ffeec37d1903a06c52bd819d5ff05f8331387b3375674b119f3d0d"
+  },
+  {
+   "path": "raw/r02/sabotage-run2-c.json",
+   "sha256": "563e2c9d2ac326bc431effc7e401026e24403c369851e873861ca304b8c17c36",
+   "source_sha256": "563e2c9d2ac326bc431effc7e401026e24403c369851e873861ca304b8c17c36"
+  }
+ ],
+ "verdict": "RECORDED (per-hunk sabotage done; unpinned rows listed; P5 still needs F14 guards)"
+}

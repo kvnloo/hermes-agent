@@ -1,0 +1,1805 @@
+▶ not activated — using HERMES_PYTHON: $HERMES_PYTHON
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 11 test files (~77 tests) under ['tests/agent/test_compressor_historical_media.py', 'tests/agent/test_compressor_stale_tool_images.py', 'tests/agent/test_outbound_stale_vision.py', 'tests/agent/test_protected_tail_pressure.py', 'tests/agent/test_image_eviction_policy.py', 'tests/agent/test_compressor_zero_user_guard.py', 'tests/agent/test_image_rejection_fallback.py', 'tests/agent/test_iteration_summary_reasoning_details.py', 'tests/agent/test_dict_tool_call_args.py', 'tests/agent/test_context_token_tracking.py', 'tests/agent/test_degenerate_final_recovery.py']; running with -j 2
+[  7.8% |     6/~77 | ✓6 | ✗0] ✓ tests/agent/test_compressor_stale_tool_images.py (6✓, 1.3s)
+[ 27.3% |    21/~77 | ✓21 | ✗ 0] ✓ tests/agent/test_compressor_historical_media.py (15✓, 2.2s)
+[ 35.1% |    27/~77 | ✓27 | ✗ 0] ✓ tests/agent/test_compressor_zero_user_guard.py (6✓, 2.1s)
+[ 40.3% |    31/~77 | ✓27 | ✗ 4] ✗ tests/agent/test_context_token_tracking.py (4✗, 12.6s)
+
+  ╔╍ Failed: tests/agent/test_context_token_tracking.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'meta-ai-image-gen' registered image_gen provider: meta-ai
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai' registered image_gen provider: openai
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai-codex' registered image_gen provider: openai-codex
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: openrouter
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: nous
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered image_gen provider: xai
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered video_gen provider: deepinfra
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered video_gen provider: fal
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered video_gen provider: openrouter
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered video_gen provider: xai
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-brave-free' registered web provider: brave-free
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-ddgs' registered web provider: ddgs
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-exa' registered web provider: exa
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-firecrawl' registered web provider: firecrawl
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-keenable' registered web provider: keenable
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-openai-native' registered web provider: openai-native
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-parallel' registered web provider: parallel
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-perplexity' registered web provider: perplexity
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-searxng' registered web provider: searxng
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-tavily' registered web provider: tavily
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-xai' registered web provider: xai
+  ║ INFO     hermes_cli.plugins:plugins.py:1499 Plugin discovery complete: 58 found, 53 enabled
+  ║ INFO     agent.context_compressor:context_compressor.py:1928 Context compressor initialized: model=test-model context_length=256000 threshold=192000 (75%) target_ratio=20% tail_budget=10000 provider=openai-codex base_url=http://localhost:1234/v1
+  ║ INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_113153_fd0900 model=test-model provider=openai-codex platform=unknown history=0 msg='hi'
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/agent/test_context_token_tracking.py::test_anthropic_cache_read_and_creation_added
+  ║ FAILED tests/agent/test_context_token_tracking.py::test_anthropic_no_cache_fields
+  ║ FAILED tests/agent/test_context_token_tracking.py::test_openai_prompt_tokens_unchanged
+  ║ FAILED tests/agent/test_context_token_tracking.py::test_codex_no_cache_fields
+  ║ 4 failed in 5.03s
+  ║
+  ║  Repro: python -m pytest tests/agent/test_context_token_tracking.py -q -rfE
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+[ 48.1% |    37/~77 | ✓73 | ✗ 7] ✗ tests/agent/test_degenerate_final_recovery.py (46✓ 3✗, 14.7s)
+
+  ╔╍ Failed: tests/agent/test_degenerate_final_recovery.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'meta-ai-image-gen' registered image_gen provider: meta-ai
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai' registered image_gen provider: openai
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai-codex' registered image_gen provider: openai-codex
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: openrouter
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: nous
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered image_gen provider: xai
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered video_gen provider: deepinfra
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered video_gen provider: fal
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered video_gen provider: openrouter
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered video_gen provider: xai
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-brave-free' registered web provider: brave-free
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-ddgs' registered web provider: ddgs
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-exa' registered web provider: exa
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-firecrawl' registered web provider: firecrawl
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-keenable' registered web provider: keenable
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-openai-native' registered web provider: openai-native
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-parallel' registered web provider: parallel
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-perplexity' registered web provider: perplexity
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-searxng' registered web provider: searxng
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-tavily' registered web provider: tavily
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-xai' registered web provider: xai
+  ║ INFO     hermes_cli.plugins:plugins.py:1499 Plugin discovery complete: 58 found, 53 enabled
+  ║ INFO     agent.model_metadata:model_metadata.py:2226 No model id provided for context length resolution — defaulting to 256,000 tokens.
+  ║ ------------------------------ Captured log call -------------------------------
+  ║ INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_113154_62df5c model= provider=unknown platform=unknown history=0 msg='build the workbook'
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/agent/test_degenerate_final_recovery.py::TestFragmentAfterToolWork::test_fragment_after_tool_work_reprompts_instead_of_exiting
+  ║ FAILED tests/agent/test_degenerate_final_recovery.py::TestFragmentAfterToolWork::test_persistent_collapse_is_bounded_and_keeps_the_fragment
+  ║ FAILED tests/agent/test_degenerate_final_recovery.py::TestFragmentAfterToolWork::test_fragment_without_tool_work_is_a_plain_answer
+  ║ 3 failed, 46 passed in 6.06s
+  ║
+  ║  Repro: python -m pytest tests/agent/test_degenerate_final_recovery.py -q -rfE
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+[ 50.6% |    39/~77 | ✓85 | ✗ 7] ✓ tests/agent/test_image_eviction_policy.py (12✓, 1.7s)
+[ 51.9% |    40/~77 | ✓85 | ✗ 8] ✗ tests/agent/test_dict_tool_call_args.py (1✗, 8.3s)
+
+  ╔╍ Failed: tests/agent/test_dict_tool_call_args.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║     verdict = fn(agent, **{n: extra[n] if n in extra else getattr(state, n) for n in params})
+  ║               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  ║ agent/turn_request_assembly.py:155: in assemble_api_request
+  ║     evict_stale_outbound_tool_images(api_messages)
+  ║ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+  ║ 
+  ║ api_messages = [{'role': 'system', 'content': 'You are Hermes Agent, built by Nous Research. Be direct: match the length of your repl...es idle for 24h are pruned)\n\n<!-- End Hermes runtime environment -->'}, {'role': 'user', 'content': 'read the file'}]
+  ║ 
+  ║     def evict_stale_outbound_tool_images(api_messages: List[Dict[str, Any]]) -> int:
+  ║ >       raise RuntimeError("sabotage evict_stale_outbound_tool_images")
+  ║ E       RuntimeError: sabotage evict_stale_outbound_tool_images
+  ║ 
+  ║ agent/context_compressor_media.py:110: RuntimeError
+  ║ ------------------------------ Captured log call -------------------------------
+  ║ INFO     run_agent:agent_runtime_helpers.py:1990 OpenAI client created (agent_init, shared=True) thread=MainThread:140580941876096 provider= base_url=http://localhost:8080/v1 model=test-model
+  ║ INFO     agent.model_metadata:model_metadata.py:2060 Could not detect context length for model 'test-model' at http://localhost:8080/v1 — defaulting to 256,000 tokens (probe-down). Set model.context_length in config.yaml to override.
+  ║ WARNING  agent.model_metadata:model_metadata.py:264 Could not determine context length for model 'test-model' (base_url=http://localhost:8080/v1) — falling back to 256,000 tokens. Set model.context_length in config.yaml to override.
+  ║ WARNING  agent.relay_runtime:relay_runtime.py:328 Hermes Relay plugin initialization failed: initialize() got an unexpected keyword argument 'additional_plugins_toml'
+  ║ Traceback (most recent call last):
+  ║   File "$W/sab/agent/relay_runtime.py", line 318, in _activate
+  ║     if not self._initialize(relay):
+  ║            ^^^^^^^^^^^^^^^^^^^^^^^
+  ║   File "$W/sab/agent/relay_runtime.py", line 346, in _initialize
+  ║     activation = _resolve_plugin_awaitable(relay.plugin.initialize({}, additional_plugins_toml=config_path))
+  ║                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  ║ TypeError: initialize() got an unexpected keyword argument 'additional_plugins_toml'
+  ║ INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_113201_fdcbdc model=test-model provider=unknown platform=cli history=0 msg='read the file'
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/agent/test_dict_tool_call_args.py::test_tool_call_validation_accepts_dict_arguments
+  ║ 1 failed in 3.09s
+  ║
+  ║  Repro: python -m pytest tests/agent/test_dict_tool_call_args.py -q -rfE
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+[ 74.0% |    57/~77 | ✓101 | ✗  9] ✗ tests/agent/test_image_rejection_fallback.py (16✓ 1✗, 12.6s)
+
+  ╔╍ Failed: tests/agent/test_image_rejection_fallback.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ INFO     tools.registry:registry.py:381 check_fn check_discord_tool_requirements returned False; dependent tools will be unavailable this turn
+  ║ INFO     tools.registry:registry.py:381 check_fn _check_feishu returned False; dependent tools will be unavailable this turn
+  ║ INFO     tools.registry:registry.py:381 check_fn _check_ha_available returned False; dependent tools will be unavailable this turn
+  ║ INFO     tools.registry:registry.py:381 check_fn check_image_generation_requirements returned False; dependent tools will be unavailable this turn
+  ║ INFO     tools.registry:registry.py:381 check_fn <lambda> returned False; dependent tools will be unavailable this turn
+  ║ INFO     tools.registry:registry.py:381 check_fn check_react_requirements returned False; dependent tools will be unavailable this turn
+  ║ INFO     tools.registry:registry.py:381 check_fn _check_spotify_available returned False; dependent tools will be unavailable this turn
+  ║ WARNING  agent.auxiliary_unavailable:auxiliary_unavailable.py:259 Auxiliary Nous client unavailable: Nous Portal runtime credentials unavailable: Hermes is not logged into Nous Portal. Run `hermes model` to re-authenticate. (code: nous_auth_missing)
+  ║ WARNING  agent.auxiliary_client:auxiliary_client.py:2367 Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+  ║ WARNING  agent.auxiliary_client:auxiliary_client.py:5012 resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+  ║ WARNING  agent.auxiliary_client:auxiliary_client.py:2367 Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+  ║ WARNING  agent.auxiliary_client:auxiliary_client.py:5012 resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+  ║ INFO     tools.registry:registry.py:381 check_fn check_video_requirements returned False; dependent tools will be unavailable this turn
+  ║ INFO     agent.credential_pool:credential_pool.py:2155 credential pool: no available entries (all exhausted or empty)
+  ║ INFO     tools.registry:registry.py:381 check_fn check_video_generation_requirements returned False; dependent tools will be unavailable this turn
+  ║ WARNING  agent.auxiliary_client:auxiliary_client.py:2367 Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+  ║ WARNING  agent.auxiliary_client:auxiliary_client.py:5012 resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+  ║ WARNING  agent.auxiliary_client:auxiliary_client.py:2367 Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+  ║ WARNING  agent.auxiliary_client:auxiliary_client.py:5012 resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+  ║ INFO     tools.registry:registry.py:381 check_fn check_vision_requirements returned False; dependent tools will be unavailable this turn
+  ║ INFO     agent.credential_pool:credential_pool.py:2155 credential pool: no available entries (all exhausted or empty)
+  ║ INFO     tools.registry:registry.py:381 check_fn check_x_search_requirements returned False; dependent tools will be unavailable this turn
+  ║ INFO     tools.registry:registry.py:381 check_fn _check_xai_video_requirements returned False; dependent tools will be unavailable this turn
+  ║ INFO     tools.registry:registry.py:381 check_fn _check_yuanbao returned False; dependent tools will be unavailable this turn
+  ║ INFO     tools.tool_search:tool_search.py:379 tool_search activated (tier 1): 15 core/visible tools kept, 14 deferred (~4328 tokens), listing full (budget ~4000 tokens)
+  ║ INFO     agent.model_metadata:model_metadata.py:2060 Could not detect context length for model 'm' at https://api.groq.com/openai/v1 — defaulting to 256,000 tokens (probe-down). Set model.context_length in config.yaml to override.
+  ║ WARNING  agent.model_metadata:model_metadata.py:264 Could not determine context length for model 'm' (base_url=https://api.groq.com/openai/v1) — falling back to 256,000 tokens. Set model.context_length in config.yaml to override.
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/agent/test_image_rejection_fallback.py::test_iteration_summary_strips_images_for_rejecting_model
+  ║ 1 failed, 16 passed in 4.92s
+  ║
+  ║  Repro: python -m pytest tests/agent/test_image_rejection_fallback.py -q -rfE
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+[ 79.2% |    61/~77 | ✓101 | ✗ 13] ✗ tests/agent/test_iteration_summary_reasoning_details.py (4✗, 16.3s)
+
+  ╔╍ Failed: tests/agent/test_iteration_summary_reasoning_details.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai' registered image_gen provider: openai
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai-codex' registered image_gen provider: openai-codex
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: openrouter
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: nous
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered image_gen provider: xai
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered video_gen provider: deepinfra
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered video_gen provider: fal
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered video_gen provider: openrouter
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered video_gen provider: xai
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-brave-free' registered web provider: brave-free
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-ddgs' registered web provider: ddgs
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-exa' registered web provider: exa
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-firecrawl' registered web provider: firecrawl
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-keenable' registered web provider: keenable
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-openai-native' registered web provider: openai-native
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-parallel' registered web provider: parallel
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-perplexity' registered web provider: perplexity
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-searxng' registered web provider: searxng
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-tavily' registered web provider: tavily
+  ║ INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-xai' registered web provider: xai
+  ║ INFO     hermes_cli.plugins:plugins.py:1499 Plugin discovery complete: 58 found, 53 enabled
+  ║ INFO     tools.registry:registry.py:381 check_fn _a2a_tools_available returned False; dependent tools will be unavailable this turn
+  ║ INFO     tools.tool_search:tool_search.py:379 tool_search activated (tier 1): 15 core/visible tools kept, 14 deferred (~4328 tokens), listing full (budget ~4000 tokens)
+  ║ INFO     agent.model_metadata:model_metadata.py:2060 Could not detect context length for model 'm' at https://api.groq.com/openai/v1 — defaulting to 256,000 tokens (probe-down). Set model.context_length in config.yaml to override.
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/agent/test_iteration_summary_reasoning_details.py::test_anthropic_summary_messages_keep_reasoning_details
+  ║ FAILED tests/agent/test_iteration_summary_reasoning_details.py::test_strict_chat_route_summary_wire_drops_reasoning_details
+  ║ FAILED tests/agent/test_iteration_summary_reasoning_details.py::TestSummaryPrefixParity::test_canonicalizes_tool_call_arguments_and_strips_content
+  ║ FAILED tests/agent/test_iteration_summary_reasoning_details.py::TestSummaryPrefixParity::test_strips_lone_surrogates_like_the_send_path
+  ║ 4 failed in 6.54s
+  ║
+  ║  Repro: python -m pytest tests/agent/test_iteration_summary_reasoning_details.py -q -rfE
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+[ 94.8% |    73/~77 | ✓101 | ✗ 25] ✗ tests/agent/test_outbound_stale_vision.py (12✗, 7.3s)
+
+  ╔╍ Failed: tests/agent/test_outbound_stale_vision.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║         for i in range(OUTBOUND_IMAGE_LIMIT):
+  ║             history.extend(_image_tool(i))
+  ║         outbound = sanitize_api_messages(history)
+  ║ >       assert evict_stale_outbound_tool_images(outbound) > 0
+  ║                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  ║ 
+  ║ tests/agent/test_outbound_stale_vision.py:489: 
+  ║ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+  ║ 
+  ║ api_messages = [{'role': 'user', 'content': [{'type': 'text', 'text': 'look'}, {'type': 'image_url', 'image_url': {'url': 'data:image...'call_2', 'type': 'function', 'function': {'name': 'vision_analyze', 'arguments': '{"image_url":"shot2.png"}'}}]}, ...]
+  ║ 
+  ║     def evict_stale_outbound_tool_images(api_messages: List[Dict[str, Any]]) -> int:
+  ║ >       raise RuntimeError("sabotage evict_stale_outbound_tool_images")
+  ║ E       RuntimeError: sabotage evict_stale_outbound_tool_images
+  ║ 
+  ║ agent/context_compressor_media.py:110: RuntimeError
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_nothing_is_evicted_below_the_provider_limit
+  ║ FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_eviction_retires_a_batch_once_over_the_limit
+  ║ FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_frontier_holds_between_batch_advances
+  ║ FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_frontier_holds_when_tool_results_carry_several_images
+  ║ FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_multi_image_tool_results_count_as_blocks
+  ║ FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_user_uploads_count_against_the_ceiling
+  ║ FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_keep_newest_is_a_floor_when_uploads_fill_the_ceiling
+  ║ FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_a_batch_that_would_blind_the_model_stops_at_the_floor
+  ║ FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_byte_pressure_overrides_the_keep_newest_floor
+  ║ FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_floor_yields_when_eviction_can_fix_the_breach
+  ║ FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_does_not_rewrite_persisted_history
+  ║ FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_user_uploads_are_not_evicted
+  ║ 12 failed in 2.85s
+  ║
+  ║  Repro: python -m pytest tests/agent/test_outbound_stale_vision.py -q -rfE
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+[100.0% |    77/~77 | ✓107 | ✗ 25] ✓ tests/agent/test_protected_tail_pressure.py (6✓, 1.5s)
+
+=== Summary: 11 files, 107 tests passed, 25 failed (100% complete) in 41.0s (2 workers) ===
+  Durations cached to test_durations.json (5 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   11
+  Total subprocess CPU-wall: 80.6s  (runner wall: 41.0s, parallelism: 2x)
+  P50: 7.33s  P90: 14.70s  P95: 16.29s  P99: 16.29s  Max: 16.29s
+  <1s: 0 files (0%)  <2s: 3 files (27%)
+  Top 10 slowest:
+     16.29s  tests/agent/test_iteration_summary_reasoning_details.py
+     14.70s  tests/agent/test_degenerate_final_recovery.py
+     12.64s  tests/agent/test_context_token_tracking.py
+     12.56s  tests/agent/test_image_rejection_fallback.py
+      8.28s  tests/agent/test_dict_tool_call_args.py
+      7.33s  tests/agent/test_outbound_stale_vision.py
+      2.23s  tests/agent/test_compressor_historical_media.py
+      2.06s  tests/agent/test_compressor_zero_user_guard.py
+      1.69s  tests/agent/test_image_eviction_policy.py
+      1.51s  tests/agent/test_protected_tail_pressure.py
+
+=== Failure output ===
+
+--- tests/agent/test_context_token_tracking.py ---
+FFFF                                                                     [100%]
+=================================== FAILURES ===================================
+_________________ test_anthropic_cache_read_and_creation_added _________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f7829fe7c50>
+
+    def test_anthropic_cache_read_and_creation_added(monkeypatch):
+        agent = _make_agent(monkeypatch, "anthropic_messages", "anthropic",
+                            lambda: _anthropic_resp(3, 10, cache_read=15000, cache_creation=2000))
+>       agent.run_conversation("hi")
+
+tests/agent/test_context_token_tracking.py:84: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/agent/test_context_token_tracking.py:60: in run_conversation
+    return super().run_conversation(msg, conversation_history=conversation_history, task_id=task_id)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/turn_facade.py:147: in run_conversation
+    result = run_conversation(
+agent/conversation_loop.py:1724: in run_conversation
+    result = _run_conversation_turn(
+agent/conversation_loop.py:1640: in _run_conversation_turn
+    _run_phase(assemble_api_request, agent, s)
+agent/conversation_loop.py:1488: in _run_phase
+    verdict = fn(agent, **{n: extra[n] if n in extra else getattr(state, n) for n in params})
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/turn_request_assembly.py:155: in assemble_api_request
+    evict_stale_outbound_tool_images(api_messages)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api_messages = [{'role': 'system', 'content': 'You are Hermes Agent, built by Nous Research. Be direct: match the length of your repl... dir; entries idle for 24h are pruned)\n\n<!-- End Hermes runtime environment -->'}, {'role': 'user', 'content': 'hi'}]
+
+    def evict_stale_outbound_tool_images(api_messages: List[Dict[str, Any]]) -> int:
+>       raise RuntimeError("sabotage evict_stale_outbound_tool_images")
+E       RuntimeError: sabotage evict_stale_outbound_tool_images
+
+agent/context_compressor_media.py:110: RuntimeError
+----------------------------- Captured stdout call -----------------------------
+🤖 AI Agent initialized with model: test-model (Anthropic native)
+🛠️  Loaded 1 tools: t
+💾 Prompt caching: ENABLED (native Anthropic, 5m TTL)
+📊 Context limit: 256,000 tokens (compress at 75% = 192,000)
+💬 Starting conversation: 'hi'
+------------------------------ Captured log call -------------------------------
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-browser-use' registered browser provider: browser-use
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-browserbase' registered browser provider: browserbase
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-firecrawl' registered browser provider: firecrawl
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered image_gen provider: deepinfra
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered image_gen provider: fal
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'krea' registered image_gen provider: krea
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'meta-ai-image-gen' registered image_gen provider: meta-ai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai' registered image_gen provider: openai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai-codex' registered image_gen provider: openai-codex
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: openrouter
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: nous
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered image_gen provider: xai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered video_gen provider: deepinfra
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered video_gen provider: fal
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered video_gen provider: openrouter
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered video_gen provider: xai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-brave-free' registered web provider: brave-free
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-ddgs' registered web provider: ddgs
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-exa' registered web provider: exa
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-firecrawl' registered web provider: firecrawl
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-keenable' registered web provider: keenable
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-openai-native' registered web provider: openai-native
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-parallel' registered web provider: parallel
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-perplexity' registered web provider: perplexity
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-searxng' registered web provider: searxng
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-tavily' registered web provider: tavily
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-xai' registered web provider: xai
+INFO     hermes_cli.plugins:plugins.py:1499 Plugin discovery complete: 58 found, 53 enabled
+INFO     agent.model_metadata:model_metadata.py:2060 Could not detect context length for model 'test-model' at http://localhost:1234/v1 — defaulting to 256,000 tokens (probe-down). Set model.context_length in config.yaml to override.
+WARNING  agent.model_metadata:model_metadata.py:264 Could not determine context length for model 'test-model' (base_url=http://localhost:1234/v1) — falling back to 256,000 tokens. Set model.context_length in config.yaml to override.
+INFO     agent.context_compressor:context_compressor.py:1928 Context compressor initialized: model=test-model context_length=256000 threshold=192000 (75%) target_ratio=20% tail_budget=10000 provider=anthropic base_url=http://localhost:1234/v1
+WARNING  agent.relay_runtime:relay_runtime.py:328 Hermes Relay plugin initialization failed: initialize() got an unexpected keyword argument 'additional_plugins_toml'
+Traceback (most recent call last):
+  File "$W/sab/agent/relay_runtime.py", line 318, in _activate
+    if not self._initialize(relay):
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "$W/sab/agent/relay_runtime.py", line 346, in _initialize
+    activation = _resolve_plugin_awaitable(relay.plugin.initialize({}, additional_plugins_toml=config_path))
+                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: initialize() got an unexpected keyword argument 'additional_plugins_toml'
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_113150_49efec model=test-model provider=anthropic platform=unknown history=0 msg='hi'
+________________________ test_anthropic_no_cache_fields ________________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f7829bc9690>
+
+    def test_anthropic_no_cache_fields(monkeypatch):
+        agent = _make_agent(monkeypatch, "anthropic_messages", "anthropic",
+                            lambda: _anthropic_resp(500, 20))
+>       agent.run_conversation("hi")
+
+tests/agent/test_context_token_tracking.py:92: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/agent/test_context_token_tracking.py:60: in run_conversation
+    return super().run_conversation(msg, conversation_history=conversation_history, task_id=task_id)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/turn_facade.py:147: in run_conversation
+    result = run_conversation(
+agent/conversation_loop.py:1724: in run_conversation
+    result = _run_conversation_turn(
+agent/conversation_loop.py:1640: in _run_conversation_turn
+    _run_phase(assemble_api_request, agent, s)
+agent/conversation_loop.py:1488: in _run_phase
+    verdict = fn(agent, **{n: extra[n] if n in extra else getattr(state, n) for n in params})
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/turn_request_assembly.py:155: in assemble_api_request
+    evict_stale_outbound_tool_images(api_messages)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api_messages = [{'role': 'system', 'content': 'You are Hermes Agent, built by Nous Research. Be direct: match the length of your repl... dir; entries idle for 24h are pruned)\n\n<!-- End Hermes runtime environment -->'}, {'role': 'user', 'content': 'hi'}]
+
+    def evict_stale_outbound_tool_images(api_messages: List[Dict[str, Any]]) -> int:
+>       raise RuntimeError("sabotage evict_stale_outbound_tool_images")
+E       RuntimeError: sabotage evict_stale_outbound_tool_images
+
+agent/context_compressor_media.py:110: RuntimeError
+----------------------------- Captured stdout call -----------------------------
+🤖 AI Agent initialized with model: test-model (Anthropic native)
+🛠️  Loaded 1 tools: t
+💾 Prompt caching: ENABLED (native Anthropic, 5m TTL)
+📊 Context limit: 256,000 tokens (compress at 75% = 192,000)
+💬 Starting conversation: 'hi'
+------------------------------ Captured log call -------------------------------
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-browser-use' registered browser provider: browser-use
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-browserbase' registered browser provider: browserbase
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-firecrawl' registered browser provider: firecrawl
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered image_gen provider: deepinfra
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered image_gen provider: fal
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'krea' registered image_gen provider: krea
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'meta-ai-image-gen' registered image_gen provider: meta-ai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai' registered image_gen provider: openai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai-codex' registered image_gen provider: openai-codex
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: openrouter
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: nous
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered image_gen provider: xai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered video_gen provider: deepinfra
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered video_gen provider: fal
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered video_gen provider: openrouter
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered video_gen provider: xai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-brave-free' registered web provider: brave-free
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-ddgs' registered web provider: ddgs
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-exa' registered web provider: exa
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-firecrawl' registered web provider: firecrawl
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-keenable' registered web provider: keenable
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-openai-native' registered web provider: openai-native
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-parallel' registered web provider: parallel
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-perplexity' registered web provider: perplexity
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-searxng' registered web provider: searxng
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-tavily' registered web provider: tavily
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-xai' registered web provider: xai
+INFO     hermes_cli.plugins:plugins.py:1499 Plugin discovery complete: 58 found, 53 enabled
+INFO     agent.model_metadata:model_metadata.py:2060 Could not detect context length for model 'test-model' at http://localhost:1234/v1 — defaulting to 256,000 tokens (probe-down). Set model.context_length in config.yaml to override.
+INFO     agent.context_compressor:context_compressor.py:1928 Context compressor initialized: model=test-model context_length=256000 threshold=192000 (75%) target_ratio=20% tail_budget=10000 provider=anthropic base_url=http://localhost:1234/v1
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_113151_950862 model=test-model provider=anthropic platform=unknown history=0 msg='hi'
+_____________________ test_openai_prompt_tokens_unchanged ______________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f7829bac890>
+
+    def test_openai_prompt_tokens_unchanged(monkeypatch):
+        resp = lambda: SimpleNamespace(
+            choices=[SimpleNamespace(index=0, message=SimpleNamespace(
+                role="assistant", content="ok", tool_calls=None, reasoning_content=None,
+            ), finish_reason="stop")],
+            usage=SimpleNamespace(prompt_tokens=5000, completion_tokens=100, total_tokens=5100),
+            model="gpt-4o",
+        )
+        agent = _make_agent(monkeypatch, "chat_completions", "openrouter", resp)
+>       agent.run_conversation("hi")
+
+tests/agent/test_context_token_tracking.py:109: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/agent/test_context_token_tracking.py:60: in run_conversation
+    return super().run_conversation(msg, conversation_history=conversation_history, task_id=task_id)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/turn_facade.py:147: in run_conversation
+    result = run_conversation(
+agent/conversation_loop.py:1724: in run_conversation
+    result = _run_conversation_turn(
+agent/conversation_loop.py:1640: in _run_conversation_turn
+    _run_phase(assemble_api_request, agent, s)
+agent/conversation_loop.py:1488: in _run_phase
+    verdict = fn(agent, **{n: extra[n] if n in extra else getattr(state, n) for n in params})
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/turn_request_assembly.py:155: in assemble_api_request
+    evict_stale_outbound_tool_images(api_messages)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api_messages = [{'role': 'system', 'content': 'You are Hermes Agent, built by Nous Research. Be direct: match the length of your repl... dir; entries idle for 24h are pruned)\n\n<!-- End Hermes runtime environment -->'}, {'role': 'user', 'content': 'hi'}]
+
+    def evict_stale_outbound_tool_images(api_messages: List[Dict[str, Any]]) -> int:
+>       raise RuntimeError("sabotage evict_stale_outbound_tool_images")
+E       RuntimeError: sabotage evict_stale_outbound_tool_images
+
+agent/context_compressor_media.py:110: RuntimeError
+----------------------------- Captured stdout call -----------------------------
+🤖 AI Agent initialized with model: test-model
+🔗 Using custom base URL: http://localhost:1234/v1
+⚠️  Warning: API key appears invalid or missing
+🛠️  Loaded 1 tools: t
+📊 Context limit: 256,000 tokens (compress at 75% = 192,000)
+💬 Starting conversation: 'hi'
+------------------------------ Captured log call -------------------------------
+INFO     run_agent:agent_runtime_helpers.py:1990 OpenAI client created (agent_init, shared=True) thread=MainThread:140154175658880 provider=openrouter base_url=http://localhost:1234/v1 model=test-model
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-browser-use' registered browser provider: browser-use
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-browserbase' registered browser provider: browserbase
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-firecrawl' registered browser provider: firecrawl
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered image_gen provider: deepinfra
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered image_gen provider: fal
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'krea' registered image_gen provider: krea
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'meta-ai-image-gen' registered image_gen provider: meta-ai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai' registered image_gen provider: openai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai-codex' registered image_gen provider: openai-codex
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: openrouter
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: nous
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered image_gen provider: xai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered video_gen provider: deepinfra
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered video_gen provider: fal
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered video_gen provider: openrouter
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered video_gen provider: xai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-brave-free' registered web provider: brave-free
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-ddgs' registered web provider: ddgs
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-exa' registered web provider: exa
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-firecrawl' registered web provider: firecrawl
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-keenable' registered web provider: keenable
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-openai-native' registered web provider: openai-native
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-parallel' registered web provider: parallel
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-perplexity' registered web provider: perplexity
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-searxng' registered web provider: searxng
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-tavily' registered web provider: tavily
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-xai' registered web provider: xai
+INFO     hermes_cli.plugins:plugins.py:1499 Plugin discovery complete: 58 found, 53 enabled
+INFO     agent.model_metadata:model_metadata.py:2060 Could not detect context length for model 'test-model' at http://localhost:1234/v1 — defaulting to 256,000 tokens (probe-down). Set model.context_length in config.yaml to override.
+INFO     agent.context_compressor:context_compressor.py:1928 Context compressor initialized: model=test-model context_length=256000 threshold=192000 (75%) target_ratio=20% tail_budget=10000 provider=openrouter base_url=http://localhost:1234/v1
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_113153_712ae2 model=test-model provider=openrouter platform=unknown history=0 msg='hi'
+__________________________ test_codex_no_cache_fields __________________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f782bf33c90>
+
+    def test_codex_no_cache_fields(monkeypatch):
+        resp = lambda: SimpleNamespace(
+            output=[SimpleNamespace(type="message", content=[SimpleNamespace(type="output_text", text="ok")])],
+            usage=SimpleNamespace(input_tokens=3000, output_tokens=50, total_tokens=3050),
+            status="completed", model="gpt-5-codex",
+        )
+        agent = _make_agent(monkeypatch, "codex_responses", "openai-codex", resp)
+>       agent.run_conversation("hi")
+
+tests/agent/test_context_token_tracking.py:122: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/agent/test_context_token_tracking.py:60: in run_conversation
+    return super().run_conversation(msg, conversation_history=conversation_history, task_id=task_id)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/turn_facade.py:147: in run_conversation
+    result = run_conversation(
+agent/conversation_loop.py:1724: in run_conversation
+    result = _run_conversation_turn(
+agent/conversation_loop.py:1640: in _run_conversation_turn
+    _run_phase(assemble_api_request, agent, s)
+agent/conversation_loop.py:1488: in _run_phase
+    verdict = fn(agent, **{n: extra[n] if n in extra else getattr(state, n) for n in params})
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/turn_request_assembly.py:155: in assemble_api_request
+    evict_stale_outbound_tool_images(api_messages)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api_messages = [{'role': 'system', 'content': 'You are Hermes Agent, built by Nous Research. Be direct: match the length of your repl... dir; entries idle for 24h are pruned)\n\n<!-- End Hermes runtime environment -->'}, {'role': 'user', 'content': 'hi'}]
+
+    def evict_stale_outbound_tool_images(api_messages: List[Dict[str, Any]]) -> int:
+>       raise RuntimeError("sabotage evict_stale_outbound_tool_images")
+E       RuntimeError: sabotage evict_stale_outbound_tool_images
+
+agent/context_compressor_media.py:110: RuntimeError
+----------------------------- Captured stdout call -----------------------------
+🤖 AI Agent initialized with model: test-model
+🔗 Using custom base URL: http://localhost:1234/v1
+⚠️  Warning: API key appears invalid or missing
+🛠️  Loaded 1 tools: t
+📊 Context limit: 256,000 tokens (compress at 75% = 192,000)
+💬 Starting conversation: 'hi'
+------------------------------ Captured log call -------------------------------
+INFO     run_agent:agent_runtime_helpers.py:1990 OpenAI client created (agent_init, shared=True) thread=MainThread:140154175658880 provider=openai-codex base_url=http://localhost:1234/v1 model=test-model
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-browser-use' registered browser provider: browser-use
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-browserbase' registered browser provider: browserbase
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-firecrawl' registered browser provider: firecrawl
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered image_gen provider: deepinfra
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered image_gen provider: fal
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'krea' registered image_gen provider: krea
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'meta-ai-image-gen' registered image_gen provider: meta-ai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai' registered image_gen provider: openai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai-codex' registered image_gen provider: openai-codex
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: openrouter
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: nous
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered image_gen provider: xai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered video_gen provider: deepinfra
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered video_gen provider: fal
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered video_gen provider: openrouter
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered video_gen provider: xai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-brave-free' registered web provider: brave-free
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-ddgs' registered web provider: ddgs
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-exa' registered web provider: exa
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-firecrawl' registered web provider: firecrawl
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-keenable' registered web provider: keenable
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-openai-native' registered web provider: openai-native
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-parallel' registered web provider: parallel
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-perplexity' registered web provider: perplexity
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-searxng' registered web provider: searxng
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-tavily' registered web provider: tavily
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-xai' registered web provider: xai
+INFO     hermes_cli.plugins:plugins.py:1499 Plugin discovery complete: 58 found, 53 enabled
+INFO     agent.context_compressor:context_compressor.py:1928 Context compressor initialized: model=test-model context_length=256000 threshold=192000 (75%) target_ratio=20% tail_budget=10000 provider=openai-codex base_url=http://localhost:1234/v1
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_113153_fd0900 model=test-model provider=openai-codex platform=unknown history=0 msg='hi'
+=========================== short test summary info ============================
+FAILED tests/agent/test_context_token_tracking.py::test_anthropic_cache_read_and_creation_added
+FAILED tests/agent/test_context_token_tracking.py::test_anthropic_no_cache_fields
+FAILED tests/agent/test_context_token_tracking.py::test_openai_prompt_tokens_unchanged
+FAILED tests/agent/test_context_token_tracking.py::test_codex_no_cache_fields
+4 failed in 5.03s
+
+--- tests/agent/test_degenerate_final_recovery.py ---
+FFF..............................................                        [100%]
+=================================== FAILURES ===================================
+_ TestFragmentAfterToolWork.test_fragment_after_tool_work_reprompts_instead_of_exiting _
+
+self = <tests.agent.test_degenerate_final_recovery.TestFragmentAfterToolWork object at 0x7ff1ca9d4b10>
+loop_agent = <run_agent.AIAgent object at 0x7ff1c8bd0510>
+
+    def test_fragment_after_tool_work_reprompts_instead_of_exiting(self, loop_agent):
+>       result = _run(loop_agent, [_tool_round("call_1"), _final("пар"), _final("Workbook built: 3 sheets.")])
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_degenerate_final_recovery.py:82: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/agent/test_degenerate_final_recovery.py:59: in _run
+    return agent.run_conversation("build the workbook")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/turn_facade.py:147: in run_conversation
+    result = run_conversation(
+agent/conversation_loop.py:1724: in run_conversation
+    result = _run_conversation_turn(
+agent/conversation_loop.py:1640: in _run_conversation_turn
+    _run_phase(assemble_api_request, agent, s)
+agent/conversation_loop.py:1488: in _run_phase
+    verdict = fn(agent, **{n: extra[n] if n in extra else getattr(state, n) for n in params})
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/turn_request_assembly.py:155: in assemble_api_request
+    evict_stale_outbound_tool_images(api_messages)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api_messages = [{'role': 'system', 'content': 'You are helpful.'}, {'role': 'user', 'content': 'build the workbook'}]
+
+    def evict_stale_outbound_tool_images(api_messages: List[Dict[str, Any]]) -> int:
+>       raise RuntimeError("sabotage evict_stale_outbound_tool_images")
+E       RuntimeError: sabotage evict_stale_outbound_tool_images
+
+agent/context_compressor_media.py:110: RuntimeError
+------------------------------ Captured log setup ------------------------------
+INFO     run_agent:agent_runtime_helpers.py:1990 OpenAI client created (agent_init, shared=True) thread=MainThread:140676532345728 provider= base_url=https://openrouter.ai/api/v1 model=
+INFO     agent.model_metadata:model_metadata.py:2226 No model id provided for context length resolution — defaulting to 256,000 tokens.
+------------------------------ Captured log call -------------------------------
+WARNING  agent.relay_runtime:relay_runtime.py:328 Hermes Relay plugin initialization failed: initialize() got an unexpected keyword argument 'additional_plugins_toml'
+Traceback (most recent call last):
+  File "$W/sab/agent/relay_runtime.py", line 318, in _activate
+    if not self._initialize(relay):
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "$W/sab/agent/relay_runtime.py", line 346, in _initialize
+    activation = _resolve_plugin_awaitable(relay.plugin.initialize({}, additional_plugins_toml=config_path))
+                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: initialize() got an unexpected keyword argument 'additional_plugins_toml'
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_113152_c7b87c model= provider=unknown platform=unknown history=0 msg='build the workbook'
+_ TestFragmentAfterToolWork.test_persistent_collapse_is_bounded_and_keeps_the_fragment _
+
+self = <tests.agent.test_degenerate_final_recovery.TestFragmentAfterToolWork object at 0x7ff1ca9d54d0>
+loop_agent = <run_agent.AIAgent object at 0x7ff1c8dd2190>
+
+    def test_persistent_collapse_is_bounded_and_keeps_the_fragment(self, loop_agent):
+        """One re-prompt per collapse: the nudge row closes the tool-work window, so a second
+        fragment is the answer — today's behaviour, never a loop."""
+>       result = _run(loop_agent, [_tool_round("call_1"), _final("пар"), _final("?warming up")])
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_degenerate_final_recovery.py:95: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/agent/test_degenerate_final_recovery.py:59: in _run
+    return agent.run_conversation("build the workbook")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/turn_facade.py:147: in run_conversation
+    result = run_conversation(
+agent/conversation_loop.py:1724: in run_conversation
+    result = _run_conversation_turn(
+agent/conversation_loop.py:1640: in _run_conversation_turn
+    _run_phase(assemble_api_request, agent, s)
+agent/conversation_loop.py:1488: in _run_phase
+    verdict = fn(agent, **{n: extra[n] if n in extra else getattr(state, n) for n in params})
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/turn_request_assembly.py:155: in assemble_api_request
+    evict_stale_outbound_tool_images(api_messages)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api_messages = [{'role': 'system', 'content': 'You are helpful.'}, {'role': 'user', 'content': 'build the workbook'}]
+
+    def evict_stale_outbound_tool_images(api_messages: List[Dict[str, Any]]) -> int:
+>       raise RuntimeError("sabotage evict_stale_outbound_tool_images")
+E       RuntimeError: sabotage evict_stale_outbound_tool_images
+
+agent/context_compressor_media.py:110: RuntimeError
+------------------------------ Captured log setup ------------------------------
+INFO     run_agent:agent_runtime_helpers.py:1990 OpenAI client created (agent_init, shared=True) thread=MainThread:140676532345728 provider= base_url=https://openrouter.ai/api/v1 model=
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-browser-use' registered browser provider: browser-use
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-browserbase' registered browser provider: browserbase
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-firecrawl' registered browser provider: firecrawl
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered image_gen provider: deepinfra
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered image_gen provider: fal
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'krea' registered image_gen provider: krea
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'meta-ai-image-gen' registered image_gen provider: meta-ai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai' registered image_gen provider: openai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai-codex' registered image_gen provider: openai-codex
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: openrouter
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: nous
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered image_gen provider: xai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered video_gen provider: deepinfra
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered video_gen provider: fal
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered video_gen provider: openrouter
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered video_gen provider: xai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-brave-free' registered web provider: brave-free
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-ddgs' registered web provider: ddgs
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-exa' registered web provider: exa
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-firecrawl' registered web provider: firecrawl
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-keenable' registered web provider: keenable
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-openai-native' registered web provider: openai-native
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-parallel' registered web provider: parallel
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-perplexity' registered web provider: perplexity
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-searxng' registered web provider: searxng
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-tavily' registered web provider: tavily
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-xai' registered web provider: xai
+INFO     hermes_cli.plugins:plugins.py:1499 Plugin discovery complete: 58 found, 53 enabled
+INFO     agent.model_metadata:model_metadata.py:2226 No model id provided for context length resolution — defaulting to 256,000 tokens.
+------------------------------ Captured log call -------------------------------
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_113154_a1819e model= provider=unknown platform=unknown history=0 msg='build the workbook'
+_ TestFragmentAfterToolWork.test_fragment_without_tool_work_is_a_plain_answer __
+
+self = <tests.agent.test_degenerate_final_recovery.TestFragmentAfterToolWork object at 0x7ff1ca9d5a90>
+loop_agent = <run_agent.AIAgent object at 0x7ff1c08a5bd0>
+
+    def test_fragment_without_tool_work_is_a_plain_answer(self, loop_agent):
+        """A chat-only turn that answers tersely is not a collapse; nothing is re-prompted."""
+>       result = _run(loop_agent, [_final("пар")])
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_degenerate_final_recovery.py:102: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/agent/test_degenerate_final_recovery.py:59: in _run
+    return agent.run_conversation("build the workbook")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/turn_facade.py:147: in run_conversation
+    result = run_conversation(
+agent/conversation_loop.py:1724: in run_conversation
+    result = _run_conversation_turn(
+agent/conversation_loop.py:1640: in _run_conversation_turn
+    _run_phase(assemble_api_request, agent, s)
+agent/conversation_loop.py:1488: in _run_phase
+    verdict = fn(agent, **{n: extra[n] if n in extra else getattr(state, n) for n in params})
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/turn_request_assembly.py:155: in assemble_api_request
+    evict_stale_outbound_tool_images(api_messages)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api_messages = [{'role': 'system', 'content': 'You are helpful.'}, {'role': 'user', 'content': 'build the workbook'}]
+
+    def evict_stale_outbound_tool_images(api_messages: List[Dict[str, Any]]) -> int:
+>       raise RuntimeError("sabotage evict_stale_outbound_tool_images")
+E       RuntimeError: sabotage evict_stale_outbound_tool_images
+
+agent/context_compressor_media.py:110: RuntimeError
+------------------------------ Captured log setup ------------------------------
+INFO     run_agent:agent_runtime_helpers.py:1990 OpenAI client created (agent_init, shared=True) thread=MainThread:140676532345728 provider= base_url=https://openrouter.ai/api/v1 model=
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-browser-use' registered browser provider: browser-use
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-browserbase' registered browser provider: browserbase
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-firecrawl' registered browser provider: firecrawl
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered image_gen provider: deepinfra
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered image_gen provider: fal
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'krea' registered image_gen provider: krea
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'meta-ai-image-gen' registered image_gen provider: meta-ai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai' registered image_gen provider: openai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai-codex' registered image_gen provider: openai-codex
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: openrouter
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: nous
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered image_gen provider: xai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered video_gen provider: deepinfra
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered video_gen provider: fal
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered video_gen provider: openrouter
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered video_gen provider: xai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-brave-free' registered web provider: brave-free
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-ddgs' registered web provider: ddgs
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-exa' registered web provider: exa
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-firecrawl' registered web provider: firecrawl
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-keenable' registered web provider: keenable
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-openai-native' registered web provider: openai-native
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-parallel' registered web provider: parallel
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-perplexity' registered web provider: perplexity
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-searxng' registered web provider: searxng
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-tavily' registered web provider: tavily
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-xai' registered web provider: xai
+INFO     hermes_cli.plugins:plugins.py:1499 Plugin discovery complete: 58 found, 53 enabled
+INFO     agent.model_metadata:model_metadata.py:2226 No model id provided for context length resolution — defaulting to 256,000 tokens.
+------------------------------ Captured log call -------------------------------
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_113154_62df5c model= provider=unknown platform=unknown history=0 msg='build the workbook'
+=========================== short test summary info ============================
+FAILED tests/agent/test_degenerate_final_recovery.py::TestFragmentAfterToolWork::test_fragment_after_tool_work_reprompts_instead_of_exiting
+FAILED tests/agent/test_degenerate_final_recovery.py::TestFragmentAfterToolWork::test_persistent_collapse_is_bounded_and_keeps_the_fragment
+FAILED tests/agent/test_degenerate_final_recovery.py::TestFragmentAfterToolWork::test_fragment_without_tool_work_is_a_plain_answer
+3 failed, 46 passed in 6.06s
+
+--- tests/agent/test_dict_tool_call_args.py ---
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_______________ test_tool_call_validation_accepts_dict_arguments _______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fdb8a1e4250>
+
+    def test_tool_call_validation_accepts_dict_arguments(monkeypatch):
+        from run_agent import AIAgent
+    
+        monkeypatch.setattr("agent.process_bootstrap.OpenAI", lambda **kwargs: _FakeClient())
+        monkeypatch.setattr(
+            "model_tools.get_tool_definitions",
+            lambda *args, **kwargs: [{"function": {"name": "read_file"}}],
+        )
+        monkeypatch.setattr(
+            "model_tools.handle_function_call",
+            lambda name, args, task_id=None, **kwargs: json.dumps({"ok": True, "args": args}),
+        )
+    
+        agent = AIAgent(
+            model="test-model",
+            api_key="test-key",
+            base_url="http://localhost:8080/v1",
+            platform="cli",
+            max_iterations=3,
+            quiet_mode=True,
+            skip_memory=True,
+        )
+        agent._disable_streaming = True
+    
+>       result = agent.run_conversation("read the file")
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_dict_tool_call_args.py:71: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+agent/turn_facade.py:147: in run_conversation
+    result = run_conversation(
+agent/conversation_loop.py:1724: in run_conversation
+    result = _run_conversation_turn(
+agent/conversation_loop.py:1640: in _run_conversation_turn
+    _run_phase(assemble_api_request, agent, s)
+agent/conversation_loop.py:1488: in _run_phase
+    verdict = fn(agent, **{n: extra[n] if n in extra else getattr(state, n) for n in params})
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/turn_request_assembly.py:155: in assemble_api_request
+    evict_stale_outbound_tool_images(api_messages)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api_messages = [{'role': 'system', 'content': 'You are Hermes Agent, built by Nous Research. Be direct: match the length of your repl...es idle for 24h are pruned)\n\n<!-- End Hermes runtime environment -->'}, {'role': 'user', 'content': 'read the file'}]
+
+    def evict_stale_outbound_tool_images(api_messages: List[Dict[str, Any]]) -> int:
+>       raise RuntimeError("sabotage evict_stale_outbound_tool_images")
+E       RuntimeError: sabotage evict_stale_outbound_tool_images
+
+agent/context_compressor_media.py:110: RuntimeError
+------------------------------ Captured log call -------------------------------
+INFO     run_agent:agent_runtime_helpers.py:1990 OpenAI client created (agent_init, shared=True) thread=MainThread:140580941876096 provider= base_url=http://localhost:8080/v1 model=test-model
+INFO     agent.model_metadata:model_metadata.py:2060 Could not detect context length for model 'test-model' at http://localhost:8080/v1 — defaulting to 256,000 tokens (probe-down). Set model.context_length in config.yaml to override.
+WARNING  agent.model_metadata:model_metadata.py:264 Could not determine context length for model 'test-model' (base_url=http://localhost:8080/v1) — falling back to 256,000 tokens. Set model.context_length in config.yaml to override.
+WARNING  agent.relay_runtime:relay_runtime.py:328 Hermes Relay plugin initialization failed: initialize() got an unexpected keyword argument 'additional_plugins_toml'
+Traceback (most recent call last):
+  File "$W/sab/agent/relay_runtime.py", line 318, in _activate
+    if not self._initialize(relay):
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "$W/sab/agent/relay_runtime.py", line 346, in _initialize
+    activation = _resolve_plugin_awaitable(relay.plugin.initialize({}, additional_plugins_toml=config_path))
+                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: initialize() got an unexpected keyword argument 'additional_plugins_toml'
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_113201_fdcbdc model=test-model provider=unknown platform=cli history=0 msg='read the file'
+=========================== short test summary info ============================
+FAILED tests/agent/test_dict_tool_call_args.py::test_tool_call_validation_accepts_dict_arguments
+1 failed in 3.09s
+
+--- tests/agent/test_image_rejection_fallback.py ---
+................F                                                        [100%]
+=================================== FAILURES ===================================
+___________ test_iteration_summary_strips_images_for_rejecting_model ___________
+
+tmp_path = PosixPath('<pytest-tmp>/r-n_41ux1s/pytest-of-<user>/pytest-0/test_iteration_summary_strips_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f9aba324890>
+
+    def test_iteration_summary_strips_images_for_rejecting_model(tmp_path, monkeypatch):
+        """The max-iterations summary hand-builds api_messages and bypasses build_api_request, so
+        it must apply the same per-model strip; history keeps its image."""
+        import copy
+    
+        from agent.chat_completion_helpers import _iteration_summary_api_messages
+        from agent.vision_message_prep import _provider_model_key
+        from run_agent import AIAgent
+    
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        agent = AIAgent(api_key="k", base_url="https://api.groq.com/openai/v1", provider="custom", model="m",
+                        quiet_mode=True, skip_context_files=True, skip_memory=True)
+        agent._cached_system_prompt = "SYS"
+        agent._image_rejecting_models.add(_provider_model_key(agent))
+        history = [
+            {"role": "user", "content": [
+                {"type": "text", "text": "look"},
+                {"type": "image_url", "image_url": {"url": "data:image/png;base64,AAAA"}},
+            ]},
+            {"role": "assistant", "content": "ok"},
+        ]
+        before = copy.deepcopy(history)
+    
+>       out = _iteration_summary_api_messages(agent, history)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_image_rejection_fallback.py:453: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+agent/chat_completion_helpers.py:2258: in _iteration_summary_api_messages
+    evict_stale_outbound_tool_images(api_messages)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api_messages = [{'role': 'system', 'content': 'SYS'}, {'role': 'user', 'content': [{'type': 'text', 'text': 'look'}, {'type': 'image_url', 'image_url': {'url': 'data:image/png;base64,AAAA'}}]}, {'role': 'assistant', 'content': 'ok'}]
+
+    def evict_stale_outbound_tool_images(api_messages: List[Dict[str, Any]]) -> int:
+>       raise RuntimeError("sabotage evict_stale_outbound_tool_images")
+E       RuntimeError: sabotage evict_stale_outbound_tool_images
+
+agent/context_compressor_media.py:110: RuntimeError
+------------------------------ Captured log call -------------------------------
+INFO     run_agent:agent_runtime_helpers.py:1990 OpenAI client created (agent_init, shared=True) thread=MainThread:140302595677056 provider=custom base_url=https://api.groq.com/openai/v1 model=m
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-browser-use' registered browser provider: browser-use
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-browserbase' registered browser provider: browserbase
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-firecrawl' registered browser provider: firecrawl
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered image_gen provider: deepinfra
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered image_gen provider: fal
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'krea' registered image_gen provider: krea
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'meta-ai-image-gen' registered image_gen provider: meta-ai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai' registered image_gen provider: openai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai-codex' registered image_gen provider: openai-codex
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: openrouter
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: nous
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered image_gen provider: xai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered video_gen provider: deepinfra
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered video_gen provider: fal
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered video_gen provider: openrouter
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered video_gen provider: xai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-brave-free' registered web provider: brave-free
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-ddgs' registered web provider: ddgs
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-exa' registered web provider: exa
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-firecrawl' registered web provider: firecrawl
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-keenable' registered web provider: keenable
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-openai-native' registered web provider: openai-native
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-parallel' registered web provider: parallel
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-perplexity' registered web provider: perplexity
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-searxng' registered web provider: searxng
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-tavily' registered web provider: tavily
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-xai' registered web provider: xai
+INFO     hermes_cli.plugins:plugins.py:1499 Plugin discovery complete: 58 found, 53 enabled
+INFO     tools.registry:registry.py:381 check_fn _a2a_tools_available returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_back_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn _browser_cdp_check returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_click_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn _browser_dialog_check returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn is_browser_use_cli_mode returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_navigate_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_press_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_scroll_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_snapshot_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_type_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_vision_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_computer_use_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_cronjob_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_discord_tool_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn _check_feishu returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn _check_ha_available returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_image_generation_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn <lambda> returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_react_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn _check_spotify_available returned False; dependent tools will be unavailable this turn
+WARNING  agent.auxiliary_unavailable:auxiliary_unavailable.py:259 Auxiliary Nous client unavailable: Nous Portal runtime credentials unavailable: Hermes is not logged into Nous Portal. Run `hermes model` to re-authenticate. (code: nous_auth_missing)
+WARNING  agent.auxiliary_client:auxiliary_client.py:2367 Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+WARNING  agent.auxiliary_client:auxiliary_client.py:5012 resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+WARNING  agent.auxiliary_client:auxiliary_client.py:2367 Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+WARNING  agent.auxiliary_client:auxiliary_client.py:5012 resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+INFO     tools.registry:registry.py:381 check_fn check_video_requirements returned False; dependent tools will be unavailable this turn
+INFO     agent.credential_pool:credential_pool.py:2155 credential pool: no available entries (all exhausted or empty)
+INFO     tools.registry:registry.py:381 check_fn check_video_generation_requirements returned False; dependent tools will be unavailable this turn
+WARNING  agent.auxiliary_client:auxiliary_client.py:2367 Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+WARNING  agent.auxiliary_client:auxiliary_client.py:5012 resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+WARNING  agent.auxiliary_client:auxiliary_client.py:2367 Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+WARNING  agent.auxiliary_client:auxiliary_client.py:5012 resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+INFO     tools.registry:registry.py:381 check_fn check_vision_requirements returned False; dependent tools will be unavailable this turn
+INFO     agent.credential_pool:credential_pool.py:2155 credential pool: no available entries (all exhausted or empty)
+INFO     tools.registry:registry.py:381 check_fn check_x_search_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn _check_xai_video_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn _check_yuanbao returned False; dependent tools will be unavailable this turn
+INFO     tools.tool_search:tool_search.py:379 tool_search activated (tier 1): 15 core/visible tools kept, 14 deferred (~4328 tokens), listing full (budget ~4000 tokens)
+INFO     agent.model_metadata:model_metadata.py:2060 Could not detect context length for model 'm' at https://api.groq.com/openai/v1 — defaulting to 256,000 tokens (probe-down). Set model.context_length in config.yaml to override.
+WARNING  agent.model_metadata:model_metadata.py:264 Could not determine context length for model 'm' (base_url=https://api.groq.com/openai/v1) — falling back to 256,000 tokens. Set model.context_length in config.yaml to override.
+=========================== short test summary info ============================
+FAILED tests/agent/test_image_rejection_fallback.py::test_iteration_summary_strips_images_for_rejecting_model
+1 failed, 16 passed in 4.92s
+
+--- tests/agent/test_iteration_summary_reasoning_details.py ---
+FFFF                                                                     [100%]
+=================================== FAILURES ===================================
+____________ test_anthropic_summary_messages_keep_reasoning_details ____________
+
+make_agent = <function make_agent.<locals>._make at 0x7fda4def27a0>
+
+    def test_anthropic_summary_messages_keep_reasoning_details(make_agent):
+        agent = make_agent("https://api.anthropic.com", "anthropic")
+        assert agent.api_mode == "anthropic_messages"
+>       out = _iteration_summary_api_messages(agent, [dict(m) for m in _HISTORY])
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_iteration_summary_reasoning_details.py:37: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+agent/chat_completion_helpers.py:2258: in _iteration_summary_api_messages
+    evict_stale_outbound_tool_images(api_messages)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api_messages = [{'role': 'system', 'content': 'SYS'}, {'role': 'user', 'content': 'q'}, {'role': 'assistant', 'content': '', 'tool_ca...: [{'type': 'thinking', 'thinking': 'x', 'signature': 'SIG'}]}, {'role': 'tool', 'tool_call_id': 't1', 'content': 'r'}]
+
+    def evict_stale_outbound_tool_images(api_messages: List[Dict[str, Any]]) -> int:
+>       raise RuntimeError("sabotage evict_stale_outbound_tool_images")
+E       RuntimeError: sabotage evict_stale_outbound_tool_images
+
+agent/context_compressor_media.py:110: RuntimeError
+------------------------------ Captured log call -------------------------------
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-browser-use' registered browser provider: browser-use
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-browserbase' registered browser provider: browserbase
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-firecrawl' registered browser provider: firecrawl
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered image_gen provider: deepinfra
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered image_gen provider: fal
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'krea' registered image_gen provider: krea
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'meta-ai-image-gen' registered image_gen provider: meta-ai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai' registered image_gen provider: openai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai-codex' registered image_gen provider: openai-codex
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: openrouter
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: nous
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered image_gen provider: xai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered video_gen provider: deepinfra
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered video_gen provider: fal
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered video_gen provider: openrouter
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered video_gen provider: xai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-brave-free' registered web provider: brave-free
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-ddgs' registered web provider: ddgs
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-exa' registered web provider: exa
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-firecrawl' registered web provider: firecrawl
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-keenable' registered web provider: keenable
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-openai-native' registered web provider: openai-native
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-parallel' registered web provider: parallel
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-perplexity' registered web provider: perplexity
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-searxng' registered web provider: searxng
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-tavily' registered web provider: tavily
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-xai' registered web provider: xai
+INFO     hermes_cli.plugins:plugins.py:1499 Plugin discovery complete: 58 found, 53 enabled
+INFO     tools.registry:registry.py:381 check_fn _a2a_tools_available returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_back_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn _browser_cdp_check returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_click_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn _browser_dialog_check returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn is_browser_use_cli_mode returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_navigate_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_press_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_scroll_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_snapshot_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_type_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_vision_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_computer_use_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_cronjob_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_discord_tool_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn _check_feishu returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn _check_ha_available returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_image_generation_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn <lambda> returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_react_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn _check_spotify_available returned False; dependent tools will be unavailable this turn
+WARNING  agent.auxiliary_unavailable:auxiliary_unavailable.py:259 Auxiliary Nous client unavailable: Nous Portal runtime credentials unavailable: Hermes is not logged into Nous Portal. Run `hermes model` to re-authenticate. (code: nous_auth_missing)
+WARNING  agent.auxiliary_client:auxiliary_client.py:2367 Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+WARNING  agent.auxiliary_client:auxiliary_client.py:5012 resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+WARNING  agent.auxiliary_client:auxiliary_client.py:2367 Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+WARNING  agent.auxiliary_client:auxiliary_client.py:5012 resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+INFO     tools.registry:registry.py:381 check_fn check_video_requirements returned False; dependent tools will be unavailable this turn
+INFO     agent.credential_pool:credential_pool.py:2155 credential pool: no available entries (all exhausted or empty)
+INFO     tools.registry:registry.py:381 check_fn check_video_generation_requirements returned False; dependent tools will be unavailable this turn
+WARNING  agent.auxiliary_client:auxiliary_client.py:2367 Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+WARNING  agent.auxiliary_client:auxiliary_client.py:5012 resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+WARNING  agent.auxiliary_client:auxiliary_client.py:2367 Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+WARNING  agent.auxiliary_client:auxiliary_client.py:5012 resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+INFO     tools.registry:registry.py:381 check_fn check_vision_requirements returned False; dependent tools will be unavailable this turn
+INFO     agent.credential_pool:credential_pool.py:2155 credential pool: no available entries (all exhausted or empty)
+INFO     tools.registry:registry.py:381 check_fn check_x_search_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn _check_xai_video_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn _check_yuanbao returned False; dependent tools will be unavailable this turn
+INFO     tools.tool_search:tool_search.py:379 tool_search activated (tier 1): 15 core/visible tools kept, 14 deferred (~4328 tokens), listing full (budget ~4000 tokens)
+WARNING  agent.model_metadata:model_metadata.py:264 Could not determine context length for model 'm' (base_url=https://api.anthropic.com) — falling back to 256,000 tokens. Set model.context_length in config.yaml to override.
+_________ test_strict_chat_route_summary_wire_drops_reasoning_details __________
+
+make_agent = <function make_agent.<locals>._make at 0x7fda4cc77a60>
+
+    def test_strict_chat_route_summary_wire_drops_reasoning_details(make_agent):
+        agent = make_agent("https://api.groq.com/openai/v1", "custom")
+        assert agent.api_mode == "chat_completions"
+>       api_messages = _iteration_summary_api_messages(agent, [dict(m) for m in _HISTORY])
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_iteration_summary_reasoning_details.py:45: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+agent/chat_completion_helpers.py:2258: in _iteration_summary_api_messages
+    evict_stale_outbound_tool_images(api_messages)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api_messages = [{'role': 'system', 'content': 'SYS'}, {'role': 'user', 'content': 'q'}, {'role': 'assistant', 'content': '', 'tool_ca...: [{'type': 'thinking', 'thinking': 'x', 'signature': 'SIG'}]}, {'role': 'tool', 'tool_call_id': 't1', 'content': 'r'}]
+
+    def evict_stale_outbound_tool_images(api_messages: List[Dict[str, Any]]) -> int:
+>       raise RuntimeError("sabotage evict_stale_outbound_tool_images")
+E       RuntimeError: sabotage evict_stale_outbound_tool_images
+
+agent/context_compressor_media.py:110: RuntimeError
+------------------------------ Captured log call -------------------------------
+INFO     run_agent:agent_runtime_helpers.py:1990 OpenAI client created (agent_init, shared=True) thread=MainThread:140575688289152 provider=custom base_url=https://api.groq.com/openai/v1 model=m
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-browser-use' registered browser provider: browser-use
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-browserbase' registered browser provider: browserbase
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-firecrawl' registered browser provider: firecrawl
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered image_gen provider: deepinfra
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered image_gen provider: fal
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'krea' registered image_gen provider: krea
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'meta-ai-image-gen' registered image_gen provider: meta-ai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai' registered image_gen provider: openai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai-codex' registered image_gen provider: openai-codex
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: openrouter
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: nous
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered image_gen provider: xai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered video_gen provider: deepinfra
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered video_gen provider: fal
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered video_gen provider: openrouter
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered video_gen provider: xai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-brave-free' registered web provider: brave-free
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-ddgs' registered web provider: ddgs
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-exa' registered web provider: exa
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-firecrawl' registered web provider: firecrawl
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-keenable' registered web provider: keenable
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-openai-native' registered web provider: openai-native
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-parallel' registered web provider: parallel
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-perplexity' registered web provider: perplexity
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-searxng' registered web provider: searxng
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-tavily' registered web provider: tavily
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-xai' registered web provider: xai
+INFO     hermes_cli.plugins:plugins.py:1499 Plugin discovery complete: 58 found, 53 enabled
+INFO     tools.registry:registry.py:381 check_fn _a2a_tools_available returned False; dependent tools will be unavailable this turn
+INFO     tools.tool_search:tool_search.py:379 tool_search activated (tier 1): 15 core/visible tools kept, 14 deferred (~4328 tokens), listing full (budget ~4000 tokens)
+INFO     agent.model_metadata:model_metadata.py:2060 Could not detect context length for model 'm' at https://api.groq.com/openai/v1 — defaulting to 256,000 tokens (probe-down). Set model.context_length in config.yaml to override.
+WARNING  agent.model_metadata:model_metadata.py:264 Could not determine context length for model 'm' (base_url=https://api.groq.com/openai/v1) — falling back to 256,000 tokens. Set model.context_length in config.yaml to override.
+_ TestSummaryPrefixParity.test_canonicalizes_tool_call_arguments_and_strips_content _
+
+self = <tests.agent.test_iteration_summary_reasoning_details.TestSummaryPrefixParity object at 0x7fda4dfd3050>
+make_agent = <function make_agent.<locals>._make at 0x7fda4782e480>
+
+    def test_canonicalizes_tool_call_arguments_and_strips_content(self, make_agent):
+        agent = make_agent("https://api.groq.com/openai/v1", "custom")
+        history = [
+            {"role": "user", "content": "  q  "},
+            {"role": "assistant", "content": "  thinking out loud  ", "tool_calls": [
+                {"id": "t1", "type": "function",
+                 "function": {"name": "f", "arguments": '{"b": 1, "a": 2}'}},
+            ]},
+            {"role": "tool", "tool_call_id": "t1", "content": "  r  "},
+        ]
+        snapshot = copy.deepcopy(history)
+>       out = _iteration_summary_api_messages(agent, history)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_iteration_summary_reasoning_details.py:68: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+agent/chat_completion_helpers.py:2258: in _iteration_summary_api_messages
+    evict_stale_outbound_tool_images(api_messages)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api_messages = [{'role': 'system', 'content': 'SYS'}, {'role': 'user', 'content': '  q  '}, {'role': 'assistant', 'content': '  think...nction': {'name': 'f', 'arguments': '{"b": 1, "a": 2}'}}]}, {'role': 'tool', 'tool_call_id': 't1', 'content': '  r  '}]
+
+    def evict_stale_outbound_tool_images(api_messages: List[Dict[str, Any]]) -> int:
+>       raise RuntimeError("sabotage evict_stale_outbound_tool_images")
+E       RuntimeError: sabotage evict_stale_outbound_tool_images
+
+agent/context_compressor_media.py:110: RuntimeError
+------------------------------ Captured log call -------------------------------
+INFO     run_agent:agent_runtime_helpers.py:1990 OpenAI client created (agent_init, shared=True) thread=MainThread:140575688289152 provider=custom base_url=https://api.groq.com/openai/v1 model=m
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-browser-use' registered browser provider: browser-use
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-browserbase' registered browser provider: browserbase
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-firecrawl' registered browser provider: firecrawl
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered image_gen provider: deepinfra
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered image_gen provider: fal
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'krea' registered image_gen provider: krea
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'meta-ai-image-gen' registered image_gen provider: meta-ai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai' registered image_gen provider: openai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai-codex' registered image_gen provider: openai-codex
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: openrouter
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: nous
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered image_gen provider: xai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered video_gen provider: deepinfra
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered video_gen provider: fal
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered video_gen provider: openrouter
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered video_gen provider: xai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-brave-free' registered web provider: brave-free
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-ddgs' registered web provider: ddgs
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-exa' registered web provider: exa
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-firecrawl' registered web provider: firecrawl
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-keenable' registered web provider: keenable
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-openai-native' registered web provider: openai-native
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-parallel' registered web provider: parallel
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-perplexity' registered web provider: perplexity
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-searxng' registered web provider: searxng
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-tavily' registered web provider: tavily
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-xai' registered web provider: xai
+INFO     hermes_cli.plugins:plugins.py:1499 Plugin discovery complete: 58 found, 53 enabled
+INFO     tools.registry:registry.py:381 check_fn _a2a_tools_available returned False; dependent tools will be unavailable this turn
+INFO     tools.tool_search:tool_search.py:379 tool_search activated (tier 1): 15 core/visible tools kept, 14 deferred (~4328 tokens), listing full (budget ~4000 tokens)
+INFO     agent.model_metadata:model_metadata.py:2060 Could not detect context length for model 'm' at https://api.groq.com/openai/v1 — defaulting to 256,000 tokens (probe-down). Set model.context_length in config.yaml to override.
+____ TestSummaryPrefixParity.test_strips_lone_surrogates_like_the_send_path ____
+
+self = <tests.agent.test_iteration_summary_reasoning_details.TestSummaryPrefixParity object at 0x7fda4dfd3650>
+make_agent = <function make_agent.<locals>._make at 0x7fda4e1b9760>
+
+    def test_strips_lone_surrogates_like_the_send_path(self, make_agent):
+        agent = make_agent("https://api.groq.com/openai/v1", "custom")
+        history = [
+            {"role": "user", "content": "clip \ud800 paste"},
+            {"role": "assistant", "content": "ok \ud83d", "tool_calls": [
+                {"id": "t1", "type": "function",
+                 "function": {"name": "f", "arguments": '{"k": "v\ud800"}'}},
+            ]},
+            {"role": "tool", "tool_call_id": "t1", "content": "r"},
+            {"role": "user", "content": [{"type": "text", "text": "part \ud800"}]},
+        ]
+        snapshot = copy.deepcopy(history)
+>       out = _iteration_summary_api_messages(agent, history)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_iteration_summary_reasoning_details.py:93: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+agent/chat_completion_helpers.py:2258: in _iteration_summary_api_messages
+    evict_stale_outbound_tool_images(api_messages)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api_messages = [{'role': 'system', 'content': 'SYS'}, {'role': 'user', 'content': 'clip \ud800 paste'}, {'role': 'assistant', 'conten... 'tool', 'tool_call_id': 't1', 'content': 'r'}, {'role': 'user', 'content': [{'type': 'text', 'text': 'part \ud800'}]}]
+
+    def evict_stale_outbound_tool_images(api_messages: List[Dict[str, Any]]) -> int:
+>       raise RuntimeError("sabotage evict_stale_outbound_tool_images")
+E       RuntimeError: sabotage evict_stale_outbound_tool_images
+
+agent/context_compressor_media.py:110: RuntimeError
+------------------------------ Captured log call -------------------------------
+INFO     run_agent:agent_runtime_helpers.py:1990 OpenAI client created (agent_init, shared=True) thread=MainThread:140575688289152 provider=custom base_url=https://api.groq.com/openai/v1 model=m
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-browser-use' registered browser provider: browser-use
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-browserbase' registered browser provider: browserbase
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-firecrawl' registered browser provider: firecrawl
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered image_gen provider: deepinfra
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered image_gen provider: fal
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'krea' registered image_gen provider: krea
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'meta-ai-image-gen' registered image_gen provider: meta-ai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai' registered image_gen provider: openai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai-codex' registered image_gen provider: openai-codex
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: openrouter
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: nous
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered image_gen provider: xai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered video_gen provider: deepinfra
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered video_gen provider: fal
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered video_gen provider: openrouter
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered video_gen provider: xai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-brave-free' registered web provider: brave-free
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-ddgs' registered web provider: ddgs
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-exa' registered web provider: exa
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-firecrawl' registered web provider: firecrawl
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-keenable' registered web provider: keenable
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-openai-native' registered web provider: openai-native
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-parallel' registered web provider: parallel
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-perplexity' registered web provider: perplexity
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-searxng' registered web provider: searxng
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-tavily' registered web provider: tavily
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-xai' registered web provider: xai
+INFO     hermes_cli.plugins:plugins.py:1499 Plugin discovery complete: 58 found, 53 enabled
+INFO     tools.registry:registry.py:381 check_fn _a2a_tools_available returned False; dependent tools will be unavailable this turn
+INFO     tools.tool_search:tool_search.py:379 tool_search activated (tier 1): 15 core/visible tools kept, 14 deferred (~4328 tokens), listing full (budget ~4000 tokens)
+INFO     agent.model_metadata:model_metadata.py:2060 Could not detect context length for model 'm' at https://api.groq.com/openai/v1 — defaulting to 256,000 tokens (probe-down). Set model.context_length in config.yaml to override.
+=========================== short test summary info ============================
+FAILED tests/agent/test_iteration_summary_reasoning_details.py::test_anthropic_summary_messages_keep_reasoning_details
+FAILED tests/agent/test_iteration_summary_reasoning_details.py::test_strict_chat_route_summary_wire_drops_reasoning_details
+FAILED tests/agent/test_iteration_summary_reasoning_details.py::TestSummaryPrefixParity::test_canonicalizes_tool_call_arguments_and_strips_content
+FAILED tests/agent/test_iteration_summary_reasoning_details.py::TestSummaryPrefixParity::test_strips_lone_surrogates_like_the_send_path
+4 failed in 6.54s
+
+--- tests/agent/test_outbound_stale_vision.py ---
+FFFFFFFFFFFF                                                             [100%]
+=================================== FAILURES ===================================
+_ TestOutboundStaleVisionEviction.test_nothing_is_evicted_below_the_provider_limit _
+
+self = <tests.agent.test_outbound_stale_vision.TestOutboundStaleVisionEviction object at 0x7f53ebe5c290>
+
+    def test_nothing_is_evicted_below_the_provider_limit(self):
+        """The common case must be append-only: no rewrite, so the cached prefix survives."""
+        history = _history_with_screenshots(OUTBOUND_IMAGE_LIMIT)
+        outbound = sanitize_api_messages(history)
+>       assert evict_stale_outbound_tool_images(outbound) == 0
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_outbound_stale_vision.py:97: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api_messages = [{'role': 'user', 'content': 'look at these'}, {'role': 'assistant', 'content': None, 'tool_calls': [{'id': 'call_0', ...'call_2', 'type': 'function', 'function': {'name': 'vision_analyze', 'arguments': '{"image_url":"shot2.png"}'}}]}, ...]
+
+    def evict_stale_outbound_tool_images(api_messages: List[Dict[str, Any]]) -> int:
+>       raise RuntimeError("sabotage evict_stale_outbound_tool_images")
+E       RuntimeError: sabotage evict_stale_outbound_tool_images
+
+agent/context_compressor_media.py:110: RuntimeError
+_ TestOutboundStaleVisionEviction.test_eviction_retires_a_batch_once_over_the_limit _
+
+self = <tests.agent.test_outbound_stale_vision.TestOutboundStaleVisionEviction object at 0x7f53eb0a9910>
+
+    def test_eviction_retires_a_batch_once_over_the_limit(self):
+        n = OUTBOUND_IMAGE_LIMIT + 1
+        history = _history_with_screenshots(n)
+        outbound = sanitize_api_messages(history)
+>       pruned = evict_stale_outbound_tool_images(outbound)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_outbound_stale_vision.py:106: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api_messages = [{'role': 'user', 'content': 'look at these'}, {'role': 'assistant', 'content': None, 'tool_calls': [{'id': 'call_0', ...'call_2', 'type': 'function', 'function': {'name': 'vision_analyze', 'arguments': '{"image_url":"shot2.png"}'}}]}, ...]
+
+    def evict_stale_outbound_tool_images(api_messages: List[Dict[str, Any]]) -> int:
+>       raise RuntimeError("sabotage evict_stale_outbound_tool_images")
+E       RuntimeError: sabotage evict_stale_outbound_tool_images
+
+agent/context_compressor_media.py:110: RuntimeError
+__ TestOutboundStaleVisionEviction.test_frontier_holds_between_batch_advances __
+
+self = <tests.agent.test_outbound_stale_vision.TestOutboundStaleVisionEviction object at 0x7f53eb0a9c90>
+
+    def test_frontier_holds_between_batch_advances(self):
+        """The rewritten set must not move on every new image.
+    
+        A frontier that advances one step per image edits an already-cached row each
+        turn, so Anthropic re-writes the entire prompt-cache prefix instead of reading
+        it — orders of magnitude more expensive than the image tokens reclaimed. Asserted
+        over a span wide enough that a per-image frontier cannot pass by coincidence.
+        """
+        from agent.conversation_loop import _clone_message_for_send
+    
+        def surviving(n: int) -> list:
+            msgs = [_clone_message_for_send(m) for m in _history_with_screenshots(n)]
+            evict_stale_outbound_tool_images(msgs)
+            return _image_bearing_tool_ids(msgs)
+    
+        # Span three batch windows: a fixed one-batch retire holds the frontier but stops
+        # enforcing the limit after the first window, which the count assertion catches.
+        span = range(OUTBOUND_IMAGE_FLOOR + 1, OUTBOUND_IMAGE_LIMIT + 3 * IMAGE_EVICTION_BATCH)
+>       kept = [surviving(n) for n in span]
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_outbound_stale_vision.py:139: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/agent/test_outbound_stale_vision.py:139: in <listcomp>
+    kept = [surviving(n) for n in span]
+            ^^^^^^^^^^^^
+tests/agent/test_outbound_stale_vision.py:133: in surviving
+    evict_stale_outbound_tool_images(msgs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api_messages = [{'role': 'user', 'content': 'look at these'}, {'role': 'assistant', 'content': None, 'tool_calls': [{'id': 'call_0', ...'call_2', 'type': 'function', 'function': {'name': 'vision_analyze', 'arguments': '{"image_url":"shot2.png"}'}}]}, ...]
+
+    def evict_stale_outbound_tool_images(api_messages: List[Dict[str, Any]]) -> int:
+>       raise RuntimeError("sabotage evict_stale_outbound_tool_images")
+E       RuntimeError: sabotage evict_stale_outbound_tool_images
+
+agent/context_compressor_media.py:110: RuntimeError
+_ TestOutboundStaleVisionEviction.test_frontier_holds_when_tool_results_carry_several_images _
+
+self = <tests.agent.test_outbound_stale_vision.TestOutboundStaleVisionEviction object at 0x7f53eb0aa010>
+
+    def test_frontier_holds_when_tool_results_carry_several_images(self):
+        """Heavy carriers must still advance the frontier in steps, never per image.
+    
+        With three images per tool result, an eight-carrier batch is wider than the
+        fit window, so a step cut back to exactly ``total - floor`` tracks the total
+        and rewrites a cached row on every turn. The quantum must shrink to the window
+        instead: the frontier may move at most once per (window - floor) turns.
+        """
+        from agent.conversation_loop import _clone_message_for_send
+    
+        def surviving(n: int) -> list:
+            history: list[dict] = [{"role": "user", "content": "start"}]
+            for i in range(n):
+                history.append(
+                    {
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [
+                            {
+                                "id": f"call_{i}",
+                                "type": "function",
+                                "function": {"name": "vision_analyze", "arguments": "{}"},
+                            }
+                        ],
+                    }
+                )
+                history.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": f"call_{i}",
+                        "content": [
+                            {"type": "text", "text": f"shot {i}"},
+                            *[
+                                {"type": "image_url", "image_url": {"url": f"data:image/png;base64,A{i}{k}"}}
+                                for k in range(3)
+                            ],
+                        ],
+                    }
+                )
+            msgs = [_clone_message_for_send(m) for m in history]
+            evict_stale_outbound_tool_images(msgs)
+            assert _outbound_image_blocks(msgs) <= OUTBOUND_IMAGE_LIMIT
+            return _image_bearing_tool_ids(msgs)
+    
+        window = OUTBOUND_IMAGE_LIMIT // 3
+        span = range(window + 1, window + 1 + 4 * (window - OUTBOUND_IMAGE_FLOOR))
+>       frontier = [surviving(n)[0] for n in span]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_outbound_stale_vision.py:194: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/agent/test_outbound_stale_vision.py:194: in <listcomp>
+    frontier = [surviving(n)[0] for n in span]
+                ^^^^^^^^^^^^
+tests/agent/test_outbound_stale_vision.py:188: in surviving
+    evict_stale_outbound_tool_images(msgs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api_messages = [{'role': 'user', 'content': 'start'}, {'role': 'assistant', 'content': None, 'tool_calls': [{'id': 'call_0', 'type': ... 'tool_calls': [{'id': 'call_2', 'type': 'function', 'function': {'name': 'vision_analyze', 'arguments': '{}'}}]}, ...]
+
+    def evict_stale_outbound_tool_images(api_messages: List[Dict[str, Any]]) -> int:
+>       raise RuntimeError("sabotage evict_stale_outbound_tool_images")
+E       RuntimeError: sabotage evict_stale_outbound_tool_images
+
+agent/context_compressor_media.py:110: RuntimeError
+_ TestOutboundStaleVisionEviction.test_multi_image_tool_results_count_as_blocks _
+
+self = <tests.agent.test_outbound_stale_vision.TestOutboundStaleVisionEviction object at 0x7f53eb0aa550>
+
+    def test_multi_image_tool_results_count_as_blocks(self):
+        """The provider limit counts image BLOCKS, not tool messages.
+    
+        Eight tool results carrying three screenshots each are 24 API blocks against a
+        20-block ceiling. Counting one unit per message sees only 8 and evicts nothing.
+        """
+        history: list[dict] = [{"role": "user", "content": "start"}]
+        for i in range(8):
+            history.append(
+                {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [
+                        {
+                            "id": f"call_{i}",
+                            "type": "function",
+                            "function": {
+                                "name": "vision_analyze",
+                                "arguments": "{}",
+                            },
+                        }
+                    ],
+                }
+            )
+            history.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": f"call_{i}",
+                    "content": [
+                        {"type": "text", "text": f"shot {i}"},
+                        *[
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": f"data:image/png;base64,AAA{i}{k}"},
+                            }
+                            for k in range(3)
+                        ],
+                    ],
+                }
+            )
+        outbound = sanitize_api_messages(history)
+>       assert evict_stale_outbound_tool_images(outbound) > 0, (
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            "24 image blocks across 8 messages must trip the 20-block ceiling"
+        )
+
+tests/agent/test_outbound_stale_vision.py:243: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api_messages = [{'role': 'user', 'content': 'start'}, {'role': 'assistant', 'content': None, 'tool_calls': [{'id': 'call_0', 'type': ... 'tool_calls': [{'id': 'call_2', 'type': 'function', 'function': {'name': 'vision_analyze', 'arguments': '{}'}}]}, ...]
+
+    def evict_stale_outbound_tool_images(api_messages: List[Dict[str, Any]]) -> int:
+>       raise RuntimeError("sabotage evict_stale_outbound_tool_images")
+E       RuntimeError: sabotage evict_stale_outbound_tool_images
+
+agent/context_compressor_media.py:110: RuntimeError
+_ TestOutboundStaleVisionEviction.test_user_uploads_count_against_the_ceiling __
+
+self = <tests.agent.test_outbound_stale_vision.TestOutboundStaleVisionEviction object at 0x7f53eb0aab10>
+
+    def test_user_uploads_count_against_the_ceiling(self):
+        """Uploads occupy the provider's budget, so they must force tool eviction.
+    
+        Holding the tool-screenshot count fixed and adding uploads must increase the
+        number of retired screenshots; ignoring uploads leaves the request over the limit.
+        """
+        def outbound_for(n_uploads: int) -> list[dict]:
+            history: list[dict] = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "look"},
+                        *[
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": f"data:image/png;base64,U{k}"},
+                            }
+                            for k in range(n_uploads)
+                        ],
+                    ],
+                }
+            ]
+            for i in range(16):
+                history.extend(_image_tool(i))
+            outbound = sanitize_api_messages(history)
+            evict_stale_outbound_tool_images(outbound)
+            return outbound
+    
+>       assert evict_stale_outbound_tool_images(sanitize_api_messages(
+            [{"role": "user", "content": "start"}]
+            + [m for i in range(16) for m in _image_tool(i)]
+        )) == 0, "16 screenshots alone are under the ceiling"
+
+tests/agent/test_outbound_stale_vision.py:276: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api_messages = [{'role': 'user', 'content': 'start'}, {'role': 'assistant', 'content': None, 'tool_calls': [{'id': 'call_0', 'type': ...'call_2', 'type': 'function', 'function': {'name': 'vision_analyze', 'arguments': '{"image_url":"shot2.png"}'}}]}, ...]
+
+    def evict_stale_outbound_tool_images(api_messages: List[Dict[str, Any]]) -> int:
+>       raise RuntimeError("sabotage evict_stale_outbound_tool_images")
+E       RuntimeError: sabotage evict_stale_outbound_tool_images
+
+agent/context_compressor_media.py:110: RuntimeError
+_ TestOutboundStaleVisionEviction.test_keep_newest_is_a_floor_when_uploads_fill_the_ceiling _
+
+self = <tests.agent.test_outbound_stale_vision.TestOutboundStaleVisionEviction object at 0x7f53eb0a9dd0>
+
+    def test_keep_newest_is_a_floor_when_uploads_fill_the_ceiling(self):
+        """Reserved uploads alone over the limit must not blind the model.
+    
+        Retiring every screenshot cannot bring the request under the ceiling here, so
+        the newest frames have to survive rather than be stripped for no benefit.
+        """
+        history: list[dict] = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "look"},
+                    *[
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/png;base64,U{k}"},
+                        }
+                        for k in range(OUTBOUND_IMAGE_LIMIT + 1)
+                    ],
+                ],
+            }
+        ]
+        for i in range(5):
+            history.extend(_image_tool(i))
+        outbound = sanitize_api_messages(history)
+>       evict_stale_outbound_tool_images(outbound)
+
+tests/agent/test_outbound_stale_vision.py:317: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api_messages = [{'role': 'user', 'content': [{'type': 'text', 'text': 'look'}, {'type': 'image_url', 'image_url': {'url': 'data:image...'call_2', 'type': 'function', 'function': {'name': 'vision_analyze', 'arguments': '{"image_url":"shot2.png"}'}}]}, ...]
+
+    def evict_stale_outbound_tool_images(api_messages: List[Dict[str, Any]]) -> int:
+>       raise RuntimeError("sabotage evict_stale_outbound_tool_images")
+E       RuntimeError: sabotage evict_stale_outbound_tool_images
+
+agent/context_compressor_media.py:110: RuntimeError
+_ TestOutboundStaleVisionEviction.test_a_batch_that_would_blind_the_model_stops_at_the_floor _
+
+self = <tests.agent.test_outbound_stale_vision.TestOutboundStaleVisionEviction object at 0x7f53eb0aaf90>
+
+    def test_a_batch_that_would_blind_the_model_stops_at_the_floor(self):
+        """A whole-batch retire must not take the newest frames when the floor already fits.
+    
+        Fifteen reserved uploads leave five block slots; the sixth screenshot breaches, and
+        one eight-wide batch would retire all six tool frames -- including the one the model
+        was just asked about -- although keeping the newest three already clears the limit.
+        """
+        uploads = OUTBOUND_IMAGE_LIMIT - 5
+        history: list[dict] = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "look"},
+                    *[
+                        {"type": "image_url", "image_url": {"url": f"data:image/png;base64,U{k}"}}
+                        for k in range(uploads)
+                    ],
+                ],
+            }
+        ]
+        for i in range(6):
+            history.extend(_image_tool(i))
+        outbound = sanitize_api_messages(history)
+>       evict_stale_outbound_tool_images(outbound)
+
+tests/agent/test_outbound_stale_vision.py:343: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api_messages = [{'role': 'user', 'content': [{'type': 'text', 'text': 'look'}, {'type': 'image_url', 'image_url': {'url': 'data:image...'call_2', 'type': 'function', 'function': {'name': 'vision_analyze', 'arguments': '{"image_url":"shot2.png"}'}}]}, ...]
+
+    def evict_stale_outbound_tool_images(api_messages: List[Dict[str, Any]]) -> int:
+>       raise RuntimeError("sabotage evict_stale_outbound_tool_images")
+E       RuntimeError: sabotage evict_stale_outbound_tool_images
+
+agent/context_compressor_media.py:110: RuntimeError
+_ TestOutboundStaleVisionEviction.test_byte_pressure_overrides_the_keep_newest_floor _
+
+self = <tests.agent.test_outbound_stale_vision.TestOutboundStaleVisionEviction object at 0x7f53eb0ab290>
+
+    def test_byte_pressure_overrides_the_keep_newest_floor(self):
+        """A hard request-size breach must not be preserved by the floor.
+    
+        Five 5 MB uploads plus three 3 MB tool images serialize to ~34 MB against
+        Anthropic's 32 MB Messages limit
+        (https://platform.claude.com/docs/en/api/overview#request-size-limits).
+        Uploads are never rewritten, so the only way under the ceiling is to retire
+        every removable tool image — the floor may cost a frame, never a 413.
+        """
+        mb = 1024 * 1024
+        hard_limit = 32 * mb
+    
+        def blob(size_mb: float) -> str:
+            return "data:image/jpeg;base64," + "Q" * int(size_mb * mb)
+    
+        history: list[dict] = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "look"},
+                    *[
+                        {"type": "image_url", "image_url": {"url": blob(5.0)}}
+                        for _ in range(5)
+                    ],
+                ],
+            }
+        ]
+        for i in range(3):
+            history.append(
+                {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [
+                        {
+                            "id": f"call_{i}",
+                            "type": "function",
+                            "function": {"name": "vision_analyze", "arguments": "{}"},
+                        }
+                    ],
+                }
+            )
+            history.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": f"call_{i}",
+                    "content": [
+                        {"type": "text", "text": f"shot {i}"},
+                        {"type": "image_url", "image_url": {"url": blob(3.0)}},
+                    ],
+                }
+            )
+    
+        outbound = sanitize_api_messages(history)
+        assert len(json.dumps(outbound, ensure_ascii=False)) > hard_limit, (
+            "fixture must start over the hard limit or it proves nothing"
+        )
+    
+>       evict_stale_outbound_tool_images(outbound)
+
+tests/agent/test_outbound_stale_vision.py:405: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api_messages = [{'role': 'user', 'content': [{'type': 'text', 'text': 'look'}, {'type': 'image_url', 'image_url': {'url': 'data:image... 'tool_calls': [{'id': 'call_2', 'type': 'function', 'function': {'name': 'vision_analyze', 'arguments': '{}'}}]}, ...]
+
+    def evict_stale_outbound_tool_images(api_messages: List[Dict[str, Any]]) -> int:
+>       raise RuntimeError("sabotage evict_stale_outbound_tool_images")
+E       RuntimeError: sabotage evict_stale_outbound_tool_images
+
+agent/context_compressor_media.py:110: RuntimeError
+_ TestOutboundStaleVisionEviction.test_floor_yields_when_eviction_can_fix_the_breach _
+
+self = <tests.agent.test_outbound_stale_vision.TestOutboundStaleVisionEviction object at 0x7f53eb0ab650>
+
+    def test_floor_yields_when_eviction_can_fix_the_breach(self):
+        """The floor shelters only violations that retiring tool content cannot fix.
+    
+        A single `tool_result` carrying 25 image blocks breaches the 20-block ceiling on
+        its own. There are fewer carriers than the floor, so a floor applied
+        unconditionally leaves the request over the limit while evicting nothing.
+        """
+        history: list[dict] = [{"role": "user", "content": "start"}]
+        history.append(
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": "call_0",
+                        "type": "function",
+                        "function": {"name": "vision_analyze", "arguments": "{}"},
+                    }
+                ],
+            }
+        )
+        history.append(
+            {
+                "role": "tool",
+                "tool_call_id": "call_0",
+                "content": [
+                    {"type": "text", "text": "batch"},
+                    *[
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/png;base64,A{k}"},
+                        }
+                        for k in range(OUTBOUND_IMAGE_LIMIT + 5)
+                    ],
+                ],
+            }
+        )
+        outbound = sanitize_api_messages(history)
+        assert _outbound_image_blocks(outbound) > OUTBOUND_IMAGE_LIMIT
+>       evict_stale_outbound_tool_images(outbound)
+
+tests/agent/test_outbound_stale_vision.py:456: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api_messages = [{'role': 'user', 'content': 'start'}, {'role': 'assistant', 'content': None, 'tool_calls': [{'id': 'call_0', 'type': ...: {'url': 'data:image/png;base64,A3'}}, {'type': 'image_url', 'image_url': {'url': 'data:image/png;base64,A4'}}, ...]}]
+
+    def evict_stale_outbound_tool_images(api_messages: List[Dict[str, Any]]) -> int:
+>       raise RuntimeError("sabotage evict_stale_outbound_tool_images")
+E       RuntimeError: sabotage evict_stale_outbound_tool_images
+
+agent/context_compressor_media.py:110: RuntimeError
+___ TestOutboundStaleVisionEviction.test_does_not_rewrite_persisted_history ____
+
+self = <tests.agent.test_outbound_stale_vision.TestOutboundStaleVisionEviction object at 0x7f53eb0abbd0>
+
+    def test_does_not_rewrite_persisted_history(self):
+        from agent.conversation_loop import _clone_message_for_send
+    
+        n = OUTBOUND_IMAGE_LIMIT + 1
+        history = _history_with_screenshots(n)
+        outbound = [_clone_message_for_send(m) for m in history]
+>       evict_stale_outbound_tool_images(outbound)
+
+tests/agent/test_outbound_stale_vision.py:467: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api_messages = [{'role': 'user', 'content': 'look at these'}, {'role': 'assistant', 'content': None, 'tool_calls': [{'id': 'call_0', ...'call_2', 'type': 'function', 'function': {'name': 'vision_analyze', 'arguments': '{"image_url":"shot2.png"}'}}]}, ...]
+
+    def evict_stale_outbound_tool_images(api_messages: List[Dict[str, Any]]) -> int:
+>       raise RuntimeError("sabotage evict_stale_outbound_tool_images")
+E       RuntimeError: sabotage evict_stale_outbound_tool_images
+
+agent/context_compressor_media.py:110: RuntimeError
+______ TestOutboundStaleVisionEviction.test_user_uploads_are_not_evicted _______
+
+self = <tests.agent.test_outbound_stale_vision.TestOutboundStaleVisionEviction object at 0x7f53eb0b8190>
+
+    def test_user_uploads_are_not_evicted(self):
+        history = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "look"},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "data:image/png;base64,USERUPLOAD"},
+                    },
+                ],
+            }
+        ]
+        for i in range(OUTBOUND_IMAGE_LIMIT):
+            history.extend(_image_tool(i))
+        outbound = sanitize_api_messages(history)
+>       assert evict_stale_outbound_tool_images(outbound) > 0
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_outbound_stale_vision.py:489: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api_messages = [{'role': 'user', 'content': [{'type': 'text', 'text': 'look'}, {'type': 'image_url', 'image_url': {'url': 'data:image...'call_2', 'type': 'function', 'function': {'name': 'vision_analyze', 'arguments': '{"image_url":"shot2.png"}'}}]}, ...]
+
+    def evict_stale_outbound_tool_images(api_messages: List[Dict[str, Any]]) -> int:
+>       raise RuntimeError("sabotage evict_stale_outbound_tool_images")
+E       RuntimeError: sabotage evict_stale_outbound_tool_images
+
+agent/context_compressor_media.py:110: RuntimeError
+=========================== short test summary info ============================
+FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_nothing_is_evicted_below_the_provider_limit
+FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_eviction_retires_a_batch_once_over_the_limit
+FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_frontier_holds_between_batch_advances
+FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_frontier_holds_when_tool_results_carry_several_images
+FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_multi_image_tool_results_count_as_blocks
+FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_user_uploads_count_against_the_ceiling
+FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_keep_newest_is_a_floor_when_uploads_fill_the_ceiling
+FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_a_batch_that_would_blind_the_model_stops_at_the_floor
+FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_byte_pressure_overrides_the_keep_newest_floor
+FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_floor_yields_when_eviction_can_fix_the_breach
+FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_does_not_rewrite_persisted_history
+FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_user_uploads_are_not_evicted
+12 failed in 2.85s
+
+=== 6 files with test failures (25 tests failed) ===
+  tests/agent/test_context_token_tracking.py  (4 tests failed)
+  tests/agent/test_degenerate_final_recovery.py  (3 tests failed)
+  tests/agent/test_dict_tool_call_args.py  (1 test failed)
+  tests/agent/test_image_rejection_fallback.py  (1 test failed)
+  tests/agent/test_iteration_summary_reasoning_details.py  (4 tests failed)
+  tests/agent/test_outbound_stale_vision.py  (12 tests failed)

@@ -1,0 +1,19 @@
+#129147 main:   rc=0 conflicted_files=[] cc_hunks=0
+#129147 branch: rc=0 conflicted_files=[] cc_hunks=0
+#118847 main:   rc=1 conflicted_files=[agent/context_compressor.py] cc_hunks=1
+#118847 branch: rc=1 conflicted_files=[agent/context_compressor.py] cc_hunks=1
+#119347 main:   rc=1 conflicted_files=[agent/context_compressor.py] cc_hunks=3
+#119347 branch: rc=1 conflicted_files=[agent/context_compressor.py] cc_hunks=3
+#80636 main:   rc=1 conflicted_files=[agent/context_compressor.py] cc_hunks=1
+#80636 branch: rc=1 conflicted_files=[agent/context_compressor.py agent/context_compressor_media.py] cc_hunks=1
+#80645 main:   rc=1 conflicted_files=[agent/context_compressor.py] cc_hunks=1
+#80645 branch: rc=1 conflicted_files=[agent/context_compressor.py agent/context_compressor_media.py] cc_hunks=1
+#80644 main:   rc=1 conflicted_files=[agent/context_compressor.py] cc_hunks=3
+#80644 branch: rc=1 conflicted_files=[agent/context_compressor.py agent/context_compressor_media.py] cc_hunks=3
+#81074 main:   rc=1 conflicted_files=[agent/context_compressor.py] cc_hunks=5
+#81074 branch: rc=1 conflicted_files=[agent/context_compressor.py agent/context_compressor_media.py] cc_hunks=5
+#81181 main:   rc=1 conflicted_files=[agent/context_compressor.py] cc_hunks=9
+#81181 branch: rc=1 conflicted_files=[agent/context_compressor.py agent/context_compressor_media.py] cc_hunks=9
+#80636 media-commit-alone main:   rc=1 conflicted_files=[agent/context_compressor.py] cc_hunks=1
+#80636 media-commit-alone branch: rc=1 conflicted_files=[agent/context_compressor.py agent/context_compressor_media.py] cc_hunks=1
+branch onto main: rc=0 conflicted_files=[] cc_hunks=0

@@ -1,0 +1,782 @@
+{
+"n78645": {
+"__typename": "Issue",
+"number": 78645,
+"state": "OPEN",
+"closedAt": null,
+"updatedAt": "2026-09-02T10:35:36Z",
+"author": {
+"login": "andrexibiza"
+},
+"title": "Shard agent/context_compressor.py (god-file decomposition)",
+"stateReason": null
+},
+"n78647": {
+"__typename": "Issue",
+"number": 78647,
+"state": "OPEN",
+"closedAt": null,
+"updatedAt": "2026-09-10T00:13:46Z",
+"author": {
+"login": "andrexibiza"
+},
+"title": "Repo-wide godfile eradication: residual 2K tasks after #102117",
+"stateReason": "REOPENED"
+},
+"n80626": {
+"__typename": "PullRequest",
+"number": 80626,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "CONFLICTING",
+"headRefOid": "2b7a1b9780706fe78a007c596e71093cee61592b",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-08-15T22:51:36Z",
+"author": {
+"login": "andrexibiza"
+},
+"title": "refactor(context_compressor): extract text-util leaves into context_compressor_text_utils",
+"baseRefName": "main"
+},
+"n80628": {
+"__typename": "PullRequest",
+"number": 80628,
+"state": "CLOSED",
+"isDraft": false,
+"mergeable": "UNKNOWN",
+"headRefOid": "497dae37b7a01f203da3e7fe09c3e7799c4c5833",
+"closedAt": "2026-09-02T10:06:56Z",
+"mergedAt": null,
+"updatedAt": "2026-09-02T10:06:56Z",
+"author": {
+"login": "andrexibiza"
+},
+"title": "refactor(context_compressor): extract skill-prune/ghost-skill cluster (LB2)",
+"baseRefName": "main"
+},
+"n80634": {
+"__typename": "PullRequest",
+"number": 80634,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "CONFLICTING",
+"headRefOid": "d7596b4301ee42cf267b97f982f3aeda33162454",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-08-15T22:51:27Z",
+"author": {
+"login": "andrexibiza"
+},
+"title": "refactor(context_compressor): extract token-budget estimators into context_compressor_budget (LB3)",
+"baseRefName": "main"
+},
+"n80636": {
+"__typename": "PullRequest",
+"number": 80636,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "CONFLICTING",
+"headRefOid": "5aa1746a288f6401b6b2b28ae3607e99d9b72e74",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-08-15T17:28:55Z",
+"author": {
+"login": "andrexibiza"
+},
+"title": "refactor(context_compressor): extract content/media strip helpers (LB4)",
+"baseRefName": "main"
+},
+"n80644": {
+"__typename": "PullRequest",
+"number": 80644,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "CONFLICTING",
+"headRefOid": "c871197b77b4fbe6cf0059a74161322b5dc02ad2",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-08-31T16:16:36Z",
+"author": {
+"login": "andrexibiza"
+},
+"title": "refactor(context_compressor): extract threshold coercion mixin (LB7)",
+"baseRefName": "main"
+},
+"n80645": {
+"__typename": "PullRequest",
+"number": 80645,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "CONFLICTING",
+"headRefOid": "2ace2a70c00ac818d0759fec406f3735a6f6d8f5",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-08-15T17:28:59Z",
+"author": {
+"login": "andrexibiza"
+},
+"title": "refactor(context_compressor): extract tool-result summarizers (LB5a)",
+"baseRefName": "main"
+},
+"n81074": {
+"__typename": "PullRequest",
+"number": 81074,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "CONFLICTING",
+"headRefOid": "4effdf33967f49f19069c00c5b5348fd8c10539b",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-08-19T17:44:54Z",
+"author": {
+"login": "andrexibiza"
+},
+"title": "refactor(context_compressor): extract durable session guards mixin (LB6)",
+"baseRefName": "main"
+},
+"n81181": {
+"__typename": "PullRequest",
+"number": 81181,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "CONFLICTING",
+"headRefOid": "e40f2db1402cb629dedcff57e656dee439bb51c3",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-08-31T16:16:42Z",
+"author": {
+"login": "andrexibiza"
+},
+"title": "refactor(context_compressor): extract summary kernel and preserve compatibility",
+"baseRefName": "main"
+},
+"n81243": {
+"__typename": "PullRequest",
+"number": 81243,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "CONFLICTING",
+"headRefOid": "cd35efa2e759ca73a17194bac99b2abfcacc25ad",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-08-31T17:00:07Z",
+"author": {
+"login": "andrexibiza"
+},
+"title": "refactor(context_compressor): extract message marker helpers",
+"baseRefName": "main"
+},
+"n82129": {
+"__typename": "PullRequest",
+"number": 82129,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "CONFLICTING",
+"headRefOid": "0b5e9b5840d86ffef587732db811c130145dbaa3",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-08-09T11:11:29Z",
+"author": {
+"login": "kweiss4510-create"
+},
+"title": "feat: integrate agent runtime and prompt diagnostics",
+"baseRefName": "main"
+},
+"n85481": {
+"__typename": "PullRequest",
+"number": 85481,
+"state": "OPEN",
+"isDraft": true,
+"mergeable": "CONFLICTING",
+"headRefOid": "f4b17c32ff9038eb043a47fbf3e5310dcd8a914c",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-08-13T17:34:08Z",
+"author": {
+"login": "pablo-afterlife"
+},
+"title": "feat(compression): cache-aware summarization + thinking-off aux titles",
+"baseRefName": "main"
+},
+"n90771": {
+"__typename": "PullRequest",
+"number": 90771,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "CONFLICTING",
+"headRefOid": "0639b5155e1c4b7ee20b6d25fffa387da6695268",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-08-27T16:30:58Z",
+"author": {
+"login": "bobaba76"
+},
+"title": "feat(agent): allow pre_llm_call hooks to route the answerer model",
+"baseRefName": "main"
+},
+"n90910": {
+"__typename": "PullRequest",
+"number": 90910,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "CONFLICTING",
+"headRefOid": "306f512fe062c7b1a0fba57204395081443f93fe",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-08-21T19:59:25Z",
+"author": {
+"login": "b3nnb"
+},
+"title": "fix: [Architecture] Make observable state proof-carrying from source to side effect (closes #90866)",
+"baseRefName": "main"
+},
+"n104914": {
+"__typename": "PullRequest",
+"number": 104914,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "CONFLICTING",
+"headRefOid": "62bd42ff590c00f52d82707c37d5c200ad9576fe",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-09-19T13:06:19Z",
+"author": {
+"login": "traysh"
+},
+"title": "fix(agent): strip oldest images and retry on provider per-prompt image count limits",
+"baseRefName": "main"
+},
+"n106867": {
+"__typename": "PullRequest",
+"number": 106867,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "MERGEABLE",
+"headRefOid": "ded9a96da59f01c3c5193bb9423ef0064174875a",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-10-01T10:26:01Z",
+"author": {
+"login": "KoNit-K"
+},
+"title": "fix(agent): avoid duplicating unfinished user task across compression handoff",
+"baseRefName": "main"
+},
+"n107532": {
+"__typename": "PullRequest",
+"number": 107532,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "MERGEABLE",
+"headRefOid": "8efd903f29a6873fa36ea4fd415ab195967f74ff",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-10-01T11:25:16Z",
+"author": {
+"login": "KoNit-K"
+},
+"title": "fix(compression): give up auto-compress after timeout ladder is exhausted",
+"baseRefName": "main"
+},
+"n107589": {
+"__typename": "PullRequest",
+"number": 107589,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "MERGEABLE",
+"headRefOid": "168d47f949066e847992e4a9ad555035d55a61f3",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-09-10T19:11:15Z",
+"author": {
+"login": "JoaoMarcos44"
+},
+"title": "fix(compression): guard non-scalar content-part `type` in the two compressor siblings #104840 missed",
+"baseRefName": "main"
+},
+"n110103": {
+"__typename": "PullRequest",
+"number": 110103,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "CONFLICTING",
+"headRefOid": "641134e774747117cda2b2d208f90d130d9b2f64",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-09-13T17:30:16Z",
+"author": {
+"login": "Sahilvishnaliya"
+},
+"title": "compressor: guard non-scalar content-part types in the two unfixed image checks (fixes #107628)",
+"baseRefName": "main"
+},
+"n113887": {
+"__typename": "Issue",
+"number": 113887,
+"state": "CLOSED",
+"closedAt": "2026-09-19T02:08:11Z",
+"updatedAt": "2026-09-19T02:13:20Z",
+"author": {
+"login": "cervantesh"
+},
+"title": "[Wave] Refactor PR triage: superseded/stale (268 rows; corrected 2026-09-18 after maintainer re-verify)",
+"stateReason": "COMPLETED"
+},
+"n118847": {
+"__typename": "PullRequest",
+"number": 118847,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "CONFLICTING",
+"headRefOid": "222e3e26c35281740aa6a76108198f0efd508e1e",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-09-22T06:32:14Z",
+"author": {
+"login": "Baophan00"
+},
+"title": "feat(plugins): add post_compaction hook (#118382)",
+"baseRefName": "main"
+},
+"n119347": {
+"__typename": "PullRequest",
+"number": 119347,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "CONFLICTING",
+"headRefOid": "4a527fc35d8ffb5dec742c85abda9e92d6880bda",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-09-22T18:31:05Z",
+"author": {
+"login": "fangliquanflq"
+},
+"title": "feat(compaction): let plugins filter summaries by current task",
+"baseRefName": "main"
+},
+"n120403": {
+"__typename": "PullRequest",
+"number": 120403,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "MERGEABLE",
+"headRefOid": "473d89fa6658ecce933fddb08aaf74e9c7e2ec5e",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-09-30T00:17:09Z",
+"author": {
+"login": "jonpol01"
+},
+"title": "fix(compaction): recovery pointers name the discovery shape that can reach compacted rows (salvage of #89998)",
+"baseRefName": "main"
+},
+"n125186": {
+"__typename": "Issue",
+"number": 125186,
+"state": "OPEN",
+"closedAt": null,
+"updatedAt": "2026-10-01T02:40:54Z",
+"author": {
+"login": "granolacowboy"
+},
+"title": "Decompose `agent/auxiliary_client.py` (8,251 lines, 325 top-level functions, 92 broad excepts)",
+"stateReason": null
+},
+"n127838": {
+"__typename": "PullRequest",
+"number": 127838,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "MERGEABLE",
+"headRefOid": "b67dc9511f2e9db31678ea8479a7782e28e079ed",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-09-29T13:34:18Z",
+"author": {
+"login": "Iwang-f"
+},
+"title": "refactor(aux): extract exception-classifier cluster into agent/auxiliary_predicates",
+"baseRefName": "main"
+},
+"n129147": {
+"__typename": "PullRequest",
+"number": 129147,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "MERGEABLE",
+"headRefOid": "d912e76a6419062953cebca19d0a41122aa55b49",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-09-30T09:29:59Z",
+"author": {
+"login": "Shenrui-Ma"
+},
+"title": "fix(compression): use Unicode-aware estimates for multimodal text",
+"baseRefName": "main"
+},
+"n42793": {
+"__typename": "PullRequest",
+"number": 42793,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "CONFLICTING",
+"headRefOid": "6717645a19e3bf85d48638c50c8274f88595c153",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-08-10T13:43:50Z",
+"author": {
+"login": "GiuseppeCapaldo93"
+},
+"title": "fix(update): support proxy for managed uv bootstrap",
+"baseRefName": "main"
+},
+"n102117": {
+"__typename": "PullRequest",
+"number": 102117,
+"state": "MERGED",
+"isDraft": false,
+"mergeable": "UNKNOWN",
+"headRefOid": "957710a1194f3107aa2d1e296edba4f33b781749",
+"closedAt": "2026-09-04T12:50:53Z",
+"mergedAt": "2026-09-04T12:50:53Z",
+"updatedAt": "2026-09-07T17:40:06Z",
+"author": {
+"login": "teknium1"
+},
+"title": "refactor: whole-codebase simplification \u2014 \u221234% source LOC, every god file decomposed, zero behavior change",
+"baseRefName": "main"
+},
+"n104920": {
+"__typename": "PullRequest",
+"number": 104920,
+"state": "MERGED",
+"isDraft": false,
+"mergeable": "UNKNOWN",
+"headRefOid": "24f40306a5afe00ffd5326d81007ddcb8b594541",
+"closedAt": "2026-09-07T12:59:09Z",
+"mergedAt": "2026-09-07T12:59:09Z",
+"updatedAt": "2026-09-07T12:59:13Z",
+"author": {
+"login": "teknium1"
+},
+"title": "fix: legacy context engines keep compressing (salvage #104214)",
+"baseRefName": "main"
+},
+"n127373": {
+"__typename": "Issue",
+"number": 127373,
+"state": "OPEN",
+"closedAt": null,
+"updatedAt": "2026-09-29T05:56:31Z",
+"author": {
+"login": "kvnloo"
+},
+"title": "perf(tui): drive pet refresh from pet.changed with a slow backstop",
+"stateReason": null
+},
+"n127374": {
+"__typename": "Issue",
+"number": 127374,
+"state": "OPEN",
+"closedAt": null,
+"updatedAt": "2026-09-29T06:10:30Z",
+"author": {
+"login": "kvnloo"
+},
+"title": "perf(tui): replace steady config mtime RPC polling with a gateway change signal",
+"stateReason": null
+},
+"n127375": {
+"__typename": "Issue",
+"number": 127375,
+"state": "OPEN",
+"closedAt": null,
+"updatedAt": "2026-09-29T05:56:27Z",
+"author": {
+"login": "kvnloo"
+},
+"title": "perf(tui): pause git branch subprocess polling when the status label is hidden",
+"stateReason": null
+},
+"n127332": {
+"__typename": "Issue",
+"number": 127332,
+"state": "OPEN",
+"closedAt": null,
+"updatedAt": "2026-09-29T06:10:32Z",
+"author": {
+"login": "kvnloo"
+},
+"title": "TUI: give the composer a zero-row visual boundary",
+"stateReason": null
+},
+"n127228": {
+"__typename": "Issue",
+"number": 127228,
+"state": "OPEN",
+"closedAt": null,
+"updatedAt": "2026-09-29T05:56:40Z",
+"author": {
+"login": "kvnloo"
+},
+"title": "[Feature]: HUD quicklaunch \u2014 warm summon under 200ms, not a cold Desktop boot",
+"stateReason": null
+},
+"n22200": {
+"__typename": "PullRequest",
+"number": 22200,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "CONFLICTING",
+"headRefOid": "9e210de1ba4a5bbac29e5133456089b9d3cf015b",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-09-13T05:06:08Z",
+"author": {
+"login": "hitken"
+},
+"title": "fix(acp): pass fallback_providers to AIAgent in ACP sessions",
+"baseRefName": "main"
+},
+"n22209": {
+"__typename": "PullRequest",
+"number": 22209,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "CONFLICTING",
+"headRefOid": "38238d60ecab708fba7ae146d4afdcedd2304e14",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-07-13T04:08:03Z",
+"author": {
+"login": "hermes-matekno"
+},
+"title": "feat(gateway): add channel_prompt and auto_skill resolution for WhatsApp adapter",
+"baseRefName": "main"
+},
+"n32761": {
+"__typename": "PullRequest",
+"number": 32761,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "CONFLICTING",
+"headRefOid": "b6f3fb0ca6523ec6f9695ba3d2ea78c3ea2b6181",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-07-13T15:42:59Z",
+"author": {
+"login": "jameslcowan"
+},
+"title": "test(discord): regression guard for typing-indicator 429 handling (#29671)",
+"baseRefName": "main"
+},
+"n56911": {
+"__typename": "PullRequest",
+"number": 56911,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "CONFLICTING",
+"headRefOid": "cafe49769516cfcfa2f5a7d6e904cf69b9d1443d",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-09-29T12:30:04Z",
+"author": {
+"login": "sg-shag"
+},
+"title": "fix(telegram): don't eat trailing space after @botname in _clean_bot_trigger_text",
+"baseRefName": "main"
+},
+"n90888": {
+"__typename": "PullRequest",
+"number": 90888,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "MERGEABLE",
+"headRefOid": "37e6fb627edba6971569dcf58168c615bae0ff9e",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-09-11T23:36:31Z",
+"author": {
+"login": "andrexibiza"
+},
+"title": "fix(mcp-oauth): bind delegated auth-flow teardown to the owning task",
+"baseRefName": "main"
+},
+"n93119": {
+"__typename": "PullRequest",
+"number": 93119,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "CONFLICTING",
+"headRefOid": "51315d657d1f86a02327f737eddcb1c49ee269cd",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-08-23T19:45:20Z",
+"author": {
+"login": "zacharyjleach-stack"
+},
+"title": "Unfork and rebrand as ORION; remove unsafe jailbreak/abliteration skills",
+"baseRefName": "main"
+},
+"n94074": {
+"__typename": "PullRequest",
+"number": 94074,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "CONFLICTING",
+"headRefOid": "f76ae3ccbdffaecfab375d86b0832c69dec7812a",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-08-26T03:12:53Z",
+"author": {
+"login": "salch-cred"
+},
+"title": "fix(desktop): shield math spans closed after an escaped backslash",
+"baseRefName": "main"
+},
+"n96359": {
+"__typename": "PullRequest",
+"number": 96359,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "CONFLICTING",
+"headRefOid": "00b26488964a4e924dace1f429ba10d412132ba5",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-09-23T09:56:47Z",
+"author": {
+"login": "Finn763"
+},
+"title": "fix(telegram): walk hostname A records before the dual-stack connect attempt",
+"baseRefName": "main"
+},
+"n100467": {
+"__typename": "PullRequest",
+"number": 100467,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "CONFLICTING",
+"headRefOid": "ba4e5a83446183d22739f95a2b5d7dc1dba8f1fa",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-09-20T20:20:10Z",
+"author": {
+"login": "JaimeMarques"
+},
+"title": "fix(desktop): follow Bot owner for floating pets",
+"baseRefName": "main"
+},
+"n101882": {
+"__typename": "PullRequest",
+"number": 101882,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "CONFLICTING",
+"headRefOid": "b53eb76b13ad031bb60670b90bb75513a79c17ce",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-09-03T05:30:30Z",
+"author": {
+"login": "Afinagen"
+},
+"title": "feat(agent): synchronize Orca and Hermes Codex accounts",
+"baseRefName": "main"
+},
+"n110342": {
+"__typename": "PullRequest",
+"number": 110342,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "MERGEABLE",
+"headRefOid": "c32104c87e1a01d224fae42c587debadcda668bb",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-09-17T23:06:21Z",
+"author": {
+"login": "airabbi-Jerry"
+},
+"title": "test(kanban): verify single-writer PR recovery",
+"baseRefName": "main"
+},
+"n112391": {
+"__typename": "PullRequest",
+"number": 112391,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "MERGEABLE",
+"headRefOid": "f7a06ae6ce228a56f48d8a968dd9f5ceb70606d0",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-09-22T08:51:27Z",
+"author": {
+"login": "JaimeMarques"
+},
+"title": "fix(doctor): large-DB advisory matches effective sessions.auto_prune (#83933)",
+"baseRefName": "main"
+},
+"n114731": {
+"__typename": "PullRequest",
+"number": 114731,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "CONFLICTING",
+"headRefOid": "9c32504117aed84ba6947640b1073618520a62c0",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-09-18T07:08:02Z",
+"author": {
+"login": "batumilove"
+},
+"title": "fix(honcho-monitor): skip spark-goat chat probe when pipeline does not route to it",
+"baseRefName": "main"
+},
+"n120375": {
+"__typename": "PullRequest",
+"number": 120375,
+"state": "OPEN",
+"isDraft": true,
+"mergeable": "CONFLICTING",
+"headRefOid": "b81354460ab1769dbaf605b59abc644ce338dc55",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-09-23T15:43:00Z",
+"author": {
+"login": "ssxi341-alt"
+},
+"title": "chore(sync): snapshot local working state (v0.21.3) onto June-2026 upstream baseline",
+"baseRefName": "main"
+},
+"n126874": {
+"__typename": "PullRequest",
+"number": 126874,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "UNKNOWN",
+"headRefOid": "c46d2809820b8df92ef7b9591465415f7b4da71a",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-09-28T20:13:53Z",
+"author": {
+"login": "auroracapital"
+},
+"title": "fix: restore guard symbols and count fleet bots in slack hops",
+"baseRefName": "main"
+},
+"n130634": {
+"__typename": "PullRequest",
+"number": 130634,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "MERGEABLE",
+"headRefOid": "efb88e4601d45b340c449c97cc8b57db880e04a9",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-10-01T16:01:11Z",
+"author": {
+"login": "Cyrene2008"
+},
+"title": "feat: dashboard zh localization, model routing controls, and native audio handling",
+"baseRefName": "main"
+}
+}

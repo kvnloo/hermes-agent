@@ -1,0 +1,118 @@
+▶ not activated — using HERMES_PYTHON: <hermes-home>/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~16 tests) under ['tests/hermes_cli/test_shared_metrics_loop.py']; running with -j 2
+[100.0% |    16/~16 | ✓15 | ✗ 1] ✗ tests/hermes_cli/test_shared_metrics_loop.py (15✓ 1✗, 15.7s)
+
+  ╔╍ Failed: tests/hermes_cli/test_shared_metrics_loop.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║             ("supermemory", "failed", "lt_100ms"): 1,
+  ║             ("plugin", "timed_out", "250ms_to_500ms"): 1,
+  ║             ("plugin", "skipped", "lt_100ms"): 1,
+  ║         }
+  ║ E       AssertionError: assert {('mem0', 'em...0ms'): 1, ...} == {('honcho', '...0ms'): 1, ...}
+  ║ E         
+  ║ E         Omitting 2 identical items, use -vv to show
+  ║ E         Left contains 3 more items:
+  ║ E         {('honcho', 'success', '100ms_to_250ms'): 1,
+  ║ E          ('mem0', 'empty', '100ms_to_250ms'): 1,
+  ║ E          ('supermemory', 'failed', '100ms_to_250ms'): 1}
+  ║ E         Right contains 3 more items:...
+  ║ E         
+  ║ E         ...Full output truncated (4 lines hidden), use '-vv' to show
+  ║ 
+  ║ tests/hermes_cli/test_shared_metrics_loop.py:126: AssertionError
+  ║ ------------------------------ Captured log call -------------------------------
+  ║ WARNING  agent.relay_runtime:relay_runtime.py:328 Hermes Relay plugin initialization failed: '_Relay' object has no attribute 'plugin'
+  ║ Traceback (most recent call last):
+  ║   File "$ARTIFACTS/promotion-readiness-2026-10-01/wt/stfix3/memory-prefetch-metric/agent/relay_runtime.py", line 318, in _activate
+  ║     if not self._initialize(relay):
+  ║            ^^^^^^^^^^^^^^^^^^^^^^^
+  ║   File "$ARTIFACTS/promotion-readiness-2026-10-01/wt/stfix3/memory-prefetch-metric/agent/relay_runtime.py", line 346, in _initialize
+  ║     activation = _resolve_plugin_awaitable(relay.plugin.initialize({}, additional_plugins_toml=config_path))
+  ║                                            ^^^^^^^^^^^^
+  ║ AttributeError: '_Relay' object has no attribute 'plugin'
+  ║ WARNING  agent.memory_manager:memory_manager.py:488 Memory provider 'acme-private-memory' prefetch timed out after 0.3s; skipping it until the stuck call returns
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited
+  ║ 1 failed, 15 passed in 6.98s
+  ║
+  ║  Repro: python -m pytest tests/hermes_cli/test_shared_metrics_loop.py -q
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 15.7s (2 workers) ===
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 15.7s  (runner wall: 15.7s, parallelism: 2x)
+  P50: 15.69s  P90: 15.69s  P95: 15.69s  P99: 15.69s  Max: 15.69s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+     15.69s  tests/hermes_cli/test_shared_metrics_loop.py
+
+=== Failure output ===
+
+--- tests/hermes_cli/test_shared_metrics_loop.py ---
+..F.............                                                         [100%]
+=================================== FAILURES ===================================
+____ test_external_prefetch_records_each_exit_with_how_long_the_turn_waited ____
+
+home = PosixPath('/var/tmp/hermes-pytest-1000/r-2n3rjysb/pytest-of-kvn/pytest-0/test_external_prefetch_records0/hermes-home')
+
+    def test_external_prefetch_records_each_exit_with_how_long_the_turn_waited(home):
+        from agent.memory_manager import MemoryManager
+    
+        release = threading.Event()
+        hung = _PrefetchProvider("acme-private-memory", lambda: release.wait(10) and "late")
+        manager = MemoryManager(external_prefetch_timeout=0.3)
+        manager._providers = [
+            _PrefetchProvider("honcho", lambda: "- prefers tabs"),
+            _PrefetchProvider("mem0", lambda: "  "),
+            _PrefetchProvider("supermemory", lambda: _raise()),
+            hung,
+        ]
+        assert manager.prefetch_all("what do I prefer?") == "- prefers tabs"
+        manager._providers = [hung]
+        assert manager.prefetch_all("and now?") == ""  # the first call is still stuck: not asked again
+        release.set()
+        manager._external_prefetch_threads["acme-private-memory"].join(5)  # its late return adds no row
+    
+        rows = _rows(home, "hermes.memory.prefetch.count")
+>       assert {(d["provider"], d["outcome"], d["latency_bucket"]): v for d, v in rows} == {
+            ("honcho", "success", "lt_100ms"): 1,
+            ("mem0", "empty", "lt_100ms"): 1,
+            ("supermemory", "failed", "lt_100ms"): 1,
+            ("plugin", "timed_out", "250ms_to_500ms"): 1,
+            ("plugin", "skipped", "lt_100ms"): 1,
+        }
+E       AssertionError: assert {('mem0', 'em...0ms'): 1, ...} == {('honcho', '...0ms'): 1, ...}
+E         
+E         Omitting 2 identical items, use -vv to show
+E         Left contains 3 more items:
+E         {('honcho', 'success', '100ms_to_250ms'): 1,
+E          ('mem0', 'empty', '100ms_to_250ms'): 1,
+E          ('supermemory', 'failed', '100ms_to_250ms'): 1}
+E         Right contains 3 more items:...
+E         
+E         ...Full output truncated (4 lines hidden), use '-vv' to show
+
+tests/hermes_cli/test_shared_metrics_loop.py:126: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  agent.relay_runtime:relay_runtime.py:328 Hermes Relay plugin initialization failed: '_Relay' object has no attribute 'plugin'
+Traceback (most recent call last):
+  File "$ARTIFACTS/promotion-readiness-2026-10-01/wt/stfix3/memory-prefetch-metric/agent/relay_runtime.py", line 318, in _activate
+    if not self._initialize(relay):
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "$ARTIFACTS/promotion-readiness-2026-10-01/wt/stfix3/memory-prefetch-metric/agent/relay_runtime.py", line 346, in _initialize
+    activation = _resolve_plugin_awaitable(relay.plugin.initialize({}, additional_plugins_toml=config_path))
+                                           ^^^^^^^^^^^^
+AttributeError: '_Relay' object has no attribute 'plugin'
+WARNING  agent.memory_manager:memory_manager.py:488 Memory provider 'acme-private-memory' prefetch timed out after 0.3s; skipping it until the stuck call returns
+=========================== short test summary info ============================
+FAILED tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited
+1 failed, 15 passed in 6.98s
+
+=== 1 file with test failures (1 test failed) ===
+  tests/hermes_cli/test_shared_metrics_loop.py  (1 test failed)

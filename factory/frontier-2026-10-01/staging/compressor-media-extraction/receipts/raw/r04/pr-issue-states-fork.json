@@ -1,0 +1,130 @@
+{
+"n69": {
+"__typename": "PullRequest",
+"number": 69,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "MERGEABLE",
+"headRefOid": "c13f5f0044c001c76adf5d905414903f71cbadc6",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-09-16T01:30:25Z",
+"author": {
+"login": "kvnloo"
+},
+"title": "docs(state-db): sidecars/locks + PASSIVE doctor + NFS/ledger honesty",
+"baseRefName": "staging"
+},
+"n70": {
+"__typename": "PullRequest",
+"number": 70,
+"state": "OPEN",
+"isDraft": false,
+"mergeable": "MERGEABLE",
+"headRefOid": "8e4e1afbafc1f4fcbaa614bffca42b9f762cd6b2",
+"closedAt": null,
+"mergedAt": null,
+"updatedAt": "2026-09-16T01:22:16Z",
+"author": {
+"login": "kvnloo"
+},
+"title": "fix(doctor): tracked state.db connects + WAL PASSIVE honesty",
+"baseRefName": "staging"
+},
+"n402": {
+"__typename": "Issue",
+"number": 402,
+"state": "CLOSED",
+"closedAt": "2026-10-01T07:32:29Z",
+"updatedAt": "2026-10-01T07:32:29Z",
+"author": {
+"login": "kvnloo"
+},
+"title": "[staged wave] Salvage wave: 9 open issues, each with one A/B-verified carrier among the competing PRs",
+"stateReason": "COMPLETED"
+},
+"n403": {
+"__typename": "Issue",
+"number": 403,
+"state": "CLOSED",
+"closedAt": "2026-10-01T07:32:31Z",
+"updatedAt": "2026-10-01T07:32:31Z",
+"author": {
+"login": "kvnloo"
+},
+"title": "[staged wave] Close wave: agent, gateway and tools PRs superseded by 2026-09-15\u219230 landings (20 rows)",
+"stateReason": "COMPLETED"
+},
+"n404": {
+"__typename": "Issue",
+"number": 404,
+"state": "OPEN",
+"closedAt": null,
+"updatedAt": "2026-10-01T08:11:50Z",
+"author": {
+"login": "kvnloo"
+},
+"title": "[staged PRs] 39 reproved branches ready for manual upstream promotion",
+"stateReason": null
+},
+"n407": {
+"__typename": "Issue",
+"number": 407,
+"state": "OPEN",
+"closedAt": null,
+"updatedAt": "2026-10-01T16:03:56Z",
+"author": {
+"login": "kvnloo"
+},
+"title": "[staged] evals/postmortem: count zero-hit and usage-unavailable calls in logcalls (and the two live cache probes)",
+"stateReason": null
+},
+"n408": {
+"__typename": "Issue",
+"number": 408,
+"state": "OPEN",
+"closedAt": null,
+"updatedAt": "2026-10-01T16:03:58Z",
+"author": {
+"login": "kvnloo"
+},
+"title": "[staged] Document post_api_request's first_chunk_at, context_length and moa_references",
+"stateReason": null
+},
+"n409": {
+"__typename": "Issue",
+"number": 409,
+"state": "OPEN",
+"closedAt": null,
+"updatedAt": "2026-10-01T16:04:00Z",
+"author": {
+"login": "kvnloo"
+},
+"title": "[staged] Capability-gated computer-use capture-mode projection, with Linux desktop evidence first",
+"stateReason": null
+},
+"n410": {
+"__typename": "Issue",
+"number": 410,
+"state": "OPEN",
+"closedAt": null,
+"updatedAt": "2026-10-01T16:04:02Z",
+"author": {
+"login": "kvnloo"
+},
+"title": "[staged] Same-turn duplicate-call elimination keeps order-significant computer_use key presses",
+"stateReason": null
+},
+"n411": {
+"__typename": "Issue",
+"number": 411,
+"state": "OPEN",
+"closedAt": null,
+"updatedAt": "2026-10-01T16:04:04Z",
+"author": {
+"login": "kvnloo"
+},
+"title": "[staged] Prefix-stability journeys for uncovered surfaces: messaging gateway, api_server /v1/runs, ACP (first slice); relay connector, A2A, /goal queued",
+"stateReason": null
+}
+}

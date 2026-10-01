@@ -1,0 +1,13 @@
+checked_at 2026-10-01T16:28Z
+upstream main: 44a1ce9724502b9c692faaef00af3054bf11f1a6	refs/heads/main
+workflow commits 040b6df2c4..44a1ce9724 under .github/: 0
+workflow files on 44a1ce9724: 52
+fork refs (staged/*, staging, staging/*):
+3d64efc27d refs/heads/staged/cu-capture-mode-projection
+2f79b549ef refs/heads/staged/cu-repeat-input-dedup
+9225807160 refs/heads/staged/observer-hooks-doc-drift
+dd4dd10611 refs/heads/staged/postmortem-logcalls-zero-hit
+ddf4748d31 refs/heads/staged/prefix-parity-journeys
+28790e597c refs/heads/staging
+staged/memory-prefetch-metric on fork: 0
+local staging ref: 569ad4d84b0f9888ea2598c2a8ea416b2c75bad6

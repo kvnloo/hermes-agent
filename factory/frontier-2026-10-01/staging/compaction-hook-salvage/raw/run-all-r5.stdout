@@ -1,0 +1,49 @@
+== F05 r5 2026-10-01T16:29:37Z
+base [('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok')]
+foldin [('contract', 7, 0, 'ok'), ('contract', 7, 0, 'ok'), ('contract', 7, 0, 'ok')]
+foldin-ref [('contract', 7, 0, 'ok'), ('contract', 7, 0, 'ok'), ('contract', 7, 0, 'ok')]
+r4-offer [('contract', 5, 2, 'ok'), ('contract', 5, 2, 'ok'), ('contract', 5, 2, 'ok')]
+foldin-x127058 [('contract', 7, 0, 'ok'), ('contract', 7, 0, 'ok'), ('contract', 7, 0, 'ok')]
+c53806-handport [('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok'), ('adapted', 3, 4, 'ok'), ('adapted', 3, 4, 'ok'), ('adapted', 3, 4, 'ok')]
+c53806-handport-pre [('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok'), ('adapted', 0, 7, 'ok'), ('adapted', 0, 7, 'ok'), ('adapted', 0, 7, 'ok')]
+c93391-code [('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok'), ('adapted', 0, 7, 'ok'), ('adapted', 0, 7, 'ok'), ('adapted', 0, 7, 'ok')]
+c118847-handport [('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok'), ('adapted', 1, 6, 'ok'), ('adapted', 1, 6, 'ok'), ('adapted', 1, 6, 'ok')]
+c125881-merge [('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok'), ('adapted', 1, 6, 'ok'), ('adapted', 1, 6, 'ok'), ('adapted', 1, 6, 'ok')]
+== F05 r5s 2026-10-01T16:45:52Z
+neg-prefire [('contract', 1, 6, 'ok'), ('contract', 1, 6, 'ok'), ('contract', 1, 6, 'ok')]
+neg-infence [('contract', 5, 2, 'ok'), ('contract', 5, 2, 'ok'), ('contract', 5, 2, 'ok')]
+neg-nodefer [('contract', 5, 2, 'ok'), ('contract', 5, 2, 'ok'), ('contract', 5, 2, 'ok')]
+sab-h1-stage-call [('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok')]
+sab-h2-finally-call [('contract', 5, 2, 'ok'), ('contract', 5, 2, 'ok'), ('contract', 5, 2, 'ok')]
+sab-h3-tokens-before [('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok')]
+sab-h4-tokens-after [('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok'), ('contract', 4, 3, 'ok')]
+sab-h5-valid-hooks [('contract', 7, 0, 'ok'), ('contract', 7, 0, 'ok'), ('contract', 7, 0, 'ok')]
+sab-h6-bounded [('contract', 7, 0, 'ok'), ('contract', 7, 0, 'ok'), ('contract', 7, 0, 'ok')]
+sab-h7-payload-and-docs [('contract', 7, 0, 'ok'), ('contract', 7, 0, 'ok'), ('contract', 7, 0, 'ok')]
+sab-h8-start-call [('contract', 7, 0, 'ok'), ('contract', 7, 0, 'ok'), ('contract', 7, 0, 'ok')]
+sab-h9-deferred-chain [('contract', 6, 1, 'ok'), ('contract', 6, 1, 'ok'), ('contract', 6, 1, 'ok')]
+== E12 r5 2026-10-01T16:58:01Z
+done base
+done foldin
+done foldin-x127058
+== OWN r5 2026-10-01T17:06:56Z
+base-rotation_state === Summary: 1 files, 40 tests passed, 0 failed (100% complete) in 77.5s (2 workers) ===
+c93391-code === Summary: 1 files, 43 tests passed, 0 failed (100% complete) in 62.5s (2 workers) ===
+c118847-handport === Summary: 1 files, 7 tests passed, 0 failed (100% complete) in 1.0s (2 workers) ===
+c125881-merge === Summary: 1 files, 9 tests passed, 0 failed (100% complete) in 1.0s (2 workers) ===
+base-c53806-own === Summary: 1 files, 0 tests passed, 3 failed (100% complete) in 13.2s (2 workers) ===
+c53806-handport-own === Summary: 1 files, 0 tests passed, 3 failed (100% complete) in 12.2s (2 workers) ===
+foldin-own === Summary: 1 files, 0 tests passed, 3 failed (100% complete) in 12.7s (2 workers) ===
+base-c53806-own-adapted === Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 12.1s (2 workers) ===
+c53806-handport-own-adapted === Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 6.1s (2 workers) ===
+foldin-own-adapted === Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 11.5s (2 workers) ===
+own-r5 done
+== MRG r5 2026-10-01T17:10:38Z
+x127058-contract === Summary: 1 files, 7 tests passed, 0 failed (100% complete) in 7.5s (2 workers) ===
+x127058-118120 === Summary: 1 files, 1 tests passed, 0 failed (100% complete) in 9.9s (2 workers) ===
+x127058-neighbours === Summary: 4 files, 92 tests passed, 0 failed (100% complete) in 64.2s (2 workers) ===
+s5x127058-contract === Summary: 1 files, 4 tests passed, 3 failed (100% complete) in 15.5s (2 workers) ===
+s5x127058-118120 === Summary: 1 files, 1 tests passed, 0 failed (100% complete) in 10.8s (2 workers) ===
+s5x127058-neighbours === Summary: 4 files, 92 tests passed, 0 failed (100% complete) in 60.1s (2 workers) ===
+mrg-r5 done
+== done 2026-10-01T17:13:35Z

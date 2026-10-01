@@ -1,0 +1,307 @@
+{
+  "schema": "xf.receipt.v1",
+  "id": "G-guards/r20261001-03",
+  "tier": "T1",
+  "label_default": "OBSERVED",
+  "spec": {
+    "path": "specs/G-guards.toml",
+    "rev": 3,
+    "sha256": "6daa861d85f55aad9755086d250647c6e50890cba0a0dfa7698dfa7ee14e6482",
+    "prereg_commit": null,
+    "prereg_recorded_at": "2026-10-01T11:43:41Z",
+    "decision_rule_sha": "82bafd574d513cf2c55b66bd8d93e848ee2ba7c1a968ffb03debb1ad6f27abf4",
+    "decision_rule": "EQUAL iff replay_gates verdict maps are identical across arms with 11/11 PASS on head, and the four ab_checkpoint_preflight scenario summaries are identical across arms.",
+    "prereg_note": "spec written and hashed before the run started (specs/PREREG.json); not committed to claude/ledger because xf is not built yet"
+  },
+  "runner_revision": {
+    "driver": {
+      "path": "harness/run_proofs.py",
+      "sha256": "375e77549fb1d14f7c5de0d512838ed4d38b9f342e837f3948d84a3d4421f772"
+    },
+    "test_runner": "scripts/run_tests.sh blob 8fcc4294f4@e8c97320ac",
+    "receipt_writer": {
+      "path": "harness/write_receipts.py",
+      "sha256": "ab4e50c5bfab21ceaa47f744f40088ec2eb1adba087870e82c351dc04f2fda3f"
+    }
+  },
+  "issue": "kvnloo/hermes-agent#322",
+  "origin_refs": [
+    "NousResearch/hermes-agent#526",
+    "NousResearch/hermes-agent#1147",
+    "NousResearch/hermes-agent#528"
+  ],
+  "staging": "anthropic-context-editing",
+  "base_revision": "e8c97320ac8691d4de92af49f98459f9ef9ddb08",
+  "arms": {
+    "base": {
+      "commit": "e8c97320ac8691d4de92af49f98459f9ef9ddb08",
+      "tree": "06b5f753858650bab9c2e1dbd0f9c62050b2b790"
+    },
+    "head": {
+      "commit": "61effa4dd8a0b81c8eda50a6119239b2aa19e52a",
+      "tree": "134b78fcb5493c46553d350c511251237204a5d9",
+      "parent": "e8c97320ac8691d4de92af49f98459f9ef9ddb08",
+      "merge": "clean (one commit on base)"
+    }
+  },
+  "head_revision": "61effa4dd8a0b81c8eda50a6119239b2aa19e52a",
+  "changed_files": [
+    "agent/agent_init.py",
+    "agent/anthropic_adapter.py",
+    "agent/anthropic_context_editing.py",
+    "agent/chat_completion_helpers.py",
+    "agent/transports/anthropic.py",
+    "agent/turn_recovery.py",
+    "cli-config.yaml.example",
+    "gateway/run.py",
+    "hermes_cli/config_defaults.py",
+    "tests/agent/test_anthropic_context_editing.py",
+    "tui_gateway/session_compression.py",
+    "website/docs/developer-guide/context-compression-and-caching.md",
+    "website/docs/user-guide/features/computer-use.md"
+  ],
+  "policy_revision": {
+    "AGENTS.md": "65aa3e61bcba610da21279a17385671263be39e9@e8c97320ac",
+    "CONTRIBUTING.md": "b0baa59b5057c204b3c09d3dd170c0955cfdb39c@e8c97320ac",
+    ".github/PULL_REQUEST_TEMPLATE.md": "5496eb534fef9d08c091b8186e7edd1b5cf356db@e8c97320ac",
+    "factory": "FACTORY.md sha256 7726ba18b43a9367f91d7f70c3aaefb96a9863761ddf71225c61c26a30d688d4 (frontier-2026-10-01)",
+    "protocol": "PROTOCOL.md sha256 182e3fbae771d7219497833b3f9d6f7ed385d70abace8736559026e4e60b90d4 (promotion-readiness-2026-10-01)"
+  },
+  "env": {
+    "host": "<local-host>",
+    "host_note": "name withheld, as F09 strips host facts from system prompts",
+    "os": "Linux x86_64",
+    "python": "3.11.14 (test venv, passed as HERMES_PYTHON)",
+    "anthropic_sdk": "0.87.0",
+    "httpx": "0.28.1",
+    "pydantic": "2.13.4",
+    "venv_lock_sha256": null,
+    "sandbox": "no bwrap; loopback-only connect guard in the F09 probe; isolated HOME/HERMES_HOME for every run",
+    "network": "loopback only"
+  },
+  "denominators": {
+    "cells": 4,
+    "errored_scored_zero": 0,
+    "infra_excluded": 0,
+    "completeness": 1.0
+  },
+  "evidence_class": {
+    "local": true,
+    "ci": "none",
+    "simulation": false,
+    "runtime": false,
+    "kind": "regression"
+  },
+  "harness_abi": {
+    "harness": "hermes",
+    "editor_abi": "n/a",
+    "surface": "AIAgent.run_conversation; vendor HTTP boundary replaced by the in-repo SDK-oracle fake"
+  },
+  "resource_usage": {
+    "wall_s": 30.9,
+    "cpu_core_s": 25.3,
+    "gpu_s": 0,
+    "energy_j": null,
+    "tokens": 0,
+    "api_cost_usd": 0.0,
+    "steps": {
+      "replay_gates_base": {
+        "wall_s": 8.4,
+        "cpu_core_s": 5.9
+      },
+      "ab_checkpoint_preflight_base": {
+        "wall_s": 5.6,
+        "cpu_core_s": 5.2
+      },
+      "replay_gates_head": {
+        "wall_s": 10.1,
+        "cpu_core_s": 7.7
+      },
+      "ab_checkpoint_preflight_head": {
+        "wall_s": 6.8,
+        "cpu_core_s": 6.5
+      }
+    }
+  },
+  "carrier_choice": {
+    "winner": "head (own leaf)",
+    "why": "no open or merged implementation and no carrier; #528 was closed as superseded by #1147, which only changed beta-header/OAuth plumbing; no code reused"
+  },
+  "provenance": "self",
+  "frozen": {
+    "bundle_sha": null,
+    "cells": 4,
+    "supersedes": "G-guards/r20261001-02",
+    "status": "NOT_FROZEN (P8 pending: no write-once bundle, not frozen to z0evals)"
+  },
+  "z0evals_study": {
+    "repo": "kvnloo/z0evals",
+    "branch": "study/hermes-anthropic-context-editing",
+    "commit": null
+  },
+  "ai_assistance": "Claude Code (Claude Opus 5.5) wrote the change, tests and probes",
+  "privacy": "public-aggregate",
+  "guards": {
+    "replay_gates": {
+      "script": "evals/token_accounting/replay_gates.py",
+      "blob": "66fa6a42d46341de9eb1524f6ef24576a493a7cb",
+      "base_verdict": {
+        "cli_past_window_inflated": "PASS",
+        "cli_inflated": "PASS",
+        "cli_deflated": "PASS",
+        "gateway_past_window_inflated": "PASS",
+        "gateway_inflated": "PASS",
+        "gateway_deflated": "PASS",
+        "restore_past_window_inflated": "PASS",
+        "restore_inflated": "PASS",
+        "restore_deflated": "PASS",
+        "overflow_recovery": "PASS",
+        "usage_less_fallback": "PASS"
+      },
+      "head_verdict": {
+        "cli_past_window_inflated": "PASS",
+        "cli_inflated": "PASS",
+        "cli_deflated": "PASS",
+        "gateway_past_window_inflated": "PASS",
+        "gateway_inflated": "PASS",
+        "gateway_deflated": "PASS",
+        "restore_past_window_inflated": "PASS",
+        "restore_inflated": "PASS",
+        "restore_deflated": "PASS",
+        "overflow_recovery": "PASS",
+        "usage_less_fallback": "PASS"
+      },
+      "equal": true,
+      "all_pass_head": true,
+      "commands": [
+        "env -i PATH=/usr/bin:/bin HOME=<testhome> HERMES_HOME=<testhome>/.hermes HERMES_DISABLE_LAZY_INSTALLS=1 HERMES_DISABLE_MODEL_METADATA_FETCH=1 TZ=UTC LANG=C.UTF-8 <venv-python> evals/token_accounting/replay_gates.py --out raw/replay_gates_base.json  # cwd <worktree> at base",
+        "env -i PATH=/usr/bin:/bin HOME=<testhome> HERMES_HOME=<testhome>/.hermes HERMES_DISABLE_LAZY_INSTALLS=1 HERMES_DISABLE_MODEL_METADATA_FETCH=1 TZ=UTC LANG=C.UTF-8 <venv-python> evals/token_accounting/replay_gates.py --out raw/replay_gates_head.json  # cwd <worktree> at head"
+      ],
+      "raw": {
+        "base": {
+          "path": "raw/replay_gates_base.json",
+          "sha256": "479215b8ecd72df7e2727d2b9786ef387fef0651790142195d3294083fc7dc1f"
+        },
+        "head": {
+          "path": "raw/replay_gates_head.json",
+          "sha256": "bdb0c039a059311e19c2cacc9454f427c7beff482d581b4f5343923b7974f161"
+        }
+      }
+    },
+    "ab_checkpoint_preflight": {
+      "script": "evals/native_compaction/ab_checkpoint_preflight.py",
+      "blob": "d698994e54ee1a0b04ce685ec90991ba4a050e48",
+      "base": {
+        "capture_cli_same_objects": {
+          "turn1_completed": true,
+          "turn2_completed": true,
+          "turn3_completed": true,
+          "local_compress_calls_turn2": 0,
+          "local_compress_calls_turn3": 0
+        },
+        "capture_gateway_reloaded_history": {
+          "turn1_completed": true,
+          "turn2_completed": true,
+          "turn3_completed": true,
+          "local_compress_calls_turn2": 0,
+          "local_compress_calls_turn3": 0
+        },
+        "restore": {
+          "turn1_completed": true,
+          "resume_completed": true,
+          "local_compress_calls_resume": 0
+        },
+        "over_threshold_negative": {
+          "turn1_completed": true,
+          "turn2_completed": true,
+          "turn3_completed": true,
+          "local_compress_calls_turn2": 0,
+          "local_compress_calls_turn3": 1
+        }
+      },
+      "head": {
+        "capture_cli_same_objects": {
+          "turn1_completed": true,
+          "turn2_completed": true,
+          "turn3_completed": true,
+          "local_compress_calls_turn2": 0,
+          "local_compress_calls_turn3": 0
+        },
+        "capture_gateway_reloaded_history": {
+          "turn1_completed": true,
+          "turn2_completed": true,
+          "turn3_completed": true,
+          "local_compress_calls_turn2": 0,
+          "local_compress_calls_turn3": 0
+        },
+        "restore": {
+          "turn1_completed": true,
+          "resume_completed": true,
+          "local_compress_calls_resume": 0
+        },
+        "over_threshold_negative": {
+          "turn1_completed": true,
+          "turn2_completed": true,
+          "turn3_completed": true,
+          "local_compress_calls_turn2": 0,
+          "local_compress_calls_turn3": 1
+        }
+      },
+      "equal": true,
+      "commands": [
+        "env -i PATH=/usr/bin:/bin HOME=<testhome> HERMES_HOME=<testhome>/.hermes HERMES_DISABLE_LAZY_INSTALLS=1 HERMES_DISABLE_MODEL_METADATA_FETCH=1 TZ=UTC LANG=C.UTF-8 <venv-python> evals/native_compaction/ab_checkpoint_preflight.py --out raw/ab_checkpoint_preflight_base.json  # cwd <worktree> at base",
+        "env -i PATH=/usr/bin:/bin HOME=<testhome> HERMES_HOME=<testhome>/.hermes HERMES_DISABLE_LAZY_INSTALLS=1 HERMES_DISABLE_MODEL_METADATA_FETCH=1 TZ=UTC LANG=C.UTF-8 <venv-python> evals/native_compaction/ab_checkpoint_preflight.py --out raw/ab_checkpoint_preflight_head.json  # cwd <worktree> at head"
+      ],
+      "raw": {
+        "base": {
+          "path": "raw/ab_checkpoint_preflight_base.json",
+          "sha256": "4d16b286918078cd6c44f34fda44b4990ce7ebeb07037417c0c300d202b7afbb"
+        },
+        "head": {
+          "path": "raw/ab_checkpoint_preflight_head.json",
+          "sha256": "9c386bed883663cb88a657f81326680b1eb2dff9df1101b17457f0d2e0b3e06f"
+        }
+      }
+    }
+  },
+  "gates": {
+    "validity": "PASS",
+    "guards": {
+      "replay_gates": "equal",
+      "ab_checkpoint_preflight": "equal"
+    }
+  },
+  "ab": null,
+  "measurements": [
+    {
+      "name": "replay_gates_pass_head",
+      "arm": "head",
+      "value": 11,
+      "n": 11,
+      "label": "OBSERVED",
+      "statistic": "count"
+    },
+    {
+      "name": "ab_preflight_scenarios_equal",
+      "value": 4,
+      "n": 4,
+      "label": "OBSERVED",
+      "statistic": "count"
+    }
+  ],
+  "not_tested": [
+    "the Anthropic payload (F09 covers it)"
+  ],
+  "limitations": [
+    "both guards run OpenAI-wire paths; they confirm the compression gates and the checkpoint preflight are unchanged; neither reaches the structured-400 recovery step in turn_recovery"
+  ],
+  "verdict": "EQUAL",
+  "learning": {
+    "hypothesis": "no regression on the shared recovery rung or compression gates",
+    "result": "EQUAL",
+    "observed_evidence": [],
+    "regressions": [],
+    "reusable_lesson": null,
+    "roadmap_effect": "none"
+  }
+}

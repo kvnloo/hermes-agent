@@ -1,0 +1,91 @@
+# r1 disclosure read: programasweights 0.4.10 wheel + kvnloo/pii at d891ebdd (paths relative to the wheel root / repo root)
+$ curl https://pypi.org/pypi/programasweights/0.4.10/json  (wheel entry)
+programasweights-0.4.10-py3-none-any.whl size 65814 sha256 7e82cb9364f0c403d90e926d2e04dc30785e7bcc536de15dea943991919a9290 uploaded 2026-09-22T02:15:27.316522Z
+$ sha256sum programasweights-0.4.10-py3-none-any.whl  (downloaded from files.pythonhosted.org)
+7e82cb9364f0c403d90e926d2e04dc30785e7bcc536de15dea943991919a9290  programasweights-0.4.10-py3-none-any.whl
+$ grep -n -E 'gguf +#|huggingface\.co/programasweights|"size_bytes": [0-9]' programasweights/cache.py
+7:            qwen3-0.6b-q6_k.gguf      # ~594 MB, downloaded once
+8:            gpt2-q8_0.gguf            # ~134 MB, downloaded once
+11:                adapter.gguf            # ~23 MB, Q4_0 LoRA
+36:    "qwen3-0.6b-q6_k": "https://huggingface.co/programasweights/Qwen3-0.6B-GGUF-Q6_K/resolve/main/qwen3-0.6b-q6_k.gguf",
+37:    "gpt2-q8_0": "https://huggingface.co/programasweights/GPT2-GGUF-Q8_0/resolve/main/gpt2-q8_0.gguf",
+117:                "size_bytes": 622733120,
+157:                "size_bytes": 139804832,
+169:                "size_bytes": 139804832,
+$ grep -n '_DEFAULT_API_URL =' programasweights/config.py
+14:_DEFAULT_API_URL = "https://programasweights.com"
+$ sed -n 414,422p programasweights/__init__.py  (paw.function signature)
+def function(
+    program_id,
+    n_ctx: int = 2048,
+    n_gpu_layers: int | None = None,
+    verbose: bool = False,
+    offline: bool = False,
+    *,
+    remote: bool = False,
+    interpreter: str | None = None,
+$ git -C kvnloo/pii rev-parse HEAD
+d891ebdd3a3dab27a3451923eb56f955253a2782
+$ sed -n 70,81p src/paw_pii/service.py  (the plugin calls paw.function without remote=, so remote=False applies)
+    def _function(self) -> Any:
+        if self._fn is not None:
+            return self._fn
+        with self._lock:
+            if self._fn is None:
+                paw = _import_paw()
+                self._fn = paw.function(
+                    self.program_id,
+                    n_ctx=self.n_ctx,
+                    n_gpu_layers=self.n_gpu_layers,
+                )
+        return self._fn
+$ sed -n 74,89p artifacts/frozen-programs.json  (repo's frozen record for program 73a0e38b and its shared runtime)
+  },
+  "finetuned_one_pass_typed": {
+    "compiler": "paw-ft-bs48",
+    "compiler_snapshot": "paw-ft-bs48-20260530",
+    "program_id": "73a0e38b8bbe3427cd1d",
+    "public": true,
+    "spec": {
+      "path": "specs/pii-detector-typed-ft-v1.txt",
+      "sha256": "376fae3801e2e23543ae11922fc70baf4e2906a8349658cdf681477fd3fd04e4"
+    }
+  },
+  "shared_runtime": {
+    "bytes": 622733120,
+    "id": "qwen3-0.6b-q6_k",
+    "sha256": "9a16ed5cacba959e63b62e2b6840c3eca2b51c3c3e51d31367ef8e4aafeae33c"
+  }
+# Which base model a program uses is read from server metadata at first use (cache.py LEGACY_RUNTIME_MANIFESTS lists two: qwen3-0.6b-q6_k 622733120 B and gpt2-q8_0 139804832 B).
+# No program metadata was fetched and nothing was downloaded from programasweights.com or Hugging Face: the ~600 MB figure is MODELED.
+# plugin env toggles and _redact_value (advisory)
+$ sed -n 17,24p integrations/hermes/__init__.py
+
+Env:
+  PAW_PII_DISABLE=1       master off
+  PAW_PII_AUTO_LLM=0      disable llm_request middleware
+  PAW_PII_AUTO_TOOLS=0    disable tool_execution middleware
+  PAW_PII_PROGRAM_ID=...  override published program id
+  PAW_PII_PLACEHOLDER=... default [PII]
+"""
+$ grep -n 'os.environ' integrations/hermes/__init__.py
+48:            program_id=os.environ.get("PAW_PII_PROGRAM_ID"),
+52:        program_id=os.environ.get("PAW_PII_PROGRAM_ID"),
+53:        placeholder=os.environ.get("PAW_PII_PLACEHOLDER", "[PII]"),
+58:    return os.environ.get("PAW_PII_DISABLE", "").lower() not in {"1", "true", "yes", "on"}
+62:    return os.environ.get(name, default).lower() not in {"0", "false", "no", "off"}
+$ sed -n 127,140p src/paw_pii/service.py
+    def _redact_value(self, value: Any, *, content_keys: Sequence[str]) -> Any:
+        if isinstance(value, str):
+            return self.redact(value)
+        if isinstance(value, list):
+            return [self._redact_value(item, content_keys=content_keys) for item in value]
+        if isinstance(value, dict):
+            result: dict[str, Any] = {}
+            for key, item in value.items():
+                if key in content_keys or isinstance(item, (str, list, dict)):
+                    result[key] = self._redact_value(item, content_keys=content_keys)
+                else:
+                    result[key] = item
+            return result
+        return value

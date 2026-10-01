@@ -1,0 +1,1406 @@
+{
+ "searched_at": "2026-10-01T16:07Z",
+ "queries": {
+  "prefetch metric": {
+   "total_count": 4,
+   "numbers": [
+    68028,
+    78584,
+    92118,
+    128757
+   ]
+  },
+  "prefetch telemetry": {
+   "total_count": 10,
+   "numbers": [
+    65329,
+    80517,
+    81582,
+    92118,
+    106813,
+    115109,
+    115694,
+    121513,
+    128757,
+    129620
+   ]
+  },
+  "memory prefetch": {
+   "total_count": 153,
+   "numbers": [
+    5688,
+    7789,
+    9308,
+    11678,
+    12126,
+    14150,
+    15412,
+    17405,
+    18372,
+    18565,
+    19448,
+    19833,
+    22876,
+    24209,
+    24270,
+    25344,
+    28436,
+    30965,
+    30991,
+    31664,
+    33166,
+    34215,
+    34521,
+    35604,
+    37150,
+    37635,
+    37783,
+    38706,
+    39664,
+    40425,
+    40967,
+    44246,
+    44378,
+    45743,
+    45927,
+    47457,
+    49538,
+    50086,
+    50134,
+    51012,
+    51222,
+    52186,
+    53182,
+    53315,
+    55172,
+    55729,
+    55849,
+    58346,
+    58597,
+    60953,
+    61129,
+    61685,
+    62841,
+    63759,
+    63791,
+    63931,
+    64288,
+    64421,
+    64528,
+    65329,
+    66137,
+    66684,
+    66979,
+    67559,
+    67679,
+    67833,
+    67894,
+    68028,
+    68325,
+    68692,
+    68721,
+    68903,
+    69606,
+    70715,
+    72385,
+    73644,
+    73901,
+    74984,
+    75446,
+    76351,
+    78584,
+    80517,
+    80909,
+    81386,
+    81582,
+    82512,
+    83152,
+    83647,
+    84360,
+    84382,
+    84412,
+    85071,
+    85728,
+    86948,
+    87028,
+    89282,
+    89283,
+    89418,
+    89822,
+    90385,
+    90800,
+    91974,
+    92039,
+    92118,
+    92149,
+    93676,
+    94243,
+    94983,
+    95387,
+    98703,
+    98768,
+    100008,
+    101580,
+    102837,
+    102928,
+    104178,
+    105292,
+    105495,
+    106813,
+    107526,
+    108864,
+    108965,
+    109498,
+    109688,
+    112681,
+    115109,
+    115694,
+    117358,
+    117692,
+    117888,
+    117945,
+    118895,
+    119191,
+    120042,
+    120146,
+    121513,
+    121837,
+    122287,
+    122763,
+    124151,
+    125418,
+    125802,
+    125881,
+    126193,
+    126457,
+    126519,
+    127339,
+    127847,
+    128757,
+    129093,
+    129324,
+    130474,
+    130491
+   ]
+  },
+  "prefetch_provider": {
+   "total_count": 0,
+   "numbers": []
+  },
+  "prefetch shared metrics": {
+   "total_count": 2,
+   "numbers": [
+    78584,
+    128757
+   ]
+  },
+  "memory.prefetch": {
+   "total_count": 1,
+   "numbers": [
+    15412
+   ]
+  },
+  "record_memory_prefetch": {
+   "total_count": 0,
+   "numbers": []
+  },
+  "external prefetch": {
+   "total_count": 61,
+   "numbers": [
+    5688,
+    7789,
+    11678,
+    12126,
+    15412,
+    18565,
+    19448,
+    28436,
+    30965,
+    30991,
+    34215,
+    34521,
+    40425,
+    40930,
+    49538,
+    50086,
+    58346,
+    62841,
+    63791,
+    64288,
+    64421,
+    66684,
+    66979,
+    67833,
+    68325,
+    68721,
+    68903,
+    69606,
+    78584,
+    83647,
+    84412,
+    86948,
+    87028,
+    89283,
+    90385,
+    92118,
+    93676,
+    94983,
+    98703,
+    102837,
+    105495,
+    111510,
+    112351,
+    115109,
+    115694,
+    117888,
+    117945,
+    118051,
+    118895,
+    120042,
+    120146,
+    121793,
+    124151,
+    125802,
+    126193,
+    126457,
+    126890,
+    128757,
+    129093,
+    129164,
+    129620
+   ]
+  },
+  "prefetch timeout": {
+   "total_count": 55,
+   "numbers": [
+    12126,
+    13176,
+    22876,
+    24270,
+    32744,
+    35965,
+    37150,
+    37635,
+    44308,
+    44378,
+    50086,
+    51012,
+    51222,
+    53315,
+    55849,
+    60953,
+    65329,
+    67894,
+    68325,
+    69606,
+    72385,
+    75446,
+    76655,
+    78234,
+    83152,
+    84412,
+    85071,
+    85728,
+    86948,
+    87028,
+    90385,
+    90800,
+    92118,
+    93676,
+    94180,
+    94214,
+    94259,
+    98703,
+    101531,
+    101580,
+    105495,
+    107526,
+    115244,
+    117358,
+    117692,
+    118051,
+    120042,
+    120893,
+    121063,
+    124151,
+    125418,
+    125881,
+    126457,
+    129620,
+    130240
+   ]
+  },
+  "prefetch latency": {
+   "total_count": 22,
+   "numbers": [
+    12126,
+    21416,
+    30991,
+    44308,
+    44378,
+    45743,
+    45927,
+    60953,
+    62703,
+    65329,
+    85071,
+    92118,
+    93676,
+    94214,
+    95387,
+    98703,
+    102928,
+    109286,
+    115244,
+    120042,
+    124151,
+    128757
+   ]
+  }
+ },
+ "teknium1": {
+  "total_count": 260,
+  "prs": [
+   {
+    "number": 30055,
+    "title": "feat(telegram): observe-with-approval Telegram Business Mode (Secretary Bots)"
+   },
+   {
+    "number": 68930,
+    "title": "feat(gateway): X Chat (encrypted X DMs) platform plugin"
+   },
+   {
+    "number": 72199,
+    "title": "feat(cli): hermes record \u2014 demonstrate browser workflows, /learn turns them into replayable skills"
+   },
+   {
+    "number": 76467,
+    "title": "fix(update): make npm recovery resumable on no-op retries (salvage #76250)"
+   },
+   {
+    "number": 80448,
+    "title": "feat: /model reset \u2014 clear session model pin and return to configured default (salvage #74899)"
+   },
+   {
+    "number": 80462,
+    "title": "ci: #79771 follow-ups \u2014 dep-bootstrap policy gate, slice-gen in detect, 16 slices, treeless lint clone"
+   },
+   {
+    "number": 80488,
+    "title": "feat(delegation): durable retained subagents \u2014 registry, follow-up messaging, persisted usage attribution"
+   },
+   {
+    "number": 80701,
+    "title": "feat(streaming): cap a streaming response's total lifetime (port of qwen-code#8602)"
+   },
+   {
+    "number": 80721,
+    "title": "Announce date changes to long-running sessions without touching the prompt cache (port from kimi-code)"
+   },
+   {
+    "number": 80741,
+    "title": "feat(profiles): assistant presets \u2014 one-command role profiles (Energy-inspired)"
+   },
+   {
+    "number": 80788,
+    "title": "feat(background-review): evidence-grounding rule cuts inferred memory writes 87.5% \u2192 30%"
+   },
+   {
+    "number": 80873,
+    "title": "Port from block/buzz#4959: classify transport timeouts distinctly in API error summaries"
+   },
+   {
+    "number": 80882,
+    "title": "feat(slack): surface emoji reactions in thread context (port of centaur#1264)"
+   },
+   {
+    "number": 80915,
+    "title": "feat(skills): add human-writing optional skill (\u6d3b\u4eba\u611f\u5199\u4f5c Chinese prose)"
+   },
+   {
+    "number": 81403,
+    "title": "feat(approval): surface invisible Unicode, control bytes, and padding in approval prompts (Claude Code v2.1.223-inspired)"
+   },
+   {
+    "number": 81434,
+    "title": "feat(hooks): pre_llm_call block directive \u2014 veto a turn before inference, inspired by Claude Cowork"
+   },
+   {
+    "number": 81450,
+    "title": "Inspired by Energy: extend `hermes import-agent` with Gemini CLI support"
+   },
+   {
+    "number": 81507,
+    "title": "Inspired by Cursor: `hermes inbox` \u2014 unified view of everything in flight"
+   },
+   {
+    "number": 81736,
+    "title": "perf(docs-site): split search index by section and stop indexing code blocks"
+   },
+   {
+    "number": 81739,
+    "title": "fix(ci): retain previous Pages deploy's hashed assets to stop CDN skew 404s"
+   },
+   {
+    "number": 81875,
+    "title": "feat: install skill sets from AI Catalog + agentskills discovery indexes"
+   },
+   {
+    "number": 82067,
+    "title": "fix(kanban): dispatch dependency observers post-commit"
+   },
+   {
+    "number": 82092,
+    "title": "fix(middleware): preserve original tool requests"
+   },
+   {
+    "number": 82137,
+    "title": "fix(deps): bump electron 40.10.6 -> 41.10.3 (GHSA-9f4c-93c8-jc8g)"
+   },
+   {
+    "number": 82170,
+    "title": "feat(feishu): interactive clarify cards + native choice picker (port of QwenLM/qwen-code#8578)"
+   },
+   {
+    "number": 82200,
+    "title": "fix(patch): recover line-number-gutter pasted old_string (port from oh-my-pi#7906)"
+   },
+   {
+    "number": 82286,
+    "title": "feat(skills): add graph-engineering optional skill (knowledge graphs + task graphs)"
+   },
+   {
+    "number": 82820,
+    "title": "feat(session_search): bounded lexical query expansion for conversational recall"
+   },
+   {
+    "number": 82825,
+    "title": "fix(gateway): preserve approval card content when resolving on Telegram and Feishu"
+   },
+   {
+    "number": 82826,
+    "title": "feat(cron): give scheduled jobs their actual run time in the prompt"
+   },
+   {
+    "number": 82835,
+    "title": "feat(photon): gate setup success on iMessage opt-in via first message"
+   },
+   {
+    "number": 82857,
+    "title": "Inspired by Poke: hermes recipe \u2014 shareable setup bundles (export/preview/install)"
+   },
+   {
+    "number": 83364,
+    "title": "feat: hermes mcp serve --tools \u2014 expose Hermes' tool surface to any MCP client"
+   },
+   {
+    "number": 83411,
+    "title": "feat: composio optional skill \u2014 1000+ SaaS connectors via one API key"
+   },
+   {
+    "number": 83549,
+    "title": "fix(pricing): treat negative catalog pricing sentinels as unknown (port kilocode#13040)"
+   },
+   {
+    "number": 83551,
+    "title": "feat(approval): explain silently auto-approved dangerous commands (port kilocode#12728/#12995)"
+   },
+   {
+    "number": 83616,
+    "title": "Inspired by ChatGPT Work: extend hermes import-agent with Cursor support"
+   },
+   {
+    "number": 83689,
+    "title": "ci(windows): desktop install + update E2E on a real Windows runner"
+   },
+   {
+    "number": 84889,
+    "title": "feat(models): add deepseek-v4-pro-0813 to nous + openrouter curated catalogs, drop old v4-pro"
+   },
+   {
+    "number": 85005,
+    "title": "fix(agent): recover 'not a multimodal model' image rejections from text-only endpoints (port from block/buzz#5318)"
+   },
+   {
+    "number": 85031,
+    "title": "fix(gemini): surface promptFeedback.blockReason as a terminal content-policy error (port of lobehub#17937)"
+   },
+   {
+    "number": 85116,
+    "title": "Port from RooCodeInc/Roomote#1218: keep scheduling cadence out of cron prompts"
+   },
+   {
+    "number": 85126,
+    "title": "fix(agent): classify byte-size request-limit 400s as payload_too_large (port of block/goose#11173)"
+   },
+   {
+    "number": 85138,
+    "title": "feat(mcp-catalog): add patsnap patent & literature search MCP"
+   },
+   {
+    "number": 85144,
+    "title": "feat(optional-skills): add interface-design UI/UX craft skill (port of interfaces.dev, 3.7k\u2605)"
+   },
+   {
+    "number": 85151,
+    "title": "fix(tests): close SessionDB before rmtree in codex persist test (CI flake)"
+   },
+   {
+    "number": 85461,
+    "title": "feat(enterprise): control-plane core \u2014 resource model, store, audit, driver contracts"
+   },
+   {
+    "number": 85468,
+    "title": "feat(enterprise): native IAM \u2014 principals, roles, bindings, restrictions"
+   },
+   {
+    "number": 85469,
+    "title": "feat(enterprise): access gateway \u2014 fail-closed identity verification and tenant admission"
+   },
+   {
+    "number": 85470,
+    "title": "feat(enterprise): controller \u2014 deploy choreography, rollback, namespace lifecycle, CLI"
+   },
+   {
+    "number": 85471,
+    "title": "feat(enterprise): KubernetesComputeDriver \u2014 candidate provisioning via kubectl, gated harness start"
+   },
+   {
+    "number": 85472,
+    "title": "feat(enterprise): K8s sandbox driver \u2014 verified containment before harness start"
+   },
+   {
+    "number": 85473,
+    "title": "feat(enterprise): secret brokering \u2014 workload-verified, value-free secret operations"
+   },
+   {
+    "number": 85474,
+    "title": "feat(enterprise): deployment packaging \u2014 Dockerfile, Helm chart, RBAC, smoke script"
+   },
+   {
+    "number": 85475,
+    "title": "docs(enterprise): overview, concepts, deployment, installation, security"
+   },
+   {
+    "number": 85719,
+    "title": "feat(tools): expire persisted tool results after 7 days via file mtime (port opencode#40987)"
+   },
+   {
+    "number": 85775,
+    "title": "Desktop: show MCP launch targets on the setup_mcp consent card (port of kimi-code#2843)"
+   },
+   {
+    "number": 85794,
+    "title": "Inspired by Copilot CLI: plugin auto-update at session start + update --all"
+   },
+   {
+    "number": 86005,
+    "title": "feat(skills): add short-drama-production optional skill (AI \u77ed\u5267 pipeline)"
+   },
+   {
+    "number": 86009,
+    "title": "fix(tests): mock get_hermes_home with Path, not str, across tui_gateway tests"
+   },
+   {
+    "number": 86019,
+    "title": "feat(compression): preserve epistemic stance of uncertain claims through compaction (arXiv:2608.06953)"
+   },
+   {
+    "number": 86552,
+    "title": "feat(terminal): per-command memory ceiling for local backend (Claude Code v2.1.233 port)"
+   },
+   {
+    "number": 86553,
+    "title": "feat(delegation): prompt-cache launch stagger for batch subagents (Claude Code v2.1.229 port)"
+   },
+   {
+    "number": 86628,
+    "title": "feat(dashboard): expose skill deletion on the Skills page (port of centaur#1393)"
+   },
+   {
+    "number": 86695,
+    "title": "Inspired by Cursor: pre-built Docker sandbox images (sandbox builds)"
+   },
+   {
+    "number": 86858,
+    "title": "docs: /save is now a cross-platform session export (json/md/html)"
+   },
+   {
+    "number": 87174,
+    "title": "docs: add Official Domains & Phishing Safety page"
+   },
+   {
+    "number": 87285,
+    "title": "feat(optional-skills): add squirrelscan \u2014 website QA/audit CLI skill"
+   },
+   {
+    "number": 87286,
+    "title": "feat(optional-skills): add video-shotcraft \u2014 Remotion cinematic product videos"
+   },
+   {
+    "number": 87290,
+    "title": "Inspired by Factory Droid: /branch --stay keeps you in the original session"
+   },
+   {
+    "number": 87362,
+    "title": "fix(approval): widen pipe-remote-to-shell detection (port of block/goose#10989)"
+   },
+   {
+    "number": 87363,
+    "title": "fix(vision): bound local image reads during the read (port of block/goose#11114)"
+   },
+   {
+    "number": 87406,
+    "title": "fix(lsp): send $/cancelRequest when an abandoned request times out (port oh-my-pi#8153)"
+   },
+   {
+    "number": 87464,
+    "title": "feat(video-gen): add Wan 2.7 FAL video family (t2v + i2v)"
+   },
+   {
+    "number": 87545,
+    "title": "feat(cli): add CPU profiling flag"
+   },
+   {
+    "number": 87546,
+    "title": "fix: reject duplicate V4A patch paths"
+   },
+   {
+    "number": 87549,
+    "title": "Inspired by Claude Code: cap local terminal memory"
+   },
+   {
+    "number": 87554,
+    "title": "fix: bind gateway approval buttons to request ids"
+   },
+   {
+    "number": 87885,
+    "title": "fix(gateway): honor whatsapp.group_allow_from for no-user-id routed group turns"
+   },
+   {
+    "number": 88026,
+    "title": "fix(logs): survive log rotation in 'hermes logs -f' follow mode"
+   },
+   {
+    "number": 89306,
+    "title": "fix(tests): tui gateway server timing waits no longer flake on loaded CI runners"
+   },
+   {
+    "number": 89936,
+    "title": "feat(delegation): subagents can be spawned with their own reasoning level (port prime-agent#1510, salvage #81921)"
+   },
+   {
+    "number": 89940,
+    "title": "feat(dashboard): Memory Wiki \u2014 browsable session-history wiki + persistent-memory audit panel (salvage #31244, Perplexity Brain-inspired)"
+   },
+   {
+    "number": 90430,
+    "title": "feat(desktop): Space stages clarify choices from the keyboard"
+   },
+   {
+    "number": 91252,
+    "title": "feat(delegation): subagents can fork the parent conversation (port of kimi-code#3007)"
+   },
+   {
+    "number": 91271,
+    "title": "hermes -z pipelines can now attribute spend per subagent (Copilot CLI 1.0.81 port)"
+   },
+   {
+    "number": 92387,
+    "title": "feat(skills): add discernment-nudge \u2014 post-answer check-questions (port of Anthropic's Apache-2.0 skill)"
+   },
+   {
+    "number": 92613,
+    "title": "feat(pricing): user-declared pricing_overrides in config.yaml drive cost tracking for custom providers (salvage #22614)"
+   },
+   {
+    "number": 93415,
+    "title": "feat(gateway): /mute silences a chat at the harness level until /unmute"
+   },
+   {
+    "number": 93480,
+    "title": "hermes sessions usage: per-session token/cost drill-down + insights --json (Amp Explain Usage port)"
+   },
+   {
+    "number": 95247,
+    "title": "feat(approvals): per-tool allow/ask/deny policy \u2014 non-shell tools finally gated (Perplexity Computer-inspired, #35357)"
+   },
+   {
+    "number": 95269,
+    "title": "optional-skills: asu-job-hunt \u2014 Chinese job-hunt workflow (resume, interview, offers)"
+   },
+   {
+    "number": 96848,
+    "title": "CLI startup offers to restore sessions orphaned by a crash (Copilot CLI port)"
+   },
+   {
+    "number": 97561,
+    "title": "feat(browser): real-profile browsing can keep banking/email/SSO logins out of the agent's snapshot (Cowork-inspired)"
+   },
+   {
+    "number": 97594,
+    "title": "feat(skills): opportunity-radar \u2014 cross-source proactive suggestions from posts, inbox, and calendar (Energy-inspired)"
+   },
+   {
+    "number": 98036,
+    "title": "feat(skills): sepia \u2014 de-AI writing via narrative-structure repair (port of Nanako0129/sepia, MIT)"
+   },
+   {
+    "number": 99054,
+    "title": "Agent commits now carry the git identity you configure (Amp-inspired, #72556/#78374 class)"
+   },
+   {
+    "number": 99685,
+    "title": "fix(update): cold-start every autostart-installed profile gateway after update (#91675 resume half)"
+   },
+   {
+    "number": 100015,
+    "title": "feat(skills): h3-storyboard \u2014 MiniMax H3 shot breakdown + performance direction (optional)"
+   },
+   {
+    "number": 100821,
+    "title": "feat(tools): consult \u2014 agent-initiated second opinion from a frontier reference model (salvage #82103, Perplexity advisor-escalation port)"
+   },
+   {
+    "number": 100885,
+    "title": "feat(lsp): project-pinned language servers now win over global PATH installs (port omo#7424)"
+   },
+   {
+    "number": 103476,
+    "title": "fix(anthropic): keep prior-turn thinking blocks on keep-all Claude models so the cached prefix stays byte-stable (small correctness fix; the run's write bill was aggregator routing)"
+   },
+   {
+    "number": 104886,
+    "title": "fix: auxiliary Copilot calls recover after token rejection"
+   },
+   {
+    "number": 106395,
+    "title": "fix(mcp): identify hermes-agent in the MCP handshake clientInfo (salvage #70074, Copilot CLI 1.0.84-2 parity)"
+   },
+   {
+    "number": 106398,
+    "title": "feat(desktop): Review pane smart file order \u2014 change-explaining files first, supporting files muted (inspired by Amp)"
+   },
+   {
+    "number": 106399,
+    "title": "feat(tools): per-tool spillover budgets \u2014 contain chatty tools without shrinking every budget (salvage #94679)"
+   },
+   {
+    "number": 106401,
+    "title": "feat: stay-awake inhibitor \u2014 OS sleep no longer kills long turns (salvage #19484)"
+   },
+   {
+    "number": 106413,
+    "title": "feat(webhook): opt-in persistent conversations via per-route session_key (Poke-inspired, salvage #90589)"
+   },
+   {
+    "number": 106414,
+    "title": "fix(anthropic): Claude Code OAuth identity floor 2.1.280 \u2014 Fable 5.x and Opus 5.5 no longer rejected (port prime-agent#1993, omo#8705)"
+   },
+   {
+    "number": 106419,
+    "title": "fix(tui_gateway): zombie-safe, Windows-safe compute-host PID supervision (salvage #68272 + codex port)"
+   },
+   {
+    "number": 106423,
+    "title": "feat(tools): peer session messaging \u2014 one session can warn or unblock another (inspired by Muse Code)"
+   },
+   {
+    "number": 106426,
+    "title": "fix(anthropic): opt into thinking-prefix drop_block on Claude 5.1+ so prefix mutations stop 400ing turns"
+   },
+   {
+    "number": 106429,
+    "title": "feat: /archive archives the current session from chat; sessions unarchive restores it"
+   },
+   {
+    "number": 106438,
+    "title": "feat(computer-use): sensitive-app blocklist \u2014 trading, crypto wallets, password vaults denied by default (Cowork-inspired)"
+   },
+   {
+    "number": 106474,
+    "title": "feat(delegation): subagents can fork the parent conversation (salvage #91252, deepagents-confirmed)"
+   },
+   {
+    "number": 106742,
+    "title": "One gateway owns every local session: CLI, TUI, Desktop (local), API, ACP, bots and cron attach to the same live conversation"
+   },
+   {
+    "number": 107881,
+    "title": "feat(mcp): CLI enable/disable for MCP servers + machine-readable list --json (salvages #94781)"
+   },
+   {
+    "number": 107891,
+    "title": "feat(skills): /skills + hermes skills enable/disable/disabled toggles (salvages #36691)"
+   },
+   {
+    "number": 107947,
+    "title": "feat(skills): i-have-adhd \u2014 ADHD-friendly output shaping (port of ayghri/i-have-adhd, 38.9k\u2605 MIT)"
+   },
+   {
+    "number": 108678,
+    "title": "feat(wisdom): Collective Wisdom returns as a ~2.5k-line bundled plugin with chat, Desktop, update-policy and share-candidate parity (after #108507)"
+   },
+   {
+    "number": 108828,
+    "title": "feat(delegation): subagents share per-workspace notes across batches (Inspired by Cursor Projects)"
+   },
+   {
+    "number": 109308,
+    "title": "feat(skills): botmaker \u2014 mint specialist Hermes bots (port of techjanitor/botmaker, first Hermes-native community skill)"
+   },
+   {
+    "number": 109553,
+    "title": "fix(errors): Anthropic credits_required 429 rotates the credential instead of retrying (omp#11333 port)"
+   },
+   {
+    "number": 109596,
+    "title": "feat(cli): opt-in 'custom' status-bar field renders a user command's output"
+   },
+   {
+    "number": 109645,
+    "title": "feat(skills): video-shot-breakdown \u2014 measured shot lists + synced shot-info video (port of eternityspring/reelbench-skills)"
+   },
+   {
+    "number": 110142,
+    "title": "fix(desktop): pack no longer fails on a missing cross-env bin (#110121)"
+   },
+   {
+    "number": 110371,
+    "title": "Anthropic Console spend-cap 400 now classified as billing, key rotates (#80553, salvage #80618)"
+   },
+   {
+    "number": 110436,
+    "title": "Tool-call arguments with invalid JSON escapes or flattened tool_call params no longer execute as {} (ports openclaw/openclaw#141323, #143729)"
+   },
+   {
+    "number": 110440,
+    "title": "Linux gateway starts detached when user systemd is unreachable instead of aborting setup (port nanoclaw#3768/#3760)"
+   },
+   {
+    "number": 110525,
+    "title": "Review pane restacks a branch into reviewable commits and walks them one at a time (Inspired by Amp)"
+   },
+   {
+    "number": 110566,
+    "title": "ci: advisory silent-revert check flags stale-branch files that would undo landed commits (port of gastown#4840)"
+   },
+   {
+    "number": 111093,
+    "title": "Long clarify choices stay readable on Slack, Discord, Google Chat and the relay (#78115, salvage #77547 #93154)"
+   },
+   {
+    "number": 111360,
+    "title": "feat(tools): agent can schedule its own wakeup in the current session (schedule_wakeup, port of kilocode#14094)"
+   },
+   {
+    "number": 111493,
+    "title": "fix(cli): /resume of a session owned by another surface is read-only, never a second writer (Codex 0.154 port)"
+   },
+   {
+    "number": 111579,
+    "title": "feat(optional-skills): fal-music \u2014 hosted music and sound-effect generation via fal.ai (ElevenLabs Music v2.5, MiniMax 3, Lyria 3, Stable Audio 3, ACE-Step)"
+   },
+   {
+    "number": 112075,
+    "title": "Test leak sweep no longer segfaults dashboard tests by closing a SessionDB a live thread is probing"
+   },
+   {
+    "number": 112076,
+    "title": "Remote-kernel eviction test polls the kernel map under its lock instead of a lock-free busy spin"
+   },
+   {
+    "number": 112477,
+    "title": "fix(terminal): agent shells fail fast on git editors and credential prompts instead of hanging (port prime-agent#2219, credits #73196)"
+   },
+   {
+    "number": 112481,
+    "title": "fix(gateway): unknown slash commands suggest the intended command on every platform (port prime-agent#2243)"
+   },
+   {
+    "number": 112540,
+    "title": "feat(egress): SSH sandboxes reach iron-proxy over a reverse forward \u2014 tokens, not real keys (proxy.ssh_tunnel)"
+   },
+   {
+    "number": 112588,
+    "title": "hermes doctor names version, install method, upstream distance and the update command (salvage #85372, port omo#8055/#8060)"
+   },
+   {
+    "number": 112617,
+    "title": "feat(reasoning): large sessions confirm before a cache-breaking mid-session effort change (port deepagents#6196)"
+   },
+   {
+    "number": 113122,
+    "title": "Feishu/Lark bots receive websocket events again: lark-oapi pinned 1.7.3 (#103979, salvage #103980 + #78268)"
+   },
+   {
+    "number": 113614,
+    "title": "feat(display): MCP/connector/plugin tool calls show argument previews instead of a bare name (port of gemini-cli#29341)"
+   },
+   {
+    "number": 113615,
+    "title": "fix(codex): ChatGPT Codex picker no longer offers retired gpt-5.4 / gpt-5.4-mini (port cline#14011)"
+   },
+   {
+    "number": 113650,
+    "title": "write_file flags a new file that nearly duplicates a sibling (inspired by Muse Code)"
+   },
+   {
+    "number": 113678,
+    "title": "feat(cli): --disable-tools and tools.disabled_functions remove single tools below toolset granularity (salvage #110774, #69675)"
+   },
+   {
+    "number": 113700,
+    "title": "feat(cli): `hermes commands` prints the whole command tree in one call (port block/buzz#7584)"
+   },
+   {
+    "number": 114534,
+    "title": "Mid-session /reasoning switches keep the Claude prompt cache warm (in-band effort updates, port of opencode#48513)"
+   },
+   {
+    "number": 114578,
+    "title": "feat(tool-search): pin one MCP server eager with mcp_servers.<name>.defer: false (salvage #110714, port kimi-code#3667)"
+   },
+   {
+    "number": 114591,
+    "title": "fix(mcp): call-time 401 from an anonymously connected server asks for sign-in; hermes mcp login sets up OAuth (port kimi-code#3846)"
+   },
+   {
+    "number": 114621,
+    "title": "/usage shows every model route on CLI, TUI, gateway and Desktop (salvage #96546, Copilot CLI 1.0.85 port)"
+   },
+   {
+    "number": 114670,
+    "title": "web_extract signals empty results instead of returning a success-shaped empty page (#52120, #99533; salvages #52178)"
+   },
+   {
+    "number": 114698,
+    "title": "feat(video_gen): Creatify Boreal FAL family \u2014 $0.01/s native-audio presenter/UGC video (t2v + i2v)"
+   },
+   {
+    "number": 115203,
+    "title": "test(dashboard): stopper-survives-sweep test waits for the stopper's marker, not the backend's exit (flaky on main)"
+   },
+   {
+    "number": 115211,
+    "title": "test(windows): live-runtime children publish ready/pid files atomically (JSONDecodeError flake in the Windows-only job)"
+   },
+   {
+    "number": 115230,
+    "title": "fix: plugin validation accepts web-dashboard-only plugins as loadable"
+   },
+   {
+    "number": 115502,
+    "title": "MCP tools/list_changed storms no longer trigger one refresh per notification (Inspired by Claude Code)"
+   },
+   {
+    "number": 115506,
+    "title": "write_file on a directory reports the directory, not a stale-read refusal (Inspired by Claude Code)"
+   },
+   {
+    "number": 115515,
+    "title": "Async subagent completions frame the child's text as a report, not the user's words (Inspired by Claude Code)"
+   },
+   {
+    "number": 115559,
+    "title": "feat(desktop): crash page with Restart / software rendering, progressive reload back-off, persisted chromium-flags.json (Cowork-inspired)"
+   },
+   {
+    "number": 115622,
+    "title": "feat(desktop): search and kind filter on the Passwords & Logins list (port centaur#1661)"
+   },
+   {
+    "number": 115645,
+    "title": "/review reviews a chosen git diff at a chosen depth (salvage #94836 + #108426, inspired by Cursor Agent Review)"
+   },
+   {
+    "number": 115682,
+    "title": "Closed-schema tools reject undeclared arguments instead of silently dropping them (port Roomote#2695)"
+   },
+   {
+    "number": 116247,
+    "title": "feat(skills): open-steps \u2014 plain-language reports, steps and verdicts for non-engineers (port of kharmanskyi/open-steps, MIT)"
+   },
+   {
+    "number": 116280,
+    "title": "docs(vision): auxiliary.vision.provider main still routes images as text \u2014 say so and how to get pixels back"
+   },
+   {
+    "number": 116500,
+    "title": "skills hub: install a skill from its pasted GitHub folder URL (port of OpenHands#17504)"
+   },
+   {
+    "number": 116534,
+    "title": "Batch subagents share one cached system-prompt prefix (salvage #103659, part of #103481)"
+   },
+   {
+    "number": 116579,
+    "title": "feat(terminal): bubblewrap backend \u2014 per-command bwrap sandbox on Linux hosts (salvage #102875, hardened from a live pass)"
+   },
+   {
+    "number": 116768,
+    "title": "feat(optional-skills): security-audit \u2014 Cloudflare's coverage-ledgered codebase security audit (port of cloudflare/security-audit-skill)"
+   },
+   {
+    "number": 117598,
+    "title": "fix(terminal): embedded agent hosts can opt into per-worker cgroup scopes; timeout schema says it does not bound background commands (#116936, salvage #117020)"
+   },
+   {
+    "number": 117690,
+    "title": "feat(acp): tool_call updates carry the programmatic tool name in _meta.tool_name (port of zed#64080, clean-room)"
+   },
+   {
+    "number": 117716,
+    "title": "fix(config): saved .env value no longer shadowed by stale duplicate lines (#8270, salvage #20100)"
+   },
+   {
+    "number": 117729,
+    "title": "fix(bedrock): tool-result images reach the model as Converse image blocks (#55134, salvage #55135)"
+   },
+   {
+    "number": 117732,
+    "title": "fix: LLM JSON replies with trailing prose or nested objects parse in delegate_task, goal judge and Kanban specify (salvage #116462)"
+   },
+   {
+    "number": 117735,
+    "title": "fix(gateway): long-message splits no longer tear emoji sequences and accented letters apart (port openclaw#151959)"
+   },
+   {
+    "number": 117752,
+    "title": "feat(desktop): Enter-to-send or multiline-first composer mode (salvage #83911, closes #52952)"
+   },
+   {
+    "number": 117763,
+    "title": "feat(desktop): Copy on a reply pastes formatted into docs/mail, Markdown into editors"
+   },
+   {
+    "number": 118639,
+    "title": "Malformed tool-call loops stop after 3 rejections instead of running to the iteration budget (port of Kilo-Org/kilocode#14163)"
+   },
+   {
+    "number": 118661,
+    "title": "feat(prompt): skills installed mid-session reach the model without a prompt rebuild (port cloudflare-os#267)"
+   },
+   {
+    "number": 118705,
+    "title": "feat(goals): /goal pauses after three empty responses instead of stalling silently (Codex #44320 port)"
+   },
+   {
+    "number": 118737,
+    "title": "fix(desktop): every copy action reports success or failure (salvage #44372, port paperclip#13603)"
+   },
+   {
+    "number": 118788,
+    "title": "fix(stt): xAI transcription names grok-voice-transcribe-2.0 and survives auto-detect language (salvage #115264)"
+   },
+   {
+    "number": 119391,
+    "title": "WhatsApp from `hermes setup` no longer enables an unpaired account (pairs first, like `hermes whatsapp`)"
+   },
+   {
+    "number": 119396,
+    "title": "Setup wizard and docs say the terminal backend moves commands, not the agent"
+   },
+   {
+    "number": 119675,
+    "title": "feat(cli,tui): display.reduced_motion freezes spinners for screen readers (#26689, port openai/codex#46040)"
+   },
+   {
+    "number": 119712,
+    "title": "Compaction summaries pair tool results with their calls by index and tool name (port prime-agent#2424)"
+   },
+   {
+    "number": 119713,
+    "title": "Per-call usage log line carries time-to-first-chunk (port prime-agent#2462)"
+   },
+   {
+    "number": 119747,
+    "title": "feat(btw): side questions may read files/web/past sessions; tool whitelist now survives the worker hop (salvage #98485, fixes #98479)"
+   },
+   {
+    "number": 119873,
+    "title": "Capped terminal/execute_code spills are reported as partial, not \"full output\" (#109757, salvage #109763)"
+   },
+   {
+    "number": 120551,
+    "title": "docs(setup): terminal backend wizard and docs say only tool execution moves, the agent stays local"
+   },
+   {
+    "number": 120785,
+    "title": "fix(windows): planted repo binaries no longer hijack bare program names (port cline#14171)"
+   },
+   {
+    "number": 120787,
+    "title": "fix(honcho): OAuth refresh keeps the prior refresh_token when the server omits it (salvage #106303)"
+   },
+   {
+    "number": 120788,
+    "title": "fix(acp): permission bubble is created as a pending tool_call before request_permission (port of gemini-cli#29439)"
+   },
+   {
+    "number": 120855,
+    "title": "feat(vision): attached images carry a session-wide Image #N label the model can see (inspired by Muse Code)"
+   },
+   {
+    "number": 120926,
+    "title": "Disk-wipe commands and macOS/LVM device names hit the hardline floor (#102371, salvage #102376 #105607)"
+   },
+   {
+    "number": 120936,
+    "title": "approvals.deny rules match version-pinned and flagged package-runner spellings (Inspired by Factory Droid v0.221)"
+   },
+   {
+    "number": 120975,
+    "title": "fix(desktop): model labels render sizes, versions and brands by token class (port block/buzz#7844)"
+   },
+   {
+    "number": 121016,
+    "title": "Thinking-off turns no longer 400 on Claude Opus 5.5 (fixes #120069, salvage #119419)"
+   },
+   {
+    "number": 121849,
+    "title": "session_search no longer collapses /new chains onto the oldest ancestor (#121831)"
+   },
+   {
+    "number": 122059,
+    "title": "Optional tool args sent as null/{} no longer crash handlers; nested scalar strings coerced (port of opencode#45002)"
+   },
+   {
+    "number": 122060,
+    "title": "Gemini tool schemas with orphan required/draft-04 bounds/tuples/required $ref loops no longer 400 the request (port of opencode#51009)"
+   },
+   {
+    "number": 122094,
+    "title": "feat(agent): opt-in Anthropic prompt-cache warming keeps the prefix alive through long tool runs (port of pi#9668)"
+   },
+   {
+    "number": 122096,
+    "title": "fix(errors): Z.AI \"Prompt too long\" 400 compacts and retries instead of ending the turn (port of pi 0e283203c)"
+   },
+   {
+    "number": 122140,
+    "title": "Tool results tell the model how long the call took (Wall time header, port kimi-code#3966)"
+   },
+   {
+    "number": 122200,
+    "title": "CLI: Up in an empty composer takes a queued prompt back for editing (Copilot CLI port, salvage #8492)"
+   },
+   {
+    "number": 122201,
+    "title": "process_manage list shows running processes before finished ones (Copilot CLI port)"
+   },
+   {
+    "number": 122327,
+    "title": "fix(tts): Gemini 3.8 Flash / Flash-Lite TTS speak only the transcript and decode WAV once (salvage #121105, fixes #121082)"
+   },
+   {
+    "number": 122332,
+    "title": "feat(image_gen): Seedream 5.0 Flash (t2i + edit) and Recraft V4.1 Flash join the FAL catalog"
+   },
+   {
+    "number": 122852,
+    "title": "fix(process): first heartbeat keeps output printed before arming (CI flake test_process_heartbeat)"
+   },
+   {
+    "number": 122853,
+    "title": "test: child pid files published atomically, no torn int('') reads (CI flake test_client_e2e)"
+   },
+   {
+    "number": 122854,
+    "title": "test(moa): late-sink test raises the interrupt after the fast slot is recorded (CI flake)"
+   },
+   {
+    "number": 122855,
+    "title": "test(e2e): send_and_capture waits up to 15 s for the send instead of 2 s (CI flake test_platform_commands)"
+   },
+   {
+    "number": 122979,
+    "title": "docs(faq): one profile per topic, or one profile with Telegram topics?"
+   },
+   {
+    "number": 123221,
+    "title": "MCP server instructions reach the system prompt; tool descriptions and instructions capped (salvage #58182, closes #118381)"
+   },
+   {
+    "number": 123272,
+    "title": "fix(sessions): dashboard and gateway API session deletes scrub on-disk transcripts too (salvage #20685 #55100 #20342)"
+   },
+   {
+    "number": 123474,
+    "title": "hermes insights shows per-tool session reach and which eager tool schemas to defer"
+   },
+   {
+    "number": 123541,
+    "title": "Codex /usage shows the credits balance again, in credits (port Roomote#3144)"
+   },
+   {
+    "number": 123542,
+    "title": "Desktop model picker dialog opens on the current model (port Roomote#3088)"
+   },
+   {
+    "number": 124160,
+    "title": "feat(optional-skills): golive \u2014 ship an agent-built app live on the user's own accounts (port of mikehasa/golive-skill, MIT)"
+   },
+   {
+    "number": 124161,
+    "title": "feat(optional-skills): 3dicon \u2014 animate a prompt or icon into a looping transparent WebP (port of samyost1/3dicon, MIT)"
+   },
+   {
+    "number": 124241,
+    "title": "fix: Slack stream reopened after a server-side seal no longer splits a word across two messages (#124219)"
+   },
+   {
+    "number": 124595,
+    "title": "fix(compression): summarizer sends instructions as system and turns as user (port OpenHands sdk#5143)"
+   },
+   {
+    "number": 124596,
+    "title": "fix(cli): compact token counts promote to M when rounding carries, no more 1000.0K (port OpenHands#17469)"
+   },
+   {
+    "number": 124639,
+    "title": "fix(security): MCP HTTP/SSE clients refuse redirects into private/metadata space (salvage #70335, port goose#11501)"
+   },
+   {
+    "number": 124703,
+    "title": "fix(worktree): reclaimers preserve git-ignored .env and quoted untracked files (salvage #120624, port qwen-code#12763)"
+   },
+   {
+    "number": 124735,
+    "title": "fix(agent): Google billing 429s no longer retry as throttles, Gemini throttles no longer bench the key (port can1357/oh-my-pi#13092)"
+   },
+   {
+    "number": 124774,
+    "title": "feat(acp): installed skills appear in the editor's slash palette and load before the turn (port of minimax-code#244, salvage #122017)"
+   },
+   {
+    "number": 124818,
+    "title": "feat(optional-skills): fal-3d \u2014 text-to-3D and image-to-3D meshes via fal.ai (Tripo P2, Meshy 7.1, Hunyuan 3D 3.1, TRELLIS.2)"
+   },
+   {
+    "number": 125560,
+    "title": "docs(state): the \"state.db was replaced\" refusal names the replacer and links the recovery guide"
+   },
+   {
+    "number": 125823,
+    "title": "Copilot ACP: an answer that arrives with the CLI's exit is returned, not reported as a crash (port zed#64603)"
+   },
+   {
+    "number": 125848,
+    "title": "Egress setup drops unmatchable proxy.extra_allowed_hosts entries with a fix hint instead of a silent 403 (port of nanoclaw#3915)"
+   },
+   {
+    "number": 125853,
+    "title": "feat(config): ${VAR:-default} fills unset or empty env refs in config.yaml and MCP entries (port of openclaw#155164)"
+   },
+   {
+    "number": 125903,
+    "title": "Inspired by Poke: /handoff desktop continues a CLI session in the Desktop app; hermes://session/<id> deep links open saved chats (salvage #66647, #76398, #79186, #84683)"
+   },
+   {
+    "number": 125958,
+    "title": "Inspired by Amp: a session can archive and reclaim its own worktree under the prune policy (Desktop, CLI, /worktree remove, REST)"
+   },
+   {
+    "number": 126054,
+    "title": "fix(video_gen): local image paths work on FAL, 1080p/4k tiers exposed, gateway validation errors surfaced"
+   },
+   {
+    "number": 126077,
+    "title": "fix(agent-plugins): accept YAML-list allowed-tools in SKILL.md frontmatter"
+   },
+   {
+    "number": 126093,
+    "title": "fix(plugin-guard): false-positive round (denylist regex literals, localhost curl docs, tone rules, ANSI regex)"
+   },
+   {
+    "number": 126610,
+    "title": "fix(cron): a chatty job no longer evicts quiet jobs' execution history (per-job floor, salvage #124830)"
+   },
+   {
+    "number": 126627,
+    "title": "Background review fork is told which consulted skills are protected before it drafts a patch (\u221240% calls per review)"
+   },
+   {
+    "number": 126781,
+    "title": "fix(agent): a streamed chunk carrying text and a tool call no longer drops the tool call (#126758)"
+   },
+   {
+    "number": 126911,
+    "title": "Third-party plugins can run in a per-profile plugin host process (plugins.isolation: host)"
+   },
+   {
+    "number": 127080,
+    "title": "fix(sessions): prune keeps the finished subagents of a chat still in use (port kilocode#14502)"
+   },
+   {
+    "number": 127181,
+    "title": "fix(google-workspace): docs get no longer drops tables (port cloudflare-os#518)"
+   },
+   {
+    "number": 127258,
+    "title": "hermes doctor warns on config.yaml keys Hermes never reads, with did-you-mean (#91876, salvage #94860)"
+   },
+   {
+    "number": 127314,
+    "title": "feat(desktop): Artifacts gallery previews rendered videos as tiles (port of paperclipai/paperclip#13825)"
+   },
+   {
+    "number": 127407,
+    "title": "feat(optional-skills): reladraw \u2014 text diagrams with stated placement, upstream-maintained stub"
+   },
+   {
+    "number": 128163,
+    "title": "test(delegate): parent-interrupt case no longer races child 0's own teardown (CI flake test_finite_delegation_outcomes)"
+   },
+   {
+    "number": 128674,
+    "title": "fix(process): stdin writes to background processes pass the dangerous-command guard (salvage #22557)"
+   },
+   {
+    "number": 128755,
+    "title": "OpenRouter cost shows the billed amount, not a table estimate (#105215, salvage #105226 + #76187)"
+   },
+   {
+    "number": 128798,
+    "title": "feat(cron): monitor jobs can watch a registered tool result (monitor_tool) \u2014 event triggers on connectors/MCP without LLM ticks"
+   },
+   {
+    "number": 128939,
+    "title": "computer_use can read and write the system clipboard (port of oh-my-openagent#9053)"
+   },
+   {
+    "number": 130128,
+    "title": "docs(discord): privileged-intent review threshold is 10,000 users, not 100 servers"
+   },
+   {
+    "number": 130137,
+    "title": "feat(cli): hermes -z --output-schema makes one-shot answers schema-shaped JSON (salvage #108421, inspired by Muse Code)"
+   },
+   {
+    "number": 130138,
+    "title": "fix(cli): credential-bearing prompts stay out of the on-disk prompt history (inspired by Muse Code)"
+   },
+   {
+    "number": 130141,
+    "title": "Gateway restart from a cron job or tool no longer writes a service launcher that cannot boot (#130116)"
+   },
+   {
+    "number": 130142,
+    "title": "fix: port conflicts name the process holding the port (port cline/cline#14532)"
+   },
+   {
+    "number": 130146,
+    "title": "feat(btw): follow-up side questions remember the earlier /btw exchanges (port deepagents#6434)"
+   },
+   {
+    "number": 130147,
+    "title": "feat(cron): create/update results preview the next three fire times (port deepagents#6526)"
+   },
+   {
+    "number": 130160,
+    "title": "Cron jobs accept /model shorthand: aliases resolve at create/edit, ambiguity refused (#126655, builds on #126745)"
+   }
+  ]
+ }
+}

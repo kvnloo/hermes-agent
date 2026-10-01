@@ -1,0 +1,417 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "E37-synthetic/r20261001-03",
+ "staging": "tool-result-projection-support",
+ "origin_refs": [
+  "NousResearch/hermes-agent#107731",
+  "NousResearch/hermes-agent#39691",
+  "NousResearch/hermes-agent#47866",
+  "NousResearch/hermes-agent#129620",
+  "NousResearch/hermes-agent#129492",
+  "NousResearch/hermes-agent#129882",
+  "NousResearch/hermes-agent#106426",
+  "NousResearch/hermes-agent#70107",
+  "NousResearch/hermes-agent#526",
+  "kvnloo/hermes-agent#310"
+ ],
+ "base_revision": "e8c97320ac8691d4de92af49f98459f9ef9ddb08",
+ "env": {
+  "host": "withheld (one local workstation; receipts carry no host names)",
+  "python": "3.11.14 ($PY = the repo venv interpreter, used read-only)",
+  "isolation": "probes: env -i, fresh HOME/HERMES_HOME under scratch, loopback-only socket.connect + getaddrinfo guard; canonical runner: scripts/run_tests.sh -j 2 with HOME=$S/testhome-sf-tool-result-projection-support, HERMES_HOME=$HOME/.hermes; no credentials",
+  "network": "loopback only (egress_blocked recorded per probe run)",
+  "relay": {
+   "present": true,
+   "package": "nemo-relay 0.8.4 (installed in the shared repo venv; not part of this change)",
+   "state": "FAILED at initialize(): agent/relay_runtime.py:346 calls relay.plugin.initialize({}, additional_plugins_toml=...), which nemo-relay 0.8.4 does not accept, so _activate() logs 'Hermes Relay plugin initialization failed' (relay_runtime.py:328) and returns FAILED. No Relay plugin or Hermes-managed Relay middleware was active in any run.",
+   "plugins_toml_sha256": null,
+   "config_paths": [],
+   "explicit_plugins_toml": "none: HERMES_NEMO_RELAY_PLUGINS_TOML unset and the isolated HERMES_HOME has no relay-plugins.toml",
+   "seen_in": "canonical-runner logs (captured WARNING on failing tests); probes run the same agent init"
+  }
+ },
+ "spec": {
+  "path": null,
+  "rev": null,
+  "sha256": null,
+  "prereg_commit": null,
+  "decision_rule_sha": null,
+  "note": "not pre-registered: an ad-hoc staging re-run under FACTORY.md section 8 (round-2 fix of the round-1 re-verifier findings). Decision rule: the assertions of tests/e2e/core/history/test_tool_result_projection_wire.py (blob 7347ad045b) and the harness outputs named in command."
+ },
+ "policy_revision": {
+  "AGENTS.md": "65aa3e61bc@e8c97320ac",
+  "CONTRIBUTING.md": "b0baa59b50@e8c97320ac",
+  "factory": "FACTORY.md sha256:7726ba18b43a9367 (frontier-2026-10-01 ledger copy)"
+ },
+ "provenance": "self",
+ "cost": {
+  "api_cost_usd": 0.0,
+  "tier_cost": "$0"
+ },
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the harness, tests and fold-in gate; disclosed per repository policy",
+ "privacy": "synthetic fixtures only; no state.db / agent.log / credentials read; absolute local paths replaced by placeholders",
+ "inputs": {
+  "shas": {
+   "main": "e8c97320ac8691d4de92af49f98459f9ef9ddb08",
+   "main_previous_round": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+   "staging_commit": "8c783ff4ac2fcd7906e074eefec7f0d3fcfc0782",
+   "staging_commit_parent": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+   "staging_merge_tree_on_main": "7016f82dc28a05fed0f6c6b67bb99df237e54244",
+   "main_plus_test_arm": "434aa0b1083993444ec0cd5aa7cc61ec3422bd16",
+   "main_plus_test_arm_tree": "7016f82dc28a05fed0f6c6b67bb99df237e54244",
+   "carrier_head": "069adfb67e57287ac8df996ef48e082fe8455e2c",
+   "carrier_merge_base": "67764dc0863349a384c16425e73ee8571f3a94b7",
+   "carrier_rebased_arm": "4b5b438de8f6ed77d38c675e0077666ef8b2f75b",
+   "carrier_rebased_arm_tree": "7f099e3b93326d04e266d0c9b5c49984cab43be7",
+   "carrier_rebased_arm_plus_test": "dedece6d1937938ae9b5cfa92babaa380cbe584c",
+   "carrier_rebased_arm_plus_test_tree": "03cf488911915a6823873c344e57f3f805ca875a",
+   "test_blob": "7347ad045bf049afabce5b78435d5746273160f1",
+   "carrier_module_blob": "a76fb42f76e3bb7d71643da6a5f58890878d4d32",
+   "carrier_module_blob_with_gate_v3": "852be44f4f4306ec177a191591bc6f2529c927ce"
+  },
+  "harness_sha256": {
+   "harness/e37_synthetic.py": "4de16b55331c737d8db15eaf0acdfacb69cb458808f59bc3c912cd4c424c2f85",
+   "harness/f04_bedrock_probe.py": "8159c09229dce68316973ff10486d4da87ee356d815f5a6188f59ac76c53286c",
+   "harness/f04_probe.py": "a23b3b14b3cd7a4c4e8bfd35a6da50c06656f183fc842afca738e3f46e051bb9",
+   "harness/f04_thirdparty_probe.py": "b102cd9093f284907b41409d3d1f4b825f7eef1844fea942f8ec1d0d0fc184c6",
+   "harness/guarded_run.py": "be17793cdf4bad466fb2e05b5c67d63430a1e79c8c40949a7e45c897d35d654f",
+   "harness/per_hunk_sabotage.py": "73a31ca6888f7384b58993924ee66f5795962af8fdabe98b1d5d678dc84866fd",
+   "harness/per_hunk_sabotage_r2.py": "57219f128cb8f90cb9bb87df659c0d499da9c716e018a2de626be9a9b9ed9d60",
+   "harness/predicate_direct.py": "5996ac8a92033342ae18a71a052257773235ba8d470c5829f733ed554d0ae4bb",
+   "harness/predicate_wire_truth.py": "b5ee90a984238695c9837a0c7edbedb5c87c28111b46a77389c91b3568be5f4b",
+   "harness/readtool_direct.py": "e8dd892a0a2a835550467d4ccf4732470860692b6200a6e150be50950d9a96f4",
+   "harness/seam_trace.py": "b1c1efa4e7fd6d37b3c4ab37ee770d09c9308e5fcb06f91c2c67004197645750"
+  },
+  "patches_sha256": {
+   "patches/carrier-rebase-handport-hot-reload-test.diff": "6024fcb1457cdc1bf8d6762da6ca372d3109d41d532311dd8a0264c609d7d741",
+   "patches/foldin-preserved-thinking-gate-v2.diff": "acac8a736c2503a122a986622c8003f813e331363f2a92832eb709b6738d6e84",
+   "patches/foldin-preserved-thinking-gate-v3.diff": "12e83bd0dc82dc1042ef37cf93a65ea810d6a118eb322785b6c27cbe7c1acaed",
+   "patches/foldin-preserved-thinking-gate.diff": "1490213c6d074a6cae190b4bf138d09b431ab78c535961159e3982b4f06ae6ab",
+   "patches/sabotage-S1-per-turn-reevaluation.diff": "a7f55f013f779c6a12aaab89b56c3b2af0bf4380883fda474df2b3757582a132",
+   "patches/sabotage-S2-no-stickiness.diff": "3b8b144c13805d30e117621a2fc3f7ed316434be4bcfd06197a8b865b1abbfd3",
+   "patches/tool-result-projection-support.v1-d5854fdd7b.patch": "a71a2123f6bd3f9d6d67a9b1c7c88a8ffbb1149a125332209333636042e95a0c",
+   "patches/tool-result-projection-support.v2-8c783ff4ac.patch": "b9d18435f4d1c45eacc77912f217b8e034295c3adec0667bdedd5bbd9da5d7f9"
+  }
+ },
+ "tier": "T1",
+ "kind": "economics",
+ "experiment": "E37 synthetic arm on main e8c97320ac: one 20-turn tool-heavy session through config arms (prune off / prune on 48000 / projection / projection with a provider-cached route), real AIAgent + SessionDB + read_file against the recording loopback provider; carrier and carrier + gate v3",
+ "z0evals_study": {
+  "repo": "kvnloo/z0evals",
+  "branch": "study/hermes-tool-result-projection-support",
+  "commit": null,
+  "status": "not frozen (P8 pending; freeze when the comment is posted)"
+ },
+ "frozen": null,
+ "command": {
+  "run": "env -i PATH=/usr/bin:/bin PYTHONHASHSEED=0 E37_SCRATCH=$S/sf-trp3/scratch $PY harness/e37_synthetic.py <worktree> <out.json> <arm> 20",
+  "arm_trees": {
+   "base-*": "git checkout --detach e8c97320ac8691d4de92af49f98459f9ef9ddb08 && git cherry-pick 8c783ff4ac2fcd7906e074eefec7f0d3fcfc0782 -> 434aa0b1083993444ec0cd5aa7cc61ec3422bd16 (main + test, local evidence commit)",
+   "carrier-*": "dedece6d1937938ae9b5cfa92babaa380cbe584c (main + refs/pr/107731 merged, hot-reload add/add kept both sides, + test; local evidence commits)",
+   "carrier-foldin-v3-*": "carrier + git apply patches/foldin-preserved-thinking-gate-v3.diff (round-2 gate)"
+  }
+ },
+ "results": {
+  "label": "wire OBSERVED; billing and cache-read ratio MODELED (perfect message-level prefix cache, chars/4, write 1.25x, read 0.10x)",
+  "n_per_arm": 1,
+  "table": {
+   "base-prune-off": {
+    "prefix_breaks": 1,
+    "break_requests": [
+     27
+    ],
+    "break_reasons": [
+     "message list shrank 54 -> 14"
+    ],
+    "rows_projected": 2,
+    "sum_request_chars": 6337345,
+    "wire_chars_vs_base_prune_off_pct": 0.0,
+    "modeled_cache_read_ratio": 0.917,
+    "modeled_billed_units_cached": 309711,
+    "modeled_billed_vs_base_prune_off_pct": 0.0,
+    "durable_model_view_tool_rows_chars": 189352,
+    "turn_errors": [],
+    "egress_blocked": []
+   },
+   "base-prune-on": {
+    "prefix_breaks": 2,
+    "break_requests": [
+     13,
+     29
+    ],
+    "break_reasons": [
+     "messages[3] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 00 line 0000 alpha beta g",
+     "messages[11] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 02 line 0000 alpha beta "
+    ],
+    "rows_projected": 10,
+    "sum_request_chars": 6707342,
+    "wire_chars_vs_base_prune_off_pct": 5.8,
+    "modeled_cache_read_ratio": 0.8958,
+    "modeled_billed_units_cached": 368596,
+    "modeled_billed_vs_base_prune_off_pct": 19.0,
+    "durable_model_view_tool_rows_chars": 238030,
+    "turn_errors": [],
+    "egress_blocked": []
+   },
+   "carrier-prune-off": {
+    "prefix_breaks": 1,
+    "break_requests": [
+     27
+    ],
+    "break_reasons": [
+     "message list shrank 54 -> 14"
+    ],
+    "rows_projected": 2,
+    "sum_request_chars": 6337345,
+    "wire_chars_vs_base_prune_off_pct": 0.0,
+    "modeled_cache_read_ratio": 0.917,
+    "modeled_billed_units_cached": 309711,
+    "modeled_billed_vs_base_prune_off_pct": 0.0,
+    "durable_model_view_tool_rows_chars": 189352,
+    "turn_errors": [],
+    "egress_blocked": []
+   },
+   "carrier-prune-on": {
+    "prefix_breaks": 2,
+    "break_requests": [
+     13,
+     29
+    ],
+    "break_reasons": [
+     "messages[3] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 00 line 0000 alpha beta g",
+     "messages[11] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 02 line 0000 alpha beta "
+    ],
+    "rows_projected": 10,
+    "sum_request_chars": 6707342,
+    "wire_chars_vs_base_prune_off_pct": 5.8,
+    "modeled_cache_read_ratio": 0.8958,
+    "modeled_billed_units_cached": 368596,
+    "modeled_billed_vs_base_prune_off_pct": 19.0,
+    "durable_model_view_tool_rows_chars": 238030,
+    "turn_errors": [],
+    "egress_blocked": []
+   },
+   "carrier-projection": {
+    "prefix_breaks": 6,
+    "break_requests": [
+     9,
+     15,
+     21,
+     27,
+     33,
+     39
+    ],
+    "break_reasons": [
+     "messages[3] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 00 line 0000 alpha beta g",
+     "messages[15] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 03 line 0000 alpha beta ",
+     "messages[27] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 06 line 0000 alpha beta ",
+     "messages[39] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 09 line 0000 alpha beta ",
+     "messages[51] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 12 line 0000 alpha beta ",
+     "messages[63] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 15 line 0000 alpha beta "
+    ],
+    "rows_projected": 18,
+    "sum_request_chars": 3338725,
+    "wire_chars_vs_base_prune_off_pct": -47.3,
+    "modeled_cache_read_ratio": 0.802,
+    "modeled_billed_units_cached": 273491,
+    "modeled_billed_vs_base_prune_off_pct": -11.7,
+    "durable_model_view_tool_rows_chars": 472480,
+    "turn_errors": [],
+    "egress_blocked": []
+   },
+   "carrier-projection-cached": {
+    "prefix_breaks": 3,
+    "break_requests": [
+     15,
+     27,
+     39
+    ],
+    "break_reasons": [
+     "messages[3] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 00 line 0000 alpha beta g",
+     "messages[27] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 06 line 0000 alpha beta ",
+     "messages[51] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 12 line 0000 alpha beta "
+    ],
+    "rows_projected": 18,
+    "sum_request_chars": 4613013,
+    "wire_chars_vs_base_prune_off_pct": -27.2,
+    "modeled_cache_read_ratio": 0.8723,
+    "modeled_billed_units_cached": 284629,
+    "modeled_billed_vs_base_prune_off_pct": -8.1,
+    "durable_model_view_tool_rows_chars": 472480,
+    "turn_errors": [],
+    "egress_blocked": []
+   },
+   "carrier-foldin-v3-projection": {
+    "prefix_breaks": 6,
+    "break_requests": [
+     9,
+     15,
+     21,
+     27,
+     33,
+     39
+    ],
+    "break_reasons": [
+     "messages[3] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 00 line 0000 alpha beta g",
+     "messages[15] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 03 line 0000 alpha beta ",
+     "messages[27] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 06 line 0000 alpha beta ",
+     "messages[39] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 09 line 0000 alpha beta ",
+     "messages[51] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 12 line 0000 alpha beta ",
+     "messages[63] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 15 line 0000 alpha beta "
+    ],
+    "rows_projected": 18,
+    "sum_request_chars": 3338725,
+    "wire_chars_vs_base_prune_off_pct": -47.3,
+    "modeled_cache_read_ratio": 0.802,
+    "modeled_billed_units_cached": 273491,
+    "modeled_billed_vs_base_prune_off_pct": -11.7,
+    "durable_model_view_tool_rows_chars": 472480,
+    "turn_errors": [],
+    "egress_blocked": []
+   },
+   "carrier-foldin-v3-projection-cached": {
+    "prefix_breaks": 3,
+    "break_requests": [
+     15,
+     27,
+     39
+    ],
+    "break_reasons": [
+     "messages[3] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 00 line 0000 alpha beta g",
+     "messages[27] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 06 line 0000 alpha beta ",
+     "messages[51] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 12 line 0000 alpha beta "
+    ],
+    "rows_projected": 18,
+    "sum_request_chars": 4613013,
+    "wire_chars_vs_base_prune_off_pct": -27.2,
+    "modeled_cache_read_ratio": 0.8723,
+    "modeled_billed_units_cached": 284629,
+    "modeled_billed_vs_base_prune_off_pct": -8.1,
+    "durable_model_view_tool_rows_chars": 472480,
+    "turn_errors": [],
+    "egress_blocked": []
+   }
+  }
+ },
+ "aa_check": {
+  "carrier_vs_base_prune_off_per_request_equal": true,
+  "carrier_vs_base_prune_on_per_request_equal": true,
+  "gate_v3_vs_carrier_projection_per_request_equal": true,
+  "gate_v3_vs_carrier_projection_cached_per_request_equal": true
+ },
+ "environment_note": "absolute figures shift slightly with sandbox path length (round 1 on aea969677c: baseline 309,613 billed units, -47.4% / -27.3% wire); ratios and break positions are unchanged",
+ "denominators": {
+  "cells": 8,
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "completeness": 1.0,
+  "note": "8 arms x 1 deterministic run"
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "economics-model"
+ },
+ "not_tested": [
+  "a real provider prompt cache (queued item 1, OD-3)",
+  "private lineage replay (queued item 2, OD-7)"
+ ],
+ "limitations": [
+  "synthetic session; perfect cache model with no TTL; MODELED numbers are never a headline"
+ ],
+ "resource_usage": {
+  "wall_s": 26.8,
+  "cpu_core_s": null,
+  "gpu_s": 0,
+  "energy_j": null,
+  "api_cost_usd": 0.0,
+  "note": "wall_s summed from raw outputs; CPU time and energy not recorded"
+ },
+ "artifacts": [
+  {
+   "path": "receipts/raw/r03/e37-base-prune-off.json",
+   "sha256": "0e5841fa8ba4676e009b8a471fea37bfa545f86f2f8a5e4fd6a5195d7f392409"
+  },
+  {
+   "path": "receipts/raw/r03/e37-base-prune-off.log",
+   "sha256": "e65e449268c64743aa331dd15c93bb4893c2e2ed3b9d4237b73a5e71118f5a62"
+  },
+  {
+   "path": "receipts/raw/r03/e37-base-prune-on.json",
+   "sha256": "16e0f05078069fb169dc3ec10d493682d5052f1a0e66c46f02f743feec115125"
+  },
+  {
+   "path": "receipts/raw/r03/e37-base-prune-on.log",
+   "sha256": "1c27347b993a75e5db1a5adab3a4836b131557a0c73a08f2e561b6700b1cc211"
+  },
+  {
+   "path": "receipts/raw/r03/e37-carrier-foldin-v3-projection-cached.json",
+   "sha256": "da7a9395d7600de0f1f0d3ab3be24cb98cfcfa98678aa04fccc3aa69513a6272"
+  },
+  {
+   "path": "receipts/raw/r03/e37-carrier-foldin-v3-projection-cached.log",
+   "sha256": "b5ce982b36994da19b80991a1756536da40d92c675bee0bd835bd296211e662e"
+  },
+  {
+   "path": "receipts/raw/r03/e37-carrier-foldin-v3-projection.json",
+   "sha256": "98a5a6d886d4d7566f39ccadfef24c05407378d90a28c8f63199257110fbd26f"
+  },
+  {
+   "path": "receipts/raw/r03/e37-carrier-foldin-v3-projection.log",
+   "sha256": "b19e50a7aaad15db986193a4fd2c99b28d8d85e25951a3064351cf97e0b8cd90"
+  },
+  {
+   "path": "receipts/raw/r03/e37-carrier-projection-cached.json",
+   "sha256": "1796d73cf7ccaf92bcb8f72dbdb016ca6f482bbed1ee61fdb5bd00f36743fd9e"
+  },
+  {
+   "path": "receipts/raw/r03/e37-carrier-projection-cached.log",
+   "sha256": "b5ce982b36994da19b80991a1756536da40d92c675bee0bd835bd296211e662e"
+  },
+  {
+   "path": "receipts/raw/r03/e37-carrier-projection.json",
+   "sha256": "8b030e97fa5ec5a97f2f62a42d2ef6e98ac985b1d4666a1fed6e0cbee9c6e55c"
+  },
+  {
+   "path": "receipts/raw/r03/e37-carrier-projection.log",
+   "sha256": "b19e50a7aaad15db986193a4fd2c99b28d8d85e25951a3064351cf97e0b8cd90"
+  },
+  {
+   "path": "receipts/raw/r03/e37-carrier-prune-off.json",
+   "sha256": "495e5d978a03aecfeae8fe8bb3fec672548d6c66bb5748332ef58a126672de3c"
+  },
+  {
+   "path": "receipts/raw/r03/e37-carrier-prune-off.log",
+   "sha256": "9350788dbc69bb72e715340bf1174e41b00fd783193d7e7c9aecaa04e7c14c40"
+  },
+  {
+   "path": "receipts/raw/r03/e37-carrier-prune-on.json",
+   "sha256": "2c7078d59f1a26a36442e42cf15dbc64e72a9bf8ee0ae11524735ad6c4a77e6a"
+  },
+  {
+   "path": "receipts/raw/r03/e37-carrier-prune-on.log",
+   "sha256": "1c27347b993a75e5db1a5adab3a4836b131557a0c73a08f2e561b6700b1cc211"
+  }
+ ],
+ "verdict": "RECORDED (MODELED): projection cuts wire chars 47.3% (uncached trigger) / 27.2% (cached trigger) and modeled billed input 11.7% / 8.1% vs prune-off, at a cache-read ratio of 0.802 / 0.872 vs 0.917; prune-on costs +19.0%. Gate v3 changes nothing on this OpenAI-compatible route.",
+ "supersedes": "E37-synthetic/r20261001-02",
+ "corrections": [
+  {
+   "date": "2026-10-01",
+   "by": "staging fix round 3 (fix of the round-2 re-verifier findings)",
+   "changes": [
+    "env.host: the workstation's host name replaced by 'withheld' (receipts must not carry host names)"
+   ]
+  },
+  {
+   "date": "2026-10-01",
+   "by": "staging fix round 3 (fix of the round-2 re-verifier findings)",
+   "changes": [
+    "superseded_by E37-synthetic/r20261001-04 (round 3, re-measured on main 44a1ce9724 with the staging commit 3b47753d54 and gate v4)"
+   ]
+  }
+ ],
+ "superseded_by": "E37-synthetic/r20261001-04"
+}

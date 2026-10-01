@@ -1,0 +1,29 @@
+xf_spec = 1
+id = "F11-N3-fork111-conflict"
+rev = 1
+kind = "redgreen"
+issue = "kvnloo/hermes-agent#322"
+ai_assistance = "Spec and runner written with Claude Code (Opus 5.5); disclosed per repository policy"
+origin_refs = ["kvnloo/hermes-agent#111"]
+expected = "refused at materialization (BLOCKED, conflicting)"
+[base]
+repo = "NousResearch/hermes-agent"
+pin = "572e4f4fad32bbdcfc948fb2ec833177ed5734c0"
+[head]
+commit = "df1b7e4ed77d4a519544f5b29b52858b2382e530"
+merge_onto_base = true
+[probe]
+kind = "pytest"
+files = ["tests/hermes_cli/test_profile_rename_checkpoints.py"]
+reps = 3
+jobs = 2
+timeout_s = 900
+[oracle]
+red_markers = ["does not descend from"]
+sabotage = "per_hunk"
+adjacent = []
+[ownership]
+verdict = "unknown"
+queries = []
+[outputs]
+not_tested = ["full test suite", "real provider responses", "kernel network namespace (in-process guard only)"]

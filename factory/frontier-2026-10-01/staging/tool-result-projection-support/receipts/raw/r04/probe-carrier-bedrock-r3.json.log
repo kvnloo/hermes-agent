@@ -1,0 +1,63 @@
+  ┊ 📖 read      notes_00.txt  0.3s
+  ┊ 📖 read      notes_01.txt  0.0s
+  ┊ 📖 read      notes_02.txt  0.0s
+  ┊ 📖 read      notes_03.txt  0.0s
+  ┊ 📖 read      notes_04.txt  0.0s
+  ┊ 📖 read      notes_05.txt  0.0s
+  ┊ 📖 read      notes_06.txt  0.0s
+  ┊ 📖 read      notes_07.txt  0.0s
+  ┊ 📖 read      notes_08.txt  0.0s
+  ┊ 📖 read      notes_09.txt  0.0s
+  ┊ 📖 read      notes_10.txt  0.0s
+  ┊ 📖 read      notes_11.txt  0.0s
+{
+ "arm": "carrier",
+ "route": {
+  "provider": "bedrock",
+  "api_mode": "bedrock_converse",
+  "model": "anthropic.claude-opus-5-5"
+ },
+ "outcome": "failed",
+ "message": "a request replayed signed reasoning over a rewritten prefix",
+ "requests": 24,
+ "replayed_reasoning_blocks": 276,
+ "invalidated_reasoning_blocks": 214,
+ "projection": {
+  "tool_rows": 12,
+  "rows_projected": 10,
+  "pass_request_indices": [
+   7,
+   11,
+   15,
+   19,
+   23
+  ],
+  "passes": {
+   "7": [
+    "tooluse_000182080",
+    "tooluse_000482690"
+   ],
+   "11": [
+    "tooluse_000782800",
+    "tooluse_001082914"
+   ],
+   "15": [
+    "tooluse_001383033",
+    "tooluse_001683154"
+   ],
+   "19": [
+    "tooluse_001983273",
+    "tooluse_002283406"
+   ],
+   "23": [
+    "tooluse_002583527",
+    "tooluse_002883656"
+   ]
+  }
+ },
+ "fake_rejections": [],
+ "egress_blocked": [
+  "getaddrinfo 'bedrock-runtime.us-east-1.amazonaws.com'",
+  "getaddrinfo 'bedrock-runtime.us-east-1.amazonaws.com'"
+ ]
+}

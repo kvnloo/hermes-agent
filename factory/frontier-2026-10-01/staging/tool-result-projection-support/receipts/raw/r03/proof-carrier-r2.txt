@@ -1,0 +1,212 @@
+▶ not activated — using HERMES_PYTHON: $PY
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~2 tests) under ['tests/e2e/core/history/test_tool_result_projection_wire.py']; running with -j 2
+[100.0% |     2/~2 | ✓1 | ✗1] ✗ tests/e2e/core/history/test_tool_result_projection_wire.py (1✓ 1✗, 16.8s)
+
+  ╔╍ Failed: tests/e2e/core/history/test_tool_result_projection_wire.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_121319_fdd8b2 model=claude-opus-5-5 provider=anthropic platform=cli history=28 msg='read notes_07.txt and remember it'
+  ║ INFO     agent.conversation_loop:turn_usage.py:205 API call #15: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_43d61234a90b4a94abfd
+  ║ INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.01s, 23624 chars)
+  ║ INFO     agent.tool_result_projection:tool_result_projection.py:690 Tool-result projection: 3 stale result(s) archived, ~17,622 tokens reclaimed per request (15,862 message tokens now); 3 row(s) kept projected
+  ║ INFO     agent.conversation_loop:turn_usage.py:205 API call #16: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_834874ce07df469f8b32
+  ║ INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=claude-opus-5-5 api_calls=2/4 budget=2/4 tool_turns=8 last_msg_role=assistant response_len=13 session=20261001_121319_fdd8b2
+  ║ INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_121319_fdd8b2 model=claude-opus-5-5 provider=anthropic platform=cli history=32 msg='read notes_08.txt and remember it'
+  ║ INFO     agent.conversation_loop:turn_usage.py:205 API call #17: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_cd3edab47d9c49f4a878
+  ║ INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.01s, 23624 chars)
+  ║ INFO     agent.conversation_loop:turn_usage.py:205 API call #18: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_af60e9a1f2b8438c9390
+  ║ INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=claude-opus-5-5 api_calls=2/4 budget=2/4 tool_turns=9 last_msg_role=assistant response_len=13 session=20261001_121319_fdd8b2
+  ║ INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_121319_fdd8b2 model=claude-opus-5-5 provider=anthropic platform=cli history=36 msg='read notes_09.txt and remember it'
+  ║ INFO     agent.conversation_loop:turn_usage.py:205 API call #19: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_c529046cdd1349e089f8
+  ║ INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.01s, 23624 chars)
+  ║ INFO     agent.conversation_loop:turn_usage.py:205 API call #20: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_e3f3f823b5f24ec4a3d8
+  ║ INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=claude-opus-5-5 api_calls=2/4 budget=2/4 tool_turns=10 last_msg_role=assistant response_len=13 session=20261001_121319_fdd8b2
+  ║ INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_121319_fdd8b2 model=claude-opus-5-5 provider=anthropic platform=cli history=40 msg='read notes_10.txt and remember it'
+  ║ INFO     agent.conversation_loop:turn_usage.py:205 API call #21: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_e5f2cc3c8d5b42b79693
+  ║ INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.01s, 23624 chars)
+  ║ INFO     agent.tool_result_projection:tool_result_projection.py:690 Tool-result projection: 3 stale result(s) archived, ~17,622 tokens reclaimed per request (16,897 message tokens now); 6 row(s) kept projected
+  ║ INFO     agent.conversation_loop:turn_usage.py:205 API call #22: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_7d4a02710210464ba95e
+  ║ INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=claude-opus-5-5 api_calls=2/4 budget=2/4 tool_turns=11 last_msg_role=assistant response_len=13 session=20261001_121319_fdd8b2
+  ║ INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_121319_fdd8b2 model=claude-opus-5-5 provider=anthropic platform=cli history=44 msg='read notes_11.txt and remember it'
+  ║ INFO     agent.conversation_loop:turn_usage.py:205 API call #23: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_d144a775af514a598139
+  ║ INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.01s, 23624 chars)
+  ║ INFO     agent.conversation_loop:turn_usage.py:205 API call #24: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_fa6f78bdb0254cafafa8
+  ║ INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=claude-opus-5-5 api_calls=2/4 budget=2/4 tool_turns=12 last_msg_role=assistant response_len=13 session=20261001_121319_fdd8b2
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/e2e/core/history/test_tool_result_projection_wire.py::test_projection_never_invalidates_replayed_preserved_thinking
+  ║ 1 failed, 1 passed in 6.84s
+  ║
+  ║  Repro: python -m pytest tests/e2e/core/history/test_tool_result_projection_wire.py -q
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 16.8s (2 workers) ===
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 16.8s  (runner wall: 16.8s, parallelism: 2x)
+  P50: 16.75s  P90: 16.75s  P95: 16.75s  P99: 16.75s  Max: 16.75s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+     16.75s  tests/e2e/core/history/test_tool_result_projection_wire.py
+
+=== Failure output ===
+
+--- tests/e2e/core/history/test_tool_result_projection_wire.py ---
+.F                                                                       [100%]
+=================================== FAILURES ===================================
+________ test_projection_never_invalidates_replayed_preserved_thinking _________
+
+native_anthropic = {'srv': <tests.fakes.providers.anthropic_messages.AnthropicMessagesServer object at 0x7fbf242e3850>, 'provider': <test...kdir': PosixPath('$PYTEST_TMP/test_projection_never_invalida0/work')}
+
+    def test_projection_never_invalidates_replayed_preserved_thinking(native_anthropic):
+        from run_agent import AIAgent
+    
+        srv, provider = native_anthropic["srv"], native_anthropic["provider"]
+        paths = write_corpus(native_anthropic["workdir"], TURNS)
+        agent = AIAgent(provider="anthropic", api_key="sk-ant-api03-e2e-fake-key", model=ANTHROPIC_MODEL,
+                        quiet_mode=True, platform="cli", enabled_toolsets=["file"], skip_memory=True,
+                        skip_context_files=True, max_iterations=4)
+        history: list[dict[str, Any]] = []
+        try:
+            for i, path in enumerate(paths):
+                provider.turns += [
+                    [Thinking(f"plan the read of file {i:02d}", ""), ToolUse("read_file", {"path": str(path)})],
+                    [Thinking(f"file {i:02d} read", ""), AnthropicText(f"noted file {i:02d}")],
+                ]
+                result = agent.run_conversation(f"read notes_{i:02d}.txt and remember it",
+                                                conversation_history=history, task_id="projection-thinking")
+                history = result.get("messages") or history
+                assert result.get("final_response") is not None, f"turn {i}: {result}"
+        finally:
+            agent.close()
+    
+        assert not native_anthropic["proxy"].refused, native_anthropic["proxy"].refused
+        assert srv.main_requests(), "no request reached the native Messages endpoint"
+        assert provider.replayed, "the route never replayed a signed thinking block; the check would be vacuous"
+>       assert not provider.invalidated, (
+            "a request replayed preserved-thinking blocks over a rewritten conversation prefix (Anthropic "
+            "drops them, or rejects the request on enforced accounts):\n"
+            + "\n".join(f"  {line}" for line in provider.invalidated))
+E       AssertionError: a request replayed preserved-thinking blocks over a rewritten conversation prefix (Anthropic drops them, or rejects the request on enforced accounts):
+E           request 10: messages[17] thinking block replayed over a rewritten prefix (signed: True)
+E           request 16: messages[29] thinking block replayed over a rewritten prefix (signed: True)
+E           request 22: messages[41] thinking block replayed over a rewritten prefix (signed: True)
+E       assert not ['request 10: messages[17] thinking block replayed over a rewritten prefix (signed: True)', 'request 16: messages[29] ...tten prefix (signed: True)', 'request 22: messages[41] thinking block replayed over a rewritten prefix (signed: True)']
+E        +  where ['request 10: messages[17] thinking block replayed over a rewritten prefix (signed: True)', 'request 16: messages[29] ...tten prefix (signed: True)', 'request 22: messages[41] thinking block replayed over a rewritten prefix (signed: True)'] = <tests.e2e.core.history.test_tool_result_projection_wire.SigningProvider object at 0x7fbf242e3b10>.invalidated
+
+$WT_CARRIER/tests/e2e/core/history/test_tool_result_projection_wire.py:292: AssertionError
+----------------------------- Captured stdout call -----------------------------
+  ┊ 📖 read      notes_00.txt  0.0s
+  ┊ 📖 read      notes_01.txt  0.0s
+  ┊ 📖 read      notes_02.txt  0.0s
+  ┊ 📖 read      notes_03.txt  0.0s
+  ┊ 📖 read      notes_04.txt  0.0s
+  ┊ 📖 read      notes_05.txt  0.0s
+  ┊ 📖 read      notes_06.txt  0.0s
+  ┊ 📖 read      notes_07.txt  0.0s
+  ┊ 📖 read      notes_08.txt  0.0s
+  ┊ 📖 read      notes_09.txt  0.0s
+  ┊ 📖 read      notes_10.txt  0.0s
+  ┊ 📖 read      notes_11.txt  0.0s
+------------------------------ Captured log call -------------------------------
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-browser-use' registered browser provider: browser-use
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-browserbase' registered browser provider: browserbase
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-firecrawl' registered browser provider: firecrawl
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered image_gen provider: deepinfra
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered image_gen provider: fal
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'krea' registered image_gen provider: krea
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'meta-ai-image-gen' registered image_gen provider: meta-ai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai' registered image_gen provider: openai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai-codex' registered image_gen provider: openai-codex
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: openrouter
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: nous
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered image_gen provider: xai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered video_gen provider: deepinfra
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered video_gen provider: fal
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered video_gen provider: openrouter
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered video_gen provider: xai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-brave-free' registered web provider: brave-free
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-ddgs' registered web provider: ddgs
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-exa' registered web provider: exa
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-firecrawl' registered web provider: firecrawl
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-keenable' registered web provider: keenable
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-openai-native' registered web provider: openai-native
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-parallel' registered web provider: parallel
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-perplexity' registered web provider: perplexity
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-searxng' registered web provider: searxng
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-tavily' registered web provider: tavily
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-xai' registered web provider: xai
+INFO     hermes_cli.plugins:plugins.py:1499 Plugin discovery complete: 58 found, 53 enabled
+WARNING  agent.context_pin:context_pin.py:68 model.context_length pins claude-opus-5-5 at 200,000 tokens but the provider advertises 1,000,000; the pin wins. Remove model.context_length from config.yaml to use the advertised window.
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_121319_fdd8b2 model=claude-opus-5-5 provider=anthropic platform=cli history=0 msg='read notes_00.txt and remember it'
+INFO     agent.conversation_loop:turn_usage.py:205 API call #1: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.1s id=msg_794b95d2e7ef45c1b0ed
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.01s, 23624 chars)
+INFO     agent.conversation_loop:turn_usage.py:205 API call #2: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_d6bd0d254eb845a48141
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=claude-opus-5-5 api_calls=2/4 budget=2/4 tool_turns=1 last_msg_role=assistant response_len=13 session=20261001_121319_fdd8b2
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_121319_fdd8b2 model=claude-opus-5-5 provider=anthropic platform=cli history=4 msg='read notes_01.txt and remember it'
+INFO     agent.conversation_loop:turn_usage.py:205 API call #3: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_7f35711f886347a29f3a
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.01s, 23624 chars)
+INFO     agent.conversation_loop:turn_usage.py:205 API call #4: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_d521b39b9d704acba61c
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=claude-opus-5-5 api_calls=2/4 budget=2/4 tool_turns=2 last_msg_role=assistant response_len=13 session=20261001_121319_fdd8b2
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_121319_fdd8b2 model=claude-opus-5-5 provider=anthropic platform=cli history=8 msg='read notes_02.txt and remember it'
+INFO     agent.conversation_loop:turn_usage.py:205 API call #5: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_f77b44673f93454ca3f3
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.01s, 23624 chars)
+INFO     agent.conversation_loop:turn_usage.py:205 API call #6: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_52e3396ea32b4fad89d1
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=claude-opus-5-5 api_calls=2/4 budget=2/4 tool_turns=3 last_msg_role=assistant response_len=13 session=20261001_121319_fdd8b2
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_121319_fdd8b2 model=claude-opus-5-5 provider=anthropic platform=cli history=12 msg='read notes_03.txt and remember it'
+INFO     agent.conversation_loop:turn_usage.py:205 API call #7: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_b8bdc65e1ef84ee9b14a
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.01s, 23624 chars)
+INFO     agent.conversation_loop:turn_usage.py:205 API call #8: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_d994368804b6486fa3f2
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=claude-opus-5-5 api_calls=2/4 budget=2/4 tool_turns=4 last_msg_role=assistant response_len=13 session=20261001_121319_fdd8b2
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_121319_fdd8b2 model=claude-opus-5-5 provider=anthropic platform=cli history=16 msg='read notes_04.txt and remember it'
+INFO     agent.conversation_loop:turn_usage.py:205 API call #9: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_6859052cc8ff4f67a19c
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.01s, 23624 chars)
+INFO     agent.tool_result_projection:tool_result_projection.py:690 Tool-result projection: 3 stale result(s) archived, ~17,622 tokens reclaimed per request (14,827 message tokens now)
+INFO     agent.conversation_loop:turn_usage.py:205 API call #10: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_07d870bc7c434d0fa026
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=claude-opus-5-5 api_calls=2/4 budget=2/4 tool_turns=5 last_msg_role=assistant response_len=13 session=20261001_121319_fdd8b2
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_121319_fdd8b2 model=claude-opus-5-5 provider=anthropic platform=cli history=20 msg='read notes_05.txt and remember it'
+INFO     agent.conversation_loop:turn_usage.py:205 API call #11: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_1c7e38446223437d8db7
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.01s, 23624 chars)
+INFO     agent.conversation_loop:turn_usage.py:205 API call #12: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_7932dc286096494892e3
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=claude-opus-5-5 api_calls=2/4 budget=2/4 tool_turns=6 last_msg_role=assistant response_len=13 session=20261001_121319_fdd8b2
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_121319_fdd8b2 model=claude-opus-5-5 provider=anthropic platform=cli history=24 msg='read notes_06.txt and remember it'
+INFO     agent.conversation_loop:turn_usage.py:205 API call #13: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_8c560e0fee434c08a501
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.01s, 23624 chars)
+INFO     agent.conversation_loop:turn_usage.py:205 API call #14: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_1f84094a979c448e83de
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=claude-opus-5-5 api_calls=2/4 budget=2/4 tool_turns=7 last_msg_role=assistant response_len=13 session=20261001_121319_fdd8b2
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_121319_fdd8b2 model=claude-opus-5-5 provider=anthropic platform=cli history=28 msg='read notes_07.txt and remember it'
+INFO     agent.conversation_loop:turn_usage.py:205 API call #15: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_43d61234a90b4a94abfd
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.01s, 23624 chars)
+INFO     agent.tool_result_projection:tool_result_projection.py:690 Tool-result projection: 3 stale result(s) archived, ~17,622 tokens reclaimed per request (15,862 message tokens now); 3 row(s) kept projected
+INFO     agent.conversation_loop:turn_usage.py:205 API call #16: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_834874ce07df469f8b32
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=claude-opus-5-5 api_calls=2/4 budget=2/4 tool_turns=8 last_msg_role=assistant response_len=13 session=20261001_121319_fdd8b2
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_121319_fdd8b2 model=claude-opus-5-5 provider=anthropic platform=cli history=32 msg='read notes_08.txt and remember it'
+INFO     agent.conversation_loop:turn_usage.py:205 API call #17: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_cd3edab47d9c49f4a878
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.01s, 23624 chars)
+INFO     agent.conversation_loop:turn_usage.py:205 API call #18: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_af60e9a1f2b8438c9390
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=claude-opus-5-5 api_calls=2/4 budget=2/4 tool_turns=9 last_msg_role=assistant response_len=13 session=20261001_121319_fdd8b2
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_121319_fdd8b2 model=claude-opus-5-5 provider=anthropic platform=cli history=36 msg='read notes_09.txt and remember it'
+INFO     agent.conversation_loop:turn_usage.py:205 API call #19: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_c529046cdd1349e089f8
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.01s, 23624 chars)
+INFO     agent.conversation_loop:turn_usage.py:205 API call #20: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_e3f3f823b5f24ec4a3d8
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=claude-opus-5-5 api_calls=2/4 budget=2/4 tool_turns=10 last_msg_role=assistant response_len=13 session=20261001_121319_fdd8b2
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_121319_fdd8b2 model=claude-opus-5-5 provider=anthropic platform=cli history=40 msg='read notes_10.txt and remember it'
+INFO     agent.conversation_loop:turn_usage.py:205 API call #21: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_e5f2cc3c8d5b42b79693
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.01s, 23624 chars)
+INFO     agent.tool_result_projection:tool_result_projection.py:690 Tool-result projection: 3 stale result(s) archived, ~17,622 tokens reclaimed per request (16,897 message tokens now); 6 row(s) kept projected
+INFO     agent.conversation_loop:turn_usage.py:205 API call #22: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_7d4a02710210464ba95e
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=claude-opus-5-5 api_calls=2/4 budget=2/4 tool_turns=11 last_msg_role=assistant response_len=13 session=20261001_121319_fdd8b2
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_121319_fdd8b2 model=claude-opus-5-5 provider=anthropic platform=cli history=44 msg='read notes_11.txt and remember it'
+INFO     agent.conversation_loop:turn_usage.py:205 API call #23: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_d144a775af514a598139
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.01s, 23624 chars)
+INFO     agent.conversation_loop:turn_usage.py:205 API call #24: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_fa6f78bdb0254cafafa8
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=claude-opus-5-5 api_calls=2/4 budget=2/4 tool_turns=12 last_msg_role=assistant response_len=13 session=20261001_121319_fdd8b2
+=========================== short test summary info ============================
+FAILED tests/e2e/core/history/test_tool_result_projection_wire.py::test_projection_never_invalidates_replayed_preserved_thinking
+1 failed, 1 passed in 6.84s
+
+=== 1 file with test failures (1 test failed) ===
+  tests/e2e/core/history/test_tool_result_projection_wire.py  (1 test failed)

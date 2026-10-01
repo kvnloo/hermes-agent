@@ -1,0 +1,22 @@
+▶ not activated — using HERMES_PYTHON: <hermes-home>/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 3 test files (~110 tests) under ['tests/hermes_cli/test_shared_metrics_loop.py', 'tests/agent/test_memory_provider.py', 'tests/agent/test_memory_health.py']; running with -j 2
+[ 40.0% |    44/~110 | ✓44 | ✗ 0] ✓ tests/agent/test_memory_health.py (44✓, 2.7s)
+[ 85.5% |    94/~110 | ✓99 | ✗ 0] ✓ tests/agent/test_memory_provider.py (55✓, 3.0s)
+[100.0% |   110/~110 | ✓115 | ✗  0] ✓ tests/hermes_cli/test_shared_metrics_loop.py (16✓, 6.5s)
+
+=== Summary: 3 files, 115 tests passed, 0 failed (100% complete) in 9.3s (2 workers) ===
+  Durations cached to test_durations.json (3 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   3
+  Total subprocess CPU-wall: 12.2s  (runner wall: 9.3s, parallelism: 2x)
+  P50: 2.99s  P90: 6.54s  P95: 6.54s  P99: 6.54s  Max: 6.54s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+      6.54s  tests/hermes_cli/test_shared_metrics_loop.py
+      2.99s  tests/agent/test_memory_provider.py
+      2.71s  tests/agent/test_memory_health.py

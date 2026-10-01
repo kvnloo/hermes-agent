@@ -1,0 +1,187 @@
+{
+  "schema": "f09.gate_probe.v1",
+  "arm": "base",
+  "repo_head": "e8c97320ac8691d4de92af49f98459f9ef9ddb08",
+  "cells": [
+    {
+      "cell": "native_claude_flag_false",
+      "completed": true,
+      "requests": 1,
+      "payload_sent": [
+        false
+      ],
+      "beta_present": [
+        false
+      ],
+      "payload": null,
+      "schema_errors": [],
+      "local_threshold_tokens": 150000,
+      "expect_payload": false,
+      "pass": true
+    },
+    {
+      "cell": "native_claude_flag_true",
+      "completed": true,
+      "requests": 1,
+      "payload_sent": [
+        false
+      ],
+      "beta_present": [
+        false
+      ],
+      "payload": null,
+      "schema_errors": [],
+      "local_threshold_tokens": 150000,
+      "expect_payload": true,
+      "pass": false
+    },
+    {
+      "cell": "native_claude_flag_true_compression_disabled",
+      "completed": true,
+      "requests": 1,
+      "payload_sent": [
+        false
+      ],
+      "beta_present": [
+        false
+      ],
+      "payload": null,
+      "schema_errors": [],
+      "local_threshold_tokens": 150000,
+      "expect_payload": false,
+      "pass": true
+    },
+    {
+      "cell": "native_claude_flag_true_checkpoint_required",
+      "completed": true,
+      "requests": 1,
+      "payload_sent": [
+        false
+      ],
+      "beta_present": [
+        false
+      ],
+      "payload": null,
+      "schema_errors": [],
+      "local_threshold_tokens": 150000,
+      "expect_payload": false,
+      "pass": true
+    },
+    {
+      "cell": "native_non_claude_flag_true",
+      "completed": true,
+      "requests": 1,
+      "payload_sent": [
+        false
+      ],
+      "beta_present": [
+        false
+      ],
+      "payload": null,
+      "schema_errors": [],
+      "local_threshold_tokens": 153600,
+      "expect_payload": false,
+      "pass": true
+    },
+    {
+      "cell": "third_party_endpoint_flag_true",
+      "completed": true,
+      "requests": 1,
+      "payload_sent": [
+        false
+      ],
+      "beta_present": [
+        false
+      ],
+      "payload": null,
+      "schema_errors": [],
+      "local_threshold_tokens": 150000,
+      "expect_payload": false,
+      "pass": true
+    },
+    {
+      "cell": "structured_400_disable_and_retry_once",
+      "turn1_completed": true,
+      "turn2_completed": true,
+      "payload_sent_per_request": [
+        false,
+        false
+      ],
+      "flag_after": null,
+      "pass": false
+    },
+    {
+      "cell": "over_threshold_local_fallback_on",
+      "turn1_completed": true,
+      "turn2_completed": true,
+      "local_threshold_tokens": 50000,
+      "turn1_real_input_tokens": 60000,
+      "local_compress_calls_turn1": 0,
+      "local_compress_calls_turn2": 1,
+      "payload_sent_per_request": [
+        false,
+        false
+      ],
+      "trigger_sent": [],
+      "pass": true
+    },
+    {
+      "cell": "over_threshold_local_fallback_off",
+      "turn1_completed": true,
+      "turn2_completed": true,
+      "local_threshold_tokens": 50000,
+      "turn1_real_input_tokens": 60000,
+      "local_compress_calls_turn1": 0,
+      "local_compress_calls_turn2": 1,
+      "payload_sent_per_request": [
+        false,
+        false
+      ],
+      "trigger_sent": [],
+      "pass": true
+    },
+    {
+      "cell": "flag_absent_wire",
+      "completed": true,
+      "requests": [
+        {
+          "context_management": null,
+          "beta_header": "interleaved-thinking-2025-05-14,fine-grained-tool-streaming-2025-05-14",
+          "beta_present": false,
+          "schema_errors": [],
+          "body_sha256": "c1eae24390b8569f7fc485a34d96f0d835400acd2be4b99a3185d971420304ab",
+          "body_minus_system_sha256": "eab91ad3f12252c117aaeb842102822ade9b2fd2672d27386c5759172e4c9c66",
+          "system_sha256": "66e4dd690f2cdd874d6636e48fb16f14806c51b4b0fc3419e16c3331f877ecdd",
+          "headers_sha256": "eb74173fa90f7f3759981331635312281b186d105415e735acefca4542876b84"
+        },
+        {
+          "context_management": null,
+          "beta_header": "interleaved-thinking-2025-05-14,fine-grained-tool-streaming-2025-05-14",
+          "beta_present": false,
+          "schema_errors": [],
+          "body_sha256": "7b7297cb5863be654f1b8594f265723fc0a5154f86b5895117e26e78a9af85a0",
+          "body_minus_system_sha256": "7fa573ed3c43d43e67c6f6c82d2384afe368bb1e1678c09d2316dc54bbdb751b",
+          "system_sha256": "66e4dd690f2cdd874d6636e48fb16f14806c51b4b0fc3419e16c3331f877ecdd",
+          "headers_sha256": "eb74173fa90f7f3759981331635312281b186d105415e735acefca4542876b84"
+        }
+      ],
+      "system_normalised_sha256": "9d4472d1d3d060cf9e3d08ee08a9d82fcbe5ee8995c50890c78a8f503b9ffec8",
+      "system_host_substitutions": [
+        {
+          "placeholder": "<SANDBOX>",
+          "count": 4
+        },
+        {
+          "placeholder": "Host: <HOST>",
+          "count": 1
+        },
+        {
+          "placeholder": "python3=<PY>",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "egress_blocked": [],
+  "sdk_schema_errors_total": 0
+}

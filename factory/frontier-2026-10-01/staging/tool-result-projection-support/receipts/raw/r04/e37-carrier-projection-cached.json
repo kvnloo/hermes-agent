@@ -1,0 +1,109 @@
+{
+  "arm": "projection-cached",
+  "turns": 20,
+  "repo_head": "15dff75cc860a14d06414c6bf31459397e1de912",
+  "repo_tree": "b733be3f0d7be6561ca550dd6eb1425f4eae1854",
+  "dirty_files": [],
+  "config_overlay": "compression:\n  tool_result_projection: auto\n",
+  "provider_reports_cached_input": true,
+  "observed": {
+    "label": "OBSERVED (loopback wire)",
+    "main_requests": 40,
+    "aux_requests": 1,
+    "prefix_breaks": [
+      15,
+      27,
+      39
+    ],
+    "prefix_break_reasons": [
+      "messages[3] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 00 line 0000 alpha beta gamma delta e'  vs  '",
+      "messages[27] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 06 line 0000 alpha beta gamma delta e'  vs  ",
+      "messages[51] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 12 line 0000 alpha beta gamma delta e'  vs  "
+    ],
+    "projection_passes": {
+      "15": [
+        "call_fake_1",
+        "call_fake_2",
+        "call_fake_3",
+        "call_fake_4",
+        "call_fake_5",
+        "call_fake_6"
+      ],
+      "27": [
+        "call_fake_7",
+        "call_fake_8",
+        "call_fake_9",
+        "call_fake_10",
+        "call_fake_11",
+        "call_fake_12"
+      ],
+      "39": [
+        "call_fake_13",
+        "call_fake_14",
+        "call_fake_15",
+        "call_fake_16",
+        "call_fake_17",
+        "call_fake_18"
+      ]
+    },
+    "rows_projected": 18,
+    "unstable_archived_rows": [],
+    "wire_chars_per_request": [
+      7600,
+      31989,
+      32096,
+      56485,
+      56592,
+      80981,
+      81088,
+      105477,
+      105584,
+      129973,
+      130080,
+      154469,
+      154576,
+      178965,
+      179072,
+      62755,
+      62862,
+      87251,
+      87358,
+      111749,
+      111856,
+      136247,
+      136354,
+      160745,
+      160852,
+      185243,
+      185350,
+      69038,
+      69145,
+      93536,
+      93643,
+      118034,
+      118141,
+      142532,
+      142639,
+      167030,
+      167137,
+      191528,
+      191635,
+      75326
+    ],
+    "last_request_chars": 75326,
+    "max_request_chars": 191635,
+    "sum_request_chars": 4613013,
+    "durable_model_view_tool_rows_chars": 472480,
+    "turn_errors": []
+  },
+  "modeled": {
+    "label": "MODELED (chars/4 tokens; perfect prefix cache; write 1.25x, read 0.10x)",
+    "cache_read_ratio": 0.8723,
+    "billed_input_tokens_no_cache": 1153253,
+    "billed_input_token_units_cached": 284629,
+    "reprefill_tokens_after_breaks": 145321
+  },
+  "egress_blocked": [],
+  "wall_s": 4.93,
+  "python": "3.11.14"
+}

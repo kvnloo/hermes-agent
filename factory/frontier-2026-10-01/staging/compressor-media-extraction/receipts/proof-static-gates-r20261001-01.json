@@ -1,0 +1,155 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compressor-media-extraction",
+ "base_revision": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+ "head_revision": "d2bff3a59edd1a9be5a90f5d84bbded1fbe04e8b",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#80636",
+  "NousResearch/hermes-agent#78645"
+ ],
+ "provenance": "self",
+ "privacy": "public-aggregate",
+ "cost_usd": 0.0,
+ "ai_assistance": "Claude Code (Opus 5.5) ran the experiment and wrote this receipt",
+ "created_at": "2026-10-01T05:21:43-05:00",
+ "spec": {
+  "path": null,
+  "prereg_commit": null,
+  "note": "not pre-registered on claude/ledger (no ledger writes in this run)"
+ },
+ "env": {
+  "host": "<local-host>",
+  "test_python": "3.11.14 (pytest 9.1.1, HERMES_PYTHON)",
+  "nav_python": "3.14.7 separate uv venv (tiktoken 0.14.0, radon 6.0.1)",
+  "sandbox": "none (no bwrap); HOME/HERMES_HOME pointed at scratch test homes; run_tests.sh env -i",
+  "load1_range": "3.4-13 (shared host)"
+ },
+ "id": "static-gates/r20261001-01",
+ "experiment": "verify_media.py parity / no-shim / old-path gates, plus negative controls",
+ "tier": "T0",
+ "label": "OBSERVED",
+ "inputs": {
+  "regen_scripts_sha256": {
+   "extract_media.py": "88b143d7b0600ad5197fb5630d6c92bdbaf075cefa5af3477aeebfa03d140a06",
+   "golden_parity.py": "5ec7c2954fbbb9166eb5da15be7bc0c3f50dee0fbe11b77a1c632dc2559795d8",
+   "moved_symbol_lookup.py": "137868172480a30d09ed2a0afe60bca0b28ab6a81fff73d21618ceb37a7c3141",
+   "parity_compare.py": "bc99048d3cbc402a079a2ee098f9f209c2f86d34e65388074c0547bb4635989b",
+   "verify_media.py": "569fc7e4bb407f4071249911ba927ddbb1ec501c72772c3acaa2468f57daf1f1"
+  }
+ },
+ "command": "python3 regen/verify_media.py $W/base $W/head --python $HERMES_PYTHON --json verify-head.json",
+ "result": {
+  "head": {
+   "overall": "PASS",
+   "gates": {
+    "verbatim": "PASS",
+    "facade_rest": "PASS",
+    "no_shim": "PASS",
+    "old_path_zero": "PASS",
+    "native_coupling": "PASS",
+    "imports": "PASS"
+   },
+   "sizes": {
+    "facade_lines_base": 5753,
+    "facade_lines_head": 5531,
+    "sibling_lines_head": 243
+   },
+   "facade_imports_from_sibling": [
+    "_is_image_part",
+    "_retire_stale_tool_result_images",
+    "_rewritten",
+    "_strip_historical_media",
+    "_strip_images_from_tool_msg",
+    "_summary_part_text"
+   ],
+   "import_probes": [
+    {
+     "module": "agent.context_compressor_media",
+     "facade_loaded": false,
+     "rc": 0
+    },
+    {
+     "module": "agent.context_compressor",
+     "facade_loaded": true,
+     "rc": 0
+    },
+    {
+     "module": "agent.native_compaction",
+     "facade_loaded": true,
+     "rc": 0
+    },
+    {
+     "module": "agent.chat_completion_helpers",
+     "facade_loaded": false,
+     "rc": 0
+    },
+    {
+     "module": "agent.turn_request_assembly",
+     "facade_loaded": false,
+     "rc": 0
+    }
+   ]
+  },
+  "negative_controls": {
+   "N2a_reexport_added": {
+    "mutation": "add _tool_content_has_images to the facade's sibling import (a re-export)",
+    "overall": "FAIL",
+    "gates": {
+     "verbatim": "PASS",
+     "facade_rest": "PASS",
+     "no_shim": "FAIL",
+     "old_path_zero": "PASS",
+     "native_coupling": "PASS",
+     "imports": "PASS"
+    },
+    "caught": [
+     "_tool_content_has_images"
+    ]
+   },
+   "N2bc_old_path_imports": {
+    "mutation": "test_protected_tail_pressure imports _tool_content_has_images and test_compressor_historical_media imports _strip_historical_media from agent.context_compressor",
+    "overall": "FAIL",
+    "gates": {
+     "verbatim": "PASS",
+     "facade_rest": "PASS",
+     "no_shim": "PASS",
+     "old_path_zero": "FAIL",
+     "native_coupling": "PASS",
+     "imports": "PASS"
+    },
+    "caught": [
+     "tests/agent/test_compressor_historical_media.py:16:_strip_historical_media",
+     "tests/agent/test_protected_tail_pressure.py:21:_tool_content_has_images"
+    ],
+    "pytest": "test_protected_tail_pressure: ImportError (facade does not export it); test_compressor_historical_media: 15 passed (facade imports _strip_historical_media for its own use), so only the static gate catches that one"
+   }
+  }
+ },
+ "raw": [
+  {
+   "path": "raw/verify-head.json",
+   "sha256": "03c134af08037bee2c3a8a6bf7c14cd6716204dc7b6488c114168505e1aaec34",
+   "source_sha256": "03c134af08037bee2c3a8a6bf7c14cd6716204dc7b6488c114168505e1aaec34"
+  },
+  {
+   "path": "raw/neg-n2a-verify.json",
+   "sha256": "658c3b0e678dcf03008bf869b37669746421eb98c89c9f33f335afcc6b45176f",
+   "source_sha256": "658c3b0e678dcf03008bf869b37669746421eb98c89c9f33f335afcc6b45176f"
+  },
+  {
+   "path": "raw/neg-n2bc-verify.json",
+   "sha256": "e5dda2fa1a4b8c81394c2d95a2a13177a8686f31eb5d5c6a98a43b6dd487a0a0",
+   "source_sha256": "e5dda2fa1a4b8c81394c2d95a2a13177a8686f31eb5d5c6a98a43b6dd487a0a0"
+  },
+  {
+   "path": "raw/neg-n2bc-tests.log",
+   "sha256": "c127eb9875c49db24a8479757cf3a2c04d4ce1ba82de67c01a18017de0f61f21",
+   "source_sha256": "09e87cfecf1e105de79b34e632b94e011b232eeda692f41494a7aed644db577e"
+  }
+ ],
+ "verdict": "PASS (all 6 gates on head; each negative control flips exactly its gate)",
+ "privacy_scrub": "fix round 1 (2026-10-01): absolute local paths and the local user name were replaced with placeholders ($W/<tree>, $S, $HERMES_PYTHON, $HERMES_VENV, <uv>, <pytest-tmp>, pytest-of-<user>, ~). raw[].sha256 is the file as shipped after that scrub; raw[].source_sha256 is the pre-scrub original.",
+ "superseded_by": "static-gates/r20261001-02",
+ "superseded_note": "first build d2bff3a59e on 572e4f4fad; replaced in fix round 1 by c5e8be14b4 on aea969677c (same patch-id 2c92e56f)"
+}

@@ -1,0 +1,243 @@
+{
+  "schema": "xf.receipt.v1",
+  "id": "F08/r20261001-04",
+  "experiment": "F08 replay on current main: the staging head's diff applied onto main aaa863f7ff (25 commits after its parent 040b6df2c4) as a temporary, unreferenced commit, then RED, GREEN x3, the 10 per-hunk sabotage cells, the two stall cells and the 12-file adjacent run with the unchanged round-3 driver. It checks that the proof in F08/r20261001-03 still holds on the newest main; it does not replace it",
+  "tier": "T1",
+  "cost_usd": 0.0,
+  "lane": "cpu",
+  "spec": {
+    "path": null,
+    "prereg_commit": null,
+    "note": "same oracle and cells as F08/r20261001-03"
+  },
+  "runner_revision": {
+    "driver": "work/r3/mpm_prove_r3.py (sha256 6678e43a1815488e297c3f5599f4ab65506973c44ad711e074ad141bf5a09cf9, unchanged)",
+    "test_runner": "scripts/run_tests.sh"
+  },
+  "staging": "memory-prefetch-metric",
+  "base_revision": "aaa863f7ff2dec1821be1652b5d15ad14ecea70b",
+  "head_revision": "569ad4d84b0f9888ea2598c2a8ea416b2c75bad6",
+  "replay": {
+    "commit": "27d0a5e42f5b001ae071d9b4cbf312dfd51ac27c",
+    "parent": "aaa863f7ff2dec1821be1652b5d15ad14ecea70b",
+    "tree": "21c423feb3df08111ba13bd5cf8af2161c21af23",
+    "equals_merge_tree_of_head_and_main": true,
+    "patch_id_equals_head": true,
+    "changed_file_blobs_equal_head": true,
+    "how": "git cherry-pick of the head onto main in a detached worktree (committer identity passed with -c); the worktree was removed and no ref points at the commit",
+    "why_not_moved": "the branch stays at the head: no invalidate_on path changed since its parent, and moving it would change the exact head the verifier read"
+  },
+  "env": {
+    "host": "<host>",
+    "python": "3.11.14 (<read-only py3.11 venv>, used read-only as HERMES_PYTHON)",
+    "nemo_relay_native": true,
+    "sandbox": "no bwrap; HOME/HERMES_HOME forced to a scratch test home; run_tests.sh clean env",
+    "network": "none used by tests",
+    "load1_at_start": 12.99,
+    "load1_at_end": 10.39,
+    "window": "2026-10-01T16:54:07Z .. 2026-10-01T17:00:54Z"
+  },
+  "command": "HOME=<scratch>/testhome-sf3-memory-prefetch-metric HERMES_HOME=$HOME/.hermes HERMES_PYTHON=<read-only py3.11 venv>/bin/python bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py -q",
+  "gates": {
+    "red": {
+      "arm": "main aaa863f7ff with the head's test file (the 5 production files from main)",
+      "result": "PASS",
+      "assertion": "E       AssertionError: assert [] == [('honcho', '... 'failed', 1)]",
+      "observed": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 16.0s (2 workers) ===",
+      "failed": [
+        "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+      ],
+      "log_sha256": "237d6067b2aba1bf6d45284751b45c741506333638b0c43bc77857fb8252d08e"
+    },
+    "green": [
+      {
+        "rep": 1,
+        "observed": "=== Summary: 1 files, 16 tests passed, 0 failed (100% complete) in 8.1s (2 workers) ===",
+        "failed": [],
+        "log_sha256": "f33fc267cb92e036ac87f4c82885852f0db1be64e5ede1caeb5af842ecf07872"
+      },
+      {
+        "rep": 2,
+        "observed": "=== Summary: 1 files, 16 tests passed, 0 failed (100% complete) in 7.1s (2 workers) ===",
+        "failed": [],
+        "log_sha256": "2f4b206fa6ff0f12f075a8f634e8ac7bb11b0420a977a9071c415d8fa73e6455"
+      },
+      {
+        "rep": 3,
+        "observed": "=== Summary: 1 files, 16 tests passed, 0 failed (100% complete) in 6.9s (2 workers) ===",
+        "failed": [],
+        "log_sha256": "b5431a68dfaf58b3566be6ece357c79154ff4f92c4db53c8027d1d8b26b447f8"
+      }
+    ],
+    "green_reps_agree": "3/3",
+    "sabotage": {
+      "per_hunk": [
+        {
+          "mutation": "S1-skip-exit",
+          "file": "agent/memory_manager.py",
+          "red_again": true,
+          "observed": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 15.8s (2 workers) ===",
+          "failed": [
+            "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+          ],
+          "log_sha256": "3937df33654ee7df461d21cb0456b8ebcb40519c0c50c8e81ca0c072d8ce7864"
+        },
+        {
+          "mutation": "S2-timeout-exit",
+          "file": "agent/memory_manager.py",
+          "red_again": true,
+          "observed": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 17.2s (2 workers) ===",
+          "failed": [
+            "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+          ],
+          "log_sha256": "a132a3b9094ad9f2ab942b0b6ccf95baf87e3dd376b08a0398caecf050515afa"
+        },
+        {
+          "mutation": "S3-error-exit",
+          "file": "agent/memory_manager.py",
+          "red_again": true,
+          "observed": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 20.2s (2 workers) ===",
+          "failed": [
+            "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+          ],
+          "log_sha256": "046d9d528e9e9b9cb13247a2f3a1acdeb991646c1b8e6eb92bc37a4f26f6b549"
+        },
+        {
+          "mutation": "S4-success-empty-exit",
+          "file": "agent/memory_manager.py",
+          "red_again": true,
+          "observed": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 19.0s (2 workers) ===",
+          "failed": [
+            "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+          ],
+          "log_sha256": "cbe310377f697c6f856c8f669d3062f49d1ad5c044bcc9e5edfeaf2b6723c5a3"
+        },
+        {
+          "mutation": "S5-mark-to-metric-mapping",
+          "file": "hermes_cli/observability/shared_metrics_contract.py",
+          "red_again": true,
+          "observed": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 19.8s (2 workers) ===",
+          "failed": [
+            "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+          ],
+          "log_sha256": "679c2f6c093c3e4a3832d00cad05da27be2c53363b312d203166227f938fe108"
+        },
+        {
+          "mutation": "S6-provider-rule-raw-name",
+          "file": "hermes_cli/observability/shared_metrics_loop.py",
+          "red_again": true,
+          "observed": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 18.0s (2 workers) ===",
+          "failed": [
+            "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+          ],
+          "log_sha256": "e6fc38cd0510e0231934ff8b23c1f8019312297147d4f34c10004dad65969424"
+        },
+        {
+          "mutation": "S7-outcome-vocabulary-drift",
+          "file": "agent/memory_manager.py",
+          "red_again": true,
+          "observed": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 17.3s (2 workers) ===",
+          "failed": [
+            "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+          ],
+          "log_sha256": "4fa03d5f316266c12975cc472c3c531a2bf2037149a671145ea75ee6942fd9da"
+        },
+        {
+          "mutation": "S8-latency-not-measured",
+          "file": "hermes_cli/observability/shared_metrics_loop.py",
+          "red_again": true,
+          "observed": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 16.8s (2 workers) ===",
+          "failed": [
+            "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+          ],
+          "log_sha256": "53db30670f1d60f1dbc3f8da104c8e7c6ff6358852970841e48fa11170aab7d8"
+        },
+        {
+          "mutation": "S9-empty-classification",
+          "file": "hermes_cli/observability/shared_metrics_loop.py",
+          "red_again": true,
+          "observed": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 18.9s (2 workers) ===",
+          "failed": [
+            "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+          ],
+          "log_sha256": "5eddf9c1ff10f693707d4457acf111ff93bf111e1f8d19beb17c3163eb847064"
+        },
+        {
+          "mutation": "S10-constant-latency-above-timeout",
+          "file": "hermes_cli/observability/shared_metrics_loop.py",
+          "red_again": true,
+          "observed": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 18.5s (2 workers) ===",
+          "failed": [
+            "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+          ],
+          "log_sha256": "7fc17234ffb50645dbf5ff20df70ccbe27613183578793ffa9813ca5016e736f"
+        }
+      ],
+      "result": "10/10 re-RED on exactly the contract test"
+    },
+    "stall_tolerance": {
+      "amended_test_1500ms_stall": {
+        "result": "PASS (expected PASS)",
+        "observed": "=== Summary: 1 files, 16 tests passed, 0 failed (100% complete) in 15.5s (2 workers) ===",
+        "failed": [],
+        "log_sha256": "1737bc7a266f4ddfef6001875e05185000e74e2952e9d2111f55cc3edb2f8a4d"
+      },
+      "round2_test_150ms_stall": {
+        "result": "FAIL (expected FAIL)",
+        "observed": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 15.7s (2 workers) ===",
+        "failed": [
+          "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+        ],
+        "log_sha256": "3e6a3560b618a6f1d24e4ce91dea2e7b61b8437955b45d783a161435fb152bee"
+      }
+    },
+    "adjacent": {
+      "files": 12,
+      "base": "=== Summary: 12 files, 330 tests passed, 0 failed (100% complete) in 51.1s (2 workers) ===",
+      "head": "=== Summary: 12 files, 331 tests passed, 0 failed (100% complete) in 46.1s (2 workers) ===",
+      "base_failed": [],
+      "head_failed": [],
+      "identical": true,
+      "note": "330 of 330 on main, 331 of 331 with the replay (+1 = the new test)",
+      "log_sha256": {
+        "base": "b85403d9fe0122ca93de9410d1e08f045ba2cb3fe6adb0fa9c6e96cc8c267c41",
+        "head": "fb7f93a65f1fe3f4823738cb75d6477205c76bd15208a93ff6dbe3f065c76144"
+      }
+    },
+    "flaky": false
+  },
+  "evidence_class": {
+    "local": true,
+    "ci": "none",
+    "simulation": false,
+    "runtime": false,
+    "kind": "mechanism"
+  },
+  "not_tested": [
+    "real provider backends",
+    "py3.14 CI matrix",
+    "Windows/macOS"
+  ],
+  "limitations": [
+    "host load1 about 10 to 13 (shared host)",
+    "same limitations as F08/r20261001-03"
+  ],
+  "verdict": "KEEP",
+  "provenance": "self",
+  "privacy": "public-aggregate",
+  "ai_assistance": "Claude Code (Opus 5.5) ran the replay and wrote this receipt",
+  "raw_artifacts": {
+    "results": {
+      "path": "work/r5/prove/prove_results.json",
+      "sha256": "101ded37ef35d6ecfa7ef3013ea63aec347a7b337b0a4cd3cc7a8ae7e97e6853"
+    },
+    "stdout": {
+      "path": "work/r5/prove_stdout.txt",
+      "sha256": "c7cbc3603adb9f6c338b85bc2bae034201e4789ab3d548f6d6c1e29c090b6b34"
+    }
+  },
+  "complements": {
+    "id": "F08/r20261001-03",
+    "why": "r03 proves the branch commit on its own parent and stays current; this replays it on the newest main"
+  }
+}

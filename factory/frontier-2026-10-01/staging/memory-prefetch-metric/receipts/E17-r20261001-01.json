@@ -1,0 +1,590 @@
+{
+  "schema": "xf.receipt.v1",
+  "id": "E17/r20261001-01",
+  "experiment": "E17: delay/hang/empty/error fault probe against a local fake memory backend through the real turn-start prefetch path, plus profile-scope and collection-off checks and a base-vs-head microbenchmark",
+  "tier": "T1",
+  "cost_usd": 0.0,
+  "lane": "cpu",
+  "spec": {
+    "path": null,
+    "prereg_commit": null,
+    "note": "Not pre-registered; expectations fixed in the probe before the run."
+  },
+  "staging": "memory-prefetch-metric",
+  "origin_refs": [
+    "NousResearch/hermes-agent#124151",
+    "evals/memory/honcho_current_query.py pattern",
+    "evals/provider_fallback/probe_104260.py:11-39 isolation + loopback guard"
+  ],
+  "base_revision": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+  "head_revision": "c815543bc2504eccaae9f6adce5046f41710f38c",
+  "head_tree": "9569d4977ca74896070bc85425145742ee835291",
+  "arms": {
+    "head": "MemoryManager from the staging commit c815543bc2",
+    "base": "main's agent/memory_manager.py (blob d023a57f8b, sha256 048842c1\u2026) loaded from source into the head tree; it is the only changed file on the prefetch call path"
+  },
+  "inputs": {
+    "probe": {
+      "path": "work/e17_prefetch_fault_probe.py",
+      "sha256": "14db2ff5cc8f144781fa0b952b99c9ef59aee26a563516cb0a64c5f9afd4f9de"
+    },
+    "base_memory_manager": {
+      "path": "work/base_memory_manager.py",
+      "sha256": "048842c1c3725e6fe6aef8f2b7fe3ea06baec02cebdea1e9ab0e9da06473930d"
+    },
+    "gate_cost_micro": {
+      "path": "work/micro_gate_cost.py",
+      "sha256": "2e0960442d0d0def4ee7e0c1c6c0b58d773c8b60b23ffdf316134542653d98dc"
+    }
+  },
+  "env": {
+    "host": "<host>",
+    "python": "3.11.14 (<read-only py3.11 venv>, read-only use as HERMES_PYTHON)",
+    "pytest": "9.1.1",
+    "nemo_relay_native": true,
+    "sandbox": "no bwrap; HOME/HERMES_HOME forced to scratch test home; run_tests.sh clean env (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0)",
+    "network": "none used; probes install a loopback-only socket.connect guard",
+    "relay": "REAL nemo_relay native binding + real SharedMetricsStore in an isolated HERMES_HOME (config.yaml: telemetry.shared_metrics.enabled true, send false)",
+    "load1": {
+      "probe_end": 13.07275390625,
+      "gate_micro": [
+        15.080078125,
+        16.85888671875
+      ]
+    },
+    "prefetch_timeout_s": {
+      "bulk": 1.0,
+      "default_case": 8.0
+    }
+  },
+  "commands": [
+    "cd <scratchpad> && env -i PATH=/usr/bin:/bin <read-only py3.11 venv>/bin/python work/e17_prefetch_fault_probe.py --repo <worktree at c815543bc2> --base-mm work/base_memory_manager.py --out work/e17_result.json",
+    "cd <scratchpad> && env -i PATH=/usr/bin:/bin <read-only py3.11 venv>/bin/python work/micro_gate_cost.py --repo <worktree at c815543bc2> --out work/micro_gate_cost.json"
+  ],
+  "reps_per_fault_per_arm": 12,
+  "results": {
+    "faults": {
+      "ok": {
+        "backend_fault": "ok",
+        "expected_outcome": "success",
+        "observed_head_rows": [
+          {
+            "dims": {
+              "latency_bucket": "lt_100ms",
+              "outcome": "success",
+              "provider": "plugin"
+            },
+            "value": 12
+          }
+        ],
+        "observed_base_rows": [],
+        "turn_wait_ms": {
+          "base": {
+            "n": 12,
+            "p50": 0.65,
+            "p95": 1.01,
+            "max": 1.22
+          },
+          "head": {
+            "n": 12,
+            "p50": 0.74,
+            "p95": 2.9,
+            "max": 4.58
+          }
+        },
+        "returned_context_identical_across_arms": true
+      },
+      "delay_0.05": {
+        "backend_fault": "delay_0.05",
+        "expected_outcome": "success",
+        "observed_head_rows": [
+          {
+            "dims": {
+              "latency_bucket": "lt_100ms",
+              "outcome": "success",
+              "provider": "plugin"
+            },
+            "value": 12
+          }
+        ],
+        "observed_base_rows": [],
+        "turn_wait_ms": {
+          "base": {
+            "n": 12,
+            "p50": 51.15,
+            "p95": 51.84,
+            "max": 52.2
+          },
+          "head": {
+            "n": 12,
+            "p50": 51.32,
+            "p95": 52.24,
+            "max": 52.81
+          }
+        },
+        "returned_context_identical_across_arms": true
+      },
+      "delay_0.4": {
+        "backend_fault": "delay_0.4",
+        "expected_outcome": "success",
+        "observed_head_rows": [
+          {
+            "dims": {
+              "latency_bucket": "250ms_to_500ms",
+              "outcome": "success",
+              "provider": "plugin"
+            },
+            "value": 12
+          }
+        ],
+        "observed_base_rows": [],
+        "turn_wait_ms": {
+          "base": {
+            "n": 12,
+            "p50": 401.25,
+            "p95": 401.53,
+            "max": 401.56
+          },
+          "head": {
+            "n": 12,
+            "p50": 401.64,
+            "p95": 403.13,
+            "max": 404.59
+          }
+        },
+        "returned_context_identical_across_arms": true
+      },
+      "slow_over_timeout": {
+        "backend_fault": "delay_1.5",
+        "expected_outcome": "timed_out",
+        "observed_head_rows": [
+          {
+            "dims": {
+              "latency_bucket": "1s_to_2s",
+              "outcome": "timed_out",
+              "provider": "plugin"
+            },
+            "value": 12
+          }
+        ],
+        "observed_base_rows": [],
+        "turn_wait_ms": {
+          "base": {
+            "n": 12,
+            "p50": 1000.39,
+            "p95": 1000.56,
+            "max": 1000.59
+          },
+          "head": {
+            "n": 12,
+            "p50": 1000.87,
+            "p95": 1001.7,
+            "max": 1002.34
+          }
+        },
+        "returned_context_identical_across_arms": true
+      },
+      "empty": {
+        "backend_fault": "empty",
+        "expected_outcome": "empty",
+        "observed_head_rows": [
+          {
+            "dims": {
+              "latency_bucket": "lt_100ms",
+              "outcome": "empty",
+              "provider": "plugin"
+            },
+            "value": 12
+          }
+        ],
+        "observed_base_rows": [],
+        "turn_wait_ms": {
+          "base": {
+            "n": 12,
+            "p50": 0.79,
+            "p95": 0.97,
+            "max": 0.99
+          },
+          "head": {
+            "n": 12,
+            "p50": 0.9,
+            "p95": 3.41,
+            "max": 6.08
+          }
+        },
+        "returned_context_identical_across_arms": true
+      },
+      "error": {
+        "backend_fault": "error",
+        "expected_outcome": "failed",
+        "observed_head_rows": [
+          {
+            "dims": {
+              "latency_bucket": "lt_100ms",
+              "outcome": "failed",
+              "provider": "plugin"
+            },
+            "value": 12
+          }
+        ],
+        "observed_base_rows": [],
+        "turn_wait_ms": {
+          "base": {
+            "n": 12,
+            "p50": 0.82,
+            "p95": 1.43,
+            "max": 1.52
+          },
+          "head": {
+            "n": 12,
+            "p50": 1.0,
+            "p95": 1.95,
+            "max": 2.47
+          }
+        },
+        "returned_context_identical_across_arms": true
+      },
+      "refused": {
+        "backend_fault": "refused",
+        "expected_outcome": "failed",
+        "observed_head_rows": [
+          {
+            "dims": {
+              "latency_bucket": "lt_100ms",
+              "outcome": "failed",
+              "provider": "plugin"
+            },
+            "value": 12
+          }
+        ],
+        "observed_base_rows": [],
+        "turn_wait_ms": {
+          "base": {
+            "n": 12,
+            "p50": 0.33,
+            "p95": 0.45,
+            "max": 0.47
+          },
+          "head": {
+            "n": 12,
+            "p50": 0.51,
+            "p95": 1.19,
+            "max": 1.94
+          }
+        },
+        "returned_context_identical_across_arms": true
+      },
+      "hang": {
+        "expected_outcomes": [
+          "timed_out",
+          "skipped",
+          "skipped",
+          "skipped",
+          "success(after release)"
+        ],
+        "turn_wait_ms": [
+          1001.99,
+          0.29,
+          0.18,
+          0.15
+        ],
+        "after_release_ms": 1.03,
+        "backend_calls_while_hung": 1,
+        "head_rows": [
+          {
+            "dims": {
+              "latency_bucket": "1s_to_2s",
+              "outcome": "timed_out",
+              "provider": "plugin"
+            },
+            "value": 1
+          },
+          {
+            "dims": {
+              "latency_bucket": "lt_100ms",
+              "outcome": "skipped",
+              "provider": "plugin"
+            },
+            "value": 3
+          },
+          {
+            "dims": {
+              "latency_bucket": "lt_100ms",
+              "outcome": "success",
+              "provider": "plugin"
+            },
+            "value": 1
+          }
+        ]
+      },
+      "hang_default_timeout": {
+        "timeout_s": 8.0,
+        "turn_wait_ms": 8002.28,
+        "head_rows": [
+          {
+            "dims": {
+              "latency_bucket": "5s_to_10s",
+              "outcome": "timed_out",
+              "provider": "plugin"
+            },
+            "value": 1
+          }
+        ]
+      }
+    },
+    "checks": {
+      "profile_scope": {
+        "rows_in_owner_profile": 1,
+        "rows_in_default_home": 0,
+        "pass": true
+      },
+      "collection_off": {
+        "rows": 0,
+        "store_created": false,
+        "pass": true
+      },
+      "egress_blocked_attempts": [],
+      "outcome_classes_match_expected": {
+        "ok": true,
+        "delay_0.05": true,
+        "delay_0.4": true,
+        "slow_over_timeout": true,
+        "empty": true,
+        "error": true,
+        "refused": true
+      },
+      "one_row_per_turn_head": {
+        "ok": true,
+        "delay_0.05": true,
+        "delay_0.4": true,
+        "slow_over_timeout": true,
+        "empty": true,
+        "error": true,
+        "refused": true
+      },
+      "base_records_nothing": true,
+      "returned_context_identical_across_arms": true
+    },
+    "microbenchmark_prefetch_provider_us_per_call": {
+      "collection_off": {
+        "us_per_call_median": {
+          "base": 62.54,
+          "head": 110.94,
+          "base_aa": 62.68
+        },
+        "us_per_call_p95": {
+          "base": 71.82,
+          "head": 121.46,
+          "base_aa": 66.02
+        },
+        "delta_head_minus_base_us": {
+          "median": 47.05,
+          "p05": 41.95,
+          "p95": 56.71
+        },
+        "aa_base_minus_base_us": {
+          "median": -0.18,
+          "p05": -8.34,
+          "p95": 4.68
+        },
+        "blocks": 12,
+        "calls_per_block": 400,
+        "order": "ABA/ABA alternating"
+      },
+      "collection_on": {
+        "us_per_call_median": {
+          "base": 99.99,
+          "head": 263.27,
+          "base_aa": 105.06
+        },
+        "us_per_call_p95": {
+          "base": 110.93,
+          "head": 290.81,
+          "base_aa": 120.48
+        },
+        "delta_head_minus_base_us": {
+          "median": 158.76,
+          "p05": 140.4,
+          "p95": 203.67
+        },
+        "aa_base_minus_base_us": {
+          "median": 3.95,
+          "p05": -12.25,
+          "p95": 33.55
+        },
+        "blocks": 12,
+        "calls_per_block": 400,
+        "order": "ABA/ABA alternating"
+      }
+    },
+    "gate_cost_attribution_us_per_call": {
+      "off": {
+        "noop_baseline": {
+          "median_us": 0.03,
+          "p95_us": 0.06
+        },
+        "enabled_gate_only": {
+          "median_us": 16.65,
+          "p95_us": 21.38
+        },
+        "record_memory_prefetch": {
+          "median_us": 26.69,
+          "p95_us": 34.31
+        },
+        "record_execution_backend_existing": {
+          "median_us": 32.8,
+          "p95_us": 36.23
+        },
+        "record_provider_memory_call_existing": {
+          "median_us": 33.14,
+          "p95_us": 40.7
+        }
+      },
+      "on": {
+        "noop_baseline": {
+          "median_us": 0.03,
+          "p95_us": 0.06
+        },
+        "enabled_gate_only": {
+          "median_us": 21.1,
+          "p95_us": 27.69
+        },
+        "record_memory_prefetch": {
+          "median_us": 112.95,
+          "p95_us": 132.79
+        },
+        "record_execution_backend_existing": {
+          "median_us": 114.43,
+          "p95_us": 132.82
+        },
+        "record_provider_memory_call_existing": {
+          "median_us": 117.31,
+          "p95_us": 127.6
+        }
+      }
+    }
+  },
+  "measurements": [
+    {
+      "name": "outcome_class_matches_fault",
+      "value": 7,
+      "n": 7,
+      "label": "OBSERVED"
+    },
+    {
+      "name": "rows_per_turn_head",
+      "value": "1 row per turn for every fault (12/12 x 7 faults)",
+      "label": "OBSERVED"
+    },
+    {
+      "name": "rows_base",
+      "value": 0,
+      "label": "OBSERVED"
+    },
+    {
+      "name": "hang_skips_while_stuck",
+      "value": "1 timed_out (1s_to_2s) then 3 skipped (lt_100ms); 1 backend call while hung",
+      "label": "OBSERVED"
+    },
+    {
+      "name": "default_8s_timeout_bucket",
+      "value": "5s_to_10s",
+      "turn_wait_ms": 8002.28,
+      "label": "OBSERVED"
+    },
+    {
+      "name": "profile_scope",
+      "value": "pass (row in owning profile, 0 in default home)",
+      "label": "OBSERVED"
+    },
+    {
+      "name": "collection_off_rows",
+      "value": 0,
+      "store_created": false,
+      "label": "OBSERVED"
+    },
+    {
+      "name": "prefetch_provider_overhead_us_collection_off",
+      "statistic": "median of 12 block deltas (400 calls each)",
+      "value": {
+        "median": 47.05,
+        "p05": 41.95,
+        "p95": 56.71
+      },
+      "aa_noise": {
+        "median": -0.18,
+        "p05": -8.34,
+        "p95": 4.68
+      },
+      "label": "OBSERVED"
+    },
+    {
+      "name": "prefetch_provider_overhead_us_collection_on",
+      "statistic": "median of 12 block deltas (400 calls each)",
+      "value": {
+        "median": 158.76,
+        "p05": 140.4,
+        "p95": 203.67
+      },
+      "aa_noise": {
+        "median": 3.95,
+        "p05": -12.25,
+        "p95": 33.55
+      },
+      "label": "OBSERVED"
+    },
+    {
+      "name": "record_call_cost_vs_existing_sites_us",
+      "value": {
+        "off": {
+          "record_memory_prefetch": 26.69,
+          "record_execution_backend": 32.8,
+          "record_provider_memory_call": 33.14,
+          "enabled_gate_alone": 16.65
+        },
+        "on": {
+          "record_memory_prefetch": 112.95,
+          "record_execution_backend": 114.43,
+          "record_provider_memory_call": 117.31
+        }
+      },
+      "label": "OBSERVED"
+    }
+  ],
+  "interpretation": {
+    "prompt_prefix": "unchanged: the context string returned to the turn is identical across arms for all 7 faults",
+    "hot_path": "NOT below per-call microbenchmark noise: +~47 us per external prefetch with collection off, +~159 us with it on (A/A within about +/-8 us and +/-30 us). The record call costs the same as the existing record_execution_backend / record_provider_memory_call sites; it runs once per turn per external provider, against turn waits of 0.3 ms (loopback) to 8 s (timeout).",
+    "host_noise": "load1 was 11-17 during these runs (other agents); absolute microseconds are inflated, A/A included"
+  },
+  "evidence_class": {
+    "local": true,
+    "ci": "none",
+    "simulation": true,
+    "runtime": false,
+    "kind": "mechanism"
+  },
+  "not_tested": [
+    "real memory backends (Honcho, Hindsight, mem0, Supermemory servers)",
+    "packages sent upstream (send: false)",
+    "py3.14 interpreter",
+    "the turn's other phases (model call, tools)"
+  ],
+  "limitations": [
+    "The fake backend is a local HTTP server; real backend latency distributions are not measured here",
+    "The microbenchmark ran on a loaded shared host; A/A is reported beside every delta",
+    "Store drain uses relay_shared_metrics._reset_for_tests(), the same hook the upstream tests use"
+  ],
+  "verdict": "KEEP (mechanism); hot-path gate recorded as not met as worded",
+  "provenance": "self",
+  "privacy": "public-aggregate (synthetic fixtures only)",
+  "raw_artifacts": {
+    "e17_result": {
+      "path": "work/e17_result.json",
+      "sha256": "2fa516e0325dd553bbd6100221532653dad9fa2a0cc2cd995b0d1f17dbe0a599"
+    },
+    "gate_cost": {
+      "path": "work/micro_gate_cost.json",
+      "sha256": "6d00e0e125a516029dd9d448d43691a276467c2febedf3786cb8e4c0d60b567e"
+    }
+  }
+}

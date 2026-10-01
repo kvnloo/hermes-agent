@@ -1,0 +1,1602 @@
+{
+ "schema": "xf.receipt.v1 (hand-run; xf executor not built)",
+ "id": "F01/r20261001-01",
+ "staging": "edit-fuzzy-wrong-region",
+ "kind": "carrier-ab",
+ "tier": "T1 ($0): real ShellFileOperations + LocalEnvironment (bash in tmp dir), no model, no provider, no network",
+ "origin_refs": [
+  "NousResearch/hermes-agent#54572",
+  "NousResearch/hermes-agent#111116",
+  "NousResearch/hermes-agent#93698"
+ ],
+ "base_revision": {
+  "tested": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+  "final": "234badf4012af380d23c91eae55d045a69c69ffb",
+  "factory_base": "e496ccc7d7e0ca885041e69223683d7739123ff9",
+  "edit_path_blobs_identical_across_all_three": {
+   "tools/fuzzy_match.py": "a6a439d70e7d31a2ff781db3ab9baa6686ea4ee9",
+   "tools/file_operations.py": "cc028e89f130b2629cbcb6448203b1a5d770c45a",
+   "tools/patch_parser.py": "8e6ce92ed7b68d3ca32c57b346a4a1087af0c8bf",
+   "tests/tools/test_fuzzy_match_wrong_region.py": "3335a5bf23ea75c684dc02521fef640617ea50bf"
+  }
+ },
+ "head_revision": {
+  "tested": "01bf8d379edc480765c53c087735e09be7798140",
+  "final": "ea25f06132c81ef18f44f160b7a278770ac59586",
+  "intermediate": "8375dc3ccae5e7d32f2d9be43792e85936d560e1",
+  "note": "tested = first build on 572e4f4fad; intermediate = cherry-pick onto 234badf401 (0 edit-path drift); final = same tree with two test comments reworded (#111116 battery -> #111127 battery), re-proven 3/3 RED, 3/3 GREEN, 3/3 per-hunk sabotage on the final head"
+ },
+ "command": "receipts/raw/scripts/run_arm.sh <arm> <rep> proof tests/tools/test_fuzzy_match_wrong_region.py tests/tools/test_fuzzy_match.py tests/tools/test_file_tools_live.py  (wraps: HOME=$S/testhome-st-edit-fuzzy-wrong-region HERMES_HOME=$HOME/.hermes HERMES_PYTHON=<venv python> bash scripts/run_tests.sh -j 2 <files> -q -m 'not live and not integration')",
+ "arms": {
+  "base": {
+   "tree": "main 572e4f4fad + contract commit 01bf8d379e",
+   "merge": "n/a",
+   "fuzzy_match_sha256": "71eac9a33f6b8441f0cd1ac787fa08d1018dc0adb04430c17ff7e937253e8790"
+  },
+  "c54575": {
+   "pr": 54575,
+   "author": "MaxFreedomPollard",
+   "head": "e28d7c772dccbc5a773c758b5ae647cac7e98d19",
+   "merge": "conflict (tests only); tools/fuzzy_match.py hunk merges clean; test conflicts resolved mechanically (keep main's deletion of TestStrategyNameSurfaced / TestTerminalOutputCleanliness, keep the carrier's additions) by receipts/raw/scripts/resolve_drop_base.py, which refuses any other conflict shape. The published c54575-rebased-on-main.diff is purely additive (0 removed lines); the overlay these runs used differed from it only in blank lines (diff -w -B empty: an earlier resolver pass collapsed 4+ newline runs), so results carry over",
+   "fuzzy_match_sha256": "fc55b3d0563cee1e0d3526facc67f12ffe23af8da875f4617dd9b685784dfad4",
+   "merge_tree_on_572e4f4fad": "3ff55756f369bf59ba9ac10bd1084ebadddde3bc"
+  },
+  "c125376": {
+   "pr": 125376,
+   "author": "Finn763",
+   "head": "5f3f5896a4b03f102be75e3f2bdd8aae8ca65fd1",
+   "merge": "CONFLICTING (tui_gateway/methods_bot_relay.py from the bundled bot_relay commit 1c890ae8d0); not run. Its merged tools/fuzzy_match.py is byte-identical to c125376-leaf's (sha256 below), so the leaf arm stands in for the edit fix.",
+   "fuzzy_match_sha256": "7e80805b0c8a04c5cad8bd82960ae39d42d4e1e84abb23f6221a0672d30eb23b",
+   "merge_tree_on_572e4f4fad": "8c7468038303612dcee4c9cb9eaed32f8837fc66"
+  },
+  "c125376-leaf": {
+   "cherry_pick": [
+    "5f3f5896a4"
+   ],
+   "merge": "clean",
+   "fuzzy_match_sha256": "7e80805b0c8a04c5cad8bd82960ae39d42d4e1e84abb23f6221a0672d30eb23b",
+   "tree_on_572e4f4fad": "b311275c1dd0ba6902d477d8be72318632a1963c",
+   "tree_note": "cherry-pick tree on main 572e4f4fad; it differs on every later main (234badf401: f9fb6640d2, bafb42b431: af624fea5e, aea969677c: 38ff73b5da). See F01/r20261001-02 member_heads_on_main."
+  },
+  "both": {
+   "composition": "c54575 + c125376-leaf",
+   "merge": "clean (fuzzy_match.py hunks disjoint)",
+   "fuzzy_match_sha256": "f42e75ebd653bf3c56137d76e48e3cb848e2b590dd470b282fa9877042b15449"
+  },
+  "leaf+fold": {
+   "composition": "c125376-leaf + fold-in",
+   "fuzzy_match_sha256": "92125b051af75e8733bb946cec963f8a1461fb2eb3772a8a2df4525881256dee"
+  },
+  "both+fold": {
+   "composition": "c54575 + c125376-leaf + fold-in (1 line)",
+   "fuzzy_match_sha256": "145fb70356117a9ab7a9356f8f40f8257d7bdfd5ff045510d19b47cbbf6fc9a7"
+  },
+  "c126502": {
+   "pr": 126502,
+   "author": "Finn763",
+   "head": "6d4fbff950",
+   "merge": "clean",
+   "note": "found by the dedupe search during this run (not in the selection): block_anchor single-candidate threshold 0.50 -> 0.70; closes #93698",
+   "fuzzy_match_sha256": "a2024727f6c084eda8f2f705810cd7f7488797c798f360e44050b1c236594b0d",
+   "merge_tree_on_572e4f4fad": "708fe568a2a816be361dea96b431e3f28c7fa44a"
+  },
+  "c126502+leaf+fold": {
+   "composition": "c126502 + c125376-leaf + fold-in",
+   "fuzzy_match_sha256": "89b94ed1dbd9b15ce9534539c40994bd2409b6fd62ca3ecc1665563f4f72b731"
+  },
+  "c93717": {
+   "pr": 93717,
+   "author": "fangliquanflq",
+   "head": "3c4c81f706",
+   "merge": "CONFLICTING in tools/fuzzy_match.py (written against the pre-refactor module); not run, not hand-ported. Core change is the same flat 0.70 block_anchor floor as #126502, plus a hunk that keeps escape-drift diagnostics for weak anchors."
+  }
+ },
+ "inject": {
+  "contract_test": "tests/tools/test_fuzzy_match_wrong_region.py @ ea25f06132 (blob 3335a5bf23; tested-head blob 42fff91290 differs only in two comments)",
+  "carrier_tests_cross_applied": "union of #54575 + #125376 test additions (test_fuzzy_match.py, test_file_tools_live.py) applied to every arm except the c126502 arms",
+  "fold_in": {
+   "path": "receipts/raw/patches/foldin-125376-stripped-guard.diff",
+   "sha256": "c0846607c44d3207c14accf3f38a4b38f38aa41558591eb2a44d1bf7f1759fee"
+  }
+ },
+ "gates": {
+  "red": {
+   "arm": "base",
+   "result": "PASS",
+   "label": "OBSERVED",
+   "observed": "8 failed / 10 (all 8 wrong-region cells), 2 near-miss cells pass; 3/3 reps agree on the tested head and 3/3 on the final head ea25f06132",
+   "marker": "wrong region replaced via block_anchor|context_aware: count=1, error=None",
+   "contract_failed_ids": [
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[block_anchor_middle-replace]",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[block_anchor_middle-v4a]",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_missing_anchor-replace]",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_missing_anchor-v4a]",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-replace]",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-v4a]",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_wrong_token-replace]",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_wrong_token-v4a]"
+   ],
+   "carrier_tests_failed_ids": [
+    "tests/tools/test_file_tools_live.py::TestPatchReplaceWrongRegionRejected::test_block_anchor_wrong_region_is_rejected",
+    "tests/tools/test_fuzzy_match.py::TestContentDivergenceGuard::test_block_anchor_partial_middle_does_not_overwrite",
+    "tests/tools/test_fuzzy_match.py::TestEdittoolShapeSingleLineFailLoud::test_wrong_token_single_line_refused"
+   ],
+   "carrier_tests_observed": "with the carriers' tests cross-applied, 3 carrier tests also fail on main: test_fuzzy_match.py 59 passed / 2 failed, test_file_tools_live.py 15 passed / 1 failed (receipts/raw/runs/base/proof.rep1.log)"
+  },
+  "green": {
+   "arm": "both+fold",
+   "result": "PASS",
+   "label": "OBSERVED",
+   "reps_agree": "3/3 on the tested head, 1/1 intermediate, 3/3 on the final head",
+   "observed": "10/10 contract; carrier tests 61/61 + 16/16"
+  },
+  "no_single_carrier_green": {
+   "c54575": "4/10 (block_anchor fixed; 3 single-line cases x 2 modes still replaced)",
+   "c125376-leaf": "6/10 (single-line fixed; block_anchor x2 and trailing newline x2 still replaced)",
+   "both": "8/10 (trailing-newline bypass x2 still replaced)",
+   "leaf+fold": "8/10 (block_anchor x2 still replaced)",
+   "c126502": "4/10 (block_anchor fixed)",
+   "c126502+leaf+fold": "10/10 (3/3)"
+  },
+  "sabotage": {
+   "floor": {
+    "reverted": "#54575 content-divergence guard in fuzzy_find_and_replace",
+    "contract": {
+     "passed": 8,
+     "skipped": 0,
+     "failed": 2
+    },
+    "red_again": true,
+    "carrier_tests": {
+     "tests/tools/test_fuzzy_match.py": {
+      "passed": 60,
+      "skipped": 0,
+      "failed": 1
+     },
+     "tests/tools/test_file_tools_live.py": {
+      "passed": 15,
+      "skipped": 0,
+      "failed": 1
+     }
+    },
+    "failed_ids": [
+     "tests/tools/test_file_tools_live.py::TestPatchReplaceWrongRegionRejected::test_block_anchor_wrong_region_is_rejected",
+     "tests/tools/test_fuzzy_match.py::TestContentDivergenceGuard::test_block_anchor_partial_middle_does_not_overwrite",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[block_anchor_middle-replace]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[block_anchor_middle-v4a]"
+    ],
+    "log": {
+     "path": "receipts/raw/runs/both+fold/sabotage-floor.rep1.log",
+     "sha256": "5f70a0e6f5274d28ac4c7aaec2e6eec2a39cc3937cd71881f0b7789c1a40bedd"
+    }
+   },
+   "single_line": {
+    "reverted": "#125376 single-line refusal in _strategy_context_aware",
+    "contract": {
+     "passed": 4,
+     "skipped": 0,
+     "failed": 6
+    },
+    "red_again": true,
+    "carrier_tests": {
+     "tests/tools/test_fuzzy_match.py": {
+      "passed": 60,
+      "skipped": 0,
+      "failed": 1
+     },
+     "tests/tools/test_file_tools_live.py": {
+      "passed": 16,
+      "skipped": 0,
+      "failed": 0
+     }
+    },
+    "failed_ids": [
+     "tests/tools/test_fuzzy_match.py::TestEdittoolShapeSingleLineFailLoud::test_wrong_token_single_line_refused",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_missing_anchor-replace]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_missing_anchor-v4a]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-replace]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-v4a]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_wrong_token-replace]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_wrong_token-v4a]"
+    ],
+    "log": {
+     "path": "receipts/raw/runs/both+fold/sabotage-single_line.rep1.log",
+     "sha256": "8afd7ad0f67bd1918b6a5c361d76b19904c9972868a477caded3179280d14714"
+    }
+   },
+   "foldin": {
+    "reverted": "fold-in only (stripped-pattern test back to n == 1)",
+    "contract": {
+     "passed": 8,
+     "skipped": 0,
+     "failed": 2
+    },
+    "red_again": true,
+    "carrier_tests": {
+     "tests/tools/test_fuzzy_match.py": {
+      "passed": 61,
+      "skipped": 0,
+      "failed": 0
+     },
+     "tests/tools/test_file_tools_live.py": {
+      "passed": 16,
+      "skipped": 0,
+      "failed": 0
+     }
+    },
+    "failed_ids": [
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-replace]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-v4a]"
+    ],
+    "log": {
+     "path": "receipts/raw/runs/both+fold/sabotage-foldin.rep1.log",
+     "sha256": "c80fd7efbd4c4d6e5356e220eb41f1c908c4738c9d1e906cd66811f317801434"
+    }
+   }
+  },
+  "adjacent": {
+   "files": [
+    "tests/acp_adapter/test_edit_approval.py",
+    "tests/hermes_cli/test_shared_metrics_harness.py",
+    "tests/tools/test_file_operations.py",
+    "tests/tools/test_file_operations_delete.py",
+    "tests/tools/test_file_operations_edge_cases.py",
+    "tests/tools/test_file_tools.py",
+    "tests/tools/test_file_tools_live.py",
+    "tests/tools/test_fuzzy_match.py",
+    "tests/tools/test_patch_already_applied.py",
+    "tests/tools/test_patch_multimatch_locations.py",
+    "tests/tools/test_patch_parser.py",
+    "tests/tools/test_patch_v4a_gate.py",
+    "tests/tools/test_patch_ws_diagnosis.py"
+   ],
+   "per_arm_totals": {
+    "base": {
+     "passed": 284,
+     "skipped": 8,
+     "failed": 0
+    },
+    "c54575": {
+     "passed": 284,
+     "skipped": 8,
+     "failed": 0
+    },
+    "c125376-leaf": {
+     "passed": 284,
+     "skipped": 8,
+     "failed": 0
+    },
+    "both+fold": {
+     "passed": 284,
+     "skipped": 8,
+     "failed": 0
+    },
+    "c126502": {
+     "passed": 282,
+     "skipped": 8,
+     "failed": 2
+    }
+   },
+   "identical_to_base": {
+    "base": true,
+    "c54575": true,
+    "c125376-leaf": true,
+    "both+fold": true,
+    "c126502": false
+   },
+   "c126502_failures": [
+    "tests/tools/test_fuzzy_match.py::TestEscapeDriftGuard::test_drift_blocked_apostrophe",
+    "tests/tools/test_fuzzy_match.py::TestEscapeDriftGuard::test_drift_blocked_double_quote"
+   ],
+   "note": "c126502 needs its own edits to two existing escape-drift tests; with main's tests unchanged it fails them (weak-anchor escape-drift diagnostic downgraded to plain no-match)"
+  },
+  "flaky": false,
+  "guards": "F14 standing set NOT run (factory-replay-gate harness not built here)",
+  "informativeness": "N_A",
+  "credit": null,
+  "cache_read_ratio": {
+   "status": "N_A"
+  }
+ },
+ "ab_table": {
+  "base": {
+   "reps": 3,
+   "per_rep_pass_fail": [
+    [
+     2,
+     8
+    ],
+    [
+     2,
+     8
+    ],
+    [
+     2,
+     8
+    ]
+   ],
+   "reps_agree": true,
+   "failed_ids_rep1_all_files_in_run": [
+    "tests/tools/test_file_tools_live.py::TestPatchReplaceWrongRegionRejected::test_block_anchor_wrong_region_is_rejected",
+    "tests/tools/test_fuzzy_match.py::TestContentDivergenceGuard::test_block_anchor_partial_middle_does_not_overwrite",
+    "tests/tools/test_fuzzy_match.py::TestEdittoolShapeSingleLineFailLoud::test_wrong_token_single_line_refused",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[block_anchor_middle-replace]",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[block_anchor_middle-v4a]",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_missing_anchor-replace]",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_missing_anchor-v4a]",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-replace]",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-v4a]",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_wrong_token-replace]",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_wrong_token-v4a]"
+   ],
+   "carrier_tests_cross_applied": {
+    "tests/tools/test_fuzzy_match.py": {
+     "passed": 59,
+     "skipped": 0,
+     "failed": 2
+    },
+    "tests/tools/test_file_tools_live.py": {
+     "passed": 15,
+     "skipped": 0,
+     "failed": 1
+    }
+   }
+  },
+  "c54575": {
+   "reps": 3,
+   "per_rep_pass_fail": [
+    [
+     4,
+     6
+    ],
+    [
+     4,
+     6
+    ],
+    [
+     4,
+     6
+    ]
+   ],
+   "reps_agree": true,
+   "failed_ids_rep1_all_files_in_run": [
+    "tests/tools/test_fuzzy_match.py::TestEdittoolShapeSingleLineFailLoud::test_wrong_token_single_line_refused",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_missing_anchor-replace]",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_missing_anchor-v4a]",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-replace]",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-v4a]",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_wrong_token-replace]",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_wrong_token-v4a]"
+   ],
+   "carrier_tests_cross_applied": {
+    "tests/tools/test_fuzzy_match.py": {
+     "passed": 60,
+     "skipped": 0,
+     "failed": 1
+    },
+    "tests/tools/test_file_tools_live.py": {
+     "passed": 16,
+     "skipped": 0,
+     "failed": 0
+    }
+   }
+  },
+  "c125376-leaf": {
+   "reps": 3,
+   "per_rep_pass_fail": [
+    [
+     6,
+     4
+    ],
+    [
+     6,
+     4
+    ],
+    [
+     6,
+     4
+    ]
+   ],
+   "reps_agree": true,
+   "failed_ids_rep1_all_files_in_run": [
+    "tests/tools/test_file_tools_live.py::TestPatchReplaceWrongRegionRejected::test_block_anchor_wrong_region_is_rejected",
+    "tests/tools/test_fuzzy_match.py::TestContentDivergenceGuard::test_block_anchor_partial_middle_does_not_overwrite",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[block_anchor_middle-replace]",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[block_anchor_middle-v4a]",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-replace]",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-v4a]"
+   ],
+   "carrier_tests_cross_applied": {
+    "tests/tools/test_fuzzy_match.py": {
+     "passed": 60,
+     "skipped": 0,
+     "failed": 1
+    },
+    "tests/tools/test_file_tools_live.py": {
+     "passed": 15,
+     "skipped": 0,
+     "failed": 1
+    }
+   }
+  },
+  "both": {
+   "reps": 3,
+   "per_rep_pass_fail": [
+    [
+     8,
+     2
+    ],
+    [
+     8,
+     2
+    ],
+    [
+     8,
+     2
+    ]
+   ],
+   "reps_agree": true,
+   "failed_ids_rep1_all_files_in_run": [
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-replace]",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-v4a]"
+   ],
+   "carrier_tests_cross_applied": {
+    "tests/tools/test_fuzzy_match.py": {
+     "passed": 61,
+     "skipped": 0,
+     "failed": 0
+    },
+    "tests/tools/test_file_tools_live.py": {
+     "passed": 16,
+     "skipped": 0,
+     "failed": 0
+    }
+   }
+  },
+  "leaf+fold": {
+   "reps": 3,
+   "per_rep_pass_fail": [
+    [
+     8,
+     2
+    ],
+    [
+     8,
+     2
+    ],
+    [
+     8,
+     2
+    ]
+   ],
+   "reps_agree": true,
+   "failed_ids_rep1_all_files_in_run": [
+    "tests/tools/test_file_tools_live.py::TestPatchReplaceWrongRegionRejected::test_block_anchor_wrong_region_is_rejected",
+    "tests/tools/test_fuzzy_match.py::TestContentDivergenceGuard::test_block_anchor_partial_middle_does_not_overwrite",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[block_anchor_middle-replace]",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[block_anchor_middle-v4a]"
+   ],
+   "carrier_tests_cross_applied": {
+    "tests/tools/test_fuzzy_match.py": {
+     "passed": 60,
+     "skipped": 0,
+     "failed": 1
+    },
+    "tests/tools/test_file_tools_live.py": {
+     "passed": 15,
+     "skipped": 0,
+     "failed": 1
+    }
+   }
+  },
+  "both+fold": {
+   "reps": 3,
+   "per_rep_pass_fail": [
+    [
+     10,
+     0
+    ],
+    [
+     10,
+     0
+    ],
+    [
+     10,
+     0
+    ]
+   ],
+   "reps_agree": true,
+   "failed_ids_rep1_all_files_in_run": [],
+   "carrier_tests_cross_applied": {
+    "tests/tools/test_fuzzy_match.py": {
+     "passed": 61,
+     "skipped": 0,
+     "failed": 0
+    },
+    "tests/tools/test_file_tools_live.py": {
+     "passed": 16,
+     "skipped": 0,
+     "failed": 0
+    }
+   }
+  },
+  "c126502": {
+   "reps": 3,
+   "per_rep_pass_fail": [
+    [
+     4,
+     6
+    ],
+    [
+     4,
+     6
+    ],
+    [
+     4,
+     6
+    ]
+   ],
+   "reps_agree": true,
+   "failed_ids_rep1_all_files_in_run": [
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_missing_anchor-replace]",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_missing_anchor-v4a]",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-replace]",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-v4a]",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_wrong_token-replace]",
+    "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_wrong_token-v4a]"
+   ],
+   "carrier_tests_cross_applied": "not run on this arm (contract file only)"
+  },
+  "c126502+leaf+fold": {
+   "reps": 3,
+   "per_rep_pass_fail": [
+    [
+     10,
+     0
+    ],
+    [
+     10,
+     0
+    ],
+    [
+     10,
+     0
+    ]
+   ],
+   "reps_agree": true,
+   "failed_ids_rep1_all_files_in_run": [],
+   "carrier_tests_cross_applied": "not run on this arm (contract file only)"
+  }
+ },
+ "cross_application_block_anchor_carriers": {
+  "label": "OBSERVED (direct calls)",
+  "result": {
+   "base": {
+    "c93717_markdown_weak_middle": {
+     "got": "applied:block_anchor",
+     "want": "refuse",
+     "ok": false
+    },
+    "c126502_markdown_lookalike": {
+     "got": "applied:block_anchor",
+     "want": "refuse",
+     "ok": false
+    },
+    "main_escape_drift_apostrophe": {
+     "got": "refused:drift-diag",
+     "want": "drift-diag",
+     "ok": true
+    },
+    "c93717_backslash_diag_weak_anchor": {
+     "got": "refused:drift-diag",
+     "want": "drift-diag",
+     "ok": true
+    }
+   },
+   "c54575": {
+    "c93717_markdown_weak_middle": {
+     "got": "refused:no-match",
+     "want": "refuse",
+     "ok": true
+    },
+    "c126502_markdown_lookalike": {
+     "got": "refused:no-match",
+     "want": "refuse",
+     "ok": true
+    },
+    "main_escape_drift_apostrophe": {
+     "got": "refused:drift-diag",
+     "want": "drift-diag",
+     "ok": true
+    },
+    "c93717_backslash_diag_weak_anchor": {
+     "got": "refused:drift-diag",
+     "want": "drift-diag",
+     "ok": true
+    }
+   },
+   "c126502": {
+    "c93717_markdown_weak_middle": {
+     "got": "refused:no-match",
+     "want": "refuse",
+     "ok": true
+    },
+    "c126502_markdown_lookalike": {
+     "got": "refused:no-match",
+     "want": "refuse",
+     "ok": true
+    },
+    "main_escape_drift_apostrophe": {
+     "got": "refused:no-match",
+     "want": "drift-diag",
+     "ok": false
+    },
+    "c93717_backslash_diag_weak_anchor": {
+     "got": "refused:no-match",
+     "want": "drift-diag",
+     "ok": false
+    }
+   },
+   "c125376-leaf": {
+    "c93717_markdown_weak_middle": {
+     "got": "applied:block_anchor",
+     "want": "refuse",
+     "ok": false
+    },
+    "c126502_markdown_lookalike": {
+     "got": "applied:block_anchor",
+     "want": "refuse",
+     "ok": false
+    },
+    "main_escape_drift_apostrophe": {
+     "got": "refused:drift-diag",
+     "want": "drift-diag",
+     "ok": true
+    },
+    "c93717_backslash_diag_weak_anchor": {
+     "got": "refused:drift-diag",
+     "want": "drift-diag",
+     "ok": true
+    }
+   },
+   "both": {
+    "c93717_markdown_weak_middle": {
+     "got": "refused:no-match",
+     "want": "refuse",
+     "ok": true
+    },
+    "c126502_markdown_lookalike": {
+     "got": "refused:no-match",
+     "want": "refuse",
+     "ok": true
+    },
+    "main_escape_drift_apostrophe": {
+     "got": "refused:drift-diag",
+     "want": "drift-diag",
+     "ok": true
+    },
+    "c93717_backslash_diag_weak_anchor": {
+     "got": "refused:drift-diag",
+     "want": "drift-diag",
+     "ok": true
+    }
+   },
+   "both+fold": {
+    "c93717_markdown_weak_middle": {
+     "got": "refused:no-match",
+     "want": "refuse",
+     "ok": true
+    },
+    "c126502_markdown_lookalike": {
+     "got": "refused:no-match",
+     "want": "refuse",
+     "ok": true
+    },
+    "main_escape_drift_apostrophe": {
+     "got": "refused:drift-diag",
+     "want": "drift-diag",
+     "ok": true
+    },
+    "c93717_backslash_diag_weak_anchor": {
+     "got": "refused:drift-diag",
+     "want": "drift-diag",
+     "ok": true
+    }
+   },
+   "c126502+leaf+fold": {
+    "c93717_markdown_weak_middle": {
+     "got": "refused:no-match",
+     "want": "refuse",
+     "ok": true
+    },
+    "c126502_markdown_lookalike": {
+     "got": "refused:no-match",
+     "want": "refuse",
+     "ok": true
+    },
+    "main_escape_drift_apostrophe": {
+     "got": "refused:no-match",
+     "want": "drift-diag",
+     "ok": false
+    },
+    "c93717_backslash_diag_weak_anchor": {
+     "got": "refused:no-match",
+     "want": "drift-diag",
+     "ok": false
+    }
+   }
+  },
+  "summary": "#54575 refuses both #93717's and #126502's Markdown repros and keeps both escape-drift diagnostics; #126502 refuses the repros but downgrades both diagnostics to plain no-match"
+ },
+ "residual_probe": {
+  "label": "OBSERVED (direct calls)",
+  "result": {
+   "base": {
+    "block_anchor_54572": {
+     "count": 1,
+     "strategy": "block_anchor",
+     "error": null,
+     "file_changed": true
+    },
+    "single_line_trim_125376": {
+     "count": 1,
+     "strategy": "context_aware",
+     "error": null,
+     "file_changed": true
+    },
+    "missing_anchor_111127": {
+     "count": 1,
+     "strategy": "context_aware",
+     "error": null,
+     "file_changed": true
+    },
+    "trailing_newline_bypass": {
+     "count": 1,
+     "strategy": "context_aware",
+     "error": null,
+     "file_changed": true
+    },
+    "obs_context_aware_half_block_54572": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "obs_crlf_trailing_bypass": {
+     "count": 1,
+     "strategy": "context_aware",
+     "error": null,
+     "file_changed": true
+    },
+    "obs_leading_newline_bypass": {
+     "count": 1,
+     "strategy": "context_aware",
+     "error": null,
+     "file_changed": true
+    },
+    "obs_two_line_wrong_token": {
+     "count": 1,
+     "strategy": "context_aware",
+     "error": null,
+     "file_changed": true
+    },
+    "legit_block_drift_54575": {
+     "count": 1,
+     "strategy": "block_anchor",
+     "error": null,
+     "file_changed": true
+    },
+    "legit_smart_quote_single_line": {
+     "count": 1,
+     "strategy": "unicode_normalized",
+     "error": null,
+     "file_changed": true
+    },
+    "legit_indent_drift_111127": {
+     "count": 1,
+     "strategy": "whitespace_normalized",
+     "error": null,
+     "file_changed": true
+    }
+   },
+   "c54575": {
+    "block_anchor_54572": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "single_line_trim_125376": {
+     "count": 1,
+     "strategy": "context_aware",
+     "error": null,
+     "file_changed": true
+    },
+    "missing_anchor_111127": {
+     "count": 1,
+     "strategy": "context_aware",
+     "error": null,
+     "file_changed": true
+    },
+    "trailing_newline_bypass": {
+     "count": 1,
+     "strategy": "context_aware",
+     "error": null,
+     "file_changed": true
+    },
+    "obs_context_aware_half_block_54572": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "obs_crlf_trailing_bypass": {
+     "count": 1,
+     "strategy": "context_aware",
+     "error": null,
+     "file_changed": true
+    },
+    "obs_leading_newline_bypass": {
+     "count": 1,
+     "strategy": "context_aware",
+     "error": null,
+     "file_changed": true
+    },
+    "obs_two_line_wrong_token": {
+     "count": 1,
+     "strategy": "context_aware",
+     "error": null,
+     "file_changed": true
+    },
+    "legit_block_drift_54575": {
+     "count": 1,
+     "strategy": "block_anchor",
+     "error": null,
+     "file_changed": true
+    },
+    "legit_smart_quote_single_line": {
+     "count": 1,
+     "strategy": "unicode_normalized",
+     "error": null,
+     "file_changed": true
+    },
+    "legit_indent_drift_111127": {
+     "count": 1,
+     "strategy": "whitespace_normalized",
+     "error": null,
+     "file_changed": true
+    }
+   },
+   "c126502": {
+    "block_anchor_54572": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "single_line_trim_125376": {
+     "count": 1,
+     "strategy": "context_aware",
+     "error": null,
+     "file_changed": true
+    },
+    "missing_anchor_111127": {
+     "count": 1,
+     "strategy": "context_aware",
+     "error": null,
+     "file_changed": true
+    },
+    "trailing_newline_bypass": {
+     "count": 1,
+     "strategy": "context_aware",
+     "error": null,
+     "file_changed": true
+    },
+    "obs_context_aware_half_block_54572": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "obs_crlf_trailing_bypass": {
+     "count": 1,
+     "strategy": "context_aware",
+     "error": null,
+     "file_changed": true
+    },
+    "obs_leading_newline_bypass": {
+     "count": 1,
+     "strategy": "context_aware",
+     "error": null,
+     "file_changed": true
+    },
+    "obs_two_line_wrong_token": {
+     "count": 1,
+     "strategy": "context_aware",
+     "error": null,
+     "file_changed": true
+    },
+    "legit_block_drift_54575": {
+     "count": 1,
+     "strategy": "block_anchor",
+     "error": null,
+     "file_changed": true
+    },
+    "legit_smart_quote_single_line": {
+     "count": 1,
+     "strategy": "unicode_normalized",
+     "error": null,
+     "file_changed": true
+    },
+    "legit_indent_drift_111127": {
+     "count": 1,
+     "strategy": "whitespace_normalized",
+     "error": null,
+     "file_changed": true
+    }
+   },
+   "c125376-leaf": {
+    "block_anchor_54572": {
+     "count": 1,
+     "strategy": "block_anchor",
+     "error": null,
+     "file_changed": true
+    },
+    "single_line_trim_125376": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "missing_anchor_111127": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "trailing_newline_bypass": {
+     "count": 1,
+     "strategy": "context_aware",
+     "error": null,
+     "file_changed": true
+    },
+    "obs_context_aware_half_block_54572": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "obs_crlf_trailing_bypass": {
+     "count": 1,
+     "strategy": "context_aware",
+     "error": null,
+     "file_changed": true
+    },
+    "obs_leading_newline_bypass": {
+     "count": 1,
+     "strategy": "context_aware",
+     "error": null,
+     "file_changed": true
+    },
+    "obs_two_line_wrong_token": {
+     "count": 1,
+     "strategy": "context_aware",
+     "error": null,
+     "file_changed": true
+    },
+    "legit_block_drift_54575": {
+     "count": 1,
+     "strategy": "block_anchor",
+     "error": null,
+     "file_changed": true
+    },
+    "legit_smart_quote_single_line": {
+     "count": 1,
+     "strategy": "unicode_normalized",
+     "error": null,
+     "file_changed": true
+    },
+    "legit_indent_drift_111127": {
+     "count": 1,
+     "strategy": "whitespace_normalized",
+     "error": null,
+     "file_changed": true
+    }
+   },
+   "both": {
+    "block_anchor_54572": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "single_line_trim_125376": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "missing_anchor_111127": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "trailing_newline_bypass": {
+     "count": 1,
+     "strategy": "context_aware",
+     "error": null,
+     "file_changed": true
+    },
+    "obs_context_aware_half_block_54572": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "obs_crlf_trailing_bypass": {
+     "count": 1,
+     "strategy": "context_aware",
+     "error": null,
+     "file_changed": true
+    },
+    "obs_leading_newline_bypass": {
+     "count": 1,
+     "strategy": "context_aware",
+     "error": null,
+     "file_changed": true
+    },
+    "obs_two_line_wrong_token": {
+     "count": 1,
+     "strategy": "context_aware",
+     "error": null,
+     "file_changed": true
+    },
+    "legit_block_drift_54575": {
+     "count": 1,
+     "strategy": "block_anchor",
+     "error": null,
+     "file_changed": true
+    },
+    "legit_smart_quote_single_line": {
+     "count": 1,
+     "strategy": "unicode_normalized",
+     "error": null,
+     "file_changed": true
+    },
+    "legit_indent_drift_111127": {
+     "count": 1,
+     "strategy": "whitespace_normalized",
+     "error": null,
+     "file_changed": true
+    }
+   },
+   "leaf+fold": {
+    "block_anchor_54572": {
+     "count": 1,
+     "strategy": "block_anchor",
+     "error": null,
+     "file_changed": true
+    },
+    "single_line_trim_125376": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "missing_anchor_111127": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "trailing_newline_bypass": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "obs_context_aware_half_block_54572": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "obs_crlf_trailing_bypass": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "obs_leading_newline_bypass": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "obs_two_line_wrong_token": {
+     "count": 1,
+     "strategy": "context_aware",
+     "error": null,
+     "file_changed": true
+    },
+    "legit_block_drift_54575": {
+     "count": 1,
+     "strategy": "block_anchor",
+     "error": null,
+     "file_changed": true
+    },
+    "legit_smart_quote_single_line": {
+     "count": 1,
+     "strategy": "unicode_normalized",
+     "error": null,
+     "file_changed": true
+    },
+    "legit_indent_drift_111127": {
+     "count": 1,
+     "strategy": "whitespace_normalized",
+     "error": null,
+     "file_changed": true
+    }
+   },
+   "both+fold": {
+    "block_anchor_54572": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "single_line_trim_125376": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "missing_anchor_111127": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "trailing_newline_bypass": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "obs_context_aware_half_block_54572": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "obs_crlf_trailing_bypass": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "obs_leading_newline_bypass": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "obs_two_line_wrong_token": {
+     "count": 1,
+     "strategy": "context_aware",
+     "error": null,
+     "file_changed": true
+    },
+    "legit_block_drift_54575": {
+     "count": 1,
+     "strategy": "block_anchor",
+     "error": null,
+     "file_changed": true
+    },
+    "legit_smart_quote_single_line": {
+     "count": 1,
+     "strategy": "unicode_normalized",
+     "error": null,
+     "file_changed": true
+    },
+    "legit_indent_drift_111127": {
+     "count": 1,
+     "strategy": "whitespace_normalized",
+     "error": null,
+     "file_changed": true
+    }
+   },
+   "c126502+leaf+fold": {
+    "block_anchor_54572": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "single_line_trim_125376": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "missing_anchor_111127": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "trailing_newline_bypass": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "obs_context_aware_half_block_54572": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "obs_crlf_trailing_bypass": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "obs_leading_newline_bypass": {
+     "count": 0,
+     "strategy": null,
+     "error": "Could not find a match for old_string in",
+     "file_changed": false
+    },
+    "obs_two_line_wrong_token": {
+     "count": 1,
+     "strategy": "context_aware",
+     "error": null,
+     "file_changed": true
+    },
+    "legit_block_drift_54575": {
+     "count": 1,
+     "strategy": "block_anchor",
+     "error": null,
+     "file_changed": true
+    },
+    "legit_smart_quote_single_line": {
+     "count": 1,
+     "strategy": "unicode_normalized",
+     "error": null,
+     "file_changed": true
+    },
+    "legit_indent_drift_111127": {
+     "count": 1,
+     "strategy": "whitespace_normalized",
+     "error": null,
+     "file_changed": true
+    }
+   }
+  },
+  "summary": "with both+fold: CRLF and leading-newline variants also refused; a 2-line wrong-token anchor ('def normalize(value):' + 'return value.trim()') still applies via context_aware on every arm (out of scope; #125376 states it deliberately)"
+ },
+ "final_head_check": {
+  "intermediate_head": {
+   "base": {
+    "head": "8375dc3cca",
+    "files": {
+     "tests/tools/test_fuzzy_match_wrong_region.py": {
+      "passed": 2,
+      "skipped": 0,
+      "failed": 8
+     }
+    },
+    "failed_ids": [
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[block_anchor_middle-replace]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[block_anchor_middle-v4a]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_missing_anchor-replace]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_missing_anchor-v4a]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-replace]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-v4a]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_wrong_token-replace]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_wrong_token-v4a]"
+    ],
+    "log": {
+     "path": "receipts/raw/runs/base/final.rep1.log",
+     "sha256": "1b15871b6e9a517fd22ced89d48039187123bcebf40f74d9c5cd2eeceee3c5fb"
+    }
+   },
+   "both+fold": {
+    "head": "8375dc3cca",
+    "files": {
+     "tests/tools/test_fuzzy_match.py": {
+      "passed": 61,
+      "skipped": 0,
+      "failed": 0
+     },
+     "tests/tools/test_file_tools_live.py": {
+      "passed": 16,
+      "skipped": 0,
+      "failed": 0
+     },
+     "tests/tools/test_fuzzy_match_wrong_region.py": {
+      "passed": 10,
+      "skipped": 0,
+      "failed": 0
+     }
+    },
+    "failed_ids": [],
+    "log": {
+     "path": "receipts/raw/runs/both+fold/final.rep1.log",
+     "sha256": "4fa972289f6963749afb2ffa7282a9d6ee27a4043ca650a1c49383323d7d0635"
+    }
+   },
+   "sabotage_foldin": {
+    "head": "8375dc3cca",
+    "files": {
+     "tests/tools/test_fuzzy_match_wrong_region.py": {
+      "passed": 8,
+      "skipped": 0,
+      "failed": 2
+     }
+    },
+    "failed_ids": [
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-replace]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-v4a]"
+    ],
+    "log": {
+     "path": "receipts/raw/runs/both+fold/final-sab-foldin.rep1.log",
+     "sha256": "e738a1a0e326625376cd1294b9430a445cdf921537f13b5d53d3e2e4a851cbdd"
+    }
+   }
+  },
+  "final_head": {
+   "base_rep1": {
+    "head": "ea25f06132",
+    "files": {
+     "tests/tools/test_fuzzy_match_wrong_region.py": {
+      "passed": 2,
+      "skipped": 0,
+      "failed": 8
+     }
+    },
+    "failed_ids": [
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[block_anchor_middle-replace]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[block_anchor_middle-v4a]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_missing_anchor-replace]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_missing_anchor-v4a]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-replace]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-v4a]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_wrong_token-replace]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_wrong_token-v4a]"
+    ],
+    "log": {
+     "path": "receipts/raw/runs/base/final2.rep1.log",
+     "sha256": "ed3de8c371fceeee09820c2bbdb618fa919937892d004ef239785c585b873402"
+    }
+   },
+   "base_rep2": {
+    "head": "ea25f06132",
+    "files": {
+     "tests/tools/test_fuzzy_match_wrong_region.py": {
+      "passed": 2,
+      "skipped": 0,
+      "failed": 8
+     }
+    },
+    "failed_ids": [
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[block_anchor_middle-replace]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[block_anchor_middle-v4a]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_missing_anchor-replace]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_missing_anchor-v4a]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-replace]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-v4a]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_wrong_token-replace]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_wrong_token-v4a]"
+    ],
+    "log": {
+     "path": "receipts/raw/runs/base/final2.rep2.log",
+     "sha256": "b228e1c6c120816b0d43b0a57267749829aef3ae6cb961fe857f442a2e67fa79"
+    }
+   },
+   "base_rep3": {
+    "head": "ea25f06132",
+    "files": {
+     "tests/tools/test_fuzzy_match_wrong_region.py": {
+      "passed": 2,
+      "skipped": 0,
+      "failed": 8
+     }
+    },
+    "failed_ids": [
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[block_anchor_middle-replace]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[block_anchor_middle-v4a]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_missing_anchor-replace]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_missing_anchor-v4a]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-replace]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-v4a]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_wrong_token-replace]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_wrong_token-v4a]"
+    ],
+    "log": {
+     "path": "receipts/raw/runs/base/final2.rep3.log",
+     "sha256": "c6e07b928654669d10648ef19f748eeb2660b5748ff5f9a2cc719a6e8bc69753"
+    }
+   },
+   "both+fold_rep1": {
+    "head": "ea25f06132",
+    "files": {
+     "tests/tools/test_fuzzy_match.py": {
+      "passed": 61,
+      "skipped": 0,
+      "failed": 0
+     },
+     "tests/tools/test_file_tools_live.py": {
+      "passed": 16,
+      "skipped": 0,
+      "failed": 0
+     },
+     "tests/tools/test_fuzzy_match_wrong_region.py": {
+      "passed": 10,
+      "skipped": 0,
+      "failed": 0
+     }
+    },
+    "failed_ids": [],
+    "log": {
+     "path": "receipts/raw/runs/both+fold/final2.rep1.log",
+     "sha256": "b202423a65414d20f0583ede680c0ac57bf8d40cc5313a9e0224c602515597d3"
+    }
+   },
+   "both+fold_rep2": {
+    "head": "ea25f06132",
+    "files": {
+     "tests/tools/test_fuzzy_match.py": {
+      "passed": 61,
+      "skipped": 0,
+      "failed": 0
+     },
+     "tests/tools/test_file_tools_live.py": {
+      "passed": 16,
+      "skipped": 0,
+      "failed": 0
+     },
+     "tests/tools/test_fuzzy_match_wrong_region.py": {
+      "passed": 10,
+      "skipped": 0,
+      "failed": 0
+     }
+    },
+    "failed_ids": [],
+    "log": {
+     "path": "receipts/raw/runs/both+fold/final2.rep2.log",
+     "sha256": "dc69e877888d1e26a76d35c0bc7b7fb1ad06ec4b79126211b253b0a4ad10d58f"
+    }
+   },
+   "both+fold_rep3": {
+    "head": "ea25f06132",
+    "files": {
+     "tests/tools/test_fuzzy_match.py": {
+      "passed": 61,
+      "skipped": 0,
+      "failed": 0
+     },
+     "tests/tools/test_file_tools_live.py": {
+      "passed": 16,
+      "skipped": 0,
+      "failed": 0
+     },
+     "tests/tools/test_fuzzy_match_wrong_region.py": {
+      "passed": 10,
+      "skipped": 0,
+      "failed": 0
+     }
+    },
+    "failed_ids": [],
+    "log": {
+     "path": "receipts/raw/runs/both+fold/final2.rep3.log",
+     "sha256": "90d2b3c55de4d665e0b3f429734b5110c1fa9c531b3f75418aa643d0d5dc96f0"
+    }
+   },
+   "sabotage_floor": {
+    "head": "ea25f06132",
+    "files": {
+     "tests/tools/test_fuzzy_match_wrong_region.py": {
+      "passed": 8,
+      "skipped": 0,
+      "failed": 2
+     }
+    },
+    "failed_ids": [
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[block_anchor_middle-replace]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[block_anchor_middle-v4a]"
+    ],
+    "log": {
+     "path": "receipts/raw/runs/both+fold/final2-sab-floor.rep1.log",
+     "sha256": "01c7eacd98928135bc04bde84d29e54fb1b8501765615f2036e948327ea00c8a"
+    }
+   },
+   "sabotage_single_line": {
+    "head": "ea25f06132",
+    "files": {
+     "tests/tools/test_fuzzy_match_wrong_region.py": {
+      "passed": 4,
+      "skipped": 0,
+      "failed": 6
+     }
+    },
+    "failed_ids": [
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_missing_anchor-replace]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_missing_anchor-v4a]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-replace]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-v4a]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_wrong_token-replace]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_wrong_token-v4a]"
+    ],
+    "log": {
+     "path": "receipts/raw/runs/both+fold/final2-sab-single_line.rep1.log",
+     "sha256": "c3d178c21dffa588c491f0d0eb83ec378fbde4fd1c9e992eb20350c89e9d1e0e"
+    }
+   },
+   "sabotage_foldin": {
+    "head": "ea25f06132",
+    "files": {
+     "tests/tools/test_fuzzy_match_wrong_region.py": {
+      "passed": 8,
+      "skipped": 0,
+      "failed": 2
+     }
+    },
+    "failed_ids": [
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-replace]",
+     "tests/tools/test_fuzzy_match_wrong_region.py::test_wrong_region_edit_fails_loud_and_leaves_file_untouched[single_line_trailing_newline-v4a]"
+    ],
+    "log": {
+     "path": "receipts/raw/runs/both+fold/final2-sab-foldin.rep1.log",
+     "sha256": "aa221afff975d2e3cd4d196cb8cc6c71391b88e5d5d4db2848e7cc9325acabc1"
+    }
+   }
+  }
+ },
+ "env": {
+  "host": "<local-workstation> (name withheld)",
+  "python_interpreter": "<venv-python> (interpreter only; HOME/HERMES_HOME isolated)",
+  "HOME": "$S/testhome-st-edit-fuzzy-wrong-region",
+  "HERMES_HOME": "$HOME/.hermes",
+  "network": "loopback-only by construction (no provider, no model, direct tool calls)",
+  "sandbox": "process isolation via run_tests.sh clean env; bwrap NOT used (xf executor not built)"
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none (statusCheckRollup empty on #54575/#125376/#126502)",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "not_tested": [
+  "model behaviour after a refusal (E02, deferred)",
+  "Windows/CRLF files on disk (only CRLF in old_string probed)",
+  "#93717 (CONFLICTING, not hand-ported)",
+  "#125376 full head (CONFLICTING)",
+  "F14 standing guard set",
+  "bwrap sandbox / blind verifier"
+ ],
+ "verdict": "KEEP",
+ "carrier_choice": {
+  "winner": "#54575 (block_anchor) + #125376 fix commit 5f3f5896a4 (single-line) + 1-line fold-in on #125376",
+  "why": "No single open PR closes all four cases. #54575 keeps adjacent tests identical and preserves escape-drift diagnostics, and also refuses the #93717/#126502 repros; #126502 fails two existing escape-drift tests unless they are edited; #93717 conflicts. #125376's guard misses old_string with a trailing newline; testing the stripped pattern closes it (sabotage of that line alone re-REDs only the contract test)."
+ },
+ "resource_usage": {
+  "api_cost_usd": 0.0,
+  "gpu_s": 0,
+  "label": "OBSERVED (runner per-file wall times, summed over every log incl. adjacent/sabotage)",
+  "test_file_wall_s_sum": 1160.1,
+  "runs": 44
+ },
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the contract test, probes and receipts",
+ "privacy": "public-aggregate (synthetic fixtures only)",
+ "corrections": [
+  "2026-10-01 phase-3 round-1 fix: gates.red.failed_ids listed 9 ids (8 contract + 1 of the 3 failing carrier tests). Split into contract_failed_ids (8) and carrier_tests_failed_ids (3), re-read from receipts/raw/runs/base/proof.rep1.log.",
+  "2026-10-01 phase-3 round-1 fix: arms.*.merge_tree_on_main and c125376-leaf.tree_on_main were measured on main 572e4f4fad, not on the final main 234badf401; the keys now name that main.",
+  "2026-10-01 phase-3 round-1 fix: absolute local paths in this receipt and its raw files replaced by placeholders ($S, $WT, <venv-python>, <pytest-tmp>); cited raw-file hashes recomputed.",
+  "The amended head c3af284031 on main aea969677c is re-proven in F01/r20261001-02."
+ ]
+}

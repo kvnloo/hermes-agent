@@ -1,0 +1,56 @@
+# r2 git recheck (round-2 manifest fix; bare mirror, read-only; run at 2026-10-01T11:35:40Z)
+# commit dates (UTC)
+$ git -C <bare> log -1 --date=iso-strict-local --format=%H author=%ad committer=%cd parent=%P tree=%T 98c305b3ec8d03693f4dc94bade69035cb15ff7d
+98c305b3ec8d03693f4dc94bade69035cb15ff7d author=2026-10-01T09:03:41Z committer=2026-10-01T09:14:45Z parent=234badf4012af380d23c91eae55d045a69c69ffb tree=3a915075078775928dd352fa2fe77bd200bdd714
+rc=0
+$ git -C <bare> log -1 --date=iso-strict-local --format=%H author=%ad committer=%cd parent=%P tree=%T 2b05ac2bb8423c987ba8051f6cc22939104b4da7
+2b05ac2bb8423c987ba8051f6cc22939104b4da7 author=2026-10-01T09:03:41Z committer=2026-10-01T09:03:41Z parent=572e4f4fad32bbdcfc948fb2ec833177ed5734c0 tree=43af53a68452335f3bb3c7059610bddac02f57f5
+rc=0
+$ git -C <bare> log -1 --date=iso-strict-local --format=%H committer=%cd 234badf4012af380d23c91eae55d045a69c69ffb
+234badf4012af380d23c91eae55d045a69c69ffb committer=2026-10-01T08:50:55Z
+rc=0
+$ git -C <bare> rev-parse refs/heads/staging/plugin-catalog-entries
+98c305b3ec8d03693f4dc94bade69035cb15ff7d
+rc=0
+# merge-tree of the branch head on the declared base and on the round-1 main
+$ git -C <bare> merge-tree --write-tree 234badf4012af380d23c91eae55d045a69c69ffb 98c305b3ec8d03693f4dc94bade69035cb15ff7d
+3a915075078775928dd352fa2fe77bd200bdd714
+rc=0
+$ git -C <bare> merge-tree --write-tree aea969677c60a1bb72fe227fdfb98f196a2092cc 98c305b3ec8d03693f4dc94bade69035cb15ff7d
+0f33a17f5c53e39fc185d63f0f1ee8b2b48760a7
+rc=0
+# same base with the pre-rebase commit (it yields the same tree)
+$ git -C <bare> merge-tree --write-tree 234badf4012af380d23c91eae55d045a69c69ffb 2b05ac2bb8423c987ba8051f6cc22939104b4da7
+3a915075078775928dd352fa2fe77bd200bdd714
+rc=0
+# bare-mirror main at round 2 (moved since round 1; not fetched by this round)
+$ git -C <bare> rev-parse main
+e8c97320ac8691d4de92af49f98459f9ef9ddb08
+rc=0
+$ git -C <bare> log -1 --date=iso-strict-local --format=%H committer=%cd main
+e8c97320ac8691d4de92af49f98459f9ef9ddb08 committer=2026-10-01T11:10:58Z
+rc=0
+$ git -C <bare> merge-base --is-ancestor aea969677c60a1bb72fe227fdfb98f196a2092cc main
+rc=0
+$ git -C <bare> rev-list --count aea969677c60a1bb72fe227fdfb98f196a2092cc..main
+6
+rc=0
+$ git -C <bare> merge-tree --write-tree main 98c305b3ec8d03693f4dc94bade69035cb15ff7d
+e84c527a14f10d4c6500968d72f89334a8c3e951
+rc=0
+$ git -C <bare> diff --stat aea969677c60a1bb72fe227fdfb98f196a2092cc main -- <18 invalidate_on path specs from tools/build_receipts.py INVALIDATE_ON>
+(empty = unchanged)
+$ git -C <bare> cat-file -e main:plugin-catalog/paw-pii.yaml
+absent (need still holds)
+# UTC mtimes of the round-0 outputs written around the 234badf401 rebase (stat -c '%y'; local filesystem metadata)
+2026-10-01 09:14:11Z raw/workflow_push_scan.json
+2026-10-01 09:15:16Z raw/adjacent_branch_v234.txt
+2026-10-01 09:15:17Z raw/loader_branch_v234.json
+2026-10-01 09:15:31Z raw/adjacent_base_v234.txt
+2026-10-01 09:15:31Z raw/loader_base_v234.json
+2026-10-01 09:17:40Z tools/build_receipts.py (round-0 bytes, last written before round 2; it hard-codes merge_tree 3a915075078775928dd352fa2fe77bd200bdd714 for main 234badf401)
+# UTC mtimes of the round-0 F12 and T1 outputs (first and last of each set)
+2026-10-01 09:08:00Z raw/f12_as-pinned.json
+2026-10-01 09:08:02Z raw/f12_sabotage.json
+2026-10-01 09:12:24Z raw/t1_failopen_rep1.json
+2026-10-01 09:12:27Z raw/t1_capability_fixed_manifest_rep3.json

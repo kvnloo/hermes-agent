@@ -1,0 +1,99 @@
+▶ not activated — using HERMES_PYTHON: $VENV/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~2 tests) under ['tests/agent/test_context_compressor_anchor_index.py']; running with -j 2
+[100.0% |     2/~2 | ✓1 | ✗1] ✗ tests/agent/test_context_compressor_anchor_index.py (1✓ 1✗, 1.9s)
+
+  ╔╍ Failed: tests/agent/test_context_compressor_anchor_index.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║         ids = " ".join(f"sa-{i}-{i:08x}" for i in range(60))
+  ║         errors = "\n".join(f"fatal: unable to reach remote mirror {i} over https" for i in range(60))
+  ║         source = (  # code: annotations and log formats are not error lines, a mid-name fragment is not a key
+  ║             "    def _on_failure(self, error: Exception) -> Dict[str, Any]:\n"
+  ║             '        logger.warning("error: %s", exc)\n'
+  ║             "    error: Optional[Exception] = None\n"
+  ║             '    self._app.router.add_post("/hook", handler)\n'
+  ║         ) * 2
+  ║         turns = [
+  ║             {"role": "assistant", "content": prose + ids + "\n" + errors},
+  ║             {"role": "tool", "content": source},
+  ║         ]
+  ║     
+  ║         index = cc._build_anchor_index(turns)
+  ║     
+  ║         dotted = _line(index, "dotted keys")
+  ║         assert "compression.tail_mode" in dotted
+  ║         for not_a_key in ("context_compressor.py", "config.yaml", "api.openai.com", "e.g", "task_7", "router.add_post"):
+  ║ >           assert not_a_key not in dotted, f"{not_a_key!r} leaked into dotted keys: {dotted!r}"
+  ║ E           AssertionError: 'router.add_post' leaked into dotted keys: 'dotted keys: router.add_post(x2), compression.tail_mode'
+  ║ E           assert 'router.add_post' not in 'dotted keys...on.tail_mode'
+  ║ E             
+  ║ E             'router.add_post' is contained here:
+  ║ E               dotted keys: router.add_post(x2), compression.tail_mode
+  ║ E             ?              +++++++++++++++
+  ║ 
+  ║ tests/agent/test_context_compressor_anchor_index.py:83: AssertionError
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/agent/test_context_compressor_anchor_index.py::test_new_anchor_classes_stay_exact_and_bounded
+  ║ 1 failed, 1 passed in 0.50s
+  ║
+  ║  Repro: python -m pytest tests/agent/test_context_compressor_anchor_index.py -q
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 2.0s (2 workers) ===
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 1.9s  (runner wall: 2.0s, parallelism: 2x)
+  P50: 1.91s  P90: 1.91s  P95: 1.91s  P99: 1.91s  Max: 1.91s
+  <1s: 0 files (0%)  <2s: 1 files (100%)
+  Top 10 slowest:
+      1.91s  tests/agent/test_context_compressor_anchor_index.py
+
+=== Failure output ===
+
+--- tests/agent/test_context_compressor_anchor_index.py ---
+.F                                                                       [100%]
+=================================== FAILURES ===================================
+________________ test_new_anchor_classes_stay_exact_and_bounded ________________
+
+    def test_new_anchor_classes_stay_exact_and_bounded():
+        prose = (
+            "See agent/context_compressor.py and config.yaml (e.g. api.openai.com); "
+            "compression.tail_mode stays lean and the task_7 retry passed.\n"
+        )
+        ids = " ".join(f"sa-{i}-{i:08x}" for i in range(60))
+        errors = "\n".join(f"fatal: unable to reach remote mirror {i} over https" for i in range(60))
+        source = (  # code: annotations and log formats are not error lines, a mid-name fragment is not a key
+            "    def _on_failure(self, error: Exception) -> Dict[str, Any]:\n"
+            '        logger.warning("error: %s", exc)\n'
+            "    error: Optional[Exception] = None\n"
+            '    self._app.router.add_post("/hook", handler)\n'
+        ) * 2
+        turns = [
+            {"role": "assistant", "content": prose + ids + "\n" + errors},
+            {"role": "tool", "content": source},
+        ]
+    
+        index = cc._build_anchor_index(turns)
+    
+        dotted = _line(index, "dotted keys")
+        assert "compression.tail_mode" in dotted
+        for not_a_key in ("context_compressor.py", "config.yaml", "api.openai.com", "e.g", "task_7", "router.add_post"):
+>           assert not_a_key not in dotted, f"{not_a_key!r} leaked into dotted keys: {dotted!r}"
+E           AssertionError: 'router.add_post' leaked into dotted keys: 'dotted keys: router.add_post(x2), compression.tail_mode'
+E           assert 'router.add_post' not in 'dotted keys...on.tail_mode'
+E             
+E             'router.add_post' is contained here:
+E               dotted keys: router.add_post(x2), compression.tail_mode
+E             ?              +++++++++++++++
+
+tests/agent/test_context_compressor_anchor_index.py:83: AssertionError
+=========================== short test summary info ============================
+FAILED tests/agent/test_context_compressor_anchor_index.py::test_new_anchor_classes_stay_exact_and_bounded
+1 failed, 1 passed in 0.50s
+
+=== 1 file with test failures (1 test failed) ===
+  tests/agent/test_context_compressor_anchor_index.py  (1 test failed)

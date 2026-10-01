@@ -1,0 +1,30 @@
+{
+  "label": "OBSERVED (direct call on the arm's real projection and converter; mechanism, not wire)",
+  "arm": "carrier",
+  "repo_head": "15dff75cc860a14d06414c6bf31459397e1de912",
+  "dirty_files": [],
+  "projection_module_blob": "a76fb42f76e3bb7d71643da6a5f58890878d4d32",
+  "step1_chat_completions": {
+    "rows_projected": 9,
+    "stubbed_rows": 9
+  },
+  "step2_same_agent_native_messages": {
+    "rows_projected": 9,
+    "stubbed_rows": 9,
+    "same_stub_bytes_as_step1": 9,
+    "signed_thinking_blocks_on_wire": 1
+  },
+  "step3_new_agent_native_messages": {
+    "rows_projected": 9,
+    "stubbed_rows": 9,
+    "same_stub_bytes_as_step2": 9,
+    "rows_archived_in_step2_now_full": 0,
+    "signed_thinking_blocks_on_wire": 1
+  },
+  "latest_signed_block": {
+    "message_index_step2": 51,
+    "message_index_step3": 51,
+    "bound_prefix_unchanged": true
+  },
+  "python": "3.11.14"
+}

@@ -1,0 +1,131 @@
+{
+  "label": "base",
+  "generated_at": "2026-10-01T09:16:13.253726+00:00",
+  "task_count": 6,
+  "arms": {
+    "str_replace": [
+      {
+        "task_id": "anchored_replace",
+        "capability": "exact unique replacement",
+        "outcome": "applied",
+        "edits_attempted": 1,
+        "edits_requested": 1,
+        "reason": "exact unique match",
+        "expected": "applied",
+        "passed": true
+      },
+      {
+        "task_id": "indentation_drift",
+        "capability": "anchored replacement versus whitespace recovery",
+        "outcome": "rejected",
+        "edits_attempted": 1,
+        "edits_requested": 1,
+        "reason": "exact match count was 0, expected 1",
+        "expected": "rejected",
+        "passed": true
+      },
+      {
+        "task_id": "ambiguous_match",
+        "capability": "unique-match enforcement",
+        "outcome": "rejected",
+        "edits_attempted": 1,
+        "edits_requested": 1,
+        "reason": "exact match count was 2, expected 1",
+        "expected": "rejected",
+        "passed": true
+      },
+      {
+        "task_id": "multi_hunk",
+        "capability": "multi-hunk edit execution",
+        "outcome": "applied",
+        "edits_attempted": 2,
+        "edits_requested": 2,
+        "reason": "exact unique match; exact unique match",
+        "expected": "applied",
+        "passed": true
+      },
+      {
+        "task_id": "already_applied",
+        "capability": "no-op / already-applied detection",
+        "outcome": "rejected",
+        "edits_attempted": 1,
+        "edits_requested": 1,
+        "reason": "exact match count was 0, expected 1",
+        "expected": "rejected",
+        "passed": true
+      },
+      {
+        "task_id": "missing_anchor",
+        "capability": "failure loudness",
+        "outcome": "rejected",
+        "edits_attempted": 1,
+        "edits_requested": 1,
+        "reason": "exact match count was 0, expected 1",
+        "expected": "rejected",
+        "passed": true
+      }
+    ],
+    "hermes_patch": [
+      {
+        "task_id": "anchored_replace",
+        "capability": "exact unique replacement",
+        "outcome": "applied",
+        "edits_attempted": 1,
+        "edits_requested": 1,
+        "reason": "matched with exact",
+        "expected": "applied",
+        "passed": true
+      },
+      {
+        "task_id": "indentation_drift",
+        "capability": "anchored replacement versus whitespace recovery",
+        "outcome": "applied",
+        "edits_attempted": 1,
+        "edits_requested": 1,
+        "reason": "matched with whitespace_normalized",
+        "expected": "applied",
+        "passed": true
+      },
+      {
+        "task_id": "ambiguous_match",
+        "capability": "unique-match enforcement",
+        "outcome": "rejected",
+        "edits_attempted": 1,
+        "edits_requested": 1,
+        "reason": "Found 2 matches for old_string. Provide more context to make it unique, or use replace_all=True. Matches:\n  L2: enabled = false\n  L4: enabled = false",
+        "expected": "rejected",
+        "passed": true
+      },
+      {
+        "task_id": "multi_hunk",
+        "capability": "multi-hunk edit execution",
+        "outcome": "applied",
+        "edits_attempted": 2,
+        "edits_requested": 2,
+        "reason": "matched with exact; matched with exact",
+        "expected": "applied",
+        "passed": true
+      },
+      {
+        "task_id": "already_applied",
+        "capability": "no-op / already-applied detection",
+        "outcome": "no_change",
+        "edits_attempted": 1,
+        "edits_requested": 1,
+        "reason": "target text is already present",
+        "expected": "no_change",
+        "passed": true
+      },
+      {
+        "task_id": "missing_anchor",
+        "capability": "failure loudness",
+        "outcome": "applied",
+        "edits_attempted": 1,
+        "edits_requested": 1,
+        "reason": "matched with context_aware",
+        "expected": "rejected",
+        "passed": false
+      }
+    ]
+  }
+}

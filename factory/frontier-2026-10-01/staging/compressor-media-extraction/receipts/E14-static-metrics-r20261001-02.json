@@ -1,0 +1,134 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compressor-media-extraction",
+ "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+ "head_revision": "c5e8be14b43bf75bcc2e4e8d95f2d4810a7e2779",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#80636",
+  "NousResearch/hermes-agent#78645"
+ ],
+ "provenance": "self",
+ "privacy": "public-aggregate",
+ "cost_usd": 0.0,
+ "ai_assistance": "Claude Code (Opus 5.5) ran the experiment and wrote this receipt",
+ "created_at": "2026-10-01T07:47:16-05:00",
+ "spec": {
+  "path": null,
+  "prereg_commit": null,
+  "note": "not pre-registered on claude/ledger (no ledger writes in this run)"
+ },
+ "env": {
+  "host": "<local-host>",
+  "test_python": "3.11.14 (pytest 9.1.1, HERMES_PYTHON)",
+  "nav_python": "3.14.7 separate uv venv (tiktoken 0.14.0, radon 6.0.1)",
+  "sandbox": "none (no bwrap); HOME/HERMES_HOME pointed at scratch test homes; run_tests.sh env -i",
+  "load1_range": "3-16 (shared host; base and head full runs ran concurrently)",
+  "paths": "absolute local paths in commands and raw files are replaced by $W/<tree>, $S, $HERMES_PYTHON, <uv>, <pytest-tmp>, pytest-of-<user>"
+ },
+ "id": "E14-static/r20261001-02",
+ "experiment": "E14 static_metrics (first-party source, tests excluded)",
+ "tier": "T0",
+ "label": "OBSERVED",
+ "supersedes": "E14-static/r20261001-01",
+ "round_note": "fix round 1: head rebuilt on main aea969677c (c5e8be14b4 replaces the unpushed d2bff3a59e; same patch-id 2c92e56f, corrected commit message)",
+ "inputs": {
+  "harness_blobs_at_base": {
+   "evals/codebase_navigability/static_metrics.py": "25fb1b3cd6f014608579f4a534a9565ceac1c7c0"
+  }
+ },
+ "command": "NAV_OUT=out $NAVVENV/bin/python $W/head/evals/codebase_navigability/static_metrics.py $W/base base ; same for head",
+ "result": {
+  "delta": {
+   "files": {
+    "base": 2083,
+    "head": 2084
+   },
+   "lines": {
+    "base": 831454,
+    "head": 831475
+   },
+   "code": {
+    "base": 565714,
+    "head": 565724
+   },
+   "docstring": {
+    "base": 94080,
+    "head": 94087
+   },
+   "import_edges": {
+    "base": 10739,
+    "head": 10742
+   },
+   "largest_cycle": {
+    "base": 1131,
+    "head": 1132
+   },
+   "modules_in_cycles": {
+    "base": 1173,
+    "head": 1174
+   }
+  },
+  "unchanged": {
+   "comment": 58048,
+   "functions": 41134,
+   "files_gt_2000": 50,
+   "files_gt_5000": 7,
+   "funcs_gt_300": 5,
+   "func_len_max": 612,
+   "elif_chains_ge4": 191,
+   "import_cycles": 11,
+   "radon_cc_avg": 4.94,
+   "radon_cc_gt_30": 187,
+   "radon_mi_avg": 51.34
+  },
+  "changed_unexpectedly": [],
+  "largest_files_head_top6": [
+   [
+    8256,
+    "agent/auxiliary_client.py"
+   ],
+   [
+    7470,
+    "plugins/platforms/discord/adapter.py"
+   ],
+   [
+    7380,
+    "plugins/platforms/telegram/adapter.py"
+   ],
+   [
+    6925,
+    "plugins/platforms/slack/adapter.py"
+   ],
+   [
+    6154,
+    "gateway/run.py"
+   ],
+   [
+    5744,
+    "hermes_cli/gateway.py"
+   ]
+  ],
+  "facade_rank": {
+   "base": 6,
+   "head": 7
+  }
+ },
+ "reading": "One file added (+21 lines). agent/context_compressor.py drops 5,753 -> 5,531 lines (rank 6 -> 7) but stays above 2,000 and 5,000, so files_gt_2000/files_gt_5000 do not move. The sibling joins the largest import cycle (1131 -> 1132 modules) through agent.turn_context.",
+ "raw": [
+  {
+   "path": "raw/r02/base.static.json",
+   "sha256": "27245cd14a29e8ab4df83a54a38132f20d15c35f4579d3d57c5b45dc87f80bef",
+   "source_sha256": "3264f5896910e808c174d72da20f26c02c1c5b2eac06498eb7334a21abda103c"
+  },
+  {
+   "path": "raw/r02/head.static.json",
+   "sha256": "b20186c5f54dfb869716758ec01f968034c287068958b265d4001df7bd054dd0",
+   "source_sha256": "2467aca021c406901f618ef10da87c196f541682b59389e61853e42248172a56"
+  }
+ ],
+ "verdict": "KEEP (shape change as expected; no regression in cc/mi/func metrics)",
+ "not_tested": [
+  "runtime_bench.py (runs the hermes CLI; needs OD-2)"
+ ]
+}

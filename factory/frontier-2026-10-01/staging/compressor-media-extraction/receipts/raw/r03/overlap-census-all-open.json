@@ -1,0 +1,1437 @@
+{
+ "main": "bd394e2a4bdf55fa2f14b0f6963d343049787f90",
+ "listed_at": "2026-10-01T08:28-05:00 .. 08:59-05:00",
+ "open_prs_listed": 33537,
+ "file_lists_reread_via_rest": 113,
+ "touching_facade": [
+  2637,
+  3418,
+  6648,
+  7424,
+  8355,
+  9114,
+  9450,
+  9671,
+  11299,
+  11607,
+  12354,
+  12588,
+  12629,
+  13789,
+  14500,
+  14903,
+  15317,
+  15432,
+  15554,
+  15556,
+  15557,
+  15681,
+  15836,
+  16633,
+  16849,
+  17134,
+  17246,
+  18519,
+  18653,
+  18735,
+  19279,
+  19649,
+  21470,
+  21504,
+  21783,
+  22200,
+  22209,
+  22464,
+  23786,
+  23792,
+  23808,
+  24330,
+  24405,
+  24704,
+  24952,
+  25413,
+  25716,
+  26051,
+  26527,
+  27368,
+  27470,
+  27513,
+  27684,
+  28222,
+  28265,
+  29293,
+  29556,
+  29859,
+  30199,
+  30847,
+  31073,
+  31490,
+  31492,
+  32375,
+  32390,
+  32509,
+  32606,
+  32761,
+  32994,
+  33170,
+  34450,
+  35747,
+  35913,
+  35930,
+  36011,
+  36138,
+  37003,
+  37016,
+  37640,
+  38030,
+  40348,
+  40968,
+  41025,
+  41218,
+  41888,
+  42624,
+  43762,
+  44289,
+  45063,
+  45412,
+  46640,
+  46793,
+  48945,
+  50262,
+  50399,
+  51804,
+  52604,
+  52617,
+  52783,
+  53474,
+  55364,
+  56034,
+  56715,
+  56722,
+  56911,
+  57054,
+  57316,
+  57461,
+  58295,
+  58348,
+  58984,
+  59638,
+  59725,
+  60366,
+  60662,
+  61101,
+  61652,
+  62078,
+  62088,
+  62769,
+  62777,
+  63009,
+  63525,
+  63779,
+  63839,
+  64412,
+  64808,
+  65067,
+  65782,
+  66249,
+  66619,
+  67037,
+  68875,
+  68923,
+  69523,
+  69628,
+  70321,
+  70730,
+  71670,
+  72149,
+  72637,
+  73124,
+  73720,
+  73726,
+  74032,
+  74632,
+  74699,
+  74789,
+  76644,
+  76923,
+  77777,
+  77861,
+  78433,
+  78551,
+  79284,
+  79792,
+  79831,
+  80245,
+  80626,
+  80634,
+  80636,
+  80644,
+  80645,
+  81074,
+  81181,
+  81243,
+  82129,
+  82142,
+  82464,
+  82533,
+  82571,
+  82850,
+  82942,
+  83196,
+  83326,
+  83331,
+  83449,
+  83560,
+  83776,
+  84029,
+  84084,
+  84160,
+  84325,
+  84336,
+  84534,
+  85291,
+  85479,
+  85481,
+  86019,
+  86261,
+  87123,
+  87198,
+  87217,
+  87303,
+  87452,
+  87515,
+  87963,
+  88247,
+  88388,
+  88786,
+  89208,
+  89399,
+  89998,
+  90771,
+  90888,
+  90910,
+  91024,
+  91067,
+  91118,
+  91126,
+  91396,
+  92452,
+  92721,
+  92738,
+  93119,
+  93241,
+  94035,
+  94074,
+  94419,
+  94983,
+  95985,
+  96359,
+  96504,
+  97512,
+  97671,
+  98108,
+  98125,
+  98207,
+  98477,
+  98633,
+  99305,
+  99654,
+  100219,
+  100233,
+  100467,
+  101173,
+  101399,
+  101882,
+  102393,
+  102416,
+  102435,
+  102453,
+  103320,
+  104090,
+  104115,
+  104214,
+  104859,
+  104914,
+  105273,
+  105486,
+  106742,
+  106867,
+  106876,
+  106886,
+  106893,
+  107159,
+  107279,
+  107532,
+  107589,
+  107731,
+  107732,
+  107931,
+  108264,
+  108393,
+  108457,
+  108459,
+  108551,
+  108649,
+  108654,
+  109912,
+  109978,
+  109980,
+  110101,
+  110103,
+  110105,
+  110141,
+  110342,
+  110752,
+  110874,
+  111130,
+  112391,
+  112719,
+  112805,
+  112889,
+  113028,
+  113081,
+  113207,
+  113334,
+  113470,
+  113574,
+  113585,
+  114026,
+  114074,
+  114711,
+  114731,
+  115337,
+  115486,
+  115952,
+  116960,
+  117462,
+  117637,
+  117929,
+  118283,
+  118317,
+  118392,
+  118476,
+  118581,
+  118847,
+  119347,
+  119380,
+  119585,
+  119712,
+  120375,
+  120403,
+  120455,
+  120603,
+  120772,
+  120947,
+  121079,
+  121227,
+  121502,
+  121579,
+  121886,
+  122091,
+  122522,
+  122635,
+  123450,
+  123539,
+  123582,
+  123626,
+  123644,
+  123649,
+  123659,
+  123950,
+  124012,
+  124122,
+  124126,
+  124187,
+  124273,
+  124280,
+  124324,
+  124595,
+  124734,
+  124786,
+  125141,
+  125648,
+  125660,
+  125688,
+  125697,
+  125732,
+  125735,
+  125849,
+  125882,
+  125935,
+  126201,
+  126273,
+  126280,
+  126281,
+  126282,
+  126289,
+  126312,
+  126320,
+  126341,
+  126366,
+  126375,
+  126398,
+  126437,
+  126561,
+  126810,
+  127049,
+  127330,
+  127434,
+  127624,
+  127838,
+  128562,
+  128790,
+  128791,
+  129081,
+  129147,
+  129195,
+  129226,
+  129431,
+  129467,
+  129470,
+  129501,
+  129505,
+  129513,
+  129866,
+  129877,
+  129882,
+  129894,
+  129903,
+  129906,
+  130194,
+  130210,
+  130230,
+  130265,
+  130456,
+  130462,
+  130467,
+  130470,
+  130477,
+  130481
+ ],
+ "flagged": [
+  {
+   "number": 3418,
+   "author": "0xNyk",
+   "n_files": 941,
+   "kind": "stale-base mega-diff",
+   "updatedAt": "2026-09-22T06:26:53Z",
+   "isDraft": false,
+   "head": "348870c8ee5122747440b04b423c7b05fdd7fcbb",
+   "preimage": "merge-base 77a2aad771",
+   "other_files_scan": "skipped: 375 changed .py files have no patch",
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/context_compressor.py"
+   ]
+  },
+  {
+   "number": 16633,
+   "author": "gorovmaria626-hub",
+   "n_files": 676,
+   "kind": "stale-base mega-diff",
+   "updatedAt": "2026-07-12T19:51:16Z",
+   "isDraft": false,
+   "head": "5c8415d12a1b708dcb1ba5ca327c57f8391147df",
+   "preimage": "reverse-patch",
+   "other_files_scan": "skipped: 52 changed .py files have no patch",
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/context_compressor.py"
+   ]
+  },
+  {
+   "number": 22200,
+   "author": "hitken",
+   "n_files": 3000,
+   "kind": "stale-base mega-diff",
+   "github_mergeable_2026_10_01T10_14": "CONFLICTING",
+   "updatedAt": "2026-09-13T05:06:08Z",
+   "isDraft": false,
+   "head": "9e210de1ba4a5bbac29e5133456089b9d3cf015b",
+   "edits_moved": [
+    "<facade removed or renamed>"
+   ],
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/context_compressor.py"
+   ]
+  },
+  {
+   "number": 22209,
+   "author": "hermes-matekno",
+   "n_files": 3000,
+   "kind": "stale-base mega-diff",
+   "github_mergeable_2026_10_01T10_14": "CONFLICTING",
+   "updatedAt": "2026-07-13T04:08:03Z",
+   "isDraft": false,
+   "head": "38238d60ecab708fba7ae146d4afdcedd2304e14",
+   "preimage": "merge-base 78b0008f44",
+   "edits_moved": [
+    "_is_image_part:added",
+    "_content_has_images:added",
+    "_strip_images_from_content:added",
+    "_strip_historical_media:added"
+   ],
+   "carries_main_text_only": [
+    "_IMAGE_PART_TYPES"
+   ],
+   "other_files_scan": "skipped: 291 changed .py files have no patch",
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/chat_completion_helpers.py",
+    "agent/context_compressor.py",
+    "tests/agent/test_compressor_historical_media.py"
+   ]
+  },
+  {
+   "number": 26527,
+   "author": "testnetjeff",
+   "n_files": 3000,
+   "kind": "stale-base mega-diff",
+   "updatedAt": "2026-07-13T06:40:12Z",
+   "isDraft": false,
+   "head": "dd379be3ed956a4dce9246fa77b262041fbff437",
+   "other_files_scan": "skipped: 680 changed .py files have no patch",
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/context_compressor.py"
+   ]
+  },
+  {
+   "number": 30199,
+   "author": "iloveyou1955",
+   "n_files": 2879,
+   "kind": "stale-base mega-diff",
+   "updatedAt": "2026-07-19T12:26:14Z",
+   "isDraft": false,
+   "head": "b490f8362413a2a7fc92eb33eca1bcee7f755a7b",
+   "preimage": "merge-base b1a25404b6",
+   "other_files_scan": "skipped: 158 changed .py files have no patch",
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/chat_completion_helpers.py",
+    "agent/context_compressor.py"
+   ]
+  },
+  {
+   "number": 32761,
+   "author": "jameslcowan",
+   "n_files": 3000,
+   "kind": "stale-base mega-diff",
+   "github_mergeable_2026_10_01T10_14": "CONFLICTING",
+   "updatedAt": "2026-07-13T15:42:59Z",
+   "isDraft": false,
+   "head": "b6f3fb0ca6523ec6f9695ba3d2ea78c3ea2b6181",
+   "edits_moved": [
+    "_is_image_part:added",
+    "_content_has_images:added",
+    "_strip_images_from_content:added",
+    "_strip_historical_media:added"
+   ],
+   "carries_main_text_only": [
+    "_IMAGE_PART_TYPES"
+   ],
+   "other_files_scan": "skipped: 735 changed .py files have no patch",
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/chat_completion_helpers.py",
+    "agent/context_compressor.py",
+    "tests/agent/test_compressor_historical_media.py"
+   ]
+  },
+  {
+   "number": 32994,
+   "author": "Syz87",
+   "n_files": 1094,
+   "kind": "stale-base mega-diff",
+   "updatedAt": "2026-07-19T12:41:14Z",
+   "isDraft": false,
+   "head": "c45e16173f1323fe3606b9d4ac27aa600e3039e1",
+   "preimage": "reverse-patch",
+   "other_files_scan": "skipped: 53 changed .py files have no patch",
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/chat_completion_helpers.py",
+    "agent/context_compressor.py",
+    "tests/agent/test_compressor_historical_media.py"
+   ]
+  },
+  {
+   "number": 56911,
+   "author": "sg-shag",
+   "n_files": 3000,
+   "kind": "stale-base mega-diff",
+   "github_mergeable_2026_10_01T10_14": "CONFLICTING",
+   "updatedAt": "2026-09-29T12:30:04Z",
+   "isDraft": false,
+   "head": "cafe49769516cfcfa2f5a7d6e904cf69b9d1443d",
+   "preimage": "merge-base b837f07dcd",
+   "edits_moved": [
+    "_MAX_KEEP_TOOL_IMAGES:added",
+    "_tool_content_has_images:added",
+    "_retire_stale_tool_result_images:added",
+    "evict_stale_outbound_tool_images:added",
+    "_strip_historical_media:modified"
+   ],
+   "carries_main_text_only": [
+    "_replace_image_parts",
+    "_strip_images_from_tool_msg",
+    "_rewritten",
+    "_is_image_part",
+    "_content_has_images",
+    "_strip_images_from_content",
+    "_summary_part_text",
+    "_image_part_label"
+   ],
+   "other_files_scan": "skipped: 113 changed .py files have no patch",
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/chat_completion_helpers.py",
+    "agent/context_compressor.py",
+    "agent/turn_request_assembly.py"
+   ]
+  },
+  {
+   "number": 62078,
+   "author": "GiuseppeCapaldo93",
+   "n_files": 3000,
+   "kind": "stale-base mega-diff",
+   "updatedAt": "2026-08-10T13:43:54Z",
+   "isDraft": false,
+   "head": "a9a563ce5f3a469b7825f4cd4903edc37fa31c34",
+   "preimage": "merge-base 31c08a9aad",
+   "other_files_scan": "skipped: 119 changed .py files have no patch",
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/chat_completion_helpers.py",
+    "agent/context_compressor.py",
+    "tests/agent/test_compressor_historical_media.py"
+   ]
+  },
+  {
+   "number": 73720,
+   "author": "webtecnica",
+   "n_files": 3000,
+   "kind": "stale-base mega-diff",
+   "updatedAt": "2026-09-18T07:17:58Z",
+   "isDraft": false,
+   "head": "7d079c7034840856959b9738fa6b68432f907e62",
+   "preimage": "reverse-patch",
+   "other_files_scan": "skipped: 173 changed .py files have no patch",
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/chat_completion_helpers.py",
+    "agent/context_compressor.py",
+    "tests/agent/test_compressor_historical_media.py"
+   ]
+  },
+  {
+   "number": 73726,
+   "author": "webtecnica",
+   "n_files": 2823,
+   "kind": "stale-base mega-diff",
+   "updatedAt": "2026-07-30T17:15:36Z",
+   "isDraft": false,
+   "head": "90c8d2bf1b14b1fc83b99831f2a19f46621d4271",
+   "preimage": "reverse-patch",
+   "other_files_scan": "skipped: 103 changed .py files have no patch",
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/chat_completion_helpers.py",
+    "agent/context_compressor.py",
+    "tests/agent/test_compressor_historical_media.py"
+   ]
+  },
+  {
+   "number": 80636,
+   "author": "andrexibiza",
+   "n_files": 9,
+   "kind": "stack",
+   "github_mergeable_2026_10_01T10_14": "CONFLICTING",
+   "updatedAt": "2026-08-15T17:28:55Z",
+   "isDraft": false,
+   "head": "5aa1746a288f6401b6b2b28ae3607e99d9b72e74",
+   "preimage": "reverse-patch",
+   "edits_moved": [
+    "_IMAGE_PART_TYPES:removed",
+    "_is_image_part:removed",
+    "_content_has_images:removed",
+    "_strip_images_from_content:removed",
+    "_strip_historical_media:removed",
+    "_image_part_label:removed"
+   ],
+   "other_files_new_old_path_refs": [
+    {
+     "file": "tests/agent/test_context_compressor_media_seam.py",
+     "new_old_path_refs": [
+      "attr:_content_has_images",
+      "attr:_is_image_part",
+      "attr:_strip_historical_media"
+     ],
+     "breaks_after_merge": [
+      "attr:_content_has_images"
+     ],
+     "resolves_via_facade_import_gate_only": [
+      "attr:_is_image_part",
+      "attr:_strip_historical_media"
+     ]
+    }
+   ],
+   "adds_media_module": true,
+   "touches_branch_files": [
+    "agent/context_compressor.py"
+   ]
+  },
+  {
+   "number": 80644,
+   "author": "andrexibiza",
+   "n_files": 14,
+   "kind": "stack",
+   "github_mergeable_2026_10_01T10_14": "CONFLICTING",
+   "updatedAt": "2026-08-31T16:16:36Z",
+   "isDraft": false,
+   "head": "c871197b77b4fbe6cf0059a74161322b5dc02ad2",
+   "preimage": "reverse-patch",
+   "edits_moved": [
+    "_IMAGE_PART_TYPES:removed",
+    "_is_image_part:removed",
+    "_content_has_images:removed",
+    "_strip_images_from_content:removed",
+    "_strip_historical_media:removed",
+    "_image_part_label:removed"
+   ],
+   "other_files_new_old_path_refs": [
+    {
+     "file": "tests/agent/test_context_compressor_media_seam.py",
+     "new_old_path_refs": [
+      "attr:_content_has_images",
+      "attr:_is_image_part",
+      "attr:_strip_historical_media"
+     ],
+     "breaks_after_merge": [
+      "attr:_content_has_images"
+     ],
+     "resolves_via_facade_import_gate_only": [
+      "attr:_is_image_part",
+      "attr:_strip_historical_media"
+     ]
+    }
+   ],
+   "adds_media_module": true,
+   "touches_branch_files": [
+    "agent/context_compressor.py"
+   ]
+  },
+  {
+   "number": 80645,
+   "author": "andrexibiza",
+   "n_files": 12,
+   "kind": "stack",
+   "github_mergeable_2026_10_01T10_14": "CONFLICTING",
+   "updatedAt": "2026-08-15T17:28:59Z",
+   "isDraft": false,
+   "head": "2ace2a70c00ac818d0759fec406f3735a6f6d8f5",
+   "preimage": "reverse-patch",
+   "edits_moved": [
+    "_IMAGE_PART_TYPES:removed",
+    "_is_image_part:removed",
+    "_content_has_images:removed",
+    "_strip_images_from_content:removed",
+    "_strip_historical_media:removed",
+    "_image_part_label:removed"
+   ],
+   "other_files_new_old_path_refs": [
+    {
+     "file": "tests/agent/test_context_compressor_media_seam.py",
+     "new_old_path_refs": [
+      "attr:_content_has_images",
+      "attr:_is_image_part",
+      "attr:_strip_historical_media"
+     ],
+     "breaks_after_merge": [
+      "attr:_content_has_images"
+     ],
+     "resolves_via_facade_import_gate_only": [
+      "attr:_is_image_part",
+      "attr:_strip_historical_media"
+     ]
+    }
+   ],
+   "adds_media_module": true,
+   "touches_branch_files": [
+    "agent/context_compressor.py"
+   ]
+  },
+  {
+   "number": 81074,
+   "author": "andrexibiza",
+   "n_files": 16,
+   "kind": "stack",
+   "github_mergeable_2026_10_01T10_14": "CONFLICTING",
+   "updatedAt": "2026-08-19T17:44:54Z",
+   "isDraft": false,
+   "head": "4effdf33967f49f19069c00c5b5348fd8c10539b",
+   "preimage": "reverse-patch",
+   "edits_moved": [
+    "_IMAGE_PART_TYPES:removed",
+    "_is_image_part:removed",
+    "_content_has_images:removed",
+    "_strip_images_from_content:removed",
+    "_strip_historical_media:removed",
+    "_image_part_label:removed"
+   ],
+   "other_files_new_old_path_refs": [
+    {
+     "file": "tests/agent/test_context_compressor_media_seam.py",
+     "new_old_path_refs": [
+      "attr:_content_has_images",
+      "attr:_is_image_part",
+      "attr:_strip_historical_media"
+     ],
+     "breaks_after_merge": [
+      "attr:_content_has_images"
+     ],
+     "resolves_via_facade_import_gate_only": [
+      "attr:_is_image_part",
+      "attr:_strip_historical_media"
+     ]
+    }
+   ],
+   "adds_media_module": true,
+   "touches_branch_files": [
+    "agent/context_compressor.py"
+   ]
+  },
+  {
+   "number": 81181,
+   "author": "andrexibiza",
+   "n_files": 18,
+   "kind": "stack",
+   "github_mergeable_2026_10_01T10_14": "CONFLICTING",
+   "updatedAt": "2026-08-31T16:16:42Z",
+   "isDraft": false,
+   "head": "e40f2db1402cb629dedcff57e656dee439bb51c3",
+   "preimage": "reverse-patch",
+   "edits_moved": [
+    "_IMAGE_PART_TYPES:removed",
+    "_is_image_part:removed",
+    "_content_has_images:removed",
+    "_strip_images_from_content:removed",
+    "_strip_historical_media:removed",
+    "_image_part_label:removed"
+   ],
+   "other_files_new_old_path_refs": [
+    {
+     "file": "tests/agent/test_context_compressor_media_seam.py",
+     "new_old_path_refs": [
+      "attr:_content_has_images",
+      "attr:_is_image_part",
+      "attr:_strip_historical_media"
+     ],
+     "breaks_after_merge": [
+      "attr:_content_has_images"
+     ],
+     "resolves_via_facade_import_gate_only": [
+      "attr:_is_image_part",
+      "attr:_strip_historical_media"
+     ]
+    }
+   ],
+   "adds_media_module": true,
+   "touches_branch_files": [
+    "agent/context_compressor.py"
+   ]
+  },
+  {
+   "number": 82129,
+   "author": "kweiss4510-create",
+   "n_files": 1781,
+   "kind": "stale-base mega-diff",
+   "github_mergeable_2026_10_01T10_14": "CONFLICTING",
+   "updatedAt": "2026-08-09T11:11:29Z",
+   "isDraft": false,
+   "head": "0b5e9b5840d86ffef587732db811c130145dbaa3",
+   "preimage": "merge-base 30e947e0a0",
+   "edits_moved": [
+    "_strip_historical_media:modified",
+    "_image_part_label:added"
+   ],
+   "new_facade_refs": [
+    "_image_part_label"
+   ],
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/chat_completion_helpers.py",
+    "agent/context_compressor.py"
+   ]
+  },
+  {
+   "number": 85481,
+   "author": "pablo-afterlife",
+   "n_files": 11,
+   "kind": "focused",
+   "github_mergeable_2026_10_01T10_14": "CONFLICTING",
+   "updatedAt": "2026-08-13T17:34:08Z",
+   "isDraft": true,
+   "head": "f4b17c32ff9038eb043a47fbf3e5310dcd8a914c",
+   "preimage": "reverse-patch",
+   "new_facade_refs": [
+    "_image_part_label"
+   ],
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/context_compressor.py"
+   ]
+  },
+  {
+   "number": 90771,
+   "author": "bobaba76",
+   "n_files": 3000,
+   "kind": "stale-base mega-diff",
+   "github_mergeable_2026_10_01T10_14": "CONFLICTING",
+   "updatedAt": "2026-08-27T16:30:58Z",
+   "isDraft": false,
+   "head": "0639b5155e1c4b7ee20b6d25fffa387da6695268",
+   "edits_moved": [
+    "_is_image_part:added",
+    "_content_has_images:added",
+    "_strip_images_from_content:added",
+    "_strip_historical_media:added",
+    "_image_part_label:added"
+   ],
+   "carries_main_text_only": [
+    "_IMAGE_PART_TYPES"
+   ],
+   "new_facade_refs": [
+    "_image_part_label"
+   ],
+   "other_files_scan": "skipped: 107 changed .py files have no patch",
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/chat_completion_helpers.py",
+    "agent/context_compressor.py"
+   ]
+  },
+  {
+   "number": 90888,
+   "author": "andrexibiza",
+   "n_files": 3000,
+   "kind": "stale-base mega-diff",
+   "github_mergeable_2026_10_01T10_14": "MERGEABLE",
+   "updatedAt": "2026-09-11T23:36:31Z",
+   "isDraft": false,
+   "head": "37e6fb627edba6971569dcf58168c615bae0ff9e",
+   "preimage": "merge-base 4209d371aa",
+   "edits_moved": [
+    "_MAX_KEEP_TOOL_IMAGES:modified",
+    "_tool_content_has_images:modified",
+    "_retire_stale_tool_result_images:modified",
+    "evict_stale_outbound_tool_images:added",
+    "_strip_historical_media:modified"
+   ],
+   "carries_main_text_only": [
+    "_replace_image_parts",
+    "_strip_images_from_tool_msg",
+    "_rewritten",
+    "_is_image_part",
+    "_content_has_images",
+    "_strip_images_from_content",
+    "_summary_part_text",
+    "_image_part_label"
+   ],
+   "other_files_scan": "skipped: 592 changed .py files have no patch",
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/chat_completion_helpers.py",
+    "agent/context_compressor.py",
+    "agent/turn_request_assembly.py"
+   ]
+  },
+  {
+   "number": 90910,
+   "author": "b3nnb",
+   "n_files": 18,
+   "kind": "focused",
+   "github_mergeable_2026_10_01T10_14": "CONFLICTING",
+   "updatedAt": "2026-08-21T19:59:25Z",
+   "isDraft": false,
+   "head": "306f512fe062c7b1a0fba57204395081443f93fe",
+   "preimage": "reverse-patch",
+   "edits_moved": [
+    "_strip_images_from_content:modified"
+   ],
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/context_compressor.py"
+   ]
+  },
+  {
+   "number": 93119,
+   "author": "zacharyjleach-stack",
+   "n_files": 3000,
+   "kind": "stale-base mega-diff",
+   "github_mergeable_2026_10_01T10_14": "CONFLICTING",
+   "updatedAt": "2026-08-23T19:45:20Z",
+   "isDraft": false,
+   "head": "51315d657d1f86a02327f737eddcb1c49ee269cd",
+   "preimage": "reverse-patch",
+   "edits_moved": [
+    "_strip_historical_media:modified"
+   ],
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/chat_completion_helpers.py",
+    "agent/context_compressor.py"
+   ]
+  },
+  {
+   "number": 94074,
+   "author": "salch-cred",
+   "n_files": 619,
+   "kind": "stale-base mega-diff",
+   "github_mergeable_2026_10_01T10_14": "CONFLICTING",
+   "updatedAt": "2026-08-26T03:12:53Z",
+   "isDraft": false,
+   "head": "f76ae3ccbdffaecfab375d86b0832c69dec7812a",
+   "preimage": "reverse-patch",
+   "edits_moved": [
+    "_MAX_KEEP_TOOL_IMAGES:removed",
+    "_tool_content_has_images:removed",
+    "_strip_images_from_tool_msg:removed",
+    "_retire_stale_tool_result_images:removed"
+   ],
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/chat_completion_helpers.py",
+    "agent/context_compressor.py"
+   ]
+  },
+  {
+   "number": 96359,
+   "author": "Finn763",
+   "n_files": 3000,
+   "kind": "stale-base mega-diff",
+   "github_mergeable_2026_10_01T10_14": "CONFLICTING",
+   "updatedAt": "2026-09-23T09:56:47Z",
+   "isDraft": false,
+   "head": "00b26488964a4e924dace1f429ba10d412132ba5",
+   "preimage": "merge-base 5fc308a707",
+   "edits_moved": [
+    "_retire_stale_tool_result_images:modified",
+    "_strip_historical_media:modified"
+   ],
+   "carries_main_text_only": [
+    "_MAX_KEEP_TOOL_IMAGES",
+    "_replace_image_parts",
+    "_tool_result_parts",
+    "_tool_content_has_images",
+    "_strip_images_from_tool_msg",
+    "_rewritten",
+    "_image_payload",
+    "evict_stale_outbound_tool_images",
+    "_is_image_part",
+    "_content_has_images",
+    "_strip_images_from_content",
+    "_summary_part_text",
+    "_image_part_label"
+   ],
+   "other_files_scan": "skipped: 131 changed .py files have no patch",
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/chat_completion_helpers.py",
+    "agent/context_compressor.py",
+    "agent/image_eviction_policy.py",
+    "agent/turn_request_assembly.py"
+   ]
+  },
+  {
+   "number": 100467,
+   "author": "JaimeMarques",
+   "n_files": 3000,
+   "kind": "stale-base mega-diff",
+   "github_mergeable_2026_10_01T10_14": "CONFLICTING",
+   "updatedAt": "2026-09-20T20:20:10Z",
+   "isDraft": false,
+   "head": "ba4e5a83446183d22739f95a2b5d7dc1dba8f1fa",
+   "preimage": "merge-base 58472d803a",
+   "edits_moved": [
+    "_retire_stale_tool_result_images:modified",
+    "_strip_historical_media:modified"
+   ],
+   "carries_main_text_only": [
+    "_MAX_KEEP_TOOL_IMAGES",
+    "_replace_image_parts",
+    "_tool_result_parts",
+    "_tool_content_has_images",
+    "_strip_images_from_tool_msg",
+    "_rewritten",
+    "_image_payload",
+    "evict_stale_outbound_tool_images",
+    "_is_image_part",
+    "_content_has_images",
+    "_strip_images_from_content",
+    "_summary_part_text",
+    "_image_part_label"
+   ],
+   "other_files_scan": "skipped: 324 changed .py files have no patch",
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/chat_completion_helpers.py",
+    "agent/context_compressor.py",
+    "agent/image_eviction_policy.py",
+    "agent/turn_request_assembly.py"
+   ]
+  },
+  {
+   "number": 101882,
+   "author": "Afinagen",
+   "n_files": 3000,
+   "kind": "stale-base mega-diff",
+   "github_mergeable_2026_10_01T10_14": "CONFLICTING",
+   "updatedAt": "2026-09-03T05:30:30Z",
+   "isDraft": false,
+   "head": "b53eb76b13ad031bb60670b90bb75513a79c17ce",
+   "preimage": "merge-base 4dac5f28af",
+   "edits_moved": [
+    "_MAX_KEEP_TOOL_IMAGES:removed",
+    "_tool_content_has_images:removed",
+    "_strip_images_from_tool_msg:removed",
+    "_retire_stale_tool_result_images:removed",
+    "evict_stale_outbound_tool_images:removed",
+    "_strip_historical_media:modified"
+   ],
+   "other_files_scan": "skipped: 116 changed .py files have no patch",
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/chat_completion_helpers.py",
+    "agent/context_compressor.py"
+   ]
+  },
+  {
+   "number": 104914,
+   "author": "traysh",
+   "n_files": 8,
+   "kind": "focused",
+   "github_mergeable_2026_10_01T10_14": "CONFLICTING",
+   "updatedAt": "2026-09-19T13:06:19Z",
+   "isDraft": false,
+   "head": "62bd42ff590c00f52d82707c37d5c200ad9576fe",
+   "preimage": "reverse-patch",
+   "new_facade_refs": [
+    "_MAX_KEEP_TOOL_IMAGES",
+    "_content_has_images",
+    "_strip_images_from_content"
+   ],
+   "other_files_new_old_path_refs": [
+    {
+     "file": "tests/agent/test_too_many_images_recovery.py",
+     "new_old_path_refs": [
+      "import:_MAX_KEEP_TOOL_IMAGES"
+     ],
+     "breaks_after_merge": [
+      "import:_MAX_KEEP_TOOL_IMAGES"
+     ],
+     "resolves_via_facade_import_gate_only": []
+    }
+   ],
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/chat_completion_helpers.py",
+    "agent/context_compressor.py"
+   ]
+  },
+  {
+   "number": 106867,
+   "author": "KoNit-K",
+   "n_files": 2,
+   "kind": "focused",
+   "github_mergeable_2026_10_01T10_14": "MERGEABLE",
+   "updatedAt": "2026-10-01T10:26:01Z",
+   "isDraft": false,
+   "head": "ded9a96da59f01c3c5193bb9423ef0064174875a",
+   "preimage": "reverse-patch",
+   "edits_moved": [
+    "_retire_stale_tool_result_images:modified",
+    "_strip_historical_media:modified"
+   ],
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/context_compressor.py"
+   ]
+  },
+  {
+   "number": 107532,
+   "author": "KoNit-K",
+   "n_files": 2,
+   "kind": "focused",
+   "github_mergeable_2026_10_01T10_14": "MERGEABLE",
+   "updatedAt": "2026-10-01T11:25:16Z",
+   "isDraft": false,
+   "head": "8efd903f29a6873fa36ea4fd415ab195967f74ff",
+   "preimage": "merge-base 234badf401",
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/context_compressor.py"
+   ],
+   "error": "head unparseable: invalid non-printable character U+E78A (<unknown>, line 1)"
+  },
+  {
+   "number": 107589,
+   "author": "JoaoMarcos44",
+   "n_files": 2,
+   "kind": "focused",
+   "github_mergeable_2026_10_01T10_14": "MERGEABLE",
+   "updatedAt": "2026-09-10T19:11:15Z",
+   "isDraft": false,
+   "head": "168d47f949066e847992e4a9ad555035d55a61f3",
+   "preimage": "reverse-patch",
+   "edits_moved": [
+    "_is_image_part:modified",
+    "_summary_part_text:modified"
+   ],
+   "other_files_new_old_path_refs": [
+    {
+     "file": "tests/agent/test_compressor_unhashable_image_types.py",
+     "new_old_path_refs": [
+      "import:_content_has_images"
+     ],
+     "breaks_after_merge": [
+      "import:_content_has_images"
+     ],
+     "resolves_via_facade_import_gate_only": []
+    }
+   ],
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/context_compressor.py"
+   ]
+  },
+  {
+   "number": 110103,
+   "author": "Sahilvishnaliya",
+   "n_files": 2,
+   "kind": "focused",
+   "github_mergeable_2026_10_01T10_14": "CONFLICTING",
+   "updatedAt": "2026-09-13T17:30:16Z",
+   "isDraft": false,
+   "head": "641134e774747117cda2b2d208f90d130d9b2f64",
+   "preimage": "reverse-patch",
+   "edits_moved": [
+    "_is_image_part:modified",
+    "_summary_part_text:modified"
+   ],
+   "other_files_new_old_path_refs": [
+    {
+     "file": "tests/agent/test_compressor_historical_media.py",
+     "new_old_path_refs": [
+      "import:_summary_part_text"
+     ],
+     "breaks_after_merge": [],
+     "resolves_via_facade_import_gate_only": [
+      "import:_summary_part_text"
+     ]
+    }
+   ],
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/context_compressor.py",
+    "tests/agent/test_compressor_historical_media.py"
+   ]
+  },
+  {
+   "number": 110342,
+   "author": "airabbi-Jerry",
+   "n_files": 1171,
+   "kind": "stale-base mega-diff",
+   "github_mergeable_2026_10_01T10_14": "MERGEABLE",
+   "updatedAt": "2026-09-17T23:06:21Z",
+   "isDraft": false,
+   "head": "c32104c87e1a01d224fae42c587debadcda668bb",
+   "preimage": "reverse-patch",
+   "edits_moved": [
+    "_retire_stale_tool_result_images:modified"
+   ],
+   "carries_main_text_only": [
+    "_MAX_KEEP_TOOL_IMAGES",
+    "_tool_result_parts",
+    "_tool_content_has_images",
+    "_image_payload",
+    "evict_stale_outbound_tool_images"
+   ],
+   "other_files_carry_main_lines": [
+    {
+     "file": "agent/image_eviction_policy.py",
+     "carries_main_old_path_refs": [
+      "string:evict_stale_outbound_tool_images"
+     ]
+    },
+    {
+     "file": "tests/agent/test_image_eviction_policy.py",
+     "carries_main_old_path_refs": [
+      "string:evict_stale_outbound_tool_images"
+     ]
+    }
+   ],
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/chat_completion_helpers.py",
+    "agent/context_compressor.py",
+    "agent/image_eviction_policy.py",
+    "tests/agent/test_image_eviction_policy.py",
+    "tests/agent/test_outbound_stale_vision.py"
+   ]
+  },
+  {
+   "number": 112391,
+   "author": "JaimeMarques",
+   "n_files": 3000,
+   "kind": "stale-base mega-diff",
+   "github_mergeable_2026_10_01T10_14": "MERGEABLE",
+   "updatedAt": "2026-09-22T08:51:27Z",
+   "isDraft": false,
+   "head": "f7a06ae6ce228a56f48d8a968dd9f5ceb70606d0",
+   "preimage": "reverse-patch",
+   "edits_moved": [
+    "_retire_stale_tool_result_images:modified"
+   ],
+   "carries_main_text_only": [
+    "_MAX_KEEP_TOOL_IMAGES",
+    "_tool_result_parts",
+    "_tool_content_has_images",
+    "_image_payload",
+    "evict_stale_outbound_tool_images"
+   ],
+   "other_files_carry_main_lines": [
+    {
+     "file": "agent/image_eviction_policy.py",
+     "carries_main_old_path_refs": [
+      "string:evict_stale_outbound_tool_images"
+     ]
+    },
+    {
+     "file": "tests/agent/test_image_eviction_policy.py",
+     "carries_main_old_path_refs": [
+      "string:evict_stale_outbound_tool_images"
+     ]
+    }
+   ],
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/chat_completion_helpers.py",
+    "agent/context_compressor.py",
+    "agent/image_eviction_policy.py",
+    "agent/turn_request_assembly.py",
+    "tests/agent/test_image_eviction_policy.py",
+    "tests/agent/test_outbound_stale_vision.py"
+   ]
+  },
+  {
+   "number": 114731,
+   "author": "batumilove",
+   "n_files": 2431,
+   "kind": "stale-base mega-diff",
+   "github_mergeable_2026_10_01T10_14": "CONFLICTING",
+   "updatedAt": "2026-09-18T07:08:02Z",
+   "isDraft": false,
+   "head": "9c32504117aed84ba6947640b1073618520a62c0",
+   "preimage": "reverse-patch",
+   "edits_moved": [
+    "_MAX_KEEP_TOOL_IMAGES:added",
+    "_tool_content_has_images:added",
+    "_strip_images_from_tool_msg:added",
+    "_retire_stale_tool_result_images:added"
+   ],
+   "other_files_carry_main_lines": [
+    {
+     "file": "tests/agent/test_compressor_stale_tool_images.py",
+     "carries_main_old_path_refs": [
+      "import:_MAX_KEEP_TOOL_IMAGES",
+      "import:_content_has_images",
+      "import:_strip_images_from_tool_msg",
+      "import:_tool_content_has_images"
+     ]
+    }
+   ],
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/chat_completion_helpers.py",
+    "agent/context_compressor.py",
+    "tests/agent/test_compressor_stale_tool_images.py"
+   ]
+  },
+  {
+   "number": 120375,
+   "author": "ssxi341-alt",
+   "n_files": 3000,
+   "kind": "stale-base mega-diff",
+   "github_mergeable_2026_10_01T10_14": "CONFLICTING",
+   "updatedAt": "2026-09-23T15:43:00Z",
+   "isDraft": true,
+   "head": "b81354460ab1769dbaf605b59abc644ce338dc55",
+   "preimage": "merge-base f3af489ec2",
+   "edits_moved": [
+    "_retire_stale_tool_result_images:added",
+    "_strip_historical_media:modified"
+   ],
+   "carries_main_text_only": [
+    "_MAX_KEEP_TOOL_IMAGES",
+    "_replace_image_parts",
+    "_tool_result_parts",
+    "_tool_content_has_images",
+    "_strip_images_from_tool_msg",
+    "_rewritten",
+    "_image_payload",
+    "evict_stale_outbound_tool_images",
+    "_is_image_part",
+    "_content_has_images",
+    "_strip_images_from_content",
+    "_summary_part_text",
+    "_image_part_label"
+   ],
+   "other_files_scan": "skipped: 130 changed .py files have no patch",
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/chat_completion_helpers.py",
+    "agent/context_compressor.py",
+    "agent/image_eviction_policy.py",
+    "agent/turn_request_assembly.py"
+   ]
+  },
+  {
+   "number": 120403,
+   "author": "jonpol01",
+   "n_files": 5,
+   "kind": "focused",
+   "github_mergeable_2026_10_01T10_14": "MERGEABLE",
+   "updatedAt": "2026-09-30T00:17:09Z",
+   "isDraft": false,
+   "head": "473d89fa6658ecce933fddb08aaf74e9c7e2ec5e",
+   "preimage": "reverse-patch",
+   "other_files_new_old_path_refs": [
+    {
+     "file": "tests/tools/test_session_search.py",
+     "new_old_path_refs": [
+      "import:_rewritten"
+     ],
+     "breaks_after_merge": [],
+     "resolves_via_facade_import_gate_only": [
+      "import:_rewritten"
+     ]
+    }
+   ],
+   "adds_media_module": false,
+   "touches_branch_files": [
+    "agent/context_compressor.py"
+   ]
+  },
+  {
+   "number": 126874,
+   "author": "auroracapital",
+   "kind": "focused",
+   "updatedAt": "2026-09-28T20:13:53Z",
+   "isDraft": false,
+   "head": "c46d2809820b8df92ef7b9591465415f7b4da71a",
+   "error": "file list unavailable: GitHub HTTP 422 (cannot generate the diff)"
+  }
+ ]
+}

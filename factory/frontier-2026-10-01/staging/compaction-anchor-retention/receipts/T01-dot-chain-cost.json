@@ -1,0 +1,227 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compaction-anchor-retention",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#116246",
+  "NousResearch/hermes-agent#87326",
+  "NousResearch/hermes-agent#117462",
+  "NousResearch/hermes-agent#122274",
+  "NousResearch/hermes-agent#122522",
+  "NousResearch/hermes-agent#78457"
+ ],
+ "base_revision": "040b6df2c40b0f4f88f51e4c2062eafc4d7463c5",
+ "head_revision": "30a746f7920c2b4101f121353778d94f5ce001b5",
+ "main_recheck": {
+  "sha": "aaa863f7ff2dec1821be1652b5d15ad14ecea70b",
+  "note": "agent/context_compressor.py, hermes_cli/config_defaults.py and the 6 neighbouring test files are byte-identical on 040b6df2c4, 44a1ce9724 and aaa863f7ff; main+#117462 merges clean on all three (trees f4139cef66, 7beb2da248, ee14a0acac) and gives the same compressor file (the c117462 arm); the branch merges clean on aaa863f7ff (tree e2c14b39ee)"
+ },
+ "supersedes": "the r20261001-03 receipt of the same name (superseded-r04/receipts/), which measured the round-3 fold-in order",
+ "policy_revision": {
+  "factory": "FACTORY.md (frontier-2026-10-01)",
+  "protocol": "promotion-readiness-2026-10-01/PROTOCOL.md"
+ },
+ "env": {
+  "python": "3.11 (HERMES_PYTHON venv, read-only bind)",
+  "sandbox": "harness/sandbox.sh: bwrap ro-root, --unshare-net (connect -> ENETUNREACH), systemd-resolved socket masked (DNS -> EAI_AGAIN), pidns, clearenv, live Hermes install masked except the venv, fresh HOME/HERMES_HOME per run; harness/egress_sitecustomize.py logs every non-loopback DNS lookup and connect attempt",
+  "tests": "HOME=$S/testhome-sf3-compaction-anchor-retention HERMES_HOME=$HOME/.hermes HERMES_PYTHON=$PY bash scripts/run_tests.sh -j 2 <files> -q"
+ },
+ "provenance": "self",
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the rows, tests, harness, gold labels and this receipt; disclosed per repository policy",
+ "privacy": "public-aggregate (inputs are committed upstream text or seeded synthetic data; no state.db, no lineages); no absolute local paths",
+ "resource_usage": {
+  "api_cost_usd": 0.0,
+  "gpu_s": 0,
+  "tokens": 0
+ },
+ "id": "T01/r20261001-05",
+ "kind": "static",
+ "question": "Does the dotted-keys row add super-linear regex cost on adversarial tool output (one long unbroken lowercase dot chain)?",
+ "inputs": {
+  "scorecard": "evals/compaction/results/SCORECARD-2026-08-15.md",
+  "scorecard_sha256": "6d93f90b435e4f2ae2dd3187103c18e0c881ad68b88b92bfd3deacb1cf79180e",
+  "harness_sha256": {
+   "anchor_coverage.py": "c9e084c35a7b64ca4e35afcf89d5a3374c689d455a7b1126ffc49c7cbefeb8ef",
+   "foldin_order_check.py": "0a9c48b0b9ec60633929bd990ec5fe29306353fa9c8e5b7ab45bde046b33ac52",
+   "index_cost.py": "56a5798662d990ce21996b68c5d691015e00e09e1e16a89640e88a879bd1caf2",
+   "build_receipts_r05.py": "60797f54c5d83230126c79a4b5bb48dc783076d5bf08fce3e6c00706aa1763ec",
+   "sandbox.sh": "f1aad255c5022b1c0920e0a6718faa222aa84b3583c4224c4e7fd32b43fedf24",
+   "egress_sitecustomize.py": "55eef4b9cf034dea08b0004a88dcf5595582bde9b3ba9c10ef4cc83807e29d9d",
+   "negative_controls.py": "8dee7eed03d49212293e58568b6b7d39da12c7394f7d454e16d8dda688f210ff"
+  },
+  "arms": {
+   "base": {
+    "tree": "040b6df2c40b0f4f88f51e4c2062eafc4d7463c5:agent/context_compressor.py",
+    "sha256": "86f4b7a8a647f1bf520cb17497b68719f6d907028bdc7151c7921818b7e043f1"
+   },
+   "branch": {
+    "head": "30a746f7920c2b4101f121353778d94f5ce001b5",
+    "sha256": "424c8dd83747b73b7b1883c726e60823f55a656d5424c3eb948297ca07f4abc7"
+   },
+   "c117462": {
+    "pr": 117462,
+    "head": "2c19948e15d68492d048250bae7707ca77063db5",
+    "merge_tree_with_base": "f4139cef66cd97f30f7fc450301551d233ebf616",
+    "merge_tree_with_main_now": "7beb2da24840f32329d5c5d47837fe52fef9e249",
+    "merge": "clean",
+    "sha256": "fdb7abd8050b4944171522c7e713004d7fbce9b2d8ddfb1c8de93414f206ebe0"
+   },
+   "c117462_foldin": {
+    "onto": "c117462",
+    "patch": "foldin-on-117462.patch (rows + tests/agent/test_context_compressor_anchor_index.py)",
+    "patch_sha256": "f2db42bef2c90360beb775de62f1bc4c2c944dea2fbab5672610dbcd957ceb8d",
+    "placement": "round 5: the three rows appended after 'errors', the last row of #117462's table; the rows block (rows and comments) is byte-identical to the standalone commit's",
+    "sha256": "35bb31c83b7db61d5f694ea86f6cc8ca960ee027d44bf5e5b914f9b12259439e",
+    "equals": "git apply foldin-on-117462.patch on main 44a1ce9724 + #117462 (tree 7beb2da248), offset +105"
+   },
+   "c117462_foldin_r03": {
+    "onto": "c117462",
+    "patch": "superseded-r04/foldin-on-117462.patch (sha256 3713e44bbb4edfdbd493b80c290b013a3d26b3a21e88c734bd733f6fad3e9bf5)",
+    "placement": "round 3: 'task ids' after 'todo ids', 'dotted keys' before 'files', 'error messages' last",
+    "sha256": "b880b9a14eaf0949e51926004856b3e0e3109b784222cef87048b8ca7cb36cf3",
+    "role": "comparison only (the order round 5 replaces)"
+   }
+  },
+  "coverage_json_sha256": {
+   "raw/coverage.json": "96a86bcde8412a44e51eb0e72b33f3fe3236efc93e2610a7891ff828bd4a522e",
+   "raw/r05/coverage_foldin.json": "8cfaa4eeec455fd5d827793c68081c00c8597a9f4633d38de98ac801e212fbb1"
+  },
+  "reproduction_checks": {
+   "c117462_round5_run_equals_round3_run_apart_from_timings": true,
+   "round3_foldin_round5_run_equals_round3_run_apart_from_timings": true,
+   "N01_identical_round5_vs_round3_foldin_order": true
+  },
+  "checkout_for_imports": "$WT at 30a746f7920c2b4101f121353778d94f5ce001b5; `git diff --name-only 040b6df2c4 30a746f792` lists only agent/context_compressor.py and the new test file",
+  "egress": "0 attempts logged for every harness run (raw/r05/egress/ for round 5)"
+ },
+ "command": {
+  "round5_foldin": "VENV=$VENV HERMES_INSTALL=<live install> EGRESS_DIR=<dir with sitecustomize.py> $SANDBOX $WT <fresh home on a non-/tmp disk> <egress log> $PY $STAGING/harness/anchor_coverage.py --checkout $WT --arm c117462=raw/arms/c117462.py --arm c117462_foldin=raw/arms/c117462_foldin.py --arm c117462_foldin_r03=raw/arms/c117462_foldin_r03.py --seeds 10 --out <home>/coverage_r05.json   # $WT detached at HEAD; copied to raw/r05/coverage_foldin.json",
+  "round3_other_arms": "the same harness with --arm base/branch/c117462/c117462_foldin(round-3 order)/branch_r01/branch_r02, copied to raw/coverage.json (r20261001-03); its c117462_foldin key is read here as c117462_foldin_r03"
+ },
+ "method": "one tool message whose content is 'a.' * n; wall time of the arm's whole _build_anchor_index, of each row alone on n = 20,000, and of the 'dotted keys' row alone up to n = 100,000. Single runs on a shared host. The fold-in arm is the round-5 run; the other arms are the round-3 run (unchanged files).",
+ "label": "OBSERVED",
+ "results": {
+  "base": {
+   "index_s": {
+    "a.x5000": 0.1614,
+    "a.x10000": 0.6367,
+    "a.x20000": 2.5836
+   },
+   "dotted_keys_row_s": {},
+   "per_row_s_a.x20000": {
+    "PRs/issues": 0.0,
+    "commits": 0.0007,
+    "branches": 0.0006,
+    "files": 2.5507,
+    "errors": 0.0007,
+    "handles": 0.0,
+    "urls": 0.0
+   }
+  },
+  "branch": {
+   "index_s": {
+    "a.x5000": 0.1608,
+    "a.x10000": 0.6415,
+    "a.x20000": 2.5608
+   },
+   "dotted_keys_row_s": {
+    "a.x5000": 0.0003,
+    "a.x10000": 0.0007,
+    "a.x20000": 0.0013,
+    "a.x50000": 0.0034,
+    "a.x100000": 0.0069
+   },
+   "per_row_s_a.x20000": {
+    "PRs/issues": 0.0,
+    "commits": 0.0007,
+    "branches": 0.0006,
+    "files": 2.5451,
+    "errors": 0.0007,
+    "handles": 0.0,
+    "urls": 0.0,
+    "task ids": 0.0005,
+    "dotted keys": 0.0015,
+    "error messages": 0.0025
+   }
+  },
+  "branch_r02": {
+   "index_s": {
+    "a.x5000": 0.5375,
+    "a.x10000": 2.1665,
+    "a.x20000": 8.7108
+   },
+   "dotted_keys_row_s": {
+    "a.x5000": 0.3804,
+    "a.x10000": 1.5275,
+    "a.x20000": 6.1539,
+    "a.x50000": "skipped (a.x20000 took > 0.5 s)",
+    "a.x100000": "skipped (a.x20000 took > 0.5 s)"
+   },
+   "per_row_s_a.x20000": {
+    "PRs/issues": 0.0,
+    "commits": 0.0007,
+    "branches": 0.0006,
+    "files": 2.5567,
+    "errors": 0.0007,
+    "handles": 0.0,
+    "urls": 0.0,
+    "task ids": 0.0005,
+    "dotted keys": 6.1144,
+    "error messages": 0.0025
+   }
+  },
+  "c117462": {
+   "index_s": {
+    "a.x5000": 0.1599,
+    "a.x10000": 0.6403,
+    "a.x20000": 2.5769
+   },
+   "dotted_keys_row_s": {},
+   "per_row_s_a.x20000": {
+    "PRs/issues": 0.0,
+    "session ids": 0.0007,
+    "todo ids": 0.0,
+    "commits": 0.0007,
+    "branches": 0.0006,
+    "handles": 0.0,
+    "urls": 0.0,
+    "files": 2.8577,
+    "errors": 0.0007
+   }
+  },
+  "c117462_foldin": {
+   "index_s": {
+    "a.x5000": 0.1845,
+    "a.x10000": 0.6587,
+    "a.x20000": 2.7595
+   },
+   "dotted_keys_row_s": {
+    "a.x5000": 0.0005,
+    "a.x10000": 0.0009,
+    "a.x20000": 0.0023,
+    "a.x50000": 0.0045,
+    "a.x100000": 0.0099
+   },
+   "per_row_s_a.x20000": {
+    "PRs/issues": 0.0,
+    "session ids": 0.0007,
+    "todo ids": 0.0,
+    "commits": 0.0007,
+    "branches": 0.0006,
+    "handles": 0.0,
+    "urls": 0.0,
+    "files": 2.6212,
+    "errors": 0.0007,
+    "task ids": 0.0005,
+    "dotted keys": 0.0017,
+    "error messages": 0.0025
+   }
+  }
+ },
+ "readout": [
+  "dotted keys row alone on 'a.'*20000: branch 0.0013 s, round-2 row 6.1539 s; branch on 'a.'*100000: 0.0069 s (linear)",
+  "whole index on 'a.'*20000: main 2.5836 s, branch 2.5608 s; main's cost is its existing 'files' row (2.5507 s alone)",
+  "#117462 arm 2.5769 s, fold-in 2.7595 s, fold-in dotted keys row 0.0023 s on 'a.'*20000"
+ ],
+ "verdict": "KEEP (row order does not change regex cost; the fold-in row is linear)"
+}

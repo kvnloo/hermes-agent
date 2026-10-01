@@ -1,0 +1,121 @@
+▶ not activated — using HERMES_PYTHON: $VENV/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~2 tests) under ['tests/agent/test_context_compressor_anchor_index.py']; running with -j 2
+[100.0% |     2/~2 | ✓0 | ✗2] ✗ tests/agent/test_context_compressor_anchor_index.py (2✗, 2.1s)
+
+  ╔╍ Failed: tests/agent/test_context_compressor_anchor_index.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ E             
+  ║ E             
+  ║ E             ## Anchor Index (mechanically extracted, exact)
+  ║ E             PRs/issues: #86589
+  ║ E             (Exact identifiers from the compacted region — use these verbatim, and as session_search query anchors to recover their full context.)
+  ║ E           assert 'sa-2-7318d0ba' in '\n\n## Anchor Index (mechanically extracted, exact)\nPRs/issues: #86589\n(Exact identifiers from the compacted region — use these verbatim, and as session_search query anchors to recover their full context.)'
+  ║ 
+  ║ tests/agent/test_context_compressor_anchor_index.py:44: AssertionError
+  ║ ________________ test_new_anchor_classes_stay_exact_and_bounded ________________
+  ║ 
+  ║     def test_new_anchor_classes_stay_exact_and_bounded():
+  ║         prose = (
+  ║             "See agent/context_compressor.py and config.yaml (e.g. api.openai.com); "
+  ║             "compression.tail_mode stays lean and the task_7 retry passed.\n"
+  ║         )
+  ║         ids = " ".join(f"sa-{i}-{i:08x}" for i in range(60))
+  ║         errors = "\n".join(f"fatal: unable to reach remote mirror {i} over https" for i in range(60))
+  ║         turns = [{"role": "assistant", "content": prose + ids + "\n" + errors}]
+  ║     
+  ║         index = cc._build_anchor_index(turns)
+  ║     
+  ║         dotted = _line(index, "dotted keys")
+  ║ >       assert "compression.tail_mode" in dotted
+  ║ E       AssertionError: assert 'compression.tail_mode' in ''
+  ║ 
+  ║ tests/agent/test_context_compressor_anchor_index.py:59: AssertionError
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/agent/test_context_compressor_anchor_index.py::test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim
+  ║ FAILED tests/agent/test_context_compressor_anchor_index.py::test_new_anchor_classes_stay_exact_and_bounded
+  ║ 2 failed in 0.51s
+  ║
+  ║  Repro: python -m pytest tests/agent/test_context_compressor_anchor_index.py -q
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 2.2s (2 workers) ===
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 2.1s  (runner wall: 2.2s, parallelism: 2x)
+  P50: 2.13s  P90: 2.13s  P95: 2.13s  P99: 2.13s  Max: 2.13s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+      2.13s  tests/agent/test_context_compressor_anchor_index.py
+
+=== Failure output ===
+
+--- tests/agent/test_context_compressor_anchor_index.py ---
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+___ test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim ___
+
+    def test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim():
+        turns = [
+            {"role": "user", "content": "Land the desktop batch and turn on reasoning deltas."},
+            {
+                "role": "assistant",
+                "content": (
+                    "Delegated the inflight-journal cluster to sa-2-7318d0ba; kanban card t_4f9c2a1e tracks it.\n"
+                    "Set plugins.stream_reasoning_deltas: true in config.yaml.\n"
+                    "Merging #86589 failed:\n"
+                    "GraphQL: Pull Request has merge conflicts (mergePullRequest)\n"
+                    "The worktree checkout was refused:\n"
+                    "Blocked: `git checkout` would rewrite Hermes's live source checkout\n"
+                ),
+            },
+        ]
+    
+        index = cc._build_anchor_index(turns)
+    
+        for needle in (
+            "sa-2-7318d0ba",
+            "t_4f9c2a1e",
+            "plugins.stream_reasoning_deltas",
+            "GraphQL: Pull Request has merge conflicts (mergePullRequest)",
+            "Blocked: `git checkout` would rewrite Hermes's live source checkout",
+        ):
+>           assert needle in index, f"{needle!r} missing from anchor index:\n{index}"
+E           AssertionError: 'sa-2-7318d0ba' missing from anchor index:
+E             
+E             
+E             ## Anchor Index (mechanically extracted, exact)
+E             PRs/issues: #86589
+E             (Exact identifiers from the compacted region — use these verbatim, and as session_search query anchors to recover their full context.)
+E           assert 'sa-2-7318d0ba' in '\n\n## Anchor Index (mechanically extracted, exact)\nPRs/issues: #86589\n(Exact identifiers from the compacted region — use these verbatim, and as session_search query anchors to recover their full context.)'
+
+tests/agent/test_context_compressor_anchor_index.py:44: AssertionError
+________________ test_new_anchor_classes_stay_exact_and_bounded ________________
+
+    def test_new_anchor_classes_stay_exact_and_bounded():
+        prose = (
+            "See agent/context_compressor.py and config.yaml (e.g. api.openai.com); "
+            "compression.tail_mode stays lean and the task_7 retry passed.\n"
+        )
+        ids = " ".join(f"sa-{i}-{i:08x}" for i in range(60))
+        errors = "\n".join(f"fatal: unable to reach remote mirror {i} over https" for i in range(60))
+        turns = [{"role": "assistant", "content": prose + ids + "\n" + errors}]
+    
+        index = cc._build_anchor_index(turns)
+    
+        dotted = _line(index, "dotted keys")
+>       assert "compression.tail_mode" in dotted
+E       AssertionError: assert 'compression.tail_mode' in ''
+
+tests/agent/test_context_compressor_anchor_index.py:59: AssertionError
+=========================== short test summary info ============================
+FAILED tests/agent/test_context_compressor_anchor_index.py::test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim
+FAILED tests/agent/test_context_compressor_anchor_index.py::test_new_anchor_classes_stay_exact_and_bounded
+2 failed in 0.51s
+
+=== 1 file with test failures (2 tests failed) ===
+  tests/agent/test_context_compressor_anchor_index.py  (2 tests failed)

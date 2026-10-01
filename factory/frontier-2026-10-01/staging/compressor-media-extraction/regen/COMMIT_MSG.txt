@@ -1,0 +1,29 @@
+refactor(compression): move image/media helpers into agent/context_compressor_media.py
+
+agent/context_compressor.py is 5,753 lines. AGENTS.md says a file past ~2,000 lines
+should be split along <stem>_<topic>, in its own commit. This moves the image/media
+cluster into a sibling module, byte-for-byte:
+
+- compaction-time image retirement: _strip_historical_media,
+  _retire_stale_tool_result_images and _MAX_KEEP_TOOL_IMAGES
+- send-path eviction: evict_stale_outbound_tool_images, _image_payload
+- shared helpers: _IMAGE_PART_TYPES, _is_image_part, _content_has_images,
+  _tool_content_has_images, _tool_result_parts, _replace_image_parts,
+  _strip_images_from_content, _strip_images_from_tool_msg, _rewritten
+- summarizer labels: _summary_part_text, _image_part_label
+
+The facade imports only the six names it still calls. It does not re-export the
+others. The two send-path callers (turn_request_assembly, chat_completion_helpers)
+and four test modules now import from the sibling. Two docstrings that named the
+old path (image_eviction_policy and its test) now name the sibling. The sibling
+never imports the facade.
+
+No behaviour change. Every moved statement has identical source text and AST. Every
+other top-level statement in the facade has an identical AST, in the same order.
+tests/agent and tests/tools give the same pass/fail set before and after.
+
+Salvages the media slice of #80636 (andrexibiza) onto current main, without that
+PR's re-export seam.
+
+Co-authored-by: Andrex Ibiza, MBA <84248988+andrexibiza@users.noreply.github.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

@@ -1,0 +1,32 @@
+{
+  "arm": "carrier-foldin-v4",
+  "repo_head": "15dff75cc860a14d06414c6bf31459397e1de912",
+  "repo_tree": "b733be3f0d7be6561ca550dd6eb1425f4eae1854",
+  "dirty_files": [
+    "M agent/tool_result_projection.py"
+  ],
+  "route": {
+    "provider": "bedrock",
+    "api_mode": "bedrock_converse",
+    "model": "anthropic.claude-opus-5-5"
+  },
+  "outcome": "passed",
+  "message": "",
+  "requests": 24,
+  "replayed_reasoning_blocks": 276,
+  "invalidated_reasoning_blocks": 0,
+  "invalidated": [],
+  "fake_rejections": [],
+  "projection": {
+    "tool_rows": 12,
+    "rows_projected": 0,
+    "pass_request_indices": [],
+    "passes": {}
+  },
+  "egress_blocked": [
+    "getaddrinfo 'bedrock-runtime.us-east-1.amazonaws.com'",
+    "getaddrinfo 'bedrock-runtime.us-east-1.amazonaws.com'"
+  ],
+  "wall_s": 3.36,
+  "python": "3.11.14"
+}

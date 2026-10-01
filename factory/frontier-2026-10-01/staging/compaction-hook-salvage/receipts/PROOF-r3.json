@@ -1,0 +1,459 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "PROOF/r3",
+ "label": "OBSERVED",
+ "spec": {
+  "path": null,
+  "rev": 3,
+  "decision_rule": "aggregation of F05/f05-r3 and E12/e12-r3; computes nothing new"
+ },
+ "staging": "compaction-hook-salvage",
+ "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+ "head_revision": "de819a7d0660be8fd560c35bbc4c56676bc8408b",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#64231",
+  "NousResearch/hermes-agent#118382",
+  "NousResearch/hermes-agent#53806",
+  "NousResearch/hermes-agent#93391",
+  "NousResearch/hermes-agent#118847",
+  "NousResearch/hermes-agent#119347",
+  "NousResearch/hermes-agent#125881"
+ ],
+ "changed_files": [
+  "tests/agent/test_compaction_observer_hook_contract.py"
+ ],
+ "contract_test": {
+  "path": "tests/agent/test_compaction_observer_hook_contract.py",
+  "blob": "95d731de9399ecbd1d191234d3cf336b4fd159f4",
+  "tests": [
+   "test_observer_fires_once_after_the_durable_commit[rotated|in_place|manual_deferred]",
+   "test_observer_is_silent_when_nothing_commits[summary_aborted|would_grow_refused|commit_failed|manual_discarded]"
+  ]
+ },
+ "production_seam": {
+  "fire_site": "agent/conversation_compression.py::_notify_context_engine_compression_complete",
+  "dispatch": "hermes_cli.lifecycle.has_hook/invoke_hook -> PluginManager.invoke_hook",
+  "deferral": "_queue_context_engine_compression_notification -> finalize_context_engine_compression_notification"
+ },
+ "gates": {
+  "validity": "F05: PASS; E12: PASS under the recorded S16 exception (INFRA without it)",
+  "red": {
+   "arm": "base",
+   "result": "PASS",
+   "observed": "4 passed / 3 failed",
+   "assertion": "AssertionError: on_compression_complete fired 0 times",
+   "seam_covered": true,
+   "reps_agree": "3/3"
+  },
+  "green": [
+   {
+    "arm": "c53806-foldin",
+    "result": "PASS",
+    "reps_agree": "3/3"
+   },
+   {
+    "arm": "foldin-ref",
+    "result": "PASS",
+    "reps_agree": "3/3"
+   },
+   {
+    "arm": "foldin-bounded",
+    "result": "PASS",
+    "reps_agree": "3/3"
+   }
+  ],
+  "sabotage": {
+   "per_hunk": [
+    {
+     "arm": "neg-nodefer",
+     "per_rep": [
+      "5 passed / 2 failed",
+      "5 passed / 2 failed",
+      "5 passed / 2 failed"
+     ],
+     "red_again": true,
+     "reps_agree": true,
+     "failing": [
+      "test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+      "test_observer_is_silent_when_nothing_commits[manual_discarded]"
+     ]
+    },
+    {
+     "arm": "neg-prefire",
+     "per_rep": [
+      "1 passed / 6 failed",
+      "1 passed / 6 failed",
+      "1 passed / 6 failed"
+     ],
+     "red_again": true,
+     "reps_agree": true,
+     "failing": [
+      "test_observer_fires_once_after_the_durable_commit[in_place]",
+      "test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+      "test_observer_fires_once_after_the_durable_commit[rotated]",
+      "test_observer_is_silent_when_nothing_commits[commit_failed]",
+      "test_observer_is_silent_when_nothing_commits[manual_discarded]",
+      "test_observer_is_silent_when_nothing_commits[would_grow_refused]"
+     ]
+    },
+    {
+     "arm": "sab-h1-observer-call",
+     "per_rep": [
+      "4 passed / 3 failed",
+      "4 passed / 3 failed",
+      "4 passed / 3 failed"
+     ],
+     "red_again": true,
+     "reps_agree": true,
+     "failing": [
+      "test_observer_fires_once_after_the_durable_commit[in_place]",
+      "test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+      "test_observer_fires_once_after_the_durable_commit[rotated]"
+     ]
+    },
+    {
+     "arm": "sab-h2-queue-payload",
+     "per_rep": [
+      "6 passed / 1 failed",
+      "6 passed / 1 failed",
+      "6 passed / 1 failed"
+     ],
+     "red_again": true,
+     "reps_agree": true,
+     "failing": [
+      "test_observer_fires_once_after_the_durable_commit[manual_deferred]"
+     ]
+    },
+    {
+     "arm": "sab-h3-tokens-before",
+     "per_rep": [
+      "4 passed / 3 failed",
+      "4 passed / 3 failed",
+      "4 passed / 3 failed"
+     ],
+     "red_again": true,
+     "reps_agree": true,
+     "failing": [
+      "test_observer_fires_once_after_the_durable_commit[in_place]",
+      "test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+      "test_observer_fires_once_after_the_durable_commit[rotated]"
+     ]
+    },
+    {
+     "arm": "sab-h4-tokens-after",
+     "per_rep": [
+      "4 passed / 3 failed",
+      "4 passed / 3 failed",
+      "4 passed / 3 failed"
+     ],
+     "red_again": true,
+     "reps_agree": true,
+     "failing": [
+      "test_observer_fires_once_after_the_durable_commit[in_place]",
+      "test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+      "test_observer_fires_once_after_the_durable_commit[rotated]"
+     ]
+    },
+    {
+     "arm": "sab-h5-valid-hooks",
+     "per_rep": [
+      "7 passed / 0 failed",
+      "7 passed / 0 failed",
+      "7 passed / 0 failed"
+     ],
+     "red_again": false,
+     "reps_agree": true,
+     "failing": []
+    },
+    {
+     "arm": "sab-h6-keep-carrier-post-commit",
+     "per_rep": [
+      "7 passed / 0 failed",
+      "7 passed / 0 failed",
+      "7 passed / 0 failed"
+     ],
+     "red_again": false,
+     "reps_agree": true,
+     "failing": []
+    },
+    {
+     "arm": "sab-h7-payload-and-docs",
+     "per_rep": [
+      "7 passed / 0 failed",
+      "7 passed / 0 failed",
+      "7 passed / 0 failed"
+     ],
+     "red_again": false,
+     "reps_agree": true,
+     "failing": []
+    }
+   ],
+   "unpinned_hunks": [
+    "sab-h5-valid-hooks",
+    "sab-h6-keep-carrier-post-commit",
+    "sab-h7-payload-and-docs"
+   ]
+  },
+  "adjacent": {
+   "base": {
+    "files": 17,
+    "passed": 302,
+    "failed": 3,
+    "skipped_per_worker_lines": [
+     2
+    ],
+    "failing": [
+     "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[in_place]",
+     "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+     "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[rotated]"
+    ]
+   },
+   "c53806-foldin": {
+    "files": 17,
+    "passed": 305,
+    "failed": 0,
+    "skipped_per_worker_lines": [
+     2
+    ],
+    "failing": []
+   },
+   "foldin-bounded": {
+    "files": 17,
+    "passed": 305,
+    "failed": 0,
+    "skipped_per_worker_lines": [
+     2
+    ],
+    "failing": []
+   }
+  },
+  "guards": {
+   "c53806-foldin": {
+    "replay_gates": true,
+    "ab_checkpoint_preflight": true,
+    "test_region_scoping": true
+   },
+   "foldin-bounded": {
+    "replay_gates": true,
+    "ab_checkpoint_preflight": true,
+    "test_region_scoping": true
+   }
+  },
+  "flaky": false,
+  "noise_floor": null,
+  "credit": null,
+  "informativeness": "N_A",
+  "route_scope": "local-compressor",
+  "cache_read_ratio": {
+   "status": "N_A",
+   "before": null,
+   "after": null
+  }
+ },
+ "columns": {
+  "base": {
+   "contract": [
+    "4 passed / 3 failed",
+    "4 passed / 3 failed",
+    "4 passed / 3 failed"
+   ],
+   "adapted": null
+  },
+  "c53806-foldin": {
+   "contract": [
+    "7 passed / 0 failed",
+    "7 passed / 0 failed",
+    "7 passed / 0 failed"
+   ],
+   "adapted": null
+  },
+  "foldin-ref": {
+   "contract": [
+    "7 passed / 0 failed",
+    "7 passed / 0 failed",
+    "7 passed / 0 failed"
+   ],
+   "adapted": null
+  },
+  "foldin-bounded": {
+   "contract": [
+    "7 passed / 0 failed",
+    "7 passed / 0 failed",
+    "7 passed / 0 failed"
+   ],
+   "adapted": null
+  },
+  "c53806-handport": {
+   "contract": [
+    "4 passed / 3 failed",
+    "4 passed / 3 failed",
+    "4 passed / 3 failed"
+   ],
+   "adapted": [
+    "3 passed / 4 failed",
+    "3 passed / 4 failed",
+    "3 passed / 4 failed"
+   ]
+  },
+  "c53806-handport-pre": {
+   "contract": [
+    "4 passed / 3 failed",
+    "4 passed / 3 failed",
+    "4 passed / 3 failed"
+   ],
+   "adapted": [
+    "0 passed / 7 failed",
+    "0 passed / 7 failed",
+    "0 passed / 7 failed"
+   ]
+  },
+  "c93391-code": {
+   "contract": [
+    "4 passed / 3 failed",
+    "4 passed / 3 failed",
+    "4 passed / 3 failed"
+   ],
+   "adapted": [
+    "0 passed / 7 failed",
+    "0 passed / 7 failed",
+    "0 passed / 7 failed"
+   ]
+  },
+  "c118847-handport": {
+   "contract": [
+    "4 passed / 3 failed",
+    "4 passed / 3 failed",
+    "4 passed / 3 failed"
+   ],
+   "adapted": [
+    "1 passed / 6 failed",
+    "1 passed / 6 failed",
+    "1 passed / 6 failed"
+   ]
+  },
+  "c125881-merge": {
+   "contract": [
+    "4 passed / 3 failed",
+    "4 passed / 3 failed",
+    "4 passed / 3 failed"
+   ],
+   "adapted": [
+    "1 passed / 6 failed",
+    "1 passed / 6 failed",
+    "1 passed / 6 failed"
+   ]
+  },
+  "neg-prefire": {
+   "contract": [
+    "1 passed / 6 failed",
+    "1 passed / 6 failed",
+    "1 passed / 6 failed"
+   ],
+   "adapted": null
+  },
+  "neg-nodefer": {
+   "contract": [
+    "5 passed / 2 failed",
+    "5 passed / 2 failed",
+    "5 passed / 2 failed"
+   ],
+   "adapted": null
+  },
+  "sab-h1-observer-call": {
+   "contract": [
+    "4 passed / 3 failed",
+    "4 passed / 3 failed",
+    "4 passed / 3 failed"
+   ],
+   "adapted": null
+  },
+  "sab-h2-queue-payload": {
+   "contract": [
+    "6 passed / 1 failed",
+    "6 passed / 1 failed",
+    "6 passed / 1 failed"
+   ],
+   "adapted": null
+  },
+  "sab-h3-tokens-before": {
+   "contract": [
+    "4 passed / 3 failed",
+    "4 passed / 3 failed",
+    "4 passed / 3 failed"
+   ],
+   "adapted": null
+  },
+  "sab-h4-tokens-after": {
+   "contract": [
+    "4 passed / 3 failed",
+    "4 passed / 3 failed",
+    "4 passed / 3 failed"
+   ],
+   "adapted": null
+  },
+  "sab-h5-valid-hooks": {
+   "contract": [
+    "7 passed / 0 failed",
+    "7 passed / 0 failed",
+    "7 passed / 0 failed"
+   ],
+   "adapted": null
+  },
+  "sab-h6-keep-carrier-post-commit": {
+   "contract": [
+    "7 passed / 0 failed",
+    "7 passed / 0 failed",
+    "7 passed / 0 failed"
+   ],
+   "adapted": null
+  },
+  "sab-h7-payload-and-docs": {
+   "contract": [
+    "7 passed / 0 failed",
+    "7 passed / 0 failed",
+    "7 passed / 0 failed"
+   ],
+   "adapted": null
+  }
+ },
+ "sources": {
+  "F05/f05-r3": "receipts/F05-f05-r3.json",
+  "E12/e12-r3": "receipts/E12-e12-r3.json"
+ },
+ "denominators": {
+  "cells": 90,
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "infra": 6,
+  "completeness": 1.0
+ },
+ "policy_revision": {
+  "AGENTS.md": "65aa3e61bcba610da21279a17385671263be39e9",
+  "CONTRIBUTING.md": "b0baa59b5057c204b3c09d3dd170c0955cfdb39c",
+  "factory": "FACTORY.md sha256:7726ba18b43a9367f91d7f70c3aaefb96a9863761ddf71225c61c26a30d688d4",
+  "protocol": "promotion-readiness-2026-10-01/PROTOCOL.md sha256:182e3fbae771d7219497833b3f9d6f7ed385d70abace8736559026e4e60b90d4"
+ },
+ "env": {
+  "host": "withheld (redacted in round 3; receipts name no host)",
+  "python": "3.11.14 (the live venv's interpreter, used read-only through HERMES_PYTHON; never as a source)",
+  "sandbox": "no bwrap/netns (FACTORY \u00a76 layer 1 not used). In-process layer only: tools/chs_egress_guard.py (non-loopback connect and DNS refused and logged; the openrouter-prewarm metadata thread is not started), loaded through the isolated test HOME's pytest_live_guard.py shim; scripts/run_tests.sh runs pytest under env -i with isolated HOME and HERMES_HOME (placeholders: $TESTHOME, $TESTHOME/.hermes)"
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "verdict": "INFRA",
+ "verdict_note": "F05 r3 has 0 INFRA cells; E12 r3 passes under the recorded S16 exception for upstream code (see E12/e12-r3 egress)",
+ "provenance": "self",
+ "frozen": null,
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the contract test, the fold-in and the harness; disclosed per repository policy",
+ "privacy": "public-aggregate: repo-relative paths and placeholders only; synthetic fixtures; no session ids, home paths, emails, message text or secrets. Raw logs under raw/ are private and contain local paths.",
+ "verdict_as_issued": "PASS",
+ "verdict_note_round2": "aggregates F05/f05-r3 and E12/e12-r3, both INFRA under strict S16 after the round-2 re-label",
+ "superseded_by": "PROOF/r4",
+ "superseded_why": "the r3 guard refused to start the openrouter-prewarm thread (prewarm_suppressed), which hid one DNS lookup per pytest worker; the round-1 contract test itself triggered that thread. Round 2 stubs the metadata prewarm in the test and uses an r4 guard that suppresses nothing"
+}

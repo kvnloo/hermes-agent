@@ -1,0 +1,334 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "tool-result-projection-support",
+ "origin_refs": [
+  "NousResearch/hermes-agent#107731",
+  "NousResearch/hermes-agent#39691",
+  "NousResearch/hermes-agent#47866",
+  "NousResearch/hermes-agent#129620",
+  "NousResearch/hermes-agent#129492",
+  "NousResearch/hermes-agent#129882",
+  "kvnloo/hermes-agent#310"
+ ],
+ "base_revision": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+ "env": {
+  "host": "withheld (one local workstation; receipts carry no host names)",
+  "python": "3.11.14 ($PY = the repo venv interpreter, used read-only)",
+  "isolation": "env -i; fresh HOME/HERMES_HOME under scratch; loopback-only socket.connect + getaddrinfo guard (probe_104260.py:11-39 pattern); no credentials",
+  "network": "loopback only (asserted: egress_blocked list per run)",
+  "relay": {
+   "present": true,
+   "package": "nemo-relay 0.8.4 (installed in the shared repo venv; not part of this change)",
+   "state": "FAILED at initialize(): agent/relay_runtime.py calls relay.plugin.initialize({}, additional_plugins_toml=...), which nemo-relay 0.8.4 does not accept, so Hermes logs 'Hermes Relay plugin initialization failed' and disables Relay middleware. No Relay plugin was active in any run (recorded in round 2; the venv was the same in this round).",
+   "plugins_toml_sha256": null,
+   "config_paths": [],
+   "explicit_plugins_toml": "none: HERMES_NEMO_RELAY_PLUGINS_TOML unset and the isolated HERMES_HOME has no relay-plugins.toml"
+  }
+ },
+ "provenance": "self",
+ "cost": {
+  "api_cost_usd": 0.0,
+  "tier_cost": "$0"
+ },
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the harness and tests; disclosed per repository policy",
+ "privacy": "synthetic fixtures only; no state.db / agent.log / credentials read",
+ "id": "F04-enforced/r20261001-01",
+ "tier": "T1",
+ "kind": "forensic",
+ "experiment": "What an enforced account would see: the fake Messages server returns the documented 400 (thinking block bound to a different conversation) whenever a replayed block's prefix changed (MODELED server rule), Hermes' behaviour against it is OBSERVED",
+ "command": {
+  "probe": "env -i PATH=/usr/bin:/bin PYTHONHASHSEED=0 F04_SCRATCH=$S/f04final $PY harness/f04_probe.py <worktree> <out.json> <arm> enforce"
+ },
+ "inputs": {
+  "shas": {
+   "main": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+   "staging_commit": "c1ed8c9f081450bc01a08d7c638ff2d2eeecbfd8",
+   "carrier_head": "069adfb67e57287ac8df996ef48e082fe8455e2c",
+   "carrier_merge_base": "67764dc0863349a384c16425e73ee8571f3a94b7",
+   "carrier_rebased_arm": "e04f4f9e2cbecd1760df3ed7f19da9db065a4f2d",
+   "carrier_rebased_arm_plus_test": "2090d94da9b0ac6ed6e0fbb2ff77075a102c012b",
+   "test_blob": "7347ad045bf049afabce5b78435d5746273160f1"
+  },
+  "harness_sha256": {
+   "harness/e37_synthetic.py": "4de16b55331c737d8db15eaf0acdfacb69cb458808f59bc3c912cd4c424c2f85",
+   "harness/f04_probe.py": "a23b3b14b3cd7a4c4e8bfd35a6da50c06656f183fc842afca738e3f46e051bb9",
+   "harness/guarded_run.py": "be17793cdf4bad466fb2e05b5c67d63430a1e79c8c40949a7e45c897d35d654f",
+   "harness/readtool_direct.py": "e8dd892a0a2a835550467d4ccf4732470860692b6200a6e150be50950d9a96f4"
+  },
+  "patches_sha256": {
+   "patches/carrier-rebase-handport-hot-reload-test.diff": "6024fcb1457cdc1bf8d6762da6ca372d3109d41d532311dd8a0264c609d7d741",
+   "patches/foldin-preserved-thinking-gate.diff": "1490213c6d074a6cae190b4bf138d09b431ab78c535961159e3982b4f06ae6ab",
+   "patches/sabotage-S1-per-turn-reevaluation.diff": "a7f55f013f779c6a12aaab89b56c3b2af0bf4380883fda474df2b3757582a132",
+   "patches/sabotage-S2-no-stickiness.diff": "3b8b144c13805d30e117621a2fc3f7ed316434be4bcfd06197a8b865b1abbfd3"
+  },
+  "server_rule_source": "claude-api skill shared/model-migration.md, Breaking change 3 (Fable 5.1 section; applies verbatim to Opus 5.5 and Sonnet 5.5): prefix = system + tools (name-sorted set) + every earlier message; earlier thinking blocks and cache_control excluded; enforced for accounts created on/after 2026-08-31"
+ },
+ "results": [
+  {
+   "arm": "base-enforced",
+   "repo_head": "c1ed8c9f081450bc01a08d7c638ff2d2eeecbfd8",
+   "dirty_files": [],
+   "test_file_blob": "7347ad045bf049afabce5b78435d5746273160f1",
+   "test_A_openai_route": {
+    "outcome": "failed",
+    "message": "E       AssertionError: no tool result was ever archived on the wire: 28 requests, 14 tool rows"
+   },
+   "test_B_native_anthropic_preserved_thinking": {
+    "outcome": "passed",
+    "message": ""
+   },
+   "observed": {
+    "label": "OBSERVED (loopback wire)",
+    "requests": 28,
+    "tool_rows": 14,
+    "rows_archived": 0,
+    "projection_passes": 0,
+    "pass_request_indices": [],
+    "reclaim_tokens_per_pass_estimator": [],
+    "prefix_breaks": [],
+    "unstable_archived_rows": 0,
+    "last_request_chars": 351069,
+    "sum_request_chars": 5023320,
+    "anthropic_requests": 24,
+    "replayed_thinking_blocks": 23,
+    "thinking_blocks_replayed_over_rewritten_prefix": 0,
+    "rejected_400_thinking_binding": 0
+   },
+   "modeled": {
+    "label": "MODELED (perfect prefix cache, chars/4, write 1.25x read 0.10x)",
+    "openai_route_cache_read_ratio": 0.9301,
+    "openai_route_billed_units_cached": 226515,
+    "openai_route_billed_tokens_no_cache": 1255830,
+    "anthropic_route_cache_read_ratio": 0.8396,
+    "anthropic_route_billed_units_cached": 251627
+   },
+   "egress_blocked": [],
+   "wall_s": 6.95
+  },
+  {
+   "arm": "carrier-enforced",
+   "repo_head": "2090d94da9b0ac6ed6e0fbb2ff77075a102c012b",
+   "dirty_files": [],
+   "test_file_blob": "7347ad045bf049afabce5b78435d5746273160f1",
+   "test_A_openai_route": {
+    "outcome": "passed",
+    "message": ""
+   },
+   "test_B_native_anthropic_preserved_thinking": {
+    "outcome": "failed",
+    "message": "E       AssertionError: a request replayed preserved-thinking blocks over a rewritten conversation prefix (Anthropic drops them, or rejects the request on enforced accounts):"
+   },
+   "observed": {
+    "label": "OBSERVED (loopback wire)",
+    "requests": 28,
+    "tool_rows": 14,
+    "rows_archived": 12,
+    "projection_passes": 6,
+    "pass_request_indices": [
+     7,
+     11,
+     15,
+     19,
+     23,
+     27
+    ],
+    "reclaim_tokens_per_pass_estimator": [
+     11696
+    ],
+    "prefix_breaks": [
+     7,
+     11,
+     15,
+     19,
+     23,
+     27
+    ],
+    "unstable_archived_rows": 0,
+    "last_request_chars": 70188,
+    "sum_request_chars": 1933603,
+    "anthropic_requests": 25,
+    "replayed_thinking_blocks": 24,
+    "thinking_blocks_replayed_over_rewritten_prefix": 16,
+    "rejected_400_thinking_binding": 16
+   },
+   "modeled": {
+    "label": "MODELED (perfect prefix cache, chars/4, write 1.25x read 0.10x)",
+    "openai_route_cache_read_ratio": 0.7364,
+    "openai_route_billed_units_cached": 194900,
+    "openai_route_billed_tokens_no_cache": 483400,
+    "anthropic_route_cache_read_ratio": 0.6858,
+    "anthropic_route_billed_units_cached": 154092
+   },
+   "egress_blocked": [],
+   "wall_s": 8.77
+  },
+  {
+   "arm": "carrier-foldin-enforced",
+   "repo_head": "2090d94da9b0ac6ed6e0fbb2ff77075a102c012b",
+   "dirty_files": [
+    "M agent/tool_result_projection.py"
+   ],
+   "test_file_blob": "7347ad045bf049afabce5b78435d5746273160f1",
+   "test_A_openai_route": {
+    "outcome": "passed",
+    "message": ""
+   },
+   "test_B_native_anthropic_preserved_thinking": {
+    "outcome": "passed",
+    "message": ""
+   },
+   "observed": {
+    "label": "OBSERVED (loopback wire)",
+    "requests": 28,
+    "tool_rows": 14,
+    "rows_archived": 12,
+    "projection_passes": 6,
+    "pass_request_indices": [
+     7,
+     11,
+     15,
+     19,
+     23,
+     27
+    ],
+    "reclaim_tokens_per_pass_estimator": [
+     11696
+    ],
+    "prefix_breaks": [
+     7,
+     11,
+     15,
+     19,
+     23,
+     27
+    ],
+    "unstable_archived_rows": 0,
+    "last_request_chars": 70188,
+    "sum_request_chars": 1933603,
+    "anthropic_requests": 24,
+    "replayed_thinking_blocks": 23,
+    "thinking_blocks_replayed_over_rewritten_prefix": 0,
+    "rejected_400_thinking_binding": 0
+   },
+   "modeled": {
+    "label": "MODELED (perfect prefix cache, chars/4, write 1.25x read 0.10x)",
+    "openai_route_cache_read_ratio": 0.7364,
+    "openai_route_billed_units_cached": 194900,
+    "openai_route_billed_tokens_no_cache": 483400,
+    "anthropic_route_cache_read_ratio": 0.8396,
+    "anthropic_route_billed_units_cached": 251627
+   },
+   "egress_blocked": [],
+   "wall_s": 8.4
+  }
+ ],
+ "observed_turns": {
+  "label": "OBSERVED (Hermes log against MODELED server rule)",
+  "carrier": {
+   "turns": 12,
+   "turns_failed_with_400": 8,
+   "rejected_requests": 16,
+   "first_failure": "turn 5 (first projection pass)",
+   "why_it_persists": "turn_recovery strips reasoning_details only; the converter replays the ordered anthropic_content_blocks copy first (anthropic_message_convert.py:393-397), so the retried request still carries the block; every later turn replays the same latest-assistant block over the archived rows"
+  },
+  "carrier+foldin": {
+   "turns_failed": 0,
+   "rejected_requests": 0
+  },
+  "base": {
+   "turns_failed": 0,
+   "rejected_requests": 0
+  }
+ },
+ "related_owned_elsewhere": [
+  "NousResearch/hermes-agent#70107 (ordered-carrier signature recovery)",
+  "NousResearch/hermes-agent#129620 (suppresses rejected blocks across reasoning_details and anthropic_content_blocks)"
+ ],
+ "artifacts": [
+  {
+   "path": "receipts/raw/base-enforced.json",
+   "sha256": "f60659ab2527a1c7d47625cd1dc483b1e8a24f6df42945d5efec593e9ede57cf"
+  },
+  {
+   "path": "receipts/raw/carrier-enforced.json",
+   "sha256": "2a9b52b92679d64c7653feb61a5d2066ac31d36e8660b47af7a082b6816601b0"
+  },
+  {
+   "path": "receipts/raw/carrier-foldin-enforced.json",
+   "sha256": "456c53e57b2a76e357048611550174e0a1f2cd71e3695db38d876bf14717e5b1"
+  }
+ ],
+ "not_tested": [
+  "the real Anthropic API (paid)",
+  "drop_block mode (thinking-binding-controls-2026-08-01 beta) - Hermes does not send block_binding on main"
+ ],
+ "verdict": "KEEP (risk evidence): on an enforced account the unmodified carrier would wedge a preserved-thinking session from its first projection pass (8/12 turns failed in emulation); with the fold-in gate 0/12",
+ "spec": {
+  "path": null,
+  "rev": null,
+  "sha256": null,
+  "prereg_commit": null,
+  "decision_rule_sha": null,
+  "note": "not pre-registered: an ad-hoc staging run under FACTORY.md section 8. The decision rule is the assertion set of tests/e2e/core/history/test_tool_result_projection_wire.py (blob 7347ad045b) and, for probes, the harness outputs named in command."
+ },
+ "policy_revision": {
+  "AGENTS.md": "65aa3e61bc@572e4f4fad (unchanged at 234badf401 and aea969677c)",
+  "CONTRIBUTING.md": "b0baa59b50@572e4f4fad (unchanged at 234badf401 and aea969677c)",
+  "factory": "FACTORY.md sha256:7726ba18b43a9367 (frontier-2026-10-01 ledger copy, read at round-1 fix)"
+ },
+ "denominators": {
+  "cells": 3,
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "completeness": 1.0,
+  "note": "3 single probe runs (base, carrier, carrier-foldin; n=1 each)"
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": true,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "resource_usage": {
+  "wall_s": 24.1,
+  "cpu_core_s": null,
+  "gpu_s": 0,
+  "energy_j": null,
+  "api_cost_usd": 0.0,
+  "note": "wall_s summed from the raw outputs; CPU time and energy were not recorded"
+ },
+ "corrections": [
+  {
+   "date": "2026-10-01",
+   "by": "staging fix round 1 (phase-3 verifier findings)",
+   "changes": [
+    "env.python: was '$PY (3.14.x, read-only use as interpreter)' (wrong: every raw output records \"python\": \"3.11.14\" and the venv interpreter prints Python 3.11.14)",
+    "added the xf.receipt.v1 fields spec (not pre-registered), policy_revision, denominators, evidence_class, resource_usage",
+    "n: one probe run per arm (n=1); not repeated."
+   ]
+  },
+  {
+   "date": "2026-10-01",
+   "by": "staging fix round 2 (round-1 re-verifier findings)",
+   "changes": [
+    "env.relay added (the shared venv's nemo-relay 0.8.4 fails to initialize; no Relay plugin was active)",
+    "z0evals_study added (not frozen; P8 pending)"
+   ]
+  },
+  {
+   "date": "2026-10-01",
+   "by": "staging fix round 3 (fix of the round-2 re-verifier findings)",
+   "changes": [
+    "env.host: the workstation's host name replaced by 'withheld' (receipts must not carry host names)"
+   ]
+  }
+ ],
+ "superseded_by": "F04-enforced/r20261001-02",
+ "z0evals_study": {
+  "repo": "kvnloo/z0evals",
+  "branch": "study/hermes-tool-result-projection-support",
+  "commit": null,
+  "status": "not frozen (P8 pending)"
+ }
+}

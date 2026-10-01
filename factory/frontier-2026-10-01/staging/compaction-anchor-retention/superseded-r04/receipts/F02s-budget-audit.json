@@ -1,0 +1,376 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compaction-anchor-retention",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#116246",
+  "NousResearch/hermes-agent#87326",
+  "NousResearch/hermes-agent#117462",
+  "NousResearch/hermes-agent#122274",
+  "NousResearch/hermes-agent#122522",
+  "NousResearch/hermes-agent#78457"
+ ],
+ "base_revision": "040b6df2c40b0f4f88f51e4c2062eafc4d7463c5",
+ "head_revision": "30a746f7920c2b4101f121353778d94f5ce001b5",
+ "supersedes": "b11e27d5f9 receipts r20261001-02 (superseded-r02/); 6e0fa629a0 receipts r20261001-01 (superseded-r01/)",
+ "policy_revision": {
+  "factory": "FACTORY.md (frontier-2026-10-01)",
+  "protocol": "promotion-readiness-2026-10-01/PROTOCOL.md"
+ },
+ "env": {
+  "python": "3.11 (HERMES_PYTHON venv, read-only bind)",
+  "sandbox": "harness/sandbox.sh: bwrap ro-root, --unshare-net (connect -> ENETUNREACH), systemd-resolved socket masked (DNS -> EAI_AGAIN), pidns, clearenv, live Hermes install masked except the venv, fresh HOME/HERMES_HOME per run; harness/egress_sitecustomize.py logs every non-loopback DNS lookup and connect attempt (the script run had these paths inlined; the copy here takes them from env)",
+  "tests": "HOME=$S/testhome-sf-compaction-anchor-retention HERMES_HOME=$HOME/.hermes HERMES_PYTHON=$PY bash scripts/run_tests.sh -j 2 <files> -q"
+ },
+ "provenance": "self",
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the rows, tests, harness and gold labels; disclosed per repository policy",
+ "privacy": "public-aggregate (inputs are committed upstream text or seeded synthetic data; no state.db, no lineages); no absolute local paths",
+ "resource_usage": {
+  "api_cost_usd": 0.0,
+  "gpu_s": 0,
+  "tokens": 0
+ },
+ "id": "F02s/r20261001-03",
+ "kind": "static",
+ "question": "How large does the anchor index get with the new rows, against _LEAN_ANCHOR_BUDGET_CHARS=7000 and the 32k-token retained-summary budget, and do main's existing sections stay byte-identical?",
+ "substitutes_for": "F02 on frozen local lineages (needs OD-7)",
+ "inputs": {
+  "scorecard": "evals/compaction/results/SCORECARD-2026-08-15.md",
+  "scorecard_sha256": "6d93f90b435e4f2ae2dd3187103c18e0c881ad68b88b92bfd3deacb1cf79180e",
+  "harness_sha256": {
+   "anchor_coverage.py": "c9e084c35a7b64ca4e35afcf89d5a3374c689d455a7b1126ffc49c7cbefeb8ef",
+   "build_receipts.py": "631328fd68f5d602380a9864c3d63eab8988bc6a0766a301e04c6492229f8f34",
+   "sandbox.sh": "f1aad255c5022b1c0920e0a6718faa222aa84b3583c4224c4e7fd32b43fedf24",
+   "egress_sitecustomize.py": "55eef4b9cf034dea08b0004a88dcf5595582bde9b3ba9c10ef4cc83807e29d9d",
+   "negative_controls.py": "8dee7eed03d49212293e58568b6b7d39da12c7394f7d454e16d8dda688f210ff"
+  },
+  "arms": {
+   "base": {
+    "tree": "040b6df2c40b0f4f88f51e4c2062eafc4d7463c5:agent/context_compressor.py",
+    "sha256": "86f4b7a8a647f1bf520cb17497b68719f6d907028bdc7151c7921818b7e043f1"
+   },
+   "branch": {
+    "head": "30a746f7920c2b4101f121353778d94f5ce001b5",
+    "sha256": "424c8dd83747b73b7b1883c726e60823f55a656d5424c3eb948297ca07f4abc7"
+   },
+   "c117462": {
+    "pr": 117462,
+    "head": "2c19948e15d68492d048250bae7707ca77063db5",
+    "merge_tree_with_base": "f4139cef66cd97f30f7fc450301551d233ebf616",
+    "merge": "clean",
+    "sha256": "fdb7abd8050b4944171522c7e713004d7fbce9b2d8ddfb1c8de93414f206ebe0"
+   },
+   "c117462_foldin": {
+    "onto": "c117462",
+    "patch": "foldin-on-117462.patch (rows + tests/agent/test_context_compressor_anchor_index.py)",
+    "patch_sha256": "3713e44bbb4edfdbd493b80c290b013a3d26b3a21e88c734bd733f6fad3e9bf5",
+    "merge": "hand-ported (rows placed in #117462's cheap-first order)",
+    "sha256": "b880b9a14eaf0949e51926004856b3e0e3109b784222cef87048b8ca7cb36cf3"
+   },
+   "branch_r01": {
+    "head": "6e0fa629a0f6227b03417d1d6ff7f7d81208346a",
+    "sha256": "98d9e8d058557eee2fd4e89641b6350a2b21ab62c563ac741986db61ae1d98a8",
+    "role": "round-1 staging head (untightened error row); comparison only"
+   },
+   "branch_r02": {
+    "head": "b11e27d5f9c60a420cbbe94fa967fc1454df92a6",
+    "sha256": "eea32ae2600e20ac7729cc894bf9afdd8987a33d97f6f98e1671dcc5e13a3ef2",
+    "role": "round-2 staging head (dotted keys without the mid-name guard); comparison only"
+   }
+  },
+  "coverage_json_sha256": "96a86bcde8412a44e51eb0e72b33f3fe3236efc93e2610a7891ff828bd4a522e",
+  "checkout_for_imports": "$WT at 30a746f7920c2b4101f121353778d94f5ce001b5; `git diff --name-only 040b6df2c4 30a746f792` lists only agent/context_compressor.py and the new test file, so every other module, website/docs, AGENTS.md and hermes_cli/config_defaults.py are exactly 040b6df2c4",
+  "egress": "0 attempts logged for the harness run"
+ },
+ "command": "VENV=$VENV HERMES_INSTALL=<live install> EGRESS_DIR=<dir with sitecustomize.py> $SANDBOX $WT <fresh home> <egress log> $PY $STAGING/harness/anchor_coverage.py --checkout $WT --arm base=raw/arms/base.py --arm branch=raw/arms/branch.py --arm c117462=raw/arms/c117462.py --arm c117462_foldin=raw/arms/c117462_foldin.py --arm branch_r01=raw/arms/branch_r01.py --arm branch_r02=raw/arms/branch_r02.py --seeds 10 --out <home>/coverage.json   # $WT detached at HEAD; home on a non-/tmp disk; copied to raw/coverage.json",
+ "measurements": [
+  {
+   "name": "branch_index_chars_max",
+   "arm": "branch",
+   "value": 7190,
+   "n": 180,
+   "label": "OBSERVED",
+   "note": "this PR's arm only: 180 synthetic regions (10 seeds x 6 banks x 3 densities)"
+  },
+  {
+   "name": "branch_sections_chars_max",
+   "arm": "branch",
+   "value": 6998,
+   "n": 180,
+   "label": "OBSERVED"
+  },
+  {
+   "name": "branch_index_tokens_max",
+   "arm": "branch",
+   "value": 1797,
+   "label": "MODELED",
+   "note": "chars/4, the harness convention; vs RETAINED_SUMMARY_TOKEN_BUDGET=32000 (agent/native_compaction.py:146)"
+  },
+  {
+   "name": "base_sections_prefix_of_branch_sections",
+   "value": 180,
+   "n": 180,
+   "label": "OBSERVED",
+   "note": "strict additivity on main: existing lines byte-identical"
+  },
+  {
+   "name": "index_chars_max",
+   "arm": "base",
+   "value": 6451,
+   "n": 180,
+   "label": "OBSERVED"
+  },
+  {
+   "name": "index_chars_max",
+   "arm": "branch",
+   "value": 7190,
+   "n": 180,
+   "label": "OBSERVED"
+  },
+  {
+   "name": "index_chars_max",
+   "arm": "c117462",
+   "value": 7186,
+   "n": 180,
+   "label": "OBSERVED"
+  },
+  {
+   "name": "index_chars_max",
+   "arm": "c117462_foldin",
+   "value": 7193,
+   "n": 180,
+   "label": "OBSERVED"
+  }
+ ],
+ "per_arm": {
+  "base": {
+   "sparse": {
+    "n": 60,
+    "sections_chars_max": 1173,
+    "sections_chars_p50": 1039,
+    "index_chars_max": 1363,
+    "index_tokens_max_chars_div_4": 340,
+    "over_budget": 0,
+    "sections_emitted": {
+     "PRs/issues": 60,
+     "commits": 60,
+     "files": 60,
+     "errors": 60,
+     "handles": 60,
+     "urls": 60
+    }
+   },
+   "medium": {
+    "n": 60,
+    "sections_chars_max": 6261,
+    "sections_chars_p50": 6115,
+    "index_chars_max": 6451,
+    "index_tokens_max_chars_div_4": 1612,
+    "over_budget": 0,
+    "sections_emitted": {
+     "PRs/issues": 60,
+     "commits": 60,
+     "files": 60,
+     "errors": 60,
+     "handles": 60,
+     "urls": 60
+    }
+   },
+   "dense": {
+    "n": 60,
+    "sections_chars_max": 6083,
+    "sections_chars_p50": 6022,
+    "index_chars_max": 6270,
+    "index_tokens_max_chars_div_4": 1567,
+    "over_budget": 0,
+    "sections_emitted": {
+     "PRs/issues": 60,
+     "commits": 60,
+     "files": 60
+    }
+   },
+   "regions": 180,
+   "index_chars_max": 6451,
+   "sections_chars_max": 6261,
+   "timing_443k_char_region_s": 0.0286
+  },
+  "branch": {
+   "sparse": {
+    "n": 60,
+    "sections_chars_max": 1522,
+    "sections_chars_p50": 1421,
+    "index_chars_max": 1715,
+    "index_tokens_max_chars_div_4": 428,
+    "over_budget": 0,
+    "sections_emitted": {
+     "PRs/issues": 60,
+     "commits": 60,
+     "files": 60,
+     "errors": 60,
+     "handles": 60,
+     "urls": 60,
+     "task ids": 60,
+     "dotted keys": 60,
+     "error messages": 60
+    }
+   },
+   "medium": {
+    "n": 60,
+    "sections_chars_max": 6998,
+    "sections_chars_p50": 6357,
+    "index_chars_max": 7190,
+    "index_tokens_max_chars_div_4": 1797,
+    "over_budget": 0,
+    "sections_emitted": {
+     "PRs/issues": 60,
+     "commits": 60,
+     "files": 60,
+     "errors": 60,
+     "handles": 60,
+     "urls": 60,
+     "task ids": 60,
+     "dotted keys": 19
+    }
+   },
+   "dense": {
+    "n": 60,
+    "sections_chars_max": 6083,
+    "sections_chars_p50": 6022,
+    "index_chars_max": 6270,
+    "index_tokens_max_chars_div_4": 1567,
+    "over_budget": 0,
+    "sections_emitted": {
+     "PRs/issues": 60,
+     "commits": 60,
+     "files": 60
+    }
+   },
+   "regions": 180,
+   "index_chars_max": 7190,
+   "sections_chars_max": 6998,
+   "timing_443k_char_region_s": 0.0285
+  },
+  "c117462": {
+   "sparse": {
+    "n": 60,
+    "sections_chars_max": 1173,
+    "sections_chars_p50": 1039,
+    "index_chars_max": 1363,
+    "index_tokens_max_chars_div_4": 340,
+    "over_budget": 0,
+    "sections_emitted": {
+     "PRs/issues": 60,
+     "commits": 60,
+     "handles": 60,
+     "urls": 60,
+     "files": 60,
+     "errors": 60
+    }
+   },
+   "medium": {
+    "n": 60,
+    "sections_chars_max": 6261,
+    "sections_chars_p50": 6115,
+    "index_chars_max": 6451,
+    "index_tokens_max_chars_div_4": 1612,
+    "over_budget": 0,
+    "sections_emitted": {
+     "PRs/issues": 60,
+     "commits": 60,
+     "handles": 60,
+     "urls": 60,
+     "files": 60,
+     "errors": 60
+    }
+   },
+   "dense": {
+    "n": 60,
+    "sections_chars_max": 6996,
+    "sections_chars_p50": 6983,
+    "index_chars_max": 7186,
+    "index_tokens_max_chars_div_4": 1796,
+    "over_budget": 0,
+    "sections_emitted": {
+     "PRs/issues": 60,
+     "commits": 60,
+     "handles": 60,
+     "urls": 60,
+     "files": 60,
+     "errors": 48
+    }
+   },
+   "regions": 180,
+   "index_chars_max": 7186,
+   "sections_chars_max": 6996,
+   "timing_443k_char_region_s": 0.0352
+  },
+  "c117462_foldin": {
+   "sparse": {
+    "n": 60,
+    "sections_chars_max": 1522,
+    "sections_chars_p50": 1421,
+    "index_chars_max": 1715,
+    "index_tokens_max_chars_div_4": 428,
+    "over_budget": 0,
+    "sections_emitted": {
+     "PRs/issues": 60,
+     "task ids": 60,
+     "commits": 60,
+     "handles": 60,
+     "urls": 60,
+     "dotted keys": 60,
+     "files": 60,
+     "errors": 60,
+     "error messages": 60
+    }
+   },
+   "medium": {
+    "n": 60,
+    "sections_chars_max": 6998,
+    "sections_chars_p50": 6984,
+    "index_chars_max": 7191,
+    "index_tokens_max_chars_div_4": 1797,
+    "over_budget": 0,
+    "sections_emitted": {
+     "PRs/issues": 60,
+     "task ids": 60,
+     "commits": 60,
+     "handles": 60,
+     "urls": 60,
+     "dotted keys": 60,
+     "files": 60,
+     "errors": 60,
+     "error messages": 46
+    }
+   },
+   "dense": {
+    "n": 60,
+    "sections_chars_max": 7000,
+    "sections_chars_p50": 6995,
+    "index_chars_max": 7193,
+    "index_tokens_max_chars_div_4": 1798,
+    "over_budget": 0,
+    "sections_emitted": {
+     "PRs/issues": 60,
+     "task ids": 60,
+     "commits": 60,
+     "handles": 60,
+     "urls": 60,
+     "dotted keys": 60,
+     "files": 59,
+     "errors": 32,
+     "error messages": 7
+    }
+   },
+   "regions": 180,
+   "index_chars_max": 7193,
+   "sections_chars_max": 7000,
+   "timing_443k_char_region_s": 0.0813
+  }
+ },
+ "structural_note": "over-budget counts are 0 on every arm BY CONSTRUCTION, not as a finding: main's loop only appends a section while used + len(line) <= 7000 and #117462 truncates a section to the room left. The measurement of interest is the size: heading, separators and footer add under 200 chars on top of the sections",
+ "not_measured": [
+  "whole-summary tokens on real lineages (LLM output): NOT_MEASURED; the index adds at most about 1.8k tokens (MODELED)"
+ ],
+ "verdict": "KEEP"
+}

@@ -1,0 +1,39 @@
+{
+ "resolved_from": "agent.context_compressor_media",
+ "n": 400,
+ "seed": 20261001,
+ "calls": {
+  "_strip_historical_media": 400,
+  "_retire_stale_tool_result_images": 400,
+  "evict_stale_outbound_tool_images": 400,
+  "_summary_part_text": 8933,
+  "_image_part_label": 4876,
+  "_content_has_images": 5336,
+  "_tool_content_has_images": 5336,
+  "_image_payload": 5336,
+  "_strip_images_from_tool_msg": 2704,
+  "_strip_images_from_content": 5336,
+  "_is_image_part": 8933,
+  "_tool_result_parts": 5336,
+  "_replace_image_parts": 5336,
+  "_rewritten": 5336
+ },
+ "digests": {
+  "_strip_historical_media": "15baeb0e37ca19ae47a2f2392400f07f57a6a604314074568d27f1bd64330142",
+  "_retire_stale_tool_result_images": "d0488bd2ffc56b081c5fa4833b1cd1d285314e37076b2f3cb6dd1fe3ccd15571",
+  "evict_stale_outbound_tool_images": "02201b7e06eaf8a5697d0047a29f69157cc925084b341f3be54935b8ad0ca0a9",
+  "_summary_part_text": "f923058c77126f292b00b2e9677d63912ae7024d33a8da9a19d44f47209fc433",
+  "_image_part_label": "ad535737226f14c6fa5bad24444e4f08d36806ededb845535be1cc176ae03d31",
+  "_content_has_images": "36400b01715c35db026c9a9337827c61d83ad145fb25eb6f46a0c17a0291eb60",
+  "_tool_content_has_images": "91b2d5dee819fc03887a68a70cdd5fd7a3979640650bc1f835e0a4738ad5218a",
+  "_image_payload": "a55546672162b53cf09bf574cb64485fe3af2dd6930bb3db2d1044c2682c12c1",
+  "_strip_images_from_tool_msg": "7d60d06cca908b7c8d0ba3b8134a7fa3a53826d92d461dd20b39ae22341e11ae",
+  "_strip_images_from_content": "be29c364485ec8bf840a54ec2b02604395cb984916f7672de72789f9a3e807aa",
+  "_is_image_part": "9e4c5e4fcf080fb3b1b9b1ef97745b92d5c66dcfd6c1bb13078a09d410f296ae",
+  "_tool_result_parts": "4ab0ad29a75b28c3b7eb8cee70c91430977dc8016acafdbf515f6a8c1d30c17b",
+  "_replace_image_parts": "c18bba5f850bf51be6b1c8f55d5d71c00ebdedac35febc174fc37e6e8dce7a83",
+  "_rewritten": "fe95f6196cd0d88107cad9c3b1597d079f9d266097920c6faaf252e8ea19bf50"
+ },
+ "overall": "983b2307308ce689e9a4d24fc0f4c4db032df0ab1a63859c3e3c81e921354545",
+ "python": "3.11.14"
+}

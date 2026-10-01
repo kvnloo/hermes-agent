@@ -1,0 +1,7 @@
+=== Summary: 1 files, 2 tests passed, 3 failed (100% complete) in 2.4s (2 workers) ===
+FAILED tests/agent/test_context_compressor_anchor_harvest.py::test_anchor_index_harvests_tool_call_arguments_and_artifact_paths
+FAILED tests/agent/test_context_compressor_anchor_harvest.py::test_anchor_index_cheap_ids_survive_a_tight_budget
+FAILED tests/agent/test_context_compressor_anchor_harvest.py::test_anchor_index_names_a_class_whose_values_cannot_fit
+=== 1 file with test failures (3 tests failed) ===
+  tests/agent/test_context_compressor_anchor_harvest.py  (3 tests failed)
+rc=1

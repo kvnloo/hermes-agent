@@ -1,0 +1,676 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "tool-result-projection-support",
+ "origin_refs": [
+  "NousResearch/hermes-agent#107731",
+  "NousResearch/hermes-agent#39691",
+  "NousResearch/hermes-agent#47866",
+  "NousResearch/hermes-agent#129620",
+  "NousResearch/hermes-agent#129492",
+  "NousResearch/hermes-agent#129882",
+  "kvnloo/hermes-agent#310"
+ ],
+ "base_revision": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+ "env": {
+  "host": "withheld (one local workstation; receipts carry no host names)",
+  "python": "3.11.14 ($PY = the repo venv interpreter, used read-only)",
+  "isolation": "env -i; fresh HOME/HERMES_HOME under scratch; loopback-only socket.connect + getaddrinfo guard (probe_104260.py:11-39 pattern); no credentials",
+  "network": "loopback only (asserted: egress_blocked list per run)",
+  "relay": {
+   "present": true,
+   "package": "nemo-relay 0.8.4 (installed in the shared repo venv; not part of this change)",
+   "state": "FAILED at initialize(): agent/relay_runtime.py calls relay.plugin.initialize({}, additional_plugins_toml=...), which nemo-relay 0.8.4 does not accept, so Hermes logs 'Hermes Relay plugin initialization failed' and disables Relay middleware. No Relay plugin was active in any run (recorded in round 2; the venv was the same in this round).",
+   "plugins_toml_sha256": null,
+   "config_paths": [],
+   "explicit_plugins_toml": "none: HERMES_NEMO_RELAY_PLUGINS_TOML unset and the isolated HERMES_HOME has no relay-plugins.toml"
+  }
+ },
+ "provenance": "self",
+ "cost": {
+  "api_cost_usd": 0.0,
+  "tier_cost": "$0"
+ },
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the harness and tests; disclosed per repository policy",
+ "privacy": "synthetic fixtures only; no state.db / agent.log / credentials read",
+ "id": "F04/r20261001-01",
+ "tier": "T1",
+ "kind": "redgreen",
+ "experiment": "F04 projection byte-stability between boundaries + preserved-thinking route check",
+ "command": {
+  "proof": "HOME=$S/testhome-st-tool-result-projection-support HERMES_HOME=$HOME/.hermes HERMES_PYTHON=$PY bash scripts/run_tests.sh -j 2 tests/e2e/core/history/test_tool_result_projection_wire.py -q  (3 reps per arm)",
+  "probe": "env -i PATH=/usr/bin:/bin PYTHONHASHSEED=0 F04_SCRATCH=$S/f04final $PY harness/f04_probe.py <worktree> <out.json> <arm>",
+  "arm_setup": {
+   "base": "git checkout --detach c1ed8c9f081450bc01a08d7c638ff2d2eeecbfd8",
+   "carrier": "git checkout --detach 2090d94da9b0ac6ed6e0fbb2ff77075a102c012b",
+   "carrier-S1": "carrier + git apply patches/sabotage-S1-per-turn-reevaluation.diff",
+   "carrier-S2": "carrier + git apply patches/sabotage-S2-no-stickiness.diff",
+   "carrier-foldin": "carrier + git apply patches/foldin-preserved-thinking-gate.diff"
+  }
+ },
+ "inputs": {
+  "shas": {
+   "main": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+   "staging_commit": "c1ed8c9f081450bc01a08d7c638ff2d2eeecbfd8",
+   "carrier_head": "069adfb67e57287ac8df996ef48e082fe8455e2c",
+   "carrier_merge_base": "67764dc0863349a384c16425e73ee8571f3a94b7",
+   "carrier_rebased_arm": "e04f4f9e2cbecd1760df3ed7f19da9db065a4f2d",
+   "carrier_rebased_arm_plus_test": "2090d94da9b0ac6ed6e0fbb2ff77075a102c012b",
+   "test_blob": "7347ad045bf049afabce5b78435d5746273160f1"
+  },
+  "harness_sha256": {
+   "harness/e37_synthetic.py": "4de16b55331c737d8db15eaf0acdfacb69cb458808f59bc3c912cd4c424c2f85",
+   "harness/f04_probe.py": "a23b3b14b3cd7a4c4e8bfd35a6da50c06656f183fc842afca738e3f46e051bb9",
+   "harness/guarded_run.py": "be17793cdf4bad466fb2e05b5c67d63430a1e79c8c40949a7e45c897d35d654f",
+   "harness/readtool_direct.py": "e8dd892a0a2a835550467d4ccf4732470860692b6200a6e150be50950d9a96f4"
+  },
+  "patches_sha256": {
+   "patches/carrier-rebase-handport-hot-reload-test.diff": "6024fcb1457cdc1bf8d6762da6ca372d3109d41d532311dd8a0264c609d7d741",
+   "patches/foldin-preserved-thinking-gate.diff": "1490213c6d074a6cae190b4bf138d09b431ab78c535961159e3982b4f06ae6ab",
+   "patches/sabotage-S1-per-turn-reevaluation.diff": "a7f55f013f779c6a12aaab89b56c3b2af0bf4380883fda474df2b3757582a132",
+   "patches/sabotage-S2-no-stickiness.diff": "3b8b144c13805d30e117621a2fc3f7ed316434be4bcfd06197a8b865b1abbfd3"
+  }
+ },
+ "arms": {
+  "base": {
+   "tree": "0716cfeee11444de16c5fb36a5fc2854a820d0d5",
+   "commit": "c1ed8c9f081450bc01a08d7c638ff2d2eeecbfd8",
+   "note": "main + test commit"
+  },
+  "carrier": {
+   "head": "069adfb67e57287ac8df996ef48e082fe8455e2c",
+   "merge": "conflict (tests/tui_gateway/test_compression_config_hot_reload.py, add/add) -> handported, keep both sides",
+   "patch": "patches/carrier-rebase-handport-hot-reload-test.diff",
+   "commit": "2090d94da9b0ac6ed6e0fbb2ff77075a102c012b",
+   "tree": "1a299bc7f75303383451f174479aca03df2c27bd"
+  }
+ },
+ "gates": {
+  "red": {
+   "arm": "base",
+   "result": "PASS",
+   "test": "test_projection_breaks_the_prefix_once_per_paid_batch_and_never_undoes_itself",
+   "assertion": "no tool result was ever archived on the wire: 28 requests, 14 tool rows",
+   "reps_agree": "3/3",
+   "label": "OBSERVED"
+  },
+  "green": [
+   {
+    "arm": "carrier",
+    "test": "test A (OpenAI-compatible route)",
+    "result": "PASS",
+    "reps_agree": "3/3"
+   },
+   {
+    "arm": "carrier",
+    "test": "test B (native Anthropic, preserved thinking)",
+    "result": "FAIL (expected: carrier gap)",
+    "reps_agree": "3/3",
+    "assertion": "request 10/16/22: messages[17|29|41] thinking block replayed over a rewritten prefix"
+   },
+   {
+    "arm": "carrier+foldin",
+    "test": "A and B",
+    "result": "PASS",
+    "reps_agree": "3/3"
+   }
+  ],
+  "sabotage": [
+   {
+    "arm": "carrier-S1 (trigger=1: projection re-evaluated every request)",
+    "test_A": "RED",
+    "reason": "12 passes in 28 requests, each reclaiming 5848 < 8000 estimator tokens"
+   },
+   {
+    "arm": "carrier-S2 (stickiness dropped)",
+    "test_A": "RED",
+    "reason": "11 passes; previously archived rows counted as fresh so single-row passes approved (5848 < 8000)"
+   },
+   {
+    "arm": "carrier (fold-in reverted)",
+    "test_B": "RED",
+    "reason": "3 replayed thinking blocks over a rewritten prefix"
+   }
+  ],
+  "adjacent": "see GUARDS/r20261001-01",
+  "flaky": false
+ },
+ "proof_reps": {
+  "base": [
+   {
+    "rep": 1,
+    "summary": "=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 19.9s (2 workers) ===",
+    "failed": [
+     "tests/e2e/core/history/test_tool_result_projection_wire.py::test_projection_breaks_the_prefix_once_per_paid_batch_and_never_undoes_itself"
+    ]
+   },
+   {
+    "rep": 2,
+    "summary": "=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 20.4s (2 workers) ===",
+    "failed": [
+     "tests/e2e/core/history/test_tool_result_projection_wire.py::test_projection_breaks_the_prefix_once_per_paid_batch_and_never_undoes_itself"
+    ]
+   },
+   {
+    "rep": 3,
+    "summary": "=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 20.6s (2 workers) ===",
+    "failed": [
+     "tests/e2e/core/history/test_tool_result_projection_wire.py::test_projection_breaks_the_prefix_once_per_paid_batch_and_never_undoes_itself"
+    ]
+   }
+  ],
+  "carrier": [
+   {
+    "rep": 1,
+    "summary": "=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 19.8s (2 workers) ===",
+    "failed": [
+     "tests/e2e/core/history/test_tool_result_projection_wire.py::test_projection_never_invalidates_replayed_preserved_thinking"
+    ]
+   },
+   {
+    "rep": 2,
+    "summary": "=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 20.1s (2 workers) ===",
+    "failed": [
+     "tests/e2e/core/history/test_tool_result_projection_wire.py::test_projection_never_invalidates_replayed_preserved_thinking"
+    ]
+   },
+   {
+    "rep": 3,
+    "summary": "=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 21.1s (2 workers) ===",
+    "failed": [
+     "tests/e2e/core/history/test_tool_result_projection_wire.py::test_projection_never_invalidates_replayed_preserved_thinking"
+    ]
+   }
+  ],
+  "carrier+foldin": [
+   {
+    "rep": 1,
+    "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 9.9s (2 workers) ===",
+    "failed": []
+   },
+   {
+    "rep": 2,
+    "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 9.9s (2 workers) ===",
+    "failed": []
+   },
+   {
+    "rep": 3,
+    "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 10.4s (2 workers) ===",
+    "failed": []
+   }
+  ]
+ },
+ "results": [
+  {
+   "arm": "base",
+   "repo_head": "c1ed8c9f081450bc01a08d7c638ff2d2eeecbfd8",
+   "dirty_files": [],
+   "test_file_blob": "7347ad045bf049afabce5b78435d5746273160f1",
+   "test_A_openai_route": {
+    "outcome": "failed",
+    "message": "E       AssertionError: no tool result was ever archived on the wire: 28 requests, 14 tool rows"
+   },
+   "test_B_native_anthropic_preserved_thinking": {
+    "outcome": "passed",
+    "message": ""
+   },
+   "observed": {
+    "label": "OBSERVED (loopback wire)",
+    "requests": 28,
+    "tool_rows": 14,
+    "rows_archived": 0,
+    "projection_passes": 0,
+    "pass_request_indices": [],
+    "reclaim_tokens_per_pass_estimator": [],
+    "prefix_breaks": [],
+    "unstable_archived_rows": 0,
+    "last_request_chars": 351069,
+    "sum_request_chars": 5023320,
+    "anthropic_requests": 24,
+    "replayed_thinking_blocks": 23,
+    "thinking_blocks_replayed_over_rewritten_prefix": 0,
+    "rejected_400_thinking_binding": 0
+   },
+   "modeled": {
+    "label": "MODELED (perfect prefix cache, chars/4, write 1.25x read 0.10x)",
+    "openai_route_cache_read_ratio": 0.9301,
+    "openai_route_billed_units_cached": 226515,
+    "openai_route_billed_tokens_no_cache": 1255830,
+    "anthropic_route_cache_read_ratio": 0.8396,
+    "anthropic_route_billed_units_cached": 251627
+   },
+   "egress_blocked": [],
+   "wall_s": 6.87
+  },
+  {
+   "arm": "carrier",
+   "repo_head": "2090d94da9b0ac6ed6e0fbb2ff77075a102c012b",
+   "dirty_files": [],
+   "test_file_blob": "7347ad045bf049afabce5b78435d5746273160f1",
+   "test_A_openai_route": {
+    "outcome": "passed",
+    "message": ""
+   },
+   "test_B_native_anthropic_preserved_thinking": {
+    "outcome": "failed",
+    "message": "E       AssertionError: a request replayed preserved-thinking blocks over a rewritten conversation prefix (Anthropic drops them, or rejects the request on enforced accounts):"
+   },
+   "observed": {
+    "label": "OBSERVED (loopback wire)",
+    "requests": 28,
+    "tool_rows": 14,
+    "rows_archived": 12,
+    "projection_passes": 6,
+    "pass_request_indices": [
+     7,
+     11,
+     15,
+     19,
+     23,
+     27
+    ],
+    "reclaim_tokens_per_pass_estimator": [
+     11696
+    ],
+    "prefix_breaks": [
+     7,
+     11,
+     15,
+     19,
+     23,
+     27
+    ],
+    "unstable_archived_rows": 0,
+    "last_request_chars": 70188,
+    "sum_request_chars": 1933603,
+    "anthropic_requests": 24,
+    "replayed_thinking_blocks": 23,
+    "thinking_blocks_replayed_over_rewritten_prefix": 3,
+    "rejected_400_thinking_binding": 0
+   },
+   "modeled": {
+    "label": "MODELED (perfect prefix cache, chars/4, write 1.25x read 0.10x)",
+    "openai_route_cache_read_ratio": 0.7364,
+    "openai_route_billed_units_cached": 194900,
+    "openai_route_billed_tokens_no_cache": 483400,
+    "anthropic_route_cache_read_ratio": 0.6042,
+    "anthropic_route_billed_units_cached": 228029
+   },
+   "egress_blocked": [],
+   "wall_s": 7.47
+  },
+  {
+   "arm": "carrier-S1",
+   "repo_head": "2090d94da9b0ac6ed6e0fbb2ff77075a102c012b",
+   "dirty_files": [
+    "M agent/tool_result_projection.py"
+   ],
+   "test_file_blob": "7347ad045bf049afabce5b78435d5746273160f1",
+   "test_A_openai_route": {
+    "outcome": "failed",
+    "message": "E       AssertionError: a projection pass broke the prompt-cache prefix for less than tool_result_projection_min_tokens (8000) of newly archived output: {5: (5848, ['call_fake_1']), 7: (5848, ['call_fake_2']), 9: (5848, ['call_fake_3']), 11: (5848, ['call_fake_4']), 13: (5848, ['call_fake_5']), 15: (5848, ['call_fake_6']), 17: (5848, ['call_fake_7']), 19: (5848, ['call_fake_8']), 21: (5848, ['call_fake_9']), 23: (5848, ['call_fake_10']), 25: (5848, ['call_fake_11']), 27: (5848, ['call_fake_12'])}; passes at requests [5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27] out of 28"
+   },
+   "test_B_native_anthropic_preserved_thinking": {
+    "outcome": "failed",
+    "message": "E       AssertionError: a request replayed preserved-thinking blocks over a rewritten conversation prefix (Anthropic drops them, or rejects the request on enforced accounts):"
+   },
+   "observed": {
+    "label": "OBSERVED (loopback wire)",
+    "requests": 28,
+    "tool_rows": 14,
+    "rows_archived": 12,
+    "projection_passes": 12,
+    "pass_request_indices": [
+     5,
+     7,
+     9,
+     11,
+     13,
+     15,
+     17,
+     19,
+     21,
+     23,
+     25,
+     27
+    ],
+    "reclaim_tokens_per_pass_estimator": [
+     5848
+    ],
+    "prefix_breaks": [
+     5,
+     7,
+     9,
+     11,
+     13,
+     15,
+     17,
+     19,
+     21,
+     23,
+     25,
+     27
+    ],
+    "unstable_archived_rows": 0,
+    "last_request_chars": 70188,
+    "sum_request_chars": 1652721,
+    "anthropic_requests": 24,
+    "replayed_thinking_blocks": 23,
+    "thinking_blocks_replayed_over_rewritten_prefix": 3,
+    "rejected_400_thinking_binding": 0
+   },
+   "modeled": {
+    "label": "MODELED (perfect prefix cache, chars/4, write 1.25x read 0.10x)",
+    "openai_route_cache_read_ratio": 0.6037,
+    "openai_route_billed_units_cached": 229629,
+    "openai_route_billed_tokens_no_cache": 413180,
+    "anthropic_route_cache_read_ratio": 0.6042,
+    "anthropic_route_billed_units_cached": 228029
+   },
+   "egress_blocked": [],
+   "wall_s": 8.38
+  },
+  {
+   "arm": "carrier-S2",
+   "repo_head": "2090d94da9b0ac6ed6e0fbb2ff77075a102c012b",
+   "dirty_files": [
+    "M agent/tool_result_projection.py"
+   ],
+   "test_file_blob": "7347ad045bf049afabce5b78435d5746273160f1",
+   "test_A_openai_route": {
+    "outcome": "failed",
+    "message": "E       AssertionError: a projection pass broke the prompt-cache prefix for less than tool_result_projection_min_tokens (8000) of newly archived output: {9: (5848, ['call_fake_3']), 11: (5848, ['call_fake_4']), 13: (5848, ['call_fake_5']), 15: (5848, ['call_fake_6']), 17: (5848, ['call_fake_7']), 19: (5848, ['call_fake_8']), 21: (5848, ['call_fake_9']), 23: (5848, ['call_fake_10']), 25: (5848, ['call_fake_11']), 27: (5848, ['call_fake_12'])}; passes at requests [7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27] out of 28"
+   },
+   "test_B_native_anthropic_preserved_thinking": {
+    "outcome": "failed",
+    "message": "E       AssertionError: a request replayed preserved-thinking blocks over a rewritten conversation prefix (Anthropic drops them, or rejects the request on enforced accounts):"
+   },
+   "observed": {
+    "label": "OBSERVED (loopback wire)",
+    "requests": 28,
+    "tool_rows": 14,
+    "rows_archived": 12,
+    "projection_passes": 11,
+    "pass_request_indices": [
+     7,
+     9,
+     11,
+     13,
+     15,
+     17,
+     19,
+     21,
+     23,
+     25,
+     27
+    ],
+    "reclaim_tokens_per_pass_estimator": [
+     5848,
+     11696
+    ],
+    "prefix_breaks": [
+     7,
+     9,
+     11,
+     13,
+     15,
+     17,
+     19,
+     21,
+     23,
+     25,
+     27
+    ],
+    "unstable_archived_rows": 0,
+    "last_request_chars": 70188,
+    "sum_request_chars": 1699535,
+    "anthropic_requests": 24,
+    "replayed_thinking_blocks": 23,
+    "thinking_blocks_replayed_over_rewritten_prefix": 8,
+    "rejected_400_thinking_binding": 0
+   },
+   "modeled": {
+    "label": "MODELED (perfect prefix cache, chars/4, write 1.25x read 0.10x)",
+    "openai_route_cache_read_ratio": 0.6288,
+    "openai_route_billed_units_cached": 223841,
+    "openai_route_billed_tokens_no_cache": 424883,
+    "anthropic_route_cache_read_ratio": 0.4232,
+    "anthropic_route_billed_units_cached": 255445
+   },
+   "egress_blocked": [],
+   "wall_s": 8.04
+  },
+  {
+   "arm": "carrier-foldin",
+   "repo_head": "2090d94da9b0ac6ed6e0fbb2ff77075a102c012b",
+   "dirty_files": [
+    "M agent/tool_result_projection.py"
+   ],
+   "test_file_blob": "7347ad045bf049afabce5b78435d5746273160f1",
+   "test_A_openai_route": {
+    "outcome": "passed",
+    "message": ""
+   },
+   "test_B_native_anthropic_preserved_thinking": {
+    "outcome": "passed",
+    "message": ""
+   },
+   "observed": {
+    "label": "OBSERVED (loopback wire)",
+    "requests": 28,
+    "tool_rows": 14,
+    "rows_archived": 12,
+    "projection_passes": 6,
+    "pass_request_indices": [
+     7,
+     11,
+     15,
+     19,
+     23,
+     27
+    ],
+    "reclaim_tokens_per_pass_estimator": [
+     11696
+    ],
+    "prefix_breaks": [
+     7,
+     11,
+     15,
+     19,
+     23,
+     27
+    ],
+    "unstable_archived_rows": 0,
+    "last_request_chars": 70188,
+    "sum_request_chars": 1933603,
+    "anthropic_requests": 24,
+    "replayed_thinking_blocks": 23,
+    "thinking_blocks_replayed_over_rewritten_prefix": 0,
+    "rejected_400_thinking_binding": 0
+   },
+   "modeled": {
+    "label": "MODELED (perfect prefix cache, chars/4, write 1.25x read 0.10x)",
+    "openai_route_cache_read_ratio": 0.7364,
+    "openai_route_billed_units_cached": 194900,
+    "openai_route_billed_tokens_no_cache": 483400,
+    "anthropic_route_cache_read_ratio": 0.8396,
+    "anthropic_route_billed_units_cached": 251627
+   },
+   "egress_blocked": [],
+   "wall_s": 7.77
+  }
+ ],
+ "artifacts": [
+  {
+   "path": "receipts/raw/base.json",
+   "sha256": "ae8748e62b4d9b53d69a1a6000780c832d6aefaf29bd64e4d39cdf5ac0adc4a4"
+  },
+  {
+   "path": "receipts/raw/carrier.json",
+   "sha256": "deb9d745397ed4fb809fd8e7f2c4b7dd6f2cd016038e9e5ca59827b890c2fcc3"
+  },
+  {
+   "path": "receipts/raw/carrier-S1.json",
+   "sha256": "e1606919e7473129e97e0194023ad2548931eeb2c548d78cd9b85ab7ccc3f57f"
+  },
+  {
+   "path": "receipts/raw/carrier-S2.json",
+   "sha256": "f3efbe58276a4c5e1c9ba44856e92e9bc22ebc7dab4b20ba9412f25e62868089"
+  },
+  {
+   "path": "receipts/raw/carrier-foldin.json",
+   "sha256": "8a61b67581f786b3f31ec90d9db557d48db0ae86045bc94f0c86f7b3b4688863"
+  },
+  {
+   "path": "receipts/raw/staging-rep1.txt",
+   "sha256": "a8a2f5aa780ac9ad493b17737c0a274ece23794931c4aa693e924addb4aa0d13"
+  },
+  {
+   "path": "receipts/raw/staging-rep2.txt",
+   "sha256": "6729f41c701c8b29b8b9bc7dd50fcfbe7a40cb5098a18fded59cec11ba2843dc"
+  },
+  {
+   "path": "receipts/raw/staging-rep3.txt",
+   "sha256": "5e1a1d4160541fc4467ade738a880b03f8312e3db4be62bd4d416f78b60f53af"
+  },
+  {
+   "path": "receipts/raw/carrier-rep1.txt",
+   "sha256": "65c02439301b4d64b809bdad93b028a1563fa7adcf266529bbd4abd09efef989"
+  },
+  {
+   "path": "receipts/raw/carrier-rep2.txt",
+   "sha256": "ad583cfde8dcf7ff302d68a92a04065a089e6f6c9a4b2ca269ca93436b9fcfa9"
+  },
+  {
+   "path": "receipts/raw/carrier-rep3.txt",
+   "sha256": "a2733cb148793051839feefd6cba8398360e7886170c845c5351c5ca51c1abfe"
+  },
+  {
+   "path": "receipts/raw/foldin-rep1.txt",
+   "sha256": "ee80729c189d5da8c427670b4a2f1101ec28ce6dfd8b1bb764aaeec20ca9c2aa"
+  },
+  {
+   "path": "receipts/raw/foldin-rep2.txt",
+   "sha256": "d00f46ed70a635f5d345d3f3205017a2e46906fc37cf752d927827240d158b6e"
+  },
+  {
+   "path": "receipts/raw/foldin-rep3.txt",
+   "sha256": "42c3743eeea91ef98b7fea6f3c91cf4d2def9c7d0df89b7b3d75ce38af43ff9e"
+  }
+ ],
+ "not_tested": [
+  "real provider prompt cache (cache_read_input_tokens) - MODELED only",
+  "Bedrock Converse / Vertex Claude routes",
+  "remote terminal backends (docker/ssh/modal) for the spillover path",
+  "routes with real compaction mid-session in the F04 scenario (no compaction fired in 28 requests)",
+  "preserved-thinking replay of every assistant turn (#129620/#129492/#129882 not applied)"
+ ],
+ "verdict": "KEEP (support evidence): carrier holds the OpenAI-route byte-stability/paid-batch/sticky/resume contract; carrier invalidates replayed signed thinking on the native Anthropic route; fold-in gate closes it",
+ "spec": {
+  "path": null,
+  "rev": null,
+  "sha256": null,
+  "prereg_commit": null,
+  "decision_rule_sha": null,
+  "note": "not pre-registered: an ad-hoc staging run under FACTORY.md section 8. The decision rule is the assertion set of tests/e2e/core/history/test_tool_result_projection_wire.py (blob 7347ad045b) and, for probes, the harness outputs named in command."
+ },
+ "policy_revision": {
+  "AGENTS.md": "65aa3e61bc@572e4f4fad (unchanged at 234badf401 and aea969677c)",
+  "CONTRIBUTING.md": "b0baa59b50@572e4f4fad (unchanged at 234badf401 and aea969677c)",
+  "factory": "FACTORY.md sha256:7726ba18b43a9367 (frontier-2026-10-01 ledger copy, read at round-1 fix)"
+ },
+ "denominators": {
+  "cells": 14,
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "completeness": 1.0,
+  "note": "9 canonical-runner proof runs (base, carrier, carrier+foldin x 3 reps) + 5 single probe runs (base, carrier, carrier-S1, carrier-S2, carrier-foldin; n=1 each)"
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "resource_usage": {
+  "wall_s": 190.6,
+  "cpu_core_s": null,
+  "gpu_s": 0,
+  "energy_j": null,
+  "api_cost_usd": 0.0,
+  "note": "wall_s summed from the raw outputs; CPU time and energy were not recorded"
+ },
+ "corrections": [
+  {
+   "date": "2026-10-01",
+   "by": "staging fix round 1 (phase-3 verifier findings)",
+   "changes": [
+    "env.python: was '$PY (3.14.x, read-only use as interpreter)' (wrong: every raw output records \"python\": \"3.11.14\" and the venv interpreter prints Python 3.11.14)",
+    "raw artifacts scrubbed of absolute local paths (worktree, scratch, pytest tmp, interpreter paths -> $WT, $S, $PYTEST_TMP, $PY); sha256 before/after in scrubbed_artifacts",
+    "added the xf.receipt.v1 fields spec (not pre-registered), policy_revision, denominators, evidence_class, resource_usage",
+    "n: only the canonical-runner proof (proof_reps) has 3 reps per arm, for base, carrier and carrier+foldin. Every probe arm in results[] (including sabotage S1 and S2) is a single run (n=1). The original '3 reps per arm' wording in STAGING.md overstated that.",
+    "reclaim_tokens_per_pass_estimator (11,696; 5,848 for one-row passes) is per-environment: the stub embeds the read_file call arguments (the absolute file path) and the spill file's recovery path, both under the sandbox directory (build_stub in agent/tool_result_projection.py), so the estimator count moves with the sandbox path length. The phase-3 verifier's isolated rerun on 234badf401 measured 11,800-11,802 and 5,875 with identical pass indices and outcomes. Treat these figures as approximate (about 11.7K-11.8K per two-row pass)."
+   ],
+   "scrubbed_artifacts": {
+    "receipts/raw/staging-rep1.txt": {
+     "sha256_before": "c363818ef4ade327d7c6215e770fee9fb6578911a88ed5d2d3d71fb568850539",
+     "sha256_after": "a8a2f5aa780ac9ad493b17737c0a274ece23794931c4aa693e924addb4aa0d13"
+    },
+    "receipts/raw/staging-rep2.txt": {
+     "sha256_before": "ef7fccfc38ea0e3851aaa753e45f45827c4c10d15fb56c2aedb36c41faec8021",
+     "sha256_after": "6729f41c701c8b29b8b9bc7dd50fcfbe7a40cb5098a18fded59cec11ba2843dc"
+    },
+    "receipts/raw/staging-rep3.txt": {
+     "sha256_before": "8278e76f1f09473e15184f6bf1529c14d1938e36a76a8e59d484882c2ef56325",
+     "sha256_after": "5e1a1d4160541fc4467ade738a880b03f8312e3db4be62bd4d416f78b60f53af"
+    },
+    "receipts/raw/carrier-rep1.txt": {
+     "sha256_before": "0b7207cd0e4c8e6f5c83f45b2e285a416485a09d55a90e9df132e4e6a4dc8a95",
+     "sha256_after": "65c02439301b4d64b809bdad93b028a1563fa7adcf266529bbd4abd09efef989"
+    },
+    "receipts/raw/carrier-rep2.txt": {
+     "sha256_before": "007b39ec4773dc91e3be3a166770405b76309c64d44dcae7d62da3a7c30da2e5",
+     "sha256_after": "ad583cfde8dcf7ff302d68a92a04065a089e6f6c9a4b2ca269ca93436b9fcfa9"
+    },
+    "receipts/raw/carrier-rep3.txt": {
+     "sha256_before": "f487236d72ab194223ac28e7e6ad490ec33bdef3a28ffac1af4932d61098dc99",
+     "sha256_after": "a2733cb148793051839feefd6cba8398360e7886170c845c5351c5ca51c1abfe"
+    },
+    "receipts/raw/foldin-rep1.txt": {
+     "sha256_before": "c535097efd2ae2f1b931bafd54e8b578b08632576197208e6a8ddd251d5715c0",
+     "sha256_after": "ee80729c189d5da8c427670b4a2f1101ec28ce6dfd8b1bb764aaeec20ca9c2aa"
+    },
+    "receipts/raw/foldin-rep2.txt": {
+     "sha256_before": "a8019032696819c3336a9d22eb6e8de1e351a293696988e7c17144367e290db0",
+     "sha256_after": "d00f46ed70a635f5d345d3f3205017a2e46906fc37cf752d927827240d158b6e"
+    },
+    "receipts/raw/foldin-rep3.txt": {
+     "sha256_before": "ca3c6f7d4e3b42504968556cb7ddf1bb57e16888737a9fe5382668034801f327",
+     "sha256_after": "42c3743eeea91ef98b7fea6f3c91cf4d2def9c7d0df89b7b3d75ce38af43ff9e"
+    }
+   }
+  },
+  {
+   "date": "2026-10-01",
+   "by": "staging fix round 2 (round-1 re-verifier findings)",
+   "changes": [
+    "env.relay added (the shared venv's nemo-relay 0.8.4 fails to initialize; no Relay plugin was active)",
+    "z0evals_study added (not frozen; P8 pending)"
+   ]
+  },
+  {
+   "date": "2026-10-01",
+   "by": "staging fix round 3 (fix of the round-2 re-verifier findings)",
+   "changes": [
+    "env.host: the workstation's host name replaced by 'withheld' (receipts must not carry host names)"
+   ]
+  }
+ ],
+ "superseded_by": "F04/r20261001-02",
+ "z0evals_study": {
+  "repo": "kvnloo/z0evals",
+  "branch": "study/hermes-tool-result-projection-support",
+  "commit": null,
+  "status": "not frozen (P8 pending)"
+ }
+}

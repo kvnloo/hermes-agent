@@ -1,0 +1,17 @@
+Edit-tool shape audit: both+fold (6 tasks)
+str_replace: score=6/6; applied=2, rejected=4
+  anchored_replace: applied (expected applied; PASS) — exact unique match
+  indentation_drift: rejected (expected rejected; PASS) — exact match count was 0, expected 1
+  ambiguous_match: rejected (expected rejected; PASS) — exact match count was 2, expected 1
+  multi_hunk: applied (expected applied; PASS) — exact unique match; exact unique match
+  already_applied: rejected (expected rejected; PASS) — exact match count was 0, expected 1
+  missing_anchor: rejected (expected rejected; PASS) — exact match count was 0, expected 1
+hermes_patch: score=5/6; applied=3, no_change=2, rejected=1
+  anchored_replace: applied (expected applied; PASS) — matched with exact
+  indentation_drift: applied (expected applied; PASS) — matched with whitespace_normalized
+  ambiguous_match: rejected (expected rejected; PASS) — Found 2 matches for old_string. Provide more context to make it unique, or use replace_all=True. Matches:
+  L2: enabled = false
+  L4: enabled = false
+  multi_hunk: applied (expected applied; PASS) — matched with exact; matched with exact
+  already_applied: no_change (expected no_change; PASS) — target text is already present
+  missing_anchor: no_change (expected rejected; DRIFT) — target text is already present

@@ -1,0 +1,76 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compressor-media-extraction",
+ "base_revision": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+ "head_revision": "d2bff3a59edd1a9be5a90f5d84bbded1fbe04e8b",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#80636",
+  "NousResearch/hermes-agent#78645"
+ ],
+ "provenance": "self",
+ "privacy": "public-aggregate",
+ "cost_usd": 0.0,
+ "ai_assistance": "Claude Code (Opus 5.5) ran the experiment and wrote this receipt",
+ "created_at": "2026-10-01T05:21:43-05:00",
+ "spec": {
+  "path": null,
+  "prereg_commit": null,
+  "note": "not pre-registered on claude/ledger (no ledger writes in this run)"
+ },
+ "env": {
+  "host": "<local-host>",
+  "test_python": "3.11.14 (pytest 9.1.1, HERMES_PYTHON)",
+  "nav_python": "3.14.7 separate uv venv (tiktoken 0.14.0, radon 6.0.1)",
+  "sandbox": "none (no bwrap); HOME/HERMES_HOME pointed at scratch test homes; run_tests.sh env -i",
+  "load1_range": "3.4-13 (shared host)"
+ },
+ "id": "regen/r20261001-01",
+ "experiment": "extract_media.py regenerates the exact commit tree from clean main",
+ "tier": "T0",
+ "label": "OBSERVED",
+ "inputs": {
+  "regen_scripts_sha256": {
+   "extract_media.py": "88b143d7b0600ad5197fb5630d6c92bdbaf075cefa5af3477aeebfa03d140a06",
+   "golden_parity.py": "5ec7c2954fbbb9166eb5da15be7bc0c3f50dee0fbe11b77a1c632dc2559795d8",
+   "moved_symbol_lookup.py": "137868172480a30d09ed2a0afe60bca0b28ab6a81fff73d21618ceb37a7c3141",
+   "parity_compare.py": "bc99048d3cbc402a079a2ee098f9f209c2f86d34e65388074c0547bb4635989b",
+   "verify_media.py": "569fc7e4bb407f4071249911ba927ddbb1ec501c72772c3acaa2468f57daf1f1"
+  },
+  "main": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0"
+ },
+ "command": "git worktree add --detach $W/red 572e4f4fad32bbdcfc948fb2ec833177ed5734c0; python3 regen/extract_media.py $W/red; git -C $W/red add -A agent tests; git -C $W/red write-tree",
+ "result": {
+  "regenerated_tree": "62b11a3e6bc7430162224d5e60fad81771829c7d",
+  "commit_tree": "62b11a3e6bc7430162224d5e60fad81771829c7d",
+  "identical": true,
+  "git_color_moved": {
+   "moved_deleted_lines": 230,
+   "moved_added_lines": 235,
+   "plain_deleted_lines": 13,
+   "plain_added_lines": 29,
+   "command": "git show --color-moved=plain HEAD"
+  },
+  "rehearsal_on_newer_main": {
+   "main": "234badf4012af380d23c91eae55d045a69c69ffb",
+   "commits_since_base": 11,
+   "invalidate_on_paths_changed": [],
+   "extract_rc": 0,
+   "regenerated_tree": "0702c75ff7b94ebef47c4c114618bf6b7de68a43",
+   "merge_tree_of_staging_onto_it": "0702c75ff7b94ebef47c4c114618bf6b7de68a43",
+   "identical": true,
+   "verify_media": "PASS 6/6 (verify-newmain.json)"
+  }
+ },
+ "raw": [
+  {
+   "path": "raw/verify-newmain.json",
+   "sha256": "03c134af08037bee2c3a8a6bf7c14cd6716204dc7b6488c114168505e1aaec34",
+   "source_sha256": "03c134af08037bee2c3a8a6bf7c14cd6716204dc7b6488c114168505e1aaec34"
+  }
+ ],
+ "verdict": "PASS",
+ "privacy_scrub": "fix round 1 (2026-10-01): absolute local paths and the local user name were replaced with placeholders ($W/<tree>, $S, $HERMES_PYTHON, $HERMES_VENV, <uv>, <pytest-tmp>, pytest-of-<user>, ~). raw[].sha256 is the file as shipped after that scrub; raw[].source_sha256 is the pre-scrub original.",
+ "superseded_by": "regen/r20261001-02",
+ "superseded_note": "first build d2bff3a59e on 572e4f4fad; replaced in fix round 1 by c5e8be14b4 on aea969677c (same patch-id 2c92e56f)"
+}

@@ -1,0 +1,29 @@
+xf_spec = 1
+id = "F11-N1-noop-revert"
+rev = 1
+kind = "redgreen"
+issue = "kvnloo/hermes-agent#322"
+ai_assistance = "Spec and runner written with Claude Code (Opus 5.5); disclosed per repository policy"
+origin_refs = ["rework:revert 658e6c885d"]
+expected = "refused at RED (no_repro_on_base)"
+[base]
+repo = "NousResearch/hermes-agent"
+pin = "658e6c885d40a2b27a5c3f35bb6276fa5801daf8"
+[head]
+commit = "354d499511adc75769cafd9224de8b0ac6ea16ec"
+merge_onto_base = false
+[probe]
+kind = "pytest"
+files = ["tests/agent/test_length_continuation_thinking_exhaustion.py"]
+reps = 3
+jobs = 2
+timeout_s = 900
+[oracle]
+red_markers = ["AssertionError"]
+sabotage = "per_hunk"
+adjacent = []
+[ownership]
+verdict = "unknown"
+queries = []
+[outputs]
+not_tested = ["full test suite", "real provider responses", "kernel network namespace (in-process guard only)"]

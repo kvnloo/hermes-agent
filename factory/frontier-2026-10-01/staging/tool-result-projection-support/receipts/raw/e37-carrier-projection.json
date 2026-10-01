@@ -1,0 +1,121 @@
+{
+  "arm": "projection",
+  "turns": 20,
+  "repo_head": "2090d94da9b0ac6ed6e0fbb2ff77075a102c012b",
+  "repo_tree": "1a299bc7f75303383451f174479aca03df2c27bd",
+  "dirty_files": [],
+  "config_overlay": "compression:\n  tool_result_projection: auto\n",
+  "provider_reports_cached_input": false,
+  "observed": {
+    "label": "OBSERVED (loopback wire)",
+    "main_requests": 40,
+    "aux_requests": 1,
+    "prefix_breaks": [
+      9,
+      15,
+      21,
+      27,
+      33,
+      39
+    ],
+    "prefix_break_reasons": [
+      "messages[3] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 00 line 0000 alpha beta gamma delta e'  vs  '",
+      "messages[15] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 03 line 0000 alpha beta gamma delta e'  vs  ",
+      "messages[27] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 06 line 0000 alpha beta gamma delta e'  vs  ",
+      "messages[39] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 09 line 0000 alpha beta gamma delta e'  vs  ",
+      "messages[51] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 12 line 0000 alpha beta gamma delta e'  vs  ",
+      "messages[63] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 15 line 0000 alpha beta gamma delta e'  vs  "
+    ],
+    "projection_passes": {
+      "9": [
+        "call_fake_1",
+        "call_fake_2",
+        "call_fake_3"
+      ],
+      "15": [
+        "call_fake_4",
+        "call_fake_5",
+        "call_fake_6"
+      ],
+      "21": [
+        "call_fake_7",
+        "call_fake_8",
+        "call_fake_9"
+      ],
+      "27": [
+        "call_fake_10",
+        "call_fake_11",
+        "call_fake_12"
+      ],
+      "33": [
+        "call_fake_13",
+        "call_fake_14",
+        "call_fake_15"
+      ],
+      "39": [
+        "call_fake_16",
+        "call_fake_17",
+        "call_fake_18"
+      ]
+    },
+    "rows_projected": 18,
+    "unstable_archived_rows": [],
+    "wire_chars_per_request": [
+      7544,
+      31919,
+      32026,
+      56401,
+      56508,
+      80883,
+      80990,
+      105365,
+      105472,
+      59410,
+      59517,
+      83892,
+      83999,
+      108374,
+      108481,
+      62419,
+      62526,
+      86901,
+      87008,
+      111385,
+      111492,
+      65432,
+      65539,
+      89916,
+      90023,
+      114400,
+      114507,
+      68450,
+      68557,
+      92934,
+      93041,
+      117418,
+      117525,
+      71468,
+      71575,
+      95952,
+      96059,
+      120436,
+      120543,
+      74486
+    ],
+    "last_request_chars": 74486,
+    "max_request_chars": 120543,
+    "sum_request_chars": 3330773,
+    "durable_model_view_tool_rows_chars": 472480,
+    "turn_errors": []
+  },
+  "modeled": {
+    "label": "MODELED (chars/4 tokens; perfect prefix cache; write 1.25x, read 0.10x)",
+    "cache_read_ratio": 0.8017,
+    "billed_input_tokens_no_cache": 832693,
+    "billed_input_token_units_cached": 273135,
+    "reprefill_tokens_after_breaks": 163214
+  },
+  "egress_blocked": [],
+  "wall_s": 3.68,
+  "python": "3.11.14"
+}

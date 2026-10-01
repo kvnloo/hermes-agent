@@ -1,0 +1,531 @@
+{
+  "schema": "xf.receipt.v1",
+  "id": "P-redgreen/r20261001-03",
+  "tier": "T1",
+  "label_default": "OBSERVED",
+  "spec": {
+    "path": "specs/P-redgreen.toml",
+    "rev": 3,
+    "sha256": "0ac6a68ef57838dd5da543509932145d5944512ec253ef2506b1eaae2e5d7090",
+    "prereg_commit": null,
+    "prereg_recorded_at": "2026-10-01T11:43:41Z",
+    "decision_rule_sha": "1b7710826038e052b1c042b302461664157beb8971979c65bd1a0452176a7f09",
+    "decision_rule": "KEEP iff base shows 2 failed / 7 with both red markers, head shows 7/7 passed in each of 3 reps, at least one sabotage hunk re-REDs, each of the 5 gate-condition removals (flag, compression.enabled, checkpoint_required, Claude model, third-party endpoint) re-REDs, and the adjacent pass/fail counts are identical on base and head.",
+    "prereg_note": "spec written and hashed before the run started (specs/PREREG.json); not committed to claude/ledger because xf is not built yet"
+  },
+  "runner_revision": {
+    "driver": {
+      "path": "harness/run_proofs.py",
+      "sha256": "375e77549fb1d14f7c5de0d512838ed4d38b9f342e837f3948d84a3d4421f772"
+    },
+    "test_runner": "scripts/run_tests.sh blob 8fcc4294f4@e8c97320ac",
+    "receipt_writer": {
+      "path": "harness/write_receipts.py",
+      "sha256": "ab4e50c5bfab21ceaa47f744f40088ec2eb1adba087870e82c351dc04f2fda3f"
+    }
+  },
+  "issue": "kvnloo/hermes-agent#322",
+  "origin_refs": [
+    "NousResearch/hermes-agent#526",
+    "NousResearch/hermes-agent#1147",
+    "NousResearch/hermes-agent#528"
+  ],
+  "staging": "anthropic-context-editing",
+  "base_revision": "e8c97320ac8691d4de92af49f98459f9ef9ddb08",
+  "arms": {
+    "base": {
+      "commit": "e8c97320ac8691d4de92af49f98459f9ef9ddb08",
+      "tree": "06b5f753858650bab9c2e1dbd0f9c62050b2b790"
+    },
+    "head": {
+      "commit": "61effa4dd8a0b81c8eda50a6119239b2aa19e52a",
+      "tree": "134b78fcb5493c46553d350c511251237204a5d9",
+      "parent": "e8c97320ac8691d4de92af49f98459f9ef9ddb08",
+      "merge": "clean (one commit on base)"
+    }
+  },
+  "head_revision": "61effa4dd8a0b81c8eda50a6119239b2aa19e52a",
+  "changed_files": [
+    "agent/agent_init.py",
+    "agent/anthropic_adapter.py",
+    "agent/anthropic_context_editing.py",
+    "agent/chat_completion_helpers.py",
+    "agent/transports/anthropic.py",
+    "agent/turn_recovery.py",
+    "cli-config.yaml.example",
+    "gateway/run.py",
+    "hermes_cli/config_defaults.py",
+    "tests/agent/test_anthropic_context_editing.py",
+    "tui_gateway/session_compression.py",
+    "website/docs/developer-guide/context-compression-and-caching.md",
+    "website/docs/user-guide/features/computer-use.md"
+  ],
+  "policy_revision": {
+    "AGENTS.md": "65aa3e61bcba610da21279a17385671263be39e9@e8c97320ac",
+    "CONTRIBUTING.md": "b0baa59b5057c204b3c09d3dd170c0955cfdb39c@e8c97320ac",
+    ".github/PULL_REQUEST_TEMPLATE.md": "5496eb534fef9d08c091b8186e7edd1b5cf356db@e8c97320ac",
+    "factory": "FACTORY.md sha256 7726ba18b43a9367f91d7f70c3aaefb96a9863761ddf71225c61c26a30d688d4 (frontier-2026-10-01)",
+    "protocol": "PROTOCOL.md sha256 182e3fbae771d7219497833b3f9d6f7ed385d70abace8736559026e4e60b90d4 (promotion-readiness-2026-10-01)"
+  },
+  "env": {
+    "host": "<local-host>",
+    "host_note": "name withheld, as F09 strips host facts from system prompts",
+    "os": "Linux x86_64",
+    "python": "3.11.14 (test venv, passed as HERMES_PYTHON)",
+    "anthropic_sdk": "0.87.0",
+    "httpx": "0.28.1",
+    "pydantic": "2.13.4",
+    "venv_lock_sha256": null,
+    "sandbox": "no bwrap; loopback-only connect guard in the F09 probe; isolated HOME/HERMES_HOME for every run",
+    "network": "loopback only"
+  },
+  "denominators": {
+    "cells": 24,
+    "errored_scored_zero": 0,
+    "infra_excluded": 0,
+    "completeness": 1.0
+  },
+  "evidence_class": {
+    "local": true,
+    "ci": "none",
+    "simulation": false,
+    "runtime": false,
+    "kind": "mechanism"
+  },
+  "harness_abi": {
+    "harness": "hermes",
+    "editor_abi": "n/a",
+    "surface": "AIAgent.run_conversation; vendor HTTP boundary replaced by the in-repo SDK-oracle fake"
+  },
+  "resource_usage": {
+    "wall_s": 461.3,
+    "cpu_core_s": 550.2,
+    "gpu_s": 0,
+    "energy_j": null,
+    "tokens": 0,
+    "api_cost_usd": 0.0,
+    "steps": {
+      "red_base": {
+        "wall_s": 17.7,
+        "cpu_core_s": 15.2
+      },
+      "adjacent_base": {
+        "wall_s": 57.2,
+        "cpu_core_s": 111.2
+      },
+      "green_rep1": {
+        "wall_s": 9.6,
+        "cpu_core_s": 8.2
+      },
+      "green_rep2": {
+        "wall_s": 9.8,
+        "cpu_core_s": 9.4
+      },
+      "green_rep3": {
+        "wall_s": 8.9,
+        "cpu_core_s": 8.4
+      },
+      "adjacent_head": {
+        "wall_s": 74.6,
+        "cpu_core_s": 145.1
+      },
+      "sabotage_head": {
+        "wall_s": 283.5,
+        "cpu_core_s": 252.7
+      }
+    }
+  },
+  "carrier_choice": {
+    "winner": "head (own leaf)",
+    "why": "no open or merged implementation and no carrier; #528 was closed as superseded by #1147, which only changed beta-header/OAuth plumbing; no code reused"
+  },
+  "provenance": "self",
+  "frozen": {
+    "bundle_sha": null,
+    "cells": 24,
+    "supersedes": "P-redgreen/r20261001-02",
+    "status": "NOT_FROZEN (P8 pending: no write-once bundle, not frozen to z0evals)"
+  },
+  "z0evals_study": {
+    "repo": "kvnloo/z0evals",
+    "branch": "study/hermes-anthropic-context-editing",
+    "commit": null
+  },
+  "ai_assistance": "Claude Code (Claude Opus 5.5) wrote the change, tests and probes",
+  "privacy": "public-aggregate",
+  "contract_test": {
+    "path": "tests/agent/test_anthropic_context_editing.py",
+    "blob": "fc48d77dbb85fd2a34c7e73acbf29df25c07e94c",
+    "tests": 2,
+    "cases": 7,
+    "case_ids": [
+      "off",
+      "on",
+      "compression-disabled",
+      "checkpoint-required",
+      "non-claude-model",
+      "third-party-endpoint",
+      "structured-rejection"
+    ]
+  },
+  "commands": {
+    "driver": "HERMES_PYTHON=<venv-python> XF_TESTHOME=<testhome> python3 harness/run_proofs.py --worktree <worktree> --base e8c97320ac8691d4de92af49f98459f9ef9ddb08 --head 61effa4dd8a0b81c8eda50a6119239b2aa19e52a --raw raw",
+    "red": "HOME=<testhome> HERMES_HOME=<testhome>/.hermes HERMES_PYTHON=<venv-python> bash scripts/run_tests.sh -j 2 tests/agent/test_anthropic_context_editing.py -q  # base checkout + the head's test file",
+    "green": "HOME=<testhome> HERMES_HOME=<testhome>/.hermes HERMES_PYTHON=<venv-python> bash scripts/run_tests.sh -j 2 tests/agent/test_anthropic_context_editing.py -q  # head checkout, 3 reps",
+    "sabotage": "HERMES_PYTHON=<venv-python> XF_TESTHOME=<testhome> <venv-python> harness/sabotage.py --worktree <worktree> --out raw/sabotage.json",
+    "adjacent": "HOME=<testhome> HERMES_HOME=<testhome>/.hermes HERMES_PYTHON=<venv-python> bash scripts/run_tests.sh -j 2 tests/agent/test_anthropic_adapter.py tests/hermes_cli/test_fast_command.py tests/agent/test_fast_mode_auto.py tests/agent/test_native_compaction.py tests/agent/test_nous_portal_anthropic_wire.py tests/gateway/test_agent_cache.py tests/tui_gateway/test_compression_config_hot_reload.py tests/hermes_cli/test_config_edit_seed.py tests/hermes_cli/test_config_unversioned_migration.py tests/agent/test_413_compression.py tests/agent/transports/test_transport.py tests/agent/test_anthropic_stream_fallbacks.py tests/agent/test_codex_token_expired_replay_recovery.py tests/agent/test_error_classifier.py tests/e2e/core/providers/test_anthropic_oracle.py -q"
+  },
+  "gates": {
+    "validity": "PASS",
+    "red": {
+      "arm": "base",
+      "result": "PASS",
+      "observed": "2 failed / 7 (the 5 cases that expect no field pass on both arms by design)",
+      "assertion": [
+        "assert 'context-management-2025-06-27' in ['interleaved-thinking-2025-05-14', 'fine-grained-tool-streaming-2025-05-14']",
+        "assert [False, False] == [True, False, False]"
+      ],
+      "seam_covered": true,
+      "reps_agree": "1/1",
+      "raw": {
+        "path": "raw/red_base.txt",
+        "sha256": "84db0445b78e5512ca924feb5972105eda2432c94a0ed633840e2121dc843157"
+      }
+    },
+    "green": [
+      {
+        "arm": "head",
+        "result": "PASS",
+        "reps_agree": "3/3",
+        "observed": [
+          "=== Summary: 1 files, 7 tests passed, 0 failed (100% complete) in 7.6s (2 workers) ===",
+          "=== Summary: 1 files, 7 tests passed, 0 failed (100% complete) in 8.9s (2 workers) ===",
+          "=== Summary: 1 files, 7 tests passed, 0 failed (100% complete) in 7.8s (2 workers) ==="
+        ],
+        "raw": {
+          "path": "raw/green3.txt",
+          "sha256": "88d10eb0cb754bc87f78840cbd403b9640be1b6a0a5ce84de27a23d921a2ea3b"
+        }
+      }
+    ],
+    "sabotage": {
+      "mode": "one hunk at a time; kind revert = an added line or condition deleted or undone, mutation = a value changed (where deleting would only crash), adjacent = a refactored pre-existing path broken and its existing owning test run",
+      "harness": {
+        "path": "harness/sabotage.py",
+        "sha256": "0b7b813ef04a0a0f703082fd0f22842bd29172ce68961def9a6622a99bd92bfd"
+      },
+      "per_hunk": [
+        {
+          "arm": "head",
+          "hunk": "helpers-call-site",
+          "kind": "revert",
+          "file": "agent/chat_completion_helpers.py",
+          "test": "tests/agent/test_anthropic_context_editing.py",
+          "red_again": true,
+          "failed": 2,
+          "passed": 5
+        },
+        {
+          "arm": "head",
+          "hunk": "adapter-extra-body",
+          "kind": "revert",
+          "file": "agent/anthropic_adapter.py",
+          "test": "tests/agent/test_anthropic_context_editing.py",
+          "red_again": true,
+          "failed": 2,
+          "passed": 5
+        },
+        {
+          "arm": "head",
+          "hunk": "adapter-beta",
+          "kind": "revert",
+          "file": "agent/anthropic_adapter.py",
+          "test": "tests/agent/test_anthropic_context_editing.py",
+          "red_again": true,
+          "failed": 1,
+          "passed": 6
+        },
+        {
+          "arm": "head",
+          "hunk": "agent-init-parse",
+          "kind": "mutation",
+          "file": "agent/agent_init.py",
+          "test": "tests/agent/test_anthropic_context_editing.py",
+          "red_again": true,
+          "failed": 2,
+          "passed": 5
+        },
+        {
+          "arm": "head",
+          "hunk": "agent-init-attr",
+          "kind": "revert",
+          "file": "agent/agent_init.py",
+          "test": "tests/agent/test_anthropic_context_editing.py",
+          "red_again": true,
+          "failed": 2,
+          "passed": 5
+        },
+        {
+          "arm": "head",
+          "hunk": "recovery-anthropic-row",
+          "kind": "revert",
+          "file": "agent/turn_recovery.py",
+          "test": "tests/agent/test_anthropic_context_editing.py",
+          "red_again": true,
+          "failed": 1,
+          "passed": 6
+        },
+        {
+          "arm": "head",
+          "hunk": "recovery-setattr",
+          "kind": "revert",
+          "file": "agent/turn_recovery.py",
+          "test": "tests/agent/test_anthropic_context_editing.py",
+          "red_again": true,
+          "failed": 1,
+          "passed": 6
+        },
+        {
+          "arm": "head",
+          "hunk": "gate-flag",
+          "kind": "revert",
+          "file": "agent/anthropic_context_editing.py",
+          "test": "tests/agent/test_anthropic_context_editing.py",
+          "red_again": true,
+          "failed": 2,
+          "passed": 5
+        },
+        {
+          "arm": "head",
+          "hunk": "gate-compression-enabled",
+          "kind": "revert",
+          "file": "agent/anthropic_context_editing.py",
+          "test": "tests/agent/test_anthropic_context_editing.py",
+          "red_again": true,
+          "failed": 1,
+          "passed": 6
+        },
+        {
+          "arm": "head",
+          "hunk": "gate-checkpoint-required",
+          "kind": "revert",
+          "file": "agent/anthropic_context_editing.py",
+          "test": "tests/agent/test_anthropic_context_editing.py",
+          "red_again": true,
+          "failed": 1,
+          "passed": 6
+        },
+        {
+          "arm": "head",
+          "hunk": "gate-claude-model",
+          "kind": "revert",
+          "file": "agent/anthropic_context_editing.py",
+          "test": "tests/agent/test_anthropic_context_editing.py",
+          "red_again": true,
+          "failed": 1,
+          "passed": 6
+        },
+        {
+          "arm": "head",
+          "hunk": "gate-third-party-endpoint",
+          "kind": "revert",
+          "file": "agent/anthropic_context_editing.py",
+          "test": "tests/agent/test_anthropic_context_editing.py",
+          "red_again": true,
+          "failed": 1,
+          "passed": 6
+        },
+        {
+          "arm": "head",
+          "hunk": "gate-trigger-margin",
+          "kind": "mutation",
+          "file": "agent/anthropic_context_editing.py",
+          "test": "tests/agent/test_anthropic_context_editing.py",
+          "red_again": true,
+          "failed": 1,
+          "passed": 6
+        },
+        {
+          "arm": "head",
+          "hunk": "transport-default",
+          "kind": "revert",
+          "file": "agent/transports/anthropic.py",
+          "test": "tests/agent/test_anthropic_context_editing.py",
+          "red_again": true,
+          "failed": 2,
+          "passed": 5
+        },
+        {
+          "arm": "head",
+          "hunk": "tui-hot-reload",
+          "kind": "revert",
+          "file": "tui_gateway/session_compression.py",
+          "test": "tests/agent/test_anthropic_context_editing.py",
+          "red_again": false,
+          "failed": 0,
+          "passed": 7
+        },
+        {
+          "arm": "head",
+          "hunk": "gateway-cache-key",
+          "kind": "revert",
+          "file": "gateway/run.py",
+          "test": "tests/agent/test_anthropic_context_editing.py",
+          "red_again": false,
+          "failed": 0,
+          "passed": 7
+        }
+      ],
+      "gate_condition_removals": {
+        "gate-flag": true,
+        "gate-compression-enabled": true,
+        "gate-checkpoint-required": true,
+        "gate-claude-model": true,
+        "gate-third-party-endpoint": true
+      },
+      "adjacent_rows": [
+        {
+          "arm": "head",
+          "hunk": "adapter-fast-mode-beta",
+          "file": "agent/anthropic_adapter.py",
+          "test": "tests/hermes_cli/test_fast_command.py",
+          "red_again": true,
+          "failed": 1,
+          "passed": 16
+        },
+        {
+          "arm": "head",
+          "hunk": "recovery-codex-row",
+          "file": "agent/turn_recovery.py",
+          "test": "tests/agent/test_native_compaction.py",
+          "red_again": false,
+          "failed": 0,
+          "passed": 64
+        }
+      ],
+      "pinned": 14,
+      "total": 16,
+      "unpinned_hunks": [
+        "tui-hot-reload",
+        "gateway-cache-key"
+      ],
+      "unpinned_note": "sibling config propagation (TUI hot reload, gateway agent-cache key), as for codex_responses_native; not reached by the two contract tests",
+      "not_mutated": [
+        "config_defaults default entry",
+        "cli-config.yaml.example",
+        "website docs (2 pages)",
+        "adapter beta constant, signature and docstring",
+        "CLEAR_AT_LEAST_FRACTION value (the test only checks 0 < clear_at_least < trigger)",
+        "recovery display name and log text"
+      ],
+      "raw": {
+        "path": "raw/sabotage.json",
+        "sha256": "ab29c47f644dd7c41167ed3b5fca06acba92ec8077710378c980e90be3a52f33"
+      }
+    },
+    "adjacent": {
+      "files": [
+        "tests/agent/test_anthropic_adapter.py",
+        "tests/hermes_cli/test_fast_command.py",
+        "tests/agent/test_fast_mode_auto.py",
+        "tests/agent/test_native_compaction.py",
+        "tests/agent/test_nous_portal_anthropic_wire.py",
+        "tests/gateway/test_agent_cache.py",
+        "tests/tui_gateway/test_compression_config_hot_reload.py",
+        "tests/hermes_cli/test_config_edit_seed.py",
+        "tests/hermes_cli/test_config_unversioned_migration.py",
+        "tests/agent/test_413_compression.py",
+        "tests/agent/transports/test_transport.py",
+        "tests/agent/test_anthropic_stream_fallbacks.py",
+        "tests/agent/test_codex_token_expired_replay_recovery.py",
+        "tests/agent/test_error_classifier.py",
+        "tests/e2e/core/providers/test_anthropic_oracle.py"
+      ],
+      "base": "=== Summary: 15 files, 518 tests passed, 0 failed (100% complete) in 56.5s (2 workers) ===",
+      "arm": "=== Summary: 15 files, 518 tests passed, 0 failed (100% complete) in 73.8s (2 workers) ===",
+      "identical": true,
+      "pre_existing_failures": [],
+      "raw": {
+        "base": {
+          "path": "raw/adjacent_base.txt",
+          "sha256": "3618ab77e1c69b3aa607b42a379c71fb7bdc87efcdc89b94a05431db57b8bf6c"
+        },
+        "head": {
+          "path": "raw/adjacent_head.txt",
+          "sha256": "50960bd49be51ef628d879ec9fc7b1be599909f0b8847f02e5eb45d8537560ef"
+        }
+      }
+    },
+    "guards": {
+      "G-guards": "see G-guards/r20261001-03"
+    },
+    "flaky": false,
+    "noise_floor": null,
+    "credit": null,
+    "informativeness": "N_A",
+    "route_scope": "native Anthropic API, Claude models",
+    "cache_read_ratio": {
+      "status": "NOT_MEASURED",
+      "before": null,
+      "after": null,
+      "needs": "F10 (paid, OD-3)"
+    }
+  },
+  "ab": null,
+  "measurements": [
+    {
+      "name": "cases_failed",
+      "arm": "base",
+      "value": 2,
+      "n": 7,
+      "label": "OBSERVED",
+      "statistic": "count"
+    },
+    {
+      "name": "cases_passed",
+      "arm": "head",
+      "value": 7,
+      "n": 7,
+      "reps": 3,
+      "label": "OBSERVED",
+      "statistic": "count per rep"
+    },
+    {
+      "name": "sabotage_hunks_re_red",
+      "arm": "head",
+      "value": 14,
+      "n": 16,
+      "label": "OBSERVED",
+      "statistic": "count"
+    },
+    {
+      "name": "adjacent_refactor_rows_re_red",
+      "arm": "head",
+      "value": 1,
+      "n": 2,
+      "label": "OBSERVED",
+      "statistic": "count"
+    }
+  ],
+  "not_tested": [
+    "full test suite (targeted files only, per protocol)",
+    "real Anthropic API"
+  ],
+  "limitations": [
+    "the 2 sibling config hunks (TUI hot reload, gateway cache key) are not pinned by the contract tests",
+    "the codex_responses row of the generalised recovery table is not pinned: removing it fails nothing in test_native_compaction, which only covers the rejection classifier, and git grep finds no test that reaches that recovery step on main",
+    "agent-written contract tests support the invariant only (S14); they carry no value claim"
+  ],
+  "verdict": "KEEP",
+  "learning": {
+    "hypothesis": "main ignores compression.anthropic_context_editing on the native Anthropic route",
+    "result": "KEEP",
+    "observed_evidence": [
+      "assert 'context-management-2025-06-27' in ['interleaved-thinking-2025-05-14', 'fine-grained-tool-streaming-2025-05-14']",
+      "assert [False, False] == [True, False, False]"
+    ],
+    "regressions": [],
+    "reusable_lesson": null,
+    "roadmap_effect": "hold at LIMITED until F10"
+  }
+}

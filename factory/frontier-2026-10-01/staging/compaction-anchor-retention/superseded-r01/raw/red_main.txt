@@ -1,0 +1,30 @@
+E             PRs/issues: #86589
+E             (Exact identifiers from the compacted region — use these verbatim, and as session_search query anchors to recover their full context.)
+E           assert 'sa-2-7318d0ba' in '\n\n## Anchor Index (mechanically extracted, exact)\nPRs/issues: #86589\n(Exact identifiers from the compacted region — use these verbatim, and as session_search query anchors to recover their full context.)'
+
+tests/agent/test_context_compressor_anchor_index.py:44: AssertionError
+________________ test_new_anchor_classes_stay_exact_and_bounded ________________
+
+    def test_new_anchor_classes_stay_exact_and_bounded():
+        prose = (
+            "See agent/context_compressor.py and config.yaml (e.g. api.openai.com); "
+            "compression.tail_mode stays lean and the task_7 retry passed.\n"
+        )
+        ids = " ".join(f"sa-{i}-{i:08x}" for i in range(60))
+        errors = "\n".join(f"fatal: unable to reach remote mirror {i} over https" for i in range(60))
+        turns = [{"role": "assistant", "content": prose + ids + "\n" + errors}]
+    
+        index = cc._build_anchor_index(turns)
+    
+        dotted = _line(index, "dotted keys")
+>       assert "compression.tail_mode" in dotted
+E       AssertionError: assert 'compression.tail_mode' in ''
+
+tests/agent/test_context_compressor_anchor_index.py:59: AssertionError
+=========================== short test summary info ============================
+FAILED tests/agent/test_context_compressor_anchor_index.py::test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim
+FAILED tests/agent/test_context_compressor_anchor_index.py::test_new_anchor_classes_stay_exact_and_bounded
+2 failed in 0.41s
+
+=== 1 file with test failures (2 tests failed) ===
+  tests/agent/test_context_compressor_anchor_index.py  (2 tests failed)

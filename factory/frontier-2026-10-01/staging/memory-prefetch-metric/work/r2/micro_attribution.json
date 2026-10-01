@@ -1,0 +1,103 @@
+{
+  "schema": "e17d.micro_attribution.v1",
+  "python": "3.11.14",
+  "blocks": 16,
+  "calls_per_block": 400,
+  "load1_start": 12.32666015625,
+  "modes": {
+    "collection_off": {
+      "us_per_call_median": {
+        "base": 60.59,
+        "base_aa": 58.26,
+        "head": 104.25,
+        "head_noop": 61.71,
+        "head_hoisted": 100.99
+      },
+      "contrasts_us": {
+        "head_minus_base": {
+          "median": 44.12,
+          "p05": 38.33,
+          "p95": 59.29
+        },
+        "head_noop_minus_base": {
+          "median": 1.1,
+          "p05": -3.84,
+          "p95": 8.14
+        },
+        "head_hoisted_minus_base": {
+          "median": 41.61,
+          "p05": 31.47,
+          "p95": 48.62
+        },
+        "head_minus_head_noop": {
+          "median": 44.18,
+          "p05": 33.93,
+          "p95": 55.22
+        },
+        "head_minus_head_hoisted": {
+          "median": 4.92,
+          "p05": -5.91,
+          "p95": 16.91
+        },
+        "aa_base_aa_minus_base": {
+          "median": 0.46,
+          "p05": -4.69,
+          "p95": 8.9
+        }
+      },
+      "standalone_us_median": {
+        "enabled_gate_only": 14.64,
+        "record_memory_prefetch": 28.21,
+        "record_execution_backend_existing": 28.58
+      }
+    },
+    "collection_on": {
+      "us_per_call_median": {
+        "base": 81.79,
+        "base_aa": 88.4,
+        "head": 215.3,
+        "head_noop": 86.78,
+        "head_hoisted": 209.46
+      },
+      "contrasts_us": {
+        "head_minus_base": {
+          "median": 132.5,
+          "p05": 114.82,
+          "p95": 161.58
+        },
+        "head_noop_minus_base": {
+          "median": 6.0,
+          "p05": -13.11,
+          "p95": 25.76
+        },
+        "head_hoisted_minus_base": {
+          "median": 130.28,
+          "p05": 103.04,
+          "p95": 146.45
+        },
+        "head_minus_head_noop": {
+          "median": 128.82,
+          "p05": 107.07,
+          "p95": 159.06
+        },
+        "head_minus_head_hoisted": {
+          "median": 7.84,
+          "p05": -15.91,
+          "p95": 29.41
+        },
+        "aa_base_aa_minus_base": {
+          "median": 4.34,
+          "p05": -1.82,
+          "p95": 23.65
+        }
+      },
+      "standalone_us_median": {
+        "enabled_gate_only": 15.67,
+        "record_memory_prefetch": 100.59,
+        "record_execution_backend_existing": 98.82
+      }
+    }
+  },
+  "egress_blocked_attempts": [],
+  "load1_end": 13.4248046875
+}

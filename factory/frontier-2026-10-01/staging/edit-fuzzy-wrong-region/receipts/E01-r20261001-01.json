@@ -1,0 +1,142 @@
+{
+ "schema": "xf.receipt.v1 (hand-run)",
+ "id": "E01/r20261001-01",
+ "staging": "edit-fuzzy-wrong-region",
+ "tier": "T0 ($0): deterministic battery, direct fuzzy_find_and_replace calls, no model",
+ "question": "Does the #111127 battery at its current head reproduce the 6/6 vs 5/6 scorecard on current main, and does it move on the carrier arms?",
+ "inputs": {
+  "battery": "NousResearch/hermes-agent#111127 head 5444b1a2a83d8c9a239a98d01f91156dd1d73f96 (evals/edittool, git archive, unmodified)",
+  "main": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+  "fuzzy_match_blob": "a6a439d70e7d31a2ff781db3ab9baa6686ea4ee9",
+  "note": "fuzzy_match.py blob is identical on e496ccc7d7 (factory base), 572e4f4fad (tested) and 234badf401 (final)"
+ },
+ "command": "receipts/raw/scripts/run_e01.sh base c54575 c125376-leaf both both+fold  (per arm: python evals/edittool/runner.py --label <arm> --output <json>; python evals/edittool/report.py <json>; python evals/edittool/test_edittool.py)",
+ "results": {
+  "base": {
+   "str_replace": {
+    "score": "6/6",
+    "missing_anchor": "rejected (exact match count was 0, expected 1)"
+   },
+   "hermes_patch": {
+    "score": "5/6",
+    "missing_anchor": "applied (matched with context_aware)"
+   },
+   "scorecard": {
+    "path": "receipts/raw/e01/base.json",
+    "sha256": "5c8faf23463308e74df1a8932020e45f3b3eba508e2fba6194a88fba286cbf7b"
+   },
+   "fuzzy_match_sha256": "71eac9a33f6b8441f0cd1ac787fa08d1018dc0adb04430c17ff7e937253e8790"
+  },
+  "c54575": {
+   "str_replace": {
+    "score": "6/6",
+    "missing_anchor": "rejected (exact match count was 0, expected 1)"
+   },
+   "hermes_patch": {
+    "score": "5/6",
+    "missing_anchor": "applied (matched with context_aware)"
+   },
+   "scorecard": {
+    "path": "receipts/raw/e01/c54575.json",
+    "sha256": "1ec838b4b98b7c3df937a82f460c54d2d58ee7146163bdf939dbc4fb66be7728"
+   },
+   "fuzzy_match_sha256": "fc55b3d0563cee1e0d3526facc67f12ffe23af8da875f4617dd9b685784dfad4"
+  },
+  "c125376-leaf": {
+   "str_replace": {
+    "score": "6/6",
+    "missing_anchor": "rejected (exact match count was 0, expected 1)"
+   },
+   "hermes_patch": {
+    "score": "5/6",
+    "missing_anchor": "no_change (target text is already present)"
+   },
+   "scorecard": {
+    "path": "receipts/raw/e01/c125376-leaf.json",
+    "sha256": "33c749430f38a319b189df22853884192674bceb7b880ae2eceb49f3ffe0391c"
+   },
+   "fuzzy_match_sha256": "7e80805b0c8a04c5cad8bd82960ae39d42d4e1e84abb23f6221a0672d30eb23b"
+  },
+  "both": {
+   "str_replace": {
+    "score": "6/6",
+    "missing_anchor": "rejected (exact match count was 0, expected 1)"
+   },
+   "hermes_patch": {
+    "score": "5/6",
+    "missing_anchor": "no_change (target text is already present)"
+   },
+   "scorecard": {
+    "path": "receipts/raw/e01/both.json",
+    "sha256": "4be82cd111841afe0f62e8319e1d14fc5bb90bff0d88598b0dc7f192565d5477"
+   },
+   "fuzzy_match_sha256": "f42e75ebd653bf3c56137d76e48e3cb848e2b590dd470b282fa9877042b15449"
+  },
+  "both+fold": {
+   "str_replace": {
+    "score": "6/6",
+    "missing_anchor": "rejected (exact match count was 0, expected 1)"
+   },
+   "hermes_patch": {
+    "score": "5/6",
+    "missing_anchor": "no_change (target text is already present)"
+   },
+   "scorecard": {
+    "path": "receipts/raw/e01/both+fold.json",
+    "sha256": "e4ad776c0b9dee5697258054f9aafe85a051b42865ff4ff2aa1375de19eae01c"
+   },
+   "fuzzy_match_sha256": "145fb70356117a9ab7a9356f8f40f8257d7bdfd5ff045510d19b47cbbf6fc9a7"
+  }
+ },
+ "label": "OBSERVED",
+ "findings": [
+  "Main reproduces KeyArgo's 2026-09-16 scorecard (taken on head 602e596389b) at head 5444b1a2a8: str_replace 6/6, hermes_patch 5/6, missing_anchor applied via context_aware.",
+  "The score does not move on any fixed arm: with #125376's guard, missing_anchor becomes no_change, because the trap's new_string 'return value' is a substring of 'return value.strip()' and the already-applied check reports a success-shaped no-op. The file is untouched, but expected 'rejected' is still DRIFT.",
+  "So the battery as written cannot tell main from a fixed tree by score. A new_string that is not already in the file (the contract test uses 'return value.casefold()') makes the trap sensitive.",
+  "The test_edittool.py tripwire passes on every arm (it asserts the last task is NOT passed)."
+ ],
+ "trap_variant_check": {
+  "label": "OBSERVED (direct calls emulating arms._hermes_replace line for line; battery files not modified)",
+  "command": "python receipts/raw/scripts/probe_trap_variant.py <arms dir> base,c54575,c125376-leaf,both,both+fold",
+  "result": {
+   "base": {
+    "trap_as_written(new='return value')": "applied:context_aware",
+    "variant(new='return value.casefold()')": "applied:context_aware"
+   },
+   "c54575": {
+    "trap_as_written(new='return value')": "applied:context_aware",
+    "variant(new='return value.casefold()')": "applied:context_aware"
+   },
+   "c125376-leaf": {
+    "trap_as_written(new='return value')": "no_change",
+    "variant(new='return value.casefold()')": "rejected"
+   },
+   "both": {
+    "trap_as_written(new='return value')": "no_change",
+    "variant(new='return value.casefold()')": "rejected"
+   },
+   "both+fold": {
+    "trap_as_written(new='return value')": "no_change",
+    "variant(new='return value.casefold()')": "rejected"
+   }
+  },
+  "raw": {
+   "path": "receipts/raw/probes/probe_trap_variant.json",
+   "sha256": "240e51467517fa6426de7916fc2055fe4aff823b805448f8e6cda6053d571c2f"
+  },
+  "summary": "with new_string 'return value.casefold()' the trap is applied on main and rejected on every arm carrying #125376's guard, so the score would move 5/6 -> 6/6"
+ },
+ "attribution": "Battery author: KoNit-K (#111127). The 6/6 vs 5/6 scorecard was posted by KeyArgo (third-party run).",
+ "env": {
+  "host": "<local-workstation> (name withheld)",
+  "python_interpreter": "<venv-python> (interpreter only; HOME/HERMES_HOME isolated)",
+  "HOME": "$S/testhome-st-edit-fuzzy-wrong-region",
+  "HERMES_HOME": "$HOME/.hermes",
+  "network": "loopback-only by construction (no provider, no model, direct tool calls)",
+  "sandbox": "process isolation via run_tests.sh clean env; bwrap NOT used (xf executor not built)"
+ },
+ "verdict": "KEEP (reproduced; battery insensitivity recorded)",
+ "not_tested": [
+  "toolperf_abeval model arm (E02)"
+ ]
+}

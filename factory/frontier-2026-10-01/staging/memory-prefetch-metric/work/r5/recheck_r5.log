@@ -1,0 +1,100 @@
+main aaa863f7ff 25 [] {'clean': True, 'tree': '21c423feb3df08111ba13bd5cf8af2161c21af23'}
+98045 closed 77f018b7db 2026-10-01T12:51:06Z
+87028 open f63bfa2a5c None
+124151 open 3ee6189dba None
+120042 open 641f6b94c5 None
+47119 open  None
+21566 open  None
+92118 open 2ad5cc73fa None
+126457 closed 822f7b2835 2026-10-01T16:23:32Z
+86948 open cc1c2a1f2c None
+65329 open c868eaaa02 None
+125802 open 543af5de19 None
+15412 open 69c5a41321 None
+113678 open b94a482497 None
+78584 open e7c6f83e8a None
+127373 open  None
+127374 open  None
+127375 open  None
+127332 open  None
+127228 open  None
+125881 open d3fdffcf82 None
+108965 open 39dd41fe68 None
+129620 open 588b746cf6 None
+64421 open b6df099a1a None
+68903 open bce652651f None
+81582 open 36dcc4dfc8 None
+84360 open b856e23706 None
+115109 open 65d141f5ec None
+115694 open a9e3edd6ee None
+98703 open 6771ca2f4f None
+58597 open ae6946c1fc None
+63759 open 3165890dc8 None
+84412 open 30c9b1253c None
+101580 open d24b4d4042 None
+mozhongzhou [(126457, 'closed', ['agent/memory_manager.py', 'agent/memory_provider.py'])]
+prefetch metric 4 4
+prefetch telemetry 10 10
+memory prefetch 152 152
+prefetch_provider 0 0
+prefetch shared metrics 2 2
+memory.prefetch 1 1
+record_memory_prefetch 0 0
+external prefetch 60 60
+prefetch timeout 54 54
+prefetch latency 22 22
+teknium1 260 True [] []
+scan 177 flagged 50 records []
+merge 5688 open conflicts_with_main_already [] None
+merge 7789 open conflicts_with_main_already [] None
+merge 12126 open conflicts_with_main_already [] None
+merge 15412 open conflicts_with_main_already [] None
+merge 18565 open conflicts_with_main_already [] None
+merge 19833 open conflicts_with_main_already [] None
+merge 22876 open conflicts_with_main_already [] None
+merge 30991 open conflicts_with_main_already [] None
+merge 34215 open conflicts_with_main_already [] None
+merge 34521 open conflicts_with_main_already [] None
+merge 40425 open conflicts_with_main_already [] None
+merge 40967 open conflicts_with_main_already [] None
+merge 44378 open conflicts_with_main_already [] None
+merge 45743 open conflicts_with_main_already [] None
+merge 53182 open conflicts_with_main_already [] None
+merge 58597 open conflicts_with_main_already [] None
+merge 60953 open conflicts_with_main_already [] None
+merge 62841 open conflicts_with_main_already [] None
+merge 63759 open conflicts_with_main_already [] None
+merge 64288 open conflicts_with_main_already [] None
+merge 64421 open clean_both [] {'changed_vs_head': False, 'records': 4, 'returns': 4, 'raises': 1}
+merge 64528 open conflicts_with_main_already [] None
+merge 65329 open conflicts_with_main_already [] None
+merge 68721 open conflicts_with_main_already [] None
+merge 68903 open clean_both [] {'changed_vs_head': False, 'records': 4, 'returns': 4, 'raises': 1}
+merge 72385 open conflicts_with_main_already [] None
+merge 78584 open conflicts_with_main_already [] None
+merge 81582 open clean_both [] {'changed_vs_head': False, 'records': 4, 'returns': 4, 'raises': 1}
+merge 84360 open clean_both [] {'changed_vs_head': False, 'records': 4, 'returns': 4, 'raises': 1}
+merge 84412 open conflicts_with_main_already [] None
+merge 86948 open conflicts_with_main_already [] None
+merge 87028 open conflicts_with_main_already [] None
+merge 89283 open conflicts_with_main_already [] None
+merge 90385 open conflicts_with_main_already [] None
+merge 91974 open conflicts_with_main_already [] None
+merge 92118 open conflicts_with_head_only ['agent/memory_manager.py'] None
+merge 92149 open conflicts_with_main_already [] None
+merge 94983 open conflicts_with_main_already [] None
+merge 95387 open conflicts_with_main_already [] None
+merge 98768 open conflicts_with_main_already [] None
+merge 101580 open conflicts_with_main_already [] None
+merge 108965 open clean_both [] {'changed_vs_head': False, 'records': 4, 'returns': 4, 'raises': 1}
+merge 115109 open clean_both [] {'changed_vs_head': False, 'records': 4, 'returns': 4, 'raises': 1}
+merge 115694 open clean_both [] {'changed_vs_head': False, 'records': 4, 'returns': 4, 'raises': 1}
+merge 119191 open conflicts_with_main_already [] None
+merge 120042 open clean_both [] {'changed_vs_head': False, 'records': 4, 'returns': 4, 'raises': 1}
+merge 124151 open clean_both [] {'changed_vs_head': True, 'records': 4, 'returns': 4, 'raises': 1}
+merge 125802 open conflicts_with_main_already [] None
+merge 125881 open clean_both [] {'changed_vs_head': True, 'records': 4, 'returns': 5, 'raises': 1}
+merge 126457 closed conflicts_with_head_only ['agent/memory_manager.py'] None
+merge 129620 open clean_both [] {'changed_vs_head': False, 'records': 4, 'returns': 4, 'raises': 1}
+summary {'conflicts_with_main_already': 38, 'clean_both': 11, 'conflicts_with_head_only': 1} vs r4 {'left': [126457], 'entered': [], 'class_changed': {}, 'head_changed': []}
+wrote recheck_r5.json

@@ -1,0 +1,185 @@
+{
+ "schema": "xf.receipt.v1 (hand-run; xf executor not built)",
+ "id": "F01/r20261001-03",
+ "staging": "edit-fuzzy-wrong-region",
+ "kind": "freshness spot check of the staged head on a newer main, plus a direct-call probe of the #54575 content floor on the single-line cases (phase-3 round-3 fix)",
+ "relation": "F01/r20261001-02 stays the full proof (3 reps per arm, per-hunk sabotage, 13-file adjacent set, coverage, E01, M01) on main aea969677c. This receipt adds 1 RED run and 1 GREEN run of the same head re-applied on main 44a1ce9724, and the instrumented floor probe behind the corrected sentence in body.md section 3. It does not replace any r02 gate.",
+ "tier": "T1 ($0): real ShellFileOperations + LocalEnvironment (bash in tmp dir) for the runs; direct fuzzy_find_and_replace calls for the probe; no model, no provider",
+ "origin_refs": [
+  "NousResearch/hermes-agent#54572",
+  "NousResearch/hermes-agent#111116",
+  "NousResearch/hermes-agent#93698"
+ ],
+ "measured_at": "2026-10-01T16:10Z-16:16Z",
+ "base_revision": {
+  "main": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+  "proof_main": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+  "commits_since_proof_main": 29,
+  "byte_identical_since_proof_main": [
+   "tools/fuzzy_match.py",
+   "tools/file_operations.py",
+   "tools/patch_parser.py",
+   "tools/environments/local.py",
+   "tools/file_tools.py",
+   "acp_adapter/edit_approval.py",
+   "tests/acp_adapter/test_edit_approval.py",
+   "tests/hermes_cli/test_shared_metrics_harness.py",
+   "tests/tools/test_file_operations.py",
+   "tests/tools/test_file_operations_delete.py",
+   "tests/tools/test_file_operations_edge_cases.py",
+   "tests/tools/test_file_tools.py",
+   "tests/tools/test_file_tools_live.py",
+   "tests/tools/test_fuzzy_match.py",
+   "tests/tools/test_patch_already_applied.py",
+   "tests/tools/test_patch_multimatch_locations.py",
+   "tests/tools/test_patch_parser.py",
+   "tests/tools/test_patch_v4a_gate.py",
+   "tests/tools/test_patch_ws_diagnosis.py"
+  ],
+  "python_files_changed_since_proof_main": "23, all outside the edit path (agent/, cron/, gateway/, hermes_cli/, tools/kanban_tools*.py and their tests); tests/conftest.py and scripts/run_tests.sh unchanged"
+ },
+ "head_revision": {
+  "sha": "c3af284031fcdf95e0f0a05d872d25d84ad45039",
+  "applied_as": "git cherry-pick c3af284031 onto 44a1ce9724 in a throwaway detached worktree (clean; the run logs show its local id ee148e2a95). The staging branch was not moved and still points at c3af284031 on aea969677c."
+ },
+ "merge_check": {
+  "main": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+  "checked_at": "2026-10-01T16:10Z",
+  "command": "git merge-tree --write-tree 44a1ce9724 c3af284031",
+  "tree": "f23cd04b5de44fb2cbe2b9822232203ea42f259d",
+  "clean": true
+ },
+ "member_heads": {
+  "checked_at": "2026-10-01T16:12Z",
+  "method": "gh api (read-only) + git ls-remote refs/pull/<n>/head",
+  "unchanged": {
+   "54575": "e28d7c772d",
+   "125376": "5f3f5896a4",
+   "126502": "6d4fbff950",
+   "93717": "3c4c81f706",
+   "111127": "5444b1a2a8",
+   "128138": "83401c2591"
+  },
+  "state": "all six OPEN; issues #54572, #93698, #111116 OPEN; NousResearch/hermes-agent#130139 OPEN (body has no AI disclosure, 1 comment)"
+ },
+ "command": "HOME=$S/testhome-sf3-edit-fuzzy-wrong-region HERMES_HOME=$HOME/.hermes HERMES_PYTHON=<venv-python> bash scripts/run_tests.sh -j 2 <files> -q [-m 'not live and not integration']",
+ "results": {
+  "red": {
+   "arm": "base = main 44a1ce9724 + c3af284031",
+   "fuzzy_match_sha256": "71eac9a33f6b8441f0cd1ac787fa08d1018dc0adb04430c17ff7e937253e8790",
+   "same_fuzzy_match_as_r02_base": true,
+   "reps": 1,
+   "files": {
+    "tests/tools/test_fuzzy_match_wrong_region.py": {
+     "passed": 2,
+     "failed": 8,
+     "skipped": 0
+    }
+   },
+   "summary": "contract: 8 of 10 cases fail, 2 pass (the 2 near-miss cells); each of the 8 failures carries the marker",
+   "marker_counts": {
+    "block_anchor": 2,
+    "context_aware": 6
+   },
+   "log": {
+    "path": "receipts/raw/freshness-r3/base.red.log",
+    "sha256": "fdc6fbbf87695d33e20968216319fdfd24d65d5802f32665a4501ffb3f74d880"
+   }
+  },
+  "green": {
+   "arm": "both+fold = base + git cherry-pick -n 5f3f5896a4 + git apply c54575-rebased-on-main.diff + git apply foldin-125376-stripped-guard.diff (all clean)",
+   "fuzzy_match_sha256": "145fb70356117a9ab7a9356f8f40f8257d7bdfd5ff045510d19b47cbbf6fc9a7",
+   "same_fuzzy_match_as_r02_green": true,
+   "numstat_vs_head": {
+    "tools/fuzzy_match.py": [
+     36,
+     0
+    ],
+    "tests/tools/test_fuzzy_match.py": [
+     84,
+     0
+    ],
+    "tests/tools/test_file_tools_live.py": [
+     69,
+     0
+    ]
+   },
+   "reps": 1,
+   "files": {
+    "tests/tools/test_fuzzy_match_wrong_region.py": {
+     "passed": 10,
+     "failed": 0,
+     "skipped": 0
+    },
+    "tests/tools/test_fuzzy_match.py": {
+     "passed": 61,
+     "failed": 0,
+     "skipped": 0
+    },
+    "tests/tools/test_file_tools_live.py": {
+     "passed": 16,
+     "failed": 0,
+     "skipped": 0
+    }
+   },
+   "summary": "contract: 10 of 10 cases pass; carrier tests 61 of 61 and 16 of 16 pass",
+   "log": {
+    "path": "receipts/raw/freshness-r3/both+fold.green.log",
+    "sha256": "1efb8ba874db3045a6f24da91baf40c52f2f68f3ce85c59e7f468425cf018f06"
+   }
+  },
+  "not_rerun": "sabotage, adjacent, coverage, E01, M01: not re-run on 44a1ce9724. The edit-path sources and the 13 adjacent test files are byte-identical to aea969677c, where r02 measured them (adjacent 284 passed / 8 skipped / 0 failed on every chosen arm).",
+  "floor_reach_probe": {
+   "tree": "main 44a1ce9724 + c54575-rebased-on-main.diff only (tools/fuzzy_match.py sha256 fc55b3d0563cee1e0d3526facc67f12ffe23af8da875f4617dd9b685784dfad4, the same file as r02's c54575 merge)",
+   "method": "wrap tools.fuzzy_match._normalized_similarity to record every call, then call fuzzy_find_and_replace directly on the contract cases",
+   "observed": {
+    "context_aware_in_SIMILARITY_STRATEGIES": true,
+    "_FUZZY_CONTENT_FLOOR": 0.9,
+    "single_line_wrong_token": "floor called once, similarity 0.923 >= 0.90, match kept; applied via context_aware, count=1, error=None",
+    "single_line_missing_anchor": "floor called once, similarity 0.923, match kept; applied via context_aware, count=1, error=None",
+    "single_line_trailing_newline": "floor called once, similarity 0.923, match kept; applied via context_aware, count=1, error=None",
+    "block_anchor_middle": "floor called once, similarity 0.851 < 0.90, match dropped; no match, count=0, error='Could not find a match for old_string in the file'"
+   },
+   "finding": "#54575's floor does run on the single-line context_aware match; it lets trim() vs strip() through because 0.923 is above its 0.90 floor. Corrects body.md section 3, which said the floor does not reach that path. Consistent with r02's c54575 arm (the 6 single-line cells still land).",
+   "files": {
+    "probe_floor_reach.py": {
+     "path": "receipts/raw/probes-r3/probe_floor_reach.py",
+     "sha256": "c4157558c5e80c2702d2e55bfe38413b3594f67ad6201f9cef99b274350ce7aa"
+    },
+    "floor_reach_c54575.txt": {
+     "path": "receipts/raw/probes-r3/floor_reach_c54575.txt",
+     "sha256": "8228d08b9fef251b7d2102607edc22768761337e5ad13e8c12045aee1452acde"
+    }
+   }
+  }
+ },
+ "env": {
+  "host": "<local-workstation> (name withheld)",
+  "python_interpreter": "<venv-python> (interpreter only; HOME/HERMES_HOME isolated)",
+  "HOME": "$S/testhome-sf3-edit-fuzzy-wrong-region",
+  "HERMES_HOME": "$HOME/.hermes",
+  "network": "no provider, no model; gh and git ls-remote read-only for head and state checks",
+  "sandbox": "process isolation via run_tests.sh clean env; bwrap NOT used (xf executor not built)"
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "not_tested": [
+  "sabotage, adjacent, coverage, E01 and M01 on 44a1ce9724 (byte-identical inputs; see not_rerun)",
+  "more than 1 rep per arm on 44a1ce9724",
+  "F14 standing guards"
+ ],
+ "verdict": "KEEP",
+ "resource_usage": {
+  "api_cost_usd": 0.0,
+  "gpu_s": 0,
+  "test_runs": 2,
+  "probe_scripts": 1
+ },
+ "ai_assistance": "Claude Code (Opus 5.5) ran the spot check and the probe and wrote this receipt",
+ "privacy": "public-aggregate (synthetic fixtures only; absolute local paths replaced by $S, <venv-python> and <pytest-tmp>; no host name, no emails)"
+}

@@ -1,0 +1,32 @@
+xf_spec = 1
+id = "F11-N2-review-fix"
+rev = 1
+kind = "redgreen"
+issue = "kvnloo/hermes-agent#322"
+ai_assistance = "Spec and runner written with Claude Code (Opus 5.5); disclosed per repository policy"
+origin_refs = ["rework:review-fix 8ded06be29", "NousResearch/hermes-agent#123545"]
+expected = "refused at GREEN (not_fixed)"
+[base]
+repo = "NousResearch/hermes-agent"
+pin = "a7c2df3846f7d6040dd81b7573bd962da546222e"
+[head]
+commit = "ac0b07597d767ce8aa3390b60fde1020e3274e72"
+merge_onto_base = false
+[inject]
+tests_from = "8ded06be29cff20f284a474f6e304bda38b84940"
+files = ["tests/tui_gateway/test_submit_row_session_target.py"]
+[probe]
+kind = "pytest"
+files = ["tests/tui_gateway/test_submit_row_session_target.py"]
+reps = 3
+jobs = 2
+timeout_s = 900
+[oracle]
+red_markers = ["AssertionError"]
+sabotage = "per_hunk"
+adjacent = []
+[ownership]
+verdict = "unknown"
+queries = []
+[outputs]
+not_tested = ["full test suite", "real provider responses", "kernel network namespace (in-process guard only)"]

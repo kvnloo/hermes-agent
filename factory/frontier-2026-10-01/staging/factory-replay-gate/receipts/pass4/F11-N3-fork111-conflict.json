@@ -1,0 +1,121 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "F11-N3-fork111-conflict/r20261001T115829Z",
+ "generated_at": "2026-10-01T11:58:29Z",
+ "spec": {
+  "id": "F11-N3-fork111-conflict",
+  "rev": 1,
+  "sha256": "3cabbfdc692d6f969b78aab59672414fc4791950ea9a48a71dd89e5ed509953a",
+  "kind": "redgreen"
+ },
+ "work_order": {
+  "id": "xf-F11-N3-fork111-conflict",
+  "from": "factory-replay-gate staging builder",
+  "status": "claimed"
+ },
+ "runner_revision": "evals/_factory/gate_runner.py@4dfd1eb59f91",
+ "issue": "kvnloo/hermes-agent#322",
+ "origin_refs": [
+  "kvnloo/hermes-agent#111"
+ ],
+ "base_revision": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+ "head_revision": "df1b7e4ed77d4a519544f5b29b52858b2382e530",
+ "arms": {
+  "base": {
+   "commit": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+   "tree": "6ec691f75dee76b62b90b7c9f01d2ec02bf282aa"
+  },
+  "head": {
+   "commit": "df1b7e4ed77d4a519544f5b29b52858b2382e530",
+   "merge": "direct",
+   "arm_commit": "df1b7e4ed77d4a519544f5b29b52858b2382e530",
+   "tree": "0331f296f0846f6e327f04ea0a7a33a37436f4a8"
+  }
+ },
+ "changed_files": [],
+ "tests": {},
+ "gates": {
+  "validity": {
+   "result": "FAIL",
+   "reason": "conflicting",
+   "files": [
+    "tests/hermes_cli/test_profile_rename_checkpoints.py",
+    "tools/checkpoint_manager.py"
+   ]
+  },
+  "ownership": {
+   "result": "PENDING",
+   "recorded": "unknown",
+   "searched_at": null,
+   "queries": []
+  },
+  "flaky": false
+ },
+ "measurements": [
+  {
+   "name": "red_reps_failing_with_marker",
+   "value": null,
+   "unit": "reps",
+   "label": "OBSERVED",
+   "source": "probe",
+   "primary": true
+  }
+ ],
+ "denominators": {
+  "cells": 0,
+  "infra": 0,
+  "completeness": null
+ },
+ "env": {
+  "python": null,
+  "sandbox": "in-process guard per cell (loopback-only connect, name lookups, live-home opens, hermes exec); fresh HOME/HERMES_HOME per cell; empty env; no kernel network namespace",
+  "relay": {}
+ },
+ "safety": {
+  "canary": null,
+  "egress_blocked": 0,
+  "home_blocked": 0,
+  "exec_blocked": 0,
+  "interpreter_writes_refused": 0,
+  "hermes_home_isolated": false
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "builds": [],
+ "runtime_evidence": [],
+ "security_checks": [],
+ "resource_usage": {
+  "wall_s": 0.1,
+  "cpu_core_s": null,
+  "tokens": 0,
+  "api_cost_usd": 0.0
+ },
+ "outcome": {
+  "execution_completed": false,
+  "verified_success": null,
+  "verification_source": "self-run gate runner (not independent)"
+ },
+ "provenance": "self",
+ "verdict": "BLOCKED",
+ "refused": true,
+ "refusal_reasons": [
+  "validity: conflicting",
+  "ownership: PENDING"
+ ],
+ "unpinned_hunks": [],
+ "limitations": [
+  "in-process guard only; pair with a kernel network namespace for a hard boundary"
+ ],
+ "not_tested": [
+  "full test suite",
+  "real provider responses",
+  "kernel network namespace (in-process guard only)"
+ ],
+ "ai_assistance": "Spec and runner written with Claude Code (Opus 5.5); disclosed per repository policy",
+ "privacy": "public-aggregate"
+}

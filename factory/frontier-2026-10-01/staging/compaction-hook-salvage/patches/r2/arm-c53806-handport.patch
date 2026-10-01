@@ -1,0 +1,71 @@
+diff --git a/agent/conversation_compression.py b/agent/conversation_compression.py
+index f832e65dd7..7def967466 100644
+--- a/agent/conversation_compression.py
++++ b/agent/conversation_compression.py
+@@ -3482,6 +3482,25 @@ def _finish_compaction_boundary(
+         )
+         notify(agent, new_session_id=agent.session_id or "", old_session_id=_boundary_parent)
+ 
++        # Notify generic plugins of the same compaction boundary.  A plugin can use
++        # this to mark a task-state record replayable for the next turn/session, and
++        # then return that state through the existing pre_llm_call context-injection
++        # contract. Return values are ignored here to keep compression cache-safe.
++        try:
++            from hermes_cli.plugins import invoke_hook as _invoke_hook
++            _invoke_hook(
++                "on_session_start",
++                session_id=agent.session_id or "",
++                boundary_reason="compression",
++                old_session_id=_boundary_parent,
++                platform=getattr(agent, "platform", None) or "cli",
++                model=getattr(agent, "model", ""),
++                context_length=getattr(agent.context_compressor, "context_length", None),
++                conversation_id=getattr(agent, "_gateway_session_key", None),
++            )
++        except Exception as _plugin_err:
++            logger.debug("plugin on_session_start (compression): %s", _plugin_err)
++
+     # Providers refresh cached per-session state; reset=False, conversation goes on.
+     # Fires in BOTH modes so buffers don't double-count dropped turns in-place.
+     with _swallow('memory manager on_session_switch (compression): %s'):
+@@ -3922,6 +3941,25 @@ def _run_summary_phase(
+             bypass_cooldown=bypass_cooldown,
+         )
+         messages_before_compression = copy.deepcopy(messages)
++        # Notify generic plugins before compression discards/summarizes older turns.
++        # Observer-only: return values are ignored. Plugins can persist task-state,
++        # handoff breadcrumbs, or external-memory snapshots without mutating the
++        # live conversation or breaking prompt caching.
++        try:
++            from hermes_cli.plugins import invoke_hook as _invoke_hook
++            _invoke_hook(
++                "pre_context_compression",
++                session_id=agent.session_id or "",
++                conversation_history=list(messages),
++                approx_tokens=approx_tokens,
++                focus_topic=focus_topic,
++                force=force,
++                model=getattr(agent, "model", ""),
++                platform=getattr(agent, "platform", None) or "cli",
++                conversation_id=getattr(agent, "_gateway_session_key", None),
++            )
++        except Exception as _plugin_err:
++            logger.debug("plugin pre_context_compression failed: %s", _plugin_err)
+         _activity_heartbeat = _CompressionActivityHeartbeat(
+             agent, commit_fence=commit_fence, emit_client_status=lease.status_emitted,
+         ).start()
+diff --git a/hermes_cli/plugins.py b/hermes_cli/plugins.py
+index 02222185a2..ff091a848d 100644
+--- a/hermes_cli/plugins.py
++++ b/hermes_cli/plugins.py
+@@ -131,6 +131,10 @@ VALID_HOOKS: Set[str] = {
+     # error_body may be unredacted.
+     "transform_api_error_classification", "on_session_start", "on_session_end",
+     "on_session_finalize", "on_session_reset",
++    # Fired immediately before context compression drops/summarizes older
++    # turns. Observer-only: return values are ignored. Plugins can persist
++    # task-state or handoff breadcrumbs without mutating the live message list.
++    "pre_context_compression",
+     # on_skill_lifecycle: successful skill lifecycle facts (local skill name visible to plugins).
+     "on_skill_lifecycle", "subagent_start", "subagent_stop",
+     # pre_gateway_dispatch: once per incoming MessageEvent, after the internal-event guard, BEFORE

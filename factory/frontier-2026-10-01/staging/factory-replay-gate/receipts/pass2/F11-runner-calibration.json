@@ -1,0 +1,190 @@
+{
+ "schema": "xf.experiment.v1",
+ "tier": "T1",
+ "cost_usd": 0,
+ "label": "OBSERVED",
+ "runner_commit": "be292fd2ba4bed799c3a02ebf579f39389d136c6",
+ "base_main": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+ "command": "specs/run_all.sh <spec ids>  (python -m evals._factory.gate_runner run --work-order specs/<id>.wo.json --repo h.git --scratch <wt>/.xf-runs --python <hermes venv python> --out receipts/<id>.json)",
+ "id": "F11/r20261001T100137Z",
+ "question": "Does the runner reproduce RED/GREEN/negative/adjacent on 3 READY branches re-based on current main, and refuse 3 known-bad candidates?",
+ "results": {
+  "known_good_four_columns_pass": "3/3",
+  "known_good_keep": "3/3",
+  "known_bad_refused": "3/3",
+  "false_ready": 0,
+  "classifications_matching": "6/6"
+ },
+ "positives": [
+  {
+   "spec": "F11-P1-fork50",
+   "rev": 1,
+   "receipt": "receipts/F11-P1-fork50.json",
+   "receipt_sha256": "1b3ebde768d4737cef905c3fff420a6e5ff2880f1b9357f9ab9ae27f57005bb0",
+   "base": "572e4f4fad",
+   "head": "4d0e03c8a1",
+   "pre_registered": "KEEP (4 columns PASS)",
+   "verdict": "KEEP",
+   "refused": false,
+   "four_columns_pass": true,
+   "gates": {
+    "validity": "PASS",
+    "red": "PASS",
+    "green": "PASS",
+    "sabotage": "PASS",
+    "adjacent": "PASS",
+    "ownership": "PASS"
+   },
+   "underlying_when_infra": {},
+   "cells": 9,
+   "infra_cells": 0,
+   "egress_blocked": 0,
+   "wall_s": 46.5
+  },
+  {
+   "spec": "F11-P2-fork112",
+   "rev": 2,
+   "receipt": "receipts/F11-P2-fork112-r2.json",
+   "receipt_sha256": "9f75542fc58cdd9caa28846479efb2195969de11512b615a01b77a232bb243ba",
+   "base": "572e4f4fad",
+   "head": "83190e3859",
+   "pre_registered": "KEEP (4 columns PASS)",
+   "verdict": "KEEP",
+   "refused": false,
+   "four_columns_pass": true,
+   "gates": {
+    "validity": "PASS",
+    "red": "PASS",
+    "green": "PASS",
+    "sabotage": "PASS",
+    "adjacent": "PASS",
+    "ownership": "PASS"
+   },
+   "underlying_when_infra": {},
+   "cells": 12,
+   "infra_cells": 0,
+   "egress_blocked": 0,
+   "wall_s": 242.5
+  },
+  {
+   "spec": "F11-P3-fork47v2",
+   "rev": 1,
+   "receipt": "receipts/F11-P3-fork47v2.json",
+   "receipt_sha256": "77ec71bc35888becde7f2d8e77b5b075723a05b6a9f53b8a0bce633e41f73474",
+   "base": "572e4f4fad",
+   "head": "1d31fe5193",
+   "pre_registered": "KEEP (4 columns PASS)",
+   "verdict": "KEEP",
+   "refused": false,
+   "four_columns_pass": true,
+   "gates": {
+    "validity": "PASS",
+    "red": "PASS",
+    "green": "PASS",
+    "sabotage": "PASS",
+    "adjacent": "PASS",
+    "ownership": "PASS"
+   },
+   "underlying_when_infra": {},
+   "cells": 10,
+   "infra_cells": 0,
+   "egress_blocked": 0,
+   "wall_s": 57.5
+  }
+ ],
+ "negatives": [
+  {
+   "spec": "F11-N1-noop-revert",
+   "rev": 1,
+   "receipt": "receipts/F11-N1-noop-revert.json",
+   "receipt_sha256": "8463f7895adf1133ec944c2927e2f792855011edc584bd7feffaba89d68f5155",
+   "base": "658e6c885d",
+   "head": "354d499511",
+   "pre_registered": "refused at RED (no_repro_on_base)",
+   "verdict": "INFRA",
+   "refused": true,
+   "four_columns_pass": false,
+   "gates": {
+    "validity": "PASS",
+    "red": "INFRA",
+    "green": "INFRA",
+    "sabotage": "N_A",
+    "adjacent": "N_A",
+    "ownership": "PENDING"
+   },
+   "underlying_when_infra": {
+    "red": "FAIL",
+    "green": "PASS"
+   },
+   "cells": 6,
+   "infra_cells": 6,
+   "egress_blocked": 6,
+   "wall_s": 86.2
+  },
+  {
+   "spec": "F11-N2-review-fix",
+   "rev": 1,
+   "receipt": "receipts/F11-N2-review-fix.json",
+   "receipt_sha256": "3e23b989b8453df4e0936f651b8552590c96dae464b58901438c76b6f8c296f7",
+   "base": "a7c2df3846",
+   "head": "ac0b07597d",
+   "pre_registered": "refused at GREEN (not_fixed)",
+   "verdict": "DISCARD",
+   "refused": true,
+   "four_columns_pass": false,
+   "gates": {
+    "validity": "PASS",
+    "red": "PASS",
+    "green": "FAIL",
+    "sabotage": "N_A",
+    "adjacent": "N_A",
+    "ownership": "PENDING"
+   },
+   "underlying_when_infra": {},
+   "cells": 6,
+   "infra_cells": 0,
+   "egress_blocked": 0,
+   "wall_s": 74.9
+  },
+  {
+   "spec": "F11-N3-fork111-conflict",
+   "rev": 1,
+   "receipt": "receipts/F11-N3-fork111-conflict.json",
+   "receipt_sha256": "0da47ef2ab9204431c8b2dd5df0ef2f02a0813beddc7c8c230741f465c9290c2",
+   "base": "572e4f4fad",
+   "head": "df1b7e4ed7",
+   "pre_registered": "refused at materialization (BLOCKED, conflicting)",
+   "verdict": "BLOCKED",
+   "refused": true,
+   "four_columns_pass": false,
+   "gates": {
+    "validity": "FAIL",
+    "red": null,
+    "green": null,
+    "sabotage": null,
+    "adjacent": null,
+    "ownership": "PENDING"
+   },
+   "underlying_when_infra": {},
+   "cells": 0,
+   "infra_cells": 0,
+   "egress_blocked": 0,
+   "wall_s": 0.0
+  }
+ ],
+ "pass1": {
+  "receipts": "receipts/pass1/",
+  "runner_commit": "b01d6dcb8b",
+  "findings": [
+   "F11-N2 falsely accepted (PARTIAL): tests from inject.tests_from were applied to base only, so head was graded on its own weaker test -> fixed (head gets them too) and pinned by the unit test",
+   "F11-P2 rev 1 refused a known-good item: its marker quoted the untruncated repr but pytest -q prints ('killed', 'p...ss.kill', -15) -> spec rev 2 (marker authoring lesson, not a runner change)",
+   "E30-N1 BLOCKED by the exec denylist on a docstring mentioning execvp -> denylist now matches call syntax only",
+   "Relay pin probe crashed on an installed-but-incompatible nemo_relay -> recorded as an error field"
+  ]
+ },
+ "verdict": "PASS (6/6, false-READY 0) after one runner fix found by pass 1",
+ "caveats": [
+  "F11-N1 was refused as INFRA (the test resolves openrouter.ai during the run), not at RED; underlying RED was FAIL no_repro_on_base 0/3 as pre-registered",
+  "ownership verdicts were recorded inputs from the 2026-09-30 readiness verdicts, not re-searched by the runner"
+ ]
+}

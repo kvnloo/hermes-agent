@@ -1,0 +1,39 @@
+  ┊ 📖 read      notes_00.txt  0.3s
+  ┊ 📖 read      notes_01.txt  0.0s
+  ┊ 📖 read      notes_02.txt  0.0s
+  ┊ 📖 read      notes_03.txt  0.0s
+  ┊ 📖 read      notes_04.txt  0.0s
+  ┊ 📖 read      notes_05.txt  0.0s
+  ┊ 📖 read      notes_06.txt  0.0s
+  ┊ 📖 read      notes_07.txt  0.0s
+  ┊ 📖 read      notes_08.txt  0.0s
+  ┊ 📖 read      notes_09.txt  0.0s
+  ┊ 📖 read      notes_10.txt  0.0s
+  ┊ 📖 read      notes_11.txt  0.0s
+{
+ "arm": "carrier",
+ "mode": "continue",
+ "requests": 24,
+ "errors": [],
+ "rows_archived": 10,
+ "pass_request_indices": [
+  9,
+  12,
+  17,
+  23
+ ],
+ "first_request_of_phase_C": {
+  "request_index": 20,
+  "rows_stubbed_on_last_phase_B_request": 7,
+  "of_those_sent_in_full": 0,
+  "of_those_same_stub_bytes": 7,
+  "rows_newly_stubbed": 0,
+  "invalidated_thinking_blocks": 0
+ },
+ "invalidated_by_phase": {
+  "A": 0,
+  "B": 1,
+  "C": 1
+ },
+ "egress_blocked": []
+}

@@ -1,0 +1,228 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "PROOF/r2",
+ "label": "OBSERVED",
+ "staging": "compaction-hook-salvage",
+ "staging_commit": "8c834af1e4c8bfe50ab35a26d99f423b0b0a2c18",
+ "base_revision": "bafb42b431fca313471958fdf77f9c30e455f86b",
+ "contract_test": {
+  "path": "tests/agent/test_compaction_observer_hook_contract.py",
+  "blob": "8b49e01d77189e03f4d3aadcb14e8012637bef8d",
+  "tests": 2,
+  "cases": 6
+ },
+ "production_seam": {
+  "file": "agent/conversation_compression.py",
+  "symbols": [
+   "_notify_context_engine_compression_complete",
+   "_queue_context_engine_compression_notification",
+   "_finish_compaction_boundary",
+   "finalize_context_engine_compression_notification"
+  ],
+  "mocked": false
+ },
+ "gates": {
+  "red": {
+   "arm": "base-latest",
+   "commit": "8c834af1e4c8bfe50ab35a26d99f423b0b0a2c18",
+   "per_rep": [
+    "3 passed / 3 failed",
+    "3 passed / 3 failed",
+    "3 passed / 3 failed"
+   ],
+   "reps_agree": true,
+   "failing": [
+    "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[in_place]",
+    "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+    "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[rotated]"
+   ],
+   "assertions": [
+    "AssertionError: on_compression_complete fired 0 times"
+   ],
+   "marker": "AssertionError: on_compression_complete fired 0 times",
+   "result": "PASS (RED as required)",
+   "also_on_572e4f4fad": [
+    "3 passed / 3 failed",
+    "3 passed / 3 failed",
+    "3 passed / 3 failed"
+   ]
+  },
+  "green": [
+   {
+    "arm": "c53806-foldin-latest",
+    "commit": "e1b4456c6ed47245eba37b93d8cce4ad6b6afa5b",
+    "per_rep": [
+     "6 passed / 0 failed",
+     "6 passed / 0 failed",
+     "6 passed / 0 failed"
+    ],
+    "reps_agree": true,
+    "failing": [],
+    "assertions": [],
+    "result": "PASS 3/3"
+   },
+   {
+    "arm": "foldin-ref-latest",
+    "commit": "ab07a228999d490246c988703e56dc2c060d12b7",
+    "per_rep": [
+     "6 passed / 0 failed",
+     "6 passed / 0 failed",
+     "6 passed / 0 failed"
+    ],
+    "reps_agree": true,
+    "failing": [],
+    "assertions": [],
+    "result": "PASS 3/3"
+   },
+   {
+    "arm": "foldin-bounded-latest",
+    "commit": "6ef91714c8053d32a3f2c8152c21ed15ddb53abc",
+    "per_rep": [
+     "6 passed / 0 failed",
+     "6 passed / 0 failed",
+     "6 passed / 0 failed"
+    ],
+    "reps_agree": true,
+    "failing": [],
+    "assertions": [],
+    "result": "PASS 3/3"
+   }
+  ],
+  "negative_control": [
+   {
+    "arm": "neg-prefire-latest",
+    "commit": "79718857d98f460c3a9b8bbca2f3021ddcc53c26",
+    "per_rep": [
+     "0 passed / 6 failed",
+     "0 passed / 6 failed",
+     "0 passed / 6 failed"
+    ],
+    "reps_agree": true,
+    "failing": [
+     "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[in_place]",
+     "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+     "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[rotated]",
+     "tests/agent/test_compaction_observer_hook_contract.py::test_observer_is_silent_when_nothing_commits[commit_failed]",
+     "tests/agent/test_compaction_observer_hook_contract.py::test_observer_is_silent_when_nothing_commits[manual_discarded]",
+     "tests/agent/test_compaction_observer_hook_contract.py::test_observer_is_silent_when_nothing_commits[summary_failed]"
+    ],
+    "assertions": [
+     "AssertionError: observer ran before the compacted transcript was durable",
+     "AssertionError: a deferred manual compaction must wait for the host's own commit",
+     "AssertionError: on_compression_complete fired for a compaction its host never committed: [{'session_id': 'original-session', 'old_session_id': 'original-session', 'in_place': True, 'tokens_before': 75000, 'tokens_after': 5557, 'platform': '"
+    ],
+    "mutation": "same hook call moved from the post-commit notify to just before _commit_compaction",
+    "result": "RED 6/6 failed (3/3 reps)"
+   },
+   {
+    "arm": "neg-nodefer-latest",
+    "commit": "69fa9c3c384702136189ddd757caf0880591327c",
+    "per_rep": [
+     "4 passed / 2 failed",
+     "4 passed / 2 failed",
+     "4 passed / 2 failed"
+    ],
+    "reps_agree": true,
+    "failing": [
+     "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+     "tests/agent/test_compaction_observer_hook_contract.py::test_observer_is_silent_when_nothing_commits[manual_discarded]"
+    ],
+    "assertions": [
+     "AssertionError: a deferred manual compaction must wait for the host's own commit",
+     "AssertionError: on_compression_complete fired for a compaction its host never committed: [{'session_id': 'original-session', 'old_session_id': 'original-session', 'in_place': True, 'tokens_before': 75000, 'tokens_after': 11617, 'platform': "
+    ],
+    "mutation": "manual-host deferral bypassed",
+    "result": "RED 2/6 failed (manual_deferred, manual_discarded)"
+   }
+  ],
+  "sabotage_per_hunk_on_572e4f4fad": [
+   {
+    "hunk": "notify: on_compression_complete dispatch block removed",
+    "equivalent_arm": "base",
+    "result": "RED 3/6"
+   },
+   {
+    "hunk": "deferred queue stops forwarding payload",
+    "arm": "sab-h2-queue-payload",
+    "per_rep": [
+     "5 passed / 1 failed",
+     "5 passed / 1 failed",
+     "5 passed / 1 failed"
+    ],
+    "result": "RED 1/6 (manual_deferred tokens)"
+   },
+   {
+    "hunk": "compress_context stops passing tokens_before",
+    "arm": "sab-h3-tokens-before",
+    "per_rep": [
+     "3 passed / 3 failed",
+     "3 passed / 3 failed",
+     "3 passed / 3 failed"
+    ],
+    "result": "RED 3/6"
+   },
+   {
+    "hunk": "VALID_HOOKS entry removed",
+    "arm": "sab-h5-valid-hooks",
+    "per_rep": [
+     "6 passed / 0 failed",
+     "6 passed / 0 failed",
+     "6 passed / 0 failed"
+    ],
+    "result": "GREEN: unpinned hunk (dispatch does not consult VALID_HOOKS; the entry is the documented allow-list, incl. shell hooks)"
+   }
+  ],
+  "unpinned_hunks": [
+   "hermes_cli/plugins.py VALID_HOOKS entries (allow-list/docs)",
+   "on_compression_start rename of #53806's pre hook (start side; outside this contract)"
+  ],
+  "adjacent": "base 113 passed / 3 failed (the 3 failures are the new contract RED) / 2 skipped; c53806-foldin 116/0; foldin-bounded 116/0 (OBSERVED)",
+  "guards": {
+   "replay_gates": "11/11 PASS on base, c53806-foldin, foldin-bounded; verdict maps equal after removing volatile fields (OBSERVED)",
+   "ab_checkpoint_preflight": "local compress calls identical: capture turn2/3 = 0/0 (cli and gateway), restore resume = 0, over_threshold turn2/3 = 0/1 (OBSERVED)",
+   "test_region_scoping": "scoping tripwire: ALL PASS (legacy + lean) on all arms (OBSERVED)"
+  },
+  "flaky": false,
+  "validity": "INFRA"
+ },
+ "sources": {
+  "F05-f05-r1.json": "501a60bfbe9c3c73448f533bec9384f71027d0f0def7bf8ef89c9c5e354aa28b",
+  "F05-f05-r2.json": "d810bb9424791f7831189e7c89a62068e66231a60496d4deedb5fc73f8c131bd",
+  "E12-e12-r2.json": "4f27df719da21f1fe632a4731220b18fea56e2368681d98a841c4547eda2e162"
+ },
+ "cost": {
+  "usd": 0
+ },
+ "spec": {
+  "path": null,
+  "rev": 2,
+  "sha256": null,
+  "prereg_commit": null,
+  "note": "no xf_spec TOML was written"
+ },
+ "issue": null,
+ "provenance": "self",
+ "frozen": null,
+ "privacy": "public-aggregate after the round-1 scrub: local paths replaced by placeholders ($S, $TESTHOME, $WORKTREE, $PY)",
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "policy_revision": {
+  "factory": "FACTORY.md (round 0; not hashed at the time)"
+ },
+ "verdict": "INFRA",
+ "denominators": {
+  "cells": null,
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "infra": null,
+  "completeness": 1.0
+ },
+ "s16": "INFRA: aggregates F05/f05-r1, F05/f05-r2 and E12/e12-r2, which are INFRA under S16. Superseded by PROOF/r3.",
+ "superseded_by": "PROOF/r3",
+ "round1_note": "scrubbed and re-labelled in round 1 (2026-10-01): r1/r2 tool versions kept under tools/r1/ (their sha256 values above still match), r2 patches moved to patches/r2/"
+}

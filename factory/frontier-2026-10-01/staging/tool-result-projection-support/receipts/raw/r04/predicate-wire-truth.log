@@ -1,0 +1,45 @@
+{
+ "summary": {
+  "v1": {
+   "exact": 4,
+   "over_decline": 4,
+   "MISS": 2,
+   "out_of_scope": 2,
+   "declines_out_of_scope": 0
+  },
+  "v2": {
+   "exact": 5,
+   "over_decline": 5,
+   "MISS": 0,
+   "out_of_scope": 2,
+   "declines_out_of_scope": 0
+  },
+  "v3": {
+   "exact": 8,
+   "over_decline": 2,
+   "MISS": 0,
+   "out_of_scope": 2,
+   "declines_out_of_scope": 0
+  }
+ },
+ "misses": {
+  "v1": [
+   "Messages, anthropic.com: reasoning_details stripped (turn_recovery retry), anthropic_content_blocks replayed",
+   "Converse: signed reasoningText in bedrock_content_blocks"
+  ],
+  "v2": [],
+  "v3": []
+ }
+}
+Messages, anthropic.com: latest row signed (reasoning_details + anthropic_conten wire=True  bound=True    v1=exact         v2=exact         v3=exact
+Messages, anthropic.com: reasoning_details stripped (turn_recovery retry), anthr wire=True  bound=True    v1=MISS          v2=exact         v3=exact
+Messages, anthropic.com: thinking without a signature                            wire=False bound=False   v1=exact         v2=exact         v3=exact
+Messages, anthropic.com: only an OLDER assistant row is signed; the latest has n wire=False bound=False   v1=over_decline  v2=over_decline  v3=over_decline
+Messages, Nous Portal: latest row signed                                         wire=True  bound=True    v1=exact         v2=exact         v3=exact
+Messages, MiniMax (third-party): stored rows signed                              wire=False bound=False   v1=over_decline  v2=over_decline  v3=exact
+Messages, Kimi coding (third-party, replays blocks as-is, no Claude check)       wire=True  bound=False   v1=over_decline  v2=over_decline  v3=exact
+Messages via AnthropicBedrock SDK (bedrock-runtime base URL): stored rows signed wire=False bound=False   v1=over_decline  v2=over_decline  v3=exact
+Converse: signed reasoningText in bedrock_content_blocks                         wire=True  bound=True    v1=MISS          v2=exact         v3=exact
+Converse: row carries only Messages copies (session moved from native Messages t wire=False bound=False   v1=exact         v2=over_decline  v3=over_decline
+chat_completions, OpenRouter: Claude row with signed reasoning_details           wire=True  bound=unknown v1=out_of_scope  v2=out_of_scope  v3=out_of_scope
+codex_responses: Bedrock row on another wire                                     wire=None  bound=False   v1=out_of_scope  v2=out_of_scope  v3=out_of_scope

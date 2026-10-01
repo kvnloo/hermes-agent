@@ -1,0 +1,44 @@
+{
+ "base.stacks": {
+  "total": 224,
+  "by_file_and_source": {
+   "tests/agent/test_compression_attempt_lifecycle.py | OpenRouter model-metadata GET (agent init -> get_model_context_length)": 10,
+   "tests/agent/test_compression_attempt_lifecycle.py | OpenRouter video catalog GET (tool definitions build)": 18,
+   "tests/agent/test_compression_boundary_hook.py | OpenRouter model-metadata GET (agent init -> get_model_context_length)": 7,
+   "tests/agent/test_compression_boundary_hook.py | OpenRouter video catalog GET (tool definitions build)": 14,
+   "tests/agent/test_compression_commit_fence_race.py | OpenRouter model-metadata GET (agent init -> get_model_context_length)": 2,
+   "tests/agent/test_compression_commit_fence_race.py | OpenRouter video catalog GET (tool definitions build)": 4,
+   "tests/agent/test_compression_persistence.py | OpenRouter model-metadata GET (agent init -> get_model_context_length)": 6,
+   "tests/agent/test_compression_persistence.py | OpenRouter video catalog GET (tool definitions build)": 12,
+   "tests/agent/test_compression_rotation_state.py | OpenRouter model-metadata GET (agent init -> get_model_context_length)": 40,
+   "tests/agent/test_compression_rotation_state.py | OpenRouter video catalog GET (tool definitions build)": 72,
+   "tests/agent/test_conversation_compression_manual.py | OpenRouter model-metadata GET (agent init -> get_model_context_length)": 12,
+   "tests/agent/test_conversation_compression_manual.py | OpenRouter video catalog GET (tool definitions build)": 22,
+   "tests/agent/test_pre_compress_memory_context_handoff.py | OpenRouter model-metadata GET (agent init -> get_model_context_length)": 5
+  }
+ },
+ "c53806-foldin.stacks": {
+  "total": 224,
+  "by_file_and_source": {
+   "tests/agent/test_compression_attempt_lifecycle.py | OpenRouter model-metadata GET (agent init -> get_model_context_length)": 10,
+   "tests/agent/test_compression_attempt_lifecycle.py | OpenRouter video catalog GET (tool definitions build)": 18,
+   "tests/agent/test_compression_boundary_hook.py | OpenRouter model-metadata GET (agent init -> get_model_context_length)": 7,
+   "tests/agent/test_compression_boundary_hook.py | OpenRouter video catalog GET (tool definitions build)": 14,
+   "tests/agent/test_compression_commit_fence_race.py | OpenRouter model-metadata GET (agent init -> get_model_context_length)": 2,
+   "tests/agent/test_compression_commit_fence_race.py | OpenRouter video catalog GET (tool definitions build)": 4,
+   "tests/agent/test_compression_persistence.py | OpenRouter model-metadata GET (agent init -> get_model_context_length)": 6,
+   "tests/agent/test_compression_persistence.py | OpenRouter video catalog GET (tool definitions build)": 12,
+   "tests/agent/test_compression_rotation_state.py | OpenRouter model-metadata GET (agent init -> get_model_context_length)": 40,
+   "tests/agent/test_compression_rotation_state.py | OpenRouter video catalog GET (tool definitions build)": 72,
+   "tests/agent/test_conversation_compression_manual.py | OpenRouter model-metadata GET (agent init -> get_model_context_length)": 12,
+   "tests/agent/test_conversation_compression_manual.py | OpenRouter video catalog GET (tool definitions build)": 22,
+   "tests/agent/test_pre_compress_memory_context_handoff.py | OpenRouter model-metadata GET (agent init -> get_model_context_length)": 5
+  }
+ },
+ "c53806-foldin-test_region_scoping.stacks": {
+  "total": 2,
+  "by_file_and_source": {
+   "evals/compaction/test_region_scoping.py | OpenRouter model-metadata GET (agent init -> get_model_context_length)": 2
+  }
+ }
+}

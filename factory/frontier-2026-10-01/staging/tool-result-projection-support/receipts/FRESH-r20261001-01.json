@@ -1,0 +1,145 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "FRESH/r20261001-01",
+ "tier": "T1",
+ "kind": "redgreen",
+ "staging": "tool-result-projection-support",
+ "experiment": "Freshness re-check after main moved 11 commits (approval/clarify timeout work; no projection-relevant paths) during the run: slice commit cherry-picked onto the newest main, carrier rebuilt on it (same add/add resolution, blob b94e723f76), one rep per arm",
+ "base_revision": "234badf4012af380d23c91eae55d045a69c69ffb",
+ "previous_base": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+ "drift_paths_checked": "git diff --name-only 572e4f4fad 234badf401 -> only hermes_cli/config_defaults.py among projection-adjacent paths (comment-only change in the clarify/approvals sections)",
+ "arms": {
+  "staging": {
+   "commit": "d5854fdd7b7f8082c529c975c3d8d6a39513d76c",
+   "tree": "72a1814b7e7b700a488340f47c42fa0e3e54dfd7"
+  },
+  "carrier_rebased": {
+   "commit": "c55de968aea9943d4c2af1815eae1e98150d547b",
+   "tree": "a6378b3003ebc422d82d876b0ea8810e06e0e887"
+  },
+  "carrier_rebased_plus_test": {
+   "commit": "60d6efd86e80c29ce7e655ac602a1293fd4ea4fb",
+   "tree": "93dc9f20a2719521ae36f5edcc3408e9cad3bf54"
+  }
+ },
+ "command": "HOME=$S/testhome-st-tool-result-projection-support HERMES_HOME=$HOME/.hermes HERMES_PYTHON=$PY bash scripts/run_tests.sh -j 2 <files> -q",
+ "results": {
+  "label": "OBSERVED",
+  "staging": "tests/e2e/core/history/test_tool_result_projection_wire.py: 1 passed, 1 failed (A RED: 'no tool result was ever archived on the wire: 28 requests, 14 tool rows'; B GREEN)",
+  "carrier_rebased_plus_test": "wire test + tests/agent/test_tool_result_projection.py + tests/tui_gateway/test_compression_config_hot_reload.py: 70 passed, 1 failed (B: thinking block replayed over a rewritten prefix)",
+  "carrier_rebased_plus_test_plus_foldin": "wire test + tests/agent/test_tool_result_projection.py: 55 passed, 0 failed"
+ },
+ "artifacts": [
+  {
+   "path": "receipts/raw/fresh-staging.txt",
+   "sha256": "87bf0a3b13b4ccabb4d4f1f676247227a17091a8b07afe560c289ef5ca8a1699"
+  },
+  {
+   "path": "receipts/raw/fresh-carrier.txt",
+   "sha256": "dfa7fa0652c6ba27ee78f2a23dfd69bc0c49b993e80b9b522a9a404b6b791bc5"
+  },
+  {
+   "path": "receipts/raw/fresh-foldin.txt",
+   "sha256": "6cf86c67a57da7c0cecfbad02e39b9c80ac7f44935106e152a68da54c3384c55"
+  }
+ ],
+ "cost": {
+  "api_cost_usd": 0.0
+ },
+ "provenance": "self",
+ "verdict": "FRESH (matches r20261001-01 receipts)",
+ "env": {
+  "host": "withheld (one local workstation; receipts carry no host names)",
+  "python": "3.11.14 ($PY = the repo venv interpreter, used read-only)",
+  "relay": {
+   "present": true,
+   "package": "nemo-relay 0.8.4 (installed in the shared repo venv; not part of this change)",
+   "state": "FAILED at initialize(): agent/relay_runtime.py calls relay.plugin.initialize({}, additional_plugins_toml=...), which nemo-relay 0.8.4 does not accept, so Hermes logs 'Hermes Relay plugin initialization failed' and disables Relay middleware. No Relay plugin was active in any run (recorded in round 2; the venv was the same in this round).",
+   "plugins_toml_sha256": null,
+   "config_paths": [],
+   "explicit_plugins_toml": "none: HERMES_NEMO_RELAY_PLUGINS_TOML unset and the isolated HERMES_HOME has no relay-plugins.toml"
+  }
+ },
+ "spec": {
+  "path": null,
+  "rev": null,
+  "sha256": null,
+  "prereg_commit": null,
+  "decision_rule_sha": null,
+  "note": "not pre-registered: an ad-hoc staging run under FACTORY.md section 8. The decision rule is the assertion set of tests/e2e/core/history/test_tool_result_projection_wire.py (blob 7347ad045b) and, for probes, the harness outputs named in command."
+ },
+ "policy_revision": {
+  "AGENTS.md": "65aa3e61bc@572e4f4fad (unchanged at 234badf401 and aea969677c)",
+  "CONTRIBUTING.md": "b0baa59b50@572e4f4fad (unchanged at 234badf401 and aea969677c)",
+  "factory": "FACTORY.md sha256:7726ba18b43a9367 (frontier-2026-10-01 ledger copy, read at round-1 fix)"
+ },
+ "denominators": {
+  "cells": 3,
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "completeness": 1.0,
+  "note": "3 canonical-runner runs (staging, carrier+test, carrier+test+foldin; one rep each)"
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "regression"
+ },
+ "resource_usage": {
+  "wall_s": 57.5,
+  "cpu_core_s": null,
+  "gpu_s": 0,
+  "energy_j": null,
+  "api_cost_usd": 0.0,
+  "note": "wall_s summed from the raw outputs; CPU time and energy were not recorded"
+ },
+ "corrections": [
+  {
+   "date": "2026-10-01",
+   "by": "staging fix round 1 (phase-3 verifier findings)",
+   "changes": [
+    "env.python: was 'None' (wrong: every raw output records \"python\": \"3.11.14\" and the venv interpreter prints Python 3.11.14)",
+    "raw artifacts scrubbed of absolute local paths (worktree, scratch, pytest tmp, interpreter paths -> $WT, $S, $PYTEST_TMP, $PY); sha256 before/after in scrubbed_artifacts",
+    "added the xf.receipt.v1 fields spec (not pre-registered), policy_revision, denominators, evidence_class, resource_usage"
+   ],
+   "scrubbed_artifacts": {
+    "receipts/raw/fresh-staging.txt": {
+     "sha256_before": "d9281fc1fb245d6f63fa4c8fcef0bccef5f7f82d9de21c805d458488ce387728",
+     "sha256_after": "87bf0a3b13b4ccabb4d4f1f676247227a17091a8b07afe560c289ef5ca8a1699"
+    },
+    "receipts/raw/fresh-carrier.txt": {
+     "sha256_before": "051bd5c76a4e72608d7919a45f34ab32f6e0ac740a16c76d4c3fc732a846e791",
+     "sha256_after": "dfa7fa0652c6ba27ee78f2a23dfd69bc0c49b993e80b9b522a9a404b6b791bc5"
+    },
+    "receipts/raw/fresh-foldin.txt": {
+     "sha256_before": "3362283b71a81a0b87fa562641a84565540646297fad99796381f4cd4fac5c27",
+     "sha256_after": "6cf86c67a57da7c0cecfbad02e39b9c80ac7f44935106e152a68da54c3384c55"
+    }
+   }
+  },
+  {
+   "date": "2026-10-01",
+   "by": "staging fix round 2 (round-1 re-verifier findings)",
+   "changes": [
+    "env.relay added (the shared venv's nemo-relay 0.8.4 fails to initialize; no Relay plugin was active)",
+    "z0evals_study added (not frozen; P8 pending)"
+   ]
+  },
+  {
+   "date": "2026-10-01",
+   "by": "staging fix round 3 (fix of the round-2 re-verifier findings)",
+   "changes": [
+    "env.host: the workstation's host name replaced by 'withheld' (receipts must not carry host names)"
+   ]
+  }
+ ],
+ "superseded_by": "F04/r20261001-02 (full re-run on aea969677c)",
+ "z0evals_study": {
+  "repo": "kvnloo/z0evals",
+  "branch": "study/hermes-tool-result-projection-support",
+  "commit": null,
+  "status": "not frozen (P8 pending)"
+ }
+}

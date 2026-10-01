@@ -1,0 +1,130 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compaction-anchor-retention",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#116246",
+  "NousResearch/hermes-agent#117462"
+ ],
+ "base_revision": "040b6df2c40b0f4f88f51e4c2062eafc4d7463c5",
+ "head_revision": "30a746f7920c2b4101f121353778d94f5ce001b5",
+ "supersedes": null,
+ "policy_revision": {
+  "factory": "FACTORY.md (frontier-2026-10-01)",
+  "protocol": "promotion-readiness-2026-10-01/PROTOCOL.md"
+ },
+ "env": {
+  "python": "3.11 (HERMES_PYTHON venv, read-only bind)",
+  "sandbox": "harness/sandbox.sh (bwrap, no network, fresh HOME/HERMES_HOME, live install masked except the venv); harness/egress_sitecustomize.py egress logger"
+ },
+ "provenance": "self",
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the harness and ran it; disclosed per repository policy",
+ "privacy": "public-aggregate (input is the committed hermes_cli/config_defaults.py); no absolute local paths",
+ "resource_usage": {
+  "api_cost_usd": 0.0,
+  "gpu_s": 0,
+  "tokens": 0
+ },
+ "id": "N02/r20261001-04",
+ "kind": "static",
+ "question": "Which dotted DEFAULT_CONFIG key paths does the head's `dotted keys` row capture verbatim, and why are the others missed?",
+ "inputs": {
+  "checkout": "tree of 30a746f7920c2b4101f121353778d94f5ce001b5 (git archive). The row is read from the head's agent/context_compressor.py. hermes_cli/config_defaults.py is byte-identical on base 040b6df2c4, the head and main 44a1ce9724, and agent/context_compressor.py is unchanged between base and main 44a1ce9724, so the figures hold on that main too.",
+  "config_defaults_sha256": "57ce0ab8d8b913cc94538bb67f13f373c293547fa0590440a1650a9b467848a8",
+  "context_compressor_sha256_head": "424c8dd83747b73b7b1883c726e60823f55a656d5424c3eb948297ca07f4abc7",
+  "dotted_keys_row": "(?<!\\w)(?<!\\w\\.)[a-z][a-z0-9_]*(?:\\.[a-z][a-z0-9_]*)*\\.[a-z][a-z0-9]*_[a-z0-9_]*[a-z0-9](?!\\.?\\w)",
+  "harness_sha256": {
+   "config_key_coverage.py": "7a57413ba6b48feafbf1a84227c4f6968dcfd37240d43ae2534513b17fcec83a"
+  },
+  "raw": {
+   "path": "raw/config_key_coverage.json",
+   "sha256": "239e41a330a1b4cba736d5668eff6e83ef0799b06019aff836228258352faba2"
+  }
+ },
+ "command": "VENV=$VENV HERMES_INSTALL=<live install> EGRESS_DIR=<dir with sitecustomize.py> $SANDBOX $TREE <fresh home on a non-/tmp disk> <egress log> $PY $STAGING/harness/config_key_coverage.py --checkout $TREE --out <home>/n02.json   # $TREE = git archive of the head; copied to raw/config_key_coverage.json",
+ "method": "Flatten DEFAULT_CONFIG into every key path (intermediate dict nodes included, as N01 does), keep the 996 paths that contain a dot, scan each path alone with the production row; a path is fully matched when one match equals the whole path. Leaf-only figures (non-dict values) are reported beside it.",
+ "results": {
+  "flattened_paths_total": 1095,
+  "all_dotted_paths": {
+   "dotted_paths": 996,
+   "fully_matched": 726,
+   "fully_matched_pct": 72.9,
+   "not_fully_matched": 270,
+   "not_fully_matched_pct": 27.1,
+   "partial_only": 0
+  },
+  "leaf_dotted_paths": {
+   "dotted_paths": 870,
+   "fully_matched": 658,
+   "fully_matched_pct": 75.6,
+   "not_fully_matched": 212,
+   "not_fully_matched_pct": 24.4,
+   "partial_only": 0
+  },
+  "misses_by_reason_all": {
+   "last segment is one word (no underscore), e.g. terminal.backend": 270
+  },
+  "miss_examples_all": [
+   "agent.empty_response_guard.enabled",
+   "approvals.deny",
+   "approvals.mode",
+   "approvals.timeout",
+   "attachments.storage",
+   "auxiliary.approval",
+   "auxiliary.approval.model",
+   "auxiliary.approval.provider",
+   "auxiliary.approval.timeout",
+   "auxiliary.background_review.enabled",
+   "auxiliary.background_review.model",
+   "auxiliary.background_review.provider"
+  ],
+  "named_examples": {
+   "terminal.backend": {
+    "in_DEFAULT_CONFIG": true,
+    "row_values_when_scanned_alone": []
+   },
+   "compression.threshold": {
+    "in_DEFAULT_CONFIG": true,
+    "row_values_when_scanned_alone": []
+   },
+   "compression.enabled": {
+    "in_DEFAULT_CONFIG": true,
+    "row_values_when_scanned_alone": []
+   },
+   "browser.backend": {
+    "in_DEFAULT_CONFIG": true,
+    "row_values_when_scanned_alone": []
+   },
+   "checkpoints.enabled": {
+    "in_DEFAULT_CONFIG": true,
+    "row_values_when_scanned_alone": []
+   },
+   "compression.tail_mode": {
+    "in_DEFAULT_CONFIG": true,
+    "row_values_when_scanned_alone": [
+     "compression.tail_mode"
+    ]
+   },
+   "plugins.stream_reasoning_deltas": {
+    "in_DEFAULT_CONFIG": false,
+    "row_values_when_scanned_alone": [
+     "plugins.stream_reasoning_deltas"
+    ]
+   }
+  }
+ },
+ "egress": "0 lookups, 0 connect attempts",
+ "readout": [
+  "726 of 996 dotted DEFAULT_CONFIG paths (72.9%) are captured verbatim; 270 (27.1%) are not.",
+  "Leaf settings only: 658 of 870 captured; 212 (24.4%) missed.",
+  "Every miss has a one-word last segment (no underscore), e.g. terminal.backend, compression.threshold, compression.enabled, browser.backend, checkpoints.enabled. No path is partly matched.",
+  "This is the cost of the snake_case last-segment rule that keeps file names (config.yaml), hosts (api.openai.com) and e.g out of the row.",
+  "plugins.stream_reasoning_deltas (the one config-key gold) is not a DEFAULT_CONFIG path; it is captured."
+ ],
+ "label": "OBSERVED",
+ "limitations": [
+  "measures the row on bare key strings; how often a one-word-leaf key is the fact a real summary loses is NOT_MEASURED",
+  "DEFAULT_CONFIG is not the whole config surface (plugin and provider keys live elsewhere)"
+ ],
+ "verdict": "KEEP (limit disclosed: invariant narrowed to dotted keys whose last segment is snake_case; both bodies state the miss rate)"
+}

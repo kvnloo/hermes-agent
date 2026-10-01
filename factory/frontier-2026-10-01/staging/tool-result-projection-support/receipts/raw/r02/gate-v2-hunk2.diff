@@ -1,0 +1,14 @@
+diff --git i/agent/tool_result_projection.py w/agent/tool_result_projection.py
+index a76fb42f76..436152ef3d 100644
+--- i/agent/tool_result_projection.py
++++ w/agent/tool_result_projection.py
+@@ -565,6 +602,9 @@ def _project(agent: Any, api_messages: List[Dict[str, Any]], env: Any) -> int:
+ 
+     trigger = trigger_tokens(policy, window, cache_capable)
+     approved = fresh_reclaim >= trigger
++    if approved and planned and replays_bound_thinking(agent, api_messages):
++        approved = False
++        logger.debug("Tool-result projection declined: the request replays signed thinking bound to this prefix")
+     if approved and cache_capable:
+         # The rewrite invalidates the cached prefix from the first stub onward, and that region
+         # is re-prefilled once. Require the reclaim to cover it.

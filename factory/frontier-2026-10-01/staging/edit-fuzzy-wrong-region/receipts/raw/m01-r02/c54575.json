@@ -1,0 +1,70 @@
+{
+ "strategy_labels": [
+  "block_anchor",
+  "context_aware",
+  "escape_normalized",
+  "exact",
+  "indentation_flexible",
+  "line_trimmed",
+  "none",
+  "trimmed_boundary",
+  "unicode_normalized",
+  "whitespace_normalized"
+ ],
+ "outcome_labels": [
+  "already_applied",
+  "ambiguous",
+  "applied",
+  "failed",
+  "no_match"
+ ],
+ "strategies_chain": [
+  "exact",
+  "line_trimmed",
+  "whitespace_normalized",
+  "indentation_flexible",
+  "escape_normalized",
+  "trimmed_boundary",
+  "unicode_normalized",
+  "block_anchor",
+  "context_aware"
+ ],
+ "cases": {
+  "block_anchor_middle": {
+   "outcome": "no_match",
+   "match_strategy": "none",
+   "labels_in_contract": true,
+   "file_unchanged": true
+  },
+  "single_line_wrong_token": {
+   "outcome": "applied",
+   "match_strategy": "context_aware",
+   "labels_in_contract": true,
+   "file_unchanged": false
+  },
+  "single_line_missing_anchor": {
+   "outcome": "applied",
+   "match_strategy": "context_aware",
+   "labels_in_contract": true,
+   "file_unchanged": false
+  },
+  "single_line_trailing_newline": {
+   "outcome": "applied",
+   "match_strategy": "context_aware",
+   "labels_in_contract": true,
+   "file_unchanged": false
+  },
+  "block_drift": {
+   "outcome": "applied",
+   "match_strategy": "block_anchor",
+   "labels_in_contract": true,
+   "file_unchanged": false
+  },
+  "indentation_drift": {
+   "outcome": "applied",
+   "match_strategy": "whitespace_normalized",
+   "labels_in_contract": true,
+   "file_unchanged": false
+  }
+ }
+}

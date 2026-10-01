@@ -1,0 +1,114 @@
+[
+ {
+  "mutation": "drop row 'task ids'",
+  "rc": 1,
+  "summary": "Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 1.4s (2 workers)",
+  "failed": [
+   "test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim",
+   "test_new_anchor_classes_stay_exact_and_bounded"
+  ],
+  "first_assertion": "E           AssertionError: 'sa-2-7318d0ba' missing from anchor index:"
+ },
+ {
+  "mutation": "drop row 'dotted keys'",
+  "rc": 1,
+  "summary": "Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 1.4s (2 workers)",
+  "failed": [
+   "test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim",
+   "test_new_anchor_classes_stay_exact_and_bounded"
+  ],
+  "first_assertion": "E           AssertionError: 'plugins.stream_reasoning_deltas' missing from anchor index:"
+ },
+ {
+  "mutation": "drop row 'error messages'",
+  "rc": 1,
+  "summary": "Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 1.6s (2 workers)",
+  "failed": [
+   "test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim",
+   "test_new_anchor_classes_stay_exact_and_bounded"
+  ],
+  "first_assertion": "E           AssertionError: 'GraphQL: Pull Request has merge conflicts (mergePullRequest)' missing from anchor index:"
+ },
+ {
+  "mutation": "dotted keys: drop the mid-name guard (?<!\\w\\.)",
+  "rc": 1,
+  "summary": "Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 1.5s (2 workers)",
+  "failed": [
+   "test_new_anchor_classes_stay_exact_and_bounded"
+  ],
+  "first_assertion": "E           AssertionError: 'router.add_post' leaked into dotted keys: 'dotted keys: router.add_post(x2), compression.tail_mode'"
+ },
+ {
+  "mutation": "dotted keys: drop the word-start guard (?<!\\w)",
+  "rc": 1,
+  "summary": "Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 1.5s (2 workers)",
+  "failed": [
+   "test_new_anchor_classes_stay_exact_and_bounded"
+  ],
+  "first_assertion": "E           AssertionError: 'router.add_post' leaked into dotted keys: 'dotted keys: app.router.add_post(x2), compression.tail_mode'"
+ },
+ {
+  "mutation": "dotted keys: last segment no longer needs '_'",
+  "rc": 1,
+  "summary": "Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 1.4s (2 workers)",
+  "failed": [
+   "test_new_anchor_classes_stay_exact_and_bounded"
+  ],
+  "first_assertion": "E           AssertionError: 'context_compressor.py' leaked into dotted keys: 'dotted keys: logger.warning(x2), compression.tail_mode, api.openai.com, config.yaml, context_compressor.py'"
+ },
+ {
+  "mutation": "error messages: fatal:/error: anywhere (\\b instead of line-start anchor)",
+  "rc": 1,
+  "summary": "Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 1.4s (2 workers)",
+  "failed": [
+   "test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim",
+   "test_new_anchor_classes_stay_exact_and_bounded"
+  ],
+  "first_assertion": "E           AssertionError: 'error: Your local changes to the following files would be overwritten by merge' missing from anchor index:"
+ },
+ {
+  "mutation": "error messages: drop the escaped-newline anchor (?<=\\\\n)",
+  "rc": 1,
+  "summary": "Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 1.6s (2 workers)",
+  "failed": [
+   "test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim"
+  ],
+  "first_assertion": "E           AssertionError: 'error: Your local changes to the following files would be overwritten by merge' missing from anchor index:"
+ },
+ {
+  "mutation": "error messages: drop the quote/backtick anchor (?<=[`\"])",
+  "rc": 1,
+  "summary": "Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 1.5s (2 workers)",
+  "failed": [
+   "test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim"
+  ],
+  "first_assertion": "E           AssertionError: 'fatal: refusing to merge unrelated histories' missing from anchor index:"
+ },
+ {
+  "mutation": "error messages: drop re.M",
+  "rc": 1,
+  "summary": "Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 1.5s (2 workers)",
+  "failed": [
+   "test_new_anchor_classes_stay_exact_and_bounded"
+  ],
+  "first_assertion": "E       AssertionError: assert 0 == 20"
+ },
+ {
+  "mutation": "error messages: drop the %s/{} placeholder guard",
+  "rc": 1,
+  "summary": "Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 1.5s (2 workers)",
+  "failed": [
+   "test_new_anchor_classes_stay_exact_and_bounded"
+  ],
+  "first_assertion": "E           AssertionError: '%s' leaked into error messages: 'error messages: error: %s\", exc)(x2), fatal: unable to reach remote mirror 59 over https, fatal: unable to reach remote mirror 58 over htt"
+ },
+ {
+  "mutation": "error messages: value no longer stops at an escaped newline",
+  "rc": 1,
+  "summary": "Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 1.5s (2 workers)",
+  "failed": [
+   "test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim"
+  ],
+  "first_assertion": ""
+ }
+]

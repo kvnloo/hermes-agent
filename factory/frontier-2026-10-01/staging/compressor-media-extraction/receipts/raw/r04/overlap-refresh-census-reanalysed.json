@@ -1,0 +1,1127 @@
+{
+ "scanned": 16,
+ "truncated_checked": 1,
+ "truncated_numbers": [
+  122509
+ ],
+ "records": [
+  {
+   "number": 125697,
+   "head": "0d0360d677c7cafb679aea79217afdcabf9ee1e2",
+   "author": "iainlane",
+   "updatedAt": "2026-10-01T13:28:33Z",
+   "labels": {
+    "nodes": [
+     {
+      "name": "type/feature"
+     },
+     {
+      "name": "comp/gateway"
+     },
+     {
+      "name": "comp/plugins"
+     },
+     {
+      "name": "platform/matrix"
+     },
+     {
+      "name": "area/config"
+     },
+     {
+      "name": "area/docker"
+     },
+     {
+      "name": "P3"
+     },
+     {
+      "name": "sweeper:risk-session-state"
+     },
+     {
+      "name": "sweeper:risk-message-delivery"
+     },
+     {
+      "name": "sweeper:risk-automation"
+     }
+    ]
+   },
+   "isDraft": true,
+   "baseRefName": "main",
+   "n_files": 55,
+   "touches_facade": true,
+   "touches_branch_files": [
+    "agent/context_compressor.py"
+   ],
+   "adds_media_module": false,
+   "edits_branch_rewritten_lines": [],
+   "preimage": "reverse-patch",
+   "edits_moved": [],
+   "carries_main_text_only": [],
+   "moved_present_in_preimage": [
+    "_IMAGE_PART_TYPES",
+    "_MAX_KEEP_TOOL_IMAGES",
+    "_content_has_images",
+    "_image_part_label",
+    "_image_payload",
+    "_is_image_part",
+    "_replace_image_parts",
+    "_retire_stale_tool_result_images",
+    "_rewritten",
+    "_strip_historical_media",
+    "_strip_images_from_content",
+    "_strip_images_from_tool_msg",
+    "_summary_part_text",
+    "_tool_content_has_images",
+    "_tool_result_parts",
+    "evict_stale_outbound_tool_images"
+   ],
+   "new_facade_refs": [],
+   "other_files_new_old_path_refs": [],
+   "other_files_carry_main_lines": []
+  },
+  {
+   "number": 125732,
+   "head": "3d22543c71224a57e5ec7a23d28f40e20e1ad95c",
+   "author": "iainlane",
+   "updatedAt": "2026-10-01T15:39:12Z",
+   "labels": {
+    "nodes": [
+     {
+      "name": "type/feature"
+     },
+     {
+      "name": "comp/gateway"
+     },
+     {
+      "name": "comp/tools"
+     },
+     {
+      "name": "comp/plugins"
+     },
+     {
+      "name": "platform/matrix"
+     },
+     {
+      "name": "P3"
+     },
+     {
+      "name": "sweeper:risk-session-state"
+     },
+     {
+      "name": "sweeper:risk-message-delivery"
+     },
+     {
+      "name": "sweeper:risk-compatibility"
+     },
+     {
+      "name": "sweeper:risk-automation"
+     }
+    ]
+   },
+   "isDraft": true,
+   "baseRefName": "main",
+   "n_files": 97,
+   "touches_facade": true,
+   "touches_branch_files": [
+    "agent/context_compressor.py"
+   ],
+   "adds_media_module": false,
+   "edits_branch_rewritten_lines": [],
+   "preimage": "reverse-patch",
+   "edits_moved": [],
+   "carries_main_text_only": [],
+   "moved_present_in_preimage": [
+    "_IMAGE_PART_TYPES",
+    "_MAX_KEEP_TOOL_IMAGES",
+    "_content_has_images",
+    "_image_part_label",
+    "_image_payload",
+    "_is_image_part",
+    "_replace_image_parts",
+    "_retire_stale_tool_result_images",
+    "_rewritten",
+    "_strip_historical_media",
+    "_strip_images_from_content",
+    "_strip_images_from_tool_msg",
+    "_summary_part_text",
+    "_tool_content_has_images",
+    "_tool_result_parts",
+    "evict_stale_outbound_tool_images"
+   ],
+   "new_facade_refs": [],
+   "other_files_new_old_path_refs": [],
+   "other_files_carry_main_lines": []
+  },
+  {
+   "number": 125735,
+   "head": "7915af757a9af477ce9843d7b6ca9d8bde4718b5",
+   "author": "iainlane",
+   "updatedAt": "2026-10-01T13:56:40Z",
+   "labels": {
+    "nodes": [
+     {
+      "name": "type/feature"
+     },
+     {
+      "name": "comp/gateway"
+     },
+     {
+      "name": "comp/tools"
+     },
+     {
+      "name": "comp/plugins"
+     },
+     {
+      "name": "platform/matrix"
+     },
+     {
+      "name": "P3"
+     },
+     {
+      "name": "sweeper:risk-session-state"
+     },
+     {
+      "name": "sweeper:risk-message-delivery"
+     },
+     {
+      "name": "sweeper:risk-compatibility"
+     },
+     {
+      "name": "sweeper:risk-automation"
+     }
+    ]
+   },
+   "isDraft": true,
+   "baseRefName": "main",
+   "n_files": 69,
+   "touches_facade": true,
+   "touches_branch_files": [
+    "agent/context_compressor.py"
+   ],
+   "adds_media_module": false,
+   "edits_branch_rewritten_lines": [],
+   "preimage": "reverse-patch",
+   "edits_moved": [],
+   "carries_main_text_only": [],
+   "moved_present_in_preimage": [
+    "_IMAGE_PART_TYPES",
+    "_MAX_KEEP_TOOL_IMAGES",
+    "_content_has_images",
+    "_image_part_label",
+    "_image_payload",
+    "_is_image_part",
+    "_replace_image_parts",
+    "_retire_stale_tool_result_images",
+    "_rewritten",
+    "_strip_historical_media",
+    "_strip_images_from_content",
+    "_strip_images_from_tool_msg",
+    "_summary_part_text",
+    "_tool_content_has_images",
+    "_tool_result_parts",
+    "evict_stale_outbound_tool_images"
+   ],
+   "new_facade_refs": [],
+   "other_files_new_old_path_refs": [],
+   "other_files_carry_main_lines": []
+  },
+  {
+   "number": 125882,
+   "head": "d86594f0c2f1e6a18ea68241ad6cb03d88dd1076",
+   "author": "iainlane",
+   "updatedAt": "2026-10-01T15:39:58Z",
+   "labels": {
+    "nodes": [
+     {
+      "name": "type/feature"
+     },
+     {
+      "name": "comp/gateway"
+     },
+     {
+      "name": "comp/tools"
+     },
+     {
+      "name": "comp/plugins"
+     },
+     {
+      "name": "platform/matrix"
+     },
+     {
+      "name": "P3"
+     },
+     {
+      "name": "sweeper:risk-session-state"
+     },
+     {
+      "name": "sweeper:risk-message-delivery"
+     },
+     {
+      "name": "sweeper:risk-compatibility"
+     },
+     {
+      "name": "sweeper:risk-automation"
+     }
+    ]
+   },
+   "isDraft": true,
+   "baseRefName": "main",
+   "n_files": 103,
+   "touches_facade": true,
+   "touches_branch_files": [
+    "agent/context_compressor.py"
+   ],
+   "adds_media_module": false,
+   "edits_branch_rewritten_lines": [],
+   "preimage": "reverse-patch",
+   "edits_moved": [],
+   "carries_main_text_only": [],
+   "moved_present_in_preimage": [
+    "_IMAGE_PART_TYPES",
+    "_MAX_KEEP_TOOL_IMAGES",
+    "_content_has_images",
+    "_image_part_label",
+    "_image_payload",
+    "_is_image_part",
+    "_replace_image_parts",
+    "_retire_stale_tool_result_images",
+    "_rewritten",
+    "_strip_historical_media",
+    "_strip_images_from_content",
+    "_strip_images_from_tool_msg",
+    "_summary_part_text",
+    "_tool_content_has_images",
+    "_tool_result_parts",
+    "evict_stale_outbound_tool_images"
+   ],
+   "new_facade_refs": [],
+   "other_files_new_old_path_refs": [],
+   "other_files_carry_main_lines": []
+  },
+  {
+   "number": 126282,
+   "head": "6d3b7e8b50c79ad2e4e23ca99272eabffd5e6460",
+   "author": "iainlane",
+   "updatedAt": "2026-10-01T15:09:25Z",
+   "labels": {
+    "nodes": [
+     {
+      "name": "type/bug"
+     },
+     {
+      "name": "comp/gateway"
+     },
+     {
+      "name": "comp/plugins"
+     },
+     {
+      "name": "tool/memory"
+     },
+     {
+      "name": "platform/matrix"
+     },
+     {
+      "name": "P3"
+     },
+     {
+      "name": "sweeper:risk-session-state"
+     },
+     {
+      "name": "sweeper:risk-message-delivery"
+     },
+     {
+      "name": "sweeper:risk-compatibility"
+     },
+     {
+      "name": "sweeper:risk-automation"
+     }
+    ]
+   },
+   "isDraft": true,
+   "baseRefName": "main",
+   "n_files": 94,
+   "touches_facade": true,
+   "touches_branch_files": [
+    "agent/context_compressor.py"
+   ],
+   "adds_media_module": false,
+   "edits_branch_rewritten_lines": [],
+   "preimage": "reverse-patch",
+   "edits_moved": [],
+   "carries_main_text_only": [],
+   "moved_present_in_preimage": [
+    "_IMAGE_PART_TYPES",
+    "_MAX_KEEP_TOOL_IMAGES",
+    "_content_has_images",
+    "_image_part_label",
+    "_image_payload",
+    "_is_image_part",
+    "_replace_image_parts",
+    "_retire_stale_tool_result_images",
+    "_rewritten",
+    "_strip_historical_media",
+    "_strip_images_from_content",
+    "_strip_images_from_tool_msg",
+    "_summary_part_text",
+    "_tool_content_has_images",
+    "_tool_result_parts",
+    "evict_stale_outbound_tool_images"
+   ],
+   "new_facade_refs": [],
+   "other_files_new_old_path_refs": [],
+   "other_files_carry_main_lines": []
+  },
+  {
+   "number": 126289,
+   "head": "1747820eb7d9f19c2fd11a11e85c3a03341291fe",
+   "author": "iainlane",
+   "updatedAt": "2026-10-01T15:47:30Z",
+   "labels": {
+    "nodes": [
+     {
+      "name": "type/feature"
+     },
+     {
+      "name": "comp/tools"
+     },
+     {
+      "name": "platform/matrix"
+     },
+     {
+      "name": "P3"
+     }
+    ]
+   },
+   "isDraft": true,
+   "baseRefName": "main",
+   "n_files": 109,
+   "touches_facade": true,
+   "touches_branch_files": [
+    "agent/context_compressor.py"
+   ],
+   "adds_media_module": false,
+   "edits_branch_rewritten_lines": [],
+   "preimage": "reverse-patch",
+   "edits_moved": [],
+   "carries_main_text_only": [],
+   "moved_present_in_preimage": [
+    "_IMAGE_PART_TYPES",
+    "_MAX_KEEP_TOOL_IMAGES",
+    "_content_has_images",
+    "_image_part_label",
+    "_image_payload",
+    "_is_image_part",
+    "_replace_image_parts",
+    "_retire_stale_tool_result_images",
+    "_rewritten",
+    "_strip_historical_media",
+    "_strip_images_from_content",
+    "_strip_images_from_tool_msg",
+    "_summary_part_text",
+    "_tool_content_has_images",
+    "_tool_result_parts",
+    "evict_stale_outbound_tool_images"
+   ],
+   "new_facade_refs": [],
+   "other_files_new_old_path_refs": [],
+   "other_files_carry_main_lines": []
+  },
+  {
+   "number": 126312,
+   "head": "3c01a7233eea9e39cc9c2959241c1af2169d5aa5",
+   "author": "iainlane",
+   "updatedAt": "2026-10-01T15:59:04Z",
+   "labels": {
+    "nodes": [
+     {
+      "name": "type/feature"
+     },
+     {
+      "name": "comp/agent"
+     },
+     {
+      "name": "comp/cli"
+     },
+     {
+      "name": "comp/gateway"
+     },
+     {
+      "name": "comp/tools"
+     },
+     {
+      "name": "comp/plugins"
+     },
+     {
+      "name": "platform/matrix"
+     },
+     {
+      "name": "area/config"
+     },
+     {
+      "name": "area/docker"
+     },
+     {
+      "name": "P3"
+     },
+     {
+      "name": "needs-decision"
+     },
+     {
+      "name": "sweeper:risk-session-state"
+     },
+     {
+      "name": "sweeper:risk-message-delivery"
+     },
+     {
+      "name": "sweeper:risk-compatibility"
+     },
+     {
+      "name": "sweeper:risk-automation"
+     }
+    ]
+   },
+   "isDraft": true,
+   "baseRefName": "main",
+   "n_files": 107,
+   "touches_facade": true,
+   "touches_branch_files": [
+    "agent/context_compressor.py"
+   ],
+   "adds_media_module": false,
+   "edits_branch_rewritten_lines": [],
+   "preimage": "reverse-patch",
+   "edits_moved": [],
+   "carries_main_text_only": [],
+   "moved_present_in_preimage": [
+    "_IMAGE_PART_TYPES",
+    "_MAX_KEEP_TOOL_IMAGES",
+    "_content_has_images",
+    "_image_part_label",
+    "_image_payload",
+    "_is_image_part",
+    "_replace_image_parts",
+    "_retire_stale_tool_result_images",
+    "_rewritten",
+    "_strip_historical_media",
+    "_strip_images_from_content",
+    "_strip_images_from_tool_msg",
+    "_summary_part_text",
+    "_tool_content_has_images",
+    "_tool_result_parts",
+    "evict_stale_outbound_tool_images"
+   ],
+   "new_facade_refs": [],
+   "other_files_new_old_path_refs": [],
+   "other_files_carry_main_lines": []
+  },
+  {
+   "number": 126398,
+   "head": "31ba23a5831034576d0e7181202efac1512789b0",
+   "author": "iainlane",
+   "updatedAt": "2026-10-01T16:36:13Z",
+   "labels": {
+    "nodes": [
+     {
+      "name": "type/feature"
+     },
+     {
+      "name": "comp/cli"
+     },
+     {
+      "name": "comp/gateway"
+     },
+     {
+      "name": "comp/tools"
+     },
+     {
+      "name": "comp/plugins"
+     },
+     {
+      "name": "platform/matrix"
+     },
+     {
+      "name": "area/config"
+     },
+     {
+      "name": "area/docker"
+     },
+     {
+      "name": "P3"
+     },
+     {
+      "name": "needs-decision"
+     },
+     {
+      "name": "sweeper:risk-session-state"
+     },
+     {
+      "name": "sweeper:risk-message-delivery"
+     },
+     {
+      "name": "sweeper:risk-security-boundary"
+     },
+     {
+      "name": "sweeper:risk-compatibility"
+     },
+     {
+      "name": "sweeper:risk-automation"
+     }
+    ]
+   },
+   "isDraft": true,
+   "baseRefName": "main",
+   "n_files": 145,
+   "touches_facade": true,
+   "touches_branch_files": [
+    "agent/context_compressor.py"
+   ],
+   "adds_media_module": false,
+   "edits_branch_rewritten_lines": [],
+   "preimage": "reverse-patch",
+   "edits_moved": [],
+   "carries_main_text_only": [],
+   "moved_present_in_preimage": [
+    "_IMAGE_PART_TYPES",
+    "_MAX_KEEP_TOOL_IMAGES",
+    "_content_has_images",
+    "_image_part_label",
+    "_image_payload",
+    "_is_image_part",
+    "_replace_image_parts",
+    "_retire_stale_tool_result_images",
+    "_rewritten",
+    "_strip_historical_media",
+    "_strip_images_from_content",
+    "_strip_images_from_tool_msg",
+    "_summary_part_text",
+    "_tool_content_has_images",
+    "_tool_result_parts",
+    "evict_stale_outbound_tool_images"
+   ],
+   "new_facade_refs": [],
+   "other_files_new_old_path_refs": [],
+   "other_files_carry_main_lines": []
+  },
+  {
+   "number": 130506,
+   "head": "e6642b3d59b28751c5e5586a5f07f5adab3dba35",
+   "author": "kshitijk4poor",
+   "updatedAt": "2026-10-01T14:19:27Z",
+   "labels": {
+    "nodes": [
+     {
+      "name": "type/bug"
+     },
+     {
+      "name": "duplicate"
+     },
+     {
+      "name": "comp/agent"
+     },
+     {
+      "name": "P1"
+     },
+     {
+      "name": "sweeper:risk-session-state"
+     },
+     {
+      "name": "area/compression"
+     }
+    ]
+   },
+   "isDraft": false,
+   "baseRefName": "main",
+   "n_files": 2,
+   "touches_facade": true,
+   "touches_branch_files": [
+    "agent/context_compressor.py"
+   ],
+   "adds_media_module": false,
+   "edits_branch_rewritten_lines": [],
+   "preimage": "reverse-patch",
+   "edits_moved": [],
+   "carries_main_text_only": [],
+   "moved_present_in_preimage": [
+    "_IMAGE_PART_TYPES",
+    "_MAX_KEEP_TOOL_IMAGES",
+    "_content_has_images",
+    "_image_part_label",
+    "_image_payload",
+    "_is_image_part",
+    "_replace_image_parts",
+    "_retire_stale_tool_result_images",
+    "_rewritten",
+    "_strip_historical_media",
+    "_strip_images_from_content",
+    "_strip_images_from_tool_msg",
+    "_summary_part_text",
+    "_tool_content_has_images",
+    "_tool_result_parts",
+    "evict_stale_outbound_tool_images"
+   ],
+   "new_facade_refs": [],
+   "other_files_new_old_path_refs": [],
+   "other_files_carry_main_lines": []
+  },
+  {
+   "number": 130529,
+   "head": "9a3ac0041c5a4de06baf752299186e8642eec153",
+   "author": "Sahilvishnaliya",
+   "updatedAt": "2026-10-01T14:23:03Z",
+   "labels": {
+    "nodes": [
+     {
+      "name": "type/security"
+     },
+     {
+      "name": "comp/agent"
+     },
+     {
+      "name": "comp/cli"
+     },
+     {
+      "name": "comp/gateway"
+     },
+     {
+      "name": "comp/cron"
+     },
+     {
+      "name": "comp/plugins"
+     },
+     {
+      "name": "platform/discord"
+     },
+     {
+      "name": "platform/slack"
+     },
+     {
+      "name": "P1"
+     },
+     {
+      "name": "needs-decision"
+     },
+     {
+      "name": "sweeper:risk-security-boundary"
+     },
+     {
+      "name": "comp/desktop"
+     }
+    ]
+   },
+   "isDraft": false,
+   "baseRefName": "main",
+   "n_files": 32,
+   "touches_facade": true,
+   "touches_branch_files": [
+    "agent/context_compressor.py"
+   ],
+   "adds_media_module": false,
+   "edits_branch_rewritten_lines": [],
+   "preimage": "reverse-patch",
+   "edits_moved": [],
+   "carries_main_text_only": [],
+   "moved_present_in_preimage": [
+    "_IMAGE_PART_TYPES",
+    "_MAX_KEEP_TOOL_IMAGES",
+    "_content_has_images",
+    "_image_part_label",
+    "_image_payload",
+    "_is_image_part",
+    "_replace_image_parts",
+    "_retire_stale_tool_result_images",
+    "_rewritten",
+    "_strip_historical_media",
+    "_strip_images_from_content",
+    "_strip_images_from_tool_msg",
+    "_summary_part_text",
+    "_tool_content_has_images",
+    "_tool_result_parts",
+    "evict_stale_outbound_tool_images"
+   ],
+   "new_facade_refs": [],
+   "other_files_new_old_path_refs": [],
+   "other_files_carry_main_lines": []
+  },
+  {
+   "number": 130634,
+   "head": "efb88e4601d45b340c449c97cc8b57db880e04a9",
+   "author": "Cyrene2008",
+   "updatedAt": "2026-10-01T16:01:11Z",
+   "labels": {
+    "nodes": [
+     {
+      "name": "type/feature"
+     },
+     {
+      "name": "comp/agent"
+     },
+     {
+      "name": "comp/cli"
+     },
+     {
+      "name": "comp/gateway"
+     },
+     {
+      "name": "tool/delegate"
+     },
+     {
+      "name": "area/config"
+     },
+     {
+      "name": "P3"
+     },
+     {
+      "name": "needs-decision"
+     },
+     {
+      "name": "comp/desktop"
+     },
+     {
+      "name": "comp/dashboard"
+     },
+     {
+      "name": "area/i18n"
+     }
+    ]
+   },
+   "isDraft": false,
+   "baseRefName": "main",
+   "n_files": 63,
+   "touches_facade": true,
+   "touches_branch_files": [
+    "agent/chat_completion_helpers.py",
+    "agent/context_compressor.py"
+   ],
+   "adds_media_module": false,
+   "edits_branch_rewritten_lines": [],
+   "preimage": "reverse-patch",
+   "edits_moved": [
+    "_strip_historical_media:modified"
+   ],
+   "carries_main_text_only": [],
+   "moved_present_in_preimage": [
+    "_IMAGE_PART_TYPES",
+    "_MAX_KEEP_TOOL_IMAGES",
+    "_content_has_images",
+    "_image_part_label",
+    "_image_payload",
+    "_is_image_part",
+    "_replace_image_parts",
+    "_retire_stale_tool_result_images",
+    "_rewritten",
+    "_strip_historical_media",
+    "_strip_images_from_content",
+    "_strip_images_from_tool_msg",
+    "_summary_part_text",
+    "_tool_content_has_images",
+    "_tool_result_parts",
+    "evict_stale_outbound_tool_images"
+   ],
+   "new_facade_refs": [
+    "_content_has_images",
+    "_tool_result_parts"
+   ],
+   "other_files_new_old_path_refs": [
+    {
+     "file": "tests/agent/test_compressor_historical_audio.py",
+     "new_old_path_refs": [
+      "import:_content_has_images",
+      "import:_strip_historical_media",
+      "import:_strip_images_from_content"
+     ],
+     "breaks_after_merge": [
+      "import:_content_has_images",
+      "import:_strip_images_from_content"
+     ],
+     "resolves_via_facade_import_gate_only": [
+      "import:_strip_historical_media"
+     ]
+    }
+   ],
+   "other_files_carry_main_lines": []
+  },
+  {
+   "number": 130645,
+   "head": "bbbfcabc81ca9253ede01c240fe1ff49a97b499f",
+   "author": "kshitijk4poor",
+   "updatedAt": "2026-10-01T16:30:08Z",
+   "labels": {
+    "nodes": [
+     {
+      "name": "type/bug"
+     },
+     {
+      "name": "comp/agent"
+     },
+     {
+      "name": "provider/anthropic"
+     },
+     {
+      "name": "P0"
+     },
+     {
+      "name": "needs-decision"
+     },
+     {
+      "name": "sweeper:risk-session-state"
+     },
+     {
+      "name": "sweeper:risk-caching"
+     },
+     {
+      "name": "comp/portal"
+     },
+     {
+      "name": "area/sessions"
+     },
+     {
+      "name": "area/compression"
+     }
+    ]
+   },
+   "isDraft": false,
+   "baseRefName": "main",
+   "n_files": 11,
+   "touches_facade": true,
+   "touches_branch_files": [
+    "agent/context_compressor.py",
+    "agent/turn_request_assembly.py"
+   ],
+   "adds_media_module": false,
+   "edits_branch_rewritten_lines": [],
+   "preimage": "reverse-patch",
+   "edits_moved": [],
+   "carries_main_text_only": [],
+   "moved_present_in_preimage": [
+    "_IMAGE_PART_TYPES",
+    "_MAX_KEEP_TOOL_IMAGES",
+    "_content_has_images",
+    "_image_part_label",
+    "_image_payload",
+    "_is_image_part",
+    "_replace_image_parts",
+    "_retire_stale_tool_result_images",
+    "_rewritten",
+    "_strip_historical_media",
+    "_strip_images_from_content",
+    "_strip_images_from_tool_msg",
+    "_summary_part_text",
+    "_tool_content_has_images",
+    "_tool_result_parts",
+    "evict_stale_outbound_tool_images"
+   ],
+   "new_facade_refs": [],
+   "other_files_new_old_path_refs": [],
+   "other_files_carry_main_lines": []
+  },
+  {
+   "number": 130658,
+   "head": "c661ce5932b35ed0d0163dcb78f744128a0e266a",
+   "author": "jollyroger1480",
+   "updatedAt": "2026-10-01T16:21:39Z",
+   "labels": {
+    "nodes": [
+     {
+      "name": "type/bug"
+     },
+     {
+      "name": "comp/agent"
+     },
+     {
+      "name": "P2"
+     },
+     {
+      "name": "sweeper:risk-session-state"
+     },
+     {
+      "name": "area/compression"
+     }
+    ]
+   },
+   "isDraft": false,
+   "baseRefName": "main",
+   "n_files": 5,
+   "touches_facade": true,
+   "touches_branch_files": [
+    "agent/context_compressor.py"
+   ],
+   "adds_media_module": false,
+   "edits_branch_rewritten_lines": [],
+   "preimage": "reverse-patch",
+   "edits_moved": [],
+   "carries_main_text_only": [],
+   "moved_present_in_preimage": [
+    "_IMAGE_PART_TYPES",
+    "_MAX_KEEP_TOOL_IMAGES",
+    "_content_has_images",
+    "_image_part_label",
+    "_image_payload",
+    "_is_image_part",
+    "_replace_image_parts",
+    "_retire_stale_tool_result_images",
+    "_rewritten",
+    "_strip_historical_media",
+    "_strip_images_from_content",
+    "_strip_images_from_tool_msg",
+    "_summary_part_text",
+    "_tool_content_has_images",
+    "_tool_result_parts",
+    "evict_stale_outbound_tool_images"
+   ],
+   "new_facade_refs": [],
+   "other_files_new_old_path_refs": [],
+   "other_files_carry_main_lines": []
+  },
+  {
+   "number": 130667,
+   "head": "8a40428640a24e16080da5d01108c5a2fb50fbb7",
+   "author": "iainlane",
+   "updatedAt": "2026-10-01T16:34:42Z",
+   "labels": {
+    "nodes": [
+     {
+      "name": "type/bug"
+     },
+     {
+      "name": "comp/gateway"
+     },
+     {
+      "name": "comp/plugins"
+     },
+     {
+      "name": "platform/matrix"
+     },
+     {
+      "name": "area/config"
+     },
+     {
+      "name": "area/docker"
+     },
+     {
+      "name": "P3"
+     },
+     {
+      "name": "sweeper:risk-session-state"
+     },
+     {
+      "name": "sweeper:risk-message-delivery"
+     },
+     {
+      "name": "sweeper:risk-compatibility"
+     },
+     {
+      "name": "sweeper:risk-automation"
+     }
+    ]
+   },
+   "isDraft": true,
+   "baseRefName": "main",
+   "n_files": 55,
+   "touches_facade": true,
+   "touches_branch_files": [
+    "agent/context_compressor.py"
+   ],
+   "adds_media_module": false,
+   "edits_branch_rewritten_lines": [],
+   "preimage": "reverse-patch",
+   "edits_moved": [],
+   "carries_main_text_only": [],
+   "moved_present_in_preimage": [
+    "_IMAGE_PART_TYPES",
+    "_MAX_KEEP_TOOL_IMAGES",
+    "_content_has_images",
+    "_image_part_label",
+    "_image_payload",
+    "_is_image_part",
+    "_replace_image_parts",
+    "_retire_stale_tool_result_images",
+    "_rewritten",
+    "_strip_historical_media",
+    "_strip_images_from_content",
+    "_strip_images_from_tool_msg",
+    "_summary_part_text",
+    "_tool_content_has_images",
+    "_tool_result_parts",
+    "evict_stale_outbound_tool_images"
+   ],
+   "new_facade_refs": [],
+   "other_files_new_old_path_refs": [],
+   "other_files_carry_main_lines": []
+  },
+  {
+   "number": 130668,
+   "head": "394c00629de2ed0e139cbbb9f0496866164e086f",
+   "author": "iainlane",
+   "updatedAt": "2026-10-01T16:34:33Z",
+   "labels": {
+    "nodes": [
+     {
+      "name": "type/bug"
+     },
+     {
+      "name": "comp/gateway"
+     },
+     {
+      "name": "comp/plugins"
+     },
+     {
+      "name": "platform/matrix"
+     },
+     {
+      "name": "area/config"
+     },
+     {
+      "name": "area/docker"
+     },
+     {
+      "name": "P3"
+     },
+     {
+      "name": "sweeper:risk-session-state"
+     },
+     {
+      "name": "sweeper:risk-message-delivery"
+     },
+     {
+      "name": "sweeper:risk-compatibility"
+     },
+     {
+      "name": "sweeper:risk-automation"
+     }
+    ]
+   },
+   "isDraft": true,
+   "baseRefName": "main",
+   "n_files": 94,
+   "touches_facade": true,
+   "touches_branch_files": [
+    "agent/context_compressor.py"
+   ],
+   "adds_media_module": false,
+   "edits_branch_rewritten_lines": [],
+   "preimage": "reverse-patch",
+   "edits_moved": [],
+   "carries_main_text_only": [],
+   "moved_present_in_preimage": [
+    "_IMAGE_PART_TYPES",
+    "_MAX_KEEP_TOOL_IMAGES",
+    "_content_has_images",
+    "_image_part_label",
+    "_image_payload",
+    "_is_image_part",
+    "_replace_image_parts",
+    "_retire_stale_tool_result_images",
+    "_rewritten",
+    "_strip_historical_media",
+    "_strip_images_from_content",
+    "_strip_images_from_tool_msg",
+    "_summary_part_text",
+    "_tool_content_has_images",
+    "_tool_result_parts",
+    "evict_stale_outbound_tool_images"
+   ],
+   "new_facade_refs": [],
+   "other_files_new_old_path_refs": [],
+   "other_files_carry_main_lines": []
+  }
+ ]
+}

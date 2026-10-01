@@ -1,0 +1,89 @@
+{
+  "schema": "xf.receipt.v1",
+  "id": "OWNERSHIP/r20261001-02",
+  "experiment": "P2 ownership refresh: does any open upstream PR add a memory prefetch metric, and which open PRs carry demand for it or touch the same code? teknium1 open-PR recount plus 10 prefetch search queries",
+  "tier": "T0",
+  "cost_usd": 0.0,
+  "lane": "cpu (gh, read-only)",
+  "staging": "memory-prefetch-metric",
+  "base_revision": "040b6df2c40b0f4f88f51e4c2062eafc4d7463c5",
+  "head_revision": "569ad4d84b0f9888ea2598c2a8ea416b2c75bad6",
+  "results": {
+    "teknium1_open_prs": {
+      "count": 260,
+      "count_check": "gh search total_count = 260",
+      "same_set_as_r01": true,
+      "added": [],
+      "removed": [],
+      "title_regex": "prefetch|telemetry|metric",
+      "title_hits": [],
+      "file_scan": "r01's scan of all 2871 changed files stands (same 260 PRs): only #113678 touches agent/memory_manager.py, outside prefetch"
+    },
+    "prefetch_search": {
+      "searched_at": "2026-10-01T12:15Z",
+      "queries": {
+        "prefetch metric": 4,
+        "prefetch telemetry": 10,
+        "memory prefetch": 152,
+        "prefetch_provider": 0,
+        "prefetch shared metrics": 2,
+        "memory.prefetch": 1,
+        "record_memory_prefetch": 0,
+        "external prefetch": 61,
+        "prefetch timeout": 56,
+        "prefetch latency": 22
+      },
+      "command": "gh api -X GET search/issues -f q='repo:NousResearch/hermes-agent is:pr is:open <query>'"
+    },
+    "adds_prefetch_metric": [],
+    "demand_signals": {
+      "124151": "kweez007, OPEN since 2026-09-26: timed Hindsight recall by hand, raises its prefetch bound to 20 s",
+      "120042": "Navlem, OPEN since 2026-09-23 (head 641f6b94c5): raises the default bound to 12 s after a production audit of 18-27 s recalls and about 53 dropped prefetches in one day",
+      "98045": "Navlem, OPEN since 2026-08-29: makes the external prefetch timeout configurable"
+    },
+    "same_code_not_a_counter": {
+      "126457": "mozhongzhou, OPEN since 2026-09-28: CLI status-bar health indicator; marks the provider unavailable at the _prefetch_provider timeout exit; process-local UI state, not a shared metric",
+      "65329": "Soju06, OPEN since 2026-07-16 (head c868eaaa02, last update 2026-07-30): opt-in local JSONL turn trace (agent.turn_trace) with a prologue.memory_prefetch span around prefetch_all tagged hit/empty; overlaps the latency half for one machine, records nothing shared, conflicts with main in 11 files",
+      "92118": "seradin: structured prefetch observations; its body says Hermes adds no persistence, outbound delivery or telemetry",
+      "87028": "richardclawbot: honor external prefetch timeout; no record/metric lines",
+      "86948": "V0v1kkkAssistant: configurable provider timeouts; no record/metric lines",
+      "125802": "Finn763: prefetch delivery channel in turn_context.py; no metric"
+    },
+    "search_hits_checked_not_overlapping": {
+      "128757": "Finn763: model-switch cost message; no memory_manager/shared_metrics file",
+      "129324": "OPGokuVPS: mem0 prefetch gate (plugin side, 2 files)",
+      "78584": "iso2kx: temporary chats; touches memory_manager.py for session scope, not prefetch metrics",
+      "68028": "jkobject: supermemory recall precision gate (plugin)",
+      "106813": "remi-td: holographic retrieval usage tracking (plugin)",
+      "121513": "Roblmvp: holographic fact_id in prefetch (plugin)"
+    }
+  },
+  "verdict": "OURS (no open PR adds a prefetch counter); demand from #124151 and #120042; risk: teknium1 may land the same row himself",
+  "label": "OBSERVED",
+  "provenance": "self",
+  "privacy": "public-aggregate (public PR metadata only)",
+  "raw_artifacts": {
+    "prefetch_search": {
+      "path": "work/r3/ownership_prefetch_search_r3.json",
+      "sha256": "c93013801caa3a6c3dcac3b144da4d9944f89a213179d42990bf8d73e72e4b52"
+    },
+    "teknium1_open": {
+      "path": "work/r3/teknium1_open_r3.json",
+      "sha256": "09b3f3b23c0038a8fde7b005bd77128716eed83f7909ca774b1eb51f875f8bf5"
+    },
+    "pr120042": {
+      "path": "work/r3/pr120042.json",
+      "sha256": "95e43968b1c5ef2885e8cee11845318ea230386e9b8249afad5e19ad5c299fbe"
+    },
+    "pr65329": {
+      "path": "work/r3/pr65329.json",
+      "sha256": "3db9aa20f7db6f863d6e3509bad10f57eb2f72c49c9cd86695091b57657644e7"
+    }
+  },
+  "supersedes": {
+    "id": "OWNERSHIP/r20261001-01",
+    "path": "receipts/OWNERSHIP-r20261001-01.json",
+    "sha256_as_written": "07b1659df318b5517772105c5e2b84f054516aa4b81ef3b7057d2e3d37a1869d",
+    "why": "missed #120042 (a second demand signal) and #65329, #126457, #98045 (same code, not counters)"
+  }
+}

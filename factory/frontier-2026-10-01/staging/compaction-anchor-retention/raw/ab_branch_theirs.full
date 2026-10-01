@@ -1,0 +1,129 @@
+▶ not activated — using HERMES_PYTHON: $VENV/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~5 tests) under ['tests/agent/test_context_compressor_anchor_harvest.py']; running with -j 2
+[100.0% |     5/~5 | ✓2 | ✗3] ✗ tests/agent/test_context_compressor_anchor_harvest.py (2✓ 3✗, 1.9s)
+
+  ╔╍ Failed: tests/agent/test_context_compressor_anchor_harvest.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║         ]
+  ║     
+  ║         index = cc._build_anchor_index(turns)
+  ║     
+  ║ >       assert "[221791]" in index
+  ║ E       AssertionError: assert '[221791]' in ''
+  ║ 
+  ║ tests/agent/test_context_compressor_anchor_harvest.py:54: AssertionError
+  ║ ___________ test_anchor_index_names_a_class_whose_values_cannot_fit ____________
+  ║ 
+  ║ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fc75b4ce8d0>
+  ║ 
+  ║     def test_anchor_index_names_a_class_whose_values_cannot_fit(monkeypatch):
+  ║         """A scanned class that loses its values to the budget must still be named."""
+  ║         monkeypatch.setattr(cc, "_ANCHOR_PATTERNS", [_PATH_PATTERN])
+  ║         monkeypatch.setattr(cc, "_LEAN_ANCHOR_BUDGET_CHARS", 10)  # fits "files:", not the first value
+  ║         turns = [{"role": "user", "content": "见 src/very/deep/nested/module_name.py 与 src/other/second_file.py"}]
+  ║     
+  ║         index = cc._build_anchor_index(turns)
+  ║     
+  ║ >       assert "files:" in index  # label survives the cut
+  ║         ^^^^^^^^^^^^^^^^^^^^^^^^
+  ║ E       AssertionError: assert 'files:' in ''
+  ║ 
+  ║ tests/agent/test_context_compressor_anchor_harvest.py:89: AssertionError
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/agent/test_context_compressor_anchor_harvest.py::test_anchor_index_harvests_tool_call_arguments_and_artifact_paths
+  ║ FAILED tests/agent/test_context_compressor_anchor_harvest.py::test_anchor_index_cheap_ids_survive_a_tight_budget
+  ║ FAILED tests/agent/test_context_compressor_anchor_harvest.py::test_anchor_index_names_a_class_whose_values_cannot_fit
+  ║ 3 failed, 2 passed in 0.47s
+  ║
+  ║  Repro: python -m pytest tests/agent/test_context_compressor_anchor_harvest.py -q
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 1 files, 2 tests passed, 3 failed (100% complete) in 1.9s (2 workers) ===
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 1.9s  (runner wall: 1.9s, parallelism: 2x)
+  P50: 1.85s  P90: 1.85s  P95: 1.85s  P99: 1.85s  Max: 1.85s
+  <1s: 0 files (0%)  <2s: 1 files (100%)
+  Top 10 slowest:
+      1.85s  tests/agent/test_context_compressor_anchor_harvest.py
+
+=== Failure output ===
+
+--- tests/agent/test_context_compressor_anchor_harvest.py ---
+FF.F.                                                                    [100%]
+=================================== FAILURES ===================================
+______ test_anchor_index_harvests_tool_call_arguments_and_artifact_paths _______
+
+    def test_anchor_index_harvests_tool_call_arguments_and_artifact_paths():
+        """Paths reachable only through tool-call args, and non-code artifact paths, must be indexed."""
+        turns = [
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {"function": {"name": "read_file", "arguments": '{"path": "/srv/app/deploy/nightly.yaml"}'}},
+                    {"function": {"name": "terminal", "arguments": '{"command": "cat /srv/app/deploy/nightly.yaml"}'}},
+                ],
+            },
+            {"role": "tool", "content": "ok"},
+            {"role": "user", "content": "汇总 data/企业总表.csv 与 reports/2026/产业全景.xlsx 后回我"},
+        ]
+    
+        index = cc._build_anchor_index(turns)
+    
+>       assert "app/deploy/nightly.yaml" in index  # harvested verbatim from the args, not from content
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: assert 'app/deploy/nightly.yaml' in ''
+
+tests/agent/test_context_compressor_anchor_harvest.py:36: AssertionError
+______________ test_anchor_index_cheap_ids_survive_a_tight_budget ______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fc75b531b10>
+
+    def test_anchor_index_cheap_ids_survive_a_tight_budget(monkeypatch):
+        """Ids must be emitted before the greedy file-path section, and the budget must hold."""
+        monkeypatch.setattr(cc, "_LEAN_ANCHOR_BUDGET_CHARS", 900)
+        turns = [
+            {"role": "user", "content": "上一轮会话 20260920_220503_c78aff58 的口径，待办 [221791] 要复核"},
+            {
+                "role": "assistant",
+                "content": "扫描以下文件。" + "、".join(f"src/pkg/module_{i}/handlers/deep_path_{i}.py" for i in range(40)),
+            },
+        ]
+    
+        index = cc._build_anchor_index(turns)
+    
+>       assert "[221791]" in index
+E       AssertionError: assert '[221791]' in ''
+
+tests/agent/test_context_compressor_anchor_harvest.py:54: AssertionError
+___________ test_anchor_index_names_a_class_whose_values_cannot_fit ____________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fc75b4ce8d0>
+
+    def test_anchor_index_names_a_class_whose_values_cannot_fit(monkeypatch):
+        """A scanned class that loses its values to the budget must still be named."""
+        monkeypatch.setattr(cc, "_ANCHOR_PATTERNS", [_PATH_PATTERN])
+        monkeypatch.setattr(cc, "_LEAN_ANCHOR_BUDGET_CHARS", 10)  # fits "files:", not the first value
+        turns = [{"role": "user", "content": "见 src/very/deep/nested/module_name.py 与 src/other/second_file.py"}]
+    
+        index = cc._build_anchor_index(turns)
+    
+>       assert "files:" in index  # label survives the cut
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: assert 'files:' in ''
+
+tests/agent/test_context_compressor_anchor_harvest.py:89: AssertionError
+=========================== short test summary info ============================
+FAILED tests/agent/test_context_compressor_anchor_harvest.py::test_anchor_index_harvests_tool_call_arguments_and_artifact_paths
+FAILED tests/agent/test_context_compressor_anchor_harvest.py::test_anchor_index_cheap_ids_survive_a_tight_budget
+FAILED tests/agent/test_context_compressor_anchor_harvest.py::test_anchor_index_names_a_class_whose_values_cannot_fit
+3 failed, 2 passed in 0.47s
+
+=== 1 file with test failures (3 tests failed) ===
+  tests/agent/test_context_compressor_anchor_harvest.py  (3 tests failed)

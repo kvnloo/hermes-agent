@@ -46,7 +46,7 @@ COMMON = {
     "head_revision": HEAD,
     "changed_files": ["evals/postmortem/forensics/logcalls.py", "evals/postmortem/live_ab/cache_prefix_live.py",
                       "evals/postmortem/live_ab/cache_prefix_wire.py", "evals/postmortem/tests/test_postmortem_harness.py"],
-    "env": {"host": "groot", "test_python": "3.11.14 (HERMES_PYTHON, not activated)", "host_python": "3.14.7",
+    "env": {"host": "<local-host>", "test_python": "3.11.14 (HERMES_PYTHON, not activated)", "host_python": "3.14.7",
             "sandbox": "no bwrap (xf executor not built); HOME/HERMES_HOME = fresh scratch dirs; loopback-only socket guard and exec audit hook in the T1 round trip",
             "tz": "America/Chicago (CDT -0500)"},
     "evidence_class": {"local": True, "ci": "none", "simulation": False, "runtime": False, "kind": "mechanism"},

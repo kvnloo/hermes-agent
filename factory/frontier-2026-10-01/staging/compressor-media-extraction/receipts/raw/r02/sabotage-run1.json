@@ -1,0 +1,1370 @@
+{
+ "head": "c5e8be14b43bf75bcc2e4e8d95f2d4810a7e2779",
+ "base": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+ "narrow_set": [
+  "tests/agent/test_compressor_historical_media.py",
+  "tests/agent/test_compressor_stale_tool_images.py",
+  "tests/agent/test_outbound_stale_vision.py",
+  "tests/agent/test_protected_tail_pressure.py",
+  "tests/agent/test_image_eviction_policy.py",
+  "tests/agent/test_compressor_zero_user_guard.py",
+  "tests/agent/test_image_rejection_fallback.py",
+  "tests/agent/test_iteration_summary_reasoning_details.py",
+  "tests/agent/test_dict_tool_call_args.py",
+  "tests/agent/test_context_token_tracking.py",
+  "tests/agent/test_degenerate_final_recovery.py"
+ ],
+ "wide_set_files": 365,
+ "baseline_narrow": {
+  "outcome": "GREEN",
+  "rc": 0,
+  "passed": 132,
+  "failed": 0,
+  "files_no_tests": 0,
+  "ids": []
+ },
+ "rows": [
+  {
+   "id": "hunk:agent/chat_completion_helpers.py#1",
+   "mutation": "@@ -2257 +2257 @@ def _iteration_summary_api_messages(agent, messages: list) -> list:",
+   "tests_narrow": {
+    "outcome": "RED",
+    "rc": 1,
+    "passed": 127,
+    "failed": 5,
+    "files_no_tests": 0,
+    "ids": [
+     "FAILED tests/agent/test_image_rejection_fallback.py::test_iteration_summary_strips_images_for_rejecting_model",
+     "FAILED tests/agent/test_iteration_summary_reasoning_details.py::TestSummaryPrefixParity::test_canonicalizes_tool_call_arguments_and_strips_content",
+     "FAILED tests/agent/test_iteration_summary_reasoning_details.py::TestSummaryPrefixParity::test_strips_lone_surrogates_like_the_send_path",
+     "FAILED tests/agent/test_iteration_summary_reasoning_details.py::test_anthropic_summary_messages_keep_reasoning_details",
+     "FAILED tests/agent/test_iteration_summary_reasoning_details.py::test_strict_chat_route_summary_wire_drops_reasoning_details"
+    ]
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "old_path_zero"
+    ]
+   },
+   "pinned_by": [
+    "tests",
+    "static:old_path_zero"
+   ]
+  },
+  {
+   "id": "hunk:agent/context_compressor.py#1",
+   "mutation": "@@ -17 +16,0 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple",
+   "tests_narrow": {
+    "outcome": "GREEN",
+    "rc": 0,
+    "passed": 132,
+    "failed": 0,
+    "files_no_tests": 0,
+    "ids": []
+   },
+   "static": {
+    "overall": "PASS",
+    "failed_gates": []
+   },
+   "pinned_by": []
+  },
+  {
+   "id": "hunk:agent/context_compressor.py#2",
+   "mutation": "@@ -35,0 +35,8 @@ from agent.context_compressor_summary import SummaryDispatchMixin",
+   "tests_narrow": {
+    "outcome": "RED",
+    "rc": 1,
+    "passed": 115,
+    "failed": 17,
+    "files_no_tests": 0,
+    "ids": [
+     "FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_frees_stale_vision_tool_results",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_strips_historical_images",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_keep_newest_images_inside_a_large_protect_window",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_multimodal_envelopes_outside_keep_window_become_text",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_user_uploads_are_not_retired",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_kanban_worker_recompaction_keeps_user_turn",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_no_consecutive_user_roles_introduced",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_preserved_tail_user_is_not_overridden",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_image_only_protected_head_still_yields_non_empty_text",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_image_only_tail_user_turn_still_yields_non_empty_text",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_merge_targets_the_colliding_tail_message_not_index_zero",
+     "FAILED tests/agent/test_protected_tail_pressure.py::TestProtectedTailPressure61932::test_all_oversized_tail_dead_end_shape_now_compresses",
+     "FAILED tests/agent/test_protected_tail_pressure.py::TestProtectedTailPressure61932::test_compress_escapes_cannot_compress_further_dead_end",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_compaction_keeps_four_images_in_a_spared_pending_round",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[round_last]",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[steer_after_round]",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[two_steers_after_round]"
+    ]
+   },
+   "static": {
+    "overall": "PASS",
+    "failed_gates": []
+   },
+   "pinned_by": [
+    "tests"
+   ]
+  },
+  {
+   "id": "hunk:agent/context_compressor.py#3",
+   "mutation": "@@ -1170,7 +1176,0 @@ _PRESSURE_KEEP_RECENT_MESSAGES = 3",
+   "tests_narrow": {
+    "outcome": "GREEN",
+    "rc": 0,
+    "passed": 132,
+    "failed": 0,
+    "files_no_tests": 0,
+    "ids": []
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "facade_rest"
+    ]
+   },
+   "pinned_by": [
+    "static:facade_rest"
+   ]
+  },
+  {
+   "id": "hunk:agent/context_compressor.py#4",
+   "mutation": "@@ -1425,222 +1424,0 @@ def _append_text_to_content(content: Any, text: str, *, prepend: bool = False) -",
+   "tests_narrow": {
+    "outcome": "RED",
+    "rc": 1,
+    "passed": 15,
+    "failed": 27,
+    "files_no_tests": 7,
+    "ids": [
+     "ERROR tests/agent/test_compressor_historical_media.py",
+     "ERROR tests/agent/test_compressor_stale_tool_images.py",
+     "ERROR tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_kanban_worker_recompaction_keeps_user_turn",
+     "ERROR tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_no_consecutive_user_roles_introduced",
+     "ERROR tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_preserved_tail_user_is_not_overridden",
+     "ERROR tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_image_only_protected_head_still_yields_non_empty_text",
+     "ERROR tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_image_only_tail_user_turn_still_yields_non_empty_text",
+     "ERROR tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_merge_targets_the_colliding_tail_message_not_index_zero",
+     "ERROR tests/agent/test_context_token_tracking.py",
+     "ERROR tests/agent/test_degenerate_final_recovery.py",
+     "ERROR tests/agent/test_iteration_summary_reasoning_details.py",
+     "ERROR tests/agent/test_protected_tail_pressure.py",
+     "FAILED tests/agent/test_dict_tool_call_args.py::test_tool_call_validation_accepts_dict_arguments",
+     "FAILED tests/agent/test_image_rejection_fallback.py::TestRejectionNeverReachesPersistedHistory::test_a_corrupt_image_does_not_mark_the_model_image_rejecting",
+     "FAILED tests/agent/test_image_rejection_fallback.py::TestRejectionNeverReachesPersistedHistory::test_canonical_history_keeps_its_images",
+     "FAILED tests/agent/test_image_rejection_fallback.py::TestRejectionNeverReachesPersistedHistory::test_every_model_in_a_fallback_chain_is_tracked",
+     "FAILED tests/agent/test_image_rejection_fallback.py::TestStripImagesDropsStaleApiContent::test_next_turn_does_not_resend_the_stripped_images",
+     "FAILED tests/agent/test_image_rejection_fallback.py::TestStripImagesDropsStaleApiContent::test_stripped_message_loses_its_sidecar",
+     "FAILED tests/agent/test_image_rejection_fallback.py::TestStripImagesDropsStaleApiContent::test_tool_placeholder_message_also_loses_its_sidecar",
+     "FAILED tests/agent/test_image_rejection_fallback.py::TestStripImagesDropsStaleApiContent::test_untouched_messages_keep_their_sidecar",
+     "FAILED tests/agent/test_image_rejection_fallback.py::TestStripImagesPreservesAlternation::test_assistant_with_tool_calls_and_image_only_content_preserved",
+     "FAILED tests/agent/test_image_rejection_fallback.py::TestStripImagesPreservesAlternation::test_image_only_user_message_dropped",
+     "FAILED tests/agent/test_image_rejection_fallback.py::TestStripImagesPreservesAlternation::test_multiple_tool_messages_all_preserved",
+     "FAILED tests/agent/test_image_rejection_fallback.py::TestStripImagesPreservesAlternation::test_noop_when_no_images",
+     "FAILED tests/agent/test_image_rejection_fallback.py::TestStripImagesPreservesAlternation::test_tool_message_with_all_images_replaced_not_deleted",
+     "FAILED tests/agent/test_image_rejection_fallback.py::TestStripImagesPreservesAlternation::test_tool_message_with_mixed_content_keeps_text_parts",
+     "FAILED tests/agent/test_image_rejection_fallback.py::test_iteration_summary_strips_images_for_rejecting_model",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_a_batch_that_would_blind_the_model_stops_at_the_floor",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_byte_pressure_overrides_the_keep_newest_floor",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_does_not_rewrite_persisted_history",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_eviction_retires_a_batch_once_over_the_limit",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_floor_yields_when_eviction_can_fix_the_breach",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_frontier_holds_between_batch_advances",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_frontier_holds_when_tool_results_carry_several_images",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_keep_newest_is_a_floor_when_uploads_fill_the_ceiling",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_multi_image_tool_results_count_as_blocks",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_nothing_is_evicted_below_the_provider_limit",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_user_uploads_are_not_evicted",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_user_uploads_count_against_the_ceiling"
+    ]
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "facade_rest",
+     "imports"
+    ]
+   },
+   "pinned_by": [
+    "tests",
+    "static:facade_rest",
+    "static:imports"
+   ]
+  },
+  {
+   "id": "hunk:agent/image_eviction_policy.py#1",
+   "mutation": "@@ -4 +4 @@ Two passes retire old tool-result images from the per-request copy of the conver",
+   "tests_narrow": {
+    "outcome": "GREEN",
+    "rc": 0,
+    "passed": 132,
+    "failed": 0,
+    "files_no_tests": 0,
+    "ids": []
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "old_path_zero"
+    ]
+   },
+   "pinned_by": [
+    "static:old_path_zero"
+   ]
+  },
+  {
+   "id": "hunk:agent/turn_request_assembly.py#1",
+   "mutation": "@@ -153 +153 @@ def assemble_api_request(",
+   "tests_narrow": {
+    "outcome": "RED",
+    "rc": 1,
+    "passed": 124,
+    "failed": 8,
+    "files_no_tests": 0,
+    "ids": [
+     "FAILED tests/agent/test_context_token_tracking.py::test_anthropic_cache_read_and_creation_added",
+     "FAILED tests/agent/test_context_token_tracking.py::test_anthropic_no_cache_fields",
+     "FAILED tests/agent/test_context_token_tracking.py::test_codex_no_cache_fields",
+     "FAILED tests/agent/test_context_token_tracking.py::test_openai_prompt_tokens_unchanged",
+     "FAILED tests/agent/test_degenerate_final_recovery.py::TestFragmentAfterToolWork::test_fragment_after_tool_work_reprompts_instead_of_exiting",
+     "FAILED tests/agent/test_degenerate_final_recovery.py::TestFragmentAfterToolWork::test_fragment_without_tool_work_is_a_plain_answer",
+     "FAILED tests/agent/test_degenerate_final_recovery.py::TestFragmentAfterToolWork::test_persistent_collapse_is_bounded_and_keeps_the_fragment",
+     "FAILED tests/agent/test_dict_tool_call_args.py::test_tool_call_validation_accepts_dict_arguments"
+    ]
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "old_path_zero"
+    ]
+   },
+   "pinned_by": [
+    "tests",
+    "static:old_path_zero"
+   ]
+  },
+  {
+   "id": "hunk:tests/agent/test_compressor_historical_media.py#1",
+   "mutation": "@@ -16,2 +16,2 @@ import pytest",
+   "tests_narrow": {
+    "outcome": "RED",
+    "rc": 1,
+    "passed": 117,
+    "failed": 0,
+    "files_no_tests": 1,
+    "ids": [
+     "ERROR tests/agent/test_compressor_historical_media.py"
+    ]
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "old_path_zero"
+    ]
+   },
+   "pinned_by": [
+    "tests",
+    "static:old_path_zero"
+   ]
+  },
+  {
+   "id": "hunk:tests/agent/test_compressor_stale_tool_images.py#1",
+   "mutation": "@@ -11,2 +11,2 @@ from __future__ import annotations",
+   "tests_narrow": {
+    "outcome": "RED",
+    "rc": 1,
+    "passed": 126,
+    "failed": 0,
+    "files_no_tests": 1,
+    "ids": [
+     "ERROR tests/agent/test_compressor_stale_tool_images.py"
+    ]
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "old_path_zero"
+    ]
+   },
+   "pinned_by": [
+    "tests",
+    "static:old_path_zero"
+   ]
+  },
+  {
+   "id": "hunk:tests/agent/test_compressor_stale_tool_images.py#2",
+   "mutation": "@@ -152 +152 @@ class TestSharedImageStripHelper:",
+   "tests_narrow": {
+    "outcome": "GREEN",
+    "rc": 0,
+    "passed": 132,
+    "failed": 0,
+    "files_no_tests": 0,
+    "ids": []
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "old_path_zero"
+    ]
+   },
+   "pinned_by": [
+    "static:old_path_zero"
+   ]
+  },
+  {
+   "id": "hunk:tests/agent/test_compressor_stale_tool_images.py#3",
+   "mutation": "@@ -175 +175 @@ class TestSharedImageStripHelper:",
+   "tests_narrow": {
+    "outcome": "GREEN",
+    "rc": 0,
+    "passed": 132,
+    "failed": 0,
+    "files_no_tests": 0,
+    "ids": []
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "old_path_zero"
+    ]
+   },
+   "pinned_by": [
+    "static:old_path_zero"
+   ]
+  },
+  {
+   "id": "hunk:tests/agent/test_compressor_stale_tool_images.py#4",
+   "mutation": "@@ -200 +200 @@ class TestSharedImageStripHelper:",
+   "tests_narrow": {
+    "outcome": "GREEN",
+    "rc": 0,
+    "passed": 132,
+    "failed": 0,
+    "files_no_tests": 0,
+    "ids": []
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "old_path_zero"
+    ]
+   },
+   "pinned_by": [
+    "static:old_path_zero"
+   ]
+  },
+  {
+   "id": "hunk:tests/agent/test_image_eviction_policy.py#1",
+   "mutation": "@@ -3 +3 @@",
+   "tests_narrow": {
+    "outcome": "GREEN",
+    "rc": 0,
+    "passed": 132,
+    "failed": 0,
+    "files_no_tests": 0,
+    "ids": []
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "old_path_zero"
+    ]
+   },
+   "pinned_by": [
+    "static:old_path_zero"
+   ]
+  },
+  {
+   "id": "hunk:tests/agent/test_outbound_stale_vision.py#1",
+   "mutation": "@@ -14 +14 @@ from agent.agent_runtime_helpers import sanitize_api_messages",
+   "tests_narrow": {
+    "outcome": "RED",
+    "rc": 1,
+    "passed": 120,
+    "failed": 0,
+    "files_no_tests": 1,
+    "ids": [
+     "ERROR tests/agent/test_outbound_stale_vision.py"
+    ]
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "old_path_zero"
+    ]
+   },
+   "pinned_by": [
+    "tests",
+    "static:old_path_zero"
+   ]
+  },
+  {
+   "id": "hunk:tests/agent/test_protected_tail_pressure.py#1",
+   "mutation": "@@ -25 +24,0 @@ from agent.context_compressor import (",
+   "tests_narrow": {
+    "outcome": "RED",
+    "rc": 1,
+    "passed": 126,
+    "failed": 0,
+    "files_no_tests": 1,
+    "ids": [
+     "ERROR tests/agent/test_protected_tail_pressure.py"
+    ]
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "old_path_zero"
+    ]
+   },
+   "pinned_by": [
+    "tests",
+    "static:old_path_zero"
+   ]
+  },
+  {
+   "id": "hunk:tests/agent/test_protected_tail_pressure.py#2",
+   "mutation": "@@ -26,0 +26 @@ from agent.context_compressor import (",
+   "tests_narrow": {
+    "outcome": "RED",
+    "rc": 1,
+    "passed": 131,
+    "failed": 1,
+    "files_no_tests": 0,
+    "ids": [
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_compaction_keeps_four_images_in_a_spared_pending_round"
+    ]
+   },
+   "static": {
+    "overall": "PASS",
+    "failed_gates": []
+   },
+   "pinned_by": [
+    "tests"
+   ]
+  },
+  {
+   "id": "facade-import:_is_image_part",
+   "mutation": "drop _is_image_part from the facade's sibling import",
+   "tests_narrow": {
+    "outcome": "RED",
+    "rc": 1,
+    "passed": 126,
+    "failed": 6,
+    "files_no_tests": 0,
+    "ids": [
+     "FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_frees_stale_vision_tool_results",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_strips_historical_images",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_user_uploads_are_not_retired",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_image_only_tail_user_turn_still_yields_non_empty_text",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_merge_targets_the_colliding_tail_message_not_index_zero",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_compaction_keeps_four_images_in_a_spared_pending_round"
+    ]
+   },
+   "static": {
+    "overall": "PASS",
+    "failed_gates": []
+   },
+   "pinned_by": [
+    "tests"
+   ]
+  },
+  {
+   "id": "facade-import:_retire_stale_tool_result_images",
+   "mutation": "drop _retire_stale_tool_result_images from the facade's sibling import",
+   "tests_narrow": {
+    "outcome": "RED",
+    "rc": 1,
+    "passed": 115,
+    "failed": 17,
+    "files_no_tests": 0,
+    "ids": [
+     "FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_frees_stale_vision_tool_results",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_strips_historical_images",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_keep_newest_images_inside_a_large_protect_window",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_multimodal_envelopes_outside_keep_window_become_text",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_user_uploads_are_not_retired",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_kanban_worker_recompaction_keeps_user_turn",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_no_consecutive_user_roles_introduced",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_preserved_tail_user_is_not_overridden",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_image_only_protected_head_still_yields_non_empty_text",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_image_only_tail_user_turn_still_yields_non_empty_text",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_merge_targets_the_colliding_tail_message_not_index_zero",
+     "FAILED tests/agent/test_protected_tail_pressure.py::TestProtectedTailPressure61932::test_all_oversized_tail_dead_end_shape_now_compresses",
+     "FAILED tests/agent/test_protected_tail_pressure.py::TestProtectedTailPressure61932::test_compress_escapes_cannot_compress_further_dead_end",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_compaction_keeps_four_images_in_a_spared_pending_round",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[round_last]",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[steer_after_round]",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[two_steers_after_round]"
+    ]
+   },
+   "static": {
+    "overall": "PASS",
+    "failed_gates": []
+   },
+   "pinned_by": [
+    "tests"
+   ]
+  },
+  {
+   "id": "facade-import:_rewritten",
+   "mutation": "drop _rewritten from the facade's sibling import",
+   "tests_narrow": {
+    "outcome": "GREEN",
+    "rc": 0,
+    "passed": 132,
+    "failed": 0,
+    "files_no_tests": 0,
+    "ids": []
+   },
+   "static": {
+    "overall": "PASS",
+    "failed_gates": []
+   },
+   "pinned_by": []
+  },
+  {
+   "id": "facade-import:_strip_historical_media",
+   "mutation": "drop _strip_historical_media from the facade's sibling import",
+   "tests_narrow": {
+    "outcome": "RED",
+    "rc": 1,
+    "passed": 118,
+    "failed": 14,
+    "files_no_tests": 0,
+    "ids": [
+     "FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_frees_stale_vision_tool_results",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_strips_historical_images",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_kanban_worker_recompaction_keeps_user_turn",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_no_consecutive_user_roles_introduced",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_preserved_tail_user_is_not_overridden",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_image_only_protected_head_still_yields_non_empty_text",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_image_only_tail_user_turn_still_yields_non_empty_text",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_merge_targets_the_colliding_tail_message_not_index_zero",
+     "FAILED tests/agent/test_protected_tail_pressure.py::TestProtectedTailPressure61932::test_all_oversized_tail_dead_end_shape_now_compresses",
+     "FAILED tests/agent/test_protected_tail_pressure.py::TestProtectedTailPressure61932::test_compress_escapes_cannot_compress_further_dead_end",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_compaction_keeps_four_images_in_a_spared_pending_round",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[round_last]",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[steer_after_round]",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[two_steers_after_round]"
+    ]
+   },
+   "static": {
+    "overall": "PASS",
+    "failed_gates": []
+   },
+   "pinned_by": [
+    "tests"
+   ]
+  },
+  {
+   "id": "facade-import:_strip_images_from_tool_msg",
+   "mutation": "drop _strip_images_from_tool_msg from the facade's sibling import",
+   "tests_narrow": {
+    "outcome": "GREEN",
+    "rc": 0,
+    "passed": 132,
+    "failed": 0,
+    "files_no_tests": 0,
+    "ids": []
+   },
+   "static": {
+    "overall": "PASS",
+    "failed_gates": []
+   },
+   "pinned_by": []
+  },
+  {
+   "id": "facade-import:_summary_part_text",
+   "mutation": "drop _summary_part_text from the facade's sibling import",
+   "tests_narrow": {
+    "outcome": "GREEN",
+    "rc": 0,
+    "passed": 132,
+    "failed": 0,
+    "files_no_tests": 0,
+    "ids": []
+   },
+   "static": {
+    "overall": "PASS",
+    "failed_gates": []
+   },
+   "pinned_by": []
+  },
+  {
+   "id": "sibling:_MAX_KEEP_TOOL_IMAGES",
+   "mutation": "value replaced with 0",
+   "tests_narrow": {
+    "outcome": "RED",
+    "rc": 1,
+    "passed": 131,
+    "failed": 1,
+    "files_no_tests": 0,
+    "ids": [
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_multimodal_envelopes_outside_keep_window_become_text"
+    ]
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "verbatim"
+    ]
+   },
+   "pinned_by": [
+    "tests",
+    "static:verbatim"
+   ]
+  },
+  {
+   "id": "sibling:_replace_image_parts",
+   "mutation": "first statement raises RuntimeError",
+   "tests_narrow": {
+    "outcome": "RED",
+    "rc": 1,
+    "passed": 105,
+    "failed": 27,
+    "files_no_tests": 0,
+    "ids": [
+     "FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_frees_stale_vision_tool_results",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_strips_historical_images",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_all_three_wire_shapes_strip_in_tool_results",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_deterministic_double_run",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_first_message_user_image_no_longer_blocks_tool_stripping",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_newest_tool_image_survives_inside_the_protected_tail",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_non_dict_messages_pass_through",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_stripped_tool_message_drops_its_api_content_sidecar",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_strips_stale_tool_result_images_when_no_user_image_exists",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_tool_image_before_the_user_anchor_is_still_stripped",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripImagesFromContent::test_handles_all_three_shapes",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_keep_newest_images_inside_a_large_protect_window",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_user_uploads_are_not_retired",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestSharedImageStripHelper::test_demote_pass_drops_stale_api_content_on_image_strip",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestSharedImageStripHelper::test_imageless_content_returns_none",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_a_batch_that_would_blind_the_model_stops_at_the_floor",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_byte_pressure_overrides_the_keep_newest_floor",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_does_not_rewrite_persisted_history",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_eviction_retires_a_batch_once_over_the_limit",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_floor_yields_when_eviction_can_fix_the_breach",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_frontier_holds_between_batch_advances",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_frontier_holds_when_tool_results_carry_several_images",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_keep_newest_is_a_floor_when_uploads_fill_the_ceiling",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_multi_image_tool_results_count_as_blocks",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_user_uploads_are_not_evicted",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_user_uploads_count_against_the_ceiling",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_compaction_keeps_four_images_in_a_spared_pending_round"
+    ]
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "verbatim"
+    ]
+   },
+   "pinned_by": [
+    "tests",
+    "static:verbatim"
+   ]
+  },
+  {
+   "id": "sibling:_tool_result_parts",
+   "mutation": "first statement raises RuntimeError",
+   "tests_narrow": {
+    "outcome": "RED",
+    "rc": 1,
+    "passed": 80,
+    "failed": 52,
+    "files_no_tests": 0,
+    "ids": [
+     "FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_frees_stale_vision_tool_results",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_all_three_wire_shapes_strip_in_tool_results",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_deterministic_double_run",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_first_message_image_kept_when_it_is_the_only_image",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_first_message_user_image_no_longer_blocks_tool_stripping",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_multimodal_envelope_tool_results_age_out",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_newest_tool_image_survives_inside_the_protected_tail",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_single_tool_image_is_left_alone",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_stripped_tool_message_drops_its_api_content_sidecar",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_strips_stale_tool_result_images_when_no_user_image_exists",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_tool_image_before_the_user_anchor_is_still_stripped",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_unchanged_when_nothing_carries_images",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_keep_newest_images_inside_a_large_protect_window",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_multimodal_envelopes_outside_keep_window_become_text",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_user_uploads_are_not_retired",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_kanban_worker_recompaction_keeps_user_turn",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_no_consecutive_user_roles_introduced",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_preserved_tail_user_is_not_overridden",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_image_only_protected_head_still_yields_non_empty_text",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_image_only_tail_user_turn_still_yields_non_empty_text",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_merge_targets_the_colliding_tail_message_not_index_zero",
+     "FAILED tests/agent/test_context_token_tracking.py::test_anthropic_cache_read_and_creation_added",
+     "FAILED tests/agent/test_context_token_tracking.py::test_anthropic_no_cache_fields",
+     "FAILED tests/agent/test_context_token_tracking.py::test_codex_no_cache_fields",
+     "FAILED tests/agent/test_context_token_tracking.py::test_openai_prompt_tokens_unchanged",
+     "FAILED tests/agent/test_degenerate_final_recovery.py::TestFragmentAfterToolWork::test_fragment_after_tool_work_reprompts_instead_of_exiting",
+     "FAILED tests/agent/test_degenerate_final_recovery.py::TestFragmentAfterToolWork::test_fragment_without_tool_work_is_a_plain_answer",
+     "FAILED tests/agent/test_degenerate_final_recovery.py::TestFragmentAfterToolWork::test_persistent_collapse_is_bounded_and_keeps_the_fragment",
+     "FAILED tests/agent/test_dict_tool_call_args.py::test_tool_call_validation_accepts_dict_arguments",
+     "FAILED tests/agent/test_image_rejection_fallback.py::test_iteration_summary_strips_images_for_rejecting_model",
+     "FAILED tests/agent/test_iteration_summary_reasoning_details.py::TestSummaryPrefixParity::test_canonicalizes_tool_call_arguments_and_strips_content",
+     "FAILED tests/agent/test_iteration_summary_reasoning_details.py::TestSummaryPrefixParity::test_strips_lone_surrogates_like_the_send_path",
+     "FAILED tests/agent/test_iteration_summary_reasoning_details.py::test_anthropic_summary_messages_keep_reasoning_details",
+     "FAILED tests/agent/test_iteration_summary_reasoning_details.py::test_strict_chat_route_summary_wire_drops_reasoning_details",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_a_batch_that_would_blind_the_model_stops_at_the_floor",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_byte_pressure_overrides_the_keep_newest_floor",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_does_not_rewrite_persisted_history",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_eviction_retires_a_batch_once_over_the_limit",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_floor_yields_when_eviction_can_fix_the_breach",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_frontier_holds_between_batch_advances",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_frontier_holds_when_tool_results_carry_several_images",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_keep_newest_is_a_floor_when_uploads_fill_the_ceiling",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_multi_image_tool_results_count_as_blocks",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_nothing_is_evicted_below_the_provider_limit",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_user_uploads_are_not_evicted",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_user_uploads_count_against_the_ceiling",
+     "FAILED tests/agent/test_protected_tail_pressure.py::TestProtectedTailPressure61932::test_all_oversized_tail_dead_end_shape_now_compresses",
+     "FAILED tests/agent/test_protected_tail_pressure.py::TestProtectedTailPressure61932::test_compress_escapes_cannot_compress_further_dead_end",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_compaction_keeps_four_images_in_a_spared_pending_round",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[round_last]",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[steer_after_round]",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[two_steers_after_round]"
+    ]
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "verbatim"
+    ]
+   },
+   "pinned_by": [
+    "tests",
+    "static:verbatim"
+   ]
+  },
+  {
+   "id": "sibling:_tool_content_has_images",
+   "mutation": "first statement raises RuntimeError",
+   "tests_narrow": {
+    "outcome": "RED",
+    "rc": 1,
+    "passed": 97,
+    "failed": 35,
+    "files_no_tests": 0,
+    "ids": [
+     "FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_frees_stale_vision_tool_results",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_all_three_wire_shapes_strip_in_tool_results",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_deterministic_double_run",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_first_message_image_kept_when_it_is_the_only_image",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_first_message_user_image_no_longer_blocks_tool_stripping",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_multimodal_envelope_tool_results_age_out",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_newest_tool_image_survives_inside_the_protected_tail",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_single_tool_image_is_left_alone",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_stripped_tool_message_drops_its_api_content_sidecar",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_strips_stale_tool_result_images_when_no_user_image_exists",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_tool_image_before_the_user_anchor_is_still_stripped",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_unchanged_when_nothing_carries_images",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_keep_newest_images_inside_a_large_protect_window",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_multimodal_envelopes_outside_keep_window_become_text",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_user_uploads_are_not_retired",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_kanban_worker_recompaction_keeps_user_turn",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_no_consecutive_user_roles_introduced",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_preserved_tail_user_is_not_overridden",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_image_only_protected_head_still_yields_non_empty_text",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_image_only_tail_user_turn_still_yields_non_empty_text",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_merge_targets_the_colliding_tail_message_not_index_zero",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_a_batch_that_would_blind_the_model_stops_at_the_floor",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_byte_pressure_overrides_the_keep_newest_floor",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_does_not_rewrite_persisted_history",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_eviction_retires_a_batch_once_over_the_limit",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_frontier_holds_between_batch_advances",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_frontier_holds_when_tool_results_carry_several_images",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_keep_newest_is_a_floor_when_uploads_fill_the_ceiling",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_nothing_is_evicted_below_the_provider_limit",
+     "FAILED tests/agent/test_protected_tail_pressure.py::TestProtectedTailPressure61932::test_all_oversized_tail_dead_end_shape_now_compresses",
+     "FAILED tests/agent/test_protected_tail_pressure.py::TestProtectedTailPressure61932::test_compress_escapes_cannot_compress_further_dead_end",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_compaction_keeps_four_images_in_a_spared_pending_round",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[round_last]",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[steer_after_round]",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[two_steers_after_round]"
+    ]
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "verbatim"
+    ]
+   },
+   "pinned_by": [
+    "tests",
+    "static:verbatim"
+   ]
+  },
+  {
+   "id": "sibling:_strip_images_from_tool_msg",
+   "mutation": "first statement raises RuntimeError",
+   "tests_narrow": {
+    "outcome": "RED",
+    "rc": 1,
+    "passed": 113,
+    "failed": 19,
+    "files_no_tests": 0,
+    "ids": [
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_multimodal_envelope_tool_results_age_out",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_keep_newest_images_inside_a_large_protect_window",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_multimodal_envelopes_outside_keep_window_become_text",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_user_uploads_are_not_retired",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestSharedImageStripHelper::test_demote_pass_drops_stale_api_content_on_image_strip",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestSharedImageStripHelper::test_envelope_collapses_to_summary_string",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestSharedImageStripHelper::test_imageless_content_returns_none",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_a_batch_that_would_blind_the_model_stops_at_the_floor",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_byte_pressure_overrides_the_keep_newest_floor",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_does_not_rewrite_persisted_history",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_eviction_retires_a_batch_once_over_the_limit",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_floor_yields_when_eviction_can_fix_the_breach",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_frontier_holds_between_batch_advances",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_frontier_holds_when_tool_results_carry_several_images",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_keep_newest_is_a_floor_when_uploads_fill_the_ceiling",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_multi_image_tool_results_count_as_blocks",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_user_uploads_are_not_evicted",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_user_uploads_count_against_the_ceiling",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_compaction_keeps_four_images_in_a_spared_pending_round"
+    ]
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "verbatim"
+    ]
+   },
+   "pinned_by": [
+    "tests",
+    "static:verbatim"
+   ]
+  },
+  {
+   "id": "sibling:_rewritten",
+   "mutation": "first statement raises RuntimeError",
+   "tests_narrow": {
+    "outcome": "RED",
+    "rc": 1,
+    "passed": 104,
+    "failed": 28,
+    "files_no_tests": 0,
+    "ids": [
+     "FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_frees_stale_vision_tool_results",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_strips_historical_images",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_all_three_wire_shapes_strip_in_tool_results",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_deterministic_double_run",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_first_message_user_image_no_longer_blocks_tool_stripping",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_multimodal_envelope_tool_results_age_out",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_newest_tool_image_survives_inside_the_protected_tail",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_non_dict_messages_pass_through",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_stripped_tool_message_drops_its_api_content_sidecar",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_strips_stale_tool_result_images_when_no_user_image_exists",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_tool_image_before_the_user_anchor_is_still_stripped",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_keep_newest_images_inside_a_large_protect_window",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_multimodal_envelopes_outside_keep_window_become_text",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_user_uploads_are_not_retired",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestSharedImageStripHelper::test_demote_pass_drops_stale_api_content_on_image_strip",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestSharedImageStripHelper::test_envelope_collapses_to_summary_string",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_a_batch_that_would_blind_the_model_stops_at_the_floor",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_byte_pressure_overrides_the_keep_newest_floor",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_does_not_rewrite_persisted_history",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_eviction_retires_a_batch_once_over_the_limit",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_floor_yields_when_eviction_can_fix_the_breach",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_frontier_holds_between_batch_advances",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_frontier_holds_when_tool_results_carry_several_images",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_keep_newest_is_a_floor_when_uploads_fill_the_ceiling",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_multi_image_tool_results_count_as_blocks",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_user_uploads_are_not_evicted",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_user_uploads_count_against_the_ceiling",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_compaction_keeps_four_images_in_a_spared_pending_round"
+    ]
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "verbatim"
+    ]
+   },
+   "pinned_by": [
+    "tests",
+    "static:verbatim"
+   ]
+  },
+  {
+   "id": "sibling:_retire_stale_tool_result_images",
+   "mutation": "first statement raises RuntimeError",
+   "tests_narrow": {
+    "outcome": "RED",
+    "rc": 1,
+    "passed": 115,
+    "failed": 17,
+    "files_no_tests": 0,
+    "ids": [
+     "FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_frees_stale_vision_tool_results",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_strips_historical_images",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_keep_newest_images_inside_a_large_protect_window",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_multimodal_envelopes_outside_keep_window_become_text",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_user_uploads_are_not_retired",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_kanban_worker_recompaction_keeps_user_turn",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_no_consecutive_user_roles_introduced",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_preserved_tail_user_is_not_overridden",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_image_only_protected_head_still_yields_non_empty_text",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_image_only_tail_user_turn_still_yields_non_empty_text",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_merge_targets_the_colliding_tail_message_not_index_zero",
+     "FAILED tests/agent/test_protected_tail_pressure.py::TestProtectedTailPressure61932::test_all_oversized_tail_dead_end_shape_now_compresses",
+     "FAILED tests/agent/test_protected_tail_pressure.py::TestProtectedTailPressure61932::test_compress_escapes_cannot_compress_further_dead_end",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_compaction_keeps_four_images_in_a_spared_pending_round",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[round_last]",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[steer_after_round]",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[two_steers_after_round]"
+    ]
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "verbatim"
+    ]
+   },
+   "pinned_by": [
+    "tests",
+    "static:verbatim"
+   ]
+  },
+  {
+   "id": "sibling:_image_payload",
+   "mutation": "first statement raises RuntimeError",
+   "tests_narrow": {
+    "outcome": "RED",
+    "rc": 1,
+    "passed": 107,
+    "failed": 25,
+    "files_no_tests": 0,
+    "ids": [
+     "FAILED tests/agent/test_context_token_tracking.py::test_anthropic_cache_read_and_creation_added",
+     "FAILED tests/agent/test_context_token_tracking.py::test_anthropic_no_cache_fields",
+     "FAILED tests/agent/test_context_token_tracking.py::test_codex_no_cache_fields",
+     "FAILED tests/agent/test_context_token_tracking.py::test_openai_prompt_tokens_unchanged",
+     "FAILED tests/agent/test_degenerate_final_recovery.py::TestFragmentAfterToolWork::test_fragment_after_tool_work_reprompts_instead_of_exiting",
+     "FAILED tests/agent/test_degenerate_final_recovery.py::TestFragmentAfterToolWork::test_fragment_without_tool_work_is_a_plain_answer",
+     "FAILED tests/agent/test_degenerate_final_recovery.py::TestFragmentAfterToolWork::test_persistent_collapse_is_bounded_and_keeps_the_fragment",
+     "FAILED tests/agent/test_dict_tool_call_args.py::test_tool_call_validation_accepts_dict_arguments",
+     "FAILED tests/agent/test_image_rejection_fallback.py::test_iteration_summary_strips_images_for_rejecting_model",
+     "FAILED tests/agent/test_iteration_summary_reasoning_details.py::TestSummaryPrefixParity::test_canonicalizes_tool_call_arguments_and_strips_content",
+     "FAILED tests/agent/test_iteration_summary_reasoning_details.py::TestSummaryPrefixParity::test_strips_lone_surrogates_like_the_send_path",
+     "FAILED tests/agent/test_iteration_summary_reasoning_details.py::test_anthropic_summary_messages_keep_reasoning_details",
+     "FAILED tests/agent/test_iteration_summary_reasoning_details.py::test_strict_chat_route_summary_wire_drops_reasoning_details",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_a_batch_that_would_blind_the_model_stops_at_the_floor",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_byte_pressure_overrides_the_keep_newest_floor",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_does_not_rewrite_persisted_history",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_eviction_retires_a_batch_once_over_the_limit",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_floor_yields_when_eviction_can_fix_the_breach",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_frontier_holds_between_batch_advances",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_frontier_holds_when_tool_results_carry_several_images",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_keep_newest_is_a_floor_when_uploads_fill_the_ceiling",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_multi_image_tool_results_count_as_blocks",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_nothing_is_evicted_below_the_provider_limit",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_user_uploads_are_not_evicted",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_user_uploads_count_against_the_ceiling"
+    ]
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "verbatim"
+    ]
+   },
+   "pinned_by": [
+    "tests",
+    "static:verbatim"
+   ]
+  },
+  {
+   "id": "sibling:evict_stale_outbound_tool_images",
+   "mutation": "first statement raises RuntimeError",
+   "tests_narrow": {
+    "outcome": "RED",
+    "rc": 1,
+    "passed": 107,
+    "failed": 25,
+    "files_no_tests": 0,
+    "ids": [
+     "FAILED tests/agent/test_context_token_tracking.py::test_anthropic_cache_read_and_creation_added",
+     "FAILED tests/agent/test_context_token_tracking.py::test_anthropic_no_cache_fields",
+     "FAILED tests/agent/test_context_token_tracking.py::test_codex_no_cache_fields",
+     "FAILED tests/agent/test_context_token_tracking.py::test_openai_prompt_tokens_unchanged",
+     "FAILED tests/agent/test_degenerate_final_recovery.py::TestFragmentAfterToolWork::test_fragment_after_tool_work_reprompts_instead_of_exiting",
+     "FAILED tests/agent/test_degenerate_final_recovery.py::TestFragmentAfterToolWork::test_fragment_without_tool_work_is_a_plain_answer",
+     "FAILED tests/agent/test_degenerate_final_recovery.py::TestFragmentAfterToolWork::test_persistent_collapse_is_bounded_and_keeps_the_fragment",
+     "FAILED tests/agent/test_dict_tool_call_args.py::test_tool_call_validation_accepts_dict_arguments",
+     "FAILED tests/agent/test_image_rejection_fallback.py::test_iteration_summary_strips_images_for_rejecting_model",
+     "FAILED tests/agent/test_iteration_summary_reasoning_details.py::TestSummaryPrefixParity::test_canonicalizes_tool_call_arguments_and_strips_content",
+     "FAILED tests/agent/test_iteration_summary_reasoning_details.py::TestSummaryPrefixParity::test_strips_lone_surrogates_like_the_send_path",
+     "FAILED tests/agent/test_iteration_summary_reasoning_details.py::test_anthropic_summary_messages_keep_reasoning_details",
+     "FAILED tests/agent/test_iteration_summary_reasoning_details.py::test_strict_chat_route_summary_wire_drops_reasoning_details",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_a_batch_that_would_blind_the_model_stops_at_the_floor",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_byte_pressure_overrides_the_keep_newest_floor",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_does_not_rewrite_persisted_history",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_eviction_retires_a_batch_once_over_the_limit",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_floor_yields_when_eviction_can_fix_the_breach",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_frontier_holds_between_batch_advances",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_frontier_holds_when_tool_results_carry_several_images",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_keep_newest_is_a_floor_when_uploads_fill_the_ceiling",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_multi_image_tool_results_count_as_blocks",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_nothing_is_evicted_below_the_provider_limit",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_user_uploads_are_not_evicted",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_user_uploads_count_against_the_ceiling"
+    ]
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "verbatim"
+    ]
+   },
+   "pinned_by": [
+    "tests",
+    "static:verbatim"
+   ]
+  },
+  {
+   "id": "sibling:_IMAGE_PART_TYPES",
+   "mutation": "value replaced with frozenset()",
+   "tests_narrow": {
+    "outcome": "RED",
+    "rc": 1,
+    "passed": 106,
+    "failed": 26,
+    "files_no_tests": 0,
+    "ids": [
+     "FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_strips_historical_images",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_all_three_wire_shapes_strip_in_tool_results",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_first_message_user_image_no_longer_blocks_tool_stripping",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_multimodal_envelope_tool_results_age_out",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_newest_tool_image_survives_inside_the_protected_tail",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_stripped_tool_message_drops_its_api_content_sidecar",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_strips_stale_tool_result_images_when_no_user_image_exists",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_tool_image_before_the_user_anchor_is_still_stripped",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripImagesFromContent::test_handles_all_three_shapes",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_keep_newest_images_inside_a_large_protect_window",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_multimodal_envelopes_outside_keep_window_become_text",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_user_uploads_are_not_retired",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestSharedImageStripHelper::test_demote_pass_drops_stale_api_content_on_image_strip",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_a_batch_that_would_blind_the_model_stops_at_the_floor",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_byte_pressure_overrides_the_keep_newest_floor",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_does_not_rewrite_persisted_history",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_eviction_retires_a_batch_once_over_the_limit",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_floor_yields_when_eviction_can_fix_the_breach",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_frontier_holds_between_batch_advances",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_frontier_holds_when_tool_results_carry_several_images",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_keep_newest_is_a_floor_when_uploads_fill_the_ceiling",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_multi_image_tool_results_count_as_blocks",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_nothing_is_evicted_below_the_provider_limit",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_user_uploads_are_not_evicted",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_user_uploads_count_against_the_ceiling",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_compaction_keeps_four_images_in_a_spared_pending_round"
+    ]
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "verbatim"
+    ]
+   },
+   "pinned_by": [
+    "tests",
+    "static:verbatim"
+   ]
+  },
+  {
+   "id": "sibling:_is_image_part",
+   "mutation": "first statement raises RuntimeError",
+   "tests_narrow": {
+    "outcome": "RED",
+    "rc": 1,
+    "passed": 94,
+    "failed": 38,
+    "files_no_tests": 0,
+    "ids": [
+     "FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_frees_stale_vision_tool_results",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_strips_historical_images",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_all_three_wire_shapes_strip_in_tool_results",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_deterministic_double_run",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_first_message_image_kept_when_it_is_the_only_image",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_first_message_user_image_no_longer_blocks_tool_stripping",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_multimodal_envelope_tool_results_age_out",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_newest_tool_image_survives_inside_the_protected_tail",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_non_dict_messages_pass_through",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_single_tool_image_is_left_alone",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_stripped_tool_message_drops_its_api_content_sidecar",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_strips_stale_tool_result_images_when_no_user_image_exists",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_tool_image_before_the_user_anchor_is_still_stripped",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_unchanged_when_nothing_carries_images",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripImagesFromContent::test_handles_all_three_shapes",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_keep_newest_images_inside_a_large_protect_window",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_multimodal_envelopes_outside_keep_window_become_text",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_user_uploads_are_not_retired",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestSharedImageStripHelper::test_demote_pass_drops_stale_api_content_on_image_strip",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestSharedImageStripHelper::test_imageless_content_returns_none",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_image_only_protected_head_still_yields_non_empty_text",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_image_only_tail_user_turn_still_yields_non_empty_text",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_merge_targets_the_colliding_tail_message_not_index_zero",
+     "FAILED tests/agent/test_image_rejection_fallback.py::test_iteration_summary_strips_images_for_rejecting_model",
+     "FAILED tests/agent/test_iteration_summary_reasoning_details.py::TestSummaryPrefixParity::test_strips_lone_surrogates_like_the_send_path",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_a_batch_that_would_blind_the_model_stops_at_the_floor",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_byte_pressure_overrides_the_keep_newest_floor",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_does_not_rewrite_persisted_history",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_eviction_retires_a_batch_once_over_the_limit",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_floor_yields_when_eviction_can_fix_the_breach",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_frontier_holds_between_batch_advances",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_frontier_holds_when_tool_results_carry_several_images",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_keep_newest_is_a_floor_when_uploads_fill_the_ceiling",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_multi_image_tool_results_count_as_blocks",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_nothing_is_evicted_below_the_provider_limit",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_user_uploads_are_not_evicted",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_user_uploads_count_against_the_ceiling",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_compaction_keeps_four_images_in_a_spared_pending_round"
+    ]
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "verbatim"
+    ]
+   },
+   "pinned_by": [
+    "tests",
+    "static:verbatim"
+   ]
+  },
+  {
+   "id": "sibling:_content_has_images",
+   "mutation": "first statement raises RuntimeError",
+   "tests_narrow": {
+    "outcome": "RED",
+    "rc": 1,
+    "passed": 94,
+    "failed": 38,
+    "files_no_tests": 0,
+    "ids": [
+     "FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_frees_stale_vision_tool_results",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_strips_historical_images",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_all_three_wire_shapes_strip_in_tool_results",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_deterministic_double_run",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_first_message_image_kept_when_it_is_the_only_image",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_first_message_user_image_no_longer_blocks_tool_stripping",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_multimodal_envelope_tool_results_age_out",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_newest_tool_image_survives_inside_the_protected_tail",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_non_dict_messages_pass_through",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_single_tool_image_is_left_alone",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_stripped_tool_message_drops_its_api_content_sidecar",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_strips_stale_tool_result_images_when_no_user_image_exists",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_tool_image_before_the_user_anchor_is_still_stripped",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_unchanged_when_nothing_carries_images",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_keep_newest_images_inside_a_large_protect_window",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_multimodal_envelopes_outside_keep_window_become_text",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestRetireStaleToolImagesInProtectedTail::test_user_uploads_are_not_retired",
+     "FAILED tests/agent/test_compressor_stale_tool_images.py::TestSharedImageStripHelper::test_demote_pass_drops_stale_api_content_on_image_strip",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_kanban_worker_recompaction_keeps_user_turn",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_no_consecutive_user_roles_introduced",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_preserved_tail_user_is_not_overridden",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_image_only_protected_head_still_yields_non_empty_text",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_image_only_tail_user_turn_still_yields_non_empty_text",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_merge_targets_the_colliding_tail_message_not_index_zero",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_a_batch_that_would_blind_the_model_stops_at_the_floor",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_byte_pressure_overrides_the_keep_newest_floor",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_does_not_rewrite_persisted_history",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_eviction_retires_a_batch_once_over_the_limit",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_frontier_holds_between_batch_advances",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_frontier_holds_when_tool_results_carry_several_images",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_keep_newest_is_a_floor_when_uploads_fill_the_ceiling",
+     "FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_nothing_is_evicted_below_the_provider_limit",
+     "FAILED tests/agent/test_protected_tail_pressure.py::TestProtectedTailPressure61932::test_all_oversized_tail_dead_end_shape_now_compresses",
+     "FAILED tests/agent/test_protected_tail_pressure.py::TestProtectedTailPressure61932::test_compress_escapes_cannot_compress_further_dead_end",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_compaction_keeps_four_images_in_a_spared_pending_round",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[round_last]",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[steer_after_round]",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[two_steers_after_round]"
+    ]
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "verbatim"
+    ]
+   },
+   "pinned_by": [
+    "tests",
+    "static:verbatim"
+   ]
+  },
+  {
+   "id": "sibling:_strip_images_from_content",
+   "mutation": "first statement raises RuntimeError",
+   "tests_narrow": {
+    "outcome": "RED",
+    "rc": 1,
+    "passed": 121,
+    "failed": 11,
+    "files_no_tests": 0,
+    "ids": [
+     "FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_frees_stale_vision_tool_results",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_strips_historical_images",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_all_three_wire_shapes_strip_in_tool_results",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_deterministic_double_run",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_first_message_user_image_no_longer_blocks_tool_stripping",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_newest_tool_image_survives_inside_the_protected_tail",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_non_dict_messages_pass_through",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_stripped_tool_message_drops_its_api_content_sidecar",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_strips_stale_tool_result_images_when_no_user_image_exists",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_tool_image_before_the_user_anchor_is_still_stripped",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripImagesFromContent::test_handles_all_three_shapes"
+    ]
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "verbatim"
+    ]
+   },
+   "pinned_by": [
+    "tests",
+    "static:verbatim"
+   ]
+  },
+  {
+   "id": "sibling:_strip_historical_media",
+   "mutation": "first statement raises RuntimeError",
+   "tests_narrow": {
+    "outcome": "RED",
+    "rc": 1,
+    "passed": 106,
+    "failed": 26,
+    "files_no_tests": 0,
+    "ids": [
+     "FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_frees_stale_vision_tool_results",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_strips_historical_images",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_all_three_wire_shapes_strip_in_tool_results",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_deterministic_double_run",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_first_message_image_kept_when_it_is_the_only_image",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_first_message_user_image_no_longer_blocks_tool_stripping",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_multimodal_envelope_tool_results_age_out",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_newest_tool_image_survives_inside_the_protected_tail",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_non_dict_messages_pass_through",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_single_tool_image_is_left_alone",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_stripped_tool_message_drops_its_api_content_sidecar",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_strips_stale_tool_result_images_when_no_user_image_exists",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_tool_image_before_the_user_anchor_is_still_stripped",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_unchanged_when_nothing_carries_images",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_kanban_worker_recompaction_keeps_user_turn",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_no_consecutive_user_roles_introduced",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_preserved_tail_user_is_not_overridden",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_image_only_protected_head_still_yields_non_empty_text",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_image_only_tail_user_turn_still_yields_non_empty_text",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_merge_targets_the_colliding_tail_message_not_index_zero",
+     "FAILED tests/agent/test_protected_tail_pressure.py::TestProtectedTailPressure61932::test_all_oversized_tail_dead_end_shape_now_compresses",
+     "FAILED tests/agent/test_protected_tail_pressure.py::TestProtectedTailPressure61932::test_compress_escapes_cannot_compress_further_dead_end",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_compaction_keeps_four_images_in_a_spared_pending_round",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[round_last]",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[steer_after_round]",
+     "FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[two_steers_after_round]"
+    ]
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "verbatim"
+    ]
+   },
+   "pinned_by": [
+    "tests",
+    "static:verbatim"
+   ]
+  },
+  {
+   "id": "sibling:_summary_part_text",
+   "mutation": "first statement raises RuntimeError",
+   "tests_narrow": {
+    "outcome": "GREEN",
+    "rc": 0,
+    "passed": 132,
+    "failed": 0,
+    "files_no_tests": 0,
+    "ids": []
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "verbatim"
+    ]
+   },
+   "tests_wide": {
+    "outcome": "RED",
+    "rc": 1,
+    "passed": 5406,
+    "failed": 2,
+    "files_no_tests": 0,
+    "ids": [
+     "FAILED tests/agent/test_compressor_media_stripping.py::TestMediaDirectiveStripping::test_multimodal_list_content_does_not_crash",
+     "FAILED tests/agent/test_relay_atof_cwd.py::test_run_conversation_exports_session_and_turn_cwds"
+    ]
+   },
+   "pinned_by": [
+    "tests",
+    "static:verbatim"
+   ]
+  },
+  {
+   "id": "sibling:_image_part_label",
+   "mutation": "first statement raises RuntimeError",
+   "tests_narrow": {
+    "outcome": "GREEN",
+    "rc": 0,
+    "passed": 132,
+    "failed": 0,
+    "files_no_tests": 0,
+    "ids": []
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "verbatim"
+    ]
+   },
+   "tests_wide": {
+    "outcome": "RED",
+    "rc": 1,
+    "passed": 5406,
+    "failed": 2,
+    "files_no_tests": 0,
+    "ids": [
+     "FAILED tests/agent/test_compressor_media_stripping.py::TestMediaDirectiveStripping::test_multimodal_list_content_does_not_crash",
+     "FAILED tests/agent/test_relay_atof_cwd.py::test_run_conversation_exports_session_and_turn_cwds"
+    ]
+   },
+   "pinned_by": [
+    "tests",
+    "static:verbatim"
+   ]
+  }
+ ],
+ "summary": {
+  "rows": 38,
+  "tests_red": 28,
+  "green_under_tests_pinned_by_static_only": [
+   "hunk:agent/context_compressor.py#3",
+   "hunk:agent/image_eviction_policy.py#1",
+   "hunk:tests/agent/test_compressor_stale_tool_images.py#2",
+   "hunk:tests/agent/test_compressor_stale_tool_images.py#3",
+   "hunk:tests/agent/test_compressor_stale_tool_images.py#4",
+   "hunk:tests/agent/test_image_eviction_policy.py#1"
+  ],
+  "unpinned": [
+   "hunk:agent/context_compressor.py#1",
+   "facade-import:_rewritten",
+   "facade-import:_strip_images_from_tool_msg",
+   "facade-import:_summary_part_text"
+  ]
+ }
+}

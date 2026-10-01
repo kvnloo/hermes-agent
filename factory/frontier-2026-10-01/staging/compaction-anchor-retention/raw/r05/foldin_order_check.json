@@ -1,0 +1,407 @@
+{
+ "coverage_sha256": "8cfaa4eeec455fd5d827793c68081c00c8597a9f4633d38de98ac801e212fbb1",
+ "corpus": {
+  "files": 251,
+  "chars": 5870599,
+  "sha256": "fa3bf1ec183314f8f4a566721e295ce50a578d0998d9cae2ff84551862302d34"
+ },
+ "synthetic": {
+  "c117462_foldin": {
+   "regions": 180,
+   "carrier_lines_prefix": 180,
+   "regions_with_a_carrier_line_changed": 0,
+   "per_density": {
+    "sparse": {
+     "carrier_lines_changed": {},
+     "new_sections": {
+      "task ids": {
+       "emitted_in": 60,
+       "of": 60,
+       "len_p50": 42,
+       "bare_label": 0
+      },
+      "dotted keys": {
+       "emitted_in": 60,
+       "of": 60,
+       "len_p50": 108,
+       "bare_label": 0
+      },
+      "error messages": {
+       "emitted_in": 60,
+       "of": 60,
+       "len_p50": 197,
+       "bare_label": 0
+      }
+     }
+    },
+    "medium": {
+     "carrier_lines_changed": {},
+     "new_sections": {
+      "task ids": {
+       "emitted_in": 60,
+       "of": 60,
+       "len_p50": 178,
+       "bare_label": 0
+      },
+      "dotted keys": {
+       "emitted_in": 60,
+       "of": 60,
+       "len_p50": 702,
+       "bare_label": 0
+      },
+      "error messages": {
+       "emitted_in": 32,
+       "of": 60,
+       "len_p50": 15,
+       "bare_label": 25
+      }
+     }
+    },
+    "dense": {
+     "carrier_lines_changed": {},
+     "new_sections": {
+      "task ids": {
+       "emitted_in": 47,
+       "of": 60,
+       "len_p50": 9,
+       "bare_label": 31
+      },
+      "dotted keys": {
+       "emitted_in": 2,
+       "of": 60,
+       "len_p50": 12,
+       "bare_label": 2
+      },
+      "error messages": {
+       "emitted_in": 0,
+       "of": 60,
+       "len_p50": null,
+       "bare_label": 0
+      }
+     }
+    }
+   }
+  },
+  "c117462_foldin_r03": {
+   "regions": 180,
+   "carrier_lines_prefix": 0,
+   "regions_with_a_carrier_line_changed": 101,
+   "per_density": {
+    "sparse": {
+     "carrier_lines_changed": {},
+     "new_sections": {
+      "task ids": {
+       "emitted_in": 60,
+       "of": 60,
+       "len_p50": 42,
+       "bare_label": 0
+      },
+      "dotted keys": {
+       "emitted_in": 60,
+       "of": 60,
+       "len_p50": 108,
+       "bare_label": 0
+      },
+      "error messages": {
+       "emitted_in": 60,
+       "of": 60,
+       "len_p50": 197,
+       "bare_label": 0
+      }
+     }
+    },
+    "medium": {
+     "carrier_lines_changed": {
+      "errors": {
+       "regions_changed": 41,
+       "of": 60,
+       "carrier_len_p50": 1741,
+       "foldin_len_p50": 1639,
+       "cut_to_bare_label": 0,
+       "label_removed": 0
+      }
+     },
+     "new_sections": {
+      "task ids": {
+       "emitted_in": 60,
+       "of": 60,
+       "len_p50": 178,
+       "bare_label": 0
+      },
+      "dotted keys": {
+       "emitted_in": 60,
+       "of": 60,
+       "len_p50": 757,
+       "bare_label": 0
+      },
+      "error messages": {
+       "emitted_in": 46,
+       "of": 60,
+       "len_p50": 15,
+       "bare_label": 37
+      }
+     }
+    },
+    "dense": {
+     "carrier_lines_changed": {
+      "errors": {
+       "regions_changed": 21,
+       "of": 60,
+       "carrier_len_p50": 7,
+       "foldin_len_p50": 0,
+       "cut_to_bare_label": 0,
+       "label_removed": 21
+      },
+      "files": {
+       "regions_changed": 60,
+       "of": 60,
+       "carrier_len_p50": 1274,
+       "foldin_len_p50": 6,
+       "cut_to_bare_label": 59,
+       "label_removed": 1
+      }
+     },
+     "new_sections": {
+      "task ids": {
+       "emitted_in": 60,
+       "of": 60,
+       "len_p50": 736,
+       "bare_label": 0
+      },
+      "dotted keys": {
+       "emitted_in": 60,
+       "of": 60,
+       "len_p50": 530,
+       "bare_label": 0
+      },
+      "error messages": {
+       "emitted_in": 7,
+       "of": 60,
+       "len_p50": 15,
+       "bare_label": 7
+      }
+     }
+    }
+   }
+  }
+ },
+ "real_text": {
+  "c117462_foldin": {
+   "40": {
+    "files": 40,
+    "region_chars": 1092278,
+    "prefix": true,
+    "changed": {},
+    "new_lens": {
+     "dotted keys": 32
+    }
+   },
+   "120": {
+    "files": 120,
+    "region_chars": 2945717,
+    "prefix": true,
+    "changed": {},
+    "new_lens": {
+     "dotted keys": 75
+    }
+   },
+   "251": {
+    "files": 251,
+    "region_chars": 5408717,
+    "prefix": true,
+    "changed": {},
+    "new_lens": {
+     "dotted keys": 64
+    }
+   }
+  },
+  "c117462_foldin_r03": {
+   "40": {
+    "files": 40,
+    "region_chars": 1092278,
+    "prefix": false,
+    "changed": {
+     "errors": [
+      2334,
+      1321
+     ]
+    },
+    "new_lens": {
+     "dotted keys": 1020
+    }
+   },
+   "120": {
+    "files": 120,
+    "region_chars": 2945717,
+    "prefix": false,
+    "changed": {
+     "errors": [
+      1318,
+      308
+     ]
+    },
+    "new_lens": {
+     "dotted keys": 1055,
+     "error messages": 15
+    }
+   },
+   "251": {
+    "files": 251,
+    "region_chars": 5408717,
+    "prefix": false,
+    "changed": {
+     "files": [
+      2405,
+      1998
+     ],
+     "errors": [
+      622,
+      7
+     ]
+    },
+    "new_lens": {
+     "dotted keys": 1088
+    }
+   }
+  }
+ },
+ "real_text_sections": {
+  "c117462": {
+   "40": {
+    "files": 40,
+    "region_chars": 1092278,
+    "sections": [
+     "PRs/issues: #70773(x5), #67142(x5), #58962(x4), #56810(x4), #99692(x4), #29507(x3), #92550(x3), #81521(x3), #6600(x3), #70893(x3), #43083(x3), #85252(x3), #69734(x3), #94785(x3), #114967(x3), #60683(x3), #53802(x3), #76085(x3), #72039(x3), #72975(x2), #94248(x2), #22548(x2), #27907(x2), #62151(x2), #60203(x2), #93650(x2), #78382(x2), #114476(x2), #59437(x2), #14944(x2), #84423(x2), #105921(x2), #104116(x2), #102895(x2), #42177(x2), #23975(x2), #51083(x2), #106010(x2), #29344(x2), #13848(x2), #98334(x2), #24293(x2), #10933(x2), #114501(x2), #33163(x2), #94486(x2), #78063(x2), #116467(x2), #1739(x2), #63425(x2), #17829, #28660, #67935, #114446, #41225, #62984, #89401, #115702, #102148, #81932, #33062, #77256, #32106, #16884, #16844, #17341, #17400, #15250, #19798, #27197, #95003, #100536, #92302, #91621, #112909, #57354, #80759, #75301, #72227, #97281, #115024, #97968, #64507, #104793, #76411, #63871, #24996, #89863, #74263, #108200, #115865, #33317, #9486, #62673, #24515, #24220, #55925, #55769, #82146, #44672, #39996, #61521, #15216, #109964, #17276, #25322, #118693, #103579, #94825, #38727, #93057, #30532, #30220, #116055, #87250, #78996, #114405, #119232, #113064, #105191",
+     "commits: 8207862212, 5944d1962f5e",
+     "handles: @dataclass(x20), @property(x13), @staticmethod(x10), @contextlib(x5), @abc(x4), @classmethod(x4), @BrinShadewater, @contextmanager, @functools, @anthropic-ai",
+     "urls: https://hermes-agent.nousresearch.com\\(x3), https://grok.com/?_s=usage(x2), https://portal.nousresearch.com/billing?topup=open\\, https://portal.nousresearch.com/billing\\, https://build.nvidia.com/settings/billing\\, https://platform.moonshot.ai/console/pay\\, https://dashboard.cohere.com/billing\\, https://aistudio.google.com/app/billing\\, https://www.perplexity.ai/settings/api\\, https://fireworks.ai/account/billing\\, https://api.together.ai/settings/billing\\, https://console.mistral.ai/billing\\, https://console.groq.com/settings/billing\\, https://platform.deepseek.com/top_up\\, https://console.x.ai/team/default/billing\\, https://openrouter.ai/settings/credits\\, https://console.anthropic.com/settings/billing\\, https://platform.openai.com/settings/organization/billing\\, https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-xai-grok-4-6.html\\n1171|, https://bedrock-mantle.{resolved}.api.aws/openai/v1\\, https://ai.azure.com/.default\\, https://learn.microsoft.com/azure/ai-foundry/foundry-models/how-to/configure-entra-id\\n10|\\, https://api-docs.deepseek.com/guides/json_mode, https://bedrock-runtime.{region}.amazonaws.com\\, https://api.anthropic.com\\, https://inference-api.nousresearch.com/v1\\, https://api.kimi.com/coding\\, https://api.minimaxi.com/anthropic\\, https://api.minimax.io/anthropic\\, https://claude.ai/oauth/authorize?{urlencode(params",
+     "files: hermes/.anthropic_oauth.json(x4), claude/.credentials.json(x4), agent/model_metadata.py(x3), agent/transports/codex.py(x3), agent/bedrock_adapter.py(x2), agent/background_review.py(x2), agent/anthropic_endpoints.py(x2), agent/anthropic_message_convert.py(x2), agent/anthropic_adapter.py(x2), agent/system_prompt.py(x2), agent/client_lifecycle.py, agent/chat_completion_wait_notice.py, agent/chat_completion_stream_monitor.py, agent/chat_completion_nonstream.py, agent/chat_completion_helpers_relay.py, agent/chat_completion_helpers.py, agent/browser_registry.py, agent/browser_provider.py, agent/bounded_response.py, agent/billing_view.py, agent/billing_usage.py, agent/billing_links.py, docs.aws.amazon.com/bedrock/latest/userguide/model-cards-openai.html, docs.aws.amazon.com/bedrock/latest/userguide/model-card-xai-grok-4-6.html, agent/battery.py, tools/file_tools.py, tools/delegate_tool.py, MEMORY.md/USER.md, agent/backend_identity.py, agent/azure_identity_adapter.py, agent/auxiliary_wire.py, agent/auxiliary_unavailable.py, agent/auxiliary_structured_output.py, agent/auxiliary_reasoning_floor.py, agent/auxiliary_hooks.py, agent/auxiliary_health.py, agent/auxiliary_fallback_recovery.py, hermes/auth.json, agent/auxiliary_client.py, agent/auxiliary_async_rebuild.py, agent/aux_accounting.py, agent/async_utils.py, agent/api_request_hooks.py, agent/api_error_summary.py, agent/anthropic_credentials.py, tools/session_search_tool.py, tests/agent/test_shared_http_transport.py, tests/agent/test_create_openai_client_reuse.py, gateway/stream_consumer.py, agent/agent_runtime_helpers.py, agent/native_compaction.py, agent/turn_recovery_autorecover.py, agent/oneshot_footprint.py, agent/agent_init.py, tests/agent/test_session_activity_persist.py, agent/activity_tracking.py, agent/acp_openai_bridge.py, agent/account_usage.py, agent/__init__.py",
+     "errors: Exception:\\n1006|            logger.debug(\\\"custom-provider TLS resolution skipped on credential ro, Exception):\\n977|                self._anthropic_client.close()\\n978|            self._anthropic_ap, Exception:\\n939|                logger.debug(\\\"custom-provider extra_headers skipped\\\", exc_info=Tr, Exception):\\n925|                from providers import get_provider_profile\\n926|                pr, Exception as exc:\\n910|            logger.warning(\\\"Failed to rebuild Anthropic client after creden, Exception):\\n905|            self._anthropic_client.close()\\n906|        try:\\n907|            base, Exception as exc:\\n899|            logger.debug(\\\"Anthropic credential refresh failed: %s\\\", exc)\\n, Exception as exc:\\n861|            logger.debug(\\\"Copilot stale-credential recovery failed: %s\\\", e, Exception as exc:\\n837|            logger.debug(\\\"Copilot 401 re-exchange failed, using resolved to, Exception as exc:\\n825|            logger.debug(\\\"Copilot credential refresh failed: %s\\\", exc)\\n82, Exception as exc:\\n796|            logger.debug(\\\"Vertex credential refresh failed: %s\\\", exc)\\n797, Exception:\\n783|            logger.debug(\\\"sync_credential_pool_entry_id after env refresh failed\\\", ImportError:\\n716|                return None\\n717|            custom_provider = _get_named_custom_pr, ImportError:\\n691|            return None\\n692|        pconfig = PROVIDER_REGISTRY.get(self.provider), Exception:\\n675|            return False\\n676|        exp, account = claims.get(\\\"exp\\\"), claims.ge, Exception:\\n633|                new_account = None\\n634|            if str(new_account or \\\"\\\") !=, Exception as exc:\\n620|            logger.debug(\\\"Nous credential refresh failed: %s\\\", exc)\\n621|, Exception as exc:\\n596|            logger.debug(\\\"%s credential refresh failed: %s\\\", self.provider, Exception as exc:\\n583|            logger.debug(\\\"%s singleton read failed: %s\\\", self.provider, ex, Exception):\\n552|            self._force_close_tcp_sockets(client)\\n553|            client.close()\\, Exception as exc:\\n539|            logger.debug(\\n540|                \\\"Anthropic client close fail, Exception as exc:\\n440|            logger.debug(\\\"%s client abort failed (%s, shared=False) %s erro, RuntimeError(\\\"Failed to recreate closed OpenAI client\\\") from exc\\n325|            self.client = new_"
+    ]
+   },
+   "120": {
+    "files": 120,
+    "region_chars": 2945717,
+    "sections": [
+     "PRs/issues: #82154(x9), #76354(x9), #71970(x6), #76085(x5), #98722(x5), #99692(x5), #70773(x5), #67142(x5), #112358(x4), #17341(x4), #115306(x4), #104731(x4), #80498(x4), #104414(x4), #80622(x4), #97488(x4), #112420(x4), #32106(x4), #70893(x4), #58962(x4), #56810(x4), #45655(x3), #112647(x3), #106475(x3), #112473(x3), #100536(x3), #100339(x3), #98741(x3), #118900(x3), #98371(x3), #114594(x3), #63892(x3), #96634(x3), #22548(x3), #29507(x3), #92550(x3), #81521(x3), #6600(x3), #43083(x3), #85252(x3), #69734(x3), #94785(x3), #114967(x3), #60683(x3), #53802(x3), #72039(x3), #60345(x2), #98450(x2), #15250(x2), #16454(x2), #119668(x2), #108032(x2), #87096(x2), #99758(x2), #77223(x2), #89863(x2), #113517(x2), #23482(x2), #45947(x2), #121270(x2), #51512(x2), #114460(x2), #89401(x2), #14038(x2), #53099(x2), #52310(x2), #18028(x2), #37848(x2), #111231(x2), #115702(x2), #94285(x2), #83220(x2), #96962(x2), #89415(x2), #121486(x2), #113023(x2), #70111(x2), #68237(x2), #56747(x2), #76411(x2), #92450(x2), #72626(x2), #124211(x2), #36718(x2), #81841(x2), #93057(x2), #96995(x2), #62452(x2), #96775(x2), #71569(x2), #73298(x2), #96603(x2), #124077(x2), #69619(x2), #121548(x2), #74712(x2), #26035(x2), #90976(x2), #32716(x2), #72975(x2), #94248(x2), #27907(x2), #62151(x2), #60203(x2), #93650(x2), #78382(x2), #114476(x2), #59437(x2), #14944(x2), #84423(x2), #105921(x2), #104116(x2), #102895(x2), #42177(x2), #23975(x2), #51083(x2), #106010(x2), #29344(x2), #13848(x2), #98334(x2)",
+     "commits: 14155551234, 5551234567, 9a9f8a6d99, 94b3131be7, b5495db701, 2b3a4f0af8, e45f2b39e2, fa3ab2ffd0, 123456789abc, 97fa14e39, 8207862212, 5944d1962f5e",
+     "branches: docs/api-key, docs/en/build-with-claude/fast-mode, docs/developer-guide/model-provider-plugin.md",
+     "handles: @dataclass(x46), @property(x40), @staticmethod(x22), @abstractmethod(x10), @contextlib(x9), @contextmanager(x7), @file(x7), @classmethod(x6), @abc(x5), @github(x3), @folder(x3), @host(x2), @overload(x2), @ciabata-git(x2), @url(x2), @type, @-references, @-prefix, @git, @diff, @-reference, @LeonSGP43, @BrinShadewater, @functools, @anthropic-ai",
+     "urls: https://hermes-agent.nousresearch.com\\(x3), https://api.openai.com/auth\\(x2), https://claude.ai/settings/usage\\(x2), https://chatgpt.com/backend-api/codex\\(x2), https://grok.com/?_s=usage(x2), http://localhost:11434/v1\\, http://localhost:4000/gemini``, https://aistudio.google.com/app/apikey, https://aistudio.google.com/apikey, https://aiplatform.googleapis.com/v1beta1.\\, https://ai.google.dev/gemini-api/docs/api-key\\, https://aistudio.google.com/api-keys, https://aistudio.google.com/apikey\\, https://aiplatform.googleapis.com/v1beta1/publishers/google\\, https://generativelanguage.googleapis.com/v1beta\\, https://platform.claude.com/docs/en/build-with-claude/fast-mode, https://claude.ai/settings/usage, https://portal.nousresearch.com/billing?topup=open\\, https://portal.nousresearch.com/billing\\, https://build.nvidia.com/settings/billing\\, https://platform.moonshot.ai/console/pay\\, https://dashboard.cohere.com/billing\\, https://aistudio.google.com/app/billing\\, https://www.perplexity.ai/settings/api\\, https://fireworks.ai/account/billing\\, https://api.together.ai/settings/billing\\, https://console.mistral.ai/billing\\, https://console.groq.com/settings/billing\\, https://platform.deepseek.com/top_up\\, https://console.x.ai/team/default/billing\\",
+     "files: claude/.credentials.json(x11), hermes/.anthropic_oauth.json(x8), agent/transports/codex.py(x4), codex/auth.json(x4), agent/turn_finalizer.py(x3), agent/turn_recovery.py(x3), agent/auxiliary_client.py(x3), cron/jobs.json(x3), agent/background_review.py(x3), agent/model_metadata.py(x3), agent/moa_alternation.py(x2), agent/codex_responses_adapter.py(x2), agent/kanban_stop.py(x2), hermes_cli/cli_single_query.py(x2), agent/image_eviction_policy.py(x2), agent/error_classifier.py(x2), hermes/cron/jobs.json(x2), qwen/oauth_creds.json(x2), agent/credential_pool.py(x2), hermes/auth.json(x2), agent/conversation_compression.py(x2), agent/context_compressor.py(x2), agent/chat_completion_helpers.py(x2), agent/native_compaction.py(x2), agent/bedrock_adapter.py(x2), agent/anthropic_endpoints.py(x2), agent/anthropic_message_convert.py(x2), agent/anthropic_adapter.py(x2), agent/system_prompt.py(x2), agent/moa_trace.py, agent/moa_loop.py, agent/micro_compaction.py, agent/message_sanitization.py, agent/transcript_repair.py, agent/message_metadata.py, agent/message_content.py, agent/memory_provider.py, agent/memory_manager.py, agent/markdown_tables.py, agent/manual_compression_feedback.py, agent/lmstudio_reasoning.py, agent/legacy_cli.py, agent/learning_mutations.py, agent/learning_graph_render.py, agent/learning_graph.py, references/ch04-replication.md, agent/learn_prompt.py, agent/lazy_forward.py, hermes_cli/kanban_db.py, hermes_cli/kanban_db_dispatch.py, agent/kanban_turn_recovery.py, agent/jiter_preload.py, agent/iteration_budget.py, agent/interrupt_scope.py, agent/interrupt_control.py, agent/interrupt_compat.py, agent/insights.py, agent/inline_tool_executors.py, hermes/cache/image_token_costs.json, agent/image_token_cost.py, agent/image_routing.py, agent/image_gen_registry.py, agent/video_gen_provider.py, agent/image_gen_provider.py, agent/i18n_layers.py, apps/shared/src/i18n.ts, agent/i18n_languages.py, agent/i18n.py, agent/history_commentary.py, agent/gemini_schema.py, agent/gemini_native_adapter.py, hermes_cli/windows_ssh_runtime.py, agent/file_safety.py, agent/fast_mode.py, agent/fallback_cooldown.py, agent/estop.py, agent/errors.py, agent/turn_failure_copy.py, agent/error_surface.py, agent/reasoning_timeouts.py",
+     "errors: Exception as exc:  # pragma: no cover - tracing must never break a turn\\n115|        logger.debug(\\, Exception:  # pragma: no cover - never break a turn over tracing\\n32|        return None\\n33|    if, Exception:\\n1473|        resolved_preset = \\\"default\\\"\\n1474|    # ``agent`` lets the fan-out wait, Exception):\\n1457|            cb(\\n1458|                event, str(kwargs.get(primary) or \\\"\\\"), st, TypeError(\\\"_moa_prepared_request must be a dict\\\")\\n1367|            return self._call_prepared_ag, Exception as exc:  # pragma: no cover - never break a turn\\n1306|            logger.debug(\\\"MoA ref, TypeError, ValueError):\\n1232|                every_n = int(fanout_mode.split(\\\":\\\", 1)[1])\\n1233|, Exception):  # pragma: no cover - defensive\\n1197|                    output = _extract_text(agg_re, Exception as exc:\\n1175|            # Strict-alternation template rejected ``user(task), user(guida, RuntimeError(\\\"MoA aggregator cannot be another MoA preset\\\")\\n1140|        agg_runtime = _slot_runtim, Exception as exc:  # pragma: no cover - cache planning must not block MoA\\n1129|            logger, Exception as exc:  # pragma: no cover - display must never break the turn\\n1085|            logger, Exception as exc:  # pragma: no cover - tracing must never break a turn\\n1077|            logger.de"
+    ]
+   },
+   "251": {
+    "files": 251,
+    "region_chars": 5408717,
+    "sections": [
+     "PRs/issues: #98722(x10), #82154(x9), #76354(x9), #80622(x8), #97488(x8), #65991(x7), #67142(x6), #70773(x6), #65919(x6), #104414(x6), #71970(x6), #67321(x5), #69870(x5), #98741(x5), #32106(x5), #112647(x5), #92068(x5), #14536(x5), #93650(x5), #77244(x5), #77484(x5), #90976(x5), #84482(x5), #89863(x5), #76085(x5), #99692(x5), #79220(x4), #96995(x4), #100536(x4), #114460(x4), #35809(x4), #9893(x4), #48677(x4), #95514(x4), #87096(x4), #114594(x4), #106475(x4), #112473(x4), #113158(x4), #63892(x4), #74574(x4), #35519(x4), #109964(x4), #10933(x4), #121486(x4), #114967(x4), #112358(x4), #17341(x4), #115306(x4), #104731(x4), #80498(x4), #112420(x4), #70893(x4), #58962(x4), #56810(x4), #102766(x3), #119001(x3), #48879(x3), #1630(x3), #53099(x3), #98852(x3), #39550(x3), #95663(x3), #84733(x3), #8049(x3), #44239(x3), #117296(x3), #118693(x3), #89401(x3), #84423(x3), #79017(x3), #19027(x3), #55933(x3), #10521(x3), #79719(x3), #83220(x3), #72351(x3), #51083(x3), #95681(x3), #86313(x3), #76902(x3), #17924(x3), #114359(x3), #17782(x3), #59607(x3), #2852(x3), #15250(x3), #8731(x3), #105443(x3), #45655(x3), #100339(x3), #118900(x3), #98371(x3), #96634(x3), #22548(x3), #29507(x3), #92550(x3), #81521(x3), #6600(x3), #43083(x3), #85252(x3), #69734(x3), #94785(x3), #60683(x3), #53802(x3), #72039(x3), #40190(x2), #106260(x2), #91717(x2), #47967(x2), #78148(x2), #88954(x2), #61631(x2), #96155(x2), #89296(x2), #107307(x2), #85426(x2), #26293(x2), #70566(x2), #88510(x2)",
+     "commits: 93889b770da, 370ebf2d3, 9223372036854775807, 14155551234, 5551234567, 9a9f8a6d99, 94b3131be7, b5495db701, 2b3a4f0af8, e45f2b39e2, fa3ab2ffd0, 123456789abc, 97fa14e39, 8207862212, 5944d1962f5e",
+     "branches: docs/pricing(x3), docs/developer-guide/multiplexing-gateway.md(x2), docs/en/build-with-claude/fast-mode(x2), docs/api-reference/text-prompt-caching, docs/api/api-reference/models/get-models, docs/models/, docs/models/gpt-6-astra, docs/en/about-claude/pricing, docs/hub/agent-traces, docs/api-reference/text-chat-openai, docs/api-key, docs/developer-guide/model-provider-plugin.md",
+     "handles: @dataclass(x124), @property(x66), @staticmethod(x43), @classmethod(x16), @contextmanager(x14), @contextlib(x14), @abc(x12), @abstractmethod(x10), @file(x9), @dataclasses(x9), @host(x8), @github(x5), @folder(x4), @-reference(x3), @-references(x2), @functools(x2), @ruizanthony(x2), @overload(x2), @ciabata-git(x2), @url(x2), @kshitijk4poor, @example, @type, @-prefix, @git, @diff, @LeonSGP43, @BrinShadewater, @anthropic-ai",
+     "urls: https://hermes-agent.nousresearch.com\\(x3), https://ai.google.dev/gemini-api/docs/pricing\\(x2), https://inference-api.nousresearch.com/v1\\(x2), https://openrouter.ai/settings/credits\\(x2), https://portal.nousresearch.com\\(x2), https://api.minimaxi.com/anthropic\\(x2), https://api.minimax.io/anthropic\\(x2), https://portal.nousresearch.com/billing\\(x2), https://PASSWORD@github.com/...``(x2), https://hermes-agent.nousresearch.com/docs(x2), https://platform.claude.com/docs/en/build-with-claude/fast-mode(x2), https://api.openai.com/auth\\(x2), https://claude.ai/settings/usage\\(x2), https://chatgpt.com/backend-api/codex\\(x2), https://grok.com/?_s=usage(x2), https://api.openai.com/v1\\, https://{host}/v1beta1/projects/{project_id}/locations/{region}/endpoints/openapi\\, https://www.googleapis.com/auth/cloud-platform\\, https://example.com:443``, https://example.com``, https://platform.minimax.io/docs/api-reference/text-prompt-caching\\n644|, https://models.dev\\, https://openrouter.ai/docs/api/api-reference/models/get-models\\, https://developers.openai.com/api/docs/pricing?latest-pricing=ultrafast\\, https://developers.openai.com/api/docs/models/{_slug}\\, https://developers.openai.com/api/docs/models/gpt-6-astra\\, https://docs.fireworks.ai/serverless/pricing\\, https://api-docs.deepseek.com/quick_start/pricing\\, https://openai.com/api/pricing/\\, https://openrouter.ai/anthropic/claude-opus-4.8-fast\\",
+     "files: claude/.credentials.json(x11), hermes/.anthropic_oauth.json(x8), agent/turn_finalizer.py(x5), agent/model_metadata.py(x5), agent/error_surface.py(x4), agent/turn_recovery.py(x4), gateway/run.py(x4), agent/transports/codex.py(x4), codex/auth.json(x4), logs/agent.log(x3), gateway/run_turn.py(x3), agent/system_prompt.py(x3), scripts/foo.js(x3), agent/native_compaction.py(x3), agent/bedrock_adapter.py(x3), agent/auxiliary_client.py(x3), cron/jobs.json(x3), agent/background_review.py(x3), agent/image_gen_registry.py(x2), agent/image_gen_provider.py(x2), agent/video_gen_provider.py(x2), agent/vault_login_classifier.py(x2), agent/vault_store.py(x2), agent/usage_anchor.py(x2), agent/turn_usage.py(x2), agent/turn_recovery_autorecover.py(x2), agent/turn_explainers.py(x2), agent/conversation_loop.py(x2), agent/turn_failure_copy.py(x2), agent/periodic_scheduler.py(x2), agent/transcript_repair.py(x2), agent/deadline.py(x2), agent/context_references.py(x2), agent/surface_switch.py(x2), website/docs/developer-guide/multiplexing-gateway.md(x2), agent/runtime_cwd.py(x2), hermes_cli/main.py(x2), agent/reasoning_timeouts.py(x2), agent/process_bootstrap.py(x2), agent/context_file_sources.py(x2), tui_gateway/server.py(x2), agent/oneshot_footprint.py(x2), agent/moa_alternation.py(x2), agent/codex_responses_adapter.py(x2), agent/kanban_stop.py(x2), hermes_cli/cli_single_query.py(x2), agent/image_eviction_policy.py(x2), agent/error_classifier.py(x2), hermes/cron/jobs.json(x2), qwen/oauth_creds.json(x2), agent/credential_pool.py(x2), hermes/auth.json(x2), agent/conversation_compression.py(x2), agent/context_compressor.py(x2), agent/chat_completion_helpers.py(x2), agent/anthropic_endpoints.py(x2), agent/anthropic_message_convert.py(x2), agent/anthropic_adapter.py(x2), plugins/web/keyless_mcp.py, agent/web_search_registry.py, agent/web_search_provider.py, agent/vision_message_prep.py, agent/video_gen_registry.py, agent/vertex_adapter.py, agent/verify_hooks.py, hermes/environment.json, agent/verification_stop.py, agent/verification_evidence.py, tools/skill_usage.py, lib/manager/server/secret-store.ts, lib/manager/server/kernel-login-autofill.ts, agent/usage_pricing.py, agent/turn_truncation.py, agent/turn_tool_validation.py, agent/turn_tool_round.py, agent/turn_summary.py, agent/turn_stop_gates.py, agent/turn_retry_state.py, agent/turn_response_intake.py, agent/turn_response_check.py",
+     "errors: Exception as exc:  # noqa: BLE001 \u2014 diagnostics are best-effort\\n189|        logger.debug(\\\"disable, Exception as exc:  # noqa: BLE001 \u2014 config layer optional\\n149|        logger.debug(\\\"keyless_fallb, Exception as exc:  # noqa: BLE001 \u2014 buggy provider skipped\\n136|                logger.debug(\\\"prov, Exception as exc:  # noqa: BLE001 \u2014 ring optional in stripped envs\\n78|        logger.debug(\\\"keyle, Exception as exc:\\n48|        logger.debug(\\\"Could not read config %s: %s\\\", \\\".\\\".join(path), exc), NotImplementedError(\\n100|            f\\\"{self.name} does not support extract (override supports_extract)\\\"\\n"
+    ]
+   }
+  },
+  "c117462_foldin": {
+   "40": {
+    "files": 40,
+    "region_chars": 1092278,
+    "sections": [
+     "PRs/issues: #70773(x5), #67142(x5), #58962(x4), #56810(x4), #99692(x4), #29507(x3), #92550(x3), #81521(x3), #6600(x3), #70893(x3), #43083(x3), #85252(x3), #69734(x3), #94785(x3), #114967(x3), #60683(x3), #53802(x3), #76085(x3), #72039(x3), #72975(x2), #94248(x2), #22548(x2), #27907(x2), #62151(x2), #60203(x2), #93650(x2), #78382(x2), #114476(x2), #59437(x2), #14944(x2), #84423(x2), #105921(x2), #104116(x2), #102895(x2), #42177(x2), #23975(x2), #51083(x2), #106010(x2), #29344(x2), #13848(x2), #98334(x2), #24293(x2), #10933(x2), #114501(x2), #33163(x2), #94486(x2), #78063(x2), #116467(x2), #1739(x2), #63425(x2), #17829, #28660, #67935, #114446, #41225, #62984, #89401, #115702, #102148, #81932, #33062, #77256, #32106, #16884, #16844, #17341, #17400, #15250, #19798, #27197, #95003, #100536, #92302, #91621, #112909, #57354, #80759, #75301, #72227, #97281, #115024, #97968, #64507, #104793, #76411, #63871, #24996, #89863, #74263, #108200, #115865, #33317, #9486, #62673, #24515, #24220, #55925, #55769, #82146, #44672, #39996, #61521, #15216, #109964, #17276, #25322, #118693, #103579, #94825, #38727, #93057, #30532, #30220, #116055, #87250, #78996, #114405, #119232, #113064, #105191",
+     "commits: 8207862212, 5944d1962f5e",
+     "handles: @dataclass(x20), @property(x13), @staticmethod(x10), @contextlib(x5), @abc(x4), @classmethod(x4), @BrinShadewater, @contextmanager, @functools, @anthropic-ai",
+     "urls: https://hermes-agent.nousresearch.com\\(x3), https://grok.com/?_s=usage(x2), https://portal.nousresearch.com/billing?topup=open\\, https://portal.nousresearch.com/billing\\, https://build.nvidia.com/settings/billing\\, https://platform.moonshot.ai/console/pay\\, https://dashboard.cohere.com/billing\\, https://aistudio.google.com/app/billing\\, https://www.perplexity.ai/settings/api\\, https://fireworks.ai/account/billing\\, https://api.together.ai/settings/billing\\, https://console.mistral.ai/billing\\, https://console.groq.com/settings/billing\\, https://platform.deepseek.com/top_up\\, https://console.x.ai/team/default/billing\\, https://openrouter.ai/settings/credits\\, https://console.anthropic.com/settings/billing\\, https://platform.openai.com/settings/organization/billing\\, https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-xai-grok-4-6.html\\n1171|, https://bedrock-mantle.{resolved}.api.aws/openai/v1\\, https://ai.azure.com/.default\\, https://learn.microsoft.com/azure/ai-foundry/foundry-models/how-to/configure-entra-id\\n10|\\, https://api-docs.deepseek.com/guides/json_mode, https://bedrock-runtime.{region}.amazonaws.com\\, https://api.anthropic.com\\, https://inference-api.nousresearch.com/v1\\, https://api.kimi.com/coding\\, https://api.minimaxi.com/anthropic\\, https://api.minimax.io/anthropic\\, https://claude.ai/oauth/authorize?{urlencode(params",
+     "files: hermes/.anthropic_oauth.json(x4), claude/.credentials.json(x4), agent/model_metadata.py(x3), agent/transports/codex.py(x3), agent/bedrock_adapter.py(x2), agent/background_review.py(x2), agent/anthropic_endpoints.py(x2), agent/anthropic_message_convert.py(x2), agent/anthropic_adapter.py(x2), agent/system_prompt.py(x2), agent/client_lifecycle.py, agent/chat_completion_wait_notice.py, agent/chat_completion_stream_monitor.py, agent/chat_completion_nonstream.py, agent/chat_completion_helpers_relay.py, agent/chat_completion_helpers.py, agent/browser_registry.py, agent/browser_provider.py, agent/bounded_response.py, agent/billing_view.py, agent/billing_usage.py, agent/billing_links.py, docs.aws.amazon.com/bedrock/latest/userguide/model-cards-openai.html, docs.aws.amazon.com/bedrock/latest/userguide/model-card-xai-grok-4-6.html, agent/battery.py, tools/file_tools.py, tools/delegate_tool.py, MEMORY.md/USER.md, agent/backend_identity.py, agent/azure_identity_adapter.py, agent/auxiliary_wire.py, agent/auxiliary_unavailable.py, agent/auxiliary_structured_output.py, agent/auxiliary_reasoning_floor.py, agent/auxiliary_hooks.py, agent/auxiliary_health.py, agent/auxiliary_fallback_recovery.py, hermes/auth.json, agent/auxiliary_client.py, agent/auxiliary_async_rebuild.py, agent/aux_accounting.py, agent/async_utils.py, agent/api_request_hooks.py, agent/api_error_summary.py, agent/anthropic_credentials.py, tools/session_search_tool.py, tests/agent/test_shared_http_transport.py, tests/agent/test_create_openai_client_reuse.py, gateway/stream_consumer.py, agent/agent_runtime_helpers.py, agent/native_compaction.py, agent/turn_recovery_autorecover.py, agent/oneshot_footprint.py, agent/agent_init.py, tests/agent/test_session_activity_persist.py, agent/activity_tracking.py, agent/acp_openai_bridge.py, agent/account_usage.py, agent/__init__.py",
+     "errors: Exception:\\n1006|            logger.debug(\\\"custom-provider TLS resolution skipped on credential ro, Exception):\\n977|                self._anthropic_client.close()\\n978|            self._anthropic_ap, Exception:\\n939|                logger.debug(\\\"custom-provider extra_headers skipped\\\", exc_info=Tr, Exception):\\n925|                from providers import get_provider_profile\\n926|                pr, Exception as exc:\\n910|            logger.warning(\\\"Failed to rebuild Anthropic client after creden, Exception):\\n905|            self._anthropic_client.close()\\n906|        try:\\n907|            base, Exception as exc:\\n899|            logger.debug(\\\"Anthropic credential refresh failed: %s\\\", exc)\\n, Exception as exc:\\n861|            logger.debug(\\\"Copilot stale-credential recovery failed: %s\\\", e, Exception as exc:\\n837|            logger.debug(\\\"Copilot 401 re-exchange failed, using resolved to, Exception as exc:\\n825|            logger.debug(\\\"Copilot credential refresh failed: %s\\\", exc)\\n82, Exception as exc:\\n796|            logger.debug(\\\"Vertex credential refresh failed: %s\\\", exc)\\n797, Exception:\\n783|            logger.debug(\\\"sync_credential_pool_entry_id after env refresh failed\\\", ImportError:\\n716|                return None\\n717|            custom_provider = _get_named_custom_pr, ImportError:\\n691|            return None\\n692|        pconfig = PROVIDER_REGISTRY.get(self.provider), Exception:\\n675|            return False\\n676|        exp, account = claims.get(\\\"exp\\\"), claims.ge, Exception:\\n633|                new_account = None\\n634|            if str(new_account or \\\"\\\") !=, Exception as exc:\\n620|            logger.debug(\\\"Nous credential refresh failed: %s\\\", exc)\\n621|, Exception as exc:\\n596|            logger.debug(\\\"%s credential refresh failed: %s\\\", self.provider, Exception as exc:\\n583|            logger.debug(\\\"%s singleton read failed: %s\\\", self.provider, ex, Exception):\\n552|            self._force_close_tcp_sockets(client)\\n553|            client.close()\\, Exception as exc:\\n539|            logger.debug(\\n540|                \\\"Anthropic client close fail, Exception as exc:\\n440|            logger.debug(\\\"%s client abort failed (%s, shared=False) %s erro, RuntimeError(\\\"Failed to recreate closed OpenAI client\\\") from exc\\n325|            self.client = new_",
+     "dotted keys: agent.api_mode(x34)"
+    ]
+   },
+   "120": {
+    "files": 120,
+    "region_chars": 2945717,
+    "sections": [
+     "PRs/issues: #82154(x9), #76354(x9), #71970(x6), #76085(x5), #98722(x5), #99692(x5), #70773(x5), #67142(x5), #112358(x4), #17341(x4), #115306(x4), #104731(x4), #80498(x4), #104414(x4), #80622(x4), #97488(x4), #112420(x4), #32106(x4), #70893(x4), #58962(x4), #56810(x4), #45655(x3), #112647(x3), #106475(x3), #112473(x3), #100536(x3), #100339(x3), #98741(x3), #118900(x3), #98371(x3), #114594(x3), #63892(x3), #96634(x3), #22548(x3), #29507(x3), #92550(x3), #81521(x3), #6600(x3), #43083(x3), #85252(x3), #69734(x3), #94785(x3), #114967(x3), #60683(x3), #53802(x3), #72039(x3), #60345(x2), #98450(x2), #15250(x2), #16454(x2), #119668(x2), #108032(x2), #87096(x2), #99758(x2), #77223(x2), #89863(x2), #113517(x2), #23482(x2), #45947(x2), #121270(x2), #51512(x2), #114460(x2), #89401(x2), #14038(x2), #53099(x2), #52310(x2), #18028(x2), #37848(x2), #111231(x2), #115702(x2), #94285(x2), #83220(x2), #96962(x2), #89415(x2), #121486(x2), #113023(x2), #70111(x2), #68237(x2), #56747(x2), #76411(x2), #92450(x2), #72626(x2), #124211(x2), #36718(x2), #81841(x2), #93057(x2), #96995(x2), #62452(x2), #96775(x2), #71569(x2), #73298(x2), #96603(x2), #124077(x2), #69619(x2), #121548(x2), #74712(x2), #26035(x2), #90976(x2), #32716(x2), #72975(x2), #94248(x2), #27907(x2), #62151(x2), #60203(x2), #93650(x2), #78382(x2), #114476(x2), #59437(x2), #14944(x2), #84423(x2), #105921(x2), #104116(x2), #102895(x2), #42177(x2), #23975(x2), #51083(x2), #106010(x2), #29344(x2), #13848(x2), #98334(x2)",
+     "commits: 14155551234, 5551234567, 9a9f8a6d99, 94b3131be7, b5495db701, 2b3a4f0af8, e45f2b39e2, fa3ab2ffd0, 123456789abc, 97fa14e39, 8207862212, 5944d1962f5e",
+     "branches: docs/api-key, docs/en/build-with-claude/fast-mode, docs/developer-guide/model-provider-plugin.md",
+     "handles: @dataclass(x46), @property(x40), @staticmethod(x22), @abstractmethod(x10), @contextlib(x9), @contextmanager(x7), @file(x7), @classmethod(x6), @abc(x5), @github(x3), @folder(x3), @host(x2), @overload(x2), @ciabata-git(x2), @url(x2), @type, @-references, @-prefix, @git, @diff, @-reference, @LeonSGP43, @BrinShadewater, @functools, @anthropic-ai",
+     "urls: https://hermes-agent.nousresearch.com\\(x3), https://api.openai.com/auth\\(x2), https://claude.ai/settings/usage\\(x2), https://chatgpt.com/backend-api/codex\\(x2), https://grok.com/?_s=usage(x2), http://localhost:11434/v1\\, http://localhost:4000/gemini``, https://aistudio.google.com/app/apikey, https://aistudio.google.com/apikey, https://aiplatform.googleapis.com/v1beta1.\\, https://ai.google.dev/gemini-api/docs/api-key\\, https://aistudio.google.com/api-keys, https://aistudio.google.com/apikey\\, https://aiplatform.googleapis.com/v1beta1/publishers/google\\, https://generativelanguage.googleapis.com/v1beta\\, https://platform.claude.com/docs/en/build-with-claude/fast-mode, https://claude.ai/settings/usage, https://portal.nousresearch.com/billing?topup=open\\, https://portal.nousresearch.com/billing\\, https://build.nvidia.com/settings/billing\\, https://platform.moonshot.ai/console/pay\\, https://dashboard.cohere.com/billing\\, https://aistudio.google.com/app/billing\\, https://www.perplexity.ai/settings/api\\, https://fireworks.ai/account/billing\\, https://api.together.ai/settings/billing\\, https://console.mistral.ai/billing\\, https://console.groq.com/settings/billing\\, https://platform.deepseek.com/top_up\\, https://console.x.ai/team/default/billing\\",
+     "files: claude/.credentials.json(x11), hermes/.anthropic_oauth.json(x8), agent/transports/codex.py(x4), codex/auth.json(x4), agent/turn_finalizer.py(x3), agent/turn_recovery.py(x3), agent/auxiliary_client.py(x3), cron/jobs.json(x3), agent/background_review.py(x3), agent/model_metadata.py(x3), agent/moa_alternation.py(x2), agent/codex_responses_adapter.py(x2), agent/kanban_stop.py(x2), hermes_cli/cli_single_query.py(x2), agent/image_eviction_policy.py(x2), agent/error_classifier.py(x2), hermes/cron/jobs.json(x2), qwen/oauth_creds.json(x2), agent/credential_pool.py(x2), hermes/auth.json(x2), agent/conversation_compression.py(x2), agent/context_compressor.py(x2), agent/chat_completion_helpers.py(x2), agent/native_compaction.py(x2), agent/bedrock_adapter.py(x2), agent/anthropic_endpoints.py(x2), agent/anthropic_message_convert.py(x2), agent/anthropic_adapter.py(x2), agent/system_prompt.py(x2), agent/moa_trace.py, agent/moa_loop.py, agent/micro_compaction.py, agent/message_sanitization.py, agent/transcript_repair.py, agent/message_metadata.py, agent/message_content.py, agent/memory_provider.py, agent/memory_manager.py, agent/markdown_tables.py, agent/manual_compression_feedback.py, agent/lmstudio_reasoning.py, agent/legacy_cli.py, agent/learning_mutations.py, agent/learning_graph_render.py, agent/learning_graph.py, references/ch04-replication.md, agent/learn_prompt.py, agent/lazy_forward.py, hermes_cli/kanban_db.py, hermes_cli/kanban_db_dispatch.py, agent/kanban_turn_recovery.py, agent/jiter_preload.py, agent/iteration_budget.py, agent/interrupt_scope.py, agent/interrupt_control.py, agent/interrupt_compat.py, agent/insights.py, agent/inline_tool_executors.py, hermes/cache/image_token_costs.json, agent/image_token_cost.py, agent/image_routing.py, agent/image_gen_registry.py, agent/video_gen_provider.py, agent/image_gen_provider.py, agent/i18n_layers.py, apps/shared/src/i18n.ts, agent/i18n_languages.py, agent/i18n.py, agent/history_commentary.py, agent/gemini_schema.py, agent/gemini_native_adapter.py, hermes_cli/windows_ssh_runtime.py, agent/file_safety.py, agent/fast_mode.py, agent/fallback_cooldown.py, agent/estop.py, agent/errors.py, agent/turn_failure_copy.py, agent/error_surface.py, agent/reasoning_timeouts.py",
+     "errors: Exception as exc:  # pragma: no cover - tracing must never break a turn\\n115|        logger.debug(\\, Exception:  # pragma: no cover - never break a turn over tracing\\n32|        return None\\n33|    if, Exception:\\n1473|        resolved_preset = \\\"default\\\"\\n1474|    # ``agent`` lets the fan-out wait, Exception):\\n1457|            cb(\\n1458|                event, str(kwargs.get(primary) or \\\"\\\"), st, TypeError(\\\"_moa_prepared_request must be a dict\\\")\\n1367|            return self._call_prepared_ag, Exception as exc:  # pragma: no cover - never break a turn\\n1306|            logger.debug(\\\"MoA ref, TypeError, ValueError):\\n1232|                every_n = int(fanout_mode.split(\\\":\\\", 1)[1])\\n1233|, Exception):  # pragma: no cover - defensive\\n1197|                    output = _extract_text(agg_re, Exception as exc:\\n1175|            # Strict-alternation template rejected ``user(task), user(guida, RuntimeError(\\\"MoA aggregator cannot be another MoA preset\\\")\\n1140|        agg_runtime = _slot_runtim, Exception as exc:  # pragma: no cover - cache planning must not block MoA\\n1129|            logger, Exception as exc:  # pragma: no cover - display must never break the turn\\n1085|            logger, Exception as exc:  # pragma: no cover - tracing must never break a turn\\n1077|            logger.de",
+     "dotted keys: self.base_url(x39), agent.api_mode(x36), agent.session_id(x35)"
+    ]
+   },
+   "251": {
+    "files": 251,
+    "region_chars": 5408717,
+    "sections": [
+     "PRs/issues: #98722(x10), #82154(x9), #76354(x9), #80622(x8), #97488(x8), #65991(x7), #67142(x6), #70773(x6), #65919(x6), #104414(x6), #71970(x6), #67321(x5), #69870(x5), #98741(x5), #32106(x5), #112647(x5), #92068(x5), #14536(x5), #93650(x5), #77244(x5), #77484(x5), #90976(x5), #84482(x5), #89863(x5), #76085(x5), #99692(x5), #79220(x4), #96995(x4), #100536(x4), #114460(x4), #35809(x4), #9893(x4), #48677(x4), #95514(x4), #87096(x4), #114594(x4), #106475(x4), #112473(x4), #113158(x4), #63892(x4), #74574(x4), #35519(x4), #109964(x4), #10933(x4), #121486(x4), #114967(x4), #112358(x4), #17341(x4), #115306(x4), #104731(x4), #80498(x4), #112420(x4), #70893(x4), #58962(x4), #56810(x4), #102766(x3), #119001(x3), #48879(x3), #1630(x3), #53099(x3), #98852(x3), #39550(x3), #95663(x3), #84733(x3), #8049(x3), #44239(x3), #117296(x3), #118693(x3), #89401(x3), #84423(x3), #79017(x3), #19027(x3), #55933(x3), #10521(x3), #79719(x3), #83220(x3), #72351(x3), #51083(x3), #95681(x3), #86313(x3), #76902(x3), #17924(x3), #114359(x3), #17782(x3), #59607(x3), #2852(x3), #15250(x3), #8731(x3), #105443(x3), #45655(x3), #100339(x3), #118900(x3), #98371(x3), #96634(x3), #22548(x3), #29507(x3), #92550(x3), #81521(x3), #6600(x3), #43083(x3), #85252(x3), #69734(x3), #94785(x3), #60683(x3), #53802(x3), #72039(x3), #40190(x2), #106260(x2), #91717(x2), #47967(x2), #78148(x2), #88954(x2), #61631(x2), #96155(x2), #89296(x2), #107307(x2), #85426(x2), #26293(x2), #70566(x2), #88510(x2)",
+     "commits: 93889b770da, 370ebf2d3, 9223372036854775807, 14155551234, 5551234567, 9a9f8a6d99, 94b3131be7, b5495db701, 2b3a4f0af8, e45f2b39e2, fa3ab2ffd0, 123456789abc, 97fa14e39, 8207862212, 5944d1962f5e",
+     "branches: docs/pricing(x3), docs/developer-guide/multiplexing-gateway.md(x2), docs/en/build-with-claude/fast-mode(x2), docs/api-reference/text-prompt-caching, docs/api/api-reference/models/get-models, docs/models/, docs/models/gpt-6-astra, docs/en/about-claude/pricing, docs/hub/agent-traces, docs/api-reference/text-chat-openai, docs/api-key, docs/developer-guide/model-provider-plugin.md",
+     "handles: @dataclass(x124), @property(x66), @staticmethod(x43), @classmethod(x16), @contextmanager(x14), @contextlib(x14), @abc(x12), @abstractmethod(x10), @file(x9), @dataclasses(x9), @host(x8), @github(x5), @folder(x4), @-reference(x3), @-references(x2), @functools(x2), @ruizanthony(x2), @overload(x2), @ciabata-git(x2), @url(x2), @kshitijk4poor, @example, @type, @-prefix, @git, @diff, @LeonSGP43, @BrinShadewater, @anthropic-ai",
+     "urls: https://hermes-agent.nousresearch.com\\(x3), https://ai.google.dev/gemini-api/docs/pricing\\(x2), https://inference-api.nousresearch.com/v1\\(x2), https://openrouter.ai/settings/credits\\(x2), https://portal.nousresearch.com\\(x2), https://api.minimaxi.com/anthropic\\(x2), https://api.minimax.io/anthropic\\(x2), https://portal.nousresearch.com/billing\\(x2), https://PASSWORD@github.com/...``(x2), https://hermes-agent.nousresearch.com/docs(x2), https://platform.claude.com/docs/en/build-with-claude/fast-mode(x2), https://api.openai.com/auth\\(x2), https://claude.ai/settings/usage\\(x2), https://chatgpt.com/backend-api/codex\\(x2), https://grok.com/?_s=usage(x2), https://api.openai.com/v1\\, https://{host}/v1beta1/projects/{project_id}/locations/{region}/endpoints/openapi\\, https://www.googleapis.com/auth/cloud-platform\\, https://example.com:443``, https://example.com``, https://platform.minimax.io/docs/api-reference/text-prompt-caching\\n644|, https://models.dev\\, https://openrouter.ai/docs/api/api-reference/models/get-models\\, https://developers.openai.com/api/docs/pricing?latest-pricing=ultrafast\\, https://developers.openai.com/api/docs/models/{_slug}\\, https://developers.openai.com/api/docs/models/gpt-6-astra\\, https://docs.fireworks.ai/serverless/pricing\\, https://api-docs.deepseek.com/quick_start/pricing\\, https://openai.com/api/pricing/\\, https://openrouter.ai/anthropic/claude-opus-4.8-fast\\",
+     "files: claude/.credentials.json(x11), hermes/.anthropic_oauth.json(x8), agent/turn_finalizer.py(x5), agent/model_metadata.py(x5), agent/error_surface.py(x4), agent/turn_recovery.py(x4), gateway/run.py(x4), agent/transports/codex.py(x4), codex/auth.json(x4), logs/agent.log(x3), gateway/run_turn.py(x3), agent/system_prompt.py(x3), scripts/foo.js(x3), agent/native_compaction.py(x3), agent/bedrock_adapter.py(x3), agent/auxiliary_client.py(x3), cron/jobs.json(x3), agent/background_review.py(x3), agent/image_gen_registry.py(x2), agent/image_gen_provider.py(x2), agent/video_gen_provider.py(x2), agent/vault_login_classifier.py(x2), agent/vault_store.py(x2), agent/usage_anchor.py(x2), agent/turn_usage.py(x2), agent/turn_recovery_autorecover.py(x2), agent/turn_explainers.py(x2), agent/conversation_loop.py(x2), agent/turn_failure_copy.py(x2), agent/periodic_scheduler.py(x2), agent/transcript_repair.py(x2), agent/deadline.py(x2), agent/context_references.py(x2), agent/surface_switch.py(x2), website/docs/developer-guide/multiplexing-gateway.md(x2), agent/runtime_cwd.py(x2), hermes_cli/main.py(x2), agent/reasoning_timeouts.py(x2), agent/process_bootstrap.py(x2), agent/context_file_sources.py(x2), tui_gateway/server.py(x2), agent/oneshot_footprint.py(x2), agent/moa_alternation.py(x2), agent/codex_responses_adapter.py(x2), agent/kanban_stop.py(x2), hermes_cli/cli_single_query.py(x2), agent/image_eviction_policy.py(x2), agent/error_classifier.py(x2), hermes/cron/jobs.json(x2), qwen/oauth_creds.json(x2), agent/credential_pool.py(x2), hermes/auth.json(x2), agent/conversation_compression.py(x2), agent/context_compressor.py(x2), agent/chat_completion_helpers.py(x2), agent/anthropic_endpoints.py(x2), agent/anthropic_message_convert.py(x2), agent/anthropic_adapter.py(x2), plugins/web/keyless_mcp.py, agent/web_search_registry.py, agent/web_search_provider.py, agent/vision_message_prep.py, agent/video_gen_registry.py, agent/vertex_adapter.py, agent/verify_hooks.py, hermes/environment.json, agent/verification_stop.py, agent/verification_evidence.py, tools/skill_usage.py, lib/manager/server/secret-store.ts, lib/manager/server/kernel-login-autofill.ts, agent/usage_pricing.py, agent/turn_truncation.py, agent/turn_tool_validation.py, agent/turn_tool_round.py, agent/turn_summary.py, agent/turn_stop_gates.py, agent/turn_retry_state.py, agent/turn_response_intake.py, agent/turn_response_check.py",
+     "errors: Exception as exc:  # noqa: BLE001 \u2014 diagnostics are best-effort\\n189|        logger.debug(\\\"disable, Exception as exc:  # noqa: BLE001 \u2014 config layer optional\\n149|        logger.debug(\\\"keyless_fallb, Exception as exc:  # noqa: BLE001 \u2014 buggy provider skipped\\n136|                logger.debug(\\\"prov, Exception as exc:  # noqa: BLE001 \u2014 ring optional in stripped envs\\n78|        logger.debug(\\\"keyle, Exception as exc:\\n48|        logger.debug(\\\"Could not read config %s: %s\\\", \\\".\\\".join(path), exc), NotImplementedError(\\n100|            f\\\"{self.name} does not support extract (override supports_extract)\\\"\\n",
+     "dotted keys: agent.conversation_loop(x87), agent.session_id(x84)"
+    ]
+   }
+  },
+  "c117462_foldin_r03": {
+   "40": {
+    "files": 40,
+    "region_chars": 1092278,
+    "sections": [
+     "PRs/issues: #70773(x5), #67142(x5), #58962(x4), #56810(x4), #99692(x4), #29507(x3), #92550(x3), #81521(x3), #6600(x3), #70893(x3), #43083(x3), #85252(x3), #69734(x3), #94785(x3), #114967(x3), #60683(x3), #53802(x3), #76085(x3), #72039(x3), #72975(x2), #94248(x2), #22548(x2), #27907(x2), #62151(x2), #60203(x2), #93650(x2), #78382(x2), #114476(x2), #59437(x2), #14944(x2), #84423(x2), #105921(x2), #104116(x2), #102895(x2), #42177(x2), #23975(x2), #51083(x2), #106010(x2), #29344(x2), #13848(x2), #98334(x2), #24293(x2), #10933(x2), #114501(x2), #33163(x2), #94486(x2), #78063(x2), #116467(x2), #1739(x2), #63425(x2), #17829, #28660, #67935, #114446, #41225, #62984, #89401, #115702, #102148, #81932, #33062, #77256, #32106, #16884, #16844, #17341, #17400, #15250, #19798, #27197, #95003, #100536, #92302, #91621, #112909, #57354, #80759, #75301, #72227, #97281, #115024, #97968, #64507, #104793, #76411, #63871, #24996, #89863, #74263, #108200, #115865, #33317, #9486, #62673, #24515, #24220, #55925, #55769, #82146, #44672, #39996, #61521, #15216, #109964, #17276, #25322, #118693, #103579, #94825, #38727, #93057, #30532, #30220, #116055, #87250, #78996, #114405, #119232, #113064, #105191",
+     "commits: 8207862212, 5944d1962f5e",
+     "handles: @dataclass(x20), @property(x13), @staticmethod(x10), @contextlib(x5), @abc(x4), @classmethod(x4), @BrinShadewater, @contextmanager, @functools, @anthropic-ai",
+     "urls: https://hermes-agent.nousresearch.com\\(x3), https://grok.com/?_s=usage(x2), https://portal.nousresearch.com/billing?topup=open\\, https://portal.nousresearch.com/billing\\, https://build.nvidia.com/settings/billing\\, https://platform.moonshot.ai/console/pay\\, https://dashboard.cohere.com/billing\\, https://aistudio.google.com/app/billing\\, https://www.perplexity.ai/settings/api\\, https://fireworks.ai/account/billing\\, https://api.together.ai/settings/billing\\, https://console.mistral.ai/billing\\, https://console.groq.com/settings/billing\\, https://platform.deepseek.com/top_up\\, https://console.x.ai/team/default/billing\\, https://openrouter.ai/settings/credits\\, https://console.anthropic.com/settings/billing\\, https://platform.openai.com/settings/organization/billing\\, https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-xai-grok-4-6.html\\n1171|, https://bedrock-mantle.{resolved}.api.aws/openai/v1\\, https://ai.azure.com/.default\\, https://learn.microsoft.com/azure/ai-foundry/foundry-models/how-to/configure-entra-id\\n10|\\, https://api-docs.deepseek.com/guides/json_mode, https://bedrock-runtime.{region}.amazonaws.com\\, https://api.anthropic.com\\, https://inference-api.nousresearch.com/v1\\, https://api.kimi.com/coding\\, https://api.minimaxi.com/anthropic\\, https://api.minimax.io/anthropic\\, https://claude.ai/oauth/authorize?{urlencode(params",
+     "dotted keys: agent.api_mode(x34), self.base_url(x28), agent.base_url(x24), self.api_key(x23), agent.auxiliary_client(x23), self.api_mode(x16), agent.credential_pool(x15), st.review_agent(x13), agent.anthropic_adapter(x12), agent.session_id(x12), agent.model_metadata(x11), agent.bedrock_adapter(x10), self.api_kwargs(x10), self.call_start(x10), agent.quiet_mode(x10), agent.agent_runtime_helpers(x9), agent.context_compressor(x9), model.context_length(x9), agent.anthropic_credentials(x8), a.base_url(x8), self.no_progress_timeout(x8), hermes_cli.runtime_provider(x7), self.codex_token(x7), agent.max_tokens(x7), hermes_cli.route_identity(x6), agent.api_key(x6), self.stale_timeout(x6), agent.secret_scope(x6), auxiliary.background_review(x6), b.base_url(x6), self.hard_deadline(x6), value.model_dump(x6), prompt_caching.cache_ttl(x6), profile.default_headers(x5), model.base_url(x5), agent.moa_loop(x5), agent.codex_headers(x5), self.wait_notice_started_ts(x5), browser.cloud_provider(x5), hermes_cli.models_pricing(x5)",
+     "files: hermes/.anthropic_oauth.json(x4), claude/.credentials.json(x4), agent/model_metadata.py(x3), agent/transports/codex.py(x3), agent/bedrock_adapter.py(x2), agent/background_review.py(x2), agent/anthropic_endpoints.py(x2), agent/anthropic_message_convert.py(x2), agent/anthropic_adapter.py(x2), agent/system_prompt.py(x2), agent/client_lifecycle.py, agent/chat_completion_wait_notice.py, agent/chat_completion_stream_monitor.py, agent/chat_completion_nonstream.py, agent/chat_completion_helpers_relay.py, agent/chat_completion_helpers.py, agent/browser_registry.py, agent/browser_provider.py, agent/bounded_response.py, agent/billing_view.py, agent/billing_usage.py, agent/billing_links.py, docs.aws.amazon.com/bedrock/latest/userguide/model-cards-openai.html, docs.aws.amazon.com/bedrock/latest/userguide/model-card-xai-grok-4-6.html, agent/battery.py, tools/file_tools.py, tools/delegate_tool.py, MEMORY.md/USER.md, agent/backend_identity.py, agent/azure_identity_adapter.py, agent/auxiliary_wire.py, agent/auxiliary_unavailable.py, agent/auxiliary_structured_output.py, agent/auxiliary_reasoning_floor.py, agent/auxiliary_hooks.py, agent/auxiliary_health.py, agent/auxiliary_fallback_recovery.py, hermes/auth.json, agent/auxiliary_client.py, agent/auxiliary_async_rebuild.py, agent/aux_accounting.py, agent/async_utils.py, agent/api_request_hooks.py, agent/api_error_summary.py, agent/anthropic_credentials.py, tools/session_search_tool.py, tests/agent/test_shared_http_transport.py, tests/agent/test_create_openai_client_reuse.py, gateway/stream_consumer.py, agent/agent_runtime_helpers.py, agent/native_compaction.py, agent/turn_recovery_autorecover.py, agent/oneshot_footprint.py, agent/agent_init.py, tests/agent/test_session_activity_persist.py, agent/activity_tracking.py, agent/acp_openai_bridge.py, agent/account_usage.py, agent/__init__.py",
+     "errors: Exception:\\n1006|            logger.debug(\\\"custom-provider TLS resolution skipped on credential ro, Exception):\\n977|                self._anthropic_client.close()\\n978|            self._anthropic_ap, Exception:\\n939|                logger.debug(\\\"custom-provider extra_headers skipped\\\", exc_info=Tr, Exception):\\n925|                from providers import get_provider_profile\\n926|                pr, Exception as exc:\\n910|            logger.warning(\\\"Failed to rebuild Anthropic client after creden, Exception):\\n905|            self._anthropic_client.close()\\n906|        try:\\n907|            base, Exception as exc:\\n899|            logger.debug(\\\"Anthropic credential refresh failed: %s\\\", exc)\\n, Exception as exc:\\n861|            logger.debug(\\\"Copilot stale-credential recovery failed: %s\\\", e, Exception as exc:\\n837|            logger.debug(\\\"Copilot 401 re-exchange failed, using resolved to, Exception as exc:\\n825|            logger.debug(\\\"Copilot credential refresh failed: %s\\\", exc)\\n82, Exception as exc:\\n796|            logger.debug(\\\"Vertex credential refresh failed: %s\\\", exc)\\n797, Exception:\\n783|            logger.debug(\\\"sync_credential_pool_entry_id after env refresh failed\\\", ImportError:\\n716|                return None\\n717|            custom_provider = _get_named_custom_pr"
+    ]
+   },
+   "120": {
+    "files": 120,
+    "region_chars": 2945717,
+    "sections": [
+     "PRs/issues: #82154(x9), #76354(x9), #71970(x6), #76085(x5), #98722(x5), #99692(x5), #70773(x5), #67142(x5), #112358(x4), #17341(x4), #115306(x4), #104731(x4), #80498(x4), #104414(x4), #80622(x4), #97488(x4), #112420(x4), #32106(x4), #70893(x4), #58962(x4), #56810(x4), #45655(x3), #112647(x3), #106475(x3), #112473(x3), #100536(x3), #100339(x3), #98741(x3), #118900(x3), #98371(x3), #114594(x3), #63892(x3), #96634(x3), #22548(x3), #29507(x3), #92550(x3), #81521(x3), #6600(x3), #43083(x3), #85252(x3), #69734(x3), #94785(x3), #114967(x3), #60683(x3), #53802(x3), #72039(x3), #60345(x2), #98450(x2), #15250(x2), #16454(x2), #119668(x2), #108032(x2), #87096(x2), #99758(x2), #77223(x2), #89863(x2), #113517(x2), #23482(x2), #45947(x2), #121270(x2), #51512(x2), #114460(x2), #89401(x2), #14038(x2), #53099(x2), #52310(x2), #18028(x2), #37848(x2), #111231(x2), #115702(x2), #94285(x2), #83220(x2), #96962(x2), #89415(x2), #121486(x2), #113023(x2), #70111(x2), #68237(x2), #56747(x2), #76411(x2), #92450(x2), #72626(x2), #124211(x2), #36718(x2), #81841(x2), #93057(x2), #96995(x2), #62452(x2), #96775(x2), #71569(x2), #73298(x2), #96603(x2), #124077(x2), #69619(x2), #121548(x2), #74712(x2), #26035(x2), #90976(x2), #32716(x2), #72975(x2), #94248(x2), #27907(x2), #62151(x2), #60203(x2), #93650(x2), #78382(x2), #114476(x2), #59437(x2), #14944(x2), #84423(x2), #105921(x2), #104116(x2), #102895(x2), #42177(x2), #23975(x2), #51083(x2), #106010(x2), #29344(x2), #13848(x2), #98334(x2)",
+     "commits: 14155551234, 5551234567, 9a9f8a6d99, 94b3131be7, b5495db701, 2b3a4f0af8, e45f2b39e2, fa3ab2ffd0, 123456789abc, 97fa14e39, 8207862212, 5944d1962f5e",
+     "branches: docs/api-key, docs/en/build-with-claude/fast-mode, docs/developer-guide/model-provider-plugin.md",
+     "handles: @dataclass(x46), @property(x40), @staticmethod(x22), @abstractmethod(x10), @contextlib(x9), @contextmanager(x7), @file(x7), @classmethod(x6), @abc(x5), @github(x3), @folder(x3), @host(x2), @overload(x2), @ciabata-git(x2), @url(x2), @type, @-references, @-prefix, @git, @diff, @-reference, @LeonSGP43, @BrinShadewater, @functools, @anthropic-ai",
+     "urls: https://hermes-agent.nousresearch.com\\(x3), https://api.openai.com/auth\\(x2), https://claude.ai/settings/usage\\(x2), https://chatgpt.com/backend-api/codex\\(x2), https://grok.com/?_s=usage(x2), http://localhost:11434/v1\\, http://localhost:4000/gemini``, https://aistudio.google.com/app/apikey, https://aistudio.google.com/apikey, https://aiplatform.googleapis.com/v1beta1.\\, https://ai.google.dev/gemini-api/docs/api-key\\, https://aistudio.google.com/api-keys, https://aistudio.google.com/apikey\\, https://aiplatform.googleapis.com/v1beta1/publishers/google\\, https://generativelanguage.googleapis.com/v1beta\\, https://platform.claude.com/docs/en/build-with-claude/fast-mode, https://claude.ai/settings/usage, https://portal.nousresearch.com/billing?topup=open\\, https://portal.nousresearch.com/billing\\, https://build.nvidia.com/settings/billing\\, https://platform.moonshot.ai/console/pay\\, https://dashboard.cohere.com/billing\\, https://aistudio.google.com/app/billing\\, https://www.perplexity.ai/settings/api\\, https://fireworks.ai/account/billing\\, https://api.together.ai/settings/billing\\, https://console.mistral.ai/billing\\, https://console.groq.com/settings/billing\\, https://platform.deepseek.com/top_up\\, https://console.x.ai/team/default/billing\\",
+     "dotted keys: self.base_url(x39), agent.api_mode(x36), agent.session_id(x35), agent.auxiliary_client(x34), agent.context_compressor(x34), agent.model_metadata(x33), self.api_key(x30), agent.base_url(x28), agent.credential_pool(x28), entry.refresh_token(x24), entry.access_token(x19), agent.conversation_compression(x18), agent.agent_runtime_helpers(x17), model.context_length(x16), self.api_mode(x16), agent.anthropic_credentials(x15), parser.add_argument(x14), c.provider_slug(x13), st.review_agent(x13), agent.anthropic_adapter(x12), agent.error_classifier(x10), agent.bedrock_adapter(x10), self.api_kwargs(x10), self.call_start(x10), agent.quiet_mode(x10), agent.usage_pricing(x9), hermes_cli.runtime_provider(x9), agent.message_sanitization(x9), agent.secret_scope(x9), c.status_code(x9), hermes_cli.route_identity(x9), agent.message_metadata(x8), contextvars.copy_context(x8), hermes_cli.models_pricing(x8), synced.refresh_token(x8), a.base_url(x8), self.no_progress_timeout(x8), agent.api_key(x7), prompt_caching.cache_ttl(x7), agent.turn_context(x7)",
+     "files: claude/.credentials.json(x11), hermes/.anthropic_oauth.json(x8), agent/transports/codex.py(x4), codex/auth.json(x4), agent/turn_finalizer.py(x3), agent/turn_recovery.py(x3), agent/auxiliary_client.py(x3), cron/jobs.json(x3), agent/background_review.py(x3), agent/model_metadata.py(x3), agent/moa_alternation.py(x2), agent/codex_responses_adapter.py(x2), agent/kanban_stop.py(x2), hermes_cli/cli_single_query.py(x2), agent/image_eviction_policy.py(x2), agent/error_classifier.py(x2), hermes/cron/jobs.json(x2), qwen/oauth_creds.json(x2), agent/credential_pool.py(x2), hermes/auth.json(x2), agent/conversation_compression.py(x2), agent/context_compressor.py(x2), agent/chat_completion_helpers.py(x2), agent/native_compaction.py(x2), agent/bedrock_adapter.py(x2), agent/anthropic_endpoints.py(x2), agent/anthropic_message_convert.py(x2), agent/anthropic_adapter.py(x2), agent/system_prompt.py(x2), agent/moa_trace.py, agent/moa_loop.py, agent/micro_compaction.py, agent/message_sanitization.py, agent/transcript_repair.py, agent/message_metadata.py, agent/message_content.py, agent/memory_provider.py, agent/memory_manager.py, agent/markdown_tables.py, agent/manual_compression_feedback.py, agent/lmstudio_reasoning.py, agent/legacy_cli.py, agent/learning_mutations.py, agent/learning_graph_render.py, agent/learning_graph.py, references/ch04-replication.md, agent/learn_prompt.py, agent/lazy_forward.py, hermes_cli/kanban_db.py, hermes_cli/kanban_db_dispatch.py, agent/kanban_turn_recovery.py, agent/jiter_preload.py, agent/iteration_budget.py, agent/interrupt_scope.py, agent/interrupt_control.py, agent/interrupt_compat.py, agent/insights.py, agent/inline_tool_executors.py, hermes/cache/image_token_costs.json, agent/image_token_cost.py, agent/image_routing.py, agent/image_gen_registry.py, agent/video_gen_provider.py, agent/image_gen_provider.py, agent/i18n_layers.py, apps/shared/src/i18n.ts, agent/i18n_languages.py, agent/i18n.py, agent/history_commentary.py, agent/gemini_schema.py, agent/gemini_native_adapter.py, hermes_cli/windows_ssh_runtime.py, agent/file_safety.py, agent/fast_mode.py, agent/fallback_cooldown.py, agent/estop.py, agent/errors.py, agent/turn_failure_copy.py, agent/error_surface.py, agent/reasoning_timeouts.py",
+     "errors: Exception as exc:  # pragma: no cover - tracing must never break a turn\\n115|        logger.debug(\\, Exception:  # pragma: no cover - never break a turn over tracing\\n32|        return None\\n33|    if, Exception:\\n1473|        resolved_preset = \\\"default\\\"\\n1474|    # ``agent`` lets the fan-out wait",
+     "error messages:"
+    ]
+   },
+   "251": {
+    "files": 251,
+    "region_chars": 5408717,
+    "sections": [
+     "PRs/issues: #98722(x10), #82154(x9), #76354(x9), #80622(x8), #97488(x8), #65991(x7), #67142(x6), #70773(x6), #65919(x6), #104414(x6), #71970(x6), #67321(x5), #69870(x5), #98741(x5), #32106(x5), #112647(x5), #92068(x5), #14536(x5), #93650(x5), #77244(x5), #77484(x5), #90976(x5), #84482(x5), #89863(x5), #76085(x5), #99692(x5), #79220(x4), #96995(x4), #100536(x4), #114460(x4), #35809(x4), #9893(x4), #48677(x4), #95514(x4), #87096(x4), #114594(x4), #106475(x4), #112473(x4), #113158(x4), #63892(x4), #74574(x4), #35519(x4), #109964(x4), #10933(x4), #121486(x4), #114967(x4), #112358(x4), #17341(x4), #115306(x4), #104731(x4), #80498(x4), #112420(x4), #70893(x4), #58962(x4), #56810(x4), #102766(x3), #119001(x3), #48879(x3), #1630(x3), #53099(x3), #98852(x3), #39550(x3), #95663(x3), #84733(x3), #8049(x3), #44239(x3), #117296(x3), #118693(x3), #89401(x3), #84423(x3), #79017(x3), #19027(x3), #55933(x3), #10521(x3), #79719(x3), #83220(x3), #72351(x3), #51083(x3), #95681(x3), #86313(x3), #76902(x3), #17924(x3), #114359(x3), #17782(x3), #59607(x3), #2852(x3), #15250(x3), #8731(x3), #105443(x3), #45655(x3), #100339(x3), #118900(x3), #98371(x3), #96634(x3), #22548(x3), #29507(x3), #92550(x3), #81521(x3), #6600(x3), #43083(x3), #85252(x3), #69734(x3), #94785(x3), #60683(x3), #53802(x3), #72039(x3), #40190(x2), #106260(x2), #91717(x2), #47967(x2), #78148(x2), #88954(x2), #61631(x2), #96155(x2), #89296(x2), #107307(x2), #85426(x2), #26293(x2), #70566(x2), #88510(x2)",
+     "commits: 93889b770da, 370ebf2d3, 9223372036854775807, 14155551234, 5551234567, 9a9f8a6d99, 94b3131be7, b5495db701, 2b3a4f0af8, e45f2b39e2, fa3ab2ffd0, 123456789abc, 97fa14e39, 8207862212, 5944d1962f5e",
+     "branches: docs/pricing(x3), docs/developer-guide/multiplexing-gateway.md(x2), docs/en/build-with-claude/fast-mode(x2), docs/api-reference/text-prompt-caching, docs/api/api-reference/models/get-models, docs/models/, docs/models/gpt-6-astra, docs/en/about-claude/pricing, docs/hub/agent-traces, docs/api-reference/text-chat-openai, docs/api-key, docs/developer-guide/model-provider-plugin.md",
+     "handles: @dataclass(x124), @property(x66), @staticmethod(x43), @classmethod(x16), @contextmanager(x14), @contextlib(x14), @abc(x12), @abstractmethod(x10), @file(x9), @dataclasses(x9), @host(x8), @github(x5), @folder(x4), @-reference(x3), @-references(x2), @functools(x2), @ruizanthony(x2), @overload(x2), @ciabata-git(x2), @url(x2), @kshitijk4poor, @example, @type, @-prefix, @git, @diff, @LeonSGP43, @BrinShadewater, @anthropic-ai",
+     "urls: https://hermes-agent.nousresearch.com\\(x3), https://ai.google.dev/gemini-api/docs/pricing\\(x2), https://inference-api.nousresearch.com/v1\\(x2), https://openrouter.ai/settings/credits\\(x2), https://portal.nousresearch.com\\(x2), https://api.minimaxi.com/anthropic\\(x2), https://api.minimax.io/anthropic\\(x2), https://portal.nousresearch.com/billing\\(x2), https://PASSWORD@github.com/...``(x2), https://hermes-agent.nousresearch.com/docs(x2), https://platform.claude.com/docs/en/build-with-claude/fast-mode(x2), https://api.openai.com/auth\\(x2), https://claude.ai/settings/usage\\(x2), https://chatgpt.com/backend-api/codex\\(x2), https://grok.com/?_s=usage(x2), https://api.openai.com/v1\\, https://{host}/v1beta1/projects/{project_id}/locations/{region}/endpoints/openapi\\, https://www.googleapis.com/auth/cloud-platform\\, https://example.com:443``, https://example.com``, https://platform.minimax.io/docs/api-reference/text-prompt-caching\\n644|, https://models.dev\\, https://openrouter.ai/docs/api/api-reference/models/get-models\\, https://developers.openai.com/api/docs/pricing?latest-pricing=ultrafast\\, https://developers.openai.com/api/docs/models/{_slug}\\, https://developers.openai.com/api/docs/models/gpt-6-astra\\, https://docs.fireworks.ai/serverless/pricing\\, https://api-docs.deepseek.com/quick_start/pricing\\, https://openai.com/api/pricing/\\, https://openrouter.ai/anthropic/claude-opus-4.8-fast\\",
+     "dotted keys: agent.conversation_loop(x87), agent.session_id(x84), agent.api_mode(x70), agent.log_prefix(x69), agent.context_compressor(x57), agent.model_metadata(x48), agent.base_url(x47), agent.auxiliary_client(x43), self.base_url(x43), agent.agent_runtime_helpers(x37), agent.conversation_compression(x30), agent.credential_pool(x30), self.api_key(x30), agent.valid_tool_names(x27), agent.quiet_mode(x26), agent.message_metadata(x25), entry.refresh_token(x24), agent.message_sanitization(x21), assistant_message.tool_calls(x21), agent.error_classifier(x19), entry.access_token(x19), self.api_mode(x18), agent.secret_scope(x17), model.context_length(x17), agent.turn_context(x16), agent.anthropic_credentials(x16), self.working_dir(x15), agent.max_iterations(x14), parser.add_argument(x14), agent.verbose_logging(x13), agent.anthropic_adapter(x13), hermes_cli.anon_auth(x13), agent.message_content(x13), contextvars.copy_context(x13), c.provider_slug(x13), st.review_agent(x13), gateway.session_context(x12), agent.usage_pricing(x12), agent.turn_failure_copy(x12), agent.retry_utils(x12)",
+     "files: claude/.credentials.json(x11), hermes/.anthropic_oauth.json(x8), agent/turn_finalizer.py(x5), agent/model_metadata.py(x5), agent/error_surface.py(x4), agent/turn_recovery.py(x4), gateway/run.py(x4), agent/transports/codex.py(x4), codex/auth.json(x4), logs/agent.log(x3), gateway/run_turn.py(x3), agent/system_prompt.py(x3), scripts/foo.js(x3), agent/native_compaction.py(x3), agent/bedrock_adapter.py(x3), agent/auxiliary_client.py(x3), cron/jobs.json(x3), agent/background_review.py(x3), agent/image_gen_registry.py(x2), agent/image_gen_provider.py(x2), agent/video_gen_provider.py(x2), agent/vault_login_classifier.py(x2), agent/vault_store.py(x2), agent/usage_anchor.py(x2), agent/turn_usage.py(x2), agent/turn_recovery_autorecover.py(x2), agent/turn_explainers.py(x2), agent/conversation_loop.py(x2), agent/turn_failure_copy.py(x2), agent/periodic_scheduler.py(x2), agent/transcript_repair.py(x2), agent/deadline.py(x2), agent/context_references.py(x2), agent/surface_switch.py(x2), website/docs/developer-guide/multiplexing-gateway.md(x2), agent/runtime_cwd.py(x2), hermes_cli/main.py(x2), agent/reasoning_timeouts.py(x2), agent/process_bootstrap.py(x2), agent/context_file_sources.py(x2), tui_gateway/server.py(x2), agent/oneshot_footprint.py(x2), agent/moa_alternation.py(x2), agent/codex_responses_adapter.py(x2), agent/kanban_stop.py(x2), hermes_cli/cli_single_query.py(x2), agent/image_eviction_policy.py(x2), agent/error_classifier.py(x2), hermes/cron/jobs.json(x2), qwen/oauth_creds.json(x2), agent/credential_pool.py(x2), hermes/auth.json(x2), agent/conversation_compression.py(x2), agent/context_compressor.py(x2), agent/chat_completion_helpers.py(x2), agent/anthropic_endpoints.py(x2), agent/anthropic_message_convert.py(x2), agent/anthropic_adapter.py(x2), plugins/web/keyless_mcp.py, agent/web_search_registry.py, agent/web_search_provider.py, agent/vision_message_prep.py, agent/video_gen_registry.py, agent/vertex_adapter.py, agent/verify_hooks.py, hermes/environment.json",
+     "errors:"
+    ]
+   }
+  }
+ },
+ "arm_sha256": {
+  "c117462": "fdb7abd8050b4944171522c7e713004d7fbce9b2d8ddfb1c8de93414f206ebe0",
+  "c117462_foldin": "35bb31c83b7db61d5f694ea86f6cc8ca960ee027d44bf5e5b914f9b12259439e",
+  "c117462_foldin_r03": "b880b9a14eaf0949e51926004856b3e0e3109b784222cef87048b8ca7cb36cf3"
+ },
+ "egress_blocked": {
+  "c117462": [],
+  "c117462_foldin": [],
+  "c117462_foldin_r03": []
+ }
+}

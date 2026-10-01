@@ -1,0 +1,118 @@
+diff --git a/agent/conversation_compression.py b/agent/conversation_compression.py
+index f832e65dd7..1ca5954abd 100644
+--- a/agent/conversation_compression.py
++++ b/agent/conversation_compression.py
+@@ -3922,6 +3922,27 @@ def _run_summary_phase(
+             bypass_cooldown=bypass_cooldown,
+         )
+         messages_before_compression = copy.deepcopy(messages)
++
++        # Notify plugins before compression discards context, so they can
++        # capture or journal the full pre-compression transcript. Fires AFTER
++        # the memory provider's on_pre_compress and snapshot capture, but BEFORE
++        # compress_fn runs, so `messages` is still the complete, unsummarised history.
++        # Observer-only: return values are ignored.
++        try:
++            from hermes_cli.plugins import invoke_hook as _invoke_hook
++
++            _invoke_hook(
++                "pre_compression",
++                messages=copy.deepcopy(messages_before_compression),
++                session_id=agent.session_id,
++                platform=getattr(agent, "platform", "") or "",
++                compression_count=getattr(
++                    agent.context_compressor, "compression_count", 0
++                ),
++                in_place=in_place,
++            )
++        except Exception as _hook_exc:
++            logger.debug("pre_compression hook failed: %s", _hook_exc)
+         _activity_heartbeat = _CompressionActivityHeartbeat(
+             agent, commit_fence=commit_fence, emit_client_status=lease.status_emitted,
+         ).start()
+diff --git a/hermes_cli/plugins.py b/hermes_cli/plugins.py
+index 02222185a2..fa78defe86 100644
+--- a/hermes_cli/plugins.py
++++ b/hermes_cli/plugins.py
+@@ -131,6 +131,10 @@ VALID_HOOKS: Set[str] = {
+     # error_body may be unredacted.
+     "transform_api_error_classification", "on_session_start", "on_session_end",
+     "on_session_finalize", "on_session_reset",
++    # pre_compression: observer fired immediately before context compression discards
++    # messages (agent/conversation_compression.py compress_context). Kwargs: messages
++    # (snapshot; must not mutate), session_id, platform, compression_count, in_place.
++    "pre_compression",
+     # on_skill_lifecycle: successful skill lifecycle facts (local skill name visible to plugins).
+     "on_skill_lifecycle", "subagent_start", "subagent_stop",
+     # pre_gateway_dispatch: once per incoming MessageEvent, after the internal-event guard, BEFORE
+diff --git a/tests/agent/test_compression_rotation_state.py b/tests/agent/test_compression_rotation_state.py
+index 3a9643a655..eb8cc50de0 100644
+--- a/tests/agent/test_compression_rotation_state.py
++++ b/tests/agent/test_compression_rotation_state.py
+@@ -1921,3 +1921,66 @@ class TestAbortedRotationDoesNotGrowParent:
+ 
+         assert calls["n"] == 1, "the pre-flush guard never read the parent row"
+         assert agent.session_id != parent  # rotation still happened
++
++
++class TestPreCompressionHook:
++    def test_pre_compression_fires_before_compress(self, tmp_path: Path):
++        """pre_compression fires once, before compress(), with the full messages."""
++        db = SessionDB(db_path=tmp_path / "state.db")
++        parent = "PARENT_PRE_COMPRESS"
++        db.create_session(parent, source="telegram")
++        agent = _build_agent_with_db(db, parent, platform="telegram")
++
++        msgs = _msgs()
++        with patch("hermes_cli.plugins.invoke_hook") as mock_invoke:
++            agent._compress_context(msgs, "sys", approx_tokens=120_000)
++
++        pre_calls = [
++            c for c in mock_invoke.call_args_list if c.args[0] == "pre_compression"
++        ]
++        assert pre_calls, "pre_compression hook was not fired"
++        assert len(pre_calls) == 1, "pre_compression fired more than once"
++        kwargs = pre_calls[0].kwargs
++        # The hook must receive the complete pre-compression transcript so a
++        # plugin can journal it before compress() summarises it away. The
++        # runner may adopt a durable snapshot (which annotates `_db_persisted`),
++        # so assert on content, not list identity.
++        hooked = kwargs["messages"]
++        assert len(hooked) >= len(msgs)
++        assert [m.get("content") for m in hooked[: len(msgs)]] == [
++            m["content"] for m in msgs
++        ]
++        assert kwargs["session_id"] == parent
++        assert kwargs["platform"] == "telegram"
++        # Pins pre-compression boundary state: reflects compressor.compression_count
++        # as set before the summarizer runs (_build_agent_with_db sets count=1).
++        assert kwargs["compression_count"] == 1
++        assert kwargs["in_place"] is False
++
++    def test_pre_compression_is_a_valid_hook(self):
++        from hermes_cli.plugins import VALID_HOOKS
++
++        assert "pre_compression" in VALID_HOOKS
++
++    def test_pre_compression_hook_messages_mutation_isolation(self, tmp_path: Path):
++        """Mutating the messages list in pre_compression does not corrupt the transcript."""
++        db = SessionDB(db_path=tmp_path / "state.db")
++        parent = "PARENT_PRE_COMPRESS_MUTATE"
++        db.create_session(parent, source="telegram")
++        agent = _build_agent_with_db(db, parent, platform="telegram")
++
++        msgs = _msgs()
++        orig_len = len(msgs)
++
++        def mutating_hook(name, **kwargs):
++            if name == "pre_compression":
++                kwargs["messages"].clear()
++                kwargs["messages"].append({"role": "user", "content": "corrupted"})
++
++        with patch("hermes_cli.plugins.invoke_hook", side_effect=mutating_hook):
++            agent._compress_context(msgs, "sys", approx_tokens=120_000)
++
++        agent.context_compressor.compress.assert_called_once()
++        passed_msgs = agent.context_compressor.compress.call_args[0][0]
++        assert len(passed_msgs) == orig_len
++        assert [m.get("content") for m in passed_msgs] == [m["content"] for m in msgs]

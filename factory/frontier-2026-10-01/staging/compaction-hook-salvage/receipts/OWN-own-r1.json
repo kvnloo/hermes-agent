@@ -1,0 +1,89 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "OWN/own-r1",
+ "label": "OBSERVED",
+ "staging": "compaction-hook-salvage",
+ "purpose": "fairness check: each carrier's own tests still pass on its arm, i.e. each carrier proves its own (different) contract",
+ "base_revision": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0 (arms) / bafb42b431 (base rotation_state)",
+ "command_template": "HOME=$TESTHOME HERMES_HOME=$HOME/.hermes HERMES_PYTHON=$PY bash scripts/run_tests.sh -j 2 <file> -q",
+ "cells": [
+  {
+   "arm": "c93391-code",
+   "commit": "9cc99c31a95968fc373afbae0d2579327fd0f5f6",
+   "result": "43 passed / 0 failed",
+   "log": "raw/own-r1/c93391-code.log"
+  },
+  {
+   "arm": "c118847-handport",
+   "commit": "2d7aa73cc5d2888512632002ff48583d77b0f1a7",
+   "result": "7 passed / 0 failed",
+   "log": "raw/own-r1/c118847-handport.log"
+  },
+  {
+   "arm": "c125881-merge",
+   "commit": "2324372ceb7c84a31de0c9ea99197dce03c91e38",
+   "result": "9 passed / 0 failed",
+   "log": "raw/own-r1/c125881-merge.log"
+  },
+  {
+   "arm": "base (8c834af1e4)",
+   "file": "tests/agent/test_compression_rotation_state.py",
+   "result": "40 passed / 0 failed",
+   "log": "raw/own-r1/base-rotation_state.log"
+  }
+ ],
+ "files": {
+  "c93391-code": "tests/agent/test_compression_rotation_state.py (incl. #93391 TestPreCompressionHook: 43 vs base 40)",
+  "c118847-handport": "tests/agent/test_post_compaction_hook.py (mocks hermes_cli.lifecycle.has_hook/invoke_hook, i.e. the seam)",
+  "c125881-merge": "tests/agent/test_context_governance.py"
+ },
+ "egress": {
+  "blocked_attempts": 928,
+  "by_address": {
+   "2606:4700::6812:373": 232,
+   "104.18.3.115": 232,
+   "2606:4700::6812:273": 232,
+   "104.18.2.115": 232
+  },
+  "resolves_to": "openrouter.ai:443 (agent/agent_init.py:507 openrouter-prewarm -> agent/model_metadata.py:909)",
+  "log": "raw/own-r1/egress_blocked.log"
+ },
+ "cost": {
+  "usd": 0
+ },
+ "spec": {
+  "path": null,
+  "rev": 1,
+  "sha256": null,
+  "prereg_commit": null,
+  "note": "no xf_spec TOML was written"
+ },
+ "issue": null,
+ "provenance": "self",
+ "frozen": null,
+ "privacy": "public-aggregate after the round-1 scrub: local paths replaced by placeholders ($S, $TESTHOME, $WORKTREE, $PY)",
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "policy_revision": {
+  "factory": "FACTORY.md (round 0; not hashed at the time)"
+ },
+ "verdict": "INFRA",
+ "gates": {
+  "validity": "INFRA"
+ },
+ "denominators": {
+  "cells": 4,
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "infra": 4,
+  "completeness": 1.0
+ },
+ "s16": "INFRA under FACTORY S16 (unattributable): 928 blocked connects to openrouter.ai:443 logged for the whole run, not per cell; DNS not guarded. Every cell is counted INFRA. Superseded by OWN/own-r3.",
+ "superseded_by": "OWN/own-r3",
+ "round1_note": "scrubbed and re-labelled in round 1 (2026-10-01): r1/r2 tool versions kept under tools/r1/ (their sha256 values above still match), r2 patches moved to patches/r2/"
+}

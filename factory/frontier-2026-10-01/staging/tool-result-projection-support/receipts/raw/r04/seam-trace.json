@@ -1,0 +1,624 @@
+{
+  "label": "OBSERVED (line tracer over the wire test)",
+  "python": "3.11.14",
+  "pytest_rc": 0,
+  "outcomes": {
+    "test_projection_breaks_the_prefix_once_per_paid_batch_and_never_undoes_itself": "passed",
+    "test_projection_never_invalidates_replayed_preserved_thinking": "passed"
+  },
+  "hunks": [
+    {
+      "file": "agent/agent_init.py",
+      "new_start": 350,
+      "context": "def _parse_config_int(raw: Any, default: int) -> int:",
+      "added_lines": 11,
+      "executable_added": 8,
+      "executed_added": 5,
+      "executed": true,
+      "not_executed_lines": [
+        356,
+        359,
+        360
+      ]
+    },
+    {
+      "file": "agent/agent_init.py",
+      "new_start": 1586,
+      "context": "def _parse_compression_config(agent, _agent_cfg) -> CompressionSettings:",
+      "added_lines": 14,
+      "executable_added": 7,
+      "executed_added": 7,
+      "executed": true,
+      "not_executed_lines": []
+    },
+    {
+      "file": "agent/agent_init.py",
+      "new_start": 2037,
+      "context": "def _build_context_engine(agent, _agent_cfg, cs, _custom_providers, _effective_c",
+      "added_lines": 4,
+      "executable_added": 4,
+      "executed_added": 4,
+      "executed": true,
+      "not_executed_lines": []
+    },
+    {
+      "file": "agent/context_compressor.py",
+      "new_start": 2776,
+      "context": "class ContextCompressor(SummaryDispatchMixin, MicroCompactionMixin, ContextEngin",
+      "added_lines": 5,
+      "executable_added": 3,
+      "executed_added": 3,
+      "executed": true,
+      "not_executed_lines": []
+    },
+    {
+      "file": "agent/context_compressor.py",
+      "new_start": 2809,
+      "context": "class ContextCompressor(SummaryDispatchMixin, MicroCompactionMixin, ContextEngin",
+      "added_lines": 13,
+      "executable_added": 5,
+      "executed_added": 5,
+      "executed": true,
+      "not_executed_lines": []
+    },
+    {
+      "file": "agent/tool_result_projection.py",
+      "new_start": 1,
+      "context": "",
+      "added_lines": 750,
+      "executable_added": 388,
+      "executed_added": 296,
+      "executed": true,
+      "not_executed_lines": [
+        144,
+        160,
+        161,
+        168,
+        171,
+        172,
+        178,
+        181,
+        182,
+        215,
+        237,
+        238,
+        239,
+        240,
+        270,
+        273,
+        314,
+        333,
+        334,
+        335,
+        336,
+        337,
+        338,
+        339,
+        340,
+        341,
+        346,
+        347,
+        348,
+        356,
+        357,
+        358,
+        359,
+        360,
+        365,
+        397,
+        399,
+        401,
+        429,
+        430,
+        448,
+        449,
+        450,
+        462,
+        465,
+        466,
+        494,
+        515,
+        518,
+        523,
+        524,
+        525,
+        543,
+        544,
+        545,
+        547,
+        552,
+        555,
+        569,
+        570
+      ],
+      "functions": [
+        {
+          "name": "ProjectionKey.token",
+          "lines": [
+            113,
+            114
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "ProjectionKey.storage_key",
+          "lines": [
+            116,
+            117
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "ProjectionState.remember",
+          "lines": [
+            138,
+            144
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "is_projected_tool_result",
+          "lines": [
+            147,
+            149
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "projection_state_for",
+          "lines": [
+            152,
+            162
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "_cfg_int",
+          "lines": [
+            165,
+            172
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "_cfg_float",
+          "lines": [
+            175,
+            182
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "resolve_policy",
+          "lines": [
+            185,
+            202
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "context_window_for",
+          "lines": [
+            205,
+            215
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "tail_bounds",
+          "lines": [
+            218,
+            230
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "trigger_tokens",
+          "lines": [
+            233,
+            240
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "_estimate_tokens",
+          "lines": [
+            243,
+            246
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "content_digest",
+          "lines": [
+            249,
+            250
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "key_for",
+          "lines": [
+            253,
+            254
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "tool_call_index",
+          "lines": [
+            257,
+            278
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "take_call",
+          "lines": [
+            281,
+            284
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "tool_call_metadata",
+          "lines": [
+            287,
+            302
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "protected_tail_start",
+          "lines": [
+            305,
+            325
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "_looks_like_error",
+          "lines": [
+            328,
+            349
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "declares_unsafe",
+          "lines": [
+            352,
+            360
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "_is_multimodal",
+          "lines": [
+            363,
+            366
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "build_stub",
+          "lines": [
+            369,
+            388
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "is_candidate",
+          "lines": [
+            391,
+            402
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "destination_caches_prefixes",
+          "lines": [
+            408,
+            430
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "_backend_is_remote",
+          "lines": [
+            433,
+            450
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "_is_signed_thinking",
+          "lines": [
+            456,
+            466
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "replays_bound_thinking",
+          "lines": [
+            469,
+            501
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "_resolve_active_env",
+          "lines": [
+            504,
+            525
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "project_stale_tool_results",
+          "lines": [
+            531,
+            547
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "_project",
+          "lines": [
+            550,
+            671
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "_verified_stubs",
+          "lines": [
+            674,
+            681
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "_confirmed_stub",
+          "lines": [
+            684,
+            711
+          ],
+          "body_executed": true
+        },
+        {
+          "name": "_estimate_region_tokens",
+          "lines": [
+            714,
+            729
+          ],
+          "body_executed": false
+        },
+        {
+          "name": "_commit",
+          "lines": [
+            732,
+            750
+          ],
+          "body_executed": true
+        }
+      ]
+    },
+    {
+      "file": "agent/turn_request_assembly.py",
+      "new_start": 187,
+      "context": "def assemble_api_request(",
+      "added_lines": 9,
+      "executable_added": 2,
+      "executed_added": 2,
+      "executed": true,
+      "not_executed_lines": []
+    },
+    {
+      "file": "cli-config.yaml.example",
+      "new_start": 830,
+      "context": "compression:",
+      "added_lines": 34,
+      "executable_added": 0,
+      "executed_added": 0,
+      "executed": null,
+      "note": "not Python (docs/config example)"
+    },
+    {
+      "file": "gateway/run.py",
+      "new_start": 4410,
+      "context": "class GatewayRunner(",
+      "added_lines": 4,
+      "executable_added": 0,
+      "executed_added": 0,
+      "executed": false,
+      "not_executed_lines": []
+    },
+    {
+      "file": "hermes_cli/config_defaults.py",
+      "new_start": 621,
+      "context": "DEFAULT_CONFIG = {",
+      "added_lines": 24,
+      "executable_added": 4,
+      "executed_added": 4,
+      "executed": true,
+      "not_executed_lines": []
+    },
+    {
+      "file": "scripts/bench_tool_result_projection.py",
+      "new_start": 1,
+      "context": "",
+      "added_lines": 159,
+      "executable_added": 106,
+      "executed_added": 0,
+      "executed": false,
+      "not_executed_lines": [
+        1,
+        16,
+        18,
+        19,
+        20,
+        21,
+        22,
+        24,
+        26,
+        27,
+        29,
+        30,
+        32,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        44,
+        46,
+        47,
+        48,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        58,
+        59,
+        60,
+        61,
+        62,
+        65,
+        66,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        80,
+        81,
+        82,
+        85,
+        87,
+        88,
+        89,
+        90,
+        91,
+        94,
+        97,
+        98,
+        99,
+        100,
+        101,
+        102
+      ]
+    },
+    {
+      "file": "tools/tool_result_storage.py",
+      "new_start": 290,
+      "context": "def extract_persisted_path(content: str) -> str | None:",
+      "added_lines": 73,
+      "executable_added": 43,
+      "executed_added": 13,
+      "executed": true,
+      "not_executed_lines": [
+        308,
+        312,
+        313,
+        314,
+        315,
+        316,
+        317,
+        318,
+        319,
+        320,
+        321,
+        341,
+        346,
+        347,
+        348,
+        349,
+        350,
+        351,
+        352,
+        353,
+        354,
+        355,
+        356,
+        357,
+        358,
+        359,
+        360,
+        361,
+        362,
+        363
+      ]
+    },
+    {
+      "file": "tui_gateway/session_compression.py",
+      "new_start": 78,
+      "context": "_COMPRESSION_INT_KEYS = (",
+      "added_lines": 2,
+      "executable_added": 0,
+      "executed_added": 0,
+      "executed": false,
+      "not_executed_lines": []
+    },
+    {
+      "file": "tui_gateway/session_compression.py",
+      "new_start": 121,
+      "context": "def _apply_live_compression_config(agent: Any, cfg: dict | None) -> None:",
+      "added_lines": 4,
+      "executable_added": 3,
+      "executed_added": 0,
+      "executed": false,
+      "not_executed_lines": [
+        125,
+        126,
+        127
+      ]
+    },
+    {
+      "file": "tui_gateway/session_compression.py",
+      "new_start": 133,
+      "context": "def _apply_live_compression_config(agent: Any, cfg: dict | None) -> None:",
+      "added_lines": 6,
+      "executable_added": 5,
+      "executed_added": 0,
+      "executed": false,
+      "not_executed_lines": [
+        136,
+        137,
+        138,
+        139,
+        141
+      ]
+    },
+    {
+      "file": "website/docs/user-guide/configuration.md",
+      "new_start": 1013,
+      "context": "compression:",
+      "added_lines": 4,
+      "executable_added": 0,
+      "executed_added": 0,
+      "executed": null,
+      "note": "not Python (docs/config example)"
+    },
+    {
+      "file": "website/docs/user-guide/configuration.md",
+      "new_start": 1060,
+      "context": "The value is the **first rung** of an escalating ladder, not a fixed interval: c",
+      "added_lines": 10,
+      "executable_added": 0,
+      "executed_added": 0,
+      "executed": null,
+      "note": "not Python (docs/config example)"
+    }
+  ],
+  "egress_blocked": [],
+  "wall_s": 15.06
+}

@@ -1,0 +1,149 @@
+▶ not activated — using HERMES_PYTHON: <hermes-home>/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~2 tests) under ['tests/agent/test_compaction_observer_hook_contract.py']; running with -j 2
+[100.0% |     2/~2 | ✓5 | ✗2] ✗ tests/agent/test_compaction_observer_hook_contract.py (5✓ 2✗, 16.9s)
+
+  ╔╍ Failed: tests/agent/test_compaction_observer_hook_contract.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║             _compress(agent, deferred=True)
+  ║             finalize_context_engine_compression_notification(agent, committed=False)
+  ║             finalize_context_engine_compression_notification(agent, committed=True)
+  ║             assert _durable_summary(db, agent.session_id), "the manual attempt itself must have compacted"
+  ║     
+  ║         if failure != "manual_discarded":
+  ║             assert agent.session_id == "original-session" and db.get_messages(agent.session_id) == rows_before, (
+  ║                 "scenario precondition: state.db unchanged, nothing committed"
+  ║             )
+  ║ >       assert fired == [], f"{HOOK} fired for a compaction its host never committed: {fired!r}"
+  ║ E       AssertionError: on_compression_complete fired for a compaction its host never committed: [{'session_id': 'original-session', 'old_session_id': 'original-session', 'in_place': True, 'tokens_before': 75000, 'tokens_after': 11646, 'platform': 'cli', 'telemetry_schema_version': 'hermes.observer.v1', 'durable': True}]
+  ║ E       assert [{'session_id...: 75000, ...}] == []
+  ║ E         
+  ║ E         Left contains one more item: {'session_id': 'original-session', 'old_session_id': 'original-session', 'in_place': True, 'tokens_before': 75000, ...}
+  ║ E         Use -v to get more diff
+  ║ 
+  ║ tests/agent/test_compaction_observer_hook_contract.py:152: AssertionError
+  ║ ----------------------------- Captured stdout call -----------------------------
+  ║ 🗜️ Compacting context — summarizing earlier conversation so I can continue...
+  ║ ------------------------------ Captured log call -------------------------------
+  ║ INFO     run_agent:agent_runtime_helpers.py:1990 OpenAI client created (agent_init, shared=True) thread=MainThread:140305101650816 provider= base_url=https://openrouter.ai/api/v1 model=test/model
+  ║ INFO     tools.tool_search:tool_search.py:379 tool_search activated (tier 1): 14 core/visible tools kept, 15 deferred (~4511 tokens), listing full (budget ~4000 tokens)
+  ║ INFO     agent.conversation_compression:conversation_compression.py:4080 context compression started: session=original-session messages=21 tokens=~75,000 model=test/model focus=None
+  ║ WARNING  hermes_cli.plugins:plugins_dispatch.py:265 Hook 'on_compression_complete' callback boom raised: observer exploded (hook provides: in_place, old_session_id, platform, session_id, telemetry_schema_version, tokens_after, tokens_before; identical failures are logged at DEBUG from now on)
+  ║ INFO     agent.conversation_compression:conversation_compression.py:4300 context compression done: session=original-session messages=21->13 rough_tokens=~11,646 awaiting_real_usage=true
+  ║ INFO     agent.conversation_compression:conversation_compression.py:1497 context compression attempt telemetry: {"attempt_id":"1056c23f8f8547049c43f9d663cb4a33","chunk_count":0,"chunking":false,"commit_ms":18,"commit_status":"committed","event":"compression_attempt","fallback_used":false,"session_id":"original-session","split_status":"in_place_committed","total_duration_ms":75}
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]
+  ║ FAILED tests/agent/test_compaction_observer_hook_contract.py::test_observer_is_silent_when_nothing_commits[manual_discarded]
+  ║ 2 failed, 5 passed in 7.99s
+  ║
+  ║  Repro: python -m pytest tests/agent/test_compaction_observer_hook_contract.py -q
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 1 files, 5 tests passed, 2 failed (100% complete) in 16.9s (2 workers) ===
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 16.9s  (runner wall: 16.9s, parallelism: 2x)
+  P50: 16.86s  P90: 16.86s  P95: 16.86s  P99: 16.86s  Max: 16.86s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+     16.86s  tests/agent/test_compaction_observer_hook_contract.py
+
+=== Failure output ===
+
+--- tests/agent/test_compaction_observer_hook_contract.py ---
+..F...F                                                                  [100%]
+=================================== FAILURES ===================================
+______ test_observer_fires_once_after_the_durable_commit[manual_deferred] ______
+
+tmp_path = PosixPath('/var/tmp/hermes-pytest-1000/r-1uo0f0a1/pytest-of-kvn/pytest-0/test_observer_fires_once_after2')
+plugin_ctx = <hermes_cli.plugins.PluginContext object at 0x7f9b500d2a90>
+mode = 'manual_deferred'
+
+>   ???
+E   AssertionError: a deferred manual compaction must wait for the host's own commit
+E   assert [{'session_id...: 75000, ...}] == []
+E     
+E     Left contains one more item: {'session_id': 'original-session', 'old_session_id': 'original-session', 'in_place': True, 'tokens_before': 75000, ...}
+E     Use -v to get more diff
+
+tests/agent/test_compaction_observer_hook_contract.py:105: AssertionError
+----------------------------- Captured stdout call -----------------------------
+🗜️ Compacting context — summarizing earlier conversation so I can continue...
+🗜️ Compacting context — summarizing earlier conversation so I can continue...
+------------------------------ Captured log call -------------------------------
+INFO     run_agent:agent_runtime_helpers.py:1990 OpenAI client created (agent_init, shared=True) thread=MainThread:140305101650816 provider= base_url=https://openrouter.ai/api/v1 model=test/model
+INFO     tools.tool_search:tool_search.py:379 tool_search activated (tier 1): 14 core/visible tools kept, 15 deferred (~4511 tokens), listing full (budget ~4000 tokens)
+INFO     agent.conversation_compression:conversation_compression.py:4080 context compression started: session=original-session messages=21 tokens=~75,000 model=test/model focus=None
+INFO     agent.conversation_compression:conversation_compression.py:4300 context compression done: session=original-session messages=21->13 rough_tokens=~11,646 awaiting_real_usage=true
+INFO     agent.conversation_compression:conversation_compression.py:1497 context compression attempt telemetry: {"attempt_id":"9af79e8416754b298f2e0128bd99be0f","chunk_count":0,"chunking":false,"commit_ms":15,"commit_status":"committed","event":"compression_attempt","fallback_used":false,"session_id":"original-session","split_status":"in_place_committed","total_duration_ms":77}
+INFO     run_agent:agent_runtime_helpers.py:1990 OpenAI client created (agent_init, shared=True) thread=MainThread:140305101650816 provider= base_url=https://openrouter.ai/api/v1 model=test/model
+INFO     agent.conversation_compression:conversation_compression.py:4080 context compression started: session=original-session messages=21 tokens=~75,000 model=test/model focus=None
+WARNING  hermes_cli.plugins:plugins_dispatch.py:265 Hook 'on_compression_complete' callback boom raised: observer exploded (hook provides: in_place, old_session_id, platform, session_id, telemetry_schema_version, tokens_after, tokens_before; identical failures are logged at DEBUG from now on)
+INFO     agent.conversation_compression:conversation_compression.py:4300 context compression done: session=original-session messages=21->13 rough_tokens=~11,646 awaiting_real_usage=true
+INFO     agent.conversation_compression:conversation_compression.py:1497 context compression attempt telemetry: {"attempt_id":"be8dc80c62ff4f65bf865ac96d4191ef","chunk_count":0,"chunking":false,"commit_ms":13,"commit_status":"committed","event":"compression_attempt","fallback_used":false,"session_id":"original-session","split_status":"in_place_committed","total_duration_ms":65}
+________ test_observer_is_silent_when_nothing_commits[manual_discarded] ________
+
+tmp_path = PosixPath('/var/tmp/hermes-pytest-1000/r-1uo0f0a1/pytest-of-kvn/pytest-0/test_observer_is_silent_when_n3')
+plugin_ctx = <hermes_cli.plugins.PluginContext object at 0x7f9b45d8ef90>
+failure = 'manual_discarded'
+
+    @pytest.mark.parametrize(
+        "failure", ["summary_aborted", "would_grow_refused", "commit_failed", "manual_discarded"],
+    )
+    def test_observer_is_silent_when_nothing_commits(tmp_path, plugin_ctx, failure):
+        agent, db = _agent(tmp_path, in_place=True)
+        fired = []
+        _subscribe(plugin_ctx, db, fired)
+        rows_before = db.get_messages(agent.session_id)
+        compressor = agent.context_compressor
+    
+        if failure == "summary_aborted":
+            compressor.abort_on_summary_failure = True  # compression.abort_on_summary_failure: true
+            _compress(agent, summary=None)
+            assert compressor._last_compress_aborted, "scenario precondition: the failed summary aborted"
+        elif failure == "would_grow_refused":
+            # Default config: the fallback summary replaces the failed one, but on this small window it
+            # would grow the transcript, so the commit site refuses it.
+            _compress(agent, summary=None)
+            assert compressor._last_compress_refused_would_grow, "scenario precondition: would-grow refusal"
+        elif failure == "commit_failed":
+            with patch.object(db, "archive_and_compact", side_effect=RuntimeError("disk full")):
+                _compress(agent)
+        else:
+            _compress(agent, deferred=True)
+            finalize_context_engine_compression_notification(agent, committed=False)
+            finalize_context_engine_compression_notification(agent, committed=True)
+            assert _durable_summary(db, agent.session_id), "the manual attempt itself must have compacted"
+    
+        if failure != "manual_discarded":
+            assert agent.session_id == "original-session" and db.get_messages(agent.session_id) == rows_before, (
+                "scenario precondition: state.db unchanged, nothing committed"
+            )
+>       assert fired == [], f"{HOOK} fired for a compaction its host never committed: {fired!r}"
+E       AssertionError: on_compression_complete fired for a compaction its host never committed: [{'session_id': 'original-session', 'old_session_id': 'original-session', 'in_place': True, 'tokens_before': 75000, 'tokens_after': 11646, 'platform': 'cli', 'telemetry_schema_version': 'hermes.observer.v1', 'durable': True}]
+E       assert [{'session_id...: 75000, ...}] == []
+E         
+E         Left contains one more item: {'session_id': 'original-session', 'old_session_id': 'original-session', 'in_place': True, 'tokens_before': 75000, ...}
+E         Use -v to get more diff
+
+tests/agent/test_compaction_observer_hook_contract.py:152: AssertionError
+----------------------------- Captured stdout call -----------------------------
+🗜️ Compacting context — summarizing earlier conversation so I can continue...
+------------------------------ Captured log call -------------------------------
+INFO     run_agent:agent_runtime_helpers.py:1990 OpenAI client created (agent_init, shared=True) thread=MainThread:140305101650816 provider= base_url=https://openrouter.ai/api/v1 model=test/model
+INFO     tools.tool_search:tool_search.py:379 tool_search activated (tier 1): 14 core/visible tools kept, 15 deferred (~4511 tokens), listing full (budget ~4000 tokens)
+INFO     agent.conversation_compression:conversation_compression.py:4080 context compression started: session=original-session messages=21 tokens=~75,000 model=test/model focus=None
+WARNING  hermes_cli.plugins:plugins_dispatch.py:265 Hook 'on_compression_complete' callback boom raised: observer exploded (hook provides: in_place, old_session_id, platform, session_id, telemetry_schema_version, tokens_after, tokens_before; identical failures are logged at DEBUG from now on)
+INFO     agent.conversation_compression:conversation_compression.py:4300 context compression done: session=original-session messages=21->13 rough_tokens=~11,646 awaiting_real_usage=true
+INFO     agent.conversation_compression:conversation_compression.py:1497 context compression attempt telemetry: {"attempt_id":"1056c23f8f8547049c43f9d663cb4a33","chunk_count":0,"chunking":false,"commit_ms":18,"commit_status":"committed","event":"compression_attempt","fallback_used":false,"session_id":"original-session","split_status":"in_place_committed","total_duration_ms":75}
+=========================== short test summary info ============================
+FAILED tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]
+FAILED tests/agent/test_compaction_observer_hook_contract.py::test_observer_is_silent_when_nothing_commits[manual_discarded]
+2 failed, 5 passed in 7.99s
+
+=== 1 file with test failures (2 tests failed) ===
+  tests/agent/test_compaction_observer_hook_contract.py  (2 tests failed)

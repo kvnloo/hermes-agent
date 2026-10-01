@@ -1,0 +1,60 @@
+[ 31.2% |    15/~48 | ✓ 5 | ✗10] ✗ tests/agent/test_compressor_historical_media.py (5✓ 10✗, 4.4s)
+  ║ FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_strips_stale_tool_result_images_when_no_user_image_exists
+  ║ FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_first_message_user_image_no_longer_blocks_tool_stripping
+  ║ FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_multimodal_envelope_tool_results_age_out
+  ║ FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_all_three_wire_shapes_strip_in_tool_results
+  ║ FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_newest_tool_image_survives_inside_the_protected_tail
+  ║ FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_tool_image_before_the_user_anchor_is_still_stripped
+  ║ FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_stripped_tool_message_drops_its_api_content_sidecar
+  ║ FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_non_dict_messages_pass_through
+  ║ FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_strips_historical_images
+  ║ FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_frees_stale_vision_tool_results
+[ 66.7% |    32/~48 | ✓21 | ✗11] ✗ tests/agent/test_image_rejection_fallback.py (16✓ 1✗, 11.1s)
+  ║ FAILED tests/agent/test_image_rejection_fallback.py::test_iteration_summary_strips_images_for_rejecting_model
+[ 91.7% |    44/~48 | ✓21 | ✗23] ✗ tests/agent/test_outbound_stale_vision.py (12✗, 6.3s)
+  ║ >       raise RuntimeError("NEG-CONTROL N1b")
+  ║ E       RuntimeError: NEG-CONTROL N1b
+  ║ FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_nothing_is_evicted_below_the_provider_limit
+  ║ FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_eviction_retires_a_batch_once_over_the_limit
+  ║ FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_frontier_holds_between_batch_advances
+  ║ FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_frontier_holds_when_tool_results_carry_several_images
+  ║ FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_multi_image_tool_results_count_as_blocks
+  ║ FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_user_uploads_count_against_the_ceiling
+  ║ FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_keep_newest_is_a_floor_when_uploads_fill_the_ceiling
+  ║ FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_a_batch_that_would_blind_the_model_stops_at_the_floor
+  ║ FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_byte_pressure_overrides_the_keep_newest_floor
+  ║ FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_floor_yields_when_eviction_can_fix_the_breach
+  ║ FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_does_not_rewrite_persisted_history
+  ║ FAILED tests/agent/test_outbound_stale_vision.py::TestOutboundStaleVisionEviction::test_user_uploads_are_not_evicted
+[100.0% |    48/~48 | ✓21 | ✗27] ✗ tests/agent/test_iteration_summary_reasoning_details.py (4✗, 14.6s)
+  ║ FAILED tests/agent/test_iteration_summary_reasoning_details.py::test_anthropic_summary_messages_keep_reasoning_details
+  ║ FAILED tests/agent/test_iteration_summary_reasoning_details.py::test_strict_chat_route_summary_wire_drops_reasoning_details
+  ║ FAILED tests/agent/test_iteration_summary_reasoning_details.py::TestSummaryPrefixParity::test_canonicalizes_tool_call_arguments_and_strips_content
+  ║ FAILED tests/agent/test_iteration_summary_reasoning_details.py::TestSummaryPrefixParity::test_strips_lone_surrogates_like_the_send_path
+=== Summary: 4 files, 21 tests passed, 27 failed (100% complete) in 19.1s (2 workers) ===
+FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_strips_stale_tool_result_images_when_no_user_image_exists
+FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_first_message_user_image_no_longer_blocks_tool_stripping
+FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_multimodal_envelope_tool_results_age_out
+FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_all_three_wire_shapes_strip_in_tool_results
+FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_newest_tool_image_survives_inside_the_protected_tail
+FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_tool_image_before_the_user_anchor_is_still_stripped
+FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_stripped_tool_message_drops_its_api_content_sidecar
+FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_non_dict_messages_pass_through
+FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_strips_historical_images
+FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_frees_stale_vision_tool_results
+>       raise RuntimeError("NEG-CONTROL N1b")
+E       RuntimeError: NEG-CONTROL N1b
+FAILED tests/agent/test_image_rejection_fallback.py::test_iteration_summary_strips_images_for_rejecting_model
+>       raise RuntimeError("NEG-CONTROL N1b")
+E       RuntimeError: NEG-CONTROL N1b
+>       raise RuntimeError("NEG-CONTROL N1b")
+E       RuntimeError: NEG-CONTROL N1b
+>       raise RuntimeError("NEG-CONTROL N1b")
+E       RuntimeError: NEG-CONTROL N1b
+>       raise RuntimeError("NEG-CONTROL N1b")
+E       RuntimeError: NEG-CONTROL N1b
+>       raise RuntimeError("NEG-CONTROL N1b")
+E       RuntimeError: NEG-CONTROL N1b
+>       raise RuntimeError("NEG-CONTROL N1b")
+E       RuntimeError: NEG-CONTROL N1b
+>       raise RuntimeError("NEG-CONTROL N1b")

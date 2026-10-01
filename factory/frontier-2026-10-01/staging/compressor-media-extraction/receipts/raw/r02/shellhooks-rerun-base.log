@@ -1,0 +1,19 @@
+▶ not activated — using HERMES_PYTHON: $HERMES_PYTHON
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~6 tests) under ['tests/agent/test_shell_hooks_tree_kill.py']; running with -j 2
+[100.0% |     6/~6 | ✓6 | ✗0] ✓ tests/agent/test_shell_hooks_tree_kill.py (6✓, 2.6s)
+
+=== Summary: 1 files, 6 tests passed, 0 failed (100% complete) in 2.6s (2 workers) ===
+  Durations cached to test_durations.json (1 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 2.6s  (runner wall: 2.6s, parallelism: 2x)
+  P50: 2.56s  P90: 2.56s  P95: 2.56s  P99: 2.56s  Max: 2.56s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+      2.56s  tests/agent/test_shell_hooks_tree_kill.py
+exit=0

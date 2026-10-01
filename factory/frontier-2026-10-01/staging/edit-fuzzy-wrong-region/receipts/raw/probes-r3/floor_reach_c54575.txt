@@ -1,0 +1,5 @@
+context_aware in SIMILARITY_STRATEGIES: True floor: 0.9
+single_line_wrong_token: strategy=context_aware count=1 err=None floor_calls=[('    return value.strip()', '    return value.trim()', 0.923)]
+single_line_missing_anchor: strategy=context_aware count=1 err=None floor_calls=[('    return value.strip()', 'return value.trim()', 0.923)]
+single_line_trailing_newline: strategy=context_aware count=1 err=None floor_calls=[('    return value.strip()\n', '    return value.trim()\n', 0.923)]
+block_anchor_middle: strategy=None count=0 err='Could not find a match for old_string in the file' floor_calls=[('def handler(request):\n    audit_log(request.user_id)\n    return process(request)', 'def handler(request):\n    validate(request.token)\n    return process(request)', 0.851)]

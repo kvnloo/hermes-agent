@@ -1,0 +1,307 @@
+[
+  {
+    "passed": 5,
+    "failed": 2,
+    "failed_tests": [
+      "tests/agent/test_anthropic_context_editing.py::test_opt_in_sends_clear_tool_uses_with_its_beta_ahead_of_local_compression[on]",
+      "tests/agent/test_anthropic_context_editing.py::test_structured_rejection_disables_it_for_the_session_and_retries_once"
+    ],
+    "assertions": [
+      "AssertionError: assert 'context-management-2025-06-27' in ['interleaved-thinking-2025-05-14', 'fine-grained-tool-streaming-2025-05-14']",
+      "E         At index 0 diff: False != True",
+      "Right contains one more item: False",
+      "Use -v to get more diff",
+      "assert [False, False] == [True, False, False]"
+    ],
+    "rc": 1,
+    "id": "helpers-call-site",
+    "kind": "revert",
+    "file": "agent/chat_completion_helpers.py",
+    "test": "tests/agent/test_anthropic_context_editing.py",
+    "re_red": true
+  },
+  {
+    "passed": 5,
+    "failed": 2,
+    "failed_tests": [
+      "tests/agent/test_anthropic_context_editing.py::test_opt_in_sends_clear_tool_uses_with_its_beta_ahead_of_local_compression[on]",
+      "tests/agent/test_anthropic_context_editing.py::test_structured_rejection_disables_it_for_the_session_and_retries_once"
+    ],
+    "assertions": [
+      "E         At index 0 diff: False != True",
+      "Right contains one more item: False",
+      "TypeError: 'NoneType' object is not subscriptable",
+      "Use -v to get more diff",
+      "assert [False, False] == [True, False, False]"
+    ],
+    "rc": 1,
+    "id": "adapter-extra-body",
+    "kind": "revert",
+    "file": "agent/anthropic_adapter.py",
+    "test": "tests/agent/test_anthropic_context_editing.py",
+    "re_red": true
+  },
+  {
+    "passed": 6,
+    "failed": 1,
+    "failed_tests": [
+      "tests/agent/test_anthropic_context_editing.py::test_opt_in_sends_clear_tool_uses_with_its_beta_ahead_of_local_compression[on]"
+    ],
+    "assertions": [
+      "AssertionError: assert 'context-management-2025-06-27' in ['interleaved-thinking-2025-05-14', 'fine-grained-tool-streaming-2025-05-14']"
+    ],
+    "rc": 1,
+    "id": "adapter-beta",
+    "kind": "revert",
+    "file": "agent/anthropic_adapter.py",
+    "test": "tests/agent/test_anthropic_context_editing.py",
+    "re_red": true
+  },
+  {
+    "passed": 5,
+    "failed": 2,
+    "failed_tests": [
+      "tests/agent/test_anthropic_context_editing.py::test_opt_in_sends_clear_tool_uses_with_its_beta_ahead_of_local_compression[on]",
+      "tests/agent/test_anthropic_context_editing.py::test_structured_rejection_disables_it_for_the_session_and_retries_once"
+    ],
+    "assertions": [
+      "AssertionError: assert 'context-management-2025-06-27' in ['interleaved-thinking-2025-05-14', 'fine-grained-tool-streaming-2025-05-14']",
+      "E         At index 0 diff: False != True",
+      "Right contains one more item: False",
+      "Use -v to get more diff",
+      "assert [False, False] == [True, False, False]"
+    ],
+    "rc": 1,
+    "id": "agent-init-parse",
+    "kind": "mutation",
+    "file": "agent/agent_init.py",
+    "test": "tests/agent/test_anthropic_context_editing.py",
+    "re_red": true
+  },
+  {
+    "passed": 5,
+    "failed": 2,
+    "failed_tests": [
+      "tests/agent/test_anthropic_context_editing.py::test_opt_in_sends_clear_tool_uses_with_its_beta_ahead_of_local_compression[on]",
+      "tests/agent/test_anthropic_context_editing.py::test_structured_rejection_disables_it_for_the_session_and_retries_once"
+    ],
+    "assertions": [
+      "AssertionError: assert 'context-management-2025-06-27' in ['interleaved-thinking-2025-05-14', 'fine-grained-tool-streaming-2025-05-14']",
+      "E         At index 0 diff: False != True",
+      "Right contains one more item: False",
+      "Use -v to get more diff",
+      "assert [False, False] == [True, False, False]"
+    ],
+    "rc": 1,
+    "id": "agent-init-attr",
+    "kind": "revert",
+    "file": "agent/agent_init.py",
+    "test": "tests/agent/test_anthropic_context_editing.py",
+    "re_red": true
+  },
+  {
+    "passed": 6,
+    "failed": 1,
+    "failed_tests": [
+      "tests/agent/test_anthropic_context_editing.py::test_structured_rejection_disables_it_for_the_session_and_retries_once"
+    ],
+    "assertions": [
+      "assert (False)"
+    ],
+    "rc": 1,
+    "id": "recovery-anthropic-row",
+    "kind": "revert",
+    "file": "agent/turn_recovery.py",
+    "test": "tests/agent/test_anthropic_context_editing.py",
+    "re_red": true
+  },
+  {
+    "passed": 6,
+    "failed": 1,
+    "failed_tests": [
+      "tests/agent/test_anthropic_context_editing.py::test_structured_rejection_disables_it_for_the_session_and_retries_once"
+    ],
+    "assertions": [
+      "assert (False)"
+    ],
+    "rc": 1,
+    "id": "recovery-setattr",
+    "kind": "revert",
+    "file": "agent/turn_recovery.py",
+    "test": "tests/agent/test_anthropic_context_editing.py",
+    "re_red": true
+  },
+  {
+    "passed": 5,
+    "failed": 2,
+    "failed_tests": [
+      "tests/agent/test_anthropic_context_editing.py::test_opt_in_sends_clear_tool_uses_with_its_beta_ahead_of_local_compression[off]",
+      "tests/agent/test_anthropic_context_editing.py::test_structured_rejection_disables_it_for_the_session_and_retries_once"
+    ],
+    "assertions": [
+      "AssertionError: assert ({'edits': [{'type': 'clear_tool_uses_20250919', 'trigger': {'type': 'input_tokens', 'value': 141808}, 'clear_at_least': {'type': 'input_",
+      "assert (False)"
+    ],
+    "rc": 1,
+    "id": "gate-flag",
+    "kind": "revert",
+    "file": "agent/anthropic_context_editing.py",
+    "test": "tests/agent/test_anthropic_context_editing.py",
+    "re_red": true
+  },
+  {
+    "passed": 6,
+    "failed": 1,
+    "failed_tests": [
+      "tests/agent/test_anthropic_context_editing.py::test_opt_in_sends_clear_tool_uses_with_its_beta_ahead_of_local_compression[compression-disabled]"
+    ],
+    "assertions": [
+      "AssertionError: assert ({'edits': [{'type': 'clear_tool_uses_20250919', 'trigger': {'type': 'input_tokens', 'value': 141808}, 'clear_at_least': {'type': 'input_"
+    ],
+    "rc": 1,
+    "id": "gate-compression-enabled",
+    "kind": "revert",
+    "file": "agent/anthropic_context_editing.py",
+    "test": "tests/agent/test_anthropic_context_editing.py",
+    "re_red": true
+  },
+  {
+    "passed": 6,
+    "failed": 1,
+    "failed_tests": [
+      "tests/agent/test_anthropic_context_editing.py::test_opt_in_sends_clear_tool_uses_with_its_beta_ahead_of_local_compression[checkpoint-required]"
+    ],
+    "assertions": [
+      "AssertionError: assert ({'edits': [{'type': 'clear_tool_uses_20250919', 'trigger': {'type': 'input_tokens', 'value': 141808}, 'clear_at_least': {'type': 'input_"
+    ],
+    "rc": 1,
+    "id": "gate-checkpoint-required",
+    "kind": "revert",
+    "file": "agent/anthropic_context_editing.py",
+    "test": "tests/agent/test_anthropic_context_editing.py",
+    "re_red": true
+  },
+  {
+    "passed": 6,
+    "failed": 1,
+    "failed_tests": [
+      "tests/agent/test_anthropic_context_editing.py::test_opt_in_sends_clear_tool_uses_with_its_beta_ahead_of_local_compression[non-claude-model]"
+    ],
+    "assertions": [
+      "AssertionError: assert ({'edits': [{'type': 'clear_tool_uses_20250919', 'trigger': {'type': 'input_tokens', 'value': 145408}, 'clear_at_least': {'type': 'input_"
+    ],
+    "rc": 1,
+    "id": "gate-claude-model",
+    "kind": "revert",
+    "file": "agent/anthropic_context_editing.py",
+    "test": "tests/agent/test_anthropic_context_editing.py",
+    "re_red": true
+  },
+  {
+    "passed": 6,
+    "failed": 1,
+    "failed_tests": [
+      "tests/agent/test_anthropic_context_editing.py::test_opt_in_sends_clear_tool_uses_with_its_beta_ahead_of_local_compression[third-party-endpoint]"
+    ],
+    "assertions": [
+      "AssertionError: assert ({'edits': [{'type': 'clear_tool_uses_20250919', 'trigger': {'type': 'input_tokens', 'value': 141808}, 'clear_at_least': {'type': 'input_"
+    ],
+    "rc": 1,
+    "id": "gate-third-party-endpoint",
+    "kind": "revert",
+    "file": "agent/anthropic_context_editing.py",
+    "test": "tests/agent/test_anthropic_context_editing.py",
+    "re_red": true
+  },
+  {
+    "passed": 6,
+    "failed": 1,
+    "failed_tests": [
+      "tests/agent/test_anthropic_context_editing.py::test_opt_in_sends_clear_tool_uses_with_its_beta_ahead_of_local_compression[on]"
+    ],
+    "assertions": [
+      "+    where <agent.context_compressor.ContextCompressor object at 0x7fd419593a90> = <run_agent.AIAgent object at 0x7fd409e5c2d0>.context_compressor",
+      "+  where 150000 = <agent.context_compressor.ContextCompressor object at 0x7fd419593a90>.threshold_tokens",
+      "assert 150001 < 150000"
+    ],
+    "rc": 1,
+    "id": "gate-trigger-margin",
+    "kind": "mutation",
+    "file": "agent/anthropic_context_editing.py",
+    "test": "tests/agent/test_anthropic_context_editing.py",
+    "re_red": true
+  },
+  {
+    "passed": 5,
+    "failed": 2,
+    "failed_tests": [
+      "tests/agent/test_anthropic_context_editing.py::test_opt_in_sends_clear_tool_uses_with_its_beta_ahead_of_local_compression[on]",
+      "tests/agent/test_anthropic_context_editing.py::test_structured_rejection_disables_it_for_the_session_and_retries_once"
+    ],
+    "assertions": [
+      "AssertionError: assert 'context-management-2025-06-27' in ['interleaved-thinking-2025-05-14', 'fine-grained-tool-streaming-2025-05-14']",
+      "E         At index 0 diff: False != True",
+      "Right contains one more item: False",
+      "Use -v to get more diff",
+      "assert [False, False] == [True, False, False]"
+    ],
+    "rc": 1,
+    "id": "transport-default",
+    "kind": "revert",
+    "file": "agent/transports/anthropic.py",
+    "test": "tests/agent/test_anthropic_context_editing.py",
+    "re_red": true
+  },
+  {
+    "passed": 7,
+    "failed": 0,
+    "failed_tests": [],
+    "assertions": [],
+    "rc": 0,
+    "id": "tui-hot-reload",
+    "kind": "revert",
+    "file": "tui_gateway/session_compression.py",
+    "test": "tests/agent/test_anthropic_context_editing.py",
+    "re_red": false
+  },
+  {
+    "passed": 7,
+    "failed": 0,
+    "failed_tests": [],
+    "assertions": [],
+    "rc": 0,
+    "id": "gateway-cache-key",
+    "kind": "revert",
+    "file": "gateway/run.py",
+    "test": "tests/agent/test_anthropic_context_editing.py",
+    "re_red": false
+  },
+  {
+    "passed": 16,
+    "failed": 1,
+    "failed_tests": [
+      "tests/hermes_cli/test_fast_command.py::TestAnthropicFastModeAdapter::test_fast_mode_adds_speed_and_beta"
+    ],
+    "assertions": [
+      "AssertionError: assert 'extra_headers' in {'model': 'claude-opus-4-8', 'messages': [{'role': 'user', 'content': [{'type': 'text', 'text': 'hi'}]}], 'max_tokens'"
+    ],
+    "rc": 1,
+    "id": "adapter-fast-mode-beta",
+    "kind": "adjacent",
+    "file": "agent/anthropic_adapter.py",
+    "test": "tests/hermes_cli/test_fast_command.py",
+    "re_red": true
+  },
+  {
+    "passed": 64,
+    "failed": 0,
+    "failed_tests": [],
+    "assertions": [],
+    "rc": 0,
+    "id": "recovery-codex-row",
+    "kind": "adjacent",
+    "file": "agent/turn_recovery.py",
+    "test": "tests/agent/test_native_compaction.py",
+    "re_red": false
+  }
+]

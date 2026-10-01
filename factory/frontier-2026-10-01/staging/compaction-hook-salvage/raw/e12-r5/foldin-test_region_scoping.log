@@ -1,0 +1,5 @@
+Failed to fetch model metadata from OpenRouter: [Errno -2] chs egress guard: non-loopback DNS lookup blocked
+Failed to fetch model metadata from OpenRouter: [Errno -2] chs egress guard: non-loopback DNS lookup blocked
+  legacy: OK (1 summarizer call(s), 71 msgs out)
+  lean: OK (1 summarizer call(s), 71 msgs out)
+scoping tripwire: ALL PASS

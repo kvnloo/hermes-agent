@@ -263,7 +263,7 @@ def r02():
         "changed_files": ["evals/postmortem/forensics/logcalls.py", "evals/postmortem/live_ab/cache_prefix_live.py",
                           "evals/postmortem/live_ab/cache_prefix_wire.py", "evals/postmortem/tests/test_postmortem_harness.py"],
         "policy_revision": POLICY,
-        "env": {"host": "groot", "test_python": "3.11.14 (HERMES_PYTHON, not activated)", "host_python": "3.14.7",
+        "env": {"host": "<local-host>", "test_python": "3.11.14 (HERMES_PYTHON, not activated)", "host_python": "3.14.7",
                 "sandbox": "no bwrap (xf executor not built); HOME/HERMES_HOME = fresh scratch dirs", "tz": "UTC timestamps"},
         "inputs": {"scripts": scripts, "gh_read_at": "2026-10-01T11:05Z",
                    "carriers": {"#121135": {"head": "dd4a0ca4cf3345702eb7be95e11873308d3015b5", "state": "OPEN"},

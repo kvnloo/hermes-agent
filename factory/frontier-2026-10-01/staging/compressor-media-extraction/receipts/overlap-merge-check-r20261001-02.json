@@ -1,0 +1,130 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compressor-media-extraction",
+ "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+ "head_revision": "c5e8be14b43bf75bcc2e4e8d95f2d4810a7e2779",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#80636",
+  "NousResearch/hermes-agent#78645"
+ ],
+ "provenance": "self",
+ "privacy": "public-aggregate",
+ "cost_usd": 0.0,
+ "ai_assistance": "Claude Code (Opus 5.5) ran the experiment and wrote this receipt",
+ "created_at": "2026-10-01T07:47:16-05:00",
+ "spec": {
+  "path": null,
+  "prereg_commit": null,
+  "note": "not pre-registered on claude/ledger (no ledger writes in this run)"
+ },
+ "env": {
+  "host": "<local-host>",
+  "test_python": "3.11.14 (pytest 9.1.1, HERMES_PYTHON)",
+  "nav_python": "3.14.7 separate uv venv (tiktoken 0.14.0, radon 6.0.1)",
+  "sandbox": "none (no bwrap); HOME/HERMES_HOME pointed at scratch test homes; run_tests.sh env -i",
+  "load1_range": "3-16 (shared host; base and head full runs ran concurrently)",
+  "paths": "absolute local paths in commands and raw files are replaced by $W/<tree>, $S, $HERMES_PYTHON, <uv>, <pytest-tmp>, pytest-of-<user>"
+ },
+ "id": "overlap/r20261001-02",
+ "experiment": "ownership + conflict surface against open upstream PRs touching the moved code, including the four PRs stacked on #80636",
+ "tier": "T0",
+ "label": "OBSERVED",
+ "supersedes": "overlap/r20261001-01",
+ "round_note": "fix round 1: head rebuilt on main aea969677c (c5e8be14b4 replaces the unpushed d2bff3a59e; same patch-id 2c92e56f, corrected commit message)",
+ "inputs": {
+  "pr_heads": {
+   "80636": "5aa1746a288f6401b6b2b28ae3607e99d9b72e74",
+   "80645": "2ace2a70c00ac818d0759fec406f3735a6f6d8f5",
+   "80644": "c871197b77b4fbe6cf0059a74161322b5dc02ad2",
+   "81074": "4effdf33967f49f19069c00c5b5348fd8c10539b",
+   "81181": "e40f2db1402cb629dedcff57e656dee439bb51c3",
+   "129147": "d912e76a6419062953cebca19d0a41122aa55b49",
+   "118847": "222e3e26c3",
+   "119347": "4a527fc35d"
+  },
+  "searched": "gh search prs --state open context_compressor / context_compressor_media; gh api pulls/<n>/files for 80626, 80634, 80636, 80644, 80645, 81074, 81181, 81243"
+ },
+ "command": "git -C h.git merge-tree --write-tree --name-only <main|staging> refs/xf/pr/<n>; count '^<<<<<<<' per file in the result tree; git merge-base --is-ancestor 5aa1746a28 refs/xf/pr/<n>",
+ "result": {
+  "main": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+  "NousResearch/hermes-agent#80636": {
+   "author": "andrexibiza",
+   "state": "OPEN",
+   "behind_main_commits": 25973,
+   "merge_tree_vs_main": "CONFLICT agent/context_compressor.py (1 hunk); media commit alone: CONFLICT",
+   "merge_tree_vs_branch": "CONFLICT agent/context_compressor.py (1) + add/add agent/context_compressor_media.py (1)",
+   "media_module_blob": "ffd4d23465",
+   "seam_test_blob": "bc9aaa9691"
+  },
+  "stack_carrying_5aa1746a28": {
+   "80645": {
+    "author": "andrexibiza",
+    "state": "OPEN",
+    "head": "2ace2a70c00ac818d0759fec406f3735a6f6d8f5",
+    "contains_5aa1746a28": true,
+    "behind_main_commits": 25973,
+    "media_module_blob": "ffd4d23465 (identical to 5aa1746a28; no later commit touches it)",
+    "context_compressor_conflict_hunks_vs_main": 1,
+    "vs_branch": "1 + add/add agent/context_compressor_media.py (1)"
+   },
+   "80644": {
+    "author": "andrexibiza",
+    "state": "OPEN",
+    "head": "c871197b77b4fbe6cf0059a74161322b5dc02ad2",
+    "contains_5aa1746a28": true,
+    "behind_main_commits": 25973,
+    "media_module_blob": "ffd4d23465 (identical to 5aa1746a28; no later commit touches it)",
+    "context_compressor_conflict_hunks_vs_main": 3,
+    "vs_branch": "3 + add/add agent/context_compressor_media.py (1)"
+   },
+   "81074": {
+    "author": "andrexibiza",
+    "state": "OPEN",
+    "head": "4effdf33967f49f19069c00c5b5348fd8c10539b",
+    "contains_5aa1746a28": true,
+    "behind_main_commits": 25973,
+    "media_module_blob": "ffd4d23465 (identical to 5aa1746a28; no later commit touches it)",
+    "context_compressor_conflict_hunks_vs_main": 5,
+    "vs_branch": "5 + add/add agent/context_compressor_media.py (1)"
+   },
+   "81181": {
+    "author": "andrexibiza",
+    "state": "OPEN",
+    "head": "e40f2db1402cb629dedcff57e656dee439bb51c3",
+    "contains_5aa1746a28": true,
+    "behind_main_commits": 25973,
+    "media_module_blob": "ffd4d23465 (identical to 5aa1746a28; no later commit touches it)",
+    "context_compressor_conflict_hunks_vs_main": 9,
+    "vs_branch": "9 + add/add agent/context_compressor_media.py (1)"
+   }
+  },
+  "not_adding_the_module": [
+   "#80626",
+   "#80634",
+   "#81243"
+  ],
+  "NousResearch/hermes-agent#129147": {
+   "main_plus_pr": "clean",
+   "staging_plus_pr": "clean"
+  },
+  "NousResearch/hermes-agent#118847": {
+   "main_plus_pr_conflict_hunks": 1,
+   "staging_plus_pr_conflict_hunks": 1
+  },
+  "NousResearch/hermes-agent#119347": {
+   "main_plus_pr_conflict_hunks": 3,
+   "staging_plus_pr_conflict_hunks": 3
+  },
+  "branch_onto_main": "clean"
+ },
+ "reading": "The branch adds no conflict hunk to #129147, #118847 or #119347. #80636 and the four PRs stacked on it (all andrexibiza) carry the same LB4 commit and already conflict with main in agent/context_compressor.py; against this branch each also gets an add/add conflict on agent/context_compressor_media.py. A salvage of LB4 therefore obsoletes that commit in five open PRs. Ownership stays with #80636's author: route salvage-support.",
+ "raw": [
+  {
+   "path": "raw/r02/overlap-merge-tree.txt",
+   "sha256": "0b7c38f7afd08f0c16049acdb17910997a10b709286ea2b801e90ce58ca825d1",
+   "source_sha256": "0b7c38f7afd08f0c16049acdb17910997a10b709286ea2b801e90ce58ca825d1"
+  }
+ ],
+ "verdict": "ROUTE: salvage-support"
+}

@@ -1,0 +1,243 @@
+{
+ "started_at": "2026-10-01T17:06:21Z",
+ "main": {
+  "sha": "aaa863f7ff2dec1821be1652b5d15ad14ecea70b",
+  "ls_remote_at": "2026-10-01T17:06:22Z",
+  "commits_since_base": 25,
+  "invalidate_on_commits_since_base": [],
+  "github_commits_since_base": [],
+  "merge_tree_head": {
+   "clean": true,
+   "tree": "21c423feb3df08111ba13bd5cf8af2161c21af23"
+  }
+ },
+ "cited_checked_at": "2026-10-01T17:06:22Z",
+ "cited": {
+  "98045": {
+   "state": "closed",
+   "closed_at": "2026-10-01T12:51:06Z",
+   "merged_at": null,
+   "head": "77f018b7db7bb82c0163531a61605bf7245d03ce"
+  },
+  "87028": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null,
+   "head": "f63bfa2a5c3c614a19dc2f8a7440d3e7f71d349b"
+  },
+  "124151": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null,
+   "head": "3ee6189dbad0485790893c5098b20f00d27a1d51"
+  },
+  "120042": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null,
+   "head": "641f6b94c5e11f4758844af6112705083862562d"
+  },
+  "47119": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null
+  },
+  "21566": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null
+  },
+  "92118": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null,
+   "head": "2ad5cc73fac3e519deec7d4d9ff6eccb494aa953"
+  },
+  "126457": {
+   "state": "closed",
+   "closed_at": "2026-10-01T16:23:32Z",
+   "merged_at": null,
+   "head": "822f7b28358e47b1c6517981df2f791b67f2bd4a"
+  },
+  "86948": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null,
+   "head": "cc1c2a1f2c4875f29c63f27981dfb8b3f54252e9"
+  },
+  "65329": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null,
+   "head": "c868eaaa02a340071e14fdaaec99fad9b77357f9"
+  },
+  "125802": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null,
+   "head": "543af5de1910ba995540d71435cae30307c65b69"
+  },
+  "15412": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null,
+   "head": "69c5a4132128ca289fc4a605772696d6a69b69de"
+  },
+  "113678": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null,
+   "head": "b94a4824978fc4b558962cdf0ba2675d422ebb14"
+  },
+  "78584": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null,
+   "head": "e7c6f83e8a1d50e2091eaafbe9b686df245bc60c"
+  },
+  "127373": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null
+  },
+  "127374": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null
+  },
+  "127375": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null
+  },
+  "127332": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null
+  },
+  "127228": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null
+  },
+  "125881": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null,
+   "head": "d3fdffcf82a0aee790b9327f0f23b60ad03390f2"
+  },
+  "108965": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null,
+   "head": "39dd41fe689c37a18cc3c23bb16487f1e88b0f79"
+  },
+  "129620": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null,
+   "head": "588b746cf6a092a974629aec44dcb8077107307b"
+  },
+  "64421": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null,
+   "head": "b6df099a1abb47098fc41aa70dcadc27768495a4"
+  },
+  "68903": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null,
+   "head": "bce652651f55dd51e0a9007f4241f63ccb0e5fbe"
+  },
+  "81582": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null,
+   "head": "36dcc4dfc856a776c283f6e9bdc9bd3856468040"
+  },
+  "84360": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null,
+   "head": "b856e237064396677c32163ed30b3cd1dc27d251"
+  },
+  "115109": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null,
+   "head": "65d141f5ecbaa5120964050ded3c80e3622161c9"
+  },
+  "115694": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null,
+   "head": "a9e3edd6ee7bab444c50f44a70e0db621248d9bd"
+  },
+  "98703": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null,
+   "head": "6771ca2f4fe100c442b6cd4dd9810017bf837aa2"
+  },
+  "58597": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null,
+   "head": "ae6946c1fcc0a2b4b22ff8c961abccf6b1f2ffcc"
+  },
+  "63759": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null,
+   "head": "3165890dc81e3a155f17508790f3b8533ff5c0a6"
+  },
+  "84412": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null,
+   "head": "30c9b1253c58db4085a1a932b1124819613fa960"
+  },
+  "101580": {
+   "state": "open",
+   "closed_at": null,
+   "merged_at": null,
+   "head": "d24b4d404265f0b4832c7f54baf9409bfe41640b"
+  }
+ },
+ "changed_since_recheck_r5": {},
+ "query_totals": {
+  "prefetch metric": 4,
+  "prefetch telemetry": 10,
+  "memory prefetch": 152,
+  "prefetch_provider": 0,
+  "prefetch shared metrics": 2,
+  "memory.prefetch": 1,
+  "record_memory_prefetch": 0,
+  "external prefetch": 60,
+  "prefetch timeout": 54,
+  "prefetch latency": 22
+ },
+ "query_totals_changed": {},
+ "fork": {
+  "404": {
+   "state": "open",
+   "table_rows": 39
+  },
+  "322": {
+   "state": "open",
+   "table_rows": 0
+  },
+  "402": {
+   "state": "closed",
+   "table_rows": 9
+  },
+  "403": {
+   "state": "closed",
+   "table_rows": 20
+  }
+ },
+ "fork_branch_present": false,
+ "staging_ref": "569ad4d84b0f9888ea2598c2a8ea416b2c75bad6",
+ "finished_at": "2026-10-01T17:07:36Z"
+}

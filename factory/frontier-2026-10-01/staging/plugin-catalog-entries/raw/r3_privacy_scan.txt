@@ -1,0 +1,35 @@
+# r3 privacy scan: XF_PRIVATE_TERMS=<local list> python3 tools/privacy_scan_r3.py
+terms from local list: 12; hostname check: on
+STAGING.md	abs_path=0	hostname=0	terms=0
+body.md	abs_path=0	hostname=0	terms=0
+plugin-catalog-entries.patch	abs_path=0	hostname=0	terms=0
+receipts/F12-r20261001-01.json	abs_path=0	hostname=0	terms=0
+receipts/RECHECK-r20261001-02.json	abs_path=0	hostname=0	terms=0
+receipts/RECHECK-r20261001-03.json	abs_path=0	hostname=0	terms=0
+receipts/RECHECK-r20261001-04.json	abs_path=0	hostname=0	terms=0
+receipts/SLICE-proof-r20261001-01.json	abs_path=0	hostname=0	terms=0
+receipts/T1-capability-probe-r20261001-01.json	abs_path=0	hostname=0	terms=0
+receipts/T1-failopen-r20261001-01.json	abs_path=0	hostname=0	terms=0
+raw/r1_disclosure_read.txt	abs_path=0	hostname=0	terms=0
+raw/r1_gh_reads.json	abs_path=0	hostname=0	terms=0
+raw/r1_git_recheck.txt	abs_path=0	hostname=0	terms=0
+raw/r1_wf_push_scan_staged_aea969677c.json	abs_path=0	hostname=0	terms=0
+raw/r2_gh_reads.json	abs_path=0	hostname=0	terms=0
+raw/r2_git_recheck.txt	abs_path=0	hostname=0	terms=0
+raw/r2_privacy_scan.txt	abs_path=0	hostname=0	terms=0	reviewed_generic=/tmp/hh
+raw/r2_rebuild_check.txt	abs_path=0	hostname=0	terms=0
+tools/build_receipts.py	abs_path=0	hostname=0	terms=0
+tools/catalog_probe.py	abs_path=0	hostname=0	terms=0
+tools/f12_census.py	abs_path=0	hostname=0	terms=0
+tools/privacy_scan.py	abs_path=0	hostname=0	terms=0	reviewed_generic=/tmp/hh
+tools/privacy_scan_r3.py	abs_path=0	hostname=0	terms=0
+tools/scrub_receipts.py	abs_path=0	hostname=0	terms=0
+tools/t1_probe.py	abs_path=0	hostname=0	terms=0	reviewed_generic=/tmp/hh
+tools/wf_scan.py	abs_path=0	hostname=0	terms=0
+raw/r3_catalog_green.txt	abs_path=0	hostname=0	terms=0
+raw/r3_gh_reads.json	abs_path=0	hostname=0	terms=0
+raw/r3_git_recheck.txt	abs_path=0	hostname=0	terms=0
+raw/r3_privacy_scan.txt	abs_path=0	hostname=0	terms=0	reviewed_generic=/tmp/hh
+raw/r3_wf_push_scan_staged_44a1ce9724.json	abs_path=0	hostname=0	terms=0
+files flagged: 0
+rc=0

@@ -1,0 +1,1163 @@
+{
+  "arm": "head",
+  "commit": "05d6dbc172d24db4b237f8ef130fb4dc2e8651df",
+  "probes": [
+    {
+      "id": "token_accounting/replay_gates",
+      "rc": 0,
+      "marker": null,
+      "marker_found": null,
+      "verdict": "PASS",
+      "pytest_summary": null,
+      "stdout_normalised_sha256": "c1b5b4c18f30035987fb730c14280d1487bc2aba9fcd4218ba7fc56d6a53c4a8",
+      "file_normalised_sha256": "c99f3719c2ee33d051a4393577036b56727756d639286809cfdce9f04fd3658b",
+      "key": {
+        "checkout": "<worktree>",
+        "head": "<sha>",
+        "compressor_sha256": "86f4b7a8a647f1bf520cb17497b68719f6d907028bdc7151c7921818b7e043f1",
+        "cli_past_window_inflated": {
+          "threshold": 40000,
+          "real_prompt_tokens": 9000,
+          "rough_estimate_turn1_messages": 160113,
+          "local_compress_calls_by_turn": [
+            0,
+            0,
+            0
+          ],
+          "local_compress_approx_tokens": [],
+          "provider_requests": 3
+        },
+        "cli_inflated": {
+          "threshold": 40000,
+          "real_prompt_tokens": 9000,
+          "rough_estimate_turn1_messages": 120113,
+          "local_compress_calls_by_turn": [
+            0,
+            0,
+            0
+          ],
+          "local_compress_approx_tokens": [],
+          "provider_requests": 3
+        },
+        "cli_deflated": {
+          "threshold": 40000,
+          "real_prompt_tokens": 45000,
+          "rough_estimate_turn1_messages": 213,
+          "local_compress_calls_by_turn": [
+            0,
+            1,
+            1
+          ],
+          "local_compress_approx_tokens": [
+            45015,
+            45015
+          ],
+          "provider_requests": 3
+        },
+        "gateway_past_window_inflated": {
+          "threshold": 40000,
+          "real_prompt_tokens": 9000,
+          "rough_estimate_turn1_messages": 160113,
+          "local_compress_calls_by_turn": [
+            0,
+            0,
+            0
+          ],
+          "local_compress_approx_tokens": [],
+          "provider_requests": 3
+        },
+        "gateway_inflated": {
+          "threshold": 40000,
+          "real_prompt_tokens": 9000,
+          "rough_estimate_turn1_messages": 120113,
+          "local_compress_calls_by_turn": [
+            0,
+            0,
+            0
+          ],
+          "local_compress_approx_tokens": [],
+          "provider_requests": 3
+        },
+        "gateway_deflated": {
+          "threshold": 40000,
+          "real_prompt_tokens": 45000,
+          "rough_estimate_turn1_messages": 213,
+          "local_compress_calls_by_turn": [
+            0,
+            1,
+            1
+          ],
+          "local_compress_approx_tokens": [
+            45015,
+            45015
+          ],
+          "provider_requests": 3
+        },
+        "restore_past_window_inflated": {
+          "threshold": 40000,
+          "real_prompt_tokens": 9000,
+          "rough_estimate_turn1_messages": 160074,
+          "persisted_messages": 4,
+          "anchor_restored_in_fresh_agent": true,
+          "local_compress_calls_by_turn": [
+            0,
+            0,
+            0
+          ],
+          "local_compress_approx_tokens": [],
+          "provider_requests": 4
+        },
+        "restore_inflated": {
+          "threshold": 40000,
+          "real_prompt_tokens": 9000,
+          "rough_estimate_turn1_messages": 120074,
+          "persisted_messages": 4,
+          "anchor_restored_in_fresh_agent": true,
+          "local_compress_calls_by_turn": [
+            0,
+            0,
+            0
+          ],
+          "local_compress_approx_tokens": [],
+          "provider_requests": 4
+        },
+        "restore_deflated": {
+          "threshold": 40000,
+          "real_prompt_tokens": 45000,
+          "rough_estimate_turn1_messages": 174,
+          "persisted_messages": 4,
+          "anchor_restored_in_fresh_agent": true,
+          "local_compress_calls_by_turn": [
+            0,
+            1,
+            1
+          ],
+          "local_compress_approx_tokens": [
+            45020,
+            45020
+          ],
+          "provider_requests": 4
+        },
+        "overflow_recovery": {
+          "completed": true,
+          "response": "ok",
+          "compression_after_provider_requests": [
+            1
+          ],
+          "first_turn_compressions": 1,
+          "provider_request_sizes": [
+            643511,
+            131043
+          ],
+          "provider_omits_usage": false,
+          "pass": true
+        },
+        "usage_less_fallback": {
+          "completed": true,
+          "response": "ok",
+          "compression_after_provider_requests": [
+            1
+          ],
+          "first_turn_compressions": 0,
+          "provider_request_sizes": [
+            643511,
+            131130
+          ],
+          "provider_omits_usage": true,
+          "pass": true
+        },
+        "verdict": {
+          "cli_past_window_inflated": "PASS",
+          "cli_inflated": "PASS",
+          "cli_deflated": "PASS",
+          "gateway_past_window_inflated": "PASS",
+          "gateway_inflated": "PASS",
+          "gateway_deflated": "PASS",
+          "restore_past_window_inflated": "PASS",
+          "restore_inflated": "PASS",
+          "restore_deflated": "PASS",
+          "overflow_recovery": "PASS",
+          "usage_less_fallback": "PASS"
+        }
+      },
+      "wrote_into_checkout": false,
+      "wall_s": 9.5,
+      "cpu_core_s": 6.0,
+      "command": "<venv-python> evals/token_accounting/replay_gates.py --out <out>/result.json"
+    },
+    {
+      "id": "token_accounting/ab_image_cost_calibration",
+      "rc": 0,
+      "marker": null,
+      "marker_found": null,
+      "verdict": "PASS",
+      "pytest_summary": null,
+      "stdout_normalised_sha256": "2299804e495105897d5cbedb267120b4ba286448ea9126048ed0b879f6235fc7",
+      "file_normalised_sha256": "1b062d00a1d225e279fe746f290995922011685b32c6bb59c35343e7c2b1cbf6",
+      "key": {
+        "head": "<sha>",
+        "image_real_cost": 4000,
+        "context_length": 65536,
+        "threshold": 40000,
+        "learned_image_cost_after": 4374,
+        "provider_overflows": 0,
+        "compress_calls": [
+          {
+            "turn": 10,
+            "approx_tokens": 44000,
+            "images_in_history": 10,
+            "real_prompt_if_sent": 43800
+          }
+        ],
+        "per_turn": [
+          {
+            "turn": 1,
+            "completed": true,
+            "images": 1,
+            "provider_overflows_so_far": 0,
+            "compress_calls_so_far": 0
+          },
+          {
+            "turn": 2,
+            "completed": true,
+            "images": 2,
+            "provider_overflows_so_far": 0,
+            "compress_calls_so_far": 0
+          },
+          {
+            "turn": 3,
+            "completed": true,
+            "images": 3,
+            "provider_overflows_so_far": 0,
+            "compress_calls_so_far": 0
+          },
+          {
+            "turn": 4,
+            "completed": true,
+            "images": 4,
+            "provider_overflows_so_far": 0,
+            "compress_calls_so_far": 0
+          },
+          {
+            "turn": 5,
+            "completed": true,
+            "images": 5,
+            "provider_overflows_so_far": 0,
+            "compress_calls_so_far": 0
+          },
+          {
+            "turn": 6,
+            "completed": true,
+            "images": 6,
+            "provider_overflows_so_far": 0,
+            "compress_calls_so_far": 0
+          },
+          {
+            "turn": 7,
+            "completed": true,
+            "images": 7,
+            "provider_overflows_so_far": 0,
+            "compress_calls_so_far": 0
+          },
+          {
+            "turn": 8,
+            "completed": true,
+            "images": 8,
+            "provider_overflows_so_far": 0,
+            "compress_calls_so_far": 0
+          },
+          {
+            "turn": 9,
+            "completed": true,
+            "images": 9,
+            "provider_overflows_so_far": 0,
+            "compress_calls_so_far": 0
+          },
+          {
+            "turn": 10,
+            "completed": true,
+            "images": 1,
+            "provider_overflows_so_far": 0,
+            "compress_calls_so_far": 1
+          },
+          {
+            "turn": 11,
+            "completed": true,
+            "images": 2,
+            "provider_overflows_so_far": 0,
+            "compress_calls_so_far": 1
+          },
+          {
+            "turn": 12,
+            "completed": true,
+            "images": 3,
+            "provider_overflows_so_far": 0,
+            "compress_calls_so_far": 1
+          },
+          {
+            "turn": 13,
+            "completed": true,
+            "images": 4,
+            "provider_overflows_so_far": 0,
+            "compress_calls_so_far": 1
+          },
+          {
+            "turn": 14,
+            "completed": true,
+            "images": 5,
+            "provider_overflows_so_far": 0,
+            "compress_calls_so_far": 1
+          }
+        ],
+        "tail_budget": 8000,
+        "tail_images_kept": 2,
+        "tail_real_tokens": 9000,
+        "tail_walk_estimate_error_pct": 8.3,
+        "verdict": "PASS"
+      },
+      "wrote_into_checkout": false,
+      "wall_s": 5.5,
+      "cpu_core_s": 3.3,
+      "command": "<venv-python> evals/token_accounting/ab_image_cost_calibration.py --out <out>/result.json"
+    },
+    {
+      "id": "token_accounting/worktree_prompt_prefix",
+      "rc": 0,
+      "marker": null,
+      "marker_found": null,
+      "verdict": "PASS",
+      "pytest_summary": null,
+      "stdout_normalised_sha256": "467596738c5d48527014b3fb9b79a9f2025d9e97289bc4ff4b9dc514ba9683d0",
+      "file_normalised_sha256": "eada19566f81394055fd6ae1b49d15fcf49419f86f3d11c4de910dafdb263390",
+      "key": {
+        "source_sha": "<sha>",
+        "source_dirty": false,
+        "source_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "fixture_git_worktrees": "worktree <out>/probe/fixture\nHEAD <sha>\nbranch refs/heads/main\n\nworktree <out>/probe/worktree-a\nHEAD <sha>\nbranch refs/heads/worktree-a\n\nworktree <out>/probe/worktree-b\nHEAD <sha>\nbranch refs/heads/worktree-b",
+        "context_file_chars": 66000,
+        "context_file_sha256": "ac05645ef7e6ee051713d4646a8b2004d4b5bdcea9f731404641bed263687af5",
+        "stable_equal": true,
+        "full_common_prefix_chars": 72252,
+        "stable_common_prefix_chars": 5888,
+        "project_context_equal": true,
+        "same_agent_rebuild_equal": [
+          true,
+          true
+        ],
+        "per_worktree": [
+          {
+            "restore_matches": true,
+            "trailing_decoy_matches": true,
+            "drift_rejected": true,
+            "cwd": "<out>/probe/worktree-a",
+            "full_chars": 74823,
+            "stable_chars": 5888,
+            "context_chars": 67392,
+            "project_context_chars": 66111,
+            "cwd_line_offset": 74271,
+            "workspace_offset": 72003,
+            "root_offset": 72084,
+            "project_context_offset": 5890,
+            "stable_has_cwd": false,
+            "stable_sha256": "386530fde1a6bf4822154358c04684d9debaed7a32561756d1c7fdd6aee2acf1",
+            "prompt_sha256": "69a3f4722c063307d7a55fe5f3bc106b898d11185bee3ae6a1984a6e7a6aae85",
+            "valid_tool_names": [
+              "patch",
+              "read_file",
+              "search_files",
+              "terminal",
+              "tool_call",
+              "tool_describe",
+              "tool_search",
+              "write_file"
+            ]
+          },
+          {
+            "restore_matches": true,
+            "trailing_decoy_matches": true,
+            "drift_rejected": true,
+            "cwd": "<out>/probe/worktree-b",
+            "full_chars": 74823,
+            "stable_chars": 5888,
+            "context_chars": 67392,
+            "project_context_chars": 66111,
+            "cwd_line_offset": 74271,
+            "workspace_offset": 72003,
+            "root_offset": 72084,
+            "project_context_offset": 5890,
+            "stable_has_cwd": false,
+            "stable_sha256": "386530fde1a6bf4822154358c04684d9debaed7a32561756d1c7fdd6aee2acf1",
+            "prompt_sha256": "df64f022e121b5fc8be9a71f2f69ef06e05cf7762a35c252a888677a5896cb45",
+            "valid_tool_names": [
+              "patch",
+              "read_file",
+              "search_files",
+              "terminal",
+              "tool_call",
+              "tool_describe",
+              "tool_search",
+              "write_file"
+            ]
+          }
+        ],
+        "provider_usage": null,
+        "billing_measured": false
+      },
+      "wrote_into_checkout": false,
+      "wall_s": 4.8,
+      "cpu_core_s": 4.3,
+      "command": "<venv-python> evals/token_accounting/worktree_prompt_prefix.py"
+    },
+    {
+      "id": "native_compaction/ab_checkpoint_preflight",
+      "rc": 0,
+      "marker": null,
+      "marker_found": null,
+      "verdict": "PASS",
+      "pytest_summary": null,
+      "stdout_normalised_sha256": "b6e3858dcaf040d606710ee3b15eef1f2c748759c463798757ade312ced3cef8",
+      "file_normalised_sha256": "c9689b6ce606b19f0be6e2f29b40c453cfe3ab7d65c655781dfb286ed4efb388",
+      "key": {
+        "checkout": "<worktree>",
+        "head": "<sha>",
+        "capture_cli_same_objects": {
+          "turn1_completed": true,
+          "checkpoint_persisted": true,
+          "checkpoint_chars": 5169420,
+          "preflight_estimate_before_turn2": 69,
+          "threshold": 204000,
+          "latch_armed_after_turn1": true,
+          "turn2_completed": true,
+          "local_compress_calls_turn2": 0,
+          "turn3_completed": true,
+          "local_compress_calls_turn3": 0,
+          "local_compress_approx_tokens": [],
+          "provider_requests_total": 3,
+          "requests": [
+            {
+              "context_management": [
+                {
+                  "type": "compaction",
+                  "compact_threshold": 195808
+                }
+              ],
+              "input_items": 1,
+              "replayed_compaction_items": 0,
+              "replayed_compaction_chars": 0
+            },
+            {
+              "context_management": [
+                {
+                  "type": "compaction",
+                  "compact_threshold": 195808
+                }
+              ],
+              "input_items": 4,
+              "replayed_compaction_items": 1,
+              "replayed_compaction_chars": 5169420
+            },
+            {
+              "context_management": [
+                {
+                  "type": "compaction",
+                  "compact_threshold": 195808
+                }
+              ],
+              "input_items": 6,
+              "replayed_compaction_items": 1,
+              "replayed_compaction_chars": 5169420
+            }
+          ],
+          "latch_after_turn3": false,
+          "last_real_prompt_tokens": 115802
+        },
+        "capture_gateway_reloaded_history": {
+          "turn1_completed": true,
+          "checkpoint_persisted": true,
+          "checkpoint_chars": 5169420,
+          "preflight_estimate_before_turn2": 69,
+          "threshold": 204000,
+          "latch_armed_after_turn1": true,
+          "turn2_completed": true,
+          "local_compress_calls_turn2": 0,
+          "turn3_completed": true,
+          "local_compress_calls_turn3": 0,
+          "local_compress_approx_tokens": [],
+          "provider_requests_total": 3,
+          "requests": [
+            {
+              "context_management": [
+                {
+                  "type": "compaction",
+                  "compact_threshold": 195808
+                }
+              ],
+              "input_items": 1,
+              "replayed_compaction_items": 0,
+              "replayed_compaction_chars": 0
+            },
+            {
+              "context_management": [
+                {
+                  "type": "compaction",
+                  "compact_threshold": 195808
+                }
+              ],
+              "input_items": 4,
+              "replayed_compaction_items": 1,
+              "replayed_compaction_chars": 5169420
+            },
+            {
+              "context_management": [
+                {
+                  "type": "compaction",
+                  "compact_threshold": 195808
+                }
+              ],
+              "input_items": 6,
+              "replayed_compaction_items": 1,
+              "replayed_compaction_chars": 5169420
+            }
+          ],
+          "latch_after_turn3": false,
+          "last_real_prompt_tokens": 115802
+        },
+        "restore": {
+          "turn1_completed": true,
+          "restored_checkpoint_chars": 5169420,
+          "preflight_estimate_fresh_agent": 63,
+          "threshold": 204000,
+          "resume_completed": true,
+          "local_compress_calls_resume": 0,
+          "local_compress_approx_tokens": [],
+          "provider_requests_resume": 1,
+          "requests": [
+            {
+              "context_management": [
+                {
+                  "type": "compaction",
+                  "compact_threshold": 195808
+                }
+              ],
+              "input_items": 4,
+              "replayed_compaction_items": 1,
+              "replayed_compaction_chars": 5169420
+            }
+          ],
+          "latch_after_resume": false,
+          "last_real_prompt_tokens": 115802
+        },
+        "over_threshold_negative": {
+          "turn1_completed": true,
+          "checkpoint_persisted": true,
+          "checkpoint_chars": 5169420,
+          "preflight_estimate_before_turn2": 69,
+          "threshold": 204000,
+          "latch_armed_after_turn1": true,
+          "turn2_completed": true,
+          "local_compress_calls_turn2": 0,
+          "turn3_completed": true,
+          "local_compress_calls_turn3": 1,
+          "local_compress_approx_tokens": [
+            209021
+          ],
+          "provider_requests_total": 3,
+          "requests": [
+            {
+              "context_management": [
+                {
+                  "type": "compaction",
+                  "compact_threshold": 195808
+                }
+              ],
+              "input_items": 1,
+              "replayed_compaction_items": 0,
+              "replayed_compaction_chars": 0
+            },
+            {
+              "context_management": [
+                {
+                  "type": "compaction",
+                  "compact_threshold": 195808
+                }
+              ],
+              "input_items": 4,
+              "replayed_compaction_items": 1,
+              "replayed_compaction_chars": 5169420
+            },
+            {
+              "context_management": [
+                {
+                  "type": "compaction",
+                  "compact_threshold": 195808
+                }
+              ],
+              "input_items": 6,
+              "replayed_compaction_items": 1,
+              "replayed_compaction_chars": 5169420
+            }
+          ],
+          "latch_after_turn3": false,
+          "last_real_prompt_tokens": 209000
+        }
+      },
+      "wrote_into_checkout": false,
+      "wall_s": 5.3,
+      "cpu_core_s": 4.8,
+      "command": "<venv-python> evals/native_compaction/ab_checkpoint_preflight.py --out <out>/result.json"
+    },
+    {
+      "id": "provider_fallback/probe_104120",
+      "rc": 0,
+      "marker": null,
+      "marker_found": null,
+      "verdict": "PASS",
+      "pytest_summary": null,
+      "stdout_normalised_sha256": "efe403f00b4ad584f3aba7689ed04a527a0c83514fe6b34a366289a296a8c826",
+      "file_normalised_sha256": null,
+      "key": null,
+      "wrote_into_checkout": false,
+      "wall_s": 4.3,
+      "cpu_core_s": 3.9,
+      "command": "<venv-python> evals/provider_fallback/probe_104120.py <worktree>"
+    },
+    {
+      "id": "provider_fallback/probe_104260",
+      "rc": 0,
+      "marker": null,
+      "marker_found": null,
+      "verdict": "PASS",
+      "pytest_summary": null,
+      "stdout_normalised_sha256": "053d6659b5abf6db6b40c1924d7a682d477afc355336cb76838a38d8979703c6",
+      "file_normalised_sha256": null,
+      "key": null,
+      "wrote_into_checkout": false,
+      "wall_s": 3.2,
+      "cpu_core_s": 2.3,
+      "command": "<venv-python> evals/provider_fallback/probe_104260.py <worktree>"
+    },
+    {
+      "id": "provider_fallback/probe_104360",
+      "rc": 0,
+      "marker": null,
+      "marker_found": null,
+      "verdict": "PASS",
+      "pytest_summary": null,
+      "stdout_normalised_sha256": "2987b3b74cf74c0b3e71bcdef0654eb79c9f3823abeee1de4645869bf9fa8ec3",
+      "file_normalised_sha256": null,
+      "key": null,
+      "wrote_into_checkout": false,
+      "wall_s": 5.2,
+      "cpu_core_s": 3.5,
+      "command": "<venv-python> evals/provider_fallback/probe_104360.py <worktree>"
+    },
+    {
+      "id": "goal_command_parity",
+      "rc": 0,
+      "marker": null,
+      "marker_found": null,
+      "verdict": "PASS",
+      "pytest_summary": null,
+      "stdout_normalised_sha256": "c85b2b577d6e20040c816e0efe82e4a214ac037912206470a56c3021f765ec76",
+      "file_normalised_sha256": "82dd7cd779010ad7746cc9da0980222b52cfb8a33928a7602dbb79658ef19d03",
+      "key": [
+        {
+          "command": "",
+          "active": false,
+          "goal": null,
+          "status": null,
+          "contract": null,
+          "prompt_count": 0,
+          "prompts": [],
+          "output": "  No active goal. Set one with /goal <text>."
+        },
+        {
+          "command": "show",
+          "active": false,
+          "goal": null,
+          "status": null,
+          "contract": null,
+          "prompt_count": 0,
+          "prompts": [],
+          "output": "  No active goal. Set one with /goal <text>.\n  (no active goal)"
+        },
+        {
+          "command": "pause",
+          "active": false,
+          "goal": null,
+          "status": null,
+          "contract": null,
+          "prompt_count": 0,
+          "prompts": [],
+          "output": "  No goal set."
+        },
+        {
+          "command": "resume",
+          "active": false,
+          "goal": null,
+          "status": null,
+          "contract": null,
+          "prompt_count": 0,
+          "prompts": [],
+          "output": "  No goal to resume."
+        },
+        {
+          "command": "clear",
+          "active": false,
+          "goal": null,
+          "status": null,
+          "contract": null,
+          "prompt_count": 0,
+          "prompts": [],
+          "output": "  No active goal."
+        },
+        {
+          "command": "draft",
+          "active": false,
+          "goal": null,
+          "status": null,
+          "contract": null,
+          "prompt_count": 0,
+          "prompts": [],
+          "output": "  Usage: /goal draft <objective in plain language>"
+        },
+        {
+          "command": "Maintain the service\nconstraints: keep data\nstop when: credentials missing",
+          "active": true,
+          "goal": "Maintain the service",
+          "status": "active",
+          "contract": {
+            "outcome": "",
+            "verification": "",
+            "constraints": "keep data",
+            "boundaries": "",
+            "stop_when": "credentials missing"
+          },
+          "prompt_count": 1,
+          "prompts": [
+            "Maintain the service"
+          ],
+          "output": "  \u2299 Goal set (17-turn budget): Maintain the service\n  Completion contract:\n  - Constraints: keep data\n  - Stop when blocked: credentials missing\n  After each turn, a judge model checks if the goal is done against the contract above. Hermes keeps working until it is, you pause/clear it, or the budget is exhausted. Use /goal status, /goal show, /goal pause, /goal resume, /goal clear."
+        },
+        {
+          "command": "show",
+          "active": true,
+          "goal": "Maintain the service",
+          "status": "active",
+          "contract": {
+            "outcome": "",
+            "verification": "",
+            "constraints": "keep data",
+            "boundaries": "",
+            "stop_when": "credentials missing"
+          },
+          "prompt_count": 0,
+          "prompts": [],
+          "output": "  \u2299 Goal (active, 0/17 turns, contract): Maintain the service\n  - Constraints: keep data\n  - Stop when blocked: credentials missing"
+        },
+        {
+          "command": "pause",
+          "active": true,
+          "goal": "Maintain the service",
+          "status": "paused",
+          "contract": {
+            "outcome": "",
+            "verification": "",
+            "constraints": "keep data",
+            "boundaries": "",
+            "stop_when": "credentials missing"
+          },
+          "prompt_count": 0,
+          "prompts": [],
+          "output": "  \u23f8 Goal paused: Maintain the service"
+        },
+        {
+          "command": "resume",
+          "active": true,
+          "goal": "Maintain the service",
+          "status": "active",
+          "contract": {
+            "outcome": "",
+            "verification": "",
+            "constraints": "keep data",
+            "boundaries": "",
+            "stop_when": "credentials missing"
+          },
+          "prompt_count": 1,
+          "prompts": [
+            "[Continuing toward your standing goal]\nGoal: Maintain the service\n\nCompletion contract:\n- Constraints: keep data\n- Stop when blocked: credentials missing\n\nContinue working toward the outcome above. Take the next concrete step. Stay within the stated boundaries and do not violate the constraints. Before claiming the goal is done, satisfy the Verification criterion and show the concrete evidence (command output, file contents, test result). If you hit the stated stop condition or are otherwise blocked and need user input, say so clearly and stop."
+          ],
+          "output": "  \u25b6 Goal resumed: Maintain the service\n  \u001b[2;3mContinuing now \u2014 taking the next step.\u001b[0m"
+        },
+        {
+          "command": "wait nope",
+          "active": true,
+          "goal": "Maintain the service",
+          "status": "active",
+          "contract": {
+            "outcome": "",
+            "verification": "",
+            "constraints": "keep data",
+            "boundaries": "",
+            "stop_when": "credentials missing"
+          },
+          "prompt_count": 0,
+          "prompts": [],
+          "output": "  /goal wait: <pid> must be an integer process id."
+        },
+        {
+          "command": "wait",
+          "active": true,
+          "goal": "Maintain the service",
+          "status": "active",
+          "contract": {
+            "outcome": "",
+            "verification": "",
+            "constraints": "keep data",
+            "boundaries": "",
+            "stop_when": "credentials missing"
+          },
+          "prompt_count": 0,
+          "prompts": [],
+          "output": "  Usage: /goal wait <pid> [reason]"
+        },
+        {
+          "command": "wait 0",
+          "active": true,
+          "goal": "Maintain the service",
+          "status": "active",
+          "contract": {
+            "outcome": "",
+            "verification": "",
+            "constraints": "keep data",
+            "boundaries": "",
+            "stop_when": "credentials missing"
+          },
+          "prompt_count": 0,
+          "prompts": [],
+          "output": "  /goal wait: pid must be a positive integer"
+        },
+        {
+          "command": "wait <PID> running probe",
+          "active": true,
+          "goal": "Maintain the service",
+          "status": "active",
+          "contract": {
+            "outcome": "",
+            "verification": "",
+            "constraints": "keep data",
+            "boundaries": "",
+            "stop_when": "credentials missing"
+          },
+          "prompt_count": 0,
+          "prompts": [],
+          "output": "  \u23f3 Goal parked on pid <PID> (running probe). Loop pauses until it exits."
+        },
+        {
+          "command": "status",
+          "active": true,
+          "goal": "Maintain the service",
+          "status": "active",
+          "contract": {
+            "outcome": "",
+            "verification": "",
+            "constraints": "keep data",
+            "boundaries": "",
+            "stop_when": "credentials missing"
+          },
+          "prompt_count": 0,
+          "prompts": [],
+          "output": "  \u23f3 Goal (parked on running probe, 0/17 turns, contract): Maintain the service"
+        },
+        {
+          "command": "unwait",
+          "active": true,
+          "goal": "Maintain the service",
+          "status": "active",
+          "contract": {
+            "outcome": "",
+            "verification": "",
+            "constraints": "keep data",
+            "boundaries": "",
+            "stop_when": "credentials missing"
+          },
+          "prompt_count": 0,
+          "prompts": [],
+          "output": "  \u25b6 Wait barrier cleared \u2014 goal loop resumes."
+        },
+        {
+          "command": "unwait",
+          "active": true,
+          "goal": "Maintain the service",
+          "status": "active",
+          "contract": {
+            "outcome": "",
+            "verification": "",
+            "constraints": "keep data",
+            "boundaries": "",
+            "stop_when": "credentials missing"
+          },
+          "prompt_count": 0,
+          "prompts": [],
+          "output": "  No wait barrier set."
+        },
+        {
+          "command": "gate list",
+          "active": true,
+          "goal": "Maintain the service",
+          "status": "active",
+          "contract": {
+            "outcome": "",
+            "verification": "",
+            "constraints": "keep data",
+            "boundaries": "",
+            "stop_when": "credentials missing"
+          },
+          "prompt_count": 0,
+          "prompts": [],
+          "output": "  (no quality gates \u2014 use /goal gate add <command> to require one)"
+        },
+        {
+          "command": "gate remove nope",
+          "active": true,
+          "goal": "Maintain the service",
+          "status": "active",
+          "contract": {
+            "outcome": "",
+            "verification": "",
+            "constraints": "keep data",
+            "boundaries": "",
+            "stop_when": "credentials missing"
+          },
+          "prompt_count": 0,
+          "prompts": [],
+          "output": "  /goal gate remove: invalid literal for int() with base 10: 'nope'"
+        },
+        {
+          "command": "gate clear",
+          "active": true,
+          "goal": "Maintain the service",
+          "status": "active",
+          "contract": {
+            "outcome": "",
+            "verification": "",
+            "constraints": "keep data",
+            "boundaries": "",
+            "stop_when": "credentials missing"
+          },
+          "prompt_count": 0,
+          "prompts": [],
+          "output": "  \u2713 Cleared 0 gates."
+        },
+        {
+          "command": "done",
+          "active": false,
+          "goal": null,
+          "status": null,
+          "contract": null,
+          "prompt_count": 0,
+          "prompts": [],
+          "output": "  \u2713 Goal cleared."
+        },
+        {
+          "command": "status",
+          "active": false,
+          "goal": null,
+          "status": null,
+          "contract": null,
+          "prompt_count": 0,
+          "prompts": [],
+          "output": "  No active goal. Set one with /goal <text>."
+        }
+      ],
+      "wrote_into_checkout": false,
+      "wall_s": 1.0,
+      "cpu_core_s": 0.8,
+      "command": "<venv-python> evals/goal_command_parity.py <worktree> <out>/goalhome <out>/result.json"
+    },
+    {
+      "id": "compaction/test_region_scoping",
+      "rc": 0,
+      "marker": "scoping tripwire: ALL PASS",
+      "marker_found": true,
+      "verdict": "PASS",
+      "pytest_summary": null,
+      "stdout_normalised_sha256": "d78d9ff38ca5381d803b3151d7c0bf26473b3357cca2ceb48b0a2e7eecc41d42",
+      "file_normalised_sha256": null,
+      "key": null,
+      "wrote_into_checkout": false,
+      "wall_s": 1.1,
+      "cpu_core_s": 0.9,
+      "command": "<venv-python> evals/compaction/test_region_scoping.py"
+    },
+    {
+      "id": "postmortem/run_non_live",
+      "rc": 1,
+      "marker": null,
+      "marker_found": null,
+      "verdict": "FAIL",
+      "pytest_summary": null,
+      "stdout_normalised_sha256": "4e199d6a3ff8ca157cb66806321f6b58d7eee1648f379d095ff8c76144ae4c0a",
+      "file_normalised_sha256": null,
+      "key": {
+        "probes": {
+          "#103492 live_ab/hardline_scanner_matrix.py": "PASS",
+          "#103492 review_probes/scanner_bypass_probe.py": "PASS",
+          "#103513 live_ab/subagent_context_cap.py": "FAIL(rc=0)",
+          "#103549 live_ab/batch_failure_notice.py": "PASS",
+          "#103549 review_probes/notice_delivery_probe.py": "FAIL(rc=1)",
+          "#103476 review_probes/cache_estimator_probe.py": "FAIL(rc=0)",
+          "#103551 review_probes/rewrite_hint_probe.py": "PASS",
+          "#103526 live_ab/auth_stampede.py": "PASS",
+          "#103526 review_probes/credential_identity_probe.py": "PASS"
+        },
+        "n": 9,
+        "pass": 6
+      },
+      "wrote_into_checkout": false,
+      "wall_s": 38.3,
+      "cpu_core_s": 18.1,
+      "command": "<venv-python> -m evals.postmortem.run --repo <worktree>"
+    },
+    {
+      "id": "postmortem/context_cap_probe",
+      "rc": 0,
+      "marker": "DONE arm",
+      "marker_found": true,
+      "verdict": "PASS",
+      "pytest_summary": null,
+      "stdout_normalised_sha256": "e402a9383261bd1dfabfd6d7cc0a9c2fbce5ca227209677502b616600d0cdfd8",
+      "file_normalised_sha256": null,
+      "key": null,
+      "wrote_into_checkout": false,
+      "wall_s": 2.7,
+      "cpu_core_s": 2.8,
+      "command": "<venv-python> evals/postmortem/review_probes/context_cap_probe.py <worktree> arm"
+    },
+    {
+      "id": "postmortem/deadline_probe",
+      "rc": 0,
+      "marker": "PROBE_COMPLETE",
+      "marker_found": true,
+      "verdict": "PASS",
+      "pytest_summary": null,
+      "stdout_normalised_sha256": "4a46d5f85b4ebc09c326c353e98e3682fdb803ca5c9556e00124b9b59438cb42",
+      "file_normalised_sha256": null,
+      "key": null,
+      "wrote_into_checkout": false,
+      "wall_s": 8.6,
+      "cpu_core_s": 2.3,
+      "command": "<venv-python> evals/postmortem/review_probes/deadline_probe.py <worktree>"
+    },
+    {
+      "id": "postmortem/goal_scope_probe",
+      "rc": 0,
+      "marker": null,
+      "marker_found": null,
+      "verdict": "PASS",
+      "pytest_summary": null,
+      "stdout_normalised_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "file_normalised_sha256": "e7162d220d1ca4dc99f7d6a31167caf03b909030f04a06b0b25f65e1c3d7f700",
+      "key": {
+        "module": "<worktree>/hermes_cli/goals.py",
+        "sha": "<sha>",
+        "registry": [
+          {
+            "session_id": "proc_own",
+            "command": "own sleeper",
+            "cwd": null,
+            "pid": 580692,
+            "owner_task_id": "root",
+            "started_at": "<ts>",
+            "uptime_seconds": 0,
+            "status": "running",
+            "output_preview": ""
+          },
+          {
+            "session_id": "proc_child",
+            "command": "child sleeper",
+            "cwd": null,
+            "pid": 580692,
+            "owner_task_id": "sa-child",
+            "started_at": "<ts>",
+            "uptime_seconds": 0,
+            "status": "running",
+            "output_preview": ""
+          }
+        ],
+        "all": [
+          "proc_own",
+          "proc_child"
+        ],
+        "active": 1,
+        "cli": {
+          "processes": [
+            "proc_own"
+          ],
+          "active": 1
+        },
+        "gateway": {
+          "processes": [
+            "proc_own"
+          ],
+          "active": 1
+        },
+        "tui": {
+          "processes": [
+            "proc_own"
+          ],
+          "active": 0
+        },
+        "old_pid_waiting": false,
+        "old_session_waiting": false,
+        "long_timer_still_waiting": true,
+        "after_delegation_complete": {
+          "status": "active",
+          "should_continue": false,
+          "continuation_prompt": null,
+          "verdict": "waiting",
+          "reason": "delegates",
+          "message": "\u23f3 Goal parked \u2014 waiting on <t> remaining: delegates"
+        },
+        "completion_judge_calls": 0,
+        "persisted_wait_until": 1790873621.4192421,
+        "lifecycle_initial_pending": 0,
+        "lifecycle_completion_pending": 1,
+        "lifecycle_aux_calls": 2,
+        "lifecycle_still_waiting": false
+      },
+      "wrote_into_checkout": false,
+      "wall_s": 1.8,
+      "cpu_core_s": 1.7,
+      "command": "<venv-python> evals/postmortem/review_probes/goal_scope_probe.py <out>/result.json"
+    },
+    {
+      "id": "postmortem/finalizer_schedule_probe",
+      "rc": 0,
+      "marker": "2 passed",
+      "marker_found": true,
+      "verdict": "PASS",
+      "pytest_summary": null,
+      "stdout_normalised_sha256": "b71a3970def6e9bb55c2118a43658fdbb3077b959b4d48622e331911bcdd8c2b",
+      "file_normalised_sha256": null,
+      "key": null,
+      "wrote_into_checkout": false,
+      "wall_s": 5.3,
+      "cpu_core_s": 4.9,
+      "command": "<venv-python> -m pytest tests/e2e/test_relay_native_openai_stream.py -q -p evals.postmortem.review_probes.finalizer_schedule_probe --finalizer-probe=consumer-first"
+    }
+  ],
+  "not_run": [
+    {
+      "id": "readtool fixtures via direct read_file only",
+      "why": "F14 (FACTORY.md section 13, row 2) names no script, fixture path or command for this item"
+    },
+    {
+      "id": "postmortem/goal_repaste_probe",
+      "why": "reads RF_STATE_COPY (default <tmp>/rf/state_copy.db), a copy of a real session state.db; this run may not touch real sessions, and no synthetic copy is defined"
+    }
+  ],
+  "env": "env -i PATH=/usr/bin:/bin HOME=<home> HERMES_HOME=<home>/.hermes HERMES_DISABLE_LAZY_INSTALLS=1 HERMES_DISABLE_MODEL_METADATA_FETCH=1 TZ=UTC LANG=C.UTF-8 TMPDIR=<probe dir>; fresh <home> per probe; cwd <worktree>",
+  "wall_s_total": 96.6,
+  "cpu_core_s_total": 59.6
+}

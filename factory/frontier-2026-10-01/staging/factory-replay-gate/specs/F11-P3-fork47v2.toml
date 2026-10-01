@@ -1,0 +1,30 @@
+xf_spec = 1
+id = "F11-P3-fork47v2"
+rev = 1
+kind = "redgreen"
+issue = "kvnloo/hermes-agent#322"
+ai_assistance = "Spec and runner written with Claude Code (Opus 5.5); disclosed per repository policy"
+origin_refs = ["kvnloo/hermes-agent#47"]
+expected = "KEEP (4 columns PASS)"
+[base]
+repo = "NousResearch/hermes-agent"
+pin = "572e4f4fad32bbdcfc948fb2ec833177ed5734c0"
+[head]
+commit = "1d31fe5193e1ee964e611bba6340ab2919c3192c"
+merge_onto_base = true
+[probe]
+kind = "pytest"
+files = ["tests/agent/test_rate_limit_tracker.py", "tests/agent/test_nous_rate_guard.py"]
+reps = 3
+jobs = 2
+timeout_s = 900
+[oracle]
+red_markers = ["assert 100.0 == 0.0", "assert True is False"]
+sabotage = "per_hunk"
+adjacent = ["tests/gateway/test_usage_command.py", "tests/hermes_cli/test_cli_status_bar.py"]
+[ownership]
+verdict = "clear"
+searched_at = "2026-09-30"
+queries = ["x-ratelimit-remaining missing", "rate_limit_tracker remaining default"]
+[outputs]
+not_tested = ["full test suite", "real provider responses", "kernel network namespace (in-process guard only)"]

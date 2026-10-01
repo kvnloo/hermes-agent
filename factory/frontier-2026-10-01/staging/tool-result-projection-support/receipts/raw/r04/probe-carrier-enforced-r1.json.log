@@ -1,0 +1,789 @@
+.F                                                                       [100%]
+=================================== FAILURES ===================================
+________ test_projection_never_invalidates_replayed_preserved_thinking _________
+
+native_anthropic = {'srv': <tests.fakes.providers.anthropic_messages.AnthropicMessagesServer object at 0x7f218e192710>, 'provider': <test...$S/sf-trp4/scratch/f04-j2rse7io$PYTEST_TMP/test_projection_never_invalida0/work')}
+
+    def test_projection_never_invalidates_replayed_preserved_thinking(native_anthropic):
+        from run_agent import AIAgent
+    
+        srv, provider = native_anthropic["srv"], native_anthropic["provider"]
+        paths = write_corpus(native_anthropic["workdir"], TURNS)
+        agent = AIAgent(provider="anthropic", api_key="sk-ant-api03-e2e-fake-key", model=ANTHROPIC_MODEL,
+                        quiet_mode=True, platform="cli", enabled_toolsets=["file"], skip_memory=True,
+                        skip_context_files=True, max_iterations=4)
+        history: list[dict[str, Any]] = []
+        try:
+            for i, path in enumerate(paths):
+                provider.turns += [
+                    [Thinking(f"plan the read of file {i:02d}", ""), ToolUse("read_file", {"path": str(path)})],
+                    [Thinking(f"file {i:02d} read", ""), AnthropicText(f"noted file {i:02d}")],
+                ]
+                result = agent.run_conversation(f"read notes_{i:02d}.txt and remember it",
+                                                conversation_history=history, task_id="projection-thinking")
+                history = result.get("messages") or history
+                assert result.get("final_response") is not None, f"turn {i}: {result}"
+        finally:
+            agent.close()
+    
+        assert not native_anthropic["proxy"].refused, native_anthropic["proxy"].refused
+        assert srv.main_requests(), "no request reached the native Messages endpoint"
+        assert provider.replayed, "the route never replayed a signed thinking block; the check would be vacuous"
+>       assert not provider.invalidated, (
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+            "a request replayed preserved-thinking blocks over a rewritten conversation prefix (Anthropic "
+            "drops them, or rejects the request on enforced accounts):\n"
+            + "\n".join(f"  {line}" for line in provider.invalidated))
+E       AssertionError: a request replayed preserved-thinking blocks over a rewritten conversation prefix (Anthropic drops them, or rejects the request on enforced accounts):
+E         request 10: messages[17] thinking block replayed over a rewritten prefix (signed: True)
+E         request 11: messages[17] thinking block replayed over a rewritten prefix (signed: True)
+E         request 12: messages[17] thinking block replayed over a rewritten prefix (signed: True)
+E         request 13: messages[17] thinking block replayed over a rewritten prefix (signed: True)
+E         request 14: messages[17] thinking block replayed over a rewritten prefix (signed: True)
+E         request 15: messages[17] thinking block replayed over a rewritten prefix (signed: True)
+E         request 16: messages[17] thinking block replayed over a rewritten prefix (signed: True)
+E         request 17: messages[17] thinking block replayed over a rewritten prefix (signed: True)
+E         request 18: messages[17] thinking block replayed over a rewritten prefix (signed: True)
+E         request 19: messages[17] thinking block replayed over a rewritten prefix (signed: True)
+E         request 20: messages[17] thinking block replayed over a rewritten prefix (signed: True)
+E         request 21: messages[17] thinking block replayed over a rewritten prefix (signed: True)
+E         request 22: messages[17] thinking block replayed over a rewritten prefix (signed: True)
+E         request 23: messages[17] thinking block replayed over a rewritten prefix (signed: True)
+E         request 24: messages[17] thinking block replayed over a rewritten prefix (signed: True)
+E         request 25: messages[17] thinking block replayed over a rewritten prefix (signed: True)
+
+$WT_CARRIER/tests/e2e/core/history/test_tool_result_projection_wire.py:292: AssertionError
+----------------------------- Captured stdout call -----------------------------
+  ┊ 📖 read      notes_00.txt  0.0s
+  ┊ 📖 read      notes_01.txt  0.0s
+  ┊ 📖 read      notes_02.txt  0.0s
+  ┊ 📖 read      notes_03.txt  0.0s
+  ┊ 📖 read      notes_04.txt  0.0s
+⚠️  Thinking block signature invalid, stripped reasoning_details from api_messages for retry...
+⚠️  Attempt 1/1 failed: HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+❌ API failed after 1 retries — HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+   💀 Final error: HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+🧾 Request debug dump written to: $S/sf-trp4/scratch/f04-j2rse7io$PYTEST_TMP/test_projection_never_invalida0/hermes_test/sessions/request_dump_20261001_112709_06f785_20261001_162710_236085.json
+⚠️  Thinking block signature invalid, stripped reasoning_details from api_messages for retry...
+⚠️  Attempt 1/1 failed: HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+❌ API failed after 1 retries — HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+   💀 Final error: HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+🧾 Request debug dump written to: $S/sf-trp4/scratch/f04-j2rse7io$PYTEST_TMP/test_projection_never_invalida0/hermes_test/sessions/request_dump_20261001_112709_06f785_20261001_162710_463040.json
+⚠️  Thinking block signature invalid, stripped reasoning_details from api_messages for retry...
+⚠️  Attempt 1/1 failed: HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+❌ API failed after 1 retries — HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+   💀 Final error: HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+🧾 Request debug dump written to: $S/sf-trp4/scratch/f04-j2rse7io$PYTEST_TMP/test_projection_never_invalida0/hermes_test/sessions/request_dump_20261001_112709_06f785_20261001_162710_694550.json
+⚠️  Thinking block signature invalid, stripped reasoning_details from api_messages for retry...
+⚠️  Attempt 1/1 failed: HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+❌ API failed after 1 retries — HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+   💀 Final error: HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+🧾 Request debug dump written to: $S/sf-trp4/scratch/f04-j2rse7io$PYTEST_TMP/test_projection_never_invalida0/hermes_test/sessions/request_dump_20261001_112709_06f785_20261001_162710_930768.json
+⚠️  Thinking block signature invalid, stripped reasoning_details from api_messages for retry...
+⚠️  Attempt 1/1 failed: HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+❌ API failed after 1 retries — HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+   💀 Final error: HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+🧾 Request debug dump written to: $S/sf-trp4/scratch/f04-j2rse7io$PYTEST_TMP/test_projection_never_invalida0/hermes_test/sessions/request_dump_20261001_112709_06f785_20261001_162711_171197.json
+⚠️  Thinking block signature invalid, stripped reasoning_details from api_messages for retry...
+⚠️  Attempt 1/1 failed: HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+❌ API failed after 1 retries — HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+   💀 Final error: HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+🧾 Request debug dump written to: $S/sf-trp4/scratch/f04-j2rse7io$PYTEST_TMP/test_projection_never_invalida0/hermes_test/sessions/request_dump_20261001_112709_06f785_20261001_162711_409360.json
+⚠️  Thinking block signature invalid, stripped reasoning_details from api_messages for retry...
+⚠️  Attempt 1/1 failed: HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+❌ API failed after 1 retries — HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+   💀 Final error: HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+🧾 Request debug dump written to: $S/sf-trp4/scratch/f04-j2rse7io$PYTEST_TMP/test_projection_never_invalida0/hermes_test/sessions/request_dump_20261001_112709_06f785_20261001_162711_644819.json
+⚠️  Thinking block signature invalid, stripped reasoning_details from api_messages for retry...
+⚠️  Attempt 1/1 failed: HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+❌ API failed after 1 retries — HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+   💀 Final error: HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+🧾 Request debug dump written to: $S/sf-trp4/scratch/f04-j2rse7io$PYTEST_TMP/test_projection_never_invalida0/hermes_test/sessions/request_dump_20261001_112709_06f785_20261001_162711_880716.json
+------------------------------ Captured log call -------------------------------
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-browser-use' registered browser provider: browser-use
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-browserbase' registered browser provider: browserbase
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'browser-firecrawl' registered browser provider: firecrawl
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered image_gen provider: deepinfra
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered image_gen provider: fal
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'krea' registered image_gen provider: krea
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'meta-ai-image-gen' registered image_gen provider: meta-ai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai' registered image_gen provider: openai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openai-codex' registered image_gen provider: openai-codex
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: openrouter
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered image_gen provider: nous
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered image_gen provider: xai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'deepinfra' registered video_gen provider: deepinfra
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'fal' registered video_gen provider: fal
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'openrouter' registered video_gen provider: openrouter
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'xai' registered video_gen provider: xai
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-brave-free' registered web provider: brave-free
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-ddgs' registered web provider: ddgs
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-exa' registered web provider: exa
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-firecrawl' registered web provider: firecrawl
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-keenable' registered web provider: keenable
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-openai-native' registered web provider: openai-native
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-parallel' registered web provider: parallel
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-perplexity' registered web provider: perplexity
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-searxng' registered web provider: searxng
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-tavily' registered web provider: tavily
+INFO     hermes_cli.plugins:plugins.py:379 Plugin 'web-xai' registered web provider: xai
+INFO     hermes_cli.plugins:plugins.py:1499 Plugin discovery complete: 58 found, 53 enabled
+WARNING  agent.context_pin:context_pin.py:68 model.context_length pins claude-opus-5-5 at 200,000 tokens but the provider advertises 1,000,000; the pin wins. Remove model.context_length from config.yaml to use the advertised window.
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_112709_06f785 model=claude-opus-5-5 provider=anthropic platform=cli history=0 msg='read notes_00.txt and remember it'
+INFO     agent.conversation_loop:turn_usage.py:205 API call #1: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.1s id=msg_115f4f9ffd214b7184ee
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.01s, 23624 chars)
+INFO     agent.conversation_loop:turn_usage.py:205 API call #2: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_11d881d8ba5542e7bbb5
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=claude-opus-5-5 api_calls=2/4 budget=2/4 tool_turns=1 last_msg_role=assistant response_len=13 session=20261001_112709_06f785
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_112709_06f785 model=claude-opus-5-5 provider=anthropic platform=cli history=4 msg='read notes_01.txt and remember it'
+INFO     agent.conversation_loop:turn_usage.py:205 API call #3: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_0424d550c5144bf18d75
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.01s, 23624 chars)
+INFO     agent.conversation_loop:turn_usage.py:205 API call #4: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_aad64d3a5b754e359f17
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=claude-opus-5-5 api_calls=2/4 budget=2/4 tool_turns=2 last_msg_role=assistant response_len=13 session=20261001_112709_06f785
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_112709_06f785 model=claude-opus-5-5 provider=anthropic platform=cli history=8 msg='read notes_02.txt and remember it'
+INFO     agent.conversation_loop:turn_usage.py:205 API call #5: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_dd47003d70a64dba9bf2
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.01s, 23624 chars)
+INFO     agent.conversation_loop:turn_usage.py:205 API call #6: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_df8d5a9515504df1bbad
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=claude-opus-5-5 api_calls=2/4 budget=2/4 tool_turns=3 last_msg_role=assistant response_len=13 session=20261001_112709_06f785
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_112709_06f785 model=claude-opus-5-5 provider=anthropic platform=cli history=12 msg='read notes_03.txt and remember it'
+INFO     agent.conversation_loop:turn_usage.py:205 API call #7: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_a5ce3e5d7bb14878a9f7
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.01s, 23624 chars)
+INFO     agent.conversation_loop:turn_usage.py:205 API call #8: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_52c379bdbfaf4cfba193
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=claude-opus-5-5 api_calls=2/4 budget=2/4 tool_turns=4 last_msg_role=assistant response_len=13 session=20261001_112709_06f785
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_112709_06f785 model=claude-opus-5-5 provider=anthropic platform=cli history=16 msg='read notes_04.txt and remember it'
+INFO     agent.conversation_loop:turn_usage.py:205 API call #9: model=claude-opus-5-5 provider=anthropic in=100 out=20 total=120 latency=0.0s id=msg_cd269a4dc04349d1b57d
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.01s, 23624 chars)
+INFO     agent.tool_result_projection:tool_result_projection.py:690 Tool-result projection: 3 stale result(s) archived, ~17,535 tokens reclaimed per request (15,173 message tokens now)
+ERROR    agent.chat_completion_helpers:chat_completion_helpers.py:3724 Streaming failed before delivery: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_cd4d1b9a0e174a18', 'type': 'error'}
+Traceback (most recent call last):
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3823, in _call
+    self.result["response"] = _with_stream_emitters(
+                              ^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 2585, in _with_stream_emitters
+    response = run()
+               ^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3824, in <lambda>
+    self.agent, lambda: self._call_wire(stream_attempt_id))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3804, in _call_wire
+    return self._call_anthropic(request_client)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3506, in _call_anthropic
+    stream = self._set_managed_stream(relay_llm.stream(self.api_kwargs, _open_anthropic_stream,
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/relay_llm.py", line 323, in __init__
+    self._start_unmanaged(request)
+  File "$WT_CARRIER/agent/relay_llm.py", line 329, in _start_unmanaged
+    raw_stream = self._stream_factory(request)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3494, in _open_anthropic_stream
+    return normalize_stream_usage(manager.__enter__())
+                                  ^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/lib/streaming/_messages.py", line 167, in __enter__
+    raw_stream = self.__api_request()
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1364, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1137, in request
+    raise self._make_status_error_from_response(err.response) from None
+anthropic.BadRequestError: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_cd4d1b9a0e174a18', 'type': 'error'}
+INFO     run_agent:client_lifecycle.py:537 Anthropic client closed (stream_error_cleanup, shared=False) provider=anthropic model=claude-opus-5-5
+WARNING  agent.conversation_loop:turn_recovery.py:503 Thinking block signature recovery: stripped reasoning_details from 9 api_messages (canonical messages unchanged)
+ERROR    agent.chat_completion_helpers:chat_completion_helpers.py:3724 Streaming failed before delivery: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_ff552c5a46c4426f', 'type': 'error'}
+Traceback (most recent call last):
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3823, in _call
+    self.result["response"] = _with_stream_emitters(
+                              ^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 2585, in _with_stream_emitters
+    response = run()
+               ^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3824, in <lambda>
+    self.agent, lambda: self._call_wire(stream_attempt_id))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3804, in _call_wire
+    return self._call_anthropic(request_client)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3506, in _call_anthropic
+    stream = self._set_managed_stream(relay_llm.stream(self.api_kwargs, _open_anthropic_stream,
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/relay_llm.py", line 323, in __init__
+    self._start_unmanaged(request)
+  File "$WT_CARRIER/agent/relay_llm.py", line 329, in _start_unmanaged
+    raw_stream = self._stream_factory(request)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3494, in _open_anthropic_stream
+    return normalize_stream_usage(manager.__enter__())
+                                  ^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/lib/streaming/_messages.py", line 167, in __enter__
+    raw_stream = self.__api_request()
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1364, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1137, in request
+    raise self._make_status_error_from_response(err.response) from None
+anthropic.BadRequestError: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_ff552c5a46c4426f', 'type': 'error'}
+INFO     run_agent:client_lifecycle.py:537 Anthropic client closed (stream_error_cleanup, shared=False) provider=anthropic model=claude-opus-5-5
+WARNING  agent.conversation_loop:turn_recovery.py:1265 API call failed (attempt 1/1) error_type=BadRequestError thread=MainThread:139782233201536 provider=anthropic base_url= model=claude-opus-5-5 summary=HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+ERROR    agent.conversation_loop:turn_recovery.py:1177 API call failed after 1 retries. HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block". | provider=anthropic model=claude-opus-5-5 msgs=20 tokens=~15,227
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_112709_06f785 model=claude-opus-5-5 provider=anthropic platform=cli history=19 msg='read notes_05.txt and remember it'
+ERROR    agent.chat_completion_helpers:chat_completion_helpers.py:3724 Streaming failed before delivery: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_19911dad9ffd4c78', 'type': 'error'}
+Traceback (most recent call last):
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3823, in _call
+    self.result["response"] = _with_stream_emitters(
+                              ^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 2585, in _with_stream_emitters
+    response = run()
+               ^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3824, in <lambda>
+    self.agent, lambda: self._call_wire(stream_attempt_id))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3804, in _call_wire
+    return self._call_anthropic(request_client)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3506, in _call_anthropic
+    stream = self._set_managed_stream(relay_llm.stream(self.api_kwargs, _open_anthropic_stream,
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/relay_llm.py", line 323, in __init__
+    self._start_unmanaged(request)
+  File "$WT_CARRIER/agent/relay_llm.py", line 329, in _start_unmanaged
+    raw_stream = self._stream_factory(request)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3494, in _open_anthropic_stream
+    return normalize_stream_usage(manager.__enter__())
+                                  ^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/lib/streaming/_messages.py", line 167, in __enter__
+    raw_stream = self.__api_request()
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1364, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1137, in request
+    raise self._make_status_error_from_response(err.response) from None
+anthropic.BadRequestError: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_19911dad9ffd4c78', 'type': 'error'}
+INFO     run_agent:client_lifecycle.py:537 Anthropic client closed (stream_error_cleanup, shared=False) provider=anthropic model=claude-opus-5-5
+WARNING  agent.conversation_loop:turn_recovery.py:503 Thinking block signature recovery: stripped reasoning_details from 9 api_messages (canonical messages unchanged)
+ERROR    agent.chat_completion_helpers:chat_completion_helpers.py:3724 Streaming failed before delivery: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_6369e65bd8744b7d', 'type': 'error'}
+Traceback (most recent call last):
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3823, in _call
+    self.result["response"] = _with_stream_emitters(
+                              ^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 2585, in _with_stream_emitters
+    response = run()
+               ^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3824, in <lambda>
+    self.agent, lambda: self._call_wire(stream_attempt_id))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3804, in _call_wire
+    return self._call_anthropic(request_client)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3506, in _call_anthropic
+    stream = self._set_managed_stream(relay_llm.stream(self.api_kwargs, _open_anthropic_stream,
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/relay_llm.py", line 323, in __init__
+    self._start_unmanaged(request)
+  File "$WT_CARRIER/agent/relay_llm.py", line 329, in _start_unmanaged
+    raw_stream = self._stream_factory(request)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3494, in _open_anthropic_stream
+    return normalize_stream_usage(manager.__enter__())
+                                  ^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/lib/streaming/_messages.py", line 167, in __enter__
+    raw_stream = self.__api_request()
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1364, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1137, in request
+    raise self._make_status_error_from_response(err.response) from None
+anthropic.BadRequestError: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_6369e65bd8744b7d', 'type': 'error'}
+INFO     run_agent:client_lifecycle.py:537 Anthropic client closed (stream_error_cleanup, shared=False) provider=anthropic model=claude-opus-5-5
+WARNING  agent.conversation_loop:turn_recovery.py:1265 API call failed (attempt 1/1) error_type=BadRequestError thread=MainThread:139782233201536 provider=anthropic base_url= model=claude-opus-5-5 summary=HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+ERROR    agent.conversation_loop:turn_recovery.py:1177 API call failed after 1 retries. HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block". | provider=anthropic model=claude-opus-5-5 msgs=21 tokens=~15,250
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_112709_06f785 model=claude-opus-5-5 provider=anthropic platform=cli history=20 msg='read notes_06.txt and remember it'
+INFO     agent.conversation_loop:turn_iteration_prep.py:206 Repaired 1 message-alternation violations before request (session=20261001_112709_06f785)
+INFO     agent.conversation_loop:turn_iteration_prep.py:219 Re-anchored current_turn_user_idx 20 -> 19 after alternation repair (session=20261001_112709_06f785)
+INFO     agent.conversation_loop:turn_iteration_prep.py:231 Re-anchored stale current_turn_user_idx 19 -> 19 (session=20261001_112709_06f785)
+ERROR    agent.chat_completion_helpers:chat_completion_helpers.py:3724 Streaming failed before delivery: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_54d259b340ff497a', 'type': 'error'}
+Traceback (most recent call last):
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3823, in _call
+    self.result["response"] = _with_stream_emitters(
+                              ^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 2585, in _with_stream_emitters
+    response = run()
+               ^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3824, in <lambda>
+    self.agent, lambda: self._call_wire(stream_attempt_id))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3804, in _call_wire
+    return self._call_anthropic(request_client)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3506, in _call_anthropic
+    stream = self._set_managed_stream(relay_llm.stream(self.api_kwargs, _open_anthropic_stream,
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/relay_llm.py", line 323, in __init__
+    self._start_unmanaged(request)
+  File "$WT_CARRIER/agent/relay_llm.py", line 329, in _start_unmanaged
+    raw_stream = self._stream_factory(request)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3494, in _open_anthropic_stream
+    return normalize_stream_usage(manager.__enter__())
+                                  ^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/lib/streaming/_messages.py", line 167, in __enter__
+    raw_stream = self.__api_request()
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1364, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1137, in request
+    raise self._make_status_error_from_response(err.response) from None
+anthropic.BadRequestError: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_54d259b340ff497a', 'type': 'error'}
+INFO     run_agent:client_lifecycle.py:537 Anthropic client closed (stream_error_cleanup, shared=False) provider=anthropic model=claude-opus-5-5
+WARNING  agent.conversation_loop:turn_recovery.py:503 Thinking block signature recovery: stripped reasoning_details from 9 api_messages (canonical messages unchanged)
+ERROR    agent.chat_completion_helpers:chat_completion_helpers.py:3724 Streaming failed before delivery: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_276e59f649334735', 'type': 'error'}
+Traceback (most recent call last):
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3823, in _call
+    self.result["response"] = _with_stream_emitters(
+                              ^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 2585, in _with_stream_emitters
+    response = run()
+               ^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3824, in <lambda>
+    self.agent, lambda: self._call_wire(stream_attempt_id))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3804, in _call_wire
+    return self._call_anthropic(request_client)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3506, in _call_anthropic
+    stream = self._set_managed_stream(relay_llm.stream(self.api_kwargs, _open_anthropic_stream,
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/relay_llm.py", line 323, in __init__
+    self._start_unmanaged(request)
+  File "$WT_CARRIER/agent/relay_llm.py", line 329, in _start_unmanaged
+    raw_stream = self._stream_factory(request)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3494, in _open_anthropic_stream
+    return normalize_stream_usage(manager.__enter__())
+                                  ^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/lib/streaming/_messages.py", line 167, in __enter__
+    raw_stream = self.__api_request()
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1364, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1137, in request
+    raise self._make_status_error_from_response(err.response) from None
+anthropic.BadRequestError: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_276e59f649334735', 'type': 'error'}
+INFO     run_agent:client_lifecycle.py:537 Anthropic client closed (stream_error_cleanup, shared=False) provider=anthropic model=claude-opus-5-5
+WARNING  agent.conversation_loop:turn_recovery.py:1265 API call failed (attempt 1/1) error_type=BadRequestError thread=MainThread:139782233201536 provider=anthropic base_url= model=claude-opus-5-5 summary=HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+ERROR    agent.conversation_loop:turn_recovery.py:1177 API call failed after 1 retries. HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block". | provider=anthropic model=claude-opus-5-5 msgs=21 tokens=~15,260
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_112709_06f785 model=claude-opus-5-5 provider=anthropic platform=cli history=20 msg='read notes_07.txt and remember it'
+INFO     agent.conversation_loop:turn_iteration_prep.py:206 Repaired 1 message-alternation violations before request (session=20261001_112709_06f785)
+INFO     agent.conversation_loop:turn_iteration_prep.py:219 Re-anchored current_turn_user_idx 20 -> 19 after alternation repair (session=20261001_112709_06f785)
+INFO     agent.conversation_loop:turn_iteration_prep.py:231 Re-anchored stale current_turn_user_idx 19 -> 19 (session=20261001_112709_06f785)
+ERROR    agent.chat_completion_helpers:chat_completion_helpers.py:3724 Streaming failed before delivery: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_8cb93aafb3234d72', 'type': 'error'}
+Traceback (most recent call last):
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3823, in _call
+    self.result["response"] = _with_stream_emitters(
+                              ^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 2585, in _with_stream_emitters
+    response = run()
+               ^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3824, in <lambda>
+    self.agent, lambda: self._call_wire(stream_attempt_id))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3804, in _call_wire
+    return self._call_anthropic(request_client)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3506, in _call_anthropic
+    stream = self._set_managed_stream(relay_llm.stream(self.api_kwargs, _open_anthropic_stream,
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/relay_llm.py", line 323, in __init__
+    self._start_unmanaged(request)
+  File "$WT_CARRIER/agent/relay_llm.py", line 329, in _start_unmanaged
+    raw_stream = self._stream_factory(request)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3494, in _open_anthropic_stream
+    return normalize_stream_usage(manager.__enter__())
+                                  ^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/lib/streaming/_messages.py", line 167, in __enter__
+    raw_stream = self.__api_request()
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1364, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1137, in request
+    raise self._make_status_error_from_response(err.response) from None
+anthropic.BadRequestError: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_8cb93aafb3234d72', 'type': 'error'}
+INFO     run_agent:client_lifecycle.py:537 Anthropic client closed (stream_error_cleanup, shared=False) provider=anthropic model=claude-opus-5-5
+WARNING  agent.conversation_loop:turn_recovery.py:503 Thinking block signature recovery: stripped reasoning_details from 9 api_messages (canonical messages unchanged)
+ERROR    agent.chat_completion_helpers:chat_completion_helpers.py:3724 Streaming failed before delivery: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_5bd9208ef5b1434a', 'type': 'error'}
+Traceback (most recent call last):
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3823, in _call
+    self.result["response"] = _with_stream_emitters(
+                              ^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 2585, in _with_stream_emitters
+    response = run()
+               ^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3824, in <lambda>
+    self.agent, lambda: self._call_wire(stream_attempt_id))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3804, in _call_wire
+    return self._call_anthropic(request_client)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3506, in _call_anthropic
+    stream = self._set_managed_stream(relay_llm.stream(self.api_kwargs, _open_anthropic_stream,
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/relay_llm.py", line 323, in __init__
+    self._start_unmanaged(request)
+  File "$WT_CARRIER/agent/relay_llm.py", line 329, in _start_unmanaged
+    raw_stream = self._stream_factory(request)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3494, in _open_anthropic_stream
+    return normalize_stream_usage(manager.__enter__())
+                                  ^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/lib/streaming/_messages.py", line 167, in __enter__
+    raw_stream = self.__api_request()
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1364, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1137, in request
+    raise self._make_status_error_from_response(err.response) from None
+anthropic.BadRequestError: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_5bd9208ef5b1434a', 'type': 'error'}
+INFO     run_agent:client_lifecycle.py:537 Anthropic client closed (stream_error_cleanup, shared=False) provider=anthropic model=claude-opus-5-5
+WARNING  agent.conversation_loop:turn_recovery.py:1265 API call failed (attempt 1/1) error_type=BadRequestError thread=MainThread:139782233201536 provider=anthropic base_url= model=claude-opus-5-5 summary=HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+ERROR    agent.conversation_loop:turn_recovery.py:1177 API call failed after 1 retries. HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block". | provider=anthropic model=claude-opus-5-5 msgs=21 tokens=~15,269
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_112709_06f785 model=claude-opus-5-5 provider=anthropic platform=cli history=20 msg='read notes_08.txt and remember it'
+INFO     agent.conversation_loop:turn_iteration_prep.py:206 Repaired 1 message-alternation violations before request (session=20261001_112709_06f785)
+INFO     agent.conversation_loop:turn_iteration_prep.py:219 Re-anchored current_turn_user_idx 20 -> 19 after alternation repair (session=20261001_112709_06f785)
+INFO     agent.conversation_loop:turn_iteration_prep.py:231 Re-anchored stale current_turn_user_idx 19 -> 19 (session=20261001_112709_06f785)
+ERROR    agent.chat_completion_helpers:chat_completion_helpers.py:3724 Streaming failed before delivery: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_c8d3abbc41e1443b', 'type': 'error'}
+Traceback (most recent call last):
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3823, in _call
+    self.result["response"] = _with_stream_emitters(
+                              ^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 2585, in _with_stream_emitters
+    response = run()
+               ^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3824, in <lambda>
+    self.agent, lambda: self._call_wire(stream_attempt_id))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3804, in _call_wire
+    return self._call_anthropic(request_client)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3506, in _call_anthropic
+    stream = self._set_managed_stream(relay_llm.stream(self.api_kwargs, _open_anthropic_stream,
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/relay_llm.py", line 323, in __init__
+    self._start_unmanaged(request)
+  File "$WT_CARRIER/agent/relay_llm.py", line 329, in _start_unmanaged
+    raw_stream = self._stream_factory(request)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3494, in _open_anthropic_stream
+    return normalize_stream_usage(manager.__enter__())
+                                  ^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/lib/streaming/_messages.py", line 167, in __enter__
+    raw_stream = self.__api_request()
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1364, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1137, in request
+    raise self._make_status_error_from_response(err.response) from None
+anthropic.BadRequestError: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_c8d3abbc41e1443b', 'type': 'error'}
+INFO     run_agent:client_lifecycle.py:537 Anthropic client closed (stream_error_cleanup, shared=False) provider=anthropic model=claude-opus-5-5
+WARNING  agent.conversation_loop:turn_recovery.py:503 Thinking block signature recovery: stripped reasoning_details from 9 api_messages (canonical messages unchanged)
+ERROR    agent.chat_completion_helpers:chat_completion_helpers.py:3724 Streaming failed before delivery: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_00271d52e9d34af6', 'type': 'error'}
+Traceback (most recent call last):
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3823, in _call
+    self.result["response"] = _with_stream_emitters(
+                              ^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 2585, in _with_stream_emitters
+    response = run()
+               ^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3824, in <lambda>
+    self.agent, lambda: self._call_wire(stream_attempt_id))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3804, in _call_wire
+    return self._call_anthropic(request_client)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3506, in _call_anthropic
+    stream = self._set_managed_stream(relay_llm.stream(self.api_kwargs, _open_anthropic_stream,
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/relay_llm.py", line 323, in __init__
+    self._start_unmanaged(request)
+  File "$WT_CARRIER/agent/relay_llm.py", line 329, in _start_unmanaged
+    raw_stream = self._stream_factory(request)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3494, in _open_anthropic_stream
+    return normalize_stream_usage(manager.__enter__())
+                                  ^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/lib/streaming/_messages.py", line 167, in __enter__
+    raw_stream = self.__api_request()
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1364, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1137, in request
+    raise self._make_status_error_from_response(err.response) from None
+anthropic.BadRequestError: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_00271d52e9d34af6', 'type': 'error'}
+INFO     run_agent:client_lifecycle.py:537 Anthropic client closed (stream_error_cleanup, shared=False) provider=anthropic model=claude-opus-5-5
+WARNING  agent.conversation_loop:turn_recovery.py:1265 API call failed (attempt 1/1) error_type=BadRequestError thread=MainThread:139782233201536 provider=anthropic base_url= model=claude-opus-5-5 summary=HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+ERROR    agent.conversation_loop:turn_recovery.py:1177 API call failed after 1 retries. HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block". | provider=anthropic model=claude-opus-5-5 msgs=21 tokens=~15,278
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_112709_06f785 model=claude-opus-5-5 provider=anthropic platform=cli history=20 msg='read notes_09.txt and remember it'
+INFO     agent.conversation_loop:turn_iteration_prep.py:206 Repaired 1 message-alternation violations before request (session=20261001_112709_06f785)
+INFO     agent.conversation_loop:turn_iteration_prep.py:219 Re-anchored current_turn_user_idx 20 -> 19 after alternation repair (session=20261001_112709_06f785)
+INFO     agent.conversation_loop:turn_iteration_prep.py:231 Re-anchored stale current_turn_user_idx 19 -> 19 (session=20261001_112709_06f785)
+ERROR    agent.chat_completion_helpers:chat_completion_helpers.py:3724 Streaming failed before delivery: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_e3c0d239e2264fe6', 'type': 'error'}
+Traceback (most recent call last):
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3823, in _call
+    self.result["response"] = _with_stream_emitters(
+                              ^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 2585, in _with_stream_emitters
+    response = run()
+               ^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3824, in <lambda>
+    self.agent, lambda: self._call_wire(stream_attempt_id))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3804, in _call_wire
+    return self._call_anthropic(request_client)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3506, in _call_anthropic
+    stream = self._set_managed_stream(relay_llm.stream(self.api_kwargs, _open_anthropic_stream,
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/relay_llm.py", line 323, in __init__
+    self._start_unmanaged(request)
+  File "$WT_CARRIER/agent/relay_llm.py", line 329, in _start_unmanaged
+    raw_stream = self._stream_factory(request)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3494, in _open_anthropic_stream
+    return normalize_stream_usage(manager.__enter__())
+                                  ^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/lib/streaming/_messages.py", line 167, in __enter__
+    raw_stream = self.__api_request()
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1364, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1137, in request
+    raise self._make_status_error_from_response(err.response) from None
+anthropic.BadRequestError: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_e3c0d239e2264fe6', 'type': 'error'}
+INFO     run_agent:client_lifecycle.py:537 Anthropic client closed (stream_error_cleanup, shared=False) provider=anthropic model=claude-opus-5-5
+WARNING  agent.conversation_loop:turn_recovery.py:503 Thinking block signature recovery: stripped reasoning_details from 9 api_messages (canonical messages unchanged)
+ERROR    agent.chat_completion_helpers:chat_completion_helpers.py:3724 Streaming failed before delivery: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_df074dc7096e4d0e', 'type': 'error'}
+Traceback (most recent call last):
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3823, in _call
+    self.result["response"] = _with_stream_emitters(
+                              ^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 2585, in _with_stream_emitters
+    response = run()
+               ^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3824, in <lambda>
+    self.agent, lambda: self._call_wire(stream_attempt_id))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3804, in _call_wire
+    return self._call_anthropic(request_client)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3506, in _call_anthropic
+    stream = self._set_managed_stream(relay_llm.stream(self.api_kwargs, _open_anthropic_stream,
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/relay_llm.py", line 323, in __init__
+    self._start_unmanaged(request)
+  File "$WT_CARRIER/agent/relay_llm.py", line 329, in _start_unmanaged
+    raw_stream = self._stream_factory(request)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3494, in _open_anthropic_stream
+    return normalize_stream_usage(manager.__enter__())
+                                  ^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/lib/streaming/_messages.py", line 167, in __enter__
+    raw_stream = self.__api_request()
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1364, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1137, in request
+    raise self._make_status_error_from_response(err.response) from None
+anthropic.BadRequestError: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_df074dc7096e4d0e', 'type': 'error'}
+INFO     run_agent:client_lifecycle.py:537 Anthropic client closed (stream_error_cleanup, shared=False) provider=anthropic model=claude-opus-5-5
+WARNING  agent.conversation_loop:turn_recovery.py:1265 API call failed (attempt 1/1) error_type=BadRequestError thread=MainThread:139782233201536 provider=anthropic base_url= model=claude-opus-5-5 summary=HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+ERROR    agent.conversation_loop:turn_recovery.py:1177 API call failed after 1 retries. HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block". | provider=anthropic model=claude-opus-5-5 msgs=21 tokens=~15,287
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_112709_06f785 model=claude-opus-5-5 provider=anthropic platform=cli history=20 msg='read notes_10.txt and remember it'
+INFO     agent.conversation_loop:turn_iteration_prep.py:206 Repaired 1 message-alternation violations before request (session=20261001_112709_06f785)
+INFO     agent.conversation_loop:turn_iteration_prep.py:219 Re-anchored current_turn_user_idx 20 -> 19 after alternation repair (session=20261001_112709_06f785)
+INFO     agent.conversation_loop:turn_iteration_prep.py:231 Re-anchored stale current_turn_user_idx 19 -> 19 (session=20261001_112709_06f785)
+ERROR    agent.chat_completion_helpers:chat_completion_helpers.py:3724 Streaming failed before delivery: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_24e8a83299144025', 'type': 'error'}
+Traceback (most recent call last):
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3823, in _call
+    self.result["response"] = _with_stream_emitters(
+                              ^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 2585, in _with_stream_emitters
+    response = run()
+               ^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3824, in <lambda>
+    self.agent, lambda: self._call_wire(stream_attempt_id))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3804, in _call_wire
+    return self._call_anthropic(request_client)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3506, in _call_anthropic
+    stream = self._set_managed_stream(relay_llm.stream(self.api_kwargs, _open_anthropic_stream,
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/relay_llm.py", line 323, in __init__
+    self._start_unmanaged(request)
+  File "$WT_CARRIER/agent/relay_llm.py", line 329, in _start_unmanaged
+    raw_stream = self._stream_factory(request)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3494, in _open_anthropic_stream
+    return normalize_stream_usage(manager.__enter__())
+                                  ^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/lib/streaming/_messages.py", line 167, in __enter__
+    raw_stream = self.__api_request()
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1364, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1137, in request
+    raise self._make_status_error_from_response(err.response) from None
+anthropic.BadRequestError: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_24e8a83299144025', 'type': 'error'}
+INFO     run_agent:client_lifecycle.py:537 Anthropic client closed (stream_error_cleanup, shared=False) provider=anthropic model=claude-opus-5-5
+WARNING  agent.conversation_loop:turn_recovery.py:503 Thinking block signature recovery: stripped reasoning_details from 9 api_messages (canonical messages unchanged)
+ERROR    agent.chat_completion_helpers:chat_completion_helpers.py:3724 Streaming failed before delivery: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_186d7366160b49dc', 'type': 'error'}
+Traceback (most recent call last):
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3823, in _call
+    self.result["response"] = _with_stream_emitters(
+                              ^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 2585, in _with_stream_emitters
+    response = run()
+               ^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3824, in <lambda>
+    self.agent, lambda: self._call_wire(stream_attempt_id))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3804, in _call_wire
+    return self._call_anthropic(request_client)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3506, in _call_anthropic
+    stream = self._set_managed_stream(relay_llm.stream(self.api_kwargs, _open_anthropic_stream,
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/relay_llm.py", line 323, in __init__
+    self._start_unmanaged(request)
+  File "$WT_CARRIER/agent/relay_llm.py", line 329, in _start_unmanaged
+    raw_stream = self._stream_factory(request)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3494, in _open_anthropic_stream
+    return normalize_stream_usage(manager.__enter__())
+                                  ^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/lib/streaming/_messages.py", line 167, in __enter__
+    raw_stream = self.__api_request()
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1364, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1137, in request
+    raise self._make_status_error_from_response(err.response) from None
+anthropic.BadRequestError: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_186d7366160b49dc', 'type': 'error'}
+INFO     run_agent:client_lifecycle.py:537 Anthropic client closed (stream_error_cleanup, shared=False) provider=anthropic model=claude-opus-5-5
+WARNING  agent.conversation_loop:turn_recovery.py:1265 API call failed (attempt 1/1) error_type=BadRequestError thread=MainThread:139782233201536 provider=anthropic base_url= model=claude-opus-5-5 summary=HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+ERROR    agent.conversation_loop:turn_recovery.py:1177 API call failed after 1 retries. HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block". | provider=anthropic model=claude-opus-5-5 msgs=21 tokens=~15,297
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=20261001_112709_06f785 model=claude-opus-5-5 provider=anthropic platform=cli history=20 msg='read notes_11.txt and remember it'
+INFO     agent.conversation_loop:turn_iteration_prep.py:206 Repaired 1 message-alternation violations before request (session=20261001_112709_06f785)
+INFO     agent.conversation_loop:turn_iteration_prep.py:219 Re-anchored current_turn_user_idx 20 -> 19 after alternation repair (session=20261001_112709_06f785)
+INFO     agent.conversation_loop:turn_iteration_prep.py:231 Re-anchored stale current_turn_user_idx 19 -> 19 (session=20261001_112709_06f785)
+ERROR    agent.chat_completion_helpers:chat_completion_helpers.py:3724 Streaming failed before delivery: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_621165dd22ef486b', 'type': 'error'}
+Traceback (most recent call last):
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3823, in _call
+    self.result["response"] = _with_stream_emitters(
+                              ^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 2585, in _with_stream_emitters
+    response = run()
+               ^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3824, in <lambda>
+    self.agent, lambda: self._call_wire(stream_attempt_id))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3804, in _call_wire
+    return self._call_anthropic(request_client)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3506, in _call_anthropic
+    stream = self._set_managed_stream(relay_llm.stream(self.api_kwargs, _open_anthropic_stream,
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/relay_llm.py", line 323, in __init__
+    self._start_unmanaged(request)
+  File "$WT_CARRIER/agent/relay_llm.py", line 329, in _start_unmanaged
+    raw_stream = self._stream_factory(request)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3494, in _open_anthropic_stream
+    return normalize_stream_usage(manager.__enter__())
+                                  ^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/lib/streaming/_messages.py", line 167, in __enter__
+    raw_stream = self.__api_request()
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1364, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1137, in request
+    raise self._make_status_error_from_response(err.response) from None
+anthropic.BadRequestError: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_621165dd22ef486b', 'type': 'error'}
+INFO     run_agent:client_lifecycle.py:537 Anthropic client closed (stream_error_cleanup, shared=False) provider=anthropic model=claude-opus-5-5
+WARNING  agent.conversation_loop:turn_recovery.py:503 Thinking block signature recovery: stripped reasoning_details from 9 api_messages (canonical messages unchanged)
+ERROR    agent.chat_completion_helpers:chat_completion_helpers.py:3724 Streaming failed before delivery: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_ab2e6328296041a9', 'type': 'error'}
+Traceback (most recent call last):
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3823, in _call
+    self.result["response"] = _with_stream_emitters(
+                              ^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 2585, in _with_stream_emitters
+    response = run()
+               ^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3824, in <lambda>
+    self.agent, lambda: self._call_wire(stream_attempt_id))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3804, in _call_wire
+    return self._call_anthropic(request_client)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3506, in _call_anthropic
+    stream = self._set_managed_stream(relay_llm.stream(self.api_kwargs, _open_anthropic_stream,
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/relay_llm.py", line 323, in __init__
+    self._start_unmanaged(request)
+  File "$WT_CARRIER/agent/relay_llm.py", line 329, in _start_unmanaged
+    raw_stream = self._stream_factory(request)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT_CARRIER/agent/chat_completion_helpers.py", line 3494, in _open_anthropic_stream
+    return normalize_stream_usage(manager.__enter__())
+                                  ^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/lib/streaming/_messages.py", line 167, in __enter__
+    raw_stream = self.__api_request()
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1364, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<shared venv checkout>/venv/lib/python3.11/site-packages/anthropic/_base_client.py", line 1137, in request
+    raise self._make_status_error_from_response(err.response) from None
+anthropic.BadRequestError: Error code: 400 - {'error': {'message': 'messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".', 'type': 'invalid_request_error'}, 'request_id': 'req_ab2e6328296041a9', 'type': 'error'}
+INFO     run_agent:client_lifecycle.py:537 Anthropic client closed (stream_error_cleanup, shared=False) provider=anthropic model=claude-opus-5-5
+WARNING  agent.conversation_loop:turn_recovery.py:1265 API call failed (attempt 1/1) error_type=BadRequestError thread=MainThread:139782233201536 provider=anthropic base_url= model=claude-opus-5-5 summary=HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".
+ERROR    agent.conversation_loop:turn_recovery.py:1177 API call failed after 1 retries. HTTP 400: messages.17.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block". | provider=anthropic model=claude-opus-5-5 msgs=21 tokens=~15,306
+=============================== warnings summary ===============================
+../../../../../../../../..<shared venv checkout>/venv/lib/python3.11/site-packages/_pytest/config/__init__.py:1345
+  <shared venv checkout>/venv/lib/python3.11/site-packages/_pytest/config/__init__.py:1345: PytestAssertRewriteWarning: Module already imported so cannot be rewritten; anyio
+    self._mark_plugins_for_rewrite(hook, disable_autoload)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/e2e/core/history/test_tool_result_projection_wire.py::test_projection_never_invalidates_replayed_preserved_thinking
+1 failed, 1 passed, 1 warning in 7.36s
+{
+  "arm": "carrier",
+  "repo_head": "15dff75cc860a14d06414c6bf31459397e1de912",
+  "pytest_rc": 1,
+  "outcomes": {
+    "test_projection_breaks_the_prefix_once_per_paid_batch_and_never_undoes_itself": {
+      "outcome": "passed",
+      "message": ""
+    },
+    "test_projection_never_invalidates_replayed_preserved_thinking": {
+      "outcome": "failed",
+      "message": "E       AssertionError: a request replayed preserved-thinking blocks over a rewritten conversation prefix (Anthropic drops them, or rejects the request on enforced accounts):"
+    }
+  },
+  "egress_blocked": []
+}

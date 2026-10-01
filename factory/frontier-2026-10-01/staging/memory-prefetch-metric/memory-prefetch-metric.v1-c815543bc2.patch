@@ -1,0 +1,328 @@
+From c815543bc2504eccaae9f6adce5046f41710f38c Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Thu, 1 Oct 2026 03:59:04 -0500
+Subject: [PATCH] feat(telemetry): count external memory prefetch outcomes and
+ wait
+
+MemoryManager._prefetch_provider blocks the turn on the external memory
+provider for up to the prefetch timeout (8 s), but none of its exits
+recorded anything. A provider that times out on most turns only shows up
+as a log warning; #124151 had to measure Hindsight's recall by hand to
+find that the 8 s bound was dropping prefetch on nearly every turn.
+
+Add hermes.memory.prefetch.count next to hermes.memory.op.count: one row
+per external-provider prefetch with
+- provider: a bundled memory plugin, else "plugin" (memory.op.count's rule)
+- outcome: success / empty / failed / timed_out / skipped (the previous
+  call is still running, so this turn did not ask the provider)
+- latency_bucket: how long the turn waited on it, in the tool-call buckets
+
+The row is recorded on the caller's thread at each exit, so a stuck call
+that returns late adds nothing. The builtin path is unchanged. Opt-in like
+the rest of shared metrics; never the query or the recalled text. Schema
+and the "what is collected" doc gain the matching entry.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ agent/memory_manager.py                       | 19 +++++--
+ .../hermes.shared_metrics.v3.schema.json      | 51 +++++++++++++++++++
+ .../observability/shared_metrics_contract.py  |  9 ++++
+ .../observability/shared_metrics_loop.py      | 21 ++++++++
+ tests/hermes_cli/test_shared_metrics_loop.py  | 42 ++++++++++++++-
+ .../developer-guide/relay-shared-metrics.md   |  1 +
+ 6 files changed, 137 insertions(+), 6 deletions(-)
+
+diff --git a/agent/memory_manager.py b/agent/memory_manager.py
+index d023a57f8b..a099c39258 100644
+--- a/agent/memory_manager.py
++++ b/agent/memory_manager.py
+@@ -12,6 +12,7 @@ import json
+ import logging
+ import re
+ import threading
++import time
+ from concurrent.futures import Future, ThreadPoolExecutor, wait
+ from functools import partial
+ from typing import Any, Callable, Dict, List, Optional
+@@ -460,6 +461,8 @@ class MemoryManager:
+         if provider.name == "builtin":
+             return provider.prefetch(query, session_id=session_id)
+ 
++        from hermes_cli.observability.shared_metrics_loop import record_memory_prefetch
++        started = time.monotonic()
+         result_box: Dict[str, Any] = {}
+ 
+         def _run() -> None:
+@@ -471,11 +474,14 @@ class MemoryManager:
+         thread = spawn_context_thread(_run, name=f"memory-prefetch-{provider.name}")
+         with self._external_prefetch_lock:
+             existing = self._external_prefetch_threads.get(provider.name)
+-            if existing is not None and existing.is_alive():
+-                logger.debug("Memory provider '%s' prefetch is still running; skipping this turn", provider.name)
+-                return ""
+-            self._external_prefetch_threads[provider.name] = thread
+-            thread.start()
++            in_flight = existing is not None and existing.is_alive()
++            if not in_flight:
++                self._external_prefetch_threads[provider.name] = thread
++                thread.start()
++        if in_flight:
++            logger.debug("Memory provider '%s' prefetch is still running; skipping this turn", provider.name)
++            record_memory_prefetch(provider.name, "skipped", started)
++            return ""
+ 
+         thread.join(self._external_prefetch_timeout)
+         if thread.is_alive():
+@@ -483,14 +489,17 @@ class MemoryManager:
+                 "Memory provider '%s' prefetch timed out after %.1fs; skipping it until "
+                 "the stuck call returns", provider.name, self._external_prefetch_timeout,
+             )
++            record_memory_prefetch(provider.name, "timed_out", started)
+             return ""
+ 
+         with self._external_prefetch_lock:
+             if self._external_prefetch_threads.get(provider.name) is thread:
+                 self._external_prefetch_threads.pop(provider.name, None)
+         if "error" in result_box:
++            record_memory_prefetch(provider.name, "failed", started)
+             raise result_box["error"]
+         result = result_box.get("value", "")
++        record_memory_prefetch(provider.name, "success" if result and result.strip() else "empty", started)
+         if result and result.strip():
+             # Prefetch is stamped into the user turn's api_content and replayed every later turn;
+             # spill oversized results like plugin hook output so one provider can't inflate the prefix.
+diff --git a/hermes_cli/observability/schemas/hermes.shared_metrics.v3.schema.json b/hermes_cli/observability/schemas/hermes.shared_metrics.v3.schema.json
+index ab1d04383e..21cfe11bf7 100644
+--- a/hermes_cli/observability/schemas/hermes.shared_metrics.v3.schema.json
++++ b/hermes_cli/observability/schemas/hermes.shared_metrics.v3.schema.json
+@@ -169,6 +169,9 @@
+           {
+             "$ref": "#/$defs/execution_backend_counter"
+           },
++          {
++            "$ref": "#/$defs/memory_prefetch_counter"
++          },
+           {
+             "$ref": "#/$defs/platform_health_counter"
+           },
+@@ -1965,6 +1968,54 @@
+         }
+       }
+     },
++    "memory_prefetch_counter": {
++      "type": "object",
++      "additionalProperties": false,
++      "required": [
++        "name",
++        "type",
++        "dimensions",
++        "value"
++      ],
++      "properties": {
++        "name": {
++          "const": "hermes.memory.prefetch.count"
++        },
++        "type": {
++          "const": "counter"
++        },
++        "dimensions": {
++          "type": "object",
++          "additionalProperties": false,
++          "required": [
++            "latency_bucket",
++            "outcome",
++            "provider"
++          ],
++          "properties": {
++            "latency_bucket": {
++              "$ref": "#/$defs/tool_latency_bucket"
++            },
++            "outcome": {
++              "enum": [
++                "empty",
++                "failed",
++                "skipped",
++                "success",
++                "timed_out"
++              ]
++            },
++            "provider": {
++              "$ref": "#/$defs/vocabulary_identifier"
++            }
++          }
++        },
++        "value": {
++          "type": "integer",
++          "minimum": 1
++        }
++      }
++    },
+     "catalog_identifier": {
+       "type": "string",
+       "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$",
+diff --git a/hermes_cli/observability/shared_metrics_contract.py b/hermes_cli/observability/shared_metrics_contract.py
+index 23e677e6be..c8443e4600 100644
+--- a/hermes_cli/observability/shared_metrics_contract.py
++++ b/hermes_cli/observability/shared_metrics_contract.py
+@@ -67,10 +67,12 @@ MEMORY_OP_MARK = "hermes.memory.op"
+ CURATOR_RUN_MARK = "hermes.curator.run"
+ DELEGATION_RUN_MARK = "hermes.delegation.run"
+ EXECUTION_BACKEND_MARK = "hermes.execution_backend"
++MEMORY_PREFETCH_MARK = "hermes.memory.prefetch"
+ MEMORY_OP_METRIC = "hermes.memory.op.count"
+ CURATOR_RUN_METRIC = "hermes.curator.run.count"
+ DELEGATION_RUN_METRIC = "hermes.delegation.run.count"
+ EXECUTION_BACKEND_METRIC = "hermes.execution_backend.count"
++MEMORY_PREFETCH_METRIC = "hermes.memory.prefetch.count"
+ # ---- end v4 loop ----
+ # ---- v4 model ----
+ MODEL_TOOL_QUALITY_MARK = "hermes.model_tool_quality"
+@@ -237,6 +239,9 @@ MEMORY_OPS = frozenset({"add", "other", "read", "remove", "replace", "search"})
+ MEMORY_OP_OUTCOMES = frozenset({"failed", "rejected", "success"})
+ # Who asked: the user's turn, or the unattended self-improvement review fork.
+ MEMORY_OP_ORIGINS = frozenset({"background_review", "foreground"})
++# An external provider's turn-start recall: context returned, nothing returned, raised, hit the
++# prefetch timeout, or not asked because its previous call is still running.
++MEMORY_PREFETCH_OUTCOMES = frozenset({"empty", "failed", "skipped", "success", "timed_out"})
+ CURATOR_OUTCOMES = frozenset({"failed", "skipped", "success"})
+ CURATOR_TRIGGERS = frozenset({"manual", "scheduled"})
+ DELEGATION_OUTCOMES = frozenset({"cancelled", "failed", "partial", "success"})
+@@ -749,6 +754,9 @@ _COUNTER_DIMENSION_VALUES: dict[str, dict[str, frozenset[str]]] = {
+         "backend": EXECUTION_BACKENDS, "error_class": TOOL_ERROR_CLASSES, "kind": EXECUTION_KINDS,
+         "outcome": EXECUTION_OUTCOMES,
+     },
++    MEMORY_PREFETCH_METRIC: {
++        "latency_bucket": TOOL_LATENCY_BUCKETS, "outcome": MEMORY_PREFETCH_OUTCOMES, "provider": MEMORY_PROVIDERS,
++    },
+     # ---- end v4 loop ----
+     # ---- v4 gateway ----
+     PLATFORM_HEALTH_METRIC: {
+@@ -945,6 +953,7 @@ _DECISION_MARK_METRICS = {
+     # ---- v4 loop ----
+     MEMORY_OP_MARK: MEMORY_OP_METRIC, CURATOR_RUN_MARK: CURATOR_RUN_METRIC,
+     DELEGATION_RUN_MARK: DELEGATION_RUN_METRIC, EXECUTION_BACKEND_MARK: EXECUTION_BACKEND_METRIC,
++    MEMORY_PREFETCH_MARK: MEMORY_PREFETCH_METRIC,
+     # ---- end v4 loop ----
+     # ---- v4 gateway ----
+     PLATFORM_HEALTH_MARK: PLATFORM_HEALTH_METRIC, PLATFORM_DELIVERY_MARK: PLATFORM_DELIVERY_METRIC,
+diff --git a/hermes_cli/observability/shared_metrics_loop.py b/hermes_cli/observability/shared_metrics_loop.py
+index 19892e8e2a..0e5e68bf26 100644
+--- a/hermes_cli/observability/shared_metrics_loop.py
++++ b/hermes_cli/observability/shared_metrics_loop.py
+@@ -15,6 +15,7 @@ import contextvars
+ import json
+ import logging
+ import threading
++import time
+ from dataclasses import dataclass, field
+ from typing import Any, Callable, Iterable, Iterator
+ 
+@@ -158,6 +159,26 @@ def record_provider_memory_call(provider: Any, tool_name: Any, args: Any, result
+     _record_memory_ops([memory_provider_op(tool_name, args)], provider=provider, outcome=outcome)
+ 
+ 
++def memory_prefetch_fields(*, provider: Any, outcome: Any, waited_ms: Any) -> dict[str, str]:
++    from .shared_metrics_contract import MEMORY_PREFETCH_OUTCOMES, tool_latency_bucket
++
++    outcome_value = _norm(outcome)
++    return {
++        "latency_bucket": tool_latency_bucket(waited_ms),
++        "outcome": outcome_value if outcome_value in MEMORY_PREFETCH_OUTCOMES else "failed",
++        "provider": memory_provider_name(provider),
++    }
++
++
++def record_memory_prefetch(provider: Any, outcome: str, started: float) -> None:
++    """One row per external-provider prefetch: what it returned and how long the turn waited on it
++    (``started`` is the caller's ``time.monotonic()``). Never the query or the recalled text."""
++    _emit(
++        "MEMORY_PREFETCH_MARK", memory_prefetch_fields, provider=provider, outcome=outcome,
++        waited_ms=(time.monotonic() - started) * 1000,
++    )
++
++
+ # ---- curator ---------------------------------------------------------------------------------
+ 
+ _CURATOR_COUNT_KEYS = ("archived", "created", "merged", "patched")
+diff --git a/tests/hermes_cli/test_shared_metrics_loop.py b/tests/hermes_cli/test_shared_metrics_loop.py
+index 3d29db97d8..df30f9a2a0 100644
+--- a/tests/hermes_cli/test_shared_metrics_loop.py
++++ b/tests/hermes_cli/test_shared_metrics_loop.py
+@@ -16,7 +16,7 @@ from tests.hermes_cli.test_relay_shared_metrics_runtime import direct_runtime  #
+ 
+ _LOOP_METRICS = {
+     "hermes.memory.op.count", "hermes.curator.run.count", "hermes.delegation.run.count",
+-    "hermes.execution_backend.count",
++    "hermes.execution_backend.count", "hermes.memory.prefetch.count",
+ }
+ 
+ 
+@@ -95,13 +95,53 @@ def test_memory_provider_tools_report_bounded_provider_and_op(home):
+     assert rows == [("honcho", "search", "success"), ("plugin", "add", "failed")]
+ 
+ 
++class _PrefetchProvider:
++    def __init__(self, name, prefetch):
++        self.name, self._prefetch = name, prefetch
++
++    def prefetch(self, query, *, session_id=""):
++        return self._prefetch()
++
++
++def test_external_prefetch_records_each_exit_with_how_long_the_turn_waited(home):
++    from agent.memory_manager import MemoryManager
++
++    release = threading.Event()
++    hung = _PrefetchProvider("acme-private-memory", lambda: release.wait(10) and "late")
++    manager = MemoryManager(external_prefetch_timeout=0.3)
++    manager._providers = [
++        _PrefetchProvider("honcho", lambda: "- prefers tabs"),
++        _PrefetchProvider("mem0", lambda: "  "),
++        _PrefetchProvider("supermemory", lambda: _raise()),
++        hung,
++    ]
++    assert manager.prefetch_all("what do I prefer?") == "- prefers tabs"
++    manager._providers = [hung]
++    assert manager.prefetch_all("and now?") == ""  # the first call is still stuck: not asked again
++    release.set()
++    manager._external_prefetch_threads["acme-private-memory"].join(5)  # its late return adds no row
++
++    rows = _rows(home, "hermes.memory.prefetch.count")
++    assert {(d["provider"], d["outcome"], d["latency_bucket"]): v for d, v in rows} == {
++        ("honcho", "success", "lt_100ms"): 1,
++        ("mem0", "empty", "lt_100ms"): 1,
++        ("supermemory", "failed", "lt_100ms"): 1,
++        ("plugin", "timed_out", "250ms_to_500ms"): 1,
++        ("plugin", "skipped", "lt_100ms"): 1,
++    }
++
++
+ def test_disabled_shared_metrics_record_no_loop_rows(home, monkeypatch):
+     monkeypatch.setattr(
+         "hermes_cli.config.read_raw_config_readonly", lambda: {"telemetry": {"shared_metrics": {"enabled": False}}},
+     )
++    from agent.memory_manager import MemoryManager
+     from tools.memory_tool import memory_tool
+ 
+     memory_tool("add", content="x", store=_memory_store())
++    manager = MemoryManager()
++    manager._providers = [_PrefetchProvider("honcho", lambda: "- prefers tabs")]
++    manager.prefetch_all("what do I prefer?")
+     loop.record_execution_backend("terminal", "local", '{"exit_code": 0, "error": null}')
+     loop.record_curator_run(trigger="manual", outcome="success")
+     relay_shared_metrics._reset_for_tests()
+diff --git a/website/docs/developer-guide/relay-shared-metrics.md b/website/docs/developer-guide/relay-shared-metrics.md
+index 2ae7663db8..c050c62d5e 100644
+--- a/website/docs/developer-guide/relay-shared-metrics.md
++++ b/website/docs/developer-guide/relay-shared-metrics.md
+@@ -313,6 +313,7 @@ itself ships.
+ | `hermes.slash_command.count` | command, surface | Which built-in commands are used (`/retry`, `/undo`, `/new` are friction signals). Skill and plugin commands report `skill`/`plugin`. |
+ | `hermes.extension.install.count` | kind, source, name, outcome | Which catalog skills, MCP servers and plugins get installed. `name` is a bundled/optional skill, `optional-mcps/` or `plugin-catalog/` entry, otherwise `custom`. |
+ | `hermes.memory.op.count` | op (`add`/`replace`/`remove`/`read`/`search`/`other`), provider (`builtin`, a bundled memory plugin, else `plugin`), origin (`foreground`/`background_review`), outcome (`success`/`failed`/`rejected`) | Is the learning loop writing memory, who asks for it (the user's turn or the background review), and how often writes are refused or fail. Never the memory text. |
++| `hermes.memory.prefetch.count` | provider (a bundled memory plugin, else `plugin`), outcome (`success`/`empty`/`failed`/`timed_out`/`skipped`), latency bucket (the tool-call buckets, `lt_100ms` … `gte_30s`) | How often the external memory provider's turn-start recall returns context, comes back empty, fails or hits the prefetch timeout, and how long the turn waited on it. `skipped` means its previous recall is still running, so this turn did not ask it. Never the query or the recalled text. |
+ | `hermes.curator.run.count` | trigger (`scheduled`/`manual`), outcome (`success`/`failed`/`skipped`), archived/merged/patched/created buckets | Does the skill curator run, and does it actually consolidate anything. Dry runs report `skipped`; a scheduled check that finds another process already running the pass records nothing. Never skill names. |
+ | `hermes.delegation.run.count` | subagent-count bucket, depth (`1`–`3`, `gte_4`), mode (`foreground`/`background`), outcome (`success`/`partial`/`failed`/`cancelled`) | How wide and deep delegate_task fan-outs go and how often every child finishes. One row per call, however many completion units it splits into. |
+ | `hermes.execution_backend.count` | kind (`terminal`/`browser`/`code`), backend, outcome, error class | Which sandboxes carry real work and how reliable each is. Terminal backends are the `terminal.backend` values (else `other`); browser backends are `local`, `lightpanda`, `cdp`, `camofox`, `extension` or a bundled cloud provider (else `other`); execute_code is `local` or `remote`. A command's own nonzero exit is still a backend success, but a foreground command that hits its timeout is `failed`/`timeout`; terminal and execute_code calls a guard refuses before they reach the backend, Hermes' own listings for TUI/Desktop path completion, and calls made by the background review and curator forks are not counted. |
+-- 
+2.55.0
+

@@ -1,0 +1,100 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compressor-media-extraction",
+ "base_revision": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+ "head_revision": "d2bff3a59edd1a9be5a90f5d84bbded1fbe04e8b",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#80636",
+  "NousResearch/hermes-agent#78645"
+ ],
+ "provenance": "self",
+ "privacy": "public-aggregate",
+ "cost_usd": 0.0,
+ "ai_assistance": "Claude Code (Opus 5.5) ran the experiment and wrote this receipt",
+ "created_at": "2026-10-01T05:21:43-05:00",
+ "spec": {
+  "path": null,
+  "prereg_commit": null,
+  "note": "not pre-registered on claude/ledger (no ledger writes in this run)"
+ },
+ "env": {
+  "host": "<local-host>",
+  "test_python": "3.11.14 (pytest 9.1.1, HERMES_PYTHON)",
+  "nav_python": "3.14.7 separate uv venv (tiktoken 0.14.0, radon 6.0.1)",
+  "sandbox": "none (no bwrap); HOME/HERMES_HOME pointed at scratch test homes; run_tests.sh env -i",
+  "load1_range": "3.4-13 (shared host)"
+ },
+ "id": "redgreen/r20261001-01",
+ "experiment": "RED (head's tests on base), GREEN (head), sabotage negative controls through real call paths",
+ "tier": "T1",
+ "label": "OBSERVED",
+ "inputs": {
+  "test_files": [
+   "tests/agent/test_compressor_historical_media.py",
+   "tests/agent/test_compressor_stale_tool_images.py",
+   "tests/agent/test_outbound_stale_vision.py",
+   "tests/agent/test_protected_tail_pressure.py",
+   "tests/agent/test_image_eviction_policy.py",
+   "tests/agent/test_compressor_zero_user_guard.py"
+  ]
+ },
+ "command": "HOME=$S/testhome-st-compressor-media-extraction-<arm> HERMES_HOME=$HOME/.hermes HERMES_PYTHON=$HERMES_PYTHON bash scripts/run_tests.sh -j 2 <files> -q -rfE",
+ "result": {
+  "red_on_base": {
+   "tree": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0 + head's test diff only",
+   "outcome": "4 of 5 changed test files fail to collect: ModuleNotFoundError: No module named 'agent.context_compressor_media'; test_image_eviction_policy.py (docstring-only change) 12 passed; test_compressor_zero_user_guard.py (unchanged) 6 passed",
+   "marker": "ModuleNotFoundError: No module named 'agent.context_compressor_media'"
+  },
+  "base_reference": {
+   "tree": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+   "outcome": "6 files, 57 passed, 0 failed"
+  },
+  "green_on_head": {
+   "tree": "d2bff3a59edd1a9be5a90f5d84bbded1fbe04e8b",
+   "reps": "3/3",
+   "outcome": "6 files, 57 passed, 0 failed in each of 3 reps (same 57 as base)"
+  },
+  "negative_controls": {
+   "N1a": {
+    "mutation": "sibling _strip_historical_media returns its input unchanged",
+    "outcome": "test_compressor_historical_media: 10 failed incl. TestCompressIntegration::test_compress_strips_historical_images and ::test_compress_frees_stale_vision_tool_results (ContextCompressor.compress() reaches the sibling)"
+   },
+   "N1b": {
+    "mutation": "sibling evict_stale_outbound_tool_images raises",
+    "outcome": "test_outbound_stale_vision 12/12 failed; test_image_rejection_fallback::test_iteration_summary_strips_images_for_rejecting_model and 4 test_iteration_summary_reasoning_details tests failed (chat_completion_helpers._iteration_summary_api_messages reaches the sibling)"
+   },
+   "N1c": {
+    "mutation": "same raise, conversation-loop tests",
+    "outcome": "8 failed across test_dict_tool_call_args, test_context_token_tracking, test_degenerate_final_recovery with traceback agent/turn_request_assembly.py:155 in assemble_api_request (the per-turn send path reaches the sibling)"
+   }
+  },
+  "reading": "A pure move has no behaviour to turn red. The RED here proves the tests now bind to the new module; the sabotage runs prove the facade, the iteration-summary path and the per-turn request path all execute the sibling's code, so the parity run below exercises it."
+ },
+ "raw": [
+  {
+   "path": "raw/red-base.log",
+   "sha256": "454f396e8b7111f413ee823d36d17ddf7da3f9e575621ebdff7713b567e5f691",
+   "source_sha256": "54009438b8303ea1fc68a03dbef65f83678c2732da1eaa47077ff680a2c06244"
+  },
+  {
+   "path": "raw/green-targeted.log",
+   "sha256": "3dc233a479f0124512d9463e0d950e77f901ae60839dfe8e33b0aa204907aa5a",
+   "source_sha256": "3dc233a479f0124512d9463e0d950e77f901ae60839dfe8e33b0aa204907aa5a"
+  },
+  {
+   "path": "raw/neg-n1.log",
+   "sha256": "147b7647de71b7fc1b82b1165f5a891bb4d46264773672374052fc224a5d83a2",
+   "source_sha256": "147b7647de71b7fc1b82b1165f5a891bb4d46264773672374052fc224a5d83a2"
+  },
+  {
+   "path": "raw/neg-n1c.log",
+   "sha256": "14fc4754c8209716bc52ebc7a419245fa285ed36ad169b0d5168781ac74f748d",
+   "source_sha256": "14fc4754c8209716bc52ebc7a419245fa285ed36ad169b0d5168781ac74f748d"
+  }
+ ],
+ "verdict": "PASS",
+ "privacy_scrub": "fix round 1 (2026-10-01): absolute local paths and the local user name were replaced with placeholders ($W/<tree>, $S, $HERMES_PYTHON, $HERMES_VENV, <uv>, <pytest-tmp>, pytest-of-<user>, ~). raw[].sha256 is the file as shipped after that scrub; raw[].source_sha256 is the pre-scrub original.",
+ "superseded_by": "redgreen/r20261001-02",
+ "superseded_note": "first build d2bff3a59e on 572e4f4fad; replaced in fix round 1 by c5e8be14b4 on aea969677c (same patch-id 2c92e56f); its sabotage was per-function (N1a-N1c), the per-hunk table is sabotage/r20261001-02"
+}

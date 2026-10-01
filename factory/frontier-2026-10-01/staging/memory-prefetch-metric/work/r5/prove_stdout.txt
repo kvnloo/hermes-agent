@@ -1,0 +1,19 @@
+red: === Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 16.0s (2 workers) === ['tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited'] ['E', "E         Right contains 5 more items, first extra item: ('honcho', 'success', 1)"]
+green_1 === Summary: 1 files, 16 tests passed, 0 failed (100% complete) in 8.1s (2 workers) === 
+green_2 === Summary: 1 files, 16 tests passed, 0 failed (100% complete) in 7.1s (2 workers) === 
+green_3 === Summary: 1 files, 16 tests passed, 0 failed (100% complete) in 6.9s (2 workers) === 
+sabotage_S1-skip-exit === Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 15.8s (2 workers) === ['tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited'] ['E']
+sabotage_S2-timeout-exit === Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 17.2s (2 workers) === ['tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited'] ['E']
+sabotage_S3-error-exit === Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 20.2s (2 workers) === ['tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited'] ['E']
+sabotage_S4-success-empty-exit === Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 19.0s (2 workers) === ['tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited'] ['E']
+sabotage_S5-mark-to-metric-mapping === Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 19.8s (2 workers) === ['tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited'] ['E']
+sabotage_S6-provider-rule-raw-name === Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 18.0s (2 workers) === ['tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited'] ['E']
+sabotage_S7-outcome-vocabulary-drift === Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 17.3s (2 workers) === ['tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited'] ['E']
+sabotage_S8-latency-not-measured === Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 16.8s (2 workers) === ['tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited'] ['E']
+sabotage_S9-empty-classification === Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 18.9s (2 workers) === ['tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited'] ['E']
+sabotage_S10-constant-latency-above-timeout === Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 18.5s (2 workers) === ['tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited'] ['E']
+stall_amended_1500ms === Summary: 1 files, 16 tests passed, 0 failed (100% complete) in 15.5s (2 workers) === [] []
+stall_round2_150ms === Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 15.7s (2 workers) === ['tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited'] ['E', "E          ('mem0', 'empty', '100ms_to_250ms'): 1,"]
+adj base: === Summary: 12 files, 330 tests passed, 0 failed (100% complete) in 51.1s (2 workers) === []
+adj head: === Summary: 12 files, 331 tests passed, 0 failed (100% complete) in 46.1s (2 workers) === []
+rc=0

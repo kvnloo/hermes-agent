@@ -1,0 +1,4967 @@
+{
+ "started_at": "2026-10-01T16:52:24Z",
+ "main": {
+  "sha": "aaa863f7ff2dec1821be1652b5d15ad14ecea70b",
+  "ls_remote_at": "2026-10-01T16:52:24Z",
+  "committer_date": "2026-10-01T22:17:57+05:30",
+  "base_is_ancestor": true,
+  "commits_since_base": 25,
+  "commits_since_r4_main": 4,
+  "invalidate_on_commits_since_base": [],
+  "invalidate_on_blobs_equal_base": {
+   "agent/memory_manager.py": true,
+   "hermes_cli/observability/shared_metrics_loop.py": true,
+   "hermes_cli/observability/shared_metrics_contract.py": true,
+   "hermes_cli/observability/schemas/hermes.shared_metrics.v3.schema.json": true,
+   "tests/hermes_cli/test_shared_metrics_loop.py": true,
+   "website/docs/developer-guide/relay-shared-metrics.md": true,
+   "agent/memory_provider.py": true,
+   "agent/turn_context.py": true
+  },
+  "github_commits_since_base": [],
+  "workflow_files": 52,
+  "merge_tree_head": {
+   "clean": true,
+   "tree": "21c423feb3df08111ba13bd5cf8af2161c21af23"
+  },
+  "prefetch_grep_since_base": []
+ },
+ "staging_ref": "569ad4d84b0f9888ea2598c2a8ea416b2c75bad6",
+ "fork_refs": {
+  "checked_at": "2026-10-01T16:52:26Z",
+  "refs": [
+   "refs/heads/staged/cu-capture-mode-projection",
+   "refs/heads/staged/cu-repeat-input-dedup",
+   "refs/heads/staged/observer-hooks-doc-drift",
+   "refs/heads/staged/postmortem-logcalls-zero-hit",
+   "refs/heads/staged/prefix-parity-journeys",
+   "refs/heads/staging"
+  ],
+  "staged_memory_prefetch_metric_present": false
+ },
+ "cited_checked_at": "2026-10-01T16:52:26Z",
+ "cited": {
+  "98045": {
+   "state": "closed",
+   "state_reason": null,
+   "is_pr": true,
+   "author": "Navlem",
+   "created_at": "2026-08-29T17:24:07Z",
+   "closed_at": "2026-10-01T12:51:06Z",
+   "updated_at": "2026-10-01T12:51:06Z",
+   "merged_at": null,
+   "title": "feat(memory): make external provider prefetch timeout configurable",
+   "head": "77f018b7db7bb82c0163531a61605bf7245d03ce",
+   "mergeable_state": "clean",
+   "closed_by": [
+    "Navlem"
+   ],
+   "comments_since_2026_09_25": [
+    {
+     "user": "Navlem",
+     "at": "2026-10-01T12:51:05Z",
+     "body": "Closing as a duplicate of open #87028, which covers the same external_prefetch_timeout registration/handoff with stronger validation. This is not fixed on main. The keeper still needs rebase, actual _init_memory wiring tests, sample/docs, and coordination with provider-specific defaults. Preserve configured/invalid/missing-value tests in that work."
+    }
+   ]
+  },
+  "87028": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": true,
+   "author": "richardclawbot",
+   "created_at": "2026-08-15T13:53:59Z",
+   "closed_at": null,
+   "updated_at": "2026-09-06T04:08:38Z",
+   "merged_at": null,
+   "title": "fix(memory): honor external prefetch timeout",
+   "head": "f63bfa2a5c3c614a19dc2f8a7440d3e7f71d349b",
+   "mergeable_state": "unknown"
+  },
+  "124151": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": true,
+   "author": "kweez007",
+   "created_at": "2026-09-26T17:14:46Z",
+   "closed_at": null,
+   "updated_at": "2026-09-28T10:00:03Z",
+   "merged_at": null,
+   "title": "fix(memory): raise Hindsight external-prefetch timeout 8s -> 20s",
+   "head": "3ee6189dbad0485790893c5098b20f00d27a1d51",
+   "mergeable_state": "unknown"
+  },
+  "120042": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": true,
+   "author": "Navlem",
+   "created_at": "2026-09-23T08:45:46Z",
+   "closed_at": null,
+   "updated_at": "2026-09-23T08:51:55Z",
+   "merged_at": null,
+   "title": "fix(agent): raise external prefetch bound to 12s so real slow recalls are not dropped",
+   "head": "641f6b94c5e11f4758844af6112705083862562d",
+   "mergeable_state": "unknown"
+  },
+  "47119": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": false,
+   "author": "jbienz",
+   "created_at": "2026-06-16T08:06:44Z",
+   "closed_at": null,
+   "updated_at": "2026-08-14T08:53:43Z",
+   "merged_at": null,
+   "title": "[Bug]: Memory provider tools sometimes not injected"
+  },
+  "21566": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": false,
+   "author": "pikos-apikos",
+   "created_at": "2026-05-07T23:38:01Z",
+   "closed_at": null,
+   "updated_at": "2026-09-18T07:16:46Z",
+   "merged_at": null,
+   "title": "Auxiliary LLM calls (session_search, skills_hub, etc.) use short 30s default timeout with no local-endpoint detection — causes retry storms on slow local inference"
+  },
+  "92118": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": true,
+   "author": "seradin",
+   "created_at": "2026-08-22T07:27:51Z",
+   "closed_at": null,
+   "updated_at": "2026-09-25T01:26:17Z",
+   "merged_at": null,
+   "title": "feat(memory): add operation-bound structured prefetch observations",
+   "head": "2ad5cc73fac3e519deec7d4d9ff6eccb494aa953",
+   "mergeable_state": "unknown"
+  },
+  "126457": {
+   "state": "closed",
+   "state_reason": null,
+   "is_pr": true,
+   "author": "mozhongzhou",
+   "created_at": "2026-09-28T13:24:52Z",
+   "closed_at": "2026-10-01T16:23:32Z",
+   "updated_at": "2026-10-01T16:23:32Z",
+   "merged_at": null,
+   "title": "feat(cli): add memory provider runtime health indicator to status bar",
+   "head": "822f7b28358e47b1c6517981df2f791b67f2bd4a",
+   "mergeable_state": "blocked",
+   "closed_by": [
+    "mozhongzhou"
+   ],
+   "comments_since_2026_09_25": []
+  },
+  "86948": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": true,
+   "author": "V0v1kkkAssistant",
+   "created_at": "2026-08-15T12:00:50Z",
+   "closed_at": null,
+   "updated_at": "2026-08-20T14:56:04Z",
+   "merged_at": null,
+   "title": "feat(memory): make provider timeouts configurable",
+   "head": "cc1c2a1f2c4875f29c63f27981dfb8b3f54252e9",
+   "mergeable_state": "unknown"
+  },
+  "65329": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": true,
+   "author": "Soju06",
+   "created_at": "2026-07-16T02:31:06Z",
+   "closed_at": null,
+   "updated_at": "2026-07-30T01:59:54Z",
+   "merged_at": null,
+   "title": "feat(telemetry): opt-in per-turn waterfall tracing (config: agent.turn_trace)",
+   "head": "c868eaaa02a340071e14fdaaec99fad9b77357f9",
+   "mergeable_state": "unknown"
+  },
+  "125802": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": true,
+   "author": "Finn763",
+   "created_at": "2026-09-27T22:50:00Z",
+   "closed_at": null,
+   "updated_at": "2026-09-27T23:01:22Z",
+   "merged_at": null,
+   "title": "fix(core): #8893 decouple memory prefetch from user-message channel",
+   "head": "543af5de1910ba995540d71435cae30307c65b69",
+   "mergeable_state": "unknown"
+  },
+  "15412": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": true,
+   "author": "tabtablabs-dev",
+   "created_at": "2026-04-24T23:28:57Z",
+   "closed_at": null,
+   "updated_at": "2026-07-19T11:30:38Z",
+   "merged_at": null,
+   "title": "fix(memory): preview external prefetch context in Discord progress",
+   "head": "69c5a4132128ca289fc4a605772696d6a69b69de",
+   "mergeable_state": "unknown"
+  },
+  "113678": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": true,
+   "author": "teknium1",
+   "created_at": "2026-09-17T02:16:18Z",
+   "closed_at": null,
+   "updated_at": "2026-09-27T01:29:57Z",
+   "merged_at": null,
+   "title": "feat(cli): --disable-tools and tools.disabled_functions remove single tools below toolset granularity (salvage #110774, #69675)",
+   "head": "b94a4824978fc4b558962cdf0ba2675d422ebb14",
+   "mergeable_state": "dirty"
+  },
+  "78584": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": true,
+   "author": "iso2kx",
+   "created_at": "2026-08-04T15:41:06Z",
+   "closed_at": null,
+   "updated_at": "2026-09-07T14:42:13Z",
+   "merged_at": null,
+   "title": "feat(sessions): add temporary chats that leave nothing on disk",
+   "head": "e7c6f83e8a1d50e2091eaafbe9b686df245bc60c",
+   "mergeable_state": "unknown"
+  },
+  "127373": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": false,
+   "author": "kvnloo",
+   "created_at": "2026-09-29T04:42:53Z",
+   "closed_at": null,
+   "updated_at": "2026-09-29T05:56:31Z",
+   "merged_at": null,
+   "title": "perf(tui): drive pet refresh from pet.changed with a slow backstop"
+  },
+  "127374": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": false,
+   "author": "kvnloo",
+   "created_at": "2026-09-29T04:42:56Z",
+   "closed_at": null,
+   "updated_at": "2026-09-29T06:10:30Z",
+   "merged_at": null,
+   "title": "perf(tui): replace steady config mtime RPC polling with a gateway change signal"
+  },
+  "127375": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": false,
+   "author": "kvnloo",
+   "created_at": "2026-09-29T04:42:58Z",
+   "closed_at": null,
+   "updated_at": "2026-09-29T05:56:27Z",
+   "merged_at": null,
+   "title": "perf(tui): pause git branch subprocess polling when the status label is hidden"
+  },
+  "127332": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": false,
+   "author": "kvnloo",
+   "created_at": "2026-09-29T03:49:05Z",
+   "closed_at": null,
+   "updated_at": "2026-09-29T06:10:32Z",
+   "merged_at": null,
+   "title": "TUI: give the composer a zero-row visual boundary"
+  },
+  "127228": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": false,
+   "author": "kvnloo",
+   "created_at": "2026-09-29T01:52:22Z",
+   "closed_at": null,
+   "updated_at": "2026-09-29T05:56:40Z",
+   "merged_at": null,
+   "title": "[Feature]: HUD quicklaunch — warm summon under 200ms, not a cold Desktop boot"
+  },
+  "125881": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": true,
+   "author": "pstarkgit",
+   "created_at": "2026-09-28T01:05:16Z",
+   "closed_at": null,
+   "updated_at": "2026-10-01T13:21:06Z",
+   "merged_at": null,
+   "title": "Add fail-closed policy hooks for memory admission and compression commits",
+   "head": "d3fdffcf82a0aee790b9327f0f23b60ad03390f2",
+   "mergeable_state": "unknown"
+  },
+  "108965": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": true,
+   "author": "jonpol01",
+   "created_at": "2026-09-12T09:14:05Z",
+   "closed_at": null,
+   "updated_at": "2026-09-26T15:43:08Z",
+   "merged_at": null,
+   "title": "fix(memory): sanitize recalled context to a fixed point so overlapping fence tags cannot reassemble",
+   "head": "39dd41fe689c37a18cc3c23bb16487f1e88b0f79",
+   "mergeable_state": "unknown"
+  },
+  "129620": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": true,
+   "author": "JoaoMarcos44",
+   "created_at": "2026-09-30T20:25:28Z",
+   "closed_at": null,
+   "updated_at": "2026-10-01T15:39:28Z",
+   "merged_at": null,
+   "title": "fix(anthropic): make preserved-thinking replay coherent",
+   "head": "588b746cf6a092a974629aec44dcb8077107307b",
+   "mergeable_state": "blocked"
+  },
+  "64421": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": true,
+   "author": "yingliang-zhang",
+   "created_at": "2026-07-14T13:16:19Z",
+   "closed_at": null,
+   "updated_at": "2026-09-28T08:22:59Z",
+   "merged_at": null,
+   "title": "fix(memory): frame recalled context as untrusted data",
+   "head": "b6df099a1abb47098fc41aa70dcadc27768495a4",
+   "mergeable_state": "unknown"
+  },
+  "68903": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": true,
+   "author": "nuffin",
+   "created_at": "2026-07-21T20:24:35Z",
+   "closed_at": null,
+   "updated_at": "2026-09-26T06:45:28Z",
+   "merged_at": null,
+   "title": "feat(agent): add memory_mode parameter with 'on_demand' option for sub-agents",
+   "head": "bce652651f55dd51e0a9007f4241f63ccb0e5fbe",
+   "mergeable_state": "unknown"
+  },
+  "81582": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": true,
+   "author": "x7peeps",
+   "created_at": "2026-08-08T07:53:16Z",
+   "closed_at": null,
+   "updated_at": "2026-09-24T01:40:06Z",
+   "merged_at": null,
+   "title": "feat(agent): proactive feature router — suggest the right Hermes capability at the right time",
+   "head": "36dcc4dfc856a776c283f6e9bdc9bd3856468040",
+   "mergeable_state": "unknown"
+  },
+  "84360": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": true,
+   "author": "TurboAnbeli",
+   "created_at": "2026-08-12T07:13:47Z",
+   "closed_at": null,
+   "updated_at": "2026-09-08T03:24:05Z",
+   "merged_at": null,
+   "title": "fix(memory): frame recalled memory as untrusted, non-authoritative context (#84251)",
+   "head": "b856e237064396677c32163ed30b3cd1dc27d251",
+   "mergeable_state": "unknown"
+  },
+  "115109": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": true,
+   "author": "liuhao1024",
+   "created_at": "2026-09-18T13:53:17Z",
+   "closed_at": null,
+   "updated_at": "2026-09-24T23:40:13Z",
+   "merged_at": null,
+   "title": "fix(memory): scrub provider-synced turns with the egress redactor",
+   "head": "65d141f5ecbaa5120964050ded3c80e3622161c9",
+   "mergeable_state": "unknown"
+  },
+  "115694": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": true,
+   "author": "aniruddhaadak80",
+   "created_at": "2026-09-19T05:42:51Z",
+   "closed_at": null,
+   "updated_at": "2026-09-19T05:57:23Z",
+   "merged_at": null,
+   "title": "fix(memory): scrub secrets before memory-provider egress",
+   "head": "a9e3edd6ee7bab444c50f44a70e0db621248d9bd",
+   "mergeable_state": "unknown"
+  },
+  "98703": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": true,
+   "author": "oleg-koval",
+   "created_at": "2026-08-30T16:29:16Z",
+   "closed_at": null,
+   "updated_at": "2026-10-01T16:47:28Z",
+   "merged_at": null,
+   "title": "feat: add safe pre-agent turn routing middleware",
+   "head": "6771ca2f4fe100c442b6cd4dd9810017bf837aa2",
+   "mergeable_state": "blocked"
+  },
+  "58597": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": true,
+   "author": "JandY95",
+   "created_at": "2026-07-05T01:38:03Z",
+   "closed_at": null,
+   "updated_at": "2026-07-15T18:43:39Z",
+   "merged_at": null,
+   "title": "context-health: add auto context governance phases 1-9",
+   "head": "ae6946c1fcc0a2b4b22ff8c961abccf6b1f2ffcc",
+   "mergeable_state": "unknown"
+  },
+  "63759": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": true,
+   "author": "gcunharodrigues",
+   "created_at": "2026-07-13T12:52:18Z",
+   "closed_at": null,
+   "updated_at": "2026-07-19T16:41:18Z",
+   "merged_at": null,
+   "title": "fix(gateway): run a session's stdio MCP servers in that session's project cwd",
+   "head": "3165890dc81e3a155f17508790f3b8533ff5c0a6",
+   "mergeable_state": "unknown"
+  },
+  "84412": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": true,
+   "author": "TurboAnbeli",
+   "created_at": "2026-08-12T08:27:46Z",
+   "closed_at": null,
+   "updated_at": "2026-09-18T14:34:56Z",
+   "merged_at": null,
+   "title": "feat(memory): structured recall-provenance envelope (RecallItem) — tier B of #84251",
+   "head": "30c9b1253c58db4085a1a932b1124819613fa960",
+   "mergeable_state": "unknown"
+  },
+  "101580": {
+   "state": "open",
+   "state_reason": null,
+   "is_pr": true,
+   "author": "stepanov1975",
+   "created_at": "2026-09-02T19:57:39Z",
+   "closed_at": null,
+   "updated_at": "2026-09-07T14:58:20Z",
+   "merged_at": null,
+   "title": "feat(memory): plan recall for vague follow-up messages",
+   "head": "d24b4d404265f0b4832c7f54baf9409bfe41640b",
+   "mergeable_state": "unknown"
+  }
+ },
+ "pr126457": {
+  "timeline": [
+   {
+    "event": "committed",
+    "at": null,
+    "actor": null,
+    "source": null
+   },
+   {
+    "event": "committed",
+    "at": null,
+    "actor": null,
+    "source": null
+   },
+   {
+    "event": "review_requested",
+    "at": "2026-09-28T13:24:53Z",
+    "actor": "mozhongzhou",
+    "source": null
+   },
+   {
+    "event": "copilot_work_started",
+    "at": "2026-09-28T13:25:34Z",
+    "actor": "mozhongzhou",
+    "source": null
+   },
+   {
+    "event": "reviewed",
+    "at": null,
+    "actor": "Copilot",
+    "source": null
+   },
+   {
+    "event": "labeled",
+    "at": "2026-09-28T13:35:14Z",
+    "actor": "alt-glitch",
+    "source": null
+   },
+   {
+    "event": "labeled",
+    "at": "2026-09-28T13:35:14Z",
+    "actor": "alt-glitch",
+    "source": null
+   },
+   {
+    "event": "labeled",
+    "at": "2026-09-28T13:35:14Z",
+    "actor": "alt-glitch",
+    "source": null
+   },
+   {
+    "event": "labeled",
+    "at": "2026-09-28T13:35:14Z",
+    "actor": "alt-glitch",
+    "source": null
+   },
+   {
+    "event": "labeled",
+    "at": "2026-09-28T13:35:14Z",
+    "actor": "alt-glitch",
+    "source": null
+   },
+   {
+    "event": "labeled",
+    "at": "2026-09-28T13:35:14Z",
+    "actor": "alt-glitch",
+    "source": null
+   },
+   {
+    "event": "labeled",
+    "at": "2026-09-28T13:35:14Z",
+    "actor": "alt-glitch",
+    "source": null
+   },
+   {
+    "event": "committed",
+    "at": null,
+    "actor": null,
+    "source": null
+   },
+   {
+    "event": "review_requested",
+    "at": "2026-09-28T14:15:49Z",
+    "actor": "mozhongzhou",
+    "source": null
+   },
+   {
+    "event": "copilot_work_started",
+    "at": "2026-09-28T14:16:24Z",
+    "actor": "mozhongzhou",
+    "source": null
+   },
+   {
+    "event": "reviewed",
+    "at": null,
+    "actor": "Copilot",
+    "source": null
+   },
+   {
+    "event": "committed",
+    "at": null,
+    "actor": null,
+    "source": null
+   },
+   {
+    "event": "review_requested",
+    "at": "2026-09-28T14:50:02Z",
+    "actor": "mozhongzhou",
+    "source": null
+   },
+   {
+    "event": "reviewed",
+    "at": null,
+    "actor": "Copilot",
+    "source": null
+   },
+   {
+    "event": "committed",
+    "at": null,
+    "actor": null,
+    "source": null
+   },
+   {
+    "event": "review_requested",
+    "at": "2026-09-28T21:41:04Z",
+    "actor": "mozhongzhou",
+    "source": null
+   },
+   {
+    "event": "reviewed",
+    "at": null,
+    "actor": "Copilot",
+    "source": null
+   },
+   {
+    "event": "committed",
+    "at": null,
+    "actor": null,
+    "source": null
+   },
+   {
+    "event": "committed",
+    "at": null,
+    "actor": null,
+    "source": null
+   },
+   {
+    "event": "closed",
+    "at": "2026-10-01T16:23:32Z",
+    "actor": "mozhongzhou",
+    "source": null
+   }
+  ],
+  "all_comments": [],
+  "review_comments": 6,
+  "files": [
+   "agent/agent_init.py",
+   "agent/memory_health.py",
+   "agent/memory_manager.py",
+   "agent/memory_provider.py",
+   "hermes_cli/cli_status_bar_mixin.py",
+   "hermes_cli/cli_tui_runtime_mixin.py",
+   "hermes_cli/config_defaults.py",
+   "tests/agent/test_memory_health.py",
+   "tests/hermes_cli/test_cli_status_bar.py",
+   "tests/hermes_cli/test_cli_tui_runtime.py",
+   "website/docs/user-guide/configuration.md"
+  ]
+ },
+ "mozhongzhou_prs": [
+  {
+   "number": 126457,
+   "state": "closed",
+   "created_at": "2026-09-28T13:24:52Z",
+   "closed_at": "2026-10-01T16:23:32Z",
+   "title": "feat(cli): add memory provider runtime health indicator to status bar",
+   "watch_hits": [
+    "agent/memory_manager.py",
+    "agent/memory_provider.py"
+   ]
+  }
+ ],
+ "fork": {
+  "404": {
+   "state": "open",
+   "title": "[staged PRs] 39 reproved branches ready for manual upstream promotion",
+   "table_rows": 39,
+   "mentions_prefetch": false
+  },
+  "322": {
+   "state": "open",
+   "title": "[lab:S4] Build the common Hermes integration receipt + failure-injection runner",
+   "table_rows": 0,
+   "mentions_prefetch": false
+  },
+  "402": {
+   "state": "closed",
+   "title": "[staged wave] Salvage wave: 9 open issues, each with one A/B-verified carrier among the competing PRs",
+   "table_rows": 9,
+   "mentions_prefetch": false
+  },
+  "403": {
+   "state": "closed",
+   "title": "[staged wave] Close wave: agent, gateway and tools PRs superseded by 2026-09-15→30 landings (20 rows)",
+   "table_rows": 20,
+   "mentions_prefetch": false
+  }
+ },
+ "fork_prefetch_hits": [],
+ "searched_at": "2026-10-01T16:53:17Z",
+ "queries": {
+  "prefetch metric": {
+   "total_count": 4,
+   "listed": 4,
+   "numbers": [
+    68028,
+    78584,
+    92118,
+    128757
+   ],
+   "titles": {
+    "92118": [
+     "seradin",
+     "feat(memory): add operation-bound structured prefetch observations"
+    ],
+    "68028": [
+     "jkobject",
+     "fix(supermemory): precision-gate automatic recall"
+    ],
+    "78584": [
+     "iso2kx",
+     "feat(sessions): add temporary chats that leave nothing on disk"
+    ],
+    "128757": [
+     "Finn763",
+     "fix(agent): say what a model switch costs on a large session (#126068)"
+    ]
+   }
+  },
+  "prefetch telemetry": {
+   "total_count": 10,
+   "listed": 10,
+   "numbers": [
+    65329,
+    80517,
+    81582,
+    92118,
+    106813,
+    115109,
+    115694,
+    121513,
+    128757,
+    129620
+   ],
+   "titles": {
+    "92118": [
+     "seradin",
+     "feat(memory): add operation-bound structured prefetch observations"
+    ],
+    "106813": [
+     "remi-td",
+     "fix(memory): track holographic retrieval usage"
+    ],
+    "115109": [
+     "liuhao1024",
+     "fix(memory): scrub provider-synced turns with the egress redactor"
+    ],
+    "121513": [
+     "Roblmvp",
+     "fix(holographic): carry fact_id into prefetch() so fact_feedback can close the trust loop"
+    ],
+    "115694": [
+     "aniruddhaadak80",
+     "fix(memory): scrub secrets before memory-provider egress"
+    ],
+    "65329": [
+     "Soju06",
+     "feat(telemetry): opt-in per-turn waterfall tracing (config: agent.turn_trace)"
+    ],
+    "81582": [
+     "x7peeps",
+     "feat(agent): proactive feature router — suggest the right Hermes capability at the right time"
+    ],
+    "80517": [
+     "Crqptx",
+     "fix(tools,cli): never downgrade lazy deps at runtime; truthful memory status"
+    ],
+    "129620": [
+     "JoaoMarcos44",
+     "fix(anthropic): make preserved-thinking replay coherent"
+    ],
+    "128757": [
+     "Finn763",
+     "fix(agent): say what a model switch costs on a large session (#126068)"
+    ]
+   }
+  },
+  "memory prefetch": {
+   "total_count": 152,
+   "listed": 152,
+   "numbers": [
+    5688,
+    7789,
+    9308,
+    11678,
+    12126,
+    14150,
+    15412,
+    17405,
+    18372,
+    18565,
+    19448,
+    19833,
+    22876,
+    24209,
+    24270,
+    25344,
+    28436,
+    30965,
+    30991,
+    31664,
+    33166,
+    34215,
+    34521,
+    35604,
+    37150,
+    37635,
+    37783,
+    38706,
+    39664,
+    40425,
+    40967,
+    44246,
+    44378,
+    45743,
+    45927,
+    47457,
+    49538,
+    50086,
+    50134,
+    51012,
+    51222,
+    52186,
+    53182,
+    53315,
+    55172,
+    55729,
+    55849,
+    58346,
+    58597,
+    60953,
+    61129,
+    61685,
+    62841,
+    63759,
+    63791,
+    63931,
+    64288,
+    64421,
+    64528,
+    65329,
+    66137,
+    66684,
+    66979,
+    67559,
+    67679,
+    67833,
+    67894,
+    68028,
+    68325,
+    68692,
+    68721,
+    68903,
+    69606,
+    70715,
+    72385,
+    73644,
+    73901,
+    74984,
+    75446,
+    76351,
+    78584,
+    80517,
+    80909,
+    81386,
+    81582,
+    82512,
+    83152,
+    83647,
+    84360,
+    84382,
+    84412,
+    85071,
+    85728,
+    86948,
+    87028,
+    89282,
+    89283,
+    89418,
+    89822,
+    90385,
+    90800,
+    91974,
+    92039,
+    92118,
+    92149,
+    93676,
+    94243,
+    94983,
+    95387,
+    98703,
+    98768,
+    100008,
+    101580,
+    102837,
+    102928,
+    104178,
+    105292,
+    105495,
+    106813,
+    107526,
+    108864,
+    108965,
+    109498,
+    109688,
+    112681,
+    115109,
+    115694,
+    117358,
+    117692,
+    117888,
+    117945,
+    118895,
+    119191,
+    120042,
+    120146,
+    121513,
+    121837,
+    122287,
+    122763,
+    124151,
+    125418,
+    125802,
+    125881,
+    126193,
+    126519,
+    127339,
+    127847,
+    128757,
+    129093,
+    129324,
+    130474,
+    130491
+   ],
+   "titles": {
+    "129324": [
+     "OPGokuVPS",
+     "Pr/mem0 prefetch gate"
+    ],
+    "124151": [
+     "kweez007",
+     "fix(memory): raise Hindsight external-prefetch timeout 8s -> 20s"
+    ],
+    "130491": [
+     "dskwe",
+     "fix(memory): bypass planner for OpenViking memory recall"
+    ],
+    "87028": [
+     "richardclawbot",
+     "fix(memory): honor external prefetch timeout"
+    ],
+    "125802": [
+     "Finn763",
+     "fix(core): #8893 decouple memory prefetch from user-message channel"
+    ],
+    "92118": [
+     "seradin",
+     "feat(memory): add operation-bound structured prefetch observations"
+    ],
+    "106813": [
+     "remi-td",
+     "fix(memory): track holographic retrieval usage"
+    ],
+    "126193": [
+     "vbcherepanov",
+     "feat(plugin-catalog): add tam memory provider (total-agent-memory)"
+    ],
+    "95387": [
+     "x7peeps",
+     "feat(agent): implicit skill prefetch — load mentioned skills into turn prefetch cache"
+    ],
+    "115694": [
+     "aniruddhaadak80",
+     "fix(memory): scrub secrets before memory-provider egress"
+    ],
+    "93676": [
+     "Rafay121",
+     "feat(memory): add MemorySync bundled memory provider"
+    ],
+    "121513": [
+     "Roblmvp",
+     "fix(holographic): carry fact_id into prefetch() so fact_feedback can close the trust loop"
+    ],
+    "120146": [
+     "Finn763",
+     "fix(gateway): reuse session memory manager across api_server requests"
+    ],
+    "120042": [
+     "Navlem",
+     "fix(agent): raise external prefetch bound to 12s so real slow recalls are not dropped"
+    ],
+    "115109": [
+     "liuhao1024",
+     "fix(memory): scrub provider-synced turns with the egress redactor"
+    ],
+    "35604": [
+     "AJV20",
+     "feat(memory): add deterministic memory reranking helpers"
+    ],
+    "45743": [
+     "waldmanz",
+     "feat(memory): govern automatic memory context injection"
+    ],
+    "69606": [
+     "thitar",
+     "feat(memory): make prefetch and query timeouts configurable"
+    ],
+    "127339": [
+     "Allanchao87",
+     "fix(memory/holographic): CJK bigram retrieval for unsegmented languages"
+    ],
+    "86948": [
+     "V0v1kkkAssistant",
+     "feat(memory): make provider timeouts configurable"
+    ],
+    "127847": [
+     "kuehnberger",
+     "Add qdrant memory provider to plugin catalog"
+    ],
+    "107526": [
+     "KoNit-K",
+     "fix(mem0): keep backend open while sync_turn is still extracting"
+    ],
+    "33166": [
+     "zhonghui5207",
+     "fix(memory/holographic): normalize CJK prefetch queries"
+    ],
+    "105292": [
+     "nftpoetrist",
+     "fix(honcho): fence dialectic prefetch against session-switch races"
+    ],
+    "84412": [
+     "TurboAnbeli",
+     "feat(memory): structured recall-provenance envelope (RecallItem) — tier B of #84251"
+    ],
+    "125881": [
+     "pstarkgit",
+     "Add fail-closed policy hooks for memory admission and compression commits"
+    ],
+    "130474": [
+     "forrestzhang107",
+     "feat(plugin-catalog): add dexio memory provider"
+    ],
+    "84360": [
+     "TurboAnbeli",
+     "fix(memory): frame recalled memory as untrusted, non-authoritative context (#84251)"
+    ],
+    "125418": [
+     "Finn763",
+     "fix(hindsight): per-call bank targeting + per-hit provenance for recall/reflect"
+    ],
+    "60953": [
+     "tangxc96",
+     "fix(memory): isolate provider sync and prefetch background lanes"
+    ],
+    "109498": [
+     "kingdepp",
+     "fix(supermemory): read recall text from chunk so document hits reach recall"
+    ],
+    "102928": [
+     "evergardener",
+     "fix(desktop): prefetch TTS segments during playback"
+    ],
+    "52186": [
+     "pajoric",
+     "fix: shut down Honcho memory threads in oneshot mode"
+    ],
+    "92039": [
+     "liuhao1024",
+     "fix(memory): strip channel/topic auto-loaded skill bodies from memory fan-out"
+    ],
+    "89282": [
+     "ryo-papa",
+     "feat: add confidence memory provider"
+    ],
+    "64421": [
+     "yingliang-zhang",
+     "fix(memory): frame recalled context as untrusted data"
+    ],
+    "63791": [
+     "lrdeoliveira",
+     "docs(memory): list Nexusyn standalone memory provider plugin"
+    ],
+    "80909": [
+     "stevengonsalvez",
+     "feat: add memvid memory provider"
+    ],
+    "64288": [
+     "embwl0x",
+     "fix(memory): neutralize provider prompt delimiters"
+    ],
+    "63931": [
+     "madeat3am",
+     "fix(cli): shut down oneshot memory providers"
+    ],
+    "15412": [
+     "tabtablabs-dev",
+     "fix(memory): preview external prefetch context in Discord progress"
+    ],
+    "68692": [
+     "ceverson70",
+     "fix(mem0): prefetch TOCTOU race, exception logging improvements"
+    ],
+    "92149": [
+     "telnetaisha",
+     "fix(agent): preserve memory-context provenance boundary"
+    ],
+    "14150": [
+     "scorp323",
+     "Close out holographic memory understanding"
+    ],
+    "62841": [
+     "devatnull",
+     "feat(memory): per-chat/per-user/per-session memory scope isolation"
+    ],
+    "84382": [
+     "advaitbd",
+     "feat(memory): add scoped paths and tools-only holographic mode"
+    ],
+    "12126": [
+     "SonicBotMan",
+     "fix(memory): persist prefetch cache across AIAgent recreation in gateway"
+    ],
+    "102837": [
+     "vshulcz",
+     "docs(memory): add deja, a standalone provider over the sessions already on disk"
+    ],
+    "117888": [
+     "arslanr-com",
+     "feat(catalog): add PerfectRecall Jev-powered memory provider"
+    ],
+    "108864": [
+     "Shy7777",
+     "fix(memory): rebind RetainDB state on session switches"
+    ],
+    "101580": [
+     "stepanov1975",
+     "feat(memory): plan recall for vague follow-up messages"
+    ],
+    "18565": [
+     "natehale",
+     "feat(cron): per-job external memory provider modes (off|tools|full)"
+    ],
+    "66684": [
+     "gmqq0910",
+     "fix(memory): restore CJK recall in holographic FTS via jieba pre-segmentation"
+    ],
+    "126519": [
+     "pkuriarr",
+     "fix(holographic): split FTS queries into Unicode word tokens and drop bilingual stopwords"
+    ],
+    "30991": [
+     "xxxigm",
+     "fix(memory-providers): inject external memory tools when 'memory' toolset is off"
+    ],
+    "82512": [
+     "tcconnally",
+     "docs: document memory-provider on_turn_start/on_delegation/backup_paths hooks"
+    ],
+    "89283": [
+     "Nando2392",
+     "fix(security): mark provider recall as untrusted"
+    ],
+    "31664": [
+     "benpret",
+     "fix: shut down Honcho memory provider after oneshot"
+    ],
+    "40967": [
+     "iamlukethedev",
+     "fix(#40170): prevent Honcho memory injection on customer-facing gateways"
+    ],
+    "117692": [
+     "auroracapital",
+     "feat(mem0): Cloudflare embeddings and reranking"
+    ],
+    "34215": [
+     "nic-h",
+     "fix(memory): compact recall context boundaries"
+    ],
+    "44378": [
+     "Kewe63",
+     "fix(memory_manager): add exponential backoff retry for transient provider errors"
+    ],
+    "105495": [
+     "cristianuibar",
+     "fix(openviking): report recall timeouts without extra requests"
+    ],
+    "122287": [
+     "HMYDK",
+     "fix(openviking): skip writes for non-primary agent contexts"
+    ],
+    "117358": [
+     "dbrask",
+     "fix(honcho): skipSessionSources keeps autonomous kanban workers out of a human's memory"
+    ],
+    "75446": [
+     "pablo-afterlife",
+     "fix(memory/mem0): heal dead backends lazily, stop dropping sync turns, surface missing dependencies"
+    ],
+    "39664": [
+     "dusterbloom",
+     "fix(memory): increment retrieval_count on search results in holographic memory (#17899)"
+    ],
+    "30965": [
+     "quantum-chaos",
+     "fix: harden Discord sync and cron memory opt-in"
+    ],
+    "68903": [
+     "nuffin",
+     "feat(agent): add memory_mode parameter with 'on_demand' option for sub-agents"
+    ],
+    "18372": [
+     "flyingdoubleG",
+     "fix(memory): guard stale recall and unsafe learning"
+    ],
+    "121837": [
+     "686f6c61",
+     "fix(agent): keep the memory block when a model-switch row is merged"
+    ],
+    "24270": [
+     "florianaebi",
+     "fix: harden honcho memory and dashboard terminal"
+    ],
+    "47457": [
+     "r266-tech",
+     "fix(memory): strip skill scaffolding in raw-transcript provider hooks"
+    ],
+    "34521": [
+     "20231118185SSPU",
+     "feat(memory): organic memory architecture — silent engrams, salience gating,   consolidation engine"
+    ],
+    "83152": [
+     "JoaoMarcos44",
+     "fix(gateway): close long-lived resources (#83092)"
+    ],
+    "129093": [
+     "nicoloboschi",
+     "catalog(hindsight): pin the released v1.2.1"
+    ],
+    "55849": [
+     "srojk34",
+     "fix(retaindb): skip stale prefetch cache on topic change"
+    ],
+    "89418": [
+     "branben",
+     "feat(memory): add rationale-attached provenance tail convention to MEMORY_GUIDANCE"
+    ],
+    "68028": [
+     "jkobject",
+     "fix(supermemory): precision-gate automatic recall"
+    ],
+    "122763": [
+     "addelh",
+     "fix(honcho): invalidate SDK children when session clients change"
+    ],
+    "72385": [
+     "clara-patchou-ai",
+     "fix(honcho): stop background workers before exit"
+    ],
+    "58346": [
+     "vonsensey",
+     "docs(memory-providers): add Memra community provider"
+    ],
+    "90800": [
+     "nanami7777777",
+     "fix(mem0): drain sync before backend shutdown"
+    ],
+    "19833": [
+     "fadelguy",
+     "Fix Honcho auto-injection for shared gateway venues"
+    ],
+    "94243": [
+     "Parker-Fawcett",
+     "fix(agent): refresh DeepSeek pricing to the 2026-08-16 official rates"
+    ],
+    "7789": [
+     "hughpyle",
+     "fix(memory): pass session and user context to on_turn_start"
+    ],
+    "37783": [
+     "LeonSGP43",
+     "fix(honcho): drop vacuous memory summaries when facts exist"
+    ],
+    "40425": [
+     "rodboev",
+     "fix(memory): contain external recall at the injection boundary (#40170)"
+    ],
+    "53182": [
+     "jony0910",
+     "feat: add memory sidecar context retrieval and runtime fixes"
+    ],
+    "112681": [
+     "fangliquanflq",
+     "feat(tts): integrate LuxTTS sentence streaming"
+    ],
+    "76351": [
+     "Sertug17",
+     "fix: evict peer card caches after set_peer_card to prevent stale injection"
+    ],
+    "109688": [
+     "Tranquil-Flow",
+     "fix(memory/byterover): scope the brv child env to the active profile (#108993)"
+    ],
+    "94983": [
+     "GottZ",
+     "Context engines: resolve compaction authority under checkpoint_required (follow-up to #94639)"
+    ],
+    "5688": [
+     "handsdiff",
+     "feat(agent): support multiple simultaneous memory providers"
+    ],
+    "67679": [
+     "JPeetz",
+     "docs: add community memory provider listing for Memex Zero RAG"
+    ],
+    "117945": [
+     "jonpol01",
+     "fix(memory): scan a batch op's new_text, not just its content"
+    ],
+    "118895": [
+     "Sahil-SS9",
+     "feat(plugins): on_session_open — host-open lifecycle hook for addressable sessions"
+    ],
+    "73901": [
+     "ar-nim",
+     "fix(memory/holographic): wire retrieval_count into all retrieval paths via locked store helper"
+    ],
+    "51012": [
+     "joelbrilliant",
+     "fix(honcho): make local memory migration retry-safe"
+    ],
+    "55729": [
+     "BongSuCHOI",
+     "fix(memory/holographic): track retrieval counts across retriever paths"
+    ],
+    "37150": [
+     "LeonSGP43",
+     "fix(memory): keep Honcho turn-one recall non-blocking"
+    ],
+    "80517": [
+     "Crqptx",
+     "fix(tools,cli): never downgrade lazy deps at runtime; truthful memory status"
+    ],
+    "73644": [
+     "talia-danielsdottir",
+     "fix(memory/holographic): record retrieval_count on the live read path"
+    ],
+    "61129": [
+     "ZK-Snarky",
+     "feat(memory): add configurable min_score floor for mem0 injection"
+    ],
+    "100008": [
+     "kokhlo",
+     "fix(mcp): sanitize Cloudflare OAuth iss-param flag (#99984)"
+    ],
+    "70715": [
+     "tetz-akaneya",
+     "feat(mem0): add filter_by_agent_id option to scope memory reads per agent"
+    ],
+    "25344": [
+     "ayushere",
+     "fix(honcho): filter deriver noise and label dialectic context injection"
+    ],
+    "19448": [
+     "jrullan",
+     "feat: add incognito mode for ephemeral turns"
+    ],
+    "83647": [
+     "starship-s",
+     "fix(openviking): bind identity to the initialized profile"
+    ],
+    "67894": [
+     "conrelma",
+     "fix(honcho): unify pinned single-user memory by position-aware session-id swap"
+    ],
+    "81386": [
+     "malaiwah",
+     "fix(honcho): note cross-session provenance in system prompt block"
+    ],
+    "66137": [
+     "chrisdoc",
+     "fix(supermemory): read result text from chunk field (SDK v3.x rename)"
+    ],
+    "24209": [
+     "binhnt92",
+     "fix(memory): retry RetainDB pending writes"
+    ],
+    "68721": [
+     "starship-s",
+     "fix(memory): exclude synthetic delegation completions from retention"
+    ],
+    "61685": [
+     "Elektrofussel",
+     "fix(honcho): search target peer self-scope in addition to assistant-target scope"
+    ],
+    "85071": [
+     "x7peeps",
+     "feat(tts): local MLX Qwen3-TTS streaming provider (qwen3tts-mlx)"
+    ],
+    "108965": [
+     "jonpol01",
+     "fix(memory): sanitize recalled context to a fixed point so overlapping fence tags cannot reassemble"
+    ],
+    "66979": [
+     "synscott",
+     "feat(api): add request-scoped ephemeral agent turns"
+    ],
+    "38706": [
+     "beardthelion",
+     "feat(holographic): non-destructive fact supersede with version trace"
+    ],
+    "9308": [
+     "handsdiff",
+     "feat(memory): unify owner identity across channels in Honcho"
+    ],
+    "37635": [
+     "liuhao1024",
+     "fix(oneshot): join memory daemon threads before process exit (#37632)"
+    ],
+    "67559": [
+     "Matroskin86",
+     "fix(honcho): honor saveMessages=false across all automatic write paths"
+    ],
+    "53315": [
+     "pasevin",
+     "fix(agent): call shutdown_memory_provider() in AIAgent.close() + Honcho shutdown chain"
+    ],
+    "81582": [
+     "x7peeps",
+     "feat(agent): proactive feature router — suggest the right Hermes capability at the right time"
+    ],
+    "89822": [
+     "GodsBoy",
+     "feat(mem0): add configurable recall modes"
+    ],
+    "11678": [
+     "rafacpti23",
+     "Synapse Layer Skill for Hermes Agent"
+    ],
+    "44246": [
+     "theseussss",
+     "fix: place runtime context before user request"
+    ],
+    "55172": [
+     "liuhao1024",
+     "fix(honcho): add provenance caveat to AI Self-Representation context (#55160)"
+    ],
+    "22876": [
+     "Ramadas108",
+     "fix(shutdown): harden 44 cleanup blocks against second-Ctrl-C KeyboardInterrupt crash"
+    ],
+    "45927": [
+     "laoli-no1",
+     "fix(byterover): auto-translate Chinese queries for BM25 compatibility"
+    ],
+    "98768": [
+     "CaptainGimpy",
+     "feat(triggers): trigger-based skill auto-loading from SKILL.md frontmatter"
+    ],
+    "49538": [
+     "cuongdo-byterover",
+     "feat(byterover): switch provider to ByteRover V4"
+    ],
+    "58597": [
+     "JandY95",
+     "context-health: add auto context governance phases 1-9"
+    ],
+    "68325": [
+     "ceverson70",
+     "feat(mem0): vacation-aware staleness decay + logging fixes"
+    ],
+    "17405": [
+     "de1tydev",
+     "feat(honcho): add context injection section controls"
+    ],
+    "85728": [
+     "pierrenode",
+     "fix(honcho): surface backend failures from search_context/get_peer_card/get_session_context"
+    ],
+    "51222": [
+     "ehz0ah",
+     "refactor(openviking): split plugin into focused modules"
+    ],
+    "78584": [
+     "iso2kx",
+     "feat(sessions): add temporary chats that leave nothing on disk"
+    ],
+    "74984": [
+     "WangYeYi",
+     "fix(holographic): add CJK bigram tokenization for FTS5 — fixes zero recall for Chinese, Japanese, and Korean"
+    ],
+    "67833": [
+     "kilhyeonjun",
+     "fix(mcp): refresh idle-expired OAuth token on reconnect"
+    ],
+    "50134": [
+     "rzyns",
+     "fix(honcho): canonicalize gateway session keys"
+    ],
+    "28436": [
+     "GNewlon",
+     "Add sharedSessions config for cross-session recall in Honcho plugin"
+    ],
+    "63759": [
+     "gcunharodrigues",
+     "fix(gateway): run a session's stdio MCP servers in that session's project cwd"
+    ],
+    "64528": [
+     "kavyaa1505",
+     "Feat/hybrid skill retrieval"
+    ],
+    "91974": [
+     "x7peeps",
+     "feat(agent): context-window budget hint injection (adapted from openai/codex)"
+    ],
+    "65329": [
+     "Soju06",
+     "feat(telemetry): opt-in per-turn waterfall tracing (config: agent.turn_trace)"
+    ],
+    "119191": [
+     "rodricksz4h5",
+     "fix(agent): transcripts show a multimodal turn's own content, not its injected context"
+    ],
+    "90385": [
+     "ryanlatham",
+     "feat(webhook): hand off completed sessions to messaging platforms"
+    ],
+    "104178": [
+     "rodrigogs",
+     "feat(bedrock): keep discovery to the model ids the account can invoke"
+    ],
+    "50086": [
+     "arminanton",
+     "fix(dashboard): dedupe symlinked/templated state.db in cross-profile session list"
+    ],
+    "128757": [
+     "Finn763",
+     "fix(agent): say what a model switch costs on a large session (#126068)"
+    ],
+    "98703": [
+     "oleg-koval",
+     "feat: add safe pre-agent turn routing middleware"
+    ]
+   }
+  },
+  "prefetch_provider": {
+   "total_count": 0,
+   "listed": 0,
+   "numbers": [],
+   "titles": {}
+  },
+  "prefetch shared metrics": {
+   "total_count": 2,
+   "listed": 2,
+   "numbers": [
+    78584,
+    128757
+   ],
+   "titles": {
+    "78584": [
+     "iso2kx",
+     "feat(sessions): add temporary chats that leave nothing on disk"
+    ],
+    "128757": [
+     "Finn763",
+     "fix(agent): say what a model switch costs on a large session (#126068)"
+    ]
+   }
+  },
+  "memory.prefetch": {
+   "total_count": 1,
+   "listed": 1,
+   "numbers": [
+    15412
+   ],
+   "titles": {
+    "15412": [
+     "tabtablabs-dev",
+     "fix(memory): preview external prefetch context in Discord progress"
+    ]
+   }
+  },
+  "record_memory_prefetch": {
+   "total_count": 0,
+   "listed": 0,
+   "numbers": [],
+   "titles": {}
+  },
+  "external prefetch": {
+   "total_count": 60,
+   "listed": 60,
+   "numbers": [
+    5688,
+    7789,
+    11678,
+    12126,
+    15412,
+    18565,
+    19448,
+    28436,
+    30965,
+    30991,
+    34215,
+    34521,
+    40425,
+    40930,
+    49538,
+    50086,
+    58346,
+    62841,
+    63791,
+    64288,
+    64421,
+    66684,
+    66979,
+    67833,
+    68325,
+    68721,
+    68903,
+    69606,
+    78584,
+    83647,
+    84412,
+    86948,
+    87028,
+    89283,
+    90385,
+    92118,
+    93676,
+    94983,
+    98703,
+    102837,
+    105495,
+    111510,
+    112351,
+    115109,
+    115694,
+    117888,
+    117945,
+    118051,
+    118895,
+    120042,
+    120146,
+    121793,
+    124151,
+    125802,
+    126193,
+    126890,
+    128757,
+    129093,
+    129164,
+    129620
+   ],
+   "titles": {
+    "124151": [
+     "kweez007",
+     "fix(memory): raise Hindsight external-prefetch timeout 8s -> 20s"
+    ],
+    "87028": [
+     "richardclawbot",
+     "fix(memory): honor external prefetch timeout"
+    ],
+    "120042": [
+     "Navlem",
+     "fix(agent): raise external prefetch bound to 12s so real slow recalls are not dropped"
+    ],
+    "92118": [
+     "seradin",
+     "feat(memory): add operation-bound structured prefetch observations"
+    ],
+    "129164": [
+     "JerryLiu369",
+     "fix(model-picker): stable catalog fingerprint for external-process providers (#129094)"
+    ],
+    "125802": [
+     "Finn763",
+     "fix(core): #8893 decouple memory prefetch from user-message channel"
+    ],
+    "120146": [
+     "Finn763",
+     "fix(gateway): reuse session memory manager across api_server requests"
+    ],
+    "69606": [
+     "thitar",
+     "feat(memory): make prefetch and query timeouts configurable"
+    ],
+    "15412": [
+     "tabtablabs-dev",
+     "fix(memory): preview external prefetch context in Discord progress"
+    ],
+    "18565": [
+     "natehale",
+     "feat(cron): per-job external memory provider modes (off|tools|full)"
+    ],
+    "12126": [
+     "SonicBotMan",
+     "fix(memory): persist prefetch cache across AIAgent recreation in gateway"
+    ],
+    "40425": [
+     "rodboev",
+     "fix(memory): contain external recall at the injection boundary (#40170)"
+    ],
+    "115109": [
+     "liuhao1024",
+     "fix(memory): scrub provider-synced turns with the egress redactor"
+    ],
+    "105495": [
+     "cristianuibar",
+     "fix(openviking): report recall timeouts without extra requests"
+    ],
+    "86948": [
+     "V0v1kkkAssistant",
+     "feat(memory): make provider timeouts configurable"
+    ],
+    "84412": [
+     "TurboAnbeli",
+     "feat(memory): structured recall-provenance envelope (RecallItem) — tier B of #84251"
+    ],
+    "66684": [
+     "gmqq0910",
+     "fix(memory): restore CJK recall in holographic FTS via jieba pre-segmentation"
+    ],
+    "102837": [
+     "vshulcz",
+     "docs(memory): add deja, a standalone provider over the sessions already on disk"
+    ],
+    "129093": [
+     "nicoloboschi",
+     "catalog(hindsight): pin the released v1.2.1"
+    ],
+    "89283": [
+     "Nando2392",
+     "fix(security): mark provider recall as untrusted"
+    ],
+    "115694": [
+     "aniruddhaadak80",
+     "fix(memory): scrub secrets before memory-provider egress"
+    ],
+    "126193": [
+     "vbcherepanov",
+     "feat(plugin-catalog): add tam memory provider (total-agent-memory)"
+    ],
+    "68903": [
+     "nuffin",
+     "feat(agent): add memory_mode parameter with 'on_demand' option for sub-agents"
+    ],
+    "64421": [
+     "yingliang-zhang",
+     "fix(memory): frame recalled context as untrusted data"
+    ],
+    "19448": [
+     "jrullan",
+     "feat: add incognito mode for ephemeral turns"
+    ],
+    "118895": [
+     "Sahil-SS9",
+     "feat(plugins): on_session_open — host-open lifecycle hook for addressable sessions"
+    ],
+    "64288": [
+     "embwl0x",
+     "fix(memory): neutralize provider prompt delimiters"
+    ],
+    "93676": [
+     "Rafay121",
+     "feat(memory): add MemorySync bundled memory provider"
+    ],
+    "30965": [
+     "quantum-chaos",
+     "fix: harden Discord sync and cron memory opt-in"
+    ],
+    "30991": [
+     "xxxigm",
+     "fix(memory-providers): inject external memory tools when 'memory' toolset is off"
+    ],
+    "7789": [
+     "hughpyle",
+     "fix(memory): pass session and user context to on_turn_start"
+    ],
+    "34215": [
+     "nic-h",
+     "fix(memory): compact recall context boundaries"
+    ],
+    "126890": [
+     "Froraut",
+     "fix(desktop): embed mode \"off\" must not fetch the provider page for a title"
+    ],
+    "66979": [
+     "synscott",
+     "feat(api): add request-scoped ephemeral agent turns"
+    ],
+    "5688": [
+     "handsdiff",
+     "feat(agent): support multiple simultaneous memory providers"
+    ],
+    "40930": [
+     "SpikeJulia",
+     "fix(weixin): load iLink user_id for typing ticket getconfig (ret=-4)"
+    ],
+    "83647": [
+     "starship-s",
+     "fix(openviking): bind identity to the initialized profile"
+    ],
+    "121793": [
+     "Justin27-05",
+     "fix(models): key the provider catalog cache on the provider's own credentials, not auth.json mtime"
+    ],
+    "58346": [
+     "vonsensey",
+     "docs(memory-providers): add Memra community provider"
+    ],
+    "94983": [
+     "GottZ",
+     "Context engines: resolve compaction authority under checkpoint_required (follow-up to #94639)"
+    ],
+    "117888": [
+     "arslanr-com",
+     "feat(catalog): add PerfectRecall Jev-powered memory provider"
+    ],
+    "67833": [
+     "kilhyeonjun",
+     "fix(mcp): refresh idle-expired OAuth token on reconnect"
+    ],
+    "62841": [
+     "devatnull",
+     "feat(memory): per-chat/per-user/per-session memory scope isolation"
+    ],
+    "34521": [
+     "20231118185SSPU",
+     "feat(memory): organic memory architecture — silent engrams, salience gating,   consolidation engine"
+    ],
+    "11678": [
+     "rafacpti23",
+     "Synapse Layer Skill for Hermes Agent"
+    ],
+    "118051": [
+     "Kyzcreig",
+     "kanban: auto-resolve blocks whose gate PR has already merged"
+    ],
+    "112351": [
+     "jkorzeniak",
+     "feat(desktop): configurable model/reasoning picker with explicit catalog refresh"
+    ],
+    "111510": [
+     "veritas6",
+     "fix(picker): preserve recoverable credentials without reviving removed providers"
+    ],
+    "63791": [
+     "lrdeoliveira",
+     "docs(memory): list Nexusyn standalone memory provider plugin"
+    ],
+    "117945": [
+     "jonpol01",
+     "fix(memory): scan a batch op's new_text, not just its content"
+    ],
+    "49538": [
+     "cuongdo-byterover",
+     "feat(byterover): switch provider to ByteRover V4"
+    ],
+    "68721": [
+     "starship-s",
+     "fix(memory): exclude synthetic delegation completions from retention"
+    ],
+    "68325": [
+     "ceverson70",
+     "feat(mem0): vacation-aware staleness decay + logging fixes"
+    ],
+    "28436": [
+     "GNewlon",
+     "Add sharedSessions config for cross-session recall in Honcho plugin"
+    ],
+    "78584": [
+     "iso2kx",
+     "feat(sessions): add temporary chats that leave nothing on disk"
+    ],
+    "90385": [
+     "ryanlatham",
+     "feat(webhook): hand off completed sessions to messaging platforms"
+    ],
+    "98703": [
+     "oleg-koval",
+     "feat: add safe pre-agent turn routing middleware"
+    ],
+    "50086": [
+     "arminanton",
+     "fix(dashboard): dedupe symlinked/templated state.db in cross-profile session list"
+    ],
+    "128757": [
+     "Finn763",
+     "fix(agent): say what a model switch costs on a large session (#126068)"
+    ],
+    "129620": [
+     "JoaoMarcos44",
+     "fix(anthropic): make preserved-thinking replay coherent"
+    ]
+   }
+  },
+  "prefetch timeout": {
+   "total_count": 54,
+   "listed": 54,
+   "numbers": [
+    12126,
+    13176,
+    22876,
+    24270,
+    32744,
+    35965,
+    37150,
+    37635,
+    44308,
+    44378,
+    50086,
+    51012,
+    51222,
+    53315,
+    55849,
+    60953,
+    65329,
+    67894,
+    68325,
+    69606,
+    72385,
+    75446,
+    76655,
+    78234,
+    83152,
+    84412,
+    85071,
+    85728,
+    86948,
+    87028,
+    90385,
+    90800,
+    92118,
+    93676,
+    94180,
+    94214,
+    94259,
+    98703,
+    101531,
+    101580,
+    105495,
+    107526,
+    115244,
+    117358,
+    117692,
+    118051,
+    120042,
+    120893,
+    121063,
+    124151,
+    125418,
+    125881,
+    129620,
+    130240
+   ],
+   "titles": {
+    "124151": [
+     "kweez007",
+     "fix(memory): raise Hindsight external-prefetch timeout 8s -> 20s"
+    ],
+    "87028": [
+     "richardclawbot",
+     "fix(memory): honor external prefetch timeout"
+    ],
+    "120042": [
+     "Navlem",
+     "fix(agent): raise external prefetch bound to 12s so real slow recalls are not dropped"
+    ],
+    "105495": [
+     "cristianuibar",
+     "fix(openviking): report recall timeouts without extra requests"
+    ],
+    "69606": [
+     "thitar",
+     "feat(memory): make prefetch and query timeouts configurable"
+    ],
+    "86948": [
+     "V0v1kkkAssistant",
+     "feat(memory): make provider timeouts configurable"
+    ],
+    "125418": [
+     "Finn763",
+     "fix(hindsight): per-call bank targeting + per-hit provenance for recall/reflect"
+    ],
+    "92118": [
+     "seradin",
+     "feat(memory): add operation-bound structured prefetch observations"
+    ],
+    "107526": [
+     "KoNit-K",
+     "fix(mem0): keep backend open while sync_turn is still extracting"
+    ],
+    "60953": [
+     "tangxc96",
+     "fix(memory): isolate provider sync and prefetch background lanes"
+    ],
+    "94180": [
+     "jahs",
+     "fix(tools): unify callable tool discovery across CLI and TUI"
+    ],
+    "121063": [
+     "0xble",
+     "feat(gateway): transcribe queued voice messages immediately"
+    ],
+    "76655": [
+     "Drexuxux",
+     "fix(tts): prevent stalled streaming prefetch from wedging voice barge-in"
+    ],
+    "55849": [
+     "srojk34",
+     "fix(retaindb): skip stale prefetch cache on topic change"
+    ],
+    "125881": [
+     "pstarkgit",
+     "Add fail-closed policy hooks for memory admission and compression commits"
+    ],
+    "130240": [
+     "josejim",
+     "fix(mcp): honour the RFC 9728 WWW-Authenticate challenge in pre-flight discovery"
+    ],
+    "83152": [
+     "JoaoMarcos44",
+     "fix(gateway): close long-lived resources (#83092)"
+    ],
+    "94259": [
+     "FixItFoundry",
+     "fix(e2e): unbreak Install & Update E2E (MITM proxy keep-alive, Node CA trust, uv fixture)"
+    ],
+    "85071": [
+     "x7peeps",
+     "feat(tts): local MLX Qwen3-TTS streaming provider (qwen3tts-mlx)"
+    ],
+    "72385": [
+     "clara-patchou-ai",
+     "fix(honcho): stop background workers before exit"
+    ],
+    "84412": [
+     "TurboAnbeli",
+     "feat(memory): structured recall-provenance envelope (RecallItem) — tier B of #84251"
+    ],
+    "101531": [
+     "FalconOrtiz",
+     "fix(desktop): rebind mounted sessions after ws reconnect"
+    ],
+    "115244": [
+     "kaskabayev",
+     "feat(cli): pick OpenRouter provider routing when switching models"
+    ],
+    "117692": [
+     "auroracapital",
+     "feat(mem0): Cloudflare embeddings and reranking"
+    ],
+    "90800": [
+     "nanami7777777",
+     "fix(mem0): drain sync before backend shutdown"
+    ],
+    "101580": [
+     "stepanov1975",
+     "feat(memory): plan recall for vague follow-up messages"
+    ],
+    "44308": [
+     "d31tcjg",
+     "fix(desktop): preserve resilient streaming voice playback"
+    ],
+    "93676": [
+     "Rafay121",
+     "feat(memory): add MemorySync bundled memory provider"
+    ],
+    "120893": [
+     "pxwelder",
+     "feat(picker): let built-in providers pin their catalog with discover_models"
+    ],
+    "75446": [
+     "pablo-afterlife",
+     "fix(memory/mem0): heal dead backends lazily, stop dropping sync turns, surface missing dependencies"
+    ],
+    "12126": [
+     "SonicBotMan",
+     "fix(memory): persist prefetch cache across AIAgent recreation in gateway"
+    ],
+    "35965": [
+     "zapabob",
+     "fix(mcp): force OAuth login for preregistered clients"
+    ],
+    "44378": [
+     "Kewe63",
+     "fix(memory_manager): add exponential backoff retry for transient provider errors"
+    ],
+    "78234": [
+     "andrexibiza",
+     "fix(tts): never truncate spoken replies — split long text and scale playback waits"
+    ],
+    "24270": [
+     "florianaebi",
+     "fix: harden honcho memory and dashboard terminal"
+    ],
+    "118051": [
+     "Kyzcreig",
+     "kanban: auto-resolve blocks whose gate PR has already merged"
+    ],
+    "117358": [
+     "dbrask",
+     "fix(honcho): skipSessionSources keeps autonomous kanban workers out of a human's memory"
+    ],
+    "13176": [
+     "entropidelic",
+     "fix(security): dashboard security hardening"
+    ],
+    "37150": [
+     "LeonSGP43",
+     "fix(memory): keep Honcho turn-one recall non-blocking"
+    ],
+    "22876": [
+     "Ramadas108",
+     "fix(shutdown): harden 44 cleanup blocks against second-Ctrl-C KeyboardInterrupt crash"
+    ],
+    "85728": [
+     "pierrenode",
+     "fix(honcho): surface backend failures from search_context/get_peer_card/get_session_context"
+    ],
+    "51012": [
+     "joelbrilliant",
+     "fix(honcho): make local memory migration retry-safe"
+    ],
+    "32744": [
+     "chungty",
+     "fix(mcp): refresh tool registry after each successful keepalive"
+    ],
+    "67894": [
+     "conrelma",
+     "fix(honcho): unify pinned single-user memory by position-aware session-id swap"
+    ],
+    "94214": [
+     "alanjds",
+     "fix(reasoning): consult endpoint /v1/models catalog for custom providers"
+    ],
+    "53315": [
+     "pasevin",
+     "fix(agent): call shutdown_memory_provider() in AIAgent.close() + Honcho shutdown chain"
+    ],
+    "37635": [
+     "liuhao1024",
+     "fix(oneshot): join memory daemon threads before process exit (#37632)"
+    ],
+    "90385": [
+     "ryanlatham",
+     "feat(webhook): hand off completed sessions to messaging platforms"
+    ],
+    "65329": [
+     "Soju06",
+     "feat(telemetry): opt-in per-turn waterfall tracing (config: agent.turn_trace)"
+    ],
+    "68325": [
+     "ceverson70",
+     "feat(mem0): vacation-aware staleness decay + logging fixes"
+    ],
+    "51222": [
+     "ehz0ah",
+     "refactor(openviking): split plugin into focused modules"
+    ],
+    "50086": [
+     "arminanton",
+     "fix(dashboard): dedupe symlinked/templated state.db in cross-profile session list"
+    ],
+    "129620": [
+     "JoaoMarcos44",
+     "fix(anthropic): make preserved-thinking replay coherent"
+    ],
+    "98703": [
+     "oleg-koval",
+     "feat: add safe pre-agent turn routing middleware"
+    ]
+   }
+  },
+  "prefetch latency": {
+   "total_count": 22,
+   "listed": 22,
+   "numbers": [
+    12126,
+    21416,
+    30991,
+    44308,
+    44378,
+    45743,
+    45927,
+    60953,
+    62703,
+    65329,
+    85071,
+    92118,
+    93676,
+    94214,
+    95387,
+    98703,
+    102928,
+    109286,
+    115244,
+    120042,
+    124151,
+    128757
+   ],
+   "titles": {
+    "124151": [
+     "kweez007",
+     "fix(memory): raise Hindsight external-prefetch timeout 8s -> 20s"
+    ],
+    "120042": [
+     "Navlem",
+     "fix(agent): raise external prefetch bound to 12s so real slow recalls are not dropped"
+    ],
+    "102928": [
+     "evergardener",
+     "fix(desktop): prefetch TTS segments during playback"
+    ],
+    "95387": [
+     "x7peeps",
+     "feat(agent): implicit skill prefetch — load mentioned skills into turn prefetch cache"
+    ],
+    "92118": [
+     "seradin",
+     "feat(memory): add operation-bound structured prefetch observations"
+    ],
+    "109286": [
+     "salch-cred",
+     "fix(desktop): switch Talk to Hermes OpenAI TTS to Opus format"
+    ],
+    "60953": [
+     "tangxc96",
+     "fix(memory): isolate provider sync and prefetch background lanes"
+    ],
+    "44308": [
+     "d31tcjg",
+     "fix(desktop): preserve resilient streaming voice playback"
+    ],
+    "12126": [
+     "SonicBotMan",
+     "fix(memory): persist prefetch cache across AIAgent recreation in gateway"
+    ],
+    "44378": [
+     "Kewe63",
+     "fix(memory_manager): add exponential backoff retry for transient provider errors"
+    ],
+    "45743": [
+     "waldmanz",
+     "feat(memory): govern automatic memory context injection"
+    ],
+    "93676": [
+     "Rafay121",
+     "feat(memory): add MemorySync bundled memory provider"
+    ],
+    "85071": [
+     "x7peeps",
+     "feat(tts): local MLX Qwen3-TTS streaming provider (qwen3tts-mlx)"
+    ],
+    "115244": [
+     "kaskabayev",
+     "feat(cli): pick OpenRouter provider routing when switching models"
+    ],
+    "45927": [
+     "laoli-no1",
+     "fix(byterover): auto-translate Chinese queries for BM25 compatibility"
+    ],
+    "94214": [
+     "alanjds",
+     "fix(reasoning): consult endpoint /v1/models catalog for custom providers"
+    ],
+    "65329": [
+     "Soju06",
+     "feat(telemetry): opt-in per-turn waterfall tracing (config: agent.turn_trace)"
+    ],
+    "62703": [
+     "Kyzcreig",
+     "feat(desktop): startup render cache — paint last-known-good UI immediately (SWR)"
+    ],
+    "30991": [
+     "xxxigm",
+     "fix(memory-providers): inject external memory tools when 'memory' toolset is off"
+    ],
+    "21416": [
+     "dirtyren",
+     "feat(slack): add incident monitor with auto-RCA and tiered investigation"
+    ],
+    "128757": [
+     "Finn763",
+     "fix(agent): say what a model switch costs on a large session (#126068)"
+    ],
+    "98703": [
+     "oleg-koval",
+     "feat: add safe pre-agent turn routing middleware"
+    ]
+   }
+  }
+ },
+ "union": {
+  "count": 177,
+  "added_vs_r4": [],
+  "removed_vs_r4": [
+   126457
+  ]
+ },
+ "teknium1": {
+  "total_count": 260,
+  "listed": 260,
+  "same_set_as_r3": true,
+  "added": [],
+  "removed": [],
+  "title_hits": [],
+  "added_file_hits": {}
+ },
+ "file_scan": {
+  "watch_regex": "^(agent/memory_manager\\.py|agent/memory_provider\\.py|agent/turn_context\\.py|hermes_cli/observability/shared_metrics[^/]*\\.py|hermes_cli/observability/schemas/.*shared_metrics.*)$",
+  "scanned": 177,
+  "prs": {
+   "5688": {
+    "files": 9,
+    "watch_hits": [
+     "agent/memory_manager.py",
+     "agent/memory_provider.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "7789": {
+    "files": 6,
+    "watch_hits": [
+     "agent/memory_manager.py",
+     "agent/memory_provider.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "9308": {
+    "files": 5,
+    "watch_hits": []
+   },
+   "11678": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "12126": {
+    "files": 2,
+    "watch_hits": [
+     "agent/memory_manager.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "13176": {
+    "files": 9,
+    "watch_hits": []
+   },
+   "14150": {
+    "files": 15,
+    "watch_hits": []
+   },
+   "15412": {
+    "files": 8,
+    "watch_hits": [
+     "agent/memory_manager.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": true
+   },
+   "17405": {
+    "files": 11,
+    "watch_hits": []
+   },
+   "18372": {
+    "files": 8,
+    "watch_hits": []
+   },
+   "18565": {
+    "files": 18,
+    "watch_hits": [
+     "agent/memory_manager.py",
+     "agent/turn_context.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "19448": {
+    "files": 12,
+    "watch_hits": []
+   },
+   "19833": {
+    "files": 7,
+    "watch_hits": [
+     "agent/memory_manager.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "21416": {
+    "files": 4,
+    "watch_hits": []
+   },
+   "22876": {
+    "files": 8,
+    "watch_hits": [
+     "agent/memory_manager.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "24209": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "24270": {
+    "files": 7,
+    "watch_hits": []
+   },
+   "25344": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "28436": {
+    "files": 5,
+    "watch_hits": []
+   },
+   "30965": {
+    "files": 12,
+    "watch_hits": []
+   },
+   "30991": {
+    "files": 5,
+    "watch_hits": [
+     "agent/memory_manager.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "31664": {
+    "files": 5,
+    "watch_hits": []
+   },
+   "32744": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "33166": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "34215": {
+    "files": 9,
+    "watch_hits": [
+     "agent/memory_manager.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "34521": {
+    "files": 20,
+    "watch_hits": [
+     "agent/memory_manager.py"
+    ],
+    "added_metric_lines": [
+     "+        metrics = {",
+     "+        if metrics['retrieval_hit_rate'] < 0.3:",
+     "+        if metrics['consolidation_yield'] < 0.1:",
+     "+        return metrics",
+     "+## 2. Memory Lifecycle Metrics",
+     "+| Metric                              | Value |",
+     "+| Metric                    | Value |",
+     "+When any metric drifts below threshold, parameters are adjusted to restore"
+    ],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "35604": {
+    "files": 4,
+    "watch_hits": []
+   },
+   "35965": {
+    "files": 4,
+    "watch_hits": []
+   },
+   "37150": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "37635": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "37783": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "38706": {
+    "files": 6,
+    "watch_hits": []
+   },
+   "39664": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "40425": {
+    "files": 16,
+    "watch_hits": [
+     "agent/memory_manager.py",
+     "agent/turn_context.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "40930": {
+    "files": 1,
+    "watch_hits": []
+   },
+   "40967": {
+    "files": 8,
+    "watch_hits": [
+     "agent/turn_context.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "44246": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "44308": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "44378": {
+    "files": 2,
+    "watch_hits": [
+     "agent/memory_manager.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "45743": {
+    "files": 9,
+    "watch_hits": [
+     "agent/memory_manager.py",
+     "agent/memory_provider.py",
+     "agent/turn_context.py"
+    ],
+    "added_metric_lines": [
+     "+  - Success metric: A Hermes-core sandbox test modeled on `clean-holographic/scripts/evaluate_production_recall.py` passes all governed context-injection cases",
+     "+  - Success metric: built-in memory and one external provider can still register, prefetch, and sync without API breakage.",
+     "+  - Success metric: tests run under temporary `HERMES_HOME` or `HERMES_FORBID_LIVE_DB=1`; no test touches `~/.hermes/memory_store.db`.",
+     "+  - Success metric: debug/report data can distinguish raw provider output from governed injected context without exposing secrets.",
+     "+## 8. Success Metrics"
+    ],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "45927": {
+    "files": 1,
+    "watch_hits": []
+   },
+   "47457": {
+    "files": 4,
+    "watch_hits": []
+   },
+   "49538": {
+    "files": 3,
+    "watch_hits": []
+   },
+   "50086": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "50134": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "51012": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "51222": {
+    "files": 10,
+    "watch_hits": []
+   },
+   "52186": {
+    "files": 3,
+    "watch_hits": []
+   },
+   "53182": {
+    "files": 15,
+    "watch_hits": [
+     "agent/turn_context.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "53315": {
+    "files": 4,
+    "watch_hits": []
+   },
+   "55172": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "55729": {
+    "files": 3,
+    "watch_hits": []
+   },
+   "55849": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "58346": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "58597": {
+    "files": 28,
+    "watch_hits": [
+     "agent/memory_manager.py",
+     "agent/turn_context.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "60953": {
+    "files": 3,
+    "watch_hits": [
+     "agent/memory_manager.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "61129": {
+    "files": 4,
+    "watch_hits": []
+   },
+   "61685": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "62703": {
+    "files": 19,
+    "watch_hits": []
+   },
+   "62841": {
+    "files": 41,
+    "watch_hits": [
+     "agent/memory_manager.py",
+     "agent/memory_provider.py",
+     "agent/turn_context.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "63759": {
+    "files": 9,
+    "watch_hits": [
+     "agent/memory_manager.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "63791": {
+    "files": 1,
+    "watch_hits": []
+   },
+   "63931": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "64288": {
+    "files": 5,
+    "watch_hits": [
+     "agent/memory_manager.py",
+     "agent/turn_context.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "64421": {
+    "files": 2,
+    "watch_hits": [
+     "agent/memory_manager.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "64528": {
+    "files": 9,
+    "watch_hits": [
+     "agent/turn_context.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "65329": {
+    "files": 15,
+    "watch_hits": [
+     "agent/turn_context.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "66137": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "66684": {
+    "files": 10,
+    "watch_hits": []
+   },
+   "66979": {
+    "files": 10,
+    "watch_hits": []
+   },
+   "67559": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "67679": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "67833": {
+    "files": 4,
+    "watch_hits": []
+   },
+   "67894": {
+    "files": 4,
+    "watch_hits": []
+   },
+   "68028": {
+    "files": 7,
+    "watch_hits": []
+   },
+   "68325": {
+    "files": 5,
+    "watch_hits": []
+   },
+   "68692": {
+    "files": 3,
+    "watch_hits": []
+   },
+   "68721": {
+    "files": 28,
+    "watch_hits": [
+     "agent/memory_manager.py",
+     "agent/turn_context.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "68903": {
+    "files": 21,
+    "watch_hits": [
+     "agent/memory_manager.py",
+     "agent/memory_provider.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "69606": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "70715": {
+    "files": 7,
+    "watch_hits": []
+   },
+   "72385": {
+    "files": 7,
+    "watch_hits": [
+     "agent/memory_manager.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "73644": {
+    "files": 3,
+    "watch_hits": []
+   },
+   "73901": {
+    "files": 3,
+    "watch_hits": []
+   },
+   "74984": {
+    "files": 3,
+    "watch_hits": []
+   },
+   "75446": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "76351": {
+    "files": 3,
+    "watch_hits": []
+   },
+   "76655": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "78234": {
+    "files": 9,
+    "watch_hits": []
+   },
+   "78584": {
+    "files": 91,
+    "watch_hits": [
+     "agent/memory_manager.py",
+     "agent/memory_provider.py",
+     "agent/turn_context.py"
+    ],
+    "added_metric_lines": [
+     "+# values the core never consumes: telemetry marks, trajectory/ATIF exports,",
+     "+  lifecycle, API request/response, tool-call and subagent telemetry) are"
+    ],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "80517": {
+    "files": 5,
+    "watch_hits": []
+   },
+   "80909": {
+    "files": 5,
+    "watch_hits": []
+   },
+   "81386": {
+    "files": 1,
+    "watch_hits": []
+   },
+   "81582": {
+    "files": 5,
+    "watch_hits": [
+     "agent/turn_context.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "82512": {
+    "files": 1,
+    "watch_hits": []
+   },
+   "83152": {
+    "files": 9,
+    "watch_hits": []
+   },
+   "83647": {
+    "files": 10,
+    "watch_hits": []
+   },
+   "84360": {
+    "files": 2,
+    "watch_hits": [
+     "agent/memory_manager.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "84382": {
+    "files": 4,
+    "watch_hits": []
+   },
+   "84412": {
+    "files": 7,
+    "watch_hits": [
+     "agent/memory_manager.py",
+     "agent/memory_provider.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": true
+   },
+   "85071": {
+    "files": 4,
+    "watch_hits": []
+   },
+   "85728": {
+    "files": 5,
+    "watch_hits": []
+   },
+   "86948": {
+    "files": 11,
+    "watch_hits": [
+     "agent/memory_manager.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "87028": {
+    "files": 4,
+    "watch_hits": [
+     "agent/memory_manager.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "89282": {
+    "files": 10,
+    "watch_hits": []
+   },
+   "89283": {
+    "files": 3,
+    "watch_hits": [
+     "agent/memory_manager.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "89418": {
+    "files": 1,
+    "watch_hits": []
+   },
+   "89822": {
+    "files": 9,
+    "watch_hits": []
+   },
+   "90385": {
+    "files": 34,
+    "watch_hits": [
+     "agent/turn_context.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "90800": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "91974": {
+    "files": 7,
+    "watch_hits": [
+     "agent/turn_context.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "92039": {
+    "files": 3,
+    "watch_hits": []
+   },
+   "92118": {
+    "files": 21,
+    "watch_hits": [
+     "agent/memory_manager.py",
+     "agent/memory_provider.py",
+     "agent/turn_context.py"
+    ],
+    "added_metric_lines": [
+     "+    evaluation metrics.",
+     "+    # must opt in deliberately and must not treat this as outbound telemetry.",
+     "+        assert event[\"telemetry_schema_version\"]",
+     "+isolated by the host-owned observer dispatcher. Hermes provides no telemetry,",
+     "+outbound telemetry or storage for this privacy-sensitive in-process event, and",
+     "+| `memory_prefetch` | Observer (Python plugins only) | Queued asynchronously after one memory-manager prefetch operation has produced at least one valid struct",
+     "+payload. There is no built-in telemetry or storage. The operation-bound tuple and explicit IDs prevent a callback from using query,"
+    ],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": true
+   },
+   "92149": {
+    "files": 4,
+    "watch_hits": [
+     "agent/memory_manager.py",
+     "agent/turn_context.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "93676": {
+    "files": 5,
+    "watch_hits": []
+   },
+   "94180": {
+    "files": 26,
+    "watch_hits": []
+   },
+   "94214": {
+    "files": 10,
+    "watch_hits": []
+   },
+   "94243": {
+    "files": 4,
+    "watch_hits": []
+   },
+   "94259": {
+    "files": 3,
+    "watch_hits": []
+   },
+   "94983": {
+    "files": 16,
+    "watch_hits": [
+     "agent/memory_manager.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "95387": {
+    "files": 4,
+    "watch_hits": [
+     "agent/turn_context.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "98703": {
+    "files": 37,
+    "watch_hits": []
+   },
+   "98768": {
+    "files": 4,
+    "watch_hits": [
+     "agent/turn_context.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "100008": {
+    "files": 1,
+    "watch_hits": []
+   },
+   "101531": {
+    "files": 4,
+    "watch_hits": []
+   },
+   "101580": {
+    "files": 19,
+    "watch_hits": [
+     "agent/memory_manager.py",
+     "agent/memory_provider.py",
+     "agent/turn_context.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": true
+   },
+   "102837": {
+    "files": 1,
+    "watch_hits": []
+   },
+   "102928": {
+    "files": 4,
+    "watch_hits": []
+   },
+   "104178": {
+    "files": 11,
+    "watch_hits": []
+   },
+   "105292": {
+    "files": 3,
+    "watch_hits": []
+   },
+   "105495": {
+    "files": 3,
+    "watch_hits": []
+   },
+   "106813": {
+    "files": 3,
+    "watch_hits": []
+   },
+   "107526": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "108864": {
+    "files": 3,
+    "watch_hits": []
+   },
+   "108965": {
+    "files": 2,
+    "watch_hits": [
+     "agent/memory_manager.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "109286": {
+    "files": 4,
+    "watch_hits": []
+   },
+   "109498": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "109688": {
+    "files": 3,
+    "watch_hits": []
+   },
+   "111510": {
+    "files": 6,
+    "watch_hits": []
+   },
+   "112351": {
+    "files": 29,
+    "watch_hits": []
+   },
+   "112681": {
+    "files": 23,
+    "watch_hits": []
+   },
+   "115109": {
+    "files": 4,
+    "watch_hits": [
+     "agent/memory_manager.py"
+    ],
+    "added_metric_lines": [
+     "+    memory provider (a remote reader like chat platforms or telemetry). Returns the input list",
+     "+        not reach them even with ``security.redact_secrets`` on (it covers display/telemetry surfaces).",
+     "+    telemetry, memory providers). ``redact_sensitive_text(force=True)`` — the only secret-pattern",
+     "+``security.redact_secrets`` covers display/telemetry surfaces, but",
+     "+fail-closed scrub telemetry uses (``agent.redact.redact_for_egress``) is"
+    ],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": true
+   },
+   "115244": {
+    "files": 8,
+    "watch_hits": []
+   },
+   "115694": {
+    "files": 2,
+    "watch_hits": [
+     "agent/memory_manager.py"
+    ],
+    "added_metric_lines": [
+     "+    as telemetry export. Never mutates the caller's transcript: untouched",
+     "+        telemetry export — so secrets are never archived verbatim in a provider's store (#115104)."
+    ],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "117358": {
+    "files": 5,
+    "watch_hits": []
+   },
+   "117692": {
+    "files": 8,
+    "watch_hits": []
+   },
+   "117888": {
+    "files": 1,
+    "watch_hits": []
+   },
+   "117945": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "118051": {
+    "files": 4,
+    "watch_hits": []
+   },
+   "118895": {
+    "files": 4,
+    "watch_hits": []
+   },
+   "119191": {
+    "files": 6,
+    "watch_hits": [
+     "agent/turn_context.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "120042": {
+    "files": 2,
+    "watch_hits": [
+     "agent/memory_manager.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "120146": {
+    "files": 3,
+    "watch_hits": []
+   },
+   "120893": {
+    "files": 4,
+    "watch_hits": []
+   },
+   "121063": {
+    "files": 4,
+    "watch_hits": []
+   },
+   "121513": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "121793": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "121837": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "122287": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "122763": {
+    "files": 8,
+    "watch_hits": []
+   },
+   "124151": {
+    "files": 3,
+    "watch_hits": [
+     "agent/memory_manager.py"
+    ],
+    "added_metric_lines": [
+     "+| Metric | Before (300 candidates) | After (100 candidates) |",
+     "+| Metric | Result |"
+    ],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "125418": {
+    "files": 6,
+    "watch_hits": []
+   },
+   "125802": {
+    "files": 3,
+    "watch_hits": [
+     "agent/turn_context.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "125881": {
+    "files": 7,
+    "watch_hits": [
+     "agent/memory_manager.py"
+    ],
+    "added_metric_lines": [
+     "+    _emit_aborted_attempt_telemetry(agent, attempt.started_at, \"context_governance_block\")",
+     "+    monkeypatch.setattr(compression, \"_emit_aborted_attempt_telemetry\", lambda *a, **kw: None)"
+    ],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": true
+   },
+   "126193": {
+    "files": 1,
+    "watch_hits": []
+   },
+   "126519": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "126890": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "127339": {
+    "files": 4,
+    "watch_hits": []
+   },
+   "127847": {
+    "files": 1,
+    "watch_hits": []
+   },
+   "128757": {
+    "files": 9,
+    "watch_hits": []
+   },
+   "129093": {
+    "files": 1,
+    "watch_hits": []
+   },
+   "129164": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "129324": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "129620": {
+    "files": 9,
+    "watch_hits": [
+     "agent/turn_context.py"
+    ],
+    "added_metric_lines": [],
+    "adds_prefetch_record": false,
+    "touches_prefetch_provider": false
+   },
+   "130240": {
+    "files": 2,
+    "watch_hits": []
+   },
+   "130474": {
+    "files": 1,
+    "watch_hits": []
+   },
+   "130491": {
+    "files": 2,
+    "watch_hits": []
+   }
+  },
+  "flagged": [
+   5688,
+   7789,
+   12126,
+   15412,
+   18565,
+   19833,
+   22876,
+   30991,
+   34215,
+   34521,
+   40425,
+   40967,
+   44378,
+   45743,
+   53182,
+   58597,
+   60953,
+   62841,
+   63759,
+   64288,
+   64421,
+   64528,
+   65329,
+   68721,
+   68903,
+   72385,
+   78584,
+   81582,
+   84360,
+   84412,
+   86948,
+   87028,
+   89283,
+   90385,
+   91974,
+   92118,
+   92149,
+   94983,
+   95387,
+   98768,
+   101580,
+   108965,
+   115109,
+   115694,
+   119191,
+   120042,
+   124151,
+   125802,
+   125881,
+   129620
+  ],
+  "adds_prefetch_record": []
+ },
+ "head_fn": {
+  "records": 4,
+  "returns": 4,
+  "raises": 1
+ },
+ "merge_matrix": {
+  "5688": {
+   "author": "handsdiff",
+   "state": "open",
+   "title": "feat(agent): support multiple simultaneous memory providers",
+   "pr_head": "cb12154cc8",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/memory_manager.py",
+    "agent/memory_provider.py",
+    "cli-config.yaml.example",
+    "hermes_cli/config.py",
+    "hermes_cli/memory_setup.py",
+    "plugins/memory/__init__.py",
+    "run_agent.py",
+    "tests/agent/test_memory_provider.py",
+    "website/docs/user-guide/features/memory-providers.md"
+   ],
+   "vs_head_conflicts": [
+    "agent/memory_manager.py",
+    "agent/memory_provider.py",
+    "cli-config.yaml.example",
+    "hermes_cli/config.py",
+    "hermes_cli/memory_setup.py",
+    "plugins/memory/__init__.py",
+    "run_agent.py",
+    "tests/agent/test_memory_provider.py",
+    "website/docs/user-guide/features/memory-providers.md"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "cb12154cc8"
+   }
+  },
+  "7789": {
+   "author": "hughpyle",
+   "state": "open",
+   "title": "fix(memory): pass session and user context to on_turn_start",
+   "pr_head": "fc4ac4af71",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/memory_manager.py",
+    "agent/memory_provider.py",
+    "gateway/run.py",
+    "run_agent.py",
+    "tests/agent/test_memory_provider.py",
+    "tests/run_agent/test_run_agent.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/memory_manager.py",
+    "agent/memory_provider.py",
+    "gateway/run.py",
+    "run_agent.py",
+    "tests/agent/test_memory_provider.py",
+    "tests/run_agent/test_run_agent.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "fc4ac4af71"
+   }
+  },
+  "12126": {
+   "author": "SonicBotMan",
+   "state": "open",
+   "title": "fix(memory): persist prefetch cache across AIAgent recreation in gateway",
+   "pr_head": "5185526a02",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/memory_manager.py",
+    "run_agent.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/memory_manager.py",
+    "run_agent.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "5185526a02"
+   }
+  },
+  "15412": {
+   "author": "tabtablabs-dev",
+   "state": "open",
+   "title": "fix(memory): preview external prefetch context in Discord progress",
+   "pr_head": "69c5a41321",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/memory_manager.py",
+    "gateway/display_config.py",
+    "gateway/run.py",
+    "run_agent.py",
+    "tests/agent/test_memory_provider.py",
+    "tests/gateway/test_display_config.py",
+    "tests/gateway/test_run_progress_topics.py",
+    "tests/run_agent/test_run_agent.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/memory_manager.py",
+    "gateway/display_config.py",
+    "gateway/run.py",
+    "run_agent.py",
+    "tests/agent/test_memory_provider.py",
+    "tests/gateway/test_display_config.py",
+    "tests/gateway/test_run_progress_topics.py",
+    "tests/run_agent/test_run_agent.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "69c5a41321"
+   },
+   "recorded_head": "69c5a41321",
+   "head_unchanged": true
+  },
+  "18565": {
+   "author": "natehale",
+   "state": "open",
+   "title": "feat(cron): per-job external memory provider modes (off|tools|full)",
+   "pr_head": "74b9aa9c3b",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "AGENTS.md",
+    "agent/agent_init.py",
+    "agent/memory_manager.py",
+    "agent/system_prompt.py",
+    "agent/turn_context.py",
+    "cron/jobs.py",
+    "cron/scheduler.py",
+    "run_agent.py",
+    "tests/agent/test_memory_provider_mode.py",
+    "tools/cronjob_tools.py",
+    "website/docs/developer-guide/pr18565-review-replies.md"
+   ],
+   "vs_head_conflicts": [
+    "AGENTS.md",
+    "agent/agent_init.py",
+    "agent/memory_manager.py",
+    "agent/system_prompt.py",
+    "agent/turn_context.py",
+    "cron/jobs.py",
+    "cron/scheduler.py",
+    "run_agent.py",
+    "tests/agent/test_memory_provider_mode.py",
+    "tools/cronjob_tools.py",
+    "website/docs/developer-guide/pr18565-review-replies.md"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "74b9aa9c3b"
+   }
+  },
+  "19833": {
+   "author": "fadelguy",
+   "state": "open",
+   "title": "Fix Honcho auto-injection for shared gateway venues",
+   "pr_head": "ac7841b028",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/memory_manager.py",
+    "plugins/memory/honcho/__init__.py",
+    "plugins/memory/honcho/session.py",
+    "tests/agent/test_memory_user_id.py",
+    "tests/honcho_plugin/test_pin_peer_name.py",
+    "tests/honcho_plugin/test_session.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/memory_manager.py",
+    "plugins/memory/honcho/__init__.py",
+    "plugins/memory/honcho/session.py",
+    "tests/agent/test_memory_user_id.py",
+    "tests/honcho_plugin/test_pin_peer_name.py",
+    "tests/honcho_plugin/test_session.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "ac7841b028"
+   }
+  },
+  "22876": {
+   "author": "Ramadas108",
+   "state": "open",
+   "title": "fix(shutdown): harden 44 cleanup blocks against second-Ctrl-C KeyboardInterrupt crash",
+   "pr_head": "3b9dfcaaa7",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/auxiliary_client.py",
+    "agent/memory_manager.py",
+    "cli.py",
+    "gateway/run.py",
+    "plugins/memory/hindsight/__init__.py",
+    "plugins/memory/honcho/__init__.py",
+    "plugins/memory/openviking/__init__.py",
+    "run_agent.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/auxiliary_client.py",
+    "agent/memory_manager.py",
+    "cli.py",
+    "gateway/run.py",
+    "plugins/memory/hindsight/__init__.py",
+    "plugins/memory/honcho/__init__.py",
+    "plugins/memory/openviking/__init__.py",
+    "run_agent.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "3b9dfcaaa7"
+   }
+  },
+  "30991": {
+   "author": "xxxigm",
+   "state": "open",
+   "title": "fix(memory-providers): inject external memory tools when 'memory' toolset is off",
+   "pr_head": "3b1b9859d0",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/agent_init.py",
+    "hermes_cli/tools_config.py",
+    "tests/agent/test_memory_provider.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/agent_init.py",
+    "hermes_cli/tools_config.py",
+    "tests/agent/test_memory_provider.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "3b1b9859d0"
+   }
+  },
+  "34215": {
+   "author": "nic-h",
+   "state": "open",
+   "title": "fix(memory): compact recall context boundaries",
+   "pr_head": "fb9e1307f3",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/chat_completion_helpers.py",
+    "agent/conversation_loop.py",
+    "agent/memory_manager.py",
+    "plugins/memory/honcho/__init__.py",
+    "tests/agent/test_memory_provider.py",
+    "tests/agent/test_prompt_leak_sanitization.py",
+    "tests/agent/test_prompt_leak_streaming_sanitization.py",
+    "tests/honcho_plugin/test_session.py",
+    "tests/run_agent/test_run_agent.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/chat_completion_helpers.py",
+    "agent/conversation_loop.py",
+    "agent/memory_manager.py",
+    "plugins/memory/honcho/__init__.py",
+    "tests/agent/test_memory_provider.py",
+    "tests/agent/test_prompt_leak_sanitization.py",
+    "tests/agent/test_prompt_leak_streaming_sanitization.py",
+    "tests/honcho_plugin/test_session.py",
+    "tests/run_agent/test_run_agent.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "fb9e1307f3"
+   }
+  },
+  "34521": {
+   "author": "20231118185SSPU",
+   "state": "open",
+   "title": "feat(memory): organic memory architecture — silent engrams, salience gating,   consolidation engine",
+   "pr_head": "0053eb6bd2",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/memory_manager.py",
+    "plugins/memory/holographic/__init__.py",
+    "plugins/memory/holographic/retrieval.py",
+    "plugins/memory/holographic/store.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/memory_manager.py",
+    "plugins/memory/holographic/__init__.py",
+    "plugins/memory/holographic/retrieval.py",
+    "plugins/memory/holographic/store.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "0053eb6bd2"
+   }
+  },
+  "40425": {
+   "author": "rodboev",
+   "state": "open",
+   "title": "fix(memory): contain external recall at the injection boundary (#40170)",
+   "pr_head": "798e284a0c",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/agent_init.py",
+    "agent/chat_completion_helpers.py",
+    "agent/conversation_loop.py",
+    "agent/turn_context.py",
+    "gateway/config.py",
+    "gateway/platforms/api_server.py",
+    "gateway/run.py",
+    "gateway/slash_commands.py",
+    "run_agent.py",
+    "tests/agent/test_api_content_sidecar.py",
+    "tests/agent/test_turn_context.py",
+    "tests/gateway/test_agent_cache.py",
+    "tests/gateway/test_api_server_toolset.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/agent_init.py",
+    "agent/chat_completion_helpers.py",
+    "agent/conversation_loop.py",
+    "agent/turn_context.py",
+    "gateway/config.py",
+    "gateway/platforms/api_server.py",
+    "gateway/run.py",
+    "gateway/slash_commands.py",
+    "run_agent.py",
+    "tests/agent/test_api_content_sidecar.py",
+    "tests/agent/test_turn_context.py",
+    "tests/gateway/test_agent_cache.py",
+    "tests/gateway/test_api_server_toolset.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "798e284a0c"
+   }
+  },
+  "40967": {
+   "author": "iamlukethedev",
+   "state": "open",
+   "title": "fix(#40170): prevent Honcho memory injection on customer-facing gateways",
+   "pr_head": "8522abb15e",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/agent_init.py",
+    "agent/turn_context.py",
+    "gateway/run.py",
+    "tests/hermes_cli/test_model_validation.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/agent_init.py",
+    "agent/turn_context.py",
+    "gateway/run.py",
+    "tests/hermes_cli/test_model_validation.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "8522abb15e"
+   }
+  },
+  "44378": {
+   "author": "Kewe63",
+   "state": "open",
+   "title": "fix(memory_manager): add exponential backoff retry for transient provider errors",
+   "pr_head": "0b8bcb8cf5",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/memory_manager.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/memory_manager.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "0b8bcb8cf5"
+   }
+  },
+  "45743": {
+   "author": "waldmanz",
+   "state": "open",
+   "title": "feat(memory): govern automatic memory context injection",
+   "pr_head": "3600155b1b",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/memory_manager.py",
+    "agent/memory_provider.py",
+    "agent/turn_context.py",
+    "tests/agent/test_memory_provider.py",
+    "tests/agent/test_run_agent.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/memory_manager.py",
+    "agent/memory_provider.py",
+    "agent/turn_context.py",
+    "tests/agent/test_memory_provider.py",
+    "tests/agent/test_run_agent.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "3600155b1b"
+   }
+  },
+  "53182": {
+   "author": "jony0910",
+   "state": "open",
+   "title": "feat: add memory sidecar context retrieval and runtime fixes",
+   "pr_head": "ea3e8e9b88",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/conversation_loop.py",
+    "agent/turn_context.py",
+    "hermes_state.py",
+    "providers/__init__.py",
+    "tests/agent/test_run_agent.py",
+    "tests/agent/test_turn_context.py",
+    "tests/providers/test_provider_profiles.py",
+    "tests/test_hermes_state.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/conversation_loop.py",
+    "agent/turn_context.py",
+    "hermes_state.py",
+    "providers/__init__.py",
+    "tests/agent/test_run_agent.py",
+    "tests/agent/test_turn_context.py",
+    "tests/providers/test_provider_profiles.py",
+    "tests/test_hermes_state.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "ea3e8e9b88"
+   }
+  },
+  "58597": {
+   "author": "JandY95",
+   "state": "open",
+   "title": "context-health: add auto context governance phases 1-9",
+   "pr_head": "ae6946c1fc",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/conversation_loop.py",
+    "agent/memory_manager.py",
+    "agent/turn_context.py",
+    "agent/turn_finalizer.py",
+    "tests/agent/test_context_health_provider_payload.py",
+    "tests/agent/test_context_health_retrieval_scope.py",
+    "tests/agent/test_context_health_task_boundary_firewall.py",
+    "tests/agent/test_context_health_task_registry.py",
+    "tools/session_search_tool.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/conversation_loop.py",
+    "agent/memory_manager.py",
+    "agent/turn_context.py",
+    "agent/turn_finalizer.py",
+    "tests/agent/test_context_health_provider_payload.py",
+    "tests/agent/test_context_health_retrieval_scope.py",
+    "tests/agent/test_context_health_task_boundary_firewall.py",
+    "tests/agent/test_context_health_task_registry.py",
+    "tools/session_search_tool.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "ae6946c1fc"
+   }
+  },
+  "60953": {
+   "author": "tangxc96",
+   "state": "open",
+   "title": "fix(memory): isolate provider sync and prefetch background lanes",
+   "pr_head": "fc282ac2b3",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/memory_manager.py",
+    "tests/agent/test_memory_async_sync.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/memory_manager.py",
+    "tests/agent/test_memory_async_sync.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "fc282ac2b3"
+   }
+  },
+  "62841": {
+   "author": "devatnull",
+   "state": "open",
+   "title": "feat(memory): per-chat/per-user/per-session memory scope isolation",
+   "pr_head": "a4e5baac5e",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/agent_init.py",
+    "agent/conversation_compression.py",
+    "agent/learning_graph.py",
+    "agent/learning_mutations.py",
+    "agent/memory_manager.py",
+    "agent/tool_executor.py",
+    "agent/turn_context.py",
+    "gateway/session_context.py",
+    "hermes_cli/config.py",
+    "hermes_cli/doctor.py",
+    "hermes_cli/main.py",
+    "hermes_cli/subcommands/memory.py",
+    "hermes_cli/web_server.py",
+    "plugins/memory/supermemory/__init__.py",
+    "run_agent.py",
+    "tests/agent/test_learning_mutations.py",
+    "tests/agent/test_memory_boundary_commit.py",
+    "tests/hermes_cli/test_memory_reset.py",
+    "tests/hermes_cli/test_profiles.py",
+    "tests/hermes_cli/test_web_server.py",
+    "tests/test_tui_gateway_server.py",
+    "tests/tools/test_write_approval.py",
+    "tools/memory_tool.py",
+    "tui_gateway/server.py",
+    "website/docs/user-guide/configuration.md",
+    "website/docs/user-guide/features/memory.md"
+   ],
+   "vs_head_conflicts": [
+    "agent/agent_init.py",
+    "agent/conversation_compression.py",
+    "agent/learning_graph.py",
+    "agent/learning_mutations.py",
+    "agent/memory_manager.py",
+    "agent/tool_executor.py",
+    "agent/turn_context.py",
+    "gateway/session_context.py",
+    "hermes_cli/config.py",
+    "hermes_cli/doctor.py",
+    "hermes_cli/main.py",
+    "hermes_cli/subcommands/memory.py",
+    "hermes_cli/web_server.py",
+    "plugins/memory/supermemory/__init__.py",
+    "run_agent.py",
+    "tests/agent/test_learning_mutations.py",
+    "tests/agent/test_memory_boundary_commit.py",
+    "tests/hermes_cli/test_memory_reset.py",
+    "tests/hermes_cli/test_profiles.py",
+    "tests/hermes_cli/test_web_server.py",
+    "tests/test_tui_gateway_server.py",
+    "tests/tools/test_write_approval.py",
+    "tools/memory_tool.py",
+    "tui_gateway/server.py",
+    "website/docs/user-guide/configuration.md",
+    "website/docs/user-guide/features/memory.md"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "a4e5baac5e"
+   }
+  },
+  "63759": {
+   "author": "gcunharodrigues",
+   "state": "open",
+   "title": "fix(gateway): run a session's stdio MCP servers in that session's project cwd",
+   "pr_head": "3165890dc8",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/memory_manager.py",
+    "tests/agent/test_memory_async_sync.py",
+    "tests/test_tui_gateway_server.py",
+    "tests/test_windows_subprocess_no_window_flags.py",
+    "tests/tui_gateway/test_slash_worker_profile_home.py",
+    "tools/mcp_tool.py",
+    "tui_gateway/server.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/memory_manager.py",
+    "tests/agent/test_memory_async_sync.py",
+    "tests/test_tui_gateway_server.py",
+    "tests/test_windows_subprocess_no_window_flags.py",
+    "tests/tui_gateway/test_slash_worker_profile_home.py",
+    "tools/mcp_tool.py",
+    "tui_gateway/server.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "3165890dc8"
+   }
+  },
+  "64288": {
+   "author": "embwl0x",
+   "state": "open",
+   "title": "fix(memory): neutralize provider prompt delimiters",
+   "pr_head": "ac06e6a6be",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/conversation_loop.py",
+    "agent/memory_manager.py",
+    "agent/turn_context.py",
+    "tests/agent/test_api_content_sidecar.py",
+    "tests/agent/test_memory_provider.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/conversation_loop.py",
+    "agent/memory_manager.py",
+    "agent/turn_context.py",
+    "tests/agent/test_api_content_sidecar.py",
+    "tests/agent/test_memory_provider.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "ac06e6a6be"
+   }
+  },
+  "64421": {
+   "author": "yingliang-zhang",
+   "state": "open",
+   "title": "fix(memory): frame recalled context as untrusted data",
+   "pr_head": "b6df099a1a",
+   "class": "clean_both",
+   "in_watched_set": true,
+   "vs_main_conflicts": [],
+   "vs_head_conflicts": [],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "clean_both",
+    "pr_head": "b6df099a1a"
+   },
+   "merged_fn": {
+    "changed_vs_head": false,
+    "records": 4,
+    "returns": 4,
+    "raises": 1
+   }
+  },
+  "64528": {
+   "author": "kavyaa1505",
+   "state": "open",
+   "title": "Feat/hybrid skill retrieval",
+   "pr_head": "dbcd828b11",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/conversation_loop.py",
+    "agent/prompt_builder.py",
+    "agent/turn_context.py",
+    "tools/skill_manager_tool.py",
+    "tools/skills_hub.py",
+    "tools/skills_sync.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/conversation_loop.py",
+    "agent/prompt_builder.py",
+    "agent/turn_context.py",
+    "tools/skill_manager_tool.py",
+    "tools/skills_hub.py",
+    "tools/skills_sync.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "dbcd828b11"
+   }
+  },
+  "65329": {
+   "author": "Soju06",
+   "state": "open",
+   "title": "feat(telemetry): opt-in per-turn waterfall tracing (config: agent.turn_trace)",
+   "pr_head": "c868eaaa02",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/chat_completion_helpers.py",
+    "agent/conversation_loop.py",
+    "agent/tool_executor.py",
+    "agent/turn_context.py",
+    "agent/turn_finalizer.py",
+    "gateway/platforms/base.py",
+    "gateway/run.py",
+    "gateway/turn_context.py",
+    "hermes_cli/config_defaults.py",
+    "plugins/platforms/telegram/adapter.py",
+    "run_agent.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/chat_completion_helpers.py",
+    "agent/conversation_loop.py",
+    "agent/tool_executor.py",
+    "agent/turn_context.py",
+    "agent/turn_finalizer.py",
+    "gateway/platforms/base.py",
+    "gateway/run.py",
+    "gateway/turn_context.py",
+    "hermes_cli/config_defaults.py",
+    "plugins/platforms/telegram/adapter.py",
+    "run_agent.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "c868eaaa02"
+   },
+   "recorded_head": "c868eaaa02",
+   "head_unchanged": true
+  },
+  "68721": {
+   "author": "starship-s",
+   "state": "open",
+   "title": "fix(memory): exclude synthetic delegation completions from retention",
+   "pr_head": "5a8d47ab5e",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/codex_runtime.py",
+    "agent/conversation_loop.py",
+    "agent/memory_manager.py",
+    "agent/turn_context.py",
+    "agent/turn_finalizer.py",
+    "cli.py",
+    "gateway/platforms/base.py",
+    "gateway/run.py",
+    "gateway/session.py",
+    "hermes_cli/web_server.py",
+    "hermes_state.py",
+    "run_agent.py",
+    "tests/agent/test_memory_boundary_commit.py",
+    "tests/agent/test_memory_provider.py",
+    "tests/agent/test_turn_context.py",
+    "tests/agent/transports/test_chat_completions.py",
+    "tests/gateway/test_duplicate_user_message.py",
+    "tests/gateway/test_session.py",
+    "tests/hermes_cli/test_web_server.py",
+    "tests/test_hermes_state.py",
+    "tests/test_tui_gateway_server.py",
+    "tui_gateway/server.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/codex_runtime.py",
+    "agent/conversation_loop.py",
+    "agent/memory_manager.py",
+    "agent/turn_context.py",
+    "agent/turn_finalizer.py",
+    "cli.py",
+    "gateway/platforms/base.py",
+    "gateway/run.py",
+    "gateway/session.py",
+    "hermes_cli/web_server.py",
+    "hermes_state.py",
+    "run_agent.py",
+    "tests/agent/test_memory_boundary_commit.py",
+    "tests/agent/test_memory_provider.py",
+    "tests/agent/test_turn_context.py",
+    "tests/agent/transports/test_chat_completions.py",
+    "tests/gateway/test_duplicate_user_message.py",
+    "tests/gateway/test_session.py",
+    "tests/hermes_cli/test_web_server.py",
+    "tests/test_hermes_state.py",
+    "tests/test_tui_gateway_server.py",
+    "tui_gateway/server.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "5a8d47ab5e"
+   }
+  },
+  "68903": {
+   "author": "nuffin",
+   "state": "open",
+   "title": "feat(agent): add memory_mode parameter with 'on_demand' option for sub-agents",
+   "pr_head": "bce652651f",
+   "class": "clean_both",
+   "in_watched_set": true,
+   "vs_main_conflicts": [],
+   "vs_head_conflicts": [],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "clean_both",
+    "pr_head": "bce652651f"
+   },
+   "merged_fn": {
+    "changed_vs_head": false,
+    "records": 4,
+    "returns": 4,
+    "raises": 1
+   }
+  },
+  "72385": {
+   "author": "clara-patchou-ai",
+   "state": "open",
+   "title": "fix(honcho): stop background workers before exit",
+   "pr_head": "1128fbe151",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/memory_manager.py",
+    "cli.py",
+    "plugins/memory/honcho/__init__.py",
+    "plugins/memory/honcho/session.py",
+    "tests/agent/test_memory_provider.py",
+    "tests/cli/test_cli_shutdown_memory_messages.py",
+    "tests/honcho_plugin/test_async_memory.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/memory_manager.py",
+    "cli.py",
+    "plugins/memory/honcho/__init__.py",
+    "plugins/memory/honcho/session.py",
+    "tests/agent/test_memory_provider.py",
+    "tests/cli/test_cli_shutdown_memory_messages.py",
+    "tests/honcho_plugin/test_async_memory.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "1128fbe151"
+   }
+  },
+  "78584": {
+   "author": "iso2kx",
+   "state": "open",
+   "title": "feat(sessions): add temporary chats that leave nothing on disk",
+   "pr_head": "e7c6f83e8a",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/agent_init.py",
+    "agent/agent_runtime_helpers.py",
+    "agent/background_review.py",
+    "agent/conversation_compression.py",
+    "agent/memory_manager.py",
+    "agent/prompt_builder.py",
+    "agent/system_prompt.py",
+    "agent/title_generator.py",
+    "agent/tool_executor.py",
+    "agent/turn_context.py",
+    "apps/desktop/src/app/chat/composer/index.tsx",
+    "apps/desktop/src/app/chat/index.tsx",
+    "apps/desktop/src/app/chat/sidebar/index.tsx",
+    "apps/desktop/src/app/session/hooks/use-message-stream/gateway-event.ts",
+    "apps/desktop/src/app/session/hooks/use-session-actions/index.ts",
+    "apps/desktop/src/app/types.ts",
+    "apps/desktop/src/i18n/ar.ts",
+    "apps/desktop/src/i18n/en.ts",
+    "apps/desktop/src/i18n/ja.ts",
+    "apps/desktop/src/i18n/types.ts",
+    "apps/desktop/src/i18n/zh-hant.ts",
+    "apps/desktop/src/i18n/zh.ts",
+    "apps/desktop/src/lib/chat-messages.ts",
+    "apps/desktop/src/lib/keybinds/actions.ts",
+    "cli.py",
+    "gateway/platforms/base.py",
+    "gateway/run.py",
+    "gateway/session.py",
+    "gateway/slash_commands.py",
+    "hermes_cli/_parser.py",
+    "hermes_cli/cli_agent_setup_mixin.py",
+    "hermes_cli/cli_commands_mixin.py",
+    "hermes_cli/commands.py",
+    "hermes_cli/lifecycle.py",
+    "hermes_cli/main.py",
+    "hermes_cli/oneshot.py",
+    "hermes_cli/plugins.py",
+    "hermes_cli/tips.py",
+    "hermes_state.py",
+    "locales/af.yaml",
+    "locales/ar.yaml",
+    "locales/de.yaml",
+    "locales/en.yaml",
+    "locales/es.yaml",
+    "locales/fr.yaml",
+    "locales/ga.yaml",
+    "locales/hu.yaml",
+    "locales/it.yaml",
+    "locales/ja.yaml",
+    "locales/ko.yaml",
+    "locales/pt.yaml",
+    "locales/ru.yaml",
+    "locales/tr.yaml",
+    "locales/uk.yaml",
+    "locales/zh-hant.yaml",
+    "locales/zh.yaml",
+    "plugins/memory/hindsight/__init__.py",
+    "plugins/memory/honcho/__init__.py",
+    "plugins/memory/supermemory/__init__.py",
+    "run_agent.py",
+    "tests/agent/test_ephemeral_tool_guard_executors.py",
+    "tools/delegate_tool.py",
+    "tui_gateway/methods_session.py",
+    "tui_gateway/server.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/agent_init.py",
+    "agent/agent_runtime_helpers.py",
+    "agent/background_review.py",
+    "agent/conversation_compression.py",
+    "agent/memory_manager.py",
+    "agent/prompt_builder.py",
+    "agent/system_prompt.py",
+    "agent/title_generator.py",
+    "agent/tool_executor.py",
+    "agent/turn_context.py",
+    "apps/desktop/src/app/chat/composer/index.tsx",
+    "apps/desktop/src/app/chat/index.tsx",
+    "apps/desktop/src/app/chat/sidebar/index.tsx",
+    "apps/desktop/src/app/session/hooks/use-message-stream/gateway-event.ts",
+    "apps/desktop/src/app/session/hooks/use-session-actions/index.ts",
+    "apps/desktop/src/app/types.ts",
+    "apps/desktop/src/i18n/ar.ts",
+    "apps/desktop/src/i18n/en.ts",
+    "apps/desktop/src/i18n/ja.ts",
+    "apps/desktop/src/i18n/types.ts",
+    "apps/desktop/src/i18n/zh-hant.ts",
+    "apps/desktop/src/i18n/zh.ts",
+    "apps/desktop/src/lib/chat-messages.ts",
+    "apps/desktop/src/lib/keybinds/actions.ts",
+    "cli.py",
+    "gateway/platforms/base.py",
+    "gateway/run.py",
+    "gateway/session.py",
+    "gateway/slash_commands.py",
+    "hermes_cli/_parser.py",
+    "hermes_cli/cli_agent_setup_mixin.py",
+    "hermes_cli/cli_commands_mixin.py",
+    "hermes_cli/commands.py",
+    "hermes_cli/lifecycle.py",
+    "hermes_cli/main.py",
+    "hermes_cli/oneshot.py",
+    "hermes_cli/plugins.py",
+    "hermes_cli/tips.py",
+    "hermes_state.py",
+    "locales/af.yaml",
+    "locales/ar.yaml",
+    "locales/de.yaml",
+    "locales/en.yaml",
+    "locales/es.yaml",
+    "locales/fr.yaml",
+    "locales/ga.yaml",
+    "locales/hu.yaml",
+    "locales/it.yaml",
+    "locales/ja.yaml",
+    "locales/ko.yaml",
+    "locales/pt.yaml",
+    "locales/ru.yaml",
+    "locales/tr.yaml",
+    "locales/uk.yaml",
+    "locales/zh-hant.yaml",
+    "locales/zh.yaml",
+    "plugins/memory/hindsight/__init__.py",
+    "plugins/memory/honcho/__init__.py",
+    "plugins/memory/supermemory/__init__.py",
+    "run_agent.py",
+    "tests/agent/test_ephemeral_tool_guard_executors.py",
+    "tools/delegate_tool.py",
+    "tui_gateway/methods_session.py",
+    "tui_gateway/server.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "e7c6f83e8a"
+   }
+  },
+  "81582": {
+   "author": "x7peeps",
+   "state": "open",
+   "title": "feat(agent): proactive feature router — suggest the right Hermes capability at the right time",
+   "pr_head": "36dcc4dfc8",
+   "class": "clean_both",
+   "in_watched_set": true,
+   "vs_main_conflicts": [],
+   "vs_head_conflicts": [],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "clean_both",
+    "pr_head": "36dcc4dfc8"
+   },
+   "merged_fn": {
+    "changed_vs_head": false,
+    "records": 4,
+    "returns": 4,
+    "raises": 1
+   }
+  },
+  "84360": {
+   "author": "TurboAnbeli",
+   "state": "open",
+   "title": "fix(memory): frame recalled memory as untrusted, non-authoritative context (#84251)",
+   "pr_head": "b856e23706",
+   "class": "clean_both",
+   "in_watched_set": true,
+   "vs_main_conflicts": [],
+   "vs_head_conflicts": [],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "clean_both",
+    "pr_head": "b856e23706"
+   },
+   "merged_fn": {
+    "changed_vs_head": false,
+    "records": 4,
+    "returns": 4,
+    "raises": 1
+   }
+  },
+  "84412": {
+   "author": "TurboAnbeli",
+   "state": "open",
+   "title": "feat(memory): structured recall-provenance envelope (RecallItem) — tier B of #84251",
+   "pr_head": "30c9b1253c",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/memory_manager.py",
+    "plugins/memory/hindsight/__init__.py",
+    "tests/plugins/memory/test_hindsight_provider.py",
+    "website/docs/developer-guide/memory-provider-plugin.md"
+   ],
+   "vs_head_conflicts": [
+    "agent/memory_manager.py",
+    "plugins/memory/hindsight/__init__.py",
+    "tests/plugins/memory/test_hindsight_provider.py",
+    "website/docs/developer-guide/memory-provider-plugin.md"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "30c9b1253c"
+   }
+  },
+  "86948": {
+   "author": "V0v1kkkAssistant",
+   "state": "open",
+   "title": "feat(memory): make provider timeouts configurable",
+   "pr_head": "cc1c2a1f2c",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/memory_manager.py",
+    "plugins/memory/byterover/__init__.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/memory_manager.py",
+    "plugins/memory/byterover/__init__.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "cc1c2a1f2c"
+   },
+   "recorded_head": "cc1c2a1f2c",
+   "head_unchanged": true
+  },
+  "87028": {
+   "author": "richardclawbot",
+   "state": "open",
+   "title": "fix(memory): honor external prefetch timeout",
+   "pr_head": "f63bfa2a5c",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/agent_init.py",
+    "agent/memory_manager.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/agent_init.py",
+    "agent/memory_manager.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "f63bfa2a5c"
+   },
+   "recorded_head": "f63bfa2a5c",
+   "head_unchanged": true
+  },
+  "89283": {
+   "author": "Nando2392",
+   "state": "open",
+   "title": "fix(security): mark provider recall as untrusted",
+   "pr_head": "e2cfcae796",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "tests/agent/test_api_content_sidecar.py"
+   ],
+   "vs_head_conflicts": [
+    "tests/agent/test_api_content_sidecar.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "e2cfcae796"
+   }
+  },
+  "90385": {
+   "author": "ryanlatham",
+   "state": "open",
+   "title": "feat(webhook): hand off completed sessions to messaging platforms",
+   "pr_head": "4691d0dc68",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/agent_runtime_helpers.py",
+    "agent/conversation_loop.py",
+    "agent/turn_context.py",
+    "gateway/config.py",
+    "gateway/platforms/base.py",
+    "gateway/platforms/webhook.py",
+    "gateway/run.py",
+    "gateway/session.py",
+    "gateway/turn_context.py",
+    "hermes_state.py",
+    "hermes_state_schema.py",
+    "run_agent.py",
+    "tests/agent/test_turn_context.py",
+    "tests/gateway/test_active_turn_recovery.py",
+    "tests/gateway/test_compression_session_id_persistence.py",
+    "tests/gateway/test_gateway_shutdown.py",
+    "tests/gateway/test_pre_gateway_dispatch.py",
+    "tests/gateway/test_proxy_mode.py",
+    "tests/gateway/test_replay_entry_fields.py",
+    "tests/hermes_cli/test_session_handoff.py",
+    "website/docs/user-guide/messaging/webhooks.md"
+   ],
+   "vs_head_conflicts": [
+    "agent/agent_runtime_helpers.py",
+    "agent/conversation_loop.py",
+    "agent/turn_context.py",
+    "gateway/config.py",
+    "gateway/platforms/base.py",
+    "gateway/platforms/webhook.py",
+    "gateway/run.py",
+    "gateway/session.py",
+    "gateway/turn_context.py",
+    "hermes_state.py",
+    "hermes_state_schema.py",
+    "run_agent.py",
+    "tests/agent/test_turn_context.py",
+    "tests/gateway/test_active_turn_recovery.py",
+    "tests/gateway/test_compression_session_id_persistence.py",
+    "tests/gateway/test_gateway_shutdown.py",
+    "tests/gateway/test_pre_gateway_dispatch.py",
+    "tests/gateway/test_proxy_mode.py",
+    "tests/gateway/test_replay_entry_fields.py",
+    "tests/hermes_cli/test_session_handoff.py",
+    "website/docs/user-guide/messaging/webhooks.md"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "4691d0dc68"
+   }
+  },
+  "91974": {
+   "author": "x7peeps",
+   "state": "open",
+   "title": "feat(agent): context-window budget hint injection (adapted from openai/codex)",
+   "pr_head": "2189bd818c",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/turn_context.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/turn_context.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "2189bd818c"
+   }
+  },
+  "92118": {
+   "author": "seradin",
+   "state": "open",
+   "title": "feat(memory): add operation-bound structured prefetch observations",
+   "pr_head": "2ad5cc73fa",
+   "class": "conflicts_with_head_only",
+   "in_watched_set": true,
+   "vs_main_conflicts": [],
+   "vs_head_conflicts": [
+    "agent/memory_manager.py"
+   ],
+   "extra_conflicts_with_head": [
+    "agent/memory_manager.py"
+   ],
+   "r4": {
+    "class": "conflicts_with_head_only",
+    "pr_head": "2ad5cc73fa"
+   },
+   "recorded_head": "2ad5cc73fa",
+   "head_unchanged": true
+  },
+  "92149": {
+   "author": "telnetaisha",
+   "state": "open",
+   "title": "fix(agent): preserve memory-context provenance boundary",
+   "pr_head": "a997a94804",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/turn_context.py",
+    "tests/agent/test_memory_provider.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/turn_context.py",
+    "tests/agent/test_memory_provider.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "a997a94804"
+   }
+  },
+  "94983": {
+   "author": "GottZ",
+   "state": "open",
+   "title": "Context engines: resolve compaction authority under checkpoint_required (follow-up to #94639)",
+   "pr_head": "d8ac19b1e8",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/agent_init.py",
+    "agent/background_review.py",
+    "agent/context_compressor.py",
+    "agent/context_engine.py",
+    "agent/conversation_loop.py",
+    "agent/curator.py",
+    "agent/memory_manager.py",
+    "batch_runner.py",
+    "plugins/platforms/feishu/feishu_comment.py",
+    "run_agent.py",
+    "tests/agent/test_pre_compress_checkpoint_contract.py",
+    "tools/delegate_tool.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/agent_init.py",
+    "agent/background_review.py",
+    "agent/context_compressor.py",
+    "agent/context_engine.py",
+    "agent/conversation_loop.py",
+    "agent/curator.py",
+    "agent/memory_manager.py",
+    "batch_runner.py",
+    "plugins/platforms/feishu/feishu_comment.py",
+    "run_agent.py",
+    "tests/agent/test_pre_compress_checkpoint_contract.py",
+    "tools/delegate_tool.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "d8ac19b1e8"
+   }
+  },
+  "95387": {
+   "author": "x7peeps",
+   "state": "open",
+   "title": "feat(agent): implicit skill prefetch — load mentioned skills into turn prefetch cache",
+   "pr_head": "367efe23ec",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/turn_context.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/turn_context.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "367efe23ec"
+   }
+  },
+  "98768": {
+   "author": "CaptainGimpy",
+   "state": "open",
+   "title": "feat(triggers): trigger-based skill auto-loading from SKILL.md frontmatter",
+   "pr_head": "e8e365daaf",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/prompt_builder.py",
+    "agent/turn_context.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/prompt_builder.py",
+    "agent/turn_context.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "e8e365daaf"
+   }
+  },
+  "101580": {
+   "author": "stepanov1975",
+   "state": "open",
+   "title": "feat(memory): plan recall for vague follow-up messages",
+   "pr_head": "d24b4d4042",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/memory_manager.py",
+    "agent/memory_provider.py",
+    "agent/turn_context.py",
+    "hermes_cli/config_defaults.py",
+    "plugins/memory/hindsight/__init__.py",
+    "website/docs/user-guide/configuration.md"
+   ],
+   "vs_head_conflicts": [
+    "agent/memory_manager.py",
+    "agent/memory_provider.py",
+    "agent/turn_context.py",
+    "hermes_cli/config_defaults.py",
+    "plugins/memory/hindsight/__init__.py",
+    "website/docs/user-guide/configuration.md"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "d24b4d4042"
+   }
+  },
+  "108965": {
+   "author": "jonpol01",
+   "state": "open",
+   "title": "fix(memory): sanitize recalled context to a fixed point so overlapping fence tags cannot reassemble",
+   "pr_head": "39dd41fe68",
+   "class": "clean_both",
+   "in_watched_set": true,
+   "vs_main_conflicts": [],
+   "vs_head_conflicts": [],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "clean_both",
+    "pr_head": "39dd41fe68"
+   },
+   "merged_fn": {
+    "changed_vs_head": false,
+    "records": 4,
+    "returns": 4,
+    "raises": 1
+   },
+   "recorded_head": "39dd41fe68",
+   "head_unchanged": true
+  },
+  "115109": {
+   "author": "liuhao1024",
+   "state": "open",
+   "title": "fix(memory): scrub provider-synced turns with the egress redactor",
+   "pr_head": "65d141f5ec",
+   "class": "clean_both",
+   "in_watched_set": true,
+   "vs_main_conflicts": [],
+   "vs_head_conflicts": [],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "clean_both",
+    "pr_head": "65d141f5ec"
+   },
+   "merged_fn": {
+    "changed_vs_head": false,
+    "records": 4,
+    "returns": 4,
+    "raises": 1
+   }
+  },
+  "115694": {
+   "author": "aniruddhaadak80",
+   "state": "open",
+   "title": "fix(memory): scrub secrets before memory-provider egress",
+   "pr_head": "a9e3edd6ee",
+   "class": "clean_both",
+   "in_watched_set": true,
+   "vs_main_conflicts": [],
+   "vs_head_conflicts": [],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "clean_both",
+    "pr_head": "a9e3edd6ee"
+   },
+   "merged_fn": {
+    "changed_vs_head": false,
+    "records": 4,
+    "returns": 4,
+    "raises": 1
+   }
+  },
+  "119191": {
+   "author": "rodricksz4h5",
+   "state": "open",
+   "title": "fix(agent): transcripts show a multimodal turn's own content, not its injected context",
+   "pr_head": "0ae54608ba",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "hermes_cli/web_routers/sessions.py"
+   ],
+   "vs_head_conflicts": [
+    "hermes_cli/web_routers/sessions.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "0ae54608ba"
+   }
+  },
+  "120042": {
+   "author": "Navlem",
+   "state": "open",
+   "title": "fix(agent): raise external prefetch bound to 12s so real slow recalls are not dropped",
+   "pr_head": "641f6b94c5",
+   "class": "clean_both",
+   "in_watched_set": true,
+   "vs_main_conflicts": [],
+   "vs_head_conflicts": [],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "clean_both",
+    "pr_head": "641f6b94c5"
+   },
+   "merged_fn": {
+    "changed_vs_head": false,
+    "records": 4,
+    "returns": 4,
+    "raises": 1
+   },
+   "recorded_head": "641f6b94c5",
+   "head_unchanged": true
+  },
+  "124151": {
+   "author": "kweez007",
+   "state": "open",
+   "title": "fix(memory): raise Hindsight external-prefetch timeout 8s -> 20s",
+   "pr_head": "3ee6189dba",
+   "class": "clean_both",
+   "in_watched_set": true,
+   "vs_main_conflicts": [],
+   "vs_head_conflicts": [],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "clean_both",
+    "pr_head": "3ee6189dba"
+   },
+   "merged_fn": {
+    "changed_vs_head": true,
+    "records": 4,
+    "returns": 4,
+    "raises": 1
+   },
+   "recorded_head": "3ee6189dba",
+   "head_unchanged": true
+  },
+  "125802": {
+   "author": "Finn763",
+   "state": "open",
+   "title": "fix(core): #8893 decouple memory prefetch from user-message channel",
+   "pr_head": "543af5de19",
+   "class": "conflicts_with_main_already",
+   "in_watched_set": true,
+   "vs_main_conflicts": [
+    "agent/turn_context.py",
+    "tests/agent/test_api_content_sidecar.py",
+    "tests/agent/test_turn_context.py"
+   ],
+   "vs_head_conflicts": [
+    "agent/turn_context.py",
+    "tests/agent/test_api_content_sidecar.py",
+    "tests/agent/test_turn_context.py"
+   ],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "conflicts_with_main_already",
+    "pr_head": "543af5de19"
+   },
+   "recorded_head": "543af5de19",
+   "head_unchanged": true
+  },
+  "125881": {
+   "author": "pstarkgit",
+   "state": "open",
+   "title": "Add fail-closed policy hooks for memory admission and compression commits",
+   "pr_head": "d3fdffcf82",
+   "class": "clean_both",
+   "in_watched_set": true,
+   "vs_main_conflicts": [],
+   "vs_head_conflicts": [],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "clean_both",
+    "pr_head": "d3fdffcf82"
+   },
+   "merged_fn": {
+    "changed_vs_head": true,
+    "records": 4,
+    "returns": 5,
+    "raises": 1
+   },
+   "recorded_head": "d3fdffcf82",
+   "head_unchanged": true
+  },
+  "126457": {
+   "author": "mozhongzhou",
+   "state": "closed",
+   "title": "feat(cli): add memory provider runtime health indicator to status bar",
+   "pr_head": "822f7b2835",
+   "class": "conflicts_with_head_only",
+   "in_watched_set": false,
+   "vs_main_conflicts": [],
+   "vs_head_conflicts": [
+    "agent/memory_manager.py"
+   ],
+   "extra_conflicts_with_head": [
+    "agent/memory_manager.py"
+   ],
+   "r4": {
+    "class": "conflicts_with_head_only",
+    "pr_head": "822f7b2835"
+   },
+   "recorded_head": "822f7b2835",
+   "head_unchanged": true
+  },
+  "129620": {
+   "author": "JoaoMarcos44",
+   "state": "open",
+   "title": "fix(anthropic): make preserved-thinking replay coherent",
+   "pr_head": "588b746cf6",
+   "class": "clean_both",
+   "in_watched_set": true,
+   "vs_main_conflicts": [],
+   "vs_head_conflicts": [],
+   "extra_conflicts_with_head": [],
+   "r4": {
+    "class": "clean_both",
+    "pr_head": "588b746cf6"
+   },
+   "merged_fn": {
+    "changed_vs_head": false,
+    "records": 4,
+    "returns": 4,
+    "raises": 1
+   }
+  }
+ },
+ "merge_summary_watched": {
+  "conflicts_with_main_already": 38,
+  "clean_both": 11,
+  "conflicts_with_head_only": 1
+ },
+ "vs_r4_watched": {
+  "left": [
+   126457
+  ],
+  "entered": [],
+  "class_changed": {},
+  "head_changed": []
+ },
+ "finished_at": "2026-10-01T16:56:57Z"
+}

@@ -1,0 +1,1304 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "E12/e12-r4",
+ "label": "OBSERVED",
+ "spec": {
+  "path": null,
+  "factory_row": "FACTORY.md \u00a713 row 9 (E12)",
+  "rev": 4,
+  "sha256": null,
+  "prereg_commit": null,
+  "decision_rule": "replay_gates and ab_checkpoint_preflight verdict maps equal to base; test_region_scoping ALL PASS on every arm; adjacent files identical to base apart from the new contract test"
+ },
+ "runner_revision": {
+  "script": {
+   "path": "tools/chs_guards_r4.sh",
+   "sha256": "a21d2c2aabc148c2a559a2ed49ab96e338882585cdd2d140bcc2ef71e00eb602"
+  },
+  "wrapper": {
+   "path": "tools/chs_guard_wrap_r4.py",
+   "sha256": "ab4c308d4172d32723cb78ecfe0f2330f0654df8cb887930c0f93d6813be8c23"
+  },
+  "egress_guard": {
+   "path": "tools/chs_egress_guard_r4.py",
+   "sha256": "3a808849b49a9edbc0649dc5249857e0718ffa0412f54df93453d8e9f3d980a1"
+  },
+  "attribution": {
+   "path": "tools/chs_dns_attribution_r4.py",
+   "sha256": "4a6435b47dc0ab8f7483bb93ca79ef7770da56693594cc74b76a9b7662610a58"
+  }
+ },
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#64231",
+  "NousResearch/hermes-agent#118382",
+  "NousResearch/hermes-agent#53806",
+  "NousResearch/hermes-agent#93391",
+  "NousResearch/hermes-agent#118847",
+  "NousResearch/hermes-agent#119347",
+  "NousResearch/hermes-agent#125881"
+ ],
+ "staging": "compaction-hook-salvage",
+ "base_revision": "a3b56cac95488242856b6fb1f121842a38c3e391",
+ "head_revision": "111f361fb0003405e4724b4c6523f6ce5d118c22",
+ "changed_files": [
+  "tests/agent/test_compaction_observer_hook_contract.py"
+ ],
+ "harness": {
+  "replay_gates": "evals/token_accounting/replay_gates.py",
+  "ab_checkpoint_preflight": "evals/native_compaction/ab_checkpoint_preflight.py",
+  "test_region_scoping": "evals/compaction/test_region_scoping.py",
+  "adjacent_files": [
+   "tests/agent/test_compaction_observer_hook_contract.py",
+   "tests/agent/test_compression_boundary_hook.py",
+   "tests/hermes_cli/test_cli_manual_compress.py",
+   "tests/hermes_cli/test_shared_metrics_engagement.py",
+   "tests/agent/test_compression_attempt_telemetry.py",
+   "tests/agent/test_auxiliary_hooks.py",
+   "tests/agent/test_shell_hooks.py",
+   "tests/gateway/test_gateway_platform_event_hook.py",
+   "tests/hermes_cli/test_hooks_cli.py",
+   "tests/hermes_cli/test_plugins.py",
+   "tests/hermes_cli/test_kanban_lifecycle_hooks.py",
+   "tests/agent/test_conversation_compression_manual.py",
+   "tests/agent/test_compression_rotation_state.py",
+   "tests/agent/test_compression_persistence.py",
+   "tests/agent/test_compression_commit_fence_race.py",
+   "tests/agent/test_compression_attempt_lifecycle.py",
+   "tests/agent/test_pre_compress_memory_context_handoff.py"
+  ]
+ },
+ "arms": {
+  "base": {
+   "commit": "111f361fb0003405e4724b4c6523f6ce5d118c22",
+   "tree": "c3e9452f8bbf6b9ff86e57f1409059709cde0802",
+   "replay_gates": {
+    "harness": "replay_gates",
+    "egress": {
+     "connect": 0,
+     "dns": 0,
+     "by_thread": {}
+    },
+    "exit_class": "ok",
+    "verdicts": {
+     "compressor_sha256": "86f4b7a8a647f1bf520cb17497b68719f6d907028bdc7151c7921818b7e043f1",
+     "cli_past_window_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 160113,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 3
+     },
+     "cli_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 120113,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 3
+     },
+     "cli_deflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 45000,
+      "rough_estimate_turn1_messages": 213,
+      "local_compress_calls_by_turn": [
+       0,
+       1,
+       1
+      ],
+      "local_compress_approx_tokens": [
+       45015,
+       45015
+      ],
+      "provider_requests": 3
+     },
+     "gateway_past_window_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 160113,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 3
+     },
+     "gateway_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 120113,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 3
+     },
+     "gateway_deflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 45000,
+      "rough_estimate_turn1_messages": 213,
+      "local_compress_calls_by_turn": [
+       0,
+       1,
+       1
+      ],
+      "local_compress_approx_tokens": [
+       45015,
+       45015
+      ],
+      "provider_requests": 3
+     },
+     "restore_past_window_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 160074,
+      "persisted_messages": 4,
+      "anchor_restored_in_fresh_agent": true,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 4
+     },
+     "restore_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 120074,
+      "persisted_messages": 4,
+      "anchor_restored_in_fresh_agent": true,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 4
+     },
+     "restore_deflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 45000,
+      "rough_estimate_turn1_messages": 174,
+      "persisted_messages": 4,
+      "anchor_restored_in_fresh_agent": true,
+      "local_compress_calls_by_turn": [
+       0,
+       1,
+       1
+      ],
+      "local_compress_approx_tokens": [
+       45020,
+       45020
+      ],
+      "provider_requests": 4
+     },
+     "overflow_recovery": {
+      "completed": true,
+      "response": "ok",
+      "compression_after_provider_requests": [
+       1
+      ],
+      "first_turn_compressions": 1,
+      "provider_request_sizes": [
+       643236,
+       130768
+      ],
+      "provider_omits_usage": false,
+      "pass": true
+     },
+     "usage_less_fallback": {
+      "completed": true,
+      "response": "ok",
+      "compression_after_provider_requests": [
+       1
+      ],
+      "first_turn_compressions": 0,
+      "provider_request_sizes": [
+       643236,
+       130855
+      ],
+      "provider_omits_usage": true,
+      "pass": true
+     },
+     "verdict": {
+      "cli_past_window_inflated": "PASS",
+      "cli_inflated": "PASS",
+      "cli_deflated": "PASS",
+      "gateway_past_window_inflated": "PASS",
+      "gateway_inflated": "PASS",
+      "gateway_deflated": "PASS",
+      "restore_past_window_inflated": "PASS",
+      "restore_inflated": "PASS",
+      "restore_deflated": "PASS",
+      "overflow_recovery": "PASS",
+      "usage_less_fallback": "PASS"
+     }
+    },
+    "observer_counts": {
+     "rc": 0,
+     "hook_fires": 0,
+     "commits_total": 2,
+     "commits_succeeded": 0
+    },
+    "log_private": "raw/e12-r4/base-replay_gates.log"
+   },
+   "ab_checkpoint_preflight": {
+    "harness": "ab_checkpoint_preflight",
+    "egress": {
+     "connect": 0,
+     "dns": 0,
+     "by_thread": {}
+    },
+    "exit_class": "ok",
+    "verdicts": {
+     "capture_cli_same_objects": {
+      "turn1_completed": true,
+      "checkpoint_persisted": true,
+      "checkpoint_chars": 5169420,
+      "preflight_estimate_before_turn2": 69,
+      "threshold": 204000,
+      "latch_armed_after_turn1": true,
+      "turn2_completed": true,
+      "local_compress_calls_turn2": 0,
+      "turn3_completed": true,
+      "local_compress_calls_turn3": 0,
+      "local_compress_approx_tokens": [],
+      "provider_requests_total": 3,
+      "latch_after_turn3": false,
+      "last_real_prompt_tokens": 115802
+     },
+     "capture_gateway_reloaded_history": {
+      "turn1_completed": true,
+      "checkpoint_persisted": true,
+      "checkpoint_chars": 5169420,
+      "preflight_estimate_before_turn2": 69,
+      "threshold": 204000,
+      "latch_armed_after_turn1": true,
+      "turn2_completed": true,
+      "local_compress_calls_turn2": 0,
+      "turn3_completed": true,
+      "local_compress_calls_turn3": 0,
+      "local_compress_approx_tokens": [],
+      "provider_requests_total": 3,
+      "latch_after_turn3": false,
+      "last_real_prompt_tokens": 115802
+     },
+     "restore": {
+      "turn1_completed": true,
+      "restored_checkpoint_chars": 5169420,
+      "preflight_estimate_fresh_agent": 63,
+      "threshold": 204000,
+      "resume_completed": true,
+      "local_compress_calls_resume": 0,
+      "local_compress_approx_tokens": [],
+      "provider_requests_resume": 1,
+      "latch_after_resume": false,
+      "last_real_prompt_tokens": 115802
+     },
+     "over_threshold_negative": {
+      "turn1_completed": true,
+      "checkpoint_persisted": true,
+      "checkpoint_chars": 5169420,
+      "preflight_estimate_before_turn2": 69,
+      "threshold": 204000,
+      "latch_armed_after_turn1": true,
+      "turn2_completed": true,
+      "local_compress_calls_turn2": 0,
+      "turn3_completed": true,
+      "local_compress_calls_turn3": 1,
+      "local_compress_approx_tokens": [
+       209021
+      ],
+      "provider_requests_total": 3,
+      "latch_after_turn3": false,
+      "last_real_prompt_tokens": 209000
+     }
+    },
+    "observer_counts": {
+     "rc": 0,
+     "hook_fires": 0,
+     "commits_total": 0,
+     "commits_succeeded": 0
+    },
+    "log_private": "raw/e12-r4/base-ab_checkpoint_preflight.log"
+   },
+   "test_region_scoping": {
+    "harness": "test_region_scoping",
+    "egress": {
+     "connect": 0,
+     "dns": 2,
+     "by_thread": {
+      "dns:MainThread": 2
+     }
+    },
+    "exit_class": "INFRA",
+    "verdict": "ALL PASS",
+    "log_private": "raw/e12-r4/base-test_region_scoping.log"
+   },
+   "adjacent": {
+    "harness": "adjacent",
+    "egress": {
+     "connect": 0,
+     "dns": 231,
+     "by_thread": {
+      "dns:openrouter-prewarm": 7,
+      "dns:MainThread": 224
+     }
+    },
+    "exit_class": "INFRA",
+    "summary": {
+     "files": 17,
+     "passed": 302,
+     "failed": 3,
+     "skipped_per_worker_lines": [
+      2
+     ],
+     "failing": [
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[in_place]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+      "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[rotated]"
+     ]
+    },
+    "log_private": "raw/e12-r4/base-adjacent.log"
+   }
+  },
+  "c53806-foldin": {
+   "commit": "c915bb4f1ab7f4b3174cfdadd8457529c7b17e8d",
+   "tree": "2773ee4a09e1f3ddd86ac3a95630756efb3410a0",
+   "replay_gates": {
+    "harness": "replay_gates",
+    "egress": {
+     "connect": 0,
+     "dns": 0,
+     "by_thread": {}
+    },
+    "exit_class": "ok",
+    "verdicts": {
+     "compressor_sha256": "86f4b7a8a647f1bf520cb17497b68719f6d907028bdc7151c7921818b7e043f1",
+     "cli_past_window_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 160113,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 3
+     },
+     "cli_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 120113,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 3
+     },
+     "cli_deflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 45000,
+      "rough_estimate_turn1_messages": 213,
+      "local_compress_calls_by_turn": [
+       0,
+       1,
+       1
+      ],
+      "local_compress_approx_tokens": [
+       45015,
+       45015
+      ],
+      "provider_requests": 3
+     },
+     "gateway_past_window_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 160113,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 3
+     },
+     "gateway_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 120113,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 3
+     },
+     "gateway_deflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 45000,
+      "rough_estimate_turn1_messages": 213,
+      "local_compress_calls_by_turn": [
+       0,
+       1,
+       1
+      ],
+      "local_compress_approx_tokens": [
+       45015,
+       45015
+      ],
+      "provider_requests": 3
+     },
+     "restore_past_window_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 160074,
+      "persisted_messages": 4,
+      "anchor_restored_in_fresh_agent": true,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 4
+     },
+     "restore_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 120074,
+      "persisted_messages": 4,
+      "anchor_restored_in_fresh_agent": true,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 4
+     },
+     "restore_deflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 45000,
+      "rough_estimate_turn1_messages": 174,
+      "persisted_messages": 4,
+      "anchor_restored_in_fresh_agent": true,
+      "local_compress_calls_by_turn": [
+       0,
+       1,
+       1
+      ],
+      "local_compress_approx_tokens": [
+       45020,
+       45020
+      ],
+      "provider_requests": 4
+     },
+     "overflow_recovery": {
+      "completed": true,
+      "response": "ok",
+      "compression_after_provider_requests": [
+       1
+      ],
+      "first_turn_compressions": 1,
+      "provider_request_sizes": [
+       643236,
+       130768
+      ],
+      "provider_omits_usage": false,
+      "pass": true
+     },
+     "usage_less_fallback": {
+      "completed": true,
+      "response": "ok",
+      "compression_after_provider_requests": [
+       1
+      ],
+      "first_turn_compressions": 0,
+      "provider_request_sizes": [
+       643236,
+       130855
+      ],
+      "provider_omits_usage": true,
+      "pass": true
+     },
+     "verdict": {
+      "cli_past_window_inflated": "PASS",
+      "cli_inflated": "PASS",
+      "cli_deflated": "PASS",
+      "gateway_past_window_inflated": "PASS",
+      "gateway_inflated": "PASS",
+      "gateway_deflated": "PASS",
+      "restore_past_window_inflated": "PASS",
+      "restore_inflated": "PASS",
+      "restore_deflated": "PASS",
+      "overflow_recovery": "PASS",
+      "usage_less_fallback": "PASS"
+     }
+    },
+    "observer_counts": {
+     "rc": 0,
+     "hook_fires": 0,
+     "commits_total": 2,
+     "commits_succeeded": 0
+    },
+    "log_private": "raw/e12-r4/c53806-foldin-replay_gates.log"
+   },
+   "ab_checkpoint_preflight": {
+    "harness": "ab_checkpoint_preflight",
+    "egress": {
+     "connect": 0,
+     "dns": 0,
+     "by_thread": {}
+    },
+    "exit_class": "ok",
+    "verdicts": {
+     "capture_cli_same_objects": {
+      "turn1_completed": true,
+      "checkpoint_persisted": true,
+      "checkpoint_chars": 5169420,
+      "preflight_estimate_before_turn2": 69,
+      "threshold": 204000,
+      "latch_armed_after_turn1": true,
+      "turn2_completed": true,
+      "local_compress_calls_turn2": 0,
+      "turn3_completed": true,
+      "local_compress_calls_turn3": 0,
+      "local_compress_approx_tokens": [],
+      "provider_requests_total": 3,
+      "latch_after_turn3": false,
+      "last_real_prompt_tokens": 115802
+     },
+     "capture_gateway_reloaded_history": {
+      "turn1_completed": true,
+      "checkpoint_persisted": true,
+      "checkpoint_chars": 5169420,
+      "preflight_estimate_before_turn2": 69,
+      "threshold": 204000,
+      "latch_armed_after_turn1": true,
+      "turn2_completed": true,
+      "local_compress_calls_turn2": 0,
+      "turn3_completed": true,
+      "local_compress_calls_turn3": 0,
+      "local_compress_approx_tokens": [],
+      "provider_requests_total": 3,
+      "latch_after_turn3": false,
+      "last_real_prompt_tokens": 115802
+     },
+     "restore": {
+      "turn1_completed": true,
+      "restored_checkpoint_chars": 5169420,
+      "preflight_estimate_fresh_agent": 63,
+      "threshold": 204000,
+      "resume_completed": true,
+      "local_compress_calls_resume": 0,
+      "local_compress_approx_tokens": [],
+      "provider_requests_resume": 1,
+      "latch_after_resume": false,
+      "last_real_prompt_tokens": 115802
+     },
+     "over_threshold_negative": {
+      "turn1_completed": true,
+      "checkpoint_persisted": true,
+      "checkpoint_chars": 5169420,
+      "preflight_estimate_before_turn2": 69,
+      "threshold": 204000,
+      "latch_armed_after_turn1": true,
+      "turn2_completed": true,
+      "local_compress_calls_turn2": 0,
+      "turn3_completed": true,
+      "local_compress_calls_turn3": 1,
+      "local_compress_approx_tokens": [
+       209021
+      ],
+      "provider_requests_total": 3,
+      "latch_after_turn3": false,
+      "last_real_prompt_tokens": 209000
+     }
+    },
+    "observer_counts": {
+     "rc": 0,
+     "hook_fires": 0,
+     "commits_total": 0,
+     "commits_succeeded": 0
+    },
+    "log_private": "raw/e12-r4/c53806-foldin-ab_checkpoint_preflight.log"
+   },
+   "test_region_scoping": {
+    "harness": "test_region_scoping",
+    "egress": {
+     "connect": 0,
+     "dns": 2,
+     "by_thread": {
+      "dns:MainThread": 2
+     }
+    },
+    "exit_class": "INFRA",
+    "verdict": "ALL PASS",
+    "log_private": "raw/e12-r4/c53806-foldin-test_region_scoping.log"
+   },
+   "adjacent": {
+    "harness": "adjacent",
+    "egress": {
+     "connect": 0,
+     "dns": 231,
+     "by_thread": {
+      "dns:openrouter-prewarm": 7,
+      "dns:MainThread": 224
+     }
+    },
+    "exit_class": "INFRA",
+    "summary": {
+     "files": 17,
+     "passed": 305,
+     "failed": 0,
+     "skipped_per_worker_lines": [
+      2
+     ],
+     "failing": []
+    },
+    "log_private": "raw/e12-r4/c53806-foldin-adjacent.log"
+   },
+   "equal_to_base": {
+    "replay_gates": true,
+    "ab_checkpoint_preflight": true,
+    "test_region_scoping": true,
+    "adjacent_failing_outside_new_test": true
+   }
+  },
+  "foldin-bounded": {
+   "commit": "c113f73be58d16bee0c5798b9bd625e8e5c6e082",
+   "tree": "645282be9e9ab11501026832742bfbc41fe2e266",
+   "replay_gates": {
+    "harness": "replay_gates",
+    "egress": {
+     "connect": 0,
+     "dns": 0,
+     "by_thread": {}
+    },
+    "exit_class": "ok",
+    "verdicts": {
+     "compressor_sha256": "86f4b7a8a647f1bf520cb17497b68719f6d907028bdc7151c7921818b7e043f1",
+     "cli_past_window_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 160113,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 3
+     },
+     "cli_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 120113,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 3
+     },
+     "cli_deflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 45000,
+      "rough_estimate_turn1_messages": 213,
+      "local_compress_calls_by_turn": [
+       0,
+       1,
+       1
+      ],
+      "local_compress_approx_tokens": [
+       45015,
+       45015
+      ],
+      "provider_requests": 3
+     },
+     "gateway_past_window_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 160113,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 3
+     },
+     "gateway_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 120113,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 3
+     },
+     "gateway_deflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 45000,
+      "rough_estimate_turn1_messages": 213,
+      "local_compress_calls_by_turn": [
+       0,
+       1,
+       1
+      ],
+      "local_compress_approx_tokens": [
+       45015,
+       45015
+      ],
+      "provider_requests": 3
+     },
+     "restore_past_window_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 160074,
+      "persisted_messages": 4,
+      "anchor_restored_in_fresh_agent": true,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 4
+     },
+     "restore_inflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 9000,
+      "rough_estimate_turn1_messages": 120074,
+      "persisted_messages": 4,
+      "anchor_restored_in_fresh_agent": true,
+      "local_compress_calls_by_turn": [
+       0,
+       0,
+       0
+      ],
+      "local_compress_approx_tokens": [],
+      "provider_requests": 4
+     },
+     "restore_deflated": {
+      "threshold": 40000,
+      "real_prompt_tokens": 45000,
+      "rough_estimate_turn1_messages": 174,
+      "persisted_messages": 4,
+      "anchor_restored_in_fresh_agent": true,
+      "local_compress_calls_by_turn": [
+       0,
+       1,
+       1
+      ],
+      "local_compress_approx_tokens": [
+       45020,
+       45020
+      ],
+      "provider_requests": 4
+     },
+     "overflow_recovery": {
+      "completed": true,
+      "response": "ok",
+      "compression_after_provider_requests": [
+       1
+      ],
+      "first_turn_compressions": 1,
+      "provider_request_sizes": [
+       643236,
+       130768
+      ],
+      "provider_omits_usage": false,
+      "pass": true
+     },
+     "usage_less_fallback": {
+      "completed": true,
+      "response": "ok",
+      "compression_after_provider_requests": [
+       1
+      ],
+      "first_turn_compressions": 0,
+      "provider_request_sizes": [
+       643236,
+       130855
+      ],
+      "provider_omits_usage": true,
+      "pass": true
+     },
+     "verdict": {
+      "cli_past_window_inflated": "PASS",
+      "cli_inflated": "PASS",
+      "cli_deflated": "PASS",
+      "gateway_past_window_inflated": "PASS",
+      "gateway_inflated": "PASS",
+      "gateway_deflated": "PASS",
+      "restore_past_window_inflated": "PASS",
+      "restore_inflated": "PASS",
+      "restore_deflated": "PASS",
+      "overflow_recovery": "PASS",
+      "usage_less_fallback": "PASS"
+     }
+    },
+    "observer_counts": {
+     "rc": 0,
+     "hook_fires": 0,
+     "commits_total": 2,
+     "commits_succeeded": 0
+    },
+    "log_private": "raw/e12-r4/foldin-bounded-replay_gates.log"
+   },
+   "ab_checkpoint_preflight": {
+    "harness": "ab_checkpoint_preflight",
+    "egress": {
+     "connect": 0,
+     "dns": 0,
+     "by_thread": {}
+    },
+    "exit_class": "ok",
+    "verdicts": {
+     "capture_cli_same_objects": {
+      "turn1_completed": true,
+      "checkpoint_persisted": true,
+      "checkpoint_chars": 5169420,
+      "preflight_estimate_before_turn2": 69,
+      "threshold": 204000,
+      "latch_armed_after_turn1": true,
+      "turn2_completed": true,
+      "local_compress_calls_turn2": 0,
+      "turn3_completed": true,
+      "local_compress_calls_turn3": 0,
+      "local_compress_approx_tokens": [],
+      "provider_requests_total": 3,
+      "latch_after_turn3": false,
+      "last_real_prompt_tokens": 115802
+     },
+     "capture_gateway_reloaded_history": {
+      "turn1_completed": true,
+      "checkpoint_persisted": true,
+      "checkpoint_chars": 5169420,
+      "preflight_estimate_before_turn2": 69,
+      "threshold": 204000,
+      "latch_armed_after_turn1": true,
+      "turn2_completed": true,
+      "local_compress_calls_turn2": 0,
+      "turn3_completed": true,
+      "local_compress_calls_turn3": 0,
+      "local_compress_approx_tokens": [],
+      "provider_requests_total": 3,
+      "latch_after_turn3": false,
+      "last_real_prompt_tokens": 115802
+     },
+     "restore": {
+      "turn1_completed": true,
+      "restored_checkpoint_chars": 5169420,
+      "preflight_estimate_fresh_agent": 63,
+      "threshold": 204000,
+      "resume_completed": true,
+      "local_compress_calls_resume": 0,
+      "local_compress_approx_tokens": [],
+      "provider_requests_resume": 1,
+      "latch_after_resume": false,
+      "last_real_prompt_tokens": 115802
+     },
+     "over_threshold_negative": {
+      "turn1_completed": true,
+      "checkpoint_persisted": true,
+      "checkpoint_chars": 5169420,
+      "preflight_estimate_before_turn2": 69,
+      "threshold": 204000,
+      "latch_armed_after_turn1": true,
+      "turn2_completed": true,
+      "local_compress_calls_turn2": 0,
+      "turn3_completed": true,
+      "local_compress_calls_turn3": 1,
+      "local_compress_approx_tokens": [
+       209021
+      ],
+      "provider_requests_total": 3,
+      "latch_after_turn3": false,
+      "last_real_prompt_tokens": 209000
+     }
+    },
+    "observer_counts": {
+     "rc": 0,
+     "hook_fires": 0,
+     "commits_total": 0,
+     "commits_succeeded": 0
+    },
+    "log_private": "raw/e12-r4/foldin-bounded-ab_checkpoint_preflight.log"
+   },
+   "test_region_scoping": {
+    "harness": "test_region_scoping",
+    "egress": {
+     "connect": 0,
+     "dns": 2,
+     "by_thread": {
+      "dns:MainThread": 2
+     }
+    },
+    "exit_class": "INFRA",
+    "verdict": "ALL PASS",
+    "log_private": "raw/e12-r4/foldin-bounded-test_region_scoping.log"
+   },
+   "adjacent": {
+    "harness": "adjacent",
+    "egress": {
+     "connect": 0,
+     "dns": 231,
+     "by_thread": {
+      "dns:openrouter-prewarm": 7,
+      "dns:MainThread": 224
+     }
+    },
+    "exit_class": "INFRA",
+    "summary": {
+     "files": 17,
+     "passed": 305,
+     "failed": 0,
+     "skipped_per_worker_lines": [
+      2
+     ],
+     "failing": []
+    },
+    "log_private": "raw/e12-r4/foldin-bounded-adjacent.log"
+   },
+   "equal_to_base": {
+    "replay_gates": true,
+    "ab_checkpoint_preflight": true,
+    "test_region_scoping": true,
+    "adjacent_failing_outside_new_test": true
+   }
+  }
+ },
+ "policy_revision": {
+  "AGENTS.md": "65aa3e61bcba610da21279a17385671263be39e9",
+  "CONTRIBUTING.md": "b0baa59b5057c204b3c09d3dd170c0955cfdb39c",
+  "factory": "FACTORY.md sha256:7726ba18b43a9367f91d7f70c3aaefb96a9863761ddf71225c61c26a30d688d4",
+  "protocol": "promotion-readiness-2026-10-01/PROTOCOL.md sha256:182e3fbae771d7219497833b3f9d6f7ed385d70abace8736559026e4e60b90d4"
+ },
+ "env": {
+  "host": "withheld (redacted in round 3; receipts name no host)",
+  "python": "3.11.14 (the live venv's interpreter, used read-only through HERMES_PYTHON; never as a source)",
+  "sandbox": "no bwrap/netns (FACTORY \u00a76 layer 1 not used). In-process layer only: tools/chs_egress_guard_r4.py (non-loopback connect and DNS refused and logged with the calling thread's name; nothing suppressed, so the openrouter-prewarm thread starts and any lookup it makes is counted), loaded through the isolated test HOME's pytest_live_guard.py shim; scripts/run_tests.sh runs pytest under env -i with isolated HOME and HERMES_HOME (placeholders: $TESTHOME, $TESTHOME/.hermes)"
+ },
+ "command": "bash tools/chs_guards_r4.sh <arm> <commit> e12-r4 $WORKTREE $TESTHOME $PY, for base, c53806-foldin, foldin-bounded (inside tools/chs_run_all_r4.sh)",
+ "gates": {
+  "validity": "INFRA under strict S16 (6 of 12 cells); PASS only if the owner accepts the recorded S16 exception (not accepted)",
+  "guards": {
+   "c53806-foldin": {
+    "replay_gates": true,
+    "ab_checkpoint_preflight": true,
+    "test_region_scoping": true,
+    "adjacent_failing_outside_new_test": true
+   },
+   "foldin-bounded": {
+    "replay_gates": true,
+    "ab_checkpoint_preflight": true,
+    "test_region_scoping": true,
+    "adjacent_failing_outside_new_test": true
+   }
+  },
+  "adjacent": {
+   "base": {
+    "files": 17,
+    "passed": 302,
+    "failed": 3,
+    "skipped_per_worker_lines": [
+     2
+    ],
+    "failing": [
+     "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[in_place]",
+     "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+     "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[rotated]"
+    ]
+   },
+   "c53806-foldin": {
+    "files": 17,
+    "passed": 305,
+    "failed": 0,
+    "skipped_per_worker_lines": [
+     2
+    ],
+    "failing": []
+   },
+   "foldin-bounded": {
+    "files": 17,
+    "passed": 305,
+    "failed": 0,
+    "skipped_per_worker_lines": [
+     2
+    ],
+    "failing": []
+   }
+  },
+  "flaky": false,
+  "route_scope": "local-compressor"
+ },
+ "measurements": [],
+ "denominators": {
+  "cells": 12,
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "infra": 6,
+  "completeness": 1.0
+ },
+ "egress": {
+  "connect": 0,
+  "dns": 699,
+  "by_thread": {
+   "dns:MainThread": 678,
+   "dns:openrouter-prewarm": 21
+  },
+  "per_cell": {
+   "base/replay_gates": {
+    "connect": 0,
+    "dns": 0,
+    "by_thread": {}
+   },
+   "base/ab_checkpoint_preflight": {
+    "connect": 0,
+    "dns": 0,
+    "by_thread": {}
+   },
+   "base/test_region_scoping": {
+    "connect": 0,
+    "dns": 2,
+    "by_thread": {
+     "dns:MainThread": 2
+    }
+   },
+   "base/adjacent": {
+    "connect": 0,
+    "dns": 231,
+    "by_thread": {
+     "dns:openrouter-prewarm": 7,
+     "dns:MainThread": 224
+    }
+   },
+   "c53806-foldin/replay_gates": {
+    "connect": 0,
+    "dns": 0,
+    "by_thread": {}
+   },
+   "c53806-foldin/ab_checkpoint_preflight": {
+    "connect": 0,
+    "dns": 0,
+    "by_thread": {}
+   },
+   "c53806-foldin/test_region_scoping": {
+    "connect": 0,
+    "dns": 2,
+    "by_thread": {
+     "dns:MainThread": 2
+    }
+   },
+   "c53806-foldin/adjacent": {
+    "connect": 0,
+    "dns": 231,
+    "by_thread": {
+     "dns:openrouter-prewarm": 7,
+     "dns:MainThread": 224
+    }
+   },
+   "foldin-bounded/replay_gates": {
+    "connect": 0,
+    "dns": 0,
+    "by_thread": {}
+   },
+   "foldin-bounded/ab_checkpoint_preflight": {
+    "connect": 0,
+    "dns": 0,
+    "by_thread": {}
+   },
+   "foldin-bounded/test_region_scoping": {
+    "connect": 0,
+    "dns": 2,
+    "by_thread": {
+     "dns:MainThread": 2
+    }
+   },
+   "foldin-bounded/adjacent": {
+    "connect": 0,
+    "dns": 231,
+    "by_thread": {
+     "dns:openrouter-prewarm": 7,
+     "dns:MainThread": 224
+    }
+   }
+  },
+  "s16": "6 of 12 harness cells had blocked DNS lookups (0 connects). Strict S16: those cells are INFRA and the experiment is INFRA.",
+  "s16_exception": {
+   "status": "recorded exception, NOT accepted: the owner has to accept or reject it (FACTORY S16 defines none). Until then the affected cells are INFRA and P5 stays PENDING",
+   "scope": "upstream test and eval code this item does not change: sibling compression and plugin test files in the adjacent set, evals/compaction/test_region_scoping.py, tests/agent/test_compression_rotation_state.py (OWN), and #53806's own tests ported into OWN (they do not pin the context window either)",
+   "what": "best-effort DNS lookups for openrouter.ai from three upstream paths: the model-metadata GET at AIAgent init (agent_init._enforce_minimum_context -> model_metadata.get_model_context_length -> fetch_model_metadata), the openrouter-prewarm thread AIAgent init starts once per process for an OpenRouter base_url (fetch_model_metadata), and the video-catalog GET while tool definitions are built (plugins/video_gen/openrouter._catalog)",
+   "why_results_stand": [
+    "the guard refused every lookup at DNS; 0 connects",
+    "each path catches the failure and falls back (the 256K default window; an empty prewarm cache; the bundled catalog snapshot)",
+    "the same counts occur on base and on the fold-in arms (see per_cell and dns_attribution)",
+    "pass/fail is identical apart from the new contract test",
+    "the new contract test itself makes 0 lookups under the r4 guard, which suppresses nothing: F05 r4 78 cells, 0 dns, 0 connect; alone on main the round-1 file made 2 lookups (openrouter-prewarm) and the round-2 file 0"
+   ],
+   "correction": "r3 stated the same last bullet from F05 r3, but the r3 guard refused to start the openrouter-prewarm thread, so the contract test's own lookup was hidden. r4 fixed the test (prewarm stubbed) and the guard (no suppression)",
+   "without_exception": "the affected cells are INFRA, and an experiment with more than 10% INFRA cells is INFRA"
+  },
+  "dns_attribution": {
+   "base-replay_gates.egress.stacks": {
+    "total": 0,
+    "by_thread_file_and_source": {}
+   },
+   "base-ab_checkpoint_preflight.egress.stacks": {
+    "total": 0,
+    "by_thread_file_and_source": {}
+   },
+   "base-test_region_scoping.egress.stacks": {
+    "total": 2,
+    "by_thread_file_and_source": {
+     "dns | thread=MainThread | evals/compaction/test_region_scoping.py | OpenRouter model-metadata GET (fetch_model_metadata)": 2
+    }
+   },
+   "base-adjacent.egress.stacks": {
+    "total": 231,
+    "by_thread_file_and_source": {
+     "dns | thread=MainThread | tests/agent/test_compression_attempt_lifecycle.py | OpenRouter model-metadata GET (fetch_model_metadata)": 10,
+     "dns | thread=MainThread | tests/agent/test_compression_attempt_lifecycle.py | OpenRouter video catalog GET (tool definitions build)": 18,
+     "dns | thread=MainThread | tests/agent/test_compression_boundary_hook.py | OpenRouter model-metadata GET (fetch_model_metadata)": 7,
+     "dns | thread=MainThread | tests/agent/test_compression_boundary_hook.py | OpenRouter video catalog GET (tool definitions build)": 14,
+     "dns | thread=MainThread | tests/agent/test_compression_commit_fence_race.py | OpenRouter model-metadata GET (fetch_model_metadata)": 2,
+     "dns | thread=MainThread | tests/agent/test_compression_commit_fence_race.py | OpenRouter video catalog GET (tool definitions build)": 4,
+     "dns | thread=MainThread | tests/agent/test_compression_persistence.py | OpenRouter model-metadata GET (fetch_model_metadata)": 6,
+     "dns | thread=MainThread | tests/agent/test_compression_persistence.py | OpenRouter video catalog GET (tool definitions build)": 12,
+     "dns | thread=MainThread | tests/agent/test_compression_rotation_state.py | OpenRouter model-metadata GET (fetch_model_metadata)": 40,
+     "dns | thread=MainThread | tests/agent/test_compression_rotation_state.py | OpenRouter video catalog GET (tool definitions build)": 72,
+     "dns | thread=MainThread | tests/agent/test_conversation_compression_manual.py | OpenRouter model-metadata GET (fetch_model_metadata)": 12,
+     "dns | thread=MainThread | tests/agent/test_conversation_compression_manual.py | OpenRouter video catalog GET (tool definitions build)": 22,
+     "dns | thread=MainThread | tests/agent/test_pre_compress_memory_context_handoff.py | OpenRouter model-metadata GET (fetch_model_metadata)": 5,
+     "dns | thread=openrouter-prewarm | (no test frame: openrouter-prewarm thread) | OpenRouter model-metadata GET (fetch_model_metadata)": 7
+    }
+   },
+   "c53806-foldin-replay_gates.egress.stacks": {
+    "total": 0,
+    "by_thread_file_and_source": {}
+   },
+   "c53806-foldin-ab_checkpoint_preflight.egress.stacks": {
+    "total": 0,
+    "by_thread_file_and_source": {}
+   },
+   "c53806-foldin-test_region_scoping.egress.stacks": {
+    "total": 2,
+    "by_thread_file_and_source": {
+     "dns | thread=MainThread | evals/compaction/test_region_scoping.py | OpenRouter model-metadata GET (fetch_model_metadata)": 2
+    }
+   },
+   "c53806-foldin-adjacent.egress.stacks": {
+    "total": 231,
+    "by_thread_file_and_source": {
+     "dns | thread=MainThread | tests/agent/test_compression_attempt_lifecycle.py | OpenRouter model-metadata GET (fetch_model_metadata)": 10,
+     "dns | thread=MainThread | tests/agent/test_compression_attempt_lifecycle.py | OpenRouter video catalog GET (tool definitions build)": 18,
+     "dns | thread=MainThread | tests/agent/test_compression_boundary_hook.py | OpenRouter model-metadata GET (fetch_model_metadata)": 7,
+     "dns | thread=MainThread | tests/agent/test_compression_boundary_hook.py | OpenRouter video catalog GET (tool definitions build)": 14,
+     "dns | thread=MainThread | tests/agent/test_compression_commit_fence_race.py | OpenRouter model-metadata GET (fetch_model_metadata)": 2,
+     "dns | thread=MainThread | tests/agent/test_compression_commit_fence_race.py | OpenRouter video catalog GET (tool definitions build)": 4,
+     "dns | thread=MainThread | tests/agent/test_compression_persistence.py | OpenRouter model-metadata GET (fetch_model_metadata)": 6,
+     "dns | thread=MainThread | tests/agent/test_compression_persistence.py | OpenRouter video catalog GET (tool definitions build)": 12,
+     "dns | thread=MainThread | tests/agent/test_compression_rotation_state.py | OpenRouter model-metadata GET (fetch_model_metadata)": 40,
+     "dns | thread=MainThread | tests/agent/test_compression_rotation_state.py | OpenRouter video catalog GET (tool definitions build)": 72,
+     "dns | thread=MainThread | tests/agent/test_conversation_compression_manual.py | OpenRouter model-metadata GET (fetch_model_metadata)": 12,
+     "dns | thread=MainThread | tests/agent/test_conversation_compression_manual.py | OpenRouter video catalog GET (tool definitions build)": 22,
+     "dns | thread=MainThread | tests/agent/test_pre_compress_memory_context_handoff.py | OpenRouter model-metadata GET (fetch_model_metadata)": 5,
+     "dns | thread=openrouter-prewarm | (no test frame: openrouter-prewarm thread) | OpenRouter model-metadata GET (fetch_model_metadata)": 7
+    }
+   },
+   "foldin-bounded-replay_gates.egress.stacks": {
+    "total": 0,
+    "by_thread_file_and_source": {}
+   },
+   "foldin-bounded-ab_checkpoint_preflight.egress.stacks": {
+    "total": 0,
+    "by_thread_file_and_source": {}
+   },
+   "foldin-bounded-test_region_scoping.egress.stacks": {
+    "total": 2,
+    "by_thread_file_and_source": {
+     "dns | thread=MainThread | evals/compaction/test_region_scoping.py | OpenRouter model-metadata GET (fetch_model_metadata)": 2
+    }
+   },
+   "foldin-bounded-adjacent.egress.stacks": {
+    "total": 231,
+    "by_thread_file_and_source": {
+     "dns | thread=MainThread | tests/agent/test_compression_attempt_lifecycle.py | OpenRouter model-metadata GET (fetch_model_metadata)": 10,
+     "dns | thread=MainThread | tests/agent/test_compression_attempt_lifecycle.py | OpenRouter video catalog GET (tool definitions build)": 18,
+     "dns | thread=MainThread | tests/agent/test_compression_boundary_hook.py | OpenRouter model-metadata GET (fetch_model_metadata)": 7,
+     "dns | thread=MainThread | tests/agent/test_compression_boundary_hook.py | OpenRouter video catalog GET (tool definitions build)": 14,
+     "dns | thread=MainThread | tests/agent/test_compression_commit_fence_race.py | OpenRouter model-metadata GET (fetch_model_metadata)": 2,
+     "dns | thread=MainThread | tests/agent/test_compression_commit_fence_race.py | OpenRouter video catalog GET (tool definitions build)": 4,
+     "dns | thread=MainThread | tests/agent/test_compression_persistence.py | OpenRouter model-metadata GET (fetch_model_metadata)": 6,
+     "dns | thread=MainThread | tests/agent/test_compression_persistence.py | OpenRouter video catalog GET (tool definitions build)": 12,
+     "dns | thread=MainThread | tests/agent/test_compression_rotation_state.py | OpenRouter model-metadata GET (fetch_model_metadata)": 40,
+     "dns | thread=MainThread | tests/agent/test_compression_rotation_state.py | OpenRouter video catalog GET (tool definitions build)": 72,
+     "dns | thread=MainThread | tests/agent/test_conversation_compression_manual.py | OpenRouter model-metadata GET (fetch_model_metadata)": 12,
+     "dns | thread=MainThread | tests/agent/test_conversation_compression_manual.py | OpenRouter video catalog GET (tool definitions build)": 22,
+     "dns | thread=MainThread | tests/agent/test_pre_compress_memory_context_handoff.py | OpenRouter model-metadata GET (fetch_model_metadata)": 5,
+     "dns | thread=openrouter-prewarm | (no test frame: openrouter-prewarm thread) | OpenRouter model-metadata GET (fetch_model_metadata)": 7
+    }
+   }
+  }
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "structural_note": "observer fires are 0 in replay_gates/ab_checkpoint_preflight by construction (no SessionDB in their real-compression scenarios; the preflight stubs _compress_context), so 0 is not a native-route measurement",
+ "not_tested": [
+  "native compaction on a real provider turn"
+ ],
+ "limitations": [
+  "one run per arm per harness"
+ ],
+ "resource_usage": {
+  "wall_s": null,
+  "cpu_core_s": null,
+  "gpu_s": 0,
+  "energy_j": null,
+  "api_cost_usd": 0.0
+ },
+ "verdict": "INFRA",
+ "verdict_if_s16_exception_accepted": "PASS",
+ "provenance": "self",
+ "frozen": null,
+ "z0evals_study": null,
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the contract test, the fold-in and the harness; disclosed per repository policy",
+ "privacy": "public-aggregate: repo-relative paths and placeholders only; synthetic fixtures; no session ids, home paths, emails, message text or secrets. Raw logs under raw/ are private and contain local paths.",
+ "artifacts": [
+  {
+   "uri": "raw/e12-r4/",
+   "public": false
+  }
+ ],
+ "superseded_by": "E12/e12-r5",
+ "superseded_why": "round 3 rebuilt the staging commit on main 44a1ce9724 with a fence/lease clause (the observer must run after the attempt releases its commit fence and the session's compression lease, the #118120 hazard) and moved the offered fold-in into a sibling module that delivers the observer after the fence, as #127058 does for the memory hook. The r4 fold-in ran the observer inside the fence; re-applied as arm r4-offer-r5 it fails that clause (F05/f05-r5)"
+}

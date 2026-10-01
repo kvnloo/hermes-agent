@@ -1,0 +1,25 @@
+== mutation: drop row 'task ids'
+=== Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 1.4s (2 workers) ===
+E           AssertionError: 'sa-2-7318d0ba' missing from anchor index:
+E           assert 'sa-2-7318d0ba' in '\n\n## Anchor Index (mechanically extracted, exact)\nPRs/issues: #86589\ndotted keys: plugins.stream_reasoning_deltas...rs from the compacted region — use these verbatim, and as session_search query anchors to recover their full context.)'
+FAILED tests/agent/test_context_compressor_anchor_index.py::test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim
+FAILED tests/agent/test_context_compressor_anchor_index.py::test_new_anchor_classes_stay_exact_and_bounded
+== mutation: drop row 'dotted keys'
+  ║ E       AssertionError: assert 'compression.tail_mode' in ''
+=== Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 1.5s (2 workers) ===
+E           AssertionError: 'plugins.stream_reasoning_deltas' missing from anchor index:
+E           assert 'plugins.stream_reasoning_deltas' in '\n\n## Anchor Index (mechanically extracted, exact)\nPRs/issues: #86589\ntask ids: t_4f9c2a1e, sa-2-7318d0ba\nerror m...rs from the compacted region — use these verbatim, and as session_search query anchors to recover their full context.)'
+E       AssertionError: assert 'compression.tail_mode' in ''
+FAILED tests/agent/test_context_compressor_anchor_index.py::test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim
+FAILED tests/agent/test_context_compressor_anchor_index.py::test_new_anchor_classes_stay_exact_and_bounded
+== mutation: drop row 'error messages'
+=== Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 1.5s (2 workers) ===
+E           AssertionError: 'GraphQL: Pull Request has merge conflicts (mergePullRequest)' missing from anchor index:
+E           assert 'GraphQL: Pull Request has merge conflicts (mergePullRequest)' in '\n\n## Anchor Index (mechanically extracted, exact)\nPRs/issues: #86589\ntask ids: t_4f9c2a1e, sa-2-7318d0ba\ndotted ...rs from the compacted region — use these verbatim, and as session_search query anchors to recover their full context.)'
+FAILED tests/agent/test_context_compressor_anchor_index.py::test_anchor_index_keeps_task_ids_config_keys_and_error_messages_verbatim
+FAILED tests/agent/test_context_compressor_anchor_index.py::test_new_anchor_classes_stay_exact_and_bounded
+== mutation: dotted-keys last segment no longer requires '_' (precision sabotage)
+  ║ E           AssertionError: 'context_compressor.py' leaked into dotted keys: 'dotted keys: compression.tail_mode, api.openai.com, e.g, config.yaml, context_compressor.py'
+=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 1.6s (2 workers) ===
+E           AssertionError: 'context_compressor.py' leaked into dotted keys: 'dotted keys: compression.tail_mode, api.openai.com, e.g, config.yaml, context_compressor.py'
+FAILED tests/agent/test_context_compressor_anchor_index.py::test_new_anchor_classes_stay_exact_and_bounded

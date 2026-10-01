@@ -1,0 +1,11 @@
+  ║ FAILED tests/agent/test_anthropic_context_editing.py::test_opt_in_sends_clear_tool_uses_with_its_beta_ahead_of_local_compression[on]
+  ║ FAILED tests/agent/test_anthropic_context_editing.py::test_structured_rejection_disables_it_for_the_session_and_retries_once
+=== Summary: 1 files, 1 tests passed, 2 failed (100% complete) in 9.9s (2 workers) ===
+E           AssertionError: assert 'context-management-2025-06-27' in ['interleaved-thinking-2025-05-14', 'fine-grained-tool-streaming-2025-05-14']
+E       assert [False, False] == [True, False, False]
+E
+E         At index 0 diff: False != True
+E         Right contains one more item: False
+E         Use -v to get more diff
+FAILED tests/agent/test_anthropic_context_editing.py::test_opt_in_sends_clear_tool_uses_with_its_beta_ahead_of_local_compression[on]
+FAILED tests/agent/test_anthropic_context_editing.py::test_structured_rejection_disables_it_for_the_session_and_retries_once

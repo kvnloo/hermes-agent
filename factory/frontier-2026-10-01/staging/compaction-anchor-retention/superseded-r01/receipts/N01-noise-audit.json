@@ -1,0 +1,241 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compaction-anchor-retention",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch#87326",
+  "NousResearch#117462",
+  "NousResearch#122274",
+  "NousResearch#122522",
+  "NousResearch#78457"
+ ],
+ "base_revision": "234badf4012af380d23c91eae55d045a69c69ffb",
+ "head_revision": "6e0fa629a0f6227b03417d1d6ff7f7d81208346a",
+ "policy_revision": {
+  "factory": "FACTORY.md (frontier-2026-10-01)",
+  "protocol": "promotion-readiness-2026-10-01/PROTOCOL.md"
+ },
+ "env": {
+  "host": "<local-host>",
+  "python": "3.11.14 (HERMES_PYTHON venv, read-only bind)",
+  "sandbox": "bwrap ro-root, --unshare-net (connect 1.1.1.1:443 -> ENETUNREACH), pidns, clearenv, $HERMES_INSTALL masked except venv, isolated HOME/HERMES_HOME"
+ },
+ "provenance": "self",
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the rows, tests, harness and gold labels; disclosed per repository policy",
+ "privacy": "public-aggregate (all inputs are committed upstream text or seeded synthetic data; no state.db, no lineages)",
+ "resource_usage": {
+  "api_cost_usd": 0.0,
+  "gpu_s": 0,
+  "tokens": 0
+ },
+ "id": "N01/r20261001-01",
+ "kind": "static",
+ "question": "What do the three new rows capture on a large public Hermes text corpus?",
+ "inputs": {
+  "scorecard": "evals/compaction/results/SCORECARD-2026-08-15.md",
+  "scorecard_sha256": "6d93f90b435e4f2ae2dd3187103c18e0c881ad68b88b92bfd3deacb1cf79180e",
+  "harness_sha256": {
+   "anchor_coverage.py": "5cb0e034146fe2ed4103765b8a42610d3735300c1627631f5168d9be4b7dabb7",
+   "build_receipts.py": "6009a0d931aabf1bef52b6cc2b261412769ce4833e2e6abb4ebd37fe032757c3"
+  },
+  "arms": {
+   "base": {
+    "tree": "234badf4012af380d23c91eae55d045a69c69ffb:agent/context_compressor.py",
+    "sha256": "86f4b7a8a647f1bf520cb17497b68719f6d907028bdc7151c7921818b7e043f1"
+   },
+   "branch": {
+    "head": "6e0fa629a0f6227b03417d1d6ff7f7d81208346a",
+    "sha256": "98d9e8d058557eee2fd4e89641b6350a2b21ab62c563ac741986db61ae1d98a8"
+   },
+   "c117462": {
+    "pr": 117462,
+    "head": "2c19948e15d68492d048250bae7707ca77063db5",
+    "merge_tree": "8dfb180bae5909ccd06f79f7268885f3309c9af6",
+    "merge": "clean",
+    "sha256": "fdb7abd8050b4944171522c7e713004d7fbce9b2d8ddfb1c8de93414f206ebe0"
+   },
+   "c117462_foldin": {
+    "onto": "c117462",
+    "patch": "foldin-on-117462.patch",
+    "patch_sha256": "2b32d18636cb60f86c54bbc1c31f42ae062df48e13876edc34a01ae5b33c0224",
+    "merge": "handported (rows placed in #117462's cheap-first order)",
+    "sha256": "2d8e3a1712c349a40824ab8e3e8f87b01556b0c2809731b5e510686423b6a4e3"
+   }
+  },
+  "coverage_json_sha256": "a12cbcdcbce3be7e891658e134ce6ff68e44f9d28aaa1d02a82e5876c6b5d6d1",
+  "checkout_tree_for_imports": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0 (agent/* other than context_compressor.py identical to 234badf4012af380d23c91eae55d045a69c69ffb)",
+  "corpus": "AGENTS.md + website/docs/**/*.md at 572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+  "corpus_files": 448,
+  "corpus_chars": 7807940,
+  "corpus_sha256": "fefb795b2f5b2ac3d3de2cbab634692c059b2a350635ef8882de9f2e3ca124f7",
+  "default_config_keys": 1095
+ },
+ "command": "$S/car_sandbox.sh $WT $VENV/bin/python $STAGING/harness/anchor_coverage.py --checkout $WT --arm base=$STAGING/raw/arms/base.py --arm branch=$STAGING/raw/arms/branch.py --arm c117462=$STAGING/raw/arms/c117462.py --arm c117462_foldin=$STAGING/raw/arms/c117462_foldin.py --seeds 10 --out $STAGING/raw/sbhome/coverage.json  # then moved to raw/coverage.json",
+ "results": {
+  "task ids": {
+   "matches": 4,
+   "distinct": 2,
+   "top15": [
+    [
+     "sa-0-1a2b3c4d",
+     3
+    ],
+    [
+     "t_77c26979",
+     1
+    ]
+   ]
+  },
+  "dotted keys": {
+   "matches": 2043,
+   "distinct": 1032,
+   "top15": [
+    [
+     "ctx.register_hook",
+     60
+    ],
+    [
+     "pm.sync_venv",
+     48
+    ],
+    [
+     "gateway.multiplex_profiles",
+     23
+    ],
+    [
+     "repository.full_name",
+     21
+    ],
+    [
+     "security.allow_lazy_installs",
+     18
+    ],
+    [
+     "ctx.register_tool",
+     16
+    ],
+    [
+     "client.create_collection",
+     16
+    ],
+    [
+     "model.base_url",
+     14
+    ],
+    [
+     "ctx.register_platform",
+     13
+    ],
+    [
+     "torch.no_grad",
+     12
+    ],
+    [
+     "web.extract_backend",
+     11
+    ],
+    [
+     "agent.reasoning_effort",
+     11
+    ],
+    [
+     "model.set_generation_params",
+     11
+    ],
+    [
+     "agent.disabled_toolsets",
+     10
+    ],
+    [
+     "ctx.register_command",
+     10
+    ]
+   ],
+   "distinct_in_DEFAULT_CONFIG": 306,
+   "top15_in_DEFAULT_CONFIG": 4
+  },
+  "error messages": {
+   "matches": 24,
+   "distinct": 24,
+   "top15": [
+    [
+     "error: home/config/`.env`-derived",
+     1
+    ],
+    [
+     "error: <message or \"request failed\">`. Never renders \"no card\" or any other guessed state; user must retry `/topup`",
+     1
+    ],
+    [
+     "error: ...]` marker instead of breaking the whole skill",
+     1
+    ],
+    [
+     "fatal: a single misconfigured secondary adapter is skipped with",
+     1
+    ],
+    [
+     "error: dict, request: dict` | ignored |",
+     1
+    ],
+    [
+     "error: str \\| None, error_type: str \\| None` | ignored |",
+     1
+    ],
+    [
+     "error: \"Gateway shutdown interrupted the run.\"` — recorded before the agent is interrupted and never overwritten by t",
+     1
+    ],
+    [
+     "fatal: while waiting for your browser approval Hermes keeps polling through up to six consecutive transport errors (a",
+     1
+    ],
+    [
+     "Error: backup archive is damaged (N member(s) …)` with the offending members and stops with the Hermes home untouched",
+     1
+    ],
+    [
+     "fatal: can only run as pid 1` — so the dispatcher instead runs the stage2 bootstrap directly and exec's the main wrap",
+     1
+    ],
+    [
+     "error: TypeError: cannot unpack non-iterable NoneType object\"}",
+     1
+    ],
+    [
+     "Blocked: URL targets a private or internal address\"` unless you also set",
+     1
+    ],
+    [
+     "Error: assertion in test_foo.py line 42\"",
+     1
+    ],
+    [
+     "Error: ...\") -> logger.error(...)",
+     1
+    ],
+    [
+     "error: str | None` |",
+     1
+    ]
+   ]
+  }
+ },
+ "scan_seconds": {
+  "base": 0.7363,
+  "branch": 1.1487,
+  "c117462": 0.836,
+  "c117462_foldin": 1.3663
+ },
+ "readout": [
+  "task ids: 4 matches / 2 distinct in 7.8M chars (both doc examples): effectively noise-free",
+  "dotted keys: 1032 distinct values, 306 (29.7%) are DEFAULT_CONFIG keys; the 15 most frequent are all real dotted identifiers (plugin API calls like ctx.register_hook, config keys like gateway.multiplex_profiles) — hence the label 'dotted keys', not 'config keys'",
+  "error messages: 24 matches; in docs these are mostly prose/table fragments that start with 'error:' — transcripts carry real CLI output instead"
+ ],
+ "label": "OBSERVED",
+ "limitations": [
+  "docs are not transcripts; precision on real regions is NOT_MEASURED",
+  "scan timings are single runs on a shared host"
+ ],
+ "verdict": "KEEP"
+}

@@ -1,0 +1,352 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "tool-result-projection-support",
+ "origin_refs": [
+  "NousResearch/hermes-agent#107731",
+  "NousResearch/hermes-agent#39691",
+  "NousResearch/hermes-agent#47866",
+  "NousResearch/hermes-agent#129620",
+  "NousResearch/hermes-agent#129492",
+  "NousResearch/hermes-agent#129882",
+  "kvnloo/hermes-agent#310"
+ ],
+ "base_revision": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+ "env": {
+  "host": "withheld (one local workstation; receipts carry no host names)",
+  "python": "3.11.14 ($PY = the repo venv interpreter, used read-only)",
+  "isolation": "env -i; fresh HOME/HERMES_HOME under scratch; loopback-only socket.connect + getaddrinfo guard (probe_104260.py:11-39 pattern); no credentials",
+  "network": "loopback only (asserted: egress_blocked list per run)",
+  "relay": {
+   "present": true,
+   "package": "nemo-relay 0.8.4 (installed in the shared repo venv; not part of this change)",
+   "state": "FAILED at initialize(): agent/relay_runtime.py calls relay.plugin.initialize({}, additional_plugins_toml=...), which nemo-relay 0.8.4 does not accept, so Hermes logs 'Hermes Relay plugin initialization failed' and disables Relay middleware. No Relay plugin was active in any run (recorded in round 2; the venv was the same in this round).",
+   "plugins_toml_sha256": null,
+   "config_paths": [],
+   "explicit_plugins_toml": "none: HERMES_NEMO_RELAY_PLUGINS_TOML unset and the isolated HERMES_HOME has no relay-plugins.toml"
+  }
+ },
+ "provenance": "self",
+ "cost": {
+  "api_cost_usd": 0.0,
+  "tier_cost": "$0"
+ },
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the harness and tests; disclosed per repository policy",
+ "privacy": "synthetic fixtures only; no state.db / agent.log / credentials read",
+ "id": "E37-synthetic/r20261001-01",
+ "tier": "T1",
+ "kind": "sizing",
+ "experiment": "E37 offline arm, synthetic substitute (OD-7 not granted, so no state.db copies): one 20-turn read_file session (20 x ~23.6K-char results, 128K window) through prune-off / prune-on (48000) / projection (auto) / projection with provider-reported caching; provider usage = request chars/4 so prune and compaction gates see realistic numbers",
+ "command": {
+  "run": "env -i PATH=/usr/bin:/bin PYTHONHASHSEED=0 E37_SCRATCH=$S/e37final $PY harness/e37_synthetic.py <worktree> <out.json> <arm> 20",
+  "arm_trees": {
+   "base-*": "c1ed8c9f081450bc01a08d7c638ff2d2eeecbfd8",
+   "carrier-*": "2090d94da9b0ac6ed6e0fbb2ff77075a102c012b"
+  }
+ },
+ "inputs": {
+  "shas": {
+   "main": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+   "staging_commit": "c1ed8c9f081450bc01a08d7c638ff2d2eeecbfd8",
+   "carrier_head": "069adfb67e57287ac8df996ef48e082fe8455e2c",
+   "carrier_merge_base": "67764dc0863349a384c16425e73ee8571f3a94b7",
+   "carrier_rebased_arm": "e04f4f9e2cbecd1760df3ed7f19da9db065a4f2d",
+   "carrier_rebased_arm_plus_test": "2090d94da9b0ac6ed6e0fbb2ff77075a102c012b",
+   "test_blob": "7347ad045bf049afabce5b78435d5746273160f1"
+  },
+  "harness_sha256": {
+   "harness/e37_synthetic.py": "4de16b55331c737d8db15eaf0acdfacb69cb458808f59bc3c912cd4c424c2f85",
+   "harness/f04_probe.py": "a23b3b14b3cd7a4c4e8bfd35a6da50c06656f183fc842afca738e3f46e051bb9",
+   "harness/guarded_run.py": "be17793cdf4bad466fb2e05b5c67d63430a1e79c8c40949a7e45c897d35d654f",
+   "harness/readtool_direct.py": "e8dd892a0a2a835550467d4ccf4732470860692b6200a6e150be50950d9a96f4"
+  }
+ },
+ "aa_check": {
+  "label": "OBSERVED",
+  "prune-off: base vs carrier (projection off) per-request wire sizes identical": true,
+  "prune-on: identical": true
+ },
+ "results": [
+  {
+   "arm": "prune-off",
+   "repo_head": "c1ed8c9f081450bc01a08d7c638ff2d2eeecbfd8",
+   "config_overlay": "",
+   "provider_reports_cached_input": false,
+   "observed": {
+    "main_requests": 40,
+    "aux_requests": 2,
+    "prefix_breaks": [
+     27
+    ],
+    "rows_projected": 2,
+    "last_request_chars": 208002,
+    "max_request_chars": 325801,
+    "sum_request_chars": 6334153,
+    "durable_model_view_tool_rows_chars": 189338,
+    "turn_errors": [],
+    "label": "OBSERVED (loopback wire)",
+    "unstable_archived_rows": 0
+   },
+   "modeled": {
+    "label": "MODELED (chars/4 tokens; perfect prefix cache; write 1.25x, read 0.10x)",
+    "cache_read_ratio": 0.917,
+    "billed_input_tokens_no_cache": 1583538,
+    "billed_input_token_units_cached": 309575,
+    "reprefill_tokens_after_breaks": 129611
+   },
+   "egress_blocked": []
+  },
+  {
+   "arm": "prune-on",
+   "repo_head": "c1ed8c9f081450bc01a08d7c638ff2d2eeecbfd8",
+   "config_overlay": "compression:\n  proactive_prune_tokens: 48000\n",
+   "provider_reports_cached_input": false,
+   "observed": {
+    "main_requests": 40,
+    "aux_requests": 1,
+    "prefix_breaks": [
+     13,
+     29
+    ],
+    "rows_projected": 10,
+    "last_request_chars": 258381,
+    "max_request_chars": 302532,
+    "sum_request_chars": 6702428,
+    "durable_model_view_tool_rows_chars": 237960,
+    "turn_errors": [],
+    "label": "OBSERVED (loopback wire)",
+    "unstable_archived_rows": 0
+   },
+   "modeled": {
+    "label": "MODELED (chars/4 tokens; perfect prefix cache; write 1.25x, read 0.10x)",
+    "cache_read_ratio": 0.8958,
+    "billed_input_tokens_no_cache": 1675607,
+    "billed_input_token_units_cached": 368373,
+    "reprefill_tokens_after_breaks": 172735
+   },
+   "egress_blocked": []
+  },
+  {
+   "arm": "prune-off",
+   "repo_head": "2090d94da9b0ac6ed6e0fbb2ff77075a102c012b",
+   "config_overlay": "",
+   "provider_reports_cached_input": false,
+   "observed": {
+    "main_requests": 40,
+    "aux_requests": 2,
+    "prefix_breaks": [
+     27
+    ],
+    "rows_projected": 2,
+    "last_request_chars": 208002,
+    "max_request_chars": 325801,
+    "sum_request_chars": 6334153,
+    "durable_model_view_tool_rows_chars": 189338,
+    "turn_errors": [],
+    "label": "OBSERVED (loopback wire)",
+    "unstable_archived_rows": 0
+   },
+   "modeled": {
+    "label": "MODELED (chars/4 tokens; perfect prefix cache; write 1.25x, read 0.10x)",
+    "cache_read_ratio": 0.917,
+    "billed_input_tokens_no_cache": 1583538,
+    "billed_input_token_units_cached": 309575,
+    "reprefill_tokens_after_breaks": 129611
+   },
+   "egress_blocked": []
+  },
+  {
+   "arm": "prune-on",
+   "repo_head": "2090d94da9b0ac6ed6e0fbb2ff77075a102c012b",
+   "config_overlay": "compression:\n  proactive_prune_tokens: 48000\n",
+   "provider_reports_cached_input": false,
+   "observed": {
+    "main_requests": 40,
+    "aux_requests": 1,
+    "prefix_breaks": [
+     13,
+     29
+    ],
+    "rows_projected": 10,
+    "last_request_chars": 258381,
+    "max_request_chars": 302532,
+    "sum_request_chars": 6702428,
+    "durable_model_view_tool_rows_chars": 237960,
+    "turn_errors": [],
+    "label": "OBSERVED (loopback wire)",
+    "unstable_archived_rows": 0
+   },
+   "modeled": {
+    "label": "MODELED (chars/4 tokens; perfect prefix cache; write 1.25x, read 0.10x)",
+    "cache_read_ratio": 0.8958,
+    "billed_input_tokens_no_cache": 1675607,
+    "billed_input_token_units_cached": 368373,
+    "reprefill_tokens_after_breaks": 172735
+   },
+   "egress_blocked": []
+  },
+  {
+   "arm": "projection",
+   "repo_head": "2090d94da9b0ac6ed6e0fbb2ff77075a102c012b",
+   "config_overlay": "compression:\n  tool_result_projection: auto\n",
+   "provider_reports_cached_input": false,
+   "observed": {
+    "main_requests": 40,
+    "aux_requests": 1,
+    "prefix_breaks": [
+     9,
+     15,
+     21,
+     27,
+     33,
+     39
+    ],
+    "rows_projected": 18,
+    "last_request_chars": 74486,
+    "max_request_chars": 120543,
+    "sum_request_chars": 3330773,
+    "durable_model_view_tool_rows_chars": 472480,
+    "turn_errors": [],
+    "label": "OBSERVED (loopback wire)",
+    "unstable_archived_rows": 0
+   },
+   "modeled": {
+    "label": "MODELED (chars/4 tokens; perfect prefix cache; write 1.25x, read 0.10x)",
+    "cache_read_ratio": 0.8017,
+    "billed_input_tokens_no_cache": 832693,
+    "billed_input_token_units_cached": 273135,
+    "reprefill_tokens_after_breaks": 163214
+   },
+   "egress_blocked": []
+  },
+  {
+   "arm": "projection-cached",
+   "repo_head": "2090d94da9b0ac6ed6e0fbb2ff77075a102c012b",
+   "config_overlay": "compression:\n  tool_result_projection: auto\n",
+   "provider_reports_cached_input": true,
+   "observed": {
+    "main_requests": 40,
+    "aux_requests": 1,
+    "prefix_breaks": [
+     15,
+     27,
+     39
+    ],
+    "rows_projected": 18,
+    "last_request_chars": 74906,
+    "max_request_chars": 191306,
+    "sum_request_chars": 4605817,
+    "durable_model_view_tool_rows_chars": 472480,
+    "turn_errors": [],
+    "label": "OBSERVED (loopback wire)",
+    "unstable_archived_rows": 0
+   },
+   "modeled": {
+    "label": "MODELED (chars/4 tokens; perfect prefix cache; write 1.25x, read 0.10x)",
+    "cache_read_ratio": 0.8723,
+    "billed_input_tokens_no_cache": 1151454,
+    "billed_input_token_units_cached": 284293,
+    "reprefill_tokens_after_breaks": 145191
+   },
+   "egress_blocked": []
+  }
+ ],
+ "artifacts": [
+  {
+   "path": "receipts/raw/e37-base-prune-off.json",
+   "sha256": "7a226c18d3bf5e08c24ec9e66897509c62e0f7d48461199a260792426a5f0e85"
+  },
+  {
+   "path": "receipts/raw/e37-base-prune-on.json",
+   "sha256": "08a6022736e67889bfdb3069debf3a9ea155c5f40421f17282efd0ec09a5fb30"
+  },
+  {
+   "path": "receipts/raw/e37-carrier-prune-off.json",
+   "sha256": "0f7cfc6324a594bf293dec09452c5380c52e0f037f12365a3ac1328be0e69dfa"
+  },
+  {
+   "path": "receipts/raw/e37-carrier-prune-on.json",
+   "sha256": "5133d37e42a093383dcde1aa3e837edffc0a6d32db8b0105b16a8ce25623dd1d"
+  },
+  {
+   "path": "receipts/raw/e37-carrier-projection.json",
+   "sha256": "5e1b9fda8b5333607b1def88f1573775a7d7325297b1393861e805ea39330b8d"
+  },
+  {
+   "path": "receipts/raw/e37-carrier-projection-cached.json",
+   "sha256": "ba3aa1a9b90d50656d9f723ef8f0c97681599f923fefe76d3b97ccfd94d17a8c"
+  }
+ ],
+ "limitations": [
+  "synthetic workload (uniform 20K-char reads, no model behaviour); not the user population",
+  "billing and cache-read ratio are MODELED: a perfect, never-expiring prefix cache at message granularity; real caches have TTLs, minimum prefix sizes and breakpoints",
+  "single seed, n=1 per arm; no A/A noise floor needed for a deterministic replay but no CI either"
+ ],
+ "verdict": "RECORDED (MODELED; cannot make the branch READY)",
+ "spec": {
+  "path": null,
+  "rev": null,
+  "sha256": null,
+  "prereg_commit": null,
+  "decision_rule_sha": null,
+  "note": "not pre-registered: an ad-hoc staging run under FACTORY.md section 8. The decision rule is the assertion set of tests/e2e/core/history/test_tool_result_projection_wire.py (blob 7347ad045b) and, for probes, the harness outputs named in command."
+ },
+ "policy_revision": {
+  "AGENTS.md": "65aa3e61bc@572e4f4fad (unchanged at 234badf401 and aea969677c)",
+  "CONTRIBUTING.md": "b0baa59b50@572e4f4fad (unchanged at 234badf401 and aea969677c)",
+  "factory": "FACTORY.md sha256:7726ba18b43a9367 (frontier-2026-10-01 ledger copy, read at round-1 fix)"
+ },
+ "denominators": {
+  "cells": 6,
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "completeness": 1.0,
+  "note": "6 single runs (base and carrier x prune-off / prune-on; carrier projection, projection-cached)"
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": true,
+  "runtime": false,
+  "kind": "sizing"
+ },
+ "resource_usage": {
+  "wall_s": 22.9,
+  "cpu_core_s": null,
+  "gpu_s": 0,
+  "energy_j": null,
+  "api_cost_usd": 0.0,
+  "note": "wall_s summed from the raw outputs; CPU time and energy were not recorded"
+ },
+ "corrections": [
+  {
+   "date": "2026-10-01",
+   "by": "staging fix round 1 (phase-3 verifier findings)",
+   "changes": [
+    "env.python: was '$PY (3.14.x, read-only use as interpreter)' (wrong: every raw output records \"python\": \"3.11.14\" and the venv interpreter prints Python 3.11.14)",
+    "added the xf.receipt.v1 fields spec (not pre-registered), policy_revision, denominators, evidence_class, resource_usage"
+   ]
+  },
+  {
+   "date": "2026-10-01",
+   "by": "staging fix round 2 (round-1 re-verifier findings)",
+   "changes": [
+    "env.relay added (the shared venv's nemo-relay 0.8.4 fails to initialize; no Relay plugin was active)",
+    "z0evals_study added (not frozen; P8 pending)"
+   ]
+  },
+  {
+   "date": "2026-10-01",
+   "by": "staging fix round 3 (fix of the round-2 re-verifier findings)",
+   "changes": [
+    "env.host: the workstation's host name replaced by 'withheld' (receipts must not carry host names)"
+   ]
+  }
+ ],
+ "superseded_by": "E37-synthetic/r20261001-02",
+ "z0evals_study": {
+  "repo": "kvnloo/z0evals",
+  "branch": "study/hermes-tool-result-projection-support",
+  "commit": null,
+  "status": "not frozen (P8 pending)"
+ }
+}

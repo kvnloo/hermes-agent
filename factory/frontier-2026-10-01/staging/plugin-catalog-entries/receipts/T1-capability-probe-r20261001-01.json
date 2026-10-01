@@ -1,0 +1,168 @@
+{
+  "schema": "xf.receipt.v1",
+  "staging": "plugin-catalog-entries",
+  "provenance": "self",
+  "origin_refs": [
+    "NousResearch/hermes-agent#102922",
+    "NousResearch/hermes-agent#102924",
+    "NousResearch/hermes-agent#87495",
+    "NousResearch/hermes-agent#98105"
+  ],
+  "policy_revision": {
+    "plugin-catalog/README.md": "rules 2,3,5,6,7,8,9 @ 234badf4012af380d23c91eae55d045a69c69ffb"
+  },
+  "ai_assistance": "Claude Code (Opus 5.5) wrote the census, the probes and these receipts; disclosed per repository policy",
+  "privacy": "local aggregate (synthetic canary text only; no state.db, logs or credentials read). Host paths and the hostname replaced by placeholders <staging>, <worktree>, <venv>, <testhome>, <host>; artifact paths are relative to the staging directory. raw/ outputs and tools/sandbox.sh are local-only (public: false) and still carry host paths.",
+  "resource_usage": {
+    "api_cost_usd": 0.0,
+    "gpu_s": 0,
+    "tokens": 0,
+    "wall_s": null,
+    "wall_s_label": "NOT_MEASURED"
+  },
+  "id": "T1-capability/r20261001-01",
+  "tier": "T1 (direct call of hermes_cli.plugin_validate._run_capability_probe, the production probe, in the bwrap sandbox; NOT the hermes CLI; E52 stays queued)",
+  "question": "Does the production capability probe record undeclared middleware for paw-pii at its pin, and does declaring it clear the check?",
+  "base_revision": {
+    "hermes_tree": "2b05ac2bb8423c987ba8051f6cc22939104b4da7 (slice on 572e4f4fad32bbdcfc948fb2ec833177ed5734c0)",
+    "current_main": "234badf4012af380d23c91eae55d045a69c69ffb",
+    "invalidate_on_changed_since": false
+  },
+  "inputs": {
+    "plugin": {
+      "repo": "https://github.com/kvnloo/pii",
+      "sha": "d891ebdd3a3dab27a3451923eb56f955253a2782",
+      "subdir": "integrations/hermes",
+      "parent_repo": "programasweights/pii",
+      "parent_main": "454b8df4e35b207d84afa2ce1761079ea2975346",
+      "ahead_of_parent": 1,
+      "pinned_commit_author": "GitHub login kvnloo (author and committer); committer display name lesseradmin"
+    },
+    "probe_script_sha256": "dfb83da30d2a6658cb944190ce7ca43898e6a15ac35e5fc8ade01c0a884dd3bd",
+    "harness": {
+      "path": "tools/t1_probe.py",
+      "sha256": "ff594145474cc39f3731eb314a7ca92ef9be46832ec08797e89118f0e0848d82"
+    },
+    "sandbox": {
+      "path": "tools/sandbox.sh",
+      "sha256": "1f8f65efffcec1e0e6b6b2d51a843359720b6b03f209bcabeb9027bdd67b5d3c",
+      "public": false
+    },
+    "hermes_blobs": {
+      "hermes_cli/plugin_validate.py": "2f31a9a4b1d66bd0c89a676f7f57f2f541605d33"
+    }
+  },
+  "command": "MP=$(<venv>/bin/python -c 'import yaml,json,sys; print(json.dumps(yaml.safe_load(open(sys.argv[1]))))' <plugin_dir>/plugin.yaml); RUN=<staging>/run VENV=1 CHDIR=<worktree> <staging>/tools/sandbox.sh <venv>/bin/python -I <staging>/tools/t1_probe.py capability --hermes-tree <worktree> --plugin-dir {<staging>/run/src/pii/integrations/hermes | <staging>/run/variants/fixed-manifest} --manifest-json \"$MP\"  (x3 reps)",
+  "env": {
+    "host": "<host>",
+    "python_system": "3.14.7",
+    "python_hermes_venv": "3.11.14 (live venv interpreter, read-only; main requires ==3.14.*, see pre-existing env errors)",
+    "sandbox": "bwrap 0.12.0: ro-root, tmpfs over the user home and the live Hermes home (venv re-bound ro), unshare-net, unshare-pid, clearenv, writable $RUN on the artifact volume only",
+    "in_process_guard": "t1 probes: loopback-only socket.connect + exec audit hook (read-only git allowlisted)"
+  },
+  "arms": {
+    "as-pinned": {
+      "plugin_dir": "integrations/hermes @ d891ebdd"
+    },
+    "fixed-manifest": {
+      "plugin_dir": "as-pinned + provides_middleware: [llm_request, tool_execution] in plugin.yaml (synthetic)"
+    }
+  },
+  "gates": {
+    "red": {
+      "arm": "as-pinned",
+      "result": "FAIL",
+      "reps_agree": "3/3",
+      "observed": [
+        {
+          "check": "declared middleware",
+          "ok": false,
+          "undeclared": [
+            "llm_request",
+            "tool_execution"
+          ],
+          "unregistered": []
+        }
+      ]
+    },
+    "green": {
+      "arm": "fixed-manifest",
+      "result": "PASS",
+      "reps_agree": "3/3"
+    },
+    "infra": {
+      "blocked_exec_or_connect": 0
+    }
+  },
+  "measurements": [
+    {
+      "name": "recorded_registrations",
+      "arm": "as-pinned",
+      "value": {
+        "tools": [
+          "detect_pii",
+          "redact_pii"
+        ],
+        "hooks": [],
+        "middleware": [
+          "llm_request",
+          "tool_execution"
+        ],
+        "commands": [],
+        "providers": []
+      },
+      "label": "OBSERVED"
+    },
+    {
+      "name": "declared_middleware_check",
+      "arm": "as-pinned",
+      "value": "FAIL",
+      "n": 3,
+      "label": "OBSERVED"
+    },
+    {
+      "name": "declared_middleware_check",
+      "arm": "fixed-manifest",
+      "value": "PASS",
+      "n": 3,
+      "label": "OBSERVED"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "raw/t1_capability_as_pinned_rep1.json",
+      "sha256": "939890ce08d0e5d0d9d8fb1b255eb2bcec31e789138167153c2f4379749b5c49",
+      "public": false
+    },
+    {
+      "path": "raw/t1_capability_as_pinned_rep2.json",
+      "sha256": "939890ce08d0e5d0d9d8fb1b255eb2bcec31e789138167153c2f4379749b5c49",
+      "public": false
+    },
+    {
+      "path": "raw/t1_capability_as_pinned_rep3.json",
+      "sha256": "939890ce08d0e5d0d9d8fb1b255eb2bcec31e789138167153c2f4379749b5c49",
+      "public": false
+    },
+    {
+      "path": "raw/t1_capability_fixed_manifest_rep1.json",
+      "sha256": "b4fa2b434c48f62fe9e8b193bb041871d1bd6c72c9a8f94fa0ed10de590ac636",
+      "public": false
+    },
+    {
+      "path": "raw/t1_capability_fixed_manifest_rep2.json",
+      "sha256": "b4fa2b434c48f62fe9e8b193bb041871d1bd6c72c9a8f94fa0ed10de590ac636",
+      "public": false
+    },
+    {
+      "path": "raw/t1_capability_fixed_manifest_rep3.json",
+      "sha256": "b4fa2b434c48f62fe9e8b193bb041871d1bd6c72c9a8f94fa0ed10de590ac636",
+      "public": false
+    }
+  ],
+  "verdict": "KEEP: admission capability check FAILS at d891ebdd; a one-line plugin.yaml fix clears it",
+  "not_tested": [
+    "--install-deps and the CLI wrapper (E52)",
+    "the probe child runs without the in-process guard; isolation there is the bwrap layer only"
+  ]
+}

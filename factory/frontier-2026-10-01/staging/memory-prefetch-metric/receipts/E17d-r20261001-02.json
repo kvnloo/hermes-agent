@@ -1,0 +1,280 @@
+{
+  "schema": "xf.receipt.v1",
+  "id": "E17d/r20261001-02",
+  "experiment": "E17d rerun on the amended head: attribute the per-call cost the staging commit adds to MemoryManager._prefetch_provider (in place, base vs head variants), collection off and on",
+  "tier": "T1",
+  "cost_usd": 0.0,
+  "lane": "cpu",
+  "spec": {
+    "path": null,
+    "prereg_commit": null,
+    "note": "Same arms and contrasts as r01; only the no-op stand-in takes the amended signature."
+  },
+  "staging": "memory-prefetch-metric",
+  "origin_refs": [
+    "E17d/r20261001-01",
+    "E17/r20261001-04"
+  ],
+  "base_revision": "040b6df2c40b0f4f88f51e4c2062eafc4d7463c5",
+  "head_revision": "569ad4d84b0f9888ea2598c2a8ea416b2c75bad6",
+  "head_tree": "50ce6da7df616635f9edd958200c2065072b643c",
+  "arms": {
+    "base": "main's agent/memory_manager.py (blob d023a57f8b) loaded from source into the head tree",
+    "base_aa": "the same base class again (A/A)",
+    "head": "the staging commit's MemoryManager",
+    "head_noop": "head, with record_memory_prefetch swapped for a no-op during the block (head - head_noop = the record call in place)",
+    "head_hoisted": "head source with the function-level import moved to module level (head - head_hoisted = the per-call import statement)"
+  },
+  "inputs": {
+    "script": {
+      "path": "work/r3/micro_attribution_r3.py",
+      "sha256": "a2104095753abf24962016b7fbfe956fa7e5491a95c20a7aafea1b4049be73f2"
+    },
+    "base_memory_manager": {
+      "path": "work/r3/base_memory_manager_d023a57f8b.py",
+      "sha256": "048842c1c3725e6fe6aef8f2b7fe3ea06baec02cebdea1e9ab0e9da06473930d"
+    }
+  },
+  "env": {
+    "host": "<host>",
+    "python": "3.11.14 (<read-only py3.11 venv>, used read-only)",
+    "nemo_relay_native": true,
+    "sandbox": "env -i; os.environ cleared; collection-off and collection-on profiles in a fresh scratch sandbox (send: false)",
+    "network": "none; loopback-only socket.connect guard",
+    "load1": {
+      "start": 2.8818359375,
+      "end": 2.45947265625
+    },
+    "provider": "in-process instant provider (not bundled, reports as plugin); every call takes the success exit"
+  },
+  "command": "env -i PATH=/usr/bin:/bin <read-only py3.11 venv>/bin/python work/r3/micro_attribution_r3.py --repo <worktree at 569ad4d84b> --base-mm work/r3/base_memory_manager_d023a57f8b.py --sandbox-root <scratch> --out work/r3/micro_attribution_r3.json",
+  "design": {
+    "blocks": 16,
+    "calls_per_block": 400,
+    "order": "arms rotated by block index, reversed on odd blocks",
+    "statistic": "median and p05/p95 of per-block differences (us per call)",
+    "standalone_calls_per_block": 2000
+  },
+  "results": {
+    "collection_off": {
+      "us_per_call_median": {
+        "base": 44.98,
+        "base_aa": 44.71,
+        "head": 82.58,
+        "head_noop": 47.24,
+        "head_hoisted": 80.53
+      },
+      "contrasts_us": {
+        "head_minus_base": {
+          "median": 37.17,
+          "p05": 33.75,
+          "p95": 38.21
+        },
+        "head_noop_minus_base": {
+          "median": 1.8,
+          "p05": -2.7,
+          "p95": 3.04
+        },
+        "head_hoisted_minus_base": {
+          "median": 35.17,
+          "p05": 29.34,
+          "p95": 37.89
+        },
+        "head_minus_head_noop": {
+          "median": 35.44,
+          "p05": 34.02,
+          "p95": 36.66
+        },
+        "head_minus_head_hoisted": {
+          "median": 1.59,
+          "p05": -0.33,
+          "p95": 4.42
+        },
+        "aa_base_aa_minus_base": {
+          "median": -0.32,
+          "p05": -3.95,
+          "p95": 0.38
+        }
+      },
+      "standalone_us_median": {
+        "enabled_gate_only": 12.67,
+        "record_memory_prefetch": 21.28,
+        "record_execution_backend_existing": 22.19
+      }
+    },
+    "collection_on": {
+      "us_per_call_median": {
+        "base": 64.84,
+        "base_aa": 65.05,
+        "head": 175.35,
+        "head_noop": 67.62,
+        "head_hoisted": 175.83
+      },
+      "contrasts_us": {
+        "head_minus_base": {
+          "median": 110.72,
+          "p05": 108.53,
+          "p95": 116.86
+        },
+        "head_noop_minus_base": {
+          "median": 2.68,
+          "p05": 0.68,
+          "p95": 7.9
+        },
+        "head_hoisted_minus_base": {
+          "median": 110.8,
+          "p05": 107.93,
+          "p95": 119.29
+        },
+        "head_minus_head_noop": {
+          "median": 108.29,
+          "p05": 105.13,
+          "p95": 110.2
+        },
+        "head_minus_head_hoisted": {
+          "median": -0.13,
+          "p05": -6.57,
+          "p95": 3.41
+        },
+        "aa_base_aa_minus_base": {
+          "median": -0.34,
+          "p05": -1.52,
+          "p95": 0.91
+        }
+      },
+      "standalone_us_median": {
+        "enabled_gate_only": 14.0,
+        "record_memory_prefetch": 94.77,
+        "record_execution_backend_existing": 96.46
+      }
+    }
+  },
+  "measurements": [
+    {
+      "name": "delta_head_minus_base_us_off",
+      "value": {
+        "median": 37.17,
+        "p05": 33.75,
+        "p95": 38.21
+      },
+      "aa": {
+        "median": -0.32,
+        "p05": -3.95,
+        "p95": 0.38
+      },
+      "label": "OBSERVED"
+    },
+    {
+      "name": "record_call_in_place_us_off (head - head_noop)",
+      "value": {
+        "median": 35.44,
+        "p05": 34.02,
+        "p95": 36.66
+      },
+      "label": "OBSERVED"
+    },
+    {
+      "name": "everything_but_the_record_call_us_off (head_noop - base)",
+      "value": {
+        "median": 1.8,
+        "p05": -2.7,
+        "p95": 3.04
+      },
+      "label": "OBSERVED"
+    },
+    {
+      "name": "per_call_import_statement_us_off (head - head_hoisted)",
+      "value": {
+        "median": 1.59,
+        "p05": -0.33,
+        "p95": 4.42
+      },
+      "label": "OBSERVED"
+    },
+    {
+      "name": "delta_head_minus_base_us_on",
+      "value": {
+        "median": 110.72,
+        "p05": 108.53,
+        "p95": 116.86
+      },
+      "aa": {
+        "median": -0.34,
+        "p05": -1.52,
+        "p95": 0.91
+      },
+      "label": "OBSERVED"
+    },
+    {
+      "name": "record_call_in_place_us_on (head - head_noop)",
+      "value": {
+        "median": 108.29,
+        "p05": 105.13,
+        "p95": 110.2
+      },
+      "label": "OBSERVED"
+    },
+    {
+      "name": "everything_but_the_record_call_us_on (head_noop - base)",
+      "value": {
+        "median": 2.68,
+        "p05": 0.68,
+        "p95": 7.9
+      },
+      "label": "OBSERVED"
+    },
+    {
+      "name": "standalone_us_median",
+      "value": {
+        "off": {
+          "enabled_gate_only": 12.67,
+          "record_memory_prefetch": 21.28,
+          "record_execution_backend_existing": 22.19
+        },
+        "on": {
+          "enabled_gate_only": 14.0,
+          "record_memory_prefetch": 94.77,
+          "record_execution_backend_existing": 96.46
+        }
+      },
+      "label": "OBSERVED"
+    }
+  ],
+  "interpretation": {
+    "attribution": "Collection off: head - base median +37.17 us (p05..p95 +33.75..+38.21); A/A -0.32 (-3.95..+0.38). With the record call swapped for a no-op: +1.8 us (-2.7..+3.04), so the import, the clock read and the lock reshuffle cost a few us at most and the record call in place costs about 35 us. Collection on: +110.72 us, no-op +2.68, record call in place +108.29.",
+    "standalone": "Alone in a tight loop record_memory_prefetch costs 21.28 us off (enabled() alone 12.67) and 94.77 on, against record_execution_backend 22.19 / 96.46. The in-place cost of the existing record_* sites was not measured.",
+    "gate": "The selection gate 'hot-path overhead stays below noise in a microbenchmark' is still NOT met. Owner decision."
+  },
+  "evidence_class": {
+    "local": true,
+    "ci": "none",
+    "simulation": true,
+    "runtime": false,
+    "kind": "cost"
+  },
+  "not_tested": [
+    "py3.14 with nemo-relay 0.9",
+    "the in-place cost of the existing record_* call sites",
+    "why the in-place record call costs more than the tight-loop call",
+    "other exits (only the success exit is benchmarked)"
+  ],
+  "limitations": [
+    "Shared host (load1 2.9 -> 2.5, other agents); absolute microseconds are inflated, A/A included",
+    "On this quieter run the no-op arm sits just above the A/A range, so the non-record edits are measurable but small"
+  ],
+  "verdict": "KEEP (cost attribution); hot-path gate NOT MET as worded",
+  "provenance": "self",
+  "privacy": "public-aggregate (synthetic fixtures only)",
+  "raw_artifacts": {
+    "result": {
+      "path": "work/r3/micro_attribution_r3.json",
+      "sha256": "1ce74bc0627cd48faadbf5f6f68ac9995adf92cddd2e2997bdaac1e3bd6bbcd5"
+    }
+  },
+  "supersedes": {
+    "id": "E17d/r20261001-01",
+    "path": "receipts/E17d-r20261001-01.json",
+    "sha256_as_written": "7e3a8638ab38c5cff3ec137cb2f5e2941d2df40297a44feaf3c6eabd29a897ba",
+    "why": "measured at 519876fa02; rerun on the amended head"
+  }
+}

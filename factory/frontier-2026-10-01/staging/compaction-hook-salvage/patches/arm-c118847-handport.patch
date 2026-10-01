@@ -1,0 +1,210 @@
+diff --git a/agent/context_compressor.py b/agent/context_compressor.py
+index 6da13625b3..af0425b5ae 100644
+--- a/agent/context_compressor.py
++++ b/agent/context_compressor.py
+@@ -3285,6 +3285,30 @@ class ContextCompressor(SummaryDispatchMixin, MicroCompactionMixin, ContextEngin
+         self._proactive_prune_rearm_tokens = 0
+         self._last_reclaim_block_warn = None
+ 
++    def _fire_post_compaction_hook(self, messages_before: List[Dict[str, Any]], messages_after: List[Dict[str, Any]]) -> None:
++        """Fire the post_compaction plugin hook (observer-only, returns ignored).
++
++        Runs after a successful compaction so plugins/providers can react
++        (re-inject context, update indices, etc.). Gated on has_hook so
++        the hook dispatch cost is zero when no plugin is listening (#118382).
++        """
++        try:
++            from hermes_cli.lifecycle import has_hook, invoke_hook
++            if has_hook("post_compaction"):
++                before_tokens = estimate_messages_tokens_rough(messages_before)
++                after_tokens = estimate_messages_tokens_rough(messages_after)
++                messages_removed = len(messages_before) - len(messages_after)
++                invoke_hook(
++                    "post_compaction",
++                    session_id=getattr(self, "_session_id", ""),
++                    before_tokens=before_tokens,
++                    after_tokens=after_tokens,
++                    messages_removed=messages_removed,
++                    reason="compaction",
++                )
++        except Exception as exc:
++            logger.debug("post_compaction hook dispatch failed (non-fatal): %s", exc)
++
+     def _billed_basis_over_threshold(self, current_tokens: "int | None") -> bool:
+         """Whether a provider-billed reading says the session is over threshold.
+ 
+@@ -5539,7 +5563,10 @@ Write only the summary body. Do not include any preamble or prefix."""
+             )
+         # Phase 4: Assemble compressed message list
+         compressed = self._assemble_compressed(messages, compress_start, compress_end, scan, summary)
+-        return self._finalize_compressed(compressed, canonical_messages, n_messages, spare_pending_images)
++        result = self._finalize_compressed(compressed, canonical_messages, n_messages, spare_pending_images)
++        if self._last_compression_made_progress:
++            self._fire_post_compaction_hook(canonical_messages, result)
++        return result
+ 
+     def _assemble_compressed(
+         self, messages: List[Dict[str, Any]], compress_start: int, compress_end: int, scan: "_HandoffScan", summary: str,
+diff --git a/hermes_cli/plugins.py b/hermes_cli/plugins.py
+index 02222185a2..4657156cac 100644
+--- a/hermes_cli/plugins.py
++++ b/hermes_cli/plugins.py
+@@ -202,6 +202,11 @@ VALID_HOOKS: Set[str] = {
+     # IGNORED in v1 — a plugin returning a directive-shaped dict gets a debug log so future block/rewrite
+     # adopters are discoverable once the middleware variant ships against the #64231 taxonomy.
+     "pre_command",
++    # post_compaction: after a successful context compaction. Fires once per compress() call that
++    # made progress. Observer-only (returns ignored). Kwargs: session_id, before_tokens, after_tokens,
++    # messages_removed, reason. Lets plugins/providers re-inject context that compaction summarized
++    # away (#118382).
++    "post_compaction",
+ }
+ 
+ # Hooks whose directive the shell-hook response parser has no channel for. VALID_HOOKS doubles as
+diff --git a/tests/agent/test_post_compaction_hook.py b/tests/agent/test_post_compaction_hook.py
+new file mode 100644
+index 0000000000..3437190224
+--- /dev/null
++++ b/tests/agent/test_post_compaction_hook.py
+@@ -0,0 +1,141 @@
++"""Tests for the post_compaction plugin hook (#118382).
++
++The post_compaction hook fires once after a successful context compaction,
++so plugins/providers can react (re-inject context, update indices, etc.).
++"""
++
++from __future__ import annotations
++
++from unittest.mock import patch
++
++import pytest
++
++from agent.context_compressor import ContextCompressor
++
++
++class _RecordingCompressor(ContextCompressor):
++    """A compressor whose _generate_summary returns a fixed string."""
++
++    def __init__(self) -> None:
++        super().__init__(
++            model="test-model", protect_first_n=2, protect_last_n=2,
++            quiet_mode=True, config_context_length=40_960,
++        )
++        self.summary_calls: list = []
++
++    def _generate_summary(self, turns_to_summarize, focus_topic=None, memory_context="", bypass_cooldown=False):
++        self.summary_calls.append((focus_topic, memory_context, {}))
++        return "## Goal\nTest summary for hook."
++
++
++def _messages(n: int = 14) -> list[dict]:
++    """Build a small synthetic conversation."""
++    return [{"role": "system", "content": "system"}] + [
++        {"role": "user" if i % 2 == 0 else "assistant", "content": f"turn-{i} " + "context " * 50}
++        for i in range(n)
++    ]
++
++
++class TestPostCompactionHook:
++    """post_compaction hook fires once per successful compaction, observer-only."""
++
++    def test_hook_fired_when_has_hook_true(self) -> None:
++        compressor = _RecordingCompressor()
++        compressor.bind_session_state(session_id="sess-1")
++
++        messages = _messages()
++        before_tokens = len(str(messages))  # rough estimate, exact value not checked
++        after_tokens_before = len(str(messages))
++
++        with patch("hermes_cli.lifecycle.has_hook", return_value=True) as mock_has, \
++             patch("hermes_cli.lifecycle.invoke_hook") as mock_invoke:
++            compressed = compressor.compress(messages, current_tokens=30_000)
++
++        mock_has.assert_called_once_with("post_compaction")
++        mock_invoke.assert_called_once()
++        call_kwargs = mock_invoke.call_args.kwargs
++
++        assert call_kwargs["session_id"] == "sess-1"
++        assert call_kwargs["before_tokens"] > 0
++        assert call_kwargs["after_tokens"] > 0
++        assert call_kwargs["messages_removed"] > 0
++        assert call_kwargs["reason"] == "compaction"
++
++    def test_hook_not_fired_when_has_hook_false(self) -> None:
++        compressor = _RecordingCompressor()
++        compressor.bind_session_state(session_id="sess-2")
++
++        messages = _messages()
++
++        with patch("hermes_cli.lifecycle.has_hook", return_value=False) as mock_has, \
++             patch("hermes_cli.lifecycle.invoke_hook") as mock_invoke:
++            compressed = compressor.compress(messages, current_tokens=30_000)
++
++        mock_has.assert_called_once_with("post_compaction")
++        mock_invoke.assert_not_called()
++
++    def test_hook_not_fired_on_structural_no_op(self) -> None:
++        """Compaction that does nothing (too few messages) does NOT fire the hook."""
++        compressor = _RecordingCompressor()
++        compressor.bind_session_state(session_id="sess-3")
++
++        messages = [{"role": "system", "content": "system"}, {"role": "user", "content": "hi"}]
++
++        with patch("hermes_cli.lifecycle.has_hook", return_value=True) as mock_has, \
++             patch("hermes_cli.lifecycle.invoke_hook") as mock_invoke:
++            result = compressor.compress(messages, current_tokens=100)
++
++        # Hook is not fired when no compaction made progress
++        mock_has.assert_not_called()
++        mock_invoke.assert_not_called()
++
++    def test_hook_payload_values_correct(self) -> None:
++        compressor = _RecordingCompressor()
++        compressor.bind_session_state(session_id="sess-4")
++
++        messages = _messages()
++
++        with patch("hermes_cli.lifecycle.has_hook", return_value=True), \
++             patch("hermes_cli.lifecycle.invoke_hook") as mock_invoke:
++            compressed = compressor.compress(messages, current_tokens=30_000)
++
++        kwargs = mock_invoke.call_args.kwargs
++        assert kwargs["session_id"] == "sess-4"
++        assert kwargs["before_tokens"] > kwargs["after_tokens"]  # compression shrinks
++        assert kwargs["messages_removed"] == len(messages) - len(compressed)
++        assert kwargs["reason"] == "compaction"
++
++    def test_hook_dispatch_failure_does_not_raise(self) -> None:
++        """Hook dispatch failure is caught (non-fatal debug log)."""
++        compressor = _RecordingCompressor()
++        compressor.bind_session_state(session_id="sess-5")
++
++        messages = _messages()
++
++        with patch("hermes_cli.lifecycle.has_hook", return_value=True), \
++             patch("hermes_cli.lifecycle.invoke_hook", side_effect=RuntimeError("boom")):
++            # Should not raise
++            compressed = compressor.compress(messages, current_tokens=30_000)
++
++        assert len(compressed) < len(messages)  # compression still succeeded
++
++    def test_hook_called_once_per_compress(self) -> None:
++        compressor = _RecordingCompressor()
++        compressor.bind_session_state(session_id="sess-6")
++
++        messages = _messages()
++
++        with patch("hermes_cli.lifecycle.has_hook", return_value=True), \
++             patch("hermes_cli.lifecycle.invoke_hook") as mock_invoke:
++            compressed = compressor.compress(messages, current_tokens=30_000)
++
++        mock_invoke.assert_called_once()
++
++
++class TestPostCompactionHookRegistration:
++    """post_compaction appears in VALID_HOOKS."""
++
++    def test_post_compaction_in_valid_hooks(self) -> None:
++        from hermes_cli.plugins import VALID_HOOKS
++
++        assert "post_compaction" in VALID_HOOKS

@@ -1,0 +1,90 @@
+{
+  "label": "OBSERVED (direct call; mechanism, not wire)",
+  "python": "3.11.14",
+  "cases": [
+    {
+      "case": "anthropic_messages: signed thinking in reasoning_details and anthropic_content_blocks",
+      "api_mode": "anthropic_messages",
+      "row_keys": [
+        "anthropic_content_blocks",
+        "reasoning_details",
+        "role",
+        "tool_calls"
+      ],
+      "expected_decline": true,
+      "v1": true,
+      "v2": true,
+      "v2_correct": true
+    },
+    {
+      "case": "anthropic_messages: reasoning_details stripped (turn_recovery thinking-signature retry), anthropic_content_blocks still replayed",
+      "api_mode": "anthropic_messages",
+      "row_keys": [
+        "anthropic_content_blocks",
+        "role",
+        "tool_calls"
+      ],
+      "expected_decline": true,
+      "v1": false,
+      "v2": true,
+      "v2_correct": true
+    },
+    {
+      "case": "anthropic_messages: thinking without a signature (nothing bound)",
+      "api_mode": "anthropic_messages",
+      "row_keys": [
+        "anthropic_content_blocks",
+        "reasoning_details",
+        "role",
+        "tool_calls"
+      ],
+      "expected_decline": false,
+      "v1": false,
+      "v2": false,
+      "v2_correct": true
+    },
+    {
+      "case": "bedrock_converse: signed reasoningText in bedrock_content_blocks",
+      "api_mode": "bedrock_converse",
+      "row_keys": [
+        "bedrock_content_blocks",
+        "role"
+      ],
+      "expected_decline": true,
+      "v1": false,
+      "v2": true,
+      "v2_correct": true
+    },
+    {
+      "case": "chat_completions: same Anthropic row on an OpenAI-compatible route",
+      "api_mode": "chat_completions",
+      "row_keys": [
+        "anthropic_content_blocks",
+        "reasoning_details",
+        "role",
+        "tool_calls"
+      ],
+      "expected_decline": false,
+      "v1": false,
+      "v2": false,
+      "v2_correct": true
+    },
+    {
+      "case": "codex_responses: same Bedrock row on another wire",
+      "api_mode": "codex_responses",
+      "row_keys": [
+        "bedrock_content_blocks",
+        "role"
+      ],
+      "expected_decline": false,
+      "v1": false,
+      "v2": false,
+      "v2_correct": true
+    }
+  ],
+  "v2_all_correct": true,
+  "v1_misses": [
+    "anthropic_messages: reasoning_details stripped (turn_recovery thinking-signature retry), anthropic_content_blocks still replayed",
+    "bedrock_converse: signed reasoningText in bedrock_content_blocks"
+  ]
+}

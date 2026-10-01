@@ -1,0 +1,273 @@
+{
+  "schema": "xf.receipt.v1",
+  "staging": "plugin-catalog-entries",
+  "provenance": "self",
+  "id": "RECHECK/r20261001-03",
+  "tier": "T0 (read-only re-measurement for the round-2 manifest fix: git, gh read-only, file metadata, privacy scan, receipt rebuild from raw/; no code run from the plugin, no model download)",
+  "question": "Are the manifest's timestamps consistent with the commits, is the adjacent-PR list complete under a stated rule, and is the publishable package free of host paths, the hostname and private terms?",
+  "origin_refs": [
+    "NousResearch/hermes-agent#102922",
+    "NousResearch/hermes-agent#17472",
+    "NousResearch/hermes-agent#63917",
+    "NousResearch/hermes-agent#129692",
+    "NousResearch/hermes-agent#95186",
+    "NousResearch/hermes-agent#102049",
+    "NousResearch/hermes-agent#14624"
+  ],
+  "policy_revision": {
+    "factory": "FACTORY.md section 10 (STAGING.md is published to the ledger)"
+  },
+  "ai_assistance": "Claude Code (Opus 5.5) ran the reads and wrote this receipt; disclosed per repository policy",
+  "privacy": "public aggregate (no host paths, no hostname; artifact paths are relative to the staging directory; raw/r2_* files carry no host paths, scratch locations shown as <bare> and <scratch>; GitHub logins only)",
+  "resource_usage": {
+    "api_cost_usd": 0.0,
+    "gpu_s": 0,
+    "tokens": 0,
+    "wall_s": null,
+    "wall_s_label": "NOT_MEASURED"
+  },
+  "base_revision": {
+    "declared_base": "234badf4012af380d23c91eae55d045a69c69ffb",
+    "branch_head": "98c305b3ec8d03693f4dc94bade69035cb15ff7d",
+    "branch_parent": "234badf4012af380d23c91eae55d045a69c69ffb",
+    "declared_main": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+    "declared_main_note": "unchanged from round 1; the scratch mirror's main has since moved (see bare_main_round2, informational)"
+  },
+  "measurements": [
+    {
+      "name": "commit_dates_utc",
+      "label": "OBSERVED",
+      "source": "git log (raw/r2_git_recheck.txt)",
+      "value": {
+        "98c305b3ec": {
+          "author": "2026-10-01T09:03:41Z",
+          "committer": "2026-10-01T09:14:45Z",
+          "parent": "234badf401"
+        },
+        "2b05ac2bb8": {
+          "author": "2026-10-01T09:03:41Z",
+          "committer": "2026-10-01T09:03:41Z",
+          "parent": "572e4f4fad"
+        },
+        "234badf401": {
+          "committer": "2026-10-01T08:50:55Z"
+        }
+      }
+    },
+    {
+      "name": "merge_tree_declared_base",
+      "main": "234badf4012af380d23c91eae55d045a69c69ffb",
+      "head": "98c305b3ec8d03693f4dc94bade69035cb15ff7d",
+      "value": "clean",
+      "tree": "3a915075078775928dd352fa2fe77bd200bdd714",
+      "label": "OBSERVED",
+      "measured_at": "2026-10-01T11:35:40Z"
+    },
+    {
+      "name": "merge_tree_round1_main",
+      "main": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+      "head": "98c305b3ec8d03693f4dc94bade69035cb15ff7d",
+      "value": "clean",
+      "tree": "0f33a17f5c53e39fc185d63f0f1ee8b2b48760a7",
+      "label": "OBSERVED",
+      "measured_at": "2026-10-01T11:35:40Z"
+    },
+    {
+      "name": "merge_tree_prerebase_commit_on_base",
+      "main": "234badf4012af380d23c91eae55d045a69c69ffb",
+      "head": "2b05ac2bb8423c987ba8051f6cc22939104b4da7",
+      "value": "clean",
+      "tree": "3a915075078775928dd352fa2fe77bd200bdd714",
+      "label": "OBSERVED",
+      "note": "the pre-rebase commit gives the same tree on 234badf401, so a tree value alone cannot show which commit a check used"
+    },
+    {
+      "name": "merge_check_previous_timestamp",
+      "label": "OBSERVED bounds (commit date; file mtime)",
+      "value": "the v1/round-1 stamp '09:10Z' for the 234badf401 check on the branch predates the branch commit (09:14:45Z) and is withdrawn; no raw record of the original run exists",
+      "window": {
+        "not_before": "2026-10-01T09:14:45Z (98c305b3ec committer date)",
+        "not_after": "2026-10-01T09:17:40Z (mtime of the round-0 tools/build_receipts.py, which hard-codes the tree)"
+      }
+    },
+    {
+      "name": "history_row_timestamps",
+      "label": "OBSERVED (commit dates; file mtimes)",
+      "value": {
+        "STAGED row (was 09:00Z)": "2b05ac2bb8 committed 09:03:41Z; cited F12 outputs 09:08:00-09:08:02Z; T1 outputs 09:12:24-09:12:27Z; restamped 09:12Z",
+        "HOLD row (was 09:10Z)": "98c305b3ec committed 09:14:45Z; 234badf401 slice reruns 09:15:16-09:15:31Z; restamped 09:15Z"
+      }
+    },
+    {
+      "name": "bare_main_round2",
+      "label": "OBSERVED (informational; not the declared main)",
+      "value": {
+        "sha": "e8c97320ac8691d4de92af49f98459f9ef9ddb08",
+        "committer": "2026-10-01T11:10:58Z",
+        "descends_from_round1_main": true,
+        "commits_after_round1_main": 6,
+        "merge_tree": "clean",
+        "tree": "e84c527a14f10d4c6500968d72f89334a8c3e951",
+        "invalidate_on_paths_changed": 0,
+        "paw_pii_present": false
+      }
+    },
+    {
+      "name": "ownership_pii_search_open",
+      "label": "OBSERVED",
+      "source": "raw/r2_gh_reads.json",
+      "fetched_at": "2026-10-01T11:36:01Z",
+      "value": 111,
+      "returned": 111,
+      "contains_17472": true
+    },
+    {
+      "name": "ownership_adjacent_open",
+      "label": "OBSERVED (rule applied by hand to the 111 hits)",
+      "value": 6,
+      "listed": [
+        63917,
+        129692,
+        95186,
+        102049,
+        14624,
+        17472
+      ],
+      "rule": "main feature detects or redacts PII in content bound for a model or provider (plugin, skill, middleware or core), plus #95186 (middleware fail-closed contract)",
+      "not_listed_examples": {
+        "secret/log/export/telemetry/diagnostic/display redaction": [
+          37833,
+          34818,
+          57741,
+          88608,
+          31119,
+          79475,
+          82556,
+          129805,
+          34693
+        ],
+        "secret-redactor tuning": [
+          69890,
+          82196,
+          42381,
+          11766,
+          65209
+        ],
+        "existing core redactor applied to one more egress path": [
+          84611,
+          115109
+        ],
+        "risk scorer, no redaction": [
+          10730
+        ],
+        "hook seam, not a redactor": [
+          125178
+        ]
+      }
+    },
+    {
+      "name": "pr_17472",
+      "label": "OBSERVED",
+      "value": {
+        "state": "OPEN",
+        "author": "teodorofodocrispin-cmyk",
+        "created": "2026-04-29",
+        "updated": "2026-07-29",
+        "files": [
+          "optional-skills/trustboost-pii-sanitizer/SKILL.md",
+          "tests/skills/test_trustboost_pii_sanitizer_skill.py"
+        ],
+        "mechanism": "optional skill; raw text is POSTed to the hosted TrustBoost API (api.trustboost.dev) for redaction",
+        "relation": "a skill backed by a remote service; not a plugin-catalog entry or middleware; no conflict with a paw-pii catalog key"
+      }
+    },
+    {
+      "name": "receipts_hostname_placeholder",
+      "label": "OBSERVED",
+      "value": "env.host replaced by <host> in the four r20261001-01 receipts; tools/sandbox.sh input entries marked public: false; privacy text updated; measurements unchanged",
+      "sha256_before": {
+        "SLICE-proof-r20261001-01.json": "106d851852500f777a899fd19f984db35dae95d2ce4b2e2bccfef9e9cc6b2050",
+        "F12-r20261001-01.json": "86c64879689937886cd9ba2ac21973e7fbc470ef37c7cc13a9b7ce12853a5568",
+        "T1-capability-probe-r20261001-01.json": "43183c2f74bd6c3125e1eb1e0962474d3b707d95266520f9ded035d65b17eb69",
+        "T1-failopen-r20261001-01.json": "7ca5a41440ffbb6d71529b0e3141c2b2d06f79f942dbc06a27d39c1041c6d3bb"
+      },
+      "sha256_after": {
+        "SLICE-proof-r20261001-01.json": "ee97c00d324b553c9a0b011c298aa8766d75e200664ef7a6313cd35e2bda1c45",
+        "F12-r20261001-01.json": "96d4108c09ef1b2d4fbabd46bbcb5f73fbb975a11e214fae62adb98e8acc2840",
+        "T1-capability-probe-r20261001-01.json": "1b1d5c1cfa0eb788cb33178d721c4f2d127042e14fcb1a63b93277cd2008e691",
+        "T1-failopen-r20261001-01.json": "d31d5b102a902061d35e40c3690a3ed28f8d5397e35dbd0323178eb6e092fcff"
+      }
+    },
+    {
+      "name": "receipt_rebuild_from_raw_matches_published",
+      "label": "OBSERVED",
+      "source": "raw/r2_rebuild_check.txt",
+      "value": "4/4",
+      "scrub_idempotent": "5/5"
+    },
+    {
+      "name": "tools_host_path_lines",
+      "label": "OBSERVED",
+      "value": {
+        "tools/build_receipts.py": {
+          "before": 5,
+          "after": 0
+        },
+        "tools/scrub_receipts.py": {
+          "before": 6,
+          "after": 0
+        }
+      },
+      "local_only": {
+        "tools/sandbox.sh": "as-run bytes kept (sha256 1f8f65efffcec1e0e6b6b2d51a843359720b6b03f209bcabeb9027bdd67b5d3c, pinned in F12 and both T1 receipts); public: false"
+      }
+    },
+    {
+      "name": "privacy_scan_publishable_set",
+      "label": "OBSERVED",
+      "source": "raw/r2_privacy_scan.txt (tools/privacy_scan.py)",
+      "value": {
+        "files_scanned": 24,
+        "files_flagged": 0,
+        "reviewed_generic_tokens": [
+          "tools/t1_probe.py: one generic HERMES_HOME fallback under the sandbox tmp directory (listed in the scan output; not a host path)"
+        ]
+      }
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "raw/r2_git_recheck.txt",
+      "sha256": "369aa042923e4838ce8faa0a2900bd21ebd93ba2181f2a27d30413ff380b7509"
+    },
+    {
+      "path": "raw/r2_gh_reads.json",
+      "sha256": "4154145b0c893229f0238804d42c75b3347bda171bd17e1e81a450b151f69379"
+    },
+    {
+      "path": "raw/r2_rebuild_check.txt",
+      "sha256": "b5506dc821dd123800f05e9d2238db774e2c9a7ddfbc0142ad3eaee927c57fb5"
+    },
+    {
+      "path": "raw/r2_privacy_scan.txt",
+      "sha256": "743d758a29bc42cdfd0e6d546630ffd0dbfb15c073c74b92c661c4bd33d786ba"
+    },
+    {
+      "path": "tools/privacy_scan.py",
+      "sha256": "c20c602b0990f7329036e3b07b9609c9ddad2d0e582989fa94fbf233b5d5def5"
+    },
+    {
+      "path": "tools/build_receipts.py",
+      "sha256": "e6f34f857c14eff9bf5d3d0b612a93729c3b5bf5c5834b8201df1719fc4a500d"
+    },
+    {
+      "path": "tools/scrub_receipts.py",
+      "sha256": "f331a72be99970c298992dc066df905ee8d1a7acfc098ccde6e898fce55294d3"
+    }
+  ],
+  "verdict": "KEEP: timestamps corrected to the commit record (merge-check stamp withdrawn, tree re-measured), #17472 added under a stated adjacency rule, hostname placeholder applied, publishable package scans clean; the slice and its HOLD are unchanged",
+  "not_tested": [
+    "upstream main beyond the scratch mirror's e8c97320ac (not fetched)",
+    "on e8c97320ac, only the 18 invalidate_on path specs were diffed; adjacent tests, runner, lock and policy docs were not re-diffed and the push-workflow scan was not rerun (it reads .github/workflows/, which is unchanged)"
+  ]
+}

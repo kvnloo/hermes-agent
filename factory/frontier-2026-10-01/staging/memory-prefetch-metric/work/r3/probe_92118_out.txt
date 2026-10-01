@@ -1,0 +1,7 @@
+  head 519876fa02
+  PROBE context='' rows=[]
+  PROBE context='' rows=[]
+  === Summary: 1 files, 0 tests passed, 1 failed (100% complete) in 1.7s (1 workers) ===
+  head 569ad4d84b
+  PROBE context='- prefers tabs' rows=[('honcho', 'empty')]
+  === Summary: 1 files, 1 tests passed, 0 failed (100% complete) in 0.9s (1 workers) ===

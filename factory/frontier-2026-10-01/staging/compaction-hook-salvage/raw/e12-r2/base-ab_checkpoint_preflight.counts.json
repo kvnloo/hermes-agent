@@ -1,0 +1,10 @@
+{
+ "rc": 0,
+ "hook_fires": 0,
+ "commits_total": 0,
+ "commits_succeeded": 0,
+ "detail": {
+  "hook_fires": [],
+  "commits": []
+ }
+}

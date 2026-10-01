@@ -1,0 +1,8 @@
+F05-f05-r4.json fa765a48ef10f9741997f7239973052a28e6c40ed4b6edbe6a6f03583593f14b
+E12-e12-r4.json 46dcf42d507c23a2ea14e8304011a61701cc96aa3fc2d32ccad81385496a3f69
+OWN-own-r4.json 81c8e9cc7bcc7eb6b1a4be8d45eec03001ea83db418b2ea441d81165b3686882
+SANDBOX-guard-canary-r4.json e8df31c710b684f9c5fdffde5539a2d9ae2e311be8ff988847a5f284cafe22a4
+PROOF-r4.json 6497f43f6511a28ffa5d017483245e01daff7432276eee9e5256d473a8fab84b
+rc=0
+canary PASS {'connect': 1, 'dns': 2, 'by_thread': {'connect:MainThread': 1, 'dns:MainThread': 1, 'dns:openrouter-prewarm': 1}} {'connect': 0, 'dns': 2, 'by_thread': {'dns:openrouter-prewarm': 2}} {'connect': 0, 'dns': 0, 'by_thread': {}}
+own {'cells': 10, 'errored_scored_zero': 0, 'infra_excluded': 0, 'infra': 8, 'completeness': 1.0} [('base-rotation_state', 40, 0, 113), ('c93391-code', 43, 0, 119), ('c118847-handport', 7, 0, 0), ('c125881-merge', 9, 0, 0), ('base-c53806-own', 0, 3, 20), ('c53806-handport-own', 0, 3, 20), ('c53806-foldin-own', 0, 3, 20), ('base-c53806-own-adapted', 0, 2, 14), ('c53806-handport-own-adapted', 2, 0, 7), ('c53806-foldin-own-adapted', 1, 1, 14)]

@@ -1,0 +1,135 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compressor-media-extraction",
+ "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+ "head_revision": "c5e8be14b43bf75bcc2e4e8d95f2d4810a7e2779",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#80636",
+  "NousResearch/hermes-agent#78645"
+ ],
+ "provenance": "self",
+ "privacy": "public-aggregate",
+ "cost_usd": 0.0,
+ "ai_assistance": "Claude Code (Opus 5.5) ran the experiment and wrote this receipt",
+ "created_at": "2026-10-01T07:47:16-05:00",
+ "spec": {
+  "path": null,
+  "prereg_commit": null,
+  "note": "not pre-registered on claude/ledger (no ledger writes in this run)"
+ },
+ "env": {
+  "host": "<local-host>",
+  "test_python": "3.11.14 (pytest 9.1.1, HERMES_PYTHON)",
+  "nav_python": "3.14.7 separate uv venv (tiktoken 0.14.0, radon 6.0.1)",
+  "sandbox": "none (no bwrap); HOME/HERMES_HOME pointed at scratch test homes; run_tests.sh env -i",
+  "load1_range": "3-16 (shared host; base and head full runs ran concurrently)",
+  "paths": "absolute local paths in commands and raw files are replaced by $W/<tree>, $S, $HERMES_PYTHON, <uv>, <pytest-tmp>, pytest-of-<user>"
+ },
+ "id": "golden/r20261001-02",
+ "experiment": "differential output parity of the 14 moved functions over a seeded synthetic corpus (no model, loopback-only socket guard), plus corpus coverage",
+ "tier": "T1",
+ "label": "OBSERVED",
+ "supersedes": "golden/r20261001-01",
+ "round_note": "fix round 1: head rebuilt on main aea969677c (c5e8be14b4 replaces the unpushed d2bff3a59e; same patch-id 2c92e56f, corrected commit message)",
+ "inputs": {
+  "script_sha256": "5ec7c2954fbbb9166eb5da15be7bc0c3f50dee0fbe11b77a1c632dc2559795d8",
+  "coverage_script_sha256": "8f702b09cc002ec8f4a274d91a0752dc37e23192a46af373e437e56d8fa253f8",
+  "seed": 20261001,
+  "conversations": 400,
+  "python": "3.11.14"
+ },
+ "command": "env -i HOME=$tmp HERMES_HOME=$tmp/.hermes PYTHONPATH=$W/<tree> PYTHONDONTWRITEBYTECODE=1 PYTHONHASHSEED=0 $HERMES_PYTHON regen/golden_parity.py --n 400 --out golden-<tree>.json; same env: regen/golden_coverage.py --n 400 --out golden-coverage-<tree>.json  (base, head)",
+ "result": {
+  "resolved_from": {
+   "base": "agent.context_compressor",
+   "head": "agent.context_compressor_media"
+  },
+  "calls": 63998,
+  "calls_equal": true,
+  "overall_digest": {
+   "base": "983b2307308ce689e9a4d24fc0f4c4db032df0ab1a63859c3e3c81e921354545",
+   "head": "983b2307308ce689e9a4d24fc0f4c4db032df0ab1a63859c3e3c81e921354545"
+  },
+  "identical": true,
+  "per_function_identical": {
+   "_strip_historical_media": true,
+   "_retire_stale_tool_result_images": true,
+   "evict_stale_outbound_tool_images": true,
+   "_summary_part_text": true,
+   "_image_part_label": true,
+   "_content_has_images": true,
+   "_tool_content_has_images": true,
+   "_image_payload": true,
+   "_strip_images_from_tool_msg": true,
+   "_strip_images_from_content": true,
+   "_is_image_part": true,
+   "_tool_result_parts": true,
+   "_replace_image_parts": true,
+   "_rewritten": true
+  },
+  "corpus_coverage": {
+   "base": {
+    "conversations": 400,
+    "with_images": 367,
+    "strip_historical_changed": 258,
+    "retire_rewrote": 162,
+    "outbound_evicted": 59,
+    "outbound_messages_rewritten": 1069
+   },
+   "head": {
+    "conversations": 400,
+    "with_images": 367,
+    "strip_historical_changed": 258,
+    "retire_rewrote": 162,
+    "outbound_evicted": 59,
+    "outbound_messages_rewritten": 1069
+   },
+   "identical": true,
+   "note": "regen/golden_coverage.py reproduces the first build's raw/golden-coverage.json byte for byte (sha256 f26d06d7...)"
+  },
+  "negative_control": {
+   "mutation": "sibling _image_part_label returns '[img]' for data URLs; evict ignores user-upload blocks (reserved_blocks += 0); see golden-neg.diff",
+   "identical": false,
+   "digests_that_changed": [
+    "evict_stale_outbound_tool_images",
+    "_summary_part_text",
+    "_image_part_label"
+   ]
+  }
+ },
+ "reading": "Every call returned the same value and left its copied input mutated the same way on both trees, so for this corpus the compactor and the send path hand the provider the same bytes. The corpus is synthetic, not real transcripts.",
+ "raw": [
+  {
+   "path": "raw/r02/golden-base.json",
+   "sha256": "9831e23aad231acd552832413fd510e299f969988da40a0c048bfd4daf2e6abc",
+   "source_sha256": "9831e23aad231acd552832413fd510e299f969988da40a0c048bfd4daf2e6abc"
+  },
+  {
+   "path": "raw/r02/golden-head.json",
+   "sha256": "128c4def86f7618d2d18a4bfee06fc19d64407fba65269f9bd0072a994b59502",
+   "source_sha256": "128c4def86f7618d2d18a4bfee06fc19d64407fba65269f9bd0072a994b59502"
+  },
+  {
+   "path": "raw/r02/golden-head-neg.json",
+   "sha256": "58e9d2e96587833c162013415b1fc011ab72253e2d4f3555079f81b78f838268",
+   "source_sha256": "58e9d2e96587833c162013415b1fc011ab72253e2d4f3555079f81b78f838268"
+  },
+  {
+   "path": "raw/r02/golden-neg.diff",
+   "sha256": "0d3a8d22885f86a9d4c2a23f369d1a6179b3dcbf6f68e573a669f7b38f804e08",
+   "source_sha256": "0d3a8d22885f86a9d4c2a23f369d1a6179b3dcbf6f68e573a669f7b38f804e08"
+  },
+  {
+   "path": "raw/r02/golden-coverage-base.json",
+   "sha256": "f26d06d78942a431bc89bb6baad29cf0fd117753e1035be59eaec6f10b867511",
+   "source_sha256": "f26d06d78942a431bc89bb6baad29cf0fd117753e1035be59eaec6f10b867511"
+  },
+  {
+   "path": "raw/r02/golden-coverage-head.json",
+   "sha256": "f26d06d78942a431bc89bb6baad29cf0fd117753e1035be59eaec6f10b867511",
+   "source_sha256": "f26d06d78942a431bc89bb6baad29cf0fd117753e1035be59eaec6f10b867511"
+  }
+ ],
+ "verdict": "PASS"
+}

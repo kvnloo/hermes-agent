@@ -1,0 +1,309 @@
+{
+  "schema": "xf.receipt.v1",
+  "id": "T0-SCHEMA/r20261001-03",
+  "experiment": "Static schema <-> contract <-> doc agreement for hermes.memory.prefetch.count; which layer bounds each label; builder samples for the amended builder",
+  "tier": "T0",
+  "cost_usd": 0.0,
+  "lane": "cpu",
+  "staging": "memory-prefetch-metric",
+  "base_revision": "040b6df2c40b0f4f88f51e4c2062eafc4d7463c5",
+  "head_revision": "569ad4d84b0f9888ea2598c2a8ea416b2c75bad6",
+  "head_tree": "50ce6da7df616635f9edd958200c2065072b643c",
+  "inputs": {
+    "checker": {
+      "path": "work/r3/t0_schema_contract_check_r3.py",
+      "sha256": "7c2acf2ae0eee4002248293cd9950ca935242ac8d4e775a2de0daa5e98674346"
+    },
+    "schema_blob": "21cfe11bf70b3669a1a781e87aff0b2a5e09db26",
+    "contract_blob": "c8443e460013288c2523bbb90157d3aede66766f",
+    "loop_blob": "0689e32eaf7779a2e767775ea6a6eb201da67878",
+    "note": "schema, contract and doc blobs are identical to T0-SCHEMA/r20261001-02; only the builder (loop) changed"
+  },
+  "command": "env -i PATH=/usr/bin:/bin <read-only py3.11 venv>/bin/python work/r3/t0_schema_contract_check_r3.py --repo <worktree at 569ad4d84b> --out work/r3/t0_schema_contract_check_r3.json",
+  "results": {
+    "metric": "hermes.memory.prefetch.count",
+    "checks": {
+      "schema_def_present": true,
+      "schema_def_referenced_by_metrics_items": true,
+      "dimension_fields_equal": true,
+      "outcome_enum_equals_contract": true,
+      "latency_enum_equals_contract": true,
+      "mark_projects_to_metric": true,
+      "is_counter_metric": true,
+      "all_contract_combinations_valid": {
+        "accepted": 450,
+        "total": 450,
+        "pass": true
+      },
+      "all_contract_combinations_pass_contract_check": true,
+      "out_of_contract_rows_rejected": {
+        "rejected_by_schema_or_contract": 6,
+        "rejected_by_schema": 5,
+        "rejected_by_contract": 6,
+        "total": 6,
+        "pass": true
+      },
+      "builder_samples": [
+        {
+          "raw": {
+            "provider": "honcho",
+            "outcome": "success",
+            "waited_ms": 12,
+            "recalled": "- prefers tabs"
+          },
+          "got": {
+            "latency_bucket": "lt_100ms",
+            "outcome": "success",
+            "provider": "honcho"
+          },
+          "expected": {
+            "provider": "honcho",
+            "outcome": "success",
+            "latency_bucket": "lt_100ms"
+          },
+          "pass": true
+        },
+        {
+          "raw": {
+            "provider": "honcho",
+            "outcome": "success",
+            "waited_ms": 12,
+            "recalled": "  "
+          },
+          "got": {
+            "latency_bucket": "lt_100ms",
+            "outcome": "empty",
+            "provider": "honcho"
+          },
+          "expected": {
+            "provider": "honcho",
+            "outcome": "empty",
+            "latency_bucket": "lt_100ms"
+          },
+          "pass": true
+        },
+        {
+          "raw": {
+            "provider": "honcho",
+            "outcome": "success",
+            "waited_ms": 12
+          },
+          "got": {
+            "latency_bucket": "lt_100ms",
+            "outcome": "empty",
+            "provider": "honcho"
+          },
+          "expected": {
+            "provider": "honcho",
+            "outcome": "empty",
+            "latency_bucket": "lt_100ms"
+          },
+          "pass": true
+        },
+        {
+          "raw": {
+            "provider": "honcho",
+            "outcome": "success",
+            "waited_ms": 12,
+            "recalled": {
+              "context": "- prefers tabs"
+            }
+          },
+          "got": {
+            "latency_bucket": "lt_100ms",
+            "outcome": "empty",
+            "provider": "honcho"
+          },
+          "expected": {
+            "provider": "honcho",
+            "outcome": "empty",
+            "latency_bucket": "lt_100ms"
+          },
+          "pass": true
+        },
+        {
+          "raw": {
+            "provider": "honcho",
+            "outcome": "failed",
+            "waited_ms": 12,
+            "recalled": "- prefers tabs"
+          },
+          "got": {
+            "latency_bucket": "lt_100ms",
+            "outcome": "failed",
+            "provider": "honcho"
+          },
+          "expected": {
+            "provider": "honcho",
+            "outcome": "failed",
+            "latency_bucket": "lt_100ms"
+          },
+          "pass": true
+        },
+        {
+          "raw": {
+            "provider": "hindsight",
+            "outcome": "timed_out",
+            "waited_ms": 8000.4
+          },
+          "got": {
+            "latency_bucket": "5s_to_10s",
+            "outcome": "timed_out",
+            "provider": "plugin"
+          },
+          "expected": {
+            "provider": "plugin",
+            "outcome": "timed_out",
+            "latency_bucket": "5s_to_10s"
+          },
+          "pass": true
+        },
+        {
+          "raw": {
+            "provider": "Acme-Private",
+            "outcome": "weird",
+            "waited_ms": null
+          },
+          "got": {
+            "latency_bucket": "unknown",
+            "outcome": "failed",
+            "provider": "plugin"
+          },
+          "expected": {
+            "provider": "plugin",
+            "outcome": "failed",
+            "latency_bucket": "unknown"
+          },
+          "pass": true
+        },
+        {
+          "raw": {
+            "provider": "",
+            "outcome": "skipped",
+            "waited_ms": 0.2
+          },
+          "got": {
+            "latency_bucket": "lt_100ms",
+            "outcome": "skipped",
+            "provider": "builtin"
+          },
+          "expected": {
+            "provider": "builtin",
+            "outcome": "skipped",
+            "latency_bucket": "lt_100ms"
+          },
+          "pass": true
+        },
+        {
+          "raw": {
+            "provider": "mem0",
+            "outcome": "EMPTY",
+            "waited_ms": 20000
+          },
+          "got": {
+            "latency_bucket": "10s_to_30s",
+            "outcome": "empty",
+            "provider": "mem0"
+          },
+          "expected": {
+            "provider": "mem0",
+            "outcome": "empty",
+            "latency_bucket": "10s_to_30s"
+          },
+          "pass": true
+        }
+      ],
+      "doc_row_present": true,
+      "doc_row_lists_outcomes": true,
+      "doc_row_latency_range": true,
+      "doc_row_says_never_content": true
+    },
+    "rejection_split": [
+      {
+        "row": "bad outcome",
+        "dimensions": {
+          "provider": "plugin",
+          "outcome": "timeout",
+          "latency_bucket": "lt_100ms"
+        },
+        "schema_rejects": true,
+        "contract_rejects": true
+      },
+      {
+        "row": "bad bucket",
+        "dimensions": {
+          "provider": "plugin",
+          "outcome": "success",
+          "latency_bucket": "7s"
+        },
+        "schema_rejects": true,
+        "contract_rejects": true
+      },
+      {
+        "row": "raw provider name, capitals and spaces",
+        "dimensions": {
+          "provider": "Acme Private Memory",
+          "outcome": "success",
+          "latency_bucket": "lt_100ms"
+        },
+        "schema_rejects": true,
+        "contract_rejects": true
+      },
+      {
+        "row": "raw provider name, lowercase identifier",
+        "dimensions": {
+          "provider": "hindsight",
+          "outcome": "success",
+          "latency_bucket": "lt_100ms"
+        },
+        "schema_rejects": false,
+        "contract_rejects": true
+      },
+      {
+        "row": "extra field carrying the query",
+        "dimensions": {
+          "provider": "plugin",
+          "outcome": "success",
+          "latency_bucket": "lt_100ms",
+          "query": "what do I prefer?"
+        },
+        "schema_rejects": true,
+        "contract_rejects": true
+      },
+      {
+        "row": "missing field",
+        "dimensions": {
+          "provider": "plugin",
+          "outcome": "success"
+        },
+        "schema_rejects": true,
+        "contract_rejects": true
+      }
+    ],
+    "schema_provider_type": {
+      "ref": "#/$defs/vocabulary_identifier",
+      "pattern": "^[a-z0-9][a-z0-9_]{0,63}$",
+      "same_as_memory_op_counter": true
+    }
+  },
+  "interpretation": {
+    "provider_bound": "The schema types provider as vocabulary_identifier and checks the pattern only, so a lowercase raw name such as `hindsight` validates. The closed set is enforced by the contract (counter_dimensions_are_valid at the mark projection and the store write) and the builder's provider rule, which sabotage S6 pins.",
+    "empty_rule": "The builder turns `success` into `empty` when the raw returned value holds no text: '  ', None and a non-str value all give `empty`, and none raises. A non-str value with text (for example a structured result) also counts as `empty`."
+  },
+  "label": "OBSERVED",
+  "verdict": "KEEP",
+  "provenance": "self",
+  "privacy": "public-aggregate",
+  "raw_artifacts": {
+    "result": {
+      "path": "work/r3/t0_schema_contract_check_r3.json",
+      "sha256": "9e52b8f1012bfe9815f2e17ff46e3c792c483f02dfff75ae91ca2f3282264cda"
+    }
+  },
+  "supersedes": {
+    "id": "T0-SCHEMA/r20261001-02",
+    "path": "receipts/T0-SCHEMA-r20261001-02.json",
+    "sha256_as_written": "c333b0e7c47e55ffd4f7ef6078e6c63c24a71f692995283d22065c948da1ecf8",
+    "why": "the builder changed (success/empty classified inside it); same schema/contract/doc checks, builder samples 5 -> 9"
+  }
+}

@@ -1,0 +1,409 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "tool-result-projection-support",
+ "origin_refs": [
+  "NousResearch/hermes-agent#107731",
+  "NousResearch/hermes-agent#39691",
+  "NousResearch/hermes-agent#47866",
+  "NousResearch/hermes-agent#129620",
+  "NousResearch/hermes-agent#129492",
+  "NousResearch/hermes-agent#129882",
+  "NousResearch/hermes-agent#106426",
+  "NousResearch/hermes-agent#70107",
+  "NousResearch/hermes-agent#526",
+  "kvnloo/hermes-agent#310"
+ ],
+ "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+ "env": {
+  "host": "withheld (one local workstation; receipts carry no host names)",
+  "python": "3.11.14 ($PY = the repo venv interpreter, used read-only)",
+  "isolation": "probes: env -i, fresh HOME/HERMES_HOME under scratch, loopback-only socket.connect + getaddrinfo guard; canonical runner: scripts/run_tests.sh -j 2 with HOME=$S/testhome-sf-tool-result-projection-support, HERMES_HOME=$HOME/.hermes; no credentials",
+  "network": "loopback only (egress_blocked recorded per probe run)",
+  "relay": {
+   "present": true,
+   "package": "nemo-relay 0.8.4 (installed in the shared repo venv; not part of this change)",
+   "state": "FAILED at initialize(): agent/relay_runtime.py calls relay.plugin.initialize({}, additional_plugins_toml=...), which nemo-relay 0.8.4 does not accept, so Hermes logs 'Hermes Relay plugin initialization failed' and disables Relay middleware. No Relay plugin was active in any run (recorded in round 2; the venv was the same in this round).",
+   "plugins_toml_sha256": null,
+   "config_paths": [],
+   "explicit_plugins_toml": "none: HERMES_NEMO_RELAY_PLUGINS_TOML unset and the isolated HERMES_HOME has no relay-plugins.toml"
+  }
+ },
+ "spec": {
+  "path": null,
+  "rev": null,
+  "sha256": null,
+  "prereg_commit": null,
+  "decision_rule_sha": null,
+  "note": "not pre-registered: an ad-hoc staging re-run under FACTORY.md section 8 (round-1 fix of the phase-3 verifier findings). Decision rule: the assertions of tests/e2e/core/history/test_tool_result_projection_wire.py (blob 7347ad045b) and the harness outputs named in command."
+ },
+ "policy_revision": {
+  "AGENTS.md": "65aa3e61bc@aea969677c",
+  "CONTRIBUTING.md": "b0baa59b50@aea969677c",
+  "factory": "FACTORY.md sha256:7726ba18b43a9367 (frontier-2026-10-01 ledger copy)"
+ },
+ "provenance": "self",
+ "cost": {
+  "api_cost_usd": 0.0,
+  "tier_cost": "$0"
+ },
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the harness, tests and fold-in gate; disclosed per repository policy",
+ "privacy": "synthetic fixtures only; no state.db / agent.log / credentials read; absolute local paths replaced by placeholders",
+ "inputs": {
+  "shas": {
+   "main": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+   "staging_commit": "8c783ff4ac2fcd7906e074eefec7f0d3fcfc0782",
+   "staging_tree": "b93eeb36da39b84b354a36878a7ccd9fff415a59",
+   "carrier_head": "069adfb67e57287ac8df996ef48e082fe8455e2c",
+   "carrier_merge_base": "67764dc0863349a384c16425e73ee8571f3a94b7",
+   "carrier_rebased_arm": "86252e46fd3b86a9b135fc6fbd3cfc1134f4152b",
+   "carrier_rebased_arm_tree": "e95560a712a483c48f19eca6a6476d46a4403f7a",
+   "carrier_rebased_arm_plus_test": "9d3381904e98effa23dba675906dc848abd2e4db",
+   "carrier_rebased_arm_plus_test_tree": "84c73cfcb7b682d5d93043e0f5fe02365b82920e",
+   "test_blob": "7347ad045bf049afabce5b78435d5746273160f1"
+  },
+  "harness_sha256": {
+   "harness/e37_synthetic.py": "4de16b55331c737d8db15eaf0acdfacb69cb458808f59bc3c912cd4c424c2f85",
+   "harness/f04_bedrock_probe.py": "8159c09229dce68316973ff10486d4da87ee356d815f5a6188f59ac76c53286c",
+   "harness/f04_probe.py": "a23b3b14b3cd7a4c4e8bfd35a6da50c06656f183fc842afca738e3f46e051bb9",
+   "harness/guarded_run.py": "be17793cdf4bad466fb2e05b5c67d63430a1e79c8c40949a7e45c897d35d654f",
+   "harness/per_hunk_sabotage.py": "73a31ca6888f7384b58993924ee66f5795962af8fdabe98b1d5d678dc84866fd",
+   "harness/predicate_direct.py": "5996ac8a92033342ae18a71a052257773235ba8d470c5829f733ed554d0ae4bb",
+   "harness/readtool_direct.py": "e8dd892a0a2a835550467d4ccf4732470860692b6200a6e150be50950d9a96f4",
+   "harness/seam_trace.py": "b1c1efa4e7fd6d37b3c4ab37ee770d09c9308e5fcb06f91c2c67004197645750"
+  },
+  "patches_sha256": {
+   "patches/carrier-rebase-handport-hot-reload-test.diff": "6024fcb1457cdc1bf8d6762da6ca372d3109d41d532311dd8a0264c609d7d741",
+   "patches/foldin-preserved-thinking-gate-v2.diff": "acac8a736c2503a122a986622c8003f813e331363f2a92832eb709b6738d6e84",
+   "patches/foldin-preserved-thinking-gate.diff": "1490213c6d074a6cae190b4bf138d09b431ab78c535961159e3982b4f06ae6ab",
+   "patches/sabotage-S1-per-turn-reevaluation.diff": "a7f55f013f779c6a12aaab89b56c3b2af0bf4380883fda474df2b3757582a132",
+   "patches/sabotage-S2-no-stickiness.diff": "3b8b144c13805d30e117621a2fc3f7ed316434be4bcfd06197a8b865b1abbfd3"
+  }
+ },
+ "id": "F04-bedrock/r20261001-01",
+ "tier": "T1",
+ "kind": "forensic",
+ "experiment": "Test B's preserved-thinking scenario on the Bedrock Converse wire (provider bedrock, anthropic.claude-opus-5-5): real AIAgent, real read_file, real boto3 client against the repo's FakeBedrock (SigV4 re-verified); the responder signs each reasoningText over its prefix (system, name-sorted tools, earlier messages; reasoning blocks and cachePoint excluded) and audits every replay",
+ "command": {
+  "probe": "env -i PATH=/usr/bin:/bin PYTHONHASHSEED=0 F04_SCRATCH=$S/sf-trp/probe $PY harness/f04_bedrock_probe.py <worktree> <out.json> <arm>-bedrock",
+  "arm_setup": {
+   "base": "git checkout --detach 8c783ff4ac2fcd7906e074eefec7f0d3fcfc0782 (main + test)",
+   "carrier": "git checkout --detach 9d3381904e98effa23dba675906dc848abd2e4db (main + rebased carrier + test)",
+   "carrier-S1": "carrier + git apply patches/sabotage-S1-per-turn-reevaluation.diff",
+   "carrier-S2": "carrier + git apply patches/sabotage-S2-no-stickiness.diff",
+   "carrier-foldin-v1": "carrier + git apply patches/foldin-preserved-thinking-gate.diff (round-0 gate)",
+   "carrier-foldin-v2": "carrier + git apply patches/foldin-preserved-thinking-gate-v2.diff (round-1 gate)"
+  }
+ },
+ "results": {
+  "label": "OBSERVED (loopback wire); the binding rule itself is MODELED",
+  "n_per_arm": 3,
+  "arms": {
+   "base": {
+    "n": 3,
+    "reps_agree": "3/3",
+    "outcome": "passed",
+    "api_mode": "bedrock_converse",
+    "model": "anthropic.claude-opus-5-5",
+    "requests": 24,
+    "replayed_reasoning_blocks": 276,
+    "invalidated_block_replays": 0,
+    "requests_with_invalidated_blocks": 0,
+    "first_request_with_invalidated_block": null,
+    "projection_passes": 0,
+    "pass_request_indices": [],
+    "rows_archived": 0,
+    "fake_rejections": 0,
+    "egress_blocked": [
+     "getaddrinfo 'bedrock-runtime.us-east-1.amazonaws.com'",
+     "getaddrinfo 'bedrock-runtime.us-east-1.amazonaws.com'"
+    ],
+    "repo_head": "8c783ff4ac2fcd7906e074eefec7f0d3fcfc0782",
+    "dirty_files": []
+   },
+   "carrier": {
+    "n": 3,
+    "reps_agree": "3/3",
+    "outcome": "failed",
+    "api_mode": "bedrock_converse",
+    "model": "anthropic.claude-opus-5-5",
+    "requests": 24,
+    "replayed_reasoning_blocks": 276,
+    "invalidated_block_replays": 214,
+    "requests_with_invalidated_blocks": 17,
+    "first_request_with_invalidated_block": 8,
+    "projection_passes": 5,
+    "pass_request_indices": [
+     7,
+     11,
+     15,
+     19,
+     23
+    ],
+    "rows_archived": 10,
+    "fake_rejections": 0,
+    "egress_blocked": [
+     "getaddrinfo 'bedrock-runtime.us-east-1.amazonaws.com'",
+     "getaddrinfo 'bedrock-runtime.us-east-1.amazonaws.com'"
+    ],
+    "repo_head": "9d3381904e98effa23dba675906dc848abd2e4db",
+    "dirty_files": []
+   },
+   "carrier-S1": {
+    "n": 3,
+    "reps_agree": "3/3",
+    "outcome": "failed",
+    "api_mode": "bedrock_converse",
+    "model": "anthropic.claude-opus-5-5",
+    "requests": 24,
+    "replayed_reasoning_blocks": 276,
+    "invalidated_block_replays": 238,
+    "requests_with_invalidated_blocks": 19,
+    "first_request_with_invalidated_block": 6,
+    "projection_passes": 10,
+    "pass_request_indices": [
+     5,
+     7,
+     9,
+     11,
+     13,
+     15,
+     17,
+     19,
+     21,
+     23
+    ],
+    "rows_archived": 10,
+    "fake_rejections": 0,
+    "egress_blocked": [
+     "getaddrinfo 'bedrock-runtime.us-east-1.amazonaws.com'",
+     "getaddrinfo 'bedrock-runtime.us-east-1.amazonaws.com'"
+    ],
+    "repo_head": "9d3381904e98effa23dba675906dc848abd2e4db",
+    "dirty_files": [
+     "M agent/tool_result_projection.py"
+    ]
+   },
+   "carrier-S2": {
+    "n": 3,
+    "reps_agree": "3/3",
+    "outcome": "failed",
+    "api_mode": "bedrock_converse",
+    "model": "anthropic.claude-opus-5-5",
+    "requests": 24,
+    "replayed_reasoning_blocks": 276,
+    "invalidated_block_replays": 230,
+    "requests_with_invalidated_blocks": 17,
+    "first_request_with_invalidated_block": 8,
+    "projection_passes": 9,
+    "pass_request_indices": [
+     7,
+     9,
+     11,
+     13,
+     15,
+     17,
+     19,
+     21,
+     23
+    ],
+    "rows_archived": 10,
+    "fake_rejections": 0,
+    "egress_blocked": [
+     "getaddrinfo 'bedrock-runtime.us-east-1.amazonaws.com'",
+     "getaddrinfo 'bedrock-runtime.us-east-1.amazonaws.com'"
+    ],
+    "repo_head": "9d3381904e98effa23dba675906dc848abd2e4db",
+    "dirty_files": [
+     "M agent/tool_result_projection.py"
+    ]
+   },
+   "carrier-foldin-v1": {
+    "n": 3,
+    "reps_agree": "3/3",
+    "outcome": "failed",
+    "api_mode": "bedrock_converse",
+    "model": "anthropic.claude-opus-5-5",
+    "requests": 24,
+    "replayed_reasoning_blocks": 276,
+    "invalidated_block_replays": 214,
+    "requests_with_invalidated_blocks": 17,
+    "first_request_with_invalidated_block": 8,
+    "projection_passes": 5,
+    "pass_request_indices": [
+     7,
+     11,
+     15,
+     19,
+     23
+    ],
+    "rows_archived": 10,
+    "fake_rejections": 0,
+    "egress_blocked": [
+     "getaddrinfo 'bedrock-runtime.us-east-1.amazonaws.com'",
+     "getaddrinfo 'bedrock-runtime.us-east-1.amazonaws.com'"
+    ],
+    "repo_head": "9d3381904e98effa23dba675906dc848abd2e4db",
+    "dirty_files": [
+     "M agent/tool_result_projection.py"
+    ]
+   },
+   "carrier-foldin-v2": {
+    "n": 3,
+    "reps_agree": "3/3",
+    "outcome": "passed",
+    "api_mode": "bedrock_converse",
+    "model": "anthropic.claude-opus-5-5",
+    "requests": 24,
+    "replayed_reasoning_blocks": 276,
+    "invalidated_block_replays": 0,
+    "requests_with_invalidated_blocks": 0,
+    "first_request_with_invalidated_block": null,
+    "projection_passes": 0,
+    "pass_request_indices": [],
+    "rows_archived": 0,
+    "fake_rejections": 0,
+    "egress_blocked": [
+     "getaddrinfo 'bedrock-runtime.us-east-1.amazonaws.com'",
+     "getaddrinfo 'bedrock-runtime.us-east-1.amazonaws.com'"
+    ],
+    "repo_head": "9d3381904e98effa23dba675906dc848abd2e4db",
+    "dirty_files": [
+     "M agent/tool_result_projection.py"
+    ]
+   }
+  }
+ },
+ "findings": [
+  "Converse replays the signed reasoning of every earlier assistant turn (276 replayed blocks in 24 requests on every arm), so after the first pass every later request carries invalidated blocks: carrier 17 of 24 requests, 214 block replays.",
+  "The round-0 gate (v1) leaves Bedrock Converse unchanged (214 / 17), because it returns False unless api_mode is anthropic_messages.",
+  "Gate v2 declines every fresh pass on this route: 0 passes, 0 invalidated replays.",
+  "Every arm, including base, logs 2 blocked getaddrinfo('bedrock-runtime.us-east-1.amazonaws.com') before the endpoint override applies; all 24 requests reached the fake."
+ ],
+ "source_caveat": "The claude-api reference states the conversation check for the Messages API on every platform (Claude in Amazon Bedrock included) and lists the legacy Bedrock InvokeModel / Converse integration as out of its scope. Enforcement on Converse is assumed here from the shared signature mechanism, not documented in that reference.",
+ "denominators": {
+  "cells": 18,
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "completeness": 1.0,
+  "note": "6 arms x 3 probe runs"
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": true,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "resource_usage": {
+  "wall_s": 107.1,
+  "cpu_core_s": null,
+  "gpu_s": 0,
+  "energy_j": null,
+  "api_cost_usd": 0.0
+ },
+ "artifacts": [
+  {
+   "path": "receipts/raw/r02/probe-base-bedrock-r1.json",
+   "sha256": "a074e02f865f909aed15fb4327e7540d218b5b225174486dcdfabb79c35c17d1"
+  },
+  {
+   "path": "receipts/raw/r02/probe-base-bedrock-r2.json",
+   "sha256": "d02b5252aa867d7f64e810d448da2d6f552cb3c3dda8d8a22a00eee3b9207c4c"
+  },
+  {
+   "path": "receipts/raw/r02/probe-base-bedrock-r3.json",
+   "sha256": "5d3ad57570efe5b410c5f15005e52bfeab0f5df40eab748866dc30fcb47d540d"
+  },
+  {
+   "path": "receipts/raw/r02/probe-carrier-S1-bedrock-r1.json",
+   "sha256": "94c6c9ff3fc0250232318af598c4da46af6af0c72b5df8a323b7a1e5c6824001"
+  },
+  {
+   "path": "receipts/raw/r02/probe-carrier-S1-bedrock-r2.json",
+   "sha256": "0e2b1133956b77bf27d7cb49889013b929087cf1c7fc23fb141e144d7f803b71"
+  },
+  {
+   "path": "receipts/raw/r02/probe-carrier-S1-bedrock-r3.json",
+   "sha256": "ca77a7dd813556e08f9d119c839dc3ae2a1887c7f789a8d53e93a65f1c72dc98"
+  },
+  {
+   "path": "receipts/raw/r02/probe-carrier-S2-bedrock-r1.json",
+   "sha256": "8c26f25ec2c0514e22ac2256094e2cf73f7df6599716483e5bc434c0d54a4d72"
+  },
+  {
+   "path": "receipts/raw/r02/probe-carrier-S2-bedrock-r2.json",
+   "sha256": "85341a49ac296a67183b265220414608914c32798f68281a8d79356532c65617"
+  },
+  {
+   "path": "receipts/raw/r02/probe-carrier-S2-bedrock-r3.json",
+   "sha256": "406fa2df5759ac7c734e8252066411a2f3da182d3c74599fe8c1653000664f97"
+  },
+  {
+   "path": "receipts/raw/r02/probe-carrier-bedrock-r1.json",
+   "sha256": "3343b54816d0b4772ae124d08dcb02faccbdf3b9e4cc4c98cd8499199647ef14"
+  },
+  {
+   "path": "receipts/raw/r02/probe-carrier-bedrock-r2.json",
+   "sha256": "d98f8cc4a52a9401b6f5b06f8540ca364ab79dad5f530367ff47942feffc1748"
+  },
+  {
+   "path": "receipts/raw/r02/probe-carrier-bedrock-r3.json",
+   "sha256": "1ebdf866776bb84e245793ad04fad24dd8adf79cb63d4ad4ca7a1f8eefccdf55"
+  },
+  {
+   "path": "receipts/raw/r02/probe-carrier-foldin-v1-bedrock-r1.json",
+   "sha256": "3dc8bc77f2162e667f48e9a3ca720d142a3fa6e57dd33a5bb2a743db3cb33ccd"
+  },
+  {
+   "path": "receipts/raw/r02/probe-carrier-foldin-v1-bedrock-r2.json",
+   "sha256": "3f1d0c76ccfb568c469a4c22f380a2e5fa432033975f348f3f985896e5d79f72"
+  },
+  {
+   "path": "receipts/raw/r02/probe-carrier-foldin-v1-bedrock-r3.json",
+   "sha256": "1c18cc5562b9a879eb681c744da0cdffa0a0c4f2640f1422c66ec9b59698f9b6"
+  },
+  {
+   "path": "receipts/raw/r02/probe-carrier-foldin-v2-bedrock-r1.json",
+   "sha256": "2c14f5e3f81b51bb8f19172565bf5b26e089e7c0f615bcff733f6223e8698328"
+  },
+  {
+   "path": "receipts/raw/r02/probe-carrier-foldin-v2-bedrock-r2.json",
+   "sha256": "7ecf92684e552e7ba7c9fddfbc32c0f64a7cebc70edb4faae8cc5e61e20f82bc"
+  },
+  {
+   "path": "receipts/raw/r02/probe-carrier-foldin-v2-bedrock-r3.json",
+   "sha256": "fa79590e61b259d3db4269a87d8d67f9429299220a4d489b01477e57bf88810f"
+  }
+ ],
+ "not_tested": [
+  "real Bedrock (credentials, regions, guardrails)",
+  "ConverseStream vs Converse differences beyond what the fake models",
+  "non-Claude Bedrock models that sign reasoning (the v2 gate would decline projection for them too)"
+ ],
+ "verdict": "KEEP (gap evidence): v1 leaves Bedrock Converse uncovered; v2 covers it on the loopback wire",
+ "z0evals_study": {
+  "repo": "kvnloo/z0evals",
+  "branch": "study/hermes-tool-result-projection-support",
+  "commit": null,
+  "status": "not frozen (P8 pending)"
+ },
+ "superseded_by": "F04-bedrock/r20261001-02",
+ "corrections": [
+  {
+   "date": "2026-10-01",
+   "by": "staging fix round 2 (round-1 re-verifier findings)",
+   "changes": [
+    "env.relay added (the shared venv's nemo-relay 0.8.4 fails to initialize; no Relay plugin was active)",
+    "z0evals_study added (not frozen; P8 pending)",
+    "superseded_by F04-bedrock/r20261001-02 (round 2, re-measured on main e8c97320ac with gate v3)"
+   ]
+  },
+  {
+   "date": "2026-10-01",
+   "by": "staging fix round 3 (fix of the round-2 re-verifier findings)",
+   "changes": [
+    "env.host: the workstation's host name replaced by 'withheld' (receipts must not carry host names)"
+   ]
+  }
+ ]
+}

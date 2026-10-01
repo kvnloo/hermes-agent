@@ -1,0 +1,256 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "MRG/mrg-r5",
+ "label": "OBSERVED",
+ "spec": {
+  "path": null,
+  "rev": 5,
+  "decision_rule": "the fold-in and NousResearch/hermes-agent#127058 compose: after resolving the textual conflict, the contract test and #127058's own test both pass, and #127058's named neighbours fail no more than on the staging commit merged with #127058 alone"
+ },
+ "runner_revision": {
+  "script": {
+   "path": "tools/chs_merge127058_r5.sh",
+   "sha256": "3d02d4d5452eecb1d64461b47b0faaa4975b177b474539f046b4cb163631c55d"
+  },
+  "arm_builder": {
+   "path": "tools/chs_build_arms_r5.py",
+   "sha256": "ff31c2de9370b7e0090cbe97e008f10beabace3aa7d780e8872eddc7363c44f4"
+  },
+  "egress_guard": {
+   "path": "tools/chs_egress_guard_r4.py",
+   "sha256": "3a808849b49a9edbc0649dc5249857e0718ffa0412f54df93453d8e9f3d980a1"
+  }
+ },
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#64231",
+  "NousResearch/hermes-agent#118382",
+  "NousResearch/hermes-agent#53806",
+  "NousResearch/hermes-agent#93391",
+  "NousResearch/hermes-agent#118847",
+  "NousResearch/hermes-agent#119347",
+  "NousResearch/hermes-agent#125881",
+  "NousResearch/hermes-agent#4123",
+  "NousResearch/hermes-agent#7150",
+  "NousResearch/hermes-agent#118120",
+  "NousResearch/hermes-agent#127058"
+ ],
+ "staging": "compaction-hook-salvage",
+ "base_revision": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+ "head_revision": "1ab964166a125b64ea4d5c05e7f5813bffd7bb2d",
+ "changed_files": [],
+ "inputs_pinned": {
+  "pr_127058_head": "f306319fe7d7d349f329a496be10afa9650943cc",
+  "foldin": "6a2f717e4ca114878356ea03077e448090455282",
+  "foldin_x127058": "3b474fe61310b82f785a64f19c78ef31c827430d",
+  "s5x127058": "949b8b7b1a04a6d69d5384ceea4a2e97daf92b78"
+ },
+ "merge_tree": {
+  "command": "git merge-tree --write-tree --name-only foldin-r5 refs/xf/pr/127058",
+  "output": [
+   "agent/conversation_compression.py",
+   "",
+   "Auto-merging agent/conversation_compression.py",
+   "CONFLICT (content): Merge conflict in agent/conversation_compression.py"
+  ],
+  "staging_commit_vs_127058": "clean (the staging commit adds only a test file)",
+  "resolution": "one conflict region in agent/conversation_compression.py: both diffs append a post-fence delivery after commit_fence.finish_commit() in compress_context's finally. Kept both, #127058's memory on_session_switch first, then on_compression_complete (patches/foldin-x127058-delta.patch). Every other hunk of the two diffs merges cleanly"
+ },
+ "cells": [
+  {
+   "cell": "x127058-contract",
+   "commit": "3b474fe61310b82f785a64f19c78ef31c827430d",
+   "files": [
+    "tests/agent/test_compaction_observer_hook_contract.py"
+   ],
+   "summary": {
+    "files": 1,
+    "passed": 7,
+    "failed": 0,
+    "skipped_per_worker_lines": [],
+    "failing": []
+   },
+   "egress": {
+    "connect": 0,
+    "dns": 0,
+    "by_thread": {}
+   },
+   "exit_class": "ok",
+   "log_private": "raw/mrg-r5/x127058-contract.log"
+  },
+  {
+   "cell": "x127058-118120",
+   "commit": "3b474fe61310b82f785a64f19c78ef31c827430d",
+   "files": [
+    "tests/agent/test_compression_fence_memory_hook_118120.py"
+   ],
+   "summary": {
+    "files": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped_per_worker_lines": [],
+    "failing": []
+   },
+   "egress": {
+    "connect": 0,
+    "dns": 4,
+    "by_thread": {
+     "dns:openrouter-prewarm": 1,
+     "dns:MainThread": 3
+    }
+   },
+   "exit_class": "INFRA",
+   "log_private": "raw/mrg-r5/x127058-118120.log"
+  },
+  {
+   "cell": "x127058-neighbours",
+   "commit": "3b474fe61310b82f785a64f19c78ef31c827430d",
+   "files": [
+    "tests/agent/test_memory_session_switch.py",
+    "tests/agent/test_memory_boundary_commit.py",
+    "tests/agent/test_compression_rotation_state.py",
+    "tests/agent/test_compression_concurrent_fork.py"
+   ],
+   "summary": {
+    "files": 4,
+    "passed": 92,
+    "failed": 0,
+    "skipped_per_worker_lines": [],
+    "failing": []
+   },
+   "egress": {
+    "connect": 0,
+    "dns": 230,
+    "by_thread": {
+     "dns:openrouter-prewarm": 2,
+     "dns:MainThread": 228
+    }
+   },
+   "exit_class": "INFRA",
+   "log_private": "raw/mrg-r5/x127058-neighbours.log"
+  },
+  {
+   "cell": "s5x127058-contract",
+   "commit": "949b8b7b1a04a6d69d5384ceea4a2e97daf92b78",
+   "files": [
+    "tests/agent/test_compaction_observer_hook_contract.py"
+   ],
+   "summary": {
+    "files": 1,
+    "passed": 4,
+    "failed": 3,
+    "skipped_per_worker_lines": [],
+    "failing": [
+     "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[in_place]",
+     "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+     "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[rotated]"
+    ]
+   },
+   "egress": {
+    "connect": 0,
+    "dns": 0,
+    "by_thread": {}
+   },
+   "exit_class": "ok",
+   "log_private": "raw/mrg-r5/s5x127058-contract.log"
+  },
+  {
+   "cell": "s5x127058-118120",
+   "commit": "949b8b7b1a04a6d69d5384ceea4a2e97daf92b78",
+   "files": [
+    "tests/agent/test_compression_fence_memory_hook_118120.py"
+   ],
+   "summary": {
+    "files": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped_per_worker_lines": [],
+    "failing": []
+   },
+   "egress": {
+    "connect": 0,
+    "dns": 4,
+    "by_thread": {
+     "dns:openrouter-prewarm": 1,
+     "dns:MainThread": 3
+    }
+   },
+   "exit_class": "INFRA",
+   "log_private": "raw/mrg-r5/s5x127058-118120.log"
+  },
+  {
+   "cell": "s5x127058-neighbours",
+   "commit": "949b8b7b1a04a6d69d5384ceea4a2e97daf92b78",
+   "files": [
+    "tests/agent/test_memory_session_switch.py",
+    "tests/agent/test_memory_boundary_commit.py",
+    "tests/agent/test_compression_rotation_state.py",
+    "tests/agent/test_compression_concurrent_fork.py"
+   ],
+   "summary": {
+    "files": 4,
+    "passed": 92,
+    "failed": 0,
+    "skipped_per_worker_lines": [],
+    "failing": []
+   },
+   "egress": {
+    "connect": 0,
+    "dns": 230,
+    "by_thread": {
+     "dns:openrouter-prewarm": 2,
+     "dns:MainThread": 228
+    }
+   },
+   "exit_class": "INFRA",
+   "log_private": "raw/mrg-r5/s5x127058-neighbours.log"
+  }
+ ],
+ "policy_revision": {
+  "AGENTS.md": "65aa3e61bcba610da21279a17385671263be39e9",
+  "CONTRIBUTING.md": "b0baa59b5057c204b3c09d3dd170c0955cfdb39c",
+  "factory": "FACTORY.md sha256:7726ba18b43a9367f91d7f70c3aaefb96a9863761ddf71225c61c26a30d688d4",
+  "protocol": "promotion-readiness-2026-10-01/PROTOCOL.md sha256:182e3fbae771d7219497833b3f9d6f7ed385d70abace8736559026e4e60b90d4"
+ },
+ "env": {
+  "host": "withheld (one local workstation; receipts name no host)",
+  "python": "3.11.14 (the live venv's interpreter, used read-only through HERMES_PYTHON; never as a source)",
+  "sandbox": "no bwrap/netns (FACTORY \u00a76 layer 1 not used). In-process layer only: tools/chs_egress_guard_r4.py (non-loopback connect and DNS refused and logged with the calling thread's name; nothing suppressed, so the openrouter-prewarm thread starts and any lookup it makes is counted), loaded through the isolated test HOME's pytest_live_guard.py shim; scripts/run_tests.sh runs pytest under env -i with isolated HOME and HERMES_HOME (placeholders: $TESTHOME, $TESTHOME/.hermes)"
+ },
+ "command": "bash tools/chs_merge127058_r5.sh $WORKTREE $TESTHOME $PY (inside tools/chs_run_all_r5.sh)",
+ "gates": {
+  "validity": "INFRA under strict S16 (4 of 6 cells had blocked DNS lookups)"
+ },
+ "denominators": {
+  "cells": 6,
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "infra": 4,
+  "completeness": 1.0
+ },
+ "egress": {
+  "connect": 0,
+  "dns": 468,
+  "by_thread": {
+   "dns:openrouter-prewarm": 6,
+   "dns:MainThread": 462
+  }
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "verdict": "INFRA",
+ "verdict_if_s16_exception_accepted": "PASS",
+ "limitations": [
+  "one run per cell",
+  "#127058 is an open PR; its head may change"
+ ],
+ "provenance": "self",
+ "frozen": null,
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the contract test, the fold-in (including the sibling module), the harness and these receipts; disclosed per repository policy",
+ "privacy": "public-aggregate: repo-relative paths and placeholders only; synthetic fixtures; no session ids, home paths, emails, message text or secrets. Raw logs under raw/ are private and contain local paths."
+}

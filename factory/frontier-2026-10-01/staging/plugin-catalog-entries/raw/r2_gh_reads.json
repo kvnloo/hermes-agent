@@ -1,0 +1,600 @@
+{
+ "fetched_at": "2026-10-01T11:36:01Z",
+ "tool": "gh (read-only)",
+ "pr_17472": {
+  "number": 17472,
+  "state": "OPEN",
+  "isDraft": false,
+  "title": "feat(skill): add trustboost-pii-sanitizer v2.0.4 — blockchain-verified PII sanitization",
+  "author": "teodorofodocrispin-cmyk",
+  "createdAt": "2026-04-29T14:07:23Z",
+  "updatedAt": "2026-07-29T15:07:41Z",
+  "files": [
+   "optional-skills/trustboost-pii-sanitizer/SKILL.md",
+   "tests/skills/test_trustboost_pii_sanitizer_skill.py"
+  ],
+  "labels": [
+   "type/feature",
+   "tool/skills",
+   "P3",
+   "sweeper:risk-security-boundary",
+   "sweeper:blast-contained"
+  ],
+  "comments": 7,
+  "body_excerpts": [
+   "Adds TrustBoost PII Sanitizer as a hub skill.",
+   "Sanitizes PII from text before it reaches LLMs —",
+   "3. curl https://api.trustboost.dev/health",
+   "curl https://api.trustboost.dev/health"
+  ],
+  "diff_excerpts": [
+   "+  endpoint: https://api.trustboost.dev/sanitize",
+   "+to the TrustBoost API (`api.trustboost.dev`); TrustBoost redacts it with an LLM",
+   "+1. You POST the raw text to the TrustBoost API.",
+   "+- **Not zero-transmission:** raw text is sent to `api.trustboost.dev` before"
+  ]
+ },
+ "search": {
+  "query": "gh search prs 'PII' -R NousResearch/hermes-agent --state open --limit 200",
+  "total_count_api": 111,
+  "returned": 111,
+  "contains_17472": true,
+  "hits": [
+   {
+    "number": 3941,
+    "author": "colehkg-cyber",
+    "title": "feat(skills): add business development PM skill"
+   },
+   {
+    "number": 5380,
+    "author": "Mibayy",
+    "title": "fix(platform): correctness fixes across feishu, mcp, agent, session, gateway"
+   },
+   {
+    "number": 10730,
+    "author": "AlexanderWhitestone",
+    "title": "feat: input sanitizer — risk scoring for prompt injection, jailbreaks…"
+   },
+   {
+    "number": 11678,
+    "author": "rafacpti23",
+    "title": "Synapse Layer Skill for Hermes Agent"
+   },
+   {
+    "number": 11766,
+    "author": "honghua",
+    "title": "fix(redact): use unambiguous [REDACTED] marker for masked secrets"
+   },
+   {
+    "number": 13166,
+    "author": "tangyuanjc",
+    "title": "fix(gateway): show sender id in non-thread group prompts"
+   },
+   {
+    "number": 14624,
+    "author": "Ushamax",
+    "title": "feat(pii-filter): transparent PII masking middleware for OpenRouter"
+   },
+   {
+    "number": 14834,
+    "author": "MestreY0d4-Uninter",
+    "title": "fix(honcho): surface bootstrap errors in memory tools"
+   },
+   {
+    "number": 16133,
+    "author": "AdhamHsn",
+    "title": "feat(honcho): add honcho_list_conclusions tool to expose conclusion IDs"
+   },
+   {
+    "number": 17472,
+    "author": "teodorofodocrispin-cmyk",
+    "title": "feat(skill): add trustboost-pii-sanitizer v2.0.4 — blockchain-verified PII sanitization"
+   },
+   {
+    "number": 18345,
+    "author": "ChanwooSongKR",
+    "title": "security(prompt-builder): harden DEFAULT_AGENT_IDENTITY against common LLM attacks"
+   },
+   {
+    "number": 21464,
+    "author": "kesava500",
+    "title": "fix(gateway): include thread-aware delivery target in system prompt"
+   },
+   {
+    "number": 22711,
+    "author": "ariel-ai-bot",
+    "title": "feat(gateway): inject user_id alongside display name in session context"
+   },
+   {
+    "number": 22816,
+    "author": "leprincep35700",
+    "title": "feat(skills): add read-only Privy wallet skill"
+   },
+   {
+    "number": 26538,
+    "author": "dislovelhl",
+    "title": "feat(runtime): add MultiStepLoop kernel — typed, fail-closed, replaya…"
+   },
+   {
+    "number": 27001,
+    "author": "ParsifalC",
+    "title": "feat(feishu): inject chat_id and chat_type into session context prompt"
+   },
+   {
+    "number": 27177,
+    "author": "zccyman",
+    "title": "feat(gateway): add smart busy_input_mode with LLM-based intent routing"
+   },
+   {
+    "number": 28557,
+    "author": "phobienbuon",
+    "title": "Whatsapp session phone context"
+   },
+   {
+    "number": 31119,
+    "author": "to3tho",
+    "title": "security: redact identity content in remote management API responses"
+   },
+   {
+    "number": 31568,
+    "author": "to3tho",
+    "title": "Security: sanitise remote management responses (depends-on #23742)"
+   },
+   {
+    "number": 32132,
+    "author": "chenyf1010",
+    "title": "fix(dingtalk): improve file download, message parsing, and reconnection"
+   },
+   {
+    "number": 34693,
+    "author": "naterchrdsn",
+    "title": "feat(redact): add durable redaction controls"
+   },
+   {
+    "number": 34818,
+    "author": "zapabob",
+    "title": "fix(debug): redact PII in debug share logs"
+   },
+   {
+    "number": 36689,
+    "author": "avi-shual",
+    "title": "feat(gateway): previous-session bridge for auto-reset continuity"
+   },
+   {
+    "number": 37833,
+    "author": "zapabob",
+    "title": "fix(debug): redact PII in debug share logs"
+   },
+   {
+    "number": 39150,
+    "author": "kissmyabs32",
+    "title": "Add event-staffing skill (optional-skills/productivity)"
+   },
+   {
+    "number": 42381,
+    "author": "explainanalyze",
+    "title": "fix(redact): exempt SSH_AUTH_SOCK from env-assignment redaction"
+   },
+   {
+    "number": 43086,
+    "author": "harjothkhara",
+    "title": "fix(plugins): stop Honcho minting a new peer per user-addressing name"
+   },
+   {
+    "number": 44384,
+    "author": "OmarB97",
+    "title": "[hermes-desktop-active-prompt-sender-attribution][1/n] Label active prompts with sender device"
+   },
+   {
+    "number": 44741,
+    "author": "liuhao1024",
+    "title": "fix(security): remove mutable display-name from SimpleX allowlist check"
+   },
+   {
+    "number": 46578,
+    "author": "aisen2009",
+    "title": "feat: add transform_persisted_assistant plugin hook for pre-persistence transformation"
+   },
+   {
+    "number": 49826,
+    "author": "CipherFrame",
+    "title": "fix(cron): chown jobs.json to HERMES_DIR owner on save (#17144)"
+   },
+   {
+    "number": 50050,
+    "author": "vanthinh6886",
+    "title": "fix(config): use is_truthy_value for boolean config coercion across 10 files"
+   },
+   {
+    "number": 51714,
+    "author": "jquesnelle",
+    "title": "feat(telemetry): local-first telemetry & observability"
+   },
+   {
+    "number": 52884,
+    "author": "Bartok9",
+    "title": "fix(gateway): show stable sender ID alongside name in non-thread group prompts (salvage of #13166 by @tangyuanjc)"
+   },
+   {
+    "number": 54452,
+    "author": "Tosko4",
+    "title": "fix(agent): pass lane metadata to post-llm hooks"
+   },
+   {
+    "number": 56185,
+    "author": "bloomprotocol",
+    "title": "optional-mcps: add bloom — memory-native indie AI companion"
+   },
+   {
+    "number": 57291,
+    "author": "paoloantinori",
+    "title": "fix(telegram): log group messages dropped by require_mention gate"
+   },
+   {
+    "number": 57741,
+    "author": "JoaoMarcos44",
+    "title": "fix(agent): redact PII (email/SSN) before session-log export"
+   },
+   {
+    "number": 58140,
+    "author": "deltaahead",
+    "title": "docs: harden youtube-content video summaries"
+   },
+   {
+    "number": 58214,
+    "author": "stephenlthorn",
+    "title": "feat(unbroker): draft regulator complaints for missed statutory deadlines"
+   },
+   {
+    "number": 58346,
+    "author": "vonsensey",
+    "title": "docs(memory-providers): add Memra community provider"
+   },
+   {
+    "number": 59081,
+    "author": "cesaregarza",
+    "title": "[codex] Forward gateway session context to opted-in MCP servers"
+   },
+   {
+    "number": 61511,
+    "author": "nepenth",
+    "title": "feat(matrix): always-visible Tool activity list pane"
+   },
+   {
+    "number": 61517,
+    "author": "qualiobra",
+    "title": "feat(whatsapp): opt-in inline slash commands in owner-reply DMs"
+   },
+   {
+    "number": 62088,
+    "author": "iainlane",
+    "title": "feat(matrix): implement spec-correct threading and reply semantics"
+   },
+   {
+    "number": 62841,
+    "author": "devatnull",
+    "title": "feat(memory): per-chat/per-user/per-session memory scope isolation"
+   },
+   {
+    "number": 63917,
+    "author": "Micka420-collab",
+    "title": "feat(privacy): prompt-level PII anonymization middleware"
+   },
+   {
+    "number": 65209,
+    "author": "Frowtek",
+    "title": "fix(security): detect env dumps behind sudo / a full path so their opaque secrets are masked"
+   },
+   {
+    "number": 67010,
+    "author": "MarkKropf",
+    "title": "fix(honcho): return created conclusion ID"
+   },
+   {
+    "number": 69890,
+    "author": "anuragbanerjee",
+    "title": "fix(redact): reclassify E.164 phone numbers as PII, not secrets"
+   },
+   {
+    "number": 69980,
+    "author": "xiaoyaner0201",
+    "title": "fix(gateway): add trusted sender envelope for shared sessions"
+   },
+   {
+    "number": 70866,
+    "author": "julio-cloudvisor",
+    "title": "feat(memory): tiered write-approval gate (opt-in)"
+   },
+   {
+    "number": 72365,
+    "author": "pierrenode",
+    "title": "fix(kanban): carry chat_type through the dashboard home-channel subscription"
+   },
+   {
+    "number": 73832,
+    "author": "teodorofodocrispin-cmyk",
+    "title": "feat(skill): add intelica-competitive-intel via x402"
+   },
+   {
+    "number": 73833,
+    "author": "teodorofodocrispin-cmyk",
+    "title": "feat(skill): add veradata-verified-data via x402"
+   },
+   {
+    "number": 73834,
+    "author": "teodorofodocrispin-cmyk",
+    "title": "feat(skill): add sentinel-transaction-safety via x402"
+   },
+   {
+    "number": 74974,
+    "author": "guardianwisper",
+    "title": "fix(goal): pause standing goals on gateway /stop and provider failure"
+   },
+   {
+    "number": 75932,
+    "author": "ricorna",
+    "title": "feat: add trace-derived evaluation tasks"
+   },
+   {
+    "number": 76516,
+    "author": "NicholaiVogel",
+    "title": "feat(gateway): attribute every inbound sender with stable identity"
+   },
+   {
+    "number": 77117,
+    "author": "ctaylor86",
+    "title": "feat(gateway): config-driven per-user context injection (user_context_map)"
+   },
+   {
+    "number": 78501,
+    "author": "Toqsick",
+    "title": "feat: add hermes-v2 delegation, plan, security, and TUI flows"
+   },
+   {
+    "number": 79475,
+    "author": "Bohac-Petr",
+    "title": "fix(status): redact home-channel identifiers"
+   },
+   {
+    "number": 80010,
+    "author": "Shotflame",
+    "title": "docs: Add WhatsApp feature parity matrix + gap catalog (Phase 0, #79890)"
+   },
+   {
+    "number": 80851,
+    "author": "davext",
+    "title": "feat(blooio): add Blooio as an in-tree iMessage gateway platform (v4 + OAuth)"
+   },
+   {
+    "number": 82196,
+    "author": "earonesty",
+    "title": "fix: separate phone and secret redaction"
+   },
+   {
+    "number": 82358,
+    "author": "kweiner",
+    "title": "fix(agent): let transform_llm_output split display text from memory-sync text"
+   },
+   {
+    "number": 82556,
+    "author": "egilewski",
+    "title": "fix(privacy): redact WhatsApp diagnostic copies (#80076)"
+   },
+   {
+    "number": 84611,
+    "author": "wesleion",
+    "title": "feat(moa): add advisor input privacy controls"
+   },
+   {
+    "number": 86940,
+    "author": "x7peeps",
+    "title": "feat(desktop,cli): skill discoverability — ghost suggestions, hover descriptions, and an enable toggle"
+   },
+   {
+    "number": 88608,
+    "author": "elchic00",
+    "title": "fix(langfuse): fully redact secrets and emails before cloud upload"
+   },
+   {
+    "number": 91810,
+    "author": "pierrenode",
+    "title": "fix(dashboard): strip compaction scaffolding from session messages"
+   },
+   {
+    "number": 93995,
+    "author": "rcktmonk",
+    "title": "fix(profiles): scrub opaque credentials from exported config"
+   },
+   {
+    "number": 95997,
+    "author": "JantonioFC",
+    "title": "feat(memory/mem0): add auto_capture switch for per-turn fact extraction"
+   },
+   {
+    "number": 96149,
+    "author": "DanBennettUK",
+    "title": "feat(gateway): hydrate missing reply context from an outbound sent-text index"
+   },
+   {
+    "number": 97201,
+    "author": "sabastian-veroscale",
+    "title": "fix(kanban): reset tasks.started_at on every claim"
+   },
+   {
+    "number": 97523,
+    "author": "TwoRobotsinaTrenchcoat",
+    "title": "feat(tools): surface display_metadata in session_search output"
+   },
+   {
+    "number": 98613,
+    "author": "kokhlo",
+    "title": "fix(telegram): add CONTACT filter handler to avoid dropping contact cards"
+   },
+   {
+    "number": 99932,
+    "author": "WolfurX",
+    "title": "feat(skills): add public-repo-hygiene optional security skill"
+   },
+   {
+    "number": 99934,
+    "author": "afourniernv",
+    "title": "docs(relay): add native integration guide"
+   },
+   {
+    "number": 101608,
+    "author": "JoshSakeDude",
+    "title": "feat(kanban): per-card max_iterations budget, route exhaustion to blocked"
+   },
+   {
+    "number": 101820,
+    "author": "Lelolima",
+    "title": "docs: add Hermes Agent diagnostic report"
+   },
+   {
+    "number": 102049,
+    "author": "yurymolodykh",
+    "title": "feat(privacy): anonymize document PII before model requests"
+   },
+   {
+    "number": 102680,
+    "author": "SilvaVitalis-Ruth",
+    "title": "fix: PRD-279 layered secret-output guardrails"
+   },
+   {
+    "number": 104014,
+    "author": "liuhao1024",
+    "title": "fix(whatsapp): pace bridge crash-loop restarts with an on-disk crash streak"
+   },
+   {
+    "number": 104685,
+    "author": "DavidMetcalfe",
+    "title": "feat(gateway): uniform channel capabilities block in session context prompt"
+   },
+   {
+    "number": 104942,
+    "author": "kokhlo",
+    "title": "fix(discord): minimize clarify resolve INFO log to index and outcome"
+   },
+   {
+    "number": 108340,
+    "author": "salch-cred",
+    "title": "fix(tools): add cross-profile session access controls to session_search (#106224)"
+   },
+   {
+    "number": 110322,
+    "author": "lucascmg-vx",
+    "title": "fix(kanban): park a clean exit with no terminal call, carrying its last-known state"
+   },
+   {
+    "number": 110357,
+    "author": "lucascmg-vx",
+    "title": "fix(kanban): a failed liveness probe is not a dead worker"
+   },
+   {
+    "number": 113207,
+    "author": "fangliquanflq",
+    "title": "fix(session-search): prevent derived metadata from leaking secrets"
+   },
+   {
+    "number": 113295,
+    "author": "JoaoMarcos44",
+    "title": "feat(computer-use): admit and validate ExecutionRevision before publication"
+   },
+   {
+    "number": 115109,
+    "author": "liuhao1024",
+    "title": "fix(memory): scrub provider-synced turns with the egress redactor"
+   },
+   {
+    "number": 115172,
+    "author": "Isaac0314",
+    "title": "feat(feishu): add opt-in quiet progress cards"
+   },
+   {
+    "number": 116106,
+    "author": "hwangsyh",
+    "title": "fix(gateway): put Telegram chat id in session context"
+   },
+   {
+    "number": 117741,
+    "author": "dacheah",
+    "title": "feat(usage): report DeepInfra prepaid credit through the provider-profile hook"
+   },
+   {
+    "number": 119208,
+    "author": "pretyflaco",
+    "title": "feat(matrix): expose canonical matrix.to source permalink in session context"
+   },
+   {
+    "number": 119229,
+    "author": "ljluestc",
+    "title": "Private/issue 21307 threema adapter"
+   },
+   {
+    "number": 123021,
+    "author": "strzhao",
+    "title": "feat(providers): preserve signed thinking blocks for trusted Anthropic-compatible proxies"
+   },
+   {
+    "number": 123093,
+    "author": "AndreasHiltner",
+    "title": "feat(skills): add debug-duck — talking rubber duck for debugging"
+   },
+   {
+    "number": 125178,
+    "author": "warrenhermes1-cell",
+    "title": "feat(gateway): emit agent:message:filter / agent:response:filter for user text filters"
+   },
+   {
+    "number": 125648,
+    "author": "iainlane",
+    "title": "fix(matrix): preserve genuine thread replies and fallback chains"
+   },
+   {
+    "number": 125697,
+    "author": "iainlane",
+    "title": "feat(matrix): backfill recent room and thread context"
+   },
+   {
+    "number": 125738,
+    "author": "iainlane",
+    "title": "feat(matrix): expose source permalinks per turn"
+   },
+   {
+    "number": 127944,
+    "author": "matttmcfarland",
+    "title": "fix(gateway): voice-channel turns render the same session prompt as text turns"
+   },
+   {
+    "number": 128366,
+    "author": "justinsharpe",
+    "title": "feat(traces): atomic JSONL run-trace instrumentation (schema v1)"
+   },
+   {
+    "number": 128722,
+    "author": "jonpol01",
+    "title": "fix(slack): carry channel prompt and source names on slash-command turns"
+   },
+   {
+    "number": 128771,
+    "author": "dellipse",
+    "title": "fix(agent): route iteration-limit summary through llm_execution middleware"
+   },
+   {
+    "number": 129086,
+    "author": "100yenadmin",
+    "title": "fix(gateway): gateway-verified sender note for shared Telegram sessions"
+   },
+   {
+    "number": 129692,
+    "author": "saiteja-madha",
+    "title": "feat(plugin-catalog): add privacy-gateway"
+   },
+   {
+    "number": 129805,
+    "author": "Froraut",
+    "title": "fix(debug): redact support egress before truncation"
+   }
+  ]
+ }
+}

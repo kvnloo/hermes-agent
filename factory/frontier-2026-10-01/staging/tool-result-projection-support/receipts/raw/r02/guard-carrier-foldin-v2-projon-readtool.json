@@ -1,0 +1,87 @@
+[
+  {
+    "path": "package-lock.json",
+    "kwargs": {},
+    "chars": 83511,
+    "sha256": "e79c7133a94806da",
+    "head": "{\"content\": \"1|{\\n2|  \\\"name\\\": \\\"demo-api\\\",\\n3|  \\\"lockfileVersion\\\": 3,\\n4|  \\\"packages\\\": {\\n5|    \\\"node_modules/pk"
+  },
+  {
+    "path": "package-lock.json",
+    "kwargs": {
+      "offset": 40000,
+      "limit": 50
+    },
+    "chars": 2377,
+    "sha256": "37a956b797ea25bd",
+    "head": "{\"content\": \"40000|        \\\"node\\\": \\\">=18\\\"\\n40001|      },\\n40002|      \\\"license\\\": \\\"MIT\\\",\\n40003|      \\\"dependen"
+  },
+  {
+    "path": "src/app.min.js",
+    "kwargs": {},
+    "chars": 2177,
+    "sha256": "bc100107bcf1675c",
+    "head": "{\"content\": \"1|(()=>{\\\"use strict\\\";function retryDelay(t){return Math.floor(Math.random()*Math.min(3e4,250*Math.pow(2,t"
+  },
+  {
+    "path": "logs/server.log",
+    "kwargs": {
+      "offset": 149900,
+      "limit": 200
+    },
+    "chars": 9422,
+    "sha256": "a28c59bb46ee862a",
+    "head": "{\"content\": \"149900|2026-08-08T23:19:13Z INFO http request ok request_id=req-f0db6 status=200 dur_ms=2\\n149901|2026-08-0"
+  },
+  {
+    "path": "data/report.txt",
+    "kwargs": {
+      "offset": 500
+    },
+    "chars": 237,
+    "sha256": "cdf6b3d47258fd78",
+    "head": "{\"content\": \"\", \"total_lines\": 412, \"file_size\": 13639, \"truncated\": false, \"hint\": \"Note: offset 500 is beyond the end "
+  },
+  {
+    "path": "config/overrides.yaml",
+    "kwargs": {},
+    "chars": 164,
+    "sha256": "b539a8f108622b94",
+    "head": "{\"content\": \"\", \"total_lines\": 0, \"file_size\": 0, \"truncated\": false, \"hint\": \"File is empty (0 bytes).\", \"is_binary\": f"
+  },
+  {
+    "path": "AGENT.md",
+    "kwargs": {},
+    "chars": 210,
+    "sha256": "cb40ad4991f254b7",
+    "head": "{\"content\": \"\", \"total_lines\": 0, \"file_size\": 0, \"truncated\": false, \"is_binary\": false, \"is_image\": false, \"error\": \"F"
+  },
+  {
+    "path": "AGENTS.md",
+    "kwargs": {},
+    "chars": 371,
+    "sha256": "673c9e9b250d5305",
+    "head": "{\"content\": \"1|# demo-api contributor guide\\n2|\\n3|## Build\\n4|\\n5|Production builds run `npm run build:prod` (typecheck"
+  },
+  {
+    "path": "data/data.txt",
+    "kwargs": {},
+    "chars": 2290,
+    "sha256": "5ff0257561a879b6",
+    "head": "{\"content\": \"1|\u8950\u4e47\u0d0a\u1a0a\u8458\u37c9\ue66b\u1fc7\u3db3\u8797\u657d\uf3dc\u0c80\ud5f3\u1bfc\u32ec\uca8b\uc23b\uc428\u7dd8\u85af\uc748\ub5ab\u518f\u9b8a\u5ff0\u8564\ua46c\u459d\u4037\u8965\uae64\u19d9\u7743\u73f8\u6c63\ueec0\ub00a\ufae2\u419e\u4629\u0575\u58b5\u7f1b\u43ce\u9a31\u4b4f\ud4c6\uffca\u4955\u3f03\uea0e\u826d\u4741\u1c81\ucbd2\ufa7f\u5bcf\ubf62\ua01d\u8229\u4851\u0685\u257e\ue1f4\u1b60\u0f7d\u98a3\u8f52\u7af0\u8b74\u5741\u78df\ua001\u92bc\u5f85\u7679\u309a\ued2d\ueb74\u202a\u5e8d\u8bd9\uc507\u2062\u36f7\u9e29\u0ccd\ud670\u4148\u9b07\uc7b5\u1bdc\uf057\ub86e\u9ef5\u02df\u59d8\uc419\ud57f\ubdca\ub892\ubdad\ucc6f\u0fbb"
+  },
+  {
+    "path": "logs/live.pipe",
+    "kwargs": {},
+    "chars": 222,
+    "sha256": "a4b3ac73a490ea3b",
+    "head": "{\"success\": false, \"note\": \"'<ROOT>/logs/live.pipe' is a FIFO (named pipe), not a regular file \\u2014 reading it would b"
+  },
+  {
+    "path": "notes/Meeting\u202fnotes\u2019 re\u0301sume\u0301 3.04\u202fPM.txt",
+    "kwargs": {},
+    "chars": 286,
+    "sha256": "5fa73ddb52f15494",
+    "head": "{\"content\": \"1|Team sync notes\\n2|- ship the payments retry fix\\n3|- audit the staging TLS certs\\n4|- rotate the API key"
+  }
+]

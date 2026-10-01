@@ -1,0 +1,2 @@
+=== Summary: 1 files, 5 tests passed, 0 failed (100% complete) in 1.2s (2 workers) ===
+rc=0

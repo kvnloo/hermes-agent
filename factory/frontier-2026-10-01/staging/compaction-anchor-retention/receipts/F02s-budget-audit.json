@@ -1,0 +1,784 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compaction-anchor-retention",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#116246",
+  "NousResearch/hermes-agent#87326",
+  "NousResearch/hermes-agent#117462",
+  "NousResearch/hermes-agent#122274",
+  "NousResearch/hermes-agent#122522",
+  "NousResearch/hermes-agent#78457"
+ ],
+ "base_revision": "040b6df2c40b0f4f88f51e4c2062eafc4d7463c5",
+ "head_revision": "30a746f7920c2b4101f121353778d94f5ce001b5",
+ "main_recheck": {
+  "sha": "aaa863f7ff2dec1821be1652b5d15ad14ecea70b",
+  "note": "agent/context_compressor.py, hermes_cli/config_defaults.py and the 6 neighbouring test files are byte-identical on 040b6df2c4, 44a1ce9724 and aaa863f7ff; main+#117462 merges clean on all three (trees f4139cef66, 7beb2da248, ee14a0acac) and gives the same compressor file (the c117462 arm); the branch merges clean on aaa863f7ff (tree e2c14b39ee)"
+ },
+ "supersedes": "the r20261001-03 receipt of the same name (superseded-r04/receipts/), which measured the round-3 fold-in order",
+ "policy_revision": {
+  "factory": "FACTORY.md (frontier-2026-10-01)",
+  "protocol": "promotion-readiness-2026-10-01/PROTOCOL.md"
+ },
+ "env": {
+  "python": "3.11 (HERMES_PYTHON venv, read-only bind)",
+  "sandbox": "harness/sandbox.sh: bwrap ro-root, --unshare-net (connect -> ENETUNREACH), systemd-resolved socket masked (DNS -> EAI_AGAIN), pidns, clearenv, live Hermes install masked except the venv, fresh HOME/HERMES_HOME per run; harness/egress_sitecustomize.py logs every non-loopback DNS lookup and connect attempt",
+  "tests": "HOME=$S/testhome-sf3-compaction-anchor-retention HERMES_HOME=$HOME/.hermes HERMES_PYTHON=$PY bash scripts/run_tests.sh -j 2 <files> -q"
+ },
+ "provenance": "self",
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the rows, tests, harness, gold labels and this receipt; disclosed per repository policy",
+ "privacy": "public-aggregate (inputs are committed upstream text or seeded synthetic data; no state.db, no lineages); no absolute local paths",
+ "resource_usage": {
+  "api_cost_usd": 0.0,
+  "gpu_s": 0,
+  "tokens": 0
+ },
+ "id": "F02s/r20261001-05",
+ "kind": "static",
+ "question": "How large does the anchor index get with the new rows, and do the existing sections stay byte-identical, both on main (standalone commit) and on #117462 (fold-in)?",
+ "substitutes_for": "F02 on frozen local lineages (needs OD-7)",
+ "inputs": {
+  "scorecard": "evals/compaction/results/SCORECARD-2026-08-15.md",
+  "scorecard_sha256": "6d93f90b435e4f2ae2dd3187103c18e0c881ad68b88b92bfd3deacb1cf79180e",
+  "harness_sha256": {
+   "anchor_coverage.py": "c9e084c35a7b64ca4e35afcf89d5a3374c689d455a7b1126ffc49c7cbefeb8ef",
+   "foldin_order_check.py": "0a9c48b0b9ec60633929bd990ec5fe29306353fa9c8e5b7ab45bde046b33ac52",
+   "index_cost.py": "56a5798662d990ce21996b68c5d691015e00e09e1e16a89640e88a879bd1caf2",
+   "build_receipts_r05.py": "60797f54c5d83230126c79a4b5bb48dc783076d5bf08fce3e6c00706aa1763ec",
+   "sandbox.sh": "f1aad255c5022b1c0920e0a6718faa222aa84b3583c4224c4e7fd32b43fedf24",
+   "egress_sitecustomize.py": "55eef4b9cf034dea08b0004a88dcf5595582bde9b3ba9c10ef4cc83807e29d9d",
+   "negative_controls.py": "8dee7eed03d49212293e58568b6b7d39da12c7394f7d454e16d8dda688f210ff"
+  },
+  "arms": {
+   "base": {
+    "tree": "040b6df2c40b0f4f88f51e4c2062eafc4d7463c5:agent/context_compressor.py",
+    "sha256": "86f4b7a8a647f1bf520cb17497b68719f6d907028bdc7151c7921818b7e043f1"
+   },
+   "branch": {
+    "head": "30a746f7920c2b4101f121353778d94f5ce001b5",
+    "sha256": "424c8dd83747b73b7b1883c726e60823f55a656d5424c3eb948297ca07f4abc7"
+   },
+   "c117462": {
+    "pr": 117462,
+    "head": "2c19948e15d68492d048250bae7707ca77063db5",
+    "merge_tree_with_base": "f4139cef66cd97f30f7fc450301551d233ebf616",
+    "merge_tree_with_main_now": "7beb2da24840f32329d5c5d47837fe52fef9e249",
+    "merge": "clean",
+    "sha256": "fdb7abd8050b4944171522c7e713004d7fbce9b2d8ddfb1c8de93414f206ebe0"
+   },
+   "c117462_foldin": {
+    "onto": "c117462",
+    "patch": "foldin-on-117462.patch (rows + tests/agent/test_context_compressor_anchor_index.py)",
+    "patch_sha256": "f2db42bef2c90360beb775de62f1bc4c2c944dea2fbab5672610dbcd957ceb8d",
+    "placement": "round 5: the three rows appended after 'errors', the last row of #117462's table; the rows block (rows and comments) is byte-identical to the standalone commit's",
+    "sha256": "35bb31c83b7db61d5f694ea86f6cc8ca960ee027d44bf5e5b914f9b12259439e",
+    "equals": "git apply foldin-on-117462.patch on main 44a1ce9724 + #117462 (tree 7beb2da248), offset +105"
+   },
+   "c117462_foldin_r03": {
+    "onto": "c117462",
+    "patch": "superseded-r04/foldin-on-117462.patch (sha256 3713e44bbb4edfdbd493b80c290b013a3d26b3a21e88c734bd733f6fad3e9bf5)",
+    "placement": "round 3: 'task ids' after 'todo ids', 'dotted keys' before 'files', 'error messages' last",
+    "sha256": "b880b9a14eaf0949e51926004856b3e0e3109b784222cef87048b8ca7cb36cf3",
+    "role": "comparison only (the order round 5 replaces)"
+   }
+  },
+  "coverage_json_sha256": {
+   "raw/coverage.json": "96a86bcde8412a44e51eb0e72b33f3fe3236efc93e2610a7891ff828bd4a522e",
+   "raw/r05/coverage_foldin.json": "8cfaa4eeec455fd5d827793c68081c00c8597a9f4633d38de98ac801e212fbb1"
+  },
+  "reproduction_checks": {
+   "c117462_round5_run_equals_round3_run_apart_from_timings": true,
+   "round3_foldin_round5_run_equals_round3_run_apart_from_timings": true,
+   "N01_identical_round5_vs_round3_foldin_order": true
+  },
+  "checkout_for_imports": "$WT at 30a746f7920c2b4101f121353778d94f5ce001b5; `git diff --name-only 040b6df2c4 30a746f792` lists only agent/context_compressor.py and the new test file",
+  "egress": "0 attempts logged for every harness run (raw/r05/egress/ for round 5)",
+  "order_check_sha256": "df3325d59b6850d755e1f206b662dc9cf2ea4674d9d97d06834679fad8197875",
+  "index_cost_sha256": "092c6218f1915c259d452047913209b2d5b83b91e338bdd769993ba82a227d5c",
+  "real_text_corpus": {
+   "what": "agent/*.py at 44a1ce9724 (git archive), as read_file tool traffic",
+   "files": 251,
+   "chars": 5870599,
+   "sha256": "fa3bf1ec183314f8f4a566721e295ce50a578d0998d9cae2ff84551862302d34"
+  }
+ },
+ "command": {
+  "round5_foldin": "VENV=$VENV HERMES_INSTALL=<live install> EGRESS_DIR=<dir with sitecustomize.py> $SANDBOX $WT <fresh home on a non-/tmp disk> <egress log> $PY $STAGING/harness/anchor_coverage.py --checkout $WT --arm c117462=raw/arms/c117462.py --arm c117462_foldin=raw/arms/c117462_foldin.py --arm c117462_foldin_r03=raw/arms/c117462_foldin_r03.py --seeds 10 --out <home>/coverage_r05.json   # $WT detached at HEAD; copied to raw/r05/coverage_foldin.json",
+  "round3_other_arms": "the same harness with --arm base/branch/c117462/c117462_foldin(round-3 order)/branch_r01/branch_r02, copied to raw/coverage.json (r20261001-03); its c117462_foldin key is read here as c117462_foldin_r03",
+  "order_check": "VENV=$VENV HERMES_INSTALL=<live install> EGRESS_DIR=<dir with sitecustomize.py> $SANDBOX $WT <fresh home on a non-/tmp disk> <egress log> $PY $STAGING/harness/foldin_order_check.py --checkout $WT --coverage <round-5 coverage json> --corpus <git archive of agent/ at main>/agent --arm c117462=... --arm c117462_foldin=... --arm c117462_foldin_r03=... --out <home>/order.json   # copied to raw/r05/foldin_order_check.json",
+  "index_cost": "VENV=$VENV HERMES_INSTALL=<live install> EGRESS_DIR=<dir with sitecustomize.py> $SANDBOX $WT <fresh home on a non-/tmp disk> <egress log> $PY $STAGING/harness/index_cost.py --checkout $WT --arm base=... --arm branch=... --arm c117462=... --arm c117462_foldin=... --out <home>/cost.json   # copied to raw/r05/index_cost.json"
+ },
+ "measurements": [
+  {
+   "name": "branch_index_chars_max",
+   "arm": "branch",
+   "value": 7190,
+   "n": 180,
+   "label": "OBSERVED"
+  },
+  {
+   "name": "branch_sections_chars_max",
+   "arm": "branch",
+   "value": 6998,
+   "n": 180,
+   "label": "OBSERVED"
+  },
+  {
+   "name": "branch_index_tokens_max",
+   "arm": "branch",
+   "value": 1797,
+   "label": "MODELED",
+   "note": "chars/4; vs RETAINED_SUMMARY_TOKEN_BUDGET=32000 (agent/native_compaction.py:146)"
+  },
+  {
+   "name": "main_sections_prefix_of_branch_sections",
+   "value": 180,
+   "n": 180,
+   "label": "OBSERVED",
+   "note": "standalone commit on main: existing lines byte-identical"
+  },
+  {
+   "name": "117462_sections_prefix_of_foldin_sections",
+   "arm": "c117462_foldin",
+   "value": 180,
+   "n": 180,
+   "label": "OBSERVED",
+   "note": "round-5 fold-in on #117462: every #117462 line byte-identical"
+  },
+  {
+   "name": "117462_sections_prefix_of_foldin_sections",
+   "arm": "c117462_foldin_r03",
+   "value": 0,
+   "n": 180,
+   "label": "OBSERVED",
+   "note": "round-3 order: a #117462 line changed in 101 of 180 regions"
+  },
+  {
+   "name": "real_text_117462_lines_unchanged",
+   "arm": "c117462_foldin",
+   "value": 3,
+   "n": 3,
+   "label": "OBSERVED",
+   "note": "regions of 40, 120 and 251 agent/*.py files as read_file traffic"
+  },
+  {
+   "name": "index_chars_max",
+   "arm": "base",
+   "value": 6451,
+   "n": 180,
+   "label": "OBSERVED"
+  },
+  {
+   "name": "index_chars_max",
+   "arm": "branch",
+   "value": 7190,
+   "n": 180,
+   "label": "OBSERVED"
+  },
+  {
+   "name": "index_chars_max",
+   "arm": "c117462",
+   "value": 7186,
+   "n": 180,
+   "label": "OBSERVED"
+  },
+  {
+   "name": "index_chars_max",
+   "arm": "c117462_foldin",
+   "value": 7193,
+   "n": 180,
+   "label": "OBSERVED"
+  }
+ ],
+ "per_arm": {
+  "base": {
+   "sparse": {
+    "n": 60,
+    "sections_chars_max": 1173,
+    "sections_chars_p50": 1039,
+    "index_chars_max": 1363,
+    "index_tokens_max_chars_div_4": 340,
+    "over_budget": 0,
+    "sections_emitted": {
+     "PRs/issues": 60,
+     "commits": 60,
+     "files": 60,
+     "errors": 60,
+     "handles": 60,
+     "urls": 60
+    }
+   },
+   "medium": {
+    "n": 60,
+    "sections_chars_max": 6261,
+    "sections_chars_p50": 6115,
+    "index_chars_max": 6451,
+    "index_tokens_max_chars_div_4": 1612,
+    "over_budget": 0,
+    "sections_emitted": {
+     "PRs/issues": 60,
+     "commits": 60,
+     "files": 60,
+     "errors": 60,
+     "handles": 60,
+     "urls": 60
+    }
+   },
+   "dense": {
+    "n": 60,
+    "sections_chars_max": 6083,
+    "sections_chars_p50": 6022,
+    "index_chars_max": 6270,
+    "index_tokens_max_chars_div_4": 1567,
+    "over_budget": 0,
+    "sections_emitted": {
+     "PRs/issues": 60,
+     "commits": 60,
+     "files": 60
+    }
+   },
+   "regions": 180,
+   "index_chars_max": 6451,
+   "sections_chars_max": 6261
+  },
+  "branch": {
+   "sparse": {
+    "n": 60,
+    "sections_chars_max": 1522,
+    "sections_chars_p50": 1421,
+    "index_chars_max": 1715,
+    "index_tokens_max_chars_div_4": 428,
+    "over_budget": 0,
+    "sections_emitted": {
+     "PRs/issues": 60,
+     "commits": 60,
+     "files": 60,
+     "errors": 60,
+     "handles": 60,
+     "urls": 60,
+     "task ids": 60,
+     "dotted keys": 60,
+     "error messages": 60
+    }
+   },
+   "medium": {
+    "n": 60,
+    "sections_chars_max": 6998,
+    "sections_chars_p50": 6357,
+    "index_chars_max": 7190,
+    "index_tokens_max_chars_div_4": 1797,
+    "over_budget": 0,
+    "sections_emitted": {
+     "PRs/issues": 60,
+     "commits": 60,
+     "files": 60,
+     "errors": 60,
+     "handles": 60,
+     "urls": 60,
+     "task ids": 60,
+     "dotted keys": 19
+    }
+   },
+   "dense": {
+    "n": 60,
+    "sections_chars_max": 6083,
+    "sections_chars_p50": 6022,
+    "index_chars_max": 6270,
+    "index_tokens_max_chars_div_4": 1567,
+    "over_budget": 0,
+    "sections_emitted": {
+     "PRs/issues": 60,
+     "commits": 60,
+     "files": 60
+    }
+   },
+   "regions": 180,
+   "index_chars_max": 7190,
+   "sections_chars_max": 6998
+  },
+  "c117462": {
+   "sparse": {
+    "n": 60,
+    "sections_chars_max": 1173,
+    "sections_chars_p50": 1039,
+    "index_chars_max": 1363,
+    "index_tokens_max_chars_div_4": 340,
+    "over_budget": 0,
+    "sections_emitted": {
+     "PRs/issues": 60,
+     "commits": 60,
+     "handles": 60,
+     "urls": 60,
+     "files": 60,
+     "errors": 60
+    }
+   },
+   "medium": {
+    "n": 60,
+    "sections_chars_max": 6261,
+    "sections_chars_p50": 6115,
+    "index_chars_max": 6451,
+    "index_tokens_max_chars_div_4": 1612,
+    "over_budget": 0,
+    "sections_emitted": {
+     "PRs/issues": 60,
+     "commits": 60,
+     "handles": 60,
+     "urls": 60,
+     "files": 60,
+     "errors": 60
+    }
+   },
+   "dense": {
+    "n": 60,
+    "sections_chars_max": 6996,
+    "sections_chars_p50": 6983,
+    "index_chars_max": 7186,
+    "index_tokens_max_chars_div_4": 1796,
+    "over_budget": 0,
+    "sections_emitted": {
+     "PRs/issues": 60,
+     "commits": 60,
+     "handles": 60,
+     "urls": 60,
+     "files": 60,
+     "errors": 48
+    }
+   },
+   "regions": 180,
+   "index_chars_max": 7186,
+   "sections_chars_max": 6996
+  },
+  "c117462_foldin": {
+   "sparse": {
+    "n": 60,
+    "sections_chars_max": 1522,
+    "sections_chars_p50": 1421,
+    "index_chars_max": 1715,
+    "index_tokens_max_chars_div_4": 428,
+    "over_budget": 0,
+    "sections_emitted": {
+     "PRs/issues": 60,
+     "commits": 60,
+     "handles": 60,
+     "urls": 60,
+     "files": 60,
+     "errors": 60,
+     "task ids": 60,
+     "dotted keys": 60,
+     "error messages": 60
+    }
+   },
+   "medium": {
+    "n": 60,
+    "sections_chars_max": 7000,
+    "sections_chars_p50": 6992,
+    "index_chars_max": 7193,
+    "index_tokens_max_chars_div_4": 1798,
+    "over_budget": 0,
+    "sections_emitted": {
+     "PRs/issues": 60,
+     "commits": 60,
+     "handles": 60,
+     "urls": 60,
+     "files": 60,
+     "errors": 60,
+     "task ids": 60,
+     "dotted keys": 60,
+     "error messages": 32
+    }
+   },
+   "dense": {
+    "n": 60,
+    "sections_chars_max": 6999,
+    "sections_chars_p50": 6996,
+    "index_chars_max": 7190,
+    "index_tokens_max_chars_div_4": 1797,
+    "over_budget": 0,
+    "sections_emitted": {
+     "PRs/issues": 60,
+     "commits": 60,
+     "handles": 60,
+     "urls": 60,
+     "files": 60,
+     "errors": 48,
+     "task ids": 47,
+     "dotted keys": 2
+    }
+   },
+   "regions": 180,
+   "index_chars_max": 7193,
+   "sections_chars_max": 7000
+  },
+  "c117462_foldin_r03": {
+   "sparse": {
+    "n": 60,
+    "sections_chars_max": 1522,
+    "sections_chars_p50": 1421,
+    "index_chars_max": 1715,
+    "index_tokens_max_chars_div_4": 428,
+    "over_budget": 0,
+    "sections_emitted": {
+     "PRs/issues": 60,
+     "task ids": 60,
+     "commits": 60,
+     "handles": 60,
+     "urls": 60,
+     "dotted keys": 60,
+     "files": 60,
+     "errors": 60,
+     "error messages": 60
+    }
+   },
+   "medium": {
+    "n": 60,
+    "sections_chars_max": 6998,
+    "sections_chars_p50": 6984,
+    "index_chars_max": 7191,
+    "index_tokens_max_chars_div_4": 1797,
+    "over_budget": 0,
+    "sections_emitted": {
+     "PRs/issues": 60,
+     "task ids": 60,
+     "commits": 60,
+     "handles": 60,
+     "urls": 60,
+     "dotted keys": 60,
+     "files": 60,
+     "errors": 60,
+     "error messages": 46
+    }
+   },
+   "dense": {
+    "n": 60,
+    "sections_chars_max": 7000,
+    "sections_chars_p50": 6995,
+    "index_chars_max": 7193,
+    "index_tokens_max_chars_div_4": 1798,
+    "over_budget": 0,
+    "sections_emitted": {
+     "PRs/issues": 60,
+     "task ids": 60,
+     "commits": 60,
+     "handles": 60,
+     "urls": 60,
+     "dotted keys": 60,
+     "files": 59,
+     "errors": 32,
+     "error messages": 7
+    }
+   },
+   "regions": 180,
+   "index_chars_max": 7193,
+   "sections_chars_max": 7000
+  }
+ },
+ "foldin_order": {
+  "synthetic": {
+   "c117462_foldin": {
+    "regions": 180,
+    "carrier_lines_prefix": 180,
+    "regions_with_a_carrier_line_changed": 0,
+    "per_density": {
+     "sparse": {
+      "carrier_lines_changed": {},
+      "new_sections": {
+       "task ids": {
+        "emitted_in": 60,
+        "of": 60,
+        "len_p50": 42,
+        "bare_label": 0
+       },
+       "dotted keys": {
+        "emitted_in": 60,
+        "of": 60,
+        "len_p50": 108,
+        "bare_label": 0
+       },
+       "error messages": {
+        "emitted_in": 60,
+        "of": 60,
+        "len_p50": 197,
+        "bare_label": 0
+       }
+      }
+     },
+     "medium": {
+      "carrier_lines_changed": {},
+      "new_sections": {
+       "task ids": {
+        "emitted_in": 60,
+        "of": 60,
+        "len_p50": 178,
+        "bare_label": 0
+       },
+       "dotted keys": {
+        "emitted_in": 60,
+        "of": 60,
+        "len_p50": 702,
+        "bare_label": 0
+       },
+       "error messages": {
+        "emitted_in": 32,
+        "of": 60,
+        "len_p50": 15,
+        "bare_label": 25
+       }
+      }
+     },
+     "dense": {
+      "carrier_lines_changed": {},
+      "new_sections": {
+       "task ids": {
+        "emitted_in": 47,
+        "of": 60,
+        "len_p50": 9,
+        "bare_label": 31
+       },
+       "dotted keys": {
+        "emitted_in": 2,
+        "of": 60,
+        "len_p50": 12,
+        "bare_label": 2
+       },
+       "error messages": {
+        "emitted_in": 0,
+        "of": 60,
+        "len_p50": null,
+        "bare_label": 0
+       }
+      }
+     }
+    }
+   },
+   "c117462_foldin_r03": {
+    "regions": 180,
+    "carrier_lines_prefix": 0,
+    "regions_with_a_carrier_line_changed": 101,
+    "per_density": {
+     "sparse": {
+      "carrier_lines_changed": {},
+      "new_sections": {
+       "task ids": {
+        "emitted_in": 60,
+        "of": 60,
+        "len_p50": 42,
+        "bare_label": 0
+       },
+       "dotted keys": {
+        "emitted_in": 60,
+        "of": 60,
+        "len_p50": 108,
+        "bare_label": 0
+       },
+       "error messages": {
+        "emitted_in": 60,
+        "of": 60,
+        "len_p50": 197,
+        "bare_label": 0
+       }
+      }
+     },
+     "medium": {
+      "carrier_lines_changed": {
+       "errors": {
+        "regions_changed": 41,
+        "of": 60,
+        "carrier_len_p50": 1741,
+        "foldin_len_p50": 1639,
+        "cut_to_bare_label": 0,
+        "label_removed": 0
+       }
+      },
+      "new_sections": {
+       "task ids": {
+        "emitted_in": 60,
+        "of": 60,
+        "len_p50": 178,
+        "bare_label": 0
+       },
+       "dotted keys": {
+        "emitted_in": 60,
+        "of": 60,
+        "len_p50": 757,
+        "bare_label": 0
+       },
+       "error messages": {
+        "emitted_in": 46,
+        "of": 60,
+        "len_p50": 15,
+        "bare_label": 37
+       }
+      }
+     },
+     "dense": {
+      "carrier_lines_changed": {
+       "errors": {
+        "regions_changed": 21,
+        "of": 60,
+        "carrier_len_p50": 7,
+        "foldin_len_p50": 0,
+        "cut_to_bare_label": 0,
+        "label_removed": 21
+       },
+       "files": {
+        "regions_changed": 60,
+        "of": 60,
+        "carrier_len_p50": 1274,
+        "foldin_len_p50": 6,
+        "cut_to_bare_label": 59,
+        "label_removed": 1
+       }
+      },
+      "new_sections": {
+       "task ids": {
+        "emitted_in": 60,
+        "of": 60,
+        "len_p50": 736,
+        "bare_label": 0
+       },
+       "dotted keys": {
+        "emitted_in": 60,
+        "of": 60,
+        "len_p50": 530,
+        "bare_label": 0
+       },
+       "error messages": {
+        "emitted_in": 7,
+        "of": 60,
+        "len_p50": 15,
+        "bare_label": 7
+       }
+      }
+     }
+    }
+   }
+  },
+  "real_text": {
+   "c117462_foldin": {
+    "40": {
+     "files": 40,
+     "region_chars": 1092278,
+     "prefix": true,
+     "changed": {},
+     "new_lens": {
+      "dotted keys": 32
+     }
+    },
+    "120": {
+     "files": 120,
+     "region_chars": 2945717,
+     "prefix": true,
+     "changed": {},
+     "new_lens": {
+      "dotted keys": 75
+     }
+    },
+    "251": {
+     "files": 251,
+     "region_chars": 5408717,
+     "prefix": true,
+     "changed": {},
+     "new_lens": {
+      "dotted keys": 64
+     }
+    }
+   },
+   "c117462_foldin_r03": {
+    "40": {
+     "files": 40,
+     "region_chars": 1092278,
+     "prefix": false,
+     "changed": {
+      "errors": [
+       2334,
+       1321
+      ]
+     },
+     "new_lens": {
+      "dotted keys": 1020
+     }
+    },
+    "120": {
+     "files": 120,
+     "region_chars": 2945717,
+     "prefix": false,
+     "changed": {
+      "errors": [
+       1318,
+       308
+      ]
+     },
+     "new_lens": {
+      "dotted keys": 1055,
+      "error messages": 15
+     }
+    },
+    "251": {
+     "files": 251,
+     "region_chars": 5408717,
+     "prefix": false,
+     "changed": {
+      "files": [
+       2405,
+       1998
+      ],
+      "errors": [
+       622,
+       7
+      ]
+     },
+     "new_lens": {
+      "dotted keys": 1088
+     }
+    }
+   }
+  },
+  "readout": [
+   "round 5 (rows after 'errors'): no #117462 line changes in 180 of 180 synthetic regions and in 3 of 3 real-text regions; the new sections only get the room #117462's own sections leave",
+   "round 3 (task ids after todo ids, dotted keys before files): dense 'files' cut from a median 1274 chars to the bare label in 59 of 60 dense regions and removed in 1 (changed in 60 of 60); medium 'errors' shorter in 41 of 60; real text: 'errors' 2334 -> 1321 chars (40 files), 1318 -> 308 (120 files), while 'dotted keys' took 1020-1088 chars of attribute access",
+   "the trade round 5 keeps: in dense synthetic regions 'task ids' is emitted in 47 of 60 (31 as a bare label), 'dotted keys' in 2 of 60 (bare), 'error messages' in 0 of 60; in medium regions 'error messages' is emitted in 32 of 60 (25 bare); in the real-text regions only 'dotted keys' gets room (32-75 chars). The round-3 order emitted these sections in every dense region, at #117462's expense"
+  ]
+ },
+ "build_cost_443k_char_region": {
+  "per_arm": {
+   "base": {
+    "build_s_median": 0.029,
+    "new_rows_s_median": {},
+    "new_rows_s_sum": 0
+   },
+   "branch": {
+    "build_s_median": 0.0286,
+    "new_rows_s_median": {
+     "task ids": 0.005,
+     "dotted keys": 0.0149,
+     "error messages": 0.0248
+    },
+    "new_rows_s_sum": 0.0447
+   },
+   "c117462": {
+    "build_s_median": 0.0371,
+    "new_rows_s_median": {},
+    "new_rows_s_sum": 0
+   },
+   "c117462_foldin": {
+    "build_s_median": 0.0818,
+    "new_rows_s_median": {
+     "task ids": 0.0049,
+     "dotted keys": 0.0148,
+     "error messages": 0.0248
+    },
+    "new_rows_s_sum": 0.0445
+   }
+  },
+  "readout": "the three rows' patterns take about 0.0445 s together on this region wherever they run. #117462 has no break, so its build goes from 0.0371 s to 0.0818 s (median of 7). On main the loop stops at 'errors', the first section that does not fit on this region, before reaching the rows, so main and branch both take about 0.029 s here; on regions where every section fits, main pays the same per-row cost",
+  "label": "OBSERVED (single host, shared; order of magnitude only)"
+ },
+ "structural_note": "over-budget counts are 0 on every arm BY CONSTRUCTION, not as a finding: main's loop only appends a section while used + len(line) <= 7000 and #117462 truncates a section to the room left",
+ "not_measured": [
+  "whole-summary tokens on real lineages (LLM output): NOT_MEASURED; the index adds at most about 1.8k tokens (MODELED)",
+  "placement is measured here, not pinned by a unit test"
+ ],
+ "verdict": "KEEP"
+}

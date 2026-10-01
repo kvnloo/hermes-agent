@@ -1,0 +1,304 @@
+{
+  "arm": "base",
+  "repo_head": "c1ed8c9f081450bc01a08d7c638ff2d2eeecbfd8",
+  "repo_tree": "0716cfeee11444de16c5fb36a5fc2854a820d0d5",
+  "dirty_files": [],
+  "test_file_blob": "7347ad045bf049afabce5b78435d5746273160f1",
+  "pytest_rc": 1,
+  "outcomes": {
+    "test_projection_breaks_the_prefix_once_per_paid_batch_and_never_undoes_itself": {
+      "outcome": "failed",
+      "message": "E       AssertionError: no tool result was ever archived on the wire: 28 requests, 14 tool rows"
+    },
+    "test_projection_never_invalidates_replayed_preserved_thinking": {
+      "outcome": "passed",
+      "message": ""
+    }
+  },
+  "ledgers": [
+    {
+      "requests": 28,
+      "tool_rows": 14,
+      "rows_projected": 0,
+      "passes": {},
+      "reclaim_tokens_per_pass": {},
+      "unstable": [],
+      "wire_chars_per_request": [
+        7846,
+        32291,
+        32408,
+        56853,
+        56970,
+        81415,
+        81532,
+        105977,
+        106094,
+        130539,
+        130656,
+        155101,
+        155218,
+        179663,
+        179780,
+        204225,
+        204342,
+        228787,
+        228904,
+        253351,
+        253468,
+        277915,
+        278032,
+        302479,
+        302596,
+        327043,
+        327160,
+        351607
+      ],
+      "modeled": {
+        "label": "MODELED",
+        "requests": 28,
+        "sum_input_chars": 5023320,
+        "last_request_chars": 351069,
+        "cache_read_ratio_perfect_prefix_cache": 0.9301,
+        "billed_input_tokens_no_cache": 1255830,
+        "billed_input_token_units_cached_1.25w_0.10r": 226515,
+        "reprefill_chars_after_breaks": 343323,
+        "per_request": [
+          {
+            "total_chars": 7746,
+            "common_prefix_chars": 0
+          },
+          {
+            "total_chars": 32169,
+            "common_prefix_chars": 7746
+          },
+          {
+            "total_chars": 32276,
+            "common_prefix_chars": 32169
+          },
+          {
+            "total_chars": 56699,
+            "common_prefix_chars": 32276
+          },
+          {
+            "total_chars": 56806,
+            "common_prefix_chars": 56699
+          },
+          {
+            "total_chars": 81229,
+            "common_prefix_chars": 56806
+          },
+          {
+            "total_chars": 81336,
+            "common_prefix_chars": 81229
+          },
+          {
+            "total_chars": 105759,
+            "common_prefix_chars": 81336
+          },
+          {
+            "total_chars": 105866,
+            "common_prefix_chars": 105759
+          },
+          {
+            "total_chars": 130289,
+            "common_prefix_chars": 105866
+          },
+          {
+            "total_chars": 130396,
+            "common_prefix_chars": 130289
+          },
+          {
+            "total_chars": 154819,
+            "common_prefix_chars": 130396
+          },
+          {
+            "total_chars": 154926,
+            "common_prefix_chars": 154819
+          },
+          {
+            "total_chars": 179349,
+            "common_prefix_chars": 154926
+          },
+          {
+            "total_chars": 179456,
+            "common_prefix_chars": 179349
+          },
+          {
+            "total_chars": 203879,
+            "common_prefix_chars": 179456
+          },
+          {
+            "total_chars": 203986,
+            "common_prefix_chars": 203879
+          },
+          {
+            "total_chars": 228409,
+            "common_prefix_chars": 203986
+          },
+          {
+            "total_chars": 228516,
+            "common_prefix_chars": 228409
+          },
+          {
+            "total_chars": 252941,
+            "common_prefix_chars": 228516
+          },
+          {
+            "total_chars": 253048,
+            "common_prefix_chars": 252941
+          },
+          {
+            "total_chars": 277473,
+            "common_prefix_chars": 253048
+          },
+          {
+            "total_chars": 277580,
+            "common_prefix_chars": 277473
+          },
+          {
+            "total_chars": 302005,
+            "common_prefix_chars": 277580
+          },
+          {
+            "total_chars": 302112,
+            "common_prefix_chars": 302005
+          },
+          {
+            "total_chars": 326537,
+            "common_prefix_chars": 302112
+          },
+          {
+            "total_chars": 326644,
+            "common_prefix_chars": 326537
+          },
+          {
+            "total_chars": 351069,
+            "common_prefix_chars": 326644
+          }
+        ]
+      }
+    }
+  ],
+  "prefix_breaks": [],
+  "preserved_thinking": [
+    {
+      "requests": 24,
+      "replayed_thinking_blocks": 23,
+      "invalidated_thinking_blocks": 0,
+      "invalidated": []
+    }
+  ],
+  "enforced_account_emulation": false,
+  "rejected_400_thinking_binding": 0,
+  "anthropic_route_modeled": {
+    "label": "MODELED",
+    "requests": 24,
+    "sum_input_chars": 3538679,
+    "last_request_chars": 294713,
+    "cache_read_ratio_perfect_prefix_cache": 0.8396,
+    "billed_input_tokens_no_cache": 884669,
+    "billed_input_token_units_cached_1.25w_0.10r": 251627,
+    "reprefill_chars_after_breaks": 567427,
+    "per_request": [
+      {
+        "total_chars": 86,
+        "common_prefix_chars": 0
+      },
+      {
+        "total_chars": 24596,
+        "common_prefix_chars": 0
+      },
+      {
+        "total_chars": 24741,
+        "common_prefix_chars": 61
+      },
+      {
+        "total_chars": 49152,
+        "common_prefix_chars": 24485
+      },
+      {
+        "total_chars": 49297,
+        "common_prefix_chars": 24617
+      },
+      {
+        "total_chars": 73708,
+        "common_prefix_chars": 49041
+      },
+      {
+        "total_chars": 73853,
+        "common_prefix_chars": 49173
+      },
+      {
+        "total_chars": 98264,
+        "common_prefix_chars": 73597
+      },
+      {
+        "total_chars": 98409,
+        "common_prefix_chars": 73729
+      },
+      {
+        "total_chars": 122820,
+        "common_prefix_chars": 98153
+      },
+      {
+        "total_chars": 122966,
+        "common_prefix_chars": 98285
+      },
+      {
+        "total_chars": 147377,
+        "common_prefix_chars": 122709
+      },
+      {
+        "total_chars": 147522,
+        "common_prefix_chars": 122841
+      },
+      {
+        "total_chars": 171933,
+        "common_prefix_chars": 147265
+      },
+      {
+        "total_chars": 172078,
+        "common_prefix_chars": 147397
+      },
+      {
+        "total_chars": 196489,
+        "common_prefix_chars": 171821
+      },
+      {
+        "total_chars": 196634,
+        "common_prefix_chars": 171953
+      },
+      {
+        "total_chars": 221045,
+        "common_prefix_chars": 196377
+      },
+      {
+        "total_chars": 221190,
+        "common_prefix_chars": 196509
+      },
+      {
+        "total_chars": 245601,
+        "common_prefix_chars": 220933
+      },
+      {
+        "total_chars": 245746,
+        "common_prefix_chars": 221065
+      },
+      {
+        "total_chars": 270157,
+        "common_prefix_chars": 245489
+      },
+      {
+        "total_chars": 270302,
+        "common_prefix_chars": 245621
+      },
+      {
+        "total_chars": 294713,
+        "common_prefix_chars": 270045
+      }
+    ]
+  },
+  "egress_blocked": [],
+  "wall_s": 6.87,
+  "python": "3.11.14"
+}

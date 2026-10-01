@@ -1,0 +1,2109 @@
+{
+ "schema": "ownership_scan.v1",
+ "repo": "NousResearch/hermes-agent",
+ "author": "teknium1",
+ "state": "open",
+ "scanned_at": "2026-10-01T11:13Z",
+ "commands": [
+  "gh pr list -R NousResearch/hermes-agent --author teknium1 --state open --limit 1000 --json number,title,headRefOid",
+  "gh api -X GET search/issues -f q='repo:NousResearch/hermes-agent is:pr is:open author:teknium1' --jq .total_count",
+  "gh api --paginate repos/NousResearch/hermes-agent/pulls/<N>/files?per_page=100 --jq '.[].filename'   # for each of the PRs"
+ ],
+ "title_regex": "prefetch|telemetry|metric",
+ "file_regex": "memory_manager|shared_metrics",
+ "open_prs": 260,
+ "files_scanned": 2871,
+ "title_hits": [],
+ "file_hits": [
+  {
+   "number": 113678,
+   "files": [
+    "agent/memory_manager.py"
+   ]
+  }
+ ],
+ "prs": [
+  {
+   "number": 30055,
+   "head": "af2e4f418b",
+   "title": "feat(telegram): observe-with-approval Telegram Business Mode (Secretary Bots)",
+   "files": 7,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 68930,
+   "head": "46da6784aa",
+   "title": "feat(gateway): X Chat (encrypted X DMs) platform plugin",
+   "files": 17,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 72199,
+   "head": "d48909d5bf",
+   "title": "feat(cli): hermes record \u2014 demonstrate browser workflows, /learn turns them into replayable skills",
+   "files": 5,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 76467,
+   "head": "dbb15e7133",
+   "title": "fix(update): make npm recovery resumable on no-op retries (salvage #76250)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 80448,
+   "head": "bf80c3ce88",
+   "title": "feat: /model reset \u2014 clear session model pin and return to configured default (salvage #74899)",
+   "files": 26,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 80462,
+   "head": "0b0154ffaa",
+   "title": "ci: #79771 follow-ups \u2014 dep-bootstrap policy gate, slice-gen in detect, 16 slices, treeless lint clone",
+   "files": 6,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 80488,
+   "head": "492a63f3cc",
+   "title": "feat(delegation): durable retained subagents \u2014 registry, follow-up messaging, persisted usage attribution",
+   "files": 7,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 80701,
+   "head": "19fb03a93c",
+   "title": "feat(streaming): cap a streaming response's total lifetime (port of qwen-code#8602)",
+   "files": 5,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 80721,
+   "head": "38929dae9f",
+   "title": "Announce date changes to long-running sessions without touching the prompt cache (port from kimi-code)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 80741,
+   "head": "85440ed2a3",
+   "title": "feat(profiles): assistant presets \u2014 one-command role profiles (Energy-inspired)",
+   "files": 6,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 80788,
+   "head": "c069b81d89",
+   "title": "feat(background-review): evidence-grounding rule cuts inferred memory writes 87.5% \u2192 30%",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 80873,
+   "head": "4a15d26801",
+   "title": "Port from block/buzz#4959: classify transport timeouts distinctly in API error summaries",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 80882,
+   "head": "78f008ccbc",
+   "title": "feat(slack): surface emoji reactions in thread context (port of centaur#1264)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 80915,
+   "head": "b0090040e6",
+   "title": "feat(skills): add human-writing optional skill (\u6d3b\u4eba\u611f\u5199\u4f5c Chinese prose)",
+   "files": 11,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 81403,
+   "head": "c6806a8e97",
+   "title": "feat(approval): surface invisible Unicode, control bytes, and padding in approval prompts (Claude Code v2.1.223-inspired)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 81434,
+   "head": "dbaf473ae3",
+   "title": "feat(hooks): pre_llm_call block directive \u2014 veto a turn before inference, inspired by Claude Cowork",
+   "files": 7,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 81450,
+   "head": "3eb653c74d",
+   "title": "Inspired by Energy: extend `hermes import-agent` with Gemini CLI support",
+   "files": 5,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 81507,
+   "head": "b14cbbfe03",
+   "title": "Inspired by Cursor: `hermes inbox` \u2014 unified view of everything in flight",
+   "files": 5,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 81736,
+   "head": "a9d9634678",
+   "title": "perf(docs-site): split search index by section and stop indexing code blocks",
+   "files": 1,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 81739,
+   "head": "19e0a72139",
+   "title": "fix(ci): retain previous Pages deploy's hashed assets to stop CDN skew 404s",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 81875,
+   "head": "665129ca79",
+   "title": "feat: install skill sets from AI Catalog + agentskills discovery indexes",
+   "files": 5,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 82067,
+   "head": "cb0f080d3f",
+   "title": "fix(kanban): dispatch dependency observers post-commit",
+   "files": 3,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 82092,
+   "head": "b952a6cd72",
+   "title": "fix(middleware): preserve original tool requests",
+   "files": 6,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 82137,
+   "head": "afc178977d",
+   "title": "fix(deps): bump electron 40.10.6 -> 41.10.3 (GHSA-9f4c-93c8-jc8g)",
+   "files": 3,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 82170,
+   "head": "588447d3db",
+   "title": "feat(feishu): interactive clarify cards + native choice picker (port of QwenLM/qwen-code#8578)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 82200,
+   "head": "ccec8f3e53",
+   "title": "fix(patch): recover line-number-gutter pasted old_string (port from oh-my-pi#7906)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 82286,
+   "head": "4832295ca3",
+   "title": "feat(skills): add graph-engineering optional skill (knowledge graphs + task graphs)",
+   "files": 10,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 82820,
+   "head": "b46dfb97a1",
+   "title": "feat(session_search): bounded lexical query expansion for conversational recall",
+   "files": 3,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 82825,
+   "head": "0d8dba4bbb",
+   "title": "fix(gateway): preserve approval card content when resolving on Telegram and Feishu",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 82826,
+   "head": "3aae9f1bc5",
+   "title": "feat(cron): give scheduled jobs their actual run time in the prompt",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 82835,
+   "head": "9f786a0adb",
+   "title": "feat(photon): gate setup success on iMessage opt-in via first message",
+   "files": 3,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 82857,
+   "head": "6e0f4e381b",
+   "title": "Inspired by Poke: hermes recipe \u2014 shareable setup bundles (export/preview/install)",
+   "files": 6,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 83364,
+   "head": "60938d5bab",
+   "title": "feat: hermes mcp serve --tools \u2014 expose Hermes' tool surface to any MCP client",
+   "files": 6,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 83411,
+   "head": "12e368d2de",
+   "title": "feat: composio optional skill \u2014 1000+ SaaS connectors via one API key",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 83549,
+   "head": "444c292f9c",
+   "title": "fix(pricing): treat negative catalog pricing sentinels as unknown (port kilocode#13040)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 83551,
+   "head": "9af302e025",
+   "title": "feat(approval): explain silently auto-approved dangerous commands (port kilocode#12728/#12995)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 83616,
+   "head": "6c93048a82",
+   "title": "Inspired by ChatGPT Work: extend hermes import-agent with Cursor support",
+   "files": 5,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 83689,
+   "head": "9ece46e94d",
+   "title": "ci(windows): desktop install + update E2E on a real Windows runner",
+   "files": 7,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 84889,
+   "head": "d1111a1fe2",
+   "title": "feat(models): add deepseek-v4-pro-0813 to nous + openrouter curated catalogs, drop old v4-pro",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 85005,
+   "head": "da67b214eb",
+   "title": "fix(agent): recover 'not a multimodal model' image rejections from text-only endpoints (port from block/buzz#5318)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 85031,
+   "head": "ec69a884db",
+   "title": "fix(gemini): surface promptFeedback.blockReason as a terminal content-policy error (port of lobehub#17937)",
+   "files": 3,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 85116,
+   "head": "be0cc364c0",
+   "title": "Port from RooCodeInc/Roomote#1218: keep scheduling cadence out of cron prompts",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 85126,
+   "head": "09cbbd9e4d",
+   "title": "fix(agent): classify byte-size request-limit 400s as payload_too_large (port of block/goose#11173)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 85138,
+   "head": "9bb902c905",
+   "title": "feat(mcp-catalog): add patsnap patent & literature search MCP",
+   "files": 1,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 85144,
+   "head": "05fb89b29c",
+   "title": "feat(optional-skills): add interface-design UI/UX craft skill (port of interfaces.dev, 3.7k\u2605)",
+   "files": 45,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 85151,
+   "head": "657fd6a116",
+   "title": "fix(tests): close SessionDB before rmtree in codex persist test (CI flake)",
+   "files": 1,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 85461,
+   "head": "9a71b40053",
+   "title": "feat(enterprise): control-plane core \u2014 resource model, store, audit, driver contracts",
+   "files": 7,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 85468,
+   "head": "f5da9815b2",
+   "title": "feat(enterprise): native IAM \u2014 principals, roles, bindings, restrictions",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 85469,
+   "head": "983ca66dae",
+   "title": "feat(enterprise): access gateway \u2014 fail-closed identity verification and tenant admission",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 85470,
+   "head": "2a6903fd07",
+   "title": "feat(enterprise): controller \u2014 deploy choreography, rollback, namespace lifecycle, CLI",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 85471,
+   "head": "eb65da4fbd",
+   "title": "feat(enterprise): KubernetesComputeDriver \u2014 candidate provisioning via kubectl, gated harness start",
+   "files": 3,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 85472,
+   "head": "11f69d2893",
+   "title": "feat(enterprise): K8s sandbox driver \u2014 verified containment before harness start",
+   "files": 3,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 85473,
+   "head": "77a17b9f17",
+   "title": "feat(enterprise): secret brokering \u2014 workload-verified, value-free secret operations",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 85474,
+   "head": "8820cd5a90",
+   "title": "feat(enterprise): deployment packaging \u2014 Dockerfile, Helm chart, RBAC, smoke script",
+   "files": 9,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 85475,
+   "head": "0e030b03f4",
+   "title": "docs(enterprise): overview, concepts, deployment, installation, security",
+   "files": 6,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 85719,
+   "head": "c8dca9723b",
+   "title": "feat(tools): expire persisted tool results after 7 days via file mtime (port opencode#40987)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 85775,
+   "head": "342c2fc66c",
+   "title": "Desktop: show MCP launch targets on the setup_mcp consent card (port of kimi-code#2843)",
+   "files": 6,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 85794,
+   "head": "ff190a6462",
+   "title": "Inspired by Copilot CLI: plugin auto-update at session start + update --all",
+   "files": 5,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 86005,
+   "head": "4359031e4f",
+   "title": "feat(skills): add short-drama-production optional skill (AI \u77ed\u5267 pipeline)",
+   "files": 43,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 86009,
+   "head": "4f37f0e837",
+   "title": "fix(tests): mock get_hermes_home with Path, not str, across tui_gateway tests",
+   "files": 8,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 86019,
+   "head": "5809475240",
+   "title": "feat(compression): preserve epistemic stance of uncertain claims through compaction (arXiv:2608.06953)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 86552,
+   "head": "8a04225b02",
+   "title": "feat(terminal): per-command memory ceiling for local backend (Claude Code v2.1.233 port)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 86553,
+   "head": "21b31d32f5",
+   "title": "feat(delegation): prompt-cache launch stagger for batch subagents (Claude Code v2.1.229 port)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 86628,
+   "head": "beb9130a55",
+   "title": "feat(dashboard): expose skill deletion on the Skills page (port of centaur#1393)",
+   "files": 6,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 86695,
+   "head": "a6af0af13f",
+   "title": "Inspired by Cursor: pre-built Docker sandbox images (sandbox builds)",
+   "files": 8,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 86858,
+   "head": "5d3358ecda",
+   "title": "docs: /save is now a cross-platform session export (json/md/html)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 87174,
+   "head": "bac7c2928c",
+   "title": "docs: add Official Domains & Phishing Safety page",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 87285,
+   "head": "ae6faeb3ef",
+   "title": "feat(optional-skills): add squirrelscan \u2014 website QA/audit CLI skill",
+   "files": 5,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 87286,
+   "head": "0921ddf436",
+   "title": "feat(optional-skills): add video-shotcraft \u2014 Remotion cinematic product videos",
+   "files": 5,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 87290,
+   "head": "902b3b8c74",
+   "title": "Inspired by Factory Droid: /branch --stay keeps you in the original session",
+   "files": 22,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 87362,
+   "head": "d638d6723b",
+   "title": "fix(approval): widen pipe-remote-to-shell detection (port of block/goose#10989)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 87363,
+   "head": "40bd4f61c8",
+   "title": "fix(vision): bound local image reads during the read (port of block/goose#11114)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 87406,
+   "head": "bf824bb5ec",
+   "title": "fix(lsp): send $/cancelRequest when an abandoned request times out (port oh-my-pi#8153)",
+   "files": 3,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 87464,
+   "head": "5426cfa5d8",
+   "title": "feat(video-gen): add Wan 2.7 FAL video family (t2v + i2v)",
+   "files": 1,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 87545,
+   "head": "b78ce0ad36",
+   "title": "feat(cli): add CPU profiling flag",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 87546,
+   "head": "643385931c",
+   "title": "fix: reject duplicate V4A patch paths",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 87549,
+   "head": "b4cfc8a6bb",
+   "title": "Inspired by Claude Code: cap local terminal memory",
+   "files": 8,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 87554,
+   "head": "e143c01177",
+   "title": "fix: bind gateway approval buttons to request ids",
+   "files": 8,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 87885,
+   "head": "a7c72f89c4",
+   "title": "fix(gateway): honor whatsapp.group_allow_from for no-user-id routed group turns",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 88026,
+   "head": "1534932d56",
+   "title": "fix(logs): survive log rotation in 'hermes logs -f' follow mode",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 89306,
+   "head": "cfb077d29a",
+   "title": "fix(tests): tui gateway server timing waits no longer flake on loaded CI runners",
+   "files": 1,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 89936,
+   "head": "1d36b4148c",
+   "title": "feat(delegation): subagents can be spawned with their own reasoning level (port prime-agent#1510, salvage #81921)",
+   "files": 7,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 89940,
+   "head": "cda00f1548",
+   "title": "feat(dashboard): Memory Wiki \u2014 browsable session-history wiki + persistent-memory audit panel (salvage #31244, Perplexity Brain-inspired)",
+   "files": 11,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 90430,
+   "head": "890d3ae4f3",
+   "title": "feat(desktop): Space stages clarify choices from the keyboard",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 91252,
+   "head": "7e60ebc5d4",
+   "title": "feat(delegation): subagents can fork the parent conversation (port of kimi-code#3007)",
+   "files": 5,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 91271,
+   "head": "037ae2724c",
+   "title": "hermes -z pipelines can now attribute spend per subagent (Copilot CLI 1.0.81 port)",
+   "files": 8,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 92387,
+   "head": "ca713ccd4b",
+   "title": "feat(skills): add discernment-nudge \u2014 post-answer check-questions (port of Anthropic's Apache-2.0 skill)",
+   "files": 6,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 92613,
+   "head": "6f1b3769f1",
+   "title": "feat(pricing): user-declared pricing_overrides in config.yaml drive cost tracking for custom providers (salvage #22614)",
+   "files": 6,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 93415,
+   "head": "22fdf83ab3",
+   "title": "feat(gateway): /mute silences a chat at the harness level until /unmute",
+   "files": 7,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 93480,
+   "head": "c773927e32",
+   "title": "hermes sessions usage: per-session token/cost drill-down + insights --json (Amp Explain Usage port)",
+   "files": 7,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 95247,
+   "head": "fcb219fa9a",
+   "title": "feat(approvals): per-tool allow/ask/deny policy \u2014 non-shell tools finally gated (Perplexity Computer-inspired, #35357)",
+   "files": 6,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 95269,
+   "head": "9943a96dce",
+   "title": "optional-skills: asu-job-hunt \u2014 Chinese job-hunt workflow (resume, interview, offers)",
+   "files": 56,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 96848,
+   "head": "8e5829e6b1",
+   "title": "CLI startup offers to restore sessions orphaned by a crash (Copilot CLI port)",
+   "files": 6,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 97561,
+   "head": "0f4dfff041",
+   "title": "feat(browser): real-profile browsing can keep banking/email/SSO logins out of the agent's snapshot (Cowork-inspired)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 97594,
+   "head": "75b113c220",
+   "title": "feat(skills): opportunity-radar \u2014 cross-source proactive suggestions from posts, inbox, and calendar (Energy-inspired)",
+   "files": 6,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 98036,
+   "head": "f57490567b",
+   "title": "feat(skills): sepia \u2014 de-AI writing via narrative-structure repair (port of Nanako0129/sepia, MIT)",
+   "files": 17,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 99054,
+   "head": "2c444b1033",
+   "title": "Agent commits now carry the git identity you configure (Amp-inspired, #72556/#78374 class)",
+   "files": 6,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 99685,
+   "head": "53a2827456",
+   "title": "fix(update): cold-start every autostart-installed profile gateway after update (#91675 resume half)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 100015,
+   "head": "89f542f1b4",
+   "title": "feat(skills): h3-storyboard \u2014 MiniMax H3 shot breakdown + performance direction (optional)",
+   "files": 8,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 100821,
+   "head": "917ea63eda",
+   "title": "feat(tools): consult \u2014 agent-initiated second opinion from a frontier reference model (salvage #82103, Perplexity advisor-escalation port)",
+   "files": 10,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 100885,
+   "head": "d6fd0b07a0",
+   "title": "feat(lsp): project-pinned language servers now win over global PATH installs (port omo#7424)",
+   "files": 3,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 103476,
+   "head": "bc9511af3f",
+   "title": "fix(anthropic): keep prior-turn thinking blocks on keep-all Claude models so the cached prefix stays byte-stable (small correctness fix; the run's write bill was aggregator routing)",
+   "files": 5,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 104886,
+   "head": "221a79da73",
+   "title": "fix: auxiliary Copilot calls recover after token rejection",
+   "files": 3,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 106395,
+   "head": "289e5dbada",
+   "title": "fix(mcp): identify hermes-agent in the MCP handshake clientInfo (salvage #70074, Copilot CLI 1.0.84-2 parity)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 106398,
+   "head": "91a0d478a3",
+   "title": "feat(desktop): Review pane smart file order \u2014 change-explaining files first, supporting files muted (inspired by Amp)",
+   "files": 13,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 106399,
+   "head": "81cec5c43d",
+   "title": "feat(tools): per-tool spillover budgets \u2014 contain chatty tools without shrinking every budget (salvage #94679)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 106401,
+   "head": "dd61acdda8",
+   "title": "feat: stay-awake inhibitor \u2014 OS sleep no longer kills long turns (salvage #19484)",
+   "files": 5,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 106413,
+   "head": "ec0740de38",
+   "title": "feat(webhook): opt-in persistent conversations via per-route session_key (Poke-inspired, salvage #90589)",
+   "files": 7,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 106414,
+   "head": "2665fa2612",
+   "title": "fix(anthropic): Claude Code OAuth identity floor 2.1.280 \u2014 Fable 5.x and Opus 5.5 no longer rejected (port prime-agent#1993, omo#8705)",
+   "files": 3,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 106419,
+   "head": "be18e97e27",
+   "title": "fix(tui_gateway): zombie-safe, Windows-safe compute-host PID supervision (salvage #68272 + codex port)",
+   "files": 5,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 106423,
+   "head": "cff14a4c62",
+   "title": "feat(tools): peer session messaging \u2014 one session can warn or unblock another (inspired by Muse Code)",
+   "files": 6,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 106426,
+   "head": "f2ad223662",
+   "title": "fix(anthropic): opt into thinking-prefix drop_block on Claude 5.1+ so prefix mutations stop 400ing turns",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 106429,
+   "head": "ffde580a9d",
+   "title": "feat: /archive archives the current session from chat; sessions unarchive restores it",
+   "files": 29,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 106438,
+   "head": "ff4e13a240",
+   "title": "feat(computer-use): sensitive-app blocklist \u2014 trading, crypto wallets, password vaults denied by default (Cowork-inspired)",
+   "files": 5,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 106474,
+   "head": "6e98a9f7fb",
+   "title": "feat(delegation): subagents can fork the parent conversation (salvage #91252, deepagents-confirmed)",
+   "files": 6,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 106742,
+   "head": "cb8d692054",
+   "title": "One gateway owns every local session: CLI, TUI, Desktop (local), API, ACP, bots and cron attach to the same live conversation",
+   "files": 1122,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 107881,
+   "head": "849b06bc0f",
+   "title": "feat(mcp): CLI enable/disable for MCP servers + machine-readable list --json (salvages #94781)",
+   "files": 6,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 107891,
+   "head": "1dc8a7222c",
+   "title": "feat(skills): /skills + hermes skills enable/disable/disabled toggles (salvages #36691)",
+   "files": 6,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 107947,
+   "head": "d9a1074f3d",
+   "title": "feat(skills): i-have-adhd \u2014 ADHD-friendly output shaping (port of ayghri/i-have-adhd, 38.9k\u2605 MIT)",
+   "files": 5,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 108678,
+   "head": "55b6a81cbd",
+   "title": "feat(wisdom): Collective Wisdom returns as a ~2.5k-line bundled plugin with chat, Desktop, update-policy and share-candidate parity (after #108507)",
+   "files": 26,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 108828,
+   "head": "2f08ea3ac6",
+   "title": "feat(delegation): subagents share per-workspace notes across batches (Inspired by Cursor Projects)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 109308,
+   "head": "82ae34ecc5",
+   "title": "feat(skills): botmaker \u2014 mint specialist Hermes bots (port of techjanitor/botmaker, first Hermes-native community skill)",
+   "files": 10,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 109553,
+   "head": "ec48149866",
+   "title": "fix(errors): Anthropic credits_required 429 rotates the credential instead of retrying (omp#11333 port)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 109596,
+   "head": "84727483ea",
+   "title": "feat(cli): opt-in 'custom' status-bar field renders a user command's output",
+   "files": 5,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 109645,
+   "head": "3c27c9cf19",
+   "title": "feat(skills): video-shot-breakdown \u2014 measured shot lists + synced shot-info video (port of eternityspring/reelbench-skills)",
+   "files": 23,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 110142,
+   "head": "0c0d5ab02b",
+   "title": "fix(desktop): pack no longer fails on a missing cross-env bin (#110121)",
+   "files": 3,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 110371,
+   "head": "af4fb685de",
+   "title": "Anthropic Console spend-cap 400 now classified as billing, key rotates (#80553, salvage #80618)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 110436,
+   "head": "162850ab49",
+   "title": "Tool-call arguments with invalid JSON escapes or flattened tool_call params no longer execute as {} (ports openclaw/openclaw#141323, #143729)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 110440,
+   "head": "44854b34ff",
+   "title": "Linux gateway starts detached when user systemd is unreachable instead of aborting setup (port nanoclaw#3768/#3760)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 110525,
+   "head": "726d2ce7c6",
+   "title": "Review pane restacks a branch into reviewable commits and walks them one at a time (Inspired by Amp)",
+   "files": 21,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 110566,
+   "head": "47f6befd92",
+   "title": "ci: advisory silent-revert check flags stale-branch files that would undo landed commits (port of gastown#4840)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 111093,
+   "head": "32d76fbde1",
+   "title": "Long clarify choices stay readable on Slack, Discord, Google Chat and the relay (#78115, salvage #77547 #93154)",
+   "files": 7,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 111360,
+   "head": "fd707cdbae",
+   "title": "feat(tools): agent can schedule its own wakeup in the current session (schedule_wakeup, port of kilocode#14094)",
+   "files": 15,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 111493,
+   "head": "11b1d345b1",
+   "title": "fix(cli): /resume of a session owned by another surface is read-only, never a second writer (Codex 0.154 port)",
+   "files": 5,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 111579,
+   "head": "560d3d6f9a",
+   "title": "feat(optional-skills): fal-music \u2014 hosted music and sound-effect generation via fal.ai (ElevenLabs Music v2.5, MiniMax 3, Lyria 3, Stable Audio 3, ACE-Step)",
+   "files": 6,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 112075,
+   "head": "29dbe8844e",
+   "title": "Test leak sweep no longer segfaults dashboard tests by closing a SessionDB a live thread is probing",
+   "files": 3,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 112076,
+   "head": "5b886c714b",
+   "title": "Remote-kernel eviction test polls the kernel map under its lock instead of a lock-free busy spin",
+   "files": 1,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 112477,
+   "head": "b2f94553ad",
+   "title": "fix(terminal): agent shells fail fast on git editors and credential prompts instead of hanging (port prime-agent#2219, credits #73196)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 112481,
+   "head": "e9af9c5876",
+   "title": "fix(gateway): unknown slash commands suggest the intended command on every platform (port prime-agent#2243)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 112540,
+   "head": "5b82029601",
+   "title": "feat(egress): SSH sandboxes reach iron-proxy over a reverse forward \u2014 tokens, not real keys (proxy.ssh_tunnel)",
+   "files": 10,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 112588,
+   "head": "235b31b705",
+   "title": "hermes doctor names version, install method, upstream distance and the update command (salvage #85372, port omo#8055/#8060)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 112617,
+   "head": "c3db2de9c4",
+   "title": "feat(reasoning): large sessions confirm before a cache-breaking mid-session effort change (port deepagents#6196)",
+   "files": 30,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 113122,
+   "head": "75f82e0fc6",
+   "title": "Feishu/Lark bots receive websocket events again: lark-oapi pinned 1.7.3 (#103979, salvage #103980 + #78268)",
+   "files": 3,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 113614,
+   "head": "23eb6672f4",
+   "title": "feat(display): MCP/connector/plugin tool calls show argument previews instead of a bare name (port of gemini-cli#29341)",
+   "files": 3,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 113615,
+   "head": "d0f92e7627",
+   "title": "fix(codex): ChatGPT Codex picker no longer offers retired gpt-5.4 / gpt-5.4-mini (port cline#14011)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 113650,
+   "head": "a7a864bfa7",
+   "title": "write_file flags a new file that nearly duplicates a sibling (inspired by Muse Code)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 113678,
+   "head": "b94a482497",
+   "title": "feat(cli): --disable-tools and tools.disabled_functions remove single tools below toolset granularity (salvage #110774, #69675)",
+   "files": 13,
+   "title_match": false,
+   "file_match": [
+    "agent/memory_manager.py"
+   ]
+  },
+  {
+   "number": 113700,
+   "head": "3e125352c2",
+   "title": "feat(cli): `hermes commands` prints the whole command tree in one call (port block/buzz#7584)",
+   "files": 8,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 114534,
+   "head": "dbb94aa831",
+   "title": "Mid-session /reasoning switches keep the Claude prompt cache warm (in-band effort updates, port of opencode#48513)",
+   "files": 7,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 114578,
+   "head": "2acbb47e94",
+   "title": "feat(tool-search): pin one MCP server eager with mcp_servers.<name>.defer: false (salvage #110714, port kimi-code#3667)",
+   "files": 5,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 114591,
+   "head": "646031aa6c",
+   "title": "fix(mcp): call-time 401 from an anonymously connected server asks for sign-in; hermes mcp login sets up OAuth (port kimi-code#3846)",
+   "files": 8,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 114621,
+   "head": "f477f360bb",
+   "title": "/usage shows every model route on CLI, TUI, gateway and Desktop (salvage #96546, Copilot CLI 1.0.85 port)",
+   "files": 42,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 114670,
+   "head": "304bada184",
+   "title": "web_extract signals empty results instead of returning a success-shaped empty page (#52120, #99533; salvages #52178)",
+   "files": 3,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 114698,
+   "head": "8f8df2eeb9",
+   "title": "feat(video_gen): Creatify Boreal FAL family \u2014 $0.01/s native-audio presenter/UGC video (t2v + i2v)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 115203,
+   "head": "9d5d9a7ef6",
+   "title": "test(dashboard): stopper-survives-sweep test waits for the stopper's marker, not the backend's exit (flaky on main)",
+   "files": 1,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 115211,
+   "head": "0c5433f0a3",
+   "title": "test(windows): live-runtime children publish ready/pid files atomically (JSONDecodeError flake in the Windows-only job)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 115230,
+   "head": "fa2fea490f",
+   "title": "fix: plugin validation accepts web-dashboard-only plugins as loadable",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 115502,
+   "head": "b18afe2da7",
+   "title": "MCP tools/list_changed storms no longer trigger one refresh per notification (Inspired by Claude Code)",
+   "files": 3,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 115506,
+   "head": "5e77113f96",
+   "title": "write_file on a directory reports the directory, not a stale-read refusal (Inspired by Claude Code)",
+   "files": 3,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 115515,
+   "head": "87248cc083",
+   "title": "Async subagent completions frame the child's text as a report, not the user's words (Inspired by Claude Code)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 115559,
+   "head": "f81c803f13",
+   "title": "feat(desktop): crash page with Restart / software rendering, progressive reload back-off, persisted chromium-flags.json (Cowork-inspired)",
+   "files": 8,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 115622,
+   "head": "40f119ff21",
+   "title": "feat(desktop): search and kind filter on the Passwords & Logins list (port centaur#1661)",
+   "files": 10,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 115645,
+   "head": "88b7fc9726",
+   "title": "/review reviews a chosen git diff at a chosen depth (salvage #94836 + #108426, inspired by Cursor Agent Review)",
+   "files": 15,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 115682,
+   "head": "c29b156567",
+   "title": "Closed-schema tools reject undeclared arguments instead of silently dropping them (port Roomote#2695)",
+   "files": 3,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 116247,
+   "head": "d8de421066",
+   "title": "feat(skills): open-steps \u2014 plain-language reports, steps and verdicts for non-engineers (port of kharmanskyi/open-steps, MIT)",
+   "files": 25,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 116280,
+   "head": "aa4c6bdab9",
+   "title": "docs(vision): auxiliary.vision.provider main still routes images as text \u2014 say so and how to get pixels back",
+   "files": 1,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 116500,
+   "head": "b9bae75d85",
+   "title": "skills hub: install a skill from its pasted GitHub folder URL (port of OpenHands#17504)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 116534,
+   "head": "26073a7db3",
+   "title": "Batch subagents share one cached system-prompt prefix (salvage #103659, part of #103481)",
+   "files": 3,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 116579,
+   "head": "29a9cac8c2",
+   "title": "feat(terminal): bubblewrap backend \u2014 per-command bwrap sandbox on Linux hosts (salvage #102875, hardened from a live pass)",
+   "files": 44,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 116768,
+   "head": "6200e87e9e",
+   "title": "feat(optional-skills): security-audit \u2014 Cloudflare's coverage-ledgered codebase security audit (port of cloudflare/security-audit-skill)",
+   "files": 26,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 117598,
+   "head": "b184adb9dc",
+   "title": "fix(terminal): embedded agent hosts can opt into per-worker cgroup scopes; timeout schema says it does not bound background commands (#116936, salvage #117020)",
+   "files": 10,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 117690,
+   "head": "aef8564cf9",
+   "title": "feat(acp): tool_call updates carry the programmatic tool name in _meta.tool_name (port of zed#64080, clean-room)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 117716,
+   "head": "c68850d357",
+   "title": "fix(config): saved .env value no longer shadowed by stale duplicate lines (#8270, salvage #20100)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 117729,
+   "head": "5b9aaa7077",
+   "title": "fix(bedrock): tool-result images reach the model as Converse image blocks (#55134, salvage #55135)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 117732,
+   "head": "565bdd3910",
+   "title": "fix: LLM JSON replies with trailing prose or nested objects parse in delegate_task, goal judge and Kanban specify (salvage #116462)",
+   "files": 6,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 117735,
+   "head": "d9422fe9d6",
+   "title": "fix(gateway): long-message splits no longer tear emoji sequences and accented letters apart (port openclaw#151959)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 117752,
+   "head": "4f1330f063",
+   "title": "feat(desktop): Enter-to-send or multiline-first composer mode (salvage #83911, closes #52952)",
+   "files": 23,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 117763,
+   "head": "69638c9de5",
+   "title": "feat(desktop): Copy on a reply pastes formatted into docs/mail, Markdown into editors",
+   "files": 9,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 118639,
+   "head": "cf4fe02e68",
+   "title": "Malformed tool-call loops stop after 3 rejections instead of running to the iteration budget (port of Kilo-Org/kilocode#14163)",
+   "files": 5,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 118661,
+   "head": "002b16ec67",
+   "title": "feat(prompt): skills installed mid-session reach the model without a prompt rebuild (port cloudflare-os#267)",
+   "files": 5,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 118705,
+   "head": "04d15a00e4",
+   "title": "feat(goals): /goal pauses after three empty responses instead of stalling silently (Codex #44320 port)",
+   "files": 9,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 118737,
+   "head": "3f4d291125",
+   "title": "fix(desktop): every copy action reports success or failure (salvage #44372, port paperclip#13603)",
+   "files": 8,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 118788,
+   "head": "a106d0236c",
+   "title": "fix(stt): xAI transcription names grok-voice-transcribe-2.0 and survives auto-detect language (salvage #115264)",
+   "files": 16,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 119391,
+   "head": "4ee5c7733c",
+   "title": "WhatsApp from `hermes setup` no longer enables an unpaired account (pairs first, like `hermes whatsapp`)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 119396,
+   "head": "6604ae8aac",
+   "title": "Setup wizard and docs say the terminal backend moves commands, not the agent",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 119675,
+   "head": "22ca56e9ee",
+   "title": "feat(cli,tui): display.reduced_motion freezes spinners for screen readers (#26689, port openai/codex#46040)",
+   "files": 20,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 119712,
+   "head": "1d77c4c9ca",
+   "title": "Compaction summaries pair tool results with their calls by index and tool name (port prime-agent#2424)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 119713,
+   "head": "7471d9915d",
+   "title": "Per-call usage log line carries time-to-first-chunk (port prime-agent#2462)",
+   "files": 3,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 119747,
+   "head": "51fc2adf19",
+   "title": "feat(btw): side questions may read files/web/past sessions; tool whitelist now survives the worker hop (salvage #98485, fixes #98479)",
+   "files": 6,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 119873,
+   "head": "be2d71b0ab",
+   "title": "Capped terminal/execute_code spills are reported as partial, not \"full output\" (#109757, salvage #109763)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 120551,
+   "head": "060dd251c5",
+   "title": "docs(setup): terminal backend wizard and docs say only tool execution moves, the agent stays local",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 120785,
+   "head": "39bf19562a",
+   "title": "fix(windows): planted repo binaries no longer hijack bare program names (port cline#14171)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 120787,
+   "head": "b239c422b4",
+   "title": "fix(honcho): OAuth refresh keeps the prior refresh_token when the server omits it (salvage #106303)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 120788,
+   "head": "a6bcc0da8f",
+   "title": "fix(acp): permission bubble is created as a pending tool_call before request_permission (port of gemini-cli#29439)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 120855,
+   "head": "4eaa66a403",
+   "title": "feat(vision): attached images carry a session-wide Image #N label the model can see (inspired by Muse Code)",
+   "files": 8,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 120926,
+   "head": "f5e83004b8",
+   "title": "Disk-wipe commands and macOS/LVM device names hit the hardline floor (#102371, salvage #102376 #105607)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 120936,
+   "head": "4e94e66867",
+   "title": "approvals.deny rules match version-pinned and flagged package-runner spellings (Inspired by Factory Droid v0.221)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 120975,
+   "head": "793d21c1a4",
+   "title": "fix(desktop): model labels render sizes, versions and brands by token class (port block/buzz#7844)",
+   "files": 3,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 121016,
+   "head": "24e4853746",
+   "title": "Thinking-off turns no longer 400 on Claude Opus 5.5 (fixes #120069, salvage #119419)",
+   "files": 3,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 121849,
+   "head": "c520e08b35",
+   "title": "session_search no longer collapses /new chains onto the oldest ancestor (#121831)",
+   "files": 5,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 122059,
+   "head": "b8956852c4",
+   "title": "Optional tool args sent as null/{} no longer crash handlers; nested scalar strings coerced (port of opencode#45002)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 122060,
+   "head": "e0a703a0d3",
+   "title": "Gemini tool schemas with orphan required/draft-04 bounds/tuples/required $ref loops no longer 400 the request (port of opencode#51009)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 122094,
+   "head": "3021afd890",
+   "title": "feat(agent): opt-in Anthropic prompt-cache warming keeps the prefix alive through long tool runs (port of pi#9668)",
+   "files": 10,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 122096,
+   "head": "e36a5da164",
+   "title": "fix(errors): Z.AI \"Prompt too long\" 400 compacts and retries instead of ending the turn (port of pi 0e283203c)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 122140,
+   "head": "79a9ac1f79",
+   "title": "Tool results tell the model how long the call took (Wall time header, port kimi-code#3966)",
+   "files": 10,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 122200,
+   "head": "7b1d169a96",
+   "title": "CLI: Up in an empty composer takes a queued prompt back for editing (Copilot CLI port, salvage #8492)",
+   "files": 5,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 122201,
+   "head": "309547e751",
+   "title": "process_manage list shows running processes before finished ones (Copilot CLI port)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 122327,
+   "head": "af2b85284e",
+   "title": "fix(tts): Gemini 3.8 Flash / Flash-Lite TTS speak only the transcript and decode WAV once (salvage #121105, fixes #121082)",
+   "files": 7,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 122332,
+   "head": "4fc608851a",
+   "title": "feat(image_gen): Seedream 5.0 Flash (t2i + edit) and Recraft V4.1 Flash join the FAL catalog",
+   "files": 3,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 122852,
+   "head": "4bd7c9df6f",
+   "title": "fix(process): first heartbeat keeps output printed before arming (CI flake test_process_heartbeat)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 122853,
+   "head": "fa62976b39",
+   "title": "test: child pid files published atomically, no torn int('') reads (CI flake test_client_e2e)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 122854,
+   "head": "e47b4e5a79",
+   "title": "test(moa): late-sink test raises the interrupt after the fast slot is recorded (CI flake)",
+   "files": 1,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 122855,
+   "head": "4030f41cc7",
+   "title": "test(e2e): send_and_capture waits up to 15 s for the send instead of 2 s (CI flake test_platform_commands)",
+   "files": 1,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 122979,
+   "head": "43c299560a",
+   "title": "docs(faq): one profile per topic, or one profile with Telegram topics?",
+   "files": 1,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 123221,
+   "head": "3340a5f184",
+   "title": "MCP server instructions reach the system prompt; tool descriptions and instructions capped (salvage #58182, closes #118381)",
+   "files": 9,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 123272,
+   "head": "24a791b526",
+   "title": "fix(sessions): dashboard and gateway API session deletes scrub on-disk transcripts too (salvage #20685 #55100 #20342)",
+   "files": 6,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 123474,
+   "head": "f6e880a8df",
+   "title": "hermes insights shows per-tool session reach and which eager tool schemas to defer",
+   "files": 6,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 123541,
+   "head": "99599924d7",
+   "title": "Codex /usage shows the credits balance again, in credits (port Roomote#3144)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 123542,
+   "head": "2f8d6629dc",
+   "title": "Desktop model picker dialog opens on the current model (port Roomote#3088)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 124160,
+   "head": "268ce86490",
+   "title": "feat(optional-skills): golive \u2014 ship an agent-built app live on the user's own accounts (port of mikehasa/golive-skill, MIT)",
+   "files": 18,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 124161,
+   "head": "84d47c9f2a",
+   "title": "feat(optional-skills): 3dicon \u2014 animate a prompt or icon into a looping transparent WebP (port of samyost1/3dicon, MIT)",
+   "files": 20,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 124241,
+   "head": "698c3fa340",
+   "title": "fix: Slack stream reopened after a server-side seal no longer splits a word across two messages (#124219)",
+   "files": 7,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 124595,
+   "head": "556bc2a9c0",
+   "title": "fix(compression): summarizer sends instructions as system and turns as user (port OpenHands sdk#5143)",
+   "files": 7,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 124596,
+   "head": "c5b7c8d4a2",
+   "title": "fix(cli): compact token counts promote to M when rounding carries, no more 1000.0K (port OpenHands#17469)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 124639,
+   "head": "0ef1ef02f2",
+   "title": "fix(security): MCP HTTP/SSE clients refuse redirects into private/metadata space (salvage #70335, port goose#11501)",
+   "files": 3,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 124703,
+   "head": "22b224e1a9",
+   "title": "fix(worktree): reclaimers preserve git-ignored .env and quoted untracked files (salvage #120624, port qwen-code#12763)",
+   "files": 5,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 124735,
+   "head": "4ce71dc16d",
+   "title": "fix(agent): Google billing 429s no longer retry as throttles, Gemini throttles no longer bench the key (port can1357/oh-my-pi#13092)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 124774,
+   "head": "e7256b1aed",
+   "title": "feat(acp): installed skills appear in the editor's slash palette and load before the turn (port of minimax-code#244, salvage #122017)",
+   "files": 5,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 124818,
+   "head": "da31e65c1c",
+   "title": "feat(optional-skills): fal-3d \u2014 text-to-3D and image-to-3D meshes via fal.ai (Tripo P2, Meshy 7.1, Hunyuan 3D 3.1, TRELLIS.2)",
+   "files": 6,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 125560,
+   "head": "13ba9b0172",
+   "title": "docs(state): the \"state.db was replaced\" refusal names the replacer and links the recovery guide",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 125823,
+   "head": "aa5ac950d3",
+   "title": "Copilot ACP: an answer that arrives with the CLI's exit is returned, not reported as a crash (port zed#64603)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 125848,
+   "head": "4858bbf4c3",
+   "title": "Egress setup drops unmatchable proxy.extra_allowed_hosts entries with a fix hint instead of a silent 403 (port of nanoclaw#3915)",
+   "files": 5,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 125853,
+   "head": "c8a2444d25",
+   "title": "feat(config): ${VAR:-default} fills unset or empty env refs in config.yaml and MCP entries (port of openclaw#155164)",
+   "files": 6,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 125903,
+   "head": "2683043c67",
+   "title": "Inspired by Poke: /handoff desktop continues a CLI session in the Desktop app; hermes://session/<id> deep links open saved chats (salvage #66647, #76398, #79186, #84683)",
+   "files": 18,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 125958,
+   "head": "61738cd999",
+   "title": "Inspired by Amp: a session can archive and reclaim its own worktree under the prune policy (Desktop, CLI, /worktree remove, REST)",
+   "files": 29,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 126054,
+   "head": "11cdf9b8bc",
+   "title": "fix(video_gen): local image paths work on FAL, 1080p/4k tiers exposed, gateway validation errors surfaced",
+   "files": 6,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 126077,
+   "head": "b4c5d0baa9",
+   "title": "fix(agent-plugins): accept YAML-list allowed-tools in SKILL.md frontmatter",
+   "files": 3,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 126093,
+   "head": "e39c527c99",
+   "title": "fix(plugin-guard): false-positive round (denylist regex literals, localhost curl docs, tone rules, ANSI regex)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 126610,
+   "head": "52e4ea843b",
+   "title": "fix(cron): a chatty job no longer evicts quiet jobs' execution history (per-job floor, salvage #124830)",
+   "files": 3,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 126627,
+   "head": "82dda6c53b",
+   "title": "Background review fork is told which consulted skills are protected before it drafts a patch (\u221240% calls per review)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 126781,
+   "head": "0569a3a0e4",
+   "title": "fix(agent): a streamed chunk carrying text and a tool call no longer drops the tool call (#126758)",
+   "files": 2,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 126911,
+   "head": "efcf517dd4",
+   "title": "Third-party plugins can run in a per-profile plugin host process (plugins.isolation: host)",
+   "files": 22,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 127080,
+   "head": "ba7a8dd681",
+   "title": "fix(sessions): prune keeps the finished subagents of a chat still in use (port kilocode#14502)",
+   "files": 3,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 127181,
+   "head": "0036ea97ca",
+   "title": "fix(google-workspace): docs get no longer drops tables (port cloudflare-os#518)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 127258,
+   "head": "d86fc22cbd",
+   "title": "hermes doctor warns on config.yaml keys Hermes never reads, with did-you-mean (#91876, salvage #94860)",
+   "files": 6,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 127314,
+   "head": "b5d6f36d61",
+   "title": "feat(desktop): Artifacts gallery previews rendered videos as tiles (port of paperclipai/paperclip#13825)",
+   "files": 15,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 127407,
+   "head": "7b54948133",
+   "title": "feat(optional-skills): reladraw \u2014 text diagrams with stated placement, upstream-maintained stub",
+   "files": 5,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 128163,
+   "head": "34e05e93d9",
+   "title": "test(delegate): parent-interrupt case no longer races child 0's own teardown (CI flake test_finite_delegation_outcomes)",
+   "files": 1,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 128674,
+   "head": "b4bd1c6306",
+   "title": "fix(process): stdin writes to background processes pass the dangerous-command guard (salvage #22557)",
+   "files": 3,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 128755,
+   "head": "1497b5d8fa",
+   "title": "OpenRouter cost shows the billed amount, not a table estimate (#105215, salvage #105226 + #76187)",
+   "files": 8,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 128798,
+   "head": "48675bebdf",
+   "title": "feat(cron): monitor jobs can watch a registered tool result (monitor_tool) \u2014 event triggers on connectors/MCP without LLM ticks",
+   "files": 12,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 128939,
+   "head": "d0ec8d05b0",
+   "title": "computer_use can read and write the system clipboard (port of oh-my-openagent#9053)",
+   "files": 8,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 130128,
+   "head": "79e4453e5f",
+   "title": "docs(discord): privileged-intent review threshold is 10,000 users, not 100 servers",
+   "files": 1,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 130137,
+   "head": "25f0434d2f",
+   "title": "feat(cli): hermes -z --output-schema makes one-shot answers schema-shaped JSON (salvage #108421, inspired by Muse Code)",
+   "files": 5,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 130138,
+   "head": "6ae9547104",
+   "title": "fix(cli): credential-bearing prompts stay out of the on-disk prompt history (inspired by Muse Code)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 130141,
+   "head": "ef1bc09cac",
+   "title": "Gateway restart from a cron job or tool no longer writes a service launcher that cannot boot (#130116)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 130142,
+   "head": "0f764ba2e9",
+   "title": "fix: port conflicts name the process holding the port (port cline/cline#14532)",
+   "files": 10,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 130146,
+   "head": "9ec3f0cb3e",
+   "title": "feat(btw): follow-up side questions remember the earlier /btw exchanges (port deepagents#6434)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 130147,
+   "head": "9c52ad8f93",
+   "title": "feat(cron): create/update results preview the next three fire times (port deepagents#6526)",
+   "files": 4,
+   "title_match": false,
+   "file_match": []
+  },
+  {
+   "number": 130160,
+   "head": "cdcc54437e",
+   "title": "Cron jobs accept /model shorthand: aliases resolve at create/edit, ambiguity refused (#126655, builds on #126745)",
+   "files": 7,
+   "title_match": false,
+   "file_match": []
+  }
+ ]
+}

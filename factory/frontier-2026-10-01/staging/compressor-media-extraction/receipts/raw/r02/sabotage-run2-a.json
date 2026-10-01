@@ -1,0 +1,150 @@
+{
+ "head": "c5e8be14b43bf75bcc2e4e8d95f2d4810a7e2779",
+ "base": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+ "narrow_set": [
+  "tests/agent/test_compressor_historical_media.py",
+  "tests/agent/test_compressor_stale_tool_images.py",
+  "tests/agent/test_outbound_stale_vision.py",
+  "tests/agent/test_protected_tail_pressure.py",
+  "tests/agent/test_image_eviction_policy.py",
+  "tests/agent/test_compressor_zero_user_guard.py",
+  "tests/agent/test_image_rejection_fallback.py",
+  "tests/agent/test_iteration_summary_reasoning_details.py",
+  "tests/agent/test_dict_tool_call_args.py",
+  "tests/agent/test_context_token_tracking.py",
+  "tests/agent/test_degenerate_final_recovery.py"
+ ],
+ "wide_set_files": 365,
+ "known_failures": [
+  "tests/agent/lsp/test_workspace.py::test_resolve_workspace_for_file_survives_deleted_cwd",
+  "tests/agent/test_relay_atof_cwd.py::test_run_conversation_exports_session_and_turn_cwds",
+  "tests/agent/test_relay_runtime_plugins.py::test_real_binding_discovers_user_and_ignores_project_config",
+  "tests/agent/test_relay_runtime_plugins.py::test_real_binding_explicit_config_replaces_user_and_ignores_project",
+  "tests/agent/test_relay_runtime_plugins.py::test_real_binding_hands_dynamic_records_to_relay_and_fails_open_on_rejection",
+  "tests/agent/test_relay_runtime_plugins.py::test_real_binding_keeps_two_profile_trajectories_separate_in_shared_exporters",
+  "tests/agent/test_relay_runtime_plugins.py::test_real_binding_leaves_foreign_plugin_host_unchanged",
+  "tests/agent/test_relay_tools.py::test_request_rewrite_reaches_authorized_callback_once",
+  "tests/tools/test_browser_use_harness.py::test_harness_runs_on_an_interpreter_without_its_own_site_packages",
+  "tests/tools/test_fal_sdk.py",
+  "tests/tools/test_local_env_blocklist.py::test_runtime_provenance_is_independent_of_aliases_and_virtual_env[True]",
+  "tests/tools/test_microsoft_graph_auth.py::TestMicrosoftGraphTokenProvider::test_concurrent_calls_share_one_token_fetch[trio]",
+  "tests/tools/test_modal_sandbox_fixes.py::TestDockerHostBindApproval::test_host_bound_docker_requires_approval",
+  "tests/tools/test_plugin_guard.py::TestInstallIntegration::test_caution_plugin_accepted_via_callback[desktop/plugin.js-const",
+  "tests/tools/test_plugin_guard.py::TestInstallIntegration::test_caution_plugin_accepted_via_callback[helper.py-eval('1",
+  "tests/tools/test_plugin_guard.py::TestInstallIntegration::test_clean_plugin_installs",
+  "tests/tools/test_plugin_guard.py::TestInstallIntegration::test_dangerous_plugin_is_blocked",
+  "tests/tools/test_plugin_guard.py::TestInstallIntegration::test_dashboard_install_reports_scan_block",
+  "tests/tools/test_plugin_guard.py::TestInstallIntegration::test_scan_disabled_via_config",
+  "tests/tools/test_tts_deepinfra.py::test_unselected_cloud_credentials_do_not_expose_edge_tool",
+  "tests/tools/test_tts_mistral.py::TestCheckTtsRequirementsMistral::test_mistral_key_missing_returns_false",
+  "tests/tools/test_web_keyless_fallback.py::TestProviderRouting::test_keyless_disabled_falls_through_to_key_error",
+  "tests/tools/test_web_keyless_fallback.py::TestProviderRouting::test_tier_paid_forces_keyed_without_key"
+ ],
+ "baseline_narrow": {
+  "outcome": "GREEN",
+  "rc": 0,
+  "passed": 132,
+  "failed": 0,
+  "files_no_tests": 0,
+  "failed_files": [],
+  "ids": [],
+  "new_ids": [],
+  "new_failed_files_without_ids": []
+ },
+ "rows": [
+  {
+   "id": "facade-import:_rewritten",
+   "mutation": "drop _rewritten from the facade's sibling import",
+   "tests_narrow": {
+    "outcome": "GREEN",
+    "rc": 0,
+    "passed": 132,
+    "failed": 0,
+    "files_no_tests": 0,
+    "failed_files": [],
+    "ids": [],
+    "new_ids": [],
+    "new_failed_files_without_ids": []
+   },
+   "static": {
+    "overall": "PASS",
+    "failed_gates": []
+   },
+   "tests_wide": {
+    "outcome": "GREEN",
+    "rc": 1,
+    "passed": 5407,
+    "failed": 1,
+    "files_no_tests": 0,
+    "failed_files": [
+     "tests/agent/test_relay_atof_cwd.py"
+    ],
+    "ids": [
+     "FAILED tests/agent/test_relay_atof_cwd.py::test_run_conversation_exports_session_and_turn_cwds"
+    ],
+    "new_ids": [],
+    "new_failed_files_without_ids": []
+   },
+   "pinned_by": []
+  },
+  {
+   "id": "hunk:agent/context_compressor.py#deletions",
+   "mutation": "reverse all 3 pure-deletion facade hunks together",
+   "tests_narrow": {
+    "outcome": "GREEN",
+    "rc": 0,
+    "passed": 132,
+    "failed": 0,
+    "files_no_tests": 0,
+    "failed_files": [],
+    "ids": [],
+    "new_ids": [],
+    "new_failed_files_without_ids": []
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "facade_rest"
+    ]
+   },
+   "pinned_by": [
+    "static:facade_rest"
+   ]
+  },
+  {
+   "id": "control:reexport:_replace_image_parts",
+   "mutation": "add _replace_image_parts to the facade's sibling import (a shim)",
+   "tests_narrow": {
+    "outcome": "GREEN",
+    "rc": 0,
+    "passed": 132,
+    "failed": 0,
+    "files_no_tests": 0,
+    "failed_files": [],
+    "ids": [],
+    "new_ids": [],
+    "new_failed_files_without_ids": []
+   },
+   "static": {
+    "overall": "FAIL",
+    "failed_gates": [
+     "no_shim"
+    ]
+   },
+   "pinned_by": [
+    "static:no_shim"
+   ]
+  }
+ ],
+ "summary": {
+  "rows": 3,
+  "tests_red": 0,
+  "green_under_tests_pinned_by_static_only": [
+   "hunk:agent/context_compressor.py#deletions",
+   "control:reexport:_replace_image_parts"
+  ],
+  "unpinned": [
+   "facade-import:_rewritten"
+  ]
+ }
+}

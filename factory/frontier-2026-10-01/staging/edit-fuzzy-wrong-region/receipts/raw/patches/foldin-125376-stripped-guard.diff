@@ -1,0 +1,11 @@
+--- a/tools/fuzzy_match.py
++++ b/tools/fuzzy_match.py
+@@ -264,7 +264,7 @@
+     pattern_lines = pattern.split('\n')
+     content_lines = content.split('\n')
+     n = len(pattern_lines)
+-    if n == 1:
++    if len(pattern.strip().split('\n')) == 1:
+         # ponytail: single-line similarity has no block context; precise
+         # strategies 1-7 already cover whitespace/indent/unicode drift.
+         # Refuse here so wrong-token anchors (trim vs strip) fail loud.

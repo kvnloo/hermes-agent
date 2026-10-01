@@ -1,0 +1,58 @@
+diff --git i/agent/tool_result_projection.py w/agent/tool_result_projection.py
+index a76fb42f76..436152ef3d 100644
+--- i/agent/tool_result_projection.py
++++ w/agent/tool_result_projection.py
+@@ -450,6 +450,43 @@ def _backend_is_remote() -> Optional[bool]:
+         return None
+ 
+ 
++_SIGNED_THINKING_MODES = frozenset({"anthropic_messages", "bedrock_converse"})
++
++
++def _is_signed_thinking(block: Any) -> bool:
++    """A replayable signed thinking block, in any copy Hermes keeps on an assistant row: Anthropic
++    ``{type: thinking | redacted_thinking}`` with ``signature`` / ``data`` (``reasoning_details`` and
++    ``anthropic_content_blocks``), or Bedrock Converse ``reasoningContent`` with ``signature`` /
++    ``redactedContentBase64`` (``bedrock_content_blocks``)."""
++    if not isinstance(block, dict):
++        return False
++    if str(block.get("type") or "").strip().lower() in ("thinking", "redacted_thinking"):
++        return bool(block.get("signature") or block.get("data"))
++    reasoning = block.get("reasoningContent")
++    return isinstance(reasoning, dict) and bool(reasoning.get("signature") or reasoning.get("redactedContentBase64"))
++
++
++def replays_bound_thinking(agent: Any, api_messages: Sequence[Dict[str, Any]]) -> bool:
++    """Whether this request replays signed Claude thinking that a fresh pass would invalidate.
++
++    A signed thinking block is bound to the conversation prefix it was produced over (system,
++    tools and every earlier message). Rewriting an earlier tool row is a history edit: on
++    preserved-thinking models the API drops every later thinking block, or rejects the request
++    on accounts it enforces, and the turn loses that reasoning. Both wires that replay signatures
++    (Messages and Bedrock Converse) are covered, and every copy their converters replay is read.
++    Sticky rows are already part of the bound prefix, so only a FRESH pass is declined here.
++    """
++    if str(getattr(agent, "api_mode", "") or "") not in _SIGNED_THINKING_MODES:
++        return False
++    return any(
++        _is_signed_thinking(block)
++        for msg in api_messages
++        if isinstance(msg, dict) and msg.get("role") == "assistant"
++        for key in ("anthropic_content_blocks", "bedrock_content_blocks", "reasoning_details")
++        for block in (msg.get(key) or ())
++    )
++
++
+ def _resolve_active_env(agent: Any):
+     """Best-effort live terminal env for this agent, or None.
+ 
+@@ -565,6 +602,9 @@ def _project(agent: Any, api_messages: List[Dict[str, Any]], env: Any) -> int:
+ 
+     trigger = trigger_tokens(policy, window, cache_capable)
+     approved = fresh_reclaim >= trigger
++    if approved and planned and replays_bound_thinking(agent, api_messages):
++        approved = False
++        logger.debug("Tool-result projection declined: the request replays signed thinking bound to this prefix")
+     if approved and cache_capable:
+         # The rewrite invalidates the cached prefix from the first stub onward, and that region
+         # is re-prefilled once. Require the reclaim to cover it.

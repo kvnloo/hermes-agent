@@ -1,0 +1,18 @@
+{
+ "id": "xf-E30-P1-8ded06be29",
+ "kind": "work_order",
+ "project": "hermes-agent",
+ "from": "factory-replay-gate staging builder",
+ "to": [
+  "factory"
+ ],
+ "status": "claimed",
+ "civ": {
+  "city_id": "oss:hermes-agent"
+ },
+ "dedupe_key": "frontier:factory-replay-gate",
+ "spec": "E30-P1-8ded06be29.toml",
+ "spec_sha256": "08bf368237b20f35372ecb8e5cf630901419513fb9687c142d07d0cbdb82e181",
+ "queue_rank": null,
+ "staging": "factory-replay-gate"
+}

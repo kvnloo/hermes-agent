@@ -1,0 +1,28 @@
+▶ not activated — using HERMES_PYTHON: $VENV/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 6 test files (~220 tests) under ['tests/agent/test_context_compressor.py', 'tests/agent/test_lean_single_aux_call.py', 'tests/agent/test_compression_rotation_state.py', 'tests/agent/test_context_compressor_summary_continuity.py', 'tests/agent/test_compaction_redaction_boundaries.py', 'tests/agent/test_native_compaction_summary_retention.py']; running with -j 2
+[  3.6% |     8/~220 | ✓8 | ✗0] ✓ tests/agent/test_compaction_redaction_boundaries.py (8✓, 2.6s)
+[ 63.6% |   140/~220 | ✓284 | ✗  0] ✓ tests/agent/test_context_compressor.py (276✓, 28.3s)
+[ 68.2% |   150/~220 | ✓294 | ✗  0] ✓ tests/agent/test_context_compressor_summary_continuity.py (10✓, 2.6s)
+[ 71.4% |   157/~220 | ✓301 | ✗  0] ✓ tests/agent/test_lean_single_aux_call.py (7✓, 2.2s)
+[ 82.3% |   181/~220 | ✓325 | ✗  0] ✓ tests/agent/test_native_compaction_summary_retention.py (24✓, 2.2s)
+[100.0% |   220/~220 | ✓365 | ✗  0] ✓ tests/agent/test_compression_rotation_state.py (40✓, 101.1s)
+
+=== Summary: 6 files, 365 tests passed, 0 failed (100% complete) in 101.2s (2 workers) ===
+  Durations cached to test_durations.json (6 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   6
+  Total subprocess CPU-wall: 139.0s  (runner wall: 101.2s, parallelism: 2x)
+  P50: 2.65s  P90: 101.13s  P95: 101.13s  P99: 101.13s  Max: 101.13s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+    101.13s  tests/agent/test_compression_rotation_state.py
+     28.30s  tests/agent/test_context_compressor.py
+      2.65s  tests/agent/test_compaction_redaction_boundaries.py
+      2.59s  tests/agent/test_context_compressor_summary_continuity.py
+      2.18s  tests/agent/test_native_compaction_summary_retention.py
+      2.15s  tests/agent/test_lean_single_aux_call.py

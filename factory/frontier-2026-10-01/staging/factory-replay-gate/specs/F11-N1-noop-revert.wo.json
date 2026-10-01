@@ -1,0 +1,18 @@
+{
+ "id": "xf-F11-N1-noop-revert",
+ "kind": "work_order",
+ "project": "hermes-agent",
+ "from": "factory-replay-gate staging builder",
+ "to": [
+  "factory"
+ ],
+ "status": "claimed",
+ "civ": {
+  "city_id": "oss:hermes-agent"
+ },
+ "dedupe_key": "frontier:factory-replay-gate",
+ "spec": "F11-N1-noop-revert.toml",
+ "spec_sha256": "08806da251366ab3a92782cc86b11243f01c1fc7e851595714dcf13b8ccf69f1",
+ "queue_rank": null,
+ "staging": "factory-replay-gate"
+}

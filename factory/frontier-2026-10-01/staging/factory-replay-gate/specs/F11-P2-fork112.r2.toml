@@ -1,0 +1,31 @@
+xf_spec = 1
+id = "F11-P2-fork112"
+rev = 2
+# rev 2: rev 1's first marker quoted the untruncated repr; pytest -q prints ('killed', 'p...ss.kill', -15), so RED read as a marker mismatch (receipts/pass1/F11-P2-fork112.json).
+kind = "redgreen"
+issue = "kvnloo/hermes-agent#322"
+ai_assistance = "Spec and runner written with Claude Code (Opus 5.5); disclosed per repository policy"
+origin_refs = ["kvnloo/hermes-agent#112"]
+expected = "KEEP (4 columns PASS)"
+[base]
+repo = "NousResearch/hermes-agent"
+pin = "572e4f4fad32bbdcfc948fb2ec833177ed5734c0"
+[head]
+commit = "83190e3859755602629b06017891152788e3d728"
+merge_onto_base = true
+[probe]
+kind = "pytest"
+files = ["tests/tools/test_process_registry.py"]
+reps = 3
+jobs = 2
+timeout_s = 900
+[oracle]
+red_markers = ["assert ('exited', '', 0) == ('killed', ", "assert ('exited', '', -15) == ('killed', 'kill_all', -15)"]
+sabotage = "per_hunk"
+adjacent = ["tests/tools/test_notify_on_complete.py", "tests/tools/test_kill_verify_tree_death.py", "tests/tools/test_process_registry_list_exit.py"]
+[ownership]
+verdict = "clear"
+searched_at = "2026-09-30"
+queries = ["completion_queue stale killed", "kill_all exited completion_reason"]
+[outputs]
+not_tested = ["full test suite", "real provider responses", "kernel network namespace (in-process guard only)"]

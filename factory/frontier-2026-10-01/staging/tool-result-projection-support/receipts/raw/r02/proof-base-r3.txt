@@ -1,0 +1,225 @@
+▶ not activated — using HERMES_PYTHON: $PY
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~2 tests) under ['tests/e2e/core/history/test_tool_result_projection_wire.py']; running with -j 2
+[100.0% |     2/~2 | ✓1 | ✗1] ✗ tests/e2e/core/history/test_tool_result_projection_wire.py (1✓ 1✗, 32.1s)
+
+  ╔╍ Failed: tests/e2e/core/history/test_tool_result_projection_wire.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=projection-wire model=fake-model provider=custom platform=cli history=40 msg='read notes_10.txt and remember it'
+  ║ INFO     agent.conversation_loop:turn_usage.py:205 API call #21: model=fake-model provider=custom in=100 out=10 total=110 latency=0.0s id=chatcmpl-fake
+  ║ INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.02s, 23624 chars)
+  ║ INFO     agent.conversation_loop:turn_usage.py:205 API call #22: model=fake-model provider=custom in=100 out=20 total=120 latency=0.0s id=chatcmpl-fake
+  ║ INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=fake-model api_calls=2/9223372036854775807 budget=2/9223372036854775807 tool_turns=11 last_msg_role=assistant response_len=13 session=projection-wire
+  ║ INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=projection-wire model=fake-model provider=custom platform=cli history=44 msg='read notes_11.txt and remember it'
+  ║ INFO     agent.conversation_loop:turn_usage.py:205 API call #23: model=fake-model provider=custom in=100 out=10 total=110 latency=0.0s id=chatcmpl-fake
+  ║ INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.01s, 23624 chars)
+  ║ INFO     agent.conversation_loop:turn_usage.py:205 API call #24: model=fake-model provider=custom in=100 out=20 total=120 latency=0.0s id=chatcmpl-fake
+  ║ INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=fake-model api_calls=2/9223372036854775807 budget=2/9223372036854775807 tool_turns=12 last_msg_role=assistant response_len=13 session=projection-wire
+  ║ INFO     run_agent:client_lifecycle.py:206 OpenAI client closed (agent_close, shared=True, tcp_force_closed=0) thread=MainThread:139683223010176 provider=custom base_url=http://127.0.0.1:18809/v1 model=fake-model
+  ║ INFO     run_agent:client_lifecycle.py:206 OpenAI client closed (agent_close, shared=False, tcp_force_closed=0) thread=MainThread:139683223010176 provider=custom base_url=http://127.0.0.1:18809/v1 model=fake-model
+  ║ INFO     hermes_cli.mem_trim:mem_trim.py:179 memory trim: reason=agent close malloc_trim=1 rss_kib=208796->206336 rss_anon_kib=176888->174428 threads=7 duration_ms=241.1
+  ║ INFO     run_agent:agent_runtime_helpers.py:1990 OpenAI client created (agent_init, shared=True) thread=MainThread:139683223010176 provider=custom base_url=http://127.0.0.1:18809/v1 model=fake-model
+  ║ INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=projection-wire model=fake-model provider=custom platform=cli history=48 msg='read notes_12.txt and remember it'
+  ║ INFO     run_agent:agent_runtime_helpers.py:1990 OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-56 (<lambda>):139682797053632 provider=custom base_url=http://127.0.0.1:18809/v1 model=fake-model
+  ║ INFO     agent.conversation_loop:turn_usage.py:205 API call #1: model=fake-model provider=custom in=100 out=10 total=110 latency=0.0s id=chatcmpl-fake
+  ║ INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.01s, 23624 chars)
+  ║ INFO     agent.conversation_loop:turn_usage.py:205 API call #2: model=fake-model provider=custom in=100 out=20 total=120 latency=0.0s id=chatcmpl-fake
+  ║ INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=fake-model api_calls=2/9223372036854775807 budget=2/9223372036854775807 tool_turns=13 last_msg_role=assistant response_len=13 session=projection-wire
+  ║ INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=projection-wire model=fake-model provider=custom platform=cli history=52 msg='read notes_13.txt and remember it'
+  ║ INFO     agent.conversation_loop:turn_usage.py:205 API call #3: model=fake-model provider=custom in=100 out=10 total=110 latency=0.0s id=chatcmpl-fake
+  ║ INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.01s, 23624 chars)
+  ║ INFO     agent.conversation_loop:turn_usage.py:205 API call #4: model=fake-model provider=custom in=100 out=20 total=120 latency=0.0s id=chatcmpl-fake
+  ║ INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=fake-model api_calls=2/9223372036854775807 budget=2/9223372036854775807 tool_turns=14 last_msg_role=assistant response_len=13 session=projection-wire
+  ║ INFO     run_agent:client_lifecycle.py:206 OpenAI client closed (agent_close, shared=True, tcp_force_closed=0) thread=MainThread:139683223010176 provider=custom base_url=http://127.0.0.1:18809/v1 model=fake-model
+  ║ INFO     run_agent:client_lifecycle.py:206 OpenAI client closed (agent_close, shared=False, tcp_force_closed=0) thread=MainThread:139683223010176 provider=custom base_url=http://127.0.0.1:18809/v1 model=fake-model
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/e2e/core/history/test_tool_result_projection_wire.py::test_projection_breaks_the_prefix_once_per_paid_batch_and_never_undoes_itself
+  ║ 1 failed, 1 passed in 12.31s
+  ║
+  ║  Repro: python -m pytest tests/e2e/core/history/test_tool_result_projection_wire.py -q
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 32.2s (2 workers) ===
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 32.1s  (runner wall: 32.2s, parallelism: 2x)
+  P50: 32.11s  P90: 32.11s  P95: 32.11s  P99: 32.11s  Max: 32.11s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+     32.11s  tests/e2e/core/history/test_tool_result_projection_wire.py
+
+=== Failure output ===
+
+--- tests/e2e/core/history/test_tool_result_projection_wire.py ---
+F.                                                                       [100%]
+=================================== FAILURES ===================================
+_ test_projection_breaks_the_prefix_once_per_paid_batch_and_never_undoes_itself _
+
+world = {'srv': <tests.fakes.fake_llm_provider.FakeLLMServer object at 0x7f0a822cc990>, 'script': <tests.e2e.core.history._hel...kdir': PosixPath('/var$PYTEST_TMP/pytest-0/test_projection_breaks_the_pre0/work')}
+
+    def test_projection_breaks_the_prefix_once_per_paid_batch_and_never_undoes_itself(world):
+        srv, script, hermes_home = world["srv"], world["script"], world["hermes_home"]
+        paths = write_corpus(world["workdir"], TURNS + 2)
+    
+        session = InProcessSession(srv.base_url, hermes_home, "projection-wire")
+        try:
+            run_read_turns(session, script, paths, 0, TURNS)
+            sid = session.sid
+        finally:
+            session.close()
+        before_resume = len(srv.main_requests())
+    
+        # A fresh agent resumes the session (new process state, same durable transcript).
+        resumed = InProcessSession(srv.base_url, hermes_home, sid)
+        resumed.history = views(hermes_home, sid)[0]
+        try:
+            run_read_turns(resumed, script, paths, TURNS, TURNS + 2)
+        finally:
+            resumed.close()
+    
+        main = srv.main_requests()
+        ledger = projection_ledger(main)
+        passes = ledger["passes"]
+>       assert passes, ("no tool result was ever archived on the wire: "
+                        f"{len(main)} requests, {len(ledger['first_seen'])} tool rows")
+E       AssertionError: no tool result was ever archived on the wire: 28 requests, 14 tool rows
+E       assert {}
+
+$WT/tests/e2e/core/history/test_tool_result_projection_wire.py:148: AssertionError
+----------------------------- Captured stdout call -----------------------------
+  ┊ 📖 read      notes_00.txt  0.3s
+  ┊ 📖 read      notes_01.txt  0.0s
+  ┊ 📖 read      notes_02.txt  0.0s
+  ┊ 📖 read      notes_03.txt  0.0s
+  ┊ 📖 read      notes_04.txt  0.0s
+  ┊ 📖 read      notes_05.txt  0.0s
+  ┊ 📖 read      notes_06.txt  0.0s
+  ┊ 📖 read      notes_07.txt  0.0s
+  ┊ 📖 read      notes_08.txt  0.0s
+  ┊ 📖 read      notes_09.txt  0.0s
+  ┊ 📖 read      notes_10.txt  0.0s
+  ┊ 📖 read      notes_11.txt  0.0s
+  ┊ 📖 read      notes_12.txt  0.0s
+  ┊ 📖 read      notes_13.txt  0.0s
+------------------------------ Captured log call -------------------------------
+INFO     run_agent:agent_runtime_helpers.py:1990 OpenAI client created (agent_init, shared=True) thread=MainThread:139683223010176 provider=custom base_url=http://127.0.0.1:18809/v1 model=fake-model
+INFO     tools.registry:registry.py:381 check_fn check_browser_back_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn _browser_cdp_check returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_click_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn _browser_dialog_check returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn is_browser_use_cli_mode returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_navigate_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_press_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_scroll_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_snapshot_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_type_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_browser_vision_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_computer_use_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_cronjob_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn check_image_generation_requirements returned False; dependent tools will be unavailable this turn
+INFO     tools.registry:registry.py:381 check_fn <lambda> returned False; dependent tools will be unavailable this turn
+INFO     agent.auxiliary_client:auxiliary_client.py:5630 Vision auto-detect: using main provider custom (fake-model)
+INFO     tools.tool_search:tool_search.py:379 tool_search activated (tier 1): 16 core/visible tools kept, 3 deferred (~1684 tokens), listing full (budget ~4000 tokens)
+WARNING  agent.relay_runtime:relay_runtime.py:328 Hermes Relay plugin initialization failed: initialize() got an unexpected keyword argument 'additional_plugins_toml'
+Traceback (most recent call last):
+  File "$WT/agent/relay_runtime.py", line 318, in _activate
+    if not self._initialize(relay):
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WT/agent/relay_runtime.py", line 346, in _initialize
+    activation = _resolve_plugin_awaitable(relay.plugin.initialize({}, additional_plugins_toml=config_path))
+                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: initialize() got an unexpected keyword argument 'additional_plugins_toml'
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=projection-wire model=fake-model provider=custom platform=cli history=0 msg='read notes_00.txt and remember it'
+INFO     run_agent:agent_runtime_helpers.py:1990 OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-4 (<lambda>):139682994190016 provider=custom base_url=http://127.0.0.1:18809/v1 model=fake-model
+INFO     agent.conversation_loop:turn_usage.py:205 API call #1: model=fake-model provider=custom in=100 out=10 total=110 latency=0.4s id=chatcmpl-fake
+INFO     tools.file_tools:file_tools.py:303 Creating new local environment for task default...
+INFO     tools.environments.base:base.py:372 Session snapshot created (session=20ad3b076b3f, cwd=/var$PYTEST_TMP/pytest-0/test_projection_breaks_the_pre0/work)
+INFO     tools.file_tools:file_tools.py:370 local environment ready for task default
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.25s, 23624 chars)
+INFO     agent.conversation_loop:turn_usage.py:205 API call #2: model=fake-model provider=custom in=100 out=20 total=120 latency=0.0s id=chatcmpl-fake
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=fake-model api_calls=2/9223372036854775807 budget=2/9223372036854775807 tool_turns=1 last_msg_role=assistant response_len=13 session=projection-wire
+INFO     agent.auxiliary_client:auxiliary_client.py:4609 Auxiliary auto-detect: using main provider custom (fake-model)
+INFO     agent.auxiliary_client:auxiliary_client.py:7385 Auxiliary title_generation: using custom (fake-model) at http://127.0.0.1:18809/v1/
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=projection-wire model=fake-model provider=custom platform=cli history=4 msg='read notes_01.txt and remember it'
+INFO     agent.conversation_loop:turn_usage.py:205 API call #3: model=fake-model provider=custom in=100 out=10 total=110 latency=0.0s id=chatcmpl-fake
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.02s, 23624 chars)
+INFO     agent.conversation_loop:turn_usage.py:205 API call #4: model=fake-model provider=custom in=100 out=20 total=120 latency=0.0s id=chatcmpl-fake
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=fake-model api_calls=2/9223372036854775807 budget=2/9223372036854775807 tool_turns=2 last_msg_role=assistant response_len=13 session=projection-wire
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=projection-wire model=fake-model provider=custom platform=cli history=8 msg='read notes_02.txt and remember it'
+INFO     agent.conversation_loop:turn_usage.py:205 API call #5: model=fake-model provider=custom in=100 out=10 total=110 latency=0.0s id=chatcmpl-fake
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.02s, 23624 chars)
+INFO     agent.conversation_loop:turn_usage.py:205 API call #6: model=fake-model provider=custom in=100 out=20 total=120 latency=0.0s id=chatcmpl-fake
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=fake-model api_calls=2/9223372036854775807 budget=2/9223372036854775807 tool_turns=3 last_msg_role=assistant response_len=13 session=projection-wire
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=projection-wire model=fake-model provider=custom platform=cli history=12 msg='read notes_03.txt and remember it'
+INFO     agent.conversation_loop:turn_usage.py:205 API call #7: model=fake-model provider=custom in=100 out=10 total=110 latency=0.0s id=chatcmpl-fake
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.02s, 23624 chars)
+INFO     agent.conversation_loop:turn_usage.py:205 API call #8: model=fake-model provider=custom in=100 out=20 total=120 latency=0.0s id=chatcmpl-fake
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=fake-model api_calls=2/9223372036854775807 budget=2/9223372036854775807 tool_turns=4 last_msg_role=assistant response_len=13 session=projection-wire
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=projection-wire model=fake-model provider=custom platform=cli history=16 msg='read notes_04.txt and remember it'
+INFO     agent.conversation_loop:turn_usage.py:205 API call #9: model=fake-model provider=custom in=100 out=10 total=110 latency=0.0s id=chatcmpl-fake
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.02s, 23624 chars)
+INFO     agent.conversation_loop:turn_usage.py:205 API call #10: model=fake-model provider=custom in=100 out=20 total=120 latency=0.0s id=chatcmpl-fake
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=fake-model api_calls=2/9223372036854775807 budget=2/9223372036854775807 tool_turns=5 last_msg_role=assistant response_len=13 session=projection-wire
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=projection-wire model=fake-model provider=custom platform=cli history=20 msg='read notes_05.txt and remember it'
+INFO     agent.conversation_loop:turn_usage.py:205 API call #11: model=fake-model provider=custom in=100 out=10 total=110 latency=0.0s id=chatcmpl-fake
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.02s, 23624 chars)
+INFO     agent.conversation_loop:turn_usage.py:205 API call #12: model=fake-model provider=custom in=100 out=20 total=120 latency=0.0s id=chatcmpl-fake
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=fake-model api_calls=2/9223372036854775807 budget=2/9223372036854775807 tool_turns=6 last_msg_role=assistant response_len=13 session=projection-wire
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=projection-wire model=fake-model provider=custom platform=cli history=24 msg='read notes_06.txt and remember it'
+INFO     agent.conversation_loop:turn_usage.py:205 API call #13: model=fake-model provider=custom in=100 out=10 total=110 latency=0.0s id=chatcmpl-fake
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.02s, 23624 chars)
+INFO     agent.conversation_loop:turn_usage.py:205 API call #14: model=fake-model provider=custom in=100 out=20 total=120 latency=0.0s id=chatcmpl-fake
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=fake-model api_calls=2/9223372036854775807 budget=2/9223372036854775807 tool_turns=7 last_msg_role=assistant response_len=13 session=projection-wire
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=projection-wire model=fake-model provider=custom platform=cli history=28 msg='read notes_07.txt and remember it'
+INFO     agent.conversation_loop:turn_usage.py:205 API call #15: model=fake-model provider=custom in=100 out=10 total=110 latency=0.0s id=chatcmpl-fake
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.01s, 23624 chars)
+INFO     agent.conversation_loop:turn_usage.py:205 API call #16: model=fake-model provider=custom in=100 out=20 total=120 latency=0.0s id=chatcmpl-fake
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=fake-model api_calls=2/9223372036854775807 budget=2/9223372036854775807 tool_turns=8 last_msg_role=assistant response_len=13 session=projection-wire
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=projection-wire model=fake-model provider=custom platform=cli history=32 msg='read notes_08.txt and remember it'
+INFO     agent.conversation_loop:turn_usage.py:205 API call #17: model=fake-model provider=custom in=100 out=10 total=110 latency=0.0s id=chatcmpl-fake
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.02s, 23624 chars)
+INFO     agent.conversation_loop:turn_usage.py:205 API call #18: model=fake-model provider=custom in=100 out=20 total=120 latency=0.0s id=chatcmpl-fake
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=fake-model api_calls=2/9223372036854775807 budget=2/9223372036854775807 tool_turns=9 last_msg_role=assistant response_len=13 session=projection-wire
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=projection-wire model=fake-model provider=custom platform=cli history=36 msg='read notes_09.txt and remember it'
+INFO     agent.conversation_loop:turn_usage.py:205 API call #19: model=fake-model provider=custom in=100 out=10 total=110 latency=0.0s id=chatcmpl-fake
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.02s, 23624 chars)
+INFO     agent.conversation_loop:turn_usage.py:205 API call #20: model=fake-model provider=custom in=100 out=20 total=120 latency=0.0s id=chatcmpl-fake
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=fake-model api_calls=2/9223372036854775807 budget=2/9223372036854775807 tool_turns=10 last_msg_role=assistant response_len=13 session=projection-wire
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=projection-wire model=fake-model provider=custom platform=cli history=40 msg='read notes_10.txt and remember it'
+INFO     agent.conversation_loop:turn_usage.py:205 API call #21: model=fake-model provider=custom in=100 out=10 total=110 latency=0.0s id=chatcmpl-fake
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.02s, 23624 chars)
+INFO     agent.conversation_loop:turn_usage.py:205 API call #22: model=fake-model provider=custom in=100 out=20 total=120 latency=0.0s id=chatcmpl-fake
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=fake-model api_calls=2/9223372036854775807 budget=2/9223372036854775807 tool_turns=11 last_msg_role=assistant response_len=13 session=projection-wire
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=projection-wire model=fake-model provider=custom platform=cli history=44 msg='read notes_11.txt and remember it'
+INFO     agent.conversation_loop:turn_usage.py:205 API call #23: model=fake-model provider=custom in=100 out=10 total=110 latency=0.0s id=chatcmpl-fake
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.01s, 23624 chars)
+INFO     agent.conversation_loop:turn_usage.py:205 API call #24: model=fake-model provider=custom in=100 out=20 total=120 latency=0.0s id=chatcmpl-fake
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=fake-model api_calls=2/9223372036854775807 budget=2/9223372036854775807 tool_turns=12 last_msg_role=assistant response_len=13 session=projection-wire
+INFO     run_agent:client_lifecycle.py:206 OpenAI client closed (agent_close, shared=True, tcp_force_closed=0) thread=MainThread:139683223010176 provider=custom base_url=http://127.0.0.1:18809/v1 model=fake-model
+INFO     run_agent:client_lifecycle.py:206 OpenAI client closed (agent_close, shared=False, tcp_force_closed=0) thread=MainThread:139683223010176 provider=custom base_url=http://127.0.0.1:18809/v1 model=fake-model
+INFO     hermes_cli.mem_trim:mem_trim.py:179 memory trim: reason=agent close malloc_trim=1 rss_kib=208796->206336 rss_anon_kib=176888->174428 threads=7 duration_ms=241.1
+INFO     run_agent:agent_runtime_helpers.py:1990 OpenAI client created (agent_init, shared=True) thread=MainThread:139683223010176 provider=custom base_url=http://127.0.0.1:18809/v1 model=fake-model
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=projection-wire model=fake-model provider=custom platform=cli history=48 msg='read notes_12.txt and remember it'
+INFO     run_agent:agent_runtime_helpers.py:1990 OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-56 (<lambda>):139682797053632 provider=custom base_url=http://127.0.0.1:18809/v1 model=fake-model
+INFO     agent.conversation_loop:turn_usage.py:205 API call #1: model=fake-model provider=custom in=100 out=10 total=110 latency=0.0s id=chatcmpl-fake
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.01s, 23624 chars)
+INFO     agent.conversation_loop:turn_usage.py:205 API call #2: model=fake-model provider=custom in=100 out=20 total=120 latency=0.0s id=chatcmpl-fake
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=fake-model api_calls=2/9223372036854775807 budget=2/9223372036854775807 tool_turns=13 last_msg_role=assistant response_len=13 session=projection-wire
+INFO     agent.turn_context:turn_context.py:1062 conversation turn: session=projection-wire model=fake-model provider=custom platform=cli history=52 msg='read notes_13.txt and remember it'
+INFO     agent.conversation_loop:turn_usage.py:205 API call #3: model=fake-model provider=custom in=100 out=10 total=110 latency=0.0s id=chatcmpl-fake
+INFO     agent.tool_executor:tool_executor.py:1090 tool read_file completed (0.01s, 23624 chars)
+INFO     agent.conversation_loop:turn_usage.py:205 API call #4: model=fake-model provider=custom in=100 out=20 total=120 latency=0.0s id=chatcmpl-fake
+INFO     agent.conversation_loop:turn_finalizer.py:368 Turn ended: reason=text_response(finish_reason=stop) model=fake-model api_calls=2/9223372036854775807 budget=2/9223372036854775807 tool_turns=14 last_msg_role=assistant response_len=13 session=projection-wire
+INFO     run_agent:client_lifecycle.py:206 OpenAI client closed (agent_close, shared=True, tcp_force_closed=0) thread=MainThread:139683223010176 provider=custom base_url=http://127.0.0.1:18809/v1 model=fake-model
+INFO     run_agent:client_lifecycle.py:206 OpenAI client closed (agent_close, shared=False, tcp_force_closed=0) thread=MainThread:139683223010176 provider=custom base_url=http://127.0.0.1:18809/v1 model=fake-model
+=========================== short test summary info ============================
+FAILED tests/e2e/core/history/test_tool_result_projection_wire.py::test_projection_breaks_the_prefix_once_per_paid_batch_and_never_undoes_itself
+1 failed, 1 passed in 12.31s
+
+=== 1 file with test failures (1 test failed) ===
+  tests/e2e/core/history/test_tool_result_projection_wire.py  (1 test failed)

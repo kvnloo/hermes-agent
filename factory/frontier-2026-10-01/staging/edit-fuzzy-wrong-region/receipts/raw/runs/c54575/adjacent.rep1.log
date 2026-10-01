@@ -1,0 +1,44 @@
+# arm=c54575 rep=1 sabotage=none head=01bf8d379e fuzzy_match.py sha256[:16]=fc55b3d0563cee1e
+# files: tests/tools/test_fuzzy_match.py tests/tools/test_file_tools_live.py tests/tools/test_file_operations.py tests/tools/test_file_operations_edge_cases.py tests/tools/test_file_operations_delete.py tests/tools/test_patch_parser.py tests/tools/test_patch_already_applied.py tests/tools/test_patch_multimatch_locations.py tests/tools/test_patch_ws_diagnosis.py tests/tools/test_patch_v4a_gate.py tests/tools/test_file_tools.py tests/acp_adapter/test_edit_approval.py tests/hermes_cli/test_shared_metrics_harness.py
+▶ not activated — using HERMES_PYTHON: <venv-python>
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 13 test files (~268 tests) under ['tests/tools/test_fuzzy_match.py', 'tests/tools/test_file_tools_live.py', 'tests/tools/test_file_operations.py', 'tests/tools/test_file_operations_edge_cases.py', 'tests/tools/test_file_operations_delete.py', 'tests/tools/test_patch_parser.py', 'tests/tools/test_patch_already_applied.py', 'tests/tools/test_patch_multimatch_locations.py', 'tests/tools/test_patch_ws_diagnosis.py', 'tests/tools/test_patch_v4a_gate.py', 'tests/tools/test_file_tools.py', 'tests/acp_adapter/test_edit_approval.py', 'tests/hermes_cli/test_shared_metrics_harness.py']; running with -j 2
+[  2.2% |     6/~268 | ✓6 | ✗0] ✓ tests/acp_adapter/test_edit_approval.py (6✓, 2.8s)
+[ 22.0% |    59/~268 | ✓57 | ✗ 0] ✓ tests/tools/test_file_operations.py (51✓ 6s, 4.2s)
+[ 26.9% |    72/~268 | ✓83 | ✗ 0] ✓ tests/hermes_cli/test_shared_metrics_harness.py (26✓, 7.5s)
+[ 34.3% |    92/~268 | ✓103 | ✗  0] ✓ tests/tools/test_file_operations_edge_cases.py (20✓, 3.4s)
+[ 35.4% |    95/~268 | ✓113 | ✗  0] ✓ tests/tools/test_file_operations_delete.py (10✓, 5.1s)
+[ 51.5% |   138/~268 | ✓154 | ✗  0] ✓ tests/tools/test_file_tools.py (41✓ 2s, 5.0s)
+[ 56.7% |   152/~268 | ✓168 | ✗  0] ✓ tests/tools/test_file_tools_live.py (14✓, 6.6s)
+[ 77.6% |   208/~268 | ✓224 | ✗  0] ✓ tests/tools/test_fuzzy_match.py (56✓, 3.5s)
+[ 78.7% |   211/~268 | ✓227 | ✗  0] ✓ tests/tools/test_patch_multimatch_locations.py (3✓, 1.9s)
+[ 91.8% |   246/~268 | ✓262 | ✗  0] ✓ tests/tools/test_patch_parser.py (35✓, 2.9s)
+[ 97.0% |   260/~268 | ✓276 | ✗  0] ✓ tests/tools/test_patch_already_applied.py (14✓, 5.4s)
+[ 98.5% |   264/~268 | ✓280 | ✗  0] ✓ tests/tools/test_patch_ws_diagnosis.py (4✓, 2.2s)
+[100.0% |   268/~268 | ✓284 | ✗  0] ✓ tests/tools/test_patch_v4a_gate.py (4✓, 3.5s)
+
+=== Summary: 13 files, 284 tests passed, 0 failed, 8 skipped (100% complete) in 27.6s (2 workers) ===
+
+  note: platforms('windows') tests (in 2 files) were SKIPPED on this host (linux); they run on the Windows Python-tests lane.
+  Durations cached to test_durations.json (13 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   13
+  Total subprocess CPU-wall: 53.9s  (runner wall: 27.6s, parallelism: 2x)
+  P50: 3.51s  P90: 6.61s  P95: 7.45s  P99: 7.45s  Max: 7.45s
+  <1s: 0 files (0%)  <2s: 1 files (8%)
+  Top 10 slowest:
+      7.45s  tests/hermes_cli/test_shared_metrics_harness.py
+      6.61s  tests/tools/test_file_tools_live.py
+      5.39s  tests/tools/test_patch_already_applied.py
+      5.14s  tests/tools/test_file_operations_delete.py
+      5.00s  tests/tools/test_file_tools.py
+      4.25s  tests/tools/test_file_operations.py
+      3.51s  tests/tools/test_patch_v4a_gate.py
+      3.45s  tests/tools/test_fuzzy_match.py
+      3.38s  tests/tools/test_file_operations_edge_cases.py
+      2.91s  tests/tools/test_patch_parser.py
+# rc=0

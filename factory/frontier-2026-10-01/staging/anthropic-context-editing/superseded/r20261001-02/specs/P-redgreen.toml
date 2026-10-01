@@ -1,0 +1,87 @@
+xf_spec = 1
+id = "P-redgreen"
+rev = 2                          # rev 1 = run r20261001-01 on 572e4f4fad (not pre-registered); rev 2 = this file, written before run r20261001-02
+staging = "anthropic-context-editing"
+catalog_refs = ["F09"]
+feature = "anthropic-context-editing"
+kind = "redgreen"
+queue_rank = 0                   # owner-set (C2); unranked
+hypothesis_refs = ["NousResearch#526", "NousResearch#528", "NousResearch#1147"]
+priors = []
+
+[contract]
+question = "Does main send no context_management / context-management beta on the native Anthropic route when compression.anthropic_context_editing is true, and does the staging head send it and recover from a structured 400 by disabling it and retrying once?"
+hypothesis = "main ignores the key (2 flag-on cases RED); the head passes all 3 cases"
+varied = "tree"
+fixed = ["contract test blob 208fb8a1f3", "SDK-oracle fake blob e46bb9b439", "venv interpreter", "isolated HOME/HERMES_HOME"]
+falsifier = "the flag-on cases pass on main (no live need -> SUPERSEDED_ON_MAIN), or the head is not GREEN 3/3, or no behavioural hunk re-REDs when reverted"
+kill = "falsifier met on the declared base"
+observer_effect = "none: real AIAgent loop; only the vendor HTTP boundary is replaced by the loopback fake"
+
+[class]
+cost = "$0"
+tier = "T1"
+lane = "cpu"
+evidence_class = "mechanism"
+route_if_keep = "core-leaf"
+route_scope = "native Anthropic API, Claude models"
+harness = { name = "hermes", editor_abi = "n/a", surface = "AIAgent.run_conversation over TLS-intercepted api.anthropic.com" }
+
+[safety]
+net = "loopback only"
+data_class = "public"
+cli_entrypoint = false
+allow_exec = ["bash scripts/run_tests.sh"]
+owner_decisions = []
+
+[base]
+repo = "NousResearch/hermes-agent"
+pin = "aea969677c60a1bb72fe227fdfb98f196a2092cc"
+
+[[arms]]
+id = "base"
+tree = "@base"
+
+[[arms]]
+id = "head"
+branch = "staging/anthropic-context-editing"
+head = "b83e778103d36c48c7736bae07c01658dfb97158"
+parent = "@base"
+
+[inject]
+patches = ["tests/agent/test_anthropic_context_editing.py copied from the head onto the base checkout"]
+carrier_tests = []
+
+[probe]
+kind = "pytest"
+cmd = "HOME=<testhome> HERMES_HOME=<testhome>/.hermes HERMES_PYTHON=<venv-python> bash scripts/run_tests.sh -j 2 {files} -q"
+files = ["tests/agent/test_anthropic_context_editing.py"]
+reps = 3
+escalate_to = 3
+order = "base then head"
+timeout_s = 900
+
+[oracle]
+type = "gate"
+red_on = "base"
+red_marker = "assert 'context-management-2025-06-27' in [...] ; assert [False, False] == [True, False, False]"
+green_on = ["head"]
+production_seam = { file = "agent/anthropic_context_editing.py", symbols = ["anthropic_context_management"] }
+sabotage = "per_hunk (harness/sabotage.py, 12 behavioural hunks); >=1 must re-RED; unpinned hunks reported"
+adjacent = { files = ["tests/agent/test_anthropic_adapter.py", "tests/hermes_cli/test_fast_command.py", "tests/agent/test_fast_mode_auto.py", "tests/agent/test_native_compaction.py", "tests/agent/test_nous_portal_anthropic_wire.py", "tests/gateway/test_agent_cache.py", "tests/tui_gateway/test_compression_config_hot_reload.py", "tests/hermes_cli/test_config_edit_seed.py", "tests/hermes_cli/test_config_unversioned_migration.py", "tests/agent/test_413_compression.py", "tests/agent/transports/test_transport.py", "tests/agent/test_anthropic_stream_fallbacks.py", "tests/agent/test_codex_token_expired_replay_recovery.py", "tests/agent/test_error_classifier.py", "tests/e2e/core/providers/test_anthropic_oracle.py"], rule = "identical pass/fail set to base" }
+decision_rule = "KEEP iff base shows 2 failed / 3 with both red markers, head shows 3/3 passed in each of 3 reps, at least one sabotage hunk re-REDs, and the adjacent pass/fail counts are identical on base and head."
+
+guards = ["G-guards"]
+invalidate_on = ["agent/anthropic_adapter.py", "agent/chat_completion_helpers.py", "agent/turn_recovery.py", "agent/agent_init.py", "agent/transports/anthropic.py", "agent/native_compaction.py", "agent/anthropic_endpoints.py", "tests/fakes/providers/anthropic_messages.py"]
+
+[outputs]
+public = ["per-arm counts", "assertion text", "shas"]
+private = []
+not_tested = ["full test suite", "real Anthropic API"]
+
+[budget]
+usd = 0
+wall_s = 3600
+cpu_core_s = 7200
+max_cells = 40
+lease_hours = 24

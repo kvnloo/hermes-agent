@@ -1,0 +1,178 @@
+{
+ "base": {
+  "c93717_markdown_weak_middle": {
+   "got": "applied:block_anchor",
+   "want": "refuse",
+   "ok": false
+  },
+  "c126502_markdown_lookalike": {
+   "got": "applied:block_anchor",
+   "want": "refuse",
+   "ok": false
+  },
+  "main_escape_drift_apostrophe": {
+   "got": "refused:drift-diag",
+   "want": "drift-diag",
+   "ok": true
+  },
+  "c93717_backslash_diag_weak_anchor": {
+   "got": "refused:drift-diag",
+   "want": "drift-diag",
+   "ok": true
+  }
+ },
+ "c54575": {
+  "c93717_markdown_weak_middle": {
+   "got": "refused:no-match",
+   "want": "refuse",
+   "ok": true
+  },
+  "c126502_markdown_lookalike": {
+   "got": "refused:no-match",
+   "want": "refuse",
+   "ok": true
+  },
+  "main_escape_drift_apostrophe": {
+   "got": "refused:drift-diag",
+   "want": "drift-diag",
+   "ok": true
+  },
+  "c93717_backslash_diag_weak_anchor": {
+   "got": "refused:drift-diag",
+   "want": "drift-diag",
+   "ok": true
+  }
+ },
+ "c125376-leaf": {
+  "c93717_markdown_weak_middle": {
+   "got": "applied:block_anchor",
+   "want": "refuse",
+   "ok": false
+  },
+  "c126502_markdown_lookalike": {
+   "got": "applied:block_anchor",
+   "want": "refuse",
+   "ok": false
+  },
+  "main_escape_drift_apostrophe": {
+   "got": "refused:drift-diag",
+   "want": "drift-diag",
+   "ok": true
+  },
+  "c93717_backslash_diag_weak_anchor": {
+   "got": "refused:drift-diag",
+   "want": "drift-diag",
+   "ok": true
+  }
+ },
+ "both": {
+  "c93717_markdown_weak_middle": {
+   "got": "refused:no-match",
+   "want": "refuse",
+   "ok": true
+  },
+  "c126502_markdown_lookalike": {
+   "got": "refused:no-match",
+   "want": "refuse",
+   "ok": true
+  },
+  "main_escape_drift_apostrophe": {
+   "got": "refused:drift-diag",
+   "want": "drift-diag",
+   "ok": true
+  },
+  "c93717_backslash_diag_weak_anchor": {
+   "got": "refused:drift-diag",
+   "want": "drift-diag",
+   "ok": true
+  }
+ },
+ "leaf+fold": {
+  "c93717_markdown_weak_middle": {
+   "got": "applied:block_anchor",
+   "want": "refuse",
+   "ok": false
+  },
+  "c126502_markdown_lookalike": {
+   "got": "applied:block_anchor",
+   "want": "refuse",
+   "ok": false
+  },
+  "main_escape_drift_apostrophe": {
+   "got": "refused:drift-diag",
+   "want": "drift-diag",
+   "ok": true
+  },
+  "c93717_backslash_diag_weak_anchor": {
+   "got": "refused:drift-diag",
+   "want": "drift-diag",
+   "ok": true
+  }
+ },
+ "both+fold": {
+  "c93717_markdown_weak_middle": {
+   "got": "refused:no-match",
+   "want": "refuse",
+   "ok": true
+  },
+  "c126502_markdown_lookalike": {
+   "got": "refused:no-match",
+   "want": "refuse",
+   "ok": true
+  },
+  "main_escape_drift_apostrophe": {
+   "got": "refused:drift-diag",
+   "want": "drift-diag",
+   "ok": true
+  },
+  "c93717_backslash_diag_weak_anchor": {
+   "got": "refused:drift-diag",
+   "want": "drift-diag",
+   "ok": true
+  }
+ },
+ "c126502": {
+  "c93717_markdown_weak_middle": {
+   "got": "refused:no-match",
+   "want": "refuse",
+   "ok": true
+  },
+  "c126502_markdown_lookalike": {
+   "got": "refused:no-match",
+   "want": "refuse",
+   "ok": true
+  },
+  "main_escape_drift_apostrophe": {
+   "got": "refused:no-match",
+   "want": "drift-diag",
+   "ok": false
+  },
+  "c93717_backslash_diag_weak_anchor": {
+   "got": "refused:no-match",
+   "want": "drift-diag",
+   "ok": false
+  }
+ },
+ "c126502+leaf+fold": {
+  "c93717_markdown_weak_middle": {
+   "got": "refused:no-match",
+   "want": "refuse",
+   "ok": true
+  },
+  "c126502_markdown_lookalike": {
+   "got": "refused:no-match",
+   "want": "refuse",
+   "ok": true
+  },
+  "main_escape_drift_apostrophe": {
+   "got": "refused:no-match",
+   "want": "drift-diag",
+   "ok": false
+  },
+  "c93717_backslash_diag_weak_anchor": {
+   "got": "refused:no-match",
+   "want": "drift-diag",
+   "ok": false
+  }
+ }
+}

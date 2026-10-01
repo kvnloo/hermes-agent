@@ -1,0 +1,261 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "tool-result-projection-support",
+ "origin_refs": [
+  "NousResearch/hermes-agent#107731",
+  "NousResearch/hermes-agent#39691",
+  "NousResearch/hermes-agent#47866",
+  "NousResearch/hermes-agent#129620",
+  "NousResearch/hermes-agent#129492",
+  "NousResearch/hermes-agent#129882",
+  "kvnloo/hermes-agent#310"
+ ],
+ "base_revision": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+ "env": {
+  "host": "withheld (one local workstation; receipts carry no host names)",
+  "python": "3.11.14 ($PY = the repo venv interpreter, used read-only)",
+  "isolation": "env -i; fresh HOME/HERMES_HOME under scratch; loopback-only socket.connect + getaddrinfo guard (probe_104260.py:11-39 pattern); no credentials",
+  "network": "loopback only (asserted: egress_blocked list per run)",
+  "relay": {
+   "present": true,
+   "package": "nemo-relay 0.8.4 (installed in the shared repo venv; not part of this change)",
+   "state": "FAILED at initialize(): agent/relay_runtime.py calls relay.plugin.initialize({}, additional_plugins_toml=...), which nemo-relay 0.8.4 does not accept, so Hermes logs 'Hermes Relay plugin initialization failed' and disables Relay middleware. No Relay plugin was active in any run (recorded in round 2; the venv was the same in this round).",
+   "plugins_toml_sha256": null,
+   "config_paths": [],
+   "explicit_plugins_toml": "none: HERMES_NEMO_RELAY_PLUGINS_TOML unset and the isolated HERMES_HOME has no relay-plugins.toml"
+  }
+ },
+ "provenance": "self",
+ "cost": {
+  "api_cost_usd": 0.0,
+  "tier_cost": "$0"
+ },
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the harness and tests; disclosed per repository policy",
+ "privacy": "synthetic fixtures only; no state.db / agent.log / credentials read",
+ "id": "GUARDS/r20261001-01",
+ "tier": "T1",
+ "kind": "regression",
+ "experiment": "Standing regression guards named for this item: token_accounting/replay_gates, compaction/test_region_scoping, readtool deterministic fixtures via direct read_file, plus the touched-module unit suites",
+ "command": {
+  "guarded": "env -i PATH=/usr/bin:/bin PYTHONHASHSEED=0 GUARD_SCRATCH=$S/guardruns [GUARD_PROJECTION=auto] $PY harness/guarded_run.py <worktree> <script> [args]",
+  "replay_gates": "... evals/token_accounting/replay_gates.py --out <json>",
+  "region_scoping": "... evals/compaction/test_region_scoping.py",
+  "readtool": "... harness/readtool_direct.py <json>",
+  "unit": "HOME=$S/testhome-st-tool-result-projection-support HERMES_HOME=$HOME/.hermes HERMES_PYTHON=$PY bash scripts/run_tests.sh -j 2 tests/agent/test_compression_config_defaults.py tests/agent/test_proactive_tool_result_pruning.py tests/tools/test_tool_result_storage.py tests/tui_gateway/test_compression_config_hot_reload.py [tests/agent/test_tool_result_projection.py] -q"
+ },
+ "arms": {
+  "base": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+  "carrier": "e04f4f9e2cbecd1760df3ed7f19da9db065a4f2d",
+  "carrier+test (unit suites)": "2090d94da9b0ac6ed6e0fbb2ff77075a102c012b"
+ },
+ "results": {
+  "replay_gates": {
+   "base": {
+    "cli_past_window_inflated": "PASS",
+    "cli_inflated": "PASS",
+    "cli_deflated": "PASS",
+    "gateway_past_window_inflated": "PASS",
+    "gateway_inflated": "PASS",
+    "gateway_deflated": "PASS",
+    "restore_past_window_inflated": "PASS",
+    "restore_inflated": "PASS",
+    "restore_deflated": "PASS",
+    "overflow_recovery": "PASS",
+    "usage_less_fallback": "PASS"
+   },
+   "carrier": {
+    "cli_past_window_inflated": "PASS",
+    "cli_inflated": "PASS",
+    "cli_deflated": "PASS",
+    "gateway_past_window_inflated": "PASS",
+    "gateway_inflated": "PASS",
+    "gateway_deflated": "PASS",
+    "restore_past_window_inflated": "PASS",
+    "restore_inflated": "PASS",
+    "restore_deflated": "PASS",
+    "overflow_recovery": "PASS",
+    "usage_less_fallback": "PASS"
+   },
+   "carrier_projection_on": {
+    "cli_past_window_inflated": "PASS",
+    "cli_inflated": "PASS",
+    "cli_deflated": "PASS",
+    "gateway_past_window_inflated": "PASS",
+    "gateway_inflated": "PASS",
+    "gateway_deflated": "PASS",
+    "restore_past_window_inflated": "PASS",
+    "restore_inflated": "PASS",
+    "restore_deflated": "PASS",
+    "overflow_recovery": "PASS",
+    "usage_less_fallback": "PASS"
+   },
+   "note": "identical 11/11 PASS on all three; replay_gates transcripts carry no projectable tool rows, so the projection-on arm does not exercise a pass (gate behaviour after a pass is covered by E37-synthetic: no compaction fired with projection on while the durable transcript held ~472K chars of tool output)"
+  },
+  "region_scoping": {
+   "base": "ALL PASS (legacy, lean)",
+   "carrier": "ALL PASS",
+   "carrier_projection_on": "ALL PASS",
+   "egress_blocked_each_run": [
+    "getaddrinfo 'openrouter.ai' x2 (blocked by guard, same on all arms; script still passes)"
+   ]
+  },
+  "readtool_direct": {
+   "calls": 11,
+   "identical_outputs_base_vs_carrier": true
+  },
+  "unit_suites": {
+   "base": "4 files, 75 passed, 0 failed",
+   "carrier+test": "5 files, 130 passed, 0 failed (incl. tests/agent/test_tool_result_projection.py 53/53 and 2 new hot-reload tests)"
+  },
+  "carrier_own_tests_on_rebased_arm": "tests/agent/test_tool_result_projection.py + tests/tui_gateway/test_compression_config_hot_reload.py: 69 passed, 0 failed (also 69/69 with the fold-in applied)"
+ },
+ "artifacts": [
+  {
+   "path": "receipts/raw/guard-base-replay_gates.json",
+   "sha256": "d0606b41bbcb0e6bce0953f930c29a461754a95ff600ae986246e7de2074e7a3"
+  },
+  {
+   "path": "receipts/raw/guard-carrier-replay_gates.json",
+   "sha256": "0ec5a178e6c2dd53d8c215ab9f99cee796584060ab91c73456701a3933b28ab8"
+  },
+  {
+   "path": "receipts/raw/guard-carrier-projon-replay_gates.json",
+   "sha256": "0ec5a178e6c2dd53d8c215ab9f99cee796584060ab91c73456701a3933b28ab8"
+  },
+  {
+   "path": "receipts/raw/guard-base-region_scoping.log",
+   "sha256": "c281b30c6ed63e018f3f0041b075d272425ec4dde0b3c1e7df3bcbb3c733a55c"
+  },
+  {
+   "path": "receipts/raw/guard-carrier-region_scoping.log",
+   "sha256": "4aa4ea2ba4d11f03e3bc2500139de9b4c94f917c37dacbc01de34ded179fa7e3"
+  },
+  {
+   "path": "receipts/raw/guard-carrier-projon-region_scoping.log",
+   "sha256": "3b6ac8bc6d82d0f9c87456e12d2ebfd54c834d00a77b350131b2edc1f3c1e2b6"
+  },
+  {
+   "path": "receipts/raw/guard-base-readtool.json",
+   "sha256": "68fdacc6f790a91224e8c0d97c7c6e52139f6adede8b36dd2c3466353deaa1ef"
+  },
+  {
+   "path": "receipts/raw/guard-carrier-readtool.json",
+   "sha256": "68fdacc6f790a91224e8c0d97c7c6e52139f6adede8b36dd2c3466353deaa1ef"
+  },
+  {
+   "path": "receipts/raw/adjacent-base.txt",
+   "sha256": "8491bb758b72dd7eb63c38d6ca99c2e809c18dd4937df1e6b777550a15e01f53"
+  },
+  {
+   "path": "receipts/raw/adjacent-carrier.txt",
+   "sha256": "2e8f8d8efbc59c5fc914bdd23495080f17eea274f0207f1658b1a54eab37b5ff"
+  }
+ ],
+ "not_tested": [
+  "readtool model arm (needs OD-1 or OD-3)",
+  "tests/e2e/core/history/test_prefix_stability.py and test_transcript_ledger.py (spawn the hermes CLI / tui_gateway; denylisted without OD-2)"
+ ],
+ "verdict": "KEEP (guards equal)",
+ "spec": {
+  "path": null,
+  "rev": null,
+  "sha256": null,
+  "prereg_commit": null,
+  "decision_rule_sha": null,
+  "note": "not pre-registered: an ad-hoc staging run under FACTORY.md section 8. The decision rule is the assertion set of tests/e2e/core/history/test_tool_result_projection_wire.py (blob 7347ad045b) and, for probes, the harness outputs named in command."
+ },
+ "policy_revision": {
+  "AGENTS.md": "65aa3e61bc@572e4f4fad (unchanged at 234badf401 and aea969677c)",
+  "CONTRIBUTING.md": "b0baa59b50@572e4f4fad (unchanged at 234badf401 and aea969677c)",
+  "factory": "FACTORY.md sha256:7726ba18b43a9367 (frontier-2026-10-01 ledger copy, read at round-1 fix)"
+ },
+ "denominators": {
+  "cells": 10,
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "completeness": 1.0,
+  "note": "replay_gates x3, region_scoping x3, readtool_direct x2, unit suites x2 (one run each)"
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "regression"
+ },
+ "resource_usage": {
+  "wall_s": 9.9,
+  "cpu_core_s": null,
+  "gpu_s": 0,
+  "energy_j": null,
+  "api_cost_usd": 0.0,
+  "note": "wall_s summed from the raw outputs; CPU time and energy were not recorded"
+ },
+ "corrections": [
+  {
+   "date": "2026-10-01",
+   "by": "staging fix round 1 (phase-3 verifier findings)",
+   "changes": [
+    "env.python: was '$PY (3.14.x, read-only use as interpreter)' (wrong: every raw output records \"python\": \"3.11.14\" and the venv interpreter prints Python 3.11.14)",
+    "raw artifacts scrubbed of absolute local paths (worktree, scratch, pytest tmp, interpreter paths -> $WT, $S, $PYTEST_TMP, $PY); sha256 before/after in scrubbed_artifacts",
+    "added the xf.receipt.v1 fields spec (not pre-registered), policy_revision, denominators, evidence_class, resource_usage"
+   ],
+   "scrubbed_artifacts": {
+    "receipts/raw/guard-base-replay_gates.json": {
+     "sha256_before": "19f4f2702af1f25da91b12456f2ed0c59955deee3c502bf82c677988001a8d16",
+     "sha256_after": "d0606b41bbcb0e6bce0953f930c29a461754a95ff600ae986246e7de2074e7a3"
+    },
+    "receipts/raw/guard-carrier-replay_gates.json": {
+     "sha256_before": "9aec32028a5c00a8f6e94396f777a4f3d8e8d0c66c1829e547c8a66618ce9af0",
+     "sha256_after": "0ec5a178e6c2dd53d8c215ab9f99cee796584060ab91c73456701a3933b28ab8"
+    },
+    "receipts/raw/guard-carrier-projon-replay_gates.json": {
+     "sha256_before": "9aec32028a5c00a8f6e94396f777a4f3d8e8d0c66c1829e547c8a66618ce9af0",
+     "sha256_after": "0ec5a178e6c2dd53d8c215ab9f99cee796584060ab91c73456701a3933b28ab8"
+    },
+    "receipts/raw/guard-base-region_scoping.log": {
+     "sha256_before": "6795dea98eb6e69ccbbb0f615c59b3f3c41e98be70102a243b53eccf40440538",
+     "sha256_after": "c281b30c6ed63e018f3f0041b075d272425ec4dde0b3c1e7df3bcbb3c733a55c"
+    },
+    "receipts/raw/guard-carrier-region_scoping.log": {
+     "sha256_before": "de55e74fd5eedf7e087d77c4e9d01c808390ec5ffd450e5d91af590b7151925a",
+     "sha256_after": "4aa4ea2ba4d11f03e3bc2500139de9b4c94f917c37dacbc01de34ded179fa7e3"
+    },
+    "receipts/raw/guard-carrier-projon-region_scoping.log": {
+     "sha256_before": "d9294b61c7da85f78253823d3b3b6b6fcab961930e25be454fa5b9c7cd06a066",
+     "sha256_after": "3b6ac8bc6d82d0f9c87456e12d2ebfd54c834d00a77b350131b2edc1f3c1e2b6"
+    },
+    "receipts/raw/adjacent-base.txt": {
+     "sha256_before": "8c98a18598ada8839dcb629a30e2c3a7790a9ba8d1d6b40c6364811f55488ec0",
+     "sha256_after": "8491bb758b72dd7eb63c38d6ca99c2e809c18dd4937df1e6b777550a15e01f53"
+    },
+    "receipts/raw/adjacent-carrier.txt": {
+     "sha256_before": "f57b72fb725cfd7fcb051ff1571f5c8908871e9efd11ba6153447830f9762035",
+     "sha256_after": "2e8f8d8efbc59c5fc914bdd23495080f17eea274f0207f1658b1a54eab37b5ff"
+    }
+   }
+  },
+  {
+   "date": "2026-10-01",
+   "by": "staging fix round 2 (round-1 re-verifier findings)",
+   "changes": [
+    "env.relay added (the shared venv's nemo-relay 0.8.4 fails to initialize; no Relay plugin was active)",
+    "z0evals_study added (not frozen; P8 pending)"
+   ]
+  },
+  {
+   "date": "2026-10-01",
+   "by": "staging fix round 3 (fix of the round-2 re-verifier findings)",
+   "changes": [
+    "env.host: the workstation's host name replaced by 'withheld' (receipts must not carry host names)"
+   ]
+  }
+ ],
+ "superseded_by": "GUARDS/r20261001-02",
+ "z0evals_study": {
+  "repo": "kvnloo/z0evals",
+  "branch": "study/hermes-tool-result-projection-support",
+  "commit": null,
+  "status": "not frozen (P8 pending)"
+ }
+}

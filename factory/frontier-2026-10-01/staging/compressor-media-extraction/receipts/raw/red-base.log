@@ -1,0 +1,17 @@
+[100.0% |    45/~45 | ✓18 | ✗ 0] ✗ tests/agent/test_protected_tail_pressure.py (1e, 2.4s)
+[ 13.3% |     6/~45 | ✓0 | ✗0] ✗ tests/agent/test_compressor_stale_tool_images.py (1e, 2.5s)
+[ 46.7% |    21/~45 | ✓0 | ✗0] ✗ tests/agent/test_compressor_historical_media.py (1e, 2.5s)
+[ 51.1% |    23/~45 | ✓12 | ✗ 0] ✓ tests/agent/test_image_eviction_policy.py (12✓, 1.5s)
+[ 64.4% |    29/~45 | ✓18 | ✗ 0] ✓ tests/agent/test_compressor_zero_user_guard.py (6✓, 2.3s)
+[ 91.1% |    41/~45 | ✓18 | ✗ 0] ✗ tests/agent/test_outbound_stale_vision.py (1e, 2.4s)
+  ║ E   ModuleNotFoundError: No module named 'agent.context_compressor_media'
+E   ModuleNotFoundError: No module named 'agent.context_compressor_media'
+  ║ ImportError while importing test module '$W/red/tests/agent/test_compressor_historical_media.py'.
+ImportError while importing test module '$W/red/tests/agent/test_compressor_historical_media.py'.
+  ║ ImportError while importing test module '$W/red/tests/agent/test_compressor_stale_tool_images.py'.
+ImportError while importing test module '$W/red/tests/agent/test_compressor_stale_tool_images.py'.
+  ║ ImportError while importing test module '$W/red/tests/agent/test_outbound_stale_vision.py'.
+ImportError while importing test module '$W/red/tests/agent/test_outbound_stale_vision.py'.
+  ║ ImportError while importing test module '$W/red/tests/agent/test_protected_tail_pressure.py'.
+ImportError while importing test module '$W/red/tests/agent/test_protected_tail_pressure.py'.
+=== Summary: 6 files, 18 tests passed, 0 failed (100% complete) in 7.1s (2 workers) ===

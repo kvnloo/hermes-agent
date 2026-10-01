@@ -1,0 +1,18 @@
+{
+ "id": "xf-F11-N2-review-fix",
+ "kind": "work_order",
+ "project": "hermes-agent",
+ "from": "factory-replay-gate staging builder",
+ "to": [
+  "factory"
+ ],
+ "status": "claimed",
+ "civ": {
+  "city_id": "oss:hermes-agent"
+ },
+ "dedupe_key": "frontier:factory-replay-gate",
+ "spec": "F11-N2-review-fix.toml",
+ "spec_sha256": "904169800be4cf3e4cdf0c73da889b428934cdf41f1e52269b54d0767926dc04",
+ "queue_rank": null,
+ "staging": "factory-replay-gate"
+}

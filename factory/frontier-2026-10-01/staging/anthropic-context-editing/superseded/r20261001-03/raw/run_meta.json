@@ -1,0 +1,73 @@
+{
+  "base": "e8c97320ac8691d4de92af49f98459f9ef9ddb08",
+  "head": "61effa4dd8a0b81c8eda50a6119239b2aa19e52a",
+  "steps": [
+    {
+      "step": "red_base",
+      "wall_s": 17.7,
+      "cpu_core_s": 15.2
+    },
+    {
+      "step": "adjacent_base",
+      "wall_s": 57.2,
+      "cpu_core_s": 111.2
+    },
+    {
+      "step": "replay_gates_base",
+      "wall_s": 8.4,
+      "cpu_core_s": 5.9
+    },
+    {
+      "step": "ab_checkpoint_preflight_base",
+      "wall_s": 5.6,
+      "cpu_core_s": 5.2
+    },
+    {
+      "step": "f09_base",
+      "wall_s": 4.8,
+      "cpu_core_s": 4.2
+    },
+    {
+      "step": "green_rep1",
+      "wall_s": 9.6,
+      "cpu_core_s": 8.2
+    },
+    {
+      "step": "green_rep2",
+      "wall_s": 9.8,
+      "cpu_core_s": 9.4
+    },
+    {
+      "step": "green_rep3",
+      "wall_s": 8.9,
+      "cpu_core_s": 8.4
+    },
+    {
+      "step": "adjacent_head",
+      "wall_s": 74.6,
+      "cpu_core_s": 145.1
+    },
+    {
+      "step": "replay_gates_head",
+      "wall_s": 10.1,
+      "cpu_core_s": 7.7
+    },
+    {
+      "step": "ab_checkpoint_preflight_head",
+      "wall_s": 6.8,
+      "cpu_core_s": 6.5
+    },
+    {
+      "step": "f09_head",
+      "wall_s": 5.2,
+      "cpu_core_s": 4.6
+    },
+    {
+      "step": "sabotage_head",
+      "wall_s": 283.5,
+      "cpu_core_s": 252.7
+    }
+  ],
+  "wall_s_total": 502.2,
+  "cpu_core_s_total": 584.3
+}

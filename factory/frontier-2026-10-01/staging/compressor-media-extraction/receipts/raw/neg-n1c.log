@@ -1,0 +1,9 @@
+      1 [100.0% |    11/~11 | ✓46 | ✗ 8] ✗ tests/agent/test_dict_tool_call_args.py (1✗, 6.1s)
+      1 [ 36.4% |     4/~11 | ✓0 | ✗4] ✗ tests/agent/test_context_token_tracking.py (4✗, 11.4s)
+      1 [ 90.9% |    10/~11 | ✓46 | ✗ 7] ✗ tests/agent/test_degenerate_final_recovery.py (46✓ 3✗, 13.2s)
+      8 agent/turn_request_assembly.py:155: in assemble_api_request
+      1   ║ E       RuntimeError: NEG-CONTROL N1c
+      8 E       RuntimeError: NEG-CONTROL N1c
+      1   ║ >       raise RuntimeError("NEG-CONTROL N1c")
+      8 >       raise RuntimeError("NEG-CONTROL N1c")
+      1 === Summary: 3 files, 46 tests passed, 8 failed (100% complete) in 17.5s (2 workers) ===

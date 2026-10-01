@@ -1,0 +1,24 @@
+  ┊ 📖 read      notes_00.txt  0.2s
+  ┊ 📖 read      notes_01.txt  0.0s
+  ┊ 📖 read      notes_02.txt  0.0s
+  ┊ 📖 read      notes_03.txt  0.0s
+  ┊ 📖 read      notes_04.txt  0.0s
+  ┊ 📖 read      notes_05.txt  0.0s
+  ┊ 📖 read      notes_06.txt  0.0s
+  ┊ 📖 read      notes_07.txt  0.0s
+  ┊ 📖 read      notes_08.txt  0.0s
+  ┊ 📖 read      notes_09.txt  0.0s
+  ┊ 📖 read      notes_10.txt  0.0s
+  ┊ 📖 read      notes_11.txt  0.0s
+{
+ "arm": "base",
+ "agent_api_mode": "anthropic_messages",
+ "requests": 24,
+ "errors": [],
+ "thinking_blocks_on_wire": 0,
+ "invalidated_thinking_blocks": 0,
+ "projection_passes": 0,
+ "pass_request_indices": [],
+ "sum_request_chars": 3536108,
+ "egress_blocked": []
+}

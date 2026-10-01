@@ -1,0 +1,87 @@
+{
+  "checks": {
+    "profile_scope": {
+      "rows_in_owner_profile": 1,
+      "rows_in_default_home": 0,
+      "pass": true
+    },
+    "collection_off": {
+      "rows": 0,
+      "store_created": false,
+      "pass": true
+    },
+    "egress_blocked_attempts": [],
+    "outcome_classes_match_expected": {
+      "ok": true,
+      "delay_0.05": true,
+      "delay_0.4": true,
+      "slow_over_timeout": true,
+      "empty": true,
+      "error": true,
+      "refused": true
+    },
+    "one_row_per_turn_head": {
+      "ok": true,
+      "delay_0.05": true,
+      "delay_0.4": true,
+      "slow_over_timeout": true,
+      "empty": true,
+      "error": true,
+      "refused": true
+    },
+    "base_records_nothing": true,
+    "returned_context_identical_across_arms": true
+  },
+  "micro": {
+    "collection_off": {
+      "us_per_call_median": {
+        "base": 46.28,
+        "head": 84.63,
+        "base_aa": 46.18
+      },
+      "us_per_call_p95": {
+        "base": 49.13,
+        "head": 87.49,
+        "base_aa": 49.43
+      },
+      "delta_head_minus_base_us": {
+        "median": 37.77,
+        "p05": 34.71,
+        "p95": 40.11
+      },
+      "aa_base_minus_base_us": {
+        "median": 0.43,
+        "p05": -2.78,
+        "p95": 1.39
+      },
+      "blocks": 12,
+      "calls_per_block": 400,
+      "order": "ABA/ABA alternating"
+    },
+    "collection_on": {
+      "us_per_call_median": {
+        "base": 67.23,
+        "head": 178.88,
+        "base_aa": 67.28
+      },
+      "us_per_call_p95": {
+        "base": 70.6,
+        "head": 180.58,
+        "base_aa": 69.78
+      },
+      "delta_head_minus_base_us": {
+        "median": 111.45,
+        "p05": 107.49,
+        "p95": 120.04
+      },
+      "aa_base_minus_base_us": {
+        "median": 0.06,
+        "p05": -3.4,
+        "p95": 10.96
+      },
+      "blocks": 12,
+      "calls_per_block": 400,
+      "order": "ABA/ABA alternating"
+    }
+  }
+}

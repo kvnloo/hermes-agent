@@ -1,0 +1,129 @@
+{
+ "schema": "xf.experiment.v1",
+ "id": "E48/r20261001T093944Z",
+ "tier": "T0",
+ "cost_usd": 0,
+ "label": "OBSERVED",
+ "question": "Does validate_receipt refuse each injected fault and accept the clean receipt?",
+ "inputs": {
+  "runner_commit": "be292fd2ba4bed799c3a02ebf579f39389d136c6",
+  "gate_runner_sha256": "f16bd0ff0907f135d81a140e850ccee493e85a49eb3ea1fd089b9fc9901530a8",
+  "clean_receipt": "F11-P1-fork50/r20261001T093854Z",
+  "clean_receipt_sha256": "1b3ebde768d4737cef905c3fff420a6e5ff2880f1b9357f9ab9ae27f57005bb0"
+ },
+ "command": "python e48_validator_faults.py <worktree@runner_commit> receipts/F11-P1-fork50.json receipts/E48-validator-faults.json",
+ "results": {
+  "core_faults_refused": "10/10",
+  "extra_faults_refused": "1/1",
+  "clean_accepted": true,
+  "clean_problems": [],
+  "verified_success_null_on_core_faults": true
+ },
+ "fixtures": [
+  {
+   "fixture": "missing RED",
+   "refused": true,
+   "reasons": [
+    "KEEP needs red PASS"
+   ],
+   "verified_success": null,
+   "core": true
+  },
+  {
+   "fixture": "GREEN on base (RED not reproduced)",
+   "refused": true,
+   "reasons": [
+    "KEEP needs red PASS"
+   ],
+   "verified_success": null,
+   "core": true
+  },
+  {
+   "fixture": "flaky reps",
+   "refused": true,
+   "reasons": [
+    "KEEP needs green PASS",
+    "KEEP cannot be flaky"
+   ],
+   "verified_success": null,
+   "core": true
+  },
+  {
+   "fixture": "infra exit counted",
+   "refused": true,
+   "reasons": [
+    "KEEP cannot include infra cells"
+   ],
+   "verified_success": null,
+   "core": true
+  },
+  {
+   "fixture": "GREEN negative control",
+   "refused": true,
+   "reasons": [
+    "KEEP needs sabotage PASS"
+   ],
+   "verified_success": null,
+   "core": true
+  },
+  {
+   "fixture": "adjacent regression",
+   "refused": true,
+   "reasons": [
+    "KEEP needs adjacent PASS"
+   ],
+   "verified_success": null,
+   "core": true
+  },
+  {
+   "fixture": "private-field leak",
+   "refused": true,
+   "reasons": [
+    "receipt contains a home path, email, token or key"
+   ],
+   "verified_success": null,
+   "core": true
+  },
+  {
+   "fixture": "MODELED headline",
+   "refused": true,
+   "reasons": [
+    "the headline measurement must be OBSERVED"
+   ],
+   "verified_success": null,
+   "core": true
+  },
+  {
+   "fixture": "stale base",
+   "refused": true,
+   "reasons": [
+    "receipt is older than 24 h; re-run on a fresh base"
+   ],
+   "verified_success": null,
+   "core": true
+  },
+  {
+   "fixture": "unpinned PR head",
+   "refused": true,
+   "reasons": [
+    "head_revision is not pinned to a full SHA"
+   ],
+   "verified_success": null,
+   "core": true
+  },
+  {
+   "fixture": "verified_success self-upgraded",
+   "refused": true,
+   "reasons": [
+    "verified_success must stay null: a self-run gate is not independent verification"
+   ],
+   "verified_success": true,
+   "core": false
+  }
+ ],
+ "verdict": "PASS",
+ "not_tested": [
+  "joining z0int / verifier / component receipts into one envelope (kvnloo/hermes-agent#322 join half)",
+  "schema-level validation with a JSON Schema engine (validator is stdlib code)"
+ ]
+}

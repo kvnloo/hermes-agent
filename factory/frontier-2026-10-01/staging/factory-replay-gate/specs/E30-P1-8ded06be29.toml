@@ -1,0 +1,29 @@
+xf_spec = 1
+id = "E30-P1-8ded06be29"
+rev = 1
+kind = "redgreen"
+issue = "kvnloo/hermes-agent#322"
+ai_assistance = "Spec and runner written with Claude Code (Opus 5.5); disclosed per repository policy"
+origin_refs = ["NousResearch/hermes-agent#123545"]
+expected = "4 columns PASS (ownership not applicable -> PARTIAL)"
+[base]
+repo = "NousResearch/hermes-agent"
+pin = "ac0b07597d767ce8aa3390b60fde1020e3274e72"
+[head]
+commit = "8ded06be29cff20f284a474f6e304bda38b84940"
+merge_onto_base = false
+[probe]
+kind = "pytest"
+files = ["tests/tui_gateway/test_submit_row_session_target.py"]
+reps = 3
+jobs = 2
+timeout_s = 900
+[oracle]
+red_markers = ["AssertionError"]
+sabotage = "per_hunk"
+adjacent = ["tests/tui_gateway/test_submit_row_session_target.py"]
+[ownership]
+verdict = "unknown"
+queries = []
+[outputs]
+not_tested = ["full test suite", "real provider responses", "kernel network namespace (in-process guard only)"]

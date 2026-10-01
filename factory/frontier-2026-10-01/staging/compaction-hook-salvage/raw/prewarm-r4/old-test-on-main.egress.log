@@ -1,0 +1,2 @@
+dns	getaddrinfo('openrouter.ai')	thread=openrouter-prewarm
+dns	getaddrinfo('openrouter.ai')	thread=openrouter-prewarm

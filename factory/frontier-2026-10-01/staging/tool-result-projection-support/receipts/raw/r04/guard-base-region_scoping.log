@@ -1,0 +1,6 @@
+Failed to fetch model metadata from OpenRouter: guard blocks non-loopback name resolution
+Failed to fetch model metadata from OpenRouter: guard blocks non-loopback name resolution
+[guard] rc=0 egress_blocked=2 sandbox=$S/sf-trp4/scratch/guard-n02t07os
+  legacy: OK (1 summarizer call(s), 71 msgs out)
+  lean: OK (1 summarizer call(s), 71 msgs out)
+scoping tripwire: ALL PASS

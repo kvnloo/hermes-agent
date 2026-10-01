@@ -1,0 +1,89 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compaction-anchor-retention",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch#87326",
+  "NousResearch#117462",
+  "NousResearch#122274",
+  "NousResearch#122522",
+  "NousResearch#78457"
+ ],
+ "base_revision": "234badf4012af380d23c91eae55d045a69c69ffb",
+ "head_revision": "6e0fa629a0f6227b03417d1d6ff7f7d81208346a",
+ "policy_revision": {
+  "factory": "FACTORY.md (frontier-2026-10-01)",
+  "protocol": "promotion-readiness-2026-10-01/PROTOCOL.md"
+ },
+ "env": {
+  "host": "<local-host>",
+  "python": "3.11.14 (HERMES_PYTHON venv, read-only bind)",
+  "sandbox": "bwrap ro-root, --unshare-net (connect 1.1.1.1:443 -> ENETUNREACH), pidns, clearenv, $HERMES_INSTALL masked except venv, isolated HOME/HERMES_HOME"
+ },
+ "provenance": "self",
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the rows, tests, harness and gold labels; disclosed per repository policy",
+ "privacy": "public-aggregate (all inputs are committed upstream text or seeded synthetic data; no state.db, no lineages)",
+ "resource_usage": {
+  "api_cost_usd": 0.0,
+  "gpu_s": 0,
+  "tokens": 0
+ },
+ "id": "AB117462/r20261001-01",
+ "kind": "carrier-ab",
+ "question": "Is this slice duplicated by the open #117462 (Seldash, anchor harvest surface + truncation), and does it compose with it?",
+ "inputs": {
+  "arms": {
+   "base": {
+    "tree": "234badf4012af380d23c91eae55d045a69c69ffb:agent/context_compressor.py",
+    "sha256": "86f4b7a8a647f1bf520cb17497b68719f6d907028bdc7151c7921818b7e043f1"
+   },
+   "branch": {
+    "head": "6e0fa629a0f6227b03417d1d6ff7f7d81208346a",
+    "sha256": "98d9e8d058557eee2fd4e89641b6350a2b21ab62c563ac741986db61ae1d98a8"
+   },
+   "c117462": {
+    "pr": 117462,
+    "head": "2c19948e15d68492d048250bae7707ca77063db5",
+    "merge_tree": "8dfb180bae5909ccd06f79f7268885f3309c9af6",
+    "merge": "clean",
+    "sha256": "fdb7abd8050b4944171522c7e713004d7fbce9b2d8ddfb1c8de93414f206ebe0"
+   },
+   "c117462_foldin": {
+    "onto": "c117462",
+    "patch": "foldin-on-117462.patch",
+    "patch_sha256": "2b32d18636cb60f86c54bbc1c31f42ae062df48e13876edc34a01ae5b33c0224",
+    "merge": "handported (rows placed in #117462's cheap-first order)",
+    "sha256": "2d8e3a1712c349a40824ab8e3e8f87b01556b0c2809731b5e510686423b6a4e3"
+   }
+  },
+  "tests": {
+   "ours": "tests/agent/test_context_compressor_anchor_index.py",
+   "theirs": "tests/agent/test_context_compressor_anchor_harvest.py @ 2c19948e15d68492d048250bae7707ca77063db5"
+  }
+ },
+ "command": "copy each arm file over agent/context_compressor.py in the worktree (plus #117462's test file), run both test files with run_tests.sh, restore",
+ "matrix": {
+  "c117462": {
+   "ours": "0 passed / 2 failed",
+   "theirs": "5 passed"
+  },
+  "c117462_foldin": {
+   "ours": "2 passed",
+   "theirs": "5 passed",
+   "adjacent_8_files": "372 passed / 0 failed"
+  },
+  "branch": {
+   "ours": "2 passed",
+   "theirs": "2 passed / 3 failed"
+  }
+ },
+ "merge": {
+  "branch_vs_main": "clean",
+  "branch_vs_117462_head": "conflict (both edit the _ANCHOR_PATTERNS table)",
+  "foldin_patch_applies_to_117462_head": "yes (git apply, offset -105 lines)",
+  "branch_vs_122522_head": "clean"
+ },
+ "label": "OBSERVED",
+ "readout": "not a duplicate: #117462 does not capture these classes (our tests RED on it) and this slice does not do its work (3 of its 5 tests RED here); the two compose (fold-in GREEN on both suites)",
+ "verdict": "KEEP (complementary; coordinate)"
+}

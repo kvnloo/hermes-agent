@@ -1,0 +1,170 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "SRC-preserved-thinking/r20261001-04",
+ "staging": "tool-result-projection-support",
+ "origin_refs": [
+  "NousResearch/hermes-agent#107731",
+  "NousResearch/hermes-agent#39691",
+  "NousResearch/hermes-agent#47866",
+  "NousResearch/hermes-agent#129620",
+  "NousResearch/hermes-agent#129492",
+  "NousResearch/hermes-agent#129882",
+  "NousResearch/hermes-agent#106426",
+  "NousResearch/hermes-agent#70107",
+  "NousResearch/hermes-agent#526",
+  "kvnloo/hermes-agent#310"
+ ],
+ "base_revision": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+ "env": {
+  "host": "withheld (one local workstation; receipts carry no host names)",
+  "python": "3.11.14 ($PY = the repo venv interpreter, used read-only)",
+  "isolation": "probes: env -i, fresh HOME/HERMES_HOME under scratch, loopback-only socket.connect + getaddrinfo guard; canonical runner: scripts/run_tests.sh -j 2 with HOME=$S/testhome-sf3-tool-result-projection-support, HERMES_HOME=$HOME/.hermes; no credentials",
+  "network": "loopback only (egress_blocked recorded per probe run)",
+  "relay": {
+   "present": true,
+   "package": "nemo-relay 0.8.4 (installed in the shared repo venv; not part of this change)",
+   "state": "FAILED at initialize(): agent/relay_runtime.py:346 calls relay.plugin.initialize({}, additional_plugins_toml=...), which nemo-relay 0.8.4 does not accept, so _activate() logs 'Hermes Relay plugin initialization failed' (relay_runtime.py:328) and returns FAILED. No Relay plugin or Hermes-managed Relay middleware was active in any run.",
+   "plugins_toml_sha256": null,
+   "config_paths": [],
+   "explicit_plugins_toml": "none: HERMES_NEMO_RELAY_PLUGINS_TOML unset and the isolated HERMES_HOME has no relay-plugins.toml",
+   "seen_in": "canonical-runner logs (captured WARNING on failing tests); probes run the same agent init"
+  }
+ },
+ "spec": {
+  "path": null,
+  "rev": null,
+  "sha256": null,
+  "prereg_commit": null,
+  "decision_rule_sha": null,
+  "note": "not pre-registered: an ad-hoc staging re-run under FACTORY.md section 8 (round 3 (fix of the round-2 re-verifier findings)). Decision rule: the assertions of tests/e2e/core/history/test_tool_result_projection_wire.py (blob 7347ad045b) and the harness outputs named in command."
+ },
+ "policy_revision": {
+  "AGENTS.md": "65aa3e61bc@44a1ce9724",
+  "CONTRIBUTING.md": "b0baa59b50@44a1ce9724",
+  "factory": "FACTORY.md sha256:7726ba18b43a9367 (frontier-2026-10-01 ledger copy)"
+ },
+ "provenance": "self",
+ "cost": {
+  "api_cost_usd": 0.0,
+  "tier_cost": "$0"
+ },
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the harness, the tests, the fold-in gate and the comment text (body.md); disclosed per repository policy",
+ "privacy": "synthetic fixtures only; no state.db / agent.log / credentials read; absolute local paths and host names replaced by placeholders",
+ "inputs": {
+  "shas": {
+   "main": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+   "main_previous_round": "e8c97320ac8691d4de92af49f98459f9ef9ddb08",
+   "staging_commit": "3b47753d54be51a06a7f9a939f9edea579f3c949",
+   "staging_commit_parent": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+   "staging_commit_tree": "70a3bd18653dc5f97ec86cd01a75c96e7a7d5576",
+   "staging_commit_previous_version": "8c783ff4ac2fcd7906e074eefec7f0d3fcfc0782",
+   "main_plus_test_arm": "3b47753d54be51a06a7f9a939f9edea579f3c949",
+   "carrier_head": "069adfb67e57287ac8df996ef48e082fe8455e2c",
+   "carrier_merge_base": "67764dc0863349a384c16425e73ee8571f3a94b7",
+   "carrier_rebased_arm": "5d4adb328093184ef1d0e616f9b7bf5f3cef2fe2",
+   "carrier_rebased_arm_tree": "a7b3340eca13b13d34d929cff705d6673693c8f1",
+   "carrier_rebased_arm_plus_test": "15dff75cc860a14d06414c6bf31459397e1de912",
+   "carrier_rebased_arm_plus_test_tree": "b733be3f0d7be6561ca550dd6eb1425f4eae1854",
+   "test_blob": "7347ad045bf049afabce5b78435d5746273160f1",
+   "hot_reload_resolved_blob": "b94e723f76280aee56e959fa4d72b46cc62e0bdc",
+   "carrier_module_blob": "a76fb42f76e3bb7d71643da6a5f58890878d4d32",
+   "carrier_module_blob_with_gate_v3": "852be44f4f4306ec177a191591bc6f2529c927ce",
+   "carrier_module_blob_with_gate_v4": "a3227c92a75c4cbcd196e309142530d64b534817"
+  },
+  "harness_sha256": {
+   "harness/e37_synthetic.py": "4de16b55331c737d8db15eaf0acdfacb69cb458808f59bc3c912cd4c424c2f85",
+   "harness/f04_bedrock_probe.py": "8159c09229dce68316973ff10486d4da87ee356d815f5a6188f59ac76c53286c",
+   "harness/f04_probe.py": "a23b3b14b3cd7a4c4e8bfd35a6da50c06656f183fc842afca738e3f46e051bb9",
+   "harness/f04_restart_probe.py": "6c6e1e6776edbb0a5dc7a94f1247b410b8e863ef7b1968746ee962082fd531da",
+   "harness/f04_thirdparty_probe.py": "b102cd9093f284907b41409d3d1f4b825f7eef1844fea942f8ec1d0d0fc184c6",
+   "harness/guarded_run.py": "be17793cdf4bad466fb2e05b5c67d63430a1e79c8c40949a7e45c897d35d654f",
+   "harness/per_hunk_sabotage.py": "73a31ca6888f7384b58993924ee66f5795962af8fdabe98b1d5d678dc84866fd",
+   "harness/per_hunk_sabotage_r2.py": "57219f128cb8f90cb9bb87df659c0d499da9c716e018a2de626be9a9b9ed9d60",
+   "harness/predicate_direct.py": "5996ac8a92033342ae18a71a052257773235ba8d470c5829f733ed554d0ae4bb",
+   "harness/predicate_wire_truth.py": "b5ee90a984238695c9837a0c7edbedb5c87c28111b46a77389c91b3568be5f4b",
+   "harness/readtool_direct.py": "e8dd892a0a2a835550467d4ccf4732470860692b6200a6e150be50950d9a96f4",
+   "harness/restart_direct.py": "3a8c4c72f055be6bbced24f682ad84a4b1531c24ea0a56ea71f25135c8b4a62f",
+   "harness/seam_trace.py": "b1c1efa4e7fd6d37b3c4ab37ee770d09c9308e5fcb06f91c2c67004197645750"
+  },
+  "patches_sha256": {
+   "patches/carrier-rebase-handport-hot-reload-test.diff": "6024fcb1457cdc1bf8d6762da6ca372d3109d41d532311dd8a0264c609d7d741",
+   "patches/foldin-preserved-thinking-gate-v2.diff": "acac8a736c2503a122a986622c8003f813e331363f2a92832eb709b6738d6e84",
+   "patches/foldin-preserved-thinking-gate-v3.diff": "12e83bd0dc82dc1042ef37cf93a65ea810d6a118eb322785b6c27cbe7c1acaed",
+   "patches/foldin-preserved-thinking-gate-v4.diff": "0d2b808bd2a9d581e23411fcfbffa429109706360218425c96e0917e2013712c",
+   "patches/foldin-preserved-thinking-gate.diff": "1490213c6d074a6cae190b4bf138d09b431ab78c535961159e3982b4f06ae6ab",
+   "patches/sabotage-S1-per-turn-reevaluation.diff": "a7f55f013f779c6a12aaab89b56c3b2af0bf4380883fda474df2b3757582a132",
+   "patches/sabotage-S2-no-stickiness.diff": "3b8b144c13805d30e117621a2fc3f7ed316434be4bcfd06197a8b865b1abbfd3",
+   "patches/tool-result-projection-support.v1-d5854fdd7b.patch": "a71a2123f6bd3f9d6d67a9b1c7c88a8ffbb1149a125332209333636042e95a0c",
+   "patches/tool-result-projection-support.v2-8c783ff4ac.patch": "b9d18435f4d1c45eacc77912f217b8e034295c3adec0667bdedd5bbd9da5d7f9",
+   "patches/tool-result-projection-support.v3-3b47753d54.patch": "e6cd277dc7a04299a2e742a2449af3d46214c14d7950240f36cb01590176a972"
+  }
+ },
+ "tier": "T0",
+ "kind": "static",
+ "experiment": "Source verification of the preserved-thinking premise and of the Hermes code gate v4 mirrors, at main 44a1ce9724 (every cited file is byte-identical to e8c97320ac), plus the persistence facts behind the restart case",
+ "z0evals_study": {
+  "repo": "kvnloo/z0evals",
+  "branch": "study/hermes-tool-result-projection-support",
+  "commit": null,
+  "status": "not frozen (P8 pending; freeze when the comment is posted)"
+ },
+ "frozen": null,
+ "sources": {
+  "reference": "claude-api skill (bundled 2.1.286) shared/model-migration.md, 'Breaking change 3: thinking blocks are preserved only in the conversation that produced them' (Fable 5.1 section; the Opus 5.5 section applies the mechanics verbatim)",
+  "quotes": [
+   "What invalidates every later thinking block: Editing, reordering, or removing an earlier turn while keeping later ones - including deleting old tool results (use server-side tool-result clearing instead).",
+   "Who is enforced: new accounts created on or after August 31, 2026, on every platform. Enforcement scope is decided per model - Claude Opus 5.5 also enforces it for new accounts only",
+   "server-side compaction and context editing, including thinking-block clearing (they don't count as edits, because the check compares the conversation as you sent it, not the server's edited copy",
+   "Out of scope: the legacy Amazon Bedrock integration (InvokeModel / Converse APIs with ARN-versioned IDs ...) uses a different request shape and model-ID format. This guide does not cover it"
+  ],
+  "scope_note": "The reference states the check for the Messages API on every platform (Claude in Amazon Bedrock via the Mantle client included). It does not cover Bedrock Converse; the gate treats Converse as bound because Hermes replays the same signed reasoning there (assumption, recorded in F04-bedrock/r20261001-01).",
+  "hermes_main": {
+   "agent/anthropic_message_convert.py:567": "_manage_thinking_signatures keeps signed thinking on the LATEST assistant turn on direct Anthropic; third-party endpoints strip all thinking",
+   "agent/anthropic_message_convert.py:393": "assistant replay prefers the ordered anthropic_content_blocks copy (thinking included) over reasoning_details",
+   "agent/transports/anthropic.py:100": "anthropic_content_blocks is stored only when a signed thinking block and a tool_use share a response; reasoning_details always carries the signed blocks",
+   "agent/turn_recovery.py:495-500": "thinking-signature recovery strips reasoning_details from api_messages only (the anthropic_content_blocks copy stays)",
+   "agent/chat_completion_helpers.py:1731": "build_assistant_message copies anthropic_content_blocks and bedrock_content_blocks onto the stored row",
+   "agent/bedrock_adapter.py:748 (_assistant_blocks) / :709 (_replay_ordered_blocks) / :727": "Converse replay of an assistant row rebuilds bedrock_content_blocks, signed reasoningText included, for every assistant turn",
+   "agent/bedrock_adapter.py:861": "normalizer stores the ordered blocks as bedrock_content_blocks (signature kept)",
+   "agent/agent_init.py:402, hermes_cli/config_providers.py:53": "provider bedrock selects api_mode bedrock_converse",
+   "agent/anthropic_adapter.py": "no context_management / clear_tool_uses on main (server-side tool-result clearing absent; NousResearch/hermes-agent#526 open)",
+   "agent/anthropic_message_convert.py:577": "_manage_thinking_signatures: is_third_party = _is_third_party_anthropic_endpoint(base_url) and not _is_nous_portal_endpoint(base_url)",
+   "agent/anthropic_message_convert.py:593": "third-party endpoints, and every assistant turn but the latest, get _strip_thinking",
+   "agent/anthropic_endpoints.py:28": "_is_third_party_anthropic_endpoint: any non-empty base URL without 'anthropic.com' (a bedrock-runtime URL counts as third party)",
+   "agent/anthropic_endpoints.py:107": "_is_nous_portal_endpoint: inference-api.nousresearch.com or the NOUS_INFERENCE_BASE_URL host",
+   "agent/chat_completion_helpers.py:1420": "_build_anthropic_kwargs hands the converter base_url=getattr(agent, '_anthropic_base_url', None); gate v3 reads the same attribute",
+   "agent/bedrock_adapter.py:435": "bind_bedrock_runtime sets agent._anthropic_base_url to the bedrock-runtime URL (AnthropicBedrock SDK path therefore strips thinking in the converter)",
+   "agent/bedrock_adapter.py:748 (_assistant_blocks)": "Converse replays bedrock_content_blocks when present, else only redacted_thinking from reasoning_details; signed 'thinking' copies in reasoning_details and anthropic_content_blocks are not replayed on Converse",
+   "agent/transports/chat_completions.py:259": "_route_replays_reasoning_details: OpenRouter and nousresearch.com chat routes get the stored reasoning_details (signed) on the wire",
+   "hermes_state.py:1609-1615 (_CONVERSATION_ROW_COLUMNS)": "SessionDB stores and resumes reasoning_details (the signed thinking copy) but has no anthropic_content_blocks or bedrock_content_blocks column: a resumed history still holds signed thinking in reasoning_details",
+   "hermes_cli/cli_commands_mixin.py:2603-2604": "/reasoning <level> sets reasoning_config and calls _retire_agent(self) ('Force agent re-init with new reasoning config'): the agent, and with it ProjectionState, is rebuilt",
+   "agent/tool_result_projection.py (carrier) projection_state_for": "ProjectionState is stored on agent._tool_result_projection_state, in memory only",
+   "gateway/run.py:4398-4415 (carrier arm 15dff75cc8) _CACHE_BUSTING_CONFIG_KEYS": "the carrier adds the four tool_result_projection keys to the gateway's cache-busting config keys: editing one rebuilds the cached agent, which empties ProjectionState"
+  },
+  "hermes_main_sha": "44a1ce9724502b9c692faaef00af3054bf11f1a6"
+ },
+ "denominators": {
+  "cells": 0,
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "completeness": 1.0,
+  "note": "static source reading"
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "resource_usage": {
+  "wall_s": null,
+  "cpu_core_s": null,
+  "gpu_s": 0,
+  "energy_j": null,
+  "api_cost_usd": 0.0,
+  "note": "wall_s summed from raw outputs; CPU time and energy not recorded"
+ },
+ "verdict": "CONFIRMED for the Messages API: a wire-only rewrite of an earlier tool row is a history edit on preserved-thinking routes; the Messages converter sends signed thinking only to anthropic.com and Nous Portal, and only on the latest assistant turn; a resumed session keeps signed reasoning_details while ProjectionState starts empty. Converse: assumed, not documented in the cited reference",
+ "supersedes": "SRC-preserved-thinking/r20261001-03"
+}

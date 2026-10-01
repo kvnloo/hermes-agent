@@ -1,0 +1,392 @@
+{
+  "arm": "carrier-S1",
+  "repo_head": "dedece6d1937938ae9b5cfa92babaa380cbe584c",
+  "repo_tree": "03cf488911915a6823873c344e57f3f805ca875a",
+  "dirty_files": [
+    "M agent/tool_result_projection.py"
+  ],
+  "test_file_blob": "7347ad045bf049afabce5b78435d5746273160f1",
+  "pytest_rc": 1,
+  "outcomes": {
+    "test_projection_breaks_the_prefix_once_per_paid_batch_and_never_undoes_itself": {
+      "outcome": "failed",
+      "message": "E       AssertionError: a projection pass broke the prompt-cache prefix for less than tool_result_projection_min_tokens (8000) of newly archived output: {5: (5846, ['call_fake_1']), 7: (5846, ['call_fake_2']), 9: (5846, ['call_fake_3']), 11: (5846, ['call_fake_4']), 13: (5846, ['call_fake_5']), 15: (5846, ['call_fake_6']), 17: (5846, ['call_fake_7']), 19: (5846, ['call_fake_8']), 21: (5846, ['call_fake_9']), 23: (5846, ['call_fake_10']), 25: (5846, ['call_fake_11']), 27: (5846, ['call_fake_12'])}; passes at requests [5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27] out of 28"
+    },
+    "test_projection_never_invalidates_replayed_preserved_thinking": {
+      "outcome": "failed",
+      "message": "E       AssertionError: a request replayed preserved-thinking blocks over a rewritten conversation prefix (Anthropic drops them, or rejects the request on enforced accounts):"
+    }
+  },
+  "ledgers": [
+    {
+      "requests": 28,
+      "tool_rows": 14,
+      "rows_projected": 12,
+      "passes": {
+        "5": [
+          "call_fake_1"
+        ],
+        "7": [
+          "call_fake_2"
+        ],
+        "9": [
+          "call_fake_3"
+        ],
+        "11": [
+          "call_fake_4"
+        ],
+        "13": [
+          "call_fake_5"
+        ],
+        "15": [
+          "call_fake_6"
+        ],
+        "17": [
+          "call_fake_7"
+        ],
+        "19": [
+          "call_fake_8"
+        ],
+        "21": [
+          "call_fake_9"
+        ],
+        "23": [
+          "call_fake_10"
+        ],
+        "25": [
+          "call_fake_11"
+        ],
+        "27": [
+          "call_fake_12"
+        ]
+      },
+      "reclaim_tokens_per_pass": {
+        "5": 5846,
+        "7": 5846,
+        "9": 5846,
+        "11": 5846,
+        "13": 5846,
+        "15": 5846,
+        "17": 5846,
+        "19": 5846,
+        "21": 5846,
+        "23": 5846,
+        "25": 5846,
+        "27": 5846
+      },
+      "unstable": [],
+      "wire_chars_per_request": [
+        7874,
+        32326,
+        32443,
+        56895,
+        57012,
+        58069,
+        58186,
+        59243,
+        59360,
+        60417,
+        60534,
+        61591,
+        61708,
+        62765,
+        62882,
+        63939,
+        64056,
+        65113,
+        65230,
+        66289,
+        66406,
+        67465,
+        67582,
+        68642,
+        68759,
+        69819,
+        69936,
+        70996
+      ],
+      "modeled": {
+        "label": "MODELED",
+        "requests": 28,
+        "sum_input_chars": 1655885,
+        "last_request_chars": 70398,
+        "cache_read_ratio_perfect_prefix_cache": 0.6043,
+        "billed_input_tokens_no_cache": 413971,
+        "billed_input_token_units_cached_1.25w_0.10r": 229793,
+        "reprefill_chars_after_breaks": 647515,
+        "per_request": [
+          {
+            "total_chars": 7774,
+            "common_prefix_chars": 0
+          },
+          {
+            "total_chars": 32204,
+            "common_prefix_chars": 7774
+          },
+          {
+            "total_chars": 32311,
+            "common_prefix_chars": 32204
+          },
+          {
+            "total_chars": 56741,
+            "common_prefix_chars": 32311
+          },
+          {
+            "total_chars": 56848,
+            "common_prefix_chars": 56741
+          },
+          {
+            "total_chars": 57878,
+            "common_prefix_chars": 8108
+          },
+          {
+            "total_chars": 57985,
+            "common_prefix_chars": 57878
+          },
+          {
+            "total_chars": 59015,
+            "common_prefix_chars": 9245
+          },
+          {
+            "total_chars": 59122,
+            "common_prefix_chars": 59015
+          },
+          {
+            "total_chars": 60152,
+            "common_prefix_chars": 10382
+          },
+          {
+            "total_chars": 60259,
+            "common_prefix_chars": 60152
+          },
+          {
+            "total_chars": 61289,
+            "common_prefix_chars": 11519
+          },
+          {
+            "total_chars": 61396,
+            "common_prefix_chars": 61289
+          },
+          {
+            "total_chars": 62426,
+            "common_prefix_chars": 12656
+          },
+          {
+            "total_chars": 62533,
+            "common_prefix_chars": 62426
+          },
+          {
+            "total_chars": 63563,
+            "common_prefix_chars": 13793
+          },
+          {
+            "total_chars": 63670,
+            "common_prefix_chars": 63563
+          },
+          {
+            "total_chars": 64700,
+            "common_prefix_chars": 14930
+          },
+          {
+            "total_chars": 64807,
+            "common_prefix_chars": 64700
+          },
+          {
+            "total_chars": 65839,
+            "common_prefix_chars": 16067
+          },
+          {
+            "total_chars": 65946,
+            "common_prefix_chars": 65839
+          },
+          {
+            "total_chars": 66978,
+            "common_prefix_chars": 17204
+          },
+          {
+            "total_chars": 67085,
+            "common_prefix_chars": 66978
+          },
+          {
+            "total_chars": 68118,
+            "common_prefix_chars": 18342
+          },
+          {
+            "total_chars": 68225,
+            "common_prefix_chars": 68118
+          },
+          {
+            "total_chars": 69258,
+            "common_prefix_chars": 19482
+          },
+          {
+            "total_chars": 69365,
+            "common_prefix_chars": 69258
+          },
+          {
+            "total_chars": 70398,
+            "common_prefix_chars": 20622
+          }
+        ]
+      }
+    }
+  ],
+  "prefix_breaks": [
+    {
+      "requests": 28,
+      "break_indices": [
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27
+      ],
+      "reasons": [
+        "messages[3] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 00 line 0000 alpha beta gamma delta e'  vs  '{\"content\":\"[tool-re",
+        "messages[7] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 01 line 0000 alpha beta gamma delta e'  vs  '{\"content\":\"[tool-re",
+        "messages[11] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 02 line 0000 alpha beta gamma delta e'  vs  '{\"content\":\"[tool-r",
+        "messages[15] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 03 line 0000 alpha beta gamma delta e'  vs  '{\"content\":\"[tool-r",
+        "messages[19] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 04 line 0000 alpha beta gamma delta e'  vs  '{\"content\":\"[tool-r",
+        "messages[23] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 05 line 0000 alpha beta gamma delta e'  vs  '{\"content\":\"[tool-r",
+        "messages[27] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 06 line 0000 alpha beta gamma delta e'  vs  '{\"content\":\"[tool-r",
+        "messages[31] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 07 line 0000 alpha beta gamma delta e'  vs  '{\"content\":\"[tool-r",
+        "messages[35] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 08 line 0000 alpha beta gamma delta e'  vs  '{\"content\":\"[tool-r",
+        "messages[39] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 09 line 0000 alpha beta gamma delta e'  vs  '{\"content\":\"[tool-r",
+        "messages[43] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 10 line 0000 alpha beta gamma delta e'  vs  '{\"content\":\"[tool-r",
+        "messages[47] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 11 line 0000 alpha beta gamma delta e'  vs  '{\"content\":\"[tool-r"
+      ]
+    }
+  ],
+  "preserved_thinking": [
+    {
+      "requests": 24,
+      "replayed_thinking_blocks": 23,
+      "invalidated_thinking_blocks": 3,
+      "invalidated": [
+        "request 10: messages[17] thinking block replayed over a rewritten prefix (signed: True)",
+        "request 16: messages[29] thinking block replayed over a rewritten prefix (signed: True)",
+        "request 22: messages[41] thinking block replayed over a rewritten prefix (signed: True)"
+      ]
+    }
+  ],
+  "enforced_account_emulation": false,
+  "rejected_400_thinking_binding": 0,
+  "anthropic_route_modeled": {
+    "label": "MODELED",
+    "requests": 24,
+    "sum_input_chars": 1644530,
+    "last_request_chars": 84224,
+    "cache_read_ratio_perfect_prefix_cache": 0.6044,
+    "billed_input_tokens_no_cache": 411132,
+    "billed_input_token_units_cached_1.25w_0.10r": 228151,
+    "reprefill_chars_after_breaks": 650481,
+    "per_request": [
+      {
+        "total_chars": 86,
+        "common_prefix_chars": 0
+      },
+      {
+        "total_chars": 24603,
+        "common_prefix_chars": 0
+      },
+      {
+        "total_chars": 24748,
+        "common_prefix_chars": 61
+      },
+      {
+        "total_chars": 49166,
+        "common_prefix_chars": 24492
+      },
+      {
+        "total_chars": 49311,
+        "common_prefix_chars": 24624
+      },
+      {
+        "total_chars": 73729,
+        "common_prefix_chars": 49055
+      },
+      {
+        "total_chars": 73874,
+        "common_prefix_chars": 49187
+      },
+      {
+        "total_chars": 98292,
+        "common_prefix_chars": 73618
+      },
+      {
+        "total_chars": 98437,
+        "common_prefix_chars": 73750
+      },
+      {
+        "total_chars": 52664,
+        "common_prefix_chars": 359
+      },
+      {
+        "total_chars": 52810,
+        "common_prefix_chars": 28122
+      },
+      {
+        "total_chars": 77228,
+        "common_prefix_chars": 52553
+      },
+      {
+        "total_chars": 77373,
+        "common_prefix_chars": 52685
+      },
+      {
+        "total_chars": 101791,
+        "common_prefix_chars": 77116
+      },
+      {
+        "total_chars": 101936,
+        "common_prefix_chars": 77248
+      },
+      {
+        "total_chars": 56163,
+        "common_prefix_chars": 3857
+      },
+      {
+        "total_chars": 56308,
+        "common_prefix_chars": 31620
+      },
+      {
+        "total_chars": 80726,
+        "common_prefix_chars": 56051
+      },
+      {
+        "total_chars": 80871,
+        "common_prefix_chars": 56183
+      },
+      {
+        "total_chars": 105289,
+        "common_prefix_chars": 80614
+      },
+      {
+        "total_chars": 105434,
+        "common_prefix_chars": 80746
+      },
+      {
+        "total_chars": 59661,
+        "common_prefix_chars": 7355
+      },
+      {
+        "total_chars": 59806,
+        "common_prefix_chars": 35118
+      },
+      {
+        "total_chars": 84224,
+        "common_prefix_chars": 59549
+      }
+    ]
+  },
+  "egress_blocked": [],
+  "wall_s": 6.63,
+  "python": "3.11.14"
+}

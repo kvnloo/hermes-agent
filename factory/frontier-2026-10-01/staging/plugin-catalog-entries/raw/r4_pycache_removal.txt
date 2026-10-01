@@ -1,0 +1,19 @@
+# r4 __pycache__ removal (round 4; run at 2026-10-01T16:40:27Z; python3 -B, so this read writes no bytecode)
+# paths are relative to the staging directory; the embedded absolute path is never printed, only its shape
+file	tools/__pycache__/privacy_scan.cpython-314.pyc
+size_bytes	5384
+sha256	0af2b07ae12bfc4607a7baa26bfc458a148255d60a2071eaedfcaa9b5ff11a32
+mtime_utc	2026-10-01T16:21:49Z
+magic_equals_this_python	True (python 3.14.7)
+header_source_size	2801 (tools/privacy_scan.py is 2801 bytes; sha256 c20c602b)
+header_source_mtime_utc	2026-10-01T11:38:05Z (tools/privacy_scan.py mtime 2026-10-01T11:38:05Z)
+co_filename_is_absolute	True
+co_filename_equals_<staging>/tools/privacy_scan.py	True
+co_filename_length	119
+tools/privacy_scan_r3.py_mtime_utc	2026-10-01T16:21:22Z
+raw/r3_privacy_scan.txt_mtime_utc	2026-10-01T16:23:07Z
+pinned_by_any_receipt	False
+pinned_in_STAGING.md	False
+$ rm -r tools/__pycache__
+tools/__pycache__ exists after removal	False
+__pycache__ dirs or *.pyc/*.pyo left outside run/	0

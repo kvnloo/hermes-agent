@@ -1,0 +1,1540 @@
+{
+ "checked_at": "2026-10-01T16:24Z",
+ "main": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+ "head": "569ad4d84b0f9888ea2598c2a8ea416b2c75bad6",
+ "prs": {
+  "5688": {
+   "author": "handsdiff",
+   "state": "open",
+   "title": "feat(agent): support multiple simultaneous memory providers",
+   "pr_head": "cb12154cc8",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py",
+     "agent/memory_provider.py",
+     "cli-config.yaml.example",
+     "hermes_cli/config.py",
+     "hermes_cli/memory_setup.py",
+     "plugins/memory/__init__.py",
+     "run_agent.py",
+     "tests/agent/test_memory_provider.py",
+     "website/docs/user-guide/features/memory-providers.md"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py",
+     "agent/memory_provider.py",
+     "cli-config.yaml.example",
+     "hermes_cli/config.py",
+     "hermes_cli/memory_setup.py",
+     "plugins/memory/__init__.py",
+     "run_agent.py",
+     "tests/agent/test_memory_provider.py",
+     "website/docs/user-guide/features/memory-providers.md"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "7789": {
+   "author": "hughpyle",
+   "state": "open",
+   "title": "fix(memory): pass session and user context to on_turn_start",
+   "pr_head": "fc4ac4af71",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py",
+     "agent/memory_provider.py",
+     "gateway/run.py",
+     "run_agent.py",
+     "tests/agent/test_memory_provider.py",
+     "tests/run_agent/test_run_agent.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py",
+     "agent/memory_provider.py",
+     "gateway/run.py",
+     "run_agent.py",
+     "tests/agent/test_memory_provider.py",
+     "tests/run_agent/test_run_agent.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "12126": {
+   "author": "SonicBotMan",
+   "state": "open",
+   "title": "fix(memory): persist prefetch cache across AIAgent recreation in gateway",
+   "pr_head": "5185526a02",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py",
+     "run_agent.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py",
+     "run_agent.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "15412": {
+   "author": "tabtablabs-dev",
+   "state": "open",
+   "title": "fix(memory): preview external prefetch context in Discord progress",
+   "pr_head": "69c5a41321",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py",
+     "gateway/display_config.py",
+     "gateway/run.py",
+     "run_agent.py",
+     "tests/agent/test_memory_provider.py",
+     "tests/gateway/test_display_config.py",
+     "tests/gateway/test_run_progress_topics.py",
+     "tests/run_agent/test_run_agent.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py",
+     "gateway/display_config.py",
+     "gateway/run.py",
+     "run_agent.py",
+     "tests/agent/test_memory_provider.py",
+     "tests/gateway/test_display_config.py",
+     "tests/gateway/test_run_progress_topics.py",
+     "tests/run_agent/test_run_agent.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "18565": {
+   "author": "natehale",
+   "state": "open",
+   "title": "feat(cron): per-job external memory provider modes (off|tools|full)",
+   "pr_head": "74b9aa9c3b",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "AGENTS.md",
+     "agent/agent_init.py",
+     "agent/memory_manager.py",
+     "agent/system_prompt.py",
+     "agent/turn_context.py",
+     "cron/jobs.py",
+     "cron/scheduler.py",
+     "run_agent.py",
+     "tests/agent/test_memory_provider_mode.py",
+     "tools/cronjob_tools.py",
+     "website/docs/developer-guide/pr18565-review-replies.md"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "AGENTS.md",
+     "agent/agent_init.py",
+     "agent/memory_manager.py",
+     "agent/system_prompt.py",
+     "agent/turn_context.py",
+     "cron/jobs.py",
+     "cron/scheduler.py",
+     "run_agent.py",
+     "tests/agent/test_memory_provider_mode.py",
+     "tools/cronjob_tools.py",
+     "website/docs/developer-guide/pr18565-review-replies.md"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "19833": {
+   "author": "fadelguy",
+   "state": "open",
+   "title": "Fix Honcho auto-injection for shared gateway venues",
+   "pr_head": "ac7841b028",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py",
+     "plugins/memory/honcho/__init__.py",
+     "plugins/memory/honcho/session.py",
+     "tests/agent/test_memory_user_id.py",
+     "tests/honcho_plugin/test_pin_peer_name.py",
+     "tests/honcho_plugin/test_session.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py",
+     "plugins/memory/honcho/__init__.py",
+     "plugins/memory/honcho/session.py",
+     "tests/agent/test_memory_user_id.py",
+     "tests/honcho_plugin/test_pin_peer_name.py",
+     "tests/honcho_plugin/test_session.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "22876": {
+   "author": "Ramadas108",
+   "state": "open",
+   "title": "fix(shutdown): harden 44 cleanup blocks against second-Ctrl-C KeyboardInterrupt crash",
+   "pr_head": "3b9dfcaaa7",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/auxiliary_client.py",
+     "agent/memory_manager.py",
+     "cli.py",
+     "gateway/run.py",
+     "plugins/memory/hindsight/__init__.py",
+     "plugins/memory/honcho/__init__.py",
+     "plugins/memory/openviking/__init__.py",
+     "run_agent.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/auxiliary_client.py",
+     "agent/memory_manager.py",
+     "cli.py",
+     "gateway/run.py",
+     "plugins/memory/hindsight/__init__.py",
+     "plugins/memory/honcho/__init__.py",
+     "plugins/memory/openviking/__init__.py",
+     "run_agent.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "30991": {
+   "author": "xxxigm",
+   "state": "open",
+   "title": "fix(memory-providers): inject external memory tools when 'memory' toolset is off",
+   "pr_head": "3b1b9859d0",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/agent_init.py",
+     "hermes_cli/tools_config.py",
+     "tests/agent/test_memory_provider.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/agent_init.py",
+     "hermes_cli/tools_config.py",
+     "tests/agent/test_memory_provider.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "34215": {
+   "author": "nic-h",
+   "state": "open",
+   "title": "fix(memory): compact recall context boundaries",
+   "pr_head": "fb9e1307f3",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/chat_completion_helpers.py",
+     "agent/conversation_loop.py",
+     "agent/memory_manager.py",
+     "plugins/memory/honcho/__init__.py",
+     "tests/agent/test_memory_provider.py",
+     "tests/agent/test_prompt_leak_sanitization.py",
+     "tests/agent/test_prompt_leak_streaming_sanitization.py",
+     "tests/honcho_plugin/test_session.py",
+     "tests/run_agent/test_run_agent.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/chat_completion_helpers.py",
+     "agent/conversation_loop.py",
+     "agent/memory_manager.py",
+     "plugins/memory/honcho/__init__.py",
+     "tests/agent/test_memory_provider.py",
+     "tests/agent/test_prompt_leak_sanitization.py",
+     "tests/agent/test_prompt_leak_streaming_sanitization.py",
+     "tests/honcho_plugin/test_session.py",
+     "tests/run_agent/test_run_agent.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "34521": {
+   "author": "20231118185SSPU",
+   "state": "open",
+   "title": "feat(memory): organic memory architecture — silent engrams, salience gating,   consolidation engine",
+   "pr_head": "0053eb6bd2",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py",
+     "plugins/memory/holographic/__init__.py",
+     "plugins/memory/holographic/retrieval.py",
+     "plugins/memory/holographic/store.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py",
+     "plugins/memory/holographic/__init__.py",
+     "plugins/memory/holographic/retrieval.py",
+     "plugins/memory/holographic/store.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "40425": {
+   "author": "rodboev",
+   "state": "open",
+   "title": "fix(memory): contain external recall at the injection boundary (#40170)",
+   "pr_head": "798e284a0c",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/agent_init.py",
+     "agent/chat_completion_helpers.py",
+     "agent/conversation_loop.py",
+     "agent/turn_context.py",
+     "gateway/config.py",
+     "gateway/platforms/api_server.py",
+     "gateway/run.py",
+     "gateway/slash_commands.py",
+     "run_agent.py",
+     "tests/agent/test_api_content_sidecar.py",
+     "tests/agent/test_turn_context.py",
+     "tests/gateway/test_agent_cache.py",
+     "tests/gateway/test_api_server_toolset.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/agent_init.py",
+     "agent/chat_completion_helpers.py",
+     "agent/conversation_loop.py",
+     "agent/turn_context.py",
+     "gateway/config.py",
+     "gateway/platforms/api_server.py",
+     "gateway/run.py",
+     "gateway/slash_commands.py",
+     "run_agent.py",
+     "tests/agent/test_api_content_sidecar.py",
+     "tests/agent/test_turn_context.py",
+     "tests/gateway/test_agent_cache.py",
+     "tests/gateway/test_api_server_toolset.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "40967": {
+   "author": "iamlukethedev",
+   "state": "open",
+   "title": "fix(#40170): prevent Honcho memory injection on customer-facing gateways",
+   "pr_head": "8522abb15e",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/agent_init.py",
+     "agent/turn_context.py",
+     "gateway/run.py",
+     "tests/hermes_cli/test_model_validation.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/agent_init.py",
+     "agent/turn_context.py",
+     "gateway/run.py",
+     "tests/hermes_cli/test_model_validation.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "44378": {
+   "author": "Kewe63",
+   "state": "open",
+   "title": "fix(memory_manager): add exponential backoff retry for transient provider errors",
+   "pr_head": "0b8bcb8cf5",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "45743": {
+   "author": "waldmanz",
+   "state": "open",
+   "title": "feat(memory): govern automatic memory context injection",
+   "pr_head": "3600155b1b",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py",
+     "agent/memory_provider.py",
+     "agent/turn_context.py",
+     "tests/agent/test_memory_provider.py",
+     "tests/agent/test_run_agent.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py",
+     "agent/memory_provider.py",
+     "agent/turn_context.py",
+     "tests/agent/test_memory_provider.py",
+     "tests/agent/test_run_agent.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "53182": {
+   "author": "jony0910",
+   "state": "open",
+   "title": "feat: add memory sidecar context retrieval and runtime fixes",
+   "pr_head": "ea3e8e9b88",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/conversation_loop.py",
+     "agent/turn_context.py",
+     "hermes_state.py",
+     "providers/__init__.py",
+     "tests/agent/test_run_agent.py",
+     "tests/agent/test_turn_context.py",
+     "tests/providers/test_provider_profiles.py",
+     "tests/test_hermes_state.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/conversation_loop.py",
+     "agent/turn_context.py",
+     "hermes_state.py",
+     "providers/__init__.py",
+     "tests/agent/test_run_agent.py",
+     "tests/agent/test_turn_context.py",
+     "tests/providers/test_provider_profiles.py",
+     "tests/test_hermes_state.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "58597": {
+   "author": "JandY95",
+   "state": "open",
+   "title": "context-health: add auto context governance phases 1-9",
+   "pr_head": "ae6946c1fc",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/conversation_loop.py",
+     "agent/memory_manager.py",
+     "agent/turn_context.py",
+     "agent/turn_finalizer.py",
+     "tests/agent/test_context_health_provider_payload.py",
+     "tests/agent/test_context_health_retrieval_scope.py",
+     "tests/agent/test_context_health_task_boundary_firewall.py",
+     "tests/agent/test_context_health_task_registry.py",
+     "tools/session_search_tool.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/conversation_loop.py",
+     "agent/memory_manager.py",
+     "agent/turn_context.py",
+     "agent/turn_finalizer.py",
+     "tests/agent/test_context_health_provider_payload.py",
+     "tests/agent/test_context_health_retrieval_scope.py",
+     "tests/agent/test_context_health_task_boundary_firewall.py",
+     "tests/agent/test_context_health_task_registry.py",
+     "tools/session_search_tool.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "60953": {
+   "author": "tangxc96",
+   "state": "open",
+   "title": "fix(memory): isolate provider sync and prefetch background lanes",
+   "pr_head": "fc282ac2b3",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py",
+     "tests/agent/test_memory_async_sync.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py",
+     "tests/agent/test_memory_async_sync.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "62841": {
+   "author": "devatnull",
+   "state": "open",
+   "title": "feat(memory): per-chat/per-user/per-session memory scope isolation",
+   "pr_head": "a4e5baac5e",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/agent_init.py",
+     "agent/conversation_compression.py",
+     "agent/learning_graph.py",
+     "agent/learning_mutations.py",
+     "agent/memory_manager.py",
+     "agent/tool_executor.py",
+     "agent/turn_context.py",
+     "gateway/session_context.py",
+     "hermes_cli/config.py",
+     "hermes_cli/doctor.py",
+     "hermes_cli/main.py",
+     "hermes_cli/subcommands/memory.py",
+     "hermes_cli/web_server.py",
+     "plugins/memory/supermemory/__init__.py",
+     "run_agent.py",
+     "tests/agent/test_learning_mutations.py",
+     "tests/agent/test_memory_boundary_commit.py",
+     "tests/hermes_cli/test_memory_reset.py",
+     "tests/hermes_cli/test_profiles.py",
+     "tests/hermes_cli/test_web_server.py",
+     "tests/test_tui_gateway_server.py",
+     "tests/tools/test_write_approval.py",
+     "tools/memory_tool.py",
+     "tui_gateway/server.py",
+     "website/docs/user-guide/configuration.md",
+     "website/docs/user-guide/features/memory.md"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/agent_init.py",
+     "agent/conversation_compression.py",
+     "agent/learning_graph.py",
+     "agent/learning_mutations.py",
+     "agent/memory_manager.py",
+     "agent/tool_executor.py",
+     "agent/turn_context.py",
+     "gateway/session_context.py",
+     "hermes_cli/config.py",
+     "hermes_cli/doctor.py",
+     "hermes_cli/main.py",
+     "hermes_cli/subcommands/memory.py",
+     "hermes_cli/web_server.py",
+     "plugins/memory/supermemory/__init__.py",
+     "run_agent.py",
+     "tests/agent/test_learning_mutations.py",
+     "tests/agent/test_memory_boundary_commit.py",
+     "tests/hermes_cli/test_memory_reset.py",
+     "tests/hermes_cli/test_profiles.py",
+     "tests/hermes_cli/test_web_server.py",
+     "tests/test_tui_gateway_server.py",
+     "tests/tools/test_write_approval.py",
+     "tools/memory_tool.py",
+     "tui_gateway/server.py",
+     "website/docs/user-guide/configuration.md",
+     "website/docs/user-guide/features/memory.md"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "63759": {
+   "author": "gcunharodrigues",
+   "state": "open",
+   "title": "fix(gateway): run a session's stdio MCP servers in that session's project cwd",
+   "pr_head": "3165890dc8",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py",
+     "tests/agent/test_memory_async_sync.py",
+     "tests/test_tui_gateway_server.py",
+     "tests/test_windows_subprocess_no_window_flags.py",
+     "tests/tui_gateway/test_slash_worker_profile_home.py",
+     "tools/mcp_tool.py",
+     "tui_gateway/server.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py",
+     "tests/agent/test_memory_async_sync.py",
+     "tests/test_tui_gateway_server.py",
+     "tests/test_windows_subprocess_no_window_flags.py",
+     "tests/tui_gateway/test_slash_worker_profile_home.py",
+     "tools/mcp_tool.py",
+     "tui_gateway/server.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "64288": {
+   "author": "embwl0x",
+   "state": "open",
+   "title": "fix(memory): neutralize provider prompt delimiters",
+   "pr_head": "ac06e6a6be",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/conversation_loop.py",
+     "agent/memory_manager.py",
+     "agent/turn_context.py",
+     "tests/agent/test_api_content_sidecar.py",
+     "tests/agent/test_memory_provider.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/conversation_loop.py",
+     "agent/memory_manager.py",
+     "agent/turn_context.py",
+     "tests/agent/test_api_content_sidecar.py",
+     "tests/agent/test_memory_provider.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "64421": {
+   "author": "yingliang-zhang",
+   "state": "open",
+   "title": "fix(memory): frame recalled context as untrusted data",
+   "pr_head": "b6df099a1a",
+   "class": "clean_both",
+   "vs_main": {
+    "clean": true,
+    "conflicts": []
+   },
+   "vs_staging_head": {
+    "clean": true,
+    "conflicts": []
+   },
+   "extra_conflicts_with_head": []
+  },
+  "64528": {
+   "author": "kavyaa1505",
+   "state": "open",
+   "title": "Feat/hybrid skill retrieval",
+   "pr_head": "dbcd828b11",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/conversation_loop.py",
+     "agent/prompt_builder.py",
+     "agent/turn_context.py",
+     "tools/skill_manager_tool.py",
+     "tools/skills_hub.py",
+     "tools/skills_sync.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/conversation_loop.py",
+     "agent/prompt_builder.py",
+     "agent/turn_context.py",
+     "tools/skill_manager_tool.py",
+     "tools/skills_hub.py",
+     "tools/skills_sync.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "65329": {
+   "author": "Soju06",
+   "state": "open",
+   "title": "feat(telemetry): opt-in per-turn waterfall tracing (config: agent.turn_trace)",
+   "pr_head": "c868eaaa02",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/chat_completion_helpers.py",
+     "agent/conversation_loop.py",
+     "agent/tool_executor.py",
+     "agent/turn_context.py",
+     "agent/turn_finalizer.py",
+     "gateway/platforms/base.py",
+     "gateway/run.py",
+     "gateway/turn_context.py",
+     "hermes_cli/config_defaults.py",
+     "plugins/platforms/telegram/adapter.py",
+     "run_agent.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/chat_completion_helpers.py",
+     "agent/conversation_loop.py",
+     "agent/tool_executor.py",
+     "agent/turn_context.py",
+     "agent/turn_finalizer.py",
+     "gateway/platforms/base.py",
+     "gateway/run.py",
+     "gateway/turn_context.py",
+     "hermes_cli/config_defaults.py",
+     "plugins/platforms/telegram/adapter.py",
+     "run_agent.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "68721": {
+   "author": "starship-s",
+   "state": "open",
+   "title": "fix(memory): exclude synthetic delegation completions from retention",
+   "pr_head": "5a8d47ab5e",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/codex_runtime.py",
+     "agent/conversation_loop.py",
+     "agent/memory_manager.py",
+     "agent/turn_context.py",
+     "agent/turn_finalizer.py",
+     "cli.py",
+     "gateway/platforms/base.py",
+     "gateway/run.py",
+     "gateway/session.py",
+     "hermes_cli/web_server.py",
+     "hermes_state.py",
+     "run_agent.py",
+     "tests/agent/test_memory_boundary_commit.py",
+     "tests/agent/test_memory_provider.py",
+     "tests/agent/test_turn_context.py",
+     "tests/agent/transports/test_chat_completions.py",
+     "tests/gateway/test_duplicate_user_message.py",
+     "tests/gateway/test_session.py",
+     "tests/hermes_cli/test_web_server.py",
+     "tests/test_hermes_state.py",
+     "tests/test_tui_gateway_server.py",
+     "tui_gateway/server.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/codex_runtime.py",
+     "agent/conversation_loop.py",
+     "agent/memory_manager.py",
+     "agent/turn_context.py",
+     "agent/turn_finalizer.py",
+     "cli.py",
+     "gateway/platforms/base.py",
+     "gateway/run.py",
+     "gateway/session.py",
+     "hermes_cli/web_server.py",
+     "hermes_state.py",
+     "run_agent.py",
+     "tests/agent/test_memory_boundary_commit.py",
+     "tests/agent/test_memory_provider.py",
+     "tests/agent/test_turn_context.py",
+     "tests/agent/transports/test_chat_completions.py",
+     "tests/gateway/test_duplicate_user_message.py",
+     "tests/gateway/test_session.py",
+     "tests/hermes_cli/test_web_server.py",
+     "tests/test_hermes_state.py",
+     "tests/test_tui_gateway_server.py",
+     "tui_gateway/server.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "68903": {
+   "author": "nuffin",
+   "state": "open",
+   "title": "feat(agent): add memory_mode parameter with 'on_demand' option for sub-agents",
+   "pr_head": "bce652651f",
+   "class": "clean_both",
+   "vs_main": {
+    "clean": true,
+    "conflicts": []
+   },
+   "vs_staging_head": {
+    "clean": true,
+    "conflicts": []
+   },
+   "extra_conflicts_with_head": []
+  },
+  "72385": {
+   "author": "clara-patchou-ai",
+   "state": "open",
+   "title": "fix(honcho): stop background workers before exit",
+   "pr_head": "1128fbe151",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py",
+     "cli.py",
+     "plugins/memory/honcho/__init__.py",
+     "plugins/memory/honcho/session.py",
+     "tests/agent/test_memory_provider.py",
+     "tests/cli/test_cli_shutdown_memory_messages.py",
+     "tests/honcho_plugin/test_async_memory.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py",
+     "cli.py",
+     "plugins/memory/honcho/__init__.py",
+     "plugins/memory/honcho/session.py",
+     "tests/agent/test_memory_provider.py",
+     "tests/cli/test_cli_shutdown_memory_messages.py",
+     "tests/honcho_plugin/test_async_memory.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "78584": {
+   "author": "iso2kx",
+   "state": "open",
+   "title": "feat(sessions): add temporary chats that leave nothing on disk",
+   "pr_head": "e7c6f83e8a",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/agent_init.py",
+     "agent/agent_runtime_helpers.py",
+     "agent/background_review.py",
+     "agent/conversation_compression.py",
+     "agent/memory_manager.py",
+     "agent/prompt_builder.py",
+     "agent/system_prompt.py",
+     "agent/title_generator.py",
+     "agent/tool_executor.py",
+     "agent/turn_context.py",
+     "apps/desktop/src/app/chat/composer/index.tsx",
+     "apps/desktop/src/app/chat/index.tsx",
+     "apps/desktop/src/app/chat/sidebar/index.tsx",
+     "apps/desktop/src/app/session/hooks/use-message-stream/gateway-event.ts",
+     "apps/desktop/src/app/session/hooks/use-session-actions/index.ts",
+     "apps/desktop/src/app/types.ts",
+     "apps/desktop/src/i18n/ar.ts",
+     "apps/desktop/src/i18n/en.ts",
+     "apps/desktop/src/i18n/ja.ts",
+     "apps/desktop/src/i18n/types.ts",
+     "apps/desktop/src/i18n/zh-hant.ts",
+     "apps/desktop/src/i18n/zh.ts",
+     "apps/desktop/src/lib/chat-messages.ts",
+     "apps/desktop/src/lib/keybinds/actions.ts",
+     "cli.py",
+     "gateway/platforms/base.py",
+     "gateway/run.py",
+     "gateway/session.py",
+     "gateway/slash_commands.py",
+     "hermes_cli/_parser.py",
+     "hermes_cli/cli_agent_setup_mixin.py",
+     "hermes_cli/cli_commands_mixin.py",
+     "hermes_cli/commands.py",
+     "hermes_cli/lifecycle.py",
+     "hermes_cli/main.py",
+     "hermes_cli/oneshot.py",
+     "hermes_cli/plugins.py",
+     "hermes_cli/tips.py",
+     "hermes_state.py",
+     "locales/af.yaml",
+     "locales/ar.yaml",
+     "locales/de.yaml",
+     "locales/en.yaml",
+     "locales/es.yaml",
+     "locales/fr.yaml",
+     "locales/ga.yaml",
+     "locales/hu.yaml",
+     "locales/it.yaml",
+     "locales/ja.yaml",
+     "locales/ko.yaml",
+     "locales/pt.yaml",
+     "locales/ru.yaml",
+     "locales/tr.yaml",
+     "locales/uk.yaml",
+     "locales/zh-hant.yaml",
+     "locales/zh.yaml",
+     "plugins/memory/hindsight/__init__.py",
+     "plugins/memory/honcho/__init__.py",
+     "plugins/memory/supermemory/__init__.py",
+     "run_agent.py",
+     "tests/agent/test_ephemeral_tool_guard_executors.py",
+     "tools/delegate_tool.py",
+     "tui_gateway/methods_session.py",
+     "tui_gateway/server.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/agent_init.py",
+     "agent/agent_runtime_helpers.py",
+     "agent/background_review.py",
+     "agent/conversation_compression.py",
+     "agent/memory_manager.py",
+     "agent/prompt_builder.py",
+     "agent/system_prompt.py",
+     "agent/title_generator.py",
+     "agent/tool_executor.py",
+     "agent/turn_context.py",
+     "apps/desktop/src/app/chat/composer/index.tsx",
+     "apps/desktop/src/app/chat/index.tsx",
+     "apps/desktop/src/app/chat/sidebar/index.tsx",
+     "apps/desktop/src/app/session/hooks/use-message-stream/gateway-event.ts",
+     "apps/desktop/src/app/session/hooks/use-session-actions/index.ts",
+     "apps/desktop/src/app/types.ts",
+     "apps/desktop/src/i18n/ar.ts",
+     "apps/desktop/src/i18n/en.ts",
+     "apps/desktop/src/i18n/ja.ts",
+     "apps/desktop/src/i18n/types.ts",
+     "apps/desktop/src/i18n/zh-hant.ts",
+     "apps/desktop/src/i18n/zh.ts",
+     "apps/desktop/src/lib/chat-messages.ts",
+     "apps/desktop/src/lib/keybinds/actions.ts",
+     "cli.py",
+     "gateway/platforms/base.py",
+     "gateway/run.py",
+     "gateway/session.py",
+     "gateway/slash_commands.py",
+     "hermes_cli/_parser.py",
+     "hermes_cli/cli_agent_setup_mixin.py",
+     "hermes_cli/cli_commands_mixin.py",
+     "hermes_cli/commands.py",
+     "hermes_cli/lifecycle.py",
+     "hermes_cli/main.py",
+     "hermes_cli/oneshot.py",
+     "hermes_cli/plugins.py",
+     "hermes_cli/tips.py",
+     "hermes_state.py",
+     "locales/af.yaml",
+     "locales/ar.yaml",
+     "locales/de.yaml",
+     "locales/en.yaml",
+     "locales/es.yaml",
+     "locales/fr.yaml",
+     "locales/ga.yaml",
+     "locales/hu.yaml",
+     "locales/it.yaml",
+     "locales/ja.yaml",
+     "locales/ko.yaml",
+     "locales/pt.yaml",
+     "locales/ru.yaml",
+     "locales/tr.yaml",
+     "locales/uk.yaml",
+     "locales/zh-hant.yaml",
+     "locales/zh.yaml",
+     "plugins/memory/hindsight/__init__.py",
+     "plugins/memory/honcho/__init__.py",
+     "plugins/memory/supermemory/__init__.py",
+     "run_agent.py",
+     "tests/agent/test_ephemeral_tool_guard_executors.py",
+     "tools/delegate_tool.py",
+     "tui_gateway/methods_session.py",
+     "tui_gateway/server.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "81582": {
+   "author": "x7peeps",
+   "state": "open",
+   "title": "feat(agent): proactive feature router — suggest the right Hermes capability at the right time",
+   "pr_head": "36dcc4dfc8",
+   "class": "clean_both",
+   "vs_main": {
+    "clean": true,
+    "conflicts": []
+   },
+   "vs_staging_head": {
+    "clean": true,
+    "conflicts": []
+   },
+   "extra_conflicts_with_head": []
+  },
+  "84360": {
+   "author": "TurboAnbeli",
+   "state": "open",
+   "title": "fix(memory): frame recalled memory as untrusted, non-authoritative context (#84251)",
+   "pr_head": "b856e23706",
+   "class": "clean_both",
+   "vs_main": {
+    "clean": true,
+    "conflicts": []
+   },
+   "vs_staging_head": {
+    "clean": true,
+    "conflicts": []
+   },
+   "extra_conflicts_with_head": []
+  },
+  "84412": {
+   "author": "TurboAnbeli",
+   "state": "open",
+   "title": "feat(memory): structured recall-provenance envelope (RecallItem) — tier B of #84251",
+   "pr_head": "30c9b1253c",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py",
+     "plugins/memory/hindsight/__init__.py",
+     "tests/plugins/memory/test_hindsight_provider.py",
+     "website/docs/developer-guide/memory-provider-plugin.md"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py",
+     "plugins/memory/hindsight/__init__.py",
+     "tests/plugins/memory/test_hindsight_provider.py",
+     "website/docs/developer-guide/memory-provider-plugin.md"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "86948": {
+   "author": "V0v1kkkAssistant",
+   "state": "open",
+   "title": "feat(memory): make provider timeouts configurable",
+   "pr_head": "cc1c2a1f2c",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py",
+     "plugins/memory/byterover/__init__.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py",
+     "plugins/memory/byterover/__init__.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "87028": {
+   "author": "richardclawbot",
+   "state": "open",
+   "title": "fix(memory): honor external prefetch timeout",
+   "pr_head": "f63bfa2a5c",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/agent_init.py",
+     "agent/memory_manager.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/agent_init.py",
+     "agent/memory_manager.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "89283": {
+   "author": "Nando2392",
+   "state": "open",
+   "title": "fix(security): mark provider recall as untrusted",
+   "pr_head": "e2cfcae796",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "tests/agent/test_api_content_sidecar.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "tests/agent/test_api_content_sidecar.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "90385": {
+   "author": "ryanlatham",
+   "state": "open",
+   "title": "feat(webhook): hand off completed sessions to messaging platforms",
+   "pr_head": "4691d0dc68",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/agent_runtime_helpers.py",
+     "agent/conversation_loop.py",
+     "agent/turn_context.py",
+     "gateway/config.py",
+     "gateway/platforms/base.py",
+     "gateway/platforms/webhook.py",
+     "gateway/run.py",
+     "gateway/session.py",
+     "gateway/turn_context.py",
+     "hermes_state.py",
+     "hermes_state_schema.py",
+     "run_agent.py",
+     "tests/agent/test_turn_context.py",
+     "tests/gateway/test_active_turn_recovery.py",
+     "tests/gateway/test_compression_session_id_persistence.py",
+     "tests/gateway/test_gateway_shutdown.py",
+     "tests/gateway/test_pre_gateway_dispatch.py",
+     "tests/gateway/test_proxy_mode.py",
+     "tests/gateway/test_replay_entry_fields.py",
+     "tests/hermes_cli/test_session_handoff.py",
+     "website/docs/user-guide/messaging/webhooks.md"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/agent_runtime_helpers.py",
+     "agent/conversation_loop.py",
+     "agent/turn_context.py",
+     "gateway/config.py",
+     "gateway/platforms/base.py",
+     "gateway/platforms/webhook.py",
+     "gateway/run.py",
+     "gateway/session.py",
+     "gateway/turn_context.py",
+     "hermes_state.py",
+     "hermes_state_schema.py",
+     "run_agent.py",
+     "tests/agent/test_turn_context.py",
+     "tests/gateway/test_active_turn_recovery.py",
+     "tests/gateway/test_compression_session_id_persistence.py",
+     "tests/gateway/test_gateway_shutdown.py",
+     "tests/gateway/test_pre_gateway_dispatch.py",
+     "tests/gateway/test_proxy_mode.py",
+     "tests/gateway/test_replay_entry_fields.py",
+     "tests/hermes_cli/test_session_handoff.py",
+     "website/docs/user-guide/messaging/webhooks.md"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "91974": {
+   "author": "x7peeps",
+   "state": "open",
+   "title": "feat(agent): context-window budget hint injection (adapted from openai/codex)",
+   "pr_head": "2189bd818c",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/turn_context.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/turn_context.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "92118": {
+   "author": "seradin",
+   "state": "open",
+   "title": "feat(memory): add operation-bound structured prefetch observations",
+   "pr_head": "2ad5cc73fa",
+   "class": "conflicts_with_head_only",
+   "vs_main": {
+    "clean": true,
+    "conflicts": []
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py"
+    ]
+   },
+   "extra_conflicts_with_head": [
+    "agent/memory_manager.py"
+   ]
+  },
+  "92149": {
+   "author": "telnetaisha",
+   "state": "open",
+   "title": "fix(agent): preserve memory-context provenance boundary",
+   "pr_head": "a997a94804",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/turn_context.py",
+     "tests/agent/test_memory_provider.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/turn_context.py",
+     "tests/agent/test_memory_provider.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "94983": {
+   "author": "GottZ",
+   "state": "open",
+   "title": "Context engines: resolve compaction authority under checkpoint_required (follow-up to #94639)",
+   "pr_head": "d8ac19b1e8",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/agent_init.py",
+     "agent/background_review.py",
+     "agent/context_compressor.py",
+     "agent/context_engine.py",
+     "agent/conversation_loop.py",
+     "agent/curator.py",
+     "agent/memory_manager.py",
+     "batch_runner.py",
+     "plugins/platforms/feishu/feishu_comment.py",
+     "run_agent.py",
+     "tests/agent/test_pre_compress_checkpoint_contract.py",
+     "tools/delegate_tool.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/agent_init.py",
+     "agent/background_review.py",
+     "agent/context_compressor.py",
+     "agent/context_engine.py",
+     "agent/conversation_loop.py",
+     "agent/curator.py",
+     "agent/memory_manager.py",
+     "batch_runner.py",
+     "plugins/platforms/feishu/feishu_comment.py",
+     "run_agent.py",
+     "tests/agent/test_pre_compress_checkpoint_contract.py",
+     "tools/delegate_tool.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "95387": {
+   "author": "x7peeps",
+   "state": "open",
+   "title": "feat(agent): implicit skill prefetch — load mentioned skills into turn prefetch cache",
+   "pr_head": "367efe23ec",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/turn_context.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/turn_context.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "98768": {
+   "author": "CaptainGimpy",
+   "state": "open",
+   "title": "feat(triggers): trigger-based skill auto-loading from SKILL.md frontmatter",
+   "pr_head": "e8e365daaf",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/prompt_builder.py",
+     "agent/turn_context.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/prompt_builder.py",
+     "agent/turn_context.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "101580": {
+   "author": "stepanov1975",
+   "state": "open",
+   "title": "feat(memory): plan recall for vague follow-up messages",
+   "pr_head": "d24b4d4042",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py",
+     "agent/memory_provider.py",
+     "agent/turn_context.py",
+     "hermes_cli/config_defaults.py",
+     "plugins/memory/hindsight/__init__.py",
+     "website/docs/user-guide/configuration.md"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py",
+     "agent/memory_provider.py",
+     "agent/turn_context.py",
+     "hermes_cli/config_defaults.py",
+     "plugins/memory/hindsight/__init__.py",
+     "website/docs/user-guide/configuration.md"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "108965": {
+   "author": "jonpol01",
+   "state": "open",
+   "title": "fix(memory): sanitize recalled context to a fixed point so overlapping fence tags cannot reassemble",
+   "pr_head": "39dd41fe68",
+   "class": "clean_both",
+   "vs_main": {
+    "clean": true,
+    "conflicts": []
+   },
+   "vs_staging_head": {
+    "clean": true,
+    "conflicts": []
+   },
+   "extra_conflicts_with_head": []
+  },
+  "115109": {
+   "author": "liuhao1024",
+   "state": "open",
+   "title": "fix(memory): scrub provider-synced turns with the egress redactor",
+   "pr_head": "65d141f5ec",
+   "class": "clean_both",
+   "vs_main": {
+    "clean": true,
+    "conflicts": []
+   },
+   "vs_staging_head": {
+    "clean": true,
+    "conflicts": []
+   },
+   "extra_conflicts_with_head": []
+  },
+  "115694": {
+   "author": "aniruddhaadak80",
+   "state": "open",
+   "title": "fix(memory): scrub secrets before memory-provider egress",
+   "pr_head": "a9e3edd6ee",
+   "class": "clean_both",
+   "vs_main": {
+    "clean": true,
+    "conflicts": []
+   },
+   "vs_staging_head": {
+    "clean": true,
+    "conflicts": []
+   },
+   "extra_conflicts_with_head": []
+  },
+  "119191": {
+   "author": "rodricksz4h5",
+   "state": "open",
+   "title": "fix(agent): transcripts show a multimodal turn's own content, not its injected context",
+   "pr_head": "0ae54608ba",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "hermes_cli/web_routers/sessions.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "hermes_cli/web_routers/sessions.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "120042": {
+   "author": "Navlem",
+   "state": "open",
+   "title": "fix(agent): raise external prefetch bound to 12s so real slow recalls are not dropped",
+   "pr_head": "641f6b94c5",
+   "class": "clean_both",
+   "vs_main": {
+    "clean": true,
+    "conflicts": []
+   },
+   "vs_staging_head": {
+    "clean": true,
+    "conflicts": []
+   },
+   "extra_conflicts_with_head": []
+  },
+  "124151": {
+   "author": "kweez007",
+   "state": "open",
+   "title": "fix(memory): raise Hindsight external-prefetch timeout 8s -> 20s",
+   "pr_head": "3ee6189dba",
+   "class": "clean_both",
+   "vs_main": {
+    "clean": true,
+    "conflicts": []
+   },
+   "vs_staging_head": {
+    "clean": true,
+    "conflicts": []
+   },
+   "extra_conflicts_with_head": []
+  },
+  "125802": {
+   "author": "Finn763",
+   "state": "open",
+   "title": "fix(core): #8893 decouple memory prefetch from user-message channel",
+   "pr_head": "543af5de19",
+   "class": "conflicts_with_main_already",
+   "vs_main": {
+    "clean": false,
+    "conflicts": [
+     "agent/turn_context.py",
+     "tests/agent/test_api_content_sidecar.py",
+     "tests/agent/test_turn_context.py"
+    ]
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/turn_context.py",
+     "tests/agent/test_api_content_sidecar.py",
+     "tests/agent/test_turn_context.py"
+    ]
+   },
+   "extra_conflicts_with_head": []
+  },
+  "125881": {
+   "author": "pstarkgit",
+   "state": "open",
+   "title": "Add fail-closed policy hooks for memory admission and compression commits",
+   "pr_head": "d3fdffcf82",
+   "class": "clean_both",
+   "vs_main": {
+    "clean": true,
+    "conflicts": []
+   },
+   "vs_staging_head": {
+    "clean": true,
+    "conflicts": []
+   },
+   "extra_conflicts_with_head": []
+  },
+  "126457": {
+   "author": "mozhongzhou",
+   "state": "closed",
+   "title": "feat(cli): add memory provider runtime health indicator to status bar",
+   "pr_head": "822f7b2835",
+   "class": "conflicts_with_head_only",
+   "vs_main": {
+    "clean": true,
+    "conflicts": []
+   },
+   "vs_staging_head": {
+    "clean": false,
+    "conflicts": [
+     "agent/memory_manager.py"
+    ]
+   },
+   "extra_conflicts_with_head": [
+    "agent/memory_manager.py"
+   ]
+  },
+  "129620": {
+   "author": "JoaoMarcos44",
+   "state": "open",
+   "title": "fix(anthropic): make preserved-thinking replay coherent",
+   "pr_head": "588b746cf6",
+   "class": "clean_both",
+   "vs_main": {
+    "clean": true,
+    "conflicts": []
+   },
+   "vs_staging_head": {
+    "clean": true,
+    "conflicts": []
+   },
+   "extra_conflicts_with_head": []
+  }
+ },
+ "summary": {
+  "conflicts_with_main_already": 38,
+  "clean_both": 11,
+  "conflicts_with_head_only": 2
+ }
+}

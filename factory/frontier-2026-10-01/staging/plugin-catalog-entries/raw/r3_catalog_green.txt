@@ -1,0 +1,54 @@
+# r3 catalog re-measure on the declared main 44a1ce9724 (worktree <worktree>, isolated HOME <testhome>; run at 2026-10-01T16:13:51Z)
+# arm A: main as is
+$ git rev-parse HEAD
+44a1ce9724502b9c692faaef00af3054bf11f1a6
+$ HOME=<testhome> HERMES_HOME=<testhome>/.hermes <venv>/bin/python -I tools/catalog_probe.py paw-pii
+{"all_loaded": true, "capability_summary": null, "catalog_dir": "<worktree>/plugin-catalog", "entry": null, "entry_present": false, "files": 348, "install_identifier": null, "loaded": 348, "name_collisions": [], "removed_match": null}
+rc=0
+$ <venv>/bin/python -I scripts/validate_plugin_catalog.py plugin-catalog/
+OK: 349 file(s) valid
+rc=0
+# arm B: main plus the branch's only change (git checkout 98c305b3ec -- plugin-catalog/paw-pii.yaml); index tree must equal the merge-tree result
+$ git write-tree
+60459843c290c8d7062e5d8af03603607eedbe51
+$ git rev-parse :plugin-catalog/paw-pii.yaml
+845dc6cce78e67a8989e267debcc5b4a4dcf473c
+$ HOME=<testhome> HERMES_HOME=<testhome>/.hermes <venv>/bin/python -I tools/catalog_probe.py paw-pii
+{"all_loaded": true, "capability_summary": "paw-pii (community, maintained by kvnloo) On-device PII detection and redaction using the ProgramAsWeights PII program (model and library by programasweights/pii; Hermes integration by kvnloo). Adds detect_pii and redact_pii tools, plus llm_request and tool_execution middleware that replace names, emails, phone numbers, secrets and other PII with a placeholder in provider requests and tool results. Disclosure: on first use the PAW program bundle downloads from programasweights.com and a ~600 MB base model from Hugging Face; after that, inference runs locally through llama.cpp and no text is sent to a remote service. Redaction fails open: if the program or its runtime cannot load, requests and tool results pass through unchanged. Every string in a request is scanned separately, so long conversations add local inference time per turn. This plugin registers tool(s): detect_pii, redact_pii; middleware: llm_request, tool_execution.", "catalog_dir": "<worktree>/plugin-catalog", "entry": {"capabilities": {"provides_hooks": [], "provides_middleware": ["llm_request", "tool_execution"], "provides_tools": ["detect_pii", "redact_pii"], "requires_env": []}, "category": "tools", "description": "On-device PII detection and redaction using the ProgramAsWeights PII program (model and library by programasweights/pii; Hermes integration by kvnloo). Adds detect_pii and redact_pii tools, plus llm_request and tool_execution middleware that replace names, emails, phone numbers, secrets and other PII with a placeholder in provider requests and tool results. Disclosure: on first use the PAW program bundle downloads from programasweights.com and a ~600 MB base model from Hugging Face; after that, inference runs locally through llama.cpp and no text is sent to a remote service. Redaction fails open: if the program or its runtime cannot load, requests and tool results pass through unchanged. Every string in a request is scanned separately, so long conversations add local inference time per turn.", "docs_url": "https://github.com/kvnloo/pii/blob/d891ebdd3a3dab27a3451923eb56f955253a2782/README.md#agent-harness-plugins", "image": "", "known_issues": [], "maintainer": "kvnloo", "name": "paw-pii", "onboarding": false, "platforms": [], "readme": false, "repo": "https://github.com/kvnloo/pii", "requires_hermes": "", "screenshots": [], "sha": "d891ebdd3a3dab27a3451923eb56f955253a2782", "subdir": "integrations/hermes", "tier": "community", "title": "", "version": "0.1.0"}, "entry_present": true, "files": 349, "install_identifier": "https://github.com/kvnloo/pii#integrations/hermes", "loaded": 349, "name_collisions": ["paw-pii.yaml"], "removed_match": null}
+rc=0
+$ <venv>/bin/python -I scripts/validate_plugin_catalog.py plugin-catalog/
+OK: 350 file(s) valid
+rc=0
+# r3 green and negative control on the declared main 44a1ce9724 (run at 2026-10-01T16:14:44Z)
+# arm B = main + plugin-catalog/paw-pii.yaml from 98c305b3ec (index tree 60459843c290c8d7062e5d8af03603607eedbe51)
+# arm B rep 1 (16:14:44Z)
+$ HOME=<testhome> HERMES_HOME=<testhome>/.hermes HERMES_PYTHON=<venv>/bin/python bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_plugin_catalog.py -q -k test_shipped_catalog_entries_are_all_valid_and_pinned
+=== Summary: 1 files, 1 tests passed, 0 failed (100% complete) in 1.4s (2 workers) ===
+rc=0
+# arm B rep 2 (16:14:50Z)
+$ HOME=<testhome> HERMES_HOME=<testhome>/.hermes HERMES_PYTHON=<venv>/bin/python bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_plugin_catalog.py -q -k test_shipped_catalog_entries_are_all_valid_and_pinned
+=== Summary: 1 files, 1 tests passed, 0 failed (100% complete) in 1.0s (2 workers) ===
+rc=0
+# arm B rep 3 (16:14:52Z)
+$ HOME=<testhome> HERMES_HOME=<testhome>/.hermes HERMES_PYTHON=<venv>/bin/python bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_plugin_catalog.py -q -k test_shipped_catalog_entries_are_all_valid_and_pinned
+=== Summary: 1 files, 1 tests passed, 0 failed (100% complete) in 1.1s (2 workers) ===
+rc=0
+# negative control on arm B: sed -i 's/^sha: .*/sha: main/' plugin-catalog/paw-pii.yaml
+3:sha: main
+$ <venv>/bin/python -I scripts/validate_plugin_catalog.py plugin-catalog/
+plugin-catalog/paw-pii.yaml: ERROR: sha 'main' must be exactly 40 lowercase hex characters
+FAIL: 1/350 file(s) invalid
+rc=1
+$ HOME=<testhome> HERMES_HOME=<testhome>/.hermes HERMES_PYTHON=<venv>/bin/python bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_plugin_catalog.py -q -k test_shipped_catalog_entries_are_all_valid_and_pinned
+E       AssertionError: assert 348 == 349
+=== Summary: 1 files, 0 tests passed, 1 failed (100% complete) in 2.3s (2 workers) ===
+║ tests/hermes_cli/test_plugin_catalog.py:31: AssertionError
+tests/hermes_cli/test_plugin_catalog.py:31: AssertionError
+rc=1
+# restore arm B entry and then main
+restored blob 845dc6cce78e67a8989e267debcc5b4a4dcf473c
+# arm A (main as is) shipped-entries test, 1 rep
+index tree 6a18f0eebdb6f90887fa6588781c20ec50fc6e1d
+$ HOME=<testhome> HERMES_HOME=<testhome>/.hermes HERMES_PYTHON=<venv>/bin/python bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_plugin_catalog.py -q -k test_shipped_catalog_entries_are_all_valid_and_pinned
+=== Summary: 1 files, 1 tests passed, 0 failed (100% complete) in 1.0s (2 workers) ===
+rc=0

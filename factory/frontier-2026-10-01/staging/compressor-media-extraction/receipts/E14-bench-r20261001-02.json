@@ -1,0 +1,110 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compressor-media-extraction",
+ "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+ "head_revision": "c5e8be14b43bf75bcc2e4e8d95f2d4810a7e2779",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#80636",
+  "NousResearch/hermes-agent#78645"
+ ],
+ "provenance": "self",
+ "privacy": "public-aggregate",
+ "cost_usd": 0.0,
+ "ai_assistance": "Claude Code (Opus 5.5) ran the experiment and wrote this receipt",
+ "created_at": "2026-10-01T07:47:16-05:00",
+ "spec": {
+  "path": null,
+  "prereg_commit": null,
+  "note": "not pre-registered on claude/ledger (no ledger writes in this run)"
+ },
+ "env": {
+  "host": "<local-host>",
+  "test_python": "3.11.14 (pytest 9.1.1, HERMES_PYTHON)",
+  "nav_python": "3.14.7 separate uv venv (tiktoken 0.14.0, radon 6.0.1)",
+  "sandbox": "none (no bwrap); HOME/HERMES_HOME pointed at scratch test homes; run_tests.sh env -i",
+  "load1_range": "3-16 (shared host; base and head full runs ran concurrently)",
+  "paths": "absolute local paths in commands and raw files are replaced by $W/<tree>, $S, $HERMES_PYTHON, <uv>, <pytest-tmp>, pytest-of-<user>"
+ },
+ "id": "E14-bench/r20261001-02",
+ "experiment": "E14 bench.py naive locate-X cost over every first-party import in tests/",
+ "tier": "T0",
+ "label": "MODELED",
+ "supersedes": "E14-bench/r20261001-01",
+ "round_note": "fix round 1: head rebuilt on main aea969677c (c5e8be14b4 replaces the unpushed d2bff3a59e; same patch-id 2c92e56f, corrected commit message)",
+ "inputs": {
+  "harness_blobs_at_base": {
+   "evals/codebase_navigability/bench.py": "307d41872ff00cef2ae3ccde5a5546cc89431023"
+  },
+  "tokenizer": "tiktoken o200k_base, cache file sha256 446a9538cb6c348e3516120d7c08b09f57c36495e2acfffe59a5bf8b0cfb1a2d"
+ },
+ "command": "TIKTOKEN_CACHE_DIR=... $NAVVENV/bin/python $W/head/evals/codebase_navigability/bench.py $W/base base --out out ; same for head",
+ "result": {
+  "tasks": {
+   "base": 24707,
+   "head": 24707
+  },
+  "distinct_defining_files": {
+   "base": 1328,
+   "head": 1329
+  },
+  "file_tokens_mean": {
+   "base": 19296,
+   "head": 19216
+  },
+  "overhead_tokens_mean": {
+   "base": 16190,
+   "head": 16109
+  },
+  "overhead_ratio_mean": {
+   "base": 222.9,
+   "head": 220.8
+  },
+  "total_file_tokens_if_read_whole": {
+   "base": 476754859,
+   "head": 474758058
+  },
+  "tasks_file_over_32k": {
+   "base": 4776,
+   "head": 4763
+  },
+  "tasks_file_over_8k": {
+   "base": 15190,
+   "head": 15177
+  },
+  "tasks_file_over_2000_lines": {
+   "base": 5634,
+   "head": 5621
+  },
+  "siblings_mean": {
+   "base": 76.5,
+   "head": 76.2
+  },
+  "total_symbol_tokens": {
+   "base": 76742660,
+   "head": 76742662
+  },
+  "reexport_hops": {
+   "base": 1120,
+   "head": 1120
+  },
+  "whole_file_tokens_delta": {
+   "tokens": -1996801,
+   "pct": -0.42
+  }
+ },
+ "reading": "13 test-import tasks that resolved to a >2,000-line file now resolve to the 243-line sibling. Whole-file read cost over all 24,707 tasks moves by -1,996,801 tokens (-0.42%). Naive read-the-whole-file workload, simulated.",
+ "raw": [
+  {
+   "path": null,
+   "sha256": "f25d8bc864f55d6909b5d6979bb0e1a26fa8bb96989a0838b8175259dab3c204",
+   "note": "base.navigability.json (8 MB) kept locally only"
+  },
+  {
+   "path": null,
+   "sha256": "50549cfa263ad7d17b0f7d4e6ba8998262bcc47f8d316dbe215d86cd9c96714e",
+   "note": "head.navigability.json (8 MB) kept locally only"
+  }
+ ],
+ "verdict": "KEEP (MODELED; never a headline)"
+}

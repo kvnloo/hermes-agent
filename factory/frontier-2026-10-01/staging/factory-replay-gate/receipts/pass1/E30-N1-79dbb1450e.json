@@ -1,0 +1,131 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "E30-N1-79dbb1450e/r20261001T093000Z",
+ "generated_at": "2026-10-01T09:30:00Z",
+ "spec": {
+  "id": "E30-N1-79dbb1450e",
+  "rev": 1,
+  "sha256": "b7f76b850fb9428c85f50deff54f9b19fe8e076a527abf51d6dde021ccf44a71",
+  "kind": "redgreen"
+ },
+ "work_order": {
+  "id": "xf-E30-N1-79dbb1450e",
+  "from": "factory-replay-gate staging builder",
+  "status": "claimed"
+ },
+ "runner_revision": "evals/_factory/gate_runner.py@2f9f69cf03b2",
+ "issue": "kvnloo/hermes-agent#322",
+ "origin_refs": [
+  "NousResearch/hermes-agent#124792",
+  "revert 6ca1924763"
+ ],
+ "base_revision": "652fb2eb57de84ea8648bce88b40fce07cad33d6",
+ "head_revision": "79dbb1450ec404a2240529f5554526da4cfec498",
+ "arms": {
+  "base": {
+   "commit": "652fb2eb57de84ea8648bce88b40fce07cad33d6",
+   "tree": "46dc418678ddeb5e94dacb7536a728b9cdf79e9c",
+   "inject": {
+    "from": "79dbb1450ec404a2240529f5554526da4cfec498",
+    "source_commit": "79dbb1450ec404a2240529f5554526da4cfec498",
+    "files": [
+     "tests/tools/test_mcp_tool_issue_948.py"
+    ]
+   }
+  },
+  "head": {
+   "commit": "79dbb1450ec404a2240529f5554526da4cfec498",
+   "merge": "direct",
+   "arm_commit": "79dbb1450ec404a2240529f5554526da4cfec498",
+   "tree": "f80500dceb6de711032cfaca2c9924f73e996a96"
+  }
+ },
+ "changed_files": [
+  "tests/tools/test_mcp_tool_issue_948.py",
+  "tools/mcp_tool_common.py"
+ ],
+ "tests": {},
+ "gates": {
+  "validity": {
+   "result": "FAIL",
+   "reason": "selected file references exec/re-exec",
+   "files": [
+    "tests/tools/test_mcp_tool_issue_948.py"
+   ]
+  },
+  "ownership": {
+   "result": "PENDING",
+   "recorded": "unknown",
+   "searched_at": null,
+   "queries": []
+  },
+  "flaky": false
+ },
+ "measurements": [
+  {
+   "name": "red_reps_failing_with_marker",
+   "value": null,
+   "unit": "reps",
+   "label": "OBSERVED",
+   "source": "probe",
+   "primary": true
+  }
+ ],
+ "denominators": {
+  "cells": 0,
+  "infra": 0,
+  "completeness": null
+ },
+ "env": {
+  "python": null,
+  "sandbox": "in-process guard per cell (loopback-only connect, name lookups, live-home opens, hermes exec); fresh HOME/HERMES_HOME per cell; empty env; no kernel network namespace",
+  "relay": {}
+ },
+ "safety": {
+  "canary": null,
+  "egress_blocked": 0,
+  "home_blocked": 0,
+  "exec_blocked": 0,
+  "interpreter_writes_refused": 0,
+  "hermes_home_isolated": false
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "builds": [],
+ "runtime_evidence": [],
+ "security_checks": [],
+ "resource_usage": {
+  "wall_s": 0.1,
+  "cpu_core_s": null,
+  "tokens": 0,
+  "api_cost_usd": 0.0
+ },
+ "outcome": {
+  "execution_completed": true,
+  "verified_success": null,
+  "verification_source": "self-run gate runner (not independent)"
+ },
+ "provenance": "self",
+ "verdict": "DISCARD",
+ "refused": true,
+ "refusal_reasons": [
+  "validity: selected file references exec/re-exec",
+  "ownership: PENDING"
+ ],
+ "unpinned_hunks": [],
+ "limitations": [
+  "in-process guard only; pair with a kernel network namespace for a hard boundary"
+ ],
+ "not_tested": [
+  "full test suite",
+  "real provider responses",
+  "kernel network namespace (in-process guard only)"
+ ],
+ "ai_assistance": "Spec and runner written with Claude Code (Opus 5.5); disclosed per repository policy",
+ "privacy": "public-aggregate"
+}

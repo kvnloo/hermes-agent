@@ -1,0 +1,389 @@
+{
+  "schema": "xf.receipt.v1",
+  "id": "OWNERSHIP/r20261001-03",
+  "experiment": "P2 ownership and PR-state refresh against current main: state of every upstream PR/issue the manifest cites, the 10 prefetch queries (all result pages), the teknium1 open-PR set, a changed-file scan of every open search hit, and a merge-tree matrix of the hits that touch the prefetch or shared-metrics files against current main and the staging head",
+  "tier": "T0",
+  "cost_usd": 0.0,
+  "lane": "cpu (gh read-only; git ls-remote and merge-tree on the local object store)",
+  "staging": "memory-prefetch-metric",
+  "base_revision": "040b6df2c40b0f4f88f51e4c2062eafc4d7463c5",
+  "head_revision": "569ad4d84b0f9888ea2598c2a8ea416b2c75bad6",
+  "main_revision": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+  "results": {
+    "main_recheck": {
+      "ls_remote_at": "2026-10-01T16:14:25Z",
+      "main": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+      "main_committer_date": "2026-10-01T11:56:40-04:00",
+      "base_is_ancestor": true,
+      "commits_since_base": 21,
+      "invalidate_on_commits_since_base": [],
+      "merge_tree_head_vs_main": {
+        "clean": true,
+        "tree": "675e1aa029"
+      },
+      "prefetch_grep_since_2026_09_20": {
+        "count": 15,
+        "since_base": 0,
+        "note": "the same 15 commits as on a3b56cac95; none meters prefetch"
+      },
+      "workflows": "0 commits under .github/ since the base; 52 workflow files, so the 0/52 push-trigger scan in MERGE/r20261001-03 stands",
+      "fork_branch_name": "staged/memory-prefetch-metric absent on the fork at 16:28Z (5 other staged/* refs exist); local ref still at the head"
+    },
+    "cited_state_checked_at": "2026-10-01T16:14:25Z",
+    "cited_state": {
+      "98045": {
+        "state": "closed",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "Navlem",
+        "closed_at": "2026-10-01T12:51:06Z",
+        "merged_at": null,
+        "head": "77f018b7db",
+        "mergeable_state": "clean"
+      },
+      "87028": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "richardclawbot",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "f63bfa2a5c",
+        "mergeable_state": "dirty"
+      },
+      "124151": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "kweez007",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "3ee6189dba",
+        "mergeable_state": "blocked"
+      },
+      "120042": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "Navlem",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "641f6b94c5",
+        "mergeable_state": "blocked"
+      },
+      "47119": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": false,
+        "author": "jbienz",
+        "closed_at": null,
+        "merged_at": null
+      },
+      "21566": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": false,
+        "author": "pikos-apikos",
+        "closed_at": null,
+        "merged_at": null
+      },
+      "92118": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "seradin",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "2ad5cc73fa",
+        "mergeable_state": "blocked"
+      },
+      "126457": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "mozhongzhou",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "822f7b2835",
+        "mergeable_state": "blocked"
+      },
+      "86948": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "V0v1kkkAssistant",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "cc1c2a1f2c",
+        "mergeable_state": "dirty"
+      },
+      "65329": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "Soju06",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "c868eaaa02",
+        "mergeable_state": "dirty"
+      },
+      "125802": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "Finn763",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "543af5de19",
+        "mergeable_state": "dirty"
+      },
+      "15412": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "tabtablabs-dev",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "69c5a41321",
+        "mergeable_state": "dirty"
+      },
+      "113678": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "teknium1",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "b94a482497",
+        "mergeable_state": "dirty"
+      },
+      "78584": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "iso2kx",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "e7c6f83e8a",
+        "mergeable_state": "dirty"
+      },
+      "127373": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": false,
+        "author": "kvnloo",
+        "closed_at": null,
+        "merged_at": null
+      },
+      "127374": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": false,
+        "author": "kvnloo",
+        "closed_at": null,
+        "merged_at": null
+      },
+      "127375": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": false,
+        "author": "kvnloo",
+        "closed_at": null,
+        "merged_at": null
+      },
+      "127332": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": false,
+        "author": "kvnloo",
+        "closed_at": null,
+        "merged_at": null
+      },
+      "127228": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": false,
+        "author": "kvnloo",
+        "closed_at": null,
+        "merged_at": null
+      }
+    },
+    "pr98045": {
+      "state": "CLOSED, not merged",
+      "closed_at": "2026-10-01T12:51:06Z",
+      "closed_by": "Navlem",
+      "reason": "duplicate of #87028 (alt-glitch's AI triage flagged it as a duplicate of #87028 on 2026-08-29)",
+      "closing_comment": "Closing as a duplicate of open #87028, which covers the same external_prefetch_timeout registration/handoff with stronger validation. This is not fixed on main. The keeper still needs rebase, actual _init_memory wiring tests, sample/docs, and coordination with provider-specific defaults. Preserve configured/invalid/missing-value tests in that work.",
+      "effect": "no longer an open adjacent PR or a demand signal; r02 recorded it as OPEN at 12:15Z, before the close"
+    },
+    "pr87028": {
+      "state": "OPEN",
+      "author": "richardclawbot",
+      "head": "f63bfa2a5c",
+      "mergeable_state": "dirty",
+      "field_evidence_comment": {
+        "user": "rodrigogs",
+        "at": "2026-09-06T04:08:38Z",
+        "summary": "Bedrock-only Docker gateway, holographic with a local Ollama embedder: the 8 s join fired 4 times in about an hour, coinciding with 18.4-47.1 s embeds or a 400 after 60 s; 101 of 197 agent starts injected no external memory, which he says he cannot all pin on the 8 s cap; the per-turn skip is logged only at DEBUG; he argues a tunable bound matters more than more logging"
+      },
+      "use": "demand signal 3 (replaces #98045): field evidence that the drop rate is currently invisible and unattributable; it argues for the bound, not for a counter"
+    },
+    "teknium1_open_prs": {
+      "count": 260,
+      "same_set_as_r02": true,
+      "added": [],
+      "removed": [],
+      "title_hits": []
+    },
+    "prefetch_search": {
+      "searched_at": "2026-10-01T16:14:48Z",
+      "queries": {
+        "prefetch metric": 4,
+        "prefetch telemetry": 10,
+        "memory prefetch": 153,
+        "prefetch_provider": 0,
+        "prefetch shared metrics": 2,
+        "memory.prefetch": 1,
+        "record_memory_prefetch": 0,
+        "external prefetch": 61,
+        "prefetch timeout": 55,
+        "prefetch latency": 22
+      },
+      "vs_r02": {
+        "removed": "#98045 from 'memory prefetch', 'external prefetch', 'prefetch timeout', 'prefetch latency' (closed)",
+        "added": "#129620 to 'external prefetch' (JoaoMarcos44, Anthropic thinking replay; touches agent/turn_context.py, merges cleanly with main and the head); #98703 to 'prefetch latency' (oleg-koval, pre-agent turn routing; touches none of the watched files)",
+        "r02_gap": "r02 stored only the first 100 of 152 'memory prefetch' hits; this run lists all 153"
+      },
+      "command": "gh api -X GET --paginate search/issues -f q='repo:NousResearch/hermes-agent is:pr is:open <query>' -f per_page=100"
+    },
+    "file_scan": {
+      "unique_open_prs": 178,
+      "watch_regex": "^(agent/memory_manager\\.py|agent/memory_provider\\.py|agent/turn_context\\.py|hermes_cli/observability/shared_metrics[^/]*\\.py|hermes_cli/observability/schemas/.*shared_metrics.*)$",
+      "touch_watched_files": 51,
+      "add_a_prefetch_counter": [],
+      "note": "added lines naming shared_metrics/telemetry/metric appear only as prose, tables or unrelated telemetry words (#34521, #45743, #78584, #92118 'no telemetry', #115109, #115694, #124151, #125881); none records a prefetch row"
+    },
+    "merge_matrix_watched": {
+      "checked_at": "2026-10-01T16:24Z",
+      "summary": {
+        "already_conflict_with_main": 38,
+        "clean_with_main_and_head": 11,
+        "conflict_with_head_only": 2
+      },
+      "conflict_with_head_only": {
+        "126457": {
+          "author": "mozhongzhou",
+          "files": [
+            "agent/memory_manager.py"
+          ]
+        },
+        "92118": {
+          "author": "seradin",
+          "files": [
+            "agent/memory_manager.py"
+          ]
+        }
+      },
+      "clean_with_main_and_head": {
+        "64421": "yingliang-zhang: fix(memory): frame recalled context as untrusted data",
+        "68903": "nuffin: feat(agent): add memory_mode parameter with 'on_demand' option for sub-agents",
+        "81582": "x7peeps: feat(agent): proactive feature router — suggest the right Hermes capability at the right time",
+        "84360": "TurboAnbeli: fix(memory): frame recalled memory as untrusted, non-authoritative context (#84251)",
+        "108965": "jonpol01: fix(memory): sanitize recalled context to a fixed point so overlapping fence tags cannot reassemble",
+        "115109": "liuhao1024: fix(memory): scrub provider-synced turns with the egress redactor",
+        "115694": "aniruddhaadak80: fix(memory): scrub secrets before memory-provider egress",
+        "120042": "Navlem: fix(agent): raise external prefetch bound to 12s so real slow recalls are not dropped",
+        "124151": "kweez007: fix(memory): raise Hindsight external-prefetch timeout 8s -> 20s",
+        "125881": "pstarkgit: Add fail-closed policy hooks for memory admission and compression commits",
+        "129620": "JoaoMarcos44: fix(anthropic): make preserved-thinking replay coherent"
+      },
+      "clean_set_prefetch_provider_changes": {
+        "124151": "per-provider bound only; one record call per exit kept",
+        "125881": "pstarkgit: adds a governance check after the success/empty record call that can return '' (5 returns vs 4 on the head); still one row per exit, but a context the hook blocks is recorded as success. Text-only reading of the merged tree; not run"
+      },
+      "conflict_with_main_already_includes": [
+        "87028",
+        "86948",
+        "65329",
+        "125802",
+        "78584",
+        "58597",
+        "63759",
+        "84412",
+        "101580",
+        "15412"
+      ],
+      "pr_heads_vs_MERGE_r03": "all 10 heads in MERGE/r20261001-03 unchanged; their merge results are the same on 44a1ce9724"
+    },
+    "fork": {
+      "404": {
+        "state": "open",
+        "table_rows": 39
+      },
+      "322": {
+        "state": "open",
+        "table_rows": 0
+      },
+      "402": {
+        "state": "closed",
+        "table_rows": 9
+      },
+      "403": {
+        "state": "closed",
+        "table_rows": 20
+      }
+    }
+  },
+  "verdict": "OURS (no open PR adds a prefetch counter); demand from #124151, #120042 and the field evidence on #87028; #98045 closed as a duplicate of #87028 and dropped; risk: teknium1 may land the same row himself",
+  "label": "OBSERVED",
+  "provenance": "self",
+  "privacy": "public-aggregate (public PR metadata only)",
+  "raw_artifacts": {
+    "recheck": {
+      "path": "work/r4/recheck_r4.json",
+      "sha256": "d0b538f45bb2b8ef233b97a9ad0ce5b794658ac41a065d3a5b9f9699fada57ed"
+    },
+    "recheck_script": {
+      "path": "work/r4/recheck_r4.py",
+      "sha256": "b1bd52e4607a72ae61832fed7881d5c64b5fdf89bdd57fc1c4cd5e9db15b9e95"
+    },
+    "fullscan": {
+      "path": "work/r4/fullscan_r4.json",
+      "sha256": "1da21b04b4a15cdcba5cee4a6e6bfc321aecb3beaca865c36c2407292b9d90fe"
+    },
+    "fullscan_script": {
+      "path": "work/r4/fullscan_r4.py",
+      "sha256": "ab2cac09b3f1ca7bfe3029a1179a3b937da91cd26104e2d19db2187cfff54b2d"
+    },
+    "flagged_merge": {
+      "path": "work/r4/flagged_merge_r4.json",
+      "sha256": "3a5d287b95366c6db5f16182d2c1ce315120c3dfe9fa689d666782f2b4ac7cbb"
+    },
+    "flagged_merge_script": {
+      "path": "work/r4/flagged_merge_r4.py",
+      "sha256": "a54b71f2702df56a8bc61aab34c3fa0a3300f4e1e7137b3d47b9180fed38bd84"
+    },
+    "clean_semantics": {
+      "path": "work/r4/clean_semantics_r4.json",
+      "sha256": "94e1566a2ac923a7fe9419950c0830a0a3fc9614dbb19802056fb9fb79d26a1d"
+    },
+    "clean_semantics_script": {
+      "path": "work/r4/clean_semantics_r4.py",
+      "sha256": "9895aaaf0f894c248d90cccfea4a551ff84d77de0efe4a16730d2c331e103276"
+    },
+    "newhits": {
+      "path": "work/r4/newhits_r4.json",
+      "sha256": "02456629aca1a15242a66387c92171904d75da6388c18f2ff5a093f79b468b21"
+    },
+    "freshness": {
+      "path": "work/r4/freshness_r4.txt",
+      "sha256": "fbb4a75edf823cdb30788a8f8243065aff8f5fbee9f36ce3e5c4530ddc96d877"
+    }
+  },
+  "supersedes": {
+    "id": "OWNERSHIP/r20261001-02",
+    "path": "receipts/OWNERSHIP-r20261001-02.json",
+    "sha256_as_written": "55f264ebbbf9c0f6482a28d4222c8433ba5bfa00663fda1c9942aaedfdd1a055",
+    "why": "recorded #98045 as OPEN (closed 12:51Z as a duplicate of #87028); stored only 100 of 152 'memory prefetch' hits and did not merge-test the hits that touch the watched files"
+  }
+}

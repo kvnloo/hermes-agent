@@ -1,0 +1,18 @@
+# r2 receipt rebuild check (run at 2026-10-01T11:38:39Z): rebuild the four r20261001-01 receipts from raw/ with the round-2 tools in a scratch copy, then compare with the published receipts
+$ cp -a tools raw <scratch>/ && cd <scratch> && python3 tools/build_receipts.py && python3 tools/scrub_receipts.py   # no XF_* env set: placeholders are the defaults
+scrub rc=0
+# tool sha256 used
+e6f34f857c14eff9bf5d3d0b612a93729c3b5bf5c5834b8201df1719fc4a500d  tools/build_receipts.py
+f331a72be99970c298992dc066df905ee8d1a7acfc098ccde6e898fce55294d3  tools/scrub_receipts.py
+# sha256: rebuilt | published | equal
+F12-r20261001-01.json 96d4108c09ef1b2d4fbabd46bbcb5f73fbb975a11e214fae62adb98e8acc2840 96d4108c09ef1b2d4fbabd46bbcb5f73fbb975a11e214fae62adb98e8acc2840 yes
+SLICE-proof-r20261001-01.json ee97c00d324b553c9a0b011c298aa8766d75e200664ef7a6313cd35e2bda1c45 ee97c00d324b553c9a0b011c298aa8766d75e200664ef7a6313cd35e2bda1c45 yes
+T1-capability-probe-r20261001-01.json 1b1d5c1cfa0eb788cb33178d721c4f2d127042e14fcb1a63b93277cd2008e691 1b1d5c1cfa0eb788cb33178d721c4f2d127042e14fcb1a63b93277cd2008e691 yes
+T1-failopen-r20261001-01.json d31d5b102a902061d35e40c3690a3ed28f8d5397e35dbd0323178eb6e092fcff d31d5b102a902061d35e40c3690a3ed28f8d5397e35dbd0323178eb6e092fcff yes
+# idempotence: scrub over the published receipts (in a second scratch copy) changes nothing
+scrub rc=0
+F12-r20261001-01.json unchanged
+RECHECK-r20261001-02.json unchanged
+SLICE-proof-r20261001-01.json unchanged
+T1-capability-probe-r20261001-01.json unchanged
+T1-failopen-r20261001-01.json unchanged

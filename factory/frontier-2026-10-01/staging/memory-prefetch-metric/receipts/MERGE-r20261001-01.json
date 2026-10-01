@@ -1,0 +1,46 @@
+{
+  "schema": "xf.receipt.v1",
+  "id": "MERGE/r20261001-01",
+  "experiment": "Freshness and overlap: merge-tree on current main, and a simulated merge with the open PR that edits the same function",
+  "tier": "T0",
+  "cost_usd": 0.0,
+  "lane": "cpu",
+  "staging": "memory-prefetch-metric",
+  "base_revision": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+  "head_revision": "c815543bc2504eccaae9f6adce5046f41710f38c",
+  "results": {
+    "current_main": {
+      "sha": "234badf4012af380d23c91eae55d045a69c69ffb",
+      "commits_since_base": 11,
+      "invalidate_on_changed": false,
+      "command": "git merge-tree --write-tree 234badf4012af380d23c91eae55d045a69c69ffb c815543bc2504eccaae9f6adce5046f41710f38c",
+      "tree": "6dad8cd3ed88da6143bc2494dec2750dba79324f",
+      "clean": true
+    },
+    "with_NousResearch_124151": {
+      "pr": 124151,
+      "author": "kweez007",
+      "head": "3ee6189dbad0485790893c5098b20f00d27a1d51",
+      "diff_sha256": "e43f8f1dab462e9289190ae81734a76c46934313ce0b7adff68761b55086a35c",
+      "method": "gh pr diff applied onto main as an unreferenced temp commit 9812d4f212, then merge-tree with the staging commit",
+      "merge_tree": "2e08be356dc5999d01f8d0fa4da582080a523b23",
+      "clean": true,
+      "tests_on_merged_tree": {
+        "commit": "2698613f0a (temp, unreferenced)",
+        "command": "scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py tests/agent/test_memory_provider.py -q",
+        "observed": "2 files, 74 tests passed, 0 failed",
+        "log_sha256": "a5fd874f549f1a469948f46c9587ee1ea01df9e0f43737c02442a1b486ff4cec"
+      },
+      "semantics": "compatible: the record calls time the real wait, so #124151's per-provider 20 s Hindsight bound lands in 10s_to_30s"
+    },
+    "workflow_push_trigger_scan": {
+      "tree": "9569d4977ca74896070bc85425145742ee835291",
+      "workflows": 52,
+      "matches_for_branch": 0
+    }
+  },
+  "label": "OBSERVED",
+  "verdict": "KEEP",
+  "provenance": "self",
+  "privacy": "public-aggregate"
+}

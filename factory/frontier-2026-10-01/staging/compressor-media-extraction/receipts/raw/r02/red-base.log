@@ -1,0 +1,197 @@
+▶ not activated — using HERMES_PYTHON: $HERMES_PYTHON
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 6 test files (~45 tests) under ['tests/agent/test_compressor_historical_media.py', 'tests/agent/test_compressor_stale_tool_images.py', 'tests/agent/test_outbound_stale_vision.py', 'tests/agent/test_protected_tail_pressure.py', 'tests/agent/test_image_eviction_policy.py', 'tests/agent/test_compressor_zero_user_guard.py']; running with -j 2
+[ 13.3% |     6/~45 | ✓0 | ✗0] ✗ tests/agent/test_compressor_stale_tool_images.py (1e, 1.8s)
+
+  ╔╍ Failed: tests/agent/test_compressor_stale_tool_images.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ 
+  ║ ==================================== ERRORS ====================================
+  ║ ______ ERROR collecting tests/agent/test_compressor_stale_tool_images.py _______
+  ║ ImportError while importing test module '$W/red/tests/agent/test_compressor_stale_tool_images.py'.
+  ║ Hint: make sure your test modules/packages have valid Python names.
+  ║ Traceback:
+  ║ /usr/lib/python3.11/importlib/__init__.py:126: in import_module
+  ║     return _bootstrap._gcd_import(name[level:], package, level)
+  ║            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  ║ tests/agent/test_compressor_stale_tool_images.py:12: in <module>
+  ║     from agent.context_compressor_media import (
+  ║ E   ModuleNotFoundError: No module named 'agent.context_compressor_media'
+  ║ =========================== short test summary info ============================
+  ║ ERROR tests/agent/test_compressor_stale_tool_images.py
+  ║ !!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+  ║ 1 error in 0.41s
+  ║
+  ║  Repro: python -m pytest tests/agent/test_compressor_stale_tool_images.py -q -rfE
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+[ 46.7% |    21/~45 | ✓0 | ✗0] ✗ tests/agent/test_compressor_historical_media.py (1e, 1.8s)
+
+  ╔╍ Failed: tests/agent/test_compressor_historical_media.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ 
+  ║ ==================================== ERRORS ====================================
+  ║ _______ ERROR collecting tests/agent/test_compressor_historical_media.py _______
+  ║ ImportError while importing test module '$W/red/tests/agent/test_compressor_historical_media.py'.
+  ║ Hint: make sure your test modules/packages have valid Python names.
+  ║ Traceback:
+  ║ /usr/lib/python3.11/importlib/__init__.py:126: in import_module
+  ║     return _bootstrap._gcd_import(name[level:], package, level)
+  ║            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  ║ tests/agent/test_compressor_historical_media.py:17: in <module>
+  ║     from agent.context_compressor_media import (
+  ║ E   ModuleNotFoundError: No module named 'agent.context_compressor_media'
+  ║ =========================== short test summary info ============================
+  ║ ERROR tests/agent/test_compressor_historical_media.py
+  ║ !!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+  ║ 1 error in 0.40s
+  ║
+  ║  Repro: python -m pytest tests/agent/test_compressor_historical_media.py -q -rfE
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+[ 51.1% |    23/~45 | ✓12 | ✗ 0] ✓ tests/agent/test_image_eviction_policy.py (12✓, 1.0s)
+[ 64.4% |    29/~45 | ✓18 | ✗ 0] ✓ tests/agent/test_compressor_zero_user_guard.py (6✓, 1.4s)
+[ 91.1% |    41/~45 | ✓18 | ✗ 0] ✗ tests/agent/test_outbound_stale_vision.py (1e, 1.6s)
+
+  ╔╍ Failed: tests/agent/test_outbound_stale_vision.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ 
+  ║ ==================================== ERRORS ====================================
+  ║ __________ ERROR collecting tests/agent/test_outbound_stale_vision.py __________
+  ║ ImportError while importing test module '$W/red/tests/agent/test_outbound_stale_vision.py'.
+  ║ Hint: make sure your test modules/packages have valid Python names.
+  ║ Traceback:
+  ║ /usr/lib/python3.11/importlib/__init__.py:126: in import_module
+  ║     return _bootstrap._gcd_import(name[level:], package, level)
+  ║            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  ║ tests/agent/test_outbound_stale_vision.py:14: in <module>
+  ║     from agent.context_compressor_media import (
+  ║ E   ModuleNotFoundError: No module named 'agent.context_compressor_media'
+  ║ =========================== short test summary info ============================
+  ║ ERROR tests/agent/test_outbound_stale_vision.py
+  ║ !!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+  ║ 1 error in 0.36s
+  ║
+  ║  Repro: python -m pytest tests/agent/test_outbound_stale_vision.py -q -rfE
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+[100.0% |    45/~45 | ✓18 | ✗ 0] ✗ tests/agent/test_protected_tail_pressure.py (1e, 1.5s)
+
+  ╔╍ Failed: tests/agent/test_protected_tail_pressure.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ 
+  ║ ==================================== ERRORS ====================================
+  ║ _________ ERROR collecting tests/agent/test_protected_tail_pressure.py _________
+  ║ ImportError while importing test module '$W/red/tests/agent/test_protected_tail_pressure.py'.
+  ║ Hint: make sure your test modules/packages have valid Python names.
+  ║ Traceback:
+  ║ /usr/lib/python3.11/importlib/__init__.py:126: in import_module
+  ║     return _bootstrap._gcd_import(name[level:], package, level)
+  ║            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  ║ tests/agent/test_protected_tail_pressure.py:26: in <module>
+  ║     from agent.context_compressor_media import _tool_content_has_images
+  ║ E   ModuleNotFoundError: No module named 'agent.context_compressor_media'
+  ║ =========================== short test summary info ============================
+  ║ ERROR tests/agent/test_protected_tail_pressure.py
+  ║ !!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+  ║ 1 error in 0.37s
+  ║
+  ║  Repro: python -m pytest tests/agent/test_protected_tail_pressure.py -q -rfE
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 6 files, 18 tests passed, 0 failed (100% complete) in 4.7s (2 workers) ===
+  Durations cached to test_durations.json (2 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   6
+  Total subprocess CPU-wall: 9.0s  (runner wall: 4.7s, parallelism: 2x)
+  P50: 1.62s  P90: 1.75s  P95: 1.75s  P99: 1.75s  Max: 1.75s
+  <1s: 1 files (17%)  <2s: 6 files (100%)
+  Top 10 slowest:
+      1.75s  tests/agent/test_compressor_historical_media.py
+      1.75s  tests/agent/test_compressor_stale_tool_images.py
+      1.62s  tests/agent/test_outbound_stale_vision.py
+      1.53s  tests/agent/test_protected_tail_pressure.py
+      1.40s  tests/agent/test_compressor_zero_user_guard.py
+      0.99s  tests/agent/test_image_eviction_policy.py
+
+=== Failure output ===
+
+--- tests/agent/test_compressor_stale_tool_images.py ---
+
+==================================== ERRORS ====================================
+______ ERROR collecting tests/agent/test_compressor_stale_tool_images.py _______
+ImportError while importing test module '$W/red/tests/agent/test_compressor_stale_tool_images.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/agent/test_compressor_stale_tool_images.py:12: in <module>
+    from agent.context_compressor_media import (
+E   ModuleNotFoundError: No module named 'agent.context_compressor_media'
+=========================== short test summary info ============================
+ERROR tests/agent/test_compressor_stale_tool_images.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.41s
+
+--- tests/agent/test_compressor_historical_media.py ---
+
+==================================== ERRORS ====================================
+_______ ERROR collecting tests/agent/test_compressor_historical_media.py _______
+ImportError while importing test module '$W/red/tests/agent/test_compressor_historical_media.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/agent/test_compressor_historical_media.py:17: in <module>
+    from agent.context_compressor_media import (
+E   ModuleNotFoundError: No module named 'agent.context_compressor_media'
+=========================== short test summary info ============================
+ERROR tests/agent/test_compressor_historical_media.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.40s
+
+--- tests/agent/test_outbound_stale_vision.py ---
+
+==================================== ERRORS ====================================
+__________ ERROR collecting tests/agent/test_outbound_stale_vision.py __________
+ImportError while importing test module '$W/red/tests/agent/test_outbound_stale_vision.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/agent/test_outbound_stale_vision.py:14: in <module>
+    from agent.context_compressor_media import (
+E   ModuleNotFoundError: No module named 'agent.context_compressor_media'
+=========================== short test summary info ============================
+ERROR tests/agent/test_outbound_stale_vision.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.36s
+
+--- tests/agent/test_protected_tail_pressure.py ---
+
+==================================== ERRORS ====================================
+_________ ERROR collecting tests/agent/test_protected_tail_pressure.py _________
+ImportError while importing test module '$W/red/tests/agent/test_protected_tail_pressure.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/agent/test_protected_tail_pressure.py:26: in <module>
+    from agent.context_compressor_media import _tool_content_has_images
+E   ModuleNotFoundError: No module named 'agent.context_compressor_media'
+=========================== short test summary info ============================
+ERROR tests/agent/test_protected_tail_pressure.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.37s
+
+=== 4 files where no tests ran (collection/import error, timeout before collection, etc.) ===
+  tests/agent/test_compressor_stale_tool_images.py
+  tests/agent/test_compressor_historical_media.py
+  tests/agent/test_outbound_stale_vision.py
+  tests/agent/test_protected_tail_pressure.py
+exit=1

@@ -1,0 +1,290 @@
+{
+ "schema": "xf.experiment.v1",
+ "id": "F15-lite/r20261001T120443Z",
+ "tier": "T0",
+ "cost_usd": 0,
+ "label": "OBSERVED",
+ "question": "Does each guard class block inside a real cell, and escape when only that class is removed?",
+ "inputs": {
+  "runner_commit": "2a4253258bb18b7601c137b37d9d7530276fc2c8",
+  "gate_runner_sha256": "4dfd1eb59f91510bd986fc9443227c134f34b406f34ad8e6817244ba26b7873f",
+  "interpreter": "hermes-agent venv python 3.11 (read-only)"
+ },
+ "command": "python f15_guard_canary.py <worktree@runner_commit> <scratch> receipts/F15-guard-canary.json",
+ "results": {
+  "blocked": "7/7",
+  "sabotage_escapes": "7/7",
+  "loopback_still_allowed": true,
+  "hermes_home_isolated": true
+ },
+ "arms": [
+  {
+   "arm": "intact",
+   "passed": true,
+   "checks": {
+    "loopback_connect": true,
+    "nonloopback_connect": true,
+    "name_lookup": true,
+    "live_home_open": true,
+    "hermes_exec": true,
+    "hermes_exec_shell": true,
+    "hermes_exec_bash_c": true,
+    "hermes_exec_path": true,
+    "hermes_exec_ran": true,
+    "hermes_on_path": true,
+    "guard": true,
+    "home_isolated": true,
+    "logged": true
+   },
+   "blocked_events": [
+    "open",
+    "socket.connect",
+    "socket.getaddrinfo",
+    "subprocess.Popen"
+   ]
+  },
+  {
+   "arm": "without nonloopback_connect",
+   "escaped": true,
+   "must_flip": [
+    "nonloopback_connect"
+   ],
+   "must_stay_blocked": [],
+   "checks": {
+    "loopback_connect": true,
+    "nonloopback_connect": false,
+    "name_lookup": true,
+    "live_home_open": true,
+    "hermes_exec": true,
+    "hermes_exec_shell": true,
+    "hermes_exec_bash_c": true,
+    "hermes_exec_path": true,
+    "hermes_exec_ran": true,
+    "hermes_on_path": true,
+    "guard": true,
+    "home_isolated": true,
+    "logged": true
+   }
+  },
+  {
+   "arm": "without name_lookup",
+   "escaped": true,
+   "must_flip": [
+    "name_lookup"
+   ],
+   "must_stay_blocked": [],
+   "checks": {
+    "loopback_connect": true,
+    "nonloopback_connect": true,
+    "name_lookup": false,
+    "live_home_open": true,
+    "hermes_exec": true,
+    "hermes_exec_shell": true,
+    "hermes_exec_bash_c": true,
+    "hermes_exec_path": true,
+    "hermes_exec_ran": true,
+    "hermes_on_path": true,
+    "guard": true,
+    "home_isolated": true,
+    "logged": true
+   }
+  },
+  {
+   "arm": "without live_home_open",
+   "escaped": true,
+   "must_flip": [
+    "live_home_open"
+   ],
+   "must_stay_blocked": [],
+   "checks": {
+    "loopback_connect": true,
+    "nonloopback_connect": true,
+    "name_lookup": true,
+    "live_home_open": false,
+    "hermes_exec": true,
+    "hermes_exec_shell": true,
+    "hermes_exec_bash_c": true,
+    "hermes_exec_path": true,
+    "hermes_exec_ran": true,
+    "hermes_on_path": true,
+    "guard": true,
+    "home_isolated": true,
+    "logged": true
+   }
+  },
+  {
+   "arm": "without hermes_exec",
+   "escaped": true,
+   "must_flip": [
+    "hermes_exec",
+    "hermes_exec_shell",
+    "hermes_exec_bash_c",
+    "hermes_exec_path"
+   ],
+   "must_stay_blocked": [],
+   "checks": {
+    "loopback_connect": true,
+    "nonloopback_connect": true,
+    "name_lookup": true,
+    "live_home_open": true,
+    "hermes_exec": false,
+    "hermes_exec_shell": false,
+    "hermes_exec_bash_c": false,
+    "hermes_exec_path": false,
+    "hermes_exec_ran": false,
+    "hermes_on_path": true,
+    "guard": true,
+    "home_isolated": true,
+    "logged": true
+   }
+  },
+  {
+   "arm": "without hermes_exec_shell_text",
+   "escaped": true,
+   "must_flip": [
+    "hermes_exec_shell",
+    "hermes_exec_bash_c",
+    "hermes_exec_path"
+   ],
+   "must_stay_blocked": [
+    "hermes_exec"
+   ],
+   "checks": {
+    "loopback_connect": true,
+    "nonloopback_connect": true,
+    "name_lookup": true,
+    "live_home_open": true,
+    "hermes_exec": true,
+    "hermes_exec_shell": false,
+    "hermes_exec_bash_c": false,
+    "hermes_exec_path": false,
+    "hermes_exec_ran": false,
+    "hermes_on_path": true,
+    "guard": true,
+    "home_isolated": true,
+    "logged": true
+   }
+  },
+  {
+   "arm": "without hermes_not_on_path",
+   "escaped": true,
+   "must_flip": [
+    "hermes_on_path"
+   ],
+   "must_stay_blocked": [
+    "hermes_exec",
+    "hermes_exec_shell",
+    "hermes_exec_bash_c",
+    "hermes_exec_path"
+   ],
+   "checks": {
+    "loopback_connect": true,
+    "nonloopback_connect": true,
+    "name_lookup": true,
+    "live_home_open": true,
+    "hermes_exec": true,
+    "hermes_exec_shell": true,
+    "hermes_exec_bash_c": true,
+    "hermes_exec_path": true,
+    "hermes_exec_ran": true,
+    "hermes_on_path": false,
+    "guard": true,
+    "home_isolated": true,
+    "logged": true
+   }
+  },
+  {
+   "arm": "selection denylist",
+   "blocked": true,
+   "escaped_without_globs": true
+  }
+ ],
+ "known_limits": {
+  "question": "Which lexical forms of a hermes exec does the intact word match miss? (stated limit, not a PASS criterion)",
+  "controls_blocked": "3/3",
+  "evasions_ran_unblocked": "5/5",
+  "forms": [
+   {
+    "form": "control: shell=True, plain",
+    "expected": "blocked",
+    "decoy_ran": false,
+    "blocked_events": 1,
+    "cell_infra": true,
+    "as_expected": true
+   },
+   {
+    "form": "control: whole word in a variable assignment (X=hermes; $X)",
+    "expected": "blocked",
+    "decoy_ran": false,
+    "blocked_events": 1,
+    "cell_infra": true,
+    "as_expected": true
+   },
+   {
+    "form": "control: python -m hermes_cli.main",
+    "expected": "blocked",
+    "decoy_ran": false,
+    "blocked_events": 1,
+    "cell_infra": true,
+    "as_expected": true
+   },
+   {
+    "form": "glob (herme?)",
+    "expected": "evades",
+    "decoy_ran": true,
+    "blocked_events": 0,
+    "cell_infra": false,
+    "as_expected": true
+   },
+   {
+    "form": "quote concatenation (her''mes)",
+    "expected": "evades",
+    "decoy_ran": true,
+    "blocked_events": 0,
+    "cell_infra": false,
+    "as_expected": true
+   },
+   {
+    "form": "backslash escape (her\\mes)",
+    "expected": "evades",
+    "decoy_ran": true,
+    "blocked_events": 0,
+    "cell_infra": false,
+    "as_expected": true
+   },
+   {
+    "form": "variable expansion that builds the name (X=her; ${X}mes)",
+    "expected": "evades",
+    "decoy_ran": true,
+    "blocked_events": 0,
+    "cell_infra": false,
+    "as_expected": true
+   },
+   {
+    "form": "python -c 'import hermes_cli.main'",
+    "expected": "evades",
+    "decoy_ran": true,
+    "blocked_events": 0,
+    "cell_infra": false,
+    "as_expected": true
+   }
+  ],
+  "closed_by": "a kernel sandbox (no reachable hermes, read-only root); the in-process guard cannot parse shell text"
+ },
+ "verdict": "PASS",
+ "classes": [
+  "nonloopback_connect",
+  "name_lookup",
+  "live_home_open",
+  "hermes_exec_argv",
+  "hermes_exec_shell_text",
+  "hermes_not_on_path",
+  "selection_denylist"
+ ],
+ "not_measured": [
+  "writes outside the run directory (needs a read-only-root kernel sandbox)",
+  "kernel network namespace (bwrap --unshare-net) layer",
+  "C-extension sockets that bypass Python's socket module",
+  "a shell script file that runs hermes, or a child started with a cleared environment (the guard is not on its PYTHONPATH)"
+ ]
+}

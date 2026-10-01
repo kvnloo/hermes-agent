@@ -1,0 +1,18 @@
+▶ not activated — using HERMES_PYTHON: <hermes-home>/hermes-agent/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~1 tests) under ['tests/agent/test_zz_chs_clause_probe.py']; running with -j 2
+[100.0% |     1/~1 | ✓7 | ✗0] ✓ tests/agent/test_zz_chs_clause_probe.py (7✓, 8.7s)
+
+=== Summary: 1 files, 7 tests passed, 0 failed (100% complete) in 8.8s (2 workers) ===
+  Durations cached to test_durations.json (1 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 8.7s  (runner wall: 8.8s, parallelism: 2x)
+  P50: 8.72s  P90: 8.72s  P95: 8.72s  P99: 8.72s  Max: 8.72s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+      8.72s  tests/agent/test_zz_chs_clause_probe.py

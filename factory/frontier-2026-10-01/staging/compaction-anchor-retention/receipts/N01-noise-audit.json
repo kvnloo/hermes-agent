@@ -1,0 +1,394 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compaction-anchor-retention",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#116246",
+  "NousResearch/hermes-agent#87326",
+  "NousResearch/hermes-agent#117462",
+  "NousResearch/hermes-agent#122274",
+  "NousResearch/hermes-agent#122522",
+  "NousResearch/hermes-agent#78457"
+ ],
+ "base_revision": "040b6df2c40b0f4f88f51e4c2062eafc4d7463c5",
+ "head_revision": "30a746f7920c2b4101f121353778d94f5ce001b5",
+ "supersedes": "b11e27d5f9 receipts r20261001-02 (superseded-r02/); 6e0fa629a0 receipts r20261001-01 (superseded-r01/)",
+ "policy_revision": {
+  "factory": "FACTORY.md (frontier-2026-10-01)",
+  "protocol": "promotion-readiness-2026-10-01/PROTOCOL.md"
+ },
+ "env": {
+  "python": "3.11 (HERMES_PYTHON venv, read-only bind)",
+  "sandbox": "harness/sandbox.sh: bwrap ro-root, --unshare-net (connect -> ENETUNREACH), systemd-resolved socket masked (DNS -> EAI_AGAIN), pidns, clearenv, live Hermes install masked except the venv, fresh HOME/HERMES_HOME per run; harness/egress_sitecustomize.py logs every non-loopback DNS lookup and connect attempt (the script run had these paths inlined; the copy here takes them from env)",
+  "tests": "HOME=$S/testhome-sf-compaction-anchor-retention HERMES_HOME=$HOME/.hermes HERMES_PYTHON=$PY bash scripts/run_tests.sh -j 2 <files> -q"
+ },
+ "provenance": "self",
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the rows, tests, harness and gold labels; disclosed per repository policy",
+ "privacy": "public-aggregate (inputs are committed upstream text or seeded synthetic data; no state.db, no lineages); no absolute local paths",
+ "resource_usage": {
+  "api_cost_usd": 0.0,
+  "gpu_s": 0,
+  "tokens": 0
+ },
+ "id": "N01/r20261001-03",
+ "kind": "static",
+ "question": "What do the three new rows capture on large public Hermes text, both docs and Python source (a stand-in for read_file output)?",
+ "inputs": {
+  "scorecard": "evals/compaction/results/SCORECARD-2026-08-15.md",
+  "scorecard_sha256": "6d93f90b435e4f2ae2dd3187103c18e0c881ad68b88b92bfd3deacb1cf79180e",
+  "harness_sha256": {
+   "anchor_coverage.py": "c9e084c35a7b64ca4e35afcf89d5a3374c689d455a7b1126ffc49c7cbefeb8ef",
+   "build_receipts.py": "631328fd68f5d602380a9864c3d63eab8988bc6a0766a301e04c6492229f8f34",
+   "sandbox.sh": "f1aad255c5022b1c0920e0a6718faa222aa84b3583c4224c4e7fd32b43fedf24",
+   "egress_sitecustomize.py": "55eef4b9cf034dea08b0004a88dcf5595582bde9b3ba9c10ef4cc83807e29d9d",
+   "negative_controls.py": "8dee7eed03d49212293e58568b6b7d39da12c7394f7d454e16d8dda688f210ff"
+  },
+  "arms": {
+   "base": {
+    "tree": "040b6df2c40b0f4f88f51e4c2062eafc4d7463c5:agent/context_compressor.py",
+    "sha256": "86f4b7a8a647f1bf520cb17497b68719f6d907028bdc7151c7921818b7e043f1"
+   },
+   "branch": {
+    "head": "30a746f7920c2b4101f121353778d94f5ce001b5",
+    "sha256": "424c8dd83747b73b7b1883c726e60823f55a656d5424c3eb948297ca07f4abc7"
+   },
+   "c117462": {
+    "pr": 117462,
+    "head": "2c19948e15d68492d048250bae7707ca77063db5",
+    "merge_tree_with_base": "f4139cef66cd97f30f7fc450301551d233ebf616",
+    "merge": "clean",
+    "sha256": "fdb7abd8050b4944171522c7e713004d7fbce9b2d8ddfb1c8de93414f206ebe0"
+   },
+   "c117462_foldin": {
+    "onto": "c117462",
+    "patch": "foldin-on-117462.patch (rows + tests/agent/test_context_compressor_anchor_index.py)",
+    "patch_sha256": "3713e44bbb4edfdbd493b80c290b013a3d26b3a21e88c734bd733f6fad3e9bf5",
+    "merge": "hand-ported (rows placed in #117462's cheap-first order)",
+    "sha256": "b880b9a14eaf0949e51926004856b3e0e3109b784222cef87048b8ca7cb36cf3"
+   },
+   "branch_r01": {
+    "head": "6e0fa629a0f6227b03417d1d6ff7f7d81208346a",
+    "sha256": "98d9e8d058557eee2fd4e89641b6350a2b21ab62c563ac741986db61ae1d98a8",
+    "role": "round-1 staging head (untightened error row); comparison only"
+   },
+   "branch_r02": {
+    "head": "b11e27d5f9c60a420cbbe94fa967fc1454df92a6",
+    "sha256": "eea32ae2600e20ac7729cc894bf9afdd8987a33d97f6f98e1671dcc5e13a3ef2",
+    "role": "round-2 staging head (dotted keys without the mid-name guard); comparison only"
+   }
+  },
+  "coverage_json_sha256": "96a86bcde8412a44e51eb0e72b33f3fe3236efc93e2610a7891ff828bd4a522e",
+  "checkout_for_imports": "$WT at 30a746f7920c2b4101f121353778d94f5ce001b5; `git diff --name-only 040b6df2c4 30a746f792` lists only agent/context_compressor.py and the new test file, so every other module, website/docs, AGENTS.md and hermes_cli/config_defaults.py are exactly 040b6df2c4",
+  "egress": "0 attempts logged for the harness run",
+  "docs_corpus": {
+   "what": "AGENTS.md + website/docs/**/*.md at 040b6df2c40b0f4f88f51e4c2062eafc4d7463c5",
+   "files": 448,
+   "chars": 7808641,
+   "sha256": "e8f0a7b17b571e0d76ace79500e96c31cdb3092e568fd812b4a2a39745be890b"
+  },
+  "code_corpus": {
+   "what": "agent/*.py at 040b6df2c40b0f4f88f51e4c2062eafc4d7463c5",
+   "files": 251,
+   "chars": 5871525,
+   "sha256": "6d4748b59a76c62b605f5fae87a3fbca63e606b9034b1e82f8ce7cc426d0ab01"
+  },
+  "default_config_keys": 1095
+ },
+ "command": "VENV=$VENV HERMES_INSTALL=<live install> EGRESS_DIR=<dir with sitecustomize.py> $SANDBOX $WT <fresh home> <egress log> $PY $STAGING/harness/anchor_coverage.py --checkout $WT --arm base=raw/arms/base.py --arm branch=raw/arms/branch.py --arm c117462=raw/arms/c117462.py --arm c117462_foldin=raw/arms/c117462_foldin.py --arm branch_r01=raw/arms/branch_r01.py --arm branch_r02=raw/arms/branch_r02.py --seeds 10 --out <home>/coverage.json   # $WT detached at HEAD; home on a non-/tmp disk; copied to raw/coverage.json",
+ "results": {
+  "docs": {
+   "task ids": {
+    "matches": 4,
+    "distinct": 2,
+    "top15": [
+     [
+      "sa-0-1a2b3c4d",
+      3
+     ],
+     [
+      "t_77c26979",
+      1
+     ]
+    ]
+   },
+   "dotted keys": {
+    "matches": 2041,
+    "distinct": 1031,
+    "top15": [
+     [
+      "ctx.register_hook",
+      60
+     ],
+     [
+      "pm.sync_venv",
+      48
+     ],
+     [
+      "gateway.multiplex_profiles",
+      23
+     ],
+     [
+      "repository.full_name",
+      21
+     ],
+     [
+      "security.allow_lazy_installs",
+      18
+     ],
+     [
+      "ctx.register_tool",
+      16
+     ],
+     [
+      "client.create_collection",
+      16
+     ],
+     [
+      "model.base_url",
+      14
+     ],
+     [
+      "ctx.register_platform",
+      13
+     ],
+     [
+      "torch.no_grad",
+      12
+     ],
+     [
+      "web.extract_backend",
+      11
+     ],
+     [
+      "agent.reasoning_effort",
+      11
+     ],
+     [
+      "model.set_generation_params",
+      11
+     ],
+     [
+      "agent.disabled_toolsets",
+      10
+     ],
+     [
+      "ctx.register_command",
+      10
+     ]
+    ],
+    "distinct_in_DEFAULT_CONFIG": 306,
+    "top15_in_DEFAULT_CONFIG": 4
+   },
+   "error messages": {
+    "matches": 9,
+    "distinct": 9,
+    "top15": [
+     [
+      "error: <message or \"request failed\">`. Never renders \"no card\" or any other guessed state; user must retry `/topup`",
+      1
+     ],
+     [
+      "error: \"Gateway shutdown interrupted the run.\"` — recorded before the agent is interrupted and never overwritten by t",
+      1
+     ],
+     [
+      "Error: backup archive is damaged (N member(s) …)` with the offending members and stops with the Hermes home untouched",
+      1
+     ],
+     [
+      "Blocked: URL targets a private or internal address\"` unless you also set",
+      1
+     ],
+     [
+      "Error: assertion in test_foo.py line 42\"",
+      1
+     ],
+     [
+      "Error: ...\") -> logger.error(...)",
+      1
+     ],
+     [
+      "error: str | None` |",
+      1
+     ],
+     [
+      "fatal: ntfy_unauthorized`. Fix the token and restart the gateway",
+      1
+     ],
+     [
+      "fatal: ntfy_topic_not_found`",
+      1
+     ]
+    ]
+   }
+  },
+  "code": {
+   "task ids": {
+    "matches": 0,
+    "distinct": 0,
+    "top15": []
+   },
+   "dotted keys": {
+    "matches": 5608,
+    "distinct": 1955,
+    "top15": [
+     [
+      "agent.session_id",
+      128
+     ],
+     [
+      "agent.context_compressor",
+      113
+     ],
+     [
+      "agent.conversation_loop",
+      89
+     ],
+     [
+      "agent.api_mode",
+      84
+     ],
+     [
+      "agent.base_url",
+      75
+     ],
+     [
+      "agent.log_prefix",
+      71
+     ],
+     [
+      "agent.model_metadata",
+      53
+     ],
+     [
+      "self.base_url",
+      50
+     ],
+     [
+      "agent.auxiliary_client",
+      46
+     ],
+     [
+      "agent.agent_runtime_helpers",
+      45
+     ],
+     [
+      "agent.conversation_compression",
+      41
+     ],
+     [
+      "agent.valid_tool_names",
+      34
+     ],
+     [
+      "self.api_key",
+      34
+     ],
+     [
+      "agent.credential_pool",
+      32
+     ],
+     [
+      "agent.quiet_mode",
+      30
+     ]
+    ],
+    "top40_self_attr": 9,
+    "top40_in_DEFAULT_CONFIG": 0,
+    "distinct_in_DEFAULT_CONFIG": 74
+   },
+   "error messages": {
+    "matches": 2,
+    "distinct": 2,
+    "top15": [
+     [
+      "Blocked: internal skill-hub caches (prompt-injection carriers), credential",
+      1
+     ],
+     [
+      "Error: Invalid JSON arguments. {err}. \"",
+      1
+     ]
+    ],
+    "values": [
+     "Blocked: internal skill-hub caches (prompt-injection carriers), credential",
+     "Error: Invalid JSON arguments. {err}. \""
+    ]
+   }
+  }
+ },
+ "code_error_messages_classified": {
+  "Blocked: internal skill-hub caches (prompt-injection carriers), credential": "docstring line, agent/file_safety.py:368 (get_read_block_error): prose, not a message",
+  "Error: Invalid JSON arguments. {err}. \"": "error-message template (f-string), agent/turn_tool_validation.py:217"
+ },
+ "docs_error_messages_classified": {
+  "quoted_messages_or_message_examples": 7,
+  "code_example": [
+   "Error: ...\") -> logger.error(...)"
+  ],
+  "type_annotation_in_a_table": [
+   "error: str | None` |"
+  ],
+  "note": "hand-classified from the 9 values in results.docs['error messages'].top15"
+ },
+ "previous_rows_r01": {
+  "docs_error_messages_matches": 24,
+  "code_error_messages": {
+   "matches": 80,
+   "distinct": 67,
+   "sample": [
+    "Blocked: internal skill-hub caches (prompt-injection carriers), credential",
+    "Error: Invalid JSON arguments. {err}. \"",
+    "Error: {error or 'provider stream failure'}.\\n\\n\"",
+    "error: %s\", _mw_err)",
+    "error: %s\", agent.log_prefix, api_error)",
+    "error: %s\", callback_error)",
+    "error: %s\", cb_err)",
+    "error: %s\", exc)",
+    "error: %s\", label, callback_error)",
+    "error: %s\", probe_err)",
+    "error: %s)\", turn.error)",
+    "error: Any = None) -> None"
+   ]
+  }
+ },
+ "previous_rows_r02_dotted_keys": {
+  "docs": {
+   "matches": 2042,
+   "distinct": 1032
+  },
+  "code": {
+   "matches": 5610,
+   "distinct": 1957
+  },
+  "removed_by_mid_name_guard": [
+   "router.add_post (docs: self._app.router.add_post)",
+   "wait_notice.should_emit (code: self._mon.wait_notice.should_emit)",
+   "tb_frame.f_code.co_filename (code: _tb.tb_frame.f_code.co_filename)"
+  ],
+  "note": "listed by a direct old-vs-new pattern diff over the same corpora at BASE; all are fragments of longer names"
+ },
+ "scan_seconds": {
+  "base": 0.5658,
+  "branch": 1.555,
+  "c117462": 0.6929,
+  "c117462_foldin": 1.692,
+  "branch_r01": 1.0581,
+  "branch_r02": 1.5298
+ },
+ "readout": [
+  "task ids: 4 matches / 2 distinct in the docs (both doc examples), 0 in agent/*.py",
+  "dotted keys, docs: 1031 distinct values, 306 (29.7%) are DEFAULT_CONFIG keys, hence the label 'dotted keys'",
+  "dotted keys, code (LIMITATION): 1955 distinct values in agent/*.py; of the 40 most frequent, 9 are self.* attributes and 0 are DEFAULT_CONFIG keys (the rest are attribute accesses such as agent.session_id and module paths). In a region full of Python source the 40-value cap fills with these, and a config key mentioned once in assistant text can be crowded out. Not changed in this slice.",
+  "dotted keys, round 3: the mid-name guard removes 1 docs match and 2 code matches vs the round-2 row, all fragments of longer names (router.add_post from self._app.router.add_post); nothing else changes",
+  "error messages, docs: 9 matches (round-1 rows 24): 7 quoted messages or message examples, 1 code example and 1 type annotation in a table ('error: str | None')",
+  "error messages, agent/*.py: 2 matches: one error-message template (agent/turn_tool_validation.py:217) and one docstring line (agent/file_safety.py:368). 'Blocked:' is matched anywhere, not only at a line start, so it also catches prose and docstrings that use the word that way (round-1 rows: 80 matches, nearly all annotations such as 'error: Exception) -> Dict[str, Any]' or log formats such as 'error: %s\", exc)')"
+ ],
+ "label": "OBSERVED",
+ "limitations": [
+  "docs and source files are not transcripts; precision on real regions is NOT_MEASURED",
+  "'Blocked:' (and 'GraphQL:', 'error TS####:') are unanchored: any prose or docstring line containing 'Blocked: ' is captured",
+  "scan timings are single runs on a shared host"
+ ],
+ "verdict": "KEEP (error-row precision stated per match; dotted-keys code limitation disclosed; mid-name fragments removed in round 3)"
+}

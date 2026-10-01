@@ -1,0 +1,546 @@
+{
+ "base": {
+  "block_anchor_54572": {
+   "count": 1,
+   "strategy": "block_anchor",
+   "error": null,
+   "file_changed": true
+  },
+  "single_line_trim_125376": {
+   "count": 1,
+   "strategy": "context_aware",
+   "error": null,
+   "file_changed": true
+  },
+  "missing_anchor_111127": {
+   "count": 1,
+   "strategy": "context_aware",
+   "error": null,
+   "file_changed": true
+  },
+  "trailing_newline_bypass": {
+   "count": 1,
+   "strategy": "context_aware",
+   "error": null,
+   "file_changed": true
+  },
+  "obs_context_aware_half_block_54572": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "obs_crlf_trailing_bypass": {
+   "count": 1,
+   "strategy": "context_aware",
+   "error": null,
+   "file_changed": true
+  },
+  "obs_leading_newline_bypass": {
+   "count": 1,
+   "strategy": "context_aware",
+   "error": null,
+   "file_changed": true
+  },
+  "obs_two_line_wrong_token": {
+   "count": 1,
+   "strategy": "context_aware",
+   "error": null,
+   "file_changed": true
+  },
+  "legit_block_drift_54575": {
+   "count": 1,
+   "strategy": "block_anchor",
+   "error": null,
+   "file_changed": true
+  },
+  "legit_smart_quote_single_line": {
+   "count": 1,
+   "strategy": "unicode_normalized",
+   "error": null,
+   "file_changed": true
+  },
+  "legit_indent_drift_111127": {
+   "count": 1,
+   "strategy": "whitespace_normalized",
+   "error": null,
+   "file_changed": true
+  }
+ },
+ "c54575": {
+  "block_anchor_54572": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "single_line_trim_125376": {
+   "count": 1,
+   "strategy": "context_aware",
+   "error": null,
+   "file_changed": true
+  },
+  "missing_anchor_111127": {
+   "count": 1,
+   "strategy": "context_aware",
+   "error": null,
+   "file_changed": true
+  },
+  "trailing_newline_bypass": {
+   "count": 1,
+   "strategy": "context_aware",
+   "error": null,
+   "file_changed": true
+  },
+  "obs_context_aware_half_block_54572": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "obs_crlf_trailing_bypass": {
+   "count": 1,
+   "strategy": "context_aware",
+   "error": null,
+   "file_changed": true
+  },
+  "obs_leading_newline_bypass": {
+   "count": 1,
+   "strategy": "context_aware",
+   "error": null,
+   "file_changed": true
+  },
+  "obs_two_line_wrong_token": {
+   "count": 1,
+   "strategy": "context_aware",
+   "error": null,
+   "file_changed": true
+  },
+  "legit_block_drift_54575": {
+   "count": 1,
+   "strategy": "block_anchor",
+   "error": null,
+   "file_changed": true
+  },
+  "legit_smart_quote_single_line": {
+   "count": 1,
+   "strategy": "unicode_normalized",
+   "error": null,
+   "file_changed": true
+  },
+  "legit_indent_drift_111127": {
+   "count": 1,
+   "strategy": "whitespace_normalized",
+   "error": null,
+   "file_changed": true
+  }
+ },
+ "c125376-leaf": {
+  "block_anchor_54572": {
+   "count": 1,
+   "strategy": "block_anchor",
+   "error": null,
+   "file_changed": true
+  },
+  "single_line_trim_125376": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "missing_anchor_111127": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "trailing_newline_bypass": {
+   "count": 1,
+   "strategy": "context_aware",
+   "error": null,
+   "file_changed": true
+  },
+  "obs_context_aware_half_block_54572": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "obs_crlf_trailing_bypass": {
+   "count": 1,
+   "strategy": "context_aware",
+   "error": null,
+   "file_changed": true
+  },
+  "obs_leading_newline_bypass": {
+   "count": 1,
+   "strategy": "context_aware",
+   "error": null,
+   "file_changed": true
+  },
+  "obs_two_line_wrong_token": {
+   "count": 1,
+   "strategy": "context_aware",
+   "error": null,
+   "file_changed": true
+  },
+  "legit_block_drift_54575": {
+   "count": 1,
+   "strategy": "block_anchor",
+   "error": null,
+   "file_changed": true
+  },
+  "legit_smart_quote_single_line": {
+   "count": 1,
+   "strategy": "unicode_normalized",
+   "error": null,
+   "file_changed": true
+  },
+  "legit_indent_drift_111127": {
+   "count": 1,
+   "strategy": "whitespace_normalized",
+   "error": null,
+   "file_changed": true
+  }
+ },
+ "both": {
+  "block_anchor_54572": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "single_line_trim_125376": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "missing_anchor_111127": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "trailing_newline_bypass": {
+   "count": 1,
+   "strategy": "context_aware",
+   "error": null,
+   "file_changed": true
+  },
+  "obs_context_aware_half_block_54572": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "obs_crlf_trailing_bypass": {
+   "count": 1,
+   "strategy": "context_aware",
+   "error": null,
+   "file_changed": true
+  },
+  "obs_leading_newline_bypass": {
+   "count": 1,
+   "strategy": "context_aware",
+   "error": null,
+   "file_changed": true
+  },
+  "obs_two_line_wrong_token": {
+   "count": 1,
+   "strategy": "context_aware",
+   "error": null,
+   "file_changed": true
+  },
+  "legit_block_drift_54575": {
+   "count": 1,
+   "strategy": "block_anchor",
+   "error": null,
+   "file_changed": true
+  },
+  "legit_smart_quote_single_line": {
+   "count": 1,
+   "strategy": "unicode_normalized",
+   "error": null,
+   "file_changed": true
+  },
+  "legit_indent_drift_111127": {
+   "count": 1,
+   "strategy": "whitespace_normalized",
+   "error": null,
+   "file_changed": true
+  }
+ },
+ "leaf+fold": {
+  "block_anchor_54572": {
+   "count": 1,
+   "strategy": "block_anchor",
+   "error": null,
+   "file_changed": true
+  },
+  "single_line_trim_125376": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "missing_anchor_111127": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "trailing_newline_bypass": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "obs_context_aware_half_block_54572": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "obs_crlf_trailing_bypass": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "obs_leading_newline_bypass": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "obs_two_line_wrong_token": {
+   "count": 1,
+   "strategy": "context_aware",
+   "error": null,
+   "file_changed": true
+  },
+  "legit_block_drift_54575": {
+   "count": 1,
+   "strategy": "block_anchor",
+   "error": null,
+   "file_changed": true
+  },
+  "legit_smart_quote_single_line": {
+   "count": 1,
+   "strategy": "unicode_normalized",
+   "error": null,
+   "file_changed": true
+  },
+  "legit_indent_drift_111127": {
+   "count": 1,
+   "strategy": "whitespace_normalized",
+   "error": null,
+   "file_changed": true
+  }
+ },
+ "both+fold": {
+  "block_anchor_54572": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "single_line_trim_125376": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "missing_anchor_111127": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "trailing_newline_bypass": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "obs_context_aware_half_block_54572": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "obs_crlf_trailing_bypass": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "obs_leading_newline_bypass": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "obs_two_line_wrong_token": {
+   "count": 1,
+   "strategy": "context_aware",
+   "error": null,
+   "file_changed": true
+  },
+  "legit_block_drift_54575": {
+   "count": 1,
+   "strategy": "block_anchor",
+   "error": null,
+   "file_changed": true
+  },
+  "legit_smart_quote_single_line": {
+   "count": 1,
+   "strategy": "unicode_normalized",
+   "error": null,
+   "file_changed": true
+  },
+  "legit_indent_drift_111127": {
+   "count": 1,
+   "strategy": "whitespace_normalized",
+   "error": null,
+   "file_changed": true
+  }
+ },
+ "c126502": {
+  "block_anchor_54572": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "single_line_trim_125376": {
+   "count": 1,
+   "strategy": "context_aware",
+   "error": null,
+   "file_changed": true
+  },
+  "missing_anchor_111127": {
+   "count": 1,
+   "strategy": "context_aware",
+   "error": null,
+   "file_changed": true
+  },
+  "trailing_newline_bypass": {
+   "count": 1,
+   "strategy": "context_aware",
+   "error": null,
+   "file_changed": true
+  },
+  "obs_context_aware_half_block_54572": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "obs_crlf_trailing_bypass": {
+   "count": 1,
+   "strategy": "context_aware",
+   "error": null,
+   "file_changed": true
+  },
+  "obs_leading_newline_bypass": {
+   "count": 1,
+   "strategy": "context_aware",
+   "error": null,
+   "file_changed": true
+  },
+  "obs_two_line_wrong_token": {
+   "count": 1,
+   "strategy": "context_aware",
+   "error": null,
+   "file_changed": true
+  },
+  "legit_block_drift_54575": {
+   "count": 1,
+   "strategy": "block_anchor",
+   "error": null,
+   "file_changed": true
+  },
+  "legit_smart_quote_single_line": {
+   "count": 1,
+   "strategy": "unicode_normalized",
+   "error": null,
+   "file_changed": true
+  },
+  "legit_indent_drift_111127": {
+   "count": 1,
+   "strategy": "whitespace_normalized",
+   "error": null,
+   "file_changed": true
+  }
+ },
+ "c126502+leaf+fold": {
+  "block_anchor_54572": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "single_line_trim_125376": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "missing_anchor_111127": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "trailing_newline_bypass": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "obs_context_aware_half_block_54572": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "obs_crlf_trailing_bypass": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "obs_leading_newline_bypass": {
+   "count": 0,
+   "strategy": null,
+   "error": "Could not find a match for old_string in",
+   "file_changed": false
+  },
+  "obs_two_line_wrong_token": {
+   "count": 1,
+   "strategy": "context_aware",
+   "error": null,
+   "file_changed": true
+  },
+  "legit_block_drift_54575": {
+   "count": 1,
+   "strategy": "block_anchor",
+   "error": null,
+   "file_changed": true
+  },
+  "legit_smart_quote_single_line": {
+   "count": 1,
+   "strategy": "unicode_normalized",
+   "error": null,
+   "file_changed": true
+  },
+  "legit_indent_drift_111127": {
+   "count": 1,
+   "strategy": "whitespace_normalized",
+   "error": null,
+   "file_changed": true
+  }
+ }
+}

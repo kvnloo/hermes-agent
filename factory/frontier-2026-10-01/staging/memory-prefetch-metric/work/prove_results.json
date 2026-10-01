@@ -1,0 +1,299 @@
+{
+  "head": "c815543bc2504eccaae9f6adce5046f41710f38c",
+  "base": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+  "started": "2026-10-01T04:00:49-0500",
+  "runs": {
+    "red": {
+      "label": "red",
+      "cmd": "bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py -q",
+      "rc": 1,
+      "wall_s": 12.5,
+      "summary": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 10.4s (2 workers) ===",
+      "failed": [
+        "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+      ],
+      "assertion_lines": [
+        "E",
+        "E          ('mem0', 'empty', 'lt_100ms'): 1,",
+        "E          ('plugin', 'skipped', 'lt_100ms'): 1,",
+        "E          ('plugin', 'timed_out', '250ms_to_500ms'): 1,",
+        "E          ('supermemory', 'failed', 'lt_100ms'): 1}",
+        "E         Right contains 5 more items:",
+        "E         Use -v to get more diff",
+        "E         {('honcho', 'success', 'lt_100ms'): 1,",
+        "E       AssertionError: assert {} == {('honcho', '...0ms'): 1, ...}"
+      ],
+      "log": "$ARTIFACTS/frontier-2026-10-01/staging/memory-prefetch-metric/work/red.log",
+      "log_sha256": "60e9aca94b87dac9a496c83cbfc073319c67b80b89bcf3fb072c6f319c0ae048"
+    },
+    "green": [
+      {
+        "label": "green_1",
+        "cmd": "bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py -q",
+        "rc": 0,
+        "wall_s": 5.9,
+        "summary": "=== Summary: 1 files, 16 tests passed, 0 failed (100% complete) in 5.0s (2 workers) ===",
+        "failed": [],
+        "assertion_lines": [],
+        "log": "$ARTIFACTS/frontier-2026-10-01/staging/memory-prefetch-metric/work/green_1.log",
+        "log_sha256": "c56314759b86474db38becae5c6d9e732b802bd1bdbdf7b9a9769e555a4a38d3"
+      },
+      {
+        "label": "green_2",
+        "cmd": "bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py -q",
+        "rc": 0,
+        "wall_s": 5.6,
+        "summary": "=== Summary: 1 files, 16 tests passed, 0 failed (100% complete) in 5.1s (2 workers) ===",
+        "failed": [],
+        "assertion_lines": [],
+        "log": "$ARTIFACTS/frontier-2026-10-01/staging/memory-prefetch-metric/work/green_2.log",
+        "log_sha256": "e969fbe1f7ce4f94cbbcace0b6bdeabdca0f949f8cf9c4d5359aefc8348286b3"
+      },
+      {
+        "label": "green_3",
+        "cmd": "bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py -q",
+        "rc": 0,
+        "wall_s": 7.9,
+        "summary": "=== Summary: 1 files, 16 tests passed, 0 failed (100% complete) in 6.5s (2 workers) ===",
+        "failed": [],
+        "assertion_lines": [],
+        "log": "$ARTIFACTS/frontier-2026-10-01/staging/memory-prefetch-metric/work/green_3.log",
+        "log_sha256": "113c444a19a2580974ae7d7925f8150b3fdbe36c8ce8835b4f9c77590c3b3251"
+      }
+    ],
+    "sabotage": [
+      {
+        "label": "sabotage_S1-skip-exit",
+        "cmd": "bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py -q",
+        "rc": 1,
+        "wall_s": 13.7,
+        "summary": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 13.0s (2 workers) ===",
+        "failed": [
+          "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+        ],
+        "assertion_lines": [
+          "E",
+          "E         Omitting 4 identical items, use -vv to show",
+          "E         Right contains 1 more item:",
+          "E         Use -v to get more diff",
+          "E         {('plugin', 'skipped', 'lt_100ms'): 1}",
+          "E       AssertionError: assert {('plugin', '...lt_100ms'): 1} == {('honcho', '...0ms'): 1, ...}"
+        ],
+        "log": "$ARTIFACTS/frontier-2026-10-01/staging/memory-prefetch-metric/work/sabotage_S1-skip-exit.log",
+        "log_sha256": "cfce0ea130fc85a759e085b6ad5c9993faba98063ca5d5cb5602bdcfe081652d",
+        "mutation": {
+          "file": "agent/memory_manager.py",
+          "old": "            record_memory_prefetch(provider.name, \"skipped\", started)\n",
+          "new": ""
+        }
+      },
+      {
+        "label": "sabotage_S2-timeout-exit",
+        "cmd": "bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py -q",
+        "rc": 1,
+        "wall_s": 13.8,
+        "summary": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 11.9s (2 workers) ===",
+        "failed": [
+          "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+        ],
+        "assertion_lines": [
+          "E",
+          "E         Omitting 4 identical items, use -vv to show",
+          "E         Right contains 1 more item:",
+          "E         Use -v to get more diff",
+          "E         {('plugin', 'timed_out', '250ms_to_500ms'): 1}",
+          "E       AssertionError: assert {('mem0', 'em...lt_100ms'): 1} == {('honcho', '...0ms'): 1, ...}"
+        ],
+        "log": "$ARTIFACTS/frontier-2026-10-01/staging/memory-prefetch-metric/work/sabotage_S2-timeout-exit.log",
+        "log_sha256": "a22c25c02eff3e40d36a6a81428ddffb44fe4d1d23d35529a59be7b6e3b2c2ac",
+        "mutation": {
+          "file": "agent/memory_manager.py",
+          "old": "            record_memory_prefetch(provider.name, \"timed_out\", started)\n",
+          "new": ""
+        }
+      },
+      {
+        "label": "sabotage_S3-error-exit",
+        "cmd": "bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py -q",
+        "rc": 1,
+        "wall_s": 14.6,
+        "summary": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 12.9s (2 workers) ===",
+        "failed": [
+          "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+        ],
+        "assertion_lines": [
+          "E",
+          "E         Omitting 4 identical items, use -vv to show",
+          "E         Right contains 1 more item:",
+          "E         Use -v to get more diff",
+          "E         {('supermemory', 'failed', 'lt_100ms'): 1}",
+          "E       AssertionError: assert {('plugin', '...lt_100ms'): 1} == {('honcho', '...0ms'): 1, ...}"
+        ],
+        "log": "$ARTIFACTS/frontier-2026-10-01/staging/memory-prefetch-metric/work/sabotage_S3-error-exit.log",
+        "log_sha256": "b9b41558a81a5049fe44dff1da593323d7950e375e804266200a04db5b124410",
+        "mutation": {
+          "file": "agent/memory_manager.py",
+          "old": "            record_memory_prefetch(provider.name, \"failed\", started)\n",
+          "new": ""
+        }
+      },
+      {
+        "label": "sabotage_S4-success-empty-exit",
+        "cmd": "bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py -q",
+        "rc": 1,
+        "wall_s": 14.4,
+        "summary": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 13.7s (2 workers) ===",
+        "failed": [
+          "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+        ],
+        "assertion_lines": [
+          "E",
+          "E         Omitting 3 identical items, use -vv to show",
+          "E         Right contains 2 more items:",
+          "E         Use -v to get more diff",
+          "E         {('honcho', 'success', 'lt_100ms'): 1, ('mem0', 'empty', 'lt_100ms'): 1}",
+          "E       AssertionError: assert {('plugin', '...lt_100ms'): 1} == {('honcho', '...0ms'): 1, ...}"
+        ],
+        "log": "$ARTIFACTS/frontier-2026-10-01/staging/memory-prefetch-metric/work/sabotage_S4-success-empty-exit.log",
+        "log_sha256": "cfe1beeafcc6f7afc7661fa7fe7545c8ed9515fa820e1e977a68ddbf9d71d063",
+        "mutation": {
+          "file": "agent/memory_manager.py",
+          "old": "        record_memory_prefetch(provider.name, \"success\" if result and result.strip() else \"empty\", started)\n",
+          "new": ""
+        }
+      },
+      {
+        "label": "sabotage_S5-mark-to-metric-mapping",
+        "cmd": "bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py -q",
+        "rc": 1,
+        "wall_s": 15.2,
+        "summary": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 13.4s (2 workers) ===",
+        "failed": [
+          "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+        ],
+        "assertion_lines": [
+          "E",
+          "E          ('mem0', 'empty', 'lt_100ms'): 1,",
+          "E          ('plugin', 'skipped', 'lt_100ms'): 1,",
+          "E          ('plugin', 'timed_out', '250ms_to_500ms'): 1,",
+          "E          ('supermemory', 'failed', 'lt_100ms'): 1}",
+          "E         Right contains 5 more items:",
+          "E         Use -v to get more diff",
+          "E         {('honcho', 'success', 'lt_100ms'): 1,",
+          "E       AssertionError: assert {} == {('honcho', '...0ms'): 1, ...}"
+        ],
+        "log": "$ARTIFACTS/frontier-2026-10-01/staging/memory-prefetch-metric/work/sabotage_S5-mark-to-metric-mapping.log",
+        "log_sha256": "b7f3cf83eb512c290288e10b5d4d16628134d7eac364f4c96a591938792bcd17",
+        "mutation": {
+          "file": "hermes_cli/observability/shared_metrics_contract.py",
+          "old": "    MEMORY_PREFETCH_MARK: MEMORY_PREFETCH_METRIC,\n",
+          "new": ""
+        }
+      },
+      {
+        "label": "sabotage_S6-provider-rule-raw-name",
+        "cmd": "bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py -q",
+        "rc": 1,
+        "wall_s": 14.5,
+        "summary": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 13.3s (2 workers) ===",
+        "failed": [
+          "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+        ],
+        "assertion_lines": [
+          "E",
+          "E          ('plugin', 'timed_out', '250ms_to_500ms'): 1}",
+          "E         Omitting 3 identical items, use -vv to show",
+          "E         Right contains 2 more items:",
+          "E         Use -v to get more diff",
+          "E         {('plugin', 'skipped', 'lt_100ms'): 1,",
+          "E       AssertionError: assert {('mem0', 'em...lt_100ms'): 1} == {('honcho', '...0ms'): 1, ...}"
+        ],
+        "log": "$ARTIFACTS/frontier-2026-10-01/staging/memory-prefetch-metric/work/sabotage_S6-provider-rule-raw-name.log",
+        "log_sha256": "d4cc92bd1f22a6c7fbee06e333dd23a53add0f70d5da1104330957ecdafe1053",
+        "mutation": {
+          "file": "hermes_cli/observability/shared_metrics_loop.py",
+          "old": "        \"outcome\": outcome_value if outcome_value in MEMORY_PREFETCH_OUTCOMES else \"failed\",\n        \"provider\": memory_provider_name(provider),",
+          "new": "        \"outcome\": outcome_value if outcome_value in MEMORY_PREFETCH_OUTCOMES else \"failed\",\n        \"provider\": _norm(provider),"
+        }
+      },
+      {
+        "label": "sabotage_S7-outcome-vocabulary-drift",
+        "cmd": "bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py -q",
+        "rc": 1,
+        "wall_s": 13.8,
+        "summary": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 13.1s (2 workers) ===",
+        "failed": [
+          "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+        ],
+        "assertion_lines": [
+          "E",
+          "E         Left contains 1 more item:",
+          "E         Omitting 4 identical items, use -vv to show",
+          "E         Right contains 1 more item:",
+          "E         Use -v to get more diff",
+          "E         {('plugin', 'failed', '250ms_to_500ms'): 1}",
+          "E         {('plugin', 'timed_out', '250ms_to_500ms'): 1}",
+          "E       AssertionError: assert {('plugin', '...0ms'): 1, ...} == {('honcho', '...0ms'): 1, ...}"
+        ],
+        "log": "$ARTIFACTS/frontier-2026-10-01/staging/memory-prefetch-metric/work/sabotage_S7-outcome-vocabulary-drift.log",
+        "log_sha256": "0dce52226580110638a8506771e09397d7b67ea5577092f1ef639dbfabf697b8",
+        "mutation": {
+          "file": "agent/memory_manager.py",
+          "old": "\"timed_out\", started)",
+          "new": "\"timeout\", started)"
+        }
+      },
+      {
+        "label": "sabotage_S8-latency-not-measured",
+        "cmd": "bash scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py -q",
+        "rc": 1,
+        "wall_s": 16.1,
+        "summary": "=== Summary: 1 files, 15 tests passed, 1 failed (100% complete) in 14.3s (2 workers) ===",
+        "failed": [
+          "tests/hermes_cli/test_shared_metrics_loop.py::test_external_prefetch_records_each_exit_with_how_long_the_turn_waited"
+        ],
+        "assertion_lines": [
+          "E",
+          "E         Left contains 1 more item:",
+          "E         Omitting 4 identical items, use -vv to show",
+          "E         Right contains 1 more item:",
+          "E         Use -v to get more diff",
+          "E         {('plugin', 'timed_out', '250ms_to_500ms'): 1}",
+          "E         {('plugin', 'timed_out', 'lt_100ms'): 1}",
+          "E       AssertionError: assert {('mem0', 'em...0ms'): 1, ...} == {('honcho', '...0ms'): 1, ...}"
+        ],
+        "log": "$ARTIFACTS/frontier-2026-10-01/staging/memory-prefetch-metric/work/sabotage_S8-latency-not-measured.log",
+        "log_sha256": "5cdd2fc8c4cedd306d9a3cbd9032caa991a48416e948455093532589667f27fa",
+        "mutation": {
+          "file": "hermes_cli/observability/shared_metrics_loop.py",
+          "old": "waited_ms=(time.monotonic() - started) * 1000,",
+          "new": "waited_ms=0,"
+        }
+      }
+    ],
+    "adjacent_base": {
+      "label": "adjacent_base",
+      "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_memory_provider.py tests/agent/test_memory_async_sync.py tests/agent/test_memory_session_switch.py tests/agent/test_memory_skill_scaffolding.py tests/agent/test_memory_sync_interrupted.py tests/agent/test_turn_context.py tests/hermes_cli/test_relay_shared_metrics.py tests/hermes_cli/test_relay_shared_metrics_runtime.py tests/hermes_cli/test_shared_metrics_signals.py tests/hermes_cli/test_shared_metrics_efficiency.py tests/hermes_cli/test_shared_metrics_harness.py tests/hermes_cli/test_shared_metrics_loop.py -q",
+      "rc": 0,
+      "wall_s": 50.2,
+      "summary": "=== Summary: 12 files, 330 tests passed, 0 failed (100% complete) in 49.0s (2 workers) ===",
+      "failed": [],
+      "assertion_lines": [],
+      "log": "$ARTIFACTS/frontier-2026-10-01/staging/memory-prefetch-metric/work/adjacent_base.log",
+      "log_sha256": "cdeb761186fb57333a52af5da6221beee9d328d52fd8ee6ac4aad3e207660a60"
+    },
+    "adjacent_head": {
+      "label": "adjacent_head",
+      "cmd": "bash scripts/run_tests.sh -j 2 tests/agent/test_memory_provider.py tests/agent/test_memory_async_sync.py tests/agent/test_memory_session_switch.py tests/agent/test_memory_skill_scaffolding.py tests/agent/test_memory_sync_interrupted.py tests/agent/test_turn_context.py tests/hermes_cli/test_relay_shared_metrics.py tests/hermes_cli/test_relay_shared_metrics_runtime.py tests/hermes_cli/test_shared_metrics_signals.py tests/hermes_cli/test_shared_metrics_efficiency.py tests/hermes_cli/test_shared_metrics_harness.py tests/hermes_cli/test_shared_metrics_loop.py -q",
+      "rc": 0,
+      "wall_s": 45.8,
+      "summary": "=== Summary: 12 files, 331 tests passed, 0 failed (100% complete) in 43.8s (2 workers) ===",
+      "failed": [],
+      "assertion_lines": [],
+      "log": "$ARTIFACTS/frontier-2026-10-01/staging/memory-prefetch-metric/work/adjacent_head.log",
+      "log_sha256": "d8ef747f01789dfebb772cb3166eb98f587d65f8e4e354e02912242ca06f7c73"
+    }
+  },
+  "load1_at_start": 4.9921875,
+  "finished": "2026-10-01T04:04:54-0500"
+}

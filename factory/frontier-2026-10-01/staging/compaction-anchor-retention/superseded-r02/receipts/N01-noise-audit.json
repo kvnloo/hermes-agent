@@ -1,0 +1,354 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compaction-anchor-retention",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#116246",
+  "NousResearch/hermes-agent#87326",
+  "NousResearch/hermes-agent#117462",
+  "NousResearch/hermes-agent#122274",
+  "NousResearch/hermes-agent#122522",
+  "NousResearch/hermes-agent#78457"
+ ],
+ "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+ "head_revision": "b11e27d5f9c60a420cbbe94fa967fc1454df92a6",
+ "supersedes": "6e0fa629a0 receipts r20261001-01 (superseded-r01/)",
+ "policy_revision": {
+  "factory": "FACTORY.md (frontier-2026-10-01)",
+  "protocol": "promotion-readiness-2026-10-01/PROTOCOL.md"
+ },
+ "env": {
+  "python": "3.11 (HERMES_PYTHON venv, read-only bind)",
+  "sandbox": "harness/sandbox.sh: bwrap ro-root, --unshare-net (connect -> ENETUNREACH), systemd-resolved socket masked (DNS -> EAI_AGAIN), pidns, clearenv, live Hermes install masked except the venv, fresh HOME/HERMES_HOME per run; harness/egress_sitecustomize.py logs every non-loopback DNS lookup and connect attempt (the script run had these paths inlined; the copy here takes them from env)",
+  "tests": "HOME=$S/testhome-sf-compaction-anchor-retention HERMES_HOME=$HOME/.hermes HERMES_PYTHON=$PY bash scripts/run_tests.sh -j 2 <files> -q"
+ },
+ "provenance": "self",
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the rows, tests, harness and gold labels; disclosed per repository policy",
+ "privacy": "public-aggregate (inputs are committed upstream text or seeded synthetic data; no state.db, no lineages); no absolute local paths",
+ "resource_usage": {
+  "api_cost_usd": 0.0,
+  "gpu_s": 0,
+  "tokens": 0
+ },
+ "id": "N01/r20261001-02",
+ "kind": "static",
+ "question": "What do the three new rows capture on large public Hermes text, both docs and Python source (a stand-in for read_file output)?",
+ "inputs": {
+  "scorecard": "evals/compaction/results/SCORECARD-2026-08-15.md",
+  "scorecard_sha256": "6d93f90b435e4f2ae2dd3187103c18e0c881ad68b88b92bfd3deacb1cf79180e",
+  "harness_sha256": {
+   "anchor_coverage.py": "3abc8976ca6e0d6c8793147ea2ecae07d1f682cf1c2f37d3df645d50f8ee54e0",
+   "build_receipts.py": "e796d99bdfbbf1e698d79875d483494e69d054bc19c79211b7ad822a85a7cfce",
+   "sandbox.sh": "f1aad255c5022b1c0920e0a6718faa222aa84b3583c4224c4e7fd32b43fedf24",
+   "egress_sitecustomize.py": "55eef4b9cf034dea08b0004a88dcf5595582bde9b3ba9c10ef4cc83807e29d9d",
+   "negative_controls.py": "076348310b01bd1bc24f173aebcee0de03afb4367451776aa8af6b47c641d099"
+  },
+  "arms": {
+   "base": {
+    "tree": "aea969677c60a1bb72fe227fdfb98f196a2092cc:agent/context_compressor.py",
+    "sha256": "86f4b7a8a647f1bf520cb17497b68719f6d907028bdc7151c7921818b7e043f1"
+   },
+   "branch": {
+    "head": "b11e27d5f9c60a420cbbe94fa967fc1454df92a6",
+    "sha256": "eea32ae2600e20ac7729cc894bf9afdd8987a33d97f6f98e1671dcc5e13a3ef2"
+   },
+   "c117462": {
+    "pr": 117462,
+    "head": "2c19948e15d68492d048250bae7707ca77063db5",
+    "merge_tree_with_base": "8d48e1bbf2de02ca54cdf4aa6bdc9bb029183db1",
+    "merge": "clean",
+    "sha256": "fdb7abd8050b4944171522c7e713004d7fbce9b2d8ddfb1c8de93414f206ebe0"
+   },
+   "c117462_foldin": {
+    "onto": "c117462",
+    "patch": "foldin-on-117462.patch (rows + tests/agent/test_context_compressor_anchor_index.py)",
+    "patch_sha256": "06369375643c1233d72e7f7a705f150c9909a9d906aa8bcf19215ffab6ef6228",
+    "merge": "hand-ported (rows placed in #117462's cheap-first order)",
+    "sha256": "c8994fc54bfe99312707a53d7d4ac7a20d0d66614d66c059bd392adad3c1f7ca"
+   },
+   "branch_r01": {
+    "head": "6e0fa629a0f6227b03417d1d6ff7f7d81208346a",
+    "sha256": "98d9e8d058557eee2fd4e89641b6350a2b21ab62c563ac741986db61ae1d98a8",
+    "role": "previous staging head (untightened error row); comparison only"
+   }
+  },
+  "coverage_json_sha256": "fcb9840037b27ab795e343526b2578d328a5c6479c0886c616a989df8a4541d8",
+  "checkout_for_imports": "$WT at b11e27d5f9c60a420cbbe94fa967fc1454df92a6; `git diff --name-only aea969677c b11e27d5f9` lists only agent/context_compressor.py and the new test file, so every other module, website/docs, AGENTS.md and hermes_cli/config_defaults.py are exactly aea969677c",
+  "egress": "0 attempts logged for the harness run",
+  "docs_corpus": {
+   "what": "AGENTS.md + website/docs/**/*.md at aea969677c60a1bb72fe227fdfb98f196a2092cc",
+   "files": 448,
+   "chars": 7808641,
+   "sha256": "3045bf5be8a810f758319d6f6ffa71d3cd07ac4f9a141f2563b9d4798c9ee36c"
+  },
+  "code_corpus": {
+   "what": "agent/*.py at aea969677c60a1bb72fe227fdfb98f196a2092cc",
+   "files": 251,
+   "chars": 5871222,
+   "sha256": "697749b2bac1a457f299e42e71ecdf1dc3f6e1c65442403570d97e7bf95b3fd1"
+  },
+  "default_config_keys": 1095
+ },
+ "command": "VENV=$VENV HERMES_INSTALL=<live install> EGRESS_DIR=<dir with sitecustomize.py> $SANDBOX $WT <fresh home> <egress log> $PY $STAGING/harness/anchor_coverage.py --checkout $WT --arm base=raw/arms/base.py --arm branch=raw/arms/branch.py --arm c117462=raw/arms/c117462.py --arm c117462_foldin=raw/arms/c117462_foldin.py --arm branch_r01=raw/arms/branch_r01.py --seeds 10 --out <home>/coverage.json   # $WT detached at HEAD; copied to raw/coverage.json",
+ "results": {
+  "docs": {
+   "task ids": {
+    "matches": 4,
+    "distinct": 2,
+    "top15": [
+     [
+      "sa-0-1a2b3c4d",
+      3
+     ],
+     [
+      "t_77c26979",
+      1
+     ]
+    ]
+   },
+   "dotted keys": {
+    "matches": 2042,
+    "distinct": 1032,
+    "top15": [
+     [
+      "ctx.register_hook",
+      60
+     ],
+     [
+      "pm.sync_venv",
+      48
+     ],
+     [
+      "gateway.multiplex_profiles",
+      23
+     ],
+     [
+      "repository.full_name",
+      21
+     ],
+     [
+      "security.allow_lazy_installs",
+      18
+     ],
+     [
+      "ctx.register_tool",
+      16
+     ],
+     [
+      "client.create_collection",
+      16
+     ],
+     [
+      "model.base_url",
+      14
+     ],
+     [
+      "ctx.register_platform",
+      13
+     ],
+     [
+      "torch.no_grad",
+      12
+     ],
+     [
+      "web.extract_backend",
+      11
+     ],
+     [
+      "agent.reasoning_effort",
+      11
+     ],
+     [
+      "model.set_generation_params",
+      11
+     ],
+     [
+      "agent.disabled_toolsets",
+      10
+     ],
+     [
+      "ctx.register_command",
+      10
+     ]
+    ],
+    "distinct_in_DEFAULT_CONFIG": 306,
+    "top15_in_DEFAULT_CONFIG": 4
+   },
+   "error messages": {
+    "matches": 9,
+    "distinct": 9,
+    "top15": [
+     [
+      "error: <message or \"request failed\">`. Never renders \"no card\" or any other guessed state; user must retry `/topup`",
+      1
+     ],
+     [
+      "error: \"Gateway shutdown interrupted the run.\"` — recorded before the agent is interrupted and never overwritten by t",
+      1
+     ],
+     [
+      "Error: backup archive is damaged (N member(s) …)` with the offending members and stops with the Hermes home untouched",
+      1
+     ],
+     [
+      "Blocked: URL targets a private or internal address\"` unless you also set",
+      1
+     ],
+     [
+      "Error: assertion in test_foo.py line 42\"",
+      1
+     ],
+     [
+      "Error: ...\") -> logger.error(...)",
+      1
+     ],
+     [
+      "error: str | None` |",
+      1
+     ],
+     [
+      "fatal: ntfy_unauthorized`. Fix the token and restart the gateway",
+      1
+     ],
+     [
+      "fatal: ntfy_topic_not_found`",
+      1
+     ]
+    ]
+   }
+  },
+  "code": {
+   "task ids": {
+    "matches": 0,
+    "distinct": 0,
+    "top15": []
+   },
+   "dotted keys": {
+    "matches": 5610,
+    "distinct": 1957,
+    "top15": [
+     [
+      "agent.session_id",
+      128
+     ],
+     [
+      "agent.context_compressor",
+      113
+     ],
+     [
+      "agent.conversation_loop",
+      89
+     ],
+     [
+      "agent.api_mode",
+      84
+     ],
+     [
+      "agent.base_url",
+      75
+     ],
+     [
+      "agent.log_prefix",
+      71
+     ],
+     [
+      "agent.model_metadata",
+      53
+     ],
+     [
+      "self.base_url",
+      50
+     ],
+     [
+      "agent.auxiliary_client",
+      46
+     ],
+     [
+      "agent.agent_runtime_helpers",
+      45
+     ],
+     [
+      "agent.conversation_compression",
+      41
+     ],
+     [
+      "agent.valid_tool_names",
+      34
+     ],
+     [
+      "self.api_key",
+      34
+     ],
+     [
+      "agent.credential_pool",
+      32
+     ],
+     [
+      "agent.quiet_mode",
+      30
+     ]
+    ],
+    "top40_self_attr": 9,
+    "top40_in_DEFAULT_CONFIG": 0,
+    "distinct_in_DEFAULT_CONFIG": 74
+   },
+   "error messages": {
+    "matches": 2,
+    "distinct": 2,
+    "top15": [
+     [
+      "Blocked: internal skill-hub caches (prompt-injection carriers), credential",
+      1
+     ],
+     [
+      "Error: Invalid JSON arguments. {err}. \"",
+      1
+     ]
+    ],
+    "values": [
+     "Blocked: internal skill-hub caches (prompt-injection carriers), credential",
+     "Error: Invalid JSON arguments. {err}. \""
+    ]
+   }
+  }
+ },
+ "previous_rows_r01": {
+  "docs_error_messages_matches": 24,
+  "code_error_messages": {
+   "matches": 80,
+   "distinct": 67,
+   "sample": [
+    "Blocked: internal skill-hub caches (prompt-injection carriers), credential",
+    "Error: Invalid JSON arguments. {err}. \"",
+    "Error: {error or 'provider stream failure'}.\\n\\n\"",
+    "error: %s\", _mw_err)",
+    "error: %s\", agent.log_prefix, api_error)",
+    "error: %s\", callback_error)",
+    "error: %s\", cb_err)",
+    "error: %s\", exc)",
+    "error: %s\", label, callback_error)",
+    "error: %s\", probe_err)",
+    "error: %s)\", turn.error)",
+    "error: Any = None) -> None"
+   ]
+  }
+ },
+ "scan_seconds": {
+  "base": 0.6148,
+  "branch": 2.1047,
+  "c117462": 0.9032,
+  "c117462_foldin": 1.9105
+ },
+ "readout": [
+  "task ids: 4 matches / 2 distinct in the docs (both doc examples), 0 in agent/*.py",
+  "dotted keys, docs: 1032 distinct values, 306 (29.7%) are DEFAULT_CONFIG keys, hence the label 'dotted keys'",
+  "dotted keys, code (LIMITATION): 1957 distinct values in agent/*.py; of the 40 most frequent, 9 are self.* attributes and 0 are DEFAULT_CONFIG keys (the rest are attribute accesses such as agent.session_id and module paths). In a region full of Python source the 40-value cap fills with these, and a config key mentioned once in assistant text can be crowded out. Not changed in this slice.",
+  "error messages: docs 9 matches (previous rows 24); agent/*.py 2 matches, both real message strings (previous rows 80 matches, nearly all annotations such as 'error: Exception) -> Dict[str, Any]' or log formats such as 'error: %s\", exc)')"
+ ],
+ "label": "OBSERVED",
+ "limitations": [
+  "docs and source files are not transcripts; precision on real regions is NOT_MEASURED",
+  "scan timings are single runs on a shared host"
+ ],
+ "verdict": "KEEP (error row tightened this round; dotted-keys code limitation disclosed)"
+}

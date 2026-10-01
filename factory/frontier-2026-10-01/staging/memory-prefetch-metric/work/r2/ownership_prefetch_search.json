@@ -1,0 +1,688 @@
+{
+ "schema": "ownership_prefetch_search.v1",
+ "searched_at": "2026-10-01T11:14Z",
+ "queries": {
+  "prefetch metric": {
+   "total_count": 3,
+   "items": [
+    {
+     "number": 92118,
+     "author": "seradin",
+     "title": "feat(memory): add operation-bound structured prefetch observations"
+    },
+    {
+     "number": 68028,
+     "author": "jkobject",
+     "title": "fix(supermemory): precision-gate automatic recall"
+    },
+    {
+     "number": 78584,
+     "author": "iso2kx",
+     "title": "feat(sessions): add temporary chats that leave nothing on disk"
+    }
+   ]
+  },
+  "prefetch telemetry": {
+   "total_count": 9,
+   "items": [
+    {
+     "number": 92118,
+     "author": "seradin",
+     "title": "feat(memory): add operation-bound structured prefetch observations"
+    },
+    {
+     "number": 106813,
+     "author": "remi-td",
+     "title": "fix(memory): track holographic retrieval usage"
+    },
+    {
+     "number": 115109,
+     "author": "liuhao1024",
+     "title": "fix(memory): scrub provider-synced turns with the egress redactor"
+    },
+    {
+     "number": 121513,
+     "author": "Roblmvp",
+     "title": "fix(holographic): carry fact_id into prefetch() so fact_feedback can close the trust loop"
+    },
+    {
+     "number": 115694,
+     "author": "aniruddhaadak80",
+     "title": "fix(memory): scrub secrets before memory-provider egress"
+    },
+    {
+     "number": 65329,
+     "author": "Soju06",
+     "title": "feat(telemetry): opt-in per-turn waterfall tracing (config: agent.turn_trace)"
+    },
+    {
+     "number": 81582,
+     "author": "x7peeps",
+     "title": "feat(agent): proactive feature router \u2014 suggest the right Hermes capability at the right time"
+    },
+    {
+     "number": 80517,
+     "author": "Crqptx",
+     "title": "fix(tools,cli): never downgrade lazy deps at runtime; truthful memory status"
+    },
+    {
+     "number": 129620,
+     "author": "JoaoMarcos44",
+     "title": "fix(anthropic): make preserved-thinking replay coherent"
+    }
+   ]
+  },
+  "memory prefetch": {
+   "total_count": 151,
+   "items": [
+    {
+     "number": 129324,
+     "author": "OPGokuVPS",
+     "title": "Pr/mem0 prefetch gate"
+    },
+    {
+     "number": 124151,
+     "author": "kweez007",
+     "title": "fix(memory): raise Hindsight external-prefetch timeout 8s -> 20s"
+    },
+    {
+     "number": 87028,
+     "author": "richardclawbot",
+     "title": "fix(memory): honor external prefetch timeout"
+    },
+    {
+     "number": 125802,
+     "author": "Finn763",
+     "title": "fix(core): #8893 decouple memory prefetch from user-message channel"
+    },
+    {
+     "number": 92118,
+     "author": "seradin",
+     "title": "feat(memory): add operation-bound structured prefetch observations"
+    },
+    {
+     "number": 98045,
+     "author": "Navlem",
+     "title": "feat(memory): make external provider prefetch timeout configurable"
+    },
+    {
+     "number": 106813,
+     "author": "remi-td",
+     "title": "fix(memory): track holographic retrieval usage"
+    },
+    {
+     "number": 126193,
+     "author": "vbcherepanov",
+     "title": "feat(plugin-catalog): add tam memory provider (total-agent-memory)"
+    },
+    {
+     "number": 95387,
+     "author": "x7peeps",
+     "title": "feat(agent): implicit skill prefetch \u2014 load mentioned skills into turn prefetch cache"
+    },
+    {
+     "number": 115694,
+     "author": "aniruddhaadak80",
+     "title": "fix(memory): scrub secrets before memory-provider egress"
+    },
+    {
+     "number": 93676,
+     "author": "Rafay121",
+     "title": "feat(memory): add MemorySync bundled memory provider"
+    },
+    {
+     "number": 121513,
+     "author": "Roblmvp",
+     "title": "fix(holographic): carry fact_id into prefetch() so fact_feedback can close the trust loop"
+    },
+    {
+     "number": 120146,
+     "author": "Finn763",
+     "title": "fix(gateway): reuse session memory manager across api_server requests"
+    },
+    {
+     "number": 120042,
+     "author": "Navlem",
+     "title": "fix(agent): raise external prefetch bound to 12s so real slow recalls are not dropped"
+    },
+    {
+     "number": 115109,
+     "author": "liuhao1024",
+     "title": "fix(memory): scrub provider-synced turns with the egress redactor"
+    },
+    {
+     "number": 35604,
+     "author": "AJV20",
+     "title": "feat(memory): add deterministic memory reranking helpers"
+    },
+    {
+     "number": 45743,
+     "author": "waldmanz",
+     "title": "feat(memory): govern automatic memory context injection"
+    },
+    {
+     "number": 69606,
+     "author": "thitar",
+     "title": "feat(memory): make prefetch and query timeouts configurable"
+    },
+    {
+     "number": 127339,
+     "author": "Allanchao87",
+     "title": "fix(memory/holographic): CJK bigram retrieval for unsegmented languages"
+    },
+    {
+     "number": 86948,
+     "author": "V0v1kkkAssistant",
+     "title": "feat(memory): make provider timeouts configurable"
+    },
+    {
+     "number": 127847,
+     "author": "kuehnberger",
+     "title": "Add qdrant memory provider to plugin catalog"
+    },
+    {
+     "number": 105292,
+     "author": "nftpoetrist",
+     "title": "fix(honcho): fence dialectic prefetch against session-switch races"
+    },
+    {
+     "number": 33166,
+     "author": "zhonghui5207",
+     "title": "fix(memory/holographic): normalize CJK prefetch queries"
+    },
+    {
+     "number": 84412,
+     "author": "TurboAnbeli",
+     "title": "feat(memory): structured recall-provenance envelope (RecallItem) \u2014 tier B of #84251"
+    },
+    {
+     "number": 84360,
+     "author": "TurboAnbeli",
+     "title": "fix(memory): frame recalled memory as untrusted, non-authoritative context (#84251)"
+    },
+    {
+     "number": 125881,
+     "author": "pstarkgit",
+     "title": "Add fail-closed policy hooks for memory admission and compression commits"
+    },
+    {
+     "number": 107526,
+     "author": "KoNit-K",
+     "title": "fix(mem0): keep backend open while sync_turn is still extracting"
+    },
+    {
+     "number": 125418,
+     "author": "Finn763",
+     "title": "fix(hindsight): per-call bank targeting + per-hit provenance for recall/reflect"
+    },
+    {
+     "number": 109498,
+     "author": "kingdepp",
+     "title": "fix(supermemory): read recall text from chunk so document hits reach recall"
+    },
+    {
+     "number": 60953,
+     "author": "tangxc96",
+     "title": "fix(memory): isolate provider sync and prefetch background lanes"
+    },
+    {
+     "number": 102928,
+     "author": "evergardener",
+     "title": "fix(desktop): prefetch TTS segments during playback"
+    },
+    {
+     "number": 92039,
+     "author": "liuhao1024",
+     "title": "fix(memory): strip channel/topic auto-loaded skill bodies from memory fan-out"
+    },
+    {
+     "number": 52186,
+     "author": "pajoric",
+     "title": "fix: shut down Honcho memory threads in oneshot mode"
+    },
+    {
+     "number": 89282,
+     "author": "ryo-papa",
+     "title": "feat: add confidence memory provider"
+    },
+    {
+     "number": 64421,
+     "author": "yingliang-zhang",
+     "title": "fix(memory): frame recalled context as untrusted data"
+    },
+    {
+     "number": 63791,
+     "author": "lrdeoliveira",
+     "title": "docs(memory): list Nexusyn standalone memory provider plugin"
+    },
+    {
+     "number": 80909,
+     "author": "stevengonsalvez",
+     "title": "feat: add memvid memory provider"
+    },
+    {
+     "number": 64288,
+     "author": "embwl0x",
+     "title": "fix(memory): neutralize provider prompt delimiters"
+    },
+    {
+     "number": 63931,
+     "author": "madeat3am",
+     "title": "fix(cli): shut down oneshot memory providers"
+    },
+    {
+     "number": 15412,
+     "author": "tabtablabs-dev",
+     "title": "fix(memory): preview external prefetch context in Discord progress"
+    },
+    {
+     "number": 68692,
+     "author": "ceverson70",
+     "title": "fix(mem0): prefetch TOCTOU race, exception logging improvements"
+    },
+    {
+     "number": 92149,
+     "author": "telnetaisha",
+     "title": "fix(agent): preserve memory-context provenance boundary"
+    },
+    {
+     "number": 14150,
+     "author": "scorp323",
+     "title": "Close out holographic memory understanding"
+    },
+    {
+     "number": 62841,
+     "author": "devatnull",
+     "title": "feat(memory): per-chat/per-user/per-session memory scope isolation"
+    },
+    {
+     "number": 84382,
+     "author": "advaitbd",
+     "title": "feat(memory): add scoped paths and tools-only holographic mode"
+    },
+    {
+     "number": 12126,
+     "author": "SonicBotMan",
+     "title": "fix(memory): persist prefetch cache across AIAgent recreation in gateway"
+    },
+    {
+     "number": 102837,
+     "author": "vshulcz",
+     "title": "docs(memory): add deja, a standalone provider over the sessions already on disk"
+    },
+    {
+     "number": 117888,
+     "author": "arslanr-com",
+     "title": "feat(catalog): add PerfectRecall Jev-powered memory provider"
+    },
+    {
+     "number": 108864,
+     "author": "Shy7777",
+     "title": "fix(memory): rebind RetainDB state on session switches"
+    },
+    {
+     "number": 101580,
+     "author": "stepanov1975",
+     "title": "feat(memory): plan recall for vague follow-up messages"
+    },
+    {
+     "number": 18565,
+     "author": "natehale",
+     "title": "feat(cron): per-job external memory provider modes (off|tools|full)"
+    },
+    {
+     "number": 126519,
+     "author": "pkuriarr",
+     "title": "fix(holographic): split FTS queries into Unicode word tokens and drop bilingual stopwords"
+    },
+    {
+     "number": 66684,
+     "author": "gmqq0910",
+     "title": "fix(memory): restore CJK recall in holographic FTS via jieba pre-segmentation"
+    },
+    {
+     "number": 30991,
+     "author": "xxxigm",
+     "title": "fix(memory-providers): inject external memory tools when 'memory' toolset is off"
+    },
+    {
+     "number": 82512,
+     "author": "tcconnally",
+     "title": "docs: document memory-provider on_turn_start/on_delegation/backup_paths hooks"
+    },
+    {
+     "number": 89283,
+     "author": "Nando2392",
+     "title": "fix(security): mark provider recall as untrusted"
+    },
+    {
+     "number": 31664,
+     "author": "benpret",
+     "title": "fix: shut down Honcho memory provider after oneshot"
+    },
+    {
+     "number": 40967,
+     "author": "iamlukethedev",
+     "title": "fix(#40170): prevent Honcho memory injection on customer-facing gateways"
+    },
+    {
+     "number": 117692,
+     "author": "auroracapital",
+     "title": "feat(mem0): Cloudflare embeddings and reranking"
+    },
+    {
+     "number": 34215,
+     "author": "nic-h",
+     "title": "fix(memory): compact recall context boundaries"
+    },
+    {
+     "number": 44378,
+     "author": "Kewe63",
+     "title": "fix(memory_manager): add exponential backoff retry for transient provider errors"
+    },
+    {
+     "number": 105495,
+     "author": "cristianuibar",
+     "title": "fix(openviking): report recall timeouts without extra requests"
+    },
+    {
+     "number": 122287,
+     "author": "HMYDK",
+     "title": "fix(openviking): skip writes for non-primary agent contexts"
+    },
+    {
+     "number": 117358,
+     "author": "dbrask",
+     "title": "fix(honcho): skipSessionSources keeps autonomous kanban workers out of a human's memory"
+    },
+    {
+     "number": 75446,
+     "author": "pablo-afterlife",
+     "title": "fix(memory/mem0): heal dead backends lazily, stop dropping sync turns, surface missing dependencies"
+    },
+    {
+     "number": 39664,
+     "author": "dusterbloom",
+     "title": "fix(memory): increment retrieval_count on search results in holographic memory (#17899)"
+    },
+    {
+     "number": 30965,
+     "author": "quantum-chaos",
+     "title": "fix: harden Discord sync and cron memory opt-in"
+    },
+    {
+     "number": 68903,
+     "author": "nuffin",
+     "title": "feat(agent): add memory_mode parameter with 'on_demand' option for sub-agents"
+    },
+    {
+     "number": 18372,
+     "author": "flyingdoubleG",
+     "title": "fix(memory): guard stale recall and unsafe learning"
+    },
+    {
+     "number": 121837,
+     "author": "686f6c61",
+     "title": "fix(agent): keep the memory block when a model-switch row is merged"
+    },
+    {
+     "number": 24270,
+     "author": "florianaebi",
+     "title": "fix: harden honcho memory and dashboard terminal"
+    },
+    {
+     "number": 47457,
+     "author": "r266-tech",
+     "title": "fix(memory): strip skill scaffolding in raw-transcript provider hooks"
+    },
+    {
+     "number": 34521,
+     "author": "20231118185SSPU",
+     "title": "feat(memory): organic memory architecture \u2014 silent engrams, salience gating,   consolidation engine"
+    },
+    {
+     "number": 83152,
+     "author": "JoaoMarcos44",
+     "title": "fix(gateway): close long-lived resources (#83092)"
+    },
+    {
+     "number": 129093,
+     "author": "nicoloboschi",
+     "title": "catalog(hindsight): pin the released v1.2.1"
+    },
+    {
+     "number": 55849,
+     "author": "srojk34",
+     "title": "fix(retaindb): skip stale prefetch cache on topic change"
+    },
+    {
+     "number": 89418,
+     "author": "branben",
+     "title": "feat(memory): add rationale-attached provenance tail convention to MEMORY_GUIDANCE"
+    },
+    {
+     "number": 68028,
+     "author": "jkobject",
+     "title": "fix(supermemory): precision-gate automatic recall"
+    },
+    {
+     "number": 122763,
+     "author": "addelh",
+     "title": "fix(honcho): invalidate SDK children when session clients change"
+    },
+    {
+     "number": 72385,
+     "author": "clara-patchou-ai",
+     "title": "fix(honcho): stop background workers before exit"
+    },
+    {
+     "number": 58346,
+     "author": "vonsensey",
+     "title": "docs(memory-providers): add Memra community provider"
+    },
+    {
+     "number": 90800,
+     "author": "nanami7777777",
+     "title": "fix(mem0): drain sync before backend shutdown"
+    },
+    {
+     "number": 19833,
+     "author": "fadelguy",
+     "title": "Fix Honcho auto-injection for shared gateway venues"
+    },
+    {
+     "number": 94243,
+     "author": "Parker-Fawcett",
+     "title": "fix(agent): refresh DeepSeek pricing to the 2026-08-16 official rates"
+    },
+    {
+     "number": 7789,
+     "author": "hughpyle",
+     "title": "fix(memory): pass session and user context to on_turn_start"
+    },
+    {
+     "number": 37783,
+     "author": "LeonSGP43",
+     "title": "fix(honcho): drop vacuous memory summaries when facts exist"
+    },
+    {
+     "number": 40425,
+     "author": "rodboev",
+     "title": "fix(memory): contain external recall at the injection boundary (#40170)"
+    },
+    {
+     "number": 53182,
+     "author": "jony0910",
+     "title": "feat: add memory sidecar context retrieval and runtime fixes"
+    },
+    {
+     "number": 112681,
+     "author": "fangliquanflq",
+     "title": "feat(tts): integrate LuxTTS sentence streaming"
+    },
+    {
+     "number": 76351,
+     "author": "Sertug17",
+     "title": "fix: evict peer card caches after set_peer_card to prevent stale injection"
+    },
+    {
+     "number": 109688,
+     "author": "Tranquil-Flow",
+     "title": "fix(memory/byterover): scope the brv child env to the active profile (#108993)"
+    },
+    {
+     "number": 126457,
+     "author": "mozhongzhou",
+     "title": "feat(cli): add memory provider runtime health indicator to status bar"
+    },
+    {
+     "number": 94983,
+     "author": "GottZ",
+     "title": "Context engines: resolve compaction authority under checkpoint_required (follow-up to #94639)"
+    },
+    {
+     "number": 5688,
+     "author": "handsdiff",
+     "title": "feat(agent): support multiple simultaneous memory providers"
+    },
+    {
+     "number": 67679,
+     "author": "JPeetz",
+     "title": "docs: add community memory provider listing for Memex Zero RAG"
+    },
+    {
+     "number": 117945,
+     "author": "jonpol01",
+     "title": "fix(memory): scan a batch op's new_text, not just its content"
+    },
+    {
+     "number": 118895,
+     "author": "Sahil-SS9",
+     "title": "feat(plugins): on_session_open \u2014 host-open lifecycle hook for addressable sessions"
+    },
+    {
+     "number": 73901,
+     "author": "ar-nim",
+     "title": "fix(memory/holographic): wire retrieval_count into all retrieval paths via locked store helper"
+    },
+    {
+     "number": 51012,
+     "author": "joelbrilliant",
+     "title": "fix(honcho): make local memory migration retry-safe"
+    },
+    {
+     "number": 55729,
+     "author": "BongSuCHOI",
+     "title": "fix(memory/holographic): track retrieval counts across retriever paths"
+    }
+   ]
+  },
+  "prefetch_provider": {
+   "total_count": 0,
+   "items": []
+  },
+  "prefetch shared metrics": {
+   "total_count": 1,
+   "items": [
+    {
+     "number": 78584,
+     "author": "iso2kx",
+     "title": "feat(sessions): add temporary chats that leave nothing on disk"
+    }
+   ]
+  },
+  "memory.prefetch": {
+   "total_count": 1,
+   "items": [
+    {
+     "number": 15412,
+     "author": "tabtablabs-dev",
+     "title": "fix(memory): preview external prefetch context in Discord progress"
+    }
+   ]
+  }
+ },
+ "memory_manager_check": {
+  "129324": {
+   "touches_memory_manager": false,
+   "hunk_mentions_prefetch_provider": false,
+   "adds_record_or_metric_lines": false
+  },
+  "87028": {
+   "touches_memory_manager": true,
+   "hunk_mentions_prefetch_provider": true,
+   "adds_record_or_metric_lines": false
+  },
+  "125802": {
+   "touches_memory_manager": false,
+   "hunk_mentions_prefetch_provider": false,
+   "adds_record_or_metric_lines": false
+  },
+  "92118": {
+   "touches_memory_manager": true,
+   "hunk_mentions_prefetch_provider": true,
+   "adds_record_or_metric_lines": false
+  },
+  "98045": {
+   "touches_memory_manager": false,
+   "hunk_mentions_prefetch_provider": false,
+   "adds_record_or_metric_lines": false
+  },
+  "120042": {
+   "touches_memory_manager": true,
+   "hunk_mentions_prefetch_provider": false,
+   "adds_record_or_metric_lines": false
+  },
+  "69606": {
+   "touches_memory_manager": false,
+   "hunk_mentions_prefetch_provider": false,
+   "adds_record_or_metric_lines": false
+  },
+  "86948": {
+   "touches_memory_manager": true,
+   "hunk_mentions_prefetch_provider": true,
+   "adds_record_or_metric_lines": false
+  },
+  "60953": {
+   "touches_memory_manager": true,
+   "hunk_mentions_prefetch_provider": false,
+   "adds_record_or_metric_lines": false
+  },
+  "65329": {
+   "touches_memory_manager": false,
+   "hunk_mentions_prefetch_provider": false,
+   "adds_record_or_metric_lines": false
+  },
+  "12126": {
+   "touches_memory_manager": true,
+   "hunk_mentions_prefetch_provider": false,
+   "adds_record_or_metric_lines": false
+  },
+  "68692": {
+   "touches_memory_manager": false,
+   "hunk_mentions_prefetch_provider": false,
+   "adds_record_or_metric_lines": false
+  },
+  "120146": {
+   "touches_memory_manager": false,
+   "hunk_mentions_prefetch_provider": false,
+   "adds_record_or_metric_lines": false
+  },
+  "106813": {
+   "touches_memory_manager": false,
+   "hunk_mentions_prefetch_provider": false,
+   "adds_record_or_metric_lines": false
+  },
+  "124151": {
+   "touches_memory_manager": true,
+   "hunk_mentions_prefetch_provider": true,
+   "adds_record_or_metric_lines": false
+  },
+  "15412": {
+   "touches_memory_manager": true,
+   "hunk_mentions_prefetch_provider": false,
+   "adds_record_or_metric_lines": false
+  }
+ },
+ "note": "#92118 body: 'Hermes adds no persistence, outbound delivery, or telemetry' (structured observation side channel, not a counter)"
+}

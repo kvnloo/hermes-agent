@@ -1,0 +1,536 @@
+{
+  "schema": "xf.receipt.v1",
+  "id": "OWNERSHIP/r20261001-04",
+  "experiment": "P2 ownership and PR-state refresh taken after #126457 closed (2026-10-01T16:23:32Z): state of every upstream PR/issue the manifest, PR_BODY.md and OWNERSHIP r03 cite, #126457's close and the author's other PRs, the 10 prefetch queries (all result pages), the teknium1 open-PR set, a changed-file scan of every open search hit, a merge-tree matrix of the hits that touch the prefetch or shared-metrics files against current main and the staging head, and a final state check just before manifest r5 was written",
+  "tier": "T0",
+  "cost_usd": 0.0,
+  "lane": "cpu (gh read-only; git ls-remote, fetch by SHA with --no-write-fetch-head, merge-tree on the local object store)",
+  "staging": "memory-prefetch-metric",
+  "base_revision": "040b6df2c40b0f4f88f51e4c2062eafc4d7463c5",
+  "head_revision": "569ad4d84b0f9888ea2598c2a8ea416b2c75bad6",
+  "main_revision": "aaa863f7ff2dec1821be1652b5d15ad14ecea70b",
+  "results": {
+    "main_recheck": {
+      "ls_remote_at": "2026-10-01T16:52:24Z",
+      "main": "aaa863f7ff2dec1821be1652b5d15ad14ecea70b",
+      "main_committer_date": "2026-10-01T22:17:57+05:30",
+      "base_is_ancestor": true,
+      "commits_since_base": 25,
+      "commits_since_r03_main_44a1ce9724": 4,
+      "invalidate_on_commits_since_base": [],
+      "invalidate_on_blobs_equal_base": "all 8",
+      "merge_tree_head_vs_main": {
+        "clean": true,
+        "tree": "21c423feb3"
+      },
+      "prefetch_grep_since_base": 0,
+      "workflows": "0 commits under .github/ since the base; 52 workflow files, so the 0/52 push-trigger scan in MERGE/r20261001-03 stands",
+      "fork_branch_name": "staged/memory-prefetch-metric absent on the fork at 2026-10-01T16:52:26Z (5 other staged/* refs and the legacy staging ref exist); local ref still at the head",
+      "f08_replay": "F08/r20261001-04 replays the head's diff on this main: tree equals the merge-tree result"
+    },
+    "cited_state_checked_at": "2026-10-01T16:52:26Z",
+    "cited_state": {
+      "98045": {
+        "state": "closed",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "Navlem",
+        "closed_at": "2026-10-01T12:51:06Z",
+        "merged_at": null,
+        "head": "77f018b7db",
+        "mergeable_state": "clean"
+      },
+      "87028": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "richardclawbot",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "f63bfa2a5c",
+        "mergeable_state": "unknown"
+      },
+      "124151": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "kweez007",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "3ee6189dba",
+        "mergeable_state": "unknown"
+      },
+      "120042": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "Navlem",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "641f6b94c5",
+        "mergeable_state": "unknown"
+      },
+      "47119": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": false,
+        "author": "jbienz",
+        "closed_at": null,
+        "merged_at": null
+      },
+      "21566": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": false,
+        "author": "pikos-apikos",
+        "closed_at": null,
+        "merged_at": null
+      },
+      "92118": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "seradin",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "2ad5cc73fa",
+        "mergeable_state": "unknown"
+      },
+      "126457": {
+        "state": "closed",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "mozhongzhou",
+        "closed_at": "2026-10-01T16:23:32Z",
+        "merged_at": null,
+        "head": "822f7b2835",
+        "mergeable_state": "blocked"
+      },
+      "86948": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "V0v1kkkAssistant",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "cc1c2a1f2c",
+        "mergeable_state": "unknown"
+      },
+      "65329": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "Soju06",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "c868eaaa02",
+        "mergeable_state": "unknown"
+      },
+      "125802": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "Finn763",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "543af5de19",
+        "mergeable_state": "unknown"
+      },
+      "15412": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "tabtablabs-dev",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "69c5a41321",
+        "mergeable_state": "unknown"
+      },
+      "113678": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "teknium1",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "b94a482497",
+        "mergeable_state": "dirty"
+      },
+      "78584": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "iso2kx",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "e7c6f83e8a",
+        "mergeable_state": "unknown"
+      },
+      "127373": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": false,
+        "author": "kvnloo",
+        "closed_at": null,
+        "merged_at": null
+      },
+      "127374": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": false,
+        "author": "kvnloo",
+        "closed_at": null,
+        "merged_at": null
+      },
+      "127375": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": false,
+        "author": "kvnloo",
+        "closed_at": null,
+        "merged_at": null
+      },
+      "127332": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": false,
+        "author": "kvnloo",
+        "closed_at": null,
+        "merged_at": null
+      },
+      "127228": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": false,
+        "author": "kvnloo",
+        "closed_at": null,
+        "merged_at": null
+      },
+      "125881": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "pstarkgit",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "d3fdffcf82",
+        "mergeable_state": "unknown"
+      },
+      "108965": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "jonpol01",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "39dd41fe68",
+        "mergeable_state": "unknown"
+      },
+      "129620": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "JoaoMarcos44",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "588b746cf6",
+        "mergeable_state": "blocked"
+      },
+      "64421": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "yingliang-zhang",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "b6df099a1a",
+        "mergeable_state": "unknown"
+      },
+      "68903": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "nuffin",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "bce652651f",
+        "mergeable_state": "unknown"
+      },
+      "81582": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "x7peeps",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "36dcc4dfc8",
+        "mergeable_state": "unknown"
+      },
+      "84360": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "TurboAnbeli",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "b856e23706",
+        "mergeable_state": "unknown"
+      },
+      "115109": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "liuhao1024",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "65d141f5ec",
+        "mergeable_state": "unknown"
+      },
+      "115694": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "aniruddhaadak80",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "a9e3edd6ee",
+        "mergeable_state": "unknown"
+      },
+      "98703": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "oleg-koval",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "6771ca2f4f",
+        "mergeable_state": "blocked"
+      },
+      "58597": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "JandY95",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "ae6946c1fc",
+        "mergeable_state": "unknown"
+      },
+      "63759": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "gcunharodrigues",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "3165890dc8",
+        "mergeable_state": "unknown"
+      },
+      "84412": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "TurboAnbeli",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "30c9b1253c",
+        "mergeable_state": "unknown"
+      },
+      "101580": {
+        "state": "open",
+        "state_reason": null,
+        "is_pr": true,
+        "author": "stepanov1975",
+        "closed_at": null,
+        "merged_at": null,
+        "head": "d24b4d4042",
+        "mergeable_state": "unknown"
+      }
+    },
+    "closed_of_cited": {
+      "98045": "closed 2026-10-01T12:51:06Z by Navlem as a duplicate of #87028 (as in r03)",
+      "126457": "closed 2026-10-01T16:23:32Z by its author mozhongzhou, unmerged (new since r03)"
+    },
+    "pr126457": {
+      "state": "CLOSED, not merged",
+      "closed_at": "2026-10-01T16:23:32Z",
+      "closed_by": "mozhongzhou (the author)",
+      "head": "822f7b2835",
+      "head_unchanged_since_MERGE_r03": true,
+      "issue_comments": 0,
+      "review_activity": "4 Copilot bot reviews with 6 inline comments, all on 2026-09-28; no human comment or review",
+      "close_reason_given": null,
+      "replacement": "none: the author's only PR in the repo (search is:pr author:mozhongzhou, all states) is #126457 itself; no cross-reference in its timeline",
+      "files": [
+        "agent/agent_init.py",
+        "agent/memory_health.py",
+        "agent/memory_manager.py",
+        "agent/memory_provider.py",
+        "hermes_cli/cli_status_bar_mixin.py",
+        "hermes_cli/cli_tui_runtime_mixin.py",
+        "hermes_cli/config_defaults.py",
+        "tests/agent/test_memory_health.py",
+        "tests/hermes_cli/test_cli_status_bar.py",
+        "tests/hermes_cli/test_cli_tui_runtime.py",
+        "website/docs/user-guide/configuration.md"
+      ],
+      "effect": "no longer an open adjacent PR; the head-only conflict count drops from 2 to 1 (#92118). r03 recorded it as open at 16:14:25Z, nine minutes before the close; manifest r4 (16:35Z) and PR_BODY.md still listed it"
+    },
+    "teknium1_open_prs": {
+      "count": 260,
+      "same_set_as_r01_r03": true,
+      "added": [],
+      "removed": [],
+      "title_hits": []
+    },
+    "prefetch_search": {
+      "searched_at": "2026-10-01T16:53:17Z",
+      "queries": {
+        "prefetch metric": 4,
+        "prefetch telemetry": 10,
+        "memory prefetch": 152,
+        "prefetch_provider": 0,
+        "prefetch shared metrics": 2,
+        "memory.prefetch": 1,
+        "record_memory_prefetch": 0,
+        "external prefetch": 60,
+        "prefetch timeout": 54,
+        "prefetch latency": 22
+      },
+      "vs_r03": "union 177 (r03: 178); only #126457 left ('memory prefetch' 153->152, 'external prefetch' 61->60, 'prefetch timeout' 55->54); nothing added",
+      "command": "gh api -X GET --paginate search/issues -f q='repo:NousResearch/hermes-agent is:pr is:open <query>' -f per_page=100"
+    },
+    "file_scan": {
+      "unique_open_prs": 177,
+      "watch_regex": "^(agent/memory_manager\\.py|agent/memory_provider\\.py|agent/turn_context\\.py|hermes_cli/observability/shared_metrics[^/]*\\.py|hermes_cli/observability/schemas/.*shared_metrics.*)$",
+      "touch_watched_files": 50,
+      "add_a_prefetch_record_call": [],
+      "note": "added lines naming shared_metrics/telemetry/metric appear only as prose, tables or unrelated telemetry (#34521, #45743, #78584, #92118 'no telemetry', #115109, #115694, #124151, #125881); none records a prefetch row"
+    },
+    "merge_matrix_watched": {
+      "checked_at": "2026-10-01T16:56:57Z",
+      "main": "aaa863f7ff",
+      "summary": {
+        "already_conflict_with_main": 38,
+        "clean_with_main_and_head": 11,
+        "conflict_with_head_only": 1
+      },
+      "conflict_with_head_only": {
+        "92118": {
+          "author": "seradin",
+          "files": [
+            "agent/memory_manager.py"
+          ]
+        }
+      },
+      "clean_with_main_and_head": {
+        "64421": "yingliang-zhang: fix(memory): frame recalled context as untrusted data",
+        "68903": "nuffin: feat(agent): add memory_mode parameter with 'on_demand' option for sub-agents",
+        "81582": "x7peeps: feat(agent): proactive feature router — suggest the right Hermes capability at the right time",
+        "84360": "TurboAnbeli: fix(memory): frame recalled memory as untrusted, non-authoritative context (#84251)",
+        "108965": "jonpol01: fix(memory): sanitize recalled context to a fixed point so overlapping fence tags cannot reassemble",
+        "115109": "liuhao1024: fix(memory): scrub provider-synced turns with the egress redactor",
+        "115694": "aniruddhaadak80: fix(memory): scrub secrets before memory-provider egress",
+        "120042": "Navlem: fix(agent): raise external prefetch bound to 12s so real slow recalls are not dropped",
+        "124151": "kweez007: fix(memory): raise Hindsight external-prefetch timeout 8s -> 20s",
+        "125881": "pstarkgit: Add fail-closed policy hooks for memory admission and compression commits",
+        "129620": "JoaoMarcos44: fix(anthropic): make preserved-thinking replay coherent"
+      },
+      "clean_set_prefetch_provider_changes": {
+        "124151": "per-provider bound only; 4 record calls, 4 returns, as on the head",
+        "125881": "adds a governance check after the success/empty record call that can return '' (5 returns vs 4 on the head); still one row per exit, but a context the check blocks is recorded as success. Count of returns from the merged tree; not run"
+      },
+      "vs_r03": "the same 50 PRs minus #126457 (closed); no PR entered; no class changed; no head changed",
+      "closed_pr126457_for_reference": {
+        "class_while_open": "conflicts_with_head_only",
+        "files": [
+          "agent/memory_manager.py"
+        ]
+      },
+      "adjacent_heads_unchanged": "all 10 open adjacent heads in the manifest (#124151, #120042, #92118, #87028, #86948, #65329, #125802, #125881, #108965, #15412) are unchanged"
+    },
+    "fork": {
+      "404": {
+        "state": "open",
+        "table_rows": 39
+      },
+      "322": {
+        "state": "open",
+        "table_rows": 0
+      },
+      "402": {
+        "state": "closed",
+        "table_rows": 9
+      },
+      "403": {
+        "state": "closed",
+        "table_rows": 20
+      }
+    },
+    "fork_prefetch_hits": [],
+    "final_state_check": {
+      "window": "2026-10-01T17:06:21Z .. 2026-10-01T17:07:36Z",
+      "main": "aaa863f7ff2dec1821be1652b5d15ad14ecea70b",
+      "commits_since_base": 25,
+      "invalidate_on_commits_since_base": [],
+      "merge_tree_head_vs_main": {
+        "clean": true,
+        "tree": "21c423feb3"
+      },
+      "cited_changed_since_recheck": {},
+      "query_totals_changed": {},
+      "fork": {
+        "404": {
+          "state": "open",
+          "table_rows": 39
+        },
+        "322": {
+          "state": "open",
+          "table_rows": 0
+        },
+        "402": {
+          "state": "closed",
+          "table_rows": 9
+        },
+        "403": {
+          "state": "closed",
+          "table_rows": 20
+        }
+      },
+      "fork_branch_present": false,
+      "staging_ref": "569ad4d84b0f9888ea2598c2a8ea416b2c75bad6"
+    }
+  },
+  "verdict": "OURS (no open PR adds a prefetch counter); demand from #124151, #120042 and the field evidence on #87028; one open PR conflicts with the head (#92118); #98045 and #126457 closed; risk: teknium1 may land the same row himself",
+  "label": "OBSERVED",
+  "provenance": "self",
+  "privacy": "public-aggregate (public PR metadata only)",
+  "raw_artifacts": {
+    "recheck": {
+      "path": "work/r5/recheck_r5.json",
+      "sha256": "8984bf67b3643df72dd231daebd50746a5a5f1be8f74bb1cf49b5ba1a5ec796d"
+    },
+    "recheck_script": {
+      "path": "work/r5/recheck_r5.py",
+      "sha256": "99a90e1980ea427ed34bb40efa405e1d86e80a0168f485c7a1ab114e9787520d"
+    },
+    "recheck_log": {
+      "path": "work/r5/recheck_r5.log",
+      "sha256": "e35a070f2cc71602f2d1fe05ddf8c001d52d0237841a4b6d26e109687b9980ad"
+    },
+    "final_state": {
+      "path": "work/r5/final_state_r5.json",
+      "sha256": "329c13a9aa67db7fea10e2b43793d4c94ee7993d037d2b15d815feef519e62b5"
+    },
+    "final_state_script": {
+      "path": "work/r5/final_state_r5.py",
+      "sha256": "2f62bba77afacae75cab46363653b28509ae9b4f580fa7bca2844adb98e27e68"
+    }
+  },
+  "supersedes": {
+    "id": "OWNERSHIP/r20261001-03",
+    "path": "receipts/OWNERSHIP-r20261001-03.json",
+    "sha256_as_written": "3f1372957a4472436fda2d26b4fc8dc26f4ca1d3fd15371701a5321c3d319102",
+    "why": "recorded #126457 as open at 16:14:25Z (closed 16:23:32Z by its author); its head-only conflict count (2) is now 1"
+  }
+}

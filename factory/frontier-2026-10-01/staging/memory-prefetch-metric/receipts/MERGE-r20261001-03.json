@@ -1,0 +1,596 @@
+{
+  "schema": "xf.receipt.v1",
+  "id": "MERGE/r20261001-03",
+  "experiment": "Freshness and overlap for the amended head: move to current main, merge-tree against every open PR that edits the prefetch path, targeted tests on the clean merges, the #92118 keep-both hazard probe, the workflow push-trigger scan and the fork-name check",
+  "tier": "T0",
+  "cost_usd": 0.0,
+  "lane": "cpu",
+  "staging": "memory-prefetch-metric",
+  "base_revision": "040b6df2c40b0f4f88f51e4c2062eafc4d7463c5",
+  "head_revision": "569ad4d84b0f9888ea2598c2a8ea416b2c75bad6",
+  "results": {
+    "rebase": {
+      "from": {
+        "head": "519876fa02f5e5812f5763cef03c5fed054d6cf7",
+        "base": "aea969677c60a1bb72fe227fdfb98f196a2092cc"
+      },
+      "to": {
+        "head": "569ad4d84b0f9888ea2598c2a8ea416b2c75bad6",
+        "base": "040b6df2c40b0f4f88f51e4c2062eafc4d7463c5",
+        "tree": "50ce6da7df616635f9edd958200c2065072b643c"
+      },
+      "commits_between_bases": 8,
+      "invalidate_on_changed": false,
+      "method": "git cherry-pick 519876fa02 onto e8c97320ac (clean), `git commit --amend` with the test and builder changes, then a clean cherry-pick onto 040b6df2c4 (author Kevin Rajan, author date kept). An intermediate amend 61fc6ea62d (same code, an overclaiming test comment) was proven first and superseded; its run is kept under work/r3/superseded-61fc6ea62d/",
+      "main_checked": {
+        "sha": "040b6df2c40b0f4f88f51e4c2062eafc4d7463c5",
+        "how": "git ls-remote https://github.com/NousResearch/hermes-agent.git refs/heads/main",
+        "committed_at": "2026-10-01T12:03:56Z"
+      }
+    },
+    "freshness_recheck": {
+      "main": "040b6df2c40b0f4f88f51e4c2062eafc4d7463c5",
+      "checked_at": "2026-10-01T12:34Z",
+      "commits_since_base": 0,
+      "invalidate_on_changed": false,
+      "merge_tree": {
+        "clean": true,
+        "tree": "50ce6da7df",
+        "conflicts": []
+      }
+    },
+    "overlapping_open_prs": {
+      "124151": {
+        "author": "kweez007",
+        "head": "3ee6189dbad0485790893c5098b20f00d27a1d51",
+        "touches": "agent/memory_manager.py: per-provider prefetch bound (Hindsight 20 s)",
+        "vs_main": {
+          "clean": true,
+          "tree": "850c9a8ff6",
+          "conflicts": []
+        },
+        "vs_staging_head": {
+          "clean": true,
+          "tree": "9c83bc2e46",
+          "conflicts": []
+        },
+        "vs_round2_head": {
+          "clean": true,
+          "tree": "e39976d7b2",
+          "conflicts": []
+        },
+        "tests_on_merged_tree": {
+          "method": "git merge --no-commit of the PR head into the staging head in the stfix worktree (clean), then aborted",
+          "command": "scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py tests/agent/test_memory_provider.py -q",
+          "observed": "2 files, 74 tests passed, 0 failed",
+          "log_sha256": "9f4d3dd7de70efd1b2a458236c8794ef7141b2d51b9140e185f03b530039bf03"
+        }
+      },
+      "120042": {
+        "author": "Navlem",
+        "head": "641f6b94c5e11f4758844af6112705083862562d",
+        "touches": "agent/memory_manager.py: default external prefetch bound 8 s -> 12 s",
+        "vs_main": {
+          "clean": true,
+          "tree": "6e75ebeee8",
+          "conflicts": []
+        },
+        "vs_staging_head": {
+          "clean": true,
+          "tree": "f789be4dc9",
+          "conflicts": []
+        },
+        "vs_round2_head": {
+          "clean": true,
+          "tree": "87972f6579",
+          "conflicts": []
+        },
+        "tests_on_merged_tree": {
+          "method": "git merge --no-commit of the PR head into the staging head (clean), then aborted",
+          "command": "scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py tests/agent/test_memory_provider.py -q",
+          "observed": "2 files, 72 tests passed, 0 failed",
+          "log_sha256": "a0308d17f6776d08ce43973f3666fe18411e0865999d27737bf743d811205703"
+        }
+      },
+      "98045": {
+        "author": "Navlem",
+        "head": "77f018b7db7bb82c0163531a61605bf7245d03ce",
+        "touches": "agent/agent_init.py + config: configurable external prefetch timeout (does not edit memory_manager.py)",
+        "vs_main": {
+          "clean": true,
+          "tree": "91176634b7",
+          "conflicts": []
+        },
+        "vs_staging_head": {
+          "clean": true,
+          "tree": "f2d32d0f95",
+          "conflicts": []
+        },
+        "vs_round2_head": {
+          "clean": true,
+          "tree": "bbc808f259",
+          "conflicts": []
+        }
+      },
+      "92118": {
+        "author": "seradin",
+        "head": "2ad5cc73fac3e519deec7d4d9ff6eccb494aa953",
+        "touches": "agent/memory_manager.py _prefetch_provider return path: str or MemoryPrefetchResult (structured observations)",
+        "vs_main": {
+          "clean": true,
+          "tree": "18a8e0a65c",
+          "conflicts": []
+        },
+        "vs_staging_head": {
+          "clean": false,
+          "tree": "8ade2df6b9",
+          "conflicts": [
+            "agent/memory_manager.py"
+          ]
+        },
+        "vs_round2_head": {
+          "clean": false,
+          "tree": "bff0e7780d",
+          "conflicts": [
+            "agent/memory_manager.py"
+          ]
+        },
+        "conflict": {
+          "hunk": "return path of _prefetch_provider: ours inserts the success/empty record line right before `if result and result.strip():`, which #92118 rewrites to `if isinstance(result, str) and result.strip():`",
+          "hazard_round2": "the round-2 head computed the outcome in the caller (`\"success\" if result and result.strip() else \"empty\"`), outside _emit's guard; with #92118 `result` can be a MemoryPrefetchResult, so a keep-both resolution raised AttributeError and #92118's per-provider except dropped that provider's recalled context",
+          "fix_round3": "the amended head passes the raw value (`record_memory_prefetch(provider.name, \"success\", started, recalled=result)`) and the builder classifies it inside _emit's guard with an isinstance check, so nothing on the prefetch path can raise because of the metric",
+          "naive_resolution_probe": {
+            "method": "git merge --no-commit of 2ad5cc73fa into each head, conflict resolved by keeping our record line plus their isinstance line (work/r3/resolve_92118.py), then a temporary test (work/r3/test_zz_probe_92118.py, never committed) prefetches through a provider returning MemoryPrefetchResult(context='- prefers tabs') with shared metrics on; merge aborted afterwards",
+            "round2_head": "context '' (dropped), no row; probe FAILED (also on the runner's one retry)",
+            "staging_head": "context '- prefers tabs' (kept); one row ('honcho', 'empty'); probe PASSED",
+            "output_sha256": "27350aabe887d3e1c0e241464558dd143683e59db1360be3790cff0a43de4b49",
+            "remaining_semantics": "with #92118 merged, a structured result counts as `empty` until the builder reads its `.context`; a one-line follow-up for whichever PR lands second"
+          }
+        }
+      },
+      "126457": {
+        "author": "mozhongzhou",
+        "head": "822f7b28358e47b1c6517981df2f791b67f2bd4a",
+        "touches": "agent/memory_manager.py _prefetch_provider timeout exit: marks the provider unavailable for a CLI health indicator",
+        "vs_main": {
+          "clean": true,
+          "tree": "24ffd2d8d0",
+          "conflicts": []
+        },
+        "vs_staging_head": {
+          "clean": false,
+          "tree": "340a0e50f7",
+          "conflicts": [
+            "agent/memory_manager.py"
+          ]
+        },
+        "vs_round2_head": {
+          "clean": false,
+          "tree": "c86c72d392",
+          "conflicts": [
+            "agent/memory_manager.py"
+          ]
+        },
+        "conflict": {
+          "hunk": "timeout exit of _prefetch_provider: ours adds `record_memory_prefetch(provider.name, \"timed_out\", started)`, theirs adds `self._record_provider_failure(provider, ...)` at the same place before `return \"\"`",
+          "resolution": "keep both lines (work/r3/resolve_keep_both.py); both calls are internally guarded and never raise",
+          "tests_on_resolved_tree": {
+            "command": "scripts/run_tests.sh -j 2 tests/hermes_cli/test_shared_metrics_loop.py tests/agent/test_memory_provider.py tests/agent/test_memory_health.py -q",
+            "observed": "3 files, 115 tests passed, 0 failed",
+            "log_sha256": "f7000224ed0c4da859b5534999dfd1c789677f61f898227921a7e01084e5b844"
+          }
+        }
+      },
+      "87028": {
+        "author": "richardclawbot",
+        "head": "f63bfa2a5c3c614a19dc2f8a7440d3e7f71d349b",
+        "touches": "agent/memory_manager.py _prefetch_provider: honor the external prefetch timeout",
+        "vs_main": {
+          "clean": false,
+          "tree": "86b693fce2",
+          "conflicts": [
+            "agent/agent_init.py",
+            "agent/memory_manager.py"
+          ]
+        },
+        "vs_staging_head": {
+          "clean": false,
+          "tree": "ab5c1287da",
+          "conflicts": [
+            "agent/agent_init.py",
+            "agent/memory_manager.py"
+          ]
+        },
+        "vs_round2_head": {
+          "clean": false,
+          "tree": "d106c68c37",
+          "conflicts": [
+            "agent/agent_init.py",
+            "agent/memory_manager.py"
+          ]
+        }
+      },
+      "86948": {
+        "author": "V0v1kkkAssistant",
+        "head": "cc1c2a1f2c4875f29c63f27981dfb8b3f54252e9",
+        "touches": "agent/memory_manager.py: configurable provider timeouts",
+        "vs_main": {
+          "clean": false,
+          "tree": "1a757a9c5a",
+          "conflicts": [
+            "agent/memory_manager.py",
+            "plugins/memory/byterover/__init__.py"
+          ]
+        },
+        "vs_staging_head": {
+          "clean": false,
+          "tree": "5ae03e001c",
+          "conflicts": [
+            "agent/memory_manager.py",
+            "plugins/memory/byterover/__init__.py"
+          ]
+        },
+        "vs_round2_head": {
+          "clean": false,
+          "tree": "123524422e",
+          "conflicts": [
+            "agent/memory_manager.py",
+            "plugins/memory/byterover/__init__.py"
+          ]
+        }
+      },
+      "65329": {
+        "author": "Soju06",
+        "head": "c868eaaa02a340071e14fdaaec99fad9b77357f9",
+        "touches": "agent/turn_context.py: opt-in local turn trace with a prologue.memory_prefetch span around prefetch_all",
+        "vs_main": {
+          "clean": false,
+          "tree": "4093c75fcf",
+          "conflicts": [
+            "agent/chat_completion_helpers.py",
+            "agent/conversation_loop.py",
+            "agent/tool_executor.py",
+            "agent/turn_context.py",
+            "agent/turn_finalizer.py",
+            "gateway/platforms/base.py",
+            "gateway/run.py",
+            "gateway/turn_context.py",
+            "hermes_cli/config_defaults.py",
+            "plugins/platforms/telegram/adapter.py",
+            "run_agent.py"
+          ]
+        },
+        "vs_staging_head": {
+          "clean": false,
+          "tree": "3d0a2229d3",
+          "conflicts": [
+            "agent/chat_completion_helpers.py",
+            "agent/conversation_loop.py",
+            "agent/tool_executor.py",
+            "agent/turn_context.py",
+            "agent/turn_finalizer.py",
+            "gateway/platforms/base.py",
+            "gateway/run.py",
+            "gateway/turn_context.py",
+            "hermes_cli/config_defaults.py",
+            "plugins/platforms/telegram/adapter.py",
+            "run_agent.py"
+          ]
+        },
+        "vs_round2_head": {
+          "clean": false,
+          "tree": "d00b18a882",
+          "conflicts": [
+            "agent/chat_completion_helpers.py",
+            "agent/conversation_loop.py",
+            "agent/tool_executor.py",
+            "agent/turn_context.py",
+            "agent/turn_finalizer.py",
+            "gateway/platforms/base.py",
+            "gateway/run.py",
+            "gateway/turn_context.py",
+            "hermes_cli/config_defaults.py",
+            "plugins/platforms/telegram/adapter.py",
+            "run_agent.py"
+          ]
+        }
+      },
+      "125802": {
+        "author": "Finn763",
+        "head": "543af5de1910ba995540d71435cae30307c65b69",
+        "touches": "agent/turn_context.py: decouple memory prefetch from the user-message channel (does not edit our files)",
+        "vs_main": {
+          "clean": false,
+          "tree": "ca5fcb349d",
+          "conflicts": [
+            "agent/turn_context.py",
+            "tests/agent/test_api_content_sidecar.py",
+            "tests/agent/test_turn_context.py"
+          ]
+        },
+        "vs_staging_head": {
+          "clean": false,
+          "tree": "605b024bd7",
+          "conflicts": [
+            "agent/turn_context.py",
+            "tests/agent/test_api_content_sidecar.py",
+            "tests/agent/test_turn_context.py"
+          ]
+        },
+        "vs_round2_head": {
+          "clean": false,
+          "tree": "4aec4ed57c",
+          "conflicts": [
+            "agent/turn_context.py",
+            "tests/agent/test_api_content_sidecar.py",
+            "tests/agent/test_turn_context.py"
+          ]
+        }
+      },
+      "78584": {
+        "author": "iso2kx",
+        "head": "e7c6f83e8a1d50e2091eaafbe9b686df245bc60c",
+        "touches": "temporary chats (91 files incl. agent/memory_manager.py); not about prefetch metrics",
+        "vs_main": {
+          "clean": false,
+          "tree": "226fdb78c0",
+          "conflicts": [
+            "agent/agent_init.py",
+            "agent/agent_runtime_helpers.py",
+            "agent/background_review.py",
+            "agent/conversation_compression.py",
+            "agent/memory_manager.py",
+            "agent/prompt_builder.py",
+            "agent/system_prompt.py",
+            "agent/title_generator.py",
+            "agent/tool_executor.py",
+            "agent/turn_context.py",
+            "apps/desktop/src/app/chat/composer/index.tsx",
+            "apps/desktop/src/app/chat/index.tsx",
+            "apps/desktop/src/app/chat/sidebar/index.tsx",
+            "apps/desktop/src/app/session/hooks/use-message-stream/gateway-event.ts",
+            "apps/desktop/src/app/session/hooks/use-session-actions/index.ts",
+            "apps/desktop/src/app/types.ts",
+            "apps/desktop/src/i18n/ar.ts",
+            "apps/desktop/src/i18n/en.ts",
+            "apps/desktop/src/i18n/ja.ts",
+            "apps/desktop/src/i18n/types.ts",
+            "apps/desktop/src/i18n/zh-hant.ts",
+            "apps/desktop/src/i18n/zh.ts",
+            "apps/desktop/src/lib/chat-messages.ts",
+            "apps/desktop/src/lib/keybinds/actions.ts",
+            "cli.py",
+            "gateway/platforms/base.py",
+            "gateway/run.py",
+            "gateway/session.py",
+            "gateway/slash_commands.py",
+            "hermes_cli/_parser.py",
+            "hermes_cli/cli_agent_setup_mixin.py",
+            "hermes_cli/cli_commands_mixin.py",
+            "hermes_cli/commands.py",
+            "hermes_cli/lifecycle.py",
+            "hermes_cli/main.py",
+            "hermes_cli/oneshot.py",
+            "hermes_cli/plugins.py",
+            "hermes_cli/tips.py",
+            "hermes_state.py",
+            "locales/af.yaml",
+            "locales/ar.yaml",
+            "locales/de.yaml",
+            "locales/en.yaml",
+            "locales/es.yaml",
+            "locales/fr.yaml",
+            "locales/ga.yaml",
+            "locales/hu.yaml",
+            "locales/it.yaml",
+            "locales/ja.yaml",
+            "locales/ko.yaml",
+            "locales/pt.yaml",
+            "locales/ru.yaml",
+            "locales/tr.yaml",
+            "locales/uk.yaml",
+            "locales/zh-hant.yaml",
+            "locales/zh.yaml",
+            "plugins/memory/hindsight/__init__.py",
+            "plugins/memory/honcho/__init__.py",
+            "plugins/memory/supermemory/__init__.py",
+            "run_agent.py",
+            "tests/agent/test_ephemeral_tool_guard_executors.py",
+            "tools/delegate_tool.py",
+            "tui_gateway/methods_session.py",
+            "tui_gateway/server.py"
+          ]
+        },
+        "vs_staging_head": {
+          "clean": false,
+          "tree": "6cf77156b2",
+          "conflicts": [
+            "agent/agent_init.py",
+            "agent/agent_runtime_helpers.py",
+            "agent/background_review.py",
+            "agent/conversation_compression.py",
+            "agent/memory_manager.py",
+            "agent/prompt_builder.py",
+            "agent/system_prompt.py",
+            "agent/title_generator.py",
+            "agent/tool_executor.py",
+            "agent/turn_context.py",
+            "apps/desktop/src/app/chat/composer/index.tsx",
+            "apps/desktop/src/app/chat/index.tsx",
+            "apps/desktop/src/app/chat/sidebar/index.tsx",
+            "apps/desktop/src/app/session/hooks/use-message-stream/gateway-event.ts",
+            "apps/desktop/src/app/session/hooks/use-session-actions/index.ts",
+            "apps/desktop/src/app/types.ts",
+            "apps/desktop/src/i18n/ar.ts",
+            "apps/desktop/src/i18n/en.ts",
+            "apps/desktop/src/i18n/ja.ts",
+            "apps/desktop/src/i18n/types.ts",
+            "apps/desktop/src/i18n/zh-hant.ts",
+            "apps/desktop/src/i18n/zh.ts",
+            "apps/desktop/src/lib/chat-messages.ts",
+            "apps/desktop/src/lib/keybinds/actions.ts",
+            "cli.py",
+            "gateway/platforms/base.py",
+            "gateway/run.py",
+            "gateway/session.py",
+            "gateway/slash_commands.py",
+            "hermes_cli/_parser.py",
+            "hermes_cli/cli_agent_setup_mixin.py",
+            "hermes_cli/cli_commands_mixin.py",
+            "hermes_cli/commands.py",
+            "hermes_cli/lifecycle.py",
+            "hermes_cli/main.py",
+            "hermes_cli/oneshot.py",
+            "hermes_cli/plugins.py",
+            "hermes_cli/tips.py",
+            "hermes_state.py",
+            "locales/af.yaml",
+            "locales/ar.yaml",
+            "locales/de.yaml",
+            "locales/en.yaml",
+            "locales/es.yaml",
+            "locales/fr.yaml",
+            "locales/ga.yaml",
+            "locales/hu.yaml",
+            "locales/it.yaml",
+            "locales/ja.yaml",
+            "locales/ko.yaml",
+            "locales/pt.yaml",
+            "locales/ru.yaml",
+            "locales/tr.yaml",
+            "locales/uk.yaml",
+            "locales/zh-hant.yaml",
+            "locales/zh.yaml",
+            "plugins/memory/hindsight/__init__.py",
+            "plugins/memory/honcho/__init__.py",
+            "plugins/memory/supermemory/__init__.py",
+            "run_agent.py",
+            "tests/agent/test_ephemeral_tool_guard_executors.py",
+            "tools/delegate_tool.py",
+            "tui_gateway/methods_session.py",
+            "tui_gateway/server.py"
+          ]
+        },
+        "vs_round2_head": {
+          "clean": false,
+          "tree": "431b405498",
+          "conflicts": [
+            "agent/agent_init.py",
+            "agent/agent_runtime_helpers.py",
+            "agent/background_review.py",
+            "agent/conversation_compression.py",
+            "agent/memory_manager.py",
+            "agent/prompt_builder.py",
+            "agent/system_prompt.py",
+            "agent/title_generator.py",
+            "agent/tool_executor.py",
+            "agent/turn_context.py",
+            "apps/desktop/src/app/chat/composer/index.tsx",
+            "apps/desktop/src/app/chat/index.tsx",
+            "apps/desktop/src/app/chat/sidebar/index.tsx",
+            "apps/desktop/src/app/session/hooks/use-message-stream/gateway-event.ts",
+            "apps/desktop/src/app/session/hooks/use-session-actions/index.ts",
+            "apps/desktop/src/app/types.ts",
+            "apps/desktop/src/i18n/ar.ts",
+            "apps/desktop/src/i18n/en.ts",
+            "apps/desktop/src/i18n/ja.ts",
+            "apps/desktop/src/i18n/types.ts",
+            "apps/desktop/src/i18n/zh-hant.ts",
+            "apps/desktop/src/i18n/zh.ts",
+            "apps/desktop/src/lib/chat-messages.ts",
+            "apps/desktop/src/lib/keybinds/actions.ts",
+            "cli.py",
+            "gateway/platforms/base.py",
+            "gateway/run.py",
+            "gateway/session.py",
+            "gateway/slash_commands.py",
+            "hermes_cli/_parser.py",
+            "hermes_cli/cli_agent_setup_mixin.py",
+            "hermes_cli/cli_commands_mixin.py",
+            "hermes_cli/commands.py",
+            "hermes_cli/lifecycle.py",
+            "hermes_cli/main.py",
+            "hermes_cli/oneshot.py",
+            "hermes_cli/plugins.py",
+            "hermes_cli/tips.py",
+            "hermes_state.py",
+            "locales/af.yaml",
+            "locales/ar.yaml",
+            "locales/de.yaml",
+            "locales/en.yaml",
+            "locales/es.yaml",
+            "locales/fr.yaml",
+            "locales/ga.yaml",
+            "locales/hu.yaml",
+            "locales/it.yaml",
+            "locales/ja.yaml",
+            "locales/ko.yaml",
+            "locales/pt.yaml",
+            "locales/ru.yaml",
+            "locales/tr.yaml",
+            "locales/uk.yaml",
+            "locales/zh-hant.yaml",
+            "locales/zh.yaml",
+            "plugins/memory/hindsight/__init__.py",
+            "plugins/memory/honcho/__init__.py",
+            "plugins/memory/supermemory/__init__.py",
+            "run_agent.py",
+            "tests/agent/test_ephemeral_tool_guard_executors.py",
+            "tools/delegate_tool.py",
+            "tui_gateway/methods_session.py",
+            "tui_gateway/server.py"
+          ]
+        }
+      }
+    },
+    "workflow_push_trigger_scan": {
+      "tree": "50ce6da7df616635f9edd958200c2065072b643c",
+      "workflows": 52,
+      "with_push_trigger": 11,
+      "branch_names": [
+        "staged/memory-prefetch-metric",
+        "staging/memory-prefetch-metric"
+      ],
+      "matches_for_branch": 0,
+      "note": "push filters are main (9), wine2e/** and wine2e-install/**; live-providers.yml is tag-only"
+    },
+    "fork_ref_check": {
+      "command": "git ls-remote https://github.com/kvnloo/hermes-agent.git 'refs/heads/staged/*' refs/heads/staging",
+      "staged_refs": 0,
+      "legacy_staging_ref": "28790e597c",
+      "note": "staged/memory-prefetch-metric is free on the fork (OD-0 resolved by the staged/<id> rename)"
+    }
+  },
+  "label": "OBSERVED",
+  "verdict": "KEEP",
+  "provenance": "self",
+  "privacy": "public-aggregate",
+  "raw_artifacts": {
+    "merge_matrix": {
+      "path": "work/r3/merge_matrix_r3.json",
+      "sha256": "5c5d309cd3b030f23e98170025ecd619d6010e523570e21269fbd834cabdfaea"
+    },
+    "merged_124151_tests_log": {
+      "path": "work/r3/merged_124151_tests.log",
+      "sha256": "9f4d3dd7de70efd1b2a458236c8794ef7141b2d51b9140e185f03b530039bf03"
+    },
+    "merged_120042_tests_log": {
+      "path": "work/r3/merged_120042_tests.log",
+      "sha256": "a0308d17f6776d08ce43973f3666fe18411e0865999d27737bf743d811205703"
+    },
+    "merged_126457_tests_log": {
+      "path": "work/r3/merged_126457_tests.log",
+      "sha256": "f7000224ed0c4da859b5534999dfd1c789677f61f898227921a7e01084e5b844"
+    },
+    "probe_92118": {
+      "path": "work/r3/probe_92118_out.txt",
+      "sha256": "27350aabe887d3e1c0e241464558dd143683e59db1360be3790cff0a43de4b49"
+    }
+  },
+  "supersedes": {
+    "id": "MERGE/r20261001-02",
+    "path": "receipts/MERGE-r20261001-02.json",
+    "sha256_as_written": "5d721ad49a573add9373a7fd7b0a473dc0e43c908a7b03906f2bde6b36882fa1",
+    "why": "old head and base; did not test merge order against #87028, #86948, #92118 (the #92118 conflict and its hazard went unrecorded), and missed #120042, #98045, #126457 and #65329"
+  }
+}

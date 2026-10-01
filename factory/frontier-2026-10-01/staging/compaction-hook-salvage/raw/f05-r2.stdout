@@ -1,0 +1,7 @@
+base-latest [('contract', 3, 3), ('contract', 3, 3), ('contract', 3, 3)]
+foldin-ref-latest [('contract', 6, 0), ('contract', 6, 0), ('contract', 6, 0)]
+foldin-bounded-latest [('contract', 6, 0), ('contract', 6, 0), ('contract', 6, 0)]
+c53806-foldin-latest [('contract', 6, 0), ('contract', 6, 0), ('contract', 6, 0)]
+c53806-handport-latest [('contract', 3, 3), ('contract', 3, 3), ('contract', 3, 3), ('adapted', 2, 4), ('adapted', 2, 4), ('adapted', 2, 4)]
+neg-prefire-latest [('contract', 0, 6), ('contract', 0, 6), ('contract', 0, 6)]
+neg-nodefer-latest [('contract', 4, 2), ('contract', 4, 2), ('contract', 4, 2)]

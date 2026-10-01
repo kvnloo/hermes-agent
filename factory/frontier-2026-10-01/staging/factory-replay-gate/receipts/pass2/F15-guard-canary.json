@@ -1,0 +1,114 @@
+{
+ "schema": "xf.experiment.v1",
+ "id": "F15-lite/r20261001T093919Z",
+ "tier": "T0",
+ "cost_usd": 0,
+ "label": "OBSERVED",
+ "question": "Does each guard class block inside a real cell, and escape when only that class is removed?",
+ "inputs": {
+  "runner_commit": "be292fd2ba4bed799c3a02ebf579f39389d136c6",
+  "gate_runner_sha256": "f16bd0ff0907f135d81a140e850ccee493e85a49eb3ea1fd089b9fc9901530a8",
+  "interpreter": "hermes-agent venv python 3.11 (read-only)"
+ },
+ "command": "python f15_guard_canary.py <worktree@runner_commit> <scratch> receipts/F15-guard-canary.json",
+ "results": {
+  "blocked": "5/5",
+  "sabotage_escapes": "5/5",
+  "loopback_still_allowed": true,
+  "hermes_home_isolated": true
+ },
+ "arms": [
+  {
+   "arm": "intact",
+   "passed": true,
+   "checks": {
+    "loopback_connect": true,
+    "nonloopback_connect": true,
+    "name_lookup": true,
+    "live_home_open": true,
+    "hermes_exec": true,
+    "hermes_exec_ran": true,
+    "guard": true,
+    "home_isolated": true,
+    "logged": true
+   },
+   "blocked_events": [
+    "open",
+    "socket.connect",
+    "socket.getaddrinfo",
+    "subprocess.Popen"
+   ]
+  },
+  {
+   "arm": "without nonloopback_connect",
+   "escaped": true,
+   "checks": {
+    "loopback_connect": true,
+    "nonloopback_connect": false,
+    "name_lookup": true,
+    "live_home_open": true,
+    "hermes_exec": true,
+    "hermes_exec_ran": true,
+    "guard": true,
+    "home_isolated": true,
+    "logged": true
+   }
+  },
+  {
+   "arm": "without name_lookup",
+   "escaped": true,
+   "checks": {
+    "loopback_connect": true,
+    "nonloopback_connect": true,
+    "name_lookup": false,
+    "live_home_open": true,
+    "hermes_exec": true,
+    "hermes_exec_ran": true,
+    "guard": true,
+    "home_isolated": true,
+    "logged": true
+   }
+  },
+  {
+   "arm": "without live_home_open",
+   "escaped": true,
+   "checks": {
+    "loopback_connect": true,
+    "nonloopback_connect": true,
+    "name_lookup": true,
+    "live_home_open": false,
+    "hermes_exec": true,
+    "hermes_exec_ran": true,
+    "guard": true,
+    "home_isolated": true,
+    "logged": true
+   }
+  },
+  {
+   "arm": "without hermes_exec",
+   "escaped": true,
+   "checks": {
+    "loopback_connect": true,
+    "nonloopback_connect": true,
+    "name_lookup": true,
+    "live_home_open": true,
+    "hermes_exec": false,
+    "hermes_exec_ran": false,
+    "guard": true,
+    "home_isolated": true,
+    "logged": true
+   }
+  },
+  {
+   "arm": "selection denylist",
+   "blocked": true,
+   "escaped_without_globs": true
+  }
+ ],
+ "verdict": "PASS",
+ "not_measured": [
+  "writes outside the run directory (needs a read-only-root kernel sandbox)",
+  "kernel network namespace (bwrap --unshare-net) layer",
+  "C-extension sockets that bypass Python's socket module"
+ ]
+}

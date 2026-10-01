@@ -1,0 +1,65 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compressor-media-extraction",
+ "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+ "head_revision": "c5e8be14b43bf75bcc2e4e8d95f2d4810a7e2779",
+ "issue": null,
+ "origin_refs": [],
+ "provenance": "self",
+ "privacy": "public-aggregate",
+ "cost_usd": 0.0,
+ "ai_assistance": "Claude Code (Opus 5.5) ran the check and wrote this receipt",
+ "created_at": "2026-10-01T08:45:00-05:00",
+ "spec": {
+  "path": null,
+  "prereg_commit": null,
+  "note": "not pre-registered on claude/ledger (no ledger writes in this run)"
+ },
+ "env": {
+  "host": "<local-host>",
+  "python": "system python3 with PyYAML 6.0.3",
+  "sandbox": "none; GitHub contents API reads only (gh api), no local git object access",
+  "paths": "no local paths recorded"
+ },
+ "id": "push-trigger/r20261001-03",
+ "experiment": "which workflows a push of the fork branch staged/compressor-media-extraction would trigger",
+ "tier": "T0",
+ "label": "OBSERVED",
+ "supersedes": null,
+ "round_note": "fix round 2: the round-1 STAGING [push] comment listed only branch triggers and left out the tags v* trigger in live-providers.yml",
+ "inputs": {
+  "trees": {
+   "aea969677c60a1bb72fe227fdfb98f196a2092cc": "the branch's base; c5e8be14b4 changes only agent/ and tests/, so its .github/workflows is this tree's",
+   "bd394e2a4bdf55fa2f14b0f6963d343049787f90": "upstream main at 2026-10-01T08:26-05:00, for comparison"
+  },
+  "branch": "staged/compressor-media-extraction",
+  "push_flags": "no tags (--no-follow-tags)"
+ },
+ "command": "python3 regen/workflow_push_triggers.py <ref>  (lists .github/workflows via the contents API, parses each with yaml.safe_load, applies GitHub branch/tag filter rules: a push with only tags filters never fires on a branch push; ** crosses '/', * does not)",
+ "result": {
+  "workflows_parsed": 52,
+  "with_push_trigger": 11,
+  "push_triggers": {
+   "branches: main": ["archive-inputs.yml", "ci.yaml", "deploy-site.yml", "docker.yml", "js-autofix.yml", "nix.yml", "skills-index.yml", "termux-verify.yml"],
+   "branches: wine2e/**": ["windows-venv-e2e.yml"],
+   "branches: wine2e-install/**": ["windows-install-update-e2e.yml"],
+   "tags: v*": ["live-providers.yml"]
+  },
+  "branch_push_matches": 0,
+  "same_on_bd394e2a4b": true
+ },
+ "reading": "A branch push of staged/compressor-media-extraction fires none of the 52 workflows. live-providers.yml fires on pushed tags matching v*, which is why the push must not carry tags (no_follow_tags = true).",
+ "raw": [
+  {
+   "path": "raw/r03/workflow-push-triggers-aea969677c.json",
+   "sha256": "41eab465c0915e90e5796e2c4275281af96ff11e5b36ede24b30419026c65184",
+   "source_sha256": "41eab465c0915e90e5796e2c4275281af96ff11e5b36ede24b30419026c65184"
+  },
+  {
+   "path": "raw/r03/workflow-push-triggers-bd394e2a4b.json",
+   "sha256": "1730ec8630b832f2add5e39d8f5baa1c3bfefc53a4406fd6ce90dc370dc7977c",
+   "source_sha256": "1730ec8630b832f2add5e39d8f5baa1c3bfefc53a4406fd6ce90dc370dc7977c"
+  }
+ ],
+ "verdict": "PASS: 0 push workflows match; no_follow_tags required by the v* tag trigger"
+}

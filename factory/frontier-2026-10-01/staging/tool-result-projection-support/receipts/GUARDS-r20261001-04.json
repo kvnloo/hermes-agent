@@ -1,0 +1,303 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "GUARDS/r20261001-04",
+ "staging": "tool-result-projection-support",
+ "origin_refs": [
+  "NousResearch/hermes-agent#107731",
+  "NousResearch/hermes-agent#39691",
+  "NousResearch/hermes-agent#47866",
+  "NousResearch/hermes-agent#129620",
+  "NousResearch/hermes-agent#129492",
+  "NousResearch/hermes-agent#129882",
+  "NousResearch/hermes-agent#106426",
+  "NousResearch/hermes-agent#70107",
+  "NousResearch/hermes-agent#526",
+  "kvnloo/hermes-agent#310"
+ ],
+ "base_revision": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+ "env": {
+  "host": "withheld (one local workstation; receipts carry no host names)",
+  "python": "3.11.14 ($PY = the repo venv interpreter, used read-only)",
+  "isolation": "probes: env -i, fresh HOME/HERMES_HOME under scratch, loopback-only socket.connect + getaddrinfo guard; canonical runner: scripts/run_tests.sh -j 2 with HOME=$S/testhome-sf3-tool-result-projection-support, HERMES_HOME=$HOME/.hermes; no credentials",
+  "network": "loopback only (egress_blocked recorded per probe run)",
+  "relay": {
+   "present": true,
+   "package": "nemo-relay 0.8.4 (installed in the shared repo venv; not part of this change)",
+   "state": "FAILED at initialize(): agent/relay_runtime.py:346 calls relay.plugin.initialize({}, additional_plugins_toml=...), which nemo-relay 0.8.4 does not accept, so _activate() logs 'Hermes Relay plugin initialization failed' (relay_runtime.py:328) and returns FAILED. No Relay plugin or Hermes-managed Relay middleware was active in any run.",
+   "plugins_toml_sha256": null,
+   "config_paths": [],
+   "explicit_plugins_toml": "none: HERMES_NEMO_RELAY_PLUGINS_TOML unset and the isolated HERMES_HOME has no relay-plugins.toml",
+   "seen_in": "canonical-runner logs (captured WARNING on failing tests); probes run the same agent init"
+  }
+ },
+ "spec": {
+  "path": null,
+  "rev": null,
+  "sha256": null,
+  "prereg_commit": null,
+  "decision_rule_sha": null,
+  "note": "not pre-registered: an ad-hoc staging re-run under FACTORY.md section 8 (round 3 (fix of the round-2 re-verifier findings)). Decision rule: the assertions of tests/e2e/core/history/test_tool_result_projection_wire.py (blob 7347ad045b) and the harness outputs named in command."
+ },
+ "policy_revision": {
+  "AGENTS.md": "65aa3e61bc@44a1ce9724",
+  "CONTRIBUTING.md": "b0baa59b50@44a1ce9724",
+  "factory": "FACTORY.md sha256:7726ba18b43a9367 (frontier-2026-10-01 ledger copy)"
+ },
+ "provenance": "self",
+ "cost": {
+  "api_cost_usd": 0.0,
+  "tier_cost": "$0"
+ },
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the harness, the tests, the fold-in gate and the comment text (body.md); disclosed per repository policy",
+ "privacy": "synthetic fixtures only; no state.db / agent.log / credentials read; absolute local paths and host names replaced by placeholders",
+ "inputs": {
+  "shas": {
+   "main": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+   "main_previous_round": "e8c97320ac8691d4de92af49f98459f9ef9ddb08",
+   "staging_commit": "3b47753d54be51a06a7f9a939f9edea579f3c949",
+   "staging_commit_parent": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+   "staging_commit_tree": "70a3bd18653dc5f97ec86cd01a75c96e7a7d5576",
+   "staging_commit_previous_version": "8c783ff4ac2fcd7906e074eefec7f0d3fcfc0782",
+   "main_plus_test_arm": "3b47753d54be51a06a7f9a939f9edea579f3c949",
+   "carrier_head": "069adfb67e57287ac8df996ef48e082fe8455e2c",
+   "carrier_merge_base": "67764dc0863349a384c16425e73ee8571f3a94b7",
+   "carrier_rebased_arm": "5d4adb328093184ef1d0e616f9b7bf5f3cef2fe2",
+   "carrier_rebased_arm_tree": "a7b3340eca13b13d34d929cff705d6673693c8f1",
+   "carrier_rebased_arm_plus_test": "15dff75cc860a14d06414c6bf31459397e1de912",
+   "carrier_rebased_arm_plus_test_tree": "b733be3f0d7be6561ca550dd6eb1425f4eae1854",
+   "test_blob": "7347ad045bf049afabce5b78435d5746273160f1",
+   "hot_reload_resolved_blob": "b94e723f76280aee56e959fa4d72b46cc62e0bdc",
+   "carrier_module_blob": "a76fb42f76e3bb7d71643da6a5f58890878d4d32",
+   "carrier_module_blob_with_gate_v3": "852be44f4f4306ec177a191591bc6f2529c927ce",
+   "carrier_module_blob_with_gate_v4": "a3227c92a75c4cbcd196e309142530d64b534817"
+  },
+  "harness_sha256": {
+   "harness/e37_synthetic.py": "4de16b55331c737d8db15eaf0acdfacb69cb458808f59bc3c912cd4c424c2f85",
+   "harness/f04_bedrock_probe.py": "8159c09229dce68316973ff10486d4da87ee356d815f5a6188f59ac76c53286c",
+   "harness/f04_probe.py": "a23b3b14b3cd7a4c4e8bfd35a6da50c06656f183fc842afca738e3f46e051bb9",
+   "harness/f04_restart_probe.py": "6c6e1e6776edbb0a5dc7a94f1247b410b8e863ef7b1968746ee962082fd531da",
+   "harness/f04_thirdparty_probe.py": "b102cd9093f284907b41409d3d1f4b825f7eef1844fea942f8ec1d0d0fc184c6",
+   "harness/guarded_run.py": "be17793cdf4bad466fb2e05b5c67d63430a1e79c8c40949a7e45c897d35d654f",
+   "harness/per_hunk_sabotage.py": "73a31ca6888f7384b58993924ee66f5795962af8fdabe98b1d5d678dc84866fd",
+   "harness/per_hunk_sabotage_r2.py": "57219f128cb8f90cb9bb87df659c0d499da9c716e018a2de626be9a9b9ed9d60",
+   "harness/predicate_direct.py": "5996ac8a92033342ae18a71a052257773235ba8d470c5829f733ed554d0ae4bb",
+   "harness/predicate_wire_truth.py": "b5ee90a984238695c9837a0c7edbedb5c87c28111b46a77389c91b3568be5f4b",
+   "harness/readtool_direct.py": "e8dd892a0a2a835550467d4ccf4732470860692b6200a6e150be50950d9a96f4",
+   "harness/restart_direct.py": "3a8c4c72f055be6bbced24f682ad84a4b1531c24ea0a56ea71f25135c8b4a62f",
+   "harness/seam_trace.py": "b1c1efa4e7fd6d37b3c4ab37ee770d09c9308e5fcb06f91c2c67004197645750"
+  },
+  "patches_sha256": {
+   "patches/carrier-rebase-handport-hot-reload-test.diff": "6024fcb1457cdc1bf8d6762da6ca372d3109d41d532311dd8a0264c609d7d741",
+   "patches/foldin-preserved-thinking-gate-v2.diff": "acac8a736c2503a122a986622c8003f813e331363f2a92832eb709b6738d6e84",
+   "patches/foldin-preserved-thinking-gate-v3.diff": "12e83bd0dc82dc1042ef37cf93a65ea810d6a118eb322785b6c27cbe7c1acaed",
+   "patches/foldin-preserved-thinking-gate-v4.diff": "0d2b808bd2a9d581e23411fcfbffa429109706360218425c96e0917e2013712c",
+   "patches/foldin-preserved-thinking-gate.diff": "1490213c6d074a6cae190b4bf138d09b431ab78c535961159e3982b4f06ae6ab",
+   "patches/sabotage-S1-per-turn-reevaluation.diff": "a7f55f013f779c6a12aaab89b56c3b2af0bf4380883fda474df2b3757582a132",
+   "patches/sabotage-S2-no-stickiness.diff": "3b8b144c13805d30e117621a2fc3f7ed316434be4bcfd06197a8b865b1abbfd3",
+   "patches/tool-result-projection-support.v1-d5854fdd7b.patch": "a71a2123f6bd3f9d6d67a9b1c7c88a8ffbb1149a125332209333636042e95a0c",
+   "patches/tool-result-projection-support.v2-8c783ff4ac.patch": "b9d18435f4d1c45eacc77912f217b8e034295c3adec0667bdedd5bbd9da5d7f9",
+   "patches/tool-result-projection-support.v3-3b47753d54.patch": "e6cd277dc7a04299a2e742a2449af3d46214c14d7950240f36cb01590176a972"
+  }
+ },
+ "tier": "T1",
+ "kind": "regression",
+ "experiment": "Three members of the F14 standing set on main 44a1ce9724: token_accounting/replay_gates, compaction/test_region_scoping, readtool direct read_file calls; arms main + test, rebased carrier + test, rebased carrier + test + gate v4 with projection forced on. The full F14 set was not run.",
+ "z0evals_study": {
+  "repo": "kvnloo/z0evals",
+  "branch": "study/hermes-tool-result-projection-support",
+  "commit": null,
+  "status": "not frozen (P8 pending; freeze when the comment is posted)"
+ },
+ "frozen": null,
+ "command": {
+  "guarded": "env -i PATH=/usr/bin:/bin PYTHONHASHSEED=0 GUARD_SCRATCH=$S/sf-trp4/scratch [GUARD_PROJECTION=auto] $PY harness/guarded_run.py <worktree> <script> [args]",
+  "replay_gates": "... evals/token_accounting/replay_gates.py --out <json>",
+  "region_scoping": "... evals/compaction/test_region_scoping.py",
+  "readtool": "... harness/readtool_direct.py <json>",
+  "checkout_note": "all three arms ran from the same worktree path (the base commit was checked out there for its run), so request sizes that embed the checkout path compare equal. A first base run from the base worktree differed from the carrier arms only in overflow_recovery and usage_less_fallback request sizes, by +3 chars per request = the path-length difference ('base' vs 'carrier'); it was re-run from the shared path and the first run is not cited"
+ },
+ "arms": {
+  "base": "the staging commit 3b47753d54 itself (parent = main 44a1ce9724; tree 70a3bd1865)",
+  "carrier": "15dff75cc860a14d06414c6bf31459397e1de912 = main 44a1ce9724 + refs/pr/107731 merged (5d4adb3280; the hot-reload add/add was resolved by keeping both sides: git rerere replayed the recorded resolution, byte-identical to patches/carrier-rebase-handport-hot-reload-test.diff, blob b94e723f76) + the staging commit cherry-picked; local evidence commits",
+  "carrier-foldin-v4-projon": "carrier + git apply patches/foldin-preserved-thinking-gate-v4.diff (round-3 gate: v3 with a corrected docstring; the code lines are byte-identical to v3), GUARD_PROJECTION=auto"
+ },
+ "results": {
+  "base": {
+   "replay_gates_verdict": {
+    "cli_past_window_inflated": "PASS",
+    "cli_inflated": "PASS",
+    "cli_deflated": "PASS",
+    "gateway_past_window_inflated": "PASS",
+    "gateway_inflated": "PASS",
+    "gateway_deflated": "PASS",
+    "restore_past_window_inflated": "PASS",
+    "restore_inflated": "PASS",
+    "restore_deflated": "PASS",
+    "overflow_recovery": "PASS",
+    "usage_less_fallback": "PASS"
+   },
+   "replay_gates_head": "3b47753d54be51a06a7f9a939f9edea579f3c949",
+   "replay_gates_measurements_equal_to_base": true,
+   "replay_gates_keys_differing_from_base": [],
+   "region_scoping": [
+    "scoping tripwire: ALL PASS"
+   ],
+   "readtool_output_sha256": "68fdacc6f790a91224e8c0d97c7c6e52139f6adede8b36dd2c3466353deaa1ef",
+   "egress_blocked": {
+    "replay_gates": "0",
+    "region_scoping": "2",
+    "readtool": "0"
+   }
+  },
+  "carrier": {
+   "replay_gates_verdict": {
+    "cli_past_window_inflated": "PASS",
+    "cli_inflated": "PASS",
+    "cli_deflated": "PASS",
+    "gateway_past_window_inflated": "PASS",
+    "gateway_inflated": "PASS",
+    "gateway_deflated": "PASS",
+    "restore_past_window_inflated": "PASS",
+    "restore_inflated": "PASS",
+    "restore_deflated": "PASS",
+    "overflow_recovery": "PASS",
+    "usage_less_fallback": "PASS"
+   },
+   "replay_gates_head": "15dff75cc860a14d06414c6bf31459397e1de912",
+   "replay_gates_measurements_equal_to_base": true,
+   "replay_gates_keys_differing_from_base": [],
+   "region_scoping": [
+    "scoping tripwire: ALL PASS"
+   ],
+   "readtool_output_sha256": "68fdacc6f790a91224e8c0d97c7c6e52139f6adede8b36dd2c3466353deaa1ef",
+   "egress_blocked": {
+    "replay_gates": "0",
+    "region_scoping": "2",
+    "readtool": "0"
+   }
+  },
+  "carrier-foldin-v4-projon": {
+   "replay_gates_verdict": {
+    "cli_past_window_inflated": "PASS",
+    "cli_inflated": "PASS",
+    "cli_deflated": "PASS",
+    "gateway_past_window_inflated": "PASS",
+    "gateway_inflated": "PASS",
+    "gateway_deflated": "PASS",
+    "restore_past_window_inflated": "PASS",
+    "restore_inflated": "PASS",
+    "restore_deflated": "PASS",
+    "overflow_recovery": "PASS",
+    "usage_less_fallback": "PASS"
+   },
+   "replay_gates_head": "15dff75cc860a14d06414c6bf31459397e1de912",
+   "replay_gates_measurements_equal_to_base": true,
+   "replay_gates_keys_differing_from_base": [],
+   "region_scoping": [
+    "scoping tripwire: ALL PASS"
+   ],
+   "readtool_output_sha256": "68fdacc6f790a91224e8c0d97c7c6e52139f6adede8b36dd2c3466353deaa1ef",
+   "egress_blocked": {
+    "replay_gates": "0",
+    "region_scoping": "2",
+    "readtool": "0"
+   }
+  }
+ },
+ "unit_suites": "see F04/r20261001-04 gates.adjacent",
+ "f14": "NOT_RUN: the F14 standing set (FACTORY.md section 13 item 2: token_accounting x3, native_compaction, provider_fallback x3, goal_command_parity, region_scoping, postmortem probes, readtool) is not built (staging/factory-replay-gate). Only the three members above ran, so P5 cannot be PASS.",
+ "denominators": {
+  "cells": 9,
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "completeness": 1.0,
+  "note": "3 arms x 3 guards"
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "regression"
+ },
+ "not_tested": [
+  "the rest of the F14 standing set",
+  "readtool model arm (needs OD-1 or OD-3)",
+  "tests/e2e/core/history/test_prefix_stability.py and test_transcript_ledger.py (spawn the hermes CLI / tui_gateway; denylisted without OD-2)"
+ ],
+ "limitations": [
+  "replay_gates and region-scoping transcripts hold no rows projection could archive, so projection never runs there; gate decisions after projection are covered by E37-synthetic/r20261001-04"
+ ],
+ "resource_usage": {
+  "wall_s": null,
+  "cpu_core_s": null,
+  "gpu_s": 0,
+  "energy_j": null,
+  "api_cost_usd": 0.0,
+  "note": "wall_s summed from raw outputs; CPU time and energy not recorded"
+ },
+ "artifacts": [
+  {
+   "path": "receipts/raw/r04/guard-base-readtool.json",
+   "sha256": "68fdacc6f790a91224e8c0d97c7c6e52139f6adede8b36dd2c3466353deaa1ef"
+  },
+  {
+   "path": "receipts/raw/r04/guard-base-readtool.log",
+   "sha256": "a10093d5fc36d53e4eea53b1b55637c1d9f1aa43f9901fbb2e7afa4d74632903"
+  },
+  {
+   "path": "receipts/raw/r04/guard-base-region_scoping.log",
+   "sha256": "16b824ff5192ea6533bba2876453e40cb2ee1a7cf7ce02d01528fbae5f985803"
+  },
+  {
+   "path": "receipts/raw/r04/guard-base-replay_gates.json",
+   "sha256": "8c23ad7dd6ab37fed10ab0b5b5ad66700720cda1eb2abb1964ab080b330bf9cb"
+  },
+  {
+   "path": "receipts/raw/r04/guard-base-replay_gates.log",
+   "sha256": "f22e726576934333e0141641489c2de6b803b2273654460afb103182989cef7e"
+  },
+  {
+   "path": "receipts/raw/r04/guard-carrier-foldin-v4-projon-readtool.json",
+   "sha256": "68fdacc6f790a91224e8c0d97c7c6e52139f6adede8b36dd2c3466353deaa1ef"
+  },
+  {
+   "path": "receipts/raw/r04/guard-carrier-foldin-v4-projon-readtool.log",
+   "sha256": "d2a043b4ba73d0ea01eb723094f8645130884af226cf984f88014b9d1d7dc44d"
+  },
+  {
+   "path": "receipts/raw/r04/guard-carrier-foldin-v4-projon-region_scoping.log",
+   "sha256": "8aeeeb4ea4ed14ea790535fcfaa16866cdcd956b981a48877d4d632a3b77c232"
+  },
+  {
+   "path": "receipts/raw/r04/guard-carrier-foldin-v4-projon-replay_gates.json",
+   "sha256": "ee85a2b124f50e880905dfcdf1a53fabc908c51358b41bd43694f79976362e9f"
+  },
+  {
+   "path": "receipts/raw/r04/guard-carrier-foldin-v4-projon-replay_gates.log",
+   "sha256": "6da43bb71be3a9bbcf91cba9daa29ab52a5cb4e3f7d9e42b53201ebc08c66a09"
+  },
+  {
+   "path": "receipts/raw/r04/guard-carrier-readtool.json",
+   "sha256": "68fdacc6f790a91224e8c0d97c7c6e52139f6adede8b36dd2c3466353deaa1ef"
+  },
+  {
+   "path": "receipts/raw/r04/guard-carrier-readtool.log",
+   "sha256": "d0a30746760fc82a50f04fe7acafa9cf2219ad046645d0215e0f77bc6e28c699"
+  },
+  {
+   "path": "receipts/raw/r04/guard-carrier-region_scoping.log",
+   "sha256": "0fca1cf0bef8f136929f7cce39fe6ab39afe3a16e34f0c9d014b4626fab6d6e5"
+  },
+  {
+   "path": "receipts/raw/r04/guard-carrier-replay_gates.json",
+   "sha256": "ee85a2b124f50e880905dfcdf1a53fabc908c51358b41bd43694f79976362e9f"
+  },
+  {
+   "path": "receipts/raw/r04/guard-carrier-replay_gates.log",
+   "sha256": "d08baba7dd4fa5f56edd5e9ec1e9e446b4b77b1159890354aac178e976648ead"
+  }
+ ],
+ "verdict": "RECORDED (three F14 members equal; F14 not run): replay_gates base: 11 of 11 pass, carrier: 11 of 11 pass, carrier-foldin-v4-projon: 11 of 11 pass; region-scoping and readtool as listed",
+ "supersedes": "GUARDS/r20261001-03"
+}

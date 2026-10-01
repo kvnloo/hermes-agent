@@ -1,0 +1,22 @@
+{
+ "schema": "xf.finding.v1",
+ "id": "FINDING-unit-test-metadata-fetch/r20261001-round1",
+ "label": "OBSERVED",
+ "tier": "T1",
+ "cost_usd": 0,
+ "observed_on": [
+  "NousResearch/hermes-agent main 572e4f4fad32bbdcfc948fb2ec833177ed5734c0 (runner be292fd2ba guard; first observation)",
+  "NousResearch/hermes-agent main aea969677c60a1bb72fe227fdfb98f196a2092cc (runner c430541d16 guard; round-1 re-check, worktree = main + the slice, which touches neither file)"
+ ],
+ "what": "Under scripts/run_tests.sh, tests/agent/test_length_continuation_thinking_exhaustion.py (10 passed) makes a real outbound request: a background thread runs agent/model_metadata.py fetch_model_metadata (the GET at line 909, unchanged between the two mains) -> model_metadata_http.get(OPENROUTER_MODELS_URL) -> httpx -> hermes_bootstrap._happy_eyeballs_create_connection -> socket.getaddrinfo('openrouter.ai'). The cell guard blocked the lookup; the tests still pass, so an unguarded run silently depends on (and contacts) openrouter.ai.",
+ "how_seen": [
+  "round-1 re-check on aea969677c: guarded run_tests.sh cell (canary passed), rc 0, 10 passed, guard log 1 x socket.getaddrinfo openrouter.ai -> cell INFRA",
+  "first observation on 572e4f4fad: guarded run_tests.sh cell, rc 0, 10 passed, guard log 1 x socket.getaddrinfo openrouter.ai -> cell INFRA",
+  "same file on 354d499511 (F11-N1 arms): 1 blocked lookup per cell, 6/6 cells INFRA in pass 2 and again in pass 3",
+  "stack captured with a socket.getaddrinfo wrapper and pytest -s in a guarded cell; the thread's entry is Thread(target=fetch_model_metadata), consistent with the 'openrouter-prewarm' thread started in agent/agent_init.py (not confirmed); reproduces only in run_tests.sh's environment (HERMES_HOME unset), not with HERMES_HOME set to the cell home"
+ ],
+ "private_artifacts": ["private/finding-metadata-fetch/trace.txt", "private/finding-metadata-fetch/run_tests_cell.txt", "private/finding-metadata-fetch/guard.jsonl"],
+ "upstream_search": "gh search issues/prs 'test_length_continuation_thinking_exhaustion', 'fetch_model_metadata network test', open PRs 'fetch_model_metadata' on 2026-10-01 (re-run in round 1): no report of the test leak. NousResearch/hermes-agent#122843 (dskwe, open) touches the same test file for a different change; NousResearch/hermes-agent#109924 (MaxFreedomPollard, open) changes how the openrouter-prewarm thread is claimed in agent/agent_init.py, not test hermeticity.",
+ "status": "not filed (no GitHub writes); candidate real fix for this runner to ride with (D5/P11)",
+ "not_tested": ["which fixture or code path starts the metadata thread only when HERMES_HOME is unset", "other test files with the same leak (no suite-wide guarded sweep was run)"]
+}

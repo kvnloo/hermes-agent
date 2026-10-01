@@ -1,0 +1,169 @@
+{
+  "checkout": "$WT",
+  "head": "572e4f4fad32bbdcfc948fb2ec833177ed5734c0",
+  "compressor_sha256": "86f4b7a8a647f1bf520cb17497b68719f6d907028bdc7151c7921818b7e043f1",
+  "cli_past_window_inflated": {
+    "threshold": 40000,
+    "real_prompt_tokens": 9000,
+    "rough_estimate_turn1_messages": 160113,
+    "local_compress_calls_by_turn": [
+      0,
+      0,
+      0
+    ],
+    "local_compress_approx_tokens": [],
+    "provider_requests": 3
+  },
+  "cli_inflated": {
+    "threshold": 40000,
+    "real_prompt_tokens": 9000,
+    "rough_estimate_turn1_messages": 120113,
+    "local_compress_calls_by_turn": [
+      0,
+      0,
+      0
+    ],
+    "local_compress_approx_tokens": [],
+    "provider_requests": 3
+  },
+  "cli_deflated": {
+    "threshold": 40000,
+    "real_prompt_tokens": 45000,
+    "rough_estimate_turn1_messages": 213,
+    "local_compress_calls_by_turn": [
+      0,
+      1,
+      1
+    ],
+    "local_compress_approx_tokens": [
+      45015,
+      45015
+    ],
+    "provider_requests": 3
+  },
+  "gateway_past_window_inflated": {
+    "threshold": 40000,
+    "real_prompt_tokens": 9000,
+    "rough_estimate_turn1_messages": 160113,
+    "local_compress_calls_by_turn": [
+      0,
+      0,
+      0
+    ],
+    "local_compress_approx_tokens": [],
+    "provider_requests": 3
+  },
+  "gateway_inflated": {
+    "threshold": 40000,
+    "real_prompt_tokens": 9000,
+    "rough_estimate_turn1_messages": 120113,
+    "local_compress_calls_by_turn": [
+      0,
+      0,
+      0
+    ],
+    "local_compress_approx_tokens": [],
+    "provider_requests": 3
+  },
+  "gateway_deflated": {
+    "threshold": 40000,
+    "real_prompt_tokens": 45000,
+    "rough_estimate_turn1_messages": 213,
+    "local_compress_calls_by_turn": [
+      0,
+      1,
+      1
+    ],
+    "local_compress_approx_tokens": [
+      45015,
+      45015
+    ],
+    "provider_requests": 3
+  },
+  "restore_past_window_inflated": {
+    "threshold": 40000,
+    "real_prompt_tokens": 9000,
+    "rough_estimate_turn1_messages": 160074,
+    "persisted_messages": 4,
+    "anchor_restored_in_fresh_agent": true,
+    "local_compress_calls_by_turn": [
+      0,
+      0,
+      0
+    ],
+    "local_compress_approx_tokens": [],
+    "provider_requests": 4
+  },
+  "restore_inflated": {
+    "threshold": 40000,
+    "real_prompt_tokens": 9000,
+    "rough_estimate_turn1_messages": 120074,
+    "persisted_messages": 4,
+    "anchor_restored_in_fresh_agent": true,
+    "local_compress_calls_by_turn": [
+      0,
+      0,
+      0
+    ],
+    "local_compress_approx_tokens": [],
+    "provider_requests": 4
+  },
+  "restore_deflated": {
+    "threshold": 40000,
+    "real_prompt_tokens": 45000,
+    "rough_estimate_turn1_messages": 174,
+    "persisted_messages": 4,
+    "anchor_restored_in_fresh_agent": true,
+    "local_compress_calls_by_turn": [
+      0,
+      1,
+      1
+    ],
+    "local_compress_approx_tokens": [
+      45020,
+      45020
+    ],
+    "provider_requests": 4
+  },
+  "overflow_recovery": {
+    "completed": true,
+    "response": "ok",
+    "compression_after_provider_requests": [
+      1
+    ],
+    "first_turn_compressions": 1,
+    "provider_request_sizes": [
+      643447,
+      130979
+    ],
+    "provider_omits_usage": false,
+    "pass": true
+  },
+  "usage_less_fallback": {
+    "completed": true,
+    "response": "ok",
+    "compression_after_provider_requests": [
+      1
+    ],
+    "first_turn_compressions": 0,
+    "provider_request_sizes": [
+      643447,
+      131066
+    ],
+    "provider_omits_usage": true,
+    "pass": true
+  },
+  "verdict": {
+    "cli_past_window_inflated": "PASS",
+    "cli_inflated": "PASS",
+    "cli_deflated": "PASS",
+    "gateway_past_window_inflated": "PASS",
+    "gateway_inflated": "PASS",
+    "gateway_deflated": "PASS",
+    "restore_past_window_inflated": "PASS",
+    "restore_inflated": "PASS",
+    "restore_deflated": "PASS",
+    "overflow_recovery": "PASS",
+    "usage_less_fallback": "PASS"
+  }
+}

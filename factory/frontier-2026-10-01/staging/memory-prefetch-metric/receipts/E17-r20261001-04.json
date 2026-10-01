@@ -1,0 +1,555 @@
+{
+  "schema": "xf.receipt.v1",
+  "id": "E17/r20261001-04",
+  "experiment": "E17 rerun on the amended head: delay/hang/empty/error fault probe against a local fake memory backend through the real turn-start prefetch path, profile-scope and collection-off checks, a base-vs-head microbenchmark, and the bundled holographic provider (E17c)",
+  "tier": "T1",
+  "cost_usd": 0.0,
+  "lane": "cpu",
+  "spec": {
+    "path": null,
+    "prereg_commit": null,
+    "note": "Not pre-registered; same probe and expectations as r03, unchanged."
+  },
+  "staging": "memory-prefetch-metric",
+  "origin_refs": [
+    "NousResearch/hermes-agent#124151",
+    "NousResearch/hermes-agent#120042",
+    "evals/memory/honcho_current_query.py pattern",
+    "evals/provider_fallback/probe_104260.py:11-39 isolation + loopback guard"
+  ],
+  "base_revision": "040b6df2c40b0f4f88f51e4c2062eafc4d7463c5",
+  "head_revision": "569ad4d84b0f9888ea2598c2a8ea416b2c75bad6",
+  "head_tree": "50ce6da7df616635f9edd958200c2065072b643c",
+  "arms": {
+    "head": "MemoryManager from the staging commit 569ad4d84b",
+    "base": "main's agent/memory_manager.py (blob d023a57f8b, sha256 048842c1...) loaded from source into the head tree; it is the only file on the prefetch call path whose record calls differ"
+  },
+  "inputs": {
+    "probe": {
+      "path": "work/e17_prefetch_fault_probe.py",
+      "sha256": "14db2ff5cc8f144781fa0b952b99c9ef59aee26a563516cb0a64c5f9afd4f9de"
+    },
+    "holographic_probe": {
+      "path": "work/e17c_holographic_probe.py",
+      "sha256": "240178e8fa5415ae3cbd0698a0520f177c66c4017158291d62b53aa300df78ba"
+    },
+    "base_memory_manager": {
+      "path": "work/r3/base_memory_manager_d023a57f8b.py",
+      "sha256": "048842c1c3725e6fe6aef8f2b7fe3ea06baec02cebdea1e9ab0e9da06473930d"
+    }
+  },
+  "env": {
+    "host": "<host>",
+    "python": "3.11.14 (<read-only py3.11 venv>, used read-only)",
+    "nemo_relay_native": true,
+    "relay": "REAL nemo_relay native binding (0.8.4 in this venv; main pins >=0.9 on py3.14)",
+    "sandbox": "env -i; os.environ cleared; HOME/HERMES_HOME in a fresh scratch sandbox; send: false",
+    "network": "none; loopback-only socket.connect guard",
+    "load1_end": 2.8818359375
+  },
+  "commands": [
+    "env -i PATH=/usr/bin:/bin <read-only py3.11 venv>/bin/python work/e17_prefetch_fault_probe.py --repo <worktree at 569ad4d84b> --base-mm work/r3/base_memory_manager_d023a57f8b.py --out work/r3/e17_result_r3.json",
+    "env -i PATH=/usr/bin:/bin <read-only py3.11 venv>/bin/python work/e17c_holographic_probe.py --repo <worktree at 569ad4d84b> --out work/r3/e17c_result_r3.json"
+  ],
+  "reps_per_fault_per_arm": 12,
+  "timeout_s": 1.0,
+  "results": {
+    "faults": {
+      "ok": {
+        "backend_fault": "ok",
+        "expected_outcome": "success",
+        "observed_head_rows": [
+          {
+            "dims": {
+              "latency_bucket": "lt_100ms",
+              "outcome": "success",
+              "provider": "plugin"
+            },
+            "value": 12
+          }
+        ],
+        "observed_base_rows": [],
+        "turn_wait_ms": {
+          "base": {
+            "n": 12,
+            "p50": 0.53,
+            "p95": 0.95,
+            "max": 1.21
+          },
+          "head": {
+            "n": 12,
+            "p50": 0.63,
+            "p95": 3.08,
+            "max": 5.35
+          }
+        },
+        "returned_context_identical_across_arms": true
+      },
+      "delay_0.05": {
+        "backend_fault": "delay_0.05",
+        "expected_outcome": "success",
+        "observed_head_rows": [
+          {
+            "dims": {
+              "latency_bucket": "lt_100ms",
+              "outcome": "success",
+              "provider": "plugin"
+            },
+            "value": 12
+          }
+        ],
+        "observed_base_rows": [],
+        "turn_wait_ms": {
+          "base": {
+            "n": 12,
+            "p50": 50.89,
+            "p95": 50.97,
+            "max": 50.99
+          },
+          "head": {
+            "n": 12,
+            "p50": 51.12,
+            "p95": 52.04,
+            "max": 52.44
+          }
+        },
+        "returned_context_identical_across_arms": true
+      },
+      "delay_0.4": {
+        "backend_fault": "delay_0.4",
+        "expected_outcome": "success",
+        "observed_head_rows": [
+          {
+            "dims": {
+              "latency_bucket": "250ms_to_500ms",
+              "outcome": "success",
+              "provider": "plugin"
+            },
+            "value": 12
+          }
+        ],
+        "observed_base_rows": [],
+        "turn_wait_ms": {
+          "base": {
+            "n": 12,
+            "p50": 400.86,
+            "p95": 400.99,
+            "max": 401.0
+          },
+          "head": {
+            "n": 12,
+            "p50": 401.09,
+            "p95": 401.65,
+            "max": 402.13
+          }
+        },
+        "returned_context_identical_across_arms": true
+      },
+      "slow_over_timeout": {
+        "backend_fault": "delay_1.5",
+        "expected_outcome": "timed_out",
+        "observed_head_rows": [
+          {
+            "dims": {
+              "latency_bucket": "1s_to_2s",
+              "outcome": "timed_out",
+              "provider": "plugin"
+            },
+            "value": 12
+          }
+        ],
+        "observed_base_rows": [],
+        "turn_wait_ms": {
+          "base": {
+            "n": 12,
+            "p50": 1000.26,
+            "p95": 1000.44,
+            "max": 1000.59
+          },
+          "head": {
+            "n": 12,
+            "p50": 1000.49,
+            "p95": 1001.12,
+            "max": 1001.84
+          }
+        },
+        "returned_context_identical_across_arms": true
+      },
+      "empty": {
+        "backend_fault": "empty",
+        "expected_outcome": "empty",
+        "observed_head_rows": [
+          {
+            "dims": {
+              "latency_bucket": "lt_100ms",
+              "outcome": "empty",
+              "provider": "plugin"
+            },
+            "value": 12
+          }
+        ],
+        "observed_base_rows": [],
+        "turn_wait_ms": {
+          "base": {
+            "n": 12,
+            "p50": 0.47,
+            "p95": 0.64,
+            "max": 0.66
+          },
+          "head": {
+            "n": 12,
+            "p50": 0.61,
+            "p95": 1.25,
+            "max": 1.9
+          }
+        },
+        "returned_context_identical_across_arms": true
+      },
+      "error": {
+        "backend_fault": "error",
+        "expected_outcome": "failed",
+        "observed_head_rows": [
+          {
+            "dims": {
+              "latency_bucket": "lt_100ms",
+              "outcome": "failed",
+              "provider": "plugin"
+            },
+            "value": 12
+          }
+        ],
+        "observed_base_rows": [],
+        "turn_wait_ms": {
+          "base": {
+            "n": 12,
+            "p50": 0.5,
+            "p95": 0.55,
+            "max": 0.56
+          },
+          "head": {
+            "n": 12,
+            "p50": 0.59,
+            "p95": 1.1,
+            "max": 1.65
+          }
+        },
+        "returned_context_identical_across_arms": true
+      },
+      "refused": {
+        "backend_fault": "refused",
+        "expected_outcome": "failed",
+        "observed_head_rows": [
+          {
+            "dims": {
+              "latency_bucket": "lt_100ms",
+              "outcome": "failed",
+              "provider": "plugin"
+            },
+            "value": 12
+          }
+        ],
+        "observed_base_rows": [],
+        "turn_wait_ms": {
+          "base": {
+            "n": 12,
+            "p50": 0.21,
+            "p95": 0.28,
+            "max": 0.35
+          },
+          "head": {
+            "n": 12,
+            "p50": 0.39,
+            "p95": 0.9,
+            "max": 1.49
+          }
+        },
+        "returned_context_identical_across_arms": true
+      },
+      "hang": {
+        "expected_outcomes": [
+          "timed_out",
+          "skipped",
+          "skipped",
+          "skipped",
+          "success(after release)"
+        ],
+        "turn_wait_ms": [
+          1001.63,
+          0.19,
+          0.14,
+          0.14
+        ],
+        "after_release_ms": 0.92,
+        "backend_calls_while_hung": 1,
+        "head_rows": [
+          {
+            "dims": {
+              "latency_bucket": "1s_to_2s",
+              "outcome": "timed_out",
+              "provider": "plugin"
+            },
+            "value": 1
+          },
+          {
+            "dims": {
+              "latency_bucket": "lt_100ms",
+              "outcome": "skipped",
+              "provider": "plugin"
+            },
+            "value": 3
+          },
+          {
+            "dims": {
+              "latency_bucket": "lt_100ms",
+              "outcome": "success",
+              "provider": "plugin"
+            },
+            "value": 1
+          }
+        ]
+      },
+      "hang_default_timeout": {
+        "timeout_s": 8.0,
+        "turn_wait_ms": 8001.75,
+        "head_rows": [
+          {
+            "dims": {
+              "latency_bucket": "5s_to_10s",
+              "outcome": "timed_out",
+              "provider": "plugin"
+            },
+            "value": 1
+          }
+        ]
+      }
+    },
+    "checks": {
+      "profile_scope": {
+        "rows_in_owner_profile": 1,
+        "rows_in_default_home": 0,
+        "pass": true
+      },
+      "collection_off": {
+        "rows": 0,
+        "store_created": false,
+        "pass": true
+      },
+      "egress_blocked_attempts": [],
+      "outcome_classes_match_expected": {
+        "ok": true,
+        "delay_0.05": true,
+        "delay_0.4": true,
+        "slow_over_timeout": true,
+        "empty": true,
+        "error": true,
+        "refused": true
+      },
+      "one_row_per_turn_head": {
+        "ok": true,
+        "delay_0.05": true,
+        "delay_0.4": true,
+        "slow_over_timeout": true,
+        "empty": true,
+        "error": true,
+        "refused": true
+      },
+      "base_records_nothing": true,
+      "returned_context_identical_across_arms": true
+    },
+    "microbenchmark": {
+      "collection_off": {
+        "us_per_call_median": {
+          "base": 46.28,
+          "head": 84.63,
+          "base_aa": 46.18
+        },
+        "us_per_call_p95": {
+          "base": 49.13,
+          "head": 87.49,
+          "base_aa": 49.43
+        },
+        "delta_head_minus_base_us": {
+          "median": 37.77,
+          "p05": 34.71,
+          "p95": 40.11
+        },
+        "aa_base_minus_base_us": {
+          "median": 0.43,
+          "p05": -2.78,
+          "p95": 1.39
+        },
+        "blocks": 12,
+        "calls_per_block": 400,
+        "order": "ABA/ABA alternating"
+      },
+      "collection_on": {
+        "us_per_call_median": {
+          "base": 67.23,
+          "head": 178.88,
+          "base_aa": 67.28
+        },
+        "us_per_call_p95": {
+          "base": 70.6,
+          "head": 180.58,
+          "base_aa": 69.78
+        },
+        "delta_head_minus_base_us": {
+          "median": 111.45,
+          "p05": 107.49,
+          "p95": 120.04
+        },
+        "aa_base_minus_base_us": {
+          "median": 0.06,
+          "p05": -3.4,
+          "p95": 10.96
+        },
+        "blocks": 12,
+        "calls_per_block": 400,
+        "order": "ABA/ABA alternating"
+      }
+    },
+    "holographic": {
+      "provider": "holographic (bundled, local SQLite)",
+      "turns": 20,
+      "rows": [
+        {
+          "dims": {
+            "latency_bucket": "lt_100ms",
+            "outcome": "empty",
+            "provider": "holographic"
+          },
+          "value": 10
+        },
+        {
+          "dims": {
+            "latency_bucket": "lt_100ms",
+            "outcome": "success",
+            "provider": "holographic"
+          },
+          "value": 10
+        }
+      ],
+      "turns_with_context": 10,
+      "turns_without_context": 10,
+      "row_outcome_counts": {
+        "success": 10,
+        "empty": 10
+      },
+      "rows_match_turns": true,
+      "wait_ms_p50": 1.062,
+      "wait_ms_max": 26.249,
+      "egress_blocked_attempts": []
+    }
+  },
+  "measurements": [
+    {
+      "name": "outcome_class_matches_fault",
+      "value": 7,
+      "n": 7,
+      "label": "OBSERVED"
+    },
+    {
+      "name": "rows_per_turn_head",
+      "value": "1 row per turn for every fault (12/12 x 7 faults)",
+      "label": "OBSERVED"
+    },
+    {
+      "name": "rows_base",
+      "value": 0,
+      "label": "OBSERVED"
+    },
+    {
+      "name": "hang_skips_while_stuck",
+      "value": "1 timed_out (1s_to_2s) then 3 skipped (lt_100ms); 1 backend call while hung; 1 success after release",
+      "label": "OBSERVED"
+    },
+    {
+      "name": "shipped_8s_bound_hang",
+      "value": "8001.75 ms -> 5s_to_10s timed_out",
+      "label": "OBSERVED"
+    },
+    {
+      "name": "delta_head_minus_base_us_off",
+      "value": {
+        "median": 37.77,
+        "p05": 34.71,
+        "p95": 40.11
+      },
+      "aa": {
+        "median": 0.43,
+        "p05": -2.78,
+        "p95": 1.39
+      },
+      "n": "12 blocks x 400",
+      "label": "OBSERVED"
+    },
+    {
+      "name": "delta_head_minus_base_us_on",
+      "value": {
+        "median": 111.45,
+        "p05": 107.49,
+        "p95": 120.04
+      },
+      "aa": {
+        "median": 0.06,
+        "p05": -3.4,
+        "p95": 10.96
+      },
+      "n": "12 blocks x 400",
+      "label": "OBSERVED"
+    },
+    {
+      "name": "holographic_rows",
+      "value": {
+        "success": 10,
+        "empty": 10
+      },
+      "n": 20,
+      "label": "OBSERVED"
+    }
+  ],
+  "interpretation": {
+    "outcomes": "unchanged from r03 after the amendment: every fault class gives the expected outcome, one row per turn, none on base",
+    "prompt_prefix": "unchanged: the context string returned to the turn is identical across arms for all 7 faults",
+    "hot_path": "NOT below per-call microbenchmark noise. Median head-minus-base per _prefetch_provider call: +37.77 us collection off (p05..p95 +34.71..+40.11; A/A median +0.43, p05..p95 -2.78..+1.39) and +111.45 us on (+107.49..+120.04; A/A median +0.06, p05..p95 -3.4..+10.96). r03 (round-1 head, load1 5-17) measured +47.05 off / +158.76 on. Owner decision."
+  },
+  "evidence_class": {
+    "local": true,
+    "ci": "none",
+    "simulation": true,
+    "runtime": false,
+    "kind": "mechanism"
+  },
+  "not_tested": [
+    "real memory backends (Honcho, Hindsight, mem0, Supermemory servers)",
+    "packages sent upstream (send: false)",
+    "the turn's other phases (model call, tools)",
+    "py3.14 interpreter with nemo-relay 0.9 (the shipped shared-metrics runtime)",
+    "remote memory backends with real network latency"
+  ],
+  "limitations": [
+    "The fake backend is a local HTTP server; real backend latency distributions are not measured here",
+    "The microbenchmark ran on a shared host (load1 2.9 at the end); A/A is reported beside every delta",
+    "Store drain uses relay_shared_metrics._reset_for_tests(), the same hook the upstream tests use",
+    "holographic swallows its own errors and returns \"\", so a failing holographic recall reports as empty, not failed"
+  ],
+  "verdict": "KEEP (mechanism); hot-path gate recorded as NOT MET as worded (owner decision)",
+  "provenance": "self",
+  "privacy": "public-aggregate (synthetic fixtures only)",
+  "raw_artifacts": {
+    "e17_result": {
+      "path": "work/r3/e17_result_r3.json",
+      "sha256": "15edd39b02d6e4a9f704372f2bfa6f48f93c511eef20323b108c598c89f6c935"
+    },
+    "e17c_result": {
+      "path": "work/r3/e17c_result_r3.json",
+      "sha256": "a6e1294b42c770887dabfded193987c5ab4fc0ec810393a77e2c0018d2c3170f"
+    }
+  },
+  "supersedes": {
+    "id": "E17/r20261001-03",
+    "path": "receipts/E17-r20261001-03.json",
+    "sha256_as_written": "c0e152d4f9123bac071bf1dd05a8e88b5172076def0c6827cde26b99731d761d",
+    "why": "measured at c815543bc2; the amended head changes the success/empty call, so E17 was rerun on it"
+  }
+}

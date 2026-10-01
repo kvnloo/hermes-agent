@@ -1,0 +1,37 @@
+  ┊ 📖 read      notes_00.txt  0.2s
+  ┊ 📖 read      notes_01.txt  0.0s
+  ┊ 📖 read      notes_02.txt  0.0s
+  ┊ 📖 read      notes_03.txt  0.0s
+  ┊ 📖 read      notes_04.txt  0.0s
+  ┊ 📖 read      notes_05.txt  0.0s
+  ┊ 📖 read      notes_06.txt  0.0s
+  ┊ 📖 read      notes_07.txt  0.0s
+  ┊ 📖 read      notes_08.txt  0.0s
+  ┊ 📖 read      notes_09.txt  0.0s
+  ┊ 📖 read      notes_10.txt  0.0s
+  ┊ 📖 read      notes_11.txt  0.0s
+{
+ "arm": "carrier-foldin-v4",
+ "mode": "restart",
+ "requests": 24,
+ "errors": [],
+ "rows_archived": 4,
+ "pass_request_indices": [
+  9,
+  12
+ ],
+ "first_request_of_phase_C": {
+  "request_index": 20,
+  "rows_stubbed_on_last_phase_B_request": 4,
+  "of_those_sent_in_full": 4,
+  "of_those_same_stub_bytes": 0,
+  "rows_newly_stubbed": 0,
+  "invalidated_thinking_blocks": 1
+ },
+ "invalidated_by_phase": {
+  "A": 0,
+  "B": 0,
+  "C": 1
+ },
+ "egress_blocked": []
+}

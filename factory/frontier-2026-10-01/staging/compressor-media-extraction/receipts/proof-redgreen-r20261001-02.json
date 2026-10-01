@@ -1,0 +1,120 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compressor-media-extraction",
+ "base_revision": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+ "head_revision": "c5e8be14b43bf75bcc2e4e8d95f2d4810a7e2779",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#80636",
+  "NousResearch/hermes-agent#78645"
+ ],
+ "provenance": "self",
+ "privacy": "public-aggregate",
+ "cost_usd": 0.0,
+ "ai_assistance": "Claude Code (Opus 5.5) ran the experiment and wrote this receipt",
+ "created_at": "2026-10-01T07:47:16-05:00",
+ "spec": {
+  "path": null,
+  "prereg_commit": null,
+  "note": "not pre-registered on claude/ledger (no ledger writes in this run)"
+ },
+ "env": {
+  "host": "<local-host>",
+  "test_python": "3.11.14 (pytest 9.1.1, HERMES_PYTHON)",
+  "nav_python": "3.14.7 separate uv venv (tiktoken 0.14.0, radon 6.0.1)",
+  "sandbox": "none (no bwrap); HOME/HERMES_HOME pointed at scratch test homes; run_tests.sh env -i",
+  "load1_range": "3-16 (shared host; base and head full runs ran concurrently)",
+  "paths": "absolute local paths in commands and raw files are replaced by $W/<tree>, $S, $HERMES_PYTHON, <uv>, <pytest-tmp>, pytest-of-<user>"
+ },
+ "id": "redgreen/r20261001-02",
+ "experiment": "RED (head's tests on base), GREEN (head), sabotage through real call paths",
+ "tier": "T1",
+ "label": "OBSERVED",
+ "supersedes": "redgreen/r20261001-01",
+ "round_note": "fix round 1: head rebuilt on main aea969677c (c5e8be14b4 replaces the unpushed d2bff3a59e; same patch-id 2c92e56f, corrected commit message)",
+ "inputs": {
+  "test_files": [
+   "tests/agent/test_compressor_historical_media.py",
+   "tests/agent/test_compressor_stale_tool_images.py",
+   "tests/agent/test_outbound_stale_vision.py",
+   "tests/agent/test_protected_tail_pressure.py",
+   "tests/agent/test_image_eviction_policy.py",
+   "tests/agent/test_compressor_zero_user_guard.py"
+  ]
+ },
+ "command": "HOME=$S/testhome-sf-compressor-media-extraction/<arm> HERMES_HOME=$HOME/.hermes HERMES_PYTHON=$HERMES_PYTHON bash scripts/run_tests.sh -j 2 <files> -q -rfE  (arm red = base + head's test diff; arm sab = head)",
+ "result": {
+  "red_on_base": {
+   "tree": "aea969677c60a1bb72fe227fdfb98f196a2092cc + head's test diff only",
+   "outcome": "4 of 5 changed test files fail to collect: ModuleNotFoundError: No module named 'agent.context_compressor_media'; test_image_eviction_policy.py (docstring-only change) and the unchanged test_compressor_zero_user_guard.py pass (18 passed)",
+   "marker": "ModuleNotFoundError: No module named 'agent.context_compressor_media'"
+  },
+  "green_on_head": {
+   "tree": "c5e8be14b43bf75bcc2e4e8d95f2d4810a7e2779",
+   "reps": "3/3",
+   "outcome": "6 files, 57 passed, 0 failed in each of 3 reps"
+  },
+  "base_reference": "57 passed on base (the same 6 files are in the identical E14-parity/r20261001-02 run)",
+  "negative_controls": {
+   "sibling:_strip_historical_media raises": {
+    "failed": 26,
+    "through_compress": [
+     "FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_frees_stale_vision_tool_results",
+     "FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_strips_historical_images",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_kanban_worker_recompaction_keeps_user_turn",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_no_consecutive_user_roles_introduced",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_preserved_tail_user_is_not_overridden",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_image_only_protected_head_still_yields_non_empty_text",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_image_only_tail_user_turn_still_yields_non_empty_text",
+     "FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_merge_targets_the_colliding_tail_message_not_index_zero"
+    ]
+   },
+   "sibling:evict_stale_outbound_tool_images raises": {
+    "failed": 25,
+    "iteration_summary_path": [
+     "FAILED tests/agent/test_image_rejection_fallback.py::test_iteration_summary_strips_images_for_rejecting_model",
+     "FAILED tests/agent/test_iteration_summary_reasoning_details.py::TestSummaryPrefixParity::test_canonicalizes_tool_call_arguments_and_strips_content",
+     "FAILED tests/agent/test_iteration_summary_reasoning_details.py::TestSummaryPrefixParity::test_strips_lone_surrogates_like_the_send_path",
+     "FAILED tests/agent/test_iteration_summary_reasoning_details.py::test_anthropic_summary_messages_keep_reasoning_details",
+     "FAILED tests/agent/test_iteration_summary_reasoning_details.py::test_strict_chat_route_summary_wire_drops_reasoning_details"
+    ],
+    "conversation_loop_path": [
+     "FAILED tests/agent/test_context_token_tracking.py::test_anthropic_cache_read_and_creation_added",
+     "FAILED tests/agent/test_context_token_tracking.py::test_anthropic_no_cache_fields",
+     "FAILED tests/agent/test_context_token_tracking.py::test_codex_no_cache_fields",
+     "FAILED tests/agent/test_context_token_tracking.py::test_openai_prompt_tokens_unchanged",
+     "FAILED tests/agent/test_degenerate_final_recovery.py::TestFragmentAfterToolWork::test_fragment_after_tool_work_reprompts_instead_of_exiting",
+     "FAILED tests/agent/test_degenerate_final_recovery.py::TestFragmentAfterToolWork::test_fragment_without_tool_work_is_a_plain_answer",
+     "FAILED tests/agent/test_degenerate_final_recovery.py::TestFragmentAfterToolWork::test_persistent_collapse_is_bounded_and_keeps_the_fragment",
+     "FAILED tests/agent/test_dict_tool_call_args.py::test_tool_call_validation_accepts_dict_arguments"
+    ],
+    "traceback": "agent/turn_request_assembly.py:155 in assemble_api_request"
+   },
+   "full per-hunk table": "sabotage/r20261001-02"
+  },
+  "reading": "A pure move has no behaviour to turn red. RED proves the tests now bind to the new module; the sabotage rows prove ContextCompressor.compress(), the iteration-summary path and the per-turn request path all execute the sibling's code."
+ },
+ "raw": [
+  {
+   "path": "raw/r02/red-base.log",
+   "sha256": "3649bc200089ce16691433556bcd2249f44bb2052744ca9d97bb356e1dc7cfde",
+   "source_sha256": "0622a64c3de8e89a2ebdaf6d685aead4eb81e13229a406d8f994bbd3c1631251"
+  },
+  {
+   "path": "raw/r02/green-targeted.log",
+   "sha256": "5a37e97cc366d676e94f4ff2671648d301f82ad232981d223f523a8812ca28d9",
+   "source_sha256": "34f4761d4c994a93f316c4fb055fd0579515638b5aa65a23a57e269b5b34ce8b"
+  },
+  {
+   "path": "raw/r02/neg-sibling-strip_historical_media.log",
+   "sha256": "09165c522b88f792df900e02b80b15555d345d4fbff452eaa5ed0666a5f2edd5",
+   "source_sha256": "4a4a71966295248554797e248778de53f8e0c1ba5e46d1389ca1cb335cfded4a"
+  },
+  {
+   "path": "raw/r02/neg-sibling-evict_stale_outbound_tool_images.log",
+   "sha256": "75efa8ce2f1fcacc1db4f2e05e766e920d0590a140531a32813db97ffe4291ad",
+   "source_sha256": "f47aa0291f33937cdcc5ea3a7cb48b181de650c5cd6a3fdedf86e124f434818e"
+  }
+ ],
+ "verdict": "PASS"
+}

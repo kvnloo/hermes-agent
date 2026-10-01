@@ -1,0 +1,1643 @@
+{
+ "schema": "xf.receipt.v1",
+ "staging": "compaction-anchor-retention",
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#116246",
+  "NousResearch/hermes-agent#87326",
+  "NousResearch/hermes-agent#117462",
+  "NousResearch/hermes-agent#122274",
+  "NousResearch/hermes-agent#122522",
+  "NousResearch/hermes-agent#78457"
+ ],
+ "base_revision": "040b6df2c40b0f4f88f51e4c2062eafc4d7463c5",
+ "head_revision": "30a746f7920c2b4101f121353778d94f5ce001b5",
+ "main_recheck": {
+  "sha": "aaa863f7ff2dec1821be1652b5d15ad14ecea70b",
+  "note": "agent/context_compressor.py, hermes_cli/config_defaults.py and the 6 neighbouring test files are byte-identical on 040b6df2c4, 44a1ce9724 and aaa863f7ff; main+#117462 merges clean on all three (trees f4139cef66, 7beb2da248, ee14a0acac) and gives the same compressor file (the c117462 arm); the branch merges clean on aaa863f7ff (tree e2c14b39ee)"
+ },
+ "supersedes": "the r20261001-03 receipt of the same name (superseded-r04/receipts/), which measured the round-3 fold-in order",
+ "policy_revision": {
+  "factory": "FACTORY.md (frontier-2026-10-01)",
+  "protocol": "promotion-readiness-2026-10-01/PROTOCOL.md"
+ },
+ "env": {
+  "python": "3.11 (HERMES_PYTHON venv, read-only bind)",
+  "sandbox": "harness/sandbox.sh: bwrap ro-root, --unshare-net (connect -> ENETUNREACH), systemd-resolved socket masked (DNS -> EAI_AGAIN), pidns, clearenv, live Hermes install masked except the venv, fresh HOME/HERMES_HOME per run; harness/egress_sitecustomize.py logs every non-loopback DNS lookup and connect attempt",
+  "tests": "HOME=$S/testhome-sf3-compaction-anchor-retention HERMES_HOME=$HOME/.hermes HERMES_PYTHON=$PY bash scripts/run_tests.sh -j 2 <files> -q"
+ },
+ "provenance": "self",
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the rows, tests, harness, gold labels and this receipt; disclosed per repository policy",
+ "privacy": "public-aggregate (inputs are committed upstream text or seeded synthetic data; no state.db, no lineages); no absolute local paths",
+ "resource_usage": {
+  "api_cost_usd": 0.0,
+  "gpu_s": 0,
+  "tokens": 0
+ },
+ "id": "E03s/r20261001-05",
+ "kind": "sizing",
+ "question": "If each identifier gold is mentioned once in assistant text inside a region of a given density, does it survive into the anchor index?",
+ "inputs": {
+  "scorecard": "evals/compaction/results/SCORECARD-2026-08-15.md",
+  "scorecard_sha256": "6d93f90b435e4f2ae2dd3187103c18e0c881ad68b88b92bfd3deacb1cf79180e",
+  "harness_sha256": {
+   "anchor_coverage.py": "c9e084c35a7b64ca4e35afcf89d5a3374c689d455a7b1126ffc49c7cbefeb8ef",
+   "foldin_order_check.py": "0a9c48b0b9ec60633929bd990ec5fe29306353fa9c8e5b7ab45bde046b33ac52",
+   "index_cost.py": "56a5798662d990ce21996b68c5d691015e00e09e1e16a89640e88a879bd1caf2",
+   "build_receipts_r05.py": "60797f54c5d83230126c79a4b5bb48dc783076d5bf08fce3e6c00706aa1763ec",
+   "sandbox.sh": "f1aad255c5022b1c0920e0a6718faa222aa84b3583c4224c4e7fd32b43fedf24",
+   "egress_sitecustomize.py": "55eef4b9cf034dea08b0004a88dcf5595582bde9b3ba9c10ef4cc83807e29d9d",
+   "negative_controls.py": "8dee7eed03d49212293e58568b6b7d39da12c7394f7d454e16d8dda688f210ff"
+  },
+  "arms": {
+   "base": {
+    "tree": "040b6df2c40b0f4f88f51e4c2062eafc4d7463c5:agent/context_compressor.py",
+    "sha256": "86f4b7a8a647f1bf520cb17497b68719f6d907028bdc7151c7921818b7e043f1"
+   },
+   "branch": {
+    "head": "30a746f7920c2b4101f121353778d94f5ce001b5",
+    "sha256": "424c8dd83747b73b7b1883c726e60823f55a656d5424c3eb948297ca07f4abc7"
+   },
+   "c117462": {
+    "pr": 117462,
+    "head": "2c19948e15d68492d048250bae7707ca77063db5",
+    "merge_tree_with_base": "f4139cef66cd97f30f7fc450301551d233ebf616",
+    "merge_tree_with_main_now": "7beb2da24840f32329d5c5d47837fe52fef9e249",
+    "merge": "clean",
+    "sha256": "fdb7abd8050b4944171522c7e713004d7fbce9b2d8ddfb1c8de93414f206ebe0"
+   },
+   "c117462_foldin": {
+    "onto": "c117462",
+    "patch": "foldin-on-117462.patch (rows + tests/agent/test_context_compressor_anchor_index.py)",
+    "patch_sha256": "f2db42bef2c90360beb775de62f1bc4c2c944dea2fbab5672610dbcd957ceb8d",
+    "placement": "round 5: the three rows appended after 'errors', the last row of #117462's table; the rows block (rows and comments) is byte-identical to the standalone commit's",
+    "sha256": "35bb31c83b7db61d5f694ea86f6cc8ca960ee027d44bf5e5b914f9b12259439e",
+    "equals": "git apply foldin-on-117462.patch on main 44a1ce9724 + #117462 (tree 7beb2da248), offset +105"
+   },
+   "c117462_foldin_r03": {
+    "onto": "c117462",
+    "patch": "superseded-r04/foldin-on-117462.patch (sha256 3713e44bbb4edfdbd493b80c290b013a3d26b3a21e88c734bd733f6fad3e9bf5)",
+    "placement": "round 3: 'task ids' after 'todo ids', 'dotted keys' before 'files', 'error messages' last",
+    "sha256": "b880b9a14eaf0949e51926004856b3e0e3109b784222cef87048b8ca7cb36cf3",
+    "role": "comparison only (the order round 5 replaces)"
+   }
+  },
+  "coverage_json_sha256": {
+   "raw/coverage.json": "96a86bcde8412a44e51eb0e72b33f3fe3236efc93e2610a7891ff828bd4a522e",
+   "raw/r05/coverage_foldin.json": "8cfaa4eeec455fd5d827793c68081c00c8597a9f4633d38de98ac801e212fbb1"
+  },
+  "reproduction_checks": {
+   "c117462_round5_run_equals_round3_run_apart_from_timings": true,
+   "round3_foldin_round5_run_equals_round3_run_apart_from_timings": true,
+   "N01_identical_round5_vs_round3_foldin_order": true
+  },
+  "checkout_for_imports": "$WT at 30a746f7920c2b4101f121353778d94f5ce001b5; `git diff --name-only 040b6df2c4 30a746f792` lists only agent/context_compressor.py and the new test file",
+  "egress": "0 attempts logged for every harness run (raw/r05/egress/ for round 5)"
+ },
+ "command": {
+  "round5_foldin": "VENV=$VENV HERMES_INSTALL=<live install> EGRESS_DIR=<dir with sitecustomize.py> $SANDBOX $WT <fresh home on a non-/tmp disk> <egress log> $PY $STAGING/harness/anchor_coverage.py --checkout $WT --arm c117462=raw/arms/c117462.py --arm c117462_foldin=raw/arms/c117462_foldin.py --arm c117462_foldin_r03=raw/arms/c117462_foldin_r03.py --seeds 10 --out <home>/coverage_r05.json   # $WT detached at HEAD; copied to raw/r05/coverage_foldin.json",
+  "round3_other_arms": "the same harness with --arm base/branch/c117462/c117462_foldin(round-3 order)/branch_r01/branch_r02, copied to raw/coverage.json (r20261001-03); its c117462_foldin key is read here as c117462_foldin_r03"
+ },
+ "method": "seeded synthetic regions (DENSITIES in harness; 10 seeds x 6 banks x 3 densities = 180 regions per arm); each bank's identifier golds planted once on their own line in an assistant message (emitter line where defined); survival = needle substring of the real _build_anchor_index output. 'existing_classes' = needles of classes the current rows target (460 per density).",
+ "label": "MODELED",
+ "results": {
+  "base": {
+   "sparse": {
+    "all": [
+     280,
+     570
+    ],
+    "new_classes": [
+     0,
+     110
+    ],
+    "existing_classes": [
+     280,
+     460
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      0,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      20,
+      20
+     ],
+     "error_message": [
+      0,
+      90
+     ],
+     "file_bare": [
+      10,
+      20
+     ],
+     "file_path": [
+      40,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      20,
+      20
+     ],
+     "pr_issue": [
+      150,
+      150
+     ],
+     "sha": [
+      40,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      0,
+      10
+     ]
+    }
+   },
+   "medium": {
+    "all": [
+     280,
+     570
+    ],
+    "new_classes": [
+     0,
+     110
+    ],
+    "existing_classes": [
+     280,
+     460
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      0,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      20,
+      20
+     ],
+     "error_message": [
+      0,
+      90
+     ],
+     "file_bare": [
+      10,
+      20
+     ],
+     "file_path": [
+      40,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      20,
+      20
+     ],
+     "pr_issue": [
+      150,
+      150
+     ],
+     "sha": [
+      40,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      0,
+      10
+     ]
+    }
+   },
+   "dense": {
+    "all": [
+     13,
+     570
+    ],
+    "new_classes": [
+     0,
+     110
+    ],
+    "existing_classes": [
+     13,
+     460
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      0,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      0,
+      20
+     ],
+     "error_message": [
+      0,
+      90
+     ],
+     "file_bare": [
+      0,
+      20
+     ],
+     "file_path": [
+      0,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      0,
+      20
+     ],
+     "pr_issue": [
+      10,
+      150
+     ],
+     "sha": [
+      3,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      0,
+      10
+     ]
+    }
+   }
+  },
+  "branch": {
+   "sparse": {
+    "all": [
+     370,
+     570
+    ],
+    "new_classes": [
+     90,
+     110
+    ],
+    "existing_classes": [
+     280,
+     460
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      10,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      20,
+      20
+     ],
+     "error_message": [
+      70,
+      90
+     ],
+     "file_bare": [
+      10,
+      20
+     ],
+     "file_path": [
+      40,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      20,
+      20
+     ],
+     "pr_issue": [
+      150,
+      150
+     ],
+     "sha": [
+      40,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      10,
+      10
+     ]
+    }
+   },
+   "medium": {
+    "all": [
+     297,
+     570
+    ],
+    "new_classes": [
+     17,
+     110
+    ],
+    "existing_classes": [
+     280,
+     460
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      7,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      20,
+      20
+     ],
+     "error_message": [
+      0,
+      90
+     ],
+     "file_bare": [
+      10,
+      20
+     ],
+     "file_path": [
+      40,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      20,
+      20
+     ],
+     "pr_issue": [
+      150,
+      150
+     ],
+     "sha": [
+      40,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      10,
+      10
+     ]
+    }
+   },
+   "dense": {
+    "all": [
+     13,
+     570
+    ],
+    "new_classes": [
+     0,
+     110
+    ],
+    "existing_classes": [
+     13,
+     460
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      0,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      0,
+      20
+     ],
+     "error_message": [
+      0,
+      90
+     ],
+     "file_bare": [
+      0,
+      20
+     ],
+     "file_path": [
+      0,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      0,
+      20
+     ],
+     "pr_issue": [
+      10,
+      150
+     ],
+     "sha": [
+      3,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      0,
+      10
+     ]
+    }
+   }
+  },
+  "c117462": {
+   "sparse": {
+    "all": [
+     280,
+     570
+    ],
+    "new_classes": [
+     0,
+     110
+    ],
+    "existing_classes": [
+     280,
+     460
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      0,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      20,
+      20
+     ],
+     "error_message": [
+      0,
+      90
+     ],
+     "file_bare": [
+      10,
+      20
+     ],
+     "file_path": [
+      40,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      20,
+      20
+     ],
+     "pr_issue": [
+      150,
+      150
+     ],
+     "sha": [
+      40,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      0,
+      10
+     ]
+    }
+   },
+   "medium": {
+    "all": [
+     280,
+     570
+    ],
+    "new_classes": [
+     0,
+     110
+    ],
+    "existing_classes": [
+     280,
+     460
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      0,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      20,
+      20
+     ],
+     "error_message": [
+      0,
+      90
+     ],
+     "file_bare": [
+      10,
+      20
+     ],
+     "file_path": [
+      40,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      20,
+      20
+     ],
+     "pr_issue": [
+      150,
+      150
+     ],
+     "sha": [
+      40,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      0,
+      10
+     ]
+    }
+   },
+   "dense": {
+    "all": [
+     25,
+     570
+    ],
+    "new_classes": [
+     0,
+     110
+    ],
+    "existing_classes": [
+     25,
+     460
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      0,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      0,
+      20
+     ],
+     "error_message": [
+      0,
+      90
+     ],
+     "file_bare": [
+      0,
+      20
+     ],
+     "file_path": [
+      0,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      12,
+      20
+     ],
+     "pr_issue": [
+      10,
+      150
+     ],
+     "sha": [
+      3,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      0,
+      10
+     ]
+    }
+   }
+  },
+  "branch_r01": {
+   "sparse": {
+    "all": [
+     380,
+     570
+    ],
+    "new_classes": [
+     100,
+     110
+    ],
+    "existing_classes": [
+     280,
+     460
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      10,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      20,
+      20
+     ],
+     "error_message": [
+      80,
+      90
+     ],
+     "file_bare": [
+      10,
+      20
+     ],
+     "file_path": [
+      40,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      20,
+      20
+     ],
+     "pr_issue": [
+      150,
+      150
+     ],
+     "sha": [
+      40,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      10,
+      10
+     ]
+    }
+   },
+   "medium": {
+    "all": [
+     297,
+     570
+    ],
+    "new_classes": [
+     17,
+     110
+    ],
+    "existing_classes": [
+     280,
+     460
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      7,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      20,
+      20
+     ],
+     "error_message": [
+      0,
+      90
+     ],
+     "file_bare": [
+      10,
+      20
+     ],
+     "file_path": [
+      40,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      20,
+      20
+     ],
+     "pr_issue": [
+      150,
+      150
+     ],
+     "sha": [
+      40,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      10,
+      10
+     ]
+    }
+   },
+   "dense": {
+    "all": [
+     13,
+     570
+    ],
+    "new_classes": [
+     0,
+     110
+    ],
+    "existing_classes": [
+     13,
+     460
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      0,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      0,
+      20
+     ],
+     "error_message": [
+      0,
+      90
+     ],
+     "file_bare": [
+      0,
+      20
+     ],
+     "file_path": [
+      0,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      0,
+      20
+     ],
+     "pr_issue": [
+      10,
+      150
+     ],
+     "sha": [
+      3,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      0,
+      10
+     ]
+    }
+   }
+  },
+  "branch_r02": {
+   "sparse": {
+    "all": [
+     370,
+     570
+    ],
+    "new_classes": [
+     90,
+     110
+    ],
+    "existing_classes": [
+     280,
+     460
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      10,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      20,
+      20
+     ],
+     "error_message": [
+      70,
+      90
+     ],
+     "file_bare": [
+      10,
+      20
+     ],
+     "file_path": [
+      40,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      20,
+      20
+     ],
+     "pr_issue": [
+      150,
+      150
+     ],
+     "sha": [
+      40,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      10,
+      10
+     ]
+    }
+   },
+   "medium": {
+    "all": [
+     297,
+     570
+    ],
+    "new_classes": [
+     17,
+     110
+    ],
+    "existing_classes": [
+     280,
+     460
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      7,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      20,
+      20
+     ],
+     "error_message": [
+      0,
+      90
+     ],
+     "file_bare": [
+      10,
+      20
+     ],
+     "file_path": [
+      40,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      20,
+      20
+     ],
+     "pr_issue": [
+      150,
+      150
+     ],
+     "sha": [
+      40,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      10,
+      10
+     ]
+    }
+   },
+   "dense": {
+    "all": [
+     13,
+     570
+    ],
+    "new_classes": [
+     0,
+     110
+    ],
+    "existing_classes": [
+     13,
+     460
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      0,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      0,
+      20
+     ],
+     "error_message": [
+      0,
+      90
+     ],
+     "file_bare": [
+      0,
+      20
+     ],
+     "file_path": [
+      0,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      0,
+      20
+     ],
+     "pr_issue": [
+      10,
+      150
+     ],
+     "sha": [
+      3,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      0,
+      10
+     ]
+    }
+   }
+  },
+  "c117462_foldin_r03": {
+   "sparse": {
+    "all": [
+     370,
+     570
+    ],
+    "new_classes": [
+     90,
+     110
+    ],
+    "existing_classes": [
+     280,
+     460
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      10,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      20,
+      20
+     ],
+     "error_message": [
+      70,
+      90
+     ],
+     "file_bare": [
+      10,
+      20
+     ],
+     "file_path": [
+      40,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      20,
+      20
+     ],
+     "pr_issue": [
+      150,
+      150
+     ],
+     "sha": [
+      40,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      10,
+      10
+     ]
+    }
+   },
+   "medium": {
+    "all": [
+     299,
+     570
+    ],
+    "new_classes": [
+     20,
+     110
+    ],
+    "existing_classes": [
+     279,
+     460
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      10,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      19,
+      20
+     ],
+     "error_message": [
+      0,
+      90
+     ],
+     "file_bare": [
+      10,
+      20
+     ],
+     "file_path": [
+      40,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      20,
+      20
+     ],
+     "pr_issue": [
+      150,
+      150
+     ],
+     "sha": [
+      40,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      10,
+      10
+     ]
+    }
+   },
+   "dense": {
+    "all": [
+     25,
+     570
+    ],
+    "new_classes": [
+     0,
+     110
+    ],
+    "existing_classes": [
+     25,
+     460
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      0,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      0,
+      20
+     ],
+     "error_message": [
+      0,
+      90
+     ],
+     "file_bare": [
+      0,
+      20
+     ],
+     "file_path": [
+      0,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      12,
+      20
+     ],
+     "pr_issue": [
+      10,
+      150
+     ],
+     "sha": [
+      3,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      0,
+      10
+     ]
+    }
+   }
+  },
+  "c117462_foldin": {
+   "sparse": {
+    "all": [
+     370,
+     570
+    ],
+    "new_classes": [
+     90,
+     110
+    ],
+    "existing_classes": [
+     280,
+     460
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      10,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      20,
+      20
+     ],
+     "error_message": [
+      70,
+      90
+     ],
+     "file_bare": [
+      10,
+      20
+     ],
+     "file_path": [
+      40,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      20,
+      20
+     ],
+     "pr_issue": [
+      150,
+      150
+     ],
+     "sha": [
+      40,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      10,
+      10
+     ]
+    }
+   },
+   "medium": {
+    "all": [
+     300,
+     570
+    ],
+    "new_classes": [
+     20,
+     110
+    ],
+    "existing_classes": [
+     280,
+     460
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      10,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      20,
+      20
+     ],
+     "error_message": [
+      0,
+      90
+     ],
+     "file_bare": [
+      10,
+      20
+     ],
+     "file_path": [
+      40,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      20,
+      20
+     ],
+     "pr_issue": [
+      150,
+      150
+     ],
+     "sha": [
+      40,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      10,
+      10
+     ]
+    }
+   },
+   "dense": {
+    "all": [
+     25,
+     570
+    ],
+    "new_classes": [
+     0,
+     110
+    ],
+    "existing_classes": [
+     25,
+     460
+    ],
+    "per_class": {
+     "command": [
+      0,
+      20
+     ],
+     "config_key": [
+      0,
+      10
+     ],
+     "email": [
+      0,
+      10
+     ],
+     "error_keyword": [
+      0,
+      20
+     ],
+     "error_message": [
+      0,
+      90
+     ],
+     "file_bare": [
+      0,
+      20
+     ],
+     "file_path": [
+      0,
+      40
+     ],
+     "file_path_suffix": [
+      0,
+      20
+     ],
+     "handle": [
+      12,
+      20
+     ],
+     "pr_issue": [
+      10,
+      150
+     ],
+     "sha": [
+      3,
+      40
+     ],
+     "sql": [
+      0,
+      10
+     ],
+     "symbol": [
+      0,
+      110
+     ],
+     "task_id": [
+      0,
+      10
+     ]
+    }
+   }
+  }
+ },
+ "readout": [
+  "sparse: branch and fold-in keep 90/110 and 90/110 new-class needles (main and #117462 0/110)",
+  "medium: branch 17/110, fold-in 20/110 (round-3 order 20/110); error messages 0/90 on every arm",
+  "existing classes, #117462 vs fold-in: sparse 280 vs 280, medium 280 vs 280, dense 25 vs 25 (of 460 each): identical. The round-3 order lost one in medium (279/460: \"ModuleNotFoundError: No module named 'hermes_cli.dashboard_auth'\", seed 1, which the shortened 'errors' line dropped)",
+  "dense: every arm keeps almost no once-mentioned needle (main 13/570, #117462 and fold-in 25/570; new classes 0/110 on every arm, round-3 order included); frequency-first ranking plus the 7,000-char budget is the binding limit"
+ ],
+ "limitations": [
+  "filler distributions are invented; real regions mention important identifiers more than once",
+  "no LLM summary text is included (index only)",
+  "once-mentioned needles rank last in both fold-in orders, so this measure does not show the cost of appending: a new-class value repeated often in a dense region is kept by the round-3 order and cut by the round-5 order (see F02s new_sections)"
+ ],
+ "verdict": "PARTIAL (mechanism works where budget remains; the round-5 fold-in order keeps every #117462 needle and the same new-class survival as the round-3 order)"
+}

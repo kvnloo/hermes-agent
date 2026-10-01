@@ -79,7 +79,7 @@
   "protocol": "promotion-readiness PROTOCOL.md sha256:182e3fbae771d7219497833b3f9d6f7ed385d70abace8736559026e4e60b90d4"
  },
  "env": {
-  "host": "groot",
+  "host": "<local-host>",
   "test_python": "3.11.14 (HERMES_PYTHON, not activated)",
   "host_python": "3.14.7",
   "sandbox": "no bwrap (xf executor not built); HOME/HERMES_HOME = fresh scratch dirs",

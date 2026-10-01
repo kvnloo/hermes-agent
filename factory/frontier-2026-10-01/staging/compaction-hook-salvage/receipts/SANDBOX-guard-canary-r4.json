@@ -1,0 +1,142 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "SANDBOX/guard-canary-r4",
+ "label": "OBSERVED",
+ "spec": {
+  "path": null,
+  "rev": 4,
+  "decision_rule": "each guard layer blocks and logs; loopback still works; nothing is suppressed"
+ },
+ "runner_revision": {
+  "egress_guard": {
+   "path": "tools/chs_egress_guard_r4.py",
+   "sha256": "3a808849b49a9edbc0649dc5249857e0718ffa0412f54df93453d8e9f3d980a1"
+  },
+  "canary": {
+   "path": "tools/chs_guard_canary_r4.py",
+   "sha256": "058e9e1dbb03e569b13ec93b85b949950caef13734cef300e5fd0939575a6faa"
+  }
+ },
+ "staging": "compaction-hook-salvage",
+ "base_revision": "a3b56cac95488242856b6fb1f121842a38c3e391",
+ "head_revision": "111f361fb0003405e4724b4c6523f6ce5d118c22",
+ "what": "tools/chs_egress_guard_r4.py loaded by scripts/run_tests.sh through the isolated HOME's pytest_live_guard.py shim",
+ "cases": [
+  "guard r4 loaded from the isolated test HOME (log path not under the real ~/.hermes)",
+  "connect to 1.1.1.1:443 refused",
+  "getaddrinfo('example.com') refused",
+  "loopback connect + localhost DNS still work",
+  "a thread named openrouter-prewarm starts, its getaddrinfo('openrouter.ai') is refused and logged with its name"
+ ],
+ "result": {
+  "files": 1,
+  "passed": 5,
+  "failed": 0,
+  "skipped_per_worker_lines": [],
+  "failing": []
+ },
+ "egress_log_counts": {
+  "connect": 1,
+  "dns": 2,
+  "by_thread": {
+   "connect:MainThread": 1,
+   "dns:MainThread": 1,
+   "dns:openrouter-prewarm": 1
+  }
+ },
+ "expected_egress_log_counts": {
+  "connect": 1,
+  "dns": 2,
+  "by_thread": {
+   "connect:MainThread": 1,
+   "dns:MainThread": 1,
+   "dns:openrouter-prewarm": 1
+  }
+ },
+ "contract_test_prewarm_check": {
+  "what": "the contract test alone on main under the r4 guard (-j 2): the round-1 file (blob 95d731de93, staging commit de819a7d06) versus the round-2 file (blob 6e8fca00bb, this staging commit)",
+  "old_test": {
+   "egress": {
+    "connect": 0,
+    "dns": 2,
+    "by_thread": {
+     "dns:openrouter-prewarm": 2
+    }
+   },
+   "result": {
+    "files": 1,
+    "passed": 4,
+    "failed": 3,
+    "skipped_per_worker_lines": [],
+    "failing": [
+     "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[in_place]",
+     "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+     "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[rotated]"
+    ]
+   }
+  },
+  "new_test": {
+   "egress": {
+    "connect": 0,
+    "dns": 0,
+    "by_thread": {}
+   },
+   "result": {
+    "files": 1,
+    "passed": 4,
+    "failed": 3,
+    "skipped_per_worker_lines": [],
+    "failing": [
+     "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[in_place]",
+     "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[manual_deferred]",
+     "tests/agent/test_compaction_observer_hook_contract.py::test_observer_fires_once_after_the_durable_commit[rotated]"
+    ]
+   }
+  },
+  "reading": "the round-1 test triggered one blocked getaddrinfo('openrouter.ai') per pytest worker, from the openrouter-prewarm thread that AIAgent init starts for an OpenRouter base_url; the round-2 test stubs agent.agent_init.fetch_model_metadata during init and triggers none",
+  "logs_private": [
+   "raw/prewarm-r4/old-test-on-main.log",
+   "raw/prewarm-r4/new-test-on-main.log"
+  ]
+ },
+ "command": "cp tools/chs_guard_canary_r4.py tests/agent/test_zz_chs_guard_canary.py; HOME=$TESTHOME HERMES_HOME=$TESTHOME/.hermes HERMES_PYTHON=$PY bash scripts/run_tests.sh -j 2 tests/agent/test_zz_chs_guard_canary.py -q",
+ "policy_revision": {
+  "AGENTS.md": "65aa3e61bcba610da21279a17385671263be39e9",
+  "CONTRIBUTING.md": "b0baa59b5057c204b3c09d3dd170c0955cfdb39c",
+  "factory": "FACTORY.md sha256:7726ba18b43a9367f91d7f70c3aaefb96a9863761ddf71225c61c26a30d688d4",
+  "protocol": "promotion-readiness-2026-10-01/PROTOCOL.md sha256:182e3fbae771d7219497833b3f9d6f7ed385d70abace8736559026e4e60b90d4"
+ },
+ "env": {
+  "host": "withheld (redacted in round 3; receipts name no host)",
+  "python": "3.11.14 (the live venv's interpreter, used read-only through HERMES_PYTHON; never as a source)",
+  "sandbox": "no bwrap/netns (FACTORY \u00a76 layer 1 not used). In-process layer only: tools/chs_egress_guard_r4.py (non-loopback connect and DNS refused and logged with the calling thread's name; nothing suppressed, so the openrouter-prewarm thread starts and any lookup it makes is counted), loaded through the isolated test HOME's pytest_live_guard.py shim; scripts/run_tests.sh runs pytest under env -i with isolated HOME and HERMES_HOME (placeholders: $TESTHOME, $TESTHOME/.hermes)"
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "gates": {
+  "validity": "PASS"
+ },
+ "denominators": {
+  "cells": 5,
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "infra": 0,
+  "completeness": 1.0
+ },
+ "verdict": "PASS",
+ "limitations": [
+  "in-process guard only: a native extension or subprocess could bypass it (no netns)"
+ ],
+ "reruns": [
+  "re-run at 2026-10-01T13:39Z on the staging commit (tools/chs_rerun_r4_tail.sh): the first run at 13:20:44Z started after the worktree checkout failed with ENOSPC on the shared /tmp tmpfs. It also passed 5/5 with the same guard log, but on a half-checked-out tree; it is kept privately under raw/guard-canary-r4-enospc-1/"
+ ],
+ "provenance": "self",
+ "frozen": null,
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the contract test, the fold-in and the harness; disclosed per repository policy",
+ "privacy": "public-aggregate: repo-relative paths and placeholders only; synthetic fixtures; no session ids, home paths, emails, message text or secrets. Raw logs under raw/ are private and contain local paths."
+}

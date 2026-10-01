@@ -1,0 +1,20 @@
+▶ not activated — using HERMES_PYTHON: $PY
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 2 test files (~47 tests) under ['tests/e2e/core/history/test_tool_result_projection_wire.py', 'tests/agent/test_tool_result_projection.py']; running with -j 2
+[ 95.7% |    45/~47 | ✓53 | ✗ 0] ✓ tests/agent/test_tool_result_projection.py (53✓, 4.6s)
+[100.0% |    47/~47 | ✓55 | ✗ 0] ✓ tests/e2e/core/history/test_tool_result_projection_wire.py (2✓, 11.5s)
+
+=== Summary: 2 files, 55 tests passed, 0 failed (100% complete) in 11.6s (2 workers) ===
+  Durations cached to test_durations.json (2 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   2
+  Total subprocess CPU-wall: 16.2s  (runner wall: 11.6s, parallelism: 2x)
+  P50: 11.52s  P90: 11.52s  P95: 11.52s  P99: 11.52s  Max: 11.52s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+     11.52s  tests/e2e/core/history/test_tool_result_projection_wire.py
+      4.64s  tests/agent/test_tool_result_projection.py

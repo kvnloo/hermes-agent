@@ -471,7 +471,7 @@
   "donor": "refs/fork/fix/computer-use-repeat-input-dedup-current-main@570dc83ba65fc4ce86efb2c00e89dc84d19bd5ca (merge-base cb3142d3257b15ac42de544bd585793567400d0f)"
  },
  "env": {
-  "host": "groot",
+  "host": "<local-host>",
   "python": "3.11.14 (HERMES_PYTHON=<hermes-home>/hermes-agent/venv/bin/python, interpreter only)",
   "sandbox": "run_tests.sh env -i + isolated HOME/HERMES_HOME (scratchpad/testhome-st-cu-repeat-input-dedup) + in-process loopback-only connect guard; no bwrap",
   "file_retries": 0,

@@ -1,0 +1,45 @@
+diff --git i/agent/tool_result_projection.py w/agent/tool_result_projection.py
+index a76fb42f76..01766d6592 100644
+--- i/agent/tool_result_projection.py
++++ w/agent/tool_result_projection.py
+@@ -450,6 +450,30 @@ def _backend_is_remote() -> Optional[bool]:
+         return None
+ 
+ 
++def replays_bound_thinking(agent: Any, api_messages: Sequence[Dict[str, Any]]) -> bool:
++    """Whether this request replays signed Anthropic thinking that a fresh pass would invalidate.
++
++    A signed thinking block is bound to the conversation prefix it was produced over (system,
++    tools and every earlier message). Rewriting an earlier tool row is a history edit: on
++    preserved-thinking models the Messages API drops every later thinking block, or rejects the
++    request on accounts it enforces, and the turn loses that reasoning. Sticky rows are already
++    part of the bound prefix, so only a FRESH pass is declined here.
++    """
++    if str(getattr(agent, "api_mode", "") or "") != "anthropic_messages":
++        return False
++    for msg in api_messages:
++        if not isinstance(msg, dict) or msg.get("role") != "assistant":
++            continue
++        for detail in msg.get("reasoning_details") or ():
++            if (
++                isinstance(detail, dict)
++                and str(detail.get("type") or "").strip().lower() in ("thinking", "redacted_thinking")
++                and (detail.get("signature") or detail.get("data"))
++            ):
++                return True
++    return False
++
++
+ def _resolve_active_env(agent: Any):
+     """Best-effort live terminal env for this agent, or None.
+ 
+@@ -565,6 +589,9 @@ def _project(agent: Any, api_messages: List[Dict[str, Any]], env: Any) -> int:
+ 
+     trigger = trigger_tokens(policy, window, cache_capable)
+     approved = fresh_reclaim >= trigger
++    if approved and planned and replays_bound_thinking(agent, api_messages):
++        approved = False
++        logger.debug("Tool-result projection declined: the request replays signed thinking bound to this prefix")
+     if approved and cache_capable:
+         # The rewrite invalidates the cached prefix from the first stub onward, and that region
+         # is re-prefilled once. Require the reclaim to cover it.

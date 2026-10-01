@@ -1,0 +1,129 @@
+..                                                                       [100%]
+2 passed in 13.34s
+{
+ "outcomes": {
+  "test_projection_breaks_the_prefix_once_per_paid_batch_and_never_undoes_itself": "passed",
+  "test_projection_never_invalidates_replayed_preserved_thinking": "passed"
+ },
+ "hunks": [
+  {
+   "file": "agent/agent_init.py",
+   "new_start": 350,
+   "added_lines": 11,
+   "executable_added": 8,
+   "executed_added": 5
+  },
+  {
+   "file": "agent/agent_init.py",
+   "new_start": 1586,
+   "added_lines": 14,
+   "executable_added": 7,
+   "executed_added": 7
+  },
+  {
+   "file": "agent/agent_init.py",
+   "new_start": 2037,
+   "added_lines": 4,
+   "executable_added": 4,
+   "executed_added": 4
+  },
+  {
+   "file": "agent/context_compressor.py",
+   "new_start": 2776,
+   "added_lines": 5,
+   "executable_added": 3,
+   "executed_added": 3
+  },
+  {
+   "file": "agent/context_compressor.py",
+   "new_start": 2809,
+   "added_lines": 13,
+   "executable_added": 5,
+   "executed_added": 5
+  },
+  {
+   "file": "agent/tool_result_projection.py",
+   "new_start": 1,
+   "added_lines": 746,
+   "executable_added": 388,
+   "executed_added": 296
+  },
+  {
+   "file": "agent/turn_request_assembly.py",
+   "new_start": 187,
+   "added_lines": 9,
+   "executable_added": 2,
+   "executed_added": 2
+  },
+  {
+   "file": "cli-config.yaml.example",
+   "new_start": 830,
+   "added_lines": 34,
+   "executable_added": 0,
+   "executed_added": 0
+  },
+  {
+   "file": "gateway/run.py",
+   "new_start": 4410,
+   "added_lines": 4,
+   "executable_added": 0,
+   "executed_added": 0
+  },
+  {
+   "file": "hermes_cli/config_defaults.py",
+   "new_start": 621,
+   "added_lines": 24,
+   "executable_added": 4,
+   "executed_added": 4
+  },
+  {
+   "file": "scripts/bench_tool_result_projection.py",
+   "new_start": 1,
+   "added_lines": 159,
+   "executable_added": 106,
+   "executed_added": 0
+  },
+  {
+   "file": "tools/tool_result_storage.py",
+   "new_start": 290,
+   "added_lines": 73,
+   "executable_added": 43,
+   "executed_added": 13
+  },
+  {
+   "file": "tui_gateway/session_compression.py",
+   "new_start": 78,
+   "added_lines": 2,
+   "executable_added": 0,
+   "executed_added": 0
+  },
+  {
+   "file": "tui_gateway/session_compression.py",
+   "new_start": 121,
+   "added_lines": 4,
+   "executable_added": 3,
+   "executed_added": 0
+  },
+  {
+   "file": "tui_gateway/session_compression.py",
+   "new_start": 133,
+   "added_lines": 6,
+   "executable_added": 5,
+   "executed_added": 0
+  },
+  {
+   "file": "website/docs/user-guide/configuration.md",
+   "new_start": 1013,
+   "added_lines": 4,
+   "executable_added": 0,
+   "executed_added": 0
+  },
+  {
+   "file": "website/docs/user-guide/configuration.md",
+   "new_start": 1060,
+   "added_lines": 10,
+   "executable_added": 0,
+   "executed_added": 0
+  }
+ ]
+}

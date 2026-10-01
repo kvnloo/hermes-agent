@@ -1,0 +1,1247 @@
+▶ not activated — using HERMES_PYTHON: $HERMES_PYTHON
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 11 test files (~77 tests) under ['tests/agent/test_compressor_historical_media.py', 'tests/agent/test_compressor_stale_tool_images.py', 'tests/agent/test_outbound_stale_vision.py', 'tests/agent/test_protected_tail_pressure.py', 'tests/agent/test_image_eviction_policy.py', 'tests/agent/test_compressor_zero_user_guard.py', 'tests/agent/test_image_rejection_fallback.py', 'tests/agent/test_iteration_summary_reasoning_details.py', 'tests/agent/test_dict_tool_call_args.py', 'tests/agent/test_context_token_tracking.py', 'tests/agent/test_degenerate_final_recovery.py']; running with -j 2
+[  7.8% |     6/~77 | ✓6 | ✗0] ✓ tests/agent/test_compressor_stale_tool_images.py (6✓, 0.9s)
+[ 27.3% |    21/~77 | ✓ 7 | ✗14] ✗ tests/agent/test_compressor_historical_media.py (1✓ 14✗, 3.8s)
+
+  ╔╍ Failed: tests/agent/test_compressor_historical_media.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  ║ agent/context_compressor.py:5177: in _finalize_compressed
+  ║     compressed = _strip_historical_media(compressed, spared=spared)
+  ║                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  ║ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+  ║ 
+  ║ messages = [{'role': 'system', 'content': 'sys\n\n[Note: Some earlier conversation turns have been compacted into a handoff summa...AAAAAAAAAA'}}], '_compaction_tail': True}, {'role': 'user', 'content': 'and this one?', '_compaction_tail': True}, ...]
+  ║ spared = range(7, 8)
+  ║ 
+  ║     def _strip_historical_media(messages: List[Dict[str, Any]], spared: range = range(0)) -> List[Dict[str, Any]]:
+  ║ >       raise RuntimeError("sabotage _strip_historical_media")
+  ║ E       RuntimeError: sabotage _strip_historical_media
+  ║ 
+  ║ agent/context_compressor_media.py:171: RuntimeError
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_strips_stale_tool_result_images_when_no_user_image_exists
+  ║ FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_first_message_user_image_no_longer_blocks_tool_stripping
+  ║ FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_first_message_image_kept_when_it_is_the_only_image
+  ║ FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_multimodal_envelope_tool_results_age_out
+  ║ FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_all_three_wire_shapes_strip_in_tool_results
+  ║ FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_deterministic_double_run
+  ║ FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_newest_tool_image_survives_inside_the_protected_tail
+  ║ FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_tool_image_before_the_user_anchor_is_still_stripped
+  ║ FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_unchanged_when_nothing_carries_images
+  ║ FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_single_tool_image_is_left_alone
+  ║ FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_stripped_tool_message_drops_its_api_content_sidecar
+  ║ FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_non_dict_messages_pass_through
+  ║ FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_strips_historical_images
+  ║ FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_frees_stale_vision_tool_results
+  ║ 14 failed, 1 passed in 1.44s
+  ║
+  ║  Repro: python -m pytest tests/agent/test_compressor_historical_media.py -q -rfE
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+[ 35.1% |    27/~77 | ✓ 7 | ✗20] ✗ tests/agent/test_compressor_zero_user_guard.py (6✗, 4.4s)
+
+  ╔╍ Failed: tests/agent/test_compressor_zero_user_guard.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║         with patch.object(c, "_generate_summary", return_value=mocked):
+  ║ >           out = c.compress(messages, current_tokens=90_000)
+  ║                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  ║ 
+  ║ tests/agent/test_compressor_zero_user_guard.py:270: 
+  ║ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+  ║ agent/context_compressor.py:5320: in compress
+  ║     return self._finalize_compressed(compressed, canonical_messages, n_messages, spare_pending_images)
+  ║            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  ║ agent/context_compressor.py:5177: in _finalize_compressed
+  ║     compressed = _strip_historical_media(compressed, spared=spared)
+  ║                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  ║ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+  ║ 
+  ║ messages = [{'role': 'assistant', 'content': None, 'tool_calls': [{'id': 'c8', 'function': {'name': 'read_task', 'arguments': '{}... '[Duplicate tool output — same content as a more recent call]', 'tool_call_id': 'c10', '_compaction_tail': True}, ...]
+  ║ spared = range(0, 0)
+  ║ 
+  ║     def _strip_historical_media(messages: List[Dict[str, Any]], spared: range = range(0)) -> List[Dict[str, Any]]:
+  ║ >       raise RuntimeError("sabotage _strip_historical_media")
+  ║ E       RuntimeError: sabotage _strip_historical_media
+  ║ 
+  ║ agent/context_compressor_media.py:171: RuntimeError
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_kanban_worker_recompaction_keeps_user_turn
+  ║ FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_no_consecutive_user_roles_introduced
+  ║ FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_preserved_tail_user_is_not_overridden
+  ║ FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_image_only_tail_user_turn_still_yields_non_empty_text
+  ║ FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_image_only_protected_head_still_yields_non_empty_text
+  ║ FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_merge_targets_the_colliding_tail_message_not_index_zero
+  ║ 6 failed in 1.87s
+  ║
+  ║  Repro: python -m pytest tests/agent/test_compressor_zero_user_guard.py -q -rfE
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+[ 40.3% |    31/~77 | ✓11 | ✗20] ✓ tests/agent/test_context_token_tracking.py (4✓, 3.9s)
+[ 48.1% |    37/~77 | ✓60 | ✗20] ✓ tests/agent/test_degenerate_final_recovery.py (49✓, 4.4s)
+[ 49.4% |    38/~77 | ✓61 | ✗20] ✓ tests/agent/test_dict_tool_call_args.py (1✓, 2.2s)
+[ 51.9% |    40/~77 | ✓73 | ✗20] ✓ tests/agent/test_image_eviction_policy.py (12✓, 0.9s)
+[ 74.0% |    57/~77 | ✓ 90 | ✗ 20] ✓ tests/agent/test_image_rejection_fallback.py (17✓, 3.7s)
+[ 79.2% |    61/~77 | ✓ 94 | ✗ 20] ✓ tests/agent/test_iteration_summary_reasoning_details.py (4✓, 5.0s)
+[ 94.8% |    73/~77 | ✓106 | ✗ 20] ✓ tests/agent/test_outbound_stale_vision.py (12✓, 2.1s)
+[100.0% |    77/~77 | ✓106 | ✗ 26] ✗ tests/agent/test_protected_tail_pressure.py (6✗, 3.1s)
+
+  ╔╍ Failed: tests/agent/test_protected_tail_pressure.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║     
+  ║ >       out = compressor_128k.compress(msgs, current_tokens=estimate_messages_tokens_rough(msgs))
+  ║               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  ║ 
+  ║ tests/agent/test_protected_tail_pressure.py:318: 
+  ║ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+  ║ agent/context_compressor.py:5320: in compress
+  ║     return self._finalize_compressed(compressed, canonical_messages, n_messages, spare_pending_images)
+  ║            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  ║ agent/context_compressor.py:5177: in _finalize_compressed
+  ║     compressed = _strip_historical_media(compressed, spared=spared)
+  ║                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  ║ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+  ║ 
+  ║ messages = [{'role': 'system', 'content': 'You are Hermes.\n\n[Note: Some earlier conversation turns have been compacted into a h...ummary_has_user_turn': True}, {'role': 'user', 'content': 'Inspect these four images.', '_compaction_tail': True}, ...]
+  ║ spared = range(7, 11)
+  ║ 
+  ║     def _strip_historical_media(messages: List[Dict[str, Any]], spared: range = range(0)) -> List[Dict[str, Any]]:
+  ║ >       raise RuntimeError("sabotage _strip_historical_media")
+  ║ E       RuntimeError: sabotage _strip_historical_media
+  ║ 
+  ║ agent/context_compressor_media.py:171: RuntimeError
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/agent/test_protected_tail_pressure.py::TestProtectedTailPressure61932::test_compress_escapes_cannot_compress_further_dead_end
+  ║ FAILED tests/agent/test_protected_tail_pressure.py::TestProtectedTailPressure61932::test_all_oversized_tail_dead_end_shape_now_compresses
+  ║ FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[round_last]
+  ║ FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[steer_after_round]
+  ║ FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[two_steers_after_round]
+  ║ FAILED tests/agent/test_protected_tail_pressure.py::test_compaction_keeps_four_images_in_a_spared_pending_round
+  ║ 6 failed in 1.25s
+  ║
+  ║  Repro: python -m pytest tests/agent/test_protected_tail_pressure.py -q -rfE
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 11 files, 106 tests passed, 26 failed (100% complete) in 18.7s (2 workers) ===
+  Durations cached to test_durations.json (8 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   11
+  Total subprocess CPU-wall: 34.3s  (runner wall: 18.7s, parallelism: 2x)
+  P50: 3.68s  P90: 4.40s  P95: 4.97s  P99: 4.97s  Max: 4.97s
+  <1s: 2 files (18%)  <2s: 2 files (18%)
+  Top 10 slowest:
+      4.97s  tests/agent/test_iteration_summary_reasoning_details.py
+      4.40s  tests/agent/test_compressor_zero_user_guard.py
+      4.39s  tests/agent/test_degenerate_final_recovery.py
+      3.88s  tests/agent/test_context_token_tracking.py
+      3.85s  tests/agent/test_compressor_historical_media.py
+      3.68s  tests/agent/test_image_rejection_fallback.py
+      3.11s  tests/agent/test_protected_tail_pressure.py
+      2.17s  tests/agent/test_dict_tool_call_args.py
+      2.07s  tests/agent/test_outbound_stale_vision.py
+      0.91s  tests/agent/test_compressor_stale_tool_images.py
+
+=== Failure output ===
+
+--- tests/agent/test_compressor_historical_media.py ---
+.FFFFFFFFFFFFFF                                                          [100%]
+=================================== FAILURES ===================================
+_ TestStripHistoricalMedia.test_strips_stale_tool_result_images_when_no_user_image_exists _
+
+self = <tests.agent.test_compressor_historical_media.TestStripHistoricalMedia object at 0x7f488e2cc590>
+
+    def test_strips_stale_tool_result_images_when_no_user_image_exists(self):
+        """#89938: vision_analyze results are the only images in the session.
+    
+        Before this rule the anchor stayed at -1 and the list came back
+        untouched, so every base64 blob rode along on every request.
+        """
+        msgs = [
+            {"role": "user", "content": "look at these"},
+            {"role": "tool", "tool_call_id": "a", "content": [TEXT, IMG_URL]},
+            {"role": "tool", "tool_call_id": "b", "content": [TEXT, IMG_URL]},
+            {"role": "tool", "tool_call_id": "c", "content": [TEXT, IMG_URL]},
+        ]
+>       out = _strip_historical_media(msgs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_compressor_historical_media.py:80: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = [{'role': 'user', 'content': 'look at these'}, {'role': 'tool', 'tool_call_id': 'a', 'content': [{'type': 'text', 'tex...AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'}}]}]
+spared = range(0, 0)
+
+    def _strip_historical_media(messages: List[Dict[str, Any]], spared: range = range(0)) -> List[Dict[str, Any]]:
+>       raise RuntimeError("sabotage _strip_historical_media")
+E       RuntimeError: sabotage _strip_historical_media
+
+agent/context_compressor_media.py:171: RuntimeError
+_ TestStripHistoricalMedia.test_first_message_user_image_no_longer_blocks_tool_stripping _
+
+self = <tests.agent.test_compressor_historical_media.TestStripHistoricalMedia object at 0x7f488e2ccb10>
+
+    def test_first_message_user_image_no_longer_blocks_tool_stripping(self):
+        """#89938's other half: ``anchor <= 0`` used to return early.
+    
+        One attachment on the opening message plus a run of vision tool calls
+        is the exact reproduction in the report - and the old early return
+        meant the 413 recovery compaction freed nothing.
+        """
+        msgs = [
+            {"role": "user", "content": [TEXT, IMG_URL]},
+            {"role": "tool", "tool_call_id": "a", "content": [TEXT, IMG_URL]},
+            {"role": "tool", "tool_call_id": "b", "content": [TEXT, IMG_URL]},
+        ]
+>       out = _strip_historical_media(msgs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_compressor_historical_media.py:99: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = [{'role': 'user', 'content': [{'type': 'text', 'text': 'hi'}, {'type': 'image_url', 'image_url': {'url': 'data:image/p...AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'}}]}]
+spared = range(0, 0)
+
+    def _strip_historical_media(messages: List[Dict[str, Any]], spared: range = range(0)) -> List[Dict[str, Any]]:
+>       raise RuntimeError("sabotage _strip_historical_media")
+E       RuntimeError: sabotage _strip_historical_media
+
+agent/context_compressor_media.py:171: RuntimeError
+_ TestStripHistoricalMedia.test_first_message_image_kept_when_it_is_the_only_image _
+
+self = <tests.agent.test_compressor_historical_media.TestStripHistoricalMedia object at 0x7f488e2ccd10>
+
+    def test_first_message_image_kept_when_it_is_the_only_image(self):
+        """Rule 1b only fires when something newer supersedes the opener."""
+        msgs = [
+            {"role": "user", "content": [TEXT, IMG_URL]},
+            {"role": "assistant", "content": "looked"},
+            {"role": "tool", "tool_call_id": "a", "content": [TEXT]},
+        ]
+>       assert _strip_historical_media(msgs) is msgs
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_compressor_historical_media.py:115: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = [{'role': 'user', 'content': [{'type': 'text', 'text': 'hi'}, {'type': 'image_url', 'image_url': {'url': 'data:image/p... 'assistant', 'content': 'looked'}, {'role': 'tool', 'tool_call_id': 'a', 'content': [{'type': 'text', 'text': 'hi'}]}]
+spared = range(0, 0)
+
+    def _strip_historical_media(messages: List[Dict[str, Any]], spared: range = range(0)) -> List[Dict[str, Any]]:
+>       raise RuntimeError("sabotage _strip_historical_media")
+E       RuntimeError: sabotage _strip_historical_media
+
+agent/context_compressor_media.py:171: RuntimeError
+____ TestStripHistoricalMedia.test_multimodal_envelope_tool_results_age_out ____
+
+self = <tests.agent.test_compressor_historical_media.TestStripHistoricalMedia object at 0x7f488e2cd110>
+
+    def test_multimodal_envelope_tool_results_age_out(self):
+        """The native ``{_multimodal: True}`` dict envelope must strip too.
+    
+        vision_analyze hands back this shape before adapters unwrap it; the
+        bare list matcher never saw it, so envelope-shaped results kept their
+        base64 through every compaction (#89965's shape-coverage gap).
+        """
+        env = {
+            "_multimodal": True,
+            "text_summary": "a poster",
+            "content": [TEXT, IMG_URL],
+        }
+        msgs = [
+            {"role": "user", "content": "look"},
+            {"role": "tool", "tool_call_id": "a", "content": dict(env), "api_content": "stale"},
+            {"role": "tool", "tool_call_id": "b", "content": dict(env)},
+        ]
+>       out = _strip_historical_media(msgs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_compressor_historical_media.py:134: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = [{'role': 'user', 'content': 'look'}, {'role': 'tool', 'tool_call_id': 'a', 'content': {'_multimodal': True, 'text_sum...AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'}}]}}]
+spared = range(0, 0)
+
+    def _strip_historical_media(messages: List[Dict[str, Any]], spared: range = range(0)) -> List[Dict[str, Any]]:
+>       raise RuntimeError("sabotage _strip_historical_media")
+E       RuntimeError: sabotage _strip_historical_media
+
+agent/context_compressor_media.py:171: RuntimeError
+__ TestStripHistoricalMedia.test_all_three_wire_shapes_strip_in_tool_results ___
+
+self = <tests.agent.test_compressor_historical_media.TestStripHistoricalMedia object at 0x7f488e2cd690>
+
+    def test_all_three_wire_shapes_strip_in_tool_results(self):
+        """Chat Completions, Responses, and Anthropic-native parts all age."""
+        for img in (IMG_URL, INPUT_IMG, ANTHROPIC_IMG):
+            msgs = [
+                {"role": "tool", "tool_call_id": "a", "content": [TEXT, dict(img)]},
+                {"role": "tool", "tool_call_id": "b", "content": [TEXT, dict(img)]},
+            ]
+>           out = _strip_historical_media(msgs)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_compressor_historical_media.py:151: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = [{'role': 'tool', 'tool_call_id': 'a', 'content': [{'type': 'text', 'text': 'hi'}, {'type': 'image_url', 'image_url': ...AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'}}]}]
+spared = range(0, 0)
+
+    def _strip_historical_media(messages: List[Dict[str, Any]], spared: range = range(0)) -> List[Dict[str, Any]]:
+>       raise RuntimeError("sabotage _strip_historical_media")
+E       RuntimeError: sabotage _strip_historical_media
+
+agent/context_compressor_media.py:171: RuntimeError
+____________ TestStripHistoricalMedia.test_deterministic_double_run ____________
+
+self = <tests.agent.test_compressor_historical_media.TestStripHistoricalMedia object at 0x7f488e2cdc10>
+
+    def test_deterministic_double_run(self):
+        """Running the strip twice yields byte-identical output."""
+        import json
+    
+        msgs = [
+            {"role": "user", "content": [TEXT, IMG_URL]},
+            {"role": "tool", "tool_call_id": "a", "content": [TEXT, IMG_URL]},
+            {"role": "tool", "tool_call_id": "b", "content": [TEXT, INPUT_IMG]},
+        ]
+>       first = _strip_historical_media(msgs)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_compressor_historical_media.py:164: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = [{'role': 'user', 'content': [{'type': 'text', 'text': 'hi'}, {'type': 'image_url', 'image_url': {'url': 'data:image/p...BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB'}]}]
+spared = range(0, 0)
+
+    def _strip_historical_media(messages: List[Dict[str, Any]], spared: range = range(0)) -> List[Dict[str, Any]]:
+>       raise RuntimeError("sabotage _strip_historical_media")
+E       RuntimeError: sabotage _strip_historical_media
+
+agent/context_compressor_media.py:171: RuntimeError
+_ TestStripHistoricalMedia.test_newest_tool_image_survives_inside_the_protected_tail _
+
+self = <tests.agent.test_compressor_historical_media.TestStripHistoricalMedia object at 0x7f488e2ce190>
+
+    def test_newest_tool_image_survives_inside_the_protected_tail(self):
+        msgs = [
+            {"role": "user", "content": "hi"},
+            {"role": "user", "content": [TEXT, IMG_URL]},
+            {"role": "tool", "tool_call_id": "a", "content": [TEXT, IMG_URL]},
+            {"role": "tool", "tool_call_id": "b", "content": [TEXT, IMG_URL]},
+        ]
+>       out = _strip_historical_media(msgs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_compressor_historical_media.py:176: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = [{'role': 'user', 'content': 'hi'}, {'role': 'user', 'content': [{'type': 'text', 'text': 'hi'}, {'type': 'image_url',...AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'}}]}]
+spared = range(0, 0)
+
+    def _strip_historical_media(messages: List[Dict[str, Any]], spared: range = range(0)) -> List[Dict[str, Any]]:
+>       raise RuntimeError("sabotage _strip_historical_media")
+E       RuntimeError: sabotage _strip_historical_media
+
+agent/context_compressor_media.py:171: RuntimeError
+_ TestStripHistoricalMedia.test_tool_image_before_the_user_anchor_is_still_stripped _
+
+self = <tests.agent.test_compressor_historical_media.TestStripHistoricalMedia object at 0x7f488e2ce710>
+
+    def test_tool_image_before_the_user_anchor_is_still_stripped(self):
+        """Rule 1 keeps precedence over rule 2 where the two disagree."""
+        msgs = [
+            {"role": "tool", "tool_call_id": "a", "content": [TEXT, IMG_URL]},
+            {"role": "assistant", "content": "ok"},
+            {"role": "user", "content": [TEXT, IMG_URL]},
+        ]
+>       out = _strip_historical_media(msgs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_compressor_historical_media.py:192: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = [{'role': 'tool', 'tool_call_id': 'a', 'content': [{'type': 'text', 'text': 'hi'}, {'type': 'image_url', 'image_url': ...AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'}}]}]
+spared = range(0, 0)
+
+    def _strip_historical_media(messages: List[Dict[str, Any]], spared: range = range(0)) -> List[Dict[str, Any]]:
+>       raise RuntimeError("sabotage _strip_historical_media")
+E       RuntimeError: sabotage _strip_historical_media
+
+agent/context_compressor_media.py:171: RuntimeError
+_____ TestStripHistoricalMedia.test_unchanged_when_nothing_carries_images ______
+
+self = <tests.agent.test_compressor_historical_media.TestStripHistoricalMedia object at 0x7f488e2cec90>
+
+    def test_unchanged_when_nothing_carries_images(self):
+        msgs = [
+            {"role": "user", "content": [TEXT]},
+            {"role": "tool", "tool_call_id": "a", "content": [TEXT]},
+        ]
+>       assert _strip_historical_media(msgs) is msgs
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_compressor_historical_media.py:204: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = [{'role': 'user', 'content': [{'type': 'text', 'text': 'hi'}]}, {'role': 'tool', 'tool_call_id': 'a', 'content': [{'type': 'text', 'text': 'hi'}]}]
+spared = range(0, 0)
+
+    def _strip_historical_media(messages: List[Dict[str, Any]], spared: range = range(0)) -> List[Dict[str, Any]]:
+>       raise RuntimeError("sabotage _strip_historical_media")
+E       RuntimeError: sabotage _strip_historical_media
+
+agent/context_compressor_media.py:171: RuntimeError
+________ TestStripHistoricalMedia.test_single_tool_image_is_left_alone _________
+
+self = <tests.agent.test_compressor_historical_media.TestStripHistoricalMedia object at 0x7f488e2cf1d0>
+
+    def test_single_tool_image_is_left_alone(self):
+        msgs = [
+            {"role": "user", "content": "look"},
+            {"role": "tool", "tool_call_id": "a", "content": [TEXT, IMG_URL]},
+        ]
+>       assert _strip_historical_media(msgs) is msgs
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_compressor_historical_media.py:211: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = [{'role': 'user', 'content': 'look'}, {'role': 'tool', 'tool_call_id': 'a', 'content': [{'type': 'text', 'text': 'hi'}...AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'}}]}]
+spared = range(0, 0)
+
+    def _strip_historical_media(messages: List[Dict[str, Any]], spared: range = range(0)) -> List[Dict[str, Any]]:
+>       raise RuntimeError("sabotage _strip_historical_media")
+E       RuntimeError: sabotage _strip_historical_media
+
+agent/context_compressor_media.py:171: RuntimeError
+_ TestStripHistoricalMedia.test_stripped_tool_message_drops_its_api_content_sidecar _
+
+self = <tests.agent.test_compressor_historical_media.TestStripHistoricalMedia object at 0x7f488e2cf750>
+
+    def test_stripped_tool_message_drops_its_api_content_sidecar(self):
+        """Replaying the sidecar would resend the bytes the strip removed."""
+        msgs = [
+            {
+                "role": "tool",
+                "tool_call_id": "a",
+                "content": [TEXT, IMG_URL],
+                "api_content": "the exact multimodal bytes sent last turn",
+            },
+            {"role": "tool", "tool_call_id": "b", "content": [TEXT, IMG_URL]},
+        ]
+>       out = _strip_historical_media(msgs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_compressor_historical_media.py:225: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = [{'role': 'tool', 'tool_call_id': 'a', 'content': [{'type': 'text', 'text': 'hi'}, {'type': 'image_url', 'image_url': ...AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'}}]}]
+spared = range(0, 0)
+
+    def _strip_historical_media(messages: List[Dict[str, Any]], spared: range = range(0)) -> List[Dict[str, Any]]:
+>       raise RuntimeError("sabotage _strip_historical_media")
+E       RuntimeError: sabotage _strip_historical_media
+
+agent/context_compressor_media.py:171: RuntimeError
+_________ TestStripHistoricalMedia.test_non_dict_messages_pass_through _________
+
+self = <tests.agent.test_compressor_historical_media.TestStripHistoricalMedia object at 0x7f488e2cfd10>
+
+    def test_non_dict_messages_pass_through(self):
+        msgs = [
+            "not-a-dict",  # shouldn't crash
+            {"role": "user", "content": [TEXT, IMG_URL]},
+            {"role": "assistant", "content": "ok"},
+            {"role": "user", "content": [TEXT, IMG_URL]},
+        ]
+>       out = _strip_historical_media(msgs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_compressor_historical_media.py:238: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = ['not-a-dict', {'role': 'user', 'content': [{'type': 'text', 'text': 'hi'}, {'type': 'image_url', 'image_url': {'url':...AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'}}]}]
+spared = range(0, 0)
+
+    def _strip_historical_media(messages: List[Dict[str, Any]], spared: range = range(0)) -> List[Dict[str, Any]]:
+>       raise RuntimeError("sabotage _strip_historical_media")
+E       RuntimeError: sabotage _strip_historical_media
+
+agent/context_compressor_media.py:171: RuntimeError
+________ TestCompressIntegration.test_compress_strips_historical_images ________
+
+self = <tests.agent.test_compressor_historical_media.TestCompressIntegration object at 0x7f488e2d8610>
+compressor = <agent.context_compressor.ContextCompressor object at 0x7f488ddb9d50>
+
+    def test_compress_strips_historical_images(self, compressor):
+        # Enough messages to trigger the summarize path. protect_first_n=1 +
+        # protect_last_n=2 + a middle window of at least 3 with a summary.
+        msgs = [
+            {"role": "system", "content": "sys"},
+            {"role": "user", "content": [TEXT, IMG_URL]},           # old image-bearing user
+            {"role": "assistant", "content": "looked at it"},
+            {"role": "user", "content": "follow-up"},
+            {"role": "assistant", "content": "ack"},
+            {"role": "user", "content": "more"},
+            {"role": "assistant", "content": "ok"},
+            {"role": "user", "content": [TEXT, IMG_URL]},           # newest image-bearing user (tail)
+            {"role": "assistant", "content": "done"},
+        ]
+        # Bypass the real LLM summary — return a stub so compress() proceeds.
+        with patch.object(compressor, "_generate_summary", return_value="SUMMARY TEXT"):
+>           out = compressor.compress(msgs, current_tokens=60_000)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_compressor_historical_media.py:275: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+agent/context_compressor.py:5320: in compress
+    return self._finalize_compressed(compressed, canonical_messages, n_messages, spare_pending_images)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/context_compressor.py:5177: in _finalize_compressed
+    compressed = _strip_historical_media(compressed, spared=spared)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = [{'role': 'system', 'content': 'sys\n\n[Note: Some earlier conversation turns have been compacted into a handoff summa...AAAAAAAAAAAAAAAAAAA'}}], '_compaction_tail': True}, {'role': 'assistant', 'content': 'done', '_compaction_tail': True}]
+spared = range(0, 0)
+
+    def _strip_historical_media(messages: List[Dict[str, Any]], spared: range = range(0)) -> List[Dict[str, Any]]:
+>       raise RuntimeError("sabotage _strip_historical_media")
+E       RuntimeError: sabotage _strip_historical_media
+
+agent/context_compressor_media.py:171: RuntimeError
+------------------------------ Captured log call -------------------------------
+WARNING  agent.model_metadata:model_metadata.py:264 Could not determine context length for model 'test/model' (base_url=default) — falling back to 256,000 tokens. Set model.context_length in config.yaml to override.
+____ TestCompressIntegration.test_compress_frees_stale_vision_tool_results _____
+
+self = <tests.agent.test_compressor_historical_media.TestCompressIntegration object at 0x7f488e2cdd50>
+compressor = <agent.context_compressor.ContextCompressor object at 0x7f488d30f1d0>
+
+    def test_compress_frees_stale_vision_tool_results(self, compressor):
+        """#89938 end to end: the 413 recovery compaction must free bytes.
+    
+        The reported session had one attachment on the opening message and a
+        run of ``vision_analyze`` results after it. ``anchor <= 0`` made this
+        pass a no-op, so every recovery compaction returned a body that was
+        still multi-MB and the provider answered 413 again - seven times in
+        thirteen minutes.
+        """
+    
+        def call(idx: str):
+            return [
+                {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [
+                        {
+                            "id": idx,
+                            "type": "function",
+                            "function": {"name": "vision_analyze", "arguments": "{}"},
+                        }
+                    ],
+                },
+                {"role": "tool", "tool_call_id": idx, "content": [TEXT, IMG_URL]},
+            ]
+    
+        msgs = [
+            {"role": "system", "content": "sys"},
+            {"role": "user", "content": [TEXT, IMG_URL]},  # the ONLY user image, first
+            *call("a"),
+            *call("b"),
+            {"role": "user", "content": "and this one?"},
+            *call("c"),
+        ]
+        with patch.object(compressor, "_generate_summary", return_value="SUMMARY TEXT"):
+>           out = compressor.compress(msgs, current_tokens=60_000)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_compressor_historical_media.py:326: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+agent/context_compressor.py:5320: in compress
+    return self._finalize_compressed(compressed, canonical_messages, n_messages, spare_pending_images)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/context_compressor.py:5177: in _finalize_compressed
+    compressed = _strip_historical_media(compressed, spared=spared)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = [{'role': 'system', 'content': 'sys\n\n[Note: Some earlier conversation turns have been compacted into a handoff summa...AAAAAAAAAA'}}], '_compaction_tail': True}, {'role': 'user', 'content': 'and this one?', '_compaction_tail': True}, ...]
+spared = range(7, 8)
+
+    def _strip_historical_media(messages: List[Dict[str, Any]], spared: range = range(0)) -> List[Dict[str, Any]]:
+>       raise RuntimeError("sabotage _strip_historical_media")
+E       RuntimeError: sabotage _strip_historical_media
+
+agent/context_compressor_media.py:171: RuntimeError
+=========================== short test summary info ============================
+FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_strips_stale_tool_result_images_when_no_user_image_exists
+FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_first_message_user_image_no_longer_blocks_tool_stripping
+FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_first_message_image_kept_when_it_is_the_only_image
+FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_multimodal_envelope_tool_results_age_out
+FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_all_three_wire_shapes_strip_in_tool_results
+FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_deterministic_double_run
+FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_newest_tool_image_survives_inside_the_protected_tail
+FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_tool_image_before_the_user_anchor_is_still_stripped
+FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_unchanged_when_nothing_carries_images
+FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_single_tool_image_is_left_alone
+FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_stripped_tool_message_drops_its_api_content_sidecar
+FAILED tests/agent/test_compressor_historical_media.py::TestStripHistoricalMedia::test_non_dict_messages_pass_through
+FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_strips_historical_images
+FAILED tests/agent/test_compressor_historical_media.py::TestCompressIntegration::test_compress_frees_stale_vision_tool_results
+14 failed, 1 passed in 1.44s
+
+--- tests/agent/test_compressor_zero_user_guard.py ---
+FFFFFF                                                                   [100%]
+=================================== FAILURES ===================================
+_ TestCompressAlwaysKeepsAUserTurn.test_kanban_worker_recompaction_keeps_user_turn _
+
+self = <tests.agent.test_compressor_zero_user_guard.TestCompressAlwaysKeepsAUserTurn object at 0x7f045ffd29d0>
+compressor = <agent.context_compressor.ContextCompressor object at 0x7f045f15a6d0>
+
+    def test_kanban_worker_recompaction_keeps_user_turn(self, compressor):
+        """The exact #58753 shape: no system prompt in the list, a
+        re-compaction (``protect_first_n`` decayed to 0), and the only
+        user turn old enough to fall into the compressed middle. Before
+        the fix, the summary was emitted as ``assistant`` and the output
+        had zero user-role messages."""
+        from agent.context_compressor import SUMMARY_PREFIX
+    
+        c = compressor
+        # A prior compaction has already happened → protect_first_n decays
+        # to 0 so compress_start lands at 0 (no protected head).
+        c.compression_count = 1
+        # No system message: the main loop prepends it separately.
+        messages = [{"role": "user", "content": "work kanban task 42"}]
+        messages += _tool_turns(0, 12)
+    
+        mocked = f"{SUMMARY_PREFIX}\nrolled-up summary of the tool work"
+        with patch.object(c, "_generate_summary", return_value=mocked):
+>           out = c.compress(messages, current_tokens=90_000)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_compressor_zero_user_guard.py:99: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+agent/context_compressor.py:5320: in compress
+    return self._finalize_compressed(compressed, canonical_messages, n_messages, spare_pending_images)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/context_compressor.py:5177: in _finalize_compressed
+    compressed = _strip_historical_media(compressed, spared=spared)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = [{'role': 'user', 'content': '[CONTEXT COMPACTION — REFERENCE ONLY] Earlier turns were compacted into the summary belo...ne, 'tool_calls': [{'id': 'c9', 'function': {'name': 'read_task', 'arguments': '{}'}}], '_compaction_tail': True}, ...]
+spared = range(10, 11)
+
+    def _strip_historical_media(messages: List[Dict[str, Any]], spared: range = range(0)) -> List[Dict[str, Any]]:
+>       raise RuntimeError("sabotage _strip_historical_media")
+E       RuntimeError: sabotage _strip_historical_media
+
+agent/context_compressor_media.py:171: RuntimeError
+------------------------------ Captured log call -------------------------------
+WARNING  agent.model_metadata:model_metadata.py:264 Could not determine context length for model 'test/model' (base_url=default) — falling back to 256,000 tokens. Set model.context_length in config.yaml to override.
+__ TestCompressAlwaysKeepsAUserTurn.test_no_consecutive_user_roles_introduced __
+
+self = <tests.agent.test_compressor_zero_user_guard.TestCompressAlwaysKeepsAUserTurn object at 0x7f045fdfb090>
+compressor = <agent.context_compressor.ContextCompressor object at 0x7f045e286990>
+
+    def test_no_consecutive_user_roles_introduced(self, compressor):
+        """Forcing the summary to role=user must not create two
+        consecutive user-role messages (strict alternation invariant).
+        When a user survives in the tail we do NOT force, so the pinned
+        summary can never collide with a user-role neighbour."""
+        from agent.context_compressor import SUMMARY_PREFIX
+    
+        c = compressor
+        c.compression_count = 1
+        messages = [{"role": "user", "content": "work kanban task 9"}]
+        messages += _tool_turns(0, 12)
+    
+        mocked = f"{SUMMARY_PREFIX}\nsummary body"
+        with patch.object(c, "_generate_summary", return_value=mocked):
+>           out = c.compress(messages, current_tokens=90_000)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_compressor_zero_user_guard.py:123: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+agent/context_compressor.py:5320: in compress
+    return self._finalize_compressed(compressed, canonical_messages, n_messages, spare_pending_images)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/context_compressor.py:5177: in _finalize_compressed
+    compressed = _strip_historical_media(compressed, spared=spared)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = [{'role': 'user', 'content': '[CONTEXT COMPACTION — REFERENCE ONLY] Earlier turns were compacted into the summary belo...ne, 'tool_calls': [{'id': 'c9', 'function': {'name': 'read_task', 'arguments': '{}'}}], '_compaction_tail': True}, ...]
+spared = range(10, 11)
+
+    def _strip_historical_media(messages: List[Dict[str, Any]], spared: range = range(0)) -> List[Dict[str, Any]]:
+>       raise RuntimeError("sabotage _strip_historical_media")
+E       RuntimeError: sabotage _strip_historical_media
+
+agent/context_compressor_media.py:171: RuntimeError
+_ TestCompressAlwaysKeepsAUserTurn.test_preserved_tail_user_is_not_overridden __
+
+self = <tests.agent.test_compressor_zero_user_guard.TestCompressAlwaysKeepsAUserTurn object at 0x7f045fdfb890>
+compressor = <agent.context_compressor.ContextCompressor object at 0x7f045e14f010>
+
+    def test_preserved_tail_user_is_not_overridden(self, compressor):
+        """When a genuine user message survives in the tail, the guard
+        must NOT fire (the summary keeps its alternation-driven role) —
+        the request already has a user turn."""
+        from agent.context_compressor import SUMMARY_PREFIX
+    
+        c = compressor
+        c.compression_count = 1
+        c.tail_token_budget = 10  # tight tail so most turns compress
+        messages = [{"role": "user", "content": "old task"}]
+        messages += _tool_turns(0, 10)
+        # A recent, genuine user turn that will be preserved in the tail.
+        messages += [
+            {"role": "user", "content": "the latest live user question"},
+            {"role": "assistant", "content": "on it"},
+        ]
+    
+        mocked = f"{SUMMARY_PREFIX}\nsummary body"
+        with patch.object(c, "_generate_summary", return_value=mocked):
+>           out = c.compress(messages, current_tokens=90_000)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_compressor_zero_user_guard.py:149: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+agent/context_compressor.py:5320: in compress
+    return self._finalize_compressed(compressed, canonical_messages, n_messages, spare_pending_images)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/context_compressor.py:5177: in _finalize_compressed
+    compressed = _strip_historical_media(compressed, spared=spared)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = [{'role': 'assistant', 'content': None, 'tool_calls': [{'id': 'c6', 'function': {'name': 'read_task', 'arguments': '{}...: '[Duplicate tool output — same content as a more recent call]', 'tool_call_id': 'c8', '_compaction_tail': True}, ...]
+spared = range(0, 0)
+
+    def _strip_historical_media(messages: List[Dict[str, Any]], spared: range = range(0)) -> List[Dict[str, Any]]:
+>       raise RuntimeError("sabotage _strip_historical_media")
+E       RuntimeError: sabotage _strip_historical_media
+
+agent/context_compressor_media.py:171: RuntimeError
+_ TestCompressKeepsANonEmptyUserTurn.test_image_only_tail_user_turn_still_yields_non_empty_text _
+
+self = <tests.agent.test_compressor_zero_user_guard.TestCompressKeepsANonEmptyUserTurn object at 0x7f045fdfa290>
+compressor = <agent.context_compressor.ContextCompressor object at 0x7f045ff72510>
+
+    def test_image_only_tail_user_turn_still_yields_non_empty_text(self, compressor):
+        from agent.context_compressor import SUMMARY_PREFIX
+    
+        c = compressor
+        c.compression_count = 1
+        # No system message and no protected head (compression_count=1
+        # decays protect_first_n to 0), same #58753 shape — except the
+        # only surviving user turn is an image with no caption text.
+        messages = [{"role": "user", "content": "work kanban task 42"}]
+        messages += _tool_turns(0, 12)
+        messages += [{
+            "role": "user",
+            "content": [
+                {"type": "image_url", "image_url": {"url": "data:image/png;base64,AAAA"}},
+            ],
+        }]
+    
+        mocked = f"{SUMMARY_PREFIX}\nrolled-up summary of the tool work"
+        with patch.object(c, "_generate_summary", return_value=mocked):
+>           out = c.compress(messages, current_tokens=90_000)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_compressor_zero_user_guard.py:203: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+agent/context_compressor.py:5320: in compress
+    return self._finalize_compressed(compressed, canonical_messages, n_messages, spare_pending_images)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/context_compressor.py:5177: in _finalize_compressed
+    compressed = _strip_historical_media(compressed, spared=spared)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = [{'role': 'assistant', 'content': None, 'tool_calls': [{'id': 'c8', 'function': {'name': 'read_task', 'arguments': '{}... '[Duplicate tool output — same content as a more recent call]', 'tool_call_id': 'c10', '_compaction_tail': True}, ...]
+spared = range(0, 0)
+
+    def _strip_historical_media(messages: List[Dict[str, Any]], spared: range = range(0)) -> List[Dict[str, Any]]:
+>       raise RuntimeError("sabotage _strip_historical_media")
+E       RuntimeError: sabotage _strip_historical_media
+
+agent/context_compressor_media.py:171: RuntimeError
+_ TestCompressKeepsANonEmptyUserTurn.test_image_only_protected_head_still_yields_non_empty_text _
+
+self = <tests.agent.test_compressor_zero_user_guard.TestCompressKeepsANonEmptyUserTurn object at 0x7f045fd94150>
+compressor = <agent.context_compressor.ContextCompressor object at 0x7f045e2a3350>
+
+    def test_image_only_protected_head_still_yields_non_empty_text(self, compressor):
+        """Isolates the ``_user_survives`` text check from the merge-target
+        fix below: here ``compress_start != 0`` and there's no system
+        message, so neither existing force condition
+        (``compress_start == 0`` / ``last_head_role == "system"``) fires on
+        its own — only the broadened (text-aware) survival check does.
+        """
+        from agent.context_compressor import SUMMARY_PREFIX
+    
+        c = compressor
+        c.protect_first_n = 1
+        c.protect_last_n = 2
+        c.tail_token_budget = 10
+        c.compression_count = 0
+    
+        messages = [{
+            "role": "user",
+            "content": [
+                {"type": "image_url", "image_url": {"url": "data:image/png;base64,AAAA"}},
+            ],
+        }]
+        messages += _tool_turns(0, 12)
+    
+        mocked = f"{SUMMARY_PREFIX}\nrolled-up summary of the tool work"
+        with patch.object(c, "_generate_summary", return_value=mocked):
+>           out = c.compress(messages, current_tokens=90_000)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_compressor_zero_user_guard.py:240: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+agent/context_compressor.py:5320: in compress
+    return self._finalize_compressed(compressed, canonical_messages, n_messages, spare_pending_images)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/context_compressor.py:5177: in _finalize_compressed
+    compressed = _strip_historical_media(compressed, spared=spared)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = [{'role': 'user', 'content': [{'type': 'image_url', 'image_url': {'url': 'data:image/png;base64,AAAA'}}]}, {'role': 'u...xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', 'tool_call_id': 'c11', '_compaction_tail': True}]
+spared = range(5, 6)
+
+    def _strip_historical_media(messages: List[Dict[str, Any]], spared: range = range(0)) -> List[Dict[str, Any]]:
+>       raise RuntimeError("sabotage _strip_historical_media")
+E       RuntimeError: sabotage _strip_historical_media
+
+agent/context_compressor_media.py:171: RuntimeError
+_ TestCompressKeepsANonEmptyUserTurn.test_merge_targets_the_colliding_tail_message_not_index_zero _
+
+self = <tests.agent.test_compressor_zero_user_guard.TestCompressKeepsANonEmptyUserTurn object at 0x7f045fd946d0>
+compressor = <agent.context_compressor.ContextCompressor object at 0x7f045e293190>
+
+    def test_merge_targets_the_colliding_tail_message_not_index_zero(self, compressor):
+        """Template-exempt rows (bare tool-call assistant / tool messages)
+        ahead of the colliding tail user message must not divert the merge:
+        merging into literal tail index 0 would attach the summary to an
+        exempt row and leave the real (image-only) user message untouched
+        and still empty, silently defeating the forced role="user" this
+        block exists to guarantee.
+        """
+        from agent.context_compressor import SUMMARY_PREFIX
+    
+        c = compressor
+        c.compression_count = 1  # decays protect_first_n to 0 -> compress_start == 0
+        messages = [{"role": "user", "content": "work kanban task 42"}]
+        messages += _tool_turns(0, 12)
+        messages += [{
+            "role": "user",
+            "content": [
+                {"type": "image_url", "image_url": {"url": "data:image/png;base64,AAAA"}},
+            ],
+        }]
+    
+        mocked = f"{SUMMARY_PREFIX}\nrolled-up summary of the tool work"
+        with patch.object(c, "_generate_summary", return_value=mocked):
+>           out = c.compress(messages, current_tokens=90_000)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_compressor_zero_user_guard.py:270: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+agent/context_compressor.py:5320: in compress
+    return self._finalize_compressed(compressed, canonical_messages, n_messages, spare_pending_images)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/context_compressor.py:5177: in _finalize_compressed
+    compressed = _strip_historical_media(compressed, spared=spared)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = [{'role': 'assistant', 'content': None, 'tool_calls': [{'id': 'c8', 'function': {'name': 'read_task', 'arguments': '{}... '[Duplicate tool output — same content as a more recent call]', 'tool_call_id': 'c10', '_compaction_tail': True}, ...]
+spared = range(0, 0)
+
+    def _strip_historical_media(messages: List[Dict[str, Any]], spared: range = range(0)) -> List[Dict[str, Any]]:
+>       raise RuntimeError("sabotage _strip_historical_media")
+E       RuntimeError: sabotage _strip_historical_media
+
+agent/context_compressor_media.py:171: RuntimeError
+=========================== short test summary info ============================
+FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_kanban_worker_recompaction_keeps_user_turn
+FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_no_consecutive_user_roles_introduced
+FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressAlwaysKeepsAUserTurn::test_preserved_tail_user_is_not_overridden
+FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_image_only_tail_user_turn_still_yields_non_empty_text
+FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_image_only_protected_head_still_yields_non_empty_text
+FAILED tests/agent/test_compressor_zero_user_guard.py::TestCompressKeepsANonEmptyUserTurn::test_merge_targets_the_colliding_tail_message_not_index_zero
+6 failed in 1.87s
+
+--- tests/agent/test_protected_tail_pressure.py ---
+FFFFFF                                                                   [100%]
+=================================== FAILURES ===================================
+_ TestProtectedTailPressure61932.test_compress_escapes_cannot_compress_further_dead_end _
+
+self = <tests.agent.test_protected_tail_pressure.TestProtectedTailPressure61932 object at 0x7f074c00e110>
+compressor_128k = <agent.context_compressor.ContextCompressor object at 0x7f074c4efbd0>
+
+    def test_compress_escapes_cannot_compress_further_dead_end(
+        self, compressor_128k
+    ):
+        """Full compress path must materially reduce an over-context tail.
+    
+        Reproduces the #61932 failure class: multipass compression previously
+        dropped a couple of message rows while leaving ~170k tokens intact,
+        then reported no further progress.
+        """
+        c = compressor_128k
+        msgs = _already_compacted_session(
+            n_pairs=4, tool_chars=200_000, user_chars=80_000
+        )
+        rough0 = estimate_messages_tokens_rough(msgs)
+        assert rough0 > c.context_length
+    
+        cur = msgs
+        tok = rough0
+        last_progress = False
+        for _pass in range(3):
+            o_len, o_tok = len(cur), tok
+>           out = c.compress(list(cur), current_tokens=tok)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_protected_tail_pressure.py:133: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+agent/context_compressor.py:5320: in compress
+    return self._finalize_compressed(compressed, canonical_messages, n_messages, spare_pending_images)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/context_compressor.py:5177: in _finalize_compressed
+    compressed = _strip_historical_media(compressed, spared=spared)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = [{'role': 'system', 'content': 'You are Hermes.\n\n[Note: Some earlier conversation turns have been compacted into a h...ype': 'function', 'function': {'name': 'read_file', 'arguments': '{"path":"f0.py"}'}}], '_compaction_tail': True}, ...]
+spared = range(0, 0)
+
+    def _strip_historical_media(messages: List[Dict[str, Any]], spared: range = range(0)) -> List[Dict[str, Any]]:
+>       raise RuntimeError("sabotage _strip_historical_media")
+E       RuntimeError: sabotage _strip_historical_media
+
+agent/context_compressor_media.py:171: RuntimeError
+_ TestProtectedTailPressure61932.test_all_oversized_tail_dead_end_shape_now_compresses _
+
+self = <tests.agent.test_protected_tail_pressure.TestProtectedTailPressure61932 object at 0x7f074c00e690>
+compressor_128k = <agent.context_compressor.ContextCompressor object at 0x7f074b794f10>
+
+    def test_all_oversized_tail_dead_end_shape_now_compresses(
+        self, compressor_128k
+    ):
+        """Exact #61932 dead-end: the protected tail ALONE holds everything.
+    
+        Head (3 messages) + an 8-message tail of exclusively oversized tool
+        pairs.  The tail token budget + the ``_MAX_TAIL_MESSAGE_FLOOR`` (8)
+        floor protect every non-head message, so ``compress_start >=
+        compress_end`` — pre-fix ``compress()`` returned the transcript
+        UNCHANGED, incremented ``_ineffective_compression_count``, and the
+        retry loop died with "Cannot compress further".  Post-fix the Phase-1
+        pressure pass demotes the oversized tool bodies even though the
+        summary window is empty, so the same call materially shrinks the
+        transcript below the context window.
+        """
+        c = compressor_128k
+        msgs: list[dict] = [
+            {"role": "system", "content": "You are Hermes."},
+            {"role": "user", "content": "Investigate thoroughly"},
+            {"role": "assistant", "content": "OK"},
+        ]
+        for i in range(4):
+            msgs.extend(_unique_tool_pair(i, 200_000))
+        assert len(msgs) == 11  # 3 head + 8-message all-oversized tail
+    
+        before = estimate_messages_tokens_rough(msgs)
+        assert before > c.context_length, "fixture must start over-context"
+    
+>       out = c.compress(list(msgs), current_tokens=before)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_protected_tail_pressure.py:180: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+agent/context_compressor.py:5320: in compress
+    return self._finalize_compressed(compressed, canonical_messages, n_messages, spare_pending_images)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/context_compressor.py:5177: in _finalize_compressed
+    compressed = _strip_historical_media(compressed, spared=spared)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = [{'role': 'system', 'content': 'You are Hermes.\n\n[Note: Some earlier conversation turns have been compacted into a h...ot start over.]\nInvestigate thoroughly', '_compressed_summary': True, '_compressed_summary_has_user_turn': True}, ...]
+spared = range(0, 0)
+
+    def _strip_historical_media(messages: List[Dict[str, Any]], spared: range = range(0)) -> List[Dict[str, Any]]:
+>       raise RuntimeError("sabotage _strip_historical_media")
+E       RuntimeError: sabotage _strip_historical_media
+
+agent/context_compressor_media.py:171: RuntimeError
+__ test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[round_last] __
+
+steers = 0
+
+    @pytest.mark.parametrize("steers", [0, 1, 2], ids=["round_last", "steer_after_round", "two_steers_after_round"])
+    def test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim(steers):
+        """Regression: compaction after a tool round stubbed the output the model had just asked for.
+    
+        Lean mode's 10K tail budget puts pass 4's soft ceiling at 15K tokens. Long user messages (no pass
+        may shrink them) filled it, so the last resort stubbed the pending round. The model has not read
+        that round and would re-run the command or answer blind, so it must survive verbatim while older
+        rounds still give way to the budget. A /steer sent during the tools lands as a user row after the
+        round before preflight compaction runs; the round is still unread then. Two steers can land in one
+        iteration: one drained when the tool batch ends, another drained before the next request and
+        inserted right after the newest tool result, so the round is followed by two steer rows.
+        """
+        ctx = 272_000
+        with patch("agent.context_compressor.get_model_context_length", return_value=ctx):
+            c = ContextCompressor(
+                model="test/model", threshold_percent=0.50, protect_first_n=3, protect_last_n=8,
+                quiet_mode=True, config_context_length=ctx,
+            )
+        c._generate_summary = lambda *a, **k: "compact summary of earlier turns"
+        prose = ("the quarterly fleet review keeps drifting between regions and owners " * 360)[:24_000]
+        msgs: list[dict] = [{"role": "system", "content": "You are Hermes."}]
+        for t in range(13):
+            msgs += [
+                {"role": "user", "content": f"{prose}\nRun probe {t} and name the hottest node."},
+                {"role": "assistant", "content": None, "tool_calls": [_terminal_call(f"old_{t}", f"python3 probe.py c{t} 3")]},
+                _terminal_result(f"old_{t}", f"o{t}", 70),
+                {"role": "assistant", "content": f"node-o{t}-000 is the hottest."},
+            ]
+        # The pending call's own args (well over pass 3's 500-char floor) belong to the unread round too.
+        long_command = "python3 probe.py lyra 1 " + " ".join(f"--node node-nb-{i:03d}" for i in range(120))
+        pending_calls = [_terminal_call("new_a", "python3 probe.py indus 3"), _terminal_call("new_b", long_command)]
+        msgs += [
+            {"role": "user", "content": "Run both probes and compare them."},
+            {"role": "assistant", "content": None, "tool_calls": pending_calls},
+            _terminal_result("new_a", "na", 70),
+            # Last and bigger than the soft ceiling on its own, still well inside the hard window share.
+            _terminal_result("new_b", "nb", 420),
+        ]
+        pending = {m["tool_call_id"]: m["content"] for m in msgs[-2:]}
+        previous = msgs[-6]
+        for text in ["Also flag any node above 90% cpu.", "And list the racks they sit in."][:steers]:
+            msgs.append(steer_user_row(text))
+        assert previous["tool_call_id"] == "old_12"
+    
+>       out = c.compress(list(msgs), current_tokens=estimate_messages_tokens_rough(msgs))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_protected_tail_pressure.py:292: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+agent/context_compressor.py:5320: in compress
+    return self._finalize_compressed(compressed, canonical_messages, n_messages, spare_pending_images)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/context_compressor.py:5177: in _finalize_compressed
+    compressed = _strip_historical_media(compressed, spared=spared)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = [{'role': 'system', 'content': 'You are Hermes.\n\n[Note: Some earlier conversation turns have been compacted into a h...ld_12', 'content': '[terminal] ran `python3 probe.py c12 3` -> exit 0, 1 lines output', '_compaction_tail': True}, ...]
+spared = range(9, 11)
+
+    def _strip_historical_media(messages: List[Dict[str, Any]], spared: range = range(0)) -> List[Dict[str, Any]]:
+>       raise RuntimeError("sabotage _strip_historical_media")
+E       RuntimeError: sabotage _strip_historical_media
+
+agent/context_compressor_media.py:171: RuntimeError
+_ test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[steer_after_round] _
+
+steers = 1
+
+    @pytest.mark.parametrize("steers", [0, 1, 2], ids=["round_last", "steer_after_round", "two_steers_after_round"])
+    def test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim(steers):
+        """Regression: compaction after a tool round stubbed the output the model had just asked for.
+    
+        Lean mode's 10K tail budget puts pass 4's soft ceiling at 15K tokens. Long user messages (no pass
+        may shrink them) filled it, so the last resort stubbed the pending round. The model has not read
+        that round and would re-run the command or answer blind, so it must survive verbatim while older
+        rounds still give way to the budget. A /steer sent during the tools lands as a user row after the
+        round before preflight compaction runs; the round is still unread then. Two steers can land in one
+        iteration: one drained when the tool batch ends, another drained before the next request and
+        inserted right after the newest tool result, so the round is followed by two steer rows.
+        """
+        ctx = 272_000
+        with patch("agent.context_compressor.get_model_context_length", return_value=ctx):
+            c = ContextCompressor(
+                model="test/model", threshold_percent=0.50, protect_first_n=3, protect_last_n=8,
+                quiet_mode=True, config_context_length=ctx,
+            )
+        c._generate_summary = lambda *a, **k: "compact summary of earlier turns"
+        prose = ("the quarterly fleet review keeps drifting between regions and owners " * 360)[:24_000]
+        msgs: list[dict] = [{"role": "system", "content": "You are Hermes."}]
+        for t in range(13):
+            msgs += [
+                {"role": "user", "content": f"{prose}\nRun probe {t} and name the hottest node."},
+                {"role": "assistant", "content": None, "tool_calls": [_terminal_call(f"old_{t}", f"python3 probe.py c{t} 3")]},
+                _terminal_result(f"old_{t}", f"o{t}", 70),
+                {"role": "assistant", "content": f"node-o{t}-000 is the hottest."},
+            ]
+        # The pending call's own args (well over pass 3's 500-char floor) belong to the unread round too.
+        long_command = "python3 probe.py lyra 1 " + " ".join(f"--node node-nb-{i:03d}" for i in range(120))
+        pending_calls = [_terminal_call("new_a", "python3 probe.py indus 3"), _terminal_call("new_b", long_command)]
+        msgs += [
+            {"role": "user", "content": "Run both probes and compare them."},
+            {"role": "assistant", "content": None, "tool_calls": pending_calls},
+            _terminal_result("new_a", "na", 70),
+            # Last and bigger than the soft ceiling on its own, still well inside the hard window share.
+            _terminal_result("new_b", "nb", 420),
+        ]
+        pending = {m["tool_call_id"]: m["content"] for m in msgs[-2:]}
+        previous = msgs[-6]
+        for text in ["Also flag any node above 90% cpu.", "And list the racks they sit in."][:steers]:
+            msgs.append(steer_user_row(text))
+        assert previous["tool_call_id"] == "old_12"
+    
+>       out = c.compress(list(msgs), current_tokens=estimate_messages_tokens_rough(msgs))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_protected_tail_pressure.py:292: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+agent/context_compressor.py:5320: in compress
+    return self._finalize_compressed(compressed, canonical_messages, n_messages, spare_pending_images)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/context_compressor.py:5177: in _finalize_compressed
+    compressed = _strip_historical_media(compressed, spared=spared)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = [{'role': 'system', 'content': 'You are Hermes.\n\n[Note: Some earlier conversation turns have been compacted into a h...ld_12', 'content': '[terminal] ran `python3 probe.py c12 3` -> exit 0, 1 lines output', '_compaction_tail': True}, ...]
+spared = range(9, 11)
+
+    def _strip_historical_media(messages: List[Dict[str, Any]], spared: range = range(0)) -> List[Dict[str, Any]]:
+>       raise RuntimeError("sabotage _strip_historical_media")
+E       RuntimeError: sabotage _strip_historical_media
+
+agent/context_compressor_media.py:171: RuntimeError
+_ test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[two_steers_after_round] _
+
+steers = 2
+
+    @pytest.mark.parametrize("steers", [0, 1, 2], ids=["round_last", "steer_after_round", "two_steers_after_round"])
+    def test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim(steers):
+        """Regression: compaction after a tool round stubbed the output the model had just asked for.
+    
+        Lean mode's 10K tail budget puts pass 4's soft ceiling at 15K tokens. Long user messages (no pass
+        may shrink them) filled it, so the last resort stubbed the pending round. The model has not read
+        that round and would re-run the command or answer blind, so it must survive verbatim while older
+        rounds still give way to the budget. A /steer sent during the tools lands as a user row after the
+        round before preflight compaction runs; the round is still unread then. Two steers can land in one
+        iteration: one drained when the tool batch ends, another drained before the next request and
+        inserted right after the newest tool result, so the round is followed by two steer rows.
+        """
+        ctx = 272_000
+        with patch("agent.context_compressor.get_model_context_length", return_value=ctx):
+            c = ContextCompressor(
+                model="test/model", threshold_percent=0.50, protect_first_n=3, protect_last_n=8,
+                quiet_mode=True, config_context_length=ctx,
+            )
+        c._generate_summary = lambda *a, **k: "compact summary of earlier turns"
+        prose = ("the quarterly fleet review keeps drifting between regions and owners " * 360)[:24_000]
+        msgs: list[dict] = [{"role": "system", "content": "You are Hermes."}]
+        for t in range(13):
+            msgs += [
+                {"role": "user", "content": f"{prose}\nRun probe {t} and name the hottest node."},
+                {"role": "assistant", "content": None, "tool_calls": [_terminal_call(f"old_{t}", f"python3 probe.py c{t} 3")]},
+                _terminal_result(f"old_{t}", f"o{t}", 70),
+                {"role": "assistant", "content": f"node-o{t}-000 is the hottest."},
+            ]
+        # The pending call's own args (well over pass 3's 500-char floor) belong to the unread round too.
+        long_command = "python3 probe.py lyra 1 " + " ".join(f"--node node-nb-{i:03d}" for i in range(120))
+        pending_calls = [_terminal_call("new_a", "python3 probe.py indus 3"), _terminal_call("new_b", long_command)]
+        msgs += [
+            {"role": "user", "content": "Run both probes and compare them."},
+            {"role": "assistant", "content": None, "tool_calls": pending_calls},
+            _terminal_result("new_a", "na", 70),
+            # Last and bigger than the soft ceiling on its own, still well inside the hard window share.
+            _terminal_result("new_b", "nb", 420),
+        ]
+        pending = {m["tool_call_id"]: m["content"] for m in msgs[-2:]}
+        previous = msgs[-6]
+        for text in ["Also flag any node above 90% cpu.", "And list the racks they sit in."][:steers]:
+            msgs.append(steer_user_row(text))
+        assert previous["tool_call_id"] == "old_12"
+    
+>       out = c.compress(list(msgs), current_tokens=estimate_messages_tokens_rough(msgs))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_protected_tail_pressure.py:292: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+agent/context_compressor.py:5320: in compress
+    return self._finalize_compressed(compressed, canonical_messages, n_messages, spare_pending_images)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/context_compressor.py:5177: in _finalize_compressed
+    compressed = _strip_historical_media(compressed, spared=spared)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = [{'role': 'system', 'content': 'You are Hermes.\n\n[Note: Some earlier conversation turns have been compacted into a h...ld_12', 'content': '[terminal] ran `python3 probe.py c12 3` -> exit 0, 1 lines output', '_compaction_tail': True}, ...]
+spared = range(9, 11)
+
+    def _strip_historical_media(messages: List[Dict[str, Any]], spared: range = range(0)) -> List[Dict[str, Any]]:
+>       raise RuntimeError("sabotage _strip_historical_media")
+E       RuntimeError: sabotage _strip_historical_media
+
+agent/context_compressor_media.py:171: RuntimeError
+_________ test_compaction_keeps_four_images_in_a_spared_pending_round __________
+
+compressor_128k = <agent.context_compressor.ContextCompressor object at 0x7f074b61c910>
+
+    def test_compaction_keeps_four_images_in_a_spared_pending_round(compressor_128k):
+        pending_ids = [f"new_{i}" for i in range(4)]
+        msgs = [
+            {"role": "system", "content": "You are Hermes."},
+            {"role": "user", "content": "Inspect the first image."},
+            {"role": "assistant", "content": None, "tool_calls": [_image_call("old")]},
+            _image_result("old"),
+            {"role": "assistant", "content": "The first image is clear."},
+            {"role": "user", "content": "Inspect these four images."},
+            {"role": "assistant", "content": None, "tool_calls": [_image_call(call_id) for call_id in pending_ids]},
+            *[_image_result(call_id) for call_id in pending_ids],
+            steer_user_row("Compare their labels."),
+            steer_user_row("Check the colors too."),
+        ]
+    
+>       out = compressor_128k.compress(msgs, current_tokens=estimate_messages_tokens_rough(msgs))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_protected_tail_pressure.py:318: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+agent/context_compressor.py:5320: in compress
+    return self._finalize_compressed(compressed, canonical_messages, n_messages, spare_pending_images)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/context_compressor.py:5177: in _finalize_compressed
+    compressed = _strip_historical_media(compressed, spared=spared)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = [{'role': 'system', 'content': 'You are Hermes.\n\n[Note: Some earlier conversation turns have been compacted into a h...ummary_has_user_turn': True}, {'role': 'user', 'content': 'Inspect these four images.', '_compaction_tail': True}, ...]
+spared = range(7, 11)
+
+    def _strip_historical_media(messages: List[Dict[str, Any]], spared: range = range(0)) -> List[Dict[str, Any]]:
+>       raise RuntimeError("sabotage _strip_historical_media")
+E       RuntimeError: sabotage _strip_historical_media
+
+agent/context_compressor_media.py:171: RuntimeError
+=========================== short test summary info ============================
+FAILED tests/agent/test_protected_tail_pressure.py::TestProtectedTailPressure61932::test_compress_escapes_cannot_compress_further_dead_end
+FAILED tests/agent/test_protected_tail_pressure.py::TestProtectedTailPressure61932::test_all_oversized_tail_dead_end_shape_now_compresses
+FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[round_last]
+FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[steer_after_round]
+FAILED tests/agent/test_protected_tail_pressure.py::test_mid_turn_compaction_keeps_the_pending_tool_round_verbatim[two_steers_after_round]
+FAILED tests/agent/test_protected_tail_pressure.py::test_compaction_keeps_four_images_in_a_spared_pending_round
+6 failed in 1.25s
+
+=== 3 files with test failures (26 tests failed) ===
+  tests/agent/test_compressor_historical_media.py  (14 tests failed)
+  tests/agent/test_compressor_zero_user_guard.py  (6 tests failed)
+  tests/agent/test_protected_tail_pressure.py  (6 tests failed)

@@ -1,0 +1,404 @@
+{
+  "arm": "carrier-S2-enforced",
+  "repo_head": "9d3381904e98effa23dba675906dc848abd2e4db",
+  "repo_tree": "84c73cfcb7b682d5d93043e0f5fe02365b82920e",
+  "dirty_files": [
+    "M agent/tool_result_projection.py"
+  ],
+  "test_file_blob": "7347ad045bf049afabce5b78435d5746273160f1",
+  "pytest_rc": 1,
+  "outcomes": {
+    "test_projection_breaks_the_prefix_once_per_paid_batch_and_never_undoes_itself": {
+      "outcome": "failed",
+      "message": "E       AssertionError: a projection pass broke the prompt-cache prefix for less than tool_result_projection_min_tokens (8000) of newly archived output: {9: (5847, ['call_fake_3']), 11: (5847, ['call_fake_4']), 13: (5847, ['call_fake_5']), 15: (5847, ['call_fake_6']), 17: (5847, ['call_fake_7']), 19: (5847, ['call_fake_8']), 21: (5847, ['call_fake_9']), 23: (5847, ['call_fake_10']), 25: (5847, ['call_fake_11']), 27: (5847, ['call_fake_12'])}; passes at requests [7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27] out of 28"
+    },
+    "test_projection_never_invalidates_replayed_preserved_thinking": {
+      "outcome": "failed",
+      "message": "E       AssertionError: a request replayed preserved-thinking blocks over a rewritten conversation prefix (Anthropic drops them, or rejects the request on enforced accounts):"
+    }
+  },
+  "ledgers": [
+    {
+      "requests": 28,
+      "tool_rows": 14,
+      "rows_projected": 12,
+      "passes": {
+        "7": [
+          "call_fake_1",
+          "call_fake_2"
+        ],
+        "9": [
+          "call_fake_3"
+        ],
+        "11": [
+          "call_fake_4"
+        ],
+        "13": [
+          "call_fake_5"
+        ],
+        "15": [
+          "call_fake_6"
+        ],
+        "17": [
+          "call_fake_7"
+        ],
+        "19": [
+          "call_fake_8"
+        ],
+        "21": [
+          "call_fake_9"
+        ],
+        "23": [
+          "call_fake_10"
+        ],
+        "25": [
+          "call_fake_11"
+        ],
+        "27": [
+          "call_fake_12"
+        ]
+      },
+      "reclaim_tokens_per_pass": {
+        "7": 11694,
+        "9": 5847,
+        "11": 5847,
+        "13": 5847,
+        "15": 5847,
+        "17": 5847,
+        "19": 5847,
+        "21": 5847,
+        "23": 5847,
+        "25": 5847,
+        "27": 5847
+      },
+      "unstable": [],
+      "wire_chars_per_request": [
+        7862,
+        32311,
+        32428,
+        56877,
+        56994,
+        81443,
+        81560,
+        59213,
+        59330,
+        60381,
+        60498,
+        61549,
+        61666,
+        62717,
+        62834,
+        63885,
+        64002,
+        65053,
+        65170,
+        66223,
+        66340,
+        67393,
+        67510,
+        68564,
+        68681,
+        69735,
+        69852,
+        70906
+      ],
+      "modeled": {
+        "label": "MODELED",
+        "requests": 28,
+        "sum_input_chars": 1701335,
+        "last_request_chars": 70308,
+        "cache_read_ratio_perfect_prefix_cache": 0.6291,
+        "billed_input_tokens_no_cache": 425333,
+        "billed_input_token_units_cached_1.25w_0.10r": 223934,
+        "reprefill_chars_after_breaks": 623198,
+        "per_request": [
+          {
+            "total_chars": 7762,
+            "common_prefix_chars": 0
+          },
+          {
+            "total_chars": 32189,
+            "common_prefix_chars": 7762
+          },
+          {
+            "total_chars": 32296,
+            "common_prefix_chars": 32189
+          },
+          {
+            "total_chars": 56723,
+            "common_prefix_chars": 32296
+          },
+          {
+            "total_chars": 56830,
+            "common_prefix_chars": 56723
+          },
+          {
+            "total_chars": 81257,
+            "common_prefix_chars": 56830
+          },
+          {
+            "total_chars": 81364,
+            "common_prefix_chars": 81257
+          },
+          {
+            "total_chars": 58985,
+            "common_prefix_chars": 8093
+          },
+          {
+            "total_chars": 59092,
+            "common_prefix_chars": 58985
+          },
+          {
+            "total_chars": 60116,
+            "common_prefix_chars": 10355
+          },
+          {
+            "total_chars": 60223,
+            "common_prefix_chars": 60116
+          },
+          {
+            "total_chars": 61247,
+            "common_prefix_chars": 11486
+          },
+          {
+            "total_chars": 61354,
+            "common_prefix_chars": 61247
+          },
+          {
+            "total_chars": 62378,
+            "common_prefix_chars": 12617
+          },
+          {
+            "total_chars": 62485,
+            "common_prefix_chars": 62378
+          },
+          {
+            "total_chars": 63509,
+            "common_prefix_chars": 13748
+          },
+          {
+            "total_chars": 63616,
+            "common_prefix_chars": 63509
+          },
+          {
+            "total_chars": 64640,
+            "common_prefix_chars": 14879
+          },
+          {
+            "total_chars": 64747,
+            "common_prefix_chars": 64640
+          },
+          {
+            "total_chars": 65773,
+            "common_prefix_chars": 16010
+          },
+          {
+            "total_chars": 65880,
+            "common_prefix_chars": 65773
+          },
+          {
+            "total_chars": 66906,
+            "common_prefix_chars": 17141
+          },
+          {
+            "total_chars": 67013,
+            "common_prefix_chars": 66906
+          },
+          {
+            "total_chars": 68040,
+            "common_prefix_chars": 18273
+          },
+          {
+            "total_chars": 68147,
+            "common_prefix_chars": 68040
+          },
+          {
+            "total_chars": 69174,
+            "common_prefix_chars": 19407
+          },
+          {
+            "total_chars": 69281,
+            "common_prefix_chars": 69174
+          },
+          {
+            "total_chars": 70308,
+            "common_prefix_chars": 20541
+          }
+        ]
+      }
+    }
+  ],
+  "prefix_breaks": [
+    {
+      "requests": 28,
+      "break_indices": [
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27
+      ],
+      "reasons": [
+        "messages[3] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 00 line 0000 alpha beta gamma delta e'  vs  '{\"content\":\"[tool-re",
+        "messages[11] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 02 line 0000 alpha beta gamma delta e'  vs  '{\"content\":\"[tool-r",
+        "messages[15] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 03 line 0000 alpha beta gamma delta e'  vs  '{\"content\":\"[tool-r",
+        "messages[19] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 04 line 0000 alpha beta gamma delta e'  vs  '{\"content\":\"[tool-r",
+        "messages[23] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 05 line 0000 alpha beta gamma delta e'  vs  '{\"content\":\"[tool-r",
+        "messages[27] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 06 line 0000 alpha beta gamma delta e'  vs  '{\"content\":\"[tool-r",
+        "messages[31] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 07 line 0000 alpha beta gamma delta e'  vs  '{\"content\":\"[tool-r",
+        "messages[35] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 08 line 0000 alpha beta gamma delta e'  vs  '{\"content\":\"[tool-r",
+        "messages[39] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 09 line 0000 alpha beta gamma delta e'  vs  '{\"content\":\"[tool-r",
+        "messages[43] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 10 line 0000 alpha beta gamma delta e'  vs  '{\"content\":\"[tool-r",
+        "messages[47] (tool) changed; first diverging byte at 12: '{\"content\":\"{\\\\\"content\\\\\": \\\\\"1|file 11 line 0000 alpha beta gamma delta e'  vs  '{\"content\":\"[tool-r"
+      ]
+    }
+  ],
+  "preserved_thinking": [
+    {
+      "requests": 25,
+      "replayed_thinking_blocks": 24,
+      "invalidated_thinking_blocks": 16,
+      "invalidated": [
+        "request 10: messages[17] thinking block replayed over a rewritten prefix (signed: True)",
+        "request 11: messages[17] thinking block replayed over a rewritten prefix (signed: True)",
+        "request 12: messages[17] thinking block replayed over a rewritten prefix (signed: True)",
+        "request 13: messages[17] thinking block replayed over a rewritten prefix (signed: True)",
+        "request 14: messages[17] thinking block replayed over a rewritten prefix (signed: True)",
+        "request 15: messages[17] thinking block replayed over a rewritten prefix (signed: True)",
+        "request 16: messages[17] thinking block replayed over a rewritten prefix (signed: True)",
+        "request 17: messages[17] thinking block replayed over a rewritten prefix (signed: True)",
+        "request 18: messages[17] thinking block replayed over a rewritten prefix (signed: True)",
+        "request 19: messages[17] thinking block replayed over a rewritten prefix (signed: True)",
+        "request 20: messages[17] thinking block replayed over a rewritten prefix (signed: True)",
+        "request 21: messages[17] thinking block replayed over a rewritten prefix (signed: True)",
+        "request 22: messages[17] thinking block replayed over a rewritten prefix (signed: True)",
+        "request 23: messages[17] thinking block replayed over a rewritten prefix (signed: True)",
+        "request 24: messages[17] thinking block replayed over a rewritten prefix (signed: True)",
+        "request 25: messages[17] thinking block replayed over a rewritten prefix (signed: True)"
+      ]
+    }
+  ],
+  "enforced_account_emulation": true,
+  "rejected_400_thinking_binding": 16,
+  "anthropic_route_modeled": {
+    "label": "MODELED",
+    "requests": 25,
+    "sum_input_chars": 1336806,
+    "last_request_chars": 52921,
+    "cache_read_ratio_perfect_prefix_cache": 0.6859,
+    "billed_input_tokens_no_cache": 334201,
+    "billed_input_token_units_cached_1.25w_0.10r": 154124,
+    "reprefill_chars_after_breaks": 419754,
+    "per_request": [
+      {
+        "total_chars": 86,
+        "common_prefix_chars": 0
+      },
+      {
+        "total_chars": 24600,
+        "common_prefix_chars": 0
+      },
+      {
+        "total_chars": 24745,
+        "common_prefix_chars": 61
+      },
+      {
+        "total_chars": 49160,
+        "common_prefix_chars": 24489
+      },
+      {
+        "total_chars": 49305,
+        "common_prefix_chars": 24621
+      },
+      {
+        "total_chars": 73720,
+        "common_prefix_chars": 49049
+      },
+      {
+        "total_chars": 73865,
+        "common_prefix_chars": 49181
+      },
+      {
+        "total_chars": 98280,
+        "common_prefix_chars": 73609
+      },
+      {
+        "total_chars": 98425,
+        "common_prefix_chars": 73741
+      },
+      {
+        "total_chars": 52640,
+        "common_prefix_chars": 356
+      },
+      {
+        "total_chars": 52640,
+        "common_prefix_chars": 52640
+      },
+      {
+        "total_chars": 52699,
+        "common_prefix_chars": 28507
+      },
+      {
+        "total_chars": 52699,
+        "common_prefix_chars": 52699
+      },
+      {
+        "total_chars": 52736,
+        "common_prefix_chars": 28507
+      },
+      {
+        "total_chars": 52736,
+        "common_prefix_chars": 52736
+      },
+      {
+        "total_chars": 52773,
+        "common_prefix_chars": 28507
+      },
+      {
+        "total_chars": 52773,
+        "common_prefix_chars": 52773
+      },
+      {
+        "total_chars": 52810,
+        "common_prefix_chars": 28507
+      },
+      {
+        "total_chars": 52810,
+        "common_prefix_chars": 52810
+      },
+      {
+        "total_chars": 52847,
+        "common_prefix_chars": 28507
+      },
+      {
+        "total_chars": 52847,
+        "common_prefix_chars": 52847
+      },
+      {
+        "total_chars": 52884,
+        "common_prefix_chars": 28507
+      },
+      {
+        "total_chars": 52884,
+        "common_prefix_chars": 52884
+      },
+      {
+        "total_chars": 52921,
+        "common_prefix_chars": 28507
+      },
+      {
+        "total_chars": 52921,
+        "common_prefix_chars": 52921
+      }
+    ]
+  },
+  "egress_blocked": [],
+  "wall_s": 13.02,
+  "python": "3.11.14"
+}

@@ -1,0 +1,36 @@
+  ┊ 📖 read      notes_00.txt  0.2s
+  ┊ 📖 read      notes_01.txt  0.0s
+  ┊ 📖 read      notes_02.txt  0.0s
+  ┊ 📖 read      notes_03.txt  0.0s
+  ┊ 📖 read      notes_04.txt  0.0s
+  ┊ 📖 read      notes_05.txt  0.0s
+  ┊ 📖 read      notes_06.txt  0.0s
+  ┊ 📖 read      notes_07.txt  0.0s
+  ┊ 📖 read      notes_08.txt  0.0s
+  ┊ 📖 read      notes_09.txt  0.0s
+  ┊ 📖 read      notes_10.txt  0.0s
+  ┊ 📖 read      notes_11.txt  0.0s
+{
+ "arm": "carrier-foldin-v2",
+ "route": {
+  "provider": "bedrock",
+  "api_mode": "bedrock_converse",
+  "model": "anthropic.claude-opus-5-5"
+ },
+ "outcome": "passed",
+ "message": "",
+ "requests": 24,
+ "replayed_reasoning_blocks": 276,
+ "invalidated_reasoning_blocks": 0,
+ "projection": {
+  "tool_rows": 12,
+  "rows_projected": 0,
+  "pass_request_indices": [],
+  "passes": {}
+ },
+ "fake_rejections": [],
+ "egress_blocked": [
+  "getaddrinfo 'bedrock-runtime.us-east-1.amazonaws.com'",
+  "getaddrinfo 'bedrock-runtime.us-east-1.amazonaws.com'"
+ ]
+}

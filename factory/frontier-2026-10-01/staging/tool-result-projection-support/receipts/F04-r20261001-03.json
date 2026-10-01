@@ -1,0 +1,1440 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "F04/r20261001-03",
+ "staging": "tool-result-projection-support",
+ "origin_refs": [
+  "NousResearch/hermes-agent#107731",
+  "NousResearch/hermes-agent#39691",
+  "NousResearch/hermes-agent#47866",
+  "NousResearch/hermes-agent#129620",
+  "NousResearch/hermes-agent#129492",
+  "NousResearch/hermes-agent#129882",
+  "NousResearch/hermes-agent#106426",
+  "NousResearch/hermes-agent#70107",
+  "NousResearch/hermes-agent#526",
+  "kvnloo/hermes-agent#310"
+ ],
+ "base_revision": "e8c97320ac8691d4de92af49f98459f9ef9ddb08",
+ "env": {
+  "host": "withheld (one local workstation; receipts carry no host names)",
+  "python": "3.11.14 ($PY = the repo venv interpreter, used read-only)",
+  "isolation": "probes: env -i, fresh HOME/HERMES_HOME under scratch, loopback-only socket.connect + getaddrinfo guard; canonical runner: scripts/run_tests.sh -j 2 with HOME=$S/testhome-sf-tool-result-projection-support, HERMES_HOME=$HOME/.hermes; no credentials",
+  "network": "loopback only (egress_blocked recorded per probe run)",
+  "relay": {
+   "present": true,
+   "package": "nemo-relay 0.8.4 (installed in the shared repo venv; not part of this change)",
+   "state": "FAILED at initialize(): agent/relay_runtime.py:346 calls relay.plugin.initialize({}, additional_plugins_toml=...), which nemo-relay 0.8.4 does not accept, so _activate() logs 'Hermes Relay plugin initialization failed' (relay_runtime.py:328) and returns FAILED. No Relay plugin or Hermes-managed Relay middleware was active in any run.",
+   "plugins_toml_sha256": null,
+   "config_paths": [],
+   "explicit_plugins_toml": "none: HERMES_NEMO_RELAY_PLUGINS_TOML unset and the isolated HERMES_HOME has no relay-plugins.toml",
+   "seen_in": "canonical-runner logs (captured WARNING on failing tests); probes run the same agent init"
+  }
+ },
+ "spec": {
+  "path": null,
+  "rev": null,
+  "sha256": null,
+  "prereg_commit": null,
+  "decision_rule_sha": null,
+  "note": "not pre-registered: an ad-hoc staging re-run under FACTORY.md section 8 (round-2 fix of the round-1 re-verifier findings). Decision rule: the assertions of tests/e2e/core/history/test_tool_result_projection_wire.py (blob 7347ad045b) and the harness outputs named in command."
+ },
+ "policy_revision": {
+  "AGENTS.md": "65aa3e61bc@e8c97320ac",
+  "CONTRIBUTING.md": "b0baa59b50@e8c97320ac",
+  "factory": "FACTORY.md sha256:7726ba18b43a9367 (frontier-2026-10-01 ledger copy)"
+ },
+ "provenance": "self",
+ "cost": {
+  "api_cost_usd": 0.0,
+  "tier_cost": "$0"
+ },
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the harness, tests and fold-in gate; disclosed per repository policy",
+ "privacy": "synthetic fixtures only; no state.db / agent.log / credentials read; absolute local paths replaced by placeholders",
+ "inputs": {
+  "shas": {
+   "main": "e8c97320ac8691d4de92af49f98459f9ef9ddb08",
+   "main_previous_round": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+   "staging_commit": "8c783ff4ac2fcd7906e074eefec7f0d3fcfc0782",
+   "staging_commit_parent": "aea969677c60a1bb72fe227fdfb98f196a2092cc",
+   "staging_merge_tree_on_main": "7016f82dc28a05fed0f6c6b67bb99df237e54244",
+   "main_plus_test_arm": "434aa0b1083993444ec0cd5aa7cc61ec3422bd16",
+   "main_plus_test_arm_tree": "7016f82dc28a05fed0f6c6b67bb99df237e54244",
+   "carrier_head": "069adfb67e57287ac8df996ef48e082fe8455e2c",
+   "carrier_merge_base": "67764dc0863349a384c16425e73ee8571f3a94b7",
+   "carrier_rebased_arm": "4b5b438de8f6ed77d38c675e0077666ef8b2f75b",
+   "carrier_rebased_arm_tree": "7f099e3b93326d04e266d0c9b5c49984cab43be7",
+   "carrier_rebased_arm_plus_test": "dedece6d1937938ae9b5cfa92babaa380cbe584c",
+   "carrier_rebased_arm_plus_test_tree": "03cf488911915a6823873c344e57f3f805ca875a",
+   "test_blob": "7347ad045bf049afabce5b78435d5746273160f1",
+   "carrier_module_blob": "a76fb42f76e3bb7d71643da6a5f58890878d4d32",
+   "carrier_module_blob_with_gate_v3": "852be44f4f4306ec177a191591bc6f2529c927ce"
+  },
+  "harness_sha256": {
+   "harness/e37_synthetic.py": "4de16b55331c737d8db15eaf0acdfacb69cb458808f59bc3c912cd4c424c2f85",
+   "harness/f04_bedrock_probe.py": "8159c09229dce68316973ff10486d4da87ee356d815f5a6188f59ac76c53286c",
+   "harness/f04_probe.py": "a23b3b14b3cd7a4c4e8bfd35a6da50c06656f183fc842afca738e3f46e051bb9",
+   "harness/f04_thirdparty_probe.py": "b102cd9093f284907b41409d3d1f4b825f7eef1844fea942f8ec1d0d0fc184c6",
+   "harness/guarded_run.py": "be17793cdf4bad466fb2e05b5c67d63430a1e79c8c40949a7e45c897d35d654f",
+   "harness/per_hunk_sabotage.py": "73a31ca6888f7384b58993924ee66f5795962af8fdabe98b1d5d678dc84866fd",
+   "harness/per_hunk_sabotage_r2.py": "57219f128cb8f90cb9bb87df659c0d499da9c716e018a2de626be9a9b9ed9d60",
+   "harness/predicate_direct.py": "5996ac8a92033342ae18a71a052257773235ba8d470c5829f733ed554d0ae4bb",
+   "harness/predicate_wire_truth.py": "b5ee90a984238695c9837a0c7edbedb5c87c28111b46a77389c91b3568be5f4b",
+   "harness/readtool_direct.py": "e8dd892a0a2a835550467d4ccf4732470860692b6200a6e150be50950d9a96f4",
+   "harness/seam_trace.py": "b1c1efa4e7fd6d37b3c4ab37ee770d09c9308e5fcb06f91c2c67004197645750"
+  },
+  "patches_sha256": {
+   "patches/carrier-rebase-handport-hot-reload-test.diff": "6024fcb1457cdc1bf8d6762da6ca372d3109d41d532311dd8a0264c609d7d741",
+   "patches/foldin-preserved-thinking-gate-v2.diff": "acac8a736c2503a122a986622c8003f813e331363f2a92832eb709b6738d6e84",
+   "patches/foldin-preserved-thinking-gate-v3.diff": "12e83bd0dc82dc1042ef37cf93a65ea810d6a118eb322785b6c27cbe7c1acaed",
+   "patches/foldin-preserved-thinking-gate.diff": "1490213c6d074a6cae190b4bf138d09b431ab78c535961159e3982b4f06ae6ab",
+   "patches/sabotage-S1-per-turn-reevaluation.diff": "a7f55f013f779c6a12aaab89b56c3b2af0bf4380883fda474df2b3757582a132",
+   "patches/sabotage-S2-no-stickiness.diff": "3b8b144c13805d30e117621a2fc3f7ed316434be4bcfd06197a8b865b1abbfd3",
+   "patches/tool-result-projection-support.v1-d5854fdd7b.patch": "a71a2123f6bd3f9d6d67a9b1c7c88a8ffbb1149a125332209333636042e95a0c",
+   "patches/tool-result-projection-support.v2-8c783ff4ac.patch": "b9d18435f4d1c45eacc77912f217b8e034295c3adec0667bdedd5bbd9da5d7f9"
+  }
+ },
+ "tier": "T1",
+ "kind": "redgreen",
+ "experiment": "F04 re-run on main e8c97320ac: projection byte-stability between paid boundaries (OpenAI-compatible route) and the preserved-thinking check (native Anthropic), with fold-in gate v3; per-hunk sabotage now labels flips caused by an exception the carrier's fail-open guard swallows; seam line trace re-run on v3",
+ "z0evals_study": {
+  "repo": "kvnloo/z0evals",
+  "branch": "study/hermes-tool-result-projection-support",
+  "commit": null,
+  "status": "not frozen (P8 pending; freeze when the comment is posted)"
+ },
+ "frozen": null,
+ "command": {
+  "proof": "HOME=$S/testhome-sf-tool-result-projection-support HERMES_HOME=$HOME/.hermes HERMES_PYTHON=$PY bash scripts/run_tests.sh -j 2 tests/e2e/core/history/test_tool_result_projection_wire.py -q  (3 reps per arm: base, carrier, carrier+foldin-v1, -v2, -v3)",
+  "probe": "env -i PATH=/usr/bin:/bin PYTHONHASHSEED=0 F04_SCRATCH=$S/sf-trp3/scratch $PY harness/f04_probe.py <worktree> <out.json> <arm>  (3 reps per arm)",
+  "seam_trace": "env -i PATH=/usr/bin:/bin PYTHONHASHSEED=0 F04_SCRATCH=$S/sf-trp3/scratch $PY harness/seam_trace.py <worktree> <out.json> receipts/raw/r03/fix-v3.diff",
+  "per_hunk_sabotage": "env -i PATH=/usr/bin:/bin TMPDIR=$S/sf-trp3/sabtmp $PY harness/per_hunk_sabotage_r2.py <worktree> e8c97320ac <carrier+test> patches/foldin-preserved-thinking-gate-v3.diff <out.json> <testhome> bedrock=harness/f04_bedrock_probe.py thirdparty=harness/f04_thirdparty_probe.py",
+  "adjacent": "run_tests.sh -j 2 tests/agent/test_compression_config_defaults.py tests/agent/test_proactive_tool_result_pruning.py tests/tools/test_tool_result_storage.py tests/tui_gateway/test_compression_config_hot_reload.py [tests/agent/test_tool_result_projection.py] -q",
+  "arm_setup": {
+   "base": "git checkout --detach e8c97320ac8691d4de92af49f98459f9ef9ddb08 && git cherry-pick 8c783ff4ac2fcd7906e074eefec7f0d3fcfc0782 -> 434aa0b1083993444ec0cd5aa7cc61ec3422bd16 (main + test, local evidence commit)",
+   "carrier": "dedece6d1937938ae9b5cfa92babaa380cbe584c (main + refs/pr/107731 merged, hot-reload add/add kept both sides, + test; local evidence commits)",
+   "carrier-S1": "carrier + git apply patches/sabotage-S1-per-turn-reevaluation.diff",
+   "carrier-S2": "carrier + git apply patches/sabotage-S2-no-stickiness.diff",
+   "carrier-foldin-v1": "carrier + git apply patches/foldin-preserved-thinking-gate.diff (round-0 gate)",
+   "carrier-foldin-v2": "carrier + git apply patches/foldin-preserved-thinking-gate-v2.diff (round-1 gate)",
+   "carrier-foldin-v3": "carrier + git apply patches/foldin-preserved-thinking-gate-v3.diff (round-2 gate)"
+  }
+ },
+ "arms": {
+  "base": {
+   "commit": "434aa0b1083993444ec0cd5aa7cc61ec3422bd16",
+   "tree": "7016f82dc28a05fed0f6c6b67bb99df237e54244",
+   "note": "main + the staging commit (cherry-pick, same blob)"
+  },
+  "carrier": {
+   "head": "069adfb67e57287ac8df996ef48e082fe8455e2c",
+   "merge": "conflict (tests/tui_gateway/test_compression_config_hot_reload.py, add/add) -> handported, keep both sides",
+   "patch": "patches/carrier-rebase-handport-hot-reload-test.diff",
+   "commit": "dedece6d1937938ae9b5cfa92babaa380cbe584c",
+   "tree": "03cf488911915a6823873c344e57f3f805ca875a"
+  },
+  "carrier-S1": {
+   "patch": "patches/sabotage-S1-per-turn-reevaluation.diff"
+  },
+  "carrier-S2": {
+   "patch": "patches/sabotage-S2-no-stickiness.diff"
+  },
+  "carrier-foldin-v1": {
+   "patch": "patches/foldin-preserved-thinking-gate.diff"
+  },
+  "carrier-foldin-v2": {
+   "patch": "patches/foldin-preserved-thinking-gate-v2.diff"
+  },
+  "carrier-foldin-v3": {
+   "patch": "patches/foldin-preserved-thinking-gate-v3.diff"
+  }
+ },
+ "head_revision": "8c783ff4ac2fcd7906e074eefec7f0d3fcfc0782",
+ "changed_files": [
+  "tests/e2e/core/history/test_tool_result_projection_wire.py"
+ ],
+ "gates": {
+  "validity": "PASS",
+  "red": {
+   "arm": "base",
+   "result": "PASS",
+   "observed": "test A failed 3/3 (canonical runner) and 3/3 (probe); test B passed",
+   "assertion": "no tool result was ever archived on the wire: 28 requests, 14 tool rows",
+   "seam_covered": "n/a on base: the projection seam is absent on main by design (feature RED); the seam trace on the GREEN arm is below",
+   "reps_agree": "3/3"
+  },
+  "green": [
+   {
+    "arm": "carrier",
+    "test": "A (OpenAI-compatible route)",
+    "result": "PASS",
+    "reps_agree": "3/3"
+   },
+   {
+    "arm": "carrier",
+    "test": "B (native Anthropic, preserved thinking)",
+    "result": "FAIL (expected: the carrier gap)",
+    "reps_agree": "3/3"
+   },
+   {
+    "arm": "carrier+foldin-v3",
+    "test": "A and B",
+    "result": "PASS",
+    "reps_agree": "3/3"
+   },
+   {
+    "arm": "carrier+foldin-v2",
+    "test": "A and B",
+    "result": "PASS",
+    "reps_agree": "3/3"
+   },
+   {
+    "arm": "carrier+foldin-v1",
+    "test": "A and B",
+    "result": "PASS",
+    "reps_agree": "3/3"
+   }
+  ],
+  "green_pins": "The test file passes with v1, v2 and v3 alike: it pins only that some gate exists on native Messages. What v2 and v3 add (the anthropic_content_blocks and bedrock_content_blocks reads; v3's skip for third-party Messages endpoints) is pinned only by harnesses outside the repo: PREDICATE/r20261001-02, F04-bedrock/r20261001-02, F04-thirdparty/r20261001-01. The seam trace confirms the wire test never executes the Bedrock branch of _is_signed_thinking or the third-party early return.",
+  "seam_coverage": {
+   "tool": "harness/seam_trace.py (sys.settrace line tracer; the venv has no coverage package)",
+   "arm": "carrier+test+foldin-v3",
+   "outcomes": {
+    "test_projection_breaks_the_prefix_once_per_paid_batch_and_never_undoes_itself": "passed",
+    "test_projection_never_invalidates_replayed_preserved_thinking": "passed"
+   },
+   "hunks": [
+    {
+     "file": "agent/agent_init.py",
+     "new_start": 350,
+     "added_lines": 11,
+     "executable_added": 8,
+     "executed_added": 5
+    },
+    {
+     "file": "agent/agent_init.py",
+     "new_start": 1586,
+     "added_lines": 14,
+     "executable_added": 7,
+     "executed_added": 7
+    },
+    {
+     "file": "agent/agent_init.py",
+     "new_start": 2037,
+     "added_lines": 4,
+     "executable_added": 4,
+     "executed_added": 4
+    },
+    {
+     "file": "agent/context_compressor.py",
+     "new_start": 2776,
+     "added_lines": 5,
+     "executable_added": 3,
+     "executed_added": 3
+    },
+    {
+     "file": "agent/context_compressor.py",
+     "new_start": 2809,
+     "added_lines": 13,
+     "executable_added": 5,
+     "executed_added": 5
+    },
+    {
+     "file": "agent/tool_result_projection.py",
+     "new_start": 1,
+     "added_lines": 746,
+     "executable_added": 388,
+     "executed_added": 296
+    },
+    {
+     "file": "agent/turn_request_assembly.py",
+     "new_start": 187,
+     "added_lines": 9,
+     "executable_added": 2,
+     "executed_added": 2
+    },
+    {
+     "file": "cli-config.yaml.example",
+     "new_start": 830,
+     "added_lines": 34,
+     "executable_added": 0,
+     "executed_added": 0
+    },
+    {
+     "file": "gateway/run.py",
+     "new_start": 4410,
+     "added_lines": 4,
+     "executable_added": 0,
+     "executed_added": 0
+    },
+    {
+     "file": "hermes_cli/config_defaults.py",
+     "new_start": 621,
+     "added_lines": 24,
+     "executable_added": 4,
+     "executed_added": 4
+    },
+    {
+     "file": "scripts/bench_tool_result_projection.py",
+     "new_start": 1,
+     "added_lines": 159,
+     "executable_added": 106,
+     "executed_added": 0
+    },
+    {
+     "file": "tools/tool_result_storage.py",
+     "new_start": 290,
+     "added_lines": 73,
+     "executable_added": 43,
+     "executed_added": 13
+    },
+    {
+     "file": "tui_gateway/session_compression.py",
+     "new_start": 78,
+     "added_lines": 2,
+     "executable_added": 0,
+     "executed_added": 0
+    },
+    {
+     "file": "tui_gateway/session_compression.py",
+     "new_start": 121,
+     "added_lines": 4,
+     "executable_added": 3,
+     "executed_added": 0
+    },
+    {
+     "file": "tui_gateway/session_compression.py",
+     "new_start": 133,
+     "added_lines": 6,
+     "executable_added": 5,
+     "executed_added": 0
+    },
+    {
+     "file": "website/docs/user-guide/configuration.md",
+     "new_start": 1013,
+     "added_lines": 4,
+     "executable_added": 0,
+     "executed_added": 0
+    },
+    {
+     "file": "website/docs/user-guide/configuration.md",
+     "new_start": 1060,
+     "added_lines": 10,
+     "executable_added": 0,
+     "executed_added": 0
+    }
+   ],
+   "gate_v3_lines_not_executed": "_is_signed_thinking: the non-dict return and the Bedrock reasoningContent branch; replays_bound_thinking: the third-party early return (module lines 462, 465-466, 490 in the v3 blob)",
+   "unexecuted_function": "_estimate_region_tokens (cache-capable break-cost path)"
+  },
+  "sabotage": {
+   "per_hunk": [
+    {
+     "n": 1,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "agent/agent_init.py -350,6 +350,17",
+     "added_lines": 11,
+     "red_again": true,
+     "failed_tests": [
+      "A",
+      "B"
+     ],
+     "failed_how": "crash",
+     "swallowed_exceptions": [],
+     "first_error_line": "E       NameError: name '_parse_config_ratio' is not defined"
+    },
+    {
+     "n": 2,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "agent/agent_init.py -1575,6 +1586,20",
+     "added_lines": 14,
+     "red_again": true,
+     "failed_tests": [
+      "A",
+      "B"
+     ],
+     "failed_how": "crash",
+     "swallowed_exceptions": [],
+     "first_error_line": "E           AttributeError: 'CompressionSettings' object has no attribute 'tool_result_projection'"
+    },
+    {
+     "n": 3,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "agent/agent_init.py -2012,6 +2037,10",
+     "added_lines": 4,
+     "red_again": true,
+     "failed_tests": [
+      "A"
+     ],
+     "failed_how": "assertion",
+     "swallowed_exceptions": [],
+     "first_error_line": "E       AssertionError: no tool result was ever archived on the wire: 28 requests, 14 tool rows"
+    },
+    {
+     "n": 4,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "agent/context_compressor.py -2776,6 +2776,11",
+     "added_lines": 5,
+     "red_again": true,
+     "failed_tests": [
+      "A",
+      "B"
+     ],
+     "failed_how": "crash",
+     "swallowed_exceptions": [],
+     "first_error_line": "E           TypeError: ContextCompressor.__init__() got an unexpected keyword argument 'tool_result_projection'"
+    },
+    {
+     "n": 5,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "agent/context_compressor.py -2804,6 +2809,19",
+     "added_lines": 13,
+     "red_again": true,
+     "failed_tests": [
+      "A"
+     ],
+     "failed_how": "assertion",
+     "swallowed_exceptions": [],
+     "first_error_line": "E       AssertionError: no tool result was ever archived on the wire: 28 requests, 14 tool rows"
+    },
+    {
+     "n": 6,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "agent/tool_result_projection.py -0,0 +1,746",
+     "added_lines": 746,
+     "red_again": true,
+     "failed_tests": [
+      "A",
+      "B"
+     ],
+     "failed_how": "crash",
+     "swallowed_exceptions": [],
+     "first_error_line": "E       ModuleNotFoundError: No module named 'agent.tool_result_projection'"
+    },
+    {
+     "n": 7,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "agent/turn_request_assembly.py -187,6 +187,15",
+     "added_lines": 9,
+     "red_again": true,
+     "failed_tests": [
+      "A"
+     ],
+     "failed_how": "assertion",
+     "swallowed_exceptions": [],
+     "first_error_line": "E       AssertionError: no tool result was ever archived on the wire: 28 requests, 14 tool rows"
+    },
+    {
+     "n": 8,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "cli-config.yaml.example -830,6 +830,40",
+     "added_lines": 34,
+     "red_again": false,
+     "failed_tests": [],
+     "failed_how": null,
+     "swallowed_exceptions": [],
+     "first_error_line": ""
+    },
+    {
+     "n": 9,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "gateway/run.py -4410,6 +4410,10",
+     "added_lines": 4,
+     "red_again": false,
+     "failed_tests": [],
+     "failed_how": null,
+     "swallowed_exceptions": [],
+     "first_error_line": ""
+    },
+    {
+     "n": 10,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "hermes_cli/config_defaults.py -621,6 +621,30",
+     "added_lines": 24,
+     "red_again": false,
+     "failed_tests": [],
+     "failed_how": null,
+     "swallowed_exceptions": [],
+     "first_error_line": ""
+    },
+    {
+     "n": 11,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "scripts/bench_tool_result_projection.py -0,0 +1,159",
+     "added_lines": 159,
+     "red_again": false,
+     "failed_tests": [],
+     "failed_how": null,
+     "swallowed_exceptions": [],
+     "first_error_line": ""
+    },
+    {
+     "n": 12,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "tools/tool_result_storage.py -290,6 +290,79",
+     "added_lines": 73,
+     "red_again": true,
+     "failed_tests": [
+      "A"
+     ],
+     "failed_how": "assertion_via_swallowed_exception",
+     "swallowed_exceptions": [
+      "ImportError: cannot import name 'spillover_path_is_readable' from 'tools.tool_result_storage' ($WT..."
+     ],
+     "first_error_line": "E       AssertionError: no tool result was ever archived on the wire: 28 requests, 14 tool rows"
+    },
+    {
+     "n": 13,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "tui_gateway/session_compression.py -78,6 +78,8",
+     "added_lines": 2,
+     "red_again": false,
+     "failed_tests": [],
+     "failed_how": null,
+     "swallowed_exceptions": [],
+     "first_error_line": ""
+    },
+    {
+     "n": 14,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "tui_gateway/session_compression.py -119,6 +121,10",
+     "added_lines": 4,
+     "red_again": false,
+     "failed_tests": [],
+     "failed_how": null,
+     "swallowed_exceptions": [],
+     "first_error_line": ""
+    },
+    {
+     "n": 15,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "tui_gateway/session_compression.py -127,6 +133,12",
+     "added_lines": 6,
+     "red_again": false,
+     "failed_tests": [],
+     "failed_how": null,
+     "swallowed_exceptions": [],
+     "first_error_line": ""
+    },
+    {
+     "n": 16,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "website/docs/user-guide/configuration.md -1013,6 +1013,10",
+     "added_lines": 4,
+     "red_again": false,
+     "failed_tests": [],
+     "failed_how": null,
+     "swallowed_exceptions": [],
+     "first_error_line": ""
+    },
+    {
+     "n": 17,
+     "source": "carrier (+ gate where it sits in the new module)",
+     "hunk": "website/docs/user-guide/configuration.md -1056,6 +1060,16",
+     "added_lines": 10,
+     "red_again": false,
+     "failed_tests": [],
+     "failed_how": null,
+     "swallowed_exceptions": [],
+     "first_error_line": ""
+    },
+    {
+     "n": 18,
+     "source": "gate patch hunk 1",
+     "hunk": "agent/tool_result_projection.py -450,6 +450,53",
+     "added_lines": 47,
+     "red_again": true,
+     "failed_tests": [
+      "A"
+     ],
+     "failed_how": "assertion_via_swallowed_exception",
+     "swallowed_exceptions": [
+      "NameError: name 'replays_bound_thinking' is not defined"
+     ],
+     "first_error_line": "E       AssertionError: no tool result was ever archived on the wire: 28 requests, 14 tool rows",
+     "probes": {
+      "bedrock": {
+       "outcome": "passed",
+       "invalidated_block_replays": 0,
+       "projection_passes": 0,
+       "raw": "receipts/raw/r03/gate-revert-v3-hunk1-bedrock.json"
+      },
+      "thirdparty": {
+       "projection_passes": 0,
+       "pass_request_indices": [],
+       "thinking_blocks_on_wire": 0,
+       "raw": "receipts/raw/r03/gate-revert-v3-hunk1-thirdparty.json"
+      }
+     }
+    },
+    {
+     "n": 19,
+     "source": "gate patch hunk 2",
+     "hunk": "agent/tool_result_projection.py -565,6 +612,9",
+     "added_lines": 3,
+     "red_again": true,
+     "failed_tests": [
+      "B"
+     ],
+     "failed_how": "assertion",
+     "swallowed_exceptions": [],
+     "first_error_line": "E       AssertionError: a request replayed preserved-thinking blocks over a rewritten conversation prefix (Anthropic drops them, or rejects the request on enforced accounts):",
+     "probes": {
+      "bedrock": {
+       "outcome": "failed",
+       "invalidated_block_replays": 214,
+       "projection_passes": 5,
+       "raw": "receipts/raw/r03/gate-revert-v3-hunk2-bedrock.json"
+      },
+      "thirdparty": {
+       "projection_passes": 3,
+       "pass_request_indices": [
+        9,
+        15,
+        21
+       ],
+       "thinking_blocks_on_wire": 0,
+       "raw": "receipts/raw/r03/gate-revert-v3-hunk2-thirdparty.json"
+      }
+     }
+    }
+   ],
+   "pinned": [
+    "agent/agent_init.py @@ -350,6 +350,17 @@ def _parse_config_int(raw: Any, default: int) -> int: [crash]",
+    "agent/agent_init.py @@ -1575,6 +1586,20 @@ def _parse_compression_config(agent, _agent_cfg) -> CompressionSettings: [crash]",
+    "agent/agent_init.py @@ -2012,6 +2037,10 @@ def _build_context_engine(agent, _agent_cfg, cs, _custom_providers, _effective_c [assertion]",
+    "agent/context_compressor.py @@ -2776,6 +2776,11 @@ class ContextCompressor(SummaryDispatchMixin, MicroCompactionMixin, ContextEngin [crash]",
+    "agent/context_compressor.py @@ -2804,6 +2809,19 @@ class ContextCompressor(SummaryDispatchMixin, MicroCompactionMixin, ContextEngin [assertion]",
+    "agent/tool_result_projection.py @@ -0,0 +1,746 @@ [crash]",
+    "agent/turn_request_assembly.py @@ -187,6 +187,15 @@ def assemble_api_request( [assertion]",
+    "tools/tool_result_storage.py @@ -290,6 +290,79 @@ def extract_persisted_path(content: str) -> str | None: [assertion_via_swallowed_exception]",
+    "agent/tool_result_projection.py @@ -450,6 +450,53 @@ def _backend_is_remote() -> Optional[bool]: [assertion_via_swallowed_exception]",
+    "agent/tool_result_projection.py @@ -565,6 +612,9 @@ def _project(agent: Any, api_messages: List[Dict[str, Any]], env: Any) -> int: [assertion]"
+   ],
+   "unpinned_hunks": [
+    "cli-config.yaml.example @@ -830,6 +830,40 @@ compression:",
+    "gateway/run.py @@ -4410,6 +4410,10 @@ class GatewayRunner(",
+    "hermes_cli/config_defaults.py @@ -621,6 +621,30 @@ DEFAULT_CONFIG = {",
+    "scripts/bench_tool_result_projection.py @@ -0,0 +1,159 @@",
+    "tui_gateway/session_compression.py @@ -78,6 +78,8 @@ _COMPRESSION_INT_KEYS = (",
+    "tui_gateway/session_compression.py @@ -119,6 +121,10 @@ def _apply_live_compression_config(agent: Any, cfg: dict | None) -> None:",
+    "tui_gateway/session_compression.py @@ -127,6 +133,12 @@ def _apply_live_compression_config(agent: Any, cfg: dict | None) -> None:",
+    "website/docs/user-guide/configuration.md @@ -1013,6 +1013,10 @@ compression:",
+    "website/docs/user-guide/configuration.md @@ -1056,6 +1060,16 @@ The value is the **first rung** of an escalating ladder, not a fixed interval: c"
+   ],
+   "classification": {
+    "assertion": 4,
+    "assertion_via_swallowed_exception": 2,
+    "crash": 4,
+    "unpinned": 9
+   },
+   "classification_note": "project_stale_tool_results is fail-open: an exception inside the pass is logged and the request goes out unprojected. A revert that raises there turns projection off, and test A then fails by assertion; those flips are labelled assertion_via_swallowed_exception (tools/tool_result_storage.py: ImportError spillover_path_is_readable; gate hunk 1: NameError replays_bound_thinking). Round 1 listed both under 'by assertion'.",
+   "named": {
+    "S1 trigger=1": "A RED 3/3 (probe)",
+    "S2 stickiness dropped": "A RED 3/3 (probe)",
+    "gate v3 third-party skip removed": "= the carrier+foldin-v2 arm: third-party probe 0 passes vs 3 with v3 (F04-thirdparty/r20261001-01); test file GREEN either way"
+   },
+   "baseline": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 8.2s (2 workers) ==="
+  },
+  "adjacent": {
+   "files": [
+    "tests/agent/test_compression_config_defaults.py",
+    "tests/agent/test_proactive_tool_result_pruning.py",
+    "tests/tools/test_tool_result_storage.py",
+    "tests/tui_gateway/test_compression_config_hot_reload.py",
+    "(head only) tests/agent/test_tool_result_projection.py"
+   ],
+   "base": "=== Summary: 4 files, 75 tests passed, 0 failed (100% complete) in 3.7s (2 workers) ===",
+   "arm_carrier": "=== Summary: 5 files, 130 tests passed, 0 failed (100% complete) in 6.5s (2 workers) ===",
+   "arm_carrier_foldin_v2": "=== Summary: 5 files, 130 tests passed, 0 failed (100% complete) in 6.1s (2 workers) ===",
+   "arm_carrier_foldin_v3": "=== Summary: 5 files, 130 tests passed, 0 failed (100% complete) in 5.7s (2 workers) ===",
+   "count_note": "130 = 75 (the four files on main) + 2 (the carrier's two hot-reload tests, added to an existing file) + 53 (tests/agent/test_tool_result_projection.py); 55 of the 130 come from the carrier",
+   "identical": true,
+   "pre_existing_failures": []
+  },
+  "guards": "see GUARDS/r20261001-03",
+  "flaky": false,
+  "route_scope": "OpenAI-compatible (test A) and native Anthropic Messages (test B); Bedrock Converse in F04-bedrock/r20261001-02; third-party Messages endpoint in F04-thirdparty/r20261001-01",
+  "cache_read_ratio": {
+   "status": "MODELED_ONLY",
+   "see": "E37-synthetic/r20261001-03"
+  }
+ },
+ "proof_reps": {
+  "base": [
+   {
+    "rep": 1,
+    "summary": "=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 16.8s (2 workers) ===",
+    "failed": [
+     "A"
+    ],
+    "wall_s": 16.8,
+    "relay_init_failed_logged": true
+   },
+   {
+    "rep": 2,
+    "summary": "=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 16.7s (2 workers) ===",
+    "failed": [
+     "A"
+    ],
+    "wall_s": 16.7,
+    "relay_init_failed_logged": true
+   },
+   {
+    "rep": 3,
+    "summary": "=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 16.6s (2 workers) ===",
+    "failed": [
+     "A"
+    ],
+    "wall_s": 16.6,
+    "relay_init_failed_logged": true
+   }
+  ],
+  "carrier": [
+   {
+    "rep": 1,
+    "summary": "=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 16.6s (2 workers) ===",
+    "failed": [
+     "B"
+    ],
+    "wall_s": 16.6,
+    "relay_init_failed_logged": false
+   },
+   {
+    "rep": 2,
+    "summary": "=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 16.8s (2 workers) ===",
+    "failed": [
+     "B"
+    ],
+    "wall_s": 16.8,
+    "relay_init_failed_logged": false
+   },
+   {
+    "rep": 3,
+    "summary": "=== Summary: 1 files, 1 tests passed, 1 failed (100% complete) in 16.7s (2 workers) ===",
+    "failed": [
+     "B"
+    ],
+    "wall_s": 16.7,
+    "relay_init_failed_logged": false
+   }
+  ],
+  "carrier-foldin-v1": [
+   {
+    "rep": 1,
+    "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 8.4s (2 workers) ===",
+    "failed": [],
+    "wall_s": 8.4,
+    "relay_init_failed_logged": false
+   },
+   {
+    "rep": 2,
+    "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 8.5s (2 workers) ===",
+    "failed": [],
+    "wall_s": 8.5,
+    "relay_init_failed_logged": false
+   },
+   {
+    "rep": 3,
+    "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 8.4s (2 workers) ===",
+    "failed": [],
+    "wall_s": 8.4,
+    "relay_init_failed_logged": false
+   }
+  ],
+  "carrier-foldin-v2": [
+   {
+    "rep": 1,
+    "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 8.4s (2 workers) ===",
+    "failed": [],
+    "wall_s": 8.4,
+    "relay_init_failed_logged": false
+   },
+   {
+    "rep": 2,
+    "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 8.2s (2 workers) ===",
+    "failed": [],
+    "wall_s": 8.2,
+    "relay_init_failed_logged": false
+   },
+   {
+    "rep": 3,
+    "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 8.4s (2 workers) ===",
+    "failed": [],
+    "wall_s": 8.4,
+    "relay_init_failed_logged": false
+   }
+  ],
+  "carrier-foldin-v3": [
+   {
+    "rep": 1,
+    "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 8.1s (2 workers) ===",
+    "failed": [],
+    "wall_s": 8.1,
+    "relay_init_failed_logged": false
+   },
+   {
+    "rep": 2,
+    "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 8.4s (2 workers) ===",
+    "failed": [],
+    "wall_s": 8.4,
+    "relay_init_failed_logged": false
+   },
+   {
+    "rep": 3,
+    "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 8.4s (2 workers) ===",
+    "failed": [],
+    "wall_s": 8.4,
+    "relay_init_failed_logged": false
+   }
+  ]
+ },
+ "probe_results": {
+  "label": "OBSERVED (loopback wire)",
+  "n_per_arm": 3,
+  "arms": {
+   "base": {
+    "n": 3,
+    "reps_agree": "3/3",
+    "test_A_openai_route": "failed",
+    "test_B_native_anthropic": "passed",
+    "openai_route": {
+     "requests": 28,
+     "tool_rows": 14,
+     "rows_archived": 0,
+     "projection_passes": 0,
+     "pass_request_indices": [],
+     "reclaim_estimator_tokens_per_pass": [],
+     "unstable_archived_rows": 0,
+     "sum_request_chars": 5025476
+    },
+    "native_anthropic_route": {
+     "requests": 24,
+     "replayed_thinking_blocks": 23,
+     "invalidated_thinking_blocks": 0,
+     "rejected_400": 0,
+     "sum_request_chars": 3539687
+    },
+    "egress_blocked": [],
+    "repo_head": "434aa0b1083993444ec0cd5aa7cc61ec3422bd16",
+    "dirty_files": []
+   },
+   "carrier": {
+    "n": 3,
+    "reps_agree": "3/3",
+    "test_A_openai_route": "passed",
+    "test_B_native_anthropic": "failed",
+    "openai_route": {
+     "requests": 28,
+     "tool_rows": 14,
+     "rows_archived": 12,
+     "projection_passes": 6,
+     "pass_request_indices": [
+      7,
+      11,
+      15,
+      19,
+      23,
+      27
+     ],
+     "reclaim_estimator_tokens_per_pass": [
+      11692
+     ],
+     "unstable_archived_rows": 0,
+     "sum_request_chars": 1936683
+    },
+    "native_anthropic_route": {
+     "requests": 24,
+     "replayed_thinking_blocks": 23,
+     "invalidated_thinking_blocks": 3,
+     "rejected_400": 0,
+     "sum_request_chars": 1644530
+    },
+    "egress_blocked": [],
+    "repo_head": "dedece6d1937938ae9b5cfa92babaa380cbe584c",
+    "dirty_files": []
+   },
+   "carrier-S1": {
+    "n": 3,
+    "reps_agree": "3/3",
+    "test_A_openai_route": "failed",
+    "test_B_native_anthropic": "failed",
+    "openai_route": {
+     "requests": 28,
+     "tool_rows": 14,
+     "rows_archived": 12,
+     "projection_passes": 12,
+     "pass_request_indices": [
+      5,
+      7,
+      9,
+      11,
+      13,
+      15,
+      17,
+      19,
+      21,
+      23,
+      25,
+      27
+     ],
+     "reclaim_estimator_tokens_per_pass": [
+      5846
+     ],
+     "unstable_archived_rows": 0,
+     "sum_request_chars": 1655885
+    },
+    "native_anthropic_route": {
+     "requests": 24,
+     "replayed_thinking_blocks": 23,
+     "invalidated_thinking_blocks": 3,
+     "rejected_400": 0,
+     "sum_request_chars": 1644530
+    },
+    "egress_blocked": [],
+    "repo_head": "dedece6d1937938ae9b5cfa92babaa380cbe584c",
+    "dirty_files": [
+     "M agent/tool_result_projection.py"
+    ]
+   },
+   "carrier-S2": {
+    "n": 3,
+    "reps_agree": "3/3",
+    "test_A_openai_route": "failed",
+    "test_B_native_anthropic": "failed",
+    "openai_route": {
+     "requests": 28,
+     "tool_rows": 14,
+     "rows_archived": 12,
+     "projection_passes": 11,
+     "pass_request_indices": [
+      7,
+      9,
+      11,
+      13,
+      15,
+      17,
+      19,
+      21,
+      23,
+      25,
+      27
+     ],
+     "reclaim_estimator_tokens_per_pass": [
+      5846,
+      11692
+     ],
+     "unstable_archived_rows": 0,
+     "sum_request_chars": 1702685
+    },
+    "native_anthropic_route": {
+     "requests": 24,
+     "replayed_thinking_blocks": 23,
+     "invalidated_thinking_blocks": 8,
+     "rejected_400": 0,
+     "sum_request_chars": 1340369
+    },
+    "egress_blocked": [],
+    "repo_head": "dedece6d1937938ae9b5cfa92babaa380cbe584c",
+    "dirty_files": [
+     "M agent/tool_result_projection.py"
+    ]
+   },
+   "carrier-foldin-v1": {
+    "n": 3,
+    "reps_agree": "3/3",
+    "test_A_openai_route": "passed",
+    "test_B_native_anthropic": "passed",
+    "openai_route": {
+     "requests": 28,
+     "tool_rows": 14,
+     "rows_archived": 12,
+     "projection_passes": 6,
+     "pass_request_indices": [
+      7,
+      11,
+      15,
+      19,
+      23,
+      27
+     ],
+     "reclaim_estimator_tokens_per_pass": [
+      11692
+     ],
+     "unstable_archived_rows": 0,
+     "sum_request_chars": 1936683
+    },
+    "native_anthropic_route": {
+     "requests": 24,
+     "replayed_thinking_blocks": 23,
+     "invalidated_thinking_blocks": 0,
+     "rejected_400": 0,
+     "sum_request_chars": 3539687
+    },
+    "egress_blocked": [],
+    "repo_head": "dedece6d1937938ae9b5cfa92babaa380cbe584c",
+    "dirty_files": [
+     "M agent/tool_result_projection.py"
+    ]
+   },
+   "carrier-foldin-v2": {
+    "n": 3,
+    "reps_agree": "3/3",
+    "test_A_openai_route": "passed",
+    "test_B_native_anthropic": "passed",
+    "openai_route": {
+     "requests": 28,
+     "tool_rows": 14,
+     "rows_archived": 12,
+     "projection_passes": 6,
+     "pass_request_indices": [
+      7,
+      11,
+      15,
+      19,
+      23,
+      27
+     ],
+     "reclaim_estimator_tokens_per_pass": [
+      11692
+     ],
+     "unstable_archived_rows": 0,
+     "sum_request_chars": 1936683
+    },
+    "native_anthropic_route": {
+     "requests": 24,
+     "replayed_thinking_blocks": 23,
+     "invalidated_thinking_blocks": 0,
+     "rejected_400": 0,
+     "sum_request_chars": 3539687
+    },
+    "egress_blocked": [],
+    "repo_head": "dedece6d1937938ae9b5cfa92babaa380cbe584c",
+    "dirty_files": [
+     "M agent/tool_result_projection.py"
+    ]
+   },
+   "carrier-foldin-v3": {
+    "n": 3,
+    "reps_agree": "3/3",
+    "test_A_openai_route": "passed",
+    "test_B_native_anthropic": "passed",
+    "openai_route": {
+     "requests": 28,
+     "tool_rows": 14,
+     "rows_archived": 12,
+     "projection_passes": 6,
+     "pass_request_indices": [
+      7,
+      11,
+      15,
+      19,
+      23,
+      27
+     ],
+     "reclaim_estimator_tokens_per_pass": [
+      11692
+     ],
+     "unstable_archived_rows": 0,
+     "sum_request_chars": 1936683
+    },
+    "native_anthropic_route": {
+     "requests": 24,
+     "replayed_thinking_blocks": 23,
+     "invalidated_thinking_blocks": 0,
+     "rejected_400": 0,
+     "sum_request_chars": 3539687
+    },
+    "egress_blocked": [],
+    "repo_head": "dedece6d1937938ae9b5cfa92babaa380cbe584c",
+    "dirty_files": [
+     "M agent/tool_result_projection.py"
+    ]
+   }
+  }
+ },
+ "measurements": [
+  {
+   "name": "projection_passes_openai_route",
+   "arm": "carrier",
+   "value": 6,
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "count (all reps equal)"
+  },
+  {
+   "name": "reclaim_estimator_tokens_per_pass",
+   "arm": "carrier",
+   "value": [
+    11692
+   ],
+   "n": 3,
+   "label": "OBSERVED (per-environment)",
+   "statistic": "value"
+  },
+  {
+   "name": "thinking_blocks_replayed_over_rewritten_prefix",
+   "arm": "carrier",
+   "value": 3,
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "count"
+  },
+  {
+   "name": "thinking_blocks_replayed_over_rewritten_prefix",
+   "arm": "carrier+foldin-v3",
+   "value": 0,
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "count"
+  },
+  {
+   "name": "native_anthropic_sum_request_chars",
+   "arm": "base / carrier / carrier+foldin-v3",
+   "value": [
+    3539687,
+    1644530,
+    3539687
+   ],
+   "n": 3,
+   "label": "OBSERVED",
+   "statistic": "sum of request chars; equal base and fold-in values mean no projection pass ran on the native route with the gate"
+  }
+ ],
+ "denominators": {
+  "cells": 65,
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "completeness": 1.0,
+  "note": "15 canonical-runner proof runs, 21 probe runs (7 arms x 3), 1 seam trace, 1 sabotage baseline + one run per hunk (17 carrier + 2 gate), 4 adjacent runs, 4 gate-revert probe runs (Bedrock + third-party per gate hunk)"
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "harness_abi": {
+  "harness": "hermes",
+  "editor_abi": "n/a"
+ },
+ "not_tested": [
+  "real provider prompt cache (cache_read_input_tokens) - MODELED only",
+  "Vertex Claude; Claude thinking over chat completions (OpenRouter / Nous Portal chat wire: Hermes replays signed reasoning_details there, the gate does not look at that wire, binding unknown)",
+  "Nous Portal Messages route on the wire (direct call only, PREDICATE/r20261001-02)",
+  "remote terminal backends (docker/ssh/modal) for the spillover path",
+  "compaction mid-session in the F04 scenario (no compaction fired in 28 requests)",
+  "preserved-thinking replay of every assistant turn on the native route (#129620/#129492/#129882 not applied)"
+ ],
+ "limitations": [
+  "a passing per-hunk sabotage run only means the wire test does not pin that hunk; see unpinned_hunks",
+  "the estimator token counts are per-environment (the stub embeds sandbox paths): 11,692 here, 11,694 in round 1, 11,696 in round 0, 11,800-11,802 in the phase-3 verifier's rerun"
+ ],
+ "resource_usage": {
+  "wall_s": 546.2,
+  "cpu_core_s": null,
+  "gpu_s": 0,
+  "energy_j": null,
+  "api_cost_usd": 0.0,
+  "note": "wall_s summed from raw outputs; CPU time and energy not recorded"
+ },
+ "artifacts": [
+  {
+   "path": "receipts/raw/r03/adjacent-base.txt",
+   "sha256": "6daab0642a57369a7bb4a967069c8467b816504279484ccaed010d23637f2426"
+  },
+  {
+   "path": "receipts/raw/r03/adjacent-carrier-foldin-v2.txt",
+   "sha256": "bd995aba3be0a155c8a89669e48d4eb7a0b22b1d0c6bc57f5ee41c26de0adddc"
+  },
+  {
+   "path": "receipts/raw/r03/adjacent-carrier-foldin-v3.txt",
+   "sha256": "4aa01d54fad57b8e37b397d3ae6392beba679e5427d4486f9052df5032e9cff2"
+  },
+  {
+   "path": "receipts/raw/r03/adjacent-carrier.txt",
+   "sha256": "9f4d1f01bf0fab569f178f9a1dacba1858bc13559f976f00b1a12250141d8c5f"
+  },
+  {
+   "path": "receipts/raw/r03/fix-v3.diff",
+   "sha256": "5d91350e88edadcbb22b131bf707a8509eac95d1aead8e0ca443c7cb5ddd309d"
+  },
+  {
+   "path": "receipts/raw/r03/gate-revert-v3-hunk1-bedrock.json",
+   "sha256": "dc0a34c8b60268aef8c95e9ebd6482316c3d320209a0811e7ae32c3b60bec1e9"
+  },
+  {
+   "path": "receipts/raw/r03/gate-revert-v3-hunk1-thirdparty.json",
+   "sha256": "54137a68b3957c81273a1c186237403816772c9bc32f9fefa540baca357d23c6"
+  },
+  {
+   "path": "receipts/raw/r03/gate-revert-v3-hunk2-bedrock.json",
+   "sha256": "910357a1abadb9e4fa778f47a2b711ca39afdbaad967cc37747129563b1856dc"
+  },
+  {
+   "path": "receipts/raw/r03/gate-revert-v3-hunk2-thirdparty.json",
+   "sha256": "f3dfc81a2d7d1915dca041b0418f604ba362a4df512231a4ebc4e38415e6216b"
+  },
+  {
+   "path": "receipts/raw/r03/per-hunk-sabotage.json",
+   "sha256": "99242b88a1802bf26f510cc42dbc1126230e8fe0fd522a25cc816f621e5638df"
+  },
+  {
+   "path": "receipts/raw/r03/probe-base-wire-r1.json",
+   "sha256": "e189e973b18d5226c56f25ea17712888629f6a74260d5651feb765c6e82c5bfc"
+  },
+  {
+   "path": "receipts/raw/r03/probe-base-wire-r1.json.log",
+   "sha256": "1b3116bafe1b572869dcd5b9f49d356c985a27ba3decb163a0b63971bbe1964f"
+  },
+  {
+   "path": "receipts/raw/r03/probe-base-wire-r2.json",
+   "sha256": "fa1aeda168f8a37c7b0c9d311cecd53f826ba66a87172df752f3488f709698bd"
+  },
+  {
+   "path": "receipts/raw/r03/probe-base-wire-r2.json.log",
+   "sha256": "c9ac6190cd7650891c9f48c6204237a2b11ec41f28237d0cd43b38f468f094c1"
+  },
+  {
+   "path": "receipts/raw/r03/probe-base-wire-r3.json",
+   "sha256": "b057e54daea9e69e6242134acc0944a1e5d46a0b85ac69bd35d375077a321015"
+  },
+  {
+   "path": "receipts/raw/r03/probe-base-wire-r3.json.log",
+   "sha256": "98b0e560927efc9b3bc5c38bad1738ad6459755b04926b94d7d0486d31226f41"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-S1-wire-r1.json",
+   "sha256": "7cfe4b2b2c7f41f6bb0cf69fb0a0b08827d3c64b2b3118165e29efb388788182"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-S1-wire-r1.json.log",
+   "sha256": "026fe478781513393ce5af738cb74a091eca3bb4b4e8b3e6b62f707c1e2abb15"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-S1-wire-r2.json",
+   "sha256": "04a4e5f77bb36eb413a00bbf5b21090c9be6bd0af118a991bdfd472dbc7279e1"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-S1-wire-r2.json.log",
+   "sha256": "804f7b9dabd05871dde9aceba241519be7316104700fd2522d012825d1a8fae1"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-S1-wire-r3.json",
+   "sha256": "78bd48fbd5e6d0e0c230e374d40c56966334de4d2277145b872893e12902b261"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-S1-wire-r3.json.log",
+   "sha256": "5a59569b464188d4e799c0e9609e71471830f087fd041a964b715076071c336a"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-S2-wire-r1.json",
+   "sha256": "a7a535827bd0c3ef83435f8e95fd38b55aed43c4de99a4e90e207b927b26b464"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-S2-wire-r1.json.log",
+   "sha256": "ae42bf9e8152776a05c18664efc5a258ae4459dbd5e9cbc89a463cd05c141edd"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-S2-wire-r2.json",
+   "sha256": "947bde70f66c29b9a38eac829568ef47a61cdbcb8bc8a5c6307e7f2445b40a9c"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-S2-wire-r2.json.log",
+   "sha256": "4a2cf6902fa92091d788c122d4a3b855dce616c6dd3140709e4a400a524beb94"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-S2-wire-r3.json",
+   "sha256": "33448572d99e4a2390cd10c07f8a1d601ad091566dbd6580f168485fbef76047"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-S2-wire-r3.json.log",
+   "sha256": "9e15a46ae437ddd3248d3aa25e7bcaa93984020dc760286d641f563876d4eeaa"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v1-wire-r1.json",
+   "sha256": "fe9c75432ac21704f1481c5144c2079e0912d79e981722afc7b1a4fc36fb66e4"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v1-wire-r1.json.log",
+   "sha256": "78518365062ea1ad2ed724ad4269670bf07359f465b0e68a64311a3dcf4e4682"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v1-wire-r2.json",
+   "sha256": "87c23a58c5f6a7491167c0bee74987fafb4cdf245df39a1ba20710d0a2c4f90e"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v1-wire-r2.json.log",
+   "sha256": "49e696f7597accb8e0c68d4a6d9ca375d4ce8bc978575e6e4e39bc86ea980f4d"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v1-wire-r3.json",
+   "sha256": "ea73ec7e91d7abda94066bf956c82fd67b59f0b0bd2e94d1b52ae7f85cd823fa"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v1-wire-r3.json.log",
+   "sha256": "1216de21d58dfde20e0726761234f954f2c19a61c843010a740866d483dbcecf"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v2-wire-r1.json",
+   "sha256": "275360ba80c98d2ef60c9e8f277abd1171ebaf9b847a5b6e8ac2f438e39bb124"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v2-wire-r1.json.log",
+   "sha256": "2b380f7603ae26ed267198a9e4e75243cfbfbf30eff66057ae68034aa21f9477"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v2-wire-r2.json",
+   "sha256": "17e0d9ac9969cfecadeb9051dbeda124250a716618f3ef3c8b0663914d042feb"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v2-wire-r2.json.log",
+   "sha256": "4b929bdf5e3ed89b2d93a5ae6066b61cb2b9227cc1e9af9ffbfb0f723d19dd8b"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v2-wire-r3.json",
+   "sha256": "d4572ecd7d92f5bbe50c2e95a9f33425d6259463640ede689ef5bce0e02b4317"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v2-wire-r3.json.log",
+   "sha256": "f25f328abee4ff21488b0358cc10b69793f4c6092e8fde467f289d3b038bdbd5"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v3-wire-r1.json",
+   "sha256": "d0910e835938ea030735702bcb5e6d60be6a0c2b575d2bfc9a5529c47b44b7a2"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v3-wire-r1.json.log",
+   "sha256": "ea1fd6fd4defe232b8ebff45d35fb9fc9b7637158c62b1e8d52eea4fde08d875"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v3-wire-r2.json",
+   "sha256": "10a3be440f0614d3681b3dbcf43931bfb4397d33c09cd4d182b6eed1ee537c69"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v3-wire-r2.json.log",
+   "sha256": "2a071061547fd89dbba9ab718975bdeba107644e37e2eab6042196159aae7aaa"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v3-wire-r3.json",
+   "sha256": "45713247f987b23721f2c1677f2e7bfd1246cd5f5e77b20a9c7386fa5de3d663"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-foldin-v3-wire-r3.json.log",
+   "sha256": "b1a7cbb11e3c1b207f97c458afd59acb309a91aa8761fec3f5f75f1e557279fb"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-wire-r1.json",
+   "sha256": "66c42f0f44e0164aa6a685421bd769c27e885dd37ca44eff2be7f2e971a7157e"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-wire-r1.json.log",
+   "sha256": "1294333643fe52994cc7c76836d46217a724c721c57c9f85751f488107fcfd0e"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-wire-r2.json",
+   "sha256": "d73fb2301943f6bca8b996a83ad8c75ef106de754cb5260b5a9a486d21c6ac75"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-wire-r2.json.log",
+   "sha256": "3f02d685647c5b328cb36e781b26a45292a52c5078648aa36b68710d31ec87e5"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-wire-r3.json",
+   "sha256": "f5a35771a180ff1ec6ecb62184d6f9fdfe669be5a05943134e6d15bc4765b4f4"
+  },
+  {
+   "path": "receipts/raw/r03/probe-carrier-wire-r3.json.log",
+   "sha256": "2496e9b329a1e60af1bbdfd9b7f6af4a2059cfcd1661669a53cf654afe80b31f"
+  },
+  {
+   "path": "receipts/raw/r03/proof-base-r1.txt",
+   "sha256": "2dfce8fa569f815b962bcc4131223bd2d927a1b58cb5d010cac7bd10d98917e4"
+  },
+  {
+   "path": "receipts/raw/r03/proof-base-r2.txt",
+   "sha256": "b08e7f26be93bb10641f626ba2a33f9bfad062d81ef2389969311215fe1ef449"
+  },
+  {
+   "path": "receipts/raw/r03/proof-base-r3.txt",
+   "sha256": "08a451cfa04a567a08edd1760b765d7f53a1f9ecf00d2619feb1006710143d0d"
+  },
+  {
+   "path": "receipts/raw/r03/proof-carrier-foldin-v1-r1.txt",
+   "sha256": "226bd230ea92efe7061baf9a3576efa2602f9af3b4f877dd659972d5f0344998"
+  },
+  {
+   "path": "receipts/raw/r03/proof-carrier-foldin-v1-r2.txt",
+   "sha256": "8bc88e4d20bba5f83232e0983f8c337341f7ae73e5e743a8f8454365dfd230c3"
+  },
+  {
+   "path": "receipts/raw/r03/proof-carrier-foldin-v1-r3.txt",
+   "sha256": "08693f6323e6945d25f58d5aa5f7e286e62d119104e73c121d4cc231797c5152"
+  },
+  {
+   "path": "receipts/raw/r03/proof-carrier-foldin-v2-r1.txt",
+   "sha256": "dfa259141eb9e8a7871158d85711beb97dddf35d6ed69ec1c22848c4d7eb4e8f"
+  },
+  {
+   "path": "receipts/raw/r03/proof-carrier-foldin-v2-r2.txt",
+   "sha256": "6e751e702cd29bf057718eb29190ee48b053c4809cc43da687a8941c91abd9e9"
+  },
+  {
+   "path": "receipts/raw/r03/proof-carrier-foldin-v2-r3.txt",
+   "sha256": "bcc974b32e80ace76390960f4a493cf67cf0177761feff24324ab773f22447d1"
+  },
+  {
+   "path": "receipts/raw/r03/proof-carrier-foldin-v3-r1.txt",
+   "sha256": "d9f76ae4a68dc6f9066e6ba262b3e4ec9bcd745f16db9ef2869ace07473ec032"
+  },
+  {
+   "path": "receipts/raw/r03/proof-carrier-foldin-v3-r2.txt",
+   "sha256": "90da41e96f242fe9a5c49c2f8feed1660ac4a20f51cff4384e7a012758c2873f"
+  },
+  {
+   "path": "receipts/raw/r03/proof-carrier-foldin-v3-r3.txt",
+   "sha256": "9e15b795169bddd96246286b3b280fe098fa3998cb596b38fd25c1fe5c966551"
+  },
+  {
+   "path": "receipts/raw/r03/proof-carrier-r1.txt",
+   "sha256": "c22db447096b2fd3f9a2e862f8ba86f5c31f47914248069559c1fe920606f895"
+  },
+  {
+   "path": "receipts/raw/r03/proof-carrier-r2.txt",
+   "sha256": "617db7382bcb91d8b654179c4301b05832abb62f9e652118005b5df04f93153b"
+  },
+  {
+   "path": "receipts/raw/r03/proof-carrier-r3.txt",
+   "sha256": "84365b9d06251a52f287382ee61eada701f42fb32465b6b0f8af963d3eee8b0f"
+  },
+  {
+   "path": "receipts/raw/r03/seam-trace.json",
+   "sha256": "036dedc41121d732b8f357d427f799a07e6a297da8670cb2323b8b7d8bdb8b0a"
+  },
+  {
+   "path": "receipts/raw/r03/seam-trace.log",
+   "sha256": "a73255b84713ecdfefa39e0367eb96f38808a7a2955d48a0ede786c5d76dbede"
+  }
+ ],
+ "verdict": "KEEP (support evidence): the carrier holds the OpenAI-route byte-stability / paid-batch / sticky / resume contract; it invalidates replayed signed thinking on native Anthropic; fold-in gate v3 closes that (v2 and v1 do too on this route: the test file does not tell them apart)",
+ "supersedes": "F04/r20261001-02",
+ "corrections": [
+  {
+   "date": "2026-10-01",
+   "by": "staging fix round 3 (fix of the round-2 re-verifier findings)",
+   "changes": [
+    "env.host: the workstation's host name replaced by 'withheld' (receipts must not carry host names)",
+    "artifacts: repr-truncated scratch-path fragments (a session-id fragment of the scratch directory path) in pytest locals were scrubbed to '...$S/...' in receipts/raw/r03/probe-base-wire-r1.json.log, receipts/raw/r03/probe-base-wire-r2.json.log, receipts/raw/r03/probe-base-wire-r3.json.log, receipts/raw/r03/probe-carrier-S1-wire-r1.json.log, receipts/raw/r03/probe-carrier-S1-wire-r2.json.log, receipts/raw/r03/probe-carrier-S1-wire-r3.json.log, receipts/raw/r03/probe-carrier-S2-wire-r1.json.log, receipts/raw/r03/probe-carrier-S2-wire-r2.json.log, receipts/raw/r03/probe-carrier-S2-wire-r3.json.log, receipts/raw/r03/probe-carrier-wire-r1.json.log, receipts/raw/r03/probe-carrier-wire-r2.json.log, receipts/raw/r03/probe-carrier-wire-r3.json.log; before/after hashes: {\"receipts/raw/r03/probe-base-wire-r1.json.log\": {\"before\": \"6f5d558ff380cb850f4ae0c4115e4d95f314381ff38ff74be30da15c53169629\", \"after\": \"1b3116bafe1b572869dcd5b9f49d356c985a27ba3decb163a0b63971bbe1964f\"}, \"receipts/raw/r03/probe-base-wire-r2.json.log\": {\"before\": \"fe80dffc054852680550a9be17c6739f04a5e24763843d4c3521870e6e74a681\", \"after\": \"c9ac6190cd7650891c9f48c6204237a2b11ec41f28237d0cd43b38f468f094c1\"}, \"receipts/raw/r03/probe-base-wire-r3.json.log\": {\"before\": \"72f38c338943308f3af3d4addda90672ef1c166cae6ccb0e7b3f31c4254e61ea\", \"after\": \"98b0e560927efc9b3bc5c38bad1738ad6459755b04926b94d7d0486d31226f41\"}, \"receipts/raw/r03/probe-carrier-S1-wire-r1.json.log\": {\"before\": \"c4b7a3e6b674d92e2d0a49008f0205822c20c41e4ebcaa03d31ecfb3343f6258\", \"after\": \"026fe478781513393ce5af738cb74a091eca3bb4b4e8b3e6b62f707c1e2abb15\"}, \"receipts/raw/r03/probe-carrier-S1-wire-r2.json.log\": {\"before\": \"9bea2adc8c00b89d372d2e42c6df58279ed2b9e88d179da4b229d7ce0cb4fe09\", \"after\": \"804f7b9dabd05871dde9aceba241519be7316104700fd2522d012825d1a8fae1\"}, \"receipts/raw/r03/probe-carrier-S1-wire-r3.json.log\": {\"before\": \"17930a2c162955bf84e00fa78f9366f0d9869e4a708bfcd316a424792b3975c1\", \"after\": \"5a59569b464188d4e799c0e9609e71471830f087fd041a964b715076071c336a\"}, \"receipts/raw/r03/probe-carrier-S2-wire-r1.json.log\": {\"before\": \"b62ddd2d5e168b50bd67eec6f9c0fd4c9b409f6a44689b2b2fe53f718f8537a7\", \"after\": \"ae42bf9e8152776a05c18664efc5a258ae4459dbd5e9cbc89a463cd05c141edd\"}, \"receipts/raw/r03/probe-carrier-S2-wire-r2.json.log\": {\"before\": \"3ea147f33e6036b2d5c6ca259c73cf03c62a39c11ad32e33231e1fa9d048aebe\", \"after\": \"4a2cf6902fa92091d788c122d4a3b855dce616c6dd3140709e4a400a524beb94\"}, \"receipts/raw/r03/probe-carrier-S2-wire-r3.json.log\": {\"before\": \"61f5a2af2bc1eca57a076ac5a9f234bf82089d42793c67ded82bdff931701597\", \"after\": \"9e15a46ae437ddd3248d3aa25e7bcaa93984020dc760286d641f563876d4eeaa\"}, \"receipts/raw/r03/probe-carrier-wire-r1.json.log\": {\"before\": \"bcb9b3a06bf5ca5e803677fd058c6e2b36fcd9619a73b9c4c7e9a8c9361d9624\", \"after\": \"1294333643fe52994cc7c76836d46217a724c721c57c9f85751f488107fcfd0e\"}, \"receipts/raw/r03/probe-carrier-wire-r2.json.log\": {\"before\": \"e93907a5d2c495b22117e87fb1ca3d38d96ae3d8ee6ec24e6b1e2521d05909c3\", \"after\": \"3f02d685647c5b328cb36e781b26a45292a52c5078648aa36b68710d31ec87e5\"}, \"receipts/raw/r03/probe-carrier-wire-r3.json.log\": {\"before\": \"f3295672049dfb1724f88abf305f07fc72b1faf0703b85d4bb3ebbf644bcd1f8\", \"after\": \"2496e9b329a1e60af1bbdfd9b7f6af4a2059cfcd1661669a53cf654afe80b31f\"}}"
+   ]
+  },
+  {
+   "date": "2026-10-01",
+   "by": "staging fix round 3 (fix of the round-2 re-verifier findings)",
+   "changes": [
+    "superseded_by F04/r20261001-04 (round 3, re-measured on main 44a1ce9724 with the staging commit 3b47753d54 and gate v4)",
+    "gates.green / verdict: 'fold-in gate v3 closes that' holds within one agent only. ProjectionState is in memory, so after a restart, resume or agent rebuild the gate declines the re-projection and archived rows go back to full bytes under a block signed over their stubs (RESTART/r20261001-01). The guards entry ('guards equal') covered three members of the F14 standing set, not F14, so P5 was overstated as PASS."
+   ]
+  }
+ ],
+ "superseded_by": "F04/r20261001-04"
+}

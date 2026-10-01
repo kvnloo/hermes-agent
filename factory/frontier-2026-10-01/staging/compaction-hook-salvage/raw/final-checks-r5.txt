@@ -1,0 +1,21 @@
+checked_at 2026-10-01T17:14:54Z
+main 07ab19b0a399f33bd760852e0b0588d07efe8c22 2026-10-01T22:43:34+05:30
+commits_since_base 7
+invalidate_on_changed []
+merge_tree_main e8d99459cae29e2f836389ad24470fe3bbb5c53b rc=0
+staging_tree 29740a06f74641abc89163a16529d24bd9001f1a
+branch 111f361fb0003405e4724b4c6523f6ce5d118c22
+pr127058_head f306319fe7d7d349f329a496be10afa9650943cc
+foldin_vs_127058 bd2034bca94c4367147140c807147f8fdaaa58ec agent/conversation_compression.py  Auto-merging agent/conversation_compression.py CONFLICT (content): Merge conflict in agent/conversation_compression.py 
+foldin_on_main 4df2fdc3df7fdb7abebed636b4ebc0196f6111c5
+body diff == patches/arm-foldin.patch
+body diff applies on 1ab964166a125b64ea4d5c05e7f5813bffd7bb2d
+diff vs foldin-r5: []
+worktree clean
+staging patch applies on 44a1ce9724502b9c692faaef00af3054bf11f1a6
+fork_refs [3d64efc27d1247da5dd6b170a87c44ef9e653776	refs/heads/staged/cu-capture-mode-projection 2f79b549ef40aeb31cb3af36cd92d8d12b9ba799	refs/heads/staged/cu-repeat-input-dedup 9225807160327a648a21bd493e9ed943f8ce5baa	refs/heads/staged/observer-hooks-doc-drift dd4dd10611e8c23c7579a4ddb95655abebbaca27	refs/heads/staged/postmortem-logcalls-zero-hit ddf4748d31cb5dc65e7cd0b0c5b27b98d63ae880	refs/heads/staged/prefix-parity-journeys 28790e597cdd497aef31f2c16327f8b347669354	refs/heads/staging ] at 2026-10-01T17:14:55Z
+done 2026-10-01T17:14:55Z
+# after forcing the local branch to the r5 staging commit (the run above still read round 2's 111f361fb0 for 'branch' and 'merge_tree_main'):
+branch 1ab964166a125b64ea4d5c05e7f5813bffd7bb2d at 2026-10-01T17:15:12Z
+merge_tree_main 0866f212717637926b4f3c0ceb3a0b601b964495 rc=0 (main 07ab19b0a399f33bd760852e0b0588d07efe8c22)
+foldin_on_main 4df2fdc3df7fdb7abebed636b4ebc0196f6111c5 rc=0

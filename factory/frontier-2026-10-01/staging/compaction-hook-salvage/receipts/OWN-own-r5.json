@@ -1,0 +1,447 @@
+{
+ "schema": "xf.receipt.v1",
+ "id": "OWN/own-r5",
+ "label": "OBSERVED",
+ "spec": {
+  "path": null,
+  "rev": 5,
+  "decision_rule": "fairness only: each carrier's own tests on its arm; #53806's tests are ported from its compression commit, verbatim and with two marked drift adaptations"
+ },
+ "runner_revision": {
+  "script": {
+   "path": "tools/chs_own_r5.sh",
+   "sha256": "65d12e144cf40b3dce5f272f5f04421ad499b780284fe9861dce7fdfe4c6ac88"
+  },
+  "egress_guard": {
+   "path": "tools/chs_egress_guard_r4.py",
+   "sha256": "3a808849b49a9edbc0649dc5249857e0718ffa0412f54df93453d8e9f3d980a1"
+  },
+  "c53806_port_verbatim": {
+   "path": "tools/chs_c53806_own_tests.py",
+   "sha256": "7ff61555c90e9324eead7740058348691f73dc720f02f8d40e544e3bdab2aae2"
+  },
+  "c53806_port_adapted": {
+   "path": "tools/chs_c53806_own_tests_adapted.py",
+   "sha256": "2f8d79eb2a2a1910546b4f4cee2d439780f20e5d5866c01f9c78cd0a677eb5af"
+  }
+ },
+ "issue": null,
+ "origin_refs": [
+  "NousResearch/hermes-agent#64231",
+  "NousResearch/hermes-agent#118382",
+  "NousResearch/hermes-agent#53806",
+  "NousResearch/hermes-agent#93391",
+  "NousResearch/hermes-agent#118847",
+  "NousResearch/hermes-agent#119347",
+  "NousResearch/hermes-agent#125881",
+  "NousResearch/hermes-agent#4123",
+  "NousResearch/hermes-agent#7150",
+  "NousResearch/hermes-agent#118120",
+  "NousResearch/hermes-agent#127058"
+ ],
+ "staging": "compaction-hook-salvage",
+ "base_revision": "44a1ce9724502b9c692faaef00af3054bf11f1a6",
+ "head_revision": "1ab964166a125b64ea4d5c05e7f5813bffd7bb2d",
+ "changed_files": [],
+ "purpose": "fairness check: each carrier proves its own, different contract with its own tests",
+ "cells": [
+  {
+   "cell": "base-rotation_state",
+   "commit": "1ab964166a125b64ea4d5c05e7f5813bffd7bb2d",
+   "file": "tests/agent/test_compression_rotation_state.py",
+   "file_source": "carrier's own file on its arm",
+   "summary": {
+    "files": 1,
+    "passed": 40,
+    "failed": 0,
+    "skipped_per_worker_lines": [],
+    "failing": []
+   },
+   "egress": {
+    "connect": 0,
+    "dns": 113,
+    "by_thread": {
+     "dns:openrouter-prewarm": 1,
+     "dns:MainThread": 112
+    }
+   },
+   "exit_class": "INFRA",
+   "log_private": "raw/own-r5/base-rotation_state.log"
+  },
+  {
+   "cell": "c93391-code",
+   "commit": "bc2e3a1ee895db29cbd13499f8729b1f36486291",
+   "file": "tests/agent/test_compression_rotation_state.py",
+   "file_source": "carrier's own file on its arm",
+   "summary": {
+    "files": 1,
+    "passed": 43,
+    "failed": 0,
+    "skipped_per_worker_lines": [],
+    "failing": []
+   },
+   "egress": {
+    "connect": 0,
+    "dns": 119,
+    "by_thread": {
+     "dns:openrouter-prewarm": 1,
+     "dns:MainThread": 118
+    }
+   },
+   "exit_class": "INFRA",
+   "log_private": "raw/own-r5/c93391-code.log"
+  },
+  {
+   "cell": "c118847-handport",
+   "commit": "e5b6d4cfcf2b7e605ef0e4ad7036e757a6a12a37",
+   "file": "tests/agent/test_post_compaction_hook.py",
+   "file_source": "carrier's own file on its arm",
+   "summary": {
+    "files": 1,
+    "passed": 7,
+    "failed": 0,
+    "skipped_per_worker_lines": [],
+    "failing": []
+   },
+   "egress": {
+    "connect": 0,
+    "dns": 0,
+    "by_thread": {}
+   },
+   "exit_class": "ok",
+   "log_private": "raw/own-r5/c118847-handport.log"
+  },
+  {
+   "cell": "c125881-merge",
+   "commit": "d2130c1220c82e90674ee01a08f54f1eca316c1f",
+   "file": "tests/agent/test_context_governance.py",
+   "file_source": "carrier's own file on its arm",
+   "summary": {
+    "files": 1,
+    "passed": 9,
+    "failed": 0,
+    "skipped_per_worker_lines": [],
+    "failing": []
+   },
+   "egress": {
+    "connect": 0,
+    "dns": 0,
+    "by_thread": {}
+   },
+   "exit_class": "ok",
+   "log_private": "raw/own-r5/c125881-merge.log"
+  },
+  {
+   "cell": "base-c53806-own",
+   "commit": "1ab964166a125b64ea4d5c05e7f5813bffd7bb2d",
+   "file": "tests/agent/test_zz_chs_c53806_own.py",
+   "file_source": "factory port: tools/chs_c53806_own_tests.py",
+   "summary": {
+    "files": 1,
+    "passed": 0,
+    "failed": 3,
+    "skipped_per_worker_lines": [],
+    "failing": [
+     "tests/agent/test_zz_chs_c53806_own.py::TestCarrier53806OwnTests::test_plugin_on_session_start_called_on_agent_init",
+     "tests/agent/test_zz_chs_c53806_own.py::TestCarrier53806OwnTests::test_plugin_on_session_start_called_with_compression_boundary",
+     "tests/agent/test_zz_chs_c53806_own.py::TestCarrier53806OwnTests::test_pre_context_compression_plugin_hook_fires_before_compress"
+    ]
+   },
+   "egress": {
+    "connect": 0,
+    "dns": 20,
+    "by_thread": {
+     "dns:openrouter-prewarm": 2,
+     "dns:MainThread": 18
+    }
+   },
+   "exit_class": "INFRA",
+   "log_private": "raw/own-r5/base-c53806-own.log",
+   "per_test": {
+    "test_plugin_on_session_start_called_on_agent_init": "FAIL",
+    "test_pre_context_compression_plugin_hook_fires_before_compress": "FAIL",
+    "test_plugin_on_session_start_called_with_compression_boundary": "FAIL"
+   }
+  },
+  {
+   "cell": "c53806-handport-own",
+   "commit": "809dcbbb49adf8aefb125a810bdd144098b7093a",
+   "file": "tests/agent/test_zz_chs_c53806_own.py",
+   "file_source": "factory port: tools/chs_c53806_own_tests.py",
+   "summary": {
+    "files": 1,
+    "passed": 0,
+    "failed": 3,
+    "skipped_per_worker_lines": [],
+    "failing": [
+     "tests/agent/test_zz_chs_c53806_own.py::TestCarrier53806OwnTests::test_plugin_on_session_start_called_on_agent_init",
+     "tests/agent/test_zz_chs_c53806_own.py::TestCarrier53806OwnTests::test_plugin_on_session_start_called_with_compression_boundary",
+     "tests/agent/test_zz_chs_c53806_own.py::TestCarrier53806OwnTests::test_pre_context_compression_plugin_hook_fires_before_compress"
+    ]
+   },
+   "egress": {
+    "connect": 0,
+    "dns": 20,
+    "by_thread": {
+     "dns:openrouter-prewarm": 2,
+     "dns:MainThread": 18
+    }
+   },
+   "exit_class": "INFRA",
+   "log_private": "raw/own-r5/c53806-handport-own.log",
+   "per_test": {
+    "test_plugin_on_session_start_called_on_agent_init": "FAIL",
+    "test_pre_context_compression_plugin_hook_fires_before_compress": "FAIL",
+    "test_plugin_on_session_start_called_with_compression_boundary": "FAIL"
+   }
+  },
+  {
+   "cell": "foldin-own",
+   "commit": "6a2f717e4ca114878356ea03077e448090455282",
+   "file": "tests/agent/test_zz_chs_c53806_own.py",
+   "file_source": "factory port: tools/chs_c53806_own_tests.py",
+   "summary": {
+    "files": 1,
+    "passed": 0,
+    "failed": 3,
+    "skipped_per_worker_lines": [],
+    "failing": [
+     "tests/agent/test_zz_chs_c53806_own.py::TestCarrier53806OwnTests::test_plugin_on_session_start_called_on_agent_init",
+     "tests/agent/test_zz_chs_c53806_own.py::TestCarrier53806OwnTests::test_plugin_on_session_start_called_with_compression_boundary",
+     "tests/agent/test_zz_chs_c53806_own.py::TestCarrier53806OwnTests::test_pre_context_compression_plugin_hook_fires_before_compress"
+    ]
+   },
+   "egress": {
+    "connect": 0,
+    "dns": 20,
+    "by_thread": {
+     "dns:openrouter-prewarm": 2,
+     "dns:MainThread": 18
+    }
+   },
+   "exit_class": "INFRA",
+   "log_private": "raw/own-r5/foldin-own.log",
+   "per_test": {
+    "test_plugin_on_session_start_called_on_agent_init": "FAIL",
+    "test_pre_context_compression_plugin_hook_fires_before_compress": "FAIL",
+    "test_plugin_on_session_start_called_with_compression_boundary": "FAIL"
+   }
+  },
+  {
+   "cell": "base-c53806-own-adapted",
+   "commit": "1ab964166a125b64ea4d5c05e7f5813bffd7bb2d",
+   "file": "tests/agent/test_zz_chs_c53806_own.py",
+   "file_source": "factory port: tools/chs_c53806_own_tests_adapted.py",
+   "summary": {
+    "files": 1,
+    "passed": 0,
+    "failed": 2,
+    "skipped_per_worker_lines": [],
+    "failing": [
+     "tests/agent/test_zz_chs_c53806_own.py::TestCarrier53806OwnTestsAdapted::test_plugin_on_session_start_called_with_compression_boundary",
+     "tests/agent/test_zz_chs_c53806_own.py::TestCarrier53806OwnTestsAdapted::test_pre_context_compression_plugin_hook_fires_before_compress"
+    ]
+   },
+   "egress": {
+    "connect": 0,
+    "dns": 14,
+    "by_thread": {
+     "dns:openrouter-prewarm": 2,
+     "dns:MainThread": 12
+    }
+   },
+   "exit_class": "INFRA",
+   "log_private": "raw/own-r5/base-c53806-own-adapted.log",
+   "per_test": {
+    "test_pre_context_compression_plugin_hook_fires_before_compress": "FAIL",
+    "test_plugin_on_session_start_called_with_compression_boundary": "FAIL"
+   }
+  },
+  {
+   "cell": "c53806-handport-own-adapted",
+   "commit": "809dcbbb49adf8aefb125a810bdd144098b7093a",
+   "file": "tests/agent/test_zz_chs_c53806_own.py",
+   "file_source": "factory port: tools/chs_c53806_own_tests_adapted.py",
+   "summary": {
+    "files": 1,
+    "passed": 2,
+    "failed": 0,
+    "skipped_per_worker_lines": [],
+    "failing": []
+   },
+   "egress": {
+    "connect": 0,
+    "dns": 7,
+    "by_thread": {
+     "dns:openrouter-prewarm": 1,
+     "dns:MainThread": 6
+    }
+   },
+   "exit_class": "INFRA",
+   "log_private": "raw/own-r5/c53806-handport-own-adapted.log",
+   "per_test": {
+    "test_pre_context_compression_plugin_hook_fires_before_compress": "PASS",
+    "test_plugin_on_session_start_called_with_compression_boundary": "PASS"
+   }
+  },
+  {
+   "cell": "foldin-own-adapted",
+   "commit": "6a2f717e4ca114878356ea03077e448090455282",
+   "file": "tests/agent/test_zz_chs_c53806_own.py",
+   "file_source": "factory port: tools/chs_c53806_own_tests_adapted.py",
+   "summary": {
+    "files": 1,
+    "passed": 1,
+    "failed": 1,
+    "skipped_per_worker_lines": [],
+    "failing": [
+     "tests/agent/test_zz_chs_c53806_own.py::TestCarrier53806OwnTestsAdapted::test_plugin_on_session_start_called_with_compression_boundary"
+    ]
+   },
+   "egress": {
+    "connect": 0,
+    "dns": 14,
+    "by_thread": {
+     "dns:openrouter-prewarm": 2,
+     "dns:MainThread": 12
+    }
+   },
+   "exit_class": "INFRA",
+   "log_private": "raw/own-r5/foldin-own-adapted.log",
+   "per_test": {
+    "test_pre_context_compression_plugin_hook_fires_before_compress": "PASS",
+    "test_plugin_on_session_start_called_with_compression_boundary": "FAIL"
+   }
+  }
+ ],
+ "c53806_reading": {
+  "test_plugin_on_session_start_called_on_agent_init": "needs the carrier's agent/agent_init.py hunk (plugin on_session_start at agent init), which the hand-port leaves out with the resume-hook commit",
+  "test_pre_context_compression_plugin_hook_fires_before_compress": "verbatim: current main hands the hook the transcript with the session store's row metadata attached (_db_persisted, _row_id, message_uid, timestamp, _db_row_snapshot), so `conversation_history == messages` fails; session_id, task_id and approx_tokens match. Same result with the call placed in compress_context instead",
+  "test_plugin_on_session_start_called_with_compression_boundary": "verbatim: on current main a one-message compaction no longer commits, so no post-commit boundary call happens; with 10 messages (main's own sibling test) it fires on the hand-port. On the fold-in it fails by design: the fold-in replaces this on_session_start(boundary_reason='compression') call with on_compression_complete"
+ },
+ "c53806_r5_note": {
+  "test_pre_context_compression_plugin_hook_fires_before_compress": "r5: the fold-in routes the call through hermes_cli.lifecycle.invoke_hook (first-party observers, then plugins) from agent/conversation_compression_observer.py; the carrier's test patches hermes_cli.plugins.invoke_hook, which lifecycle still calls, so the adapted test reads the same seam"
+ },
+ "policy_revision": {
+  "AGENTS.md": "65aa3e61bcba610da21279a17385671263be39e9",
+  "CONTRIBUTING.md": "b0baa59b5057c204b3c09d3dd170c0955cfdb39c",
+  "factory": "FACTORY.md sha256:7726ba18b43a9367f91d7f70c3aaefb96a9863761ddf71225c61c26a30d688d4",
+  "protocol": "promotion-readiness-2026-10-01/PROTOCOL.md sha256:182e3fbae771d7219497833b3f9d6f7ed385d70abace8736559026e4e60b90d4"
+ },
+ "env": {
+  "host": "withheld (one local workstation; receipts name no host)",
+  "python": "3.11.14 (the live venv's interpreter, used read-only through HERMES_PYTHON; never as a source)",
+  "sandbox": "no bwrap/netns (FACTORY \u00a76 layer 1 not used). In-process layer only: tools/chs_egress_guard_r4.py (non-loopback connect and DNS refused and logged with the calling thread's name; nothing suppressed, so the openrouter-prewarm thread starts and any lookup it makes is counted), loaded through the isolated test HOME's pytest_live_guard.py shim; scripts/run_tests.sh runs pytest under env -i with isolated HOME and HERMES_HOME (placeholders: $TESTHOME, $TESTHOME/.hermes)"
+ },
+ "command": "bash tools/chs_own_r5.sh $WORKTREE $TESTHOME $PY (inside tools/chs_run_all_r5.sh)",
+ "gates": {
+  "validity": "INFRA under strict S16 (8 of 10 cells had blocked DNS lookups from the carriers' own or upstream test code); fairness reading only under the recorded S16 exception (not accepted)"
+ },
+ "denominators": {
+  "cells": 10,
+  "errored_scored_zero": 0,
+  "infra_excluded": 0,
+  "infra": 8,
+  "completeness": 1.0
+ },
+ "egress": {
+  "connect": 0,
+  "dns": 327,
+  "by_thread": {
+   "dns:openrouter-prewarm": 13,
+   "dns:MainThread": 314
+  },
+  "dns_attribution": {
+   "base-rotation_state.egress.stacks": {
+    "total": 113,
+    "by_thread_file_and_source": {
+     "dns | thread=MainThread | tests/agent/test_compression_rotation_state.py | OpenRouter model-metadata GET (fetch_model_metadata)": 40,
+     "dns | thread=MainThread | tests/agent/test_compression_rotation_state.py | OpenRouter video catalog GET (tool definitions build)": 72,
+     "dns | thread=openrouter-prewarm | (no test frame: openrouter-prewarm thread) | OpenRouter model-metadata GET (fetch_model_metadata)": 1
+    }
+   },
+   "c93391-code.egress.stacks": {
+    "total": 119,
+    "by_thread_file_and_source": {
+     "dns | thread=MainThread | tests/agent/test_compression_rotation_state.py | OpenRouter model-metadata GET (fetch_model_metadata)": 42,
+     "dns | thread=MainThread | tests/agent/test_compression_rotation_state.py | OpenRouter video catalog GET (tool definitions build)": 76,
+     "dns | thread=openrouter-prewarm | (no test frame: openrouter-prewarm thread) | OpenRouter model-metadata GET (fetch_model_metadata)": 1
+    }
+   },
+   "c118847-handport.egress.stacks": {
+    "total": 0,
+    "by_thread_file_and_source": {}
+   },
+   "c125881-merge.egress.stacks": {
+    "total": 0,
+    "by_thread_file_and_source": {}
+   },
+   "base-c53806-own.egress.stacks": {
+    "total": 20,
+    "by_thread_file_and_source": {
+     "dns | thread=MainThread | tests/agent/test_zz_chs_c53806_own.py | OpenRouter model-metadata GET (fetch_model_metadata)": 6,
+     "dns | thread=MainThread | tests/agent/test_zz_chs_c53806_own.py | OpenRouter video catalog GET (tool definitions build)": 12,
+     "dns | thread=openrouter-prewarm | (no test frame: openrouter-prewarm thread) | OpenRouter model-metadata GET (fetch_model_metadata)": 2
+    }
+   },
+   "c53806-handport-own.egress.stacks": {
+    "total": 20,
+    "by_thread_file_and_source": {
+     "dns | thread=MainThread | tests/agent/test_zz_chs_c53806_own.py | OpenRouter model-metadata GET (fetch_model_metadata)": 6,
+     "dns | thread=MainThread | tests/agent/test_zz_chs_c53806_own.py | OpenRouter video catalog GET (tool definitions build)": 12,
+     "dns | thread=openrouter-prewarm | (no test frame: openrouter-prewarm thread) | OpenRouter model-metadata GET (fetch_model_metadata)": 2
+    }
+   },
+   "foldin-own.egress.stacks": {
+    "total": 20,
+    "by_thread_file_and_source": {
+     "dns | thread=MainThread | tests/agent/test_zz_chs_c53806_own.py | OpenRouter model-metadata GET (fetch_model_metadata)": 6,
+     "dns | thread=MainThread | tests/agent/test_zz_chs_c53806_own.py | OpenRouter video catalog GET (tool definitions build)": 12,
+     "dns | thread=openrouter-prewarm | (no test frame: openrouter-prewarm thread) | OpenRouter model-metadata GET (fetch_model_metadata)": 2
+    }
+   },
+   "base-c53806-own-adapted.egress.stacks": {
+    "total": 14,
+    "by_thread_file_and_source": {
+     "dns | thread=MainThread | tests/agent/test_zz_chs_c53806_own.py | OpenRouter model-metadata GET (fetch_model_metadata)": 4,
+     "dns | thread=MainThread | tests/agent/test_zz_chs_c53806_own.py | OpenRouter video catalog GET (tool definitions build)": 8,
+     "dns | thread=openrouter-prewarm | (no test frame: openrouter-prewarm thread) | OpenRouter model-metadata GET (fetch_model_metadata)": 2
+    }
+   },
+   "c53806-handport-own-adapted.egress.stacks": {
+    "total": 7,
+    "by_thread_file_and_source": {
+     "dns | thread=MainThread | tests/agent/test_zz_chs_c53806_own.py | OpenRouter model-metadata GET (fetch_model_metadata)": 2,
+     "dns | thread=MainThread | tests/agent/test_zz_chs_c53806_own.py | OpenRouter video catalog GET (tool definitions build)": 4,
+     "dns | thread=openrouter-prewarm | (no test frame: openrouter-prewarm thread) | OpenRouter model-metadata GET (fetch_model_metadata)": 1
+    }
+   },
+   "foldin-own-adapted.egress.stacks": {
+    "total": 14,
+    "by_thread_file_and_source": {
+     "dns | thread=MainThread | tests/agent/test_zz_chs_c53806_own.py | OpenRouter model-metadata GET (fetch_model_metadata)": 4,
+     "dns | thread=MainThread | tests/agent/test_zz_chs_c53806_own.py | OpenRouter video catalog GET (tool definitions build)": 8,
+     "dns | thread=openrouter-prewarm | (no test frame: openrouter-prewarm thread) | OpenRouter model-metadata GET (fetch_model_metadata)": 2
+    }
+   }
+  },
+  "s16_exception": "see E12/e12-r5 egress.s16_exception"
+ },
+ "evidence_class": {
+  "local": true,
+  "ci": "none",
+  "simulation": false,
+  "runtime": false,
+  "kind": "mechanism"
+ },
+ "reruns": [],
+ "limitations": [
+  "#118847's own tests mock hermes_cli.lifecycle.invoke_hook, the seam itself",
+  "#53806's tests are a factory port (its test hunk no longer applies to main's moved file)"
+ ],
+ "verdict": "N_A (fairness)",
+ "provenance": "self",
+ "frozen": null,
+ "ai_assistance": "Claude Code (Opus 5.5) wrote the contract test, the fold-in (including the sibling module), the harness and these receipts; disclosed per repository policy",
+ "privacy": "public-aggregate: repo-relative paths and placeholders only; synthetic fixtures; no session ids, home paths, emails, message text or secrets. Raw logs under raw/ are private and contain local paths."
+}
