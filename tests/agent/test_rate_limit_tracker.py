@@ -4,6 +4,8 @@ import time
 import pytest
 from agent.rate_limit_tracker import (
     RateLimitBucket,
+    format_rate_limit_compact,
+    format_rate_limit_display,
     parse_rate_limit_headers,
 )
 
@@ -48,6 +50,27 @@ class TestParseHeaders:
     def test_no_headers(self):
         state = parse_rate_limit_headers({})
         assert state is None
+
+    def test_missing_remaining_is_unknown_not_exhausted(self):
+        # A limit without its remaining header must not read as "0 left":
+        # remaining=0 is the real exhaustion signal, so an absent header is no data.
+        state = parse_rate_limit_headers(
+            {"x-ratelimit-limit-requests": "800", "x-ratelimit-reset-requests": "30"},
+            provider="custom",
+        )
+        assert state is not None
+        assert state.requests_min.usage_pct == 0.0
+        assert not state.has_data
+        assert format_rate_limit_compact(state) == "No rate limit data."
+
+        # A present remaining of 0 is still genuine exhaustion.
+        exhausted = parse_rate_limit_headers(
+            {"x-ratelimit-limit-requests": "800", "x-ratelimit-remaining-requests": "0",
+             "x-ratelimit-reset-requests": "120"},
+            provider="custom",
+        )
+        assert exhausted.requests_min.usage_pct == 100.0
+        assert "⚠ requests/min at 100%" in format_rate_limit_display(exhausted)
 
 class TestBucket:
 

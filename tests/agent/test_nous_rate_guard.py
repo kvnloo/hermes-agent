@@ -241,6 +241,20 @@ class TestIsGenuineNousRateLimit:
             headers=None, last_known_state=last_state
         ) is False
 
+    def test_last_known_state_missing_remaining_stays_upstream(self):
+        # A prior response that sent limit+reset but no remaining header says
+        # nothing about exhaustion; it must not trip the breaker on a bare 429.
+        from agent.nous_rate_guard import is_genuine_nous_rate_limit
+        from agent.rate_limit_tracker import parse_rate_limit_headers
+
+        last_state = parse_rate_limit_headers(
+            {"x-ratelimit-limit-requests-1h": "800", "x-ratelimit-reset-requests-1h": "3100"},
+            provider="nous",
+        )
+        assert is_genuine_nous_rate_limit(
+            headers=None, last_known_state=last_state
+        ) is False
+
 
 
 class TestWelcomeRouteCopy:
