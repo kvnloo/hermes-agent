@@ -162,3 +162,75 @@ async def test_non_corruption_database_error_is_not_swallowed(monkeypatch):
     )
     with pytest.raises(sqlite3.DatabaseError):
         await sessions_router.get_session_detail("20260830_180820_744f05")
+
+
+# ── Corruption past the session lookup ──────────────────────────────────────
+#
+# The session lookup reads the *sessions* b-tree; the transcript reads
+# (/messages, /timeline, /messages/around) read the *messages* b-tree
+# afterwards. With the sessions primary key intact and only the messages b-tree
+# damaged, the lookup succeeds and the transcript read raised an unclassified
+# ``sqlite3.DatabaseError`` → bare 500.
+
+
+def _zero_messages_rootpage(db_path) -> None:
+    conn = sqlite3.connect(str(db_path))
+    try:
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        page_size = conn.execute("PRAGMA page_size").fetchone()[0]
+        rootpage = conn.execute(
+            "SELECT rootpage FROM sqlite_master WHERE type='table' AND name='messages'"
+        ).fetchone()[0]
+    finally:
+        conn.close()
+    with open(db_path, "r+b") as f:
+        f.seek((rootpage - 1) * page_size)
+        f.write(b"\x00" * page_size)
+
+
+@pytest.mark.parametrize("path", ["messages", "timeline", "messages/around?row_id=1"])
+def test_transcript_reads_report_corrupt_messages_btree_as_503(path):
+    from starlette.testclient import TestClient
+
+    from hermes_cli.web_server import _SESSION_HEADER_NAME, _SESSION_TOKEN, app
+    from hermes_state import SessionDB, _default_db_path
+
+    db = SessionDB()
+    sid = db.create_session(session_id="20260831_000000_abcdef", source="test")
+    for i in range(3):
+        db.append_message(sid, role="user", content=f"hello {i}")
+    db.close()
+    _zero_messages_rootpage(_default_db_path())
+
+    client = TestClient(app, raise_server_exceptions=False)
+    client.headers[_SESSION_HEADER_NAME] = _SESSION_TOKEN
+    resp = client.get(f"/api/sessions/{sid}/{path}")
+
+    assert resp.status_code == 503, resp.text
+    assert "hermes doctor" in str(resp.json()["detail"]).lower()
+
+
+class _MessagesReadErrorDB(_EmptyDB):
+    """Sessions PK intact (resolve succeeds); the transcript read fails."""
+
+    def resolve_session_id(self, session_id):
+        return session_id
+
+    def resolve_resume_session_id(self, session_id):
+        return session_id
+
+    def get_messages(self, session_id, **kwargs):
+        raise sqlite3.DatabaseError("some unrelated database failure")
+
+
+@pytest.mark.asyncio
+async def test_messages_read_non_corruption_error_is_not_relabelled(monkeypatch):
+    monkeypatch.setattr(
+        _web_server_sessions,
+        "_open_session_db_for_profile",
+        lambda profile, *, read_only: _MessagesReadErrorDB(),
+    )
+    with pytest.raises(sqlite3.DatabaseError):
+        await sessions_router.get_session_messages(
+            "20260830_180820_744f05", None, None, 0, None, False
+        )

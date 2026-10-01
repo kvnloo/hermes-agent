@@ -144,6 +144,17 @@ def _with_db(profile: Optional[str], fn: Callable, *, read_only: bool):
         db.close()
 
 
+async def _read_transcript(profile: Optional[str], fn: Callable):
+    """Read-only ``_with_db`` off the loop for the transcript endpoints. The session lookup
+    passes on an intact sessions b-tree, so a damaged messages b-tree first fails here:
+    same corrupt-store 503 as the other reads, not a bare 500."""
+    try:
+        return await asyncio.to_thread(_with_db, profile, fn, read_only=True)
+    except sqlite3.DatabaseError:
+        with corrupt_store_as_status(_session_db_path_for_profile(profile)):
+            raise
+
+
 def _serving_profile(profile: Optional[str]) -> str:
     """The profile name rows are stamped with: the requested one, else the
     serving process's own — so default-profile rows never circulate unowned."""
@@ -710,7 +721,7 @@ async def get_session_messages(
             sid, limit=_limit, offset=offset, latest=latest_page,
             include_compacted=include_compacted, include_ancestors=True)
 
-    result = await asyncio.to_thread(_with_db, profile, _read, read_only=True)
+    result = await _read_transcript(profile, _read)
     if result is None:
         raise HTTPException(status_code=404, detail=_NOT_FOUND)
     sid, _limit, messages = result
@@ -763,7 +774,7 @@ async def get_session_timeline(
         return {"session_id": sid, "profile": owner,
                 **read_timeline(db, sid, limit=limit, after_row_id=after_row_id)}
 
-    return await asyncio.to_thread(_with_db, profile, _read, read_only=True)
+    return await _read_transcript(profile, _read)
 
 
 @manage_router.get("/api/sessions/{session_id}/messages/around")
@@ -783,7 +794,7 @@ async def get_session_messages_around(
             raise HTTPException(status_code=404, detail="Prompt not found")
         return {"session_id": sid, "profile": owner, **page}
 
-    result = await asyncio.to_thread(_with_db, profile, _read, read_only=True)
+    result = await _read_transcript(profile, _read)
     result["messages"] = await asyncio.to_thread(
         _project_for_display, result["messages"], home=_history_profile_home(profile))
     return result
