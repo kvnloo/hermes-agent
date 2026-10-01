@@ -476,6 +476,30 @@ def test_names_hyperlinks_notes(tmp_path):
     assert names["defined_names"] == {"Extra": "'D'!$C$1"}
 
 
+def test_hyperlink_font_overrides_keep_link_color(tmp_path):
+    # bold/italic/font_size on a hyperlink must restyle the Hyperlink font,
+    # not replace it with a colorless one; only font_color changes the color.
+    spec = {"sheets": [{"name": "L", "cells": {
+        "A1": {"value": "plain", "hyperlink": "https://example.com/a"},
+        "A2": {"value": "styled", "hyperlink": "https://example.com/b",
+               "bold": True, "italic": True, "font_size": 14},
+        "A3": {"value": "colored", "hyperlink": "https://example.com/c",
+               "bold": True, "font_color": "FF0000"},
+    }}]}
+    spec_path = tmp_path / "lspec.json"
+    spec_path.write_text(json.dumps(spec), encoding="utf-8")
+    book = tmp_path / "links.xlsx"
+    run("xlsx_create.py", spec_path, book)
+
+    ws = load_workbook(book)["L"]
+    a1, a2, a3 = ws["A1"].font, ws["A2"].font, ws["A3"].font
+    assert a1.color.theme == 10 and not a1.bold
+    assert (a2.bold, a2.italic, a2.size) == (True, True, 14)
+    assert a2.color is not None and a2.color.theme == 10
+    assert a3.bold and a3.color.rgb.endswith("FF0000")
+    assert ws["A2"].hyperlink.target == "https://example.com/b"
+
+
 def test_sheet_protection(tmp_path):
     spec = {"sheets": [{"name": "P", "rows": [["locked", "open"]],
                         "protection": {"password": "your-password",
