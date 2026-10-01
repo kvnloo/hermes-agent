@@ -3,7 +3,9 @@
 One durable session is driven for 10+ turns through fresh processes of the real entrypoints that
 can continue it — the ``tui_gateway`` stdio JSON-RPC server (what the TUI/Desktop spawn) and the
 ``hermes chat -q --resume`` oneshot CLI — switching process and working directory between turns,
-with a parallel tool batch and (gateway journeys) one manual ``session.compress`` on the way.
+with a parallel tool batch and (gateway journeys) one manual ``session.compress`` on the way. The
+surfaces that build a fresh agent per process each get their own restart journey with one compaction:
+the messaging gateway, api_server ``/v1/runs`` and ACP.
 
 Invariants over the fake provider's recorded request stream:
 
@@ -22,9 +24,12 @@ from pathlib import Path
 
 import pytest
 
+from tests.e2e.core._pending_fixes import known_gate
 from tests.e2e.core.history._helpers import (
     NO_BACKGROUND_REVIEW,
     OFFLINE_CONFIG,
+    AcpStdio,
+    ApiServerRuns,
     Script,
     Spawned,
     TuiGateway,
@@ -32,11 +37,15 @@ from tests.e2e.core.history._helpers import (
     assert_rows_exactly_once,
     assert_usage_matches,
     big,
+    canon,
     child_env,
+    first_summary_request,
     integrity_ok,
     lineage,
     prefix_breaks,
+    root_session,
     row_counts,
+    run_messaging_gateway,
     run_oneshot,
     tools_breaks,
     views,
@@ -76,6 +85,49 @@ JOURNEYS: dict[str, list[Hop]] = {
         ("gw", "a", ["sw6 before compress", "/compress", "sw6 after compress", "sw6 more"]),
         ("cli", "b", ["sw7 oneshot after compaction"]),
     ],
+    # The tui_gateway_restarts shape on surfaces that build a fresh agent per process: the messaging
+    # gateway (recording Telegram adapter, one DM chat), api_server /v1/runs addressed by the client's
+    # session_id, and ACP (session/new, then session/load). Their cwd is an explicit input
+    # (terminal.cwd, session/load cwd) and a changed cwd rebuilds the prompt by design, so it stays put.
+    "messaging_gateway_restarts": [
+        ("msg", "a", ["mg1 first turn", "TOOLS:mg1 runs a parallel batch", "mg1 third turn"]),
+        ("msg", "a", ["mg2 resumed turn", "mg2 another turn"]),
+        ("msg", "a", ["mg3 turn before compress", "/compress", "mg3 turn after compress", "mg3 more"]),
+        ("msg", "a", ["mg4 resumed after compaction", "mg4 last turn"]),
+    ],
+    # No manual compaction over HTTP: the provider reports context pressure ("PRESSURE:") and the
+    # next turn auto-compacts, as a long API session does.
+    "api_server_runs_restarts": [
+        ("api", "a", ["api1 first turn", "TOOLS:api1 runs a parallel batch", "api1 third turn"]),
+        ("api", "a", ["api2 resumed turn", "api2 another turn"]),
+        ("api", "a", ["PRESSURE:api3 turn near the window", "api3 turn after compaction", "api3 more"]),
+        ("api", "a", ["api4 resumed after compaction", "api4 last turn"]),
+    ],
+    "acp_restarts": [
+        ("acp", "a", ["acp1 first turn", "TOOLS:acp1 runs a parallel batch", "acp1 third turn"]),
+        ("acp", "a", ["acp2 loaded turn", "acp2 another turn"]),
+        ("acp", "a", ["acp3 turn before compress", "/compress", "acp3 turn after compress", "acp3 more"]),
+        ("acp", "a", ["acp4 loaded after compaction", "acp4 last turn"]),
+    ],
+}
+# Provider-reported prompt tokens for a "PRESSURE:" turn: above the 75% compaction threshold of the
+# fixture's 128K window, so the next turn's preflight compacts.
+PRESSURE_PROMPT_TOKENS = 110_000
+
+# journey -> (the gap's own failure signature, "#issue reason"); see _pending_fixes.known_gate.
+# acp_restarts repro: after ACP /compress, the first request of a fresh `hermes acp` (session/load) is a
+# full prefix miss. Two causes, each enough on its own: the compacted transcript is never persisted, so
+# the reload replays the pre-compaction rows; and the prompt rebuilt at the compaction wraps the cached
+# one (compress_now(system_message=agent._cached_system_prompt), the #15281 shape), which is not
+# persisted either, so the reload drops back to the stored copy. With only the first fixed, the nested
+# prompt is persisted instead and the nesting assertion below is the one that still fails.
+KNOWN: dict[str, tuple[str, str]] = {
+    "acp_restarts": (
+        r"^prompt-cache prefix broke outside the compaction boundary:\s+request \d+ \(in hop 4 \(acp in "
+        r"work-a\)\): messages\[\d+\] \(\w+\) changed;[^\n]*(?![\s\S]*request \d+ \(in hop)"
+        r"|^the prompt rebuilt at the compaction \(request \d+\) nests the previous system prompt",
+        "#76215 ACP /compress is lost on reload (fixes in review: #76224, #88364), and its rebuilt prompt nests the "
+        "cached one (acp_adapter/commands.py passes system_message=agent._cached_system_prompt)"),
 }
 
 class ToolsArrayDrift(Exception):
@@ -104,6 +156,11 @@ def world(tmp_path):
 
 def _queue_turn(script: Script, prompt: str) -> str:
     """Script the model for one turn; returns the text the user types."""
+    if prompt == "/compress":
+        return prompt
+    pressure = prompt.startswith("PRESSURE:")
+    if pressure:
+        prompt = prompt[len("PRESSURE:"):]
     if prompt.startswith("TOOLS:"):
         prompt = prompt[len("TOOLS:"):]
         tag = prompt.split()[0]
@@ -113,7 +170,8 @@ def _queue_turn(script: Script, prompt: str) -> str:
     # answer so a double-counted or dropped request is visible.
     n = len(prompt)
     script.actions.append(Text(big(f"answer-{prompt.replace(' ', '-')}", 12000),
-                               prompt_tokens=2000 + n, completion_tokens=40 + n, cached_tokens=1500))
+                               prompt_tokens=(PRESSURE_PROMPT_TOKENS if pressure else 2000) + n,
+                               completion_tokens=40 + n, cached_tokens=1500))
     return prompt
 
 
@@ -146,6 +204,20 @@ def run_journey(world: dict, hops: list[Hop]) -> tuple[str, list[tuple[int, str]
                         continue
                     gw.submit(live, _queue_turn(script, turn))
                 sid = sid or gw.stored[live]
+        elif surface == "msg":
+            run_messaging_gateway(env, cwd, home, [_queue_turn(script, t) for t in turns], world["spawned"])
+            sid = sid or root_session(home, "telegram")
+        elif surface == "api":
+            sid = sid or "prefix-journey-api"  # the client's own conversation id
+            with ApiServerRuns(env, cwd, home, world["spawned"]) as api:
+                for turn in turns:
+                    api.submit(sid, _queue_turn(script, turn))
+        elif surface == "acp":
+            with AcpStdio(env, cwd, home, world["spawned"]) as acp:
+                live = acp.open(sid)
+                for turn in turns:
+                    acp.prompt(live, _queue_turn(script, turn))
+            sid = sid or live
         else:
             for turn in turns:
                 _out, got = run_oneshot(env, cwd, _queue_turn(script, turn), world["spawned"], resume=sid)
@@ -153,6 +225,9 @@ def run_journey(world: dict, hops: list[Hop]) -> tuple[str, list[tuple[int, str]
                 sid = got
         main = srv.main_requests()
         assert len(main) > opened_at, f"{label}: sent no model request"
+        if surface != "gw" and any(t == "/compress" or t.startswith("PRESSURE:") for t in turns):
+            compaction_idx = first_summary_request(main, opened_at)
+            assert compaction_idx is not None, f"{label}: no request after the compaction carries a summary"
         if persisted is not None:
             assert_replay_equals_persisted(main[opened_at], persisted, f"{label} opening request")
         assert_rows_exactly_once(home, sid, label)
@@ -162,6 +237,11 @@ def run_journey(world: dict, hops: list[Hop]) -> tuple[str, list[tuple[int, str]
         openings.append((opened_at, label))
     assert not script.actions, f"scripted responses never consumed: {script.actions}"
     return sid, openings, compaction_idx
+
+
+def _system_text(request: dict) -> str:
+    content = request["messages"][0].get("content")
+    return content if isinstance(content, str) else canon(content)
 
 
 @pytest.mark.parametrize("journey", list(JOURNEYS))
@@ -174,18 +254,24 @@ def test_request_prefix_is_byte_stable_across_processes(world, journey):
     def where(i: int) -> str:
         return f"request {i} (in {max((o for o in openings if o[0] <= i), default=(0, '?'))[1]})"
 
-    # System prompt + messages first; the tools array is checked last, on its own, so a gated
-    # tools-drift bug cannot mask a message-prefix, usage or integrity regression.
-    breaks = prefix_breaks(main, tools=False)
-    unexpected = [(i, why) for i, why in breaks if i != compaction_idx]
-    assert not unexpected, "prompt-cache prefix broke outside the compaction boundary:\n" + "\n".join(
-        f"  {where(i)}: {why}" for i, why in unexpected)
-    if compaction_idx is not None:
-        assert [i for i, _ in breaks] == [compaction_idx], (
-            f"the manual /compress must break the prefix exactly once, at request {compaction_idx}: {breaks}")
-
+    # Usage and integrity first, so a gated prefix gap (KNOWN) cannot mask them; the tools array is
+    # checked last, on its own, so a gated tools-drift bug cannot mask a message-prefix regression.
     assert_usage_matches(home, lineage(home, sid), srv.requests, f"after journey {journey}")
     integrity_ok(home)
+
+    breaks = prefix_breaks(main, tools=False)
+    unexpected = [(i, why) for i, why in breaks if i != compaction_idx]
+    with known_gate(KNOWN, journey):
+        assert not unexpected, "prompt-cache prefix broke outside the compaction boundary:\n" + "\n".join(
+            f"  {where(i)}: {why}" for i, why in unexpected)
+        if compaction_idx is not None:
+            assert [i for i, _ in breaks] == [compaction_idx], (
+                f"the compaction must break the prefix exactly once, at request {compaction_idx}: {breaks}")
+            # The one sanctioned break is a rebuild, never the old prompt wrapped in a new one (#15281).
+            before, after = (_system_text(main[i]) for i in (compaction_idx - 1, compaction_idx))
+            assert after == before or before not in after, (
+                f"the prompt rebuilt at the compaction (request {compaction_idx}) nests the previous system "
+                f"prompt ({len(before)} -> {len(after)} chars)")
 
     drift = [(i, why) for i, why in tools_breaks(main) if i != compaction_idx]
     if drift:

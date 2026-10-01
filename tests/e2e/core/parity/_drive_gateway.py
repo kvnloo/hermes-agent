@@ -140,20 +140,22 @@ def _collect_delivered(events: list[dict[str, Any]]) -> str:
     return "\n".join(messages.values())
 
 
-def drive_gateway(ph: ParityHome, srv: FakeLLMServer, prompt: str) -> DriveResult:
+def run_gateway(ph: ParityHome, prompts: list[str]) -> tuple[subprocess.Popen, list[dict[str, Any]], bool]:
+    """One gateway life: the DMs in order on one private chat (each after the previous turn
+    completed), then the normal stop. Returns (proc, events, graceful)."""
     ph.pin_terminal_cwd()
     # A real Telegram setup: bot token + allowlisted user in the profile .env.
     _append_env(ph, {"TELEGRAM_BOT_TOKEN": "123456:parity-fake-token",
                      "TELEGRAM_ALLOWED_USERS": PARITY_USER_ID})
     proc = _spawn(ph, [sys.executable, str(GATEWAY_CHILD)], "gateway.stderr.log",
-                  {"PARITY_GATEWAY_PROMPT": prompt, "PARITY_GATEWAY_USER": PARITY_USER_ID})
+                  {"PARITY_GATEWAY_PROMPTS": json.dumps(prompts), "PARITY_GATEWAY_USER": PARITY_USER_ID})
     lines = _stdout_pump(proc)
     events: list[dict[str, Any]] = []
-    outcome: str | None = None
+    completed = 0
     graceful = False
     try:
         deadline = time.monotonic() + TURN_TIMEOUT
-        while outcome is None:
+        while completed < len(prompts):
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 raise AssertionError(f"gateway turn timed out; events={events}\n{_log_tail(proc)}")
@@ -169,9 +171,16 @@ def drive_gateway(ph: ParityHome, srv: FakeLLMServer, prompt: str) -> DriveResul
             ev = json.loads(line[len(_LINE_PREFIX):])
             events.append(ev)
             if ev["kind"] == "complete":
-                outcome = ev["outcome"]
+                completed += 1
+                deadline = time.monotonic() + TURN_TIMEOUT
     finally:
         graceful = _stop(ph, proc)
+    return proc, events, graceful
+
+
+def drive_gateway(ph: ParityHome, srv: FakeLLMServer, prompt: str) -> DriveResult:
+    proc, events, graceful = run_gateway(ph, [prompt])
+    outcome = next((ev["outcome"] for ev in events if ev["kind"] == "complete"), None)
     return DriveResult(
         final_text=_collect_delivered(events), toolset="hermes-telegram", cwd_channel="terminal.cwd",
         graceful_exit=graceful,
@@ -227,10 +236,15 @@ def _await_own_api_server(proc: subprocess.Popen, base: str, key: str) -> bool:
         time.sleep(0.2)
 
 
-def drive_api_server(ph: ParityHome, srv: FakeLLMServer, prompt: str) -> DriveResult:
+def spawn_api_server(ph: ParityHome) -> tuple[subprocess.Popen, str, str]:
+    """``python -m gateway.run`` with only api_server enabled; (proc, base url, key) once OUR
+    child answers. Stop it with ``_stop``."""
     ph.pin_terminal_cwd()
     key = secrets.token_hex(32)
-    env_before = (ph.hermes_home / ".env").read_text(encoding="utf-8") if (ph.hermes_home / ".env").exists() else ""
+    env_file = ph.hermes_home / ".env"
+    # A previous life's API_SERVER_* lines are replaced, never shadowed.
+    env_before = "".join(line for line in (env_file.read_text(encoding="utf-8") if env_file.exists() else "")
+                         .splitlines(keepends=True) if not line.startswith("API_SERVER_"))
     for _attempt in range(PORT_ATTEMPTS):
         port = _free_loopback_port()
         (ph.hermes_home / ".env").write_text(env_before, encoding="utf-8")
@@ -244,10 +258,13 @@ def drive_api_server(ph: ParityHome, srv: FakeLLMServer, prompt: str) -> DriveRe
             _stop(ph, proc)
             raise
         if ready:
-            break
+            return proc, base, key
         _stop(ph, proc)
-    else:
-        raise AssertionError(f"api server lost the port race {PORT_ATTEMPTS} times\n{_log_tail(proc)}")
+    raise AssertionError(f"api server lost the port race {PORT_ATTEMPTS} times\n{_log_tail(proc)}")
+
+
+def drive_api_server(ph: ParityHome, srv: FakeLLMServer, prompt: str) -> DriveResult:
+    proc, base, key = spawn_api_server(ph)
     status: int | None = None
     payload: dict[str, Any] = {}
     graceful = False

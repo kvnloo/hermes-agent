@@ -1,4 +1,4 @@
-"""Lane-private child process for ``_drive_gateway.drive_gateway``.
+"""Lane-private child process for ``_drive_gateway.run_gateway``.
 
 Runs the REAL messaging gateway entrypoint (``gateway.run.main`` — what
 ``python -m gateway.run`` / the ``hermes gateway run`` service executes: host
@@ -8,11 +8,12 @@ Telegram adapter instance is a recording fake. Everything behind the adapter
 (authorization, session store, SessionDB, agent cache, AIAgent, hooks, plugins,
 MCP) is production code.
 
-The fake adapter injects ONE inbound DM through the adapter's normal
-``handle_message`` path once the runner is running, prints every outbound
+The fake adapter injects each inbound DM of ``PARITY_GATEWAY_PROMPTS`` (a JSON
+list) in order, each once the previous one completed, through the adapter's
+normal ``handle_message`` path once the runner is running, prints every outbound
 ``send()`` and the ``on_processing_complete`` outcome as ``PARITY-GW <json>``
-lines on stdout, and otherwise waits for the parent's normal stop
-(planned-stop marker + SIGTERM, exactly like ``hermes gateway stop``).
+lines on stdout, and otherwise waits for the parent's normal stop (planned-stop
+marker + SIGTERM, exactly like ``hermes gateway stop``).
 """
 
 from __future__ import annotations
@@ -42,12 +43,13 @@ def emit(kind: str, **payload: Any) -> None:
 
 
 class ParityTelegramAdapter(BasePlatformAdapter):
-    """Telegram-shaped adapter: no network, records outbound text, injects one DM."""
+    """Telegram-shaped adapter: no network, records outbound text, injects the scripted DMs."""
 
     def __init__(self, config: Any, platform: Platform) -> None:
         super().__init__(config, platform)
         self._sent = 0
         self._inject_task: Optional[asyncio.Task] = None
+        self._completed = asyncio.Event()
 
     async def connect(self, *, is_reconnect: bool = False) -> bool:
         self._mark_connected()
@@ -62,16 +64,21 @@ class ParityTelegramAdapter(BasePlatformAdapter):
         while not getattr(runner, "_running", False) or getattr(runner, "_startup_restore_in_progress", True):
             await asyncio.sleep(0.05)
         emit("ready")
-        source = self.build_source(
-            chat_id=PARITY_CHAT_ID, chat_name="parity", chat_type="dm",
-            user_id=PARITY_USER_ID, user_name="parity-user", message_id="1",
-        )
-        event = MessageEvent(
-            text=os.environ["PARITY_GATEWAY_PROMPT"], source=source, message_id="1",
-            user_id=PARITY_USER_ID, user_name="parity-user",
-        )
-        await self.handle_message(event)
-        emit("accepted", accepted=bool(getattr(event, "_gateway_accepted", False)))
+        for n, text in enumerate(json.loads(os.environ["PARITY_GATEWAY_PROMPTS"])):
+            # Unique across gateway lives of one test, so a later life never sees a reused id.
+            message_id = f"{os.getpid()}{n:03d}"
+            source = self.build_source(
+                chat_id=PARITY_CHAT_ID, chat_name="parity", chat_type="dm",
+                user_id=PARITY_USER_ID, user_name="parity-user", message_id=message_id,
+            )
+            event = MessageEvent(
+                text=text, source=source, message_id=message_id,
+                user_id=PARITY_USER_ID, user_name="parity-user",
+            )
+            self._completed.clear()
+            await self.handle_message(event)
+            emit("accepted", accepted=bool(getattr(event, "_gateway_accepted", False)))
+            await self._completed.wait()
 
     async def disconnect(self) -> None:
         if self._inject_task is not None and not self._inject_task.done():
@@ -95,6 +102,7 @@ class ParityTelegramAdapter(BasePlatformAdapter):
 
     async def on_processing_complete(self, event: MessageEvent, outcome: Any) -> None:
         emit("complete", outcome=str(getattr(outcome, "value", outcome)))
+        self._completed.set()
 
 
 _real_instantiate = gateway_run.GatewayRunner._instantiate_adapter

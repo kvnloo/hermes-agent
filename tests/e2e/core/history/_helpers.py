@@ -26,6 +26,9 @@ import time
 from pathlib import Path
 from typing import Any, Iterable
 
+from tests.e2e.core.parity import _drive_acp, _drive_gateway
+from tests.e2e.core.parity._helpers import ParityHome
+
 REPO_ROOT = Path(__file__).resolve().parents[4]
 
 # Children get an ALLOWLISTED env: a developer or agent shell exports TERMINAL_CWD,
@@ -190,7 +193,8 @@ def assert_exactly_once(msgs: Iterable[dict[str, Any]], where: str) -> None:
 
 
 def model_payload(msgs: Iterable[dict[str, Any]]) -> list[tuple]:
-    return [identity(m) for m in msgs if m.get("role") != "system"]
+    # session_meta rows (the gateway's tools/model snapshot of a fresh session) are never sent.
+    return [identity(m) for m in msgs if m.get("role") not in ("system", "session_meta")]
 
 
 def assert_replay_equals_persisted(request: dict[str, Any], persisted: list[dict], where: str) -> None:
@@ -514,6 +518,115 @@ class TuiGateway:
         start = self.mark()
         self.call("prompt.submit", {"session_id": sid, "text": text}, timeout=timeout)
         return self.wait_event("message.complete", sid, start=start, timeout=timeout).get("payload") or {}
+
+
+# ---------------------------------------------------------------------------------------------
+# messaging gateway, api_server and ACP: the parity matrix's drivers, one process life per hop
+
+
+class SurfaceHome(ParityHome):
+    """The ``ParityHome`` the parity drivers spawn and stop through, over THIS suite's allowlisted
+    child env, so every surface of a journey runs with the same env."""
+
+    def __init__(self, env: dict[str, str], cwd: Path, hermes_home: Path) -> None:
+        home = Path(env["HOME"])
+        super().__init__(root=home, home=home, hermes_home=hermes_home, project=cwd, markers=home,
+                         pid_log=home / "mcp_pids.log", tag="")
+        self._env = env
+
+    def env(self, extra: dict[str, str] | None = None) -> dict[str, str]:
+        return {**self._env, "PWD": str(self.project), **(extra or {})}
+
+
+def root_session(hermes_home: Path, source: str) -> str:
+    """The one root session a daemon surface created for this journey's conversation."""
+    with db_connect(hermes_home) as con:
+        rows = [r[0] for r in con.execute(
+            "SELECT id FROM sessions WHERE source=? AND parent_session_id IS NULL", (source,))]
+    assert len(rows) == 1, f"expected one root {source} session, found {rows}"
+    return rows[0]
+
+
+def run_messaging_gateway(env: dict[str, str], cwd: Path, hermes_home: Path, texts: list[str],
+                          spawned: Spawned) -> None:
+    """One life of the real messaging gateway (recording Telegram adapter): ``texts`` arrive as DMs
+    on one private chat, in order, then the ``hermes gateway stop`` path."""
+    proc, events, graceful = _drive_gateway.run_gateway(SurfaceHome(env, cwd, hermes_home), texts)
+    spawned.add(proc)
+    outcomes = [ev["outcome"] for ev in events if ev["kind"] == "complete"]
+    assert outcomes == ["success"] * len(texts) and graceful, (
+        f"messaging gateway life: outcomes={outcomes} graceful_exit={graceful}; events={events}")
+
+
+class ApiServerRuns:
+    """One life of ``python -m gateway.run`` serving only api_server; a turn is ``POST /v1/runs``
+    addressed by the client's ``session_id``, polled to its terminal state."""
+
+    def __init__(self, env: dict[str, str], cwd: Path, hermes_home: Path, spawned: Spawned) -> None:
+        self.ph, self.spawned = SurfaceHome(env, cwd, hermes_home), spawned
+
+    def __enter__(self) -> "ApiServerRuns":
+        self.proc, self.base, self.key = _drive_gateway.spawn_api_server(self.ph)
+        self.spawned.add(self.proc)
+        return self
+
+    def __exit__(self, exc_type: Any, *_exc: object) -> None:
+        graceful = _drive_gateway._stop(self.ph, self.proc)
+        assert exc_type is not None or graceful, f"api_server did not stop cleanly (rc={self.proc.returncode})"
+
+    def submit(self, sid: str, text: str, timeout: float = 120.0) -> dict:
+        status, raw = _drive_gateway._http("POST", f"{self.base}/v1/runs", key=self.key,
+                                           body={"input": text, "session_id": sid}, timeout=30)
+        assert status in (200, 202), f"POST /v1/runs -> {status}: {raw[-2000:]}"
+        run_id = json.loads(raw)["run_id"]
+        deadline = time.monotonic() + timeout
+        while True:
+            status, raw = _drive_gateway._http("GET", f"{self.base}/v1/runs/{run_id}", key=self.key, timeout=30)
+            run = json.loads(raw) if status == 200 else {}
+            if run.get("status") in ("completed", "failed", "cancelled", "interrupted"):
+                break
+            assert time.monotonic() < deadline, f"run {run_id} not finished in {timeout}s: {status} {raw[-500:]}"
+            time.sleep(0.1)
+        assert run["status"] == "completed", f"run {run_id} ended {run.get('status')}: {run.get('error')}"
+        return run
+
+
+class AcpStdio:
+    """One life of ``hermes acp`` (an editor host): ``session/new`` or ``session/load`` with the
+    hop's cwd, ``session/prompt`` per turn (``/compress`` is ACP's own slash command), stdin EOF."""
+
+    def __init__(self, env: dict[str, str], cwd: Path, hermes_home: Path, spawned: Spawned) -> None:
+        self.ph, self.spawned = SurfaceHome(env, cwd, hermes_home), spawned
+
+    def __enter__(self) -> "AcpStdio":
+        self._stderr = open(self.ph.home / "acp.stderr.log", "a", encoding="utf-8")  # noqa: SIM115
+        self.proc, self.client, _init = _drive_acp.spawn_acp(self.ph, self._stderr, "prefix-stability")
+        self.spawned.add(self.proc)
+        return self
+
+    def __exit__(self, exc_type: Any, *_exc: object) -> None:
+        try:
+            graceful = _drive_acp.close_acp(self.proc)
+        finally:
+            self._stderr.close()
+        assert exc_type is not None or graceful, "hermes acp did not exit on stdin EOF"
+
+    def open(self, sid: str | None) -> str:
+        params = {"cwd": str(self.ph.project), "mcpServers": []}
+        if sid is None:
+            return self.client.request("session/new", params, timeout=120)["sessionId"]
+        self.client.request("session/load", {**params, "sessionId": sid}, timeout=120)
+        return sid
+
+    def prompt(self, sid: str, text: str, timeout: float = 120.0) -> None:
+        res = self.client.request("session/prompt", {"sessionId": sid, "prompt": [{"type": "text", "text": text}]},
+                                  timeout=timeout)
+        assert res.get("stopReason") == "end_turn", f"ACP prompt {text[:40]!r} stopped {res}"
+
+
+def first_summary_request(requests: list[dict[str, Any]], start: int) -> int | None:
+    """Index of the first request at or after ``start`` that carries a compaction summary."""
+    return next((i for i in range(start, len(requests)) if any(is_summary(m) for m in requests[i]["messages"])), None)
 
 
 # ---------------------------------------------------------------------------------------------

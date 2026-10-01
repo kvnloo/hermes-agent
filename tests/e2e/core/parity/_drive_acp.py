@@ -15,7 +15,7 @@ import queue
 import subprocess
 import threading
 import time
-from typing import Any
+from typing import IO, Any
 
 from tests.e2e.core.parity._helpers import TURN_TIMEOUT, DriveResult, ParityHome, hermes_argv, terminate
 from tests.fakes.fake_llm_provider import FakeLLMServer
@@ -99,22 +99,48 @@ class _AcpClient:
                     "error": {"code": -32601, "message": f"client does not implement {method}"}})
 
 
+def spawn_acp(ph: ParityHome, stderr: IO[str],
+              client_name: str = "parity-suite") -> tuple[subprocess.Popen, _AcpClient, dict[str, Any]]:
+    """``hermes acp`` in ``ph.project``, initialized as an editor host without fs/terminal
+    capabilities. Returns (proc, client, initialize result); stop it with ``close_acp``."""
+    proc = subprocess.Popen(
+        hermes_argv("acp"), cwd=ph.project, env=ph.env(), stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE, stderr=stderr, text=True, bufsize=1,
+    )
+    client = _AcpClient(proc)
+    try:
+        init = client.request("initialize", {
+            "protocolVersion": 1,
+            "clientCapabilities": {"fs": {"readTextFile": False, "writeTextFile": False}, "terminal": False},
+            "clientInfo": {"name": client_name, "version": "1.0"},
+        }, timeout=60)
+    except BaseException:
+        close_acp(proc)
+        raise
+    return proc, client, init
+
+
+def close_acp(proc: subprocess.Popen) -> bool:
+    """Normal host shutdown: close the pipe and let the server exit on EOF. False if it had to be
+    terminated instead."""
+    try:
+        proc.stdin.close()  # type: ignore[union-attr]
+    except OSError:
+        pass
+    try:
+        proc.wait(timeout=EOF_EXIT_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        terminate(proc)
+        return False
+    return True
+
+
 def drive_acp(ph: ParityHome, srv: FakeLLMServer, prompt: str) -> DriveResult:
     stderr_path = ph.root / "acp_stderr.log"
     with open(stderr_path, "w", encoding="utf-8") as stderr_fh:
-        proc = subprocess.Popen(
-            hermes_argv("acp"), cwd=ph.project, env=ph.env(), stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE, stderr=stderr_fh, text=True, bufsize=1,
-        )
-        client = _AcpClient(proc)
-        graceful = True
+        proc, client, init = spawn_acp(ph, stderr_fh)
         stop_reason = None
         try:
-            init = client.request("initialize", {
-                "protocolVersion": 1,
-                "clientCapabilities": {"fs": {"readTextFile": False, "writeTextFile": False}, "terminal": False},
-                "clientInfo": {"name": "parity-suite", "version": "1.0"},
-            }, timeout=60)
             session = client.request("session/new", {"cwd": str(ph.project), "mcpServers": []},
                                      timeout=120)
             session_id = session["sessionId"]
@@ -123,16 +149,7 @@ def drive_acp(ph: ParityHome, srv: FakeLLMServer, prompt: str) -> DriveResult:
             }, timeout=TURN_TIMEOUT)
             stop_reason = result.get("stopReason")
         finally:
-            # Normal host shutdown: close the pipe and let the server exit on EOF.
-            try:
-                proc.stdin.close()  # type: ignore[union-attr]
-            except OSError:
-                pass
-            try:
-                proc.wait(timeout=EOF_EXIT_TIMEOUT)
-            except subprocess.TimeoutExpired:
-                graceful = False
-                terminate(proc)
+            graceful = close_acp(proc)
     return DriveResult(
         final_text="".join(client.chunks),
         toolset=ACP_TOOLSET,
