@@ -122,6 +122,24 @@ test('probe times out when the socket never opens', async () => {
   assert.match(result.reason, /Timed out/)
 })
 
+test('probe resolves ok when the socket opens late in the connect budget and stays open', async () => {
+  // The upgrade lands inside the last readyGraceMs of the connect budget, so the
+  // grace deadline falls after the connect deadline. Opening must disarm the
+  // connect timer; otherwise it fires mid-grace and reports a connect timeout
+  // for a socket that opened and stayed open.
+  const { FakeWs, instances } = makeFakeWs()
+
+  const promise = probeGatewayWebSocket('ws://host/api/ws?token=t', {
+    WebSocketImpl: FakeWs,
+    connectTimeoutMs: 50,
+    readyGraceMs: 200
+  })
+
+  instances[0].emit('open')
+
+  assert.deepEqual(await promise, { ok: true })
+})
+
 // --- waiting on a spawned backend (#96177) ----------------------------------
 // A Windows cold start can stall the backend's event loop for 12-28s after
 // HTTP is up, leaving the upgrade unanswered past the fixed budget. Fake timers
