@@ -1915,10 +1915,13 @@ Manage profiles — multiple isolated Hermes instances, each with its own config
 | `list` | List all profiles. |
 | `use <name>` | Set a sticky default profile. |
 | `create <name> [--clone] [--clone-all] [--clone-from <source>] [--no-alias]` | Create a new profile. `--clone` copies config, `.env`, `SOUL.md`, skills, and the curated `MEMORY.md`/`USER.md` memory files from the active profile. `--clone-all` copies all state. `--clone-from` specifies a source profile and implies config clone unless paired with `--clone-all`. |
+| `describe [<name>] [--text TEXT] [--auto] [--overwrite] [--all]` | Read or set a profile's description (used by the kanban orchestrator for routing). |
 | `delete <name> [-y]` | Delete a profile. |
 | `show <name>` | Show profile details (home directory, config, etc.). |
 | `alias <name> [--remove] [--name NAME]` | Manage wrapper scripts for quick profile access. |
 | `rename <old> <new>` | Rename a profile. |
+| `migrate-identity <old> <new>` | Retry a renamed profile's session/routing identity migration. |
+| `purge-identity <name>` | Retry a deleted profile's session/routing identity purge. |
 | `export <name> [-o FILE]` | Export a profile to a `.tar.gz` archive (local backup). |
 | `import <archive> [--name NAME]` | Import a profile from a `.tar.gz` archive (local restore). |
 | `install <source> [--name N] [--alias] [--force] [-y]` | Install a profile distribution from a git URL or local directory. |
