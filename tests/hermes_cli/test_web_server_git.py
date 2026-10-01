@@ -253,14 +253,17 @@ def test_worktree_add_existing_remote_branch_tracks_not_detaches(client, repo_wi
     assert upstream == "origin/feature"
 
 
-def test_worktree_add_from_origin_base_does_not_track(client, repo_with_remote):
+@pytest.mark.parametrize("remote", ["origin", "upstream"])
+def test_worktree_add_from_remote_base_does_not_track(client, repo_with_remote, remote):
+    if remote != "origin":
+        _git(repo_with_remote, "remote", "rename", "origin", remote)
     added = client.post(
         "/api/git/worktree/add",
-        json={"path": str(repo_with_remote), "branch": "fresh", "base": "origin/main"},
+        json={"path": str(repo_with_remote), "branch": "fresh", "base": f"{remote}/main"},
     ).json()
     assert added["branch"] == "fresh"
 
-    # Branching off origin/main must yield a standalone local branch, not one
+    # Branching off <remote>/main must yield a standalone local branch, not one
     # silently wired to the remote's upstream (parity with the Electron op).
     probe = subprocess.run(
         ["git", "rev-parse", "--abbrev-ref", "fresh@{upstream}"],

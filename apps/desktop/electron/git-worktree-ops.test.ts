@@ -322,6 +322,53 @@ test('addWorktree: base origin/main does not set up upstream tracking', async ()
   }
 })
 
+test('addWorktree: base on a remote not named origin does not set up upstream tracking', async () => {
+  // Fork layout: the remote is `upstream`, so the base is upstream/main. git
+  // auto-tracks any remote-tracking base, whatever the remote is called.
+  const remoteDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hermes-remote-'))
+  const cloneDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hermes-clone-'))
+
+  try {
+    execFileSync('git', ['init', '-b', 'main', remoteDir])
+    execFileSync('git', [
+      '-C',
+      remoteDir,
+      '-c',
+      'user.email=hermes@localhost',
+      '-c',
+      'user.name=Hermes',
+      'commit',
+      '--allow-empty',
+      '-m',
+      'root'
+    ])
+    execFileSync('git', ['clone', '--origin', 'upstream', remoteDir, cloneDir])
+
+    const result = await addWorktree(
+      cloneDir,
+      { base: 'upstream/main', branch: 'feature-branch', name: 'feature-branch' },
+      'git'
+    )
+
+    let upstream = ''
+
+    try {
+      upstream = execFileSync('git', ['-C', result.path, 'rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'], {
+        stdio: ['ignore', 'pipe', 'ignore']
+      })
+        .toString()
+        .trim()
+    } catch {
+      // No upstream configured: the expected outcome.
+    }
+
+    assert.equal(upstream, '')
+  } finally {
+    fs.rmSync(remoteDir, { recursive: true, force: true })
+    fs.rmSync(cloneDir, { recursive: true, force: true })
+  }
+})
+
 // A tag-pinned narrow clone (`--single-branch --branch v0`), the shape older
 // installers made: remote.origin.fetch maps only the tag, so no branch has a
 // tracking ref. The remote has `main` and `feature` one commit past the tag.
