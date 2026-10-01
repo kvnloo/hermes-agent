@@ -1,0 +1,20 @@
+name: paw-pii
+repo: https://github.com/kvnloo/pii
+sha: d891ebdd3a3dab27a3451923eb56f955253a2782
+subdir: integrations/hermes
+description: "On-device PII detection and redaction using the ProgramAsWeights PII program (model and library by programasweights/pii; Hermes integration by kvnloo). Adds detect_pii and redact_pii tools, plus llm_request and tool_execution middleware that replace names, emails, phone numbers, secrets and other PII with a placeholder in provider requests and tool results. Disclosure: on first use the PAW program bundle downloads from programasweights.com and a ~600 MB base model from Hugging Face; after that, inference runs locally through llama.cpp and no text is sent to a remote service. Redaction fails open: if the program or its runtime cannot load, requests and tool results pass through unchanged. Every string in a request is scanned separately, so long conversations add local inference time per turn."
+maintainer: kvnloo
+tier: community
+category: tools
+version: "0.1.0"
+docs_url: https://github.com/kvnloo/pii/blob/d891ebdd3a3dab27a3451923eb56f955253a2782/README.md#agent-harness-plugins
+readme: false
+capabilities:
+  provides_tools:
+    - detect_pii
+    - redact_pii
+  provides_hooks: []
+  provides_middleware:
+    - llm_request
+    - tool_execution
+  requires_env: []
