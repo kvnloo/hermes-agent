@@ -116,4 +116,57 @@ describe('tool events for a part that already exists on a sealed message', () =>
     expect(rows[1].part).toMatchObject({ args: { command: 'echo step2' }, result: 'step 2 output' })
     expect(rows[1].messageIndex).toBeGreaterThan(rows[0].messageIndex)
   })
+
+  it.each([
+    { interimInA: false, interimInB: false, shape: 'settled on the bubble that owns the call' },
+    { interimInA: true, interimInB: false, shape: 'sealed the call behind interim commentary, then settled' },
+    { interimInA: false, interimInB: true, shape: 'settled, and the later turn opens with interim commentary' }
+  ])(
+    'draws a reused id as its own row when the prior turn lost the completion and $shape',
+    ({ interimInA, interimInB }) => {
+      // Turn A never receives tool.complete; settle seals its part without a result.
+      event('message.start', 600)
+
+      if (interimInA) {
+        event('message.delta', 601, { text: 'Running step A.' })
+      }
+
+      event('tool.start', 602, { args: { command: 'echo stepA' }, name: 'terminal', tool_id: 'call_lost' })
+
+      if (interimInA) {
+        event('message.interim', 603, { text: 'Running step A.' })
+      }
+
+      event('message.complete', 604, { text: 'first turn done' })
+
+      event('message.start', 700)
+
+      if (interimInB) {
+        event('message.interim', 701, { already_streamed: true, text: 'Thinking about step B.' })
+      }
+
+      event('tool.start', 702, { args: { command: 'echo stepB' }, name: 'terminal', tool_id: 'call_lost' })
+      event('tool.complete', 703, { name: 'terminal', result: 'step B output', tool_id: 'call_lost' })
+      event('message.complete', 704, { text: 'second turn done' })
+
+      const rows = toolRows('call_lost')
+      expect(rows).toHaveLength(2)
+      expect(rows[0].part).toMatchObject({ args: { command: 'echo stepA' } })
+      expect((rows[0].part as { result?: unknown }).result).toBeUndefined()
+      expect(rows[1].part).toMatchObject({ args: { command: 'echo stepB' }, result: 'step B output' })
+      expect(rows[1].messageIndex).toBeGreaterThan(rows[0].messageIndex)
+    }
+  )
+
+  it('attaches a late completion to a part sealed by a plain turn settle', () => {
+    event('message.start', 800)
+    event('tool.start', 801, { args: { command: 'echo step1' }, name: 'terminal', tool_id: 'call_settle' })
+    event('message.complete', 802, { text: 'first turn done' })
+    event('tool.complete', 803, { name: 'terminal', result: 'ok', tool_id: 'call_settle' })
+
+    const rows = toolRows('call_settle')
+    expect(rows).toHaveLength(1)
+    expect(rows[0].part).toMatchObject({ args: { command: 'echo step1' }, result: 'ok' })
+    expect(stream.state(SID).streamId).toBeNull()
+  })
 })

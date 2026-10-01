@@ -589,8 +589,9 @@ export function useMessageStream({
           // lookup a completion seeds a new bubble with a duplicate row while
           // the sealed one keeps reading "Result unavailable", and a running
           // event for the same id seeds a second live row with its own timer
-          // under the user's message (#113035). Both phases route by id.
-          eventTarget: state => toolCallOwnerMessageId(state.messages, payload)
+          // under the user's message (#113035). Both phases route by id; a
+          // running event never re-arms a sealed row from a settled turn.
+          eventTarget: state => toolCallOwnerMessageId(state.messages, payload, phase)
         },
         occurredAt
       )

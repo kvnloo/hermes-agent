@@ -425,13 +425,23 @@ export interface SettledClarifyProjection {
  * from an earlier turn, not the owner of the new one. Routing to it would
  * draw the new call over the old row and leave the live turn empty.
  *
+ * A part sealed WITHOUT a result (`sealOpenToolParts` after a lost
+ * `tool.complete`) is split by phase. A `complete` event is that call's own
+ * late result, so the sealed part always owns it (#113035). A `running` event
+ * re-arms it only while its turn is still in flight: the bubble is `pending`
+ * or `interim` and no settled reply has landed after it. `interim` alone is
+ * not enough — it stays set on a bubble sealed by interim commentary after its
+ * turn settles into a later bubble — so a reused id in a later turn would
+ * otherwise overwrite that turn's row and leave the live turn without one.
+ *
  * Newest-first among unresolved parts: interim boundaries append bubbles, so
  * the owner of an in-flight call is the most recent message that carries the
  * id without a result.
  */
 export function toolCallOwnerMessageId(
   messages: ChatMessage[],
-  payload: GatewayEventPayload | undefined
+  payload: GatewayEventPayload | undefined,
+  phase: 'running' | 'complete'
 ): string | null {
   const stableId = toolId(payload)
 
@@ -439,13 +449,26 @@ export function toolCallOwnerMessageId(
     return null
   }
 
+  let settledReplyAfter = false
+
   for (let messageIndex = messages.length - 1; messageIndex >= 0; messageIndex -= 1) {
     const message = messages[messageIndex]
+    const inFlight = (message.pending || message.interim) && !settledReplyAfter
 
     for (const part of message.parts) {
-      if (part.type === 'tool-call' && part.toolCallId === stableId && !Object.hasOwn(part, 'result')) {
-        return message.id
+      if (part.type !== 'tool-call' || part.toolCallId !== stableId || Object.hasOwn(part, 'result')) {
+        continue
       }
+
+      if (phase === 'running' && part.completedAt !== undefined && !inFlight) {
+        continue
+      }
+
+      return message.id
+    }
+
+    if (message.role === 'assistant' && !message.pending && !message.interim && message.completedAt !== undefined) {
+      settledReplyAfter = true
     }
   }
 
