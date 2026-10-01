@@ -3,14 +3,21 @@
 This lab plugin deliberately records metadata, not prompt/tool content.  It is a
 measurement substrate for downstream z0 experiments; every callback returns
 None and every failure is swallowed so Hermes behavior is unchanged.
+
+Rows are encoded on the calling thread and appended by one background writer, so a hook
+callback never waits on storage.  ``pre_tool_call`` fails closed when a callback outlives
+the host timeout and ``subagent_stop`` runs on the caller thread; a stalled disk must not
+become a blocked tool or a hung parent.
 """
 from __future__ import annotations
 
+import atexit
 import hashlib
 import json
 import os
 import threading
 import time
+from collections import deque
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -18,7 +25,18 @@ from hermes_constants import get_hermes_home
 
 PLUGIN_ID = "z0-hermes-observer"
 SCHEMA = "z0int.hermes_observer_event.v1"
-_LOCK = threading.Lock()
+
+_MAX_PENDING = 4096        # rows buffered while the writer is busy or storage is stalled
+_EXIT_FLUSH_SECONDS = 2.0  # longest a normal interpreter exit waits for buffered rows
+
+# Delivery state, all guarded by _STATE.  It is never held across I/O, so a hook callback
+# can wait on a few deque operations but never on storage.
+_STATE = threading.Condition()
+_pending: deque[tuple[Path, str]] = deque()  # (spool path, encoded row)
+_inflight = 0   # rows the writer has taken and not finished with
+_dropped = 0    # rows lost since the last observer_rows_dropped marker was written
+_worker: threading.Thread | None = None
+_exit_hook = False
 
 _HOOKS = (
     "on_session_start",
@@ -146,21 +164,108 @@ def _row(event: str, payload: Mapping[str, Any]) -> dict[str, Any]:
     return data
 
 
-def _write_row(row: Mapping[str, Any]) -> None:
-    encoded = json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    path = _event_path()
-    with _LOCK:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("a", encoding="utf-8") as stream:
-            stream.write(encoded + "\n")
+def _encode(row: Mapping[str, Any]) -> str:
+    return json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
+
+
+def _dropped_row(count: int) -> dict[str, Any]:
+    return {
+        "schema": SCHEMA,
+        "event": "observer_rows_dropped",
+        "observed_at": time.time(),
+        "identity": {"harness_id": "hermes"},
+        "fields": {"dropped_rows": count},
+    }
+
+
+def _append(path: Path, lines: list[str]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as stream:
+        for line in lines:
+            stream.write(line)
+            stream.flush()  # one write per row keeps rows from concurrent appenders whole
+
+
+def _write_batch(batch: list[tuple[Path, str]], lost: int) -> int:
+    """Append *batch*, led by a drop marker for *lost* earlier rows; return rows left unwritten."""
+    groups: dict[Path, list[str]] = {}
+    for path, line in batch:
+        groups.setdefault(path, []).append(line)
+    marker_path = batch[0][0]
+    unwritten = 0
+    for path, lines in groups.items():
+        carried = lost if path == marker_path else 0
+        if carried:
+            lines = [_encode(_dropped_row(carried)), *lines]
+        try:
+            _append(path, lines)
+        except Exception:
+            unwritten += (len(lines) - 1 + carried) if carried else len(lines)
+    return unwritten
+
+
+def _drain() -> None:
+    global _inflight, _dropped
+    while True:
+        with _STATE:
+            while not _pending:
+                _STATE.wait()
+            batch = list(_pending)
+            _pending.clear()
+            lost, _dropped = _dropped, 0
+            _inflight = len(batch)
+        unwritten = len(batch) + lost
+        try:
+            unwritten = _write_batch(batch, lost)
+        finally:
+            with _STATE:
+                _dropped += unwritten
+                _inflight = 0
+                _STATE.notify_all()
+
+
+def _enqueue(path: Path, line: str) -> None:
+    global _dropped, _worker, _exit_hook
+    with _STATE:
+        if len(_pending) >= _MAX_PENDING:
+            _dropped += 1
+            return
+        if _worker is None or not _worker.is_alive():
+            _worker = threading.Thread(target=_drain, name=f"{PLUGIN_ID}-writer", daemon=True)
+            _worker.start()
+        if not _exit_hook:
+            atexit.register(flush, _EXIT_FLUSH_SECONDS)
+            _exit_hook = True
+        _pending.append((path, line))
+        _STATE.notify_all()
+
+
+def flush(timeout: float = 5.0) -> bool:
+    """Wait until every accepted row is on disk or counted as dropped; False if *timeout* hits first."""
+    deadline = time.monotonic() + timeout
+    with _STATE:
+        while _pending or _inflight:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return False
+            _STATE.wait(remaining)
+    return True
+
+
+def stats() -> dict[str, int]:
+    with _STATE:
+        return {"pending": len(_pending), "inflight": _inflight, "dropped": _dropped}
 
 
 def observe(event: str, **payload: Any) -> None:
+    global _dropped
     try:
-        _write_row(_row(event, payload))
+        # The spool is resolved here, in the caller's profile scope; the writer has none.
+        _enqueue(_event_path(), _encode(_row(event, payload)))
     except Exception:
         # Observer failures must never affect Hermes execution.
-        return None
+        with _STATE:
+            _dropped += 1
     return None
 
 

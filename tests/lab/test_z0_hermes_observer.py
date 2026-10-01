@@ -16,8 +16,9 @@ def _load():
     return module
 
 
-def test_registers_observer_surface():
+def test_registers_observer_surface(tmp_path, monkeypatch):
     module = _load()
+    monkeypatch.setenv("Z0INT_HERMES_EVENT_PATH", str(tmp_path / "events.jsonl"))
     seen = {}
 
     class Ctx:
@@ -28,6 +29,7 @@ def test_registers_observer_surface():
     assert set(seen) == set(module._HOOKS)
     assert {"pre_api_request", "post_api_request", "pre_tool_call", "post_tool_call", "on_session_end"} <= set(seen)
     assert all(callback(test_only=True) is None for callback in seen.values())
+    assert module.flush()
 
 
 def test_metadata_only_default_does_not_persist_content(tmp_path, monkeypatch):
@@ -48,6 +50,7 @@ def test_metadata_only_default_does_not_persist_content(tmp_path, monkeypatch):
         request_char_count=123,
         request={"body": {"messages": [{"role": "user", "content": "TOP SECRET USER TEXT"}]}},
     )
+    assert module.flush()
 
     raw = path.read_text()
     assert "TOP SECRET USER TEXT" not in raw
@@ -71,6 +74,7 @@ def test_trace_identity_is_stable_within_turn(tmp_path, monkeypatch):
     module.observe("post_api_request", api_request_id="a", usage={"input_tokens": 10, "output_tokens": 2}, **common)
     module.observe("pre_tool_call", tool_call_id="tool-1", tool_name="terminal", args={"command": "secret"}, **common)
     module.observe("on_session_end", completed=True, failed=False, interrupted=False, **common)
+    assert module.flush()
 
     rows = [json.loads(line) for line in path.read_text().splitlines()]
     assert len(rows) == 4
@@ -80,11 +84,14 @@ def test_trace_identity_is_stable_within_turn(tmp_path, monkeypatch):
     assert "secret" not in path.read_text()
 
 
-def test_observer_failure_is_fail_open(monkeypatch):
+def test_observer_failure_is_fail_open(tmp_path, monkeypatch):
     module = _load()
+    monkeypatch.setenv("Z0INT_HERMES_EVENT_PATH", str(tmp_path / "events.jsonl"))
 
-    def boom(_row):
+    def boom(_path, _lines):
         raise OSError("disk full")
 
-    monkeypatch.setattr(module, "_write_row", boom)
+    monkeypatch.setattr(module, "_append", boom)
     assert module.observe("post_api_request", session_id="s", turn_id="t") is None
+    assert module.flush()
+    assert module.stats()["dropped"] == 1

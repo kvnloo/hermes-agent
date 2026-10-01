@@ -29,6 +29,7 @@ def test_spool_lands_in_the_active_profiles_plugin_data_dir(tmp_path, monkeypatc
     module = _load()
 
     module.observe("post_api_request", session_id="s", turn_id="t")
+    assert module.flush()
 
     spool = plugin_data_dir(module.PLUGIN_ID) / "events.jsonl"
     assert spool.parent == tmp_path / "profile" / "plugin-data" / "z0-hermes-observer"
@@ -47,5 +48,7 @@ def test_unwritable_profile_storage_never_spills_into_the_default_profile(tmp_pa
     module = _load()
 
     assert module.observe("post_api_request", session_id="s", turn_id="t") is None
+    assert module.flush()
 
+    assert module.stats()["dropped"] == 1  # lost and accounted for, not redirected
     assert not (default_home / ".hermes").exists()

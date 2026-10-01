@@ -30,3 +30,20 @@ For tests or one-off experiments, set `Z0INT_HERMES_EVENT_PATH=$TMPDIR/z0-hermes
 
 The next slice will join independent outcomes and run DecisionBackend shadow
 questions over these receipts.
+
+## Delivery
+
+Hook callbacks never wait on storage. Each row is encoded on the calling thread, tagged
+with the active profile's spool path, and appended by one background writer. Hermes fails a
+`pre_tool_call` callback closed when it outlives `plugins.hook_callback_timeout` and runs
+`subagent_stop` callbacks on the caller thread, so a synchronous disk write there would turn a
+stalled filesystem into blocked tools or a hung parent.
+
+- Up to 4096 rows are buffered while the writer is busy or storage is stalled. Beyond that,
+  rows are dropped and counted. The next successful write starts with an
+  `observer_rows_dropped` row whose `fields.dropped_rows` is the number of rows missing
+  before it. Rows that could not be written count as dropped too.
+- A normal interpreter exit waits up to 2 seconds for buffered rows. Rows still buffered at a
+  hard exit (`os._exit`, SIGKILL) are lost.
+- A profile whose spool directory cannot be created loses its rows; they are never redirected
+  to another profile.
