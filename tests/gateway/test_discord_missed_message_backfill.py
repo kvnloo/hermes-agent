@@ -437,6 +437,38 @@ async def test_unthreaded_final_reply_records_recovery_completion(adapter):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("reactive", [False, True], ids=["preflight", "reactive_50035"])
+async def test_oversized_final_edit_records_recovery_completion(adapter, reactive):
+    """A streamed final reply over 2,000 chars is delivered by the overflow split; it must still
+    mark the source message responded, or backfill re-scans it on every reconnect."""
+    channel = FakeChannel(channel_id=123)
+    adapter._record_discord_message_seen(make_message(message_id=93, channel=channel), status="processing")
+    edits = []
+
+    def edit(*, content):
+        edits.append(content)
+        if reactive and len(edits) == 1:
+            # Pre-flight passed but Discord still rejected the length.
+            raise RuntimeError(
+                "400 Bad Request (error code: 50035): Invalid Form Body\n"
+                "In content: Must be 2000 or fewer in length."
+            )
+
+    original = SimpleNamespace(id=42, edit=AsyncMock(side_effect=edit), to_reference=MagicMock(return_value=None))
+    channel.get_partial_message = MagicMock(return_value=original)
+    channel.send = AsyncMock(return_value=SimpleNamespace(id=9006))
+    adapter._client.get_channel = lambda _channel_id: channel
+
+    result = await adapter.edit_message(
+        "123", "42", "u" * (1500 if reactive else 5000), finalize=True,
+        metadata={"reply_to_message_id": "93"},
+    )
+
+    assert result.success is True
+    assert adapter._discord_message_is_persistently_complete("93") is True
+
+
+@pytest.mark.asyncio
 async def test_iter_candidates_keeps_latest_messages_when_window_exceeds_limit(adapter, monkeypatch):
     class RealisticChannel(FakeChannel):
         def history(self, **kwargs):

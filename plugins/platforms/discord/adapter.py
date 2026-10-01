@@ -3252,7 +3252,11 @@ class DiscordAdapter(DiscordMediaMixin, BasePlatformAdapter):
             # Pre-flight oversize: final edits split-and-deliver; streaming edits truncate in place.
             if len(formatted) > self.MAX_MESSAGE_LENGTH:
                 if finalize:
-                    return await self._edit_overflow_split(channel, msg, message_id, content)
+                    # A split final delivery owes the recovery ledger the same record as an in-place one.
+                    return await self._record_response_async(
+                        (metadata or {}).get("reply_to_message_id"),
+                        await self._edit_overflow_split(channel, msg, message_id, content), content, True,
+                    )
                 formatted = self.truncate_message(formatted, self.MAX_MESSAGE_LENGTH)[0]
                 _saturated_preview = True
                 # Saturated-preview dedup: past the cap every edit is the same text; skip until finalize.
@@ -3271,7 +3275,10 @@ class DiscordAdapter(DiscordMediaMixin, BasePlatformAdapter):
                 # Reactive split: format_message inflation can exceed 2,000 (50035) even after pre-flight.
                 if self._is_length_overflow_error(edit_err):
                     if finalize:
-                        return await self._edit_overflow_split(channel, msg, message_id, content)
+                        return await self._record_response_async(
+                            (metadata or {}).get("reply_to_message_id"),
+                            await self._edit_overflow_split(channel, msg, message_id, content), content, True,
+                        )
                     truncated = self.truncate_message(formatted, self.MAX_MESSAGE_LENGTH)[0]
                     if self._last_overflow_preview.get(_preview_key) == truncated:
                         # Saturated-preview dedup (see pre-flight path above).
