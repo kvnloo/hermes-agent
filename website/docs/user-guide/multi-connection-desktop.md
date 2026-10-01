@@ -59,10 +59,12 @@ Rules worth knowing:
   **Make primary** does not switch the current Sessions workspace; removing
   the primary falls back to the local entry.
 - **At startup, return to Sessions on the last-used gateway** controls which
-  gateway Sessions opens after a full app restart. It is off by default, so
-  Sessions opens on **Primary**. Turn it on to resume the most recent gateway
-  that connected successfully. A failed switch is never remembered, and a
-  removed or unavailable saved gateway falls back to Primary.
+  gateway Sessions opens after a full app restart when no profile is set as
+  the default. It is off by default, so Sessions opens on **Primary**. Turn it
+  on to resume the most recent gateway that connected successfully. A failed
+  switch is never remembered, and a removed or unavailable saved gateway falls
+  back to Primary. A default profile (**Set as default** on its square) takes
+  precedence: startup opens that profile's gateway instead.
 - **Test** probes the connection's own HTTP *and* WebSocket legs, so a pass
   (the *"Reachable"* toast) means chat will actually work — not just that the
   host pinged.
@@ -228,7 +230,8 @@ that live on one gateway.
   answers, and a dead target fails the click with a message rather than
   leaving the window half-switched. Groups keep registry order whichever
   gateway is active, so a square never moves under the pointer that clicked
-  it. Right-click on an at-rest square offers **Switch to**, **Color**,
+  it. Right-click on an at-rest square offers **Open in new window** (when
+  the app can open one), **Set as default**, **Switch to**, **Color**,
   **Rename**, **Edit SOUL.md** and **Delete**, all executed on the square's
   own gateway; the delete confirmation names the machine.
 - A gateway the last enumeration could not reach keeps its squares, marked
@@ -237,7 +240,8 @@ that live on one gateway.
   squares across the fleet, the strip condenses into one menu sectioned by
   gateway.
 - The selected gateway survives a quit and relaunch only when **Settings →
-  Gateways → At startup, return to Sessions on the last-used gateway** is on.
+  Gateways → At startup, return to Sessions on the last-used gateway** is on
+  and no profile is set as the default.
   The preference and gateway id live in the app's user-data registry, so
   replacing or updating the application bundle does not reset them.
 - With more than thirteen profiles on the active gateway, their avatar strip
