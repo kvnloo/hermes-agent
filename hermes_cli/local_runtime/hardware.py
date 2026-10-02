@@ -340,6 +340,12 @@ def _unified_pool_bytes(smi_total: int, ram_total: int) -> int | None:
     attribute-less engine fallback needs the two numeric gates, both of which must hold.
     """
     view = _device_pool_view()
+    return _unified_pool_from_view(view, smi_total, ram_total)
+
+
+def _unified_pool_from_view(
+        view: "tuple[int, bool | None] | None", smi_total: int, ram_total: int) -> int | None:
+    """Classify a captured allocator view without discarding a discrete-device verdict."""
     if view is None:
         return None
     pool, integrated = view
@@ -359,7 +365,25 @@ def _uma_budget(base: int, total: int, *, gpu_name: str = "",
                           gpu_pci_id=gpu_pci_id)
 
 
-def probe_budget(*, planning: bool = False) -> HardwareBudget:
+def _cpu_budget(base: int) -> HardwareBudget:
+    """Host RAM available to CPU inference, after leaving the OS/app headroom."""
+    usable = max(0, int(base * (1 - _UMA_HEADROOM_FRACTION)))
+    return HardwareBudget(usable_vram_bytes=0, total_device_bytes=0,
+                          ram_available_bytes=usable, uma=False, platform=sys.platform)
+
+
+def _discrete_budget(
+        total: int, free: int | None, ram_bytes: int, *, planning: bool,
+        gpu_name: str = "", gpu_pci_id: int | None = None) -> HardwareBudget:
+    """Budget a known discrete device; unknown live-free capacity fails conservatively closed."""
+    margin = max(_MARGIN_FLOOR, int(total * _MARGIN_FRACTION))
+    base = total if planning else (free or 0)
+    return HardwareBudget(usable_vram_bytes=max(0, base - margin),
+                          total_device_bytes=total, ram_available_bytes=ram_bytes,
+                          uma=False, gpu_name=gpu_name, platform=sys.platform, gpu_pci_id=gpu_pci_id)
+
+
+def probe_budget(*, planning: bool = False, platform_name: str | None = None) -> HardwareBudget:
     """Construct the budget per the source rules above.
 
     ``planning=False``: LIVE budget (free VRAM now) for launch-time fit and growth re-grants.
@@ -367,15 +391,17 @@ def probe_budget(*, planning: bool = False) -> HardwareBudget:
     selection — pricing against live-free while a model was loaded made every row read as too
     large. The managed server unloads/relaunches itself, so capacity is real.
     """
+    platform_name = sys.platform if platform_name is None else platform_name
     ram_total, ram_avail = _ram_bytes()
     vram = _nvidia_vram()
+    pool_view = _device_pool_view()
 
     # Unified-memory NVIDIA: the CUDA allocator pool is the real capacity. Classification comes
     # from the driver API/engine and must not require nvidia-smi (stripped-PATH sessions lose smi
     # but nvcuda loads via the system loader). Crossing the carve-out costs nothing — it is an OS
     # accounting knob, not a GPU limit. Deliberately NOT clamped to OS RAM: carved-out memory is
     # invisible to GlobalMemoryStatusEx, so a RAM clamp would throw away exactly that capacity.
-    unified = _unified_pool_bytes(vram[0] if vram else 0, ram_total)
+    unified = _unified_pool_from_view(pool_view, vram[0] if vram else 0, ram_total)
     if unified is not None:
         logger.info(
             "unified-memory NVIDIA device: allocator pool %.1f GiB "
@@ -394,16 +420,22 @@ def probe_budget(*, planning: bool = False) -> HardwareBudget:
                            gpu_pci_id=vram[3] if vram else None)
 
     if vram is None:
-        # No NVIDIA device visible: Metal/Vulkan/CPU paths budget from RAM as UMA (Apple
-        # Silicon) — conservative for discrete AMD until a vendor probe lands.
-        return _uma_budget(ram_total if planning else ram_avail, ram_total)
+        if pool_view is not None and pool_view[1] is False:
+            # nvidia-smi can fail even though the CUDA driver positively identifies a discrete
+            # device. The driver view has no live-free fact, so live grants remain zero.
+            return _discrete_budget(
+                pool_view[0], None, ram_total if planning else ram_avail, planning=planning)
+        # Metal is unified memory. Elsewhere, no detected device means CPU fallback; an
+        # attribute-less pool claim must not turn host RAM into claimed GPU capacity.
+        base = ram_total if planning else ram_avail
+        if platform_name == "darwin":
+            return _uma_budget(base, ram_total)
+        return _cpu_budget(base)
 
     total, free, gpu_name, gpu_pci_id = vram
-    margin = max(_MARGIN_FLOOR, int(total * _MARGIN_FRACTION))
-    return HardwareBudget(usable_vram_bytes=max(0, (total if planning else free) - margin),
-                          total_device_bytes=total,
-                          ram_available_bytes=ram_total if planning else ram_avail,
-                          uma=False, gpu_name=gpu_name, platform=sys.platform, gpu_pci_id=gpu_pci_id)
+    return _discrete_budget(
+        total, free, ram_total if planning else ram_avail, planning=planning,
+        gpu_name=gpu_name, gpu_pci_id=gpu_pci_id)
 
 
 def launch_budget(capacity: HardwareBudget, *, own_bytes: int = 0) -> HardwareBudget | None:

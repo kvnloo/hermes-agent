@@ -169,15 +169,16 @@ def test_budget_discrete_unchanged_when_probe_unavailable(monkeypatch):
 def test_engine_fallback_without_smi_stays_conservative(monkeypatch):
     """Engine-fallback view (no INTEGRATED verdict) + no smi numbers: the
     disagreement gate has nothing to compare against, so the quirk stays
-    off and budgeting falls to the conservative RAM-as-UMA path — an
-    attribute-less pool claim alone must never flip the verdict."""
+    off and budgeting falls to the CPU path — an attribute-less pool claim
+    alone must never invent GPU or unified-memory capacity."""
     _no_cache(monkeypatch)
     monkeypatch.setattr(hw, "_nvidia_vram", lambda: None)
     monkeypatch.setattr(hw, "_ram_bytes", lambda: (UMA_RAM, 32 * GIB))
     monkeypatch.setattr(hw, "_device_pool_view", lambda: (UMA_POOL, None))
-    b = hw.probe_budget(planning=True)
-    assert b.uma is True
-    assert b.total_device_bytes == UMA_RAM  # RAM path, not the pool
+    b = hw.probe_budget(planning=True, platform_name="win32")
+    assert b.uma is False
+    assert b.total_device_bytes == 0
+    assert b.ram_available_bytes == int(UMA_RAM * (1 - hw._UMA_HEADROOM_FRACTION))
 
 
 
