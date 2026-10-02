@@ -279,7 +279,8 @@ def _discover_files(roots: List[Path]) -> List[Path]:
 
     Roots may be directories (recursed for ``test_*.py``) or explicit
     ``.py`` files (included as-is, even if they don't match the
-    ``test_*`` prefix — caller knows what they want).
+    ``test_*`` prefix — caller knows what they want). Missing roots raise
+    ``FileNotFoundError`` rather than silently reducing the requested suite.
 
     Exclude any file whose path contains a component in ``_SKIP_PARTS``,
     UNLESS the user explicitly named it as a root (in which case the
@@ -292,7 +293,7 @@ def _discover_files(roots: List[Path]) -> List[Path]:
     out: List[Path] = []
     for root in roots:
         if not root.exists():
-            continue
+            raise FileNotFoundError(f"test discovery path does not exist: {root}")
         if root.is_file():
             # Explicit file: include it as-is, skip the _SKIP_PARTS filter
             # since the user named it directly.
@@ -1253,7 +1254,11 @@ def main() -> int:
             global _SKIP_PARTS  # noqa: PLW0603 — config knob
             _SKIP_PARTS = set()
 
-        files = _discover_files(roots)
+        try:
+            files = _discover_files(roots)
+        except FileNotFoundError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
 
     if not files:
         print("No test files to run", file=sys.stderr)

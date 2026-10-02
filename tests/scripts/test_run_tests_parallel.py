@@ -277,6 +277,59 @@ def _run_runner(probe_dir: Path, *extra: str) -> subprocess.CompletedProcess:
     )
 
 
+@pytest.mark.parametrize("form", ["positional", "paths"])
+@pytest.mark.parametrize("missing_kind", ["file", "directory"])
+def test_missing_explicit_root_prevents_partial_run(tmp_path, form, missing_kind):
+    runner = _probe_root(tmp_path) / "scripts/run_tests_parallel.py"
+    receipt = tmp_path / "ran"
+    probe = tmp_path / "test_present.py"
+    probe.write_text(
+        "from pathlib import Path\n"
+        f"def test_probe():\n    Path({str(receipt)!r}).touch()\n",
+        encoding="utf-8",
+    )
+    missing = tmp_path / ("test_missing.py" if missing_kind == "file" else "missing-suite")
+    roots = [str(probe), str(missing)]
+    arguments = roots if form == "positional" else ["--paths", os.pathsep.join(roots)]
+    result = subprocess.run(
+        [sys.executable, str(runner), *arguments, "-j", "1", "--file-timeout", "30"],
+        cwd=tmp_path, capture_output=True, text=True, encoding="utf-8", timeout=60,
+    )
+    output = result.stdout + result.stderr
+    assert result.returncode != 0, output
+    assert str(missing) in output
+    assert "Discovered" not in output
+    assert not receipt.exists(), "a partial test inventory was executed"
+
+
+@pytest.mark.parametrize("form", ["positional", "paths"])
+def test_explicit_root_inventory_preserves_exact_execution_receipts(tmp_path, form):
+    runner = _probe_root(tmp_path) / "scripts/run_tests_parallel.py"
+    receipts = tmp_path / "receipts"
+    receipts.mkdir()
+    probes = []
+    for name in ("first", "second"):
+        probe = tmp_path / f"test_{name}.py"
+        probe.write_text(
+            "from pathlib import Path\n"
+            f"def test_probe():\n    Path({str(receipts / name)!r}).touch()\n",
+            encoding="utf-8",
+        )
+        probes.append(str(probe))
+    empty = tmp_path / "empty-suite"
+    empty.mkdir()
+    roots = [probes[0], str(empty), probes[1], probes[0]]
+    arguments = roots if form == "positional" else ["--paths", os.pathsep.join(roots)]
+    result = subprocess.run(
+        [sys.executable, str(runner), *arguments, "-j", "1", "--file-timeout", "30"],
+        cwd=tmp_path, capture_output=True, text=True, encoding="utf-8", timeout=60,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "Discovered 2 test files" in result.stdout
+    assert "2 tests passed" in result.stdout
+    assert sorted(path.name for path in receipts.iterdir()) == ["first", "second"]
+
+
 @pytest.mark.parametrize("help_flag", ["-h", "--help"])
 def test_help_prints_usage_without_discovering_or_running_tests(
     tmp_path: Path, help_flag: str
