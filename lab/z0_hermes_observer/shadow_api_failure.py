@@ -14,6 +14,8 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 QUESTION_ID = "api.attempt_will_fail"
+# Finite deterministic action set for this boolean lane (never a non-deterministic filter).
+LEGAL_ACTIONS: tuple[bool, ...] = (False, True)
 
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -56,6 +58,7 @@ def request_for(pre: Mapping[str, Any]) -> dict[str, Any]:
         "questions": [{
             "id": QUESTION_ID,
             "type": "boolean",
+            "legal_actions": list(LEGAL_ACTIONS),
             "instructions": (
                 "Predict whether this physical Hermes provider attempt will fail "
                 "before a normalized successful response is returned."
@@ -85,13 +88,23 @@ def joined_examples(rows: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
         pre = pending.pop(key, None)
         if pre is None:
             continue
-        outcome = event == "api_request_error"
+        # execution_completed: Hermes finished this provider-attempt lifecycle.
+        # verified_outcome: independent will_fail label (api_request_error → True).
+        # verified_success: NOT an alias of execution_completed. This offline join
+        # only proves the attempt terminated and labels will_fail; it does not
+        # verify task/agent success. Keep False here so the signals never collapse.
+        will_fail = event == "api_request_error"
+        execution_completed = event in {"post_api_request", "api_request_error"}
+        verified_success = False
+        assert execution_completed != verified_success or (not execution_completed and not verified_success)
         examples.append({
             "schema": "z0int.hermes_shadow_example.v1",
             "question_id": QUESTION_ID,
             "identity": pre.get("identity"),
             "request": request_for(pre),
-            "verified_outcome": outcome,
+            "verified_outcome": will_fail,
+            "verified_success": verified_success,
+            "execution_completed": execution_completed,
             "outcome_source": event,
         })
     return examples
