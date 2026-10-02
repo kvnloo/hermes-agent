@@ -67,3 +67,27 @@ def test_request_is_bounded_metadata_not_content():
     assert "secret" not in rendered
     assert request["questions"][0]["id"] == "api.attempt_will_fail"
     assert request["state"]["message_count"] == 5
+
+
+
+def test_legal_actions_and_execution_vs_verified():
+    """Phase 1 GAPs: finite legal_actions + execution_completed never aliases verified_success."""
+    module = _load()
+    rows = [
+        _event("pre_api_request", 1, provider="p", model="m"),
+        _event("post_api_request", 1),
+        _event("pre_api_request", 2, request_id="req2", provider="p", model="m"),
+        _event("api_request_error", 2, request_id="req2", status_code=500),
+    ]
+    examples = module.joined_examples(rows)
+    assert len(examples) == 2
+    for ex in examples:
+        legal = ex["request"]["questions"][0]["legal_actions"]
+        assert legal == [False, True]
+        assert list(module.LEGAL_ACTIONS) == [False, True]
+        assert ex["execution_completed"] is True
+        assert ex["verified_success"] is False
+        assert ex["execution_completed"] != ex["verified_success"]
+        assert "verified_outcome" in ex
+    assert examples[0]["verified_outcome"] is False  # post_api_request → will_fail false
+    assert examples[1]["verified_outcome"] is True   # api_request_error → will_fail true

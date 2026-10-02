@@ -35,3 +35,14 @@ must not alter retries, provider routing, or model choice.
 
 Next measurement: Brier/log loss, calibration, latency, coverage, and paired
 comparison against a trivial base-rate predictor.
+
+## Phase 1 join fields
+
+Every joined example includes:
+
+- `request.questions[0].legal_actions`: deterministic `[false, true]`
+- `execution_completed`: Hermes finished the attempt lifecycle (`post_api_request` or `api_request_error`)
+- `verified_outcome`: independent will_fail label (`api_request_error` → true)
+- `verified_success`: always false in this offline join (lifecycle completion is not task/agent success verification); **never** an alias of `execution_completed`
+
+Do not collapse execution completion into verified success.
