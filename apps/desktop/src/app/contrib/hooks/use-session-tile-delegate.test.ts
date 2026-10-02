@@ -37,12 +37,9 @@ vi.mock('@/store/gateway', async importActual => ({
   requestGatewayForProfile: vi.fn()
 }))
 
-const {
-  fetchStoredTranscriptAcrossBackends,
-  getLatestSessionMessages,
-  getSession,
-  PROMPT_SUBMIT_REQUEST_TIMEOUT_MS
-} = await import('@/hermes')
+const { fetchStoredTranscriptAcrossBackends, getLatestSessionMessages, getSession, PROMPT_SUBMIT_REQUEST_TIMEOUT_MS } =
+  await import('@/hermes')
+
 const { requestGatewayForAgent, requestGatewayForProfile } = await import('@/store/gateway')
 
 const row = (over: Partial<SessionInfo>): SessionInfo =>
@@ -1045,10 +1042,21 @@ describe('useSessionTileDelegate resumeTile stale-recovery race (#94724)', () =>
     setSessions([])
     clearSingleFlightSessionResumeState()
     resetLiveResumeGenerations()
-    vi.mocked(getLatestSessionMessages).mockClear()
-    vi.mocked(fetchStoredTranscriptAcrossBackends).mockClear()
-    vi.mocked(requestGatewayForAgent).mockClear()
-    vi.mocked(requestGatewayForProfile).mockClear()
+    // mockReset (not mockClear): upstream's submitToSession / read-only cron run
+    // suites leave persistent mockImplementation values on these mocks and only
+    // setSessions([]) in their afterEach, so a mockClear here would let those
+    // implementations leak into this suite's first test. Reset fully and re-arm
+    // the file-level defaults so each test arms only what it asserts on.
+    vi.mocked(getLatestSessionMessages).mockReset()
+    vi.mocked(getLatestSessionMessages).mockImplementation(async () => ({ messages: [], session_id: '' }))
+    vi.mocked(fetchStoredTranscriptAcrossBackends).mockReset()
+    vi.mocked(fetchStoredTranscriptAcrossBackends).mockImplementation(async () => ({ messages: [], session_id: '' }))
+    vi.mocked(getSession).mockReset()
+    vi.mocked(getSession).mockImplementation(async () => {
+      throw new Error('not found')
+    })
+    vi.mocked(requestGatewayForAgent).mockReset()
+    vi.mocked(requestGatewayForProfile).mockReset()
   })
 
   afterEach(() => {

@@ -329,7 +329,7 @@ export function useSessionTileDelegate({
         )
       },
       resumeTile: async (storedSessionId, options) => {
-const epoch = (resumeTileEpochByStoredSessionId.get(storedSessionId) ?? 0) + 1
+        const epoch = (resumeTileEpochByStoredSessionId.get(storedSessionId) ?? 0) + 1
         resumeTileEpochByStoredSessionId.set(storedSessionId, epoch)
 
         // A retained tile can still own its runtime after the primary view drops
@@ -337,6 +337,7 @@ const epoch = (resumeTileEpochByStoredSessionId.get(storedSessionId) ?? 0) + 1
         const existing =
           runtimeIdByStoredSessionIdRef.current.get(storedSessionId) ??
           $sessionTiles.get().find(tile => tile.storedSessionId === storedSessionId)?.runtimeId
+
         const cached = existing ? sessionStateByRuntimeIdRef.current.get(existing) : undefined
         const refreshTranscript = options?.refreshTranscript === true
 
