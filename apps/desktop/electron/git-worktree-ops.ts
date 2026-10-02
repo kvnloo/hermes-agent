@@ -342,7 +342,19 @@ async function addWorktree(repoPath, options, gitBin) {
     // `remoteOfRef` rather than a literal `origin/` prefix: a repo can name
     // its remotes anything (`upstream`, `fork`, a renamed `origin`).
     const base = String(opts.base)
-    const remote = await remoteOfRef(gitBin, root, base)
+    let remote = await remoteOfRef(gitBin, root, base)
+
+    // A tag-pinned narrow clone has no tracking ref for any branch, so
+    // `remoteOfRef` reads "<remote>/<branch>" as not-a-remote. When the prefix
+    // is a configured remote, treat it as a remote-tracking base so the fetch
+    // below can create the ref; otherwise keep the local-branch reading.
+    if (!remote && base.includes('/')) {
+      const maybeRemote = base.slice(0, base.indexOf('/'))
+
+      if (await gitLine(gitBin, ['remote', 'get-url', maybeRemote], root)) {
+        remote = maybeRemote
+      }
+    }
 
     if (remote) {
       const remoteBranch = base.slice(remote.length + 1)
