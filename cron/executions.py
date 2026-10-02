@@ -128,6 +128,18 @@ def _process_start_time(pid: int) -> Optional[int]:
 
 
 def _owner_is_live(pid: int, started_at: Optional[int]) -> bool:
+    """Missing claim instrumentation is not proof that an execution owner died."""
+    return _owner_is_live_for_claim(pid, started_at, missing_claim_is_live=True)
+
+
+def _delivery_owner_is_live(pid: int, started_at: Optional[int]) -> bool:
+    """Retain delivery's existing missing-claim policy with the shared PID checks."""
+    return _owner_is_live_for_claim(pid, started_at, missing_claim_is_live=False)
+
+
+def _owner_is_live_for_claim(
+    pid: int, started_at: Optional[int], *, missing_claim_is_live: bool,
+) -> bool:
     try:
         from gateway.status import _pid_exists
         if not _pid_exists(pid):
@@ -135,7 +147,7 @@ def _owner_is_live(pid: int, started_at: Optional[int]) -> bool:
     except Exception:
         return True  # fail safe: inability to prove death must not rewrite state
     if started_at is None:
-        return pid == os.getpid()
+        return missing_claim_is_live or pid == os.getpid()
     current = _process_start_time(pid)
     if current is None:
         return True  # cannot compare -> cannot prove death; a misread must not rewrite state

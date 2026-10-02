@@ -8,6 +8,9 @@ import sqlite3
 import subprocess
 import sys
 from pathlib import Path
+from unittest.mock import Mock
+
+import pytest
 
 
 def _point_ledger(monkeypatch, tmp_path):
@@ -514,3 +517,89 @@ def test_history_orders_by_instant_across_dst_fall_back(monkeypatch, tmp_path):
     ]
     page = executions.list_executions(job_id="dst-job", before_claimed_at=later["claimed_at"])
     assert [r["id"] for r in page] == [earlier["id"]]
+
+
+@pytest.mark.parametrize("owner_exited", [False, True], ids=["live-owner", "exited-owner"])
+def test_missing_claim_fingerprint_uses_real_external_owner_liveness(
+    monkeypatch, tmp_path, owner_exited, record_property,
+):
+    """Missing instrumentation must not terminalize a fresh live owner's attempt."""
+    import gateway.status as gateway_status
+    import cron.delivery_queue as delivery_queue
+
+    executions = _point_ledger(monkeypatch, tmp_path)
+    monkeypatch.setattr(delivery_queue, "DELIVERY_DB", tmp_path / "deliveries.db")
+    child = subprocess.Popen(
+        [sys.executable, "-c", "import sys; sys.stdin.buffer.read()"],
+        stdin=subprocess.PIPE,
+    )
+    try:
+        assert child.poll() is None
+        assert child.pid != os.getpid()
+        def seed_row(job_id):
+            row = executions.create_execution(job_id, source="builtin")
+            executions.mark_execution_running(row["id"])
+            # Synthetic rows attributed to this test's real external child.
+            # Neither kernel liveness nor the recovery helper is mocked.
+            with executions._transaction() as conn:
+                conn.execute(
+                    "UPDATE executions SET process_id=?, pid=?, process_started_at=NULL WHERE id=?",
+                    ("test-owned-external-child", child.pid, row["id"]),
+                )
+            return row
+
+        record = seed_row("missing-fingerprint")
+        direct_record = seed_row("missing-fingerprint-direct")
+        delivery_queue.enqueue(record["id"], {"id": "missing-fingerprint"}, "fixture result")
+        assert delivery_queue.claim_next() is not None
+        with delivery_queue._transaction() as conn:
+            conn.execute(
+                "UPDATE deliveries SET owner_process_id=?, owner_pid=?, owner_started_at=NULL "
+                "WHERE execution_id=?",
+                ("test-owned-external-child", child.pid, record["id"]),
+            )
+        if owner_exited:
+            child.stdin.close()
+            child.wait(timeout=5)
+        alive_before = gateway_status._pid_exists(child.pid)
+        assert alive_before is (not owner_exited)
+        before = executions.get_execution(record["id"])
+        inflight = executions.live_inflight_execution("missing-fingerprint")
+        direct_terminalized = executions.terminalize_dead_owner(
+            direct_record["id"], reason="Test-owned child exited",
+        )
+        direct_after = executions.get_execution(direct_record["id"])
+        recovered = executions.recover_interrupted_executions()
+        after = executions.get_execution(record["id"])
+        delivery_recovered = delivery_queue.recover_abandoned()
+        delivery = delivery_queue.get_status(record["id"])
+        send = Mock()
+        assert delivery_queue.drain(send) == 0
+        send.assert_not_called()
+        alive_after = gateway_status._pid_exists(child.pid)
+        record_property("owner_identity_observation", json.dumps({
+            "owner_exited": owner_exited, "child_pid": child.pid,
+            "alive_before": alive_before, "alive_after": alive_after,
+            "before": before, "recovered": recovered, "after": after,
+            "inflight": inflight, "direct_terminalized": direct_terminalized,
+            "direct_after": direct_after,
+            "delivery_recovered": delivery_recovered, "delivery": delivery,
+            "send_calls": send.call_count,
+        }, sort_keys=True))
+        assert alive_after is (not owner_exited)
+        # Delivery's existing uncertainty policy still terminalizes without replay.
+        assert delivery_recovered == 1
+        assert delivery["status"] == "unknown"
+        assert (inflight is not None) is (not owner_exited)
+        assert direct_terminalized is owner_exited
+        assert direct_after["status"] == ("unknown" if owner_exited else "running")
+        assert recovered == int(owner_exited)
+        assert after["status"] == ("unknown" if owner_exited else "running")
+    finally:
+        if child.stdin and not child.stdin.closed:
+            child.stdin.close()
+        try:
+            child.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            child.kill()
+            child.wait(timeout=5)

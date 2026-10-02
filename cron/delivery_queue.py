@@ -21,7 +21,8 @@ from pathlib import Path
 from typing import Any, Callable, Iterator, Optional
 
 from agent.redact import redact_sensitive_text
-from cron.executions import _owner_is_live, _process_start_time
+from cron.executions import _delivery_owner_is_live as _owner_is_live
+from cron.executions import _process_start_time
 from hermes_constants import get_hermes_home
 from hermes_time import now as _hermes_now
 
