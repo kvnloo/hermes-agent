@@ -15,6 +15,7 @@ locks). Schema: tasks, task_links, task_comments, task_events, task_runs, attach
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import json
 import os
 import re
@@ -4596,6 +4597,7 @@ from hermes_cli.kanban_db_boards import (  # noqa: E402
 )
 from hermes_cli.kanban_db_connect import (  # noqa: E402
     _INITIALIZED_PATHS,
+    connect,
     init_db,
     write_txn,
 )

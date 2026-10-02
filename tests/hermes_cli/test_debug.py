@@ -1,6 +1,7 @@
 """Tests for ``hermes debug`` CLI command and debug utilities."""
 
 import os
+import urllib.error
 from unittest.mock import MagicMock, patch
 
 import pytest

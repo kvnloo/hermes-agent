@@ -229,7 +229,7 @@ class LearningNodeEdit(BaseModel):
 class DebugShareRequest(BaseModel):
     # Redaction scrubs credential-shaped tokens before logs leave the machine; opt-out only.
     redact: bool = True
-lines: int = 200  # recent log lines in the summary tail (full logs are separate)
+    lines: int = 200  # recent log lines in the summary tail (full logs are separate)
     # dpaste.com fallback retention in days (only applies when paste.rs is
     # unreachable; paste.rs pastes are always swept after 6 hours). Clamped to
     # [1, 365] by the share core (dpaste.com's server-enforced range).
