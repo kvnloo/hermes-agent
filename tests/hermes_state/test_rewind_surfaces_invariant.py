@@ -164,3 +164,53 @@ def test_rewind_rejects_a_warm_prefix_with_a_different_earlier_user_turn(db):
     with pytest.raises(RuntimeError, match="session history changed"):
         db.rewind_user_turn(sid, 2, warm_history=warm)
     assert _active_rows(db, sid) == before
+
+
+@pytest.mark.parametrize("surface", ["cli", "tui"])
+def test_mismatched_warm_prefix_refusal_preserves_consumer_state(db, surface):
+    """A rejected durable rewind must not publish a new in-memory history."""
+    sid = f"stale-consumer-{surface}"
+    _seed(db, sid, turns=3)
+    durable_before = _active_rows(db, sid)
+    warm = [dict(message) for message in db.get_messages_as_conversation(sid)]
+    warm[0]["content"] = "different-q1"
+    warm_before = [dict(message) for message in warm]
+    agent = SimpleNamespace(
+        _session_messages=warm,
+        _last_flushed_db_idx=len(warm),
+        _db_flush_scan_prefix=list(warm),
+        _invalidate_system_prompt=MagicMock(),
+    )
+
+    if surface == "cli":
+        from hermes_cli.cli_session_mixin import CLISessionMixin
+
+        cli = CLISessionMixin.__new__(CLISessionMixin)
+        cli._session_db, cli.session_id = db, sid
+        cli.conversation_history, cli.agent = warm, agent
+        cli._prefill_input_buffer = MagicMock()
+        assert cli.undo_last(1) is None
+        assert cli.conversation_history == warm_before
+        cli._prefill_input_buffer.assert_not_called()
+        agent._invalidate_system_prompt.assert_not_called()
+    else:
+        from tui_gateway.server import _rewind_active_session_history
+
+        version_before = 3
+        session = {
+            "agent": agent,
+            "history": list(warm),
+            "history_lock": threading.Lock(),
+            "history_version": version_before,
+            "session_key": sid,
+        }
+        with session["history_lock"]:
+            with pytest.raises(RuntimeError, match="session history changed"):
+                _rewind_active_session_history(session, 2)
+        assert session["history"] == warm_before
+        assert session["history_version"] == version_before
+
+    assert agent._session_messages == warm_before
+    assert agent._last_flushed_db_idx == len(warm_before)
+    assert agent._db_flush_scan_prefix == warm_before
+    assert _active_rows(db, sid) == durable_before
