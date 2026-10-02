@@ -8,9 +8,11 @@ describe('ui theme subscription', () => {
   it('does not notify theme-only consumers for unrelated ui-state churn', () => {
     let fullStoreWakeups = 0
     let themeWakeups = 0
+
     const stopFull = $uiState.listen(() => {
       fullStoreWakeups += 1
     })
+
     const stopTheme = $uiTheme.listen(() => {
       themeWakeups += 1
     })
