@@ -273,14 +273,6 @@ def _content_parts_to_anthropic_blocks(parts: Any) -> List[Dict[str, Any]]:
     return out
 
 
-def _safe_text(text: Any) -> str:
-    """``text`` if non-whitespace, else the placeholder. A blank text block stored in history (e.g.
-    by compression) is replayed on every turn and wedges the session with HTTP 400; the placeholder
-    is self-healing. Mirrors ``bedrock_adapter._safe_text`` (kept separate on purpose)."""
-    text = "" if text is None else str(text)
-    return text if text.strip() else _EMPTY_TEXT_PLACEHOLDER
-
-
 def _replay_text(b: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     # Drop blank blocks rather than coerce in place: the caller relocates any cache_control and
     # falls back to a placeholder only when nothing survives, so "(empty)" never sits as
