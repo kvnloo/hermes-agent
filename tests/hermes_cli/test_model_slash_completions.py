@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
+import pytest
+
 import hermes_cli.commands_completion as commands_mod
 
 
@@ -89,3 +91,34 @@ def test_catalog_memo_busts_on_refresh_and_config_sig():
         commands_mod._model_completion_catalog()
         commands_mod._model_completion_catalog()
         assert build.call_count == 2
+
+
+@pytest.mark.parametrize("prefix", [
+    "--provider nous ",
+    "--reasoning high ",
+    "--provider nous --reasoning high ",
+    "--reasoning high --provider nous --session ",
+])
+def test_option_values_do_not_consume_the_model_position(prefix):
+    catalog = {
+        "providers": [("nous", "Nous Portal")],
+        "models": [("nous/hermes-4", "Nous Portal")],
+    }
+    with patch.object(commands_mod, "_model_completion_catalog", return_value=catalog):
+        assert "nous/hermes-4" in _texts(prefix)
+        assert _texts(prefix + "hrms") == ["nous/hermes-4"]
+
+
+@pytest.mark.parametrize("prefix", [
+    "nous/hermes-4 ",
+    "--provider nous nous/hermes-4 ",
+    "nous/hermes-4 --reasoning high ",
+])
+def test_actual_model_still_consumes_the_model_position(prefix):
+    catalog = {
+        "providers": [("nous", "Nous Portal")],
+        "models": [("nous/hermes-4", "Nous Portal")],
+    }
+    with patch.object(commands_mod, "_model_completion_catalog", return_value=catalog):
+        assert "nous/hermes-4" not in _texts(prefix)
+        assert "--refresh" in _texts(prefix + "--r")

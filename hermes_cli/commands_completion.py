@@ -271,7 +271,15 @@ def _model_completions(sub_text: str, sub_lower: str):
         rows = [(e, "reasoning effort") for e in ("none", *VALID_REASONING_EFFORTS)]
         yield from _ranked_completions(rows, partial, skip_exact=False)
         return
-    has_model = any(not c.startswith("-") for c in completed)
+    has_model = False
+    expects_value = False
+    for word in completed:
+        if expects_value and not word.startswith("-"):
+            expects_value = False
+            continue
+        expects_value = word.lower() in ("--provider", "--reasoning")
+        if not word.startswith("-"):
+            has_model = True
     if partial.startswith("-") or not has_model:
         yield from _ranked_completions(
             ((name, meta) for name, meta in flag_rows if name not in used), partial, skip_exact=False)
