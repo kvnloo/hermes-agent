@@ -710,7 +710,19 @@ async def get_session_messages(
             sid, limit=_limit, offset=offset, latest=latest_page,
             include_compacted=include_compacted, include_ancestors=True)
 
-    result = await asyncio.to_thread(_with_db, profile, _read, read_only=True)
+    try:
+        result = await asyncio.to_thread(_with_db, profile, _read, read_only=True)
+    except sqlite3.DatabaseError as exc:
+        if not is_malformed_db_error(exc):
+            raise
+        _log.error("state.db is corrupt while reading messages for session %s: %s", session_id, exc)
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Session store is corrupt (database disk image is malformed). "
+                "Sessions cannot be read until it is repaired — run "
+                "`hermes doctor` for diagnosis."),
+        ) from exc
     if result is None:
         raise HTTPException(status_code=404, detail=_NOT_FOUND)
     sid, _limit, messages = result
