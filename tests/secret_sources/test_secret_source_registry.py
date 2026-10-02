@@ -160,8 +160,6 @@ class TestApplyAll:
         report = reg.apply_all({"dummy": {"enabled": True}}, tmp_path, environ=env)
         assert env["API_KEY"] == "v1"
         assert report.provenance["API_KEY"].source == "dummy"
-        assert report.provenance["API_KEY"].shape == "mapped"
-        assert report.provenance["API_KEY"].overrode_env is False
 
 
 

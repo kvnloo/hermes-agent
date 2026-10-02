@@ -48,10 +48,7 @@ _BUILTIN_SOURCES = (
 class AppliedVar:
     """Provenance record for one env var the orchestrator set."""
 
-    name: str
     source: str          # SecretSource.name
-    shape: str           # "mapped" | "bulk"
-    overrode_env: bool   # replaced a pre-existing .env/shell value
     # The source may beat .env/shell for this var (``override_existing`` and not ``preserve_existing``), so a
     # dotenv reload may re-assert it; a gap-fill or preserved name must keep following .env edits (#74265).
     authoritative: bool = False
@@ -66,9 +63,6 @@ class SourceReport:
     result: FetchResult
     applied: List[str] = field(default_factory=list)
     skipped_existing: List[str] = field(default_factory=list)   # .env/shell won
-    skipped_claimed: List[str] = field(default_factory=list)    # earlier source won
-    skipped_protected: List[str] = field(default_factory=list)  # bootstrap-auth guard
-    skipped_invalid: List[str] = field(default_factory=list)    # bad env-var name
 
 
 @dataclass
@@ -355,13 +349,10 @@ class _Applier:
                    var: str, value: str) -> bool:
         """Apply one var through the shared guard chain. True = applied."""
         if not is_valid_env_name(var):
-            sr.skipped_invalid.append(var)
             return False
         if var in self.protected:
-            sr.skipped_protected.append(var)
             return False
         if var in self.claimed:
-            sr.skipped_claimed.append(var)
             self.report.conflicts.append(f"{var}: kept value from {self.claimed[var]}; "
                                          f"{source.name} also supplies it (first source wins — "
                                          "remove one binding or reorder secrets.sources)")
@@ -373,7 +364,7 @@ class _Applier:
         self.env[var] = value
         self.claimed[var] = source.name
         sr.applied.append(var)
-        self.report.provenance[var] = AppliedVar(var, source.name, source.shape, overrode_env=existed,
+        self.report.provenance[var] = AppliedVar(source=source.name,
                                                  authoritative=override and var not in self.preserve)
         return True
 
@@ -388,7 +379,7 @@ def apply_all(secrets_cfg: dict, home_path: Path,
     (2) pre-existing .env/shell value, unless the winning source has
     ``override_existing: true``; (3) mapped sources in configured order; (4) bulk
     sources in configured order. First claim wins: a later source carrying the same
-    var gets ``skipped_claimed`` plus a conflict warning — never a silent clobber,
+    var gets a conflict warning — never a silent clobber,
     and ``override_existing`` never applies across sources.
 
     Profile aliasing: under a named profile an applied ``FOO_<PROFILE>``
