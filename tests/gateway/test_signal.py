@@ -1082,6 +1082,60 @@ def _patch_scheduler_sleep(monkeypatch, capture: list):
 
 class TestSignalSendMultipleImages:
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("case", [
+        "empty", "all-invalid", "all-failed", "complete", "skipped",
+        "first-failed", "last-failed", "skipped-and-failed",
+    ])
+    async def test_aggregate_preserves_partial_failure_metadata(self, monkeypatch, tmp_path, case):
+        from gateway.platforms.signal import SIGNAL_MAX_ATTACHMENTS_PER_MSG, SIGNAL_RATE_LIMIT_MAX_ATTEMPTS
+
+        adapter = _make_signal_adapter(monkeypatch)
+        adapter._stop_typing_indicator = AsyncMock()
+        per = SIGNAL_MAX_ATTACHMENTS_PER_MSG
+        valid, missing, failed_batches = {
+            "empty": (0, False, set()),
+            "all-invalid": (0, True, set()),
+            "all-failed": (1, False, {0}),
+            "complete": (per + 1, False, set()),
+            "skipped": (1, True, set()),
+            "first-failed": (per + 1, False, {0}),
+            "last-failed": (per + 1, False, {1}),
+            "skipped-and-failed": (per + 1, True, {1}),
+        }[case]
+        images = _make_image_files(tmp_path, valid)
+        batches = [images[i:i + per] for i in range(0, valid, per)]
+        if missing:
+            images.append(((tmp_path / "missing.png").as_uri(), ""))
+        responses = []
+        expected_attachments = []
+        for index, batch in enumerate(batches):
+            attempts = SIGNAL_RATE_LIMIT_MAX_ATTEMPTS if index in failed_batches else 1
+            responses.extend([None if index in failed_batches else {"timestamp": index + 1}] * attempts)
+            expected_attachments.extend([[str(tmp_path / f"img_{index * per + n}.png") for n in range(len(batch))]] * attempts)
+        mock_rpc, captured = _stub_rpc_responses(responses)
+        adapter._rpc = mock_rpc
+        _patch_scheduler_sleep(monkeypatch, [])
+        adapter._notify_batch_pacing = AsyncMock()
+
+        result = await adapter.send_multiple_images(chat_id="+155****4567", images=images)
+
+        delivered = bool(batches) and len(failed_batches) < len(batches)
+        assert result.success is delivered
+        failed_images = int(missing) + sum(len(batches[index]) for index in failed_batches)
+        if delivered:
+            assert result.error == (f"{failed_images} image(s) failed to send" if failed_images else None)
+        else:
+            expected_error = "all Signal attachment batches failed"
+            if not images:
+                expected_error = "no images to send"
+            elif not valid:
+                expected_error = "no valid images in batch"
+            assert result.error == expected_error
+        assert [call["params"]["attachments"] for call in captured] == expected_attachments
+        assert all(call["kwargs"].get("raise_on_rate_limit") is True for call in captured)
+        assert result.retryable is False  # existing aggregate does not request another batch replay
+
+    @pytest.mark.asyncio
     async def test_empty_list_is_noop(self, monkeypatch):
         adapter = _make_signal_adapter(monkeypatch)
         mock_rpc, captured = _stub_rpc_responses([])

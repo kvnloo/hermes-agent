@@ -805,6 +805,7 @@ class SignalAdapter(BasePlatformAdapter):
         att_batches = [attachments[i:i + per] for i in range(0, len(attachments), per)]
         n_batches = len(att_batches)
         delivered = False
+        failed_images = sum(skipped.values())
         for idx, att_batch in enumerate(att_batches, start=1):
             n = len(att_batch)
             estimated = scheduler.estimate_wait(n)
@@ -814,9 +815,12 @@ class SignalAdapter(BasePlatformAdapter):
             if await self._send_attachment_batch(scheduler, dict(base_params, attachments=att_batch), n,
                                                  f"{idx}/{n_batches}"):
                 delivered = True
-        return SendResult(
-            success=delivered,
-            error=None if delivered else "all Signal attachment batches failed")
+            else:
+                failed_images += n
+        error = None if delivered else "all Signal attachment batches failed"
+        if delivered and failed_images:
+            error = f"{failed_images} image(s) failed to send"
+        return SendResult(success=delivered, error=error)
 
     async def _send_attachment_batch(self, scheduler, params: Dict[str, Any], n: int, label: str) -> bool:
         """Send one attachment batch with rate-limit pacing and a single transient retry. Tokens are
