@@ -334,10 +334,7 @@ def test_cold_profile_hydration_retries_failed_source(tmp_path, monkeypatch):
             ],
             provenance={
                 "OPENAI_API_KEY": AppliedVar(
-                    name="OPENAI_API_KEY",
                     source="command",
-                    shape="bulk",
-                    overrode_env=False,
                 )
             },
         )
@@ -383,10 +380,7 @@ def test_cold_profile_hydration_clears_partial_snapshot_when_sources_are_removed
             ],
             provenance={
                 "OPENAI_API_KEY": AppliedVar(
-                    name="OPENAI_API_KEY",
                     source="onepassword",
-                    shape="bulk",
-                    overrode_env=False,
                 )
             },
         )
@@ -561,10 +555,7 @@ def test_external_secret_values_are_isolated_between_homes(tmp_path, monkeypatch
             ],
             provenance={
                 "SHARED_API_KEY": AppliedVar(
-                    name="SHARED_API_KEY",
                     source="test-source",
-                    shape="mapped",
-                    overrode_env=True,
                 )
             }
         )
