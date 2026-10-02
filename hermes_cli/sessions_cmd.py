@@ -317,7 +317,6 @@ def _cmd_list(db, args):
         print_truncated(None, f"use --limit {limit * 2} to see more")
 
 
-# -- export -----------------------------------------------------------------
 
 def _cmd_export(db, args):
     from hermes_cli.session_filters import build_prune_filters
@@ -330,6 +329,10 @@ def _cmd_export(db, args):
             return
         # Unlike prune/archive, export includes archived sessions.
         filters["archived"] = None
+        # Export is a read-only superset (matches export_all / --session-id);
+        # don't inherit the destructive pinned-exclusion default from
+        # _prune_filter_where.
+        filters["include_pinned"] = True
 
     def _redact(data):
         if not args.redact or data is None:
