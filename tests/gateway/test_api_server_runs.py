@@ -2614,3 +2614,100 @@ class TestRunEventsHeadFlush:
             assert first, "no body byte arrived before the first event"
 
             resp.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("producer", "delivered"),
+    [("rate_limit", True), ("nonretryable", True),
+     ("rate_limit", False), ("nonretryable", False), ("success", False)],
+)
+async def test_failed_run_preserves_delivered_partial_on_status_and_event(
+    adapter, producer, delivered, record_property,
+):
+    """A failed producer's retained text remains available to terminal API readers."""
+    from agent.error_classifier import classify_api_error
+    from agent.turn_recovery import (
+        max_retries_exhausted_result,
+        nonretryable_client_error_result,
+    )
+    from gateway.platforms.api_server import _redact_api_error_text
+
+    partial_text = "The first half of the report was already delivered."
+    secret = "sk-proj-abcdef1234567890abcdef1234567890abcdef12"
+    produced = {}
+    agent = MagicMock()
+    agent.log_prefix = ""
+    agent.verbose = agent.verbose_logging = False
+    agent.provider = "openrouter"
+    agent.model = "fixture-model"
+    agent.base_url = "https://openrouter.ai/api/v1"
+    agent.session_prompt_tokens = agent.session_completion_tokens = agent.session_total_tokens = 0
+    agent._summarize_api_error.side_effect = str
+    agent._extract_api_error_context.return_value = {}
+
+    def create_agent(**kwargs):
+        def run_conversation(**_kwargs):
+            if producer == "success":
+                result = {"completed": True, "final_response": "Complete report."}
+            else:
+                status_code = 429 if producer == "rate_limit" else 401
+                error = RuntimeError(f"HTTP {status_code}: fixture provider failure; key={secret}")
+                error.status_code = status_code
+                classified = classify_api_error(error, provider=agent.provider, model=agent.model)
+                if delivered:
+                    kwargs["stream_delta_callback"](partial_text)
+                common = dict(
+                    api_kwargs=None, api_messages=[], messages=[], conversation_history=None,
+                    api_call_count=3, approx_tokens=10, provider=agent.provider,
+                    base_url=agent.base_url, model=agent.model,
+                    delivered=partial_text if delivered else "",
+                )
+                if producer == "rate_limit":
+                    result = max_retries_exhausted_result(
+                        agent, error, classified, max_retries=3, is_rate_limited=True,
+                        error_msg=str(error).lower(), **common,
+                    )
+                else:
+                    result = nonretryable_client_error_result(
+                        agent, error, classified, status_code=status_code, **common,
+                    )
+            produced.update(result)
+            return result
+        agent.run_conversation.side_effect = run_conversation
+        return agent
+
+    async with TestClient(TestServer(_create_runs_app(adapter))) as client:
+        with patch.object(adapter, "_create_agent", side_effect=create_agent):
+            response = await client.post("/v1/runs", json={"input": "Write a report."})
+            assert response.status == 202
+            run_id = (await response.json())["run_id"]
+            body = await (await client.get(f"/v1/runs/{run_id}/events")).text()
+            status = await (await client.get(f"/v1/runs/{run_id}")).json()
+    events = [json.loads(line[6:]) for line in body.splitlines() if line.startswith("data: ")]
+    terminal = events[-1]
+    expected_status = "completed" if producer == "success" else "failed"
+    observation = dict(producer=producer,delivered=delivered,produced=produced,
+                       status=status,terminal=terminal,calls=agent.run_conversation.call_count)
+    record_property("partial_result_observation", json.dumps(observation, sort_keys=True))
+    assert agent.run_conversation.call_count == 1
+    assert [e["delta"] for e in events if e["event"] == "message.delta"] == (
+        [partial_text] if delivered else []
+    )
+    assert len([e for e in events if e["event"].startswith("run.")]) == 1
+    assert status["status"] == expected_status
+    assert terminal["event"] == f"run.{expected_status}"
+    for payload in (status, terminal):
+        assert secret not in json.dumps(payload)
+        assert payload["completed"] is (producer == "success")
+        assert payload["partial"] is delivered
+        if producer == "success":
+            assert payload["output"] == "Complete report."
+        elif delivered:
+            assert produced["failed"] is True and produced["partial"] is True
+            assert partial_text in produced["final_response"]
+            assert payload.get("output") == _redact_api_error_text(produced["final_response"])
+            assert payload["error"] == _redact_api_error_text(produced["error"])
+        else:
+            assert "output" not in payload
+            assert payload["error"] == _redact_api_error_text(produced["error"])

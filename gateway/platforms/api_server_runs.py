@@ -974,6 +974,10 @@ async def _execute_run(self, run: _RunLaunch, *, _api_server) -> None:
             _finish("cancelled", fields)
         elif result.get("failed"):
             # Non-retryable client errors (401/400) return failed=True rather than raising.
+            # Retained text must survive polling/reconnect as well as live deltas.
+            # A failed final also contains provider diagnostics, so redact it.
+            if fields["partial"]:
+                fields["output"] = _redact_api_error_text(result.get("final_response") or "")
             _finish("failed", fields, error=_redact_api_error_text(result.get("error") or "agent run failed"))
         else:
             # ``runtime`` rides on both the pollable status and the run.completed event via _finish, in the
