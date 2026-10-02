@@ -256,3 +256,67 @@ def test_device_line_regex_handles_parenthesized_names():
             "(46464 MiB, 46284 MiB free)")
     m = hw._DEVICE_LINE_RE.search(line)
     assert m and int(m.group(1)) == 46464
+
+
+def _check_synthetic_budget(monkeypatch, planning, vram, pool, kind, device, *, platform_name=None):
+    """Exercise supplied facts while keeping real host metadata and avoiding physical probes."""
+    import sys
+
+    total, available = 64 * GIB, 32 * GIB
+    if kind == "fallback":
+        classification_platform = sys.platform if platform_name is None else platform_name
+        kind = "uma" if classification_platform == "darwin" else "cpu"
+        device = total if kind == "uma" else 0
+    monkeypatch.setattr(hw, "_ram_bytes", lambda: (total, available))
+    monkeypatch.setattr(hw, "_nvidia_vram", lambda: vram)
+    reads = []
+
+    def pool_view():
+        reads.append(True)
+        return pool
+
+    monkeypatch.setattr(hw, "_device_pool_view", pool_view)
+    if platform_name is None:
+        budget = hw.probe_budget(planning=planning)
+    else:
+        budget = hw.probe_budget(planning=planning, platform_name=platform_name)
+    ram = total if planning else available
+    assert reads == [True]
+    assert budget.platform == sys.platform
+    assert budget.gpu_name == (vram[2] if vram else "")
+    assert budget.gpu_pci_id == (vram[3] if vram else None)
+    assert budget.total_device_bytes == device
+    assert budget.uma is (kind == "uma")
+    if kind == "cpu":
+        assert budget.usable_vram_bytes == 0
+        assert budget.ram_available_bytes == int(ram * (1 - hw._UMA_HEADROOM_FRACTION))
+    elif kind == "discrete":
+        free = vram[1] if vram else 0
+        margin = max(hw._MARGIN_FLOOR, int(device * hw._MARGIN_FRACTION))
+        assert budget.usable_vram_bytes == max(0, (device if planning else free) - margin)
+        assert budget.ram_available_bytes == ram
+    else:
+        base = device if planning else min(device, (vram[1] if vram else 0) + available)
+        assert budget.usable_vram_bytes == int(base * (1 - hw._UMA_HEADROOM_FRACTION))
+        assert budget.ram_available_bytes == 0
+
+
+@pytest.mark.parametrize("planning", [False, True], ids=["live", "capacity"])
+@pytest.mark.parametrize("vram, pool, kind, device", [
+    (None, None, "fallback", 0),
+    (None, (48 * GIB, None), "fallback", 0),
+    (None, (32 * GIB, False), "discrete", 32 * GIB),
+    (None, (48 * GIB, True), "uma", 48 * GIB),
+    ((16 * GIB, 12 * GIB, "fixture GPU", 0x1234), (48 * GIB, False), "discrete", 16 * GIB),
+    ((16 * GIB, 12 * GIB, "fixture GPU", 0x1234), (48 * GIB, True), "uma", 48 * GIB),
+], ids=["no-device-native", "unknown-pool-native", "discrete-no-smi", "unified-no-smi", "discrete-metadata", "unified-metadata"])
+def test_native_budget_component_preserves_hardware_facts(monkeypatch, planning, vram, pool, kind, device):
+    """The existing call shape gives a semantic baseline without simulating the host OS."""
+    _check_synthetic_budget(monkeypatch, planning, vram, pool, kind, device)
+
+
+@pytest.mark.parametrize("planning", [False, True], ids=["live", "capacity"])
+@pytest.mark.parametrize("platform_name", ["linux", "win32", "darwin"])
+def test_budget_fallback_uses_explicit_platform_data(monkeypatch, planning, platform_name):
+    """Only the preferred owner's classification seam varies; metadata stays on the real host."""
+    _check_synthetic_budget(monkeypatch, planning, None, None, "fallback", 0, platform_name=platform_name)
