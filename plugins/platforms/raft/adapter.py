@@ -212,6 +212,11 @@ def _forget_raft_context(session_id: Any, turn_id: Any = None, *, forget_session
         if safe_turn_id:
             _RAFT_TURN_IDS.discard(safe_turn_id)
             _RAFT_PROMPT_TURN_IDS.discard(safe_turn_id)
+            owned_turns = _RAFT_SESSION_TURNS.get(safe_session_id)
+            if owned_turns is not None:
+                owned_turns.discard(safe_turn_id)
+                if not owned_turns:
+                    _RAFT_SESSION_TURNS.pop(safe_session_id, None)
         if forget_session and safe_session_id:
             _RAFT_SESSION_IDS.discard(safe_session_id)
             for owned_turn_id in _RAFT_SESSION_TURNS.pop(safe_session_id, ()):

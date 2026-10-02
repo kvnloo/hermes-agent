@@ -138,3 +138,61 @@ class TestRaftContextTracking:
         assert _RAFT_SESSION_IDS == set()
         assert _RAFT_TURN_IDS == set()
         assert _RAFT_PROMPT_TURN_IDS == set()
+
+    def test_completed_turns_do_not_accumulate_per_session_entries(self):
+        """The reverse index must not move the leak into a long-lived session."""
+        for index in range(4):
+            turn_id = f"turn-{index}"
+            self._drive_session_turn("live-session", turn_id)
+            _on_session_end(platform="raft", session_id="live-session", turn_id=turn_id, completed=True)
+            assert _RAFT_SESSION_IDS == {"live-session"}
+            assert not _RAFT_TURN_IDS and not _RAFT_PROMPT_TURN_IDS
+            assert not getattr(raft_mod, "_RAFT_SESSION_TURNS", {}).get("live-session")
+
+
+def test_loaded_plugin_lifecycle_finalizes_only_selected_session(monkeypatch, tmp_path):
+    """Real manifest loader, registration and dispatch; no Raft HTTP/CLI connection."""
+    import importlib
+    from pathlib import Path
+    import weakref
+
+    from hermes_cli import lifecycle, plugins
+    from hermes_cli.plugins_manifest import parse_manifest_file
+
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    plugin_dir = Path(raft_mod.__file__).resolve().parent
+    manifest = parse_manifest_file(plugin_dir / "plugin.yaml", plugin_dir, "bundled", "platforms")
+    assert manifest is not None
+    manager = plugins.PluginManager(scope_key=str(tmp_path))
+    try:
+        manager._load_plugin(manifest)
+        loaded = manager._plugins[manifest.key]
+        assert loaded.enabled and not loaded.error
+        manager._discovered = True  # This test explicitly loaded its one real manifest.
+        monkeypatch.setattr(plugins, "get_plugin_manager", lambda: manager)
+        module = importlib.import_module(loaded.module.register.__module__)
+        assert Path(module.__file__).resolve() == Path(raft_mod.__file__).resolve()
+        adapter = module.RaftAdapter(PlatformConfig(enabled=True, extra={
+            "bridge_token": "fixture-token", "runtime_session": "default", "port": 0,
+        }))
+        monkeypatch.setattr(module, "_ACTIVE_ADAPTERS", weakref.WeakSet([adapter]))
+        for session_id, turn_id in (("left-session", "left-turn"), ("right-session", "right-turn")):
+            lifecycle.invoke_hook("on_session_start", platform="raft", session_id=session_id)
+            lifecycle.invoke_hook("pre_llm_call", platform="raft", session_id=session_id, turn_id=turn_id)
+        assert module._RAFT_TURN_IDS == {"left-turn", "right-turn"}
+        lifecycle.invoke_hook("on_session_end", platform="raft", session_id="left-session", interrupted=True)
+        lifecycle.finalize_session(platform="raft", session_id="left-session", reason="fixture-teardown")
+        assert module._RAFT_TURN_IDS == {"right-turn"}
+        assert module._RAFT_PROMPT_TURN_IDS == {"right-turn"}
+        assert module._RAFT_SESSION_IDS == {"right-session"}
+        events = adapter._activity_queue.drain()["events"]
+        assert [(event["sessionId"], event["hookEventName"]) for event in events] == [
+            ("left-session", "SessionStart"), ("left-session", "UserPromptSubmit"),
+            ("right-session", "SessionStart"), ("right-session", "UserPromptSubmit"),
+            ("left-session", "Stop"), ("left-session", "SessionEnd"),
+        ]
+        lifecycle.finalize_session(platform="raft", session_id="right-session", reason="fixture-teardown")
+        assert not module._RAFT_TURN_IDS and not module._RAFT_PROMPT_TURN_IDS
+        assert not module._RAFT_SESSION_IDS and not module._RAFT_SESSION_TURNS
+    finally:
+        manager.unload()
