@@ -64,4 +64,6 @@ def test_no_scored_examples_is_explicit_zero_evidence():
         "schema": "z0int.hermes_shadow_eval.v1",
         "question_id": "api.attempt_will_fail",
         "n": 0,
+        "denominators": {"n_rows": 0, "n_labelled": 0, "n_unknown_label": 0, "n_backend_error": 0,
+                         "n_missing_probability": 0, "n_scored": 0, "coverage": None},
     }

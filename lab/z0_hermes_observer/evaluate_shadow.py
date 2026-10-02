@@ -10,7 +10,7 @@ from typing import Any, Iterable, Mapping
 QUESTION_ID = "api.attempt_will_fail"
 
 
-def _probability(row: Mapping[str, Any]) -> float | None:
+def _probability(row: Mapping[str, Any], question_id: str = QUESTION_ID) -> float | None:
     decision = row.get("decision")
     if not isinstance(decision, Mapping):
         return None
@@ -18,7 +18,7 @@ def _probability(row: Mapping[str, Any]) -> float | None:
     if not isinstance(answers, list):
         return None
     for answer in answers:
-        if not isinstance(answer, Mapping) or answer.get("question_id") != QUESTION_ID:
+        if not isinstance(answer, Mapping) or answer.get("question_id") != question_id:
             continue
         probs = answer.get("probabilities")
         if not isinstance(probs, Mapping):
@@ -30,16 +30,25 @@ def _probability(row: Mapping[str, Any]) -> float | None:
     return None
 
 
-def evaluate(rows: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
+def evaluate(rows: Iterable[Mapping[str, Any]], question_id: str = QUESTION_ID) -> dict[str, Any]:
     pairs: list[tuple[float, int]] = []
     latencies: list[float] = []
     backend = None
+    # Every row lands in exactly one bucket; nothing is dropped silently.
+    counts = {"n_rows": 0, "n_labelled": 0, "n_unknown_label": 0, "n_backend_error": 0, "n_missing_probability": 0}
     for row in rows:
+        counts["n_rows"] += 1
         y = row.get("verified_outcome")
         if not isinstance(y, bool):
+            counts["n_unknown_label"] += 1
             continue
-        p = _probability(row)
+        counts["n_labelled"] += 1
+        if row.get("backend_error"):
+            counts["n_backend_error"] += 1
+            continue
+        p = _probability(row, question_id)
         if p is None or not math.isfinite(p) or not 0.0 <= p <= 1.0:
+            counts["n_missing_probability"] += 1
             continue
         pairs.append((p, int(y)))
         decision = row.get("decision")
@@ -50,8 +59,11 @@ def evaluate(rows: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
                 latencies.append(float(latency))
 
     n = len(pairs)
+    denominators = dict(counts, n_scored=n,
+                        coverage=(n / counts["n_labelled"]) if counts["n_labelled"] else None)
     if not n:
-        return {"schema": "z0int.hermes_shadow_eval.v1", "question_id": QUESTION_ID, "n": 0}
+        return {"schema": "z0int.hermes_shadow_eval.v1", "question_id": question_id, "n": 0,
+                "denominators": denominators}
 
     eps = 1e-12
     brier = sum((p - y) ** 2 for p, y in pairs) / n
@@ -73,9 +85,10 @@ def evaluate(rows: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
 
     return {
         "schema": "z0int.hermes_shadow_eval.v1",
-        "question_id": QUESTION_ID,
+        "question_id": question_id,
         "backend": backend,
         "n": n,
+        "denominators": denominators,
         "positive_rate": positive_rate,
         "brier": brier,
         "base_rate_brier": base_brier,
@@ -98,8 +111,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("scored", type=Path)
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--question-id", default=QUESTION_ID)
     args = parser.parse_args()
-    report = evaluate(read_jsonl(args.scored))
+    report = evaluate(read_jsonl(args.scored), question_id=args.question_id)
     rendered = json.dumps(report, indent=2, sort_keys=True)
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
