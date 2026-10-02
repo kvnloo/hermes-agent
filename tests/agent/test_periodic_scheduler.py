@@ -197,3 +197,48 @@ def test_rejected_interval_leaves_scheduler_usable():
         assert _wait_until(lambda: fired), "scheduler stayed dead after a rejected schedule()"
     finally:
         handle.cancel(wait=1.0)
+
+
+@pytest.mark.parametrize(
+    ("interval", "reject"),
+    [
+        (0, True),
+        (0.0, True),
+        (-1, True),
+        (-0.5, True),
+        (float("nan"), True),
+        (float("inf"), True),
+        (float("-inf"), True),
+        (1e-6, False),
+        (1.0, False),
+    ],
+    ids=[
+        "zero-int",
+        "zero-float",
+        "negative-int",
+        "negative-fraction",
+        "nan",
+        "positive-infinity",
+        "negative-infinity",
+        "tiny-positive",
+        "positive",
+    ],
+)
+def test_direct_handle_validates_interval_without_scheduling(interval, reject):
+    """Direct construction shares admission rules without starting a timer."""
+    scheduler = PeriodicScheduler()
+    calls = []
+
+    def callback():
+        calls.append("unexpected")
+
+    if reject:
+        with pytest.raises(ValueError, match="finite value greater than zero"):
+            periodic_scheduler.ScheduledHandle(scheduler, callback, interval)
+    else:
+        handle = periodic_scheduler.ScheduledHandle(scheduler, callback, interval)
+        assert handle._interval == interval
+        assert not handle.cancelled
+    assert scheduler._heap == []
+    assert scheduler._thread is None
+    assert calls == []
