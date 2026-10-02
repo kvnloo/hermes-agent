@@ -400,6 +400,34 @@ class TestMergeSemantics:
         assert memory_items[0]["status"] == "skipped"
 
 
+    @pytest.mark.parametrize("configured_limit", [None, 3000])
+    def test_import_stays_within_the_memory_stores_limit(
+            self, profile_env, hermes_home, configured_limit):
+        """The importer and MemoryStore share one budget: whatever the import writes, the
+        memory tool must still load under its limit and accept writes (remove, then add)."""
+        import json as _json
+        from tools.memory_tool import load_on_disk_store, memory_tool
+
+        if configured_limit is not None:
+            (hermes_home / "config.yaml").write_text(
+                yaml.safe_dump({"memory": {"memory_char_limit": configured_limit}}), encoding="utf-8")
+        source = profile_env / ".claude"
+        source.mkdir()
+        (source / "CLAUDE.md").write_text("# Rules\n" + "".join(
+            f"- Rule {i}: run the linter and the unit tests before committing module {i}\n"
+            for i in range(80)), encoding="utf-8")
+
+        report = run_import("claude-code", source, hermes_home, execute=True)
+
+        store = load_on_disk_store()
+        assert 0 < len(ENTRY_DELIMITER.join(store.memory_entries)) <= store.memory_char_limit
+        item = next(i for i in report["items"] if i["kind"] == "claude-md")
+        assert item["status"] == "imported" and item["overflowed_entries"] > 0
+        for args in ({"action": "remove", "old_text": "Rule 0:"}, {"action": "add", "content": "ok"}):
+            result = _json.loads(memory_tool(target="memory", store=store, **args))
+            assert result["success"] is True, result
+
+
 # ---------------------------------------------------------------------------
 # The DESTINATION memories/MEMORY.md is a §-delimited store, not a document
 # ---------------------------------------------------------------------------
@@ -775,3 +803,27 @@ class TestSyncManifest:
         self._run_command(None, None, sync=True, dry_run=True)
         assert snapshot_tree(hermes_home) == before
         assert load_sync_manifest(hermes_home)["agents"]["claude-code"]["digest"] == old_digest
+
+
+@pytest.mark.parametrize("configured, expected", [('"3000"', 3000), (".nan", None), (".inf", None), ("-.inf", None)], ids=["healthy-string", "nan-default", "positive-infinity", "negative-infinity"])
+def test_import_memory_config_coercion_matches_store_fallback(profile_env, hermes_home, configured, expected):
+    from tools.memory_tool import load_on_disk_store
+
+    config_path = hermes_home / "config.yaml"
+    config_path.write_text("memory:\n  memory_char_limit: " + configured + "\n", encoding="utf-8")
+    store = load_on_disk_store()
+    from hermes_cli.config_defaults import DEFAULT_CONFIG
+    expected = DEFAULT_CONFIG["memory"]["memory_char_limit"] if expected is None else expected
+    assert store.memory_char_limit == expected
+    source = profile_env / "memory-source"
+    source.mkdir()
+    context = source / "CLAUDE.md"
+    context.write_text("# Rules\n- Keep the temporary fixture small\n", encoding="utf-8")
+    importer = AgentImporter("claude-code", source, hermes_home, execute=True)
+
+    importer.import_context_file(context, "claude-md")
+
+    item, = importer.items
+    assert item["status"] == "imported"
+    assert item["char_limit"] == store.memory_char_limit
+    assert (hermes_home / "memories/MEMORY.md").read_text().strip()
