@@ -1,17 +1,19 @@
 import { PassThrough } from 'node:stream'
 
-import { Box, renderSync } from '@hermes/ink'
-import React from 'react'
+import { Box, forceRedraw, renderSync, Text } from '@hermes/ink'
+import React, { Profiler } from 'react'
 import stripAnsi from 'strip-ansi'
 import { expect, it, vi } from 'vitest'
 
 import { renderToScreen } from '../../packages/hermes-ink/src/ink/render-to-screen.js'
 import { cellAtIndex } from '../../packages/hermes-ink/src/ink/screen.js'
-import { applyAgentSnapshot } from '../app/agentRoster.js'
+import { $agentDockCollapsed, applyAgentSnapshot } from '../app/agentRoster.js'
 import { getInputSelection } from '../app/inputSelectionStore.js'
-import { patchUiState, resetUiState } from '../app/uiStore.js'
+import { applyProcessSnapshot } from '../app/processRoster.js'
+import { resetTurnState } from '../app/turnStore.js'
+import { getUiState, patchUiState, resetUiState } from '../app/uiStore.js'
 import { AgentsOverlay } from '../components/agentsOverlay.js'
-import { AgentsPanelView } from '../components/agentsPanel.js'
+import { AgentsPanelView, LiveAgentsPanel } from '../components/agentsPanel.js'
 import { TextInput } from '../components/textInput.js'
 import type { GatewayClient } from '../gatewayClient.js'
 import { messages } from '../i18n/runtime.js'
@@ -93,5 +95,124 @@ it('opens the selected live transcript on Enter while details remain independent
     view.cleanup()
     applyAgentSnapshot(null)
     resetUiState()
+  }
+})
+
+it('keeps the mounted dock asleep for status churn while following its theme, rosters and session', async () => {
+  // Leave React/Ink scheduling real; this contract is independent of clock ticks.
+  vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
+  vi.setSystemTime(1_000_000)
+  resetTurnState()
+  resetUiState()
+  $agentDockCollapsed.set(false)
+  patchUiState({ sid: 'dock-owner' })
+  const child = { subagent_id: 'fixture-agent', goal: 'fixtureagent', status: 'running', started_at: 995 }
+
+  const process = {
+    session_id: 'fixture-process',
+    command: 'fixtureprocess',
+    status: 'running',
+    uptime_seconds: 5,
+    output_preview: 'ready'
+  }
+
+  applyAgentSnapshot('dock-owner', { subagents: [child], delegations: [] })
+  applyProcessSnapshot('dock-owner', [process])
+  const stdout = Object.assign(new PassThrough(), { columns: 120, rows: 40, isTTY: true })
+  const stdin = Object.assign(new PassThrough(), { isTTY: false })
+  let output = ''
+  stdout.on('data', chunk => {
+    output += String(chunk)
+  })
+  const commits = vi.fn()
+
+  const view = renderSync(
+    <Box flexDirection="column" height={12}>
+      <Profiler id="dock-consumer" onRender={commits}>
+        <LiveAgentsPanel cols={100} />
+      </Profiler>
+      <Text>ROSTER_CONTROL</Text>
+    </Box>,
+    {
+      patchConsole: false,
+      stdout: stdout as unknown as NodeJS.WriteStream,
+      stdin: stdin as unknown as NodeJS.ReadStream,
+      stderr: new PassThrough() as unknown as NodeJS.WriteStream
+    }
+  )
+
+  const settle = async () => {
+    await new Promise<void>(resolve => setImmediate(resolve))
+    await new Promise<void>(resolve => setImmediate(resolve))
+  }
+
+  const frame = async () => {
+    await settle()
+    output = ''
+    expect(forceRedraw(stdout as unknown as NodeJS.WriteStream)).toBe(true)
+    const text = stripAnsi(output)
+    expect(text).toContain('ROSTER_CONTROL')
+
+    return text
+  }
+
+  try {
+    const initial = await frame()
+    expect(initial).toContain('fixtureagent')
+    expect(initial).toContain('fixtureprocess')
+    expect(commits).toHaveBeenCalled()
+    commits.mockClear()
+
+    for (let i = 0; i < 20; i++) {
+      patchUiState({ status: `streaming-${i}` })
+    }
+
+    await settle()
+    expect(commits).not.toHaveBeenCalled()
+
+    patchUiState({ theme: { ...getUiState().theme } })
+    await settle()
+    expect(commits).toHaveBeenCalledTimes(1)
+    expect(await frame()).toContain('fixtureagent')
+    commits.mockClear()
+
+    applyAgentSnapshot('dock-owner', { subagents: [{ ...child, goal: 'changedagent' }], delegations: [] })
+    await settle()
+    expect(commits).toHaveBeenCalledTimes(1)
+    expect(await frame()).toContain('changedagent')
+    commits.mockClear()
+
+    applyProcessSnapshot('dock-owner', [{ ...process, command: 'changedprocess', output_preview: 'progress' }])
+    await settle()
+    expect(commits).toHaveBeenCalledTimes(1)
+    const updated = await frame()
+    expect(updated).toContain('changedagent')
+    expect(updated).toContain('changedprocess')
+    commits.mockClear()
+
+    patchUiState({ sid: 'other-session' })
+    await settle()
+    expect(commits).toHaveBeenCalledTimes(1)
+    const away = await frame()
+    expect(away).not.toContain('changedagent')
+    expect(away).not.toContain('changedprocess')
+    commits.mockClear()
+
+    patchUiState({ sid: 'dock-owner' })
+    await settle()
+    expect(commits).toHaveBeenCalledTimes(1)
+    const returned = await frame()
+    expect(returned).toContain('changedagent')
+    expect(returned).toContain('changedprocess')
+    expect(Date.now()).toBe(1_000_000)
+  } finally {
+    view.unmount()
+    view.cleanup()
+    applyAgentSnapshot(null)
+    applyProcessSnapshot(null)
+    $agentDockCollapsed.set(false)
+    resetTurnState()
+    resetUiState()
+    vi.useRealTimers()
   }
 })
