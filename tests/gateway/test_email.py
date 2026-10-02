@@ -894,6 +894,71 @@ class TestPollLoop(unittest.TestCase):
         self.assertIn(b"7", reconnected._seen_uids)
         self.assertEqual(fetched, [])  # the poison message is suppressed, not re-parsed
 
+    def test_seen_flag_stall_does_not_block_poll_or_replay_dispatched_mail(self):
+        """A best-effort flag stall must not hold a completed handoff indefinitely."""
+        import asyncio
+        import threading
+        import plugins.platforms.email.adapter as email_adapter
+        from plugins.platforms.email.adapter import EmailAdapter
+
+        prior = dict(EmailAdapter._seen_uids_snapshot)
+        EmailAdapter._seen_uids_snapshot.clear()
+        adapter = self._make_adapter()
+        dispatched, notified, flagged = [], [], []
+        entered, release = threading.Event(), threading.Event()
+
+        async def dispatch(message):
+            dispatched.append(message["uid"])
+
+        async def fatal(_adapter):
+            notified.append(_adapter)
+
+        def blocked_flag(uids):
+            flagged.append(list(uids))
+            entered.set()
+            release.wait(timeout=5)
+
+        raw = MIMEText("Body", "plain", "utf-8")
+        raw["From"], raw["Subject"], raw["Message-ID"] = "sender@test.com", "Flag stall", "<flag-stall@test.com>"
+        imap = MagicMock()
+        imap.uid.side_effect = lambda command, *args: {
+            "search": ("OK", [b"42"]), "fetch": ("OK", [(b"42", raw.as_bytes())]),
+        }.get(command, ("OK", []))
+        adapter._dispatch_message = dispatch
+        adapter.set_fatal_error_handler(fatal)
+
+        async def scenario():
+            poll = asyncio.create_task(adapter._check_inbox())
+            bounded = False
+            try:
+                self.assertTrue(await asyncio.to_thread(entered.wait, 2))
+                self.assertEqual(dispatched, [b"42"])
+                self.assertIn(b"42", adapter._seen_uids)
+                self.assertEqual(EmailAdapter._seen_uids_snapshot[adapter._address], {b"42"})
+                try:
+                    await asyncio.wait_for(asyncio.shield(poll), timeout=2)
+                    bounded = True
+                except asyncio.TimeoutError:
+                    pass
+            finally:
+                release.set()
+                await asyncio.wait_for(poll, timeout=2)
+            self.assertTrue(bounded, "poll remained blocked on best-effort flag after its configured budget")
+            await adapter._check_inbox()
+
+        try:
+            with patch("imaplib.IMAP4_SSL", return_value=imap), patch.object(
+                adapter, "_flag_seen_on_server", blocked_flag
+            ), patch.object(email_adapter, "IMAP_FETCH_TIMEOUT_S", 0.2):
+                asyncio.run(scenario())
+            self.assertEqual(dispatched, [b"42"])
+            self.assertEqual(flagged, [[b"42"]])
+            self.assertEqual(notified, [])  # Delivered mail is not a failed fetch.
+        finally:
+            release.set()
+            EmailAdapter._seen_uids_snapshot.clear()
+            EmailAdapter._seen_uids_snapshot.update(prior)
+
     def test_partial_batch_dispatched_before_escalation(self):
         """A mid-batch IMAP failure must dispatch the messages already
         fetched BEFORE escalating — dropping them would lose mail, since

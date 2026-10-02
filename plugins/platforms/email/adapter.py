@@ -666,7 +666,15 @@ class EmailAdapter(BasePlatformAdapter):
             self._remember_seen_uids()
             # Server-side \Seen moved here, after dispatch: the fetch itself no longer touches flags, so the
             # abandoned-run window above is closed at the source rather than rolled back afterwards.
-            await asyncio.get_running_loop().run_in_executor(None, self._flag_seen_on_server, dispatched_uids)
+            try:
+                await asyncio.wait_for(
+                    asyncio.get_running_loop().run_in_executor(None, self._flag_seen_on_server, dispatched_uids),
+                    timeout=IMAP_FETCH_TIMEOUT_S)
+            except (asyncio.TimeoutError, TimeoutError):
+                # Handoff and the local UID snapshot are already committed. A best-effort flag
+                # stall must not block later polls or replay delivered mail. The executor thread
+                # may still finish later; cancelling its waiter does not undo the server operation.
+                logger.debug("[Email] Seen flag exceeded %ss budget after dispatch", IMAP_FETCH_TIMEOUT_S)
         if self._last_fetch_failed:
             # The IMAP check itself failed (not an empty inbox): route through the fatal-error hook so the gateway's
             # reconnect/backoff re-establishes the mailbox. The handler runs detached (gateway/run.py), so awaiting it is safe.
