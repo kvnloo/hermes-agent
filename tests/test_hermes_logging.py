@@ -110,6 +110,68 @@ def test_repeated_setup_routes_records_once(hermes_home, mode, component, config
 
 
 class TestSetupLogging:
+    @pytest.mark.parametrize("routed", [False, True], ids=["launch-home", "profile-home"])
+    @pytest.mark.parametrize("mode,source,configured,explicit", [
+        ("cli", "agent.rollover_contract", True, False),
+        ("gateway", "gateway.rollover_contract", True, False),
+        ("gui", "hermes_cli.web_server.rollover_contract", True, True),
+        ("gateway", "gateway.rollover_contract", False, False),
+    ], ids=["config-errors", "config-gateway", "explicit-gui", "defaults"])
+    def test_component_rotation_writes_and_routes_real_backups(
+            self, hermes_home, tmp_path, record_property, routed, mode, source, configured, explicit):
+        """Real queue -> optional profile router -> rollover follows the selected policy."""
+        import json
+
+        from hermes_constants import reset_hermes_home_override, set_hermes_home_override
+
+        if configured:
+            # The GUI case proves explicit parameters win over a conflicting config.
+            size, count = (2, 2) if explicit else (1, 1)
+            (hermes_home / "config.yaml").write_text(
+                f"logging:\n  max_size_mb: {size}\n  backup_count: {count}\n", encoding="utf-8")
+        kwargs = {"max_size_mb": 1, "backup_count": 1} if explicit else {}
+        hermes_logging.setup_logging(hermes_home=hermes_home, mode=mode, **kwargs)
+        target = hermes_home
+        if routed:
+            target = tmp_path / "profile-rollover"
+            target.mkdir()
+            assert hermes_logging.enable_profile_log_routing([hermes_home, target]) is True
+            logging.getLogger(source).warning("launch-before-profile")
+            hermes_logging.flush_log_queue()
+
+        token = set_hermes_home_override(target)
+        try:
+            for index in range(3):
+                logging.getLogger(source).warning("rollover-occurrence-%s %s", index, "x" * 550_000)
+        finally:
+            reset_hermes_home_override(token)
+        hermes_logging.flush_log_queue()
+        if routed:
+            logging.getLogger(source).warning("launch-after-profile")
+            hermes_logging.flush_log_queue()
+
+        names = {"agent.log", "errors.log"} | ({f"{mode}.log"} if mode != "cli" else set())
+        actual = {}
+        for name in sorted(names):
+            files = sorted((target / "logs").glob(name + "*"))
+            # Ignore a platform handler's lock file, never any numbered backup.
+            files = [p for p in files if p.name == name or p.name[len(name) + 1:].isdigit()]
+            contents = {p.name: p.read_text(encoding="utf-8-sig") for p in files}
+            actual[name] = {filename: {str(i): text.count(f"rollover-occurrence-{i}")
+                                      for i in range(3)} for filename, text in contents.items()}
+            if routed:
+                assert all("launch-before-profile" not in text and "launch-after-profile" not in text
+                           for text in contents.values())
+                launch = (hermes_home / "logs" / name).read_text(encoding="utf-8-sig")
+                assert launch.count("launch-before-profile") == launch.count("launch-after-profile") == 1
+                assert "rollover-occurrence-" not in launch
+        record_property("rollover_observation", json.dumps(actual, sort_keys=True))
+        for name in sorted(names):
+            expected = ({name: {"0": 0, "1": 0, "2": 1},
+                         name + ".1": {"0": 0, "1": 1, "2": 0}} if configured else
+                        {name: {"0": 1, "1": 1, "2": 1}})
+            assert actual[name] == expected, (name, actual[name])
+
     def test_profile_routing_follows_context_home(self, hermes_home, tmp_path):
         """Desktop multiplex cron records are written to their owning profile."""
         from hermes_constants import reset_hermes_home_override, set_hermes_home_override
