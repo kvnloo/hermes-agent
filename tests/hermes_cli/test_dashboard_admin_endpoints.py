@@ -668,6 +668,58 @@ class TestSkillsHubSearchEndpoint:
         assert ids == ["official/cat/s-official"] + [f"skills-sh/x/s{i}" for i in range(9)]
 
 
+    def test_native_parallel_merge_keeps_late_builtin_before_page_cut(self, monkeypatch):
+        from threading import Event
+
+        import tools.skills_hub_search as hub
+
+        community = [_FakeMeta(f"skills-sh/x/s{i}", "community", "skills.sh") for i in range(20)]
+        official = _FakeMeta("official/cat/late", "builtin", "official")
+        community_merged = Event()
+        completed = []
+
+        class Source:
+            def __init__(self, sid, results):
+                self.sid, self.results = sid, results
+
+            def source_id(self):
+                return self.sid
+
+            def search(self, query, limit=50):
+                if self.sid == "official":
+                    assert community_merged.wait(10), "community source was not merged"
+                return self.results[:limit]
+
+        def on_source_done(sid, count):
+            completed.append((sid, count))
+            if sid == "skills-sh":
+                community_merged.set()
+
+        parallel = hub.parallel_search_sources
+
+        def observed_parallel(*args, **kwargs):
+            # Keep the real worker pool and as_completed merge. The existing
+            # progress hook releases the builtin only after community merged.
+            return parallel(*args, **kwargs, on_source_done=on_source_done)
+
+        monkeypatch.setattr(hub, "create_source_router", lambda: [
+            Source("official", [official]), Source("skills-sh", community),
+        ])
+        monkeypatch.setattr(hub, "parallel_search_sources", observed_parallel)
+        monkeypatch.setattr(
+            "hermes_cli.web_routers.skills._installed_hub_identifiers", lambda profile=None: {}
+        )
+        response = self.client.get("/api/skills/hub/search?q=s&limit=10")
+        assert response.status_code == 200
+        body = response.json()
+        assert completed == [("skills-sh", 20), ("official", 1)]
+        assert body["source_counts"] == {"skills-sh": 20, "official": 1}
+        assert body["timed_out"] == []
+        assert [row["identifier"] for row in body["results"]] == [
+            official.identifier, *[row.identifier for row in community[:9]],
+        ]
+
+
 class TestOfficialSkillsCatalogEndpoint:
     @pytest.fixture(autouse=True)
     def _setup(self, _isolate_hermes_home):
