@@ -4368,6 +4368,18 @@ class BasePlatformAdapter(ABC):
             return
         record_delivery(result)
 
+        # Success still means at least one image arrived. A partial aggregate can
+        # carry an error too; surface one generic notice without replaying images
+        # or letting the notice's own receipt change the delivery outcome.
+        if result is not None and (not result.success or result.error):
+            try:
+                notice = await self.emit_warning(
+                    event.source.chat_id, _media_failure_text("image"), metadata=metadata)
+                if notice is not None and not notice.success:
+                    logger.debug("[%s] Could not send image-delivery-failure notice: %s", self.name, notice.error)
+            except Exception as notify_err:
+                logger.debug("[%s] Could not send image-delivery-failure notice: %s", self.name, notify_err)
+
     async def send_final_ledgered(
         self, event: MessageEvent, session_key: str, text_content: str, metadata: Dict[str, Any], *,
         reply_to: Optional[str], is_ephemeral_response: bool = False,
