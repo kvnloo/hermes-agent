@@ -71,6 +71,9 @@ _RAFT_CONTEXT_LOCK = threading.Lock()
 _RAFT_SESSION_IDS: set[str] = set()
 _RAFT_TURN_IDS: set[str] = set()
 _RAFT_PROMPT_TURN_IDS: set[str] = set()
+# Turn ids owned by each session, so a finalizer without turn_id can release
+# orphaned turns whose per-turn finalizer never ran (downstream #44).
+_RAFT_SESSION_TURNS: dict[str, set[str]] = {}
 
 
 def _resolve_raft_profile() -> str:
@@ -211,6 +214,9 @@ def _forget_raft_context(session_id: Any, turn_id: Any = None, *, forget_session
             _RAFT_PROMPT_TURN_IDS.discard(safe_turn_id)
         if forget_session and safe_session_id:
             _RAFT_SESSION_IDS.discard(safe_session_id)
+            for owned_turn_id in _RAFT_SESSION_TURNS.pop(safe_session_id, ()):
+                _RAFT_TURN_IDS.discard(owned_turn_id)
+                _RAFT_PROMPT_TURN_IDS.discard(owned_turn_id)
 
 
 def _is_raft_context(**kwargs: Any) -> bool:
@@ -221,6 +227,8 @@ def _is_raft_context(**kwargs: Any) -> bool:
         if str(getattr(platform, "value", platform) or "") == "raft":
             if safe_session_id:
                 _RAFT_SESSION_IDS.add(safe_session_id)
+                if safe_turn_id:
+                    _RAFT_SESSION_TURNS.setdefault(safe_session_id, set()).add(safe_turn_id)
             if safe_turn_id:
                 _RAFT_TURN_IDS.add(safe_turn_id)
             return True
