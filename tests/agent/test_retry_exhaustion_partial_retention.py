@@ -11,6 +11,7 @@ delivered text is the fragment rows. Both terminal builders are driven through
 """
 from __future__ import annotations
 
+import json
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -72,9 +73,13 @@ def _messages_with_fragment():
 @pytest.mark.parametrize("status, message", [
     (429, "HTTP 429: RequestBurstTooFast — slow down traffic growth"),  # max_retries_exhausted_result
     (401, "HTTP 401: invalid api key"),  # nonretryable_client_error_result
+    (402, "HTTP 402: Payment Required: insufficient credits"),  # confirmed billing early return
 ])
-def test_terminal_error_keeps_partial_and_collapses_this_turns_trail(status, message):
-    messages = _messages_with_fragment()
+@pytest.mark.parametrize("delivered", [True, False])
+def test_terminal_error_keeps_partial_and_collapses_this_turns_trail(
+    status, message, delivered, record_property,
+):
+    messages = _messages_with_fragment() if delivered else [{"role": "user", "content": "write a report"}]
     error = _Http(status, message)
     classified = classify_api_error(error, provider="openrouter", model="m")
     retry = SimpleNamespace(copilot_stale_cred_retry_attempted=False, primary_recovery_attempted=True)
@@ -86,11 +91,24 @@ def test_terminal_error_keeps_partial_and_collapses_this_turns_trail(status, mes
             _is_zai_coding_overload=False, _provider="openrouter", _base="https://openrouter.ai/api/v1",
             _model="m", messages=messages, api_messages=[], api_kwargs=None, active_system_prompt="",
             conversation_history=None, approx_tokens=10, retry_count=3, max_retries=3,
-            compression_attempts=0, api_call_count=3, current_turn_user_idx=2,
+            compression_attempts=0, api_call_count=3, current_turn_user_idx=2 if delivered else 0,
         )
     assert verdict.action == "return"
     result = verdict.result
-    assert result.get("partial") is True and result["failed"] is True
+    record_property("terminal_partial_result", json.dumps({
+        "status_code": status, "delivered": delivered, "result": result,
+    }, sort_keys=True))
+    if status == 402:
+        assert result["failure_reason"] == "billing"
+        assert result["failure_retryable"] is False
+        assert result["billing_unverified"] is False
+        assert result["billing_block"]["provider"] == "openrouter"
+    assert result.get("partial", False) is delivered and result["failed"] is True
+    if not delivered:
+        assert "partial" not in result
+        assert PARTIAL not in result["final_response"]
+        assert messages == [{"role": "user", "content": "write a report"}]
+        return
     assert PARTIAL in result["final_response"] and "stale" not in result["final_response"]
     # Gateway retention contract: final must differ from the error string.
     assert result["final_response"].strip() != str(result["error"]).strip()
