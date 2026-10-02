@@ -485,3 +485,49 @@ def test_save_over_limit_controls_writing_still_over_limit_trajectories(tmp_path
     assert [json.loads(line)["id"] for line in lines] == written
     assert tc.aggregate_metrics.trajectories_still_over_limit == 1
     tc._generate_summary_async.assert_not_called()
+
+
+@pytest.mark.parametrize("save_setting", [False, True, None], ids=["false", "true", "default"])
+def test_save_over_limit_yaml_preserves_error_rows_and_file_order(tmp_path, save_setting):
+    """The output filter honors YAML while retaining unclassified error rows."""
+    config_path = tmp_path / "config.yaml"
+    processing = "" if save_setting is None else f"processing:\n  save_over_limit: {str(save_setting).lower()}\n"
+    config_path.write_text(
+        "compression:\n  target_max_tokens: 100\n  summary_target_tokens: 20\n"
+        "protected_turns:\n  last_n_turns: 2\n" + processing,
+        encoding="utf-8",
+    )
+    config = CompressionConfig.from_yaml(str(config_path))
+    keep_over = save_setting is not False
+    assert config.save_over_limit is keep_over
+    tc = _make_compressor(config)
+    tc._generate_summary_async = AsyncMock()
+    under = [{"from": "system", "value": "sys"}, {"from": "human", "value": "hi"}]
+    entries = {
+        "a.jsonl": [
+            {"id": "first", "conversations": under},
+            {"id": "over", "conversations": TestCompressionNetSavingsGuard()._tiny_middle_trajectory()},
+            {"id": "error", "conversations": None, "metadata": {"preserve": "exact"}},
+            {"id": "last", "conversations": under},
+        ],
+        "b.jsonl": [{"id": "other-file", "conversations": under}],
+    }
+    in_dir, out_dir = tmp_path / "in", tmp_path / "out"
+    in_dir.mkdir()
+    original_bytes = {}
+    for name, rows in entries.items():
+        original_bytes[name] = "".join(json.dumps(row) + "\n" for row in rows).encode()
+        (in_dir / name).write_bytes(original_bytes[name])
+
+    tc.process_directory(in_dir, out_dir)
+
+    for name, rows in entries.items():
+        expected = [row for row in rows if keep_over or row["id"] != "over"]
+        actual = [json.loads(line) for line in (out_dir / name).read_text(encoding="utf-8").splitlines()]
+        assert actual == expected
+        assert (in_dir / name).read_bytes() == original_bytes[name]
+    report = json.loads((out_dir / config.metrics_output_file).read_text(encoding="utf-8"))
+    assert report["summary"]["trajectories_failed"] == 1
+    assert report["summary"]["trajectories_still_over_limit"] == 1
+    assert report["summary"]["trajectories_skipped_under_target"] == 3
+    tc._generate_summary_async.assert_not_called()
