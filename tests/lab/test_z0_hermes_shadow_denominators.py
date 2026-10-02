@@ -179,3 +179,17 @@ def test_ollama_backend_refuses_when_no_label_token_has_mass():
     backend = module.OllamaLogprobBackend("m", post=_FakeOllama([{"token": "Sure", "logprob": -0.1}]), revision="d")
     with pytest.raises(ValueError):
         backend.evaluate(request_from_mapping(_request()))
+
+
+@pytest.mark.parametrize("top", [
+    [{"token": "true", "logprob": -0.01}, {"token": "Sure", "logprob": -5.0}],
+    [{"token": " False", "logprob": -0.02}, {"token": "maybe", "logprob": -4.0}],
+])
+def test_ollama_backend_refuses_when_only_one_label_has_mass(top):
+    # Renormalising a single present label would emit exactly p=0 or p=1 (one-hot); refuse instead.
+    pytest.importorskip("z0int.backends.base")
+    module = _load("ollama_logprob_backend")
+    from z0int.backends.base import request_from_mapping
+    backend = module.OllamaLogprobBackend("m", post=_FakeOllama(top), revision="d")
+    with pytest.raises(ValueError, match="absent from the top"):
+        backend.evaluate(request_from_mapping(_request()))

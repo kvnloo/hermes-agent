@@ -90,6 +90,10 @@ class OllamaLogprobBackend:
             total = mass["false"] + mass["true"]
             if total <= 0.0:
                 raise ValueError("no probability mass on a true/false first token")
+            if mass["false"] <= 0.0 or mass["true"] <= 0.0:
+                # Only one label is in the top-k: renormalising would emit exactly 0/1 (one-hot). Refuse.
+                missing = "false" if mass["false"] <= 0.0 else "true"
+                raise ValueError(f"label {missing!r} absent from the top-{TOP_LOGPROBS} first-token logprobs")
             probs = {"false": mass["false"] / total, "true": mass["true"] / total}
             covered.append(total)
             answers.append(DecisionAnswer(question_id=question.id, type="boolean", probabilities=probs,
