@@ -43,6 +43,10 @@ _AUTOMATED_HEADERS = {"Auto-Submitted": lambda v: v.lower() != "no",
                       "X-Auto-Response-Suppress": lambda v: bool(v), "List-Unsubscribe": lambda v: bool(v)}
 MAX_MESSAGE_LENGTH = 50_000  # Gmail-safe max length per email body
 SMTP_CONNECT_TIMEOUT = 30
+# Outer budget for one IMAP poll in the executor: imaplib's own socket timeout is 30s, so 3x
+# headroom for a slow-but-progressing fetch while a wedged thread can no longer stall the poll
+# loop silently for tens of minutes (#87128).
+IMAP_FETCH_TIMEOUT_S = 90
 _TRUTHY = {"true", "1", "yes"}
 _IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 # Charset labels seen in the wild that Python's codec registry doesn't know: "unknown-8bit"/"x-unknown" are
@@ -599,7 +603,18 @@ class EmailAdapter(BasePlatformAdapter):
 
     async def _check_inbox(self) -> None:
         """Check INBOX for unseen messages and dispatch them."""
-        messages = await asyncio.get_running_loop().run_in_executor(None, self._fetch_new_messages)
+        try:
+            messages = await asyncio.wait_for(
+                asyncio.get_running_loop().run_in_executor(None, self._fetch_new_messages),
+                timeout=IMAP_FETCH_TIMEOUT_S)
+        except (asyncio.TimeoutError, TimeoutError):
+            # ponytail: wait_for cancels only the wrapper; the wedged thread lingers until
+            # imaplib's own timeout fires — one leaked thread per timed-out poll, next poll retries.
+            logger.warning("[Email] IMAP fetch exceeded %ss budget; treating as retryable failure",
+                           IMAP_FETCH_TIMEOUT_S)
+            self._last_fetch_failed, self._last_fetch_error = (
+                True, f"IMAP fetch timed out after {IMAP_FETCH_TIMEOUT_S}s")
+            messages = []
         # Dispatch partial results BEFORE escalating a failure — a mid-batch exception returns what was fetched (already marked seen).
         for msg_data in messages:
             await self._dispatch_message(msg_data)

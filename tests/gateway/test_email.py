@@ -732,6 +732,44 @@ class TestPollLoop(unittest.TestCase):
         self.assertTrue(adapter.fatal_error_retryable)
         self.assertIn("read operation timed out", adapter.fatal_error_message)
 
+    def test_check_inbox_times_out_wedged_fetch(self):
+        """A wedged executor thread must not stall the poll loop silently —
+        the fetch is bounded by IMAP_FETCH_TIMEOUT_S and escalates retryable
+        so reconnect/backoff re-establishes the mailbox (#87128)."""
+        import asyncio
+        import threading
+        import time
+        import plugins.platforms.email.adapter as email_adapter
+        adapter = self._make_adapter()
+        notified = []
+
+        async def mock_fatal_handler(a):
+            notified.append(a)
+
+        adapter.set_fatal_error_handler(mock_fatal_handler)
+        release = threading.Event()
+
+        def wedged_fetch():
+            release.wait(timeout=30)
+            return []
+
+        async def scenario():
+            t0 = time.monotonic()
+            await adapter._check_inbox()
+            return time.monotonic() - t0
+
+        with patch.object(email_adapter, "IMAP_FETCH_TIMEOUT_S", 0.2, create=True):
+            with patch.object(adapter, "_fetch_new_messages", wedged_fetch):
+                # Free the wedged thread after the check returns so asyncio.run's
+                # default-executor shutdown does not hold the suite open.
+                threading.Timer(5.0, release.set).start()
+                elapsed = asyncio.run(asyncio.wait_for(scenario(), timeout=10.0))
+
+        self.assertLess(elapsed, 10.0)
+        self.assertEqual(len(notified), 1)
+        self.assertEqual(adapter.fatal_error_code, "email_imap_fetch_failed")
+        self.assertTrue(adapter.fatal_error_retryable)
+
     def test_partial_batch_dispatched_before_escalation(self):
         """A mid-batch IMAP failure must dispatch the messages already
         fetched BEFORE escalating — dropping them would lose mail, since
