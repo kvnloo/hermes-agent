@@ -326,6 +326,9 @@ def lint_spec(spec: dict) -> list[str]:
         if not isinstance(sha, str) or not SHA_RE.match(sha):
             problems.append(f"{key} must be a full 40-hex SHA")
     probe, oracle = spec.get("probe", {}), spec.get("oracle", {})
+    reps = probe.get("reps", 3)
+    if type(reps) is not int or reps < 1:
+        problems.append("probe.reps must be a positive integer")
     if probe.get("kind") not in ("pytest", "script") or not probe.get("files"):
         problems.append("probe.kind must be pytest or script, with probe.files")
     if not oracle.get("red_markers") or not all(isinstance(m, str) and m for m in oracle["red_markers"]):
@@ -748,7 +751,9 @@ def validate_receipt(receipt: dict, now: datetime | None = None, max_age_hours: 
         if not SHA_RE.match(str(receipt[key])):
             problems.append(f"{key} is not pinned to a full SHA")
     measurements = receipt["measurements"]
-    if any(m.get("label") not in LABELS for m in measurements):
+    if not isinstance(measurements, list) or not all(isinstance(m, dict) for m in measurements):
+        return [*problems, "measurements must be a list of objects"]
+    if any(not isinstance(m.get("label"), str) or m["label"] not in LABELS for m in measurements):
         problems.append("every measurement needs an OBSERVED/MODELED/PRIOR/NOT_MEASURED label")
     primary = [m for m in measurements if m.get("primary")]
     if not primary or any(m.get("label") != "OBSERVED" for m in primary):
@@ -761,10 +766,31 @@ def validate_receipt(receipt: dict, now: datetime | None = None, max_age_hours: 
     verdict, gates, safety = receipt["verdict"], receipt["gates"], receipt["safety"]
     if verdict not in VERDICTS:
         problems.append(f"unknown verdict {verdict!r}")
+    if not isinstance(gates, dict):
+        return [*problems, "gates must be an object"]
     if verdict == "KEEP":
         for gate in (*FOUR_COLUMNS, "ownership"):
-            if (gates.get(gate) or {}).get("result") != "PASS":
+            if not isinstance(gates.get(gate), dict) or gates[gate].get("result") != "PASS":
                 problems.append(f"KEEP needs {gate} PASS")
+        # PASS flags alone cannot establish that any base/head probes ran.
+        # Bind their existing repetition summaries to numbered exit observations.
+        counts = {}
+        for gate, want_fail in (("red", True), ("green", False)):
+            detail = gates.get(gate) if isinstance(gates.get(gate), dict) else {}
+            observed = [m for m in measurements if isinstance(m.get("name"), str)
+                        and re.fullmatch(rf"{gate}-[0-9]+_exit", m["name"])]
+            count = counts[gate] = len(observed)
+            if (not count or detail.get("reps_agree") != f"{count}/{count}"
+                    or {m["name"] for m in observed} != {f"{gate}-{i}_exit" for i in range(count)}
+                    or any(type(m.get("value")) is not int or (m["value"] != 0) != want_fail
+                           or m.get("label") != "OBSERVED" for m in observed)):
+                problems.append(f"KEEP needs nonempty unanimous {gate} repetitions matching exit observations")
+        if counts["red"] != counts["green"]:
+            problems.append("KEEP needs equal RED and GREEN repetition counts")
+        headline = [m for m in measurements if m.get("name") == "red_reps_failing_with_marker"]
+        if (len(headline) != 1 or headline[0].get("value") != f"{counts['red']}/{counts['red']}"
+                or headline[0].get("primary") is not True or headline[0].get("label") != "OBSERVED"):
+            problems.append("KEEP needs one observed RED repetition headline matching its proof")
         if gates.get("flaky"):
             problems.append("KEEP cannot be flaky")
         if (receipt.get("denominators") or {}).get("infra"):
