@@ -222,7 +222,7 @@ tone_gate = { peer = true, no_labor = true, no_internal_leak = true, smallest_as
 jargon_lint = "PASS (self-check, manifest r6: no gate ids, OD, xf, receipt, wave, lane or E##/F## terms; upstream items as #N only; no fork items)"
 privacy_scan = "PASS (manifest r7, after the work/ redaction: every file outside private/ (203 at the redaction run; 206 in a final re-scan after this manifest and the work/r7 records were written), incl. STAGING.md, PR_BODY.md, the patches, receipts/ and all of work/: 0 hits for absolute paths under the mount, workspace, home or var-tmp roots, the scratchpad path, pytest-of-<user> dirs, the host name, the local user name, the artifacts root, the live install root, private IPv4 or non-noreply emails; 15 allowed matches listed with reasons in work/r7/path_redaction_r7.json (upstream #124151 diff text, scanner needle strings, placeholder text); no bytecode. The r6 scan covered only STAGING.md, PR_BODY.md, receipts/ and work/r6/ and missed the rest of work/)"
 owner_review = "not claimed: the r6 AI-assistance line no longer says the diff and results were reviewed; the owner may add such a line after reviewing"
-pr_create_command = "gh pr create -R NousResearch/hermes-agent --base main --head kvnloo:staged/memory-prefetch-metric --title 'feat(telemetry): count external memory prefetch outcomes and wait' --body-file PR_BODY.md   # NOT run by the factory"
+pr_create_command = "gh pr create -R NousResearch/hermes-agent --base main --head kvnloo:staged/memory-prefetch-metric-v2 --title 'feat(telemetry): count external memory prefetch outcomes and wait' --body-file PR_BODY.md   # NOT run by the factory"
 
 [queue]
 board = "kvnloo/hermes-agent#404"
