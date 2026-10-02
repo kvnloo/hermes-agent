@@ -12,6 +12,7 @@ locks). Schema: tasks, task_links, task_comments, task_events, task_runs, attach
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import json
 import os
 import re
@@ -4659,6 +4660,7 @@ def current_run_started_ats(conn: sqlite3.Connection, task_ids: Iterable[str]) -
 # --- Split modules (imported at the tail: they import this module as ``_kb``) ---
 from hermes_cli.kanban_db_connect import (  # noqa: E402
     _INITIALIZED_PATHS,
+    connect,
     init_db,
     write_txn,
 )
