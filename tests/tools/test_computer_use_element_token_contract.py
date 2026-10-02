@@ -236,7 +236,33 @@ class TestEndedSessionRevival:
         result = s.call_tool("click", args)
         assert [c[1] for c in calls] == ["click", "start_session", "click"]
         assert result["isError"] is False
-        s._transport_reset_callback.assert_not_called()
+        s._transport_reset_callback.assert_called_once_with()  # the ended session's tokens are dropped anyway
+
+    def test_token_free_revival_then_element_action_never_sends_a_dead_token(self):
+        """The revive may be triggered by ANY call (type_text, key, a coordinate click). Every token cached from
+        the ended session is dead afterwards, so the next element action must not carry one."""
+        backend, driver = _captured(TOKEN_ONLY)  # snapshot 1 -> tokens s00000001:*
+        fake_call, state = driver.call_tool, {"ended": False}
+
+        class Bridge:
+            def run(self, value, timeout=None):
+                _, name, args = value
+                if name == "start_session":
+                    state["ended"] = False
+                    return {"data": "ok", "images": [], "structuredContent": None, "isError": False}
+                return dict(self.ended) if state["ended"] else fake_call(name, args)
+
+        Bridge.ended = self.ENDED
+        s, _ = self._session([])
+        s._bridge, s._tool_schemas, s._capabilities = Bridge(), backend._session._tool_schemas, backend._session._capabilities
+        s._timeout_suspect = False
+        s.set_transport_reset_callback(backend._handle_transport_reset)
+        backend._session = s
+        state["ended"] = True  # the Driver session ends while the model is thinking
+        assert backend.type_text("hello").ok  # token-free call: revive + replay once
+        result = backend.click(element=2)
+        assert not result.ok and "capture" in result.message  # refused locally: capture again first
+        assert [a for n, a in driver.calls if n == "click"] == []  # no stale token reached the Driver
 
     def test_backend_requires_a_fresh_capture_after_the_ended_session(self):
         backend, driver = _captured(TOKEN_ONLY)
