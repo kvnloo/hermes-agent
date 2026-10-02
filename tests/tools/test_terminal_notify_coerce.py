@@ -75,3 +75,47 @@ def test_string_notify_true_still_refused_on_foreground(capture_terminal):
     assert result.get("error")
     assert "background" in result["error"]
     assert capture_terminal == {}
+
+
+def test_string_false_notify_allows_foreground(capture_terminal):
+    result = _dispatch({"command": "echo unchanged", "notify": "false"})
+    assert not result.get("error"), result
+    assert capture_terminal["background"] is False
+    assert capture_terminal["notify_on_complete"] is False
+    assert capture_terminal["watch_patterns"] is None
+
+
+@pytest.mark.parametrize("notify", [False, "false"])
+def test_explicit_false_overrides_legacy_flags_before_foreground_gate(capture_terminal, notify):
+    result = _dispatch({
+        "command": "echo unchanged", "notify": notify,
+        "notify_on_complete": True, "watch_patterns": ["stale legacy pattern"],
+    })
+    assert not result.get("error"), result
+    assert capture_terminal["background"] is False
+    assert capture_terminal["notify_on_complete"] is False
+    assert capture_terminal["watch_patterns"] is None
+
+
+def test_explicit_pattern_list_overrides_legacy_completion_without_filtering(capture_terminal):
+    patterns = ["ready", "  literal spaces  "]
+    result = _dispatch({
+        "command": "echo unchanged", "background": True,
+        "notify": patterns, "notify_on_complete": True,
+    })
+    assert not result.get("error"), result
+    assert capture_terminal["notify_on_complete"] is False
+    assert capture_terminal["watch_patterns"] is patterns
+
+
+@pytest.mark.parametrize("notify", [{"pattern": "ready"}, ("ready",), '["ready"]'])
+def test_unsupported_pattern_representations_do_not_dispatch(capture_terminal, notify):
+    result = _dispatch({"command": "echo unchanged", "background": True, "notify": notify})
+    assert "notify must be true/false" in result.get("error", "")
+    assert capture_terminal == {}
+
+
+def test_native_true_notify_still_refused_on_foreground(capture_terminal):
+    result = _dispatch({"command": "echo unchanged", "notify": True})
+    assert "background" in result.get("error", "")
+    assert capture_terminal == {}
