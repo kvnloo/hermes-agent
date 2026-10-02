@@ -959,6 +959,58 @@ class TestPollLoop(unittest.TestCase):
             EmailAdapter._seen_uids_snapshot.clear()
             EmailAdapter._seen_uids_snapshot.update(prior)
 
+    def test_dispatch_failure_keeps_completed_handoff_in_reconnect_snapshot(self):
+        """A later dispatch refusal must not resurrect an earlier completed handoff."""
+        import asyncio
+        from plugins.platforms.email.adapter import EmailAdapter
+
+        prior = dict(EmailAdapter._seen_uids_snapshot)
+        EmailAdapter._seen_uids_snapshot.clear()
+        first, reconnected = self._make_adapter(), self._make_adapter()
+        accepted, attempted, fetched = [], [], []
+        raw = MIMEText("Body", "plain", "utf-8")
+        raw["From"], raw["Subject"], raw["Message-ID"] = "sender@test.com", "Batch", "<batch@test.com>"
+        imap = MagicMock()
+
+        def uid_handler(command, *args):
+            if command == "search":
+                return ("OK", [b"" if args[-1] == "ALL" else b"1 2"])
+            if command == "fetch":
+                fetched.append(args[0])
+                return ("OK", [(args[0], raw.as_bytes())])
+            return ("OK", [])
+
+        async def first_dispatch(message):
+            attempted.append(message["uid"])
+            if message["uid"] == b"2":
+                raise RuntimeError("second handoff refused before acceptance")
+            accepted.append(message["uid"])
+
+        async def resumed_dispatch(message):
+            attempted.append(message["uid"])
+            accepted.append(message["uid"])
+
+        imap.uid.side_effect = uid_handler
+        first._dispatch_message = first_dispatch
+        reconnected._dispatch_message = resumed_dispatch
+        try:
+            with patch("imaplib.IMAP4_SSL", return_value=imap):
+                self.assertTrue(first._probe_imap(is_reconnect=False))
+                with self.assertRaisesRegex(RuntimeError, "second handoff refused"):
+                    asyncio.run(first._check_inbox())
+                self.assertEqual(accepted, [b"1"])
+                self.assertEqual(first._seen_uids, {b"1"})
+                self.assertTrue(reconnected._probe_imap(is_reconnect=True))
+                asyncio.run(reconnected._check_inbox())
+            self.assertEqual(accepted, [b"1", b"2"], "reconnect replayed an already completed handoff")
+            self.assertEqual(attempted, [b"1", b"2", b"2"])
+            self.assertEqual(fetched, [b"1", b"2", b"2"])
+            self.assertEqual(reconnected._seen_uids, {b"1", b"2"})
+            self.assertEqual(EmailAdapter._seen_uids_snapshot[first._address], {b"1", b"2"})
+        finally:
+            EmailAdapter._seen_uids_snapshot.clear()
+            EmailAdapter._seen_uids_snapshot.update(prior)
+
     def test_partial_batch_dispatched_before_escalation(self):
         """A mid-batch IMAP failure must dispatch the messages already
         fetched BEFORE escalating — dropping them would lose mail, since

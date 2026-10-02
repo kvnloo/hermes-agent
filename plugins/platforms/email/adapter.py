@@ -661,9 +661,10 @@ class EmailAdapter(BasePlatformAdapter):
             # Commit only after hand-over: a fetch abandoned at the budget below must not have written this UID off,
             # or the message is dispatched by nobody and (being \Seen server-side) fetched by nobody again (#87128).
             self._mark_seen(msg_data["uid"])
+            # A later dispatch can raise or be cancelled before the batch completes.
+            self._remember_seen_uids()
             dispatched_uids.append(msg_data["uid"])
         if dispatched_uids:
-            self._remember_seen_uids()
             # Server-side \Seen moved here, after dispatch: the fetch itself no longer touches flags, so the
             # abandoned-run window above is closed at the source rather than rolled back afterwards.
             try:
