@@ -1339,6 +1339,179 @@ class TestCheckpoint:
 # =========================================================================
 
 class TestKillProcess:
+    @pytest.mark.parametrize("owns_completion", [False, True])
+    def test_kill_completion_held_by_drain_uses_final_exit_stamp(self, registry, owns_completion):
+        """An undelivered event can be outside the queue while ownership is checked."""
+        session = _make_session(sid="proc_held_drain", output="fixture output")
+        session.session_key = "owner-session"
+        session.notify_on_complete = True
+        session.process = MagicMock(pid=424244)
+        registry._running[session.id] = session
+        held = threading.Event()
+        release = threading.Event()
+        errors, drained = [], []
+
+        def owns_event(event):
+            assert event["session_id"] == session.id
+            # Ownership hooks may query the registry; never invoke under its lock.
+            assert registry.get(session.id) is session
+            held.set()
+            assert release.wait(5), "test must release the held completion"
+            return owns_completion
+
+        def drain():
+            try:
+                drained.extend(registry.drain_notifications(owns_event=owns_event))
+            except BaseException as error:
+                errors.append(error)
+
+        worker = threading.Thread(target=drain, daemon=True)
+
+        def signal_boundary(_pid, _start=None):
+            registry._finish_exited(session, -15)
+            worker.start()
+            assert held.wait(5), "drain must hold the completion before kill finishes"
+
+        try:
+            with patch.object(ProcessRegistry, "_terminate_host_pid", side_effect=signal_boundary), \
+                    patch("tools.process_registry.save_completed_result"):
+                result = registry.kill_process(session.id, source="kill_all", consume_output=False)
+                assert result["status"] == "killed"
+                assert registry.completion_queue.empty(), "event is held, not delivered"
+                release.set()
+                worker.join(5)
+            assert not worker.is_alive() and not errors
+            pending = registry.drain_notifications(session_key="owner-session")
+            assert len(drained) == int(owns_completion)
+            assert len(pending) == int(not owns_completion)
+            event, text = (drained + pending)[0]
+            assert event["completion_reason"] == "killed"
+            assert event["termination_source"] == "kill_all"
+            assert "terminated by kill_all" in text
+            assert registry.drain_notifications(session_key="owner-session") == []
+        finally:
+            release.set()
+            if worker.ident is not None:
+                worker.join(5)
+            registry._running.pop(session.id, None)
+            registry._finished.pop(session.id, None)
+
+    def test_kill_completion_prepared_before_kill_uses_final_exit_stamp(self, registry):
+        """A reader's prepared payload must not publish stale fields after kill returns."""
+        from tools import process_registry as module
+
+        session = _make_session(sid="proc_late_publish", output="fixture output")
+        session.session_key = "owner-session"
+        session.notify_on_complete = True
+        session.process = MagicMock(pid=424244)
+        registry._running[session.id] = session
+        prepared = threading.Event()
+        release = threading.Event()
+        errors = []
+        redact = module._redact_process_result
+
+        def pause_before_publish(event):
+            redact(event)
+            prepared.set()
+            assert release.wait(5), "test must release prepared notification"
+
+        def reader():
+            try:
+                registry._finish_exited(session, -15)
+            except BaseException as error:
+                errors.append(error)
+
+        worker = threading.Thread(target=reader, daemon=True)
+
+        def signal_boundary(_pid, _start=None):
+            worker.start()
+            assert prepared.wait(5), "reader must prepare its exit before kill finishes"
+
+        try:
+            with patch.object(ProcessRegistry, "_terminate_host_pid", side_effect=signal_boundary), \
+                    patch("tools.process_registry.save_completed_result"), \
+                    patch.object(module, "_redact_process_result", side_effect=pause_before_publish):
+                result = registry.kill_process(session.id, source="kill_all", consume_output=False)
+                assert result["status"] == "killed"
+                assert registry.completion_queue.empty(), "prepared event has not been published"
+                release.set()
+                worker.join(5)
+            assert not worker.is_alive() and not errors
+            delivered = registry.drain_notifications(session_key="owner-session")
+            assert len(delivered) == 1
+            event, text = delivered[0]
+            assert event["completion_reason"] == "killed"
+            assert event["termination_source"] == "kill_all"
+            assert "terminated by kill_all" in text
+        finally:
+            release.set()
+            if worker.ident is not None:
+                worker.join(5)
+            registry._running.pop(session.id, None)
+            registry._finished.pop(session.id, None)
+
+    @pytest.mark.parametrize("reader_first,already_drained", [(True, False), (True, True), (False, False)])
+    def test_kill_completion_race_preserves_pending_delivery_without_replay(
+        self, registry, reader_first, already_drained,
+    ):
+        """Restamp pending output; never re-deliver a completion already drained.
+
+        The fake signal boundary drives the real registry finish/drain paths.
+        No host process is started or signaled. Current completion output limits
+        and cut metadata must survive the restamp (downstream #112).
+        """
+        session = _make_session(sid="proc_live_race", output="x" * 3500)
+        session.session_key = "owner-session"
+        session.notify_on_complete = True
+        session.completion_output_chars = 2500
+        session.process = MagicMock(pid=424244)
+        registry._running[session.id] = session
+        foreign = {
+            "type": "completion", "session_id": "proc_foreign", "session_key": "foreign-session",
+            "task_id": "foreign", "owner_task_id": "foreign", "command": "fixture",
+            "completion_reason": "exited", "termination_source": "", "exit_code": 0,
+            "output": "foreign result", "started_at": 0,
+        }
+        registry.completion_queue.put(foreign)
+        earlier = []
+        saved = []
+
+        def signal_boundary(_pid, _start=None):
+            if reader_first:
+                registry._finish_exited(session, -15)
+            if already_drained:
+                earlier.extend(registry.drain_notifications(session_key="owner-session"))
+
+        def record_save(value):
+            saved.append((value.completion_reason, value.termination_source, value.exit_code))
+
+        try:
+            with patch.object(ProcessRegistry, "_terminate_host_pid", side_effect=signal_boundary), \
+                    patch.object(ProcessRegistry, "_post_kill_survivors", return_value=[]), \
+                    patch("tools.process_registry.save_completed_result", side_effect=record_save):
+                result = registry.kill_process(session.id, source="kill_all", consume_output=False)
+            assert result["status"] == "killed"
+            assert saved[-1] == ("killed", "kill_all", -15)
+            pending = registry.drain_notifications(session_key="owner-session")
+            assert len(earlier) + len(pending) == 1, "one completion, without replay after drain"
+            if already_drained:
+                assert not pending
+                assert earlier[0][0]["completion_reason"] == "exited"
+            else:
+                event, text = pending[0]
+                assert event["completion_reason"] == "killed"
+                assert event["termination_source"] == "kill_all"
+                assert "terminated by kill_all" in text
+                assert event["output"] == result["output"] == "x" * 2500
+                assert event["output_cut"] == result["output_cut"] == 1000
+            assert registry.drain_notifications(session_key="owner-session") == []
+            foreign_results = registry.drain_notifications(session_key="foreign-session")
+            assert len(foreign_results) == 1 and foreign_results[0][0] == foreign
+            assert registry.completion_queue.empty()
+        finally:
+            registry._running.pop(session.id, None)
+            registry._finished.pop(session.id, None)
+
     def test_kill_already_exited(self, registry):
         s = _make_session(exited=True, exit_code=0)
         registry._finished[s.id] = s

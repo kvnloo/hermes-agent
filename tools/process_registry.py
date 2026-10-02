@@ -2016,6 +2016,15 @@ class ProcessRegistry(ProcessCheckpointMixin):
                         "type=%s session_id=%s task_id=%s",
                         evt.get("type", "completion"), _evt_sid, _evt_task_id)
                     continue
+            if evt.get("type") == "completion":
+                # A kill can finish while this event is queued or held by another
+                # session's drain. Refresh only the exit stamp at delivery; keep
+                # the original output, truncation metadata and routing intact.
+                with self._lock:
+                    session = self._finished.get(_evt_sid)
+                if session is not None:
+                    with session._lock:
+                        evt = {**evt, **self._exit_fields(session)}
             if text := format_process_notification(evt):
                 results.append((evt, text))
         for evt in requeue:
