@@ -160,10 +160,10 @@ describe('weather reference app (async contract)', () => {
 describe('weather reference app (relaunch race)', () => {
   const LATITUDE: Record<string, number> = { Paris: 48.85, Rome: 41.9 }
 
-  // Geocoding answers at once; each launch's forecast is held (keyed by
-  // latitude) until the test settles it, so an older launch can land last.
+  // Geocoding answers at once; retain each forecast by occurrence so a
+  // same-location relaunch has distinct old/new requests as well.
   const holdForecasts = () => {
-    const held = new Map<string, { reject: (error: unknown) => void; resolve: (value: unknown) => void }>()
+    const held: Array<{ reject: (error: unknown) => void; resolve: (value: unknown) => void }> = []
 
     vi.stubGlobal(
       'fetch',
@@ -178,42 +178,62 @@ describe('weather reference app (relaunch race)', () => {
           return Promise.resolve({ json: async () => ({ results: [place] }), ok: true })
         }
 
-        return new Promise((resolve, reject) => held.set(url.searchParams.get('latitude') ?? '', { reject, resolve }))
+        expect(url.hostname).toBe('api.open-meteo.com')
+
+        return new Promise((resolve, reject) => held.push({ reject, resolve }))
       })
     )
 
-    return (name: string) => held.get(String(LATITUDE[name]))!
+    return (index: number) => held[index]!
   }
 
-  const relaunchParisThenRome = async (forecast: (name: string) => unknown) => {
+  const relaunchParisThen = async (forecast: (index: number) => unknown, location: string) => {
     expect(launchWidget('weather', 'Paris')).toBeNull()
-    expect(launchWidget('weather', 'Rome')).toBeNull()
-    await vi.waitFor(() => expect(forecast('Paris') && forecast('Rome')).toBeTruthy())
+    expect(launchWidget('weather', location)).toBeNull()
+    await vi.waitFor(() => expect(forecast(0) && forecast(1)).toBeTruthy())
   }
 
-  it('a stale forecast resolving last does not replace the newer launch', async () => {
+  it.each(['Paris', 'Rome'])('a stale forecast resolving last does not replace the newer %s launch', async location => {
     const forecast = holdForecasts()
 
-    await relaunchParisThenRome(forecast)
-    forecast('Rome').resolve({ json: async () => openMeteoForecast, ok: true })
+    await relaunchParisThen(forecast, location)
+    forecast(1).resolve({
+      json: async () => ({ current: { ...openMeteoForecast.current, temperature_2m: 33 } }),
+      ok: true
+    })
     await vi.waitFor(() => expect(activeState()?.phase.kind).toBe('ready'))
 
-    forecast('Paris').resolve({ json: async () => openMeteoForecast, ok: true })
+    forecast(0).resolve({ json: async () => openMeteoForecast, ok: true })
     await new Promise(resolve => setTimeout(resolve, 0))
 
-    expect(activeState()).toMatchObject({ location: 'Rome', phase: { kind: 'ready', report: { area: 'Rome, Italy' } } })
+    expect(activeState()).toMatchObject({
+      location,
+      phase: {
+        kind: 'ready',
+        report: { area: `${location}, ${location === 'Paris' ? 'France' : 'Italy'}`, tempC: '33' }
+      }
+    })
   })
 
-  it('a stale forecast failure does not flip the newer launch to error', async () => {
+  it.each(['Paris', 'Rome'])('a stale forecast failure does not flip the newer %s launch to error', async location => {
     const forecast = holdForecasts()
 
-    await relaunchParisThenRome(forecast)
-    forecast('Rome').resolve({ json: async () => openMeteoForecast, ok: true })
+    await relaunchParisThen(forecast, location)
+    forecast(1).resolve({
+      json: async () => ({ current: { ...openMeteoForecast.current, temperature_2m: 33 } }),
+      ok: true
+    })
     await vi.waitFor(() => expect(activeState()?.phase.kind).toBe('ready'))
 
-    forecast('Paris').reject(new Error('The operation was aborted due to timeout'))
+    forecast(0).reject(new Error('The operation was aborted due to timeout'))
     await new Promise(resolve => setTimeout(resolve, 0))
 
-    expect(activeState()).toMatchObject({ location: 'Rome', phase: { kind: 'ready', report: { area: 'Rome, Italy' } } })
+    expect(activeState()).toMatchObject({
+      location,
+      phase: {
+        kind: 'ready',
+        report: { area: `${location}, ${location === 'Paris' ? 'France' : 'Italy'}`, tempC: '33' }
+      }
+    })
   })
 })
