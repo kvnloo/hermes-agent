@@ -83,3 +83,57 @@ class TestBucket:
         b = RateLimitBucket(limit=800, remaining=795, reset_seconds=60.0, captured_at=now - 10)
         # ~50 seconds should remain
         assert 49 <= b.remaining_seconds_now <= 51
+
+
+@pytest.mark.parametrize("unknown_remaining", [None, "not-a-count"])
+def test_response_capture_keeps_unknown_windows_distinct_from_exhaustion(unknown_remaining):
+    """The native capture cache must not turn partial response headers into a breaker signal."""
+    from httpx import Response
+
+    from agent.nous_rate_guard import is_genuine_nous_rate_limit
+    from agent.rate_limit_credits import RateLimitCreditsMixin
+
+    class Agent(RateLimitCreditsMixin):
+        provider = "nous"
+        _rate_limit_state = None
+
+    agent = Agent()
+    partial = {
+        "X-RateLimit-Limit-Requests": "800",
+        "X-RateLimit-Reset-Requests": "3600",
+    }
+    if unknown_remaining is not None:
+        partial["X-RateLimit-Remaining-Requests"] = unknown_remaining
+
+    # A complete sibling window survives; the partial one supplies no exhaustion evidence.
+    agent._capture_rate_limits(Response(200, headers={
+        **partial,
+        "X-RateLimit-Limit-Tokens": "100",
+        "X-RateLimit-Remaining-Tokens": "75",
+        "X-RateLimit-Reset-Tokens": "3600",
+    }))
+    state = agent.get_rate_limit_state()
+    assert state is agent._rate_limit_state
+    assert state.provider == "nous" and state.has_data
+    assert state.requests_min.limit == 0
+    assert (state.tokens_min.limit, state.tokens_min.remaining) == (100, 75)
+    assert "TPM: 75/100" in format_rate_limit_compact(state)
+    assert "RPM:" not in format_rate_limit_compact(state)
+    assert not is_genuine_nous_rate_limit(headers=None, last_known_state=state)
+
+    # Explicit zero still replaces the cache with genuine exhaustion.
+    agent._capture_rate_limits(Response(200, headers={
+        **partial, "X-RateLimit-Remaining-Requests": "0",
+    }))
+    exhausted = agent.get_rate_limit_state()
+    assert exhausted.has_data and exhausted.requests_min.usage_pct == 100
+    assert is_genuine_nous_rate_limit(headers=None, last_known_state=exhausted)
+
+    # No relevant headers retain the last-known state, while a new partial report
+    # replaces it with unknown rather than leaving a stale exhaustion signal cached.
+    agent._capture_rate_limits(Response(200, headers={"Content-Type": "application/json"}))
+    assert agent.get_rate_limit_state() is exhausted
+    agent._capture_rate_limits(Response(200, headers=partial))
+    unknown = agent.get_rate_limit_state()
+    assert unknown is not exhausted and not unknown.has_data
+    assert not is_genuine_nous_rate_limit(headers=None, last_known_state=unknown)
