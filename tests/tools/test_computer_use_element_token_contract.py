@@ -189,3 +189,57 @@ def test_fixture_matches_the_contract_under_test(version):
         assert "element_token" in props
         assert ("element_index" in props) is (version == LEGACY)
         assert schemas[tool]["additionalProperties"] is False
+
+
+class TestEndedSessionRevival:
+    """The Driver retires an ended session's snapshots, so a token minted under it is dead. Hermes revives the
+    session and replays a rejected call once; that replay must never carry an element_token from the ended
+    session (observed full-stack: the replayed click came back 'element_token is stale ... no current
+    snapshot'). Token-free calls keep the existing revive-and-replay behaviour."""
+
+    ENDED = {"data": "session hermes-label has ended; call start_session to begin a new session", "images": [],
+             "structuredContent": None, "isError": True}
+
+    def _session(self, effects):
+        import threading
+        from unittest.mock import MagicMock
+        from tools.computer_use.cua_backend_session import _CuaDriverSession
+
+        calls = []
+
+        class Bridge:
+            def run(self, value, timeout=None):
+                calls.append(value)
+                return effects.pop(0)
+
+        s = _CuaDriverSession.__new__(_CuaDriverSession)
+        s._bridge, s._session, s._lock, s._started = Bridge(), object(), threading.Lock(), True
+        s._capabilities, s._capability_version, s._declared_session_id = {}, "", "hermes-label"
+        s._call_tool_async = lambda name, args: ("call", name, args)
+        s._transport_reset_callback = MagicMock()
+        return s, calls
+
+    def test_token_call_is_not_replayed_after_revival(self):
+        ok = {"data": "ok", "images": [], "structuredContent": None, "isError": False}
+        s, calls = self._session([dict(self.ENDED), dict(ok), dict(ok)])
+        args = {"pid": 1, "element_token": "s00000001:2", "session": "hermes-label"}
+        result = s.call_tool("click", args)
+        assert calls == [("call", "click", args), ("call", "start_session", {"session": "hermes-label"})]
+        assert result["isError"] is True
+        assert result["structuredContent"]["code"] == "element_token_session_ended"
+        s._transport_reset_callback.assert_called_once_with()  # backend drops the ended session's tokens
+
+    def test_token_free_call_is_still_replayed_after_revival(self):
+        ok = {"data": "ok", "images": [], "structuredContent": None, "isError": False}
+        s, calls = self._session([dict(self.ENDED), dict(ok), dict(ok)])
+        args = {"pid": 1, "window_id": 2, "x": 3, "y": 4, "session": "hermes-label"}
+        result = s.call_tool("click", args)
+        assert [c[1] for c in calls] == ["click", "start_session", "click"]
+        assert result["isError"] is False
+        s._transport_reset_callback.assert_not_called()
+
+    def test_backend_requires_a_fresh_capture_after_the_ended_session(self):
+        backend, driver = _captured(TOKEN_ONLY)
+        backend._handle_transport_reset()  # what the session's reset callback runs
+        result = backend.click(element=2)
+        assert not result.ok and driver.action_calls() == []
