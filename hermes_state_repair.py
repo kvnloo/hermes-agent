@@ -369,7 +369,15 @@ def _backup_content_identity(db_path: Path) -> "Optional[str]":
 def _read_repair_ledger(db_path: Path) -> "Dict[str, Any]":
     with contextlib.suppress(OSError, ValueError):
         raw = json.loads(_repair_ledger_path(db_path).read_text(encoding="utf-8"))
-        return raw if isinstance(raw, dict) else {}
+        if not isinstance(raw, dict):
+            return {}
+        try:
+            int(raw.get("failed_attempts", 0))
+        except (TypeError, ValueError, OverflowError):
+            # Recover counting on the next recorded outcome, not just the read:
+            # retaining an unreadable counter would make every update fail too.
+            raw["failed_attempts"] = 0
+        return raw
     return {}
 
 
