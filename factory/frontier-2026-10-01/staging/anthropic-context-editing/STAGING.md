@@ -4,8 +4,8 @@ id = "anthropic-context-editing"
 version = 7
 title = "Opt-in Anthropic server-side context editing (clear_tool_uses) behind a native_compaction-style gate (#526)"
 branch = "staging/anthropic-context-editing-v3"
-branch_fork = "staged/anthropic-context-editing"
-branch_physical = "local-only in scratch h.git as staging/anthropic-context-editing-v3 (promotion head, on main af7287ed22) next to the untouched staging/anthropic-context-editing (05d6dbc172) and staging/anthropic-context-editing-v2 (24cc2cc869), both on 44a1ce9724; v3 is the one to push to kvnloo/hermes-agent as staged/anthropic-context-editing (OD-0 resolved by that rename: the fork's legacy refs/heads/staging 28790e597c blocks staging/<id>)"
+branch_fork = "staged/anthropic-context-editing-v3"
+branch_physical = "Published on kvnloo/hermes-agent as staged/anthropic-context-editing-v3 at 97efa68e9b7005f5c65624bf5f4f583ebf8e098f (verified by read-only GitHub ref lookup 2026-10-02). The superseded staged/anthropic-context-editing remains at 05d6dbc172d24db4b237f8ef130fb4dc2e8651df and must not be used for v3 promotion. Original scratch ref: staging/anthropic-context-editing-v3; no ref is rewritten by this manifest correction."
 branch_sha = "97efa68e9b7005f5c65624bf5f4f583ebf8e098f"
 branch_prev = { ref = "staging/anthropic-context-editing-v2", sha = "24cc2cc8699dd5b4792264728ea484daeac82356", relation = "v3 (97efa68e9b, tree c66e75b01f, parent af7287ed22) = v2 cherry-picked onto main af7287ed22 (clean; git auto-merged agent/agent_init.py, agent/chat_completion_helpers.py and agent/turn_recovery.py, no conflict to resolve), then amended once: the comment at tests/agent/test_anthropic_context_editing.py:75 now says local compression keys on the reported post-clear size and fires later (test blob fc48d77dbb -> 2ae0c4d73c; no assertion or code changed). Author and author date kept, committer Kevin Rajan; commit message unchanged (no stated fact changed). Stable patch-id 7b127f103d (v2: 352f5b8a44; the difference is the comment line only). Built 2026-10-01T19:48Z; v2 and the original ref were not rewritten", suffix_note = "the -v2/-v3 suffixes count staging/<id> refs; they are unrelated to refs/xf/superseded/anthropic-context-editing-v2/-v3 (older heads b83e778103, 61effa4dd8)" }
 status = "STAGED"          # ceiling at $0 = LIMITED (P6 needs the paid F10 cache arm); every $0 proof re-run on af7287ed22 as r20261001-05 and F14/r20261001-02 (EQUAL to the af7287ed22 baseline)
@@ -110,7 +110,7 @@ P3 = "PASS"
 P4 = "PASS"
 P5 = "PASS"       # on af7287ed22 / v3 97efa68e9b: RED marker matched, GREEN 3/3, sabotage 14/16 with unpinned hunks listed, adjacent 518/518 identical, flaky false (P-redgreen/r20261001-05); F14 EQUAL x2 vs baseline-af7287ed22 (F14/r20261001-02)
 P6 = "PENDING"    # caching-adjacent: needs OBSERVED cache-read before/after (F10) -> LIMITED until then
-P7 = "PASS"       # local: one commit (v3 97efa68e9b) on main af7287ed22, author kept, feat(anthropic):, merge-tree = its own tree, 0 workflow files; not pushed yet (fork name staged/<id>)
+P7 = "PASS"       # local: one commit (v3 97efa68e9b) on main af7287ed22, author kept, feat(anthropic):, merge-tree = its own tree, 0 workflow files; fork v3 identity verified 2026-10-02; publication does not clear the remaining promotion gates
 P8 = "PENDING"
 P9 = "PENDING"    # body rewritten for v3; cache section waits on F10; tone gate by a second reader
 P10 = "PENDING"   # no blind verifier on the v3 head 97efa68e9b yet
@@ -135,7 +135,7 @@ recheck = "git -C <h.git> merge-tree --write-tree main staging/anthropic-context
 note = "main is v3's parent, so the merge tree is v3's own tree (MERGE/r20261001-05). Before the rebase: merge-tree of af7287ed22 with v2 was also clean (tree 1c38863f36)"
 
 [push]
-fork_ref = "staged/anthropic-context-editing"
+fork_ref = "staged/anthropic-context-editing-v3"
 no_follow_tags = true
 workflow_push_matches = 0
 pushed_at = ""
@@ -161,7 +161,7 @@ origin_actions_taken = 0
 
 **Promotion form:** core-pr (route core-leaf). **Status:** STAGED. The best class reachable at $0 is LIMITED: the change is caching-adjacent, so the PR body has to carry an OBSERVED cache-read before/after, and that needs the paid F10 run. Round 7 rebuilt the branch as `staging/anthropic-context-editing-v3` on main `af7287ed22` and re-ran every $0 proof there: P-redgreen/r20261001-05, F09/r20261001-05, MERGE/r20261001-05 and F14/r20261001-02 (EQUAL to the `af7287ed22` baseline). P1–P5 and P7 hold on v3; P6, P8, P9, P10 and P12 are PENDING.
 
-**Branch.** The promotion head is the local ref `staging/anthropic-context-editing-v3` at `97efa68e9b` in the scratch h.git, one commit on main `af7287ed22` (tree `c66e75b01f`). It is v2 (`24cc2cc869`) cherry-picked onto `af7287ed22`. The cherry-pick was clean: git auto-merged `agent/agent_init.py`, `agent/chat_completion_helpers.py` and `agent/turn_recovery.py`, and there was no conflict to record. It was then amended once, for the test comment at line 75 (old next step 8). The author and author date are kept; the commit message is unchanged, because none of its facts changed. `staging/anthropic-context-editing` (`05d6dbc172`) and `staging/anthropic-context-editing-v2` (`24cc2cc869`) stay where they were, on `44a1ce9724`. On the fork, v3 will be pushed as `staged/anthropic-context-editing`, because the fork still has a legacy branch named `staging`, which blocks `staging/<id>`. That rename resolves OD-0 for this item. Nothing has been pushed. Earlier heads stay reachable: `61effa4dd8` at `refs/xf/superseded/anthropic-context-editing-v3`, `b83e778103` at `-v2` and `1ecde98a71` at `-v1`; the old F14 arm `da974f840c` stays at `refs/xf/w0/anthropic-context-editing`. Their patches are in `superseded/`.
+**Branch.** The promotion head is the local ref `staging/anthropic-context-editing-v3` at `97efa68e9b` in the scratch h.git, one commit on main `af7287ed22` (tree `c66e75b01f`). It is v2 (`24cc2cc869`) cherry-picked onto `af7287ed22`. The cherry-pick was clean: git auto-merged `agent/agent_init.py`, `agent/chat_completion_helpers.py` and `agent/turn_recovery.py`, and there was no conflict to record. It was then amended once, for the test comment at line 75 (old next step 8). The author and author date are kept; the commit message is unchanged, because none of its facts changed. `staging/anthropic-context-editing` (`05d6dbc172`) and `staging/anthropic-context-editing-v2` (`24cc2cc869`) stay where they were, on `44a1ce9724`. On the fork, v3 is published as `staged/anthropic-context-editing-v3` at `97efa68e9b` (read-only ref check, 2026-10-02). The unsuffixed `staged/anthropic-context-editing` remains at superseded `05d6dbc172`; keep that ref intact and use the v3 ref for any later authorized promotion. Earlier heads stay reachable: `61effa4dd8` at `refs/xf/superseded/anthropic-context-editing-v3`, `b83e778103` at `-v2` and `1ecde98a71` at `-v1`; the old F14 arm `da974f840c` stays at `refs/xf/w0/anthropic-context-editing`. Their patches are in `superseded/`.
 
 **Links.** Upstream: NousResearch/hermes-agent#526 (the feature spec, teknium1), NousResearch/hermes-agent#525 (related /microcompact), NousResearch/hermes-agent#1147 (merged; despite its title, OAuth token and header plumbing only), NousResearch/hermes-agent#528 (closed prior attempt), NousResearch/hermes-agent#71302 (open, related: writes the same field on OAuth), NousResearch/hermes-agent#130645 (merged preserved-thinking salvage; v3 sits on it), NousResearch/hermes-agent#103476, NousResearch/hermes-agent#129620, NousResearch/hermes-agent#129492 (closed as superseded by #130645), NousResearch/hermes-agent#129882 (open; its thinking portion is superseded, so it is no longer a dependency). Fork: kvnloo/hermes-agent#322 (factory thread), kvnloo/hermes-agent#404 (staged-PR queue, 39 rows). No fork thread exists for this feature yet.
 
@@ -290,7 +290,7 @@ Known gaps in F10:
 - P4 PASS: real turn loop on the native route. Only the HTTP vendor boundary is faked.
 - P5 PASS: on base `af7287ed22` and head v3 `97efa68e9b`: RED with both markers matched, GREEN 3 of 3, sabotage 14 of 16 with every gate condition pinned (2 sibling config hunks unpinned, listed), adjacent 518/518 identical, `flaky = false` (P-redgreen/r20261001-05). The codex row of the generalised recovery table is also unpinned and listed: no test on main reaches it. F14 guards equal: F14/r20261001-02, 2 runs, both EQUAL to the `af7287ed22` baseline on all 40 verdict ids.
 - P6 PENDING: F10.
-- P7 PASS (local): one commit (v3 `97efa68e9b`) on main `af7287ed22`, correct author, `feat(anthropic):`, 0 workflow files touched, merge-tree clean (its own tree). Not pushed; the fork ref will be `staged/anthropic-context-editing`, pushed from v3.
+- P7 PASS (local): one commit (v3 `97efa68e9b`) on main `af7287ed22`, correct author, `feat(anthropic):`, 0 workflow files touched, merge-tree clean (its own tree). The fork ref `staged/anthropic-context-editing-v3` is published at `97efa68e9b`; the superseded unsuffixed ref remains unchanged (verified 2026-10-02).
 - P8 PENDING: receipts carry the full §9.2 field set and the specs are pre-registered by hash, but nothing is frozen (no write-once bundle, nothing in z0evals). superseded/ is excluded from any public freeze.
 - P9 PENDING: body rewritten for v3, with an AI disclosure ("written and run with Claude Code") and credit for #528 (prior art), #71302 (related) and #130645 (merged neighbour). Jargon lint and privacy scan: see [body]. The cache section is a placeholder until F10. Tone gate by a second reader.
 - P10 PENDING: no blind verifier on the v3 head `97efa68e9b` yet.
@@ -313,7 +313,7 @@ Known gaps in F10:
 
 ## Origin action (owner only)
 
-When F10 numbers exist and the #71302 interaction is resolved: fill the cache section of PR_BODY.md, re-run RED/GREEN and F14 on the newest main, push `staging/anthropic-context-editing-v3` (`97efa68e9b`) to the fork as `staged/anthropic-context-editing`, then run `gh pr create -R NousResearch/hermes-agent --head kvnloo:staged/anthropic-context-editing --title "feat(anthropic): opt-in server-side context editing (clear_tool_uses)" --body-file PR_BODY.md`. The factory does not run this command. If F10 is not funded, post the body's design and open questions on #526 as a decision request instead.
+When F10 numbers exist and the #71302 interaction is resolved: fill the cache section of PR_BODY.md, re-run RED/GREEN and F14 on the newest main, recheck that the existing fork ref `staged/anthropic-context-editing-v3` still resolves to the exact approved v3 head (currently `97efa68e9b`), then, only with owner authorization, run `gh pr create -R NousResearch/hermes-agent --head kvnloo:staged/anthropic-context-editing-v3 --title "feat(anthropic): opt-in server-side context editing (clear_tool_uses)" --body-file PR_BODY.md`. The factory does not run this command. If F10 is not funded, post the body's design and open questions on #526 as a decision request instead.
 
 ## Next steps
 
