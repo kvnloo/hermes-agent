@@ -1,6 +1,6 @@
 name: bend
-repo: https://github.com/kvnloo/hermes-agent
-sha: 014d33c366855ceb918e6c548cee9a2f12ee933b
+repo: https://github.com/kvnloo/bend-native
+sha: 7b891019204ee10b88e78ef142ec00c3db5fe36a
 description: >-
   Native Bend proof verification with an isolated input snapshot and private BendTT
   kernel. Adds bend_verify, hermes bend doctor/verify/replay, and a workflow skill.
@@ -10,8 +10,8 @@ description: >-
 maintainer: kvnloo
 tier: community
 category: tools
-version: "0.3.1"
-docs_url: https://github.com/kvnloo/hermes-agent/blob/014d33c366855ceb918e6c548cee9a2f12ee933b/README.md
+version: "0.3.2"
+docs_url: https://github.com/kvnloo/bend-native/blob/7b891019204ee10b88e78ef142ec00c3db5fe36a/README.md
 readme: true
 platforms: [linux, macos]
 capabilities:
