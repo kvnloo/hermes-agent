@@ -272,6 +272,31 @@ def test_worktree_add_from_remote_base_does_not_track(client, repo_with_remote, 
     assert probe.returncode != 0
 
 
+@pytest.mark.parametrize("auto_setup", ["always", "inherit"])
+def test_worktree_add_from_local_base_ignores_auto_tracking(client, repo_with_remote, auto_setup):
+    """A new worktree is standalone even when repository policy auto-tracks local bases."""
+    _git(repo_with_remote, "branch", "--set-upstream-to=origin/main", "main")
+    _git(repo_with_remote, "config", "branch.autoSetupMerge", auto_setup)
+    base_commit = _out(repo_with_remote, "rev-parse", "main")
+
+    response = client.post(
+        "/api/git/worktree/add",
+        json={"path": str(repo_with_remote), "branch": "fresh-local", "base": "main"},
+    )
+
+    assert response.status_code == 200
+    added = response.json()
+    assert added["branch"] == "fresh-local"
+    assert _out(added["path"], "symbolic-ref", "--short", "HEAD") == "fresh-local"
+    assert _out(added["path"], "rev-parse", "HEAD") == base_commit
+    assert _out(repo_with_remote, "rev-parse", "--abbrev-ref", "main@{upstream}") == "origin/main"
+    probe = subprocess.run(
+        ["git", "rev-parse", "--abbrev-ref", "fresh-local@{upstream}"],
+        cwd=repo_with_remote, capture_output=True, text=True,
+    )
+    assert probe.returncode != 0
+
+
 def _out(cwd, *args):
     return subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, text=True).stdout.strip()
 
