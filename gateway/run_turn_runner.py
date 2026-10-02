@@ -23,7 +23,7 @@ from agent.i18n import t
 from agent.interrupt_compat import _accepts_keyword
 from agent.replay_cleanup import canonicalize_replay_history
 from gateway.config import Platform
-from gateway.media_repair import repair_explicit_computer_use_media_paths
+from gateway.media_repair import repair_explicit_computer_use_media_paths, untagged_media_tags
 from gateway.platforms.base import BasePlatformAdapter
 from gateway.platforms.base_exec_approval import ea_default_reason_text
 from gateway.turn_context import TurnContext
@@ -1858,8 +1858,6 @@ class TurnRunner:
         a stale MEDIA: path from an earlier turn never rides a later reply; the history-path dedup is
         the secondary guard — and the sole one when mid-run compression shrank the list."""
         from gateway.run import _collect_auto_append_media_tags
-        if "MEDIA:" in final_response:
-            return final_response
         # Scan tool results for MEDIA:<path> tags that need to be delivered as native audio/file
         # attachments. The TTS tool embeds MEDIA: tags in its JSON response, but the model's final text
         # reply usually doesn't include them. We collect unique tags from tool results and append any that
@@ -1878,7 +1876,13 @@ class TurnRunner:
         )
         if not media_tags:
             return final_response
-        unique_tags = (["[[audio_as_voice]]"] if has_voice_directive else []) + list(dict.fromkeys(media_tags))
+        # An already-tagged voice file still needs its producer's delivery kind.
+        unique_tags = []
+        if has_voice_directive and "[[audio_as_voice]]" not in final_response:
+            unique_tags.append("[[audio_as_voice]]")
+        unique_tags.extend(dict.fromkeys(untagged_media_tags(media_tags, final_response)))
+        if not unique_tags:
+            return final_response
         return final_response + "\n" + "\n".join(unique_tags)
 
     def run_sync(self):
