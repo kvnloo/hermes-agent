@@ -881,6 +881,20 @@ def _extract_pruned_skill_names(text: str) -> list[str]:
     return list(dict.fromkeys(m.group(1) for m in _SKILL_PRUNED_MARKER_RE.finditer(text or "")))
 
 
+def _validated_pruned_skill_names(text: str) -> list[str]:
+    """Return pruned skill names that are currently loadable for this session."""
+    names = _extract_pruned_skill_names(text)
+    if not names:
+        return []
+    try:
+        from tools.skills_tool import _find_all_skills
+        available = {str(skill.get("name") or "") for skill in _find_all_skills()}
+    except Exception:
+        logger.debug("Could not validate pruned skill markers", exc_info=True)
+        return []
+    return [name for name in names if name in available]
+
+
 def _skill_view_failed(content: Any) -> bool:
     """True for a ``skill_view`` that loaded nothing: the raw failure payload or its ``[skill_view] … FAILED`` stub."""
     if not isinstance(content, str):
@@ -3745,7 +3759,7 @@ Summary generation was unavailable, so this is a best-effort deterministic fallb
         # Ghost-skill defense: LLMs paraphrase [SKILL_PRUNED] markers away; collect the names
         # deterministically BEFORE the call (from the turn LIST, not the bounded text), re-inject after.
         _pruned_skill_names = list(dict.fromkeys(
-            _collect_ghosted_skill_names(turns_to_summarize) + _extract_pruned_skill_names(self._previous_summary or "")
+            _collect_ghosted_skill_names(turns_to_summarize) + _validated_pruned_skill_names(self._previous_summary or "")
         ))[:_MAX_PRUNED_SKILL_MARKERS]
         # Lean mode even-samples oversized input (one bounded request, never a second).
         if getattr(self, "tail_mode", "lean") == "lean":
