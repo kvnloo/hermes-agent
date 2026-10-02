@@ -1,0 +1,21 @@
+name: bend
+repo: https://github.com/kvnloo/hermes-agent
+sha: 77d1837eceefd3fb6acf6bd9dc301d3820eb05a4
+description: >-
+  Native Bend proof verification with an isolated input snapshot and private BendTT
+  kernel. Adds bend_verify, hermes bend doctor/verify, and a workflow skill.
+  Requires installed Bend and Lean 4.34.0 on the Hermes host. PASS covers the
+  emitted book, not compiler/source equivalence or whole-task success. Local
+  imports only; no telemetry, project edits, or automatic install/update.
+maintainer: kvnloo
+tier: community
+category: tools
+version: "0.2.0"
+docs_url: https://github.com/kvnloo/hermes-agent/blob/77d1837eceefd3fb6acf6bd9dc301d3820eb05a4/README.md
+readme: true
+platforms: [linux, macos]
+capabilities:
+  provides_tools: [bend_verify]
+  provides_hooks: []
+  provides_middleware: []
+  requires_env: []
