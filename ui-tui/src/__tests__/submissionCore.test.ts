@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { isSessionBusyError, submitPrompt, type SubmitPromptDeps } from '../app/submissionCore.js'
 import { getUiState, patchUiState, resetUiState } from '../app/uiStore.js'
 import type { GatewayClient } from '../gatewayClient.js'
+import { queueItem } from '../hooks/useQueue.js'
 
 // A gateway double whose `input.detect_drop` resolution we control, so we can
 // observe UI state DURING the async gap — the exact window the queue-mode race
@@ -138,5 +139,80 @@ describe('submissionCore.isSessionBusyError', () => {
     expect(isSessionBusyError(new Error('waiting for model response'))).toBe(true)
     expect(isSessionBusyError(new Error('some other failure'))).toBe(false)
     expect(isSessionBusyError('not an error')).toBe(false)
+  })
+})
+
+describe('submissionCore.submitPrompt — retry preview contract', () => {
+  beforeEach(() => {
+    resetUiState()
+    patchUiState({ sid: 'sess-1' })
+  })
+
+  it.each(['composer expansion', 'resolved display override', 'detected file display'])(
+    'retains the submitted payload, visible preview and expander after a busy reply (%s)',
+    async route => {
+      const payload = 'first line\nmiddle payload\nlast line'
+      const preview = '[[ first line.. [3 lines] .. last line ]]'
+      const expand = vi.fn((value: string) => (value === preview ? payload : value))
+      const resolved = route === 'resolved display override'
+      const detected = route === 'detected file display'
+
+      const request = vi.fn(async (method: string) => {
+        if (method === 'input.detect_drop') {
+          return detected ? { matched: true, text: preview } : { matched: false }
+        }
+
+        throw new Error('session busy')
+      })
+
+      const queued: ReturnType<typeof queueItem>[] = []
+
+      const enqueue = vi.fn((text: string, display?: string, savedExpand?: (value: string) => string) => {
+        queued.push(queueItem(text, display, savedExpand))
+      })
+
+      const deps = makeDeps({ request } as unknown as GatewayClient, { enqueue, expand })
+
+      submitPrompt(detected ? 'document.txt' : resolved ? payload : preview, deps, true, resolved ? preview : undefined)
+
+      await vi.waitFor(() => expect(enqueue).toHaveBeenCalledTimes(1))
+
+      expect(request).toHaveBeenCalledWith('prompt.submit', { session_id: 'sess-1', text: payload })
+      expect(deps.appendMessage).toHaveBeenCalledWith({ role: 'user', text: preview })
+      expect(queued[0]).toMatchObject({ display: preview, text: payload })
+      // Forward the supplied function unchanged; do not reconstruct composer state.
+      expect(queued[0]!.expand).toBe(expand)
+      expect(expand).toHaveBeenCalledTimes(1)
+      expect(getUiState()).toMatchObject({ busy: true, status: 'queued for next turn' })
+    }
+  )
+
+  it.each(['success', 'other error'])('does not queue ordinary %s replies', async reply => {
+    const request = vi.fn(async (method: string) => {
+      if (method === 'input.detect_drop') {
+        return { matched: false }
+      }
+
+      if (reply === 'other error') {
+        throw new Error('gateway unavailable')
+      }
+
+      return { status: 'streaming' }
+    })
+
+    const deps = makeDeps({ request } as unknown as GatewayClient)
+
+    submitPrompt('ordinary text', deps)
+    await vi.waitFor(() =>
+      expect(request).toHaveBeenCalledWith('prompt.submit', { session_id: 'sess-1', text: 'ordinary text' })
+    )
+
+    expect(deps.enqueue).not.toHaveBeenCalled()
+    expect(deps.appendMessage).toHaveBeenCalledWith({ role: 'user', text: 'ordinary text' })
+    expect(getUiState().busy).toBe(reply === 'success')
+
+    if (reply === 'other error') {
+      expect(deps.sys).toHaveBeenCalledWith('error: gateway unavailable')
+    }
   })
 })
