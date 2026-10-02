@@ -8,6 +8,10 @@ candidate must get the same recovery as the primary request.
 """
 from types import SimpleNamespace
 from unittest.mock import MagicMock
+from copy import deepcopy
+import json
+
+import pytest
 
 from agent.auxiliary_client import (
     _call_fallback_candidate_sync,
@@ -92,6 +96,60 @@ def test_google_payload_unknown_name_rejection_strips_reasoning_field():
     assert _is_reasoning_field_rejection(
         _Bad400("Unknown name 'reasoning_effort': Cannot find field.")
     )
+
+
+@pytest.mark.parametrize("path", ["primary", "fallback"])
+def test_google_rejections_recover_with_only_rejected_wire_fields_removed(path, record_property):
+    """Exercise the real ladder, including nested extra_body, not just its predicate."""
+    client = MagicMock(base_url="https://api.example/v1")
+    sent = []
+    messages = [{"role": "user", "content": "fixture request"}]
+    extra = {"reasoning": {"enabled": False}, "fixture_option": "preserve"}
+
+    def create(**kwargs):
+        sent.append(deepcopy(kwargs))
+        body = {**kwargs, **(kwargs.get("extra_body") or {})}
+        for field in ("reasoning", "temperature"):
+            if field in body:
+                raise _Bad400(f'Invalid JSON payload received. Unknown name "{field}": Cannot find field.')
+        return _ok()
+
+    client.chat.completions.create.side_effect = create
+    if path == "primary":
+        kwargs = {"model": "fixture-model", "messages": messages, "temperature": 0.3,
+                  "max_tokens": 16, "extra_body": deepcopy(extra)}
+        route = _LadderRoute(**{**dict.fromkeys(_LadderRoute._fields), "client": client,
+                                "task": "title_generation", "tag": "", "async_mode": False,
+                                "base_info": "", "resolved_provider": ""})
+        with pytest.raises(_Bad400) as first:
+            client.chat.completions.create(**kwargs)
+        response, error, _ = _drive_ladder(
+            _ladder_parameter_rungs(first.value, route, kwargs, 16),
+            lambda step: step.args[0].chat.completions.create(**step.args[1]))
+        assert error is None
+    else:
+        response = _call_fallback_candidate_sync(
+            client, "fixture-model", "fallback_chain[0](openai)", task="title_generation",
+            messages=messages, temperature=0.3, max_tokens=16, tools=None,
+            effective_timeout=30.0, effective_extra_body=deepcopy(extra), reasoning_config=None,
+        )
+
+    assert response.choices[0].message.content == "ok"
+    bodies = [{**k, **(k.get("extra_body") or {})} for k in sent]
+    assert [("reasoning" in b, "temperature" in b) for b in bodies] == [
+        (True, True), (False, True), (False, False)]
+    assert all(b["messages"] == messages and b["model"] == "fixture-model" for b in bodies)
+    cap_keys = {"max_tokens", "max_completion_tokens"}
+    initial_cap = {k: v for k, v in bodies[0].items() if k in cap_keys}
+    if path == "primary":
+        assert initial_cap == {"max_tokens": 16}
+    assert all({k: v for k, v in b.items() if k in cap_keys} == initial_cap for b in bodies)
+    assert all(b["fixture_option"] == "preserve" for b in bodies)
+    assert extra == {"reasoning": {"enabled": False}, "fixture_option": "preserve"}
+    wire_keys = {"model", "messages", "temperature", "max_tokens", "max_completion_tokens", "extra_body"}
+    record_property("wire_recovery", json.dumps({
+        "path": path, "attempts": [{k: v for k, v in call.items() if k in wire_keys} for call in sent],
+    }, sort_keys=True))
 
 
 def test_structured_param_rejection_strips_reasoning_effort_on_retry():
