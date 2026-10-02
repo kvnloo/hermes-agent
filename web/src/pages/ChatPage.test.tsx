@@ -529,6 +529,13 @@ describe("ChatPage", () => {
     );
     expect(notice()).not.toBeNull();
 
+    // Real resume replay can begin with an erase-only binary frame. The
+    // sanitizer writes no visible content, so that frame must not end the wait.
+    await act(async () =>
+      socket.onmessage?.({ data: new TextEncoder().encode("\x1b[2K").buffer }),
+    );
+    expect(notice(), "empty sanitized PTY output must retain the wait notice").not.toBeNull();
+
     // First real PTY output ends the blank window.
     await act(async () =>
       socket.onmessage?.({ data: new TextEncoder().encode("history\r\n").buffer }),
