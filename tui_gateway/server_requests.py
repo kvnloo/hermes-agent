@@ -326,11 +326,20 @@ def cancel(sid: str | None = None, reason: str = "interrupted") -> int:
                 req.result, req.answered = {"answers": dict(req.locked), "outcome": "cancelled"}, True
             else:
                 req.result, req.answered = None, False
+    notification_error: Exception | None = None
     for req in targets:
         if req.on_result is not None:
             req.on_result(None)
         req.event.set()
-        _emit_cancel(req, reason)
+        try:
+            _emit_cancel(req, reason)
+        except Exception as exc:
+            # All targets have already left _open: finish waking their owners even
+            # when one transport write fails, then preserve the first I/O error.
+            if notification_error is None:
+                notification_error = exc
+    if notification_error is not None:
+        raise notification_error
     return len(targets)
 
 
