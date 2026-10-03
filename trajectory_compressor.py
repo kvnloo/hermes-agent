@@ -191,6 +191,7 @@ class AggregateMetrics:
     trajectories_compressed: int = 0
     trajectories_skipped_under_target: int = 0
     trajectories_still_over_limit: int = 0
+    trajectories_dropped_over_limit: int = 0
     trajectories_failed: int = 0
     total_tokens_before: int = 0
     total_tokens_after: int = 0
@@ -230,7 +231,9 @@ class AggregateMetrics:
         return {
             "summary": {"total_trajectories": self.total_trajectories, "trajectories_compressed": self.trajectories_compressed,
                         "trajectories_skipped_under_target": self.trajectories_skipped_under_target,
-                        "trajectories_still_over_limit": self.trajectories_still_over_limit, "trajectories_failed": self.trajectories_failed,
+                        "trajectories_still_over_limit": self.trajectories_still_over_limit,
+                        "trajectories_dropped_over_limit": self.trajectories_dropped_over_limit,
+                        "trajectories_failed": self.trajectories_failed,
                         "compression_rate": round(self.trajectories_compressed / max(self.total_trajectories, 1), 4)},
             "tokens": {"total_before": self.total_tokens_before, "total_after": self.total_tokens_after, "total_saved": self.total_tokens_saved,
                        "overall_compression_ratio": round(self.total_tokens_after / max(self.total_tokens_before, 1), 4)},
@@ -659,11 +662,17 @@ Write only the summary, starting with "[CONTEXT SUMMARY]:" prefix."""
         output_dir.mkdir(parents=True, exist_ok=True)
         results = {f: [] for f in jsonl_files}
         for (file_path, _, _), outcome in zip(all_entries, outcomes):
-            if outcome is not None:
-                results[file_path].append(outcome[0])
+            if outcome is None:
+                continue
+            processed_entry, metrics = outcome
+            if not self.config.save_over_limit and metrics.still_over_limit:
+                self.aggregate_metrics.trajectories_dropped_over_limit += 1
+                continue
+            results[file_path].append(processed_entry)
         for file_path in jsonl_files:
             _write_jsonl(output_dir / file_path.name, results[file_path])
 
+        # Record end time
         self.aggregate_metrics.processing_end_time = datetime.now().isoformat()
         self.aggregate_metrics.processing_duration_seconds = time.time() - start_time
         self._print_summary()
@@ -688,6 +697,7 @@ Write only the summary, starting with "[CONTEXT SUMMARY]:" prefix."""
                 f"║{'':4}├─ Compressed:          {compressed:>10,}  ({pct(compressed):>5.1f}%){' '*18}║",
                 f"║{'':4}├─ Skipped (under limit):{s['trajectories_skipped_under_target']:>9,}  ({pct(s['trajectories_skipped_under_target']):>5.1f}%){' '*18}║",
                 f"║{'':4}├─ Still over limit:    {s['trajectories_still_over_limit']:>10,}  ({pct(s['trajectories_still_over_limit']):>5.1f}%){' '*18}║",
+                f"║{'':4}├─ Dropped (over limit): {s['trajectories_dropped_over_limit']:>9,}{' '*32}║",
                 f"║{'':4}└─ Failed:              {s['trajectories_failed']:>10,}{' '*32}║",
             ]),
             ("🔢 TOKENS", 60, [
