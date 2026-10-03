@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -11,7 +11,8 @@ import { $connectionsRegistry } from '@/store/connection-registry-state'
 import { $sidebarMessagingOpenIds, setSidebarAgentsGrouped, setSidebarGrouping } from '@/store/layout'
 import { $activeGatewayProfile, $profiles, setShowAllProfiles } from '@/store/profile'
 import { $projectScope, ALL_PROJECTS } from '@/store/project-scope'
-import { $projectTree } from '@/store/projects'
+import * as projectsStore from '@/store/projects'
+import { $projects, $projectTree } from '@/store/projects'
 import {
   $currentCwd,
   $messagingSessions,
@@ -445,4 +446,96 @@ describe('ChatSidebar messaging owners', () => {
     expect(screen.queryByText('work-1')).toBeNull()
     expect(within(row('default-1')).queryByRole('img', { name: /^Profile:/ })).toBeNull()
   })
+})
+
+it('keeps lineage tombstones wired through sidebar Show all counts and hydrated rows', async () => {
+  const id = '/repos/lineage-fixture'
+
+  const live = Array.from({ length: 4 }, (_, index) =>
+    makeSessionInfo({
+      id: `lineage-live-${index}`,
+      title: `Visible lineage chat ${index}`,
+      cwd: id,
+      profile: 'default',
+      source: 'cli',
+      last_active: 500 - index,
+      started_at: 1
+    })
+  )
+
+  const removed = makeSessionInfo({
+    id: 'lineage-mid',
+    title: 'Deleted compressed conversation',
+    cwd: id,
+    profile: 'default',
+    source: 'cli',
+    _lineage_root_id: 'lineage-root',
+    last_active: 600,
+    started_at: 1
+  })
+
+  const all = [removed, ...live]
+
+  const project = {
+    id,
+    label: 'Lineage fixture',
+    path: id,
+    repos: [],
+    sessionCount: all.length,
+    previewSessions: all.slice(0, 3)
+  }
+
+  const fetch = vi.spyOn(projectsStore, 'fetchProjectSessions').mockResolvedValue({
+    ...project,
+    repos: [{ id, path: id, groups: [{ id, path: id, sessions: all }] }]
+  } as unknown as Awaited<ReturnType<typeof projectsStore.fetchProjectSessions>>)
+
+  const profile = vi.spyOn(projectsStore, 'projectProfile').mockReturnValue('default')
+
+  try {
+    setShowAllProfiles(false)
+    setSidebarGrouping('project')
+    $projectScope.set(ALL_PROJECTS)
+    $projects.set([
+      {
+        id,
+        name: project.label,
+        slug: 'lineage',
+        description: null,
+        icon: null,
+        color: null,
+        board_slug: null,
+        primary_path: id,
+        archived: false,
+        created_at: 1,
+        folders: [{ path: id, label: null, is_primary: true, added_at: 1 }]
+      }
+    ])
+    $projectTree.set([project])
+    $sessions.set(all)
+    $removedSessionIds.set(new Set(['lineage-root', 'lineage-tip']))
+    renderSidebar('/', 'chat')
+    expect(screen.queryByText('Deleted compressed conversation')).toBeNull()
+    const showAll = screen.getByRole('button', { name: /Show all \d+ sessions/ })
+    const showAllLabel = showAll.textContent
+    fireEvent.click(showAll)
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith(id, { supersedable: false }))
+    await waitFor(() => expect(screen.getByText('Visible lineage chat 3')).toBeTruthy())
+    expect(screen.queryByText('Deleted compressed conversation')).toBeNull()
+    expect(showAllLabel).toBe('Show all 4 sessions')
+
+    for (const row of live) {
+      expect(screen.getAllByText(row.title!)).toHaveLength(1)
+    }
+  } finally {
+    cleanup()
+    fetch.mockRestore()
+    profile.mockRestore()
+    $projects.set([])
+    $projectTree.set([])
+    $sessions.set([])
+    $removedSessionIds.set(new Set())
+    $projectScope.set(ALL_PROJECTS)
+    setSidebarAgentsGrouped(false)
+  }
 })
