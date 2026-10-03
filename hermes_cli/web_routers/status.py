@@ -794,13 +794,21 @@ async def run_debug_share_endpoint(body: DebugShareRequest | None = None,
                                    profile: Optional[str] = None):
     """Upload a redacted debug report + full logs and return the paste URLs. Synchronous,
     unlike the other diagnostics actions: the point is the shareable URLs, returned as a
-    structured payload the dashboard renders as copyable links."""
+    structured payload the dashboard renders as copyable links.
+
+    Retention is service-aware: paste.rs pastes are swept after 6 hours, but if
+    paste.rs is unreachable the upload falls back to dpaste.com, which keeps
+    pastes for the requested ``expiry`` days (default 1) and cannot delete them
+    via API. ``auto_delete_seconds`` reflects the actual worst-case retention
+    and ``dpaste_fallback`` flags the fallback so the UI can say so."""
     from hermes_cli.debug import build_debug_share
     from hermes_cli.debug_redaction import redact_debug_support_text
     req = body or DebugShareRequest()
     try:
         result = await config_scoped_to_thread(profile, lambda: build_debug_share(
-            log_lines=max(1, min(int(req.lines), 5000)), redact=bool(req.redact)))
+            log_lines=max(1, min(int(req.lines), 5000)),
+            expiry=max(1, min(int(req.expiry), 365)),
+            redact=bool(req.redact)))
     except HTTPException:
         raise  # an unknown ?profile= is the scope's 404, not a failed share
     except RuntimeError as exc:
@@ -813,7 +821,8 @@ async def run_debug_share_endpoint(body: DebugShareRequest | None = None,
         raise HTTPException(status_code=500, detail=f"Failed: {error}")
 
     return {"ok": True, "urls": result.urls, "failures": result.failures,
-            "redacted": result.redacted, "auto_delete_seconds": result.auto_delete_seconds}
+            "redacted": result.redacted, "auto_delete_seconds": result.auto_delete_seconds,
+            "dpaste_fallback": bool(result.dpaste_fallback)}
 
 
 @logs_router.get("/api/logs")

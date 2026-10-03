@@ -436,6 +436,8 @@ class DebugShareResult:
     redacted: bool  # whether force-mode redaction was applied before upload
     auto_delete_seconds: int  # how long until the pastes auto-delete (paste.rs only;
     # dpaste.com fallbacks outlive this and cannot be deleted)
+    dpaste_fallback: bool = False  # True if any upload fell back to dpaste.com (those
+    # pastes cannot be deleted via API)
     report: str = ""  # the summary report text (kept for local fallback)
 
 
@@ -447,6 +449,10 @@ def build_debug_share(
     network I/O — callers inside an event loop must run it in a worker thread.
     """
     _best_effort_sweep_expired_pastes()
+    # Clamp to dpaste.com's server-enforced [1, 365] range so a CLI `--expire 0`
+    # degrades to the minimum rather than raising, and the dashboard's retention
+    # knob never 400s the upload.
+    expiry = max(1, min(int(expiry), 365))
     bundle = collect_share_bundle(log_lines=log_lines, redact=redact)
     if redact:
         logger.info(
@@ -475,8 +481,19 @@ def build_debug_share(
         except Exception as exc:
             failures.append(f"{label}: {redact_debug_support_text(exc)}")
     _schedule_auto_delete(list(urls.values()))
+    # Effective retention: paste.rs pastes are swept at _AUTO_DELETE_SECONDS;
+    # dpaste.com fallback pastes live `expiry` days server-side. Report the
+    # longest-lived paste's retention so callers never understate the
+    # worst-case exposure.
+    any_paste_rs = any(_extract_paste_id(u) for u in urls.values())
+    any_dpaste = any(_is_dpaste_url(u) for u in urls.values())
+    auto_delete_seconds = max(
+        _AUTO_DELETE_SECONDS if any_paste_rs else 0,
+        (expiry * 86400) if any_dpaste else 0,
+    )
     return DebugShareResult(urls=urls, failures=failures, redacted=redact,
-                            auto_delete_seconds=_AUTO_DELETE_SECONDS, report=report)
+                            auto_delete_seconds=auto_delete_seconds,
+                            dpaste_fallback=any_dpaste, report=report)
 
 
 def _confirm_upload(args) -> bool:
@@ -546,16 +563,31 @@ def run_debug_share(args):
         print(f"\n  (failed to upload: {', '.join(result.failures)})")
     dpaste_urls = [u for u in result.urls.values() if _is_dpaste_url(u)]
     if dpaste_urls:
-        print(f"\n⏱  paste.rs pastes will auto-delete in "
-              f"{result.auto_delete_seconds // 3600} hours.")
-        print(f"⚠️  {len(dpaste_urls)} of {len(result.urls)} upload(s) fell back to "
-              f"dpaste.com: those pastes stay public for {expiry} day(s) and CANNOT be "
-              "deleted with `hermes debug delete`.\n"
-              "\nShare these links with the Hermes team for support.")
+        # dpaste.com fallback fired: those pastes stay public for the (clamped)
+        # expiry window and cannot be deleted via API (anonymous posts have no
+        # owner token). Be honest — do not promise the 6-hour sweep or the
+        # `hermes debug delete` hint for these. Derive the displayed retention
+        # from result.auto_delete_seconds (the clamped, authoritative value), not
+        # the raw --expire arg, so a sub-minimum like --expire 0 reports the
+        # effective 1-day floor rather than the impossible "0 day(s)".
+        effective_days = result.auto_delete_seconds // 86400 or 1
+        print(
+            f"\n⚠️  {len(dpaste_urls)} of {len(result.urls)} upload(s) fell back "
+            f"to dpaste.com: those pastes stay public for {effective_days} day(s) "
+            "and cannot be deleted with `hermes debug delete`."
+        )
+        if any(_extract_paste_id(u) for u in result.urls.values()):
+            print(
+                f"⏱  paste.rs pastes will auto-delete in "
+                f"{_AUTO_DELETE_SECONDS // 3600} hours."
+            )
     else:
-        print(f"\n⏱  Pastes will auto-delete in {result.auto_delete_seconds // 3600} hours.\n"
-              "To delete now:  hermes debug delete <url>\n"
-              "\nShare these links with the Hermes team for support.")
+        hours = result.auto_delete_seconds // 3600
+        print(f"\n⏱  Pastes will auto-delete in {hours} hours.")
+        # Manual delete fallback
+        print("To delete now:  hermes debug delete <url>")
+
+    print("\nShare these links with the Hermes team for support.")
 
 
 _NOUS_PRIVACY_NOTICE = """\
