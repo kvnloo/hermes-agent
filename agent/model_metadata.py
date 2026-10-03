@@ -2627,44 +2627,52 @@ def estimate_request_tokens_rough(
     return total
 
 
-# Keyed by ``id(tools)``; bounded, oldest-first eviction. Repeated ``str(tools)`` on
-# large schemas stalls GUI event loops under GIL pressure.
-_TOOLS_TOKENS_CACHE: dict[int, Tuple[int, str, str, int]] = {}
+# Per-tool-schema token-estimate memo keyed by the same exact value fingerprint as
+# message estimates. String leaves are pinned in each row, so their ids cannot be
+# recycled while cached; nested dict/list mutations produce a different key.
+_TOOLS_TOKENS_CACHE: Dict[Any, Tuple[list, int]] = {}
 _TOOLS_TOKENS_CACHE_MAX = 256
-
-
-def _tool_name_for_cache(tool: Any) -> str:
-    if not isinstance(tool, dict):
-        return ""
-    fn = tool.get("function")
-    name = fn.get("name") if isinstance(fn, dict) else None
-    name = name if isinstance(name, str) else tool.get("name")
-    return name if isinstance(name, str) else ""
 
 
 def _estimate_tools_tokens_rough(tools: List[Dict[str, Any]]) -> int:
     if not tools:
         return 0
-    key = id(tools)
-    signature = (len(tools), _tool_name_for_cache(tools[0]), _tool_name_for_cache(tools[-1]))
+
+    def _compute() -> int:
+        # Sum the major schema fields (descriptions + parameters dominate).
+        total_chars = 0
+        for tool in tools:
+            if not isinstance(tool, dict):
+                continue
+            fn = tool.get("function")
+            src = fn if isinstance(fn, dict) else tool
+            params = src.get("parameters") or {}
+            total_chars += sum(
+                len(v)
+                for v in (src.get("name") or "", src.get("description") or "")
+                if isinstance(v, str)
+            )
+            try:  # JSON is closer to wire size than repr()
+                total_chars += len(json.dumps(params, ensure_ascii=False, separators=(",", ":")))
+            except Exception:
+                total_chars += len(str(params))
+        return (total_chars + 3) // 4
+
+    try:
+        pins: list = []
+        key = _msg_fingerprint(tools, pins)
+        hash(key)
+    except Exception:
+        # Preserve support for non-JSON-ish custom schemas without risking a
+        # stale memo entry when the structure cannot be fingerprinted safely.
+        return _compute()
+
     cached = _TOOLS_TOKENS_CACHE.get(key)
-    if cached is not None and cached[:3] == signature:
-        return cached[3]
-    # Sum the major schema fields (descriptions + parameters dominate).
-    total_chars = 0
-    for tool in tools:
-        if not isinstance(tool, dict):
-            continue
-        fn = tool.get("function")
-        src = fn if isinstance(fn, dict) else tool
-        params = src.get("parameters") or {}
-        total_chars += sum(len(v) for v in (src.get("name") or "", src.get("description") or "") if isinstance(v, str))
-        try:  # JSON is closer to wire size than repr()
-            total_chars += len(json.dumps(params, ensure_ascii=False, separators=(",", ":")))
-        except Exception:
-            total_chars += len(str(params))
-    tokens = (total_chars + 3) // 4
+    if cached is not None:
+        return cached[1]
+
+    tokens = _compute()
     if len(_TOOLS_TOKENS_CACHE) >= _TOOLS_TOKENS_CACHE_MAX:
         _TOOLS_TOKENS_CACHE.pop(next(iter(_TOOLS_TOKENS_CACHE)), None)
-    _TOOLS_TOKENS_CACHE[key] = (*signature, tokens)
+    _TOOLS_TOKENS_CACHE[key] = (pins, tokens)
     return tokens
