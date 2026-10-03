@@ -1,0 +1,30 @@
+[
+  {
+    "lane": "receipt-profile-retirement",
+    "publication_sha": "751011c036644e4932a5852901ea1b46ef1a5890",
+    "tree": "e099766fd3f50331fc97a363938f362ead4a685a",
+    "parents": [
+      "251c0d62dc892034f3a274dee0b8eadd07ffc2eb"
+    ],
+    "branch": "downstream/20261003-reviewed-receipt-profile-retirement"
+  },
+  {
+    "lane": "inbound-reply-consumer",
+    "publication_sha": "b632ef7ae4d51dd782280b4e2826a2a5f2efd821",
+    "tree": "80520b585878ecda2ce7b171ea9660d7fcf2e1d7",
+    "parents": [
+      "68a913b9b453a5eb02b2e98fc9e0b849f0e284bf"
+    ],
+    "branch": "downstream/20261003-reviewed-inbound-reply-consumer"
+  },
+  {
+    "lane": "current-main-cancellation",
+    "publication_sha": "1a523b7df2ba4731a5d9ae0aa06b0f51976d977d",
+    "tree": "9fe5fea80cd9bc82935fdcd7480c5bc3e0af9242",
+    "parents": [
+      "833b6ad1e84c5dc503c0c45a5a651bc24833dedb"
+    ],
+    "validation_baseline": "bd0affe5e5f723579df8902852f5d0c47795f355",
+    "branch": "downstream/20261003-reviewed-current-main-cancellation"
+  }
+]
