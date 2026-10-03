@@ -101,7 +101,19 @@ class _InputMixin:
         button_norm = (button or "left").lower()
         if button_norm not in {"left", "right", "middle"}:
             return _refuse("click", f"unknown button {button!r} — expected left, right, middle.")
-        tool, args["button"] = ("double_click" if click_count == 2 else "click"), button_norm
+        tool = "double_click" if click_count == 2 else "click"
+        if tool == "click" or self._session.supports_input_property(tool, "button"):
+            args["button"] = button_norm
+        elif button_norm != "left":
+            # Newer driver schemas may expose double_click as left-button-only
+            # and reject the click tool's button field. Preserve semantics:
+            # omit the redundant default-left field, but never silently turn
+            # a requested right/middle double-click into a left double-click.
+            return _refuse(
+                tool,
+                f"{tool} does not accept button={button_norm!r} on this driver.",
+                code="button_unsupported",
+            )
         refusal = self._pointer_args(tool, args, (
             ("element_index click", {"element_index": element} if element is not None else None),
             ("coordinate click", {"x": x, "y": y} if x is not None and y is not None else None),
