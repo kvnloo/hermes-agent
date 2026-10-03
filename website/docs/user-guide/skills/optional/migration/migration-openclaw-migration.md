@@ -104,11 +104,8 @@ With `--migrate-secrets`, it will also import a small allowlisted set of Hermes-
 
 Hermes CLI supports the `clarify` tool for interactive prompts, but it is limited to:
 
-- one choice at a time
 - up to 4 predefined choices
 - an automatic `Other` free-text option
-
-It does **not** support true multi-select checkboxes in a single prompt.
 
 For every `clarify` call:
 
