@@ -920,3 +920,40 @@ def test_component_rotation_reaches_real_files(
         if routed:
             for launch_file in (hermes_home / "logs").glob(filename + "*"):
                 assert "rotation-witness-" not in launch_file.read_text(encoding="utf-8-sig")
+
+
+@pytest.mark.parametrize("mode,logger_name", [
+    ("gateway", "gateway.rotation_threshold"),
+    ("gui", "hermes_cli.web_server.rotation_threshold"),
+])
+@pytest.mark.parametrize("routed", [False, True], ids=["launch", "profile"])
+def test_explicit_rotation_size_wins_at_real_threshold(
+        hermes_home, tmp_path, mode, logger_name, routed):
+    """Two records fit the explicit 2 MiB limit but exceed config's 1 MiB."""
+    from hermes_constants import reset_hermes_home_override, set_hermes_home_override
+
+    (hermes_home / "config.yaml").write_text(
+        "logging:\n  max_size_mb: 1\n  backup_count: 4\n", encoding="utf-8")
+    hermes_logging.setup_logging(
+        hermes_home=hermes_home, mode=mode, max_size_mb=2, backup_count=4)
+    destination = hermes_home
+    if routed:
+        destination = tmp_path / "threshold-profile"
+        destination.mkdir()
+        assert hermes_logging.enable_profile_log_routing([hermes_home, destination])
+    token = set_hermes_home_override(destination)
+    try:
+        for index in range(2):
+            logging.getLogger(logger_name).warning(
+                "threshold-witness-%d %s", index, "x" * 600000)
+    finally:
+        reset_hermes_home_override(token)
+    hermes_logging.flush_log_queue()
+
+    for filename in ("agent.log", "errors.log", mode + ".log"):
+        files = list((destination / "logs").glob(filename + "*"))
+        assert [p.name for p in files] == [filename], (filename, [p.name for p in files])
+        assert 1024 * 1024 < files[0].stat().st_size < 2 * 1024 * 1024
+        content = files[0].read_text(encoding="utf-8-sig")
+        assert content.count("threshold-witness-") == 2
+        assert "threshold-witness-0 " in content and "threshold-witness-1 " in content
