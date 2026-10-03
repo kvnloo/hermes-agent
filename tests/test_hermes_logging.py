@@ -869,3 +869,54 @@ class TestLineBufferPipedStdout:
         # setup_logging runs per AIAgent build: a second call must not re-flush/reconfigure.
         hermes_logging.setup_logging(hermes_home=tmp_path, force=True)
         stream.reconfigure.assert_called_once_with(line_buffering=True)
+
+
+@pytest.mark.parametrize("mode,logger_name", [
+    ("gateway", "gateway.rotation_consumer"),
+    ("gui", "hermes_cli.web_server.rotation_consumer"),
+])
+@pytest.mark.parametrize("routed", [False, True], ids=["launch", "profile"])
+@pytest.mark.parametrize("explicit", [False, True], ids=["config", "parameter-precedence"])
+def test_component_rotation_reaches_real_files(
+        hermes_home, tmp_path, mode, logger_name, routed, explicit):
+    """Config survives the queue and profile router through real rollover/retention.
+
+    Upstream fix: strzhao, #125464. This consumer test extends its constructor
+    assertions without replacing the real queue, formatter, or file handlers.
+    """
+    from hermes_constants import reset_hermes_home_override, set_hermes_home_override
+
+    (hermes_home / "config.yaml").write_text(
+        "logging:\n  max_size_mb: 1\n  backup_count: 4\n", encoding="utf-8")
+    params = {"max_size_mb": 2, "backup_count": 2} if explicit else {}
+    hermes_logging.setup_logging(hermes_home=hermes_home, mode=mode, **params)
+    destination = hermes_home
+    if routed:
+        destination = tmp_path / "rotation-profile"
+        destination.mkdir()
+        assert hermes_logging.enable_profile_log_routing([hermes_home, destination])
+    token = set_hermes_home_override(destination)
+    try:
+        # Each record exceeds half the requested limit. Every subsequent
+        # record therefore rolls, without mutating maxBytes to force rotation.
+        padding = "x" * (1200000 if explicit else 600000)
+        for index in range(7):
+            logging.getLogger(logger_name).warning("rotation-witness-%d %s", index, padding)
+    finally:
+        reset_hermes_home_override(token)
+    hermes_logging.flush_log_queue()
+
+    backups = 2 if explicit else 4
+    for filename in ("agent.log", "errors.log", mode + ".log"):
+        files = sorted((destination / "logs").glob(filename + "*"))
+        assert {p.name for p in files} == {filename} | {
+            filename + "." + str(i) for i in range(1, backups + 1)
+        }, (filename, [p.name for p in files])
+        for age in range(backups + 1):
+            path = destination / "logs" / (filename + ("." + str(age) if age else ""))
+            content = path.read_text(encoding="utf-8-sig")
+            assert content.count("rotation-witness-") == 1
+            assert "rotation-witness-%d " % (6 - age) in content
+        if routed:
+            for launch_file in (hermes_home / "logs").glob(filename + "*"):
+                assert "rotation-witness-" not in launch_file.read_text(encoding="utf-8-sig")
