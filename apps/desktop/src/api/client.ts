@@ -157,7 +157,7 @@ export class HermesGateway extends JsonRpcGatewayClient {
     try {
       const result = await super.request<T>(wireMethod, prepared, timeoutMs, signal)
 
-      const settled = this.protocol.settle(method, prepared, this.protocol.result(method, prepared, result), (m, p) => this.request(m, p)) as T
+      const settled = this.protocol.settle(method, prepared, this.protocol.result(method, prepared, result), (m, p) => this.request(m, p, timeoutMs, signal)) as T
 
       if (method === 'session.resume' || method === 'session.create' || method === 'session.activate') {
         // Prompts still open on the authority re-deliver like `open_requests` after a reconnect.
