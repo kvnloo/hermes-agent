@@ -78,14 +78,14 @@ def run_process(
         stdout, stderr = process.communicate(timeout=timeout)
     except subprocess.TimeoutExpired as exc:
         try:
-            os.killpg(process.pid, signal.SIGTERM)
+            os.killpg(process.pid, signal.SIGTERM)  # windows-footgun: ok -- POSIX-only branch above
         except ProcessLookupError:
             pass
         try:
             stdout, stderr = process.communicate(timeout=1)
         except subprocess.TimeoutExpired:
             try:
-                os.killpg(process.pid, signal.SIGKILL)
+                os.killpg(process.pid, signal.SIGKILL)  # windows-footgun: ok -- POSIX-only branch above
             except ProcessLookupError:
                 pass
             stdout, stderr = process.communicate()
