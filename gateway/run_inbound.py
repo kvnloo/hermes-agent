@@ -643,7 +643,7 @@ class GatewayInboundMixin:
             if _cmd_def_inner.name == "context":
                 return True, await self._handle_context_command(event)
             # Slash access control mirrors the cold-path gate so non-admins can't bypass gating
-            # just because an agent is busy. /help and /whoami are the always-allowed floor.
+            # just because an agent is busy. /status, /help, and /whoami are the always-allowed floor.
             _denied = self._check_slash_access(source, _cmd_def_inner.name)
             if _denied is not None:
                 return True, _denied
@@ -877,7 +877,7 @@ class GatewayInboundMixin:
 
         # Per-platform slash access control: only active when the operator set ``allow_admin_from``
         # for the source's scope; then non-admins get ``user_allowed_commands`` plus the
-        # /help, /whoami floor. Plain chat is never gated.
+        # /help, /whoami, /status floor. Plain chat is never gated.
         _denied = self._check_slash_access(source, canonical)
         if _denied is not None:
             return True, _denied, command, canonical
