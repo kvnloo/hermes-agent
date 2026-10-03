@@ -185,3 +185,48 @@ def test_delivery_queue_fences_unreadable_fingerprint_owner(monkeypatch, tmp_pat
     row = queue.get_status("exec-unreadable")
     assert row is not None
     assert row["status"] == "unknown"
+
+
+def test_uncertain_recovery_preserves_owner_finish_without_retrying_delivery(monkeypatch, tmp_path):
+    """An uncertain probe must not discard the owner's later durable outcome."""
+    import gateway.status as status
+
+    executions = _point_ledger(monkeypatch, tmp_path)
+    queue = _point_delivery(monkeypatch, tmp_path)
+    monkeypatch.setattr(executions, "_process_start_time", lambda _pid: None)
+    monkeypatch.setattr(queue, "_process_start_time", lambda _pid: None)
+    monkeypatch.setattr(status, "_pid_exists", lambda _pid: True)
+    # Instrument identity only; no real process/procfs assumptions enter this scenario.
+    monkeypatch.setattr(executions.os, "getpid", lambda: 101)
+    record = executions.create_execution("finish-after-uncertain-recovery", source="builtin")
+    execution_id = record["id"]
+    assert record["process_started_at"] is None
+    assert executions.mark_execution_running(execution_id) is not None
+    queue.enqueue(execution_id, {"id": record["job_id"]}, "fixture result")
+    delivery = queue.claim_next()
+    assert delivery is not None and delivery["owner_started_at"] is None
+
+    with monkeypatch.context() as replacement:
+        replacement.setattr(executions, "_PROCESS_ID", "replacement-gateway")
+        replacement.setattr(queue, "_PROCESS_ID", "replacement-gateway")
+        replacement.setattr(executions.os, "getpid", lambda: 202)
+        assert executions.recover_interrupted_executions() == 0
+        assert queue.recover_abandoned() == 1
+        assert queue.get_status(execution_id)["status"] == "unknown"
+
+    # Resume the original owning identity through the real terminal writer.
+    finished = executions.finish_execution(execution_id, success=True, delivery_outcome="unknown")
+    assert finished is not None
+    persisted = executions.get_execution(execution_id)
+    assert persisted["status"] == "completed"
+    assert persisted["finished_at"]
+    assert persisted["error"] is None
+    assert persisted["delivery_outcome"] == "unknown"
+    assert persisted["process_id"] == record["process_id"]
+    assert persisted["pid"] == record["pid"]
+    send = Mock()
+    assert queue.drain(send) == 0
+    send.assert_not_called()
+    assert queue.get_status(execution_id)["status"] == "unknown"
+    assert executions.finish_execution(execution_id, success=False, error="late duplicate") is None
+    assert executions.get_execution(execution_id) == persisted
