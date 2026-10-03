@@ -42,9 +42,9 @@ _AUTOMATED_HEADERS = {"Auto-Submitted": lambda v: v.lower() != "no",
                       "X-Auto-Response-Suppress": lambda v: bool(v), "List-Unsubscribe": lambda v: bool(v)}
 MAX_MESSAGE_LENGTH = 50_000  # Gmail-safe max length per email body
 SMTP_CONNECT_TIMEOUT = 30
-# Outer budget for one IMAP poll in the executor: imaplib's own socket timeout is 30s, so 3x
-# headroom for a slow-but-progressing fetch while a wedged thread can no longer stall the poll
-# loop silently for tens of minutes (#87128).
+# Shared budget for the IMAP fetch and post-dispatch flagging waits. Consumer hand-over
+# is not IMAP I/O and may legitimately take longer. imaplib's socket timeout is 30s;
+# this bounds a slow batch without pretending cancellation stops its executor thread (#87128).
 IMAP_FETCH_TIMEOUT_S = 90
 _TRUTHY = {"true", "1", "yes"}
 _IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
@@ -639,9 +639,11 @@ class EmailAdapter(BasePlatformAdapter):
 
     async def _check_inbox(self) -> None:
         """Check INBOX for unseen messages and dispatch them."""
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + IMAP_FETCH_TIMEOUT_S
         try:
             messages = await asyncio.wait_for(
-                asyncio.get_running_loop().run_in_executor(None, self._fetch_new_messages),
+                loop.run_in_executor(None, self._fetch_new_messages),
                 timeout=IMAP_FETCH_TIMEOUT_S)
         except (asyncio.TimeoutError, TimeoutError):
             # ponytail: wait_for cancels only the wrapper; the wedged thread lingers until
@@ -654,7 +656,9 @@ class EmailAdapter(BasePlatformAdapter):
         # Dispatch partial results BEFORE escalating a failure — a mid-batch exception returns what was fetched.
         dispatched_uids: List[bytes] = []
         for msg_data in messages:
+            handover_started = loop.time()
             await self._dispatch_message(msg_data)
+            deadline += loop.time() - handover_started
             # Commit only after hand-over: a fetch abandoned at the budget below must not have written this UID off,
             # or the message is dispatched by nobody and (being \Seen server-side) fetched by nobody again (#87128).
             self._mark_seen(msg_data["uid"])
@@ -663,7 +667,19 @@ class EmailAdapter(BasePlatformAdapter):
             self._remember_seen_uids()
             # Server-side \Seen moved here, after dispatch: the fetch itself no longer touches flags, so the
             # abandoned-run window above is closed at the source rather than rolled back afterwards.
-            await asyncio.get_running_loop().run_in_executor(None, self._flag_seen_on_server, dispatched_uids)
+            try:
+                remaining = deadline - loop.time()
+                if remaining <= 0:
+                    raise TimeoutError
+                await asyncio.wait_for(
+                    loop.run_in_executor(None, self._flag_seen_on_server, dispatched_uids),
+                    timeout=remaining)
+            except (asyncio.TimeoutError, TimeoutError):
+                # Local seen state is already committed. A lingering worker can only flag
+                # handed-over mail on its own connection; it does not fetch or dispatch more mail.
+                logger.warning("[Email] IMAP flagging exceeded the %ss poll I/O budget", IMAP_FETCH_TIMEOUT_S)
+                self._last_fetch_failed, self._last_fetch_error = (
+                    True, f"IMAP flagging timed out within {IMAP_FETCH_TIMEOUT_S}s poll I/O budget")
         if self._last_fetch_failed:
             # The IMAP check itself failed (not an empty inbox): route through the fatal-error hook so the gateway's
             # reconnect/backoff re-establishes the mailbox. The handler runs detached (gateway/run.py), so awaiting it is safe.
