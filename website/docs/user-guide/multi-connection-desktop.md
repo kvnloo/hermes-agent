@@ -228,9 +228,10 @@ that live on one gateway.
   answers, and a dead target fails the click with a message rather than
   leaving the window half-switched. Groups keep registry order whichever
   gateway is active, so a square never moves under the pointer that clicked
-  it. Right-click on an at-rest square offers **Switch to**, **Color**,
-  **Rename**, **Edit SOUL.md** and **Delete**, all executed on the square's
-  own gateway; the delete confirmation names the machine.
+  it. Right-click on an at-rest square offers **Open in new window**, **Set
+  as default**, **Switch to**, **Color**, **Rename**, **Edit SOUL.md** and
+  **Delete**, all executed on the square's own gateway; the delete
+  confirmation names the machine.
 - A gateway the last enumeration could not reach keeps its squares, marked
   with an amber dot on its glyph — a sleeping box is still yours. Two
   registrations of one backend collapse to a single group. Past thirteen
