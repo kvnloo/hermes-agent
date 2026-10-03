@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { ChatBarState } from '@/app/chat/composer/types'
 import { I18nProvider } from '@/i18n'
+import { en } from '@/i18n/en'
 import { $hudMode } from '@/store/hud'
 import { applyWakeStartResult, applyWakeStatus, resetWakeWordState } from '@/store/wake-word'
 
@@ -16,8 +17,8 @@ const state: ChatBarState = {
   voice: { active: false, enabled: false }
 }
 
-function renderControls(overrides: Partial<React.ComponentProps<typeof ComposerControls>> = {}) {
-  return render(
+function controlsElement(overrides: Partial<React.ComponentProps<typeof ComposerControls>> = {}) {
+  return (
     <I18nProvider configClient={null} initialLocale="en">
       <ComposerControls
         autoSpeak={false}
@@ -45,6 +46,10 @@ function renderControls(overrides: Partial<React.ComponentProps<typeof ComposerC
       />
     </I18nProvider>
   )
+}
+
+function renderControls(overrides: Partial<React.ComponentProps<typeof ComposerControls>> = {}) {
+  return render(controlsElement(overrides))
 }
 
 async function expectShortcutTooltip(label: string, shortcut: string) {
@@ -242,4 +247,60 @@ describe('voice pill turn-status caption', () => {
 
     cleanup()
   })
+
+  it('updates the caption through turn states and removes it when the conversation ends', () => {
+    const conversation: React.ComponentProps<typeof ComposerControls>['conversation'] = {
+      active: true,
+      level: 0,
+      muted: false,
+      onEnd: vi.fn(),
+      onStart: vi.fn(),
+      onStopTurn: vi.fn(),
+      onToggleMute: vi.fn(),
+      status: 'listening'
+    }
+    const view = renderControls({ conversation })
+
+    // Keep one mounted consumer: a fresh mount per status cannot catch a stale caption.
+    for (const status of ['listening', 'transcribing', 'thinking', 'speaking', 'listening'] as const) {
+      view.rerender(controlsElement({ conversation: { ...conversation, status } }))
+      const caption = screen.getByRole('status')
+
+      expect(caption.textContent).toBe(en.composer[status])
+      expect(caption.classList.contains('sr-only')).toBe(false)
+    }
+
+    view.rerender(controlsElement({ conversation: { ...conversation, active: false, status: 'idle' } }))
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('shows the muted fallback while idle and preserves active turn-status precedence', () => {
+    const conversation: React.ComponentProps<typeof ComposerControls>['conversation'] = {
+      active: true,
+      level: 0,
+      muted: false,
+      onEnd: vi.fn(),
+      onStart: vi.fn(),
+      onStopTurn: vi.fn(),
+      onToggleMute: vi.fn(),
+      status: 'listening'
+    }
+    const view = renderControls({ conversation })
+
+    expect(screen.getByRole('status').textContent).toBe(en.composer.listening)
+
+    // The microphone's muted flag does not replace transcription/thinking/playback status.
+    for (const status of ['idle', 'listening', 'transcribing', 'thinking', 'speaking'] as const) {
+      view.rerender(controlsElement({ conversation: { ...conversation, muted: true, status } }))
+      const caption = screen.getByRole('status')
+      const expected = status === 'idle' || status === 'listening' ? en.composer.muted : en.composer[status]
+
+      expect(caption.textContent).toBe(expected)
+      expect(caption.classList.contains('sr-only')).toBe(false)
+    }
+
+    view.rerender(controlsElement({ conversation }))
+    expect(screen.getByRole('status').textContent).toBe(en.composer.listening)
+  })
+
 })
