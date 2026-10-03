@@ -351,3 +351,74 @@ def test_rekey_rollback_preserves_existing_new_ledger_writes(profile_env, tmp_pa
 
     # Rollback restored the pre-merge state, preserving the user's writes under the new name.
     assert cm._load_ledger(store, new_hash) == pre_existing_new_ledger
+
+
+def test_recovered_history_restores_all_snapshots_and_keeps_user_edits(profile_env):
+    """Recovery must restore actual bytes, not merely expose reachable checkpoint ids."""
+    old_dir = create_profile("oldname", no_alias=True)
+    workdir = old_dir / "project"
+    workdir.mkdir()
+    (workdir / "pyproject.toml").write_text("[project]\nname = 'recovery'\n", encoding="utf-8")
+    note = workdir / "note.txt"
+    user_note = workdir / "user.txt"
+    note.write_text("before rename\n", encoding="utf-8")
+    user_note.write_text("original user note\n", encoding="utf-8")
+    token = set_hermes_home_override(old_dir)
+    try:
+        manager = CheckpointManager(enabled=True, max_snapshots=10)
+        assert manager.ensure_checkpoint(str(workdir), "before rename")
+        old_tip = manager.list_checkpoints(str(workdir))[0]["hash"]
+        manager.record_agent_write(str(note))
+        manager.record_agent_write(str(user_note))
+    finally:
+        reset_hermes_home_override(token)
+
+    # A failed post-move wrapper cleanup leaves checkpoint identity migration pending.
+    with patch("hermes_cli.profiles.check_alias_collision", return_value="skip"), \
+         patch("hermes_cli.profiles._live_default_multiplexer", return_value=False), \
+         patch("hermes_cli.profiles.remove_wrapper_script", side_effect=OSError("fixture failure")):
+        with pytest.raises(OSError, match="fixture failure"):
+            rename_profile("oldname", "newname")
+    new_dir = get_profile_dir("newname")
+    workdir = new_dir / "project"
+    note, user_note = workdir / "note.txt", workdir / "user.txt"
+    token = set_hermes_home_override(new_dir)
+    try:
+        manager = CheckpointManager(enabled=True, max_snapshots=10)
+        for content in ("after rename one\n", "after rename two\n"):
+            manager.new_turn()
+            note.write_text(content, encoding="utf-8")
+            manager.record_agent_write(str(note))
+            assert manager.ensure_checkpoint(str(workdir), content.strip())
+        # The rebased old ledger must still recognize a subsequent human edit.
+        user_note.write_text("human edit after rename\n", encoding="utf-8")
+        assert migrate_profile_identity("oldname", "newname") is True
+        snapshots = manager.list_checkpoints(str(workdir))
+        assert len(snapshots) == 3
+        newest, middle, oldest = [entry["hash"] for entry in snapshots]
+        assert oldest == old_tip
+
+        for checkpoint, expected in (
+            (oldest, "before rename\n"),
+            (middle, "after rename one\n"),
+            (newest, "after rename two\n"),
+        ):
+            # Simulate a fresh agent write before each independent safe rollback.
+            note.write_text("latest agent write\n", encoding="utf-8")
+            manager.record_agent_write(str(note))
+            restored = manager.restore(str(workdir), checkpoint, safe=True)
+            assert restored["success"] is True
+            assert "note.txt" in restored["restored_files"]
+            assert "user.txt" in restored["skipped_user_edits"]
+            assert note.read_text(encoding="utf-8") == expected
+            assert user_note.read_text(encoding="utf-8") == "human edit after rename\n"
+
+        # Restore may add its own safety checkpoint; a migration retry must not rewrite any history.
+        before_retry = [entry["hash"] for entry in manager.list_checkpoints(str(workdir))]
+        assert {newest, middle, oldest}.issubset(before_retry)
+        assert migrate_profile_identity("oldname", "newname") is True
+        assert [entry["hash"] for entry in manager.list_checkpoints(str(workdir))] == before_retry
+        assert note.read_text(encoding="utf-8") == "after rename two\n"
+        assert user_note.read_text(encoding="utf-8") == "human edit after rename\n"
+    finally:
+        reset_hermes_home_override(token)
