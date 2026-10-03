@@ -1,0 +1,40 @@
+[
+  {
+    "lane": "profile-park",
+    "publication_sha": "b45fe7c21c89a8b46911df7c86afc68023025d2f",
+    "tree": "6176614dff9493acc2df3a7066e1a318806e5ba1",
+    "parents": [
+      "cb8d6920549ebe9d31f69f187d30b356b5639eed"
+    ],
+    "branch": "downstream/20261003-reviewed-profile-park"
+  },
+  {
+    "lane": "interrupt-marker",
+    "publication_sha": "71910cd9f6dc5b7381c23da4070c792177dea0c3",
+    "tree": "d1c4b574629885f0d725012e73bee3a96e74d0c5",
+    "parents": [
+      "681e4cae5d3828586940fa029d62aa165b75fd20"
+    ],
+    "branch": "downstream/20261003-reviewed-interrupt-marker"
+  },
+  {
+    "lane": "voice-integration",
+    "publication_sha": "00df1a838c40badf77cfb6b6ed11f2e9682bcfd8",
+    "tree": "9e5ba47bb16a808760d696d43864bb4173201d7c",
+    "parents": [
+      "b9bf6f84f3f464c38a9c09056ada0d1d1ff0a1d2"
+    ],
+    "branch": "downstream/20261003-reviewed-voice-lifecycle-integration"
+  },
+  {
+    "lane": "picker-integration",
+    "publication_sha": "261a2b16094a40fb2b2c61e4bd52640d701432be",
+    "tree": "d22de7021952c88dc169313051dbc5b7fb3714b4",
+    "parents": [
+      "e03ca28af7d027adb8e8a4ab5c9187434762d349",
+      "bd0affe5e5f723579df8902852f5d0c47795f355"
+    ],
+    "branch": "downstream/20261003-reviewed-model-search-integration",
+    "validation_baseline": "bd0affe5e5f723579df8902852f5d0c47795f355"
+  }
+]
