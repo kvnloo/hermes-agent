@@ -1,0 +1,24 @@
+{
+  "main": "bd0affe5e5f723579df8902852f5d0c47795f355",
+  "donor": "5ef448a688b9cf47c382c372798b854a85982c1d",
+  "main_sha256": "77ecfe626c970ba50b43bf67f665a664479f355375ebeacd471b60c0ed00b08e",
+  "donor_sha256": "2d7b9875609efc8cd709496d50c387ad4833f241db794fffb3c4e01c89172633",
+  "overlay_sha256": "d474db55602d72f818819888997e78dc39623dec91514ac8ca9afdd3acbc00dd",
+  "classification": "hypothetical partial composition; not cherry-pick/integrated PR or production fix",
+  "unchanged_main_functions": [
+    "_write_zip_file",
+    "_atomic_output_path",
+    "_create_prefixed_full_backup",
+    "_prune_incomplete_zips"
+  ],
+  "modifications": [
+    "four donor classification helpers",
+    "donor writer retaining main _write_zip_file",
+    "automatic vanished callback only"
+  ],
+  "harness_sha256": "e2e4c5f54dd335bc49b6b39c1459b7292fbeb13292fbf1e62c9cc371ab8d5a06",
+  "builder_sha256": "557f672c8d26240ecab5622b07496e32f4e8ed64bee8a4913e05af48945836e4",
+  "worktree_status": "",
+  "published_builder_sha256": "84d5fafd073c0274de0a2180ce74e2f6088c81a0ba897fe6dbd69e6e88544178",
+  "builder_note": "Only repository-path selection adapted to required --repo; the recorded original builder hash remains provenance. Overlay output must match overlay_sha256."
+}

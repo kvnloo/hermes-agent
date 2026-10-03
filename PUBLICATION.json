@@ -1,0 +1,38 @@
+{
+  "repository": "kvnloo/hermes-agent",
+  "receipt_branch": "downstream/20261003-reviewed-bounded-ten-receipts",
+  "results": [
+    {
+      "branch": "downstream/20261003-reviewed-pin-persistence",
+      "commit": "50cd9cf35ad010c59cd0f993c442127d2b949c16",
+      "parent": "894dd2fdac907836878ccaa8ad0a08bca41d41d0",
+      "tree": "eb6c665411491fe67b31d2d2f39fe282dbf0cefc",
+      "credit": "dskwe; test-only descendant Codex under Kevin Rajan direction"
+    },
+    {
+      "branch": "downstream/20261003-reviewed-google-fallback-consumer",
+      "commit": "4856223841c1bf2f981982291818b35bbf47aca8",
+      "parent": "dda144216abe74c759834d0e8cd30fa9d61934de",
+      "tree": "45a225ad668ce7f03938f47c4d4f9dfc0fe3c1dc",
+      "credit": "KazTradez; test-only descendant Codex under Kevin Rajan direction"
+    }
+  ],
+  "workflow_audit": "51 definitions per code commit; no create or push event matches planned new branches; receipt branch contains no workflows",
+  "ci": "Post-publication API observations recorded separately; no CI pass implied",
+  "files_sha256": {
+    "LEDGER.md": "bb3d7afa5aded1c2dc9c8798783056b446bc387edada05f1faeb9068da31de2a",
+    "README.md": "d1e44b85d97ba28e1b18564acfd9c9dcf120ac61b5ef62fdc6966d86c4097b3f",
+    "backup/build_overlay.py": "84d5fafd073c0274de0a2180ce74e2f6088c81a0ba897fe6dbd69e6e88544178",
+    "backup/composition.diff": "a813f979ce1f2111b2030fb293fc29e89ad8115e2e65e52cf12b39bef0ee4ff4",
+    "backup/exact-main-survivor.json": "05d2cb17309a139af89167f755e66969001edcabc591176a20f16e838b48d1a4",
+    "backup/exact-main-zero.json": "cb6e2226a61b7f85b723c46d02a8c4e79f85275d523880e54ff0e55446b3b17e",
+    "backup/hypothetical-composition-survivor.json": "f31a99f6569e5c83fd751ba37d03199748f85f1c32fd29eebd4ddbab6ea1cef7",
+    "backup/hypothetical-composition-zero.json": "dcfa758345a2c51e58ee2e1d3378f2d0b401c0a0c201d10a3fc3d81d9988bc84",
+    "backup/source-bindings.json": "cb0641477fdccadf9d01b2429553c189e38e2f63155b58b1c84d90b850016584",
+    "backup/test_backup_composition_evidence.py": "e2e4c5f54dd335bc49b6b39c1459b7292fbeb13292fbf1e62c9cc371ab8d5a06",
+    "google/source-bindings.json": "96721bc989a09c90ce16f2c70ca0a59bdb333540215b9d429e0c491c1bde416a",
+    "pin/all-names.patch": "070092064ee171bdf42cd4db49bda84fc38b9acda1f37deb80b061e20a0d0601",
+    "pin/omit-save.patch": "5457156dd6f48f9abe66e3c5b0b6205eed62420eb59fdd46f6631924e65b7b2c",
+    "pin/source-bindings.json": "aac39a4dfa5af98b309889ccc87fa7f27037056f39337084852b23e5e2652404"
+  }
+}

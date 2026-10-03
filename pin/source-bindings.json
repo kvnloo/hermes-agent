@@ -1,0 +1,15 @@
+{
+  "head": "50cd9cf35ad010c59cd0f993c442127d2b949c16",
+  "parent": "894dd2fdac907836878ccaa8ad0a08bca41d41d0",
+  "tree": "eb6c665411491fe67b31d2d2f39fe282dbf0cefc",
+  "production_blob": "4172b40a8725d364d0069a047221cea449d4d5a6",
+  "author_production_blob": "4172b40a8725d364d0069a047221cea449d4d5a6",
+  "test_blob": "ce499a8cca6bbcf77ae54b808882ac6436a9e4e5",
+  "test_sha256": "ad27e76a424ac0356c426c70bcd9565cc01882b56dbe70deb3d88181963df277",
+  "controls": {
+    "omit-save": "2 PASS / 1 FAIL fresh persisted version",
+    "all-names": "2 PASS / 1 FAIL captured install names"
+  },
+  "restored": "3 PASS / 0 FAIL",
+  "status": ""
+}

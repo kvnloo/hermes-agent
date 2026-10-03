@@ -1,0 +1,13 @@
+diff --git a/pm/cli.py b/pm/cli.py
+index 4172b40a87..95db5d7053 100644
+--- a/pm/cli.py
++++ b/pm/cli.py
+@@ -608,7 +608,7 @@ def _apply_pins(changed: list, lockfile) -> int:
+         print("pm update: every pin failed; lockfile untouched")
+         return 1
+     lockfile.save()
+-    if _install_names(pinned):
++    if _install_names([d.name for d in changed]):
+         return 1
+     rc = 0 if _sync_venv_step() else 1
+     if failed:

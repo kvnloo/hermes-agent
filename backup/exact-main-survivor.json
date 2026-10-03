@@ -1,0 +1,46 @@
+{
+  "variant": "exact-main",
+  "survivor": true,
+  "selected": [
+    "survivor.txt",
+    "transient.txt",
+    "unreadable.txt"
+  ],
+  "return": null,
+  "archives": {
+    "pre-update-2026-10-01-120000.zip": {
+      "members": [
+        "previous.txt"
+      ],
+      "bytes": 180,
+      "crc_error": null,
+      "contents": {
+        "previous.txt": "useful existing recovery: pre-update-2026-10-01-120000.zip"
+      }
+    },
+    "pre-update-2026-10-03-120000.incomplete.zip": {
+      "members": [
+        "survivor.txt"
+      ],
+      "bytes": 144,
+      "crc_error": null,
+      "contents": {
+        "survivor.txt": "useful recovery data"
+      }
+    },
+    "pre-update-2026-10-03-120000.zip": {
+      "members": [
+        "previous.txt"
+      ],
+      "bytes": 180,
+      "crc_error": null,
+      "contents": {
+        "previous.txt": "useful existing recovery: pre-update-2026-10-03-120000.zip"
+      }
+    }
+  },
+  "prior_complete_preserved": true,
+  "older_useful_salvage_preserved": false,
+  "fresh_salvage_published": true,
+  "partials_remaining": []
+}
