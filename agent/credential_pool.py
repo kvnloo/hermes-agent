@@ -2971,12 +2971,14 @@ def _seed_from_env(provider: str, entries: List[PooledCredential]) -> Tuple[bool
         return seed.result
 
     pconfig = PROVIDER_REGISTRY.get(provider)
-    if not pconfig or pconfig.auth_type != AUTH_TYPE_API_KEY:
+    if not pconfig:
         # User-declared ``providers.<key>`` endpoints are never in the registry;
         # their credential lives in ``key_env`` and must still seed the pool
         # (#125436), or the main chat path (pool as sole source) calls out
         # key-less and silently falls back.
         _seed_custom_provider_key_env(provider, seed)
+        return seed.result
+    if pconfig.auth_type != AUTH_TYPE_API_KEY:
         return seed.result
 
     env_url = ""
