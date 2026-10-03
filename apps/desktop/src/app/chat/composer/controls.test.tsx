@@ -303,4 +303,33 @@ describe('voice pill turn-status caption', () => {
     expect(screen.getByRole('status').textContent).toBe(en.composer.listening)
   })
 
+
+  it('dispatches End to the conversation owner once and suppresses it when disabled', () => {
+    const conversation: React.ComponentProps<typeof ComposerControls>['conversation'] = {
+      active: true,
+      level: 0,
+      muted: false,
+      onEnd: vi.fn(),
+      onStart: vi.fn(),
+      onStopTurn: vi.fn(),
+      onToggleMute: vi.fn(),
+      status: 'speaking'
+    }
+    const view = renderControls({ conversation })
+
+    fireEvent.click(screen.getByRole('button', { name: en.composer.endConversation }))
+    expect(conversation.onEnd).toHaveBeenCalledTimes(1)
+    expect(conversation.onStopTurn).not.toHaveBeenCalled()
+    expect(conversation.onToggleMute).not.toHaveBeenCalled()
+
+    view.rerender(controlsElement({ conversation, disabled: true }))
+    const end = screen.getByRole('button', { name: en.composer.endConversation })
+
+    expect((end as HTMLButtonElement).disabled).toBe(true)
+    fireEvent.click(end)
+    expect(conversation.onEnd).toHaveBeenCalledTimes(1)
+    expect(conversation.onStopTurn).not.toHaveBeenCalled()
+    expect(conversation.onToggleMute).not.toHaveBeenCalled()
+  })
+
 })
