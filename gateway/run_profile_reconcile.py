@@ -178,8 +178,14 @@ class GatewayProfileReconcileMixin:
             except MultiplexConfigError as exc:
                 # Boot refuses to run with such a profile; at runtime we park just this profile.
                 logger.error("[MULTIPLEX] Profile '%s' not served: %s", name, exc)
-                connected = 0
-                sigs[name] = scan_signature
+                await self._unserve_profile(name, current.pop(name))
+                sigs.pop(name, None)
+                if name in added:
+                    added.remove(name)
+                park_profile(self, name, str(exc))
+                result["parked"].append(name)
+                claimed = self._live_resource_claims(active)
+                continue
             except Exception:
                 logger.error("[MULTIPLEX] Failed to start adapters for profile '%s'", name, exc_info=True)
                 connected = 0
