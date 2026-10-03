@@ -1,0 +1,61 @@
+{
+  "candidate": "9c56a7c6b76d93717e0eff4a861fcfc8ea953ec9",
+  "parents": [
+    "bd0affe5e5f723579df8902852f5d0c47795f355",
+    "6287208a45fe01d09bd85a86f5f7fc502671fcf7"
+  ],
+  "source": "6287208a45fe01d09bd85a86f5f7fc502671fcf7",
+  "main": "bd0affe5e5f723579df8902852f5d0c47795f355",
+  "status": "",
+  "patch_id_author_and_integration": "20e30c89630e312afd2695ab40fc7d19ea5ecdc6",
+  "files": {
+    "hermes_cli/agent_import.py": {
+      "candidate_blob": "e661133e8020b51965ea574a902df0333b0119cd",
+      "main_blob": "89ec1b951b78be5cf506e963cbe6bab049f6cc0e",
+      "author_blob": "6cec1822b430b704df5e49fb914fedb46c91a17d",
+      "candidate_sha256": "febf6f0e54934c209612463bb7bb38e4c93f15e0605d48522464695cd73d4fd6",
+      "control_sha256": "967718859314d53102a9ff5e1d9a05ea815abe6851a7c4f5c81b4ea49ea8a0c9"
+    },
+    "tests/hermes_cli/test_agent_import.py": {
+      "candidate_blob": "7088bf383f6d0f73909aa6e48e49e207952fa46e",
+      "main_blob": "ec5f4b22b80c5bb1354b26c74a4a61a5d07b08ca",
+      "author_blob": "7088bf383f6d0f73909aa6e48e49e207952fa46e",
+      "candidate_sha256": "687ad06d95017609896748068bf772d87b1c4671dc28278553b9b764597ccb8c",
+      "control_sha256": "687ad06d95017609896748068bf772d87b1c4671dc28278553b9b764597ccb8c"
+    },
+    "website/docs/user-guide/import-from-other-agents.md": {
+      "candidate_blob": "41bb10671449bf092645b9f46a0eb1168b2910d4",
+      "main_blob": "2814766b9bf017523419cf7f8aa3b65a266e2e55",
+      "author_blob": "41bb10671449bf092645b9f46a0eb1168b2910d4",
+      "candidate_sha256": "b00f151a1fd77dd5ff19e350fd787c1cba7fd13fd974852a1f5d20f3b06b059c",
+      "control_sha256": "063995d13baaa98a95d580970fe1547dbfe5bb4886cbeaa0bb73d452474979ea"
+    },
+    "tools/memory_tool.py": {
+      "candidate_blob": "a768f015b1829c060addf16a04bd1e8d3f92ee59",
+      "main_blob": "a768f015b1829c060addf16a04bd1e8d3f92ee59",
+      "author_blob": "7577015e9210550e4831c8f5bc11aa60e32faa4d",
+      "candidate_sha256": "8e12003a4dee509239b829b9fbc31d6055f57f40f458c48f7865b7f4ccb9cb82",
+      "control_sha256": "8e12003a4dee509239b829b9fbc31d6055f57f40f458c48f7865b7f4ccb9cb82"
+    },
+    "tools/memory_tool_store.py": {
+      "candidate_blob": "339e1c73ae9e992f9c6dcd7fc385a243b09319fc",
+      "main_blob": "339e1c73ae9e992f9c6dcd7fc385a243b09319fc",
+      "author_blob": "339e1c73ae9e992f9c6dcd7fc385a243b09319fc",
+      "candidate_sha256": "2a44cc0ea35066a4320395d63997f26011525c9ffe04183e562e16575837f488",
+      "control_sha256": "2a44cc0ea35066a4320395d63997f26011525c9ffe04183e562e16575837f488"
+    },
+    "hermes_cli/config_defaults.py": {
+      "candidate_blob": "dca80464281f21e1e410ea3b12b1aea57f31e58c",
+      "main_blob": "dca80464281f21e1e410ea3b12b1aea57f31e58c",
+      "author_blob": "fd3e9180c3665bac8c4637a842865e28641120c0",
+      "candidate_sha256": "e85fdba7368a414817e611b9a6400a203d377ca552b85f4ea8ba5ee97e1ddb39",
+      "control_sha256": "e85fdba7368a414817e611b9a6400a203d377ca552b85f4ea8ba5ee97e1ddb39"
+    }
+  },
+  "control_overlay": "exactmain production plus identical final tests/hermes_cli/test_agent_import.py only",
+  "test_selection": "all52 importer plus8 existing MemoryStore cases; no new tests",
+  "results": {
+    "candidate": "60PASS exit0",
+    "exactmain": "58PASS2FAIL exit1"
+  }
+}

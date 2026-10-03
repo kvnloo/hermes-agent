@@ -1,0 +1,121 @@
+diff --git a/hermes_cli/agent_import.py b/hermes_cli/agent_import.py
+index 89ec1b951b..e661133e80 100644
+--- a/hermes_cli/agent_import.py
++++ b/hermes_cli/agent_import.py
+@@ -19,14 +19,13 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+ 
+ import hermes_yaml as yaml
+ 
++from hermes_cli.config_defaults import DEFAULT_CONFIG
+ from utils import atomic_write_text, atomic_yaml_write
+ 
+ logger = logging.getLogger(__name__)
+ 
+ # Entry delimiter of the Hermes memory store (memories/MEMORY.md) and the openclaw script.
+ ENTRY_DELIMITER = "\n§\n"
+-# Character budget for merged memory files (openclaw script default).
+-MEMORY_CHAR_LIMIT = 20_000
+ SUPPORTED_AGENTS = ("claude-code", "codex")
+ _AGENT_DEFAULT_DIRS = {"claude-code": ".claude", "codex": ".codex"}
+ _SKILL_CATEGORY = {"claude-code": "claude-code-imports", "codex": "codex-imports"}
+@@ -354,6 +353,20 @@ class AgentImporter:
+             self.record(kind, path, None, "error", non_mapping_error)
+         return {}
+ 
++    def _memory_char_limit(self) -> int:
++        """The destination's ``memory.memory_char_limit``, the budget ``MemoryStore`` enforces on
++        every write: a merge past it leaves a store whose every ``add`` is refused, and an entry
++        longer than it reads as external drift, refusing ``replace``/``remove`` as well."""
++        default = DEFAULT_CONFIG["memory"]["memory_char_limit"]
++        try:
++            memory = load_yaml_file(self.target_root / "config.yaml").get("memory")
++        except ConfigReadError:
++            return default
++        try:
++            return int(memory.get("memory_char_limit", default)) if isinstance(memory, dict) else default
++        except (TypeError, ValueError):
++            return default
++
+     def import_context_file(self, source: Path, kind: str) -> None:
+         """CLAUDE.md / AGENTS.md → memory entries in memories/MEMORY.md."""
+         self._import_markdown_files(kind, source, [source] if source.exists() else None,
+@@ -381,12 +394,15 @@ class AgentImporter:
+                 self.record(kind, source, destination, "skipped", "No importable entries found")
+             return
+         existing = parse_existing_memory_entries(destination)
+-        merged, stats = merge_entries(existing, incoming, MEMORY_CHAR_LIMIT)
++        limit = self._memory_char_limit()
++        merged, stats = merge_entries(existing, incoming, limit)
+         details = {"existing_entries": stats["existing"], "added_entries": stats["added"],
+                    "duplicate_entries": stats["duplicates"],
+-                   "overflowed_entries": stats["overflowed"]}
++                   "overflowed_entries": stats["overflowed"], "char_limit": limit}
+         if stats["added"] == 0:
+-            self.record(kind, source, destination, "skipped", "No new entries to import", **details)
++            reason = (f"No room: {stats['overflowed']} entries do not fit memory.memory_char_limit ({limit})"
++                      if stats["overflowed"] else "No new entries to import")
++            self.record(kind, source, destination, "skipped", reason, **details)
+             return
+ 
+         def write() -> Optional[str]:
+@@ -651,6 +667,9 @@ def print_import_report(report: Dict[str, Any], dry_run: bool) -> None:
+         for item in group_items:
+             tail = ("→ " + str(item.get("destination") or "").replace(str(Path.home()), "~")
+                     if status == "imported" else f" {item.get('reason', '')}")
++            if status == "imported" and item.get("overflowed_entries"):
++                tail += (f"  ({item['overflowed_entries']} entries left out: over "
++                         f"memory.memory_char_limit {item.get('char_limit')})")
+             print(f"      {item.get('kind', 'unknown'):<22s} {tail}")
+         print()
+     if stripped := report.get("stripped_secrets"):
+diff --git a/tests/hermes_cli/test_agent_import.py b/tests/hermes_cli/test_agent_import.py
+index ec5f4b22b8..7088bf383f 100644
+--- a/tests/hermes_cli/test_agent_import.py
++++ b/tests/hermes_cli/test_agent_import.py
+@@ -400,6 +400,34 @@ class TestMergeSemantics:
+         assert memory_items[0]["status"] == "skipped"
+ 
+ 
++    @pytest.mark.parametrize("configured_limit", [None, 3000])
++    def test_import_stays_within_the_memory_stores_limit(
++            self, profile_env, hermes_home, configured_limit):
++        """The importer and MemoryStore share one budget: whatever the import writes, the
++        memory tool must still load under its limit and accept writes (remove, then add)."""
++        import json as _json
++        from tools.memory_tool import load_on_disk_store, memory_tool
++
++        if configured_limit is not None:
++            (hermes_home / "config.yaml").write_text(
++                yaml.safe_dump({"memory": {"memory_char_limit": configured_limit}}), encoding="utf-8")
++        source = profile_env / ".claude"
++        source.mkdir()
++        (source / "CLAUDE.md").write_text("# Rules\n" + "".join(
++            f"- Rule {i}: run the linter and the unit tests before committing module {i}\n"
++            for i in range(80)), encoding="utf-8")
++
++        report = run_import("claude-code", source, hermes_home, execute=True)
++
++        store = load_on_disk_store()
++        assert 0 < len(ENTRY_DELIMITER.join(store.memory_entries)) <= store.memory_char_limit
++        item = next(i for i in report["items"] if i["kind"] == "claude-md")
++        assert item["status"] == "imported" and item["overflowed_entries"] > 0
++        for args in ({"action": "remove", "old_text": "Rule 0:"}, {"action": "add", "content": "ok"}):
++            result = _json.loads(memory_tool(target="memory", store=store, **args))
++            assert result["success"] is True, result
++
++
+ # ---------------------------------------------------------------------------
+ # The DESTINATION memories/MEMORY.md is a §-delimited store, not a document
+ # ---------------------------------------------------------------------------
+diff --git a/website/docs/user-guide/import-from-other-agents.md b/website/docs/user-guide/import-from-other-agents.md
+index 2814766b9b..41bb106714 100644
+--- a/website/docs/user-guide/import-from-other-agents.md
++++ b/website/docs/user-guide/import-from-other-agents.md
+@@ -49,6 +49,7 @@ Claude's `Bash(npm run test:*)` prefix rules become `npm run test*` globs. Non-`
+ 
+ - **Preview first, always.** The command prints the full plan before applying; in non-interactive sessions it stops at the preview unless you pass `--yes`.
+ - **Merges, not replaces.** Memory entries are deduplicated against your existing `MEMORY.md`; allowlist/denylist patterns merge with what's already in `config.yaml`.
++- **Memory stays within `memory.memory_char_limit`.** Imported entries fill `MEMORY.md` up to the same limit the memory tool enforces; the report says how many entries were left out. Raise the limit first if you want more of `CLAUDE.md`/`AGENTS.md` imported.
+ - **Conflicts are skipped by default.** An MCP server or skill that already exists in Hermes is reported as a conflict; pass `--overwrite` to replace it.
+ - **Malformed files don't abort the run.** A broken `settings.json` or `config.toml` becomes a per-item error in the report while everything else still imports.
+ - Coming from OpenClaw instead? Use [`hermes claw migrate`](../guides/migrate-from-openclaw.md).

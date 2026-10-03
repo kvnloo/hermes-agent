@@ -1,0 +1,16 @@
+{
+  "candidate": "9c56a7c6b76d93717e0eff4a861fcfc8ea953ec9",
+  "tree": "988e23ea1ce5c8d81cebdc42e13de266fd397a2b",
+  "parents": [
+    "bd0affe5e5f723579df8902852f5d0c47795f355",
+    "6287208a45fe01d09bd85a86f5f7fc502671fcf7"
+  ],
+  "candidate_status": "",
+  "control": "bd0affe5e5f723579df8902852f5d0c47795f355",
+  "control_production_diff": "",
+  "test_sha256": "687ad06d95017609896748068bf772d87b1c4671dc28278553b9b764597ccb8c",
+  "control_test_sha256": "687ad06d95017609896748068bf772d87b1c4671dc28278553b9b764597ccb8c",
+  "test_blob": "7088bf383f6d0f73909aa6e48e49e207952fa46e",
+  "independent_exit": 0,
+  "independent_pass": 2
+}

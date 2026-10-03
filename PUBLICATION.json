@@ -1,0 +1,18 @@
+{
+  "integration_branch": "downstream/20261003-reviewed-import-memory-main",
+  "receipt_branch": "downstream/20261003-reviewed-import-memory-receipts",
+  "integration_commit": "9c56a7c6b76d93717e0eff4a861fcfc8ea953ec9",
+  "tree": "988e23ea1ce5c8d81cebdc42e13de266fd397a2b",
+  "parents": [
+    "bd0affe5e5f723579df8902852f5d0c47795f355",
+    "6287208a45fe01d09bd85a86f5f7fc502671fcf7"
+  ],
+  "workflow_audit": "51 candidate definitions; no create/push event matches planned branch; receipts have no workflows",
+  "files_sha256": {
+    "README.md": "ee7515ae26e971246b11cdd46a771eed7ef1706f9773f691c3bd016fc5f2f61b",
+    "independent-consumer-bindings.json": "8cec1309b18185fcafb065e3fab5acbd49b6531caffd4faaa700f1df4aac1c0e",
+    "independent-source-audit.json": "7e2aa6785c1f225751d6262d00bca68a56dafb86ac775bdf8ebc6cf70bec5170",
+    "main-delta.patch": "070e5351b16172e57c1e61d477403c7fb9e359d85cfad1353a188c8f5a153881",
+    "source-bindings.json": "6d783f75b6ddc6a1fd14b9fb3d686b81fe36be13e2e327a605c01f3014c4a8ca"
+  }
+}

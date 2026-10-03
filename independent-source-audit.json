@@ -1,0 +1,26 @@
+{
+  "candidate": "9c56a7c6b76d93717e0eff4a861fcfc8ea953ec9",
+  "parents": "bd0affe5e5f723579df8902852f5d0c47795f355 6287208a45fe01d09bd85a86f5f7fc502671fcf7",
+  "tree": "988e23ea1ce5c8d81cebdc42e13de266fd397a2b",
+  "author_patch_id": "20e30c89630e312afd2695ab40fc7d19ea5ecdc6",
+  "integration_patch_id": "20e30c89630e312afd2695ab40fc7d19ea5ecdc6",
+  "files": {
+    "hermes_cli/agent_import.py": {
+      "author": "6cec1822b430b704df5e49fb914fedb46c91a17d",
+      "main": "89ec1b951b78be5cf506e963cbe6bab049f6cc0e",
+      "candidate": "e661133e8020b51965ea574a902df0333b0119cd"
+    },
+    "tests/hermes_cli/test_agent_import.py": {
+      "author": "7088bf383f6d0f73909aa6e48e49e207952fa46e",
+      "main": "ec5f4b22b80c5bb1354b26c74a4a61a5d07b08ca",
+      "candidate": "7088bf383f6d0f73909aa6e48e49e207952fa46e"
+    },
+    "website/docs/user-guide/import-from-other-agents.md": {
+      "author": "41bb10671449bf092645b9f46a0eb1168b2910d4",
+      "main": "2814766b9bf017523419cf7f8aa3b65a266e2e55",
+      "candidate": "41bb10671449bf092645b9f46a0eb1168b2910d4"
+    }
+  },
+  "test_bytes_equal": true,
+  "test_sha256": "687ad06d95017609896748068bf772d87b1c4671dc28278553b9b764597ccb8c"
+}
