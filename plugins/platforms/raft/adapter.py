@@ -71,6 +71,12 @@ _RAFT_CONTEXT_LOCK = threading.Lock()
 _RAFT_SESSION_IDS: set[str] = set()
 _RAFT_TURN_IDS: set[str] = set()
 _RAFT_PROMPT_TURN_IDS: set[str] = set()
+# turn ids registered per session, so the teardown path (``on_session_end``/
+# ``on_session_finalize`` fired without a ``turn_id`` — e.g. the gateway's
+# ``_finalize_session`` force-reap) can still release every turn id the
+# session owned instead of leaking it into ``_RAFT_TURN_IDS`` /
+# ``_RAFT_PROMPT_TURN_IDS`` for the lifetime of the process.
+_RAFT_SESSION_TURNS: dict[str, set[str]] = {}
 
 
 def _resolve_raft_profile() -> str:
@@ -211,6 +217,15 @@ def _forget_raft_context(session_id: Any, turn_id: Any = None, *, forget_session
             _RAFT_PROMPT_TURN_IDS.discard(safe_turn_id)
         if forget_session and safe_session_id:
             _RAFT_SESSION_IDS.discard(safe_session_id)
+            # Drain every turn id the session registered. The gateway's
+            # teardown path fires ``on_session_finalize`` without a
+            # ``turn_id`` (a force-reaped in-flight turn never ran its own
+            # per-turn ``finalize_turn`` hook), so the per-turn discard above
+            # is a no-op for those orphans — release them here instead of
+            # leaving them to leak into the module-global sets.
+            for t in _RAFT_SESSION_TURNS.pop(safe_session_id, ()):
+                _RAFT_TURN_IDS.discard(t)
+                _RAFT_PROMPT_TURN_IDS.discard(t)
 
 
 def _is_raft_context(**kwargs: Any) -> bool:
@@ -223,6 +238,8 @@ def _is_raft_context(**kwargs: Any) -> bool:
                 _RAFT_SESSION_IDS.add(safe_session_id)
             if safe_turn_id:
                 _RAFT_TURN_IDS.add(safe_turn_id)
+            if safe_session_id and safe_turn_id:
+                _RAFT_SESSION_TURNS.setdefault(safe_session_id, set()).add(safe_turn_id)
             return True
         return bool((safe_turn_id and safe_turn_id in _RAFT_TURN_IDS)
                     or (safe_session_id and safe_session_id in _RAFT_SESSION_IDS))
