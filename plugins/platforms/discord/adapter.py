@@ -3252,7 +3252,7 @@ class DiscordAdapter(DiscordMediaMixin, BasePlatformAdapter):
             # Pre-flight oversize: final edits split-and-deliver; streaming edits truncate in place.
             if len(formatted) > self.MAX_MESSAGE_LENGTH:
                 if finalize:
-overflow_result = await self._edit_overflow_split(
+                    overflow_result = await self._edit_overflow_split(
                         channel, msg, message_id, content,
                     )
                     if overflow_result.success:
@@ -3284,7 +3284,7 @@ overflow_result = await self._edit_overflow_split(
                 # Reactive split: format_message inflation can exceed 2,000 (50035) even after pre-flight.
                 if self._is_length_overflow_error(edit_err):
                     if finalize:
-overflow_result = await self._edit_overflow_split(
+                        overflow_result = await self._edit_overflow_split(
                             channel, msg, message_id, content,
                         )
                         if overflow_result.success:
