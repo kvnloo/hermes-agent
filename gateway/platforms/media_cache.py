@@ -11,7 +11,6 @@ toggles) so each adapter's historical output stays byte-identical —
 from __future__ import annotations
 
 import mimetypes
-import uuid
 from typing import Mapping, Optional
 
 # Union of the per-adapter maps where they agree. Favors the common-in-the-wild extension
@@ -64,33 +63,3 @@ def mime_for_ext(ext: str, *, overrides: Optional[Mapping[str, str]] = None,
     """Inverse lookup: ``overrides`` → ``DEFAULT_EXT_TO_MIME`` → ``fallback``."""
     key = (ext or "").strip().lower()
     return (overrides or {}).get(key) or DEFAULT_EXT_TO_MIME.get(key, fallback)
-
-
-def cache_media_bytes(data: bytes, mime: str, *, filename_hint: str = "",
-                      kind_hint: Optional[str] = None,
-                      ext_overrides: Optional[Mapping[str, str]] = None) -> str:
-    """Cache downloaded media bytes and return the local file path.
-
-    Picks the image / audio / document cache primitive by mime class (or explicit ``kind_hint``
-    ``"image"``/``"audio"``/``"document"``). ``filename_hint`` names document files (else a
-    generated name with the resolved extension); ``ext_overrides`` feeds :func:`ext_for_mime`.
-    """
-    # Local import: base is heavyweight and some adapters import this module very early.
-    from gateway.platforms.base import (
-        cache_audio_from_bytes, cache_document_from_bytes, cache_image_from_bytes)
-    primary = _normalize_mime(mime)
-    kind = kind_hint
-    if kind is None:
-        kind = ("image" if primary.startswith("image/")
-                else "audio" if primary.startswith("audio/") else "document")
-    if kind == "image":
-        ext = ext_for_mime(primary, overrides=ext_overrides, fallback=".jpg") or ".jpg"
-        return cache_image_from_bytes(data, ext)
-    if kind == "audio":
-        ext = ext_for_mime(primary, overrides=ext_overrides, fallback=".ogg") or ".ogg"
-        return cache_audio_from_bytes(data, ext)
-    filename = filename_hint
-    if not filename:
-        ext = ext_for_mime(primary, overrides=ext_overrides, fallback=".bin")
-        filename = f"file_{uuid.uuid4().hex[:8]}{ext}"
-    return cache_document_from_bytes(data, filename)
