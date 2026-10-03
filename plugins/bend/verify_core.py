@@ -288,24 +288,41 @@ def _read_stable(path: Path) -> bytes:
 
 
 def _local_imports(text: str) -> list[str]:
-    """Return local .bend imports from Bend's import prefix; hub imports stay external."""
+    """Accept only the bundled Base import and explicit local .bend dependencies.
+
+    Every project dependency must enter the immutable input closure. Hub imports
+    cannot be skipped: an isolated cache is not an offline dependency boundary.
+    Base belongs to the compiler distribution, whose release qualification is a
+    separate requirement; it is not represented by the project input manifest.
+    """
     imports: list[str] = []
     for raw in text.splitlines():
         line = raw.strip()
         if line == "" or line.startswith("#"):
             continue
-        if not line.startswith("import"):
+        if re.match(r"^import(?:\s|$)", line) is None:
             break
         match = _IMPORT_RE.fullmatch(line)
         if match is None:
-            continue  # Bend itself will reject the malformed line in the snapshot.
+            raise BendVerifyError(
+                "unsupported_import", "malformed import is outside local-only verification"
+            )
         target, alias = match.groups()
-        if alias is None:
-            continue  # only valid alias-free import is Base; Bend validates that.
-        if _HASH_IMPORT_RE.match(target) or _NAMED_IMPORT_RE.match(target):
+        if target == "Base" and alias is None:
             continue
-        if target.endswith(".bend"):
-            imports.append(target)
+        if (
+            alias is None
+            or _HASH_IMPORT_RE.match(target)
+            or _NAMED_IMPORT_RE.match(target)
+            or ":" in target
+            or not target.endswith(".bend")
+        ):
+            raise BendVerifyError(
+                "unsupported_import",
+                "local-only verification requires a local .bend import with an alias; "
+                f"remote, hub, and unsupported imports are not allowed: {target}",
+            )
+        imports.append(target)
     return imports
 
 
