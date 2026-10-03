@@ -289,7 +289,9 @@ export function ModelPicker({
             next.findIndex(p => p.is_current)
           )
         )
-        setModelIdx(hopCurrentIndex(buildModelHopRows(next, providerDisplayNames(next)), String(r.model ?? '')))
+        const current = String(r.model ?? '')
+        const orderedHops = orderHopRows(buildModelHopRows(next, providerDisplayNames(next)), current)
+        setModelIdx(hopCurrentIndex(orderedHops, current))
         setStage(initialStage === 'provider' ? 'provider' : 'hop')
         setErr('')
         setLoading(false)
@@ -365,10 +367,10 @@ export function ModelPicker({
   }, [filteredProviderRows.length, providerIdx])
 
   useEffect(() => {
-    if (modelIdx >= models.length && models.length > 0) {
+    if (stage === 'model' && modelIdx >= models.length && models.length > 0) {
       setModelIdx(0)
     }
-  }, [models.length, modelIdx])
+  }, [models.length, modelIdx, stage])
 
   useEffect(() => {
     if (stage === 'hop' && modelIdx >= filteredHopRows.length && filteredHopRows.length > 0) {
