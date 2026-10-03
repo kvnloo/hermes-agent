@@ -685,6 +685,7 @@ def _ws_session_is_orphaned(session: dict | None) -> bool:
 
 def _interrupt_session_turn(
     sid: str, session: dict, *, request_id: str | None = None, orphan: bool = False,
+    retire_marker: bool = False,
 ) -> bool:
     """Apply the shared ``session.interrupt`` contract to one claimed session; returns whether the compute-host control
     channel was used. The WS orphan reaper reuses this so a dead client gets the same partial-history/queue semantics.
@@ -740,6 +741,13 @@ def _interrupt_session_turn(
                 if session.get("running"):
                     session["running"] = False
                     _clear_inflight_turn(session)
+        if retire_marker:
+            # An explicit local Stop must not become crash recovery if a later cancel
+            # notification fails. Retire only after the agent interrupt succeeds; other
+            # shared callers (shutdown and compute-host control) keep their old ownership.
+            with session["history_lock"]:
+                active_marker_key = str(session.pop("_active_turn_marker_key", "") or "")
+            _retire_turn_marker(session, active_marker_key)
     # Sibling of the #102895 finalize-path fix above: an explicit /stop (or the WS-orphan reaper's
     # interrupt-at-grace) must also reach a background memory/skill review, not just the foreground
     # turn. The review fork is invisible to `should_interrupt`/`run_thread_alive` above (both gated

@@ -2123,3 +2123,150 @@ def test_session_branch_stored_accepts_idempotency_key(server, monkeypatch):
     assert "error" not in second, second.get("error")
     assert second["result"]["session_id"] == first_sid
     assert len(server._sessions) == 1
+
+
+@pytest.mark.parametrize("scope", ["session", "shutdown"])
+def test_cancellation_write_failure_does_not_strand_other_waiters(server, scope):
+    """A failed cancellation frame must not abandon other waits already removed from replay."""
+    import errno
+    from tui_gateway import server_requests
+    from tui_gateway.transport import StdioTransport, bind_transport, reset_transport
+
+    frames = []
+    registered = threading.Event()
+    cancelled = []
+
+    class FailingCancelStream(io.StringIO):
+        def write(self, text):
+            frame = json.loads(text)
+            frames.append(frame)
+            if frame.get("method") == "event" and frame["params"]["type"] == "request.cancel":
+                cancelled.append(frame["params"]["payload"]["id"])
+                if len(cancelled) == 1:
+                    raise OSError(errno.ENOSPC, "synthetic cancel output full")
+            elif len([f for f in frames if f.get("method") == "clarify"]) == 3:
+                registered.set()
+            return super().write(text)
+
+    stream = FailingCancelStream()
+    transport = StdioTransport(lambda: stream, threading.Lock())
+    results = {}
+    threads = []
+    requests = []
+    token = bind_transport(transport)
+
+    def wait_for_question(index, sid):
+        worker_token = bind_transport(transport)
+        try:
+            results[index] = server_requests.send("clarify", sid, {}, timeout=10)
+        finally:
+            reset_transport(worker_token)
+
+    try:
+        for index, sid in enumerate(["cancel-target", "cancel-target", "cancel-other"]):
+            worker = threading.Thread(target=wait_for_question, args=(index, sid))
+            threads.append(worker)
+            worker.start()
+        assert registered.wait(5), "clarify requests were not written"
+        with server_requests._lock:
+            requests = list(server_requests._open.values())
+        targets = [req for req in requests if scope == "shutdown" or req.sid == "cancel-target"]
+        others = [req for req in requests if req not in targets]
+        with pytest.raises(OSError, match="synthetic cancel output full") as failure:
+            server._clear_pending(None if scope == "shutdown" else "cancel-target")
+        assert failure.value.errno == errno.ENOSPC
+        assert all(req.event.is_set() for req in targets), "withdrawn waiter was never signalled"
+        assert cancelled == [req.id for req in targets]
+        assert server._open_requests("cancel-target") == []
+        assert [row["id"] for row in server._open_requests("cancel-other")] == [req.id for req in others]
+        for index in (range(3) if scope == "shutdown" else range(2)):
+            threads[index].join(5)
+            assert not threads[index].is_alive()
+            assert results[index] is None
+        if others:
+            assert not others[0].event.is_set()
+            server._clear_pending("cancel-other")
+            threads[2].join(5)
+            assert not threads[2].is_alive()
+            assert results[2] is None
+    finally:
+        # The negative control removed un-signalled requests from the public registry.
+        # Release captured wait handles so failed assertions never leak test workers.
+        for req in requests:
+            req.event.set()
+        server._clear_pending()
+        for worker in threads:
+            worker.join(5)
+        reset_transport(token)
+
+
+def test_locked_batch_cancel_preserves_answers_after_notification_write_failure(server):
+    """Current batch outcomes survive the carried cancellation fanout correction."""
+    import errno
+    from tui_gateway import server_requests
+    from tui_gateway.transport import StdioTransport, bind_transport, reset_transport
+
+    registered = threading.Event()
+    frames, cancellations, requests, threads = [], [], [], []
+    results, errors = {}, []
+    failure = OSError(errno.ENOSPC, "synthetic batch cancellation write failure")
+
+    class CancelStream(io.StringIO):
+        def write(self, text):
+            frame = json.loads(text)
+            frames.append(frame)
+            if frame.get("method") == "clarify":
+                registered.set()
+            elif frame.get("method") == "event" and frame["params"]["type"] == "request.cancel":
+                cancellations.append(frame["params"]["payload"]["id"])
+                if len(cancellations) == 1:
+                    raise failure
+            return super().write(text)
+
+    transport = StdioTransport(CancelStream, threading.Lock())
+    token = bind_transport(transport)
+
+    def ask(index):
+        worker_token = bind_transport(transport)
+        try:
+            questions = [{"qid": q, "id": "", "question": q, "choices": None,
+                          "choices_offered": [], "multi_select": False} for q in ("q0", "q1")]
+            results[index] = server._clarify_block("locked-batch-cancel", questions)
+        except BaseException as exc:
+            errors.append(exc)
+        finally:
+            reset_transport(worker_token)
+
+    try:
+        for index in range(2):
+            registered.clear()
+            worker = threading.Thread(target=ask, args=(index,))
+            threads.append(worker)
+            worker.start()
+            assert registered.wait(5), "batch request did not reach the transport"
+        with server_requests._lock:
+            requests = [req for req in server_requests._open.values() if req.sid == "locked-batch-cancel"]
+        assert len(requests) == 2
+        locked = server.handle_request({"id": "lock", "method": "clarify.lock", "params": {
+            "request_id": requests[0].id, "question_id": "q0", "answer": "keep this answer"}})
+        assert locked["result"] == {"status": "ok", "remaining": ["q1"]}
+        with pytest.raises(OSError) as caught:
+            server._clear_pending("locked-batch-cancel")
+        assert caught.value is failure
+        for worker in threads:
+            worker.join(5)
+        assert not any(worker.is_alive() for worker in threads), "cancelled batch owner remained blocked"
+        assert errors == []
+        assert results == {
+            0: {"answers": {"q0": "keep this answer"}, "outcome": "cancelled"},
+            1: {"answers": {}, "outcome": "cancelled"},
+        }
+        assert cancellations == [req.id for req in requests]
+        assert server_requests.open_requests("locked-batch-cancel") == []
+    finally:
+        for req in requests:
+            req.event.set()
+        server._clear_pending("locked-batch-cancel")
+        for worker in threads:
+            worker.join(5)
+        reset_transport(token)
