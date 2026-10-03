@@ -1,0 +1,163 @@
+name: Bend Hermes experiments
+
+on:
+  push:
+    branches:
+      - exp/bend-hermes-verify
+    paths:
+      - "plugins/bend/**"
+      - "tests/plugins/test_bend_plugin*.py"
+      - "evals/bend_adapter_*.py"
+      - ".github/workflows/bend-hermes-experiments.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  core-soak:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.13"
+      - name: Install Lean 4.34.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          ELAN_COMMIT=0e36a07b9bbcc5381fa6250df109f9a4f94d7bac
+          curl -sSfL --retry 3 \
+            "https://raw.githubusercontent.com/leanprover/elan/${ELAN_COMMIT}/elan-init.sh" \
+            -o /tmp/elan-init.sh
+          sh /tmp/elan-init.sh -y --default-toolchain leanprover/lean4:v4.34.0
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Install pinned Bend 2.0.34
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL=https://github.com/bendlang/bend/releases/download/v2.0.34/bend-2.0.34-linux-x64.tar.gz
+          SHA=78106a97af242429dcc057258eb8d10f69cddebcd5e263022185a52d003e09bf
+          curl -sSfL --retry 3 --retry-delay 2 "$URL" -o /tmp/bend.tar.gz
+          echo "$SHA  /tmp/bend.tar.gz" | sha256sum -c -
+          mkdir -p /tmp/bend-release
+          tar -xzf /tmp/bend.tar.gz -C /tmp/bend-release
+          BEND_BIN=$(find /tmp/bend-release -type f -name bend -perm -u+x | head -n 1)
+          test -n "$BEND_BIN"
+          BEND_BIN_DIR=$(dirname "$BEND_BIN")
+          echo "$BEND_BIN_DIR" >> "$GITHUB_PATH"
+          "$BEND_BIN" version
+      - name: Run 225 live verification experiments
+        run: python3 evals/bend_adapter_matrix.py --iterations 25 --output /tmp/bend-hermes-matrix.json
+      - name: Run 225 concurrency and TOCTOU experiments
+        run: python3 evals/bend_adapter_wave2.py --repeats 20 --attacks 25 --output /tmp/bend-hermes-wave2.json
+      - name: Run corrected kernel provenance experiments
+        run: python3 evals/bend_adapter_provenance.py --attacks 25 --cold-runs 5 --output /tmp/bend-hermes-provenance.json
+      - name: Upload core-soak receipts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: bend-hermes-core-soak
+          path: |
+            /tmp/bend-hermes-matrix.json
+            /tmp/bend-hermes-wave2.json
+            /tmp/bend-hermes-provenance.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  kernel-strategies:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.13"
+      - name: Install Lean 4.34.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          ELAN_COMMIT=0e36a07b9bbcc5381fa6250df109f9a4f94d7bac
+          curl -sSfL --retry 3 \
+            "https://raw.githubusercontent.com/leanprover/elan/${ELAN_COMMIT}/elan-init.sh" \
+            -o /tmp/elan-init.sh
+          sh /tmp/elan-init.sh -y --default-toolchain leanprover/lean4:v4.34.0
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Install pinned Bend 2.0.34
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL=https://github.com/bendlang/bend/releases/download/v2.0.34/bend-2.0.34-linux-x64.tar.gz
+          SHA=78106a97af242429dcc057258eb8d10f69cddebcd5e263022185a52d003e09bf
+          curl -sSfL --retry 3 --retry-delay 2 "$URL" -o /tmp/bend.tar.gz
+          echo "$SHA  /tmp/bend.tar.gz" | sha256sum -c -
+          mkdir -p /tmp/bend-release
+          tar -xzf /tmp/bend.tar.gz -C /tmp/bend-release
+          BEND_BIN=$(find /tmp/bend-release -type f -name bend -perm -u+x | head -n 1)
+          echo "$(dirname "$BEND_BIN")" >> "$GITHUB_PATH"
+      - name: Compare shared vs session-pinned kernels
+        run: python3 evals/bend_adapter_kernel_strategies.py --repeats 20 --attacks 10 --output /tmp/bend-hermes-kernel-strategies.json
+      - name: Upload kernel-strategy receipt
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: bend-hermes-kernel-strategies
+          path: /tmp/bend-hermes-kernel-strategies.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  upstream-qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.13"
+      - name: Install Lean 4.34.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          ELAN_COMMIT=0e36a07b9bbcc5381fa6250df109f9a4f94d7bac
+          curl -sSfL --retry 3 \
+            "https://raw.githubusercontent.com/leanprover/elan/${ELAN_COMMIT}/elan-init.sh" \
+            -o /tmp/elan-init.sh
+          sh /tmp/elan-init.sh -y --default-toolchain leanprover/lean4:v4.34.0
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Install Bend 2.0.32-2.0.34
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > /tmp/bend-versions.txt
+          install_bend() {
+            version="$1"; sha="$2"; root="/tmp/bend-version-$version"; archive="/tmp/bend-$version.tar.gz"
+            curl -sSfL --retry 3 --retry-delay 2 \
+              "https://github.com/bendlang/bend/releases/download/v${version}/bend-${version}-linux-x64.tar.gz" -o "$archive"
+            echo "$sha  $archive" | sha256sum -c -
+            mkdir -p "$root"
+            tar -xzf "$archive" -C "$root"
+            bin=$(find "$root" -type f -name bend -perm -u+x | head -n 1)
+            test -n "$bin"
+            echo "$version=$bin" >> /tmp/bend-versions.txt
+          }
+          install_bend 2.0.32 5c365ddb12954d0933cef751802e0f7d9875f842edcb80f9661f89cd1a9ff7b6
+          install_bend 2.0.33 a6c13c421543701a7f33e594a9c077c74361cdabd87c0052fc487a0deab8bc30
+          install_bend 2.0.34 78106a97af242429dcc057258eb8d10f69cddebcd5e263022185a52d003e09bf
+          cat /tmp/bend-versions.txt
+      - name: Run cross-version semantic oracle
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=()
+          while IFS= read -r spec; do args+=(--bend "$spec"); done < /tmp/bend-versions.txt
+          python3 evals/bend_adapter_upstream_regressions.py \
+            "${args[@]}" --repeats 25 --output /tmp/bend-upstream-qualification.json
+      - name: Upload upstream-qualification receipt
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: bend-upstream-qualification
+          path: /tmp/bend-upstream-qualification.json
+          if-no-files-found: warn
+          retention-days: 14
