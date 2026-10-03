@@ -5,6 +5,7 @@ and run_agent.py for pre-flight context checks.
 """
 
 import contextlib
+import copy
 import hashlib
 import ipaddress
 import json
@@ -2627,44 +2628,83 @@ def estimate_request_tokens_rough(
     return total
 
 
-# Keyed by ``id(tools)``; bounded, oldest-first eviction. Repeated ``str(tools)`` on
-# large schemas stalls GUI event loops under GIL pressure.
-_TOOLS_TOKENS_CACHE: dict[int, Tuple[int, str, str, int]] = {}
+# Keyed by list identity for a cheap lookup, but every row also keeps a deep
+# snapshot of the schema fields that affect the estimate. A hit is accepted only
+# when the live fields still equal that snapshot, so in-place mutations and a
+# recycled list id both miss safely without re-serializing unchanged schemas.
+_TOOLS_TOKENS_CACHE: dict[int, Tuple[tuple, int]] = {}
 _TOOLS_TOKENS_CACHE_MAX = 256
 
 
-def _tool_name_for_cache(tool: Any) -> str:
+def _tool_estimate_fields(tool: Any) -> Optional[Tuple[str, str, Any]]:
     if not isinstance(tool, dict):
-        return ""
+        return None
     fn = tool.get("function")
-    name = fn.get("name") if isinstance(fn, dict) else None
-    name = name if isinstance(name, str) else tool.get("name")
-    return name if isinstance(name, str) else ""
+    src = fn if isinstance(fn, dict) else tool
+    name = src.get("name")
+    description = src.get("description")
+    return (
+        name if isinstance(name, str) else "",
+        description if isinstance(description, str) else "",
+        src.get("parameters") or {},
+    )
+
+
+def _tool_cache_snapshot(tools: List[Dict[str, Any]]) -> tuple:
+    return tuple(
+        None if (fields := _tool_estimate_fields(tool)) is None
+        else (fields[0], fields[1], copy.deepcopy(fields[2]))
+        for tool in tools
+    )
+
+
+def _tool_cache_matches(tools: List[Dict[str, Any]], snapshot: tuple) -> bool:
+    if len(tools) != len(snapshot):
+        return False
+    for tool, cached in zip(tools, snapshot):
+        fields = _tool_estimate_fields(tool)
+        if fields is None or cached is None:
+            if fields is not None or cached is not None:
+                return False
+            continue
+        try:
+            if fields[0] != cached[0] or fields[1] != cached[1] or fields[2] != cached[2]:
+                return False
+        except Exception:
+            return False
+    return True
 
 
 def _estimate_tools_tokens_rough(tools: List[Dict[str, Any]]) -> int:
     if not tools:
         return 0
     key = id(tools)
-    signature = (len(tools), _tool_name_for_cache(tools[0]), _tool_name_for_cache(tools[-1]))
     cached = _TOOLS_TOKENS_CACHE.get(key)
-    if cached is not None and cached[:3] == signature:
-        return cached[3]
+    if cached is not None and _tool_cache_matches(tools, cached[0]):
+        return cached[1]
+
     # Sum the major schema fields (descriptions + parameters dominate).
     total_chars = 0
     for tool in tools:
-        if not isinstance(tool, dict):
+        fields = _tool_estimate_fields(tool)
+        if fields is None:
             continue
-        fn = tool.get("function")
-        src = fn if isinstance(fn, dict) else tool
-        params = src.get("parameters") or {}
-        total_chars += sum(len(v) for v in (src.get("name") or "", src.get("description") or "") if isinstance(v, str))
+        name, description, params = fields
+        total_chars += len(name) + len(description)
         try:  # JSON is closer to wire size than repr()
             total_chars += len(json.dumps(params, ensure_ascii=False, separators=(",", ":")))
         except Exception:
             total_chars += len(str(params))
     tokens = (total_chars + 3) // 4
-    if len(_TOOLS_TOKENS_CACHE) >= _TOOLS_TOKENS_CACHE_MAX:
+
+    try:
+        snapshot = _tool_cache_snapshot(tools)
+    except Exception:
+        # Exotic custom schemas may be estimable via repr() but not safely
+        # snapshot-able. Return the correct estimate without memoizing them.
+        return tokens
+
+    if len(_TOOLS_TOKENS_CACHE) >= _TOOLS_TOKENS_CACHE_MAX and key not in _TOOLS_TOKENS_CACHE:
         _TOOLS_TOKENS_CACHE.pop(next(iter(_TOOLS_TOKENS_CACHE)), None)
-    _TOOLS_TOKENS_CACHE[key] = (*signature, tokens)
+    _TOOLS_TOKENS_CACHE[key] = (snapshot, tokens)
     return tokens
