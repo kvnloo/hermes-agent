@@ -1,0 +1,47 @@
+[
+  {
+    "lane": "symlink-consumers",
+    "reviewed_sha": "ce4a9ee961c2555f20cf6b1082d435343c457593",
+    "publication_sha": "fc7d63d271247d4e200442b95bd9f8e6134c2dc7",
+    "tree": "2a9b5b41f8381e27297d377161cb616c0bfd5bd7",
+    "parent": "e01284d328bf8da8f669a108dfc37fbaea2260c5",
+    "branch": "downstream/20261003-reviewed-symlink-consumers",
+    "metadata_sanitized": true
+  },
+  {
+    "lane": "logging-consumers",
+    "reviewed_sha": "4cc3d275dffb239034563d5234e524634df11f8a",
+    "publication_sha": "4cc3d275dffb239034563d5234e524634df11f8a",
+    "tree": "58b0e63db968017b40b0ef1b34079d687ef90ca4",
+    "parent": "6ffbfb2933dbe7286c87cd6a1dfe1180e397b306",
+    "branch": "downstream/20261003-reviewed-logging-consumers",
+    "metadata_sanitized": false
+  },
+  {
+    "lane": "caption-transitions",
+    "reviewed_sha": "af39055645bca4614e9cd0cfea1e3383cab842ea",
+    "publication_sha": "af39055645bca4614e9cd0cfea1e3383cab842ea",
+    "tree": "8621c67441cf823b6d80362559ccaa11505d61d3",
+    "parent": "ad13ef7e78df3b20139bc25aca2d0855d0c78804",
+    "branch": "downstream/20261003-reviewed-caption-transitions",
+    "metadata_sanitized": false
+  },
+  {
+    "lane": "hosted-consumers",
+    "reviewed_sha": "696aeaa968354ab629faf8c15daace7fe65db9b8",
+    "publication_sha": "89cbd9a93c4f27453f0697524069b13bb0b2b2ec",
+    "tree": "815bd85b6577e39bb9c457c99e7fdc4f1c87683e",
+    "parent": "cb8d6920549ebe9d31f69f187d30b356b5639eed",
+    "branch": "downstream/20261003-reviewed-hosted-consumers",
+    "metadata_sanitized": true
+  },
+  {
+    "lane": "hosted-activity-fix",
+    "reviewed_sha": "8208ce0ac70431ce4fecad42421d0e7b1ce65e17",
+    "publication_sha": "8208ce0ac70431ce4fecad42421d0e7b1ce65e17",
+    "tree": "aefd551fd56f9f83ea3fd6bfafc84a4da89d3f22",
+    "parent": "cb8d6920549ebe9d31f69f187d30b356b5639eed",
+    "branch": "downstream/20261003-reviewed-hosted-activity-fix",
+    "metadata_sanitized": false
+  }
+]
