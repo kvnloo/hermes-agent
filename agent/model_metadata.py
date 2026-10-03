@@ -5,6 +5,7 @@ and run_agent.py for pre-flight context checks.
 """
 
 import contextlib
+import copy
 import hashlib
 import ipaddress
 import json
@@ -2627,29 +2628,25 @@ def estimate_request_tokens_rough(
     return total
 
 
-# Keyed by ``id(tools)``; bounded, oldest-first eviction. Repeated ``str(tools)`` on
-# large schemas stalls GUI event loops under GIL pressure.
-_TOOLS_TOKENS_CACHE: dict[int, Tuple[int, str, str, int]] = {}
+# Keyed by list identity for a cheap lookup, with a deep snapshot validating
+# each hit. Snapshot equality catches in-place schema mutations and also makes a
+# recycled list id harmless: only an equal schema may reuse the cached estimate.
+_TOOLS_TOKENS_CACHE: dict[int, Tuple[List[Dict[str, Any]], int]] = {}
 _TOOLS_TOKENS_CACHE_MAX = 256
-
-
-def _tool_name_for_cache(tool: Any) -> str:
-    if not isinstance(tool, dict):
-        return ""
-    fn = tool.get("function")
-    name = fn.get("name") if isinstance(fn, dict) else None
-    name = name if isinstance(name, str) else tool.get("name")
-    return name if isinstance(name, str) else ""
 
 
 def _estimate_tools_tokens_rough(tools: List[Dict[str, Any]]) -> int:
     if not tools:
         return 0
     key = id(tools)
-    signature = (len(tools), _tool_name_for_cache(tools[0]), _tool_name_for_cache(tools[-1]))
     cached = _TOOLS_TOKENS_CACHE.get(key)
-    if cached is not None and cached[:3] == signature:
-        return cached[3]
+    if cached is not None:
+        try:
+            if tools == cached[0]:
+                return cached[1]
+        except Exception:
+            pass
+
     # Sum the major schema fields (descriptions + parameters dominate).
     total_chars = 0
     for tool in tools:
@@ -2664,7 +2661,15 @@ def _estimate_tools_tokens_rough(tools: List[Dict[str, Any]]) -> int:
         except Exception:
             total_chars += len(str(params))
     tokens = (total_chars + 3) // 4
-    if len(_TOOLS_TOKENS_CACHE) >= _TOOLS_TOKENS_CACHE_MAX:
+
+    try:
+        snapshot = copy.deepcopy(tools)
+    except Exception:
+        # Exotic custom schemas may still be estimable via repr(); if they
+        # cannot be snapshotted safely, return the estimate without memoizing.
+        return tokens
+
+    if len(_TOOLS_TOKENS_CACHE) >= _TOOLS_TOKENS_CACHE_MAX and key not in _TOOLS_TOKENS_CACHE:
         _TOOLS_TOKENS_CACHE.pop(next(iter(_TOOLS_TOKENS_CACHE)), None)
-    _TOOLS_TOKENS_CACHE[key] = (*signature, tokens)
+    _TOOLS_TOKENS_CACHE[key] = (snapshot, tokens)
     return tokens
