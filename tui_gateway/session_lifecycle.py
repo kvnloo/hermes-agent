@@ -633,7 +633,8 @@ def _ws_session_is_orphaned(session: dict | None) -> bool:
     return bool(_ws_session_is_detached(session) and not session.get("running"))
 
 
-def _interrupt_session_turn(sid: str, session: dict, *, request_id: str | None = None) -> bool:
+def _interrupt_session_turn(sid: str, session: dict, *, request_id: str | None = None,
+                            retire_marker: bool = False) -> bool:
     """Apply the shared ``session.interrupt`` contract to one claimed session; returns whether the compute-host control
     channel was used. The WS orphan reaper reuses this so a dead client gets the same partial-history/queue semantics."""
     use_compute_host = _session_uses_compute_host(session)
@@ -680,6 +681,13 @@ def _interrupt_session_turn(sid: str, session: dict, *, request_id: str | None =
                 if session.get("running"):
                     session["running"] = False
                     _clear_inflight_turn(session)
+        if retire_marker:
+            # An explicit local Stop must not become crash recovery if a later cancel
+            # notification fails. Retire only after the agent interrupt succeeds; other
+            # shared callers (shutdown and compute-host control) keep their old ownership.
+            with session["history_lock"]:
+                active_marker_key = str(session.pop("_active_turn_marker_key", "") or "")
+            _retire_turn_marker(session, active_marker_key)
     _clear_pending(sid)
     with contextlib.suppress(Exception):
         from tools.approval import resolve_gateway_approval
