@@ -83,6 +83,31 @@ class TestProfileScopedSkills:
 
 
 
+    def test_toggle_edits_allowlist_instead_of_requiring_yaml(self, client, isolated_profiles):
+        worker = isolated_profiles["worker_alpha"]
+        (worker / "config.yaml").write_text(
+            "skills:\n  enabled: []\n  disabled: []\n", encoding="utf-8"
+        )
+
+        resp = client.put(
+            "/api/skills/toggle",
+            json={"name": "worker-skill", "enabled": True, "profile": "worker_alpha"},
+        )
+        assert resp.status_code == 200
+        cfg = _load_cfg(worker)
+        assert cfg["skills"]["enabled"] == ["worker-skill"]
+        assert cfg["skills"]["disabled"] == []
+
+        resp = client.put(
+            "/api/skills/toggle",
+            json={"name": "worker-skill", "enabled": False, "profile": "worker_alpha"},
+        )
+        assert resp.status_code == 200
+        cfg = _load_cfg(worker)
+        assert cfg["skills"]["enabled"] == []
+        assert cfg["skills"]["disabled"] == []
+
+
     def test_scope_restores_module_globals(self, client, isolated_profiles):
         """The SKILLS_DIR swap is per-request; the module global must be
         restored even after a scoped call (cron-style locked swap)."""

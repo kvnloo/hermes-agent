@@ -1,6 +1,8 @@
 """Tests for hermes_cli/skills_config.py and skills_tool disabled filtering."""
 from unittest.mock import patch
 
+import pytest
+
 
 # ---------------------------------------------------------------------------
 # get_disabled_skills
@@ -38,29 +40,89 @@ class TestSaveDisabledSkills:
 
 
 # ---------------------------------------------------------------------------
+# toggle_skill_selection — allowlist-aware UI writes
+# ---------------------------------------------------------------------------
+
+class TestToggleSkillSelection:
+    @patch("hermes_cli.skills_config.save_config")
+    def test_legacy_profile_still_uses_disabled_list(self, mock_save):
+        from hermes_cli.skills_config import toggle_skill_selection
+        config = {"skills": {"disabled": []}}
+
+        mode = toggle_skill_selection(config, "notes", False)
+
+        assert mode == "denylist"
+        assert config["skills"]["disabled"] == ["notes"]
+        assert "enabled" not in config["skills"]
+        mock_save.assert_called_once_with(config)
+
+    @patch("hermes_cli.skills_config.save_config")
+    def test_enabling_from_empty_allowlist_adds_exact_name(self, mock_save):
+        from hermes_cli.skills_config import toggle_skill_selection
+        config = {"skills": {"enabled": [], "disabled": []}}
+
+        mode = toggle_skill_selection(config, "notes", True)
+
+        assert mode == "allowlist"
+        assert config["skills"]["enabled"] == ["notes"]
+        assert config["skills"]["disabled"] == []
+        mock_save.assert_called_once_with(config)
+
+    @patch("hermes_cli.skills_config.save_config")
+    def test_disabling_exact_allowlist_entry_removes_it_without_deny(self, mock_save):
+        from hermes_cli.skills_config import toggle_skill_selection
+        config = {"skills": {"enabled": ["git", "notes"], "disabled": []}}
+
+        mode = toggle_skill_selection(config, "notes", False)
+
+        assert mode == "allowlist"
+        assert config["skills"]["enabled"] == ["git"]
+        assert config["skills"]["disabled"] == []
+        mock_save.assert_called_once_with(config)
+
+    @patch("hermes_cli.skills_config.save_config")
+    def test_disabling_skill_still_admitted_by_glob_uses_deny_override(self, mock_save):
+        from hermes_cli.skills_config import toggle_skill_selection
+        config = {"skills": {"enabled": ["*", "notes"], "disabled": []}}
+
+        mode = toggle_skill_selection(config, "notes", False)
+
+        assert mode == "denylist"
+        assert config["skills"]["enabled"] == ["*"]
+        assert config["skills"]["disabled"] == ["notes"]
+        mock_save.assert_called_once_with(config)
+
+    @patch("hermes_cli.skills_config.save_config")
+    def test_essential_skill_refuses_disable(self, mock_save):
+        from hermes_cli.skills_config import toggle_skill_selection
+
+        with pytest.raises(ValueError, match="essential"):
+            toggle_skill_selection({"skills": {"enabled": ["hermes-agent"]}}, "hermes-agent", False)
+
+        mock_save.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
 # _is_skill_disabled
 # ---------------------------------------------------------------------------
 
 class TestIsSkillDisabled:
 
 
-    @patch("hermes_cli.config.load_config")
-    def test_platform_disabled(self, mock_load):
-        mock_load.return_value = {"skills": {
-            "disabled": [],
-            "platform_disabled": {"telegram": ["tg-skill"]}
-        }}
+    def test_platform_disabled(self, tmp_path, monkeypatch):
+        (tmp_path / "config.yaml").write_text(
+            "skills:\n  disabled: []\n  platform_disabled:\n    telegram: [tg-skill]\n")
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
         from tools.skills_tool import _is_skill_disabled
         assert _is_skill_disabled("tg-skill", platform="telegram") is True
 
 
 
-    @patch("hermes_cli.config.load_config")
     @patch.dict("os.environ", {"HERMES_PLATFORM": "discord"})
-    def test_env_var_platform(self, mock_load):
-        mock_load.return_value = {"skills": {
-            "platform_disabled": {"discord": ["discord-skill"]}
-        }}
+    def test_env_var_platform(self, tmp_path, monkeypatch):
+        (tmp_path / "config.yaml").write_text(
+            "skills:\n  platform_disabled:\n    discord: [discord-skill]\n")
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
         from tools.skills_tool import _is_skill_disabled
         assert _is_skill_disabled("discord-skill") is True
 
@@ -135,7 +197,7 @@ class TestGetDisabledSkillNames:
 # ---------------------------------------------------------------------------
 
 class TestFindAllSkillsFiltering:
-    @patch("tools.skills_tool._get_disabled_skill_names", return_value={"my-skill"})
+    @patch("agent.skill_utils.get_disabled_skill_names", return_value={"my-skill"})
     @patch("tools.skills_tool.skill_matches_platform", return_value=True)
     def test_disabled_skill_excluded(self, mock_platform, mock_disabled, tmp_path, monkeypatch):
         skill_dir = tmp_path / "my-skill"

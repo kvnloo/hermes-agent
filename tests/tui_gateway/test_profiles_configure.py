@@ -44,6 +44,37 @@ def _described() -> dict:
     return {s["name"]: s["enabled"] for s in _call("profiles.describe", {})["mcp_servers"]}
 
 
+def _write_skill(profile_dir: Path, name: str) -> None:
+    target = profile_dir / "skills" / name
+    target.mkdir(parents=True, exist_ok=True)
+    (target / "SKILL.md").write_text(
+        f"---\nname: {name}\ndescription: test skill\n---\n\n# {name}\n",
+        encoding="utf-8",
+    )
+
+
+def _read_config(profile_dir: Path) -> dict:
+    path = profile_dir / "config.yaml"
+    return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+
+
+def test_configure_skill_checklist_edits_allowlist_directly(profile_dir):
+    _write_skill(profile_dir, "notes")
+    (profile_dir / "config.yaml").write_text(
+        "skills:\n  enabled: []\n  disabled: []\n", encoding="utf-8"
+    )
+
+    _call("profiles.configure", {"disabled_skills": []})
+    cfg = _read_config(profile_dir)
+    assert cfg["skills"]["enabled"] == ["notes"]
+    assert cfg["skills"]["disabled"] == []
+
+    _call("profiles.configure", {"disabled_skills": ["notes"]})
+    cfg = _read_config(profile_dir)
+    assert cfg["skills"]["enabled"] == []
+    assert cfg["skills"]["disabled"] == []
+
+
 def test_describe_matches_the_runtime_once_legacy_disabled_is_migrated(profile_dir):
     """Describe reads ``enabled``; a legacy ``disabled: true`` reads as off, and the config
     migration turns it into the ``enabled: false`` the runtime resolver honours."""
