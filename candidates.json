@@ -1,0 +1,29 @@
+[
+  {
+    "branch": "downstream/20261003-promotion-review-import-memory",
+    "commit": "4bfa806c4ac197447d062cf8655f91145a663f31",
+    "tree": "993eb03cefb36257fad79701682cfe2a26425d42",
+    "parents": [
+      "3c9847f5e86e81c23335a54daa532de28eeffeb3",
+      "9c56a7c6b76d93717e0eff4a861fcfc8ea953ec9"
+    ]
+  },
+  {
+    "branch": "downstream/20261003-promotion-review-cancel-recovery",
+    "commit": "e5ee351a94465208b68ebf27d634abcf223d00d7",
+    "tree": "a31c8a06439a7ae0f62d5b2c9b089f24b00c131c",
+    "parents": [
+      "3c9847f5e86e81c23335a54daa532de28eeffeb3",
+      "1a523b7df2ba4731a5d9ae0aa06b0f51976d977d"
+    ]
+  },
+  {
+    "branch": "downstream/20261003-promotion-review-chronos-fallback",
+    "commit": "5064c2698aebf1d6b811f300468fd4afb9313d32",
+    "tree": "ba373bdd375220116636b070767d7ef74474894b",
+    "parents": [
+      "3c9847f5e86e81c23335a54daa532de28eeffeb3",
+      "a83b87d635459c5c850115e2ff5c4f3ce259f66e"
+    ]
+  }
+]
