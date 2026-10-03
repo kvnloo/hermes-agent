@@ -252,6 +252,8 @@ export function ModelPicker({
   const width = clampOverlayWidth(preferredWidth, maxWidth)
 
   useEffect(() => {
+    // Catalog and reasoning responses belong to this mounted session only.
+    let active = true
     gw.request<ModelOptionsResult>('model.options', {
       ...(sessionId ? { session_id: sessionId } : {}),
       ...(initialRefresh ? { refresh: true } : {}),
@@ -262,6 +264,7 @@ export function ModelPicker({
       include_unconfigured: true
     })
       .then(raw => {
+        if (!active) return
         const r = asRpcResult<ModelOptionsResult>(raw)
 
         if (!r) {
@@ -279,10 +282,11 @@ export function ModelPicker({
           ...(sessionId ? { session_id: sessionId } : {})
         })
           .then(raw => {
+            if (!active) return
             const effort = asRpcResult<{ value?: string }>(raw)
             setCurrentReasoning(String(effort?.value ?? ''))
           })
-          .catch(() => setCurrentReasoning(''))
+          .catch(() => { if (active) setCurrentReasoning('') })
         setProviderIdx(
           Math.max(
             0,
@@ -297,9 +301,11 @@ export function ModelPicker({
         setLoading(false)
       })
       .catch((e: unknown) => {
+        if (!active) return
         setErr(rpcErrorMessage(e))
         setLoading(false)
       })
+    return () => { active = false }
   }, [gw, initialRefresh, sessionId])
 
   const names = useMemo(() => providerDisplayNames(providers), [providers])
