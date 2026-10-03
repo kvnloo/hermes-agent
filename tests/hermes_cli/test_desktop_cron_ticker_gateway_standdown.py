@@ -282,10 +282,19 @@ def test_chronos_fallback_stands_down_while_gateway_live(tmp_path, monkeypatch, 
     import hermes_cli.profiles as profiles
 
     startup_rechecked = threading.Event()
+    owned_cycles = threading.Event()
+    owned_phase = {"active": False, "probes": 0, "ticks": 0, "baseline": None}
     probes = []
+    ticks = []
 
     def gateway_running(home):
         probes.append(gateway["running"])
+        if owned_phase["active"] and gateway["running"]:
+            if owned_phase["baseline"] is None:
+                owned_phase["baseline"] = len(ticks)
+            owned_phase["probes"] += 1
+            if owned_phase["probes"] >= 3:
+                owned_cycles.set()
         if len(probes) >= 2 and gateway["running"]:
             startup_rechecked.set()
         return gateway["running"]
@@ -323,8 +332,14 @@ def test_chronos_fallback_stands_down_while_gateway_live(tmp_path, monkeypatch, 
     import cron.scheduler_provider as sp
 
     monkeypatch.setattr(sp, "resolve_cron_scheduler", lambda: prov)
-    ticks = []
-    monkeypatch.setattr("cron.scheduler.tick", lambda **kw: ticks.append(time.monotonic()))
+    def tick(**kwargs):
+        ticks.append(time.monotonic())
+        if owned_phase["active"] and gateway["running"]:
+            owned_phase["ticks"] += 1
+            if owned_phase["ticks"] >= 3:
+                owned_cycles.set()  # An ungated baseline also makes observable progress.
+
+    monkeypatch.setattr("cron.scheduler.tick", tick)
 
     stop = threading.Event()
     errors = []
@@ -353,13 +368,18 @@ def test_chronos_fallback_stands_down_while_gateway_live(tmp_path, monkeypatch, 
             time.sleep(0.05)
         assert len(ticks) >= 3, "fallback ticker never took over after rejection"
 
+        owned_phase["active"] = True
         gateway["running"] = True  # a gateway comes up on the same home
-        time.sleep(0.3)  # let an in-flight tick finish
-        held = len(ticks)
-        time.sleep(0.8)  # ~8 ticks would fire here ungated
+        assert owned_cycles.wait(5), "fallback made neither gated nor ticking progress"
+        assert owned_phase["probes"] >= 3, (
+            f"fallback ticked without checking ownership: {owned_phase}")
+        # The real ticker is serial: an earlier in-flight tick has finished by
+        # the first owned probe. Three observed gates prove the worker stayed active.
+        held = owned_phase["baseline"]
         assert len(ticks) == held, (
-            f"fallback raced the live gateway: {len(ticks) - held} ticks while owned")
+            f"fallback raced the live gateway: {len(ticks) - held} ticks after ownership probe")
 
+        owned_phase["active"] = False
         gateway["running"] = False
         deadline = time.monotonic() + 5
         while len(ticks) == held and time.monotonic() < deadline:
