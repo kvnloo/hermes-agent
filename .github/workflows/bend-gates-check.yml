@@ -1,0 +1,87 @@
+name: Bend adapter gate qualification
+
+on:
+  push:
+    branches: [verify/bend-local-only-qualification-20261003]
+    paths: [.github/workflows/bend-gates-check.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  adapter-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      HERMES_TEST_FILE_RETRIES: '0'
+      OPENROUTER_API_KEY: ''
+      OPENAI_API_KEY: ''
+      NOUS_API_KEY: ''
+      BASE: 55afb2446495e12f3cf119b9604d8172a398d9fa
+      CANDIDATE: c249922392fc52774279aa7425869ab04f1e325b
+    steps:
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+        with:
+          ref: c249922392fc52774279aa7425869ab04f1e325b
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: ./.github/actions/setup-pm
+        with:
+          extras: '[]'
+          test-environment: 'true'
+      - name: Verify exact product head and scope
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CANDIDATE"
+          test "$(git rev-parse HEAD^)" = "$BASE"
+          git diff --check "$BASE" "$CANDIDATE"
+          git diff --stat "$BASE" "$CANDIDATE"
+          python3 - <<'PY'
+          import os, subprocess
+          expected = {
+              'plugins/bend/verify_core.py', 'plugins/bend/tools.py',
+              'plugins/bend/QUALIFICATION.md', 'tests/plugins/test_bend_release_gates.py',
+          }
+          actual = set(subprocess.check_output(['git', 'diff', '--name-only', os.environ['BASE'], os.environ['CANDIDATE']], text=True).splitlines())
+          assert actual == expected, actual
+          PY
+      - name: Baseline must expose the missing guards
+        run: |
+          set -euo pipefail
+          git checkout "$BASE" -- plugins/bend/verify_core.py plugins/bend/tools.py
+          set +e
+          "$HERMES_PYTHON" -m pytest tests/plugins/test_bend_release_gates.py -q --tb=short --junitxml=/tmp/bend-gates-baseline.xml
+          result=$?
+          set -e
+          git checkout "$CANDIDATE" -- plugins/bend/verify_core.py plugins/bend/tools.py
+          test "$result" -eq 1
+          python3 - <<'PY'
+          from xml.etree import ElementTree as ET
+          root = ET.parse('/tmp/bend-gates-baseline.xml').getroot()
+          assert not root.findall('.//error'), 'Collection/setup errors are not baseline evidence'
+          failed = [case.attrib['name'] for case in root.findall('.//testcase') if case.find('failure') is not None]
+          for prefix in ('test_unsupported_import_is_refused_before_any_cli_call', 'test_remote_import_in_transitive_or_adjacent_input_is_refused', 'test_handler_never_promotes_raw_pass_by_version_alone'):
+              assert any(name.startswith(prefix) for name in failed), (prefix, failed)
+          print('Baseline behavioral failures:', len(failed))
+          PY
+      - name: Candidate public-handler and closure regressions
+        run: |
+          set -euo pipefail
+          "$HERMES_PYTHON" -m pytest tests/plugins/test_bend_release_gates.py -q --tb=short --junitxml=/tmp/bend-gates-candidate.xml
+          python3 - <<'PY'
+          from xml.etree import ElementTree as ET
+          root = ET.parse('/tmp/bend-gates-candidate.xml').getroot()
+          assert len(root.findall('.//testcase')) == 27
+          assert not root.findall('.//skipped')
+          assert not root.findall('.//error')
+          assert not root.findall('.//failure')
+          PY
+      - name: Focused canonical plugin suite
+        run: |
+          set -euo pipefail
+          scripts/run_tests.sh -j 2 tests/plugins/test_bend_plugin.py tests/plugins/test_bend_plugin_matrix.py tests/plugins/test_bend_release_gates.py -- -q --tb=short
+          git diff --exit-code
+      - name: State evidence boundary
+        if: always()
+        run: |
+          printf 'Exact adapter head: `%s`\n\nThese are adapter/public-handler tests, not qualification of a Bend release, live proof soundness, or standalone catalog admission. No Bend/Lean download or live provenance experiment is run.\n' "$CANDIDATE" >> "$GITHUB_STEP_SUMMARY"
