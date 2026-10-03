@@ -1,0 +1,70 @@
+[
+  {
+    "lane": "checkpoint-recovery",
+    "publication_sha": "2334804827c21a2bbea714a5f05984e4f10af703",
+    "tree": "c7db83248db0914805a5311f3226716354550db1",
+    "parents": [
+      "2194c9fb75988e25225496e799f98c3ffa29e533"
+    ],
+    "branch": "downstream/20261003-reviewed-checkpoint-recovery"
+  },
+  {
+    "lane": "discord-ledger",
+    "publication_sha": "7d5643c1254d3167ed94372cc5d69440360f71ce",
+    "tree": "7741dd712ae0142dae0bf50a00708f7f8d56a0ea",
+    "parents": [
+      "0efdd2946f7e3abe334d8e507e2d9c5243d411e3"
+    ],
+    "branch": "downstream/20261003-reviewed-discord-ledger"
+  },
+  {
+    "lane": "chronos-fallback-integration",
+    "publication_sha": "a83b87d635459c5c850115e2ff5c4f3ce259f66e",
+    "tree": "99e7830503e8c069c01ec8cd14d2c21cb3ba8dbc",
+    "parents": [
+      "6716ca0d28bc271c38b8ec0bdd7c5b20141552e5"
+    ],
+    "branch": "downstream/20261003-reviewed-chronos-fallback-integration",
+    "validation_baseline": "bd0affe5e5f723579df8902852f5d0c47795f355"
+  },
+  {
+    "lane": "sidebar-lineage-consumer",
+    "publication_sha": "6db79c9212cd04ee4f819e81408a8e283135fcdc",
+    "tree": "46c25fcc9707d7662224e30734202eea7d42d756",
+    "parents": [
+      "c9c5d0da7635a3d0f623a22afd3f94fde578b1eb"
+    ],
+    "branch": "downstream/20261003-reviewed-sidebar-lineage-consumer"
+  },
+  {
+    "lane": "cron-owner-consumer",
+    "publication_sha": "effd8c19730b8c4672a596988935d94685e8e38d",
+    "tree": "043acbef17db6e5f7fae87e21002f5b7d8329b0a",
+    "parents": [
+      "736d43cec1f21d291d6c579c8d47a662d9be0f4e"
+    ],
+    "branch": "downstream/20261003-reviewed-cron-owner-consumer"
+  },
+  {
+    "lane": "hosted-profile-integration",
+    "publication_sha": "27d28f08b1be3482cd87f7aaebdbddc6b0c73169",
+    "tree": "d68238a24d05b010bea6d103d16bf49d016f42f3",
+    "parents": [
+      "9250d92c123a07d28fa83c3af25590987b7df1e1"
+    ],
+    "branch": "downstream/20261003-reviewed-hosted-profile-integration",
+    "validation_baseline": "d87b5611fa7ac87e05cacdc1e7024a72a3a08470",
+    "composed_correction": "b45fe7c21c89a8b46911df7c86afc68023025d2f"
+  },
+  {
+    "lane": "voice-evidence-union",
+    "publication_sha": "bacdc1cfba19bacdc21c2e0ed88b60790df26a78",
+    "tree": "79dcf5c8aaf7a191ed8957d6ed6beef4ddf09bb4",
+    "parents": [
+      "00df1a838c40badf77cfb6b6ed11f2e9682bcfd8"
+    ],
+    "branch": "downstream/20261003-reviewed-voice-evidence-union",
+    "validation_baseline": "00df1a838c40badf77cfb6b6ed11f2e9682bcfd8",
+    "composed_tests": "180f79282bd6bafe62f9654c85b68dd1522b0b84"
+  }
+]
