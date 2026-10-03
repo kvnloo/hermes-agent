@@ -1,0 +1,82 @@
+[
+  {
+    "lane": "caption-end",
+    "publication_sha": "7d4eef431425ef74054d942186027601b67d4f56",
+    "tree": "bdbeed1533bbff95abe0be081bb8ba78f937c4c9",
+    "branch": "downstream/20261003-reviewed-caption-end",
+    "remote_verified": true,
+    "ci": {
+      "run_count": 0,
+      "check_count": 0,
+      "status_count": 0,
+      "runs": [],
+      "checks": [],
+      "classification": "NOT_RUN"
+    },
+    "parent": "af39055645bca4614e9cd0cfea1e3383cab842ea"
+  },
+  {
+    "lane": "credential-guard",
+    "publication_sha": "e51fbe4e76feb27ecc62cdad0613930a461992f9",
+    "tree": "f26e1b9350ad3fd6c5bfdf9528201aef97c32502",
+    "branch": "downstream/20261003-reviewed-credential-guard",
+    "remote_verified": true,
+    "ci": {
+      "run_count": 0,
+      "check_count": 0,
+      "status_count": 0,
+      "runs": [],
+      "checks": [],
+      "classification": "NOT_RUN"
+    },
+    "parent": "143f43bee487ed80c7e2348bc5435c2bdffa1297"
+  },
+  {
+    "lane": "protocol-consumers",
+    "publication_sha": "f99b5e4225e5cb519ac70bf33df881c82a466f65",
+    "tree": "bfeb33641fca53e79f58a0696259a124dde191ad",
+    "branch": "downstream/20261003-reviewed-protocol-consumers",
+    "remote_verified": true,
+    "ci": {
+      "run_count": 0,
+      "check_count": 0,
+      "status_count": 0,
+      "runs": [],
+      "checks": [],
+      "classification": "NOT_RUN"
+    },
+    "parent": "cb8f552878b6cf527851a5d939c793b33e2bc2da"
+  },
+  {
+    "lane": "model-hop-fix",
+    "publication_sha": "dfb0eafc23ede375db3a2bae5a0bd377fe74abfa",
+    "tree": "4f3c4aad34478c0c3a10ec118df4941fe9144781",
+    "branch": "downstream/20261003-reviewed-model-hop-fix",
+    "remote_verified": true,
+    "ci": {
+      "run_count": 0,
+      "check_count": 0,
+      "status_count": 0,
+      "runs": [],
+      "checks": [],
+      "classification": "NOT_RUN"
+    },
+    "parent": "b9c06a906c90e04b0db1aabd04656cfdcbd6f542"
+  },
+  {
+    "lane": "email-poll-budget",
+    "publication_sha": "e9ebc39ca59e1452bfcc5a86a3d11dd1fdd0b22d",
+    "tree": "64477711141bd60bdfe83208cf6e1c4ea1fde302",
+    "branch": "downstream/20261003-reviewed-email-poll-budget",
+    "remote_verified": true,
+    "ci": {
+      "run_count": 0,
+      "check_count": 0,
+      "status_count": 0,
+      "runs": [],
+      "checks": [],
+      "classification": "NOT_RUN"
+    },
+    "parent": "714bf7be0bf261388563a9ac9862cf267ac46708"
+  }
+]
