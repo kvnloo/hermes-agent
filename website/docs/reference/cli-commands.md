@@ -1018,7 +1018,7 @@ Outputs a compact, plain-text summary of your entire Hermes setup. Designed to b
 | **Features** | Enabled toolsets, MCP server count, memory provider |
 | **Services** | Gateway status, configured messaging platforms |
 | **Workload** | Cron job counts, installed skill count |
-| **Config overrides** | Any config values that differ from defaults. Credentials in them are redacted: a `fallback_providers` entry's `api_key`, and credentials in its `base_url` (userinfo, `key`/token query parameters, signed-URL signatures). |
+| **Config overrides** | Any config values that differ from defaults. Credentials in them are redacted: any secret field in a `fallback_providers` entry (`api_key`, `token`, `password`, ...), and credentials in its `base_url` (userinfo, `key`/token query parameters, signed-URL signatures). |
 
 ### Example output
 

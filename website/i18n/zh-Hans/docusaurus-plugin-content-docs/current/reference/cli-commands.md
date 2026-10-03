@@ -519,7 +519,7 @@ hermes dump [--show-keys]
 | **Features** | 已启用的 toolset、MCP 服务器数量、memory provider |
 | **Services** | Gateway 状态、已配置的消息平台 |
 | **Workload** | Cron 任务数量、已安装 skill 数量 |
-| **Config overrides** | 与默认值不同的所有 config 值。其中的凭据会被脱敏：`fallback_providers` 条目的 `api_key`，以及其 `base_url` 中的凭据（userinfo、`key`/token 查询参数、签名 URL 的签名）。 |
+| **Config overrides** | 与默认值不同的所有 config 值。其中的凭据会被脱敏：`fallback_providers` 条目中的任何秘密字段（`api_key`、`token`、`password`、……），以及其 `base_url` 中的凭据（userinfo、`key`/token 查询参数、签名 URL 的签名）。 |
 
 ### 示例输出
 
