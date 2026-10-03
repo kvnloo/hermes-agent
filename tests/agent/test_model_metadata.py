@@ -220,6 +220,41 @@ class TestResponsesItemImageAccounting:
 
 class TestEstimateRequestTokensRough:
 
+    def test_tools_cache_invalidates_on_in_place_schema_mutation(self):
+        import agent.model_metadata as mm
+
+        mm._TOOLS_TOKENS_CACHE.clear()
+        tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_weather",
+                    "description": "d",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "city": {"type": "string", "description": "c"},
+                        },
+                    },
+                },
+            }
+        ]
+
+        before = mm._estimate_tools_tokens_rough(tools)
+
+        # Neither mutation changes list identity, length, or the first/last tool name.
+        tools[0]["function"]["description"] = "d" * 1024
+        after_description = mm._estimate_tools_tokens_rough(tools)
+        tools[0]["function"]["parameters"]["properties"]["city"]["description"] = "c" * 1024
+        after_parameters = mm._estimate_tools_tokens_rough(tools)
+
+        mm._TOOLS_TOKENS_CACHE.clear()
+        fresh = mm._estimate_tools_tokens_rough(tools)
+
+        assert after_description > before
+        assert after_parameters > after_description
+        assert after_parameters == fresh
+
     def test_tools_cache_is_bounded(self):
         # A long-lived process builds many transient tool lists; the cache must
         # not grow without bound. Feed more distinct lists than the cap and
