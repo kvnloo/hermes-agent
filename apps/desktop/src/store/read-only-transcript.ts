@@ -44,7 +44,18 @@ export function markStoredTranscriptReadOnly(storedSessionId: string): void {
 export function clearStoredTranscriptReadOnly(storedSessionId: string): void {
   const id = storedSessionId.trim()
 
-  if (!id || !$readOnlyStoredTranscripts.get().has(id)) {
+  if (!id) {
+    return
+  }
+
+  // A successful live resume supersedes any in-flight stored-transcript
+  // recovery for this id. Bump its generation so a recoverer awaiting a slow
+  // stored read can detect the supersession before it marks the latch — a
+  // no-op clear STILL counts: the success is the signal, not the latch state,
+  // and the stale recovery's flag was never set yet (#94724 stale-recovery race).
+  bumpLiveResumeGeneration(id)
+
+  if (!$readOnlyStoredTranscripts.get().has(id)) {
     return
   }
 
@@ -102,6 +113,34 @@ export function isCronRunReadOnly(storedSessionId: null | string | undefined): b
   return Boolean(storedSessionId && $cronRunReadOnlyVerdicts.get().get(storedSessionId.trim()) === true)
 }
 
+/**
+ * Per-stored-id live-resume generation. `clearStoredTranscriptReadOnly` bumps
+ * the target's generation on every successful live resume — a no-op clear
+ * counts too, since the success (not the latch state) is the signal. A stale
+ * in-flight stored-transcript recovery captures the generation at catch entry
+ * and skips `markStoredTranscriptReadOnly` when it has moved by the time its
+ * slow stored read resolves: a live resume proved the session routable again
+ * while this recovery was still awaiting, so the live outcome is authoritative
+ * and the read-only latch must NOT be set over it (#94724 stale-recovery race).
+ */
+const liveResumeGenerationByStoredSessionId = new Map<string, number>()
+
+function bumpLiveResumeGeneration(storedSessionId: string): void {
+  liveResumeGenerationByStoredSessionId.set(
+    storedSessionId,
+    (liveResumeGenerationByStoredSessionId.get(storedSessionId) ?? 0) + 1
+  )
+}
+
+function liveResumeGeneration(storedSessionId: string): number {
+  return liveResumeGenerationByStoredSessionId.get(storedSessionId.trim()) ?? 0
+}
+
+/** Reset the live-resume generation counter (test affordance). */
+export function resetLiveResumeGenerations(): void {
+  liveResumeGenerationByStoredSessionId.clear()
+}
+
 /** Synthetic runtime-id namespace for read-only tiles: a stored transcript
  *  opened without a live runtime still needs a state-cache key, and this
  *  prefix guarantees it can never collide with (or be mistaken for) a real
@@ -149,6 +188,15 @@ export async function resumeWithStoredTranscriptFallback<TResumed, TTranscript>(
       throw error
     }
 
+    // Capture the live-resume generation at catch entry. A concurrent (or
+    // later) successful live resume bumps it via clearStoredTranscriptReadOnly
+    // while this stored read is in flight; if it has moved by the time the
+    // read resolves, this recovery is stale — the session is provably routable
+    // again and must NOT be latched read-only over the live outcome (#94724
+    // stale-recovery race: a no-owner resumeTile's slow cross-backend stored
+    // read resolving after a later live resume proved the session routable).
+    const generationAtCatch = liveResumeGeneration(storedSessionId)
+
     let transcript: TTranscript
 
     try {
@@ -157,7 +205,9 @@ export async function resumeWithStoredTranscriptFallback<TResumed, TTranscript>(
       throw error
     }
 
-    markStoredTranscriptReadOnly(storedSessionId)
+    if (liveResumeGeneration(storedSessionId) === generationAtCatch) {
+      markStoredTranscriptReadOnly(storedSessionId)
+    }
 
     return { error, mode: 'read-only', transcript }
   }
