@@ -887,12 +887,36 @@ class GoogleChatAdapter(BasePlatformAdapter):
             if event is None:
                 return
             text = (event.text or "").strip()
-            # The sender email (user_id_alt) is the per-user OAuth token key.
-            if text.startswith("/setup-files") and event.source is not None and await self._handle_setup_files_command(
-                chat_id=event.source.chat_id, thread_id=event.source.thread_id, raw_text=text,
-                sender_email=event.source.user_id_alt or None,
-            ):
-                return
+            if text.startswith("/setup-files") and event.source is not None:
+                # The sender's email (``user_id`` — populated from
+                # sender.get("email") in _build_message_event) is the
+                # per-user OAuth key: the bot stores this user's token at
+                # ${HERMES_HOME}/google_chat_user_tokens/<sanitized>.json
+                # so when User B asks for a file later in B's DM, B's
+                # token gets used (not the first person who set up files).
+                # _send_file looks the token up via _last_sender_by_chat,
+                # which is keyed by the SAME sender email, so the setup
+                # store and send-time lookup MUST agree on identity —
+                # using the resource name here (``user_id_alt`` =
+                # "users/{id}") would write a different file than the email
+                # keyed at send time and break per-user routing. Falls
+                # back to ``user_id_alt`` only when no email is present
+                # (rare — bot-to-bot/system events), where the per-user
+                # send path is unreachable anyway.
+                sender_email = (
+                    event.source.user_id
+                    if event.source and event.source.user_id
+                    else event.source.user_id_alt
+                )
+                handled = await self._handle_setup_files_command(
+                    chat_id=event.source.chat_id,
+                    thread_id=event.source.thread_id,
+                    raw_text=text,
+                    sender_email=sender_email,
+                )
+                if handled:
+                    return
+
             await self.handle_message(event)
         except Exception:
             logger.exception("[GoogleChat] _dispatch_message failed")
