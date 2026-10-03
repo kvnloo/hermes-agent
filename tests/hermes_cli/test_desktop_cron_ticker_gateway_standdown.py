@@ -265,7 +265,8 @@ def test_legacy_external_provider_starts_without_gate(tmp_path, monkeypatch):
     assert started["kwargs"] == {"adapters": None, "loop": None, "interval": 0}
 
 
-def test_chronos_fallback_stands_down_while_gateway_live(tmp_path, monkeypatch):
+@pytest.mark.parametrize("initially_owned", [False, True], ids=["starts-unowned", "deferred-start"])
+def test_chronos_fallback_stands_down_while_gateway_live(tmp_path, monkeypatch, initially_owned):
     """End-to-end for #126907 with the real ticker, real Chronos and the real
     built-in fallback (gateway liveness, the rejection and the tick body are
     stubbed; no network): gateway down -> identity rejected -> gateway up must
@@ -277,10 +278,19 @@ def test_chronos_fallback_stands_down_while_gateway_live(tmp_path, monkeypatch):
     from hermes_cli import web_server
 
     monkeypatch.setattr(hermes_constants, "get_hermes_home", lambda: tmp_path)
-    gateway = {"running": False}
+    gateway = {"running": initially_owned}
     import hermes_cli.profiles as profiles
 
-    monkeypatch.setattr(profiles, "_check_gateway_running", lambda home: gateway["running"])
+    startup_rechecked = threading.Event()
+    probes = []
+
+    def gateway_running(home):
+        probes.append(gateway["running"])
+        if len(probes) >= 2 and gateway["running"]:
+            startup_rechecked.set()
+        return gateway["running"]
+
+    monkeypatch.setattr(profiles, "_check_gateway_running", gateway_running)
 
     from plugins.cron_providers.chronos import ChronosCronScheduler
     from plugins.cron_providers.chronos._nas_client import NasCronClientError
@@ -317,8 +327,26 @@ def test_chronos_fallback_stands_down_while_gateway_live(tmp_path, monkeypatch):
     monkeypatch.setattr("cron.scheduler.tick", lambda **kw: ticks.append(time.monotonic()))
 
     stop = threading.Event()
+    errors = []
+
+    def start_desktop():
+        try:
+            web_server._start_desktop_cron_ticker(stop, interval=0.1)
+        except BaseException as exc:
+            errors.append(exc)
+
+    starter = threading.Thread(target=start_desktop, name="fixture-desktop-cron-start")
+    starter.start()
     try:
-        web_server._start_desktop_cron_ticker(stop, interval=0.1)
+        if initially_owned:
+            assert startup_rechecked.wait(5), "desktop never re-probed its deferred startup"
+            assert starter.is_alive()
+            assert not prov._identity_rejected
+            assert not ticks
+            gateway["running"] = False
+        starter.join(timeout=5)
+        assert not starter.is_alive()
+        assert not errors
 
         deadline = time.monotonic() + 5
         while len(ticks) < 3 and time.monotonic() < deadline:
@@ -339,6 +367,9 @@ def test_chronos_fallback_stands_down_while_gateway_live(tmp_path, monkeypatch):
         assert len(ticks) > held, "fallback did not resume after the gateway stopped"
     finally:
         stop.set()
+        starter.join(timeout=5)
+        assert not starter.is_alive()
         for thread in threading.enumerate():
             if thread.name == "cron-scheduler-chronos-fallback":
                 thread.join(timeout=5)
+                assert not thread.is_alive()
