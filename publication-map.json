@@ -1,0 +1,82 @@
+[
+  {
+    "lane": "cancel-fanout",
+    "publication_sha": "681e4cae5d3828586940fa029d62aa165b75fd20",
+    "tree": "050e44f80a220906fb3265bbe9fa95d3f13ca6a8",
+    "parent": "f99b5e4225e5cb519ac70bf33df881c82a466f65",
+    "branch": "downstream/20261003-reviewed-cancel-fanout",
+    "remote_verified": true,
+    "ci": {
+      "run_count": 0,
+      "check_count": 0,
+      "status_count": 0,
+      "runs": [],
+      "checks": [],
+      "classification": "NOT_RUN"
+    }
+  },
+  {
+    "lane": "stt-body-deadline",
+    "publication_sha": "531610fcbdae54dcc526cb44a68f34a26457ebb8",
+    "tree": "3ba3a0171a0142d1f8392faa9f70ead3c05a1b5f",
+    "parent": "8cc0f9541c49bd9b83830dd0979a38dc872ae047",
+    "branch": "downstream/20261003-reviewed-stt-body-deadline",
+    "remote_verified": true,
+    "ci": {
+      "run_count": 0,
+      "check_count": 0,
+      "status_count": 0,
+      "runs": [],
+      "checks": [],
+      "classification": "NOT_RUN"
+    }
+  },
+  {
+    "lane": "picker-lifecycle",
+    "publication_sha": "7145f40fa29fcedff7aa72a4bfaf5269ee93cda1",
+    "tree": "abcf1754d51e4e81a4cc76428fe2ca4f31cc1903",
+    "parent": "dfb0eafc23ede375db3a2bae5a0bd377fe74abfa",
+    "branch": "downstream/20261003-reviewed-picker-lifecycle",
+    "remote_verified": true,
+    "ci": {
+      "run_count": 0,
+      "check_count": 0,
+      "status_count": 0,
+      "runs": [],
+      "checks": [],
+      "classification": "NOT_RUN"
+    }
+  },
+  {
+    "lane": "email-reconnect-lifecycle",
+    "publication_sha": "d34b01ae37f0ab420bc44c07e97e2740b119c2dd",
+    "tree": "97226bfea1513d1bfa26e46c85de3ddecc893faa",
+    "parent": "e9ebc39ca59e1452bfcc5a86a3d11dd1fdd0b22d",
+    "branch": "downstream/20261003-reviewed-email-reconnect-lifecycle",
+    "remote_verified": true,
+    "ci": {
+      "run_count": 0,
+      "check_count": 0,
+      "status_count": 0,
+      "runs": [],
+      "checks": [],
+      "classification": "NOT_RUN"
+    }
+  },
+  {
+    "lane": "gemini-stream-close",
+    "publication_sha": "20392f057d2a10624ed65e8fa758f93f4b78c0db",
+    "tree": "7603d273c58da598b096f277b911ac93758380d1",
+    "parent": "091ad151caaac29930cfeedfd85e33e1d548c14f",
+    "branch": "downstream/20261003-reviewed-gemini-stream-close",
+    "remote_verified": true,
+    "ci": {
+      "run_count": 0,
+      "check_count": 0,
+      "status_count": 0,
+      "runs": [],
+      "checks": [],
+      "classification": "NOT_RUN"
+    }
+  }
+]
