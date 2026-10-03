@@ -1,0 +1,87 @@
+name: CUA promotion qualification
+
+on:
+  push:
+    branches: [verify/cua-token-only-session-20261003]
+    paths: [.github/workflows/cua-promotion-check.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      HERMES_TEST_FILE_RETRIES: '0'
+      HERMES_TEST_WORKERS: '2'
+      OPENROUTER_API_KEY: ''
+      OPENAI_API_KEY: ''
+      NOUS_API_KEY: ''
+      BASE: bd0affe5e5f723579df8902852f5d0c47795f355
+      CANDIDATE: 5f709c0d1faa7b1d9019209ebbd89a9530d22842
+    steps:
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+        with:
+          ref: 5f709c0d1faa7b1d9019209ebbd89a9530d22842
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Set up locked interpreter and test environment
+        uses: ./.github/actions/setup-pm
+        with:
+          extras: '["computer-use"]'
+          test-environment: 'true'
+      - name: Verify exact scope
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CANDIDATE"
+          test "$(git rev-parse HEAD^)" = "$BASE"
+          git diff --check "$BASE" "$CANDIDATE"
+          git diff --stat "$BASE" "$CANDIDATE"
+          python3 - <<'PY'
+          import os, subprocess
+          expected = {
+              'tools/computer_use/cua_backend.py',
+              'tools/computer_use/cua_backend_session.py',
+              'tests/tools/test_computer_use_element_token_contract.py',
+              'tests/fixtures/cua_driver_element_addressing_schemas.json',
+          }
+          actual = set(subprocess.check_output(['git', 'diff', '--name-only', os.environ['BASE'], os.environ['CANDIDATE']], text=True).splitlines())
+          assert actual == expected, actual
+          PY
+      - name: Baseline must fail the behavioral regressions
+        run: |
+          set -euo pipefail
+          git checkout "$BASE" -- tools/computer_use/cua_backend.py tools/computer_use/cua_backend_session.py
+          set +e
+          "$HERMES_PYTHON" -m pytest tests/tools/test_computer_use_element_token_contract.py -q --tb=short --junitxml=/tmp/cua-baseline.xml
+          result=$?
+          set -e
+          git checkout "$CANDIDATE" -- tools/computer_use/cua_backend.py tools/computer_use/cua_backend_session.py
+          test "$result" -eq 1
+          python3 - <<'PY'
+          from xml.etree import ElementTree as ET
+          root = ET.parse('/tmp/cua-baseline.xml').getroot()
+          assert not root.findall('.//error'), 'A collection/setup error is not regression evidence'
+          failed = {case.attrib['name'] for case in root.findall('.//testcase') if case.find('failure') is not None}
+          required = {
+              'test_click_by_element_sends_current_token_not_index',
+              'test_token_call_is_not_replayed_after_revival',
+              'test_token_free_revival_then_element_action_never_sends_a_dead_token',
+          }
+          assert required <= failed, failed
+          print('Confirmed baseline behavioral failures:', sorted(failed))
+          PY
+      - name: Candidate regressions
+        run: |
+          set -euo pipefail
+          "$HERMES_PYTHON" -m pytest tests/tools/test_computer_use_element_token_contract.py -q --tb=short
+      - name: Focused canonical computer-use suite
+        run: |
+          set -euo pipefail
+          scripts/run_tests.sh -j 2 tests/tools/test_computer_use.py tests/tools/test_computer_use_element_token_contract.py tests/computer_use/ -- -q --tb=short
+          git diff --exit-code
+      - name: Record qualification scope
+        if: always()
+        run: |
+          printf 'Candidate: `%s`\n\nBase: `%s`\n\nNo live desktop, paid model calls, or full-repository test claim. See individual step results.\n' "$CANDIDATE" "$BASE" >> "$GITHUB_STEP_SUMMARY"
