@@ -1,0 +1,82 @@
+[
+  {
+    "lane": "hosted-combined",
+    "publication_sha": "d87b5611fa7ac87e05cacdc1e7024a72a3a08470",
+    "tree": "40d61bfe8c3fe4baf6b47aaeeecba8a7f2f9e9f9",
+    "parent": "89cbd9a93c4f27453f0697524069b13bb0b2b2ec",
+    "branch": "downstream/20261003-reviewed-hosted-combined",
+    "remote_verified": true,
+    "ci": {
+      "run_count": 0,
+      "check_count": 0,
+      "status_count": 0,
+      "runs": [],
+      "checks": [],
+      "classification": "NOT_RUN"
+    }
+  },
+  {
+    "lane": "gemini-cancel-assessment",
+    "publication_sha": "1d14c6a926812d421b579560207a6c192ce1bf5a",
+    "tree": "d2e506bf94fb5f0eb3261bd2e3c3a0c35be7ca3f",
+    "parent": "20392f057d2a10624ed65e8fa758f93f4b78c0db",
+    "branch": "downstream/20261003-reviewed-gemini-cancel-assessment",
+    "remote_verified": true,
+    "ci": {
+      "run_count": 0,
+      "check_count": 0,
+      "status_count": 0,
+      "runs": [],
+      "checks": [],
+      "classification": "NOT_RUN"
+    }
+  },
+  {
+    "lane": "tts-lease-hook",
+    "publication_sha": "180f79282bd6bafe62f9654c85b68dd1522b0b84",
+    "tree": "a16b99f3681fee31c7bdcd641e57d47032f795a9",
+    "parent": "8c7c49403574f045429bc50086fdd7ccd528d584",
+    "branch": "downstream/20261003-reviewed-tts-lease-hook",
+    "remote_verified": true,
+    "ci": {
+      "run_count": 0,
+      "check_count": 0,
+      "status_count": 0,
+      "runs": [],
+      "checks": [],
+      "classification": "NOT_RUN"
+    }
+  },
+  {
+    "lane": "weather-race-fixtures",
+    "publication_sha": "1c4098c6327bce57cb99be29b4a1edc35f7868ef",
+    "tree": "42d67b65f044e48f1122ce61f5d3b2467b1e8cb6",
+    "parent": "9bfd2958edea8e24970e4e0de187592f0c3149a3",
+    "branch": "downstream/20261003-reviewed-weather-race-fixtures",
+    "remote_verified": true,
+    "ci": {
+      "run_count": 0,
+      "check_count": 0,
+      "status_count": 0,
+      "runs": [],
+      "checks": [],
+      "classification": "NOT_RUN"
+    }
+  },
+  {
+    "lane": "modal-cleanup-consumer",
+    "publication_sha": "f30fb396055d5410eccda4d2cebaa44b1200dd75",
+    "tree": "c854d62eb80e223102d82fcdbab389750ed66627",
+    "parent": "00cf303ca5fca3f353d27b47284c52072d577cf0",
+    "branch": "downstream/20261003-reviewed-modal-cleanup-consumer",
+    "remote_verified": true,
+    "ci": {
+      "run_count": 0,
+      "check_count": 0,
+      "status_count": 0,
+      "runs": [],
+      "checks": [],
+      "classification": "NOT_RUN"
+    }
+  }
+]
