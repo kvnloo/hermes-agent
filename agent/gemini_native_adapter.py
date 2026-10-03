@@ -906,8 +906,16 @@ class AsyncGeminiNativeClient:
         return self._async_stream(result) if kwargs.get("stream") else result
 
     async def _async_stream(self, iterator: Iterator[_GeminiStreamChunk]) -> Any:
-        while not (step := await asyncio.to_thread(self._sync._advance_stream_iterator, iterator))[0]:
-            yield step[1]
+        try:
+            while not (step := await asyncio.to_thread(self._sync._advance_stream_iterator, iterator))[0]:
+                yield step[1]
+        except GeneratorExit:
+            # aclose() between chunks must release the response now, not at GC.
+            # Do not close on task cancellation while a worker may still be in next().
+            close = getattr(iterator, "close", None)
+            if callable(close):
+                await asyncio.to_thread(close)
+            raise
 
     async def close(self) -> None:
         await asyncio.to_thread(self._sync.close)
