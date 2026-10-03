@@ -48,6 +48,9 @@ def test_deferred_retry_preserves_thread_publication(tmp_path, monkeypatch, late
         'platform_toolsets': {'cli': [], 'gui': [], 'bot_room': []},
         'hosted_rooms': {'profiles': {'two': str(secondary)}},
     }))
+    # Other test modules can import gateway.run before this fixture selects its home.
+    # Bind the real gateway config reader's startup home as the gateway bootstrap does.
+    monkeypatch.setattr('gateway.run._hermes_home', home)
     store = SessionStore(home / 'sessions', GatewayConfig())
     store._db = SessionDB(home / 'state.db')
     runner = SimpleNamespace(session_store=store, _session_db=store._db,
@@ -95,7 +98,7 @@ def test_deferred_retry_preserves_thread_publication(tmp_path, monkeypatch, late
             {'member_id': 'two', 'profile': 'two', 'handle': 'two'}])
         original = call('groups.send', room_id='room', event_id='original',
              payload={'text': '@one ORIGINAL', 'thread_id': 'thread-a'})
-        assert lost.wait(10)
+        assert lost.wait(10), service.runtime.status()
         first = _wait(lambda: next(iter(tasks.list_tasks(service.db_path, room_id='room')), None), 'original task')
         identity = first['identity']
         frozen = first['payload']
