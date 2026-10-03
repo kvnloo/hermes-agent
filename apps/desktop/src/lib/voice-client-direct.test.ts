@@ -374,6 +374,70 @@ describe('transcribeAudioClientDirect', () => {
       vi.useRealTimers()
     }
   })
+
+  it.each(['openai-multipart', 'xai-stt', 'elevenlabs-stt'] as const)(
+    'keeps the %s deadline active while the response body is stalled',
+    async wire => {
+      vi.useFakeTimers()
+      let body: ReadableStreamDefaultController<Uint8Array> | undefined
+      const aborted = vi.fn()
+      try {
+        mockDesktopApi({ ok: true, stt: { ...directStt, wire, timeout_s: 5 }, tts: relay })
+        vi.stubGlobal(
+          'fetch',
+          vi.fn(async (_url: string, init: RequestInit) => {
+            const stream = new ReadableStream<Uint8Array>({
+              start(controller) {
+                body = controller
+              }
+            })
+            init.signal?.addEventListener(
+              'abort',
+              () => {
+                aborted()
+                body?.error(new DOMException('aborted', 'AbortError'))
+              },
+              { once: true }
+            )
+            // Headers arrived. The real Response reader still waits for body bytes.
+            return new Response(stream, { status: 200 })
+          })
+        )
+        const pending = transcribeAudioClientDirect(new Blob(['audio']))
+        const settled = vi.fn()
+        void pending.then(settled, settled)
+        await vi.advanceTimersByTimeAsync(4_900)
+        expect(settled).not.toHaveBeenCalled()
+        await vi.advanceTimersByTimeAsync(200)
+        expect(aborted).toHaveBeenCalledTimes(1)
+        expect(settled).toHaveBeenCalledTimes(1)
+        await expect(pending).rejects.toThrow(/Transcription timed out after 5s/)
+      } finally {
+        body?.error(new DOMException('test cleanup', 'AbortError'))
+        vi.useRealTimers()
+      }
+    }
+  )
+
+  it('releases the xai deadline after the complete response is consumed', async () => {
+    vi.useFakeTimers()
+    let signal: AbortSignal | null | undefined
+    try {
+      mockDesktopApi({ ok: true, stt: { ...directStt, wire: 'xai-stt', timeout_s: 5 }, tts: relay })
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (_url: string, init: RequestInit) => {
+          signal = init.signal
+          return new Response(JSON.stringify({ text: 'completed transcript' }), { status: 200 })
+        })
+      )
+      expect(await transcribeAudioClientDirect(new Blob(['audio']))).toBe('completed transcript')
+      await vi.advanceTimersByTimeAsync(6_000)
+      expect(signal?.aborted).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })
 
 describe('synthesizeSpeechClientDirect', () => {

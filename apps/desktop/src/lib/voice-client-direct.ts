@@ -66,9 +66,6 @@ export interface VoiceClientConfig {
 // ---------------------------------------------------------------------------
 
 const CONFIG_TTL_MS = 60_000
-// Per-request cap on a direct STT upload; the gateway's stt timeout is not part of the
-// client config, so this mirrors its 60s default rather than hanging dictation forever.
-const STT_REQUEST_TIMEOUT_MS = 60_000
 
 let cached: { key: string; at: number; config: VoiceClientConfig } | null = null
 let inflight: { key: string; promise: Promise<null | VoiceClientConfig> } | null = null
@@ -248,13 +245,18 @@ export function isSttSilenceHallucination(
  * dictation UI in "transcribing" forever — the browser applies no timeout of
  * its own to a POST that never answers.
  */
-async function sttFetch(stt: DirectSttConfig, url: string, init: RequestInit): Promise<Response> {
+async function sttFetch(
+  stt: DirectSttConfig,
+  url: string,
+  init: RequestInit,
+  readBody: (response: Response) => Promise<string>
+): Promise<string> {
   const seconds = sttTimeoutSeconds(stt)
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), seconds * 1000)
 
   try {
-    return await fetch(url, { ...init, signal: controller.signal })
+    return await readBody(await fetch(url, { ...init, signal: controller.signal }))
   } catch (error) {
     if (controller.signal.aborted) {
       throw new Error(`Transcription timed out after ${seconds}s (${stt.provider} did not answer)`)
@@ -296,18 +298,22 @@ export async function transcribeAudioClientDirect(audio: Blob, owner?: ResolvedO
       form.set('language', stt.language)
     }
 
-    const response = await sttFetch(stt, `${stt.base_url.replace(/\/+$/, '')}/audio/transcriptions`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${stt.api_key}` },
-      body: form,
-      signal: AbortSignal.timeout(STT_REQUEST_TIMEOUT_MS)
-    })
+    const transcript = await sttFetch(
+      stt,
+      `${stt.base_url.replace(/\/+$/, '')}/audio/transcriptions`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${stt.api_key}` },
+        body: form
+      },
+      async response => {
+        if (!response.ok) {
+          throw new Error(`${stt.provider} STT error (HTTP ${response.status}): ${await providerErrorText(response)}`)
+        }
 
-    if (!response.ok) {
-      throw new Error(`${stt.provider} STT error (HTTP ${response.status}): ${await providerErrorText(response)}`)
-    }
-
-    const transcript = transcriptFromOpenAiMultipartBody(await response.text())
+        return transcriptFromOpenAiMultipartBody(await response.text())
+      }
+    )
 
     // Silence hallucination ("thank you" on quiet audio): treat as silence,
     // exactly like the relay endpoint, instead of submitting a phantom turn.
@@ -328,19 +334,23 @@ export async function transcribeAudioClientDirect(audio: Blob, owner?: ResolvedO
       form.set('format', 'true')
     }
 
-    const response = await sttFetch(stt, `${stt.base_url.replace(/\/+$/, '')}/stt`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${stt.api_key}` },
-      body: form,
-      signal: AbortSignal.timeout(STT_REQUEST_TIMEOUT_MS)
-    })
+    const transcript = await sttFetch(
+      stt,
+      `${stt.base_url.replace(/\/+$/, '')}/stt`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${stt.api_key}` },
+        body: form
+      },
+      async response => {
+        if (!response.ok) {
+          throw new Error(`xAI STT error (HTTP ${response.status}): ${await providerErrorText(response)}`)
+        }
 
-    if (!response.ok) {
-      throw new Error(`xAI STT error (HTTP ${response.status}): ${await providerErrorText(response)}`)
-    }
-
-    const result = (await response.json()) as { text?: string }
-    const transcript = (result.text || '').trim()
+        const result = (await response.json()) as { text?: string }
+        return (result.text || '').trim()
+      }
+    )
 
     // Silence hallucination: same contract as the relay endpoint.
     return isSttSilenceHallucination(transcript, stt.hallucination_filter) ? '' : transcript
@@ -358,19 +368,23 @@ export async function transcribeAudioClientDirect(audio: Blob, owner?: ResolvedO
       form.set('language_code', stt.language)
     }
 
-    const response = await sttFetch(stt, `${stt.base_url.replace(/\/+$/, '')}/speech-to-text`, {
-      method: 'POST',
-      headers: { 'xi-api-key': stt.api_key },
-      body: form,
-      signal: AbortSignal.timeout(STT_REQUEST_TIMEOUT_MS)
-    })
+    const transcript = await sttFetch(
+      stt,
+      `${stt.base_url.replace(/\/+$/, '')}/speech-to-text`,
+      {
+        method: 'POST',
+        headers: { 'xi-api-key': stt.api_key },
+        body: form
+      },
+      async response => {
+        if (!response.ok) {
+          throw new Error(`ElevenLabs STT error (HTTP ${response.status}): ${await providerErrorText(response)}`)
+        }
 
-    if (!response.ok) {
-      throw new Error(`ElevenLabs STT error (HTTP ${response.status}): ${await providerErrorText(response)}`)
-    }
-
-    const result = (await response.json()) as { text?: string }
-    const transcript = (result.text || '').trim()
+        const result = (await response.json()) as { text?: string }
+        return (result.text || '').trim()
+      }
+    )
 
     // Silence hallucination: same contract as the relay endpoint.
     return isSttSilenceHallucination(transcript, stt.hallucination_filter) ? '' : transcript
