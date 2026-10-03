@@ -158,91 +158,52 @@ describe('weather reference app (async contract)', () => {
 })
 
 describe('weather reference app (relaunch race)', () => {
-  const reply = (area: string, country: string, code: string) => ({
-    current_condition: [
-      {
-        FeelsLikeC: '20',
-        humidity: '40',
-        temp_C: '22',
-        weatherCode: code,
-        weatherDesc: [{ value: 'Sunny' }],
-        windspeedKmph: '7'
+  it.each(['resolve', 'reject'] as const)('ignores an older forecast that later %ss', async completion => {
+    let resolveParis!: (value: unknown) => void
+    let rejectParis!: (error: Error) => void
+    let resolveRome!: (value: unknown) => void
+    const fetchMock = vi.fn((input: string | URL | Request) => {
+      const url = new URL(String(input))
+      if (url.hostname === 'geocoding-api.open-meteo.com') {
+        const paris = url.searchParams.get('name') === 'Paris'
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ results: [{
+            name: paris ? 'Paris' : 'Rome', country: paris ? 'France' : 'Italy',
+            latitude: paris ? 48.85 : 41.90, longitude: paris ? 2.35 : 12.50,
+            timezone: paris ? 'Europe/Paris' : 'Europe/Rome'
+          }] })
+        })
       }
-    ],
-    nearest_area: [{ areaName: [{ value: area }], country: [{ value: country }] }]
-  })
-
-  it('a stale resolution must not clobber the newer launch', async () => {
-    let resolveParis!: (v: unknown) => void
-    let resolveRome!: (v: unknown) => void
-
-    vi.stubGlobal(
-      'fetch',
-      vi.fn((url: string) => {
-        if (url.includes('Paris')) {
-          return new Promise(r => (resolveParis = r))
-        }
-
-        if (url.includes('Rome')) {
-          return new Promise(r => (resolveRome = r))
-        }
-
-        throw new Error('unexpected url ' + url)
-      })
-    )
+      if (url.hostname === 'api.open-meteo.com' && url.searchParams.get('latitude') === '48.85') {
+        return new Promise((resolve, reject) => { resolveParis = resolve; rejectParis = reject })
+      }
+      if (url.hostname === 'api.open-meteo.com' && url.searchParams.get('latitude') === '41.9') {
+        return new Promise(resolve => { resolveRome = resolve })
+      }
+      throw new Error(`unexpected weather URL: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
 
     expect(launchWidget('weather', 'Paris')).toBeNull()
     expect(launchWidget('weather', 'Rome')).toBeNull()
-    expect(activeState()?.location).toBe('Rome')
-    expect(activeState()?.phase.kind).toBe('loading')
+    expect(activeState()).toMatchObject({ location: 'Rome', phase: { kind: 'loading' } })
+    // Both real geocoding calls must reach the forecast boundary before settlement.
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4))
+    resolveRome({ json: async () => openMeteoForecast, ok: true })
+    await vi.waitFor(() => expect(activeState()?.phase).toMatchObject({
+      kind: 'ready', report: { area: 'Rome, Italy', tempC: '22', weatherCode: 0 }
+    }))
 
-    // Rome resolves first — the user sees correct Rome conditions.
-    resolveRome({ json: async () => reply('Rome', 'Italy', '113'), ok: true })
-    await vi.waitFor(() => expect(activeState()?.phase.kind).toBe('ready'))
-    expect((activeState()!.phase as { kind: 'ready'; report: { area: string } }).report.area).toBe('Rome, Italy')
-
-    // Paris, launched first but slower, resolves LAST. Expected: discarded.
-    resolveParis({ json: async () => reply('Paris', 'France', '200'), ok: true })
-    await new Promise(r => setTimeout(r, 0))
-
-    const phase = activeState()!.phase as { kind: 'ready'; report: { area: string } }
-
-    expect(phase.report.area).toBe('Rome, Italy')
-    expect(activeState()?.location).toBe('Rome')
-  })
-
-  it('a stale rejection must not flip a ready slot to error', async () => {
-    let rejectParis!: (e: unknown) => void
-    let resolveRome!: (v: unknown) => void
-
-    vi.stubGlobal(
-      'fetch',
-      vi.fn((url: string) => {
-        if (url.includes('Paris')) {
-          return new Promise((_, rej) => (rejectParis = rej))
-        }
-
-        if (url.includes('Rome')) {
-          return new Promise(r => (resolveRome = r))
-        }
-
-        throw new Error('unexpected url ' + url)
-      })
-    )
-
-    expect(launchWidget('weather', 'Paris')).toBeNull()
-    expect(launchWidget('weather', 'Rome')).toBeNull()
-    expect(activeState()?.location).toBe('Rome')
-
-    // Rome resolves successfully — the user sees correct Rome conditions.
-    resolveRome({ json: async () => reply('Rome', 'Italy', '113'), ok: true })
-    await vi.waitFor(() => expect(activeState()?.phase.kind).toBe('ready'))
-
-    // Paris, launched first but slower, REJECTS. Expected: discarded — Rome stays ready.
-    rejectParis(new DOMException('The operation was aborted due to timeout', 'TimeoutError'))
-    await new Promise(r => setTimeout(r, 0))
-
-    expect(activeState()?.phase.kind).toBe('ready')
-    expect(activeState()?.location).toBe('Rome')
+    if (completion === 'resolve') {
+      resolveParis({ json: async () => ({ current: { ...openMeteoForecast.current, temperature_2m: 9 } }), ok: true })
+    } else {
+      rejectParis(new Error('older forecast failed'))
+    }
+    await new Promise<void>(resolve => setImmediate(resolve))
+    expect(activeState()).toMatchObject({
+      location: 'Rome', phase: { kind: 'ready', report: { area: 'Rome, Italy', tempC: '22' } }
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(4)
   })
 })
