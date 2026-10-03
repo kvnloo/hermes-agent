@@ -153,7 +153,7 @@ def _check_all_guards(command: str, env_type: str,
                                   has_host_access=has_host_access)
 
 
-from tools.environments.base import EnvironmentConnectionError
+from tools.environments.base import AmbiguousExecutionError, EnvironmentConnectionError
 
 
 # Tool description for LLM
@@ -1272,12 +1272,23 @@ def _run_foreground(
                                 task_id=task_id, session_key=session_key),
             )
             break
+        except AmbiguousExecutionError:
+            # A process existed, so the command may already have changed the
+            # world even though Hermes lost its trustworthy completion signal.
+            # Never replay an arbitrary shell command under a fresh execution.
+            return _error_json(
+                "Command execution outcome is unknown after it started. "
+                "Some effects may already have occurred; verify the target state before resending.",
+                status="ambiguous",
+                outcome_unknown=True,
+            )
         except Exception as e:
-            # A backend exception (e.g. an SSH connect timeout) never reached an exit status, so it
-            # is not a terminal outcome; Hermes' own deadline arrives as ``hermes_timed_out``.
+            # Exceptions that escape before BaseEnvironment publishes a process
+            # handle are pre-spawn/setup failures and remain retryable. Normal
+            # command timeouts/nonzero exits are structured results, not this path.
             if "timeout" in str(e).lower():
                 return _error_json(f"Command timed out after {effective_timeout} seconds", exit_code=124)
-            # Retry on transient errors
+            # Retry pre-spawn transient errors.
             if retry_count < max_retries:
                 wait_time = 2 ** (retry_count + 1)
                 logger.warning("Execution error, retrying in %ds (attempt %d/%d) - Command: %s - Error: %s: %s - Task: %s, Backend: %s",
