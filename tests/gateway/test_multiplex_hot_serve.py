@@ -297,7 +297,7 @@ async def test_deleted_profile_is_torn_down_and_unrouted_others_untouched(tmp_pa
 async def test_transient_start_failure_is_retried_on_next_reconcile(tmp_path, monkeypatch):
     """A hot-added profile whose adapter start raises a transient error (secret backend
     unreachable, a half-written config.yaml) must not be recorded as scanned: the next
-    reconcile retries it. Only the deliberate MultiplexConfigError park is acknowledged."""
+    reconcile retries it. A deliberate MultiplexConfigError is parked instead of retried."""
     runner, home = _runner(tmp_path, monkeypatch)
     _mkprofile(home, "alpha", "DISCORD_BOT_TOKEN=alpha-token\n")
     with patch("hermes_cli.profiles.get_active_profile_name", return_value="default"):
@@ -326,7 +326,7 @@ async def test_transient_start_failure_is_retried_on_next_reconcile(tmp_path, mo
         assert second["rescanned"] == ["gamma"]
         assert runner._profile_adapters["gamma"][Platform.DISCORD].token.strip().endswith("gamma-token")
 
-        # The deliberate park stays distinct: a MultiplexConfigError is acknowledged, not retried.
+        # The deliberate park stays distinct: a MultiplexConfigError is unserved, not retried.
         from gateway.run import MultiplexConfigError
 
         delta_dir = _mkprofile(home, "delta", "DISCORD_BOT_TOKEN=delta-token\n")
@@ -340,7 +340,9 @@ async def test_transient_start_failure_is_retried_on_next_reconcile(tmp_path, mo
         await runner.reconcile_served_profiles()
         await runner.reconcile_served_profiles()
         assert parked == ["delta"]
-        assert runner._served_profile_signatures["delta"] == profile_serve_signature(delta_dir)
+        assert "delta" not in runner._served_profile_signatures
+        assert "delta" not in runner.served_profile_names()
+        assert "delta" in runner._parked_profile_names()
 
 
 @pytest.mark.asyncio
