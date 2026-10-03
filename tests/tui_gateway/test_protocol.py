@@ -1837,3 +1837,90 @@ def test_disconnected_server_request_send_remains_replayable(server):
         assert server_requests.open_requests("send-detached") == []
     finally:
         reset_transport(token)
+
+
+@pytest.mark.parametrize("outcome", ["deny", "cancel"])
+def test_approval_queue_recovers_after_registration_failure(server, monkeypatch, outcome):
+    """The real queue owner drops a failed notification; a new request still settles normally."""
+    import errno
+    from tools import approval
+    from tools import approval_gateway_wait as wait_mod
+    from tui_gateway import server_requests
+    from tui_gateway.transport import StdioTransport, bind_transport, reset_transport
+
+    sid = "approval-registration-consumer"
+    frames = []
+    notified = threading.Event()
+
+    class RecoveringStream(io.StringIO):
+        def write(self, text):
+            frame = json.loads(text)
+            frames.append(frame)
+            if len(frames) == 1:
+                raise OSError(errno.ENOSPC, "test request stream full")
+            written = super().write(text)
+            if frame.get("method") == "approval":
+                notified.set()
+            return written
+
+    stream = RecoveringStream()
+    transport = StdioTransport(lambda: stream, threading.Lock())
+    monkeypatch.setitem(server._sessions, sid, {"session_key": sid})
+    monkeypatch.setattr(wait_mod._ctx, "_get_approval_timeout", lambda: 10)
+    monkeypatch.setattr(wait_mod._ctx, "_fire_approval_hook", lambda name, **kw: None)
+    approval.register_gateway_notify(sid, lambda data: server._emit_approval_request(sid, data))
+    token = bind_transport(transport)
+    worker = None
+    result = {}
+
+    def ask(command):
+        return wait_mod._await_gateway_decision(
+            sid, approval._gateway_notify_cbs[sid],
+            {"command": command, "description": "test-only request; never executed",
+             "pattern_key": "test", "pattern_keys": ["test"]})
+
+    def ask_later():
+        worker_token = bind_transport(transport)
+        try:
+            result["decision"] = ask("echo separate-request")
+        except BaseException as exc:
+            result["error"] = exc
+        finally:
+            reset_transport(worker_token)
+
+    try:
+        failed = ask("echo failed-notification")
+        assert failed == {"resolved": False, "choice": None, "notify_failed": True}
+        assert approval.list_gateway_approvals(sid) == []
+        assert server._open_requests(sid) == []
+        failed_id = frames[0]["id"]
+
+        worker = threading.Thread(target=ask_later)
+        worker.start()
+        assert notified.wait(5), "new approval did not reach the renderer transport"
+        pending, = server._open_requests(sid)
+        assert pending["id"] != failed_id
+        assert not server_requests.resolve_response({"id": failed_id, "result": {"choice": "deny"}})
+        if outcome == "deny":
+            assert server_requests.resolve_response({"id": pending["id"], "result": {"choice": "deny"}})
+        else:
+            server._clear_pending(sid)
+        worker.join(5)
+        assert not worker.is_alive(), "queue owner did not wake after settlement"
+        assert "error" not in result, result
+        decision = result["decision"]
+        if outcome == "deny":
+            assert decision["resolved"] and decision["choice"] == "deny"
+        else:
+            assert decision["choice"] is None and decision["cancelled"]
+        assert approval.list_gateway_approvals(sid) == []
+        assert server._open_requests(sid) == []
+        cancels = [frame["params"]["payload"] for frame in frames
+                   if frame.get("method") == "event" and frame["params"]["type"] == "request.cancel"]
+        assert [frame["id"] for frame in cancels] == ([pending["id"]] if outcome == "cancel" else [])
+    finally:
+        server._clear_pending(sid)
+        approval.unregister_gateway_notify(sid)
+        if worker is not None:
+            worker.join(5)
+        reset_transport(token)
