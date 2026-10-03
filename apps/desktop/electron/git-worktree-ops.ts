@@ -335,20 +335,36 @@ async function addWorktree(repoPath, options, gitBin) {
 
   if (opts.base) {
     // Remote-tracking branches may be stale or missing if the user hasn't
-    // fetched recently. When the base is an `origin/…` ref, fetch just that
-    // branch so `git worktree add -b new origin/main` works against the
-    // latest remote commit. Local branches are used as-is.
+    // fetched recently. When the base is a remote-tracking ref
+    // (`<remote>/<branch>`), fetch just that branch so
+    // `git worktree add -b new <remote>/<branch>` works against the latest
+    // remote commit. Local branches are used as-is. Resolve the remote with
+    // `remoteOfRef` rather than a literal `origin/` prefix: a repo can name
+    // its remotes anything (`upstream`, `fork`, a renamed `origin`).
     const base = String(opts.base)
+    let remote = await remoteOfRef(gitBin, root, base)
 
-    if (base.startsWith('origin/')) {
-      const remoteBranch = base.slice('origin/'.length)
+    // A tag-pinned narrow clone has no tracking ref for any branch, so
+    // `remoteOfRef` reads "<remote>/<branch>" as not-a-remote. When the prefix
+    // is a configured remote, treat it as a remote-tracking base so the fetch
+    // below can create the ref; otherwise keep the local-branch reading.
+    if (!remote && base.includes('/')) {
+      const maybeRemote = base.slice(0, base.indexOf('/'))
+
+      if (await gitLine(gitBin, ['remote', 'get-url', maybeRemote], root)) {
+        remote = maybeRemote
+      }
+    }
+
+    if (remote) {
+      const remoteBranch = base.slice(remote.length + 1)
 
       // `base` comes straight from IPC, and inside a refspec a glob such as
       // "origin/*" would fetch every branch: only fetch valid branch names.
       // The fetch is best effort; git uses the local ref or raises a clear
       // error below if it is entirely missing.
       if (await gitOk(gitBin, ['check-ref-format', '--branch', remoteBranch], root)) {
-        await fetchTrackingRef(gitBin, root, 'origin', remoteBranch)
+        await fetchTrackingRef(gitBin, root, remote, remoteBranch)
       }
 
       // When branching off a remote-tracking ref, git auto-sets up tracking
