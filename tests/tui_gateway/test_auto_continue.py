@@ -623,3 +623,129 @@ def test_second_backend_defers_to_a_live_marker_writer(emits, schedule_env, mark
         if child.poll() is None:
             child.kill()
         child.wait(timeout=10)
+
+
+@pytest.mark.parametrize("cancel_write_fails", [False, True])
+def test_interrupt_transport_failure_cannot_recover_stopped_turn(
+    monkeypatch, marker_home, cancel_write_fails
+):
+    """A stopped local turn must lose crash recovery state even when a cancel frame fails."""
+    import errno
+    import io
+    import json
+
+    from tui_gateway import server_requests
+    from tui_gateway.transport import StdioTransport, bind_transport, reset_transport
+
+    class AliveTurn:
+        def is_alive(self):
+            return True
+
+    sid = "marker-interrupt-target"
+    other_sid = "marker-interrupt-other"
+    home = marker_home / "owned-profile"
+    interrupted = []
+    settled = []
+    other_settled = []
+    cancellations = []
+    failure = OSError(errno.ENOSPC, "synthetic cancellation write failure")
+
+    class CancelStream(io.StringIO):
+        def write(self, text):
+            frame = json.loads(text)
+            if frame.get("method") == "event" and frame["params"]["type"] == "request.cancel":
+                cancellations.append(frame["params"]["payload"]["id"])
+                if cancel_write_fails and len(cancellations) == 1:
+                    raise failure
+            return super().write(text)
+
+    session = _session(
+        agent=types.SimpleNamespace(interrupt=lambda: interrupted.append(True)),
+        running=True, _run_thread=AliveTurn(), session_key="rotated-key",
+        _active_turn_marker_key="original-key", profile_home=str(home),
+    )
+    for key in ("original-key", "rotated-key"):
+        record_turn_start(home, key, "stopped fixture; must not run again")
+    record_turn_start(marker_home, "original-key", "unrelated launch profile")
+    actual_clear = server._clear_pending
+    _patch_local_interrupt(monkeypatch, session)
+    monkeypatch.setattr(server, "_clear_pending", actual_clear)
+    monkeypatch.setattr(server, "_resume_wake_after_interrupt", lambda: None)
+    monkeypatch.setitem(server._sessions, sid, session)
+    token = bind_transport(StdioTransport(CancelStream, threading.Lock()))
+    scheduled = []
+    monkeypatch.setattr(server, "_auto_continue_config", lambda: (True, 900, 2))
+    monkeypatch.setattr(server, "_start_session_work", lambda fn, **kw: scheduled.append(fn) or object())
+    try:
+        for _ in range(2):
+            server_requests.send_async("clarify", sid, {}, settled.append)
+        server_requests.send_async("clarify", other_sid, {}, other_settled.append)
+        targets = server_requests.open_requests(sid)
+        others = server_requests.open_requests(other_sid)
+        if cancel_write_fails:
+            with pytest.raises(OSError) as caught:
+                server._methods["session.interrupt"]("stop-marker", {"session_id": sid})
+            assert caught.value is failure
+        else:
+            response = server._methods["session.interrupt"]("stop-marker", {"session_id": sid})
+            assert response["result"]["status"] == "interrupted"
+        assert interrupted == [True]
+        assert session["_turn_cancel_requested"]
+        assert settled == [None, None]
+        assert cancellations == [row["id"] for row in targets]
+        assert server_requests.open_requests(sid) == []
+        assert server_requests.open_requests(other_sid) == others
+        assert other_settled == []
+        # A fresh resumed record reads the actual durable marker. Capture only
+        # scheduling: never construct an agent or execute the recovered prompt.
+        for key in ("original-key", "rotated-key"):
+            resumed = _session(session_key=key, profile_home=str(home))
+            assert server._maybe_schedule_auto_continue(sid, resumed, key) is None
+            assert read_turn_marker(home, key) is None
+        assert scheduled == []
+        assert "_active_turn_marker_key" not in session
+        assert read_turn_marker(marker_home, "original-key") is not None
+    finally:
+        server_requests.cancel(sid)
+        server_requests.cancel(other_sid)
+        reset_transport(token)
+
+
+def test_failed_agent_interrupt_preserves_recovery_marker(monkeypatch, marker_home):
+    """Do not retire crash recovery state before the actual stop has succeeded."""
+    failure = RuntimeError("synthetic agent interrupt failure")
+
+    def fail_interrupt():
+        raise failure
+
+    session = _session(
+        agent=types.SimpleNamespace(interrupt=fail_interrupt), running=True,
+        _active_turn_marker_key="original-key",
+    )
+    record_turn_start(marker_home, "original-key", "unfinished fixture")
+    record_turn_start(marker_home, "session-key", "unfinished fixture")
+    _patch_local_interrupt(monkeypatch, session)
+    monkeypatch.setattr(server, "_resume_wake_after_interrupt", lambda: None)
+    with pytest.raises(RuntimeError) as caught:
+        server._methods["session.interrupt"]("failed-stop", {"session_id": "failed-marker-stop"})
+    assert caught.value is failure
+    assert session["_active_turn_marker_key"] == "original-key"
+    assert read_turn_marker(marker_home, "original-key") is not None
+    assert read_turn_marker(marker_home, "session-key") is not None
+
+
+def test_shared_interrupt_default_retains_recovery_marker(monkeypatch, marker_home):
+    """Shutdown/other helper callers retain their existing recovery ownership."""
+    stopped = []
+    session = _session(
+        agent=types.SimpleNamespace(interrupt=lambda: stopped.append(True)), running=True,
+        _active_turn_marker_key="original-key",
+    )
+    record_turn_start(marker_home, "original-key", "unfinished fixture")
+    record_turn_start(marker_home, "session-key", "unfinished fixture")
+    _patch_local_interrupt(monkeypatch, session)
+    assert server._interrupt_session_turn("default-marker-stop", session) is False
+    assert stopped == [True]
+    assert session["_active_turn_marker_key"] == "original-key"
+    assert read_turn_marker(marker_home, "original-key") is not None
+    assert read_turn_marker(marker_home, "session-key") is not None
