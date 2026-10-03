@@ -48,12 +48,16 @@ Default menu when the user's intent is unclear:
 
 ```python
 clarify(
-    question="Which pixel-art style do you want?",
-    choices=[
-        "arcade — bold, chunky 80s cabinet feel (16 colors, 8px)",
-        "nes — Nintendo 8-bit hardware palette (54 colors, 8px)",
-        "gameboy — 4-shade green Game Boy DMG",
-        "snes — cleaner 16-bit look (32 colors, 4px)",
+    questions=[
+        {
+            "question": "Which pixel-art style do you want?",
+            "choices": [
+                "arcade — bold, chunky 80s cabinet feel (16 colors, 8px)",
+                "nes — Nintendo 8-bit hardware palette (54 colors, 8px)",
+                "gameboy — 4-shade green Game Boy DMG",
+                "snes — cleaner 16-bit look (32 colors, 4px)",
+            ],
+        }
     ],
 )
 ```
@@ -68,12 +72,16 @@ ask which scene:
 
 ```python
 clarify(
-    question="Want to animate it? Pick a scene or skip.",
-    choices=[
-        "night — stars + fireflies + leaves",
-        "urban — rain + neon pulse",
-        "snow — falling snowflakes",
-        "skip — just the image",
+    questions=[
+        {
+            "question": "Want to animate it? Pick a scene or skip.",
+            "choices": [
+                "night — stars + fireflies + leaves",
+                "urban — rain + neon pulse",
+                "snow — falling snowflakes",
+                "skip — just the image",
+            ],
+        }
     ],
 )
 ```
