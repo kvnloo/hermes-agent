@@ -1,0 +1,36 @@
+name: code-health architecture evidence
+
+on:
+  push:
+    branches:
+      - exp/code-health-architecture-evidence
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned Ruff
+        run: python -m pip install "$(python -m scripts.code_health --print-pins)"
+
+      - name: Run architecture evidence probes
+        run: python experiments/code_health_architecture_probe.py
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: code-health-architecture-evidence
+          path: architecture-evidence.json
+          retention-days: 7
