@@ -86,7 +86,7 @@ _DROP_HINTS = {
 _MISSING_AUTHSERV_HINT = (" Set EMAIL_AUTHSERV_ID (or platforms.email.authserv_id) to the receiving MTA's exact authserv-id, "
                           "or " + _OPT_OUT_HINT)
 _MESSAGE_ID_RE = re.compile(r"<[^<>\s]+>")
-_GMAIL_THREAD_ID_RE = re.compile(rb"(?:^|\s)X-GM-THRID\s+(\d+)(?:\s|$)", re.IGNORECASE)
+_GMAIL_THREAD_ID_RE = re.compile(rb"(?:^|[\s(])X-GM-THRID\s+(\d+)(?=\s|$)", re.IGNORECASE)
 # One token of a clause: a property we read (``header.from=x``; the value may be or contain a quoted-string), or
 # any other whitespace-delimited token consumed whole, so text inside quotes or other values is never read as a prop.
 _QUOTED = r'"(?:[^"\\]|\\.)*"'
