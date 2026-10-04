@@ -744,7 +744,7 @@ def format_scan_report(result: ScanResult) -> str:
         order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
         for f in sorted(result.findings, key=lambda f: order.get(f.severity, 4)):
             lines.append(f"  {f.severity.upper().ljust(8)} {f.category.ljust(14)} "
-                         f"{f'{f.file}:{f.line}'.ljust(30)} \"{f.match[:60]}\"")
+                         f"{f'{f.file}:{f.line}'.ljust(30)} \"{f.match[:60]}\" (rule: {f.pattern_id})")
         lines.append("")
     allowed, reason = should_allow_install(result)
     status = "ALLOWED" if allowed is True else "NEEDS CONFIRMATION" if allowed is None else "BLOCKED"
