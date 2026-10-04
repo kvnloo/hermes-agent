@@ -277,7 +277,13 @@ def _iter_external_files(base: Path) -> List[Path]:
     if not base.is_dir():
         return []
     files: List[Path] = []
-    for dirpath, dirnames, filenames in os.walk(base, followlinks=False):
+
+    def scan_error(exc: OSError) -> None:
+        # Provider discovery is optional; failure to enumerate already-selected
+        # state must not be reported as a complete archive.
+        raise exc
+
+    for dirpath, dirnames, filenames in os.walk(base, followlinks=False, onerror=scan_error):
         dirnames[:] = [d for d in dirnames if d not in _EXCLUDED_DIRS]
         files.extend(fp for fp in (Path(dirpath) / f for f in filenames)
                      if not (_is_non_regular_path(fp) or fp.name in _EXCLUDED_NAMES
@@ -622,11 +628,11 @@ def _run_backup_locked(args, hermes_root: Path) -> bool:
     skipped_dirs: set = set()
     try:
         files_to_add: list[tuple[Path, Path]] = list(_iter_backup_files(hermes_root, out_path, skipped_dirs))
+        external_to_add, skipped_external = _collect_external_entries()
     except OSError as exc:
         logger.warning("Backup aborted: scan failed: %s", exc)
         print(f"Error: backup scan failed: {exc}")
         return False
-    external_to_add, skipped_external = _collect_external_entries()
     if not files_to_add and not external_to_add:
         logger.info("backup phase=scan status=empty duration_ms=%.1f", (time.monotonic() - scan_started) * 1000)
         print("No files to back up.")
