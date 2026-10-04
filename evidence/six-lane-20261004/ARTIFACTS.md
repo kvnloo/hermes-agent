@@ -6,9 +6,12 @@ Historical absolute paths in receipts identify that workspace; they are not port
 Hosted CI was not run for these checks.
 
 - [H1 CLI/config readiness and independent review](h1.md)
+- [H2 reviewed gateway pool-attachment fix](h2.md)
 - [H3 fallback consumer proof and owner exclusions](h3.md)
 - [H4 tools/provider consumer proof and CUA evidence review](h4.md)
 - [H5 session/TUI readiness and H3 independent review](h5.md)
+- [CUA evidence reconciliation](cua.md)
+- [Delivery status and next choices](README.md)
 - [H3 original retry-budget-one reproduction](h3-retry1-original-probe.py)
 - [H3 final retry-budget-three control](h3-fallback-consumer-probe.py)
 
