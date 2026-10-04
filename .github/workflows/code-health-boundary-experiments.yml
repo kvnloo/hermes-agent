@@ -26,4 +26,4 @@ jobs:
           python -m pip install pytest "$(python -m scripts.code_health --print-pins)"
 
       - name: Run boundary experiments
-        run: pytest -q --confcutdir=tests/scripts tests/scripts/test_code_health_boundary_experiments.py
+        run: PYTHONPATH=. pytest -q --confcutdir=tests/scripts tests/scripts/test_code_health_boundary_experiments.py
