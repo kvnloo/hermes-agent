@@ -1,6 +1,7 @@
 """Tests for tools/skills_guard.py - security scanner for skills."""
 
 import tempfile
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -498,6 +499,41 @@ class TestCheckStructure:
 
 
 class TestFormatScanReport:
+    def test_rule_ids_distinguish_findings_without_mutating_result(self):
+        findings = [
+            Finding("example_note", "low", "example", "reference.md", 7,
+                    "Neutral reference text", "Example note"),
+            Finding("example_review", "critical", "example", "reference.md", 7,
+                    "Neutral reference text", "Example review"),
+        ]
+        result = ScanResult("example", "community", "community", "dangerous", findings)
+        before = deepcopy(result)
+
+        report = format_scan_report(result)
+
+        assert report.index("(rule: example_review)") < report.index("(rule: example_note)")
+        assert report.count("reference.md:7") == 2
+        assert report.count('"Neutral reference text"') == 2
+        assert result == before
+
+    @pytest.mark.parametrize("trust, verdict, severity, status", [
+        ("community", "safe", "low", "ALLOWED"),
+        ("community", "caution", "high", "BLOCKED"),
+        ("community", "dangerous", "critical", "BLOCKED"),
+        ("agent-created", "dangerous", "critical", "NEEDS CONFIRMATION"),
+    ])
+    def test_rule_id_keeps_verdict_and_decision(self, trust, verdict, severity, status):
+        finding = Finding("example_rule", severity, "example", "reference.md", 1,
+                          "Neutral reference text", "Example finding")
+        result = ScanResult("example", trust, trust, verdict, [finding])
+        _, reason = should_allow_install(result)
+
+        report = format_scan_report(result)
+
+        assert "(rule: example_rule)" in report
+        assert f"Verdict: {verdict.upper()}" in report
+        assert report.endswith(f"Decision: {status} — {reason}")
+
     def test_dangerous_report_surfaces_verdict_and_snippet(self):
         f = [Finding("x", "critical", "exfil", "f.py", 1, "curl $KEY", "exfil")]
         result = ScanResult("bad-skill", "test", "community", "dangerous", findings=f)
