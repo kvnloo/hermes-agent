@@ -202,7 +202,8 @@ class GatewayTurnMixin:
             override_runtime["capabilities"] = dict(override_runtime["capabilities"] or {})
             if override_runtime.get("api_key"):
                 if override_runtime.get("credential_pool") is None:
-                    override_runtime["credential_pool"] = _credential_pool_for_provider(override.get("provider"))
+                    override_runtime["credential_pool"] = _credential_pool_for_provider(
+                        override.get("provider"), target_model=override_model or None)
                 logger.debug(
                     "Session model override (fast): session=%s config_model=%s -> override_model=%s provider=%s",
                     skey or "", model, override_model, override_runtime.get("provider"),

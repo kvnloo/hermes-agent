@@ -2495,12 +2495,13 @@ def _deep_merge_request_overrides(base: Optional[dict], override: Optional[dict]
     return _deep_merge(base_dict, override_dict)
 
 
-def _credential_pool_for_provider(provider: Optional[str]):
-    """Return the live credential pool for a provider id (e.g. ``custom:hyper``)."""
+def _credential_pool_for_provider(provider: Optional[str], target_model: Optional[str] = None):
+    """Return the live pool for a provider and the model the session will send."""
     if not provider or not str(provider).strip():
         return None
     try:
-        return _resolve_runtime_agent_kwargs_for_provider(str(provider).strip()).get("credential_pool")
+        return _resolve_runtime_agent_kwargs_for_provider(
+            str(provider).strip(), target_model=target_model).get("credential_pool")
     except Exception:
         logger.debug("Failed to resolve credential pool for provider=%s", provider, exc_info=True)
         return None

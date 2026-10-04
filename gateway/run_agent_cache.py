@@ -216,7 +216,8 @@ class GatewayAgentCacheMixin:
             and runtime_kwargs.get("credential_pool") is None
             and override.get("provider")
         ):
-            runtime_kwargs["credential_pool"] = _credential_pool_for_provider(override.get("provider"))
+            runtime_kwargs["credential_pool"] = _credential_pool_for_provider(
+                override.get("provider"), target_model=model or None)
         return model, runtime_kwargs
 
     def _snapshot_session_model_override(self, session_key: str) -> dict:
