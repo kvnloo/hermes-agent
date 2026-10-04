@@ -17,8 +17,11 @@ import io
 import json
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from scripts.code_health import py_rules
 from scripts.code_health.cli import run
