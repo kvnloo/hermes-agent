@@ -1,0 +1,29 @@
+name: code-health boundary experiments
+
+on:
+  push:
+    branches:
+      - exp/code-health-boundary-fixes-96bb97a
+
+permissions:
+  contents: read
+
+jobs:
+  boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.1
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install test deps
+        run: |
+          python -m pip install pytest "$(python -m scripts.code_health --print-pins)"
+
+      - name: Run boundary experiments
+        run: pytest -q tests/scripts/test_code_health_boundary_experiments.py
