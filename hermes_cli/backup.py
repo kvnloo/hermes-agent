@@ -329,7 +329,12 @@ def _iter_backup_files(hermes_root: Path, out_path: Path, skipped_dirs: Optional
     excluded tree, the root-only ``hermes-agent`` carve-out, root runtime trees, per-file rules),
     shared by ``hermes backup`` and the pre-update path so they can never drift.
     """
-    for dirpath, dirnames, filenames in os.walk(hermes_root, followlinks=False):
+    def scan_error(exc: OSError) -> None:
+        # os.walk otherwise hides unreadable subtrees, making a partial scan look
+        # complete and allowing retention to prune the last complete backup.
+        raise exc
+
+    for dirpath, dirnames, filenames in os.walk(hermes_root, followlinks=False, onerror=scan_error):
         rel_dir = Path(dirpath).relative_to(hermes_root)
         is_root = rel_dir == Path(".")
         kept = [
@@ -615,7 +620,12 @@ def _run_backup_locked(args, hermes_root: Path) -> bool:
     logger.info("backup phase=scan status=started")
     print(f"Scanning {display_hermes_home()} ...")
     skipped_dirs: set = set()
-    files_to_add: list[tuple[Path, Path]] = list(_iter_backup_files(hermes_root, out_path, skipped_dirs))
+    try:
+        files_to_add: list[tuple[Path, Path]] = list(_iter_backup_files(hermes_root, out_path, skipped_dirs))
+    except OSError as exc:
+        logger.warning("Backup aborted: scan failed: %s", exc)
+        print(f"Error: backup scan failed: {exc}")
+        return False
     external_to_add, skipped_external = _collect_external_entries()
     if not files_to_add and not external_to_add:
         logger.info("backup phase=scan status=empty duration_ms=%.1f", (time.monotonic() - scan_started) * 1000)
