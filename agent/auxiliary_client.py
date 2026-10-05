@@ -3781,52 +3781,10 @@ def _recover_provider_pool(provider: str, exc: Exception, *, failed_api_key: str
     return False
 
 
-def _prepare_same_provider_retry(
-    *, task: Optional[str], resolved_provider: str, resolved_model: Optional[str],
-    resolved_base_url: Optional[str], resolved_api_key: Optional[str],
-    resolved_api_mode: Optional[str], main_runtime: Optional[Dict[str, Any]],
-    final_model: Optional[str], messages: list, temperature: Optional[float],
-    max_tokens: Optional[int], tools: Optional[list], effective_timeout: float,
-    effective_extra_body: dict, reasoning_config: Optional[dict], async_mode: bool,
-    extra_headers: Optional[Dict[str, str]] = None,
-) -> Tuple[Any, Dict[str, Any]]:
-    """Rebuild (client, request kwargs) for a same-provider retry after credential recovery."""
-    if task == "vision":
-        effective_provider, retry_client, retry_model = resolve_vision_provider_client(
-            provider=resolved_provider, model=final_model, base_url=resolved_base_url,
-            api_key=resolved_api_key, async_mode=async_mode,
-        )
-    else:
-        retry_client, retry_model = _get_cached_client(
-            resolved_provider, resolved_model, async_mode=async_mode, base_url=resolved_base_url,
-            api_key=resolved_api_key, api_mode=resolved_api_mode, main_runtime=main_runtime,
-        )
-        effective_provider = _effective_provider_for_client(retry_client, resolved_provider)
-    if retry_client is None:
-        raise RuntimeError(
-            f"Auxiliary {task or 'call'}: provider {resolved_provider} could not be rebuilt after recovery"
-        )
-    retry_base = str(getattr(retry_client, "base_url", "") or "")
-    retry_kwargs = _build_call_kwargs(
-        effective_provider or resolved_provider, retry_model or final_model, messages,
-        temperature=temperature, max_tokens=max_tokens, tools=tools, timeout=effective_timeout,
-        extra_body=effective_extra_body, reasoning_config=reasoning_config,
-        base_url=retry_base or resolved_base_url, task=task,
-    )
-    # Preserve per-request attribution headers (e.g. Copilot ``x-initiator``) so the retry keeps capability gating.
-    if extra_headers:
-        # Copilot's ``x-initiator: user``) across the rebuilt-client retry — dropping them here would let a
-        # recovery retry silently lose capability gating (#60293).
-        # Preserve per-request attribution headers across the rebuilt-client retry — see the sync variant
-        # above (#60293).
-        retry_kwargs["extra_headers"] = dict(extra_headers)
-    if _is_anthropic_compat_endpoint(resolved_provider, retry_base):
-        retry_kwargs["messages"] = _convert_openai_images_to_anthropic(retry_kwargs["messages"])
-    return retry_client, retry_kwargs
-
-
 def _retry_same_provider_sync(*, resolved_provider: str, resolved_api_mode: Optional[str], task: Optional[str], **prep) -> Any:
-    retry_client, retry_kwargs = _prepare_same_provider_retry(
+    from agent.auxiliary_retry import prepare_same_provider_retry
+
+    retry_client, retry_kwargs = prepare_same_provider_retry(
         task=task, resolved_provider=resolved_provider, resolved_api_mode=resolved_api_mode, async_mode=False, **prep,
     )
     # Honor auxiliary.stream_only_base_urls on the retry path too (mirrors the
@@ -3850,25 +3808,18 @@ def _retry_same_provider_sync(*, resolved_provider: str, resolved_api_mode: Opti
 
 
 async def _retry_same_provider_async(*, resolved_provider: str, resolved_api_mode: Optional[str], task: Optional[str], **prep) -> Any:
-    retry_client, retry_kwargs = _prepare_same_provider_retry(
+    from agent.auxiliary_retry import prepare_same_provider_retry
+
+    retry_client, retry_kwargs = prepare_same_provider_retry(
         task=task, resolved_provider=resolved_provider, resolved_api_mode=resolved_api_mode, async_mode=True, **prep,
     )
-    # Mirror of the sync-path fix, with the same native-client exclusions as
-    # the initial async path in _async_call_llm_impl (those adapters don't
-    # speak OpenAI-style stream/stream_options kwargs).
     force_stream = _provider_requires_stream(
         _effective_provider_for_client(retry_client, resolved_provider),
         str(getattr(retry_client, "base_url", "") or "") or prep.get("resolved_base_url"),
-    ) and not isinstance(retry_client, (
-        AsyncCodexAuxiliaryClient,
-        AsyncAnthropicAuxiliaryClient,
-        AsyncBedrockAuxiliaryClient,
-    ))
+    )
 
     async def _acreate(_kwargs: Dict[str, Any]) -> Any:
-        if force_stream:
-            return await _acreate_with_stream(retry_client, _kwargs, task)
-        return await retry_client.chat.completions.create(**_kwargs)
+        return await _acreate_with_progress(retry_client, _kwargs, task, force_stream=force_stream)
 
     return _validate_llm_response(
         await _relay_async_completion(
