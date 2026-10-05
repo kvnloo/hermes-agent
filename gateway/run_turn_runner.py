@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from agent.i18n import t
 from agent.interrupt_compat import _accepts_keyword
 from agent.replay_cleanup import canonicalize_replay_history
+from gateway import run_turn_progress_state as progress_state
 from gateway.config import Platform
 from gateway.media_repair import repair_explicit_computer_use_media_paths
 from gateway.platforms.base import BasePlatformAdapter
@@ -535,27 +536,8 @@ class TurnRunner:
 
     # ── editable progress bubbles (progress-queue drain) ────────────────────────────────────
 
-    @dataclasses.dataclass
-    class _ProgressEditState:
-        """Mutable editable-bubble state shared by ``send_progress_messages`` and its helpers."""
-        adapter: Any
-        progress_lines: list
-        progress_msg_id: Any
-        can_edit: bool
-        _progress_len_fn: Any
-        _PROGRESS_TEXT_LIMIT: int
-        _edit_accepts_metadata: bool
-        # A permanent edit failure already moved progress to a fresh bubble that has not yet been
-        # edited successfully. A second failure in a row means edits are unusable, not one dead bubble.
-        reanchored: bool = False
-        # Monotonic deadline set by a flood refusal. Until it passes, new lines are only buffered:
-        # no edit, split, or send, so a refused bubble is not retried once per incoming tool line.
-        defer_until: float = 0.0
 
-    # Minimum seconds between progress edits (Telegram flood control).
-    _PROGRESS_EDIT_INTERVAL = 1.5
-
-    def _progress_edit_state(self, adapter) -> "TurnRunner._ProgressEditState":
+    def _progress_edit_state(self, adapter) -> progress_state.ProgressEditState:
         ctx = self._ctx
         len_fn = adapter.message_len_fn if isinstance(adapter, BasePlatformAdapter) else len
         try:
@@ -568,7 +550,7 @@ class TurnRunner:
             with suppress(Exception):
                 raw_limit = int(adapter.max_message_length_for_chat(ctx.source.chat_id) or 4000)
                 len_fn = adapter.message_len_fn_for_chat(ctx.source.chat_id)
-        return self._ProgressEditState(
+        return progress_state.ProgressEditState(
             adapter=adapter, progress_lines=[], progress_msg_id=None,
             # "separate" = one message per tool (pre-v0.9 behavior)
             can_edit=ctx.progress_grouping != "separate",
@@ -588,17 +570,13 @@ class TurnRunner:
             kwargs["metadata"] = ctx._progress_metadata
         return await st.adapter.edit_message(**kwargs)
 
-    @staticmethod
-    def _progress_text(lines: list) -> str:
-        return "\n".join(str(line) for line in lines)
-
     def _split_progress_groups(self, st, lines: list) -> list[list]:
         """Partition progress lines into platform-sized editable bubbles."""
         groups: list[list] = []
         current: list = []
         for line in lines:
             candidate = current + [line]
-            if current and st._progress_len_fn(self._progress_text(candidate)) > st._PROGRESS_TEXT_LIMIT:
+            if current and st._progress_len_fn(progress_state.progress_text(candidate)) > st._PROGRESS_TEXT_LIMIT:
                 groups.append(current)
                 candidate = [line]
             current = candidate
@@ -623,21 +601,21 @@ class TurnRunner:
         groups = self._split_progress_groups(st, st.progress_lines)
         if len(groups) <= 1:
             return False
-        if self._progress_deferred(st):
+        if progress_state.progress_deferred(st):
             return True
         if st.progress_msg_id is not None:
-            result = await self._edit_progress_message(st, st.progress_msg_id, self._progress_text(groups[0]))
+            result = await self._edit_progress_message(st, st.progress_msg_id, progress_state.progress_text(groups[0]))
             if result.success:
                 st.reanchored = False
                 groups = groups[1:]
-            elif self._edit_failure_is_deferrable(st, result):
+            elif progress_state.edit_failure_is_deferrable(st, result):
                 # Keep the buffer intact; the next tick retries the same split.
                 return True
-            elif not self._abandon_progress_bubble(st):
+            elif not progress_state.abandon_progress_bubble(st):
                 return False
             # An abandoned bubble never received groups[0], so it is re-sent below in a fresh one.
         for group in groups:
-            result = await self._send_progress_text(st, self._progress_text(group))
+            result = await self._send_progress_text(st, progress_state.progress_text(group))
             if result.success and result.message_id:
                 st.progress_msg_id = result.message_id
         # The newest continuation is the only mutable bubble: keep just its lines so later
@@ -645,44 +623,6 @@ class TurnRunner:
         st.progress_lines = groups[-1]
         return True
 
-    @staticmethod
-    def _is_flood_refusal(result) -> bool:
-        error = (getattr(result, "error", "") or "").lower()
-        return getattr(result, "retry_after", None) is not None or any(w in error for w in ("flood", "retry after"))
-
-    @classmethod
-    def _edit_failure_is_deferrable(cls, st, result) -> bool:
-        """Transient and rate-limit edit failures leave the bubble editable for a later tick.
-
-        A flood refusal says "not now", not "never": disabling edits on it turns every later tool
-        line into its own message for the rest of the turn, and sending one now spends the budget
-        the platform just said is exhausted.
-        """
-        if cls._is_flood_refusal(result):
-            wait = max(float(getattr(result, "retry_after", None) or 0.0), cls._PROGRESS_EDIT_INTERVAL)
-            st.defer_until = time.monotonic() + wait
-            logger.info("[%s] Progress edit flood control, deferring edits for %.1fs", st.adapter.name, wait)
-            return True
-        if getattr(result, "retryable", False):
-            logger.debug("[%s] Transient progress edit failure, retrying next tick", st.adapter.name)
-            return True
-        return False
-
-    @staticmethod
-    def _progress_deferred(st) -> bool:
-        return time.monotonic() < st.defer_until
-
-    @staticmethod
-    def _abandon_progress_bubble(st) -> bool:
-        """After a permanent edit failure, continue in a fresh bubble (True) unless the previous
-        fresh bubble also failed, which means editing itself is unusable (False, can_edit off)."""
-        if st.reanchored:
-            st.can_edit = False
-            return False
-        logger.info("[%s] Progress bubble no longer editable, starting a fresh one", st.adapter.name)
-        st.reanchored = True
-        st.progress_msg_id = None
-        return True
 
     @staticmethod
     def _is_reset_marker(raw) -> bool:
@@ -707,9 +647,9 @@ class TurnRunner:
 
     async def _flush_progress_edit(self, st) -> None:
         # A deferred bubble may still hold an unsplit, over-limit buffer: never send that as one edit.
-        if st.can_edit and st.progress_lines and st.progress_msg_id and not self._progress_deferred(st):
+        if st.can_edit and st.progress_lines and st.progress_msg_id and not progress_state.progress_deferred(st):
             with suppress(Exception):
-                await self._edit_progress_message(st, st.progress_msg_id, self._progress_text(st.progress_lines))
+                await self._edit_progress_message(st, st.progress_msg_id, progress_state.progress_text(st.progress_lines))
 
     async def _drain_progress_on_cancel(self, st) -> None:
         ctx = self._ctx
@@ -748,10 +688,10 @@ class TurnRunner:
             if result.success:
                 st.reanchored = False
                 return True
-            if self._edit_failure_is_deferrable(st, result):
+            if progress_state.edit_failure_is_deferrable(st, result):
                 # Flood keeps the throttle cadence (True); a bare transient error retries next tick.
-                return self._is_flood_refusal(result)
-            if self._abandon_progress_bubble(st):
+                return progress_state.is_flood_refusal(result)
+            if progress_state.abandon_progress_bubble(st):
                 # The fresh bubble starts at the newest line; the dead one keeps what it shows.
                 st.progress_lines = st.progress_lines[-1:]
         # First tool: send all accumulated text as a new message; editing unsupported: just this line.
@@ -777,7 +717,7 @@ class TurnRunner:
             return
         st = self._progress_edit_state(adapter)
         last_edit_ts = 0.0
-        EDIT_INTERVAL = self._PROGRESS_EDIT_INTERVAL
+        EDIT_INTERVAL = progress_state.PROGRESS_EDIT_INTERVAL
         while True:
             try:
                 if not ctx._run_still_current():
