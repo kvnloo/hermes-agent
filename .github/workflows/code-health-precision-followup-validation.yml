@@ -19,10 +19,6 @@ jobs:
         with:
           python-version: "3.13"
 
-      - uses: actions/setup-node@1e60f620b9541d4f338c5d2c2db858b1c91a2c6a # v4
-        with:
-          node-version: "24"
-
       - name: Install focused test dependencies
         run: |
           python -m pip install pytest ruff==0.15.10
