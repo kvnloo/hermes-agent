@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { probeCache, probeKey } from '@/lib/mcp-probe-cache'
+
 const mocks = vi.hoisted(() => {
   const makeAtom = <T>(initial: T) => {
     let value = initial
@@ -245,4 +247,37 @@ it('runs one follow-up when the active sweep fails through the handled config-er
   await flush()
   await flush()
   expect(mocks.getHermesConfigRecord).toHaveBeenCalledTimes(2)
+})
+
+it('discards a pending probe after disconnect and probes again on reconnect', async () => {
+  const server = { url: 'https://mcp-fixture.invalid/mcp' }
+  const key = probeKey('disconnect-fixture', server, 'default')
+  let rejectProbe!: (err: Error) => void
+
+  const pending = new Promise<never>((_resolve, reject) => {
+    rejectProbe = reject
+  })
+
+  mocks.getHermesConfigRecord.mockResolvedValue({ mcp_servers: { 'disconnect-fixture': server } })
+  mocks.testMcpServer.mockReturnValueOnce(pending).mockResolvedValue({ ok: true, tools: [] })
+
+  startMcpHealthChecker()
+  mocks.gatewayState.set('open')
+  await flush()
+  expect(mocks.testMcpServer).toHaveBeenCalledTimes(1)
+
+  mocks.gatewayState.set('closed')
+  rejectProbe(new Error('gateway disconnected'))
+  await flush()
+  expect(mocks.notify).not.toHaveBeenCalled()
+  expect(probeCache.has(key)).toBe(false)
+  expect(window.localStorage.getItem('hermes:mcp-health-snooze-until:default::disconnect-fixture')).toBeNull()
+
+  mocks.gatewayState.set('open')
+  await flush()
+  await flush()
+  expect(mocks.testMcpServer).toHaveBeenCalledTimes(2)
+  expect(probeCache.get(key)?.result.ok).toBe(true)
+  expect(mocks.notify).not.toHaveBeenCalled()
+  probeCache.delete(key)
 })

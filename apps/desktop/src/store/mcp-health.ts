@@ -87,8 +87,8 @@ const lastStatus = new Map<string, McpHealthStatus>()
 
 let started = false
 let timer: ReturnType<typeof setInterval> | null = null
-// Bumped on profile switch; in-flight sweeps compare and bail so a slow
-// profile-A probe can't record (or notify) into profile B's state.
+// Bumped on profile switch or disconnect; in-flight sweeps compare and bail
+// so an obsolete probe cannot update the cache or notify after either change.
 let sweepEpoch = 0
 // At most one sweep runs and one follow-up is remembered. Reconnect storms
 // still request a fresh pass, but cannot append an unbounded backlog.
@@ -255,6 +255,7 @@ export function startMcpHealthChecker(): void {
     if (state === 'open') {
       arm()
     } else {
+      sweepEpoch += 1
       disarm()
     }
   })
