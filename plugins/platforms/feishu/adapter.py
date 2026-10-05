@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from pm import install_hint
 import asyncio
+from plugins.platforms.feishu.feishu_response import response_error_result
 import collections
 import concurrent.futures
 import contextvars
@@ -1925,7 +1926,7 @@ class FeishuAdapter(BasePlatformAdapter):
             upload_response = await self._run_blocking(self._client.im.v1.image.create, request)
             image_key = self._extract_response_field(upload_response, "image_key")
             if not image_key:
-                return self._response_error_result(
+                return response_error_result(
                     upload_response, default_message="image upload failed",
                     override_error="Feishu image upload missing image_key",
                 )
@@ -3676,7 +3677,7 @@ class FeishuAdapter(BasePlatformAdapter):
                 upload_response = await self._run_blocking(self._client.im.v1.file.create, request)
             file_key = self._extract_response_field(upload_response, "file_key")
             if not file_key:
-                return self._response_error_result(
+                return response_error_result(
                     upload_response, default_message="file upload failed",
                     override_error="Feishu file upload missing file_key",
                 )
@@ -3777,27 +3778,9 @@ class FeishuAdapter(BasePlatformAdapter):
         data = getattr(response, "data", None) if FeishuAdapter._response_succeeded(response) else None
         return getattr(data, field_name, None) if data else None
 
-    def _response_error_result(
-        self, response: Any, *, default_message: str, override_error: Optional[str] = None,
-    ) -> SendResult:
-        code = getattr(response, "code", "unknown")
-        # lark's BaseResponse.msg is Optional[str]: getattr substitutes the default only when
-        # the attribute is absent, so a present-but-None msg needs its own fallback or it
-        # renders as the literal "None".
-        msg = getattr(response, "msg", None) or default_message
-        # override_error is only a headline ("missing file_key" never says why); the API's
-        # code/msg carries the diagnosis (e.g. 99991672 = app lacks the im:resource scope),
-        # so keep both. This string is logged by the caller, never echoed into chat.
-        error = f"{override_error} [{code}] {msg}" if override_error else f"[{code}] {msg}"
-        # The appended platform verdict must not leak into substring classification (an
-        # upload error carrying "[230002] chat not found" reads as a dead-chat marker to
-        # text-based classifiers), so pin the kind instead of letting them infer one.
-        return SendResult(
-            success=False, error=error, raw_response=response, error_kind="unknown")
-
     def _finalize_send_result(self, response: Any, default_message: str) -> SendResult:
         if not self._response_succeeded(response):
-            return self._response_error_result(response, default_message=default_message)
+            return response_error_result(response, default_message=default_message)
         return SendResult(
             success=True, message_id=self._extract_response_field(response, "message_id"),
             raw_response=response,
