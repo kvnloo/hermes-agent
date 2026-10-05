@@ -33,6 +33,8 @@ from pathlib import Path as _Path
 
 sys.path.insert(0, str(_Path(__file__).resolve().parents[3]))
 
+from plugins.platforms.slack.adapter_message_changes import normalize_changed_message
+
 from agent.compression_marker import ELISION_MARKER_MAX_LEN, elide
 from agent.i18n import t
 from agent.retry_utils import parse_retry_after_seconds
@@ -4216,37 +4218,6 @@ class SlackAdapter(BasePlatformAdapter):
                 chat_type="dm" if is_dm else "group")
         return True
 
-    def _normalize_changed_message(self, event: dict) -> Optional[dict]:
-        """Turn a ``message_changed`` envelope into a plain message event.
-        None if malformed, a Slack-side metadata update, or the original was already routed to the
-        agent. The edit's own ts rides along as ``_slack_changed_event_ts`` for dedup."""
-        updated_message = event.get("message")
-        if not isinstance(updated_message, dict):
-            return None
-        original_message_ts = str(updated_message.get("ts") or "")
-        if original_message_ts and original_message_ts in self._processed_message_ts:
-            return None
-        edited = updated_message.get("edited")
-        if not (isinstance(edited, dict) and edited.get("ts")):
-            # Slack also fires ``message_changed`` without ``edited`` for its own metadata updates
-            # (a thread root's reply_count/latest_reply, link unfurls): never the user speaking.
-            # The in-memory ts map is empty after a gateway restart, so it cannot be the only
-            # guard stopping a metadata update from re-routing the root as a new turn (#131688).
-            return None
-        edited_ts = str(edited.get("ts") or "")
-        outer_event_ts = str(event.get("ts") or "")
-        changed_event_ts = (
-            str(event.get("event_ts") or edited_ts or "")
-            or (outer_event_ts if outer_event_ts != original_message_ts else "")
-            or (f"{original_message_ts}:changed" if original_message_ts else ""))
-        normalized_event = dict(updated_message)
-        for key in ("channel", "channel_type", "team", "team_id"):
-            if not normalized_event.get(key) and event.get(key):
-                normalized_event[key] = event.get(key)
-        if changed_event_ts:
-            normalized_event["_slack_changed_event_ts"] = changed_event_ts
-        return normalized_event
-
     @staticmethod
     def _append_link_unfurls(text: str, slack_attachments: list) -> str:
         """Append link-unfurl previews (``attachments``) to ``text``; ``is_msg_unfurl`` echoes our
@@ -4489,7 +4460,7 @@ class SlackAdapter(BasePlatformAdapter):
                 (_bot_profile.get("name") if isinstance(_bot_profile, dict) else "") or "",
                 event.get("channel", ""), event.get("ts", ""), event.get("thread_ts", ""))
         if event.get("subtype") == "message_changed":
-            event = self._normalize_changed_message(event)
+            event = normalize_changed_message(event, self._processed_message_ts)
             if event is None:
                 return None
         # Socket Mode redelivers after reconnects. Scope by workspace: ts is only unique per team.
