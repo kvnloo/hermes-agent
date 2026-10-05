@@ -15,8 +15,10 @@ from pathlib import Path
 
 from scripts.code_health import gitio
 from scripts.code_health.config import RULES_BY_ID
+from scripts.code_health.compare import compare
 from scripts.code_health.measure import Measurer
-from scripts.code_health.replay import pr_range, replay_one
+from scripts.code_health.replay import pr_range
+from scripts.code_health.report import apply_allows
 from scripts.code_health.ruff_runner import resolve_ruff
 
 _QUERY = """
@@ -68,6 +70,33 @@ def freeze_sample(repo: Path, limit: int, since: str, out: Path) -> list[dict]:
     return sample
 
 
+def replay_semantic_one(repo: Path, measurer: Measurer, base: str, head: str) -> list[dict]:
+    changes = gitio.changed_files(repo, base, head)
+    head_paths = sorted({
+        c.new for c in changes
+        if c.new and c.new.endswith(".py") and gitio.read_file(repo, head, c.new) is not None
+    })
+    base_paths = sorted({
+        c.old for c in changes
+        if c.old and c.old.endswith(".py") and gitio.read_file(repo, base, c.old) is not None
+    })
+    if not head_paths:
+        return []
+    measurer.ctx.known_env = gitio.known_env_names(repo, base)
+    base_m = measurer.measure(base, base_paths)
+    head_m = measurer.measure(head, head_paths)
+    findings = compare(base_m, head_m, changes)
+    apply_allows(findings, head_m)
+    return [
+        {
+            "path": f.path, "rule": f.rule, "scope": f.scope, "line": f.line,
+            "detail": f.detail, "blocking": f.blocking, "allowed_reason": f.allowed_reason,
+        }
+        for f in findings
+        if f.allowed_reason is None and f.rule.startswith(SEMANTIC_PREFIXES)
+    ]
+
+
 def _context(repo: Path, head: str, path: str, line: int, radius: int = 3) -> str:
     try:
         text = gitio.git(repo, "show", f"{head}:{path}")
@@ -117,7 +146,7 @@ def main(argv: list[str] | None = None) -> int:
     for index, pr in enumerate(sample, start=1):
         try:
             base, head = pr_range(repo, pr)
-            findings = replay_one(repo, measurer, base, head)
+            findings = replay_semantic_one(repo, measurer, base, head)
         except Exception as exc:
             errors += 1
             rows.append({
