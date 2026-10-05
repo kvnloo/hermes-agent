@@ -49,6 +49,7 @@ def nesting_depth(stmts: list[ast.stmt], depth: int = 0) -> int:
                 and index == 1
                 and len(block) == 1
                 and isinstance(block[0], ast.If)
+                and block[0].col_offset == stmt.col_offset
             )
             deepest = max(deepest, nesting_depth(block, depth if is_elif else depth + 1))
     return deepest
