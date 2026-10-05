@@ -147,6 +147,12 @@ function measureFile(path) {
   const text = readFileSync(join(root, path), 'utf8')
   const kind = path.endsWith('x') ? ts.ScriptKind.TSX : ts.ScriptKind.TS
   const sf = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, kind)
+  if (sf.parseDiagnostics?.length) {
+    const message = sf.parseDiagnostics.slice(0, 3)
+      .map(d => ts.flattenDiagnosticMessageText(d.messageText, ' '))
+      .join('; ')
+    return { error: `does not parse: ${message}` }
+  }
   const units = []
   const seen = new Map()
   const unique = q => {
