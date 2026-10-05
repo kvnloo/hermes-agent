@@ -74,3 +74,36 @@ describe('OSC 11 reply chain', () => {
     expect(chars.length).toBeGreaterThanOrEqual(2)
   })
 })
+
+
+describe('terminal response subscriptions', () => {
+  it('delivers unsolicited APC responses and stops after unsubscribe', () => {
+    const stdout = { write: () => true } as unknown as NodeJS.WriteStream
+    const querier = new TerminalQuerier(stdout)
+    const seen: string[] = []
+    const unsubscribe = querier.subscribe(response => {
+      if (response.type === 'apc') {
+        seen.push(response.data)
+      }
+    })
+    const payload = 'tsp;e;{"ev":"theme","dark":true}'
+    const responses = drainResponses('\x1b_' + payload + '\x1b\\')
+
+    for (const response of responses) {
+      if (response.kind === 'response') {
+        querier.onResponse(response.response)
+      }
+    }
+
+    expect(seen).toEqual([payload])
+    unsubscribe()
+
+    for (const response of responses) {
+      if (response.kind === 'response') {
+        querier.onResponse(response.response)
+      }
+    }
+
+    expect(seen).toEqual([payload])
+  })
+})

@@ -2,7 +2,7 @@ import { useStdin } from '@hermes/ink'
 import { atom } from 'nanostores'
 import { useEffect } from 'react'
 
-import { decodeTspHello, encodeTspHelloQuery, isTspHelloApcResponse, type TspHello } from './protocol.js'
+import { decodeTspEvent, decodeTspHello, encodeTspHelloQuery, isTspHelloApcResponse, type TspEvent, type TspHello } from './protocol.js'
 
 export type TernSurfaceState =
   | { status: 'idle' }
@@ -17,6 +17,22 @@ export type TernSurfaceState =
  */
 export const $ternSurface = atom<TernSurfaceState>({ status: 'idle' })
 
+export type TernSurfaceEventListener = (event: TspEvent) => void
+
+const eventListeners = new Set<TernSurfaceEventListener>()
+
+export function subscribeTernSurfaceEvents(listener: TernSurfaceEventListener): () => void {
+  eventListeners.add(listener)
+
+  return () => eventListeners.delete(listener)
+}
+
+const emitTernSurfaceEvent = (event: TspEvent): void => {
+  for (const listener of eventListeners) {
+    listener(event)
+  }
+}
+
 export function useTernSurfaceProbe(): void {
   const { querier } = useStdin()
 
@@ -30,6 +46,18 @@ export function useTernSurfaceProbe(): void {
     }
 
     $ternSurface.set({ status: 'probing' })
+
+    const unsubscribeResponses = querier.subscribe(response => {
+      if (response.type !== 'apc') {
+        return
+      }
+
+      const event = decodeTspEvent(response.data)
+
+      if (event) {
+        emitTernSurfaceEvent(event)
+      }
+    })
 
     const helloResponse = querier.send({
       request: encodeTspHelloQuery(),
@@ -56,6 +84,7 @@ export function useTernSurfaceProbe(): void {
 
     return () => {
       cancelled = true
+      unsubscribeResponses()
     }
   }, [querier])
 }

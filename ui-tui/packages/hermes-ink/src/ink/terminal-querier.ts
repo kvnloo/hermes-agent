@@ -27,6 +27,8 @@ import { osc } from './termio/osc.js'
 /** A terminal query: an outbound request sequence paired with a matcher
  *  that recognizes the expected inbound response. Built by `decrqm()`,
  *  `oscColor()`, `kittyKeyboard()`, etc. */
+export type TerminalResponseListener = (response: TerminalResponse) => void
+
 export type TerminalQuery<T extends TerminalResponse = TerminalResponse> = {
   /** Escape sequence to write to stdout */
   request: string
@@ -132,8 +134,16 @@ export class TerminalQuerier {
    * before it — concurrent batches from independent callers stay isolated.
    */
   private queue: Pending[] = []
+  private responseListeners = new Set<TerminalResponseListener>()
 
   constructor(private stdout: NodeJS.WriteStream) {}
+
+  /** Observe terminal responses, including unsolicited application events. */
+  subscribe(listener: TerminalResponseListener): () => void {
+    this.responseListeners.add(listener)
+
+    return () => this.responseListeners.delete(listener)
+  }
 
   /**
    * Send a query and wait for its response.
@@ -191,6 +201,10 @@ export class TerminalQuerier {
    * - Unsolicited responses (no match, no sentinel) are silently dropped.
    */
   onResponse(r: TerminalResponse): void {
+    for (const listener of this.responseListeners) {
+      listener(r)
+    }
+
     const idx = this.queue.findIndex(p => p.kind === 'query' && p.match(r))
 
     if (idx !== -1) {

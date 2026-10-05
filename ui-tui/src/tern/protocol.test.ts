@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { decodeTspHello, encodeTspHelloQuery, parseTspApc } from './protocol.js'
+import { decodeTspEvent, decodeTspHello, encodeTspHelloQuery, parseTspApc } from './protocol.js'
 
 describe('Tern Surface Protocol', () => {
   it('encodes the Hermes hello query as a TSP APC frame', () => {
@@ -32,5 +32,37 @@ describe('Tern Surface Protocol', () => {
   it('rejects unrelated APC payloads and malformed hello replies', () => {
     expect(parseTspApc('kitty;G,a=q')).toBeNull()
     expect(decodeTspHello('tsp;r;{"r":"hello","v":"1","term":"tern","kinds":[]}')).toBeNull()
+  })
+})
+
+
+describe('TSP events', () => {
+  it('decodes native editor edits', () => {
+    expect(
+      decodeTspEvent('tsp;e;{"ev":"edit","sf":"s:1","id":"composer","from":1,"to":2,"text":"x","cursor":2,"len":4}')
+    ).toEqual({
+      ev: 'edit',
+      sf: 's:1',
+      id: 'composer',
+      from: 1,
+      to: 2,
+      text: 'x',
+      cursor: 2,
+      len: 4
+    })
+  })
+
+  it('decodes explicit composer sends', () => {
+    expect(decodeTspEvent('tsp;e;{"ev":"send","sf":"s:1","id":"composer","text":"hello"}')).toEqual({
+      ev: 'send',
+      sf: 's:1',
+      id: 'composer',
+      text: 'hello'
+    })
+  })
+
+  it('rejects malformed and reply-shaped payloads', () => {
+    expect(decodeTspEvent('tsp;e;{"ev":"edit","sf":"s:1","id":"composer","from":"1"}')).toBeNull()
+    expect(decodeTspEvent('tsp;r;{"r":"hello","v":1,"term":"tern","kinds":[]}')).toBeNull()
   })
 })
