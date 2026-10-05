@@ -39,50 +39,117 @@ class Ctx:
     known_env: set[str] = field(default_factory=set)
 
 
-def canonical_tree(tree: ast.Module) -> ast.Module:
-    """``tree`` with every import-bound name spelled out: ``sp.run`` -> ``subprocess.run``,
-    ``execute`` (``from subprocess import run as execute``) -> ``subprocess.run``.
+def _scope_bindings(body: list[ast.stmt], params: Iterable[str] = ()) -> tuple[dict[str, str], set[str]]:
+    aliases: dict[str, str] = {}
+    rebound = set(params)
 
-    Rules then match canonical API names, so an alias neither hides a call nor lets a local
-    helper that merely shares a leaf name (``def wait_for``) pass as the real API. A name the
-    module also rebinds (def, class, assignment, parameter) is left alone: it is ambiguous.
-    """
-    bound: dict[str, str] = {}
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
+    class _Bindings(ast.NodeVisitor):
+        def visit_Import(self, node: ast.Import) -> None:
             for alias in node.names:
-                if alias.asname:
-                    bound[alias.asname] = alias.name
-                else:
-                    top = alias.name.split(".")[0]
-                    bound[top] = top
-        elif isinstance(node, ast.ImportFrom):
-            # A relative import keeps its module path minus the dots: rules match the leaf.
+                local = alias.asname or alias.name.split('.')[0]
+                aliases[local] = alias.name if alias.asname else local
+
+        def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
             for alias in node.names:
-                if alias.name != "*":
-                    target = f"{node.module}.{alias.name}" if node.module else alias.name
-                    bound[alias.asname or alias.name] = target
-    rebound = {
-        n.id for n in ast.walk(tree) if isinstance(n, ast.Name) and not isinstance(n.ctx, ast.Load)
-    } | {n.arg for n in ast.walk(tree) if isinstance(n, ast.arg)} | {
-        n.name for n in ast.walk(tree) if isinstance(n, (*_FUNCS, ast.ClassDef))
-    }
-    names = {k: v for k, v in bound.items() if k not in rebound and k != v}
+                if alias.name == '*':
+                    continue
+                target = f'{node.module}.{alias.name}' if node.module else alias.name
+                aliases[alias.asname or alias.name] = target
+
+        def visit_Name(self, node: ast.Name) -> None:
+            if not isinstance(node.ctx, ast.Load):
+                rebound.add(node.id)
+
+        def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+            rebound.add(node.name)
+
+        def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+            rebound.add(node.name)
+
+        def visit_ClassDef(self, node: ast.ClassDef) -> None:
+            rebound.add(node.name)
+
+        def visit_Lambda(self, node: ast.Lambda) -> None:
+            return
+
+        def visit_ListComp(self, node: ast.ListComp) -> None:
+            return
+
+        visit_SetComp = visit_ListComp
+        visit_DictComp = visit_ListComp
+        visit_GeneratorExp = visit_ListComp
+
+    visitor = _Bindings()
+    for stmt in body:
+        visitor.visit(stmt)
+    return aliases, rebound
+
+
+def _arg_names(args: ast.arguments) -> set[str]:
+    names = {a.arg for a in (*args.posonlyargs, *args.args, *args.kwonlyargs)}
+    if args.vararg:
+        names.add(args.vararg.arg)
+    if args.kwarg:
+        names.add(args.kwarg.arg)
+    return names
+
+
+def canonical_tree(tree: ast.Module) -> ast.Module:
+    root_aliases, root_rebound = _scope_bindings(tree.body)
+    root = {k: v for k, v in root_aliases.items() if k not in root_rebound and k != v}
 
     class _Spell(ast.NodeTransformer):
+        def __init__(self) -> None:
+            self.aliases = root
+
+        def _push(self, body: list[ast.stmt], params: Iterable[str] = ()) -> dict[str, str]:
+            local_aliases, rebound = _scope_bindings(body, params)
+            previous = self.aliases
+            merged = dict(previous)
+            for name in rebound:
+                merged.pop(name, None)
+            for name, target in local_aliases.items():
+                if name not in rebound and name != target:
+                    merged[name] = target
+            self.aliases = merged
+            return previous
+
+        def _visit_func(self, node: ast.FunctionDef | ast.AsyncFunctionDef):
+            previous = self._push(node.body, _arg_names(node.args))
+            node = self.generic_visit(node)
+            self.aliases = previous
+            return node
+
+        visit_FunctionDef = _visit_func
+        visit_AsyncFunctionDef = _visit_func
+
+        def visit_ClassDef(self, node: ast.ClassDef):
+            previous = self._push(node.body)
+            node = self.generic_visit(node)
+            self.aliases = previous
+            return node
+
+        def visit_Lambda(self, node: ast.Lambda):
+            previous = self.aliases
+            shadowed = _arg_names(node.args)
+            self.aliases = {k: v for k, v in previous.items() if k not in shadowed}
+            node = self.generic_visit(node)
+            self.aliases = previous
+            return node
+
         def visit_Name(self, node: ast.Name) -> ast.AST:
-            target = names.get(node.id)
+            target = self.aliases.get(node.id)
             if target is None or not isinstance(node.ctx, ast.Load):
                 return node
-            parts = target.split(".")
+            parts = target.split('.')
             expr: ast.expr = ast.Name(parts[0], ast.Load())
             for part in parts[1:]:
                 expr = ast.Attribute(expr, part, ast.Load())
             return ast.copy_location(expr, node)
 
-    return ast.fix_missing_locations(_Spell().visit(tree)) if names else tree
+    return ast.fix_missing_locations(_Spell().visit(tree)) if root_aliases else tree
 
-
+def _dotted
 def _dotted(node: ast.AST) -> str:
     """``os.environ.get`` for an Attribute chain, ``""`` for anything else."""
     parts: list[str] = []
@@ -237,19 +304,21 @@ def unscoped_secret_fallback(tree: ast.Module, ctx: Ctx) -> Iterable[int]:
 
 
 def _capture_lines(expr: ast.AST) -> Iterator[int]:
-    # Deferred bodies (lambda, def, generator element) read at call time: that is the fix.
+    seen: set[int] = set()
     for node in _eager(expr):
+        line = 0
         if isinstance(node, ast.Call):
             name = _call_name(node)
-            leaf = name.rsplit(".", 1)[-1]
-            if leaf in _CAPTURE_CALLS or name.endswith("Path.home"):
-                yield node.lineno
-                return
-        if _env_read_name(node):
-            yield getattr(node, "lineno", 0)
-            return
+            leaf = name.rsplit('.', 1)[-1]
+            if leaf in _CAPTURE_CALLS or name.endswith('Path.home'):
+                line = node.lineno
+        if not line and _env_read_name(node):
+            line = getattr(node, 'lineno', 0)
+        if line and line not in seen:
+            seen.add(line)
+            yield line
 
-
+def _main_guard
 def _main_guard(stmt: ast.stmt) -> str | None:
     """``"=="``/``"!="`` for ``if __name__ <op> "__main__":``, else None."""
     test = stmt.test if isinstance(stmt, ast.If) else None
@@ -404,9 +473,22 @@ def _spawn_kind(value: ast.AST | None) -> str | None:
     return _SPAWNS.get(_call_name(value)) if isinstance(value, ast.Call) else None
 
 
-def _process_handles(tree: ast.Module) -> dict[str, str]:
-    """Dotted names that hold a child process (``proc``, ``self._proc``) -> ``sync``/``async``."""
-    handles: dict[str, str] = {}
+def _function_scopes(tree: ast.Module) -> list[ast.FunctionDef | ast.AsyncFunctionDef]:
+    return [n for n in ast.walk(tree) if isinstance(n, _FUNCS)]
+
+
+def _scope_key(node: ast.AST, funcs: list[ast.FunctionDef | ast.AsyncFunctionDef]) -> int:
+    line = getattr(node, 'lineno', 0)
+    candidates = [f for f in funcs if f.lineno <= line <= (f.end_lineno or f.lineno)]
+    if not candidates:
+        return 0
+    owner = min(candidates, key=lambda f: (f.end_lineno or f.lineno) - f.lineno)
+    return id(owner)
+
+
+def _process_handles(tree: ast.Module) -> tuple[dict[tuple[int, str], str], list[ast.FunctionDef | ast.AsyncFunctionDef]]:
+    funcs = _function_scopes(tree)
+    handles: dict[tuple[int, str], str] = {}
     for node in ast.walk(tree):
         pairs: list[tuple[ast.AST, ast.AST | None]] = []
         if isinstance(node, ast.Assign):
@@ -417,54 +499,66 @@ def _process_handles(tree: ast.Module) -> dict[str, str]:
             pairs = [(i.optional_vars, i.context_expr) for i in node.items if i.optional_vars]
         for target, value in pairs:
             kind = _spawn_kind(value)
-            if kind and _dotted(target):
-                handles[_dotted(target)] = kind
-    return handles
+            name = _dotted(target)
+            if kind and name:
+                handles[(_scope_key(node, funcs), name)] = kind
+    return handles, funcs
 
 
-# Process methods that wait for the child, with the slot of their ``timeout`` (sync Popen);
-# the asyncio Process versions take no timeout and must be bounded by asyncio.
-_PROCESS_WAITS = {"communicate": 1, "wait": 0}
+def _handle_kind(handles, funcs, node: ast.AST, name: str) -> str | None:
+    scope = _scope_key(node, funcs)
+    return handles.get((scope, name)) or handles.get((0, name))
 
 
-def _reaped_after_kill(tree: ast.Module, handles: dict[str, str]) -> set[int]:
-    """ids of a sync ``proc.wait()`` that directly follows ``proc.kill()``: SIGKILL bounds it.
-    Not ``communicate()`` (it reads until every grandchild holding the pipe exits) and not the
-    asyncio ``Process.wait()`` (it waits for the pipe transports too); both measured to hang."""
+_PROCESS_WAITS = {'communicate': 1, 'wait': 0}
+
+
+def _stmt_call(stmt: ast.stmt) -> ast.Call | None:
+    if isinstance(stmt, (ast.Expr, ast.Return, ast.Assign, ast.AnnAssign)):
+        value = stmt.value
+        return value if isinstance(value, ast.Call) else None
+    return None
+
+
+def _reaped_after_kill(tree: ast.Module, handles, funcs) -> set[int]:
     reaped: set[int] = set()
     for node in ast.walk(tree):
-        for field in ("body", "orelse", "finalbody"):
+        for field in ('body', 'orelse', 'finalbody'):
             stmts = getattr(node, field, None)
             if not isinstance(stmts, list):
                 continue
             for first, second in zip(stmts, stmts[1:]):
-                kill = first.value if isinstance(first, ast.Expr) else None
-                wait = second.value if isinstance(second, (ast.Expr, ast.Assign)) else None
+                kill = _stmt_call(first)
+                wait = _stmt_call(second)
                 if not (isinstance(kill, ast.Call) and isinstance(wait, ast.Call)):
                     continue
-                head, _, leaf = _call_name(kill).rpartition(".")
-                if (leaf == "kill" and handles.get(head) == "sync"
-                        and _call_name(wait) == f"{head}.wait"):
+                head, _, leaf = _call_name(kill).rpartition('.')
+                if (
+                    leaf == 'kill'
+                    and _handle_kind(handles, funcs, kill, head) == 'sync'
+                    and _call_name(wait) == f'{head}.wait'
+                ):
                     reaped.add(id(wait))
     return reaped
 
 
 def missing_timeout(tree: ast.Module, ctx: Ctx) -> Iterable[int]:
-    handles = _process_handles(tree)
-    bounded = _bounded_calls(tree) | _reaped_after_kill(tree, handles)
+    handles, funcs = _process_handles(tree)
+    bounded = _bounded_calls(tree) | _reaped_after_kill(tree, handles, funcs)
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call) or id(node) in bounded:
             continue
-        head, _, leaf = _call_name(node).rpartition(".")
-        if head == "subprocess" and leaf in _SUBPROCESS_WAITS and not _deadline(node):
+        head, _, leaf = _call_name(node).rpartition('.')
+        if head == 'subprocess' and leaf in _SUBPROCESS_WAITS and not _deadline(node):
             yield node.lineno
-        elif leaf == "urlopen" and not _deadline(node, "timeout", 2):
+        elif leaf == 'urlopen' and not _deadline(node, 'timeout', 2):
             yield node.lineno
-        elif leaf in _PROCESS_WAITS and head in handles:
-            if handles[head] == "async" or not _deadline(node, "timeout", _PROCESS_WAITS[leaf]):
+        elif leaf in _PROCESS_WAITS:
+            kind = _handle_kind(handles, funcs, node, head)
+            if kind and (kind == 'async' or not _deadline(node, 'timeout', _PROCESS_WAITS[leaf])):
                 yield node.lineno
 
-
+def sync_config_in_async
 def sync_config_in_async(tree: ast.Module, ctx: Ctx) -> Iterable[int]:
     for func in ast.walk(tree):
         if not isinstance(func, ast.AsyncFunctionDef):
@@ -519,6 +613,8 @@ def _result_names(func: ast.AST) -> set[str]:
         for node in nodes:
             if isinstance(node, ast.Assign) and _from_results(node.value, results):
                 results |= set().union(*(_names(t) for t in node.targets))
+            elif isinstance(node, ast.AnnAssign) and _from_results(node.value, results):
+                results |= _names(node.target)
             elif isinstance(node, (ast.For, ast.AsyncFor, ast.comprehension)) and _from_results(node.iter, results):
                 results |= _names(node.target)
     return results
