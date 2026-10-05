@@ -254,7 +254,7 @@ export function useTernComposerSurface(composer: AppLayoutComposerProps): void {
     const unsubscribe = subscribeTernSurfaceEvents(event => {
       transport.handleEvent(event)
 
-      if (event.sf !== TERN_SURFACE_ID || !('id' in event) || event.id !== TERN_COMPOSER_ID) {
+      if (!('sf' in event) || event.sf !== TERN_SURFACE_ID || !('id' in event) || event.id !== TERN_COMPOSER_ID) {
         return
       }
 
