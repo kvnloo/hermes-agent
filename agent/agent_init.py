@@ -1393,7 +1393,7 @@ def _init_memory(agent, _agent_cfg, skip_memory, platform, memory_manager=None):
                     _ra().logger.debug("Memory provider '%s' not found or not available", _mem_provider_name)
                     agent._memory_manager = None
         except (Exception, SystemExit) as _mpe:
-            _ra().logger.warning("Memory provider plugin init failed: %s", _mpe)
+            logger.warning("Memory provider plugin init failed: %s", _mpe, exc_info=True)
             agent._memory_manager = None
 
     from agent.memory_manager import inject_memory_provider_tools

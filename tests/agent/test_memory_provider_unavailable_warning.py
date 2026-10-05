@@ -75,33 +75,23 @@ class _ExitProvider:
 def _memory_init_fixture(monkeypatch, provider):
     import agent.memory_manager as memory_manager
     import plugins.memory as memory_plugins
-    import tools.memory_tool as memory_tool
-
-    monkeypatch.setattr(
-        memory_tool,
-        "get_builtin_memory_config",
-        lambda _config: {
-            "provider": "exit-provider",
-            "memory_enabled": False,
-            "user_profile_enabled": False,
-        },
-    )
-    monkeypatch.setattr(memory_tool, "get_builtin_memory_store_flags", lambda _config: (False, False))
     monkeypatch.setattr(memory_plugins, "load_memory_provider", lambda _name: provider)
     monkeypatch.setattr(memory_manager, "inject_memory_provider_tools", lambda _agent: None)
     monkeypatch.setattr(agent_init, "is_core_memory_provider", lambda _name: False)
 
     logger = SimpleNamespace(debug=Mock(), info=Mock(), warning=Mock())
     monkeypatch.setattr(agent_init, "_ra", lambda: SimpleNamespace(logger=logger))
-    agent = SimpleNamespace(enabled_toolsets=[], disabled_toolsets=[])
+    monkeypatch.setattr(agent_init, "logger", logger)
+    agent = SimpleNamespace(enabled_toolsets=[], disabled_toolsets=[], _emit_startup_warning=Mock())
 
-    return agent, logger
+    config = {"memory": {"provider": "exit-provider", "memory_enabled": False, "user_profile_enabled": False}}
+    return agent, logger, config
 
 
 def test_memory_provider_systemexit_is_contained(monkeypatch):
-    agent, logger = _memory_init_fixture(monkeypatch, _ExitProvider())
+    agent, logger, config = _memory_init_fixture(monkeypatch, _ExitProvider())
 
-    agent_init._init_memory(agent, {}, False, "cli")
+    agent_init._init_memory(agent, config, False, "cli")
 
     assert agent._memory_manager is None
     logger.warning.assert_called_once()
@@ -111,16 +101,17 @@ def test_memory_provider_systemexit_is_contained(monkeypatch):
 def test_unavailable_reason_systemexit_does_not_abort_init(monkeypatch):
     agent_init._warned_unavailable_providers.clear()
     provider = _ExitProvider(available=False, reason_exit=True)
-    agent, _logger = _memory_init_fixture(monkeypatch, provider)
+    agent, _logger, config = _memory_init_fixture(monkeypatch, provider)
 
-    agent_init._init_memory(agent, {}, False, "cli")
+    agent_init._init_memory(agent, config, False, "cli")
 
     assert agent._memory_manager is None
-    assert "exit-provider" in agent_init._warned_unavailable_providers
+    assert agent_init._unavailable_warning_key("exit-provider") in agent_init._warned_unavailable_providers
+    agent._emit_startup_warning.assert_called_once()
 
 
 def test_memory_provider_keyboard_interrupt_still_propagates(monkeypatch):
-    agent, _logger = _memory_init_fixture(monkeypatch, _ExitProvider(interrupt=True))
+    agent, _logger, config = _memory_init_fixture(monkeypatch, _ExitProvider(interrupt=True))
 
     with pytest.raises(KeyboardInterrupt):
-        agent_init._init_memory(agent, {}, False, "cli")
+        agent_init._init_memory(agent, config, False, "cli")
