@@ -21,6 +21,8 @@ import threading
 from dataclasses import dataclass
 from typing import Any, List, Optional
 
+from cron.scheduler_delivery_media import media_send_route
+
 
 # Log-record parity with the origin module.
 logger = logging.getLogger("cron.scheduler")
@@ -1117,11 +1119,6 @@ def _resolve_delivery_target(job: dict) -> Optional[dict]:
     return targets[0] if targets else None
 
 
-# Audio routing is centralized in gateway.platforms.base.should_send_media_as_audio().
-_VIDEO_EXTS = frozenset({'.mp4', '.mov', '.avi', '.mkv', '.webm', '.3gp'})
-_IMAGE_EXTS = frozenset({'.jpg', '.jpeg', '.png', '.webp', '.gif'})
-
-
 def _send_media_via_adapter(
     adapter, chat_id: str, media_files: list, metadata: dict | None, loop, job: dict, platform=None,
 ) -> list:
@@ -1129,7 +1126,7 @@ def _send_media_via_adapter(
     _process_message_background). Returns per-file error strings so a dropped attachment surfaces
     in run status, not just the gateway log."""
     from gateway.platforms.base import (
-        BasePlatformAdapter, should_send_media_as_audio, validate_media_delivery_path)
+        BasePlatformAdapter, validate_media_delivery_path)
     from agent.async_utils import safe_schedule_threadsafe
     job_ref = {"id": job.get("id", "?")}
     errors: list = []
@@ -1148,19 +1145,7 @@ def _send_media_via_adapter(
     route_platform = platform if platform is not None else getattr(adapter, "platform", None)
     for media_path, _is_voice in media_files:
         try:
-            ext = _sched.Path(media_path).suffix.lower()
-            if should_send_media_as_audio(route_platform, ext, is_voice=_is_voice):
-                method, path_kw = "send_voice", "audio_path"
-            elif ext in _VIDEO_EXTS:
-                method, path_kw = "send_video", "video_path"
-            elif ext in _IMAGE_EXTS:
-                method, path_kw = "send_image_file", "image_path"
-            else:
-                method, path_kw = "send_document", "file_path"
-            # The voice sender decides bubble vs music-file from ``is_voice`` (Telegram
-            # transcodes non-Opus only when it is set), matching the gateway dispatch
-            # in BasePlatformAdapter._send_one.
-            extra = {"is_voice": _is_voice} if method == "send_voice" else {}
+            method, path_kw, extra = media_send_route(route_platform, media_path, _is_voice)
             coro = getattr(adapter, method)(
                 chat_id=chat_id, metadata=metadata, **{path_kw: media_path}, **extra)
             future = safe_schedule_threadsafe(coro, loop)
