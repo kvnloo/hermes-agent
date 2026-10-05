@@ -285,3 +285,16 @@ describe('cursor position report parsing', () => {
     })
   })
 })
+
+
+describe('APC terminal response parsing', () => {
+  it('routes an application payload as a terminal response instead of keyboard input', () => {
+    const payload = 'tsp;r;{"r":"hello","v":1,"term":"tern","kinds":["screen"]}'
+    const [[response]] = parseMultipleKeypresses(INITIAL_STATE, '\x1b_' + payload + '\x1b\\')
+
+    expect(response).toMatchObject({
+      kind: 'response',
+      response: { type: 'apc', data: payload }
+    })
+  })
+})

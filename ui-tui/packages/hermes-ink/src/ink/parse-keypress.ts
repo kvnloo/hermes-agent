@@ -61,6 +61,11 @@ const OSC_RESPONSE_RE = /^\x1b\](\d+);(.*?)(?:\x07|\x1b\\)$/s
 // goes through the pty, not the environment.
 // eslint-disable-next-line no-control-regex
 const XTVERSION_RE = /^\x1bP>\|(.*?)(?:\x07|\x1b\\)$/s
+// APC response/event: APC payload ST. APC cannot be produced by a physical
+// key, so it is safe to route through the terminal-response path. Consumers
+// decide which application payloads they understand (TSP, kitty, etc.).
+// eslint-disable-next-line no-control-regex
+const APC_RESPONSE_RE = /^\x1b_([\s\S]*?)(?:\x07|\x1b\\)$/
 // SGR mouse event: CSI < button ; col ; row M (press) or m (release)
 // Button codes: 64=wheel-up, 65=wheel-down (0x40 | wheel-bit).
 // Button 32=left-drag (0x20 | motion-bit). Plain 0/1/2 = left/mid/right click.
@@ -112,6 +117,8 @@ export type TerminalResponse =
   /** XTVERSION: terminal name/version string (answer to CSI > 0 q).
    *  Example values: "xterm.js(5.5.0)", "ghostty 1.2.0", "iTerm2 3.6". */
   | { type: 'xtversion'; name: string }
+  /** APC: generic application-program-command payload (without APC/ST framing) */
+  | { type: 'apc'; data: string }
 
 /**
  * Try to recognize a sequence token as a terminal response.
@@ -186,6 +193,16 @@ function parseTerminalResponse(s: string): TerminalResponse | null {
 
     if (m) {
       return { type: 'xtversion', name: m[1]! }
+    }
+  }
+
+  // APC responses/events are application-owned. Keep the payload opaque here;
+  // the consumer (for example Tern TSP) validates its own protocol.
+  if (s.startsWith('\x1b_')) {
+    const m = APC_RESPONSE_RE.exec(s)
+
+    if (m) {
+      return { type: 'apc', data: m[1]! }
     }
   }
 
