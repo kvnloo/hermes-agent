@@ -62,13 +62,19 @@ def run(repo: Path, base: str, head: str | None, as_json: bool = False) -> int:
     started = time.monotonic()
     mode = enforcement(repo, base)
     if mode == "off":
-        print(f"code health: off (ENFORCEMENT in {_SWITCH_FILE} on {base[:12]})")
+        if as_json:
+            print("[]")
+        else:
+            print(f"code health: off (ENFORCEMENT in {_SWITCH_FILE} on {base[:12]})")
         return 0
     changes = gitio.changed_files(repo, base, head)
     head_paths = sorted({c.new for c in changes if c.new and in_scope(c.new)})
     base_paths = sorted({c.old for c in changes if c.old and in_scope(c.old)})
     if not head_paths:
-        print("code health: no measured files changed")
+        if as_json:
+            print("[]")
+        else:
+            print("code health: no measured files changed")
         return 0
     # Base files are measured too: a deleted .py still needs ruff on the base side.
     needs_ruff = any(p.endswith(".py") for p in (*head_paths, *base_paths))
