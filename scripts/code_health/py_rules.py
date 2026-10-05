@@ -503,9 +503,23 @@ def _process_handles(tree: ast.Module) -> tuple[dict[tuple[int, str], str], list
     return handles, funcs
 
 
+def _scope_chain(node: ast.AST, funcs: list[ast.FunctionDef | ast.AsyncFunctionDef]) -> list[int]:
+    line = getattr(node, "lineno", 0)
+    enclosing = [
+        f for f in funcs if f.lineno <= line <= (f.end_lineno or f.lineno)
+    ]
+    enclosing.sort(key=lambda f: (f.end_lineno or f.lineno) - f.lineno)
+    return [id(f) for f in enclosing]
+
+
 def _handle_kind(handles, funcs, node: ast.AST, name: str) -> str | None:
-    scope = _scope_key(node, funcs)
-    return handles.get((scope, name)) or handles.get((0, name))
+    # A nested function may close over a handle created by an enclosing function, but an
+    # unrelated sibling function with the same local name must never affect this lookup.
+    for scope in _scope_chain(node, funcs):
+        kind = handles.get((scope, name))
+        if kind is not None:
+            return kind
+    return handles.get((0, name))
 
 
 _PROCESS_WAITS = {'communicate': 1, 'wait': 0}
