@@ -101,7 +101,7 @@ CACHE = {
     "old": os.getenv("PATH"),
 }
 """))
-    assert list(import_time_capture(tree, Ctx())) == [3, 4]
+    assert sorted(import_time_capture(tree, Ctx())) == [3, 4]
 
 
 @pytest.mark.parametrize("tail", [
@@ -171,3 +171,64 @@ def test_unknown_only_selector_is_usage_error():
         cwd=ROOT, capture_output=True, text=True, encoding="utf-8", timeout=60, check=False,
     )
     assert proc.returncode != 0
+
+
+def _checker_repo(tmp_path: Path) -> Path:
+    repo = tmp_path / "checker"
+    (repo / "scripts" / "ci").mkdir(parents=True)
+    shutil.copy(ROOT / "pyproject.toml", repo / "pyproject.toml")
+    shutil.copy(ROOT / "package-lock.json", repo / "package-lock.json")
+    shutil.copy(ROOT / "scripts/check", repo / "scripts/check")
+    shutil.copytree(ROOT / "scripts/code_health", repo / "scripts/code_health")
+    shutil.copy(ROOT / "scripts/ci/profile_scope_patterns.json", repo / "scripts/ci/")
+    _git(repo, "init", "-q", "-b", "main")
+    _git(repo, "config", "user.email", "t@example.com")
+    _git(repo, "config", "user.name", "t")
+    _commit(repo, {"pkg/a.py": "def ok():\n    return 1\n"})
+    return repo
+
+
+def test_staged_health_uses_staged_policy_not_unstaged_policy(tmp_path):
+    repo = _checker_repo(tmp_path)
+    source = """import os
+import subprocess
+
+def f(cmd):
+    env = os.environ.copy()
+    return subprocess.run(cmd, env=env, timeout=1)
+"""
+    path = repo / "pkg/a.py"
+    path.write_text(source, encoding="utf-8")
+    _git(repo, "add", "pkg/a.py")
+    tree = _git(repo, "write-tree")
+
+    def check() -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [sys.executable, "scripts/check", "--staged", "--only", "health", "--base", "HEAD"],
+            cwd=repo, capture_output=True, text=True, encoding="utf-8", timeout=120, check=False,
+        )
+
+    before = check()
+    assert before.returncode == 1
+    assert "PS-P05" in before.stdout
+
+    policy = repo / "scripts/ci/profile_scope_patterns.json"
+    data = json.loads(policy.read_text(encoding="utf-8"))
+    for pattern in data["patterns"]:
+        if pattern["id"] == "P05":
+            pattern["path_regex"] = r"^never-match-this-probe$"
+    policy.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
+    assert _git(repo, "write-tree") == tree
+    after = check()
+    assert after.returncode == 1
+    assert "PS-P05" in after.stdout
+
+
+def test_profile_regex_rules_ignore_prose(tmp_path):
+    source = """def f():
+    # Avoid env = os.environ.copy(); use the scoped builder.
+    return 1
+"""
+    code, _ = _verdict(tmp_path, source)
+    assert code == 0
