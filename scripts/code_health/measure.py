@@ -57,6 +57,49 @@ def _python_comments(text: str) -> dict[int, str]:
     return comments
 
 
+_PLATFORM_SECRET_PREFIXES = (
+    "DISCORD_", "TELEGRAM_", "SLACK_", "MATRIX_", "WHATSAPP_", "FEISHU_", "SIGNAL_",
+    "TEAMS_", "LINE_", "WECOM_", "YUANBAO_", "HINDSIGHT_", "BRV_", "A2A_", "WEIXIN_",
+)
+
+
+def _masked_lines(text: str, token_types: set[int]) -> list[str]:
+    """Source lines with selected token ranges replaced by spaces, preserving line numbers."""
+    rows = [list(line) for line in text.splitlines()]
+    try:
+        tokens = tokenize.generate_tokens(io.StringIO(text).readline)
+        for tok in tokens:
+            if tok.type not in token_types:
+                continue
+            (start_row, start_col), (end_row, end_col) = tok.start, tok.end
+            for row_no in range(start_row, end_row + 1):
+                if not (1 <= row_no <= len(rows)):
+                    continue
+                row = rows[row_no - 1]
+                left = start_col if row_no == start_row else 0
+                right = end_col if row_no == end_row else len(row)
+                for col in range(min(left, len(row)), min(right, len(row))):
+                    row[col] = " "
+    except (tokenize.TokenError, SyntaxError):
+        pass
+    return ["".join(row) for row in rows]
+
+
+def _platform_secret_rows(tree: ast.Module) -> set[int]:
+    rows: set[int] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or not node.args:
+            continue
+        name = ast.unparse(node.func)
+        if name not in ("os.getenv", "os.environ.get"):
+            continue
+        arg = node.args[0]
+        if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+            if arg.value.startswith(_PLATFORM_SECRET_PREFIXES):
+                rows.add(node.lineno)
+    return rows
+
+
 class Measurer:
     def __init__(self, repo: Path, ruff: list[str], known_env: set[str]) -> None:
         self.repo = repo
@@ -116,17 +159,28 @@ class Measurer:
             if rule_applies(RULES_BY_ID[rule_id], fm.path):
                 for row in sorted(set(checker(rules_tree, self.ctx))):
                     fm.add_hit(rule_id, scopes.scope(row), row)
-        self._regex(fm, scopes)
+        self._regex(fm, scopes, text, tree)
 
-    def _regex(self, fm: FileMeasure, scopes) -> None:
+    def _regex(self, fm: FileMeasure, scopes, text: str, tree: ast.Module) -> None:
+        p05_lines: list[str] | None = None
+        p06_rows: set[int] | None = None
         for rule_id, pattern, path_re in self.regex_rules:
             if not rule_applies(RULES_BY_ID[rule_id], fm.path):
                 continue
             if path_re and not path_re.search(fm.path):
                 continue
-            for index, line in enumerate(fm.lines, start=1):
-                if pattern.search(line):
-                    fm.add_hit(rule_id, scopes.scope(index), index)
+            if rule_id == "PS-P05":
+                if p05_lines is None:
+                    p05_lines = _masked_lines(text, {tokenize.COMMENT, tokenize.STRING})
+                rows = {index for index, line in enumerate(p05_lines, start=1) if pattern.search(line)}
+            elif rule_id == "PS-P06":
+                if p06_rows is None:
+                    p06_rows = _platform_secret_rows(tree)
+                rows = p06_rows
+            else:
+                rows = {index for index, line in enumerate(fm.lines, start=1) if pattern.search(line)}
+            for index in sorted(rows):
+                fm.add_hit(rule_id, scopes.scope(index), index)
 
     @staticmethod
     def _typescript(fm: FileMeasure, data: dict | None) -> None:
