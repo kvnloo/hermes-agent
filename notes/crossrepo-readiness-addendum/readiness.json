@@ -1,0 +1,282 @@
+{
+  "schema_version": 1,
+  "classification": "READ_ONLY_ADOPTION_READINESS_DELTA_NOT_NEW_QUALIFICATION",
+  "observed_at": "2026-10-05T20:12:03.113307+00:00",
+  "expected_previous_public_manifest": "a7033dba08bc5b70c5718aede314cb9627cceeb8",
+  "publication_requires_ref_recheck": true,
+  "meaningful_change": {
+    "repository": "can1357/oh-my-pi",
+    "issue": 14306,
+    "comment_url": "https://github.com/can1357/oh-my-pi/issues/14306#issuecomment-6000624143",
+    "comment_author": "F0Rextasy",
+    "comment_created_at": "2026-10-05T18:30:01Z",
+    "claim": "Contributor says a broader advisor grant-notice/tool-not-found/loop-guard implementation and five passing AgentSession tests exist, and offers a branch if requested; no PR opened because of unexplained wontfix triage.",
+    "owner_reported_tests": {
+      "pass": 5,
+      "independently_run_or_verified_here": false
+    },
+    "published_branch_in_comment": false,
+    "issue_timeline_pr_cross_reference_present": false,
+    "issue_state": "open",
+    "verified_current_labels": [
+      "wontfix",
+      "tool",
+      "agent",
+      "triaged"
+    ],
+    "adoption_inference": "Treat as a public overlapping implementation claim; hold competing promotion/implementation pending contributor and maintainer disposition. This is not a maintainer rejection rationale or acceptance, not adoption of our91ea diagnostic, and not access authorization for unpublished artifacts."
+  },
+  "five_carriers": [
+    {
+      "name": "Email wire References integration",
+      "repository": "kvnloo/hermes-agent",
+      "head": "f062b66e09d558ff0b3b604ab9674b43e9f0eab8",
+      "ref": "refs/heads/ready/email-wire-references-current-20261005",
+      "ref_matches_saved_qualified_head": true,
+      "qualified_upstream_base": "7157422022ff06f3e632d1dd394ee1253b17ad37",
+      "observed_current_main": "79af3f6cea8067284a7ea5725078578b3f790adb",
+      "direct_touched_paths_in_current_base_diff": [],
+      "current_runtime_requalified": false,
+      "disposition": "EXISTING_OWNER_ADOPTION_CHOICE_NOT_PROMOTION_APPROVAL"
+    },
+    {
+      "name": "Slack block fallback and metadata composition",
+      "repository": "kvnloo/hermes-agent",
+      "head": "9d1de65d0b969f62c53fbff711020b1b8c024067",
+      "ref": "refs/heads/ready/slack-block-metadata-current-20261005",
+      "ref_matches_saved_qualified_head": true,
+      "qualified_upstream_base": "7157422022ff06f3e632d1dd394ee1253b17ad37",
+      "observed_current_main": "79af3f6cea8067284a7ea5725078578b3f790adb",
+      "direct_touched_paths_in_current_base_diff": [],
+      "current_runtime_requalified": false,
+      "disposition": "EXISTING_OWNER_ADOPTION_CHOICE_NOT_PROMOTION_APPROVAL"
+    },
+    {
+      "name": "Localized rate-limit reply and diagnostic composition",
+      "repository": "kvnloo/hermes-agent",
+      "head": "0074d8a68076200ab239d4255da9ea602fcc224e",
+      "ref": "refs/heads/ready/rate-reply-localized-current-20261005",
+      "ref_matches_saved_qualified_head": true,
+      "qualified_upstream_base": "e473f5a9c976a0b5bc292aa415dae28c638a47c3",
+      "observed_current_main": "79af3f6cea8067284a7ea5725078578b3f790adb",
+      "direct_touched_paths_in_current_base_diff": [],
+      "current_runtime_requalified": false,
+      "disposition": "EXISTING_OWNER_ADOPTION_CHOICE_NOT_PROMOTION_APPROVAL"
+    },
+    {
+      "name": "Available active-tool diagnostics",
+      "repository": "kvnloo/oh-my-pi",
+      "head": "91ea68b3b1ee514958204851a6b50eab9cc7a427",
+      "ref": "refs/heads/fix/tool-not-found-available-names-20261005",
+      "ref_matches_saved_qualified_head": true,
+      "qualified_upstream_base": "9d6747d031e4819fa59ed0ab70942174520f1a18",
+      "observed_current_main": "d9ee5e6a31d621f50ac6610cd1cdadccfbf41b0c",
+      "direct_touched_paths_in_current_base_diff": null,
+      "current_runtime_requalified": false,
+      "disposition": "OVERLAPPING_HUMAN_IMPLEMENTATION_CLAIM_AND_WONTFIX_DECISION"
+    },
+    {
+      "name": "Feishu upload diagnostic current integration",
+      "repository": "kvnloo/hermes-agent",
+      "head": "847a5f74349b6f939ff5353e87d4231e08290413",
+      "ref": "refs/heads/ready/feishu-upload-diagnostics-current-20261005",
+      "ref_matches_saved_qualified_head": true,
+      "qualified_upstream_base": "e473f5a9c976a0b5bc292aa415dae28c638a47c3",
+      "observed_current_main": "79af3f6cea8067284a7ea5725078578b3f790adb",
+      "direct_touched_paths_in_current_base_diff": [],
+      "current_runtime_requalified": false,
+      "disposition": "EXISTING_OWNER_ADOPTION_CHOICE_NOT_PROMOTION_APPROVAL"
+    }
+  ],
+  "upstream_owners": [
+    {
+      "repo": "NousResearch/hermes-agent",
+      "number": 132967,
+      "url": "https://github.com/NousResearch/hermes-agent/pull/132967",
+      "owner": "dborosev",
+      "head": "2989a2672061aaf4fc857b14077a67437714ea3d",
+      "base": "af8839df1038cc026075fb254afa22edc19d911d",
+      "state": "open",
+      "draft": false,
+      "merged_at": null,
+      "updated_at": "2026-10-05T12:12:10Z",
+      "comments": 2,
+      "review_comments": 0
+    },
+    {
+      "repo": "NousResearch/hermes-agent",
+      "number": 122527,
+      "url": "https://github.com/NousResearch/hermes-agent/pull/122527",
+      "owner": "liuhao1024",
+      "head": "672e51cf47e7e10a129b5f03b0150e7bbce239ee",
+      "base": "fdec926ef54391edcf6caad5f7f6761fdcccdaa2",
+      "state": "open",
+      "draft": false,
+      "merged_at": null,
+      "updated_at": "2026-09-25T10:07:17Z",
+      "comments": 3,
+      "review_comments": 0
+    },
+    {
+      "repo": "NousResearch/hermes-agent",
+      "number": 131866,
+      "url": "https://github.com/NousResearch/hermes-agent/pull/131866",
+      "owner": "liuhao1024",
+      "head": "9585c347beea43b2c3d613202cf82e19eed200d7",
+      "base": "46904a3b467f62616f5b3ee247adce30b1b277a0",
+      "state": "open",
+      "draft": true,
+      "merged_at": null,
+      "updated_at": "2026-10-03T00:41:53Z",
+      "comments": 0,
+      "review_comments": 0
+    },
+    {
+      "repo": "NousResearch/hermes-agent",
+      "number": 122293,
+      "url": "https://github.com/NousResearch/hermes-agent/pull/122293",
+      "owner": "Wenfengcheng",
+      "head": "77161df5d5a1da9cc77c7277b45466d6743747b5",
+      "base": "138e33d51f521cde606f7e6a00cdc9a203275ed3",
+      "state": "open",
+      "draft": false,
+      "merged_at": null,
+      "updated_at": "2026-09-25T04:56:29Z",
+      "comments": 2,
+      "review_comments": 0
+    },
+    {
+      "repo": "NousResearch/hermes-agent",
+      "number": 127650,
+      "url": "https://github.com/NousResearch/hermes-agent/pull/127650",
+      "owner": "liuhao1024",
+      "head": "347c70e3f02ac942ef6bc85276eaab54a40a788a",
+      "base": "ea114c3e98c3339e13004adfc6098cf28ed7d754",
+      "state": "open",
+      "draft": false,
+      "merged_at": null,
+      "updated_at": "2026-10-03T19:13:50Z",
+      "comments": 2,
+      "review_comments": 0
+    },
+    {
+      "repo": "trycua/cua",
+      "number": 4537,
+      "url": "https://github.com/trycua/cua/pull/4537",
+      "owner": "pingu52",
+      "head": "b334ef24dd57441c586822687f89953adc0c1676",
+      "base": "4635c066808ba662c1d82a394592f707b4ad09ae",
+      "state": "open",
+      "draft": false,
+      "merged_at": null,
+      "updated_at": "2026-10-03T16:29:50Z",
+      "comments": 2,
+      "review_comments": 0
+    },
+    {
+      "repo": "trycua/cua",
+      "number": 4665,
+      "url": "https://github.com/trycua/cua/pull/4665",
+      "owner": "f-trycua",
+      "head": "aa4b0777e6c44d386af0673f5dfa05cdb85a1056",
+      "base": "25f63eea951c1ac31f7b71357ba4c9f849199cec",
+      "state": "closed",
+      "draft": false,
+      "merged_at": "2026-10-05T15:22:05Z",
+      "updated_at": "2026-10-05T15:22:06Z",
+      "comments": 4,
+      "review_comments": 0
+    },
+    {
+      "repo": "kvnloo/gods-eye-view",
+      "number": 126,
+      "url": "https://github.com/kvnloo/gods-eye-view/pull/126",
+      "owner": "kvnloo",
+      "head": "d76cfde9b0d8753765ecc74e03f8f3c522c0ee12",
+      "base": "d67dbd6b8c5b5846f008cf7316e5112b77f64c58",
+      "state": "open",
+      "draft": false,
+      "merged_at": null,
+      "updated_at": "2026-10-02T00:11:47Z",
+      "comments": 0,
+      "review_comments": 0
+    }
+  ],
+  "shared_input_freshness": {
+    "Hermes": {
+      "current_main": "79af3f6cea8067284a7ea5725078578b3f790adb",
+      "commits_after715": 115,
+      "commits_aftere473": 113,
+      "direct_four_carrier_paths_changed": false,
+      "changed_shared_inputs": [
+        "gateway/platforms/base.py",
+        "gateway/platforms/helpers.py",
+        "gateway/session.py",
+        "gateway/run_adapters.py"
+      ],
+      "limit": "Independent source-only interface trace found reconnect/cache API changes outside all four narrow recorded consumer proofs, with no demonstrated incompatibility within those boundaries. Slack fresh-adapter metadata proof is not reconnect proof. Retain historical runtime qualification; no full import-closure, mergeability or current-main execution claim.",
+      "independent_trace_receipt": "hermes-shared-impact-79af/README.md and impact.json"
+    },
+    "OMP": {
+      "current_main": "d9ee5e6a31d621f50ac6610cd1cdadccfbf41b0c",
+      "commits_after_qualified_base": 38,
+      "limit": "Main has changed session/provider/native inputs. No new current-main runtime qualification or grant/retry-loop repair claim."
+    }
+  },
+  "cua": {
+    "repository": "kvnloo/cua",
+    "head": "754c9d71fdc6f2c7ceef40771975dcc5ac5e4705",
+    "ref": "refs/heads/qualified/sandbox-held-keys-current-20261005",
+    "qualified_base": "f68b806024170205c63f4c65501a11e61042fa38",
+    "current_main": "b0968e1b12834e485dda68789541a3cc57664a9f",
+    "commits_since_base": 6,
+    "original_author": "pingu52",
+    "owner_pr4537_head": "b334ef24dd57441c586822687f89953adc0c1676",
+    "owner_pr4537_state": "open",
+    "scope": "Two held-key handler/test files; one real handler with inert keyboard, current-lock Python3.12 qualification atf68. No native input, model-loop or live service qualification.",
+    "ancestry": "Normal merge preserves owner289a65 and currentf68, followed by explicit selective revert of four unrelated owner-feature files. Future adoption of those features needs deliberate revert/reapply; ancestry alone will not restore them.",
+    "source_freshness": "Six-commit API file inventory does not touch the qualified Python agent/core/Sandbox source or uv.lock; no execution at newmainb096 claimed.",
+    "merged4665": {
+      "head": "aa4b0777e6c44d386af0673f5dfa05cdb85a1056",
+      "merged_at": "2026-10-05T15:22:05Z",
+      "merge_sha": "9842b060537303f9ac2412e77f0e061daf8a2caf",
+      "disposition": "Merged and remains ancestor through qualifiedf68 to currentb096; unchanged from prior addendum, not a new docs repair or fresh generator proof."
+    },
+    "hosted_ci": "Historical CI_NOT_RUN snapshot retained, not re-polled."
+  },
+  "gev": {
+    "repository": "kvnloo/gods-eye-view",
+    "head": "392dfdf5cda86a44f1d2f67d35819ff3912295df",
+    "ref": "refs/heads/parked/hazard-current-modal-feedback-20261005",
+    "tree": "7092ebec8c9c3b4b3779099aa98f85a7d2fab5b2",
+    "parents": [
+      "a08a53cf9469eb991f708bd3d042c327a2347e3c",
+      "d76cfde9b0d8753765ecc74e03f8f3c522c0ee12"
+    ],
+    "original_author": "Kevin Rajan / kvnloo",
+    "owner_pr126_state": "open",
+    "current_main": "a08a53cf9469eb991f708bd3d042c327a2347e3c",
+    "main_unchanged": true,
+    "qualification": "Doctor, format, boundaries, canonical unit tests, build and independently inspected dev/built-preview dialog-status evidence passed on exact tree.",
+    "hold": "Mandatory tracking exit2 and incomplete FIRMS watchdog exit97 prevent overall integration readiness. Five preliminary FIRMS checks are not a suite pass.",
+    "global_toast_history": "Earlier global-toast visual failure remains; final visible proof concerns persistent dialog-owned status.",
+    "limits": "No live-provider, hardware GPU, complete visual polish or clean-console claim.",
+    "hosted_ci": "Historical exact392 snapshot at20:04:58: zero checks/statuses/runs (CI_NOT_RUN); not refreshed in this audit."
+  },
+  "actions_not_taken": [
+    "No Git hydration, tests, browser runs, workflow runs, paid calls, upstream communication, PR state changes, merges or publication",
+    "No old receipt, author history, delivery ledger or public manifest overwritten"
+  ],
+  "outputs_budget_bytes": 2097152,
+  "hermes_promotion_cap": {
+    "observed_at": "2026-10-05T20:20:43.523630Z",
+    "open": 18,
+    "non_draft": 13,
+    "draft": 5,
+    "standing_limit": 3,
+    "above_limit": 15,
+    "changed_from_prior_snapshot": false,
+    "decision": "Select the permitted three and obtain explicit per-PR disposition before state changes; draft status does not exempt a PR and count does not authorize closure."
+  },
+  "independent_promotion_approval_established": false
+}
