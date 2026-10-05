@@ -1439,7 +1439,7 @@ Fires right before Hermes blocks waiting for a person to type or click something
 | `"clarify"` | A `clarify` tool question | CLI, Ink TUI / Desktop, gateway platforms |
 | `"approval"` | Dangerous-command / write approval, MCP elicitation consent, plugin approval transports | CLI, Ink TUI / Desktop, ACP, gateway platforms, `ctx.register_approval_transport` plugins |
 
-`approvals.mode=smart` decisions made by the auxiliary LLM do not fire it, because no person is asked; neither do gateway approvals that join an identical prompt already pending (the person sees one prompt, and the pair fires once for it). New kinds can be added later, so ignore kinds you don't handle.
+With `approvals.mode=smart`, the auxiliary LLM decision itself does not fire these hooks. If that decision is followed by a human approval prompt, the prompt fires the pair normally. Gateway approvals that join an identical prompt already pending do not fire another pair: the person sees one prompt, and the pair fires once for it. New kinds can be added later, so ignore kinds you don't handle.
 
 **Callback signature:**
 

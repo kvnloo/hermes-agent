@@ -203,8 +203,10 @@ where the agent blocks for a person: sudo password prompts (`kind="sudo"`),
 (`kind="approval"`) on CLI, TUI/Desktop, ACP and gateway platforms. Fields:
 `kind`, `request_id` (shared by the pair), `session_id`, `session_key`,
 `platform`, and a force-redacted `prompt`; the resolved hook adds `outcome`.
-The typed password or answer is never included. Smart (aux-LLM) approvals do
-not fire it. Source: `tools/human_input_hooks.py`.
+The typed password or answer is never included. A smart (aux-LLM) decision
+does not itself fire these hooks. If that decision is followed by a human
+approval prompt, the prompt fires the pair normally. Source:
+`tools/human_input_hooks.py`.
 
 ### Approval Lifecycle
 
