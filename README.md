@@ -1,24 +1,16 @@
-# Execution checkpoint v2 — 2026-10-05
+# Execution checkpoint v3 — 2026-10-05
 
-This metadata-only packet preserves the downstream delivery ledger across workspace replacement. It is a dated checkpoint, not a claim that the standing six lanes stopped.
+Dated metadata-only review candidate: 38 Hermes, 15 OMP and 3 CUA branch records, not unique fixes. Prior packets remain unchanged.
 
-- [Hermes deliveries](manifests/hermes.json) and [OMP deliveries](manifests/omp.json): exact published commit URLs, classification, local validation and limits, remote verification, and separate hosted-CI status.
-- [Non-fix evidence](manifests/nonfix-evidence.json), [hold index](manifests/holds.json), and [CUA next choices](manifests/cua-next-choices.json): unresolved contracts, resource gates and non-reproductions remain explicit.
-- [Overlap map](notes/overlap-map.md): combined review heads and overlapping histories; branches are not unique fixes.
-- [Hermes cap decision](notes/hermes-cap-decision.md): read-only inventory reports 17 open entries, including four drafts; the standing three-PR constraint remains. No states were changed.
-- [Agent/consumer shortlist](notes/consumer-review-shortlist.md), [Desktop/CLI shortlist](notes/desktop-cli-shortlist.md), and [OMP owner follow-ups](notes/omp-owner-followups.md): review choices, not authorization to contact anyone or publish upstream.
-- [Roster](manifests/roster.json) and [snapshot metadata](snapshot.json) are explicitly point-in-time.
+- [Hermes](manifests/hermes.json), [OMP](manifests/omp.json), [CUA](manifests/cua.json): exact published commit identities, classification, local qualification and hosted snapshots.
+- [Overlap map](notes/overlap-map.md), [holds](manifests/holds.json), [non-fix evidence](manifests/nonfix-evidence.json), [CUA next choices](manifests/cua-next-choices.json): overlaps and unresolved scopes remain explicit.
+- [Consumer supplement](notes/consumer-review-supplement.md) and [Desktop/CLI supplement](notes/desktop-cli-review-supplement.md) preserve concrete owner-review priorities alongside the prior shortlists. No permission to contact upstream or change PR states.
+- [PR cap decision](notes/hermes-cap-decision.md) retains the earlier17OPEN inventory (13non-draft/4draft), not a fresh poll. The standing three-PR limit remains. [Roster](manifests/roster.json) is point-in-time.
 
-Receipt paths retained inside records refer to the original /workspace/receipts directory and are provenance locators, not bundled files. Exact downstream GitHub commit URLs remain independently accessible. The packet preserves summarized results; it does not pretend to bundle every raw log.
+New CUA ledger distinguishes e37 test-only structured metadata proof,5d Sandbox generated facts and4bd Python generated facts. Documentation uses unchanged generators via explicitly disclosed Bun substitution; Python adds static Griffe only. All9Python outputs checked, only index2facts changed. These do not resolve SDKFFI/TypeDoc/curated/full-site/release claims. PackagedFleet ABI initialization belongs only to e37 real-package consumer, not static docs. e37's recorded pending ImageAPI workflow is unrelated to its Python consumer and was not repolled.
 
-All author-owned integrations retain original author histories or explicit cherry-pick provenance. Owner-branch follow-ups marked current_main_ready=false must not be described as current-main-qualified. Historical runtime results remain historical when later source-equivalence audits show unchanged relevant inputs. The specifically requested ACP c6641dab exact-final runtime rerun passed one selected test; its earlier receipt was retained.
+Historical715 tests remain historical under read-only e473 source audits. Owner-only terminal918 and search-fixture d0f remain current_main_ready=false; original owner runtime remains untouched. Fixture fidelity2pass→precondition2fail→corrected2pass is not a product regression. Compositions are preferred review entries for their exact scopes, not additional underlying fixes. All author histories/credit remain preserved.
 
-No secrets, runtime configuration, dependency caches, live-provider output or test environments are included. Recorded CI_NOT_RUN remains distinct from local test/check success. CUA e37d is the explicit exception: one unrelated Image API workflow/check was in progress at remote verification (HOSTED_PENDING), not a hosted Python consumer pass.
+This16file allowlist contains only metadata Markdown/JSON: no credentials, runtime configuration, raw logs, dependency caches or environments. Local receipt paths are nonbundled provenance locators. Exact downstream commit URLs remain accessible; summarized evidence does not pretend to include every log. No tests, workflow actions, upstream publication or deployment performed to prepare this packet.
 
-## Snapshot changes
-
-This 13-file snapshot contains 33 Hermes and 15 OMP branch records, plus one separately recorded CUA test-only consumer delivery; these are not unique-fix counts. The previous approved packet a952aee remains untouched. New Hermes records cover Slack metadata integration, temporary-root doctor tests, owner-only real-shell workdir proof, and overlapping Slack composition.
-
-Main e473 changes only plugin-status entry-point handling. The three recent Slack/doctor records have scoped 19-input source equivalence from715, with historical runtime/check bases unchanged. Terminal 918def remains an older-owner child (current_main_ready=false); unchanged715-to-e473 terminal files do not prove owner-to-main compatibility.
-
-CUA 25f63 has selected consumer dependencies now available in supported scoped Python 3.12; e37d is reviewed and remotely verified. Its real adapter/inert-client proof and approved packaged Fleet ABI initialization are recorded separately from native Driver or service behavior. This resolves only that consumer dependency gate, not griffe/TypeDoc/SDK documentation generation holds. Standing 123578/417/131689 holds remain unchanged. Latest bounded agent intake found ownership/contract gates rather than another justified implementation.
+Source-head timing: parent observed newer Hermes80309111b480937264881f29f66fa87a3af72356 before publication. This packet keeps its assessed e473 source snapshot and historical per-delivery bases; the newer delta was not yet assessed for this freeze. No803 applicability or runtime qualification is implied.

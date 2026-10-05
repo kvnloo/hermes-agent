@@ -132,6 +132,29 @@
       ],
       "provenance": "Initial published packet explicitly lists identifier/status without repository or contract; follow-up preserves holds generically. Complete parentless trees have only README.md and candidates.json. Scope remains unknown; hosting repository is not evidence of issue scope.",
       "contract_gate": null
+    },
+    {
+      "id": "hermes-130184",
+      "repository": "NousResearch/hermes-agent",
+      "number": 130184,
+      "status": "CONTRACT_HOLD",
+      "owner_head": "8e159700a3b2269ba2c9b7bc6d2057d999b448c5",
+      "evidence_sha": "e3efd9a2758979fdaa39a139350529a9b04a25cc",
+      "current_main_ready": false,
+      "blocking_condition": "Owner no-rowId guard retains an ordinary hydrated historical user row; desired provenance/durability predicate remains undecided.",
+      "next_action": "Select required durability/provenance evidence before production changes; preserve unchanged optimistic/live correction control.",
+      "sources": [
+        "https://github.com/NousResearch/hermes-agent/pull/130184#issuecomment-5928269483"
+      ],
+      "receipts": [
+        "retention-130184/README.md",
+        "retention-130184/remote-verification.md"
+      ],
+      "do_not": [
+        "claim test-only held evidence is a fix",
+        "call helper-only differential a full current-main integration",
+        "invent an ID-prefix retention policy"
+      ]
     }
   ]
 }

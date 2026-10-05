@@ -1,0 +1,93 @@
+[
+  {
+    "name": "Structured directory metadata consumer",
+    "sha": "e37d782bd732b3ea1de7fa088062db511f9d80bf",
+    "tree": "393f3865ee80e79ea2e2a25ffeb3f97addf8826b",
+    "parent": "25f63eea951c1ac31f7b71357ba4c9f849199cec",
+    "qualified_upstream_base": "25f63eea951c1ac31f7b71357ba4c9f849199cec",
+    "branch": "qualified/env-directory-consumer-20261005",
+    "classification": "test_only_consumer_evidence",
+    "validation": "1 exact-final selected real Sandbox/EnvTransport/Files test passes with inert in-memory client; Ruff check/format and diff check pass",
+    "controls": [
+      "Original fixture omission fails on missing directory and included nested file",
+      "Temporary production classification mutation fails directory flag assertion; production restored byte-exact"
+    ],
+    "limits": "Already-correct structured metadata translation; no legacy3988 repair, native CUA Driver, missing-file classification or live Fleet/Spacesd/VM qualification",
+    "native_initialization": "Approved packaged Fleet libcyclops_sdk.so ABI setup and callback registration occurs at import; native cua SDK absent, Fleet clients/services not called",
+    "environment": "Scoped CPython3.12.14;30 exact locked binary distributions; no shared environment mutation",
+    "receipt": "/workspace/receipts/cua-env-directory/qualification.md",
+    "independent_review_receipt": "/workspace/receipts/cua-env-directory/independent-review.md",
+    "remote_verification_receipt": "/workspace/receipts/cua-env-directory/remote-verification.md",
+    "remote_verified": true,
+    "hosted_ci": {
+      "status": "HOSTED_PENDING_AT_RECORDED_VERIFICATION",
+      "checks": 1,
+      "statuses": 0,
+      "workflow_runs": 1,
+      "workflow": "CI: Image API",
+      "conclusion": null,
+      "run_url": "https://github.com/kvnloo/cua/actions/runs/37316142429",
+      "limits": "Recorded historical inventory, not repolled; unrelated workflow does not establish hosted Python consumer success"
+    },
+    "url": "https://github.com/kvnloo/cua/commit/e37d782bd732b3ea1de7fa088062db511f9d80bf"
+  },
+  {
+    "name": "Generated Sandbox facts consistency subset",
+    "sha": "5d1dd8ec50dfdbf98d27adf98ecf641c7e0ff691",
+    "tree": "690a26d8fb4496745fac7626326701995576619b",
+    "parent": "25f63eea951c1ac31f7b71357ba4c9f849199cec",
+    "qualified_upstream_base": "25f63eea951c1ac31f7b71357ba4c9f849199cec",
+    "branch": "qualified/sandbox-doc-facts-current-20261005",
+    "classification": "generated_documentation_subset_correction",
+    "validation": "Unchanged sandbox generator initial --check reports3 stale pages; regeneration changes only3pages with5 version substitutions; final --check and diff check pass",
+    "controls": [
+      "Initial check exit1 names runtime-support.mdx,os-image-catalog.mdx,image-software.mdx",
+      "Five owned outputs reviewed; sandbox-images.mdx and quickstart.mdx regenerate byte-identically"
+    ],
+    "execution_runtime": "Existing Bun1.4.2 executes unchanged sandbox.ts; canonical package script specifies tsx4.21.0 and was not run",
+    "limits": "Only runtime-support version fact and generated provenance banners; not all seven version facts, Python/TypeScript/SDK reference refresh, full docs build or release shipment",
+    "native_initialization": "None; generation uses builtin/local modules and source facts, no SDK/native load or service calls",
+    "receipt": "/workspace/receipts/cua-sandbox-doc-subset/README.md",
+    "independent_review_receipt": "/workspace/receipts/cua-sandbox-doc-subset/independent-review.md",
+    "remote_verification_receipt": "/workspace/receipts/lane3-feishu-docfacts-remote-verification.md",
+    "remote_verified": true,
+    "hosted_ci": {
+      "status": "CI_NOT_RUN",
+      "checks": 0,
+      "statuses": 0,
+      "workflow_runs": 0,
+      "limits": "Recorded exact-SHA verification; no fresh poll"
+    },
+    "url": "https://github.com/kvnloo/cua/commit/5d1dd8ec50dfdbf98d27adf98ecf641c7e0ff691"
+  },
+  {
+    "name": "Generated Python reference version facts subset",
+    "sha": "4bd270be79fe7171442b65aaefc66d1d4734f3a8",
+    "tree": "5847652c4756b2d2cd0c8c176ca823045096437a",
+    "parent": "25f63eea951c1ac31f7b71357ba4c9f849199cec",
+    "qualified_upstream_base": "25f63eea951c1ac31f7b71357ba4c9f849199cec",
+    "branch": "qualified/python-doc-facts-current-20261005",
+    "classification": "generated_documentation_subset_correction",
+    "validation": "Initial full9output --check reports only Python index drift; unchanged generator changes1page2version substitutions; final full9output --check and diff check pass",
+    "controls": [
+      "Initial check exit1 identifies reference/python/index.mdx",
+      "All9owned output hashes reviewed; other8 unchanged, no stale output removed; coverage and unused-example assertions retained"
+    ],
+    "execution_runtime": "Bun1.4.2 substitutes for canonical tsx4.21.0; explicit PYTHON_DOCS_EXTRACTOR uses scoped CPython3.12.14 with pinned Griffe2.3.0",
+    "environment": "Four reviewed pure wheels added to earlier30 locked consumer packages,34 total; not a full project sync",
+    "native_initialization": "Static Griffe allow_inspection=False/resolve_aliases=False; cua/cua_sandbox source parsed without SDK imports/native loading",
+    "limits": "Python generated subset only; no all-seven-facts completion, SDKFFI/TypeDoc reference, full site build, native runtime or shipped-release claim",
+    "receipt": "/workspace/receipts/cua-python-doc-subset/README.md",
+    "independent_review_receipt": "/workspace/receipts/cua-python-doc-subset/independent-review.md",
+    "remote_verification_receipt": "/workspace/receipts/cua-python-doc-subset/remote-verification.md",
+    "remote_verified": true,
+    "hosted_ci": {
+      "status": "CI_NOT_RUN",
+      "checks": 0,
+      "statuses": 0,
+      "workflow_runs": 0,
+      "limits": "Recorded exact-SHA verification; no fresh poll"
+    },
+    "url": "https://github.com/kvnloo/cua/commit/4bd270be79fe7171442b65aaefc66d1d4734f3a8"
+  }
+]

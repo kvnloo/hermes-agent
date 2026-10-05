@@ -1,16 +1,20 @@
 {
-  "captured_at_utc": "2026-10-05T13:24:07.813322+00:00",
-  "hermes_records": 33,
+  "captured_at_utc": "2026-10-05T13:53:42.568310+00:00",
+  "hermes_records": 38,
   "omp_records": 15,
-  "interpretation": "Published branch records include overlapping compositions, holds, tests and docs; not a count of unique fixes.",
+  "cua_records": 3,
+  "interpretation": "Branch records include overlapping compositions, test-only evidence, held proposals and docs; not unique fixes.",
   "source_heads": {
     "hermes": "e473f5a9c976a0b5bc292aa415dae28c638a47c3",
     "omp": "1c0993c3d12e70042169a951663bb2702e2c0a9e",
     "cua": "25f63eea951c1ac31f7b71357ba4c9f849199cec"
   },
-  "hosted_ci": "Hermes/OMP local qualification remains separate from recorded hosted inventories. CUA e37d has HOSTED_PENDING unrelated Image API workflow, not a Python consumer pass.",
-  "publication_scope": "Downstream receipt packet only; no upstream publication, new PR, merge or deployment.",
-  "cua_new_test_only_deliveries": 1,
-  "previous_packet_commit": "a952aee2fcab35f4a081bbe91cf474fc6370d2d4",
-  "source_head_limits": "Source snapshot is not the qualification base of every delivery. Historical bases and owner-child limits remain in records. OMP head retained from prior verified snapshot, not newly polled."
+  "source_head_limits": "Last verified source snapshots retained, not newly polled for packet creation. Historical qualification bases and owner-child limits remain per record.",
+  "prior_packet_digest": "618a6c01117ea529471c39556a207d50ccffb857870117af162353ddf8dc17cb",
+  "publication_scope": "Local review candidate only; parent controls downstream-only publication.",
+  "hosted_ci": "Recorded snapshots, not repolled. CUAe37 ImageAPI pending at prior verification does not qualify Python consumer; other recorded zero-run statuses remain distinct from local tests.",
+  "newer_observed_source": {
+    "hermes": "80309111b480937264881f29f66fa87a3af72356",
+    "assessment": "Observed by parent before publication; incremental delta assessment pending outside this frozen packet. No source-applicability, test or readiness claim for803."
+  }
 }

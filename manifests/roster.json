@@ -1,38 +1,38 @@
 [
   {
     "worker": "hermes_gateway",
-    "status": "source integration assessment",
-    "assignment": "Owner122293 reply wording integration preserving localization; checking new source delta",
-    "updated_at": "2026-10-05T13:17:43.830417+00:00"
+    "status": "active source triage and ledger update",
+    "assignment": "Feishu847a delivered; next distinct gateway integration gap",
+    "updated_at": "2026-10-05T13:37:12.712363+00:00"
   },
   {
     "worker": "hermes_agent",
-    "status": "checkpoint snapshot prepared",
-    "assignment": "Dated13file v2 evidence snapshot for independent review; no publication",
-    "updated_at": "2026-10-05T13:24:07.813322+00:00"
+    "status": "active source triage",
+    "assignment": "Current sessions/persistence consumer gaps after reviewed promotion shortlist",
+    "updated_at": "2026-10-05T13:37:12.712363+00:00"
   },
   {
     "worker": "hermes_tools",
-    "status": "active source triage",
-    "assignment": "Distinct current tool defect or missing real consumer proof",
-    "updated_at": "2026-10-05T13:17:43.830417+00:00"
+    "status": "qualification completed; selecting next work",
+    "assignment": "122162 existing prerequisite case passed; no new implementation claim",
+    "updated_at": "2026-10-05T13:37:12.712363+00:00"
   },
   {
     "worker": "hermes_readiness",
-    "status": "independent checkpoint review",
-    "assignment": "Review frozen v2 packet; e473 scoped applicability audit complete",
-    "updated_at": "2026-10-05T13:24:07.813322+00:00"
+    "status": "active independent source review",
+    "assignment": "CUA Python static extractor four-wheel dependency closure",
+    "updated_at": "2026-10-05T13:37:12.712363+00:00"
   },
   {
     "worker": "hermes_cli",
-    "status": "remote verification complete",
-    "assignment": "CUA e37d remote identity and pending Image API workflow verified; no Python hosted-pass claim",
-    "updated_at": "2026-10-05T13:24:07.813322+00:00"
+    "status": "delivery review completed",
+    "assignment": "Feishu847a/CUA docs5d exact remote verification;122162 claim review",
+    "updated_at": "2026-10-05T13:37:12.712363+00:00"
   },
   {
     "worker": "cua_consumer",
-    "status": "consumer delivered",
-    "assignment": "Test-only structured directory metadata e37d remotely verified; next scope requires fresh selection",
-    "updated_at": "2026-10-05T13:24:07.813322+00:00"
+    "status": "active dependency source preparation",
+    "assignment": "Bounded static Python docs generator closure; native SDK/TS remain held",
+    "updated_at": "2026-10-05T13:37:12.712363+00:00"
   }
 ]

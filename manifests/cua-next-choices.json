@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "assessmentMode": "historical_choices_plus_new_scoped_consumer_delivery",
-  "dependencyAuthorization": "Selected EnvTransport consumer closure provisioned in scoped supported Python3.12; separate docs generator gates unchanged.",
+  "assessmentMode": "historical_choices_with_published_generator_subset_outcomes",
+  "dependencyAuthorization": "Selected EnvTransport and static Python docs closures provisioned in scoped supportedPython3.12 (34 exact packages); separate SDKFFI/TypeDoc gates unchanged.",
   "choices": [
     {
       "id": "sdk_docs",
@@ -24,19 +24,19 @@
     },
     {
       "id": "python_docs",
-      "sourceSHA": "ed22ad958a5ab6d764c98261b24d65f80f3a6f95",
-      "status": "held",
+      "sourceSHA": "25f63eea951c1ac31f7b71357ba4c9f849199cec",
+      "status": "qualified_generated_subset_remote_verified",
       "availableExistingResources": [
-        "Canonical header and source version",
-        "Installed Python test interpreter"
+        "Scoped CPython3.12.14 with Griffe2.3.0 and exact4wheelclosure",
+        "Existing Bun1.4.2 explicitly substituted for tsx4.21.0"
       ],
-      "missingArtifactPackageVersion": [
-        "griffe2.3.0 via compatible interpreter or uv Python3.12",
-        "docs tsx4.21.0"
-      ],
-      "smallestAction": "Select pinned static extractor then canonical Python generator/check",
-      "notYetQualifiedClaim": "Whole Python reference refreshed",
-      "receipt": "cua-doc-version/independent-generator-review.md"
+      "missingArtifactPackageVersion": [],
+      "smallestAction": "Review the published whole9output qualification; no duplicate generation required.",
+      "notYetQualifiedClaim": "Full site build, SDKFFI/TypeDoc output or all-seven-facts completion",
+      "receipt": "cua-python-doc-subset/README.md",
+      "sha": "4bd270be79fe7171442b65aaefc66d1d4734f3a8",
+      "url": "https://github.com/kvnloo/cua/commit/4bd270be79fe7171442b65aaefc66d1d4734f3a8",
+      "local_validation": "Initial full9output --check reports only Python index drift; unchanged generator changes1page2version substitutions; final full9output --check and diff check pass"
     },
     {
       "id": "typescript_docs",
@@ -58,17 +58,20 @@
     },
     {
       "id": "sandbox_docs",
-      "sourceSHA": "ed22ad958a5ab6d764c98261b24d65f80f3a6f95",
-      "status": "held",
+      "sourceSHA": "25f63eea951c1ac31f7b71357ba4c9f849199cec",
+      "status": "qualified_generated_subset_remote_verified",
       "availableExistingResources": [
         "Portable sandbox.ts builtin Node/local modules",
         "Canonical templates/manifests",
         "Existing Node/Bun"
       ],
       "missingArtifactPackageVersion": [],
-      "smallestAction": "If selected run canonical generator; inspect3generatedpages plus2catalog-region pages",
-      "notYetQualifiedClaim": "Complete seven-fact repair; this covers only runtime-support subset",
-      "receipt": "cua-doc-version/template-feasibility.md"
+      "smallestAction": "Review published3page version-fact correction; other2owned outputs unchanged.",
+      "notYetQualifiedClaim": "Full site build or all-seven-facts completion",
+      "receipt": "cua-sandbox-doc-subset/README.md",
+      "sha": "5d1dd8ec50dfdbf98d27adf98ecf641c7e0ff691",
+      "url": "https://github.com/kvnloo/cua/commit/5d1dd8ec50dfdbf98d27adf98ecf641c7e0ff691",
+      "local_validation": "Unchanged sandbox generator initial --check reports3 stale pages; regeneration changes only3pages with5 version substitutions; final --check and diff check pass"
     },
     {
       "id": "curated_docs",
@@ -83,7 +86,7 @@
         "Four generated references remain stale"
       ],
       "smallestAction": "Pair curated images/quickstart fixes with selected generator scope and owner overlap refresh",
-      "notYetQualifiedClaim": "Green version-fact suite; currently1fail2pass",
+      "notYetQualifiedClaim": "Whole version-fact suite not rerun after independently generated Sandbox/Python subsets; historical1fail2pass is not current rerun.",
       "receipt": "cua-doc-version/README.md"
     },
     {
@@ -196,6 +199,6 @@
       "remote_verification_receipt": "cua-env-directory/remote-verification.md"
     }
   ],
-  "snapshot_updated_at_utc": "2026-10-05T13:24:07.813322+00:00",
+  "snapshot_updated_at_utc": "2026-10-05T13:53:42.568310+00:00",
   "current_upstream_source": "25f63eea951c1ac31f7b71357ba4c9f849199cec"
 }

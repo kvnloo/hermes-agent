@@ -479,5 +479,85 @@
       "rebased": false,
       "historical_validation_unchanged": true
     }
+  },
+  {
+    "name": "Localized rate-limit reply and diagnostic composition",
+    "sha": "0074d8a68076200ab239d4255da9ea602fcc224e",
+    "branch": "ready/rate-reply-localized-current-20261005",
+    "classification": "owner_composition",
+    "qualified_upstream_base": "e473f5a9c976a0b5bc292aa415dae28c638a47c3",
+    "parents": [
+      "f69222f36f31b2ae225f67b20979a3f2a1fc01ec",
+      "ce6e0d8e71937ec2f953e1c3843d6c95b355ea05"
+    ],
+    "validation": "34 selected tests and11checks pass; original owner port fails current filecap and real German-profile locale consumer; unchanged diagnostic18 not rerun",
+    "limits": "Preserves3funky-xamarin owner commits and prior diagnostic author chains; existing classification policy retained;2new English fallback keys, no new translations; composition not another diagnostic fix",
+    "receipt": "/workspace/receipts/rate-reply122293/README.md",
+    "remote_verification_receipt": "/workspace/receipts/rate-reply122293/remote-verification.md",
+    "remote_verified": true,
+    "hosted_ci": "CI_NOT_RUN: zero checks/statuses/workflow runs",
+    "url": "https://github.com/kvnloo/hermes-agent/commit/0074d8a68076200ab239d4255da9ea602fcc224e"
+  },
+  {
+    "name": "File-search owner fixture binding fidelity",
+    "sha": "d0f625872a01182c6d3160ac02f96c316f84bb3b",
+    "branch": "evidence/search-diagnostic-fixtures-20261005",
+    "classification": "owner_test_fixture_correction",
+    "current_main_ready": false,
+    "owner_parent": "36d259f89baa4b6547a91c45f40ff5f885673935",
+    "validation": "Original owner2pass; real-directory precondition exposes2fixture failures; corrected final2pass; selected Ruff and diff check pass; owner tree has no scripts/check",
+    "limits": "Test-only self/fixture binding correction; existing runtime untouched; no current-main port, live search walk or product regression claim",
+    "receipt": "/workspace/receipts/search-diagnostics118494/README.md",
+    "remote_verification_receipt": "/workspace/receipts/search-diagnostics118494/remote-verification.md",
+    "remote_verified": true,
+    "hosted_ci": "CI_NOT_RUN: zero checks/statuses/workflow runs",
+    "url": "https://github.com/kvnloo/hermes-agent/commit/d0f625872a01182c6d3160ac02f96c316f84bb3b"
+  },
+  {
+    "name": "Feishu upload diagnostic current integration",
+    "sha": "847a5f74349b6f939ff5353e87d4231e08290413",
+    "branch": "ready/feishu-upload-diagnostics-current-20261005",
+    "classification": "owner_current_integration",
+    "qualified_upstream_base": "e473f5a9c976a0b5bc292aa415dae28c638a47c3",
+    "owner_parent": "1921498a40011258408b30eae1eb9e7fa4051fa0",
+    "validation": "2 existing SDK-unbound consumer tests and11checks pass; actual current2filecap failures resolved by pure helper/test relocation",
+    "limits": "Original2liuhao1024 commits retained; behavior negative author-attributed; no live Feishu/SDK qualification or new behavior",
+    "receipt": "/workspace/receipts/feishu127650/README.md",
+    "remote_verification_receipt": "/workspace/receipts/lane3-feishu-docfacts-remote-verification.md",
+    "remote_verified": true,
+    "hosted_ci": "CI_NOT_RUN: zero checks/statuses/workflow runs",
+    "url": "https://github.com/kvnloo/hermes-agent/commit/847a5f74349b6f939ff5353e87d4231e08290413"
+  },
+  {
+    "name": "Transcript retention row-ID contract evidence",
+    "sha": "e3efd9a2758979fdaa39a139350529a9b04a25cc",
+    "branch": "evidence/retention-row-id-contract-20261005",
+    "classification": "evidence_hold",
+    "status": "CONTRACT_HOLD",
+    "current_main_ready": false,
+    "owner_parent": "8e159700a3b2269ba2c9b7bc6d2057d999b448c5",
+    "validation": "Owner consumer1unmasked failure and1live-control pass; exacte473helper-only differential1pass; owner production restored; diff check pass",
+    "limits": "Test-only owner child; no production fix, current-main integration, database durability or backend refetch proof; missing-ID provenance predicate unresolved",
+    "receipt": "/workspace/receipts/retention-130184/README.md",
+    "remote_verification_receipt": "/workspace/receipts/retention-130184/remote-verification.md",
+    "remote_verified": true,
+    "hosted_ci": "CI_NOT_RUN: zero checks/statuses/workflow runs",
+    "url": "https://github.com/kvnloo/hermes-agent/commit/e3efd9a2758979fdaa39a139350529a9b04a25cc"
+  },
+  {
+    "name": "Cron voice delivery current owner integration",
+    "sha": "8c3b8bce281798dfdb6993488ee56d92d4c2d852",
+    "branch": "ready/cron-voice-current-20261005",
+    "classification": "owner_integration",
+    "qualified_upstream_base": "e473f5a9c976a0b5bc292aa415dae28c638a47c3",
+    "owner_original": "a1edc68f1a1798e6f86a042465c8c5db26661dfe",
+    "parent": "a3f089fd9af0491fb514e491e031aa0d7c30baf3",
+    "validation": "4 existing relocated tests and11checks pass; current local negative is2filecaps; earlier3test result superseded, not additive; functionalnegative owner-attributed",
+    "limits": "Unchanged routing extracted with lazy platform import preserved; synthetic adapter coroutine only, no Telegram SDK/transcoding/live delivery",
+    "receipt": "/workspace/receipts/cron-voice132126/README.md",
+    "remote_verification_receipt": "/workspace/receipts/cron-voice132126/remote-verification.md",
+    "remote_verified": true,
+    "hosted_ci": "CI_NOT_RUN: zero checks/statuses/workflow runs",
+    "url": "https://github.com/kvnloo/hermes-agent/commit/8c3b8bce281798dfdb6993488ee56d92d4c2d852"
   }
 ]

@@ -26,6 +26,12 @@ Prefer `9d1de65d0b969f62c53fbff711020b1b8c024067` (`ready/slack-block-metadata-c
 
 Terminal `918def7ffcd9942f8f1f87c1f406220fb03709a9` (`evidence/terminal-workdir-owner-consumer-20261005`) is test-only evidence directly atop original Tranquil-Flow owner `12dff5acc30913d672c87300c0e497ab1c75dd06`. It is not a715 current-main integration or another runtime fix. One real isolated local-shell consumer qualifies transient cwd restoration; no delegated/stale-record/native-Windows guarantee. Owner tree lacks scripts/check. Keep current_main_ready=false; remote verification in terminal-workdir-73717/remote-verification.md (local receipt, not bundled).
 
-## v2 source applicability and separate consumer
+## Local live-manifest entry34: localized rate replies plus diagnostics
 
-The recent Slack metadata d2d1 and block-fallback composition 9d1de overlap; prefer the composition only for its recorded combined scope. Their 715 runtime bases and doctor 9c256 remain historical; e473 audit is read-only relevant-input equivalence. Terminal 918def is test-only owner 12dff evidence, not a current-main port. CUA e37d is separate test-only structured-directory adapter evidence on 25f63; it does not port or fix legacy name-only #3988.
+Prefer `0074d8a68076200ab239d4255da9ea602fcc224e` (`ready/rate-reply-localized-current-20261005`) for reviewing owner122293 rate-source wording with existing diagnostics/helper composition. Normal parents are owner port `f69222f36f31b2ae225f67b20979a3f2a1fc01ec` and `ce6e0d8e71937ec2f953e1c3843d6c95b355ea05`; the latter remains the narrow diagnostic-only review head. All3funky-xamarin commits and prior diagnostic/extraction authors survive. Current qualified base is e473; known model responses retain localized catalog keys and2new English keys use established fallback. Local34selected tests and11checks passed; prior18diagnostic tests were not repeated, helper/test blobs match ce6e. This is not a second diagnostic fix. Independent remote identity verifies both parents/tree and zero hosted inventory (CI_NOT_RUN). Entry34 is appended only to the live manifest; frozen durable-checkpoint-v2 remains the historical33-entry snapshot.
+
+## Later standalone evidence and integration
+
+Retention e3efd9a2758979fdaa39a139350529a9b04a25cc is test-only original-owner8e159 evidence with an intentionally unmasked failing history control, CONTRACT_HOLD and current_main_ready=false. Currente473helper-only success is differential evidence, not a full port or chosen durability/provenance policy. Do not count as fixed.
+
+Cron voice8c3b8bce281798dfdb6993488ee56d92d4c2d852 preserves liuhao1024 originala1edc68 viaa3f089 and adds currente473 checker compatibility extraction. Final4existing tests11checks replace earlier3test result; no new voice/transcoding/live-service scope. This is independent of unrelated gateway reply/diagnostic compositions.

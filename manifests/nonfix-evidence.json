@@ -9,8 +9,8 @@
   {
     "name": "CUA docs release version facts",
     "classification": "local_scope_hold",
-    "validation": "1 fail/2 pass; one-line local correction reveals six additional facts",
-    "limits": "Canonical generation requires unavailable SDK/Spaces UniFFI inputs, griffe and TypeDoc dependency closures; no generated edits or publication",
+    "validation": "Historical initial1fail2pass before later independently qualified Sandbox/Python generated subsets; full fact suite not rerun.",
+    "limits": "Selected Sandbox and Python outputs now published separately; SDK/Spaces UniFFI, TypeDoc and curated facts remain. No full seven-fact resolution or full docs build claim.",
     "receipt": "/workspace/receipts/cua-doc-version/independent-generator-review.md"
   },
   {
