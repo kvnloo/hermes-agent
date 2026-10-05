@@ -9,6 +9,7 @@ import contextlib
 import sys
 from pathlib import Path
 
+from .command_catalog import CommandCatalog
 from .method_ctx import HandlerRegistry, bind_module
 
 _registry = HandlerRegistry()
@@ -425,23 +426,9 @@ def _(rid, params: dict) -> dict:
 
 
 # ─── Command catalog / dispatch ──────────────────────────────────────────────
-class _Catalog:
-    """Accumulator for commands.catalog: ``pairs`` (every [key, desc]), ``canon`` (lowercase
-    key/alias → canonical key), ``commands`` (key → desktop meta) and ordered categories."""
-
-    def __init__(self) -> None:
-        self.pairs: list[list[str]] = []
-        self.canon: dict[str, str] = {}
-        self.commands: dict[str, dict[str, str | None]] = {}
-        self.cat_map: dict[str, list[list[str]]] = {}  # insertion order = category order
-
-    def add(self, key: str, desc: str, cat: str) -> None:
-        self.canon[key.lower()] = key
-        self.pairs.append([key, desc])
-        self.cat_map.setdefault(cat, []).append([key, desc])
 
 
-def _catalog_registry(cat: _Catalog) -> None:
+def _catalog_registry(cat: CommandCatalog) -> None:
     commands = _tools_mod("hermes_cli.commands")
     for cmd in commands.COMMAND_REGISTRY:
         meta = commands.command_desktop_meta(cmd)
@@ -457,7 +444,7 @@ def _catalog_registry(cat: _Catalog) -> None:
             cat.add(name, desc, category)
 
 
-def _catalog_quick_commands(cat: _Catalog) -> None:
+def _catalog_quick_commands(cat: CommandCatalog) -> None:
     qcmds = _load_cfg().get("quick_commands", {}) or {}
     if not (isinstance(qcmds, dict) and qcmds):
         return
@@ -471,7 +458,7 @@ def _catalog_quick_commands(cat: _Catalog) -> None:
         cat.add(f"/{qname}", desc, "User commands")
 
 
-def _catalog_plugin_commands(cat: _Catalog) -> None:
+def _catalog_plugin_commands(cat: CommandCatalog) -> None:
     plugin_cmds = _tools_mod("hermes_cli.plugins").get_plugin_commands() or {}
     if plugin_cmds:
         cat.cat_map.setdefault("Plugin commands", [])
@@ -486,7 +473,7 @@ def _catalog_plugin_commands(cat: _Catalog) -> None:
         cat.commands[key] = {"argument_mode": mode, "desktop": None}
 
 
-def _catalog_skills(cat: _Catalog, skills: dict[str, dict]) -> str:
+def _catalog_skills(cat: CommandCatalog, skills: dict[str, dict]) -> str:
     """Append skill pairs and fill ``skills`` = ``{key: {usage, origin}}`` (every consumer ranks by them).
     Returns the one-line notice for skills whose name is a built-in command (no ``/<name>`` entry;
     ``agent.skill_commands`` guard), ``""`` when none."""
@@ -510,7 +497,9 @@ def _(rid, params: dict) -> dict:
     session would be seeded with) so project-local skills register for the repo the session is
     actually in (#114359); a session-less draft is bound to ``params['profile']`` (#124651), and an
     unknown profile is 4064 like ``complete.slash`` — never a launch-profile palette."""
-    cat = _Catalog()
+    from tui_gateway.command_catalog import CommandCatalog  # RPC globals are rebound onto server.
+
+    cat = CommandCatalog()
     _catalog_registry(cat)
     warning = ""
     skills: dict[str, dict] = {}
@@ -675,35 +664,6 @@ def _is_registry_command(base: str) -> bool:
         return _tools_mod("hermes_cli.commands").resolve_command(base) is not None
     except Exception:
         return False
-
-
-def _alias_skill_target(session: dict, base: str, arg: str):
-    """Resolve a quick-command alias whose target is a profile skill command to
-    ``(target_base, combined_arg)`` for command.dispatch; None otherwise.
-
-    A quick-command alias to a skill must not reach the slash worker: the worker
-    runs the CLI non-interactively, where a loaded skill is queued onto
-    ``_pending_input`` that only the interactive REPL drains, so the skill is
-    silently dropped (#106063). Rewriting to the resolved skill mirrors the
-    messaging gateway's ``_hm_expand_alias_quick_command`` — the target's own
-    args are prepended to the user's args, and dispatch routes through the same
-    skill stage a direct ``/skill`` already uses."""
-    qc = _load_cfg().get("quick_commands", {}).get(base)
-    if not isinstance(qc, dict) or qc.get("type") != "alias":
-        return None
-    target = str(qc.get("target", "")).strip()
-    target_tokens = target.lstrip("/").split()
-    if not target_tokens:
-        return None
-    target_base = target_tokens[0].lower()
-    # Rewrite only when the target is definitively a skill. ``None`` (the scan
-    # raised) is not a "yes": leaving the alias unrewritten falls through to the
-    # gate below, which handles the fail-open case, rather than dispatching a
-    # command that may not be a skill at all.
-    if _profile_skill_command(session, target_base) is not True:
-        return None
-    combined_arg = " ".join(target_tokens[1:] + ([arg] if arg else [])).strip()
-    return target_base, combined_arg
 
 
 def _dispatch_plugin(rid, params, session, name, arg):
@@ -1165,15 +1125,19 @@ def _(rid, params: dict) -> dict:
         return _err(rid, 4018, "snapshot restore mutates live config/state; use command.dispatch for /snapshot restore")
     # Pending-input built-ins route straight to command.dispatch (some clients fail the
     # error-then-retry fallback); bundles go the same way under their resolved key.
+    from tui_gateway.command_alias import alias_skill_target
+
     with _session_home_scope(session):  # a secondary-only bundle must route too (#110695)
         target = base if base in _PENDING_INPUT_COMMANDS else _bundle_key_for(base)
+        alias = alias_skill_target(_load_cfg(), base, arg,
+                                   lambda name: _profile_skill_command(session, name)) if target is None else None
     if target is not None:
         return _methods["command.dispatch"](rid, {"name": target.lstrip("/"), "arg": arg, "session_id": sid})
     # A quick-command alias whose target is a skill must be rewritten and
     # dispatched before the skill gate below — the alias name itself is not a
     # skill, so it would otherwise fall through to the slash worker and be
     # dropped (#106063).
-    if alias := _alias_skill_target(session, base, arg):
+    if alias:
         skill_base, skill_arg = alias
         return _methods["command.dispatch"](rid, {"name": skill_base, "arg": skill_arg, "session_id": sid})
     # Recognized skills keep the 4018 gate so clients command.dispatch. A scan
