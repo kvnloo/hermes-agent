@@ -33,9 +33,16 @@ def test_skill_alias_dispatches_real_profile_skill(tmp_path, monkeypatch):
             "session_key": sid, "profile_home": str(home), "cwd": str(tmp_path),
             "agent": None, "slash_worker": worker,
         })
+        catalog_response = server.handle_request({
+            "id": "catalog", "method": "commands.catalog", "params": {"session_id": sid},
+        })
+        assert "result" in catalog_response, catalog_response
+        canon = catalog_response["result"]["canon"]
+        assert canon["/research"] == "/research"
+        alias = canon[f"/{home.name}-review"]
         response = server.handle_request({
             "id": "alias", "method": "slash.exec", "params": {
-                "command": f"{home.name}-review compare databases", "session_id": sid,
+                "command": f"{alias} compare databases", "session_id": sid,
             },
         })
         assert "result" in response, response

@@ -427,7 +427,6 @@ def _(rid, params: dict) -> dict:
 
 # ─── Command catalog / dispatch ──────────────────────────────────────────────
 
-
 def _catalog_registry(cat: CommandCatalog) -> None:
     commands = _tools_mod("hermes_cli.commands")
     for cmd in commands.COMMAND_REGISTRY:
@@ -480,6 +479,7 @@ def _catalog_skills(cat: CommandCatalog, skills: dict[str, dict]) -> str:
     usage, origin_of = _skill_usage_lookup()
     sc = _tools_mod("agent.skill_commands")
     for k, info in sorted(sc.get_interactive_skill_commands().items()):
+        cat.canon.setdefault(k.lower(), k)
         cat.pairs.append([k, str(info.get("description", "Skill"))])
         name = str(info.get("name") or k.lstrip("/"))
         skills[k] = {"usage": usage(name), "origin": origin_of(name)}
