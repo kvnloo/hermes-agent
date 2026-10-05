@@ -1,4 +1,5 @@
 import json
+import socket
 from types import SimpleNamespace
 
 
@@ -20,45 +21,46 @@ def _response_with_tool_call(arguments):
     return SimpleNamespace(choices=[choice], usage=None)
 
 
-class _FakeChatCompletions:
-    def __init__(self):
-        self.calls = 0
-
-    def create(self, **kwargs):
-        self.calls += 1
-        if self.calls == 1:
-            return _response_with_tool_call({"path": "README.md"})
-        return SimpleNamespace(
-            choices=[
-                SimpleNamespace(
-                    message=SimpleNamespace(content="done", reasoning=None, tool_calls=[]),
-                    finish_reason="stop",
-                )
-            ],
-            usage=None,
-        )
-
-
-class _FakeClient:
-    def __init__(self):
-        self.chat = SimpleNamespace(completions=_FakeChatCompletions())
-
-
-def test_tool_call_validation_accepts_dict_arguments(monkeypatch):
+def test_tool_call_validation_accepts_dict_arguments(monkeypatch, tmp_path):
     from run_agent import AIAgent
+    from tools.registry import registry
 
-    monkeypatch.setattr("agent.process_bootstrap.OpenAI", lambda **kwargs: _FakeClient())
+    monkeypatch.setattr("agent.process_bootstrap.OpenAI", lambda **kwargs: SimpleNamespace())
     monkeypatch.setattr(
         "model_tools.get_tool_definitions",
-        lambda *args, **kwargs: [{"function": {"name": "read_file"}}],
+        lambda *args, **kwargs: [{"type": "function", "function": registry.get_schema("read_file")}],
     )
-    monkeypatch.setattr(
-        "model_tools.handle_function_call",
-        lambda name, args, task_id=None, **kwargs: json.dumps({"ok": True, "args": args}),
+
+    received = []
+
+    def inert_read(args, **_kwargs):
+        received.append(dict(args))
+        return json.dumps({"ok": True, "args": args})
+
+    monkeypatch.setattr(registry.get_entry("read_file"), "handler", inert_read)
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    (tmp_path / "config.yaml").write_text(
+        "environment_probe: false\nlocal_runtime:\n  enabled: false\n"
+        "model:\n  context_length: 128000\n", encoding="utf-8",
     )
+    monkeypatch.setattr("agent.model_metadata.detect_local_server_type", lambda *args, **kwargs: "unknown")
+    network_attempts = []
+
+    def deny_network(original):
+        def guarded(sock, address):
+            if sock.family in (socket.AF_INET, socket.AF_INET6):
+                network_attempts.append(address)
+                raise AssertionError("fixture must not connect to a network service")
+            return original(sock, address)
+        return guarded
+
+    monkeypatch.setattr(socket.socket, "connect", deny_network(socket.socket.connect))
+    monkeypatch.setattr(socket.socket, "connect_ex", deny_network(socket.socket.connect_ex))
 
     agent = AIAgent(
         model="test-model",
+        provider="custom",
+        api_mode="chat_completions",
         api_key="test-key",
         base_url="http://localhost:8080/v1",
         platform="cli",
@@ -68,14 +70,14 @@ def test_tool_call_validation_accepts_dict_arguments(monkeypatch):
     )
     agent._disable_streaming = True
 
-    result = agent.run_conversation("read the file")
-
-    # The conversation hits max_iterations=3 (3 tool turns then forced summary).
-    # PR #34470 adds an explainer suffix to abnormal turn endings so users
-    # understand why the response is short instead of seeing a blank reply.
-    # The exact suffix wording is owned by conversation_loop; this test only
-    # cares that the model's actual text ('done') survives at the start.
-    assert result["final_response"].startswith("done")
+    try:
+        message = _response_with_tool_call({"path": "README.md"}).choices[0].message
+        messages = []
+        agent._execute_tool_calls(message, messages, "inert-dict-fixture")
+        assert received == [{"path": "README.md"}]
+        assert network_attempts == []
+    finally:
+        agent.close()
 
 
 def test_tool_call_argument_parser_accepts_structured_values():
@@ -85,10 +87,6 @@ def test_tool_call_argument_parser_accepts_structured_values():
 
     assert error is None
     assert args == {"action": "send", "target": "telegram:user", "message": "Test"}
-
-
-def test_tool_call_argument_parser_rejects_non_object_values():
-    from agent.tool_executor import _parse_tool_arguments
 
     args, error = _parse_tool_arguments(["telegram:user", "Test"])
 
