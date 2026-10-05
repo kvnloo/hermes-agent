@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { ChatMessage } from '@/lib/chat-messages'
+import { type ChatMessage, toChatMessages } from '@/lib/chat-messages'
 import { messageStoreWeight, RENDER_WEIGHT_CHARS } from '@/lib/render-weight'
 
 import { boundRetainedTranscript, TRANSCRIPT_RETAIN_BUDGET } from './transcript-retention'
@@ -61,6 +61,22 @@ describe('boundRetainedTranscript', () => {
     expect(retention.releasedRows).toBe(40 - keep)
     expect(retention.messages[0].id).toBe(`m${40 - keep}`)
     expect(retention.messages).toHaveLength(messages.length - retention.releasedRows)
+  })
+
+  it('releases hydrated older history when its user row omits the optional database id', () => {
+    const messages = transcript(60, heavy)
+    const [historicalUser] = toChatMessages([
+      { role: 'user', content: 'Earlier history prompt', timestamp: 1000 }
+    ])
+    expect(historicalUser.rowId).toBeUndefined()
+    expect(historicalUser.pending).not.toBe(true)
+    messages[0] = historicalUser
+
+    const retention = released(messages, messages[40].id)
+
+    expect(retention.releasedRows).toBeGreaterThan(0)
+    expect(retention.messages.some(message => message.id === historicalUser.id)).toBe(false)
+    expect(retention.messages.some(message => message.id === messages[40].id)).toBe(true)
   })
 
   it('keeps a fixed amount of history behind the window, however long the session is', () => {
