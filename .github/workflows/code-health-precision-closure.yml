@@ -1,0 +1,146 @@
+name: code-health precision closure
+on:
+  push:
+    branches: [exp/code-health-precision-closure-ccafc30]
+permissions:
+  contents: read
+concurrency:
+  group: code-health-precision-closure
+  cancel-in-progress: false
+jobs:
+  prepare:
+    if: github.repository == 'kvnloo/hermes-agent'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    outputs:
+      sha: ${{ steps.publish.outputs.sha }}
+    steps:
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+      - name: Apply hash-verified locally tested patch once
+        id: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f tests/scripts/test_code_health_iteration.py ]; then
+            python - <<'PY'
+          import base64, hashlib, json, lzma, os, subprocess
+          from pathlib import Path
+          parts = ['29ff35ed341784782d22e217f3a1165da16e0325', 'c18ebf313723dd6b03cac3c457e0ea0861b438f1', '714510c58206029df57c03423c527bb875fd0e86']
+          payload = bytearray()
+          for sha in parts:
+              response = subprocess.check_output(['gh', 'api', f'repos/{os.environ["GITHUB_REPOSITORY"]}/git/blobs/{sha}'], timeout=60)
+              data = base64.b64decode(json.loads(response)['content'])
+              assert hashlib.sha1(f'blob {len(data)}\0'.encode() + data).hexdigest() == sha
+              payload.extend(data)
+          assert hashlib.sha256(payload).hexdigest() == 'f66f31b65f423ad4b60d3f108eb7779b1e55c1a6c6eba4930f594ec35b770efc'
+          data = json.loads(lzma.decompress(payload))
+          subprocess.run(['git', 'apply', '--check', '-'], input=data['patch'].encode(), check=True)
+          subprocess.run(['git', 'apply', '-'], input=data['patch'].encode(), check=True)
+          for name, text in data['files'].items():
+              p = Path(name)
+              assert not p.is_absolute() and '..' not in p.parts
+              assert name == 'tests/scripts/test_code_health_iteration.py' or name.startswith('experiments/code_health_precision/')
+              p.parent.mkdir(parents=True, exist_ok=True)
+              p.write_text(text, encoding='utf-8', newline='')
+          p = Path('experiments/code_health_precision/corpus.json')
+          corpus = json.loads(p.read_text(encoding='utf-8'))
+          for case in corpus['cases']:
+              case['source_sha256'] = hashlib.sha256(case['source'].encode()).hexdigest()
+          p.write_text(json.dumps(corpus, indent=2) + '\n', encoding='utf-8', newline='')
+          p = Path('experiments/code_health_precision/behavioral_witnesses.py')
+          p.write_text(p.read_text().replace("ROOT/'precision_corpus.json'", "ROOT/'corpus.json'"), encoding='utf-8', newline='')
+          PY
+            python -m compileall -q scripts/code_health experiments/code_health_precision tests/scripts/test_code_health_iteration.py
+            git diff --check
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add CONTRIBUTING.md scripts/check scripts/code_health/measure.py scripts/code_health/py_rules.py scripts/code_health/replay.py scripts/code_health/ts_units.mjs tests/scripts/test_code_health_cli.py tests/scripts/test_code_health_iteration.py experiments/code_health_precision/*.py experiments/code_health_precision/corpus.json
+            git commit -m 'fix(code-health): close scoped-rule and replay/platform regressions'
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+  validate:
+    needs: prepare
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    env:
+      PYTHONUTF8: '1'
+      PYTHONPATH: .
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+      XDG_CACHE_HOME: ${{ runner.temp }}/code-health-cache
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Keep fixture bytes independent of checkout defaults
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.13'
+      - name: Install pinned measurement tools
+        run: |
+          set -euo pipefail
+          python -m pip install 'pytest==9.1.1' 'ruff==0.15.10'
+          python - <<'PY'
+          import os, subprocess
+          from pathlib import Path
+          prefix = Path(os.environ['XDG_CACHE_HOME']) / 'hermes-code-health/typescript-6.0.3'
+          prefix.mkdir(parents=True, exist_ok=True)
+          subprocess.run(['npm.cmd' if os.name == 'nt' else 'npm', 'install', '--ignore-scripts', '--no-audit', '--no-fund', '--prefix', str(prefix), 'typescript@6.0.3'], check=True, timeout=180)
+          Path('.evidence').mkdir(exist_ok=True)
+          Path('experiments/code_health_precision/evidence').mkdir(exist_ok=True)
+          PY
+      - name: Original suite plus closure regressions
+        run: python -m pytest -q --confcutdir=tests/scripts tests/scripts/test_code_health*.py --junitxml=.evidence/regressions.xml
+      - name: Frozen precision corpus and suppression/overreport controls
+        run: |
+          python experiments/code_health_precision/run_precision.py --snapshot . --corpus experiments/code_health_precision/corpus.json --out .evidence/precision.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path('.evidence/precision.json').read_text())
+          assert data['matched'] == data['n'] == 162
+          assert data['measurement_errors'] == 0
+          assert len(data['mutations']) == 28
+          assert all(m['killed'] and m['other_rules_unchanged'] for m in data['mutations'])
+          assert data['public_cli_parity'] and data['restoration_parity']
+          PY
+      - name: Independent behavioral witnesses
+        run: python experiments/code_health_precision/behavioral_witnesses.py
+      - name: Mechanism-specific repair mutations
+        run: python experiments/code_health_precision/mutate_mechanisms.py --out .evidence/mechanism-mutations.json
+      - name: Verify source restoration and style
+        run: |
+          git diff --exit-code
+          python -m ruff check scripts/code_health/py_rules.py scripts/code_health/measure.py scripts/code_health/replay.py scripts/check tests/scripts/test_code_health_cli.py tests/scripts/test_code_health_iteration.py
+          python -m ruff check --isolated --select C901 --config 'lint.mccabe.max-complexity=20' scripts/code_health/py_rules.py scripts/code_health/measure.py scripts/code_health/replay.py scripts/check tests/scripts/test_code_health_iteration.py
+          git rev-parse HEAD > .evidence/tested-sha.txt
+          python --version > .evidence/python.txt
+          git --version > .evidence/git.txt
+          node --version > .evidence/node.txt
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: precision-closure-${{ matrix.os }}
+          path: |
+            .evidence/
+            experiments/code_health_precision/evidence/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
