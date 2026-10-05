@@ -127,6 +127,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--since", default="2026-09-01")
     p.add_argument("--examples-per-rule", type=int, default=12)
     p.add_argument("--out", default="rule-readiness")
+    p.add_argument("--sample-file", help="frozen JSON corpus with exact base/head ranges")
     args = p.parse_args(argv)
 
     repo = gitio.repo_root(Path.cwd())
@@ -134,7 +135,14 @@ def main(argv: list[str] | None = None) -> int:
     out.mkdir(parents=True, exist_ok=True)
 
     sample_path = out / "sample.json"
-    sample = freeze_sample(repo, args.limit, args.since, sample_path)
+    if args.sample_file:
+        frozen = json.loads(Path(args.sample_file).read_text(encoding="utf-8"))
+        if len(frozen) != args.limit:
+            raise RuntimeError(f"frozen sample has {len(frozen)} rows; expected {args.limit}")
+        sample = frozen
+        sample_path.write_text(json.dumps(sample, indent=2) + "\n", encoding="utf-8")
+    else:
+        sample = freeze_sample(repo, args.limit, args.since, sample_path)
 
     measurer = Measurer(repo, resolve_ruff(repo), known_env=set())
     per_rule_findings: Counter[str] = Counter()
@@ -145,12 +153,15 @@ def main(argv: list[str] | None = None) -> int:
 
     for index, pr in enumerate(sample, start=1):
         try:
-            base, head = pr_range(repo, pr)
+            base = pr.get("base")
+            head = pr.get("head")
+            if not base or not head:
+                base, head = pr_range(repo, pr)
             findings = replay_semantic_one(repo, measurer, base, head)
         except Exception as exc:
             errors += 1
             rows.append({
-                "number": pr["number"], "title": pr["title"], "mergedAt": pr["mergedAt"],
+                "number": pr["number"], "title": pr["title"], "mergedAt": pr.get("mergedAt", ""),
                 "error": f"{type(exc).__name__}: {exc}",
             })
             continue
@@ -167,7 +178,7 @@ def main(argv: list[str] | None = None) -> int:
             item = {
                 "number": pr["number"],
                 "title": pr["title"],
-                "mergedAt": pr["mergedAt"],
+                "mergedAt": pr.get("mergedAt", ""),
                 "base": base,
                 "head": head,
                 "path": finding["path"],
@@ -179,7 +190,7 @@ def main(argv: list[str] | None = None) -> int:
             occurrences[finding["rule"]].append(item)
 
         rows.append({
-            "number": pr["number"], "title": pr["title"], "mergedAt": pr["mergedAt"],
+            "number": pr["number"], "title": pr["title"], "mergedAt": pr.get("mergedAt", ""),
             "base": base, "head": head, "semantic_findings": semantic,
         })
         if index % 25 == 0:
