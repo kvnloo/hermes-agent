@@ -6,6 +6,7 @@ import { parseTspApc } from './protocol.js'
 import {
   applyTernComposerEdit,
   resolveTernComposerSendable,
+  ternSurfaceStaysOpen,
   supportsTernComposer,
   TERN_COMPOSER_ID,
   TERN_SURFACE_ID,
@@ -99,5 +100,12 @@ describe('program features vs terminal hello', () => {
   it('sets sendable from Hermes readiness, not a terminal echo of send', () => {
     expect(resolveTernComposerSendable(ternHello, true)).toBe(true)
     expect(resolveTernComposerSendable(ternHello, false)).toBe(false)
+  })
+})
+
+describe('surface lifetime', () => {
+  it('stays open while Hermes is busy and closes for a modal block', () => {
+    expect(ternSurfaceStaysOpen({ blocked: false })).toBe(true)
+    expect(ternSurfaceStaysOpen({ blocked: true })).toBe(false)
   })
 })

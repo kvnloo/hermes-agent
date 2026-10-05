@@ -54,6 +54,10 @@ export function resolveTernComposerSendable(_hello: TspHello, hermesReady: boole
   return hermesReady && HERMES_TSP_PROGRAM_FEATURES.includes('send')
 }
 
+export function ternSurfaceStaysOpen(state: { blocked: boolean }): boolean {
+  return !state.blocked
+}
+
 /**
  * First concrete TSP consumer. The transcript intentionally remains Ink-owned:
  * while Hermes is idle this surface owns only the native composer; busy turns
@@ -226,7 +230,6 @@ export function useTernComposerSurface(composer: AppLayoutComposerProps): void {
   useEffect(() => {
     if (
       !NATIVE_MODE ||
-      busy ||
       blocked ||
       !stdout ||
       surface.status !== 'active' ||
@@ -236,7 +239,7 @@ export function useTernComposerSurface(composer: AppLayoutComposerProps): void {
     }
 
     const hello = surface.hello
-    const sendable = resolveTernComposerSendable(hello, true)
+    const sendable = resolveTernComposerSendable(hello, !busy)
 
     if (!pauseRendering(stdout)) {
       return
@@ -302,7 +305,7 @@ export function useTernComposerSurface(composer: AppLayoutComposerProps): void {
       transportRef.current = null
       resumeRendering(stdout)
     }
-  }, [blocked, busy, stdout, surface])
+  }, [blocked, stdout, surface])
 
   useEffect(() => {
     const transport = transportRef.current
@@ -322,7 +325,7 @@ export function useTernComposerSurface(composer: AppLayoutComposerProps): void {
         cursor: cursorRef.current,
         text: nativeTextRef.current
       },
-      resolveTernComposerSendable(hello ?? { r: 'hello', v: 1, term: 'tern', kinds: [] }, true)
+      resolveTernComposerSendable(hello ?? { r: 'hello', v: 1, term: 'tern', kinds: [] }, !busy)
     )
-  }, [composer.input, surface])
+  }, [busy, composer.input, surface])
 }
