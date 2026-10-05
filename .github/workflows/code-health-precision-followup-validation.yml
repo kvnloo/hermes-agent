@@ -1,0 +1,40 @@
+name: code-health precision follow-up validation
+
+on:
+  push:
+    branches:
+      - fix/code-health-precision-followup
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.1
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@1e60f620b9541d4f338c5d2c2db858b1c91a2c6a # v4
+        with:
+          node-version: "24"
+
+      - name: Install focused test dependencies
+        run: |
+          python -m pip install pytest ruff==0.15.10
+          npm install --ignore-scripts --no-save typescript@6.0.3
+
+      - name: Run code-health suites
+        env:
+          PYTHONPATH: .
+        run: |
+          pytest -q --confcutdir=tests/scripts \
+            tests/scripts/test_code_health.py \
+            tests/scripts/test_code_health_cli.py \
+            tests/scripts/test_code_health_identity.py \
+            tests/scripts/test_code_health_rules.py \
+            tests/scripts/test_code_health_precision_followup.py
