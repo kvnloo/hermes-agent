@@ -559,5 +559,25 @@
     "remote_verified": true,
     "hosted_ci": "CI_NOT_RUN: zero checks/statuses/workflow runs",
     "url": "https://github.com/kvnloo/hermes-agent/commit/8c3b8bce281798dfdb6993488ee56d92d4c2d852"
+  },
+  {
+    "name": "Backend btw registered-handler completion consumer",
+    "sha": "51ee13c42b996396c9f2fd45ed4182ad62dc1559",
+    "tree": "1d02daf4ebf6947f1b6e11b5ea1d6c8235820715",
+    "parents": [
+      "ac28abc96ce83f22f6b831f80d9007e2aba81f21"
+    ],
+    "branch": "evidence/btw-rpc-completion-20261005",
+    "qualified_upstream_base": "ac28abc96ce83f22f6b831f80d9007e2aba81f21",
+    "classification": "test_only_consumer_evidence",
+    "validation": "2final existing-source consumer passes; empty-completion omission control1fail1pass;11checks with0blocking/0advisory. Production restored byte-exact, no production diff.",
+    "scope": "Actual registered prompt.btw handler, session lookup, real worker thread, framed completion. Empty success and ordinary error match accepted task/session/question; foreground history unchanged.",
+    "limits": "No provider/answer-engine execution, live WebSocket, packagedDesktop, reconnect/session-switch, UIrenderer or original incident-reproduction claim. Independent renderer owner129403 remains separate; no new backend fix claimed.",
+    "receipt": "/workspace/receipts/btw129391/README.md",
+    "independent_review_receipt": "/workspace/receipts/btw129391/independent-review.md",
+    "remote_verification_receipt": "/workspace/receipts/btw129391/remote-verification.md",
+    "remote_verified": true,
+    "hosted_ci": "CI_NOT_RUN: zero checks/statuses/workflow runs at recorded verification",
+    "url": "https://github.com/kvnloo/hermes-agent/commit/51ee13c42b996396c9f2fd45ed4182ad62dc1559"
   }
 ]

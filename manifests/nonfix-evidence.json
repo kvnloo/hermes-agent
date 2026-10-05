@@ -8,10 +8,10 @@
   },
   {
     "name": "CUA docs release version facts",
-    "classification": "local_scope_hold",
-    "validation": "Historical initial1fail2pass before later independently qualified Sandbox/Python generated subsets; full fact suite not rerun.",
-    "limits": "Selected Sandbox and Python outputs now published separately; SDK/Spaces UniFFI, TypeDoc and curated facts remain. No full seven-fact resolution or full docs build claim.",
-    "receipt": "/workspace/receipts/cua-doc-version/independent-generator-review.md"
+    "classification": "partial_composition_with_remaining_sdk_gate",
+    "validation": "Exact d1f6 composition:3generator checks pass; existing facts suite1failed2passed; only2SDKindexfacts absent",
+    "limits": "Sandbox/Python/TypeScript and2curated facts published in composition; SDK metadata remains missing, no all-green/fullsite/release claim.",
+    "receipt": "cua-docs-composition/README.md"
   },
   {
     "name": "Agent/session bounded source intake",

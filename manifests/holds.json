@@ -62,7 +62,7 @@
       "status": "CAPABILITY_REQUIRED",
       "owner_head": "d1db5a9825f33810a50692f1c735d08ada30f974",
       "blocking_condition": "Native Windows Plugins-list acceptance is explicitly unchecked; current workspace does not provide that environment.",
-      "next_action": "Qualify owner branch on native Windows with a synthetic installed pip entry point not explicitly enabled; retain ordinary directory-provider control.",
+      "next_action": "Treat implementation as present on upstream; only obtain missing native Windows consumer evidence if still useful. Do not duplicate or port the already-merged fix.",
       "do_not": [
         "claim Linux mocked-platform tests establish Windows behavior",
         "duplicate implementation",
@@ -74,7 +74,16 @@
       "receipts": [
         "h5-readiness-intake-20261005.md",
         "progress-flood-131937/remote-verification.md"
-      ]
+      ],
+      "source_update": {
+        "implemented_on_upstream": "e473f5a9c976a0b5bc292aa415dae28c638a47c3",
+        "followup_source": "80309111b480937264881f29f66fa87a3af72356",
+        "native_windows_runtime_evidence": "not supplied by source-only audits",
+        "receipts": [
+          "readiness-e473-source-delta/README.md",
+          "source-delta-803091/README.md"
+        ]
+      }
     },
     {
       "id": "standing-123578",
@@ -154,6 +163,53 @@
         "claim test-only held evidence is a fix",
         "call helper-only differential a full current-main integration",
         "invent an ID-prefix retention policy"
+      ]
+    },
+    {
+      "id": "hermes-133325",
+      "repository": "NousResearch/hermes-agent",
+      "number": 133325,
+      "status": "OWNERSHIP_HOLD",
+      "owner": "kokhlo",
+      "local_candidate_sha": "3c450a525fe4588addd46d0891ec26a7c7f66bb6",
+      "published": false,
+      "current_main_ready": false,
+      "blocking_condition": "Owner explicitly claimed the same implementation/tests; unusable-override fallback contract differs from parked candidate.",
+      "next_action": "Inspect actual owner head when supplied; reuse consumer only for a distinct missing boundary. No competing publication or owner polling.",
+      "local_evidence": "2base failures;6final selected passes;11checks, superseding initial2green. Local WIP preservation only, not delivered.",
+      "sources": [
+        "https://github.com/NousResearch/hermes-agent/issues/133325"
+      ],
+      "receipts": [
+        "explicit-launcher133325/README.md",
+        "explicit-launcher133325/owner-claim.json"
+      ],
+      "do_not": [
+        "publish competing implementation",
+        "infer fallback policy",
+        "count local candidate as delivery"
+      ]
+    },
+    {
+      "id": "hermes-133333",
+      "repository": "NousResearch/hermes-agent",
+      "number": 133333,
+      "status": "SOURCE_DESIGN_HOLD",
+      "published": false,
+      "blocking_condition": "Parent requires preserving EARLY credential/config warnings and ordinary session behavior. Scheduling-only opt-out defers diagnostics; no accepted runtime-result handoff/freshness contract exists.",
+      "next_action": "Require explicit design decision that preserves early diagnostics before any delayed-build implementation; no credential/authorization policy changes.",
+      "evidence_level": "Source inspection only; no implementation/test/provider calls",
+      "sources": [
+        "https://github.com/NousResearch/hermes-agent/issues/133333"
+      ],
+      "receipts": [
+        "sidecar-prewarm-133333/source-plan.md"
+      ],
+      "do_not": [
+        "defer early warnings as an implicit tradeoff",
+        "change authentication policy",
+        "introduce skip_memory workaround",
+        "claim paid-traffic reproduction"
       ]
     }
   ]

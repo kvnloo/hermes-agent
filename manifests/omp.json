@@ -144,7 +144,15 @@
     "receipt": "/workspace/receipts/omp-own-pr-intake/13714-README.md",
     "remote_verified": true,
     "hosted_ci": "CI_NOT_RUN: zero checks/statuses/runs",
-    "url": "https://github.com/kvnloo/oh-my-pi/commit/e9a72bb82b5186543f35cde68bc2549214691e85"
+    "url": "https://github.com/kvnloo/oh-my-pi/commit/e9a72bb82b5186543f35cde68bc2549214691e85",
+    "carrier_status_update": {
+      "source": "Parent authoritative cleanup-owner status update, 2026-10-05",
+      "upstream_pr": 13714,
+      "upstream_state": "CLOSED_UNMERGED",
+      "downstream_artifact_status": "HISTORICAL",
+      "active_upstream_promise": false,
+      "condition_for_reconsideration": "New accepted carrier required; preserve historical validation, no reopening or new offer inferred."
+    }
   },
   {
     "name": "Three ports with recovery evidence",
@@ -169,6 +177,43 @@
     "receipt": "/workspace/receipts/omp12364/README.md",
     "remote_verified": true,
     "hosted_ci": "CI_NOT_RUN: zero checks/statuses/runs",
-    "url": "https://github.com/kvnloo/oh-my-pi/commit/dfc3a983d35c2e93db9040b8c9a6f2ca709948ba"
+    "url": "https://github.com/kvnloo/oh-my-pi/commit/dfc3a983d35c2e93db9040b8c9a6f2ca709948ba",
+    "carrier_status_update": {
+      "source": "Parent authoritative cleanup-owner status update, 2026-10-05",
+      "upstream_pr": 12364,
+      "upstream_state": "CLOSED_UNMERGED",
+      "downstream_artifact_status": "HISTORICAL",
+      "active_upstream_promise": false,
+      "condition_for_reconsideration": "New accepted carrier required; preserve historical validation, no reopening or new offer inferred."
+    }
+  },
+  {
+    "name": "Unknown-tool active-pool diagnostics",
+    "sha": "91ea68b3b1ee514958204851a6b50eab9cc7a427",
+    "tree": "3f1ed169014014daa80488a7ee14c5f78d33fbc1",
+    "parents": [
+      "9d6747d031e4819fa59ed0ab70942174520f1a18"
+    ],
+    "branch": "fix/tool-not-found-available-names-20261005",
+    "qualified_upstream_base": "9d6747d031e4819fa59ed0ab70942174520f1a18",
+    "classification": "diagnostic_functional_fix",
+    "validation": "3final selected real agentLoop tests,15assertions; base negative lacks advertised name; agent package lint/format/types pass",
+    "limits": "Active advertised names only; namespace/fallback suggestions unchanged. No grant,dispatch,retry-policy,model behavior or native implementation qualification.",
+    "runtime_prerequisite": "Bun1.4.2 and source-built1c0993 pi-natives18.6.2 artifact reused. Loader/bindings match9d6747, but Rust implementation differs; not native-free execution or current-native semantics proof.",
+    "native_artifact_sha256": "8966b8a89e719e1e316e40577c72afc3208868d1d82d6b3338abfe3267a3c15b",
+    "source_applicability": {
+      "compared_upstream_head": "9325f5bd5f67194d1a27b4bd30f9415ae2abb71b",
+      "method": "scoped_source_object_equivalence",
+      "receipt": "omp14306-source-freshness/README.md",
+      "limits": "Main delta only crates/pi-natives/src/snapcompact.rs; relevant TS source/test and package/lock inputs identical. Historical runtime base9d retained; no rebase/current-native claim.",
+      "current_head_runtime_tested": false,
+      "rebased": false
+    },
+    "receipt": "/workspace/receipts/omp14306/README.md",
+    "native_review_receipt": "/workspace/receipts/omp14306/native-source-review.md",
+    "remote_verification_receipt": "/workspace/receipts/omp14306/remote-verification.md",
+    "remote_verified": true,
+    "hosted_ci": "CI_NOT_RUN: zero checks/statuses/workflow runs at recorded verification",
+    "url": "https://github.com/kvnloo/oh-my-pi/commit/91ea68b3b1ee514958204851a6b50eab9cc7a427"
   }
 ]

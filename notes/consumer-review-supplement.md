@@ -16,7 +16,7 @@ The existing cap-reconciliation receipt records **17 GitHub OPEN entries: 13 non
 
 Current Discord reviewer interest was not available in this bounded read-only task. Public review comments above are not Discord signals, and prior verification is not acceptance of the newly delivered heads. All three downstream receipts record CI_NOT_RUN separately from local qualification. The older owner PR's reported hosted success is not CI success for terminal918def.
 
-The latest verified Hermes source head is e473f5a9c976a0b5bc292aa415dae28c638a47c3. Its two-file plugin-status delta does not constitute runtime requalification of these artifacts. Historical715 integration bases for f679/b1ae remain explicit; terminal918def remains an older-owner child. No additional current-main port or tests are proposed merely to relabel that evidence.
+The historical source snapshot for this shortlist was e473f5a9c976a0b5bc292aa415dae28c638a47c3; the newer ac28 source audit has real auxiliary/config/shutdown drift. Its two-file plugin-status delta does not constitute runtime requalification of these artifacts. Historical715 integration bases for f679/b1ae remain explicit; terminal918def remains an older-owner child. No current-runtime upgrade is implied. For f679 specifically, consult source-applicability-ac28.md before any current integration claim.
 
 Previous skill/alias composition bc374 and failed-turn warning4edf remain qualified reserve choices in the historical shortlist; this supplement does not demote their correctness, reopen owner work or consume new slots. It prioritizes direct existing requests and the smallest reviewable artifacts.
 

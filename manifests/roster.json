@@ -1,38 +1,44 @@
 [
   {
     "worker": "hermes_gateway",
-    "status": "active source triage and ledger update",
-    "assignment": "Feishu847a delivered; next distinct gateway integration gap",
-    "updated_at": "2026-10-05T13:37:12.712363+00:00"
+    "status": "completed selected task; not currently running at snapshot",
+    "assignment": "129391 test-only evidence delivered and remote-verified;133325 localownershiphold",
+    "successor": "Proposed bounded independent source intake only when reassigned; no active next implementation.",
+    "status_observed_at_utc": "2026-10-05T15:01:38.121903+00:00"
   },
   {
     "worker": "hermes_agent",
-    "status": "active source triage",
-    "assignment": "Current sessions/persistence consumer gaps after reviewed promotion shortlist",
-    "updated_at": "2026-10-05T13:37:12.712363+00:00"
+    "status": "completed selected task; not currently running at snapshot",
+    "assignment": "Final129391 independent review approved; provider intake complete and133333 early-warning design hold retained",
+    "successor": "Independent review of a concrete active owner patch when reassigned; none selected.",
+    "status_observed_at_utc": "2026-10-05T15:01:38.121903+00:00"
   },
   {
     "worker": "hermes_tools",
-    "status": "qualification completed; selecting next work",
-    "assignment": "122162 existing prerequisite case passed; no new implementation claim",
-    "updated_at": "2026-10-05T13:37:12.712363+00:00"
-  },
-  {
-    "worker": "hermes_readiness",
-    "status": "active independent source review",
-    "assignment": "CUA Python static extractor four-wheel dependency closure",
-    "updated_at": "2026-10-05T13:37:12.712363+00:00"
+    "status": "active bounded source intake after14306 delivered",
+    "assignment": "Unknown-tool active-pool diagnostics on9d6747;3focused tests15assertions and agent check; native reuse limitation explicit",
+    "successor": "Select actual distinct current-source request after ownership proof; no approved next implementation yet.",
+    "status_observed_at_utc": "2026-10-05T15:01:38.121903+00:00"
   },
   {
     "worker": "hermes_cli",
-    "status": "delivery review completed",
-    "assignment": "Feishu847a/CUA docs5d exact remote verification;122162 claim review",
-    "updated_at": "2026-10-05T13:37:12.712363+00:00"
+    "status": "active independent metadata review assignment",
+    "assignment": "OMP91ea/CUAfb594/Hermes51ee exact remote gates complete; v4review queued",
+    "successor": "Review19file frozen count/classification/digest; no tests.",
+    "status_observed_at_utc": "2026-10-05T15:01:38.121903+00:00"
+  },
+  {
+    "worker": "hermes_readiness",
+    "status": "active final packet handoff",
+    "assignment": "Final39/16/6 record reconciliation and native source audit complete; v4 frozen",
+    "successor": "Resolve any concrete metadata review findings; parent alone publishes after approveddigest.",
+    "status_observed_at_utc": "2026-10-05T15:01:38.121903+00:00"
   },
   {
     "worker": "cua_consumer",
-    "status": "active dependency source preparation",
-    "assignment": "Bounded static Python docs generator closure; native SDK/TS remain held",
-    "updated_at": "2026-10-05T13:37:12.712363+00:00"
+    "status": "active source intake after usage-comment delivery",
+    "assignment": "Static usagecomment only; d1f6 partial docs remains SDKheld",
+    "successor": "Select real source/owner gap; no approved next implementation reported. Keep SDK metadata held.",
+    "status_observed_at_utc": "2026-10-05T15:01:38.121903+00:00"
   }
 ]

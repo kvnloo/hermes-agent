@@ -89,5 +89,93 @@
       "limits": "Recorded exact-SHA verification; no fresh poll"
     },
     "url": "https://github.com/kvnloo/cua/commit/4bd270be79fe7171442b65aaefc66d1d4734f3a8"
+  },
+  {
+    "name": "Generated TypeScript reference version facts subset",
+    "sha": "127ddc0a9babcd484dea50203c1b7809a28c0db7",
+    "tree": "9f15f045891b83c55cbb11d52d936845691e8d55",
+    "parent": "25f63eea951c1ac31f7b71357ba4c9f849199cec",
+    "qualified_upstream_base": "25f63eea951c1ac31f7b71357ba4c9f849199cec",
+    "branch": "qualified/typescript-doc-facts-current-20261005",
+    "classification": "generated_documentation_subset_correction",
+    "validation": "Initial unchanged-generator check exits1 for4MDX pages; full5output regeneration changes4pages5version substitutions; final check and diff check pass",
+    "controls": [
+      "Initial exact stale-output check retained",
+      "All5owned output hashes reviewed; meta.json unchanged, no stale page deletion"
+    ],
+    "execution_runtime": "Bun1.4.2 substitutes for canonical tsx4.21.0; TypeDoc0.28.20,Markdownplugin4.13.1,TypeScript5.8.3 exact locks",
+    "environment": "27 scoped integrity-verified npm archives, no lifecycle scripts/native optional addons or project manifest/lock edits; local packaged ShikiWASM highlighting disclosed",
+    "native_initialization": "Static compiler source conversion; SDK JavaScript not evaluated, no CUA addon/Driver/VM/API calls; packaged highlighter WASM is distinct",
+    "limits": "Generated TypeScript subset only; no full seven-fact completion, SDKFFI metadata, full site build, runtime or shipped-release qualification",
+    "receipt": "/workspace/receipts/cua-ts-doc-feasibility/qualification.md",
+    "independent_review_receipt": "/workspace/receipts/cua-ts-doc-feasibility/independent-review.md",
+    "remote_verification_receipt": "/workspace/receipts/cua-ts-doc-feasibility/remote-verification.md",
+    "remote_verified": true,
+    "hosted_ci": {
+      "status": "CI_NOT_RUN",
+      "checks": 0,
+      "statuses": 0,
+      "workflow_runs": 0,
+      "limits": "Recorded exact-SHA verification; no fresh poll"
+    },
+    "url": "https://github.com/kvnloo/cua/commit/127ddc0a9babcd484dea50203c1b7809a28c0db7"
+  },
+  {
+    "name": "Three-generator docs composition with remaining SDK gate",
+    "sha": "d1f6fc94217017d8d91b55725f9bc797621b7264",
+    "tree": "80f3b1547ca8a07ce817a9c77b3f49b6c9cf7977",
+    "parents": [
+      "5d1dd8ec50dfdbf98d27adf98ecf641c7e0ff691",
+      "4bd270be79fe7171442b65aaefc66d1d4734f3a8",
+      "127ddc0a9babcd484dea50203c1b7809a28c0db7"
+    ],
+    "qualified_upstream_base": "25f63eea951c1ac31f7b71357ba4c9f849199cec",
+    "branch": "qualified/docs-facts-composition-sdk-held-20261005",
+    "classification": "partial_docs_composition_with_sdk_gate",
+    "new_independent_fix": false,
+    "validation": "Exact composition sandbox/Python/TypeScript generator checks all exit0; existing version-facts suite exits1 with1failed2passed; git diff --check clean",
+    "remaining_failure": "Untouched cua-sdk/reference/index.mdx lacks two install/version facts; only these two EXPECTED_FACTS remain absent. SDK index not hand-edited.",
+    "composition_scope": "Preserves three published parents; adds two curated version facts. Ten docs files/14version substitutions versus base; no generator/source/API/package/lock/test changes.",
+    "execution_runtime": "Bun1.4.2 substitution for canonical tsx; explicit scoped Python3.12 static Griffe and approved TypeDoc dependency contexts inherited.",
+    "limits": "Partial source-version consistency only, not all facts green, full site build, runtime, release availability or SDK FFI generation. No new native SDK calls.",
+    "sdk_gate": "Requires both authentic current CUA_SDK_API_JSON and CUA_SPACES_FFI_API_JSON, or matching libraries and bindgen; missing metadata not synthesized.",
+    "receipt": "/workspace/receipts/cua-docs-composition/README.md",
+    "independent_review_receipt": "/workspace/receipts/cua-docs-composition/independent-review.md",
+    "remote_verification_receipt": "/workspace/receipts/cua-docs-composition/remote-verification.md",
+    "remote_verified": true,
+    "hosted_ci": {
+      "status": "CI_NOT_RUN",
+      "checks": 0,
+      "statuses": 0,
+      "workflow_runs": 0,
+      "limits": "Recorded snapshot; no repoll"
+    },
+    "url": "https://github.com/kvnloo/cua/commit/d1f6fc94217017d8d91b55725f9bc797621b7264"
+  },
+  {
+    "name": "Python docs generator usage comment",
+    "sha": "fb594a0f8934a64710dff5aa7bdbc63f7b8b34ff",
+    "tree": "f4d53371f769954d989d6e94c6a6b4ef9e4569a1",
+    "parents": [
+      "25f63eea951c1ac31f7b71357ba4c9f849199cec"
+    ],
+    "branch": "qualified/python-generator-usage-20261005",
+    "qualified_upstream_base": "25f63eea951c1ac31f7b71357ba4c9f849199cec",
+    "classification": "documentation_usage_correction",
+    "validation": "Independent source comparison: all executable bytes after opening comment identical; git diff --check clean. No generator or test rerun warranted.",
+    "scope": "Removes unsupported --only cua|cua-sandbox advertisement; canonical pnpm/check examples retained; no behavior/generated-output changes.",
+    "limits": "Does not resolve SDK metadata or partial version-facts failure; not runtime or full docs build qualification.",
+    "receipt": "/workspace/receipts/cua-python-generator-usage/README.md",
+    "independent_review_receipt": "/workspace/receipts/cua-python-generator-usage/independent-review.md",
+    "remote_verification_receipt": "/workspace/receipts/cua-python-generator-usage/remote-verification.md",
+    "remote_verified": true,
+    "hosted_ci": {
+      "status": "CI_NOT_RUN",
+      "checks": 0,
+      "statuses": 0,
+      "workflow_runs": 0,
+      "limits": "Recorded snapshot; no repoll"
+    },
+    "url": "https://github.com/kvnloo/cua/commit/fb594a0f8934a64710dff5aa7bdbc63f7b8b34ff"
   }
 ]

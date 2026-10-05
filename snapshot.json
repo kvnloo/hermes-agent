@@ -1,20 +1,23 @@
 {
-  "captured_at_utc": "2026-10-05T13:53:42.568310+00:00",
-  "hermes_records": 38,
-  "omp_records": 15,
-  "cua_records": 3,
-  "interpretation": "Branch records include overlapping compositions, test-only evidence, held proposals and docs; not unique fixes.",
+  "prepared_at_utc": "2026-10-05T14:49:00.923410+00:00",
+  "status": "FROZEN_FOR_INDEPENDENT_REVIEW",
+  "hermes_records": 39,
+  "omp_records": 16,
+  "cua_records": 6,
+  "hold_records": 9,
+  "counts_final": true,
+  "interpretation": "Branch records, overlapping compositions, evidence/holds/docs; not unique fixes.",
   "source_heads": {
-    "hermes": "e473f5a9c976a0b5bc292aa415dae28c638a47c3",
-    "omp": "1c0993c3d12e70042169a951663bb2702e2c0a9e",
+    "hermes": "ac28abc96ce83f22f6b831f80d9007e2aba81f21",
+    "omp_latest_observed_by_agent": "9325f5bd5f67194d1a27b4bd30f9415ae2abb71b",
+    "omp14306_test_base": "9d6747d031e4819fa59ed0ab70942174520f1a18",
     "cua": "25f63eea951c1ac31f7b71357ba4c9f849199cec"
   },
-  "source_head_limits": "Last verified source snapshots retained, not newly polled for packet creation. Historical qualification bases and owner-child limits remain per record.",
-  "prior_packet_digest": "618a6c01117ea529471c39556a207d50ccffb857870117af162353ddf8dc17cb",
-  "publication_scope": "Local review candidate only; parent controls downstream-only publication.",
-  "hosted_ci": "Recorded snapshots, not repolled. CUAe37 ImageAPI pending at prior verification does not qualify Python consumer; other recorded zero-run statuses remain distinct from local tests.",
-  "newer_observed_source": {
-    "hermes": "80309111b480937264881f29f66fa87a3af72356",
-    "assessment": "Observed by parent before publication; incremental delta assessment pending outside this frozen packet. No source-applicability, test or readiness claim for803."
-  }
+  "source_head_limits": "Hermes803\u2192ac28 source-only audit has actual auxiliary/config/shutdown drift. OMP9325 observation is not9d\u21929325 applicability assessment. Every historical qualification base retained. OMP14306 scoped9d\u21929325 source applicability now recorded; no current-native/runtime upgrade.",
+  "prior_packet_digest": "7723f6f9cf000c1fcdb8039d0c2cb8a4a67d70cd10e707ea29374e04f8088a8f",
+  "publication_scope": "Frozen local metadata candidate; parent publishes downstream normal fast-forward only after exactdigest independent approval.",
+  "hosted_ci": "Recorded snapshots, not repolled; unrelated e37ImageAPI pending does not qualify consumer.",
+  "captured_at_utc": "2026-10-05T15:01:38.121903+00:00",
+  "files": 19,
+  "source_snapshot_note": "Point-in-time observations from receipts as of freeze; not a fresh latest-head poll. Historical qualification bases remain per artifact."
 }

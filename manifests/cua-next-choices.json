@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "assessmentMode": "historical_choices_with_published_generator_subset_outcomes",
-  "dependencyAuthorization": "Selected EnvTransport and static Python docs closures provisioned in scoped supportedPython3.12 (34 exact packages); separate SDKFFI/TypeDoc gates unchanged.",
+  "assessmentMode": "current_published_subsets_and_partial_composition",
+  "dependencyAuthorization": "Scoped Python34packages and TypeDoc27archives provisioned; Bun substitution explicit. SDKFFI metadata gate remains.",
   "choices": [
     {
       "id": "sdk_docs",
@@ -32,7 +32,7 @@
       ],
       "missingArtifactPackageVersion": [],
       "smallestAction": "Review the published whole9output qualification; no duplicate generation required.",
-      "notYetQualifiedClaim": "Full site build, SDKFFI/TypeDoc output or all-seven-facts completion",
+      "notYetQualifiedClaim": "Full site build, SDKFFI output or all-seven-facts completion",
       "receipt": "cua-python-doc-subset/README.md",
       "sha": "4bd270be79fe7171442b65aaefc66d1d4734f3a8",
       "url": "https://github.com/kvnloo/cua/commit/4bd270be79fe7171442b65aaefc66d1d4734f3a8",
@@ -40,21 +40,16 @@
     },
     {
       "id": "typescript_docs",
-      "sourceSHA": "ed22ad958a5ab6d764c98261b24d65f80f3a6f95",
-      "status": "held",
+      "sourceSHA": "25f63eea951c1ac31f7b71357ba4c9f849199cec",
+      "status": "qualified_generated_subset_remote_verified",
       "availableExistingResources": [
-        "Canonical header and package0.4.1",
-        "ExistingBun1.4.2"
+        "27 scoped locked packages; TypeDoc0.28.20/markdown4.13.1/TypeScript5.8.3; Bun1.4.2 substitute"
       ],
-      "missingArtifactPackageVersion": [
-        "typedoc0.28.20",
-        "typedoc-plugin-markdown4.13.1",
-        "docs TypeScript5.8.3 and tsx4.21.0",
-        "TypeScript package dependencies"
-      ],
-      "smallestAction": "Select locked dependencies then canonical TS generator/check",
-      "notYetQualifiedClaim": "Whole TypeScript reference refreshed",
-      "receipt": "cua-doc-version/independent-generator-review.md"
+      "missingArtifactPackageVersion": [],
+      "smallestAction": "Use published127dd or combinedd1f6; no duplicate generation.",
+      "notYetQualifiedClaim": "Full site/runtime/release or SDKFFI output",
+      "receipt": "cua-ts-doc-feasibility/qualification.md",
+      "sha": "127ddc0a9babcd484dea50203c1b7809a28c0db7"
     },
     {
       "id": "sandbox_docs",
@@ -75,19 +70,18 @@
     },
     {
       "id": "curated_docs",
-      "sourceSHA": "ed22ad958a5ab6d764c98261b24d65f80f3a6f95",
-      "status": "held",
+      "sourceSHA": "25f63eea951c1ac31f7b71357ba4c9f849199cec",
+      "status": "published_partial_composition",
       "availableExistingResources": [
-        "Existing3version-fact tests",
-        "Local uncommitted image-line correction",
-        "Installed pytest"
+        "Three generator checks green; two curated facts included in published composition"
       ],
       "missingArtifactPackageVersion": [
-        "Four generated references remain stale"
+        "Authentic SDK and Spaces FFI metadata for remaining two SDK index facts"
       ],
-      "smallestAction": "Pair curated images/quickstart fixes with selected generator scope and owner overlap refresh",
-      "notYetQualifiedClaim": "Whole version-fact suite not rerun after independently generated Sandbox/Python subsets; historical1fail2pass is not current rerun.",
-      "receipt": "cua-doc-version/README.md"
+      "smallestAction": "Retain explicit SDK gate; review partial composition without whole-suite-green claim.",
+      "notYetQualifiedClaim": "Existing facts suite remains1failed2passed; only two untouched SDK index facts absent.",
+      "receipt": "cua-docs-composition/README.md",
+      "sha": "d1f6fc94217017d8d91b55725f9bc797621b7264"
     },
     {
       "id": "guarded111",

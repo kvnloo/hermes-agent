@@ -35,3 +35,7 @@ Prefer `0074d8a68076200ab239d4255da9ea602fcc224e` (`ready/rate-reply-localized-c
 Retention e3efd9a2758979fdaa39a139350529a9b04a25cc is test-only original-owner8e159 evidence with an intentionally unmasked failing history control, CONTRACT_HOLD and current_main_ready=false. Currente473helper-only success is differential evidence, not a full port or chosen durability/provenance policy. Do not count as fixed.
 
 Cron voice8c3b8bce281798dfdb6993488ee56d92d4c2d852 preserves liuhao1024 originala1edc68 viaa3f089 and adds currente473 checker compatibility extraction. Final4existing tests11checks replace earlier3test result; no new voice/transcoding/live-service scope. This is independent of unrelated gateway reply/diagnostic compositions.
+
+## OMP owner-status correction (parent-authoritative, 2026-10-05)
+
+Upstream #13714 and #12364 and fork #57 were closed unmerged by the separate cleanup owner. Downstream e9a72bb and dfc3a98 remain historical artifacts with unchanged validation; neither carries an active upstream promise without a newly accepted carrier. Fork #82 merged documentation into `rfc/interactive-performance-stack`, not main. The conditional #14166 offer assigns no slice; exclude duplicate work. These corrections do not add deliveries or unique fixes.
