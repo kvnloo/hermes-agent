@@ -242,6 +242,8 @@ export function useTernComposerSurface(composer: AppLayoutComposerProps): void {
       return
     }
 
+    stdout.write('\x1b[2J\x1b[H')
+
     nativeTextRef.current = composerRef.current.input
     cursorRef.current = composerRef.current.input.length
 
