@@ -10,12 +10,13 @@ import pytest
 
 from hermes_cli.backup import (
     BackupInProgressError,
-    _atomic_output_path,
     _backup_operation_lock,
     _write_full_zip_backup,
     create_quick_snapshot,
     list_quick_snapshots,
 )
+
+from hermes_cli.backup_output import _atomic_output_path
 
 
 def test_backup_lock_rejects_a_second_operation(tmp_path) -> None:
