@@ -6,7 +6,8 @@ on:
       - exp/code-health-rule-readiness-96bb97a
 
 permissions:
-  contents: read
+  actions: read
+  contents: write
 
 jobs:
   replay:
@@ -26,6 +27,40 @@ jobs:
       - name: Install pinned Ruff
         run: python -m pip install "$(python -m scripts.code_health --print-pins)"
 
+      - name: Freeze validated 300-PR corpus
+        run: |
+          sample=experiments/code_health_rule_readiness_sample.json
+          if [ ! -f "$sample" ]; then
+            gh api /repos/${GITHUB_REPOSITORY}/actions/artifacts/11321505998/zip > /tmp/readiness.zip
+            python - <<'PY'
+          import json, zipfile
+          from pathlib import Path
+
+          with zipfile.ZipFile("/tmp/readiness.zip") as zf:
+              rows = json.loads(zf.read("replay.json"))
+          sample = [
+              {
+                  "number": row["number"],
+                  "title": row["title"],
+                  "mergedAt": row.get("mergedAt", ""),
+                  "base": row["base"],
+                  "head": row["head"],
+              }
+              for row in rows
+              if row.get("base") and row.get("head")
+          ]
+          assert len(sample) == 300, len(sample)
+          Path("experiments/code_health_rule_readiness_sample.json").write_text(
+              json.dumps(sample, separators=(",", ":")) + "\n", encoding="utf-8"
+          )
+          PY
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add "$sample"
+            git commit -m "test: freeze 300-PR semantic readiness corpus"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+
       - name: Fetch upstream main history
         run: |
           git remote add upstream https://github.com/NousResearch/hermes-agent.git
@@ -35,7 +70,7 @@ jobs:
         run: |
           PYTHONPATH=. python experiments/code_health_rule_readiness.py \
             --limit 300 \
-            --since 2026-09-01 \
+            --sample-file experiments/code_health_rule_readiness_sample.json \
             --examples-per-rule 12 \
             --out rule-readiness
 
