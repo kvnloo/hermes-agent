@@ -317,7 +317,6 @@ def _capture_lines(expr: ast.AST) -> Iterator[int]:
             seen.add(line)
             yield line
 
-def _main_guard
 def _main_guard(stmt: ast.stmt) -> str | None:
     """``"=="``/``"!="`` for ``if __name__ <op> "__main__":``, else None."""
     test = stmt.test if isinstance(stmt, ast.If) else None
@@ -557,7 +556,6 @@ def missing_timeout(tree: ast.Module, ctx: Ctx) -> Iterable[int]:
             if kind and (kind == 'async' or not _deadline(node, 'timeout', _PROCESS_WAITS[leaf])):
                 yield node.lineno
 
-def sync_config_in_async
 def sync_config_in_async(tree: ast.Module, ctx: Ctx) -> Iterable[int]:
     for func in ast.walk(tree):
         if not isinstance(func, ast.AsyncFunctionDef):
