@@ -269,7 +269,8 @@ def _is_hermes_managed_bin_dir(directory: str) -> bool:
         resolved = Path(directory).resolve()
     except OSError:
         return False
-    if resolved == Path(sys.executable).resolve().parent:
+    # A venv Python may symlink outside its bin dir to a system interpreter.
+    if resolved == Path(sys.executable).parent.resolve():
         return True
     from hermes_constants import get_hermes_home
     try:
