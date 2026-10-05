@@ -1,0 +1,55 @@
+[
+  {
+    "name": "Image cache wrapper filename forwarding",
+    "sha": "4fb98a6419df9d02e06aef224e638e3ba931e228",
+    "branch": "fix/image-cache-filename-forwarding-20261005",
+    "validation": "Owner negative1fail/1controlpass; final2pass; scoped Ruff and diffcheck pass. Owner has no scripts/check; current-main not qualified.",
+    "remote_verified": true,
+    "hosted_ci": "CI_NOT_RUN: zero check runs, statuses and workflow runs",
+    "url": "https://github.com/kvnloo/hermes-agent/commit/4fb98a6419df9d02e06aef224e638e3ba931e228",
+    "classification": "owner_child_narrow_correction",
+    "original_authors": [
+      "KoNit-K",
+      "dasgltd"
+    ],
+    "owner_parent": "667b60ae39f2201c31455f398b36edb34cbaf1a1",
+    "tree": "0502bea9025d5f81da3b37f4a5cbc2afb26f1353"
+  },
+  {
+    "name": "FTS rebuild DatabaseError rollback boundary",
+    "sha": "2b6d7a3c6be3d2de67151e325d26b68d709386c6",
+    "tree": "5e0ddc5c80bdb92fe083b8e0e536d00e7fdabf03",
+    "parents": [
+      "6590f13a1ba21b18224a0f53ef2ead004b5fa7d6"
+    ],
+    "branch": "fix/fts-rebuild-database-error-20261005",
+    "validation": "Exact-base DatabaseError1fail/OperationalError1controlpass; final2pass;11checks0blocking0advisory. Per-index execute failure/rollback/warning/no-progress/unchanged row only; no full incident, corruption or repair qualification.",
+    "remote_verified": true,
+    "hosted_ci": "CI_NOT_RUN: zero check runs, statuses and workflow runs",
+    "url": "https://github.com/kvnloo/hermes-agent/commit/2b6d7a3c6be3d2de67151e325d26b68d709386c6",
+    "classification": "fix",
+    "reported_by": "herbic07"
+  },
+  {
+    "name": "Telegram missing-message diagnostic",
+    "sha": "f3a87aefef6f8b873032a6e177c68b1f9d046bab",
+    "tree": "2ce3233bb9668e12b64de179f064ff8193434cb0",
+    "parents": [
+      "6590f13a1ba21b18224a0f53ef2ead004b5fa7d6"
+    ],
+    "branch": "fix/telegram-missing-media-diagnostic-20261005",
+    "classification": "partial_diagnostic_fix",
+    "reported_by": "wordpressnewbie",
+    "issue": "https://github.com/NousResearch/hermes-agent/issues/133348",
+    "validation": "Base diagnostic consumer fails on absent log; final diagnostic plus existing document-classification consumer: 2 passed. All 11 checks pass, health 0 blocking/0 advisory. Final EOF blank-line cleanup is formatting only.",
+    "limits": "Constant DEBUG text only, no identifiers or payload. Existing selection, authorization, filtering and early-return behavior unchanged. SDK imports are stubbed by conftest; no Telegram SDK decoding, whole update dispatch, DM-topic delivery or incident-resolution claim.",
+    "integration": "Existing media classifier moved with AST-identical body into topical telegram_media.py; both callers updated, no compatibility shim.",
+    "dependency_scope": "Final supported Python 3.14 environment with stubbed SDK fixture. Earlier PTB-only addition to owner Python 3.12 was unused setup, not SDK qualification; no cascading installs.",
+    "receipt": "/workspace/receipts/telegram133348/README.md",
+    "independent_review_receipt": "/workspace/receipts/telegram133348-independent-review.md",
+    "remote_verification_receipt": "/workspace/receipts/telegram133348/remote-verification.md",
+    "remote_verified": true,
+    "hosted_ci": "CI_NOT_RUN: zero checks/statuses/workflow runs",
+    "url": "https://github.com/kvnloo/hermes-agent/commit/f3a87aefef6f8b873032a6e177c68b1f9d046bab"
+  }
+]

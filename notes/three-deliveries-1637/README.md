@@ -1,0 +1,9 @@
+# Three later Hermes deliveries — 2026-10-05 16:37 UTC
+
+Mutable Hermes ledger now contains 45 branch records, not 45 unique independent fixes. The three following additions are remotely verified; each exact-head hosted inventory records zero checks, statuses and workflow runs (**CI_NOT_RUN**). Prior immutable packets are unchanged. Exact identities are in deliveries.json.
+
+- **Image cache filename forwarding — 4fb98a6.** Narrow correction on original-owner parent 667b60a, preserving KoNit-K and dasgltd ancestry. Causal owner negative: 1 failure and 1 control pass; final 2 passes, scoped Ruff and diff check. The old owner tree has no scripts/check. This is not current-main readiness or broad cache qualification.
+- **FTS rebuild exception handling — 2b6d7a3.** Parent 6590f13. One catch changes from OperationalError to DatabaseError, preserving existing rollback, warning and count semantics. Base 1 failure plus 1 control pass; final 2 passes and 11 checks. Safe ordinary temporary database with SQL-specific exception injection. No actual corruption, live database, retry schedule, full repair, multi-index continuation, commit-failure or full incident claim. Reporter herbic07 credited.
+- **Telegram missing-message diagnostic — f3a87ae.** Parent 6590f13. One constant DEBUG reason at the existing early return, plus a reviewed unchanged-body media-classifier extraction to meet the checker cap. Base diagnostic failure, final 2 selected tests and 11 checks. SDK imports are stubbed; no real Telegram SDK decoding or DM-topic/document delivery claim. Reporter wordpressnewbie credited; adjacent owners remain separate.
+
+STT #98419 provenance is corrected in the separately published [immutable addendum](https://github.com/kvnloo/hermes-agent/blob/e312b8bcdc43ced7e8202d52c3eea4e96e3ada1c/notes/stt-provenance-addendum/README.md). This summary neither revises nor replaces that correction; neither Telegram receipt establishes real-SDK qualification.
