@@ -17,6 +17,8 @@ from hermes_cli import setup_platforms
 
 logger = logging.getLogger(__name__)
 
+from plugins.platforms.telegram.telegram_media import media_message_type
+
 from agent.deadline import run_bounded_async
 from gateway.platforms._shared import (
     decode_json_list_literal as _decode_json_list_literal,
@@ -6209,15 +6211,6 @@ class TelegramAdapter(TelegramHeldInboundMixin, BasePlatformAdapter):
             event, text=self._telegram_group_observe_attributed_text(event),
             source=self._telegram_group_observe_shared_source(event.source), channel_prompt=channel_prompt)
 
-    def _media_message_type(self, msg: Message) -> MessageType:
-        """Classify a Telegram media message into a MessageType (first present attachment wins)."""
-        for attr, mtype in (
-            ("sticker", MessageType.STICKER), ("photo", MessageType.PHOTO), ("video", MessageType.VIDEO),
-            ("audio", MessageType.AUDIO), ("voice", MessageType.VOICE)):
-            if getattr(msg, attr):
-                return mtype
-        return MessageType.DOCUMENT
-
     _CACHED_KIND_TO_MESSAGE_TYPE = {"image": MessageType.PHOTO, "video": MessageType.VIDEO, "audio": MessageType.AUDIO}
 
     async def _download_observed_media(self, msg: Any, what: str):
@@ -6782,19 +6775,20 @@ class TelegramAdapter(TelegramHeldInboundMixin, BasePlatformAdapter):
         """Handle incoming media messages, downloading images to local cache."""
         msg = update.message
         if not msg:
+            logger.debug("[Telegram] Ignoring media update: no message attached")
             return
         if not self._is_user_authorized_from_message(msg):
             self._log_blocked_user(msg, level=logging.INFO, what="media from unauthorized user")
             return
         if not self._should_process_message(msg):
             if self._should_observe_unmentioned_group_message(msg):
-                _event = self._build_message_event(msg, self._media_message_type(msg), update_id=update.update_id)
+                _event = self._build_message_event(msg, media_message_type(msg), update_id=update.update_id)
                 if msg.caption:
                     _event.text = self._clean_bot_trigger_text(expand_link_entities(msg))
                 await self._cache_observed_media(msg, _event)
                 self._observe_unmentioned_group_message(msg, _event.message_type, update_id=update.update_id, event=_event)
             return
-        event = self._build_message_event(msg, self._media_message_type(msg), update_id=update.update_id)
+        event = self._build_message_event(msg, media_message_type(msg), update_id=update.update_id)
         if msg.caption:
             from plugins.platforms.telegram.telegram_context import group_trigger_text
             event.text = group_trigger_text(self, msg, expand_link_entities(msg))
