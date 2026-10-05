@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "assessmentMode": "source_only_no_new_poll_or_tests",
-  "dependencyAuthorization": "Official scoped dependencies generally authorized; this broad refresh not selected/provisioned",
+  "assessmentMode": "historical_choices_plus_new_scoped_consumer_delivery",
+  "dependencyAuthorization": "Selected EnvTransport consumer closure provisioned in scoped supported Python3.12; separate docs generator gates unchanged.",
   "choices": [
     {
       "id": "sdk_docs",
@@ -165,6 +165,37 @@
       "smallestAction": "Obtain owner Mac evidence before diagnosing",
       "notYetQualifiedClaim": "Reproduced portable mapping defect",
       "receipt": "cua-4609/README.md"
+    },
+    {
+      "id": "env_directory_metadata_consumer",
+      "sourceSHA": "25f63eea951c1ac31f7b71357ba4c9f849199cec",
+      "status": "qualified_downstream_remote_verified",
+      "classification": "test_only_consumer_evidence",
+      "sha": "e37d782bd732b3ea1de7fa088062db511f9d80bf",
+      "url": "https://github.com/kvnloo/cua/commit/e37d782bd732b3ea1de7fa088062db511f9d80bf",
+      "branch": "qualified/env-directory-consumer-20261005",
+      "local_validation": "Two causal negatives; one final selected test pass; Ruff check/format and independent review approved.",
+      "availableExistingResources": [
+        "Scoped CPython3.12.14 with30 exact locked binary distributions",
+        "Real Sandbox/EnvTransport/Files exercised with inert in-memory client"
+      ],
+      "missingArtifactPackageVersion": [],
+      "limits": "Already-correct structured metadata translation; not legacy3988 repair, native CUA Driver, missing-file behavior, or live Fleet/service qualification. Packaged Fleet.so loads for schema ABI setup, so not native-library-free.",
+      "hosted_ci": {
+        "status": "HOSTED_PENDING",
+        "checks": 1,
+        "commit_statuses": 0,
+        "workflow_runs": 1,
+        "workflow": "CI: Image API",
+        "conclusion": null,
+        "run_url": "https://github.com/kvnloo/cua/actions/runs/37316142429",
+        "scope": "Unrelated in-progress Image API workflow is not a hosted Python consumer pass."
+      },
+      "receipt": "cua-env-directory/qualification.md",
+      "provisioning_receipt": "cua-env-directory/provisioning.md",
+      "remote_verification_receipt": "cua-env-directory/remote-verification.md"
     }
-  ]
+  ],
+  "snapshot_updated_at_utc": "2026-10-05T13:24:07.813322+00:00",
+  "current_upstream_source": "25f63eea951c1ac31f7b71357ba4c9f849199cec"
 }

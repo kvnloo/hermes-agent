@@ -1,13 +1,16 @@
 {
-  "captured_at_utc": "2026-10-05T12:26:15.491221+00:00",
-  "hermes_records": 29,
+  "captured_at_utc": "2026-10-05T13:24:07.813322+00:00",
+  "hermes_records": 33,
   "omp_records": 15,
   "interpretation": "Published branch records include overlapping compositions, holds, tests and docs; not a count of unique fixes.",
   "source_heads": {
-    "hermes": "7157422022ff06f3e632d1dd394ee1253b17ad37",
+    "hermes": "e473f5a9c976a0b5bc292aa415dae28c638a47c3",
     "omp": "1c0993c3d12e70042169a951663bb2702e2c0a9e",
-    "cua": "ed22ad958a5ab6d764c98261b24d65f80f3a6f95"
+    "cua": "25f63eea951c1ac31f7b71357ba4c9f849199cec"
   },
-  "hosted_ci": "Each delivery records local qualification separately; no hosted execution implied by aggregate pending with zero runs/checks/statuses.",
-  "publication_scope": "Downstream receipt packet only; no upstream publication, new PR, merge or deployment."
+  "hosted_ci": "Hermes/OMP local qualification remains separate from recorded hosted inventories. CUA e37d has HOSTED_PENDING unrelated Image API workflow, not a Python consumer pass.",
+  "publication_scope": "Downstream receipt packet only; no upstream publication, new PR, merge or deployment.",
+  "cua_new_test_only_deliveries": 1,
+  "previous_packet_commit": "a952aee2fcab35f4a081bbe91cf474fc6370d2d4",
+  "source_head_limits": "Source snapshot is not the qualification base of every delivery. Historical bases and owner-child limits remain in records. OMP head retained from prior verified snapshot, not newly polled."
 }

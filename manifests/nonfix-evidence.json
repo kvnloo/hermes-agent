@@ -12,5 +12,12 @@
     "validation": "1 fail/2 pass; one-line local correction reveals six additional facts",
     "limits": "Canonical generation requires unavailable SDK/Spaces UniFFI inputs, griffe and TypeDoc dependency closures; no generated edits or publication",
     "receipt": "/workspace/receipts/cua-doc-version/independent-generator-review.md"
+  },
+  {
+    "name": "Agent/session bounded source intake",
+    "classification": "owned_or_contract_gated_no_new_fix",
+    "validation": "Six reports inspected; active owners and existing real consumer proofs identified. No tests or production edits.",
+    "limits": "102725 withdrawn/open ownership contradictory;133192 missing-session contract undecided;125273 backfill claimed pending marker selection;123926 asks maintainer CI/owner choice.",
+    "receipt": "lane2-agent-intake-20261005/README.md"
   }
 ]

@@ -390,5 +390,94 @@
     "hosted_ci": "CI_NOT_RUN: zero checks/statuses/runs",
     "qualified_upstream_base": "7157422022ff06f3e632d1dd394ee1253b17ad37",
     "url": "https://github.com/kvnloo/hermes-agent/commit/f062b66e09d558ff0b3b604ab9674b43e9f0eab8"
+  },
+  {
+    "name": "Slack metadata replay current integration",
+    "sha": "d2d1aed99ab2b68c4a6c38a01afdacdea404ea51",
+    "branch": "ready/slack-metadata-current-20261005",
+    "classification": "owner_integration",
+    "validation": "3 existing real-handler tests and11checks pass; localnegative is current filecap; originalfunctionalnegative owner-attributed",
+    "limits": "Unchanged helper behavior moved to topical module; synthetic events, no SlackSDK/livecalls",
+    "receipt": "/workspace/receipts/slack-metadata131866/README.md",
+    "qualified_upstream_base": "7157422022ff06f3e632d1dd394ee1253b17ad37",
+    "remote_verified": true,
+    "hosted_ci": "CI_NOT_RUN: zero checks/statuses/runs",
+    "url": "https://github.com/kvnloo/hermes-agent/commit/d2d1aed99ab2b68c4a6c38a01afdacdea404ea51",
+    "source_applicability": {
+      "compared_upstream_head": "e473f5a9c976a0b5bc292aa415dae28c638a47c3",
+      "method": "read_only_relevant_input_equivalence",
+      "receipt": "readiness-e473-source-delta/README.md",
+      "identities_receipt": "readiness-e473-source-delta/identities.json",
+      "scope": "Selected Slack and doctor production/test/dependency/check inputs unchanged across715-to-e473 delta.",
+      "current_head_runtime_tested": false,
+      "rebased": false,
+      "historical_validation_unchanged": true
+    }
+  },
+  {
+    "name": "Doctor test temporary-root isolation",
+    "sha": "9c25679a31fea38739c1534bd16ceecb31ef40e5",
+    "branch": "qualified/doctor-test-root-current-20261005",
+    "classification": "owner_integration_with_test_isolation",
+    "validation": "Inert-root-routing omission fails;5selectedportable tests and11checks pass; originalowner preserved",
+    "limits": "No native macOS TCC or actual runtime-write qualification; broaderglobaltestguard remains outside scope",
+    "receipt": "/workspace/receipts/tcc-test-root132178/README.md",
+    "qualified_upstream_base": "7157422022ff06f3e632d1dd394ee1253b17ad37",
+    "remote_verified": true,
+    "hosted_ci": "CI_NOT_RUN: zero checks/statuses/runs",
+    "url": "https://github.com/kvnloo/hermes-agent/commit/9c25679a31fea38739c1534bd16ceecb31ef40e5",
+    "source_applicability": {
+      "compared_upstream_head": "e473f5a9c976a0b5bc292aa415dae28c638a47c3",
+      "method": "read_only_relevant_input_equivalence",
+      "receipt": "readiness-e473-source-delta/README.md",
+      "identities_receipt": "readiness-e473-source-delta/identities.json",
+      "scope": "Selected Slack and doctor production/test/dependency/check inputs unchanged across715-to-e473 delta.",
+      "current_head_runtime_tested": false,
+      "rebased": false,
+      "historical_validation_unchanged": true
+    }
+  },
+  {
+    "name": "Terminal workdir real-shell owner consumer",
+    "sha": "918def7ffcd9942f8f1f87c1f406220fb03709a9",
+    "branch": "evidence/terminal-workdir-owner-consumer-20261005",
+    "classification": "owner_consumer_evidence",
+    "current_main_ready": false,
+    "owner_parent": "12dff5acc30913d672c87300c0e497ab1c75dd06",
+    "validation": "1 exact-final real local-shell consumer passes; restoration omission control fails; canonical owner runner and diff check pass; owner tree has no scripts/check",
+    "limits": "Test-only owner child; no current715 port/checks, native Windows, delegated fan-out or stale-record recovery qualification",
+    "receipt": "/workspace/receipts/terminal-workdir-73717/README.md",
+    "remote_verification_receipt": "/workspace/receipts/terminal-workdir-73717/remote-verification.md",
+    "remote_verified": true,
+    "hosted_ci": "CI_NOT_RUN: zero checks/statuses/workflow runs",
+    "url": "https://github.com/kvnloo/hermes-agent/commit/918def7ffcd9942f8f1f87c1f406220fb03709a9"
+  },
+  {
+    "name": "Slack block fallback and metadata composition",
+    "sha": "9d1de65d0b969f62c53fbff711020b1b8c024067",
+    "branch": "ready/slack-block-metadata-current-20261005",
+    "classification": "owner_composition",
+    "qualified_upstream_base": "7157422022ff06f3e632d1dd394ee1253b17ad37",
+    "parents": [
+      "07bed760f09386ec3f82c414e575e7a57b849112",
+      "d2d1aed99ab2b68c4a6c38a01afdacdea404ea51"
+    ],
+    "validation": "5 final selected synthetic adapter tests and11checks pass; current negative is owner filecap; original behavior negative owner-attributed",
+    "limits": "Two preserved owner fixes with existing extraction; preferred combined review head, not a third fix; no SlackSDK/live service",
+    "receipt": "/workspace/receipts/slack-block122527/README.md",
+    "remote_verification_receipt": "/workspace/receipts/lane3-slack-composition-remote-verify.md",
+    "remote_verified": true,
+    "hosted_ci": "CI_NOT_RUN: zero checks/statuses/workflow runs",
+    "url": "https://github.com/kvnloo/hermes-agent/commit/9d1de65d0b969f62c53fbff711020b1b8c024067",
+    "source_applicability": {
+      "compared_upstream_head": "e473f5a9c976a0b5bc292aa415dae28c638a47c3",
+      "method": "read_only_relevant_input_equivalence",
+      "receipt": "readiness-e473-source-delta/README.md",
+      "identities_receipt": "readiness-e473-source-delta/identities.json",
+      "scope": "Selected Slack and doctor production/test/dependency/check inputs unchanged across715-to-e473 delta.",
+      "current_head_runtime_tested": false,
+      "rebased": false,
+      "historical_validation_unchanged": true
+    }
   }
 ]

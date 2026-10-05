@@ -1,38 +1,38 @@
 [
   {
     "worker": "hermes_gateway",
-    "status": "active implementation",
-    "assignment": "132967 synthetic email routing/reply/MIME header consumer and bounded owner integration",
-    "updated_at": "2026-10-05T12:17:37.682233+00:00"
-  },
-  {
-    "worker": "hermes_tools",
-    "status": "active review",
-    "assignment": "132967 independent header-source contract and evidence review",
-    "updated_at": "2026-10-05T12:17:37.682242+00:00"
+    "status": "source integration assessment",
+    "assignment": "Owner122293 reply wording integration preserving localization; checking new source delta",
+    "updated_at": "2026-10-05T13:17:43.830417+00:00"
   },
   {
     "worker": "hermes_agent",
-    "status": "active qualification",
-    "assignment": "132947 real temporary restore/config identity consumer; evidence-only scope",
-    "updated_at": "2026-10-05T12:17:37.682245+00:00"
+    "status": "checkpoint snapshot prepared",
+    "assignment": "Dated13file v2 evidence snapshot for independent review; no publication",
+    "updated_at": "2026-10-05T13:24:07.813322+00:00"
   },
   {
-    "worker": "hermes_cli",
-    "status": "active review",
-    "assignment": "132947 independent real restore consumer review",
-    "updated_at": "2026-10-05T12:17:37.682246+00:00"
+    "worker": "hermes_tools",
+    "status": "active source triage",
+    "assignment": "Distinct current tool defect or missing real consumer proof",
+    "updated_at": "2026-10-05T13:17:43.830417+00:00"
   },
   {
     "worker": "hermes_readiness",
-    "status": "intake checkpoint",
-    "assignment": "Current source readiness updates; new requests owned or held, no invented tests",
-    "updated_at": "2026-10-05T12:17:37.682247+00:00"
+    "status": "independent checkpoint review",
+    "assignment": "Review frozen v2 packet; e473 scoped applicability audit complete",
+    "updated_at": "2026-10-05T13:24:07.813322+00:00"
+  },
+  {
+    "worker": "hermes_cli",
+    "status": "remote verification complete",
+    "assignment": "CUA e37d remote identity and pending Image API workflow verified; no Python hosted-pass claim",
+    "updated_at": "2026-10-05T13:24:07.813322+00:00"
   },
   {
     "worker": "cua_consumer",
-    "status": "intake checkpoint",
-    "assignment": "CUA docs and workflow dependency gates; latest native updates owned; Jev remote verification complete",
-    "updated_at": "2026-10-05T12:17:37.682248+00:00"
+    "status": "consumer delivered",
+    "assignment": "Test-only structured directory metadata e37d remotely verified; next scope requires fresh selection",
+    "updated_at": "2026-10-05T13:24:07.813322+00:00"
   }
 ]
