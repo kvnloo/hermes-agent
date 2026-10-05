@@ -47,6 +47,7 @@ export type TspEvent =
   | { ev: 'activate'; sf: string; id: string; item: string }
   | { ev: 'action'; sf: string; id: string; act: string; value?: string; mods?: string[] }
   | { ev: 'change'; sf: string; id: string; item: string; value: boolean | number | string | string[] | null }
+  | { ev: 'change'; sf: string; id: string; value: string; checked: boolean; name?: string; values?: Record<string, unknown> }
   | { ev: 'edit'; sf: string; id: string; from: number; to: number; text: string; cursor: number; len: number }
   | { ev: 'undo'; sf: string; id: string }
   | { ev: 'send'; sf: string; id: string; text: string }
@@ -317,17 +318,32 @@ export function decodeTspEvent(data: string): TspEvent | null {
         (event.mods === undefined || isStringArray(event.mods))
         ? (event as TspEvent)
         : null
-    case 'change':
-      return isString(event.sf) &&
-        isString(event.id) &&
-        isString(event.item) &&
-        (event.value === null ||
-          isBoolean(event.value) ||
-          isNumber(event.value) ||
-          isString(event.value) ||
-          isStringArray(event.value))
-        ? (event as TspEvent)
-        : null
+    case 'change': {
+      if (!isString(event.sf) || !isString(event.id)) {
+        return null
+      }
+
+      const valueOk =
+        event.value === null ||
+        isBoolean(event.value) ||
+        isNumber(event.value) ||
+        isString(event.value) ||
+        isStringArray(event.value)
+
+      if (isString(event.item)) {
+        return valueOk ? (event as TspEvent) : null
+      }
+
+      if (!isBoolean(event.checked) || !isString(event.value) || !optionalString(event.name)) {
+        return null
+      }
+
+      if (event.values !== undefined && !isRecord(event.values)) {
+        return null
+      }
+
+      return event as TspEvent
+    }
     case 'edit':
       return isString(event.sf) &&
         isString(event.id) &&

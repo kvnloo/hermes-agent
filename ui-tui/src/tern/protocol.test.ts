@@ -16,6 +16,30 @@ describe('Tern Surface Protocol', () => {
       body: '{"r":"hello"}'
     })
   })
+  it('decodes an el change without requiring a prefs item', () => {
+    expect(
+      decodeTspEvent(
+        'tsp;e;{"ev":"change","sf":"pick","id":"l.r","value":"l","checked":true,"name":"size","values":{"size":"l"}}'
+      )
+    ).toEqual({
+      ev: 'change',
+      sf: 'pick',
+      id: 'l.r',
+      value: 'l',
+      checked: true,
+      name: 'size',
+      values: { size: 'l' }
+    })
+  })
+  it('still decodes a prefs change by item', () => {
+    expect(decodeTspEvent('tsp;e;{"ev":"change","sf":"s","id":"prefs","item":"theme","value":"dark"}')).toEqual({
+      ev: 'change',
+      sf: 's',
+      id: 'prefs',
+      item: 'theme',
+      value: 'dark'
+    })
+  })
 
   it('decodes a valid TSP hello reply', () => {
     expect(
