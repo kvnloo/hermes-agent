@@ -894,8 +894,13 @@ class EmailAdapter(BasePlatformAdapter):
             thread_root = in_reply_to or str(msg_data.get("message_id") or "").strip()
         # Bound untrusted header material before it enters the gateway session key.
         thread_id = "email-" + hashlib.sha256(thread_root.encode("utf-8", "replace")).hexdigest()[:24]
+        # Provider thread IDs identify sessions, but References carries only message IDs.
+        root_message_id = (known_context or {}).get("root_message_id") or (
+            references[0] if references else in_reply_to or str(msg_data.get("message_id") or "").strip()
+        )
         context = {
             "subject": subject, "message_id": msg_data["message_id"], "thread_root": thread_root,
+            "root_message_id": root_message_id,
         }
         self._thread_context[sender_addr] = context
         if msg_data["message_id"]:
@@ -963,8 +968,8 @@ class EmailAdapter(BasePlatformAdapter):
         if not subject.startswith("Re:"):
             subject = f"Re: {subject}"
         original_msg_id = reply_to_msg_id or ctx.get("message_id")
-        thread_root = ctx.get("thread_root")
-        reference_ids = list(dict.fromkeys(token for token in (thread_root, original_msg_id) if token))
+        root_message_id = ctx.get("root_message_id")
+        reference_ids = list(dict.fromkeys(token for token in (root_message_id, original_msg_id) if token))
         threading = (
             ("In-Reply-To", original_msg_id),
             ("References", " ".join(reference_ids)),

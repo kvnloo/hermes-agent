@@ -7,6 +7,7 @@ from agent.turn_context import compose_user_api_content
 from gateway.config import Platform
 from gateway.platforms.event import MessageEvent
 from gateway.session import SessionSource
+from gateway.run_turn_email import add_email_message_id_sidecar
 
 
 def _runner():
@@ -53,7 +54,7 @@ def test_email_message_id_is_exact_model_sidecar_and_transcript_stays_clean():
     })
     notes = []
 
-    runner._hmwa_add_email_message_id_sidecar(event, source, notes)
+    add_email_message_id_sidecar(event, source, notes)
 
     assert len(notes) == 1
     note = notes[0]
@@ -79,19 +80,17 @@ def test_email_message_id_is_exact_model_sidecar_and_transcript_stays_clean():
 
 
 def test_email_message_id_sidecar_excludes_other_platforms_and_internal_events():
-    runner = _runner()
     for event, source in (
         _event(platform=Platform.DISCORD),
         _event(internal=True),
         _event(message_id=None),
     ):
         notes = []
-        runner._hmwa_add_email_message_id_sidecar(event, source, notes)
+        add_email_message_id_sidecar(event, source, notes)
         assert notes == []
 
 
 def test_email_transport_sidecar_preserves_available_metadata_without_message_id():
-    runner = _runner()
     event, source = _event(message_id=None)
     event.metadata.update({
         "email_sender": "sender@example.com",
@@ -100,7 +99,7 @@ def test_email_transport_sidecar_preserves_available_metadata_without_message_id
     })
     notes = []
 
-    runner._hmwa_add_email_message_id_sidecar(event, source, notes)
+    add_email_message_id_sidecar(event, source, notes)
 
     assert len(notes) == 1
     payload = notes[0][notes[0].index("{") : notes[0].rindex("}") + 1]
