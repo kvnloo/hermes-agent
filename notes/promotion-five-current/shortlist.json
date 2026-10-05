@@ -1,0 +1,225 @@
+[
+  {
+    "name": "Email wire References integration",
+    "sha": "f062b66e09d558ff0b3b604ab9674b43e9f0eab8",
+    "branch": "ready/email-wire-references-current-20261005",
+    "classification": "owner_integration",
+    "validation": "5 final affected tests and11checks pass;50 unchanged email neighbors passed before mechanical sidecar extraction",
+    "limits": "Synthetic actual MIME headers; internalprovider routing retained; no SMTP/Gmail/live service calls",
+    "receipt": "/workspace/receipts/email-wire132967/README.md",
+    "remote_verified": true,
+    "hosted_ci": "CI_NOT_RUN: fresh exact-SHA zero checks, statuses and workflow runs",
+    "qualified_upstream_base": "7157422022ff06f3e632d1dd394ee1253b17ad37",
+    "url": "https://github.com/kvnloo/hermes-agent/commit/f062b66e09d558ff0b3b604ab9674b43e9f0eab8",
+    "touched_files": [
+      "gateway/run_turn.py",
+      "gateway/run_turn_email.py",
+      "plugins/platforms/email/adapter.py",
+      "tests/gateway/test_email.py",
+      "tests/gateway/test_email_message_id_sidecar.py",
+      "tests/gateway/test_email_wire_references.py"
+    ],
+    "source_delta_to_824": "",
+    "latest_upstream": "6590f13a1ba21b18224a0f53ef2ead004b5fa7d6",
+    "source_delta_to_latest": "",
+    "timestamp": "2026-10-05T15:30:26.652437+00:00",
+    "original_authors": "dborosev; original five-commit history preserved",
+    "causal_evidence": "Owner-integration MIME negative1fail1pass; final5affected pass and11checks;50neighbors earlier, not final rerun",
+    "smallest_next_action": "Original owner review of separate wire-root field and sidecar extraction",
+    "source_applicability_only": true,
+    "no_new_runtime_qualification": true,
+    "owner_status": [
+      {
+        "pr": 132967,
+        "state": "open",
+        "merged_at": null,
+        "head": "2989a2672061aaf4fc857b14077a67437714ea3d",
+        "owner": "dborosev"
+      }
+    ],
+    "remaining_gates": [
+      "Owner/reviewer acceptance",
+      "Hosted CI not run",
+      "No upstream promotion authorized; standing PR cap preserved"
+    ],
+    "immutable_url": "https://github.com/kvnloo/hermes-agent/commit/f062b66e09d558ff0b3b604ab9674b43e9f0eab8"
+  },
+  {
+    "name": "Slack block fallback and metadata composition",
+    "sha": "9d1de65d0b969f62c53fbff711020b1b8c024067",
+    "branch": "ready/slack-block-metadata-current-20261005",
+    "classification": "owner_composition",
+    "qualified_upstream_base": "7157422022ff06f3e632d1dd394ee1253b17ad37",
+    "parents": [
+      "07bed760f09386ec3f82c414e575e7a57b849112",
+      "d2d1aed99ab2b68c4a6c38a01afdacdea404ea51"
+    ],
+    "validation": "5 final selected synthetic adapter tests and11checks pass; current negative is owner filecap; original behavior negative owner-attributed",
+    "limits": "Two preserved owner fixes with existing extraction; preferred combined review head, not a third fix; no SlackSDK/live service",
+    "receipt": "/workspace/receipts/slack-block122527/README.md",
+    "remote_verification_receipt": "/workspace/receipts/lane3-slack-composition-remote-verify.md",
+    "remote_verified": true,
+    "hosted_ci": "CI_NOT_RUN: fresh exact-SHA zero checks, statuses and workflow runs",
+    "url": "https://github.com/kvnloo/hermes-agent/commit/9d1de65d0b969f62c53fbff711020b1b8c024067",
+    "touched_files": [
+      "plugins/platforms/slack/adapter.py",
+      "plugins/platforms/slack/adapter_message_changes.py",
+      "tests/gateway/test_slack_block_kit_adapter.py",
+      "tests/gateway/test_slack_unfurl_duplicate_turn.py"
+    ],
+    "source_delta_to_824": "",
+    "latest_upstream": "6590f13a1ba21b18224a0f53ef2ead004b5fa7d6",
+    "source_delta_to_latest": "",
+    "timestamp": "2026-10-05T15:30:26.652437+00:00",
+    "original_authors": "liuhao1024; both original histories retained by normal merge",
+    "causal_evidence": "Local checker file-cap negative;5existing handler consumers pass and11checks; functional red owner-attributed",
+    "smallest_next_action": "Joint existing-owner review; no third competing PR",
+    "source_applicability_only": true,
+    "no_new_runtime_qualification": true,
+    "owner_status": [
+      {
+        "pr": 122527,
+        "state": "open",
+        "merged_at": null,
+        "head": "672e51cf47e7e10a129b5f03b0150e7bbce239ee",
+        "owner": "liuhao1024"
+      },
+      {
+        "pr": 131866,
+        "state": "open",
+        "merged_at": null,
+        "head": "9585c347beea43b2c3d613202cf82e19eed200d7",
+        "owner": "liuhao1024"
+      }
+    ],
+    "remaining_gates": [
+      "Owner/reviewer acceptance",
+      "Hosted CI not run",
+      "No upstream promotion authorized; standing PR cap preserved"
+    ],
+    "immutable_url": "https://github.com/kvnloo/hermes-agent/commit/9d1de65d0b969f62c53fbff711020b1b8c024067"
+  },
+  {
+    "name": "Localized rate-limit reply and diagnostic composition",
+    "sha": "0074d8a68076200ab239d4255da9ea602fcc224e",
+    "branch": "ready/rate-reply-localized-current-20261005",
+    "classification": "owner_composition",
+    "qualified_upstream_base": "e473f5a9c976a0b5bc292aa415dae28c638a47c3",
+    "parents": [
+      "f69222f36f31b2ae225f67b20979a3f2a1fc01ec",
+      "ce6e0d8e71937ec2f953e1c3843d6c95b355ea05"
+    ],
+    "validation": "34 selected tests and11checks pass; original owner port fails current filecap and real German-profile locale consumer; unchanged diagnostic18 not rerun",
+    "limits": "Preserves3funky-xamarin owner commits and prior diagnostic author chains; existing classification policy retained;2new English fallback keys, no new translations; composition not another diagnostic fix",
+    "receipt": "/workspace/receipts/rate-reply122293/README.md",
+    "remote_verification_receipt": "/workspace/receipts/rate-reply122293/remote-verification.md",
+    "remote_verified": true,
+    "hosted_ci": "CI_NOT_RUN: fresh exact-SHA zero checks, statuses and workflow runs",
+    "url": "https://github.com/kvnloo/hermes-agent/commit/0074d8a68076200ab239d4255da9ea602fcc224e",
+    "touched_files": [
+      "gateway/error_helpers.py",
+      "gateway/run.py",
+      "locales/en.yaml",
+      "tests/gateway/test_local_model_connection_reply.py",
+      "tests/gateway/test_loop_exception_handler.py",
+      "tests/gateway/test_rate_limit_reply_locale.py",
+      "tests/gateway/test_rate_limit_source_reply.py"
+    ],
+    "source_delta_to_824": "",
+    "latest_upstream": "6590f13a1ba21b18224a0f53ef2ead004b5fa7d6",
+    "source_delta_to_latest": "",
+    "timestamp": "2026-10-05T15:30:26.652437+00:00",
+    "original_authors": "Wenfengcheng/funky-xamarin; original3commits plus prior diagnostic/extraction authors retained",
+    "causal_evidence": "Real German-profile locale negative and checker cap;34final pass11checks; unchanged18diagnostic not rerun",
+    "smallest_next_action": "Owner review localized returns and helper composition; paid review not performed",
+    "source_applicability_only": true,
+    "no_new_runtime_qualification": true,
+    "owner_status": [
+      {
+        "pr": 122293,
+        "state": "open",
+        "merged_at": null,
+        "head": "77161df5d5a1da9cc77c7277b45466d6743747b5",
+        "owner": "Wenfengcheng"
+      }
+    ],
+    "remaining_gates": [
+      "Owner/reviewer acceptance",
+      "Hosted CI not run",
+      "No upstream promotion authorized; standing PR cap preserved"
+    ],
+    "immutable_url": "https://github.com/kvnloo/hermes-agent/commit/0074d8a68076200ab239d4255da9ea602fcc224e"
+  },
+  {
+    "name": "Available active-tool diagnostics",
+    "sha": "91ea68b3b1ee514958204851a6b50eab9cc7a427",
+    "classification": "fix",
+    "qualified_upstream_base": "9d6747d031e4819fa59ed0ab70942174520f1a18",
+    "latest_upstream": "8aaf115b8e5f54e6bddeffa969e43e290a1efa01",
+    "owner": "New downstream implementation; reporter credited through14306",
+    "receipt": "/workspace/receipts/omp14306/README.md",
+    "hosted_ci": "CI_NOT_RUN: fresh exact-SHA zero checks, statuses and workflow runs",
+    "timestamp": "2026-10-05T15:30:26.652437+00:00",
+    "original_authors": "Kevin/downstream implementation; human14306 credited, no third-party code copied",
+    "causal_evidence": "Real agentLoop missing-name negative;3selected pass15assertions; package lint/format/types green",
+    "smallest_next_action": "Obtain narrow diagnostic reviewer interest; no grant/retry-loop claim",
+    "source_applicability_only": true,
+    "no_new_runtime_qualification": true,
+    "owner_status": {
+      "issue": 14306,
+      "state": "open",
+      "linked_prs_found": 0,
+      "comments": 0
+    },
+    "remaining_gates": [
+      "Owner/reviewer acceptance",
+      "Hosted CI not run",
+      "No upstream promotion authorized; standing PR cap preserved"
+    ],
+    "immutable_url": "https://github.com/kvnloo/oh-my-pi/commit/91ea68b3b1ee514958204851a6b50eab9cc7a427"
+  },
+  {
+    "name": "Feishu upload diagnostic current integration",
+    "sha": "847a5f74349b6f939ff5353e87d4231e08290413",
+    "branch": "ready/feishu-upload-diagnostics-current-20261005",
+    "classification": "owner_current_integration",
+    "qualified_upstream_base": "e473f5a9c976a0b5bc292aa415dae28c638a47c3",
+    "owner_parent": "1921498a40011258408b30eae1eb9e7fa4051fa0",
+    "validation": "2 existing SDK-unbound consumer tests and11checks pass; actual current2filecap failures resolved by pure helper/test relocation",
+    "limits": "Original2liuhao1024 commits retained; behavior negative author-attributed; no live Feishu/SDK qualification or new behavior",
+    "receipt": "/workspace/receipts/feishu127650/README.md",
+    "remote_verification_receipt": "/workspace/receipts/lane3-feishu-docfacts-remote-verification.md",
+    "remote_verified": true,
+    "hosted_ci": "CI_NOT_RUN: fresh exact-SHA zero checks, statuses and workflow runs",
+    "url": "https://github.com/kvnloo/hermes-agent/commit/847a5f74349b6f939ff5353e87d4231e08290413",
+    "touched_files": [
+      "plugins/platforms/feishu/adapter.py",
+      "plugins/platforms/feishu/feishu_response.py",
+      "tests/gateway/test_feishu_upload_diagnostics.py"
+    ],
+    "source_delta_to_824": "",
+    "latest_upstream": "6590f13a1ba21b18224a0f53ef2ead004b5fa7d6",
+    "source_delta_to_latest": "",
+    "timestamp": "2026-10-05T15:30:26.652437+00:00",
+    "original_authors": "liuhao1024; original2commits retained",
+    "causal_evidence": "Local2file-cap negatives;2existing SDK-unbound consumers pass11checks; functional red owner-attributed",
+    "smallest_next_action": "Owner review pure-helper/test relocation; broader classifier follow-up remains owner-conditional",
+    "source_applicability_only": true,
+    "no_new_runtime_qualification": true,
+    "owner_status": [
+      {
+        "pr": 127650,
+        "state": "open",
+        "merged_at": null,
+        "head": "347c70e3f02ac942ef6bc85276eaab54a40a788a",
+        "owner": "liuhao1024"
+      }
+    ],
+    "remaining_gates": [
+      "Owner/reviewer acceptance",
+      "Hosted CI not run",
+      "No upstream promotion authorized; standing PR cap preserved"
+    ],
+    "immutable_url": "https://github.com/kvnloo/hermes-agent/commit/847a5f74349b6f939ff5353e87d4231e08290413"
+  }
+]
