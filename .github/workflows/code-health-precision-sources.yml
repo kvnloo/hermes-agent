@@ -1,0 +1,48 @@
+name: code-health precision source inputs
+on:
+  push:
+    branches: [exp/code-health-precision-ccafc30]
+    paths: [.github/workflows/code-health-precision-sources.yml]
+permissions:
+  contents: read
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.13'
+      - name: Fetch immutable study inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p precision-inputs/tools
+          while read -r name repo sha; do
+            mkdir -p "precision-inputs/$name"
+            curl -fsSL --retry 2 "https://codeload.github.com/$repo/tar.gz/$sha" -o /tmp/source.tar.gz
+            tar -xzf /tmp/source.tar.gz --strip-components=1 -C "precision-inputs/$name"
+            printf '%s\n' "$sha" > "precision-inputs/$name/.source-sha"
+            find "precision-inputs/$name" -type f ! -name '*.py' ! -name '*.mjs' ! -name '*.json' ! -name '*.toml' ! -name '*.md' ! -name '.source-sha' ! -name check -delete
+          done <<'REFS'
+          upstream_old NousResearch/hermes-agent 96bb97a7892c3ea9497aab494dce69484ebc6b36
+          fork kvnloo/hermes-agent 3aad0cd6f0dac07ecd383670fbe33e5b20d1dc42
+          upstream_current NousResearch/hermes-agent ccafc30d13f7ca1a6a8e5a19466e3c4de841c1f9
+          REFS
+          python -m pip download --no-deps 'ruff==0.15.10' -d precision-inputs/tools
+          npm pack typescript@6.0.3 --pack-destination precision-inputs/tools
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          root=Path('precision-inputs')
+          hashes={str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(root.rglob('*')) if p.is_file()}
+          (root/'sha256-manifest.json').write_text(json.dumps(hashes,sort_keys=True,indent=2)+'\n')
+          print(f'Frozen {len(hashes)} files')
+          PY
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: code-health-precision-inputs
+          path: precision-inputs/
+          include-hidden-files: true
+          retention-days: 14
+          if-no-files-found: error
