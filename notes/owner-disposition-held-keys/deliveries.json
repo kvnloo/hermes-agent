@@ -1,0 +1,44 @@
+{
+  "date": "2026-10-05",
+  "owner_handoffs": [
+    {
+      "issue": 133400,
+      "owner": "liuhao1024",
+      "head": "b6d3e92f4c491c54028ea931ec00e6e584488e8d",
+      "our_historical_sha": "2b6d7a3c6be3d2de67151e325d26b68d709386c6",
+      "classification": "source_only_owner_handoff",
+      "new_delivery": false
+    },
+    {
+      "issue": 133401,
+      "owner": "liuhao1024",
+      "head": "48141a06e1ed5162eec35e286d9dd860ab66da81",
+      "our_historical_sha": "f3a87aefef6f8b873032a6e177c68b1f9d046bab",
+      "classification": "source_only_owner_handoff",
+      "new_delivery": false
+    }
+  ],
+  "deliveries": [
+    {
+      "sha": "289a65f653f1fb42eee8e0ce822979a19baed1b6",
+      "tree": "a35dde269fc688f75fe189b74eb4ec0c2f0cddaf",
+      "parents": [
+        "b334ef24dd57441c586822687f89953adc0c1676"
+      ],
+      "classification": "OWNER_BRANCH_FOLLOWUP",
+      "current_main_ready": false,
+      "remote_verified": true,
+      "branch": "qualified/sandbox-held-keys-owner-followup-20261005",
+      "repo": "kvnloo/cua",
+      "observed_at": "2026-10-05T17:08:07.768385+00:00",
+      "check_runs": 0,
+      "statuses": 0,
+      "workflow_runs": 0,
+      "hosted_ci": "CI_NOT_RUN",
+      "original_author": "pingu52",
+      "companion_contract_pr": 4536,
+      "source_owner_pr": 4537,
+      "validation": "Untouched owner: one missing-method failure. Final: one real-handler test with an inert recording keyboard passed. Scoped Ruff, formatting and diff checks passed. No current-main, model-reachability or native-keyboard qualification."
+    }
+  ]
+}
