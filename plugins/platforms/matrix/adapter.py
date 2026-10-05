@@ -46,6 +46,8 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Dict, Optional, Set
 
+from plugins.platforms.matrix.grace_diagnostics import note_grace_drop, reset_grace_diagnostics
+
 from agent.i18n import t
 from agent.secret_scope import get_secret
 from gateway.platforms._shared import (
@@ -882,7 +884,7 @@ class MatrixAdapter(BasePlatformAdapter):
         self._invite_join_tasks: Dict[str, asyncio.Task] = {}
         self._closing = False
         self._startup_ts: float = 0.0
-        self._reset_clock_skew_detector()
+        reset_grace_diagnostics(self)
         self._last_sync_ts: float = 0.0
         self._dm_rooms: Dict[str, bool] = {}
         self._room_identities: Dict[str, MatrixRoomIdentity] = {}
@@ -1378,7 +1380,7 @@ class MatrixAdapter(BasePlatformAdapter):
         client.add_event_handler(EventType.REACTION, self._on_reaction, wait_sync=True)
         client.add_event_handler(IntEvt.INVITE, self._on_invite, wait_sync=True)
         self._startup_ts = time.time()
-        self._reset_clock_skew_detector()  # a reconnect after an NTP fix starts clean
+        reset_grace_diagnostics(self)  # a reconnect after an NTP fix starts clean
         self._closing = False
         await self._connect_initial_sync(client)
         if self._encryption and getattr(client, "crypto", None):
@@ -1988,40 +1990,6 @@ class MatrixAdapter(BasePlatformAdapter):
             logger.debug("Matrix: could not resolve room identity for allowlist check in %s: %s", room_id, exc)
             return False
 
-    def _reset_clock_skew_detector(self) -> None:
-        """State for _note_late_grace_drop: consecutive-drop count, their skew, and the once-only warning."""
-        # Clock-skew detection: count grace-check drops that happen well after startup (i.e. not
-        # initial-sync backfill). If the host's system clock is set ahead of real time, the startup grace
-        # check `event_ts < startup_ts - 5` silently drops every live message. See #12614 — the symptom is
-        # "bot joins rooms but never replies". Drops only count when their skew matches the first sampled
-        # drop (within 60s), so varied-age backfill from freshly-invited rooms doesn't trip the heuristic.
-        self._late_grace_drops: int = 0
-        self._late_grace_skew: float = 0.0
-        self._clock_skew_warned: bool = False
-
-    def _note_late_grace_drop(self, event_ts: float) -> None:
-        """Clock-skew heuristic for grace-check drops well after startup. A host clock set ahead of
-        real time makes every live event look "older than startup" and the bot silently never
-        replies. Warn once when drops keep happening >30s after startup with a *consistent* skew —
-        unlike backfill from a freshly invited room, whose event ages vary widely and reset the counter."""
-        if self._clock_skew_warned or time.time() - self._startup_ts <= 30:
-            return
-        skew = self._startup_ts - event_ts
-        if not (5 < skew < 86400):  # ignore malformed/absurd timestamps
-            return
-        if self._late_grace_drops and abs(skew - self._late_grace_skew) < 60:
-            self._late_grace_drops += 1
-        else:
-            self._late_grace_skew = skew
-            self._late_grace_drops = 1
-        if self._late_grace_drops >= 3:
-            logger.warning(
-                "Matrix: dropped %d consecutive live events as 'too old' more than 30s after startup "
-                "(skew ≈ %.0fs). The host system clock is likely set ahead of real time, which causes "
-                "the startup grace filter to silently discard every incoming message. Run "
-                "`timedatectl set-ntp true` (or sync NTP) and restart the bot.", self._late_grace_drops, skew)
-            self._clock_skew_warned = True
-
     async def _on_room_message(self, event: Any) -> None:
         room_id = str(getattr(event, "room_id", ""))
         sender = str(getattr(event, "sender", ""))
@@ -2050,7 +2018,7 @@ class MatrixAdapter(BasePlatformAdapter):
         # Startup grace: ignore old messages replayed by the initial sync.
         event_ts = _matrix_event_timestamp_seconds(event)
         if event_ts and event_ts < self._startup_ts - _STARTUP_GRACE_SECONDS:
-            self._note_late_grace_drop(event_ts)
+            note_grace_drop(self, event_ts)
             return
         content = getattr(event, "content", None)
         if content is None:
