@@ -1,0 +1,78 @@
+{
+  "parent_checkpoint": "82254ca8d22115277e88ffbe4a966d0f2131a710",
+  "prior_packet_files_to_preserve": 25,
+  "records": [
+    {
+      "repo": "kvnloo/oh-my-pi",
+      "branch": "fix/git-history-action-hints-20261005",
+      "sha": "724e6bd64c8acad2bad0ddc1602db7c4895b222e",
+      "tree": "be8f8335299045985573aeb92a1ffc2a58799263",
+      "parents": [
+        "8aaf115b8e5f54e6bddeffa969e43e290a1efa01"
+      ],
+      "check_runs": 0,
+      "statuses": 0,
+      "workflow_runs": 0,
+      "api_and_git_match": true,
+      "hosted_ci": "CI_NOT_RUN"
+    },
+    {
+      "repo": "kvnloo/cua",
+      "branch": "qualified/sandbox-lifecycle-readme-20261005",
+      "sha": "b853d52de41b1aaddaf806d7aa260902fada1134",
+      "tree": "c81e8ada21b2e684350a987583b9c14d486cc159",
+      "parents": [
+        "9842b060537303f9ac2412e77f0e061daf8a2caf"
+      ],
+      "check_runs": 1,
+      "statuses": 0,
+      "workflow_runs": 1,
+      "api_and_git_match": true,
+      "hosted_ci": "HOSTED_PENDING_AT_RECORDED_VERIFICATION",
+      "workflow_detail": {
+        "name": "CI: Image API",
+        "run_id": 37336360076,
+        "job_id": 111852031727,
+        "status": "in_progress",
+        "conclusion": null,
+        "check_name": "validate",
+        "check_status": "in_progress",
+        "check_conclusion": null,
+        "qualifies_readme": false
+      }
+    },
+    {
+      "repo": "kvnloo/hermes-agent",
+      "branch": "evidence/commands-plugin-discovery-20261005",
+      "sha": "4cb7c576a3dd18117d1a47ce9735858151716dc7",
+      "tree": "3e2f2353b503bfd0e2044a7232d261fcc4b1a8dc",
+      "parents": [
+        "3e125352c2940b98ad01be1d3b56d5d09a6aa7d4"
+      ],
+      "statuses": 0,
+      "workflow_runs": 0,
+      "hosted_ci": "CI_NOT_RUN",
+      "check_runs": 0,
+      "api_and_git_match": true,
+      "classification": "owner_test_only_consumer_evidence",
+      "observed_at": "2026-10-05T16:04:39.242556+00:00"
+    }
+  ],
+  "cap_snapshot": {
+    "captured_at_utc": "2026-10-05T15:39:14.393754+00:00",
+    "upstream_repository": "NousResearch/hermes-agent",
+    "author": "kvnloo",
+    "open": 18,
+    "draft": 5,
+    "non_draft": 13,
+    "query_limit": 100,
+    "state_changes": false
+  },
+  "pending_excluded": [],
+  "counts": {
+    "hermes": 42,
+    "omp": 17,
+    "cua": 7
+  },
+  "counts_are": "Branch records, not unique fixes."
+}
