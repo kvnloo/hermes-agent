@@ -10,6 +10,7 @@ in ``kanban_watchers_common``.
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import time
 from pathlib import Path
@@ -22,7 +23,6 @@ from gateway.kanban_watchers_common import (
     _resolve_auto_decompose_settings,
     _gc_retention_days,
     _to_thread_process_service,
-    logger,
 )
 from gateway.kanban_watchers_notifier import _KanbanNotification, _notifier_collect
 from gateway.kanban_watchers_dispatcher import (
@@ -30,6 +30,8 @@ from gateway.kanban_watchers_dispatcher import (
     _log_spawn_results,
     _resolve_dispatcher_settings,
 )
+
+logger = logging.getLogger("gateway.run")
 
 _IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
 _VIDEO_EXTS = {".mp4", ".mov", ".avi", ".mkv", ".webm", ".3gp"}
@@ -330,6 +332,7 @@ class GatewayKanbanWatchersMixin:
                             else {}
                         )
                     except Exception:
+                        logger.exception("kanban dispatcher: config re-read failed; keeping previous settings")
                         _fresh_kanban = applied_kanban_cfg
                     if _fresh_kanban != applied_kanban_cfg:
                         try:
