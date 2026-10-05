@@ -1,0 +1,40 @@
+{
+  "captured_at_utc": "2026-10-05T15:30:10.220453+00:00",
+  "prior_checkpoint": "ecb9bcc71023c4dd75605049f2e1100960642297",
+  "counts": {
+    "hermes": 41,
+    "omp": 16,
+    "cua": 6
+  },
+  "counts_are": "Branch records, not unique fixes.",
+  "records": [
+    {
+      "sha": "1c6d6d1c77b842772151676bc28ddfc5e88c1b9c",
+      "tree": "8ddc90f319dc028f07bb0903de6ecbfab3f99c76",
+      "parents": [
+        "a6dc3d021776f9910debda8bcd8190364c4d7c6b"
+      ],
+      "branch": "evidence/hint-marker-owner-cap-20261005",
+      "classification": "owner_child_narrow_review_correction",
+      "remote_verified": true,
+      "hosted_ci": "CI_NOT_RUN: zero checks, statuses and workflow runs at exact-SHA verification.",
+      "url": "https://github.com/kvnloo/hermes-agent/commit/1c6d6d1c77b842772151676bc28ddfc5e88c1b9c"
+    },
+    {
+      "sha": "e0c7bbc3b6f8e04e099eb7c4496c2c82edf8a638",
+      "tree": "9c9c3a4a6446ad1f8c6eb0e63f3568084da8349e",
+      "parents": [
+        "205553904950dcdadebae52535c7b73ac7ca1eda"
+      ],
+      "branch": "evidence/stt-html-fallback-20261005",
+      "classification": "owner_test_only_consumer_evidence",
+      "remote_verified": true,
+      "hosted_ci": "CI_NOT_RUN: zero checks, statuses and workflow runs at exact-SHA verification.",
+      "url": "https://github.com/kvnloo/hermes-agent/commit/e0c7bbc3b6f8e04e099eb7c4496c2c82edf8a638"
+    }
+  ],
+  "qualification_scope": "Both are exact owner children; #47198 is a narrow correction with a separate priority hold, #98419 is test-only evidence. Neither is a current-main integration.",
+  "current_source_reference": "824a942e972ea0ccca05e83282e3fea1387afcdc is a dated source-disposition reference, not a new test base.",
+  "cua_4537_status": "DEPENDENCY_AND_CONTRACT_HOLD; not a delivered record.",
+  "receipt_paths_are": "Nonbundled local provenance locators in README.md."
+}
