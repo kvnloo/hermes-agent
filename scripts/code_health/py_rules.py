@@ -149,7 +149,6 @@ def canonical_tree(tree: ast.Module) -> ast.Module:
 
     return ast.fix_missing_locations(_Spell().visit(tree)) if root_aliases else tree
 
-def _dotted
 def _dotted(node: ast.AST) -> str:
     """``os.environ.get`` for an Attribute chain, ``""`` for anything else."""
     parts: list[str] = []
