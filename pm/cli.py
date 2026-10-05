@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import shutil
 import subprocess
 import sys
@@ -18,6 +19,9 @@ from pm.paths import repo_root
 from pm.registry import get_package, source_install_packages, tool_roots
 from pm.store import ALL_TARGETS, current_target, hash_url
 from pm.update import Resolved, resolve_package, reuse_index_responses
+
+
+logger = logging.getLogger(__name__)
 
 
 def cmd_lock(args) -> int:
@@ -599,6 +603,7 @@ def _apply_pins(changed: list, lockfile) -> int:
             # One broken pin — a package's resolution bug or one target's upstream
             # pool skew (rolling Termux pool 404 while nodejs.org is ahead) — must
             # not zero out the whole run. Pin the rest, report the failure (#125386).
+            logger.exception("pm update: failed to pin %s", d.name)
             print(f"✗ {d.name} pin failed: {e}")
             failed[d.name] = f"{type(e).__name__}: {e}"
             continue
