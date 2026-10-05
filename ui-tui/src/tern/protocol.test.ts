@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { decodeTspEvent, decodeTspHello, encodeTspHelloQuery, parseTspApc } from './protocol.js'
+import { decodeTspEvent, decodeTspHello, encodeTspHelloQuery, encodeTspMessage, parseTspApc } from './protocol.js'
 
 describe('Tern Surface Protocol', () => {
   it('encodes the Hermes hello query as a TSP APC frame', () => {
     expect(encodeTspHelloQuery('test-build')).toBe(
-      '\x1b_tsp;q;{"q":"hello","v":[1],"app":"hermes","features":[],"ver":"test-build"}\x1b\\'
+      '\x1b_tsp;q;{"q":"hello","v":[1],"app":"hermes","features":["edit","send"],"ver":"test-build"}\x1b\\'
     )
   })
 
@@ -64,5 +64,16 @@ describe('TSP events', () => {
   it('rejects malformed and reply-shaped payloads', () => {
     expect(decodeTspEvent('tsp;e;{"ev":"edit","sf":"s:1","id":"composer","from":"1"}')).toBeNull()
     expect(decodeTspEvent('tsp;r;{"r":"hello","v":1,"term":"tern","kinds":[]}')).toBeNull()
+  })
+})
+
+
+describe('TSP framing', () => {
+  it('chunks large UTF-8 bodies without splitting surrogate pairs', () => {
+    const encoded = encodeTspMessage('f', 'a🙂b🙂c', 5)
+
+    expect(encoded).toContain(';c=')
+    expect(encoded).toContain(';m=1;')
+    expect(encoded).not.toContain('\ufffd')
   })
 })

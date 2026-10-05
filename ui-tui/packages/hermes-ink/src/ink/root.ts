@@ -101,6 +101,32 @@ export const forceRedraw = (stdout: NodeJS.WriteStream = process.stdout): boolea
   return true
 }
 
+/** Pause terminal painting without suspending stdin or React state updates. */
+export const pauseRendering = (stdout: NodeJS.WriteStream = process.stdout): boolean => {
+  const instance = instances.get(stdout)
+
+  if (!instance) {
+    return false
+  }
+
+  instance.pause()
+
+  return true
+}
+
+/** Resume terminal painting after a surface temporarily owned presentation. */
+export const resumeRendering = (stdout: NodeJS.WriteStream = process.stdout): boolean => {
+  const instance = instances.get(stdout)
+
+  if (!instance) {
+    return false
+  }
+
+  instance.resume()
+
+  return true
+}
+
 /**
  * Mount a component and render the output.
  */

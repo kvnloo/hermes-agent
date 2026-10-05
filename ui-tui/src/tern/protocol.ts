@@ -51,16 +51,91 @@ export type TspEvent =
   | { ev: 'error'; sf?: string; s?: number; op?: number; msg: string }
   | { ev: 'gone'; sf?: string; ids: string[] }
 
+let nextChunkId = 1
+
+const codePointBytes = (text: string, at: number): { bytes: number; units: number } => {
+  const code = text.charCodeAt(at)
+
+  if (code < 0x80) {
+    return { bytes: 1, units: 1 }
+  }
+
+  if (code < 0x800) {
+    return { bytes: 2, units: 1 }
+  }
+
+  if (code >= 0xd800 && code <= 0xdbff && at + 1 < text.length) {
+    const next = text.charCodeAt(at + 1)
+
+    if (next >= 0xdc00 && next <= 0xdfff) {
+      return { bytes: 4, units: 2 }
+    }
+  }
+
+  return { bytes: 3, units: 1 }
+}
+
+export function splitTspUtf8(body: string, limit: number): string[] {
+  const max = Math.max(4, Math.trunc(limit))
+  const chunks: string[] = []
+  let start = 0
+  let bytes = 0
+  let at = 0
+
+  while (at < body.length) {
+    const step = codePointBytes(body, at)
+
+    if (bytes + step.bytes > max) {
+      chunks.push(body.slice(start, at))
+      start = at
+      bytes = 0
+    }
+
+    bytes += step.bytes
+    at += step.units
+  }
+
+  chunks.push(body.slice(start))
+
+  return chunks
+}
+
+const tspFrame = (verb: TspVerb, params: string, body: string): string =>
+  APC + TSP_PREFIX + verb + params + ';' + body + ST
+
+export function encodeTspMessage(
+  verb: TspVerb,
+  body: string,
+  limit: number = TSP_DEFAULT_APC_LIMIT
+): string {
+  if (body.length * 3 <= limit || Buffer.byteLength(body, 'utf8') <= limit) {
+    return tspFrame(verb, '', body)
+  }
+
+  const chunkId = (nextChunkId++).toString(36)
+  const chunks = splitTspUtf8(body, limit)
+
+  return chunks
+    .map((chunk, index) => tspFrame(verb, ';c=' + chunkId + (index < chunks.length - 1 ? ';m=1' : ''), chunk))
+    .join('')
+}
+
+export function encodeTspJson(
+  verb: TspVerb,
+  value: unknown,
+  limit: number = TSP_DEFAULT_APC_LIMIT
+): string {
+  return encodeTspMessage(verb, JSON.stringify(value), limit)
+}
+
 export function encodeTspHelloQuery(version?: string): string {
-  const body = {
+  return encodeTspJson('q', {
     q: 'hello',
     v: [TSP_VERSION],
     app: 'hermes',
-    features: [] as string[],
+    features: ['edit', 'send'],
     ...(version ? { ver: version } : {})
-  }
-
-  return APC + TSP_PREFIX + 'q;' + JSON.stringify(body) + ST
+  })
 }
 
 /**
