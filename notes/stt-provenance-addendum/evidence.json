@@ -1,0 +1,48 @@
+{
+  "classification": "additive_evidence_correction",
+  "recorded_at_utc": "2026-10-05T16:36:38.043513+00:00",
+  "subject_commit": "e0c7bbc3b6f8e04e099eb7c4496c2c82edf8a638",
+  "subject_tree": "9c9c3a4a6446ad1f8c6eb0e63f3568084da8349e",
+  "owner_parent": "205553904950dcdadebae52535c7b73ac7ca1eda",
+  "diagnostic": {
+    "scope": "Provenance-only test temporarily appended to the exact published test module; original functional test deselected.",
+    "command": "HERMES_PYTHON=/workspace/.onboarding/hermes-tests/bin/python bash scripts/run_tests.sh -j 2 --file-retries 0 tests/gateway/test_stt_html_fallback_consumer.py -k exception_provenance_audit",
+    "result": "1 diagnostic passed, 0 failed",
+    "observations": {
+      "bad_request_module": "tests.gateway.conftest",
+      "bad_request_source": "tests/gateway/conftest.py",
+      "telegram_type": "unittest.mock.MagicMock",
+      "telegram_file": "None",
+      "exception_mro": [
+        "tests.gateway.conftest.BadRequest",
+        "tests.gateway.conftest.NetworkError",
+        "tests.gateway.conftest.TelegramError",
+        "builtins.Exception",
+        "builtins.BaseException",
+        "builtins.object"
+      ]
+    },
+    "restoration": "Original test bytes restored from subject commit; tracked diff empty; prior H4 HEAD restored."
+  },
+  "local_evidence_sha256": {
+    "exception-provenance.json": "8d63a2da57d1a8aa960c838913d10d2ae8e88fc464a57cacae25875ee1e4db17",
+    "exception-provenance.log": "2915ed994fa459e6aa45ad465db13d0633406116c4c86595e6e310d59387e136",
+    "exception-provenance-audit.md": "e985e36aa259f5da73d95f7bc8e8a986d039189df6c9bb29c8ebe000b5e86da2"
+  },
+  "withdrawn_claims": [
+    "Actual installed PTB BadRequest was used",
+    "Only Bot.send_message was mocked"
+  ],
+  "retained_scope": "Real Hermes formatter, metadata and adapter plaintext fallback under gateway conftest Telegram stand-ins. Original functional negative/pass and child-delta checks are unchanged.",
+  "dependency_history": {
+    "package": "python-telegram-bot",
+    "version": "22.8",
+    "wheel_bytes": 769397,
+    "wheel_sha256": "42373918097f1b837cc4e717d588c19ea79651497ec712bb5b0c76e5e63c50e1",
+    "installed": true,
+    "required_for_recorded_standin_path": false,
+    "establishes_real_sdk_qualification": false
+  },
+  "published_history_changed": false,
+  "hosted_ci": "No new hosted CI or functional runtime qualification from this audit."
+}
