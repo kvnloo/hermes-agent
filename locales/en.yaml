@@ -665,6 +665,8 @@ gateway:
     skip_hint: 'Reply "skip" to skip this question.'
 
   errors:
+    discord_rate_limited: "⏱️ Discord is rate-limiting requests. Wait a moment, then use /retry. If it persists, check `hermes logs` on the host."
+    upstream_rate_limited: "⏱️ An upstream service is rate-limiting requests. Wait a moment, then use /retry. Check `hermes logs` on the host to identify the service."
     rate_limited: "⏱️ The AI model service is rate-limiting requests. Wait a moment, then use /retry."
     auth_failed: "⚠️ Sign-in to the AI model service failed. Use /login to sign in again, or ask whoever runs this bot to run `hermes doctor` on the host."
     bad_request: "⚠️ The AI model service rejected this request. Try rephrasing your message, or use /model to switch models."
