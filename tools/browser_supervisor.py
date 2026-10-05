@@ -47,7 +47,10 @@ def _redact_cdp_error_text(exc: object) -> str:
     try:
         from agent.redact import redact_cdp_url
 
-        return redact_cdp_url(str(exc))
+        message = str(exc)
+        if not message and isinstance(exc, BaseException):
+            message = type(exc).__name__
+        return redact_cdp_url(message)
     except Exception:
         return "<error redacted>"
 
@@ -323,7 +326,7 @@ class CDPSupervisor(DialogSupervisionMixin, FrameTrackingMixin):
             loop.run_until_complete(self._run())
         except BaseException as e:  # noqa: BLE001 — propagate via _start_error
             if not self._fail_start(e):
-                logger.warning("CDP supervisor %s crashed: %s", self.task_id, e)
+                logger.warning("CDP supervisor %s crashed: %s", self.task_id, _redact_cdp_error_text(e))
         finally:
             # Cancel + flush remaining tasks before closing the loop to avoid
             # "Task was destroyed but it is pending" warnings.
