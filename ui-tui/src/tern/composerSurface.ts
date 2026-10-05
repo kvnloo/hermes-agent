@@ -6,7 +6,7 @@ import type { AppLayoutComposerProps } from '../app/interfaces.js'
 import { $isBlocked } from '../app/overlayStore.js'
 import { $uiState } from '../app/uiStore.js'
 import { NATIVE_MODE } from '../config/env.js'
-import { encodeTspJson, type TspEvent, type TspHello } from './protocol.js'
+import { encodeTspJson, HERMES_TSP_PROGRAM_FEATURES, type TspEvent, type TspHello } from './protocol.js'
 import { $ternSurface, subscribeTernSurfaceEvents } from './surface.js'
 
 export const TERN_SURFACE_ID = 'hermes:session'
@@ -41,10 +41,17 @@ export function applyTernComposerEdit(
 }
 
 export function supportsTernComposer(hello: TspHello): boolean {
-  const kinds = new Set(hello.kinds)
-  const features = new Set(hello.features ?? [])
+  const kinds = hello.kinds
 
-  return kinds.has('col') && kinds.has('editor') && features.has('edit')
+  return (
+    kinds.includes('col') &&
+    kinds.includes('editor') &&
+    HERMES_TSP_PROGRAM_FEATURES.includes('edit')
+  )
+}
+
+export function resolveTernComposerSendable(_hello: TspHello, hermesReady: boolean): boolean {
+  return hermesReady && HERMES_TSP_PROGRAM_FEATURES.includes('send')
 }
 
 /**
@@ -229,7 +236,7 @@ export function useTernComposerSurface(composer: AppLayoutComposerProps): void {
     }
 
     const hello = surface.hello
-    const sendable = (hello.features ?? []).includes('send')
+    const sendable = resolveTernComposerSendable(hello, true)
 
     if (!pauseRendering(stdout)) {
       return
@@ -313,7 +320,7 @@ export function useTernComposerSurface(composer: AppLayoutComposerProps): void {
         cursor: cursorRef.current,
         text: nativeTextRef.current
       },
-      Boolean(hello?.features?.includes('send'))
+      resolveTernComposerSendable(hello ?? { r: 'hello', v: 1, term: 'tern', kinds: [] }, true)
     )
   }, [composer.input, surface])
 }

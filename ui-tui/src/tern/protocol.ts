@@ -131,12 +131,14 @@ export function encodeTspJson(
   return encodeTspMessage(verb, JSON.stringify(value), limit)
 }
 
+export const HERMES_TSP_PROGRAM_FEATURES = ['edit', 'send'] as const
+
 export function encodeTspHelloQuery(version?: string): string {
   return encodeTspJson('q', {
     q: 'hello',
     v: [TSP_VERSION],
     app: 'hermes',
-    features: ['edit', 'send'],
+    features: [...HERMES_TSP_PROGRAM_FEATURES],
     ...(version ? { ver: version } : {})
   })
 }

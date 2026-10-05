@@ -1,9 +1,12 @@
+import ternHello045 from './fixtures/tern-hello-0.4.5.json'
 import { describe, expect, it } from 'vitest'
 
 import type { TspEvent, TspHello } from './protocol.js'
 import { parseTspApc } from './protocol.js'
 import {
   applyTernComposerEdit,
+  resolveTernComposerSendable,
+  supportsTernComposer,
   TERN_COMPOSER_ID,
   TERN_SURFACE_ID,
   TernComposerTransport
@@ -77,5 +80,23 @@ describe('Tern composer edits', () => {
 
     expect(applyTernComposerEdit('abcd', event)).toEqual({ cursor: 2, text: 'aXd' })
     expect(applyTernComposerEdit('abcde', event)).toBeNull()
+  })
+})
+
+describe('program features vs terminal hello', () => {
+  const ternHello = ternHello045 as TspHello
+
+  it('activates the composer when Tern reports terminal features but not edit', () => {
+    expect(ternHello.features).not.toContain('edit')
+    expect(ternHello.features).not.toContain('send')
+    expect(ternHello.features).toEqual(
+      expect.arrayContaining(['dock', 'styles', 'settle', 'flow'])
+    )
+    expect(supportsTernComposer(ternHello)).toBe(true)
+  })
+
+  it('sets sendable from Hermes readiness, not a terminal echo of send', () => {
+    expect(resolveTernComposerSendable(ternHello, true)).toBe(true)
+    expect(resolveTernComposerSendable(ternHello, false)).toBe(false)
   })
 })
