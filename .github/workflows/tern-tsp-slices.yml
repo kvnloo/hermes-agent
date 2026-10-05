@@ -1,0 +1,32 @@
+name: Tern TSP slices
+
+on:
+  pull_request:
+    branches:
+      - feat/tern-tsp-surface
+    paths:
+      - ui-tui/src/tern/**
+      - ui-tui/packages/hermes-ink/**
+      - .github/workflows/tern-tsp-slices.yml
+  push:
+    branches:
+      - feat/tern-tsp-*
+
+jobs:
+  tern-unit:
+    name: TSP unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install the TUI workspace
+        run: npm ci --workspace ui-tui --include-workspace-root --ignore-scripts
+      - name: Build Ink
+        run: npm run build:ink --workspace ui-tui
+      - name: Run TSP tests
+        run: npm test --workspace ui-tui -- src/tern

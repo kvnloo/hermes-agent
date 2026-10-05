@@ -102,7 +102,7 @@ export class TernComposerTransport {
     )
 
     this.sendOps([
-      ['add', 'main', TERN_SURFACE_ID, null, { id: 'main', k: 'col', c: [] }],
+      ['add', 'main', TERN_SURFACE_ID, null, { id: 'main', k: 'col', c: [{ id: 'hermes:title', k: 'text', p: { text: 'Hermes' } }] }],
       [
         'add',
         'dock',

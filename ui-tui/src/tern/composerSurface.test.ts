@@ -45,6 +45,7 @@ describe('Tern composer transport', () => {
     expect(decoded[1]?.verb).toBe('f')
     expect(JSON.stringify(decoded[1]?.json)).toContain(TERN_COMPOSER_ID)
     expect(JSON.stringify(decoded[1]?.json)).toContain('"sendable":true')
+    expect(JSON.stringify(decoded[1]?.json)).toContain('"text":"Hermes"')
   })
 
   it('coalesces composer updates while its only frame credit is in flight', () => {
