@@ -1326,7 +1326,7 @@ class SessionSearchMixin:
                         self._conn.execute(f"INSERT INTO {tbl}({tbl}) VALUES('rebuild')")
                         self._conn.commit()
                         rebuilt += 1
-                    except sqlite3.OperationalError as exc:
+                    except sqlite3.DatabaseError as exc:
                         self._conn.rollback()
                         logger.warning("FTS rebuild failed for %s: %s", tbl, exc)
         return rebuilt
