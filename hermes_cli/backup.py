@@ -25,7 +25,7 @@ from hermes_state_dbfile import RETIRED_GENERATION_DIR_SUFFIX
 from hermes_state_holders import read_only_db_uri
 
 from agent.provider_media import GENERATED_SUBDIR
-from hermes_cli import backup_output
+from hermes_cli import backup_output, backup_sqlite
 from hermes_cli.archive_safe import normalize_archive_parts
 from hermes_cli.backup_sqlite import _close_quietly, _safe_copy_db
 from hermes_cli.home_data_layout import PM_RUNTIME_ROOT_DIRS, profile_root_entry
@@ -118,11 +118,7 @@ def _in_excluded_root_dir(rel_path: Path) -> bool:
     return len(parts) >= 2 and parts[0] == "cache" and parts[1] not in _KEPT_CACHE_SUBDIRS
 
 
-# SQLite sidecars are excluded because ``*.db`` is snapshotted via ``sqlite3.backup()``:
-# shipping the live WAL/SHM/journal alongside would pair a fresh snapshot with stale sidecar
-# state and produce a torn restore on next open. They are regenerated on first connection.
-_SQLITE_SIDECAR_SUFFIXES = (".db-wal", ".db-shm", ".db-journal")
-_EXCLUDED_SUFFIXES = (".pyc", ".pyo", *_SQLITE_SIDECAR_SUFFIXES)
+_EXCLUDED_SUFFIXES = (".pyc", ".pyo", *backup_sqlite._SQLITE_SIDECAR_SUFFIXES)
 
 # File names to skip (runtime state that's meaningless on another machine)
 _EXCLUDED_NAMES = {".backup.lock", "gateway.pid", "cron.pid"}
@@ -249,42 +245,10 @@ def _collect_memory_provider_external_paths() -> List[Path]:
     return list(out.values())
 
 
-def _is_sqlite_sidecar_name(name: str) -> bool:
-    """True for live SQLite WAL/SHM/journal sidecars of ``*.db`` *and* extensionless stores.
-
-    ``cache.db`` uses ``cache.db-wal``; Cognee's ``cognee_db`` uses ``cognee_db-wal``.
-    Shipping either beside a ``sqlite3.backup()`` snapshot tears the restore (#132705).
-    """
-    return name.endswith(_SQLITE_SIDECAR_SUFFIXES) or name.endswith(("-wal", "-shm", "-journal"))
-
-
-def _looks_like_sqlite_db(path: Path) -> bool:
-    """True when *path* should be archived via a WAL-safe SQLite snapshot.
-
-    ``*.db`` always qualifies. Extensionless (and other odd) SQLite files are detected by
-    header so providers like Cognee (``cognee_db``) are not raw-copied while their WAL is
-    excluded (#132705).
-    """
-    if path.suffix.lower() == ".db":
-        return True
-    # Skip common non-database text/config payloads without opening them.
-    if path.suffix.lower() in {
-        ".json", ".yaml", ".yml", ".txt", ".md", ".py", ".log", ".zip", ".png", ".jpg",
-        ".jpeg", ".webp", ".gif", ".mp3", ".mp4", ".wav", ".html", ".css", ".js", ".ts",
-    }:
-        return False
-    try:
-        from hermes_cli.sqlite_safe_read import read_header_bytes_preopen
-        head = read_header_bytes_preopen(path, length=16, force=True)
-        return bool(head and head.startswith(b"SQLite format 3"))
-    except Exception:
-        return False
-
-
 def _iter_external_files(base: Path) -> List[Path]:
     """Regular files under *base* (a file or a directory), skipping symlinks, caches, and pyc."""
     if base.is_file() and not base.is_symlink():
-        return [] if _is_sqlite_sidecar_name(base.name) else [base]
+        return [] if backup_sqlite._is_sqlite_sidecar_name(base.name) else [base]
     if not base.is_dir():
         return []
     files: List[Path] = []
@@ -298,7 +262,7 @@ def _iter_external_files(base: Path) -> List[Path]:
         dirnames[:] = [d for d in dirnames if d not in _EXCLUDED_DIRS]
         files.extend(fp for fp in (Path(dirpath) / f for f in filenames)
                      if not (_is_non_regular_path(fp) or fp.name in _EXCLUDED_NAMES
-                             or _is_sqlite_sidecar_name(fp.name)
+                             or backup_sqlite._is_sqlite_sidecar_name(fp.name)
                              or fp.name.endswith(_EXCLUDED_SUFFIXES)))
     return files
 
@@ -673,7 +637,7 @@ def _run_backup_locked(args, hermes_root: Path) -> bool:
         # snapshot via sqlite3.backup() the same way HERMES_HOME ``*.db`` files are handled.
         for abs_path, arcname in external_to_add:
             try:
-                if _looks_like_sqlite_db(abs_path):
+                if backup_sqlite._looks_like_sqlite_db(abs_path):
                     size = _zip_sqlite_snapshot(zf, abs_path, Path(arcname), out_path)
                     if size is None:
                         errors.append(f"{arcname}: SQLite safe copy failed")
@@ -749,7 +713,7 @@ def _import_skipped(rel: str) -> bool:
         return False  # A rejected traversal is still reported by the import itself.
     return (parts[-1] in _IMPORT_SKIP_NAMES or
             profile_root_entry(parts) in PM_RUNTIME_ROOT_DIRS or
-            rel.endswith(_SQLITE_SIDECAR_SUFFIXES))
+            rel.endswith(backup_sqlite._SQLITE_SIDECAR_SUFFIXES))
 
 
 def _import_member_rel(member: str, prefix: str) -> tuple[str, bool]:
@@ -914,7 +878,7 @@ def run_import(args) -> Optional[int]:
             # a live sidecar, via os.replace) would replay a foreign WAL on
             # the next open. Current backups never ship these
             # (_EXCLUDED_SUFFIXES); older or hand-built archives might.
-            if rel.endswith(_SQLITE_SIDECAR_SUFFIXES):
+            if rel.endswith(backup_sqlite._SQLITE_SIDECAR_SUFFIXES):
                 skipped_runtime.append(rel)
                 continue
 

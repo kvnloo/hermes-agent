@@ -8,7 +8,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from hermes_cli import backup
+from hermes_cli import backup, backup_sqlite
 
 
 def test_external_sqlite_backup_keeps_committed_wal_rows(tmp_path, monkeypatch):
@@ -67,5 +67,5 @@ def test_looks_like_sqlite_db_detects_extensionless(tmp_path):
     conn.execute("CREATE TABLE t (id INTEGER)")
     conn.commit()
     conn.close()
-    assert backup._looks_like_sqlite_db(path) is True
-    assert backup._looks_like_sqlite_db(tmp_path / "notes.json") is False
+    assert backup_sqlite._looks_like_sqlite_db(path) is True
+    assert backup_sqlite._looks_like_sqlite_db(tmp_path / "notes.json") is False

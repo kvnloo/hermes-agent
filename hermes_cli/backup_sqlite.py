@@ -18,6 +18,45 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 
+# SQLite sidecars are excluded because ``*.db`` is snapshotted via ``sqlite3.backup()``:
+# shipping the live WAL/SHM/journal alongside would pair a fresh snapshot with stale sidecar
+# state and produce a torn restore on next open. They are regenerated on first connection.
+_SQLITE_SIDECAR_SUFFIXES = (".db-wal", ".db-shm", ".db-journal")
+
+
+def _is_sqlite_sidecar_name(name: str) -> bool:
+    """True for live SQLite WAL/SHM/journal sidecars of ``*.db`` *and* extensionless stores.
+
+    ``cache.db`` uses ``cache.db-wal``; Cognee's ``cognee_db`` uses ``cognee_db-wal``.
+    Shipping either beside a ``sqlite3.backup()`` snapshot tears the restore (#132705).
+    """
+    return name.endswith(_SQLITE_SIDECAR_SUFFIXES) or name.endswith(("-wal", "-shm", "-journal"))
+
+
+def _looks_like_sqlite_db(path: Path) -> bool:
+    """True when *path* should be archived via a WAL-safe SQLite snapshot.
+
+    ``*.db`` always qualifies. Extensionless (and other odd) SQLite files are detected by
+    header so providers like Cognee (``cognee_db``) are not raw-copied while their WAL is
+    excluded (#132705).
+    """
+    if path.suffix.lower() == ".db":
+        return True
+    # Skip common non-database text/config payloads without opening them.
+    if path.suffix.lower() in {
+        ".json", ".yaml", ".yml", ".txt", ".md", ".py", ".log", ".zip", ".png", ".jpg",
+        ".jpeg", ".webp", ".gif", ".mp3", ".mp4", ".wav", ".html", ".css", ".js", ".ts",
+    }:
+        return False
+    try:
+        from hermes_cli.sqlite_safe_read import read_header_bytes_preopen
+        head = read_header_bytes_preopen(path, length=16, force=True)
+        return bool(head and head.startswith(b"SQLite format 3"))
+    except Exception:
+        logger.exception("SQLite backup classification failed")
+        return False
+
+
 class _SQLiteBackupTimeout(RuntimeError):
     """Raised when a SQLite snapshot remains busy past its deadline."""
 
