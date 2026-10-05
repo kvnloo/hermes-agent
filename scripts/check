@@ -109,9 +109,15 @@ def _tree_snapshot(tree: str) -> Iterator[tuple[Path, dict[str, str]]]:
 
 def _jobs(only: str | None, base: str | None, head: str | None,
           root: Path = REPO, env: dict[str, str] | None = None) -> dict[str, _Job]:
-    names = [*_GUARDS, "ruff", "health"]
+    valid = [*_GUARDS, "ruff", "health"]
+    names = list(valid)
     if only:
-        names = [n for n in names if n in only.split(",")]
+        requested = [n.strip() for n in only.split(",") if n.strip()]
+        unknown = [n for n in requested if n not in valid]
+        if not requested or unknown:
+            bad = ", ".join(unknown) if unknown else "<empty>"
+            raise RuntimeError(f"unknown --only check(s): {bad}; choose from: {', '.join(valid)}")
+        names = requested
     jobs: dict[str, _Job] = {}
     for name in names:  # built only when selected: `--only shebangs` needs no ruff
         if name in _GUARDS:
@@ -123,7 +129,7 @@ def _jobs(only: str | None, base: str | None, head: str | None,
             health = [sys.executable, "-m", "scripts.code_health"]
             health += ["--base", base] if base else []
             health += ["--head", head] if head else []
-            jobs[name] = _Job(health)
+            jobs[name] = _Job(health, root, env)
     return jobs
 
 
