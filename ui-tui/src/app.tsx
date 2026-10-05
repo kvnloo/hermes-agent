@@ -5,11 +5,13 @@ import { $uiState } from './app/uiStore.js'
 import { useMainApp } from './app/useMainApp.js'
 import { AppLayout } from './components/appLayout.js'
 import type { GatewayClient } from './gatewayClient.js'
+import { useTernComposerSurface } from './tern/composerSurface.js'
 import { useTernSurfaceProbe } from './tern/surface.js'
 
 export function App({ gw }: { gw: GatewayClient }) {
   const { appActions, appComposer, appProgress, appStatus, appTranscript, gateway } = useMainApp(gw)
   useTernSurfaceProbe()
+  useTernComposerSurface(appComposer)
   const { mouseTracking } = useStore($uiState)
 
   return (
