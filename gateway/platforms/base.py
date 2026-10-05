@@ -1544,7 +1544,8 @@ def cache_media_bytes(data: bytes, *, filename: str = "", mime_type: str = "",
             continue
         kind_ext = ext if ext in table else default_ext
         try:
-            path = cache_fn(data, ext=kind_ext)
+            path = (cache_fn(data, ext=kind_ext, filename=filename) if kind == "image"
+                    else cache_fn(data, ext=kind_ext))
         except ValueError:
             if kind != "image":
                 raise
