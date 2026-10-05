@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "scope": "Additive current-source adoption and merged upstream docs-owner disposition only",
+  "base_evidence_commit": "d25bc9e3136b8c55c4ba0e749df31c1319e1265d",
+  "preserve_existing_manifest_blobs": 33,
+  "cua_delivery_record_count": 9,
+  "record_count_is_unique_fix_count": false,
+  "new_deliveries": [
+    {
+      "name": "Sandbox held-key current-source adoption",
+      "sha": "754c9d71fdc6f2c7ceef40771975dcc5ac5e4705",
+      "tree": "5dcacddcc56bf7b09e947c5d0925eec3b052a327",
+      "parent": "bdc0dee884f94756b93534fea78b03a8adae40f8",
+      "qualified_upstream_base": "f68b806024170205c63f4c65501a11e61042fa38",
+      "branch": "qualified/sandbox-held-keys-current-20261005",
+      "classification": "current_source_adoption",
+      "adopts_owner_delivery": "289a65f653f1fb42eee8e0ce822979a19baed1b6",
+      "new_independent_bugfix": false,
+      "current_source_qualified": true,
+      "validation": "Actual current-lock normal imports; current handler fails with AttributeError, then the exact committed final passes one test with an inert keyboard. Ruff, formatting and diff checks pass.",
+      "history": "Normal merge bdc0 preserves current f68 and owner 289 ancestry; separate 754c selective removal restores four unrelated #4537 custom/history paths. Future adoption of those features requires explicit revert/reapply.",
+      "limits": "Direct Python handler forwarding only, not full package/model/lazy/native/VM/live-service qualification. No upstream PR/merge. Historical owner qualification unchanged.",
+      "environment": "Fresh supported CPython 3.12.14; 63 exact current-locked official wheels, including urllib3 2.8 instead of owner 2.7. Existing environments untouched. Reviewed pre-import offline network guard and normal agent/core source roots.",
+      "human_credit": "pingu52 original history and published289 coauthor credit preserved",
+      "remote_verified": true,
+      "hosted_ci": {
+        "status": "CI_NOT_RUN",
+        "checks": 0,
+        "statuses": 0,
+        "workflow_runs": 0,
+        "observed_at": "2026-10-05T17:28:26.430755+00:00"
+      },
+      "url": "https://github.com/kvnloo/cua/commit/754c9d71fdc6f2c7ceef40771975dcc5ac5e4705"
+    }
+  ],
+  "owner_disposition_updates": [
+    {
+      "historical_delivery_sha": "5d1dd8ec50dfdbf98d27adf98ecf641c7e0ff691",
+      "merged_owner_disposition": {
+        "observed_at": "2026-10-05T17:30:49.818551+00:00",
+        "owner_pr": "https://github.com/trycua/cua/pull/4665",
+        "owner": "f-trycua",
+        "owner_head": "aa4b0777e6c44d386af0673f5dfa05cdb85a1056",
+        "merged": true,
+        "merged_at": "2026-10-05T15:22:05Z",
+        "merge_commit": "9842b060537303f9ac2412e77f0e061daf8a2caf",
+        "observed_main": "f68b806024170205c63f4c65501a11e61042fa38",
+        "merge_is_current_ancestor": true,
+        "sdk_index_current_matches_reviewed_owner": true,
+        "disposition": "Prior active-owner gate is superseded by confirmed merged upstream carrier. Preserve this downstream artifact as historical subset/composition evidence; no competing promotion or independent current SDK regeneration claim.",
+        "historical_validation_unchanged": true,
+        "authentic_sdk_metadata_generation_independently_reproduced": false
+      }
+    },
+    {
+      "historical_delivery_sha": "4bd270be79fe7171442b65aaefc66d1d4734f3a8",
+      "merged_owner_disposition": {
+        "observed_at": "2026-10-05T17:30:49.818551+00:00",
+        "owner_pr": "https://github.com/trycua/cua/pull/4665",
+        "owner": "f-trycua",
+        "owner_head": "aa4b0777e6c44d386af0673f5dfa05cdb85a1056",
+        "merged": true,
+        "merged_at": "2026-10-05T15:22:05Z",
+        "merge_commit": "9842b060537303f9ac2412e77f0e061daf8a2caf",
+        "observed_main": "f68b806024170205c63f4c65501a11e61042fa38",
+        "merge_is_current_ancestor": true,
+        "sdk_index_current_matches_reviewed_owner": true,
+        "disposition": "Prior active-owner gate is superseded by confirmed merged upstream carrier. Preserve this downstream artifact as historical subset/composition evidence; no competing promotion or independent current SDK regeneration claim.",
+        "historical_validation_unchanged": true,
+        "authentic_sdk_metadata_generation_independently_reproduced": false
+      }
+    },
+    {
+      "historical_delivery_sha": "127ddc0a9babcd484dea50203c1b7809a28c0db7",
+      "merged_owner_disposition": {
+        "observed_at": "2026-10-05T17:30:49.818551+00:00",
+        "owner_pr": "https://github.com/trycua/cua/pull/4665",
+        "owner": "f-trycua",
+        "owner_head": "aa4b0777e6c44d386af0673f5dfa05cdb85a1056",
+        "merged": true,
+        "merged_at": "2026-10-05T15:22:05Z",
+        "merge_commit": "9842b060537303f9ac2412e77f0e061daf8a2caf",
+        "observed_main": "f68b806024170205c63f4c65501a11e61042fa38",
+        "merge_is_current_ancestor": true,
+        "sdk_index_current_matches_reviewed_owner": true,
+        "disposition": "Prior active-owner gate is superseded by confirmed merged upstream carrier. Preserve this downstream artifact as historical subset/composition evidence; no competing promotion or independent current SDK regeneration claim.",
+        "historical_validation_unchanged": true,
+        "authentic_sdk_metadata_generation_independently_reproduced": false
+      }
+    },
+    {
+      "historical_delivery_sha": "d1f6fc94217017d8d91b55725f9bc797621b7264",
+      "merged_owner_disposition": {
+        "observed_at": "2026-10-05T17:30:49.818551+00:00",
+        "owner_pr": "https://github.com/trycua/cua/pull/4665",
+        "owner": "f-trycua",
+        "owner_head": "aa4b0777e6c44d386af0673f5dfa05cdb85a1056",
+        "merged": true,
+        "merged_at": "2026-10-05T15:22:05Z",
+        "merge_commit": "9842b060537303f9ac2412e77f0e061daf8a2caf",
+        "observed_main": "f68b806024170205c63f4c65501a11e61042fa38",
+        "merge_is_current_ancestor": true,
+        "sdk_index_current_matches_reviewed_owner": true,
+        "disposition": "Prior active-owner gate is superseded by confirmed merged upstream carrier. Preserve this downstream artifact as historical subset/composition evidence; no competing promotion or independent current SDK regeneration claim.",
+        "historical_validation_unchanged": true,
+        "authentic_sdk_metadata_generation_independently_reproduced": false
+      }
+    }
+  ],
+  "historical_results_preserved": true,
+  "source_evidence": {
+    "current_adoption": "https://github.com/kvnloo/cua/commit/754c9d71fdc6f2c7ceef40771975dcc5ac5e4705",
+    "normal_merge": "https://github.com/kvnloo/cua/commit/bdc0dee884f94756b93534fea78b03a8adae40f8",
+    "owner_followup": "https://github.com/kvnloo/cua/commit/289a65f653f1fb42eee8e0ce822979a19baed1b6",
+    "upstream_docs_pr": "https://github.com/trycua/cua/pull/4665",
+    "upstream_docs_merge": "https://github.com/trycua/cua/commit/9842b060537303f9ac2412e77f0e061daf8a2caf"
+  }
+}
