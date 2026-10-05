@@ -1,0 +1,38 @@
+[
+  {
+    "worker": "hermes_gateway",
+    "status": "active implementation",
+    "assignment": "132967 synthetic email routing/reply/MIME header consumer and bounded owner integration",
+    "updated_at": "2026-10-05T12:17:37.682233+00:00"
+  },
+  {
+    "worker": "hermes_tools",
+    "status": "active review",
+    "assignment": "132967 independent header-source contract and evidence review",
+    "updated_at": "2026-10-05T12:17:37.682242+00:00"
+  },
+  {
+    "worker": "hermes_agent",
+    "status": "active qualification",
+    "assignment": "132947 real temporary restore/config identity consumer; evidence-only scope",
+    "updated_at": "2026-10-05T12:17:37.682245+00:00"
+  },
+  {
+    "worker": "hermes_cli",
+    "status": "active review",
+    "assignment": "132947 independent real restore consumer review",
+    "updated_at": "2026-10-05T12:17:37.682246+00:00"
+  },
+  {
+    "worker": "hermes_readiness",
+    "status": "intake checkpoint",
+    "assignment": "Current source readiness updates; new requests owned or held, no invented tests",
+    "updated_at": "2026-10-05T12:17:37.682247+00:00"
+  },
+  {
+    "worker": "cua_consumer",
+    "status": "intake checkpoint",
+    "assignment": "CUA docs and workflow dependency gates; latest native updates owned; Jev remote verification complete",
+    "updated_at": "2026-10-05T12:17:37.682248+00:00"
+  }
+]

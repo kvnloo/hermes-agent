@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "assessmentMode": "source_only_no_new_poll_or_tests",
+  "dependencyAuthorization": "Official scoped dependencies generally authorized; this broad refresh not selected/provisioned",
+  "choices": [
+    {
+      "id": "sdk_docs",
+      "sourceSHA": "ed22ad958a5ab6d764c98261b24d65f80f3a6f95",
+      "status": "held",
+      "availableExistingResources": [
+        "SDK Linux artifact11336965211,78624995bytes,run37288749641; not downloaded",
+        "Canonical header and VERSION0.4.1",
+        "ScopedRust1.97.1"
+      ],
+      "missingArtifactPackageVersion": [
+        "Exact SpacesFFI API dump or library",
+        "Matching cua-bindgen unless both complete API JSON inputs available",
+        "Complete SDK metadata extraction",
+        "docs tsx4.21.0"
+      ],
+      "smallestAction": "Select matching metadata provisioning then canonical SDK generator/check; inspect whole output",
+      "notYetQualifiedClaim": "Full reference refresh or shipped release",
+      "receipt": "cua-doc-version/artifact-feasibility/README.md"
+    },
+    {
+      "id": "python_docs",
+      "sourceSHA": "ed22ad958a5ab6d764c98261b24d65f80f3a6f95",
+      "status": "held",
+      "availableExistingResources": [
+        "Canonical header and source version",
+        "Installed Python test interpreter"
+      ],
+      "missingArtifactPackageVersion": [
+        "griffe2.3.0 via compatible interpreter or uv Python3.12",
+        "docs tsx4.21.0"
+      ],
+      "smallestAction": "Select pinned static extractor then canonical Python generator/check",
+      "notYetQualifiedClaim": "Whole Python reference refreshed",
+      "receipt": "cua-doc-version/independent-generator-review.md"
+    },
+    {
+      "id": "typescript_docs",
+      "sourceSHA": "ed22ad958a5ab6d764c98261b24d65f80f3a6f95",
+      "status": "held",
+      "availableExistingResources": [
+        "Canonical header and package0.4.1",
+        "ExistingBun1.4.2"
+      ],
+      "missingArtifactPackageVersion": [
+        "typedoc0.28.20",
+        "typedoc-plugin-markdown4.13.1",
+        "docs TypeScript5.8.3 and tsx4.21.0",
+        "TypeScript package dependencies"
+      ],
+      "smallestAction": "Select locked dependencies then canonical TS generator/check",
+      "notYetQualifiedClaim": "Whole TypeScript reference refreshed",
+      "receipt": "cua-doc-version/independent-generator-review.md"
+    },
+    {
+      "id": "sandbox_docs",
+      "sourceSHA": "ed22ad958a5ab6d764c98261b24d65f80f3a6f95",
+      "status": "held",
+      "availableExistingResources": [
+        "Portable sandbox.ts builtin Node/local modules",
+        "Canonical templates/manifests",
+        "Existing Node/Bun"
+      ],
+      "missingArtifactPackageVersion": [],
+      "smallestAction": "If selected run canonical generator; inspect3generatedpages plus2catalog-region pages",
+      "notYetQualifiedClaim": "Complete seven-fact repair; this covers only runtime-support subset",
+      "receipt": "cua-doc-version/template-feasibility.md"
+    },
+    {
+      "id": "curated_docs",
+      "sourceSHA": "ed22ad958a5ab6d764c98261b24d65f80f3a6f95",
+      "status": "held",
+      "availableExistingResources": [
+        "Existing3version-fact tests",
+        "Local uncommitted image-line correction",
+        "Installed pytest"
+      ],
+      "missingArtifactPackageVersion": [
+        "Four generated references remain stale"
+      ],
+      "smallestAction": "Pair curated images/quickstart fixes with selected generator scope and owner overlap refresh",
+      "notYetQualifiedClaim": "Green version-fact suite; currently1fail2pass",
+      "receipt": "cua-doc-version/README.md"
+    },
+    {
+      "id": "guarded111",
+      "sourceSHA": "f74a4d5e1ae804249c0d37f576702890949d76f8",
+      "status": "held",
+      "availableExistingResources": [
+        "Draft111 exacthead14success1skip",
+        "4316currentb2ae source"
+      ],
+      "missingArtifactPackageVersion": [
+        "Owner-selected composition",
+        "Current-source evidence and maintainer review"
+      ],
+      "smallestAction": "Reconcile owner sources and re-review existing implementation",
+      "notYetQualifiedClaim": "Main promotion or replay/exactly-once/TypeScript/FIX04 qualification",
+      "receipt": "cua-next-choices/review-disposition.md"
+    },
+    {
+      "id": "guarded4316",
+      "sourceSHA": "b2ae7cb934403f2585c7d3ed23a188b44264f293",
+      "status": "held",
+      "availableExistingResources": [
+        "Requested telemetry/null scores source and tests",
+        "Decline CI wiring"
+      ],
+      "missingArtifactPackageVersion": [
+        "Relevant exacthead runtime evidence beyond metadata checks",
+        "Formal review acceptance"
+      ],
+      "smallestAction": "Obtain owner evidence/re-review, no duplicate code",
+      "notYetQualifiedClaim": "Promotion readiness or new native/timing results",
+      "receipt": "cua-next-choices/review-disposition.md"
+    },
+    {
+      "id": "lume4657",
+      "sourceSHA": "deac780decf91704105177af73e22fe4fbb4b5ae",
+      "status": "held",
+      "availableExistingResources": [
+        "Owner portable fixtures",
+        "Linux SDK CI success",
+        "Separate owner manualMac claim"
+      ],
+      "missingArtifactPackageVersion": [
+        "Exact new-target hosted execution evidence",
+        "MacOS+Lume for actual reboot behavior"
+      ],
+      "smallestAction": "Obtain targeted owner evidence if useful, no duplicate suite",
+      "notYetQualifiedClaim": "Observedgreenjob ran newtests or independentMacqualification",
+      "receipt": "cua4657-review/README.md"
+    },
+    {
+      "id": "native_owner_queue",
+      "sourceSHA": "ed22ad958a5ab6d764c98261b24d65f80f3a6f95",
+      "status": "held",
+      "availableExistingResources": [
+        "Saved4653/4654/4655/4658/4659 ownerheads",
+        "Motion109/110 exclusions"
+      ],
+      "missingArtifactPackageVersion": [
+        "RespectiveWindows/Mac/native environments",
+        "Owner decisions"
+      ],
+      "smallestAction": "Await material owner source/evidence change",
+      "notYetQualifiedClaim": "Universal platform qualification or unowned implementation",
+      "receipt": "cua-next-choices/README.md"
+    },
+    {
+      "id": "mac_viewer4609",
+      "sourceSHA": "ed22ad958a5ab6d764c98261b24d65f80f3a6f95",
+      "status": "held",
+      "availableExistingResources": [
+        "Existing portable mapping coverage",
+        "Public report"
+      ],
+      "missingArtifactPackageVersion": [
+        "Exact viewer/AppKit capture version and observations"
+      ],
+      "smallestAction": "Obtain owner Mac evidence before diagnosing",
+      "notYetQualifiedClaim": "Reproduced portable mapping defect",
+      "receipt": "cua-4609/README.md"
+    }
+  ]
+}

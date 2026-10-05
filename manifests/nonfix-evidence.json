@@ -1,0 +1,16 @@
+[
+  {
+    "name": "TUI132745",
+    "classification": "not_reproduced",
+    "validation": "56 distinct current-source tests pass, no code changes",
+    "limits": "WSL/Node24.15 parity not established",
+    "receipt": "/workspace/receipts/tui-overlay-132745/README.md"
+  },
+  {
+    "name": "CUA docs release version facts",
+    "classification": "local_scope_hold",
+    "validation": "1 fail/2 pass; one-line local correction reveals six additional facts",
+    "limits": "Canonical generation requires unavailable SDK/Spaces UniFFI inputs, griffe and TypeDoc dependency closures; no generated edits or publication",
+    "receipt": "/workspace/receipts/cua-doc-version/independent-generator-review.md"
+  }
+]

@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "updated_on": "2026-10-05",
+  "scope": "Compact readiness holds; not a complete global work ledger",
+  "runtime_revalidation_performed": false,
+  "entries": [
+    {
+      "id": "hermes-133254",
+      "repository": "NousResearch/hermes-agent",
+      "number": 133254,
+      "status": "OWNER_ACTIVE",
+      "supersedes": "MISSING_RESOLVER_EVIDENCE",
+      "evidence_level": "owner_reported_resolution; earlier_local_metadata_control_only",
+      "owner": "kokhlo",
+      "owner_commit_prefix": "d3f1e5749",
+      "owner_branch": "fix/133254-pin-spacy-curated-transformers-override",
+      "blocking_condition": "Active owner plans upstream PR; no independent current-head resolution qualification is claimed.",
+      "next_action": "Preserve owner work and consume its eventual review/PR; only undertake a distinct demonstrated integration gap.",
+      "do_not": [
+        "duplicate pin implementation",
+        "repeat metadata control",
+        "claim owner results as local verification",
+        "open upstream PR or comment"
+      ],
+      "sources": [
+        "https://github.com/NousResearch/hermes-agent/issues/133254#issuecomment-5993877355",
+        "https://github.com/NousResearch/hermes-agent/issues/133254#issuecomment-5993900119",
+        "https://github.com/NousResearch/hermes-agent/issues/133254#issuecomment-5994072728"
+      ],
+      "receipts": [
+        "pm-spacy-133254/README.md",
+        "h5-readiness-intake-20261005.md"
+      ],
+      "owner_tip_prefix": "a817371848",
+      "owner_tip_change": "Owner-reported test cleanup only; original behavior fix remains d3f1e5749. No local revalidation."
+    },
+    {
+      "id": "omp-10790",
+      "repository": "can1357/oh-my-pi",
+      "number": 10790,
+      "status": "DECISION_REQUIRED",
+      "owner_head": "9e7f1a186855f7253c48a3103a76d688edbd769a",
+      "blocking_condition": "Existing Changed-only watcher contract clears changed URI only; sibling fallback invalidation scope is unresolved.",
+      "next_action": "Decide whether in-workspace Changed events invalidate sibling fallback eligibility and whether scope is fallback-only or all diagnostics; then select a fake-LSP consumer.",
+      "do_not": [
+        "invent broad cache policy",
+        "duplicate owner implementation",
+        "repeat failure-only test before scope is chosen"
+      ],
+      "sources": [
+        "https://github.com/can1357/oh-my-pi/pull/10790"
+      ],
+      "receipts": [
+        "omp10790/README.md",
+        "omp10790/lane1-contract-review.md"
+      ]
+    },
+    {
+      "id": "hermes-133290",
+      "repository": "NousResearch/hermes-agent",
+      "number": 133290,
+      "status": "CAPABILITY_REQUIRED",
+      "owner_head": "d1db5a9825f33810a50692f1c735d08ada30f974",
+      "blocking_condition": "Native Windows Plugins-list acceptance is explicitly unchecked; current workspace does not provide that environment.",
+      "next_action": "Qualify owner branch on native Windows with a synthetic installed pip entry point not explicitly enabled; retain ordinary directory-provider control.",
+      "do_not": [
+        "claim Linux mocked-platform tests establish Windows behavior",
+        "duplicate implementation",
+        "silently provision platform or packages"
+      ],
+      "sources": [
+        "https://github.com/NousResearch/hermes-agent/pull/133290"
+      ],
+      "receipts": [
+        "h5-readiness-intake-20261005.md",
+        "progress-flood-131937/remote-verification.md"
+      ]
+    },
+    {
+      "id": "standing-123578",
+      "repository": null,
+      "number": 123578,
+      "status": "HOLD",
+      "carry_forward_only": true,
+      "blocking_condition": "Standing user hold persists until actual contract resolution; no new resolving evidence in this task.",
+      "next_action": "Recover the original scoped hold receipt/link or an explicit repository-qualified identifier and contract; retain existing status until that original gate is resolved.",
+      "sources": [
+        "https://github.com/kvnloo/hermes-agent/blob/4ffa2d6c16299db875769f0f98603bf7d6214070/README.md",
+        "https://github.com/kvnloo/hermes-agent/blob/2cf89a661beb842b04eeb04345904e76745658d7/README.md"
+      ],
+      "receipts": [
+        "carried-hold-recovery/README.md",
+        "carried-hold-recovery/recovered-metadata.json"
+      ],
+      "provenance": "Initial published packet explicitly lists identifier/status without repository or contract; follow-up preserves holds generically. Complete parentless trees have only README.md and candidates.json. Scope remains unknown; hosting repository is not evidence of issue scope.",
+      "contract_gate": null
+    },
+    {
+      "id": "standing-417",
+      "repository": null,
+      "number": 417,
+      "status": "NOT_MET",
+      "carry_forward_only": true,
+      "blocking_condition": "Standing NOT_MET status explicitly retained; no new acceptance evidence reviewed.",
+      "next_action": "Recover the original scoped hold receipt/link or an explicit repository-qualified identifier and contract; retain existing status until that original gate is resolved.",
+      "sources": [
+        "https://github.com/kvnloo/hermes-agent/blob/4ffa2d6c16299db875769f0f98603bf7d6214070/README.md",
+        "https://github.com/kvnloo/hermes-agent/blob/2cf89a661beb842b04eeb04345904e76745658d7/README.md"
+      ],
+      "receipts": [
+        "carried-hold-recovery/README.md",
+        "carried-hold-recovery/recovered-metadata.json"
+      ],
+      "provenance": "Initial published packet explicitly lists identifier/status without repository or contract; follow-up preserves holds generically. Complete parentless trees have only README.md and candidates.json. Scope remains unknown; hosting repository is not evidence of issue scope.",
+      "contract_gate": null
+    },
+    {
+      "id": "standing-131689",
+      "repository": null,
+      "number": 131689,
+      "status": "NEEDS_DECISION",
+      "carry_forward_only": true,
+      "blocking_condition": "Standing decision requirement remains unresolved.",
+      "next_action": "Recover the original scoped hold receipt/link or an explicit repository-qualified identifier and contract; retain existing status until that original gate is resolved.",
+      "sources": [
+        "https://github.com/kvnloo/hermes-agent/blob/4ffa2d6c16299db875769f0f98603bf7d6214070/README.md",
+        "https://github.com/kvnloo/hermes-agent/blob/2cf89a661beb842b04eeb04345904e76745658d7/README.md"
+      ],
+      "receipts": [
+        "carried-hold-recovery/README.md",
+        "carried-hold-recovery/recovered-metadata.json"
+      ],
+      "provenance": "Initial published packet explicitly lists identifier/status without repository or contract; follow-up preserves holds generically. Complete parentless trees have only README.md and candidates.json. Scope remains unknown; hosting repository is not evidence of issue scope.",
+      "contract_gate": null
+    }
+  ]
+}

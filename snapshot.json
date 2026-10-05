@@ -1,0 +1,13 @@
+{
+  "captured_at_utc": "2026-10-05T12:26:15.491221+00:00",
+  "hermes_records": 29,
+  "omp_records": 15,
+  "interpretation": "Published branch records include overlapping compositions, holds, tests and docs; not a count of unique fixes.",
+  "source_heads": {
+    "hermes": "7157422022ff06f3e632d1dd394ee1253b17ad37",
+    "omp": "1c0993c3d12e70042169a951663bb2702e2c0a9e",
+    "cua": "ed22ad958a5ab6d764c98261b24d65f80f3a6f95"
+  },
+  "hosted_ci": "Each delivery records local qualification separately; no hosted execution implied by aggregate pending with zero runs/checks/statuses.",
+  "publication_scope": "Downstream receipt packet only; no upstream publication, new PR, merge or deployment."
+}
