@@ -215,6 +215,41 @@ export class TernComposerTransport {
   }
 }
 
+export class TernInlineSession {
+  private transport: TernComposerTransport | null = null
+
+  constructor(
+    private write: WriteTsp,
+    private hello: TspHello
+  ) {}
+
+  sync(state: { blocked: boolean; busy: boolean; snapshot: TernComposerSnapshot }): void {
+    if (state.blocked) {
+      this.close()
+      return
+    }
+
+    const sendable = resolveTernComposerSendable(this.hello, !state.busy)
+
+    if (!this.transport) {
+      this.transport = new TernComposerTransport(this.write, this.hello)
+      this.transport.start(state.snapshot, sendable)
+      return
+    }
+
+    this.transport.update(state.snapshot, sendable)
+  }
+
+  handleEvent(event: TspEvent): void {
+    this.transport?.handleEvent(event)
+  }
+
+  close(): void {
+    this.transport?.stop()
+    this.transport = null
+  }
+}
+
 export function useTernComposerSurface(composer: AppLayoutComposerProps): void {
   const surface = useStore($ternSurface)
   const blocked = useStore($isBlocked)
@@ -223,7 +258,7 @@ export function useTernComposerSurface(composer: AppLayoutComposerProps): void {
   const composerRef = useRef(composer)
   const cursorRef = useRef(composer.input.length)
   const nativeTextRef = useRef(composer.input)
-  const transportRef = useRef<TernComposerTransport | null>(null)
+  const sessionRef = useRef<TernInlineSession | null>(null)
 
   composerRef.current = composer
 
@@ -239,7 +274,6 @@ export function useTernComposerSurface(composer: AppLayoutComposerProps): void {
     }
 
     const hello = surface.hello
-    const sendable = resolveTernComposerSendable(hello, !busy)
 
     if (!pauseRendering(stdout)) {
       return
@@ -250,21 +284,22 @@ export function useTernComposerSurface(composer: AppLayoutComposerProps): void {
     nativeTextRef.current = composerRef.current.input
     cursorRef.current = composerRef.current.input.length
 
-    const transport = new TernComposerTransport(data => {
+    const session = new TernInlineSession(data => {
       stdout.write(data)
     }, hello)
 
-    transportRef.current = transport
-    transport.start(
-      {
+    sessionRef.current = session
+    session.sync({
+      blocked: false,
+      busy,
+      snapshot: {
         cursor: cursorRef.current,
         text: nativeTextRef.current
-      },
-      sendable
-    )
+      }
+    })
 
     const unsubscribe = subscribeTernSurfaceEvents(event => {
-      transport.handleEvent(event)
+      session.handleEvent(event)
 
       if (!('sf' in event) || event.sf !== TERN_SURFACE_ID || !('id' in event) || event.id !== TERN_COMPOSER_ID) {
         return
@@ -280,7 +315,7 @@ export function useTernComposerSurface(composer: AppLayoutComposerProps): void {
         nativeTextRef.current = next.text
         cursorRef.current = next.cursor
         composerRef.current.updateInput(next.text)
-        transport.update(next, sendable)
+        session.sync({ blocked: false, busy, snapshot: next })
 
         return
       }
@@ -294,23 +329,23 @@ export function useTernComposerSurface(composer: AppLayoutComposerProps): void {
       ) {
         nativeTextRef.current = ''
         cursorRef.current = 0
-        transport.update({ cursor: 0, text: '' }, sendable)
+        session.sync({ blocked: false, busy, snapshot: { cursor: 0, text: '' } })
         composerRef.current.submit(event.text)
       }
     })
 
     return () => {
       unsubscribe()
-      transport.stop()
-      transportRef.current = null
+      session.close()
+      sessionRef.current = null
       resumeRendering(stdout)
     }
   }, [blocked, stdout, surface])
 
   useEffect(() => {
-    const transport = transportRef.current
+    const session = sessionRef.current
 
-    if (!transport) {
+    if (!session) {
       return
     }
 
@@ -319,13 +354,13 @@ export function useTernComposerSurface(composer: AppLayoutComposerProps): void {
       cursorRef.current = composer.input.length
     }
 
-    const hello = surface.status === 'active' ? surface.hello : null
-    transport.update(
-      {
+    session.sync({
+      blocked,
+      busy,
+      snapshot: {
         cursor: cursorRef.current,
         text: nativeTextRef.current
-      },
-      resolveTernComposerSendable(hello ?? { r: 'hello', v: 1, term: 'tern', kinds: [] }, !busy)
-    )
-  }, [busy, composer.input, surface])
+      }
+    })
+  }, [blocked, busy, composer.input, surface])
 }

@@ -10,7 +10,8 @@ import {
   supportsTernComposer,
   TERN_COMPOSER_ID,
   TERN_SURFACE_ID,
-  TernComposerTransport
+  TernComposerTransport,
+  TernInlineSession
 } from './composerSurface.js'
 
 const hello: TspHello = {
@@ -107,5 +108,29 @@ describe('surface lifetime', () => {
   it('stays open while Hermes is busy and closes for a modal block', () => {
     expect(ternSurfaceStaysOpen({ blocked: false })).toBe(true)
     expect(ternSurfaceStaysOpen({ blocked: true })).toBe(false)
+  })
+})
+
+describe('persistent inline session', () => {
+  it('keeps one surface across busy false, true, false', () => {
+    const writes: string[] = []
+    const session = new TernInlineSession(data => writes.push(data), ternHello045 as TspHello)
+    const snapshot = { cursor: 0, text: '' }
+
+    session.sync({ blocked: false, busy: false, snapshot })
+    session.sync({ blocked: false, busy: true, snapshot })
+    session.sync({ blocked: false, busy: false, snapshot })
+
+    const decoded = messages(writes)
+    const verbs = decoded.map(item => item?.verb)
+
+    expect(verbs.filter(verb => verb === 'o')).toEqual(['o'])
+    expect(verbs.filter(verb => verb === 'x')).toEqual([])
+    expect(decoded.every(item => item?.json.id === TERN_SURFACE_ID || item?.json.sf === TERN_SURFACE_ID)).toBe(true)
+
+    const sequences = decoded.filter(item => item?.verb === 'f').map(item => item?.json.s as number)
+
+    expect(sequences).toEqual([...sequences].sort((left, right) => left - right))
+    expect(new Set(sequences).size).toBe(sequences.length)
   })
 })
