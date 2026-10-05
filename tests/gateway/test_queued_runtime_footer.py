@@ -94,3 +94,50 @@ async def test_refused_trailing_footer_does_not_reopen_the_already_delivered_bod
         SimpleNamespace(session_id="session"), context.session_key, 1, result, [], "first reply", footer, False,
     ) is None
     assert [content for _, content, _ in transport.sent] == ["model-one", "model-one"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("refused", [True, False], ids=["refused", "executed"])
+async def test_distinct_queued_results_keep_each_turn_footer(tmp_path, monkeypatch, refused):
+    """Drive the actual queued-return boundary with separate worker and finalized results."""
+    from unittest.mock import AsyncMock
+
+    runner, transport, context, result = _queued_turn(tmp_path, monkeypatch, streamed=False)
+    response = dict(result)
+    context.session_id = "synthetic-session"
+    context.history = []
+    context._interrupt_depth = 0
+    context.result_holder = [result]
+    context.context_prompt = ""
+    context.channel_prompt = None
+    next_result = {"final_response": "second reply", "model": "example/model-two", "failed": False}
+    runner._run_agent = AsyncMock(return_value=next_result)
+    runner._refresh_agent_cache_message_count = AsyncMock()
+    runner._prepare_profile_scoped_inbound_message_text = AsyncMock(return_value=None)
+    pending_event = MessageEvent(text="next", source=context.source, message_id="input-2") if refused else None
+
+    terminal = await runner._run_agent_queued_followup(
+        context, transport, "next", pending_event, response, result, None,
+    )
+    assert response is not result
+    assert [content for _, content, _ in transport.sent] == ["first reply\n\nmodel-one"]
+    footer = runner._hmwa_runtime_footer_line(terminal, context.source, 1)
+    text = terminal["final_response"]
+    # Mirror the ordinary caller's footer composition before its final delivery decision.
+    if footer and text and not terminal.get("already_sent"):
+        text = f"{text}\n\n{footer}"
+    completion = await runner._hmwa_deliver_turn_response(
+        MessageEvent(text="first", source=context.source, message_id="input-1"), context.source,
+        SimpleNamespace(session_id=context.session_id), context.session_key, 1,
+        terminal, [], text, footer, False,
+    )
+    if refused:
+        runner._run_agent.assert_not_called()
+        assert terminal is result
+        assert completion is None
+        assert [content for _, content, _ in transport.sent] == ["first reply\n\nmodel-one"]
+    else:
+        runner._run_agent.assert_awaited_once()
+        assert terminal["final_response"] == next_result["final_response"]
+        assert footer == "model-two"
+        assert completion == "second reply\n\nmodel-two"
