@@ -250,9 +250,9 @@ class TestSubdirectoryHintTracker:
         result = tracker.check_tool_call("read_file", {"path": str(deep_file)})
         assert result is not None
         # Without the total cap, this would be ~24k chars (3 × 8k)
-        # With the cap, it should be <= _MAX_TOTAL_HINT_CHARS + marker
+        # The hard cap includes the truncation marker (review request #47198).
         from agent.subdirectory_hints import _MAX_TOTAL_HINT_CHARS
-        assert len(result) <= _MAX_TOTAL_HINT_CHARS + 100
+        assert len(result) <= _MAX_TOTAL_HINT_CHARS
         assert "truncated" in result.lower()
 
     def test_empty_args(self, project):

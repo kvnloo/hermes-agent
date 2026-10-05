@@ -102,10 +102,8 @@ class SubdirectoryHintTracker:
 
         combined = "\n\n" + "\n\n".join(all_hints)
         if len(combined) > _MAX_TOTAL_HINT_CHARS:
-            combined = (
-                combined[:_MAX_TOTAL_HINT_CHARS]
-                + "\n\n[...subdirectory hints truncated to save context]"
-            )
+            marker = "\n\n[...subdirectory hints truncated to save context]"
+            combined = combined[:_MAX_TOTAL_HINT_CHARS - len(marker)] + marker
         return combined
 
     def _extract_directories(
