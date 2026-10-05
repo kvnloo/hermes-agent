@@ -9,6 +9,7 @@ import contextlib
 import sys
 from pathlib import Path
 
+from .command_catalog import CommandCatalog
 from .method_ctx import HandlerRegistry, bind_module
 
 _registry = HandlerRegistry()
@@ -425,23 +426,8 @@ def _(rid, params: dict) -> dict:
 
 
 # ─── Command catalog / dispatch ──────────────────────────────────────────────
-class _Catalog:
-    """Accumulator for commands.catalog: ``pairs`` (every [key, desc]), ``canon`` (lowercase
-    key/alias → canonical key), ``commands`` (key → desktop meta) and ordered categories."""
 
-    def __init__(self) -> None:
-        self.pairs: list[list[str]] = []
-        self.canon: dict[str, str] = {}
-        self.commands: dict[str, dict[str, str | None]] = {}
-        self.cat_map: dict[str, list[list[str]]] = {}  # insertion order = category order
-
-    def add(self, key: str, desc: str, cat: str) -> None:
-        self.canon[key.lower()] = key
-        self.pairs.append([key, desc])
-        self.cat_map.setdefault(cat, []).append([key, desc])
-
-
-def _catalog_registry(cat: _Catalog) -> None:
+def _catalog_registry(cat: CommandCatalog) -> None:
     commands = _tools_mod("hermes_cli.commands")
     for cmd in commands.COMMAND_REGISTRY:
         meta = commands.command_desktop_meta(cmd)
@@ -457,7 +443,7 @@ def _catalog_registry(cat: _Catalog) -> None:
             cat.add(name, desc, category)
 
 
-def _catalog_quick_commands(cat: _Catalog) -> None:
+def _catalog_quick_commands(cat: CommandCatalog) -> None:
     qcmds = _load_cfg().get("quick_commands", {}) or {}
     if not (isinstance(qcmds, dict) and qcmds):
         return
@@ -471,7 +457,7 @@ def _catalog_quick_commands(cat: _Catalog) -> None:
         cat.add(f"/{qname}", desc, "User commands")
 
 
-def _catalog_plugin_commands(cat: _Catalog) -> None:
+def _catalog_plugin_commands(cat: CommandCatalog) -> None:
     plugin_cmds = _tools_mod("hermes_cli.plugins").get_plugin_commands() or {}
     if plugin_cmds:
         cat.cat_map.setdefault("Plugin commands", [])
@@ -486,24 +472,17 @@ def _catalog_plugin_commands(cat: _Catalog) -> None:
         cat.commands[key] = {"argument_mode": mode, "desktop": None}
 
 
-def _catalog_skills(cat: _Catalog, skills: dict[str, dict]) -> str:
+def _catalog_skills(cat: CommandCatalog, skills: dict[str, dict]) -> str:
     """Append skill pairs and fill ``skills`` = ``{key: {usage, origin}}`` (every consumer ranks by them).
     Returns the one-line notice for skills whose name is a built-in command (no ``/<name>`` entry;
     ``agent.skill_commands`` guard), ``""`` when none."""
     usage, origin_of = _skill_usage_lookup()
     sc = _tools_mod("agent.skill_commands")
     for k, info in sorted(sc.get_interactive_skill_commands().items()):
+        cat.canon.setdefault(k.lower(), k)
         cat.pairs.append([k, str(info.get("description", "Skill"))])
         name = str(info.get("name") or k.lstrip("/"))
         skills[k] = {"usage": usage(name), "origin": origin_of(name)}
-        # Skill commands must enter `canon` so the TUI exact-match resolver can
-        # find them; otherwise a built-in whose name is a prefix of a skill name
-        # (e.g. built-in `/logs` shadowing a skill named `log`) wins resolution
-        # and the skill is unreachable via its bare slash name (#96972). Guard so
-        # an exact name collision with a built-in keeps the built-in canonical
-        # (same policy as plugin / TUI-extra commands).
-        if k.lower() not in cat.canon:
-            cat.canon[k.lower()] = k
     names = sorted(s["name"] for s in _tools_mod("tools.skills_tool")._find_all_skills())
     return "; ".join(filter(None, map(sc.skill_command_collision_note, names)))
 
@@ -518,7 +497,9 @@ def _(rid, params: dict) -> dict:
     session would be seeded with) so project-local skills register for the repo the session is
     actually in (#114359); a session-less draft is bound to ``params['profile']`` (#124651), and an
     unknown profile is 4064 like ``complete.slash`` — never a launch-profile palette."""
-    cat = _Catalog()
+    from tui_gateway.command_catalog import CommandCatalog
+
+    cat = CommandCatalog()
     _catalog_registry(cat)
     warning = ""
     skills: dict[str, dict] = {}
