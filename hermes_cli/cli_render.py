@@ -949,9 +949,12 @@ def _build_compact_banner() -> str:
     )
 
 
-def _panel_box_width(title: str, content_lines: list[str], min_width: int = 46, max_width: int = 76) -> int:
+def _panel_box_width(
+    title: str, content_lines: list[str], min_width: int = 46, max_width: int = 76,
+    *, terminal_cols: int | None = None,
+) -> int:
     """Stable TUI panel width wide enough for the title and content (incl. borders)."""
-    term_cols = shutil.get_terminal_size((100, 20)).columns
+    term_cols = terminal_cols if terminal_cols is not None else shutil.get_terminal_size((100, 20)).columns
     longest = max([len(title)] + [len(line) for line in content_lines] + [min_width - 4])
     inner = min(max(longest + 4, min_width - 2), max_width - 2, max(24, term_cols - 6))
     return inner + 2  # leading/trailing space inside the borders

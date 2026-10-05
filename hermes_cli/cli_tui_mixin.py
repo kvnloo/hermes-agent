@@ -39,6 +39,7 @@ from prompt_toolkit.widgets import TextArea
 from typing import Optional
 
 from hermes_cli.cli_footer_split import FooterSplit
+from hermes_cli.cli_panel import Panel, terminal_columns
 
 # Rows below an overlay panel taken by spinner/tool-progress, status bar, input, separators and
 # prompt symbol (measured ~6 during live PTY approval prompts) — shared by every panel budget.
@@ -82,47 +83,6 @@ def _num_prefix(i: int) -> str:
 
 def _term_rows() -> int:
     return shutil.get_terminal_size((100, 24)).lines
-
-
-def _term_cols() -> int:
-    """Live terminal width: prompt_toolkit's size follows resizes; shutil covers
-    callers outside a running app (tests, early startup)."""
-    try:
-        from prompt_toolkit.application import get_app
-        from prompt_toolkit.application.dummy import DummyApplication
-
-        app = get_app()
-        if not isinstance(app, DummyApplication):  # DummyOutput always reports 80x24
-            return app.output.get_size().columns
-    except Exception:
-        pass
-    return shutil.get_terminal_size((100, 24)).columns
-
-
-class _Panel:
-    """Fragment accumulator for one bordered overlay panel (``(style, text)`` tuples)."""
-
-    def __init__(self, border: str, box_width: int, title: str = "", title_style: str = ""):
-        from cli import _append_blank_panel_line, _append_panel_line
-        self.lines, self.border, self.width = [], border, box_width
-        self._row, self._blank = _append_panel_line, _append_blank_panel_line
-        if title:
-            # Title inlined into the top rule: ``╭─ Title ───╮``.
-            self.lines.append((border, "╭─ "))
-            self.lines.append((title_style, title))
-            self.lines.append((border, " " + ("─" * max(0, box_width - len(title) - 3)) + "╮\n"))
-        else:
-            self.lines.append((border, "╭" + ("─" * box_width) + "╮\n"))
-
-    def row(self, style: str, text: str) -> None:
-        self._row(self.lines, self.border, style, text, self.width)
-
-    def blank(self) -> None:
-        self._blank(self.lines, self.border, self.width)
-
-    def close(self) -> list:
-        self.lines.append((self.border, "╰" + ("─" * self.width) + "╯\n"))
-        return self.lines
 
 
 def _wrap_rows(wrap, items, width, indent) -> list[tuple[int, str]]:
@@ -187,7 +147,7 @@ class CLITuiMixin:
         if len(detail_wrapped) > max_detail_rows:
             detail_wrapped = detail_wrapped[:max(1, max_detail_rows - 1)] + [t("cli.tui.detail_truncated")]
 
-        panel = _Panel('class:approval-border', box_width)
+        panel = Panel('class:approval-border', box_width)
         panel.row('class:approval-title', title)
         panel.blank()
         for wrapped in detail_wrapped:
@@ -266,7 +226,7 @@ class CLITuiMixin:
 
         # Render title → command → choices → description; description last so any overflow
         # clips the least-critical content, never the command or choices.
-        panel = _Panel('class:approval-border', box_width)
+        panel = Panel('class:approval-border', box_width)
         panel.row('class:approval-title', title)
         if not use_compact_chrome:
             panel.blank()
@@ -552,12 +512,12 @@ class CLITuiMixin:
 
         # Preview wrap and box cap follow the live width — the shared helper's
         # default max_width=76 caps panels at ~67 columns on wide terminals.
-        cols = _term_cols()
+        cols = terminal_columns()
         preview_rows, _ = _status_rows(max(24, cols - 10))
         box_width = _panel_box_width(
             title,
             [header] + [text for _, text in preview_rows],
-            max_width=max(76, cols - 4),
+            max_width=max(76, cols - 4), terminal_cols=cols,
         )
         rows, focus = _status_rows(max(8, box_width - 2))
         # The panel is an unsized Window, so rows past the viewport are clipped from the
@@ -571,7 +531,7 @@ class CLITuiMixin:
             first = max(0, min(first, len(rows) - budget))
             rows = rows[first:first + budget]
 
-        panel = _Panel('class:clarify-border', box_width, title, 'class:clarify-title')
+        panel = Panel('class:clarify-border', box_width, title, 'class:clarify-title')
         panel.row('class:clarify-question', header)
         for style, text in rows:
             panel.row(style, text)
@@ -586,7 +546,7 @@ class CLITuiMixin:
         """
         from cli import HermesCLI, _panel_box_width, _wrap_panel_text
         box_width = _panel_box_width(title, [hint] + labels, min_width=min_width, max_width=max_width)
-        # ``_Panel.row`` pads every row to ``box_width - 2``, so that is the real
+        # ``Panel.row`` pads every row to ``box_width - 2``, so that is the real
         # body width. Keep the wrap budget in sync with it and reserve the
         # leading cell for the cursor/indent applied below, rather than the old
         # blanket ``- 6`` which wrapped long labels two columns early.
@@ -602,7 +562,7 @@ class CLITuiMixin:
             selected, state.get("_scroll_offset", 0), len(labels), term_rows)
         state["_scroll_offset"] = scroll_offset
 
-        panel = _Panel('class:clarify-border', box_width, title, 'class:clarify-title')
+        panel = Panel('class:clarify-border', box_width, title, 'class:clarify-title')
         panel.blank()
         panel.row('class:clarify-hint', hint)
         panel.blank()
@@ -693,7 +653,7 @@ class CLITuiMixin:
         """Bordered ``sudo-*`` panel: blank, each body line, blank, body-final line, blank."""
         from cli import _panel_box_width
         box_width = _panel_box_width(title, body_lines)
-        panel = _Panel('class:sudo-border', box_width, title, 'class:sudo-title')
+        panel = Panel('class:sudo-border', box_width, title, 'class:sudo-title')
         panel.blank()
         for i, text in enumerate(body_lines):
             if i == len(body_lines) - 1 and i > 0:
