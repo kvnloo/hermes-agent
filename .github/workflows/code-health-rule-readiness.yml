@@ -1,0 +1,48 @@
+name: code-health semantic rule readiness
+
+on:
+  push:
+    branches:
+      - exp/code-health-rule-readiness-96bb97a
+
+permissions:
+  contents: read
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.1
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install pinned Ruff
+        run: python -m pip install "$(python -m scripts.code_health --print-pins)"
+
+      - name: Fetch upstream main history
+        run: |
+          git remote add upstream https://github.com/NousResearch/hermes-agent.git
+          git fetch --no-tags --depth=20000 upstream main
+
+      - name: Replay fixed corpus
+        run: |
+          PYTHONPATH=. python experiments/code_health_rule_readiness.py \
+            --limit 300 \
+            --since 2026-09-01 \
+            --examples-per-rule 12 \
+            --out rule-readiness
+
+      - name: Upload readiness evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: code-health-rule-readiness
+          path: rule-readiness/
+          retention-days: 14
