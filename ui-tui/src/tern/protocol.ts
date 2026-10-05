@@ -13,6 +13,9 @@ const PARAM_PATTERN = /^[A-Za-z0-9_-]+=[\x21-\x3a\x3c-\x7e]*$/
 
 export const TSP_VERSION = 1
 export const TSP_PREFIX = 'tsp;'
+export const TSP_DEFAULT_APC_LIMIT = 65_536
+
+export type TspVerb = 'b' | 'e' | 'f' | 'o' | 'q' | 'r' | 't' | 'x'
 
 export type TspHello = {
   r: 'hello'
