@@ -53,7 +53,7 @@ tern.command({
             split = "right",
             {
                 launch = {
-                    command = "HERMES_HOME=\"$PWD/.tmp/tern-ux-home\" HERMES_RUNTIME_DIR=\"$PWD/.tmp/tern-ux-runtime\" hermes --tui --native",
+                    command = "HERMES_HOME=\"$PWD/.hermes-sandbox/tern-ux-home\" HERMES_RUNTIME_DIR=\"$PWD/.hermes-sandbox/tern-ux-runtime\" hermes --tui --native",
                 },
             },
             {
