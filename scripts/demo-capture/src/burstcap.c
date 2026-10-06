@@ -9,7 +9,7 @@
 // says how many frames the compositor really delivered, and when. It holds
 // the whole burst in RAM, so size the burst (-n) to fit.
 //
-//   burstcap -o OUTPUT [-g X,Y,W,H] [-n FRAMES] [-t SECONDS] [-a] -f frames.raw
+//   burstcap -o OUTPUT [-g X,Y,W,H] [-n FRAMES] [-t SECONDS] [-a] [-s] -f frames.raw
 //
 //   -o  output name (hyprctl monitors)
 //   -g  region of the output, in output pixels (default: all of it)
@@ -17,6 +17,10 @@
 //   -t  stop after this many seconds (default 10)
 //   -a  take every compositor frame; default waits for damage, so a frame is
 //       only delivered when something on the output changed
+//   -s  stream: write each frame to stdout as it arrives instead of holding
+//       the burst in RAM, for takes too long to hold (pipe it to an encoder;
+//       -f then only names the .json and .times files). Fine at 60 fps, not
+//       a way to go faster: the copy to the pipe is in the loop.
 //
 // Writes FILE (BGRx/XRGB8888-style rows, as the compositor gives them),
 // FILE.json (size, format, counts) and FILE.times (one line per frame:
@@ -159,9 +163,11 @@ int main(int argc, char **argv) {
 	const char *want = NULL, *path = NULL;
 	int rx = 0, ry = 0, rw = 0, rh = 0, opt;
 	double seconds = 10;
-	bool every = false;
+	bool every = false, stream = false;
+	struct wl_buffer *stream_buffer = NULL;
+	void *stream_data = NULL;
 
-	while ((opt = getopt(argc, argv, "o:g:n:t:af:")) != -1) {
+	while ((opt = getopt(argc, argv, "o:g:n:t:asf:")) != -1) {
 		switch (opt) {
 		case 'o': want = optarg; break;
 		case 'g':
@@ -173,6 +179,7 @@ int main(int argc, char **argv) {
 		case 'n': max_frames = strtoul(optarg, NULL, 10); break;
 		case 't': seconds = atof(optarg); break;
 		case 'a': every = true; break;
+		case 's': stream = true; break;
 		case 'f': path = optarg; break;
 		default: return 2;
 		}
@@ -223,8 +230,21 @@ int main(int argc, char **argv) {
 		if (!stamps) {
 			frame_bytes = (size_t)geo.stride * geo.height;
 			pool_frames = POOL_BYTES / frame_bytes ? POOL_BYTES / frame_bytes : 1;
+			if (stream) {
+				// One buffer, reused: each frame goes straight down the pipe.
+				int sfd = memfd_create("burstcap", MFD_CLOEXEC);
+				if (sfd < 0 || ftruncate(sfd, frame_bytes) < 0) {
+					perror("burstcap: frame memory");
+					return 1;
+				}
+				stream_data = mmap(NULL, frame_bytes, PROT_READ, MAP_SHARED, sfd, 0);
+				struct wl_shm_pool *pool = wl_shm_create_pool(shm, sfd, frame_bytes);
+				stream_buffer = wl_shm_pool_create_buffer(pool, 0, geo.width, geo.height, geo.stride, geo.format);
+				wl_shm_pool_destroy(pool);
+				close(sfd);
+			}
 			// Reserve every pool before the clock starts.
-			for (uint32_t i = 0; i < max_frames; i += pool_frames) {
+			for (uint32_t i = 0; !stream && i < max_frames; i += pool_frames) {
 				wl_buffer_destroy(frame_slot(i));
 			}
 			wl_display_roundtrip(display);
@@ -234,7 +254,7 @@ int main(int argc, char **argv) {
 			deadline = started + seconds;
 		}
 
-		struct wl_buffer *buffer = frame_slot(frames);
+		struct wl_buffer *buffer = stream ? stream_buffer : frame_slot(frames);
 		if (every) {
 			zwlr_screencopy_frame_v1_copy(frame, buffer);
 		} else {
@@ -242,9 +262,24 @@ int main(int argc, char **argv) {
 		}
 		while (!frame_done && !frame_failed && wl_display_dispatch(display) != -1) {}
 		zwlr_screencopy_frame_v1_destroy(frame);
-		wl_buffer_destroy(buffer);
+		if (!stream) {
+			wl_buffer_destroy(buffer);
+		}
 		if (frame_failed) {
 			break;
+		}
+		if (stream) {
+			const uint8_t *at = stream_data;
+			size_t left = frame_bytes;
+			while (left) {
+				ssize_t sent = write(STDOUT_FILENO, at, left);
+				if (sent <= 0) {
+					perror("burstcap: writing to the pipe");
+					return 1;
+				}
+				at += sent;
+				left -= sent;
+			}
 		}
 
 		stamps[frames] = frame_time;
@@ -260,12 +295,12 @@ int main(int argc, char **argv) {
 	double wall = now() - started;
 
 	// The burst is over: write the frames out, pool by pool.
-	fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-	if (fd < 0) {
+	fd = stream ? -1 : open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	if (fd < 0 && !stream) {
 		perror("burstcap: output file");
 		return 1;
 	}
-	for (uint32_t p = 0, left = frames; p < pool_count && left; p++) {
+	for (uint32_t p = 0, left = frames; !stream && p < pool_count && left; p++) {
 		uint32_t n = left < pool_frames ? left : pool_frames;
 		off_t at = 0;
 		size_t bytes = (size_t)n * frame_bytes;

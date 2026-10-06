@@ -25,7 +25,7 @@ frames=$(python3 -c "print(int($fps * $seconds * 1.03) + 8)")
 mkdir -p "$DEMO_OUT"
 
 # The burst lives in RAM until it ends: refuse one that would not fit.
-python3 - "$region" "$frames" << 'EOS' || exit 1
+[ "$(cat "$DEMO_STATE/stream" 2> /dev/null)" = 1 ] || python3 - "$region" "$frames" << 'EOS' || exit 1
 import sys
 w, h = (int(v) for v in sys.argv[1].split(',')[2:])
 need = w * h * 4 * int(sys.argv[2])
@@ -59,6 +59,22 @@ if [ -n "$scenario" ]; then
   # {repo} and {state} in a scenario are this checkout and the stage's state dir.
   sed -e "s#{repo}#$repo#g" -e "s#{state}#$DEMO_STATE#g" -e "s#{arg}#$arg#g" "$scenario" > "$DEMO_STATE/take.scn"
   ( tern ctl --control "$sock" --file "$DEMO_STATE/take.scn" > "$DEMO_STATE/take.log" 2>&1 & )
+fi
+
+if [ "$(cat "$DEMO_STATE/stream" 2> /dev/null)" = 1 ]; then
+  # A streaming preset: frames go straight to the encoder, so the take can be any length.
+  size=$(echo "$region" | awk -F, '{print $3 "x" $4}')
+  if ffmpeg -hide_banner -encoders 2> /dev/null | grep -q h264_nvenc; then
+    codec="-c:v h264_nvenc -preset p6 -tune hq -rc constqp -qp 14"
+  else
+    codec="-c:v libx264 -preset veryfast -crf 12"
+  fi
+  "$here/build/burstcap" -o "$DEMO_OUTPUT" -g "$region" -n "$frames" -t "$seconds" -a -s -f "$DEMO_OUT/$name.raw" \
+    | ffmpeg -hide_banner -loglevel error -y -f rawvideo -pix_fmt bgr0 -video_size "$size" -framerate "$fps" -i - \
+      $codec -pix_fmt yuv420p -movflags +faststart "$DEMO_OUT/${name}_native_${fps}fps.mp4"
+  echo "capture: $DEMO_OUT/${name}_native_${fps}fps.mp4"
+  "$here/verify-frames.py" "$DEMO_OUT/${name}_native_${fps}fps.mp4"
+  exit 0
 fi
 
 "$here/build/burstcap" -o "$DEMO_OUTPUT" -g "$region" -n "$frames" -t "$seconds" -a -f "$DEMO_OUT/$name.raw"

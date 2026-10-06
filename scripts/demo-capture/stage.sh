@@ -18,6 +18,7 @@ OUT_W=1920
 OUT_H=1200
 
 fit() {
+  CAP_STREAM=0
   load_preset "$1"
   focus_save
   set -- $(output_xy)
@@ -34,6 +35,7 @@ fit() {
     || hyprctl dispatch setprop "address:$addr" nofocus 1 > /dev/null 2>&1 || true
   echo "$rx,$ry,$CAP_W,$CAP_H" > "$DEMO_STATE/region"
   echo "$CAP_FPS" > "$DEMO_STATE/fps"
+  echo "${CAP_STREAM:-0}" > "$DEMO_STATE/stream"
   focus_restore
   sleep 1
   echo "stage: ${CAP_W}x${CAP_H} window on $DEMO_OUTPUT at $CAP_FPS Hz"
@@ -80,6 +82,9 @@ EOS
   #   splash.sh [DESIGN] [SPLASH_FPS]   the splash gallery, held on one design
   # DEMO_HERMES_HOME names the Hermes home to use; the default is an empty one
   # under the stage, which has no model provider: fine for the launch, not for a prompt.
+  # DEMO_HERMES_MODEL / DEMO_HERMES_PROVIDER pick the model for the take's
+  # session only, the way `hermes --model --provider` does; no config is written.
+  # DEMO_HERMES_CWD is the directory the session works in (keep the agent out of real repos).
   cat > "$DEMO_STATE/hermes.sh" << EOS
 #!/bin/sh
 echo \$\$ > "$DEMO_STATE/app.pid"
@@ -88,6 +93,9 @@ export HERMES_TERN=1 TERM_PROGRAM=tern HERMES_PYTHON_SRC_ROOT="$repo"
 export HERMES_PYTHON="\${HERMES_PYTHON:-${HERMES_PYTHON:-/workspace/hermes-home/hermes-agent/venv/bin/python}}"
 export HERMES_HOME="${DEMO_HERMES_HOME:-$DEMO_STATE/hermes-home}"
 export HERMES_TUI_SPLASH="\${1:-kerykeion}" HERMES_TUI_SPLASH_FPS="\${2:-}"
+[ -z "${DEMO_HERMES_MODEL:-}" ] || export HERMES_MODEL="${DEMO_HERMES_MODEL:-}" HERMES_INFERENCE_MODEL="${DEMO_HERMES_MODEL:-}"
+[ -z "${DEMO_HERMES_PROVIDER:-}" ] || export HERMES_TUI_PROVIDER="${DEMO_HERMES_PROVIDER:-}" HERMES_INFERENCE_PROVIDER="${DEMO_HERMES_PROVIDER:-}"
+[ -z "${DEMO_HERMES_CWD:-}" ] || export HERMES_TUI_CWD="${DEMO_HERMES_CWD:-}"
 unset TMUX STY ZELLIJ
 exec node "$repo/ui-tsp/dist/entry.js" 2> "$DEMO_STATE/hermes.err"
 EOS

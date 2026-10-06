@@ -133,13 +133,24 @@ fourth argument of `capture.sh`.
 | `design` | One splash design from its first frame. `ARG` is the design. |
 | `themes` | One design held while Tern's themes change under it, ending on `hermes`. |
 | `native-motion` | Tern-native motion only: eased scrolling, splits, zoom. |
+| `agent-turn` | A real launch and a real prompt: splash, hand-off, tool cards, streamed answer. `ARG` is the prompt. |
+| `beside-shell` | Hermes answering in one pane while a shell runs beside it. `ARG` is the prompt. |
+| `chrome-themes` | A finished turn, then Tern's themes changing under the chrome. `ARG` is the prompt. |
 
 The stage's Hermes home is empty, so `launch` shows the real launch but has no model
-provider. To record a prompt and a streamed answer, bring the stage up with your own:
+provider. The three scenarios above need a real one. Name it when the stage comes up, with
+the model for the take's session only (nothing is written to the config) and a throwaway
+directory for the agent to work in:
 
 ```sh
-DEMO_HERMES_HOME=~/.hermes ./stage.sh up 1080p120      # your real Hermes home: real model, real cost
+DEMO_HERMES_HOME=~/.hermes DEMO_HERMES_MODEL=openrouter/free DEMO_HERMES_PROVIDER=openrouter \
+DEMO_HERMES_CWD=/tmp/hermes-demo-capture/project ./stage.sh up 1080p60
+./capture.sh agent-turn 75 agent-turn "What does this project do? Read the code and answer in two sentences."
 ```
+
+A turn runs far longer than a burst fits in RAM, so these use the streaming presets
+(`1080p60`, `720p60`): frames go straight to an encoder and the take can be any length, at
+normal speed only. In testing a 75-second 1080p60 take missed 1.8% of frames.
 
 ## Files
 

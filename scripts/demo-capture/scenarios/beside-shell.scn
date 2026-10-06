@@ -1,0 +1,14 @@
+# Hermes working in one pane while a shell runs beside it, as the Tern
+# homepage shows its agent. Streaming preset; record about 60 seconds.
+#   capture.sh beside-shell 60 beside-shell "Which channel does an alert go to? Check the code and answer in one sentence."
+# The prompt goes in before the split: once the shell beside it is printing,
+# the pane never settles and `focus` would wait on it.
+run "{state}/hermes.sh 0"
+wait 5000
+type "{arg}"
+wait 700
+key enter
+wait 1500
+split right
+wait 900
+run "cd {state}/project && git log --oneline -3 && for i in $(seq 1 600); do echo tick $i; sleep .12; done"

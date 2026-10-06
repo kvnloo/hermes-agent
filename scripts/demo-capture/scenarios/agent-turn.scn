@@ -1,0 +1,9 @@
+# Hermes answering a real prompt: launch, splash, hand-off, prompt, tool
+# cards, streamed answer. Needs a Hermes home with a model (DEMO_HERMES_HOME)
+# and a streaming preset; record 60 to 90 seconds for a free model.
+#   capture.sh agent-turn 75 agent-turn "What does this project do? Read the code and answer in two sentences."
+run "{state}/hermes.sh kerykeion"
+wait 5200
+type "{arg}"
+wait 700
+key enter
