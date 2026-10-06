@@ -56,7 +56,9 @@ export function projectTernSubagents(subagents: readonly SubagentProgress[]): re
         stats,
         depth: agent.depth > 0 ? agent.depth : undefined,
         collapsible: true,
-        collapsed: running
+        // Keep the authored value stable so a Tern-side disclosure toggle is not
+        // overwritten when lifecycle/stats update in place.
+        collapsed: true
       },
       ...(children.length ? { c: children } : {})
     }
