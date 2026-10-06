@@ -611,6 +611,16 @@ class LSPService:
             # Binary not locatable (auto-install off, manual-only, or install failed) — surface once.
             eventlog.log_server_unavailable(srv.server_id, srv.server_id)
             return None
+        from agent.lsp.omp_mux import mux_socket, omp_server_command
+        if mux_socket():
+            extension = srv.extensions[0] if srv.extensions else ""
+            resolved = await omp_server_command(root, extension)
+            if not resolved:
+                eventlog.log_server_unavailable(srv.server_id, "omp-mux")
+                return None
+            spec.command = [resolved["command"], *resolved["args"]]
+            spec.cwd = resolved["cwd"]
+            spec.env = {}
         client = LSPClient(
             server_id=srv.server_id, workspace_root=spec.workspace_root, command=spec.command, env=spec.env,
             cwd=spec.cwd, initialization_options=spec.initialization_options,

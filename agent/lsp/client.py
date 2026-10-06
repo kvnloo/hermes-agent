@@ -248,8 +248,14 @@ class LSPClient:
 
     async def _spawn(self) -> None:
         from agent.delegation_context import delegated_child_subprocess_env
+        from agent.lsp.omp_mux import attach_omp_mux, mux_socket
         from tools.environments.local import hermes_subprocess_env
         cmd = self._command
+        if mux_socket():
+            self._proc = await attach_omp_mux(cmd, self._cwd)
+            self._stderr_task = asyncio.create_task(self._drain_stderr())
+            self._reader_task = asyncio.create_task(self._reader_loop())
+            return
         if sys.platform == "win32" and cmd[0].lower().endswith((".cmd", ".bat")):
             cmd = ["cmd.exe", "/c", *cmd]  # CreateProcess can't run .cmd/.bat shims directly
         try:
