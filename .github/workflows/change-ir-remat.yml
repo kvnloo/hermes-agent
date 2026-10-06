@@ -1,0 +1,26 @@
+name: Change IR rematerialization
+
+on:
+  push:
+    branches:
+      - exp/change-ir-remat-105624-sibling-observe
+
+permissions:
+  contents: read
+
+jobs:
+  targeted:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+
+      - name: Set up Hermes test environment
+        uses: ./.github/actions/setup-pm
+        with:
+          extras: '["all"]'
+          test-environment: 'true'
+
+      - name: Telegram sibling-observe regression
+        run: python -m pytest tests/gateway/test_telegram_group_gating.py -q
