@@ -35,13 +35,30 @@ interface Card {
 const str = (v: unknown): string | undefined => (typeof v === 'string' && v ? v : undefined)
 
 const READ_PREVIEW_LINES = 3
+const BASH_PREVIEW_LINES = 10
 
 function plainOutput(text: string): string {
   return text.replace(/\u001b\[[0-9;?]*[ -/]*[@-~]/g, '').replace(/\r/g, '')
 }
 
+function commandText(value: unknown, fallback?: string): string | undefined {
+  if (typeof value === 'string' && value) return value
+  if (Array.isArray(value)) {
+    const text = value.map(part => (typeof part === 'string' ? part : '')).filter(Boolean).join(' ')
+    if (text) return text
+  }
+  return fallback || undefined
+}
+
+function clipLines(text: string, limit: number, from: 'head' | 'tail'): { hidden: number; shown: string } {
+  const lines = plainOutput(text).replace(/\n$/, '').split('\n')
+  if (lines.length <= limit) return { hidden: 0, shown: lines.join('\n') }
+  const shown = (from === 'tail' ? lines.slice(-limit) : lines.slice(0, limit)).join('\n')
+  return { hidden: lines.length - limit, shown }
+}
+
 function outputCode(key: string, text: string, lang = 'text'): JSX.Element {
-  return <code key={key} lang={lang} numbers={false} text={plainOutput(text).replace(/\n$/, '')} />
+  return <code key={key} lang={lang} numbers={false} text={text} />
 }
 /** The `tool` node of one call. */
 export function toolNode(call: ToolCall, now: number): JSX.Element {
@@ -97,6 +114,7 @@ function cardOf(call: ToolCall, now: number): Card {
   switch (call.name) {
     case 'terminal':
     case 'shell':
+    case 'bash':
       return bashCard(call, result)
 
     case 'cronjob_manage':
@@ -117,11 +135,16 @@ function cardOf(call: ToolCall, now: number): Card {
     case 'password':
       return { body: [], frame: 'inline', name: 'secret', title: 'Secret' }
 
+    case 'read':
     case 'read_file':
       return readCard(call, result)
 
     case 'patch':
-
+    case 'edit':
+    case 'edit_file':
+    case 'str_replace':
+    case 'apply_patch':
+    case 'write':
     case 'write_file':
       return editCard(call, result)
 
@@ -209,20 +232,21 @@ function cardOf(call: ToolCall, now: number): Card {
 }
 
 function bashCard(call: ToolCall, result: Record<string, unknown> | undefined): Card {
-  // The cancelled card's notice already says the command was interrupted.
   const output = (str(result?.output) ?? call.resultText)?.replace(/\s*\[Command interrupted\]\s*$/, '')
   const error = str(result?.error)
+  const clipped = output ? clipLines(output, BASH_PREVIEW_LINES, 'tail') : undefined
 
   return {
+    badges: clipped && clipped.hidden > 0 ? [{ text: `${clipped.hidden} more lines`, tone: 'muted' }] : undefined,
     body: [
-      ...(output ? [outputCode('out', output, 'bash')] : []),
+      ...(clipped?.shown ? [outputCode('out', clipped.shown, 'bash')] : []),
       ...(error ? [<text key="err" role="omp.tool.error" spans={[{ s: 'error', t: error }]} wrap="word" />] : [])
     ],
     folded: true,
     lang: 'bash',
     name: 'bash',
-    preview: { tail: 10 },
-    target: str(call.args.command) ?? call.context,
+    preview: { tail: BASH_PREVIEW_LINES },
+    target: commandText(call.args.command, call.context),
     targetKind: 'command',
     title: 'Bash'
   }
@@ -238,11 +262,11 @@ function readCard(call: ToolCall, result: Record<string, unknown> | undefined): 
   const whole = first === 1 && last !== undefined && last === total
   const meta = first !== undefined && last !== undefined ? [whole ? `${total} lines` : `:${first}-${last}`] : []
   const text = content?.replace(/^ *\d+\|/gm, '') ?? ''
-  const hidden = Math.max(0, text.split('\n').filter(line => line.length > 0).length - READ_PREVIEW_LINES)
+  const clipped = text ? clipLines(text, READ_PREVIEW_LINES, 'head') : undefined
 
   return {
-    badges: hidden > 0 ? [{ text: `${hidden} more line${hidden === 1 ? '' : 's'}`, tone: 'muted' }] : undefined,
-    body: text ? [<code key="code" lang={langOf(path)} numbers start={first} text={text} />] : [],
+    badges: clipped && clipped.hidden > 0 ? [{ text: `${clipped.hidden} more lines`, tone: 'muted' }] : undefined,
+    body: clipped?.shown ? [<code key="code" lang={langOf(path)} numbers start={first} text={clipped.shown} />] : [],
     folded: true,
     frame: 'inline',
     lang: langOf(path),
@@ -293,9 +317,14 @@ function editCard(call: ToolCall, result: Record<string, unknown> | undefined): 
   if (!diff) {
     return {
       ...head,
-      body: diagnostics
-        ? [<text key="lsp" role="omp.tool.notice" spans={[{ s: 'error', t: diagnostics }]} wrap="word" />]
-        : []
+      body: [
+        <text key="none" role="omp.tool.notice" spans={[{ s: 'muted', t: 'No changes' }]} />,
+        ...(diagnostics
+          ? [<text key="lsp" role="omp.tool.notice" spans={[{ s: 'error', t: diagnostics }]} wrap="word" />]
+          : [])
+      ],
+      folded: true,
+      frame: 'inline'
     }
   }
 
@@ -651,6 +680,8 @@ function evalCard(call: ToolCall, result: Record<string, unknown> | undefined): 
   const language = str(call.args.language) === 'js' || str(call.args.language) === 'javascript' ? 'javascript' : 'python'
   const output = str(result?.output) ?? str(result?.stdout) ?? call.resultText
   const error = str(result?.error) ?? str(result?.stderr)
+  const source = code ? clipLines(code, 8, 'head') : undefined
+  const clipped = output ? clipLines(output, 8, 'tail') : undefined
 
   return {
     badges: [{ text: language }],
@@ -658,23 +689,24 @@ function evalCard(call: ToolCall, result: Record<string, unknown> | undefined): 
       <col key="cell-0" role="omp.tool.eval.cell">
         <row align="start" key="input" role="omp.tool.eval.input">
           <icon aria="Input" key="0" name="arrow-left" role="omp.tool.eval.prompt" />
-          <code key="code" lang={language} numbers={false} text={code} />
+          <code key="code" lang={language} numbers={false} text={source?.shown ?? ''} />
         </row>
-        {output || error ? (
+        {clipped?.shown || error ? (
           <row align="start" key="result" role="omp.tool.eval.result">
             <icon aria="Output" key="0" name="arrow-right" role="omp.tool.eval.prompt" />
             <col key="outputs" role="omp.tool.eval.outputs">
-              {output ? outputCode('out', output, language) : null}
+              {clipped?.shown ? outputCode('out', clipped.shown, language) : null}
               {error ? <text key="err" role="omp.tool.error" spans={[{ s: 'error', t: error }]} wrap="word" /> : null}
             </col>
           </row>
         ) : null}
       </col>
     ],
-    folded: false,
+    folded: true,
     name: 'eval',
+    preview: { lines: 8 },
     role: 'omp.tool.eval',
-    title: firstLine(code)?.startsWith('#') ? (firstLine(code)?.replace(/^#+\s*/, '') ?? 'Eval') : 'Eval'
+    title: 'Eval'
   }
 }
 
@@ -685,7 +717,7 @@ function genericBody(call: ToolCall): JSX.Element[] {
     return []
   }
 
-  return [<code key="out" lang={/^\s*[[{]/.test(text) ? 'json' : 'text'} text={clip(text, 4000)} />]
+  return [<code key="out" lang="text" numbers={false} text={clipLines(text, 8, 'head').shown} />]
 }
 
 function errorOf(call: ToolCall): string | undefined {

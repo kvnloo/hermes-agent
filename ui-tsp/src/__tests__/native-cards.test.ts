@@ -35,6 +35,13 @@ describe('native tool cards', () => {
     expect(card.children[0]?.props.text).toBe('total 1')
   })
 
+  it('puts a command array on the Bash head', () => {
+    const card = toolNode(call({ args: { command: ['ls', '-la'] }, context: '/tmp', name: 'terminal' }), 0)
+
+    expect(card.props.target).toBe('ls -la')
+    expect(card.props.title).toBe('Bash')
+  })
+
   it('folds a long read to three lines and badges the rest', () => {
     const card = toolNode(
       call({
@@ -48,7 +55,10 @@ describe('native tool cards', () => {
     expect(card.props).toMatchObject({
       badges: [{ text: '2 more lines', tone: 'muted' }],
       name: 'read',
-      preview: { lines: 3 }
+      preview: { lines: 3 },
+      target: 'src/index.ts',
+      title: 'Read'
     })
+    expect(card.children[0]?.props.text).toBe('a\nb\nc')
   })
 })
