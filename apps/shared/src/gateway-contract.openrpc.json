@@ -35855,6 +35855,11 @@
             "default": null,
             "title": "Duration S"
           },
+          "failed": {
+            "default": false,
+            "title": "Failed",
+            "type": "boolean"
+          },
           "result": {
             "default": null,
             "title": "Result"
