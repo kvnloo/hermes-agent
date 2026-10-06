@@ -105,7 +105,7 @@ export function projectTernTools(
       continue
     }
 
-    const historyId = `history:${row.key.replace(/:c\\d+$/, '')}`
+    const historyId = `history:${row.key.replace(/:c\d+$/, '')}`
     put(historyId, {
       id: `hermes:tool-${historyId}`,
       k: 'text',
