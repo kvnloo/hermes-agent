@@ -5,10 +5,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from runpy import run_path
-
-import httpx
 from types import SimpleNamespace
 
+import httpx
 import pytest
 
 
