@@ -18,6 +18,7 @@ from __future__ import annotations
 import errno
 import importlib.abc
 import importlib.util
+import ipaddress
 import os
 import selectors
 import socket
@@ -28,6 +29,8 @@ _IS_WINDOWS = sys.platform == "win32"
 _bootstrap_applied = False
 _HAPPY_EYEBALLS_DELAY_SECONDS = 0.25
 _URLLIB3_CONNECTION_MODULE = "urllib3.util.connection"
+_TAILSCALE_IPV4_NETWORK = ipaddress.ip_network("100.64.0.0/10")
+_TAILSCALE_IPV6_NETWORK = ipaddress.ip_network("fd7a:115c:a1e0::/48")
 
 
 def _interleave_addrinfos(addrinfos: list[tuple]) -> list[tuple]:
@@ -226,8 +229,25 @@ def install_happy_eyeballs_socket_connect() -> None:
     install_tailscale_mtu_clamp()
 
 
+def _is_tailscale_tcp_peer(sock: socket.socket) -> bool:
+    """True only for connected TCP sockets whose peer is in Tailscale assigned address space."""
+    try:
+        # socket.type may carry SOCK_NONBLOCK/CLOEXEC bits; mask the transport kind.
+        if (sock.type & socket.SOCK_STREAM) != socket.SOCK_STREAM:
+            return False
+        peer = sock.getpeername()
+        if not (isinstance(peer, tuple) and isinstance(peer[0], str)):
+            return False
+        # IPv6 peer labels may include a scope id (%interface).
+        address = ipaddress.ip_address(peer[0].split("%", 1)[0])
+        network = _TAILSCALE_IPV4_NETWORK if address.version == 4 else _TAILSCALE_IPV6_NETWORK
+        return address in network
+    except (OSError, ValueError, TypeError):
+        return False
+
+
 def install_tailscale_mtu_clamp() -> None:
-    """Clamp outbound TCP segment payloads to Tailscale IPs (100.64.0.0/10 and fd7a::/16).
+    """Clamp outbound TCP writes to Tailscale peers (100.64.0.0/10 and fd7a:115c:a1e0::/48).
 
     Direct peer-to-peer WireGuard connections over IPv6 through some ISPs (e.g., Telkom Indonesia PPPoE)
     have a Path MTU of ~1250 bytes. The virtual Tailscale adapter MTU defaults to 1280, producing
@@ -235,9 +255,9 @@ def install_tailscale_mtu_clamp() -> None:
     packet reaches ~1320 bytes and is silently dropped by the ISP router without ICMP feedback.
     This causes any payload > 1KB (such as LLM requests with tools and system prompt) to hang and time out.
 
-    By clamping socket.send and socket.sendall to 1000-byte chunks with TCP_NODELAY and a 5ms pacing interval,
-    all packets stay strictly within the path MTU limit without needing elevated admin privileges to modify
-    the system adapter MTU.
+    By clamping TCP socket.send and socket.sendall to 1000-byte chunks with TCP_NODELAY and a 5ms pacing
+    interval, packets stay within the path MTU limit without changing datagram message boundaries or
+    touching unrelated 100.0.0.0/8 traffic.
     """
     if getattr(socket.socket, "_hermes_tailscale_clamped", False):
         return
@@ -245,18 +265,8 @@ def install_tailscale_mtu_clamp() -> None:
     orig_send = socket.socket.send
     orig_sendall = socket.socket.sendall
 
-    def _is_tailscale_peer(sock: socket.socket) -> bool:
-        try:
-            peer = sock.getpeername()
-            if isinstance(peer, tuple) and isinstance(peer[0], str):
-                addr = peer[0]
-                return addr.startswith("100.") or addr.startswith("fd7a:")
-        except Exception:
-            pass
-        return False
-
     def _clamped_send(self, data, flags=0):
-        if _is_tailscale_peer(self):
+        if _is_tailscale_tcp_peer(self):
             try:
                 self.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             except Exception:
@@ -269,7 +279,7 @@ def install_tailscale_mtu_clamp() -> None:
         return orig_send(self, data, flags)
 
     def _clamped_sendall(self, data, flags=0):
-        if _is_tailscale_peer(self):
+        if _is_tailscale_tcp_peer(self):
             try:
                 self.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             except Exception:
@@ -288,7 +298,6 @@ def install_tailscale_mtu_clamp() -> None:
     socket.socket.send = _clamped_send
     socket.socket.sendall = _clamped_sendall
     socket.socket._hermes_tailscale_clamped = True  # type: ignore[attr-defined]
-
 
 def apply_windows_utf8_bootstrap() -> bool:
     """Apply the Windows UTF-8 bootstrap once; True only when it was applied this call."""

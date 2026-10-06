@@ -847,17 +847,24 @@ class GeminiNativeClient:
         return {"x-goog-api-key": self.api_key}
 
     def _headers(self) -> Dict[str, str]:
+        auth_headers = self._auth_headers()
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json",
-            **self._auth_headers(),
+            **auth_headers,
             "User-Agent": f"{_API_CLIENT} (gemini-native)",
             "X-Goog-Api-Client": _API_CLIENT,
             **self._default_headers,
         }
-        # Prevent Google from treating the request as OAuth2 and failing with 401 (#69031)
-        headers.pop("Authorization", None)
-        headers.pop("authorization", None)
+        # API-key Gemini must not inherit an OpenAI-style Bearer from generic defaults (#69031),
+        # but subclasses such as Solstice intentionally authenticate with OAuth in _auth_headers().
+        intentional_authorization = next(
+            (value for key, value in auth_headers.items() if key.lower() == "authorization"), None
+        )
+        for key in [key for key in headers if key.lower() == "authorization"]:
+            headers.pop(key, None)
+        if intentional_authorization is not None:
+            headers["Authorization"] = intentional_authorization
         return headers
 
     def _http_error(self, response: httpx.Response, body_text: Optional[str] = None) -> "GeminiAPIError":

@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
+from runpy import run_path
 from types import SimpleNamespace
 
+import httpx
 import pytest
 
 
@@ -314,6 +317,73 @@ def test_native_client_uses_x_goog_api_key_and_native_models_endpoint(monkeypatc
     assert recorded["headers"]["x-goog-api-key"] == "AIza-test"
     assert "Authorization" not in recorded["headers"]
     assert response.choices[0].message.content == "hello"
+
+
+def _capture_native_auth_headers(client_cls, api_key: str, *, stream: bool) -> httpx.Headers:
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        event = {
+            "candidates": [
+                {
+                    "content": {"parts": [{"text": "hello"}]},
+                    "finishReason": "STOP",
+                }
+            ]
+        }
+        if stream:
+            body = f"data: {json.dumps(event)}\n\n".encode()
+            return httpx.Response(
+                200,
+                headers={"content-type": "text/event-stream"},
+                content=body,
+                request=request,
+            )
+        return httpx.Response(200, json=event, request=request)
+
+    http = httpx.Client(transport=httpx.MockTransport(handler))
+    client = client_cls(
+        api_key=api_key,
+        http_client=http,
+        default_headers={"Authorization": "Bearer accidental-generic-default"},
+    )
+    try:
+        response = client.chat.completions.create(
+            model="gemini-2.5-flash",
+            messages=[{"role": "user", "content": "Hello"}],
+            stream=stream,
+        )
+        if stream:
+            list(response)
+    finally:
+        client.close()
+
+    assert len(seen) == 1
+    return seen[0].headers
+
+
+@pytest.mark.parametrize("stream", [False, True])
+def test_native_gemini_strips_accidental_default_authorization_on_final_request(stream):
+    from agent.gemini_native_adapter import GeminiNativeClient
+
+    headers = _capture_native_auth_headers(GeminiNativeClient, "AIza-test", stream=stream)
+
+    assert headers["x-goog-api-key"] == "AIza-test"
+    assert "authorization" not in headers
+
+
+@pytest.mark.parametrize("stream", [False, True])
+def test_solstice_preserves_oauth_authorization_on_final_request(stream):
+    transport = run_path(
+        str(Path(__file__).parents[2] / "plugins" / "model-providers" / "solstice" / "transport.py")
+    )
+    SolsticeClient = transport["SolsticeClient"]
+
+    headers = _capture_native_auth_headers(SolsticeClient, "synthetic-review-token", stream=stream)
+
+    assert headers["authorization"] == "Bearer synthetic-review-token"
+    assert "x-goog-api-key" not in headers
 
 
 
