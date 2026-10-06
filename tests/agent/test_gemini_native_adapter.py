@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
+from runpy import run_path
 
 import httpx
 from types import SimpleNamespace
@@ -374,7 +376,10 @@ def test_native_gemini_strips_accidental_default_authorization_on_final_request(
 
 @pytest.mark.parametrize("stream", [False, True])
 def test_solstice_preserves_oauth_authorization_on_final_request(stream):
-    from plugins.model-providers.solstice.transport import SolsticeClient
+    transport = run_path(
+        str(Path(__file__).parents[2] / "plugins" / "model-providers" / "solstice" / "transport.py")
+    )
+    SolsticeClient = transport["SolsticeClient"]
 
     headers = _capture_native_auth_headers(SolsticeClient, "synthetic-review-token", stream=stream)
 
