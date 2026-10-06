@@ -36,6 +36,25 @@ const str = (v: unknown): string | undefined => (typeof v === 'string' && v ? v 
 
 /** OMP shows three code lines on a collapsed read, then a more-lines badge. */
 const READ_PREVIEW_LINES = 3
+const WRITE_PREVIEW_LINES = 8
+const BASH_PREVIEW_TAIL = 10
+const DIFF_PREVIEW_LINES = 12
+const EVAL_PREVIEW_LINES = 8
+
+function nonemptyLines(text: string): number {
+  return text.split('\n').filter(line => line.length > 0).length
+}
+
+/** The retired pane's fold: a short preview, then a more-lines badge. A blank head is worse. */
+function moreBadge(lineCount: number, shown: number): Card['badges'] {
+  const hidden = Math.max(0, lineCount - shown)
+
+  if (hidden <= 0) {
+    return undefined
+  }
+
+  return [{ text: `${hidden} more line${hidden === 1 ? '' : 's'}`, tone: 'muted' }]
+}
 
 /** The `tool` node of one call. */
 export function toolNode(call: ToolCall, now: number): JSX.Element {
@@ -55,9 +74,9 @@ export function toolNode(call: ToolCall, now: number): JSX.Element {
     )
   }
 
-  // A failure with output unfolds to show it (omp's failed bash); one without
-  // says why in the head (omp's failed read).
-  const collapsed = call.status === 'error' ? false : card.folded
+  // A failure keeps the error status and the same fold as a success. The
+  // preview shows the tail. Do not hide the body, and do not dump it open.
+  const collapsed = card.folded
 
   return node(
     'tool',
@@ -207,7 +226,10 @@ function bashCard(call: ToolCall, result: Record<string, unknown> | undefined): 
   const output = (str(result?.output) ?? call.resultText)?.replace(/\s*\[Command interrupted\]\s*$/, '')
   const error = str(result?.error)
 
+  const shown = output ? nonemptyLines(output) : 0
+
   return {
+    badges: moreBadge(shown, BASH_PREVIEW_TAIL),
     body: [
       ...(output ? [<ansi follow={call.status === 'running'} key="out" text={output} />] : []),
       ...(error ? [<text key="err" role="omp.tool.error" spans={[{ s: 'error', t: error }]} wrap="word" />] : [])
@@ -215,7 +237,7 @@ function bashCard(call: ToolCall, result: Record<string, unknown> | undefined): 
     folded: true,
     lang: 'bash',
     name: 'bash',
-    preview: { tail: 10 },
+    preview: { tail: BASH_PREVIEW_TAIL },
     target: str(call.args.command) ?? call.context,
     targetKind: 'command',
     title: 'Bash'
@@ -267,11 +289,13 @@ function editCard(call: ToolCall, result: Record<string, unknown> | undefined): 
   // A new file is all additions: omp shows it as the file, numbered, with a badge.
   if (write && content && (!diff || diff.startsWith('@@ -0,0 '))) {
     const text = content.replace(/\n$/, '')
-    const lines = text.split('\n').length
+    const lines = nonemptyLines(text)
+    const fileBadge = diff ? [{ text: 'new file', tone: 'success' }] : []
+    const badges = [...fileBadge, ...(moreBadge(lines, WRITE_PREVIEW_LINES) ?? [])]
 
     return {
       ...head,
-      badges: diff ? [{ text: 'new file', tone: 'success' }] : undefined,
+      badges: badges.length ? badges : undefined,
       body: [
         <code key="code" lang={lang ?? 'text'} numbers text={text} />,
         ...(diagnostics
@@ -280,7 +304,7 @@ function editCard(call: ToolCall, result: Record<string, unknown> | undefined): 
       ],
       folded: true,
       meta: [`${lines} line${lines === 1 ? '' : 's'}`],
-      preview: { lines: 8 }
+      preview: { lines: WRITE_PREVIEW_LINES }
     }
   }
 
@@ -294,16 +318,21 @@ function editCard(call: ToolCall, result: Record<string, unknown> | undefined): 
   }
 
   const { added, removed } = diffStats(diff)
+  const lines = nonemptyLines(diff)
+  const fold = lines > DIFF_PREVIEW_LINES
 
   return {
     ...head,
+    badges: moreBadge(lines, DIFF_PREVIEW_LINES),
     body: [
       <diff key="diff" lang={lang} text={diff} />,
       ...(diagnostics
         ? [<text key="lsp" role="omp.tool.notice" spans={[{ s: 'error', t: diagnostics }]} wrap="word" />]
         : [])
     ],
-    meta: [`+${added} −${removed}`]
+    folded: fold,
+    meta: [`+${added} −${removed}`],
+    preview: fold ? { lines: DIFF_PREVIEW_LINES } : undefined
   }
 }
 
@@ -646,8 +675,11 @@ function evalCard(call: ToolCall, result: Record<string, unknown> | undefined): 
   const output = str(result?.output) ?? str(result?.stdout) ?? call.resultText
   const error = str(result?.error) ?? str(result?.stderr)
 
+  const outLines = output ? nonemptyLines(output) : 0
+  const fold = outLines > EVAL_PREVIEW_LINES
+
   return {
-    badges: [{ text: language }],
+    badges: [{ text: language }, ...(moreBadge(outLines, EVAL_PREVIEW_LINES) ?? [])],
     body: [
       <col key="cell-0" role="omp.tool.eval.cell">
         <row align="start" key="input" role="omp.tool.eval.input">
@@ -667,8 +699,9 @@ function evalCard(call: ToolCall, result: Record<string, unknown> | undefined): 
         ) : null}
       </col>
     ],
-    folded: false,
+    folded: fold,
     name: 'eval',
+    preview: fold ? { lines: EVAL_PREVIEW_LINES } : undefined,
     role: 'omp.tool.eval',
     title: firstLine(code)?.startsWith('#') ? (firstLine(code)?.replace(/^#+\s*/, '') ?? 'Eval') : 'Eval'
   }
