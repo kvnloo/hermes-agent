@@ -9,7 +9,7 @@ import { $uiState } from '../app/uiStore.js'
 import { NATIVE_MODE } from '../config/env.js'
 import { encodeTspJson, HERMES_TSP_PROGRAM_FEATURES, type TspEvent, type TspHello } from './protocol.js'
 import { projectTernTranscript, reconcileTernLiveNodes, type TernLiveNode } from './liveProjection.js'
-import { projectTernActiveTools } from './toolProjection.js'
+import { projectTernTools } from './toolProjection.js'
 import { $ternSurface, subscribeTernSurfaceEvents } from './surface.js'
 
 export const TERN_SURFACE_ID = 'hermes:session'
@@ -360,9 +360,13 @@ export function useTernComposerSurface(composer: AppLayoutComposerProps, transcr
   const { busy } = useStore($uiState)
   const streaming = useTurnSelector(state => state.streaming)
   const activeTools = useTurnSelector(state => state.tools)
+  const streamSegments = useTurnSelector(state => state.streamSegments)
   const main = useMemo(
-    () => [...projectTernTranscript(transcript.virtualRows, streaming), ...projectTernActiveTools(activeTools)],
-    [activeTools, streaming, transcript.virtualRows]
+    () => [
+      ...projectTernTranscript(transcript.virtualRows, streaming),
+      ...projectTernTools(transcript.virtualRows, streamSegments, activeTools)
+    ],
+    [activeTools, streamSegments, streaming, transcript.virtualRows]
   )
   const { stdout } = useStdout()
   const composerRef = useRef(composer)
