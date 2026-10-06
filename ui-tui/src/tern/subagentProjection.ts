@@ -43,6 +43,41 @@ export function projectTernSubagents(subagents: readonly SubagentProgress[]): re
         k: 'md',
         p: { text: agent.summary.trim() }
       })
+    } else {
+      const thinking = agent.thinking.at(-1)?.trim()
+      const note = agent.notes.at(-1)?.trim()
+
+      if (thinking) {
+        children.push({
+          id: `hermes:agent:${agent.id}:thinking`,
+          k: 'text',
+          p: { text: thinking, tone: 'muted' }
+        })
+      }
+
+      if (note) {
+        children.push({
+          id: `hermes:agent:${agent.id}:note`,
+          k: 'text',
+          p: { text: note, tone: 'muted' }
+        })
+      }
+    }
+
+    const output = agent.outputTail ?? []
+    const start = Math.max(0, output.length - 3)
+
+    for (let index = start; index < output.length; index += 1) {
+      const item = output[index]!
+
+      children.push({
+        id: `hermes:agent:${agent.id}:output:${index}`,
+        k: 'text',
+        p: {
+          text: `${item.tool}: ${item.preview}`,
+          tone: item.isError ? 'error' : 'muted'
+        }
+      })
     }
 
     return {
