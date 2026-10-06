@@ -20,7 +20,7 @@ A fixture records:
 - independent semantic operations;
 - semantic anchors (symbols and behavioral surfaces, never line numbers);
 - verification contracts/evidence;
-- concrete realizations (PR/commit/tree state).
+- concrete realizations (PR/commit/tree state);\n- timestamped historical refresh states (evidence, never mutable current truth).
 
 Refresh states for an operation:
 
@@ -49,7 +49,7 @@ The output is intentionally conservative:
 - `partial`: only some anchor evidence survived;
 - `missing`: no configured textual evidence was found.
 
-These are **anchor states, not semantic refresh states**. A `present` symbol does not prove behavior is equivalent; a `missing` symbol may mean the behavior moved or was renamed. An agent/human must use the evidence to classify the operation.
+These are **anchor states, not semantic refresh states**. A `present` symbol does not prove behavior is equivalent; a `missing` symbol may mean the behavior moved or was renamed. An agent/human must use the evidence to classify the operation. Historical fixture states are timestamped baselines; each run records a new classification instead of rewriting history.
 
 That distinction is the point of the experiment: make architectural drift visible without pretending textual matching solved semantic equivalence.
 
