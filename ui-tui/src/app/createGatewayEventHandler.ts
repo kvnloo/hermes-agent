@@ -1312,7 +1312,8 @@ export function createGatewayEventHandler(ctx: GatewayEventHandlerContext): (ev:
             ev.payload.name,
             ev.payload.duration_s ?? undefined,
             resultText,
-            ev.payload.labels ?? undefined
+            ev.payload.labels ?? undefined,
+            ev.payload.failed === true
           )
         } else {
           turnController.recordToolComplete(
@@ -1322,7 +1323,8 @@ export function createGatewayEventHandler(ctx: GatewayEventHandlerContext): (ev:
             ev.payload.duration_s ?? undefined,
             ev.payload.todos ?? undefined,
             resultText,
-            ev.payload.labels ?? undefined
+            ev.payload.labels ?? undefined,
+            ev.payload.failed === true
           )
         }
 
