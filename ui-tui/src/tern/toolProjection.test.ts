@@ -71,7 +71,6 @@ describe('native terminal-tool projection', () => {
       k: 'tool',
       p: {
         status: 'done',
-        note: 'Read 12 lines',
         took: 1250,
         collapsed: true
       }
@@ -88,7 +87,8 @@ describe('native terminal-tool projection', () => {
 
     const nodes = projectTernTools(rows, [], [])
     expect(nodes.map(node => node.id)).toEqual(['hermes:tool:call-7', 'hermes:tool:call-8'])
-    expect(nodes[0]).toMatchObject({ p: { status: 'error', collapsed: false, note: 'Permission denied' } })
+    expect(nodes[0]).toMatchObject({ p: { status: 'error', collapsed: false } })
+    expect(JSON.stringify(nodes[0].c)).toContain('Permission denied')
     expect(nodes[1]).toMatchObject({ p: { status: 'done', collapsed: true } })
   })
 
