@@ -236,14 +236,14 @@ def _set_process_title() -> None:
         pass
 
 
-# Cheap read of `display.interface` for the earliest hot-path decisions
+# Cheap read of `display.interface` and `display.tern` for the earliest hot-path decisions
 # (mouse-residue suppression, Termux fast launch) that run before
 # hermes_cli.config is importable. Cached per config path so early callers
 # don't re-parse YAML, and so the answer follows the home the process ends up
 # in: mouse-residue suppression reads this BEFORE `_apply_profile_override()`
 # sets HERMES_HOME, and a cache keyed on nothing pinned every later caller to
 # the default home's interface for the whole run (#116902).
-_EARLY_INTERFACE_CACHE: "tuple[str, str] | None" = None
+_EARLY_INTERFACE_CACHE: "tuple[str, str, bool] | None" = None
 
 
 def _early_interface_config_path() -> str:
@@ -254,14 +254,14 @@ def _early_interface_config_path() -> str:
     return os.path.join(os.path.expanduser("~"), ".hermes", "config.yaml")
 
 
-def _config_default_interface_early() -> str:
-    """Return the configured default interface ("cli"/"tui") via a minimal
-    YAML read. Best-effort: any error falls back to "cli" (legacy behavior)."""
+def _early_display_config() -> "tuple[str, bool]":
+    """``(display.interface, display.tern)`` via a minimal YAML read. Best-effort:
+    any error falls back to ``("cli", True)`` (classic REPL, Tern frontend allowed)."""
     global _EARLY_INTERFACE_CACHE
     cfg_path = _early_interface_config_path()
     if _EARLY_INTERFACE_CACHE is not None and _EARLY_INTERFACE_CACHE[0] == cfg_path:
-        return _EARLY_INTERFACE_CACHE[1]
-    value = "cli"
+        return _EARLY_INTERFACE_CACHE[1], _EARLY_INTERFACE_CACHE[2]
+    value, tern = "cli", True
     try:
         if os.path.exists(cfg_path):
             import hermes_yaml as _yaml_iface
@@ -273,17 +273,32 @@ def _config_default_interface_early() -> str:
                 iface = disp.get("interface")
                 if isinstance(iface, str) and iface.strip().lower() == "tui":
                     value = "tui"
+                tern = disp.get("tern") is not False
     except Exception:
-        value = "cli"  # best-effort — default to classic REPL on any error
-    _EARLY_INTERFACE_CACHE = (cfg_path, value)
-    return value
+        value, tern = "cli", True  # best-effort — default to classic REPL on any error
+    _EARLY_INTERFACE_CACHE = (cfg_path, value, tern)
+    return value, tern
+
+
+
+def _tern_terminal_early(env: "os._Environ[str] | dict" = os.environ) -> bool:
+    """Whether to try the Tern frontend, from the environment alone: ``HERMES_TERN=1``
+    forces it (Tern over ssh), ``HERMES_TERN=0`` opts out, else ``TERM_PROGRAM=tern``
+    outside tmux/screen/zellij (which drop the protocol's APC strings)."""
+    flag = (env.get("HERMES_TERN") or "").strip().lower()
+    if flag in {"0", "false", "no", "off"}:
+        return False
+    if flag in {"1", "true", "yes", "on"}:
+        return True
+    return env.get("TERM_PROGRAM") == "tern" and not any(env.get(k) for k in ("TMUX", "STY", "ZELLIJ"))
 
 
 def _wants_tui_early(argv: "list[str] | None" = None) -> bool:
     """Earliest TUI decision, usable before argparse/config imports.
 
     Precedence: ``--cli`` wins, then ``--tui``/``HERMES_TUI=1``, then a
-    real-TTY gate, then ``display.interface``. The TTY gate is load-bearing
+    real-TTY gate, then Tern (``_tern_terminal_early`` unless ``display.tern: false``),
+    then ``display.interface``. The TTY gate is load-bearing
     for headless spawners (kanban workers, cron, pipes running ``chat -q``):
     a ``display.interface: tui`` default used to boot the TUI here, whose
     no-TTY bail-out exits 0 without doing the task. An explicit ``--tui``
@@ -300,7 +315,8 @@ def _wants_tui_early(argv: "list[str] | None" = None) -> bool:
             return False
     except Exception:
         return False
-    return _config_default_interface_early() == "tui"
+    interface, tern = _early_display_config()
+    return (tern and _tern_terminal_early()) or interface == "tui"
 
 
 # Mouse-tracking residue suppression — runs BEFORE every other import on the

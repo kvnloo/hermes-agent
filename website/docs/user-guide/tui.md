@@ -301,9 +301,21 @@ There is no general "point any TUI at any standalone gateway port" mode. In part
 
 If you want multiple surfaces to share one set of sessions, use the shared `~/.hermes/state.db` (see [Sessions](sessions.md)) or the web dashboard's embedded chat (see [Web Dashboard](features/web-dashboard.md#chat)) — not a hand-set gateway URL.
 
+## In Tern
+
+In [Tern](https://stencil.so/tern), `hermes` (and `hermes --tui`) runs a native frontend instead (`ui-tsp/`): it describes the chat to the terminal over the Tern Surface Protocol, and Tern draws the transcript, tool cards, thinking, the composer and every sheet itself — in your skin's colors, with Tern's chat styles (Reader, Spine, Console), folding, selection and native text editing. Same gateway, sessions and slash commands as the Ink TUI.
+
+| Switch | Effect |
+| --- | --- |
+| `hermes --cli` | The classic CLI, as always |
+| `HERMES_TERN=0` or `display.tern: false` | Never use the Tern frontend (the Ink TUI or classic CLI as configured) |
+| `HERMES_TERN=1` | Try it where Tern isn't detected by name, e.g. over ssh |
+
+Inside tmux, screen or zellij (which drop the protocol) Hermes keeps its usual interface; a terminal that doesn't answer the protocol gets the Ink TUI.
+
 ## Reverting to the classic CLI
 
-Launching `hermes` (without `--tui`) stays on the classic CLI by default. To make a machine prefer the TUI, set `display.interface: tui` in `~/.hermes/config.yaml` (persistent) or `HERMES_TUI=1` in your shell profile (per-shell). To go back, set `interface: cli` / unset the env var, or pass `hermes --cli` for a one-off.
+Launching `hermes` (without `--tui`) stays on the classic CLI by default (in Tern, the [Tern frontend](#in-tern)). To make a machine prefer the TUI, set `display.interface: tui` in `~/.hermes/config.yaml` (persistent) or `HERMES_TUI=1` in your shell profile (per-shell). To go back, set `interface: cli` / unset the env var, or pass `hermes --cli` for a one-off.
 
 If the TUI fails to launch (no Node, missing bundle, TTY issue), Hermes prints a diagnostic and falls back — rather than leaving you stuck.
 

@@ -1,4 +1,4 @@
-"""TUI (ui-tui) launcher: prepared source builds and argv/env assembly.
+"""TUI launcher (ui-tui, and ui-tsp under Tern): prepared source builds and argv/env assembly.
 
 Split out of ``hermes_cli/main.py``. Names that still live in main (``PROJECT_ROOT``, ...)
 are imported lazily inside the functions that use them (avoids an import cycle).
@@ -83,6 +83,50 @@ def _tui_need_rebuild(root: Path) -> bool:
 
     force = (os.environ.get("HERMES_TUI_FORCE_BUILD") or "").strip().lower()
     return force in {"1", "true", "yes", "on"} or not source_product_current(root.parent, "tui", root / "dist")
+
+
+# ui-tsp's exit code when the terminal never answered the Tern Surface Protocol
+# handshake: the launcher then runs the Ink TUI in the same terminal.
+NO_TSP_EXIT = 75
+
+
+def _tern_frontend_wanted(env: dict) -> bool:
+    """Whether to try the Tern frontend (ui-tsp) before the Ink TUI.
+
+    ``HERMES_TERN=1`` always tries it (Tern over ssh, where ``TERM_PROGRAM`` doesn't travel),
+    ``HERMES_TERN=0`` or ``display.tern: false`` never does; otherwise it runs when the
+    terminal names itself Tern outside a multiplexer (tmux, screen and zellij drop the
+    protocol's APC strings). ui-tsp still probes and exits ``NO_TSP_EXIT`` without it.
+    """
+    from hermes_cli.main import _tern_terminal_early
+    if not _tern_terminal_early(env):
+        return False
+    try:
+        from hermes_cli.config import load_config
+        display = load_config().get("display", {})
+        return not (isinstance(display, dict) and display.get("tern") is False)
+    except Exception:
+        return True
+
+
+def _make_tsp_argv(project_root: Path) -> Optional[tuple[list[str], Path]]:
+    """The Tern frontend: the wheel's bundled ``tsp_dist``, else the checkout's receipted
+    ``ui-tsp/dist`` (rebuilt when stale); None when this install carries neither."""
+    bundled = Path(__file__).parent / "tsp_dist" / "entry.js"
+    if bundled.is_file():
+        return [_tui_node_bin("node"), str(bundled)], bundled.parent
+    tsp_dir = project_root / "ui-tsp"
+    if not (tsp_dir / "package.json").is_file():
+        return None
+
+    from hermes_cli.source_build import (
+        build_source_tsp, prepare_launch_dependencies, source_build_env, source_product_current)
+
+    if not source_product_current(project_root, "tsp", tsp_dir / "dist"):
+        env = source_build_env()
+        prepare_launch_dependencies(project_root, env=env)
+        build_source_tsp(project_root, env=env)
+    return [_tui_node_bin("node"), str(tsp_dir / "dist/entry.js")], tsp_dir
 
 
 def _find_bundled_tui(hermes_cli_dir: Path | None = None) -> Path | None:
@@ -444,11 +488,16 @@ def _launch_tui(
     if resume_session_id:
         env["HERMES_TUI_RESUME"] = resume_session_id
 
-    argv, cwd = _make_tui_argv(tui_dir, tui_dev)
     code: Optional[int] = None
     try:
         try:
-            code = subprocess.call(argv, cwd=str(cwd), env=env)
+            # --dev is the Ink TUI's hot-reload loop; ui-tsp has its own `npm run bundle`.
+            tsp = _make_tsp_argv(PROJECT_ROOT) if not tui_dev and _tern_frontend_wanted(env) else None
+            if tsp:
+                code = subprocess.call(tsp[0], cwd=str(tsp[1]), env=env)
+            if code is None or code == NO_TSP_EXIT:
+                argv, cwd = _make_tui_argv(tui_dir, tui_dev)
+                code = subprocess.call(argv, cwd=str(cwd), env=env)
         except KeyboardInterrupt:
             code = 130
 
@@ -499,7 +548,8 @@ def _sync_bundled_skills_quietly() -> None:
 
 def _resolve_use_tui(args) -> bool:
     """Decide whether to launch the TUI: ``--cli`` → classic; ``--tui`` → TUI; no TTY → classic;
-    ``HERMES_TUI=1`` → TUI; ``display.interface`` config; default classic.
+    ``HERMES_TUI=1`` → TUI; Tern (``_tern_frontend_wanted``) → TUI; ``display.interface`` config;
+    default classic.
 
     The TTY gate is load-bearing: ambient preferences must never hijack a piped
     ``hermes chat -q`` (kanban workers, cron) — the Ink no-TTY bail-out exits 0 and
@@ -515,6 +565,9 @@ def _resolve_use_tui(args) -> bool:
     except Exception:
         return False
     if os.environ.get("HERMES_TUI") == "1":
+        return True
+    # Under Tern the native frontend beats the classic REPL; `--cli` above still wins.
+    if _tern_frontend_wanted(dict(os.environ)):
         return True
     try:
         from hermes_cli.config import load_config

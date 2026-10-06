@@ -842,6 +842,9 @@ DEFAULT_CONFIG = {
         # Native TUI uses the terminal's primary buffer and scrollback instead of the custom
         # alternate-screen viewport. Flags win: `--native` / `--tui-native` and `--cli`.
         "tui_native": False,
+        # In Tern, bare `hermes` runs the Tern frontend (ui-tsp): the terminal draws the chat
+        # natively. False keeps `interface` above; HERMES_TERN=0/1 and `--cli` win.
+        "tern": True,
         # `hermes --tui` auto-resumes the most recent human-facing session (like `hermes -c`).
         # HERMES_TUI_RESUME=<id> always wins.
         "tui_auto_resume_recent": False,
