@@ -67,3 +67,13 @@ jobs:
             exit 1
           fi
           sha256sum -c "$RUNNER_TEMP/tern-ux-replay.sha256"
+      - name: Verify capture receipt evidence gates
+        run: |
+          printf 'real bytes, synthetic CI evidence only\n' > "$RUNNER_TEMP/capture.bin"
+          npm run --silent tern:ux:capture-receipt --workspace ui-tui -- \
+            --evidence "$RUNNER_TEMP/capture.bin" \
+            --viewport normal \
+            --mode fixture-replay \
+            --tern-version ci-fixture \
+            --out "$RUNNER_TEMP/capture.json"
+          python3 -c 'import json,os; d=json.load(open(os.environ["RUNNER_TEMP"]+"/capture.json")); assert d["liveTernVerified"] is False; assert d["attentionMeasured"] is False; assert d["viewport"]["columns"] == 120'
