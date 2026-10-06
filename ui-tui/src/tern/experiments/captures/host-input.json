@@ -1,0 +1,44 @@
+{
+  "isolation": "sway headless GLES, private TERN_CONFIG_DIR /tmp/tern-ux-iso3, cwd /tmp/tern-ux-iso3",
+  "notUserDesktop": true,
+  "click": {
+    "ok": true,
+    "at": [
+      400,
+      400
+    ],
+    "focused": "textarea.tv-input"
+  },
+  "scroll": {
+    "command": [
+      "scroll",
+      "-8"
+    ],
+    "pngSha256Before": "a59f588ded7f1f1f7aae2f50d3620fc9407e165451030b830b17e36a858b7235",
+    "pngSha256After": "1a09629f51c09c8fdfd04373c47f5c9a3a900eec807cdf32d4d45d08e9df2ebd",
+    "bytesBefore": 42153,
+    "bytesAfter": 41878,
+    "changed": true
+  },
+  "split": {
+    "command": [
+      "split",
+      "right"
+    ],
+    "panesBefore": 1,
+    "panesAfter": [
+      {
+        "id": 5,
+        "cols": 59,
+        "rows": 38
+      },
+      {
+        "id": 7,
+        "cols": 59,
+        "rows": 38
+      }
+    ]
+  },
+  "liveTernVerified": false,
+  "reason": "Authored fixture pane plus Tern host chrome. Not a live Hermes session and not a browser PiP."
+}
