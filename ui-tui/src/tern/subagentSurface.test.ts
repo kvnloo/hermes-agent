@@ -53,5 +53,6 @@ describe('native subagent surface lifecycle', () => {
     expect(JSON.stringify(ops)).toContain('"done"')
     expect(ops.some(op => op[0] === 'del' && op[1] === 'hermes:agent:worker-1')).toBe(false)
     expect(ops.some(op => op[0] === 'add' && op[1] === 'hermes:agent:worker-1')).toBe(false)
+    expect(JSON.stringify(ops)).not.toContain('"collapsed"')
   })
 })
