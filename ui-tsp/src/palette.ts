@@ -73,11 +73,11 @@ function tokensOf(c: ThemeColors): Tokens {
     statusLineUntracked: c.muted,
     success: c.ok,
     syntaxComment: c.syntaxComment,
-    syntaxFunction: c.accent,
+    syntaxFunction: c.ok,
     syntaxKeyword: c.syntaxKeyword,
     syntaxNumber: c.syntaxNumber,
     syntaxString: c.syntaxString,
-    syntaxType: c.primary,
+    syntaxType: c.primary !== c.syntaxString ? c.primary : c.syntaxKeyword,
     thinkingHigh: c.warn,
     thinkingLow: c.statusGood,
     thinkingMedium: c.accent,
@@ -101,6 +101,12 @@ function tokensOf(c: ThemeColors): Tokens {
     } else {
       delete out[key]
     }
+  }
+
+  // A skin that leaves function color on the string color paints every token
+  // the same. The retired pane kept them apart.
+  if (!out.syntaxFunction || out.syntaxFunction === out.syntaxString) {
+    out.syntaxFunction = '#00ff88'
   }
 
   return out
