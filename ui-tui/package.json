@@ -18,7 +18,8 @@
     "fix": "npm run lint:fix && npm run fmt",
     "check": "npm run build:ink && npm run typecheck && npm run i18n:keys:check && npm run test && npm run lint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "tern:ux:manifest": "tsx scripts/tern-ux/manifest.ts"
   },
   "dependencies": {
     "@hermes/ink": "file:./packages/hermes-ink",
