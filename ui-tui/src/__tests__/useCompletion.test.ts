@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { completionRequestForInput } from '../hooks/useCompletion.js'
+import { completionRequestForInput } from '../domain/slash.js'
 
 describe('completionRequestForInput', () => {
   it('routes real slash commands to slash completion', () => {
