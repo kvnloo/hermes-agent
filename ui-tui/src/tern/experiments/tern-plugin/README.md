@@ -1,57 +1,25 @@
-# Hermes UX Lab — Tern development harness
+# Hermes A fixture lab — optional Tern launcher
 
-Development-only Tern plugin for issue #436. It creates the same three-pane
-workspace for every A/B/C experiment branch:
-
-```text
-┌─────────────────────────────┬────────────────────────┐
-│ Hermes --tui --native       │ TSP tests              │
-│                             ├────────────────────────┤
-│                             │ scratch shell          │
-└─────────────────────────────┴────────────────────────┘
-```
-
-The plugin does not implement Hermes behavior, intercept TSP, or become a runtime
-dependency. It only arranges panes using Tern's documented window layout API.
-
-## Install for development
-
-From a Tern shell:
+On Variant A this command now launches the worktree's executable native fixture,
+not an installed `hermes` command. See [the native preview runbook](../NATIVE_PREVIEW.md)
+for installation, direct launch and verification limits.
 
 ```bash
-tern plugin link /absolute/path/to/hermes-agent/ui-tui/src/tern/experiments/tern-plugin
+tern plugin link /absolute/path/to/hermes-tern-a/ui-tui/src/tern/experiments/tern-plugin
 tern plugin reload
 ```
 
-Optional type definitions for editing the Luau file:
+Focus a Tern pane inside the A checkout, then use **Open Hermes A fixture lab** or
+`Ctrl+Alt+Shift+H`. It checks for the fixture entrypoint before arranging a new tab:
+fixture left, manifest/tests upper-right, scratch shell lower-right.
 
-```bash
-tern plugin types /absolute/path/to/hermes-agent/ui-tui/src/tern/experiments/tern-plugin
-```
+The preview does not read or write Hermes sessions/configuration, so the old
+worktree-local `HERMES_HOME`/`HERMES_RUNTIME_DIR` overrides are no longer necessary
+for this launch. B/C remain separate scaffold branches.
 
-Then focus any pane inside the Hermes checkout and run **Open Hermes UX lab** from
-Tern's command palette, or press `Ctrl+Alt+Shift+H`.
+The Luau launcher and actual host layout still require live Tern verification.
+CI verifies the TypeScript CLI directly with a fake Tern peer; it does not prove
+that this plugin loads or that its geometry is correct. The direct command in
+`NATIVE_PREVIEW.md` is the reproducible entrypoint independent of the plugin.
 
-The focused pane is only used to discover the checkout root. The lab opens in a
-new tab and does not mutate the current layout.
-
-## Why this exists
-
-Every variant must be dogfooded in the same geometry. Without a repeatable
-workspace, screenshots and glance-test timings are too easy to bias by pane
-placement.
-
-The canonical layout API reference is:
-https://docs.stencil.so/tern/guides/layout.html
-
-Credit: Tern/TSP and the layout/plugin APIs are by Stencil Labs.
-
-
-## Isolation
-
-The lab launches Hermes with worktree-local `HERMES_HOME` and
-`HERMES_RUNTIME_DIR` under `.hermes-sandbox/`. This lets A/B/C run concurrently without
-sharing sessions, logs or runtime sockets.
-
-The upper-right pane emits the active variant manifest before running TSP tests,
-so a screenshot session can be traced back to the exact experiment identity.
+Credit: Stencil Labs for Tern/TSP and the layout/plugin APIs.

@@ -31,29 +31,29 @@ end
 
 tern.command({
     id = "open-lab",
-    title = "Open Hermes UX lab",
+    title = "Open Hermes A fixture lab",
     icon = "sparkle",
     keys = { "ctrl+alt+shift+h" },
     run = function(cx)
         local cwd = focused_cwd(cx)
         local root = cwd and repo_root_from(cwd) or nil
 
-        if root == nil then
+        if root == nil or not tern.fs.exists(root .. "/ui-tui/scripts/tern-ux/preview.ts") then
             cx:toast(
                 "error",
-                "Hermes UX lab needs a Hermes checkout",
-                "Focus a pane somewhere inside hermes-agent, then run the command again."
+                "Hermes A fixture needs its experiment checkout",
+                "Focus a pane inside exp/tern-ux-omp-baseline with dependencies installed."
             )
             return
         end
 
         local _tab, err = cx.layout:tab({
-            name = "Hermes UX",
+            name = "Hermes A fixture",
             cwd = root,
             split = "right",
             {
                 launch = {
-                    command = "HERMES_HOME=\"$PWD/.hermes-sandbox/tern-ux-home\" HERMES_RUNTIME_DIR=\"$PWD/.hermes-sandbox/tern-ux-runtime\" hermes --tui --native",
+                    command = "npm run tern:ux:preview --workspace ui-tui",
                 },
             },
             {
@@ -74,8 +74,8 @@ tern.command({
 
         cx:toast(
             "success",
-            "Hermes UX lab ready",
-            "Hermes left · manifest/tests upper-right · scratch shell lower-right"
+            "Hermes A fixture workspace opened",
+            "Fixture left · manifest/tests upper-right · scratch shell lower-right"
         )
     end,
 })

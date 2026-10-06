@@ -12,7 +12,7 @@ import termios
 import time
 
 TUI = Path(__file__).resolve().parents[2]
-KINDS = ['agent', 'card', 'code', 'col', 'diff', 'editor', 'md', 'overlay', 'row', 'text']
+KINDS = ['agent', 'card', 'code', 'col', 'diff', 'editor', 'md', 'overlay', 'row', 'text', 'tool']
 SURFACE = 'hermes:ux:preview'
 
 
@@ -27,6 +27,7 @@ def smoke(columns: int, rows: int, supported: bool = True) -> dict:
         stdin=slave, stdout=slave, stderr=slave, close_fds=True,
     )
     buffer = b''
+    transcript = b''
     opened = closed = frames = barriers = 0
 
     def reply(verb: str, payload: dict) -> None:
@@ -60,7 +61,9 @@ def smoke(columns: int, rows: int, supported: bool = True) -> dict:
         while child.poll() is None and time.monotonic() < deadline:
             if not select.select([master], [], [], 0.1)[0]:
                 continue
-            buffer += os.read(master, 65536)
+            part = os.read(master, 65536)
+            buffer += part
+            transcript = (transcript + part)[-16384:]
             while buffer:
                 if buffer.startswith(b'\x1b_'):
                     end = buffer.find(b'\x1b\\', 2)
@@ -79,7 +82,8 @@ def smoke(columns: int, rows: int, supported: bool = True) -> dict:
                     break
                 else:
                     buffer = buffer[1:]
-        assert child.wait(timeout=2) == (0 if supported else 1), 'unexpected preview exit'
+        result = child.wait(timeout=2)
+        assert result == (0 if supported else 1), f'unexpected preview exit {result}; tail={transcript!r}'
         assert (opened, closed, frames) == ((1, 1, 14) if supported else (0, 0, 0))
         assert barriers == 2, 'probe and post-close barriers must both complete'
         restored = termios.tcgetattr(slave)
