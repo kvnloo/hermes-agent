@@ -59,7 +59,7 @@ export function resolveTernComposerSendable(_hello: TspHello, hermesReady: boole
 
 
 export function supportsTernLiveSurface(hello: TspHello): boolean {
-  return supportsTernComposer(hello) && hello.kinds.includes('md') && hello.kinds.includes('card') && hello.kinds.includes('tool')
+  return supportsTernComposer(hello) && hello.kinds.includes('md') && hello.kinds.includes('card') && hello.kinds.includes('text') && hello.kinds.includes('tool')
 }
 
 export function ternSurfaceStaysOpen(state: { blocked: boolean }): boolean {
