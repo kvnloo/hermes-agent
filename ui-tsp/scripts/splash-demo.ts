@@ -5,12 +5,13 @@
 //   npx tsx scripts/splash-demo.ts --design atlas     # start on one design
 //   npx tsx scripts/splash-demo.ts --once             # play one launch, then exit
 //
-// Gallery keys: h / l previous / next design · r replay · t swap the skin
-// (what a skin.changed event does) · q quit. `SPLASH_DEMO_AT=<ms>` freezes
+// Gallery keys: h / l previous / next design · r replay · t put on / take off
+// a Hermes skin (what a skin.changed event does; off, the splash wears Tern's
+// own theme) · q quit. `SPLASH_DEMO_AT=<ms>` freezes
 // the clock at that instant, for a stable still.
 import { connect, ui } from '@stencil-hq/tern'
 
-import { paletteOf } from '../src/palette.js'
+import { splashPaletteOf } from '../src/palette.js'
 import { SPLASH_DESIGN_NAMES, SPLASH_ROLE } from '../src/splash/index.js'
 import { LaunchSplash, pickSplashDesign, splashInsets } from '../src/splash/launch.js'
 
@@ -19,7 +20,7 @@ const value = (name: string) => (args.includes(name) ? args[args.indexOf(name) +
 const once = args.includes('--once')
 const frozen = process.env.SPLASH_DEMO_AT ? Number(process.env.SPLASH_DEMO_AT) : null
 
-// A second skin, to show the splash following a skin.changed event.
+// A chosen skin, to show the splash following a skin.changed event.
 const EMBER = {
   colors: {
     background: '#1b0b05',
@@ -41,7 +42,6 @@ if (!session) {
 
 const chrome = session.open({ id: 'hermes', mode: 'inline', role: 'omp.session', title: 'hermes' })
 
-chrome.palette(paletteOf(undefined))
 chrome.render(
   ui.card({ head: 'session chrome', key: 'stand-in' }, ui.text({ key: 't', text: 'The splash hands off to this.' }))
 )
@@ -77,7 +77,7 @@ const play = () => {
       }
     },
     open: () => session.open({ id: 'splash', mode: 'screen', role: SPLASH_ROLE, title: 'hermes' }),
-    palette: paletteOf(ember ? EMBER : undefined),
+    palette: splashPaletteOf(ember ? EMBER : undefined),
     size: () => splashInsets(session.caps.cols, process.stdout.rows ?? 24),
     status: once
       ? 'summoning hermes…'
@@ -117,6 +117,6 @@ for await (const input of session) {
     splash?.skip()
   } else if (key === 't') {
     ember = !ember
-    splash?.palette(paletteOf(ember ? EMBER : undefined))
+    splash?.palette(splashPaletteOf(ember ? EMBER : undefined))
   }
 }

@@ -286,12 +286,6 @@ export interface ThemeSeeds {
   error: string
   /** Identity tone override: muted/dim text (derived when omitted). */
   muted?: string
-  /**
-   * The theme's own canvas colour, for surfaces that paint one (the Tern
-   * frontend's user messages and launch splash). `bg` stays the terminal
-   * background the tone ladder is derived against; this defaults to it.
-   */
-  paper?: string
   ok: string
   primary: string
   prompt?: string
@@ -375,32 +369,27 @@ export function buildPalette(seeds: ThemeSeeds, isLight: boolean): ThemeColors {
   }
 }
 
-// The dark default is the Hermes website's palette (`--hermes-color-*` on
-// nousresearch.com): ultramarine paper, off-white ink, navy shade, yellow
-// accent, and two lavenders for secondary text and rules. The launch splash
-// (ui-tsp/src/splash) draws in exactly these six, so the chrome and the splash
-// share one set. Status hues are the site's own --success/--warning/
-// --destructive. `bg` is still the dark terminal the ladder derives against:
-// the Ink TUI sits on the terminal's own background and never paints `paper`.
 export const DARK_SEEDS: ThemeSeeds = {
-  accent: '#f2f200',
+  accent: '#FFBF00',
+  // The classic Hermes navy surfaces are IDENTITY, not derivation drift —
+  // keep them as explicit fill seeds (the ladder derives them for skins
+  // that don't care).
+  activeRow: '#333355',
   bg: '#101014',
-  border: '#6e6ef7',
-  error: '#f0949e',
-  muted: '#a6a6f6',
-  ok: '#8cc4a7',
-  paper: '#0000f2',
-  primary: '#f2f2f2',
-  prompt: '#f2f2f2',
-  selection: '#000082',
-  shellDollar: '#a6a6f6',
-  statusBad: '#ddba7d',
-  statusCritical: '#f0949e',
-  statusGood: '#8cc4a7',
-  statusWarn: '#f2f200',
-  surface: '#000082',
-  text: '#f2f2f2',
-  warn: '#ddba7d'
+  border: '#CD7F32',
+  error: '#ef5350',
+  ok: '#4caf50',
+  primary: '#FFD700',
+  prompt: '#FFF8DC',
+  selection: '#3a3a55',
+  shellDollar: '#4dabf7',
+  statusBad: '#FF8C00',
+  statusCritical: '#FF6B6B',
+  statusGood: '#8FBC8F',
+  statusWarn: '#FFD700',
+  surface: '#1a1a2e',
+  text: '#FFF8DC',
+  warn: '#ffa726'
 }
 
 // Light-terminal seeds: darker golds/ambers that stay legible on white.

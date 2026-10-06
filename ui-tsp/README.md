@@ -56,14 +56,16 @@ It is also skipped under Reduce Motion and when the launch carries a prompt (`he
 
 Each design is a pure function of size, elapsed time and a palette (`renderSplashFrame`), so a
 frame is reproducible without a gateway or a model. A frame is cells, not ANSI: `text` nodes whose
-inks are span tokens naming palette tokens (`text`, `accent`, `dim`, `border`) and whose grounds are
-roles a small stylesheet paints from Tern's fill tokens (`userMessageBg`, `selectedBg`). No colour
-value lives in the view, so `gateway.ready` and `skin.changed` recolour it through
-`surface.palette()` alone. The dark default (`DARK_SEEDS` in `ui-tui/src/theme.ts`) is the Hermes
-website's palette, shared with the chrome.
+inks are span tokens naming theme tokens (`text`, `accent`, `muted`, `dim`).
+
+The splash wears Tern's own theme, so it is part of the window rather than a panel inside it and
+follows the theme picker live: paper is the pane itself, and shade and inverted grounds are derived
+from the pane's background and foreground by a small stylesheet. No colour value lives in the view.
+Hermes's built-in `default` skin leaves it that way; a skin the user chose is sent to the splash as
+a program palette on `gateway.ready` and `skin.changed`, and recolours the next frame.
 
 ```sh
-npx tsx scripts/splash-demo.ts            # gallery in a Tern pane: h/l switch, r replay, t swap skin, q quit
+npx tsx scripts/splash-demo.ts            # gallery in a Tern pane: h/l switch, r replay, t skin on/off, q quit
 npx tsx scripts/splash-demo.ts --once     # one launch, as the app plays it
 SPLASH_DEMO_AT=3000 npx tsx scripts/splash-demo.ts --design atlas   # hold one instant, for a still
 ```

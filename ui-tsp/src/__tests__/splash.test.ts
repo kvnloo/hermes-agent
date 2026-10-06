@@ -5,7 +5,7 @@ import type { GatewayClient } from '@tui/gatewayClient.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { App } from '../app.js'
-import { paletteOf } from '../palette.js'
+import { paletteOf, splashPaletteOf } from '../palette.js'
 import {
   DEFAULT_SPLASH_DESIGN,
   renderSplashFrame,
@@ -32,23 +32,12 @@ import {
 import { renderWordmark, WORDMARK_MIN_ROWS, wordmarkWidth } from '../splash/wordmark.js'
 import { splashNode } from '../view/splash.js'
 
-/** The six website colours the dark theme and the splash share. */
-const WEBSITE = {
-  accent: '#f2f200',
-  dim: '#a6a6f6',
-  ink: '#f2f2f2',
-  paper: '#0000f2',
-  ray: '#6e6ef7',
-  shade: '#000082'
-}
-
 const SWAPPED: SplashPalette = {
   accent: 'tokAccent',
   dim: 'tokDim',
   ink: 'tokInk',
-  paper: 'customMessageBg',
   ray: 'tokRay',
-  shade: 'cardBg'
+  shade: 'ins'
 }
 
 const frame = (design: string, width: number, height: number, elapsedMs: number, extra = {}) =>
@@ -96,7 +85,8 @@ describe.each(SPLASH_DESIGN_NAMES)('splash design %s', design => {
       TERN_SPLASH_PALETTE.ink,
       TERN_SPLASH_PALETTE.accent,
       TERN_SPLASH_PALETTE.dim,
-      TERN_SPLASH_PALETTE.ray
+      TERN_SPLASH_PALETTE.ray,
+      TERN_SPLASH_PALETTE.shade
     ])
 
     expect(text(cells)).not.toContain('\x1b')
@@ -116,7 +106,7 @@ describe.each(SPLASH_DESIGN_NAMES)('splash design %s', design => {
       expect(swapped).not.toEqual(base)
 
       for (const token of tokens(swapped)) {
-        expect([SWAPPED.ink, SWAPPED.accent, SWAPPED.dim, SWAPPED.ray]).toContain(token)
+        expect(Object.values(SWAPPED)).toContain(token)
       }
     }
   })
@@ -170,11 +160,11 @@ describe('renderSplashFrame', () => {
     expect(settled).toContain('├─┤')
   })
 
-  it('inks a ground colour as the segment base: navy on paper, paper on an inverted card', () => {
+  it('carries shadow as its own span token, and paper-as-ink as the base of an inverted card', () => {
     const bases = (design: string) =>
       new Set(frame(design, 120, 40, 3000).flatMap(row => row.map(seg => `${seg.ground}/${seg.base}`)))
 
-    expect(bases('kerykeion')).toContain('paper/shade')
+    expect(tokens(frame('kerykeion', 120, 40, 3000))).toContain(TERN_SPLASH_PALETTE.shade)
     expect(bases('sigil')).toContain('ink/paper')
     expect(bases('windows')).toContain('shade/none')
   })
@@ -209,65 +199,40 @@ describe('splash view', () => {
 })
 
 describe('splash theme', () => {
-  it('paints grounds from the palette tokens, with no colour value of its own', () => {
+  it('inks with tokens every Tern theme defines', () => {
+    expect(TERN_SPLASH_PALETTE).toEqual({ accent: 'accent', dim: 'muted', ink: 'text', ray: 'dim', shade: 'del' })
+  })
+
+  it('takes paper, ink, shade and inverted grounds from the pane itself, with no colour value of its own', () => {
     const css = splashStylesheet()
+    const shade = 'color-mix(in oklab, var(--tv-bg) 58%, black)'
 
-    expect(css).toContain('var(--sf-tint-user)')
-    expect(css).toContain('var(--sf-mark-bg)')
-    expect(css).toContain('var(--sf-p-text)')
-    expect(css).toContain(`[data-role='${segmentRole('paper', 'shade')}']`)
+    // Paper is the pane: a paper ground paints nothing. Ink is the pane's text colour.
+    expect(css).not.toContain(`[data-role='${segmentRole('paper', 'none')}']`)
+    expect(css).toContain(`[data-role^='${SPLASH_ROLE}.on-'] { color: var(--sf-p-text, var(--tv-fg)); }`)
+    // Shadow ink rides the `del` span class, re-inked inside the splash only.
+    expect(css).toContain(`[data-role^='${SPLASH_ROLE}.on-'] .sf-t-del { color: ${shade}; text-decoration: none; }`)
+    expect(css).toContain(
+      `[data-role='${segmentRole('ink', 'paper')}'] { background: var(--sf-p-text, var(--tv-fg)); color: var(--tv-bg); }`
+    )
+    expect(css).toContain(`[data-role='${segmentRole('shade', 'none')}'] { background: ${shade}; }`)
     expect(css).not.toMatch(/#[0-9a-f]{3,8}\b/i)
+    expect(css).not.toMatch(/rgb\(\s*\d/)
+    expect(splashStylesheet(SWAPPED)).toContain('.sf-t-ins {')
   })
 
-  it('follows a swapped palette', () => {
-    const css = splashStylesheet(SWAPPED)
+  it('wears Tern\u2019s theme under the built-in default skin, and a chosen skin\u2019s palette otherwise', () => {
+    expect(splashPaletteOf(undefined)).toEqual({})
+    expect(splashPaletteOf({ colors: { ui_accent: '#FFBF00' }, name: 'default' })).toEqual({})
 
-    expect(css).toContain('var(--sf-tint-custom)')
-    expect(css).toContain('var(--sf-tint-neutral)')
-    expect(css).toContain('var(--sf-p-tokInk)')
-    expect(css).not.toContain('--sf-tint-user')
-  })
+    const ember = { colors: { banner_dim: '#c98a5a', ui_accent: '#ffd166', ui_text: '#ffe9d6' }, name: 'ember' }
+    const dark = splashPaletteOf(ember).dark!
 
-  it('makes the dark default the six website colours, on the tokens the splash draws with', () => {
-    const dark = paletteOf(undefined).dark!
-
-    expect(dark[TERN_SPLASH_PALETTE.paper]).toBe(WEBSITE.paper)
-    expect(dark[TERN_SPLASH_PALETTE.ink]).toBe(WEBSITE.ink)
-    expect(dark[TERN_SPLASH_PALETTE.shade]).toBe(WEBSITE.shade)
-    expect(dark[TERN_SPLASH_PALETTE.accent]).toBe(WEBSITE.accent)
-    expect(dark[TERN_SPLASH_PALETTE.dim]).toBe(WEBSITE.dim)
-    expect(dark[TERN_SPLASH_PALETTE.ray]).toBe(WEBSITE.ray)
-  })
-
-  it('leaves the light default on its own seeds', () => {
-    const light = paletteOf(undefined).light!
-
-    expect(light[TERN_SPLASH_PALETTE.paper]).toBe('#ffffff')
-    expect(light[TERN_SPLASH_PALETTE.accent]).toBe('#956E00')
-  })
-
-  it('recolours every splash token for a skin, with the skin’s own canvas as paper', () => {
-    const skin = {
-      colors: {
-        background: '#1b0b05',
-        banner_dim: '#c98a5a',
-        ui_accent: '#ffd166',
-        ui_border: '#a8502a',
-        ui_text: '#ffe9d6'
-      },
-      name: 'ember'
-    }
-
-    const dark = paletteOf(skin).dark!
-
-    expect(dark[TERN_SPLASH_PALETTE.paper]).toBe('#1b0b05')
+    expect(splashPaletteOf(ember)).toEqual(paletteOf(ember))
     expect(dark[TERN_SPLASH_PALETTE.ink]).toBe('#ffe9d6')
     expect(dark[TERN_SPLASH_PALETTE.accent]).toBe('#ffd166')
-
-    for (const role of ['paper', 'ink', 'shade', 'accent', 'dim', 'ray'] as const) {
-      expect(dark[TERN_SPLASH_PALETTE[role]]).toMatch(/^#[0-9a-f]{6}$/i)
-      expect(dark[TERN_SPLASH_PALETTE[role]]).not.toBe(WEBSITE[role])
-    }
+    expect(dark[TERN_SPLASH_PALETTE.dim]).toMatch(/^#[0-9a-f]{6}$/i)
+    expect(dark[TERN_SPLASH_PALETTE.ray]).toMatch(/^#[0-9a-f]{6}$/i)
   })
 })
 
@@ -340,7 +305,6 @@ function rig(extra: { design?: string } = {}) {
     now: () => now,
     onDone: done,
     open: () => surface,
-    palette: paletteOf(undefined),
     setInterval: fn => {
       step = fn
     },
@@ -360,7 +324,7 @@ function rig(extra: { design?: string } = {}) {
 }
 
 describe('LaunchSplash', () => {
-  it('opens its surface with the stylesheet and palette, and draws at once', () => {
+  it('opens its surface with the stylesheet and no palette of its own, and draws at once', () => {
     const { splash, surface } = rig()
 
     expect(splash.active).toBe(false)
@@ -368,7 +332,7 @@ describe('LaunchSplash', () => {
 
     expect(splash.active).toBe(true)
     expect(surface.sheets.splash).toBe(splashStylesheet())
-    expect(surface.palettes).toEqual([paletteOf(undefined)])
+    expect(surface.palettes).toEqual([])
     expect(surface.frames).toHaveLength(1)
   })
 
@@ -450,8 +414,8 @@ describe('LaunchSplash', () => {
 
     splash.skip()
     advance(SPLASH_EXIT_MS + SPLASH_TICK_MS)
-    splash.palette(paletteOf(undefined))
-    expect(surface.palettes).toHaveLength(2)
+    splash.palette({})
+    expect(surface.palettes).toHaveLength(1)
   })
 
   it.each(SPLASH_DESIGN_NAMES)('draws %s as a native view', design => {
@@ -566,12 +530,12 @@ describe('App launch splash', () => {
     return { app, chrome, gw, splash, tern }
   }
 
-  it('covers the session chrome with a screen surface in the default skin', async () => {
+  it('covers the session chrome with a screen surface in Tern\u2019s own theme', async () => {
     const { chrome, splash } = launch()
 
     expect(chrome().options).toMatchObject({ mode: 'inline', role: 'omp.session' })
     expect(splash()!.options).toMatchObject({ mode: 'screen', role: SPLASH_ROLE })
-    expect(splash()!.palettes).toEqual([paletteOf(undefined)])
+    expect(splash()!.palettes).toEqual([])
     expect(splash()!.sheets.splash).toBe(splashStylesheet())
 
     await vi.advanceTimersByTimeAsync(400)
@@ -579,28 +543,32 @@ describe('App launch splash', () => {
     expect(splash()!.closed).toBe(false)
   })
 
-  it('recolours the splash when the gateway names a skin, and again on skin.changed', async () => {
+  it('stays in Tern\u2019s theme for the default skin, and recolours on skin.changed', async () => {
     const { chrome, gw, splash } = launch()
-    const ember = { colors: { background: '#1b0b05', ui_accent: '#ffd166', ui_text: '#ffe9d6' }, name: 'ember' }
-    const moss = { colors: { background: '#0c1a10', ui_accent: '#9be564' }, name: 'moss' }
+    const builtin = { colors: { ui_accent: '#FFBF00' }, name: 'default' }
+    const ember = { colors: { ui_accent: '#ffd166', ui_text: '#ffe9d6' }, name: 'ember' }
 
     await vi.advanceTimersByTimeAsync(200)
-    gw.emit('event', { payload: { skin: ember }, type: 'gateway.ready' })
-    expect(splash()!.palettes.at(-1)).toEqual(paletteOf(ember))
-    expect(splash()!.palettes.at(-1)!.dark![TERN_SPLASH_PALETTE.paper]).toBe('#1b0b05')
+    gw.emit('event', { payload: { skin: builtin }, type: 'gateway.ready' })
+    // No palette of the program's: the window's theme inks the splash.
+    expect(splash()!.palettes.at(-1)).toEqual({})
+    expect(chrome().palettes.at(-1)).toEqual(paletteOf(builtin))
 
     const before = splash()!.frames.length
 
-    gw.emit('event', { payload: moss, type: 'skin.changed' })
-    expect(splash()!.palettes.at(-1)).toEqual(paletteOf(moss))
-    expect(splash()!.palettes.at(-1)!.dark![TERN_SPLASH_PALETTE.accent]).toBe('#9be564')
-    // The chrome takes the same palette: one set of colours.
-    expect(chrome().palettes.at(-1)).toEqual(paletteOf(moss))
+    gw.emit('event', { payload: ember, type: 'skin.changed' })
+    expect(splash()!.palettes.at(-1)).toEqual(paletteOf(ember))
+    expect(splash()!.palettes.at(-1)!.dark![TERN_SPLASH_PALETTE.accent]).toBe('#ffd166')
+    expect(chrome().palettes.at(-1)).toEqual(paletteOf(ember))
 
     // The picture itself carries no colour, so the next frame is simply drawn in the new skin.
     await vi.advanceTimersByTimeAsync(SPLASH_TICK_MS)
     expect(splash()!.frames.length).toBeGreaterThan(before)
     expect(JSON.stringify(splash()!.frames.at(-1))).not.toMatch(/#[0-9a-f]{6}/i)
+
+    // Back to the built-in skin: back to the window's theme.
+    gw.emit('event', { payload: builtin, type: 'skin.changed' })
+    expect(splash()!.palettes.at(-1)).toEqual({})
   })
 
   it('hands off to the chrome once the gateway is ready and the intro has played', async () => {

@@ -14,9 +14,9 @@ export interface SplashSpan {
 }
 
 export type SplashGround = 'ink' | 'none' | 'paper' | 'shade'
-export type SplashBase = 'none' | 'paper' | 'shade'
+export type SplashBase = 'none' | 'paper'
 
-/** A run of cells on one ground. `base` is the ground colour its un-tokened spans are inked in. */
+/** A run of cells on one ground. `base` is `paper` when its un-tokened spans are inked in the paper colour. */
 export interface SplashSegment {
   ground: SplashGround
   base: SplashBase
@@ -146,7 +146,7 @@ export class Canvas {
    * (text, grounds, base inks) never depends on `pal`; only span tokens do.
    */
   cells(pal: SplashPalette, visible?: (x: number, y: number) => boolean): SplashCells {
-    const token = ['', pal.ink, '', pal.accent, pal.dim, pal.ray, '']
+    const token = ['', pal.ink, pal.shade, pal.accent, pal.dim, pal.ray, '']
     const rows: SplashCells = []
 
     for (let y = 0; y < this.h; y++) {
@@ -159,8 +159,8 @@ export class Canvas {
         const ground = GROUNDS[visible && !visible(x, y) ? 0 : this.bg[i]!]!
         const blank = ground === 'none' || this.glyph[i] === ' ' || this.fg[i] === 0
         const tone = blank ? 0 : this.fg[i]!
-        // A ground-coloured ink (shade or paper used as ink) is the segment's base ink.
-        const base: SplashBase | undefined = tone === SHADE ? 'shade' : tone === PAPER ? 'paper' : undefined
+        // Paper used as ink (type on an inverted card) is the segment's base ink.
+        const base: SplashBase | undefined = tone === PAPER ? 'paper' : undefined
 
         if (!seg || seg.ground !== ground || (base && seg.base !== 'none' && seg.base !== base)) {
           seg = { base: 'none', ground, spans: [] }

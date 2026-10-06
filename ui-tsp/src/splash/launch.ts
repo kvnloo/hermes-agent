@@ -82,9 +82,9 @@ export interface LaunchSplashOptions {
   design: string
   /** Called once, after the splash's surface is closed. */
   onDone: () => void
-  /** The program palette to start with (the skin's, once one is known). */
+  /** A program palette to start in; without one Tern's own theme colours the splash. */
   palette?: Palette
-  /** Which palette token carries each splash colour. */
+  /** Which theme token inks each splash role. */
   tokens?: SplashPalette
   status?: string
   now?: () => number
@@ -147,7 +147,7 @@ export class LaunchSplash {
     this.#skipped = true
   }
 
-  /** A skin arrived or changed: the next frame is drawn in it. */
+  /** The program palette changed (a skin was chosen, or dropped): the next frame is drawn in it. */
   palette(palette: Palette) {
     if (this.active) {
       this.#surface!.palette(palette)
