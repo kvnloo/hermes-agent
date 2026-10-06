@@ -41,7 +41,7 @@ The command discovers that focused worktree and opens:
 ```
 
 The Hermes pane uses worktree-local `HERMES_HOME` and `HERMES_RUNTIME_DIR`
-under `.tmp/`, so A/B/C can run simultaneously without sharing experiment state.
+under `.hermes-sandbox/`, so A/B/C can run simultaneously without sharing experiment state.
 
 ## 3. Verify identity before a run
 
