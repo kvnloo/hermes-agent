@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["node"],
+    "esModuleInterop": true
+  },
+  "files": [
+    "preview.ts",
+    "../../src/tern/experiments/nativeView.ts",
+    "../../src/tern/experiments/nativeSession.ts",
+    "../../src/tern/experiments/nativeInput.ts"
+  ]
+}

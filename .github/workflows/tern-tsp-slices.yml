@@ -33,3 +33,11 @@ jobs:
         run: npm test --workspace ui-tui -- src/tern
       - name: Emit UX experiment manifest
         run: npm run tern:ux:manifest --workspace ui-tui
+      - name: Typecheck native fixture viewer
+        run: npm run tern:ux:check --workspace ui-tui
+      - name: Verify offline fixture dump
+        run: |
+          npm run --silent tern:ux:preview --workspace ui-tui -- --dump > "$RUNNER_TEMP/native-a-views.json"
+          python3 -c 'import json,os; d=json.load(open(os.environ["RUNNER_TEMP"]+"/native-a-views.json")); assert len(d["views"]) == 14; assert d["variant"] == "omp-baseline"; print("14 semantic views; no visual verification claimed")'
+      - name: Exercise real Node PTYs with fake Tern replies
+        run: python3 ui-tui/scripts/tern-ux/smoke_preview.py
