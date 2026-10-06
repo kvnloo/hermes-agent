@@ -146,6 +146,9 @@ export class TernComposerTransport {
     }
 
     if (next.text === this.lastText && next.cursor === this.cursor && sendable === this.lastSendable) {
+      // The desired state has converged back to the most recently sent frame.
+      // Drop any blocked intermediate update so a later ACK cannot resurrect it.
+      this.pending = null
       return
     }
 
@@ -163,7 +166,15 @@ export class TernComposerTransport {
       return
     }
 
-    this.acked = Math.max(this.acked, Math.min(event.s, this.seq))
+    // ACK sequence numbers are cumulative frame ids. Ignore malformed,
+    // duplicate/stale, and future ACKs rather than clamping them into credit:
+    // clamping a future ACK would release a frame the terminal never accepted,
+    // and a fractional ACK must never create half a credit.
+    if (!Number.isInteger(event.s) || event.s <= this.acked || event.s > this.seq) {
+      return
+    }
+
+    this.acked = event.s
 
     if (this.pending && this.seq - this.acked < this.credits) {
       const pending = this.pending
