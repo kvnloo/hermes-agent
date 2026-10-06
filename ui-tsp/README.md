@@ -61,8 +61,10 @@ inks are span tokens naming theme tokens (`text`, `accent`, `muted`, `dim`).
 The splash wears Tern's own theme, so it is part of the window rather than a panel inside it and
 follows the theme picker live: paper is the pane itself, and shade and inverted grounds are derived
 from the pane's background and foreground by a small stylesheet. No colour value lives in the view.
-Hermes's built-in `default` skin leaves it that way; a skin the user chose is sent to the splash as
-a program palette on `gateway.ready` and `skin.changed`, and recolours the next frame.
+Hermes's built-in `default` skin leaves it that way, for the chrome as well: it sends no program
+palette, so the window keeps the Tern theme the user picked. A skin the user chose is sent as a
+program palette on `gateway.ready` and `skin.changed` and recolours the next frame; Tern also
+switches the window to its own theme of the same name when it has one.
 
 ```sh
 npx tsx scripts/splash-demo.ts            # gallery in a Tern pane: h/l switch, r replay, t skin on/off, q quit

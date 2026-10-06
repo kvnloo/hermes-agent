@@ -21,11 +21,14 @@ export function paletteOf(skin: HermesSkin | undefined): Palette {
 }
 
 /**
- * What the launch splash wears for `skin`. Hermes's built-in `default` skin is
- * no choice of the user's, so the splash stays in Tern's own theme (an empty
- * palette) and belongs to the window; a skin the user picked dresses it.
+ * The program palette to send for `skin`. Hermes's built-in `default` skin is
+ * no choice of the user's, so it sends none: Tern's own theme colours the
+ * chrome and the launch splash, and they belong to the window. (A palette
+ * also carries the skin's name, and Tern switches the window to its theme of
+ * that name, so sending `default` would replace the theme the user picked.)
+ * A skin the user chose is sent in full.
  */
-export function splashPaletteOf(skin: HermesSkin | null | undefined): Palette {
+export function programPaletteOf(skin: HermesSkin | null | undefined): Palette {
   return skin?.name && skin.name !== 'default' ? paletteOf(skin) : {}
 }
 

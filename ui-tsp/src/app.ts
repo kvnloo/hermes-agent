@@ -25,9 +25,9 @@ import type { Overlay, OverlayHost } from './overlay.js'
 import { Completion } from './overlays/completion.js'
 import { openModelPicker } from './overlays/models.js'
 import { promptOverlay } from './overlays/prompts.js'
-import { paletteOf, splashPaletteOf } from './palette.js'
+import { programPaletteOf } from './palette.js'
 import { SPLASH_ROLE } from './splash/index.js'
-import { LaunchSplash, pickSplashDesign, splashInsets, splashSetting } from './splash/launch.js'
+import { LaunchSplash, pickSplashDesign, splashInsets, splashSetting, splashTickMs } from './splash/launch.js'
 import { Transcript } from './transcript.js'
 import { dockNodes } from './view/dock.js'
 import { entryNode } from './view/transcript.js'
@@ -794,9 +794,11 @@ export class App implements OverlayHost {
 
   #applySkin(skin: SkinPayload | null | undefined) {
     if (skin) {
-      this.#surface.palette(paletteOf(skin))
+      const palette = programPaletteOf(skin)
+
+      this.#surface.palette(palette)
       // The splash draws in theme tokens only, so this recolours its next frame.
-      this.#splash?.palette(splashPaletteOf(skin))
+      this.#splash?.palette(palette)
     }
   }
 
@@ -822,7 +824,8 @@ export class App implements OverlayHost {
       },
       open: () => this.#tern.open({ id: 'splash', mode: 'screen', role: SPLASH_ROLE, title: 'hermes' }),
       size: () => splashInsets(this.#tern.caps.cols, process.stdout.rows ?? 24),
-      status: 'summoning hermes…'
+      status: 'summoning hermes…',
+      tickMs: splashTickMs()
     })
     this.#splash.start()
   }
@@ -889,7 +892,9 @@ export class App implements OverlayHost {
       copy: (text: string) => copyToClipboard(text),
       now,
       rewind: () => {
-        if (!this.sid) return
+        if (!this.sid) {
+          return
+        }
         this.#gw.request('session.undo', { session_id: this.sid }).catch((error: Error) => {
           this.transcript.notice(error.message, 'error')
           this.changed()

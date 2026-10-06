@@ -11,9 +11,9 @@
 // the clock at that instant, for a stable still.
 import { connect, ui } from '@stencil-hq/tern'
 
-import { splashPaletteOf } from '../src/palette.js'
+import { programPaletteOf } from '../src/palette.js'
 import { SPLASH_DESIGN_NAMES, SPLASH_ROLE } from '../src/splash/index.js'
-import { LaunchSplash, pickSplashDesign, splashInsets } from '../src/splash/launch.js'
+import { LaunchSplash, pickSplashDesign, splashInsets, splashTickMs } from '../src/splash/launch.js'
 
 const args = process.argv.slice(2)
 const value = (name: string) => (args.includes(name) ? args[args.indexOf(name) + 1] : undefined)
@@ -77,8 +77,9 @@ const play = () => {
       }
     },
     open: () => session.open({ id: 'splash', mode: 'screen', role: SPLASH_ROLE, title: 'hermes' }),
-    palette: splashPaletteOf(ember ? EMBER : undefined),
+    palette: programPaletteOf(ember ? EMBER : undefined),
     size: () => splashInsets(session.caps.cols, process.stdout.rows ?? 24),
+    tickMs: splashTickMs(),
     status: once
       ? 'summoning hermes…'
       : `${index + 1}/${SPLASH_DESIGN_NAMES.length} ${name} · h/l switch · t skin · q quit`
@@ -117,6 +118,6 @@ for await (const input of session) {
     splash?.skip()
   } else if (key === 't') {
     ember = !ember
-    splash?.palette(splashPaletteOf(ember ? EMBER : undefined))
+    splash?.palette(programPaletteOf(ember ? EMBER : undefined))
   }
 }

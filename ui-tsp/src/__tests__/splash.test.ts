@@ -5,7 +5,7 @@ import type { GatewayClient } from '@tui/gatewayClient.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { App } from '../app.js'
-import { paletteOf, splashPaletteOf } from '../palette.js'
+import { paletteOf, programPaletteOf } from '../palette.js'
 import {
   DEFAULT_SPLASH_DESIGN,
   renderSplashFrame,
@@ -27,7 +27,8 @@ import {
   SPLASH_MAX_MS,
   splashInsets,
   splashSetting,
-  type SplashSurface
+  type SplashSurface,
+  splashTickMs
 } from '../splash/launch.js'
 import { renderWordmark, WORDMARK_MIN_ROWS, wordmarkWidth } from '../splash/wordmark.js'
 import { splashNode } from '../view/splash.js'
@@ -222,13 +223,13 @@ describe('splash theme', () => {
   })
 
   it('wears Tern\u2019s theme under the built-in default skin, and a chosen skin\u2019s palette otherwise', () => {
-    expect(splashPaletteOf(undefined)).toEqual({})
-    expect(splashPaletteOf({ colors: { ui_accent: '#FFBF00' }, name: 'default' })).toEqual({})
+    expect(programPaletteOf(undefined)).toEqual({})
+    expect(programPaletteOf({ colors: { ui_accent: '#FFBF00' }, name: 'default' })).toEqual({})
 
     const ember = { colors: { banner_dim: '#c98a5a', ui_accent: '#ffd166', ui_text: '#ffe9d6' }, name: 'ember' }
-    const dark = splashPaletteOf(ember).dark!
+    const dark = programPaletteOf(ember).dark!
 
-    expect(splashPaletteOf(ember)).toEqual(paletteOf(ember))
+    expect(programPaletteOf(ember)).toEqual(paletteOf(ember))
     expect(dark[TERN_SPLASH_PALETTE.ink]).toBe('#ffe9d6')
     expect(dark[TERN_SPLASH_PALETTE.accent]).toBe('#ffd166')
     expect(dark[TERN_SPLASH_PALETTE.dim]).toMatch(/^#[0-9a-f]{6}$/i)
@@ -252,6 +253,13 @@ describe('HERMES_TUI_SPLASH', () => {
     expect(pickSplashDesign('nope')).toBe('kerykeion')
     expect(pickSplashDesign('random', () => 0)).toBe('kerykeion')
     expect(pickSplashDesign('random', () => 0.999)).toBe('soul')
+  })
+
+  it('HERMES_TUI_SPLASH_FPS sets a recording frame rate, bounded', () => {
+    expect(splashTickMs({})).toBeUndefined()
+    expect(splashTickMs({ HERMES_TUI_SPLASH_FPS: 'fast' })).toBeUndefined()
+    expect(splashTickMs({ HERMES_TUI_SPLASH_FPS: '120' })).toBe(8)
+    expect(splashTickMs({ HERMES_TUI_SPLASH_FPS: '9000' })).toBe(4)
   })
 
   it('stays out of the way of a launch that carries a prompt', () => {
@@ -552,7 +560,8 @@ describe('App launch splash', () => {
     gw.emit('event', { payload: { skin: builtin }, type: 'gateway.ready' })
     // No palette of the program's: the window's theme inks the splash.
     expect(splash()!.palettes.at(-1)).toEqual({})
-    expect(chrome().palettes.at(-1)).toEqual(paletteOf(builtin))
+    // The chrome too: a palette names its skin, and Tern would switch the window to that theme.
+    expect(chrome().palettes.at(-1)).toEqual({})
 
     const before = splash()!.frames.length
 
@@ -569,6 +578,7 @@ describe('App launch splash', () => {
     // Back to the built-in skin: back to the window's theme.
     gw.emit('event', { payload: builtin, type: 'skin.changed' })
     expect(splash()!.palettes.at(-1)).toEqual({})
+    expect(chrome().palettes.at(-1)).toEqual({})
   })
 
   it('hands off to the chrome once the gateway is ready and the intro has played', async () => {

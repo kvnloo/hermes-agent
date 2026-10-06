@@ -43,6 +43,18 @@ export function splashSetting(env: Readonly<Record<string, string | undefined>> 
   return { design: off || on ? '' : raw, enabled: !off && !prompted }
 }
 
+/**
+ * `HERMES_TUI_SPLASH_FPS`: draw the splash at another rate. For recording
+ * only (a high-frame-rate capture wants more than 25 unique frames a second);
+ * the designs are functions of time, so the motion is the same, just finer.
+ * Undefined keeps the default tick.
+ */
+export function splashTickMs(env: Readonly<Record<string, string | undefined>> = process.env): number | undefined {
+  const fps = Number(env.HERMES_TUI_SPLASH_FPS)
+
+  return Number.isFinite(fps) && fps > 0 ? Math.max(4, Math.round(1000 / Math.min(240, fps))) : undefined
+}
+
 /** Resolves a `HERMES_TUI_SPLASH` design value to a design name. */
 export function pickSplashDesign(setting: string, random: () => number = Math.random): string {
   if (setting === 'random') {
@@ -87,6 +99,8 @@ export interface LaunchSplashOptions {
   /** Which theme token inks each splash role. */
   tokens?: SplashPalette
   status?: string
+  /** Milliseconds between frames; the default is the designs' own tick. */
+  tickMs?: number
   now?: () => number
   setInterval?: (fn: () => void, ms: number) => unknown
   clearInterval?: (handle: unknown) => void
@@ -133,7 +147,7 @@ export class LaunchSplash {
     }
 
     this.#startedAt = this.#now()
-    this.#timer = (this.#options.setInterval ?? setInterval)(() => this.tick(), SPLASH_TICK_MS)
+    this.#timer = (this.#options.setInterval ?? setInterval)(() => this.tick(), this.#options.tickMs ?? SPLASH_TICK_MS)
     this.tick()
   }
 
