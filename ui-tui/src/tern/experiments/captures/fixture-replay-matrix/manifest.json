@@ -1,0 +1,572 @@
+{
+  "mode": "fixture-replay",
+  "liveTernVerified": false,
+  "reason": "bun scripts/tern-ux/preview.ts in an isolated Tern pane. No model calls.",
+  "isolation": "sway WLR_BACKENDS=headless WLR_RENDERER=gles2, private TERN_CONFIG_DIR, not the user desktop",
+  "ternVersion": "tern 0.4.5 (1d14241)",
+  "codeCommit": "37796d645d146f93f4b46d653bfe7540bb351dd1",
+  "wideFootersFromCtlTree": [
+    "1/14 \u00b7 Fresh session",
+    "2/14 \u00b7 Bounded code-change request",
+    "3/14 \u00b7 Assistant thinking",
+    "4/14 \u00b7 Read/search tool",
+    "5/14 \u00b7 Write/edit tool",
+    "6/14 \u00b7 Subagent starts",
+    "7/14 \u00b7 Queued user follow-up",
+    "8/14 \u00b7 Approval-required command",
+    "9/14 \u00b7 Tool failure and recovery",
+    "10/14 \u00b7 Successful completion",
+    "11/14 \u00b7 Open model picker",
+    "12/14 \u00b7 Inspect background/agent state",
+    "13/14 \u00b7 Open split preview",
+    "14/14 \u00b7 Return to chat"
+  ],
+  "files": [
+    {
+      "viewport": "narrow",
+      "state": 1,
+      "file": "narrow-1.png",
+      "bytes": 30130,
+      "sha256": "29ae2f20c98cb5dba0badfa4676ac9e11c3a9bd749a36db6262bdde2dbbfdc90",
+      "columns": 80,
+      "rows": 28,
+      "output": [
+        657,
+        561
+      ]
+    },
+    {
+      "viewport": "narrow",
+      "state": 2,
+      "file": "narrow-2.png",
+      "bytes": 35275,
+      "sha256": "89a55e50d80f4f4f2ccbee05a2162100ed49af57df36c67c7ba3ee0c6fc4fb9d",
+      "columns": 80,
+      "rows": 28,
+      "output": [
+        657,
+        561
+      ]
+    },
+    {
+      "viewport": "narrow",
+      "state": 3,
+      "file": "narrow-3.png",
+      "bytes": 34715,
+      "sha256": "f5b28a078d5e12abdfb1b28d8fd6060a4e63f2bd066a636e6ff546e59b73215a",
+      "columns": 80,
+      "rows": 28,
+      "output": [
+        657,
+        561
+      ]
+    },
+    {
+      "viewport": "narrow",
+      "state": 4,
+      "file": "narrow-4.png",
+      "bytes": 44050,
+      "sha256": "782b5ad6b708151191bbef40f3b6804ed0ba71f5937820e415804fe57f09b5d6",
+      "columns": 80,
+      "rows": 28,
+      "output": [
+        657,
+        561
+      ]
+    },
+    {
+      "viewport": "narrow",
+      "state": 5,
+      "file": "narrow-5.png",
+      "bytes": 51839,
+      "sha256": "b90476c48e01f9f15cfc78a255606b5526c241ef42477a63108c15eade83b27d",
+      "columns": 80,
+      "rows": 28,
+      "output": [
+        657,
+        561
+      ]
+    },
+    {
+      "viewport": "narrow",
+      "state": 6,
+      "file": "narrow-6.png",
+      "bytes": 47037,
+      "sha256": "c06d49c9abff60d212f0bc4a3754029256c78ee752bafb705a463a8209bead6b",
+      "columns": 80,
+      "rows": 28,
+      "output": [
+        657,
+        561
+      ]
+    },
+    {
+      "viewport": "narrow",
+      "state": 7,
+      "file": "narrow-7.png",
+      "bytes": 48497,
+      "sha256": "73cd722bf67981791bce1b4dee70ea476cdbf00b93bb0a9a306970e7f8c8d4cc",
+      "columns": 80,
+      "rows": 28,
+      "output": [
+        657,
+        561
+      ]
+    },
+    {
+      "viewport": "narrow",
+      "state": 8,
+      "file": "narrow-8.png",
+      "bytes": 68326,
+      "sha256": "dc4ffc3654ce634069167b3e96b880c5b3781b9c6c4a7412d59c0e94c436028b",
+      "columns": 80,
+      "rows": 28,
+      "output": [
+        657,
+        561
+      ]
+    },
+    {
+      "viewport": "narrow",
+      "state": 9,
+      "file": "narrow-9.png",
+      "bytes": 52187,
+      "sha256": "46fd38d2c083943bde998ba457037cfa18f256b4d211b60d2940bd37359a7725",
+      "columns": 80,
+      "rows": 28,
+      "output": [
+        657,
+        561
+      ]
+    },
+    {
+      "viewport": "narrow",
+      "state": 10,
+      "file": "narrow-10.png",
+      "bytes": 50036,
+      "sha256": "3e4c228df89e3190c81ccf84d8d1c78883ecd346e6df09125059aabacaed859a",
+      "columns": 80,
+      "rows": 28,
+      "output": [
+        657,
+        561
+      ]
+    },
+    {
+      "viewport": "narrow",
+      "state": 11,
+      "file": "narrow-11.png",
+      "bytes": 62456,
+      "sha256": "44a5c5d03ba481545d08859b7ce6c337f165f9097e11042245b5a00fb7922e78",
+      "columns": 80,
+      "rows": 28,
+      "output": [
+        657,
+        561
+      ]
+    },
+    {
+      "viewport": "narrow",
+      "state": 12,
+      "file": "narrow-12.png",
+      "bytes": 69625,
+      "sha256": "0b9700dcb2433f286efe6961181503648830df2c393618d6418e411e273418f2",
+      "columns": 80,
+      "rows": 28,
+      "output": [
+        657,
+        561
+      ]
+    },
+    {
+      "viewport": "narrow",
+      "state": 13,
+      "file": "narrow-13.png",
+      "bytes": 72113,
+      "sha256": "2376e338c6ce86c9a8ef24558b3d66f391b1e0d8924224721b7df171e06414fc",
+      "columns": 80,
+      "rows": 28,
+      "output": [
+        657,
+        561
+      ]
+    },
+    {
+      "viewport": "narrow",
+      "state": 14,
+      "file": "narrow-14.png",
+      "bytes": 49796,
+      "sha256": "3c4c91a23fb710a84178fc50ec6373322c905bf709e8884133833cb6a4a6ba0f",
+      "columns": 80,
+      "rows": 28,
+      "output": [
+        657,
+        561
+      ]
+    },
+    {
+      "viewport": "normal",
+      "state": 1,
+      "file": "normal-1.png",
+      "bytes": 35097,
+      "sha256": "6dcc15dd677b1fec9a3099ebc596e54af8c30f94acb002abf69ec5b2ec6148a9",
+      "columns": 120,
+      "rows": 36,
+      "output": [
+        984,
+        713
+      ]
+    },
+    {
+      "viewport": "normal",
+      "state": 2,
+      "file": "normal-2.png",
+      "bytes": 35004,
+      "sha256": "e8238371ef499e957f0e9890acf26bc3e9fe375e025064bbae2b90f4c8347434",
+      "columns": 120,
+      "rows": 36,
+      "output": [
+        984,
+        713
+      ]
+    },
+    {
+      "viewport": "normal",
+      "state": 3,
+      "file": "normal-3.png",
+      "bytes": 39853,
+      "sha256": "8921b477ae282f6f758c8636e91178548e0223c4b48f09d37b7300d2f601303d",
+      "columns": 120,
+      "rows": 36,
+      "output": [
+        984,
+        713
+      ]
+    },
+    {
+      "viewport": "normal",
+      "state": 4,
+      "file": "normal-4.png",
+      "bytes": 48510,
+      "sha256": "e8d4d72d61af16a8b1a13139a4d63ab2080e4c9e1321000763ba62226e6b2379",
+      "columns": 120,
+      "rows": 36,
+      "output": [
+        984,
+        713
+      ]
+    },
+    {
+      "viewport": "normal",
+      "state": 5,
+      "file": "normal-5.png",
+      "bytes": 57031,
+      "sha256": "18136b439abc6dd718837e859b786c7e1ac403583ad061b88bca8ca6686a0217",
+      "columns": 120,
+      "rows": 36,
+      "output": [
+        984,
+        713
+      ]
+    },
+    {
+      "viewport": "normal",
+      "state": 6,
+      "file": "normal-6.png",
+      "bytes": 52070,
+      "sha256": "5d872a409f4b0029465c9f66420546d91e912e3e0252b57aa5b0bf747f158aac",
+      "columns": 120,
+      "rows": 36,
+      "output": [
+        984,
+        713
+      ]
+    },
+    {
+      "viewport": "normal",
+      "state": 7,
+      "file": "normal-7.png",
+      "bytes": 53505,
+      "sha256": "1de2690eac5df0ac4106074c37e0408cb82ff312b8087012f3679c28943641b8",
+      "columns": 120,
+      "rows": 36,
+      "output": [
+        984,
+        713
+      ]
+    },
+    {
+      "viewport": "normal",
+      "state": 8,
+      "file": "normal-8.png",
+      "bytes": 54186,
+      "sha256": "c51d9d44cc1e9514809fd54697581c6b1cb81729ddcb66723309248b8c828cad",
+      "columns": 120,
+      "rows": 36,
+      "output": [
+        984,
+        713
+      ]
+    },
+    {
+      "viewport": "normal",
+      "state": 9,
+      "file": "normal-9.png",
+      "bytes": 66125,
+      "sha256": "ef62df73c42c70c301225639822c42d39ec6a35e5976224253a9320b4f105181",
+      "columns": 120,
+      "rows": 36,
+      "output": [
+        984,
+        713
+      ]
+    },
+    {
+      "viewport": "normal",
+      "state": 10,
+      "file": "normal-10.png",
+      "bytes": 59937,
+      "sha256": "f64ce15fd284a2892a17caf6c96bedadf7ec07bf0c298a2ecbc2f7489bb93adf",
+      "columns": 120,
+      "rows": 36,
+      "output": [
+        984,
+        713
+      ]
+    },
+    {
+      "viewport": "normal",
+      "state": 11,
+      "file": "normal-11.png",
+      "bytes": 59552,
+      "sha256": "8caf8b595286eb0af9ccda1cdde0ae6c6f0f333238cc56b6d0b4fc8886fdff23",
+      "columns": 120,
+      "rows": 36,
+      "output": [
+        984,
+        713
+      ]
+    },
+    {
+      "viewport": "normal",
+      "state": 12,
+      "file": "normal-12.png",
+      "bytes": 60185,
+      "sha256": "5481e01c6583acecfc5ac290b168f7170b4870a017e490840d14909cbbbcd544",
+      "columns": 120,
+      "rows": 36,
+      "output": [
+        984,
+        713
+      ]
+    },
+    {
+      "viewport": "normal",
+      "state": 13,
+      "file": "normal-13.png",
+      "bytes": 81786,
+      "sha256": "bdc19cc84e8806ac6573dfac5dc7346511e28e2f3fac95e953234d9c183dccb1",
+      "columns": 120,
+      "rows": 36,
+      "output": [
+        984,
+        713
+      ]
+    },
+    {
+      "viewport": "normal",
+      "state": 14,
+      "file": "normal-14.png",
+      "bytes": 59555,
+      "sha256": "6552846e44d075539c0e1bf15eb2d49e03d0b50f0b0d6fa19c5ce4e59146731a",
+      "columns": 120,
+      "rows": 36,
+      "output": [
+        984,
+        713
+      ]
+    },
+    {
+      "viewport": "wide",
+      "state": 1,
+      "file": "wide-1.png",
+      "bytes": 39974,
+      "sha256": "e9187b3bb037a1a157f833a6cec1e61f405e7e0da1551718046b6327403c4a12",
+      "columns": 180,
+      "rows": 44,
+      "output": [
+        1433,
+        820
+      ]
+    },
+    {
+      "viewport": "wide",
+      "state": 2,
+      "file": "wide-2.png",
+      "bytes": 45487,
+      "sha256": "99ca59c96db3cce71bcb3554890ab646f3b80e16410c9c14d3e81ba2ca8635b5",
+      "columns": 180,
+      "rows": 44,
+      "output": [
+        1433,
+        820
+      ]
+    },
+    {
+      "viewport": "wide",
+      "state": 3,
+      "file": "wide-3.png",
+      "bytes": 45144,
+      "sha256": "5108b259855fbef7e7818e056c1a8dadd23a19724c7b0d9ff0535b1c50f3a647",
+      "columns": 180,
+      "rows": 44,
+      "output": [
+        1433,
+        820
+      ]
+    },
+    {
+      "viewport": "wide",
+      "state": 4,
+      "file": "wide-4.png",
+      "bytes": 53638,
+      "sha256": "610b1e9d8b983d310adae146c0563b6aa36da4f37f93661cd58716a5975536b0",
+      "columns": 180,
+      "rows": 44,
+      "output": [
+        1433,
+        820
+      ]
+    },
+    {
+      "viewport": "wide",
+      "state": 5,
+      "file": "wide-5.png",
+      "bytes": 62254,
+      "sha256": "f95b0bc6f9c9a08a13c1298e76aa5a8776bc074685de3cd6ffa58014f8f21625",
+      "columns": 180,
+      "rows": 44,
+      "output": [
+        1433,
+        820
+      ]
+    },
+    {
+      "viewport": "wide",
+      "state": 6,
+      "file": "wide-6.png",
+      "bytes": 57220,
+      "sha256": "489ca1d5997334a7c6b8dee80a94050ba5506c0e9c2b7d8e6bce90b16bd33119",
+      "columns": 180,
+      "rows": 44,
+      "output": [
+        1433,
+        820
+      ]
+    },
+    {
+      "viewport": "wide",
+      "state": 7,
+      "file": "wide-7.png",
+      "bytes": 58480,
+      "sha256": "fb85ea946fad0fc83c8e5f1dac74ff4938d0513e5c2f978814fe8162d56c9bf2",
+      "columns": 180,
+      "rows": 44,
+      "output": [
+        1433,
+        820
+      ]
+    },
+    {
+      "viewport": "wide",
+      "state": 8,
+      "file": "wide-8.png",
+      "bytes": 78007,
+      "sha256": "6ab289899bc329e0dc55e72279cb24dbc409bff64a796d9a6ff2cd21b0c26bbe",
+      "columns": 180,
+      "rows": 44,
+      "output": [
+        1433,
+        820
+      ]
+    },
+    {
+      "viewport": "wide",
+      "state": 9,
+      "file": "wide-9.png",
+      "bytes": 72261,
+      "sha256": "9c10ca2afdbbcae7ad6c8fd80d07847e1303500fd1d9b90598e374c2f4cebfba",
+      "columns": 180,
+      "rows": 44,
+      "output": [
+        1433,
+        820
+      ]
+    },
+    {
+      "viewport": "wide",
+      "state": 10,
+      "file": "wide-10.png",
+      "bytes": 65543,
+      "sha256": "528d88224ad218a94636803f666b3c4a34abb9c5335498bd568c65536f0ddf59",
+      "columns": 180,
+      "rows": 44,
+      "output": [
+        1433,
+        820
+      ]
+    },
+    {
+      "viewport": "wide",
+      "state": 11,
+      "file": "wide-11.png",
+      "bytes": 74542,
+      "sha256": "4d7e0229cc9524ccb99206534e67c37c4a1d24f89df9865b88253dfd7cbf47c6",
+      "columns": 180,
+      "rows": 44,
+      "output": [
+        1433,
+        820
+      ]
+    },
+    {
+      "viewport": "wide",
+      "state": 12,
+      "file": "wide-12.png",
+      "bytes": 81611,
+      "sha256": "51b150b25e043b41b8afbfe8cce2a2f67eef949eb4b05785a6852fe674956dfa",
+      "columns": 180,
+      "rows": 44,
+      "output": [
+        1433,
+        820
+      ]
+    },
+    {
+      "viewport": "wide",
+      "state": 13,
+      "file": "wide-13.png",
+      "bytes": 82659,
+      "sha256": "e5e3b61004295329122feda827d4dd8b92361020b4b5d1e22236a8454a57d6b7",
+      "columns": 180,
+      "rows": 44,
+      "output": [
+        1433,
+        820
+      ]
+    },
+    {
+      "viewport": "wide",
+      "state": 14,
+      "file": "wide-14.png",
+      "bytes": 65149,
+      "sha256": "b8aada94157147ad83975acae9a3cf21b9f354c87bcd5afdbbe302d9cace26ec",
+      "columns": 180,
+      "rows": 44,
+      "output": [
+        1433,
+        820
+      ]
+    }
+  ]
+}
