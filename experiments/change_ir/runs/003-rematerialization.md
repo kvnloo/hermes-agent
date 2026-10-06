@@ -78,4 +78,11 @@ python -m pytest tests/gateway/test_telegram_group_gating.py -q
 
 Workflow: `Change IR rematerialization`, run 37547255551.
 
-Validation result is recorded in the final experiment closeout; the workflow file itself is excluded from the compression numbers above.
+As of experiment closeout, run 37547255551 is **queued**, not failed. The fork has 29 queued Actions runs, including unrelated runs that have been waiting much longer, so this is recorded as runner-capacity evidence rather than a test result.
+
+Two additional checks reduce—but do not erase—the remaining execution uncertainty:
+
+- #105624's refreshed/tested base was `02a802a7ef87f360fee0aa8d31e9232fc8800983`.
+- The rematerialization target `59a3866ea5a07290afd9a1d137d52d679b77f3ab` is **378 commits ahead**, yet none of the three rematerialized source/test files changed in that interval: `plugins/platforms/telegram/adapter.py`, `gateway/config_loader.py`, or `tests/gateway/test_telegram_group_gating.py`.
+
+The original refreshed PR reported 77 targeted tests passing on those same surfaces. That is corroborating evidence, **not a substitute for executing the new branch**. The workflow is deliberately left attached to the isolated rematerialization branch so its eventual result is auditable; the workflow file itself is excluded from the compression numbers above.
