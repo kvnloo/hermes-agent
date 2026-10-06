@@ -1,0 +1,89 @@
+--- a/tools/delegate_tool.py
++++ b/tools/delegate_tool.py
+@@ -399,42 +399,55 @@
+     live_deleg_id: Optional[str], live_writers: list,
+ ) -> tuple[List[tuple], Optional[str]]:
+     """Build every child on the main thread (construction is not thread-safe);
+     ``(children, None)`` or ``([], error)`` on an explicit-pin preflight failure."""
++    from contextlib import ExitStack
++    from tools.delegate_tool_child_run import _close_child, _detach_child
+     from tools.delegation_live_log import wrap_progress_callback
+     from tools.delegation_output_schema import append_output_contract
++    # A bad later pin must fail before an earlier child allocates resources.
++    try:
++        task_routes = [_resolve_task_credentials(t, creds, routing_cfg, parent_agent) for t in task_list]
++    except ValueError as exc:
++        return [], str(exc)
++
+     children = []
+-    for i, t in enumerate(task_list):
+-        _task_schema = task_schemas[i] if i < len(task_schemas) else None
+-        _child_context = t.get("context")
+-        if _task_schema is not None:
+-            _child_context = append_output_contract(_child_context, _task_schema)
+-        try:
+-            creds_i, routing_i = _resolve_task_credentials(t, creds, routing_cfg, parent_agent)
+-            child = _build_child_preserving_parent_tools(
+-                task_index=i, goal=t["goal"], context=_child_context,
+-                toolsets=None,  # always inherit the parent's toolsets
+-                model=creds_i["model"], max_iterations=max_iterations, task_count=len(task_list),
+-                parent_agent=parent_agent, role=_normalize_role(t.get("role") or top_role),
+-                **_child_credential_overrides(creds_i, routing_i),
+-            )
+-        except ValueError as exc:
+-            return [], str(exc)
+-        if _task_schema is not None:
+-            with _quiet("Could not attach output schema to child %d", i):
+-                child._delegate_output_schema = _task_schema
+-        # Tee progress events into the live transcript (wrapper keeps the
+-        # _flush contract and swallows writer failures).
+-        _writer = live_writers[i] if i < len(live_writers) else None
+-        if _writer is not None:
+-            child.tool_progress_callback = wrap_progress_callback(getattr(child, "tool_progress_callback", None), _writer)
+-            child._live_transcript_path = str(_writer.path)
+-        if live_deleg_id:
+-            setattr(child, "_delegation_id", live_deleg_id)
+-            _ident_ref = getattr(child, "_progress_identity_ref", None)
+-            if isinstance(_ident_ref, dict):
+-                _ident_ref["delegation_id"] = live_deleg_id
+-        children.append((i, t, child))
++    with ExitStack() as rollback:
++        for i, t in enumerate(task_list):
++            _task_schema = task_schemas[i] if i < len(task_schemas) else None
++            _child_context = t.get("context")
++            if _task_schema is not None:
++                _child_context = append_output_contract(_child_context, _task_schema)
++            try:
++                creds_i, routing_i = task_routes[i]
++                child = _build_child_preserving_parent_tools(
++                    task_index=i, goal=t["goal"], context=_child_context,
++                    toolsets=None,  # always inherit the parent's toolsets
++                    model=creds_i["model"], max_iterations=max_iterations, task_count=len(task_list),
++                    parent_agent=parent_agent, role=_normalize_role(t.get("role") or top_role),
++                    **_child_credential_overrides(creds_i, routing_i),
++                )
++            except ValueError as exc:
++                return [], str(exc)
++            # Until the complete batch succeeds, this scope owns every returned child.
++            rollback.callback(_detach_child, parent_agent, child)
++            rollback.callback(_close_child, child, "subagent batch preflight rollback close failed")
++            if _task_schema is not None:
++                with _quiet("Could not attach output schema to child %d", i):
++                    child._delegate_output_schema = _task_schema
++            # Tee progress events into the live transcript (wrapper keeps the
++            # _flush contract and swallows writer failures).
++            _writer = live_writers[i] if i < len(live_writers) else None
++            if _writer is not None:
++                child.tool_progress_callback = wrap_progress_callback(getattr(child, "tool_progress_callback", None), _writer)
++                child._live_transcript_path = str(_writer.path)
++            if live_deleg_id:
++                setattr(child, "_delegation_id", live_deleg_id)
++                _ident_ref = getattr(child, "_progress_identity_ref", None)
++                if isinstance(_ident_ref, dict):
++                    _ident_ref["delegation_id"] = live_deleg_id
++            children.append((i, t, child))
++        rollback.pop_all()  # The normal child runner now owns close/detach.
+     return children, None
+ 
+ 
+ def delegate_task(
