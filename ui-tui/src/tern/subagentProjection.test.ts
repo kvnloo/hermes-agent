@@ -89,7 +89,7 @@ describe('native subagent projection', () => {
     expect(JSON.stringify(node.c)).toContain('latest note')
     expect(JSON.stringify(node.c)).not.toContain('older thought')
     expect(JSON.stringify(node.c)).not.toContain('older note')
-    expect(JSON.stringify(node.c)).not.toContain('one')
+    expect(node.c?.some(child => child.id.endsWith(':output:0'))).toBe(false)
     expect(JSON.stringify(node.c)).toContain('two')
     expect(JSON.stringify(node.c)).toContain('three')
     expect(JSON.stringify(node.c)).toContain('"error"')
