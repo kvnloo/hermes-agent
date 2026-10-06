@@ -7,6 +7,7 @@ import { $isBlocked } from '../app/overlayStore.js'
 import { $uiState } from '../app/uiStore.js'
 import { NATIVE_MODE } from '../config/env.js'
 import { encodeTspJson, HERMES_TSP_PROGRAM_FEATURES, type TspEvent, type TspHello } from './protocol.js'
+import type { TernLiveNode } from './liveProjection.js'
 import { $ternSurface, subscribeTernSurfaceEvents } from './surface.js'
 
 export const TERN_SURFACE_ID = 'hermes:session'
@@ -82,7 +83,7 @@ export class TernComposerTransport {
     this.limit = Math.max(4, Math.trunc(hello.apc ?? 65_536))
   }
 
-  start(snapshot: TernComposerSnapshot, sendable: boolean): void {
+  start(snapshot: TernComposerSnapshot, sendable: boolean, _main?: readonly TernLiveNode[]): void {
     if (this.started) {
       return
     }
@@ -135,7 +136,7 @@ export class TernComposerTransport {
     ])
   }
 
-  update(snapshot: TernComposerSnapshot, sendable: boolean): void {
+  update(snapshot: TernComposerSnapshot, sendable: boolean, _main?: readonly TernLiveNode[]): void {
     if (!this.started) {
       return
     }
@@ -234,7 +235,7 @@ export class TernInlineSession {
     private hello: TspHello
   ) {}
 
-  sync(state: { blocked: boolean; busy: boolean; snapshot: TernComposerSnapshot }): void {
+  sync(state: { blocked: boolean; busy: boolean; snapshot: TernComposerSnapshot; main?: readonly TernLiveNode[] }): void {
     if (state.blocked) {
       this.close()
       return
@@ -244,11 +245,11 @@ export class TernInlineSession {
 
     if (!this.transport) {
       this.transport = new TernComposerTransport(this.write, this.hello)
-      this.transport.start(state.snapshot, sendable)
+      this.transport.start(state.snapshot, sendable, state.main)
       return
     }
 
-    this.transport.update(state.snapshot, sendable)
+    this.transport.update(state.snapshot, sendable, state.main)
   }
 
   handleEvent(event: TspEvent): void {
