@@ -1,0 +1,4 @@
+# A real launch: the Tern frontend on a real gateway. The splash covers boot
+# and hands off to the session chrome. Record at least 5 seconds.
+#   capture.sh launch 6 launch kerykeion
+run "{state}/hermes.sh {arg} 120"

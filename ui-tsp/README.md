@@ -30,6 +30,7 @@ code 75, and the launcher runs the Ink TUI in its place (`hermes_cli/main_tui_la
 | `src/view/` | Node builders (TSX on the Tern SDK's runtime) for the transcript, tool cards, dock and welcome card |
 | `src/overlay.ts`, `src/overlays/` | Floating sheets: approvals, clarify, masked prompts, completions, pickers |
 | `src/palette.ts` | The skin as a Tern program palette (`t`) |
+| `src/splash/`, `src/view/splash.tsx` | The launch splash: seven pure designs, their Tern view, and the shell that times and hands off |
 
 The views speak omp's chat vocabulary (`omp.session`, `omp.user`, `omp.assistant`,
 `omp.thinking`, `omp.editor`, `tool` names like `bash`/`read`/`edit`): Tern's chat styles
@@ -39,6 +40,37 @@ its icon, deck tile and branding.
 
 `@tui/*` imports reach the renderer-free modules of `ui-tui/src` (the gateway transport, skins,
 history, completion requests); nothing here imports React or Ink.
+
+## Launch splash
+
+Before the session chrome appears, a splash covers gateway boot on its own `screen` surface and
+hands off when the gateway is ready. Any key skips it; it never holds past 15 seconds.
+
+| Switch | Effect |
+| --- | --- |
+| `HERMES_TUI_SPLASH=0` | No splash |
+| `HERMES_TUI_SPLASH=<design>` | `kerykeion` (default), `sigil`, `velocity`, `atlas`, `windows`, `unleash` or `soul` |
+| `HERMES_TUI_SPLASH=random` | A different design each launch |
+
+It is also skipped under Reduce Motion and when the launch carries a prompt (`hermes -q …`).
+
+Each design is a pure function of size, elapsed time and a palette (`renderSplashFrame`), so a
+frame is reproducible without a gateway or a model. A frame is cells, not ANSI: `text` nodes whose
+inks are span tokens naming theme tokens (`text`, `accent`, `muted`, `dim`).
+
+The splash wears Tern's own theme, so it is part of the window rather than a panel inside it and
+follows the theme picker live: paper is the pane itself, and shade and inverted grounds are derived
+from the pane's background and foreground by a small stylesheet. No colour value lives in the view.
+Hermes's built-in `default` skin leaves it that way, for the chrome as well: it sends no program
+palette, so the window keeps the Tern theme the user picked. A skin the user chose is sent as a
+program palette on `gateway.ready` and `skin.changed` and recolours the next frame; Tern also
+switches the window to its own theme of the same name when it has one.
+
+```sh
+npx tsx scripts/splash-demo.ts            # gallery in a Tern pane: h/l switch, r replay, t skin on/off, q quit
+npx tsx scripts/splash-demo.ts --once     # one launch, as the app plays it
+SPLASH_DEMO_AT=3000 npx tsx scripts/splash-demo.ts --design atlas   # hold one instant, for a still
+```
 
 ## Developing
 

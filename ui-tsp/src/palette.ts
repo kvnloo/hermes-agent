@@ -21,6 +21,18 @@ export function paletteOf(skin: HermesSkin | undefined): Palette {
 }
 
 /**
+ * The program palette to send for `skin`. Hermes's built-in `default` skin is
+ * no choice of the user's, so it sends none: Tern's own theme colours the
+ * chrome and the launch splash, and they belong to the window. (A palette
+ * also carries the skin's name, and Tern switches the window to its theme of
+ * that name, so sending `default` would replace the theme the user picked.)
+ * A skin the user chose is sent in full.
+ */
+export function programPaletteOf(skin: HermesSkin | null | undefined): Palette {
+  return skin?.name && skin.name !== 'default' ? paletteOf(skin) : {}
+}
+
+/**
  * The skin's colors for one polarity. `fromSkin` decides polarity from the
  * environment (`HERMES_TUI_LIGHT`), so pin it for the call; the overlay a
  * skin authors for that polarity wins over its base colors.
@@ -78,6 +90,8 @@ function tokensOf(c: ThemeColors): Tokens {
     syntaxNumber: c.syntaxNumber,
     syntaxString: c.syntaxString,
     syntaxType: c.primary !== c.syntaxString ? c.primary : c.syntaxKeyword,
+    // Body text; the launch splash's ink under a chosen skin.
+    text: c.text,
     thinkingHigh: c.warn,
     thinkingLow: c.statusGood,
     thinkingMedium: c.accent,
