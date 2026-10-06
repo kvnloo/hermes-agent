@@ -2,6 +2,7 @@ import type { SubagentProgress } from '../types.js'
 import type { TernLiveNode } from './liveProjection.js'
 
 const statusOf = (status: SubagentProgress['status']): string => {
+  if (status === 'queued') return 'pending'
   if (status === 'completed') return 'done'
   if (status === 'failed' || status === 'error') return 'failed'
   if (status === 'timeout' || status === 'interrupted') return 'aborted'
