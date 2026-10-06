@@ -97,6 +97,22 @@ export function projectTernTools(
     byId.set(id, node)
   }
 
+  // Cold-resumed transcripts predate renderer-only nativeTools metadata. Keep
+  // their existing tool trail visible as a generic historical row instead of
+  // guessing a tool id/status from formatted prose.
+  for (const row of historyRows) {
+    if (row.msg.nativeTools?.length || !row.msg.tools?.length) {
+      continue
+    }
+
+    const historyId = `history:${row.key.replace(/:c\\d+$/, '')}`
+    put(historyId, {
+      id: `hermes:tool-${historyId}`,
+      k: 'text',
+      p: { text: row.msg.tools.join('\n'), tone: 'muted' }
+    })
+  }
+
   for (const snapshot of [
     ...snapshotsFromMessages(historyRows.map(row => row.msg)),
     ...snapshotsFromMessages(streamSegments)
