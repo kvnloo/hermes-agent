@@ -58,11 +58,42 @@ export function ternSurfaceStaysOpen(state: { blocked: boolean }): boolean {
   return !state.blocked
 }
 
-/**
- * First concrete TSP consumer. The transcript intentionally remains Ink-owned:
- * while Hermes is idle this surface owns only the native composer; busy turns
- * and modal prompts close it and resume Ink immediately.
- */
+export interface TernComposerInputState {
+  snapshot: TernComposerSnapshot
+  busy: boolean
+  blocked: boolean
+  completionCount: number
+}
+
+export interface TernComposerInputDeps {
+  read: () => TernComposerInputState
+  edit: (snapshot: TernComposerSnapshot) => void
+  /** Clear the native snapshot synchronously before calling Hermes submission. */
+  submit: (text: string) => void
+}
+
+/** The listener outlives React renders. Read current authority for every event,
+ * including a modal opening before its effect cleanup has removed the listener. */
+export function createTernComposerInputHandler(hello: TspHello, deps: TernComposerInputDeps): (event: TspEvent) => void {
+  return event => {
+    if (!('sf' in event) || event.sf !== TERN_SURFACE_ID || !('id' in event) || event.id !== TERN_COMPOSER_ID) return
+    if (event.ev !== 'edit' && event.ev !== 'send') return
+    const state = deps.read()
+    if (state.blocked) return
+
+    if (event.ev === 'edit') {
+      const next = applyTernComposerEdit(state.snapshot.text, event)
+      if (next) deps.edit(next)
+      return
+    }
+
+    const sendable = resolveTernComposerSendable(hello, !state.busy && state.completionCount === 0)
+    if (sendable && event.text.trim() && event.text === state.snapshot.text) deps.submit(event.text)
+  }
+}
+
+/** Composer-only transport. A busy turn keeps this surface alive; unsupported
+ * modal flows still return to Ink. Live transcript projection is a separate gate. */
 export class TernComposerTransport {
   private acked = 0
   private credits: number
@@ -146,15 +177,13 @@ export class TernComposerTransport {
     }
 
     if (next.text === this.lastText && next.cursor === this.cursor && sendable === this.lastSendable) {
-      // The desired state has converged back to the most recently sent frame.
-      // Drop any blocked intermediate update so a later ACK cannot resurrect it.
+      // A -> B -> A while credit-blocked must cancel B, not replay it on ACK.
       this.pending = null
       return
     }
 
     if (this.seq - this.acked >= this.credits) {
       this.pending = { sendable, snapshot: next }
-
       return
     }
 
@@ -166,14 +195,7 @@ export class TernComposerTransport {
       return
     }
 
-    // ACK sequence numbers are cumulative frame ids. Ignore malformed,
-    // duplicate/stale, and future ACKs rather than clamping them into credit:
-    // clamping a future ACK would release a frame the terminal never accepted,
-    // and a fractional ACK must never create half a credit.
-    if (!Number.isInteger(event.s) || event.s <= this.acked || event.s > this.seq) {
-      return
-    }
-
+    if (!Number.isSafeInteger(event.s) || event.s <= this.acked || event.s > this.seq) return
     this.acked = event.s
 
     if (this.pending && this.seq - this.acked < this.credits) {
@@ -234,13 +256,13 @@ export class TernInlineSession {
     private hello: TspHello
   ) {}
 
-  sync(state: { blocked: boolean; busy: boolean; snapshot: TernComposerSnapshot }): void {
+  sync(state: { blocked: boolean; busy: boolean; snapshot: TernComposerSnapshot; completionCount?: number }): void {
     if (state.blocked) {
       this.close()
       return
     }
 
-    const sendable = resolveTernComposerSendable(this.hello, !state.busy)
+    const sendable = resolveTernComposerSendable(this.hello, !state.busy && (state.completionCount ?? 0) === 0)
 
     if (!this.transport) {
       this.transport = new TernComposerTransport(this.write, this.hello)
@@ -300,49 +322,33 @@ export function useTernComposerSurface(composer: AppLayoutComposerProps): void {
     }, hello)
 
     sessionRef.current = session
-    session.sync({
-      blocked: false,
-      busy,
-      snapshot: {
-        cursor: cursorRef.current,
-        text: nativeTextRef.current
-      }
+    const readInputState = (): TernComposerInputState => ({
+      blocked: $isBlocked.get(),
+      busy: $uiState.get().busy,
+      completionCount: composerRef.current.completions.length,
+      snapshot: { cursor: cursorRef.current, text: nativeTextRef.current }
     })
+    session.sync(readInputState())
 
-    const unsubscribe = subscribeTernSurfaceEvents(event => {
-      session.handleEvent(event)
-
-      if (!('sf' in event) || event.sf !== TERN_SURFACE_ID || !('id' in event) || event.id !== TERN_COMPOSER_ID) {
-        return
-      }
-
-      if (event.ev === 'edit') {
-        const next = applyTernComposerEdit(nativeTextRef.current, event)
-
-        if (!next) {
-          return
-        }
-
+    const handleInput = createTernComposerInputHandler(hello, {
+      read: readInputState,
+      edit: next => {
         nativeTextRef.current = next.text
         cursorRef.current = next.cursor
         composerRef.current.updateInput(next.text)
-        session.sync({ blocked: false, busy, snapshot: next })
-
-        return
-      }
-
-      if (
-        event.ev === 'send' &&
-        sendable &&
-        composerRef.current.completions.length === 0 &&
-        event.text.trim() &&
-        event.text === nativeTextRef.current
-      ) {
+        session.sync(readInputState())
+      },
+      submit: text => {
+        // Invalidate the submitted snapshot before a second native send can land.
         nativeTextRef.current = ''
         cursorRef.current = 0
-        session.sync({ blocked: false, busy, snapshot: { cursor: 0, text: '' } })
-        composerRef.current.submit(event.text)
+        session.sync(readInputState())
+        composerRef.current.submit(text)
       }
+    })
+    const unsubscribe = subscribeTernSurfaceEvents(event => {
+      session.handleEvent(event)
+      handleInput(event)
     })
 
     return () => {
@@ -368,10 +374,11 @@ export function useTernComposerSurface(composer: AppLayoutComposerProps): void {
     session.sync({
       blocked,
       busy,
+      completionCount: composer.completions.length,
       snapshot: {
         cursor: cursorRef.current,
         text: nativeTextRef.current
       }
     })
-  }, [blocked, busy, composer.input, surface])
+  }, [blocked, busy, composer.input, composer.completions.length, surface])
 }
