@@ -7,6 +7,8 @@ import type { HermesSkin } from '@hermes/shared/skin'
 import type { Palette } from '@stencil-hq/tern'
 import { fromSkin, themeToneHex, type ThemeColors } from '@tui/theme.js'
 
+import { SPLASH_PAPER_TOKEN } from './splash/theme.js'
+
 type Tokens = Record<string, string>
 
 /** The palette for `skin`, in a dark and a light variant. */
@@ -23,13 +25,33 @@ export function paletteOf(skin: HermesSkin | undefined): Palette {
 /**
  * The program palette to send for `skin`. Hermes's built-in `default` skin is
  * no choice of the user's, so it sends none: Tern's own theme colours the
- * chrome and the launch splash, and they belong to the window. (A palette
+ * chrome, and it belongs to the window. (A palette
  * also carries the skin's name, and Tern switches the window to its theme of
  * that name, so sending `default` would replace the theme the user picked.)
  * A skin the user chose is sent in full.
  */
 export function programPaletteOf(skin: HermesSkin | null | undefined): Palette {
   return skin?.name && skin.name !== 'default' ? paletteOf(skin) : {}
+}
+
+// The Hermes brand colours (the website's): the welcome screen is this blue
+// whatever theme the window wears. The paper rides a background token, which
+// Tern keeps as given (it lifts foreground tokens for contrast with the pane).
+const BRAND: Tokens = { accent: '#f2f200', dim: '#6e6ef7', muted: '#a6a6f6', [SPLASH_PAPER_TOKEN]: '#0000f2', text: '#f2f2f2' }
+
+/**
+ * The palette the launch splash draws in: a skin the user chose, else the
+ * Hermes brand. It carries no theme name, so it recolours the splash's surface
+ * and leaves the window's theme alone.
+ */
+export function splashPaletteOf(skin: HermesSkin | null | undefined): Palette {
+  if (skin?.name && skin.name !== 'default') {
+    const { dark, light } = paletteOf(skin)
+
+    return { dark, light }
+  }
+
+  return { dark: BRAND, light: BRAND }
 }
 
 /**

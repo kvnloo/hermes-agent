@@ -1,19 +1,19 @@
-// How the splash takes its colours from Tern. The designs speak in roles
-// (paper, ink, shade, accent, dim, ray); nothing here or in the view holds a
-// colour value. Tern's own theme (the omp theme the window wears) supplies
-// every one of them, so the splash is part of the window, not a panel inside
-// it, and follows the theme picker live.
+// How the splash takes its colours. The designs speak in roles (paper, ink,
+// shade, accent, dim, ray); nothing here or in the view holds a colour value.
+// They arrive as a palette on the splash's own surface: the Hermes brand by
+// default (the welcome screen is brand blue under any window theme), or a skin
+// the user chose. With no palette at all, Tern's theme supplies every one.
 //
-//   * Inks are span tokens. Tern colours a span that names a theme token
-//     (`{ s: 'accent' }`) from the active theme, or from the program palette
-//     when the app sends one (a Hermes skin the user chose).
-//   * Paper is the pane itself: a paper ground paints nothing.
+//   * Inks are span tokens. Tern colours a span that names a token
+//     (`{ s: 'accent' }`) from the surface's palette, else the active theme.
+//   * Paper is the palette's own (`SPLASH_PAPER_TOKEN`), filled across the
+//     pane; a palette without one leaves the pane itself as the paper.
 //   * Shade and the inverted "ink" ground are stylesheet fills derived from
-//     the pane's own background and foreground.
+//     the paper and the foreground.
 //   * Shadow ink (specks and shading darker than the paper) has no theme
 //     token: no theme names a colour below its own page. It travels on the
 //     `del` span class, which the splash stylesheet re-inks, inside the splash
-//     only, from the pane background.
+//     only, from the paper.
 
 /** Which Tern theme token inks each splash role. */
 export interface SplashPalette {
@@ -38,11 +38,16 @@ export const TERN_SPLASH_PALETTE: SplashPalette = {
   shade: 'del'
 }
 
+/**
+ * The palette token a splash palette names its own paper with. It is one of
+ * Tern's background tokens, which arrive as a translucent `--sf-status-bg`.
+ */
+export const SPLASH_PAPER_TOKEN = 'statusLineBg'
+
 // The pane's background and foreground, as Tern's theme sets them.
-const PAPER = 'var(--tv-bg)'
+const PANE = 'var(--tv-bg)'
+const OWN_PAPER = 'rgb(from var(--sf-status-bg) r g b / 1)'
 const INK_GROUND = 'var(--sf-p-text, var(--tv-fg))'
-// Shadow: the paper pulled toward black (still "darker than the paper" on a light theme).
-const SHADE = `color-mix(in oklab, ${PAPER} 58%, black)`
 
 export const SPLASH_ROLE = 'hermes.splash'
 
@@ -50,7 +55,11 @@ export const SPLASH_ROLE = 'hermes.splash'
 export const segmentRole = (ground: string, base: string) => `${SPLASH_ROLE}.on-${ground}.in-${base}`
 
 /** The stylesheet that turns segment roles into fills and inks. Rows are flush, cell-exact lines. */
-export function splashStylesheet(palette: SplashPalette = TERN_SPLASH_PALETTE): string {
+export function splashStylesheet(palette: SplashPalette = TERN_SPLASH_PALETTE, ownPaper = false): string {
+  // The paper: the splash palette's own (the Hermes brand blue), else the pane itself.
+  const PAPER = ownPaper ? OWN_PAPER : PANE
+  // Shadow: the paper pulled toward black (still "darker than the paper" on a light theme).
+  const SHADE = `color-mix(in oklab, ${PAPER} 58%, black)`
   const fill: Record<string, string> = { ink: INK_GROUND, shade: SHADE }
   const segment = `[data-role^='${SPLASH_ROLE}.on-']`
 
@@ -58,6 +67,8 @@ export function splashStylesheet(palette: SplashPalette = TERN_SPLASH_PALETTE): 
     // Surface text advances a hair less than a grid cell, so a full-width row
     // falls short of the pane: centre the block rather than leave a ragged edge.
     `[data-role='${SPLASH_ROLE}'] { align-items: center; }`,
+    // Its own paper covers the whole pane, past the block's edges.
+    ...(ownPaper ? [`[data-role='${SPLASH_ROLE}'] { background: ${PAPER}; box-shadow: 0 0 0 100vmax ${PAPER}; }`] : []),
     `[data-role='${SPLASH_ROLE}.row'] { align-items: stretch; flex-wrap: nowrap; }`,
     `[data-role='${SPLASH_ROLE}.row'] > * { flex: none; }`,
     // Ink is the pane's own text colour; a span that names a theme token overrides it.

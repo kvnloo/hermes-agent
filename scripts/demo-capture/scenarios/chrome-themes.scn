@@ -20,3 +20,7 @@ wait 1300
 theme dark "dark-nord"
 wait 1300
 theme dark "hermes"
+wait 1500
+appearance light
+wait 1800
+appearance dark

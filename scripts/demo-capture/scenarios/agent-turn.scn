@@ -3,7 +3,7 @@
 # and a streaming preset; record 60 to 90 seconds for a free model.
 #   capture.sh agent-turn 75 agent-turn "What does this project do? Read the code and answer in two sentences."
 run "{state}/hermes.sh kerykeion"
-wait 5200
+wait 8000
 type "{arg}"
 wait 700
 key enter

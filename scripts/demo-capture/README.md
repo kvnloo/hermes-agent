@@ -106,20 +106,28 @@ the counts it expects.
 
 ## The Hermes theme for Tern
 
-`themes/hermes.json` is the Hermes website palette as a Tern theme (omp's theme format):
-paper `#0000f2`, ink `#f2f2f2`, shade `#000082`, accent `#f2f200`, dim `#a6a6f6`,
-ray `#6e6ef7`. The stage installs and selects it. To use it in your own Tern:
+`themes/hermes.json` and `themes/hermes-light.json` are the Hermes desktop app's default
+theme (`nous`: GitHub's neutrals with Nous blue) as Tern themes (omp's theme format). Every
+value is taken from the desktop palette (`apps/shared/src/theme-presets.ts` and the `nous`
+terminal colours in `apps/desktop/src/themes/presets.ts`): dark is background `#0d1117`,
+foreground `#e6edf3`, accent `#4a84fe`; light is `#ffffff`, `#1f2328`, `#0053fd`. The stage
+installs both and selects `hermes`. To use them in your own Tern:
 
 ```sh
-mkdir -p ~/.omp/agent/themes && cp themes/hermes.json ~/.omp/agent/themes/
-# then pick "hermes" in Tern's theme picker, or set theme.dark: hermes in ~/.omp/agent/config.yml
+mkdir -p ~/.omp/agent/themes && cp themes/hermes*.json ~/.omp/agent/themes/
+# then pick "hermes" in Tern's theme picker, or set theme.dark: hermes and
+# theme.light: hermes-light in ~/.omp/agent/config.yml
 ```
 
 Tern reads user themes from the omp agent directory in a real window; the headless
 `tern serve` does not load them.
 
-`./stage.sh theme NAME` switches the stage to any of Tern's themes. The splash and the chrome
-follow, because they draw in theme tokens.
+The welcome screen does not follow the theme: the launch splash brings the Hermes brand
+palette (blue `#0000f2`) on its own surface, so it is full blue and the session it hands
+off to is the theme's. A skin the user chose replaces the brand palette.
+
+`./stage.sh theme NAME` switches the stage to any of Tern's themes. The chrome follows,
+because it draws in theme tokens.
 
 ## Scenarios
 

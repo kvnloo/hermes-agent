@@ -46,7 +46,7 @@ up)
   mkdir -p "$DEMO_STATE/home/.omp/agent/themes" "$DEMO_STATE/hermes-home" "$DEMO_OUT"
   chmod 700 "$DEMO_STATE"
   cp "$here/themes/"*.json "$DEMO_STATE/home/.omp/agent/themes/"
-  printf 'theme:\n  dark: %s\n  light: light\n' "$DEMO_THEME" > "$DEMO_STATE/home/.omp/agent/config.yml"
+  printf 'theme:\n  dark: %s\n  light: hermes-light\n' "$DEMO_THEME" > "$DEMO_STATE/home/.omp/agent/config.yml"
   [ -f "$DEMO_STATE/settings.json" ] || echo '{"theme":"Dark","material":"Solid"}' > "$DEMO_STATE/settings.json"
 
   focus_save

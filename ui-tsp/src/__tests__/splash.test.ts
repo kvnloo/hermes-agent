@@ -5,7 +5,7 @@ import type { GatewayClient } from '@tui/gatewayClient.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { App } from '../app.js'
-import { paletteOf, programPaletteOf } from '../palette.js'
+import { paletteOf, programPaletteOf, splashPaletteOf } from '../palette.js'
 import {
   DEFAULT_SPLASH_DESIGN,
   renderSplashFrame,
@@ -18,6 +18,7 @@ import {
   SPLASH_TICK_MS,
   type SplashCells,
   type SplashPalette,
+  SPLASH_PAPER_TOKEN,
   splashStylesheet,
   TERN_SPLASH_PALETTE
 } from '../splash/index.js'
@@ -220,6 +221,32 @@ describe('splash theme', () => {
     expect(css).not.toMatch(/#[0-9a-f]{3,8}\b/i)
     expect(css).not.toMatch(/rgb\(\s*\d/)
     expect(splashStylesheet(SWAPPED)).toContain('.sf-t-ins {')
+  })
+
+  it('fills the whole pane with a palette\u2019s own paper, and derives the shadow from it', () => {
+    const css = splashStylesheet(TERN_SPLASH_PALETTE, true)
+    const paper = 'rgb(from var(--sf-status-bg) r g b / 1)'
+
+    expect(css).toContain(`[data-role='${SPLASH_ROLE}'] { background: ${paper}; box-shadow: 0 0 0 100vmax ${paper}; }`)
+    expect(css).toContain(`[data-role='${segmentRole('shade', 'none')}'] { background: color-mix(in oklab, ${paper} 58%, black); }`)
+    expect(css).toContain(`[data-role='${segmentRole('ink', 'paper')}'] { background: var(--sf-p-text, var(--tv-fg)); color: ${paper}; }`)
+    // Still no colour value: the blue is the palette's.
+    expect(css).not.toMatch(/#[0-9a-f]{3,8}\b/i)
+    expect(splashStylesheet()).not.toContain('--sf-status-bg')
+  })
+
+  it('draws in the Hermes brand by default and in a chosen skin otherwise, never naming a theme', () => {
+    const brand = splashPaletteOf({ colors: {}, name: 'default' })
+
+    expect(brand).toEqual(splashPaletteOf(undefined))
+    expect(brand.dark).toEqual({ accent: '#f2f200', dim: '#6e6ef7', muted: '#a6a6f6', [SPLASH_PAPER_TOKEN]: '#0000f2', text: '#f2f2f2' })
+    expect(brand.light).toEqual(brand.dark)
+
+    const ember = splashPaletteOf({ colors: { ui_accent: '#ffd166' }, name: 'ember' })
+
+    expect(ember.dark!.accent).toBe('#ffd166')
+    expect(ember.dark).not.toHaveProperty(SPLASH_PAPER_TOKEN)
+    expect(ember).not.toHaveProperty('name')
   })
 
   it('wears Tern\u2019s theme under the built-in default skin, and a chosen skin\u2019s palette otherwise', () => {
@@ -538,36 +565,43 @@ describe('App launch splash', () => {
     return { app, chrome, gw, splash, tern }
   }
 
-  it('covers the session chrome with a screen surface in Tern\u2019s own theme', async () => {
+  it('covers the session chrome with a screen surface in the Hermes brand colours', async () => {
     const { chrome, splash } = launch()
 
     expect(chrome().options).toMatchObject({ mode: 'inline', role: 'omp.session' })
     expect(splash()!.options).toMatchObject({ mode: 'screen', role: SPLASH_ROLE })
-    expect(splash()!.palettes).toEqual([])
-    expect(splash()!.sheets.splash).toBe(splashStylesheet())
+    // The welcome screen brings its own paper and inks; the chrome is left to the window's theme.
+    expect(splash()!.palettes).toEqual([splashPaletteOf(undefined)])
+    expect(splash()!.palettes[0]!.dark![SPLASH_PAPER_TOKEN]).toBe('#0000f2')
+    expect(splash()!.palettes[0]).not.toHaveProperty('name')
+    expect(splash()!.sheets.splash).toBe(splashStylesheet(TERN_SPLASH_PALETTE, true))
+    expect(chrome().palettes).toEqual([])
 
     await vi.advanceTimersByTimeAsync(400)
     expect(splash()!.frames.length).toBeGreaterThan(5)
     expect(splash()!.closed).toBe(false)
   })
 
-  it('stays in Tern\u2019s theme for the default skin, and recolours on skin.changed', async () => {
+  it('stays in the brand colours for the default skin, and recolours on skin.changed', async () => {
     const { chrome, gw, splash } = launch()
     const builtin = { colors: { ui_accent: '#FFBF00' }, name: 'default' }
     const ember = { colors: { ui_accent: '#ffd166', ui_text: '#ffe9d6' }, name: 'ember' }
 
     await vi.advanceTimersByTimeAsync(200)
     gw.emit('event', { payload: { skin: builtin }, type: 'gateway.ready' })
-    // No palette of the program's: the window's theme inks the splash.
-    expect(splash()!.palettes.at(-1)).toEqual({})
-    // The chrome too: a palette names its skin, and Tern would switch the window to that theme.
+    // The splash keeps the brand palette and its own paper.
+    expect(splash()!.palettes.at(-1)).toEqual(splashPaletteOf(undefined))
+    expect(splash()!.sheets.splash).toBe(splashStylesheet(TERN_SPLASH_PALETTE, true))
+    // The chrome gets none: a palette names its skin, and Tern would switch the window to that theme.
     expect(chrome().palettes.at(-1)).toEqual({})
 
     const before = splash()!.frames.length
 
     gw.emit('event', { payload: ember, type: 'skin.changed' })
-    expect(splash()!.palettes.at(-1)).toEqual(paletteOf(ember))
+    // A chosen skin inks the splash, on the pane's own background; the theme name stays with the chrome.
+    expect(splash()!.palettes.at(-1)).toEqual({ dark: paletteOf(ember).dark, light: paletteOf(ember).light })
     expect(splash()!.palettes.at(-1)!.dark![TERN_SPLASH_PALETTE.accent]).toBe('#ffd166')
+    expect(splash()!.sheets.splash).toBe(splashStylesheet())
     expect(chrome().palettes.at(-1)).toEqual(paletteOf(ember))
 
     // The picture itself carries no colour, so the next frame is simply drawn in the new skin.
@@ -575,9 +609,10 @@ describe('App launch splash', () => {
     expect(splash()!.frames.length).toBeGreaterThan(before)
     expect(JSON.stringify(splash()!.frames.at(-1))).not.toMatch(/#[0-9a-f]{6}/i)
 
-    // Back to the built-in skin: back to the window's theme.
+    // Back to the built-in skin: the splash back to the brand, the chrome back to the window's theme.
     gw.emit('event', { payload: builtin, type: 'skin.changed' })
-    expect(splash()!.palettes.at(-1)).toEqual({})
+    expect(splash()!.palettes.at(-1)).toEqual(splashPaletteOf(undefined))
+    expect(splash()!.sheets.splash).toBe(splashStylesheet(TERN_SPLASH_PALETTE, true))
     expect(chrome().palettes.at(-1)).toEqual({})
   })
 

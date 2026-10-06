@@ -11,7 +11,7 @@
 // the clock at that instant, for a stable still.
 import { connect, ui } from '@stencil-hq/tern'
 
-import { programPaletteOf } from '../src/palette.js'
+import { splashPaletteOf } from '../src/palette.js'
 import { SPLASH_DESIGN_NAMES, SPLASH_ROLE } from '../src/splash/index.js'
 import { LaunchSplash, pickSplashDesign, splashInsets, splashTickMs } from '../src/splash/launch.js'
 
@@ -77,7 +77,7 @@ const play = () => {
       }
     },
     open: () => session.open({ id: 'splash', mode: 'screen', role: SPLASH_ROLE, title: 'hermes' }),
-    palette: programPaletteOf(ember ? EMBER : undefined),
+    palette: splashPaletteOf(ember ? EMBER : undefined),
     size: () => splashInsets(session.caps.cols, process.stdout.rows ?? 24),
     tickMs: splashTickMs(),
     status: once
@@ -118,6 +118,6 @@ for await (const input of session) {
     splash?.skip()
   } else if (key === 't') {
     ember = !ember
-    splash?.palette(programPaletteOf(ember ? EMBER : undefined))
+    splash?.palette(splashPaletteOf(ember ? EMBER : undefined))
   }
 }

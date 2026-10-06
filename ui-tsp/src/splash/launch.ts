@@ -15,6 +15,7 @@ import {
   SPLASH_TICK_MS,
   type SplashCells,
   type SplashPalette,
+  SPLASH_PAPER_TOKEN,
   splashStylesheet,
   TERN_SPLASH_PALETTE
 } from './index.js'
@@ -140,11 +141,7 @@ export class LaunchSplash {
     }
 
     this.#surface = this.#options.open()
-    this.#surface.stylesheet('splash', splashStylesheet(this.#tokens))
-
-    if (this.#options.palette) {
-      this.#surface.palette(this.#options.palette)
-    }
+    this.#dress(this.#options.palette)
 
     this.#startedAt = this.#now()
     this.#timer = (this.#options.setInterval ?? setInterval)(() => this.tick(), this.#options.tickMs ?? SPLASH_TICK_MS)
@@ -164,6 +161,17 @@ export class LaunchSplash {
   /** The program palette changed (a skin was chosen, or dropped): the next frame is drawn in it. */
   palette(palette: Palette) {
     if (this.active) {
+      this.#dress(palette)
+    }
+  }
+
+  /** Sends the stylesheet and palette: a palette that names its own paper fills the pane with it. */
+  #dress(palette: Palette | undefined) {
+    const own = [palette?.dark, palette?.light].some(tokens => tokens && SPLASH_PAPER_TOKEN in tokens)
+
+    this.#surface!.stylesheet('splash', splashStylesheet(this.#tokens, own))
+
+    if (palette) {
       this.#surface!.palette(palette)
     }
   }
