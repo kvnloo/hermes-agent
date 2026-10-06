@@ -1,0 +1,153 @@
+{
+  "schema_version": 1,
+  "relations": [
+    {
+      "from": "CHG-31157-selective-salvage:OP-mcp-refresh-teardown-guard",
+      "type": "superseded_by",
+      "to": "NousResearch/hermes-agent@1c82c22eb69c502d6298703d0ebbc971f7eac6cd",
+      "credit": [
+        "sege66",
+        "patrykkopycinski",
+        "salch-cred",
+        "Tranquil-Flow",
+        "ildunari",
+        "andrexibiza",
+        "ly6751",
+        "austinpickett"
+      ]
+    },
+    {
+      "from": "CHG-telegram-sibling-context:OP-observe-sibling-addressed-user",
+      "type": "materialized_by",
+      "to": "kvnloo/hermes-agent:exp/change-ir-remat-105624-sibling-observe@ae39a24e59e34b49695312585ad83ae9ccd97c6c",
+      "credit": [
+        "majkonautic",
+        "DavidMetcalfe",
+        "kvnloo"
+      ]
+    },
+    {
+      "from": "PR-77724",
+      "type": "superseded_by",
+      "to": "NousResearch/hermes-agent@66366d3",
+      "credit": [
+        "andrexibiza",
+        "teknium1"
+      ]
+    },
+    {
+      "from": "PR-77748",
+      "type": "superseded_by",
+      "to": "NousResearch/hermes-agent@66366d3",
+      "credit": [
+        "andrexibiza",
+        "teknium1"
+      ]
+    },
+    {
+      "from": "PR-77756",
+      "type": "superseded_by",
+      "to": "NousResearch/hermes-agent@66366d3",
+      "credit": [
+        "andrexibiza",
+        "teknium1"
+      ]
+    },
+    {
+      "from": "PR-77751",
+      "type": "superseded_by",
+      "to": "NousResearch/hermes-agent@66366d3d",
+      "credit": [
+        "andrexibiza",
+        "teknium1"
+      ]
+    },
+    {
+      "from": "PR-77759",
+      "type": "superseded_by",
+      "to": "NousResearch/hermes-agent@66366d3dabf",
+      "credit": [
+        "andrexibiza",
+        "teknium1"
+      ]
+    },
+    {
+      "from": "PR-77752",
+      "type": "superseded_by",
+      "to": "NousResearch/hermes-agent@66366d3",
+      "credit": [
+        "andrexibiza",
+        "teknium1"
+      ]
+    },
+    {
+      "from": "PR-77719",
+      "type": "superseded_by",
+      "to": "NousResearch/hermes-agent@66366d3dabf",
+      "credit": [
+        "andrexibiza",
+        "teknium1"
+      ]
+    },
+    {
+      "from": "PR-78036",
+      "type": "implemented_on_main",
+      "to": "NousResearch/hermes-agent@59a3866ea5a07290afd9a1d137d52d679b77f3ab:tui_gateway/methods_tools.py#shell.exec",
+      "credit": [
+        "andrexibiza"
+      ]
+    },
+    {
+      "from": "PR-78033:byterover-env",
+      "type": "implemented_on_main",
+      "to": "NousResearch/hermes-agent@59a3866ea5a07290afd9a1d137d52d679b77f3ab:plugins/memory/byterover/__init__.py",
+      "credit": [
+        "andrexibiza",
+        "jonpol01"
+      ]
+    },
+    {
+      "from": "PR-78033:buzz-env",
+      "type": "implemented_on_main",
+      "to": "NousResearch/hermes-agent@59a3866ea5a07290afd9a1d137d52d679b77f3ab:plugins/platforms/buzz/adapter.py",
+      "credit": [
+        "andrexibiza"
+      ]
+    },
+    {
+      "from": "PR-78033:google-meet-env",
+      "type": "needs_fresh_decision",
+      "to": "CHG-vox-stale-wave-2026-08-04",
+      "credit": [
+        "andrexibiza",
+        "egilewski"
+      ]
+    },
+    {
+      "from": "PR-78033:photon-env",
+      "type": "needs_fresh_decision",
+      "to": "CHG-vox-stale-wave-2026-08-04",
+      "credit": [
+        "andrexibiza",
+        "egilewski"
+      ]
+    },
+    {
+      "from": "PR-77711",
+      "type": "invalidated_by_semantic_drift",
+      "to": "NousResearch/hermes-agent@59a3866ea5a07290afd9a1d137d52d679b77f3ab:gateway/run.py#_select_cached_agent_history",
+      "credit": [
+        "andrexibiza",
+        "spfcraze"
+      ]
+    },
+    {
+      "from": "PR-77708:_ensure_ssl_certs",
+      "type": "invalidated_by_architecture",
+      "to": "NousResearch/hermes-agent@59a3866ea5a07290afd9a1d137d52d679b77f3ab:website/docs/user-guide/security.md",
+      "credit": [
+        "andrexibiza"
+      ]
+    }
+  ]
+}
