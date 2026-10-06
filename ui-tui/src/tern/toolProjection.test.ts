@@ -105,4 +105,24 @@ describe('native terminal-tool projection', () => {
       p: { status: 'cancelled', collapsed: false }
     })
   })
+
+
+  it('keeps legacy cold-resume tool trails visible without inventing tool status', () => {
+    const rows = [
+      row(0, 'msg:legacy:c80', {
+        role: 'system',
+        kind: 'trail',
+        text: '',
+        tools: ['Read File("src/tasks.ts") ✓']
+      })
+    ]
+
+    const node = projectTernTools(rows, [], [])[0]!
+    expect(node).toMatchObject({
+      id: 'hermes:tool-history:msg:legacy',
+      k: 'text',
+      p: { text: 'Read File("src/tasks.ts") ✓', tone: 'muted' }
+    })
+    expect(node.p?.status).toBeUndefined()
+  })
 })
