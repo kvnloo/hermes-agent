@@ -11,7 +11,7 @@ import { useTernSurfaceProbe } from './tern/surface.js'
 export function App({ gw }: { gw: GatewayClient }) {
   const { appActions, appComposer, appProgress, appStatus, appTranscript, gateway } = useMainApp(gw)
   useTernSurfaceProbe()
-  useTernComposerSurface(appComposer)
+  useTernComposerSurface(appComposer, appTranscript)
   const { mouseTracking } = useStore($uiState)
 
   return (

@@ -1,67 +1,77 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'vitest'
 
-import { dispatchNativeSend, type NativeSendOwner, type NativeSendState } from './composerInput.js'
+import { createTernComposerInputHandler, TernInlineSession, TERN_COMPOSER_ID, TERN_SURFACE_ID, type TernComposerInputState } from './composerSurface.js'
+import { parseTspApc, type TspEvent, type TspHello } from './protocol.js'
 
-function harness(draft = 'first\nsecond') {
-  const state: NativeSendState = { draft, blocked: false, busy: false, completions: 0, bufferedLines: 0, sendEnabled: true }
-  const sent: string[] = []
-  let clears = 0
-  const owner: NativeSendOwner = {
-    read: () => ({ ...state }),
-    clearDraft: () => { clears++; state.draft = '' },
-    submit: text => { sent.push(text) }
-  }
-  return { state, sent, owner, clears: () => clears }
+const hello: TspHello = { r: 'hello', v: 1, term: 'tern', kinds: ['col', 'text', 'editor'], features: ['dock'], credits: 2 }
+const send = (text: string): TspEvent => ({ ev: 'send', sf: TERN_SURFACE_ID, id: TERN_COMPOSER_ID, text })
+
+function input(text = 'first line\nsecond line') {
+  const state: TernComposerInputState = { busy: false, blocked: false, completionCount: 0, snapshot: { text, cursor: text.length } }
+  const submitted: string[] = []
+  let edits = 0
+  const handle = createTernComposerInputHandler(hello, {
+    read: () => state,
+    edit: snapshot => { edits++; state.snapshot = snapshot },
+    submit: value => {
+      state.snapshot = { text: '', cursor: 0 }
+      submitted.push(value)
+    }
+  })
+  return { state, submitted, handle, edits: () => edits }
 }
 
-describe('live native send dispatch', () => {
-  it('submits exact multiline text once, including a reentrant duplicate', () => {
-    const h = harness('  first\nsecond  ')
-    const original = h.owner.submit
-    h.owner.submit = text => {
-      original(text)
-      assert.equal(dispatchNativeSend(text, h.owner), false)
-    }
-    assert.equal(dispatchNativeSend('  first\nsecond  ', h.owner), true)
-    assert.deepEqual(h.sent, ['  first\nsecond  '])
-    assert.equal(h.clears(), 1)
-  })
-
-  it('reads busy and modal transitions after the owner was created', () => {
-    const h = harness('draft')
+describe('live native composer input', () => {
+  it('uses current busy state through one listener and submits unchanged multiline text once', () => {
+    const h = input()
+    const text = h.state.snapshot.text
     h.state.busy = true
-    assert.equal(dispatchNativeSend('draft', h.owner), false)
+    h.handle(send(text))
+    assert.deepEqual(h.submitted, [])
     h.state.busy = false
-    h.state.blocked = true
-    assert.equal(dispatchNativeSend('draft', h.owner), false)
-    assert.equal(h.state.draft, 'draft')
-    assert.equal(h.clears(), 0)
-    h.state.blocked = false
-    assert.equal(dispatchNativeSend('draft', h.owner), true)
-    assert.deepEqual(h.sent, ['draft'])
+    h.handle(send(text))
+    h.handle(send(text))
+    assert.deepEqual(h.submitted, [text])
   })
 
-  for (const changes of [
-    { completions: 1 }, { bufferedLines: 1 }, { sendEnabled: false }
-  ]) {
-    it(`preserves the draft when not natively sendable: ${JSON.stringify(changes)}`, () => {
-      const h = harness('draft')
-      Object.assign(h.state, changes)
-      assert.equal(dispatchNativeSend('draft', h.owner), false)
-      assert.equal(h.state.draft, 'draft')
-      assert.equal(h.clears(), 0)
-      assert.deepEqual(h.sent, [])
-    })
-  }
+  it('blocks both edit and send when a modal opens before listener cleanup', () => {
+    const h = input('draft')
+    h.state.blocked = true
+    h.handle(send('draft'))
+    h.handle({ ev: 'edit', sf: TERN_SURFACE_ID, id: TERN_COMPOSER_ID, from: 0, to: 5, text: 'changed', cursor: 7, len: 5 })
+    assert.deepEqual(h.submitted, [])
+    assert.equal(h.edits(), 0)
+    assert.equal(h.state.snapshot.text, 'draft')
+  })
 
-  it('rejects stale and blank payloads without modifying the current draft', () => {
-    const h = harness('newer')
-    assert.equal(dispatchNativeSend('older', h.owner), false)
-    assert.equal(dispatchNativeSend('  \n ', h.owner), false)
-    h.state.draft = '  \n '
-    assert.equal(dispatchNativeSend('  \n ', h.owner), false)
-    assert.equal(h.clears(), 0)
-    assert.deepEqual(h.sent, [])
+  it('requires current text, correct target and no unresolved completion', () => {
+    const h = input('draft')
+    h.handle({ ev: 'send', sf: 'other', id: TERN_COMPOSER_ID, text: 'draft' })
+    h.handle({ ev: 'send', sf: TERN_SURFACE_ID, id: 'other', text: 'draft' })
+    h.handle(send('stale'))
+    h.state.completionCount = 1
+    h.handle(send('draft'))
+    assert.deepEqual(h.submitted, [])
+    h.state.completionCount = 0
+    h.handle({ ev: 'edit', sf: TERN_SURFACE_ID, id: TERN_COMPOSER_ID, from: 0, to: 5, text: 'ok', cursor: 2, len: 99 })
+    assert.equal(h.edits(), 0)
+    h.handle({ ev: 'edit', sf: TERN_SURFACE_ID, id: TERN_COMPOSER_ID, from: 0, to: 5, text: 'ok', cursor: 2, len: 5 })
+    h.handle(send('ok'))
+    assert.equal(h.edits(), 1)
+    assert.deepEqual(h.submitted, ['ok'])
+  })
+
+  it('projects the same completion readiness into the native editor without reopening it', () => {
+    const writes: string[] = []
+    const session = new TernInlineSession(wire => writes.push(wire), hello)
+    const snapshot = { text: 'draft', cursor: 5 }
+    session.sync({ blocked: false, busy: false, completionCount: 1, snapshot })
+    session.sync({ blocked: false, busy: false, completionCount: 0, snapshot })
+    const decoded = writes.map(wire => parseTspApc(wire.slice(2, -2))!)
+    assert.equal(decoded.filter(item => item.verb === 'o').length, 1)
+    const frames = decoded.filter(item => item.verb === 'f').map(item => JSON.parse(item.body))
+    assert.equal(frames[0].ops[1][4].c[0].p.sendable, false)
+    assert.equal(frames[1].ops[0][2].sendable, true)
   })
 })
