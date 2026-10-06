@@ -1,0 +1,33 @@
+--- a/tools/delegate_tool.py
++++ b/tools/delegate_tool.py
+@@ -489,20 +489,24 @@
+     # credentials_cfg (internal callers only, e.g. /review → auxiliary.review) is
+     # a per-call routing owner shaped like the delegation config section. Keep
+     # the route and its fallback policy together through child construction.
+     routing_cfg = credentials_cfg if credentials_cfg is not None else cfg
+-    try:
+-        creds = _resolve_delegation_credentials(routing_cfg, parent_agent)
+-    except ValueError as exc:
+-        # Explicit-pin preflight failures (e.g. pinned delegation.command missing from PATH) refuse the
+-        # spawn loudly (#80450).
+-        return tool_error(str(exc))
+     max_children = _get_max_concurrent_children()
+     task_list, err = _normalize_task_list(goal, context, tasks, output_schema, top_role, max_children)
+     if not err:
+         task_schemas, err = _coerce_task_schemas(task_list, output_schema)
+     if err:
+         return tool_error(err)
++
++    # Only an unpinned child consumes the shared route. Resolve pinned overlays
++    # independently in _build_children; an unused default must not block them.
++    inherits_batch = any(
++        not (_task_route_pin(t.get("provider")) or _task_route_pin(t.get("model"))) for t in task_list
++    )
++    try:
++        creds = _resolve_delegation_credentials(routing_cfg if inherits_batch else {}, parent_agent)
++    except ValueError as exc:
++        return tool_error(str(exc))
+ 
+     overall_start = time.monotonic()
+     # Live transcripts: cache/delegation/live/<id>/task-<n>.log per task, a side channel with zero effect on message
+     # content or prompt caching. Best-effort: on failure live_paths is empty and delegation proceeds.
