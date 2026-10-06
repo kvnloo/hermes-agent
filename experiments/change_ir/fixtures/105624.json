@@ -1,0 +1,148 @@
+{
+  "change_id": "CHG-telegram-sibling-context",
+  "title": "Opt-in sibling context for multi-bot Telegram groups",
+  "provenance": {
+    "issue": "NousResearch/hermes-agent#44881",
+    "related_issue": "NousResearch/hermes-agent#75711",
+    "pr": "NousResearch/hermes-agent#105624",
+    "authors": [
+      "majkonautic",
+      "DavidMetcalfe"
+    ],
+    "notes": [
+      "Issue #44881 supplied the production failure and desired behavior.",
+      "PR #105624 supplied the first implementation and the 2026-10-06 current-main reconciliation."
+    ]
+  },
+  "problem": "Mention-gated Telegram profile bots dispatch correctly but sibling agents can become context-blind.",
+  "outcomes": [
+    "Only the addressed bot dispatches.",
+    "Sibling agents may retain bounded attributed channel context.",
+    "A later addressed sibling can use prior user and final-agent context."
+  ],
+  "invariants": [
+    {
+      "id": "INV-dispatch-observation-separation",
+      "text": "Observation must never imply dispatch or wake an untagged bot."
+    },
+    {
+      "id": "INV-context-only",
+      "text": "Observed and mirrored rows remain context-only, never pending requests."
+    },
+    {
+      "id": "INV-opt-in",
+      "text": "Sibling context remains opt-in and allowlist-scoped."
+    },
+    {
+      "id": "INV-final-only",
+      "text": "Only finalized assistant output is mirrored; drafts/interim frames are not."
+    }
+  ],
+  "decisions": [
+    {
+      "id": "DEC-mention-gating",
+      "text": "Preserve require_mention and exclusive_bot_mentions dispatch semantics."
+    },
+    {
+      "id": "DEC-profile-namespace",
+      "text": "Mirrored context uses the sibling profile's own session namespace."
+    }
+  ],
+  "open_questions": [
+    "How should duplicate wire-observed + mirrored sibling answers be deduplicated?",
+    "Should cross-host sibling context eventually use a shared transcript rather than local profile DB mirroring?"
+  ],
+  "operations": [
+    {
+      "id": "OP-observe-sibling-addressed-user",
+      "description": "Record sibling-addressed user messages as observed context without dispatching them.",
+      "expected_refresh_state": "still_needed",
+      "anchors": [
+        {
+          "id": "A-dispatch-observe-surface",
+          "description": "Current Telegram dispatch/observation surface that the operation must preserve.",
+          "paths": [
+            "plugins/platforms/telegram/adapter.py"
+          ],
+          "all_terms": [
+            "exclusive_bot_mentions",
+            "observe_unmentioned_group_messages"
+          ],
+          "any_terms": [
+            "_should_process_message",
+            "_should_observe_unmentioned_group_message"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "OP-mirror-final-response",
+      "description": "Make finalized output available to configured sibling profiles while following the current final-delivery path.",
+      "expected_refresh_state": "still_needed",
+      "note": "The 2026-10-06 refresh had to move mirroring onto the newer _send_chunks success path and cover overflow-split finalization.",
+      "anchors": [
+        {
+          "id": "A-current-send-path",
+          "description": "Current refactored Telegram final-send path.",
+          "paths": [
+            "plugins/platforms/telegram/adapter.py"
+          ],
+          "all_terms": [
+            "_send_chunks"
+          ],
+          "any_terms": [
+            "result.success",
+            "finalize"
+          ]
+        },
+        {
+          "id": "A-proposed-mirror-config",
+          "description": "Concrete PR realization; expected to be absent from main until the PR lands.",
+          "paths": [
+            "plugins/platforms/telegram/adapter.py",
+            "gateway/config_loader.py"
+          ],
+          "all_terms": [
+            "mirror_final_responses_to_profiles"
+          ],
+          "any_terms": []
+        }
+      ]
+    },
+    {
+      "id": "OP-preserve-bot-sender-observation",
+      "description": "Do not regress current-main bot-sender suppression/observation behavior while adding sibling context.",
+      "expected_refresh_state": "already_on_main",
+      "note": "This is a main-side behavior to preserve, not a feature the stale patch owns.",
+      "anchors": [
+        {
+          "id": "A-bot-sender-policy",
+          "description": "Main's bot-sender policy introduced after the original implementation.",
+          "paths": [
+            "plugins/platforms/telegram/adapter.py"
+          ],
+          "all_terms": [
+            "_bot_sender_suppressed"
+          ],
+          "any_terms": [
+            "observe_unmentioned_group_messages"
+          ]
+        }
+      ]
+    }
+  ],
+  "verification": [
+    "Sibling-addressed messages never dispatch to the untagged bot.",
+    "Observed/mirrored rows remain context-only.",
+    "Final responses including overflow-split paths are mirrored exactly once.",
+    "Behavior with sibling mode disabled stays equivalent to current main."
+  ],
+  "realizations": [
+    {
+      "kind": "pull_request",
+      "ref": "NousResearch/hermes-agent#105624",
+      "head": "fb7455387637634f275274516fde78ef722e0725",
+      "note": "Refreshed against current main on 2026-10-06 after roughly one month of drift."
+    }
+  ]
+}
