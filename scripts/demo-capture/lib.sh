@@ -36,6 +36,13 @@ pid=int(open('$DEMO_STATE/tern.pid').read())
 for c in json.load(sys.stdin):
     if c['pid']==pid: print(c['address'])"; }
 
+# Likewise the Wayland socket: a shell that outlived a compositor restart still names the old one.
+runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
+if [ ! -S "$runtime/${WAYLAND_DISPLAY:-none}" ]; then
+  WAYLAND_DISPLAY=$(ls -t "$runtime" 2>/dev/null | grep -E '^wayland-[0-9]+$' | head -1)
+  export WAYLAND_DISPLAY
+fi
+
 # Changing outputs or windows can warp the pointer onto the stage, and with
 # focus-follows-mouse that hands it your keyboard. Remember where you were
 # and put you back; the stage window itself is made unfocusable.
