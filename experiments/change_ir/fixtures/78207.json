@@ -1,0 +1,265 @@
+{
+  "change_id": "CHG-vox-stale-wave-2026-08-04",
+  "title": "Vox Lockin stale-base salvage wave: 17 PRs after two more months of main churn",
+  "provenance": {
+    "issue": "NousResearch/hermes-agent#78207",
+    "campaign_author": "andrexibiza",
+    "baseline_date": "2026-08-04",
+    "baseline_evidence": "All 17 stale-base PRs were fast-forwarded against then-current main and reported green; campaign policy preferred salvage/verification over duplicate implementation."
+  },
+  "target_main": {
+    "repository": "NousResearch/hermes-agent",
+    "sha": "59a3866ea5a07290afd9a1d137d52d679b77f3ab",
+    "date": "2026-10-06"
+  },
+  "operations": [
+    {
+      "id": "PR-78036",
+      "pr": 78036,
+      "title": "sanitize tui_gateway shell.exec child env",
+      "baseline": "green_after_refresh",
+      "current_states": [
+        "already_on_main"
+      ],
+      "evidence": [
+        "current tui_gateway/methods_tools.py shell.exec builds build_subprocess_env before child execution",
+        "closed 2026-10-02 only for contributor-volume narrowing"
+      ]
+    },
+    {
+      "id": "PR-78033",
+      "pr": 78033,
+      "title": "sanitize plugin sidecar child envs",
+      "baseline": "green_after_refresh",
+      "current_states": [
+        "already_on_main",
+        "still_needed",
+        "needs_decision"
+      ],
+      "evidence": [
+        "ByteRover now uses build_subprocess_env + strip_launch_profile_env and re-adds scoped BRV_API_KEY",
+        "Buzz now uses hermes_subprocess_env and explicitly re-adds BUZZ_PRIVATE_KEY",
+        "Google Meet process_manager still seeds a child from **os.environ",
+        "Photon still has child/preparation paths based on with_hermes_node_path; exact remaining boundary requires fresh review"
+      ]
+    },
+    {
+      "id": "PR-77911",
+      "pr": 77911,
+      "title": "god-file decomposition campaign canon",
+      "baseline": "green_after_refresh",
+      "current_states": [
+        "moved",
+        "needs_decision"
+      ],
+      "evidence": [
+        "the gateway/run.py decomposition that was pending in the PR's historical status later shipped",
+        "the proposed i-killed-the-godfile.md path is absent on current main, so the historical write-up must be regenerated or intentionally dropped"
+      ]
+    },
+    {
+      "id": "PR-77907",
+      "pr": 77907,
+      "title": "APA7 references bundled skill",
+      "baseline": "green_after_refresh",
+      "current_states": [
+        "needs_decision"
+      ],
+      "evidence": [
+        "skill path absent on current main",
+        "closed for contributor-volume narrowing, not on merits"
+      ]
+    },
+    {
+      "id": "PR-77909",
+      "pr": 77909,
+      "title": "X research MCP/API bundled skill",
+      "baseline": "green_after_refresh",
+      "current_states": [
+        "needs_decision"
+      ],
+      "evidence": [
+        "skill path absent on current main",
+        "closed for contributor-volume narrowing, not on merits"
+      ]
+    },
+    {
+      "id": "PR-77724",
+      "pr": 77724,
+      "title": "extract TurnRunner",
+      "baseline": "green_after_refresh",
+      "current_states": [
+        "already_on_main",
+        "moved"
+      ],
+      "superseded_by": [
+        "66366d3"
+      ],
+      "evidence": [
+        "maintainer explicitly closed as superseded; TurnRunner landed as gateway/run_turn_runner.py"
+      ]
+    },
+    {
+      "id": "PR-77748",
+      "pr": 77748,
+      "title": "extract GatewayRuntimeConfigMixin",
+      "baseline": "green_after_refresh",
+      "current_states": [
+        "already_on_main",
+        "moved"
+      ],
+      "superseded_by": [
+        "66366d3"
+      ],
+      "evidence": [
+        "maintainer explicitly closed as superseded across run_config_loaders.py, run_agent_cache.py, run_turn.py and run_inbound.py"
+      ]
+    },
+    {
+      "id": "PR-77756",
+      "pr": 77756,
+      "title": "extract GatewayDispatchMixin",
+      "baseline": "green_after_refresh",
+      "current_states": [
+        "already_on_main",
+        "moved"
+      ],
+      "superseded_by": [
+        "66366d3"
+      ],
+      "evidence": [
+        "maintainer explicitly closed as superseded across run_inbound.py, run_turn.py and run_busy.py"
+      ]
+    },
+    {
+      "id": "PR-77751",
+      "pr": 77751,
+      "title": "extract GatewayMediaMixin",
+      "baseline": "green_after_refresh",
+      "current_states": [
+        "already_on_main",
+        "moved"
+      ],
+      "superseded_by": [
+        "66366d3d"
+      ],
+      "evidence": [
+        "maintainer explicitly closed as superseded across run_inbound.py, run_voice.py and run_notifications.py"
+      ]
+    },
+    {
+      "id": "PR-77759",
+      "pr": 77759,
+      "title": "extract GatewayPlatformMixin",
+      "baseline": "green_after_refresh",
+      "current_states": [
+        "already_on_main",
+        "moved"
+      ],
+      "superseded_by": [
+        "66366d3"
+      ],
+      "evidence": [
+        "maintainer explicitly closed as superseded by run_adapters.py / GatewayAdapterLifecycleMixin"
+      ]
+    },
+    {
+      "id": "PR-77752",
+      "pr": 77752,
+      "title": "extract GatewayTurnExecMixin",
+      "baseline": "green_after_refresh",
+      "current_states": [
+        "already_on_main",
+        "moved"
+      ],
+      "superseded_by": [
+        "66366d3"
+      ],
+      "evidence": [
+        "maintainer explicitly closed as superseded across run_turn.py, run_agent_cache.py and run_shutdown.py"
+      ]
+    },
+    {
+      "id": "PR-77706",
+      "pr": 77706,
+      "title": "extract auto-continue helpers",
+      "baseline": "green_after_refresh",
+      "current_states": [
+        "needs_decision"
+      ],
+      "evidence": [
+        "helper symbols remain in gateway/run.py on current main",
+        "closed for contributor-volume narrowing rather than superseded on merits"
+      ]
+    },
+    {
+      "id": "PR-77707",
+      "pr": 77707,
+      "title": "extract redaction/provider-error helpers",
+      "baseline": "green_after_refresh",
+      "current_states": [
+        "needs_decision"
+      ],
+      "evidence": [
+        "redaction/provider-error helpers remain public in gateway/run.py and are late-imported by newer run_* modules",
+        "closed for contributor-volume narrowing rather than superseded on merits"
+      ]
+    },
+    {
+      "id": "PR-77708",
+      "pr": 77708,
+      "title": "extract env/bootstrap helpers",
+      "baseline": "green_after_refresh",
+      "current_states": [
+        "invalidated",
+        "needs_decision"
+      ],
+      "evidence": [
+        "the former startup certificate guard is gone from current architecture",
+        "_bridge_max_turns_from_config remains in gateway/run.py and is still a public bridge"
+      ]
+    },
+    {
+      "id": "PR-77710",
+      "pr": 77710,
+      "title": "extract status-message helpers",
+      "baseline": "green_after_refresh",
+      "current_states": [
+        "needs_decision"
+      ],
+      "evidence": [
+        "render_notice_line and _send_or_update_status_coro remain in gateway/run.py",
+        "closed for contributor-volume narrowing rather than superseded on merits"
+      ]
+    },
+    {
+      "id": "PR-77711",
+      "pr": 77711,
+      "title": "extract history helpers",
+      "baseline": "green_after_refresh",
+      "current_states": [
+        "needs_decision"
+      ],
+      "evidence": [
+        "history helpers remain in gateway/run.py",
+        "_select_cached_agent_history semantically changed after the original extraction, so the stale body cannot be replayed"
+      ]
+    },
+    {
+      "id": "PR-77719",
+      "pr": 77719,
+      "title": "extract config/runtime-resolution helpers",
+      "baseline": "green_after_refresh",
+      "current_states": [
+        "already_on_main",
+        "moved"
+      ],
+      "superseded_by": [
+        "66366d3"
+      ],
+      "evidence": [
+        "maintainer explicitly closed as superseded; public facade helpers intentionally remained in gateway/run.py while runner methods moved to run_* siblings"
+      ]
+    }
+  ]
+}
