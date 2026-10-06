@@ -5,7 +5,7 @@
 
 import type { HermesSkin } from '@hermes/shared/skin'
 import type { Palette } from '@stencil-hq/tern'
-import { fromSkin, type ThemeColors } from '@tui/theme.js'
+import { DARK_SEEDS, fromSkin, LIGHT_SEEDS, type ThemeColors } from '@tui/theme.js'
 
 type Tokens = Record<string, string>
 
@@ -14,8 +14,8 @@ export function paletteOf(skin: HermesSkin | undefined): Palette {
   const name = skin?.name || 'default'
 
   return {
-    dark: tokensOf(resolve(skin, 'dark')),
-    light: tokensOf(resolve(skin, 'light')),
+    dark: tokensOf(resolve(skin, 'dark'), paperOf(skin, 'dark')),
+    light: tokensOf(resolve(skin, 'light'), paperOf(skin, 'light')),
     name: { dark: name, light: name }
   }
 }
@@ -42,7 +42,21 @@ function resolve(skin: HermesSkin | undefined, polarity: 'dark' | 'light'): Them
   }
 }
 
-function tokensOf(c: ThemeColors): Tokens {
+/**
+ * The canvas colour for one polarity: the background a skin authors, else the
+ * base theme's. The Theme carries no background of its own (the Ink TUI sits
+ * on the terminal's), so it is read here for the surfaces that paint one.
+ */
+function paperOf(skin: HermesSkin | undefined, polarity: 'dark' | 'light'): string {
+  const light = polarity === 'light'
+  const authored = { ...skin?.colors, ...(light ? skin?.light_colors : skin?.dark_colors) }['background']?.trim() ?? ''
+
+  const base = light ? LIGHT_SEEDS : DARK_SEEDS
+
+  return /^#[0-9a-f]{6}$/i.test(authored) ? authored : (base.paper ?? base.bg)
+}
+
+function tokensOf(c: ThemeColors, paper: string): Tokens {
   const out: Tokens = {
     accent: c.accent,
     border: c.border,
@@ -78,6 +92,8 @@ function tokensOf(c: ThemeColors): Tokens {
     syntaxNumber: c.syntaxNumber,
     syntaxString: c.syntaxString,
     syntaxType: c.primary,
+    // Body text, and the launch splash's ink.
+    text: c.text,
     thinkingHigh: c.warn,
     thinkingLow: c.statusGood,
     thinkingMedium: c.accent,
@@ -88,6 +104,9 @@ function tokensOf(c: ThemeColors): Tokens {
     toolDiffContext: c.muted,
     toolDiffRemoved: c.diffRemoved,
     toolOutput: c.muted,
+    // The canvas colour: a user's own messages, and the launch splash's paper.
+    userMessageBg: paper,
+    userMessageText: c.text,
     warning: c.warn
   }
 

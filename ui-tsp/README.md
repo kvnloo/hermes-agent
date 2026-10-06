@@ -30,6 +30,7 @@ code 75, and the launcher runs the Ink TUI in its place (`hermes_cli/main_tui_la
 | `src/view/` | Node builders (TSX on the Tern SDK's runtime) for the transcript, tool cards, dock and welcome card |
 | `src/overlay.ts`, `src/overlays/` | Floating sheets: approvals, clarify, masked prompts, completions, pickers |
 | `src/palette.ts` | The skin as a Tern program palette (`t`) |
+| `src/splash/`, `src/view/splash.tsx` | The launch splash: seven pure designs, their Tern view, and the shell that times and hands off |
 
 The views speak omp's chat vocabulary (`omp.session`, `omp.user`, `omp.assistant`,
 `omp.thinking`, `omp.editor`, `tool` names like `bash`/`read`/`edit`): Tern's chat styles
@@ -39,6 +40,33 @@ its icon, deck tile and branding.
 
 `@tui/*` imports reach the renderer-free modules of `ui-tui/src` (the gateway transport, skins,
 history, completion requests); nothing here imports React or Ink.
+
+## Launch splash
+
+Before the session chrome appears, a splash covers gateway boot on its own `screen` surface and
+hands off when the gateway is ready. Any key skips it; it never holds past 15 seconds.
+
+| Switch | Effect |
+| --- | --- |
+| `HERMES_TUI_SPLASH=0` | No splash |
+| `HERMES_TUI_SPLASH=<design>` | `kerykeion` (default), `sigil`, `velocity`, `atlas`, `windows`, `unleash` or `soul` |
+| `HERMES_TUI_SPLASH=random` | A different design each launch |
+
+It is also skipped under Reduce Motion and when the launch carries a prompt (`hermes -q …`).
+
+Each design is a pure function of size, elapsed time and a palette (`renderSplashFrame`), so a
+frame is reproducible without a gateway or a model. A frame is cells, not ANSI: `text` nodes whose
+inks are span tokens naming palette tokens (`text`, `accent`, `dim`, `border`) and whose grounds are
+roles a small stylesheet paints from Tern's fill tokens (`userMessageBg`, `selectedBg`). No colour
+value lives in the view, so `gateway.ready` and `skin.changed` recolour it through
+`surface.palette()` alone. The dark default (`DARK_SEEDS` in `ui-tui/src/theme.ts`) is the Hermes
+website's palette, shared with the chrome.
+
+```sh
+npx tsx scripts/splash-demo.ts            # gallery in a Tern pane: h/l switch, r replay, t swap skin, q quit
+npx tsx scripts/splash-demo.ts --once     # one launch, as the app plays it
+SPLASH_DEMO_AT=3000 npx tsx scripts/splash-demo.ts --design atlas   # hold one instant, for a still
+```
 
 ## Developing
 

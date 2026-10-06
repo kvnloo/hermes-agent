@@ -393,13 +393,15 @@ describe('derived tone ladder', () => {
     const dark = await importThemeWithCleanEnv()
     const light = await importThemeWithEnv({ HERMES_TUI_BACKGROUND: '#ffffff' })
 
+    // The dark default is now the website palette (authored tones, see
+    // below), so the dark half of the fit is checked against the classic gold
+    // seeds the knobs were fitted on.
+    const gold = dark.deriveTones({ accent: '#FFBF00', bg: '#101014', primary: '#FFD700', text: '#FFF8DC' })
+
     const cases: Array<[string, string, string]> = [
-      [dark.DARK_THEME.color.muted, '#CC9B1F', 'dark muted'],
-      [dark.DARK_THEME.color.label, '#DAA520', 'dark label'],
-      [dark.DARK_THEME.color.statusFg, '#C0C0C0', 'dark statusFg'],
-      [dark.DARK_THEME.color.completionBg, '#1a1a2e', 'dark surface'],
-      [dark.DARK_THEME.color.completionCurrentBg, '#333355', 'dark chip'],
-      [dark.DARK_THEME.color.selectionBg, '#3a3a55', 'dark selection'],
+      [gold.muted, '#CC9B1F', 'dark muted'],
+      [gold.label, '#DAA520', 'dark label'],
+      [gold.statusFg, '#C0C0C0', 'dark statusFg'],
       // Light canon = liftForContrast(dark literal, white, 4.5): the exact
       // colors xterm's minimumContrastRatio rendered on light hosts.
       [light.LIGHT_THEME.color.muted, '#946C08', 'light muted'],
@@ -412,6 +414,26 @@ describe('derived tone ladder', () => {
     for (const [got, original, label] of cases) {
       expect(channelDelta(got, original), `${label}: ${got} vs original ${original}`).toBeLessThanOrEqual(8)
     }
+  })
+
+  it('makes the dark default the Hermes website palette', async () => {
+    const { DARK_SEEDS, DARK_THEME, fromSkin } = await importThemeWithCleanEnv()
+
+    // --hermes-color-* on nousresearch.com; the launch splash draws in these six.
+    expect(DARK_SEEDS.paper).toBe('#0000f2')
+    expect(DARK_THEME.color.text).toBe('#f2f2f2')
+    expect(DARK_THEME.color.selectionBg).toBe('#000082')
+    expect(DARK_THEME.color.accent).toBe('#f2f200')
+    expect(DARK_THEME.color.muted).toBe('#a6a6f6')
+    expect(DARK_THEME.color.border).toBe('#6e6ef7')
+    // And they survive the skinless path the gateway's default skin takes.
+    expect(fromSkin({}, {}).color).toMatchObject({
+      accent: '#f2f200',
+      border: '#6e6ef7',
+      muted: '#a6a6f6',
+      selectionBg: '#000082',
+      text: '#f2f2f2'
+    })
   })
 
   it('derives dim/secondary tones from the skin identity, not another palette', async () => {

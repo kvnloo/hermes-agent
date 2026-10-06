@@ -26,6 +26,8 @@ import { Completion } from './overlays/completion.js'
 import { openModelPicker } from './overlays/models.js'
 import { promptOverlay } from './overlays/prompts.js'
 import { paletteOf } from './palette.js'
+import { SPLASH_ROLE } from './splash/index.js'
+import { LaunchSplash, pickSplashDesign, splashInsets, splashSetting } from './splash/launch.js'
 import { Transcript } from './transcript.js'
 import { dockNodes } from './view/dock.js'
 import { entryNode } from './view/transcript.js'
@@ -77,6 +79,8 @@ export class App implements OverlayHost {
   readonly #approvalIds = new Map<string, string>()
   /** The launcher's startup image until it is attached to the first session (the queue waits for it). */
   #startupImage = process.env.HERMES_TUI_IMAGE?.trim() ?? ''
+  /** The launch splash while it covers the session chrome (it takes the keys until it leaves). */
+  #splash: LaunchSplash | undefined
 
   constructor(tern: Session, gw: GatewayClient, version: string) {
     this.#tern = tern
@@ -109,6 +113,7 @@ export class App implements OverlayHost {
       this.queue.push(query || 'What do you see in this image?')
     }
 
+    this.#startSplash()
     this.#gw.on('event', (ev: AnyGatewayEvent) => this.#onGatewayEvent(ev))
     this.#gw.on('request', (req: ServerRequest) => this.#onRequest(req))
     this.#gw.on('exit', (code: null | number) => {
@@ -117,6 +122,8 @@ export class App implements OverlayHost {
       this.sid = null
       this.busy = null
       this.transcript.interrupt()
+      // Whatever went wrong is in the transcript: let it be seen.
+      this.#splash?.ready()
       this.changed()
     })
     this.#gw.drain()
@@ -194,6 +201,11 @@ export class App implements OverlayHost {
   }
 
   #onKey(key: Key) {
+    // Any key skips the launch splash, and is spent doing so.
+    if (this.#splash?.active) {
+      return this.#splash.skip()
+    }
+
     const top = this.overlays.at(-1)
 
     if (key.ctrl && key.name === 'c') {
@@ -572,6 +584,7 @@ export class App implements OverlayHost {
     switch (ev.type) {
       case 'gateway.ready':
         this.#applySkin(ev.payload?.skin)
+        this.#splash?.ready()
         // A reconnect's ready reattaches the shown session; only a sessionless app bootstraps.
         void (this.storedSid ? this.#reattach(this.storedSid) : this.#bootstrap())
 
@@ -705,6 +718,7 @@ export class App implements OverlayHost {
 
       case 'gateway.start_timeout':
         t.notice('The agent backend did not start in time.', 'error')
+        this.#splash?.ready()
 
         break
 
@@ -780,8 +794,40 @@ export class App implements OverlayHost {
 
   #applySkin(skin: SkinPayload | null | undefined) {
     if (skin) {
-      this.#surface.palette(paletteOf(skin))
+      const palette = paletteOf(skin)
+
+      this.#surface.palette(palette)
+      // The splash draws in palette tokens only, so this recolours its next frame.
+      this.#splash?.palette(palette)
     }
+  }
+
+  /**
+   * Covers the session chrome with the launch splash until the gateway is
+   * ready (`HERMES_TUI_SPLASH`; see `splash/launch.ts`). It draws on its own
+   * `screen` surface in the default skin until the gateway names one.
+   */
+  #startSplash() {
+    const setting = splashSetting()
+
+    if (!setting.enabled || this.#tern.caps.reduceMotion) {
+      return
+    }
+
+    this.#splash = new LaunchSplash({
+      design: pickSplashDesign(setting.design),
+      onDone: () => {
+        this.#splash = undefined
+        // The caret was the composer's all along; say so again now that it shows.
+        this.#surface.focus(this.#focus)
+        this.changed()
+      },
+      open: () => this.#tern.open({ id: 'splash', mode: 'screen', role: SPLASH_ROLE, title: 'hermes' }),
+      palette: paletteOf(undefined),
+      size: () => splashInsets(this.#tern.caps.cols, process.stdout.rows ?? 24),
+      status: 'summoning hermes…'
+    })
+    this.#splash.start()
   }
 
   #label(label: string) {
