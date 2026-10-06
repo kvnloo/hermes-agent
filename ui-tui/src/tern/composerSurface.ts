@@ -8,6 +8,7 @@ import { $uiState } from '../app/uiStore.js'
 import { NATIVE_MODE } from '../config/env.js'
 import { encodeTspJson, HERMES_TSP_PROGRAM_FEATURES, type TspEvent, type TspHello } from './protocol.js'
 import { $ternSurface, subscribeTernSurfaceEvents } from './surface.js'
+import { loadUsageSnapshot, usageSurfaceNodes, type UsageNetworkSnapshot } from './usageSurface.js'
 
 export const TERN_SURFACE_ID = 'hermes:session'
 export const TERN_COMPOSER_ID = 'hermes:composer'
@@ -76,7 +77,8 @@ export class TernComposerTransport {
 
   constructor(
     private write: WriteTsp,
-    hello: TspHello
+    hello: TspHello,
+    private usage: UsageNetworkSnapshot = loadUsageSnapshot()
   ) {
     this.credits = Math.max(1, Math.trunc(hello.credits ?? 2))
     this.limit = Math.max(4, Math.trunc(hello.apc ?? 65_536))
@@ -126,7 +128,8 @@ export class TernComposerTransport {
                 sendable,
                 text: snapshot.text
               }
-            }
+            },
+            ...usageSurfaceNodes(this.usage)
           ]
         }
       ],
