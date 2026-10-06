@@ -5765,6 +5765,11 @@ class TelegramAdapter(TelegramHeldInboundMixin, BasePlatformAdapter):
             "observe_unmentioned_group_messages", "TELEGRAM_OBSERVE_UNMENTIONED_GROUP_MESSAGES", "false",
             "ingest_unmentioned_group_messages")
 
+    def _telegram_observe_sibling_bot_messages(self) -> bool:
+        """Store user messages addressed to another bot as context without dispatching them."""
+        return self._extra_bool(
+            "observe_sibling_bot_messages", "TELEGRAM_OBSERVE_SIBLING_BOT_MESSAGES", "false")
+
     def _telegram_guest_mode(self) -> bool:
         """Return whether non-allowlisted groups may trigger via direct @mention."""
         return self._extra_bool("guest_mode", "TELEGRAM_GUEST_MODE", "false")
@@ -6147,17 +6152,32 @@ class TelegramAdapter(TelegramHeldInboundMixin, BasePlatformAdapter):
 
     def _should_observe_unmentioned_group_message(self, message: Message) -> bool:
         """Return True when a group message should be stored but not dispatched."""
-        if self._is_own_message(message) or not self._telegram_observe_unmentioned_group_messages() or not self._is_group_chat(message):
+        if self._is_own_message(message) or not self._is_group_chat(message):
             return False
         if self._topic_gates_pass(getattr(message, "message_thread_id", None), warn_non_numeric=False) is False:
             return False
         chat_id_str = self._chat_id_str(message)
-        if self._telegram_exclusive_bot_mentions() and self._explicit_bot_mentions_exclude_self(message):
+        sibling_addressed = (
+            self._telegram_exclusive_bot_mentions()
+            and self._explicit_bot_mentions_exclude_self(message)
+        )
+        if sibling_addressed:
+            if not self._telegram_observe_sibling_bot_messages():
+                return False
+            # Bot-authored sibling output follows a separate egress/context path; this
+            # operation is only the user-message observation half of #44881/#105624.
+            if getattr(getattr(message, "from_user", None), "is_bot", False):
+                return False
+        elif not self._telegram_observe_unmentioned_group_messages():
             return False
         # Observed context is shared at chat/topic scope, so require an explicit chat allowlist.
         allowed = self._telegram_observe_allowed_chats()
         if not allowed or chat_id_str not in allowed:
             return False
+        if sibling_addressed:
+            # The exclusive-bot gate rejects this before wake-word/reply/free-response
+            # dispatch branches, so those later observe vetoes must not drop it too.
+            return True
         # Free-response chats/topics dispatch every message, so they are never observed.
         if chat_id_str in self._telegram_free_response_chats() or self._telegram_is_free_response_topic(message):
             return False
@@ -6192,7 +6212,10 @@ class TelegramAdapter(TelegramHeldInboundMixin, BasePlatformAdapter):
 
     def _apply_telegram_group_observe_attribution(self, event: MessageEvent) -> MessageEvent:
         """Align triggered group turns with observed-history attribution."""
-        if not self._telegram_observe_unmentioned_group_messages():
+        if not (
+            self._telegram_observe_unmentioned_group_messages()
+            or self._telegram_observe_sibling_bot_messages()
+        ):
             return event
         raw_message = getattr(event, "raw_message", None)
         if not raw_message or not self._is_group_chat(raw_message):
