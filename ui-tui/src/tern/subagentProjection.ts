@@ -1,12 +1,27 @@
 import type { SubagentProgress } from '../types.js'
 import type { TernLiveNode } from './liveProjection.js'
 
-const statusOf = (status: SubagentProgress['status']): string => {
-  if (status === 'queued') return 'pending'
-  if (status === 'completed') return 'done'
-  if (status === 'failed' || status === 'error') return 'failed'
-  if (status === 'timeout' || status === 'interrupted') return 'aborted'
-  return status
+type TernAgentStatus = 'pending' | 'running' | 'done' | 'failed' | 'aborted' | 'idle' | 'parked'
+
+const statusOf = (status: SubagentProgress['status']): TernAgentStatus => {
+  switch (status) {
+    case 'queued':
+      return 'pending'
+    case 'running':
+      return 'running'
+    case 'completed':
+      return 'done'
+    case 'failed':
+    case 'error':
+      return 'failed'
+    case 'timeout':
+    case 'interrupted':
+      return 'aborted'
+    default: {
+      const exhaustive: never = status
+      return exhaustive
+    }
+  }
 }
 
 const tokenTotal = (agent: SubagentProgress): number | undefined => {
