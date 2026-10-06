@@ -71,3 +71,20 @@ Keep source credit attached to every implementation note:
 - Hermes Desktop/TUI behavior and design language — Hermes contributors
 
 The canonical visual references and ownership rules live in issue #436.
+
+
+## Tern dogfood workspace
+
+A tiny development-only Tern plugin lives in `tern-plugin/`. Link it once with
+`tern plugin link`, then **Open Hermes UX lab** gives every variant the same
+three-pane geometry: Hermes, TSP tests, and a scratch shell.
+
+This is intentionally a harness, not product code. It uses Tern's documented
+layout API and must never become required for normal Hermes startup.
+
+## Active variant contract
+
+`activeVariant.ts` identifies the presentation hypothesis of the current
+branch. The shared base stays `base`; each A/B/C branch changes only its own
+descriptor before any presentation work begins. CI validates that the shared
+branch remains neutral.

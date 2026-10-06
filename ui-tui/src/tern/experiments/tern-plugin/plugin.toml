@@ -1,0 +1,6 @@
+schema = 1
+id = "hermes-ux"
+name = "Hermes UX Lab"
+version = "0.1.0"
+description = "Development-only workspace launcher for Hermes × Tern UX experiments"
+window = "window.luau"
