@@ -38,7 +38,6 @@
     {
       "id": "OP-mcp-refresh-teardown-guard",
       "description": "Prevent refresh from dereferencing a torn-down MCP session.",
-      "expected_refresh_state": "still_needed",
       "note": "The sweeper review confirmed the current-main teardown/refresh race and called this change salvageable, while also requiring a focused regression test.",
       "anchors": [
         {
@@ -57,12 +56,16 @@
             "disconnect"
           ]
         }
-      ]
+      ],
+      "baseline_refresh_state": {
+        "state": "still_needed",
+        "as_of": "2026-07-13",
+        "source": "PR #31157 maintainer/sweeper review"
+      }
     },
     {
       "id": "OP-repo-wide-gitnexus-instruction",
       "description": "Make a contributor-local GitNexus workflow mandatory in repository-wide instructions.",
-      "expected_refresh_state": "invalidated",
       "note": "Reviewer requested removal or relocation to optional tooling documentation because it hard-coded /Users/kihwangkim/dev/hermes-agent.",
       "anchors": [
         {
@@ -78,12 +81,16 @@
             "GitNexus"
           ]
         }
-      ]
+      ],
+      "baseline_refresh_state": {
+        "state": "invalidated",
+        "as_of": "2026-07-13",
+        "source": "PR #31157 maintainer/sweeper review"
+      }
     },
     {
       "id": "OP-gws-generated-credentials",
       "description": "Adjust Google Workspace generated credential handling and prove the generated payload/permissions through behavior-level tests.",
-      "expected_refresh_state": "needs_decision",
       "note": "The review found that seeding a token only made the helper runnable; it did not exercise _gws_env() or validate the generated credential file.",
       "anchors": [
         {
@@ -102,7 +109,12 @@
             "chmod"
           ]
         }
-      ]
+      ],
+      "baseline_refresh_state": {
+        "state": "needs_decision",
+        "as_of": "2026-07-13",
+        "source": "PR #31157 maintainer/sweeper review"
+      }
     }
   ],
   "verification": [
