@@ -587,6 +587,50 @@ class TestHappyEyeballsSocketConnect:
                 racer(("127.0.0.1", 1), 1.0)
 
 
+class TestTailscaleMtuClamp:
+    """The process-wide MTU workaround must never change non-TCP message semantics."""
+
+    def test_peer_classifier_requires_tcp_and_exact_tailscale_ranges(self):
+        hb = _fresh_import()
+
+        class FakePeer:
+            def __init__(self, sock_type, host):
+                self.type = sock_type
+                self.host = host
+
+            def getpeername(self):
+                return (self.host, 443)
+
+        assert hb._is_tailscale_tcp_peer(FakePeer(socket.SOCK_STREAM, "100.64.0.1"))
+        assert hb._is_tailscale_tcp_peer(FakePeer(socket.SOCK_STREAM, "100.127.255.254"))
+        assert not hb._is_tailscale_tcp_peer(FakePeer(socket.SOCK_STREAM, "100.128.0.1"))
+        assert not hb._is_tailscale_tcp_peer(FakePeer(socket.SOCK_STREAM, "100.1.2.3"))
+        assert hb._is_tailscale_tcp_peer(FakePeer(socket.SOCK_STREAM, "fd7a:115c:a1e0::1234"))
+        assert not hb._is_tailscale_tcp_peer(FakePeer(socket.SOCK_STREAM, "fd7b::1"))
+        assert not hb._is_tailscale_tcp_peer(FakePeer(socket.SOCK_DGRAM, "100.64.0.1"))
+
+    def test_matching_udp_peer_keeps_one_datagram(self):
+        _fresh_import()
+        receiver = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        receiver.bind(("127.0.0.1", 0))
+
+        class LabelledDatagramSocket(socket.socket):
+            def getpeername(self):
+                _host, port = super().getpeername()
+                return ("100.64.1.2", port)
+
+        sender = LabelledDatagramSocket(socket.AF_INET, socket.SOCK_DGRAM)
+        sender.connect(receiver.getsockname())
+        payload = b"x" * 2500
+        try:
+            assert sender.send(payload) == len(payload)
+            data, _peer = receiver.recvfrom(4096)
+            assert data == payload
+        finally:
+            sender.close()
+            receiver.close()
+
+
 @pytest.mark.skipif(
     sys.platform != "linux" or not (os.confstr("CS_GNU_LIBC_VERSION") or "").startswith("glibc"),
     reason="environ array lifetime is a glibc property")
