@@ -22,7 +22,7 @@ import {
   toolTrailLine,
   verboseToolTrailLine
 } from '../lib/text.js'
-import type { ActiveTool, ActivityItem, Msg, SubagentProgress, TodoItem } from '../types.js'
+import type { ActiveTool, ActivityItem, Msg, NativeToolSnapshot, SubagentProgress, TodoItem } from '../types.js'
 
 import type { Notice } from './interfaces.js'
 import { resetFlowOverlays } from './overlayStore.js'
@@ -36,6 +36,7 @@ function toolTrailLines(
   labels: readonly ToolLabel[],
   summary: string,
   resultText: string,
+  failed: boolean,
   took?: number
 ): string[] {
   const heads = labels.length ? labels.map(formatToolLabel) : [formatToolCall(name, done?.context || '')]
@@ -47,8 +48,8 @@ function toolTrailLines(
     }
 
     return verbose
-      ? verboseToolTrailLine(head, false, took, done?.verboseArgs, resultText || summary)
-      : toolTrailLine(head, false, summary, took)
+      ? verboseToolTrailLine(head, failed, took, done?.verboseArgs, resultText || summary)
+      : toolTrailLine(head, failed, summary, took)
   })
 }
 
@@ -367,7 +368,17 @@ class TurnController {
 
     this.closeReasoningSegment()
 
-    const segments = this.segmentMessages
+    const cancelledTools: NativeToolSnapshot[] = this.activeTools.map(tool => ({
+      id: tool.id,
+      name: tool.name,
+      status: 'cancelled',
+      ...(tool.context ? { context: tool.context } : {}),
+      ...(tool.verboseArgs ? { verboseArgs: tool.verboseArgs } : {}),
+      ...(tool.startedAt ? { durationSeconds: Math.max(0, (Date.now() - tool.startedAt) / 1000) } : {})
+    }))
+    const segments = cancelledTools.length
+      ? [...this.segmentMessages, { kind: 'trail' as const, role: 'system' as const, text: '', nativeTools: cancelledTools }]
+      : this.segmentMessages
     const partial = this.bufRef.trimStart()
     const tools = this.pendingSegmentTools
 
@@ -874,17 +885,23 @@ class TurnController {
     duration?: number,
     todos?: unknown,
     resultText?: string,
-    labels?: ToolLabel[]
+    labels?: ToolLabel[],
+    failed = false
   ) {
     if (this.interrupted) {
       return
     }
 
     this.recordTodos(todos)
-    const lines = this.completeTool(toolId, fallbackName, summary, duration, resultText, labels)
+    const completed = this.completeTool(toolId, fallbackName, summary, duration, resultText, labels, failed)
 
-    this.pendingSegmentTools = [...this.pendingSegmentTools, ...lines]
+    this.pendingSegmentTools = [...this.pendingSegmentTools, ...completed.lines]
     this.flushPendingToolsIntoLastSegment()
+    this.segmentMessages = [
+      ...this.segmentMessages,
+      { kind: 'trail', role: 'system', text: '', nativeTools: [completed.native] }
+    ]
+    patchTurnState({ streamSegments: this.segmentMessages })
     this.publishToolState()
   }
 
@@ -894,14 +911,21 @@ class TurnController {
     fallbackName?: string,
     duration?: number,
     resultText?: string,
-    labels?: ToolLabel[]
+    labels?: ToolLabel[],
+    failed = false
   ) {
     if (this.interrupted) {
       return
     }
 
     this.flushStreamingSegment()
-    this.pushInlineDiffSegment(diffText, this.completeTool(toolId, fallbackName, '', duration, resultText, labels))
+    const completed = this.completeTool(toolId, fallbackName, '', duration, resultText, labels, failed)
+    this.pushInlineDiffSegment(diffText, completed.lines)
+    this.segmentMessages = [
+      ...this.segmentMessages,
+      { kind: 'trail', role: 'system', text: '', nativeTools: [completed.native] }
+    ]
+    patchTurnState({ streamSegments: this.segmentMessages })
     this.publishToolState()
   }
 
@@ -913,8 +937,9 @@ class TurnController {
     summary?: string,
     duration?: number,
     resultText?: string,
-    eventLabels?: ToolLabel[]
-  ) {
+    eventLabels?: ToolLabel[],
+    failed = false
+  ): { lines: string[]; native: NativeToolSnapshot } {
     const done = this.activeTools.find(tool => tool.id === toolId)
     const name = done?.name ?? fallbackName ?? 'tool'
     const label = toolTrailLabel(name)
@@ -922,7 +947,17 @@ class TurnController {
     const fallbackDuration = done?.startedAt ? (Date.now() - done.startedAt) / 1000 : undefined
     const took = duration ?? fallbackDuration
 
-    const lines = toolTrailLines(done, name, labels, summary || '', resultText || '', took)
+    const lines = toolTrailLines(done, name, labels, summary || '', resultText || '', failed, took)
+    const native: NativeToolSnapshot = {
+      id: toolId,
+      name,
+      status: failed ? 'failed' : 'done',
+      ...(done?.context ? { context: done.context } : {}),
+      ...(done?.verboseArgs ? { verboseArgs: done.verboseArgs } : {}),
+      ...(summary ? { summary } : {}),
+      ...(resultText ? { resultText } : {}),
+      ...(took !== undefined ? { durationSeconds: took } : {})
+    }
 
     this.activeTools = this.activeTools.filter(tool => tool.id !== toolId)
 
@@ -934,7 +969,7 @@ class TurnController {
 
     this.turnTools = next.slice(-TRAIL_LIMIT)
 
-    return lines
+    return { lines, native }
   }
 
   private publishToolState() {
