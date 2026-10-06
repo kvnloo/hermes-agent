@@ -6,6 +6,7 @@ import type { AppLayoutComposerProps } from '../app/interfaces.js'
 import { $isBlocked } from '../app/overlayStore.js'
 import { $uiState } from '../app/uiStore.js'
 import { NATIVE_MODE } from '../config/env.js'
+import { dispatchNativeSend, type NativeSendOwner } from './composerInput.js'
 import { encodeTspJson, HERMES_TSP_PROGRAM_FEATURES, type TspEvent, type TspHello } from './protocol.js'
 import type { TernLiveNode } from './liveProjection.js'
 import { $ternSurface, subscribeTernSurfaceEvents } from './surface.js'
@@ -59,11 +60,8 @@ export function ternSurfaceStaysOpen(state: { blocked: boolean }): boolean {
   return !state.blocked
 }
 
-/**
- * First concrete TSP consumer. The transcript intentionally remains Ink-owned:
- * while Hermes is idle this surface owns only the native composer; busy turns
- * and modal prompts close it and resume Ink immediately.
- */
+/** Composer-only transport stays open while busy. Native transcript
+ * presentation and full live-UI acceptance remain separate slices. */
 export class TernComposerTransport {
   private acked = 0
   private credits: number
@@ -301,19 +299,38 @@ export function useTernComposerSurface(composer: AppLayoutComposerProps): void {
     }, hello)
 
     sessionRef.current = session
-    session.sync({
-      blocked: false,
-      busy,
-      snapshot: {
-        cursor: cursorRef.current,
-        text: nativeTextRef.current
-      }
+    const syncCurrent = () => session.sync({
+      blocked: $isBlocked.get(),
+      busy: $uiState.get().busy,
+      snapshot: { cursor: cursorRef.current, text: nativeTextRef.current }
     })
+    syncCurrent()
+
+    const sendOwner: NativeSendOwner = {
+      read: () => ({
+        draft: nativeTextRef.current,
+        blocked: $isBlocked.get(),
+        busy: $uiState.get().busy,
+        completions: composerRef.current.completions.length,
+        bufferedLines: composerRef.current.inputBuf.length,
+        sendEnabled: HERMES_TSP_PROGRAM_FEATURES.includes('send')
+      }),
+      clearDraft: () => {
+        nativeTextRef.current = ''
+        cursorRef.current = 0
+        syncCurrent()
+      },
+      submit: text => composerRef.current.submit(text)
+    }
 
     const unsubscribe = subscribeTernSurfaceEvents(event => {
       session.handleEvent(event)
 
       if (!('sf' in event) || event.sf !== TERN_SURFACE_ID || !('id' in event) || event.id !== TERN_COMPOSER_ID) {
+        return
+      }
+
+      if ($isBlocked.get()) {
         return
       }
 
@@ -327,22 +344,12 @@ export function useTernComposerSurface(composer: AppLayoutComposerProps): void {
         nativeTextRef.current = next.text
         cursorRef.current = next.cursor
         composerRef.current.updateInput(next.text)
-        session.sync({ blocked: false, busy, snapshot: next })
-
+        syncCurrent()
         return
       }
 
-      if (
-        event.ev === 'send' &&
-        sendable &&
-        composerRef.current.completions.length === 0 &&
-        event.text.trim() &&
-        event.text === nativeTextRef.current
-      ) {
-        nativeTextRef.current = ''
-        cursorRef.current = 0
-        session.sync({ blocked: false, busy, snapshot: { cursor: 0, text: '' } })
-        composerRef.current.submit(event.text)
+      if (event.ev === 'send') {
+        dispatchNativeSend(event.text, sendOwner)
       }
     })
 

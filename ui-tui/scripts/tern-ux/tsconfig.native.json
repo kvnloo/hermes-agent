@@ -12,6 +12,7 @@
   "files": [
     "preview.ts",
     "record.ts",
+    "../../src/tern/composerInput.ts",
     "../../src/tern/experiments/nativeView.ts",
     "../../src/tern/experiments/nativeSession.ts",
     "../../src/tern/experiments/nativeInput.ts"
