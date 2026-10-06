@@ -1,0 +1,101 @@
+{
+  "mode": "fixture-replay",
+  "liveTernVerified": false,
+  "reason": "preview.ts is an authored fixture, not a live Hermes session",
+  "viewport": {
+    "width": 1280,
+    "height": 720,
+    "columns": 160,
+    "rows": 40
+  },
+  "matrix": "not the required 80x28 / 120x36 / 180x44 cell matrix; headless output stayed 1280x720",
+  "isolation": "cage WLR_BACKENDS=headless WLR_RENDERER=gles2, private TERN_CONFIG_DIR, not the user desktop",
+  "ternVersion": "tern 0.4.5 (1d14241)",
+  "codeCommit": "37796d645d146f93f4b46d653bfe7540bb351dd1",
+  "files": [
+    {
+      "state": 1,
+      "file": "fixture-1.png",
+      "bytes": 36785,
+      "sha256": "d1a0f14eb3317e513deb370018fe90e6247b46dc545b13426f0359d98d44c84c"
+    },
+    {
+      "state": 2,
+      "file": "fixture-2.png",
+      "bytes": 41605,
+      "sha256": "30a79aa59da9017bd8beebe9b621cd390fb98450b6257a24d20b9bfdd94d1228"
+    },
+    {
+      "state": 3,
+      "file": "fixture-3.png",
+      "bytes": 41108,
+      "sha256": "439c4b9a33f7260d10a2f43707aeb49a73b28af9a379706c9f7592723b0ed1f7"
+    },
+    {
+      "state": 4,
+      "file": "fixture-4.png",
+      "bytes": 50128,
+      "sha256": "e6572aec8c09e4d68e73a0a748a634700876b262bb47f19e2e036c4bac567ff8"
+    },
+    {
+      "state": 5,
+      "file": "fixture-5.png",
+      "bytes": 58641,
+      "sha256": "8af9ea22e4fee86e6f89edbdb86655380927d1fe7f23f37fc34655298a127d39"
+    },
+    {
+      "state": 6,
+      "file": "fixture-6.png",
+      "bytes": 53774,
+      "sha256": "e4c9a69fa1d079ee3cd74102e2ca3c9a04d0f7dd4244fcd38657d0a5f6a6c0d1"
+    },
+    {
+      "state": 7,
+      "file": "fixture-7.png",
+      "bytes": 55339,
+      "sha256": "16fbab57777c88fbcb80983a16c951c2eea047c1c0662e617ec251ca6e5c9f84"
+    },
+    {
+      "state": 8,
+      "file": "fixture-8.png",
+      "bytes": 56048,
+      "sha256": "91b4eb9ddbd989eb60a288f11d26139f89c2fc5f410df74e2440b75a0e50717a"
+    },
+    {
+      "state": 9,
+      "file": "fixture-9.png",
+      "bytes": 68201,
+      "sha256": "5e33f43b8e07315ab9bc482334ac2df99b2266e42f9bb1958fb0f94ccf509805"
+    },
+    {
+      "state": 10,
+      "file": "fixture-10.png",
+      "bytes": 61908,
+      "sha256": "2109bd15a40885863abb82d7a27414b64b16809e4d9b1b252e99b86c253dd1cc"
+    },
+    {
+      "state": 11,
+      "file": "fixture-11.png",
+      "bytes": 61509,
+      "sha256": "a1dd6c7b8a7d17ed8a621de741fe724a8764789a5b4b1490a0c51af0f48f696f"
+    },
+    {
+      "state": 12,
+      "file": "fixture-12.png",
+      "bytes": 62211,
+      "sha256": "c33612b4e137b5a4da3e1e7c130b01504943e62cba45dc67d974e146124003e8"
+    },
+    {
+      "state": 13,
+      "file": "fixture-13.png",
+      "bytes": 61691,
+      "sha256": "8f074ddc6e46d1b1cae773c5139fba0450c857a6e6d0297dadb15ebab6517111"
+    },
+    {
+      "state": 14,
+      "file": "fixture-14.png",
+      "bytes": 61401,
+      "sha256": "bd217edb6e9ab427f57a1b54fcf9ee207c575070a466811318a18c441b616ce5"
+    }
+  ]
+}
