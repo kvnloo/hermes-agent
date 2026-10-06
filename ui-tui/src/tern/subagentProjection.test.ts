@@ -69,4 +69,30 @@ describe('native subagent projection', () => {
     const node = projectTernSubagents([agent()])[0]!
     expect(node.p?.tool).toBeUndefined()
   })
+
+
+  it('keeps inspection detail bounded to existing Hermes data', () => {
+    const node = projectTernSubagents([
+      agent({
+        notes: ['older note', 'latest note'],
+        thinking: ['older thought', 'latest thought'],
+        outputTail: [
+          { isError: false, preview: 'one', tool: 'read' },
+          { isError: false, preview: 'two', tool: 'grep' },
+          { isError: true, preview: 'three', tool: 'bash' },
+          { isError: false, preview: 'four', tool: 'read' }
+        ]
+      })
+    ])[0]!
+
+    expect(JSON.stringify(node.c)).toContain('latest thought')
+    expect(JSON.stringify(node.c)).toContain('latest note')
+    expect(JSON.stringify(node.c)).not.toContain('older thought')
+    expect(JSON.stringify(node.c)).not.toContain('older note')
+    expect(JSON.stringify(node.c)).not.toContain('one')
+    expect(JSON.stringify(node.c)).toContain('two')
+    expect(JSON.stringify(node.c)).toContain('three')
+    expect(JSON.stringify(node.c)).toContain('"error"')
+    expect(JSON.stringify(node.c)).toContain('four')
+  })
 })
