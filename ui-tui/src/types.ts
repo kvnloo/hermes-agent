@@ -9,6 +9,18 @@ export interface ActiveTool {
   startedAt?: number
 }
 
+export interface NativeToolSnapshot {
+  context?: string
+  durationSeconds?: number
+  id: string
+  name: string
+  resultText?: string
+  status: 'cancelled' | 'done' | 'failed'
+  summary?: string
+  verboseArgs?: string
+}
+
+
 export interface TodoItem {
   content: string
   id: string
@@ -154,6 +166,8 @@ export interface Msg {
   thinkingTokens?: number
   toolTokens?: number
   tools?: string[]
+  /** Renderer-only structured lifecycle snapshots derived from authoritative tool events. */
+  nativeTools?: NativeToolSnapshot[]
   todos?: TodoItem[]
   todoIncomplete?: boolean
   todoCollapsedByDefault?: boolean
