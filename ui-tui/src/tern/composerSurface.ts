@@ -9,6 +9,7 @@ import { $uiState } from '../app/uiStore.js'
 import { NATIVE_MODE } from '../config/env.js'
 import { encodeTspJson, HERMES_TSP_PROGRAM_FEATURES, type TspEvent, type TspHello } from './protocol.js'
 import { projectTernTranscript, reconcileTernLiveNodes, type TernLiveNode } from './liveProjection.js'
+import { projectTernSubagents } from './subagentProjection.js'
 import { $ternSurface, subscribeTernSurfaceEvents } from './surface.js'
 
 export const TERN_SURFACE_ID = 'hermes:session'
@@ -58,7 +59,7 @@ export function resolveTernComposerSendable(_hello: TspHello, hermesReady: boole
 
 
 export function supportsTernLiveSurface(hello: TspHello): boolean {
-  return supportsTernComposer(hello) && hello.kinds.includes('md') && hello.kinds.includes('card')
+  return supportsTernComposer(hello) && hello.kinds.includes('md') && hello.kinds.includes('card') && hello.kinds.includes('agent')
 }
 
 export function ternSurfaceStaysOpen(state: { blocked: boolean }): boolean {
@@ -358,7 +359,11 @@ export function useTernComposerSurface(composer: AppLayoutComposerProps, transcr
   const blocked = useStore($isBlocked)
   const { busy } = useStore($uiState)
   const streaming = useTurnSelector(state => state.streaming)
-  const main = useMemo(() => projectTernTranscript(transcript.virtualRows, streaming), [streaming, transcript.virtualRows])
+  const subagents = useTurnSelector(state => state.subagents)
+  const main = useMemo(
+    () => [...projectTernTranscript(transcript.virtualRows, streaming), ...projectTernSubagents(subagents)],
+    [streaming, subagents, transcript.virtualRows]
+  )
   const { stdout } = useStdout()
   const composerRef = useRef(composer)
   const cursorRef = useRef(composer.input.length)
