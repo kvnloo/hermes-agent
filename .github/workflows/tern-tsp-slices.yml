@@ -41,3 +41,27 @@ jobs:
           python3 -c 'import json,os; d=json.load(open(os.environ["RUNNER_TEMP"]+"/native-a-views.json")); assert len(d["views"]) == 14; assert d["variant"] == "omp-baseline"; print("14 semantic views; no visual verification claimed")'
       - name: Exercise real Node PTYs with fake Tern replies
         run: python3 ui-tui/scripts/tern-ux/smoke_preview.py
+      - name: Verify replay export and no-overwrite behavior
+        run: |
+          OUT=$(mktemp -d "$RUNNER_TEMP/tern-ux-replay.XXXXXX")
+          npm run --silent tern:ux:record --workspace ui-tui -- "$OUT"
+          python3 - "$OUT" <<'PY'
+          import json, pathlib, sys
+          out = pathlib.Path(sys.argv[1])
+          for name in ('narrow', 'normal', 'wide'):
+              records = [json.loads(line) for line in (out / (name + '.jsonl')).read_text().splitlines()]
+              manifest = json.loads((out / (name + '.manifest.json')).read_text())
+              assert len([r for r in records if r['verb'] == 'o']) == 1
+              frames = [r for r in records if r['verb'] == 'f']
+              assert [r['body']['s'] for r in frames] == list(range(1, 15))
+              assert manifest['viewport']['id'] == name
+              assert manifest['liveTernVerified'] is False
+              assert manifest['attentionMeasured'] is False
+          print('3 reproducible replay exports; no GUI verification claimed')
+          PY
+          sha256sum "$OUT"/* > "$RUNNER_TEMP/tern-ux-replay.sha256"
+          if npm run --silent tern:ux:record --workspace ui-tui -- "$OUT"; then
+            echo 'Recorder unexpectedly overwrote an existing run' >&2
+            exit 1
+          fi
+          sha256sum -c "$RUNNER_TEMP/tern-ux-replay.sha256"
