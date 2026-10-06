@@ -48,3 +48,15 @@ from `GLANCE_TEST.md` can be added to the receipt by the analysis step after
 the run.
 
 No generated mockup or ANSI OMP image counts as live-Tern evidence.
+
+
+## Matrix gate
+
+After collecting all three **live-Hermes** receipts into one directory:
+
+```bash
+npm run tern:ux:verify-captures --workspace ui-tui -- /tmp/a-live-receipts
+```
+
+The gate requires narrow/normal/wide receipts from the same Variant A commit
+and the same observed Tern version. Fixture-replay receipts cannot satisfy it.
