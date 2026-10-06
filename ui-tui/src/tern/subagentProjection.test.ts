@@ -55,7 +55,7 @@ describe('native subagent projection', () => {
       ['error', 'failed'],
       ['timeout', 'aborted'],
       ['interrupted', 'aborted'],
-      ['queued', 'queued']
+      ['queued', 'pending']
     ] as const
 
     for (const [source, expected] of states) {
