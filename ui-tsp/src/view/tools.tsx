@@ -87,7 +87,26 @@ function cardOf(call: ToolCall, now: number): Card {
 
   switch (call.name) {
     case 'terminal':
+    case 'shell':
       return bashCard(call, result)
+
+    case 'cronjob_manage':
+      return bashCard(
+        {
+          ...call,
+          args: {
+            ...call.args,
+            command: ['cronjob', str(call.args.action) ?? '', str(call.args.job_id) ?? str(call.args.id) ?? '']
+              .filter(Boolean)
+              .join(' ')
+          }
+        },
+        result
+      )
+
+    case 'secret':
+    case 'password':
+      return { body: [], frame: 'inline', name: 'secret', title: 'Secret' }
 
     case 'read_file':
       return readCard(call, result)
@@ -175,8 +194,8 @@ function cardOf(call: ToolCall, now: number): Card {
     body: genericBody(call),
     folded: true,
     frame: 'inline',
-    target: str(call.args.query) ?? str(call.args.url) ?? (call.context || undefined),
-    targetKind: str(call.args.url) ? 'path' : str(call.args.query) ? 'query' : 'text'
+    target: str(call.args.url) ?? str(call.args.target) ?? str(call.args.query) ?? (call.context || undefined),
+    targetKind: str(call.args.url) || str(call.args.target) ? 'path' : str(call.args.query) ? 'query' : 'text'
   }
 }
 
@@ -201,7 +220,7 @@ function bashCard(call: ToolCall, result: Record<string, unknown> | undefined): 
 }
 
 function readCard(call: ToolCall, result: Record<string, unknown> | undefined): Card {
-  const path = str(call.args.path) ?? call.context
+  const path = str(call.args.path) ?? str(call.args.file_path) ?? call.context
   const content = str(result?.content)
   const total = typeof result?.total_lines === 'number' ? result.total_lines : undefined
   const numbered = content ? [...content.matchAll(/^ *(\d+)\|/gm)] : []
@@ -225,11 +244,12 @@ function readCard(call: ToolCall, result: Record<string, unknown> | undefined): 
 }
 
 function editCard(call: ToolCall, result: Record<string, unknown> | undefined): Card {
-  const path = str(call.args.path) ?? call.context
+  const path = str(call.args.path) ?? str(call.args.file_path) ?? call.context
   const lang = langOf(path)
   const diff = hunks(str(result?.diff)) ?? (call.diff ? plainDiff(call.diff) : undefined)
-  const content = str(call.args.content)
+  const content = str(call.args.content) ?? str(call.args.contents)
   const write = call.name === 'write_file'
+  const diagnostics = str(result?.lsp_diagnostics)
 
   const head = {
     name: write ? 'write' : 'edit',
@@ -246,7 +266,12 @@ function editCard(call: ToolCall, result: Record<string, unknown> | undefined): 
     return {
       ...head,
       badges: diff ? [{ text: 'new file', tone: 'success' }] : undefined,
-      body: [<code key="code" lang={lang ?? 'text'} numbers text={text} />],
+      body: [
+        <code key="code" lang={lang ?? 'text'} numbers text={text} />,
+        ...(diagnostics
+          ? [<text key="lsp" role="omp.tool.notice" spans={[{ s: 'error', t: diagnostics }]} wrap="word" />]
+          : [])
+      ],
       folded: true,
       meta: [`${lines} line${lines === 1 ? '' : 's'}`],
       preview: { lines: 8 }
@@ -254,12 +279,26 @@ function editCard(call: ToolCall, result: Record<string, unknown> | undefined): 
   }
 
   if (!diff) {
-    return { ...head, body: [] }
+    return {
+      ...head,
+      body: diagnostics
+        ? [<text key="lsp" role="omp.tool.notice" spans={[{ s: 'error', t: diagnostics }]} wrap="word" />]
+        : []
+    }
   }
 
   const { added, removed } = diffStats(diff)
 
-  return { ...head, body: [<diff key="diff" lang={lang} text={diff} />], meta: [`+${added} −${removed}`] }
+  return {
+    ...head,
+    body: [
+      <diff key="diff" lang={lang} text={diff} />,
+      ...(diagnostics
+        ? [<text key="lsp" role="omp.tool.notice" spans={[{ s: 'error', t: diagnostics }]} wrap="word" />]
+        : [])
+    ],
+    meta: [`+${added} −${removed}`]
+  }
 }
 
 function searchCard(call: ToolCall, result: Record<string, unknown> | undefined): Card {

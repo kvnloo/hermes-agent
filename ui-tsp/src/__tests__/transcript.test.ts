@@ -155,6 +155,15 @@ describe('Transcript', () => {
     expect(call).toMatchObject({ args: { path: 'a.py' }, duration: 250, id: 'c1', name: 'read_file', status: 'done' })
   })
 
+  it('reads duration_s from the result when the event omits it', () => {
+    const t = new Transcript()
+    t.start(0)
+    t.toolStart({ args: { command: 'sleep 1' }, name: 'terminal', tool_id: 'c1' }, 0)
+    t.toolComplete({ name: 'terminal', result: { duration_s: 1.5, exit_code: 0, output: 'ok' }, tool_id: 'c1' }, 10)
+
+    expect(tools(turnOf(t.entries))[0]?.duration).toBe(1500)
+  })
+
   it('fails a terminal call with a non-zero exit and cancels an interrupted one', () => {
     const t = new Transcript()
     t.start(0)

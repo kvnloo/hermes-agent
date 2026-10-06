@@ -199,7 +199,9 @@ export class Transcript {
       p.name === 'terminal' && typeof output === 'string' && /\[Command interrupted\]\s*$/.test(output)
 
     call.status = interrupted ? 'cancelled' : isToolError(p) ? 'error' : 'done'
-    call.duration = typeof p.duration_s === 'number' ? Math.round(p.duration_s * 1000) : at - call.startedAt
+    const resultDuration = record(p.result)?.duration_s
+    const durationS = typeof p.duration_s === 'number' ? p.duration_s : typeof resultDuration === 'number' ? resultDuration : undefined
+    call.duration = durationS !== undefined ? Math.round(durationS * 1000) : at - call.startedAt
     call.summary = p.summary ?? undefined
     call.resultText = p.result_text ?? undefined
     call.result = p.result
