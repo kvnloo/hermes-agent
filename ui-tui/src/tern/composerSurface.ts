@@ -61,8 +61,11 @@ export function supportsTernLiveSurface(hello: TspHello): boolean {
   return supportsTernComposer(hello) && hello.kinds.includes('md') && hello.kinds.includes('card')
 }
 
-export function ternSurfaceStaysOpen(state: { blocked: boolean }): boolean {
-  return !state.blocked
+export function ternSurfaceStaysOpen(state: { blocked: boolean; bufferedLines?: number }): boolean {
+  // The normal submit path already joins inputBuf. Until the native editor can
+  // show that complete draft, let Ink display and submit it rather than hiding
+  // the prefix or leaving the user with a disabled Send button.
+  return !state.blocked && (state.bufferedLines ?? 0) === 0
 }
 
 
@@ -99,7 +102,7 @@ export function createTernComposerInputHandler(
 
     const state = deps.read()
 
-    if (state.blocked) {
+    if (!ternSurfaceStaysOpen(state)) {
       return
     }
 
@@ -113,10 +116,7 @@ export function createTernComposerInputHandler(
       return
     }
 
-    // Never submit only the visible suffix while Hermes owns an earlier prefix.
-    const sendable = resolveTernComposerSendable(
-      hello, !state.busy && state.completionCount === 0 && (state.bufferedLines ?? 0) === 0
-    )
+    const sendable = resolveTernComposerSendable(hello, !state.busy && state.completionCount === 0)
 
     if (sendable && event.text.trim() && event.text === state.snapshot.text) {
       deps.submit(event.text)
@@ -333,14 +333,12 @@ export class TernInlineSession {
     snapshot: TernComposerSnapshot
     main?: readonly TernLiveNode[]
   }): void {
-    if (state.blocked) {
+    if (!ternSurfaceStaysOpen(state)) {
       this.close()
       return
     }
 
-    const sendable = resolveTernComposerSendable(
-      this.hello, !state.busy && (state.completionCount ?? 0) === 0 && (state.bufferedLines ?? 0) === 0
-    )
+    const sendable = resolveTernComposerSendable(this.hello, !state.busy && (state.completionCount ?? 0) === 0)
 
     if (!this.transport) {
       this.transport = new TernComposerTransport(this.write, this.hello)
@@ -363,7 +361,7 @@ export class TernInlineSession {
 
 export function useTernComposerSurface(composer: AppLayoutComposerProps, transcript: AppLayoutTranscriptProps): void {
   const surface = useStore($ternSurface)
-  const blocked = useStore($isBlocked)
+  const blocked = !ternSurfaceStaysOpen({ blocked: useStore($isBlocked), bufferedLines: composer.inputBuf.length })
   const { busy } = useStore($uiState)
   const streaming = useTurnSelector(state => state.streaming)
   const main = useMemo(() => projectTernTranscript(transcript.virtualRows, streaming), [streaming, transcript.virtualRows])
