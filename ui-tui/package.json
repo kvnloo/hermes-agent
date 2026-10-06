@@ -23,7 +23,8 @@
     "tern:ux:preview": "tsx scripts/tern-ux/preview.ts",
     "tern:ux:check": "tsc -p scripts/tern-ux/tsconfig.native.json",
     "tern:ux:record": "tsx scripts/tern-ux/record.ts",
-    "tern:ux:capture-receipt": "tsx scripts/tern-ux/capture-receipt.ts"
+    "tern:ux:capture-receipt": "tsx scripts/tern-ux/capture-receipt.ts",
+    "tern:ux:verify-captures": "tsx scripts/tern-ux/verify-captures.ts"
   },
   "dependencies": {
     "@hermes/ink": "file:./packages/hermes-ink",
