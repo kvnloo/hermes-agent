@@ -8,7 +8,7 @@ export interface TernLiveNode {
 }
 
 export const stableTernMessageId = (row: Pick<TranscriptRow, 'key'>): string =>
-  `hermes:message:${row.key.replace(/:c\\d+$/, '')}`
+  `hermes:message:${row.key.replace(/:c\d+$/, '')}`
 
 const proseNode = (row: TranscriptRow): TernLiveNode | null => {
   const { msg } = row
