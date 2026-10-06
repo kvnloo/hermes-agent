@@ -31,3 +31,5 @@ jobs:
         run: npm run build:ink --workspace ui-tui
       - name: Run TSP tests
         run: npm test --workspace ui-tui -- src/tern
+      - name: Emit UX experiment manifest
+        run: npm run tern:ux:manifest --workspace ui-tui
