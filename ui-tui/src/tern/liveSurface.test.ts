@@ -51,7 +51,7 @@ describe('live native transcript transport', () => {
     expect(writes).toHaveLength(3)
     const frame = decoded(writes[2]!).body
     expect(frame.s).toBe(2)
-    expect(JSON.stringify(frame.ops)).toContain('Working on it')
+    expect(frame.ops).toEqual([['text', 'hermes:streaming', 'append', ' on it']])
     expect(JSON.stringify(frame.ops)).not.toContain('Working on"')
   })
 })
