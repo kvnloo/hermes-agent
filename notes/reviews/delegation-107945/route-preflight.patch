@@ -1,0 +1,23 @@
+--- a/tools/delegate_tool.py
++++ b/tools/delegate_tool.py
+@@ -402,6 +402,11 @@
+     ``(children, None)`` or ``([], error)`` on an explicit-pin preflight failure."""
+     from tools.delegation_live_log import wrap_progress_callback
+     from tools.delegation_output_schema import append_output_contract
++    # Validate every requested route before constructing any child or acquiring its resources.
++    try:
++        task_routes = [_resolve_task_credentials(t, creds, routing_cfg, parent_agent) for t in task_list]
++    except ValueError as exc:
++        return [], str(exc)
+     children = []
+     for i, t in enumerate(task_list):
+         _task_schema = task_schemas[i] if i < len(task_schemas) else None
+@@ -409,7 +414,7 @@
+         if _task_schema is not None:
+             _child_context = append_output_contract(_child_context, _task_schema)
+         try:
+-            creds_i, routing_i = _resolve_task_credentials(t, creds, routing_cfg, parent_agent)
++            creds_i, routing_i = task_routes[i]
+             child = _build_child_preserving_parent_tools(
+                 task_index=i, goal=t["goal"], context=_child_context,
+                 toolsets=None,  # always inherit the parent's toolsets
