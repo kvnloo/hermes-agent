@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - feat/tern-tsp-surface
+      - exp/tern-ux-omp-baseline
     paths:
       - ui-tui/src/tern/**
       - ui-tui/packages/hermes-ink/**
@@ -12,6 +13,7 @@ on:
     branches:
       - feat/tern-tsp-*
       - exp/tern-ux-*
+      - exp/tern-a-*
 
 jobs:
   tern-unit:
