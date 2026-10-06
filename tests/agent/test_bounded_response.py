@@ -111,3 +111,45 @@ def test_oversize_body_is_capped(server_base, client):
     assert 0 < len(text) <= 64 * 1024
     # Capping must return promptly, not after draining the whole body.
     assert elapsed < 9.0
+
+
+# ── close_quietly ────────────────────────────────────────────────────────────
+
+
+class _Closable:
+    def __init__(self, exc: Exception | None = None):
+        self.calls = 0
+        self._exc = exc
+
+    def close(self):
+        self.calls += 1
+        if self._exc is not None:
+            raise self._exc
+
+
+def test_close_quietly_calls_close_once():
+    from agent.bounded_response import close_quietly
+
+    resp = _Closable()
+    close_quietly(resp)
+    assert resp.calls == 1
+
+
+def test_close_quietly_swallows_close_errors():
+    from agent.bounded_response import close_quietly
+
+    resp = _Closable(exc=OSError("socket already gone"))
+    close_quietly(resp)  # must not raise
+    assert resp.calls == 1
+
+
+def test_close_quietly_ignores_none_and_objects_without_callable_close():
+    from agent.bounded_response import close_quietly
+
+    close_quietly(None)
+    close_quietly(object())
+
+    class _NonCallableClose:
+        close = "not callable"
+
+    close_quietly(_NonCallableClose())
