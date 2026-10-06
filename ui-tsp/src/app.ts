@@ -1,7 +1,7 @@
 // The app: one inline Tern surface (role `omp.session`, so Tern's chat styles
 // apply) over one tui_gateway session. Gateway events fold into the
-// transcript, keys go to the top overlay or the composer, and every change
-// schedules one render of the whole view; the SDK diffs it into frame ops.
+// transcript. Keys go to the top overlay or the composer. A state change
+// marks the view dirty. Tern draws the frame. The next ack flushes the newest view.
 
 import type {
   ConfigGetResult,
@@ -25,6 +25,7 @@ import { Dispatches } from './attention.js'
 import { localCommand } from './commands.js'
 import { Composer } from './composer.js'
 import { type Busy, busyFrom, ownsEvent, Switches } from './flow.js'
+import { FramePump } from './frame.js'
 import { OrbActivity, ThinkingOrb } from './orb.js'
 import type { Overlay, OverlayHost } from './overlay.js'
 import { Completion } from './overlays/completion.js'
@@ -86,7 +87,7 @@ export class App implements OverlayHost {
   #overlaySerial = 0
   readonly #activity = new OrbActivity()
   #orb: ThinkingOrb | undefined
-  #scheduled = false
+  #frames!: FramePump
   #dispatchTimer: ReturnType<typeof setTimeout> | undefined
   #dispatchDeadline: number | null = null
   #visible = true
@@ -160,6 +161,15 @@ export class App implements OverlayHost {
           return handler()
         }
       }
+    }
+    this.#frames = new FramePump(
+      () => this.#surface.blocked,
+      () => this.#render()
+    )
+    const ack = this.#surface.acknowledge.bind(this.#surface)
+    this.#surface.acknowledge = (s: number) => {
+      ack(s)
+      this.#frames.credit()
     }
 
     if (this.#tern.caps.features.includes('blobs')) {
@@ -242,15 +252,7 @@ export class App implements OverlayHost {
   }
 
   changed() {
-    if (this.#scheduled) {
-      return
-    }
-
-    this.#scheduled = true
-    setImmediate(() => {
-      this.#scheduled = false
-      this.#render()
-    })
+    this.#frames.changed()
   }
 
   // ── Input ──────────────────────────────────────────────────────────
