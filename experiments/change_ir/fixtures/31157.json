@@ -1,0 +1,121 @@
+{
+  "change_id": "CHG-31157-selective-salvage",
+  "title": "Selective salvage of independently aging cleanup/guardrail changes",
+  "provenance": {
+    "pr": "NousResearch/hermes-agent#31157",
+    "authors": [
+      "sege66"
+    ],
+    "reviewers": [
+      "teknium1"
+    ],
+    "notes": [
+      "The author rebased the branch and reported 371 targeted tests passing on 2026-05-23.",
+      "The 2026-07-13 sweeper review confirmed at least one current-main defect but recommended selective salvage rather than atomic merge."
+    ]
+  },
+  "problem": "A single cleanup PR bundled independent changes that acquired different validity and verification states as main evolved.",
+  "outcomes": [
+    "Preserve salvageable fixes without inheriting unrelated stale guidance.",
+    "Require behavior-level proof for changes whose fixtures do not exercise the new behavior.",
+    "Allow each semantic operation to expire or survive independently."
+  ],
+  "invariants": [
+    {
+      "id": "INV-independent-aging",
+      "text": "Independent operations must be classifiable independently rather than inheriting one PR-level state."
+    },
+    {
+      "id": "INV-proof",
+      "text": "A fixture change is not verification unless it exercises the behavior being changed."
+    },
+    {
+      "id": "INV-portability",
+      "text": "Repository-wide guidance must not encode one contributor's local absolute path."
+    }
+  ],
+  "operations": [
+    {
+      "id": "OP-mcp-refresh-teardown-guard",
+      "description": "Prevent refresh from dereferencing a torn-down MCP session.",
+      "expected_refresh_state": "still_needed",
+      "note": "The sweeper review confirmed the current-main teardown/refresh race and called this change salvageable, while also requiring a focused regression test.",
+      "anchors": [
+        {
+          "id": "A-mcp-refresh-session",
+          "description": "Current MCP refresh/session lifecycle surface.",
+          "paths": [
+            "tools/mcp_tool.py"
+          ],
+          "all_terms": [
+            "_refresh_tools",
+            "self.session"
+          ],
+          "any_terms": [
+            "close",
+            "teardown",
+            "disconnect"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "OP-repo-wide-gitnexus-instruction",
+      "description": "Make a contributor-local GitNexus workflow mandatory in repository-wide instructions.",
+      "expected_refresh_state": "invalidated",
+      "note": "Reviewer requested removal or relocation to optional tooling documentation because it hard-coded /Users/kihwangkim/dev/hermes-agent.",
+      "anchors": [
+        {
+          "id": "A-hardcoded-local-path",
+          "description": "The rejected contributor-local absolute path.",
+          "paths": [
+            "AGENTS.md"
+          ],
+          "all_terms": [
+            "/Users/kihwangkim/dev/hermes-agent"
+          ],
+          "any_terms": [
+            "GitNexus"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "OP-gws-generated-credentials",
+      "description": "Adjust Google Workspace generated credential handling and prove the generated payload/permissions through behavior-level tests.",
+      "expected_refresh_state": "needs_decision",
+      "note": "The review found that seeding a token only made the helper runnable; it did not exercise _gws_env() or validate the generated credential file.",
+      "anchors": [
+        {
+          "id": "A-gws-helper-test-surface",
+          "description": "Google Workspace helper and its test surface.",
+          "paths": [
+            "skills/productivity/google-workspace/scripts/google_api.py",
+            "tests/skills/test_google_workspace_api.py"
+          ],
+          "all_terms": [
+            "_gws_env"
+          ],
+          "any_terms": [
+            "authorized_user",
+            "permissions",
+            "chmod"
+          ]
+        }
+      ]
+    }
+  ],
+  "verification": [
+    "MCP regression test must exercise refresh after session teardown.",
+    "No repository-wide instruction may depend on a contributor-local absolute path.",
+    "GWS test must call the generation path and assert resulting authorized-user payload plus restrictive permissions."
+  ],
+  "realizations": [
+    {
+      "kind": "pull_request",
+      "ref": "NousResearch/hermes-agent#31157",
+      "head": "22ef90337b14f8f1c322eaf6fd18fbde5702d772",
+      "note": "Rebased/green on 2026-05-23; later current-main review classified its pieces differently."
+    }
+  ]
+}
