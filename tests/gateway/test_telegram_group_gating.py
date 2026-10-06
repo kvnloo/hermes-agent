@@ -39,6 +39,7 @@ def _make_adapter(
     group_allowed_chats=None,
     guest_mode=None,
     observe_unmentioned_group_messages=None,
+    observe_sibling_bot_messages=None,
     bots_require_mention=None,
     bot_username="hermes_bot",
 ):
@@ -83,6 +84,8 @@ def _make_adapter(
         extra["guest_mode"] = guest_mode
     if observe_unmentioned_group_messages is not None:
         extra["observe_unmentioned_group_messages"] = observe_unmentioned_group_messages
+    if observe_sibling_bot_messages is not None:
+        extra["observe_sibling_bot_messages"] = observe_sibling_bot_messages
     if bots_require_mention is not None:
         extra["bots_require_mention"] = bots_require_mention
 
@@ -1012,3 +1015,52 @@ def test_sibling_bot_explicit_mention_still_dispatches_and_is_not_observed():
     human = _group_message("hermes, hello")
     assert adapter._should_process_message(human) is True
     assert adapter._should_observe_unmentioned_group_message(human) is False
+
+
+# Change-IR rematerialization fixture: #44881 / #105624, operation
+# "observe a user message addressed to a sibling bot without dispatching it".
+def test_sibling_addressed_user_can_be_observed_without_dispatch():
+    adapter = _make_adapter(
+        require_mention=True,
+        exclusive_bot_mentions=True,
+        allowed_chats=["-100"],
+        group_allowed_chats=["-100"],
+        observe_unmentioned_group_messages=False,
+        observe_sibling_bot_messages=True,
+    )
+    text = "@other_bot please research this"
+    msg = _group_message(text, entities=[_mention_entity(text, "@other_bot")])
+
+    assert adapter._should_process_message(msg) is False
+    assert adapter._should_observe_unmentioned_group_message(msg) is True
+
+
+def test_sibling_observe_flag_does_not_enable_ordinary_chatter_observation():
+    adapter = _make_adapter(
+        require_mention=True,
+        exclusive_bot_mentions=True,
+        allowed_chats=["-100"],
+        group_allowed_chats=["-100"],
+        observe_unmentioned_group_messages=False,
+        observe_sibling_bot_messages=True,
+    )
+
+    assert adapter._should_observe_unmentioned_group_message(
+        _group_message("ordinary side chatter")
+    ) is False
+
+
+def test_sibling_addressed_user_stays_dropped_when_sibling_observe_is_off():
+    adapter = _make_adapter(
+        require_mention=True,
+        exclusive_bot_mentions=True,
+        allowed_chats=["-100"],
+        group_allowed_chats=["-100"],
+        observe_unmentioned_group_messages=True,
+        observe_sibling_bot_messages=False,
+    )
+    text = "@other_bot please research this"
+    msg = _group_message(text, entities=[_mention_entity(text, "@other_bot")])
+
+    assert adapter._should_process_message(msg) is False
+    assert adapter._should_observe_unmentioned_group_message(msg) is False
