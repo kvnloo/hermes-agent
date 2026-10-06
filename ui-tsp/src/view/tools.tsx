@@ -34,6 +34,9 @@ interface Card {
 
 const str = (v: unknown): string | undefined => (typeof v === 'string' && v ? v : undefined)
 
+/** OMP shows three code lines on a collapsed read, then a more-lines badge. */
+const READ_PREVIEW_LINES = 3
+
 /** The `tool` node of one call. */
 export function toolNode(call: ToolCall, now: number): JSX.Element {
   const card = cardOf(call, now)
@@ -228,15 +231,18 @@ function readCard(call: ToolCall, result: Record<string, unknown> | undefined): 
   const last = numbered.length ? Number(numbered.at(-1)?.[1]) : undefined
   const whole = first === 1 && last !== undefined && last === total
   const meta = first !== undefined && last !== undefined ? [whole ? `${total} lines` : `:${first}-${last}`] : []
+  const text = content?.replace(/^ *\d+\|/gm, '') ?? ''
+  const hidden = Math.max(0, text.split('\n').filter(line => line.length > 0).length - READ_PREVIEW_LINES)
 
   return {
-    body: content
-      ? [<code key="code" lang={langOf(path)} numbers start={first} text={content.replace(/^ *\d+\|/gm, '')} />]
-      : [],
+    badges: hidden > 0 ? [{ text: `${hidden} more line${hidden === 1 ? '' : 's'}`, tone: 'muted' }] : undefined,
+    body: text ? [<code key="code" lang={langOf(path)} numbers start={first} text={text} />] : [],
     folded: true,
     frame: 'inline',
+    lang: langOf(path),
     meta,
     name: 'read',
+    preview: { lines: READ_PREVIEW_LINES },
     target: path,
     targetKind: 'path',
     title: 'Read'

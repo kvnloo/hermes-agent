@@ -5,7 +5,7 @@
 
 import type { HermesSkin } from '@hermes/shared/skin'
 import type { Palette } from '@stencil-hq/tern'
-import { fromSkin, type ThemeColors } from '@tui/theme.js'
+import { fromSkin, themeToneHex, type ThemeColors } from '@tui/theme.js'
 
 type Tokens = Record<string, string>
 
@@ -91,9 +91,14 @@ function tokensOf(c: ThemeColors): Tokens {
     warning: c.warn
   }
 
-  // Tern reads #rrggbb (and #rgb); drop anything an ANSI fallback produced.
+  // Tern reads #rrggbb. A skin tone may arrive as ansi256(N); resolve it
+  // so syntax, muted, and diff colors still paint.
   for (const key in out) {
-    if (!/^#[0-9a-f]{3,8}$/i.test(out[key] ?? '')) {
+    const hex = themeToneHex(out[key] ?? '')
+
+    if (hex) {
+      out[key] = hex
+    } else {
       delete out[key]
     }
   }
