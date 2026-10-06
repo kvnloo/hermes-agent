@@ -20,7 +20,8 @@ A fixture records:
 - independent semantic operations;
 - semantic anchors (symbols and behavioral surfaces, never line numbers);
 - verification contracts/evidence;
-- concrete realizations (PR/commit/tree state);\n- timestamped historical refresh states (evidence, never mutable current truth).
+- concrete realizations (PR/commit/tree state);
+- timestamped historical refresh states (evidence, never mutable current truth).
 
 Refresh states for an operation:
 
@@ -63,9 +64,9 @@ Tests preservation of the same change intent while Telegram's send and bot-obser
 
 Tests whether an old atomic PR can be decomposed into independently aging operations: salvage, reject/relocate, or require additional proof.
 
-### E3 — #78207 (next)
+### E3 — #78207 — complete
 
-Use the Vox Lockin stale-PR wave as a larger-scale classification dataset: `still_needed`, `already_on_main`, `moved`, and salvage-with-credit.
+The 17-PR Vox stale-wave was reclassified against current main. Result: 8 clearly implemented/superseded, 2 mixed-state, 7 requiring a fresh decision, and **0/17 safely replayable as-is**. See `runs/002-vox-17-prs.md`.
 
 ## Success criteria
 
@@ -76,3 +77,18 @@ The representation earns further work only if it makes current-main refreshes ma
 3. already-landed work is detectable before duplicate implementation;
 4. semantic uncertainty stays explicit;
 5. authors/diagnosers/reviewers keep credit across rematerializations.
+
+
+## Final result
+
+**Experiment complete — hypothesis supported.**
+
+The decisive rematerialization took one surviving operation from #105624 and reconstructed it against current main instead of replaying the full stale PR:
+
+- 824 → 82 changed lines (**90.0% reduction**)
+- 67,555 → 12,540 measured review-context characters (**81.4% reduction**)
+- **5.39× smaller** review packet
+
+All five experimental criteria passed at the representation/workflow level. The branch-local execution workflow for the rematerialized slice is still queued behind the fork's Actions backlog and is explicitly not counted as a test pass.
+
+See `FINAL.md` for the full assessment.
