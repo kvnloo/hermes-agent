@@ -56,6 +56,11 @@ export function resolveTernComposerSendable(_hello: TspHello, hermesReady: boole
   return hermesReady && HERMES_TSP_PROGRAM_FEATURES.includes('send')
 }
 
+
+export function supportsTernLiveSurface(hello: TspHello): boolean {
+  return supportsTernComposer(hello) && hello.kinds.includes('md') && hello.kinds.includes('card')
+}
+
 export function ternSurfaceStaysOpen(state: { blocked: boolean }): boolean {
   return !state.blocked
 }
@@ -370,7 +375,7 @@ export function useTernComposerSurface(composer: AppLayoutComposerProps, transcr
       blocked ||
       !stdout ||
       surface.status !== 'active' ||
-      !supportsTernComposer(surface.hello)
+      !supportsTernLiveSurface(surface.hello)
     ) {
       return
     }
