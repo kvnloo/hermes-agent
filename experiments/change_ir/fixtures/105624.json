@@ -56,7 +56,6 @@
     {
       "id": "OP-observe-sibling-addressed-user",
       "description": "Record sibling-addressed user messages as observed context without dispatching them.",
-      "expected_refresh_state": "still_needed",
       "anchors": [
         {
           "id": "A-dispatch-observe-surface",
@@ -73,12 +72,16 @@
             "_should_observe_unmentioned_group_message"
           ]
         }
-      ]
+      ],
+      "baseline_refresh_state": {
+        "state": "still_needed",
+        "as_of": "2026-10-06",
+        "source": "PR #105624 refresh notes and current-main reconciliation"
+      }
     },
     {
       "id": "OP-mirror-final-response",
       "description": "Make finalized output available to configured sibling profiles while following the current final-delivery path.",
-      "expected_refresh_state": "still_needed",
       "note": "The 2026-10-06 refresh had to move mirroring onto the newer _send_chunks success path and cover overflow-split finalization.",
       "anchors": [
         {
@@ -107,12 +110,16 @@
           ],
           "any_terms": []
         }
-      ]
+      ],
+      "baseline_refresh_state": {
+        "state": "still_needed",
+        "as_of": "2026-10-06",
+        "source": "PR #105624 refresh notes and current-main reconciliation"
+      }
     },
     {
       "id": "OP-preserve-bot-sender-observation",
       "description": "Do not regress current-main bot-sender suppression/observation behavior while adding sibling context.",
-      "expected_refresh_state": "already_on_main",
       "note": "This is a main-side behavior to preserve, not a feature the stale patch owns.",
       "anchors": [
         {
@@ -128,7 +135,12 @@
             "observe_unmentioned_group_messages"
           ]
         }
-      ]
+      ],
+      "baseline_refresh_state": {
+        "state": "already_on_main",
+        "as_of": "2026-10-06",
+        "source": "PR #105624 refresh notes and current-main reconciliation"
+      }
     }
   ],
   "verification": [
