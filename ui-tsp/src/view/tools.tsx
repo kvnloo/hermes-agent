@@ -34,6 +34,15 @@ interface Card {
 
 const str = (v: unknown): string | undefined => (typeof v === 'string' && v ? v : undefined)
 
+const READ_PREVIEW_LINES = 3
+
+function plainOutput(text: string): string {
+  return text.replace(/\u001b\[[0-9;?]*[ -/]*[@-~]/g, '').replace(/\r/g, '')
+}
+
+function outputCode(key: string, text: string, lang = 'text'): JSX.Element {
+  return <code key={key} lang={lang} numbers={false} text={plainOutput(text).replace(/\n$/, '')} />
+}
 /** The `tool` node of one call. */
 export function toolNode(call: ToolCall, now: number): JSX.Element {
   const card = cardOf(call, now)
@@ -206,7 +215,7 @@ function bashCard(call: ToolCall, result: Record<string, unknown> | undefined): 
 
   return {
     body: [
-      ...(output ? [<ansi follow={call.status === 'running'} key="out" text={output} />] : []),
+      ...(output ? [outputCode('out', output, 'bash')] : []),
       ...(error ? [<text key="err" role="omp.tool.error" spans={[{ s: 'error', t: error }]} wrap="word" />] : [])
     ],
     folded: true,
@@ -228,15 +237,18 @@ function readCard(call: ToolCall, result: Record<string, unknown> | undefined): 
   const last = numbered.length ? Number(numbered.at(-1)?.[1]) : undefined
   const whole = first === 1 && last !== undefined && last === total
   const meta = first !== undefined && last !== undefined ? [whole ? `${total} lines` : `:${first}-${last}`] : []
+  const text = content?.replace(/^ *\d+\|/gm, '') ?? ''
+  const hidden = Math.max(0, text.split('\n').filter(line => line.length > 0).length - READ_PREVIEW_LINES)
 
   return {
-    body: content
-      ? [<code key="code" lang={langOf(path)} numbers start={first} text={content.replace(/^ *\d+\|/gm, '')} />]
-      : [],
+    badges: hidden > 0 ? [{ text: `${hidden} more line${hidden === 1 ? '' : 's'}`, tone: 'muted' }] : undefined,
+    body: text ? [<code key="code" lang={langOf(path)} numbers start={first} text={text} />] : [],
     folded: true,
     frame: 'inline',
+    lang: langOf(path),
     meta,
     name: 'read',
+    preview: { lines: READ_PREVIEW_LINES },
     target: path,
     targetKind: 'path',
     title: 'Read'
@@ -652,9 +664,7 @@ function evalCard(call: ToolCall, result: Record<string, unknown> | undefined): 
           <row align="start" key="result" role="omp.tool.eval.result">
             <icon aria="Output" key="0" name="arrow-right" role="omp.tool.eval.prompt" />
             <col key="outputs" role="omp.tool.eval.outputs">
-              {output ? (
-                <ansi follow={false} key="out" role="omp.tool.eval.output" text={output.replace(/\n$/, '')} />
-              ) : null}
+              {output ? outputCode('out', output, language) : null}
               {error ? <text key="err" role="omp.tool.error" spans={[{ s: 'error', t: error }]} wrap="word" /> : null}
             </col>
           </row>
