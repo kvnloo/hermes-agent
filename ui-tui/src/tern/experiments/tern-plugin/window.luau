@@ -53,14 +53,14 @@ tern.command({
             split = "right",
             {
                 launch = {
-                    command = "hermes --tui --native",
+                    command = "HERMES_HOME=\"$PWD/.tmp/tern-ux-home\" HERMES_RUNTIME_DIR=\"$PWD/.tmp/tern-ux-runtime\" hermes --tui --native",
                 },
             },
             {
                 split = "down",
                 {
                     launch = {
-                        command = "npm test --workspace ui-tui -- src/tern; exec ${SHELL:-/bin/sh} -l",
+                        command = "npm run tern:ux:manifest --workspace ui-tui; npm test --workspace ui-tui -- src/tern; exec ${SHELL:-/bin/sh} -l",
                     },
                 },
                 {},
@@ -75,7 +75,7 @@ tern.command({
         cx:toast(
             "success",
             "Hermes UX lab ready",
-            "Hermes left · TSP tests upper-right · scratch shell lower-right"
+            "Hermes left · manifest/tests upper-right · scratch shell lower-right"
         )
     end,
 })
