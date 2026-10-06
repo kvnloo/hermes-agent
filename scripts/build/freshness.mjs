@@ -6,7 +6,7 @@ import { parseArgs } from 'node:util'
 import { isMain } from './frontend-common.mjs'
 
 const receiptName = 'hermes-build.json'
-const workspaces = { tui: 'ui-tui', web: 'web', desktop: 'apps/desktop' }
+const workspaces = { tui: 'ui-tui', tsp: 'ui-tsp', web: 'web', desktop: 'apps/desktop' }
 const generated = new Set(['node_modules', 'dist', 'build', 'release', '.cache', '.git', 'coverage', 'test-results', 'playwright-report'])
 
 // OS file-manager metadata is never a build input, and it can land in ANY hashed
@@ -30,6 +30,15 @@ const tuiInputs = [
   'scripts/build/tui.mjs', 'scripts/build/frontend-common.mjs', 'scripts/build/freshness.mjs',
 ]
 
+// buildTsp bundles ui-tsp plus the renderer-free ui-tui modules it imports
+// (`@tui/*`) and apps/shared; the Tern SDK arrives through package-lock.json.
+const tspInputs = [
+  'ui-tsp/src', 'ui-tsp/assets', 'ui-tsp/scripts', 'ui-tsp/package.json', 'ui-tsp/tsconfig.json',
+  'ui-tui/src', 'apps/shared/src', 'apps/shared/package.json',
+  'package.json', 'package-lock.json', '.npmrc', 'pm/lock.json',
+  'scripts/build/tsp.mjs', 'scripts/build/frontend-common.mjs', 'scripts/build/freshness.mjs',
+]
+
 function treeHash(root, inputs, skip, contents = () => true) {
   const hash = createHash('sha256')
   function visit(name) {
@@ -51,7 +60,7 @@ function treeHash(root, inputs, skip, contents = () => true) {
 export function sourceHash(source, product) {
   const workspace = workspaces[product]
   if (!workspace) throw new Error(`Unknown frontend product: ${product}`)
-  return treeHash(source, product === 'tui' ? tuiInputs : [
+  return treeHash(source, product === 'tui' ? tuiInputs : product === 'tsp' ? tspInputs : [
     workspace, 'apps/shared', 'package.json', 'package-lock.json', '.npmrc', 'pm/lock.json',
     'scripts/build',
     'scripts/generate-icons.mjs', 'scripts/generate_icons.py',
@@ -62,7 +71,7 @@ export function sourceHash(source, product) {
     // Build scripts are inputs; workspace build directories are outputs.
     const parts = name.split('/')
     return (!name.startsWith('scripts/') && parts.some(part => generated.has(part)))
-      || (product === 'tui' && (parts.includes('__tests__') || /\.(test|spec)(-d)?\.[cm]?[jt]sx?$/.test(name)))
+      || ((product === 'tui' || product === 'tsp') && (parts.includes('__tests__') || /\.(test|spec)(-d)?\.[cm]?[jt]sx?$/.test(name)))
       || parts.some(part => part.startsWith('.dist-') || part.startsWith('.staging-') || part === '__pycache__')
       || name.endsWith('.tsbuildinfo') || name.endsWith('.pyc')
   })

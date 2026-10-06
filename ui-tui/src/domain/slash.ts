@@ -1,3 +1,5 @@
+import { looksLikeSlashCommand } from '@hermes/shared/slash'
+
 /** Appended by TUI pickers; converted to the backend's `--session` flag before `config.set`. */
 export const TUI_SESSION_MODEL_FLAG = '--tui-session'
 
@@ -43,6 +45,61 @@ export const inlineSlashTrigger = (text: string): { query: string; start: number
   const query = match[1] ?? ''
 
   return { query, start: text.length - query.length - 1 }
+}
+
+const TAB_PATH_RE = /((?:["']?(?:[A-Za-z]:[\\/]|\.{1,2}\/|~\/|\/|@|[^"'`\s]+\/))[^\s]*)$/
+
+/**
+ * The completion RPC for the text before the caret: slash commands (and their
+ * arguments), inline `/skill` references, or a path-looking word; null when
+ * nothing completes. `replaceFrom` is where an accepted row's text goes.
+ */
+export function completionRequestForInput(
+  input: string
+):
+  | { method: 'complete.path'; params: { word: string }; replaceFrom: number }
+  | { method: 'complete.slash'; params: { text: string }; replaceFrom: number; skillsOnly?: boolean }
+  | null {
+  const isSlashCommand = looksLikeSlashCommand(input)
+  const pathWord = isSlashCommand ? null : (input.match(TAB_PATH_RE)?.[1] ?? null)
+
+  // `/model` uses the two-step ModelPicker (real curated IDs).
+  // Slash completion here only showed short aliases + vendor/family meta.
+  if (isSlashCommand && /^\/model(?:\s|$)/.test(input)) {
+    return null
+  }
+
+  // A `/token` mid-message is a skill reference dropped into prose. Detected
+  // BEFORE the leading-command shape because only the first slash can be an
+  // invocation — `/help /cle` is a command whose argument names a skill, and
+  // routing the whole line to the backend's completer offered nothing at all.
+  // It only matches a whitespace-preceded slash sitting at the caret, so
+  // ordinary argument completion (`/cron ad`, `/personality alic`) is
+  // untouched.
+  const inline = inlineSlashTrigger(input)
+
+  if (inline) {
+    return {
+      method: 'complete.slash',
+      params: { text: `/${inline.query}` },
+      replaceFrom: inline.start + 1,
+      skillsOnly: true
+    }
+  }
+
+  if (isSlashCommand) {
+    return { method: 'complete.slash', params: { text: input }, replaceFrom: 1 }
+  }
+
+  if (!pathWord) {
+    return null
+  }
+
+  return {
+    method: 'complete.path',
+    params: { word: pathWord },
+    replaceFrom: input.length - pathWord.length
+  }
 }
 
 /**

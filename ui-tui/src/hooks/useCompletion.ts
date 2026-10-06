@@ -1,10 +1,9 @@
-import { looksLikeSlashCommand } from '@hermes/shared/slash'
 import { useEffect, useRef, useState } from 'react'
 
 import type { CompletionItem } from '../app/interfaces.js'
 import { rankSlashItems } from '../app/slash/fuzzyScore.js'
 import { getUiState } from '../app/uiStore.js'
-import { inlineSlashTrigger } from '../domain/slash.js'
+import { completionRequestForInput } from '../domain/slash.js'
 import type { GatewayClient } from '../gatewayClient.js'
 import type { CompletionResponse } from '../gatewayTypes.js'
 import { t } from '../i18n/runtime.js'
@@ -27,56 +26,6 @@ export function mergeWidgetAppItems(input: string, items: CompletionItem[]): Com
     .map(app => ({ display: `/${app.id}`, meta: app.help, text: `/${app.id}` }))
 
   return [...items, ...local]
-}
-
-const TAB_PATH_RE = /((?:["']?(?:[A-Za-z]:[\\/]|\.{1,2}\/|~\/|\/|@|[^"'`\s]+\/))[^\s]*)$/
-
-export function completionRequestForInput(
-  input: string
-):
-  | { method: 'complete.path'; params: { word: string }; replaceFrom: number }
-  | { method: 'complete.slash'; params: { text: string }; replaceFrom: number; skillsOnly?: boolean }
-  | null {
-  const isSlashCommand = looksLikeSlashCommand(input)
-  const pathWord = isSlashCommand ? null : (input.match(TAB_PATH_RE)?.[1] ?? null)
-
-  // `/model` uses the two-step ModelPicker (real curated IDs).
-  // Slash completion here only showed short aliases + vendor/family meta.
-  if (isSlashCommand && /^\/model(?:\s|$)/.test(input)) {
-    return null
-  }
-
-  // A `/token` mid-message is a skill reference dropped into prose. Detected
-  // BEFORE the leading-command shape because only the first slash can be an
-  // invocation — `/help /cle` is a command whose argument names a skill, and
-  // routing the whole line to the backend's completer offered nothing at all.
-  // It only matches a whitespace-preceded slash sitting at the caret, so
-  // ordinary argument completion (`/cron ad`, `/personality alic`) is
-  // untouched.
-  const inline = inlineSlashTrigger(input)
-
-  if (inline) {
-    return {
-      method: 'complete.slash',
-      params: { text: `/${inline.query}` },
-      replaceFrom: inline.start + 1,
-      skillsOnly: true
-    }
-  }
-
-  if (isSlashCommand) {
-    return { method: 'complete.slash', params: { text: input }, replaceFrom: 1 }
-  }
-
-  if (!pathWord) {
-    return null
-  }
-
-  return {
-    method: 'complete.path',
-    params: { word: pathWord },
-    replaceFrom: input.length - pathWord.length
-  }
 }
 
 export function useCompletion(input: string, blocked: boolean, gw: GatewayClient) {
