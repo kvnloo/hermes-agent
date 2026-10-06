@@ -40,6 +40,14 @@ const terminalNode = (tool: NativeToolSnapshot): TernLiveNode => {
     })
   }
 
+  if (tool.summary?.trim()) {
+    children.push({
+      id: `${toolId(tool.id)}:summary`,
+      k: 'text',
+      p: { text: tool.summary.trim(), tone: tool.status === 'failed' ? 'error' : 'muted' }
+    })
+  }
+
   if (tool.resultText?.trim()) {
     children.push({
       id: `${toolId(tool.id)}:result`,
@@ -56,7 +64,6 @@ const terminalNode = (tool: NativeToolSnapshot): TernLiveNode => {
       title: toolTrailLabel(tool.name),
       ...(tool.context?.trim() ? { target: tool.context.trim(), targetKind: 'text' } : {}),
       status: tool.status === 'done' ? 'done' : tool.status === 'failed' ? 'error' : 'cancelled',
-      ...(tool.summary?.trim() ? { note: tool.summary.trim() } : {}),
       ...(typeof tool.durationSeconds === 'number' && Number.isFinite(tool.durationSeconds)
         ? { took: Math.max(0, Math.round(tool.durationSeconds * 1000)) }
         : {}),
