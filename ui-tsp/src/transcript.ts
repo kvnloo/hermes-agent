@@ -198,7 +198,7 @@ export class Transcript {
     const interrupted =
       p.name === 'terminal' && typeof output === 'string' && /\[Command interrupted\]\s*$/.test(output)
 
-    call.status = interrupted ? 'cancelled' : isToolError(p) ? 'error' : 'done'
+    call.status = interrupted ? 'cancelled' : isToolError(p, call.name) ? 'error' : 'done'
     const resultDuration = record(p.result)?.duration_s
     const durationS = typeof p.duration_s === 'number' ? p.duration_s : typeof resultDuration === 'number' ? resultDuration : undefined
     call.duration = durationS !== undefined ? Math.round(durationS * 1000) : at - call.startedAt
@@ -208,7 +208,7 @@ export class Transcript {
     call.diff = p.inline_diff ?? undefined
 
     if (p.args) {
-      call.args = p.args
+      call.args = { ...call.args, ...p.args }
     }
 
     if (Array.isArray(p.todos)) {
@@ -260,7 +260,8 @@ export class Transcript {
     }
 
     agent.last = p
-    agent.goal = p.goal || agent.goal
+    agent.goal = textField(p, 'task') || p.goal || agent.goal
+    agent.label = textField(p, 'name') || agent.label
     agent.model = p.model ?? agent.model
     agent.toolCount = p.tool_count ?? agent.toolCount
     agent.calls = p.api_calls ?? agent.calls
@@ -511,18 +512,24 @@ function trailingText(turn: TurnEntry): string {
   return out
 }
 
-function isToolError(p: ToolCompletePayload): boolean {
+function isToolError(p: ToolCompletePayload, callName?: string): boolean {
   const r = record(p.result)
 
   if (r?.error) {
     return true
   }
 
-  if (p.name === 'terminal' && typeof r?.exit_code === 'number' && r.exit_code !== 0) {
+  const name = p.name || callName
+  if ((name === 'terminal' || name === 'shell') && typeof r?.exit_code === 'number' && r.exit_code !== 0) {
     return true
   }
 
   return typeof p.summary === 'string' && /^(error|failed)\b/i.test(p.summary)
+}
+
+function textField(value: object, key: string): string | undefined {
+  const field = (value as Record<string, unknown>)[key]
+  return typeof field === 'string' && field.length > 0 ? field : undefined
 }
 
 /** One turn's share of the session totals: `now` minus `before`, field by field. */

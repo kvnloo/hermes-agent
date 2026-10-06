@@ -845,6 +845,13 @@ export class App implements OverlayHost {
     const cx = {
       copy: (text: string) => copyToClipboard(text),
       now,
+      rewind: () => {
+        if (!this.sid) return
+        this.#gw.request('session.undo', { session_id: this.sid }).catch((error: Error) => {
+          this.transcript.notice(error.message, 'error')
+          this.changed()
+        })
+      },
       welcome: { ...this.#welcome, version: this.#welcome.version || backend }
     }
 

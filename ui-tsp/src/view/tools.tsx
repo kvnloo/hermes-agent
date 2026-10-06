@@ -63,7 +63,7 @@ export function toolNode(call: ToolCall, now: number): JSX.Element {
       badges: card.badges,
       collapsed: body.length > 0 ? collapsed : undefined,
       collapsible: body.length > 0 ? true : undefined,
-      exit: call.name === 'terminal' && !running && call.status !== 'cancelled' ? exitOf(call) : undefined,
+      exit: card.name === 'bash' && !running && call.status !== 'cancelled' ? exitOf(call) : undefined,
       frame: card.frame === 'inline' && (running || !body.length || card.name !== 'web_search') ? 'inline' : undefined,
       key: call.id,
       lang: card.lang,
@@ -559,7 +559,7 @@ function agentNode(a: Subagent, now: number): JSX.Element {
       collapsible={a.summary ? true : undefined}
       key={a.id}
       model={a.model}
-      name={`Agent ${a.index + 1}`}
+      name={a.label ?? `Agent ${a.index + 1}`}
       stats={{
         requests: a.calls || undefined,
         tokens: a.tokens || undefined,
@@ -636,16 +636,17 @@ function answerRow(key: string, text: string, picked: boolean): JSX.Element {
 
 function evalCard(call: ToolCall, result: Record<string, unknown> | undefined): Card {
   const code = str(call.args.code) ?? ''
+  const language = str(call.args.language) === 'js' || str(call.args.language) === 'javascript' ? 'javascript' : 'python'
   const output = str(result?.output) ?? str(result?.stdout) ?? call.resultText
   const error = str(result?.error) ?? str(result?.stderr)
 
   return {
-    badges: [{ text: 'python' }],
+    badges: [{ text: language }],
     body: [
       <col key="cell-0" role="omp.tool.eval.cell">
         <row align="start" key="input" role="omp.tool.eval.input">
           <icon aria="Input" key="0" name="arrow-left" role="omp.tool.eval.prompt" />
-          <code key="code" lang="python" numbers={false} text={code} />
+          <code key="code" lang={language} numbers={false} text={code} />
         </row>
         {output || error ? (
           <row align="start" key="result" role="omp.tool.eval.result">

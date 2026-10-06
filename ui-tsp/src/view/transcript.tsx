@@ -16,6 +16,7 @@ export interface TranscriptContext {
   now: number
   welcome: WelcomeContext
   copy(text: string): void
+  rewind?(): void
 }
 
 const kNode = Symbol('tsp.node')
@@ -84,6 +85,7 @@ function userNode(e: UserEntry, cx: TranscriptContext): JSX.Element {
           title={at.toLocaleString()}
         />
         <text key="copy" onClick={() => cx.copy(e.text)} role="omp.user.tool" text="Copy" title="Copy message" />
+        <text key="rewind" onClick={() => cx.rewind?.()} role="omp.user.tool" text="Rewind" title="Rewind to this message" />
       </row>
       <md key="body">{e.text}</md>
     </card>

@@ -16,6 +16,8 @@ export interface Todo {
 export interface Subagent {
   id: string
   goal: string
+  /** Worker name from Hermes, when the event sends one. */
+  label?: string
   index: number
   status: 'cancelled' | 'done' | 'failed' | 'queued' | 'running'
   model?: string

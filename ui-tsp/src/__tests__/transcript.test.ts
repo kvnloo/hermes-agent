@@ -164,6 +164,45 @@ describe('Transcript', () => {
     expect(tools(turnOf(t.entries))[0]?.duration).toBe(1500)
   })
 
+  it('keeps a failed shell card failed when a later retry succeeds', () => {
+    const t = new Transcript()
+    t.start(0)
+    t.toolStart({ args: { command: 'npm test -- tasks' }, name: 'terminal', tool_id: 'test:first' }, 0)
+    t.toolComplete(
+      { name: 'shell', result: { exit_code: 1, output: 'Expected the whitespace-only case to reject' }, tool_id: 'test:first' },
+      1
+    )
+    t.toolStart({ args: { command: 'npm test -- tasks' }, name: 'terminal', tool_id: 'test:retry' }, 2)
+    t.toolComplete({ name: 'terminal', result: { exit_code: 0, output: '2 tests passed' }, tool_id: 'test:retry' }, 3)
+
+    const [failed, retried] = tools(turnOf(t.entries))
+    expect(failed).toMatchObject({ id: 'test:first', status: 'error' })
+    expect(retried).toMatchObject({ id: 'test:retry', status: 'done' })
+  })
+
+  it('keeps a file search as glob when complete omits the target', () => {
+    const t = new Transcript()
+    t.start(0)
+    t.toolStart(
+      { args: { path: '.github/workflows', pattern: '*.yml', target: 'files' }, name: 'search_files', tool_id: 'glob-1' },
+      0
+    )
+    t.toolComplete({ args: { pattern: '*.yml' }, name: 'search_files', result: { output: 'ci.yml' }, tool_id: 'glob-1' }, 1)
+
+    expect(tools(turnOf(t.entries))[0]?.args).toMatchObject({ pattern: '*.yml', target: 'files' })
+  })
+
+  it('keeps the worker name and task on one subagent id', () => {
+    const t = new Transcript()
+    t.start(0)
+    t.toolStart({ args: { task: 'Check the empty-title edge case' }, name: 'delegate_task', tool_id: 'd1' }, 0)
+    t.subagent('subagent.start', { goal: '', name: 'Review', subagent_id: 'child-1', task: 'Check the empty-title edge case', task_count: 1, task_index: 0 } as never, 1)
+    t.subagent('subagent.complete', { goal: '', status: 'completed', subagent_id: 'child-1', summary: 'done', task_count: 1, task_index: 0 }, 2)
+
+    const child = tools(turnOf(t.entries))[0]?.subagents?.[0]
+    expect(child).toMatchObject({ goal: 'Check the empty-title edge case', id: 'child-1', label: 'Review', status: 'done' })
+  })
+
   it('fails a terminal call with a non-zero exit and cancels an interrupted one', () => {
     const t = new Transcript()
     t.start(0)
