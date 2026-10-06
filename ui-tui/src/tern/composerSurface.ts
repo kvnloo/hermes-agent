@@ -60,6 +60,60 @@ export function ternSurfaceStaysOpen(state: { blocked: boolean }): boolean {
   return !state.blocked
 }
 
+
+export interface TernComposerInputState {
+  snapshot: TernComposerSnapshot
+  busy: boolean
+  blocked: boolean
+  completionCount: number
+}
+
+export interface TernComposerInputDeps {
+  read: () => TernComposerInputState
+  edit: (snapshot: TernComposerSnapshot) => void
+  /** Clear the native snapshot synchronously before calling Hermes submission. */
+  submit: (text: string) => void
+}
+
+/** The listener outlives React renders. Read current Hermes authority for each
+ * event, including a modal opening before effect cleanup removes the listener. */
+export function createTernComposerInputHandler(
+  hello: TspHello,
+  deps: TernComposerInputDeps
+): (event: TspEvent) => void {
+  return event => {
+    if (!('sf' in event) || event.sf !== TERN_SURFACE_ID || !('id' in event) || event.id !== TERN_COMPOSER_ID) {
+      return
+    }
+
+    if (event.ev !== 'edit' && event.ev !== 'send') {
+      return
+    }
+
+    const state = deps.read()
+
+    if (state.blocked) {
+      return
+    }
+
+    if (event.ev === 'edit') {
+      const next = applyTernComposerEdit(state.snapshot.text, event)
+
+      if (next) {
+        deps.edit(next)
+      }
+
+      return
+    }
+
+    const sendable = resolveTernComposerSendable(hello, !state.busy && state.completionCount === 0)
+
+    if (sendable && event.text.trim() && event.text === state.snapshot.text) {
+      deps.submit(event.text)
+    }
+  }
+}
+
 /**
  * First concrete TSP consumer. Hermes still owns the authoritative transcript
  * and composer state; this transport only projects the first prose-only slice
@@ -261,13 +315,19 @@ export class TernInlineSession {
     private hello: TspHello
   ) {}
 
-  sync(state: { blocked: boolean; busy: boolean; snapshot: TernComposerSnapshot; main?: readonly TernLiveNode[] }): void {
+  sync(state: {
+    blocked: boolean
+    busy: boolean
+    completionCount?: number
+    snapshot: TernComposerSnapshot
+    main?: readonly TernLiveNode[]
+  }): void {
     if (state.blocked) {
       this.close()
       return
     }
 
-    const sendable = resolveTernComposerSendable(this.hello, !state.busy)
+    const sendable = resolveTernComposerSendable(this.hello, !state.busy && (state.completionCount ?? 0) === 0)
 
     if (!this.transport) {
       this.transport = new TernComposerTransport(this.write, this.hello)
@@ -295,14 +355,12 @@ export function useTernComposerSurface(composer: AppLayoutComposerProps, transcr
   const streaming = useTurnSelector(state => state.streaming)
   const main = useMemo(() => projectTernTranscript(transcript.virtualRows, streaming), [streaming, transcript.virtualRows])
   const { stdout } = useStdout()
-  const busyRef = useRef(busy)
   const composerRef = useRef(composer)
   const cursorRef = useRef(composer.input.length)
   const mainRef = useRef(main)
   const nativeTextRef = useRef(composer.input)
   const sessionRef = useRef<TernInlineSession | null>(null)
 
-  busyRef.current = busy
   composerRef.current = composer
   mainRef.current = main
 
@@ -333,50 +391,39 @@ export function useTernComposerSurface(composer: AppLayoutComposerProps, transcr
     }, hello)
 
     sessionRef.current = session
-    session.sync({
-      blocked: false,
-      busy,
+    const readInputState = (): TernComposerInputState => ({
+      blocked: $isBlocked.get(),
+      busy: $uiState.get().busy,
+      completionCount: composerRef.current.completions.length,
       snapshot: {
         cursor: cursorRef.current,
         text: nativeTextRef.current
+      }
+    })
+    const syncCurrent = () => session.sync({ ...readInputState(), main: mainRef.current })
+
+    syncCurrent()
+
+    const handleInput = createTernComposerInputHandler(hello, {
+      read: readInputState,
+      edit: next => {
+        nativeTextRef.current = next.text
+        cursorRef.current = next.cursor
+        composerRef.current.updateInput(next.text)
+        syncCurrent()
       },
-      main: mainRef.current
+      submit: text => {
+        // Invalidate the submitted snapshot before a second native send can land.
+        nativeTextRef.current = ''
+        cursorRef.current = 0
+        syncCurrent()
+        composerRef.current.submit(text)
+      }
     })
 
     const unsubscribe = subscribeTernSurfaceEvents(event => {
       session.handleEvent(event)
-
-      if (!('sf' in event) || event.sf !== TERN_SURFACE_ID || !('id' in event) || event.id !== TERN_COMPOSER_ID) {
-        return
-      }
-
-      if (event.ev === 'edit') {
-        const next = applyTernComposerEdit(nativeTextRef.current, event)
-
-        if (!next) {
-          return
-        }
-
-        nativeTextRef.current = next.text
-        cursorRef.current = next.cursor
-        composerRef.current.updateInput(next.text)
-        session.sync({ blocked: false, busy: busyRef.current, snapshot: next, main: mainRef.current })
-
-        return
-      }
-
-      if (
-        event.ev === 'send' &&
-        resolveTernComposerSendable(hello, !busyRef.current) &&
-        composerRef.current.completions.length === 0 &&
-        event.text.trim() &&
-        event.text === nativeTextRef.current
-      ) {
-        nativeTextRef.current = ''
-        cursorRef.current = 0
-        session.sync({ blocked: false, busy: busyRef.current, snapshot: { cursor: 0, text: '' }, main: mainRef.current })
-        composerRef.current.submit(event.text)
-      }
+      handleInput(event)
     })
 
     return () => {
@@ -402,11 +449,12 @@ export function useTernComposerSurface(composer: AppLayoutComposerProps, transcr
     session.sync({
       blocked,
       busy,
+      completionCount: composer.completions.length,
       snapshot: {
         cursor: cursorRef.current,
         text: nativeTextRef.current
       },
       main
     })
-  }, [blocked, busy, composer.input, main, surface])
+  }, [blocked, busy, composer.completions.length, composer.input, main, surface])
 }
