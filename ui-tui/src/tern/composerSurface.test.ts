@@ -8,6 +8,7 @@ import {
   resolveTernComposerSendable,
   ternSurfaceStaysOpen,
   supportsTernComposer,
+  supportsTernLiveSurface,
   TERN_COMPOSER_ID,
   TERN_SURFACE_ID,
   TernComposerTransport,
@@ -101,6 +102,13 @@ describe('program features vs terminal hello', () => {
   it('sets sendable from Hermes readiness, not a terminal echo of send', () => {
     expect(resolveTernComposerSendable(ternHello, true)).toBe(true)
     expect(resolveTernComposerSendable(ternHello, false)).toBe(false)
+  })
+
+
+  it('requires prose kinds only when the live transcript takes over', () => {
+    expect(supportsTernComposer(hello)).toBe(true)
+    expect(supportsTernLiveSurface(hello)).toBe(false)
+    expect(supportsTernLiveSurface(ternHello)).toBe(true)
   })
 })
 
