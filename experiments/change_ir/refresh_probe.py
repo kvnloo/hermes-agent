@@ -82,7 +82,7 @@ def probe_operation(root: Path, operation: dict[str, Any]) -> dict[str, Any]:
         "description": operation.get("description", ""),
         "anchor_state": anchor_state,
         "anchors": anchors,
-        "expected_refresh_state": operation.get("expected_refresh_state"),
+        "baseline_refresh_state": operation.get("baseline_refresh_state"),
         "note": operation.get("note"),
     }
 
@@ -107,13 +107,13 @@ def render_markdown(result: dict[str, Any]) -> str:
         "",
         result["warning"],
         "",
-        "| operation | anchor state | expected fixture state |",
+        "| operation | anchor state | historical baseline |",
         "|---|---|---|",
     ]
     for op in result["operations"]:
         lines.append(
             f"| `{op['id']}` | {op['anchor_state']} | "
-            f"{op.get('expected_refresh_state') or '—'} |"
+            f"{(op.get('baseline_refresh_state') or {}).get('state', '—')} |"
         )
 
     for op in result["operations"]:
