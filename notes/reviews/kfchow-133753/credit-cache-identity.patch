@@ -1,0 +1,182 @@
+--- a/__init__.py
++++ b/__init__.py
+@@ -36,6 +36,7 @@
+ Config: ~/.hermes/jev/lane2_config.json       Log: ~/.hermes/jev/lane2-live.jsonl
+ """
+ 
++import hashlib
+ import json
+ import logging
+ import os
+@@ -77,7 +78,7 @@
+ # do not escalate — the turn keeps the affordable rung.
+ CREDIT_PROBE_MODEL = "z-ai/glm-5.3-flash"
+ CREDIT_TTL_S = 300          # don't probe on every turn
+-_CREDIT = {"ok": None, "checked_at": 0.0}
++_CREDIT = {"ok": None, "checked_at": 0.0, "identity": None}
+ _CREDIT_LOCK = threading.Lock()
+ _STATE = {"last_turn": None}
+ _STATE_LOCK = threading.Lock()
+@@ -117,19 +118,28 @@
+ def _paid_lane_alive():
+     """True if a cheap paid call succeeds. Cached CREDIT_TTL_S. Fail-CLOSED:
+     unknown => False => do not escalate (stay on the affordable rung)."""
+-    now = time.time()
++    key = _nous_api_key()
++    if not key:
++        return False
++    base_url = _nous_base_url().rstrip("/")
++    # A cached probe only describes this endpoint, credential and probe model.
++    # Keep one bounded entry and never retain the plaintext credential in it.
++    identity = hashlib.sha256(json.dumps(
++        [base_url, key, CREDIT_PROBE_MODEL], separators=(",", ":")
++    ).encode()).hexdigest()
++    now = time.monotonic()
+     with _CREDIT_LOCK:
+-        if _CREDIT["ok"] is not None and (now - _CREDIT["checked_at"]) < CREDIT_TTL_S:
++        if (_CREDIT.get("identity") == identity and _CREDIT["ok"] is not None
++                and (now - _CREDIT["checked_at"]) < CREDIT_TTL_S):
+             return _CREDIT["ok"]
+     alive = False
+     try:
+-        key = _nous_api_key()
+         if key:
+             body = json.dumps({"model": CREDIT_PROBE_MODEL,
+                                "messages": [{"role": "user", "content": "ping"}],
+                                "max_tokens": 2, "temperature": 0}).encode()
+             req = urllib.request.Request(
+-                _nous_base_url() + "/chat/completions",
++                base_url + "/chat/completions",
+                 data=body, headers={"Content-Type": "application/json",
+                                     "Authorization": "Bearer " + key})
+             with urllib.request.urlopen(req, timeout=15) as r:
+@@ -139,7 +149,8 @@
+         logger.debug("credit probe failed (fail-closed, no escalation): %s", e)
+     with _CREDIT_LOCK:
+         _CREDIT["ok"] = alive
+-        _CREDIT["checked_at"] = now
++        _CREDIT["checked_at"] = time.monotonic()
++        _CREDIT["identity"] = identity
+     return alive
+ 
+ 
+--- /dev/null
++++ b/tests/test_credit_probe_identity.py
+@@ -0,0 +1,117 @@
++"""Credential/endpoint cache controls; every HTTP operation is a local test double."""
++import io
++import importlib.util
++import os
++from pathlib import Path
++from types import SimpleNamespace
++
++import pytest
++
++
++@pytest.fixture
++def harness(monkeypatch, tmp_path):
++    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
++    monkeypatch.delenv("NOUS_API_KEY", raising=False)
++    monkeypatch.setenv("NOUS_BASE_URL", "https://original.invalid/v1")
++    path = Path(os.environ.get("ROUTER_SOURCE", Path(__file__).parents[1] / "__init__.py"))
++    spec = importlib.util.spec_from_file_location("credit_identity_router", path)
++    router = importlib.util.module_from_spec(spec)
++    spec.loader.exec_module(router)
++
++    def no_network(*args, **kwargs):
++        raise AssertionError("Unexpected network access")
++
++    monkeypatch.setattr(router.urllib.request, "urlopen", no_network)
++    return SimpleNamespace(router=router)
++
++
++def credit_probe(h, monkeypatch):
++    calls, clock, alive = [], [1000.], [True]
++    monkeypatch.setenv('NOUS_API_KEY', 'synthetic-account-A')
++    monkeypatch.setattr(h.router.time, 'time', lambda: clock[0])
++    monkeypatch.setattr(h.router.time, 'monotonic', lambda: clock[0])
++
++    def urlopen(request, timeout):
++        calls.append((request.full_url, request.get_header('Authorization')))
++        if not alive[0]:
++            raise OSError('synthetic unavailable account')
++        return io.BytesIO(b'{"choices":[{"message":{"content":"pong"}}]}')
++    monkeypatch.setattr(h.router.urllib.request, 'urlopen', urlopen)
++    return calls, clock, alive
++
++
++@pytest.mark.parametrize('change', ['rotate_key', 'remove_key', 'change_endpoint'])
++def test_positive_cache_cannot_authorize_another_identity(harness, monkeypatch, change):
++    h = harness
++    calls, clock, alive = credit_probe(h, monkeypatch)
++    assert h.router._paid_lane_alive() is True
++    alive[0] = False
++    if change == 'rotate_key':
++        monkeypatch.setenv('NOUS_API_KEY', 'synthetic-account-B')
++    elif change == 'remove_key':
++        monkeypatch.delenv('NOUS_API_KEY')
++    else:
++        monkeypatch.setenv('NOUS_BASE_URL', 'https://replacement.invalid/v1')
++    assert h.router._paid_lane_alive() is False
++    assert len(calls) == (1 if change == 'remove_key' else 2)
++
++
++def test_negative_cache_does_not_block_new_identity(harness, monkeypatch):
++    h = harness
++    calls, clock, alive = credit_probe(h, monkeypatch)
++    alive[0] = False
++    assert h.router._paid_lane_alive() is False
++    monkeypatch.setenv('NOUS_API_KEY', 'synthetic-account-B')
++    alive[0] = True
++    assert h.router._paid_lane_alive() is True
++    assert len(calls) == 2
++
++
++def test_unchanged_identity_reuses_verdict(harness, monkeypatch):
++    h = harness
++    calls, clock, alive = credit_probe(h, monkeypatch)
++    assert h.router._paid_lane_alive() is True
++    assert h.router._paid_lane_alive() is True
++    assert len(calls) == 1
++
++
++def test_unchanged_negative_identity_reuses_verdict(harness, monkeypatch):
++    h = harness
++    calls, clock, alive = credit_probe(h, monkeypatch)
++    alive[0] = False
++    assert h.router._paid_lane_alive() is False
++    assert h.router._paid_lane_alive() is False
++    assert len(calls) == 1
++
++
++def test_expired_verdict_reprobes(harness, monkeypatch):
++    h = harness
++    calls, clock, alive = credit_probe(h, monkeypatch)
++    assert h.router._paid_lane_alive() is True
++    clock[0] += h.router.CREDIT_TTL_S + 1
++    alive[0] = False
++    assert h.router._paid_lane_alive() is False
++    assert len(calls) == 2
++
++
++def test_missing_credential_never_probes(harness):
++    assert harness.router._paid_lane_alive() is False
++
++
++def test_current_account_rejection_blocks_escalation(harness, monkeypatch):
++    h = harness
++    calls, clock, alive = credit_probe(h, monkeypatch)
++    cfg = {"enabled": True, "mode": "live", "confidence_gate": .8,
++           "escalate_enabled": True, "escalate_providers": ["nous"],
++           "escalate_models": ["source-mid"], "premium_model": "target-premium",
++           "credit_probe": True}
++    monkeypatch.setattr(h.router, "_load_config", lambda: cfg)
++    monkeypatch.setattr(h.router, "_classify", lambda *args: ("paid", .99))
++    monkeypatch.setattr(h.router, "_log", lambda record: None)
++    alive[0] = False
++    request = {"model": "source-mid", "messages": [{"role": "user", "content": "analyze"}]}
++    result = h.router.on_llm_request(request=request, provider="nous", model="source-mid",
++                                     session_id="s", turn_id="t", api_call_count=1)
++    assert result is None
++    assert request["model"] == "source-mid"
++    assert len(calls) == 1
