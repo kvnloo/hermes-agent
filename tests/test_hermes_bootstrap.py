@@ -609,7 +609,8 @@ class TestTailscaleMtuClamp:
         assert not hb._is_tailscale_tcp_peer(FakePeer(socket.SOCK_STREAM, "fd7b::1"))
         assert not hb._is_tailscale_tcp_peer(FakePeer(socket.SOCK_DGRAM, "100.64.0.1"))
 
-    def test_matching_udp_peer_keeps_one_datagram(self):
+    @pytest.mark.parametrize("method", ["send", "sendall"])
+    def test_matching_udp_peer_keeps_one_datagram(self, method):
         _fresh_import()
         receiver = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         receiver.bind(("127.0.0.1", 0))
@@ -623,7 +624,11 @@ class TestTailscaleMtuClamp:
         sender.connect(receiver.getsockname())
         payload = b"x" * 2500
         try:
-            assert sender.send(payload) == len(payload)
+            result = getattr(sender, method)(payload)
+            if method == "send":
+                assert result == len(payload)
+            else:
+                assert result is None
             data, _peer = receiver.recvfrom(4096)
             assert data == payload
         finally:
