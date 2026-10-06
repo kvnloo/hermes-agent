@@ -4,6 +4,7 @@ import { GatewayProvider } from './app/gatewayContext.js'
 import { $uiState } from './app/uiStore.js'
 import { useMainApp } from './app/useMainApp.js'
 import { AppLayout } from './components/appLayout.js'
+import { LAUNCH_SPLASH } from './config/env.js'
 import type { GatewayClient } from './gatewayClient.js'
 
 export function App({ gw }: { gw: GatewayClient }) {
@@ -15,6 +16,7 @@ export function App({ gw }: { gw: GatewayClient }) {
       <AppLayout
         actions={appActions}
         composer={appComposer}
+        launchSplash={LAUNCH_SPLASH}
         mouseTracking={mouseTracking}
         progress={appProgress}
         status={appStatus}

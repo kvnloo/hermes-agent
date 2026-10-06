@@ -634,6 +634,8 @@ export interface AppLayoutTranscriptProps {
 }
 
 export interface AppLayoutProps {
+  /** Cover gateway boot with the launch splash. Off unless the host opts in. */
+  launchSplash?: boolean
   actions: AppLayoutActions
   composer: AppLayoutComposerProps
   mouseTracking: MouseTrackingMode

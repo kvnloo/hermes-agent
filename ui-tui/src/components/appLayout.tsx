@@ -3,7 +3,7 @@ import '../sdk/apps/index.js'
 
 import { AlternateScreen, Box, NoSelect, ScrollBox, Text } from '@hermes/ink'
 import { useStore } from '@nanostores/react'
-import { Fragment, memo, type MutableRefObject, useEffect, useMemo, useRef } from 'react'
+import { Fragment, memo, type MutableRefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useGateway } from '../app/gatewayContext.js'
 import type { AppLayoutProps } from '../app/interfaces.js'
@@ -11,7 +11,7 @@ import { $isBlocked, $overlayState, patchOverlayState } from '../app/overlayStor
 import { $petBox } from '../app/petFlashStore.js'
 import { $uiState } from '../app/uiStore.js'
 import { usePet } from '../app/usePet.js'
-import { INLINE_MODE, NATIVE_MODE, SHOW_FPS, TERMUX_TUI_MODE } from '../config/env.js'
+import { INLINE_MODE, LAUNCH_SPLASH_DESIGN, NATIVE_MODE, SHOW_FPS, TERMUX_TUI_MODE } from '../config/env.js'
 import { placeholder } from '../content/placeholders.js'
 import { prevRenderedMsg } from '../domain/blockLayout.js'
 import { useT } from '../i18n/useT.js'
@@ -34,6 +34,7 @@ import { FpsOverlay } from './fpsOverlay.js'
 import { GoalBar } from './goalBar.js'
 import { HelpHint } from './helpHint.js'
 import { Journey } from './journey.js'
+import { LaunchSplash, pickSplashDesign } from './launchSplash.js'
 import { MessageLine } from './messageLine.js'
 import { PetKitty, PetSprite } from './petSprite.js'
 import { QueuedMessages } from './queuedMessages.js'
@@ -564,6 +565,7 @@ const StatusRulePane = memo(function StatusRulePane({
 export const AppLayout = memo(function AppLayout({
   actions,
   composer,
+  launchSplash = false,
   mouseTracking,
   progress,
   status,
@@ -582,6 +584,26 @@ export const AppLayout = memo(function AppLayout({
   // stay anchored via normal flex-column flow.
   const Shell = INLINE_MODE ? Fragment : AlternateScreen
   const shellProps = INLINE_MODE ? {} : { mouseTracking }
+
+  // Launch splash covers gateway boot. "Ready" is the first sign of life from
+  // the gateway: a session id, or the status line moving off its boot text.
+  const [splash, setSplash] = useState(launchSplash)
+  const bootStatus = useRef(ui.status)
+  const splashDesign = useRef(pickSplashDesign(LAUNCH_SPLASH_DESIGN))
+  const endSplash = useCallback(() => setSplash(false), [])
+
+  if (splash) {
+    return (
+      <Shell {...shellProps}>
+        <LaunchSplash
+          design={splashDesign.current}
+          onDone={endSplash}
+          ready={ui.sid !== null || ui.status !== bootStatus.current}
+          status={ui.status}
+        />
+      </Shell>
+    )
+  }
 
   return (
     <Shell {...shellProps}>

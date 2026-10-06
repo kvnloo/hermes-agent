@@ -76,6 +76,19 @@ const inlineOverride = parseToggle(process.env.HERMES_TUI_INLINE)
 // less fragile. Override explicitly with HERMES_TUI_INLINE=0/1.
 export const INLINE_MODE: boolean = NATIVE_MODE || (inlineOverride ?? TERMUX_TUI_MODE)
 
+// Launch splash — the animation that covers gateway boot. On by default in
+// the fullscreen TUI. HERMES_TUI_SPLASH=0 skips it; HERMES_TUI_SPLASH=<design>
+// picks one (see ui-tui/src/splash/index.ts), and =random picks per launch.
+// Never shown inline (it would be left behind in scrollback) or in the
+// dashboard PTY, and skipped when the launch already carries a prompt to run.
+const splashSetting = (process.env.HERMES_TUI_SPLASH ?? '').trim().toLowerCase()
+
+export const LAUNCH_SPLASH: boolean =
+  !INLINE_MODE && !DASHBOARD_TUI_MODE && !STARTUP_QUERY && (parseToggle(splashSetting) ?? true)
+
+/** Design name, 'random', or '' for the default. */
+export const LAUNCH_SPLASH_DESIGN: string = parseToggle(splashSetting) === null ? splashSetting : ''
+
 // Live FPS counter overlay, fed by ink's onFrame (real render rate, not a
 // synthetic timer).
 export const SHOW_FPS = truthy(process.env.HERMES_TUI_FPS)
