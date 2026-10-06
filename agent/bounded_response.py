@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import logging
 import threading
-from typing import List
+from typing import Any, List
 
 import httpx
 
@@ -23,6 +23,21 @@ logger = logging.getLogger(__name__)
 DEFAULT_ERROR_BODY_MAX_BYTES = 64 * 1024
 # Hard deadline for the whole read; past it the connection is closed and the partial bytes are kept.
 DEFAULT_ERROR_BODY_TIMEOUT_S = 10.0
+
+
+def close_quietly(resp: Any) -> None:
+    """Best-effort ``resp.close()`` for any response-like object (requests, httpx, test doubles).
+
+    No-op for ``None`` or objects without a callable ``close``; close errors are logged at debug and
+    swallowed so cleanup on an error path never masks the original exception.
+    """
+    close = getattr(resp, "close", None)
+    if not callable(close):
+        return
+    try:
+        close()
+    except Exception:  # noqa: BLE001 - cleanup must not raise
+        logger.debug("response close failed", exc_info=True)
 
 
 def read_streaming_error_body(
