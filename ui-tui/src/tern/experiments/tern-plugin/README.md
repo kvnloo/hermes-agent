@@ -45,3 +45,13 @@ The canonical layout API reference is:
 https://docs.stencil.so/tern/guides/layout.html
 
 Credit: Tern/TSP and the layout/plugin APIs are by Stencil Labs.
+
+
+## Isolation
+
+The lab launches Hermes with worktree-local `HERMES_HOME` and
+`HERMES_RUNTIME_DIR` under `.tmp/`. This lets A/B/C run concurrently without
+sharing sessions, logs or runtime sockets.
+
+The upper-right pane emits the active variant manifest before running TSP tests,
+so a screenshot session can be traced back to the exact experiment identity.
