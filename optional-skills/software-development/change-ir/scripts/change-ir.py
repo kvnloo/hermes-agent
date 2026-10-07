@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Local, human-reviewed Change IR workflow. No models, network, or promotion."""
+"""Evidence-bound Change IR workflow for the active agent. No model service or auto-merge."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ import html
 import itertools
 import json
 import os
+import re
 from pathlib import Path, PurePosixPath
 import subprocess
 import sys
@@ -67,7 +68,7 @@ def git(repo, *args, input_data=None):
 
 def snapshot(repo, *, clean=False):
     repo = Path(repo).resolve()
-    require(git(repo, "rev-parse", "--show-toplevel").decode().strip() == str(repo), "Use the repository root")
+    require(Path(git(repo, "rev-parse", "--show-toplevel").decode().strip()).resolve() == repo, "Use the repository root")
     status = git(repo, "status", "--porcelain", "--untracked-files=all")
     require(not clean or not status, "Target repository must be clean; use an isolated checkout")
     untracked = {}
@@ -102,6 +103,142 @@ def relative_path(value):
     return value
 
 
+def source_record(kind, ref, text, *, author=None):
+    sha = digest(text.encode())
+    return {"id": digest((kind + "\0" + ref + "\0" + sha).encode())[:20], "kind": kind, "ref": ref,
+            "sha256": sha, "text": text, "authors": [author] if author else []}
+
+
+def github_api(endpoint, *, pages=False, query=None):
+    command = ["gh", "api", "--hostname", "github.com", endpoint]
+    if pages:
+        command += ["--paginate", "--slurp"]
+    if query:
+        command += ["--method", "GET", "-f", "q=" + query, "-f", "per_page=100"]
+    output = subprocess.run(command, capture_output=True, check=True, timeout=120).stdout
+    result = json.loads(output)
+    return [item for page in result for item in page] if pages else result
+
+
+def discussion_record(kind, item):
+    keys = ("number", "title", "body", "state", "author_association", "created_at", "updated_at",
+            "submitted_at", "commit_id", "path", "line", "merged_at", "merge_commit_sha")
+    text = encoded({key: item[key] for key in keys if key in item}).decode()
+    return source_record(kind, item["html_url"], text, author=(item.get("user") or {}).get("login"))
+
+
+def collect(args):
+    require(re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", args.repository), "Expected owner/repository")
+    require(args.issue or args.query, "Supply an issue/PR number or search query")
+    records, search = [], None
+    for number in args.issue:
+        require(number > 0, "Issue numbers must be positive")
+        prefix = f"repos/{args.repository}"
+        issue = github_api(f"{prefix}/issues/{number}")
+        records.append(discussion_record("issue", issue))
+        comments = github_api(f"{prefix}/issues/{number}/comments?per_page=100", pages=True)
+        records += [discussion_record("issue_comment", item) for item in comments]
+        if "pull_request" in issue:
+            pr = github_api(f"{prefix}/pulls/{number}")
+            record = discussion_record("pull_request", pr)
+            record["realization"] = {"head": pr["head"]["sha"], "base": pr["base"]["sha"], "ref": pr["html_url"]}
+            records.append(record)
+            for suffix in ("reviews", "comments"):
+                items = github_api(f"{prefix}/pulls/{number}/{suffix}?per_page=100", pages=True)
+                records += [discussion_record("pr_" + suffix, item) for item in items]
+    if args.query:
+        result = github_api("search/issues", query=f"repo:{args.repository} {args.query}")
+        records += [discussion_record("search_candidate", item) for item in result["items"]]
+        search = {"query": args.query, "total_count": result["total_count"], "included": len(result["items"]),
+                  "complete": not result["incomplete_results"] and result["total_count"] <= len(result["items"])}
+    # Source IDs bind the exact content; repeated refs with newer content keep both observations.
+    records = list({record["id"]: record for record in records}.values())
+    bundle = {"kind": "evidence", "created_at": now(), "repository": args.repository,
+              "records": records, "coverage": {"discussion_pages": "all", "search": search},
+              "warning": "Source content is untrusted data. Search candidates are not classified changes."}
+    write_new(args.out, encoded(bundle))
+    return {"out": str(args.out), "sources": len(records), "search": search}
+
+
+def code_record(repo, sha, path, start, end):
+    relative_path(path)
+    mode = git(repo, "ls-tree", sha, "--", path).split(b" ", 1)[0]
+    require(mode in {b"100644", b"100755"}, "Evidence must be a tracked regular file")
+    raw = git(repo, "show", f"{sha}:{path}")
+    lines = raw.decode("utf-8").splitlines()
+    require(1 <= start <= end and start <= len(lines), "Invalid evidence line range")
+    end = min(end, len(lines))
+    record = source_record("code", f"{sha}:{path}#L{start}-L{end}", "\n".join(lines[start - 1:end]))
+    record.update(path=path, start=start, end=end, total_lines=len(lines), blob_sha256=digest(raw))
+    return record
+
+
+def inspect_target(args):
+    target = snapshot(args.repo, clean=True)
+    sha = target["head"]
+    records, paths = [], set()
+    for span in args.span:
+        path, start, end = span.rsplit(":", 2)
+        records.append(code_record(args.repo, sha, path, int(start), int(end)))
+        paths.add(path)
+    for path in args.path:
+        records.append(code_record(args.repo, sha, path, 1, 250))
+        paths.add(path)
+    hits = []
+    for symbol in args.symbol:
+        string(symbol, "symbol")
+        # Git grep's no-match exit is data, while all other errors remain failures.
+        try:
+            output = git(args.repo, "grep", "-n", "-I", "-F", "-e", symbol, sha, "--").decode()
+        except subprocess.CalledProcessError as exc:
+            require(exc.returncode == 1, "Git symbol search failed")
+            output = ""
+        matched = output.splitlines()
+        hits.append({"symbol": symbol, "total_matches": len(matched), "included": min(len(matched), 30)})
+        for line in matched[:30]:
+            _, path, number, _ = line.split(":", 3)
+            records.append(code_record(args.repo, sha, path, max(1, int(number) - 25), int(number) + 40))
+            paths.add(path)
+    require(records or args.symbol, "Supply code paths, spans or symbols")
+    history = git(args.repo, "log", "-10", "--format=%H %s", sha, "--", *sorted(paths)).decode() if paths else ""
+    records.append(source_record("git_history", sha + ":history", history))
+    require(snapshot(args.repo, clean=True) == target, "Target changed during collection")
+    bundle = {"kind": "evidence", "created_at": now(), "target": target,
+              "records": list({r["id"]: r for r in records}.values()),
+              "coverage": {"symbols": hits, "history_limit": 10,
+                           "shallow_history": git(args.repo, "rev-parse", "--is-shallow-repository").decode().strip() == "true"}}
+    write_new(args.out, encoded(bundle))
+    return {"out": str(args.out), "target_sha": sha, "records": len(bundle["records"]), "coverage": bundle["coverage"]}
+
+
+def evidence_records(paths, target):
+    records = {}
+    for path in paths:
+        bundle = read_json(path)
+        require(bundle.get("kind") == "evidence", "Expected collected evidence")
+        if "target" in bundle:
+            require(bundle["target"] == target, "Evidence belongs to a different target snapshot")
+        for record in bundle["records"]:
+            require(record["sha256"] == digest(record["text"].encode()), "Evidence digest mismatch")
+            expected = digest((record["kind"] + "\0" + record["ref"] + "\0" + record["sha256"]).encode())[:20]
+            require(record["id"] == expected, "Evidence identity mismatch")
+            records[record["id"]] = record
+    return records
+
+
+def verification_contracts(contracts):
+    require(isinstance(contracts, list) and contracts, "Executable verification contracts are required")
+    ids = set()
+    for contract in contracts:
+        string(contract.get("id"), "contract id")
+        require(contract["id"] not in ids, "Duplicate verification contract")
+        ids.add(contract["id"])
+        strings(contract.get("argv"), "verification argv", nonempty=True)
+        strings(contract.get("invariants"), "verified invariants", nonempty=True)
+        string(contract.get("purpose"), "verification purpose")
+    return contracts
+
+
 def validate_packet(packet):
     require(isinstance(packet, dict), "Packet must be an object")
     string(packet.get("change_id"), "change_id")
@@ -129,7 +266,11 @@ def validate_packet(packet):
 
 
 def ingest(args):
-    packet = validate_packet(read_json(args.fixture))
+    packet = read_json(args.fixture)
+    for op in packet.get("operations", []):
+        if "description" not in op and "title" in op:
+            op["description"] = op["title"]
+    validate_packet(packet)
     sources = list(packet.get("sources", []))
     for name in args.source:
         path = Path(name).resolve()
@@ -171,6 +312,15 @@ def refresh(args):
     target = snapshot(args.repo, clean=True)
     review = read_json(args.review) if args.review else None
     reviewed = {op["id"]: op for op in review_operations(packet, target, review)}
+    records = evidence_records(args.evidence, target)
+    for op in reviewed.values():
+        strings(op.get("evidence_ids"), "collected evidence IDs", nonempty=True)
+        require(set(op["evidence_ids"]) <= records.keys(), "Review cites evidence that was not collected")
+        if set(op["states"]) & {"still_needed", "already_on_main"}:
+            require(any(records[key]["kind"] == "code" for key in op["evidence_ids"]), "Code-state review requires current code evidence")
+        if "still_needed" in op["states"]:
+            strings(op.get("plan"), "minimal patch plan", nonempty=True)
+            verification_contracts(op.get("verification_contracts"))
     evidence = probe_fixture(Path(args.repo), packet)
     tracked = set(git(args.repo, "ls-files", "-z").decode().split("\0"))
     repo = Path(args.repo).resolve()
@@ -194,6 +344,7 @@ def refresh(args):
         "packet": packet, "packet_sha256": digest(encoded(packet)),
         "reviewer": review.get("reviewer") if review else None,
         "operations": operations, "anchor_evidence": evidence,
+        "evidence_records": list(records.values()), "evidence_bound": bool(reviewed),
         "relations": relations["relations"], "maintainer_decisions": (review or {}).get("maintainer_decisions", []),
         "acceptance_inferred": False,
     }
@@ -223,6 +374,7 @@ def collision_entries(paths):
                 strings(contract.get("invariants"), "collision invariants", nonempty=True)
                 strings(contract.get("evidence"), "collision evidence", nonempty=True)
                 strings(contract.get("complements", []), "complementary boundaries")
+                strings(contract.get("supersedes", []), "superseded operation identities")
                 entries.append({"change_id": packet["change_id"], "operation_id": op["id"],
                                 "provenance": packet["provenance"], "contract": contract})
     identities = [(e["change_id"], e["operation_id"]) for e in entries]
@@ -250,7 +402,15 @@ def compare(args):
     results = []
     # ponytail: quadratic scan of a local catalog; index family/boundary if the catalog becomes large.
     for left, right in itertools.combinations(entries, 2):
+        left_id = f"{left['change_id']}:{left['operation_id']}"
+        right_id = f"{right['change_id']}:{right['operation_id']}"
+        forward = right_id in left["contract"].get("supersedes", [])
+        backward = left_id in right["contract"].get("supersedes", [])
+        if backward and not forward:
+            left, right = right, left
         kind = relationship(left, right)
+        if forward or backward:
+            kind = "unknown" if forward and backward else "supersedes"
         if kind:
             results.append({
                 "from": f"{left['change_id']}:{left['operation_id']}",
@@ -289,6 +449,10 @@ def render(args):
     for op in receipt["operations"]:
         for evidence in op["evidence"]:
             lines.append(f"- {safe_text(op['id'])}: {safe_text(evidence)}")
+        for step in op.get("plan", []):
+            lines.append(f"- Plan for {safe_text(op['id'])}: {safe_text(step)}")
+        for contract in op.get("verification_contracts", []):
+            lines.append(f"- Verify {safe_text(contract['id'])}: {safe_text(contract['purpose'])}; argv: {safe_text(contract['argv'])}")
     for heading, items in (("Outcomes", packet.get("outcomes", [])),
                            ("Decisions", packet.get("decisions", [])),
                            ("Verification contract", packet.get("verification", [])),
@@ -340,6 +504,7 @@ def materialize(args):
     require(receipt.get("kind") == "refresh", "Expected a refresh receipt")
     packet = validate_packet(receipt["packet"])
     require(receipt["packet_sha256"] == digest(encoded(packet)), "Packet digest mismatch")
+    require(receipt.get("evidence_bound") is True, "Refresh with collected evidence before materialization")
     reviewed = review_operations(packet, receipt["target"], {
         "packet_sha256": receipt["packet_sha256"], "target_sha": receipt["target"]["head"],
         "reviewer": receipt["reviewer"], "operations": [op for op in receipt["operations"] if op["evidence"]],
@@ -347,6 +512,7 @@ def materialize(args):
     op = next((op for op in reviewed if op["id"] == args.operation), None)
     require(op is not None and set(op["states"]) - {"moved"} == {"still_needed"}, "Select a reviewed still_needed operation")
     strings(op.get("allowed_paths"), "allowed_paths", nonempty=True)
+    contracts = verification_contracts(op.get("verification_contracts"))
     string(args.selected_by, "selected_by")
     repo = Path(receipt["target"]["repo"])
     require(snapshot(repo, clean=True) == receipt["target"], "Target changed since review")
@@ -366,6 +532,7 @@ def materialize(args):
               "worktree": str(worktree), "branch": args.branch, "input": snapshot(worktree),
               "patch_sha256": digest(patch), "paths": paths, "provenance": packet["provenance"],
               "refresh_receipt": str(Path(args.receipt).resolve()),
+              "verification_contracts": contracts, "plan": op["plan"],
               "refresh_receipt_sha256": digest(encoded(receipt)), "verification": "unverified"}
     write_new(args.out, encoded(result))
     return result
@@ -380,6 +547,9 @@ def verify(args):
     require(snapshot(worktree) == realization["input"], "Materialized inputs changed before verification")
     command = args.command[1:] if args.command[:1] == ["--"] else args.command
     strings(command, "Explicit verification argv", nonempty=True)
+    contracts = verification_contracts(realization.get("verification_contracts"))
+    contract = next((item for item in contracts if item["id"] == args.contract), None)
+    require(contract is not None and contract["argv"] == command, "Command must match the selected verification contract")
     require(args.timeout > 0, "Timeout must be positive")
     env = {key: os.environ[key] for key in ("PATH", "HOME", "SYSTEMROOT", "COMSPEC", "PATHEXT") if key in os.environ}
     with tempfile.TemporaryDirectory(prefix="change-ir-verify-") as sandbox:
@@ -392,6 +562,7 @@ def verify(args):
     unchanged = snapshot(worktree) == realization["input"]
     result = {"kind": "verification", "created_at": now(), "input": realization["input"],
               "realization": str(Path(args.realization).resolve()), "timeout_seconds": args.timeout, "timed_out": code is None,
+              "contract_id": args.contract,
               "realization_sha256": digest(encoded(realization)), "command": command, "returncode": code,
               "stdout": stdout.decode(errors="replace"), "stderr": stderr.decode(errors="replace"),
               "inputs_unchanged": unchanged, "verification": "passed" if code == 0 and unchanged else "failed",
@@ -401,9 +572,55 @@ def verify(args):
     return 0 if result["verification"] == "passed" else 1
 
 
+def prepare_pr(args):
+    realization = read_json(args.realization)
+    require(realization.get("kind") == "materialization", "Expected a materialization receipt")
+    require(snapshot(realization["worktree"]) == realization["input"], "Code changed after materialization")
+    contracts = {item["id"]: item for item in verification_contracts(realization.get("verification_contracts"))}
+    passed = set()
+    for path in args.verification:
+        receipt = read_json(path)
+        require(receipt.get("kind") == "verification" and receipt.get("verification") == "passed", "Verification did not pass")
+        require(receipt.get("returncode") == 0 and receipt.get("inputs_unchanged") is True, "Verification inputs or exit status failed")
+        require(receipt.get("realization_sha256") == digest(encoded(realization)), "Verification belongs to another realization")
+        key = receipt.get("contract_id")
+        require(key in contracts and receipt.get("command") == contracts[key]["argv"], "Verification contract mismatch")
+        require(receipt.get("input") == realization["input"], "Verification input mismatch")
+        passed.add(key)
+    require(passed == contracts.keys(), "Every verification contract must pass before PR preparation")
+    refresh_receipt = read_json(realization["refresh_receipt"])
+    require(digest(encoded(refresh_receipt)) == realization["refresh_receipt_sha256"], "Refresh receipt changed")
+    packet = refresh_receipt["packet"]
+    lines = [f"# {safe_text(packet['title'])}", "", safe_text(packet.get("problem", "")), "",
+             f"Change: {safe_text(realization['change_id'])}; operation: {safe_text(realization['operation_id'])}.",
+             f"Reviewed base: {realization['input']['head']}.", "", "## Change", ""]
+    lines += [f"- {safe_text(step)}" for step in realization["plan"]]
+    lines += ["", "## Verification", ""]
+    lines += [f"- {safe_text(key)}: passed; {safe_text(item['purpose'])}; argv {safe_text(item['argv'])}"
+              for key, item in contracts.items()]
+    lines += ["", "## Credit and provenance", "", safe_text(json.dumps(packet["provenance"], ensure_ascii=False))]
+    lines += [f"- {safe_text(json.dumps(edge, ensure_ascii=False))}" for edge in refresh_receipt["relations"]
+              if packet["change_id"] in str(edge)]
+    lines += ["", "Ready for social review; verification does not infer priority, acceptance or permission to merge.", ""]
+    require(not Path(args.out).resolve().is_relative_to(Path(realization["worktree"]).resolve()), "Write PR drafts outside the worktree")
+    write_new(args.out, "\n".join(lines).encode())
+    return {"out": str(args.out), "verified_contracts": sorted(passed), "promotion_authorized": False}
+
+
 def parser():
     root = argparse.ArgumentParser(description=__doc__)
     commands = root.add_subparsers(dest="command_name", required=True)
+    p = commands.add_parser("collect", help="Collect GitHub intent sources and related-work candidates")
+    p.add_argument("--repository", required=True)
+    p.add_argument("--issue", type=int, action="append", default=[])
+    p.add_argument("--query")
+    p.add_argument("--out", type=Path, required=True)
+    p = commands.add_parser("inspect", help="Collect pinned code, symbols and bounded history")
+    p.add_argument("--repo", type=Path, required=True)
+    p.add_argument("--path", action="append", default=[])
+    p.add_argument("--span", action="append", default=[])
+    p.add_argument("--symbol", action="append", default=[])
+    p.add_argument("--out", type=Path, required=True)
     p = commands.add_parser("ingest", help="Wrap curated operations with source digests")
     p.add_argument("fixture", type=Path)
     p.add_argument("--source", type=Path, action="append", default=[])
@@ -412,6 +629,7 @@ def parser():
     p.add_argument("packet", type=Path)
     p.add_argument("--repo", type=Path, required=True)
     p.add_argument("--review", type=Path)
+    p.add_argument("--evidence", type=Path, action="append", default=[])
     p.add_argument("--relations", type=Path)
     p.add_argument("--out", type=Path, required=True)
     p = commands.add_parser("compare", help="Compare curated operation contracts")
@@ -429,6 +647,11 @@ def parser():
     p.add_argument("realization", type=Path)
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--timeout", type=int, default=300)
+    p.add_argument("--contract", required=True)
+    p = commands.add_parser("prepare-pr", help="Prepare a review document only after every contract passed")
+    p.add_argument("realization", type=Path)
+    p.add_argument("--verification", type=Path, action="append", required=True)
+    p.add_argument("--out", type=Path, required=True)
     return root
 
 
@@ -441,8 +664,8 @@ def main(argv=None):
         command, argv = argv[split + 1:], argv[:split]
     args = root.parse_args(argv)
     args.command = command
-    functions = {"ingest": ingest, "refresh": refresh, "compare": compare,
-                 "render": render, "materialize": materialize, "verify": verify}
+    functions = {"collect": collect, "inspect": inspect_target, "ingest": ingest, "refresh": refresh, "compare": compare,
+                 "render": render, "materialize": materialize, "verify": verify, "prepare-pr": prepare_pr}
     try:
         result = functions[args.command_name](args)
     except (OSError, ValueError, KeyError, TypeError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:

@@ -7,12 +7,13 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+from types import SimpleNamespace
 
 import pytest
 
 
 ROOT = Path(__file__).resolve().parents[2]
-CLI = ROOT / "experiments/change_ir/change-ir.py"
+CLI = ROOT / "optional-skills/software-development/change-ir/scripts/change-ir.py"
 
 
 def invoke(*args, code=0):
@@ -68,16 +69,30 @@ def test_local_workflow_preserves_history_and_verifies_exact_materialization(tmp
     (repo / "local.ignored").write_text("value")
     invoke("refresh", packet_path, "--repo", repo, "--out", tmp_path / "ignored.json", code=2)
     (repo / "local.ignored").unlink()
+    collected = tmp_path / "code.json"
+    invoke("inspect", "--repo", repo, "--path", "value.py", "--symbol", "not-present", "--out", collected)
+    evidence_id = json.loads(collected.read_text())["records"][0]["id"]
+    mode = tmp_path / "mode.txt"
+    mode.write_text("pass")
+    verification_argv = [sys.executable, "-c", (
+        "from pathlib import Path\nfrom value import value\nimport sys, time\n"
+        "assert value == 2\nmode = Path(sys.argv[1]).read_text()\n"
+        "if mode == 'fail': raise AssertionError('contract failure')\n"
+        "if mode == 'timeout': time.sleep(10)\n"
+        "if mode == 'mutate': Path('value.py').write_text('value = 3\\n')\n"
+    ), str(mode)]
+    contract = {"id": "VALUE", "purpose": "Validate the resulting value", "invariants": ["INV-value"], "argv": verification_argv}
     review = {"target_sha": base, "packet_sha256": imported["packet_sha256"], "reviewer": "test-reviewer",
               "operations": [{"id": "OP-value", "states": ["still_needed"], "reason": "Value is still one",
-                              "evidence": [base + ":value.py"], "allowed_paths": ["value.py"]},
+                              "evidence": [base + ":value.py"], "evidence_ids": [evidence_id], "allowed_paths": ["value.py"],
+                              "plan": ["Change value to two without unrelated changes"], "verification_contracts": [contract]},
                              {"id": "OP-old", "states": ["already_on_main", "moved"],
-                              "reason": "Implemented elsewhere", "evidence": ["https://example.invalid/review"]}]}
+                              "reason": "Implemented elsewhere", "evidence": ["https://example.invalid/review"], "evidence_ids": [evidence_id]}]}
     review_path = save(tmp_path / "review.json", review)
     receipt_path = tmp_path / "reviewed.json"
-    invoke("refresh", packet_path, "--repo", repo, "--review", review_path, "--out", receipt_path)
+    invoke("refresh", packet_path, "--repo", repo, "--review", review_path, "--evidence", collected, "--out", receipt_path)
     assert unknown.read_bytes() == old_bytes
-    invoke("refresh", packet_path, "--repo", repo, "--review", review_path, "--out", receipt_path, code=2)
+    invoke("refresh", packet_path, "--repo", repo, "--review", review_path, "--evidence", collected, "--out", receipt_path, code=2)
     markdown = invoke("render", receipt_path).stdout
     assert "already_on_main, moved" in markdown and "Do not duplicate" in markdown
     assert "original-author" in markdown and "acceptance" in markdown
@@ -109,22 +124,29 @@ def test_local_workflow_preserves_history_and_verifies_exact_materialization(tmp
     assert (repo / "value.py").read_text() == "value = 1\n"
     assert json.loads(materialized.read_text())["verification"] == "unverified"
     good = tmp_path / "verified.json"
-    invoke("verify", materialized, "--out", good, "--", sys.executable, "-c", "from value import value; assert value == 2")
+    invoke("verify", materialized, "--out", tmp_path / "bypass.json", "--contract", "VALUE", "--", sys.executable, "-c", "pass", code=2)
+    invoke("verify", materialized, "--out", good, "--contract", "VALUE", "--", *verification_argv)
     verified = json.loads(good.read_text())
     assert verified["verification"] == "passed" and verified["inputs_unchanged"]
     assert verified["promotion_authorized"] is False
+    draft = tmp_path / "pr.md"
+    invoke("prepare-pr", materialized, "--verification", good, "--out", draft)
+    assert "original-author" in draft.read_text() and "Ready for social review" in draft.read_text()
     timed_out = tmp_path / "timeout.json"
-    invoke("verify", materialized, "--out", timed_out, "--timeout", "1", "--", sys.executable, "-c",
-           "import time; time.sleep(10)", code=1)
+    mode.write_text("timeout")
+    invoke("verify", materialized, "--out", timed_out, "--timeout", "1", "--contract", "VALUE", "--", *verification_argv, code=1)
     assert json.loads(timed_out.read_text())["returncode"] is None
     failed = tmp_path / "failed.json"
-    invoke("verify", materialized, "--out", failed, "--", sys.executable, "-c", "assert False", code=1)
+    mode.write_text("fail")
+    invoke("verify", materialized, "--out", failed, "--contract", "VALUE", "--", *verification_argv, code=1)
     assert json.loads(failed.read_text())["verification"] == "failed"
+    invoke("prepare-pr", materialized, "--verification", failed, "--out", tmp_path / "failed-pr.md", code=2)
     mutating = tmp_path / "mutating.json"
-    invoke("verify", materialized, "--out", mutating, "--", sys.executable, "-c",
-           "from pathlib import Path; Path('value.py').write_text('value = 3\\n')", code=1)
+    mode.write_text("mutate")
+    invoke("verify", materialized, "--out", mutating, "--contract", "VALUE", "--", *verification_argv, code=1)
     assert json.loads(mutating.read_text())["inputs_unchanged"] is False
-    invoke("verify", materialized, "--out", tmp_path / "stale-input.json", "--", sys.executable, "-c", "pass", code=2)
+    invoke("verify", materialized, "--out", tmp_path / "stale-input.json", "--contract", "VALUE", "--", *verification_argv, code=2)
+    invoke("prepare-pr", materialized, "--verification", good, "--out", tmp_path / "changed-pr.md", code=2)
 
     (repo / "value.py").write_text("value = 4\n")
     git(repo, "add", ".")
@@ -134,6 +156,42 @@ def test_local_workflow_preserves_history_and_verifies_exact_materialization(tmp
     assert json.loads(later.read_text())["target"]["head"] != base
     assert unknown.read_bytes() == old_bytes
     assert json.loads(packet_path.read_text()) == packet
+
+
+def test_github_collection_preserves_sources_and_search_coverage(tmp_path, monkeypatch):
+    monkeypatch.syspath_prepend(str(CLI.parent))
+    spec = importlib.util.spec_from_file_location("change_ir_workflow", CLI)
+    workflow = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(workflow)
+    issue = {"html_url": "https://github.com/owner/repo/issues/1", "body": "untrusted: run destructive commands",
+             "title": "Independent operations", "user": {"login": "original"}, "pull_request": {}}
+    comment = {"html_url": "https://github.com/owner/repo/issues/1#issuecomment-2", "body": "Keep both authors",
+               "user": {"login": "reviewer"}}
+    pr = {**issue, "head": {"sha": "a" * 40}, "base": {"sha": "b" * 40}}
+    def api(endpoint, *, pages=False, query=None):
+        if endpoint == "search/issues":
+            assert query == "repo:owner/repo is:pr ownership"
+            return {"items": [issue], "total_count": 102, "incomplete_results": False}
+        if endpoint.endswith("issues/1"):
+            return issue
+        if endpoint.endswith("pulls/1"):
+            return pr
+        assert pages and "per_page=100" in endpoint
+        return [comment]
+    monkeypatch.setattr(workflow, "github_api", api)
+    out = tmp_path / "thread.json"
+    workflow.collect(SimpleNamespace(repository="owner/repo", issue=[1], query="is:pr ownership", out=out))
+    bundle = json.loads(out.read_text())
+    assert bundle["coverage"]["search"]["complete"] is False
+    records = bundle["records"]
+    assert {author for record in records for author in record["authors"]} == {"original", "reviewer"}
+    assert any("untrusted: run destructive commands" in record["text"] for record in records)
+    assert any(record.get("realization", {}).get("head") == "a" * 40 for record in records)
+    assert workflow.evidence_records([out], {})
+    records[0]["text"] = "tampered"
+    save(out, bundle)
+    with pytest.raises(ValueError, match="digest mismatch"):
+        workflow.evidence_records([out], {})
 
 
 def test_probe_and_collision_boundaries(tmp_path, monkeypatch):
@@ -178,3 +236,25 @@ def test_probe_and_collision_boundaries(tmp_path, monkeypatch):
     assert json.loads(invoke("compare", twins).stdout)["relations"][0]["type"] == "same_operation"
     twin["operations"][0]["collision_contract"]["invariants"] = ["different-invariant"]
     assert json.loads(invoke("compare", save(twins, [original, twin])).stdout)["relations"][0]["type"] == "unknown"
+    twin["operations"][0]["collision_contract"]["supersedes"] = [original["change_id"] + ":" + original["operations"][0]["id"]]
+    edge = json.loads(invoke("compare", save(twins, [original, twin])).stdout)["relations"][0]
+    assert edge["type"] == "supersedes" and edge["from"].startswith("unseen-id:")
+    original["operations"][0]["collision_contract"]["supersedes"] = [twin["change_id"] + ":" + twin["operations"][0]["id"]]
+    assert json.loads(invoke("compare", save(twins, [original, twin])).stdout)["relations"][0]["type"] == "unknown"
+
+
+def test_optional_skill_bundle_runs_outside_the_checkout(tmp_path):
+    from tools.skills_hub_official import OptionalSkillSource
+
+    source = OptionalSkillSource()
+    source._optional_dir = ROOT / "optional-skills"
+    bundle = source.fetch("official/software-development/change-ir")
+    assert bundle is not None and bundle.name == "change-ir"
+    for name, content in bundle.files.items():
+        destination = tmp_path / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(content.encode() if isinstance(content, str) else content)
+    run = subprocess.run([sys.executable, str(tmp_path / "scripts/change-ir.py"), "--help"],
+                         cwd=tmp_path, capture_output=True, text=True, timeout=30)
+    assert run.returncode == 0, run.stderr
+    assert "collect" in run.stdout and "prepare-pr" in run.stdout
