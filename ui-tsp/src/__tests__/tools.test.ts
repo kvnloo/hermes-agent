@@ -72,6 +72,7 @@ describe('tool cards', () => {
 
   it('keeps a failed shell failed, folded, and exited', () => {
     const output = Array.from({ length: 14 }, (_, i) => `line ${i}`).join('\n')
+
     const card = node(toolNode(
       {
         args: { command: 'npm test' },

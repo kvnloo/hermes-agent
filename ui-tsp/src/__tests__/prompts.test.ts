@@ -1,6 +1,5 @@
-import { describe, expect, it } from 'vitest'
-
 import type { ServerRequest } from '@hermes/shared/json-rpc-channel'
+import { describe, expect, it } from 'vitest'
 
 import type { OverlayHost } from '../overlay.js'
 import { promptOverlay } from '../overlays/prompts.js'
