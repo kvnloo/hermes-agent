@@ -29,11 +29,8 @@ jobs:
         with:
           node-version: '22.16.0'
       - name: Install isolated pinned dependencies, without lifecycle scripts
-        run: npm install --ignore-scripts --no-audit --no-fund --workspaces=false
-      - name: Record the resolved dependency lock for promotion
-        run: |
-          echo OPENUI_LOCK_START
-          cat package-lock.json
-          echo OPENUI_LOCK_END
+        run: npm ci --ignore-scripts --no-audit --no-fund --workspaces=false
       - run: npm test
       - run: npm run demo
+      - name: Verify the experiment did not rewrite tracked inputs
+        run: git diff --exit-code
