@@ -14,6 +14,12 @@ const mode = positionals[0]
 if (!['prepare', 'run'].includes(mode) || positionals.length !== 1) throw new Error('Use prepare or run, with --entry --root --control --pane --proof-dir --python [--framework-root].')
 for (const name of ['entry', 'root', 'control', 'pane', 'proof-dir', 'python']) if (!values[name]) throw new Error(`Missing --${name}`)
 const root = await realpath(values.root)
+try {
+  await access(join(root, '.env'))
+  throw new Error('Refusing a checkout with a project dotenv fallback; no non-fixture env files may be loaded or sanitized.')
+} catch (error) {
+  if (error.code !== 'ENOENT') throw error
+}
 const entry = await realpath(values.entry)
 // Keep the venv executable spelling: realpath would bypass its pyvenv.cfg.
 const python = resolve(values.python)

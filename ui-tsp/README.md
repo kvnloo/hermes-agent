@@ -90,6 +90,8 @@ parent runs that command in the allocated pane. The launcher uses the real app
 entry and the supplied Python interpreter. Its environment allows only PTY,
 locale, and PATH values plus owned fixture paths and dummy credentials.
 An owned empty managed directory prevents host managed policy from entering the fixture.
+Preparation and real gateway startup refuse a checkout with a project `.env`.
+The real env loader may load and sanitize that fallback; no non-fixture dotenv file is permitted.
 Existing profiles are never overwritten.
 
 Before launch, the parent reads fresh control state and verifies `focused.id=11`,
@@ -133,12 +135,15 @@ or an unacknowledged frame does not count as displayed state.
 
 The transparent gateway wrapper records the original real requests/responses. It
 can hold only matching real `settings.get`/`settings.set` responses, unchanged,
-for deterministic ownership checks; tests prove the real response arrived before
-closing/replacing its owner. Release forwards that response exactly once. Gates
-expire after 60 seconds and are removed by teardown. No replies are manufactured,
-no recording is replayed as application input, and unrelated RPCs are never held.
-The wrapper fails closed on turns, grants, confirmations, global reasoning
-writes, and every `model.*` mutation. Only readonly `model.options` is allowed.
+for deterministic ownership checks. Tests prove the response is still undelivered
+after verified owner closure/replacement and arrives only after explicit release.
+Release forwards that response exactly once. A gate expiring after 60 seconds
+fails closed instead of forwarding; teardown removes the gate.
+No replies are manufactured, no recording is replayed as application input,
+and unrelated RPCs are never held. The wrapper fails closed on turns, grants,
+confirmations, global reasoning writes, every `model.*` mutation, every
+server-originated request, and every client reply to one. Only readonly
+`model.options` is allowed.
 Its Node line reader has no Python StreamReader 64-KiB line ceiling;
 observers incrementally parse complete multi-megabyte JSONL records.
 
@@ -150,7 +155,9 @@ fresh native AX, tree, and DOM dump evidence, matches bounds within one pixel,
 rejects hidden/ambiguous targets, and clicks the unique deepest native `nth`
 selector. Selectors stay raw; text is encoded with `JSON.stringify` inside one
 scenario string. It verifies the exact focused pane, launcher/entry identity, and
-checkout before observation/input. There is no capture-text or replay fallback.
+checkout before and after capture. AX, tree and dump targets belong only to the
+single visible focused pane's native subtree; ownership ambiguity fails closed.
+There is no capture-text or replay fallback.
 Field visibility is scoped to the painted native `pf-row` label, not the identical
 text in the search query. Multiple visible row labels still fail as ambiguous.
 

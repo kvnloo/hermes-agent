@@ -19,6 +19,17 @@ function leaf(config: Record<string,Json>, key: string): Json | undefined {
   return value
 }
 
+async function stillHeld(native:NativeControl,request:Wire): Promise<void> {
+  const wire = await native.wire()
+  expect(wire.some(row => row.dir === 'held' && row.body.id === request.body.id)).toBe(true)
+  expect(wire.filter(row => row.dir === 'delivered' && row.body.id === request.body.id)).toEqual([])
+  expect(wire.filter(row => row.dir === 'denied')).toEqual([])
+}
+
+async function deliveredAfterRelease(native:NativeControl,request:Wire): Promise<void> {
+  await expect.poll(async () => (await native.wire()).some(row => row.dir === 'delivered' && row.body.id === request.body.id)).toBe(true)
+}
+
 async function settingsOpen(screen:Screen,native:NativeControl): Promise<void> {
   await screen.getByText('Settings',{exact:true}).tap()
   await expect.poll(async () => (await native.prefs())?.p.title).toBe('Hermes settings')
@@ -426,7 +437,9 @@ test.describe('real native profile settings (no turns, confirmations or provider
       await screen.getByRole('switch',key,{exact:true}).tap()
       await expect(screen.getByRole('switch',key,{exact:true})).toBeChecked({checked:original})
       expect((await native.wire()).slice(offset).filter(w => w.dir === 'request' && w.body.method === 'settings.set')).toHaveLength(1)
+      await stillHeld(native,first)
       await native.release()
+      await deliveredAfterRelease(native,first)
       await saved(native,key,original)
       const writes = (await native.wire()).slice(offset).filter(w => w.dir === 'request' && w.body.method === 'settings.set')
       expect(writes.map(w => w.body.params?.value)).toEqual([!original,original])
@@ -443,12 +456,15 @@ test.describe('real native profile settings (no turns, confirmations or provider
       await expect.poll(async () => (await native.wire()).some(w => w.dir === 'held' && w.body.id === pending.body.id)).toBe(true)
       await close(screen,native)
       await screen.getByText('Settings',{exact:true}).tap()
-      await expect.poll(async () => (await native.prefs())?.id).not.toBe(old)
+      await expect.poll(async () => { const id = (await native.prefs())?.id; return typeof id === 'string' && id !== old }).toBe(true)
+      const replacement = (await native.prefs())!.id
       expect((await native.wire()).slice(offset2).filter(w => w.dir === 'request' && w.body.method === 'settings.get')).toHaveLength(0)
+      await stillHeld(native,pending)
       await native.release()
+      await deliveredAfterRelease(native,pending)
       await search(native,'agent.max_turns')
       await saved(native,'agent.max_turns',next)
-      expect((await native.prefs())!.id).not.toBe(old)
+      expect((await native.prefs())!.id).toBe(replacement)
       await native.evidence('replacement-owner-readback')
       await screen.getByRole('button','Decrease agent.max_turns',{exact:true}).tap()
       await saved(native,'agent.max_turns',baseline.fields['agent.max_turns']!.value)
@@ -470,10 +486,13 @@ test.describe('real native profile settings (no turns, confirmations or provider
       await close(screen,native)
       await expect.poll(() => composer(native)).toEqual(draft)
       await screen.getByText('Settings',{exact:true}).tap()
-      await expect.poll(async () => (await native.prefs())?.id).not.toBe(old)
+      await expect.poll(async () => { const id = (await native.prefs())?.id; return typeof id === 'string' && id !== old }).toBe(true)
+      const replacement = (await native.prefs())!.id
+      await stillHeld(native,pending)
       await native.release()
+      await deliveredAfterRelease(native,pending)
       await expect.poll(async () => (await native.prefs())?.p.sections?.some(s => s.rows.length)).toBe(true)
-      expect((await native.prefs())!.id).not.toBe(old)
+      expect((await native.prefs())!.id).toBe(replacement)
       await close(screen,native)
       await expect.poll(() => composer(native)).toEqual(draft)
       await native.type('!')
@@ -506,6 +525,9 @@ test.describe('real native profile settings (no turns, confirmations or provider
       await localCommand(native,'/new')
       const current = await requestAfter(native,offset,'session.create')
       await expect.poll(async () => (await native.wire()).find(w => w.dir === 'delivered' && w.body.id === current.body.id)?.body.result).toHaveProperty('session_id')
+      await stillHeld(native,oldRequest)
+      await native.release()
+      await deliveredAfterRelease(native,oldRequest)
     } finally { await native.release() }
     await expect.poll(async () => await native.prefs()).toBeUndefined()
     expect(await native.configBytes()).toBe(before)
