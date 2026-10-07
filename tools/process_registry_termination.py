@@ -2,11 +2,12 @@
 
 import logging
 import os
+import shlex
 import signal
 import subprocess
 import time
 from contextlib import suppress
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
 
 from hermes_cli._subprocess_compat import windows_hide_flags
 
@@ -128,6 +129,48 @@ class ProcessTerminationMixin:
                 if cls._proc_alive(proc):
                     proc.kill()  # SIGKILL on POSIX
                     logger.info("Escalated to SIGKILL for pid %d (ignored SIGTERM within %.1fs grace)", proc.pid, grace)
+
+    def _terminate_env_worker(self, env: Any, session: "ProcessSession") -> None:
+        """Best-effort tree-kill of the nohup'd worker a sandbox-backed session spawned.
+
+        ``spawn_via_env`` stores the wrapper subshell PID as ``session.pid`` and the
+        real worker PID in ``session.worker_pid_path``. Signaling only the wrapper
+        SIGTERMs it while it ``wait``s on the worker, leaving the worker reparented
+        to PID 1 inside the sandbox and still running. Read the worker PID and
+        tree-kill it (and its direct children) with a SIGTERM-then-SIGKILL escalation,
+        mirroring ``_terminate_host_pid``. Failures are swallowed (logged at debug):
+        a missing/unreadable worker PID file (legacy session, dead sandbox, race with
+        cleanup) leaves the caller's subsequent ``kill {session.pid}`` to clean up the
+        wrapper — the historical best-effort behavior, no regression.
+        """
+        worker_pid_path = getattr(session, "worker_pid_path", "") or ""
+        if not worker_pid_path:
+            return
+        try:
+            res = env.execute(
+                f"cat {shlex.quote(worker_pid_path)} 2>/dev/null", timeout=5
+            )
+        except Exception:
+            logger.debug("worker pid read failed for %s", worker_pid_path, exc_info=True)
+            return
+        worker_pid = (res.get("output", "") or "").strip()
+        # The PID came from a file we wrote and is interpolated into a kill
+        # command, so validate it is purely numeric first — a corrupted file
+        # can never inject shell syntax into the command below.
+        if not worker_pid.isdigit():
+            return
+        try:
+            # SIGTERM the worker + direct children, a brief grace, then SIGKILL any
+            # survivor so a worker that traps/ignores SIGTERM cannot keep running.
+            # The kill commands are individually best-effort (``2>/dev/null``).
+            env.execute(
+                f"pkill -P {worker_pid} 2>/dev/null; kill {worker_pid} 2>/dev/null; "
+                f"sleep 0.5; "
+                f"pkill -9 -P {worker_pid} 2>/dev/null; kill -9 {worker_pid} 2>/dev/null",
+                timeout=6,
+            )
+        except Exception:
+            logger.debug("env worker tree-kill failed for %s", worker_pid_path, exc_info=True)
 
     @staticmethod
     def _live_descendants(pid: int) -> list[int]:
