@@ -1,0 +1,39 @@
+name: OpenUI generation experiment
+on:
+  push:
+    branches: [exp/tern-openui-generation]
+    paths:
+      - ui-tsp/experiments/openui-generation/**
+      - .github/workflows/openui-generation-experiment.yml
+permissions:
+  contents: read
+concurrency:
+  group: openui-generation-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  contracts:
+    if: github.repository == 'kvnloo/hermes-agent'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      OPENUI_TELEMETRY_DISABLED: '1'
+      DO_NOT_TRACK: '1'
+    defaults:
+      run:
+        working-directory: ui-tsp/experiments/openui-generation
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22.16.0'
+      - name: Install isolated pinned dependencies, without lifecycle scripts
+        run: npm install --ignore-scripts --no-audit --no-fund --workspaces=false
+      - name: Record the resolved dependency lock for promotion
+        run: |
+          echo OPENUI_LOCK_START
+          cat package-lock.json
+          echo OPENUI_LOCK_END
+      - run: npm test
+      - run: npm run demo
