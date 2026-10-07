@@ -79,6 +79,19 @@ Each submission clears the draft and caret, resets draft undo, and records the s
 Native `send` records its own text, including multiline text, rather than an older draft.
 Hermes retains command dispatch, prompt queues and gateway submission authority.
 
+## Reasoning effort
+
+`/reasoning` reads the live session through `config.get`.
+`/reasoning <level>` uses `config.set`, not the separate slash worker.
+The composer adopts the confirmed effort, including before the first model turn.
+`none` appears as `off` in the native effort control.
+Click that control or press Shift+Tab to cycle the effort.
+
+Effort changes apply to this session by default. `--session` makes that scope explicit.
+Only `--global` persists the effort in the profile config.
+Display commands such as `/reasoning show` do not change the effort.
+A late command response cannot overwrite the status or transcript of another session.
+
 ## Native overlay actions
 
 An overlay action belongs to the instance that produced its native node.
