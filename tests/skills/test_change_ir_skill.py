@@ -187,7 +187,28 @@ def test_github_collection_preserves_sources_and_search_coverage(tmp_path, monke
     assert {author for record in records for author in record["authors"]} == {"original", "reviewer"}
     assert any("untrusted: run destructive commands" in record["text"] for record in records)
     assert any(record.get("realization", {}).get("head") == "a" * 40 for record in records)
-    assert workflow.evidence_records([out], {})
+    evidence = workflow.evidence_records([out], {})
+
+    reviewer_record = next(record for record in records if record["authors"] == ["reviewer"])
+    decision = {"state": "selected_for_delivery", "by": "reviewer", "source": reviewer_record["ref"],
+                "evidence_id": reviewer_record["id"]}
+    assert workflow.validated_maintainer_decisions({"maintainer_decisions": [decision]}, evidence) == [decision]
+    with pytest.raises(ValueError, match="not collected"):
+        workflow.validated_maintainer_decisions(
+            {"maintainer_decisions": [{**decision, "evidence_id": "missing"}]}, evidence)
+    with pytest.raises(ValueError, match="source does not match"):
+        workflow.validated_maintainer_decisions(
+            {"maintainer_decisions": [{**decision, "source": "https://example.invalid/wrong"}]}, evidence)
+    with pytest.raises(ValueError, match="author does not match"):
+        workflow.validated_maintainer_decisions(
+            {"maintainer_decisions": [{**decision, "by": "impostor"}]}, evidence)
+
+    original_authors = list(records[0]["authors"])
+    records[0]["authors"] = ["tampered"]
+    save(out, bundle)
+    with pytest.raises(ValueError, match="identity mismatch"):
+        workflow.evidence_records([out], {})
+    records[0]["authors"] = original_authors
     records[0]["text"] = "tampered"
     save(out, bundle)
     with pytest.raises(ValueError, match="digest mismatch"):
