@@ -1,0 +1,133 @@
+{
+  "change_id": "CHG-root-ownership-collision-cluster",
+  "title": "Concurrent root-ownership contribution collision cluster",
+  "provenance": {
+    "upstream_thread": "NousResearch/hermes-agent#134008",
+    "issues": [
+      91212,
+      102172,
+      102193,
+      128968
+    ],
+    "proposal_prompt": "DavidMetcalfe comment #6027540710: test whether stable change identity catches collisions between concurrent attempts."
+  },
+  "timeline": [
+    {
+      "pr": 102199,
+      "opened": "2026-09-03T13:25:45Z",
+      "author": "fangliquanflq"
+    },
+    {
+      "pr": 102208,
+      "opened": "2026-09-03T13:39:15Z",
+      "author": "Sahilvishnaliya"
+    },
+    {
+      "pr": 102258,
+      "opened": "2026-09-03T15:17:25Z",
+      "author": "Sahilvishnaliya"
+    },
+    {
+      "pr": 102320,
+      "opened": "2026-09-03T16:48:58Z",
+      "author": "aniruddhaadak80"
+    },
+    {
+      "pr": 105608,
+      "opened": "2026-09-08T05:47:34Z",
+      "author": "RickyYii"
+    },
+    {
+      "pr": 128970,
+      "opened": "2026-09-30T05:16:17Z",
+      "author": "dskwe"
+    }
+  ],
+  "semantic_operations": [
+    {
+      "id": "OP-refuse-foreign-owned-git-tree-before-mutation",
+      "issue_refs": [
+        102172,
+        102193
+      ],
+      "attempts": [
+        102199,
+        102320
+      ],
+      "relation": "near_duplicate",
+      "evidence": [
+        "both edit hermes_cli/update_cmd.py",
+        "both perform bounded POSIX ownership scan of repo/.git object paths",
+        "both refuse before backup/git mutation",
+        "both emit actionable chown guidance",
+        "PR #102320 triage explicitly calls #102258 competing; PR #102199 review describes pre-update preflight"
+      ]
+    },
+    {
+      "id": "OP-repair-install-ownership",
+      "issue_refs": [
+        102193,
+        102172
+      ],
+      "attempts": [
+        102258
+      ],
+      "relation": "overlapping_alternative_policy",
+      "evidence": [
+        "same updater ownership class and update_cmd.py surface",
+        "repair/chown policy rather than refuse-only policy",
+        "review explicitly says compose with/credit #102199 and declare merge order"
+      ]
+    },
+    {
+      "id": "OP-permission-error-remediation-message",
+      "issue_refs": [
+        102172
+      ],
+      "attempts": [
+        102208
+      ],
+      "relation": "complements",
+      "evidence": [
+        "post-failure UX hint on git stash permission error",
+        "review explicitly says complements #102199 pre-update preflight"
+      ]
+    },
+    {
+      "id": "OP-planned-stop-marker-owner-handoff",
+      "issue_refs": [
+        91212
+      ],
+      "attempts": [
+        105608
+      ],
+      "relation": "same_symptom_family_distinct_writer_boundary",
+      "evidence": [
+        "gateway/status.py rather than updater",
+        "root-written .gateway-planned-stop.json fresh-file ownership",
+        "review on #102258 explicitly calls #91212 adjacent and not solved by updater-tree repair"
+      ]
+    },
+    {
+      "id": "OP-refuse-root-context-update-on-user-install",
+      "issue_refs": [
+        128968
+      ],
+      "attempts": [
+        128970
+      ],
+      "relation": "same_symptom_family_distinct_admission_boundary",
+      "evidence": [
+        "update_contract.py admission guard",
+        "prevents privileged update context from mutating a user-owned install",
+        "different lifecycle boundary from stale .git ownership preflight"
+      ]
+    }
+  ],
+  "finding": {
+    "exact_collision": "PR #102199 and #102320 independently implement the same semantic operation within 3h23m.",
+    "broader_collision": "PR #102258 overlaps the same defect class with a competing repair policy and was opened between them.",
+    "false_positive_guard": "PR #105608 and #128970 share 'root-owned files' language but are distinct semantic operations and must not be collapsed as duplicates.",
+    "product_requirement": "Detect semantic operation collisions before implementation/review while preserving related-but-distinct boundaries."
+  }
+}
