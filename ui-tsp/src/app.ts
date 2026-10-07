@@ -895,6 +895,7 @@ export class App implements OverlayHost {
         if (!this.sid) {
           return
         }
+
         this.#gw.request('session.undo', { session_id: this.sid }).catch((error: Error) => {
           this.transcript.notice(error.message, 'error')
           this.changed()
@@ -935,7 +936,7 @@ export class App implements OverlayHost {
         onModel: () => openModelPicker(this),
         onQueueEdit: () => this.#dequeue(),
         onSend: ev => {
-          this.#submit(ev.text)
+          this.#submit(this.composer.take(ev.text))
           this.changed()
         },
         onSubmit: () => {

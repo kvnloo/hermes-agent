@@ -72,6 +72,13 @@ npx tsx scripts/splash-demo.ts --once     # one launch, as the app plays it
 SPLASH_DEMO_AT=3000 npx tsx scripts/splash-demo.ts --design atlas   # hold one instant, for a still
 ```
 
+## Composer submission
+
+Enter, the Send control and Tern's atomic `send` event use the same composer consumption path.
+Each submission clears the draft and caret, resets draft undo, and records the submitted text in prompt history.
+Native `send` records its own text, including multiline text, rather than an older draft.
+Hermes retains command dispatch, prompt queues and gateway submission authority.
+
 ## Developing
 
 ```sh

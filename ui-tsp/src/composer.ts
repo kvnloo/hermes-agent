@@ -39,9 +39,8 @@ export class Composer {
     this.#changed()
   }
 
-  /** Clears the draft after a submit, remembering it in the prompt history. */
-  take(): string {
-    const text = this.text
+  /** Consumes a submit (the draft, or Tern's atomic text) into prompt history. */
+  take(text = this.text): string {
     appendHistory(text)
     this.#undo = []
     this.#redo = []

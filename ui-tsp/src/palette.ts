@@ -5,7 +5,8 @@
 
 import type { HermesSkin } from '@hermes/shared/skin'
 import type { Palette } from '@stencil-hq/tern'
-import { fromSkin, themeToneHex, type ThemeColors } from '@tui/theme.js'
+import type { ThemeColors } from '@tui/theme.js'
+import { fromSkin, themeToneHex } from '@tui/theme.js'
 
 type Tokens = Record<string, string>
 
