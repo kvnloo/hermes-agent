@@ -37,7 +37,7 @@ From this directory, not the repository root:
 
 ```sh
 export OPENUI_TELEMETRY_DISABLED=1 DO_NOT_TRACK=1
-npm install --ignore-scripts --no-audit --no-fund --workspaces=false
+npm ci --ignore-scripts --no-audit --no-fund --workspaces=false
 npm test
 node cli.mjs prompt
 npm run demo
@@ -99,6 +99,13 @@ and frozen; changing the host registry later cannot mutate an earlier handoff.
 Never mistake this identity for proof of pixels or interactions.
 
 ## Tests and promotion
+
+At implementation commit `ad418c46aaeff7262c5a3c3d0d4d948da0458ed0`,
+[GitHub Actions run 37564802574](https://github.com/kvnloo/hermes-agent/actions/runs/37564802574)
+passed **68 tests (39 host checks + 29 real-package integration checks), zero skips**,
+and the CLI demo, on Node 22.16.0 / npm 10.9.2. The checked-in lock is copied from
+that run's actual npm resolution, including package integrity hashes. CI now uses
+`npm ci`; this is not a measured Tern or model-generation performance result.
 
 `npm run test:host` exercises independent host validation/resource gates without
 requiring npm dependencies. `npm test` additionally exercises the **real pinned
