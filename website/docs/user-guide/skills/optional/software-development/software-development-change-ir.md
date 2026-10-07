@@ -166,8 +166,10 @@ evidence and a new review/receipt; historical baselines are never rewritten.
 Carry provenance edges (`derived_from`, `requires`, `implements`, `proves`,
 `superseded_by`, `invalidated_by`, `moved_to`, `materialized_by` and collision
 relations) in a `relations` array with `from`, `type`, `to`, and human `credit`.
-Record explicit maintainer decisions separately with `state`, `by`, `source`;
-the active agent must verify that the source actually conveys the decision.
+Record explicit maintainer decisions separately with `state`, `by`, `source` and
+`evidence_id`. The ID must resolve to collected evidence whose ref matches
+`source` and whose recorded author matches `by`; the active agent must still
+verify that the source actually conveys the decision.
 
 ### 5. Reconstruct only selected work
 

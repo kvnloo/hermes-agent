@@ -103,10 +103,20 @@ def relative_path(value):
     return value
 
 
+def source_identity(kind, ref, sha, authors):
+    """Bind an evidence ID to both content and recorded human provenance."""
+    strings(authors, "evidence authors")
+    material = kind + "\0" + ref + "\0" + sha + "\0" + json.dumps(
+        authors, ensure_ascii=False, separators=(",", ":")
+    )
+    return digest(material.encode())[:20]
+
+
 def source_record(kind, ref, text, *, author=None):
     sha = digest(text.encode())
-    return {"id": digest((kind + "\0" + ref + "\0" + sha).encode())[:20], "kind": kind, "ref": ref,
-            "sha256": sha, "text": text, "authors": [author] if author else []}
+    authors = [author] if author else []
+    return {"id": source_identity(kind, ref, sha, authors), "kind": kind, "ref": ref,
+            "sha256": sha, "text": text, "authors": authors}
 
 
 def github_api(endpoint, *, pages=False, query=None):
@@ -151,7 +161,7 @@ def collect(args):
         records += [discussion_record("search_candidate", item) for item in result["items"]]
         search = {"query": args.query, "total_count": result["total_count"], "included": len(result["items"]),
                   "complete": not result["incomplete_results"] and result["total_count"] <= len(result["items"])}
-    # Source IDs bind the exact content; repeated refs with newer content keep both observations.
+    # Source IDs bind exact content and recorded authors; repeated refs with newer content keep both observations.
     records = list({record["id"]: record for record in records}.values())
     bundle = {"kind": "evidence", "created_at": now(), "repository": args.repository,
               "records": records, "coverage": {"discussion_pages": "all", "search": search},
@@ -220,10 +230,27 @@ def evidence_records(paths, target):
             require(bundle["target"] == target, "Evidence belongs to a different target snapshot")
         for record in bundle["records"]:
             require(record["sha256"] == digest(record["text"].encode()), "Evidence digest mismatch")
-            expected = digest((record["kind"] + "\0" + record["ref"] + "\0" + record["sha256"]).encode())[:20]
+            authors = record.get("authors", [])
+            expected = source_identity(record["kind"], record["ref"], record["sha256"], authors)
             require(record["id"] == expected, "Evidence identity mismatch")
             records[record["id"]] = record
     return records
+
+
+def validated_maintainer_decisions(review, records):
+    decisions = (review or {}).get("maintainer_decisions", [])
+    require(isinstance(decisions, list), "Maintainer decisions must be a list")
+    for decision in decisions:
+        require(isinstance(decision, dict), "Maintainer decision must be an object")
+        for key in ("state", "by", "source", "evidence_id"):
+            string(decision.get(key), f"decision {key}")
+        evidence_id = decision["evidence_id"]
+        require(evidence_id in records, "Maintainer decision cites evidence that was not collected")
+        source = records[evidence_id]
+        require(decision["source"] == source["ref"], "Maintainer decision source does not match collected evidence")
+        require(decision["by"] in source.get("authors", []),
+                "Maintainer decision author does not match collected evidence")
+    return decisions
 
 
 def verification_contracts(contracts):
@@ -345,13 +372,9 @@ def refresh(args):
         "reviewer": review.get("reviewer") if review else None,
         "operations": operations, "anchor_evidence": evidence,
         "evidence_records": list(records.values()), "evidence_bound": bool(reviewed),
-        "relations": relations["relations"], "maintainer_decisions": (review or {}).get("maintainer_decisions", []),
+        "relations": relations["relations"], "maintainer_decisions": validated_maintainer_decisions(review, records),
         "acceptance_inferred": False,
     }
-    for decision in receipt["maintainer_decisions"]:
-        require(isinstance(decision, dict), "Maintainer decision must be an object")
-        for key in ("state", "by", "source"):
-            string(decision.get(key), f"decision {key}")
     write_new(args.out, encoded(receipt))
     return {"out": str(args.out), "target_sha": target["head"], "states": operations}
 
