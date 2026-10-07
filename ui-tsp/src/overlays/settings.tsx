@@ -215,9 +215,8 @@ class Settings implements Overlay {
         return
       }
 
-      this.#fields = fields(result)
       this.#profile = result.profile
-      this.#reconcile()
+      this.#reconcile(result)
       this.#state = 'ready'
       const pages = Object.values(this.#fields).map(field => `profile.${field.category}`)
 
@@ -347,8 +346,7 @@ class Settings implements Overlay {
           throw new Error('The saved field is absent from the profile readback.')
         }
 
-        this.#fields = fields(current)
-        this.#reconcile()
+        this.#reconcile(current, edit.key)
 
         this.#message = `Profile value confirmed: ${edit.key}.`
       })
@@ -370,7 +368,18 @@ class Settings implements Overlay {
     }
   }
 
-  #reconcile() {
+  #reconcile(result: SettingsGetResult, acceptedKey?: string) {
+    const next = fields(result)
+
+    // A coupled canonical update can invalidate another field's earlier acceptance.
+    for (const key of this.#accepted.keys()) {
+      if (key !== acceptedKey && (!next[key] || !this.#fields[key] || !equal(next[key].value, this.#fields[key].value))) {
+        this.#accepted.delete(key)
+      }
+    }
+
+    this.#fields = next
+
     for (const [key, edit] of this.#readback) {
       if (!this.#fields[key]) {
         throw new Error(`The saved field is absent from the profile readback: ${key}`)
@@ -610,7 +619,7 @@ class Settings implements Overlay {
     }
 
     const input = field.type === 'select' ? this.#option ?? ''
-      : field.type === 'number' ? (this.#editor.text.trim() ? Number(this.#editor.text) : null)
+      : field.type === 'number' ? (this.#editor.text.trim() ? this.#editor.text : null)
         : this.#editor.text
 
     this.#edit(key, input)
@@ -728,6 +737,10 @@ class Settings implements Overlay {
             }) : null}
             {selectedField && (!selectedField.sensitive || selectedField.type === 'list' || selectedField.type === 'object') ? this.#button('default', 'Use default for selected field', () => this.#edit(selectedKey!, selectedField.default)) : null}
             {selectedField?.nullable && !selectedField.sensitive ? this.#button('unset', 'Unset selected field', () => this.#edit(selectedKey!, null)) : null}
+            {selectedField?.sensitive && selectedField.type === 'string' ? this.#button('clear', 'Clear private value', () => {
+              this.#editing = undefined
+              this.#edit(selectedKey!, '')
+            }) : null}
             {this.#button('close', 'Close', () => this.#app.close(this))}
           </row>
         </col>

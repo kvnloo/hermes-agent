@@ -266,6 +266,12 @@ describe('native Settings', () => {
       expect(row(surface, 'optional').warning).toBeTruthy()
       expect(row(surface, 'optional').control).toHaveProperty('value', '1e')
       expect(writes).toEqual([])
+      app.overlays.at(-1)!.onKey!(escape)
+      app.changed()
+      await rendered()
+      expect(row(surface, 'optional').control).toHaveProperty('value', '1e')
+      await surface.dispatch({ ev: 'activate', id: prefs(surface).id, item: 'optional', raw: {}, sf: 'hermes' })?.()
+      expect(row(surface, 'optional').control).toHaveProperty('value', '1e')
       await press('\x7f')
       expect(row(surface, 'optional').control).toHaveProperty('value', '1')
       await press('\r')
@@ -358,6 +364,84 @@ describe('native Settings', () => {
       await rendered()
       expect(committed).toBe(1)
       expect(row(surface, 'policy').control).toMatchObject({ on: true })
+    })
+  })
+
+  it('allows a coupled consent value to be enabled again after another field disables it', async () => {
+    const stored = { enabled: field('boolean', true), send: field('boolean', false) }
+    let enabledSends = 0
+
+    const fixture: Fixture = {
+      read: async () => profile(stored),
+      write: async (key, value, confirmed) => {
+        if (!confirmed) {
+          return { confirm_message: 'Change consent?', confirm_required: true, key }
+        }
+
+        stored[key as keyof typeof stored].value = value
+
+        if (key === 'enabled' && value === false) {
+          stored.send.value = false
+        }
+
+        if (key === 'send' && value === true) {
+          enabledSends++
+        }
+
+        return { confirm_message: '', confirm_required: false, key }
+      }
+    }
+
+    await withApp(fixture, async (app, surface) => {
+      openSettings(app)
+      await rendered()
+
+      for (const [key, value] of [['send', true], ['enabled', false], ['send', true]] as const) {
+        await change(surface, key, value)()
+        await rendered()
+        await click(surface, 'confirm')()
+        await rendered()
+      }
+
+      expect(stored.send.value).toBe(true)
+      expect(enabledSends).toBe(2)
+      expect(row(surface, 'send').control).toMatchObject({ on: true })
+    })
+  })
+
+  it('clears a private scalar only after an explicit clear and exact confirmation', async () => {
+    const stored = { secret: field('string', null, { sensitive: true }) }
+    let privateValue = 'fixture-private-value'
+
+    const fixture: Fixture = {
+      read: async () => profile(stored),
+      write: async (key, value, confirmed) => {
+        if (!confirmed) {
+          return { confirm_message: 'Clear private credential?', confirm_required: true, key }
+        }
+
+        privateValue = String(value)
+
+        return { confirm_message: '', confirm_required: false, key }
+      }
+    }
+
+    await withApp(fixture, async (app, surface, press) => {
+      openSettings(app)
+      await rendered()
+      await surface.dispatch({ ev: 'activate', id: prefs(surface).id, item: 'secret', raw: {}, sf: 'hermes' })?.()
+      await press('\r')
+      expect(privateValue).toBe('fixture-private-value')
+      await click(surface, 'clear')()
+      await rendered()
+      await press('\r')
+      expect(privateValue).toBe('fixture-private-value')
+      await click(surface, 'clear')()
+      await rendered()
+      await click(surface, 'confirm')()
+      await rendered()
+      expect(privateValue).toBe('')
+      expect(row(surface, 'secret').control).toHaveProperty('value', '')
     })
   })
 

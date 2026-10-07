@@ -80,7 +80,9 @@ Boolean and numeric environment templates stay visible as raw text, not false sw
 Nullable booleans and numbers show **Unset**, not false or zero.
 During numeric editing, the native text control shows the raw draft, including incomplete numbers.
 Enter validates and commits the number. Typing alone does not change the saved value.
+Rejected numeric drafts survive leaving and reopening the editor as their original text.
 Stored credential values remain undisclosed. Null credential leaves in JSON preserve the stored credential. An explicit empty string clears a scalar credential.
+**Clear private value** submits an explicit empty string through the same exact confirmation flow. An untouched blank editor preserves the credential.
 
 Each row has the saved value and its default.
 **Use default for selected field** restores a public field's default. For a structured private field, credential nulls still preserve stored credentials.
@@ -92,6 +94,7 @@ The composer retains its draft and caret. Ctrl+C closes Settings without clearin
 Hermes sends one changed key per write and serializes profile operations.
 Duplicate native commits do not repeat a mutation.
 The displayed saved value comes from canonical `settings.get` readback.
+Coupled readback changes invalidate earlier duplicate-commit acceptance for the affected fields.
 Errors retain the draft and offer **Retry**.
 If a write was acknowledged but readback failed, Retry repeats the read, not the mutation.
 An explicit revert after failed readback is retained and saved, including when the acknowledged value was null.
