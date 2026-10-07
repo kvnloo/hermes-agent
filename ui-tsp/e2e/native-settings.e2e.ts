@@ -36,7 +36,7 @@ async function tapAction(screen:Screen,native:NativeControl,name:string): Promis
 }
 
 async function settingsOpen(screen:Screen,native:NativeControl): Promise<void> {
-  await screen.getByText('Settings',{exact:true}).tap()
+  await screen.getByText('Open Hermes settings',{exact:true}).tap()
   await expect.poll(async () => (await native.prefs())?.p.title).toBe('Hermes settings')
   await expect.poll(async () => (await native.settings()).fields['agent.max_turns']?.type).toBe('number')
   await expect.poll(async () => (await native.prefs())?.p.sections?.some(s => s.rows.length)).toBe(true)
@@ -406,7 +406,7 @@ test.describe('real native profile settings (no turns, confirmations or provider
     try {
       await close(screen,native)
       await writeFile(path,corrupt,{mode:0o600})
-      await screen.getByText('Settings',{exact:true}).tap()
+      await screen.getByText('Open Hermes settings',{exact:true}).tap()
       await expect(screen.getByText('Retry',{exact:true})).toBeVisible()
       expect(await native.configBytes()).toBe(corrupt)
       await native.evidence('real-load-error')
@@ -460,7 +460,7 @@ test.describe('real native profile settings (no turns, confirmations or provider
       const pending = await requestAfter(native,offset2,'settings.set','agent.max_turns')
       await expect.poll(async () => (await native.wire()).some(w => w.dir === 'held' && w.body.id === pending.body.id)).toBe(true)
       await close(screen,native)
-      await screen.getByText('Settings',{exact:true}).tap()
+      await screen.getByText('Open Hermes settings',{exact:true}).tap()
       await expect.poll(async () => { const id = (await native.prefs())?.id; return typeof id === 'string' && id !== old }).toBe(true)
       const replacement = (await native.prefs())!.id
       expect((await native.wire()).slice(offset2).filter(w => w.dir === 'request' && w.body.method === 'settings.get')).toHaveLength(0)
@@ -484,13 +484,13 @@ test.describe('real native profile settings (no turns, confirmations or provider
     const draft = await composer(native), offset = (await native.wire()).length
     const token = await native.hold('settings.get')
     try {
-      await screen.getByText('Settings',{exact:true}).tap()
+      await screen.getByText('Open Hermes settings',{exact:true}).tap()
       const old = (await native.prefs())!.id
       const pending = await requestAfter(native,offset,'settings.get')
       await expect.poll(async () => (await native.wire()).some(w => w.dir === 'held' && w.body.id === pending.body.id)).toBe(true)
       await close(screen,native)
       await expect.poll(() => composer(native)).toEqual(draft)
-      await screen.getByText('Settings',{exact:true}).tap()
+      await screen.getByText('Open Hermes settings',{exact:true}).tap()
       await expect.poll(async () => { const id = (await native.prefs())?.id; return typeof id === 'string' && id !== old }).toBe(true)
       const replacement = (await native.prefs())!.id
       await stillHeld(native,pending)
@@ -522,7 +522,7 @@ test.describe('real native profile settings (no turns, confirmations or provider
     const foreignBefore = await readFile(foreignPath,'utf8')
     await native.hold('settings.get')
     try {
-      await screen.getByText('Settings',{exact:true}).tap()
+      await screen.getByText('Open Hermes settings',{exact:true}).tap()
       const oldRequest = await requestAfter(native,offset,'settings.get')
       await expect.poll(async () => (await native.wire()).some(w => w.dir === 'held' && w.body.id === oldRequest.body.id)).toBe(true)
       expect(oldRequest.body.params?.session_id).toBe(initialSession)

@@ -165,6 +165,15 @@ match the owned AX bounds to one deepest owned DOM selector, dispatch
 `a11y scroll-into-view`, then require fresh visible geometry before clicking.
 This scroll is not a focus or click substitute. A broad search placed a footer
 13,035 pixels below the viewport; its visible position and unchanged YAML were verified.
+Locator taps use a native AX `click` action when the target advertises it;
+otherwise they retain native pointer dispatch. Settings is addressed by its
+actionable AX name, `Open Hermes settings`, not its decorative `Settings` label.
+The label click returned success without issuing `settings.get` in a fresh pane.
+The advertised action produced that request and SDK reconciliation, but a fresh
+screenshot exposed the closed-beta sign-in gate over the app: **not visible proof**.
+Captures now require explicit `state.gate.applies === false` before and after
+reading native trees. An active or unknown gate blocks input and acceptance.
+Restore access interactively; never automate account approval or act through a gate.
 Field visibility is scoped to the painted native `pf-row` label, not the identical
 text in the search query. Multiple visible row labels still fail as ambiguous.
 

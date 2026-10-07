@@ -51,6 +51,7 @@ export class NativeControl {
       return this.ctl(scenario,remaining)
     }
     const state = record(await ctl('state'))
+    if (record(state.gate).applies !== false) throw new EngineError('INVALID_STATE','Native Tern account gate blocks visible proof; restore access interactively before any input.',{ retryable:false })
     const panes = state.panes as { id:number }[] | undefined
     const focused = record(state.focused)
     if (!panes?.some(p => String(p.id) === this.manifest.pane) || String(focused.id) !== this.manifest.pane) throw new Error('Native input target changed; parent must reselect the prepared private pane.')
@@ -77,7 +78,9 @@ export class NativeControl {
     const dump = windowDump.filter(node => node.nth === prefix || node.nth.startsWith(`${prefix}>`))
     const tree = [paneTree]
     const elements = flatten(tree)
-    const after = record(record(await ctl('state')).focused)
+    const end = record(await ctl('state'))
+    if (record(end.gate).applies !== false) throw new EngineError('INVALID_STATE','Native Tern account gate changed during capture; no input is permitted.',{ retryable:false })
+    const after = record(end.focused)
     if (String(after.id) !== this.manifest.pane || after.cwd !== focused.cwd || after.running !== focused.running) throw new Error('Prepared pane ownership changed during native capture.')
     const surfaces = elements.filter(e => (e.class ?? '').split(' ').includes('sf-region') && e.rect)
     const inApp = (r?: readonly number[]) => Boolean(r && surfaces.some(e => r[0]! >= e.rect![0]! - 1 && r[1]! >= e.rect![1]! - 1 && r[0]! + r[2]! <= e.rect![0]! + e.rect![2]! + 1 && r[1]! + r[3]! <= e.rect![1]! + e.rect![3]! + 1))
@@ -168,7 +171,9 @@ export class NativeControl {
     if (matches.length !== 1) throw new EngineError('NOT_ACTIONABLE', `AX ${node.name ?? id} has ${matches.length} deepest visible DOM matches (expected exactly one).`, { retryable:false })
     const target = matches[0]!
     await appendFile(join(this.manifest.proof,'native-actions.jsonl'),JSON.stringify({ time:Date.now(), id, name:node.name, role:node.role, rect:r, nth:target.nth, path:target.path })+'\n',{ mode:0o600 })
-    try { await this.ctl(`click ${target.nth}`) } catch (cause) { throw new EngineError('ACTION_MAY_HAVE_COMMITTED','Native click failed after dispatch; do not retry it.',{ retryable:false, cause }) }
+    const ax = flatten([fresh.ax]).find(n => `ax:${n.id}` === id)
+    const action = ax?.actions?.includes('click') ? 'a11y click' : 'click'
+    try { await this.ctl(`${action} ${target.nth}`) } catch (cause) { throw new EngineError('ACTION_MAY_HAVE_COMMITTED','Native click failed after dispatch; do not retry it.',{ retryable:false, cause }) }
     await this.snapshot()
   }
 
