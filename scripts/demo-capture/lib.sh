@@ -7,7 +7,9 @@ DEMO_STATE=${DEMO_STATE:-/tmp/hermes-demo-capture}
 # Where takes are written. Raw frames are large (1080p120: ~1 GB per second): use a real disk.
 DEMO_OUT=${DEMO_OUT:-$here/out}
 DEMO_OUTPUT=${DEMO_OUTPUT:-DEMOCAP}
-DEMO_THEME=${DEMO_THEME:-hermes}
+# Light or dark: chosen when the stage comes up (DEMO_APPEARANCE=light ./stage.sh up ...) and kept for its takes.
+DEMO_APPEARANCE=${DEMO_APPEARANCE:-$(cat "$DEMO_STATE/appearance" 2> /dev/null || echo dark)}
+if [ "$DEMO_APPEARANCE" = light ]; then DEMO_THEME=${DEMO_THEME:-hermes-light}; else DEMO_THEME=${DEMO_THEME:-hermes}; fi
 sock=$DEMO_STATE/ctl.sock
 
 ctl() { tern ctl --control "$sock" "$@"; }

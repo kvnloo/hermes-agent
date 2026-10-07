@@ -50,7 +50,7 @@ while [ "$(tabs)" -gt 1 ]; do
   ctl tab close > /dev/null
   sleep 0.3
 done
-ctl theme dark "$DEMO_THEME" > /dev/null
+ctl theme "$DEMO_APPEARANCE" "$DEMO_THEME" > /dev/null
 # Let the pane settle at its final size: a program reads it once, as it starts.
 sleep 1.5
 

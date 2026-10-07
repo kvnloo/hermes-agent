@@ -46,8 +46,12 @@ up)
   mkdir -p "$DEMO_STATE/home/.omp/agent/themes" "$DEMO_STATE/hermes-home" "$DEMO_OUT"
   chmod 700 "$DEMO_STATE"
   cp "$here/themes/"*.json "$DEMO_STATE/home/.omp/agent/themes/"
-  printf 'theme:\n  dark: %s\n  light: hermes-light\n' "$DEMO_THEME" > "$DEMO_STATE/home/.omp/agent/config.yml"
+  printf 'theme:\n  dark: hermes\n  light: hermes-light\n' > "$DEMO_STATE/home/.omp/agent/config.yml"
   [ -f "$DEMO_STATE/settings.json" ] || echo '{"theme":"Dark","material":"Solid"}' > "$DEMO_STATE/settings.json"
+  # Tern's appearance is a setting read at start: there is no control command for it.
+  echo "$DEMO_APPEARANCE" > "$DEMO_STATE/appearance"
+  if [ "$DEMO_APPEARANCE" = light ]; then word=Light; else word=Dark; fi
+  sed -i -E "s/\"theme\": *\"(Dark|Light)\"/\"theme\": \"$word\"/" "$DEMO_STATE/settings.json"
 
   focus_save
   hyprctl monitors -j | grep -q "\"name\": \"$DEMO_OUTPUT\"" || hyprctl output create headless "$DEMO_OUTPUT" > /dev/null

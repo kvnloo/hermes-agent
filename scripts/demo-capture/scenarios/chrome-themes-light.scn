@@ -1,0 +1,23 @@
+# The same turn under Tern's light themes, ending on hermes-light. Set the stage to light first: tern ctl appearance light
+# A finished Hermes turn, then Tern's themes changing under it: the chrome
+# wears whatever theme the window has. Streaming preset; record about 55 seconds.
+#   capture.sh chrome-themes 55 chrome-themes "What does this project do? Read the code and answer in two sentences."
+run "{state}/hermes.sh 0"
+wait 5000
+type "{arg}"
+wait 700
+key enter
+wait 36000
+theme light "light-github"
+wait 1300
+theme light "light-catppuccin"
+wait 1300
+theme light "light-tokyo-night"
+wait 1300
+theme light "light-gruvbox"
+wait 1300
+theme light "light-solarized"
+wait 1300
+theme light "light-one"
+wait 1300
+theme light "hermes-light"

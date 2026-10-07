@@ -126,6 +126,11 @@ The welcome screen does not follow the theme: the launch splash brings the Herme
 palette (blue `#0000f2`) on its own surface, so it is full blue and the session it hands
 off to is the theme's. A skin the user chose replaces the brand palette.
 
+`DEMO_APPEARANCE=light ./stage.sh up 1080p60` brings the stage up white, in `hermes-light`
+(appearance is a Tern setting read at start, so it is chosen here, not per take). Known defect:
+under a light theme Tern darkens the welcome screen's inks for contrast with the white pane, so
+the figure is dark on the blue.
+
 `./stage.sh theme NAME` switches the stage to any of Tern's themes. The chrome follows,
 because it draws in theme tokens.
 
@@ -144,6 +149,7 @@ fourth argument of `capture.sh`.
 | `agent-turn` | A real launch and a real prompt: splash, hand-off, tool cards, streamed answer. `ARG` is the prompt. |
 | `beside-shell` | Hermes answering in one pane while a shell runs beside it. `ARG` is the prompt. |
 | `chrome-themes` | A finished turn, then Tern's themes changing under the chrome. `ARG` is the prompt. |
+| `chrome-themes-light` | The same on a light stage, under Tern's light themes. |
 
 The stage's Hermes home is empty, so `launch` shows the real launch but has no model
 provider. The three scenarios above need a real one. Name it when the stage comes up, with
