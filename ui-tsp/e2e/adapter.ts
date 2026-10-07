@@ -10,7 +10,7 @@ import { flatten, record, type Json, type Manifest, type Prefs, type SettingsRes
 const exec = promisify(execFile)
 interface Ax {
   id?: number; role?: string; name?: string; description?: string; value?: string | number
-  bounds?: number[]; states?: string[]; children?: Ax[]; level?: number
+  bounds?: number[]; states?: string[]; children?: Ax[]; level?: number; actions?: string[]
 }
 interface Tree {
   tag?: string; id?: string; role?: string; class?: string; title?: string; text?: string; rect?: number[]
@@ -37,24 +37,29 @@ export class NativeControl {
   #applied = 0
   constructor(manifest: Manifest) { this.manifest = manifest }
 
-  async ctl(scenario: string): Promise<unknown> {
-    const { stdout } = await exec('tern', ['ctl','--control',this.manifest.control,scenario], { maxBuffer:32*1024*1024, timeout:30000 })
+  async ctl(scenario: string, timeout = 30000): Promise<unknown> {
+    const { stdout } = await exec('tern', ['ctl','--control',this.manifest.control,scenario], { maxBuffer:32*1024*1024, timeout })
     const result: unknown = JSON.parse(stdout)
     if (record(result).ok !== true) throw new EngineError('ENGINE_FAILURE', `Native control failed: ${scenario}: ${stdout}`, { retryable:false })
     return result
   }
 
-  async snapshot(): Promise<Snapshot> {
-    const state = record(await this.ctl('state'))
+  async snapshot(deadline = Infinity): Promise<Snapshot> {
+    const ctl = (scenario:string) => {
+      const remaining = Math.min(30000,deadline-Date.now())
+      if (remaining <= 0) throw new EngineError('NOT_ACTIONABLE','Native capture deadline expired.',{ retryable:false })
+      return this.ctl(scenario,remaining)
+    }
+    const state = record(await ctl('state'))
     const panes = state.panes as { id:number }[] | undefined
     const focused = record(state.focused)
     if (!panes?.some(p => String(p.id) === this.manifest.pane) || String(focused.id) !== this.manifest.pane) throw new Error('Native input target changed; parent must reselect the prepared private pane.')
     if (focused.cwd !== this.manifest.root || typeof focused.running !== 'string' || !focused.running.includes(this.manifest.launch)) throw new Error('The prepared private pane is not running its recorded real native launcher.')
     // Serial captures avoid combining snapshots from independently racing UI actions.
-    const windowAx = await this.ctl('a11y') as Ax
-    const payload = record(await this.ctl('tree'))
+    const windowAx = await ctl('a11y') as Ax
+    const payload = record(await ctl('tree'))
     const windowTree = payload.tree as Tree[]
-    const dumped = record(await this.ctl('dump *'))
+    const dumped = record(await ctl('dump *'))
     const windowDump = dumped.elements as Dump[]
     const header = record(dumped.header)
     const viewport = record(header.viewport) as { width:number; height:number }
@@ -72,16 +77,15 @@ export class NativeControl {
     const dump = windowDump.filter(node => node.nth === prefix || node.nth.startsWith(`${prefix}>`))
     const tree = [paneTree]
     const elements = flatten(tree)
-    const after = record(record(await this.ctl('state')).focused)
+    const after = record(record(await ctl('state')).focused)
     if (String(after.id) !== this.manifest.pane || after.cwd !== focused.cwd || after.running !== focused.running) throw new Error('Prepared pane ownership changed during native capture.')
     const surfaces = elements.filter(e => (e.class ?? '').split(' ').includes('sf-region') && e.rect)
     const inApp = (r?: readonly number[]) => Boolean(r && surfaces.some(e => r[0]! >= e.rect![0]! - 1 && r[1]! >= e.rect![1]! - 1 && r[0]! + r[2]! <= e.rect![0]! + e.rect![2]! + 1 && r[1]! + r[3]! <= e.rect![1]! + e.rect![3]! + 1))
-    const ownedAx = (node:Ax): Ax[] => {
-      const children = (node.children ?? []).flatMap(ownedAx)
-      return node.bounds && inApp(node.bounds) ? [{...node,children}] : children
-    }
-    const ax: Ax = {...windowAx,children:(windowAx.children ?? []).flatMap(ownedAx)}
-    const nodes: SemanticNode[] = flatten([ax]).filter(n => n.id !== undefined && n.bounds && inApp(n.bounds)).map(n => {
+    // Own the AX subtree by its native pane region, including offscreen descendants.
+    const owners = flatten([windowAx]).filter(node => node.role === 'Region' && node.name === 'Agent block' && node.bounds && near(node.bounds,paneTree.rect!))
+    if (owners.length !== 1) throw new Error('Cannot correlate one native AX owner with the prepared pane.')
+    const ax: Ax = owners[0]!
+    const nodes: SemanticNode[] = flatten([ax]).filter(n => n.id !== undefined && n.bounds && n.bounds[2]! > 0 && n.bounds[3]! > 0).map(n => {
       const matching = elements.filter(e => e.rect && near(e.rect, n.bounds!))
       const host = matching.find(e => e.role === roles[n.role ?? '']) ?? matching.find(e => e.input)
       const states = n.states ?? []
@@ -111,6 +115,29 @@ export class NativeControl {
     // form label from becoming two locator matches (AX field + DOM label).
     for (const [i, e] of elements.entries()) if (e.text && visible(e.rect) && inApp(e.rect) && !nodes.some(node => node.name === e.text)) roots.push({ ref:{ id:`text:${i}:${e.text}`, revision:'' }, role:'text', text:e.text, name:e.text, rect:box(e.rect!) })
     return { ax, tree, dump, nodes:flatten(roots), roots, viewport }
+  }
+
+  async reveal(name:string): Promise<void> {
+    const deadline = Date.now()+30000
+    const fresh = await this.snapshot(deadline)
+    const targets = flatten([fresh.ax]).filter(node => node.name === name && node.id !== undefined)
+    if (targets.length !== 1) throw new EngineError('NOT_ACTIONABLE', `Native reveal ${name} has ${targets.length} owned AX targets.`, { retryable:false })
+    const target = targets[0]!
+    const id = `ax:${target.id}`
+    if (fresh.nodes.find(node => node.ref.id === id)?.states?.hidden === false) return
+    if (!target.actions?.includes('scroll-into-view') || !target.bounds) throw new EngineError('UNSUPPORTED_CAPABILITY','The owned native target does not expose accessibility scrolling.',{ retryable:false })
+    const matches = fresh.dump.filter(node => near(node.rect,target.bounds!))
+    const deepest = matches.filter(node => !matches.some(other => other !== node && other.path.startsWith(`${node.path}>`)))
+    if (deepest.length !== 1) throw new EngineError('NOT_ACTIONABLE','Offscreen native AX target has ambiguous owned DOM geometry.',{ retryable:false })
+    const remaining = deadline-Date.now()
+    if (remaining <= 0) throw new EngineError('NOT_ACTIONABLE','Native scrolling deadline expired before dispatch.',{ retryable:false })
+    try { await this.ctl(`a11y scroll-into-view ${deepest[0]!.nth}`,remaining) } catch (cause) { throw new EngineError('ACTION_MAY_HAVE_COMMITTED','Native accessibility scroll failed after dispatch; do not retry.',{ retryable:false,cause }) }
+    for (;;) {
+      const observed = await this.snapshot(deadline)
+      if (observed.nodes.find(node => node.ref.id === id)?.states?.hidden === false) return
+      if (Date.now() >= deadline) throw new EngineError('NOT_ACTIONABLE','Native accessibility scrolling did not paint the target.',{ retryable:false })
+      await new Promise(resolve => setTimeout(resolve,100))
+    }
   }
 
   async fieldVisible(label: string): Promise<boolean> {
@@ -295,6 +322,7 @@ export function nativeControlEngine(native: NativeControl): EngineHandle {
       snapshot:{kind:'resource'},wire:{kind:'resource'},frames:{kind:'resource'},rendered:{kind:'resource'},
       prefs:{kind:'resource'},settings:{kind:'resource'},config:{kind:'resource'},configBytes:{kind:'resource'},
       fieldVisible:{kind:'resource',label:label => label},
+      reveal:{kind:'resource',label:name => name},
       schema:{kind:'resource'},hold:{kind:'resource'},release:{kind:'resource'},evidence:{kind:'resource',label:label => label}
     }) },
     async endAttempt() { await native.release() }

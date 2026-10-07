@@ -30,6 +30,11 @@ async function deliveredAfterRelease(native:NativeControl,request:Wire): Promise
   await expect.poll(async () => (await native.wire()).some(row => row.dir === 'delivered' && row.body.id === request.body.id)).toBe(true)
 }
 
+async function tapAction(screen:Screen,native:NativeControl,name:string): Promise<void> {
+  await native.reveal(name)
+  await screen.getByText(name,{exact:true}).tap()
+}
+
 async function settingsOpen(screen:Screen,native:NativeControl): Promise<void> {
   await screen.getByText('Settings',{exact:true}).tap()
   await expect.poll(async () => (await native.prefs())?.p.title).toBe('Hermes settings')
@@ -237,7 +242,7 @@ test.describe('real native profile settings (no turns, confirmations or provider
     await saved(native,number,baseline.fields[number]!.value)
     await selectField(native,number)
     expect(baseline.fields[number]!.value).not.toEqual(baseline.fields[number]!.default)
-    await screen.getByText('Use default for selected field',{exact:true}).tap()
+    await tapAction(screen,native,'Use default for selected field')
     await saved(native,number,baseline.fields[number]!.default)
     await editor(screen,native,number,String(baseline.fields[number]!.value))
     await saved(native,number,baseline.fields[number]!.value)
@@ -261,7 +266,7 @@ test.describe('real native profile settings (no turns, confirmations or provider
       await search(native,key)
       expect((await native.settings()).fields[key]!.value).toEqual(value)
       await selectField(native,key)
-      await screen.getByText('Use default for selected field',{exact:true}).tap()
+      await tapAction(screen,native,'Use default for selected field')
       await saved(native,key,baseline.fields[key]!.default)
       // Explicit object {} reversion must delete its prior entry, not deep-merge it.
       expect(leaf(await native.config(),key)).toEqual(baseline.fields[key]!.default)
@@ -276,7 +281,7 @@ test.describe('real native profile settings (no turns, confirmations or provider
       await screen.getByRole('switch',bool,{exact:true}).tap()
       await saved(native,bool,nonDefault)
     }
-    await screen.getByText('Use default for selected field',{exact:true}).tap()
+    await tapAction(screen,native,'Use default for selected field')
     await saved(native,bool,baseline.fields[bool]!.default)
     if (baseline.fields[bool]!.default !== baseline.fields[bool]!.value) {
       await screen.getByRole('switch',bool,{exact:true}).tap()
@@ -289,7 +294,7 @@ test.describe('real native profile settings (no turns, confirmations or provider
       await saved(native,select,nonDefault)
       await selectField(native,select)
     }
-    await screen.getByText('Use default for selected field',{exact:true}).tap()
+    await tapAction(screen,native,'Use default for selected field')
     await saved(native,select,baseline.fields[select]!.default)
     if (baseline.fields[select]!.default !== baseline.fields[select]!.value) {
       await choice(screen,native,select,String(baseline.fields[select]!.value),baseline.fields[select]!.options!)
@@ -313,7 +318,7 @@ test.describe('real native profile settings (no turns, confirmations or provider
         expect((await native.wire()).slice(offset).filter(w => w.dir === 'request' && w.body.method === 'settings.set')).toHaveLength(0)
         await native.evidence(`invalid-${key}`)
         await native.key('Escape')
-        await screen.getByText('Reload saved values',{exact:true}).tap()
+        await tapAction(screen,native,'Reload saved values')
         await expect.poll(async () => (await native.prefs())?.p.sections?.flatMap(s => s.rows).find(r => r.id === key)?.warning).toBeUndefined()
       }
     }
@@ -347,10 +352,10 @@ test.describe('real native profile settings (no turns, confirmations or provider
     await expect.poll(async () => (await native.prefs())?.p.sections?.flatMap(s => s.rows).find(r => r.id === 'session.effort')?.control.value).toBe('high')
     expect(await native.configBytes()).toBe(profileBefore)
     await selectField(native,'agent.reasoning_effort')
-    await screen.getByText('Unset selected field',{exact:true}).tap()
+    await tapAction(screen,native,'Unset selected field')
     await saved(native,'agent.reasoning_effort',null,{absent:true})
     await expect.poll(async () => (await native.snapshot()).nodes.find(n => n.role === 'meter' && n.name === 'Thinking effort')?.value).toBe('high')
-    await screen.getByText('Use default for selected field',{exact:true}).tap()
+    await tapAction(screen,native,'Use default for selected field')
     await saved(native,'agent.reasoning_effort',baseline.fields['agent.reasoning_effort']!.default,{absent:true})
     await search(native,'agent.reasoning_effort')
     await choice(screen,native,'agent.reasoning_effort','low',baseline.fields['agent.reasoning_effort']!.options!)
@@ -406,7 +411,7 @@ test.describe('real native profile settings (no turns, confirmations or provider
       expect(await native.configBytes()).toBe(corrupt)
       await native.evidence('real-load-error')
       await writeFile(path,good,{mode:0o600})
-      await screen.getByText('Retry',{exact:true}).tap()
+      await tapAction(screen,native,'Retry')
       await expect.poll(async () => (await native.settings()).fields['agent.max_turns']?.value).toEqual(baseline.fields['agent.max_turns']!.value)
       await search(native,'agent.max_turns')
       await writeFile(path,corrupt,{mode:0o600})
@@ -418,7 +423,7 @@ test.describe('real native profile settings (no turns, confirmations or provider
       expect(await native.configBytes()).toBe(corrupt)
       await native.evidence('real-save-error')
       await writeFile(path,good,{mode:0o600})
-      await screen.getByText('Retry',{exact:true}).tap()
+      await tapAction(screen,native,'Retry')
       await saved(native,'agent.max_turns',Number(baseline.fields['agent.max_turns']!.value)+1)
       await screen.getByRole('button','Decrease agent.max_turns',{exact:true}).tap()
       await saved(native,'agent.max_turns',baseline.fields['agent.max_turns']!.value)

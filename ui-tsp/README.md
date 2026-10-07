@@ -158,6 +158,13 @@ scenario string. It verifies the exact focused pane, launcher/entry identity, an
 checkout before and after capture. AX, tree and dump targets belong only to the
 single visible focused pane's native subtree; ownership ambiguity fails closed.
 There is no capture-text or replay fallback.
+The native AX owner is correlated with that pane's **Agent block** region, so
+offscreen descendants remain observable without accepting sibling-pane targets.
+Footer actions use documented [accessibility scrolling](https://docs.stencil.so/tern/scripts/harness.md):
+match the owned AX bounds to one deepest owned DOM selector, dispatch
+`a11y scroll-into-view`, then require fresh visible geometry before clicking.
+This scroll is not a focus or click substitute. A broad search placed a footer
+13,035 pixels below the viewport; its visible position and unchanged YAML were verified.
 Field visibility is scoped to the painted native `pf-row` label, not the identical
 text in the search query. Multiple visible row labels still fail as ambiguous.
 
