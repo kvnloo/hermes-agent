@@ -60,6 +60,52 @@ Only `--global` persists the effort in the profile config.
 Display commands such as `/reasoning show` do not change the effort.
 A late command response cannot overwrite the status or transcript of another session.
 
+## Native Settings
+
+Open `/settings`, `/prefs`, or the composer's **Settings** control.
+The help sheet and slash completion list include both commands.
+Hermes sends one SDK `prefs` sheet directly in `layer`, not inside the inline transcript.
+
+Each portable schema category has a **Profile defaults** page.
+The caption names the canonical profile.
+The **Session** page is separate. It uses the native model picker with session-only scope and the same live reasoning owner as `/reasoning`.
+Profile writes do not replace live session pins.
+
+Type to search all pages, or press Ctrl+F.
+Use Up/Down to select a row, Enter to edit it, and Tab or Left/Right to change pages.
+Boolean, number, choice and text rows use native controls.
+List and object rows use JSON text. Hermes rejects invalid JSON and the wrong root shape before it sends a write.
+Untouched nullable values stay unset, including nullable choices.
+Boolean and numeric environment templates stay visible as raw text, not false switches or blank numbers.
+Nullable booleans and numbers show **Unset**, not false or zero.
+During numeric editing, the native text control shows the raw draft, including incomplete numbers.
+Enter validates and commits the number. Typing alone does not change the saved value.
+Stored credential values remain undisclosed. Null credential leaves in JSON preserve the stored credential. An explicit empty string clears a scalar credential.
+
+Each row has the saved value and its default.
+**Use default for selected field** restores a public field's default. For a structured private field, credential nulls still preserve stored credentials.
+Nullable public fields also have **Unset selected field**. Private scalar fields do not offer false reset or unset controls.
+**Reload saved values** discards unsaved drafts and reads the profile again.
+Escape cancels an open editor or search before it closes the sheet.
+The composer retains its draft and caret. Ctrl+C closes Settings without clearing that draft.
+
+Hermes sends one changed key per write and serializes profile operations.
+Duplicate native commits do not repeat a mutation.
+The displayed saved value comes from canonical `settings.get` readback.
+Errors retain the draft and offer **Retry**.
+If a write was acknowledged but readback failed, Retry repeats the read, not the mutation.
+An explicit revert after failed readback is retained and saved, including when the acknowledged value was null.
+Policy and consent changes show the exact profile, setting and proposed value.
+**Cancel** is the default. Enter or Escape cancels. Only the explicit confirmation control accepts the change.
+Every open belongs to its original live session and overlay instance.
+Late replies, old native IDs and queued callbacks cannot write into a replacement session or sheet.
+
+The SDK routes `change` to `onChange`, `select` to `onSelect`, `activate` to `onActivate`, and named `action` to `onAction`.
+Prefs changes use the sheet ID plus `item` (the schema key) and typed `value`.
+Page actions use `act: "page"` and `value` (the page ID).
+Choice previews use `item: "<row>=<option>"`. Close with a row value cancels its editor. Close without a value closes the sheet.
+Hermes owns the search text, edit draft, caret and raw keys. Tern owns native layout, chrome and control rendering.
+
 ## Native overlay actions
 
 An overlay action belongs to the instance that produced its native node.

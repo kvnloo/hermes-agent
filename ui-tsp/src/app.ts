@@ -4,6 +4,8 @@
 // schedules one render of the whole view; the SDK diffs it into frame ops.
 
 import type {
+  ConfigGetResult,
+  ConfigSetResult,
   SessionLiveInfo,
   SessionResumeResult,
   SkinPayload,
@@ -25,6 +27,7 @@ import type { Overlay, OverlayHost } from './overlay.js'
 import { Completion } from './overlays/completion.js'
 import { openModelPicker } from './overlays/models.js'
 import { promptOverlay } from './overlays/prompts.js'
+import { openSettings } from './overlays/settings.js'
 import { paletteOf } from './palette.js'
 import { Transcript } from './transcript.js'
 import { dockNodes } from './view/dock.js'
@@ -81,6 +84,8 @@ export class App implements OverlayHost {
   readonly #approvalIds = new Map<string, string>()
   /** The launcher's startup image until it is attached to the first session (the queue waits for it). */
   #startupImage = process.env.HERMES_TUI_IMAGE?.trim() ?? ''
+  #effortWrites: Promise<unknown> = Promise.resolve()
+  #effortRequested: { sid: string; value: string } | null = null
 
   constructor(tern: Session, gw: GatewayClient, version: string) {
     this.#tern = tern
@@ -237,7 +242,7 @@ export class App implements OverlayHost {
     const top = this.overlays.at(-1)
 
     if (key.ctrl && key.name === 'c') {
-      return this.#ctrlC()
+      return top?.key === 'settings' ? top.onKey(key) : this.#ctrlC()
     }
 
     if (top?.onKey(key)) {
@@ -830,20 +835,67 @@ export class App implements OverlayHost {
     }
   }
 
-  /** Steps the session's reasoning effort up hermes's ladder; session.info echoes it back. */
+  /** The single live effort owner, including a lazy session before its first model turn. */
+  setReasoning(value: string, scope?: 'session' | 'global', sid = this.sid): Promise<ConfigSetResult | undefined> {
+    const write = async () => {
+      if (!sid || this.sid !== sid) {
+        return undefined
+      }
+
+      const result = await this.#gw.request<ConfigSetResult>('config.set', {
+        key: 'reasoning',
+        session_id: sid,
+        value,
+        ...(scope ? { scope } : {})
+      })
+
+      if (this.sid !== sid) {
+        return undefined
+      }
+
+      const current = await this.#gw.request<ConfigGetResult>('config.get', { key: 'reasoning', session_id: sid })
+
+      if (this.sid === sid && typeof current.value === 'string') {
+        this.info = { ...this.info, reasoning_effort: current.value }
+        this.changed()
+
+        return result
+      }
+      if (this.sid === sid) {
+        throw new Error('The backend did not confirm the live reasoning effort.')
+      }
+
+
+      return undefined
+    }
+
+    const result = this.#effortWrites.then(write, write)
+    this.#effortWrites = result.catch(() => undefined)
+
+    return result
+  }
+
+  /** Steps the session's reasoning effort. The native glyph changes only after readback. */
   #cycleEffort() {
-    if (!this.sid) {
+    const sid = this.sid
+
+    if (!sid) {
       return
     }
 
-    const at = EFFORTS.indexOf(this.info?.reasoning_effort ?? '')
-    const value = EFFORTS[at < 0 ? EFFORTS.indexOf('medium') : (at + 1) % EFFORTS.length]!
-    // Shown at once (and a quick second press steps from it); session.info confirms.
-    this.info = this.info && { ...this.info, reasoning_effort: value }
-    this.changed()
-    this.#gw.request('config.set', { key: 'reasoning', session_id: this.sid, value }).catch((error: Error) => {
-      this.transcript.notice(error.message, 'error')
-      this.changed()
+    const current = this.#effortRequested?.sid === sid ? this.#effortRequested.value : this.info?.reasoning_effort ?? ''
+    const at = EFFORTS.indexOf(current)
+    const request = { sid, value: EFFORTS[at < 0 ? EFFORTS.indexOf('medium') : (at + 1) % EFFORTS.length]! }
+    this.#effortRequested = request
+    this.setReasoning(request.value, 'session', sid).catch((error: Error) => {
+      if (this.sid === sid) {
+        this.transcript.notice(error.message, 'error')
+        this.changed()
+      }
+    }).finally(() => {
+      if (this.#effortRequested === request) {
+        this.#effortRequested = null
+      }
     })
   }
 
@@ -928,6 +980,7 @@ export class App implements OverlayHost {
         },
         onEffort: () => this.#cycleEffort(),
         onInterrupt: () => this.#interrupt(),
+        onSettings: () => openSettings(this),
         onModel: () => openModelPicker(this),
         onQueueEdit: () => this.#dequeue(),
         onSend: ev => {

@@ -693,7 +693,7 @@ function maskedOverlay(host: OverlayHost, req: ServerRequest): Overlay {
 /** A yes/no sheet for a choice the frontend itself must confirm (an expensive model switch). */
 export function confirmOverlay(
   host: OverlayHost,
-  ask: { title: string; detail: string; confirm: string; onConfirm(): void }
+  ask: { title: string; detail: string; confirm: string; onConfirm(): void; onCancel?(): void }
 ): Overlay {
   const key = `confirm:${ask.title}`
 
@@ -702,6 +702,8 @@ export function confirmOverlay(
 
     if (yes) {
       ask.onConfirm()
+    } else {
+      ask.onCancel?.()
     }
   }
 
@@ -714,23 +716,23 @@ export function confirmOverlay(
           <md key="question" role="omp.ask.question" text={ask.title} />
           {ask.detail ? <text key="detail" text={ask.detail} wrap="word" /> : null}
           {actionsRow([
-            { hint: 'n · escape', key: 'cancel', keys: ['escape'], label: 'Cancel', onClick: () => answer(false) },
+            { hint: 'enter · escape', key: 'cancel', keys: ['enter', 'escape'], label: 'Cancel (default)', onClick: () => answer(false), primary: true },
             {
-              hint: 'enter · y',
+              hint: 'y',
               key: 'ok',
-              keys: ['enter'],
+              keys: ['y'],
               label: ask.confirm,
               onClick: () => answer(true),
-              primary: true
+              primary: false
             }
           ])}
         </col>
       </overlay>
     ),
     onKey: k => {
-      if (k.name === 'enter' || k.name === 'y') {
+      if (k.name === 'y') {
         answer(true)
-      } else if (k.name === 'escape' || k.name === 'n') {
+      } else if (k.name === 'enter' || k.name === 'escape' || k.name === 'n') {
         answer(false)
       }
 

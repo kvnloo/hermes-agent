@@ -2,13 +2,14 @@
 // clearing, reasoning settings and native sheets (model, sessions, help).
 // Everything else goes to the gateway's `slash.exec`.
 
-import type { ConfigGetResult, ConfigSetResult } from '@hermes/shared/gateway-events'
+import type { ConfigGetResult } from '@hermes/shared/gateway-events'
 
 import type { App } from './app.js'
 import { openHelp } from './overlays/help.js'
 import { openModelPicker, switchModel } from './overlays/models.js'
 import { confirmOverlay } from './overlays/prompts.js'
 import { openSessionPicker } from './overlays/sessions.js'
+import { openSettings } from './overlays/settings.js'
 
 /** A client-side slash command. */
 export interface LocalCommand {
@@ -46,14 +47,24 @@ const COMMANDS: readonly LocalCommand[] = [
         return openModelPicker(app)
       }
 
-      const r = await switchModel(app, arg)
+      const sid = app.sid
+      const r = await switchModel(app, arg, false, sid)
 
-      if (r.confirm_required) {
+      if (r.confirm_required && app.sid === sid) {
         app.open(
           confirmOverlay(app, {
             confirm: 'Switch anyway',
-            detail: r.confirm_message || r.warning || '',
-            onConfirm: () => void switchModel(app, arg, true),
+            detail: `Session: ${sid}. Model request: ${arg}. ${r.confirm_message || r.warning || ''}`,
+            onConfirm: () => {
+              if (app.sid === sid) {
+                void switchModel(app, arg, true, sid).catch((error: Error) => {
+                  if (app.sid === sid) {
+                    app.transcript.notice(error.message, 'error')
+                    app.changed()
+                  }
+                })
+              }
+            },
             title: 'Switch to an expensive model?'
           })
         )
@@ -103,25 +114,9 @@ const COMMANDS: readonly LocalCommand[] = [
         })
         .join(' ')
 
-      const r = await app.gw.request<ConfigSetResult>('config.set', {
-        key: 'reasoning',
-        session_id: sid,
-        value,
-        ...(scope ? { scope } : {})
-      })
+      const r = await app.setReasoning(value, scope, sid)
 
-      if (app.sid !== sid) {
-        return
-      }
-
-      // A lazy session has no agent yet, so config.set cannot emit session.info.
-      const current = await app.gw.request<ConfigGetResult>('config.get', { key: 'reasoning', session_id: sid })
-
-      if (app.sid === sid && typeof current.value === 'string') {
-        app.info = { ...app.info, reasoning_effort: current.value }
-      }
-
-      if (app.sid === sid && typeof r.value === 'string') {
+      if (app.sid === sid && typeof r?.value === 'string') {
         app.transcript.panel(`/reasoning ${arg}`, `Reasoning: ${r.value}.`)
       }
     }
@@ -135,6 +130,20 @@ const COMMANDS: readonly LocalCommand[] = [
       }
 
       return arg === 'new' ? app.newSession() : app.resume(arg)
+    }
+  },
+  {
+    aliases: ['prefs'],
+    name: 'settings',
+    run: (app, arg) => {
+      if (arg) {
+        app.transcript.panel('/settings', 'Open /settings or /prefs to edit profile defaults and live session controls.')
+        app.changed()
+
+        return
+      }
+
+      openSettings(app)
     }
   },
   {
