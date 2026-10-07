@@ -35,6 +35,7 @@ from hermes_cli.config import get_hermes_home
 from tools.process_registry_notifications import format_process_notification
 from tools.process_registry_checkpoint import ProcessCheckpointMixin
 from tools.process_registry_termination import ProcessTerminationMixin
+from tools.process_registry_completion_queue import ProcessCompletionQueueMixin
 from tools.process_registry_results import load_completed_results, save_completed_result
 from tools.process_registry_env_log import log_delta_command
 
@@ -696,7 +697,7 @@ def _is_wsl_launcher_command(command: str) -> bool:
     return False
 
 
-class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin):
+class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin, ProcessCompletionQueueMixin):
     """In-memory registry of running and finished background processes.
     Thread-safe: accessed from executor threads (terminal_tool, process handlers),
     the gateway asyncio loop (watchers, reset checks) and the cleanup thread."""
@@ -1626,71 +1627,6 @@ class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin):
     def _publish_finished(self, session: ProcessSession, was_running: bool) -> None:
         self._release_finished_handles(session)
         self._write_checkpoint()
-
-    def _enqueue_completion_notification(self, session: ProcessSession) -> None:
-        """Build and enqueue the autonomous completion notification for ``session``.
-
-        Caller MUST hold ``self._lock``. The notification snapshots the *current*
-        session fields, so a kill that just stamped ``completion_reason="killed"``
-        and called this from ``_replace_stale_completion_notification`` emits the
-        corrected ``killed`` payload; the reader calling it from
-        ``_move_to_finished`` before the kill stamps it sees the reader's
-        ``exited`` view (which the kill then swaps out under the same lock).
-        Holding the lock makes the snapshot-then-put atomic with the kill's
-        drain-and-swap, which is the property that closes the durable-but-stale
-        race on the live ``completion_queue`` payload."""
-        notification = {
-            "type": "completion",
-            "session_id": session.id,
-            "session_key": session.session_key,
-            "task_id": session.task_id,
-            "owner_task_id": session.owner_task_id,
-            "command": session.command,
-            **({"handoff_note": session.handoff_note} if session.handoff_note else {}),
-            **self._exit_fields(session),
-            # A consumer that relays the output (a bot DM's reply) must know it is not whole.
-            **_completion_output(session),
-            # Stable producer identity across checkpoint recovery (unlike a
-            # consumer-observed completion timestamp).
-            "started_at": session.started_at,
-        }
-        _redact_process_result(notification)
-        self.completion_queue.put(notification)
-
-    def _replace_stale_completion_notification(self, session: ProcessSession) -> None:
-        """Swap the reader's stale completion event for ``session`` out of the
-        queue and re-enqueue a corrected one built from the now-stamped session.
-
-        Used by ``kill_process`` when the reader thread finalised the session
-        while the SIGKILL grace window was still draining: the reader's
-        ``_move_to_finished`` enqueued a ``completion_reason="exited"`` payload
-        *before* the kill path stamped the session ``killed``, and the kill
-        path's own ``_move_to_finished`` returns False (``was_running=False``),
-        so it can't enqueue a corrected one itself. The durable receipt is
-        re-saved separately (``save_completed_result``); this method fixes the
-        LIVE ``completion_queue`` payload delivered to CLI/TUI drain surfaces.
-
-        Foreign sessions' events are drained to a keep-list and re-put
-        unchanged; the ``Queue`` is thread-safe, and ``self._lock`` (acquired
-        here) is what serialises this swap against the reader's enqueue inside
-        ``_move_to_finished``."""
-        with self._lock:
-            keep: list = []
-            while True:
-                try:
-                    evt = self.completion_queue.get_nowait()
-                except Exception:
-                    break
-                # Drop only this session's stale "completion"; preserve
-                # watch_match events, async-delegation completions, and every
-                # other session's completion verbatim. The reader's stale
-                # event predates the kill stamp on the session, so rebuild it.
-                if evt.get("type") == "completion" and evt.get("session_id") == session.id:
-                    continue
-                keep.append(evt)
-            for evt in keep:
-                self.completion_queue.put(evt)
-            self._enqueue_completion_notification(session)
 
     @staticmethod
     def _exit_fields(session: ProcessSession) -> dict:
