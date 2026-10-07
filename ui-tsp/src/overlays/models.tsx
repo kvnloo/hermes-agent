@@ -178,7 +178,7 @@ export function openModelPicker(app: App) {
   const overlay: Overlay = {
     key: KEY,
     modal: true,
-    node: () => {
+    node: id => {
       const { hits, order } = view()
       const priced = rows.some(r => r.provider.pricing?.[r.model])
       const columns: PickerColumn[] = priced ? [{ format: 'price', head: '$/M', id: 'price', priority: 2 }] : []
@@ -211,7 +211,7 @@ export function openModelPicker(app: App) {
           hits={hits}
           icon="cpu"
           items={rows.map(itemOf)}
-          key={KEY}
+          key={id.slice('layer.'.length)}
           layout="rows"
           message={state === 'error' ? message : undefined}
           noun="models"

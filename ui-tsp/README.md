@@ -47,6 +47,16 @@ Each submission clears the draft and caret, resets draft undo, and records the s
 Native `send` records its own text, including multiline text, rather than an older draft.
 Hermes retains command dispatch, prompt queues and gateway submission authority.
 
+## Native overlay actions
+
+An overlay action belongs to the instance that produced its native node.
+Each open has a distinct native root ID, even when its logical request key is reused.
+An event from an older painted view cannot target the replacement.
+The SDK can bind a callback before an overlay closes, is replaced, or becomes covered.
+Hermes checks that owner again when the queued callback runs.
+Only the current top overlay can act, and no overlay can act after the surface closes.
+The SDK still owns handler lookup, native events, frame credits and surface transport.
+
 ## Developing
 
 ```sh

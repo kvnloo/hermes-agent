@@ -61,8 +61,8 @@ export async function openHelp(app: App) {
   const overlay: Overlay = {
     key: KEY,
     modal: true,
-    node: () => (
-      <overlay anchor="center" head="Commands and shortcuts" key={KEY} modal role="omp.overlay.hotkeys" size="lg">
+    node: id => (
+      <overlay anchor="center" head="Commands and shortcuts" key={id.slice('layer.'.length)} modal role="omp.overlay.hotkeys" size="lg">
         <col gap="lg" key="body">
           {HOTKEYS.map(({ group, rows }) => (
             <section head={group} key={`keys-${group}`} role="omp.hotkeys.group">
