@@ -1,0 +1,11 @@
+# A finished turn, then Tern's themes changing under it: the Hermes theme is lifted (it is a
+# stylesheet here), five of Tern's own follow, and the Hermes theme comes back.
+#   render.py turn --start 68.2 --seconds 3.6 --events offline/themes.events --name themes-dark
+0.40 css zz-hermes
+0.40 theme dark "dark-dracula"
+0.90 theme dark "dark-tokyo-night"
+1.40 theme dark "dark-gruvbox"
+1.90 theme dark "dark-rose-pine"
+2.40 theme dark "dark-nord"
+2.90 theme dark "titanium"
+2.90 css zz-hermes {here}/../themes/hermes-dark.css
