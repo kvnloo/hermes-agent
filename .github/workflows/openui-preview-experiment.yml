@@ -1,0 +1,60 @@
+name: OpenUI native preview experiment
+on:
+  push:
+    branches: [exp/tern-openui-preview]
+    paths:
+      - ui-tsp/experiments/openui-preview/**
+      - ui-tsp/experiments/openui-generation/**
+      - .github/workflows/openui-preview-experiment.yml
+permissions:
+  contents: read
+concurrency:
+  group: openui-preview-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  contracts:
+    if: github.repository == 'kvnloo/hermes-agent'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      OPENUI_TELEMETRY_DISABLED: '1'
+      DO_NOT_TRACK: '1'
+    defaults:
+      run:
+        working-directory: ui-tsp/experiments/openui-preview
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22.16.0'
+      - name: Install the unchanged generation dependency lock with scripts disabled
+        working-directory: ui-tsp/experiments/openui-generation
+        run: npm ci --ignore-scripts --no-audit --no-fund --workspaces=false
+      - name: Existing real OpenUI generation tests
+        working-directory: ui-tsp/experiments/openui-generation
+        run: npm test
+      - name: Host, transport and lifecycle contracts
+        run: npm test
+      - name: Real OpenUI to preview-bundle integration
+        run: node --test test/integration.mjs
+      - name: Install Lua only for explicitly labelled mock-host checks
+        run: sudo apt-get update -qq && sudo apt-get install -y lua5.4
+      - name: Renderer logic (not live Luau or Tern)
+        run: lua5.4 test/renderer.lua tern/host.luau
+      - name: CLI preparation and missing-runtime failure boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$(mktemp -d)"
+          bundle="$(node cli.mjs prepare ../openui-generation/fixtures/explorer.openui fixtures/repository.json ci:branch "$out/bundles")"
+          repeat="$(node cli.mjs prepare ../openui-generation/fixtures/explorer.openui fixtures/repository.json ci:branch "$out/bundles")"
+          test "$bundle" = "$repeat"
+          if node cli.mjs capture "$bundle" "$out/absent-control.sock" "$out/shots" --allow-control-input; then
+            echo 'Missing Tern/control endpoint must never report success' >&2
+            exit 1
+          fi
+          grep -q 'capture-failed' "$out"/shots/capture-*.json
+      - name: No rewritten tracked inputs
+        run: git diff --exit-code
