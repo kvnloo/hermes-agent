@@ -223,6 +223,17 @@ normal speed only. In testing a 75-second 1080p60 take missed 1.8% of frames.
 
 ## Known limits
 
+- **A take with a shell beside it is out of step.** With `--focus left` the Hermes pane's replay
+  runs ahead of the shell pane: about 20 seconds ahead by the middle of a 47-second take (its
+  elapsed counter reads 14 s at second 10). The shell pane is right, since its output is printed
+  by frame number, so the moment it turns green is where it was recorded; what Hermes shows
+  beside it is from later in the session. Every pointer press used to move the focus lets real
+  time into Tern's clock, and the paced replay follows the clock. `--focus right` leads by a
+  constant 3 seconds or so and shows Hermes's composer collapsed. Stepping the stream a frame
+  at a time (`surface-play FILE from N until M`, where N and M are the frames' `s` numbers) works
+  by hand but still ended on the session's last frame inside a full render; not understood yet.
+  The single-pane takes are not affected: nothing moves the focus in them.
+
 - A burst is held in RAM until it ends; `capture.sh` refuses one that will not fit.
 - Every take starts in a fresh tab: a program stopped mid-frame can leave half a protocol
   message in a reused shell's input.

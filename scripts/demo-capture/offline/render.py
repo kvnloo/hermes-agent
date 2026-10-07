@@ -213,7 +213,8 @@ if args.keep_frames:
     kept = os.path.join(out, f"{name}_frames")
     shutil.rmtree(kept, ignore_errors=True)
     shutil.move(shots, kept)
-shutil.rmtree(work, ignore_errors=True)
+if not os.environ.get("DEMO_KEEP"):  # DEMO_KEEP=1 leaves the scenario and Tern's log to look at
+    shutil.rmtree(work, ignore_errors=True)
 
 real = "real time" if not shortened else f"pauses shortened by {shortened / 1000:.1f} s of {length + shortened / 1000:.1f} s"
 print(f"render: {video}")
