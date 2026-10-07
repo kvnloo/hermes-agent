@@ -15,6 +15,7 @@ from hermes_cli.config import (
     read_raw_config,
 )
 from hermes_cli.web_server_memory import _normalize_memory_provider_name
+from hermes_constants import VALID_REASONING_EFFORTS
 from tools.wake_word import _PROVIDER_PREFERENCE
 
 if TYPE_CHECKING:
@@ -62,12 +63,37 @@ def _select(description: str, *options: str, **extra: Any) -> Dict[str, Any]:
 
 
 # Manual overrides for fields that need select options or custom types.
+# A null default does not identify the runtime's non-null field type.
+_NULLABLE_FIELD_TYPES = {
+    "database.wal_autocheckpoint": "number",
+    "database.journal_size_limit": "number",
+    "max_concurrent_sessions": "number",
+    "agent.max_turns": "number",
+    "agent.budget_warning_ratio": "number",
+    "agent.run_budget_seconds": "number",
+    "context_file_max_chars": "number",
+    "compression.threshold_tokens": "number",
+    "compression.codex_responses_compact_threshold": "number",
+    "vision.max_calls_per_image": "number",
+    "delegation.fallback_providers": "list",
+    "cron.max_parallel_jobs": "number",
+    "kanban.max_in_progress": "number",
+    "kanban.max_in_progress_per_profile": "number",
+    "kanban.dispatch_profiles": "list",
+    "computer_use.no_overlay": "boolean",
+    "proxy.upstream_deny_cidrs": "list",
+}
+
 _SCHEMA_OVERRIDES: Dict[str, Dict[str, Any]] = {
     "timezone": _select(
         "IANA timezone (e.g. America/New_York). Blank uses the system timezone.",
         *_timezone_options(), searchable=True, clearable=True,
     ),
     "memory.provider": _select("Memory provider plugin", *_memory_provider_options()),
+    "agent.reasoning_effort": _select(
+        "Profile reasoning default (null inherits; live session overrides stay unchanged).",
+        "none", *VALID_REASONING_EFFORTS, nullable=True, category="agent",
+    ),
     "model": {
         "type": "string",
         "description": "Default model (e.g. anthropic/claude-sonnet-4.6)",
@@ -244,7 +270,7 @@ def _build_schema_from_config(config: Dict[str, Any], prefix: str = "") -> Dict[
         full_key = f"{prefix}.{key}" if prefix else key
         if full_key == "_config_version":
             continue
-        if isinstance(value, dict):
+        if isinstance(value, dict) and value:
             schema.update(_build_schema_from_config(value, full_key))
             continue
         # Category: first path component for nested keys, "general" for top-level scalars.
@@ -253,6 +279,9 @@ def _build_schema_from_config(config: Dict[str, Any], prefix: str = "") -> Dict[
             "description": full_key.replace(".", " → ").replace("_", " ").title(),
             "category": prefix.split(".")[0] if prefix else "general",
         }
+        if value is None:
+            entry["type"] = _NULLABLE_FIELD_TYPES.get(full_key, "string")
+            entry["nullable"] = True
         entry.update(_SCHEMA_OVERRIDES.get(full_key, {}))
         entry["category"] = _CATEGORY_MERGE.get(entry["category"], entry["category"])
         schema[full_key] = entry
@@ -260,13 +289,18 @@ def _build_schema_from_config(config: Dict[str, Any], prefix: str = "") -> Dict[
 
 
 def _config_schema_with_virtual_fields() -> Dict[str, Dict[str, Any]]:
-    """DEFAULT_CONFIG schema plus the virtual ``model_context_length`` field, inserted right
-    after ``model`` so it renders adjacent in the frontend."""
+    """DEFAULT_CONFIG schema plus runtime-supported optional fields, next to their owners."""
     ordered: Dict[str, Dict[str, Any]] = {}
     for key, entry in _build_schema_from_config(DEFAULT_CONFIG).items():
         ordered[key] = entry
         if key == "model":
             ordered["model_context_length"] = _SCHEMA_OVERRIDES["model_context_length"]
+        elif key == "agent.reasoning_overrides":
+            ordered["agent.reasoning_effort"] = _SCHEMA_OVERRIDES["agent.reasoning_effort"]
+    for key, override in _SCHEMA_OVERRIDES.items():
+        if key not in ordered:
+            category = key.split(".")[0] if "." in key else "general"
+            ordered[key] = {"category": _CATEGORY_MERGE.get(category, category), "nullable": True, **override}
     return ordered
 
 
