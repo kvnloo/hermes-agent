@@ -17,13 +17,17 @@ function read(content: string): ToolCall {
   }
 }
 
+function node(value: unknown): Node {
+  if (!(value instanceof Node)) {
+    throw new Error('A tool card element must be a node')
+  }
+
+  return value
+}
+
 describe('tool cards', () => {
   it('folds a long read to three lines and badges the rest', () => {
-    const card = toolNode(read('1|a\n2|b\n3|c\n4|d\n5|e'), 0)
-
-    if (!(card instanceof Node)) {
-      throw new Error('A tool card must be a node')
-    }
+    const card = node(toolNode(read('1|a\n2|b\n3|c\n4|d\n5|e'), 0))
 
     const body = card.children[0]
 
@@ -39,7 +43,7 @@ describe('tool cards', () => {
   })
 
   it('folds a long write and keeps the syntax language', () => {
-    const card = toolNode(
+    const card = node(toolNode(
       {
         args: { content: Array.from({ length: 12 }, (_, i) => `const n${i} = ${i}`).join('\n'), path: 'src/new.ts' },
         argsText: '',
@@ -51,7 +55,7 @@ describe('tool cards', () => {
         status: 'done'
       },
       0
-    )
+    ))
 
     expect(card.props).toMatchObject({
       badges: [
@@ -63,12 +67,12 @@ describe('tool cards', () => {
       preview: { lines: 8 },
       title: 'Write'
     })
-    expect(card.children[0]?.props.lang).toBe('typescript')
+    expect(node(card.children[0]).props.lang).toBe('typescript')
   })
 
   it('keeps a failed shell failed, folded, and exited', () => {
     const output = Array.from({ length: 14 }, (_, i) => `line ${i}`).join('\n')
-    const card = toolNode(
+    const card = node(toolNode(
       {
         args: { command: 'npm test' },
         argsText: '',
@@ -80,7 +84,7 @@ describe('tool cards', () => {
         status: 'error'
       },
       0
-    )
+    ))
 
     expect(card.props).toMatchObject({
       badges: [{ text: '4 more lines', tone: 'muted' }],
@@ -95,7 +99,7 @@ describe('tool cards', () => {
   })
 
   it('folds a long eval and keeps the code language', () => {
-    const card = toolNode(
+    const card = node(toolNode(
       {
         args: { code: 'print(1)\n', language: 'python' },
         argsText: '',
@@ -107,7 +111,7 @@ describe('tool cards', () => {
         status: 'done'
       },
       0
-    )
+    ))
 
     expect(card.props).toMatchObject({
       badges: [
@@ -119,11 +123,16 @@ describe('tool cards', () => {
       preview: { lines: 8 },
       title: 'Eval'
     })
-    expect(card.children[0]?.children?.[0]?.children?.[1]?.props.lang).toBe('python')
+
+    const body = node(card.children[0])
+    const result = node(body.children[0])
+    const code = node(result.children[1])
+
+    expect(code.props.lang).toBe('python')
   })
 
   it('keeps a short edit open and shows the diff stats', () => {
-    const card = toolNode(
+    const card = node(toolNode(
       {
         args: { path: 'src/index.ts' },
         argsText: '',
@@ -135,7 +144,7 @@ describe('tool cards', () => {
         status: 'done'
       },
       0
-    )
+    ))
 
     expect(card.props).toMatchObject({
       collapsed: false,
@@ -144,6 +153,6 @@ describe('tool cards', () => {
       title: 'Edit'
     })
     expect(card.props.preview).toBeUndefined()
-    expect(card.children[0]?.props.lang).toBe('typescript')
+    expect(node(card.children[0]).props.lang).toBe('typescript')
   })
 })
