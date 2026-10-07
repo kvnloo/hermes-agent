@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events'
 
-import type { Palette, Session } from '@stencil-hq/tern'
+import type { Palette, Session, Surface } from '@stencil-hq/tern'
 import type { GatewayClient } from '@tui/gatewayClient.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -445,6 +445,7 @@ describe('LaunchSplash', () => {
 class FakeAppSurface extends FakeSurface {
   rendered: unknown[] = []
   focused: (string | null)[] = []
+  dispatch = vi.fn<Surface['dispatch']>()
 
   constructor(readonly options: { id?: string; mode?: string; role?: string }) {
     super()
@@ -619,13 +620,15 @@ describe('App launch splash', () => {
     expect(splash()!.closed).toBe(true)
   })
 
-  it('HERMES_TUI_SPLASH=0 goes straight to the chrome', () => {
+  it('HERMES_TUI_SPLASH=0 preserves the first composer key', async () => {
     vi.stubEnv('HERMES_TUI_SPLASH', '0')
 
-    const { chrome, splash } = launch()
+    const { app, splash, tern } = launch()
 
     expect(splash()).toBeUndefined()
-    expect(chrome().rendered.length).toBeGreaterThan(0)
+    tern.key('x')
+    await vi.advanceTimersByTimeAsync(50)
+    expect(app.composer.text).toBe('x')
   })
 
   it('HERMES_TUI_SPLASH=<design> picks that design', async () => {
