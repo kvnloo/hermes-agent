@@ -51,18 +51,36 @@ export class NativeControl {
     if (!panes?.some(p => String(p.id) === this.manifest.pane) || String(focused.id) !== this.manifest.pane) throw new Error('Native input target changed; parent must reselect the prepared private pane.')
     if (focused.cwd !== this.manifest.root || typeof focused.running !== 'string' || !focused.running.includes(this.manifest.launch)) throw new Error('The prepared private pane is not running its recorded real native launcher.')
     // Serial captures avoid combining snapshots from independently racing UI actions.
-    const ax = await this.ctl('a11y') as Ax
+    const windowAx = await this.ctl('a11y') as Ax
     const payload = record(await this.ctl('tree'))
-    const tree = payload.tree as Tree[]
+    const windowTree = payload.tree as Tree[]
     const dumped = record(await this.ctl('dump *'))
-    const dump = dumped.elements as Dump[]
+    const windowDump = dumped.elements as Dump[]
     const header = record(dumped.header)
     const viewport = record(header.viewport) as { width:number; height:number }
-    if (!Array.isArray(tree) || !Array.isArray(dump)) throw new Error('Tern native tree/dump is missing; no text/replay fallback is allowed.')
-    const elements = flatten(tree)
+    if (!Array.isArray(windowTree) || !Array.isArray(windowDump)) throw new Error('Tern native tree/dump is missing; no text/replay fallback is allowed.')
     const visible = (r?: readonly number[]) => Boolean(r && r.length === 4 && r[2]! > 0 && r[3]! > 0 && r[0]! >= 0 && r[1]! >= 0 && r[0]! + r[2]! <= viewport.width + 1 && r[1]! + r[3]! <= viewport.height + 1)
+    const panesInTree = flatten(windowTree).filter(node => {
+      const classes = (node.class ?? '').split(' ')
+      return classes.includes('tn-pane') && classes.includes('on') && !classes.includes('off') && visible(node.rect)
+    })
+    if (panesInTree.length !== 1) throw new Error('Cannot establish one visible focused native pane subtree.')
+    const paneTree = panesInTree[0]!
+    const paneDump = windowDump.filter(node => node.visible && near(node.rect, paneTree.rect!) && /^section\.tn-pane(?:\.|$)/.test(node.path.split('>').at(-1) ?? ''))
+    if (paneDump.length !== 1) throw new Error('Cannot correlate the focused pane subtree with one native DOM owner.')
+    const prefix = paneDump[0]!.nth
+    const dump = windowDump.filter(node => node.nth === prefix || node.nth.startsWith(`${prefix}>`))
+    const tree = [paneTree]
+    const elements = flatten(tree)
+    const after = record(record(await this.ctl('state')).focused)
+    if (String(after.id) !== this.manifest.pane || after.cwd !== focused.cwd || after.running !== focused.running) throw new Error('Prepared pane ownership changed during native capture.')
     const surfaces = elements.filter(e => (e.class ?? '').split(' ').includes('sf-region') && e.rect)
     const inApp = (r?: readonly number[]) => Boolean(r && surfaces.some(e => r[0]! >= e.rect![0]! - 1 && r[1]! >= e.rect![1]! - 1 && r[0]! + r[2]! <= e.rect![0]! + e.rect![2]! + 1 && r[1]! + r[3]! <= e.rect![1]! + e.rect![3]! + 1))
+    const ownedAx = (node:Ax): Ax[] => {
+      const children = (node.children ?? []).flatMap(ownedAx)
+      return node.bounds && inApp(node.bounds) ? [{...node,children}] : children
+    }
+    const ax: Ax = {...windowAx,children:(windowAx.children ?? []).flatMap(ownedAx)}
     const nodes: SemanticNode[] = flatten([ax]).filter(n => n.id !== undefined && n.bounds && inApp(n.bounds)).map(n => {
       const matching = elements.filter(e => e.rect && near(e.rect, n.bounds!))
       const host = matching.find(e => e.role === roles[n.role ?? '']) ?? matching.find(e => e.input)
