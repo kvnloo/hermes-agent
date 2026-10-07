@@ -1,3 +1,4 @@
+import { Node } from '@stencil-hq/tern'
 import { describe, expect, it } from 'vitest'
 
 import type { ToolCall } from '../model.js'
@@ -20,6 +21,12 @@ describe('tool cards', () => {
   it('folds a long read to three lines and badges the rest', () => {
     const card = toolNode(read('1|a\n2|b\n3|c\n4|d\n5|e'), 0)
 
+    if (!(card instanceof Node)) {
+      throw new Error('A tool card must be a node')
+    }
+
+    const body = card.children[0]
+
     expect(card.props).toMatchObject({
       badges: [{ text: '2 more lines', tone: 'muted' }],
       frame: 'inline',
@@ -28,6 +35,6 @@ describe('tool cards', () => {
       preview: { lines: 3 },
       title: 'Read'
     })
-    expect(card.children[0]?.props.lang).toBe('typescript')
+    expect(body instanceof Node && body.props.lang).toBe('typescript')
   })
 })
