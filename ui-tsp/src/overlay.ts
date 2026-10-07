@@ -6,7 +6,7 @@ import type { JSX, Key } from '@stencil-hq/tern'
 
 /** One floating panel in the `layer` region. */
 export interface Overlay {
-  /** Unique among open overlays: the layer child's key. */
+  /** Logical key among open overlays; replacement and cancellation use this key. */
   readonly key: string
   /** Covers the transcript and takes every key (a question that must be answered). */
   readonly modal?: boolean
@@ -15,7 +15,7 @@ export interface Overlay {
    * its node id; null for none. Unset: none for a modal overlay, else the composer.
    */
   focus?(id: string): string | null
-  /** The overlay's node, keyed by `key`; `id` is its full node id (`layer.<key>`). */
+  /** The node's key is `id.slice('layer.'.length)`; App gives each open a distinct full id. */
   node(id: string): JSX.Element
   /** A key while this overlay is on top: true when it consumed the key. */
   onKey(key: Key): boolean

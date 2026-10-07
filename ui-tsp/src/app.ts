@@ -67,6 +67,10 @@ export class App implements OverlayHost {
   readonly #completion: Completion
   readonly #welcome: WelcomeContext
   #surface!: Surface
+  /** Owners of native handlers in the last rendered layer, not the current stack. */
+  readonly #layerOwners = new Map<string, Overlay>()
+  readonly #overlayIds = new WeakMap<Overlay, string>()
+  #overlaySerial = 0
   #scheduled = false
   /** The field holding Tern's caret, as last sent. */
   #focus: string | null = INPUT_ID
@@ -99,6 +103,40 @@ export class App implements OverlayHost {
 
   async run(): Promise<number> {
     this.#surface = this.#tern.open({ id: 'hermes', mode: 'inline', role: 'omp.session', title: 'hermes' })
+    const dispatch = this.#surface.dispatch.bind(this.#surface)
+
+    this.#surface.dispatch = event => {
+      const handler = dispatch(event)
+
+      if (!handler || !('id' in event) || typeof event.id !== 'string' || !event.id.startsWith('layer.')) {
+        return handler
+      }
+
+      let owner: Overlay | undefined
+      let rootId = ''
+
+      for (const [root, overlay] of this.#layerOwners) {
+        if (
+          root.length > rootId.length &&
+          event.id.startsWith(root) &&
+          (event.id.length === root.length || event.id[root.length] === '.')
+        ) {
+          owner = overlay
+          rootId = root
+        }
+      }
+
+      if (!owner) {
+        return handler
+      }
+
+      // Session queues handler calls. Ownership must still hold when the call runs.
+      return () => {
+        if (!this.#surface.closed && this.overlays.at(-1) === owner && this.#overlayIds.get(owner) === rootId) {
+          return handler()
+        }
+      }
+    }
 
     if (this.#tern.caps.features.includes('blobs')) {
       this.#welcome.logo = this.#tern.blob(logo, 'image/png')
@@ -148,6 +186,7 @@ export class App implements OverlayHost {
     }
 
     this.overlays.push(overlay)
+    this.#overlayIds.set(overlay, `layer.${overlay.key}:${++this.#overlaySerial}`)
 
     if (overlay.modal) {
       // The sheet owns the keys now: a list or reply for the composer would only land under it.
@@ -163,6 +202,7 @@ export class App implements OverlayHost {
 
     if (at >= 0) {
       this.overlays.splice(at, 1)
+      this.#overlayIds.delete(overlay)
       this.#approvalIds.delete(overlay.key)
       this.changed()
     }
@@ -913,6 +953,7 @@ export class App implements OverlayHost {
       this.#completion.update(this.composer)
     }
 
+    this.#layerOwners.clear()
     this.#surface.render({
       dock: dockNodes({
         branch: info?.branch ?? '',
@@ -951,13 +992,21 @@ export class App implements OverlayHost {
         queued: this.queue,
         ready: this.sid !== null
       }),
-      layer: [...this.overlays.map(o => o.node(`layer.${o.key}`)), ...(modal ? [] : this.#completion.nodes(INPUT_ID))],
+      layer: [
+        ...this.overlays.map(o => {
+          const id = this.#overlayIds.get(o)!
+          this.#layerOwners.set(id, o)
+
+          return o.node(id)
+        }),
+        ...(modal ? [] : this.#completion.nodes(INPUT_ID))
+      ],
       main: this.transcript.entries.map(e => entryNode(e, `main.${e.id}`, cx))
     })
 
     // The top overlay's field holds the caret; a modal sheet without one takes it from the composer.
     const top = this.overlays.at(-1)
-    const focus = top?.focus ? top.focus(`layer.${top.key}`) : top?.modal ? null : INPUT_ID
+    const focus = top?.focus ? top.focus(this.#overlayIds.get(top)!) : top?.modal ? null : INPUT_ID
 
     if (focus !== this.#focus) {
       this.#focus = focus

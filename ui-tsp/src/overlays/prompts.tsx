@@ -192,7 +192,7 @@ function approvalOverlay(host: OverlayHost, req: ServerRequest): Overlay {
     key,
     modal: true,
     node: id => (
-      <overlay anchor="bottom" key={key} modal role="omp.overlay.ask" size="md">
+      <overlay anchor="bottom" key={id.slice('layer.'.length)} modal role="omp.overlay.ask" size="md">
         <col gap="md" key="body">
           <md key="question" role="omp.ask.question" text="Allow this command?" />
           {command ? <code key="command" lang="bash" text={command} /> : null}
@@ -434,14 +434,14 @@ function clarifyOverlay(host: OverlayHost, req: ServerRequest): Overlay {
       const d = drafts[step]
 
       if (!q || !d) {
-        return <overlay anchor="bottom" key={key} modal role="omp.overlay.ask" size="md" />
+        return <overlay anchor="bottom" key={id.slice('layer.'.length)} modal role="omp.overlay.ask" size="md" />
       }
 
       const freeText = !q.choices.length
       const last = questions.every((other, i) => i === step || other.qid in answers)
 
       return (
-        <overlay anchor="bottom" key={key} modal role="omp.overlay.ask" size="md">
+        <overlay anchor="bottom" key={id.slice('layer.'.length)} modal role="omp.overlay.ask" size="md">
           <col gap="md" key="body">
             {questions.length > 1 ? (
               <row align="center" gap="sm" key="head" role="omp.ask.head">
@@ -622,8 +622,8 @@ function maskedOverlay(host: OverlayHost, req: ServerRequest): Overlay {
     key,
     modal: true,
     focus: id => `${id}.body.${fields[at]?.id ?? 'value'}`,
-    node: () => (
-      <overlay anchor="bottom" key={key} modal role="omp.overlay.ask" size="md">
+    node: id => (
+      <overlay anchor="bottom" key={id.slice('layer.'.length)} modal role="omp.overlay.ask" size="md">
         <col gap="md" key="body">
           <md key="question" role="omp.ask.question" text={title} />
           {note ? (
@@ -708,8 +708,8 @@ export function confirmOverlay(
   const overlay: Overlay = {
     key,
     modal: true,
-    node: () => (
-      <overlay anchor="bottom" key={key} modal role="omp.overlay.ask" size="md">
+    node: id => (
+      <overlay anchor="bottom" key={id.slice('layer.'.length)} modal role="omp.overlay.ask" size="md">
         <col gap="md" key="body">
           <md key="question" role="omp.ask.question" text={ask.title} />
           {ask.detail ? <text key="detail" text={ask.detail} wrap="word" /> : null}

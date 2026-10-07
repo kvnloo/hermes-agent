@@ -115,7 +115,7 @@ export function openSessionPicker(app: App) {
   const overlay: Overlay = {
     key: KEY,
     modal: true,
-    node: () => {
+    node: id => {
       const now = Date.now()
       const { hits, order } = view(now)
       const row = rows.find(r => r.id === selected)
@@ -141,7 +141,7 @@ export function openSessionPicker(app: App) {
           hits={hits}
           icon="history"
           items={rows.map(r => itemOf(r, now))}
-          key={KEY}
+          key={id.slice('layer.'.length)}
           layout="cards"
           message={state === 'error' ? message : undefined}
           noun="sessions"
